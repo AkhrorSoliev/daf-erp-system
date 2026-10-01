@@ -431,9 +431,10 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-72">
-                  Shu oy hisoblaridan to&apos;langan qismi. To&apos;lov avval
-                  eng eski qarzni yopadi: eski qarzi bor o&apos;quvchining
-                  to&apos;lovi avval o&apos;sha qarzga ketadi.
+                  Shu oy hisoblaridan to&apos;langan qismi (qarz kechirilgani
+                  ham shu yerda). To&apos;lov avval eng eski qarzni yopadi:
+                  eski qarzi bor o&apos;quvchining to&apos;lovi avval o&apos;sha
+                  qarzga ketadi.
                 </TooltipContent>
               </Tooltip>
               <Tooltip>

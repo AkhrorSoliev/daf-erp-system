@@ -172,6 +172,9 @@ sanalmaydi; ikki filialli direktorning foydasi to'g'ri.
 **Narx:**
 - Min-qoida oydan tashqari debetni (mock imtihon to'lovi va boshqalar) avval
   shu oyga yozadi: bunday o'quvchida «Qoldi» shu summagacha ortiq chiqadi.
+- «To'landi» balansdan chiqariladi, kassadan emas: pulsiz yopilgan hisob (qarz
+  kechirish, qo'lda kredit) ham «to'landi» ga tushadi, shuning uchun u shu oy
+  kassaga kirgan pulga teng bo'lishi shart emas.
 - «Qarzdorlik» hali bitta raqam; ikki raqam — A2 ning 2-qismi.
 - «Oy oxiriga kutilyapti» hisoblanishda davom etadi: «Foyda tarkibi»
   prognozi va kunlik snapshot uni o'qiydi.
