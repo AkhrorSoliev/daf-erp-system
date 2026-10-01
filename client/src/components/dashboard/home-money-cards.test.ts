@@ -68,22 +68,26 @@ describe("HomeMoneyCards — the month card", () => {
     expect(text).not.toContain("Bu oy hisoblandi");
   });
 
-  it("charged but nothing paid yet reads 0%, not «to'lov yo'q»", () => {
+  it("charged but nothing paid yet reads 0%, not «hisob yozilmagan»", () => {
     const text = render({
       ...money,
       monthCharges: { charged: 900_000, paid: 0, unpaid: 900_000, paidPct: 0 },
     });
 
     expect(text).toContain(`Bu oy hisoblandi ${fmt(900_000)} to'landi 0%`);
+    expect(text).not.toContain("hisob yozilmagan");
   });
 
-  it("nothing charged has no percentage to print", () => {
+  // The drill-down says the same words (income-attribution-panel.test.ts):
+  // «to'lov yo'q» read as «charged, nobody paid», which is not this state.
+  it("nothing charged says «hisob yozilmagan», with no percentage to print", () => {
     const text = render({
       ...money,
       monthCharges: { charged: 0, paid: 0, unpaid: 0, paidPct: null },
     });
 
-    expect(text).toContain(`Bu oy hisoblandi ${fmt(0)} to'lov yo'q`);
+    expect(text).toContain(`Bu oy hisoblandi ${fmt(0)} hisob yozilmagan`);
+    expect(text).not.toContain("to'lov yo'q");
     expect(text).not.toContain("null");
   });
 });

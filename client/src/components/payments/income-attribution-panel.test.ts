@@ -34,8 +34,8 @@ const attribution = (start: string, end: string) => ({
   collectionPct: 87.5,
 });
 
-/** Visible text of the panel over a cache that already holds the attribution. */
-function render(
+/** Markup of the panel over a cache that already holds the attribution. */
+function renderHtml(
   props: Partial<ComponentProps<typeof IncomeAttributionPanel>> = {},
   range: [string, string] = ["2026-10-01", "2026-10-31"],
 ): string {
@@ -46,19 +46,25 @@ function render(
     ["income-month-attribution", undefined, startDate, endDate],
     attribution(startDate, endDate),
   );
-  return norm(
-    renderToStaticMarkup(
+  return renderToStaticMarkup(
+    createElement(
+      QueryClientProvider,
+      { client },
       createElement(
-        QueryClientProvider,
-        { client },
-        createElement(
-          TooltipProvider,
-          null,
-          createElement(IncomeAttributionPanel, { startDate, endDate, ...props }),
-        ),
+        TooltipProvider,
+        null,
+        createElement(IncomeAttributionPanel, { startDate, endDate, ...props }),
       ),
     ),
   );
+}
+
+/** Visible text of the same markup. */
+function render(
+  props: Partial<ComponentProps<typeof IncomeAttributionPanel>> = {},
+  range: [string, string] = ["2026-10-01", "2026-10-31"],
+): string {
+  return norm(renderHtml(props, range));
 }
 
 function norm(html: string): string {
@@ -134,11 +140,41 @@ describe("IncomeAttributionPanel — which collection measure shows", () => {
     expect(text).not.toContain("Oy rejasidan yig'ildi");
   });
 
-  it("nothing charged (no percentage) reads 0%, not blank", () => {
-    const text = render({
-      monthCharges: { ...charges, charged: 0, paid: 0, unpaid: 0, paidPct: null },
+  // «Hech narsa hisoblanmagan» bir xil aytiladi (bosh sahifa kartasi ham):
+  // «0%» esa «hisoblandi, lekin to'lanmadi» degani.
+  const NOTHING_CHARGED: MonthCharges = {
+    ...charges,
+    charged: 0,
+    paid: 0,
+    unpaid: 0,
+    paidPct: null,
+  };
+
+  it("nothing charged says «hisob yozilmagan», not 0%, and draws no bar fill", () => {
+    const html = renderHtml({ monthCharges: NOTHING_CHARGED });
+    const text = norm(html);
+
+    expect(text).toContain("To'landi hisob yozilmagan");
+    expect(text).not.toContain("To'landi 0%");
+    // The blue fill belongs to the «To'landi» bar alone; the track stays empty.
+    expect(html).not.toContain("bg-blue-500");
+  });
+
+  it("charged but nothing paid yet still reads 0%, with its bar", () => {
+    const html = renderHtml({
+      monthCharges: { ...charges, paid: 0, unpaid: 900_000, paidPct: 0 },
     });
+    const text = norm(html);
 
     expect(text).toContain("To'landi 0%");
+    expect(text).not.toContain("hisob yozilmagan");
+    expect(html).toContain("bg-blue-500");
+  });
+
+  it("a part-paid month draws the bar at the server's percentage", () => {
+    const html = renderHtml({ monthCharges: charges });
+
+    expect(norm(html)).toContain("To'landi 38.9%");
+    expect(html).toContain("width:38.9%");
   });
 });

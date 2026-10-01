@@ -236,20 +236,32 @@ export function IncomeAttributionPanel({
           </div>
 
           {/* Oylik to'lov oyi (ADR-0058): yig'im = to'landi ÷ hisoblandi —
-              «Oy to'lovlari» kartasi bilan bir xil raqamlar, serverdan. */}
+              «{Oy} to'lovlari» kartasi bilan bir xil raqamlar, serverdan.
+              Hech narsa hisoblanmagan oyda (`paidPct === null`) foiz yo'q:
+              «0%» «hisoblandi, lekin to'lanmadi» deb o'qilardi, shuning
+              uchun bu yerda «hisob yozilmagan» turadi va chiziq bo'sh qoladi.
+              Bosh sahifa kartasi ham xuddi shu so'zni aytadi. */}
           {monthCharges && isSingleMonth && (
             <div className="rounded-lg border bg-card p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium">To&apos;landi</span>
-                <span className="text-sm font-semibold tabular-nums">
-                  {monthCharges.paidPct ?? 0}%
-                </span>
+                {monthCharges.paidPct === null ? (
+                  <span className="text-sm text-muted-foreground">
+                    hisob yozilmagan
+                  </span>
+                ) : (
+                  <span className="text-sm font-semibold tabular-nums">
+                    {monthCharges.paidPct}%
+                  </span>
+                )}
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-blue-500"
-                  style={{ width: `${Math.min(monthCharges.paidPct ?? 0, 100)}%` }}
-                />
+                {monthCharges.paidPct !== null && (
+                  <div
+                    className="h-full rounded-full bg-blue-500"
+                    style={{ width: `${Math.min(monthCharges.paidPct, 100)}%` }}
+                  />
+                )}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
                 {monthShort(monthCharges.month)} hisobi{" "}

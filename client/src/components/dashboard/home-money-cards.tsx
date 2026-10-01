@@ -82,7 +82,7 @@ export function HomeMoneyCards({ money }: { money: DashboardMoney }) {
           hint={
             money.monthCharges.paidPct !== null
               ? `to'landi ${money.monthCharges.paidPct}%`
-              : "to'lov yo'q"
+              : "hisob yozilmagan"
           }
           tooltip="Shu oy uchun o'quvchilarga yozilgan oylik hisoblar. To'landi — shundan to'langan qismi."
           href="/payments/overview"
