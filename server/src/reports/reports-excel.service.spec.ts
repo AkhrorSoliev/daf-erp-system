@@ -792,6 +792,30 @@ describe('ReportsExcelService', () => {
       expect(text).not.toContain('Oyning boshida yozilgan oylik hisoblar');
     });
 
+    it('«Izoh» defines the rows block 4 prints, under the names it prints them by', async () => {
+      const wb = await buildWorkbook({}, october);
+      // Excel's own «find» tells ‘ from ', so both sheets are read on one.
+      const plain = (s: string) => s.replace(/[‘’]/g, "'");
+      const sheet = plain(allText(wb.getWorksheet('Xulosa')!));
+      const glossaryRow = findRow(
+        wb.getWorksheet('Izoh')!,
+        'Oy hisobi (oylik hisob)',
+      );
+      expect(glossaryRow).toBeTruthy();
+      const entry = plain(cellText(glossaryRow.getCell(2).value));
+
+      // The first row is the month's name + «hisobi»; the glossary names it by
+      // that suffix and gives the example the sheet shows.
+      expect(sheet).toContain('Oktabr 2026 hisobi');
+      expect(entry).toContain('Oktabr 2026 hisobi');
+      // The two rows below it are quoted exactly as printed.
+      for (const label of ["shundan to'langan", "to'lanmagan"]) {
+        expect(sheet).toContain(label);
+        expect(entry).toContain(label);
+      }
+      expect(sheet).not.toContain('Bu oy hisoblandi');
+    });
+
     it('September is the first monthly month', async () => {
       const wb = await buildWorkbook(
         {},
@@ -1174,18 +1198,31 @@ describe('ReportsExcelService', () => {
       expect(joined).not.toContain('Balanslashuv farqi');
     });
 
-    it('«Izoh» explains «Bu oy hisoblandi» and dates the old month-end forecast', async () => {
+    it('«Izoh» explains the monthly bill under the name block 4 prints and dates the old month-end forecast', async () => {
       const wb = await buildWorkbook({});
       const defs = new Map<string, string>();
       wb.getWorksheet('Izoh')!.eachRow((r) =>
         defs.set(cellText(r.getCell(1).value), cellText(r.getCell(2).value)),
       );
-      expect(defs.get('Bu oy hisoblandi')).toContain(
-        "shu oy uchun o'quvchilarga yozilgan oylik hisoblar yig'indisi",
+      // «Bu oy hisoblandi» is the home page's and Telegram's label; no row of
+      // this workbook carries it, so the glossary must not define it.
+      expect(defs.has('Bu oy hisoblandi')).toBe(false);
+      expect(defs.get('Oy hisobi (oylik hisob)')).toContain(
+        'shu oy uchun o‘quvchilarga yozilgan oylik hisoblar yig‘indisi',
       );
       expect(defs.get('Oy oxiriga kutilyapti')).toContain(
-        "(2026-yil sentabrgacha bo'lgan oylar)",
+        '(2026-yil sentabrgacha bo‘lgan oylar)',
       );
+    });
+
+    it('«Izoh» definitions write the apostrophe one way, ‘ — never a typewriter one', async () => {
+      const wb = await buildWorkbook({});
+      const typewriter: string[] = [];
+      wb.getWorksheet('Izoh')!.eachRow((r) => {
+        const def = cellText(r.getCell(2).value);
+        if (def.includes("'")) typewriter.push(def);
+      });
+      expect(typewriter).toEqual([]);
     });
 
     it('«Xonalar bandligi» states its window as a dated "Bugungi holat"', async () => {

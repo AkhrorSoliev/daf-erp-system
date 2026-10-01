@@ -409,12 +409,16 @@ export function glossarySheet(wb: Workbook) {
   // are gone; a reader who needs this sheet is not a bookkeeper.
   const terms: [string, string][] = [
     [
-      'Bu oy hisoblandi',
-      "Oylik to'lov tizimidagi oy (2026-yil sentabrdan): shu oy uchun o'quvchilarga yozilgan oylik hisoblar yig'indisi. «To'langan» — shundan to'langani, «to'lanmagan» — hali to'lanmagani. To'lov avval eng eski qarzni yopadi.",
+      // Named after the row «Xulosa» block 4 prints from the first monthly
+      // month — `{Oy Yil} hisobi`, then «shundan to'langan» / «to'lanmagan» —
+      // not after the home page's and Telegram's «Bu oy hisoblandi», which no
+      // row of this workbook carries. The glossary has no month, hence «Oy».
+      'Oy hisobi (oylik hisob)',
+      '«Xulosa» 4-blokining birinchi qatori, masalan «Oktabr 2026 hisobi» (2026-yil sentabrdan oylik to‘lov tizimidagi oylar): shu oy uchun o‘quvchilarga yozilgan oylik hisoblar yig‘indisi. Uning ostidagi «shundan to‘langan» — shundan to‘langani (qarz kechirilgani ham shu yerda), «to‘lanmagan» — hali to‘lanmagani. To‘lov avval eng eski qarzni yopadi.',
     ],
     [
       'Oy oxiriga kutilyapti',
-      "Shu oy allaqachon o‘tilgan darslar qiymati + kalendar bo‘yicha oy oxirigacha qolgan darslar qiymati. Bu kassa bashorati EMAS — pul qachon kelishi bunga kirmaydi. (2026-yil sentabrgacha bo'lgan oylar)",
+      'Shu oy allaqachon o‘tilgan darslar qiymati + kalendar bo‘yicha oy oxirigacha qolgan darslar qiymati. Bu kassa bashorati EMAS — pul qachon kelishi bunga kirmaydi. (2026-yil sentabrgacha bo‘lgan oylar)',
     ],
     [
       "O'tilgan darslar qiymati",
