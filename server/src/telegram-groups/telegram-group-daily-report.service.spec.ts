@@ -1,8 +1,10 @@
+import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryMonthlyService } from '../salary/salary-monthly.service';
 import { ReportsService } from '../reports/reports.service';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
+import { formatSum } from './utils/format.util';
 
 /**
  * State the fake Prisma reads from. Each field maps to one metric so a test
@@ -164,6 +166,10 @@ function makePrisma(state: State) {
     },
     user: { findFirst: jest.fn(async () => state.ceo) },
     unmarkedLesson: { count: jest.fn(async () => state.staleUnmarked ?? 0) },
+    // Only a branch-scoped run names its scope in the header.
+    branch: {
+      findMany: jest.fn(async () => [{ id: 2, name: 'Namangan filiali' }]),
+    },
   };
 }
 
@@ -750,5 +756,150 @@ describe('TelegramGroupDailyReportService — canonical Sof foyda', () => {
       1,
       expect.objectContaining({ month: '2026-07' }),
     );
+  });
+});
+
+/**
+ * ADR-0058: from 2026-09 every course is paid monthly, so the month's headline
+ * is what was CHARGED — «Bu oy hisoblandi / To'landi / Qoldi» from
+ * `ReportsService.getMonthCharges`. The lesson-based collection and month-end
+ * lines it replaces stay for the months before it.
+ */
+describe('TelegramGroupDailyReportService — «Bu oy hisoblandi» (ADR-0058)', () => {
+  // 21:00 Tashkent on 8 October 2026 — a monthly-billing month.
+  const OCTOBER = new Date('2026-10-08T16:00:00Z');
+  const monthCharges = {
+    month: '2026-10',
+    charged: 177_000_000,
+    paid: 135_900_000,
+    unpaid: 41_100_000,
+    paidPct: 76.8,
+    students: 237,
+  };
+  // The message is `lines.join('\n')`, so the three lines are ONE contiguous
+  // block and a single `toContain` checks the wording and the order. `formatSum`
+  // rather than a literal: its thousands separator is a non-breaking space.
+  const chargesBlock = [
+    `• Bu oy hisoblandi: <b>${formatSum(177_000_000)}</b>`,
+    `• To'landi: <b>${formatSum(135_900_000)}</b> (<b>76.8%</b>)`,
+    `• Qoldi: <b>${formatSum(41_100_000)}</b>`,
+  ].join('\n');
+
+  /**
+   * Everything the OLD lines are built from is present, so their absence from
+   * the October message is the feature's doing and not a thin mock's.
+   */
+  function reportsMock(overrides: Record<string, unknown> = {}) {
+    return {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getIncomeMonthAttribution: jest.fn().mockResolvedValue({
+        total: 142_000_000,
+        currentMonth: 142_000_000,
+        lateTotal: 0,
+        late: [],
+        lessonsValue: 173_783_991,
+        collectionPct: 82,
+      }),
+      getMonthlyExpectation: jest
+        .fn()
+        .mockResolvedValue({ expectedValue: 155_765_411 }),
+      getMonthCharges: jest.fn().mockResolvedValue(monthCharges),
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(OCTOBER);
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it("prints hisoblandi / to'landi / qoldi after «Shu oyning darslari» and drops the lesson-based lines", async () => {
+    const state = defaultState();
+    const reports = reportsMock();
+    const service = await buildService(
+      makePrisma(state),
+      makeSalary(state),
+      reports,
+    );
+
+    const { message } = await service.build(1001, null);
+
+    expect(message).toContain(chargesBlock);
+    // «Shu oyning darslari» (revenue recognised so far) stays; the block follows it.
+    const lessons = message.indexOf('• Shu oyning darslari:');
+    expect(lessons).toBeGreaterThan(-1);
+    expect(message.indexOf(chargesBlock)).toBeGreaterThan(lessons);
+    // The three lines it replaces.
+    expect(message).not.toContain('Oy oxiriga kutilyapti');
+    expect(message).not.toContain("Oy rejasidan yig'ildi");
+    expect(message).not.toContain("Shundan yig'ildi");
+    expect(reports.getMonthCharges).toHaveBeenCalledWith(1001, {
+      month: '2026-10',
+      branchIds: null,
+    });
+  });
+
+  it("asks for the charges of the group's own branches", async () => {
+    const state = defaultState();
+    const reports = reportsMock();
+    const service = await buildService(
+      makePrisma(state),
+      makeSalary(state),
+      reports,
+    );
+
+    await service.build(1001, [2]);
+
+    expect(reports.getMonthCharges).toHaveBeenCalledWith(1001, {
+      month: '2026-10',
+      branchIds: [2],
+    });
+  });
+
+  it('drops the three lines, warns and still sends the report when getMonthCharges fails', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    try {
+      const state = defaultState();
+      const service = await buildService(
+        makePrisma(state),
+        makeSalary(state),
+        reportsMock({
+          getMonthCharges: jest.fn().mockRejectedValue(new Error('boom')),
+        }),
+      );
+
+      const { message } = await service.build(1001, null);
+
+      expect(message).not.toContain('Bu oy hisoblandi');
+      expect(message).not.toContain('Qoldi:');
+      // The rest of the report is sent, the month block included — with no
+      // charges to print it stays as it was before the monthly months.
+      expect(message).toContain('Tushum (haqiqiy)');
+      expect(message).toContain("Shundan yig'ildi");
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Oy hisoblari olinmadi: boom'),
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('keeps the lesson-based lines for a month before 2026-09 and never asks for charges', async () => {
+    jest.setSystemTime(new Date('2026-08-12T16:00:00Z'));
+    const state = defaultState();
+    const reports = reportsMock();
+    const service = await buildService(
+      makePrisma(state),
+      makeSalary(state),
+      reports,
+    );
+
+    const { message } = await service.build(1001, null);
+
+    expect(reports.getMonthCharges).not.toHaveBeenCalled();
+    expect(message).toContain("Shundan yig'ildi");
+    expect(message).toContain('Oy oxiriga kutilyapti');
+    expect(message).toContain("Oy rejasidan yig'ildi");
+    expect(message).not.toContain('Bu oy hisoblandi');
   });
 });

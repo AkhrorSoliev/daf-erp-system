@@ -3,6 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SalaryMonthlyService } from '../salary/salary-monthly.service';
 import { ReportsService } from '../reports/reports.service';
 import {
+  isMonthlyBillingMonth,
+  type MonthCharges,
+} from '../reports/month-charges';
+import {
   branchIdWhere,
   groupBranchWhere,
   singleBranchId,
@@ -22,6 +26,7 @@ import {
   tashkentTodayDate,
 } from './utils/format.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
+import { buildMonthChargesLines } from './utils/month-charges-lines.util';
 
 /**
  * Builds the once-a-day 21:00 Telegram daily report — the center's end-of-day
@@ -37,7 +42,10 @@ import { buildIncomeSplitLines } from './utils/income-split.util';
  *   🎓 Bugungi o'quv jarayoni — lessons held + attendance breakdown
  *   📌 Hozirgi holat        — active students + debt (with day-over-day ▲/▼)
  *   📅 Oy boshidan          — MTD income (+ this-month / old-debt split, per
- *                             month) / expense / net + lesson collection %
+ *                             month) / expense / net + lesson collection %;
+ *                             from 2026-09 «Bu oy hisoblandi / To'landi /
+ *                             Qoldi» take the place of the lesson-based
+ *                             collection % and the month-end lines
  *   💵 Ustozlar oyligi      — deserved / students-paid / center-funded, MTD
  *   🚩 Diqqat               — self-suppressing flags (refund / write-off / …)
  *
@@ -61,6 +69,12 @@ import { buildIncomeSplitLines } from './utils/income-split.util';
  *    whole month. It answers "are we on track", which the held-lessons ratio
  *    cannot — that one can read 50% on the 5th. Same pair of figures the
  *    /payments/overview income drill-down shows, so the two cannot disagree.
+ *  - "Bu oy hisoblandi" / "To'landi" / "Qoldi" = what the month's monthly
+ *    charges came to, how much of it is paid and what is still owed, from
+ *    `ReportsService.getMonthCharges` (ADR-0058). Printed from 2026-09 on, in
+ *    place of "Shundan yig'ildi", "Oy oxiriga kutilyapti" and "Oy rejasidan
+ *    yig'ildi" ("Shu oyning darslari" stays). Before 2026-09, or when the call
+ *    fails, those three lines stay as they were. Never re-derive it here.
  *  - "Markaz qo'shimchasi" = SalaryMonthly `centerFunded` — the center's own
  *    leg of the month: top-up accruals it has already written PLUS the lessons
  *    it still has to front. It does NOT drop to 0 once the month is settled.
@@ -356,12 +370,13 @@ export class TelegramGroupDailyReportService {
     // wrapped so a failure degrades gracefully rather than killing the report).
     // Tashkent calendar month of "today" — the window the MTD block reports on.
     const monthKey = tashkentTodayDate().toISOString().slice(0, 7);
-    const [expectedValue, salary, canonicalNet, attribution] =
+    const [expectedValue, salary, canonicalNet, attribution, monthCharges] =
       await Promise.all([
         this.computeExpectation(companyId, monthKey, branchIds),
         this.computeSalaryTopUp(companyId, branchIds),
         this.computeCanonicalNetProfit(companyId, monthKey, branchIds),
         this.computeIncomeAttribution(companyId, branchIds),
+        this.computeMonthCharges(companyId, monthKey, branchIds),
       ]);
 
     // ── Derive figures ────────────────────────────────────────────────────
@@ -525,11 +540,18 @@ export class TelegramGroupDailyReportService {
       lines.push(
         `• Shu oyning darslari: <b>${formatSum(attribution.lessonsValue)}</b>`,
       );
-      lines.push(
-        `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth)}</b> (<b>${attribution.pct}%</b>)`,
-      );
+      // From 2026-09 the month's own «Bu oy hisoblandi / To'landi / Qoldi»
+      // (below) carry the collection reading, so the lesson-based ratio goes.
+      if (!monthCharges) {
+        lines.push(
+          `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth)}</b> (<b>${attribution.pct}%</b>)`,
+        );
+      }
     }
-    if (expectedValue !== null && expectedValue > 0) {
+    if (monthCharges) {
+      // Same lines, same wording as the «Moliyaviy xulosa» card (ADR-0058).
+      for (const line of buildMonthChargesLines(monthCharges)) lines.push(line);
+    } else if (expectedValue !== null && expectedValue > 0) {
       // Lesson value, from the ONE canonical source. The line it replaces was a
       // local `exactDays × 4` walk — a second implementation of a figure the web
       // page also computed, and both were wrong the same way.
@@ -764,6 +786,24 @@ export class TelegramGroupDailyReportService {
       this.logger.warn(
         `Expectation failed for company ${companyId} (${month}): ${err?.message ?? err}`,
       );
+      return null;
+    }
+  }
+
+  /** «Bu oy hisoblandi / To'landi / Qoldi» (ADR-0058); null before 2026-09 or on failure. */
+  private async computeMonthCharges(
+    companyId: number,
+    month: string,
+    branchIds: ReportBranchIds,
+  ): Promise<MonthCharges | null> {
+    if (!isMonthlyBillingMonth(month)) return null;
+    try {
+      return await this.reports.getMonthCharges(companyId, {
+        month,
+        branchIds,
+      });
+    } catch (err: any) {
+      this.logger.warn(`Oy hisoblari olinmadi: ${err?.message ?? err}`);
       return null;
     }
   }

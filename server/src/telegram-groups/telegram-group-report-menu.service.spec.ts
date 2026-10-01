@@ -1,5 +1,7 @@
+import { Logger } from '@nestjs/common';
 import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
 import type { ReportsService } from '../reports/reports.service';
+import { formatSum } from './utils/format.util';
 
 function makeCtx(chatId = 111) {
   return {
@@ -20,6 +22,7 @@ function makeDeps(
     systemStartDate?: Date | null;
     branchId?: number | null;
     receivesAllBranches?: boolean;
+    reports?: Record<string, jest.Mock>;
   } = {},
 ) {
   const prisma: any = {
@@ -69,14 +72,15 @@ function makeDeps(
       netProfit: 185_000_000,
     }),
   };
-  // `ReportsService` is deliberately absent: the financial card must degrade
-  // to the honestly-labelled cash line when the canonical net profit cannot be
-  // computed, and one of the tests below asserts exactly that.
+  // `ReportsService` is absent unless a test passes `reports`: the financial
+  // card must degrade to the honestly-labelled cash line when the canonical net
+  // profit cannot be computed, and to a card without its month line when the
+  // month's figure cannot be read — the default tests below rely on both.
   const service = new TelegramGroupReportMenuService(
     prisma,
     reportsExcel,
     reportsFinancial,
-    null as unknown as ReportsService,
+    (overrides.reports ?? null) as unknown as ReportsService,
   );
   return { service, prisma, reportsExcel, reportsFinancial };
 }
@@ -383,6 +387,102 @@ describe('TelegramGroupReportMenuService', () => {
     // The card keeps its own income figure and simply loses the split.
     expect(text).toContain("• Tushum (haqiqiy): <b>280 000 000 so'm</b>");
     expect(text).not.toContain('Shu oy uchun');
+  });
+
+  // ADR-0058: from 2026-09 the card's month line is «Bu oy hisoblandi / To'landi
+  // / Qoldi»; before it, «Oy oxiriga kutilyapti» — now read from the reports
+  // facade (A2.2: the card printed `getFinancialOverview().income.expected`,
+  // which the raw service hard-codes to 0).
+  describe('the month line', () => {
+    const monthCharges = {
+      month: '2026-10',
+      charged: 177_000_000,
+      paid: 135_900_000,
+      unpaid: 41_100_000,
+      paidPct: 76.8,
+      students: 237,
+    };
+    // `formatSum`, not a literal: its thousands separator is a non-breaking space.
+    const chargesBlock = [
+      `• Bu oy hisoblandi: <b>${formatSum(177_000_000)}</b>`,
+      `• To'landi: <b>${formatSum(135_900_000)}</b> (<b>76.8%</b>)`,
+      `• Qoldi: <b>${formatSum(41_100_000)}</b>`,
+    ].join('\n');
+    const reportsWith = (overrides: Record<string, jest.Mock> = {}) => ({
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 12_345_678 }),
+      getMonthCharges: jest.fn().mockResolvedValue(monthCharges),
+      getMonthlyExpectation: jest
+        .fn()
+        .mockResolvedValue({ expectedValue: 150_000_000 }),
+      ...overrides,
+    });
+
+    it("prints hisoblandi / to'landi / qoldi for October 2026, for the group's branch", async () => {
+      jest.setSystemTime(new Date('2026-10-08T16:00:00Z'));
+      const reports = reportsWith();
+      const { service } = makeDeps({ branchId: 1, reports });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      const text = ctx.reply.mock.calls[0][0] as string;
+      expect(text).toContain(chargesBlock);
+      // Neither the old line nor its hard-coded 0.
+      expect(text).not.toContain('Oy oxiriga kutilyapti');
+      expect(reports.getMonthCharges).toHaveBeenCalledWith(1001, {
+        month: '2026-10',
+        branchIds: [1],
+      });
+      expect(reports.getMonthlyExpectation).not.toHaveBeenCalled();
+    });
+
+    it('prints the real «Oy oxiriga kutilyapti» before 2026-09, not the raw 0', async () => {
+      jest.setSystemTime(new Date('2026-08-12T16:00:00Z'));
+      const reports = reportsWith();
+      const { service } = makeDeps({ reports });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      const text = ctx.reply.mock.calls[0][0] as string;
+      expect(text).toContain(
+        `• Oy oxiriga kutilyapti: <b>${formatSum(150_000_000)}</b>`,
+      );
+      expect(text).not.toContain('Bu oy hisoblandi');
+      expect(reports.getMonthlyExpectation).toHaveBeenCalledWith(1001, {
+        month: '2026-08',
+        branchIds: null,
+      });
+      expect(reports.getMonthCharges).not.toHaveBeenCalled();
+    });
+
+    it('still sends the card, without the month line, when the figure cannot be read', async () => {
+      jest.setSystemTime(new Date('2026-10-08T16:00:00Z'));
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      try {
+        const { service } = makeDeps({
+          reports: reportsWith({
+            getMonthCharges: jest.fn().mockRejectedValue(new Error('boom')),
+          }),
+        });
+        const ctx = makeCtx();
+
+        await service.sendFinancialCard(ctx);
+
+        // One message, and it is the card — not the «Ma'lumot yuklanmadi» apology.
+        expect(ctx.reply).toHaveBeenCalledTimes(1);
+        const text = ctx.reply.mock.calls[0][0] as string;
+        expect(text).toContain('Moliyaviy xulosa');
+        expect(text).toContain('Tushum (haqiqiy)');
+        expect(text).not.toContain('Bu oy hisoblandi');
+        expect(text).not.toContain('Oy oxiriga kutilyapti');
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('boom'));
+      } finally {
+        warn.mockRestore();
+      }
+    });
   });
 
   it('openMenu posts a fresh menu message with the root keyboard', async () => {
