@@ -94,7 +94,8 @@ Spec A2 ning 4-bandi (qarz ikki raqam) — alohida reja
    bekor qilingan juftning ikkala qatori ham tashqarida qoladi:
    - **sof foyda** (`getPeriodOutflows`): `refunds = 0 − Σ` (kuchdagi REFUND
      manfiy), kechirish izohi — oddiy musbat Σ (kuchdagi DEBT_WRITE_OFF —
-     kredit); `Math.abs` yo'q; `NET_PROFIT_CACHE_VERSION = 'v5'`. To'lov
+     kredit); `Math.abs` yo'q; sof foyda keshi `NET_PROFIT_CACHE_VERSION`
+     `'v4'` dan `'v5'` ga oshirildi (ADR-0055 hali `v4` deydi). To'lov
      hisobotlaridagi qaytarish ham `0 − Σ`;
    - **Telegram 21:00 🚩** (bugungi REFUND / DEBT_WRITE_OFF / katta
      ADJUSTMENT);
@@ -118,10 +119,14 @@ Spec A2 ning 4-bandi (qarz ikki raqam) — alohida reja
    narsa. `mainBranch` i bo'sh, lekin `UserBranch` qatori bor xodim endi
    to'plamdan oylikni ko'radi: ADR-0002 bunday xodimning bo'sh ekranini
    ataylab to'lanadigan narx degan edi — ADR-0002 ning o'sha qismi va
-   `PayrollBranchScope` turi shu ADR bilan o'zgardi. Oylik **to'lash**
-   (`payPayment`, `batchPay`) va to'lovlar matritsasi (`getMatrix`)
-   to'lovchining asosiy filialida qoladi; `mainBranch` bo'sh bo'lsa
-   `payPayment` rad etadi. Fail-closed tamoyili o'zgarmaydi.
+   `PayrollBranchScope` turi shu ADR bilan o'zgardi. Uning fail-closed
+   tamoyili (`none` — hech narsa) o'zgarmaydi. Oylik **to'lash**
+   (`payPayment`, `batchPay`) to'lovchining asosiy filialida qoladi;
+   `mainBranch` bo'sh bo'lsa ikkalasi ham rad etadi. To'lovlar matritsasi
+   (`getMatrix`) bu turni o'qimaydi: o'zining `mainBranch` filtri bu ADR
+   bilan o'zgarmagan va u fail-closed emas — Administrator va `mainBranch`
+   i bo'sh direktor u yerda hamma filialni ko'radi (alohida xavfsizlik
+   vazifasi).
 7. **To'lov oynasi va kurs turi.** «Keyingi oy» summasi ACTIVE va FORMING
    guruhlardagi yozilishlarni sanaydi, PAUSED ni emas: oylik hisob PAUSED
    guruhni hisoblamaydi, FORMING esa boshlanish kuni ACTIVE bo'lib
@@ -153,8 +158,8 @@ Spec A2 ning 4-bandi (qarz ikki raqam) — alohida reja
   oylik to'lovda noto'g'ri raqamlar; qatorsiz blok to'g'ri, eski qatorli blok
   — yo'q.
 - **To'lashni ham to'plamga kengaytirish.** Hozircha yo'q: hisobot tuzatishi
-  pul vakolatini kengaytirmasin. `payPayment`, `batchPay` va `getMatrix`
-  birga, alohida qaror bilan o'zgaradi.
+  pul vakolatini kengaytirmasin. `payPayment` va `batchPay` birga, alohida
+  qaror bilan o'zgaradi.
 - **«Keyingi oy» da faqat ACTIVE guruh.** Rad etildi: birinchi to'lov aynan
   FORMING guruhdagi yangi o'quvchidan olinadi.
 
