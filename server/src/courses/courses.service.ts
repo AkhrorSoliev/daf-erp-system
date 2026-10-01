@@ -1,9 +1,10 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CourseStatus } from '@prisma/client';
+import { CourseStatus, EnrollmentStatus, PaymentModel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { tashkentDateStr } from '../common/date/tashkent';
 import { courseScheduleSummary } from './course-schedule-summary';
@@ -65,6 +66,33 @@ export class CoursesService {
     if (scope.kind !== 'all') {
       throw new ForbiddenException(
         'Bu kurs hech bir filialga biriktirilmagan — u bilan faqat CEO ishlay oladi',
+      );
+    }
+  }
+
+  /**
+   * Refuse switching a lesson-pack course to monthly while students still hold
+   * lessons they paid for and have not taken.
+   *
+   * `prepaidLessonsRemaining` belongs to the lesson-pack model. A monthly
+   * course never reads or writes it, but refunds still do, so a counter left
+   * behind keeps quoting money the monthly charge does not hold. Releasing
+   * those lessons to the balance, or writing them off, moves money and is the
+   * CEO's decision — until then the switch is refused instead of leaving stale
+   * counters. A FROZEN enrollment is still the student's, so it counts.
+   */
+  private async assertNoPrepaidLessonsLeft(courseId: string): Promise<void> {
+    const withPrepaid = await this.prisma.enrollment.count({
+      where: {
+        deletedAt: null,
+        status: { in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.FROZEN] },
+        prepaidLessonsRemaining: { gt: 0 },
+        group: { courseId, deletedAt: null },
+      },
+    });
+    if (withPrepaid > 0) {
+      throw new BadRequestException(
+        `Bu kursda oldindan to'langan darslari qolgan ${withPrepaid} ta o'quvchi bor. Avval ularning darslarini hal qiling, keyin kursni oylik to'lovga o'tkazing.`,
       );
     }
   }
@@ -225,6 +253,16 @@ export class CoursesService {
       throw new NotFoundException(`Kurs #${id} topilmadi`);
     }
     await this.assertCallerMayTouchCourse(userId, course.branchId);
+
+    // After the branch check, so a caller who may not touch the course never
+    // learns how many of its students hold prepaid lessons. Only the switch
+    // itself is checked: the edit form sends the model back on every save.
+    if (
+      dto.paymentModel === PaymentModel.MONTHLY &&
+      course.paymentModel === PaymentModel.LESSON_PACK
+    ) {
+      await this.assertNoPrepaidLessonsLeft(id);
+    }
 
     const updated = await this.prisma.course.update({
       where: { id },
