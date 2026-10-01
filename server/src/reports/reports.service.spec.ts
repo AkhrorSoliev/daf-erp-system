@@ -1327,10 +1327,10 @@ describe('ReportsService', () => {
       );
 
       expect(redis.get).toHaveBeenCalledWith(
-        'rpt:np:v4:1001:3,7:u10001:2026-08',
+        'rpt:np:v5:1001:3,7:u10001:2026-08',
       );
       expect(redis.setex).toHaveBeenCalledWith(
-        'rpt:np:v4:1001:3,7:u10001:2026-08',
+        'rpt:np:v5:1001:3,7:u10001:2026-08',
         expect.any(Number),
         '4200000',
       );

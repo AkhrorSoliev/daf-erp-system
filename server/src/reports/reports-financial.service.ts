@@ -1698,12 +1698,15 @@ export class ReportsFinancialService {
    * `getProfitLoss.netProfit` subtract today — the missing pieces the CEO's
    * "aniq sof foyda" needs. All read-only aggregates:
    *
-   *  • refunds       — cash physically returned to students (REFUND ledger rows,
-   *                    active only). A real cash outflow. `Payment` stays
-   *                    COMPLETED on a refund, so revenue is not reduced either →
-   *                    a pure un-subtracted outflow.
-   *  • writeOffs     — forgiven student debt (DEBT_WRITE_OFF). Non-cash, but a
-   *                    real loss of company value (uncollectable receivable).
+   *  • refunds       — cash physically returned to students (REFUND ledger rows
+   *                    still in force: a cancelled refund counts as nothing,
+   *                    neither its original nor its counter-row). A real cash
+   *                    outflow. `Payment` stays COMPLETED on a refund, so
+   *                    revenue is not reduced either → a pure un-subtracted
+   *                    outflow.
+   *  • writeOffs     — forgiven student debt (DEBT_WRITE_OFF rows still in
+   *                    force). Non-cash, but a real loss of company value
+   *                    (uncollectable receivable).
    *  • providerFees  — gateway (Payme/Click) commission retained from the inflow
    *                    (`Payment.providerFee`). Income counts the GROSS amount,
    *                    so the fee is money the center never receives.
@@ -1725,9 +1728,12 @@ export class ReportsFinancialService {
     const tsFilter = { gte: period.start, lte: period.endTs };
     const branchFilter = branchIdWhere(query.branchIds);
 
+    // Bekor qilish ikki qator yozadi — asl qator `reversedAt` bilan, qarshi
+    // qator `reversedTransactionId` bilan; ikkalasi ham chiqariladi, aks holda
+    // bekor qilingan qaytarish sof foydada qaytarish bo'lib qoladi.
     const [refundRows, writeOffAgg, providerFeeAgg] = await Promise.all([
-      // Active (non-reversed) REFUND rows — signed negative on the student
-      // ledger; take the magnitude of cash returned.
+      // Live REFUND rows — signed negative on the student ledger; the cash
+      // returned is their negation.
       // Branch-filtered since every ledger row now carries a branch (and the
       // historical rows were backfilled) — a branch's own refunds and
       // write-offs, not the company's, must reduce its profit.
@@ -1736,6 +1742,7 @@ export class ReportsFinancialService {
           companyId,
           type: TransactionType.REFUND,
           reversedAt: null,
+          reversedTransactionId: null,
           createdAt: tsFilter,
           ...branchFilter,
         },
@@ -1746,6 +1753,7 @@ export class ReportsFinancialService {
           companyId,
           type: TransactionType.DEBT_WRITE_OFF,
           reversedAt: null,
+          reversedTransactionId: null,
           createdAt: tsFilter,
           ...branchFilter,
         },
@@ -1763,8 +1771,12 @@ export class ReportsFinancialService {
       }),
     ]);
 
-    const refunds = Math.abs(refundRows.reduce((s, t) => s + t.amount, 0));
-    const writeOffs = Math.abs(writeOffAgg._sum.amount ?? 0);
+    // Not `Math.abs`: a wrong-signed total must stay visible, not turn into a
+    // refund. `0 - x` rather than `-x`, so an empty sum is 0 and not -0.
+    const refunds = 0 - refundRows.reduce((s, t) => s + t.amount, 0);
+    // A write-off CREDITS the student (positive), so unlike a refund it is read
+    // as it stands; the live-rows filter above leaves no negative counter-row.
+    const writeOffs = writeOffAgg._sum.amount ?? 0;
     const providerFees = providerFeeAgg._sum.providerFee ?? 0;
 
     return {

@@ -331,11 +331,15 @@ export class TelegramGroupDailyReportService {
       }),
       // One cheap groupBy powers the whole 🚩 Diqqat block: today's refunds,
       // debt write-offs and manual adjustments from the append-only ledger.
+      // Live rows only: cancelling writes a counter-row of the same type with
+      // `reversedTransactionId` set and `reversedAt: null`, so `reversedAt`
+      // alone would still report a refund that was undone.
       this.prisma.transaction.groupBy({
         by: ['type'],
         where: {
           companyId,
           reversedAt: null,
+          reversedTransactionId: null,
           createdAt: { gte: today.start, lt: today.end },
           type: { in: ['REFUND', 'DEBT_WRITE_OFF', 'ADJUSTMENT'] },
           ...branchIdWhere(branchIds),

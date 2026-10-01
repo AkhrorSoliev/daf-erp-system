@@ -19,11 +19,14 @@ import {
 const LINE_ITEM_CAP = 10_000;
 
 /**
- * Refunds as the ledger records them — the same rows the net-profit refund
- * figure subtracts (`getPeriodOutflows`). `Refund` carries no branch; its
- * REFUND transaction is stamped with the branch whose kassa paid it out.
- * Reversed originals and their compensating rows are both excluded, so an
- * undone refund counts as nothing. `lt`: the end bound is exclusive.
+ * Refunds as the ledger records them — the rows the net-profit refund figure
+ * subtracts (`getPeriodOutflows`). Both reads filter the same two columns:
+ * `reversedAt: null` leaves out a cancelled original, `reversedTransactionId:
+ * null` its counter-row, so an undone refund counts as nothing in either.
+ * They write the period end differently — `lt` the day after the last day
+ * here, `lte` that day's last millisecond there — which selects the same rows.
+ * `Refund` carries no branch; its REFUND transaction is stamped with the
+ * branch whose kassa paid it out.
  */
 function refundLedgerWhere(
   companyId: number,
@@ -334,7 +337,9 @@ export class ReportsPaymentsService {
     return {
       month: period.label,
       totalPayments: paymentsAgg._sum.amount ?? 0,
-      refunds: Math.abs(refundsAgg._sum.amount ?? 0),
+      // Live REFUND rows are negative: the cash returned is their negation.
+      // Not `Math.abs`, which would turn a wrong-signed total into a refund.
+      refunds: 0 - (refundsAgg._sum.amount ?? 0),
     };
   }
 

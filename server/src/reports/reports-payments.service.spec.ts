@@ -89,6 +89,21 @@ describe('ReportsPaymentsService.getPaymentReports — branch scope', () => {
     expect(out.refunds.count).toBe(2);
   });
 
+  it('turns the refund total into cash returned without Math.abs, so a wrong-signed sum stays visible', async () => {
+    // Live REFUND rows are negative. A positive total cannot occur once the
+    // counter-rows are left out; if it does it must read as a negative refund.
+    prisma.transaction.aggregate.mockResolvedValue({
+      _sum: { amount: 50_000 },
+    });
+
+    const out = await service.getPaymentReports(1001, {
+      ...september,
+      branchIds: [3],
+    });
+
+    expect(out.refunds.current).toBe(-50_000);
+  });
+
   it('counts refunds up to, not including, the day after the range', async () => {
     await service.getPaymentReports(1001, { ...september, branchIds: [3] });
 

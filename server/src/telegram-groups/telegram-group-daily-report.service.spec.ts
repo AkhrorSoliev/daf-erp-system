@@ -675,6 +675,29 @@ describe('TelegramGroupDailyReportService', () => {
     expect(message).toContain("Qaytarilgan to'lov: <b>200 000 so'm</b>");
   });
 
+  it("reads today's flags from live ledger rows only: a cancelled refund leaves both of its rows out", async () => {
+    const state = defaultState();
+    const prisma = makePrisma(state);
+    const service = await buildService(prisma, makeSalary(state));
+
+    await service.build(1001, null);
+
+    // Cancelling writes a counter-row of the SAME type (positive for a refund)
+    // with `reversedTransactionId` set and `reversedAt: null`; `reversedAt: null`
+    // alone keeps it, and the flag reports a refund that was undone.
+    expect(prisma.transaction.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        by: ['type'],
+        where: expect.objectContaining({
+          companyId: 1001,
+          type: { in: ['REFUND', 'DEBT_WRITE_OFF', 'ADJUSTMENT'] },
+          reversedAt: null,
+          reversedTransactionId: null,
+        }),
+      }),
+    );
+  });
+
   it("flags lessons waiting more than a day for «Dars bo'ldimi?»", async () => {
     const state = { ...defaultState(), staleUnmarked: 3 };
     const prisma = makePrisma(state);
