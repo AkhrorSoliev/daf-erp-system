@@ -9,8 +9,10 @@ import { HomeMoneyCards } from "./home-money-cards";
 
 const EXPECTED_MONTH_END = 176_200_000;
 
-// Qarz — ikki alohida raqam (ADR-0059). Hech qaysi son boshqasining jami
-// summasi emas, hisoblar soni esa pul summasiga teng emas.
+// Qarz — ikki alohida raqam (ADR-0059). `studying.total` —
+// `currentMonth + older` (bo'linma shunday quriladi), lekin ikki qarzning
+// yig'indisi sahifada hech qayerda chiqmasligi kerak; hisoblar soni esa pul
+// summasiga teng emas.
 const DEBT: DashboardMoney["debt"] = {
   studying: {
     total: 43_500_000,

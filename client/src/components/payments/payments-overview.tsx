@@ -30,7 +30,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { formatPrice } from "@/lib/format-utils";
+import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
@@ -81,9 +81,10 @@ interface FinancialOverview {
   monthCharges: MonthCharges | null;
   /**
    * What the centre is owed TODAY — the period does not change it. Never sent to
-   * Administrator/Cashier.
+   * Administrator/Cashier. Optional: the client goes live before the server,
+   * and a server older than ADR-0059 sends none — the block then draws «—».
    */
-  debtSplit: DebtSplit;
+  debtSplit?: DebtSplit;
   salary: {
     paid: number;
     pending: number;
@@ -259,10 +260,6 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
       expectedRemaining: 0,
     },
     monthCharges: null,
-    debtSplit: {
-      studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
-      notStudying: { total: 0, count: 0 },
-    },
     salary: { paid: 0, pending: 0, advances: 0, computed: null },
     expenses: 0,
     netProfit: 0,
@@ -284,15 +281,15 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     ...data,
     income: { ...empty.income, ...data?.income },
     forecast: { ...empty.forecast, ...data?.forecast },
-    debtSplit: {
-      studying: { ...empty.debtSplit.studying, ...data?.debtSplit?.studying },
-      notStudying: {
-        ...empty.debtSplit.notStudying,
-        ...data?.debtSplit?.notStudying,
-      },
-    },
     salary: { ...empty.salary, ...data?.salary },
   };
+  // No zero default for the debt: with no split (an older server, or a failed
+  // request) the block draws «—», as the home card and the debt page do. A
+  // zero would read as «nobody owes».
+  const debtSplit =
+    data?.debtSplit?.studying && data.debtSplit.notStudying
+      ? data.debtSplit
+      : null;
 
   // «Ustoz oyliklari» sarlavhasidagi oy — serverning oyi, umumiy `monthLabel`
   // yozilishida («Oktabr 2026»), «Moliya» kartasidagi `monthShort` bilan bir
@@ -612,7 +609,8 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
 
         {/* Qarzdorlik — bugungi qarz IKKI alohida raqamda (ADR-0059), ikkalasi
             backend `debtSplit`dan. Ular hech qayerda qo'shilmaydi: shuning uchun
-            «Jami qarz» va «O'rtacha qarz» qatorlari yo'q. */}
+            «Jami qarz» va «O'rtacha qarz» qatorlari yo'q. Javobda bo'linma
+            bo'lmasa (eski server yoki xato) ikkala qator «—», 🟡 qatori yo'q. */}
         <div className="rounded-xl border bg-card p-4 space-y-3">
           {/* Bu blok tanlangan davrga bog'liq EMAS — u bugungi holat. Yonidagi
               kartalar davr bo'yicha bo'lgani uchun buni aytib qo'yish shart,
@@ -651,13 +649,12 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                     <span
                       className={cn(
                         "ml-auto font-medium",
-                        d.debtSplit.studying.total > 0 && "text-red-600",
+                        debtSplit &&
+                          debtSplit.studying.total > 0 &&
+                          "text-red-600",
                       )}
                     >
-                      {formatPrice(d.debtSplit.studying.total)} so&apos;m
-                      <span className="ml-1 text-xs font-normal text-muted-foreground">
-                        ({d.debtSplit.studying.count} ta)
-                      </span>
+                      <DebtAmount debt={debtSplit?.studying ?? null} />
                     </span>
                   </div>
                 </TooltipTrigger>
@@ -667,9 +664,11 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                   qarz — qolgani.
                 </TooltipContent>
               </Tooltip>
-              <p className="text-right text-[10px] leading-tight text-muted-foreground">
-                {`🟡 shu oy ${formatPrice(d.debtSplit.studying.currentMonth)} · 🔴 eski qarz ${formatPrice(d.debtSplit.studying.older)}`}
-              </p>
+              {debtSplit && (
+                <p className="text-right text-[10px] leading-tight text-muted-foreground">
+                  {`🟡 shu oy ${formatPrice(debtSplit.studying.currentMonth)} · 🔴 eski qarz ${formatPrice(debtSplit.studying.older)}`}
+                </p>
+              )}
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -678,10 +677,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                     O&apos;qimayotganlar qarzi
                   </span>
                   <span className="ml-auto font-medium">
-                    {formatPrice(d.debtSplit.notStudying.total)} so&apos;m
-                    <span className="ml-1 text-xs font-normal text-muted-foreground">
-                      ({d.debtSplit.notStudying.count} ta)
-                    </span>
+                    <DebtAmount debt={debtSplit?.notStudying ?? null} />
                   </span>
                 </div>
               </TooltipTrigger>
@@ -785,6 +781,23 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
       />
       )}
     </div>
+  );
+}
+
+/** «X so'm (N ta)» for one of the two debts, or «—» when the server sent no split. */
+function DebtAmount({
+  debt,
+}: {
+  debt: { total: number; count: number } | null;
+}) {
+  if (!debt) return "—";
+  return (
+    <>
+      {formatPrice(debt.total)} so&apos;m
+      <span className="ml-1 text-xs font-normal text-muted-foreground">
+        ({formatNumber(debt.count)} ta)
+      </span>
+    </>
   );
 }
 
