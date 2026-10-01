@@ -68,6 +68,59 @@ describe('splitMonthCharges', () => {
     expect(r.paid).toBe(450_000);
   });
 
+  // The test above sits exactly on the boundary (debt == the later month's
+  // charge). These two stand on either side of it, so a mistake in HOW the
+  // later months are subtracted — not only WHETHER — fails.
+  it("debt above the later month's charge leaves the excess on this month", () => {
+    // Debt 600 000 = November's 450 000 (newest, unpaid first) + 150 000 of October.
+    const r = splitMonthCharges({
+      ...base,
+      rows: [row(1, '2026-10', 450_000), row(1, '2026-11', 450_000)],
+      balances: new Map([[1, -600_000]]),
+    });
+    expect(r.charged).toBe(450_000);
+    expect(r.unpaid).toBe(150_000);
+    expect(r.paid).toBe(300_000);
+    expect(r.paidPct).toBe(66.7);
+  });
+
+  it("debt below the later month's charge sits wholly on that month: this one owes nothing", () => {
+    // Debt 300 000 is less than November's 450 000, so none of it reaches October.
+    const r = splitMonthCharges({
+      ...base,
+      rows: [row(1, '2026-10', 450_000), row(1, '2026-11', 450_000)],
+      balances: new Map([[1, -300_000]]),
+    });
+    expect(r.unpaid).toBe(0);
+    expect(r.paid).toBe(450_000);
+    expect(r.paidPct).toBe(100);
+  });
+
+  it('every later month is set aside, across a year end too', () => {
+    // December 2026 with January 2027 ahead of it: 2027-01 is later although
+    // its month number is smaller. Debt 600 000 − 450 000 (January) = 150 000.
+    const r = splitMonthCharges({
+      month: '2026-12',
+      branchIds: null,
+      rows: [row(1, '2026-12', 450_000), row(1, '2027-01', 450_000)],
+      balances: new Map([[1, -600_000]]),
+    });
+    expect(r.unpaid).toBe(150_000);
+
+    // Two later months add up: 1 000 000 − (450 000 + 450 000) = 100 000.
+    const two = splitMonthCharges({
+      ...base,
+      rows: [
+        row(1, '2026-10', 450_000),
+        row(1, '2026-11', 450_000),
+        row(1, '2026-12', 450_000),
+      ],
+      balances: new Map([[1, -1_000_000]]),
+    });
+    expect(two.unpaid).toBe(100_000);
+    expect(two.paid).toBe(350_000);
+  });
+
   it('branch scope counts only that branch, debt split by the share of the month', () => {
     const r = splitMonthCharges({
       month: '2026-10',
@@ -110,11 +163,12 @@ describe('loadMonthCharges', () => {
       .fn()
       .mockResolvedValueOnce([{ studentId: 7 }])
       .mockResolvedValueOnce([row(7, '2026-10', 450_000, 3)]);
+    const studentFindMany = jest
+      .fn()
+      .mockResolvedValue([{ id: 7, balance: -50_000 }]);
     const prisma = {
       enrollmentMonthlyCharge: { findMany },
-      student: {
-        findMany: jest.fn().mockResolvedValue([{ id: 7, balance: -50_000 }]),
-      },
+      student: { findMany: studentFindMany },
     };
     const r = await loadMonthCharges(prisma as never, 1, {
       month: '2026-10',
@@ -126,6 +180,25 @@ describe('loadMonthCharges', () => {
       periodMonth: 10,
       status: 'CHARGED',
       branchId: { in: [3] },
+    });
+    // The second query reads the holders' charges of this month AND LATER ones:
+    // CHARGED only (a reversed or skipped charge is not on the balance), this
+    // year's months from October on or any later year. `toEqual` also pins that
+    // it carries NO `branchId` — the balance is one, so a student's charges in
+    // every branch count against it.
+    expect(findMany.mock.calls[1][0].where).toEqual({
+      companyId: 1,
+      studentId: { in: [7] },
+      status: 'CHARGED',
+      OR: [
+        { periodYear: { gt: 2026 } },
+        { periodYear: 2026, periodMonth: { gte: 10 } },
+      ],
+    });
+    // Balances are the holders' own, unscoped by branch too.
+    expect(studentFindMany.mock.calls[0][0].where).toEqual({
+      companyId: 1,
+      id: { in: [7] },
     });
     expect(r).toMatchObject({
       charged: 450_000,
