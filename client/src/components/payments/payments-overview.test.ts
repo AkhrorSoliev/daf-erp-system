@@ -37,8 +37,12 @@ const charges: MonthCharges = {
 
 const EXPECTED_MONTH_END = 12_345_678;
 
-/** The overview as the CEO's request returns it, with only what the card reads. */
-const overview = (monthCharges: MonthCharges | null) => ({
+/**
+ * The overview as the CEO's request returns it, with only what the card reads.
+ * `salaryMonth` is the month of the computed salary («Ustoz oyliklari»); left
+ * out, the response carries no computed salary at all.
+ */
+const overview = (monthCharges: MonthCharges | null, salaryMonth?: string) => ({
   income: { expected: 0, actual: 5_000_000, paymentCount: 3, byMethod: [] },
   forecast: {
     expectedMonthEnd: EXPECTED_MONTH_END,
@@ -48,6 +52,21 @@ const overview = (monthCharges: MonthCharges | null) => ({
     debtorExposure: { count: 0, avgDebt: 0 },
   },
   monthCharges,
+  ...(salaryMonth
+    ? {
+        salary: {
+          paid: 0,
+          pending: 0,
+          computed: {
+            month: salaryMonth,
+            hasLessonData: true,
+            netToPay: 2_000_000,
+            advances: 500_000,
+            gross: 2_500_000,
+          },
+        },
+      }
+    : {}),
 });
 
 // Same formatter the card uses, so the assertions hold whatever ICU the
@@ -64,12 +83,12 @@ function norm(html: string): string {
     .replace(/\s+/g, " ");
 }
 
-function render(monthCharges: MonthCharges | null): string {
+function render(monthCharges: MonthCharges | null, salaryMonth?: string): string {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   // `undefined` twice: no branch is selected in a bare store, and no refreshKey.
   client.setQueryData(
     ["financial-overview", undefined, START, END, undefined],
-    overview(monthCharges),
+    overview(monthCharges, salaryMonth),
   );
   return norm(
     renderToStaticMarkup(
@@ -148,5 +167,32 @@ describe("PaymentsOverview — the month card", () => {
 
     expect(text).toContain(`To'landi ${money(0)}`);
     expect(text).not.toMatch(/\(\d+(\.\d+)?%\)/);
+  });
+});
+
+// «Ustoz oyliklari» sits beside «Oktabr to'lovlari» and names its month from the
+// same table (`salary-utils`): it kept a local one that spelled «Oktyabr» and
+// «Sentyabr», so one screen wrote the same month two ways.
+describe("PaymentsOverview — the salary card's month", () => {
+  it("names the server's month the way the month card does", () => {
+    const text = render(charges, "2026-10");
+
+    expect(text).toContain("Oktabr to'lovlari");
+    expect(text).toContain("Oktabr 2026 uchun hisoblangan");
+    expect(text).not.toContain("Oktyabr");
+  });
+
+  it("spells September «Sentabr» too", () => {
+    const text = render({ ...charges, month: "2026-09" }, "2026-09");
+
+    expect(text).toContain("Sentabr to'lovlari");
+    expect(text).toContain("Sentabr 2026 uchun hisoblangan");
+    expect(text).not.toContain("Sentyabr");
+  });
+
+  it("reads «Shu oy» when the server sent no month", () => {
+    const text = render(charges);
+
+    expect(text).toContain("Shu oy uchun hisoblangan");
   });
 });

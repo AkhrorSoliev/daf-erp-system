@@ -21,7 +21,7 @@ import {
   Wallet,
 } from "lucide-react";
 import type { KpiKey } from "./kpi-chart-dialog";
-import { monthShort } from "./salary-utils";
+import { monthLabel, monthShort } from "./salary-utils";
 import {
   Tooltip,
   TooltipContent,
@@ -117,19 +117,6 @@ const methodLabels: Record<string, string> = {
 
 function fmt(n: number) {
   return n.toLocaleString("uz-UZ");
-}
-
-const UZ_MONTHS = [
-  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-  "Iyul", "Avgust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr",
-];
-
-/** "2026-07" → "Iyul 2026". Fallback "Shu oy" when the month is unknown. */
-function monthLabel(m?: string) {
-  if (!m) return "Shu oy";
-  const [y, mo] = m.split("-").map(Number);
-  const name = UZ_MONTHS[(mo ?? 0) - 1];
-  return name ? `${name} ${y}` : "Shu oy";
 }
 
 interface PaymentsOverviewProps {
@@ -283,6 +270,13 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     forecast: { ...empty.forecast, ...data?.forecast, debtorExposure: { ...empty.forecast.debtorExposure, ...data?.forecast?.debtorExposure } },
     salary: { ...empty.salary, ...data?.salary },
   };
+
+  // «Ustoz oyliklari» sarlavhasidagi oy — serverning oyi, umumiy `monthLabel`
+  // yozilishida («Oktabr 2026»), «Moliya» kartasidagi `monthShort` bilan bir
+  // xil jadvaldan. Server oy aytmasa — «Shu oy».
+  const salaryMonthLabel = d.salary.computed?.month
+    ? monthLabel(d.salary.computed.month)
+    : "Shu oy";
 
   return (
     <div className="space-y-6">
@@ -516,7 +510,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                   Ustoz oyliklari
                 </p>
                 <p className="text-[10px] text-muted-foreground leading-tight">
-                  {monthLabel(d.salary.computed?.month)} uchun hisoblangan
+                  {salaryMonthLabel} uchun hisoblangan
                   {isCeo && selectedBranch ? " · barcha filiallar" : ""}
                 </p>
               </div>
