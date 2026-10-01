@@ -511,6 +511,15 @@ describe('ReportsController — role guards', () => {
         debtorExposure: { count: 4, avgDebt: 3 },
       },
       salary: { paid: 8251000, pending: 5, advances: 2 },
+      // «Bu oy hisoblandi» (ADR-0058): money — CEO/BD only, like income.
+      monthCharges: {
+        month: '2026-10',
+        charged: 900_000,
+        paid: 350_000,
+        unpaid: 550_000,
+        paidPct: 38.9,
+        students: 2,
+      },
       expenses: 8251000,
       netProfit: 60875991,
       debtorCount: 4,
@@ -549,6 +558,7 @@ describe('ReportsController — role guards', () => {
         expenses: fullOverview.expenses,
         netProfit: 12_345_678,
         forecast: fullOverview.forecast,
+        monthCharges: fullOverview.monthCharges,
       });
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
     });
@@ -698,6 +708,7 @@ describe('ReportsController — role guards', () => {
       expect(res.expenses).toBeUndefined();
       expect(res.netProfit).toBeUndefined();
       expect(res.salary).toBeUndefined();
+      expect(res.monthCharges).toBeUndefined();
       expect(res.forecast).toBeUndefined();
       expect(res.ltv).toBeUndefined();
       expect(res.cac).toBeUndefined();

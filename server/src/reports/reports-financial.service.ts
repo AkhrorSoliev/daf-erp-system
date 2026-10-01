@@ -33,6 +33,7 @@ import {
   loadBalanceWithdrawals,
   type BalanceWithdrawals,
 } from './balance-withdrawals';
+import { loadMonthCharges } from './month-charges';
 
 /** One billable lesson held in a window and the revenue it recognises. */
 export interface HeldLessonValue {
@@ -470,6 +471,14 @@ export class ReportsFinancialService {
     opts: { months: string[]; branchIds: ReportBranchIds },
   ): Promise<BalanceWithdrawals> {
     return loadBalanceWithdrawals(this.prisma, companyId, opts);
+  }
+
+  /** «Bu oy hisoblandi / To'landi / Qoldi» (ADR-0058). */
+  getMonthCharges(
+    companyId: number,
+    opts: { month: string; branchIds: ReportBranchIds },
+  ) {
+    return loadMonthCharges(this.prisma, companyId, opts);
   }
 
   /**

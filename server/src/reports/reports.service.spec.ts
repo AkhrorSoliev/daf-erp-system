@@ -157,6 +157,8 @@ describe('ReportsService', () => {
       groupTeacherChangeReason: { findMany: jest.fn().mockResolvedValue([]) },
       enrollmentTransferReason: { findMany: jest.fn().mockResolvedValue([]) },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
+      // «Bu oy hisoblandi» (overview of a billed month): nobody charged → zeros.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
     };
     prisma.enrollment.groupBy = jest.fn();
     prisma.enrollment.findMany = jest.fn().mockResolvedValue([]);
@@ -1411,6 +1413,57 @@ describe('ReportsService', () => {
         [1001, { month: '2026-10', branchIds: null }],
         [1001, { month: '2026-07', branchIds: [7] }],
       ]);
+    });
+  });
+
+  describe('getFinancialOverview — «Bu oy hisoblandi»', () => {
+    const monthCharges = {
+      month: '2026-10',
+      charged: 900_000,
+      paid: 350_000,
+      unpaid: 550_000,
+      paidPct: 38.9,
+      students: 2,
+    };
+
+    beforeEach(() => {
+      jest
+        .spyOn((service as any).financial, 'getFinancialOverview')
+        .mockResolvedValue({ income: {}, forecast: {} });
+    });
+
+    it('a billed month carries the charged figure next to the expectation', async () => {
+      const getMonthCharges = jest
+        .spyOn((service as any).financial, 'getMonthCharges')
+        .mockResolvedValue(monthCharges);
+
+      const res = await service.getFinancialOverview(1001, {
+        branchIds: [7],
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      });
+
+      expect(res.monthCharges).toEqual(monthCharges);
+      expect(getMonthCharges).toHaveBeenCalledWith(1001, {
+        month: '2026-10',
+        branchIds: [7],
+      });
+    });
+
+    it('a month before the monthly billing has no charged figure and is not queried', async () => {
+      const getMonthCharges = jest.spyOn(
+        (service as any).financial,
+        'getMonthCharges',
+      );
+
+      const res = await service.getFinancialOverview(1001, {
+        branchIds: null,
+        startDate: '2026-08-01',
+        endDate: '2026-08-31',
+      });
+
+      expect(res.monthCharges).toBeNull();
+      expect(getMonthCharges).not.toHaveBeenCalled();
     });
   });
 });
