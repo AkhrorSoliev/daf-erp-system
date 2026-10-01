@@ -47,8 +47,13 @@ type PaymentTarget = {
 };
 
 interface DebtorSummary {
-  /** The debt as two numbers (ADR-0059), never added together. */
-  split: DebtSplit;
+  /**
+   * The debt as two numbers (ADR-0059), never added together. Optional: the
+   * client goes live before the server, and a server older than the ADR answers
+   * with `totalDebt` and friends instead. The two debt cards then show a dash —
+   * a zero would read as «nobody owes».
+   */
+  split?: DebtSplit;
   openPromises: number;
   overduePromises: number;
 }
@@ -163,6 +168,7 @@ export function DebtorsView() {
   });
 
   const rows = data?.data ?? [];
+  const split = summary?.split;
 
   return (
     <div className="space-y-6">
@@ -189,15 +195,15 @@ export function DebtorsView() {
             icon={<Wallet className="size-5 text-red-700 dark:text-red-300" />}
             tone="red"
             label="O'qiyotganlar qarzi"
-            value={summary ? formatBalance(summary.split.studying.total) : "—"}
+            value={split ? formatBalance(split.studying.total) : "—"}
             hint={
-              summary && (
+              split && (
                 <>
                   <span className="block">
-                    {formatNumber(summary.split.studying.count)} ta
+                    {formatNumber(split.studying.count)} ta
                   </span>
                   <span className="block">
-                    {`🟡 shu oy ${formatPrice(summary.split.studying.currentMonth)} · 🔴 eski qarz ${formatPrice(summary.split.studying.older)}`}
+                    {`🟡 shu oy ${formatPrice(split.studying.currentMonth)} · 🔴 eski qarz ${formatPrice(split.studying.older)}`}
                   </span>
                 </>
               )
@@ -207,12 +213,8 @@ export function DebtorsView() {
             icon={<Users className="size-5 text-slate-700 dark:text-slate-300" />}
             tone="slate"
             label="O'qimayotganlar qarzi"
-            value={
-              summary ? formatBalance(summary.split.notStudying.total) : "—"
-            }
-            hint={
-              summary && `${formatNumber(summary.split.notStudying.count)} ta`
-            }
+            value={split ? formatBalance(split.notStudying.total) : "—"}
+            hint={split && `${formatNumber(split.notStudying.count)} ta`}
           />
           <SummaryCard
             icon={

@@ -40,8 +40,12 @@ export interface DashboardMoney {
   /**
    * Qarz — ikki alohida raqam, hech qayerda qo'shilmaydi (ADR-0059):
    * «O'qiyotganlar» (shu oy / eski qarz) va «O'qimayotganlar».
+   *
+   * Ixtiyoriy, chunki mijoz serverdan oldin chiqishi mumkin, ADR-0059 dan
+   * oldingi server esa `{ total, count }` yuboradi: u holda `studying` yo'q va
+   * karta qiymatsiz chiziladi (nol «hech kim qarzdor emas» deb o'qilardi).
    */
-  debt: DebtSplit;
+  debt?: Partial<DebtSplit>;
 }
 
 /** Rol 1, 2, 3, 5 uchun. */

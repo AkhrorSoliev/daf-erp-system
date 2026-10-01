@@ -9,8 +9,12 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import type { DebtSplit } from "@/components/payments/payments-overview";
 
 interface DebtorSummary {
-  /** The debt as two numbers (ADR-0059); the banner names only the first. */
-  split: DebtSplit;
+  /**
+   * The debt as two numbers (ADR-0059); the banner names only the first.
+   * Optional: the client goes live before the server, and a server older than
+   * the ADR sends no split — the line then keeps only the promise count.
+   */
+  split?: DebtSplit;
   openPromises: number;
   overduePromises: number;
 }
@@ -59,7 +63,8 @@ export function OverduePromisesBanner() {
             o&apos;tib ketgan
           </p>
           <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
-            O&apos;qiyotganlar qarzi {formatBalance(data.split.studying.total)} ·{" "}
+            {data.split &&
+              `O'qiyotganlar qarzi ${formatBalance(data.split.studying.total)} · `}
             {formatNumber(data.openPromises)} ta sana kutilmoqda
           </p>
         </div>

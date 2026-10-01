@@ -36,7 +36,7 @@ function norm(html: string): string {
 }
 
 /** The summary sits in the cache under the key the banner asks with. */
-function render(data: ReturnType<typeof summary> | null): string {
+function render(data: object | null): string {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   if (data) client.setQueryData(["debtors", "summary", undefined], data);
   return renderToStaticMarkup(
@@ -53,8 +53,9 @@ describe("OverduePromisesBanner", () => {
     const text = norm(render(summary(5)));
 
     expect(text).toContain(`${num(5)} ta to'lov sanasi o'tib ketgan`);
-    expect(text).toContain(`O'qiyotganlar qarzi ${money(43_500_000)}`);
-    expect(text).toContain(`${num(9)} ta sana kutilmoqda`);
+    expect(text).toContain(
+      `O'qiyotganlar qarzi ${money(43_500_000)} · ${num(9)} ta sana kutilmoqda`,
+    );
     expect(text).not.toContain("Jami qarz");
   });
 
@@ -67,6 +68,26 @@ describe("OverduePromisesBanner", () => {
 
   it("still opens the overdue promises", () => {
     expect(render(summary(5))).toContain('href="/payments/debt?promise=overdue"');
+  });
+
+  // The client goes live before the server (PR 1 deploys the client first), so
+  // for a few minutes it reads the answer of a server older than ADR-0059: a
+  // `totalDebt` and no `split`. The banner keeps what that server still answers,
+  // the promise counts, and leaves the debt out of its line — no «Jami qarz», no
+  // zero, and not the old total under the new label.
+  it("against a server older than the split, keeps the promise counts and drops the debt part", () => {
+    const text = norm(
+      render({ totalDebt: 28_453_233, openPromises: 9, overduePromises: 5 }),
+    );
+
+    expect(text).toContain(`${num(5)} ta to'lov sanasi o'tib ketgan`);
+    expect(text).toContain(`${num(9)} ta sana kutilmoqda`);
+    expect(text).not.toContain("O'qiyotganlar qarzi");
+    expect(text).not.toContain("Jami qarz");
+    expect(text).not.toContain(money(0));
+    expect(text).not.toContain(num(28_453_233));
+    // The separator belongs to the debt part: nothing is left dangling.
+    expect(text).not.toContain("·");
   });
 
   it("renders nothing when no promise is overdue, or before the answer", () => {
