@@ -34,6 +34,7 @@ import {
   type BalanceWithdrawals,
 } from './balance-withdrawals';
 import { loadMonthCharges } from './month-charges';
+import { loadDebtSplit } from './debt-split';
 
 /** One billable lesson held in a window and the revenue it recognises. */
 export interface HeldLessonValue {
@@ -433,6 +434,14 @@ export class ReportsFinancialService {
     opts: { month: string; branchIds: ReportBranchIds },
   ) {
     return loadMonthCharges(this.prisma, companyId, opts);
+  }
+
+  /** «O'qiyotganlar» / «O'qimayotganlar» qarzi — ikki alohida raqam (ADR-0059). */
+  getDebtSplit(
+    companyId: number,
+    opts: { branchIds: ReportBranchIds; month?: string },
+  ) {
+    return loadDebtSplit(this.prisma, companyId, opts);
   }
 
   /**

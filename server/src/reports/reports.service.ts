@@ -469,6 +469,14 @@ export class ReportsService {
     return this.financial.getMonthCharges(companyId, opts);
   }
 
+  /** «O'qiyotganlar» / «O'qimayotganlar» qarzi — ikki alohida raqam (ADR-0059). */
+  getDebtSplit(
+    companyId: number,
+    opts: { branchIds: ReportBranchIds; month?: string },
+  ) {
+    return this.financial.getDebtSplit(companyId, opts);
+  }
+
   /**
    * How «Oy oxiriga kutilyapti» moved day by day this month — straight from
    * `DailyFinancialSnapshot`. Missing days stay missing; a reconstructed point
