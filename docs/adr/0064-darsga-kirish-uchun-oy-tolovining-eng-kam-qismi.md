@@ -132,18 +132,18 @@ Shunda eng kam qism ham, 3.7 eslatmasi ham ishlamaydi.
   50% va undan ko'p to'lagan o'quvchi uni olmaydi. Darsga qo'yilish
   `LessonAdmissionService.forLesson` dan o'qiladi, ya'ni davomatdagi hukm
   bilan bir xil.
-- **Oy hisobi** muddat qatorida eng kam summani aytadi (`leastDue`).
+- **Oy hisobi** muddat qatoridan keyin eng kam summani zaxira sifatida aytadi
+  (`leastDue`).
 
 ### 8. Matnlar
 
-Uchta matn loyihasini CEO 02.10.2026 da tasdiqladi. Kodda loyihadan uch
-farq bor:
+**Avval to'liq to'lov so'raladi, eng kam qism — faqat imkon bo'lmaganda**
+(CEO, 02.10.2026). Markaz oyning to'liq to'lovini 2-darsgacha olishni
+xohlaydi; 50% — to'lay olmaganlar uchun shartnomadagi chegara, taklif emas.
+Shuning uchun har bir xabarda birinchi bo'lib to'liq summa turadi.
 
-- sanalar boshqa xabarlardagidek `KK.OO.YYYY` ko'rinishida;
-- 2-dars eslatmasida «Oy uchun jami» o'rniga «Jami to'lash kerak»: summa
-  jonli balansdan olinadi va eski qarzni ham o'z ichiga oladi, oy hisobidagi
-  qator ham shunday ataladi;
-- «Muddat: to'langan darslar tugaguncha» qatori loyihada yo'q edi.
+Matnlarni CEO 02.10.2026 da tasdiqladi. Sanalar boshqa xabarlardagidek
+`KK.OO.YYYY` ko'rinishida.
 
 3.7 eslatmasi:
 
@@ -156,19 +156,25 @@ farq bor:
 2-dars eslatmasi:
 
 > Ertaga (04.11.2026) noyabrning 2-darsi bo'ladi.
-> Darsga kirish uchun kamida: **225 000 so'm**
-> Jami to'lash kerak: 450 000 so'm
+> To'lash kerak: **450 000 so'm**
+> Darsga kirish uchun kamida: 225 000 so'm
 >
-> Shartnomaga ko'ra oylik to'lovning kamida yarmi 2-darsgacha qilinadi. Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha amalga oshirishingizni so'raymiz.
+> Shartnomaga ko'ra 2-darsdan boshlab darslarga oy to'lovining kamida yarmi to'langandan keyin qatnashish mumkin. Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha to'liq qilishingizni so'raymiz.
 
 Foiz 50 dan boshqa bo'lsa, «yarmi» o'rniga «N% i» yoziladi.
 
-Oy hisobi:
+Oy hisobi, «Jami to'lash kerak» qatoridan keyin:
 
-> Muddat: **04.11.2026** — oyning 2-darsigacha kamida 225 000 so'm, qolgani — to'langan darslar tugaguncha
+> Muddat: **04.11.2026** — oyning 2-darsigacha
+> Imkoni bo'lmasa, kamida 225 000 so'm; qolgani — to'langan darslar tugaguncha
 
-O'tgan oydan qolgan pul eng kam qismni qoplasa: «Muddat: to'langan darslar
-tugaguncha».
+O'tgan oydan qolgan pul eng kam qismni qoplasa, ikkinchi qator yozilmaydi.
+01.11 gacha bo'lgan oylarda ham faqat birinchi qator qoladi — ADR-0042 dagi
+matn o'zgarmaydi.
+
+E'lon (o'quvchilarga, bir marta): sarlavha «1-noyabrdan oylik to'lov
+tartibi»; avval to'lovni 2-darsgacha to'liq qilish so'raladi, keyin «to'liq
+to'lashning imkoni bo'lmasa» deb eng kam qism va qolgani aytiladi.
 
 ## Ko'rib chiqilgan variantlar
 
@@ -184,7 +190,8 @@ tugaguncha».
 ## Oqibatlar
 
 - 01.11 dan bitta-ikkita dars pulini to'lab kirish tugaydi. O'quvchilarga
-  yangi tartib haqida oldindan xabar berish alohida ish, bu ADR ga kirmaydi.
+  e'lon 26.10.2026 da talaba boti orqali bir marta yuboriladi. Uni yuboradigan
+  bir martalik skript repoda emas: ichida filial telefonlari bor.
 - N kuni darsga qo'yilmagan o'quvchiga alohida xabar yuborilmaydi.
 - 3.7 eslatmasidagi sanalar 19:50 dagi holat bo'yicha yoziladi. Shu 10 daqiqa
   ichida to'lov kelsa, sanalar eskirgan bo'lishi mumkin. Qolgan summa 20:00 da
@@ -196,9 +203,9 @@ tugaguncha».
   jadvalidan, darsga qo'yilishni esa hisobdagi kunlardan o'qiydi. Dars
   ertaroq kunga ko'chirilsa, ikkalasi kelishmaydi va o'sha o'quvchilarga
   2-dars eslatmasi ketmaydi (oy hisobi ketgan bo'ladi). Ma'lum cheklov.
-- 2-dars eslatmasida «kamida yarmi 2-darsgacha qilinadi» gapi faqat eng kam
-  qism yetmaganda yoziladi. Ikki-uch darslik oyda darslar puli yarmidan ko'p
-  bo'ladi, shunda faqat summa va iltimos qoladi.
+- 2-dars eslatmasida shartnomadagi «kamida yarmi» gapi faqat eng kam qism
+  yetmaganda yoziladi. Ikki-uch darslik oyda darslar puli yarmidan ko'p
+  bo'ladi, shunda faqat summalar va iltimos qoladi.
 - 3.7 eslatmasi pauzadagi guruhning darsi uchun yuborilmaydi.
 - Davomatni saqlashdagi rad matni (`assertAdmitted`) ikkala sabab uchun bir
   xil qoldi: qator ekranda qulflangan, bu matn faqat to'g'ridan API ga

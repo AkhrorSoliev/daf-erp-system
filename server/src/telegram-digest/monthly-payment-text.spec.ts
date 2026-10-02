@@ -219,30 +219,30 @@ describe('paymentReminderSection', () => {
         ...over,
       });
 
-    it('names what admits to the lesson and the whole debt', () => {
+    it('asks for the whole debt first, then names what admits to the lesson', () => {
       const blocks = paymentReminderSection([half()], 450000, event);
       expect(textOf(blocks)).toBe(
         [
           "⏰ <b>To'lov eslatmasi</b>",
           "Ertaga (04.11.2026) noyabrning 2-darsi bo'ladi.",
-          "Darsga kirish uchun kamida: <b>225 000 so'm</b>",
-          "Jami to'lash kerak: 450 000 so'm",
+          "To'lash kerak: <b>450 000 so'm</b>",
+          "Darsga kirish uchun kamida: 225 000 so'm",
           '',
-          "Shartnomaga ko'ra oylik to'lovning kamida yarmi 2-darsgacha qilinadi. Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha amalga oshirishingizni so'raymiz.",
+          "Shartnomaga ko'ra 2-darsdan boshlab darslarga oy to'lovining kamida yarmi to'langandan keyin qatnashish mumkin. Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha to'liq qilishingizni so'raymiz.",
         ].join('\n'),
       );
     });
 
     it('never asks for more than is owed now', () => {
       const text = textOf(paymentReminderSection([half()], 100000, event));
-      expect(text).toContain("Darsga kirish uchun kamida: <b>100 000 so'm</b>");
+      expect(text).toContain("Darsga kirish uchun kamida: 100 000 so'm");
     });
 
     it('names another share by its percent', () => {
       const text = textOf(
         paymentReminderSection([half({ minPaidPercent: 40 })], 450000, event),
       );
-      expect(text).toContain("to'lovning kamida 40% i 2-darsgacha qilinadi");
+      expect(text).toContain("oy to'lovining kamida 40% i to'langandan keyin");
     });
 
     it('names no share when the lessons held are what is short', () => {
@@ -253,9 +253,9 @@ describe('paymentReminderSection', () => {
           event,
         ),
       );
-      expect(text).toContain("Darsga kirish uchun kamida: <b>69 230 so'm</b>");
+      expect(text).toContain("Darsga kirish uchun kamida: 69 230 so'm");
       expect(text.split('\n').pop()).toBe(
-        "Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha amalga oshirishingizni so'raymiz.",
+        "Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha to'liq qilishingizni so'raymiz.",
       );
     });
   });
@@ -288,23 +288,27 @@ describe('monthlyBillSection under the least share (ADR-0064)', () => {
       minShare: 225000,
       ...over,
     });
-  const lastLine = (balance: number) =>
+  const lines = (balance: number) =>
     textOf(monthlyBillSection([november()], balance, '2026-11-01', event))
       .split('\n')
-      .pop();
+      .slice(-2);
 
-  it('asks for the least share by the 2nd lesson, the rest while paid lessons last', () => {
-    expect(lastLine(-450000)).toBe(
-      "Muddat: <b>04.11.2026</b> — oyning 2-darsigacha kamida 225 000 so'm, qolgani — to'langan darslar tugaguncha",
-    );
+  it('asks for the whole month by the 2nd lesson, the least share only if that is not possible', () => {
+    expect(lines(-450000)).toEqual([
+      'Muddat: <b>04.11.2026</b> — oyning 2-darsigacha',
+      "Imkoni bo'lmasa, kamida 225 000 so'm; qolgani — to'langan darslar tugaguncha",
+    ]);
   });
 
   it('adds the older debt to the least share', () => {
-    expect(lastLine(-550000)).toContain("kamida 325 000 so'm");
+    expect(lines(-550000)[1]).toContain("kamida 325 000 so'm");
   });
 
-  it('counts what was carried over: with half already paid only the rest has a term', () => {
-    expect(lastLine(-207692)).toBe("Muddat: to'langan darslar tugaguncha");
+  it('counts what was carried over: with half already paid only the 2nd-lesson term is named', () => {
+    expect(lines(-207692)).toEqual([
+      "Jami to'lash kerak: <b>207 692 so'm</b>",
+      'Muddat: <b>04.11.2026</b> — oyning 2-darsigacha',
+    ]);
   });
 });
 

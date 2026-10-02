@@ -82,22 +82,19 @@ function billTailText(
     .map((b) => b.dueDate)
     .filter((d): d is string => d !== null && d > today)
     .sort()[0];
-  // ADR-0064: under the least share only that part is due by the 2nd lesson;
-  // the rest waits until the paid lessons run out.
+  if (!due) return lines.join('\n');
+  lines.push(`Muddat: <b>${formatDigestDate(due)}</b> — oyning 2-darsigacha`);
+  // ADR-0064: the whole month is asked for by the 2nd lesson; the least share
+  // is named only as the fallback, and only while it is still unpaid.
   const afterSecondLesson = bills.reduce(
     (sum, b) =>
       sum + (b.minShare === undefined ? 0 : b.chargedAmount - b.minShare),
     0,
   );
   const minDue = Math.max(0, totalDue - afterSecondLesson);
-  if (afterSecondLesson > 0 && minDue === 0) {
-    lines.push("Muddat: to'langan darslar tugaguncha");
-  } else if (due) {
+  if (afterSecondLesson > 0 && minDue > 0) {
     lines.push(
-      `Muddat: <b>${formatDigestDate(due)}</b> — oyning 2-darsigacha` +
-        (afterSecondLesson > 0
-          ? ` kamida ${formatSum(minDue)}, qolgani — to'langan darslar tugaguncha`
-          : ''),
+      `Imkoni bo'lmasa, kamida ${formatSum(minDue)}; qolgani — to'langan darslar tugaguncha`,
     );
   }
   return lines.join('\n');
@@ -170,17 +167,20 @@ function reminderText(
       `Shartnomaga ko'ra oylik to'lov 2-darsgacha qilinadi. ${ask}`,
     ];
   }
-  // No percent: the lessons held, not the share, are short (a month of two
-  // or three lessons) — the sentence about the share would be untrue.
+  // The whole debt is asked for first; what admits to the lesson is the
+  // fallback (CEO, 02.10.2026). No percent: the lessons held, not the share,
+  // are short (a month of two or three lessons) — the sentence about the
+  // share would be untrue.
+  const full = `${UNBROKEN} to'lovni ertagi darsgacha to'liq qilishingizni so'raymiz.`;
   const share = p.minPaidPercent === 50 ? 'yarmi' : `${p.minPaidPercent}% i`;
   return [
     tomorrow,
-    `Darsga kirish uchun kamida: <b>${formatSum(Math.min(p.minDue, totalDue))}</b>`,
-    `Jami to'lash kerak: ${formatSum(totalDue)}`,
+    `To'lash kerak: <b>${formatSum(totalDue)}</b>`,
+    `Darsga kirish uchun kamida: ${formatSum(Math.min(p.minDue, totalDue))}`,
     '',
     p.minPaidPercent === undefined
-      ? ask
-      : `Shartnomaga ko'ra oylik to'lovning kamida ${share} 2-darsgacha qilinadi. ${ask}`,
+      ? full
+      : `Shartnomaga ko'ra 2-darsdan boshlab darslarga oy to'lovining kamida ${share} to'langandan keyin qatnashish mumkin. ${full}`,
   ];
 }
 
