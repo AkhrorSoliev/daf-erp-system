@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PaymentModel } from '@prisma/client';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
 import { LateAttendanceDto } from './dto/late-attendance.dto';
 import { AttendanceValidationService } from './attendance-validation.service';
@@ -52,13 +53,22 @@ export class AttendanceService {
       roles,
       late,
     );
-    const [opensMinutesBefore, admission] = await Promise.all([
+    const [opensMinutesBefore, admission, monthReach] = await Promise.all([
       this.validation.opensMinutesBefore(companyId),
       this.admission.forLesson({
         groupId,
         lessonDay: date,
         studentIds: roster.activeStudents.map((s) => s.studentId),
       }),
+      // A monthly group's debtors: how far their money reaches into the
+      // register's month (ADR-0062).
+      roster.paymentModel === PaymentModel.MONTHLY
+        ? this.admission.monthCoverage({
+            groupId,
+            lessonDay: date,
+            studentIds: roster.debtorStudents.map((s) => s.studentId),
+          })
+        : Promise.resolve(null),
     ]);
     // After the lesson a student the register left out stays out, paid or
     // not — as `save()` judges it.
@@ -72,6 +82,12 @@ export class AttendanceService {
           ? LEFT_OUT
           : (admission.get(s.studentId) ?? ADMITTED_WITHOUT_RULE),
       })),
+      debtorStudents: monthReach
+        ? roster.debtorStudents.map((s) => ({
+            ...s,
+            monthCoverage: monthReach.get(s.studentId) ?? null,
+          }))
+        : roster.debtorStudents,
     };
   }
 

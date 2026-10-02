@@ -119,6 +119,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0058](0058-oylik-oyning-asosiy-raqami-hisoblandi.md) | Oylik oyning asosiy raqami hisoblandi / to'landi / qoldi; bekor qilingan qaytarish va kechirish sanalmaydi; oylik qamrovi — filiallar to'plami | Qabul qilindi | 2026-10-01 |
 | [0059](0059-qarz-ikki-alohida-raqam.md) | Qarz ikki alohida raqamda: o'qiyotganlar va o'qimayotganlar qarzi; ikkisi hech qayerda qo'shilmaydi | Qabul qilindi | 2026-10-01 |
 | [0060](0060-sinov-darsi-javobsiz-dars-bilan-hal-qilinmaydi.md) | Sinov darsi javobsiz «Dars bo'ldimi?» bilan hal qilinmaydi: chiqarish va chetlatish avval javobni kutadi | Qabul qilindi | 2026-10-01 |
+| [0062](0062-oylik-yozilish-sikl-emas-oy.md) | Oylik yozilish «sikl»ga bo'linmaydi: «Darslar» va «Qarzdorlar» oy bo'yicha, qarz kechirish oylikda taklif qilinmaydi | Qabul qilindi | 2026-10-02 |
 | [0063](0063-bekor-qilishni-ochirish-pulni-qaytarib-oladi.md) | Bekor qilishni o'chirish qaytarilgan dars pulini ham qaytarib oladi; o'zgargan yozilishning puli qoldiriladi | Qabul qilindi | 2026-10-02 |
 | [0064](0064-darsga-kirish-uchun-oy-tolovining-eng-kam-qismi.md) | Darsga kirish uchun oy to'lovining kamida 50% i (har guruhda o'z 2-darsidan, 01.11.2026 dan); to'langan darslar tugashidan 3 kun oldin eslatma | Qabul qilindi | 2026-10-02 |
 | [0065](0065-tolov-cheki-darhol-ketadi.md) | To'lov cheki va to'lov bekor qilingani haqidagi xabar darhol ketadi; Payme/Click to'lovi ham chek oladi | Qabul qilindi | 2026-10-02 |

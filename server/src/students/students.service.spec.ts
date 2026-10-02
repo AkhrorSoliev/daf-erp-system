@@ -191,6 +191,12 @@ describe('StudentsService — status methods', () => {
           provide: StudentLeadOriginService,
           useValue: { recordDirectOrigin: jest.fn() },
         },
+        // The read service checks debt forgiveness for the closed-enrollments
+        // list (ADR-0062); off, as by default.
+        {
+          provide: require('../settings/settings.service').SettingsService,
+          useValue: { get: jest.fn().mockResolvedValue(false) },
+        },
       ],
     }).compile();
 
