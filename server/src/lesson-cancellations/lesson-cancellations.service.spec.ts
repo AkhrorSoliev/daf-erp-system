@@ -88,6 +88,9 @@ describe('LessonCancellationsService', () => {
       releaseCancelledLesson: jest
         .fn()
         .mockResolvedValue({ students: 0, refunded: 0 }),
+      restoreCancelledLesson: jest
+        .fn()
+        .mockResolvedValue({ students: 0, restored: 0, kept: 0 }),
     };
     history = {
       recordCreate: jest.fn(),
@@ -490,6 +493,46 @@ describe('LessonCancellationsService', () => {
       expect(history.recordDelete).toHaveBeenCalledWith(
         expect.objectContaining({ entityType: 'LessonCancellation' }),
       );
+    });
+
+    // ADR-0063: a deleted cancellation no longer leaves its lesson free.
+    it('takes the released lesson money back in the same transaction', async () => {
+      prisma.lessonCancellation.findFirst.mockResolvedValue({
+        id: 'cancel-1',
+        groupId: 'group-1',
+        date: new Date('2026-04-15T00:00:00Z'),
+      });
+      tx.group.findFirst.mockResolvedValue({ branchId: 1 });
+      tx.lessonCancellation.update.mockResolvedValue({});
+      monthly.restoreCancelledLesson.mockResolvedValue({
+        students: 3,
+        restored: 96_429,
+        kept: 1,
+      });
+
+      const res = await service.remove('cancel-1', 1, 99);
+
+      expect(monthly.restoreCancelledLesson).toHaveBeenCalledWith(tx, {
+        cancellationId: 'cancel-1',
+        companyId: 1,
+        performedById: 99,
+        reason: "15.04 darsining bekor qilinishi o'chirildi",
+      });
+      expect(history.recordDelete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          oldValues: expect.objectContaining({
+            qaytaYechilganOquvchilar: 3,
+            qaytaYechilganSumma: 96_429,
+            pulQoldirilganOquvchilar: 1,
+          }),
+        }),
+      );
+      expect(res).toEqual({
+        id: 'cancel-1',
+        restoredStudents: 3,
+        restoredAmount: 96_429,
+        keptStudents: 1,
+      });
     });
 
     describe("re-asking «Dars bo'ldimi?»", () => {
