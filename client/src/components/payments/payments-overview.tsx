@@ -826,9 +826,11 @@ function KpiCard({
           onClick={onClick}
           className="rounded-xl border bg-card p-4 space-y-1.5 hover:shadow-md hover:border-primary/30 transition-all text-left w-full cursor-pointer"
         >
-          <div className="flex items-center gap-2 text-muted-foreground">
+          {/* A long name wraps to a second line rather than being cut off (it
+              was at 640 and 768 px); the icon stays level with the first. */}
+          <div className="flex items-start gap-2 text-muted-foreground">
             <Icon className="size-4 shrink-0" />
-            <span className="text-xs font-medium truncate">{label}</span>
+            <span className="text-xs font-medium line-clamp-2">{label}</span>
           </div>
           <p className={`text-lg font-bold leading-tight ${color}`}>{value}</p>
           {subtitle && (

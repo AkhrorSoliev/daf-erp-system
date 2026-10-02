@@ -413,6 +413,30 @@ describe("PaymentsOverview — the money cards have Uzbek names", () => {
     expect(text).not.toContain("Samaradorlik");
   });
 
+  // Measured in a browser (A3 final wave): at 640 px «To'lov qilganlar»,
+  // «O'quvchi qiymati», «Jalb qilish narxi» and «Marketing samarasi» were cut
+  // off, at 768 px «Marketing samarasi». A name now takes a second line.
+  it("lets every card's name wrap to a second line instead of cutting it off", () => {
+    const html = renderHtml(charges);
+
+    for (const name of [
+      "Tushumlar",
+      "Chiqimlar",
+      "Foyda",
+      "To&#x27;lov qilganlar",
+      "O&#x27;quvchi qiymati",
+      "Jalb qilish narxi",
+      "Marketing samarasi",
+      "O&#x27;rtacha to&#x27;lov",
+    ]) {
+      const classes = html.match(
+        new RegExp(`<span class="([^"]*)">${name}</span>`),
+      )?.[1];
+      expect(classes, name).toContain("line-clamp-2");
+      expect(classes, name).not.toContain("truncate");
+    }
+  });
+
   // A closed dialog renders nothing, so — like the tooltips above — the chart
   // dialog's titles are read from its source. They are also the name the
   // chart's tooltip gives the series, so one list covers both.
