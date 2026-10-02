@@ -371,13 +371,19 @@ describe('LessonTeacherOverridesService', () => {
         expect.objectContaining({ teacherId: 10001, studentId: 30001 }),
       );
       // Departed enrollments only: an ACTIVE student unfrozen on a lesson day
-      // attends it free, and the teacher is still paid for it.
+      // attends it free, and the teacher is still paid for it. And only one
+      // still in the group that day (00:00 Tashkent): a student taken out and
+      // put back the same month pays for the day on the new enrollment, while
+      // the old one's charge has it frozen out as an ordinary departure.
       expect(tx.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             groupId: 'group-1',
             frozenOutDates: { has: lessonDay },
-            enrollment: { status: { not: 'ACTIVE' } },
+            enrollment: {
+              status: { not: 'ACTIVE' },
+              statusChangedAt: { gte: new Date('2026-10-13T19:00:00.000Z') },
+            },
           }),
         }),
       );

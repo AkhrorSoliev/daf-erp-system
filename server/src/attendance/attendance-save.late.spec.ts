@@ -277,8 +277,8 @@ describe('AttendanceSaveService.saveLate', () => {
   });
 
   it('does not bill a departed student for a day their departure gave back', async () => {
-    // A trial lesson (3.5) or a quality claim returned his whole month: the
-    // teacher must not be paid for it from that month, CEO exemption or not.
+    // A trial lesson (3.5) returned his whole month: the teacher must not be
+    // paid for it from that month, CEO exemption or not.
     prisma.group.findFirst.mockResolvedValue({
       id: 'g1',
       name: '#014',
@@ -286,7 +286,7 @@ describe('AttendanceSaveService.saveLate', () => {
       course: { paymentModel: 'MONTHLY' },
     });
     tx.enrollmentMonthlyCharge.findMany.mockResolvedValue([
-      { enrollmentId: 'e2' },
+      { enrollmentId: 'e2', studentId: 10002 },
     ]);
     await service.saveLate(
       'g1',
@@ -296,15 +296,24 @@ describe('AttendanceSaveService.saveLate', () => {
       ['Administrator'],
       1,
     );
+    // The rule a substitute override uses too (`trialMonthStudents`).
     expect(tx.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith({
       where: {
-        enrollmentId: { in: ['e2'] },
+        groupId: 'g1',
+        studentId: { in: [10002] },
         periodYear: 2026,
         periodMonth: 9,
         status: 'CHARGED',
         frozenOutDates: { has: '2026-09-28' },
+        // Still in the group that day (00:00 Tashkent): an enrollment that
+        // left earlier gave the day back as an ordinary departure, and a
+        // student put back into the group pays for it on the new one.
+        enrollment: {
+          status: { not: 'ACTIVE' },
+          statusChangedAt: { gte: new Date('2026-09-27T19:00:00.000Z') },
+        },
       },
-      select: { enrollmentId: true },
+      select: { enrollmentId: true, studentId: true },
     });
     // He stays on the register …
     expect(tx.attendance.upsert).toHaveBeenCalledTimes(2);
@@ -327,7 +336,7 @@ describe('AttendanceSaveService.saveLate', () => {
         course: { paymentModel: 'MONTHLY' },
       });
       tx.enrollmentMonthlyCharge.findMany.mockResolvedValue([
-        { enrollmentId: 'e2' },
+        { enrollmentId: 'e2', studentId: 10002 },
       ]);
       tx.transaction.findMany.mockResolvedValue([
         {
