@@ -11,9 +11,11 @@ import { InitialBalanceDialog } from "./initial-balance-dialog";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { RefundDialog } from "@/components/payments/refund-dialog";
 import { WithdrawalDialog } from "@/components/payments/withdrawal-dialog";
+import { InOtherBranch } from "@/components/shared/in-other-branch";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import type { Student } from "@/data/student-model";
 import api from "@/lib/api";
+import { otherBranchOf, type OtherBranch } from "@/lib/other-branch";
 
 export function StudentProfileClient({ studentId }: { studentId: string }) {
   const router = useRouter();
@@ -23,6 +25,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [otherBranch, setOtherBranch] = useState<OtherBranch | null>(null);
   const [commentKey, setCommentKey] = useState(0);
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -56,8 +59,12 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
       const { data } = await api.get(`/students/${studentId}`);
       setStudent(data);
       setError(false);
-    } catch {
-      if (showLoader) setError(true);
+      setOtherBranch(null);
+    } catch (err) {
+      if (showLoader) {
+        setError(true);
+        setOtherBranch(otherBranchOf(err));
+      }
     } finally {
       if (showLoader) setLoading(false);
       setGroupsRefreshing(false);
@@ -88,6 +95,16 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="text-muted-foreground size-6 animate-spin" />
       </div>
+    );
+  }
+
+  if (otherBranch) {
+    return (
+      <InOtherBranch
+        title="O'quvchi boshqa filialda"
+        what="o'quvchi"
+        branch={otherBranch}
+      />
     );
   }
 
