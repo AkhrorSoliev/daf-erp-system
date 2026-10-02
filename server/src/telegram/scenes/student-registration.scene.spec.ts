@@ -58,6 +58,7 @@ describe('student-registration.scene — kontakt qadami', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
 
   it("begona karta rad etiladi, o'quvchi qidirilmaydi", async () => {
@@ -162,6 +163,7 @@ describe('student-registration.scene — tasdiqlash kartasi yuborilmasa', () => 
     scene = createStudentRegistrationScene(
       {} as any,
       uploadService as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,
@@ -313,6 +315,7 @@ describe('student-registration.scene — Telegram fails after the account is cre
     const scene = createStudentRegistrationScene(
       {} as any,
       uploadService as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,
@@ -533,6 +536,7 @@ describe('student-registration.scene — a failed step releases the lock', () =>
         {} as any,
         {} as any,
         {} as any,
+        {} as any,
       );
 
       await expect(scene.middleware()(ctx, async () => {})).rejects.toBe(error);
@@ -585,6 +589,7 @@ describe('student-registration.scene — rasm yuklanmasa', () => {
     const scene = createStudentRegistrationScene(
       {} as any,
       uploadService as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,

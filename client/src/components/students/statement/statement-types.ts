@@ -9,22 +9,35 @@ export interface Segment {
   tone?: "red" | "green" | "muted";
 }
 
-export interface MonthView {
-  key: string;
+export type Tone = "red" | "green" | "muted";
+
+/** One row of "Oylar bo'yicha": a month, or a charge that is not a lesson. */
+export interface DueView {
+  /** The month, for a month's row. */
+  key: string | null;
   label: string;
+  wide: boolean;
+  bold: boolean;
   lessons: string;
-  absent: string | null;
+  lessonsNote: string | null;
   cost: string | null;
   costNote: string | null;
-  money: string;
-  running: string;
-  runningTone: "red" | "green" | "muted";
+  paid: string;
+  left: string;
+  leftTone: Tone;
   details: string[];
   highlight: boolean;
-  isLast: boolean;
 }
 
-export interface AllocationView {
+export interface DuesTotalView {
+  cost: string;
+  paid: string;
+  left: string;
+  leftTone: Tone;
+  details: string[];
+}
+
+export interface PaymentView {
   date: string;
   what: string;
   amount: string;
@@ -38,12 +51,13 @@ export interface StatementView {
   asOfLine: string;
   answer: { tone: "debt" | "credit" | "zero"; title: string; subtitle: string };
   equation: Segment[];
-  packHint: string | null;
-  months: MonthView[];
+  dues: DueView[];
+  duesTotal: DuesTotalView | null;
+  surplus: { label: string; amount: string } | null;
   sharpNote: Segment[] | null;
-  modelChanges: Array<{ title: string; lines: string[] }>;
-  allocations: AllocationView[];
-  footnote: string;
+  payments: PaymentView[];
+  paidTotal: string | null;
+  notes: string[];
   warning: string | null;
 }
 

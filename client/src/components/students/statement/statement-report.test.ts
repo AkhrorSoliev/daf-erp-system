@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { StatementReport } from "./statement-report";
 import { LessonDayChips, MonthDetails } from "./statement-months-table";
-import { StatementAllocations } from "./statement-allocations";
+import { StatementPayments } from "./statement-payments";
 import { StatementSummary } from "./statement-summary";
 import type { StatementResponse, StatementView } from "./statement-types";
 
@@ -24,49 +24,58 @@ const view = (over: Partial<StatementView> = {}): StatementView => ({
     { text: " = " },
     { text: "−150 000", bold: true, tone: "red" },
   ],
-  packHint: "Pul 12 darslik paket uchun to'lanadi.",
-  months: [
+  dues: [
     {
       key: "2026-08",
       label: "Avgust",
+      wide: false,
+      bold: false,
       lessons: "12 ta",
-      absent: null,
+      lessonsNote: null,
       cost: "200 000",
       costNote: null,
-      money: "200 000",
-      running: "0",
-      runningTone: "muted",
+      paid: "200 000",
+      left: "yo'q",
+      leftTone: "green",
       details: [],
       highlight: false,
-      isLast: false,
     },
     {
       key: "2026-09",
       label: "Sentabr",
+      wide: false,
+      bold: true,
       lessons: "9 ta",
-      absent: "2 kelmagan",
+      lessonsNote: "2 kelmagan",
       cost: "150 000",
       costNote: null,
-      money: "—",
-      running: "−150 000",
-      runningTone: "red",
-      details: ["oylik to'lov: 9 dars × 16 667"],
+      paid: "0",
+      left: "150 000",
+      leftTone: "red",
+      details: ["oylik to'lov: 19-sentabrdan, 12 darsdan 9 tasi × 16 667"],
       highlight: true,
-      isLast: true,
     },
   ],
+  duesTotal: {
+    cost: "350 000",
+    paid: "200 000",
+    left: "150 000",
+    leftTone: "red",
+    details: [],
+  },
+  surplus: null,
   sharpNote: [{ text: "Sentabr avgustdan 50 000 so'm kam.", bold: true }],
-  modelChanges: [{ title: "Sentabrdan oylik to'lov", lines: ["Bir qator."] }],
-  allocations: [
+  payments: [
     {
       date: "25.09.2026",
       what: "Naqd",
       amount: "200 000",
-      to: "avgust darslari 200 000",
+      to: "avgust",
       paymentId: "p1",
     },
   ],
-  footnote: "Izoh matni.",
+  paidTotal: "200 000",
+  notes: ["Izoh matni."],
   warning: null,
   ...over,
 });
@@ -122,24 +131,40 @@ describe("StatementReport", () => {
     expect(html).toMatch(/border-red-[^"]*"[^>]*>[\s\S]*Qarzi:/);
   });
 
-  it("keeps each month to one line, its notes wait behind a click", () => {
+  it("lists the payments with their total and the month each went to", () => {
     const html = render(data());
-    expect(html).toContain("Sentabr");
-    expect(html).toContain("2 kelmagan");
-    expect(html).not.toContain("oylik to&#x27;lov: 9 dars");
-    expect(html).not.toContain("Sentabr avgustdan 50 000 so&#x27;m kam.");
-    expect(html).toMatch(/bg-yellow-[^"]*"[^>]*data-month="2026-09"/);
-    expect(html).not.toMatch(/bg-yellow-[^"]*"[^>]*data-month="2026-08"/);
+    expect(html).toContain("Qaysi oyga yozildi");
+    expect(html).toContain("Jami to&#x27;langan");
+    expect(html).toContain("/receipts/payment/p1.pdf");
   });
 
-  it("puts the rest in closed sections under Batafsil", () => {
+  it("gives each month its price, what was paid and what is owed, with a total", () => {
+    const html = render(data());
+    for (const head of ["Narxi", "To&#x27;langan", "Qarz", "Jami"]) {
+      expect(html).toContain(head);
+    }
+    expect(html).not.toContain("Oy oxirida");
+    expect(html).toContain("2 kelmagan");
+    expect(html).toContain("12 darsdan 9 tasi");
+    expect(html).toMatch(/text-emerald-[^"]*"[^>]*>yo&#x27;q/);
+    // The sharp note and the lesson days wait behind a click.
+    expect(html).not.toContain("Sentabr avgustdan 50 000 so&#x27;m kam.");
+    expect(html).toMatch(/data-month="2026-09"[^>]*class="[^"]*bg-yellow-|bg-yellow-[^"]*"[^>]*data-month="2026-09"/);
+  });
+
+  it("shows money ahead under the total", () => {
+    const html = render(
+      data(view({ surplus: { label: "Hisobida ortiqcha pul", amount: "+12 500" } })),
+    );
+    expect(html).toContain("Hisobida ortiqcha pul");
+    expect(html).toContain("+12 500");
+  });
+
+  it("puts the notes and the raw ledger in closed sections under Batafsil", () => {
     const html = render(data());
     expect(html).toContain("Batafsil");
-    expect(html).toContain("To&#x27;lovlar qayerga ketdi");
-    expect(html).toContain("To&#x27;lov turi o&#x27;zgarishi");
-    expect(html).toContain("Hisob qanday chiqdi");
-    // Closed: their contents are not drawn yet.
-    expect(html).not.toContain("avgust darslari 200 000");
+    expect(html).toContain("Izohlar");
+    // Closed: its contents are not drawn yet.
     expect(html).not.toContain("Izoh matni.");
   });
 
@@ -193,10 +218,9 @@ describe("StatementSummary", () => {
 });
 
 describe("MonthDetails", () => {
-  it("explains the month, then lists its lesson days", () => {
+  it("explains a sharp change, then lists the lesson days", () => {
     const html = renderToStaticMarkup(
       createElement(MonthDetails, {
-        details: ["oylik to'lov: 9 dars × 16 667"],
         note: [{ text: "Sentabr avgustdan 50 000 so'm kam.", bold: true }],
         days: [
           { day: "2026-09-07", group: "#001", status: "kelmagan" },
@@ -205,19 +229,19 @@ describe("MonthDetails", () => {
         showGroup: false,
       }),
     );
-    expect(html).toContain("oylik to&#x27;lov: 9 dars × 16 667");
     expect(html).toContain("Sentabr avgustdan 50 000 so&#x27;m kam.");
     expect(html).toContain("07.09");
     expect(html).toContain("hali o&#x27;tilmagan");
   });
 });
 
-describe("StatementAllocations", () => {
+describe("StatementPayments", () => {
   const d = data();
   const renderRows = (canCorrect: boolean) =>
     renderToStaticMarkup(
-      createElement(StatementAllocations, {
-        rows: d.view.allocations,
+      createElement(StatementPayments, {
+        rows: d.view.payments,
+        total: d.view.paidTotal,
         models: d.model.allocations,
         isCorrectable: () => canCorrect,
         onCorrect: () => {},
@@ -226,12 +250,25 @@ describe("StatementAllocations", () => {
 
   it("keeps the receipt link on a payment row", () => {
     expect(renderRows(true)).toContain("/receipts/payment/p1.pdf");
-    expect(renderRows(true)).toContain("avgust darslari 200 000");
+    expect(renderRows(true)).toContain("avgust");
   });
 
   it("offers the correction menu only where the rule allows it", () => {
     expect(renderRows(true)).toContain("Amallar");
     expect(renderRows(false)).not.toContain("Amallar");
+  });
+
+  it("says so when nothing was paid", () => {
+    const html = renderToStaticMarkup(
+      createElement(StatementPayments, {
+        rows: [],
+        total: null,
+        models: [],
+        isCorrectable: () => false,
+        onCorrect: () => {},
+      }),
+    );
+    expect(html).toContain("Hali to&#x27;lov qilinmagan.");
   });
 });
 
