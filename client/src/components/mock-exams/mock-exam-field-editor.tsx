@@ -96,7 +96,7 @@ export function MockExamFieldEditor({
           title={
             canRemove
               ? "Maydonni o'chirish"
-              : "Asosiy maydonlarni (ism/familya/telefon) o'chirib bo'lmaydi"
+              : "Asosiy maydonlarni (ism/familiya/telefon) o'chirib bo'lmaydi"
           }
         >
           <Trash2 className="size-4" />

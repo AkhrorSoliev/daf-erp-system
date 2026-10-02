@@ -63,20 +63,12 @@ const EXEMPTIONS: { site: string; reason: string }[] = [
       "Xuddi shu, faqat MUSBAT balans — oldindan to'langan pul (kechiktirilgan " +
       "daromad). Debitorlik bilan bir juft, ta'rifi ham bir xil bo'lishi shart.",
   },
+  // `getFinancialOverview` had three sites. The first two — the status-ACTIVE
+  // receivable and its debtor count — are gone (ADR-0059: the debt is the two
+  // numbers of `reports/debt-split.ts`, built on `activeStudentWhere()`), so
+  // the «Aktiv balans» read below is now the first and only one.
   {
     site: 'src/reports/reports-financial.service.ts::getFinancialOverview',
-    reason:
-      'Kutilayotgan qarz (D.2) — balans hisobotidagi «Debitorlik» bilan bir xil ' +
-      "o'lchov. Ikkovi birga o'zgarishi kerak, alohida emas.",
-  },
-  {
-    site: 'src/reports/reports-financial.service.ts::getFinancialOverview#2',
-    reason:
-      'Qarzdorlar soni — yuqoridagi qarz summasining sherigi. Summa faol ' +
-      "o'quvchilarniki bo'lsa, sanoq ham o'shalarniki bo'lishi shart.",
-  },
-  {
-    site: 'src/reports/reports-financial.service.ts::getFinancialOverview#3',
     reason:
       "HAL QILINMAGAN. Bu «Aktiv balans» kartochkasi — «Faol o'quvchilar " +
       "hisobidagi jami pul» deb yozilgan, ya'ni ta'rifga bo'ysunishi kerakdek " +
@@ -90,31 +82,11 @@ const EXEMPTIONS: { site: string; reason: string }[] = [
       'Filiallar kesimidagi qarz summasi — yuqoridagi «Debitorlik» ning filial ' +
       "bo'yicha bo'lingani. Umumiy son bilan yig'indisi mos tushishi shart.",
   },
-  {
-    site: 'src/telegram-groups/daily-snapshot.service.ts::persistScope',
-    reason:
-      'Kunlik suratdagi qarz summasi va qarzdorlar soni — /payments dagi qarz ' +
-      "kartochkasi bilan bir xil o'lchov.",
-  },
-  {
-    site: 'src/telegram-groups/telegram-group-daily-report.service.ts::build#3',
-    reason: "Kunlik hisobotdagi qarz bloki — surat bilan bir xil o'lchov.",
-  },
-  {
-    site: 'src/telegram-groups/telegram-group-stats.service.ts::buildDebtorsBlock',
-    reason:
-      "/qarzdorlar buyrug'idagi jami qarz — qarz kartochkasi bilan bir xil.",
-  },
-  {
-    site: 'src/telegram-groups/telegram-group-stats.service.ts::buildDebtorsBlock#2',
-    reason:
-      "/qarzdorlar buyrug'idagi eng katta qarzdorlar ro'yxati — summasi bilan " +
-      'bir xil shartdan qurilishi shart.',
-  },
-  {
-    site: 'src/telegram-groups/telegram-group-stats.service.ts::buildOverallStats#3',
-    reason: "/stats dagi qarz bloki — qarz kartochkasi bilan bir xil o'lchov.",
-  },
+  // Telegram: kunlik hisobot, kunlik surat (`daily-snapshot.service.ts`),
+  // /qarzdorlar va /stats qarzni endi `ReportsService.getDebtSplit` dan oladi
+  // (ADR-0059), /qarzdorlar ro'yxati esa `studyingDebtorWhere()` bilan
+  // quriladi (ichida `activeStudentWhere()`; skaner uni kanonik deb biladi) —
+  // status-ACTIVE sanoqlari yo'q, shuning uchun bu yerda ular uchun qator ham yo'q.
 ];
 
 const sites = discoverStudentPopulationSites(SRC, REPO_ROOT);

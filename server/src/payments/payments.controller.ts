@@ -161,9 +161,10 @@ export class PaymentsController {
   }
 
   /**
-   * Card-ready debtor aggregate (total owed, debtor count, avg debt, open /
-   * overdue payment-promise counts) for the debtors page summary cards.
-   * Same branch scope as the list.
+   * Card-ready aggregate for the debtors page: the debt as two numbers
+   * (`split`, ADR-0059) and the open / overdue payment-promise counts. Same
+   * branch scope as the list, but NOT its filters: the cards describe the whole
+   * scope, so the list's `studentStatus` is not read here.
    */
   @Get('debtors/summary')
   getDebtorSummary(
@@ -174,7 +175,6 @@ export class PaymentsController {
   ) {
     return this.paymentsService.getDebtorSummary(companyId, {
       branchId: query.branchId,
-      status: query.studentStatus ?? 'all',
       userId,
       roles,
     });

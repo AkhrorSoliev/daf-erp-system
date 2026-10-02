@@ -146,17 +146,9 @@ export class DashboardSummaryService {
 
   private async buildMoney(ctx: SummaryContext): Promise<DashboardMoney> {
     const month = tashkentMonthKey(new Date());
-    const [overview, debt] = await Promise.all([
-      this.reports.getFinancialOverview(ctx.companyId, {
-        branchIds: ctx.branchScope,
-      }),
-      this.payments.getDebtorSummary(ctx.companyId, {
-        branchId: singleBranchId(ctx.branchScope),
-        status: 'all',
-        userId: ctx.userId,
-        roles: ctx.roles,
-      }),
-    ]);
+    const overview = await this.reports.getFinancialOverview(ctx.companyId, {
+      branchIds: ctx.branchScope,
+    });
 
     const { netProfit, netProfitBasis } =
       await this.reports.getNetProfitWithBasis(ctx.companyId, {
@@ -170,11 +162,23 @@ export class DashboardSummaryService {
       monthIncome: overview.income.actual,
       paymentCount: overview.income.paymentCount,
       expectedMonthEnd: overview.forecast.expectedMonthEnd,
+      // Bosh sahifaga faqat to'rt maydon kerak: `month` va `students` hisobot
+      // sahifasiniki. Oylik hisob boshlanmagan oyda `null` — karta eski
+      // prognozni ko'rsatadi.
+      monthCharges: overview.monthCharges
+        ? {
+            charged: overview.monthCharges.charged,
+            paid: overview.monthCharges.paid,
+            unpaid: overview.monthCharges.unpaid,
+            paidPct: overview.monthCharges.paidPct,
+          }
+        : null,
       netProfit,
       netProfitBasis,
-      // Qarz balansi manfiy saqlanadi; karta uni musbat summa qilib
-      // ko'rsatadi, chunki yonida «Qarzdorlik» yozuvi turadi.
-      debt: { total: Math.abs(debt.totalDebt), count: debt.debtorCount },
+      // Qarz — ikki alohida raqam (ADR-0059). Overview uni o'sha `branchIds`
+      // bilan o'zi hisoblab keladi (`month`siz: «shu oy» — joriy Toshkent oyi),
+      // shuning uchun ikkinchi o'qish yo'q. Jami summa hech qayerda yo'q.
+      debt: overview.debtSplit,
     };
   }
 
@@ -222,7 +226,6 @@ export class DashboardSummaryService {
       canSeeOutreach
         ? this.payments.getDebtorSummary(ctx.companyId, {
             branchId: singleBranchId(ctx.branchScope),
-            status: 'all',
             userId: ctx.userId,
             roles: ctx.roles,
           })

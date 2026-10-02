@@ -6,8 +6,10 @@ import { TransactionsService } from '../transactions/transactions.service';
 describe('SalaryPaymentService.getMatrix', () => {
   let service: SalaryPaymentService;
   let prisma: any;
+  let transactions: { recordSalaryPayment: jest.Mock };
 
   beforeEach(async () => {
+    transactions = { recordSalaryPayment: jest.fn().mockResolvedValue({}) };
     prisma = {
       user: {
         findUnique: jest.fn().mockResolvedValue({
@@ -25,7 +27,7 @@ describe('SalaryPaymentService.getMatrix', () => {
       providers: [
         SalaryPaymentService,
         { provide: PrismaService, useValue: prisma },
-        { provide: TransactionsService, useValue: {} },
+        { provide: TransactionsService, useValue: transactions },
       ],
     }).compile();
     service = module.get(SalaryPaymentService);
@@ -125,6 +127,7 @@ describe('SalaryPaymentService.getMatrix', () => {
       prisma.user.findUnique
         .mockResolvedValueOnce({
           mainBranch: 1,
+          branches: [],
           roles: [{ role: { name: 'Branch Director' } }],
         }) // caller
         .mockResolvedValueOnce({ mainBranch: 2 }); // payee
@@ -139,6 +142,7 @@ describe('SalaryPaymentService.getMatrix', () => {
     it('refuses to pay at all when the caller has no branch (fail closed)', async () => {
       prisma.user.findUnique.mockResolvedValueOnce({
         mainBranch: null,
+        branches: [],
         roles: [{ role: { name: 'Branch Director' } }],
       });
       prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
@@ -146,6 +150,68 @@ describe('SalaryPaymentService.getMatrix', () => {
       await expect(service.payPayment('sp-1', 10768, 1)).rejects.toThrow(
         /filialingizga tegishli emas/,
       );
+    });
+
+    /**
+     * A2.8 lets a director attached to two branches SEE the second branch's
+     * payroll. Paying is a separate decision and stays on the home branch, the
+     * same as `batchPay` and the payments list.
+     */
+    describe('a director attached to two branches (A2.8)', () => {
+      const TWO_BRANCHES = [{ branchId: 1 }, { branchId: 2 }];
+
+      it("still pays an employee of the caller's home branch", async () => {
+        prisma.user.findUnique
+          .mockResolvedValueOnce({
+            mainBranch: 1,
+            branches: TWO_BRANCHES,
+            roles: [{ role: { name: 'Branch Director' } }],
+          }) // caller
+          .mockResolvedValueOnce({ mainBranch: 1 }); // payee
+        prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
+
+        await service.payPayment('sp-1', 10768, 1);
+
+        expect(transactions.recordSalaryPayment).toHaveBeenCalledWith(
+          expect.objectContaining({ userId: 555, amount: 1_000_000 }),
+        );
+        expect(prisma.salaryPayment.update).toHaveBeenCalled();
+      });
+
+      it('does not pay an employee of the second branch, though its payroll is visible', async () => {
+        prisma.user.findUnique
+          .mockResolvedValueOnce({
+            mainBranch: 1,
+            branches: TWO_BRANCHES,
+            roles: [{ role: { name: 'Branch Director' } }],
+          })
+          .mockResolvedValueOnce({ mainBranch: 2 });
+        prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
+
+        await expect(service.payPayment('sp-1', 10768, 1)).rejects.toThrow(
+          /filialingizga tegishli emas/,
+        );
+        expect(transactions.recordSalaryPayment).not.toHaveBeenCalled();
+        expect(prisma.salaryPayment.update).not.toHaveBeenCalled();
+      });
+
+      it('pays nothing when attached only through UserBranch — and a payee with no branch is no match', async () => {
+        // No `mainBranch` on either side: `null === null` must not read as a
+        // match.
+        prisma.user.findUnique
+          .mockResolvedValueOnce({
+            mainBranch: null,
+            branches: [{ branchId: 2 }],
+            roles: [{ role: { name: 'Branch Director' } }],
+          })
+          .mockResolvedValueOnce({ mainBranch: null });
+        prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
+
+        await expect(service.payPayment('sp-1', 10768, 1)).rejects.toThrow(
+          /filialingizga tegishli emas/,
+        );
+        expect(transactions.recordSalaryPayment).not.toHaveBeenCalled();
+      });
     });
 
     it('blocks batchPay for a branch-less non-CEO caller', async () => {

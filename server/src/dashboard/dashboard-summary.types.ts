@@ -1,3 +1,5 @@
+import type { DebtSplit } from '../reports/debt-split';
+
 /**
  * `GET /dashboard/summary` javobi. Mijozdagi
  * `client/src/components/dashboard/dashboard-summary-types.ts` bilan
@@ -8,9 +10,24 @@ export interface DashboardMoney {
   monthIncome: number;
   paymentCount: number;
   expectedMonthEnd: number;
+  /**
+   * «Bu oy hisoblandi» (ADR-0058): shu oyga yozilgan oylik hisoblar va
+   * shundan to'langani. 2026-09 dan oldingi oyda `null` — u holda karta
+   * `expectedMonthEnd` ni ko'rsatadi.
+   */
+  monthCharges: {
+    charged: number;
+    paid: number;
+    unpaid: number;
+    paidPct: number | null;
+  } | null;
   netProfit: number;
   netProfitBasis: 'recognized' | 'cash';
-  debt: { total: number; count: number };
+  /**
+   * Qarz — ikki alohida raqam, hech qayerda qo'shilmaydi (ADR-0059):
+   * «O'qiyotganlar» (shu oy / eski qarz) va «O'qimayotganlar».
+   */
+  debt: DebtSplit;
 }
 
 export interface DashboardPeople {

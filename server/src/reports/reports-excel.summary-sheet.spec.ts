@@ -53,6 +53,7 @@ const input = (over: Partial<SummaryInput> = {}): SummaryInput =>
       // 6 232 137 + 0.
       total: 173_783_991,
     },
+    monthCharges: null,
     nextMonthLabel: 'Avgust 2026',
     cashOut: [
       { label: 'Ijara', amount: 18_000_000 },
@@ -267,6 +268,43 @@ describe('summarySheetV2', () => {
     );
     expect(pctFor(aug, "Sentabr 2026da to'langan (kechikkan)")).toBe(0);
     expect(pctFor(aug, "Hali to'lanmay qolgan")).toBe(84.9);
+  });
+
+  it('block 4 of a monthly month keeps the fixed Summa | Jamidan % header and drops the lesson-value rows', () => {
+    const wb = new Workbook();
+    summarySheetV2(
+      wb,
+      input({
+        month: '2026-10',
+        prevMonth: '2026-09',
+        monthCharges: {
+          month: '2026-10',
+          charged: 900_000,
+          paid: 600_000,
+          unpaid: 300_000,
+          paidPct: 66.7,
+          students: 12,
+        },
+      }),
+    );
+    const oct = wb.getWorksheet('Xulosa')!;
+
+    // Customer demand 6 holds for this variant too: no comparison column.
+    expect(headerCells(oct, "Ko'rsatkich", 'Summa')).toEqual([
+      'Summa',
+      'Jamidan %',
+      '',
+    ]);
+    const t = textOf(oct).join('\n');
+    expect(t).toContain('4.  OKTABR 2026 OYLIK HISOBLARI');
+    for (const gone of [
+      "Qachon to'langan",
+      "Hali to'lanmay qolgan",
+      'Oktabr 2026 darslari qiymati',
+      "Oktabr 2026 ichida to'langan",
+    ]) {
+      expect(t).not.toContain(gone);
+    }
   });
 
   it('has no KASSADA QOLDI row', () => {

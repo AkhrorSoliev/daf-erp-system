@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { IncomeAttributionPanel } from "./income-attribution-panel";
 import { ProfitCompositionPanel } from "./profit-composition-panel";
+import type { MonthCharges } from "./payments-overview";
 import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
@@ -80,21 +81,21 @@ const kpiConfig: Record<
       "Faol o'quvchilar hisobidagi jami pul. Musbat bo'lsa — oldindan to'langan, manfiy bo'lsa — qarz.",
   },
   ltv: {
-    title: "LTV — O'quvchi qiymati",
+    title: "O'quvchi qiymati",
     color: "#8b5cf6",
     suffix: " so'm",
     description:
       "Bitta o'quvchi o'rtacha qancha pul olib keladi. Yuqori bo'lsa — o'quvchilar uzoq qoladi va ko'proq to'laydi.",
   },
   cac: {
-    title: "CAC — Jalb qilish narxi",
+    title: "Jalb qilish narxi",
     color: "#d97706",
     suffix: " so'm",
     description:
       "Bitta yangi o'quvchi olib kelish uchun o'rtacha qancha sarflangani. Past bo'lsa — marketing samarali.",
   },
   marketingRoi: {
-    title: "Marketing ROI",
+    title: "Marketing samarasi",
     color: "#059669",
     suffix: "%",
     description:
@@ -125,6 +126,12 @@ interface Props {
    * rather than fetched again — same request, same figure, no second answer.
    */
   expectedMonthEnd?: number;
+  /**
+   * «Oy to'lovlari» for the period's month (ADR-0058), or `null` for a month
+   * before the monthly-payment switch. Threaded from the overview like
+   * `expectedMonthEnd`, so the card and this drill-down show the same figures.
+   */
+  monthCharges?: MonthCharges | null;
   /** Switches the dialog to another KPI — the profit breakdown links to «Tushumlar». */
   onSelectKpi?: (key: KpiKey) => void;
 }
@@ -136,6 +143,7 @@ export function KpiChartDialog({
   startDate,
   endDate,
   expectedMonthEnd,
+  monthCharges,
   onSelectKpi,
 }: Props) {
   const { selectedBranch } = useBranchSwitcher();
@@ -293,6 +301,7 @@ export function KpiChartDialog({
             startDate={startDate}
             endDate={endDate}
             expectedMonthEnd={expectedMonthEnd}
+            monthCharges={monthCharges}
           />
         )}
 

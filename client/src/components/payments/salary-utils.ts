@@ -1,5 +1,43 @@
 // Shared helpers for the salary page (matrix + period workflow views).
 
+import { formatNumber } from "@/lib/format-utils";
+
+/**
+ * The unit a rate is written in: «month» — per student per MONTH, «cycle» —
+ * per CYCLE. The server writes it on every breakdown line (`rateBasis`); the
+ * client never works out which months were billed monthly.
+ */
+export type RateBasis = "month" | "cycle";
+
+/**
+ * The rate label on a breakdown line. The admin drawer and the teacher's own
+ * page both use it, so the two read the same.
+ *
+ * FIXED_PER_STUDENT: «/o'quvchi/oy» when `rateBasis === "month"`, «/tsikl» in
+ * every other case, a line without `rateBasis` (an older server) included.
+ */
+export function breakdownRateLabel(
+  rate: { salaryType: string; value: number },
+  rateBasis?: RateBasis,
+): string {
+  if (rate.salaryType === "PERCENTAGE") return `${rate.value}%`;
+  const value = formatNumber(rate.value);
+  if (rate.salaryType === "FIXED_PER_STUDENT") {
+    return rateBasis === "month" ? `${value}/o'quvchi/oy` : `${value}/tsikl`;
+  }
+  return `${value}/oy`;
+}
+
+/**
+ * A salary type's name, never the enum's: the rate sheet's badges and the
+ * breakdown drawer's CSV (opened in Excel) both read it.
+ */
+export const SALARY_TYPE_LABELS: Record<string, string> = {
+  PERCENTAGE: "Foiz",
+  FIXED_PER_STUDENT: "O'quvchi boshiga",
+  FIXED_MONTHLY: "Oylik",
+};
+
 export const SALARY_STATUS_LABELS: Record<string, string> = {
   CALCULATED: "Hisoblangan",
   APPROVED: "Tasdiqlangan",

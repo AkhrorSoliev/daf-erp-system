@@ -551,14 +551,44 @@ describe('ExpensesService — findAll filters + summary', () => {
         settledBySalaryPaymentId: null,
       });
 
-      await expect(
-        service.update(
+      const error = await service
+        .update(
           'exp-plain',
           { category: ExpenseCategory.TEACHER_ADVANCE } as any,
           42,
           COMPANY_ID,
-        ),
-      ).rejects.toThrow(BadRequestException);
+        )
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).message).toBe(
+        'Avans uchun xodimni tanlang',
+      );
+    });
+
+    // Bu matn formada xato bo'lib chiqadi: enum nomi ham, maydon nomi ham
+    // (`relatedUserId`) foydalanuvchiga hech narsa demaydi.
+    it('xodimsiz avans yozilmaydi va sababi oddiy tilda aytiladi', async () => {
+      const error = await service
+        .create(
+          {
+            category: ExpenseCategory.TEACHER_ADVANCE,
+            paymentMethod: ExpensePaymentMethod.CASH,
+            amount: 500_000,
+            description: 'Avans',
+            date: '2026-10-01',
+            branchId: 1,
+          } as any,
+          42,
+          COMPANY_ID,
+        )
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).message).toBe(
+        'Avans uchun xodimni tanlang',
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
     it("avans bo'lmagan xarajatga qorovul tegmaydi", async () => {

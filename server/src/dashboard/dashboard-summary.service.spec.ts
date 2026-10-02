@@ -1,10 +1,33 @@
 import { ForbiddenException } from '@nestjs/common';
 import { DashboardSummaryService } from './dashboard-summary.service';
 
+// «Qarz — ikki raqam» (ADR-0059). `ReportsService.getFinancialOverview` uni
+// `debtSplit` sifatida o'zi qaytaradi — bosh sahifa qarzni shundan oladi.
+const debtSplit = {
+  studying: {
+    total: 43_500_000,
+    count: 237,
+    currentMonth: 41_100_000,
+    older: 2_400_000,
+  },
+  notStudying: { total: 40_600_000, count: 327 },
+};
+
 const financialOverview = {
   income: { actual: 128_450_000, paymentCount: 214 },
   forecast: { expectedMonthEnd: 176_200_000 },
   netProfit: 78_000_000,
+  debtSplit,
+  // `ReportsService.getFinancialOverview` shu shaklda qaytaradi. `month` va
+  // `students` hisobot sahifasi uchun — bosh sahifaga o'tmaydi.
+  monthCharges: {
+    month: '2026-10',
+    charged: 900_000,
+    paid: 600_000,
+    unpaid: 300_000,
+    paidPct: 66.7,
+    students: 2,
+  },
 };
 
 const kpis = {
@@ -17,10 +40,14 @@ const kpis = {
   departureGraceDays: { LEFT_GROUP: 21, FROZEN: 60 },
 };
 
+// Qarzdorlar sahifasining kartalari (`GET /payments/debtors/summary`) ham
+// `split` olib yuradi, lekin bosh sahifa undan faqat va'da sonlarini o'qiydi.
+// Raqamlari ATAYLAB boshqacha: karta noto'g'ri manbadan to'lsa test ko'radi.
 const debtorSummary = {
-  totalDebt: -27_748_684,
-  debtorCount: 177,
-  avgDebt: -156_772,
+  split: {
+    studying: { total: 1_000, count: 1, currentMonth: 600, older: 400 },
+    notStudying: { total: 2_000, count: 2 },
+  },
   openPromises: 9,
   overduePromises: 5,
 };
@@ -47,6 +74,8 @@ function makeService(overrides: Record<string, any> = {}) {
       netProfitBasis: 'recognized',
     }),
     getKpis: jest.fn().mockResolvedValue(kpis),
+    // Overview `debtSplit` ni o'zi olib keladi: bu yerga murojaat bo'lmasligi kerak.
+    getDebtSplit: jest.fn(),
     ...overrides.reports,
   };
   const payments = {
@@ -98,10 +127,68 @@ describe('DashboardSummaryService.getSummary', () => {
       monthIncome: 128_450_000,
       paymentCount: 214,
       expectedMonthEnd: 176_200_000,
+      // Faqat to'rt maydon: `month` va `students` o'tib ketsa, toEqual yiqiladi.
+      monthCharges: {
+        charged: 900_000,
+        paid: 600_000,
+        unpaid: 300_000,
+        paidPct: 66.7,
+      },
       netProfit: 18_930_000,
       netProfitBasis: 'recognized',
-      debt: { total: 27_748_684, count: 177 },
+      debt: debtSplit,
     });
+  });
+
+  describe('qarz — ikki raqam (ADR-0059)', () => {
+    it("karta overview.debtSplit: ikkita alohida raqam, umumiy summa yo'q, ikkinchi o'qishsiz", async () => {
+      const { service, reports } = makeService();
+      const res = await service.getSummary(CEO);
+
+      // `debtorSummary.split` boshqa raqamlar bilan keladi: karta undan emas,
+      // overview dan to'ladi.
+      expect(res.money!.debt).toEqual(debtSplit);
+      expect(res.money!.debt).not.toHaveProperty('total');
+      expect(res.money!.debt).not.toHaveProperty('count');
+      // Qarz overview bilan birga keladi: alohida o'qish (va so'rov) yo'q.
+      expect(reports.getDebtSplit).not.toHaveBeenCalled();
+    });
+
+    it("qarz qamrovi overview'niki: ko'p filial ham, «Barcha filiallar» ham", async () => {
+      const { service, reports } = makeService();
+      await service.getSummary({ ...CEO, branchScope: [3, 4] });
+      await service.getSummary({ ...CEO, branchScope: null });
+
+      expect(
+        reports.getFinancialOverview.mock.calls.map((c: any[]) => c[1]),
+      ).toEqual([{ branchIds: [3, 4] }, { branchIds: null }]);
+    });
+
+    it("«E'tibor» bloki qarzdorlar sahifasidan faqat va'da sonini oladi, holat filtrisiz", async () => {
+      const { service, payments } = makeService();
+      const res = await service.getSummary(CEO);
+
+      expect(res.attention!.brokenPromises).toBe(5);
+      expect(payments.getDebtorSummary).toHaveBeenCalledWith(CEO.companyId, {
+        branchId: 1,
+        userId: CEO.userId,
+        roles: ['CEO'],
+      });
+    });
+  });
+
+  it('oylik hisob boshlanmagan oyda monthCharges null, eski prognoz joyida qoladi', async () => {
+    const { service } = makeService({
+      reports: {
+        getFinancialOverview: jest
+          .fn()
+          .mockResolvedValue({ ...financialOverview, monthCharges: null }),
+      },
+    });
+    const res = await service.getSummary(CEO);
+
+    expect(res.money!.monthCharges).toBeNull();
+    expect(res.money!.expectedMonthEnd).toBe(176_200_000);
   });
 
   it('administrator uchun pul bloki null va moliya servisi umuman chaqirilmaydi', async () => {
@@ -111,6 +198,7 @@ describe('DashboardSummaryService.getSummary', () => {
     expect(res.money).toBeNull();
     expect(reports.getFinancialOverview).not.toHaveBeenCalled();
     expect(reports.getNetProfitWithBasis).not.toHaveBeenCalled();
+    expect(reports.getDebtSplit).not.toHaveBeenCalled();
   });
 
   it('kassir uchun outreach sonlari nol, top qarzdorlar qoladi', async () => {

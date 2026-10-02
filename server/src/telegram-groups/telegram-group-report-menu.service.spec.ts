@@ -1,5 +1,7 @@
+import { Logger } from '@nestjs/common';
 import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
 import type { ReportsService } from '../reports/reports.service';
+import { formatNumber, formatSum } from './utils/format.util';
 
 function makeCtx(chatId = 111) {
   return {
@@ -20,6 +22,7 @@ function makeDeps(
     systemStartDate?: Date | null;
     branchId?: number | null;
     receivesAllBranches?: boolean;
+    reports?: Record<string, jest.Mock>;
   } = {},
 ) {
   const prisma: any = {
@@ -57,26 +60,24 @@ function makeDeps(
     generate: jest.fn().mockResolvedValue(Buffer.from('xlsx-bytes')),
   };
   const reportsFinancial: any = {
+    // No `forecast` and no debt: the raw overview carries neither any more
+    // (ADR-0059), so a card that still read them would fail loudly here.
     getFinancialOverview: jest.fn().mockResolvedValue({
       income: { actual: 280_000_000, byMethod: [] },
-      forecast: {
-        recognizedRevenueForecast: 420_000_000,
-        outstandingReceivable: -22_300_000,
-        debtorExposure: { count: 48, avgDebt: 0 },
-      },
       salary: { paid: 30_000_000, pending: 0, advances: 0 },
       expenses: 95_000_000,
       netProfit: 185_000_000,
     }),
   };
-  // `ReportsService` is deliberately absent: the financial card must degrade
-  // to the honestly-labelled cash line when the canonical net profit cannot be
-  // computed, and one of the tests below asserts exactly that.
+  // `ReportsService` is absent unless a test passes `reports`: the financial
+  // card must degrade to the honestly-labelled cash line when the canonical net
+  // profit cannot be computed, and to a card without its month line when the
+  // month's figure cannot be read — the default tests below rely on both.
   const service = new TelegramGroupReportMenuService(
     prisma,
     reportsExcel,
     reportsFinancial,
-    null as unknown as ReportsService,
+    (overrides.reports ?? null) as unknown as ReportsService,
   );
   return { service, prisma, reportsExcel, reportsFinancial };
 }
@@ -383,6 +384,245 @@ describe('TelegramGroupReportMenuService', () => {
     // The card keeps its own income figure and simply loses the split.
     expect(text).toContain("• Tushum (haqiqiy): <b>280 000 000 so'm</b>");
     expect(text).not.toContain('Shu oy uchun');
+  });
+
+  // ADR-0058: from 2026-09 the card's month line is «Bu oy hisoblandi / To'landi
+  // / Qoldi»; before it, «Oy oxiriga kutilyapti» — now read from the reports
+  // facade (A2.2: the card printed `getFinancialOverview().income.expected`,
+  // which the raw service hard-coded to 0 — the field is gone now).
+  describe('the month line', () => {
+    const monthCharges = {
+      month: '2026-10',
+      charged: 177_000_000,
+      paid: 135_900_000,
+      unpaid: 41_100_000,
+      paidPct: 76.8,
+      students: 237,
+    };
+    // `formatSum`, not a literal: its thousands separator is a non-breaking space.
+    const chargesBlock = [
+      `• Bu oy hisoblandi: <b>${formatSum(177_000_000)}</b>`,
+      `• To'landi: <b>${formatSum(135_900_000)}</b> (<b>76.8%</b>)`,
+      `• Qoldi: <b>${formatSum(41_100_000)}</b>`,
+    ].join('\n');
+    const reportsWith = (overrides: Record<string, jest.Mock> = {}) => ({
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 12_345_678 }),
+      getMonthCharges: jest.fn().mockResolvedValue(monthCharges),
+      getMonthlyExpectation: jest
+        .fn()
+        .mockResolvedValue({ expectedValue: 150_000_000 }),
+      ...overrides,
+    });
+
+    it("prints hisoblandi / to'landi / qoldi for October 2026, for the group's branch", async () => {
+      jest.setSystemTime(new Date('2026-10-08T16:00:00Z'));
+      const reports = reportsWith();
+      const { service } = makeDeps({ branchId: 1, reports });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      const text = ctx.reply.mock.calls[0][0] as string;
+      expect(text).toContain(chargesBlock);
+      // Neither the old line nor its hard-coded 0.
+      expect(text).not.toContain('Oy oxiriga kutilyapti');
+      expect(reports.getMonthCharges).toHaveBeenCalledWith(1001, {
+        month: '2026-10',
+        branchIds: [1],
+      });
+      expect(reports.getMonthlyExpectation).not.toHaveBeenCalled();
+    });
+
+    it('prints the real «Oy oxiriga kutilyapti» before 2026-09, not the raw 0', async () => {
+      jest.setSystemTime(new Date('2026-08-12T16:00:00Z'));
+      const reports = reportsWith();
+      const { service } = makeDeps({ reports });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      const text = ctx.reply.mock.calls[0][0] as string;
+      expect(text).toContain(
+        `• Oy oxiriga kutilyapti: <b>${formatSum(150_000_000)}</b>`,
+      );
+      expect(text).not.toContain('Bu oy hisoblandi');
+      expect(reports.getMonthlyExpectation).toHaveBeenCalledWith(1001, {
+        month: '2026-08',
+        branchIds: null,
+      });
+      expect(reports.getMonthCharges).not.toHaveBeenCalled();
+    });
+
+    it('still sends the card, without the month line, when the figure cannot be read', async () => {
+      jest.setSystemTime(new Date('2026-10-08T16:00:00Z'));
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      try {
+        const { service } = makeDeps({
+          reports: reportsWith({
+            getMonthCharges: jest.fn().mockRejectedValue(new Error('boom')),
+          }),
+        });
+        const ctx = makeCtx();
+
+        await service.sendFinancialCard(ctx);
+
+        // One message, and it is the card — not the «Ma'lumot yuklanmadi» apology.
+        expect(ctx.reply).toHaveBeenCalledTimes(1);
+        const text = ctx.reply.mock.calls[0][0] as string;
+        expect(text).toContain('Moliyaviy xulosa');
+        expect(text).toContain('Tushum (haqiqiy)');
+        expect(text).not.toContain('Bu oy hisoblandi');
+        expect(text).not.toContain('Oy oxiriga kutilyapti');
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('boom'));
+      } finally {
+        warn.mockRestore();
+      }
+    });
+  });
+
+  // ADR-0059: the card's debt is TWO numbers — «O'qiyotganlar qarzi» with its
+  // shu oy / eski qarz split, and «O'qimayotganlar qarzi» — read from the
+  // facade's split for the group's own scope, never added and never from the
+  // raw overview (whose status-ACTIVE «Qarzdorlar» count is gone). The lines
+  // are the 21:00 report's, from the shared `buildDebtSplitLines`.
+  describe('the debt lines', () => {
+    const split = {
+      studying: {
+        total: 43_500_000,
+        count: 237,
+        currentMonth: 41_100_000,
+        older: 2_400_000,
+      },
+      notStudying: { total: 40_600_000, count: 327 },
+    };
+    // The card's other reads are not what is under test: they answer plainly.
+    const reportsWith = (overrides: Record<string, jest.Mock> = {}) => ({
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyExpectation: jest
+        .fn()
+        .mockResolvedValue({ expectedValue: 150_000_000 }),
+      getDebtSplit: jest.fn().mockResolvedValue(split),
+      ...overrides,
+    });
+
+    it("prints the 21:00 report's debt lines — «eski qarz», not «eski»", async () => {
+      const { service } = makeDeps({ reports: reportsWith() });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      // `formatSum` / `formatNumber`, not literals: their thousands separator
+      // is a non-breaking space. One contiguous block checks wording and order.
+      const text = ctx.reply.mock.calls[0][0] as string;
+      expect(text).toContain(
+        [
+          `• O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>`,
+          `   🟡 shu oy ${formatSum(41_100_000)} · 🔴 eski qarz ${formatSum(2_400_000)}`,
+          `• O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+        ].join('\n'),
+      );
+      // The card used to print a wording of its own: «eski» alone.
+      expect(text).not.toMatch(/eski (?!qarz)/);
+    });
+
+    it('never adds the two, and the old single «Qarzdorlar» line is gone', async () => {
+      const { service } = makeDeps({ reports: reportsWith() });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      const text = ctx.reply.mock.calls[0][0] as string;
+      expect(text).not.toContain('Qarzdorlar');
+      expect(text).not.toContain('Jami qarz');
+      expect(text).not.toContain(formatSum(43_500_000 + 40_600_000));
+      // Their own lines, not one line holding both.
+      const debtLines = text.split('\n').filter((l) => l.includes('qarzi:'));
+      expect(debtLines).toHaveLength(2);
+    });
+
+    it("asks for the group's branch and the card's own month", async () => {
+      const reports = reportsWith();
+      const { service } = makeDeps({ branchId: 1, reports });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      // The month is passed explicitly, like the income split's: the card
+      // resolves it once, for its title and every figure on it. 08.07.2026 here.
+      expect(reports.getDebtSplit).toHaveBeenCalledTimes(1);
+      expect(reports.getDebtSplit).toHaveBeenCalledWith(1001, {
+        branchIds: [1],
+        month: '2026-07',
+      });
+    });
+
+    it('a group that sees every branch gets the company-wide split', async () => {
+      const reports = reportsWith();
+      const { service } = makeDeps({
+        branchId: null,
+        receivesAllBranches: true,
+        reports,
+      });
+
+      await service.sendFinancialCard(makeCtx());
+
+      expect(reports.getDebtSplit).toHaveBeenCalledWith(1001, {
+        branchIds: null,
+        month: '2026-07',
+      });
+    });
+
+    it('nobody owes: both numbers still print, as zeros, with no shu oy line', async () => {
+      const { service } = makeDeps({
+        reports: reportsWith({
+          getDebtSplit: jest.fn().mockResolvedValue({
+            studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
+            notStudying: { total: 0, count: 0 },
+          }),
+        }),
+      });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      const text = ctx.reply.mock.calls[0][0] as string;
+      expect(text).toContain(
+        [
+          `• O'qiyotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
+          `• O'qimayotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
+        ].join('\n'),
+      );
+      // Nothing studying is owed, so there is no split to print.
+      expect(text).not.toContain('shu oy');
+    });
+
+    it('still sends the card, without the debt lines, when the split cannot be read', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      try {
+        const { service } = makeDeps({
+          reports: reportsWith({
+            getDebtSplit: jest.fn().mockRejectedValue(new Error('boom')),
+          }),
+        });
+        const ctx = makeCtx();
+
+        await service.sendFinancialCard(ctx);
+
+        // One message, and it is the card — not the «Ma'lumot yuklanmadi»
+        // apology. A missing line is honest; a zero would claim nobody owes.
+        expect(ctx.reply).toHaveBeenCalledTimes(1);
+        const text = ctx.reply.mock.calls[0][0] as string;
+        expect(text).toContain('Moliyaviy xulosa');
+        expect(text).toContain('Tushum (haqiqiy)');
+        expect(text).not.toContain('qarzi');
+        expect(text).not.toContain('Qarzdorlar');
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('boom'));
+      } finally {
+        warn.mockRestore();
+      }
+    });
   });
 
   it('openMenu posts a fresh menu message with the root keyboard', async () => {

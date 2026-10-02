@@ -392,7 +392,33 @@ describe('StudentEnrollmentService', () => {
           service.enrollToGroup(1, 'group-1', 2, 1001, {
             transferReasonId: 'nope',
           }),
-        ).rejects.toThrow(NotFoundException);
+        ).rejects.toThrow(
+          new NotFoundException(
+            'Tanlangan guruh almashtirish sababi topilmadi',
+          ),
+        );
+      });
+
+      it('rejects an unknown reason on a same-teacher move too, in the same words', async () => {
+        prisma.enrollment.findFirst
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({
+            id: 'enroll-old',
+            studentId: 1,
+            groupId: 'old-group',
+            group: { teachers: [{ teacherId: 5001 }] }, // same as target
+          });
+        prisma.enrollmentTransferReason.findFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          service.enrollToGroup(1, 'group-1', 2, 1001, {
+            transferReasonId: 'nope',
+          }),
+        ).rejects.toThrow(
+          new NotFoundException(
+            'Tanlangan guruh almashtirish sababi topilmadi',
+          ),
+        );
       });
 
       // CEO 21.09.2026, answer 13: after a course switch each course is billed
@@ -433,6 +459,13 @@ describe('StudentEnrollmentService', () => {
               performedById: 2,
             }),
           );
+          // No policy: CENTER_INITIATIVE without the trial lesson. The enroll
+          // preview quotes this release through `previewReleaseForDeparture`
+          // (`student-enroll-preview.service.ts`); naming a policy here would
+          // change the credit and must change that quote too.
+          const [, args] =
+            monthlyChargeMock.reverseChargeForDeparture.mock.calls[0];
+          expect(args).not.toHaveProperty('policy');
         } finally {
           jest.useRealTimers();
         }

@@ -258,7 +258,14 @@ export class SalaryPaymentService {
         where: { id: payment.userId },
         select: { mainBranch: true },
       });
-      if (scope.kind === 'none' || payee?.mainBranch !== scope.branchId) {
+      // Paying stays on the caller's HOME branch, like `batchPay` and the
+      // payments list: the other attached branches widen what a director may
+      // see (A2.8), not what they may pay. No `mainBranch` pays nothing.
+      if (
+        scope.kind === 'none' ||
+        scope.mainBranch == null ||
+        payee?.mainBranch !== scope.mainBranch
+      ) {
         throw new ForbiddenException(
           "Bu xodim sizning filialingizga tegishli emas — oyligini to'lay olmaysiz",
         );

@@ -190,7 +190,7 @@ export const ATTENDANCE_KPI_TOOLTIPS = {
   excused:
     "SABABLI yozuvlar — dars bekor qilindi yoki o'quvchi sababli kelmadi (kasal, hujjat bilan).\n\nDavomat foizi formulasidan chiqariladi: bu kunlar guruh ko'rsatkichini pasaytirmaydi.",
   retention:
-    "O'quvchilar soni davr boshida bo'lganga nisbatan necha foizga o'zgargan.\n\n• +45% — guruh 45% kattalashgan (yangi o'quvchilar qo'shilgan)\n• 0% — barqaror (kim ketgan, kim qo'shilgan teng)\n• -20% — guruh 20% ga kichraygan (yo'qotish bor)\n\nHisob: (davr oxiri − davr boshi) / davr boshi × 100.\n\nMuhim: davomat % yuqori bo'lib, o'zgarish manfiy bo'lsa — bu 'omon qolganlar yaxshi keladi, lekin ko'pchilik ketib qoldi' degani.\n\nGuruhda hisoblanadi = ACTIVE yoki FROZEN. Ketgan = DROPPED / TRANSFERRED / COMPLETED.",
+    "O'quvchilar soni davr boshida bo'lganga nisbatan necha foizga o'zgargan.\n\n• +45% — guruh 45% kattalashgan (yangi o'quvchilar qo'shilgan)\n• 0% — barqaror (kim ketgan, kim qo'shilgan teng)\n• -20% — guruh 20% ga kichraygan (yo'qotish bor)\n\nHisob: (davr oxiri − davr boshi) / davr boshi × 100.\n\nMuhim: davomat % yuqori bo'lib, o'zgarish manfiy bo'lsa — bu 'omon qolganlar yaxshi keladi, lekin ko'pchilik ketib qoldi' degani.\n\nGuruhda hisoblanadi = faol yoki muzlatilgan. Ketgan = chiqdi, o'tkazildi yoki tugallangan.",
 };
 
 export const ATTENDANCE_TABLE_TOOLTIPS = {
@@ -198,9 +198,9 @@ export const ATTENDANCE_TABLE_TOOLTIPS = {
     "Davomat foizi: (KELDI + KECHIKDI) / Jami yozuvlar × 100.\n\nDarslar bekor qilingan yoki sababli kelmagan yozuvlar yig'indidan chiqariladi.",
   studentCount: "Hozirda guruhda o'qiyotgan faol o'quvchilar soni.",
   startStudentCount:
-    "Tanlangan davr boshida guruhda faol bo'lgan o'quvchilar soni (ACTIVE yoki FROZEN status).",
+    "Tanlangan davr boshida guruhda faol bo'lgan o'quvchilar soni (faol yoki muzlatilgan).",
   endStudentCount:
-    "Tanlangan davr oxirida guruhda faol bo'lgan o'quvchilar soni (ACTIVE yoki FROZEN status).",
+    "Tanlangan davr oxirida guruhda faol bo'lgan o'quvchilar soni (faol yoki muzlatilgan).",
   retention:
     "O'zgarish: o'quvchilar soni davr boshida bo'lgandan necha foizga o'zgargan.\n\n• +45% — guruh kattalashgan\n• 0% — barqaror\n• -20% — guruh kichraygan\n\nHisob: (Yakun − Boshi) / Boshi × 100.\n\nRanglar:\n• Yashil — o'sish (>0%)\n• Kulrang — barqaror (0%)\n• Qizil — yo'qotish (<0%)",
   lessonCount:

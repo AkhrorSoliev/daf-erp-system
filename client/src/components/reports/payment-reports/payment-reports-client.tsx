@@ -6,7 +6,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   Receipt,
-  Clock,
   Building2,
   Percent,
   Gift,
@@ -32,8 +31,7 @@ import { TeachersReportTable, type TeacherRow } from "./teachers-report-table";
 import { TeacherGroupsDialog } from "./teacher-groups-dialog";
 import { reportViewState, retryUnlessRefused } from "./report-view-state";
 
-type CardKey =
-  "totalPayments" | "onTimePayments" | "branchBreakdown" | "refunds";
+type CardKey = "totalPayments" | "branchBreakdown" | "refunds";
 
 interface PaymentReportsResponse {
   totalPayments: {
@@ -41,12 +39,6 @@ interface PaymentReportsResponse {
     previous: number;
     change: number;
     trend: { month: string; value: number }[];
-  };
-  onTimePayments: {
-    current: { total: number; onTime: number; rate: number };
-    previous: { total: number; onTime: number; rate: number };
-    change: number;
-    trend: { month: string; onTime: number; late: number; rate: number }[];
   };
   branchBreakdown: {
     current: number;
@@ -197,7 +189,7 @@ export function PaymentReportsClient() {
       ) : view === "loading" || !data ? (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-36 rounded-xl" />
             ))}
           </div>
@@ -217,15 +209,6 @@ export function PaymentReportsClient() {
               valueColor="text-green-600 dark:text-green-400"
               tooltip="Tanlangan davrdagi barcha tasdiqlangan to'lovlar yig'indisi"
               onClick={() => setActiveCard("totalPayments")}
-            />
-
-            <PaymentReportCard
-              icon={Clock}
-              label="Vaqtida to'lovlar"
-              value={`${data.onTimePayments.current.rate}% (${data.onTimePayments.current.onTime}/${data.onTimePayments.current.total})`}
-              change={data.onTimePayments.change}
-              tooltip="O'quvchi yangi to'lov siklining birinchi darsiga kelgunicha to'lagan hollari. Yangi guruhlar uchun — birinchi 3 dars ichida."
-              onClick={() => setActiveCard("onTimePayments")}
             />
 
             <PaymentReportCard
@@ -264,21 +247,6 @@ export function PaymentReportsClient() {
             months={months}
             onMonthsChange={setMonths}
             trend={data.totalPayments.trend}
-          />
-
-          <PaymentReportDialog
-            open={activeCard === "onTimePayments"}
-            onOpenChange={(o) => !o && setActiveCard(null)}
-            title="Vaqtida to'lovlar statistikasi"
-            description="Vaqtida to'langan to'lovlar ulushi (%)"
-            color="#2563eb"
-            suffix="%"
-            months={months}
-            onMonthsChange={setMonths}
-            trend={data.onTimePayments.trend.map((p) => ({
-              month: p.month,
-              value: p.rate,
-            }))}
           />
 
           <BranchBreakdownDialog

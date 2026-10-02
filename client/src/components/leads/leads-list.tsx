@@ -141,7 +141,7 @@ export function LeadsList() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Ism familya</TableHead>
+              <TableHead>Ism familiya</TableHead>
               <TableHead>Telefon</TableHead>
               <TableHead>Holati</TableHead>
               <TableHead>O&apos;quvchi</TableHead>

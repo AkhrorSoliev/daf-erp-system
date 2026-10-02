@@ -70,7 +70,7 @@ export function ReasonsSettingsClient() {
           <ReasonListManager
             endpoint="/enrollment-transfer-reasons"
             queryKey="enrollment-transfer-reasons"
-            addPlaceholder="Yangi transfer sababi"
+            addPlaceholder="Yangi guruh almashtirish sababi"
           />
         </TabsContent>
 

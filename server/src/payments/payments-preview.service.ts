@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   AttendanceStatus,
+  GroupStatus,
   PaymentModel,
   TransactionType,
 } from '@prisma/client';
@@ -120,12 +121,26 @@ export class PaymentsPreviewService {
       throw new Error("O'quvchi topilmadi");
     }
 
+    // Groups that bill, or are about to. `MonthlyChargeService` bills an
+    // enrollment only while its group is ACTIVE (the guard on one enrollment
+    // and the daily run's query), and a PAUSED group's enrollment stays ACTIVE,
+    // so without a filter the dialog asked for a month nobody would bill. A
+    // FORMING group stays in: the status cron makes it ACTIVE on its start date
+    // and the daily run then charges it, and a new student in a forming group
+    // is who the admin takes a first payment from. A PAUSED group has no date
+    // at which billing resumes. This list sums `nextMonthAmount` and picks the
+    // model; the contract 3.2 reach (`monthly.admission`) does not read it — it
+    // loads the student's own month charges.
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         studentId,
         status: 'ACTIVE',
         deletedAt: null,
-        group: { companyId, deletedAt: null },
+        group: {
+          companyId,
+          deletedAt: null,
+          statusEnum: { in: [GroupStatus.ACTIVE, GroupStatus.FORMING] },
+        },
       },
       select: {
         id: true,

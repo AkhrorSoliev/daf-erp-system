@@ -142,12 +142,12 @@ export function AddLeadDrawer() {
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="lastName">Familya</Label>
+                  <Label htmlFor="lastName">Familiya</Label>
                   <Input
                     id="lastName"
                     placeholder="Karimov"
                     {...register("lastName", {
-                      required: "Familya kiritilishi shart",
+                      required: "Familiya kiritilishi shart",
                     })}
                   />
                   {errors.lastName && (

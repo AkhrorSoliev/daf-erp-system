@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Workbook } from 'exceljs';
 import { ReportsService } from './reports.service';
+import { isMonthlyBillingMonth } from './month-charges';
 import { tashkentTodayStr, dmy, nowLabel } from './reports-excel.helpers';
 import { uzMonthLabel } from './reports-excel.v2-helpers';
 import {
@@ -42,6 +43,7 @@ import {
   singleBranchId,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
+import { tashkentMonthKey } from '../common/date/tashkent';
 
 export interface FinancialExcelQuery {
   /**
@@ -131,11 +133,12 @@ export class ReportsExcelService {
     const salaryBranchId = singleBranchId(branchIds);
     const performedById = query.performedById ?? 0;
     // The report is a per-calendar-month view — use the period's start month
-    // (defaults to the current month, matching the frontend default).
-    const now = new Date();
+    // (defaults to the current TASHKENT month, matching the frontend default:
+    // the process clock is UTC on Railway and still says last month from 00:00
+    // to 05:00 on the 1st).
     const monthStr = query.startDate
       ? query.startDate.slice(0, 7)
-      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      : tashkentMonthKey(new Date());
     const prevMonthStr = shiftMonth(monthStr, -1);
     const nextMonthStr = shiftMonth(monthStr, 1);
 
@@ -249,6 +252,7 @@ export class ReportsExcelService {
       attributionCur,
       attributionNext,
       expectation,
+      monthCharges,
       prevSalaries,
     ] = await Promise.all([
       this.reports.getOwnMonthProfit(companyId, {
@@ -280,6 +284,16 @@ export class ReportsExcelService {
         month: monthStr,
         branchIds,
       }),
+      // From the first monthly month, block 4 of «Xulosa» is what the month
+      // CHARGED (ADR-0058); earlier months keep the lesson-value breakdown and
+      // read nothing here. Outside `safe` like every figure behind «Xulosa»: a
+      // failure must fail the export, not print a zero.
+      isMonthlyBillingMonth(monthStr)
+        ? this.reports.getMonthCharges(companyId, {
+            month: monthStr,
+            branchIds,
+          })
+        : Promise.resolve(null),
       this.reports.getSalaryMonthly(
         companyId,
         prevMonthStr,
@@ -308,6 +322,7 @@ export class ReportsExcelService {
       attributionCur,
       attributionNext,
       expectation,
+      monthCharges,
       payments,
       pl,
       students: studentFlow,

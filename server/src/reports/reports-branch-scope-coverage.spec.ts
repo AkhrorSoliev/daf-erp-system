@@ -294,3 +294,67 @@ describe('branch scope coverage — expectation service', () => {
     expect(prisma.attendance.findMany).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * «Bu oy hisoblandi» is a CHAIN too: only the holders query carries `branchId`;
+ * a student's later charges in ANY branch sit on his one balance, so the other
+ * two queries read the students it returned and carry no branch of their own.
+ */
+describe('branch scope coverage — month charges', () => {
+  let service: ReportsFinancialService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    prisma = {
+      enrollmentMonthlyCharge: {
+        findMany: jest
+          .fn()
+          .mockResolvedValueOnce([{ studentId: 10001 }])
+          .mockResolvedValueOnce([]),
+      },
+      student: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ReportsFinancialService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get(ReportsFinancialService);
+  });
+
+  it('scopes the holders query and chains the rest to the students it returned', async () => {
+    await service.getMonthCharges(1, { month: '2026-10', branchIds: [7] });
+
+    const [holders, later] = prisma.enrollmentMonthlyCharge.findMany.mock.calls;
+    expect(holders[0].where.branchId).toEqual({ in: [7] });
+    expect(later[0].where.studentId).toEqual({ in: [10001] });
+    expect(later[0].where.branchId).toBeUndefined();
+    expect(prisma.student.findMany.mock.calls[0][0].where.id).toEqual({
+      in: [10001],
+    });
+  });
+
+  it('leaves the holders query unfiltered for a company-wide caller', async () => {
+    await service.getMonthCharges(1, { month: '2026-10', branchIds: null });
+
+    expect(
+      prisma.enrollmentMonthlyCharge.findMany.mock.calls[0][0].where.branchId,
+    ).toBeUndefined();
+  });
+
+  it('an empty scope matches NOTHING and reads nothing further', async () => {
+    prisma.enrollmentMonthlyCharge.findMany.mockReset().mockResolvedValue([]);
+
+    const r = await service.getMonthCharges(1, {
+      month: '2026-10',
+      branchIds: [],
+    });
+
+    expect(
+      prisma.enrollmentMonthlyCharge.findMany.mock.calls[0][0].where.branchId,
+    ).toEqual({ in: [] });
+    expect(r.charged).toBe(0);
+    expect(prisma.student.findMany).not.toHaveBeenCalled();
+  });
+});

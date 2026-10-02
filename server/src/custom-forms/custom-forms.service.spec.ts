@@ -29,7 +29,7 @@ function baseFields(): FormFieldDto[] {
     {
       id: 'ln',
       type: 'text',
-      label: 'Familya',
+      label: 'Familiya',
       required: true,
       mapsTo: 'lastName',
     },
@@ -94,7 +94,7 @@ describe('CustomFormsService', () => {
               {
                 id: 'ln',
                 type: 'text',
-                label: 'Familya',
+                label: 'Familiya',
                 required: true,
                 mapsTo: 'lastName',
               },
@@ -111,7 +111,29 @@ describe('CustomFormsService', () => {
           10,
           null,
         ),
-      ).rejects.toThrow(/Ism maydoni majburiy/);
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Ism maydoni majburiy — formaga qo\'shing va uni "Ism"ga bog\'lang',
+        ),
+      );
+    });
+    it('names the surname slot «Familiya» when no lastName mapping exists', async () => {
+      await expect(
+        service.create(
+          {
+            title: 'F1',
+            sectionId: 'sec-1',
+            fields: baseFields().filter((f) => f.mapsTo !== 'lastName'),
+          },
+          1,
+          10,
+          null,
+        ),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Familiya maydoni majburiy — formaga qo\'shing va uni "Familiya"ga bog\'lang',
+        ),
+      );
     });
     it('rejects when a mapsTo field is not required', async () => {
       await expect(
@@ -130,7 +152,7 @@ describe('CustomFormsService', () => {
               {
                 id: 'ln',
                 type: 'text',
-                label: 'Familya',
+                label: 'Familiya',
                 required: true,
                 mapsTo: 'lastName',
               },
@@ -147,7 +169,11 @@ describe('CustomFormsService', () => {
           10,
           null,
         ),
-      ).rejects.toThrow(/majburiy bo'lishi kerak/);
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Ism / Familiya / Telefonga bog\'langan "Ism" maydoni majburiy bo\'lishi kerak',
+        ),
+      );
     });
     it('rejects when a phone mapping is not a phone field type', async () => {
       await expect(
@@ -166,7 +192,7 @@ describe('CustomFormsService', () => {
               {
                 id: 'ln',
                 type: 'text',
-                label: 'Familya',
+                label: 'Familiya',
                 required: true,
                 mapsTo: 'lastName',
               },
@@ -183,7 +209,11 @@ describe('CustomFormsService', () => {
           10,
           null,
         ),
-      ).rejects.toThrow(/turi "phone"/);
+      ).rejects.toThrow(
+        new BadRequestException(
+          "Telefon maydonining turi «Telefon» bo'lishi kerak",
+        ),
+      );
     });
     it('rejects when two fields map to the same slot', async () => {
       await expect(
@@ -209,7 +239,7 @@ describe('CustomFormsService', () => {
               {
                 id: 'ln',
                 type: 'text',
-                label: 'Familya',
+                label: 'Familiya',
                 required: true,
                 mapsTo: 'lastName',
               },
@@ -226,7 +256,9 @@ describe('CustomFormsService', () => {
           10,
           null,
         ),
-      ).rejects.toThrow(/faqat bitta maydon/);
+      ).rejects.toThrow(
+        new BadRequestException("Ismga faqat bitta maydon bog'lanishi mumkin"),
+      );
     });
     it('rejects select/radio fields with no options', async () => {
       await expect(

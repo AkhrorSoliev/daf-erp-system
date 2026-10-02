@@ -161,6 +161,7 @@ export interface BranchRow {
   operatingExpenses: number;
   refunds: number;
   netProfit: number;
+  /** «O'qiyotganlar qarzi» only (ADR-0059); the header says so. */
   debt: number;
   inGroup: number;
 }
@@ -192,7 +193,7 @@ export function branchesSheet(
     'Xarajat',
     'Qaytarilgan',
     'SOF FOYDA',
-    'Qarz (hozir)',
+    "O'qiyotganlar qarzi (hozir)",
     "Guruhda o'qiyapti",
   ]);
 
