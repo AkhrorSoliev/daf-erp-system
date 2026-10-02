@@ -25,7 +25,9 @@ import { chargeStartDate } from './charge-start-date';
 import { DepartureReleaseInput } from './departure-release';
 import {
   releaseCancelledLesson,
+  restoreCancelledLesson,
   type CancelledLessonReleaseResult,
+  type CancelledLessonRestoreResult,
 } from './cancelled-lesson-release';
 import {
   CONTRACT_62_START_DAY,
@@ -1557,6 +1559,17 @@ export class MonthlyChargeService {
     params: Parameters<typeof releaseCancelledLesson>[2],
   ): Promise<CancelledLessonReleaseResult> {
     return releaseCancelledLesson(tx, this.transactionsWrite, params);
+  }
+
+  /**
+   * The undo of `releaseCancelledLesson` when its cancellation is deleted
+   * (ADR-0063). The rule lives in `cancelled-lesson-release.ts`.
+   */
+  restoreCancelledLesson(
+    tx: Prisma.TransactionClient,
+    params: Parameters<typeof restoreCancelledLesson>[2],
+  ): Promise<CancelledLessonRestoreResult> {
+    return restoreCancelledLesson(tx, this.transactionsWrite, params);
   }
 
   /**
