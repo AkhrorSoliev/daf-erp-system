@@ -7,10 +7,12 @@
 // DISABLED — `payment.debtWriteOffEnabled` sozlamasi o'chiq bo'lsa server
 // shu sababni qaytaradi: bu "shart bajarilmadi" emas, "bu imkoniyat
 // umuman yoqilmagan" degani.
+// MONTHLY — a monthly-era enrollment (ADR-0062): write-off is never offered.
 export type DebtWriteOffEligibilityReason =
   | "NO_DEBT"
   | "NO_ABSENT_IN_CYCLE"
-  | "DISABLED";
+  | "DISABLED"
+  | "MONTHLY";
 
 export interface DebtWriteOffEligibilityDetails {
   studentId: number;
@@ -79,6 +81,8 @@ export function writeOffNoticeCopy(
       "Joriy siklda 'ABSENT' (kelmagan) belgilangan davomat yo'q.",
     DISABLED:
       "Qarz kechirish o'chirilgan — qarz butun tarixi bilan saqlanadi. Yoqish: Sozlamalar → To'lov → «Qarz kechirishga ruxsat».",
+    MONTHLY:
+      "Oylik to'lovdagi qarz hisobdan chiqarilmaydi — pul guruhdan chiqarishda tanlangan tartib bo'yicha hal bo'ladi.",
   };
 
   return {

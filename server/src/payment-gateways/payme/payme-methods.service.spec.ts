@@ -12,6 +12,8 @@ import {
   TRANSACTION_NOT_FOUND,
 } from './payme-errors';
 
+const COMMITTED = { received: { paymentId: 'payment-uuid' } };
+
 describe('PaymeMethodsService', () => {
   let service: PaymeMethodsService;
   let prisma: any;
@@ -79,7 +81,9 @@ describe('PaymeMethodsService', () => {
       createFromExternal: jest.fn().mockResolvedValue({
         id: 'payment-uuid',
         studentBalance: 500000,
+        committed: COMMITTED,
       }),
+      announceCommitted: jest.fn(),
       resolveStudentBranchId: jest.fn().mockResolvedValue(5),
       reverse: jest.fn().mockResolvedValue(undefined),
     };
@@ -351,6 +355,29 @@ describe('PaymeMethodsService', () => {
     // Shu vaqtda mock narxiga teng to'lov mockka emas, balansga ketardi
     // (shouldRouteToMock tirik intent'ni "ataylab balans to'ldirish" deb
     // o'qiydi), boshqa summadagi to'lov esa INVALID_AMOUNT bilan rad etilardi.
+    // ADR-0065: a gateway payment used to get no receipt at all — the write
+    // left it to this caller, and this caller never sent it.
+    it('sends the receipt only once the payment has committed', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn());
+      const run = prisma.$transaction.getMockImplementation();
+      prisma.$transaction.mockImplementationOnce(async (fn: any) => {
+        const out = await run(fn);
+        expect(payments.announceCommitted).not.toHaveBeenCalled();
+        return out;
+      });
+      await service.performTransaction(params as any, COMPANY_ID, 1);
+      expect(payments.announceCommitted).toHaveBeenCalledWith(COMMITTED);
+    });
+
+    it('sends no receipt when the transaction fails', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn());
+      prisma.paymentIntent.updateMany.mockRejectedValueOnce(new Error('db'));
+      await expect(
+        service.performTransaction(params as any, COMPANY_ID, 1),
+      ).rejects.toThrow('db');
+      expect(payments.announceCommitted).not.toHaveBeenCalled();
+    });
+
     it('marks the matching portal PaymentIntent as used', async () => {
       prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn());
       await service.performTransaction({ id: PAYME_ID } as any, COMPANY_ID, 1);

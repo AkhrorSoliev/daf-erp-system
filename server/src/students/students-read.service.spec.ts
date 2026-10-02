@@ -5,11 +5,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
+import { SettingsService } from '../settings/settings.service';
 
 describe('StudentsReadService', () => {
   let service: StudentsReadService;
   let prisma: any;
   let monthlyCharge: any;
+  let settings: { get: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -20,6 +22,7 @@ describe('StudentsReadService', () => {
       },
       enrollment: { findMany: jest.fn().mockResolvedValue([]) },
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
       transaction: { findMany: jest.fn().mockResolvedValue([]) },
       // systemStartDate floor lookup — default null = no floor (legacy behaviour).
       company: {
@@ -30,6 +33,8 @@ describe('StudentsReadService', () => {
     monthlyCharge = {
       previewReleaseForDeparture: jest.fn().mockResolvedValue(null),
     };
+    // Debt forgiveness is off by default (CEO, 21.09.2026, answer 9).
+    settings = { get: jest.fn().mockResolvedValue(false) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -37,6 +42,7 @@ describe('StudentsReadService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: {} },
         { provide: MonthlyChargeService, useValue: monthlyCharge },
+        { provide: SettingsService, useValue: settings },
       ],
     }).compile();
 
@@ -488,6 +494,163 @@ describe('StudentsReadService', () => {
       const where = prisma.attendance.findMany.mock.calls[0][0].where;
       expect(where.date).toBeUndefined();
     });
+
+    describe('monthly era (ADR-0062)', () => {
+      const att = (
+        date: string,
+        status = 'PRESENT',
+        cancellationId: string | null = null,
+      ) => ({
+        id: `att-${date}`,
+        groupId: 'grp-1',
+        date: new Date(`${date}T00:00:00.000Z`),
+        status,
+        cancellationId,
+      });
+      const charge = (
+        periodMonth: number,
+        coveredLessons: number,
+        status = 'CHARGED',
+      ) => ({
+        enrollmentId: 'enr-1',
+        periodYear: 2026,
+        periodMonth,
+        status,
+        coveredLessons,
+      });
+
+      beforeEach(() => {
+        prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+        prisma.enrollment.findMany.mockResolvedValue([
+          {
+            id: 'enr-1',
+            status: 'ACTIVE',
+            startDate: new Date('2026-05-01'),
+            createdAt: new Date('2026-05-01'),
+            group: {
+              id: 'grp-1',
+              name: '#014',
+              course: { name: 'Standart', lessonPaymentCount: 12 },
+            },
+          },
+        ]);
+      });
+
+      it('blocks lessons by month from the first monthly charge; earlier ones stay in cycles', async () => {
+        prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+          charge(9, 13),
+          charge(10, 13),
+        ]);
+        prisma.attendance.findMany.mockResolvedValue([
+          att('2026-08-28'),
+          att('2026-08-31'),
+          att('2026-09-28'),
+          att('2026-09-30', 'ABSENT'),
+          att('2026-10-02', 'LATE'),
+        ]);
+
+        const g = (await service.getLessonsOverview(10001, 1001)).groups[0];
+
+        expect(prisma.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { enrollmentId: { in: ['enr-1'] } },
+          }),
+        );
+        expect(g.cycles).toEqual([
+          {
+            kind: 'CYCLE',
+            cycleSequenceNumber: 1,
+            month: null,
+            capacity: 12,
+            lessonCount: 2,
+            attended: 2,
+            firstDate: '2026-08-28',
+            lastDate: '2026-08-31',
+          },
+          {
+            kind: 'MONTH',
+            cycleSequenceNumber: null,
+            month: '2026-09',
+            capacity: 13,
+            lessonCount: 2,
+            attended: 1,
+            firstDate: '2026-09-28',
+            lastDate: '2026-09-30',
+          },
+          {
+            kind: 'MONTH',
+            cycleSequenceNumber: null,
+            month: '2026-10',
+            capacity: 13,
+            lessonCount: 1,
+            attended: 1,
+            firstDate: '2026-10-02',
+            lastDate: '2026-10-02',
+          },
+        ]);
+        expect(
+          g.lessons.map((l) => [l.date, l.cycleSequenceNumber, l.month]),
+        ).toEqual([
+          ['2026-08-28', 1, null],
+          ['2026-08-31', 1, null],
+          ['2026-09-28', null, '2026-09'],
+          ['2026-09-30', null, '2026-09'],
+          ['2026-10-02', null, '2026-10'],
+        ]);
+      });
+
+      it("leaves a month's cancelled lesson out of its block", async () => {
+        prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+          charge(10, 12),
+        ]);
+        prisma.attendance.findMany.mockResolvedValue([
+          att('2026-10-02'),
+          att('2026-10-05', 'EXCUSED', 'canc-1'),
+        ]);
+
+        const g = (await service.getLessonsOverview(10001, 1001)).groups[0];
+
+        expect(g.total).toBe(1);
+        expect(g.cycles).toEqual([
+          expect.objectContaining({
+            kind: 'MONTH',
+            month: '2026-10',
+            capacity: 12,
+            lessonCount: 1,
+          }),
+        ]);
+      });
+
+      it('a month whose charge was reversed has no capacity', async () => {
+        prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+          charge(9, 13, 'REVERSED'),
+        ]);
+        prisma.attendance.findMany.mockResolvedValue([att('2026-09-30')]);
+
+        const g = (await service.getLessonsOverview(10001, 1001)).groups[0];
+
+        expect(g.cycles).toEqual([
+          expect.objectContaining({
+            kind: 'MONTH',
+            month: '2026-09',
+            capacity: null,
+          }),
+        ]);
+      });
+
+      it('without a monthly charge a cancelled lesson still counts, as before', async () => {
+        prisma.attendance.findMany.mockResolvedValue([
+          att('2026-08-28', 'EXCUSED', 'canc-1'),
+        ]);
+
+        const g = (await service.getLessonsOverview(10001, 1001)).groups[0];
+
+        expect(g.total).toBe(1);
+        expect(g.cycles).toEqual([
+          expect.objectContaining({ kind: 'CYCLE', cycleSequenceNumber: 1 }),
+        ]);
+      });
+    });
   });
 
   describe('getActiveEnrollmentsWithPrepaid — freeze dialog preview', () => {
@@ -582,6 +745,38 @@ describe('StudentsReadService', () => {
         releaseLessons: 0,
         releaseAmount: 0,
       });
+    });
+  });
+
+  describe('getClosedEnrollments — write-off candidates (ADR-0062)', () => {
+    beforeEach(() => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+    });
+
+    it('lists nothing while debt forgiveness is switched off', async () => {
+      await expect(service.getClosedEnrollments(10001, 1001)).resolves.toEqual(
+        [],
+      );
+      expect(settings.get).toHaveBeenCalledWith(
+        1001,
+        'payment.debtWriteOffEnabled',
+      );
+      expect(prisma.enrollment.findMany).not.toHaveBeenCalled();
+    });
+
+    it('lists only pack-era closed enrollments when it is on', async () => {
+      settings.get.mockResolvedValue(true);
+
+      await service.getClosedEnrollments(10001, 1001);
+
+      expect(prisma.enrollment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: { in: ['DROPPED', 'FROZEN'] },
+            monthlyCharges: { none: {} },
+          }),
+        }),
+      );
     });
   });
 });

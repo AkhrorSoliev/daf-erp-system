@@ -5,6 +5,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { formatShortDate, MONTH_NAMES } from "./attendance-cycle-utils";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
@@ -77,6 +78,33 @@ export interface DebtorStudent {
   debtAmount: number;
   // null = hech qachon to'liq sikl ochilmagan (sof qarz).
   currentCycle?: DebtorCurrentCycle | null;
+  // Monthly group only (ADR-0062); null: no charge for the month yet.
+  monthCoverage?: DebtorMonthCoverage | null;
+}
+
+/** A monthly group's debtor (ADR-0062): how far their money reaches into the register's month. */
+export interface DebtorMonthCoverage {
+  /** The student's lessons this month in the group. */
+  lessons: number;
+  /** How many of them, from the first, are paid. */
+  paid: number;
+  /** The last paid lesson, 'YYYY-MM-DD'; null when none. */
+  paidThrough: string | null;
+}
+
+/** The «Shu oy» cell of a monthly group's debtor (ADR-0062); `month` is 'YYYY-MM'. */
+export function monthCoverageText(
+  month: string,
+  coverage: DebtorMonthCoverage | null | undefined,
+): string {
+  const name = MONTH_NAMES[Number(month.slice(5, 7))] ?? month;
+  if (!coverage) return `${name}: hisob hali yozilmagan`;
+  if (coverage.paid === 0) return `${name}: to'lanmagan`;
+  if (coverage.paid >= coverage.lessons) return `${name}: to'langan`;
+  const through = coverage.paidThrough
+    ? ` (${formatShortDate(coverage.paidThrough)} gacha)`
+    : "";
+  return `${name}: ${coverage.lessons} darsdan ${coverage.paid} tasi to'langan${through}`;
 }
 
 export interface AttendanceEntry {

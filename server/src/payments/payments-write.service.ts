@@ -46,6 +46,12 @@ export interface PaymentReceivedPayload {
   performedById?: number;
 }
 
+/** What a payment announces once it has committed (`announceCommitted`). */
+export interface CommittedPaymentEvents {
+  received: PaymentReceivedPayload;
+  carriedOver: SalaryCarriedOverPayload;
+}
+
 /**
  * Emitted after a payment is reversed (standalone reverse, or the first
  * leg of an amount correction). Consumed by `PaymentEventsListener` to
@@ -291,9 +297,8 @@ export class PaymentsWriteService {
       )
       .catch(rethrowAsConflict);
 
-    // Queues the student's Telegram receipt for the 20:00 digest (ADR-0025).
-    // The digest writes the SmsMessage row, so the receipt still lands in the
-    // student profile "SMS" tab.
+    // Sends the student's Telegram receipt now (ADR-0065). SmsService writes
+    // the SmsMessage row, so the receipt lands in the profile "SMS" tab.
     this.eventEmitter.emit('payment.received', {
       paymentId: payment.id,
       studentId: dto.studentId,
@@ -983,12 +988,8 @@ export class PaymentsWriteService {
             })
             .catch(rethrowAsConflict);
 
-      // Telegram receipt — only when we owned the tx (i.e. it has
-      // committed by now). When the caller passed `outerTx` they're
-      // responsible for emitting after their own commit, so we skip to
-      // avoid notifying for a payment that may still be rolled back.
-      if (!outerTx) {
-        this.eventEmitter.emit('payment.received', {
+      const committed: CommittedPaymentEvents = {
+        received: {
           paymentId: payment.id,
           studentId: params.studentId,
           amount: params.amount,
@@ -997,20 +998,21 @@ export class PaymentsWriteService {
           studentBalance: studentBalance ?? null,
           companyId: params.companyId,
           performedById: params.performedById,
-        } satisfies PaymentReceivedPayload);
+        },
+        carriedOver: { companyId: params.companyId, items: carriedOver },
+      };
 
-        // Same post-commit gate as the receipt: only emit when we owned the
-        // tx. Carry-over notifications for an outerTx caller are that caller's
-        // responsibility after their own commit.
-        if (carriedOver.length > 0) {
-          this.eventEmitter.emit('salary.carried-over', {
-            companyId: params.companyId,
-            items: carriedOver,
-          } satisfies SalaryCarriedOverPayload);
-        }
-      }
+      // Our own tx has committed: announce now. An `outerTx` may still roll
+      // back, so its caller gets `committed` back and calls
+      // `announceCommitted` after its own commit. Payme and Click must, or the
+      // student gets no receipt — none of theirs had one until ADR-0065.
+      if (!outerTx) this.announceCommitted(committed);
 
-      return { ...payment, studentBalance };
+      return {
+        ...payment,
+        studentBalance,
+        committed: outerTx ? committed : undefined,
+      };
     } catch (err) {
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -1021,6 +1023,18 @@ export class PaymentsWriteService {
         );
       }
       throw err;
+    }
+  }
+
+  /**
+   * The post-commit events of a payment: the student's receipt and, when a
+   * late payment carried lessons out of a closed payroll, the teachers'
+   * notice. Call only once the payment has committed.
+   */
+  announceCommitted(events: CommittedPaymentEvents) {
+    this.eventEmitter.emit('payment.received', events.received);
+    if (events.carriedOver.items.length > 0) {
+      this.eventEmitter.emit('salary.carried-over', events.carriedOver);
     }
   }
 }
