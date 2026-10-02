@@ -839,7 +839,7 @@ describe('ReportsFinancialService', () => {
       branchIds: null,
     };
 
-    it('splits period income into real (current month) vs late (prior months) FIFO, oldest-first', async () => {
+    it('splits period income into this month, advance and late (prior months) FIFO, oldest-first', async () => {
       prisma.payment.groupBy.mockResolvedValueOnce([{ studentId: 10001 }]);
       // Effective ledger, chronological. Two prior-month debits, a May payment
       // that partially settles April OUT of the period (consumes silently), then
@@ -869,14 +869,14 @@ describe('ReportsFinancialService', () => {
         {
           studentId: 10001,
           type: 'PAYMENT',
-          amount: 700000, // June — clears April(200k)+May(200k), 300k current
+          amount: 700000, // June — clears April(200k)+May(200k), 300k ahead
           branchId: null,
           createdAt: new Date('2026-06-15T00:00:00Z'),
         },
         {
           studentId: 10001,
           type: 'PAYMENT',
-          amount: 100000, // June — no outstanding debt → all current
+          amount: 100000, // June — no outstanding debt → all of it ahead
           branchId: null,
           createdAt: new Date('2026-06-20T00:00:00Z'),
         },
@@ -885,7 +885,11 @@ describe('ReportsFinancialService', () => {
       const result = await service.getIncomeMonthAttribution(1, period);
 
       expect(result.monthKey).toBe('2026-06');
-      expect(result.currentMonth).toBe(400000); // 300k leftover + 100k fresh
+      // Both June payments end with money left after the debt, and nothing in
+      // June spends it, so it stands on the balance as advance.
+      expect(result.currentMonth).toBe(0);
+      expect(result.advance).toBe(400000); // 300k leftover + 100k fresh
+      expect(result.advanceStudents).toBe(1);
       expect(result.lateTotal).toBe(400000);
       expect(result.late).toEqual([
         { monthKey: '2026-05', label: 'May 2026', amount: 200000 },
@@ -893,8 +897,13 @@ describe('ReportsFinancialService', () => {
       ]);
       // Reconciles exactly with the two in-period PAYMENT amounts (700k + 100k).
       expect(result.total).toBe(800000);
-      expect(result.total).toBe(result.currentMonth + result.lateTotal);
+      expect(result.total).toBe(
+        result.currentMonth + result.advance + result.lateTotal,
+      );
       expect(result.payerCount).toBe(1);
+      expect(result.paymentCount).toBe(2);
+      expect(result.latePaymentCount).toBe(1);
+      expect(result.lateStudentCount).toBe(1);
     });
 
     it('returns an empty breakdown when nobody paid in the period', async () => {
@@ -904,8 +913,10 @@ describe('ReportsFinancialService', () => {
 
       expect(result.total).toBe(0);
       expect(result.currentMonth).toBe(0);
+      expect(result.advance).toBe(0);
       expect(result.late).toEqual([]);
       expect(result.payerCount).toBe(0);
+      expect(result.paymentCount).toBe(0);
       // No ledger replay needed when there are no payers.
       expect(prisma.transaction.findMany).not.toHaveBeenCalled();
     });
@@ -943,7 +954,8 @@ describe('ReportsFinancialService', () => {
 
       expect(result.total).toBe(400000); // only the branch-5 payment
       expect(result.lateTotal).toBe(300000);
-      expect(result.currentMonth).toBe(100000);
+      expect(result.currentMonth).toBe(0);
+      expect(result.advance).toBe(100000);
       expect(result.late).toEqual([
         { monthKey: '2026-05', label: 'May 2026', amount: 300000 },
       ]);
@@ -989,6 +1001,7 @@ describe('ReportsFinancialService', () => {
       const result = await service.getIncomeMonthAttribution(1, period);
 
       expect(result.currentMonth).toBe(240000);
+      expect(result.advance).toBe(0); // the June deduction spends it inside June
       expect(result.lateTotal).toBe(0);
       expect(result.late).toEqual([]);
       expect(result.total).toBe(240000);
@@ -1015,7 +1028,10 @@ describe('ReportsFinancialService', () => {
 
       const result = await service.getIncomeMonthAttribution(1, period);
 
-      expect(result.currentMonth).toBe(500000);
+      // The withdrawal spends 200k of the June payment inside June — that part
+      // is June's; the rest stands as advance. Never "late".
+      expect(result.currentMonth).toBe(200000);
+      expect(result.advance).toBe(300000);
       expect(result.late).toEqual([]);
       expect(result.total).toBe(500000);
     });
@@ -1070,7 +1086,7 @@ describe('ReportsFinancialService', () => {
       const result = await service.getIncomeMonthAttribution(1, period);
 
       expect(result.lessonsValue).toBe(300000);
-      expect(result.currentMonth).toBe(150000);
+      expect(result.currentMonth + result.advance).toBe(150000);
       expect(result.collectionPct).toBe(50);
     });
 
@@ -1112,6 +1128,7 @@ describe('ReportsFinancialService', () => {
       // as a triumph.
       expect(result.total).toBe(500000);
       expect(result.lateTotal).toBe(500000);
+      expect(result.advance).toBe(0);
       expect(result.collectionPct).toBe(0);
     });
 
@@ -1122,6 +1139,236 @@ describe('ReportsFinancialService', () => {
 
       expect(result.lessonsValue).toBe(0);
       expect(result.collectionPct).toBeNull();
+    });
+
+    it("overpay, then next month's charge after the period end: it stays advance", async () => {
+      prisma.payment.groupBy.mockResolvedValueOnce([{ studentId: 10011 }]);
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          studentId: 10011,
+          type: 'LESSON_DEDUCTION',
+          amount: -450000, // June's charge
+          branchId: null,
+          createdAt: new Date('2026-06-01T00:00:00Z'),
+        },
+        {
+          studentId: 10011,
+          type: 'PAYMENT',
+          amount: 900000, // June: the charge and July ahead
+          branchId: null,
+          createdAt: new Date('2026-06-05T00:00:00Z'),
+        },
+        {
+          studentId: 10011,
+          type: 'LESSON_DEDUCTION',
+          amount: -450000, // July's charge on the 1st — after June's end
+          branchId: null,
+          createdAt: new Date('2026-07-01T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getIncomeMonthAttribution(1, period);
+
+      expect(result.currentMonth).toBe(450000);
+      expect(result.advance).toBe(450000);
+      expect(result.advanceStudents).toBe(1);
+      expect(result.total).toBe(900000);
+    });
+
+    it('overpay, then a charge inside the period (a mid-month join): that part moves to the month', async () => {
+      prisma.payment.groupBy.mockResolvedValueOnce([{ studentId: 10012 }]);
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          studentId: 10012,
+          type: 'PAYMENT',
+          amount: 600000, // paid before joining
+          branchId: null,
+          createdAt: new Date('2026-06-03T00:00:00Z'),
+        },
+        {
+          studentId: 10012,
+          type: 'LESSON_DEDUCTION',
+          amount: -400000, // joined on the 15th: the rest of June
+          branchId: null,
+          createdAt: new Date('2026-06-15T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getIncomeMonthAttribution(1, period);
+
+      expect(result.currentMonth).toBe(400000);
+      expect(result.advance).toBe(200000);
+      expect(result.total).toBe(600000);
+    });
+
+    it('an older out-of-scope balance (initial balance, earlier payment, adjustment) is spent before the advance', async () => {
+      prisma.payment.groupBy.mockResolvedValueOnce([{ studentId: 10013 }]);
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          studentId: 10013,
+          type: 'INITIAL_BALANCE',
+          amount: 50000,
+          branchId: null,
+          createdAt: new Date('2026-04-01T00:00:00Z'),
+        },
+        {
+          studentId: 10013,
+          type: 'PAYMENT',
+          amount: 50000, // May — before the period, not tallied
+          branchId: null,
+          createdAt: new Date('2026-05-20T00:00:00Z'),
+        },
+        {
+          studentId: 10013,
+          type: 'ADJUSTMENT',
+          amount: 50000, // in the period, but not a payment
+          branchId: null,
+          createdAt: new Date('2026-06-02T00:00:00Z'),
+        },
+        {
+          studentId: 10013,
+          type: 'PAYMENT',
+          amount: 450000, // tallied: all of it stands as advance first
+          branchId: null,
+          createdAt: new Date('2026-06-04T00:00:00Z'),
+        },
+        {
+          studentId: 10013,
+          type: 'LESSON_DEDUCTION',
+          amount: -450000, // spends the 150k of older credit first
+          branchId: null,
+          createdAt: new Date('2026-06-10T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getIncomeMonthAttribution(1, period);
+
+      expect(result.currentMonth).toBe(300000);
+      expect(result.advance).toBe(150000);
+      expect(result.lateTotal).toBe(0);
+      expect(result.total).toBe(450000);
+    });
+
+    it('leaves a reversed payment and its counter-row out of the replay', async () => {
+      prisma.payment.groupBy.mockResolvedValueOnce([{ studentId: 10014 }]);
+      // The whole ledger, reversal pair included; the mock answers the way the
+      // database does, by the query's own two reversal filters. Without them
+      // the counter-row would read as a June debit spending the reversed
+      // payment's "advance", and the total would be 800k.
+      const ledger = [
+        {
+          studentId: 10014,
+          type: 'PAYMENT',
+          amount: 500000,
+          branchId: null,
+          createdAt: new Date('2026-06-03T05:00:00Z'),
+          reversedAt: new Date('2026-06-03T06:00:00Z'),
+          reversedTransactionId: null,
+        },
+        {
+          studentId: 10014,
+          type: 'PAYMENT',
+          amount: -500000, // the reversal's counter-row
+          branchId: null,
+          createdAt: new Date('2026-06-03T06:00:00Z'),
+          reversedAt: null,
+          reversedTransactionId: 'tx-reversed',
+        },
+        {
+          studentId: 10014,
+          type: 'PAYMENT',
+          amount: 300000,
+          branchId: null,
+          createdAt: new Date('2026-06-06T05:00:00Z'),
+          reversedAt: null,
+          reversedTransactionId: null,
+        },
+        {
+          studentId: 10014,
+          type: 'LESSON_DEDUCTION',
+          amount: -300000,
+          branchId: null,
+          createdAt: new Date('2026-06-10T05:00:00Z'),
+          reversedAt: null,
+          reversedTransactionId: null,
+        },
+      ];
+      prisma.transaction.findMany.mockImplementationOnce(({ where }: any) =>
+        Promise.resolve(
+          ledger.filter(
+            (r) =>
+              (where.reversedAt !== null || r.reversedAt === null) &&
+              (where.reversedTransactionId !== null ||
+                r.reversedTransactionId === null),
+          ),
+        ),
+      );
+
+      const result = await service.getIncomeMonthAttribution(1, period);
+
+      expect(result.total).toBe(300000);
+      expect(result.currentMonth).toBe(300000);
+      expect(result.advance).toBe(0);
+      expect(result.paymentCount).toBe(1);
+    });
+
+    it('total equals the tallied payments, and the counts follow the parts', async () => {
+      prisma.payment.groupBy.mockResolvedValueOnce([
+        { studentId: 10021 },
+        { studentId: 10022 },
+      ]);
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          studentId: 10021,
+          type: 'LESSON_DEDUCTION',
+          amount: -450000, // May — old debt
+          branchId: null,
+          createdAt: new Date('2026-05-12T00:00:00Z'),
+        },
+        {
+          studentId: 10021,
+          type: 'LESSON_DEDUCTION',
+          amount: -450000, // June's charge
+          branchId: null,
+          createdAt: new Date('2026-06-01T00:00:00Z'),
+        },
+        {
+          studentId: 10022,
+          type: 'PAYMENT',
+          amount: 200000,
+          branchId: null,
+          createdAt: new Date('2026-06-02T00:00:00Z'),
+        },
+        {
+          studentId: 10021,
+          type: 'PAYMENT',
+          amount: 1200000, // May 450k late, June 450k, 300k ahead
+          branchId: null,
+          createdAt: new Date('2026-06-05T00:00:00Z'),
+        },
+        {
+          studentId: 10022,
+          type: 'LESSON_DEDUCTION',
+          amount: -150000, // spends 150k of the 200k inside June
+          branchId: null,
+          createdAt: new Date('2026-06-20T00:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getIncomeMonthAttribution(1, period);
+
+      expect(result.lateTotal).toBe(450000);
+      expect(result.currentMonth).toBe(600000);
+      expect(result.advance).toBe(350000);
+      expect(result.total).toBe(1200000 + 200000);
+      expect(result.total).toBe(
+        result.currentMonth + result.advance + result.lateTotal,
+      );
+      expect(result.payerCount).toBe(2);
+      expect(result.paymentCount).toBe(2);
+      expect(result.latePaymentCount).toBe(1);
+      expect(result.lateStudentCount).toBe(1);
+      expect(result.advanceStudents).toBe(2);
     });
   });
 

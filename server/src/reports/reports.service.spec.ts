@@ -1291,7 +1291,8 @@ describe('ReportsService', () => {
       const svc: any = service;
       jest.spyOn(svc, 'getIncomeMonthAttribution').mockResolvedValue({
         total: 170_378_987,
-        currentMonth: 142_064_938,
+        currentMonth: 100_000_000,
+        advance: 42_064_938,
         lateTotal: 28_314_049,
         late: [],
       });
@@ -1322,6 +1323,7 @@ describe('ReportsService', () => {
         .mockResolvedValue({
           total: 0,
           currentMonth: 0,
+          advance: 0,
           lateTotal: 0,
           late: [],
         });

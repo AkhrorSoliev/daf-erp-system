@@ -66,8 +66,9 @@ import { buildMonthChargesLines } from './utils/month-charges-lines.util';
  *    re-derive either here — the status-ACTIVE aggregate this replaced counted
  *    an ungrouped «faol» student as a debtor and no other surface did.
  *  - "Tushum (haqiqiy)" = cash actually received, NOT billed — read from
- *    `getIncomeMonthAttribution` so the two lines under it («Shu oy uchun» and
- *    «Eski qarzlar uchun», per month) decompose the figure printed above them.
+ *    `getIncomeMonthAttribution` so the lines under it («Shu oy uchun»,
+ *    «Oldindan (keyingi oy uchun)», «Eski qarzlar uchun», per month) decompose
+ *    the figure printed above them (ADR-0067).
  *    The `Payment` aggregate of the same window still feeds the snapshot.
  *  - "Shu oyning darslari" / "Shundan yig'ildi" = the collection ratio, taken
  *    from `getIncomeMonthAttribution` so the bot and /payments/overview divide
@@ -570,8 +571,9 @@ export class TelegramGroupDailyReportService {
         `• Shu oyning darslari: <b>${formatSum(attribution.lessonsValue)}</b>`,
       );
       if (!monthlyBilling) {
+        // The month's own cash in its old meaning, advance included (ADR-0067).
         lines.push(
-          `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth)}</b> (<b>${attribution.pct}%</b>)`,
+          `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth + attribution.advance)}</b> (<b>${attribution.pct}%</b>)`,
         );
       }
     }
@@ -594,8 +596,10 @@ export class TelegramGroupDailyReportService {
       // Deliberately unclamped: a reading above 100% would mean more was
       // collected than the month is worth, and that should stay visible.
       if (attribution) {
+        // The month's own cash in its old meaning, advance included (ADR-0067).
         const monthPlanPct = Math.round(
-          (attribution.currentMonth / expectedValue) * 100,
+          ((attribution.currentMonth + attribution.advance) / expectedValue) *
+            100,
         );
         lines.push(`• Oy rejasidan yig'ildi: <b>${monthPlanPct}%</b>`);
       }
@@ -891,6 +895,7 @@ export class TelegramGroupDailyReportService {
   ): Promise<{
     total: number;
     currentMonth: number;
+    advance: number;
     lateTotal: number;
     late: Array<{ label: string; amount: number }>;
     lessonsValue: number;
@@ -913,6 +918,7 @@ export class TelegramGroupDailyReportService {
       return {
         total: attribution.total,
         currentMonth: attribution.currentMonth,
+        advance: attribution.advance,
         lateTotal: attribution.lateTotal,
         late: attribution.late,
         lessonsValue: attribution.lessonsValue,

@@ -334,7 +334,8 @@ export class TelegramGroupReportMenuService {
 
   /**
    * The «Tushum tarkibi» figures for the card's month — how much of the cash is
-   * this month's own income and how much settled older months' debt, per month.
+   * this month's own income, how much was paid ahead for the next month and
+   * how much settled older months' debt, per month.
    * Same service the /payments/overview drill-down and the 21:00 report read,
    * so the three surfaces cannot disagree.
    *
@@ -352,6 +353,7 @@ export class TelegramGroupReportMenuService {
   ): Promise<{
     total: number;
     currentMonth: number;
+    advance: number;
     lateTotal: number;
     late: Array<{ label: string; amount: number }>;
   } | null> {
@@ -364,6 +366,7 @@ export class TelegramGroupReportMenuService {
       return {
         total: a.total,
         currentMonth: a.currentMonth,
+        advance: a.advance,
         lateTotal: a.lateTotal,
         late: a.late,
       };

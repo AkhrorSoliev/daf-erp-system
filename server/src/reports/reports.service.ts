@@ -348,15 +348,16 @@ export class ReportsService {
       }),
       this.getMonthlyNetProfit(companyId, { month, branchIds, performedById }),
     ]);
+    // The month's own cash in its old meaning (ADR-0067): money paid ahead for
+    // the next month was part of `currentMonth` when this figure was defined,
+    // and the Excel «Xulosa» sheet still reads it that way.
+    const ownMoney = attribution.currentMonth + attribution.advance;
     return {
       month,
-      ownMoney: attribution.currentMonth,
+      ownMoney,
       cashTotal: attribution.total,
       netProfit,
-      ownMonthProfit: computeOwnMonthProfit(
-        attribution.currentMonth,
-        netProfit,
-      ),
+      ownMonthProfit: computeOwnMonthProfit(ownMoney, netProfit),
     };
   }
 

@@ -320,7 +320,8 @@ describe('TelegramGroupDailyReportService', () => {
     const state = defaultState();
     const getIncomeMonthAttribution = jest.fn().mockResolvedValue({
       total: 142_000_000,
-      currentMonth: 142_000_000,
+      currentMonth: 100_000_000,
+      advance: 42_000_000,
       lateTotal: 0,
       late: [],
       lessonsValue: 173_783_991,
@@ -412,6 +413,7 @@ describe('TelegramGroupDailyReportService', () => {
     return {
       total: 42_500_000,
       currentMonth: 31_200_000,
+      advance: 0,
       lateTotal: 11_300_000,
       late: [
         { monthKey: '2026-06', label: 'Iyun 2026', amount: 7_900_000 },
@@ -453,7 +455,11 @@ describe('TelegramGroupDailyReportService', () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {
       getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
-      getIncomeMonthAttribution: jest.fn().mockResolvedValue(fullAttribution()),
+      getIncomeMonthAttribution: jest
+        .fn()
+        .mockResolvedValue(
+          fullAttribution({ currentMonth: 21_200_000, advance: 10_000_000 }),
+        ),
       getMonthlyExpectation: jest.fn().mockResolvedValue({ expectedValue: 1 }),
     });
 
@@ -471,8 +477,35 @@ describe('TelegramGroupDailyReportService', () => {
       ...message.matchAll(/^ {6}.+ — <b>([\d ]+) so'm<\/b>$/gm),
     ].reduce((sum, m) => sum + Number(m[1].replace(/ /g, '')), 0);
 
-    expect(money('Shu oy uchun') + monthSum).toBe(
-      money('Tushum \\(haqiqiy\\)'),
+    expect(
+      money('Shu oy uchun') +
+        money('Oldindan \\(keyingi oy uchun\\)') +
+        monthSum,
+    ).toBe(money('Tushum \\(haqiqiy\\)'));
+  });
+
+  it('prints the advance between this month and old debt, the three shares summing to 100', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getIncomeMonthAttribution: jest
+        .fn()
+        .mockResolvedValue(
+          fullAttribution({ currentMonth: 21_200_000, advance: 10_000_000 }),
+        ),
+      getMonthlyExpectation: jest.fn().mockResolvedValue({ expectedValue: 1 }),
+    });
+
+    const { message: raw } = await service.build(1001, null);
+    const message = raw.replace(/\u00A0/g, ' ');
+
+    expect(message).toContain(
+      [
+        "• Tushum (haqiqiy): <b>42 500 000 so'm</b>",
+        "   Shu oy uchun: <b>21 200 000 so'm</b> (50%)",
+        "   Oldindan (keyingi oy uchun): <b>10 000 000 so'm</b> (23%)",
+        "   Eski qarzlar uchun: <b>11 300 000 so'm</b> (27%)",
+      ].join('\n'),
     );
   });
 
@@ -884,6 +917,7 @@ describe('TelegramGroupDailyReportService — «Bu oy hisoblandi» (ADR-0058)', 
       getIncomeMonthAttribution: jest.fn().mockResolvedValue({
         total: 142_000_000,
         currentMonth: 142_000_000,
+        advance: 0,
         lateTotal: 0,
         late: [],
         lessonsValue: 173_783_991,
@@ -1022,7 +1056,15 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
       currentMonth: 41_100_000,
       older: 2_400_000,
     },
-    { total: 40_600_000, count: 327 },
+    {
+      total: 40_600_000,
+      count: 327,
+      byKind: {
+        ungrouped: { total: 12_600_000, count: 101 },
+        frozen: { total: 18_000_000, count: 146 },
+        left: { total: 10_000_000, count: 80 },
+      },
+    },
   );
   const yesterday = { totalDebt: 43_000_000, debtorCount: 235 };
 
@@ -1074,7 +1116,13 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
   it('prints no shu oy / eski qarz line when nobody studying owes', async () => {
     const { message } = await buildWith(
       reportsWithDebt(
-        splitOf({ total: 0, count: 0, currentMonth: 0, older: 0 }),
+        splitOf({
+          total: 0,
+          count: 0,
+          currentMonth: 0,
+          older: 0,
+          olderCount: 0,
+        }),
       ),
       { yesterdaySnapshot: null },
     );
@@ -1096,7 +1144,15 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
       reportsWithDebt(
         splitOf(
           { total: 43_000_000, count: 235 },
-          { total: 90_000_000, count: 600 },
+          {
+            total: 90_000_000,
+            count: 600,
+            byKind: {
+              ungrouped: { total: 30_000_000, count: 200 },
+              frozen: { total: 40_000_000, count: 270 },
+              left: { total: 20_000_000, count: 130 },
+            },
+          },
         ),
       ),
       { flags: [] },

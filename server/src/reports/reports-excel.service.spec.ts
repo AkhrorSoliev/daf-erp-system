@@ -233,7 +233,8 @@ describe('ReportsExcelService', () => {
   const attribution = {
     monthKey: '2026-06',
     total: 1_000_000,
-    currentMonth: 700_000,
+    currentMonth: 500_000,
+    advance: 200_000,
     late: [{ monthKey: '2026-05', label: 'May 2026', amount: 300_000 }],
   };
   const expectation = {
@@ -733,6 +734,25 @@ describe('ReportsExcelService', () => {
       expectation.expectedValue,
     );
     expect(expectation.expectedValue).toBeGreaterThan(1_000_000);
+  });
+
+  it("keeps the advance in «Xulosa»'s own-month cash, so blocks 3 and 4 do not move (ADR-0067)", async () => {
+    // The mock splits June's own 700 000 into 500 000 + 200 000 advance.
+    const wb = await buildWorkbook(
+      {},
+      { startDate: '2026-06-01', endDate: '2026-06-30' },
+    );
+    const ws = wb.getWorksheet('Xulosa')!;
+    // Block 3 still foots to the 1 000 000 cash-in (700 000 + 300 000 late).
+    expect(findRow(ws, "Iyun 2026 — o'z oyi").getCell(2).value).toBe(700_000);
+    // Block 4: 700 000 paid inside June, the 300 000 rest from the balance.
+    expect(findRow(ws, "Iyun 2026 ichida to'langan").getCell(2).value).toBe(
+      700_000,
+    );
+    expect(
+      findRow(ws, "Iyun 2026dan oldin to'langan (balansdagi pul)").getCell(2)
+        .value,
+    ).toBe(300_000);
   });
 
   describe('«Xulosa» block 4 from the first monthly month (ADR-0058)', () => {

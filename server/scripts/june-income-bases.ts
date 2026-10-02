@@ -33,10 +33,18 @@ async function main(prismaClient: PrismaClient) {
   const costs = salary + expenses + refunds;
 
   section('Uch xil DAROMAD');
-  console.log(`  A) Dars tushumi (recognized — Foyda card ISHLATADI) : ${som(recognized)}`);
-  console.log(`  B) Kassa tushumi (barcha COMPLETED, createdAt iyun) : ${som(overview.income.actual)}`);
-  console.log(`     shundan HAQIQIY iyun (eski qarzsiz)              : ${som(attribution.currentMonth)}   ← sizning 133,6M`);
-  console.log(`     shundan KECH (eski oylar qarzi iyunda to'langan) : ${som(attribution.lateTotal)}`);
+  console.log(
+    `  A) Dars tushumi (recognized — Foyda card ISHLATADI) : ${som(recognized)}`,
+  );
+  console.log(
+    `  B) Kassa tushumi (barcha COMPLETED, createdAt iyun) : ${som(overview.income.actual)}`,
+  );
+  console.log(
+    `     shundan HAQIQIY iyun (eski qarzsiz)              : ${som(attribution.currentMonth + attribution.advance)}   ← sizning 133,6M`,
+  );
+  console.log(
+    `     shundan KECH (eski oylar qarzi iyunda to'langan) : ${som(attribution.lateTotal)}`,
+  );
 
   section('Xarajatlar (ikkalasi ham NAQD)');
   console.log(`  Ustoz oyligi (siz bergan) : ${som(salary)}`);
@@ -45,17 +53,31 @@ async function main(prismaClient: PrismaClient) {
   console.log(`  JAMI chiqim               : ${som(costs)}`);
 
   section('FOYDA — daromad asosiga qarab');
-  console.log(`  A) Dars tushumi (165M)     − chiqim : ${som(recognized - costs)}   ← HOZIRGI card (+4,7M)`);
-  console.log(`  B) Barcha kassa (171,5M)   − chiqim : ${som(overview.income.actual - costs)}`);
-  console.log(`  C) HAQIQIY iyun (133,6M)   − chiqim : ${som(attribution.currentMonth - costs)}   ← sizning hisobingiz (zarar)`);
+  console.log(
+    `  A) Dars tushumi (165M)     − chiqim : ${som(recognized - costs)}   ← HOZIRGI card (+4,7M)`,
+  );
+  console.log(
+    `  B) Barcha kassa (171,5M)   − chiqim : ${som(overview.income.actual - costs)}`,
+  );
+  console.log(
+    `  C) HAQIQIY iyun (133,6M)   − chiqim : ${som(attribution.currentMonth + attribution.advance - costs)}   ← sizning hisobingiz (zarar)`,
+  );
 
   section('Nega farq');
-  console.log(`  Dars tushumi (165M) − Haqiqiy iyun kassa (133,6M) = ${som(recognized - attribution.currentMonth)}`);
-  console.log('  Bu farq — iyun darslari boshqa oy puli bilan to\'langan:');
-  console.log('   • oldindan to\'lov (may/avval to\'langan, iyunda dars o\'tilgan), yoki');
-  console.log('   • kech to\'lov (iyun darsi iyulda to\'langan).');
-  console.log('  "Dars tushumi" darsni O\'TILGAN oyга yozadi (naqd qachon kelganidan qat\'i nazar);');
-  console.log('  "Haqiqiy kassa" esa faqat shu oyda KELGAN yangi pulni sanaydi.\n');
+  console.log(
+    `  Dars tushumi (165M) − Haqiqiy iyun kassa (133,6M) = ${som(recognized - (attribution.currentMonth + attribution.advance))}`,
+  );
+  console.log("  Bu farq — iyun darslari boshqa oy puli bilan to'langan:");
+  console.log(
+    "   • oldindan to'lov (may/avval to'langan, iyunda dars o'tilgan), yoki",
+  );
+  console.log("   • kech to'lov (iyun darsi iyulda to'langan).");
+  console.log(
+    '  "Dars tushumi" darsni O\'TILGAN oyга yozadi (naqd qachon kelganidan qat\'i nazar);',
+  );
+  console.log(
+    '  "Haqiqiy kassa" esa faqat shu oyda KELGAN yangi pulni sanaydi.\n',
+  );
 }
 
 run(main);
