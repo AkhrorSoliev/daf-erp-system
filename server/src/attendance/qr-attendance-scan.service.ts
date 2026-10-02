@@ -93,6 +93,7 @@ export class QrAttendanceScanService {
         endTime: lesson.effectiveEndTime,
         opensMinutesBefore: lesson.opensMinutesBefore,
       },
+      student: true,
     });
 
     // Contract 3.2 (ADR-0047): from the month's 2nd lesson a scan admits

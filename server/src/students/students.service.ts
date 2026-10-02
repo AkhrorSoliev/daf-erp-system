@@ -33,8 +33,13 @@ export class StudentsService {
   ) {
     return this.read.findAll(query, companyId, branchScope);
   }
-  findById(id: number, companyId: number, branchScope: ReportBranchIds) {
-    return this.read.findById(id, companyId, branchScope);
+  findById(
+    id: number,
+    companyId: number,
+    branchScope: ReportBranchIds,
+    ceiling?: ReportBranchIds,
+  ) {
+    return this.read.findById(id, companyId, branchScope, ceiling);
   }
   /**
    * The id-addressed profile reads.

@@ -16,7 +16,12 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
 import { DeleteGroupDto } from './dto/delete-group.dto';
-import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import {
+  CurrentUser,
+  Roles,
+  BranchScope,
+  BranchCeiling,
+} from '../common/decorators';
 import { RolesGuard } from '../common/guards/roles.guard';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
@@ -179,8 +184,9 @@ export class GroupsController {
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() branchScope: ReportBranchIds,
+    @BranchCeiling() ceiling: ReportBranchIds,
   ) {
-    return this.groupsService.findOne(id, companyId, branchScope);
+    return this.groupsService.findOne(id, companyId, branchScope, ceiling);
   }
 
   @Post()

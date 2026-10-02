@@ -226,6 +226,16 @@ export class StudentsStatusService {
       }
     }
 
+    // Contract 3.5 waits for an unanswered «Dars bo'ldimi?» that could decide
+    // the trial lesson (ADR-0060). Checked before anything is written: the
+    // cascade below settles each month on its own and only logs a refusal.
+    if (dto.status === StudentStatus.EXPELLED) {
+      await this.monthlyChargeService.assertTrialLessonAnswered(this.prisma, {
+        studentId: id,
+        companyId,
+      });
+    }
+
     // FROZEN-specific prepaid refund. Runs BEFORE the status flip because
     // the refund helper needs enrollments to still be ACTIVE to find their
     // prepaid counters; the cascade below will move them to FROZEN. We do

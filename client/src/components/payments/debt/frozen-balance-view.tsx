@@ -24,6 +24,8 @@ import {
 import api from "@/lib/api";
 import { formatBalance } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useAuth } from "@/hooks/use-auth";
+import { FROZEN_BALANCE_ACTION_ROLES, hasAnyRole } from "@/lib/role-access";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import { WithdrawalDialog } from "../withdrawal-dialog";
 import { RefundDialog } from "../refund-dialog";
@@ -68,6 +70,10 @@ export function FrozenBalanceView() {
   const { selectedBranch } = useBranchSwitcher();
   const queryClient = useQueryClient();
   const { filters, setFilter, setFilters } = useDebtFilters();
+  // Ro'yxat hamma xodimga, pulni siljitish esa kassirga emas.
+  const canMoveBalance = useAuth((s) =>
+    hasAnyRole(s.user?.roles, FROZEN_BALANCE_ACTION_ROLES),
+  );
 
   const [withdrawalTarget, setWithdrawalTarget] =
     useState<ActionTarget | null>(null);
@@ -136,7 +142,7 @@ export function FrozenBalanceView() {
                   <TableHead>Muzlatilgan</TableHead>
                   <TableHead className="text-right">Balansi</TableHead>
                   <TableHead>Oxirgi to&apos;lov</TableHead>
-                  <TableHead className="w-12"></TableHead>
+                  {canMoveBalance && <TableHead className="w-12"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -172,35 +178,37 @@ export function FrozenBalanceView() {
                           ? format(new Date(row.lastPaymentAt), "dd.MM.yyyy")
                           : "—"}
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="size-4" />
-                              <span className="sr-only">Amallar</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setWithdrawalTarget({
-                                  id: row.studentId,
-                                  name,
-                                })
-                              }
-                            >
-                              Markaz hisobiga o&apos;tkazish
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setRefundTarget({ id: row.studentId, name })
-                              }
-                            >
-                              O&apos;quvchiga qaytarish
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                      {canMoveBalance && (
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="size-4" />
+                                <span className="sr-only">Amallar</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setWithdrawalTarget({
+                                    id: row.studentId,
+                                    name,
+                                  })
+                                }
+                              >
+                                Markaz hisobiga o&apos;tkazish
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setRefundTarget({ id: row.studentId, name })
+                                }
+                              >
+                                O&apos;quvchiga qaytarish
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}

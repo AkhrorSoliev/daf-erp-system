@@ -42,7 +42,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
-| View salary (ish haqi) | All staff | Own branch staff | API reads only (`GET /salary/monthly`, `/overview`, …); the `/payments/salary` page is hidden | No | No |
+| View salary (ish haqi) | All staff | Own branch staff | No (page hidden, salary reads refused — see below) | No | No |
 | View balance | All staff | Own branch staff | No | No | No |
 | Create payment | Yes | Yes | Yes | No | Yes |
 | Reverse payment | Yes | No | No | No | No |
@@ -66,7 +66,22 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 - **No tax setting.** The salary tax-rate config and its endpoints were removed: the system computes and withholds no tax, and the salary page shows possible deductions as an informational note only
 - **CEO-only actions**: reverse payment, reverse refund, calculate salary, approve salary — these use `@Roles('CEO')` specifically
 - **Salary config (ADR-0034)**: a Branch Director may create a rate (`POST /salary/config`) only for an ACTIVE, own-branch user who holds the Teacher role and does not also hold CEO or Branch Director — an administrator or cashier who also teaches IS included. Never their own rate, never `FIXED_MONTHLY`, never a date before the current payroll period. Editing or deactivating an existing rate (`PATCH /salary/config/:id`), `POST /salary/config/global` and the payroll period stay CEO-only. A `PERCENTAGE` rate above 100 is rejected for every caller, including the CEO. The caller's roles and branches are read from the database through `whereUserMayAct()`, so a demoted or blocked director sets no rate even while their token still passes the guard ([ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md)).
+- **The salary page's reads are CEO + Branch Director on the server too** (2026-09-30). Every `GET /salary/*` read that only `/payments/salary` uses — `/monthly`, `/overview`, `/matrix`, `/payments`, `/payments/:id/breakdown`, `/accruals/:userId`, `/advances/:userId`, `/advance-calendar`, `/config/:userId`, `/configs/by-users`, `/config-history/:userId`, `/period-settings` — used to admit Administrator while the page was hidden from them. Two salary reads stay open to Administrator because pages they use call them: `GET /salary/timeline/:userId` (teacher profile, «Taymlayn» tab) and `GET /salary/monthly/center-topup` (debt page, below).
 - Full details: see `docs/financial-system.md`
+
+### Debt page (Qarzdorlik, `/payments/debt`)
+
+Every staff role except Teacher sees the same five tabs, «Markaz qoplagani» included (`GET /salary/monthly/center-topup`; Cashier added 2026-09-30, the tab used to answer a cashier with 403). Everyone below the CEO sees their own branch. The actions differ by role:
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| View the five tabs | Yes | Yes | Yes | No | Yes |
+| Record payment («To'lov qayd qilish») | Yes | Yes | Yes | No | Yes |
+| Log a call result («Natijani kiritish», `POST /call-logs`) | Yes | Yes | Yes | No | No |
+| Move a frozen balance (to the center / back to the student) | Yes | Yes | Yes | No | No |
+| Undo a debt write-off | Yes | No | No | No | No |
+
+- **Frontend**: `CALL_LOG_ROLES` and `FROZEN_BALANCE_ACTION_ROLES` in `client/src/lib/role-access.ts` hide the two actions a cashier may not take
 
 ### Groups
 
@@ -79,6 +94,16 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 - **Frontend**: Check `user.roles.some(r => [1, 2, 3].includes(r.id))` for create/edit/delete buttons
 - **Backend**: Use `@Roles('CEO', 'Branch Director', 'Administrator')` on mutation endpoints
+- **A cashier sees no group page**: the server refuses `GET /groups`, `/groups/:id` and `/groups/:id/students`. A cashier-only user gets no «Guruhlar» sidebar item, no «👥 Guruhlar» button in the staff Telegram bot, and group names without a link wherever a cashier meets them (debtor list, home, schedule, student profile). Frontend: `GROUP_PAGE_ROLES` + `RoleLink` (`client/src/components/shared/role-link.tsx`)
+
+### Students
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| Open student profile (`GET /students/:id`) | Yes | Own branch | Yes | No | Yes |
+| Remove from group | Yes | Own branch | Yes | No | No |
+
+- **Frontend**: on group pages a teacher-only user sees student names without a link (`STUDENT_PROFILE_ROLES`). A cashier on a profile sees the «Guruhlar» tab without the «Chiqarish» button
 
 ### Teachers
 
@@ -133,6 +158,8 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 |--------|-----|-----------------|---------------|---------|---------|
 | View settings | Yes | Yes | View only | No | No |
 | Edit settings | Yes | No | No | No | No |
+
+- **Frontend**: the form is read-only for everyone but the CEO and the save button is hidden (`COMPANY_EDIT_ROLES`)
 
 ### Settings — Employees & Branches
 

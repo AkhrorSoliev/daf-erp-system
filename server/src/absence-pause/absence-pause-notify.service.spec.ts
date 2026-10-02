@@ -29,6 +29,7 @@ describe('AbsencePauseNotifyService — what the messages claim', () => {
 
   function makeService() {
     const sendMessage = jest.fn().mockResolvedValue({});
+    const push = { sendToUser: jest.fn().mockResolvedValue(undefined) };
     const prisma = {
       user: {
         // One staff member on Telegram, so stages 2 and 3 also send their
@@ -42,10 +43,10 @@ describe('AbsencePauseNotifyService — what the messages claim', () => {
       prisma as never,
       { create: jest.fn().mockResolvedValue({ id: 1 }) } as never,
       { sendToUser: jest.fn() } as never,
-      { sendToUser: jest.fn().mockResolvedValue(undefined) } as never,
+      push as never,
       { getBot: () => ({ telegram: { sendMessage } }) } as never,
     );
-    return { service, sendMessage };
+    return { service, sendMessage, push };
   }
 
   function textsSentTo(sendMessage: jest.Mock, chatId: string): string[] {
@@ -107,5 +108,15 @@ describe('AbsencePauseNotifyService — what the messages claim', () => {
     for (const text of texts) {
       expect(text).not.toMatch(/\b(bugun|kecha)/i);
     }
+  });
+
+  it("stage 3's staff push opens the student's profile page", async () => {
+    const { service, push } = makeService();
+    await service.announcePause({ ...target, streak: 3 });
+
+    expect(push.sendToUser).toHaveBeenCalledWith(
+      20001,
+      expect.objectContaining({ url: '/students/profile/10001' }),
+    );
   });
 });

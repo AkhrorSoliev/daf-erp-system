@@ -4,6 +4,7 @@ import {
   DEFAULT_DEPARTURE_POLICY,
   heldShare,
   policyRelease,
+  trialAwaitsAnswerText,
 } from './departure-policy';
 
 /** A Mon/Wed/Fri group's October 2026: 13 lessons. */
@@ -261,5 +262,26 @@ describe('trial lesson (contract 3.5)', () => {
       { trialLesson: true },
     );
     expect(r.release).toMatchObject({ lessons: 10, amount: 800000 });
+  });
+});
+
+describe("a trial lesson waiting on «Dars bo'ldimi?» (CEO, 01.10.2026)", () => {
+  it('names the lesson to answer first', () => {
+    expect(
+      trialAwaitsAnswerText([{ date: '2026-10-05', groupName: '#014' }]),
+    ).toBe(
+      "Avval «Dars bo'ldimi?» savoliga javob bering: 05.10 (#014). Sinov darsi o'quvchi shu darsda bo'lgan-bo'lmaganiga qarab hal bo'ladi.",
+    );
+  });
+
+  it('names every lesson to answer, in the plural', () => {
+    expect(
+      trialAwaitsAnswerText([
+        { date: '2026-10-05', groupName: '#014' },
+        { date: '2026-10-07', groupName: '#014' },
+      ]),
+    ).toBe(
+      "Avval «Dars bo'ldimi?» savoliga javob bering: 05.10 (#014), 07.10 (#014). Sinov darsi o'quvchi shu darslarda bo'lgan-bo'lmaganiga qarab hal bo'ladi.",
+    );
   });
 });

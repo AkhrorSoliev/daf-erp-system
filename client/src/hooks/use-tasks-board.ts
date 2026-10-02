@@ -14,6 +14,8 @@ export interface TaskLesson {
   id: string;
   groupId: string;
   groupName: string;
+  /** The group's branch: the board lists every branch's tasks. */
+  branchName: string | null;
   date: string; // YYYY-MM-DD
   status: UnmarkedStatus;
   teacherPayExempt: boolean;
@@ -123,7 +125,7 @@ export const useTasksBoard = create<TasksBoardState>((set, get) => ({
               teacherPayExempt: boolean;
               lessonStartTime: string;
               lessonEndTime: string;
-              group: { name: string };
+              group: { name: string; branch?: { name: string } | null };
             } | null;
           };
         }) => ({
@@ -142,6 +144,8 @@ export const useTasksBoard = create<TasksBoardState>((set, get) => ({
                 id: assignee.comment.unmarkedLesson.id,
                 groupId: assignee.comment.unmarkedLesson.groupId,
                 groupName: assignee.comment.unmarkedLesson.group.name,
+                branchName:
+                  assignee.comment.unmarkedLesson.group.branch?.name ?? null,
                 date: assignee.comment.unmarkedLesson.date.slice(0, 10),
                 status: assignee.comment.unmarkedLesson.status,
                 teacherPayExempt:
@@ -286,7 +290,7 @@ function deriveCommentStatus(
   return "PENDING";
 }
 
-// Tasks hang off students, groups and leads, all of which are branch-scoped,
-// so the board's contents change with the branch. See
-// `lib/branch-scoped-stores.ts`.
+// `GET /comments/my-tasks` lists the caller's tasks of EVERY branch (it is
+// keyed on the assignee, not the switcher), so a card names its branch. The
+// store still resets on a switch; see `lib/branch-scoped-stores.ts`.
 registerBranchScopedStore(useTasksBoard);

@@ -29,6 +29,12 @@ const GULNOZA: StaffAccount = {
   roleIds: [3],
   portal: 'admin',
 };
+const MALIKA: StaffAccount = {
+  id: 30403,
+  firstName: 'Malika',
+  roleIds: [5],
+  portal: 'admin',
+};
 
 /** `inline_keyboard` — har tugmaning yozuvi va Mini App manzili. */
 function buttons(markup: any): Array<Array<[string, string | undefined]>> {
@@ -156,6 +162,25 @@ describe('staffMenuKeyboard', () => {
 
     expect(rows[rows.length - 1]).toEqual([
       ["🎓 O'quvchi kabineti", STUDENT_URL],
+    ]);
+  });
+
+  // `GET /groups` kassirni rad etadi: bu tugma uni 403 ga olib borardi.
+  it("faqat kassir: guruhlar tugmasi yo'q, jadval bor", () => {
+    expect(buttons(staffMenuKeyboard(MALIKA, ADMIN_URL))).toEqual([
+      [[STAFF_CABINET_BUTTON_TEXT, ADMIN_URL]],
+      [['📅 Jadval', `${ADMIN_URL}?next=%2Fschedule`]],
+    ]);
+  });
+
+  it('kassir ham, ustoz ham — guruhlar tugmasi bor (ustoz roli ochadi)', () => {
+    const rows = buttons(
+      staffMenuKeyboard({ ...MALIKA, roleIds: [4, 5] }, ADMIN_URL),
+    );
+
+    expect(rows[1]).toContainEqual([
+      '👥 Guruhlar',
+      `${ADMIN_URL}?next=%2Fgroups`,
     ]);
   });
 });
