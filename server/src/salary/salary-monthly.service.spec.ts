@@ -878,6 +878,7 @@ describe('SalaryMonthlyService', () => {
   it('scopes the teacher query to the mainBranch for a Branch Director', async () => {
     prisma.user.findUnique.mockResolvedValue({
       mainBranch: 7,
+      branches: [],
       roles: [{ role: { name: 'Branch Director' } }],
     });
 

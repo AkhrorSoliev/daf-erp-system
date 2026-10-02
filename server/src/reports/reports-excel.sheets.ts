@@ -1,9 +1,10 @@
 /**
  * Formal-statement + framing sheet builders for the "Moliyaviy hisobot"
- * workbook: Muqova / Asosiy xulosa / Foyda va zarar / Balans /
- * To'lov usullari / Izoh. The line-item + reconciliation builders live in
- * reports-excel.detail-sheets.ts. Data params are loosely typed (`any`) — the
- * shapes come straight from the ReportsService facade and are only read here.
+ * workbook: Muqova / Foyda va zarar / Balans / To'lov usullari / Izoh.
+ * «Asosiy xulosa» lives in reports-excel.summary-sheet.ts; the line-item +
+ * reconciliation builders live in reports-excel.detail-sheets.ts. Data params
+ * are loosely typed (`any`) — the shapes come straight from the ReportsService
+ * facade and are only read here.
  */
 import { Workbook } from 'exceljs';
 import {
@@ -23,7 +24,6 @@ import {
   tableHeader,
   totalsRow,
   kvRow,
-  deltaRow,
   sheetNotes,
 } from './reports-excel.helpers';
 
@@ -85,132 +85,6 @@ export function coverSheet(
     const r = ws.addRow([`${i + 2}. ${name}`, desc]);
     r.getCell(2).font = { color: { argb: SUBTLE } };
   });
-}
-
-// ---- Sheet 2: Asosiy xulosa ----
-export function summarySheet(
-  wb: Workbook,
-  overview: any,
-  prior: any,
-  period: string,
-  currentTag: string,
-  priorTag: string,
-  np?: NetProfit,
-) {
-  const ws = wb.addWorksheet('Asosiy xulosa');
-  ws.columns = [
-    { width: 34 },
-    { width: 18 },
-    { width: 18 },
-    { width: 16 },
-    { width: 15 },
-    { width: 48 },
-  ];
-  sheetTitle(ws, 'Asosiy xulosa', period, 6);
-
-  const o = overview ?? {};
-  const p = prior ?? {};
-
-  sectionHeader(ws, 'NATIJA, QARZDORLIK, O‘QUVCHILAR (davrlar taqqoslashi)', 6);
-  tableHeader(ws, [
-    'Ko‘rsatkich',
-    currentTag,
-    priorTag,
-    'Farq',
-    'O‘zgarish %',
-    'Izoh',
-  ]);
-  deltaRow(
-    ws,
-    'Tushgan tushum',
-    o.income?.actual ?? 0,
-    p.income?.actual ?? 0,
-    'Davrda qabul qilingan to‘lovlar (kassa asosida).',
-  );
-  deltaRow(
-    ws,
-    'Umumiy chiqim (xarajat + oylik)',
-    (o.expenses ?? 0) + (o.salary?.paid ?? 0),
-    (p.expenses ?? 0) + (p.salary?.paid ?? 0),
-    'Operatsion xarajat + to‘langan oyliklar.',
-  );
-  deltaRow(
-    ws,
-    'Sof foyda (naqd asosida)',
-    o.netProfit ?? 0,
-    p.netProfit ?? 0,
-    'Ekrandagi dashboard bilan bir xil (kassa asosida). DIQQAT: ustoz oyligi odatda keyingi oy to‘lanadi, shuning uchun bu raqam yuqori ko‘rinadi — aniq natija uchun «Sof foyda» bo‘limiga qarang.',
-  );
-  deltaRow(
-    ws,
-    'Jami qarz',
-    o.forecast?.outstandingReceivable ?? 0,
-    p.forecast?.outstandingReceivable ?? 0,
-    'Faol o‘quvchilarning umumiy qarzi (joriy holat).',
-  );
-  deltaRow(
-    ws,
-    'Qarzdorlar soni',
-    o.debtorCount ?? 0,
-    p.debtorCount ?? 0,
-    undefined,
-    { count: true },
-  );
-  deltaRow(
-    ws,
-    'Faol o‘quvchilar',
-    o.activeStudentCount ?? 0,
-    p.activeStudentCount ?? 0,
-    undefined,
-    { count: true },
-  );
-  deltaRow(
-    ws,
-    'Yangi o‘quvchilar',
-    o.newStudentCount ?? 0,
-    p.newStudentCount ?? 0,
-    undefined,
-    { count: true },
-  );
-  deltaRow(
-    ws,
-    'To‘lov qilganlar',
-    o.ltvPayerCount ?? 0,
-    p.ltvPayerCount ?? 0,
-    undefined,
-    { count: true },
-  );
-
-  sectionHeader(ws, 'Qo‘shimcha ko‘rsatkichlar', 6);
-  kvRow(
-    ws,
-    'Hisoblangan daromad (darslar)',
-    o.income?.billed ?? 0,
-    'Bu davrda o‘quvchilarga real hisoblab yozilgan darslar puli (accrual).',
-  );
-  kvRow(
-    ws,
-    'Oy oxiriga kutilyapti',
-    o.income?.expected ?? 0,
-    'Shu oy o‘tilgan darslar + kalendar bo‘yicha qolgan darslar qiymati. Kassa bashorati emas.',
-  );
-  kvRow(
-    ws,
-    'Sof foyda (aniq — hisoblangan oylik + refund bilan)',
-    np?.netProfit ?? 0,
-    '★ ENG ANIQ raqam: tushumdan HISOBLANGAN ustoz oyligi + operatsion xarajat + qaytarishlar ayirilgan. To‘liq yoyilgani «Sof foyda» bo‘limida.',
-    { bold: true },
-  );
-
-  sheetNotes(
-    ws,
-    [
-      'Bu — hisobotning eng muhim, sodda tilda XULOSAsi. NATIJA = tushum − chiqim = sof foyda.',
-      `"${currentTag} / ${priorTag} / Farq / O‘zgarish %" ustunlari — joriy davrni oldingi teng davr bilan taqqoslaydi (yashil = o‘sish, qizil = kamayish). "Farq" = ikki davr orasidagi ayirma, "O‘zgarish %" = shu ayirmaning foizi.`,
-      '"Sof foyda (naqd asosida)" — kassa asosida (ekran bilan bir xil), lekin ustoz oyligi keyingi oy to‘langani uchun yuqori ko‘rinadi. "Sof foyda (aniq)" — HISOBLANGAN ustoz oyligi + xarajat + qaytarishlar ayirilgan ENG to‘g‘ri raqam. To‘liq yoyilishi alohida «Sof foyda» bo‘limida.',
-    ],
-    6,
-  );
 }
 
 // ---- Sheet 3: Sof foyda (the single, clear "aniq sof foyda") ----
@@ -530,21 +404,25 @@ export function glossarySheet(wb: Workbook) {
   const ws = wb.addWorksheet('Izoh');
   ws.columns = [{ width: 30 }, { width: 90 }];
   sheetTitle(ws, 'Izoh / Lug‘at', 'Atamalarning sodda tilda izohi', 2);
-  // Ten plain-language terms only — the prior 21-term accounting glossary
+  // Plain-language terms only — the prior 21-term accounting glossary
   // (Roll-forward, Cash tie-out, LTV/CAC/ROI jargon) and the "Metodika" row
   // are gone; a reader who needs this sheet is not a bookkeeper.
   const terms: [string, string][] = [
     [
+      // Named after the row «Xulosa» block 4 prints from the first monthly
+      // month — `{Oy Yil} hisobi`, then «shundan to'langan» / «to'lanmagan» —
+      // not after the home page's and Telegram's «Bu oy hisoblandi», which no
+      // row of this workbook carries. The glossary has no month, hence «Oy».
+      'Oy hisobi (oylik hisob)',
+      '«Xulosa» 4-blokining birinchi qatori, masalan «Oktabr 2026 hisobi» (2026-yil sentabrdan oylik to‘lov tizimidagi oylar): shu oy uchun o‘quvchilarga yozilgan oylik hisoblar yig‘indisi. Uning ostidagi «shundan to‘langan» — shundan to‘langani (qarz kechirilgani ham shu yerda), «to‘lanmagan» — hali to‘lanmagani. To‘lov avval eng eski qarzni yopadi.',
+    ],
+    [
       'Oy oxiriga kutilyapti',
-      'Shu oy allaqachon o‘tilgan darslar qiymati + kalendar bo‘yicha oy oxirigacha qolgan darslar qiymati. Bu kassa bashorati EMAS — pul qachon kelishi bunga kirmaydi.',
+      'Shu oy allaqachon o‘tilgan darslar qiymati + kalendar bo‘yicha oy oxirigacha qolgan darslar qiymati. Bu kassa bashorati EMAS — pul qachon kelishi bunga kirmaydi. (2026-yil sentabrgacha bo‘lgan oylar)',
     ],
     [
       "O'tilgan darslar qiymati",
       'Bu davrda o‘quvchilarga real hisoblab yozilgan darslar puli. Tushgan to‘lov va qarz shundan kelib chiqadi.',
-    ],
-    [
-      'Tushgan tushum',
-      'Bu davrda kassaga real tushgan to‘lovlar (naqd, Payme, Click va h.k.).',
     ],
     [
       "Oyning o'z foydasi",

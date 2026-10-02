@@ -28,9 +28,10 @@ const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
  * the monthly charge; staff counted in their home branch only. v3: key names
  * the exact branch set and the caller; v2 wrote multi-branch scopes to the
  * company-wide entry. v4: balance withdrawals count as revenue of the month
- * they are made (ADR-0055).
+ * they are made (ADR-0055). v5: a cancelled refund no longer counts as a refund
+ * — both of its ledger rows are left out of the figure.
  */
-const NET_PROFIT_CACHE_VERSION = 'v4';
+const NET_PROFIT_CACHE_VERSION = 'v5';
 const logger = new Logger('NetProfitCache');
 
 /** Seconds remaining until the next Tashkent midnight (min 60). */

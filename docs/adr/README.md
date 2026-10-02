@@ -62,7 +62,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | # | Sarlavha | Holati | Sana |
 |---|---|---|---|
 | [0001](0001-bir-yozuv-bitta-filial.md) | Har bir yozuv aniq bitta filialga tegishli | Qabul qilindi | 2026-07-29 |
-| [0002](0002-filial-qamrovi-fail-closed.md) | Noma'lum filial qamrovi hech narsani ko'rsatmaydi | Qabul qilindi | 2026-07-29 |
+| [0002](0002-filial-qamrovi-fail-closed.md) | Noma'lum filial qamrovi hech narsani ko'rsatmaydi | Qabul qilindi; `PayrollBranchScope` turi va «asosiy filiali yo'q xodim bo'sh ekran ko'radi» qismi — ADR-0058 bilan o'zgardi | 2026-07-29 |
 | [0003](0003-route-siyosati-manifest.md) | Har bir route filial siyosati bo'yicha toifalanadi | Qabul qilindi | 2026-08-06 |
 | [0004](0004-balans-haqiqati-ledgerda.md) | Balans haqiqati ledger'da saqlangan, qayta hisoblanmaydi | Qabul qilindi | 2026-08-06 |
 | [0005](0005-hisobot-pastki-chegarasi.md) | Hisobotlar `Company.systemStartDate` dan boshlanadi | Qabul qilindi | 2026-06-06 |
@@ -116,6 +116,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0054](0054-davomat-olinmagan-dars-ustoz-haqisiz.md) | Dars tugaguncha davomat olinmasa — «Dars bo'ldimi?»; «Bo'ldi» bo'lsa ustozga haq yozilmaydi | Qabul qilindi | 2026-09-30 |
 | [0055](0055-balansdan-yechib-olingan-pul-oy-daromadi.md) | Balansdan yechib olingan pul yechilgan oyning daromadi; oy tanlanmaydi | Qabul qilindi | 2026-09-30 |
 | [0056](0056-mock-royxat-manbasi-qatorda.md) | Mock ro'yxati qayerdan kelgani (bot yoki admin) qatorning o'zida yoziladi | Qabul qilindi | 2026-09-30 |
+| [0058](0058-oylik-oyning-asosiy-raqami-hisoblandi.md) | Oylik oyning asosiy raqami hisoblandi / to'landi / qoldi; bekor qilingan qaytarish va kechirish sanalmaydi; oylik qamrovi — filiallar to'plami | Qabul qilindi | 2026-10-01 |
 | [0060](0060-sinov-darsi-javobsiz-dars-bilan-hal-qilinmaydi.md) | Sinov darsi javobsiz «Dars bo'ldimi?» bilan hal qilinmaydi: chiqarish va chetlatish avval javobni kutadi | Qabul qilindi | 2026-10-01 |
 | [0063](0063-bekor-qilishni-ochirish-pulni-qaytarib-oladi.md) | Bekor qilishni o'chirish qaytarilgan dars pulini ham qaytarib oladi; o'zgargan yozilishning puli qoldiriladi | Qabul qilindi | 2026-10-02 |
 

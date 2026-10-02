@@ -5,9 +5,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReportsExcelService } from '../reports/reports-excel.service';
 import { ReportsFinancialService } from '../reports/reports-financial.service';
 import { ReportsService } from '../reports/reports.service';
+import { isMonthlyBillingMonth } from '../reports/month-charges';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { formatSum } from './utils/format.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
+import { buildMonthChargesLines } from './utils/month-charges-lines.util';
 import {
   branchLabelForGroup,
   isLegacyUnscopedGroup,
@@ -276,15 +278,15 @@ export class TelegramGroupReportMenuService {
       const branchIds = reportBranchIdsForGroup(group);
       const monthKey = this.currentMonth();
       const month = this.monthLabel(monthKey);
-      // Three independent reads — the split is new work (the daily report gets
-      // it for free, this card does not), so it runs alongside the other two
-      // rather than after them.
+      // Four independent reads — the split and the month's headline figure are
+      // new work (the daily report gets them for free, this card does not), so
+      // they run alongside the other two rather than after them.
       //
       // `o.netProfit` is the legacy cash figure (kassa tushumi − NAQD to'langan
       // oylik). Payroll is paid the following cycle, so its paid leg is ~0 and
       // profit reads far too high — the "+78M June" bug the code names itself.
       // Read the canonical figure the Foyda card and Excel «Sof foyda» use.
-      const [o, canonical, split] = await Promise.all([
+      const [o, canonical, split, monthFigure] = await Promise.all([
         this.reportsFinancial.getFinancialOverview(group.companyId, {
           branchIds,
         }),
@@ -293,6 +295,9 @@ export class TelegramGroupReportMenuService {
         // the /payments/overview "Tushum tarkibi" drill-down and the 21:00
         // report show, over the month this card is titled with.
         this.incomeSplit(group.companyId, branchIds, monthKey),
+        // «Bu oy hisoblandi / To'landi / Qoldi», or «Oy oxiriga kutilyapti»
+        // before 2026-09 — for the same month and scope as everything above.
+        this.monthFigureLines(group.companyId, branchIds, monthKey),
       ]);
       const scopeLabel = branchLabelForGroup(
         group,
@@ -304,7 +309,7 @@ export class TelegramGroupReportMenuService {
         ``,
         `• Tushum (haqiqiy): <b>${formatSum(split ? split.total : o.income.actual)}</b>`,
         ...(split ? buildIncomeSplitLines(split) : []),
-        `• Oy oxiriga kutilyapti: <b>${formatSum(o.income.expected)}</b>`,
+        ...monthFigure,
         `• Xarajat: <b>${formatSum(o.expenses)}</b>`,
         `• Ustoz oyligi (to'langan): <b>${formatSum(o.salary.paid)}</b>`,
         canonical !== null
@@ -361,6 +366,42 @@ export class TelegramGroupReportMenuService {
     } catch (err: any) {
       this.logger.warn(`Income split failed: ${err?.message ?? err}`);
       return null;
+    }
+  }
+
+  /**
+   * The month's headline figure for the card: «Bu oy hisoblandi / To'landi /
+   * Qoldi» from 2026-09 (every course is monthly, ADR-0058), «Oy oxiriga
+   * kutilyapti» before it. Both come from the reports facade, for the card's own
+   * month and scope.
+   *
+   * The card used to print `getFinancialOverview().income.expected`. It calls
+   * the RAW service, which hard-coded that field to 0 (only the facade filled
+   * the real value in), so the line always read 0; the field is gone and the
+   * figure is asked of the facade's `getMonthlyExpectation` directly.
+   *
+   * Returns no lines on failure: a broken figure costs the card this one block,
+   * never the card itself.
+   */
+  private async monthFigureLines(
+    companyId: number,
+    branchIds: ReportBranchIds,
+    month: string,
+  ): Promise<string[]> {
+    try {
+      if (isMonthlyBillingMonth(month)) {
+        return buildMonthChargesLines(
+          await this.reports.getMonthCharges(companyId, { month, branchIds }),
+        );
+      }
+      const e = await this.reports.getMonthlyExpectation(companyId, {
+        month,
+        branchIds,
+      });
+      return [`• Oy oxiriga kutilyapti: <b>${formatSum(e.expectedValue)}</b>`];
+    } catch (err: any) {
+      this.logger.warn(`Month figure failed: ${err?.message ?? err}`);
+      return [];
     }
   }
 

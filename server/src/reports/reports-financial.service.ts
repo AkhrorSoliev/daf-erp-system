@@ -33,6 +33,7 @@ import {
   loadBalanceWithdrawals,
   type BalanceWithdrawals,
 } from './balance-withdrawals';
+import { loadMonthCharges } from './month-charges';
 
 /** One billable lesson held in a window and the revenue it recognises. */
 export interface HeldLessonValue {
@@ -172,47 +173,6 @@ export class ReportsFinancialService {
       _sum: { amount: true },
       _count: true,
     });
-
-    // Recognized revenue (actual): total lesson value billed to students in
-    // the period — the sum of every LESSON_DEDUCTION prepaid batch. Unlike
-    // recognizedRevenueForecast (a schedule-based projection), this is what
-    // was really charged. Summing signed amounts nets reversed batches out,
-    // since a reversal is itself a LESSON_DEDUCTION row with the opposite sign.
-    const billedLessonsAgg = await this.prisma.transaction.aggregate({
-      where: {
-        companyId,
-        type: 'LESSON_DEDUCTION',
-        createdAt: dateFilter,
-        ...branchFilter,
-      },
-      _sum: { amount: true },
-    });
-    // Billing corrections (the April-cutover over-charge cleanup) were booked as
-    // lump ADJUSTMENT rows, NOT as LESSON_DEDUCTION reversals. That means they
-    // do not net out of the LESSON_DEDUCTION sum above and would leave recognized
-    // revenue overstated by the phantom (double-billed) amount. Net them back in
-    // here so a balance-only correction is reflected: a correction is recognized
-    // in the period it was made (standard correction accounting). Only ADJUSTMENT
-    // rows tagged `metadata.marker = 'overcharge*'` are billing corrections —
-    // other ADJUSTMENTs (manual balance gifts, etc.) are intentionally excluded.
-    const periodAdjustments = await this.prisma.transaction.findMany({
-      where: {
-        companyId,
-        type: 'ADJUSTMENT',
-        createdAt: dateFilter,
-        ...branchFilter,
-      },
-      select: { amount: true, metadata: true },
-    });
-    const overchargeCorrectionSum = periodAdjustments.reduce((sum, t) => {
-      const marker = (t.metadata as { marker?: string } | null)?.marker;
-      return typeof marker === 'string' && marker.startsWith('overcharge')
-        ? sum + t.amount
-        : sum;
-    }, 0);
-    const billedLessons = Math.abs(
-      (billedLessonsAgg._sum.amount ?? 0) + overchargeCorrectionSum,
-    );
 
     // The `exactDays × 4` revenue forecast used to live here. It assumed every
     // month was four weeks (8–13% short on a five-week month) and was rebuilt
@@ -389,12 +349,7 @@ export class ReportsFinancialService {
 
     return {
       income: {
-        // `expected` is written by `ReportsService.getFinancialOverview`, which
-        // folds in the calendar-based month-end expectation. Zero here so a
-        // caller reaching this service directly never sees a stale forecast.
-        expected: 0,
         actual: totalIncome,
-        billed: billedLessons,
         paymentCount: actualIncome._count,
         byMethod: incomeByMethod.map((m) => ({
           method: m.method,
@@ -470,6 +425,14 @@ export class ReportsFinancialService {
     opts: { months: string[]; branchIds: ReportBranchIds },
   ): Promise<BalanceWithdrawals> {
     return loadBalanceWithdrawals(this.prisma, companyId, opts);
+  }
+
+  /** «Bu oy hisoblandi / To'landi / Qoldi» (ADR-0058). */
+  getMonthCharges(
+    companyId: number,
+    opts: { month: string; branchIds: ReportBranchIds },
+  ) {
+    return loadMonthCharges(this.prisma, companyId, opts);
   }
 
   /**
@@ -1161,6 +1124,9 @@ export class ReportsFinancialService {
    *   recovered_i = min(debt_i, max(0, Σ PAYMENT.amount after monthEnd))
    * `DEBT_WRITE_OFF` is a separate column (forgiven, not cash) so the recovery
    * rate isn't inflated. remaining = closingDebt − recovered − writtenOff.
+   * Only write-offs still in force count there: a cancelled one is two rows
+   * (original + counter-row) and neither is forgiveness, while the balance
+   * walk above keeps every row.
    */
   async getMonthlyDebtRecovery(
     companyId: number,
@@ -1317,12 +1283,18 @@ export class ReportsFinancialService {
         },
         _sum: { amount: true },
       }),
+      // Only write-offs still in force. A cancelled one is two rows — the
+      // original (`reversedAt`) and its counter-row (`reversedTransactionId`)
+      // — and neither is forgiveness. The walk back to the month end above and
+      // the payment sum keep every row: both halves of a pair net out there.
       this.prisma.transaction.groupBy({
         by: ['studentId'],
         where: {
           companyId,
           studentId: { in: cohortIds },
           type: TransactionType.DEBT_WRITE_OFF,
+          reversedAt: null,
+          reversedTransactionId: null,
           createdAt: { gte: boundary },
         },
         _sum: { amount: true },
@@ -1428,8 +1400,6 @@ export class ReportsFinancialService {
       reason: string | null;
       performedBy: string | null;
       createdAt: Date;
-      isReversed: boolean;
-      isReversal: boolean;
     }>;
     truncated: boolean;
   }> {
@@ -1485,7 +1455,8 @@ export class ReportsFinancialService {
     // Headcounts, computed by grouping rather than by de-duplicating the capped
     // lists below — a month past LIST_CAP would otherwise undercount silently.
     // Net sum > 0 so a student whose only payment was fully reversed is not
-    // counted as having paid.
+    // counted as having paid. Forgiven people are counted from write-offs still
+    // in force, the same rows as `writtenOff` (see `reconstructMonthCohort`).
     const [payerGroups, forgivenGroups] = await Promise.all([
       this.prisma.transaction.groupBy({
         by: ['studentId'],
@@ -1503,6 +1474,8 @@ export class ReportsFinancialService {
           companyId,
           studentId: { in: cohortIds },
           type: TransactionType.DEBT_WRITE_OFF,
+          reversedAt: null,
+          reversedTransactionId: null,
           createdAt: { gte: boundary },
         },
         _sum: { amount: true },
@@ -1556,11 +1529,16 @@ export class ReportsFinancialService {
         orderBy: { createdAt: 'desc' },
         take: LIST_CAP + 1,
       }),
+      // Unlike the payments above, write-offs are listed only while in force:
+      // a cancelled one is not «Kechirildi», and its two rows would show
+      // forgiveness that did not stand — the sums above leave them out too.
       this.prisma.transaction.findMany({
         where: {
           companyId,
           studentId: { in: cohortIds },
           type: TransactionType.DEBT_WRITE_OFF,
+          reversedAt: null,
+          reversedTransactionId: null,
           createdAt: { gte: boundary },
         },
         select: {
@@ -1570,8 +1548,6 @@ export class ReportsFinancialService {
           createdAt: true,
           description: true,
           metadata: true,
-          reversedAt: true,
-          reversedTransactionId: true,
           student: { select: { firstName: true, lastName: true } },
           performedBy: { select: { firstName: true, lastName: true } },
         },
@@ -1628,8 +1604,6 @@ export class ReportsFinancialService {
         reason: meta?.reason ?? t.description ?? null,
         performedBy: fullName(t.performedBy),
         createdAt: t.createdAt,
-        isReversed: t.reversedAt != null,
-        isReversal: t.reversedTransactionId != null,
       };
     });
 
@@ -1731,20 +1705,24 @@ export class ReportsFinancialService {
    * `getProfitLoss.netProfit` subtract today — the missing pieces the CEO's
    * "aniq sof foyda" needs. All read-only aggregates:
    *
-   *  • refunds       — cash physically returned to students (REFUND ledger rows,
-   *                    active only). A real cash outflow. `Payment` stays
-   *                    COMPLETED on a refund, so revenue is not reduced either →
-   *                    a pure un-subtracted outflow.
-   *  • writeOffs     — forgiven student debt (DEBT_WRITE_OFF). Non-cash, but a
-   *                    real loss of company value (uncollectable receivable).
+   *  • refunds       — cash physically returned to students (REFUND ledger rows
+   *                    still in force: a cancelled refund counts as nothing,
+   *                    neither its original nor its counter-row). A real cash
+   *                    outflow. `Payment` stays COMPLETED on a refund, so
+   *                    revenue is not reduced either → a pure un-subtracted
+   *                    outflow.
+   *  • writeOffs     — forgiven student debt (DEBT_WRITE_OFF rows still in
+   *                    force). Non-cash, but a real loss of company value
+   *                    (uncollectable receivable).
    *  • providerFees  — gateway (Payme/Click) commission retained from the inflow
    *                    (`Payment.providerFee`). Income counts the GROSS amount,
    *                    so the fee is money the center never receives.
    *
-   * Refund/write-off are student-ledger rows that don't carry a reliable
-   * branchId, so they are company-wide (like `getReconciliation`); a branchId
-   * filter is applied only to the gateway-fee (Payment) leg, which is branch-
-   * scoped. The Excel net-profit block is company-wide in the common case.
+   * All three legs are filtered by `query.branchIds`: every ledger row carries
+   * a `branchId` now (the historical ones were backfilled), so a branch's own
+   * refunds, write-offs and gateway fees — not the company's — reduce its
+   * profit. `null` (a CEO who picked no branch) reads the whole company and an
+   * empty scope reads nothing.
    */
   async getPeriodOutflows(
     companyId: number,
@@ -1758,9 +1736,12 @@ export class ReportsFinancialService {
     const tsFilter = { gte: period.start, lte: period.endTs };
     const branchFilter = branchIdWhere(query.branchIds);
 
+    // Bekor qilish ikki qator yozadi — asl qator `reversedAt` bilan, qarshi
+    // qator `reversedTransactionId` bilan; ikkalasi ham chiqariladi, aks holda
+    // bekor qilingan qaytarish sof foydada qaytarish bo'lib qoladi.
     const [refundRows, writeOffAgg, providerFeeAgg] = await Promise.all([
-      // Active (non-reversed) REFUND rows — signed negative on the student
-      // ledger; take the magnitude of cash returned.
+      // Live REFUND rows — signed negative on the student ledger; the cash
+      // returned is their negation.
       // Branch-filtered since every ledger row now carries a branch (and the
       // historical rows were backfilled) — a branch's own refunds and
       // write-offs, not the company's, must reduce its profit.
@@ -1769,6 +1750,7 @@ export class ReportsFinancialService {
           companyId,
           type: TransactionType.REFUND,
           reversedAt: null,
+          reversedTransactionId: null,
           createdAt: tsFilter,
           ...branchFilter,
         },
@@ -1779,6 +1761,7 @@ export class ReportsFinancialService {
           companyId,
           type: TransactionType.DEBT_WRITE_OFF,
           reversedAt: null,
+          reversedTransactionId: null,
           createdAt: tsFilter,
           ...branchFilter,
         },
@@ -1796,8 +1779,12 @@ export class ReportsFinancialService {
       }),
     ]);
 
-    const refunds = Math.abs(refundRows.reduce((s, t) => s + t.amount, 0));
-    const writeOffs = Math.abs(writeOffAgg._sum.amount ?? 0);
+    // Not `Math.abs`: a wrong-signed total must stay visible, not turn into a
+    // refund. `0 - x` rather than `-x`, so an empty sum is 0 and not -0.
+    const refunds = 0 - refundRows.reduce((s, t) => s + t.amount, 0);
+    // A write-off CREDITS the student (positive), so unlike a refund it is read
+    // as it stands; the live-rows filter above leaves no negative counter-row.
+    const writeOffs = writeOffAgg._sum.amount ?? 0;
     const providerFees = providerFeeAgg._sum.providerFee ?? 0;
 
     return {

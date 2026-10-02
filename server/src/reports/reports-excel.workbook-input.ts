@@ -11,6 +11,7 @@
  * contracts of the sheet builders — see reports-excel.{summary,trend}-sheet.ts.
  */
 import { ReportsService } from './reports.service';
+import type { MonthCharges } from './month-charges';
 import {
   NetProfit,
   buildNetProfit,
@@ -155,6 +156,8 @@ export interface SummarySources {
   /** Next month's attribution — null when that month has not started yet. */
   attributionNext: any;
   expectation: { expectedValue: number; remainingValue: number };
+  /** The month's CHARGED figures — null for a month before monthly billing. */
+  monthCharges: MonthCharges | null;
   payments: any;
   pl: any;
   students: StudentFlow;
@@ -217,6 +220,7 @@ export function buildSummaryInput(s: SummarySources): SummaryInput {
     payerCount: new Set((s.payments?.rows ?? []).map((p: any) => p.student?.id))
       .size,
     lessonMoney,
+    monthCharges: s.monthCharges,
     nextMonthLabel: uzMonthLabel(s.nextMonth),
     cashOut: buildCashOut(s.pl, s.np.refunds),
     students: s.students,

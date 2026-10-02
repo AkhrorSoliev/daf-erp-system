@@ -1,16 +1,16 @@
 /**
  * Operational (non-financial) sheet builders for the "Moliyaviy hisobot"
  * workbook — the business half that turns the finance report into a full
- * management report: KPI paneli / Lidlar / O'quvchilar oqimi / Xonalar
- * bandligi / Guruhlar to'ldirilishi / Davomat / O'qituvchilar samaradorligi /
- * O'qituvchi o'zgarishlari.
+ * management report: KPI paneli / Lidlar / Xonalar bandligi / Guruhlar
+ * to'ldirilishi / Davomat / O'qituvchilar samaradorligi / O'qituvchi
+ * o'zgarishlari.
  *
  * Every figure comes straight from the already-delegated ReportsService
  * methods (getKpis / getRoomUtilization / getGroupAnalytics / getLeadAnalytics
- * / getAttendanceAnalytics / getTeacherPerformance / getDepartedStudents* /
- * getTeacherChangesList). Each builder is defensive: a `null` dataset (its
- * source threw) renders an "ma'lumot yo'q" note instead of crashing the whole
- * workbook. Same visual language as the financial sheets (shared helpers).
+ * / getAttendanceAnalytics / getTeacherPerformance / getTeacherChangesList).
+ * Each builder is defensive: a `null` dataset (its source threw) renders an
+ * "ma'lumot yo'q" note instead of crashing the whole workbook. Same visual
+ * language as the financial sheets (shared helpers).
  */
 import { Workbook, Worksheet, Row } from 'exceljs';
 import {
@@ -23,7 +23,6 @@ import {
   kvRow,
   freezeAndFilter,
   sheetNotes,
-  dataBar,
   colorScale,
   fmtDate,
   dmy,
@@ -205,95 +204,6 @@ export function leadsSheet(wb: Workbook, leads: any, period: string) {
       "Konversiya jadvali doim oxirgi 6 oyni ko'rsatadi — tanlangan davrdan qat'i nazar.",
     ],
     4,
-  );
-}
-
-// ---- Op-3: O'quvchilar oqimi (kelish / ketish) ----
-export function studentFlowSheet(
-  wb: Workbook,
-  summary: any,
-  dynamics: any,
-  reasons: any,
-  period: string,
-) {
-  const ws = wb.addWorksheet("O'quvchilar oqimi");
-  ws.columns = [{ width: 36 }, { width: 18 }, { width: 46 }];
-  sheetTitle(ws, "O'quvchilar oqimi — kelish / ketish", period, 3);
-
-  sectionHeader(ws, "Umumiy ko'rsatkichlar (joriy holat)", 3);
-  if (summary) {
-    kvRow(
-      ws,
-      'Churn (ketish) foizi',
-      summary.churnRate ?? 0,
-      "Ketganlar / jami o'quvchi.",
-      { percent: true },
-    );
-    kvNum(ws, "Ketgan o'quvchilar", summary.departedCount ?? 0);
-    kvNum(
-      ws,
-      "Jami o'quvchilar (ketgan + hozirgi)",
-      summary.totalStudents ?? 0,
-    );
-    kvRow(
-      ws,
-      "Yo'qolgan daromad",
-      summary.lostRevenue ?? 0,
-      "Ketganlarning to'lanmagan qoldig'i.",
-    );
-    kvRow(
-      ws,
-      'Jami qarz (ketganlar)',
-      summary.totalDebt ?? 0,
-      "Manfiy balanslar yig'indisi.",
-    );
-    kvNum(ws, 'Qarzdorlar soni', summary.debtorCount ?? 0);
-    kvNum(
-      ws,
-      "O'rtacha davomiylik (oy)",
-      summary.avgDurationMonths ?? 0,
-      "O'quvchi o'rtacha necha oy o'qigan.",
-      { fmt: DEC1 },
-    );
-    kvNum(ws, "Ustoz o'zgarishlari (davr)", summary.totalTeacherChanges ?? 0);
-    kvNum(
-      ws,
-      "Ustoz o'zgarishidan keyin ketganlar",
-      summary.departedAfterTeacherChange ?? 0,
-    );
-  } else {
-    emptyNote(ws);
-  }
-
-  sectionHeader(ws, 'Oylik dinamika (ketganlar)', 3);
-  const dh = tableHeader(ws, ['Oy', 'Ketganlar']);
-  const first = dh.number + 1;
-  (dynamics?.data ?? []).forEach((d: any) => {
-    const r = ws.addRow([
-      typeof d.date === 'string' ? d.date.slice(0, 7) : d.date,
-      d.count ?? 0,
-    ]);
-    r.getCell(2).numFmt = NUM;
-  });
-  const last = ws.rowCount;
-  if (last >= first) dataBar(ws, `B${first}:B${last}`);
-
-  sectionHeader(ws, 'Ketish sabablari', 3);
-  tableHeader(ws, ['Sabab', 'Soni']);
-  (reasons?.data ?? []).forEach((rs: any) => {
-    const r = ws.addRow([rs.reasonName ?? "Noma'lum", rs.count ?? 0]);
-    r.getCell(2).numFmt = NUM;
-  });
-
-  sheetNotes(
-    ws,
-    [
-      "O'quvchilarning markazga kelishi va ketishi — churn, sabablar va oylik dinamika.",
-      "Diqqat: churn / qarz / yo'qolgan daromad — JORIY holat (tanlangan davrga bog'liq emas).",
-      "Faqat ustoz-o'zgarish raqamlari tanlangan davrni hisobga oladi.",
-      '"Ketganlar" — guruhdan chiqib ketgan yozuvlar (bir o\'quvchi bir necha guruhda hisoblanishi mumkin).',
-    ],
-    3,
   );
 }
 

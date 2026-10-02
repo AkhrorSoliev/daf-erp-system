@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CourseStatus } from '@prisma/client';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -35,6 +39,7 @@ describe('CoursesService — status methods', () => {
         create: jest.fn(),
       },
       branch: { findFirst: jest.fn() },
+      enrollment: { count: jest.fn().mockResolvedValue(0) },
       coursePriceSnapshot: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         create: jest.fn().mockResolvedValue({}),
@@ -210,6 +215,119 @@ describe('CoursesService — status methods', () => {
         min: expect.any(Number),
         max: expect.any(Number),
       });
+    });
+  });
+
+  /**
+   * A lesson-pack course's enrollments carry `prepaidLessonsRemaining`: lessons
+   * paid for and not yet taken. A monthly course never reads or writes it, but
+   * refunds still read it, so switching the course would leave counters behind
+   * that keep reporting money the monthly charge no longer holds. Releasing or
+   * writing those lessons off moves money and is the CEO's decision, so until
+   * then the switch is refused.
+   */
+  describe('update — switching a lesson-pack course to monthly', () => {
+    const lessonPackCourse = { ...mockCourse, paymentModel: 'LESSON_PACK' };
+
+    beforeEach(() => {
+      prisma.course.findFirst.mockResolvedValue(lessonPackCourse);
+    });
+
+    it('is refused while a live enrollment still has prepaid lessons', async () => {
+      // One enrollment of the course's groups with prepaidLessonsRemaining: 3.
+      prisma.enrollment.count.mockResolvedValue(1);
+
+      const err = await service
+        .update('course-1', { paymentModel: 'MONTHLY' as any }, 1, 1001)
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(BadRequestException);
+      expect((err as Error).message).toBe(
+        "Bu kursda oldindan to'langan darslari qolgan 1 ta o'quvchi bor. Avval ularning darslarini hal qiling, keyin kursni oylik to'lovga o'tkazing.",
+      );
+      expect(prisma.course.update).not.toHaveBeenCalled();
+      expect(entityHistoryService.recordUpdate).not.toHaveBeenCalled();
+    });
+
+    it('counts the live enrollments with prepaid lessons in the course, nothing else', async () => {
+      prisma.enrollment.count.mockResolvedValue(2);
+
+      const err = await service
+        .update('course-1', { paymentModel: 'MONTHLY' as any }, 1, 1001)
+        .catch((e: unknown) => e);
+
+      expect((err as Error).message).toMatch(/qolgan 2 ta o'quvchi bor/);
+      expect(prisma.enrollment.count).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          status: { in: ['ACTIVE', 'FROZEN'] },
+          prepaidLessonsRemaining: { gt: 0 },
+          group: { courseId: 'course-1', deletedAt: null },
+        },
+      });
+    });
+
+    it('goes through once every counter is 0', async () => {
+      prisma.enrollment.count.mockResolvedValue(0);
+
+      await service.update(
+        'course-1',
+        { paymentModel: 'MONTHLY' as any },
+        1,
+        1001,
+      );
+
+      expect(prisma.course.update).toHaveBeenCalledWith({
+        where: { id: 'course-1' },
+        data: { paymentModel: 'MONTHLY' },
+      });
+    });
+
+    it('does not tell a caller who may not touch the course how many students it has', async () => {
+      prisma.enrollment.count.mockResolvedValue(5);
+      prisma.user.findFirst.mockResolvedValue({
+        mainBranch: 2,
+        branches: [{ branchId: 2 }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+
+      await expect(
+        service.update('course-1', { paymentModel: 'MONTHLY' as any }, 1, 1001),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.enrollment.count).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['an edit that leaves the model alone', { price: 700_000 }],
+      [
+        'a form that sends the unchanged model back',
+        { paymentModel: 'LESSON_PACK' as any, price: 700_000 },
+      ],
+    ])('is not checked for %s', async (_name, dto) => {
+      prisma.enrollment.count.mockResolvedValue(3);
+
+      await service.update('course-1', dto, 1, 1001);
+
+      expect(prisma.enrollment.count).not.toHaveBeenCalled();
+      expect(prisma.course.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not checked for a course that already bills by the month', async () => {
+      prisma.course.findFirst.mockResolvedValue({
+        ...mockCourse,
+        paymentModel: 'MONTHLY',
+      });
+      prisma.enrollment.count.mockResolvedValue(3);
+
+      await service.update(
+        'course-1',
+        { paymentModel: 'MONTHLY' as any, price: 700_000 },
+        1,
+        1001,
+      );
+
+      expect(prisma.enrollment.count).not.toHaveBeenCalled();
+      expect(prisma.course.update).toHaveBeenCalledTimes(1);
     });
   });
 

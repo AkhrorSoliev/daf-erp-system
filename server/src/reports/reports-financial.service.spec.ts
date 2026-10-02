@@ -68,80 +68,6 @@ describe('ReportsFinancialService', () => {
       branchIds: null,
     };
 
-    it('reports income.billed as the absolute value of the LESSON_DEDUCTION sum', async () => {
-      // LESSON_DEDUCTION amounts are stored negative (they reduce balance).
-      prisma.transaction.aggregate.mockResolvedValueOnce({
-        _sum: { amount: -118894638 },
-      });
-
-      const result = await service.getFinancialOverview(1, period);
-
-      expect(result.income.billed).toBe(118894638);
-      expect(prisma.transaction.aggregate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            companyId: 1,
-            type: 'LESSON_DEDUCTION',
-          }),
-        }),
-      );
-    });
-
-    it('returns income.billed = 0 when there are no LESSON_DEDUCTION rows', async () => {
-      prisma.transaction.aggregate.mockResolvedValueOnce({
-        _sum: { amount: null },
-      });
-
-      const result = await service.getFinancialOverview(1, period);
-
-      expect(result.income.billed).toBe(0);
-    });
-
-    it('scopes the billed-lessons query to the requested branch', async () => {
-      await service.getFinancialOverview(1, { ...period, branchIds: [42] });
-
-      expect(prisma.transaction.aggregate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ branchId: { in: [42] } }),
-        }),
-      );
-    });
-
-    it('nets over-charge-correction ADJUSTMENT rows into income.billed so a balance-only correction does not leave recognized revenue overstated', async () => {
-      // LESSON_DEDUCTION sum still carries the phantom (double-billed) amount
-      // because the correction was a lump ADJUSTMENT, not a deduction reversal.
-      prisma.transaction.aggregate.mockResolvedValueOnce({
-        _sum: { amount: -966661 },
-      });
-      // The #10061 cleanup: +533,328 phantom credit and a -99,999 real re-bill,
-      // both marked `overcharge*`. A non-correction ADJUSTMENT must be ignored.
-      prisma.transaction.findMany.mockResolvedValueOnce([
-        { amount: 533328, metadata: { marker: 'overcharge-correction-10061' } },
-        {
-          amount: -99999,
-          metadata: {
-            marker: 'overcharge-correction-10061-v2-absent-billable',
-          },
-        },
-        { amount: 200000, metadata: { marker: 'manual-balance-gift' } },
-        { amount: 50000, metadata: null },
-      ]);
-
-      const result = await service.getFinancialOverview(1, period);
-
-      // |(-966661) + (533328 - 99999)| = |-533332| = 533332. The manual gift and
-      // the unmarked ADJUSTMENT are excluded.
-      expect(result.income.billed).toBe(533332);
-      expect(prisma.transaction.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            companyId: 1,
-            type: 'ADJUSTMENT',
-          }),
-        }),
-      );
-    });
-
     // Helper: mock the four expense.aggregate calls (all / advance-paid /
     // advance-settled / marketing) by inspecting the `where`.
     const mockExpenses = (opts: {
@@ -449,6 +375,31 @@ describe('ReportsFinancialService', () => {
       expect(m.remainingDebtorCount).toBe(0);
       expect(m.recoveryRate).toBe(100);
     });
+
+    it('sums only write-offs still in force after month-end; the balance walk and the payment tally keep every row (A2.9)', async () => {
+      // A cancelled write-off is two rows — the original (`reversedAt`) and a
+      // counter-row (`reversedTransactionId`) — and neither is forgiveness.
+      // The month-end balance and the payments are different: both halves of a
+      // pair net out there, so those reads must stay unfiltered.
+      prisma.student.findMany.mockResolvedValue([{ id: 1, balance: -100000 }]);
+      prisma.transaction.groupBy.mockResolvedValue([]);
+
+      await service.getMonthlyDebtRecovery(1, null);
+
+      const wheres = prisma.transaction.groupBy.mock.calls.map(
+        ([args]: any[]) => args.where,
+      );
+      const writeOffs = wheres.filter((w: any) => w.type === 'DEBT_WRITE_OFF');
+      expect(writeOffs).toHaveLength(1);
+      expect(writeOffs[0]).toMatchObject({
+        reversedAt: null,
+        reversedTransactionId: null,
+      });
+      for (const w of wheres.filter((w: any) => w.type !== 'DEBT_WRITE_OFF')) {
+        expect(w).not.toHaveProperty('reversedAt');
+        expect(w).not.toHaveProperty('reversedTransactionId');
+      }
+    });
   });
 
   describe('getMonthDebtDetail', () => {
@@ -646,6 +597,41 @@ describe('ReportsFinancialService', () => {
       expect(res.totals.remaining).toBe(0);
     });
 
+    it('lists and counts only write-offs still in force — a cancelled one is not «Kechirildi» (A2.9)', async () => {
+      prisma.student.findMany
+        .mockResolvedValueOnce([{ id: 1, balance: -200000 }])
+        .mockResolvedValueOnce([
+          {
+            id: 1,
+            firstName: 'Ali',
+            lastName: 'Valiyev',
+            phone: null,
+            enrollments: [],
+          },
+        ]);
+      prisma.transaction.groupBy.mockResolvedValue([]);
+      prisma.transaction.findMany.mockResolvedValue([]);
+
+      await service.getMonthDebtDetail(1, '2026-06', null);
+
+      const writeOffWheres = (mock: jest.Mock) =>
+        mock.mock.calls
+          .map(([args]: any[]) => args.where)
+          .filter((w: any) => w.type === 'DEBT_WRITE_OFF');
+      // Two grouped sums — the cohort's `writtenOff` and `forgivenCount` — and
+      // the list itself.
+      const sums = writeOffWheres(prisma.transaction.groupBy);
+      const list = writeOffWheres(prisma.transaction.findMany);
+      expect(sums).toHaveLength(2);
+      expect(list).toHaveLength(1);
+      for (const w of [...sums, ...list]) {
+        expect(w).toMatchObject({
+          reversedAt: null,
+          reversedTransactionId: null,
+        });
+      }
+    });
+
     it('short-circuits (no enrichment / list queries) when the month has no debtors', async () => {
       prisma.student.findMany.mockResolvedValueOnce([{ id: 1, balance: 5000 }]);
       prisma.transaction.groupBy.mockResolvedValueOnce([]); // movesAfter → no negatives
@@ -665,7 +651,7 @@ describe('ReportsFinancialService', () => {
       branchIds: null,
     };
 
-    it('returns |Σ refunds|, |Σ write-offs| and Σ gateway fees', async () => {
+    it('returns Σ refunds as cash returned, Σ write-offs and Σ gateway fees', async () => {
       // REFUND rows are negative on the student ledger.
       prisma.transaction.findMany.mockResolvedValueOnce([
         { amount: -500_000 },
@@ -691,7 +677,7 @@ describe('ReportsFinancialService', () => {
       expect(r).toMatchObject({ refunds: 0, writeOffs: 0, providerFees: 0 });
     });
 
-    it('filters refunds/write-offs to non-reversed rows and scopes gateway fees by branch', async () => {
+    it('filters refunds/write-offs to live rows (both reversal columns) and scopes gateway fees by branch', async () => {
       await service.getPeriodOutflows(1, { ...period, branchIds: [7] });
 
       expect(prisma.transaction.findMany).toHaveBeenCalledWith(
@@ -699,6 +685,7 @@ describe('ReportsFinancialService', () => {
           where: expect.objectContaining({
             type: 'REFUND',
             reversedAt: null,
+            reversedTransactionId: null,
           }),
         }),
       );
@@ -707,6 +694,7 @@ describe('ReportsFinancialService', () => {
           where: expect.objectContaining({
             type: 'DEBT_WRITE_OFF',
             reversedAt: null,
+            reversedTransactionId: null,
           }),
         }),
       );
@@ -714,6 +702,97 @@ describe('ReportsFinancialService', () => {
         expect.objectContaining({
           where: expect.objectContaining({ branchId: { in: [7] } }),
         }),
+      );
+    });
+
+    // Cancelling a refund or a write-off writes TWO rows of the SAME type: the
+    // original is stamped `reversedAt`, the counter-row carries
+    // `reversedTransactionId` and has `reversedAt: null`. This stand-in applies
+    // the two reversal columns of the `where` the service sends, so a read that
+    // forgets one of them gets back the row it should have left out.
+    type LedgerRow = {
+      amount: number;
+      reversedAt: Date | null;
+      reversedTransactionId: string | null;
+    };
+    const liveRows = (rows: LedgerRow[], { where }: any) =>
+      rows.filter(
+        (r) =>
+          (!('reversedAt' in where) || r.reversedAt === where.reversedAt) &&
+          (!('reversedTransactionId' in where) ||
+            r.reversedTransactionId === where.reversedTransactionId),
+      );
+    const cancelledAt = new Date('2026-06-12T10:00:00Z');
+
+    it('a cancelled refund is not money out: neither the cancelled original nor its counter-row counts', async () => {
+      const rows: LedgerRow[] = [
+        { amount: -100_000, reversedAt: null, reversedTransactionId: null }, // live refund
+        {
+          amount: -300_000,
+          reversedAt: cancelledAt,
+          reversedTransactionId: null,
+        }, // cancelled original
+        { amount: 300_000, reversedAt: null, reversedTransactionId: 'rf-1' }, // its counter-row
+      ];
+      prisma.transaction.findMany.mockImplementation(async (args: any) =>
+        liveRows(rows, args).map(({ amount }) => ({ amount })),
+      );
+
+      const r = await service.getPeriodOutflows(1, period);
+
+      expect(r.refunds).toBe(100_000);
+    });
+
+    it('a cancelled write-off is not a loss: neither the cancelled original nor its counter-row counts', async () => {
+      const rows: LedgerRow[] = [
+        { amount: 500_000, reversedAt: null, reversedTransactionId: null }, // live write-off
+        {
+          amount: 300_000,
+          reversedAt: cancelledAt,
+          reversedTransactionId: null,
+        }, // cancelled original
+        { amount: -300_000, reversedAt: null, reversedTransactionId: 'wo-1' }, // its counter-row
+      ];
+      prisma.transaction.aggregate.mockImplementation(async (args: any) => ({
+        _sum: {
+          amount: liveRows(rows, args).reduce((s, row) => s + row.amount, 0),
+        },
+      }));
+
+      const r = await service.getPeriodOutflows(1, period);
+
+      expect(r.writeOffs).toBe(500_000);
+    });
+
+    it('turns a refund total into cash returned without Math.abs, so a wrong-signed sum stays visible', async () => {
+      prisma.transaction.findMany.mockResolvedValueOnce([{ amount: -300_000 }]);
+      expect((await service.getPeriodOutflows(1, period)).refunds).toBe(
+        300_000,
+      );
+
+      // Cannot happen once counter-rows are left out — if it ever does, it must
+      // read as a negative refund, not be flipped into a real one.
+      prisma.transaction.findMany.mockResolvedValueOnce([{ amount: 50_000 }]);
+      expect((await service.getPeriodOutflows(1, period)).refunds).toBe(
+        -50_000,
+      );
+    });
+
+    it('reads the write-off total as the signed Σ (a write-off credits the student, so it is positive), never through Math.abs', async () => {
+      prisma.transaction.aggregate.mockResolvedValueOnce({
+        _sum: { amount: 300_000 },
+      });
+      expect((await service.getPeriodOutflows(1, period)).writeOffs).toBe(
+        300_000,
+      );
+
+      // A negative total can only be a counter-row that leaked in; it must stay
+      // negative instead of being flipped into a loss.
+      prisma.transaction.aggregate.mockResolvedValueOnce({
+        _sum: { amount: -50_000 },
+      });
+      expect((await service.getPeriodOutflows(1, period)).writeOffs).toBe(
+        -50_000,
       );
     });
   });
