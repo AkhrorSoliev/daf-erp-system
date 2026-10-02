@@ -62,19 +62,23 @@ function answerBox(answer: StatementView['answer']): Content {
   };
 }
 
-function monthsTable(months: MonthView[]): Content {
-  const head = (text: string, right = true): TableCell => ({
-    text,
-    bold: true,
-    ...(right ? { alignment: 'right' as const } : {}),
-  });
+const head = (text: string, right = true): TableCell => ({
+  text,
+  bold: true,
+  ...(right ? { alignment: 'right' as const } : {}),
+});
+
+function monthsTable(
+  months: MonthView[],
+  total: StatementView['monthsTotal'],
+): Content {
   const body: TableCell[][] = [
     [
       head('Oy', false),
       head('Darslar'),
       head('Darslar narxi'),
       head("To'langan"),
-      head('Oy oxirida'),
+      head('Qarz'),
     ],
   ];
   const lineAfter = new Set<number>();
@@ -101,11 +105,11 @@ function monthsTable(months: MonthView[]): Content {
             alignment: 'right',
             fillColor,
           },
-      { text: m.money, alignment: 'right', fillColor },
+      { text: m.covered, alignment: 'right', fillColor },
       {
-        text: m.running,
+        text: m.left,
         alignment: 'right',
-        color: TONE[m.runningTone],
+        color: TONE[m.leftTone],
         fillColor,
       },
     ]);
@@ -120,11 +124,27 @@ function monthsTable(months: MonthView[]): Content {
     }
     lineAfter.add(body.length - 1);
   }
+  if (total) {
+    body.push([
+      { text: 'Jami', bold: true },
+      '',
+      { text: total.cost, bold: true, alignment: 'right' },
+      { text: total.covered, bold: true, alignment: 'right' },
+      {
+        text: total.left,
+        bold: true,
+        alignment: 'right',
+        color: TONE[total.leftTone],
+      },
+    ]);
+  }
+  const totalLine = total ? body.length - 1 : -1;
   return {
     table: { headerRows: 1, widths: [60, 92, 112, 100, '*'], body },
     layout: {
-      hLineWidth: (i) => (i === 1 ? 0.8 : lineAfter.has(i - 1) ? 0.3 : 0),
-      hLineColor: (i) => (i === 1 ? C.blue : C.line),
+      hLineWidth: (i) =>
+        i === 1 || i === totalLine ? 0.8 : lineAfter.has(i - 1) ? 0.3 : 0,
+      hLineColor: (i) => (i === 1 || i === totalLine ? C.blue : C.line),
       vLineWidth: () => 0,
       paddingTop: () => 2.5,
       paddingBottom: () => 2.5,
@@ -132,21 +152,40 @@ function monthsTable(months: MonthView[]): Content {
   };
 }
 
-function allocationsTable(rows: StatementView['allocations']): Content {
+function paymentsTable(
+  rows: StatementView['allocations'],
+  total: StatementView['paidTotal'],
+): Content {
   if (rows.length === 0) return { text: "Hali to'lov qilinmagan." };
+  const body: TableCell[][] = [
+    [
+      head('Sana', false),
+      head('Usul', false),
+      head('Summa'),
+      head('Qaysi darslarga yozildi', false),
+    ],
+    ...rows.map((r): TableCell[] => [
+      { text: r.date },
+      { text: r.what },
+      { text: r.amount, bold: true, alignment: 'right' },
+      { text: r.to },
+    ]),
+  ];
+  if (total) {
+    body.push([
+      { text: "Jami to'langan", bold: true, colSpan: 2 },
+      '',
+      { text: total, bold: true, alignment: 'right' },
+      '',
+    ]);
+  }
+  const rule = total ? body.length - 1 : -1;
   return {
-    table: {
-      widths: [58, 70, 56, '*'],
-      body: rows.map((r) => [
-        { text: r.date },
-        { text: r.what },
-        { text: r.amount, bold: true, alignment: 'right' },
-        { text: `→ ${r.to}` },
-      ]),
-    },
+    table: { headerRows: 1, widths: [58, 70, 62, '*'], body },
     layout: {
-      hLineWidth: (i, node) => (i > 0 && i < node.table.body.length ? 0.3 : 0),
-      hLineColor: () => C.line,
+      hLineWidth: (i) =>
+        i === 1 || i === rule ? 0.8 : i > 1 && i < body.length ? 0.3 : 0,
+      hLineColor: (i) => (i === 1 || i === rule ? C.blue : C.line),
       vLineWidth: () => 0,
       paddingTop: () => 2.5,
       paddingBottom: () => 2.5,
@@ -168,6 +207,8 @@ export function statementDocDefinition(
       fontSize: 10.3,
       margin: [0, 2, 0, 2],
     },
+    section("To'lovlar"),
+    paymentsTable(view.allocations, view.paidTotal),
     section("Oylar bo'yicha"),
   ];
   if (view.packHint) {
@@ -178,7 +219,7 @@ export function statementDocDefinition(
       margin: [0, 0, 0, 3],
     });
   }
-  content.push(monthsTable(view.months));
+  content.push(monthsTable(view.months, view.monthsTotal));
   if (view.sharpNote) {
     content.push({
       table: {
@@ -201,10 +242,6 @@ export function statementDocDefinition(
   for (const change of view.modelChanges) {
     content.push(section(change.title), { ul: change.lines, fontSize: 9.4 });
   }
-  content.push(
-    section("To'lovlaringiz qayerga ketdi"),
-    allocationsTable(view.allocations),
-  );
   content.push({
     text: view.footnote,
     color: C.grey,

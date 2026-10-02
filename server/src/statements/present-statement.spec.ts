@@ -167,7 +167,7 @@ describe('presentStatement', () => {
     const v = presentStatement(buildStatement(debtor()), 'admin');
     expect(nb(v.answer.title)).toBe("Qarzi: 257 500 so'm");
     expect(nb(v.equation.map((s) => s.text).join(''))).toBe(
-      "To'lagan 200 000 − o'qigan darslari 457 500 = −257 500",
+      "To'lagan 200 000 − darslari narxi 457 500 = −257 500",
     );
   });
 
@@ -183,6 +183,37 @@ describe('presentStatement', () => {
     expect(nb(v.months[2].details[0])).toBe(
       "oylik to'lov: 19-sentabrdan, 12 darsdan 5 tasi × 37 500",
     );
+  });
+
+  it('splits each month into paid and still owed, adding up to the answer', () => {
+    const v = presentStatement(buildStatement(debtor()), 'student');
+    expect(
+      v.months.map((m) => [m.label, nb(m.covered), nb(m.left), m.leftTone]),
+    ).toEqual([
+      ['Iyul', '200 000', '70 000', 'red'],
+      ['Avgust', '', '', 'green'],
+      ['Sentabr', '0', '187 500', 'red'],
+    ]);
+    expect(v.monthsTotal && nb(v.monthsTotal.left)).toBe('257 500');
+    expect(v.paidTotal && nb(v.paidTotal)).toBe('200 000');
+  });
+
+  it('shows a paid-up student every month at zero debt', () => {
+    const input = debtor();
+    input.student.balance = 12_500;
+    input.rows.push(
+      row({
+        type: 'PAYMENT',
+        day: '2026-09-20',
+        amount: 270_000,
+        enrollmentId: null,
+        paymentId: 'p2',
+        paymentMethod: 'PAYME',
+      }),
+    );
+    const v = presentStatement(buildStatement(input), 'student');
+    expect(v.monthsTotal && nb(v.monthsTotal.left)).toBe('0');
+    expect(v.months.map((m) => nb(m.left))).toEqual(['0', '', '0']);
   });
 
   it('explains the sharp change in plain words', () => {

@@ -40,9 +40,21 @@ export interface MonthView {
   money: string;
   running: string;
   runningTone: 'red' | 'green' | 'muted';
+  /** Paid towards this month's lessons, by the FIFO allocation. */
+  covered: string;
+  /** Still unpaid of this month's lessons (the answer box's own figure). */
+  left: string;
+  leftTone: 'red' | 'green' | 'muted';
   details: string[];
   highlight: boolean;
   isLast: boolean;
+}
+
+export interface MonthsTotalView {
+  cost: string;
+  covered: string;
+  left: string;
+  leftTone: 'red' | 'green' | 'muted';
 }
 
 export interface StatementView {
@@ -53,6 +65,8 @@ export interface StatementView {
   equation: Segment[];
   packHint: string | null;
   months: MonthView[];
+  /** Null when the months alone do not add up to the answer box. */
+  monthsTotal: MonthsTotalView | null;
   sharpNote: Segment[] | null;
   modelChanges: Array<{ title: string; lines: string[] }>;
   allocations: Array<{
@@ -62,6 +76,8 @@ export interface StatementView {
     to: string;
     paymentId: string | null;
   }>;
+  /** Sum of the payments listed in `allocations`, null when there are none. */
+  paidTotal: string | null;
   footnote: string;
   /** Admin only: the statement does not reconcile to the balance. */
   warning: string | null;
@@ -75,15 +91,15 @@ const WORDS = {
       `Qarzingiz yo'q. Hisobingizda ${x} so'm ortiqcha pul bor.`,
     zero: "Hisobingiz nolda: qarz ham, ortiqcha pul ham yo'q.",
     paid: "To'lagansiz",
-    lessons: "o'qigan darslaringiz",
+    lessons: 'darslaringiz narxi',
     onAccount: 'hisobingizda',
     midMonth:
       "Oy o'rtasida qo'shilsangiz, faqat qo'shilgan kundan boshlab darslar hisoblanadi.",
     youLeft: 'chiqqansiz',
     yourDiscount: 'sizga ',
     footnote:
-      "«Oy oxirida» — shu oy oxirigacha to'lagan pulingizdan o'qigan darslaringiz narxi ayirilgani: + ortiqcha, − qarz. " +
-      "«Kelmagan» — sababsiz qoldirilgan dars, u ham hisoblanadi. Pul avval eng eski to'lanmagan darslarga yoziladi. " +
+      "Pul avval eng eski to'lanmagan darslarga yoziladi. «To'langan» — shu oy darslariga yozilgan pul, «Qarz» — shu oydan to'lanmay qolgani. " +
+      '«Kelmagan» — sababsiz qoldirilgan dars, u ham hisoblanadi. ' +
       "Hujjat tizim tomonidan avtomatik tuzilgan. Savol bo'lsa, filial administratoriga murojaat qiling.",
   },
   admin: {
@@ -92,15 +108,15 @@ const WORDS = {
     credit: (x: string) => `Qarzi yo'q. Hisobida ${x} so'm ortiqcha pul bor.`,
     zero: "Hisobi nolda: qarz ham, ortiqcha pul ham yo'q.",
     paid: "To'lagan",
-    lessons: "o'qigan darslari",
+    lessons: 'darslari narxi',
     onAccount: 'hisobida',
     midMonth:
       "Oy o'rtasida qo'shilsa, qo'shilgan kundan boshlab darslar hisoblanadi.",
     youLeft: 'chiqqan',
     yourDiscount: '',
     footnote:
-      "«Oy oxirida» — shu oy oxirigacha to'lagan pulidan o'qigan darslari narxi ayirilgani: + ortiqcha, − qarz. " +
-      "«Kelmagan» — sababsiz qoldirilgan dars, u ham hisoblanadi. Pul avval eng eski to'lanmagan darslarga yoziladi.",
+      "Pul avval eng eski to'lanmagan darslarga yoziladi. «To'langan» — shu oy darslariga yozilgan pul, «Qarz» — shu oydan to'lanmay qolgani. " +
+      '«Kelmagan» — sababsiz qoldirilgan dars, u ham hisoblanadi.',
   },
 };
 
@@ -177,6 +193,12 @@ function monthDetails(m: StatementMonth, voice: Voice): string[] {
         `uzrli ${p.excusedLessons} dars — ${monthName(nextMonthKey(m.key))} to'lovidan ayriladi`,
       );
     }
+  }
+  const upcoming = m.lessonDays.filter((d) => d.status === 'kelgusi').length;
+  if (m.monthlyParts.length > 0 && upcoming > 0) {
+    out.push(
+      `${upcoming} dars hali o'tilmagan — oylik to'lov oy boshida yoziladi`,
+    );
   }
   const pack = m.packParts.filter((p) => p.lessons > 0);
   if (m.monthlyParts.length > 0) {
@@ -380,10 +402,25 @@ export function presentStatement(
     },
   );
 
+  // The answer box's own per-month debt, so the table can never disagree with it.
+  const unpaidOf = new Map<MonthKey, number>();
+  for (const u of model.headline.unpaid) {
+    if (u.due.kind === 'month') unpaidOf.set(u.due.month, u.amount);
+  }
+  const sums = { cost: 0, covered: 0, left: 0 };
+  const tone = (left: number): 'red' | 'green' => (left > 0 ? 'red' : 'green');
+
   const months = model.months.map((m, i): MonthView => {
     const preOnly =
       m.preSystem !== null && m.lessons === 0 && m.cost === 0 && m.money === 0;
     const quiet = !preOnly && m.lessons === 0 && m.cost === 0;
+    const priced = !preOnly && !quiet && m.cost > 0;
+    const left = priced ? (unpaidOf.get(m.key) ?? 0) : 0;
+    if (priced) {
+      sums.cost += m.cost;
+      sums.covered += m.cost - left;
+      sums.left += left;
+    }
     return {
       key: m.key,
       label: monthTitle(m.key),
@@ -404,11 +441,29 @@ export function presentStatement(
             : '—',
       running: preOnly ? '' : m.running === 0 ? '0' : signed(m.running),
       runningTone: m.running > 0 ? 'green' : m.running < 0 ? 'red' : 'muted',
+      covered: priced ? som(m.cost - left) : '',
+      left: priced ? som(left) : '',
+      leftTone: tone(left),
       details: preOnly ? [] : monthDetails(m, voice),
       highlight: m.sharp !== null,
       isLast: i === model.months.length - 1,
     };
   });
+
+  const debt = model.headline.kind === 'debt' ? model.headline.amount : 0;
+  const monthsTotal: MonthsTotalView | null =
+    sums.cost > 0 && sums.left === debt
+      ? {
+          cost: som(sums.cost),
+          covered: som(sums.covered),
+          left: som(sums.left),
+          leftTone: tone(sums.left),
+        }
+      : null;
+  // A total under a list that also holds credits would not add up to the rows.
+  const paid = model.allocations.every((a) => a.kind === 'payment')
+    ? model.allocations.reduce((s, a) => s + a.amount, 0)
+    : 0;
 
   const sharp = last?.sharp ?? null;
   const sharpNote: Segment[] | null =
@@ -469,11 +524,13 @@ export function presentStatement(
     equation,
     packHint,
     months,
+    monthsTotal,
     sharpNote,
     modelChanges: model.modelChanges.map((c) =>
       modelChangeView(c, model, voice),
     ),
     allocations,
+    paidTotal: paid > 0 ? som(paid) : null,
     footnote: w.footnote,
     warning:
       voice === 'admin' && eq.unexplained !== 0
