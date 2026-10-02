@@ -34,6 +34,17 @@ export function utcMidnightFromDateStr(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00.000Z`);
 }
 
+/**
+ * A real 'YYYY-MM-DD' calendar day. The regex alone lets '2026-13-45' through
+ * (Invalid Date) and `new Date` rolls '2026-02-30' into March, so the day must
+ * survive a round trip.
+ */
+export function isCalendarDateStr(dateStr: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  const d = utcMidnightFromDateStr(dateStr);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === dateStr;
+}
+
 /** The Tashkent calendar date ('YYYY-MM-DD') an instant falls on. */
 export function tashkentDateStr(date: Date): string {
   const shifted = new Date(date.getTime() + TASHKENT_OFFSET_MS);

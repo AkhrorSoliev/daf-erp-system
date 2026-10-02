@@ -52,7 +52,7 @@ describe("payment.debtWriteOffEnabled sozlamasi UI'da", () => {
       SOURCE.indexOf('checked={settings["payment.debtWriteOffEnabled"]}'),
     ).slice(0, 900);
     expect(block).toContain("{!isCeo && canEdit && (");
-    expect(block).toContain("faqat CEO o&apos;zgartira oladi");
+    expect(block).toContain("faqat markaz rahbari o&apos;zgartira oladi");
   });
 
   it("CEO ko'radigan nom va tushuntirish joyida", () => {

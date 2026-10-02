@@ -377,7 +377,13 @@ export class StudentsController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.studentsService.delete(id, userId, dto.reason, companyId);
+    return this.studentsService.delete(
+      id,
+      userId,
+      dto.reason,
+      companyId,
+      dto.reasonId,
+    );
   }
 
   // ===========================================================================

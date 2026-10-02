@@ -189,6 +189,43 @@
    "order": 10
   },
   {
+   "sourceId": "u02-s2-einundzwanzig",
+   "section": "u02-s2",
+   "de": "einundzwanzig",
+   "anzeige": "21",
+   "uz": "yigirma bir",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u02-s2-fuenfunddreissig",
+   "section": "u02-s2",
+   "de": "fünfunddreißig",
+   "tts": "fünf-und-dreißig",
+   "anzeige": "35",
+   "uz": "o'ttiz besh",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u02-s2-achtundvierzig",
+   "section": "u02-s2",
+   "de": "achtundvierzig",
+   "anzeige": "48",
+   "uz": "qirq sakkiz",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u02-s2-neunundneunzig",
+   "section": "u02-s2",
+   "de": "neunundneunzig",
+   "anzeige": "99",
+   "uz": "to'qson to'qqiz",
+   "core": true,
+   "order": 14
+  },
+  {
    "sourceId": "u02-s3-beruf",
    "section": "u02-s3",
    "de": "Beruf",

@@ -58,6 +58,12 @@ describe('luecke', () => {
     expect(f.itemId).toBe(2);
   });
 
+  it('never blanks a letter: the Uzbek hint names it', () => {
+    // "Ist das ein W?" — hint "Bu W harfimi?" gives the answer away.
+    const satz = s(30, 'Ist das ein W?', 'Bu W harfimi?');
+    expect(luecke(satz, [w(31, 'W', "'W' harfi")], rnd)).toBeNull();
+  });
+
   it('gapda bo`limning so`zi bo`lmasa savol qurmaydi', () => {
     expect(luecke(SATZ, [w(2, 'danke', 'rahmat')], rnd)).toBeNull();
   });
@@ -164,6 +170,32 @@ describe('satzBauen', () => {
     ).toBe(true);
   });
 
+  it('keeps a sentence end inside the item on its tile, drops the last one', () => {
+    // Without the "?" two sentences run together: the most-missed question
+    // on production (21–29.09) was exactly this item.
+    const f = satzBauen(
+      s(
+        3,
+        'Bist du Thomas? Ja, das bin ich.',
+        'Sen Thomasmisan? Ha, o`zimman.',
+      ),
+      rnd,
+    )!;
+    expect([...f.options].sort()).toEqual(
+      ['Bist', 'du', 'Thomas?', 'Ja', 'das', 'bin', 'ich'].sort(),
+    );
+    const identityRnd = (): number => 0.9999;
+    const g = satzBauen(
+      s(
+        3,
+        'Bist du Thomas? Ja, das bin ich.',
+        'Sen Thomasmisan? Ha, o`zimman.',
+      ),
+      identityRnd,
+    )!;
+    expect(istRichtig(g.options.join(' '), g.richtig, g.akzeptiert)).toBe(true);
+  });
+
   it('ikki so`zli gapga savol qurmaydi', () => {
     // Ikki so'zdan gap tuzish tanlov emas: tartib bittagina.
     expect(satzBauen(s(1, 'Guten Tag.', 'Xayrli kun.'), rnd)).toBeNull();
@@ -202,6 +234,27 @@ describe('satzUebersetzen', () => {
 
   it('chalg`ituvchi yetmasa savol qurmaydi', () => {
     expect(satzUebersetzen(ZIEL, ANDERE.slice(0, 1), rnd)).toBeNull();
+  });
+
+  it('offers only sentences close to the target when enough are close', () => {
+    const ziel = s(10, 'Mein Bruder ist dreißig.', 'Akam o`ttiz yoshda.');
+    const nah = [
+      s(11, 'Mein Vater ist sechzig.', 'Otam oltmish yoshda.'),
+      s(12, 'Mein Sohn ist groß.', 'O`g`lim katta.'),
+      s(13, 'Meine Oma ist neunzig.', 'Buvim to`qson yoshda.'),
+      s(14, 'Mein Chef ist neu.', 'Rahbarim yangi.'),
+      s(15, 'Mein Kollege ist lustig.', 'Hamkasbim quvnoq.'),
+    ];
+    const fern = [
+      s(20, 'Hast du Kinder?', 'Bolalaring bormi?'),
+      s(21, 'Wo arbeitest du?', 'Qayerda ishlaysan?'),
+      s(22, 'Was machst du hier?', 'Bu yerda nima qilyapsan?'),
+    ];
+    for (const seed of [0, 0.4, 0.9999]) {
+      const f = satzUebersetzen(ziel, [...fern, ...nah], () => seed)!;
+      const fernUz = fern.map((x) => x.uz);
+      expect(f.options.some((o) => fernUz.includes(o))).toBe(false);
+    }
   });
 
   // Finding 4: to'g'ri javobdan FAQAT tinish belgisi bilan farq

@@ -7,6 +7,8 @@ import {
   CalendarClock,
   AlertTriangle,
   ArrowUpRight,
+  Bot,
+  Building2,
   User,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,9 +18,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/use-auth";
 import type { TaskItem, TaskPriority } from "@/hooks/use-tasks-board";
 import { useTasksBoard } from "@/hooks/use-tasks-board";
 import { cn } from "@/lib/utils";
+import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
+import { taskEntityHref } from "./task-entity-href";
 
 const PRIORITY_CONFIG: Record<
   TaskPriority,
@@ -45,24 +50,11 @@ const PRIORITY_CONFIG: Record<
   },
 };
 
-const ENTITY_ROUTES: Record<string, (id: string) => string> = {
-  Student: (id) => `/students/profile/${id}`,
-  User: (id) => `/settings/employees/${id}`,
-  Group: (id) => `/groups/${id}`,
-  Lead: (id) => `/leads/${id}`,
-  Branch: (id) => `/settings/branches/${id}`,
-  Room: (id) => `/settings/rooms/${id}`,
-  Course: (id) => `/settings/courses/${id}`,
-};
-
 const ENTITY_LABEL_MAP: Record<string, string> = {
   Student: "Talaba",
   User: "Xodim",
   Group: "Guruh",
   Lead: "Lid",
-  Branch: "Filial",
-  Room: "Xona",
-  Course: "Kurs",
 };
 
 interface TaskCardProps {
@@ -74,6 +66,7 @@ interface TaskCardProps {
 export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
   const router = useRouter();
   const tab = useTasksBoard((s) => s.tab);
+  const user = useAuth((s) => s.user);
 
   const {
     attributes,
@@ -94,12 +87,16 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
           opacity: isDragging ? 0.5 : 1,
         };
 
-  const authorInitials =
-    task.author.firstName.charAt(0) + task.author.lastName.charAt(0);
+  const authorInitials = task.author
+    ? task.author.firstName.charAt(0) + task.author.lastName.charAt(0)
+    : "";
 
   const entityLabel = ENTITY_LABEL_MAP[task.entityType] ?? task.entityType;
-  const routeBuilder = ENTITY_ROUTES[task.entityType];
-  const entityUrl = routeBuilder ? routeBuilder(task.entityId) : null;
+  const entityUrl = taskEntityHref(
+    task.entityType,
+    task.entityId,
+    user?.roles.map((r) => r.id) ?? [],
+  );
 
   function handleClick() {
     if (entityUrl) {
@@ -148,7 +145,7 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
       className={cn(
         "rounded-lg border bg-card p-3 shadow-sm",
         !isDragDisabled && "cursor-grab active:cursor-grabbing",
-        isDragDisabled && "cursor-pointer",
+        isDragDisabled && entityUrl && "cursor-pointer",
         isOverlay && "shadow-lg ring-2 ring-primary/20 rotate-2"
       )}
       onClick={isDragDisabled ? handleClick : undefined}
@@ -156,7 +153,10 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
       <div className="space-y-2">
         {/* Content */}
         <p
-          className="text-sm leading-snug line-clamp-3 cursor-pointer hover:text-primary transition-colors"
+          className={cn(
+            "text-sm leading-snug line-clamp-3",
+            entityUrl && "cursor-pointer hover:text-primary transition-colors"
+          )}
           onClick={(e) => {
             e.stopPropagation();
             handleClick();
@@ -168,8 +168,21 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
           {task.content}
         </p>
 
-        {/* Priority + deadline row */}
+        {/* Branch + priority + deadline row */}
         <div className="flex flex-wrap items-center gap-1.5">
+          {/* The board lists every branch's tasks and group numbers repeat
+              across branches (#003 is in three of them). */}
+          {task.unmarkedLesson?.branchName && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  <Building2 className="size-3" />
+                  {task.unmarkedLesson.branchName}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>Dars shu filialda bo&apos;lgan</TooltipContent>
+            </Tooltip>
+          )}
           {task.priority && (
             <div
               className={cn(
@@ -207,21 +220,61 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
           </Tooltip>
         )}
 
+        {task.unmarkedLesson?.status === "PENDING" && (
+          // Stop the card's drag and click from firing inside the prompt and
+          // its dialogs (React events bubble through portals).
+          <div
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <UnmarkedLessonPrompt
+              lesson={{
+                groupId: task.unmarkedLesson.groupId,
+                groupName: task.unmarkedLesson.groupName,
+                date: task.unmarkedLesson.date,
+                startTime: task.unmarkedLesson.lessonStartTime,
+                endTime: task.unmarkedLesson.lessonEndTime,
+              }}
+              info={{
+                id: task.unmarkedLesson.id,
+                status: task.unmarkedLesson.status,
+                teacherPayExempt: task.unmarkedLesson.teacherPayExempt,
+                lessonStartTime: task.unmarkedLesson.lessonStartTime,
+                lessonEndTime: task.unmarkedLesson.lessonEndTime,
+                // A viewer who still has the task holds it or nobody does:
+                // the server deletes the other copies when someone takes it.
+                claimedBy: null,
+              }}
+              onAnswered={() => void useTasksBoard.getState().fetchMyTasks()}
+              className="w-full"
+            />
+          </div>
+        )}
+
         {/* Footer: author + assignees */}
         <div className="flex items-center justify-between pt-1 border-t">
-          <div className="flex items-center gap-1.5">
-            <Avatar className="size-5">
-              {task.author.photo && (
-                <AvatarImage src={task.author.photo} alt={task.author.firstName} />
-              )}
-              <AvatarFallback className="text-[8px]">
-                {authorInitials}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-[11px] text-muted-foreground truncate max-w-24">
-              {task.author.firstName} {task.author.lastName}
-            </span>
-          </div>
+          {task.author ? (
+            <div className="flex items-center gap-1.5">
+              <Avatar className="size-5">
+                {task.author.photo && (
+                  <AvatarImage src={task.author.photo} alt={task.author.firstName} />
+                )}
+                <AvatarFallback className="text-[8px]">
+                  {authorInitials}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-[11px] text-muted-foreground truncate max-w-24">
+                {task.author.firstName} {task.author.lastName}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <span className="flex size-5 items-center justify-center rounded-full bg-muted">
+                <Bot className="size-3 text-muted-foreground" />
+              </span>
+              <span className="text-[11px] text-muted-foreground">Tizim</span>
+            </div>
+          )}
 
           {tab === "created" && task.assignees.length > 0 && (
             <div className="flex items-center -space-x-1">

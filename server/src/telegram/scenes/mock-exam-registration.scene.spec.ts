@@ -321,6 +321,16 @@ describe("mock-exam-registration.scene — ro'yxat yakuni", () => {
     expect(confirmation(ctx)).toContain("faqat to'lov qilganlarga");
   });
 
+  it('records the registration as coming through the bot', async () => {
+    const { prisma, scene } = buildFinalizeEnv({});
+    const ctx = typedPhoneCtx('901112233');
+
+    await scene.middleware()(ctx, async () => {});
+
+    const { data } = prisma.mockExamParticipant.create.mock.calls[0][0];
+    expect(data.registeredVia).toBe('BOT');
+  });
+
   /** CEO, 2026-09-25: expelled and archived students get no DaF discount. */
   it.each([
     ['ACTIVE', 30000],

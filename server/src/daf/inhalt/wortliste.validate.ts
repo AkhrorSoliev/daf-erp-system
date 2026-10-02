@@ -8,6 +8,24 @@ export const WORDS_MAX = 12;
 export const UNIT_WORDS_MAX = 50;
 
 /**
+ * A unit's core words that count against its budget — every core word but
+ * those built from taught ones (`ausserhalbBudget`). One definition for the
+ * unit file spec and `daf:inhalt-check`.
+ */
+export function kernwoerterImBudget(
+  woerter: Array<{ de: string; core: boolean }>,
+  file: WortlisteFile,
+): number {
+  const ausserhalb = new Set(
+    file.eintraege
+      .filter((e) => e.ausserhalbBudget)
+      .map((e) => e.wort.toLowerCase()),
+  );
+  return woerter.filter((w) => w.core && !ausserhalb.has(w.de.toLowerCase()))
+    .length;
+}
+
+/**
  * So'z taqsimotini tekshiradi.
  *
  * BOSHLANGAN bo'limgagina hajm qoidasi qo'llanadi: fayl bosqichma-bosqich
@@ -56,8 +74,15 @@ export function validateWortliste(
       problems.push(`${e.wort}: Goethe ro\`yxatida yo\`q va sababi yozilmagan`);
     }
 
-    // Only count words in known sections
-    if (isKnownSection) {
+    if (e.ausserhalbBudget && (e.grund ?? '').trim() === '') {
+      problems.push(
+        `${e.wort}: hajmdan tashqari (ausserhalbBudget), lekin sababi yozilmagan`,
+      );
+    }
+
+    // Only count words in known sections; a word built from taught words
+    // (dreizehn, einundzwanzig) is outside the budget.
+    if (isKnownSection && !e.ausserhalbBudget) {
       bySection.set(e.section, (bySection.get(e.section) ?? 0) + 1);
       const unit = unitOfSection.get(e.section);
       if (unit !== undefined) byUnit.set(unit, (byUnit.get(unit) ?? 0) + 1);

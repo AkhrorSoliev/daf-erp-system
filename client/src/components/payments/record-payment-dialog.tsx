@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { format } from "date-fns";
+import { format, startOfToday } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -42,6 +43,11 @@ import {
   type MonthlyPreviewBlock,
   type PaymentPreviewModel,
 } from "./record-payment-quick-amounts";
+import {
+  promiseDefaultDate,
+  promiseNeeded,
+  reachLines,
+} from "./record-payment-admission";
 
 interface Props {
   open: boolean;
@@ -132,6 +138,11 @@ export function RecordPaymentDialog({
   const [providerFee, setProviderFee] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [searching, setSearching] = useState(false);
+  // A part payment carries the date the rest will be paid by (ADR-0047).
+  // Null until the cashier picks one; the default is derived below.
+  const [pickedPromiseDate, setPickedPromiseDate] = useState<Date | null>(
+    null,
+  );
 
   // Sync pre-selected student when dialog opens
   useEffect(() => {
@@ -205,6 +216,13 @@ export function RecordPaymentDialog({
   });
   const preview = previewQuery.data;
 
+  // Contract 3.2: how far this amount reaches, and — when it leaves a debt —
+  // the promise for the rest, defaulting to the first lesson it does not reach.
+  const reach = preview?.monthly?.admission ?? null;
+  const needsPromise = promiseNeeded(reach);
+  const promiseDate =
+    pickedPromiseDate ?? (reach ? promiseDefaultDate(reach) : null);
+
   // Months for a monthly student, cycles for a lesson pack; null → fixed grid.
   const quickAmounts = preview ? buildQuickAmounts(preview) : null;
 
@@ -232,6 +250,10 @@ export function RecordPaymentDialog({
           method,
           branchId: selectedBranch?.id,
           note: note || undefined,
+          ...(needsPromise &&
+            promiseDate && {
+              promiseDate: format(promiseDate, "yyyy-MM-dd"),
+            }),
         });
       }
       toast.success(
@@ -262,6 +284,7 @@ export function RecordPaymentDialog({
     setNote("");
     setExternalId("");
     setProviderFee("");
+    setPickedPromiseDate(null);
   };
 
   const handleAmountChange = (val: string) => {
@@ -416,6 +439,33 @@ export function RecordPaymentDialog({
             />
           )}
 
+          {/* Contract 3.2: how far it reaches, and the promise for the rest */}
+          {selectedStudent && rawAmount >= 1000 && reach && (
+            <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-xs">
+              {reachLines(reach).map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+              {needsPromise && (
+                <div className="space-y-1">
+                  <Label htmlFor="promise-date" className="text-xs">
+                    Qolgan qismi qachon to&apos;lanadi?
+                  </Label>
+                  <DatePicker
+                    id="promise-date"
+                    value={promiseDate}
+                    onChange={(d) => setPickedPromiseDate(d ?? null)}
+                    minDate={startOfToday()}
+                    className="h-8 w-48 text-xs"
+                  />
+                  <p className="text-muted-foreground">
+                    To&apos;lov va&apos;dasi. To&apos;lovsiz muddat
+                    cho&apos;zilmaydi.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Method */}
           <div className="space-y-2">
             <Label>To&apos;lov usuli</Label>
@@ -510,7 +560,12 @@ export function RecordPaymentDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!selectedStudent || rawAmount < 1000 || submitting}
+            disabled={
+              !selectedStudent ||
+              rawAmount < 1000 ||
+              submitting ||
+              (needsPromise && !promiseDate)
+            }
           >
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
             To&apos;lovni qayd qilish

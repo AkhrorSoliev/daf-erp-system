@@ -72,6 +72,11 @@ export interface PruefErgebnis {
    * what the answer panel shows.
    */
   loesungWort?: string;
+  /**
+   * The typed word was one slip away and counted as correct; the panel
+   * shows `richtig` as the spelling to learn.
+   */
+  tippfehler?: true;
 }
 
 /**
@@ -126,6 +131,8 @@ export interface LernenUnitSummary {
   lessonCount: number;
   /** Shu o'quvchi shu unitda tugatgan seanslar soni. */
   doneCount: number;
+  /** `false` — the unit's content is not written yet («Tez orada»). */
+  bereit?: boolean;
 }
 
 /**
@@ -189,6 +196,8 @@ export interface LernenUnit {
   lessons: LernenSeans[];
   sections: LernenSectionGroup[];
   finalTest: LernenSeans | null;
+  /** `false` — the unit's content is not written yet («Tez orada»). */
+  bereit?: boolean;
 }
 
 export interface LernenLexeme {

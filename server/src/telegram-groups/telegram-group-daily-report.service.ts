@@ -164,6 +164,7 @@ export class TelegramGroupDailyReportService {
       monthlyAdvances,
       todayFlags,
       yesterdaySnapshot,
+      staleUnmarked,
     ] = await Promise.all([
       this.prisma.company.findUnique({
         where: { id: companyId },
@@ -338,6 +339,17 @@ export class TelegramGroupDailyReportService {
         },
         orderBy: { date: 'desc' },
       }),
+      // «Dars bo'ldimi?» questions left unanswered for more than a day
+      // (spec 2026-09-29 §3.7) — scoped like the rest of the report.
+      this.prisma.unmarkedLesson.count({
+        where: {
+          companyId,
+          status: 'PENDING',
+          createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          group: { deletedAt: null },
+          ...branchIdWhere(branchIds),
+        },
+      }),
     ]);
 
     // Prognoz + salary top-up are computed separately (heavier, and each is
@@ -382,7 +394,7 @@ export class TelegramGroupDailyReportService {
     // Cash-only figure, kept for the «kassa harakati» reading below.
     const mtdCashNet = mtdIncome - mtdExpense - mtdAdvance;
 
-    const flags = this.buildFlagLines(todayFlags, attendancePct);
+    const flags = this.buildFlagLines(todayFlags, attendancePct, staleUnmarked);
 
     const debtGrowth = yesterdaySnapshot
       ? totalDebt - yesterdaySnapshot.totalDebt
@@ -628,6 +640,7 @@ export class TelegramGroupDailyReportService {
       _count: number;
     }>,
     attendancePct: number,
+    staleUnmarked: number,
   ): string[] {
     const lines: string[] = [];
     const flagFor = (type: string) => todayFlags.find((f) => f.type === type);
@@ -663,6 +676,12 @@ export class TelegramGroupDailyReportService {
       attendancePct < TelegramGroupDailyReportService.ATTENDANCE_LOW_PCT
     ) {
       lines.push(`• Davomat past: <b>${attendancePct}%</b>`);
+    }
+
+    if (staleUnmarked > 0) {
+      lines.push(
+        `• Javobsiz darslar (1 kundan ortiq): <b>${staleUnmarked}</b> ta — «Topshiriqlar»da javob bering`,
+      );
     }
 
     return lines;

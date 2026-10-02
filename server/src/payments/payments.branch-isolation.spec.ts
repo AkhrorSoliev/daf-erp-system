@@ -128,7 +128,8 @@ describe('money reads are branch-isolated', () => {
           ),
         },
       };
-      const service = new PaymentsPreviewService(prisma);
+      // The student read refuses first; the admission reach is never asked.
+      const service = new PaymentsPreviewService(prisma, {} as never);
       await expect(
         service.preview(10001, 500000, COMPANY, NAMANGAN),
       ).rejects.toThrow();

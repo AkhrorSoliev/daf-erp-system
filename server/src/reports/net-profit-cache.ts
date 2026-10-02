@@ -27,9 +27,10 @@ const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
  * already shows the new one. v2: monthly-billed September lessons priced at
  * the monthly charge; staff counted in their home branch only. v3: key names
  * the exact branch set and the caller; v2 wrote multi-branch scopes to the
- * company-wide entry.
+ * company-wide entry. v4: balance withdrawals count as revenue of the month
+ * they are made (ADR-0055).
  */
-const NET_PROFIT_CACHE_VERSION = 'v3';
+const NET_PROFIT_CACHE_VERSION = 'v4';
 const logger = new Logger('NetProfitCache');
 
 /** Seconds remaining until the next Tashkent midnight (min 60). */

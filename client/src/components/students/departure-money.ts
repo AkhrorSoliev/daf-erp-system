@@ -61,6 +61,11 @@ export interface DepartureMonth {
   threshold: number;
   /** Whether rule 6.2 is in force for this departure day. */
   contractApplies: boolean;
+  /**
+   * Contract 3.5: a first-timer leaving after at most one lesson — the whole
+   * month comes back under every policy.
+   */
+  trialLesson?: boolean;
   chargedAmount: number;
   outcomes: Record<DeparturePolicy, PolicyOutcome>;
 }
@@ -138,6 +143,9 @@ export function policyHint(
   policy: DeparturePolicy,
   month: DepartureMonth,
 ): string {
+  if (month.trialLesson) {
+    return "Sinov darsi (3.5) — oyning to'liq puli qaytadi";
+  }
   if (policy === "LEVEL_COMPLETED") {
     return "Sertifikat oldi yoki keyingi darajaga o'tadi — o'tilmagan darslar puli qaytadi";
   }
@@ -181,14 +189,18 @@ export function departureConsequence(
   const lessons = outcomes.reduce((s, o) => s + o.lessons, 0);
 
   if (amount > 0) {
-    const head =
-      policy === "QUALITY_CLAIM"
+    const trial = rows.every((r) => r.month.trialLesson);
+    const head = trial
+      ? `Sinov darsi (3.5): oyning puli to'liq qaytadi — ${som(amount)}`
+      : policy === "QUALITY_CLAIM"
         ? `Oyning to'liq puli qaytadi: ${som(amount)}`
         : rows.every((r) => r.month.held === 0)
           ? `Hali dars o'tmagan: ${lessons} dars puli to'liq qaytadi, ${som(amount)}`
           : `${lessons} ta o'tilmagan dars puli qaytadi: ${som(amount)}`;
-    const teacher =
-      policy === "QUALITY_CLAIM"
+    // Contract 3.5 (CEO, 28.09.2026): a trial lesson is paid by nobody.
+    const teacher = trial
+      ? " Ustozga bu oyning darslari uchun haq yozilmaydi."
+      : policy === "QUALITY_CLAIM"
         ? " Ustoz oyligi kamaymaydi, farqni markaz qoplaydi."
         : "";
     return {

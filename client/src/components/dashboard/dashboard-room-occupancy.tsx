@@ -9,6 +9,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  UnmarkedLessonButtons,
+  UnmarkedLessonDialogs,
+  type UnmarkedDialog,
+} from "@/components/attendance/unmarked/unmarked-lesson-prompt";
+import { useAuth } from "@/hooks/use-auth";
+import { answerState } from "@/lib/unmarked-lesson";
 import type { AttendanceStatus, DashboardLesson } from "./dashboard-daily-schedule";
 
 const SLOT_HEIGHT_PX = 44;
@@ -50,6 +58,8 @@ interface DashboardRoomOccupancyProps {
   workingHours: { start: string; end: string };
   isTeacher?: boolean;
   isToday?: boolean;
+  date: string;
+  onAnswered?: () => void;
 }
 
 function timeToMin(time: string): number {
@@ -159,6 +169,8 @@ export function DashboardRoomOccupancy({
   workingHours,
   isTeacher = false,
   isToday = true,
+  date,
+  onAnswered,
 }: DashboardRoomOccupancyProps) {
   const dayStart = timeToMin(workingHours.start);
   const dayEnd = timeToMin(workingHours.end);
@@ -310,6 +322,8 @@ export function DashboardRoomOccupancy({
                         dayEnd={dayEnd}
                         isToday={isToday}
                         nowMin={nowMin}
+                        date={date}
+                        onAnswered={onAnswered}
                       />
                     ))}
                   </div>
@@ -354,6 +368,8 @@ interface LessonSegmentCardProps {
   dayEnd: number;
   isToday: boolean;
   nowMin: number;
+  date: string;
+  onAnswered?: () => void;
 }
 
 function LessonSegmentCard({
@@ -362,8 +378,23 @@ function LessonSegmentCard({
   dayEnd,
   isToday,
   nowMin,
+  date,
+  onAnswered,
 }: LessonSegmentCardProps) {
   const { lesson, lane, segmentLanes, startMin, endMin } = segment;
+
+  const user = useAuth((s) => s.user);
+  const info = lesson.unmarked ?? null;
+  const prompt = info ? answerState(info, user) : null;
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [dialog, setDialog] = useState<UnmarkedDialog>(null);
+  const lessonRef = {
+    groupId: lesson.groupId,
+    groupName: lesson.groupName,
+    date,
+    startTime: lesson.startTime,
+    endTime: lesson.endTime,
+  };
 
   // Lesson-wide bounds (used for status, progress, clip indicators)
   const lFullStart = timeToMin(lesson.startTime);
@@ -544,6 +575,38 @@ function LessonSegmentCard({
           </div>
         </TooltipContent>
       </Tooltip>
+
+      {info && prompt?.visible && (
+        <>
+          <Popover open={promptOpen} onOpenChange={setPromptOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="absolute bottom-1 left-1 z-20 rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white shadow hover:bg-orange-600"
+              >
+                Dars bo&apos;ldimi?
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="flex w-auto flex-col items-start gap-1.5 p-3">
+              <UnmarkedLessonButtons
+                state={prompt}
+                onPick={(d) => {
+                  setPromptOpen(false);
+                  setDialog(d);
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+          <UnmarkedLessonDialogs
+            lesson={lessonRef}
+            dialog={dialog}
+            onDialogChange={setDialog}
+            canExempt={prompt.canExempt}
+            teacherPayExempt={info.teacherPayExempt}
+            onAnswered={onAnswered ?? (() => undefined)}
+          />
+        </>
+      )}
     </div>
   );
 }

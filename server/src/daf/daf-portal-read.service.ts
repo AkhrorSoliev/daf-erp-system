@@ -53,6 +53,8 @@ export interface LevelPathItem {
     titleDe: string;
     lessonCount: number;
     doneCount: number;
+    /** The unit has words to practise; `false` shows «Tez orada» and locks it. */
+    bereit: boolean;
     // Yo'l zigzagida har seans o'z tugunini oladi — shuning uchun yo'l
     // sahifasi ham bo'lim ekrani bilan bir xil `sections`/`finalTest`
     // shaklini oladi, alohida 12 ta so'rov o'rniga.
@@ -60,6 +62,12 @@ export interface LevelPathItem {
     finalTest: LernenSeansItem | null;
   }[];
 }
+
+/**
+ * A word the exercise engine can ask: a core word placed in a section. The
+ * same rule decides whether a unit is ready (`bereit`).
+ */
+const TAYYOR_SOZ = { core: true, sectionId: { not: null } } as const;
 
 /** `gruppiereLektionen` ga beriladigan xom qatorlar — DB select shakli. */
 interface XomDars {
@@ -182,6 +190,16 @@ export class DafPortalReadService {
       },
     });
 
+    // A unit whose content is not written yet still has its sections and
+    // lessons (the course map seeds all twelve). Without this flag the path
+    // opened it, and each of its "lessons" asked one or two review questions.
+    const tayyorlar = await this.prisma.dafLexeme.groupBy({
+      by: ['unitId'],
+      where: { unitId: { in: unitIds }, ...TAYYOR_SOZ },
+      _count: { _all: true },
+    });
+    const tayyorUnitlar = new Set(tayyorlar.map((t) => t.unitId));
+
     const bolimlarByUnit = new Map<number, XomBolim[]>();
     for (const s of sections) {
       const list = bolimlarByUnit.get(s.unitId) ?? [];
@@ -227,6 +245,7 @@ export class DafPortalReadService {
             titleDe: u.titleDe,
             lessonCount: u._count.lessons,
             doneCount: bajarilganSoni.get(u.id) ?? 0,
+            bereit: tayyorUnitlar.has(u.id),
             sections: guruh.sections,
             finalTest: guruh.finalTest,
           };
@@ -418,11 +437,16 @@ export class DafPortalReadService {
       finalTest,
     } = this.gruppiereLektionen(unitId, lessons, sections, fortschritt);
 
+    const tayyorSozlar = await this.prisma.dafLexeme.count({
+      where: { unitId, ...TAYYOR_SOZ },
+    });
+
     const { retiredAt: _retiredAt, ...publicUnit } = unit;
 
     return {
       ...publicUnit,
       label: LEVEL_LABEL[unit.level],
+      bereit: tayyorSozlar > 0,
       // Yassi ro'yxat QOLADI — lekin NAFAQAGA CHIQARILGAN 20 ta eski DiB
       // uniti uchun emas: shu funksiya yuqorida `retiredAt` bor unitni
       // 404 bilan rad etadi (test bilan tasdiqlangan), shuning uchun

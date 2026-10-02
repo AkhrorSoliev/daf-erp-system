@@ -5,11 +5,18 @@ import { Check, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { tashkentNow } from "@/lib/tashkent-time";
+import { answerState } from "@/lib/unmarked-lesson";
+import { useAuth } from "@/hooks/use-auth";
+import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
 import { formatShortDate, type LessonDate } from "./attendance-cycle-utils";
+
+// An answer refreshes the group's calendar (this card's source) by itself.
+const noop = () => {};
 
 interface AttendanceTodayCardProps {
   todayLesson: LessonDate;
   todayStr: string;
+  group: { id: string; name: string };
   isAdmin: boolean;
   lessonStartTime: string | null;
   lessonEndTime: string | null;
@@ -19,11 +26,13 @@ interface AttendanceTodayCardProps {
 export function AttendanceTodayCard({
   todayLesson,
   todayStr,
+  group,
   isAdmin,
   lessonStartTime,
   lessonEndTime,
   onSelectDate,
 }: AttendanceTodayCardProps) {
+  const user = useAuth((s) => s.user);
   const [countdown, setCountdown] = useState("");
   const [countdownLabel, setCountdownLabel] = useState("");
 
@@ -78,6 +87,14 @@ export function AttendanceTodayCard({
 
   const dateLabel = `${todayLesson.dayName}, ${formatShortDate(todayStr)}.${todayStr.slice(0, 4)}`;
 
+  // The lesson ended unmarked and this viewer may answer «Dars bo'ldimi?»: a new
+  // register can no longer be entered, so the question replaces the button.
+  const pending =
+    todayLesson.unmarked?.status === "PENDING" &&
+    answerState(todayLesson.unmarked, user).visible
+      ? todayLesson.unmarked
+      : null;
+
   // Variant 1: attendance NOT yet taken
   if (!todayLesson.hasAttendance) {
     return (
@@ -102,13 +119,27 @@ export function AttendanceTodayCard({
             </p>
           )}
         </div>
-        <Button
-          size="sm"
-          onClick={() => onSelectDate(todayStr)}
-          variant={isLessonTime ? "default" : "outline"}
-        >
-          Davomat olish
-        </Button>
+        {pending ? (
+          <UnmarkedLessonPrompt
+            lesson={{
+              groupId: group.id,
+              groupName: group.name,
+              date: todayStr,
+              startTime: pending.lessonStartTime,
+              endTime: pending.lessonEndTime,
+            }}
+            info={pending}
+            onAnswered={noop}
+          />
+        ) : (
+          <Button
+            size="sm"
+            onClick={() => onSelectDate(todayStr)}
+            variant={isLessonTime ? "default" : "outline"}
+          >
+            Davomat olish
+          </Button>
+        )}
       </div>
     );
   }

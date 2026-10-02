@@ -1,4 +1,5 @@
 import {
+  IsDateString,
   IsInt,
   IsNotEmpty,
   IsEnum,
@@ -35,4 +36,9 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsInt()
   branchId?: number;
+
+  // ADR-0047: a part payment carries the date the rest will be paid by.
+  @IsOptional()
+  @IsDateString()
+  promiseDate?: string;
 }

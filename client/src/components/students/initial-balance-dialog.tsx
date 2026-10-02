@@ -53,7 +53,9 @@ export function InitialBalanceDialog({
   const rawAmount = parseInt(amount.replace(/\D/g, ""), 10) || 0;
 
   const handleSubmit = async () => {
-    if (rawAmount < 0) return;
+    // An empty field would post 0 and use up the student's only initial
+    // balance, which nothing can reverse. A typed "0" (no carryover) is fine.
+    if (amount === "") return;
     setSubmitting(true);
     try {
       await api.post(`/students/${studentId}/initial-balance`, {
@@ -124,7 +126,7 @@ export function InitialBalanceDialog({
           >
             Bekor qilish
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting || rawAmount < 0}>
+          <Button onClick={handleSubmit} disabled={submitting || amount === ""}>
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
             Saqlash
           </Button>

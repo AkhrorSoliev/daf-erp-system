@@ -1,17 +1,14 @@
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
 import { DeWort } from "./de-wort";
+import { javobPaneliMatni } from "./natija-xabari";
 
 /**
  * The panel under a checked question, for every format but the pairing
- * ones. A picture choice's `richtig` is a picture URL, so the word comes
- * from `loesungWort` — shown after a correct answer too, because the
- * student may have found the picture without knowing the word yet.
+ * ones. What it says comes from `javobPaneliMatni`.
  */
 export function JavobPaneli({ natija }: { natija: PruefErgebnis }) {
-  const soz = natija.isCorrect
-    ? natija.loesungWort
-    : (natija.loesungWort ?? natija.richtig);
+  const { sarlavha, izoh, soz } = javobPaneliMatni(natija);
   return (
     <div
       className={cn(
@@ -25,10 +22,11 @@ export function JavobPaneli({ natija }: { natija: PruefErgebnis }) {
           natija.isCorrect ? "text-success" : "text-danger",
         )}
       >
-        {natija.isCorrect ? "To'g'ri!" : "Xato"}
+        {sarlavha}
       </p>
       {soz ? (
         <p className="mt-0.5 text-sm font-semibold text-ink-800">
+          {izoh ? <span className="mr-1 text-ink-500">{izoh}</span> : null}
           <DeWort text={soz} />
         </p>
       ) : null}

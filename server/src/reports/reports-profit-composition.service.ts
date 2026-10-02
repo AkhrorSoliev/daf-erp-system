@@ -42,6 +42,12 @@ export interface ProfitComposition {
     /** Only when the scope spans more than one branch. */
     byBranch: { id: number; name: string; amount: number }[];
   };
+  /** «Yechib olish» booked this month — revenue beside the lessons (ADR-0055). */
+  withdrawals: {
+    total: number;
+    teacherCredited: number;
+    count: number;
+  } & NamedRows;
   teachers: { total: number; count: number; advances: number } & NamedRows;
   staff: { total: number; count: number } & NamedRows;
   expenses: {
@@ -69,6 +75,7 @@ export interface ProfitComposition {
 const TOP_TEACHERS = 6;
 const TOP_COURSES = 6;
 const TOP_ITEMS = 4;
+const TOP_WITHDRAWALS = 6;
 
 /**
  * «Foyda tarkibi» — what the Foyda card's figure is made of, and what the
@@ -152,6 +159,15 @@ export class ReportsProfitCompositionService {
       TOP_COURSES,
     );
 
+    // ── Balance withdrawals (ADR-0055) ────────────────────────────────
+    const withdrawn = topWithRest(
+      inputs.withdrawals.students.map((s) => ({
+        name: s.name,
+        amount: s.amount,
+      })),
+      TOP_WITHDRAWALS,
+    );
+
     // ── Teachers ──────────────────────────────────────────────────────
     const teacherComputed = np.teacherSalaryBasis === 'hisoblangan';
     const topUp = isTopUpMonth(month);
@@ -200,7 +216,13 @@ export class ReportsProfitCompositionService {
         : { value: 0, count: 0 };
       // The teacher's share of what is still to come, at the share this
       // month's lessons have paid so far — an estimate, labelled as one.
-      const teacherShare = np.revenue > 0 ? np.teacherSalary / np.revenue : 0;
+      // Only the lessons' teacher pay projects onto the lessons still to
+      // come — a withdrawal credited to a teacher is not a lesson.
+      const lessonTeacherPay = Math.max(
+        0,
+        np.teacherSalary - inputs.withdrawals.teacherCredited,
+      );
+      const teacherShare = np.revenue > 0 ? lessonTeacherPay / np.revenue : 0;
       const remainingTeacherPay = Math.round(remaining.value * teacherShare);
       const missingExpenses = missingRecurringExpenses(prevExpenses, expenses);
       forecast = {
@@ -266,6 +288,13 @@ export class ReportsProfitCompositionService {
               }))
               .sort((a, b) => b.amount - a.amount)
           : [],
+      },
+      withdrawals: {
+        total: np.balanceWithdrawals,
+        teacherCredited: inputs.withdrawals.teacherCredited,
+        count: inputs.withdrawals.students.length,
+        rows: withdrawn.top,
+        rest: withdrawn.rest,
       },
       teachers: {
         total: np.teacherSalary,
@@ -380,6 +409,7 @@ function emptyComposition(
     teacherSalaryBasis: 'hisoblangan',
     staffSalaryBasis: 'hisoblangan',
     revenue: { total: 0, studentCount: 0, byCourse: none, byBranch: [] },
+    withdrawals: { total: 0, teacherCredited: 0, count: 0, ...none },
     teachers: { total: 0, count: 0, advances: 0, ...none },
     staff: { total: 0, count: 0, ...none },
     expenses: { total: 0, categories: [] },

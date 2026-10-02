@@ -59,6 +59,21 @@ export class UpdatePaymentSettingsDto {
   @Type(() => Number)
   noRefundAfterPercent?: number;
 
+  @IsOptional()
+  @IsBoolean()
+  admissionRuleEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  trialLessonEnabled?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(60)
+  @Type(() => Number)
+  attendanceOpensMinutesBefore?: number;
+
   // Faqat CEO uchun ma'noli — qaysi filialga yozish. Branch Director bu
   // maydondan qat'i nazar faqat o'z filialiga yoza oladi (kontrollerda
   // majburlanadi); CEO uchun berilmasa — kompaniya darajasida yoziladi.

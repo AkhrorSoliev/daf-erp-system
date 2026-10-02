@@ -183,6 +183,38 @@
    "origin": "GENERATED"
   },
   {
+   "sourceId": "u02-s2-11",
+   "section": "u02-s2",
+   "de": "Mein Bruder ist einundzwanzig.",
+   "uz": "Akam yigirma bir yoshda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-12",
+   "section": "u02-s2",
+   "de": "Meine Mutter ist achtundvierzig.",
+   "uz": "Onam qirq sakkiz yoshda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-13",
+   "section": "u02-s2",
+   "de": "Mein Vater ist fünfunddreißig.",
+   "uz": "Otam o'ttiz besh yoshda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-14",
+   "section": "u02-s2",
+   "de": "Meine Oma ist neunundneunzig!",
+   "uz": "Buvim to'qson to'qqiz yoshda!",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
    "sourceId": "u02-s3-01",
    "section": "u02-s3",
    "de": "Was ist dein Beruf?",

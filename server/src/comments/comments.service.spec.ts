@@ -62,7 +62,16 @@ describe('CommentsService', () => {
       },
       commentAssignee: {
         findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+        deleteMany: jest.fn(),
         update: jest.fn(),
+      },
+      // «Dars bo'ldimi?» system tasks (ADR-0054): the status change runs in a
+      // transaction that also reads and updates the lesson the task belongs to.
+      $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
+      unmarkedLesson: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        updateMany: jest.fn(),
       },
       // The entity guard resolves the commented-on record's branch. These
       // fixtures put the entity and the caller in the same branch — the case
@@ -86,6 +95,7 @@ describe('CommentsService', () => {
         // Assignees are checked against the company now. The fixtures use one
         // assignee, so one match is the passing answer.
         count: jest.fn().mockResolvedValue(1),
+        findUnique: jest.fn(),
       },
     };
 
@@ -605,6 +615,172 @@ describe('CommentsService', () => {
             status: AssigneeStatus.PENDING,
             seenAt: null,
             doneAt: null,
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('system tasks (ADR-0054)', () => {
+    const systemComment = {
+      id: 'c1',
+      isTask: true,
+      isSystem: true,
+      authorId: null,
+      author: null,
+      companyId: 1,
+      entityType: 'Group',
+      entityId: 'g1',
+      content: 'x',
+      assignees: [],
+    };
+
+    it('cannot be edited or deleted', async () => {
+      prisma.comment.findFirst.mockResolvedValue(systemComment);
+      await expect(
+        service.update('c1', { content: 'y' } as any, 1, ['CEO'], 1),
+      ).rejects.toThrow("Tizim bergan topshiriqni tahrirlab bo'lmaydi");
+      await expect(service.delete('c1', 1)).rejects.toThrow(
+        "Tizim bergan topshiriqni o'chirib bo'lmaydi",
+      );
+    });
+
+    it('closes only by answering the lesson', async () => {
+      prisma.commentAssignee.findFirst.mockResolvedValue({
+        id: 'a3',
+        status: 'PENDING',
+        seenAt: null,
+        comment: systemComment,
+      });
+      await expect(
+        service.updateAssigneeStatus('c1', 3, 'DONE' as any),
+      ).rejects.toThrow("darsga javob berilganda o'zi yopiladi");
+    });
+
+    it('is taken by the first administrator to mark it seen', async () => {
+      prisma.commentAssignee.findFirst.mockResolvedValue({
+        id: 'a3',
+        status: 'PENDING',
+        seenAt: null,
+        comment: systemComment,
+      });
+      prisma.commentAssignee.findMany.mockResolvedValue([
+        { userId: 3 },
+        { userId: 4 },
+      ]);
+      prisma.commentAssignee.update.mockResolvedValue({
+        id: 'a3',
+        status: 'SEEN',
+        user: { id: 3 },
+      });
+      await service.updateAssigneeStatus('c1', 3, 'SEEN' as any);
+      expect(prisma.commentAssignee.deleteMany).toHaveBeenCalledWith({
+        where: { commentId: 'c1', userId: { not: 3 } },
+      });
+      expect(prisma.unmarkedLesson.updateMany).toHaveBeenCalledWith({
+        where: { taskCommentId: 'c1' },
+        data: { claimedById: 3 },
+      });
+    });
+
+    it('tells the second administrator who took it', async () => {
+      prisma.commentAssignee.findFirst.mockResolvedValue(null);
+      prisma.unmarkedLesson.findFirst.mockResolvedValue({ claimedById: 3 });
+      prisma.user.findUnique.mockResolvedValue({
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+      });
+      await expect(
+        service.updateAssigneeStatus('c1', 4, 'SEEN' as any),
+      ).rejects.toThrow('Bu topshiriqni Ali Valiyev oldi');
+    });
+
+    it('turns a Serializable conflict into a 409', async () => {
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2034' });
+      await expect(
+        service.updateAssigneeStatus('c1', 3, 'SEEN' as any),
+      ).rejects.toThrow("Topshiriq hozirgina o'zgardi. Sahifani yangilang");
+    });
+
+    it('turns a Postgres deadlock into the same 409', async () => {
+      // The exact object @prisma/adapter-pg produces for SQLSTATE 40P01: it
+      // maps only 40001 to P2034, so a deadlock reaches the caller as a raw
+      // DriverAdapterError with the SQLSTATE on `cause` and no `code` of its
+      // own (captured from a real deadlock between two interactive
+      // transactions).
+      const deadlock = Object.assign(new Error('deadlock detected'), {
+        name: 'DriverAdapterError',
+        cause: {
+          originalCode: '40P01',
+          originalMessage: 'deadlock detected',
+          kind: 'postgres',
+          code: '40P01',
+          severity: 'ERROR',
+          message: 'deadlock detected',
+        },
+      });
+      prisma.$transaction.mockRejectedValueOnce(deadlock);
+      await expect(
+        service.updateAssigneeStatus('c1', 3, 'SEEN' as any),
+      ).rejects.toThrow("Topshiriq hozirgina o'zgardi. Sahifani yangilang");
+    });
+
+    it('does not swallow other database errors', async () => {
+      const boom = Object.assign(new Error('connection lost'), {
+        name: 'DriverAdapterError',
+        cause: { kind: 'postgres', code: '08006' },
+      });
+      prisma.$transaction.mockRejectedValueOnce(boom);
+      await expect(
+        service.updateAssigneeStatus('c1', 3, 'SEEN' as any),
+      ).rejects.toBe(boom);
+    });
+
+    it('keeps an answered system task closed', async () => {
+      prisma.commentAssignee.findFirst.mockResolvedValue({
+        id: 'a3',
+        status: 'DONE',
+        seenAt: new Date(),
+        comment: systemComment,
+      });
+      for (const status of ['SEEN', 'PENDING']) {
+        await expect(
+          service.updateAssigneeStatus('c1', 3, status as any),
+        ).rejects.toThrow("darsga javob berilganda o'zi yopiladi");
+      }
+      expect(prisma.commentAssignee.update).not.toHaveBeenCalled();
+      expect(prisma.commentAssignee.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("carries the lesson's question in getMyTasks", async () => {
+      prisma.commentAssignee.findMany.mockResolvedValue([]);
+      prisma.commentAssignee.count = jest.fn().mockResolvedValue(0);
+      await service.getMyTasks(3, {} as any);
+      expect(prisma.commentAssignee.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            comment: expect.objectContaining({
+              include: expect.objectContaining({
+                unmarkedLesson: {
+                  select: {
+                    id: true,
+                    groupId: true,
+                    date: true,
+                    status: true,
+                    teacherPayExempt: true,
+                    lessonStartTime: true,
+                    lessonEndTime: true,
+                    // The card names the branch: a CEO in another branch opened these.
+                    group: {
+                      select: {
+                        name: true,
+                        branch: { select: { id: true, name: true } },
+                      },
+                    },
+                  },
+                },
+              }),
+            }),
           }),
         }),
       );

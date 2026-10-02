@@ -54,7 +54,7 @@ Different models use different ID types:
 | Branch | Int (4-digit) | `1001` |
 | User | Int (5-digit, starts from 10000) | `10001` |
 | Student | Int (5-digit, starts from 10000) | `10001` |
-| Role | Int (sequential) | `1` — `5` |
+| Role | Int (sequential) | `1` — `6` |
 | Course, Group, Room, Lead, Holiday, Enrollment | UUID | `a1b2c3d4-...` |
 
 ## Pagination
@@ -85,7 +85,10 @@ Stored as enum:
 - **Soft delete** uses `deletedAt` timestamp (NOT `isActive` boolean). `deletedAt IS NOT NULL` = archived/invisible
 - Each archivable entity has: `deletedAt DateTime?`, `deletedById Int?`, `deletionBatchId String?`
 - **Status enums** control entity lifecycle (e.g. `BranchStatus`, `StudentStatus`, `GroupStatus`) — each entity has its own enum
-- `isActive` field has been **removed** — use status enums and `deletedAt` instead
+- `isActive` still exists, but lifecycle decisions read the status enum and `deletedAt`:
+  - **User** — derived from `status` (`isActive === (status === ACTIVE)`), written by the services that change the status; see "User Status & isActive Synchronization" in `server/CLAUDE.md`
+  - **Branch** — a derived copy that `BranchesService.changeStatus` writes from `status`; nothing on the server filters by it
+  - Other models (`Student`, `Group`, `Course`, `EmployeeSalaryConfig`, …) carry their own `isActive` — check the model before relying on it
 
 ## Entity History (Audit Log)
 

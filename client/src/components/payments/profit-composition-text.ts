@@ -19,6 +19,12 @@ export interface ProfitComposition {
     byCourse: NamedRows;
     byBranch: { id: number; name: string; amount: number }[];
   };
+  /** «Yechib olish» booked this month (ADR-0055). Absent from a server that predates it (a rollback). */
+  withdrawals?: {
+    total: number;
+    teacherCredited: number;
+    count: number;
+  } & NamedRows;
   teachers: { total: number; count: number; advances: number } & NamedRows;
   staff: { total: number; count: number } & NamedRows;
   expenses: {
@@ -72,11 +78,29 @@ export function statusLabel(c: Pick<ProfitComposition, "month" | "status">) {
 }
 
 /** The one sentence under the big number, in plain words. */
-export function headline(revenue: number, netProfit: number): string {
+export function headline(
+  revenue: number,
+  netProfit: number,
+  withdrawn = 0,
+): string {
   const spent = "ustozlar, xodimlar va xarajatlardan keyin";
+  const came =
+    withdrawn > 0
+      ? `Darslardan ${mln(revenue)}, balansdan ${mln(withdrawn)} tushdi`
+      : `Darslardan ${mln(revenue)} tushdi`;
   return netProfit >= 0
-    ? `Darslardan ${mln(revenue)} tushdi — ${spent} ${mln(netProfit)} qoldi.`
-    : `Darslardan ${mln(revenue)} tushdi — ${spent} ${mln(-netProfit)} zarar.`;
+    ? `${came} — ${spent} ${mln(netProfit)} qoldi.`
+    : `${came} — ${spent} ${mln(-netProfit)} zarar.`;
+}
+
+/** "2 o'quvchi balansidan · 200 000 so'mi ustozlar haqiga yozilgan". */
+export function withdrawalSub(
+  w: NonNullable<ProfitComposition["withdrawals"]>,
+): string {
+  const who = `${w.count} o'quvchi balansidan`;
+  return w.teacherCredited > 0
+    ? `${who} · ${formatPrice(w.teacherCredited)} so'mi ustozlar haqiga yozilgan`
+    : who;
 }
 
 /**
@@ -121,5 +145,7 @@ export function expenseSummary(
 /** The footer that proves the lines add up to the card. */
 export function reconciliation(c: ProfitComposition): string {
   const f = formatPrice;
-  return `${f(c.revenue.total)} − ${f(c.teachers.total)} − ${f(c.staff.total)} − ${f(c.expenses.total)} − ${f(c.refunds)} = ${f(c.netProfit)}`;
+  const w = c.withdrawals?.total ?? 0;
+  const withdrawn = w !== 0 ? ` + ${f(w)}` : "";
+  return `${f(c.revenue.total)}${withdrawn} − ${f(c.teachers.total)} − ${f(c.staff.total)} − ${f(c.expenses.total)} − ${f(c.refunds)} = ${f(c.netProfit)}`;
 }

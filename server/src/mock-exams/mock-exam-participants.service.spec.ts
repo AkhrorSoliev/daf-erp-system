@@ -331,6 +331,31 @@ describe('MockExamParticipantsService', () => {
       expect(history.recordCreate).toHaveBeenCalled();
     });
 
+    it('records that a staff member added the participant', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.student.findFirst.mockResolvedValue(null);
+      prisma.$queryRaw.mockResolvedValue([{ next: BigInt(10501) }]);
+      prisma.mockExamParticipant.create.mockResolvedValue({
+        id: 'p2',
+        publicId: 10501,
+        paid: false,
+      });
+
+      await service.addManual(
+        'e1',
+        { firstName: 'Aziz', lastName: 'Karimov', phone: '901234567' },
+        1001,
+        1,
+        null,
+      );
+
+      const callArg = prisma.mockExamParticipant.create.mock.calls[0][0];
+      expect(callArg.data.registeredVia).toBe('ADMIN');
+    });
+
     /** CEO, 2026-09-25: expelled and archived students get no DaF discount. */
     it.each([
       ['ACTIVE', 30000],

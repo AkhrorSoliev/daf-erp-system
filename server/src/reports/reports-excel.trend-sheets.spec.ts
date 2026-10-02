@@ -105,6 +105,7 @@ describe('branchesSheet', () => {
       {
         branchName: "Farg'ona filiali",
         recognized: 173_783_991,
+        balanceWithdrawals: 0,
         cashIn: 170_378_987,
         teacherSalary: 95_834_547,
         operatingExpenses: 41_773_000,
@@ -116,6 +117,7 @@ describe('branchesSheet', () => {
       {
         branchName: 'Namangan filali',
         recognized: 0,
+        balanceWithdrawals: 0,
         cashIn: 0,
         teacherSalary: 0,
         operatingExpenses: 0,
@@ -142,5 +144,33 @@ describe('branchesSheet', () => {
     const total = rowFor(ws, 'Jami');
     expect(total[1]).toBe(173_783_991);
     expect(total[8]).toBe(427);
+
+    const footer: string[] = [];
+    ws.eachRow((r) => footer.push(cellText(r.getCell(1).value)));
+    expect(footer.join('\n')).not.toContain('balansdan yechib olingan');
+  });
+
+  it('names the branches whose profit includes balance withdrawals', () => {
+    const row: BranchRow = {
+      branchName: "Farg'ona filiali",
+      recognized: 1_000_000,
+      balanceWithdrawals: 300_000,
+      cashIn: 900_000,
+      teacherSalary: 400_000,
+      operatingExpenses: 100_000,
+      refunds: 0,
+      netProfit: 800_000,
+      debt: 0,
+      inGroup: 10,
+    };
+    const wb = new Workbook();
+    branchesSheet(wb, [row], 'Davr', 'Barcha filiallar');
+    const texts: string[] = [];
+    wb.getWorksheet('Filiallar')!.eachRow((r) =>
+      texts.push(cellText(r.getCell(1).value)),
+    );
+    expect(texts.join('\n')).toContain(
+      `«SOF FOYDA» ichida balansdan yechib olingan pul bor: Farg'ona filiali — ${(300_000).toLocaleString('ru-RU')} so'm.`,
+    );
   });
 });

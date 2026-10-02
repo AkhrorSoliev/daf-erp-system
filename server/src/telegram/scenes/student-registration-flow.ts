@@ -42,25 +42,34 @@ export async function uploadStudentPhoto(
   } as Express.Multer.File;
 
   const photoUrl = await uploadService.uploadFile(multerFile, 'students');
-  ctx.session.data.photo = photoUrl;
-  ctx.session.step = 7;
 
   const data = ctx.session.data;
-  await ctx.replyWithPhoto(photoUrl, {
-    caption:
-      "📋 Ma'lumotlaringizni tekshiring:\n\n" +
-      `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
-      `📚 Guruh: ${data.groupName}\n` +
-      `👤 Ism: ${data.firstName}\n` +
-      `👤 Familiya: ${data.lastName}\n` +
-      `📞 Telefon: +998 ${data.phone}`,
-    ...Markup.inlineKeyboard([
-      [
-        Markup.button.callback('✅ Tasdiqlash', 'confirm_student'),
-        Markup.button.callback('🔄 Qayta kiritish', 'restart_student'),
-      ],
-    ]),
-  });
+  try {
+    await ctx.replyWithPhoto(photoUrl, {
+      caption:
+        "📋 Ma'lumotlaringizni tekshiring:\n\n" +
+        `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
+        `📚 Guruh: ${data.groupName}\n` +
+        `👤 Ism: ${data.firstName}\n` +
+        `👤 Familiya: ${data.lastName}\n` +
+        `📞 Telefon: +998 ${data.phone}`,
+      ...Markup.inlineKeyboard([
+        [
+          Markup.button.callback('✅ Tasdiqlash', 'confirm_student'),
+          Markup.button.callback('🔄 Qayta kiritish', 'restart_student'),
+        ],
+      ]),
+    });
+  } catch (err) {
+    // The person is asked to send the photo again, so nobody will confirm
+    // this one: delete it now rather than lose track of it.
+    await uploadService.deleteFile(photoUrl);
+    throw err;
+  }
+  // Only a preview that arrived moves the person on: step 7 waits for its
+  // buttons and ignores a photo sent again.
+  ctx.session.data.photo = photoUrl;
+  ctx.session.step = 7;
 }
 
 /**

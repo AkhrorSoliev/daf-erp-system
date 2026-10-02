@@ -6,17 +6,20 @@ import { MockExamsService } from './mock-exams.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { MockExamPdfService } from './mock-exam-pdf.service';
+import { MockExamStatsService } from './mock-exam-stats.service';
 
 describe('MockExamsService', () => {
   let service: MockExamsService;
   let prisma: any;
   let history: any;
+  let statsService: { paidTotals: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
       mockExamSection: { findFirst: jest.fn(), findMany: jest.fn() },
       mockExam: {
         findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn(),
         update: jest.fn(),
@@ -44,6 +47,7 @@ describe('MockExamsService', () => {
     const pdfService = {
       generate: jest.fn().mockResolvedValue({ url: 'http://x/pdf' }),
     };
+    statsService = { paidTotals: jest.fn().mockResolvedValue(new Map()) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -51,6 +55,7 @@ describe('MockExamsService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: history },
         { provide: MockExamPdfService, useValue: pdfService },
+        { provide: MockExamStatsService, useValue: statsService },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
@@ -321,6 +326,49 @@ describe('MockExamsService', () => {
       const res = await service.findOne('e1', 1001, null);
 
       expect(res.branchId).toBe(7);
+    });
+  });
+
+  describe('list', () => {
+    it('adds paid count and revenue to every exam', async () => {
+      const base = {
+        title: 'Mock',
+        description: null,
+        status: MockExamStatus.REGISTRATION_OPEN,
+        sectionId: 's1',
+        branchId: 1,
+        examDate: null,
+        registrationDeadline: null,
+        durationMinutes: null,
+        maxScore: 100,
+        passingScore: null,
+        price: 55000,
+        studentPrice: null,
+        offeredLevels: [],
+        examTimes: [],
+        formFields: [],
+        botStartPayload: 'x',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        section: { id: 's1', name: 'Umumiy', color: null },
+        _count: { participants: 3 },
+      };
+      prisma.mockExam.findMany.mockResolvedValue([
+        { ...base, id: 'e1' },
+        { ...base, id: 'e2' },
+      ]);
+      statsService.paidTotals.mockResolvedValue(
+        new Map([['e1', { paidCount: 2, revenue: 100000 }]]),
+      );
+
+      const rows = await service.list(1001, null);
+
+      expect(rows[0]).toEqual(
+        expect.objectContaining({ id: 'e1', paidCount: 2, revenue: 100000 }),
+      );
+      expect(rows[1]).toEqual(
+        expect.objectContaining({ id: 'e2', paidCount: 0, revenue: 0 }),
+      );
     });
   });
 
