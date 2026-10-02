@@ -13,6 +13,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { UpsertLessonTeacherOverrideDto } from './dto/upsert-lesson-teacher-override.dto';
 import {
@@ -50,6 +51,7 @@ export class LessonTeacherOverridesService {
     private salaryAccrualService: SalaryAccrualService,
     private entityHistoryService: EntityHistoryService,
     private monthlyChargeService: MonthlyChargeService,
+    private lessonAdmissionService: LessonAdmissionService,
   ) {}
 
   async findByGroup(
@@ -290,7 +292,7 @@ export class LessonTeacherOverridesService {
           ],
         },
       },
-      select: { id: true, studentId: true },
+      select: { id: true, studentId: true, status: true },
     });
     if (attendances.length === 0) return;
 
@@ -384,6 +386,23 @@ export class LessonTeacherOverridesService {
       let lessonDivisor: number | undefined;
 
       if (isMonthly) {
+        // ADR-0048 §4 (R4): a debtor's ABSENT first lesson of the month pays
+        // no teacher until the student's payments reach it — the live path's
+        // rule (`isDeferredFirstLesson`). The payment then writes the accrual
+        // for whoever teaches the lesson (`accrueDeferredFirstLessons`).
+        if (
+          att.status === AttendanceStatus.ABSENT &&
+          (await this.lessonAdmissionService.isUnpaidFirstLesson(
+            {
+              studentId: att.studentId,
+              groupId: p.groupId,
+              lessonDay: p.date.toISOString().slice(0, 10),
+            },
+            tx,
+          ))
+        ) {
+          continue;
+        }
         // Muzlatilgan narx — o'quvchi to'lagan oyning O'ZIDAN. Bu ATAYLAB
         // chegirmasiz maydon: o'qituvchi haqi undan hisoblanadi
         // (`monthly-charge.service.ts` dagi `perLessonCost` izohi).

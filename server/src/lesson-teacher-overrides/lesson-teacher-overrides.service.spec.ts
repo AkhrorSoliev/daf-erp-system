@@ -5,6 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
+import { SettingsService } from '../settings/settings.service';
 
 describe('LessonTeacherOverridesService', () => {
   let service: LessonTeacherOverridesService;
@@ -62,6 +64,9 @@ describe('LessonTeacherOverridesService', () => {
         { provide: SalaryAccrualService, useValue: salaryAccrual },
         { provide: EntityHistoryService, useValue: history },
         { provide: MonthlyChargeService, useValue: monthlyCharge },
+        // The real first-lesson rule (ADR-0048 §4); it reads through `tx`.
+        LessonAdmissionService,
+        { provide: SettingsService, useValue: {} },
       ],
     }).compile();
 
@@ -352,6 +357,131 @@ describe('LessonTeacherOverridesService', () => {
       // Oylik hisob bu yo'lda umuman so'ralmaydi.
       expect(monthlyCharge.findChargeForLesson).not.toHaveBeenCalled();
     });
+  });
+
+  // ADR-0048 §4 (R4): from 01.10.2026, a debtor ABSENT at their first lesson
+  // of the month in a monthly group earns the teacher nothing until their
+  // payments reach it; that payment writes the accrual
+  // (`accrueDeferredFirstLessons`). An override re-accrues the lesson for the
+  // teachers it adds, so the same rule must hold there.
+  describe("recomputeAccruals — a debtor's first lesson (R4)", () => {
+    // The first Wednesday of October 2026: the first lesson of the month.
+    const lessonDay = '2026-10-07';
+    // October's charge: four Wednesdays for 450 000. The three after the
+    // first lesson hold 337 500 of it, so the lesson is paid once the balance
+    // is at least −337 500.
+    const octoberCharge = {
+      enrollmentId: 'enr-1',
+      groupId: 'group-1',
+      periodYear: 2026,
+      periodMonth: 10,
+      coveredDates: ['2026-10-07', '2026-10-14', '2026-10-21', '2026-10-28'],
+      frozenOutDates: [],
+      coveredLessons: 4,
+      perLessonCost: 112_500,
+      discountPercent: 0,
+      chargedAmount: 450_000,
+    };
+    const givenStudent = (status: string, balance: number) => {
+      tx.attendance.findMany.mockResolvedValue([
+        { id: 'att-1', studentId: 30001, status },
+      ]);
+      tx.student = {
+        findUnique: jest.fn(({ where }) =>
+          Promise.resolve(where.id === 30001 ? { balance } : null),
+        ),
+      };
+    };
+
+    beforeEach(() => {
+      tx.group.findFirst.mockResolvedValue({
+        id: 'group-1',
+        exactDays: ['wednesday'],
+      });
+      tx.group.findUnique.mockResolvedValue({
+        course: { paymentModel: 'MONTHLY' },
+      });
+      tx.lessonTeacherOverride.findFirst.mockResolvedValue(null);
+      tx.lessonTeacherOverride.create.mockResolvedValue({ id: 'override-1' });
+      tx.groupTeacher.findMany.mockResolvedValue([{ teacherId: 10001 }]);
+      tx.transaction.findFirst.mockResolvedValue(null);
+      tx.enrollment.findMany = jest
+        .fn()
+        .mockResolvedValue([{ id: 'enr-1', status: 'ACTIVE' }]);
+      tx.enrollmentMonthlyCharge = {
+        findMany: jest.fn().mockResolvedValue([octoberCharge]),
+      };
+      monthlyCharge.findChargeForLesson.mockResolvedValue({
+        perLessonCost: 112_500,
+        plannedLessons: 4,
+        transactionId: 'mon-tx-1',
+      });
+    });
+
+    it('pays the substitute nothing while the month is unpaid', async () => {
+      givenStudent('ABSENT', -450_000);
+
+      await service.upsert(
+        'group-1',
+        lessonDay,
+        { teacherIds: [10042] },
+        1,
+        99,
+      );
+
+      expect(salaryAccrual.createAccrual).not.toHaveBeenCalled();
+      // The replaced teacher's pay, if any, is still taken back.
+      expect(salaryAccrual.reverseAccrualForAttendance).toHaveBeenCalledWith(
+        expect.objectContaining({ teacherId: 10001, studentId: 30001 }),
+      );
+    });
+
+    it("pays the group's own teacher nothing when the override is removed", async () => {
+      givenStudent('ABSENT', -450_000);
+      tx.lessonTeacherOverride.findFirst.mockResolvedValue({
+        id: 'override-1',
+        groupId: 'group-1',
+        date: new Date(`${lessonDay}T00:00:00Z`),
+        teacherIds: [10042],
+      });
+      tx.lessonTeacherOverride.update.mockResolvedValue({});
+
+      await service.remove('override-1', 1, 99);
+
+      expect(salaryAccrual.createAccrual).not.toHaveBeenCalled();
+      expect(salaryAccrual.reverseAccrualForAttendance).toHaveBeenCalledWith(
+        expect.objectContaining({ teacherId: 10042, studentId: 30001 }),
+      );
+    });
+
+    // Only an ABSENT the payments do not reach waits: a debtor who came, and
+    // an absent student whose payments reach the lesson, are paid as usual.
+    it.each([
+      ['PRESENT', -450_000],
+      ['ABSENT', -337_500],
+    ] as const)(
+      'pays the substitute for %s at balance %d',
+      async (status, balance) => {
+        givenStudent(status, balance);
+
+        await service.upsert(
+          'group-1',
+          lessonDay,
+          { teacherIds: [10042] },
+          1,
+          99,
+        );
+
+        expect(salaryAccrual.createAccrual).toHaveBeenCalledWith(
+          expect.objectContaining({
+            teacherId: 10042,
+            attendanceId: 'att-1',
+            perLessonCost: 112_500,
+            deductionTransactionId: 'mon-tx-1',
+          }),
+        );
+      },
+    );
   });
 
   describe('remove', () => {
