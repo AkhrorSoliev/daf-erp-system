@@ -250,6 +250,140 @@
 }
 
 /* ============================================================
+   Staff sign-in — Daftar (scoped override)
+   The admin and teacher logins are one notebook sheet: squared paper and
+   navy ink on the admin portal (bookkeeping), ruled paper and green ink on
+   the teacher portal (writing), the same red margin line on both. Applied
+   via `.daftar` (+ `.daftar-lines` for the ruled variant); the class pair
+   comes from `daftarScope()` in lib/portal.ts, so content Radix portals to
+   <body> (the password-reset dialog) can carry it too.
+   Like `.form-theme` and `.lumio`, the scope re-points the shadcn semantic
+   vars, so every primitive inside it re-themes with no changes of its own.
+   Text is >= 4.5:1 and the field underline (--input) >= 3:1 against the
+   paper in all four states — src/app/daftar-theme.test.ts measures it.
+   ============================================================ */
+.daftar {
+  --daftar-margin: #f0a3a3;
+
+  --background: #fdfdfb;
+  --foreground: #1e293b;
+  --card: #fdfdfb;
+  --card-foreground: #1e293b;
+  --popover: #fdfdfb;
+  --popover-foreground: #1e293b;
+  --primary: #1e3a8a;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f9;
+  --secondary-foreground: #1e293b;
+  --muted: #eef2f9;
+  --muted-foreground: #56657a;
+  --accent: #eef2f9;
+  --accent-foreground: #1e293b;
+  --destructive: #b42318;
+  --border: #d9e3f2;
+  --input: #6f88b3;
+  --ring: #1e3a8a;
+}
+
+/* Teacher portal: ruled paper, green ink. */
+.daftar.daftar-lines {
+  --primary: #14532d;
+  --secondary: #eef5f0;
+  --muted: #eef5f0;
+  --accent: #eef5f0;
+  --input: #5f9072;
+  --ring: #14532d;
+}
+
+/* Night paper. This selector and `.daftar.daftar-lines` are equally specific,
+   so on a dark ruled sheet these values win over the teacher's light ones by
+   source order — keep this block after it, and have the next rule re-state
+   every token the ruled variant sets. */
+.dark .daftar {
+  --daftar-margin: #7a3440;
+
+  --background: #0f1626;
+  --foreground: #e6ecf8;
+  --card: #0f1626;
+  --card-foreground: #e6ecf8;
+  --popover: #0f1626;
+  --popover-foreground: #e6ecf8;
+  --primary: #c9d7f7;
+  --primary-foreground: #0f1626;
+  --secondary: #172238;
+  --secondary-foreground: #e6ecf8;
+  --muted: #172238;
+  --muted-foreground: #9aa7bd;
+  --accent: #172238;
+  --accent-foreground: #e6ecf8;
+  --destructive: #ff8a80;
+  --border: #1c2740;
+  --input: #5a6f9a;
+  --ring: #c9d7f7;
+}
+
+.dark .daftar.daftar-lines {
+  --background: #0e1a14;
+  --foreground: #e8f1eb;
+  --card: #0e1a14;
+  --card-foreground: #e8f1eb;
+  --popover: #0e1a14;
+  --popover-foreground: #e8f1eb;
+  --primary: #bfe3cc;
+  --primary-foreground: #0e1a14;
+  --secondary: #15271d;
+  --secondary-foreground: #e8f1eb;
+  --muted: #15271d;
+  --muted-foreground: #9db3a5;
+  --accent: #15271d;
+  --accent-foreground: #e8f1eb;
+  --border: #1a2c22;
+  --input: #4f7a60;
+  --ring: #bfe3cc;
+}
+
+@layer components {
+  /* The sheet: paper plus its ruling — squared by default, ruled on the
+     teacher portal. The lines are gradients, so there is no image to load. */
+  .daftar-sheet {
+    background-color: var(--background);
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .daftar-lines.daftar-sheet {
+    background-image: linear-gradient(transparent 31px, var(--border) 31px);
+    background-size: 100% 32px;
+  }
+
+  /* The red margin line. It hangs off the content column, not the viewport,
+     so the writing starts at the margin at every width. It runs far past the
+     column both ways; the sheet (`overflow-hidden`) clips it to the page. */
+  .daftar-column::before {
+    content: "";
+    position: absolute;
+    top: -100vh;
+    bottom: -100vh;
+    left: -1rem;
+    width: 1.5px;
+    background-color: var(--daftar-margin);
+    pointer-events: none;
+  }
+  @media (min-width: 40rem) {
+    .daftar-column::before {
+      left: -1.25rem;
+    }
+  }
+
+  /* Handwriting: the italic Fraunces that DaftarSheet loads. */
+  .daftar-hand {
+    font-family: var(--font-daftar-hand), Georgia, serif;
+    font-style: italic;
+  }
+}
+
+/* ============================================================
    Student Portal — Lumio design system (scoped override)
    Mirrors the student-app (student-app/src/design + daf-design-system)
    Lumio tokens so the portal at student.dafzentrum.uz matches the native
@@ -1012,4 +1146,23 @@ button {
 .lumio :focus-within > textarea:autofill,
 .lumio :focus-within > select:autofill {
   box-shadow: inset 0 0 0 1000px var(--surface-card);
+}
+
+/* A Daftar field is transparent — the sheet shows through it — so the tint
+   autofill paints on the <input> would sit on the paper as a coloured box.
+   Repaint it in the paper's colour; as with Lumio above, the fill has to be a
+   box-shadow, and Firefox needs its own rule. */
+.daftar input:-webkit-autofill,
+.daftar input:-webkit-autofill:hover,
+.daftar input:-webkit-autofill:active {
+  -webkit-box-shadow: inset 0 0 0 1000px var(--background);
+  box-shadow: inset 0 0 0 1000px var(--background);
+  -webkit-text-fill-color: var(--foreground);
+  caret-color: var(--foreground);
+}
+
+.daftar input:autofill {
+  box-shadow: inset 0 0 0 1000px var(--background);
+  filter: none;
+  caret-color: var(--foreground);
 }
