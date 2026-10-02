@@ -236,7 +236,7 @@ export function profitLossSheet(wb: Workbook, pl: any, period: string) {
     ws,
     'Ustoz oyligi',
     pl.costOfServices?.teacherSalaries ?? 0,
-    'Darslar uchun ustozlarga to‘langan (hisoblangan) oylik.',
+    'Darslar uchun ustozlarga to‘langan (naqd asosidagi) oylik.',
   );
   kvRow(ws, 'Ustoz avanslari', pl.costOfServices?.teacherAdvances ?? 0);
   kvRow(ws, 'Jami tannarx', pl.costOfServices?.total ?? 0, undefined, {

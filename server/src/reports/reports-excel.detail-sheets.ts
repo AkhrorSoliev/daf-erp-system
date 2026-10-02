@@ -551,7 +551,7 @@ export function debtFlowSheet(wb: Workbook, history: any) {
   sheetNotes(ws, [
     'Har bir so‘m FAQAT bir marta va faqat o‘zi harakatlangan oyga yoziladi, shuning uchun oqim ustunlari qo‘shiladi.',
     'Oy oxiridagi qarz — muzlagan raqam: o‘tgan oy uchun keyin o‘zgarmaydi. Joriy oy bundan mustasno.',
-    '«Boshqa» — tuzatish (qo‘lda tuzatish), boshlang‘ich balans, pul qaytarish va bekor qilingan qarz kechirish: qarzni kamaytiradi, lekin markaz yiqqan pul emas.',
+    '«Boshqa» — qo‘lda tuzatish, boshlang‘ich balans, pul qaytarish va bekor qilingan qarz kechirish: qarzni kamaytiradi, lekin markaz yiqqan pul emas.',
     'Qarz = Σ max(0, −balans). Balans manfiydan musbatga o‘tsa, faqat manfiy qismi hisoblanadi.',
   ]);
 }
@@ -901,7 +901,7 @@ export function reconciliationSheet(
   ]);
   checkRow(
     ws,
-    'To‘lovlar = Foyda-zarar daromad',
+    'To‘lovlar = Foyda va zarar daromad',
     pl?.revenue?.total ?? 0,
     payments?.total ?? 0,
     'Kassa mosligi.',
@@ -1016,7 +1016,7 @@ export function reconciliationSheet(
     [
       'Bu bo‘lim hisobotning har bir raqami bir-biriga MOS kelishini isbotlaydi.',
       'MOS = to‘g‘ri; XATO = nomuvofiqlik (farq ko‘rsatiladi va tuzatilishi kerak).',
-      'Aylanma: oy boshidagi qoldiq + davr harakatlari = oy oxiridagi qoldiq — to‘g‘ri qo‘shilib chiqishi (yig‘indi) kerak.',
+      'Aylanma: oy boshidagi qoldiq + davr harakatlari = oy oxiridagi qoldiq — to‘g‘ri qo‘shilib chiqishi kerak.',
       'O‘quvchi balansi aylanmasidagi satrlar: Hisoblangan darslar = darslar uchun yechilgan pul; Hisobdan chiqarish = kechirilgan qarz; Boshlang‘ich balans = tizimga o‘tishda kiritilgan; Balans yechish = ortiqcha balansni daromadga o‘tkazish; Boshqa = mayda tuzatishlar.',
       'Oylik "hisoblangan" va "naqd to‘langan" farq qiladi — chunki oylik keyingi oy boshida to‘lanadi (bu XATO emas).',
     ],

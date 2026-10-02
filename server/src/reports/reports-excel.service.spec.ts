@@ -1170,6 +1170,30 @@ describe('ReportsExcelService', () => {
         [2],
       );
     });
+
+    it("the debt workbook's notes carry no ledger type or table name (A3.6)", async () => {
+      // «Qarz harakati» and «Oylik qarzdorlik» used to explain themselves in
+      // the ledger's own words: ADJUSTMENT, DEBT_WRITE_OFF, Ledger, Transaction.
+      const english = /\b(ADJUSTMENT|DEBT_WRITE_OFF|Ledger|Transaction)\b/i;
+      const wb = await load(await service.generateDebtHistory(1, null));
+      // A Set: a merged title answers once per merged cell.
+      const found = new Set<string>();
+      let noteBlocks = 0;
+      wb.eachSheet((ws) =>
+        ws.eachRow((row) => {
+          if (cellText(row.getCell(1).value) === 'ⓘ Bu bo‘lim haqida') {
+            noteBlocks++;
+          }
+          row.eachCell((cell) => {
+            const text = cellText(cell.value);
+            if (english.test(text)) found.add(`${ws.name}: ${text}`);
+          });
+        }),
+      );
+      // The notes themselves must have been scanned, or this proves nothing.
+      expect(noteBlocks).toBeGreaterThanOrEqual(2);
+      expect([...found]).toEqual([]);
+    });
   });
 
   describe('carried-over sheet fixes', () => {
@@ -1258,7 +1282,8 @@ describe('ReportsExcelService', () => {
 
   it("«Davomat», «O'qituvchilar samaradorligi», «Tekshiruv» and «Foyda va zarar» carry no English words (A3.6)", async () => {
     // The CEO's rule (27.09): no English word on a screen, in Excel, PDF or
-    // Telegram. These four are the wired sheets that still had one.
+    // Telegram. These are the four sheets of the main workbook that still had
+    // one; the debt workbook has its own guard under «generateDebtHistory».
     const english =
       /\b(retention|present|absent|late|excused|reconciliation|ties|tie-out|recon|footing|refund|roll-forward|audit|accrual|GL|ACTIVE|FORMING|EXCUSED|churn|vs)\b|P&L/i;
     const wb = await buildWorkbook(

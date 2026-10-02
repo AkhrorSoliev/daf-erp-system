@@ -466,7 +466,7 @@ export function teacherPerformanceSheet(
   freezeAndFilter(ws, header.number, 7);
   const notes = [
     "Har ustoz: guruh soni, o'quvchi soni, ushlab qolish, o'rtacha davomat va guruh to'ldirilishi.",
-    '"Boshi → Oxiri" — davr boshidagi va oxiridagi o\'quvchi soni (ushlab qolish shundan).',
+    '"Boshi → Oxiri" — davr boshidagi va oxiridagi o\'quvchi soni (ushlab qolish shundan hisoblanadi).',
     "Rang (o'rt. davomat): qizil = past, yashil = yuqori.",
     'Faqat faol va shakllanayotgan guruhlar; davr boshi tizim boshlanish sanasigacha cheklangan.',
   ];
