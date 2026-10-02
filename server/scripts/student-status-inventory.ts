@@ -40,6 +40,9 @@ const POPULATION_OPS = new Set(['count', 'aggregate', 'groupBy', 'findMany']);
 const CANONICAL_HELPERS = new Set([
   'activeStudentWhere',
   'ungroupedStudentWhere',
+  // `reports/debt-split.ts`: «O'qiyotganlar qarzi»ning qarzdorlari —
+  // `activeStudentWhere()` ni yoyadi (`debt-split.spec.ts` buni tekshiradi).
+  'studyingDebtorWhere',
 ]);
 
 export interface StudentPopulationSite {
@@ -53,7 +56,11 @@ export interface StudentPopulationSite {
   line: number;
   /** `where` ning yuqori qavatida FAOLLIK da'vo qilgan ustunlar. */
   statusKeys: string[];
-  /** `...activeStudentWhere()` yoki `...ungroupedStudentWhere()` yoyilganmi. */
+  /**
+   * Kanonik ta'rif ishlatilganmi: `...activeStudentWhere()` /
+   * `...ungroupedStudentWhere()` yoyilgan, yoki `where` butunicha shu nomlar
+   * yoxud `studyingDebtorWhere(...)` chaqiruvi (ADR-0059).
+   */
   usesCanonical: boolean;
   /**
    * `where` obyekt literali sifatida yozilmagan (o'zgaruvchida qurilgan), shu
@@ -67,7 +74,8 @@ function listFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) listFiles(full, out);
-    else if (entry.endsWith('.ts') && !entry.endsWith('.spec.ts')) out.push(full);
+    else if (entry.endsWith('.ts') && !entry.endsWith('.spec.ts'))
+      out.push(full);
   }
   return out;
 }
@@ -93,17 +101,28 @@ function enclosingFn(node: ts.Node): string {
     if (ts.isMethodDeclaration(n) || ts.isFunctionDeclaration(n)) {
       if (n.name && ts.isIdentifier(n.name)) return n.name.text;
     }
-    if (ts.isPropertyDeclaration(n) && ts.isIdentifier(n.name)) return n.name.text;
+    if (ts.isPropertyDeclaration(n) && ts.isIdentifier(n.name))
+      return n.name.text;
     if (
       ts.isVariableDeclaration(n) &&
       ts.isIdentifier(n.name) &&
       n.initializer &&
-      (ts.isArrowFunction(n.initializer) || ts.isFunctionExpression(n.initializer))
+      (ts.isArrowFunction(n.initializer) ||
+        ts.isFunctionExpression(n.initializer))
     ) {
       return n.name.text;
     }
   }
   return '(top-level)';
+}
+
+/** `where:` ning o'zi kanonik yordamchining chaqiruvi: `studyingDebtorWhere(...)`. */
+function isCanonicalCall(expr: ts.Expression): boolean {
+  return (
+    ts.isCallExpression(expr) &&
+    ts.isIdentifier(expr.expression) &&
+    CANONICAL_HELPERS.has(expr.expression.text)
+  );
 }
 
 /** `'ACTIVE'` yoki `StudentStatus.ACTIVE` — ikkala yozilishi ham. */
@@ -153,7 +172,10 @@ function inspectWhere(where: ts.ObjectLiteralExpression): {
     if (key === 'status' && isActiveStatusValue(prop.initializer)) {
       statusKeys.push(key);
     }
-    if (key === 'isActive' && prop.initializer.kind === ts.SyntaxKind.TrueKeyword) {
+    if (
+      key === 'isActive' &&
+      prop.initializer.kind === ts.SyntaxKind.TrueKeyword
+    ) {
       statusKeys.push(key);
     }
   }
@@ -228,7 +250,9 @@ export function discoverStudentPopulationSites(
       ts.ScriptTarget.Latest,
       true,
     );
-    const rel = file.startsWith(repoRoot) ? file.slice(repoRoot.length + 1) : file;
+    const rel = file.startsWith(repoRoot)
+      ? file.slice(repoRoot.length + 1)
+      : file;
     const objectConsts = collectObjectConsts(source);
     const perFn = new Map<string, number>();
 
@@ -239,6 +263,7 @@ export function discoverStudentPopulationSites(
         if (op && expr) {
           let literal: ts.ObjectLiteralExpression | null = null;
           let unresolved = false;
+          let canonicalCall = false;
 
           if (ts.isObjectLiteralExpression(expr)) {
             literal = expr;
@@ -247,13 +272,17 @@ export function discoverStudentPopulationSites(
             // joy o'qilmagan deb belgilanadi, jimgina o'tkazib yuborilmaydi.
             literal = objectConsts.get(expr.text) ?? null;
             unresolved = literal === null;
+          } else if (isCanonicalCall(expr)) {
+            // `where: studyingDebtorWhere(...)` — shartning o'zi ta'rifdan
+            // quriladi.
+            canonicalCall = true;
           } else {
             unresolved = true;
           }
 
           const { statusKeys, usesCanonical } = literal
             ? inspectWhere(literal)
-            : { statusKeys: [], usesCanonical: false };
+            : { statusKeys: [], usesCanonical: canonicalCall };
 
           // Tartib raqami funksiyadagi HAMMA o'quvchi so'rovi bo'yicha
           // sanaladi, faqat belgilanganlari bo'yicha emas. Aks holda bitta
@@ -270,7 +299,8 @@ export function discoverStudentPopulationSites(
               fn,
               op,
               line:
-                source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1,
+                source.getLineAndCharacterOfPosition(node.getStart(source))
+                  .line + 1,
               statusKeys,
               usesCanonical,
               unresolved,

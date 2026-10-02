@@ -98,9 +98,7 @@ export class ExpensesService {
     companyId: number,
   ): Promise<void> {
     if (!relatedUserId) {
-      throw new BadRequestException(
-        "TEACHER_ADVANCE xarajati uchun xodim (relatedUserId) ko'rsatilishi shart",
-      );
+      throw new BadRequestException('Avans uchun xodimni tanlang');
     }
     const user = await this.prisma.user.findFirst({
       where: { id: relatedUserId, companyId, deletedAt: null },

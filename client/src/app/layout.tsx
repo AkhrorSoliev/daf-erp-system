@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Inter, Fraunces, Baloo_2, Nunito } from "next/font/google";
+import { Geist, Inter, Baloo_2, Nunito } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { RouteThemeProvider } from "@/components/providers/route-theme-lock";
@@ -13,12 +13,6 @@ const interHeading = Inter({ subsets: ["latin"], variable: "--font-heading" });
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  display: "swap",
 });
 
 // Lumio fonts (student portal + student-scoped login + public form). Defined
@@ -58,7 +52,6 @@ export default function RootLayout({
         "antialiased",
         geistSans.variable,
         interHeading.variable,
-        fraunces.variable,
         fontDisplay.variable,
         fontBody.variable,
       )}

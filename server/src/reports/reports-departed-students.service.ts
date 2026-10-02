@@ -40,8 +40,8 @@ export class ReportsDepartedStudentsService {
 
   /**
    * KPI cards of /reports/departed-students (ADR-0035). The range decides
-   * which departures count; debt and lost revenue describe the students who
-   * have not come back, as of today.
+   * which departures count; debt describes the students who have not come
+   * back, as of today.
    */
   async getDepartedStudentsSummary(
     companyId: number,
@@ -65,7 +65,6 @@ export class ReportsDepartedStudentsService {
       ...new Set(openEpisodes(episodes).map((e) => e.studentId)),
     ];
     const { totalDebt, debtorCount } = await this.debtOf(openIds);
-    const lostRevenue = await this.lostRevenueOf(companyId, openIds);
     const avgDurationMonths = await this.averageStudyMonths(departed);
 
     const { totalTeacherChanges, departedAfterTeacherChange } =
@@ -81,7 +80,6 @@ export class ReportsDepartedStudentsService {
       activeAtStart,
       pendingCount,
       graceDays,
-      lostRevenue,
       totalDebt,
       debtorCount,
       avgDurationMonths: Math.round(avgDurationMonths * 10) / 10,
@@ -157,26 +155,6 @@ export class ReportsDepartedStudentsService {
       _count: { _all: true },
     });
     return { totalDebt: agg._sum.balance ?? 0, debtorCount: agg._count._all };
-  }
-
-  /** Unpaid remainder of still-open contracts; stage 2 removes this card. */
-  private async lostRevenueOf(companyId: number, studentIds: number[]) {
-    if (studentIds.length === 0) return 0;
-    const contracts = await this.prisma.contract.findMany({
-      where: {
-        companyId,
-        deletedAt: null,
-        studentId: { in: studentIds },
-        status: { notIn: ['CANCELLED', 'REFUNDED'] },
-      },
-      select: { totalAmount: true, paidAmount: true },
-    });
-    let total = 0;
-    for (const c of contracts) {
-      const unpaid = c.totalAmount - c.paidAmount;
-      if (unpaid > 0) total += unpaid;
-    }
-    return total;
   }
 
   /** From each student's very first enrollment to the day they left. */

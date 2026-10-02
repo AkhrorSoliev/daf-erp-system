@@ -430,7 +430,7 @@ export class EnrollmentBillingService {
         // stays available for review.
         await tx.attendance.update({
           where: { id: c.attendanceId },
-          data: { status: AttendanceStatus.EXCUSED },
+          data: { status: AttendanceStatus.EXCUSED, lateMinutes: null },
         });
       }
     }

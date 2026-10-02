@@ -99,10 +99,7 @@ export function formatSanaToshkent(iso: string): string {
   return formatKunOy(kunKaliti(new Date(iso)));
 }
 
-/**
- * Davomat statistikasidagi chegaralar: 80 va 60. `amber-*` ISHLATILMAYDI —
- * `globals.css` `@theme` uni faqat `.lumio` ichidagi o'zgaruvchilarga bog'lagan.
- */
+/** Davomat statistikasidagi chegaralar: 80 va 60. */
 export function foizRangi(foiz: number | null): string {
   if (foiz === null) return "text-muted-foreground";
   if (foiz >= 80) return "text-green-600 dark:text-green-400";

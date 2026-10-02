@@ -32,7 +32,7 @@ export function FormPreview({ title, description, fields }: Props) {
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Eye className="size-3.5" />
-        <span>Public ko&apos;rinish — submitter shu sahifani ko&apos;radi</span>
+        <span>Ochiq ko&apos;rinish — formani to&apos;ldiruvchi shu sahifani ko&apos;radi</span>
       </div>
       <div className="rounded-lg border bg-muted/30 p-4 sm:p-5">
         <div className="rounded-md border bg-background p-5 shadow-sm sm:p-6">

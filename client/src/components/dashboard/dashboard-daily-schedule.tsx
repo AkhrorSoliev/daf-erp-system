@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { RoleLink } from "@/components/shared/role-link";
+import { GROUP_PAGE_ROLES } from "@/lib/role-access";
 import {
   AlertCircle,
   CalendarX,
@@ -190,12 +191,13 @@ export function DashboardDailySchedule({
                   {lesson.startTime} – {lesson.endTime}
                 </TableCell>
                 <TableCell className="font-medium text-sm">
-                  <Link
+                  <RoleLink
+                    roles={GROUP_PAGE_ROLES}
                     href={`/groups/${lesson.groupId}`}
-                    className="hover:underline hover:text-primary transition-colors"
+                    linkClassName="hover:underline hover:text-primary transition-colors"
                   >
                     {lesson.groupName}
-                  </Link>
+                  </RoleLink>
                   <span className="sm:hidden text-xs font-normal text-muted-foreground block">
                     {lesson.courseName}
                   </span>

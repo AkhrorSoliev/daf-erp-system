@@ -62,6 +62,41 @@ describe('ReportsDebtHistoryService', () => {
     prisma.transaction.findMany.mockResolvedValue(transactions);
   };
 
+  /**
+   * A ledger that answers `transaction.findMany` by APPLYING the `where` it is
+   * given, so a missing `reversedAt: null` / `reversedTransactionId: null`
+   * shows in what comes back and not only in a call assertion. Rows are listed
+   * oldest first — the order `replay` asks for. A predicate it does not know
+   * throws instead of being ignored.
+   */
+  const answerFromLedger = (rows: any[]) =>
+    prisma.transaction.findMany.mockImplementation(async ({ where }: any) =>
+      rows.filter((r) =>
+        Object.entries<any>(where).every(([key, want]) => {
+          switch (key) {
+            case 'companyId':
+              return true;
+            case 'studentId':
+              return want.in.includes(r.studentId);
+            case 'type':
+              return r.type === want;
+            case 'amount':
+              return r.amount !== want.not;
+            case 'createdAt':
+              return (
+                (want.gte === undefined || r.createdAt >= want.gte) &&
+                (want.lt === undefined || r.createdAt < want.lt)
+              );
+            case 'reversedAt':
+            case 'reversedTransactionId':
+              return r[key] === want; // `null` = still in force
+            default:
+              throw new Error(`ledger fake: unsupported where.${key}`);
+          }
+        }),
+      ),
+    );
+
   beforeEach(async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-07-15T12:00:00+05:00'));
     prisma = {
@@ -182,6 +217,68 @@ describe('ReportsDebtHistoryService', () => {
     expect(june.debtAdded).toBe(100_000); // the rollback re-opened the debt
     expect(june.closingDebt).toBe(300_000);
     expectFoots(res.months);
+  });
+
+  describe('a cancelled write-off (A2.9)', () => {
+    // 500 000 of debt arose in August, was forgiven on 10.08, and the
+    // forgiveness was cancelled on 05.09. `reverseTransaction` stamps
+    // `reversedAt` on the original and writes a counter-row of the same type,
+    // negative, pointing back at it.
+    const row = (
+      id: string,
+      type: string,
+      amount: number,
+      createdAt: Date,
+      over: any = {},
+    ) => ({
+      id,
+      studentId: 10001,
+      type,
+      amount,
+      createdAt,
+      reversedAt: null,
+      reversedTransactionId: null,
+      ...over,
+    });
+    const ledgerRows = [
+      row('bill', 'LESSON_DEDUCTION', -500_000, at('2026-08', 3)),
+      row('forgive', 'DEBT_WRITE_OFF', 500_000, at('2026-08', 10), {
+        reversedAt: at('2026-09', 5),
+      }),
+      row('undo', 'DEBT_WRITE_OFF', -500_000, at('2026-09', 5), {
+        reversedTransactionId: 'forgive',
+      }),
+    ];
+
+    beforeEach(() => {
+      jest.setSystemTime(new Date('2026-09-15T12:00:00+05:00'));
+      setup([student(10001, -500_000)], []);
+      answerFromLedger(ledgerRows);
+    });
+
+    it('is NOT «Kechirildi»: it lands in debtOther, the undo in debtAdded, and every month foots', async () => {
+      const res = await service.getDebtHistory(1, null);
+      const august = res.months.find((m) => m.monthKey === '2026-08')!;
+      const september = res.months.find((m) => m.monthKey === '2026-09')!;
+
+      expect(august.debtAdded).toBe(500_000);
+      expect(august.debtForgiven).toBe(0);
+      expect(august.debtOther).toBe(500_000);
+      expect(august.closingDebt).toBe(0);
+      expect(september.debtAdded).toBe(500_000);
+      expect(september.debtForgiven).toBe(0);
+      expect(september.closingDebt).toBe(500_000);
+      expect(res.totals.debtForgiven).toBe(0);
+      expectFoots(res.months);
+    });
+
+    it.each(['2026-08', '2026-09'])(
+      'is not listed under %s — neither the forgiveness nor its undo',
+      async (monthKey) => {
+        const res = await service.getMonthAgingDetail(1, monthKey, null);
+        expect(res.writeOffs).toEqual([]);
+      },
+    );
   });
 
   describe('cohort legs', () => {

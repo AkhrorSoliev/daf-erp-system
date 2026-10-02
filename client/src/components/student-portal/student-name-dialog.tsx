@@ -62,7 +62,7 @@ export function StudentNameDialog({
               }
             : old,
       );
-      toast.success("Ism va familya yangilandi");
+      toast.success("Ism va familiya yangilandi");
       onOpenChange(false);
     } catch (err) {
       toast.error(getErrorMessage(err, "Saqlashda xatolik"));
@@ -76,7 +76,7 @@ export function StudentNameDialog({
       <DialogContent className="lumio sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display text-xl font-extrabold">
-            Ism va familya
+            Ism va familiya
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -89,11 +89,11 @@ export function StudentNameDialog({
               required
             />
           </Field>
-          <Field label="Familya">
+          <Field label="Familiya">
             <Input
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              placeholder="Familyangiz"
+              placeholder="Familiyangiz"
               minLength={2}
               required
             />

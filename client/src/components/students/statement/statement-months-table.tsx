@@ -11,23 +11,33 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { LessonDay, MonthView, Segment } from "./statement-types";
+import type {
+  DuesTotalView,
+  DueView,
+  LessonDay,
+  Segment,
+} from "./statement-types";
 import { LESSON_STATUS, TONE_TEXT, dayMonth } from "./statement-utils";
 import { Segments } from "./statement-segments";
 
 const AMOUNT = "text-right font-mono tabular-nums";
 
 /**
- * "Oylar bo'yicha": one row per month. Clicking a row opens that month's
- * lesson days. `lessonDays[key]` comes from the model, in the same order.
- * The table is a whole-course summary, so it is deliberately not paginated.
+ * "Oylar bo'yicha": one row per month (and per charge that is not a lesson)
+ * with its price, what the payments covered of it and what is still owed;
+ * the total row is the debt the answer states. Clicking a month opens its
+ * lesson days. The table is a whole-course summary, so it is not paginated.
  */
 export function StatementMonthsTable({
-  months,
+  dues,
+  total,
+  surplus,
   lessonDays,
   sharpNote,
 }: {
-  months: MonthView[];
+  dues: DueView[];
+  total: DuesTotalView | null;
+  surplus: { label: string; amount: string } | null;
   lessonDays: Record<string, LessonDay[]>;
   sharpNote: Segment[] | null;
 }) {
@@ -38,28 +48,28 @@ export function StatementMonthsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-48">Oy</TableHead>
+            <TableHead className="min-w-40">Oy</TableHead>
             <TableHead>Darslar</TableHead>
-            <TableHead className="text-right">Darslar narxi</TableHead>
+            <TableHead className="text-right">Narxi</TableHead>
             <TableHead className="text-right">To&apos;langan</TableHead>
-            <TableHead className="text-right">Oy oxirida</TableHead>
+            <TableHead className="text-right">Qarz</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {months.map((m) => {
-            const days = lessonDays[m.key] ?? [];
-            const note = m.highlight && m.isLast ? sharpNote : null;
-            const canOpen =
-              days.length > 0 || m.details.length > 0 || note !== null;
-            const isOpen = open === m.key;
-            const groups = new Set(days.map((d) => d.group));
-            const toggle = () => setOpen(isOpen ? null : m.key);
+          {dues.map((d, i) => {
+            const days = d.key ? (lessonDays[d.key] ?? []) : [];
+            const note = d.highlight && d.bold ? sharpNote : null;
+            const canOpen = days.length > 0 || note !== null;
+            const rowKey = d.key ?? `due-${i}`;
+            const isOpen = open === rowKey;
+            const groups = new Set(days.map((x) => x.group));
+            const toggle = () => setOpen(isOpen ? null : rowKey);
             return (
-              <Fragment key={m.key}>
+              <Fragment key={rowKey}>
                 <TableRow
-                  data-month={m.key}
+                  data-month={d.key ?? undefined}
                   className={cn(
-                    m.highlight &&
+                    d.highlight &&
                       "bg-yellow-50 hover:bg-yellow-100/70 dark:bg-yellow-950/20 dark:hover:bg-yellow-950/30",
                     canOpen && "cursor-pointer",
                   )}
@@ -77,7 +87,7 @@ export function StatementMonthsTable({
                   tabIndex={canOpen ? 0 : undefined}
                   aria-expanded={canOpen ? isOpen : undefined}
                 >
-                  <TableCell>
+                  <TableCell colSpan={d.wide ? 2 : 1} className="align-top">
                     <div className="flex items-center gap-1.5">
                       <ChevronRight
                         className={cn(
@@ -86,41 +96,51 @@ export function StatementMonthsTable({
                           !canOpen && "invisible",
                         )}
                       />
-                      <span className="font-medium">{m.label}</span>
+                      <span className={d.bold ? "font-semibold" : "font-medium"}>
+                        {d.label}
+                      </span>
                     </div>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {m.lessons}
-                    {m.absent && (
-                      <span className="text-red-600 dark:text-red-400">
-                        {" · "}
-                        {m.absent}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className={AMOUNT}>
-                    {m.cost ?? (
+                  {!d.wide && (
+                    <TableCell className="whitespace-normal align-top">
+                      {d.lessons}
+                      {d.lessonsNote && (
+                        <span className="text-xs text-muted-foreground">
+                          {" · "}
+                          {d.lessonsNote}
+                        </span>
+                      )}
+                      {d.details.map((line, n) => (
+                        <p key={n} className="text-xs text-muted-foreground">
+                          {line}
+                        </p>
+                      ))}
+                    </TableCell>
+                  )}
+                  <TableCell className={cn(AMOUNT, "align-top")}>
+                    {d.cost ?? (
                       <span className="font-sans text-xs text-muted-foreground">
-                        {m.costNote}
+                        {d.costNote}
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className={AMOUNT}>{m.money}</TableCell>
+                  <TableCell className={cn(AMOUNT, "align-top")}>
+                    {d.paid}
+                  </TableCell>
                   <TableCell
                     className={cn(
                       AMOUNT,
-                      "font-semibold",
-                      TONE_TEXT[m.runningTone],
+                      "align-top font-semibold",
+                      TONE_TEXT[d.leftTone],
                     )}
                   >
-                    {m.running}
+                    {d.left}
                   </TableCell>
                 </TableRow>
                 {isOpen && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={5} className="bg-muted/30">
                       <MonthDetails
-                        details={m.details}
                         note={note}
                         days={days}
                         showGroup={groups.size > 1}
@@ -131,6 +151,40 @@ export function StatementMonthsTable({
               </Fragment>
             );
           })}
+          {total && (
+            <TableRow className="border-t-2 font-semibold hover:bg-transparent">
+              <TableCell colSpan={2}>
+                Jami
+                {total.details.map((line, n) => (
+                  <p
+                    key={n}
+                    className="text-xs font-normal text-muted-foreground"
+                  >
+                    {line}
+                  </p>
+                ))}
+              </TableCell>
+              <TableCell className={cn(AMOUNT, "align-top")}>
+                {total.cost}
+              </TableCell>
+              <TableCell className={cn(AMOUNT, "align-top")}>
+                {total.paid}
+              </TableCell>
+              <TableCell
+                className={cn(AMOUNT, "align-top", TONE_TEXT[total.leftTone])}
+              >
+                {total.left}
+              </TableCell>
+            </TableRow>
+          )}
+          {surplus && (
+            <TableRow className="font-semibold hover:bg-transparent">
+              <TableCell colSpan={4}>{surplus.label}</TableCell>
+              <TableCell className={cn(AMOUNT, TONE_TEXT.green)}>
+                {surplus.amount}
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </div>
@@ -166,14 +220,12 @@ export function LessonDayChips({
   );
 }
 
-/** What a month row opens: why it cost what it did, then its lesson days. */
+/** What a month row opens: why it differs sharply, then its lesson days. */
 export function MonthDetails({
-  details,
   note,
   days,
   showGroup,
 }: {
-  details: string[];
   note: Segment[] | null;
   days: LessonDay[];
   showGroup: boolean;
@@ -184,13 +236,6 @@ export function MonthDetails({
         <p className="text-sm text-yellow-900 dark:text-yellow-300">
           <Segments segments={note} />
         </p>
-      )}
-      {details.length > 0 && (
-        <ul className="space-y-0.5 text-xs text-muted-foreground">
-          {details.map((d, i) => (
-            <li key={i}>{d}</li>
-          ))}
-        </ul>
       )}
       {days.length > 0 && <LessonDayChips days={days} showGroup={showGroup} />}
     </div>

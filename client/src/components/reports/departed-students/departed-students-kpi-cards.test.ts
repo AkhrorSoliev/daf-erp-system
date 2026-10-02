@@ -62,7 +62,6 @@ describe("DepartedStudentsKpiCards", () => {
     activeAtStart: 5,
     pendingCount: 1,
     graceDays,
-    lostRevenue: 400_000,
     totalDebt: -80_000,
     debtorCount: 2,
     avgDurationMonths: 4.4,
@@ -100,5 +99,29 @@ describe("DepartedStudentsKpiCards", () => {
     expect(texts[0]).toBe(
       "Tanlangan davrda ketgan o'quvchilar, har biri bir marta.",
     );
+  });
+
+  // «Yo'qotilgan daromad» read contracts, and there are none: always 0.
+  it("draws four cards in a four-column grid", () => {
+    const html = renderToStaticMarkup(
+      createElement(DepartedStudentsKpiCards, {
+        data: summary,
+        isLoading: false,
+      }),
+    );
+    expect(tooltips(summary)).toHaveLength(4);
+    expect(html).toContain("lg:grid-cols-4");
+    expect(html).not.toContain("lg:grid-cols-5");
+  });
+
+  it("draws four skeletons in the same grid while loading", () => {
+    const html = renderToStaticMarkup(
+      createElement(DepartedStudentsKpiCards, {
+        data: undefined,
+        isLoading: true,
+      }),
+    );
+    expect(html.match(/h-\[104px\]/g)).toHaveLength(4);
+    expect(html).toContain("lg:grid-cols-4");
   });
 });

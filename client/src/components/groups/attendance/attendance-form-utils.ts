@@ -38,12 +38,21 @@ export interface StudentAttendance {
 export interface LessonAdmission {
   admitted: boolean;
   // LEFT_OUT: after the lesson, a student the register left out stays out,
-  // paid or not (server `leftOutAfterEnd`).
-  reason: "NOT_APPLIED" | "FIRST_LESSON" | "PAID" | "NOT_PAID" | "LEFT_OUT";
+  // paid or not (server `leftOutAfterEnd`). BELOW_MIN_SHARE: the lessons held
+  // are paid for, the least share of the month is not (ADR-0064).
+  reason:
+    | "NOT_APPLIED"
+    | "FIRST_LESSON"
+    | "PAID"
+    | "NOT_PAID"
+    | "BELOW_MIN_SHARE"
+    | "LEFT_OUT";
   /** The least payment that admits the student today. */
   shortfall: number;
   /** Admitted while owing: the last lesson this month the balance reaches. */
   paidThrough: string | null;
+  /** BELOW_MIN_SHARE only: the share of the month that was asked for. */
+  minPaidPercent?: number;
 }
 
 /** Qarzdorning joriy (eng so'nggi) sikli — sana oralig'i bilan. */

@@ -2,7 +2,6 @@
 
 import {
   Calendar,
-  CircleDollarSign,
   Info,
   TrendingDown,
   UserMinus,
@@ -29,7 +28,6 @@ export interface DepartedStudentsSummary {
    * ADR-0035 does not send it.
    */
   graceDays?: { LEFT_GROUP: number; FROZEN: number };
-  lostRevenue: number;
   totalDebt: number;
   debtorCount: number;
   avgDurationMonths: number;
@@ -122,8 +120,8 @@ interface Props {
 export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
   if (isLoading || !data) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-[104px] rounded-xl" />
         ))}
       </div>
@@ -142,10 +140,6 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
     "Ketish koeffitsienti = Davrda ketganlar ÷ Davr boshida guruhda bo'lganlar × 100.\n" +
     `Misol: ${data.departedCount} ÷ ${data.activeAtStart} → ${data.churnRate.toFixed(1)}%.`;
 
-  const lostRevenueTooltip =
-    "Agar ketgan o'quvchilar qolishganida, yana qancha so'm keltirishardi.\n" +
-    "Har bir ketgan yozuv uchun: Shartnoma summasi − Allaqachon to'langan summa. Shartnomasi yo'q yozuvlar 0 deb hisoblanadi.";
-
   const avgDurationTooltip =
     "Davrda ketganlar markazda o'rtacha necha oy o'qigani: birinchi guruhga qo'shilgan kundan ketgan kungacha.";
 
@@ -154,7 +148,7 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
     `${data.debtorCount} ta o'quvchida qarz bor.`;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <KpiCard
         icon={UserMinus}
         label="Davrda ketganlar"
@@ -166,15 +160,6 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
         label="Ketish koeffitsienti"
         value={`${data.churnRate.toFixed(1)}%`}
         tooltip={churnTooltip}
-      />
-      <KpiCard
-        icon={CircleDollarSign}
-        label="Yo'qotilgan daromad"
-        value={formatMoney(data.lostRevenue)}
-        valueColor={
-          data.lostRevenue > 0 ? "text-red-600 dark:text-red-400" : undefined
-        }
-        tooltip={lostRevenueTooltip}
       />
       <KpiCard
         icon={Calendar}

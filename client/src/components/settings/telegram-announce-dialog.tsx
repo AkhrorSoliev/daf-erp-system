@@ -41,7 +41,7 @@ interface TemplateDef {
   vars: string[];
 }
 
-const TEMPLATES: Record<TemplateKey, TemplateDef> = {
+export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
   NEW_PAYMENT_METHOD: {
     label: "Yangi to'lov usuli",
     body: "🎉 Yangi to'lov usuli: {{name}}\n\nEndi siz {{name}} orqali ham to'lovlarni qabul qila olasiz. Tafsilotlar admin panelda.",
@@ -69,6 +69,19 @@ const TEMPLATES: Record<TemplateKey, TemplateDef> = {
   },
 };
 
+// A template's variable names are the keys sent to the server, so they stay
+// English; the admin reads these words in the form and in the preview instead.
+// A key without a label shows as itself.
+export const VAR_LABELS: Record<string, string> = {
+  name: "Nomi",
+  description: "Tavsif",
+  summary: "Qisqacha mazmuni",
+  title: "Sarlavha",
+  body: "Matn",
+};
+
+const varLabel = (key: string) => VAR_LABELS[key] ?? key;
+
 export function TelegramAnnounceDialog() {
   const [open, setOpen] = useState(false);
   const [templateKey, setTemplateKey] = useState<TemplateKey>("GENERAL");
@@ -80,7 +93,7 @@ export function TelegramAnnounceDialog() {
   const preview = useMemo(() => {
     if (templateKey === "CUSTOM") return customMessage;
     return def.body.replace(/\{\{(\w+)\}\}/g, (_, k) =>
-      variables[k] ? variables[k] : `[?${k}?]`,
+      variables[k] ? variables[k] : `[?${varLabel(k)}?]`,
     );
   }, [templateKey, variables, customMessage, def.body]);
 
@@ -97,7 +110,7 @@ export function TelegramAnnounceDialog() {
     onSuccess: (data) => {
       if (data.dryRun) {
         toast.success(
-          `Preview tayyor — ${data.recipientCount} ta guruhga yuboriladi`,
+          `Ko'rinish tayyor — ${data.recipientCount} ta guruhga yuboriladi`,
         );
       } else {
         toast.success(
@@ -128,7 +141,7 @@ export function TelegramAnnounceDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Feature e&apos;loni yuborish</DialogTitle>
+          <DialogTitle>Yangilik e&apos;loni yuborish</DialogTitle>
           <DialogDescription>
             Barcha tasdiqlangan Telegram guruhlarga bir martalik xabar.
             Avval &quot;Ko&apos;rib chiqish&quot; tugmasi bilan tekshiring.
@@ -175,9 +188,9 @@ export function TelegramAnnounceDialog() {
           ) : (
             def.vars.map((v) => (
               <div key={v} className="space-y-2">
-                <Label className="capitalize">{v}</Label>
+                <Label>{varLabel(v)}</Label>
                 <Input
-                  placeholder={v}
+                  placeholder={varLabel(v)}
                   value={variables[v] ?? ""}
                   onChange={(e) =>
                     setVariables((p) => ({ ...p, [v]: e.target.value }))
@@ -188,7 +201,7 @@ export function TelegramAnnounceDialog() {
           )}
 
           <div className="space-y-2">
-            <Label>Ko&apos;rinish (preview)</Label>
+            <Label>Ko&apos;rinish</Label>
             <div className="rounded border bg-muted/40 p-3 text-sm whitespace-pre-wrap min-h-24">
               {preview || (
                 <span className="text-muted-foreground">

@@ -14,6 +14,7 @@ import { AttendanceValidationService } from './attendance-validation.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import {
   ENDED_REFUSAL,
+  STUDENT_ENDED_REFUSAL,
   TEACHER_ENDED_REFUSAL,
 } from './shared/attendance-window';
 
@@ -553,7 +554,7 @@ describe('QrAttendanceService', () => {
 
       await expect(
         service.scanQr('valid-token', 10001, 20001, 1),
-      ).rejects.toThrow(ENDED_REFUSAL);
+      ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
       expect(validation.validateLessonDate).toHaveBeenCalledWith(
         'group-1',
         '2026-04-03',
@@ -584,6 +585,31 @@ describe('QrAttendanceService', () => {
         service.scanQr('valid-token', 10001, 20001, 1),
       ).rejects.toThrow(
         "To'lov qilinmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaysiz",
+      );
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should name the least share to a student who paid less than it (ADR-0064)', async () => {
+      redis.get.mockResolvedValueOnce(tokenData);
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10001,
+            {
+              admitted: false,
+              reason: 'BELOW_MIN_SHARE',
+              shortfall: 125000,
+              paidThrough: null,
+              minPaidPercent: 50,
+            },
+          ],
+        ]),
+      );
+
+      await expect(
+        service.scanQr('valid-token', 10001, 20001, 1),
+      ).rejects.toThrow(
+        "Oy to'lovining kamida 50% i to'lanmagan: shartnomaga ko'ra 2-darsdan boshlab shu qismi to'lanmaguncha darsga qo'yilmaysiz",
       );
       expect(prisma.attendance.upsert).not.toHaveBeenCalled();
     });
@@ -766,7 +792,7 @@ describe('QrAttendanceService', () => {
 
         await expect(
           service.scanQr('valid-token', 10001, 20001, 1),
-        ).rejects.toThrow(ENDED_REFUSAL);
+        ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
         expect(prisma.attendance.upsert).not.toHaveBeenCalled();
       });
 
@@ -778,7 +804,7 @@ describe('QrAttendanceService', () => {
 
         await expect(
           service.scanQr('valid-token', 10001, 20001, 1),
-        ).rejects.toThrow(ENDED_REFUSAL);
+        ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
         expect(prisma.attendance.upsert).not.toHaveBeenCalled();
       });
 
@@ -790,7 +816,7 @@ describe('QrAttendanceService', () => {
 
         await expect(
           service.scanQr('valid-token', 10001, 20001, 1),
-        ).rejects.toThrow(ENDED_REFUSAL);
+        ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
         expect(prisma.attendance.upsert).not.toHaveBeenCalled();
       });
 

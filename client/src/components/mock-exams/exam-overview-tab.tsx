@@ -111,7 +111,7 @@ export function ExamOverviewTab({ exam }: ExamOverviewTabProps) {
           <h2 className="text-sm font-semibold">Ro&apos;yxatga olish formasi</h2>
           <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
             Telegram bot orqali ishtirokchilardan so&apos;raladigan savollar. Ism,
-            familya va telefon majburiy.
+            familiya va telefon majburiy.
           </p>
           <Button asChild size="sm" variant="outline" className="mt-4 w-full">
             <Link href={`/mock-exams/${exam.id}/form`}>

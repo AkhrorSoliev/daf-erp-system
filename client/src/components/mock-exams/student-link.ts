@@ -18,7 +18,7 @@ export interface LinkableStudent {
   status: string;
 }
 
-/** Oynadagi ism, familya va telefon maydonlari. */
+/** Oynadagi ism, familiya va telefon maydonlari. */
 export interface ParticipantIdentity {
   firstName: string;
   lastName: string;
@@ -56,7 +56,7 @@ function cardIdentity(student: LinkableStudent): ParticipantIdentity {
 }
 
 /**
- * O'quvchi tanlanganda ism, familya va telefon kartadan olinadi. Tanlov
+ * O'quvchi tanlanganda ism, familiya va telefon kartadan olinadi. Tanlov
  * olib tashlansa yoki boshqa o'quvchi tanlansa, oldingi kartadan kelgan va
  * admin o'zgartirmagan qiymatlar tozalanadi — qo'lda yozilgani qoladi.
  */

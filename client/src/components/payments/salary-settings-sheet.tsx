@@ -27,6 +27,7 @@ import {
   isInactiveAccount,
   type SalarySettingsAccess,
 } from "./salary-settings-access";
+import { SALARY_TYPE_LABELS } from "./salary-utils";
 
 interface OverviewConfig {
   id: string;
@@ -50,12 +51,6 @@ interface OverviewRow {
 interface OverviewResponse {
   data: OverviewRow[];
 }
-
-const SALARY_TYPE_SHORT: Record<string, string> = {
-  PERCENTAGE: "Foiz",
-  FIXED_PER_STUDENT: "O'quvchi boshiga",
-  FIXED_MONTHLY: "Oylik",
-};
 
 /**
  * What `SalaryConfigRowSheet` needs. Held whole rather than as an id because
@@ -277,7 +272,7 @@ export function SalarySettingsSheet({
                                 >
                                   {c.groupId
                                     ? `${c.group?.name}: `
-                                    : `${SALARY_TYPE_SHORT[c.salaryType] ?? c.salaryType}: `}
+                                    : `${SALARY_TYPE_LABELS[c.salaryType] ?? c.salaryType}: `}
                                   {c.salaryType === "PERCENTAGE"
                                     ? `${c.value}%`
                                     : `${formatPrice(c.value)} so'm`}

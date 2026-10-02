@@ -40,6 +40,16 @@ export function admissionCopy(
       warning: null,
     };
   }
+  if (admission.reason === "BELOW_MIN_SHARE") {
+    const share = `${admission.minPaidPercent}%`;
+    return {
+      blocked: true,
+      label: `Oy to'lovining ${share} i to'lanmagan · darsga qo'yilmaydi`,
+      warning: isAdmin
+        ? `Bu darsga kirishi uchun kamida ${formatPrice(admission.shortfall)} so'm kerak: oy to'lovining ${share} i to'lanishi shart. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.`
+        : `Bu o'quvchi oy to'lovining kamida ${share} ini to'lamagan. Shartnomaga ko'ra 2-darsdan boshlab shu qismi to'lanmaguncha darsga qo'yilmaydi. Agar u darsda o'tirsa va keyinroq to'lov qilsa ham, bu dars uchun sizga ish haqi yozilmaydi.`,
+    };
+  }
   if (!admission.admitted) {
     return {
       blocked: true,

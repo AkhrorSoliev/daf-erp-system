@@ -58,9 +58,11 @@ export class SalaryAccrualService {
    * `groupId DESC` is not portable across drivers.
    *
    * FIXED_PER_STUDENT semantics: the configured `value` represents what the
-   * teacher earns from one student over one full cycle (lessonPaymentCount
-   * lessons). Per-lesson is `value / lessonPaymentCount` — NOT `value`,
-   * which would over-pay by N×.
+   * teacher earns from one student over one full cycle. Per-lesson is
+   * `value / divisor` — NOT `value`, which would over-pay by N×. The divisor
+   * is `lessonDivisor` when the caller passes it: on a MONTHLY course the
+   * month's planned lessons, so a 13- and a 14-lesson month pay the same
+   * (ADR-0050). Otherwise it is the course's `lessonPaymentCount` (a pack).
    */
   async createAccrual(params: {
     teacherId: number;

@@ -111,12 +111,6 @@ function fakePrisma(
     },
     enrollmentStateLog: { findMany: jest.fn().mockResolvedValue(f.logs) },
     statusHistory: { findMany: jest.fn().mockResolvedValue(f.history) },
-    contract: {
-      findMany: jest.fn().mockResolvedValue([
-        { totalAmount: 1_000_000, paidAmount: 600_000 },
-        { totalAmount: 500_000, paidAmount: 700_000 },
-      ]),
-    },
     groupTeacherHistory: { findMany: jest.fn().mockResolvedValue([]) },
     group: { count: jest.fn().mockResolvedValue(0) },
     attendance: { groupBy: jest.fn().mockResolvedValue([]) },
@@ -156,7 +150,6 @@ describe('ReportsDepartedStudentsService', () => {
         // 10003's stop (15.11) is still pending, but it started after September.
         pendingCount: 0,
         graceDays: DEPARTURE_GRACE_DAYS,
-        lostRevenue: 400_000,
         totalDebt: -80_000,
         debtorCount: 2,
         avgDurationMonths: 4.4,

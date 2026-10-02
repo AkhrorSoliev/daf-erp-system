@@ -8,7 +8,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OnEvent } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { createHash, timingSafeEqual } from 'crypto';
 import {
   STAFF_CABINET_REQUESTED,
@@ -149,6 +149,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private gateStats: TelegramChannelGateStatsService,
     private leadOrigin: StudentLeadOriginService,
     private statements: StatementService,
+    private events: EventEmitter2,
   ) {}
 
   async onModuleInit() {
@@ -275,6 +276,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.bot,
       this.entityHistoryService,
       this.leadOrigin,
+      this.events,
     );
 
     const employeeScene = createEmployeeRegistrationScene(

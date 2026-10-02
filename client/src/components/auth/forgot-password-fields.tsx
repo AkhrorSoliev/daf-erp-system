@@ -4,14 +4,16 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPhoneInput } from "@/lib/format-utils";
 import { Button } from "@/components/ui/button";
+import { DAFTAR_INPUT, DAFTAR_ROW } from "./daftar-field";
 import {
   Button as LumioButton,
   Input as LumioInput,
   Field as LumioField,
 } from "@/components/student-portal/lumio";
 
-// The password-reset flow is one component with two skins: shadcn for the admin
-// and teacher logins, Lumio for the student portal. The three steps, the OTP
+// The password-reset flow is one component with two skins: Daftar (underline
+// fields on the shadcn tokens, see daftar-field.ts) for the admin and teacher
+// logins, Lumio for the student portal. The three steps, the OTP
 // cooldown and every API call are shared — only these leaves differ, so they
 // live here rather than as branches scattered through the dialog's JSX.
 //
@@ -21,8 +23,8 @@ import {
 
 export type FpVariant = "default" | "lumio";
 
-const SHADCN_INPUT =
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+// The dialog has no ruling to sit on, so its rows get a full touch height.
+const ROW = cn(DAFTAR_ROW, "h-11");
 
 interface FieldProps {
   lumio: boolean;
@@ -34,8 +36,8 @@ interface FieldProps {
 export function FpField({ lumio, label, htmlFor, children }: FieldProps) {
   if (lumio) return <LumioField label={label}>{children}</LumioField>;
   return (
-    <div className="space-y-2">
-      <label htmlFor={htmlFor} className="text-sm font-medium">
+    <div className="space-y-1">
+      <label htmlFor={htmlFor} className="text-sm text-muted-foreground">
         {label}
       </label>
       {children}
@@ -74,11 +76,9 @@ export function FpPhoneInput({
   if (lumio) return <LumioInput addon="+998" {...shared} />;
 
   return (
-    <div className="flex">
-      <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
-        +998
-      </span>
-      <input {...shared} className={cn(SHADCN_INPUT, "rounded-l-none")} />
+    <div className={ROW}>
+      <span className="text-base text-muted-foreground">+998</span>
+      <input {...shared} className={DAFTAR_INPUT} />
     </div>
   );
 }
@@ -118,10 +118,12 @@ export function FpCodeInput({
   }
 
   return (
-    <input
-      {...shared}
-      className={cn(SHADCN_INPUT, "text-center text-lg tracking-[0.5em]")}
-    />
+    <div className={ROW}>
+      <input
+        {...shared}
+        className={cn(DAFTAR_INPUT, "text-center text-lg tracking-[0.5em]")}
+      />
+    </div>
   );
 }
 
@@ -160,18 +162,18 @@ export function FpPasswordInput({
   if (lumio) return <LumioInput type="password" {...shared} />;
 
   return (
-    <div className="relative">
+    <div className={ROW}>
       <input
         {...shared}
         type={show ? "text" : "password"}
-        className={cn(SHADCN_INPUT, onToggleShow && "pr-10")}
+        className={DAFTAR_INPUT}
       />
       {onToggleShow ? (
         <button
           type="button"
           onClick={onToggleShow}
           aria-label={show ? "Parolni yashirish" : "Parolni ko'rsatish"}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          className="self-center text-muted-foreground hover:text-foreground"
         >
           {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
         </button>

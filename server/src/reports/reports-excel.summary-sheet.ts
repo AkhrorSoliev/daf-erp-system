@@ -2,7 +2,8 @@
  * «Xulosa» — the single sheet the director actually reads. Six blocks:
  * NATIJA (block 1) / o'z xarajatini qopladimi (2) / PUL QAYERDAN KELDI (3) /
  * DARSLARINING PULI QAYERDAN KELGAN (4) / PUL QAYERGA KETDI (5) /
- * O'QUVCHILAR (6).
+ * O'QUVCHILAR (6). From the first monthly month (2026-09, ADR-0058) block 4 is
+ * OYLIK HISOBLARI instead: the month's bill, paid and unpaid.
  *
  * Ported block-for-block from the CEO-approved prototype — a throwaway script
  * that rendered this exact sheet ("1. XULOSA") against production data and was
@@ -30,6 +31,7 @@ import {
   uzMonthLabel,
 } from './reports-excel.v2-helpers';
 import { StudentFlow } from './reports-student-flow.service';
+import type { MonthCharges } from './month-charges';
 
 export interface SummaryInput {
   month: string; // '2026-07'
@@ -63,6 +65,13 @@ export interface SummaryInput {
     unpaid: number;
     total: number;
   };
+  /**
+   * The month's CHARGED figures (ADR-0058). Set from the first monthly month
+   * (2026-09): block 4 then reads «hisobi / to'langan / to'lanmagan» and
+   * `lessonMoney` goes unused. `null` for the months before it, which keep the
+   * lesson-value breakdown exactly as it was.
+   */
+  monthCharges: MonthCharges | null;
   nextMonthLabel: string;
   cashOut: Array<{ label: string; amount: number }>;
   students: StudentFlow;
@@ -318,12 +327,89 @@ function buildBlock3(
   izohCellFor(info);
 }
 
-/** Block 4 — this month's LESSON VALUE broken down by when it was paid. No comparison columns. */
+/**
+ * The «not paid» row of block 4, in both of its shapes. Zero is the good news,
+ * and a bare "0" reads as a missing figure — so it is spelled out. Money still
+ * owed is the one red cell on the block.
+ */
+function unpaidRow(
+  ws: Worksheet,
+  label: string,
+  unpaid: number,
+  total: number,
+  izoh: { none: string; owed: string },
+): Row {
+  if (unpaid === 0) {
+    const r = ws.addRow([label, "Yo'q — hammasi to'langan", '', '', izoh.none]);
+    r.getCell(2).font = { bold: true, color: { argb: GREEN } };
+    izohCellFor(r);
+    return r;
+  }
+  const r = ws.addRow([
+    label,
+    unpaid,
+    total ? Math.round((unpaid / total) * 1000) / 10 : 0,
+    '',
+    izoh.owed,
+  ]);
+  r.getCell(2).numFmt = NUM;
+  r.getCell(2).font = { bold: true, color: { argb: RED } };
+  r.getCell(3).numFmt = PCT;
+  izohCellFor(r);
+  return r;
+}
+
+/**
+ * Block 4 from the first monthly month (ADR-0058): the month's bill, how much of
+ * it is paid and how much is not. All three amounts are `getMonthCharges`'s as
+ * they come — only each row's share of the bill is worked out here. The lesson-
+ * value breakdown (`buildBlock4` below) stays for the months before.
+ */
+function buildMonthChargesBlock4(
+  ws: Worksheet,
+  charges: MonthCharges,
+  curLabel: string,
+): void {
+  blockTitle(ws, `4.  ${curLabel.toUpperCase()} OYLIK HISOBLARI`, 5);
+  columnHeader(ws, ["Ko'rsatkich", 'Summa', 'Jamidan %', '', 'Izoh']);
+  // A month with nothing charged yet (01:00–04:00 on the 1st, before the
+  // monthly charge run; a branch with no monthly course) has no bill, so there
+  // is nothing to be «all paid»: «Yo'q — hammasi to'langan» is for a bill that
+  // exists and is settled, never for an empty one.
+  const billed = charges.charged > 0;
+  pctRow(
+    ws,
+    `${curLabel} hisobi`,
+    charges.charged,
+    charges.charged,
+    billed
+      ? "Oyning boshida yozilgan oylik hisoblar: qancha to'langani va qancha qolgani. To'lov avval eng eski qarzni yopadi."
+      : 'Bu oy uchun hali oylik hisob yozilmagan.',
+  );
+  pctRow(ws, "shundan to'langan", charges.paid, charges.charged, '');
+  if (billed) {
+    unpaidRow(ws, "to'lanmagan", charges.unpaid, charges.charged, {
+      none: '',
+      owed: '',
+    });
+  } else {
+    ws.addRow(["to'lanmagan", '—', '', '', '']);
+  }
+}
+
+/**
+ * Block 4 — the month's bill when it has one (from 2026-09), else this month's
+ * LESSON VALUE broken down by when it was paid. No comparison columns.
+ */
 function buildBlock4(
   ws: Worksheet,
   input: SummaryInput,
   curLabel: string,
 ): void {
+  if (input.monthCharges) {
+    buildMonthChargesBlock4(ws, input.monthCharges, curLabel);
+    return;
+  }
   const { lessonMoney, nextMonthLabel } = input;
   blockTitle(ws, `4.  ${curLabel} DARSLARINING PULI QAYERDAN KELGAN`, 5);
   columnHeader(ws, ["Qachon to'langan", 'Summa', 'Jamidan %', '', 'Izoh']);
@@ -357,31 +443,10 @@ function buildBlock4(
     "Oy tugagach kelgan to'lovlar.",
   );
 
-  // Zero here is the good news, and a bare "0" reads as a missing figure —
-  // spell it out instead.
-  if (lessonMoney.unpaid === 0) {
-    const r = ws.addRow([
-      "Hali to'lanmay qolgan",
-      "Yo'q — hammasi to'langan",
-      '',
-      '',
-      "Qarzda qolgan dars yo'q, oy to'liq yopilgan.",
-    ]);
-    r.getCell(2).font = { bold: true, color: { argb: GREEN } };
-    izohCellFor(r);
-  } else {
-    const r = ws.addRow([
-      "Hali to'lanmay qolgan",
-      lessonMoney.unpaid,
-      total ? Math.round((lessonMoney.unpaid / total) * 1000) / 10 : 0,
-      '',
-      "Bu darslar o'tilgan, lekin puli hali kelmagan.",
-    ]);
-    r.getCell(2).numFmt = NUM;
-    r.getCell(2).font = { bold: true, color: { argb: RED } };
-    r.getCell(3).numFmt = PCT;
-    izohCellFor(r);
-  }
+  unpaidRow(ws, "Hali to'lanmay qolgan", lessonMoney.unpaid, total, {
+    none: "Qarzda qolgan dars yo'q, oy to'liq yopilgan.",
+    owed: "Bu darslar o'tilgan, lekin puli hali kelmagan.",
+  });
   totalsBar(
     ws,
     [`${curLabel} darslari qiymati`, total, 100, '', ''],

@@ -7,15 +7,30 @@ import { MonthlyPaymentNoticeService } from './monthly-payment-notice.service';
 describe('MonthlyPaymentNoticeCronService', () => {
   const NOW = new Date('2026-10-01T14:50:00Z');
   let cron: MonthlyPaymentNoticeCronService;
-  let notices: { queueChargeNotices: jest.Mock; queueReminders: jest.Mock };
+  let notices: {
+    queueChargeNotices: jest.Mock;
+    queueReminders: jest.Mock;
+    queuePaidThroughReminders: jest.Mock;
+  };
   let settingsGet: jest.Mock;
+  /** The settings as shipped; a test overrides single keys. */
+  let settings: Record<string, unknown>;
 
   beforeEach(async () => {
     notices = {
       queueChargeNotices: jest.fn().mockResolvedValue(0),
       queueReminders: jest.fn().mockResolvedValue(0),
+      queuePaidThroughReminders: jest.fn().mockResolvedValue(0),
     };
-    settingsGet = jest.fn().mockResolvedValue(true);
+    settings = {
+      'payment.monthlyNoticesEnabled': true,
+      'payment.admissionRuleEnabled': true,
+      'payment.admissionMinPaidPercent': 50,
+      'payment.paidThroughReminderDays': 3,
+    };
+    settingsGet = jest.fn((_companyId: number, key: string) =>
+      Promise.resolve(settings[key]),
+    );
     const module = await Test.createTestingModule({
       providers: [
         MonthlyPaymentNoticeCronService,
@@ -54,23 +69,41 @@ describe('MonthlyPaymentNoticeCronService', () => {
       1,
       'payment.monthlyNoticesEnabled',
     );
-    expect(notices.queueChargeNotices).toHaveBeenCalledWith(1, NOW, true);
-    expect(notices.queueChargeNotices).toHaveBeenCalledWith(2, NOW, true);
-    expect(notices.queueReminders).toHaveBeenCalledWith(1, NOW);
-    expect(notices.queueReminders).toHaveBeenCalledWith(2, NOW);
+    expect(notices.queueChargeNotices).toHaveBeenCalledWith(1, NOW, true, 50);
+    expect(notices.queueChargeNotices).toHaveBeenCalledWith(2, NOW, true, 50);
+    expect(notices.queueReminders).toHaveBeenCalledWith(1, NOW, 50);
+    expect(notices.queueReminders).toHaveBeenCalledWith(2, NOW, 50);
+    expect(notices.queuePaidThroughReminders).toHaveBeenCalledWith(1, NOW, 3);
+    expect(notices.queuePaidThroughReminders).toHaveBeenCalledWith(2, NOW, 3);
   });
 
   it('with the notices off only marks the bills and sends no reminder', async () => {
-    settingsGet.mockResolvedValue(false);
+    settings['payment.monthlyNoticesEnabled'] = false;
     await cron.run(NOW);
-    expect(notices.queueChargeNotices).toHaveBeenCalledWith(1, NOW, false);
+    expect(notices.queueChargeNotices).toHaveBeenCalledWith(1, NOW, false, 50);
     expect(notices.queueReminders).not.toHaveBeenCalled();
+    expect(notices.queuePaidThroughReminders).not.toHaveBeenCalled();
+  });
+
+  it('with contract 3.2 switched off there is no least share and no 3.7 reminder', async () => {
+    settings['payment.admissionRuleEnabled'] = false;
+    await cron.run(NOW);
+    expect(notices.queueChargeNotices).toHaveBeenCalledWith(1, NOW, true, 0);
+    expect(notices.queueReminders).toHaveBeenCalledWith(1, NOW, 0);
+    expect(notices.queuePaidThroughReminders).not.toHaveBeenCalled();
+  });
+
+  it('0 days switches the 3.7 reminder off alone', async () => {
+    settings['payment.paidThroughReminderDays'] = 0;
+    await cron.run(NOW);
+    expect(notices.queueReminders).toHaveBeenCalledWith(1, NOW, 50);
+    expect(notices.queuePaidThroughReminders).not.toHaveBeenCalled();
   });
 
   it('one company failing does not stop the next', async () => {
     notices.queueChargeNotices.mockRejectedValueOnce(new Error('db down'));
     await cron.run(NOW);
-    expect(notices.queueChargeNotices).toHaveBeenCalledWith(2, NOW, true);
-    expect(notices.queueReminders).toHaveBeenCalledWith(2, NOW);
+    expect(notices.queueChargeNotices).toHaveBeenCalledWith(2, NOW, true, 50);
+    expect(notices.queueReminders).toHaveBeenCalledWith(2, NOW, 50);
   });
 });

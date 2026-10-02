@@ -35,6 +35,11 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { PossibleDeductionsInfo } from "./possible-deductions-info";
+import {
+  breakdownRateLabel,
+  SALARY_TYPE_LABELS,
+  type RateBasis,
+} from "./salary-utils";
 import api from "@/lib/api";
 
 interface BreakdownLine {
@@ -42,6 +47,8 @@ interface BreakdownLine {
   lessonDate: string;
   student: { id: number; firstName: string; lastName: string };
   group: { id: string; name: string; course: { name: string } };
+  // An older server does not send it; the label then reads «/tsikl».
+  rateBasis?: RateBasis;
   perLessonCost: number;
   amount: number;
   configVersion: {
@@ -117,6 +124,44 @@ const statusVariant: Record<
 
 const fmt = (n: number) => n.toLocaleString("uz-UZ");
 
+// The CSV opens in Excel, so it carries Uzbek names, never «FIXED_PER_STUDENT».
+const RATE_SCOPE_NAMES = { GROUP: "Guruh", GLOBAL: "Umumiy" } as const;
+
+/** The CSV rows, header first; `handleCsvExport` writes them to a file. */
+export function breakdownCsvRows(lines: BreakdownLine[]): (string | number)[][] {
+  return [
+    [
+      "Sana",
+      "O'quvchi",
+      "Guruh",
+      "Kurs",
+      "Dars narxi",
+      "Hisoblash turi",
+      "Qiymat",
+      "Qo'llanilish doirasi",
+      "Summa",
+      "Bekor qilingan",
+      "Bekor qilingan sabab",
+    ],
+    ...lines.map((l) => [
+      format(new Date(l.lessonDate), "yyyy-MM-dd"),
+      `${l.student.firstName} ${l.student.lastName}`,
+      l.group.name,
+      l.group.course.name,
+      l.perLessonCost,
+      l.configVersion
+        ? (SALARY_TYPE_LABELS[l.configVersion.salaryType] ??
+          l.configVersion.salaryType)
+        : "",
+      l.configVersion?.value ?? "",
+      l.configVersion ? RATE_SCOPE_NAMES[l.configVersion.scope] : "",
+      l.amount,
+      l.reversedAt ? "ha" : "",
+      l.reversalReason ?? "",
+    ]),
+  ];
+}
+
 /**
  * Read-only side sheet shown when an admin opens a salary payment row.
  *
@@ -187,34 +232,7 @@ export function SalaryBreakdownDrawer({
 
   const handleCsvExport = () => {
     if (!data) return;
-    const rows: (string | number)[][] = [
-      [
-        "Sana",
-        "O'quvchi",
-        "Guruh",
-        "Kurs",
-        "Dars narxi",
-        "Hisoblash turi",
-        "Qiymat",
-        "Qo'llanilish doirasi",
-        "Summa",
-        "Bekor qilingan",
-        "Bekor qilingan sabab",
-      ],
-      ...data.lines.map((l) => [
-        format(new Date(l.lessonDate), "yyyy-MM-dd"),
-        `${l.student.firstName} ${l.student.lastName}`,
-        l.group.name,
-        l.group.course.name,
-        l.perLessonCost,
-        l.configVersion?.salaryType ?? "",
-        l.configVersion?.value ?? "",
-        l.configVersion?.scope ?? "",
-        l.amount,
-        l.reversedAt ? "ha" : "",
-        l.reversalReason ?? "",
-      ]),
-    ];
+    const rows = breakdownCsvRows(data.lines);
     const csv = rows
       .map((r) =>
         r
@@ -369,7 +387,7 @@ export function SalaryBreakdownDrawer({
                   <div className="mt-4 flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-300">
                     <RotateCcw className="size-3.5 mt-0.5 shrink-0" />
                     <div>
-                      <b>{data.totals.reversedCount}</b> ta accrual bekor qilingan
+                      <b>{data.totals.reversedCount}</b> ta hisoblangan haq bekor qilingan
                       ({fmt(data.totals.reversedTotal)} so&apos;m) — sof
                       to&apos;lovga qo&apos;shilmagan
                     </div>
@@ -401,7 +419,7 @@ export function SalaryBreakdownDrawer({
 
                 {data.lines.length === 0 ? (
                   <p className="text-muted-foreground text-sm py-8 text-center border rounded-md">
-                    Qo&apos;lda kiritilgan oylik — dars-by-dars tafsilot yo&apos;q.
+                    Qo&apos;lda kiritilgan oylik — har bir dars bo&apos;yicha tafsilot yo&apos;q.
                   </p>
                 ) : (
                   <div className="rounded-md border overflow-hidden">
@@ -495,16 +513,10 @@ function SummaryStat({
   );
 }
 
-function BreakdownRow({ line, index }: { line: BreakdownLine; index: number }) {
+export function BreakdownRow({ line, index }: { line: BreakdownLine; index: number }) {
   const isReversed = !!line.reversedAt;
   const rate = line.configVersion;
-  const rateLabel = rate
-    ? rate.salaryType === "PERCENTAGE"
-      ? `${rate.value}%`
-      : rate.salaryType === "FIXED_PER_STUDENT"
-        ? `${fmt(rate.value)}/tsikl`
-        : `${fmt(rate.value)}/oy`
-    : "—";
+  const rateLabel = rate ? breakdownRateLabel(rate, line.rateBasis) : "—";
 
   return (
     <TableRow

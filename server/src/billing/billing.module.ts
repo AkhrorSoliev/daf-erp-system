@@ -10,6 +10,7 @@ import { MonthlyPaymentNoticeService } from './monthly-payment-notice.service';
 import { MonthlyPaymentNoticeCronService } from './monthly-payment-notice-cron.service';
 import { BillingController } from './billing.controller';
 import { StudentDebtNotificationListener } from './student-debt-notification.listener';
+import { SelfEnrollmentChargeListener } from './self-enrollment-charge.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { SalaryModule } from '../salary/salary.module';
 import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module';
@@ -33,7 +34,8 @@ import { SettingsModule } from '../settings/settings.module';
  * counterpart of the lesson-pack billing pipeline above.
  *
  * `MonthlyPaymentNoticeCronService` (19:50) queues the month's bill and the
- * 2nd-lesson reminder for the 20:00 Telegram digest (ADR-0042).
+ * 2nd-lesson reminder for the 20:00 Telegram digest (ADR-0042), and contract
+ * 3.7's reminder before a part payer's paid lessons run out (ADR-0064).
  *
  * `LessonAdmissionService` answers contract 3.2 for the attendance roster,
  * its saves and the payment preview (ADR-0047).
@@ -57,6 +59,7 @@ import { SettingsModule } from '../settings/settings.module';
     MonthlyPaymentNoticeService,
     MonthlyPaymentNoticeCronService,
     StudentDebtNotificationListener,
+    SelfEnrollmentChargeListener,
   ],
   exports: [
     LessonBillingService,

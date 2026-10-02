@@ -6,29 +6,22 @@ export type PortalType =
   | "form";
 
 interface PortalConfig {
+  /** The heading of the portal's sign-in sheet (`DaftarSheet`). */
   title: string;
-  subtitle: string;
-  icon: "shield" | "graduation-cap" | "book-open" | "file-text";
   allowedRoleIds: number[];
 }
 
 const portalConfigs: Record<PortalType, PortalConfig> = {
   admin: {
-    title: "DaF Sprachzentrum",
-    subtitle: "Hisobingizga kiring",
-    icon: "shield",
+    title: "Boshqaruv",
     allowedRoleIds: [1, 2, 3, 5], // CEO, Branch Director, Administrator, Cashier
   },
   lehrer: {
-    title: "O'qituvchi portali",
-    subtitle: "O'qituvchi hisobingizga kiring",
-    icon: "graduation-cap",
+    title: "O'qituvchi",
     allowedRoleIds: [4], // Teacher
   },
   student: {
     title: "Talaba portali",
-    subtitle: "Talaba hisobingizga kiring",
-    icon: "book-open",
     allowedRoleIds: [6], // Student
   },
   // Public document portal — no login, no role checks. Receipt verification
@@ -36,16 +29,12 @@ const portalConfigs: Record<PortalType, PortalConfig> = {
   // without an auth wall.
   invoice: {
     title: "DaF Sprachzentrum hujjatlari",
-    subtitle: "Hujjatni tekshirish",
-    icon: "file-text",
     allowedRoleIds: [],
   },
   // Public form portal — `form.dafzentrum.uz/<slug>` lets anyone fill out
   // a custom lead-collection form. No auth, no roles.
   form: {
     title: "DaF Sprachzentrum formalari",
-    subtitle: "",
-    icon: "file-text",
     allowedRoleIds: [],
   },
 };
@@ -60,6 +49,16 @@ export function getPortalType(host: string): PortalType {
 
 export function getPortalConfig(portal: PortalType): PortalConfig {
   return portalConfigs[portal];
+}
+
+/**
+ * Scope classes of the staff sign-in theme (`.daftar` in globals.css): squared
+ * paper and navy ink by default, ruled paper and green ink on the teacher
+ * portal. One source for the page shell and for content Radix portals to
+ * <body>, which no class on the page reaches.
+ */
+export function daftarScope(portal: PortalType): string {
+  return portal === "lehrer" ? "daftar daftar-lines" : "daftar";
 }
 
 // True for portals that have no login wall — every path is public.

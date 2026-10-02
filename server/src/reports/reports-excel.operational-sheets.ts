@@ -1,16 +1,16 @@
 /**
  * Operational (non-financial) sheet builders for the "Moliyaviy hisobot"
  * workbook — the business half that turns the finance report into a full
- * management report: KPI paneli / Lidlar / O'quvchilar oqimi / Xonalar
- * bandligi / Guruhlar to'ldirilishi / Davomat / O'qituvchilar samaradorligi /
- * O'qituvchi o'zgarishlari.
+ * management report: KPI paneli / Lidlar / Xonalar bandligi / Guruhlar
+ * to'ldirilishi / Davomat / O'qituvchilar samaradorligi / O'qituvchi
+ * o'zgarishlari.
  *
  * Every figure comes straight from the already-delegated ReportsService
  * methods (getKpis / getRoomUtilization / getGroupAnalytics / getLeadAnalytics
- * / getAttendanceAnalytics / getTeacherPerformance / getDepartedStudents* /
- * getTeacherChangesList). Each builder is defensive: a `null` dataset (its
- * source threw) renders an "ma'lumot yo'q" note instead of crashing the whole
- * workbook. Same visual language as the financial sheets (shared helpers).
+ * / getAttendanceAnalytics / getTeacherPerformance / getTeacherChangesList).
+ * Each builder is defensive: a `null` dataset (its source threw) renders an
+ * "ma'lumot yo'q" note instead of crashing the whole workbook. Same visual
+ * language as the financial sheets (shared helpers).
  */
 import { Workbook, Worksheet, Row } from 'exceljs';
 import {
@@ -23,7 +23,6 @@ import {
   kvRow,
   freezeAndFilter,
   sheetNotes,
-  dataBar,
   colorScale,
   fmtDate,
   dmy,
@@ -208,95 +207,6 @@ export function leadsSheet(wb: Workbook, leads: any, period: string) {
   );
 }
 
-// ---- Op-3: O'quvchilar oqimi (kelish / ketish) ----
-export function studentFlowSheet(
-  wb: Workbook,
-  summary: any,
-  dynamics: any,
-  reasons: any,
-  period: string,
-) {
-  const ws = wb.addWorksheet("O'quvchilar oqimi");
-  ws.columns = [{ width: 36 }, { width: 18 }, { width: 46 }];
-  sheetTitle(ws, "O'quvchilar oqimi — kelish / ketish", period, 3);
-
-  sectionHeader(ws, "Umumiy ko'rsatkichlar (joriy holat)", 3);
-  if (summary) {
-    kvRow(
-      ws,
-      'Churn (ketish) foizi',
-      summary.churnRate ?? 0,
-      "Ketganlar / jami o'quvchi.",
-      { percent: true },
-    );
-    kvNum(ws, "Ketgan o'quvchilar", summary.departedCount ?? 0);
-    kvNum(
-      ws,
-      "Jami o'quvchilar (ketgan + hozirgi)",
-      summary.totalStudents ?? 0,
-    );
-    kvRow(
-      ws,
-      "Yo'qolgan daromad",
-      summary.lostRevenue ?? 0,
-      "Ketganlarning to'lanmagan qoldig'i.",
-    );
-    kvRow(
-      ws,
-      'Jami qarz (ketganlar)',
-      summary.totalDebt ?? 0,
-      "Manfiy balanslar yig'indisi.",
-    );
-    kvNum(ws, 'Qarzdorlar soni', summary.debtorCount ?? 0);
-    kvNum(
-      ws,
-      "O'rtacha davomiylik (oy)",
-      summary.avgDurationMonths ?? 0,
-      "O'quvchi o'rtacha necha oy o'qigan.",
-      { fmt: DEC1 },
-    );
-    kvNum(ws, "Ustoz o'zgarishlari (davr)", summary.totalTeacherChanges ?? 0);
-    kvNum(
-      ws,
-      "Ustoz o'zgarishidan keyin ketganlar",
-      summary.departedAfterTeacherChange ?? 0,
-    );
-  } else {
-    emptyNote(ws);
-  }
-
-  sectionHeader(ws, 'Oylik dinamika (ketganlar)', 3);
-  const dh = tableHeader(ws, ['Oy', 'Ketganlar']);
-  const first = dh.number + 1;
-  (dynamics?.data ?? []).forEach((d: any) => {
-    const r = ws.addRow([
-      typeof d.date === 'string' ? d.date.slice(0, 7) : d.date,
-      d.count ?? 0,
-    ]);
-    r.getCell(2).numFmt = NUM;
-  });
-  const last = ws.rowCount;
-  if (last >= first) dataBar(ws, `B${first}:B${last}`);
-
-  sectionHeader(ws, 'Ketish sabablari', 3);
-  tableHeader(ws, ['Sabab', 'Soni']);
-  (reasons?.data ?? []).forEach((rs: any) => {
-    const r = ws.addRow([rs.reasonName ?? "Noma'lum", rs.count ?? 0]);
-    r.getCell(2).numFmt = NUM;
-  });
-
-  sheetNotes(
-    ws,
-    [
-      "O'quvchilarning markazga kelishi va ketishi — churn, sabablar va oylik dinamika.",
-      "Diqqat: churn / qarz / yo'qolgan daromad — JORIY holat (tanlangan davrga bog'liq emas).",
-      "Faqat ustoz-o'zgarish raqamlari tanlangan davrni hisobga oladi.",
-      '"Ketganlar" — guruhdan chiqib ketgan yozuvlar (bir o\'quvchi bir necha guruhda hisoblanishi mumkin).',
-    ],
-    3,
-  );
-}
-
 // ---- Op-4: Xonalar bandligi ----
 // `period` is unused and stays in the signature on purpose: every sheet
 // function in this file takes the same three arguments and the caller passes
@@ -437,31 +347,31 @@ export function attendanceSheet(wb: Workbook, att: any, period: string) {
     ws,
     'Umumiy davomat',
     att.overallRate ?? 0,
-    'Sababli (EXCUSED) maxrajdan chiqarilgan.',
+    'Sababli darslar maxrajga kirmaydi.',
     { percent: true },
   );
   if (att.overallRetention != null) {
     kvRow(
       ws,
-      'Retention (ushlab qolish)',
+      'Ushlab qolish',
       att.overallRetention,
       "Davr oxiri / davr boshi o'quvchi soni.",
       { percent: true },
     );
   }
   const sb = att.statusBreakdown ?? {};
-  kvNum(ws, 'Keldi (present)', sb.present ?? 0);
-  kvNum(ws, 'Kelmadi (absent)', sb.absent ?? 0);
-  kvNum(ws, 'Kech keldi (late)', sb.late ?? 0);
-  kvNum(ws, 'Sababli (excused)', sb.excused ?? 0);
+  kvNum(ws, 'Keldi', sb.present ?? 0);
+  kvNum(ws, 'Kelmadi', sb.absent ?? 0);
+  kvNum(ws, 'Kech keldi', sb.late ?? 0);
+  kvNum(ws, 'Sababli', sb.excused ?? 0);
   kvNum(ws, 'Jami belgilangan', sb.total ?? 0);
 
   sectionHeader(
     ws,
-    `Trend (${att.bucket === 'month' ? 'oylik' : 'haftalik'})`,
+    `${att.bucket === 'month' ? 'Oylar' : 'Haftalar'} bo'yicha`,
     3,
   );
-  const th = tableHeader(ws, ['Davr', 'Davomat %', 'Retention %']);
+  const th = tableHeader(ws, ['Davr', 'Davomat %', 'Ushlab qolish %']);
   const first = th.number + 1;
   (att.trend ?? []).forEach((t: any) => {
     const r = ws.addRow([t.label, t.rate ?? 0, t.retentionPct ?? '—']);
@@ -495,8 +405,8 @@ export function attendanceSheet(wb: Workbook, att: any, period: string) {
   sheetNotes(
     ws,
     [
-      'Davomat foizi = kelgan darslar / (jami − sababli). Past davomat = daromad va churn xavfi.',
-      "Retention — davr davomida o'quvchilarni ushlab qolish ulushi.",
+      "Davomat foizi = kelgan darslar / (jami − sababli). Past davomat = daromad va o'quvchi ketishi xavfi.",
+      "Ushlab qolish — davr oxiridagi o'quvchilar sonining davr boshidagiga nisbati (yangi qo'shilganlar ham kiradi, shuning uchun 100% dan oshishi mumkin).",
       "Eng past guruhlar — birinchi navbatda e'tibor talab qiladi.",
       'Rang: qizil = past davomat, yashil = yuqori.',
     ],
@@ -516,7 +426,7 @@ export function teacherPerformanceSheet(
     { width: 12 },
     { width: 12 },
     { width: 16 },
-    { width: 14 },
+    { width: 16 },
     { width: 16 },
     { width: 16 },
   ];
@@ -531,7 +441,7 @@ export function teacherPerformanceSheet(
     'Guruhlar',
     "O'quvchilar",
     'Boshi → Oxiri',
-    'Retention %',
+    'Ushlab qolish %',
     "O'rt. davomat %",
     "To'ldirilish %",
   ]);
@@ -555,10 +465,10 @@ export function teacherPerformanceSheet(
   if (last >= first) colorScale(ws, `F${first}:F${last}`);
   freezeAndFilter(ws, header.number, 7);
   const notes = [
-    "Har ustoz: guruh soni, o'quvchi soni, retention, o'rtacha davomat va guruh to'ldirilishi.",
-    '"Boshi → Oxiri" — davr boshidagi va oxiridagi o\'quvchi soni (retention shundan).',
+    "Har ustoz: guruh soni, o'quvchi soni, ushlab qolish, o'rtacha davomat va guruh to'ldirilishi.",
+    '"Boshi → Oxiri" — davr boshidagi va oxiridagi o\'quvchi soni (ushlab qolish shundan hisoblanadi).',
     "Rang (o'rt. davomat): qizil = past, yashil = yuqori.",
-    'Faqat ACTIVE/FORMING guruhlar; davr boshi tizim boshlanish sanasigacha cheklangan.',
+    'Faqat faol va shakllanayotgan guruhlar; davr boshi tizim boshlanish sanasigacha cheklangan.',
   ];
   if ((perf.total ?? 0) > teachers.length) {
     notes.push(

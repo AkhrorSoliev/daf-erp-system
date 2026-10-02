@@ -1,4 +1,9 @@
-import { AttendanceStatus, MonthlyChargeStatus, Prisma } from '@prisma/client';
+import {
+  AttendanceStatus,
+  MonthlyChargeStatus,
+  Prisma,
+  TransactionType,
+} from '@prisma/client';
 import type { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { cancelledLessonRelease } from './departure-release';
@@ -101,6 +106,8 @@ export async function releaseCancelledLesson(
     );
     if (!release) continue;
     const frozenOutAfter = release.frozenOutAfter ?? [];
+    const takeBackCredit =
+      excusedStudents.has(charge.studentId) && charge.excusedLessons > 0;
 
     await transactionsWrite.createAdjustment(
       {
@@ -118,13 +125,13 @@ export async function releaseCancelledLesson(
           lessons: 1,
           dates: [day],
           cancellationId: params.cancellationId,
+          // Deleting the cancellation gives the credit back only if taken.
+          ...(takeBackCredit ? { creditTakenBack: true } : {}),
         },
       },
       tx,
     );
 
-    const takeBackCredit =
-      excusedStudents.has(charge.studentId) && charge.excusedLessons > 0;
     await tx.enrollmentMonthlyCharge.update({
       where: { id: charge.id },
       data: {
@@ -136,6 +143,131 @@ export async function releaseCancelledLesson(
     });
     result.students += 1;
     result.refunded += release.amount;
+  }
+  return result;
+}
+
+export interface CancelledLessonRestoreResult {
+  /** Students whose money for the lesson was taken back. */
+  students: number;
+  restored: number;
+  /** Releases left standing: the charge or the enrollment changed since. */
+  kept: number;
+}
+
+interface ReleaseMetadata {
+  enrollmentId?: string;
+  period?: string;
+  dates?: string[];
+  creditTakenBack?: boolean;
+}
+
+/**
+ * The undo of `releaseCancelledLesson`, run when its cancellation is deleted
+ * (ADR-0063, replacing ADR-0053 rule 5). A wrong cancellation used to keep its
+ * money with the student even when the lesson was held: the day stayed out of
+ * the charge, so a later «Bo'ldi» billed nothing (October 2026: eight Namangan
+ * lessons cancelled as "the group does not exist", 1 667 518 so'm).
+ *
+ * Each release still standing is reversed, the day goes back into its charge
+ * and the next-month credit the release took comes back. A release is kept
+ * when anything moved since it was written — the charge reversed, the day
+ * billed again, or any status change of the enrollment: a freeze or departure
+ * may have taken the day out on its own account, and billing it again could
+ * charge a month the student did not attend. Keeping money is the safe side;
+ * the caller reports how many were kept.
+ *
+ * Runs inside the deletion's transaction.
+ */
+export async function restoreCancelledLesson(
+  tx: Prisma.TransactionClient,
+  transactionsWrite: TransactionsWriteService,
+  params: {
+    cancellationId: string;
+    companyId: number;
+    reason: string;
+    performedById?: number;
+  },
+): Promise<CancelledLessonRestoreResult> {
+  const releases = await tx.transaction.findMany({
+    where: {
+      companyId: params.companyId,
+      type: TransactionType.ADJUSTMENT,
+      reversedAt: null,
+      reversedTransactionId: null,
+      metadata: { path: ['cancellationId'], equals: params.cancellationId },
+    },
+    select: { id: true, amount: true, createdAt: true, metadata: true },
+  });
+  const result: CancelledLessonRestoreResult = {
+    students: 0,
+    restored: 0,
+    kept: 0,
+  };
+
+  for (const r of releases) {
+    const md = (r.metadata ?? {}) as ReleaseMetadata;
+    const day = md.dates?.[0];
+    const [periodYear, periodMonth] = (md.period ?? '').split('-').map(Number);
+    const charge =
+      md.enrollmentId && day && periodYear && periodMonth
+        ? await tx.enrollmentMonthlyCharge.findUnique({
+            where: {
+              enrollmentId_periodYear_periodMonth: {
+                enrollmentId: md.enrollmentId,
+                periodYear,
+                periodMonth,
+              },
+            },
+            select: {
+              id: true,
+              status: true,
+              coveredDates: true,
+              frozenOutDates: true,
+              chargedAmount: true,
+            },
+          })
+        : null;
+    const movedSince =
+      charge &&
+      (await tx.enrollmentStateLog.findFirst({
+        where: {
+          enrollmentId: md.enrollmentId,
+          OR: [
+            { createdAt: { gt: r.createdAt } },
+            { transitionAt: { gt: r.createdAt } },
+          ],
+        },
+        select: { id: true },
+      }));
+    if (
+      !charge ||
+      !day ||
+      charge.status !== MonthlyChargeStatus.CHARGED ||
+      !charge.frozenOutDates.includes(day) ||
+      movedSince
+    ) {
+      result.kept += 1;
+      continue;
+    }
+
+    await transactionsWrite.reverseTransaction(
+      r.id,
+      { performedById: params.performedById, reason: params.reason },
+      tx,
+    );
+    const frozenOutAfter = charge.frozenOutDates.filter((d) => d !== day);
+    await tx.enrollmentMonthlyCharge.update({
+      where: { id: charge.id },
+      data: {
+        coveredLessons: charge.coveredDates.length - frozenOutAfter.length,
+        chargedAmount: charge.chargedAmount + r.amount,
+        frozenOutDates: frozenOutAfter,
+        ...(md.creditTakenBack ? { excusedLessons: { increment: 1 } } : {}),
+      },
+    });
+    result.students += 1;
+    result.restored += r.amount;
   }
   return result;
 }

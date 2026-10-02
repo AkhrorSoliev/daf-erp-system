@@ -93,6 +93,7 @@ export class QrAttendanceScanService {
         endTime: lesson.effectiveEndTime,
         opensMinutesBefore: lesson.opensMinutesBefore,
       },
+      student: true,
     });
 
     // Contract 3.2 (ADR-0047): from the month's 2nd lesson a scan admits
@@ -102,9 +103,12 @@ export class QrAttendanceScanService {
       lessonDay: date,
       studentIds: [studentId],
     });
-    if (admission.get(studentId)?.admitted === false) {
+    const verdict = admission.get(studentId);
+    if (verdict?.admitted === false) {
       throw new BadRequestException(
-        "To'lov qilinmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaysiz",
+        verdict.reason === 'BELOW_MIN_SHARE'
+          ? `Oy to'lovining kamida ${verdict.minPaidPercent}% i to'lanmagan: shartnomaga ko'ra 2-darsdan boshlab shu qismi to'lanmaguncha darsga qo'yilmaysiz`
+          : "To'lov qilinmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaysiz",
       );
     }
 

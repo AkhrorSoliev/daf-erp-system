@@ -44,6 +44,28 @@ export const TRIAL_LESSON_START_DAY = '2026-10-01';
  */
 export const TRIAL_LESSON_MAX_HELD = 1;
 
+/** A lesson on the student's roster still waiting on «Dars bo'ldimi?». */
+export interface AwaitingLesson {
+  /** Tashkent 'YYYY-MM-DD'. */
+  date: string;
+  groupName: string;
+}
+
+/**
+ * Contract 3.5 cannot be decided while an unanswered lesson could still be
+ * the student's second (CEO, 01.10.2026): the departure waits for the answer.
+ * The removal and expulsion dialogs show the same words.
+ */
+export function trialAwaitsAnswerText(
+  lessons: readonly AwaitingLesson[],
+): string {
+  const list = lessons
+    .map((l) => `${l.date.slice(8, 10)}.${l.date.slice(5, 7)} (${l.groupName})`)
+    .join(', ');
+  const lessonWord = lessons.length > 1 ? 'darslarda' : 'darsda';
+  return `Avval «Dars bo'ldimi?» savoliga javob bering: ${list}. Sinov darsi o'quvchi shu ${lessonWord} bo'lgan-bo'lmaganiga qarab hal bo'ladi.`;
+}
+
 /** A departure day before every lesson date: releases the whole month. */
 const BEFORE_ANY_LESSON = '0000-00-00';
 

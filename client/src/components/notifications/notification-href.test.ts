@@ -61,6 +61,14 @@ describe("notificationHref", () => {
     ).toBe("/settings/absence-pause");
   });
 
+  // Server bu sahifalarni shu rollarga bermaydi: GET /students/:id da
+  // o'qituvchi, GET /groups/:id da kassir yo'q (src/lib/role-access.ts).
+  it("gives a teacher-only viewer no student link and a cashier-only viewer no group link", () => {
+    expect(notificationHref(task("Student", "10001"), TEACHER)).toBeNull();
+    expect(notificationHref(task("Group", "g1"), [5])).toBeNull();
+    expect(notificationHref(task("Group", "g1"), [5, 4])).toBe("/groups/g1");
+  });
+
   it("goes nowhere without an entity or for an unknown one", () => {
     expect(
       notificationHref(

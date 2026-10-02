@@ -33,6 +33,8 @@ describe('LessonTeacherOverridesService', () => {
       },
       enrollment: { findFirst: jest.fn() },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
+      // Trial-lesson months (contract 3.5): none by default.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
     };
     // `recomputeAccruals` guruh kursining `paymentModel` ini o'qiydi.
     // Standart — LESSON_PACK, ya'ni eski yo'l.
@@ -304,6 +306,119 @@ describe('LessonTeacherOverridesService', () => {
       expect(salaryAccrual.createAccrual).not.toHaveBeenCalled();
       expect(errorSpy).toHaveBeenCalled();
       errorSpy.mockRestore();
+    });
+  });
+
+  // Contract 3.5 (ADR-0048 §3): a student who left on the trial-lesson rule got
+  // the whole month back (its dates are in `frozenOutDates`) and the teacher's
+  // pay for it was reversed (`reverseTrialAccruals`). `findChargeForLesson`
+  // ignores `frozenOutDates`, so a substitute override used to write that pay
+  // again for the newly added teacher.
+  describe('recomputeAccruals — trial lesson (3.5)', () => {
+    // A Wednesday after contract 3.5 took effect (01.10.2026).
+    const lessonDay = '2026-10-14';
+
+    beforeEach(() => {
+      tx.group.findFirst.mockResolvedValue({
+        id: 'group-1',
+        exactDays: ['wednesday'],
+      });
+      tx.group.findUnique.mockResolvedValue({
+        course: { paymentModel: 'MONTHLY' },
+      });
+      tx.lessonTeacherOverride.findFirst.mockResolvedValue(null);
+      tx.lessonTeacherOverride.create.mockResolvedValue({ id: 'override-1' });
+      tx.groupTeacher.findMany.mockResolvedValue([{ teacherId: 10001 }]);
+      tx.attendance.findMany.mockResolvedValue([
+        { id: 'att-1', studentId: 30001 },
+      ]);
+      tx.transaction.findFirst.mockResolvedValue(null);
+      // The student was removed from the group.
+      tx.enrollment.findMany = jest
+        .fn()
+        .mockResolvedValue([{ id: 'enr-1', status: 'DROPPED' }]);
+      monthlyCharge.findChargeForLesson.mockResolvedValue({
+        perLessonCost: 34_615,
+        plannedLessons: 13,
+        transactionId: 'mon-tx-1',
+        frozenOutDates: ['2026-10-07', '2026-10-14', '2026-10-21'],
+      });
+      // The departed enrollment's charge that gave this day back.
+      tx.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        { enrollmentId: 'enr-1', studentId: 30001 },
+      ]);
+    });
+
+    it('writes no pay for the substitute on a departed trial student', async () => {
+      tx.transaction.findMany.mockResolvedValue([
+        {
+          metadata: {
+            kind: 'monthly-release',
+            enrollmentId: 'enr-1',
+            period: '2026-10',
+            policy: 'STUDENT_CANCELLED',
+            trialLesson: true,
+          },
+        },
+      ]);
+
+      await service.upsert(
+        'group-1',
+        lessonDay,
+        { teacherIds: [10042] },
+        1,
+        99,
+      );
+
+      expect(salaryAccrual.createAccrual).not.toHaveBeenCalled();
+      // The removed teacher's pay, if any, is still reversed.
+      expect(salaryAccrual.reverseAccrualForAttendance).toHaveBeenCalledWith(
+        expect.objectContaining({ teacherId: 10001, studentId: 30001 }),
+      );
+      // Departed enrollments only: an ACTIVE student unfrozen on a lesson day
+      // attends it free, and the teacher is still paid for it.
+      expect(tx.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            groupId: 'group-1',
+            frozenOutDates: { has: lessonDay },
+            enrollment: { status: { not: 'ACTIVE' } },
+          }),
+        }),
+      );
+    });
+
+    // A quality claim gives the whole month back too, but the teacher's pay
+    // does not decrease (ADR-0044); the centre's top-up would not front a
+    // student below its new-student gate, so the substitute keeps live pay.
+    it("keeps the substitute's pay on a quality-claim departure", async () => {
+      tx.transaction.findMany.mockResolvedValue([
+        {
+          metadata: {
+            kind: 'monthly-release',
+            enrollmentId: 'enr-1',
+            period: '2026-10',
+            policy: 'QUALITY_CLAIM',
+          },
+        },
+      ]);
+
+      await service.upsert(
+        'group-1',
+        lessonDay,
+        { teacherIds: [10042] },
+        1,
+        99,
+      );
+
+      expect(salaryAccrual.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teacherId: 10042,
+          attendanceId: 'att-1',
+          perLessonCost: 34_615,
+          deductionTransactionId: 'mon-tx-1',
+        }),
+      );
     });
   });
 

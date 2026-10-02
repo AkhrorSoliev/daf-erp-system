@@ -435,7 +435,7 @@ export class LeadsService {
     const lastName = dto.lastName.trim();
     if (!firstName || !lastName) {
       throw new BadRequestException(
-        "Ism va familya bo'sh bo'lishi mumkin emas",
+        "Ism va familiya bo'sh bo'lishi mumkin emas",
       );
     }
 
@@ -560,7 +560,7 @@ export class LeadsService {
     if (dto.lastName !== undefined) {
       const lastName = dto.lastName.trim();
       if (!lastName) {
-        throw new BadRequestException("Familya bo'sh bo'lishi mumkin emas");
+        throw new BadRequestException("Familiya bo'sh bo'lishi mumkin emas");
       }
       data.lastName = lastName;
     }

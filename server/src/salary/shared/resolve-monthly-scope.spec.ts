@@ -11,6 +11,7 @@ import { resolveMonthlyScope } from './resolve-monthly-scope';
 describe('resolveMonthlyScope — userId scoping', () => {
   const makePrisma = (caller: {
     mainBranch: number | null;
+    branches?: { branchId: number }[];
     roles: { role: { name: string } }[];
   }) =>
     ({
@@ -22,7 +23,10 @@ describe('resolveMonthlyScope — userId scoping', () => {
       salaryPeriodSetting: {
         findFirst: jest.fn().mockResolvedValue({ cycleStartDay: 1 }),
       },
-      user: { findUnique: jest.fn().mockResolvedValue(caller) },
+      // The database always returns the `UserBranch` rows the scope selects.
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ branches: [], ...caller }),
+      },
     }) as any;
 
   const bd = { mainBranch: 7, roles: [{ role: { name: 'Branch Director' } }] };
@@ -86,6 +90,7 @@ describe('resolveMonthlyScope — userId scoping', () => {
 describe('resolveMonthlyScope — branchId narrowing', () => {
   const makePrisma = (caller: {
     mainBranch: number | null;
+    branches?: { branchId: number }[];
     roles: { role: { name: string } }[];
   }) =>
     ({
@@ -97,7 +102,10 @@ describe('resolveMonthlyScope — branchId narrowing', () => {
       salaryPeriodSetting: {
         findFirst: jest.fn().mockResolvedValue({ cycleStartDay: 1 }),
       },
-      user: { findUnique: jest.fn().mockResolvedValue(caller) },
+      // The database always returns the `UserBranch` rows the scope selects.
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ branches: [], ...caller }),
+      },
     }) as any;
 
   const ceo = { mainBranch: null, roles: [{ role: { name: 'CEO' } }] };
@@ -160,5 +168,50 @@ describe('resolveMonthlyScope — branchId narrowing', () => {
     );
     expect(scope.blocked).toBe(true);
     expect(scope.branchId).toBeUndefined();
+  });
+
+  /**
+   * A2.8. The Foyda card asks for ONE branch's payroll. A director attached to
+   * branches 1 and 2 (home 1) who picked branch 2 used to be `blocked`, so the
+   * payroll leg of the net profit read 0 and the branch's profit looked too high.
+   */
+  describe('a director attached to several branches (A2.8)', () => {
+    const twoBranchDirector = {
+      mainBranch: 1,
+      branches: [{ branchId: 1 }, { branchId: 2 }],
+      roles: [{ role: { name: 'Branch Director' } }],
+    };
+
+    it('is served the branch they picked, not their main branch', async () => {
+      const scope = await resolveMonthlyScope(
+        makePrisma(twoBranchDirector),
+        { month: '2026-07', branchId: 2 },
+        1,
+        999,
+      );
+      expect(scope.branchId).toBe(2);
+      expect(scope.blocked).toBe(false);
+    });
+
+    it('is still blocked for a branch outside their set', async () => {
+      const scope = await resolveMonthlyScope(
+        makePrisma(twoBranchDirector),
+        { month: '2026-07', branchId: 3 },
+        1,
+        999,
+      );
+      expect(scope.blocked).toBe(true);
+    });
+
+    it('falls back to their main branch when they pick nothing', async () => {
+      const scope = await resolveMonthlyScope(
+        makePrisma(twoBranchDirector),
+        { month: '2026-07' },
+        1,
+        999,
+      );
+      expect(scope.branchId).toBe(1);
+      expect(scope.blocked).toBe(false);
+    });
   });
 });

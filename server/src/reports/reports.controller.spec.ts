@@ -499,21 +499,33 @@ describe('ReportsController — role guards', () => {
   describe('getFinancialOverview() — sensitive-field stripping', () => {
     const fullOverview = {
       income: {
-        expected: 9,
         actual: 69126991,
-        billed: 8,
         paymentCount: 212,
         byMethod: [{ method: 'CASH', amount: 5, count: 1 }],
       },
-      forecast: {
-        recognizedRevenueForecast: 7,
-        outstandingReceivable: 6,
-        debtorExposure: { count: 4, avgDebt: 3 },
-      },
+      forecast: { expectedMonthEnd: 7, expectedHeld: 3, expectedRemaining: 4 },
       salary: { paid: 8251000, pending: 5, advances: 2 },
+      // «Bu oy hisoblandi» (ADR-0058): money — CEO/BD only, like income.
+      monthCharges: {
+        month: '2026-10',
+        charged: 900_000,
+        paid: 350_000,
+        unpaid: 550_000,
+        paidPct: 38.9,
+        students: 2,
+      },
+      // «Qarzdorlik» (ADR-0059): money, CEO/BD only, like income and the rest.
+      debtSplit: {
+        studying: {
+          total: 43_500_000,
+          count: 237,
+          currentMonth: 41_100_000,
+          older: 2_400_000,
+        },
+        notStudying: { total: 40_600_000, count: 327 },
+      },
       expenses: 8251000,
       netProfit: 60875991,
-      debtorCount: 4,
       activeBalance: 1,
       activeStudentCount: 188,
       ltv: 367697,
@@ -549,6 +561,8 @@ describe('ReportsController — role guards', () => {
         expenses: fullOverview.expenses,
         netProfit: 12_345_678,
         forecast: fullOverview.forecast,
+        monthCharges: fullOverview.monthCharges,
+        debtSplit: fullOverview.debtSplit,
       });
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
     });
@@ -603,6 +617,7 @@ describe('ReportsController — role guards', () => {
         income: fullOverview.income,
         expenses: fullOverview.expenses,
         netProfit: 12_345_678,
+        debtSplit: fullOverview.debtSplit,
       });
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
     });
@@ -688,6 +703,18 @@ describe('ReportsController — role guards', () => {
       expect(res).toEqual({ ltvPayerCount: 188, avgPayment: 326071 });
     });
 
+    it('never sends the debt split to Administrator or Cashier — it is a money figure, CEO/BD only', async () => {
+      for (const role of ['Administrator', 'Cashier']) {
+        const res: any = await controller.getFinancialOverview(query, {
+          id: 10003,
+          companyId: 1,
+          roles: [role],
+        });
+        expect(res).not.toHaveProperty('debtSplit');
+        expect(JSON.stringify(res)).not.toContain('43500000');
+      }
+    });
+
     it('never leaks income / expenses / profit / salary / LTV / CAC / ROI / debt to Administrator', async () => {
       const res: any = await controller.getFinancialOverview(query, {
         id: 10003,
@@ -698,11 +725,12 @@ describe('ReportsController — role guards', () => {
       expect(res.expenses).toBeUndefined();
       expect(res.netProfit).toBeUndefined();
       expect(res.salary).toBeUndefined();
+      expect(res.monthCharges).toBeUndefined();
       expect(res.forecast).toBeUndefined();
       expect(res.ltv).toBeUndefined();
       expect(res.cac).toBeUndefined();
       expect(res.marketingRoi).toBeUndefined();
-      expect(res.debtorCount).toBeUndefined();
+      expect(res.debtSplit).toBeUndefined();
       expect(res.activeBalance).toBeUndefined();
     });
 

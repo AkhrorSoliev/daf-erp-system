@@ -270,6 +270,8 @@ export class LessonCancellationsService {
             data: {
               status: AttendanceStatus.EXCUSED,
               cancellationId: cancellation.id,
+              // A late arrival's minutes leave with its LATE mark.
+              lateMinutes: null,
             },
           });
 
@@ -388,11 +390,11 @@ export class LessonCancellationsService {
   }
 
   /**
-   * Soft-delete a cancellation. Does NOT automatically restore the
-   * attendance / consumption / accrual that the create() flow tore down —
-   * the lesson goes back to «Dars bo'ldimi?» (spec 2026-09-29 §3.5); nobody
-   * can enter a register for it any other way. This avoids surprising
-   * auto-rebill on a typo correction.
+   * Soft-delete a cancellation. The monthly money it gave back is taken back
+   * (ADR-0063): the lesson is billed again, so a later «Bo'ldi» does not leave
+   * it free. The attendance / consumption / accrual that create() tore down is
+   * NOT restored — the lesson goes back to «Dars bo'ldimi?» (spec 2026-09-29
+   * §3.5); nobody can enter a register for it any other way.
    */
   async remove(
     id: string,
@@ -423,18 +425,32 @@ export class LessonCancellationsService {
       now,
     );
 
+    const day = cancellation.date.toISOString().slice(0, 10);
+
     return this.prisma
       .$transaction(async (tx) => {
         await tx.lessonCancellation.update({
           where: { id },
           data: { deletedAt: new Date(), deletedById: userId },
         });
+        const restored = await this.monthlyChargeService.restoreCancelledLesson(
+          tx,
+          {
+            cancellationId: id,
+            companyId,
+            performedById: userId,
+            reason: `${day.slice(8, 10)}.${day.slice(5, 7)} darsining bekor qilinishi o'chirildi`,
+          },
+        );
         await this.entityHistoryService.recordDelete({
           entityType: 'LessonCancellation',
           entityId: id,
           oldValues: {
             guruh: cancellation.groupId,
-            sana: cancellation.date.toISOString().slice(0, 10),
+            sana: day,
+            qaytaYechilganOquvchilar: restored.students,
+            qaytaYechilganSumma: restored.restored,
+            pulQoldirilganOquvchilar: restored.kept,
           },
           changedById: userId,
           companyId,
@@ -450,7 +466,12 @@ export class LessonCancellationsService {
           now,
           holidays,
         });
-        return { id };
+        return {
+          id,
+          restoredStudents: restored.students,
+          restoredAmount: restored.restored,
+          keptStudents: restored.kept,
+        };
       }, SERIALIZABLE_TX)
       .catch(asConflict);
   }

@@ -3,6 +3,7 @@ import {
   firstLessonCoverage,
   heldAfter,
   isFirstLessonOfMonth,
+  leastDue,
   lessonAdmission,
   paymentReach,
   type AdmissionCharge,
@@ -204,6 +205,7 @@ describe('paymentReach', () => {
         date: '2026-10-07',
         groupName: '#005',
         needed: 350000 - 10 * 34615,
+        minPaidPercent: null,
       },
       clearsDebt: false,
     });
@@ -229,6 +231,270 @@ describe('paymentReach', () => {
     expect(
       paymentReach({ today: '2026-10-31', balanceAfter: -1000, charges }),
     ).toBeNull();
+  });
+});
+
+// #005 in November 2026: Mon/Wed/Fri, 13 lessons, 450 000 — half is 225 000.
+const NOV = OCT.map((_, i) => {
+  const day = [2, 4, 6, 9, 11, 13, 16, 18, 20, 23, 25, 27, 30][i];
+  return `2026-11-${String(day).padStart(2, '0')}`;
+});
+const nov005: AdmissionCharge = { ...g005, coveredDates: NOV };
+const admit50 = (balance: number, lessonDay: string, charges = [nov005]) =>
+  lessonAdmission({
+    lessonDay,
+    groupId: 'g005',
+    balance,
+    charges,
+    minPaidPercent: 50,
+  });
+
+describe('lessonAdmission — at least half of the month (ADR-0064)', () => {
+  it('keeps the first lesson of the month free', () => {
+    expect(admit50(-450000, '2026-11-02').reason).toBe('FIRST_LESSON');
+  });
+
+  it('blocks the 2nd lesson with nothing paid and asks for half the month', () => {
+    expect(admit50(-450000, '2026-11-04')).toEqual({
+      admitted: false,
+      reason: 'BELOW_MIN_SHARE',
+      shortfall: 225000,
+      paidThrough: null,
+      minPaidPercent: 50,
+    });
+  });
+
+  it('100 000 pays for the 2nd lesson but not for half the month', () => {
+    expect(admit50(-350000, '2026-11-04')).toMatchObject({
+      admitted: false,
+      reason: 'BELOW_MIN_SHARE',
+      shortfall: 125000,
+    });
+  });
+
+  it('half the month admits through the lessons it pays for (6 of 13)', () => {
+    expect(admit50(-225000, '2026-11-04')).toEqual({
+      admitted: true,
+      reason: 'PAID',
+      shortfall: 0,
+      paidThrough: '2026-11-13',
+    });
+    // The 7th lesson needs what the six after it do not hold: the old reach rule again.
+    expect(admit50(-225000, '2026-11-16')).toMatchObject({
+      admitted: false,
+      reason: 'NOT_PAID',
+      shortfall: 450000 - 6 * 34615 - 225000,
+    });
+  });
+
+  it("one so'm short of half is still blocked", () => {
+    expect(admit50(-225001, '2026-11-04').admitted).toBe(false);
+  });
+
+  it("rounds half of an odd charge up to a whole so'm", () => {
+    const odd = { ...nov005, chargedAmount: 450001 };
+    expect(admit50(-225000, '2026-11-04', [odd]).admitted).toBe(true);
+    expect(admit50(-225001, '2026-11-04', [odd]).shortfall).toBe(1);
+  });
+
+  it('counts what was carried over from the month before', () => {
+    // A mid-October join paid 450 000 for 6 lessons: 242 308 carried over.
+    expect(admit50(242308 - 450000, '2026-11-04').admitted).toBe(true);
+    // 400 000 paid: 192 308 carried over, 32 692 short of half.
+    expect(admit50(192308 - 450000, '2026-11-04')).toMatchObject({
+      admitted: false,
+      reason: 'BELOW_MIN_SHARE',
+      shortfall: 32692,
+    });
+  });
+
+  it('older debt is paid before the half counts', () => {
+    expect(admit50(-550000, '2026-11-04').shortfall).toBe(100000 + 225000);
+  });
+
+  it('takes half of what the month charged, discount included', () => {
+    const half = { ...nov005, discountPercent: 50, chargedAmount: 225000 };
+    expect(admit50(-112500, '2026-11-04', [half]).admitted).toBe(true);
+    expect(admit50(-112501, '2026-11-04', [half]).shortfall).toBe(1);
+  });
+
+  it('does not apply before 01.11.2026', () => {
+    expect(admit50(-300000, '2026-10-05', [g005])).toMatchObject({
+      admitted: true,
+      paidThrough: '2026-10-09',
+    });
+  });
+
+  it('0% is the old rule: the lessons held are enough', () => {
+    const paidTwoLessons = lessonAdmission({
+      lessonDay: '2026-11-04',
+      groupId: 'g005',
+      balance: -(11 * 34615),
+      charges: [nov005],
+    });
+    expect(paidTwoLessons.admitted).toBe(true);
+  });
+
+  describe('two groups: each half from its own 2nd lesson, the needs add up', () => {
+    // #010: Tue/Thu/Sat, 12 lessons, 400 000 — half is 200 000.
+    const nov010: AdmissionCharge = {
+      groupId: 'g010',
+      coveredDates: [3, 5, 7, 10, 12, 14, 17, 19, 21, 24, 26, 28].map(
+        (d) => `2026-11-${String(d).padStart(2, '0')}`,
+      ),
+      frozenOutDates: [],
+      coveredLessons: 12,
+      perLessonCost: 33333,
+      discountPercent: 0,
+      chargedAmount: 400000,
+    };
+    const both = [nov005, nov010];
+    const paid = (amount: number) => amount - 850000;
+
+    it("#005's 2nd lesson: its half plus #010's one lesson held so far", () => {
+      const need = 225000 + (400000 - 11 * 33333);
+      expect(admit50(paid(need), '2026-11-04', both).admitted).toBe(true);
+      expect(admit50(paid(need - 1), '2026-11-04', both)).toMatchObject({
+        admitted: false,
+        reason: 'BELOW_MIN_SHARE',
+        shortfall: 1,
+      });
+    });
+
+    it("from #010's 2nd lesson both halves are due", () => {
+      const on010 = (balance: number) =>
+        lessonAdmission({
+          lessonDay: '2026-11-05',
+          groupId: 'g010',
+          balance,
+          charges: both,
+          minPaidPercent: 50,
+        });
+      expect(on010(paid(425000)).admitted).toBe(true);
+      expect(on010(paid(424999)).admitted).toBe(false);
+      // Half of one group alone admits to neither.
+      expect(on010(paid(225000)).shortfall).toBe(200000);
+      expect(admit50(paid(225000), '2026-11-06', both).shortfall).toBe(200000);
+    });
+  });
+
+  describe('a month split by a transfer or a rejoin is judged whole', () => {
+    // The student's November is still 450 000: `kept` stayed with the closed
+    // enrollment for the lessons held there, the rest is the new charge.
+    const movedAfter = (held: number): AdmissionCharge => ({
+      ...nov005,
+      groupId: 'g020',
+      coveredDates: NOV.slice(held),
+      coveredLessons: 13 - held,
+      chargedAmount: 450000 - held * 34615,
+    });
+    const on2ndLesson = (held: number, paid: number, whole = true) =>
+      lessonAdmission({
+        lessonDay: NOV[held + 1],
+        groupId: 'g020',
+        balance: paid - 450000,
+        charges: [movedAfter(held)],
+        minPaidPercent: 50,
+        closedThisMonth: whole ? held * 34615 : 0,
+      });
+
+    it('two thirds of the month paid is not short of half after a transfer', () => {
+      // 6 lessons held in the old group, 300 000 paid: 8 lessons' worth.
+      expect(on2ndLesson(6, 300000)).toMatchObject({
+        admitted: true,
+        paidThrough: NOV[7],
+      });
+      // Taken of the new charge alone, half of it on top of the old group's
+      // lessons would keep the same student out.
+      expect(on2ndLesson(6, 300000, false).admitted).toBe(false);
+    });
+
+    it('half of the whole month is still asked for', () => {
+      // Moved after one lesson: three lessons held cost 103 845, half is 225 000.
+      expect(on2ndLesson(1, 225000).admitted).toBe(true);
+      expect(on2ndLesson(1, 200000)).toMatchObject({
+        admitted: false,
+        reason: 'BELOW_MIN_SHARE',
+        shortfall: 25000,
+      });
+    });
+
+    it('the payment dialog reads the same reach', () => {
+      expect(
+        paymentReach({
+          today: NOV[7],
+          balanceAfter: 300000 - 450000,
+          charges: [{ ...movedAfter(6), groupName: '#020' }],
+          minPaidPercent: 50,
+          closedThisMonth: 6 * 34615,
+        }),
+      ).toMatchObject({
+        paidThrough: NOV[7],
+        next: { date: NOV[8], minPaidPercent: null },
+      });
+    });
+  });
+});
+
+describe('paymentReach — at least half of the month (ADR-0064)', () => {
+  const charges = [{ ...nov005, groupName: '#005' }];
+  const reach = (balanceAfter: number, today = '2026-11-04') =>
+    paymentReach({ today, balanceAfter, charges, minPaidPercent: 50 });
+
+  it('100 000 does not reach the 2nd lesson: 125 000 short of half', () => {
+    expect(reach(-350000)).toEqual({
+      paidThrough: null,
+      next: {
+        date: '2026-11-04',
+        groupName: '#005',
+        needed: 125000,
+        minPaidPercent: 50,
+      },
+      clearsDebt: false,
+    });
+  });
+
+  it('half the month reaches 13.11 and names what 16.11 needs', () => {
+    expect(reach(-225000)).toEqual({
+      paidThrough: '2026-11-13',
+      next: {
+        date: '2026-11-16',
+        groupName: '#005',
+        needed: 450000 - 6 * 34615 - 225000,
+        minPaidPercent: null,
+      },
+      clearsDebt: false,
+    });
+  });
+
+  it('on the free first lesson day the next lesson still asks for half', () => {
+    expect(reach(-450000, '2026-11-02')).toMatchObject({
+      paidThrough: '2026-11-02',
+      next: { date: '2026-11-04', needed: 225000, minPaidPercent: 50 },
+    });
+  });
+});
+
+describe('leastDue (ADR-0064)', () => {
+  it('is the least share of a charge whose first two lessons cost less', () => {
+    expect(leastDue(nov005, 50)).toBe(225000);
+  });
+
+  it('is the first two lessons when they cost more than the share', () => {
+    // Joined for the month's last three lessons: 103 845, half is 51 923.
+    const short = {
+      ...nov005,
+      coveredDates: NOV.slice(10),
+      coveredLessons: 3,
+      chargedAmount: 103845,
+    };
+    expect(leastDue(short, 50)).toBe(2 * 34615);
+  });
+
+  it('is null before 01.11.2026, at 0% and with fewer than two lessons', () => {
+    expect(leastDue(g005, 50)).toBeNull();
+    expect(leastDue(nov005, 0)).toBeNull();
+    expect(leastDue({ ...nov005, coveredDates: NOV.slice(12) }, 50)).toBeNull();
   });
 });
 
