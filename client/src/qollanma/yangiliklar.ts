@@ -6,10 +6,51 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-02",
+    sarlavha: "Menyu va tugmalar rolga moslandi",
+    matn: "Kassirga «Guruhlar» menyusi ko'rinmaydi, guruh nomi unga havolasiz chiqadi va o'quvchi profilida «Chiqarish» tugmasi yo'q. «Qarzdorlik» sahifasidagi «Markaz qoplagani» tabi kassirga ochiladi, «Natijani kiritish» va muzlatilgan pulni siljitish tugmalari esa unga ko'rinmaydi. Administrator ish haqi ma'lumotini server tomondan ham ko'ra olmaydi, qidiruvda xodimlar unga chiqmaydi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "boshlash", sahifa: "rollar-va-huquqlar" },
+  },
+  {
+    sana: "2026-10-02",
+    sarlavha: "Boshqa filialdagi guruh yoki o'quvchi sahifasi",
+    matn: "Tanlangan filialda ochilmagan guruh yoki o'quvchi sizning boshqa filialingizda bo'lsa, sahifa «Guruh boshqa filialda» (yoki «O'quvchi boshqa filialda») deb yozadi va shu filialga o'tish tugmasini beradi. Ilgari bunday sahifa «Guruh topilmadi» yoki «O'quvchi topilmadi» deb chiqardi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "boshlash", sahifa: "rollar-va-huquqlar" },
+  },
+  {
     sana: "2026-09-30",
     sarlavha: "Qo'llanma ishga tushdi",
     matn: "Tizim qoidalari endi admin panel ichida. Har sahifadagi «?» tugmasi shu sahifaning qoidasini ochadi.",
     sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-09-30",
+    sarlavha: "«Topshiriqlar»da tizim topshirig'i: «Dars bo'ldimi?»",
+    matn: "Dars tugaguncha davomat olinmasa, filial administratorlariga «Tizim» nomidan «Dars bo'ldimi?» topshirig'i keladi. Javobni kartaning o'zida berasiz: «Bo'ldi» davomatni kech kiritadi va ustozga bu dars uchun haq yozilmaydi, «Bo'lmadi» darsni bekor qiladi yoki ko'chiradi. Ilgari tizim «dars bo'lmadi» bilan «davomat unutildi»ni ajrata olmasdi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-09-30",
+    sarlavha: "Bildirishnomani bossangiz, tegishli sahifa ochiladi",
+    matn: "Bildirishnomalar ro'yxatida xabarni bossangiz, tegishli o'quvchi, guruh, lid yoki xodim sahifasi ochiladi. Sahifani ocha olmaydigan xodimga (masalan, kassirga guruh sahifasi) sahifa ochilmaydi: xabar faqat o'qilgan bo'ladi. Ilgari ko'p xabarlar to'g'ri sahifani ochmasdi.",
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-09-30",
+    sarlavha: "Topshiriq muddatini sana bilan belgilash mumkin",
+    matn: "Topshiriq formasida «Muddat» sanasini tanlasangiz, muddat shu kunning 18:00 si (Toshkent vaqti) bo'ladi; yakshanbani tanlab bo'lmaydi. Ilgari sana bilan yuborilgan topshiriqni tizim rad etardi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-09-30",
+    sarlavha: "Topshiriq kartasidagi havolalar to'g'rilandi",
+    matn: "Lidga yozilgan topshiriqning havolasi endi «Lidlar» sahifasida shu lidning kartochkasini ochadi. Xodim sahifasiga havola faqat CEO va filial direktoriga chiqadi. Ilgari lidning havolasi mavjud bo'lmagan sahifaga olib borardi, administrator esa xodim havolasidan «Sozlamalar» sahifasiga qaytarilardi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
   },
   {
     sana: "2026-09-29",
