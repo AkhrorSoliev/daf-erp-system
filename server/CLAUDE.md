@@ -1287,7 +1287,7 @@ Deliberately NOT merged into this engine: `getIncomeMonthAttribution` (`reports-
 
 #### Lesson Trail (`GET /transactions/student/:id/lesson-trail`)
 
-Per-student "where did each so'm go for lessons?" report. Strictly scoped to `LESSON_DEDUCTION` (prepaid-batch allocation rows) and `LESSON_CONSUMPTION` (per-lesson use rows) — money-flow types (PAYMENT/REFUND/ADJUSTMENT/INITIAL_BALANCE) are filtered out at the service level. Paginated (`page`, `pageSize`). Returns rows in ASC order (chronological story) enriched with attendance metadata (date, group, course) and reversal markers. Drives the "Darslar" tab (URL `?tab=darslar`) on the student profile.
+Per-student "where did each so'm go for lessons?" report. Strictly scoped to `LESSON_DEDUCTION` (prepaid-batch allocation rows) and `LESSON_CONSUMPTION` (per-lesson use rows) — money-flow types (PAYMENT/REFUND/ADJUSTMENT/INITIAL_BALANCE) are filtered out at the service level. Paginated (`page`, `pageSize`). Returns rows in ASC order (chronological story) enriched with attendance metadata (date, group, course) and reversal markers. No screen reads it now: the «Darslar» tab reads `GET /students/:id/lessons-overview` (`getLessonsOverview`: month blocks from the first monthly charge on, pack cycles before — ADR-0062).
 
 #### Student transactions list (`GET /transactions/student/:id`)
 

@@ -838,12 +838,9 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 #### "Darslar" tab (`?tab=darslar`)
 
 - Component: `lesson-trail-tab.tsx`. Visible to CEO / BD / Administrator (`canManage`).
-- Question it answers: **"Which lessons did the student consume and which prepaid batch covered them?"**
-- Reads `GET /transactions/student/:id/lesson-trail?page=1&pageSize=20`. The endpoint itself filters to `LESSON_DEDUCTION` + `LESSON_CONSUMPTION` server-side — the frontend doesn't pass a `types` param.
-- Sort: ASC (chronological story), paginated by 20 (selectable 10/20/30/40/50).
-- LESSON_DEDUCTION rows show `lessonMode` from `metadata` ("To'liq tsikl (12 dars)" / "Qisman (6 dars)") + contract number.
-- LESSON_CONSUMPTION rows show the lesson date + group/course from the joined attendance row.
-- Reversed rows (`isReversal`) get an extra "Bekor" badge and 60% opacity. The pre-pagination tab name was `?tab=dars-hisob` — that URL no longer exists; old links fall back to the default tab.
+- Question it answers: **"Which lessons did the student attend, block by block?"** — attendance only; which payment covered which lesson is the «To'lovlar» tab's job.
+- Reads `GET /students/:id/lessons-overview` (`?includeClosed=true` for the «Yopilgan guruhlarni ko'rsatish» toggle).
+- Blocks (ADR-0062): from the month of an enrollment's first monthly charge on, one block per month («Oktabr: 02.10 (1/13 dars)», capacity = that month's charged lessons; a cancelled lesson is not shown); earlier lessons keep the pack-era `lessonPaymentCount` blocks («3-sikl»). Labels: `lesson-trail-labels.ts`.
 
 ### Initial Balance Dialog (Student Profile)
 
