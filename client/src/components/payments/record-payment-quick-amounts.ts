@@ -18,6 +18,10 @@ export interface MonthlyPreviewBlock {
   // Contract 3.2 (ADR-0047): how far the balance after this payment reaches.
   // Absent on an older server, null before the rule starts.
   admission?: PaymentReach | null;
+  // ADR-0064: what the least share of the month asks for before this payment,
+  // while it keeps the student out of their next lesson. Absent on an older
+  // server.
+  minShareDue?: { amount: number; percent: number } | null;
 }
 
 /** The slice of GET /payments/preview the quick amounts are derived from. */
@@ -50,12 +54,20 @@ export function buildQuickAmounts(preview: QuickAmountSource): QuickAmount[] | n
     : null;
 }
 
-function monthlyQuickAmounts({ debt, nextMonthAmount }: MonthlyPreviewBlock): QuickAmount[] | null {
+function monthlyQuickAmounts({ debt, nextMonthAmount, minShareDue }: MonthlyPreviewBlock): QuickAmount[] | null {
   const items: QuickAmount[] = [];
   if (debt > 0) {
     // The debt already contains the current month's charge (billed on the
     // 1st), so closing it is the usual payment; "+ keyingi oy" is a prepayment.
     items.push({ key: "debt", amount: debt, label: "Qarzni yopish", recommended: true });
+  }
+  if (minShareDue) {
+    // The least that lets the student into their next lesson (ADR-0064),
+    // rounded up to a whole 1 000 so'm so it is never one so'm short.
+    const amount = Math.ceil(minShareDue.amount / 1000) * 1000;
+    if (amount < debt) {
+      items.push({ key: "min-share", amount, label: `Kamida ${minShareDue.percent}%`, recommended: false });
+    }
   }
   if (debt > 0 && nextMonthAmount > 0) {
     items.push({ key: "debt-next", amount: debt + nextMonthAmount, label: "Qarz + keyingi oy", recommended: false });

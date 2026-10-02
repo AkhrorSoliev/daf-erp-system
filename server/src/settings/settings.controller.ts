@@ -103,6 +103,18 @@ export class SettingsController {
         dto.attendanceOpensMinutesBefore,
       ]);
     }
+    if (dto.admissionMinPaidPercent !== undefined) {
+      edits.push([
+        'payment.admissionMinPaidPercent',
+        dto.admissionMinPaidPercent,
+      ]);
+    }
+    if (dto.paidThroughReminderDays !== undefined) {
+      edits.push([
+        'payment.paidThroughReminderDays',
+        dto.paidThroughReminderDays,
+      ]);
+    }
 
     if (edits.length === 0) {
       throw new BadRequestException('Kamida bitta sozlama yuborilishi kerak');

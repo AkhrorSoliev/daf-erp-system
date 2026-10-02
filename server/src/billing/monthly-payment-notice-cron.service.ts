@@ -11,6 +11,12 @@ import { MonthlyPaymentNoticeService } from './monthly-payment-notice.service';
  * before the lesson whatever day that is. `payment.monthlyNoticesEnabled`
  * (company-level) switches the messages off; the bills are still marked, so
  * switching back on sends no old bill.
+ *
+ * ADR-0064: the same run queues contract 3.7's reminder
+ * (`payment.paidThroughReminderDays`, 0 = none) and hands the least share
+ * (`payment.admissionMinPaidPercent`) to the bill and the 2nd-lesson
+ * reminder. With contract 3.2 switched off (`payment.admissionRuleEnabled`)
+ * nobody is kept out of a lesson, so there is neither.
  */
 @Injectable()
 export class MonthlyPaymentNoticeCronService {
@@ -33,16 +39,41 @@ export class MonthlyPaymentNoticeCronService {
           company.id,
           'payment.monthlyNoticesEnabled',
         );
+        const admissionRule = await this.settingsService.get(
+          company.id,
+          'payment.admissionRuleEnabled',
+        );
+        const minPaidPercent = admissionRule
+          ? await this.settingsService.get(
+              company.id,
+              'payment.admissionMinPaidPercent',
+            )
+          : 0;
+        const days = admissionRule
+          ? await this.settingsService.get(
+              company.id,
+              'payment.paidThroughReminderDays',
+            )
+          : 0;
         const bills = await this.notices.queueChargeNotices(
           company.id,
           now,
           enabled,
+          minPaidPercent,
         );
         const reminders = enabled
-          ? await this.notices.queueReminders(company.id, now)
+          ? await this.notices.queueReminders(company.id, now, minPaidPercent)
           : 0;
+        const paidThrough =
+          enabled && days > 0
+            ? await this.notices.queuePaidThroughReminders(
+                company.id,
+                now,
+                days,
+              )
+            : 0;
         this.logger.log(
-          `Company ${company.id}: ${bills} monthly bill(s), ${reminders} payment reminder(s) queued` +
+          `Company ${company.id}: ${bills} monthly bill(s), ${reminders} 2nd-lesson and ${paidThrough} paid-through reminder(s) queued` +
             (enabled ? '' : ' — notices are switched off'),
         );
       } catch (error) {

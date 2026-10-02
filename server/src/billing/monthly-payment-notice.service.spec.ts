@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramDigestQueueService } from '../telegram-digest/telegram-digest-queue.service';
+import { LessonAdmissionService } from './lesson-admission.service';
 import { MonthlyChargeService } from './monthly-charge.service';
 import {
   MonthlyPaymentNoticeService,
@@ -35,6 +36,11 @@ const OCTOBER = [
   '2026-10-30',
 ];
 
+/** The same group's November: Mon 2, Wed 4, Fri 6, … — the 2nd lesson is 04.11. */
+const NOVEMBER = [2, 4, 6, 9, 11, 13, 16, 18, 20, 23, 25, 27, 30].map(
+  (d) => `2026-11-${String(d).padStart(2, '0')}`,
+);
+
 type Row = Record<string, unknown> & {
   id: string;
   studentId: number;
@@ -54,6 +60,9 @@ const charge = (over: Record<string, unknown> = {}): Row => ({
   periodMonth: 10,
   coveredLessons: 13,
   coveredDates: OCTOBER,
+  frozenOutDates: [],
+  perLessonCost: 80000,
+  discountPercent: 0,
   creditLessons: 0,
   creditAmount: 0,
   chargedAmount: 1040000,
@@ -74,6 +83,8 @@ describe('MonthlyPaymentNoticeService', () => {
   let updateMany: jest.Mock;
   let enqueue: jest.Mock;
   let resolvePlan: jest.Mock;
+  let forLesson: jest.Mock;
+  let reachForMonth: jest.Mock;
   let prisma: Record<string, unknown>;
 
   beforeEach(async () => {
@@ -92,6 +103,8 @@ describe('MonthlyPaymentNoticeService', () => {
     resolvePlan = jest
       .fn()
       .mockResolvedValue({ excludedDates: [], addedDates: [] });
+    forLesson = jest.fn().mockResolvedValue(new Map());
+    reachForMonth = jest.fn().mockResolvedValue(new Map());
     prisma = {
       enrollmentMonthlyCharge: { findMany, updateMany },
       $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(prisma)),
@@ -104,6 +117,10 @@ describe('MonthlyPaymentNoticeService', () => {
         {
           provide: MonthlyChargeService,
           useValue: { resolveMonthPlanDates: resolvePlan },
+        },
+        {
+          provide: LessonAdmissionService,
+          useValue: { forLesson, reachForMonth },
         },
       ],
     }).compile();
@@ -267,6 +284,32 @@ describe('MonthlyPaymentNoticeService', () => {
       ).resolves.toBe(1);
       expect(enqueue).toHaveBeenCalledTimes(2);
     });
+
+    describe('under the least share (ADR-0064)', () => {
+      /** 19:50 Tashkent, 01.11.2026. */
+      const NOV_1 = new Date('2026-11-01T14:50:00Z');
+      const november = () =>
+        charge({ periodMonth: 11, coveredDates: NOVEMBER });
+
+      it('the bill carries what is due by the 2nd lesson', async () => {
+        candidates = [november()];
+        await service.queueChargeNotices(1001, NOV_1, true, 50);
+        expect(enqueue.mock.calls[0][0].payload).toEqual(
+          expect.objectContaining({ dueDate: '2026-11-04', minShare: 520000 }),
+        );
+      });
+
+      it('an October bill, or 0%, carries none: the whole charge is due', async () => {
+        candidates = [charge()];
+        await service.queueChargeNotices(1001, CHARGE_DAY, true, 50);
+        candidates = [november()];
+        await service.queueChargeNotices(1001, NOV_1, true, 0);
+        for (const [item] of enqueue.mock.calls) {
+          expect(item.payload).not.toHaveProperty('minShare');
+        }
+        expect(enqueue).toHaveBeenCalledTimes(2);
+      });
+    });
   });
 
   describe('queueReminders', () => {
@@ -370,6 +413,237 @@ describe('MonthlyPaymentNoticeService', () => {
       await service.queueReminders(1001, EVE);
       expect(resolvePlan).toHaveBeenCalledTimes(1);
       expect(resolvePlan).toHaveBeenCalledWith(prisma, 'g-1', 7, 2026, 10);
+      expect(enqueue).toHaveBeenCalledTimes(2);
+    });
+
+    describe('under the least share (ADR-0064)', () => {
+      /** 19:50 Tashkent, 03.11.2026 — tomorrow, 04.11, is the 2nd lesson. */
+      const NOV_EVE = new Date('2026-11-03T14:50:00Z');
+      const november = (over: Record<string, unknown> = {}) =>
+        charge({ periodMonth: 11, coveredDates: NOVEMBER, ...over });
+
+      it("reminds only a student tomorrow's lesson does not admit, with what admits them", async () => {
+        candidates = [
+          november(),
+          november({ id: 'charge-2', enrollmentId: 'enr-2', studentId: 10043 }),
+        ];
+        forLesson.mockResolvedValue(
+          new Map([
+            [10042, { admitted: false, shortfall: 520000 }],
+            [10043, { admitted: true, shortfall: 0 }],
+          ]),
+        );
+        await expect(service.queueReminders(1001, NOV_EVE, 50)).resolves.toBe(
+          1,
+        );
+        expect(forLesson).toHaveBeenCalledTimes(1);
+        expect(forLesson).toHaveBeenCalledWith({
+          groupId: 'g-1',
+          lessonDay: '2026-11-04',
+          studentIds: [10042, 10043],
+        });
+        expect(enqueue).toHaveBeenCalledTimes(1);
+        expect(enqueue.mock.calls[0][0]).toMatchObject({
+          recipientId: 10042,
+          relatedEntityId: 'enr-1:2026-11-04',
+          payload: {
+            enrollmentId: 'enr-1',
+            lessonDate: '2026-11-04',
+            minDue: 520000,
+            minPaidPercent: 50,
+          },
+        });
+      });
+
+      it.each([
+        ['before 01.11.2026', EVE, 50],
+        ['at 0%', NOV_EVE, 0],
+      ])('%s every debtor is reminded, as before', async (_label, now, pct) => {
+        candidates = [now === EVE ? charge() : november()];
+        await expect(service.queueReminders(1001, now, pct)).resolves.toBe(1);
+        expect(forLesson).not.toHaveBeenCalled();
+        expect(enqueue.mock.calls[0][0].payload).not.toHaveProperty('minDue');
+      });
+    });
+  });
+
+  describe('queuePaidThroughReminders (contract 3.7, ADR-0064)', () => {
+    /** 19:50 Tashkent, 13.11.2026 — a lesson day; the next lesson is 16.11. */
+    const NOV_13 = new Date('2026-11-13T14:50:00Z');
+    const partPayer = (over: Record<string, unknown> = {}) =>
+      charge({
+        periodMonth: 11,
+        coveredDates: NOVEMBER,
+        chargedAmount: 450000,
+        // Half of November paid.
+        student: {
+          status: StudentStatus.ACTIVE,
+          deletedAt: null,
+          balance: -225000,
+        },
+        ...over,
+      });
+    const reachOf = (next: Record<string, unknown> | null) =>
+      reachForMonth.mockResolvedValue(
+        new Map([
+          [
+            10042,
+            {
+              paidThrough: '2026-11-13',
+              next: next && {
+                date: '2026-11-16',
+                groupName: 'A1-12',
+                needed: 17310,
+                minPaidPercent: null,
+                ...next,
+              },
+              clearsDebt: false,
+            },
+          ],
+        ]),
+      );
+    const run = (days = 3) =>
+      service.queuePaidThroughReminders(1001, NOV_13, days);
+
+    it("asks for debtors in open enrollments of active groups, charged for today's month", async () => {
+      await run();
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            companyId: 1001,
+            periodYear: 2026,
+            periodMonth: 11,
+            status: MonthlyChargeStatus.CHARGED,
+            enrollment: { status: EnrollmentStatus.ACTIVE },
+            group: { statusEnum: GroupStatus.ACTIVE, deletedAt: null },
+            student: {
+              status: StudentStatus.ACTIVE,
+              deletedAt: null,
+              balance: { lt: 0 },
+            },
+          },
+        }),
+      );
+      expect(reachForMonth).not.toHaveBeenCalled();
+    });
+
+    it('reminds a part payer whose paid lessons run out within the days', async () => {
+      candidates = [partPayer()];
+      reachOf({});
+      await expect(run()).resolves.toBe(1);
+      expect(reachForMonth).toHaveBeenCalledWith({
+        companyId: 1001,
+        studentIds: [10042],
+        today: '2026-11-13',
+      });
+      expect(enqueue).toHaveBeenCalledWith({
+        recipientKind: TelegramDigestRecipientKind.STUDENT,
+        recipientId: 10042,
+        companyId: 1001,
+        branchId: 7,
+        category: TelegramDigestCategory.PAYMENT_REMINDER,
+        relatedEntityId: 'paid-through:10042:2026-11-16:2026-11-13',
+        payload: {
+          enrollmentId: 'enr-1',
+          groupName: 'A1-12',
+          periodYear: 2026,
+          periodMonth: 11,
+          lessonDate: '2026-11-16',
+          paidThrough: { through: '2026-11-13', queuedFor: '2026-11-13' },
+        },
+      });
+    });
+
+    it.each([
+      ['the lesson is further ahead than the days', { date: '2026-11-18' }],
+      [
+        'the lesson is today: the reminders came before it',
+        { date: '2026-11-13' },
+      ],
+      [
+        'the lesson is behind: the student is already out',
+        { date: '2026-11-11' },
+      ],
+      [
+        'it is the least share that is short (the 2nd-lesson reminder)',
+        { minPaidPercent: 50 },
+      ],
+    ])('stays quiet when %s', async (_label, next) => {
+      candidates = [partPayer()];
+      reachOf(next);
+      await expect(run()).resolves.toBe(0);
+      expect(enqueue).not.toHaveBeenCalled();
+    });
+
+    it('stays quiet when the payments reach the whole month', async () => {
+      candidates = [partPayer()];
+      reachOf(null);
+      await expect(run()).resolves.toBe(0);
+    });
+
+    it.each([
+      ['nothing', -450000],
+      ['only an older debt', -500000],
+    ])(
+      'is for a part payer: none for %s paid of this month',
+      async (_l, balance) => {
+        candidates = [
+          partPayer({
+            student: { status: StudentStatus.ACTIVE, deletedAt: null, balance },
+          }),
+        ];
+        reachOf({});
+        await expect(run()).resolves.toBe(0);
+      },
+    );
+
+    it('sends one reminder to a student of two groups, for the group of that lesson', async () => {
+      const student = {
+        status: StudentStatus.ACTIVE,
+        deletedAt: null,
+        balance: -400000,
+      };
+      candidates = [
+        partPayer({ student }),
+        partPayer({
+          id: 'charge-2',
+          enrollmentId: 'enr-2',
+          groupId: 'g-2',
+          student,
+          group: { name: 'B1-3', exactDays: ['monday', 'wednesday', 'friday'] },
+        }),
+      ];
+      reachOf({ groupName: 'B1-3' });
+      await expect(run()).resolves.toBe(1);
+      expect(enqueue.mock.calls[0][0].payload).toMatchObject({
+        enrollmentId: 'enr-2',
+        groupName: 'B1-3',
+      });
+    });
+
+    it('one failing student does not stop the rest', async () => {
+      candidates = [
+        partPayer(),
+        partPayer({ id: 'charge-2', enrollmentId: 'enr-2', studentId: 10043 }),
+      ];
+      const reach = {
+        paidThrough: '2026-11-13',
+        next: {
+          date: '2026-11-16',
+          groupName: 'A1-12',
+          needed: 17310,
+          minPaidPercent: null,
+        },
+        clearsDebt: false,
+      };
+      reachForMonth.mockResolvedValue(
+        new Map([
+          [10042, reach],
+          [10043, reach],
+        ]),
+      );
+      enqueue.mockRejectedValueOnce(new Error('db down'));
+      await expect(run()).resolves.toBe(1);
       expect(enqueue).toHaveBeenCalledTimes(2);
     });
   });

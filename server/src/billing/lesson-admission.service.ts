@@ -32,6 +32,11 @@ export class LessonAdmissionService {
     return this.settings.get(companyId, 'payment.admissionRuleEnabled');
   }
 
+  /** `payment.admissionMinPaidPercent`: the least share of a month due by its 2nd lesson (ADR-0064). */
+  private minPaidPercent(companyId: number): Promise<number> {
+    return this.settings.get(companyId, 'payment.admissionMinPaidPercent');
+  }
+
   /** Contract 3.2 for every student of one lesson. A student missing from the map is admitted. */
   async forLesson(
     params: { groupId: string; lessonDay: string; studentIds: number[] },
@@ -49,6 +54,7 @@ export class LessonAdmissionService {
     if (students.length === 0) return result;
     // Switched off: nobody is kept out, the map stays empty (all admitted).
     if (!(await this.ruleEnabled(students[0].companyId))) return result;
+    const minPaidPercent = await this.minPaidPercent(students[0].companyId);
     // Later months too: the balance already carries their charges.
     const charges = await this.loadCharges(
       client,
@@ -69,6 +75,7 @@ export class LessonAdmissionService {
           balance: student.balance,
           charges: own.filter(inMonth),
           laterCharges: own.filter((c) => !inMonth(c)),
+          minPaidPercent,
         }),
       );
     }
@@ -168,7 +175,45 @@ export class LessonAdmissionService {
       today: params.today,
       balanceAfter: params.balanceAfter,
       charges,
+      minPaidPercent: await this.minPaidPercent(params.companyId),
     });
+  }
+
+  /**
+   * Contract 3.7 (ADR-0064): how far each student's balance reaches into the
+   * month of `today`, walked from the month's first lesson — `next` is the
+   * first lesson of the month the payments do not reach, behind or ahead.
+   * Empty when contract 3.2 is switched off; a student with no charge on an
+   * ACTIVE enrollment this month is absent.
+   */
+  async reachForMonth(params: {
+    companyId: number;
+    studentIds: number[];
+    today: string;
+  }): Promise<Map<number, PaymentReach>> {
+    const result = new Map<number, PaymentReach>();
+    if (params.studentIds.length === 0) return result;
+    if (params.today < ADMISSION_START_DAY) return result;
+    if (!(await this.ruleEnabled(params.companyId))) return result;
+    const [year, month] = params.today.split('-').map(Number);
+    const [students, charges, minPaidPercent] = await Promise.all([
+      this.prisma.student.findMany({
+        where: { id: { in: params.studentIds } },
+        select: { id: true, balance: true },
+      }),
+      this.loadCharges(this.prisma, params.studentIds, year, month),
+      this.minPaidPercent(params.companyId),
+    ]);
+    for (const student of students) {
+      const reach = paymentReach({
+        today: `${params.today.slice(0, 8)}01`,
+        balanceAfter: student.balance,
+        charges: charges.filter((c) => c.studentId === student.id),
+        minPaidPercent,
+      });
+      if (reach) result.set(student.id, reach);
+    }
+    return result;
   }
 
   private async loadCharges(

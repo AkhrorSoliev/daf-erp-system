@@ -125,7 +125,7 @@ export class TelegramDigestRenderService {
     const monthly = await this.liveMonthly(
       of(TelegramDigestCategory.MONTHLY_CHARGE),
       owes ? of(TelegramDigestCategory.PAYMENT_REMINDER) : [],
-      addDaysToDateStr(today, 1),
+      today,
     );
 
     const shown = new Set<DedupedRow>([
@@ -357,20 +357,28 @@ export class TelegramDigestRenderService {
    * that group: a charge reversed, or a student removed or frozen, during the
    * day gets no bill. A reminder only for tomorrow's lesson — a row kept
    * after a failed send would otherwise say «Ertaga» about a past day — and
-   * only while the enrollment is open.
+   * only while the enrollment is open. Contract 3.7's reminder (ADR-0064)
+   * only on the day it was queued for, and not on an evening the 2nd-lesson
+   * reminder goes out: one reminder a day.
    */
   private async liveMonthly(
     bills: DedupedRow[],
     reminders: DedupedRow[],
-    tomorrow: string,
+    today: string,
   ): Promise<{ bills: DedupedRow[]; reminders: DedupedRow[] }> {
     const chargeIdOf = (e: DedupedRow) =>
       payloadOf(e.row, TelegramDigestCategory.MONTHLY_CHARGE).chargeId;
     const reminderOf = (e: DedupedRow) =>
       payloadOf(e.row, TelegramDigestCategory.PAYMENT_REMINDER);
-    const dueTomorrow = reminders.filter(
-      (e) => reminderOf(e).lessonDate === tomorrow,
-    );
+    const tomorrow = addDaysToDateStr(today, 1);
+    const fresh = reminders.filter((e) => {
+      const p = reminderOf(e);
+      return p.paidThrough
+        ? p.paidThrough.queuedFor === today
+        : p.lessonDate === tomorrow;
+    });
+    const secondLesson = fresh.filter((e) => !reminderOf(e).paidThrough);
+    const dueTomorrow = secondLesson.length > 0 ? secondLesson : fresh;
 
     const standing =
       bills.length === 0

@@ -74,6 +74,20 @@ export class UpdatePaymentSettingsDto {
   @Type(() => Number)
   attendanceOpensMinutesBefore?: number;
 
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  admissionMinPaidPercent?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10)
+  @Type(() => Number)
+  paidThroughReminderDays?: number;
+
   // Faqat CEO uchun ma'noli — qaysi filialga yozish. Branch Director bu
   // maydondan qat'i nazar faqat o'z filialiga yoza oladi (kontrollerda
   // majburlanadi); CEO uchun berilmasa — kompaniya darajasida yoziladi.

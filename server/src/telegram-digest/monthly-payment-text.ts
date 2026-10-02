@@ -4,6 +4,7 @@ import { STUDENT_PORTAL_URL } from './telegram-digest.constants';
 import { DedupedRow } from './telegram-digest-dedup';
 import {
   MonthlyChargeDigestPayload,
+  PaymentReminderDigestPayload,
   payloadOf,
 } from './telegram-digest-payloads';
 import { DigestBlock, header, spacer } from './telegram-message-parts';
@@ -16,8 +17,9 @@ import {
 
 /**
  * The monthly payment messages (ADR-0042), worded exactly as the CEO
- * approved them on 27.09.2026 (spec §A5). Pure: the renderer passes the live
- * balance in.
+ * approved them on 27.09.2026 (spec §A5), and the least-share and contract
+ * 3.7 wordings of 02.10.2026 (ADR-0064 §8). Pure: the renderer passes the
+ * live balance in.
  */
 
 /** Turns a shown row into its block and records it for the audit. */
@@ -80,8 +82,23 @@ function billTailText(
     .map((b) => b.dueDate)
     .filter((d): d is string => d !== null && d > today)
     .sort()[0];
-  if (due) {
-    lines.push(`Muddat: <b>${formatDigestDate(due)}</b> — oyning 2-darsigacha`);
+  // ADR-0064: under the least share only that part is due by the 2nd lesson;
+  // the rest waits until the paid lessons run out.
+  const afterSecondLesson = bills.reduce(
+    (sum, b) =>
+      sum + (b.minShare === undefined ? 0 : b.chargedAmount - b.minShare),
+    0,
+  );
+  const minDue = Math.max(0, totalDue - afterSecondLesson);
+  if (afterSecondLesson > 0 && minDue === 0) {
+    lines.push("Muddat: to'langan darslar tugaguncha");
+  } else if (due) {
+    lines.push(
+      `Muddat: <b>${formatDigestDate(due)}</b> — oyning 2-darsigacha` +
+        (afterSecondLesson > 0
+          ? ` kamida ${formatSum(minDue)}, qolgani — to'langan darslar tugaguncha`
+          : ''),
+    );
   }
   return lines.join('\n');
 }
@@ -129,10 +146,46 @@ export function monthlyBillSection(
   return blocks;
 }
 
+const UNBROKEN = 'Darslaringiz uzilib qolmasligi uchun';
+
+function reminderText(
+  p: PaymentReminderDigestPayload,
+  totalDue: number,
+): string[] {
+  if (p.paidThrough) {
+    return [
+      `${monthWord(p.periodMonth)} oyi uchun to'lovingiz ${formatDigestDate(p.paidThrough.through)} dagi darsgacha yetadi.`,
+      `Qolgan to'lov: <b>${formatSum(totalDue)}</b>`,
+      '',
+      `${UNBROKEN} to'lovni ${formatDigestDate(p.lessonDate)} dagi darsgacha amalga oshirishingizni so'raymiz.`,
+    ];
+  }
+  const tomorrow = `Ertaga (${formatDigestDate(p.lessonDate)}) ${uzMonthName(p.periodMonth)}ning 2-darsi bo'ladi.`;
+  const ask = `${UNBROKEN} to'lovni ertagi darsgacha amalga oshirishingizni so'raymiz.`;
+  if (p.minDue === undefined) {
+    return [
+      tomorrow,
+      `To'lash kerak: <b>${formatSum(totalDue)}</b>`,
+      '',
+      `Shartnomaga ko'ra oylik to'lov 2-darsgacha qilinadi. ${ask}`,
+    ];
+  }
+  const share = p.minPaidPercent === 50 ? 'yarmi' : `${p.minPaidPercent}% i`;
+  return [
+    tomorrow,
+    `Darsga kirish uchun kamida: <b>${formatSum(Math.min(p.minDue, totalDue))}</b>`,
+    `Jami to'lash kerak: ${formatSum(totalDue)}`,
+    '',
+    `Shartnomaga ko'ra oylik to'lovning kamida ${share} 2-darsgacha qilinadi. ${ask}`,
+  ];
+}
+
 /**
- * «⏰ To'lov eslatmasi». Every reminder in one digest names the same lesson
- * day — tomorrow — so several groups share one block; the block carries all
- * their rows. `entries` must not be empty.
+ * «⏰ To'lov eslatmasi». Every reminder in one digest is of one kind and
+ * names the same lesson day, so several groups share one block; the block
+ * carries all their rows. Three wordings: the 2nd-lesson reminder as approved
+ * on 27.09.2026, the same under the least share, and contract 3.7's reminder
+ * before the paid lessons run out (ADR-0064). `entries` must not be empty.
  */
 export function paymentReminderSection(
   entries: DedupedRow[],
@@ -140,12 +193,7 @@ export function paymentReminderSection(
   event: EventBlockFn,
 ): DigestBlock[] {
   const p = payloadOf(entries[0].row, TelegramDigestCategory.PAYMENT_REMINDER);
-  const text = [
-    `Ertaga (${formatDigestDate(p.lessonDate)}) ${uzMonthName(p.periodMonth)}ning 2-darsi bo'ladi.`,
-    `To'lash kerak: <b>${formatSum(totalDue)}</b>`,
-    '',
-    "Shartnomaga ko'ra oylik to'lov 2-darsgacha qilinadi. Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha amalga oshirishingizni so'raymiz.",
-  ].join('\n');
+  const text = reminderText(p, totalDue).join('\n');
   const block = event(entries[0], text);
   return [
     header("⏰ <b>To'lov eslatmasi</b>"),

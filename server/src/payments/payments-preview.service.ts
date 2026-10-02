@@ -50,6 +50,10 @@ export interface MonthlyPreview {
   // this month's lessons, and what the next one still needs. Null before the
   // rule starts or with no lesson left this month.
   admission: PaymentReach | null;
+  // ADR-0064: what the least share of the month asks for BEFORE this payment,
+  // while it is what keeps the student out of their next lesson — the «50%»
+  // quick amount. Null otherwise.
+  minShareDue: { amount: number; percent: number } | null;
 }
 
 export interface PaymentPreview {
@@ -162,12 +166,22 @@ export class PaymentsPreviewService {
         enrollments,
       );
       if (monthly.monthly) {
-        monthly.monthly.admission = await this.admission.reachForPayment({
-          studentId,
-          companyId,
-          balanceAfter: newBalance,
-          today: tashkentDateStr(new Date()),
-        });
+        const today = tashkentDateStr(new Date());
+        const reachAt = (balanceAfter: number) =>
+          this.admission.reachForPayment({
+            studentId,
+            companyId,
+            balanceAfter,
+            today,
+          });
+        const after = await reachAt(newBalance);
+        const before = amount === 0 ? after : await reachAt(student.balance);
+        monthly.monthly.admission = after;
+        const short = before?.next;
+        monthly.monthly.minShareDue =
+          short && short.minPaidPercent !== null
+            ? { amount: short.needed, percent: short.minPaidPercent }
+            : null;
       }
       return monthly;
     }
@@ -440,6 +454,7 @@ export class PaymentsPreviewService {
         discountPercent,
         enrollments: lines,
         admission: null,
+        minShareDue: null,
       },
     };
   }

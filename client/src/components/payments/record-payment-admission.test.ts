@@ -32,6 +32,33 @@ describe("record-payment-admission", () => {
     ]);
   });
 
+  describe("the least share of the month (ADR-0064)", () => {
+    const short = {
+      paidThrough: null,
+      next: { date: "2026-11-04", groupName: "#005", needed: 125000, minPaidPercent: 50 },
+      clearsDebt: false,
+    };
+
+    it("says the share is what is short, not the lesson", () => {
+      expect(reachLines(short)).toEqual([
+        `Bu pul darsga kirish uchun yetmaydi: oy to'lovining kamida 50% i to'lanishi kerak — yana ${formatPrice(125000)} so'm (04.11, #005).`,
+      ]);
+    });
+
+    it("says it about the next lesson when today's is still open", () => {
+      expect(reachLines({ ...short, paidThrough: "2026-11-02" })).toEqual([
+        "Bu pul 02.11 gacha yetadi: bugungi darsga kiradi.",
+        `Keyingi dars 04.11 (#005): oy to'lovining kamida 50% i to'lanishi kerak — yana ${formatPrice(125000)} so'm.`,
+      ]);
+    });
+
+    it("keeps the old wording when the lessons held are short (an older server sends no percent)", () => {
+      expect(reachLines({ ...part, next: { ...part.next, minPaidPercent: null } })).toEqual(
+        reachLines(part),
+      );
+    });
+  });
+
   it("a clearing payment needs no promise", () => {
     const full = { paidThrough: "2026-10-30", next: null, clearsDebt: true };
     expect(reachLines(full)).toEqual([
