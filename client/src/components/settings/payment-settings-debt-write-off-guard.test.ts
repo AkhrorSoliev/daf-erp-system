@@ -47,12 +47,18 @@ describe("payment.debtWriteOffEnabled sozlamasi UI'da", () => {
   });
 
   it("direktorga NEGA o'zgartira olmasligi aytiladi", () => {
-    // Sababsiz qulflangan tugma buzuq tugmadan farq qilmaydi.
-    const block = SOURCE.slice(
+    // Sababsiz qulflangan tugma buzuq tugmadan farq qilmaydi. Qatorda qulf
+    // belgisi, sahifa tepasida esa sababi yozilgan bitta izoh turadi.
+    const row = SOURCE.slice(
+      0,
       SOURCE.indexOf('checked={settings["payment.debtWriteOffEnabled"]}'),
-    ).slice(0, 900);
-    expect(block).toContain("{!isCeo && canEdit && (");
-    expect(block).toContain("faqat markaz rahbari o&apos;zgartira oladi");
+    ).slice(-1200);
+    expect(row).toContain('label="Qarz kechirishga ruxsat"');
+    expect(row.slice(row.lastIndexOf('label="Qarz kechirishga ruxsat"'))).toContain(
+      "locked={!isCeo}",
+    );
+    expect(SOURCE).toContain("{!isCeo && canEdit && (");
+    expect(SOURCE).toContain("faqat markaz rahbari o&apos;zgartira");
   });
 
   it("CEO ko'radigan nom va tushuntirish joyida", () => {
