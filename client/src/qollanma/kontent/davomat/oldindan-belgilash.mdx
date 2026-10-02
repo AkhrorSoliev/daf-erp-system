@@ -1,6 +1,6 @@
 ## Qanday ishlaydi
 
-O'quvchi darsga kelmasligini oldindan aytsa (masalan, ertalab telefon qilsa), CEO, direktor yoki administrator buni davomat olinmasidan oldin yozib qo'yadi. Bu davomat emas: alohida yozuv. Shuning uchun u pulga tegmaydi va o'qituvchining davomatni bir marta saqlash qoidasini (qulfini) ishga tushirmaydi: o'qituvchi to'liq davomatni dars vaqtida odatdagidek oladi.
+O'quvchi darsga kelmasligini oldindan aytsa (masalan, ertalab telefon qilsa), CEO, direktor yoki administrator buni dars tugaguncha yozib qo'yadi. Bu davomat emas: alohida yozuv. Shuning uchun u pulga tegmaydi, davomat oynasiga (dars boshlanishidan 10 daqiqa oldin ochilishiga) bog'liq emas va o'qituvchining davomatni bir marta saqlash qoidasini (qulfini) ishga tushirmaydi: o'qituvchi to'liq davomatni dars vaqtida odatdagidek oladi.
 
 Belgi ikki xil:
 
@@ -13,7 +13,7 @@ Bir o'quvchiga bir dars uchun bitta belgi qo'yiladi. «Kelmaydi» va «Kelmadi»
 
 1. Chap menyudan «Guruhlar» ni oching, guruhni tanlang. «Davomat» tabi ochiladi.
 2. Bugungi dars kartasidagi «Davomat olish» ni bosing yoki kalendardan kelgusi dars kunining kartasini tanlang.
-3. Darsda hali hech kim belgilanmagan bo'lsa, forma «Oldindan belgilash rejimi» bilan ochiladi. Bannerda shu rejim va «Hozir to'liq davomat olish» tugmasi turadi.
+3. Darsda hali hech kim belgilanmagan va dars tugamagan bo'lsa, forma «Oldindan belgilash rejimi» bilan ochiladi. Bannerda shu rejim turadi; «Hozir to'liq davomat olish» tugmasi esa faqat davomat ochiq paytda (dars boshlanishidan 10 daqiqa oldin — dars tugaguncha) ko'rinadi.
 4. O'quvchining qatorida ikki tugma bor:
    - «Kelmaydi» — bir bosishda saqlanadi.
    - «Sababli» — sabab maydoni ochiladi. «Sababni yozing...» ga sababni yozing va ✓ («Sababli deb saqlash») ni bosing yoki Enter bosing. Bekor qilish uchun ✕ («Bekor qilish») yoki Esc. Sabab yozilmaguncha ✓ bosilmaydi.
@@ -25,7 +25,7 @@ Belgini o'chirish uchun qatordagi ✕ («Oldindan belgilashni o'chirish») ni bo
 ## Kim va qachon
 
 - **Kim.** CEO, filial direktori va administrator; direktor va administrator faqat o'z filialida. O'qituvchi belgilay olmaydi, lekin belgini davomat formasida ko'radi.
-- **Qachon.** Davomati hali olinmagan darsga: bugungi darsga (dars boshlanmasidan oldin ham, dars boshlangandan keyin ham) yoki kelgusi dars kuniga. Vaqt cheklovi yo'q. Forma faqat bugungi yoki kelgusi darsda, hali hech kim belgilanmagan bo'lsa, «Oldindan belgilash rejimi»da ochiladi.
+- **Qachon.** Davomati hali olinmagan darsga, dars tugaguncha: bugungi darsga (dars boshlanmasidan oldin ham, boshlangandan keyin ham, tugashiga qadar) yoki kelgusi dars kuniga. Dars tugagach belgilab bo'lmaydi: «Dars tugagan — kelmaslikni oldindan belgilab bo'lmaydi». Kelmaslikni kun bo'yi belgilash mumkin: davomat oynasi (10 daqiqa oldin) bunga tegmaydi. Forma bugungi yoki kelgusi darsda, hali hech kim belgilanmagan va dars tugamagan bo'lsa, «Oldindan belgilash rejimi»da ochiladi.
 - **Shartlar.** Guruh «Faol» bo'lishi, sana guruhning dars kuni bo'lishi va o'quvchi shu kunda ro'yxatda turishi kerak: guruhga faol yozilgan, yozilish sanasi dars kunidan keyin emas. Aks holda «O'quvchi bu guruhga yozilmagan yoki dars sanasi uning boshlanish sanasidan oldin» deb chiqadi.
 
 ## Davomat olinganda
@@ -34,6 +34,7 @@ Belgini o'chirish uchun qatordagi ✕ («Oldindan belgilashni o'chirish») ni bo
 - O'quvchi kelib qolsa, davomat olayotgan kishi holatni o'zgartiradi: «Keldi» qo'yadi va dars odatdagidek hisoblanadi.
 - Belgilangan o'quvchiga qayta belgi qo'yish shart emas: u belgilangan hisoblanadi va «Saqlash» tugmasi ochiladi.
 - Davomat saqlanganda oldindan belgilash ishlatilgan bo'ladi: forma uni endi to'ldirmaydi va uni o'chirib bo'lmaydi. O'quvchi «Sababli» bo'lib saqlansa va izoh bo'sh bo'lsa, tizim izohga oldindan belgilangani va sababini yozib qo'yadi. O'qituvchi izoh yoza olmaydi, administrator uni ro'yxatda ko'radi.
+- Dars tugab davomat olinmagan bo'lsa, administrator «Bo'ldi» deydi: shu oynada ham oldindan belgilanganlar «Sababli» bo'lib turadi ([Davomat olish](/qollanma/davomat/davomat-olish)).
 
 <Eslatma tur="diqqat">
 
@@ -65,7 +66,8 @@ Agar Aziza Jasurni o'zgartirmasa edi, Jasur ham «Sababli» qolardi: pul jihatid
 
 ## Istisnolar
 
-- Forma «Oldindan belgilash rejimi»da faqat darsda hali hech kim belgilanmagan bo'lsa ochiladi: bitta o'quvchi ham (masalan, QR bilan) belgilangan bo'lsa, forma oddiy davomat rejimida ochiladi. Tizim esa «Bu dars uchun davomat allaqachon olingan — oldindan belgilash kerak emas» deb faqat shu o'quvchining o'zida davomat yozuvi bo'lsa rad etadi.
+- Forma «Oldindan belgilash rejimi»da faqat darsda hali hech kim belgilanmagan va dars tugamagan bo'lsa ochiladi: bitta o'quvchi ham (masalan, QR bilan) belgilangan bo'lsa, forma oddiy davomat rejimida ochiladi. Tizim esa «Bu dars uchun davomat allaqachon olingan — oldindan belgilash kerak emas» deb faqat shu o'quvchining o'zida davomat yozuvi bo'lsa rad etadi.
+- Dars tugagan bo'lsa, belgi qo'yilmaydi: tizim «Dars tugagan — kelmaslikni oldindan belgilab bo'lmaydi» deydi. Dars tugab hech kim belgilanmagan bo'lsa, forma yopiq turadi (yangi davomat qoidasi — [Davomat olish](/qollanma/davomat/davomat-olish)).
 - O'chirilgan belgi tiklanmaydi: oldindan belgilash arxivga tushmaydi, butunlay o'chadi. Kim belgilagani va o'chirgani guruh va o'quvchi tarixida qoladi.
 - Belgi faqat shu sana uchun: o'quvchining boshqa darslari o'zgarmaydi.
 

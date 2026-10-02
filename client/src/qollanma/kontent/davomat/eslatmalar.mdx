@@ -5,15 +5,15 @@ Eslatmalar guruhning dars vaqtiga bog'lab yuboriladi. Davomat olinmagan degani �
 | Qachon | Davomat olinmagan bo'lsa | Kimga | Xabar |
 |---|---|---|---|
 | Dars boshlanish vaqtida | Shart emas | Guruhning o'qituvchilariga | «Dars boshlandi»: darsingiz boshlandi, davomatni belgilashni unutmang. |
-| Dars tugashiga 30 daqiqa qolganda | Ha | Guruhning o'qituvchilariga | «Davomat eslatmasi»: dars tugashiga 30 daqiqa qoldi. |
-| Dars tugashiga 30 daqiqa qolganda | Ha | Guruh filialidagi administratorlarga | «O'qituvchiga eslatib qo'ying»: o'qituvchi hali davomatni belgilamadi. |
-| Dars tugashiga 15 daqiqa qolganda | — | Hech kimga | Xabar yo'q: o'qituvchiga ham, administratorga ham eslatma tugashiga 30 daqiqa qolganda birga boradi. |
-| Dars tugaganda | Ha | Guruhning o'qituvchilariga | «Davomat belgilanmadi»: darsingiz tugadi, ammo davomat belgilanmadi; administrator bilan bog'lanib, davomatni tiklashni so'raydi. |
-| Dars tugaganda | Ha | Guruh filialidagi administratorlarga | «Davomat belgilanmadi»: o'qituvchi davomatni belgilamadi; davomatni qo'lda tiklashni so'raydi. |
+| Dars tugashiga 30 daqiqa qolganda | Ha | Guruhning o'qituvchilariga | «Davomat eslatmasi»: dars tugashiga 30 daqiqa qoldi; davomat dars tugaguncha olinmasa, bu dars uchun haq yozilmaydi. |
+| Dars tugashiga 30 daqiqa qolganda | Ha | Guruh filialidagi administratorlarga | «O'qituvchi hali davomat olmadi»: dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomat olmadi; dars tugaguncha olinmasa, ustozga haq yozilmaydi — iltimos, o'qituvchini ogohlantiring. |
+| Dars tugagach, «Dars bo'ldimi?» savoli ochilganda | Ha | Guruhning o'qituvchilariga | «Davomat olinmadi»: darsingiz tugadi, davomat olinmadi; bu dars uchun haq yozilmaydi; dars bo'lgan-bo'lmaganini administrator belgilaydi. |
+| Dars tugagach, «Dars bo'ldimi?» savoli ochilganda | Ha | Guruh filialidagi administratorlarga | «Davomat olinmadi»: dars tugadi, davomat olinmadi; tizimda topshiriq ochildi: dars bo'ldimi? «Bo'ldi» bo'lsa, kim kelganini belgilang. |
 | Davomat shu dars uchun birinchi marta saqlanganda | — | Guruhning o'qituvchilariga | «Davomat qabul qilindi»: «Keldi», «Kelmadi», «Kechikdi» va «Sababli» sonlari. |
+| Administrator «Bo'ldi» deb javob berganda, ustozga haq yozilmasa | — | Dars o'tgan o'qituvchiga | «Dars haqi yozilmadi»: guruh nomi, sana va dars haqi yozilmagani. |
 
-- **Guruhning o'qituvchilari** — guruhga biriktirilgan har bir faol o'qituvchi. O'rinbosar ustozga eslatma bormaydi.
-- **Filial administratorlari** — «Administrator» roli bor va guruh filialiga biriktirilgan har bir faol xodim. CEO va filial direktoriga bu xabarlar bormaydi (o'zi shu guruhning o'qituvchisi yoki «Administrator» roli ham bor bo'lsa — boradi).
+- **Guruhning o'qituvchilari** — guruhga biriktirilgan har bir faol o'qituvchi. O'rinbosar ustozga bu eslatmalar bormaydi; «Dars haqi yozilmadi» esa dars o'tgan o'rinbosarga boradi.
+- **Filial administratorlari** — «Administrator» roli bor va guruh filialiga biriktirilgan har bir faol xodim. CEO va filial direktoriga bu xabarlar bormaydi (o'zi shu guruhning o'qituvchisi yoki «Administrator» roli ham bo'lsa — boradi).
 - Faol bo'lmagan xodimga eslatma bormaydi: holati «Faol» bo'lmagan yoki arxivlangan xodim.
 - Bir turdagi xabar bir xodimga bir guruh uchun kuniga bir marta yuboriladi.
 
@@ -21,9 +21,9 @@ Eslatmalar guruhning dars vaqtiga bog'lab yuboriladi. Davomat olinmagan degani �
 
 - Tizim ichida: yuqori paneldagi qo'ng'iroq belgisida, «Bildirishnomalar» ro'yxatida.
 - Brauzer bildirishnomasi: brauzer ruxsat so'ragach ruxsat bergan bo'lsangiz.
-- Telegram: Telegram ulangan xodimga, eslatma yuborilgan zahoti.
+- Telegram: Telegram ulangan xodimga. Eslatmalar (dars boshlandi, 30 daqiqa, davomat olinmadi) yuborilgan zahoti boradi.
+- «Davomat qabul qilindi» va «Dars haqi yozilmadi» tizim ichida va brauzerda darhol keladi. Telegramda ular kunlik xabarning ichida boradi (soat 20:00). «Davomat qabul qilindi»: davomat 20:00 dan oldin saqlangan bo'lsa — shu kuni, keyin saqlangan bo'lsa — ertasi kuni; dars sanasi xabar kunidan boshqa bo'lsa, qatorda u qavs ichida turadi; qator — guruh nomi va sonlar (masalan, Keldi: 8 / Kelmadi: 2), nol sonlarsiz. «Dars haqi yozilmadi» — «Davomat vaqtida olinmagan darslar» bo'limida: guruh nomi va sana.
 - Eslatma xabarlarida guruh nomi, dars vaqti, xona va o'qituvchi yoziladi.
-- «Davomat qabul qilindi» tizim ichida va brauzerda darhol keladi. Telegramda esa u kunlik xabarning ichida boradi: davomat soat 20:00 dan oldin saqlangan bo'lsa — shu kuni 20:00 da, keyin saqlangan bo'lsa — ertasi kuni 20:00 da. Dars sanasi xabar kunidan boshqa bo'lsa, qatorda u qavs ichida turadi. Qator: guruh nomi va sonlar (masalan, Keldi: 8 / Kelmadi: 2), nol sonlarsiz.
 - Telegram ulanmagan xodim xabarni faqat tizim ichida oladi.
 
 ## Birinchi saqlashdagi xabar
@@ -32,16 +32,17 @@ Davomat shu dars sanasi uchun birinchi marta saqlanganda guruhning o'qituvchilar
 
 - Keyingi saqlashlarda (tuzatishlarda) xabar qayta yuborilmaydi.
 - QR orqali belgilashda bu xabar yuborilmaydi: u faqat qo'lda saqlashda ketadi. Davomat allaqachon (masalan, QR bilan) yozilgan bo'lsa, keyingi qo'lda saqlash ham birinchi hisoblanmaydi.
+- «Bo'ldi» bilan kiritilgan davomatda bu xabar yuborilmaydi: unda ustozga haq yozilmagani haqida «Dars haqi yozilmadi» boradi. Ustozga haq yozdirilgan (CEO istisnosi) darsda ikkalasi ham ketmaydi.
 
 ## Vaqt va istisnolar
 
-- Tizim eslatmalarni har yarim soatda, soat va yarim soat boshlarida tekshiradi: 07:00, 07:30, ... 22:30. Dushanbadan shanbagacha, Toshkent vaqti bilan.
-- Shuning uchun eslatma dars boshlanishi yoki tugashi shu vaqtlarga to'g'ri kelsagina yuboriladi (masalan, 09:00, 09:30). Vaqt boshqacha bo'lsa (masalan, 09:15), o'sha eslatma yuborilmaydi.
-- **Yakshanba:** eslatmalar tekshirilmaydi. Guruhlar jadvalga dushanbadan shanbagacha qo'yiladi.
-- **Bayram:** bayram kunida hech bir guruhga eslatma yuborilmaydi. Bayramlar Sozlamalar → «Dam olish kunlari»da kiritiladi.
-- Guruh «Faol» bo'lmasa, bugun guruhning dars kuni bo'lmasa yoki sana guruh muddatidan tashqarida bo'lsa, eslatma yo'q. Dars vaqti kiritilmagan guruhga ham eslatma yo'q.
-- Eslatma guruhning odatdagi jadvaliga qarab yuboriladi: bekor qilingan yoki boshqa kunga ko'chirilgan darsni tizim hisobga olmaydi. Bekor qilingan kunda va dars ko'chirilgan eski kunda ham eslatma kelishi mumkin; ko'chirilgan yangi kunga esa kelmaydi.
-- Davomat yozuvi paydo bo'lishi bilan (qo'lda yoki QR bilan, hatto bitta o'quvchi uchun) tugashiga 30 daqiqa va tugaganda eslatmalari to'xtaydi. «Dars boshlandi» esa davomatga qaramay, boshlanish vaqtida yuboriladi.
+- Tizim eslatmalarni har yarim soatda, soat va yarim soat boshlarida tekshiradi: 07:00, 07:30, ... 22:30. Dushanbadan shanbagacha, Toshkent vaqti bilan. Dars tugagach «Dars bo'ldimi?» savolini ochadigan tekshiruv bundan tashqari har kuni (yakshanba ham) 23:00 da yana ishlaydi.
+- «Dars boshlandi» va tugashiga 30 daqiqa qolgandagi eslatmalar dars boshlanishi yoki tugashidan 30 daqiqa oldingi vaqt shu soat va yarim soat boshlariga to'g'ri kelsagina yuboriladi (masalan, 09:00, 09:30). Vaqt boshqacha bo'lsa (masalan, 09:15), o'sha eslatma yuborilmaydi. «Davomat olinmadi» esa dars qachon tugashidan qat'i nazar, dars tugagach eng yaqin tekshiruvda ketadi: 17:45 da tugagan dars uchun 18:00 da.
+- **Yakshanba:** eslatmalar tekshirilmaydi. Guruhlar jadvalga dushanbadan shanbagacha qo'yiladi. Yakshanbaga ko'chirilgan dars davomatsiz tugasa, «Davomat olinmadi» 23:00 da ketadi.
+- **Bayram:** bayram kunida hech bir eslatma ketmaydi va «Dars bo'ldimi?» savoli ochilmaydi. Bayramlar Sozlamalar → «Dam olish kunlari»da kiritiladi va butun markazga tegishli.
+- Guruh «Faol» bo'lmasa, bugun guruhning dars kuni bo'lmasa yoki sana guruh muddatidan tashqarida bo'lsa, eslatma yo'q. Dars vaqti kiritilmagan guruhga «Dars boshlandi» va 30 daqiqa eslatmasi yo'q; shu kuni davomat olinmasa, «Davomat olinmadi» 23:00 da ketadi.
+- «Dars boshlandi» va 30 daqiqa eslatmasi guruhning odatdagi jadvaliga qarab yuboriladi: bekor qilingan yoki boshqa kunga ko'chirilgan darsni ular hisobga olmaydi. Bekor qilingan kunda va dars ko'chirilgan eski kunda ham ular kelishi mumkin; ko'chirilgan yangi kunga kelmaydi. «Davomat olinmadi» esa bekor qilingan va ko'chirilgan (eski) kunda ketmaydi, ko'chirib kelingan kunda o'sha kunning o'z vaqti bilan ketadi.
+- Davomat yozuvi paydo bo'lishi bilan (qo'lda yoki QR bilan, hatto bitta o'quvchi uchun) tugashiga 30 daqiqa qolgandagi eslatmalar to'xtaydi va «Davomat olinmadi» ham chiqmaydi: dars davomat olingan hisoblanadi. «Dars boshlandi» esa davomatga qaramay, boshlanish vaqtida yuboriladi.
 
 ## Boshqa davomat xabarlari
 
@@ -54,15 +55,15 @@ Guruh 18:00 – 19:30 da o'qiydi. O'qituvchi Aziza, filial administratori Bobur.
 **Aziza davomatni o'z vaqtida oldi.**
 
 1. 18:00 da Azizaga «Dars boshlandi» keladi.
-2. 18:20 da Aziza davomatni saqlaydi. 19:00 va 19:30 da eslatma kelmaydi.
+2. 18:20 da Aziza davomatni saqlaydi. 19:00 da va 19:30 da eslatma kelmaydi.
 3. Azizaga «Davomat qabul qilindi» keladi: Keldi: 8 / Kelmadi: 2 / Kechikdi: 0 / Sababli: 0. Telegram ulangan bo'lsa, bu qator shu kuni 20:00 dagi kunlik xabarda keladi.
 
 **Aziza davomat olmadi.**
 
 1. 18:00 da Azizaga «Dars boshlandi» keladi.
-2. 19:00 da Azizaga «Davomat eslatmasi», Boburga «O'qituvchiga eslatib qo'ying» keladi.
-3. 19:30 da ikkalasiga «Davomat belgilanmadi» keladi.
-4. Bobur davomatni o'zi oladi: o'tgan darsni o'qituvchi belgilay olmaydi ([Davomat olish](/qollanma/davomat/davomat-olish)).
+2. 19:00 da Azizaga «Davomat eslatmasi», Boburga «O'qituvchi hali davomat olmadi» keladi.
+3. 19:30 da ikkalasiga «Davomat olinmadi» keladi, Boburga «Topshiriqlar»da «Dars bo'ldimi?» topshirig'i ochiladi.
+4. O'tgan darsni o'qituvchi belgilay olmaydi. Dars o'tgan bo'lsa, Bobur «Bo'ldi» ni bosib davomatni o'zi kiritadi ([Davomat olish](/qollanma/davomat/davomat-olish)). Azizaga «Dars haqi yozilmadi» keladi.
 
 ## Kim oladi
 
@@ -72,11 +73,13 @@ Guruh 18:00 – 19:30 da o'qiydi. O'qituvchi Aziza, filial administratori Bobur.
 |---|---|---|---|---|
 | «Dars boshlandi» | — | — | — | Ha |
 | «Davomat eslatmasi» | — | — | — | Ha |
-| «O'qituvchiga eslatib qo'ying» | — | — | Ha | — |
-| «Davomat belgilanmadi» | — | — | Ha | Ha |
+| «O'qituvchi hali davomat olmadi» | — | — | Ha | — |
+| «Davomat olinmadi» | — | — | Ha | Ha |
 | «Davomat qabul qilindi» | — | — | — | Ha |
+| «Dars haqi yozilmadi» | — | — | — | Ha |
 
 ## Tizimda qayerda
 
 - Yuqori paneldagi qo'ng'iroq belgisi: «Bildirishnomalar».
-- Guruh sahifasi → «Davomat» tabi: davomatni olish yoki tiklash. Batafsil — [Davomat olish](/qollanma/davomat/davomat-olish).
+- Guruh sahifasi → «Davomat» tabi: davomatni olish yoki tuzatish. Batafsil — [Davomat olish](/qollanma/davomat/davomat-olish).
+- «Topshiriqlar»: «Dars bo'ldimi?» topshirig'i ([Topshiriqlar](/qollanma/boshlash/topshiriqlar)).
