@@ -64,6 +64,21 @@ export interface ChargeableEnrollment {
   };
 }
 
+/**
+ * `planChargeAmounts` natijasi: oyning rejasi, qoplangan sanalar va
+ * summalar — kredit va yozuvlardan oldin.
+ */
+export interface PlannedChargeAmounts {
+  plannedLessons: number;
+  coveredDates: string[];
+  coveredLessons: number;
+  monthlyPrice: number;
+  perLessonCostFull: number;
+  grossAmountFull: number;
+  grossAmountStudent: number;
+  perLessonCostStudent: number;
+}
+
 /** What `reverseChargeForDeparture` did (contract 6.2, ADR-0043). */
 export interface DepartureOutcome {
   refunded: number;
@@ -194,83 +209,24 @@ export class MonthlyChargeService {
       return existing;
     }
 
-    const { excludedDates, addedDates } = await resolveMonthPlan(
+    const planned = await this.planChargeAmounts(
       tx,
-      enr.groupId,
-      enr.group.branchId,
+      enr,
       periodYear,
       periodMonth,
-    );
-
-    // Guruhning oyi — narxni belgilaydi va MUZLATILADI.
-    const groupDates = lessonDatesInMonth({
-      year: periodYear,
-      month: periodMonth,
-      exactDays: enr.group.exactDays,
-      excludedDates,
-      addedDates,
-    });
-    const plannedLessons = groupDates.length;
-    if (plannedLessons === 0) return null;
-
-    // O'quvchining ulushi — o'rtada qo'shilgan bo'lsa kamroq. SANALARNING
-    // O'ZI ham saqlanadi: `reverseChargeForDeparture` "ketgan kungacha
-    // nechtasi qoplangan edi" degan savolga JONLI kalendardan emas, shu
-    // muzlatilgan ro'yxatdan javob berishi kerak (schema izohi).
-    const fromDate = chargeStartDate(enr);
-    // Ko'chirilgan dars `coveredDates` ga ASL kuni bilan emas, o'zi ROSTDAN
-    // o'tiladigan kuni bilan tushadi — reja bilan bir xil kalendardan.
-    // Aks holda oy o'rtasida ketgan o'quvchi hali o'tilmagan darsni
-    // "qoplangan" deb qoldirib ketardi: `reverseChargeForDeparture` faqat
-    // `d > ketgan kun` bo'lganlarini qaytaradi, bayram kuni esa ketish
-    // kunidan OLDIN turardi (1-sentabr bayrami 25-sentabrga ko'chirilgan,
-    // o'quvchi 10-sentabrda ketgan — bitta dars puli markazda qolib
-    // ketardi). `fromDate` ham shu yerda qo'llanadi: o'quvchi qo'shilishidan
-    // OLDIN o'tilgan qoplama darsini u olmagan, demak to'lamaydi ham.
-    const scheduledDates = lessonDatesInMonth({
-      year: periodYear,
-      month: periodMonth,
-      exactDays: enr.group.exactDays,
-      excludedDates,
-      addedDates,
-      fromDate,
-    });
-    // A student taken out of a group and put back into the SAME group in the
-    // same month has two enrollments there. The earlier one's charge keeps
-    // every date up to the day they left (`reverseChargeForDeparture` returns
-    // only the later ones), so those lessons are paid already: covering them
-    // again here would bill one lesson twice.
-    const paidElsewhere = await this.datesPaidByOtherCharges(tx, {
-      enrollmentId: enr.id,
-      studentId: enr.studentId,
-      groupId: enr.groupId,
-      periodYear,
-      periodMonth,
-    });
-    const coveredDates = scheduledDates.filter((d) => !paidElsewhere.has(d));
-    const coveredLessons = coveredDates.length;
-    if (coveredLessons === 0) return null;
-
-    const monthlyPrice = enr.group.course.price;
-    // CHEGIRMASIZ — o'qituvchi haqi (Task 6) va bu qatorning o'zi shu
-    // ikkisidan hisoblanadi.
-    const perLessonCostFull = perLessonCostForMonth(
-      monthlyPrice,
-      plannedLessons,
-    );
-    const grossAmountFull = proratedMonthlyAmount(
-      monthlyPrice,
-      plannedLessons,
-      coveredLessons,
-    );
-    // Markazning ulushi — o'quvchi aynan shuni to'laydi. Kredit ham shu
-    // chegirmali narxda sarflanadi: aks holda chegirmali o'quvchi to'lagan
-    // pulidan ikki barobar ko'p kredit olardi (task-9c-brief.md).
-    const grossAmountStudent = applyDiscount(grossAmountFull, discountPercent);
-    const perLessonCostStudent = applyDiscount(
-      perLessonCostFull,
       discountPercent,
     );
+    if (!planned) return null;
+    const {
+      plannedLessons,
+      coveredDates,
+      coveredLessons,
+      monthlyPrice,
+      perLessonCostFull,
+      grossAmountFull,
+      grossAmountStudent,
+      perLessonCostStudent,
+    } = planned;
 
     const rawCarried = await this.carriedCredit(
       tx,
@@ -416,6 +372,148 @@ export class MonthlyChargeService {
       where: { id: charge.id },
       data: { transactionId: transaction.id },
     });
+  }
+
+  /**
+   * Hali YO'Q yozilishga `createChargeForEnrollment` qancha yozgan bo'lardi:
+   * o'sha reja, o'sha proratsiya, o'sha chegirma. Yangi yozilishning
+   * o'tkaziladigan uzrli dars krediti yo'q, shuning uchun summa — chegirmali,
+   * proratsiya qilingan narx. Hech narsa yozmaydi; hech narsa yozilmasa
+   * `null`.
+   */
+  async previewChargeForNewEnrollment(
+    db: Prisma.TransactionClient,
+    params: {
+      enrollment: ChargeableEnrollment;
+      periodYear: number;
+      periodMonth: number;
+      discountPercent?: number;
+    },
+  ): Promise<{
+    plannedLessons: number;
+    coveredLessons: number;
+    amount: number;
+  } | null> {
+    const enr = params.enrollment;
+    if (enr.group.course.paymentModel !== PaymentModel.MONTHLY) return null;
+    if (enr.group.statusEnum !== GroupStatus.ACTIVE) return null;
+    const planned = await this.planChargeAmounts(
+      db,
+      enr,
+      params.periodYear,
+      params.periodMonth,
+      clampDiscount(params.discountPercent ?? 0),
+    );
+    if (!planned) return null;
+    return {
+      plannedLessons: planned.plannedLessons,
+      coveredLessons: planned.coveredLessons,
+      amount: planned.grossAmountStudent,
+    };
+  }
+
+  /**
+   * Oyning rejasi, qoplangan sanalar va summalar — kredit va yozuvlardan
+   * OLDINGI qism. `createChargeForEnrollment` ham, oldindan ko'rish
+   * (`previewChargeForNewEnrollment`) ham shu BITTA hisobni chaqiradi: oyna
+   * yozuv olmaydigan summani ko'rsata olmasligi uchun. Hech narsa yozmaydi.
+   * `null`: oyda dars yo'q yoki qoplanadigan dars qolmagan.
+   */
+  private async planChargeAmounts(
+    db: Prisma.TransactionClient,
+    enr: ChargeableEnrollment,
+    periodYear: number,
+    periodMonth: number,
+    discountPercent: number,
+  ): Promise<PlannedChargeAmounts | null> {
+    const { excludedDates, addedDates } = await resolveMonthPlan(
+      db,
+      enr.groupId,
+      enr.group.branchId,
+      periodYear,
+      periodMonth,
+    );
+
+    // Guruhning oyi — narxni belgilaydi va MUZLATILADI.
+    const groupDates = lessonDatesInMonth({
+      year: periodYear,
+      month: periodMonth,
+      exactDays: enr.group.exactDays,
+      excludedDates,
+      addedDates,
+    });
+    const plannedLessons = groupDates.length;
+    if (plannedLessons === 0) return null;
+
+    // O'quvchining ulushi — o'rtada qo'shilgan bo'lsa kamroq. SANALARNING
+    // O'ZI ham saqlanadi: `reverseChargeForDeparture` "ketgan kungacha
+    // nechtasi qoplangan edi" degan savolga JONLI kalendardan emas, shu
+    // muzlatilgan ro'yxatdan javob berishi kerak (schema izohi).
+    const fromDate = chargeStartDate(enr);
+    // Ko'chirilgan dars `coveredDates` ga ASL kuni bilan emas, o'zi ROSTDAN
+    // o'tiladigan kuni bilan tushadi — reja bilan bir xil kalendardan.
+    // Aks holda oy o'rtasida ketgan o'quvchi hali o'tilmagan darsni
+    // "qoplangan" deb qoldirib ketardi: `reverseChargeForDeparture` faqat
+    // `d > ketgan kun` bo'lganlarini qaytaradi, bayram kuni esa ketish
+    // kunidan OLDIN turardi (1-sentabr bayrami 25-sentabrga ko'chirilgan,
+    // o'quvchi 10-sentabrda ketgan — bitta dars puli markazda qolib
+    // ketardi). `fromDate` ham shu yerda qo'llanadi: o'quvchi qo'shilishidan
+    // OLDIN o'tilgan qoplama darsini u olmagan, demak to'lamaydi ham.
+    const scheduledDates = lessonDatesInMonth({
+      year: periodYear,
+      month: periodMonth,
+      exactDays: enr.group.exactDays,
+      excludedDates,
+      addedDates,
+      fromDate,
+    });
+    // A student taken out of a group and put back into the SAME group in the
+    // same month has two enrollments there. The earlier one's charge keeps
+    // every date up to the day they left (`reverseChargeForDeparture` returns
+    // only the later ones), so those lessons are paid already: covering them
+    // again here would bill one lesson twice.
+    const paidElsewhere = await this.datesPaidByOtherCharges(db, {
+      enrollmentId: enr.id,
+      studentId: enr.studentId,
+      groupId: enr.groupId,
+      periodYear,
+      periodMonth,
+    });
+    const coveredDates = scheduledDates.filter((d) => !paidElsewhere.has(d));
+    const coveredLessons = coveredDates.length;
+    if (coveredLessons === 0) return null;
+
+    const monthlyPrice = enr.group.course.price;
+    // CHEGIRMASIZ — o'qituvchi haqi (Task 6) va bu qatorning o'zi shu
+    // ikkisidan hisoblanadi.
+    const perLessonCostFull = perLessonCostForMonth(
+      monthlyPrice,
+      plannedLessons,
+    );
+    const grossAmountFull = proratedMonthlyAmount(
+      monthlyPrice,
+      plannedLessons,
+      coveredLessons,
+    );
+    // Markazning ulushi — o'quvchi aynan shuni to'laydi. Kredit ham shu
+    // chegirmali narxda sarflanadi: aks holda chegirmali o'quvchi to'lagan
+    // pulidan ikki barobar ko'p kredit olardi (task-9c-brief.md).
+    const grossAmountStudent = applyDiscount(grossAmountFull, discountPercent);
+    const perLessonCostStudent = applyDiscount(
+      perLessonCostFull,
+      discountPercent,
+    );
+
+    return {
+      plannedLessons,
+      coveredDates,
+      coveredLessons,
+      monthlyPrice,
+      perLessonCostFull,
+      grossAmountFull,
+      grossAmountStudent,
+      perLessonCostStudent,
+    };
   }
 
   /**
