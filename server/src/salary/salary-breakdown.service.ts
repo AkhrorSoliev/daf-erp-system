@@ -3,9 +3,28 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { PaymentModel, Prisma } from '@prisma/client';
+import { tashkentMonthKey } from '../common/date/tashkent';
 import { PrismaService } from '../prisma/prisma.service';
+import { isMonthlyBillingMonth } from '../reports/month-charges';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
+
+// FIXED_PER_STUDENT stavkasi qaysi birlikda: «month» — o'quvchi boshiga OYIGA,
+// «cycle» — SIKLiga (bo'luvchi: ADR-0050, `resolveLessonPricing`). «month» —
+// faqat oylik hisob yuritilgan oydagi oylik kurs darsi: kurs hozir oylik
+// bo'lsa ham may–avgust darslari sikl bo'yicha hisoblangan. `lessonDate` —
+// `@db.Date` (UTC yarim tun), +5 soat kunni o'zgartirmaydi, shuning uchun
+// `tashkentMonthKey` o'sha kalendar oyini beradi.
+// Qabul qilingan chekka: sentabrda paket belgisi bilan narxlangan dars (ADR-0051) ham «month» chiqadi.
+function rateBasisOf(
+  lessonDate: Date,
+  paymentModel: PaymentModel,
+): 'month' | 'cycle' {
+  return paymentModel === PaymentModel.MONTHLY &&
+    isMonthlyBillingMonth(tashkentMonthKey(lessonDate))
+    ? 'month'
+    : 'cycle';
+}
 
 /**
  * Per-payment salary breakdown — answers "where did each so'm in this
@@ -172,9 +191,7 @@ export class SalaryBreakdownService {
               select: {
                 name: true,
                 lessonPaymentCount: true,
-                // Stavka belgisi shunga qaraydi: oylik kursda «/o'quvchi/oy»,
-                // sikl kursida «/tsikl» (FIXED_PER_STUDENT bo'luvchisi —
-                // ADR-0050, `resolveLessonPricing`).
+                // Qatorning `rateBasis`i shundan chiqadi (`rateBasisOf`).
                 paymentModel: true,
               },
             },
@@ -237,6 +254,8 @@ export class SalaryBreakdownService {
         lessonDate: r.lessonDate,
         student: r.student,
         group: r.group,
+        // Ekrandagi stavka belgisi shunga qaraydi: «/o'quvchi/oy» yoki «/tsikl».
+        rateBasis: rateBasisOf(r.lessonDate, r.group.course.paymentModel),
         perLessonCost: r.perLessonCost,
         amount: r.amount,
         configVersion: r.salaryConfigVersion

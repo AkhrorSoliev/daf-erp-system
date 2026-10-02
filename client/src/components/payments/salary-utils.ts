@@ -1,28 +1,30 @@
 // Shared helpers for the salary page (matrix + period workflow views).
 
 import { formatNumber } from "@/lib/format-utils";
-import type { PaymentModel } from "@/lib/payment-model";
+
+/**
+ * Stavka qaysi birlikda yozilgan: «month» — o'quvchi boshiga OYIGA, «cycle» —
+ * SIKLiga. Server har hisob-kitob qatoriga yozadi (`rateBasis`); qaysi oylar
+ * oylik hisobda ekanini klient bilmaydi va o'zi sanamaydi.
+ */
+export type RateBasis = "month" | "cycle";
 
 /**
  * Hisob-kitob qatoridagi stavka belgisi. Admin oynasi ham, ustozning o'z
  * sahifasi ham shuni ishlatadi, shuning uchun ikkalasi bir xil yozadi.
  *
- * FIXED_PER_STUDENT: oylik kursda stavka o'quvchi boshiga OYIGA (server uni
- * oyning rejalashtirilgan darslariga bo'ladi), sikl kursida SIKLiga —
- * ADR-0050, `resolveLessonPricing` (server/src/salary/shared/gap-sweep.ts).
- * `paymentModel` kelmasa — klient serverdan oldin chiqqan — eski ma'no
- * qoladi: «/tsikl».
+ * FIXED_PER_STUDENT: `rateBasis === "month"` bo'lsa «/o'quvchi/oy», qolgan
+ * hamma holatda — `rateBasis` kelmasa ham (klient serverdan oldin chiqqan) —
+ * «/tsikl».
  */
 export function breakdownRateLabel(
   rate: { salaryType: string; value: number },
-  paymentModel?: PaymentModel,
+  rateBasis?: RateBasis,
 ): string {
   if (rate.salaryType === "PERCENTAGE") return `${rate.value}%`;
   const value = formatNumber(rate.value);
   if (rate.salaryType === "FIXED_PER_STUDENT") {
-    return paymentModel === "MONTHLY"
-      ? `${value}/o'quvchi/oy`
-      : `${value}/tsikl`;
+    return rateBasis === "month" ? `${value}/o'quvchi/oy` : `${value}/tsikl`;
   }
   return `${value}/oy`;
 }

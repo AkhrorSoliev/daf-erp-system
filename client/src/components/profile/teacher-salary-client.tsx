@@ -22,9 +22,11 @@ import {
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
-import { breakdownRateLabel } from "@/components/payments/salary-utils";
+import {
+  breakdownRateLabel,
+  type RateBasis,
+} from "@/components/payments/salary-utils";
 import { SalaryMonthlyPanel } from "@/components/shared/salary-monthly-panel";
-import type { PaymentModel } from "@/lib/payment-model";
 
 /**
  * Group context only — no money. Every salary figure on this page comes from
@@ -47,12 +49,9 @@ interface BreakdownLine {
   id: string;
   lessonDate: string;
   student: { id: number; firstName: string; lastName: string };
-  group: {
-    id: string;
-    name: string;
-    // Eski server yubormaydi — belgi o'sha holda «/tsikl» deydi.
-    course?: { paymentModel?: PaymentModel };
-  };
+  group: { id: string; name: string };
+  // Eski server yubormaydi — belgi o'sha holda «/tsikl» deydi.
+  rateBasis?: RateBasis;
   perLessonCost: number;
   amount: number;
   configVersion: {
@@ -243,10 +242,7 @@ export function BreakdownTable({
               <TableCell>
                 {l.configVersion ? (
                   <Badge variant="outline">
-                    {breakdownRateLabel(
-                      l.configVersion,
-                      l.group.course?.paymentModel,
-                    )}
+                    {breakdownRateLabel(l.configVersion, l.rateBasis)}
                     {l.configVersion.scope === "GROUP" && " (guruh)"}
                   </Badge>
                 ) : (
