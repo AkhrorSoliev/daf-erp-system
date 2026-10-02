@@ -48,8 +48,8 @@ describe("report tooltips", () => {
   });
 });
 
-// Reads a component's source the way `payments-overview.test.ts` does for the
-// tooltips a closed card hides. Whitespace is collapsed (JSX wraps its lines)
+// Reads a component's source the way `home-money-cards.test.ts` does for the
+// tooltip a closed card hides. Whitespace is collapsed (JSX wraps its lines)
 // and `&apos;` read back as the apostrophe it stands for.
 function source(file: string): string {
   return readFileSync(join(__dirname, "..", "components", file), "utf-8")

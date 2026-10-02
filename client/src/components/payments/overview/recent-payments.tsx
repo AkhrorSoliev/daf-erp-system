@@ -4,39 +4,22 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import api from "@/lib/api";
-import { formatPrice } from "@/lib/format-utils";
-import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { BlockError } from "./block-state";
+import { PAYMENT_METHOD_LABELS, som } from "./overview-math";
+import { useBranchId } from "./queries";
 
 interface Payment {
   id: string;
   amount: number;
   method: string;
-  status: string;
-  receiptNumber: string | null;
-  note: string | null;
-  branchId: number | null;
   createdAt: string;
-  student: { id: number; firstName: string; lastName: string };
+  /** `groups` — the student's groups now; absent on a server older than B1. */
+  student: { id: number; firstName: string; lastName: string; groups?: { id: string; name: string }[] };
   receivedBy: { id: number; firstName: string; lastName: string } | null;
 }
-
-const methodLabels: Record<string, string> = {
-  CASH: "Naqd",
-  PAYME: "Payme",
-  CLICK: "Click",
-  UZUM: "Uzum",
-  TRANSFER: "O'tkazma",
-};
 
 const methodColors: Record<string, string> = {
   CASH: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
@@ -46,32 +29,21 @@ const methodColors: Record<string, string> = {
   TRANSFER: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
 };
 
-interface Props {
-  refreshKey?: number;
-  startDate?: string;
-  endDate?: string;
-}
-
-export function RecentPaymentsTable({ refreshKey, startDate, endDate }: Props) {
-  const { selectedBranch } = useBranchSwitcher();
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["recent-payments", selectedBranch?.id, refreshKey, startDate, endDate],
+/**
+ * Block 5 — «Oxirgi to'lovlar»: the ten latest payments in the branch scope.
+ * «Guruh» is the student's group NOW, not a property of the payment.
+ */
+export function RecentPayments() {
+  const branchId = useBranchId();
+  const { data, isPending, isError, refetch } = useQuery({
+    queryKey: ["recent-payments", branchId],
     queryFn: () =>
       api
-        .get<{ data: Payment[]; total: number }>("/payments", {
-          params: {
-            branchId: selectedBranch?.id,
-            pageSize: 10,
-            page: 1,
-            ...(startDate && { startDate }),
-            ...(endDate && { endDate }),
-          },
-        })
+        .get<{ data: Payment[]; total: number }>("/payments", { params: { branchId, pageSize: 10, page: 1 } })
         .then((r) => r.data),
   });
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
@@ -80,15 +52,11 @@ export function RecentPaymentsTable({ refreshKey, startDate, endDate }: Props) {
       </div>
     );
   }
+  if (isError) return <BlockError title="Oxirgi to'lovlar" onRetry={() => refetch()} />;
 
-  const payments = data?.data ?? [];
-
+  const payments = data.data;
   if (payments.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground py-8 text-center">
-        Hali to&apos;lov qayd qilinmagan
-      </p>
-    );
+    return <p className="py-8 text-center text-sm text-muted-foreground">Hali to&apos;lov qayd qilinmagan</p>;
   }
 
   return (
@@ -97,6 +65,7 @@ export function RecentPaymentsTable({ refreshKey, startDate, endDate }: Props) {
         <TableRow>
           <TableHead className="w-12 border-r">#</TableHead>
           <TableHead>O&apos;quvchi</TableHead>
+          <TableHead>Guruh</TableHead>
           <TableHead>Summa</TableHead>
           <TableHead>Usul</TableHead>
           <TableHead>Qabul qildi</TableHead>
@@ -106,31 +75,28 @@ export function RecentPaymentsTable({ refreshKey, startDate, endDate }: Props) {
       <TableBody>
         {payments.map((p, i) => (
           <TableRow key={p.id}>
-            <TableCell className="border-r text-muted-foreground">
-              {i + 1}
-            </TableCell>
+            <TableCell className="border-r text-muted-foreground">{i + 1}</TableCell>
             <TableCell className="font-medium">
               <Link
                 href={`/students/profile/${p.student.id}`}
-                className="hover:underline hover:text-primary transition-colors"
+                className="transition-colors hover:text-primary hover:underline"
               >
                 #{p.student.id} {p.student.firstName} {p.student.lastName}
               </Link>
             </TableCell>
-            <TableCell className="text-green-600 font-medium">
-              +{formatPrice(p.amount)} so&apos;m
+            <TableCell className="text-sm">
+              {p.student.groups?.length ? p.student.groups.map((g) => g.name).join(", ") : "—"}
             </TableCell>
+            <TableCell className="font-medium text-green-600">+{som(p.amount)}</TableCell>
             <TableCell>
               <Badge variant="secondary" className={methodColors[p.method]}>
-                {methodLabels[p.method] ?? p.method}
+                {PAYMENT_METHOD_LABELS[p.method] ?? p.method}
               </Badge>
             </TableCell>
-            <TableCell className="text-muted-foreground text-sm">
-              {p.receivedBy
-                ? `${p.receivedBy.firstName} ${p.receivedBy.lastName}`
-                : "—"}
+            <TableCell className="text-sm text-muted-foreground">
+              {p.receivedBy ? `${p.receivedBy.firstName} ${p.receivedBy.lastName}` : "—"}
             </TableCell>
-            <TableCell className="text-muted-foreground text-sm">
+            <TableCell className="text-sm text-muted-foreground">
               {format(new Date(p.createdAt), "dd.MM.yyyy, HH:mm")}
             </TableCell>
           </TableRow>

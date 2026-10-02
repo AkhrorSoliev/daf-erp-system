@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import { breakdownCsvRows } from "./salary-breakdown-drawer";
 
 // A3.2: tegilgan faylda ko'rinadigan inglizcha so'z qolmaydi. Oyna matni Radix
-// Sheet ichida — serverda hech narsa chizmaydi — shuning uchun, payments-overview
-// testidagi kabi, jumlalar manba fayldan o'qiladi. CSV esa Excel'da ochiladi.
+// Sheet ichida — serverda hech narsa chizmaydi — shuning uchun jumlalar manba
+// fayldan o'qiladi. CSV esa Excel'da ochiladi.
 
 // Bo'shliqlar bitta probelga keltiriladi: JSX matni qatorga bo'lib yozilsa ham
 // pin buzilmaydi.
