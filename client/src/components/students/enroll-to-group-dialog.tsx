@@ -37,6 +37,8 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
+import { monthShort } from "@/components/payments/salary-utils";
+import { format } from "date-fns";
 
 interface GroupTeacher {
   id: number;
@@ -49,11 +51,7 @@ interface GroupOption {
   id: string;
   name: string;
   statusEnum: string;
-  course: {
-    name: string;
-    price?: number;
-    lessonPaymentCount?: number;
-  } | null;
+  course: { name: string } | null;
   room: { name: string; capacity: number | null } | null;
   teachers: GroupTeacher[];
   studentCount: number;
@@ -77,6 +75,164 @@ function getDaysList(days: string | null, exactDays: string[]): string[] {
   if (days === "odd") return ODD_DAYS;
   if (days === "even") return EVEN_DAYS;
   return [];
+}
+
+/** `YYYY-MM-DD` of a picked day, in the browser's own calendar. */
+const ymd = (d: Date) => format(d, "yyyy-MM-dd");
+
+/**
+ * `GET /students/:id/enroll-preview`: what enrolling the student into the group
+ * would charge, worked out by the server (A3.4). Nothing in it is added up on
+ * the client.
+ */
+export interface EnrollPreview {
+  paymentModel: "MONTHLY" | "LESSON_PACK";
+  /** The monthly price for MONTHLY, the pack price otherwise. */
+  coursePrice: number;
+  /** Lessons in one pack; null for a monthly course. */
+  lessonPaymentCount: number | null;
+  /** The student's discount, 0–100. */
+  discountPercent: number;
+  /**
+   * MONTHLY only: the first charge the student will actually get, which can be
+   * next month's. Null when the group is not ACTIVE yet.
+   */
+  firstMonth: {
+    /** `YYYY-MM`. */
+    period: string;
+    plannedLessons: number;
+    coveredLessons: number;
+    amount: number;
+  } | null;
+  /** The student's balance now; negative is a debt. */
+  balance: number;
+  /** What is still to pay after the balance, as the server worked it out. */
+  payable: number;
+}
+
+/**
+ * The start-date picker and the money of enrolling into the selected group.
+ * The money is informational: enrolling is never held up by it (an unpaid
+ * student is the debtors panel's business), so while it loads, and when the
+ * request fails (a server older than the endpoint answers 404), the picker
+ * stays and the money lines are left out. There is no client-side fallback.
+ */
+export function EnrollPreviewBlock({
+  studentId,
+  groupId,
+  startDate,
+  onStartDateChange,
+}: {
+  studentId: number;
+  groupId: string;
+  startDate: Date | undefined;
+  onStartDateChange: (date: Date | undefined) => void;
+}) {
+  const day = startDate ? ymd(startDate) : null;
+  const { data: preview, isLoading, isError } = useQuery<EnrollPreview>({
+    queryKey: ["enroll-preview", studentId, groupId, day],
+    queryFn: () =>
+      api
+        .get<EnrollPreview>(`/students/${studentId}/enroll-preview`, {
+          params: { groupId, ...(day && { startDate: day }) },
+        })
+        .then((r) => r.data),
+    // The balance and today's date both move, so an old answer is never reused
+    // as a fresh one. No retries: an old server's 404 is final, and the
+    // loading line must not wait seconds to find that out.
+    staleTime: 0,
+    retry: false,
+  });
+
+  return (
+    <div className="space-y-3 rounded-md border bg-muted/30 p-3 text-sm">
+      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <CalendarIcon className="size-3.5" />
+        Boshlanish sanasi (qaysi darsdan)
+      </div>
+      <DatePicker
+        value={startDate}
+        onChange={onStartDateChange}
+        placeholder="Bugundan boshlab"
+      />
+      {isLoading && (
+        <p className="text-xs text-muted-foreground">Hisoblanmoqda…</p>
+      )}
+      {/* A failed refetch keeps the last good answer in `preview`; on an error
+          there are no money lines, whatever is cached. */}
+      {preview && !isError && <PreviewLines preview={preview} />}
+    </div>
+  );
+}
+
+function PreviewLines({ preview }: { preview: EnrollPreview }) {
+  const {
+    paymentModel,
+    coursePrice,
+    lessonPaymentCount,
+    discountPercent,
+    firstMonth,
+    balance,
+    payable,
+  } = preview;
+  return (
+    <div className="space-y-1.5 text-xs">
+      {paymentModel === "MONTHLY" ? (
+        <>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Oylik narx:</span>
+            <span className="font-mono tabular-nums font-semibold">
+              {formatPrice(coursePrice)} so&apos;m
+            </span>
+          </div>
+          {firstMonth ? (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">
+                {`${monthShort(firstMonth.period)} uchun (${firstMonth.coveredLessons}/${firstMonth.plannedLessons} dars):`}
+                {discountPercent > 0 && ` · chegirma ${discountPercent}%`}
+              </span>
+              <span className="font-mono tabular-nums font-semibold">
+                {formatPrice(firstMonth.amount)} so&apos;m
+              </span>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">
+              Hisob guruh darslari boshlanganda yoziladi
+            </p>
+          )}
+        </>
+      ) : (
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">
+            {`Kurs narxi (${lessonPaymentCount} dars):`}
+          </span>
+          <span className="font-mono tabular-nums font-semibold">
+            {formatPrice(coursePrice)} so&apos;m
+          </span>
+        </div>
+      )}
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">O&apos;quvchi balansi:</span>
+        <span
+          className={`font-mono tabular-nums ${balance < 0 ? "text-destructive" : ""}`}
+        >
+          {formatBalance(balance)}
+        </span>
+      </div>
+      <div className="flex justify-between border-t pt-1.5 font-semibold">
+        <span>To&apos;lash kerak (taxminan):</span>
+        <span
+          className={`font-mono tabular-nums ${
+            payable > 0
+              ? "text-destructive"
+              : "text-emerald-700 dark:text-emerald-400"
+          }`}
+        >
+          {payable > 0 ? `${formatPrice(payable)} so'm` : "Yetarli"}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 interface EnrollToGroupDialogProps {
@@ -113,7 +269,6 @@ export function EnrollToGroupDialog({
   const [addingReason, setAddingReason] = useState(false);
   const [newReasonName, setNewReasonName] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>();
-  const [studentBalance, setStudentBalance] = useState<number>(0);
 
   const qc = useQueryClient();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
@@ -155,26 +310,6 @@ export function EnrollToGroupDialog({
       setStartDate(undefined);
     }
   }, [open]);
-
-  // Fetch the student's current balance once per dialog opening so the price
-  // preview can show "balance vs course price = needs to pay X". We never
-  // refetch on group change — the balance is global to the student, not
-  // group-specific.
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await api.get(`/students/${studentId}`);
-        if (!cancelled) setStudentBalance(data?.balance ?? 0);
-      } catch {
-        if (!cancelled) setStudentBalance(0);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, studentId]);
 
   // Current (active) enrollment group — use first enrolled group as "from".
   // Backend marks the previous ACTIVE enrollment as TRANSFERRED on the new POST.
@@ -285,9 +420,7 @@ export function EnrollToGroupDialog({
         groupId: selectedId,
         transferReasonId,
         // Backend defaults to today when omitted.
-        ...(startDate && {
-          startDate: `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`,
-        }),
+        ...(startDate && { startDate: ymd(startDate) }),
       });
       toast.success("O'quvchi guruhga qo'shildi");
       onEnrolled?.();
@@ -298,14 +431,6 @@ export function EnrollToGroupDialog({
       setSubmitting(false);
     }
   };
-
-  // Price preview: course price, what the student already has, and what they
-  // still need to pay. We don't enforce payment here — admin can enroll a
-  // student with zero balance; B.1 ensures the teacher won't accrue salary
-  // until the balance covers a lesson, and the new debtors panel surfaces
-  // the situation in the daily attendance flow.
-  const coursePrice = targetGroup?.course?.price ?? 0;
-  const dueAmount = Math.max(0, coursePrice - studentBalance);
 
   // Enrolled guruhlar tepada, qolganlari pastda
   const sortedGroups = [...groups].sort((a, b) => {
@@ -505,49 +630,16 @@ export function EnrollToGroupDialog({
           )}
         </div>
 
-        {/* Per-group price preview + start date picker. Only renders after a
-            target group is selected — keeps the dialog uncluttered while the
-            user is still browsing groups. */}
-        {targetGroup && coursePrice > 0 && (
-          <div className="space-y-3 rounded-md border bg-muted/30 p-3 text-sm">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <CalendarIcon className="size-3.5" />
-              Boshlanish sanasi (qaysi darsdan)
-            </div>
-            <DatePicker
-              value={startDate}
-              onChange={(d) => setStartDate(d)}
-              placeholder="Bugundan boshlab"
-            />
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  Kurs narxi ({targetGroup.course?.lessonPaymentCount ?? 12} dars):
-                </span>
-                <span className="font-mono tabular-nums font-semibold">
-                  {formatPrice(coursePrice)} so&apos;m
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  O&apos;quvchi balansi:
-                </span>
-                <span className={`font-mono tabular-nums ${studentBalance < 0 ? "text-destructive" : ""}`}>
-                  {formatBalance(studentBalance)}
-                </span>
-              </div>
-              <div className="flex justify-between border-t pt-1.5 font-semibold">
-                <span>To&apos;lash kerak (taxminan):</span>
-                <span
-                  className={`font-mono tabular-nums ${
-                    dueAmount > 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-400"
-                  }`}
-                >
-                  {dueAmount > 0 ? `${formatPrice(dueAmount)} so'm` : "Yetarli"}
-                </span>
-              </div>
-            </div>
-          </div>
+        {/* Start date picker + the server's account of what enrolling charges.
+            Only renders after a target group is selected — keeps the dialog
+            uncluttered while the user is still browsing groups. */}
+        {targetGroup && (
+          <EnrollPreviewBlock
+            studentId={studentId}
+            groupId={targetGroup.id}
+            startDate={startDate}
+            onStartDateChange={setStartDate}
+          />
         )}
 
         {teachersDiffer && (
