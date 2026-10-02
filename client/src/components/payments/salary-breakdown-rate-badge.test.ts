@@ -12,14 +12,13 @@ import type { RateBasis } from "./salary-utils";
 // Admin oynasi ham, ustozning o'z sahifasi ham shu testdan o'tadi va hech biri
 // inglizcha «cycle» demaydi.
 
-function line(salaryType: string, value: number, rateBasis?: RateBasis) {
+function line(salaryType: string, value: number, rateBasis: RateBasis) {
   return {
     id: "a1",
     lessonDate: "2026-10-01T00:00:00.000Z",
     student: { id: 10001, firstName: "Ali", lastName: "Valiyev" },
     group: { id: "g1", name: "A1-01", course: { name: "Nemis tili" } },
-    // Eski server rateBasis yubormaydi: kalitni umuman qo'ymaymiz.
-    ...(rateBasis && { rateBasis }),
+    rateBasis,
     perLessonCost: 37_500,
     amount: 37_500,
     configVersion: { salaryType, value, scope: "GLOBAL" as const },
@@ -80,14 +79,8 @@ describe.each(screens)("%s", (_name, screen) => {
     ]);
   });
 
-  it("rateBasis kelmasa (klient serverdan oldin chiqqan) «/tsikl»", () => {
-    expect(badges(render("FIXED_PER_STUDENT", 450_000))).toEqual([
-      `${formatNumber(450_000)}/tsikl`,
-    ]);
-  });
-
   it("hech qaysi holatda inglizcha «cycle» chiqmaydi", () => {
-    for (const basis of [undefined, "month", "cycle"] as const) {
+    for (const basis of ["month", "cycle"] as const) {
       const markup = render("FIXED_PER_STUDENT", 450_000, basis);
       expect(markup.match(/.{0,20}cycle.{0,20}/i)?.[0]).toBeUndefined();
     }

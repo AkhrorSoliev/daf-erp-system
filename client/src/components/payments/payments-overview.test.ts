@@ -324,55 +324,23 @@ describe("PaymentsOverview — the debt block", () => {
     expect(norm(html)).toContain("Hisobdan chiqarilgan");
   });
 
-  // The client goes live before the server (ADR-0059, item 5), so for a few
-  // minutes it reads the answer of a server older than the split: no
-  // `debtSplit`, and the old receivable fields instead. The block keeps both
-  // labels and draws «—»: a zero would read as «nobody owes», and the old
-  // receivable was every status's debt, not either of the two new numbers.
-  describe("against a server older than the split", () => {
-    const OLD_RECEIVABLE = 19_870_000;
-    const oldAnswer = {
-      income: { actual: 5_000_000, paymentCount: 3, byMethod: [] },
-      forecast: {
-        expectedMonthEnd: EXPECTED_MONTH_END,
-        expectedHeld: 1_000_000,
-        expectedRemaining: 2_000_000,
-        outstandingReceivable: OLD_RECEIVABLE,
-        debtorExposure: { count: 158, avgDebt: 125_759 },
-      },
-      debtorCount: 158,
-      monthCharges: charges,
-    };
+  /** The «Qarzdorlik» block's text alone: other cards of a failed answer read 0. */
+  function debtBlock(text: string): string {
+    const start = text.indexOf("Qarzdorlik Bugungi holat");
+    const end = text.indexOf("To'lov usullari");
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    return text.slice(start, end);
+  }
 
-    /** The «Qarzdorlik» block's text alone: other cards of a bare answer read 0. */
-    function debtBlock(text: string): string {
-      const start = text.indexOf("Qarzdorlik Bugungi holat");
-      const end = text.indexOf("To'lov usullari");
-      expect(start).toBeGreaterThanOrEqual(0);
-      expect(end).toBeGreaterThan(start);
-      return text.slice(start, end);
-    }
+  // A failed request leaves nothing to read: the block keeps both labels and
+  // draws «—», because a zero would read as «nobody owes».
+  it("a request that failed draws «—», not zero debt", () => {
+    const block = debtBlock(norm(renderAnswer(new Error("boom"))));
 
-    it("keeps both labels with «—», and draws no zero, no 🟡 line and not the old total", () => {
-      const page = norm(renderAnswer(oldAnswer));
-      const block = debtBlock(page);
-
-      expect(block).toContain("O'qiyotganlar qarzi — O'qimayotganlar qarzi —");
-      expect(block).not.toContain(money(0));
-      expect(block).not.toContain("(0 ta)");
-      expect(block).not.toContain("🟡");
-      expect(page).not.toContain(num(OLD_RECEIVABLE));
-      // The rest of the page reads the old answer as before.
-      expect(page).toContain(`Hisoblandi ${money(900_000)}`);
-    });
-
-    it("a request that failed draws the same dash, not zero debt", () => {
-      const block = debtBlock(norm(renderAnswer(new Error("boom"))));
-
-      expect(block).toContain("O'qiyotganlar qarzi — O'qimayotganlar qarzi —");
-      expect(block).not.toContain(money(0));
-      expect(block).not.toContain("🟡");
-    });
+    expect(block).toContain("O'qiyotganlar qarzi — O'qimayotganlar qarzi —");
+    expect(block).not.toContain(money(0));
+    expect(block).not.toContain("🟡");
   });
 
   // A closed tooltip renders nothing, so the static markup cannot show these two

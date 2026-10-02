@@ -13,12 +13,12 @@ export type RateBasis = "month" | "cycle";
  * The rate label on a breakdown line. The admin drawer and the teacher's own
  * page both use it, so the two read the same.
  *
- * FIXED_PER_STUDENT: «/o'quvchi/oy» when `rateBasis === "month"`, «/tsikl» in
- * every other case, a line without `rateBasis` (an older server) included.
+ * FIXED_PER_STUDENT: «/o'quvchi/oy» when `rateBasis === "month"`, «/tsikl»
+ * when it is `"cycle"`.
  */
 export function breakdownRateLabel(
   rate: { salaryType: string; value: number },
-  rateBasis?: RateBasis,
+  rateBasis: RateBasis,
 ): string {
   if (rate.salaryType === "PERCENTAGE") return `${rate.value}%`;
   const value = formatNumber(rate.value);

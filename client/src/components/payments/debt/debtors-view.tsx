@@ -49,13 +49,8 @@ type PaymentTarget = {
 };
 
 interface DebtorSummary {
-  /**
-   * The debt as two numbers (ADR-0059), never added together. Optional: the
-   * client goes live before the server, and a server older than the ADR answers
-   * with `totalDebt` and friends instead. The two debt cards then show a dash —
-   * a zero would read as «nobody owes».
-   */
-  split?: DebtSplit;
+  /** The debt as two numbers (ADR-0059), never added together. */
+  split: DebtSplit;
   openPromises: number;
   overduePromises: number;
 }
