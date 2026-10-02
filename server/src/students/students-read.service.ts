@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
+import { SettingsService } from '../settings/settings.service';
 import { StatusHistoryService } from '../common/status';
 import {
   StudentQueryDto,
@@ -80,6 +81,7 @@ export class StudentsReadService {
     private prisma: PrismaService,
     private statusHistoryService: StatusHistoryService,
     private monthlyChargeService: MonthlyChargeService,
+    private settings: SettingsService,
   ) {}
 
   async findAll(
@@ -448,6 +450,9 @@ export class StudentsReadService {
    * the profile section needs to render row + decide whether to show the
    * write-off button; eligibility per row is computed on-demand by the
    * dedicated eligibility endpoint when the modal opens.
+   *
+   * ADR-0062: empty while debt forgiveness is switched off, and never a
+   * monthly-era enrollment (one with a monthly charge).
    */
   async getClosedEnrollments(id: number, companyId: number) {
     const student = await this.prisma.student.findFirst({
@@ -456,11 +461,21 @@ export class StudentsReadService {
     });
     if (!student) throw new NotFoundException(`O'quvchi topilmadi`);
 
+    // This list exists only for the write-off button. While forgiveness is
+    // off (CEO, 21.09.2026, answer 9) the button leads nowhere, and a
+    // monthly-era enrollment is never offered one.
+    const writeOffEnabled = await this.settings.get(
+      companyId,
+      'payment.debtWriteOffEnabled',
+    );
+    if (!writeOffEnabled) return [];
+
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         studentId: id,
         deletedAt: null,
         status: { in: ['DROPPED', 'FROZEN'] },
+        monthlyCharges: { none: {} },
       },
       orderBy: { statusChangedAt: 'desc' },
       select: {

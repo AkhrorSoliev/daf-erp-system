@@ -5,11 +5,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
+import { SettingsService } from '../settings/settings.service';
 
 describe('StudentsReadService', () => {
   let service: StudentsReadService;
   let prisma: any;
   let monthlyCharge: any;
+  let settings: { get: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -31,6 +33,8 @@ describe('StudentsReadService', () => {
     monthlyCharge = {
       previewReleaseForDeparture: jest.fn().mockResolvedValue(null),
     };
+    // Debt forgiveness is off by default (CEO, 21.09.2026, answer 9).
+    settings = { get: jest.fn().mockResolvedValue(false) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -38,6 +42,7 @@ describe('StudentsReadService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: {} },
         { provide: MonthlyChargeService, useValue: monthlyCharge },
+        { provide: SettingsService, useValue: settings },
       ],
     }).compile();
 
@@ -740,6 +745,38 @@ describe('StudentsReadService', () => {
         releaseLessons: 0,
         releaseAmount: 0,
       });
+    });
+  });
+
+  describe('getClosedEnrollments — write-off candidates (ADR-0062)', () => {
+    beforeEach(() => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001 });
+    });
+
+    it('lists nothing while debt forgiveness is switched off', async () => {
+      await expect(service.getClosedEnrollments(10001, 1001)).resolves.toEqual(
+        [],
+      );
+      expect(settings.get).toHaveBeenCalledWith(
+        1001,
+        'payment.debtWriteOffEnabled',
+      );
+      expect(prisma.enrollment.findMany).not.toHaveBeenCalled();
+    });
+
+    it('lists only pack-era closed enrollments when it is on', async () => {
+      settings.get.mockResolvedValue(true);
+
+      await service.getClosedEnrollments(10001, 1001);
+
+      expect(prisma.enrollment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: { in: ['DROPPED', 'FROZEN'] },
+            monthlyCharges: { none: {} },
+          }),
+        }),
+      );
     });
   });
 });
