@@ -14,6 +14,7 @@ import {
   ReportBranchIds,
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
+import { ceilingIsWider, inOtherBranch } from '../common/auth/other-branch';
 
 @Injectable()
 export class GroupsReadService {
@@ -359,14 +360,9 @@ export class GroupsReadService {
     });
 
     if (!group) {
-      // A group of another branch the caller works in is not "missing": a
-      // CEO in Farg'ona read «guruh mavjud emas» for eight Namangan groups
-      // opened from /tasks and cancelled their lessons (01.10.2026). Name
-      // the branch so the page can switch to it.
-      const wider =
-        scope !== null &&
-        (ceiling === null || ceiling.some((b) => !scope.includes(b)));
-      const elsewhere = wider
+      // A group of another branch the caller works in is not "missing": name
+      // the branch so the page can switch to it (ADR-0063).
+      const elsewhere = ceilingIsWider(scope, ceiling)
         ? await this.prisma.group.findFirst({
             where: {
               id,
@@ -377,14 +373,7 @@ export class GroupsReadService {
             select: { branch: { select: { id: true, name: true } } },
           })
         : null;
-      if (elsewhere) {
-        throw new NotFoundException({
-          statusCode: 404,
-          error: 'Not Found',
-          message: `Bu guruh «${elsewhere.branch.name}» filialiga tegishli. Ko'rish uchun shu filialni tanlang.`,
-          branch: elsewhere.branch,
-        });
-      }
+      if (elsewhere) throw inOtherBranch('guruh', elsewhere.branch);
       throw new NotFoundException(`Guruh #${id} topilmadi`);
     }
 

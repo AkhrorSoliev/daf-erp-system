@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Building2, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { GroupInfoCard } from "./group-info-card";
 import { GroupDetailTabs } from "./group-detail-tabs";
 import { EditGroupDrawer } from "./edit-group-drawer";
-import { otherBranchOf, type OtherBranch } from "./group-other-branch";
+import { InOtherBranch } from "@/components/shared/in-other-branch";
+import { otherBranchOf, type OtherBranch } from "@/lib/other-branch";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
-import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import type { GroupData } from "@/hooks/use-edit-group";
 import api from "@/lib/api";
 
@@ -81,7 +80,13 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
   }
 
   if (otherBranch) {
-    return <GroupInOtherBranch branch={otherBranch} />;
+    return (
+      <InOtherBranch
+        title="Guruh boshqa filialda"
+        what="guruh"
+        branch={otherBranch}
+      />
+    );
   }
 
   if (error || !group) {
@@ -128,31 +133,3 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
   );
 }
 
-/**
- * The group exists, but in another of the caller's branches. Switching the
- * branch remounts the page (`scopeVersion`), which loads the group there.
- */
-function GroupInOtherBranch({ branch }: { branch: OtherBranch }) {
-  const target = useBranchSwitcher((s) =>
-    s.branches.find((b) => b.id === branch.id),
-  );
-  const selectBranch = useBranchSwitcher((s) => s.selectBranch);
-
-  return (
-    <div className="space-y-4">
-      <h1 className="font-heading text-2xl font-bold tracking-tight">
-        Guruh boshqa filialda
-      </h1>
-      <p className="text-muted-foreground">
-        Bu guruh «{branch.name}» filialiga tegishli. Uni ko&apos;rish uchun shu
-        filialni tanlang.
-      </p>
-      {target && (
-        <Button onClick={() => selectBranch(target)}>
-          <Building2 className="size-4" />
-          {branch.name}ga o&apos;tish
-        </Button>
-      )}
-    </div>
-  );
-}

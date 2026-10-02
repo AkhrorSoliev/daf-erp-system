@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { otherBranchOf } from "./group-other-branch";
+import { otherBranchOf } from "./other-branch";
 
 const axiosError = (status: number, data: unknown) => ({
   response: { status, data },

@@ -893,6 +893,10 @@ Money reports carried **two** branch parameters — `branchId` (the header switc
 - **Count legs need scoping too.** `getFinancialTrend` / `getYearlyTrend` scoped money by branch but took new-student and unique-payer COUNTS company-wide, so a branch series plotted 0 so'm beside "715 new students". `getReconciliation` took no branch at all, so every workbook's Tekshiruv sheet footed against the whole company.
 - **`reports-branch-scope-coverage.spec.ts` is the regression guard**: with a scope set, EVERY query a money report issues must carry a branch predicate. A newly-added unscoped query fails it immediately. `scripts/audit-branch-scope-sum.ts` checks the same invariant (`Σ(branches) == total`) against real data.
 
+#### A detail read outside the selected branch names its branch
+
+`GET /groups/:id` and `GET /students/:id` filter by `@BranchScope()` (the switcher). A record in another branch the caller may open (`@BranchCeiling()`) answers 404 `{ message, branch }`, built by `inOtherBranch` with `ceilingIsWider` (`common/auth/other-branch.ts`), so the page offers to switch instead of saying «topilmadi». Outside the ceiling it stays a plain 404, so the id still leaks nothing. On 01.10.2026 the bare «guruh mavjud emas» led a CEO to cancel eight Namangan lessons (ADR-0063). A new id-addressed detail read that filters by the header does the same.
+
 #### Object-level branch confinement
 
 A `@Roles()` guard proves the caller has a role, not that the record is theirs. Two id-addressed writes were company-scoped only:

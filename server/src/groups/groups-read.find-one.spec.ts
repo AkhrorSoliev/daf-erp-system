@@ -27,7 +27,7 @@ describe('GroupsReadService.findOne — a group of another branch', () => {
         branch: { id: NAMANGAN, name: 'Namangan filiali' },
       });
 
-    const err = await service
+    const err: unknown = await service
       .findOne('g-nam', 1001, [FARGONA], [FARGONA, NAMANGAN])
       .catch((e: unknown) => e);
 
@@ -54,7 +54,7 @@ describe('GroupsReadService.findOne — a group of another branch', () => {
   it('stays a plain 404 for a group outside the caller’s branches', async () => {
     prisma.group.findFirst.mockResolvedValue(null);
 
-    const err = await service
+    const err: unknown = await service
       .findOne('g-nam', 1001, [FARGONA], [FARGONA])
       .catch((e: unknown) => e);
 
