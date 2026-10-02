@@ -14,12 +14,12 @@ import { formatBalance, formatPrice } from "@/lib/format-utils";
 import {
   EnrollPreviewBlock,
   type EnrollPreview,
-} from "./enroll-to-group-dialog";
+} from "./enroll-preview-block";
 
-// The dialog's group list and its selection are state that a static render
-// never reaches (no effects, no clicks), so the block that answers "what will
-// this cost" is rendered on its own, the way the dialog draws it once a group
-// is selected. Every figure it prints comes from the server's preview.
+// The enroll dialog's group list and its selection are state that a static
+// render never reaches (no effects, no clicks), so the block the dialog draws
+// once a group is selected is rendered on its own. Every figure it prints
+// comes from the server's preview.
 
 // Same formatters the block uses, so the assertions hold whatever ICU the
 // machine running the tests carries; `norm` turns their U+00A0 into a plain
@@ -125,15 +125,19 @@ describe("EnrollPreviewBlock — a monthly course", () => {
     expect(text).not.toContain("chegirma");
   });
 
-  it("names the discount at the end of the first month's label when the student has one", async () => {
-    // 450 000 less 10%, over the same 8 of 13 lessons: 249 231 again.
+  it("names the discount inside the first month's label, before its colon, when the student has one", async () => {
+    // 450 000 less 10%, over the same 8 of 13 lessons: 249 231 again. Without
+    // a discount the label is «… dars):» (the first test); with one the
+    // suffix goes in before the colon, which stays last.
     const text = await answered(
       monthly({ coursePrice: 450000, discountPercent: 10 }),
     );
 
     expect(text).toContain(
-      `Oktabr uchun (8/13 dars): · chegirma 10% ${money(249231)}`,
+      `Oktabr uchun (8/13 dars) · chegirma 10%: ${money(249231)}`,
     );
+    expect(text).not.toContain("dars): ·");
+    expect(text.match(/chegirma/g)).toHaveLength(1);
   });
 
   it("says the bill is written when the group's lessons start, in place of a first-month line", async () => {
