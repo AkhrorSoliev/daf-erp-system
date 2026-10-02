@@ -42,7 +42,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
-| View salary (ish haqi) | All staff | Own branch staff | API reads only (`GET /salary/monthly`, `/overview`, …); the `/payments/salary` page is hidden | No | No |
+| View salary (ish haqi) | All staff | Own branch staff | No (page hidden, salary reads refused — see below) | No | No |
 | View balance | All staff | Own branch staff | No | No | No |
 | Create payment | Yes | Yes | Yes | No | Yes |
 | Reverse payment | Yes | No | No | No | No |
