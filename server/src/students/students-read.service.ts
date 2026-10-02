@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   AttendanceStatus,
   EnrollmentStatus,
+  MonthlyChargeStatus,
   PaymentModel,
   Prisma,
   StudentStatus,
@@ -508,6 +509,11 @@ export class StudentsReadService {
    * o'quvchining DAVOMATI (kelgan/kelmagan/kech/sababli), darslar sana bo'yicha
    * tartibda, har `lessonPaymentCount` tasi bitta SIKL bloki qilib guruhlangan.
    *
+   * Monthly era (ADR-0062): from the month of the enrollment's first monthly
+   * charge on, lessons are grouped by month instead — the block's capacity is
+   * that month's charged lessons, and a cancelled lesson is not shown. The
+   * `lessonPaymentCount` blocks above apply to the pack era only.
+   *
    * MUHIM: sikl bu yerda = kurs darslari soni (lessonPaymentCount, 12/20) talik
    * BLOK — moliyaviy LESSON_DEDUCTION bo'lagi EMAS. Qarzdor o'quvchida deduction
    * bo'laklari 1 talikka parchalanadi (SINGLE_UNCOVERED) va sana tartibi
@@ -587,8 +593,28 @@ export class StudentsReadService {
         groupId: { in: groupIds },
         ...(systemStart ? { date: { gte: systemStart } } : {}),
       },
-      select: { id: true, groupId: true, date: true, status: true },
+      select: {
+        id: true,
+        groupId: true,
+        date: true,
+        status: true,
+        cancellationId: true,
+      },
       orderBy: { date: 'asc' },
+    });
+
+    // Monthly era (ADR-0062): from the month of an enrollment's first monthly
+    // charge on, its lessons are grouped by month; earlier lessons keep the
+    // pack-era cycles.
+    const charges = await this.prisma.enrollmentMonthlyCharge.findMany({
+      where: { enrollmentId: { in: enrollments.map((e) => e.id) } },
+      select: {
+        enrollmentId: true,
+        periodYear: true,
+        periodMonth: true,
+        status: true,
+        coveredLessons: true,
+      },
     });
 
     // enrollmentId → tartib kaliti (pastdagi sort uchun). Kalit = guruhning eng
@@ -600,59 +626,76 @@ export class StudentsReadService {
     const groups = enrollments.map((e) => {
       // lpc = kurs darslari soni (NEVER hardcoded 12) — sikl blok o'lchami.
       const lpc = e.group.course?.lessonPaymentCount || 12;
-      const groupAtts = attendances.filter((a) => a.groupId === e.group.id);
+      const own = charges.filter((c) => c.enrollmentId === e.id);
+      const monthOf = (c: { periodYear: number; periodMonth: number }) =>
+        `${c.periodYear}-${String(c.periodMonth).padStart(2, '0')}`;
+      const monthlyFrom = own.length > 0 ? own.map(monthOf).sort()[0] : null;
+      // A month's capacity is what its live charge still covers (frozen-out,
+      // cancelled and released days gone); no live charge, no capacity.
+      const capacityByMonth = new Map(
+        own
+          .filter((c) => c.status === MonthlyChargeStatus.CHARGED)
+          .map((c) => [monthOf(c), c.coveredLessons]),
+      );
 
       // Darslarni sana bo'yicha tartibda lpc talik bloklarga ajratamiz; har
-      // darsning sikl raqami = floor(index / lpc) + 1.
-      const lessons = groupAtts.map((a, index) => ({
-        date: tashkentDateStr(a.date),
-        status: a.status,
-        cycleSequenceNumber: Math.floor(index / lpc) + 1,
-      }));
-
-      const attended = lessons.filter(
-        (l) =>
-          l.status === AttendanceStatus.PRESENT ||
-          l.status === AttendanceStatus.LATE,
-      ).length;
-
-      // Har blok uchun: sana oralig'i + dars soni + kelgan soni.
-      const cyclesMap = new Map<
-        number,
-        {
-          cycleSequenceNumber: number;
-          capacity: number;
-          lessonCount: number;
-          attended: number;
-          firstDate: string;
-          lastDate: string;
+      // darsning sikl raqami = floor(index / lpc) + 1 (pack era only).
+      const lessons: OverviewLesson[] = [];
+      let packIndex = 0;
+      for (const a of attendances) {
+        if (a.groupId !== e.group.id) continue;
+        const date = tashkentDateStr(a.date);
+        const month = date.slice(0, 7);
+        if (monthlyFrom !== null && month >= monthlyFrom) {
+          // A cancelled day is not one of the month's lessons (ADR-0053).
+          if (a.cancellationId) continue;
+          lessons.push({
+            date,
+            status: a.status,
+            cycleSequenceNumber: null,
+            month,
+          });
+        } else {
+          lessons.push({
+            date,
+            status: a.status,
+            cycleSequenceNumber: Math.floor(packIndex / lpc) + 1,
+            month: null,
+          });
+          packIndex += 1;
         }
-      >();
+      }
+
+      const isAttended = (status: AttendanceStatus) =>
+        status === AttendanceStatus.PRESENT || status === AttendanceStatus.LATE;
+      const attended = lessons.filter((l) => isAttended(l.status)).length;
+
+      // Har blok (sikl yoki oy) uchun: sana oralig'i + dars soni + kelgan soni.
+      // Lessons are in date order and the pack era comes first, so insertion
+      // order is chronological.
+      const blocks = new Map<string, LessonBlock>();
       for (const l of lessons) {
-        const seq = l.cycleSequenceNumber;
-        const existing = cyclesMap.get(seq);
-        const isAttended =
-          l.status === AttendanceStatus.PRESENT ||
-          l.status === AttendanceStatus.LATE;
+        const key = l.month ?? `cycle-${l.cycleSequenceNumber}`;
+        const existing = blocks.get(key);
         if (!existing) {
-          cyclesMap.set(seq, {
-            cycleSequenceNumber: seq,
-            capacity: lpc,
+          blocks.set(key, {
+            kind: l.month ? 'MONTH' : 'CYCLE',
+            cycleSequenceNumber: l.cycleSequenceNumber,
+            month: l.month,
+            capacity: l.month ? (capacityByMonth.get(l.month) ?? null) : lpc,
             lessonCount: 1,
-            attended: isAttended ? 1 : 0,
+            attended: isAttended(l.status) ? 1 : 0,
             firstDate: l.date,
             lastDate: l.date,
           });
         } else {
           existing.lessonCount += 1;
-          if (isAttended) existing.attended += 1;
+          if (isAttended(l.status)) existing.attended += 1;
           // lessons sana bo'yicha tartibda → oxirgisi eng kech.
           existing.lastDate = l.date;
         }
       }
-      const cycles = Array.from(cyclesMap.values()).sort(
-        (a, b) => a.cycleSequenceNumber - b.cycleSequenceNumber,
-      );
+      const cycles = [...blocks.values()];
 
       // lessons sana bo'yicha o'sish tartibida → oxirgisi eng so'nggi dars.
       // Ikki guruhning so'nggi darsi bir kunga to'g'ri kelishi mumkin (bir
@@ -690,4 +733,27 @@ export class StudentsReadService {
 
     return { studentId: id, groups };
   }
+}
+
+/** One lesson on the «Darslar» tab. */
+export interface OverviewLesson {
+  date: string;
+  status: AttendanceStatus;
+  /** Pack era: the lessonPaymentCount block; null in the monthly era. */
+  cycleSequenceNumber: number | null;
+  /** Monthly era (ADR-0062): 'YYYY-MM'; null in the pack era. */
+  month: string | null;
+}
+
+/** A «Darslar» block: a pack-era cycle or a month (ADR-0062). */
+export interface LessonBlock {
+  kind: 'CYCLE' | 'MONTH';
+  cycleSequenceNumber: number | null;
+  month: string | null;
+  /** CYCLE: lessonPaymentCount. MONTH: the live charge's covered lessons, null without one. */
+  capacity: number | null;
+  lessonCount: number;
+  attended: number;
+  firstDate: string;
+  lastDate: string;
 }
