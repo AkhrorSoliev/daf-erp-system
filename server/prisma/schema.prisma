@@ -891,6 +891,13 @@ enum MockExamStatus {
   ARCHIVED
 }
 
+// How a mock registration came in. The two creators write it themselves: the
+// Telegram bot scene (BOT) and the admin «Qo'lda qo'shish» (ADMIN). ADR-0056.
+enum MockRegistrationChannel {
+  BOT
+  ADMIN
+}
+
 // Grouping of mock exams (e.g. "IELTS", "SAT", "DTM", "Ichki testlar").
 model MockExamSection {
   id              String     @id @default(uuid())
@@ -1082,6 +1089,10 @@ model MockExamParticipant {
 
   registeredAt DateTime @default(now())
 
+  // Where this registration came from. No default on purpose: every writer
+  // states it, so the statistics never infer it from `telegramFirstName`.
+  registeredVia MockRegistrationChannel
+
   // Payment for this specific mock exam. No Transaction is written: `paid`
   // flips when an admin accepts the fee at the desk (`markPaid`) or when a
   // Payme/Click payment against the publicId completes (`markCompleted`).
@@ -1265,6 +1276,7 @@ model Group {
   holidayExtensions      GroupHolidayExtension[]
   plannedAbsences        PlannedAbsence[]
   monthlyCharges         EnrollmentMonthlyCharge[]
+  unmarkedLessons        UnmarkedLesson[]          @relation("UnmarkedLessonGroup")
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -1740,6 +1752,7 @@ enum TelegramDigestCategory {
   GROUP_STATUS_CHANGE
   MONTHLY_CHARGE
   PAYMENT_REMINDER
+  LESSON_PAY_FORFEITED
 }
 
 /// One queued Telegram notification waiting for the 20:00 digest (ADR-0025).
@@ -1829,8 +1842,9 @@ model Comment {
   isSystem   Boolean       @default(false)
   dueDate    DateTime?
   priority   TaskPriority?
-  authorId   Int
-  author     User          @relation("CommentAuthor", fields: [authorId], references: [id])
+  /// NULL = a task the system gave (ADR-0054); the UI shows «Tizim».
+  authorId   Int?
+  author     User?         @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
   companyId  Int
   company    Company       @relation(fields: [companyId], references: [id])
   createdAt  DateTime      @default(now())
@@ -1838,6 +1852,8 @@ model Comment {
 
   assignees     CommentAssignee[]
   notifications Notification[]
+  /// The unmarked lesson this system task asks about (ADR-0054).
+  unmarkedLesson UnmarkedLesson? @relation("UnmarkedLessonTask")
 
   @@index([entityType, entityId])
   @@index([authorId])
@@ -1940,6 +1956,10 @@ model Attendance {
   markedById     Int?
   markedBy       User?               @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
   markedMethod   AttendanceMethod    @default(MANUAL)
+  /// Minutes after the lesson's effective start an administrator marked the
+  /// student present, when the lesson already had attendance (ADR-0048).
+  /// Only on a LATE row; null otherwise.
+  lateMinutes    Int?
   // Set when this attendance row exists for a lesson that was later
   // cancelled. The status is forced to EXCUSED so existing biller/stat
   // queries keep working — cancellation is metadata via this link, not a
@@ -2396,6 +2416,47 @@ model LessonReschedule {
   @@index([companyId])
   @@index([deletedAt])
   @@index([newRoomId])
+}
+
+enum UnmarkedLessonStatus {
+  PENDING
+  HELD
+  NOT_HELD
+  RESCHEDULED
+}
+
+/// A lesson nobody marked before it ended (spec 2026-09-29, ADR-0054). Opened
+/// by the attendance reminder cron, answered by an administrator: HELD (the
+/// register was entered late), NOT_HELD (cancelled) or RESCHEDULED (moved).
+/// While a row exists and `teacherPayExempt` is false, the lesson never earns
+/// the teacher a SalaryAccrual — see `unmarked-lessons/forfeited-lessons.ts`.
+model UnmarkedLesson {
+  id               String               @id @default(uuid())
+  companyId        Int
+  branchId         Int
+  groupId          String
+  group            Group                @relation("UnmarkedLessonGroup", fields: [groupId], references: [id])
+  date             DateTime             @db.Date
+  lessonStartTime  String
+  lessonEndTime    String
+  status           UnmarkedLessonStatus @default(PENDING)
+  /// CEO only (Q9): the teacher could not mark it — the lesson pays as usual.
+  teacherPayExempt Boolean              @default(false)
+  exemptReason     String?
+  /// The administrator who took the system task (first to act on it).
+  claimedById      Int?
+  decidedById      Int?
+  decidedAt        DateTime?
+  cancellationId   String?
+  rescheduleId     String?
+  taskCommentId    String?              @unique
+  taskComment      Comment?             @relation("UnmarkedLessonTask", fields: [taskCommentId], references: [id], onDelete: SetNull)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@unique([groupId, date])
+  @@index([companyId, status])
+  @@index([branchId, status])
 }
 
 model SalaryAccrual {
@@ -3254,6 +3315,9 @@ model DafLexeme {
   /// The picture names this word alone, so the student may type the word
   /// from it (`BILD_TIPPEN`). Source: `content/daf/a1/bild-plan.json`.
   bildTippen        Boolean               @default(false)
+  /// Other correct spellings of the word ("tschüs" beside "tschüss"). The
+  /// typing formats accept them. Source: `woerter.json` → `akzeptiert`.
+  akzeptiert        String[]              @default([])
   /// Qaysi mavzuli bo'limga tegishli. Eski DiB so'zlarida `null`.
   sectionId         Int?
   /// Ovoz yasovchiga yuboriladigan matn. Yakka harf va raqamni TTS

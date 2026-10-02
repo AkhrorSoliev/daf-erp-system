@@ -7,6 +7,7 @@ import {
   TransactionType,
 } from '@prisma/client';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
+import { isLessonPayForfeited } from '../unmarked-lessons/forfeited-lessons';
 
 /**
  * Emitted (collected, not sent) when an accrual is carried over into the
@@ -107,6 +108,16 @@ export class SalaryAccrualService {
     }
 
     const db = params.tx ?? this.prisma;
+
+    // ADR-0054: a lesson nobody marked before it ended never earns the teacher
+    // anything — not live, not deferred, not as a centre top-up. Every accrual
+    // write passes through here, so this one check covers them all.
+    if (await isLessonPayForfeited(db, params.groupId, params.lessonDate)) {
+      this.logger.log(
+        `Accrual skipped for teacher ${params.teacherId}: lesson ${params.groupId} ${params.lessonDate.toISOString().slice(0, 10)} was not marked in time (ADR-0054).`,
+      );
+      return null;
+    }
 
     // Period-closed policy: if the lesson date falls inside a SalaryPayment
     // period that has ALREADY BEEN SETTLED for this teacher — i.e. the payroll

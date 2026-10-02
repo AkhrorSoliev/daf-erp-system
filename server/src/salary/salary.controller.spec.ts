@@ -1,6 +1,8 @@
 import 'reflect-metadata';
+import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../common/decorators/roles.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
 import { SalaryController } from './salary.controller';
 
 describe('SalaryController @Roles metadata', () => {
@@ -8,10 +10,19 @@ describe('SalaryController @Roles metadata', () => {
   // metadata here so a refactor that accidentally widens the gate is
   // caught by tests, not by an audit.
   const reflector = new Reflector();
+  const guard = new RolesGuard(reflector);
 
   function rolesFor(method: keyof SalaryController): string[] {
     const handler = SalaryController.prototype[method] as any;
     return reflector.get<string[]>(ROLES_KEY, handler) ?? [];
+  }
+
+  function ctx(method: keyof SalaryController, roles: string[]) {
+    return {
+      getHandler: () => SalaryController.prototype[method],
+      getClass: () => SalaryController,
+      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
+    } as any;
   }
 
   describe('CEO-only writes (Faza 2 narrowing)', () => {
@@ -74,30 +85,66 @@ describe('SalaryController @Roles metadata', () => {
     });
   });
 
-  describe('Read-only (CEO + BD + Administrator)', () => {
-    const readers = [
+  describe("«Ish haqi» sahifasining o'qishlari — faqat CEO + Branch Director", () => {
+    // Administrator oylikni ko'rmaydi (docs/role-access.md, «View salary»).
+    // «Ish haqi» sahifasi undan aprel oyidan beri yashirin, server esa shu
+    // endpointlarni unga ochiq qoldirgan edi: manzilni qo'lda yozgan admin
+    // har bir ustozning oyligini o'qiy olardi. 30.09.2026 da yopildi.
+    const pageReads = [
       'getConfig',
+      'getConfigsForUsers',
       'getConfigHistory',
-      'getTimeline',
       'listPeriodSettings',
       'getAccruals',
       'findPayments',
       'getMatrix',
       'getOverview',
       'getMonthly',
-      // The "Qolgan (markaz)" drill-down explains a figure already on the
-      // salary page, so it is gated exactly like the page that shows it.
-      'getCenterTopUpStudents',
       'getAdvances',
       'getAdvanceCalendar',
       'getPaymentBreakdown',
     ] as const;
-    it.each(readers)('%s allows CEO/BD/Administrator', (method) => {
-      expect(rolesFor(method)).toEqual([
+    it.each(pageReads)('%s allows CEO and Branch Director only', (method) => {
+      expect(rolesFor(method)).toEqual(['CEO', 'Branch Director']);
+    });
+
+    it('RolesGuard refuses an Administrator on /salary/monthly', () => {
+      expect(() =>
+        guard.canActivate(ctx('getMonthly', ['Administrator'])),
+      ).toThrow(ForbiddenException);
+    });
+  });
+
+  describe("Taymlayn — o'qituvchi profilining tabi, admin ham ko'radi", () => {
+    it('getTimeline allows CEO/BD/Administrator', () => {
+      expect(rolesFor('getTimeline')).toEqual([
         'CEO',
         'Branch Director',
         'Administrator',
       ]);
+    });
+  });
+
+  describe("«Markaz qoplagani» — /payments/debt tabi, o'qituvchidan boshqa har bir xodimga", () => {
+    // Qarzdorlik sahifasi ko'ruvchiga qarab shaklini o'zgartirmaydi
+    // (2026-08-12 qarori, server/CLAUDE.md «Key access rules»). Bu tab ham
+    // o'sha sahifaniki, lekin kassir uni ochganda 403 olardi.
+    it('getCenterTopUpStudents allows CEO/BD/Administrator/Cashier', () => {
+      expect(rolesFor('getCenterTopUpStudents')).toEqual([
+        'CEO',
+        'Branch Director',
+        'Administrator',
+        'Cashier',
+      ]);
+    });
+
+    it('RolesGuard lets a Cashier in and keeps a Teacher out', () => {
+      expect(
+        guard.canActivate(ctx('getCenterTopUpStudents', ['Cashier'])),
+      ).toBe(true);
+      expect(() =>
+        guard.canActivate(ctx('getCenterTopUpStudents', ['Teacher'])),
+      ).toThrow(ForbiddenException);
     });
   });
 
@@ -118,17 +165,17 @@ describe('SalaryController @Roles metadata', () => {
   });
 
   describe('Staff rate list (⚙ Sozlamalar → Xodimlar stavkalari)', () => {
-    // Unlike `getOverview` (teacher rates), this list carries the pay of the
-    // administrative staff themselves — including whoever is looking at it —
-    // so it follows the "Salary config" row of docs/role-access.md rather than
-    // the wider read gate. Administrator is deliberately excluded.
+    // This list carries the pay of the administrative staff themselves —
+    // including whoever is looking at it — so it follows the "Salary config"
+    // row of docs/role-access.md. Administrator is deliberately excluded.
     it('getStaffConfig allows CEO and Branch Director only', () => {
       expect(rolesFor('getStaffConfig')).toEqual(['CEO', 'Branch Director']);
     });
 
-    it('is narrower than the teacher rate list it sits beside', () => {
-      expect(rolesFor('getStaffConfig')).not.toContain('Administrator');
-      expect(rolesFor('getOverview')).toContain('Administrator');
+    // Ikki ro'yxat bitta oynada yonma-yon turadi: birini ko'rgan boshqasini
+    // ham ko'rishi kerak, aks holda oyna yarmi 403 bilan ochiladi.
+    it('admits exactly the roles of the teacher rate list beside it', () => {
+      expect(rolesFor('getStaffConfig')).toEqual(rolesFor('getOverview'));
     });
   });
 

@@ -19,10 +19,10 @@ import {
   useNotifications,
   type AppNotification,
 } from "@/hooks/use-notifications";
+import { useAuth } from "@/hooks/use-auth";
 import { useSSE } from "@/hooks/use-sse";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
-import { useAuth } from "@/hooks/use-auth";
-import { notificationHref } from "@/lib/notification-href";
+import { notificationHref } from "./notification-href";
 
 const TYPE_ICONS: Record<string, typeof MessageSquare> = {
   COMMENT: MessageSquare,
@@ -76,7 +76,7 @@ function NotificationItem({
 
 export function NotificationBell() {
   const router = useRouter();
-  const viewerId = useAuth((s) => s.user?.id);
+  const user = useAuth((s) => s.user);
   const {
     notifications,
     unreadCount,
@@ -108,7 +108,7 @@ export function NotificationBell() {
   };
 
   const handleNavigate = (n: AppNotification) => {
-    const url = notificationHref(n, viewerId);
+    const url = notificationHref(n, user?.roles.map((r) => r.id) ?? []);
     if (url) router.push(url);
   };
 

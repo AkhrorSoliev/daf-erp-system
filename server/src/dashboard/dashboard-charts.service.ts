@@ -2,6 +2,12 @@ import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { ReportsService } from '../reports/reports.service';
 import { RedisService } from '../redis/redis.service';
 import {
+  addDaysToDateStr,
+  addMonthsToMonthKey,
+  tashkentDateStr,
+  tashkentMonthKey,
+} from '../common/date/tashkent';
+import {
   isEmptyScope,
   singleBranchId,
 } from '../common/finance/report-branch-scope';
@@ -152,15 +158,10 @@ export class DashboardChartsService {
 
   /** Oxirgi N oy, eskisidan yangisiga: `['2026-04', … , '2026-09']`. */
   private recentMonths(count: number): string[] {
-    const now = new Date();
-    const out: string[] = [];
-    for (let i = count - 1; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      out.push(
-        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-      );
-    }
-    return out;
+    const current = tashkentMonthKey(new Date());
+    return Array.from({ length: count }, (_, i) =>
+      addMonthsToMonthKey(current, i - count + 1),
+    );
   }
 
   private monthLabel(monthKey: string): string {
@@ -210,6 +211,7 @@ export class DashboardChartsService {
     const breakdown: ChartProfitBreakdown | null = np
       ? {
           revenue: np.revenue,
+          balanceWithdrawals: np.balanceWithdrawals,
           teacherSalary: np.teacherSalary,
           adminSalary: np.adminSalary,
           operatingExpenses: np.operatingExpenses,
@@ -252,15 +254,13 @@ export class DashboardChartsService {
   private async buildAttendance(
     ctx: ChartsContext,
   ): Promise<ChartAttendancePoint[]> {
-    const end = new Date();
-    const start = new Date(end);
-    start.setDate(start.getDate() - ATTENDANCE_WEEKS * 7);
-    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    const endDate = tashkentDateStr(new Date());
+    const startDate = addDaysToDateStr(endDate, -ATTENDANCE_WEEKS * 7);
 
     const res = (await this.reports.getAttendanceAnalytics(ctx.companyId, {
       branchId: singleBranchId(ctx.branchScope),
-      startDate: iso(start),
-      endDate: iso(end),
+      startDate,
+      endDate,
       bucket: 'week',
     })) as { trend?: { label: string; rate: number }[] };
 

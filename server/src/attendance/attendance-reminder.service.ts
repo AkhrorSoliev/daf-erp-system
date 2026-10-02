@@ -7,6 +7,7 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { HolidaysService } from '../holidays/holidays.service';
+import { UnmarkedLessonsService } from './unmarked-lessons.service';
 
 const DAY_NAME_TO_JS: Record<string, number> = {
   sunday: 0,
@@ -47,21 +48,27 @@ type GroupWithTeachers = {
  *
  * Idempotency relies on the `Notification` table — one row per (userId, type,
  * relatedEntityId=groupId, today) blocks repeat sends. Cron fires twice per
- * hour (at :00 and :30) between 07:00 and 22:30 Tashkent time, Monday–Saturday.
- * At night and on Sundays the cron is silent so the DB endpoint can stay
- * suspended. This relies on lessons being scheduled on half-hour boundaries
- * — non-aligned lesson times (e.g. 09:15) will not trigger reminders.
+ * hour (at :00 and :30) between 07:00 and 22:30 Tashkent time, Monday–Saturday,
+ * and `closeDay` fires once at 23:00 EVERY day, Sundays included, so the DB is
+ * woken at 23:00 daily. The start and end − 30 reminders rely on lessons being
+ * scheduled on half-hour boundaries — non-aligned lesson times (e.g. 09:15)
+ * will not trigger them. The lesson-end sweep does not: it runs on every tick
+ * and at 23:00 and asks «Dars bo'ldimi?» for any lesson that ended unmarked,
+ * whatever its end time (ADR-0054).
  *
- * Three trigger points per lesson:
+ * Trigger points per lesson:
  *   - start            → LESSON_STARTED (teacher)
  *   - end - 30 minutes → TEACHER_WARNING (teacher) + ADMIN_ALERT (admin)
- *   - end              → MISSING_TEACHER (teacher) + MISSING_ADMIN (admin)
+ *   - end              → handled by the sweep (sweepEndedLessons): MISSING_TEACHER + MISSING_ADMIN, once, when the question is opened
  *
- * Before touching groups we compare the current minute against a cached
- * [earliestStart, latestEnd] window derived from active groups (refreshed
- * hourly). When inside the window, the group query is narrowed to rows whose
- * lessonStartTime or lessonEndTime matches the current trigger minute, so
- * most ticks perform a single indexed lookup returning 0–3 rows.
+ * Every tick starts with the sweep, before any window check, so a tick always
+ * reads the active groups, the day's moves, cancellations and open questions
+ * and the branches' holidays. Only the reminder part after it is narrowed: we
+ * compare the current minute against a cached [earliestStart, latestEnd]
+ * window derived from active groups (refreshed hourly). When inside the
+ * window, the group query is narrowed to rows whose lessonStartTime or
+ * lessonEndTime matches the current trigger minute, so the reminder part
+ * performs a single indexed lookup returning 0–3 rows.
  */
 @Injectable()
 export class AttendanceReminderService {
@@ -77,10 +84,16 @@ export class AttendanceReminderService {
     private pushService: PushService,
     private telegramService: TelegramService,
     private holidaysService: HolidaysService,
+    private unmarkedLessons: UnmarkedLessonsService,
   ) {}
 
   @Cron('0 0,30 7-22 * * 1-6', { timeZone: 'Asia/Tashkent' })
   async tick() {
+    // «Dars bo'ldimi?» — open the question for every lesson that has ended
+    // unmarked. Runs on every tick, whatever the lesson times, so a missed
+    // tick is caught by the next one (spec 2026-09-29 §3.2).
+    await this.sweepEndedLessons();
+
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Tashkent',
       year: 'numeric',
@@ -158,13 +171,25 @@ export class AttendanceReminderService {
 
     if (groups.length === 0) return;
 
-    const isHoliday =
-      !!(await this.holidaysService.findActiveHolidayCovering(parsedDate));
-    if (isHoliday) return;
+    // Cache holidays per branch so each branch is looked up once per tick
+    const holidaysByBranch = new Map<number, boolean>();
 
     for (const group of groups) {
       try {
         if (!this.groupHasLessonToday(group, parsedDate, weekdayIdx)) continue;
+
+        // Check if this branch has a holiday today
+        if (!holidaysByBranch.has(group.branchId)) {
+          const isHoliday =
+            !!(await this.holidaysService.findActiveHolidayCovering(
+              parsedDate,
+              group.branchId,
+            ));
+          holidaysByBranch.set(group.branchId, isHoliday);
+        }
+
+        if (holidaysByBranch.get(group.branchId)) continue;
+
         await this.handleGroup(
           group as unknown as GroupWithTeachers,
           currentMinutes,
@@ -173,6 +198,78 @@ export class AttendanceReminderService {
       } catch (err) {
         this.logger.error(
           `handleGroup failed for group ${group.id}: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
+  }
+
+  /** 23:00 every day, Sundays included: whatever the half-hourly ticks missed. */
+  @Cron('0 0 23 * * *', { timeZone: 'Asia/Tashkent' })
+  async closeDay() {
+    await this.sweepEndedLessons();
+  }
+
+  private async sweepEndedLessons() {
+    let opened: Awaited<
+      ReturnType<UnmarkedLessonsService['openForEndedLessons']>
+    > = [];
+    try {
+      opened = await this.unmarkedLessons.openForEndedLessons();
+    } catch (err) {
+      this.logger.error(
+        `Unmarked-lesson sweep failed: ${err instanceof Error ? err.message : err}`,
+      );
+      return;
+    }
+    for (const lesson of opened) {
+      try {
+        const group = await this.prisma.group.findUnique({
+          where: { id: lesson.groupId },
+          select: {
+            id: true,
+            name: true,
+            branchId: true,
+            companyId: true,
+            lessonStartTime: true,
+            lessonEndTime: true,
+            startDate: true,
+            endDate: true,
+            exactDays: true,
+            room: { select: { name: true } },
+            teachers: {
+              where: {
+                teacher: {
+                  deletedAt: null,
+                  isActive: true,
+                  status: UserStatus.ACTIVE,
+                },
+              },
+              select: {
+                teacher: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    telegramChatId: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (!group) continue;
+        const shown = {
+          ...group,
+          lessonStartTime: lesson.startTime,
+          lessonEndTime: lesson.endTime,
+        } as unknown as GroupWithTeachers;
+        for (const t of shown.teachers) {
+          await this.sendMissingToTeacher(t.teacher, shown);
+        }
+        await this.notifyBranchAdmins(shown, 'MISSING');
+      } catch (err) {
+        this.logger.error(
+          `Lesson-end messages failed for ${lesson.groupId}: ${err instanceof Error ? err.message : err}`,
         );
       }
     }
@@ -285,7 +382,7 @@ export class AttendanceReminderService {
       return;
     }
 
-    if (![endMin - 30, endMin].includes(currentMinutes)) return;
+    if (currentMinutes !== endMin - 30) return;
 
     const parsedDate = new Date(today + 'T00:00:00.000Z');
     const hasAttendance = await this.prisma.attendance.findFirst({
@@ -294,19 +391,10 @@ export class AttendanceReminderService {
     });
     if (hasAttendance) return;
 
-    if (currentMinutes === endMin - 30) {
-      for (const t of group.teachers) {
-        await this.sendTeacherWarning(t.teacher, group);
-      }
-      await this.notifyBranchAdmins(group, 'ADMIN_ALERT');
-      return;
-    }
-
-    // currentMinutes === endMin
     for (const t of group.teachers) {
-      await this.sendMissingToTeacher(t.teacher, group);
+      await this.sendTeacherWarning(t.teacher, group);
     }
-    await this.notifyBranchAdmins(group, 'MISSING');
+    await this.notifyBranchAdmins(group, 'ADMIN_ALERT');
   }
 
   private async sendLessonStarted(
@@ -337,7 +425,7 @@ export class AttendanceReminderService {
       group,
       type,
       'Davomat eslatmasi',
-      `⏰ Dars tugashiga 30 daqiqa qoldi\n\n${details}\n\nIltimos, davomatni belgilashni unutmang.\n🔗 ${TEACHER_PORTAL_URL}`,
+      `⏰ Dars tugashiga 30 daqiqa qoldi\n\n${details}\n\nDavomat dars tugaguncha olinmasa, bu dars uchun haq yozilmaydi.\n🔗 ${TEACHER_PORTAL_URL}`,
     );
   }
 
@@ -352,8 +440,8 @@ export class AttendanceReminderService {
       teacher,
       group,
       type,
-      'Davomat belgilanmadi',
-      `📝 Darsingiz tugadi, ammo davomat belgilanmadi\n\n${details}\n\nIltimos, administrator bilan bog'lanib, davomatni tiklashingizni so'raymiz.\n🔗 ${TEACHER_PORTAL_URL}`,
+      'Davomat olinmadi',
+      `📝 Darsingiz tugadi, davomat olinmadi\n\n${details}\n\nBu dars uchun haq yozilmaydi. Dars bo'lgan-bo'lmaganini administrator belgilaydi.\n🔗 ${TEACHER_PORTAL_URL}`,
     );
   }
 
@@ -385,14 +473,17 @@ export class AttendanceReminderService {
       kind === 'ADMIN_ALERT'
         ? NotificationType.ATTENDANCE_ADMIN_ALERT
         : NotificationType.ATTENDANCE_MISSING_ADMIN;
+    // ADMIN_ALERT (CEO-approved text, 01.10): a register not taken before
+    // the end earns the teacher nothing for the lesson (ADR-0054), so the
+    // administrator is asked to warn the teacher.
     const title =
       kind === 'ADMIN_ALERT'
-        ? "O'qituvchiga eslatib qo'ying"
-        : 'Davomat belgilanmadi';
+        ? "O'qituvchi hali davomat olmadi"
+        : 'Davomat olinmadi';
     const message =
       kind === 'ADMIN_ALERT'
-        ? `👀 Dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomatni belgilamadi\n\n${details}\n\nIltimos, o'qituvchiga eslatib qo'yishingizni so'raymiz.\n🔗 ${ADMIN_PORTAL_URL}`
-        : `📋 O'qituvchi davomatni belgilamadi\n\n${details}\n\nIltimos, davomatni qo'lda tiklashingizni so'raymiz.\n🔗 ${ADMIN_PORTAL_URL}`;
+        ? `👀 Dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomat olmadi\n\n${details}\n\nDars tugaguncha davomat olinmasa, ustozga bu dars uchun haq yozilmaydi. Iltimos, o'qituvchini ogohlantiring.\n🔗 ${ADMIN_PORTAL_URL}`
+        : `📋 Dars tugadi, davomat olinmadi\n\n${details}\n\nTizimda topshiriq ochildi: dars bo'ldimi? «Bo'ldi» bo'lsa, kim kelganini belgilang.\n🔗 ${ADMIN_PORTAL_URL}/tasks`;
 
     for (const admin of admins) {
       if (await this.alreadySent(admin.id, type, group.id)) continue;

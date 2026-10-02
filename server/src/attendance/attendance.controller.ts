@@ -10,7 +10,10 @@ import {
 import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 import { AttendanceService } from './attendance.service';
 import { QrAttendanceService } from './qr-attendance.service';
+import { UnmarkedLessonsService } from './unmarked-lessons.service';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
+import { LateAttendanceDto } from './dto/late-attendance.dto';
+import { NotHeldDto } from './dto/not-held.dto';
 import {
   AttendanceDatesQueryDto,
   AttendanceStatsQueryDto,
@@ -30,6 +33,7 @@ export class AttendanceController {
     private attendanceService: AttendanceService,
     private qrAttendanceService: QrAttendanceService,
     private prisma: PrismaService,
+    private unmarkedLessons: UnmarkedLessonsService,
   ) {}
 
   /**
@@ -105,9 +109,18 @@ export class AttendanceController {
     @CurrentUser('id') userId: number,
     @CurrentUser('roles') roles: string[],
     @CurrentUser('companyId') companyId: number,
+    @Query('late') late?: string,
   ) {
     await this.verifyGroupAccess(groupId, roles, userId, date);
-    return this.attendanceService.getByDate(groupId, date, companyId, roles);
+    const isTeacherOnly =
+      roles.length > 0 && roles.every((r) => r === 'Teacher');
+    return this.attendanceService.getByDate(
+      groupId,
+      date,
+      companyId,
+      roles,
+      late === '1' && !isTeacherOnly,
+    );
   }
 
   @Post(':groupId/date/:date')
@@ -130,6 +143,52 @@ export class AttendanceController {
       roles,
       companyId,
     );
+  }
+
+  /** «Bo'ldi» — the late register of a lesson nobody marked (ADR-0054). */
+  @Post(':groupId/date/:date/late')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  async saveLate(
+    @Param('groupId') groupId: string,
+    @Param('date') date: string,
+    @Body() dto: LateAttendanceDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    await this.verifyGroupAccess(groupId, roles, userId, date);
+    return this.attendanceService.saveLate(
+      groupId,
+      date,
+      dto,
+      userId,
+      roles,
+      companyId,
+    );
+  }
+
+  /** «Bo'lmadi» — cancel with a refund, or move (spec 2026-09-29 §3.5). */
+  @Post(':groupId/date/:date/not-held')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  async notHeld(
+    @Param('groupId') groupId: string,
+    @Param('date') date: string,
+    @Body() dto: NotHeldDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    await this.verifyGroupAccess(groupId, roles, userId, date);
+    return this.unmarkedLessons.answerNotHeld({
+      groupId,
+      date,
+      dto,
+      userId,
+      roles,
+      companyId,
+    });
   }
 
   @Get(':groupId/stats')

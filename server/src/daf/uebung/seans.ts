@@ -81,6 +81,12 @@ export function baueSeans(
   // kafolatlari saqlanadi. Bo'sh massiv (sukut) — eski chaqiruvchilar
   // uchun xatti-harakat aynan avvalgidek qoladi.
   bevorzugt: FrageFormat[] = [],
+  // The lesson's own section before older ones (`SECTION_A`/`SECTION_B`):
+  // the pool is cumulative, and without this an «Alifbo» lesson could ask
+  // no letter at all. A stronger key than the format preference; like it,
+  // only an ordering, so caps, no-repeat and `MIN_FORMATE` still hold and
+  // older sections fill in when the own section runs out.
+  vorrang?: (f: Frage) => boolean,
 ): SeansPlan {
   const pool = [...kandidaten];
   // Tasodifiy tartib: har seans boshqacha boshlansin.
@@ -95,10 +101,10 @@ export function baueSeans(
   // barqaror, ya'ni bir xil ustunlikdagi (ikkalasi ham afzal yoki
   // ikkalasi ham emas) nomzodlarning o'zaro tartibi tasodifiy
   // aralashtirilganidek qoladi.
-  if (bevorzugt.length > 0) {
-    const afzalligi = (f: Frage): number =>
-      bevorzugt.includes(f.format) ? 0 : 1;
-    pool.sort((a, b) => afzalligi(a) - afzalligi(b));
+  if (bevorzugt.length > 0 || vorrang) {
+    const ustunlik = (f: Frage): number =>
+      (vorrang && !vorrang(f) ? 2 : 0) + (bevorzugt.includes(f.format) ? 0 : 1);
+    pool.sort((a, b) => ustunlik(a) - ustunlik(b));
   }
 
   const fragen: Frage[] = [];

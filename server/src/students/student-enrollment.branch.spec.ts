@@ -108,6 +108,7 @@ describe('StudentEnrollmentService — branch confinement', () => {
           useValue: {
             createChargeForEnrollment: jest.fn().mockResolvedValue(null),
             reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+            assertTrialLessonAnswered: jest.fn().mockResolvedValue(undefined),
           },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },

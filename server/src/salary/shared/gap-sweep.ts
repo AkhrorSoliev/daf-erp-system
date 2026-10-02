@@ -3,8 +3,13 @@ import {
   monthlyPerLessonKeyForLesson,
   type FrozenMonthlyCharge,
 } from '../../common/finance/monthly-per-lesson';
+import { lessonKey } from '../../unmarked-lessons/forfeited-lessons';
 import { perLessonAccrual, type RateVersion } from './deserved-math';
 import { NEW_STUDENT_TOPUP_MIN_LESSONS } from './topup';
+import {
+  ADMISSION_START_DAY,
+  isFirstLessonOfMonth,
+} from '../../billing/lesson-admission';
 
 /**
  * Lessons the center will have to front, one row per (lesson × teacher).
@@ -48,6 +53,11 @@ export interface GapSweepInput {
     studentId: number;
     groupId: string;
     date: Date;
+    /**
+     * PRESENT, LATE or ABSENT. Required so no caller can drop it: an ABSENT
+     * first lesson of a monthly month is never fronted (ADR-0048, R4).
+     */
+    status: string;
   }>;
   /** groupId → course pricing. Missing group ⇒ the lesson is skipped. */
   groupMap: Map<string, { course: GapCourse }>;
@@ -102,6 +112,13 @@ export interface GapSweepInput {
    * without the other.
    */
   skipZeroAmount?: boolean;
+  /**
+   * `lessonKey(groupId, date)` of lessons whose teacher pay is forfeited
+   * (ADR-0054): nobody marked them before they ended. Required so no caller
+   * can forget it — without it the salary page would show the centre owing
+   * the teacher a lesson that `createAccrual` then refuses to pay.
+   */
+  forfeitedLessons: ReadonlySet<string>;
 }
 
 export interface GapSweepResult {
@@ -231,6 +248,54 @@ export function packPriceCandidates(
     .map((a) => a.id);
 }
 
+/**
+ * ADR-0048 (R4): the teacher is paid for a debtor's ABSENT first lesson of a
+ * monthly month only when the student pays — the payment writes the accrual
+ * (`LessonBillingService.accrueDeferredFirstLessons`); the centre never
+ * fronts it. A first lesson the student had already paid carries its accrual
+ * and is skipped as covered anyway, so the rule needs no balance. Shared by
+ * the sweep and the payroll cron's BR-09b backlog, the two paths that front
+ * lessons.
+ */
+export function awaitsStudentPayment(
+  att: { studentId: number; groupId: string; date: Date; status: string },
+  course: GapCourse,
+  dStr: string,
+  monthlyFrozen: Map<string, FrozenMonthlyCharge> | undefined,
+): boolean {
+  return (
+    course.paymentModel === PaymentModel.MONTHLY &&
+    att.status === 'ABSENT' &&
+    dStr >= ADMISSION_START_DAY &&
+    isMonthlyFirstLesson(att, dStr, monthlyFrozen)
+  );
+}
+
+/**
+ * The lesson is the student's first of its month in the group, by contract
+ * 3.2's rule over the dates of the charge that billed it (frozen-out ones
+ * excluded) — the reading `firstLessonCoverage` gives the same lesson. No
+ * charge billed it, or one without dates: not a first lesson.
+ */
+function isMonthlyFirstLesson(
+  att: { studentId: number; groupId: string; date: Date },
+  dStr: string,
+  monthlyFrozen: Map<string, FrozenMonthlyCharge> | undefined,
+): boolean {
+  const frozen = monthlyFrozen?.get(
+    monthlyPerLessonKeyForLesson(att.studentId, att.groupId, att.date),
+  );
+  if (!frozen) return false;
+  for (const c of [frozen, ...(frozen.earlierCharges ?? [])]) {
+    const out = new Set(c.frozenOutDates ?? []);
+    const lessons = (c.coveredDates ?? []).filter((d) => !out.has(d));
+    if (lessons.includes(dStr)) {
+      return isFirstLessonOfMonth([...lessons].sort(), dStr);
+    }
+  }
+  return false;
+}
+
 export function sweepGapLessons(input: GapSweepInput): GapSweepResult {
   const lessons: GapLesson[] = [];
   const noConfigUnits = new Map<number, number>();
@@ -239,6 +304,7 @@ export function sweepGapLessons(input: GapSweepInput): GapSweepResult {
   for (const att of input.attendances) {
     const g = input.groupMap.get(att.groupId);
     if (!g) continue;
+    if (input.forfeitedLessons.has(lessonKey(att.groupId, att.date))) continue;
 
     // BR-09: withhold the new-student top-up until they have attended enough
     // lessons in this group — mirrors the cron, so the shown gap equals what
@@ -251,6 +317,10 @@ export function sweepGapLessons(input: GapSweepInput): GapSweepResult {
     const inactiveDay = input.inactiveSince.get(att.studentId);
     const dStr = input.dateStr(att.date);
     if (inactiveDay !== undefined && dStr > inactiveDay) continue;
+
+    if (awaitsStudentPayment(att, g.course, dStr, input.monthlyFrozen)) {
+      continue;
+    }
 
     const pricing = resolveLessonPricing(
       g.course,

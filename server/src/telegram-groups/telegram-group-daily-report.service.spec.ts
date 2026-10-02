@@ -39,6 +39,8 @@ interface State {
     covered: number;
     centerFunded: number;
   } | null;
+  /** «Dars bo'ldimi?» questions unanswered for more than a day. */
+  staleUnmarked?: number;
 }
 
 function defaultState(): State {
@@ -161,6 +163,7 @@ function makePrisma(state: State) {
       upsert: jest.fn(async () => ({})),
     },
     user: { findFirst: jest.fn(async () => state.ceo) },
+    unmarkedLesson: { count: jest.fn(async () => state.staleUnmarked ?? 0) },
   };
 }
 
@@ -664,6 +667,30 @@ describe('TelegramGroupDailyReportService', () => {
     const message = raw.replace(/\u00A0/g, ' ');
     expect(message).not.toContain('Katta tuzatish');
     expect(message).toContain("Qaytarilgan to'lov: <b>200 000 so'm</b>");
+  });
+
+  it("flags lessons waiting more than a day for «Dars bo'ldimi?»", async () => {
+    const state = { ...defaultState(), staleUnmarked: 3 };
+    const prisma = makePrisma(state);
+    const service = await buildService(prisma, makeSalary(state));
+    const { message } = await service.build(1001, null);
+    expect(message).toContain(
+      '• Javobsiz darslar (1 kundan ortiq): <b>3</b> ta',
+    );
+    expect(prisma.unmarkedLesson.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        companyId: 1001,
+        status: 'PENDING',
+        group: { deletedAt: null },
+      }),
+    });
+  });
+
+  it('prints no «Javobsiz darslar» line when nothing is waiting', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state));
+    const { message } = await service.build(1001, null);
+    expect(message).not.toContain('Javobsiz darslar');
   });
 
   it('does NOT write the snapshot itself any more', async () => {

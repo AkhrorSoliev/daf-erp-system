@@ -242,6 +242,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /attendance/:groupId/lesson-sequence',
       'GET /attendance/:groupId/stats',
       'POST /attendance/:groupId/date/:date',
+      'POST /attendance/:groupId/date/:date/late',
+      'POST /attendance/:groupId/date/:date/not-held',
       'POST /attendance/:groupId/qr-session/rotate',
       'POST /attendance/:groupId/qr-session/start',
       'POST /attendance/:groupId/qr-session/stop',

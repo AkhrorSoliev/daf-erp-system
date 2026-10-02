@@ -251,6 +251,70 @@
    "core": true
   },
   {
+   "wort": "zwölf",
+   "artikel": null,
+   "section": "u01-s4",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "son — 0–11 dan keyin sanoq 12 bilan davom etadi; 13–19 bilan birga 0–19 sonlar mavzusini yopadi (CEO 30.09)"
+  },
+  {
+   "wort": "dreizehn",
+   "artikel": null,
+   "section": "u01-s4",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "son — birlik + zehn (drei + zehn = dreizehn), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
+  },
+  {
+   "wort": "vierzehn",
+   "artikel": null,
+   "section": "u01-s4",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "son — birlik + zehn (drei + zehn = dreizehn), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
+  },
+  {
+   "wort": "fünfzehn",
+   "artikel": null,
+   "section": "u01-s4",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "son — birlik + zehn (drei + zehn = dreizehn), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
+  },
+  {
+   "wort": "sechzehn",
+   "artikel": null,
+   "section": "u01-s4",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "son — birlik + zehn (drei + zehn = dreizehn), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
+  },
+  {
+   "wort": "siebzehn",
+   "artikel": null,
+   "section": "u01-s4",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "son — birlik + zehn (drei + zehn = dreizehn), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
+  },
+  {
+   "wort": "achtzehn",
+   "artikel": null,
+   "section": "u01-s4",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "son — birlik + zehn (drei + zehn = dreizehn), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
+  },
+  {
+   "wort": "neunzehn",
+   "artikel": null,
+   "section": "u01-s4",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "son — birlik + zehn (drei + zehn = dreizehn), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
+  },
+  {
    "wort": "C",
    "artikel": null,
    "section": "u01-s5",
@@ -438,6 +502,38 @@
    "artikel": null,
    "section": "u02-s2",
    "core": true
+  },
+  {
+   "wort": "einundzwanzig",
+   "artikel": null,
+   "section": "u02-s2",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "qo'shma son — birlik + und + o'nlik (eins + und + zwanzig), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
+  },
+  {
+   "wort": "fünfunddreißig",
+   "artikel": null,
+   "section": "u02-s2",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "qo'shma son — birlik + und + o'nlik (eins + und + zwanzig), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
+  },
+  {
+   "wort": "achtundvierzig",
+   "artikel": null,
+   "section": "u02-s2",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "qo'shma son — birlik + und + o'nlik (eins + und + zwanzig), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
+  },
+  {
+   "wort": "neunundneunzig",
+   "artikel": null,
+   "section": "u02-s2",
+   "core": true,
+   "ausserhalbBudget": true,
+   "grund": "qo'shma son — birlik + und + o'nlik (eins + und + zwanzig), o'rgatilgan so'zlardan yasaladi (CEO 30.09)"
   },
   {
    "wort": "Beruf",

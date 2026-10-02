@@ -15,6 +15,7 @@ import { som, dbEnvLabel, printHeader, section, run } from './lib/check-cli';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { SalaryStaffMonthlyService } from '../src/salary/salary-monthly-staff.service';
 import { SalaryMonthlyService } from '../src/salary/salary-monthly.service';
+import { SalaryMissedLessonsService } from '../src/salary/salary-missed-lessons.service';
 import { ReportsFinancialService } from '../src/reports/reports-financial.service';
 import { ReportsProfitLossService } from '../src/reports/reports-profit-loss.service';
 import { buildNetProfit } from '../src/reports/reports-excel.helpers';
@@ -29,7 +30,11 @@ const MONTHS = (() => {
 async function main(prismaClient: PrismaClient) {
   const prisma = prismaClient as unknown as PrismaService;
   const staff = new SalaryStaffMonthlyService(prisma);
-  const salaryMonthly = new SalaryMonthlyService(prisma, staff);
+  const salaryMonthly = new SalaryMonthlyService(
+    prisma,
+    staff,
+    {} as SalaryMissedLessonsService, // getMonthlyForUser only
+  );
   const financial = new ReportsFinancialService(prisma);
   const profitLoss = new ReportsProfitLossService(prisma);
 
@@ -56,7 +61,7 @@ async function main(prismaClient: PrismaClient) {
     // switcher. The whole-company figure is what this script verifies.
     const branchIds = null;
 
-    const [recognizedRevenue, sm, pl, outflows, old] = await Promise.all([
+    const [recognizedRevenue, sm, pl, outflows, old, withdrawals] = await Promise.all([
       financial.getRecognizedRevenue(COMPANY_ID, {
         start: new Date(Date.UTC(y, m - 1, 1)),
         end: new Date(Date.UTC(y, m, 1)),
@@ -70,14 +75,24 @@ async function main(prismaClient: PrismaClient) {
         endDate,
         branchIds,
       }),
+      // «Yechib olish» — the net profit's withdrawal leg (ADR-0055).
+      financial.getBalanceWithdrawals(COMPANY_ID, { months: [month], branchIds }),
     ]);
 
-    const np = buildNetProfit(pl, sm, outflows, month, recognizedRevenue);
+    const np = buildNetProfit(
+      pl,
+      sm,
+      outflows,
+      month,
+      recognizedRevenue,
+      withdrawals.total,
+    );
 
     section(`${month}  (${np.teacherSalaryHasTopup ? 'top-up bor' : 'top-up YO‘Q'})`);
     console.log(`  ESKI card netProfit (kassa − naqd oylik) : ${som(old.netProfit)}   ← soxta`);
     console.log('  ─── YANGI (kanonik — card + Excel bir xil) ───');
     console.log(`    Dars tushumi (recognized)      : ${som(np.revenue)}   [${np.revenueBasis}]`);
+    console.log(`  + Balansdan yechib olingan       : ${som(np.balanceWithdrawals)}`);
     console.log(`  − Ustoz oyligi                   : ${som(np.teacherSalary)}   [${np.teacherSalaryBasis}${np.teacherSalaryHasTopup ? ' + qo‘shimcha' : ''}]`);
     console.log(`  − Admin oyligi                   : ${som(np.adminSalary)}`);
     console.log(`  − Operatsion xarajat (avanssiz)  : ${som(np.operatingExpenses)}`);

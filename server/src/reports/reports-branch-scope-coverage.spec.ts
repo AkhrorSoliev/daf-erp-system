@@ -130,6 +130,17 @@ describe('branch scope coverage', () => {
     expect(unscoped.map((c) => `${c.model}.${c.method}`)).toEqual([]);
   });
 
+  it('getBalanceWithdrawals scopes the withdrawal leg', async () => {
+    await service.getBalanceWithdrawals(1, {
+      months: ['2026-05'],
+      branchIds: [2],
+    });
+
+    const wheres = everyWhereClause();
+    expect(wheres.length).toBe(1);
+    expect(wheres.filter((c) => !hasBranchPredicate(c.where))).toEqual([]);
+  });
+
   it('getReconciliation scopes all three roll-forward legs together', async () => {
     // If the legs disagreed the footing would break: closing (balances) minus
     // activity (their ledger rows) must reconcile within the SAME scope.

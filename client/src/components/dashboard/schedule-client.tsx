@@ -320,12 +320,14 @@ export function ScheduleClient() {
                 workingHours={data.workingHours}
                 isTeacher={isTeacher}
                 isToday={isTodaySelected}
+                date={dateParam}
               />
             </TabsContent>
             <TabsContent value="list" className="mt-0">
               <DashboardDailySchedule
                 lessons={myLessons}
                 isToday={isTodaySelected}
+                date={dateParam}
               />
             </TabsContent>
           </Tabs>

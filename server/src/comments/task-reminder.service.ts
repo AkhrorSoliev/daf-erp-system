@@ -80,7 +80,7 @@ export class TaskReminderService {
       try {
         const authorName = assignee.comment.author
           ? `${assignee.comment.author.firstName} ${assignee.comment.author.lastName}`
-          : "Noma'lum";
+          : 'Tizim';
 
         const title = 'Topshiriq muddati yaqinlashmoqda';
         const message = `${authorName} bergan topshiriq muddati 1 soat ichida tugaydi: "${this.truncate(assignee.comment.content, 80)}"`;

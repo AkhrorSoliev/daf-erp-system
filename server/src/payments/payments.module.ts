@@ -11,6 +11,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
 import { BillingModule } from '../billing/billing.module';
 import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module';
 import { MockExamsModule } from '../mock-exams/mock-exams.module';
+import { PaymentPromisesModule } from '../payment-promises/payment-promises.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { MockExamsModule } from '../mock-exams/mock-exams.module';
     BillingModule,
     TelegramDigestModule,
     MockExamsModule,
+    PaymentPromisesModule,
   ],
   controllers: [PaymentsController],
   providers: [

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SalaryCenterTopUpService } from './salary-center-topup.service';
 import { SalaryMonthlyService } from './salary-monthly.service';
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
+import { SalaryMissedLessonsService } from './salary-missed-lessons.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DebtAgeService } from '../common/finance/debt-age.service';
 
@@ -77,6 +78,8 @@ describe('SalaryCenterTopUpService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         groupBy: jest.fn().mockResolvedValue([]),
       },
+      // Lessons whose teacher pay is forfeited (ADR-0054); default none.
+      unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfigVersion: {
@@ -286,6 +289,7 @@ describe('SalaryCenterTopUpService', () => {
             }),
           },
         },
+        { provide: SalaryMissedLessonsService, useValue: {} },
       ],
     }).compile();
     const card = await monthlyModule

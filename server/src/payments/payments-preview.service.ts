@@ -10,6 +10,9 @@ import {
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
 import { applyDiscount, clampDiscount } from '../billing/monthly-price';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
+import type { PaymentReach } from '../billing/lesson-admission';
+import { tashkentDateStr } from '../common/date/tashkent';
 
 export interface PaymentBreakdownItem {
   kind: 'DEBT_REPAY' | 'CYCLE_FULL' | 'CYCLE_PARTIAL' | 'REMAINDER';
@@ -43,6 +46,10 @@ export interface MonthlyPreview {
   nextMonthAmount: number;
   discountPercent: number;
   enrollments: MonthlyPreviewEnrollment[];
+  // Contract 3.2 (ADR-0047): how far the balance after this payment reaches
+  // this month's lessons, and what the next one still needs. Null before the
+  // rule starts or with no lesson left this month.
+  admission: PaymentReach | null;
 }
 
 export interface PaymentPreview {
@@ -83,7 +90,10 @@ export interface PaymentPreview {
  */
 @Injectable()
 export class PaymentsPreviewService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private admission: LessonAdmissionService,
+  ) {}
 
   async preview(
     studentId: number,
@@ -145,12 +155,21 @@ export class PaymentsPreviewService {
         (e) => e.group.course.paymentModel === PaymentModel.MONTHLY,
       )
     ) {
-      return this.buildMonthlyPreview(
+      const monthly = this.buildMonthlyPreview(
         amount,
         student.balance,
         student.discountPercent ?? 0,
         enrollments,
       );
+      if (monthly.monthly) {
+        monthly.monthly.admission = await this.admission.reachForPayment({
+          studentId,
+          companyId,
+          balanceAfter: newBalance,
+          today: tashkentDateStr(new Date()),
+        });
+      }
+      return monthly;
     }
 
     if (enrollments.length > 1) {
@@ -415,7 +434,13 @@ export class PaymentsPreviewService {
       primaryEnrollment: null,
       breakdown,
       model: 'MONTHLY',
-      monthly: { debt, nextMonthAmount, discountPercent, enrollments: lines },
+      monthly: {
+        debt,
+        nextMonthAmount,
+        discountPercent,
+        enrollments: lines,
+        admission: null,
+      },
     };
   }
 

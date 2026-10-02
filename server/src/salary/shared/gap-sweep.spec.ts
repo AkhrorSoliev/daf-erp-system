@@ -1,5 +1,6 @@
 import { PaymentModel } from '@prisma/client';
 import {
+  awaitsStudentPayment,
   packPriceCandidates,
   resolveLessonPricing,
   sweepGapLessons,
@@ -80,7 +81,13 @@ function buildInput(
 ): GapSweepInput {
   return {
     attendances: [
-      { id: 'a1', studentId: STUDENT, groupId: GROUP, date: lessonDate(10) },
+      {
+        id: 'a1',
+        studentId: STUDENT,
+        groupId: GROUP,
+        date: lessonDate(10),
+        status: 'PRESENT',
+      },
     ],
     groupMap: new Map([[GROUP, { course }]]),
     resolveTeachers: () => [TEACHER],
@@ -93,6 +100,7 @@ function buildInput(
     ]),
     inactiveSince: new Map(),
     dateStr: (d) => d.toISOString().slice(0, 10),
+    forfeitedLessons: new Set<string>(),
     ...overrides,
   };
 }
@@ -180,6 +188,163 @@ describe('sweepGapLessons — MONTHLY kurs narxi', () => {
 
     expect(res.lessons).toHaveLength(0);
     expect(res.noChargeUnits.size).toBe(0);
+  });
+});
+
+describe('sweepGapLessons — qarzdorning oydagi birinchi darsi (ADR-0048)', () => {
+  const OCTOBER = ['2026-10-02', '2026-10-05', '2026-10-07', '2026-10-09'];
+  const october = (day: string) => new Date(`${day}T00:00:00.000Z`);
+  const octoberCharge = (over: Record<string, unknown> = {}) =>
+    new Map([
+      [
+        monthlyPerLessonKey(STUDENT, GROUP, '2026-10'),
+        {
+          perLessonCost: 34_615,
+          plannedLessons: 13,
+          coveredDates: OCTOBER,
+          frozenOutDates: [],
+          ...over,
+        },
+      ],
+    ]);
+  const sweepOne = (
+    day: string,
+    status: string,
+    monthlyFrozen = octoberCharge(),
+    course: GapCourse = MONTHLY_COURSE,
+  ) =>
+    sweepGapLessons(
+      buildInput(course, PERCENTAGE, {
+        attendances: [
+          {
+            id: 'a1',
+            studentId: STUDENT,
+            groupId: GROUP,
+            date: october(day),
+            status,
+          },
+        ],
+        monthlyFrozen,
+      }),
+    );
+
+  it('never fronts an ABSENT first lesson — it waits for the student', () => {
+    expect(sweepOne('2026-10-02', 'ABSENT').lessons).toHaveLength(0);
+  });
+
+  it('still fronts the first lesson the student came to', () => {
+    expect(sweepOne('2026-10-02', 'PRESENT').lessons).toHaveLength(1);
+    expect(sweepOne('2026-10-02', 'LATE').lessons).toHaveLength(1);
+  });
+
+  it('fronts an ABSENT from the second lesson on', () => {
+    expect(sweepOne('2026-10-05', 'ABSENT').lessons).toHaveLength(1);
+  });
+
+  it('reads the first lesson past the dates a freeze took out', () => {
+    // 02.10 frozen out: 05.10 is now the month's first lesson.
+    const res = sweepOne(
+      '2026-10-05',
+      'ABSENT',
+      octoberCharge({ frozenOutDates: ['2026-10-02'] }),
+    );
+    expect(res.lessons).toHaveLength(0);
+  });
+
+  it('leaves September and lesson-pack courses as they were', () => {
+    const sept = sweepGapLessons(
+      buildInput(MONTHLY_COURSE, PERCENTAGE, {
+        attendances: [
+          {
+            id: 'a1',
+            studentId: STUDENT,
+            groupId: GROUP,
+            date: lessonDate(2),
+            status: 'ABSENT',
+          },
+        ],
+        monthlyFrozen: new Map([
+          [
+            monthlyPerLessonKey(STUDENT, GROUP, COMPANY_MONTH),
+            {
+              perLessonCost: 30_769,
+              plannedLessons: 13,
+              coveredDates: ['2026-09-02', '2026-09-05'],
+              frozenOutDates: [],
+            },
+          ],
+        ]),
+      }),
+    );
+    expect(sept.lessons).toHaveLength(1);
+    expect(
+      sweepOne('2026-10-02', 'ABSENT', new Map(), PACK_COURSE).lessons,
+    ).toHaveLength(1);
+  });
+
+  it('reads the first lesson from the charge that billed it (a rejoin)', () => {
+    const rejoined = new Map([
+      [
+        monthlyPerLessonKey(STUDENT, GROUP, '2026-10'),
+        {
+          perLessonCost: 34_615,
+          plannedLessons: 13,
+          coveredDates: ['2026-10-07', '2026-10-09'],
+          frozenOutDates: [],
+          earlierCharges: [
+            {
+              coveredDates: OCTOBER,
+              frozenOutDates: ['2026-10-07', '2026-10-09'],
+            },
+          ],
+        },
+      ],
+    ]);
+    expect(sweepOne('2026-10-07', 'ABSENT', rejoined).lessons).toHaveLength(0);
+    expect(sweepOne('2026-10-09', 'ABSENT', rejoined).lessons).toHaveLength(1);
+    expect(sweepOne('2026-10-05', 'ABSENT', rejoined).lessons).toHaveLength(1);
+  });
+
+  it('a charge without dates is never read as a first lesson', () => {
+    const res = sweepOne(
+      '2026-10-02',
+      'ABSENT',
+      octoberCharge({ coveredDates: [] }),
+    );
+    expect(res.lessons).toHaveLength(1);
+  });
+});
+
+describe('awaitsStudentPayment', () => {
+  it('is the rule the payroll backlog applies too', () => {
+    const frozenMap = new Map([
+      [
+        monthlyPerLessonKey(STUDENT, GROUP, '2026-10'),
+        {
+          perLessonCost: 34_615,
+          plannedLessons: 13,
+          coveredDates: ['2026-10-02', '2026-10-05'],
+          frozenOutDates: [],
+        },
+      ],
+    ]);
+    const att = {
+      studentId: STUDENT,
+      groupId: GROUP,
+      date: new Date('2026-10-02T00:00:00.000Z'),
+      status: 'ABSENT',
+    };
+    expect(
+      awaitsStudentPayment(att, MONTHLY_COURSE, '2026-10-02', frozenMap),
+    ).toBe(true);
+    expect(
+      awaitsStudentPayment(
+        { ...att, status: 'PRESENT' },
+        MONTHLY_COURSE,
+        '2026-10-02',
+        frozenMap,
+      ),
+    ).toBe(false);
   });
 });
 
@@ -383,5 +548,25 @@ describe('packPriceCandidates', () => {
     expect(
       packPriceCandidates([att('a', 'gm'), att('b', 'gp')], groups, charged),
     ).toEqual([]);
+  });
+});
+
+describe('sweepGapLessons — unmarked lessons (ADR-0054)', () => {
+  // buildInput's one attendance is lessonDate(10) = 2026-09-10 in group GROUP.
+  it('never fronts a lesson whose pay was forfeited', () => {
+    const open = sweepGapLessons(
+      buildInput(MONTHLY_COURSE, PERCENTAGE, {
+        monthlyFrozen: frozen(30_769, 13),
+      }),
+    );
+    expect(open.lessons).toHaveLength(1);
+
+    const forfeited = sweepGapLessons(
+      buildInput(MONTHLY_COURSE, PERCENTAGE, {
+        monthlyFrozen: frozen(30_769, 13),
+        forfeitedLessons: new Set([`${GROUP}:2026-09-10`]),
+      }),
+    );
+    expect(forfeited.lessons).toEqual([]);
   });
 });

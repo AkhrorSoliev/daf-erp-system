@@ -111,6 +111,9 @@ describe('SettingsService', () => {
         'payment.debtWriteOffEnabled': false,
         'payment.monthlyNoticesEnabled': true,
         'payment.noRefundAfterPercent': 40,
+        'payment.admissionRuleEnabled': true,
+        'payment.trialLessonEnabled': true,
+        'payment.attendanceOpensMinutesBefore': 10,
       });
     });
   });
@@ -134,6 +137,9 @@ describe('SettingsService', () => {
         'payment.debtWriteOffEnabled': [],
         'payment.monthlyNoticesEnabled': [],
         'payment.noRefundAfterPercent': [],
+        'payment.admissionRuleEnabled': [],
+        'payment.trialLessonEnabled': [],
+        'payment.attendanceOpensMinutesBefore': [],
       });
     });
 

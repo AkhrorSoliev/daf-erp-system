@@ -258,6 +258,7 @@ export class TelegramDigestRenderService {
       entries.filter((e) => categories.includes(e.row.category));
 
     const attendance = of(TelegramDigestCategory.ATTENDANCE_COMPLETED);
+    const forfeited = of(TelegramDigestCategory.LESSON_PAY_FORFEITED);
     const tasks = of(
       TelegramDigestCategory.TASK_ASSIGNED,
       TelegramDigestCategory.TASK_UPDATED,
@@ -275,6 +276,16 @@ export class TelegramDigestRenderService {
           text: this.attendanceText(e.row, today),
           itemIds: e.ids,
         })),
+      ]);
+    }
+    if (forfeited.length > 0) {
+      sections.push([
+        header('⚠️ <b>Davomat vaqtida olinmagan darslar</b>'),
+        ...forfeited.map((e) => ({
+          text: this.forfeitedText(e.row),
+          itemIds: e.ids,
+        })),
+        { text: 'Bu darslar uchun haq yozilmadi.', itemIds: [] },
       ]);
     }
     if (tasks.length > 0) {
@@ -441,6 +452,11 @@ export class TelegramDigestRenderService {
     const p = payloadOf(row, TelegramDigestCategory.DEBT_CHARGE);
     const price = p.perLessonCost > 0 ? ` — ${formatSum(p.perLessonCost)}` : '';
     return `• ${escapeHtml(p.groupName)} (${formatIsoDate(p.date)})${price}`;
+  }
+
+  private forfeitedText(row: TelegramDigestItemRow): string {
+    const p = payloadOf(row, TelegramDigestCategory.LESSON_PAY_FORFEITED);
+    return `• ${escapeHtml(p.groupName)} (${formatIsoDate(p.date)})`;
   }
 
   private attendanceText(row: TelegramDigestItemRow, today: string): string {

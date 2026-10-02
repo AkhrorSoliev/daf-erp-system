@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { format } from "date-fns";
-import { tashkentDayAsLocalDate } from "./tashkent-time";
+import {
+  tashkentDayAsLocalDate,
+  tashkentInstantOn,
+  tashkentNow,
+} from "./tashkent-time";
 
 // Group.startDate/endDate are Tashkent calendar days on the server
 // (`tashkentDateStr`), but the stored instant is local midnight of whichever
@@ -22,5 +26,23 @@ describe("tashkentDayAsLocalDate", () => {
   it("returns local midnight, so a date picker selects exactly that day", () => {
     const d = tashkentDayAsLocalDate("2026-09-09T19:00:00.000Z");
     expect([d.getHours(), d.getMinutes(), d.getSeconds()]).toEqual([0, 0, 0]);
+  });
+});
+
+// A task deadline is picked as a day, but the server checks it as a Tashkent
+// time (Monday–Saturday, 08:00–18:00). The picker's local midnight sent as-is
+// was 00:00 in Tashkent (03:00 from a Berlin browser), so no deadline saved.
+describe("tashkentInstantOn", () => {
+  it("puts the picked day at that Tashkent hour, whatever the browser zone", () => {
+    expect(tashkentInstantOn(new Date(2026, 9, 5), 18)).toBe("2026-10-05T13:00:00.000Z");
+  });
+
+  it("stays on the picked day in Tashkent and in the picker", () => {
+    const sent = tashkentInstantOn(new Date(2026, 11, 31), 18);
+    expect(tashkentNow(new Date(sent))).toMatchObject({
+      dateStr: "2026-12-31",
+      minutes: 18 * 60,
+    });
+    expect(localDay(tashkentDayAsLocalDate(sent))).toBe("2026-12-31");
   });
 });

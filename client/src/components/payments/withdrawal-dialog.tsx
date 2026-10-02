@@ -16,7 +16,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { PriceInput } from "@/components/ui/price-input";
-import { MonthPicker } from "@/components/ui/month-picker";
 import {
   Select,
   SelectContent,
@@ -27,6 +26,7 @@ import {
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { currentMonthKey, monthLabel } from "./salary-utils";
 
 interface TeacherSuggestion {
   userId: number;
@@ -51,11 +51,6 @@ interface Props {
   onSuccess?: () => void;
 }
 
-function currentMonthString(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export function WithdrawalDialog({
   open,
   onOpenChange,
@@ -69,7 +64,6 @@ export function WithdrawalDialog({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [amount, setAmount] = useState("");
-  const [targetMonth, setTargetMonth] = useState(currentMonthString());
   const [creditTeacher, setCreditTeacher] = useState(false);
   const [teacherUserId, setTeacherUserId] = useState<string>("");
   const [reason, setReason] = useState("");
@@ -77,7 +71,6 @@ export function WithdrawalDialog({
 
   const resetForm = useCallback(() => {
     setAmount("");
-    setTargetMonth(currentMonthString());
     setCreditTeacher(false);
     setTeacherUserId("");
     setReason("");
@@ -131,7 +124,6 @@ export function WithdrawalDialog({
       await api.post("/withdrawals", {
         studentId,
         amount: rawAmount,
-        targetMonth,
         creditTeacher,
         teacherUserId: creditTeacher
           ? parseInt(teacherUserId, 10)
@@ -229,15 +221,10 @@ export function WithdrawalDialog({
                     yechib olish mumkin
                   </p>
                 )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Qaysi oy uchun</Label>
-                <MonthPicker
-                  value={targetMonth}
-                  onChange={setTargetMonth}
-                  disabled={noBalance}
-                />
+                <p className="text-xs text-muted-foreground">
+                  Bu pul {monthLabel(currentMonthKey())} foydasiga
+                  qo&apos;shiladi.
+                </p>
               </div>
 
               <div className="rounded-md border p-3">
@@ -247,7 +234,7 @@ export function WithdrawalDialog({
                       Ustoz balansiga yozilsinmi?
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Belgilangan ustozning shu oy uchun oyligiga yoziladi.
+                      Ustozning joriy oy oyligiga yoziladi.
                     </p>
                   </div>
                   <Switch

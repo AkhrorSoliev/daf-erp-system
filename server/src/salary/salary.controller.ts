@@ -112,11 +112,17 @@ export class SalaryController {
   // =========================================================================
   // CONFIG — write = CEO; `POST /salary/config` also allows an own-branch
   // Branch Director (ADR-0034, gated in SalaryService). `PATCH` stays
-  // CEO-only. Read = CEO/BD/Administrator.
+  // CEO-only. Read = CEO/BD.
+  //
+  // «Ish haqi» sahifasi o'qiydigan hamma narsa CEO + BD ga: Administrator
+  // oylikni ko'rmaydi (docs/role-access.md). Istisnolar ikkita va ikkalasi
+  // ham admin ko'radigan sahifadan chaqiriladi: `timeline/:userId`
+  // (o'qituvchi profilining «Taymlayn» tabi) va `monthly/center-topup`
+  // (qarzdorlik sahifasining «Markaz qoplagani» tabi).
   // =========================================================================
 
   @Get('config/:userId')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getConfig(
     @Param('userId', ParseIntPipe) userId: number,
     @CurrentUser('companyId') companyId: number,
@@ -129,7 +135,7 @@ export class SalaryController {
    * (current rate per row) without firing N requests from the frontend.
    */
   @Get('configs/by-users')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getConfigsForUsers(
     @Query('userIds') userIdsParam: string | undefined,
     @CurrentUser('companyId') companyId: number,
@@ -142,7 +148,7 @@ export class SalaryController {
   }
 
   @Get('config-history/:userId')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getConfigHistory(
     @Param('userId', ParseIntPipe) userId: number,
     @CurrentUser('companyId') companyId: number,
@@ -210,11 +216,11 @@ export class SalaryController {
   }
 
   // =========================================================================
-  // PERIOD SETTINGS — list = CEO/BD/Admin; write = CEO only.
+  // PERIOD SETTINGS — list = CEO/BD; write = CEO only.
   // =========================================================================
 
   @Get('period-settings')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   listPeriodSettings(@CurrentUser('companyId') companyId: number) {
     return this.periodSettingsService.list(companyId);
   }
@@ -234,7 +240,7 @@ export class SalaryController {
   // =========================================================================
 
   @Get('accruals/:userId')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getAccruals(
     @Param('userId', ParseIntPipe) userId: number,
     @CurrentUser('companyId') companyId: number,
@@ -247,7 +253,7 @@ export class SalaryController {
   // =========================================================================
 
   @Get('payments')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   findPayments(
     @Query() query: SalaryPaymentQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -256,7 +262,7 @@ export class SalaryController {
   }
 
   @Get('matrix')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getMatrix(
     @Query() query: SalaryMatrixQueryDto,
     @CurrentUser('id') userId: number,
@@ -271,7 +277,7 @@ export class SalaryController {
    * cheklangan.
    */
   @Get('overview')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getOverview(
     @Query() query: SalaryOverviewQueryDto,
     @CurrentUser('id') userId: number,
@@ -330,7 +336,7 @@ export class SalaryController {
    * bilan cheklangan.
    */
   @Get('monthly')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getMonthly(
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') userId: number,
@@ -357,11 +363,15 @@ export class SalaryController {
    * "Qolgan (markaz)" drill-down — markaz qaysi o'quvchilar uchun ustozlarga
    * pul to'lab bergani va o'sha pul kimdan undirilishi kerakligi.
    *
-   * Kartani ko'radigan rollar bilan bir xil gate: bu karta ostidagi raqamning
-   * yoyilmasi, yangi ma'lumot emas.
+   * Bugun uni `/payments/debt` ning «Markaz qoplagani» tabi o'qiydi, shuning
+   * uchun gate — qarzdorlik sahifasining boshqa o'qishlari bilan bir xil:
+   * o'qituvchidan boshqa har bir xodim (2026-08-12 qarori, server/CLAUDE.md
+   * «Key access rules»). Kassir 30.09.2026 da qo'shildi — undan oldin tab
+   * unga 403 berardi. Filial chegarasi `resolveMonthlyScope` da: CEO dan
+   * boshqa hamma o'z filialiga qamaladi.
    */
   @Get('monthly/center-topup')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   getCenterTopUpStudents(
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') userId: number,
@@ -409,7 +419,7 @@ export class SalaryController {
    * page — each TEACHER_ADVANCE given to the teacher in the selected month.
    */
   @Get('advances/:userId')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getAdvances(
     @Param('userId', ParseIntPipe) userId: number,
     @Query('month') month: string | undefined,
@@ -436,7 +446,7 @@ export class SalaryController {
    * faqat `month` uzatiladi.
    */
   @Get('advance-calendar')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getAdvanceCalendar(
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') performedById: number,
@@ -450,7 +460,7 @@ export class SalaryController {
   }
 
   @Get('payments/:id/breakdown')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   getPaymentBreakdown(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,

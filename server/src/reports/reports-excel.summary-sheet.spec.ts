@@ -150,6 +150,26 @@ describe('summarySheetV2', () => {
     expect(t).toContain("6.  O'QUVCHILAR");
   });
 
+  it('adds a withdrawal row only for a month that has one', () => {
+    expect(valueFor(ws, '+  Balansdan yechib olingan')).toBeUndefined();
+
+    const wb = new Workbook();
+    summarySheetV2(
+      wb,
+      input({
+        cur: {
+          np: np({ balanceWithdrawals: 300_000 }),
+          covered: 80_321_275,
+          centerFunded: 15_513_272,
+          recognized: 173_783_991,
+        },
+      }),
+    );
+    expect(
+      valueFor(wb.getWorksheet('Xulosa')!, '+  Balansdan yechib olingan'),
+    ).toBe(300_000);
+  });
+
   it('names the revenue row so nobody reads it as cash', () => {
     expect(valueFor(ws, "O'tilgan darslar qiymati")).toBe(173_783_991);
     expect(textOf(ws).join('\n')).not.toContain('Dars tushumi (');

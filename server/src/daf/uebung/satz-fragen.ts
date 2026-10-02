@@ -1,3 +1,4 @@
+import { istBuchstabe } from './ablenker';
 import { normalisieren } from './antwort';
 import {
   materialSchluessel,
@@ -55,8 +56,11 @@ export function luecke(
   rnd: () => number,
 ): Frage | null {
   const woerter = woerterVon(satz.de);
-  const treffer = kernwoerter.filter((k) =>
-    woerter.some((w) => w.toLowerCase() === k.de.toLowerCase()),
+  // A letter is never blanked: the Uzbek hint names it ("Bu W harfimi?").
+  const treffer = kernwoerter.filter(
+    (k) =>
+      !istBuchstabe(k) &&
+      woerter.some((w) => w.toLowerCase() === k.de.toLowerCase()),
   );
   if (treffer.length === 0) return null;
 
@@ -99,9 +103,25 @@ export function luecke(
   };
 }
 
+/**
+ * Tiles for `SATZ_BAUEN`: words without punctuation, except a sentence end
+ * INSIDE the item, which stays on its word ("Bist du Thomas? Ja, das bin
+ * ich." → "Thomas?"). Without it two sentences run together and the order
+ * cannot be told — the most-missed question on production (21–29.09). The
+ * check is unchanged: `normalisieren` drops punctuation on both sides.
+ */
+function kachelnVon(de: string): string[] {
+  const roh = de.trim().split(/\s+/);
+  return roh.map((wort, i) => {
+    const ohne = wort.replace(/[.,!?]/g, '');
+    const satzende = /[.?!]$/.exec(wort);
+    return satzende && i < roh.length - 1 ? ohne + satzende[0] : ohne;
+  });
+}
+
 /** Uch so'zdan kam gapda tartib tanlovi yo'q — savol ma'nosiz. */
 export function satzBauen(satz: MaterialSatz, rnd: () => number): Frage | null {
-  const woerter = woerterVon(satz.de);
+  const woerter = kachelnVon(satz.de);
   if (woerter.length < 3) return null;
   return {
     format: 'SATZ_BAUEN',
@@ -129,24 +149,35 @@ export function satzUebersetzen(
   // orqali ishlaydi, xom teng emas solishtirilsa richtigdan faqat
   // tinish belgisi bilan farq qiladigan gap ham chalg'ituvchi bo'lib
   // qolar, javob berilganda esa u ham "to'g'ri" hisoblanardi.
-  const falsch = [
-    ...new Set(
-      andere
-        .filter(
-          (s) =>
-            s.id !== ziel.id && normalisieren(s.uz) !== normalisieren(ziel.uz),
-        )
-        .map((s) => s.uz),
-    ),
-  ];
-  if (falsch.length < 3) return null;
+  const gesehen = new Set<string>([normalisieren(ziel.uz)]);
+  const kandidaten: MaterialSatz[] = [];
+  for (const s of mischen(andere, rnd)) {
+    const uz = normalisieren(s.uz);
+    if (s.id === ziel.id || gesehen.has(uz)) continue;
+    gesehen.add(uz);
+    kandidaten.push(s);
+  }
+  if (kandidaten.length < 3) return null;
+  // Sentences that share the most German words come first: unrelated ones
+  // made this the easiest question on production (97% right first time,
+  // 21–29.09) — one familiar word gave the answer away. Stable sort over a
+  // shuffled list, then three of the best five, so chance stays.
+  const zielWoerter = new Set(woerterVon(normalisieren(ziel.de)));
+  const gemeinsam = (s: MaterialSatz) =>
+    woerterVon(normalisieren(s.de)).filter((w) => zielWoerter.has(w)).length;
+  const falsch = mischen(
+    [...kandidaten].sort((a, b) => gemeinsam(b) - gemeinsam(a)).slice(0, 5),
+    rnd,
+  )
+    .slice(0, 3)
+    .map((s) => s.uz);
   return {
     format: 'SATZ_UEBERSETZEN',
     itemType: 'SATZ',
     itemId: ziel.id,
     prompt: ziel.de,
     hilfe: null,
-    options: mischen([ziel.uz, ...mischen(falsch, rnd).slice(0, 3)], rnd),
+    options: mischen([ziel.uz, ...falsch], rnd),
     richtig: ziel.uz,
     akzeptiert: [],
     belegteItems: [materialSchluessel('SATZ', ziel.id)],

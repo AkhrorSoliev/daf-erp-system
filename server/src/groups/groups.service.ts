@@ -61,8 +61,13 @@ export class GroupsService {
     );
     return this.read.findStudentsByGroupId(groupId, companyId);
   }
-  findOne(id: string, companyId: number, scope: ReportBranchIds) {
-    return this.read.findOne(id, companyId, scope);
+  findOne(
+    id: string,
+    companyId: number,
+    scope: ReportBranchIds,
+    ceiling?: ReportBranchIds,
+  ) {
+    return this.read.findOne(id, companyId, scope, ceiling);
   }
   async getStatusHistory(
     id: string,

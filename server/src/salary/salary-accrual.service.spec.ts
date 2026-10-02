@@ -44,6 +44,7 @@ describe('SalaryAccrualService', () => {
       },
       user: { update: jest.fn() },
       $queryRaw: jest.fn().mockResolvedValue([{ id: 1, balance: 0 }]),
+      unmarkedLesson: { findUnique: jest.fn().mockResolvedValue(null) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -796,6 +797,52 @@ describe('SalaryAccrualService', () => {
         }),
       );
       expect(prisma.user.update).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('unmarked lessons (ADR-0054)', () => {
+    const version = {
+      id: 'v-1',
+      salaryType: 'PERCENTAGE',
+      value: 30,
+      effectiveFrom: new Date('2026-01-01'),
+      effectiveTo: null,
+    };
+
+    it('writes nothing for a lesson marked after it ended', async () => {
+      prisma.unmarkedLesson.findUnique.mockResolvedValue({
+        teacherPayExempt: false,
+      });
+      expect(await service.createAccrual(baseParams)).toBeNull();
+      expect(
+        prisma.employeeSalaryConfigVersion.findFirst,
+      ).not.toHaveBeenCalled();
+      expect(prisma.salaryAccrual.upsert).not.toHaveBeenCalled();
+    });
+
+    it('refuses a centre top-up for it too', async () => {
+      prisma.unmarkedLesson.findUnique.mockResolvedValue({
+        teacherPayExempt: false,
+      });
+      expect(
+        await service.createAccrual({
+          ...baseParams,
+          deductionTransactionId: null,
+          centerFunded: true,
+        }),
+      ).toBeNull();
+      expect(prisma.salaryAccrual.upsert).not.toHaveBeenCalled();
+    });
+
+    it('pays an exempt lesson as usual', async () => {
+      prisma.unmarkedLesson.findUnique.mockResolvedValue({
+        teacherPayExempt: true,
+      });
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        version,
+      );
+      prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'acc-1' });
+      expect(await service.createAccrual(baseParams)).toEqual({ id: 'acc-1' });
     });
   });
 });

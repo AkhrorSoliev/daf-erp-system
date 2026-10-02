@@ -332,12 +332,9 @@ export class TelegramGroupReportMenuService {
    * Returns null on failure: a broken split costs the card its three extra
    * lines, never the card itself.
    *
-   * The month is passed EXPLICITLY, not left to default. `resolvePeriod` builds
-   * its default window from `now.getFullYear()/getMonth()` — the PROCESS
-   * timezone, which is UTC on Railway — while this card's title and every other
-   * figure on it resolve the month in Tashkent. Between 00:00 and 05:00
-   * Tashkent on the 1st those two disagree, and the card would have printed
-   * last month's cash under this month's heading.
+   * The month is passed EXPLICITLY, not left to default: the card resolves its
+   * month once, for its title and every figure on it, and the split must
+   * describe that same month.
    */
   private async incomeSplit(
     companyId: number,

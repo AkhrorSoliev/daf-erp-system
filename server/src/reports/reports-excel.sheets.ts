@@ -548,7 +548,7 @@ export function glossarySheet(wb: Workbook) {
     ],
     [
       "Oyning o'z foydasi",
-      '«Sof foyda» bo‘limidagi asosiy raqam: Tushum − Ustoz oyligi − Admin oyligi − Xarajat − Qaytarishlar. Barcha real chiqimlardan keyin qolgan sof pul.',
+      '«Sof foyda» bo‘limidagi asosiy raqam: Tushum + Balansdan yechib olingan − Ustoz oyligi − Admin oyligi − Xarajat − Qaytarishlar. Barcha real chiqimlardan keyin qolgan sof pul.',
     ],
     [
       'O‘quvchilar to‘lagan (ustoz oyligida)',
