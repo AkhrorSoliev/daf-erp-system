@@ -116,6 +116,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0054](0054-davomat-olinmagan-dars-ustoz-haqisiz.md) | Dars tugaguncha davomat olinmasa — «Dars bo'ldimi?»; «Bo'ldi» bo'lsa ustozga haq yozilmaydi | Qabul qilindi | 2026-09-30 |
 | [0055](0055-balansdan-yechib-olingan-pul-oy-daromadi.md) | Balansdan yechib olingan pul yechilgan oyning daromadi; oy tanlanmaydi | Qabul qilindi | 2026-09-30 |
 | [0056](0056-mock-royxat-manbasi-qatorda.md) | Mock ro'yxati qayerdan kelgani (bot yoki admin) qatorning o'zida yoziladi | Qabul qilindi | 2026-09-30 |
+| [0062](0062-oylik-yozilish-sikl-emas-oy.md) | Oylik yozilish «sikl»ga bo'linmaydi: «Darslar» va «Qarzdorlar» oy bo'yicha, qarz kechirish oylikda taklif qilinmaydi | Qabul qilindi | 2026-10-02 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 
