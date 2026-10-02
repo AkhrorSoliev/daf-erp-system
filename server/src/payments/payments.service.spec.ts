@@ -568,6 +568,38 @@ describe('PaymentsService', () => {
       );
     });
 
+    it('sends the receipt itself when it owns the transaction', async () => {
+      const result = await service.createFromExternal(externalParams);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'payment.received',
+        expect.objectContaining({ paymentId: mockPayment.id, amount: 300000 }),
+      );
+      expect(result.committed).toBeUndefined();
+    });
+
+    // ADR-0065: Payme and Click pass their own transaction. The receipt must
+    // wait for THEIR commit, so it comes back for them to send.
+    it("hands the receipt back inside a caller's transaction", async () => {
+      const result = await service.createFromExternal(externalParams, prisma);
+
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+      expect(result.committed?.received).toEqual(
+        expect.objectContaining({
+          paymentId: mockPayment.id,
+          studentId: 10001,
+          amount: 300000,
+          companyId: 1001,
+        }),
+      );
+
+      service.announceCommitted(result.committed!);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'payment.received',
+        result.committed!.received,
+      );
+    });
+
     it('should throw NotFoundException when contract does not belong to student', async () => {
       prisma.contract.findFirst.mockResolvedValue(null);
 
