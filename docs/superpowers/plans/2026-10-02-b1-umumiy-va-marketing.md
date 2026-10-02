@@ -62,7 +62,7 @@
 4. **The trend stops at the reporting floor on the server.** A month before 2026-05 would make `getSalaryMonthly` clamp its payroll up to May; `getFinancialTrend` drops such months instead of computing a wrong canonical profit (Task 3). The client sends `?month=` only for a past month, so the default view keeps working against a server that predates the parameter (`forbidNonWhitelisted` would 400 it).
 5. **`ExpectationHistoryQueryDto` becomes `MonthQueryDto`** (same fields: `branchId`, validated `month`) and serves `expectation-history`, `financial-trend` and `marketing`. `ReportsQueryDto` cannot take `month` (`forbidNonWhitelisted`), and adding it there would loosen every report.
 6. **The Telegram lines ship with the attribution change (Task 2).** Their two callers and four spec mocks would otherwise be edited twice, and an intermediate commit would print «Shu oy» without the advance under a total that includes it.
-7. **«Ketgan» includes INACTIVE.** The lead-funnel report groups INACTIVE with FROZEN; the spec says «FROZEN is frozen; every other status is ketgan», and the three parts must add up — the spec's rule is followed and stated in ADR-0065.
+7. **«Ketgan» includes INACTIVE.** The lead-funnel report groups INACTIVE with FROZEN; the spec says «FROZEN is frozen; every other status is ketgan», and the three parts must add up — the spec's rule is followed and stated in ADR-0067.
 8. **The marketing endpoint gets its own controller** (`reports/marketing/reports-marketing.controller.ts`) with class-level `@Roles('CEO', 'Branch Director')`, so the reports controller's class default (which admits Administrator) cannot leak into it.
 
 ## File map
@@ -96,7 +96,7 @@
 | `server/src/reports/reports.module.ts` | wiring | 5 |
 | `server/src/common/auth/branch-route-policy.ts` | manifest entry | 5 |
 
-**Docs:** `docs/adr/0065-kassa-uch-qism-marketing-va-umumiy-sahifa.md`, `docs/adr/README.md` (Task 6); `client/CLAUDE.md`, `CONTEXT.md`, `docs/role-access.md`, `docs/financial-system.md` (Task 10).
+**Docs:** `docs/adr/0067-kassa-uch-qism-marketing-va-umumiy-sahifa.md`, `docs/adr/README.md` (Task 6); `client/CLAUDE.md`, `CONTEXT.md`, `docs/role-access.md`, `docs/financial-system.md` (Task 10).
 
 **Client** (`client/src/…`)
 
@@ -698,7 +698,7 @@ export interface DebtSplit {
     total: number;
     count: number;
     /**
-     * «guruhsiz» / «muzlatilgan» / «ketgan» (ADR-0065). Parts of `total` and
+     * «guruhsiz» / «muzlatilgan» / «ketgan» (ADR-0067). Parts of `total` and
      * `count` by construction — they add up to them exactly.
      */
     byKind: { ungrouped: DebtKind; frozen: DebtKind; left: DebtKind };
@@ -1267,7 +1267,7 @@ In `server/src/reports/reports-financial.service.ts`, replace the doc comment an
    * Income composition for a period: how the cash received in [start, end]
    * splits into money for the period's OWN month(s), money paid AHEAD for the
    * next month, and LATE payments that settled debt carried in from earlier
-   * months — broken down by WHICH earlier month (ADR-0065). It is the
+   * months — broken down by WHICH earlier month (ADR-0067). It is the
    * «Qayerdan keldi» dialog on /payments/overview and the income lines of the
    * 21:00 report and «💰 Moliyaviy xulosa».
    *
@@ -1564,7 +1564,7 @@ In `server/src/reports/reports-financial.service.ts`, replace the doc comment an
       // (it is income for the month it was billed in) and future months
       // contribute no lessons to the denominator. The numerator is the
       // period's own cash WITH the advance — exactly what `currentMonth` was
-      // before the advance got its own part (ADR-0065), so the ratio keeps
+      // before the advance got its own part (ADR-0067), so the ratio keeps
       // its meaning.
       //
       // It CAN legitimately exceed 100%: a cycle prepaid in full is this
@@ -1850,7 +1850,7 @@ Expected: FAIL — `ownMoney` 100 000 000, `collectedForMonth` 4, «Shundan yig'
 1. `server/src/reports/reports.service.ts`, in `getOwnMonthProfit`, replace the final `return { … }` with:
 
 ```ts
-    // The month's own cash in its old meaning (ADR-0065): money paid ahead for
+    // The month's own cash in its old meaning (ADR-0067): money paid ahead for
     // the next month was part of `currentMonth` when this figure was defined,
     // and the Excel «Xulosa» sheet still reads it that way.
     const ownMoney = attribution.currentMonth + attribution.advance;
@@ -1867,7 +1867,7 @@ Expected: FAIL — `ownMoney` 100 000 000, `collectedForMonth` 4, «Shundan yig'
 3. `server/src/reports/reports-excel.workbook-input.ts`, in `buildSummaryInput`: before `const lessonMoney = {`, add
 
 ```ts
-  // The month's own cash in its old meaning (ADR-0065): `currentMonth +
+  // The month's own cash in its old meaning (ADR-0067): `currentMonth +
   // advance`. Block 3 must still foot to the cash-in and the lesson-money
   // block to the month's value; the Excel workbook is not part of B1.
   const paidInMonth =
@@ -1879,7 +1879,7 @@ then use `paidInMonth,` for `lessonMoney.paidInMonth`, `s.recognizedRevenue - pa
 
 ```ts
       // The month's own cash with the advance — the meaning this column was
-      // written with before the advance got its own part (ADR-0065). This
+      // written with before the advance got its own part (ADR-0067). This
       // record cannot be rebuilt, so its meaning must not move.
       collectedForMonth: attribution.currentMonth + attribution.advance,
 ```
@@ -1928,7 +1928,7 @@ export function sharesOf100(amounts: readonly number[]): number[] {
  * The «Tushum tarkibi» lines printed under an income figure — the same split
  * the /payments/overview «Qayerdan keldi» dialog shows, rendered for Telegram:
  * «Shu oy uchun», «Oldindan (keyingi oy uchun)», «Eski qarzlar uchun», then one
- * row per earlier month (ADR-0065). A part that is 0 is left out.
+ * row per earlier month (ADR-0067). A part that is 0 is left out.
  *
  * Lives here rather than in either caller because BOTH money surfaces (the
  * 21:00 daily report and the «Moliyaviy xulosa» card) print it; two copies of
@@ -1976,10 +1976,10 @@ export function buildIncomeSplitLines(split: IncomeSplitInput): string[] {
 ```
 
 6. `server/src/telegram-groups/telegram-group-daily-report.service.ts`:
-   - in the file's top comment, replace `` `getIncomeMonthAttribution` so the two lines under it («Shu oy uchun» and `` / `` «Eski qarzlar uchun», per month) decompose the figure printed above them. `` with `` `getIncomeMonthAttribution` so the lines under it («Shu oy uchun», `` / `` «Oldindan (keyingi oy uchun)», «Eski qarzlar uchun», per month) decompose `` / `` the figure printed above them (ADR-0065). `` (re-wrap the comment lines);
+   - in the file's top comment, replace `` `getIncomeMonthAttribution` so the two lines under it («Shu oy uchun» and `` / `` «Eski qarzlar uchun», per month) decompose the figure printed above them. `` with `` `getIncomeMonthAttribution` so the lines under it («Shu oy uchun», `` / `` «Oldindan (keyingi oy uchun)», «Eski qarzlar uchun», per month) decompose `` / `` the figure printed above them (ADR-0067). `` (re-wrap the comment lines);
    - in `computeIncomeAttribution`, add `advance: number;` to the return type after `currentMonth: number;`, and return `currentMonth: attribution.currentMonth,` followed by `advance: attribution.advance,`;
    - the «Shundan yig'ildi» line becomes `` `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth + attribution.advance)}</b> (<b>${attribution.pct}%</b>)` ``;
-   - the month-plan percentage becomes `Math.round(((attribution.currentMonth + attribution.advance) / expectedValue) * 100)`; above both, add the comment `// The month's own cash in its old meaning, advance included (ADR-0065).`
+   - the month-plan percentage becomes `Math.round(((attribution.currentMonth + attribution.advance) / expectedValue) * 100)`; above both, add the comment `// The month's own cash in its old meaning, advance included (ADR-0067).`
 7. `server/src/telegram-groups/telegram-group-report-menu.service.ts`, `incomeSplit`: add `advance: number;` to the return type after `currentMonth: number;`, return `advance: a.advance,` after `currentMonth: a.currentMonth,`, and in its doc comment replace `how much of the cash is this month's own income and how much settled older months' debt, per month` with `how much of the cash is this month's own income, how much was paid ahead for the next month and how much settled older months' debt, per month`.
 8. `server/scripts/verify-collection-ratio.ts` line 65: `` console.log(`  shu davr uchun         : ${fmt(r.currentMonth + r.advance)}`); ``.
 9. `server/scripts/june-income-bases.ts`: in the three lines that read `attribution.currentMonth`, use `(attribution.currentMonth + attribution.advance)` instead (the June analysis was written with the advance inside «HAQIQIY iyun»).
@@ -2704,7 +2704,7 @@ In `server/src/reports/reports.controller.ts`:
 3. Replace the comment block and the whole `getFinancialOverview` handler with:
 
 ```ts
-  // «Umumiy ma'lumotlar» — CEO and Branch Director only (ADR-0065). The page
+  // «Umumiy ma'lumotlar» — CEO and Branch Director only (ADR-0067). The page
   // shows Administrator and Cashier only «To'lov qayd qilish» and the recent
   // payments and does not call this; the two cards they used to get from here
   // («To'lov qilganlar», «O'rtacha to'lov») were removed, and the redaction
@@ -2804,13 +2804,13 @@ In the «Reports Module» section:
 1. Replace the whole bullet that starts with `- **\`financial-overview\` role split (deliberate — do NOT re-tighten to CEO/BD-only)**:` with:
 
 ```markdown
-- **`financial-overview` is CEO/BD only (ADR-0065)**: `@Roles('CEO', 'Branch Director')`. The Administrator/Cashier redaction branch (`{ ltvPayerCount, avgPayment }`) was deleted with the two cards it served; `/payments/overview` shows those roles only «To'lov qayd qilish» and «Oxirgi to'lovlar» (`GET /payments`) and never calls this endpoint for them. The payload carries `monthCharges` (`MonthCharges | null`, ADR-0058: «hisoblandi / to'landi / qoldi» of the period's START month, `null` before 2026-09 — see "One month-end expectation"), `debtSplit` (`DebtSplit`, ADR-0059/0065 — see "Debt as two numbers"), `income.yesterday` (`{ date, amount } | null`: yesterday's COMPLETED payments, only while the period is the current Tashkent month, `null` on the 1st) and `salary.computed` (`getMonthly` for the period's start month, by `tashkentMonthKey`: teachers' `fullDeserved` / `netToPay` / `advances` plus `staff: { monthly, advances, netToPay }`; `null` when the calc fails). The `ReportsService` facade adds `monthCharges`, `debtSplit` and `forecast`; the raw `ReportsFinancialService` overview has none of them — the Telegram `rm:cfin` card calls the raw service with a CEO scope.
+- **`financial-overview` is CEO/BD only (ADR-0067)**: `@Roles('CEO', 'Branch Director')`. The Administrator/Cashier redaction branch (`{ ltvPayerCount, avgPayment }`) was deleted with the two cards it served; `/payments/overview` shows those roles only «To'lov qayd qilish» and «Oxirgi to'lovlar» (`GET /payments`) and never calls this endpoint for them. The payload carries `monthCharges` (`MonthCharges | null`, ADR-0058: «hisoblandi / to'landi / qoldi» of the period's START month, `null` before 2026-09 — see "One month-end expectation"), `debtSplit` (`DebtSplit`, ADR-0059/0065 — see "Debt as two numbers"), `income.yesterday` (`{ date, amount } | null`: yesterday's COMPLETED payments, only while the period is the current Tashkent month, `null` on the 1st) and `salary.computed` (`getMonthly` for the period's start month, by `tashkentMonthKey`: teachers' `fullDeserved` / `netToPay` / `advances` plus `staff: { monthly, advances, netToPay }`; `null` when the calc fails). The `ReportsService` facade adds `monthCharges`, `debtSplit` and `forecast`; the raw `ReportsFinancialService` overview has none of them — the Telegram `rm:cfin` card calls the raw service with a CEO scope.
 ```
 
 2. Replace the bullet that starts with `- **Financial overview** calculates:` with:
 
 ```markdown
-- **Financial overview** calculates: income (actual, by method, and yesterday's in the current month), salary (paid + pending; no tax — see "No tax calculation" under Salary Module), expenses and net profit. LTV, CAC, marketing ROI and the average payment left it with the old overview cards (ADR-0065); the marketing figures are `GET /reports/marketing`. It carries no debt figure of its own — the `ReportsService` facade adds `debtSplit` (next bullet).
+- **Financial overview** calculates: income (actual, by method, and yesterday's in the current month), salary (paid + pending; no tax — see "No tax calculation" under Salary Module), expenses and net profit. LTV, CAC, marketing ROI and the average payment left it with the old overview cards (ADR-0067); the marketing figures are `GET /reports/marketing`. It carries no debt figure of its own — the `ReportsService` facade adds `debtSplit` (next bullet).
 ```
 
 - [ ] **Step 10: Verify no reader of the removed fields is left**
@@ -3135,7 +3135,7 @@ import type { MonthCharges } from '../month-charges';
 /**
  * The first month whose new students are really new. In May and June 2026
  * students who were already studying made their first in-system payment, so
- * they look new: those months are «o'tish oylari» (spec B1 §3.2, ADR-0065).
+ * they look new: those months are «o'tish oylari» (spec B1 §3.2, ADR-0067).
  */
 export const FIRST_COHORT_MONTH = '2026-07';
 
@@ -3534,7 +3534,7 @@ import {
 } from './marketing.math';
 
 /**
- * «Marketing» (spec B1 §3, ADR-0065): one month's spend, new students and
+ * «Marketing» (spec B1 §3, ADR-0067): one month's spend, new students and
  * what they paid, the months before it back to the reporting floor, and the
  * lead-source cohort. Every figure comes from its single source — first
  * payments and spend read here once, the month charge from `getMonthCharges`,
@@ -3764,7 +3764,7 @@ import { ReportsMarketingService } from './reports-marketing.service';
 
 /**
  * «Marketing» (spec B1 §3): spend, new students and what they paid, by the
- * ADR-0065 definitions. A money report — CEO and Branch Director only, on its
+ * ADR-0067 definitions. A money report — CEO and Branch Director only, on its
  * own controller so the reports controller's class default (which admits
  * Administrator) never reaches it.
  */
@@ -3901,25 +3901,25 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 6: ADR-0065
+### Task 6: ADR-0067
 
 **Files:**
-- Create: `docs/adr/0065-kassa-uch-qism-marketing-va-umumiy-sahifa.md`
+- Create: `docs/adr/0067-kassa-uch-qism-marketing-va-umumiy-sahifa.md`
 - Modify: `docs/adr/README.md` (one row after 0063)
 
 **Interfaces:** none (documents Tasks 1–5).
 
 - [ ] **Step 1: Check the number is still free**
 
-Run: `git fetch origin --quiet && git ls-tree --name-only origin/main docs/adr/ | grep -c "^docs/adr/0065-" ; gh pr list --state open --json number,title | grep -o "ADR-00[0-9][0-9]" | sort -u`
-Expected: `0` and a list without `ADR-0065`. If 0065 is taken, use the next free number here AND replace `ADR-0065` everywhere the earlier tasks wrote it: `grep -rln "ADR-0065" server/src server/CLAUDE.md` then edit each.
+Run: `git fetch origin --quiet && git ls-tree --name-only origin/main docs/adr/ | grep -c "^docs/adr/0067-" ; gh pr list --state open --json number,title | grep -o "ADR-00[0-9][0-9]" | sort -u`
+Expected: `0` and a list without `ADR-0067`. If 0067 is taken (0065 and 0066 already are, since 02.10), use the next free number here AND replace `ADR-0067` everywhere the earlier tasks wrote it: `grep -rln "ADR-0067" server/src server/CLAUDE.md` then edit each.
 
 - [ ] **Step 2: Write the ADR**
 
-Create `docs/adr/0065-kassa-uch-qism-marketing-va-umumiy-sahifa.md`:
+Create `docs/adr/0067-kassa-uch-qism-marketing-va-umumiy-sahifa.md`:
 
 ```markdown
-# ADR-0065 — Kassaga tushgan pul uch qismda; marketing ko'rsatkichlari birinchi to'lov bo'yicha; o'qimayotganlar qarzi uch turga bo'linadi; «financial-overview» faqat CEO va filial direktoriga
+# ADR-0067 — Kassaga tushgan pul uch qismda; marketing ko'rsatkichlari birinchi to'lov bo'yicha; o'qimayotganlar qarzi uch turga bo'linadi; «financial-overview» faqat CEO va filial direktoriga
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-02
@@ -4089,14 +4089,14 @@ o'qimayotganlar qarzi kimlardan iboratligi ko'rinadi.
 In `docs/adr/README.md`, after the `| [0063](…) |` row, add:
 
 ```markdown
-| [0065](0065-kassa-uch-qism-marketing-va-umumiy-sahifa.md) | Kassaga tushgan pul uch qismda (shu oy, oldindan, eski qarz); marketing ko'rsatkichlari birinchi to'lov bo'yicha; o'qimayotganlar qarzi uch turga bo'linadi; «financial-overview» faqat CEO va filial direktoriga | Qabul qilindi | 2026-10-02 |
+| [0067](0067-kassa-uch-qism-marketing-va-umumiy-sahifa.md) | Kassaga tushgan pul uch qismda (shu oy, oldindan, eski qarz); marketing ko'rsatkichlari birinchi to'lov bo'yicha; o'qimayotganlar qarzi uch turga bo'linadi; «financial-overview» faqat CEO va filial direktoriga | Qabul qilindi | 2026-10-02 |
 ```
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/adr/0065-kassa-uch-qism-marketing-va-umumiy-sahifa.md docs/adr/README.md
-git commit -m "docs(adr): ADR-0065 — cash in three parts, marketing definitions, debt kinds
+git add docs/adr/0067-kassa-uch-qism-marketing-va-umumiy-sahifa.md docs/adr/README.md
+git commit -m "docs(adr): ADR-0067 — cash in three parts, marketing definitions, debt kinds
 
 Also records financial-overview becoming CEO/BD only.
 
@@ -4261,7 +4261,7 @@ export interface DebtKind {
 
 /**
  * «O'qiyotganlar qarzi» and «O'qimayotganlar qarzi» — server `DebtSplit`
- * (ADR-0059, ADR-0065). Two numbers that are never added: the first is the
+ * (ADR-0059, ADR-0067). Two numbers that are never added: the first is the
  * debt of students in an active group (`currentMonth` — the part up to this
  * month's bill, `older` — the rest), the second everyone else's, in three
  * kinds.
@@ -4307,7 +4307,7 @@ export interface FinancialOverview {
   };
 }
 
-/** `GET /reports/income-month-attribution` — the cash in three parts (ADR-0065). */
+/** `GET /reports/income-month-attribution` — the cash in three parts (ADR-0067). */
 export interface IncomeAttribution {
   total: number;
   currentMonth: number;
@@ -4432,7 +4432,7 @@ In `client/src/lib/role-access.ts`, after `COMPANY_EDIT_ROLES`, add:
 ```ts
 /**
  * `GET /reports/financial-overview` — reports.controller.ts. Faqat CEO va
- * filial direktori (ADR-0065): Administrator va kassir «Umumiy ma'lumotlar»da
+ * filial direktori (ADR-0067): Administrator va kassir «Umumiy ma'lumotlar»da
  * faqat «To'lov qayd qilish» va oxirgi to'lovlarni ko'radi.
  */
 export const FINANCIAL_OVERVIEW_ROLES = [1, 2];
@@ -4899,7 +4899,7 @@ const KINDS = [
 /**
  * Block 2 — today's debt as two numbers that are never added (ADR-0059): the
  * studying debtors' «eski qarz» and the not-studying debt in its three kinds
- * (ADR-0065). Current month only: it is today's state.
+ * (ADR-0067). Current month only: it is today's state.
  */
 export function DebtCards({ month }: { month: string }) {
   const overview = useFinancialOverview(month);
@@ -5096,7 +5096,7 @@ const FILTERS = { month: { type: "string" as const, defaultValue: "" } };
  * «Umumiy ma'lumotlar» (spec B1 §2). CEO and Branch Director get the month
  * picker and the money blocks; Administrator and Cashier get the title,
  * «To'lov qayd qilish» and the recent payments, and the page never asks the
- * money endpoint for them — it is CEO/BD on the server (ADR-0065).
+ * money endpoint for them — it is CEO/BD on the server (ADR-0067).
  */
 export function OverviewPage() {
   const user = useAuth((s) => s.user);
@@ -5651,7 +5651,7 @@ export function incomeSummary(data: IncomeAttribution): string {
 
 /**
  * The dialog's body: a bar in three colours, then the parts. A part that is 0
- * is not drawn. The parts are the server's and add up to `total` (ADR-0065).
+ * is not drawn. The parts are the server's and add up to `total` (ADR-0067).
  */
 export function IncomeBreakdown({ month, data, byMethod }: { month: string; data: IncomeAttribution; byMethod: Method[] }) {
   const parts = [
@@ -6152,7 +6152,7 @@ import { formatNumber } from "@/lib/format-utils";
 import { monthShort } from "@/components/payments/salary-utils";
 import { som } from "@/components/payments/overview/overview-math";
 
-/** One month of `GET /reports/marketing` (ADR-0065 definitions; null = not computed). */
+/** One month of `GET /reports/marketing` (ADR-0067 definitions; null = not computed). */
 export interface MarketingMonth {
   month: string;
   spend: number;
@@ -6502,7 +6502,7 @@ export default function MarketingReportPage() {
 1. `client/src/lib/reports-nav.ts`: add `Megaphone,` to the `lucide-react` import and, in the «Marketing va faoliyat» section right after the «Lidlar hisoboti» item:
 
 ```ts
-      // Pul hisoboti — CEO/BD (server: `GET /reports/marketing`, ADR-0065).
+      // Pul hisoboti — CEO/BD (server: `GET /reports/marketing`, ADR-0067).
       { title: "Marketing", url: "/reports/marketing", icon: Megaphone, visibleForRoles: CEO_BD },
 ```
 
@@ -6574,17 +6574,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: `server/CLAUDE.md`**
 
-1. In the «Daily report composition» bullet, replace `because the two lines under it (\`Shu oy uchun\` / \`Eski qarzlar uchun\`, then one row per older month, ALL of them) are a decomposition of it` with `because the lines under it (\`Shu oy uchun\` / \`Oldindan (keyingi oy uchun)\` / \`Eski qarzlar uchun\`, then one row per older month, ALL of them; a part that is 0 is left out and the percentages always sum to 100, ADR-0065) are a decomposition of it`.
+1. In the «Daily report composition» bullet, replace `because the two lines under it (\`Shu oy uchun\` / \`Eski qarzlar uchun\`, then one row per older month, ALL of them) are a decomposition of it` with `because the lines under it (\`Shu oy uchun\` / \`Oldindan (keyingi oy uchun)\` / \`Eski qarzlar uchun\`, then one row per older month, ALL of them; a part that is 0 is left out and the percentages always sum to 100, ADR-0067) are a decomposition of it`.
 2. In the «Interactive report menu» bullet, replace `whose income line carries the same \`Shu oy uchun\` / \`Eski qarzlar uchun\` split as the 21:00 report` with `whose income line carries the same \`Shu oy uchun\` / \`Oldindan (keyingi oy uchun)\` / \`Eski qarzlar uchun\` split as the 21:00 report`.
-3. In «One month-end expectation»: replace `the \`/payments/overview\` card (and its daily-history dialog), the home page card,` with `the home page card,` and append to that bullet: `` `/payments/overview` shows such a month as one line, «{Oy} — 12 talik tizim: oylik hisob yo'q» (ADR-0065); `GET /reports/expectation-history` stays, with no page reading it. ``; in the next bullet replace `` `/payments/overview` «{Oy} to'lovlari» (Hisoblandi / To'landi / Qoldi) `` with `` `/payments/overview` «{Oy} oyi to'lovlari» (Hisoblandi «N o'quvchiga» / To'landi / Qoldi «N o'quvchi to'lamagan» — `unpaidStudents`, counted in `splitMonthCharges` beside `unpaid`) ``.
-4. In ««Foyda tarkibi» — the Foyda card's breakdown (ADR-0038)», after its first paragraph add: `On /payments/overview the «Foyda» card and its «Qanday hisoblandi» dialog both read it (ADR-0065): the card prints \`netProfit\`, «darslar puli», «balansdan yechib olingan» (when non-zero) and «chiqimlar», the dialog the equation.`
+3. In «One month-end expectation»: replace `the \`/payments/overview\` card (and its daily-history dialog), the home page card,` with `the home page card,` and append to that bullet: `` `/payments/overview` shows such a month as one line, «{Oy} — 12 talik tizim: oylik hisob yo'q» (ADR-0067); `GET /reports/expectation-history` stays, with no page reading it. ``; in the next bullet replace `` `/payments/overview` «{Oy} to'lovlari» (Hisoblandi / To'landi / Qoldi) `` with `` `/payments/overview` «{Oy} oyi to'lovlari» (Hisoblandi «N o'quvchiga» / To'landi / Qoldi «N o'quvchi to'lamagan» — `unpaidStudents`, counted in `splitMonthCharges` beside `unpaid`) ``.
+4. In ««Foyda tarkibi» — the Foyda card's breakdown (ADR-0038)», after its first paragraph add: `On /payments/overview the «Foyda» card and its «Qanday hisoblandi» dialog both read it (ADR-0067): the card prints \`netProfit\`, «darslar puli», «balansdan yechib olingan» (when non-zero) and «chiqimlar», the dialog the equation.`
 5. In «Reports Module»: the «Endpoints» bullet becomes `` - **Endpoints**: `GET /reports/financial-overview`, `GET /reports/financial-trend` (`?month=YYYY-MM`: six months ending there, clamped to now, none before 2026-05), `GET /reports/marketing`, `GET /reports/monthly-debt-recovery`, `GET /reports/kpis`, and more ``; the «Roles» bullet becomes `` - **Roles**: CEO, BD (money reports). `financial-overview`, `financial-trend` and `marketing` are `@Roles('CEO', 'Branch Director')`. ``
-6. In «Debt as two numbers (ADR-0059)», replace `answers \`DebtSplit { studying: { total, count, currentMonth, older }, notStudying: { total, count } }\`.` with `answers \`DebtSplit { studying: { total, count, currentMonth, older, olderCount }, notStudying: { total, count, byKind: { ungrouped, frozen, left } } }\`. \`olderCount\` counts studying debtors with \`older > 0\`; \`byKind\` is one \`groupBy(['status'])\` over the not-studying predicate — ACTIVE there is exactly \`ungroupedStudentWhere()\` («guruhsiz»), FROZEN «muzlatilgan», every other status «ketgan» — so its parts add up to \`notStudying.total\` and \`.count\` by construction (ADR-0065).`
+6. In «Debt as two numbers (ADR-0059)», replace `answers \`DebtSplit { studying: { total, count, currentMonth, older }, notStudying: { total, count } }\`.` with `answers \`DebtSplit { studying: { total, count, currentMonth, older, olderCount }, notStudying: { total, count, byKind: { ungrouped, frozen, left } } }\`. \`olderCount\` counts studying debtors with \`older > 0\`; \`byKind\` is one \`groupBy(['status'])\` over the not-studying predicate — ACTIVE there is exactly \`ungroupedStudentWhere()\` («guruhsiz»), FROZEN «muzlatilgan», every other status «ketgan» — so its parts add up to \`notStudying.total\` and \`.count\` by construction (ADR-0067).`
 7. After the «Financial overview calculates» bullet, add:
 
 ```markdown
-- **Marketing (`GET /reports/marketing?month=YYYY-MM`, CEO/BD, ADR-0065)** — `reports/marketing/`: `marketing.math.ts` (pure), `ReportsMarketingService`, `ReportsMarketingController` (own controller, class-level CEO/BD, scope via `resolveCallerReportBranchIds`, 403 on an empty scope). A new student of month M is a live card in scope with at least one non-deleted enrollment whose FIRST COMPLETED payment fell in M; cohort paid = all their COMPLETED payments to date; jalb qilish narxi = round(spend ÷ new students); o'quvchi qiymati = `getDepartedStudentsSummary(...).avgDurationMonths` × round(`MonthCharges.charged ÷ students`) (null when either is missing: 0 months, before 2026-09); marketing samarasi = cohort paid ÷ spend. Months before 2026-07 are transition months: no CAC, cohort paid or ROI. «Manba bo'yicha» is the lead funnel's own cohort (`ReportsLeadFunnelService.getSourceBreakdown`), from 10.09.2026. Never compute these anywhere else.
-- **Cash in three parts (ADR-0065)**: `getIncomeMonthAttribution` returns `currentMonth` (paid for the period's own months — a debit inside the period spent it), `advance` (paid ahead — still standing at the period end, or spent after it) and `lateTotal`; `total` is their sum and the period's tallied payments. Readers that predate the split use `currentMonth + advance` where they need the old meaning: `getOwnMonthProfit`, the Excel «Xulosa» blocks, the daily snapshot's `collectedForMonth`, the 21:00 pre-September collection lines.
+- **Marketing (`GET /reports/marketing?month=YYYY-MM`, CEO/BD, ADR-0067)** — `reports/marketing/`: `marketing.math.ts` (pure), `ReportsMarketingService`, `ReportsMarketingController` (own controller, class-level CEO/BD, scope via `resolveCallerReportBranchIds`, 403 on an empty scope). A new student of month M is a live card in scope with at least one non-deleted enrollment whose FIRST COMPLETED payment fell in M; cohort paid = all their COMPLETED payments to date; jalb qilish narxi = round(spend ÷ new students); o'quvchi qiymati = `getDepartedStudentsSummary(...).avgDurationMonths` × round(`MonthCharges.charged ÷ students`) (null when either is missing: 0 months, before 2026-09); marketing samarasi = cohort paid ÷ spend. Months before 2026-07 are transition months: no CAC, cohort paid or ROI. «Manba bo'yicha» is the lead funnel's own cohort (`ReportsLeadFunnelService.getSourceBreakdown`), from 10.09.2026. Never compute these anywhere else.
+- **Cash in three parts (ADR-0067)**: `getIncomeMonthAttribution` returns `currentMonth` (paid for the period's own months — a debit inside the period spent it), `advance` (paid ahead — still standing at the period end, or spent after it) and `lateTotal`; `total` is their sum and the period's tallied payments. Readers that predate the split use `currentMonth + advance` where they need the old meaning: `getOwnMonthProfit`, the Excel «Xulosa» blocks, the daily snapshot's `collectedForMonth`, the 21:00 pre-September collection lines.
 ```
 
 - [ ] **Step 2: `client/CLAUDE.md`**
@@ -6592,20 +6592,20 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 1. In «Financial UI (Moliya bo'limi)», replace the whole table row that starts with `` | `/payments/overview` | `` with:
 
 ```markdown
-| `/payments/overview` | `components/payments/overview/overview-page.tsx` | **«Umumiy ma'lumotlar» (spec B1, ADR-0065).** Month picker «‹ Oktabr 2026 ›» (`MonthStepper`, `?month=YYYY-MM`, default and maximum the current Tashkent month, minimum 2026-05, `clampMonth`), «Excel» (`ExportOptionsPopover` for the month) and «To'lov qayd qilish» (`data-tour="payment-record"`; a recorded payment invalidates every key in `OVERVIEW_QUERY_KEYS`). One block per file, each with its own query, skeleton and error state: «{Oy} oyi to'lovlari» (`monthCharges`; a month before 2026-09 is one muted line «{Oy} — 12 talik tizim: oylik hisob yo'q»), today's debt (current month only: «Eski qarz — o'qiyotganlar» and «O'qimayotganlar qarzi» with guruhsiz / muzlatilgan / ketgan — never added, ADR-0059), «Kassaga tushdi» (`GET /reports/income-month-attribution`; «Qayerdan keldi»: shu oy / oldindan / eski qarz, methods), «Oyliklar» (`salary.computed`: teachers + staff), «Foyda» (`GET /reports/profit-composition`; «Qanday hisoblandi»), «Oylar bo'yicha» (`GET /reports/financial-trend?month=`, «—» when `profitBasis` is `kassa`) and «Oxirgi to'lovlar» (current month only; «Guruh» = the student's groups now). Administrator and Cashier see only the title, «To'lov qayd qilish» and «Oxirgi to'lovlar», and the page never calls `GET /reports/financial-overview` for them (`FINANCIAL_OVERVIEW_ROLES`). The query key `financial-overview` keeps its name: the payment, refund, withdrawal, expense and debtor dialogs invalidate it. The client computes no figure; a field an older server does not send prints «—» or its line is left out. |
+| `/payments/overview` | `components/payments/overview/overview-page.tsx` | **«Umumiy ma'lumotlar» (spec B1, ADR-0067).** Month picker «‹ Oktabr 2026 ›» (`MonthStepper`, `?month=YYYY-MM`, default and maximum the current Tashkent month, minimum 2026-05, `clampMonth`), «Excel» (`ExportOptionsPopover` for the month) and «To'lov qayd qilish» (`data-tour="payment-record"`; a recorded payment invalidates every key in `OVERVIEW_QUERY_KEYS`). One block per file, each with its own query, skeleton and error state: «{Oy} oyi to'lovlari» (`monthCharges`; a month before 2026-09 is one muted line «{Oy} — 12 talik tizim: oylik hisob yo'q»), today's debt (current month only: «Eski qarz — o'qiyotganlar» and «O'qimayotganlar qarzi» with guruhsiz / muzlatilgan / ketgan — never added, ADR-0059), «Kassaga tushdi» (`GET /reports/income-month-attribution`; «Qayerdan keldi»: shu oy / oldindan / eski qarz, methods), «Oyliklar» (`salary.computed`: teachers + staff), «Foyda» (`GET /reports/profit-composition`; «Qanday hisoblandi»), «Oylar bo'yicha» (`GET /reports/financial-trend?month=`, «—» when `profitBasis` is `kassa`) and «Oxirgi to'lovlar» (current month only; «Guruh» = the student's groups now). Administrator and Cashier see only the title, «To'lov qayd qilish» and «Oxirgi to'lovlar», and the page never calls `GET /reports/financial-overview` for them (`FINANCIAL_OVERVIEW_ROLES`). The query key `financial-overview` keeps its name: the payment, refund, withdrawal, expense and debtor dialogs invalidate it. The client computes no figure; a field an older server does not send prints «—» or its line is left out. |
 ```
 
 2. In «Key Components», replace the whole bullet that starts with `` - **`profit-composition-panel.tsx`** `` with:
 
 ```markdown
-- **`overview/`** — the «Umumiy ma'lumotlar» page, one block per file (`month-charges-card`, `debt-cards`, `cash-card` + `income-dialog`, `salary-card`, `profit-card` + `profit-dialog`, `months-table`, `recent-payments`), `types.ts` (the server shapes; `DebtSplit` and `MonthCharges` live here and the home card, the debt page and the outreach banner import them from here), `overview-math.ts` (pure, unit-tested: month clamp and range, «so'm», the «Qanday hisoblandi» lines) and `queries.ts` (one hook per endpoint). The 8-card grid, `kpi-chart-dialog.tsx`, the income and profit panels and the daily-history dialog were deleted (ADR-0065).
+- **`overview/`** — the «Umumiy ma'lumotlar» page, one block per file (`month-charges-card`, `debt-cards`, `cash-card` + `income-dialog`, `salary-card`, `profit-card` + `profit-dialog`, `months-table`, `recent-payments`), `types.ts` (the server shapes; `DebtSplit` and `MonthCharges` live here and the home card, the debt page and the outreach banner import them from here), `overview-math.ts` (pure, unit-tested: month clamp and range, «so'm», the «Qanday hisoblandi» lines) and `queries.ts` (one hook per endpoint). The 8-card grid, `kpi-chart-dialog.tsx`, the income and profit panels and the daily-history dialog were deleted (ADR-0067).
 ```
 
 3. Delete the whole bullet that starts with `` - **`payments-overview.tsx`** ``.
 4. Before `### Salary Breakdown Drawer`, add:
 
 ```markdown
-### Marketing report (`/reports/marketing`, ADR-0065)
+### Marketing report (`/reports/marketing`, ADR-0067)
 
 - `components/reports/marketing/` — `marketing-client.tsx` (month picker `?month=`, `GET /reports/marketing`), `marketing-view.tsx` (four cards, «Marketing samarasi», «Oylar bo'yicha», «Manba bo'yicha»), `marketing-format.ts` (pure: «13×», the sentence). CEO/BD only (`reports-nav.ts`, `CEO_BD`).
 - Every figure is the server's; a null one prints «—». Transition months (May–June 2026) print the new-student count with «*» and «—» for the rest, with the footnote. No visible LTV, CAC or ROI — `lib/uzbek-only-texts.test.ts` scans both B1 folders for them.
@@ -6613,23 +6613,23 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - [ ] **Step 3: `CONTEXT.md`, `docs/role-access.md`, `docs/financial-system.md`**
 
-1. `CONTEXT.md`: in the «**O'qimayotganlar qarzi**» entry, before its file-path line add the sentence `Uch turga bo'linadi (ADR-0065): **guruhsiz** — statusi \`ACTIVE\` (o'qimayotganlar ichida bu aynan \`ungroupedStudentWhere()\`), **muzlatilgan** — \`FROZEN\`, **ketgan** — qolgan har qanday status; uchalasi jamini beradi.`; after the entry add:
+1. `CONTEXT.md`: in the «**O'qimayotganlar qarzi**» entry, before its file-path line add the sentence `Uch turga bo'linadi (ADR-0067): **guruhsiz** — statusi \`ACTIVE\` (o'qimayotganlar ichida bu aynan \`ungroupedStudentWhere()\`), **muzlatilgan** — \`FROZEN\`, **ketgan** — qolgan har qanday status; uchalasi jamini beradi.`; after the entry add:
 
 ```markdown
 **Kassaga tushdi (uch qism)** — davrda tushgan to'lovlar: **shu oy uchun** (davr
 hisobini to'lagan), **oldindan** (davr oxirida balansda turgan yoki davrdan
 keyingi hisobni to'lagan) va **eski qarzlar uchun** (oldingi oylar qarzi).
 Ledger qayta o'ynaladi, balans bo'laklari eng eskisidan sarflanadi.
-`reports/reports-financial.service.ts` (`getIncomeMonthAttribution`) · `docs/adr/0065-kassa-uch-qism-marketing-va-umumiy-sahifa.md`
+`reports/reports-financial.service.ts` (`getIncomeMonthAttribution`) · `docs/adr/0067-kassa-uch-qism-marketing-va-umumiy-sahifa.md`
 
 **Yangi o'quvchi (marketing)** — birinchi COMPLETED to'lovi shu oyga tushgan,
 arxivlanmagan, kamida bitta yozilishi bor karta. 2026-07 dan oldingi oylar —
 o'tish oylari, ularning yangi o'quvchisi hisob-kitobga kirmaydi.
-`reports/marketing/marketing.math.ts` · ADR-0065
+`reports/marketing/marketing.math.ts` · ADR-0067
 ```
 
-2. `docs/role-access.md`: replace `(\`financial-overview\` also admits Administrator and Cashier, but strips every money field for them)` with `(\`financial-overview\` and \`marketing\` included — since ADR-0065 the overview no longer admits Administrator and Cashier; their «Umumiy ma'lumotlar» is payment recording and the recent payments)`.
-3. `docs/financial-system.md`: the `financial-overview` row becomes `` | `GET` | `/api/reports/financial-overview` | CEO, BD | Tushum (usullar, kecha), oy hisoblari, qarz, oylik, foyda | ``; after the `financial-trend` row add `` | `GET` | `/api/reports/marketing` | CEO, BD | Marketing: sarf, yangi o'quvchilar, jalb qilish narxi, o'quvchi qiymati, samara (ADR-0065) | ``; in «Financial overview formulalari» delete the three lines `LTV = …`, `CAC = …`, `Marketing ROI = …`; the «Umumiy ma'lumotlar» page row's description becomes `Oy tanlash, oy to'lovlari, qarz, kassa/oylik/foyda kartalari, oylar jadvali, oxirgi to'lovlar (ADR-0065)`, and add a page row `` | Marketing | `/reports/marketing` | Sarf, yangi o'quvchilar, jalb qilish narxi, o'quvchi qiymati, samara, manba bo'yicha | ``.
+2. `docs/role-access.md`: replace `(\`financial-overview\` also admits Administrator and Cashier, but strips every money field for them)` with `(\`financial-overview\` and \`marketing\` included — since ADR-0067 the overview no longer admits Administrator and Cashier; their «Umumiy ma'lumotlar» is payment recording and the recent payments)`.
+3. `docs/financial-system.md`: the `financial-overview` row becomes `` | `GET` | `/api/reports/financial-overview` | CEO, BD | Tushum (usullar, kecha), oy hisoblari, qarz, oylik, foyda | ``; after the `financial-trend` row add `` | `GET` | `/api/reports/marketing` | CEO, BD | Marketing: sarf, yangi o'quvchilar, jalb qilish narxi, o'quvchi qiymati, samara (ADR-0067) | ``; in «Financial overview formulalari» delete the three lines `LTV = …`, `CAC = …`, `Marketing ROI = …`; the «Umumiy ma'lumotlar» page row's description becomes `Oy tanlash, oy to'lovlari, qarz, kassa/oylik/foyda kartalari, oylar jadvali, oxirgi to'lovlar (ADR-0067)`, and add a page row `` | Marketing | `/reports/marketing` | Sarf, yangi o'quvchilar, jalb qilish narxi, o'quvchi qiymati, samara, manba bo'yicha | ``.
 
 - [ ] **Step 4: Full verification — server (one after another, never in parallel)**
 
@@ -6697,6 +6697,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | §4.6 `GET /payments` groups | 4 |
 | §4.7 marketing endpoint, route policy, coverage | 5 |
 | §4.8 Telegram lines | 2 |
-| §4.9 ADR-0065 | 6 |
+| §4.9 ADR-0067 | 6 |
 | §5 client: types moved, React Query keys, per-block states, Uzbek-only | 7, 8, 9 |
 | §6 tests (pure, controllers/policy/coverage, client), browser check | 1–5, 7–10 |
