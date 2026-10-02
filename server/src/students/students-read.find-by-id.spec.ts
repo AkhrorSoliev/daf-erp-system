@@ -25,6 +25,7 @@ describe('StudentsReadService.findById — a student of another branch', () => {
       prisma as never,
       {} as never,
       {} as never,
+      {} as never,
     );
   });
 
