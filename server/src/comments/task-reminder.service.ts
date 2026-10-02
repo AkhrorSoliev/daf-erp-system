@@ -104,6 +104,7 @@ export class TaskReminderService {
         await this.pushService.sendToUser(assignee.userId, {
           title,
           body: message,
+          url: '/tasks',
         });
 
         // Qayta eslatma oldini olish

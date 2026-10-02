@@ -66,6 +66,11 @@ export interface DepartureMonth {
    * month comes back under every policy.
    */
   trialLesson?: boolean;
+  /**
+   * Contract 3.5 waits for a «Dars bo'ldimi?» answer (CEO, 01.10.2026): the
+   * server refuses the departure with these words until it is given.
+   */
+  trialAwaitsAnswer?: string | null;
   chargedAmount: number;
   outcomes: Record<DeparturePolicy, PolicyOutcome>;
 }
@@ -163,6 +168,7 @@ export function policyHint(
 export interface Consequence {
   tone: "warning" | "success" | "neutral";
   head: string;
+  /** Empty when the head says everything. */
   line: string;
 }
 
@@ -184,12 +190,25 @@ export function departureConsequence(
 ): Consequence | null {
   const rows = monthlyRows(preview);
   if (!preview || rows.length === 0) return null;
+  const awaiting = rows.find((r) => r.month.trialAwaitsAnswer)?.month
+    .trialAwaitsAnswer;
+  if (awaiting) return { tone: "warning", head: awaiting, line: "" };
   const outcomes = rows.map((r) => r.month.outcomes[policy]);
   const amount = outcomes.reduce((s, o) => s + o.amount, 0);
   const lessons = outcomes.reduce((s, o) => s + o.lessons, 0);
+  const trial = rows.every((r) => r.month.trialLesson);
+
+  // A trial month that cost nothing (a 100% discount, the excused credit):
+  // nothing comes back, and the teacher is still not paid for it.
+  if (amount === 0 && trial) {
+    return {
+      tone: "neutral",
+      head: "Sinov darsi (3.5): qaytadigan pul yo'q",
+      line: "Ustozga bu oyning darslari uchun haq yozilmaydi.",
+    };
+  }
 
   if (amount > 0) {
-    const trial = rows.every((r) => r.month.trialLesson);
     const head = trial
       ? `Sinov darsi (3.5): oyning puli to'liq qaytadi — ${som(amount)}`
       : policy === "QUALITY_CLAIM"

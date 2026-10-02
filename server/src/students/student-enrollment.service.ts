@@ -14,6 +14,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+import { rethrowAsConflict } from '../common/transaction-conflict';
 import { EntityHistoryService } from '../common/entity-history';
 
 /**
@@ -684,6 +685,16 @@ export class StudentEnrollmentService {
     // the student left (which lessons still count as "held").
     const departureAt = new Date();
 
+    // Contract 3.5 waits for an unanswered «Dars bo'ldimi?» that could decide
+    // the trial lesson (ADR-0060). A question opened after this check is not a
+    // trial: the money step below keeps the ordinary rule.
+    await this.monthlyChargeService.assertTrialLessonAnswered(this.prisma, {
+      studentId: enrollment.studentId,
+      companyId,
+      enrollmentId,
+      today: tashkentDateStr(departureAt),
+    });
+
     // Atomic: refund unused prepaid lessons + (optional) write off the
     // current-cycle debt + flip enrollment to DROPPED + write the state
     // log. Order matters:
@@ -703,64 +714,67 @@ export class StudentEnrollmentService {
     //      against `writeOffConfirmAmount`. Mismatch → 400, full rollback.
     //   3. State log + status flip — close the enrollment with reason
     //      and audit metadata.
-    const monthOutcome = await this.prisma.$transaction(
-      async (tx) => {
-        await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
-          enrollmentId,
-          performedById: userId,
-          reason: 'Guruhdan chiqarilganda qoldiq darslar uchun balans tiklash',
-        });
-
-        const outcome =
-          await this.monthlyChargeService.reverseChargeForDeparture(tx, {
+    const monthOutcome = await this.prisma
+      .$transaction(
+        async (tx) => {
+          await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
             enrollmentId,
-            departureDate: departureAt,
-            companyId,
-            reason: 'Guruhdan chiqarilganda',
             performedById: userId,
-            policy: departurePolicy,
+            reason:
+              'Guruhdan chiqarilganda qoldiq darslar uchun balans tiklash',
           });
 
-        if (input.writeOffCycleDebt) {
-          await this.debtWriteOffService.executeWriteOff(
-            {
+          const outcome =
+            await this.monthlyChargeService.reverseChargeForDeparture(tx, {
               enrollmentId,
+              departureDate: departureAt,
               companyId,
+              reason: 'Guruhdan chiqarilganda',
               performedById: userId,
-              reason: input.writeOffReason!.trim(),
-              confirmAmount: input.writeOffConfirmAmount!,
-            },
-            tx,
-          );
-        }
+              policy: departurePolicy,
+            });
 
-        await tx.enrollmentStateLog.create({
-          data: {
-            enrollmentId,
-            status: 'DROPPED',
-            transitionAt: departureAt,
-            reason: reasonText,
-            changedById: userId,
-          },
-        });
-        await tx.enrollment.update({
-          where: { id: enrollmentId },
-          data: {
-            status: 'DROPPED',
-            statusChangedAt: departureAt,
-            statusChangedById: userId,
-            statusChangeReason: reasonText,
-            departureReasonId,
-          },
-        });
-        return outcome;
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 15_000,
-      },
-    );
+          if (input.writeOffCycleDebt) {
+            await this.debtWriteOffService.executeWriteOff(
+              {
+                enrollmentId,
+                companyId,
+                performedById: userId,
+                reason: input.writeOffReason!.trim(),
+                confirmAmount: input.writeOffConfirmAmount!,
+              },
+              tx,
+            );
+          }
+
+          await tx.enrollmentStateLog.create({
+            data: {
+              enrollmentId,
+              status: 'DROPPED',
+              transitionAt: departureAt,
+              reason: reasonText,
+              changedById: userId,
+            },
+          });
+          await tx.enrollment.update({
+            where: { id: enrollmentId },
+            data: {
+              status: 'DROPPED',
+              statusChangedAt: departureAt,
+              statusChangedById: userId,
+              statusChangeReason: reasonText,
+              departureReasonId,
+            },
+          });
+          return outcome;
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 10_000,
+          timeout: 15_000,
+        },
+      )
+      .catch(rethrowAsConflict);
 
     // Mirror the latest departure reason onto the student so it's visible
     // on the student record without joining enrollments.

@@ -188,6 +188,23 @@ describe('StudentsController — debt write-off role guards', () => {
     });
   });
 
+  // O'quvchi profili. Kassir to'lov qabul qilishda ochadi; o'qituvchi yo'q —
+  // shuning uchun guruh sahifasida o'qituvchiga o'quvchi ismi havolasiz
+  // chiziladi (client/src/lib/role-access.ts, STUDENT_PROFILE_ROLES).
+  describe('findById() guard (GET /:id)', () => {
+    it.each([['CEO'], ['Branch Director'], ['Administrator'], ['Cashier']])(
+      'allows %s',
+      (role) => {
+        const ctx = mockExecutionContext(controller.findById, [role]);
+        expect(guard.canActivate(ctx)).toBe(true);
+      },
+    );
+    it('denies Teacher', () => {
+      const ctx = mockExecutionContext(controller.findById, ['Teacher']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
   describe('getDeparturePreview() guard (GET /:id/departure-preview)', () => {
     it.each([['CEO'], ['Branch Director'], ['Administrator']])(
       'allows %s',

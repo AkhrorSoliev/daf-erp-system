@@ -27,6 +27,9 @@ export const ENDED_REFUSAL =
  */
 export const TEACHER_ENDED_REFUSAL =
   "Dars tugagan — davomat olish yopilgan. Dars bo'lgan-bo'lmaganini administrator belgilaydi.";
+/** `ENDED_REFUSAL` for a student's QR scan: what he can do, not the staff's. */
+export const STUDENT_ENDED_REFUSAL =
+  "Dars tugagan — QR bilan davomat yopilgan. Darsda bo'lgan bo'lsangiz, administratorga ayting.";
 
 export function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);

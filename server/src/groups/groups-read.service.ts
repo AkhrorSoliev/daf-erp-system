@@ -14,6 +14,7 @@ import {
   ReportBranchIds,
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
+import { ceilingIsWider, inOtherBranch } from '../common/auth/other-branch';
 
 @Injectable()
 export class GroupsReadService {
@@ -343,7 +344,13 @@ export class GroupsReadService {
     };
   }
 
-  async findOne(id: string, companyId: number, scope: ReportBranchIds) {
+  async findOne(
+    id: string,
+    companyId: number,
+    scope: ReportBranchIds,
+    /** Every branch the caller may open; `scope` is the one selected. */
+    ceiling: ReportBranchIds = scope,
+  ) {
     // Branch-confined as well as company-confined: the group detail page is
     // reachable by id from search, a teacher profile or a pasted link, and it
     // carries the full student roster.
@@ -353,6 +360,20 @@ export class GroupsReadService {
     });
 
     if (!group) {
+      // A group of another branch the caller works in is not "missing": name
+      // the branch so the page can switch to it (ADR-0063).
+      const elsewhere = ceilingIsWider(scope, ceiling)
+        ? await this.prisma.group.findFirst({
+            where: {
+              id,
+              deletedAt: null,
+              companyId,
+              ...branchIdWhere(ceiling),
+            },
+            select: { branch: { select: { id: true, name: true } } },
+          })
+        : null;
+      if (elsewhere) throw inOtherBranch('guruh', elsewhere.branch);
       throw new NotFoundException(`Guruh #${id} topilmadi`);
     }
 

@@ -12,6 +12,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { SettingsPageHeader } from "./settings-page-header";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
+import { COMPANY_EDIT_ROLES, hasAnyRole } from "@/lib/role-access";
 
 interface CompanyData {
   id: number;
@@ -30,8 +31,9 @@ export function GeneralSettingsClient() {
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const authUser = useAuth((s) => s.user);
-  const canEdit = authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  // `PATCH /company/:id` faqat CEO ga: filial direktori va administrator
+  // ma'lumotni faqat o'qiydi.
+  const canEdit = useAuth((s) => hasAnyRole(s.user?.roles, COMPANY_EDIT_ROLES));
 
   const form = useForm<FormValues>();
 

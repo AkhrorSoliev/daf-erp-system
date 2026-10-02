@@ -177,6 +177,7 @@ describe('StudentsService — status methods', () => {
             .MonthlyChargeService,
           useValue: {
             reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+            assertTrialLessonAnswered: jest.fn().mockResolvedValue(undefined),
           },
         },
         // Discount adjustment path — write tests directly exercise this in the

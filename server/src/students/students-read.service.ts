@@ -21,6 +21,7 @@ import {
   ReportBranchIds,
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
+import { ceilingIsWider, inOtherBranch } from '../common/auth/other-branch';
 import {
   activeStudentWhere,
   ungroupedStudentWhere,
@@ -259,7 +260,13 @@ export class StudentsReadService {
     };
   }
 
-  async findById(id: number, companyId: number, branchScope: ReportBranchIds) {
+  async findById(
+    id: number,
+    companyId: number,
+    branchScope: ReportBranchIds,
+    /** Every branch the caller may open; `branchScope` is the one selected. */
+    ceiling: ReportBranchIds = branchScope,
+  ) {
     // Confined by branch as well as company: `@Roles` proves the caller is
     // staff, not that this student is theirs. A bare id let one branch's admin
     // open any student in the company — full PII plus balance. Out of scope
@@ -270,6 +277,24 @@ export class StudentsReadService {
     });
 
     if (!student) {
+      // A student of another branch the CALLER works in is not "missing":
+      // name that branch so the page can switch to it (ADR-0063). Outside
+      // the caller's branches it stays a plain 404.
+      const elsewhere = ceilingIsWider(branchScope, ceiling)
+        ? await this.prisma.student.findFirst({
+            where: { id, companyId, ...studentBranchWhere(ceiling) },
+            select: {
+              branches: {
+                where: ceiling === null ? {} : { branchId: { in: ceiling } },
+                select: { branch: { select: { id: true, name: true } } },
+                orderBy: { branchId: 'asc' },
+                take: 1,
+              },
+            },
+          })
+        : null;
+      const branch = elsewhere?.branches[0]?.branch;
+      if (branch) throw inOtherBranch("o'quvchi", branch);
       throw new NotFoundException(`O'quvchi topilmadi`);
     }
 

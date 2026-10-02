@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -149,6 +150,7 @@ describe('StudentEnrollmentService', () => {
           useValue: (monthlyChargeMock = {
             createChargeForEnrollment: jest.fn().mockResolvedValue(null),
             reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+            assertTrialLessonAnswered: jest.fn().mockResolvedValue(undefined),
           }),
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -537,6 +539,56 @@ describe('StudentEnrollmentService', () => {
         expect(prisma.enrollment.update).not.toHaveBeenCalled();
       },
     );
+
+    it("waits for «Dars bo'ldimi?» when it decides a trial lesson (contract 3.5)", async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-1',
+        name: 'Moliyaviy sabablar',
+        companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
+      });
+      monthlyChargeMock.assertTrialLessonAnswered.mockRejectedValueOnce(
+        new BadRequestException("Avval «Dars bo'ldimi?» savoliga javob bering"),
+      );
+
+      await expect(
+        service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-1',
+        }),
+      ).rejects.toThrow("Avval «Dars bo'ldimi?»");
+      // Only the month of the enrollment being closed reads the trial, on
+      // the departure's own Tashkent day, before the transaction opens.
+      expect(monthlyChargeMock.assertTrialLessonAnswered).toHaveBeenCalledWith(
+        prisma,
+        {
+          studentId: 1,
+          companyId: 1001,
+          enrollmentId: 'enroll-1',
+          today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        },
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(
+        monthlyChargeMock.reverseChargeForDeparture,
+      ).not.toHaveBeenCalled();
+      expect(prisma.enrollment.update).not.toHaveBeenCalled();
+    });
+
+    it('answers a transaction conflict with 409', async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-1',
+        name: 'Moliyaviy sabablar',
+        companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
+      });
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2034' });
+
+      await expect(
+        service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-1',
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
 
     it('uses StudentExitReason name when departureReasonId is provided', async () => {
       prisma.studentExitReason.findFirst.mockResolvedValueOnce({

@@ -364,7 +364,7 @@ export class LessonReschedulesService {
         for (const a of billable) {
           await tx.attendance.update({
             where: { id: a.id },
-            data: { status: AttendanceStatus.EXCUSED },
+            data: { status: AttendanceStatus.EXCUSED, lateMinutes: null },
           });
           // The enrollment the charge actually landed on — see
           // `resolveBilledEnrollmentId`. Guessing by (student, group) picks an

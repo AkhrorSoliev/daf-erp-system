@@ -354,7 +354,7 @@ export class NotificationEventsListener {
           await this.pushService.sendToUser(ceo.id, {
             title,
             body: message,
-            url: `/students/${studentId}`,
+            url: `/students/profile/${studentId}`,
           });
 
           await this.digestQueue.enqueue({
@@ -575,13 +575,5 @@ export class NotificationEventsListener {
 
   private truncate(text: string, maxLen: number): string {
     return text.length > maxLen ? text.slice(0, maxLen) + '...' : text;
-  }
-
-  private getEntityUrl(entityType: string, entityId: string): string {
-    const routes: Record<string, string> = {
-      Student: `/students/${entityId}`,
-      User: `/teachers/${entityId}`,
-    };
-    return routes[entityType] || '/';
   }
 }

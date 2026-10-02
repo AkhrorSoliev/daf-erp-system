@@ -111,28 +111,39 @@ export async function findStaffForChat(
 }
 
 /**
- * Xodim menyusi. Kabinet profilni ochadi; jadval va guruhlar — har bir
- * xodim ko'radigan sahifalar; oylik — ustozning o'z sahifasi. Telegram
- * o'quvchi kartasiga ham bog'langan bo'lsa (o'quvchi ustoz bo'lgan yoki
- * farzandi o'qiydi) — o'quvchi kabineti ham.
+ * «Guruhlar» sahifasini ochadigan rollar — `GET /groups` dagi `@Roles`
+ * (CEO, Branch Director, Administrator, Teacher). Kassir yo'q.
+ */
+const GROUPS_PAGE_ROLE_IDS = [1, 2, 3, 4];
+
+/**
+ * Xodim menyusi. Kabinet profilni ochadi; jadval — har bir xodim ko'radigan
+ * sahifa; guruhlar — kassirdan boshqa hamma; oylik — ustozning o'z sahifasi.
+ * Telegram o'quvchi kartasiga ham bog'langan bo'lsa (o'quvchi ustoz bo'lgan
+ * yoki farzandi o'qiydi) — o'quvchi kabineti ham.
  */
 export function staffMenuKeyboard(
   account: StaffAccount,
   cabinetUrl: string,
   studentCabinetUrl?: string,
 ) {
-  const rows = [
-    [Markup.button.webApp(STAFF_CABINET_BUTTON_TEXT, cabinetUrl)],
-    [
-      Markup.button.webApp(
-        '📅 Jadval',
-        staffPageUrl(cabinetUrl, STAFF_PAGES.schedule),
-      ),
+  const pages = [
+    Markup.button.webApp(
+      '📅 Jadval',
+      staffPageUrl(cabinetUrl, STAFF_PAGES.schedule),
+    ),
+  ];
+  if (account.roleIds.some((id) => GROUPS_PAGE_ROLE_IDS.includes(id))) {
+    pages.push(
       Markup.button.webApp(
         '👥 Guruhlar',
         staffPageUrl(cabinetUrl, STAFF_PAGES.groups),
       ),
-    ],
+    );
+  }
+  const rows = [
+    [Markup.button.webApp(STAFF_CABINET_BUTTON_TEXT, cabinetUrl)],
+    pages,
   ];
   if (account.roleIds.includes(TEACHER_ROLE_ID)) {
     rows.push([

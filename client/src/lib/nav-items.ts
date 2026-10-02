@@ -19,6 +19,7 @@ import {
 import { paymentsNavItems } from "./payments-nav";
 import { reportsNavSections } from "./reports-nav";
 import { dafNavItems } from "./daf-nav";
+import { GROUP_PAGE_ROLES } from "./role-access";
 
 export interface NavItemChild {
   title: string;
@@ -52,7 +53,7 @@ export const navItems: NavItem[] = [
   { title: "Lidlar", url: "/leads", icon: UserPlus, visibleForRoles: [1, 2, 3] },
   { title: "Aloqa markazi", url: "/outreach", icon: PhoneCall, visibleForRoles: [1, 2, 3] },
   { title: "Mock imtihonlar", url: "/mock-exams", icon: ClipboardCheck, visibleForRoles: [1, 2, 3] },
-  { title: "Guruhlar", url: "/groups", icon: UsersRound },
+  { title: "Guruhlar", url: "/groups", icon: UsersRound, visibleForRoles: GROUP_PAGE_ROLES },
   { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
   { title: "Media", url: "/media", icon: Images, visibleForRoles: [1, 2, 3] },
   // DaF ilovasi nazorati — markaz bo'yicha faollik. O'qituvchi bu bo'limni

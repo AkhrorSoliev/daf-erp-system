@@ -31,6 +31,7 @@ import {
   CurrentUser,
   STAFF_ROLES,
   BranchScope,
+  BranchCeiling,
 } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
@@ -88,8 +89,9 @@ export class StudentsController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() branchScope: ReportBranchIds,
+    @BranchCeiling() ceiling: ReportBranchIds,
   ) {
-    return this.studentsService.findById(id, companyId, branchScope);
+    return this.studentsService.findById(id, companyId, branchScope, ceiling);
   }
 
   @Post()

@@ -39,4 +39,18 @@ describe("taskEntityHref", () => {
   it("gives no link for a type a comment cannot be written on", () => {
     expect(taskEntityHref("Branch", "1001", CEO)).toBeNull();
   });
+
+  // Server bu sahifalarni shu rollarga bermaydi: GET /students/:id da
+  // o'qituvchi, GET /groups/:id da kassir yo'q (src/lib/role-access.ts).
+  it("gives a teacher-only viewer no student link and a cashier-only viewer no group link", () => {
+    expect(taskEntityHref("Student", "10001", [4])).toBeNull();
+    expect(taskEntityHref("Group", "g1", [5])).toBeNull();
+  });
+
+  it("lets another role the viewer holds open the page", () => {
+    expect(taskEntityHref("Student", "10001", [4, 5])).toBe(
+      "/students/profile/10001",
+    );
+    expect(taskEntityHref("Group", "g1", [5, 4])).toBe("/groups/g1");
+  });
 });
