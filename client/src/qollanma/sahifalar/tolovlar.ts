@@ -190,7 +190,7 @@ export const tolovlar: QollanmaSahifa[] = [
     sahifa: "pul-qaytarish",
     sarlavha: "Pulni qaytarish va yechib olish",
     qisqacha:
-      "Pulni qaytarish o'quvchiga pulini qaytarib berishni yozadi: pul faqat erkin balansdan va hali o'tilmagan oldindan to'langan darslardan olinadi. «Yechib olish» balansdagi pulni o'quvchiga bermay markaz hisobiga o'tkazadi: u yechib olingan oyning daromadi bo'ladi (oy tanlanmaydi) va ixtiyoriy ravishda ustozga ulush yoziladi; ikkalasini CEO, direktor va administrator qiladi.",
+      "Pulni qaytarish o'quvchiga pulini qaytarib berishni yozadi: pul faqat erkin balansdan va hali o'tilmagan oldindan to'langan darslardan olinadi. «Yechib olish» balansdagi pulni o'quvchiga bermay markaz hisobiga o'tkazadi: u yechib olingan oyning foydasiga qo'shiladi (oy tanlanmaydi) va ixtiyoriy ravishda ustozga ulush yoziladi; ikkalasini CEO, direktor va administrator qiladi.",
     rollar: [1, 2, 3],
     adr: ["0055", "0058"],
     yollar: [],
@@ -210,6 +210,7 @@ export const tolovlar: QollanmaSahifa[] = [
       "balansdan yechib olingan",
       "foyda tarkibi",
       "oy daromadi",
+      "oy foydasi",
     ],
     yangilangan: "2026-10-02",
   },

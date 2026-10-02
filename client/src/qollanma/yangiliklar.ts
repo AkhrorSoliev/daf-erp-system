@@ -8,7 +8,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-02",
     sarlavha: "Bekor qilish yozuvini o'chirsangiz, qaytgan pul qayta yechiladi",
-    matn: "Guruh sahifasidagi «Dars o'zgarishlari» tabida bekor qilingan darsning yozuvini o'chirsangiz, o'quvchilarga qaytgan dars puli ulardan qayta yechiladi, olingan keyingi oy krediti ham qaytariladi. Dars vaqti o'tib ketgan bo'lsa, u yana «Dars bo'ldimi?» savoliga qaytadi. Bekor qilingandan beri muzlatilgan yoki guruhdan chiqqan o'quvchining puli qaytarib olinmaydi. Ilgari yozuvni o'chirsangiz ham pul o'quvchida qolardi.",
+    matn: "Guruh sahifasidagi «Dars o'zgarishlari» tabida bekor qilingan darsning yozuvini o'chirsangiz, o'quvchilarga qaytgan dars puli ulardan qayta yechiladi, bekor qilishda o'quvchidan qaytarib olingan keyingi oy krediti esa unga yana beriladi. Dars vaqti o'tib ketgan bo'lsa, u yana «Dars bo'ldimi?» savoliga qaytadi. Bekor qilingandan beri muzlatilgan yoki guruhdan chiqqan o'quvchining puli qaytarib olinmaydi. Ilgari yozuvni o'chirsangiz ham pul o'quvchida qolardi.",
     rollar: [1, 2],
     sahifa: { bolim: "tolovlar", sahifa: "oylik-tolov" },
   },
@@ -173,8 +173,8 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-09-30",
-    sarlavha: "«Yechib olish» yechilgan oyning daromadi bo'ladi, oy tanlanmaydi",
-    matn: "«Yechib olish» oynasida «Qaysi oy uchun» maydoni yo'q: tizim har doim joriy oyni yozadi va pul shu oyning daromadiga («Foyda tarkibi»da «Balansdan yechib olingan» qatori) qo'shiladi. Ustozga ulush yozilsa, u yechib olingan kunning o'zi bilan yoziladi. Ilgari yechib olingan pul hech qaysi foyda hisobida ko'rinmasdi, o'tgan oy tanlansa ustoz ulushi yopilgan oylik davriga tushardi.",
+    sarlavha: "«Yechib olish» yechilgan oyning foydasiga qo'shiladi, oy tanlanmaydi",
+    matn: "«Yechib olish» oynasida «Qaysi oy uchun» maydoni yo'q: tizim har doim joriy oyni yozadi va pul shu oyning foydasiga («Foyda tarkibi»da «Balansdan yechib olingan» qatori) qo'shiladi. Ustozga ulush yozilsa, u yechib olingan kunning o'zi bilan yoziladi. Ilgari yechib olingan pul hech qaysi foyda hisobida ko'rinmasdi, o'tgan oy tanlansa ustoz ulushi yopilgan oylik davriga tushardi.",
     rollar: [1, 2, 3],
     sahifa: { bolim: "tolovlar", sahifa: "pul-qaytarish" },
   },
