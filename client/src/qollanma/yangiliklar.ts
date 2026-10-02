@@ -7,6 +7,20 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-02",
+    sarlavha: "Bekor qilish yozuvini o'chirsangiz, qaytgan pul qayta yechiladi",
+    matn: "Guruh sahifasidagi «Dars o'zgarishlari» tabida bekor qilingan darsning yozuvini o'chirsangiz, o'quvchilarga qaytgan dars puli ulardan qayta yechiladi, olingan keyingi oy krediti ham qaytariladi. Dars vaqti o'tib ketgan bo'lsa, u yana «Dars bo'ldimi?» savoliga qaytadi. Bekor qilingandan beri muzlatilgan yoki guruhdan chiqqan o'quvchining puli qaytarib olinmaydi. Ilgari yozuvni o'chirsangiz ham pul o'quvchida qolardi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "tolovlar", sahifa: "oylik-tolov" },
+  },
+  {
+    sana: "2026-10-02",
+    sarlavha: "Pulni qaytarish oynasi oylik o'quvchiga shartnoma qoidasini aytadi",
+    matn: "Oylik kursdagi o'quvchining balansi musbat bo'lsa, «Pulni qaytarish» oynasi «Oylik to'lovda o'qiyotgan o'quvchiga faqat balansdagi ortiqcha pul qaytariladi...» deb yozadi: shu oyning puli guruhdan chiqarilganda shartnomaning 6.2-bandi bo'yicha hisoblanadi. Ilgari oyna bunday o'quvchiga dars paketining «Oldindan to'langan darsi yo'q» matnini ko'rsatardi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "tolovlar", sahifa: "pul-qaytarish" },
+  },
+  {
+    sana: "2026-10-02",
     sarlavha: "Menyu va tugmalar rolga moslandi",
     matn: "Kassirga «Guruhlar» menyusi ko'rinmaydi, guruh nomi unga havolasiz chiqadi va o'quvchi profilida «Chiqarish» tugmasi yo'q. «Qarzdorlik» sahifasidagi «Markaz qoplagani» tabi kassirga ochiladi, «Natijani kiritish» va muzlatilgan pulni siljitish tugmalari esa unga ko'rinmaydi. Administrator «Ish haqi» sahifasidagi oylik, avans va to'lov ma'lumotlarini server tomondan ham ko'ra olmaydi, qidiruvda xodimlar unga chiqmaydi.",
     rollar: [1, 2, 3, 5],
@@ -76,6 +90,34 @@ export const yangiliklar: Yangilik[] = [
     sahifa: { bolim: "davomat", sahifa: "eslatmalar" },
   },
   {
+    sana: "2026-10-01",
+    sarlavha: "Qarz ikki raqamda: o'qiyotganlar va o'qimayotganlar qarzi",
+    matn: "«Qarzdorlik» sahifasida, Moliya → «Umumiy ma'lumotlar» da, Bosh sahifada va Telegram hisobotlarida qarz endi ikki alohida raqam: «O'qiyotganlar qarzi» (ostida «🟡 shu oy» va «🔴 eski qarz») va «O'qimayotganlar qarzi» (faol guruhi yo'q, muzlatilgan, chetlatilgan, bitirgan). Ular qo'shilmaydi. «Qarzdorlik» sahifasidagi «Jami qarz», «Qarzdorlar soni» va «O'rtacha qarz» kartalari olib tashlandi; kartalar ro'yxat filtrlariga qaramaydi. Ilgari qarz bitta jami bo'lib chiqardi va uning ichida kim borligi ko'rinmasdi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "tolovlar", sahifa: "qarzdorlik" },
+  },
+  {
+    sana: "2026-10-01",
+    sarlavha: "Moliya oyni «Hisoblandi / To'landi / Qoldi» bilan ko'rsatadi",
+    matn: "01.09.2026 dan oylik to'lov oylarida Moliya → «Umumiy ma'lumotlar» dagi oy kartasi («Oktabr to'lovlari» kabi), Bosh sahifadagi «Bu oy hisoblandi» kartasi va Telegram 21:00 hisoboti shu oy uchun yozilgan hisobni, shundan to'langanini va qolganini ko'rsatadi. Ilgari karta oyni «Oy oxiriga kutilyapti» bashorati bilan o'lchardi; «Hisoblangan darslar» va takror «Tushgan tushum» qatorlari olib tashlandi. Oldingi oylarda «Oy oxiriga kutilyapti» qoldi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "tolovlar", sahifa: "oylik-tolov" },
+  },
+  {
+    sana: "2026-10-01",
+    sarlavha: "To'lov oynasi pul qaysi darsgacha yetishini ko'rsatadi",
+    matn: "Oylik kursdagi o'quvchi uchun summa kiritilgach «To'lov qayd qilish» oynasi bu pul o'quvchini oyning qaysi darsigacha darsga qo'yishini yozadi. To'lovdan keyin qarz qolsa, «Qolgan qismi qachon to'lanadi?» sanasi so'raladi va o'quvchiga to'lov va'dasi yoziladi. Davomatda darsga qo'yilmagan o'quvchining qatorida esa administratorga «To'lov qabul qilish» tugmasi chiqadi. Ilgari oyna faqat pul nimaga yetishini ko'rsatardi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "tolovlar", sahifa: "tolov-qayd-qilish" },
+  },
+  {
+    sana: "2026-10-01",
+    sarlavha: "Dars paketini oylikka o'tkazish tekshiriladi",
+    matn: "Kursda oldindan to'langan, hali o'tilmagan darsi qolgan o'quvchi bo'lsa, kursning to'lov modelini «Sikl» dan «Oylik» ga almashtirib bo'lmaydi: tizim «Bu kursda oldindan to'langan darslari qolgan ... ta o'quvchi bor» deb rad etadi. Oylik kurs bu darslar hisoblagichini o'qimaydi, pul qaytarish esa o'qiydi: qoldirib ketilgan hisoblagich oylik hisob ushlamaydigan pulni «qaytarish mumkin» deb ko'rsatardi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "tolovlar", sahifa: "tolov-turlari" },
+  },
+  {
     sana: "2026-09-30",
     sarlavha: "Davomat hamma uchun faqat dars vaqtida olinadi",
     matn: "Yangi davomatni endi administrator, filial direktori va CEO ham faqat dars kuni, dars boshlanishidan 10 daqiqa oldin to dars tugaguncha oladi. Dars tugagach yangi davomat kiritishning yagona yo'li — «Dars bo'ldimi?» savoliga «Bo'ldi» deb javob berish. Saqlangan davomatni tuzatish dars tugagach ham ochiq, oldindan belgilash esa dars tugaguncha mumkin. Ilgari ular istalgan dars kuniga davomat kirita olardi.",
@@ -128,6 +170,13 @@ export const yangiliklar: Yangilik[] = [
     matn: "O'quvchi kartasidagi «To'lov» menyusida CEO uchun «Boshlang'ich balans» yana ko'rinadi: boshqa tizimdan o'tgan o'quvchining oldindan to'langan puli bir marta kiritiladi. Ilgari menyuda bu tanlov chiqmasdi.",
     rollar: [1],
     sahifa: { bolim: "oquvchilar", sahifa: "oquvchi-kartasi" },
+  },
+  {
+    sana: "2026-09-30",
+    sarlavha: "«Yechib olish» yechilgan oyning daromadi bo'ladi, oy tanlanmaydi",
+    matn: "«Yechib olish» oynasida «Qaysi oy uchun» maydoni yo'q: tizim har doim joriy oyni yozadi va pul shu oyning daromadiga («Foyda tarkibi»da «Balansdan yechib olingan» qatori) qo'shiladi. Ustozga ulush yozilsa, u yechib olingan kunning o'zi bilan yoziladi. Ilgari yechib olingan pul hech qaysi foyda hisobida ko'rinmasdi, o'tgan oy tanlansa ustoz ulushi yopilgan oylik davriga tushardi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "tolovlar", sahifa: "pul-qaytarish" },
   },
   {
     sana: "2026-09-29",

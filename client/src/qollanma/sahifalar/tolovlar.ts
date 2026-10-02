@@ -8,7 +8,7 @@ export const tolovlar: QollanmaSahifa[] = [
     qisqacha:
       "Kurs ikki xil to'lanadi: oylik (har kalendar oy uchun alohida hisob) yoki dars paketi (belgilangan son dars uchun oldindan). Kursning turi Sozlamalar → «Kurslar»da ko'rinadi; uni CEO va filial direktori o'zgartiradi.",
     rollar: [1, 2, 3, 5],
-    adr: [],
+    adr: ["0058"],
     yollar: ["/settings/courses/*"],
     kalitSozlar: [
       "to'lov modeli",
@@ -25,17 +25,18 @@ export const tolovlar: QollanmaSahifa[] = [
       "kurs turi",
       "standart to'lov modeli",
       "modelni almashtirish",
+      "dars paketini oylikka o'tkazish",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-02",
   },
   {
     bolim: "tolovlar",
     sahifa: "oylik-tolov",
     sarlavha: "Oylik to'lov",
     qisqacha:
-      "Oylik kursda oy hisobi hisob kunida (odatda 1-sanada) yoziladi va balansdan yechiladi — o'quvchi to'lay oladimi-yo'qmi. Davomat pulga tegmaydi; bekor qilingan dars puli qaytadi, sababli dars keyingi oy hisobidan ayiriladi.",
+      "Oylik kursda oy hisobi hisob kunida (odatda 1-sanada) yoziladi va balansdan yechiladi — o'quvchi to'lay oladimi-yo'qmi. Davomat pulga tegmaydi; bekor qilingan dars puli qaytadi (yozuvni o'chirsangiz qayta yechiladi), sababli dars keyingi oy hisobidan ayiriladi. Oyning asosiy raqami — «Hisoblandi / To'landi / Qoldi».",
     rollar: [1, 2, 3, 5],
-    adr: ["0042", "0053"],
+    adr: ["0042", "0047", "0048", "0053", "0058", "0063"],
     yollar: [],
     kalitSozlar: [
       "oylik hisob",
@@ -56,8 +57,14 @@ export const tolovlar: QollanmaSahifa[] = [
       "chegirma",
       "qarz",
       "muzlatish",
+      "hisoblandi",
+      "to'landi",
+      "qoldi",
+      "oy to'lovlari",
+      "bekor qilishni o'chirish",
+      "qarzdorning 1-darsi",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-02",
   },
   {
     bolim: "tolovlar",
@@ -66,7 +73,7 @@ export const tolovlar: QollanmaSahifa[] = [
     qisqacha:
       "Dars paketida o'quvchi belgilangan son dars (sikl) uchun oldindan to'laydi; pul davomat olinganda yechiladi. «Kelmadi» ham pullik, «Sababli» pulsiz; balans bir darsga yetmasa dars baribir hisoblanadi va o'quvchi qarzdor bo'ladi.",
     rollar: [1, 2, 3, 5],
-    adr: [],
+    adr: ["0047", "0054"],
     yollar: [],
     kalitSozlar: [
       "sikl",
@@ -86,16 +93,16 @@ export const tolovlar: QollanmaSahifa[] = [
       "oxirgi dars narxi",
       "ustoz ulushi kutadi",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-02",
   },
   {
     bolim: "tolovlar",
     sahifa: "tolov-qayd-qilish",
     sarlavha: "To'lov qayd qilish",
     qisqacha:
-      "To'lovni Moliya sahifalaridagi «To'lov qayd qilish» tugmasi bilan yozasiz: o'quvchini tanlaysiz, summa va usulni kiritasiz. To'lov darhol balansga tushadi va avval qarzni yopadi; chek o'quvchiga Telegramda soat 20:00 da boradi.",
+      "To'lovni Moliya sahifalaridagi «To'lov qayd qilish» tugmasi bilan yozasiz: o'quvchini tanlaysiz, summa va usulni kiritasiz; oylik kursda oyna pul qaysi darsgacha yetishini ham aytadi. To'lov darhol balansga tushadi va avval qarzni yopadi; chek o'quvchiga Telegramda soat 20:00 da boradi.",
     rollar: [1, 2, 3, 5],
-    adr: [],
+    adr: ["0047", "0058"],
     yollar: ["/payments/pending", "/payments/overview"],
     kalitSozlar: [
       "to'lov qayd qilish",
@@ -119,8 +126,11 @@ export const tolovlar: QollanmaSahifa[] = [
       "oxirgi to'lovlar",
       "qabul qildi",
       "balans",
+      "qaysi darsgacha yetadi",
+      "qisman to'lov",
+      "to'lov va'dasi",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-02",
   },
   {
     bolim: "tolovlar",
@@ -145,7 +155,7 @@ export const tolovlar: QollanmaSahifa[] = [
       "refund",
       "darslarga sarflangan",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-02",
   },
   {
     bolim: "tolovlar",
@@ -180,9 +190,9 @@ export const tolovlar: QollanmaSahifa[] = [
     sahifa: "pul-qaytarish",
     sarlavha: "Pulni qaytarish va yechib olish",
     qisqacha:
-      "Pulni qaytarish o'quvchiga pulini qaytarib berishni yozadi: pul faqat erkin balansdan va hali o'tilmagan oldindan to'langan darslardan olinadi. «Yechib olish» balansdagi pulni o'quvchiga bermay balansdan olib qo'yadi (ixtiyoriy ravishda ustozga ulush yozadi); ikkalasini CEO, direktor va administrator qiladi.",
+      "Pulni qaytarish o'quvchiga pulini qaytarib berishni yozadi: pul faqat erkin balansdan va hali o'tilmagan oldindan to'langan darslardan olinadi. «Yechib olish» balansdagi pulni o'quvchiga bermay markaz hisobiga o'tkazadi: u yechib olingan oyning daromadi bo'ladi (oy tanlanmaydi) va ixtiyoriy ravishda ustozga ulush yoziladi; ikkalasini CEO, direktor va administrator qiladi.",
     rollar: [1, 2, 3],
-    adr: [],
+    adr: ["0055", "0058"],
     yollar: [],
     kalitSozlar: [
       "pulni qaytarish",
@@ -197,17 +207,20 @@ export const tolovlar: QollanmaSahifa[] = [
       "balansdan olindi",
       "ustoz balansiga yozilsinmi",
       "qaytarilgan pul",
+      "balansdan yechib olingan",
+      "foyda tarkibi",
+      "oy daromadi",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-02",
   },
   {
     bolim: "tolovlar",
     sahifa: "qarzdorlik",
     sarlavha: "Qarzdorlik",
     qisqacha:
-      "«Qarzdorlik» sahifasi kim qarzdor, qancha va qachondan beri ekanini ko'rsatadi; besh tab qarzdorlarni, markaz qoplagan pulni, qarzning oylarini, kechirilganlarni va muzlatilganlar pulini ochadi. Qarzni kechirish CEO qarori bilan o'chiq.",
+      "«Qarzdorlik» sahifasi kim qarzdor, qancha va qachondan beri ekanini ko'rsatadi. Qarz ikki alohida raqamda: o'qiyotganlar qarzi va o'qimayotganlar qarzi. Besh tab qarzdorlarni, markaz qoplagan pulni, qarzning oylarini, kechirilganlarni va muzlatilganlar pulini ochadi. Qarzni kechirish CEO qarori bilan o'chiq.",
     rollar: [1, 2, 3, 5],
-    adr: [],
+    adr: ["0058", "0059"],
     yollar: ["/payments/debt"],
     kalitSozlar: [
       "qarzdorlik",
@@ -230,7 +243,11 @@ export const tolovlar: QollanmaSahifa[] = [
       "hisobdan chiqarish",
       "kutilyotgan to'lovlar",
       "kechirishni qaytarib olish",
+      "o'qiyotganlar qarzi",
+      "o'qimayotganlar qarzi",
+      "shu oy qarzi",
+      "eski qarz",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-02",
   },
 ];
