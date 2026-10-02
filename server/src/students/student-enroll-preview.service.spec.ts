@@ -2,6 +2,9 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { StudentEnrollPreviewService } from './student-enroll-preview.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
+import { TransactionsWriteService } from '../transactions/transactions-write.service';
+import { SettingsService } from '../settings/settings.service';
+import { SalaryAccrualService } from '../salary/salary-accrual.service';
 
 const companyId = 1001;
 const studentId = 10453;
@@ -188,7 +191,7 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
     expect(r.payable).toBe(payable);
   });
 
-  it('owes only the debt when no first month would be charged', async () => {
+  it('looks one month ahead when nothing is charged, never further, and then owes only the debt', async () => {
     previewChargeForNewEnrollment.mockResolvedValue(null);
     prisma.student.findFirst.mockResolvedValue({
       id: studentId,
@@ -200,6 +203,61 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
 
     expect(r.firstMonth).toBeNull();
     expect(r.payable).toBe(40000);
+    expect(previewChargeForNewEnrollment).toHaveBeenCalledTimes(2);
+    expect(previewChargeForNewEnrollment).toHaveBeenNthCalledWith(
+      1,
+      prisma,
+      expect.objectContaining({ periodYear: 2026, periodMonth: 10 }),
+    );
+    expect(previewChargeForNewEnrollment).toHaveBeenNthCalledWith(
+      2,
+      prisma,
+      expect.objectContaining({ periodYear: 2026, periodMonth: 11 }),
+    );
+  });
+
+  it('rolls from December into January of the next year', async () => {
+    jest.setSystemTime(new Date('2026-12-14T07:00:00.000Z'));
+    previewChargeForNewEnrollment.mockImplementation(
+      (_db: unknown, p: { periodMonth: number }) =>
+        Promise.resolve(
+          p.periodMonth === 1
+            ? { plannedLessons: 13, coveredLessons: 13, amount: 450000 }
+            : null,
+        ),
+    );
+
+    const r = await service.preview(
+      studentId,
+      companyId,
+      10001,
+      groupId,
+      '2026-12-30',
+    );
+
+    expect(r.firstMonth).toEqual({
+      period: '2027-01',
+      plannedLessons: 13,
+      coveredLessons: 13,
+      amount: 450000,
+    });
+    expect(previewChargeForNewEnrollment).toHaveBeenLastCalledWith(
+      prisma,
+      expect.objectContaining({ periodYear: 2027, periodMonth: 1 }),
+    );
+  });
+
+  it('quotes no month for a group that is still forming, and does not look ahead', async () => {
+    prisma.group.findFirst.mockResolvedValue({
+      ...monthlyGroup,
+      statusEnum: 'FORMING',
+    });
+
+    const r = await service.preview(studentId, companyId, 10001, groupId);
+
+    expect(r.firstMonth).toBeNull();
+    expect(r.payable).toBe(0); // a balance of 50 000, nothing due
+    expect(previewChargeForNewEnrollment).not.toHaveBeenCalled();
   });
 
   it('asks a lesson pack for the pack price, with no first month', async () => {
@@ -281,5 +339,100 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
     const r = await service.preview(studentId, companyId, 10002, groupId);
 
     expect(r.firstMonth?.amount).toBe(249231);
+  });
+});
+
+/**
+ * The first charge the student will actually get, worked out by the real
+ * `MonthlyChargeService` over months with no holidays, cancellations, moves
+ * or earlier charges.
+ */
+describe('StudentEnrollPreviewService — the first real charge (A3.4)', () => {
+  let prisma: Record<string, Record<string, jest.Mock>>;
+  let monthlyCharge: MonthlyChargeService;
+  let service: StudentEnrollPreviewService;
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: NOW });
+    prisma = {
+      student: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: studentId,
+          balance: 0,
+          discountPercent: 0,
+        }),
+      },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
+      user: { findFirst: jest.fn().mockResolvedValue(ceo) },
+      group: {
+        findFirst: jest.fn().mockResolvedValue(monthlyGroup),
+        // The month plan reads the group's dates; with no moves they decide
+        // nothing.
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ startDate: null, endDate: null }),
+      },
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const db = prisma as unknown as PrismaService;
+    monthlyCharge = new MonthlyChargeService(
+      db,
+      {} as TransactionsWriteService,
+      {} as SettingsService,
+      {} as SalaryAccrualService,
+    );
+    service = new StudentEnrollPreviewService(db, monthlyCharge);
+  });
+
+  afterEach(() => jest.useRealTimers());
+
+  it('quotes next month for a group set ACTIVE before its start next month', async () => {
+    // Opens on Thursday 05.11: November has 12 Tue/Thu/Sat lessons, 11 of
+    // them from the 5th on.
+    prisma.group.findFirst.mockResolvedValue({
+      ...monthlyGroup,
+      startDate: new Date('2026-11-05T00:00:00.000Z'),
+    });
+    const quote = jest.spyOn(monthlyCharge, 'previewChargeForNewEnrollment');
+
+    const r = await service.preview(studentId, companyId, 10001, groupId);
+
+    expect(r.firstMonth).toEqual({
+      period: '2026-11',
+      plannedLessons: 12,
+      coveredLessons: 11,
+      amount: 412500, // 450 000 × 11/12
+    });
+    expect(r.payable).toBe(412500);
+    // Straight to November: the charge's first day picks it, not a roll.
+    expect(quote).toHaveBeenCalledTimes(1);
+  });
+
+  it('quotes the next month in full for a start after the last lesson of this one', async () => {
+    // September's last Tue/Thu/Sat lesson is Tuesday 29.09: from Wednesday
+    // the 30th none is left, so the 1 October run is the first charge.
+    jest.setSystemTime(new Date('2026-09-14T07:00:00.000Z'));
+    const quote = jest.spyOn(monthlyCharge, 'previewChargeForNewEnrollment');
+
+    const r = await service.preview(
+      studentId,
+      companyId,
+      10001,
+      groupId,
+      '2026-09-30',
+    );
+
+    expect(r.firstMonth).toEqual({
+      period: '2026-10',
+      plannedLessons: 14,
+      coveredLessons: 14,
+      amount: 450000,
+    });
+    expect(quote.mock.calls.map(([, p]) => p.periodMonth)).toEqual([9, 10]);
   });
 });

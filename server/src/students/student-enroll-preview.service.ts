@@ -1,10 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { EnrollmentStatus, PaymentModel } from '@prisma/client';
+import { EnrollmentStatus, GroupStatus, PaymentModel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { MonthlyChargeService } from '../billing/monthly-charge.service';
+import {
+  MonthlyChargeService,
+  type ChargeableEnrollment,
+} from '../billing/monthly-charge.service';
+import { chargeStartDate } from '../billing/charge-start-date';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import {
+  addMonthsToMonthKey,
   tashkentDateStr,
   utcMidnightFromDateStr,
 } from '../common/date/tashkent';
@@ -18,8 +23,10 @@ export interface EnrollPreview {
   /** `Student.discountPercent` (0–100). */
   discountPercent: number;
   /**
-   * MONTHLY only: the first charge this enrollment would get. Null when none
-   * would be written (group not ACTIVE, no lessons left in that month).
+   * MONTHLY only: the first charge the student will actually get — the month
+   * of the charge's first day (this month at the earliest), or the next one
+   * when that month leaves nothing to charge. Null when the group is not
+   * ACTIVE, or neither month has anything to charge.
    */
   firstMonth: {
     /** 'YYYY-MM'. */
@@ -89,35 +96,38 @@ export class StudentEnrollPreviewService {
 
     const monthly = group.course.paymentModel === PaymentModel.MONTHLY;
     let firstMonth: EnrollPreview['firstMonth'] = null;
-    if (monthly) {
-      // A start in a later month is charged by that month's run; any other,
-      // by the enroll call itself, in the current month (`chargeMidMonthJoin`).
+    // The two cases `previewChargeForNewEnrollment` refuses itself; past
+    // them, its null means the month leaves nothing to charge.
+    if (monthly && group.statusEnum === GroupStatus.ACTIVE) {
       const now = new Date();
+      // The enrollment `enrollToGroup` would create: its start day read the
+      // way it reads it, created now, never frozen.
+      const enrollment: ChargeableEnrollment = {
+        id: '',
+        studentId,
+        groupId: group.id,
+        status: EnrollmentStatus.ACTIVE,
+        startDate: startDate ? utcMidnightFromDateStr(startDate) : null,
+        createdAt: now,
+        returnedAt: null,
+        group,
+      };
+      // The charge's first day, the group's own start applied. One in a later
+      // month is charged by that month's run; any other, by the enroll call
+      // itself, in the current month (`chargeMidMonthJoin`).
       const today = tashkentDateStr(now);
-      const start = startDate ?? today;
-      const month = (start > today ? start : today).slice(0, 7);
-      const planned =
-        await this.monthlyChargeService.previewChargeForNewEnrollment(
-          this.prisma,
-          {
-            // The enrollment `enrollToGroup` would create: its start day read
-            // the way it reads it, created now, never frozen.
-            enrollment: {
-              id: '',
-              studentId,
-              groupId: group.id,
-              status: EnrollmentStatus.ACTIVE,
-              startDate: startDate ? utcMidnightFromDateStr(startDate) : null,
-              createdAt: now,
-              returnedAt: null,
-              group,
-            },
-            periodYear: Number(month.slice(0, 4)),
-            periodMonth: Number(month.slice(5, 7)),
-            discountPercent: student.discountPercent,
-          },
-        );
-      firstMonth = planned ? { period: month, ...planned } : null;
+      const firstDay = chargeStartDate(enrollment);
+      const month = (firstDay > today ? firstDay : today).slice(0, 7);
+      // Nothing left to charge in that month (no lesson from the first day
+      // on, or every one already paid by an earlier charge in the group): the
+      // next month's run charges the student. One month on, never further.
+      firstMonth =
+        (await this.quoteMonth(enrollment, month, student.discountPercent)) ??
+        (await this.quoteMonth(
+          enrollment,
+          addMonthsToMonthKey(month, 1),
+          student.discountPercent,
+        ));
     }
 
     const due = monthly ? (firstMonth?.amount ?? 0) : group.course.price;
@@ -130,5 +140,24 @@ export class StudentEnrollPreviewService {
       balance: student.balance,
       payable: Math.max(0, due - student.balance),
     };
+  }
+
+  /** One month's charge for the enrollment, with the month it is for. */
+  private async quoteMonth(
+    enrollment: ChargeableEnrollment,
+    month: string,
+    discountPercent: number,
+  ): Promise<EnrollPreview['firstMonth']> {
+    const planned =
+      await this.monthlyChargeService.previewChargeForNewEnrollment(
+        this.prisma,
+        {
+          enrollment,
+          periodYear: Number(month.slice(0, 4)),
+          periodMonth: Number(month.slice(5, 7)),
+          discountPercent,
+        },
+      );
+    return planned ? { period: month, ...planned } : null;
   }
 }
