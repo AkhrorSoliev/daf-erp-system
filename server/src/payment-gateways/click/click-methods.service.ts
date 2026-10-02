@@ -298,7 +298,7 @@ export class ClickMethodsService {
 
     // Create ERP Payment + update ClickTransaction atomically
     try {
-      await this.prisma.$transaction(
+      const committed = await this.prisma.$transaction(
         async (tx) => {
           const branchId = await this.payments.resolveStudentBranchId(
             txn.studentId,
@@ -340,6 +340,8 @@ export class ClickMethodsService {
             },
             data: { used: true },
           });
+
+          return erpPayment.committed;
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -347,6 +349,9 @@ export class ClickMethodsService {
           timeout: 15000,
         },
       );
+
+      // The receipt goes only now that the payment has committed (ADR-0065).
+      if (committed) this.payments.announceCommitted(committed);
 
       return {
         click_trans_id: clickTransId,

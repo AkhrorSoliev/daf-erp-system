@@ -389,4 +389,32 @@ describe('LessonAdmissionService', () => {
       expect(prisma.student.findUnique).not.toHaveBeenCalled();
     });
   });
+
+  it("measures how far each debtor's payments reach into the month, whatever the rule switch (ADR-0062)", async () => {
+    settings.get.mockResolvedValue(false);
+    prisma.student.findMany.mockResolvedValue([
+      { id: 1, balance: -300000 },
+      { id: 2, balance: -100000 },
+      { id: 3, balance: -50000 },
+    ]);
+    prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+      chargeRow(1),
+      chargeRow(2),
+    ]);
+
+    const result = await service.monthCoverage({
+      groupId: 'g005',
+      lessonDay: '2026-10-05',
+      studentIds: [1, 2, 3],
+    });
+
+    expect(result.get(1)).toEqual({ lessons: 3, paid: 0, paidThrough: null });
+    expect(result.get(2)).toEqual({
+      lessons: 3,
+      paid: 2,
+      paidThrough: '2026-10-05',
+    });
+    expect(result.has(3)).toBe(false); // no charge this month
+    expect(settings.get).not.toHaveBeenCalled();
+  });
 });

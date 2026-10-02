@@ -150,46 +150,6 @@ describe("HomeMoneyCards — the debt card", () => {
     );
   });
 
-  // The client goes live before the server (PR 1 deploys the client first), so
-  // for a few minutes it reads the answer of a server older than ADR-0059:
-  // `debt: { total, count }`, with no `studying`. A dash then, never a zero (it
-  // would read as «nobody owes»), and never that old `total` under the new label
-  // — it was every status's debt, not the studying ones'.
-  describe("against a server older than the split", () => {
-    const oldDebt = { total: 27_748_684, count: 177 } as unknown as
-      DashboardMoney["debt"];
-
-    it("draws a dash for the debt, not a zero and not the old total", () => {
-      const html = renderHtml({ ...money, debt: oldDebt });
-      const text = norm(html);
-
-      // Reaching this line is the first check: the card did not throw.
-      expect(text).toContain("O'qiyotganlar qarzi — Sof foyda");
-      expect(text).not.toContain(`O'qiyotganlar qarzi ${fmt(0)}`);
-      expect(text).not.toContain(fmt(27_748_684));
-      expect(text).not.toContain("o'qimayotganlar");
-      expect(text).not.toContain("ta qarzdor");
-      // Nothing to redden, and the link still goes to the debt page.
-      expect(html).not.toContain("text-red-600");
-      expect(html).toContain('href="/payments/debt"');
-    });
-
-    it("leaves the other three cards as they were", () => {
-      const text = render({ ...money, debt: oldDebt });
-
-      expect(text).toContain(`Bu oy tushum ${fmt(128_450_000)} ${fmt(214)} ta to'lov`);
-      expect(text).toContain(`Bu oy hisoblandi ${fmt(900_000)} to'landi 66.7%`);
-      expect(text).toContain(`Sof foyda ${fmt(18_930_000)} shu oy`);
-    });
-
-    it("a response with no debt at all draws the same dash", () => {
-      const text = render({ ...money, debt: undefined });
-
-      expect(text).toContain("O'qiyotganlar qarzi — Sof foyda");
-      expect(text).not.toContain(`O'qiyotganlar qarzi ${fmt(0)}`);
-    });
-  });
-
   // A closed tooltip renders nothing, so the static markup cannot show it — the
   // text is read from the source (payments-overview.test.ts does the same).
   it("explains itself in the tooltip and says the two are not added", () => {

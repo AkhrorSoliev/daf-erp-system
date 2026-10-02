@@ -264,6 +264,46 @@ export function lessonAdmission(input: {
   return { admitted: true, reason: 'PAID', shortfall: 0, paidThrough };
 }
 
+/** How far the payments reach into one group's month (ADR-0062). */
+export interface MonthReach {
+  /** The student's lessons this month in the group, frozen-out ones excluded. */
+  lessons: number;
+  /** How many of them, from the first, the payments reach. */
+  paid: number;
+  /** The last lesson paid; null when not even the first. */
+  paidThrough: string | null;
+}
+
+/**
+ * The «Qarzdorlar» panel's «Shu oy» (ADR-0062): the reach `lessonAdmission`
+ * judges a lesson by — `balance + heldLater + heldAfter(day) ≥ 0` — walked
+ * over the month's lessons. Money only: the first lesson's contract-3.2 pass
+ * is admission, not payment. The reach falls day by day, so the paid lessons
+ * are a run from the first. Null: no charge in this group for the month.
+ */
+export function monthReach(input: {
+  groupId: string;
+  balance: number;
+  /** The month's charges. */
+  charges: readonly AdmissionCharge[];
+  /** Later months' charges, still held for this month (as in `lessonAdmission`). */
+  laterCharges?: readonly AdmissionCharge[];
+}): MonthReach | null {
+  const lessons = groupLessons(input.charges, input.groupId);
+  if (lessons.length === 0) return null;
+  const later = heldLater(input.laterCharges ?? []);
+  let paid = 0;
+  for (const day of lessons) {
+    if (input.balance + later + heldAfter(input.charges, day) < 0) break;
+    paid += 1;
+  }
+  return {
+    lessons: lessons.length,
+    paid,
+    paidThrough: paid > 0 ? lessons[paid - 1] : null,
+  };
+}
+
 export interface PaymentReach {
   /** The last lesson from today the new balance admits; null when not even the next one. */
   paidThrough: string | null;

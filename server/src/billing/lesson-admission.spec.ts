@@ -5,6 +5,7 @@ import {
   isFirstLessonOfMonth,
   leastDue,
   lessonAdmission,
+  monthReach,
   paymentReach,
   type AdmissionCharge,
   type CoverageCharge,
@@ -603,5 +604,56 @@ describe('firstLessonCoverage (ADR-0048, R4)', () => {
     const c = cover(0, [frozen], '2026-10-05');
     expect(c.firstLesson).toBe(true);
     expect(c.enrollmentId).toBe('enr-oct');
+  });
+});
+
+describe('monthReach', () => {
+  const reach = (
+    balance: number,
+    charges: AdmissionCharge[] = [g005],
+    laterCharges: AdmissionCharge[] = [],
+  ) => monthReach({ groupId: 'g005', balance, charges, laterCharges });
+
+  it('is null with no charge in the group this month', () => {
+    expect(reach(-450000, [{ ...g005, groupId: 'g006' }])).toBeNull();
+  });
+
+  it('reaches no lesson when nothing of the month is paid', () => {
+    expect(reach(-450000)).toEqual({ lessons: 13, paid: 0, paidThrough: null });
+  });
+
+  it('counts the run of lessons a part payment reaches', () => {
+    // 200 000 of 450 000 paid: lessons 6–13 still hold 8 × 34 615 = 276 920.
+    expect(reach(-250000)).toEqual({
+      lessons: 13,
+      paid: 5,
+      paidThrough: '2026-10-12',
+    });
+  });
+
+  it('agrees with lessonAdmission on the last lesson the money reaches', () => {
+    expect(admit(-250000, '2026-10-12')).toMatchObject({
+      admitted: true,
+      paidThrough: '2026-10-12',
+    });
+    expect(admit(-250000, '2026-10-14')).toMatchObject({ admitted: false });
+  });
+
+  it("counts a later month's charge as still held", () => {
+    const nov = { ...g005, coveredDates: [], coveredLessons: 12 };
+    expect(reach(-450000, [g005], [nov])).toEqual({
+      lessons: 13,
+      paid: 13,
+      paidThrough: '2026-10-30',
+    });
+  });
+
+  it('leaves frozen-out lessons out', () => {
+    const frozen = { ...g005, frozenOutDates: OCT.slice(10) };
+    expect(reach(0, [frozen])).toEqual({
+      lessons: 10,
+      paid: 10,
+      paidThrough: '2026-10-23',
+    });
   });
 });

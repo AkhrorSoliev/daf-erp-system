@@ -333,7 +333,7 @@ export class PaymeMethodsService {
     const now = BigInt(Date.now());
 
     try {
-      await this.prisma.$transaction(
+      const committed = await this.prisma.$transaction(
         async (tx) => {
           const branchId = await this.payments.resolveStudentBranchId(
             txn.studentId,
@@ -375,6 +375,8 @@ export class PaymeMethodsService {
             },
             data: { used: true },
           });
+
+          return erpPayment.committed;
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -382,6 +384,9 @@ export class PaymeMethodsService {
           timeout: 15000,
         },
       );
+
+      // The receipt goes only now that the payment has committed (ADR-0065).
+      if (committed) this.payments.announceCommitted(committed);
 
       return paymeSuccess(rpcId, {
         transaction: txn.id,

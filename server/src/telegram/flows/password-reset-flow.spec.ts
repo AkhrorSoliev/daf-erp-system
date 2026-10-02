@@ -75,12 +75,12 @@ describe('password-reset-flow', () => {
   });
 
   describe('linkChatIdToStudent', () => {
-    it('updates telegramChatId on the matching student', async () => {
+    it('links the chat and clears a disconnected mark (ADR-0066)', async () => {
       await linkChatIdToStudent(prisma, 12345, '777');
 
       expect(prisma.student.update).toHaveBeenCalledWith({
         where: { id: 12345 },
-        data: { telegramChatId: '777' },
+        data: { telegramChatId: '777', telegramDisconnectedAt: null },
       });
     });
   });

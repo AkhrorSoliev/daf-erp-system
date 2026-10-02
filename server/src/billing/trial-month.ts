@@ -4,20 +4,25 @@ import {
   Prisma,
   TransactionType,
 } from '@prisma/client';
+import { tashkentDayStartUtc } from '../common/date/tashkent';
 
 /**
  * Students whose lesson on `day` in `groupId` a trial departure gave back
  * (contract 3.5, ADR-0048 §3): the month's money went back to the student and
  * the teacher's pay for it was reversed (`reverseTrialAccruals`). Nobody pays
  * a teacher for such a lesson, and the centre's top-up never fronts it (its
- * new-student gate), so a path that writes pay for a lesson already held must
- * skip these students.
+ * new-student gate), so a path that writes pay for a lesson already held
+ * («Bo'ldi», a substitute override) must skip these students.
  *
  * Only a departed enrollment's charge counts: an ACTIVE student unfrozen on a
  * lesson day attends it free (the return day stays frozen out) and the
- * teacher is paid for it. A quality claim gives the whole month back too but
- * keeps the teacher's pay (ADR-0044); the refund's ledger row tells the two
- * apart, and a month given back without one is taken for a trial.
+ * teacher is paid for it. And only one still in the group that day
+ * (`rosterOnDate`'s rule): an enrollment that left earlier gave the day back
+ * as an ordinary departure, and a student put back into the group in the
+ * same month pays for it on the new enrollment. A quality claim gives the
+ * whole month back too but keeps the teacher's pay (ADR-0044); the refund's
+ * ledger row tells the two apart, and a month given back without one is
+ * taken for a trial.
  */
 export async function trialMonthStudents(
   tx: Prisma.TransactionClient,
@@ -32,7 +37,10 @@ export async function trialMonthStudents(
       periodMonth: Number(params.day.slice(5, 7)),
       status: MonthlyChargeStatus.CHARGED,
       frozenOutDates: { has: params.day },
-      enrollment: { status: { not: EnrollmentStatus.ACTIVE } },
+      enrollment: {
+        status: { not: EnrollmentStatus.ACTIVE },
+        statusChangedAt: { gte: tashkentDayStartUtc(params.day) },
+      },
     },
     select: { enrollmentId: true, studentId: true },
   });

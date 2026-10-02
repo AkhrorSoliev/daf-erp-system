@@ -161,13 +161,12 @@ function dueLabel(due: DueRef, voice: Voice): string {
 
 /**
  * The lines under a month. A full month's price needs no line (the notes say
- * the monthly price once), only the last month states the lesson credit still
- * waiting, and `coverage` is what closed part of the month without a payment.
+ * the monthly price once), and `coverage` is what closed part of the month
+ * without a payment. An excused lesson is stated only once it has reduced a
+ * charge: the centre gives no such credit while the monthly cap is 0, so a
+ * lesson still waiting is not promised to anyone.
  */
-function monthDetails(
-  m: StatementMonth,
-  table: { isLast: boolean; coverage: string[] },
-): string[] {
+function monthDetails(m: StatementMonth, coverage: string[]): string[] {
   const out: string[] = [];
   const several = m.monthlyParts.length > 1;
   for (const p of m.monthlyParts) {
@@ -184,11 +183,6 @@ function monthDetails(
     if (p.creditLessons > 0) {
       out.push(
         `o'tgan oydagi uzrli ${p.creditLessons} dars uchun −${som(p.creditAmount)}`,
-      );
-    }
-    if (p.excusedLessons > 0 && table.isLast) {
-      out.push(
-        `uzrli ${p.excusedLessons} dars — ${monthName(nextMonthKey(m.key))} to'lovidan ayriladi`,
       );
     }
   }
@@ -211,7 +205,7 @@ function monthDetails(
       byGroup.set(p.group, (byGroup.get(p.group) ?? 0) + p.lessons);
     out.push([...byGroup].map(([g, n]) => `${g} guruhda ${n} dars`).join(', '));
   }
-  out.push(...table.coverage);
+  out.push(...coverage);
   for (const n of m.notes) {
     out.push(
       `${dm(n.day)}: ${releaseText(n)} (${som(n.amount)}) — bu darslar hisobga kirmagan`,
@@ -426,12 +420,7 @@ export function presentStatement(
       paid: settled?.paid ?? '',
       left: settled?.left ?? '',
       leftTone: settled?.leftTone ?? 'muted',
-      details: preOnly
-        ? []
-        : monthDetails(m, {
-            isLast,
-            coverage: settled?.coverage ?? [],
-          }),
+      details: preOnly ? [] : monthDetails(m, settled?.coverage ?? []),
       highlight: m.sharp !== null,
     });
   });

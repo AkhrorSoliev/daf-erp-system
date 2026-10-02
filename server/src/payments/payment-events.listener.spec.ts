@@ -1,16 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  PaymentMethod,
-  PaymentSource,
-  TelegramDigestCategory,
-  TelegramDigestRecipientKind,
-} from '@prisma/client';
+import { PaymentMethod, PaymentSource, SmsMessageType } from '@prisma/client';
 import { PaymentEventsListener } from './payment-events.listener';
-import { TelegramDigestQueueService } from '../telegram-digest/telegram-digest-queue.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { SmsService } from '../sms/sms.service';
 
 describe('PaymentEventsListener', () => {
   let listener: PaymentEventsListener;
-  let enqueue: jest.Mock;
+  let findFirst: jest.Mock;
+  let sendToStudent: jest.Mock;
 
   const basePayload = {
     paymentId: 'pay-1',
@@ -29,13 +26,19 @@ describe('PaymentEventsListener', () => {
     delete process.env.APP_URL;
   };
 
+  const sentText = () => sendToStudent.mock.calls[0][1] as string;
+
   beforeEach(async () => {
     clearEnv();
-    enqueue = jest.fn().mockResolvedValue(undefined);
+    findFirst = jest
+      .fn()
+      .mockResolvedValue({ firstName: 'Ali', telegramChatId: '555' });
+    sendToStudent = jest.fn().mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentEventsListener,
-        { provide: TelegramDigestQueueService, useValue: { enqueue } },
+        { provide: PrismaService, useValue: { student: { findFirst } } },
+        { provide: SmsService, useValue: { sendToStudent } },
       ],
     }).compile();
     listener = module.get(PaymentEventsListener);
@@ -43,90 +46,103 @@ describe('PaymentEventsListener', () => {
 
   afterEach(clearEnv);
 
-  it('queues the receipt for the 20:00 digest with a structured payload', async () => {
-    await listener.handle(basePayload);
+  describe('handle (receipt)', () => {
+    it('sends the receipt at once, as an AUTO message by the performer', async () => {
+      await listener.handle(basePayload);
 
-    expect(enqueue).toHaveBeenCalledWith({
-      recipientKind: TelegramDigestRecipientKind.STUDENT,
-      recipientId: 10001,
-      companyId: 1,
-      category: TelegramDigestCategory.PAYMENT_RECEIVED,
-      relatedEntityId: 'pay-1',
-      payload: {
-        paymentId: 'pay-1',
-        amount: 1500000,
-        method: PaymentMethod.CASH,
-        receiptUrl: 'https://admin.dafzentrum.uz/r/pay-1',
-        performedById: 99,
-      },
+      expect(findFirst).toHaveBeenCalledWith({
+        where: { id: 10001, deletedAt: null },
+        select: { firstName: true, telegramChatId: true },
+      });
+      expect(sendToStudent).toHaveBeenCalledWith(
+        10001,
+        expect.any(String),
+        SmsMessageType.AUTO,
+        99,
+        1,
+      );
+      const text = sentText();
+      expect(text).toContain('Hurmatli Ali!');
+      expect(text).toContain("to'lovingiz qabul qilindi (Naqd)");
+      expect(text).toContain('Joriy balansingiz:');
+      expect(text).toContain(
+        '📄 Kvitansiya: https://admin.dafzentrum.uz/r/pay-1',
+      );
+      expect(text).toContain('Rahmat!');
     });
-  });
 
-  it('builds the receipt link from INVOICE_BASE_URL when configured', async () => {
-    process.env.INVOICE_BASE_URL = 'https://invoice.dafzentrum.uz';
-    await listener.handle(basePayload);
-    expect(enqueue.mock.calls[0][0].payload.receiptUrl).toBe(
-      'https://invoice.dafzentrum.uz/pay-1',
-    );
-  });
+    it('builds the receipt link from INVOICE_BASE_URL when configured', async () => {
+      process.env.INVOICE_BASE_URL = 'https://invoice.dafzentrum.uz';
+      await listener.handle(basePayload);
+      expect(sentText()).toContain('https://invoice.dafzentrum.uz/pay-1');
+    });
 
-  it('falls back to PUBLIC_BASE_URL/r/<id> when INVOICE_BASE_URL is missing', async () => {
-    process.env.PUBLIC_BASE_URL = 'https://erp.example.uz';
-    await listener.handle(basePayload);
-    expect(enqueue.mock.calls[0][0].payload.receiptUrl).toBe(
-      'https://erp.example.uz/r/pay-1',
-    );
-  });
+    it('falls back to PUBLIC_BASE_URL/r/<id> when INVOICE_BASE_URL is missing', async () => {
+      process.env.PUBLIC_BASE_URL = 'https://erp.example.uz';
+      await listener.handle(basePayload);
+      expect(sentText()).toContain('https://erp.example.uz/r/pay-1');
+    });
 
-  it('stores a missing performer as null', async () => {
-    await listener.handle({ ...basePayload, performedById: undefined });
-    expect(enqueue.mock.calls[0][0].payload.performedById).toBeNull();
-  });
+    it('escapes the name, which goes out as HTML', async () => {
+      findFirst.mockResolvedValue({ firstName: 'A<b>', telegramChatId: '1' });
+      await listener.handle(basePayload);
+      expect(sentText()).toContain('Hurmatli A&lt;b&gt;!');
+    });
 
-  it('swallows queue errors without throwing', async () => {
-    enqueue.mockRejectedValueOnce(new Error('db down'));
-    await expect(listener.handle(basePayload)).resolves.toBeUndefined();
+    it('leaves the balance line out when the balance is unknown', async () => {
+      await listener.handle({ ...basePayload, studentBalance: null });
+      expect(sentText()).not.toContain('Joriy balansingiz');
+    });
+
+    it('skips a student without Telegram, or a deleted one', async () => {
+      findFirst.mockResolvedValue({ firstName: 'Ali', telegramChatId: null });
+      await listener.handle(basePayload);
+      findFirst.mockResolvedValue(null);
+      await listener.handle(basePayload);
+      expect(sendToStudent).not.toHaveBeenCalled();
+    });
+
+    it('swallows send errors without throwing', async () => {
+      sendToStudent.mockRejectedValue(new Error('telegram down'));
+      await expect(listener.handle(basePayload)).resolves.toBeUndefined();
+    });
   });
 
   describe('handleReversed', () => {
-    const reversedPayload = {
+    const reversed = {
       paymentId: 'pay-1',
       studentId: 10001,
-      amount: 5000000,
-      studentBalance: 100000,
-      reason: 'Summa ortiqcha kiritilgan',
+      amount: 1500000,
+      studentBalance: 500000,
+      reason: "Noto'g'ri summa",
       companyId: 1,
-      performedById: 99,
+      performedById: 7,
     };
 
-    it('queues the reversal with its reason', async () => {
-      await listener.handleReversed(reversedPayload);
+    it('sends the reversal notice at once, with its reason', async () => {
+      await listener.handleReversed(reversed);
 
-      expect(enqueue).toHaveBeenCalledWith({
-        recipientKind: TelegramDigestRecipientKind.STUDENT,
-        recipientId: 10001,
-        companyId: 1,
-        category: TelegramDigestCategory.PAYMENT_REVERSED,
-        relatedEntityId: 'pay-1',
-        payload: {
-          paymentId: 'pay-1',
-          amount: 5000000,
-          reason: 'Summa ortiqcha kiritilgan',
-          performedById: 99,
-        },
-      });
+      expect(sendToStudent).toHaveBeenCalledWith(
+        10001,
+        expect.any(String),
+        SmsMessageType.AUTO,
+        7,
+        1,
+      );
+      const text = sentText();
+      expect(text).toContain("to'lovingiz bekor qilindi.");
+      expect(text).toContain("Sabab: Noto'g'ri summa");
+      expect(text).toContain("Savollar bo'lsa, markazga murojaat qiling.");
     });
 
-    it('keeps a null reason as null', async () => {
-      await listener.handleReversed({ ...reversedPayload, reason: null });
-      expect(enqueue.mock.calls[0][0].payload.reason).toBeNull();
+    it('leaves the reason line out when there is none', async () => {
+      await listener.handleReversed({ ...reversed, reason: null });
+      expect(sentText()).not.toContain('Sabab:');
     });
 
-    it('swallows queue errors without throwing', async () => {
-      enqueue.mockRejectedValueOnce(new Error('db down'));
-      await expect(
-        listener.handleReversed(reversedPayload),
-      ).resolves.toBeUndefined();
+    it('swallows send errors without throwing', async () => {
+      sendToStudent.mockRejectedValue(new Error('telegram down'));
+      await expect(listener.handleReversed(reversed)).resolves.toBeUndefined();
     });
   });
 });

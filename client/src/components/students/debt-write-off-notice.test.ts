@@ -14,6 +14,7 @@ const ALL_REASONS: DebtWriteOffEligibilityReason[] = [
   "NO_DEBT",
   "NO_ABSENT_IN_CYCLE",
   "DISABLED",
+  "MONTHLY",
 ];
 
 describe("writeOffNoticeCopy", () => {
@@ -57,6 +58,12 @@ describe("writeOffNoticeCopy", () => {
       (r) => writeOffNoticeCopy(r).heading === "Qarz kechirish o'chirilgan",
     );
     expect(disabledHeadings).toEqual(["DISABLED"]);
+  });
+
+  it("MONTHLY matni oylik qarz guruhdan chiqarishda hal bo'lishini aytadi", () => {
+    expect(writeOffNoticeCopy("MONTHLY").body).toContain(
+      "guruhdan chiqarishda tanlangan tartib",
+    );
   });
 
   it("sabab kelmasa umumiy matnga tushadi", () => {

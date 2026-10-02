@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/table";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
-import type { DebtorCurrentCycle, DebtorStudent } from "./attendance-form-utils";
+import {
+  monthCoverageText,
+  type DebtorCurrentCycle,
+  type DebtorStudent,
+} from "./attendance-form-utils";
 
 /** "YYYY-MM-DD" → "dd.MM" (Tashkent kunini siljitmasdan). */
 function shortDate(date: string): string {
@@ -42,6 +46,10 @@ function currentCycleText(cycle: DebtorCurrentCycle | null | undefined): string 
 
 interface AttendanceDebtorsSectionProps {
   debtors: DebtorStudent[];
+  /** A monthly group (ADR-0062): «Shu oy» instead of «Joriy sikl», no «Yetmaydi». */
+  monthly: boolean;
+  /** The register's month, 'YYYY-MM' — the month «Shu oy» describes. */
+  month: string;
   /**
    * Suggested payment amount — typically the group's full course price so
    * one click pre-fills the dialog with the right amount. Falls back to
@@ -66,6 +74,8 @@ interface AttendanceDebtorsSectionProps {
  */
 export function AttendanceDebtorsSection({
   debtors,
+  monthly,
+  month,
   suggestedAmount,
   onPaymentSuccess,
 }: AttendanceDebtorsSectionProps) {
@@ -84,10 +94,20 @@ export function AttendanceDebtorsSection({
             Qarzdorlar — {debtors.length} ta
           </CardTitle>
           <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
-            Bu o&apos;quvchilarning balansi manfiyga tushgan. Davomat
-            olinishi davom etadi va har bir dars bahosi balansdan
-            ushlanmoqda — to&apos;lov qabul qilingach, ustozning oyligiga
-            ham hisoblanadi.
+            {monthly ? (
+              <>
+                Bu o&apos;quvchilar oylik to&apos;lovni to&apos;liq
+                to&apos;lamagan. «Shu oy» ustuni to&apos;lov oyning nechta
+                darsiga yetishini ko&apos;rsatadi.
+              </>
+            ) : (
+              <>
+                Bu o&apos;quvchilarning balansi manfiyga tushgan. Davomat
+                olinishi davom etadi va har bir dars bahosi balansdan
+                ushlanmoqda — to&apos;lov qabul qilingach, ustozning oyligiga
+                ham hisoblanadi.
+              </>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -97,9 +117,11 @@ export function AttendanceDebtorsSection({
                 <TableRow>
                   <TableHead className="w-12 border-r">#</TableHead>
                   <TableHead>O&apos;quvchi</TableHead>
-                  <TableHead>Joriy sikl</TableHead>
+                  <TableHead>{monthly ? "Shu oy" : "Joriy sikl"}</TableHead>
                   <TableHead className="text-right">Balans</TableHead>
-                  <TableHead className="text-right">Yetmaydi</TableHead>
+                  {!monthly && (
+                    <TableHead className="text-right">Yetmaydi</TableHead>
+                  )}
                   <TableHead className="text-right">Tavsiya</TableHead>
                   <TableHead className="w-44" />
                 </TableRow>
@@ -117,14 +139,18 @@ export function AttendanceDebtorsSection({
                       </span>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {currentCycleText(d.currentCycle)}
+                      {monthly
+                        ? monthCoverageText(month, d.monthCoverage)
+                        : currentCycleText(d.currentCycle)}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums text-destructive">
                       {formatBalance(d.balance)}
                     </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums text-amber-700 dark:text-amber-400">
-                      {formatPrice(d.debtAmount)} so&apos;m
-                    </TableCell>
+                    {!monthly && (
+                      <TableCell className="text-right font-mono tabular-nums text-amber-700 dark:text-amber-400">
+                        {formatPrice(d.debtAmount)} so&apos;m
+                      </TableCell>
+                    )}
                     <TableCell className="text-right font-mono tabular-nums font-semibold">
                       {formatPrice(suggestedAmount || d.debtAmount)} so&apos;m
                     </TableCell>

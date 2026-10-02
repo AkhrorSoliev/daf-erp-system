@@ -23,6 +23,10 @@ function buildClient() {
     transaction: {
       findFirst: jest.fn().mockResolvedValue(null),
     },
+    // No monthly charge: the pack era (ADR-0062), unless a test says so.
+    enrollmentMonthlyCharge: {
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     // `executeWriteOff` authorises the caller INSIDE the transaction, with the
     // transaction client — the student is only known once the enrollment is
     // loaded. So the tx mock needs the same lookups the guard performs.
@@ -114,6 +118,28 @@ describe('DebtWriteOffService.computeEligibility', () => {
     await expect(
       service.computeEligibility(ENROLLMENT_ID, COMPANY_ID),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('returns MONTHLY for an enrollment in the monthly era, without reading a cycle (ADR-0062)', async () => {
+    client.enrollment.findFirst.mockResolvedValue(
+      makeEnrollment({ balance: -450_000 }),
+    );
+    client.enrollmentMonthlyCharge.findFirst.mockResolvedValue({ id: 'emc-1' });
+
+    const result = await service.computeEligibility(ENROLLMENT_ID, COMPANY_ID);
+
+    expect(result).toMatchObject({ eligible: false, reason: 'MONTHLY' });
+    expect(result.details).toMatchObject({
+      currentBalance: -450_000,
+      totalDebtAmount: 450_000,
+      suggestedWriteOff: 0,
+      maxWriteOff: 0,
+    });
+    expect(client.enrollmentMonthlyCharge.findFirst).toHaveBeenCalledWith({
+      where: { enrollmentId: ENROLLMENT_ID },
+      select: { id: true },
+    });
+    expect(client.attendance.findMany).not.toHaveBeenCalled();
   });
 
   it('returns NO_DEBT when balance >= 0', async () => {
@@ -399,6 +425,27 @@ describe('DebtWriteOffService.executeWriteOff', () => {
         client,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('refuses a monthly enrollment in words (ADR-0062)', async () => {
+    client.enrollment.findFirst.mockResolvedValue(
+      makeEnrollment({ balance: -450_000 }),
+    );
+    client.enrollmentMonthlyCharge.findFirst.mockResolvedValue({ id: 'emc-1' });
+
+    await expect(
+      service.executeWriteOff(
+        {
+          enrollmentId: ENROLLMENT_ID,
+          companyId: COMPANY_ID,
+          performedById: PERFORMER_ID,
+          reason: "Yo'qolgan o'quvchi",
+          confirmAmount: 450_000,
+        },
+        client,
+      ),
+    ).rejects.toThrow("Oylik to'lovdagi qarz hisobdan chiqarilmaydi");
+    expect(transactionsService.recordDebtWriteOff).not.toHaveBeenCalled();
   });
 
   it('rejects when confirmAmount does not match suggestedWriteOff', async () => {
