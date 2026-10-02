@@ -201,7 +201,7 @@ export class AbsencePauseNotifyService {
         type,
         title,
         message,
-        url: `/students/${target.studentId}`,
+        url: `/students/profile/${target.studentId}`,
         companyId: target.companyId,
         relatedEntityType: 'Student',
         relatedEntityId: String(target.studentId),
