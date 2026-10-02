@@ -49,7 +49,7 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-01",
-    sarlavha: "To'lamagan o'quvchi oyning 2-darsidan davomatga qo'yilmaydi",
+    sarlavha: "To'lamagan o'quvchi oydagi o'z 2-darsidan davomatga qo'yilmaydi",
     matn: "Oylik kursda o'quvchi oyning o'zining 1-darsiga to'lovsiz keladi; 2-darsdan boshlab to'lagan puli shu darsgacha yetmasa, davomatda unga «Keldi», «Kelmadi» va «Kechikdi» qo'yib bo'lmaydi, faqat «Sababli». Qatorda «To'lov qilinmagan · darsga qo'yilmaydi» yozuvi va administratorga «To'lov qabul qilish» tugmasi chiqadi; QR bilan ham skanerlay olmaydi. Ustozga bunday o'quvchi uchun haq yozilmaydi. CEO qoidani Sozlamalar → «To'lov» da o'chira oladi. Ilgari qarzdor o'quvchi har darsda boshqalar kabi belgilanardi.",
     rollar: [1, 2, 3, 4],
     sahifa: { bolim: "davomat", sahifa: "darsga-qoyish" },
@@ -146,7 +146,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-09-27",
     sarlavha: "O'quvchiga oylik to'lov xabari",
-    matn: "Oylik kursdagi o'quvchiga Telegramda ikki xabar boradi: oy hisobi yozilgan kuni oyning to'lovi va muddati, qarzdorga esa oyning 2-darsidan bir kun oldin eslatma. CEO xabarlarni Sozlamalar → «To'lov» da o'chirishi mumkin.",
+    matn: "Oylik kursdagi o'quvchiga Telegramda ikki xabar boradi: oy hisobi yozilgan kuni oyning to'lovi va muddati, qarzdorga esa oydagi o'z 2-darsidan bir kun oldin eslatma. CEO xabarlarni Sozlamalar → «To'lov» da o'chirishi mumkin.",
     rollar: [1, 2, 3, 5],
     sahifa: { bolim: "tolovlar", sahifa: "oylik-tolov" },
   },
