@@ -244,6 +244,15 @@ describe('LessonCancellationsService', () => {
           cancellationId: 'cancel-1',
         }),
       });
+      // A late arrival's minutes leave with its LATE mark (ADR-0048).
+      expect(tx.attendance.update).toHaveBeenCalledWith({
+        where: { id: 'att-2' },
+        data: {
+          status: 'EXCUSED',
+          cancellationId: 'cancel-1',
+          lateMinutes: null,
+        },
+      });
       // Billing reverse path runs for each affected attendance
       expect(billing.processAttendanceBilling).toHaveBeenCalledTimes(2);
       expect(billing.processAttendanceBilling).toHaveBeenCalledWith(
