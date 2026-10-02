@@ -190,7 +190,7 @@ export const ATTENDANCE_KPI_TOOLTIPS = {
   excused:
     "SABABLI yozuvlar — dars bekor qilindi yoki o'quvchi sababli kelmadi (kasal, hujjat bilan).\n\nDavomat foizi formulasidan chiqariladi: bu kunlar guruh ko'rsatkichini pasaytirmaydi.",
   retention:
-    "O'quvchilar soni davr boshida bo'lganga nisbatan necha foizga o'zgargan.\n\n• +45% — guruh 45% kattalashgan (yangi o'quvchilar qo'shilgan)\n• 0% — barqaror (kim ketgan, kim qo'shilgan teng)\n• -20% — guruh 20% ga kichraygan (yo'qotish bor)\n\nHisob: (davr oxiri − davr boshi) / davr boshi × 100.\n\nMuhim: davomat % yuqori bo'lib, o'zgarish manfiy bo'lsa — bu 'omon qolganlar yaxshi keladi, lekin ko'pchilik ketib qoldi' degani.\n\nGuruhda hisoblanadi = ACTIVE yoki FROZEN. Ketgan = DROPPED / TRANSFERRED / COMPLETED.",
+    "O'quvchilar soni davr boshida bo'lganga nisbatan necha foizga o'zgargan.\n\n• +45% — guruh 45% kattalashgan (yangi o'quvchilar qo'shilgan)\n• 0% — barqaror (kim ketgan, kim qo'shilgan teng)\n• -20% — guruh 20% ga kichraygan (yo'qotish bor)\n\nHisob: (davr oxiri − davr boshi) / davr boshi × 100.\n\nMuhim: davomat % yuqori bo'lib, o'zgarish manfiy bo'lsa — bu 'omon qolganlar yaxshi keladi, lekin ko'pchilik ketib qoldi' degani.\n\nGuruhda hisoblanadi = faol yoki muzlatilgan. Ketgan = chiqdi, o'tkazildi yoki tugallangan.",
 };
 
 export const ATTENDANCE_TABLE_TOOLTIPS = {

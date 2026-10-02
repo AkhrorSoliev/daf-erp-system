@@ -153,7 +153,7 @@ export function TelegramGroupsClient() {
         },
         unlink: {
           title: "Botni uzish",
-          description: `Bot "${confirmAction.group.title}" guruhidan tizim darajasida uzladi. Guruh DB'da arxivlanadi, lekin bot guruhda qoladi — uni qo'lda chiqarib yuborishingiz mumkin.`,
+          description: `Bot "${confirmAction.group.title}" guruhidan tizim darajasida uzildi. Guruh bazada arxivlanadi, lekin bot guruhda qoladi — uni qo'lda chiqarib yuborishingiz mumkin.`,
           actionLabel: "Uzish",
           destructive: true,
         },

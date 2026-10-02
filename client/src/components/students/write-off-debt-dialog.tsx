@@ -219,7 +219,7 @@ function EligibleBlock({
             {d.cyclePresentCount + d.cycleLateCount} dars
           </span>
 
-          <span className="text-muted-foreground">Kelmagan:</span>
+          <span className="text-muted-foreground">Kelmagan (sababsiz):</span>
           <span className="text-right font-medium">{d.cycleAbsentCount} dars</span>
 
           <span className="text-muted-foreground">Bir dars narxi:</span>

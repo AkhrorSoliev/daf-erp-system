@@ -23,6 +23,7 @@ import { UpdateMockExamDto } from './dto/update-mock-exam.dto';
 import {
   FormFieldDto,
   MAPS_TO_VALUES,
+  MapsToValue,
   TYPES_WITH_OPTIONS,
 } from '../custom-forms/dto/form-field.dto';
 import { shortId } from '../custom-forms/short-id.util';
@@ -36,6 +37,17 @@ import {
 
 const BOT_PAYLOAD_LENGTH = 10;
 const MAX_PAYLOAD_RETRIES = 5;
+
+/**
+ * Ro'yxatdan o'tish formasining uchta bog'lanish joyi admin ko'zida qanday
+ * ataladi. Xato xabarlarida `firstName` / `phone` kabi ichki nomlar emas,
+ * shu so'zlar chiqadi; `Record` yangi joy qo'shilganda nom yozishni majburlaydi.
+ */
+const SLOT_LABELS: Record<MapsToValue, string> = {
+  firstName: 'Ism',
+  lastName: 'Familiya',
+  phone: 'Telefon',
+};
 
 /**
  * One concrete mock-exam event. CRUD here handles the exam shell only —
@@ -682,7 +694,7 @@ export class MockExamsService {
     })) as { id: string; status: MockExamStatus };
     if (exam.status !== MockExamStatus.ANNOUNCED) {
       throw new BadRequestException(
-        'Qayta yuborish faqat ANNOUNCED holatdagi imtihon uchun mavjud',
+        "Qayta yuborish faqat «E'lon qilingan» holatdagi imtihon uchun mavjud",
       );
     }
     const cleared = await this.prisma.mockExamParticipant.updateMany({
@@ -711,7 +723,7 @@ export class MockExamsService {
     })) as { id: string; status: MockExamStatus };
     if (exam.status !== MockExamStatus.ANNOUNCED) {
       throw new BadRequestException(
-        'PDF faqat ANNOUNCED holatdagi imtihon uchun yaratiladi',
+        "PDF faqat «E'lon qilingan» holatdagi imtihon uchun yaratiladi",
       );
     }
     return this.mockExamPdfService.generate(id);
@@ -827,23 +839,23 @@ export class MockExamsService {
       const matches = fields.filter((f) => f.mapsTo === slot);
       if (matches.length === 0) {
         throw new BadRequestException(
-          `${slot} maydoni majburiy — biror maydonni unga bog'lang`,
+          `${SLOT_LABELS[slot]} maydoni majburiy — biror maydonni unga bog'lang`,
         );
       }
       if (matches.length > 1) {
         throw new BadRequestException(
-          `${slot} ga faqat bitta maydon bog'lanishi mumkin`,
+          `${SLOT_LABELS[slot]}ga faqat bitta maydon bog'lanishi mumkin`,
         );
       }
       const match = matches[0];
       if (!match.required) {
         throw new BadRequestException(
-          `${slot} ga bog'langan maydon majburiy bo'lishi kerak`,
+          `${SLOT_LABELS[slot]}ga bog'langan maydon majburiy bo'lishi kerak`,
         );
       }
       if (slot === 'phone' && match.type !== 'phone') {
         throw new BadRequestException(
-          "Telefon maydonining turi 'phone' bo'lishi kerak",
+          "Telefon maydonining turi «Telefon» bo'lishi kerak",
         );
       }
     }

@@ -390,8 +390,8 @@ export function FormBuilderClient({ formId }: Props) {
                   <HelpCircle className="size-3.5 cursor-help text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  O&apos;chirilsa public havola ishlamaydi va yangi
-                  submission qabul qilinmaydi.
+                  O&apos;chirilsa ochiq havola ishlamaydi va yangi javoblar
+                  qabul qilinmaydi.
                 </TooltipContent>
               </Tooltip>
             </div>

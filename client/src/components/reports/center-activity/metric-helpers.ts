@@ -132,7 +132,7 @@ export const KPI_TOOLTIPS = {
   emptySeats:
     "Jismoniy bo'sh o'rindiqlar soni. Hisob: har xona uchun sig'im − eng ko'p o'quvchili guruh. Bu — bir vaqtning o'zida bo'sh qoladigan o'rindiqlar.",
   extraStudents:
-    "Hozirgi guruhlardagi jami bo'sh enrollment slotlari. Hisob: har guruh uchun (sig'im − o'quvchilar), barcha guruhlar bo'yicha yig'iladi. Yangi guruh ochmasdan, hozirgi guruhlarga nechta o'quvchi qo'shilishi mumkin.",
+    "Hozirgi guruhlardagi jami bo'sh o'rinlar. Hisob: har guruh uchun (sig'im − o'quvchilar), barcha guruhlar bo'yicha yig'iladi. Yangi guruh ochmasdan, hozirgi guruhlarga nechta o'quvchi qo'shilishi mumkin.",
   fik: "FIK (Foydalanish Intensivlik Koeffitsienti). Hisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100. Reja o'rinsoat = sig'im × ish vaqti.",
 };
 

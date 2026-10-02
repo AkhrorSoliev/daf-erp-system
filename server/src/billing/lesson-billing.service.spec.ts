@@ -585,7 +585,7 @@ describe('LessonBillingService', () => {
         'cons-existing',
         expect.objectContaining({
           performedById: 99,
-          reason: "davomat holati o'zgardi",
+          reason: "Davomat holati o'zgardi",
         }),
         tx,
       );
@@ -597,7 +597,7 @@ describe('LessonBillingService', () => {
         salaryAccrualService.reverseAccrualForAttendance,
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          reversalReason: "davomat holati o'zgardi",
+          reversalReason: "Davomat holati o'zgardi",
         }),
       );
     });
@@ -619,7 +619,7 @@ describe('LessonBillingService', () => {
         salaryAccrualService.reverseAccrualForAttendance,
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          reversalReason: "davomat holati o'zgardi",
+          reversalReason: "Davomat holati o'zgardi",
         }),
       );
     });
@@ -645,7 +645,7 @@ describe('LessonBillingService', () => {
         'cons-existing',
         expect.objectContaining({
           performedById: 99,
-          reason: "davomat holati o'zgardi",
+          reason: "Davomat holati o'zgardi",
         }),
         tx,
       );
@@ -654,7 +654,7 @@ describe('LessonBillingService', () => {
         'ded-uncovered',
         expect.objectContaining({
           performedById: 99,
-          reason: "davomat holati o'zgardi",
+          reason: "Davomat holati o'zgardi",
         }),
         tx,
       );
@@ -2041,7 +2041,7 @@ describe('LessonBillingService', () => {
       for (const id of ['cons-1', 'cons-2']) {
         expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
           id,
-          { performedById: 7, reason: "dars to'lovi bekor qilindi" },
+          { performedById: 7, reason: "dars to'lovi bekor qilingani uchun" },
           tx,
         );
       }

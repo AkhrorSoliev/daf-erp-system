@@ -1164,7 +1164,7 @@ export class LessonBillingService {
         groupId: p.groupId,
         lessonDate: p.lessonDate,
         reversedById: p.performedById,
-        reversalReason: "davomat holati o'zgardi",
+        reversalReason: "Davomat holati o'zgardi",
         tx,
       });
     }
@@ -1176,7 +1176,7 @@ export class LessonBillingService {
         consumption.id,
         {
           performedById: p.performedById,
-          reason: "davomat holati o'zgardi",
+          reason: "Davomat holati o'zgardi",
         },
         tx,
       );
@@ -1206,7 +1206,7 @@ export class LessonBillingService {
           uncoveredDeduction.id,
           {
             performedById: p.performedById,
-            reason: "davomat holati o'zgardi",
+            reason: "Davomat holati o'zgardi",
           },
           tx,
         );
@@ -1349,7 +1349,7 @@ export class LessonBillingService {
               c.id,
               {
                 performedById: params.performedById,
-                reason: "dars to'lovi bekor qilindi",
+                reason: "dars to'lovi bekor qilingani uchun",
               },
               tx,
             );

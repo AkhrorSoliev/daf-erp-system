@@ -384,7 +384,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               value={`${d.marketingRoi}%`}
               color={d.marketingRoi > 100 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}
               tooltip="Marketingga sarflangan pul qancha qaytganini ko'rsatadi. 100% dan yuqori bo'lsa — foyda keltiryapti."
-              subtitle="Samaradorlik"
+              subtitle="Sarflangan pulga nisbatan"
               onClick={() => setChartKey("marketingRoi")}
             />
           </>

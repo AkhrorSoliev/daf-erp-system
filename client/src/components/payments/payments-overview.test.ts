@@ -405,9 +405,12 @@ describe("PaymentsOverview — the money cards have Uzbek names", () => {
     expect(text).toContain("Jalb qilish narxi");
     expect(text).toContain("Bitta yangi o'quvchiga");
     expect(text).toContain("Marketing samarasi");
+    expect(text).toContain("Sarflangan pulga nisbatan");
     expect(text).not.toMatch(/\b(LTV|CAC|ROI)\b/);
-    // The old subtitles are gone: «Jalb qilish narxi» is now the card's name.
+    // The old subtitles are gone: «Jalb qilish narxi» is now the card's name,
+    // and «Samaradorlik» only repeated «Marketing samarasi».
     expect(text).not.toContain("Davriy o'quvchi qiymati");
+    expect(text).not.toContain("Samaradorlik");
   });
 
   // A closed dialog renders nothing, so — like the tooltips above — the chart
