@@ -363,8 +363,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'does the departure preview, which reads the month an enrollment of ' +
       'that student would give back. The enroll preview, which reads what ' +
       "adding the student to a group would charge, checks the student's " +
-      "branch and then the group's — the one `POST /students/:id/enroll` " +
-      'checks.',
+      "branch, then the group's (the enroll call checks the group's and " +
+      'requires the student to belong to it).',
     routes: [
       'GET /students/:id/status-history',
       'GET /students/:id/balance-summary',

@@ -326,8 +326,8 @@ export function SalaryMonthlyView({
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
           <Info className="mt-0.5 size-4 shrink-0" />
           <span>
-            {monthLabel(shownMonth)} — bu oy qo&apos;lda kiritilgan, dars-by-dars
-            ma&apos;lumot yo&apos;q. Faqat kiritilgan summa va avans ko&apos;rsatilgan.
+            {monthLabel(shownMonth)} — bu oy qo&apos;lda kiritilgan, har bir dars
+            bo&apos;yicha ma&apos;lumot yo&apos;q. Faqat kiritilgan summa va avans ko&apos;rsatilgan.
           </span>
         </div>
       )}

@@ -9,13 +9,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { isMonthlyBillingMonth } from '../reports/month-charges';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
 
-// FIXED_PER_STUDENT stavkasi qaysi birlikda: «month» — o'quvchi boshiga OYIGA,
-// «cycle» — SIKLiga (bo'luvchi: ADR-0050, `resolveLessonPricing`). «month» —
-// faqat oylik hisob yuritilgan oydagi oylik kurs darsi: kurs hozir oylik
-// bo'lsa ham may–avgust darslari sikl bo'yicha hisoblangan. `lessonDate` —
-// `@db.Date` (UTC yarim tun), +5 soat kunni o'zgartirmaydi, shuning uchun
-// `tashkentMonthKey` o'sha kalendar oyini beradi.
-// Qabul qilingan chekka: sentabrda paket belgisi bilan narxlangan dars (ADR-0051) ham «month» chiqadi.
+// The unit a FIXED_PER_STUDENT rate is paid in: «month» — per student per
+// MONTH, «cycle» — per CYCLE (the divisor: ADR-0050, `resolveLessonPricing`).
+// «month» only for a monthly course's lesson in a monthly-billing month: a
+// course that is monthly now still had its May–August lessons accrued per
+// cycle. `lessonDate` is `@db.Date` (UTC midnight), which +5 hours leaves on
+// the same day, so `tashkentMonthKey` gives that calendar month.
+// Accepted edge: a September lesson priced from its pack marker (ADR-0051) reads «month» too.
 function rateBasisOf(
   lessonDate: Date,
   paymentModel: PaymentModel,
@@ -191,7 +191,7 @@ export class SalaryBreakdownService {
               select: {
                 name: true,
                 lessonPaymentCount: true,
-                // Qatorning `rateBasis`i shundan chiqadi (`rateBasisOf`).
+                // Each line's `rateBasis` comes from it (`rateBasisOf`).
                 paymentModel: true,
               },
             },
@@ -254,7 +254,7 @@ export class SalaryBreakdownService {
         lessonDate: r.lessonDate,
         student: r.student,
         group: r.group,
-        // Ekrandagi stavka belgisi shunga qaraydi: «/o'quvchi/oy» yoki «/tsikl».
+        // The rate label on screen reads it: «/o'quvchi/oy» or «/tsikl».
         rateBasis: rateBasisOf(r.lessonDate, r.group.course.paymentModel),
         perLessonCost: r.perLessonCost,
         amount: r.amount,

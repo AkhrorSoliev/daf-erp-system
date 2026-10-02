@@ -90,10 +90,10 @@ export class StudentAttendanceNotificationListener {
     let lessonNumber: number | null = null;
     let totalLessons: number | null = null;
     if (group?.course?.paymentModel === PaymentModel.MONTHLY) {
-      // Oylik kursda dars raqami o'quvchining O'Z oyidagi o'rni: shu oyning
-      // CHARGED hisobida (`coveredDates` minus `frozenOutDates`, o'sish
-      // tartibida) bu sana nechanchi, va oyda nechta dars bor. Hech bir hisob
-      // sanani qoplamasa, «Dars:» qatori chiqarilmaydi.
+      // On a monthly course the lesson number is the date's place in the
+      // student's OWN month: its position in the month's CHARGED charge
+      // (`coveredDates` minus `frozenOutDates`, ascending), out of that list's
+      // length. When no charge holds the date, the «Dars:» line is left out.
       const [year, month] = date.split('-').map(Number);
       const charges = await this.prisma.enrollmentMonthlyCharge.findMany({
         where: {

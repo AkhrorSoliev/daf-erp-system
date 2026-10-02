@@ -35,7 +35,11 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { PossibleDeductionsInfo } from "./possible-deductions-info";
-import { breakdownRateLabel, type RateBasis } from "./salary-utils";
+import {
+  breakdownRateLabel,
+  SALARY_TYPE_LABELS,
+  type RateBasis,
+} from "./salary-utils";
 import api from "@/lib/api";
 
 interface BreakdownLine {
@@ -43,7 +47,7 @@ interface BreakdownLine {
   lessonDate: string;
   student: { id: number; firstName: string; lastName: string };
   group: { id: string; name: string; course: { name: string } };
-  // Eski server yubormaydi — belgi o'sha holda «/tsikl» deydi.
+  // An older server does not send it; the label then reads «/tsikl».
   rateBasis?: RateBasis;
   perLessonCost: number;
   amount: number;
@@ -120,16 +124,10 @@ const statusVariant: Record<
 
 const fmt = (n: number) => n.toLocaleString("uz-UZ");
 
-// CSV Excel'da ochiladi: «FIXED_PER_STUDENT» emas, o'zbekcha nom (stavka
-// oynalaridagi bilan bir xil).
-const SALARY_TYPE_NAMES: Record<string, string> = {
-  PERCENTAGE: "Foiz",
-  FIXED_PER_STUDENT: "O'quvchi boshiga",
-  FIXED_MONTHLY: "Oylik",
-};
+// The CSV opens in Excel, so it carries Uzbek names, never «FIXED_PER_STUDENT».
 const RATE_SCOPE_NAMES = { GROUP: "Guruh", GLOBAL: "Umumiy" } as const;
 
-/** CSV qatorlari (sarlavha bilan), `handleCsvExport` ularni faylga yozadi. */
+/** The CSV rows, header first; `handleCsvExport` writes them to a file. */
 export function breakdownCsvRows(lines: BreakdownLine[]): (string | number)[][] {
   return [
     [
@@ -152,7 +150,7 @@ export function breakdownCsvRows(lines: BreakdownLine[]): (string | number)[][] 
       l.group.course.name,
       l.perLessonCost,
       l.configVersion
-        ? (SALARY_TYPE_NAMES[l.configVersion.salaryType] ??
+        ? (SALARY_TYPE_LABELS[l.configVersion.salaryType] ??
           l.configVersion.salaryType)
         : "",
       l.configVersion?.value ?? "",

@@ -174,15 +174,16 @@ export class RefundsEligibilityService {
     // total-lessons figure anywhere in the schema to divide by, so the honest
     // move is to say something true instead.
     //
-    // Ogohlantirish kvotaga bog'liq, model faqat jumlani tanlaydi. «Faqat
-    // balansdagi pul qaytariladi» kvota (`maxRefundable`) haqiqatan shundan
-    // iborat bo'lganda to'g'ri: oldindan to'langan dars yo'q va balans musbat.
-    // Oylik kursda hisoblagich yozilmaydi, shuning uchun paket jumlasi («oldindan
-    // to'langan darsi yo'q») oylik o'quvchiga noto'g'ri gapiradi; unga shartnoma
-    // qoidasi aytiladi (A3.5): shu oyning puli guruhdan chiqarilganda 6.2-band
-    // bo'yicha hisoblanadi. Oylik enrollmentda eski paket hisoblagichi qolgan
-    // bo'lsa, kvota uning qiymatini ham o'z ichiga oladi va ogohlantirish
-    // chiqmaydi: aks holda matn `quickRefund` ergashadigan kvotaga zid bo'lardi.
+    // Whether there is a warning depends on the quote; the payment model only
+    // picks its sentence. "Only the balance is refunded" is true exactly when
+    // the quote (`maxRefundable`) is made of the balance alone: no prepaid
+    // lessons and a positive balance. A monthly course writes no prepaid
+    // counter, so the pack sentence ("no prepaid lessons") would misdescribe a
+    // monthly student; they get the contract's rule instead (A3.5): this
+    // month's money is settled by clause 6.2 when the student leaves the
+    // group. A monthly enrollment that still carries a stale pack counter has
+    // its value inside the quote, so it gets no warning: the text would
+    // otherwise contradict the ceiling `quickRefund` follows.
     const isMonthly =
       enrollment.group.course.paymentModel === PaymentModel.MONTHLY;
     const balanceOnly = prepaidLessons === 0 && student.balance > 0;

@@ -395,6 +395,7 @@ export class MonthlyChargeService {
     amount: number;
   } | null> {
     const enr = params.enrollment;
+    // `student-enroll-preview.service.ts`dagi darvoza shu ikki rad etishni takrorlaydi — ular birga o'zgaradi.
     if (enr.group.course.paymentModel !== PaymentModel.MONTHLY) return null;
     if (enr.group.statusEnum !== GroupStatus.ACTIVE) return null;
     const planned = await this.planChargeAmounts(

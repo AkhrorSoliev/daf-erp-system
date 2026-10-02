@@ -97,6 +97,18 @@ describe("texts inside stateful components", () => {
       expect(text).not.toMatch(/[Tt]ransfer sababi/);
     }
   });
+
+  it.each([
+    "payments/salary-monthly-view.tsx",
+    "shared/salary-monthly-panel.tsx",
+  ])("the manual-month note in %s says «har bir dars bo'yicha», like the drawer", (file) => {
+    const text = source(file);
+
+    expect(text).toContain(
+      "bu oy qo'lda kiritilgan, har bir dars bo'yicha ma'lumot yo'q.",
+    );
+    expect(text).not.toContain("dars-by-dars");
+  });
 });
 
 describe("the lead and mock-exam form builders", () => {
