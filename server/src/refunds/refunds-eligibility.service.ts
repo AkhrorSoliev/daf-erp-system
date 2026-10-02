@@ -12,9 +12,14 @@ import {
 import {
   AttendanceStatus,
   EnrollmentStatus,
+  PaymentModel,
   PaymentStatus,
   RefundStatus,
 } from '@prisma/client';
+
+/** Refund quote for a student on a monthly course (spec A3.5, contract 6.2). */
+export const MONTHLY_REFUND_WARNING =
+  "Oylik to'lovda o'qiyotgan o'quvchiga faqat balansdagi ortiqcha pul qaytariladi. Shu oyning puli guruhdan chiqarilganda shartnomaning 6.2-bandi bo'yicha hisoblanadi.";
 
 @Injectable()
 export class RefundsEligibilityService {
@@ -168,8 +173,19 @@ export class RefundsEligibilityService {
     // warning fired for nearly everyone and told nobody anything. There is no
     // total-lessons figure anywhere in the schema to divide by, so the honest
     // move is to say something true instead.
-    const warning =
-      prepaidLessons === 0 && student.balance > 0
+    //
+    // Oylik kursda `prepaidLessonsRemaining` yozilmaydi, shuning uchun «oldindan
+    // to'langan darsi yo'q» paket modelini tasvirlaydi va har bir oylik
+    // o'quvchiga noto'g'ri gapiradi. Unga shartnoma qoidasi aytiladi (A3.5):
+    // faqat balansdagi ortiqcha pul qaytariladi, shu oyning puli guruhdan
+    // chiqarilganda 6.2-band bo'yicha hisoblanadi.
+    const isMonthly =
+      enrollment.group.course.paymentModel === PaymentModel.MONTHLY;
+    const warning = isMonthly
+      ? student.balance > 0
+        ? MONTHLY_REFUND_WARNING
+        : null
+      : prepaidLessons === 0 && student.balance > 0
         ? "Oldindan to'langan darsi yo'q — faqat balansdagi puldan qaytariladi"
         : null;
 
@@ -304,6 +320,7 @@ export class RefundsEligibilityService {
                   name: true,
                   price: true,
                   lessonPaymentCount: true,
+                  paymentModel: true,
                 },
               },
             },
@@ -345,6 +362,7 @@ export class RefundsEligibilityService {
                 name: true,
                 price: true,
                 lessonPaymentCount: true,
+                paymentModel: true,
               },
             },
           },

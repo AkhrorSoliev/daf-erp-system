@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { RefundsEligibilityService } from './refunds-eligibility.service';
+import {
+  MONTHLY_REFUND_WARNING,
+  RefundsEligibilityService,
+} from './refunds-eligibility.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 
@@ -279,6 +282,95 @@ describe('RefundsEligibilityService', () => {
       const result = await service.previewRefund(10001, 1);
 
       expect(result.warning).toMatch(/balansdagi/i);
+    });
+  });
+
+  /**
+   * Oylik kursda `prepaidLessonsRemaining` hech qachon yozilmaydi, shuning
+   * uchun «oldindan to'langan darsi yo'q» paket modelini tasvirlaydi va har
+   * bir oylik o'quvchiga noto'g'ri gapiradi. Oylik o'quvchiga shartnoma qoidasi
+   * aytiladi (A3.5, 6.2-band); paket kursda eski matn o'zgarmaydi.
+   */
+  describe('warning by payment model (A3.5)', () => {
+    const enrollmentOf = (paymentModel: 'MONTHLY' | 'LESSON_PACK') => ({
+      ...enrollmentRow,
+      prepaidLessonsRemaining: 0,
+      group: {
+        ...enrollmentRow.group,
+        course: { ...enrollmentRow.group.course, paymentModel },
+      },
+    });
+
+    it('tells a monthly student the contract rule when there is free balance', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        balance: 150_000,
+      });
+      prisma.enrollment.findMany.mockResolvedValue([enrollmentOf('MONTHLY')]);
+
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.warning).toBe(MONTHLY_REFUND_WARNING);
+    });
+
+    it.each([0, -80_000])(
+      'says nothing to a monthly student whose balance is %i',
+      async (balance) => {
+        prisma.student.findFirst.mockResolvedValue({ id: 10001, balance });
+        prisma.enrollment.findMany.mockResolvedValue([enrollmentOf('MONTHLY')]);
+
+        const result = await service.previewRefund(10001, 1);
+
+        expect(result.warning).toBeNull();
+      },
+    );
+
+    it('keeps the old text for a lesson-pack student with no prepaid lessons', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        balance: 150_000,
+      });
+      prisma.enrollment.findMany.mockResolvedValue([
+        enrollmentOf('LESSON_PACK'),
+      ]);
+
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.warning).toBe(
+        "Oldindan to'langan darsi yo'q — faqat balansdagi puldan qaytariladi",
+      );
+    });
+
+    // Mock Prisma qaytarilgan qatorni `select`ga qaramay beradi: `paymentModel`ni
+    // so'rashni unutgan `select` yuqoridagi hamma testdan o'tadi, productionda
+    // esa har bir kurs paket yo'liga tushadi. Shuning uchun `select` alohida
+    // tekshiriladi, ikkala qidiruv uchun ham.
+    const selectsPaymentModel = expect.objectContaining({
+      select: expect.objectContaining({
+        group: {
+          select: expect.objectContaining({
+            course: {
+              select: expect.objectContaining({ paymentModel: true }),
+            },
+          }),
+        },
+      }),
+    });
+
+    it('reads the payment model off the enrollment it picks on its own', async () => {
+      await service.previewRefund(10001, 1);
+
+      expect(prisma.enrollment.findMany).toHaveBeenCalledWith(
+        selectsPaymentModel,
+      );
+    });
+
+    it('reads the payment model off an enrollment named by id', async () => {
+      await service.previewRefund(10001, 1, 'enr-1');
+
+      expect(prisma.enrollment.findFirst).toHaveBeenCalledWith(
+        selectsPaymentModel,
+      );
     });
   });
 
