@@ -146,7 +146,7 @@ export function getActionInfo(record: HistoryRecord): ActionInfo {
         return { label: "SMS yuborildi", icon: MessageSquare, variant: "default" };
       if (customAction === "SMS_YUBORILMADI")
         return { label: "SMS yuborilmadi", icon: MessageSquare, variant: "destructive" };
-      // The bot learned the student's chat refuses it, or takes it again (ADR-0054).
+      // The bot learned the student's chat refuses it, or takes it again (ADR-0066).
       if (customAction === "TELEGRAM_UZILDI")
         return { label: "Telegram uzildi", icon: Unplug, variant: "destructive" };
       if (customAction === "TELEGRAM_QAYTA_ULANDI")

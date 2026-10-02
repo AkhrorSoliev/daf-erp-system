@@ -65,7 +65,7 @@ export async function linkChat(
   chatId: string,
 ): Promise<void> {
   // The chat is writing to the bot right now, so it takes messages: a mark
-  // left by an old chat (a deleted Telegram account) goes too (ADR-0054).
+  // left by an old chat (a deleted Telegram account) goes too (ADR-0066).
   await prisma.student.updateMany({
     where: { id: { in: studentIds } },
     data: { telegramChatId: chatId, telegramDisconnectedAt: null },

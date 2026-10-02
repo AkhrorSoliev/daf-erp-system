@@ -160,7 +160,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     this.bot = new Telegraf<BotContext>(token);
 
-    // Whether a student's chat still takes the bot's messages (ADR-0054):
+    // Whether a student's chat still takes the bot's messages (ADR-0066):
     // every send reports its outcome, and a block or unblock is recorded as
     // Telegram announces it. Registered first, so no session is loaded for it.
     const chatReach = new StudentChatReach(

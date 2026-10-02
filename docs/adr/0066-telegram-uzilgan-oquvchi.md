@@ -1,4 +1,4 @@
-# ADR-0054 — Botni bloklagan o'quvchi «Telegram uzilgan» deb belgilanadi; botga qaytsa belgi o'zi olinadi
+# ADR-0066 — Botni bloklagan o'quvchi «Telegram uzilgan» deb belgilanadi; botga qaytsa belgi o'zi olinadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-30

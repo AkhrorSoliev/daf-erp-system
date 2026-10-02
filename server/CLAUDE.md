@@ -1340,7 +1340,7 @@ Event-driven Telegram notifications no longer go out when the event happens. The
 - **Audit**: a student send writes `SmsMessage` plus an `SMS_YUBORILDI` / `SMS_YUBORILMADI` history row, exactly as `SmsService` does, so the profile's «SMS» tab keeps working.
 - **Instant by design** (ADR-0025's list): lesson cancel/reschedule, bot flows (OTP, registration), attendance reminders, `payment-promise.overdue` (09:00), the 21:00 report, product news and auto-pause messages. `src/telegram-digest/direct-send.guard.spec.ts` freezes who may call `.sendMessage(` directly; adding a new instant sender is a product decision, so put it on the spec's and ADR-0025's instant list first.
 
-#### A student's chat can refuse the bot (ADR-0054)
+#### A student's chat can refuse the bot (ADR-0066)
 
 `Student.telegramDisconnectedAt` is when the bot learned the linked chat no longer takes its messages — the student blocked the bot or deleted the Telegram account. Null = reachable. **The link itself is never removed**: a Telegram user's chat id survives a block, so an unblock needs no new registration and the Mini App still recognises the chat. A student the bot can reach is `telegramChatId` set AND `telegramDisconnectedAt` null.
 

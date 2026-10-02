@@ -98,7 +98,7 @@ yetmaydi: o'quvchi botni bloklagan yoki Telegram hisobini o'chirgan
 blokdan chiqarsa, botga yozsa yoki xabar yana yetib borsa, belgi o'zi
 olinadi. Bot orqali yetadigan o'quvchi — chati bog'langan va uzilmagan
 o'quvchi.
-`telegram/utils/student-chat-reach.ts` · `docs/adr/0054-telegram-uzilgan-oquvchi.md`
+`telegram/utils/student-chat-reach.ts` · `docs/adr/0066-telegram-uzilgan-oquvchi.md`
 
 **Xodimning Telegram'i** — xodim hisobiga bog'langan chat (`User.telegramChatId`),
 o'quvchi kartasidagi bog'lanishdan alohida. Bot uni xodim havolasi bilan

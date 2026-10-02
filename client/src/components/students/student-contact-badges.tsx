@@ -17,7 +17,7 @@ import {
 //   can carry a different number from the one the student uses.
 // - «Telegram botda» — a Telegram chat is linked to the card, so the bot's
 //   messages reach it. The bot calls this being registered. «Telegram
-//   uzilgan» replaces it while the linked chat refuses the bot (ADR-0054).
+//   uzilgan» replaces it while the linked chat refuses the bot (ADR-0066).
 
 export function PhoneProofBadge({
   verified,
@@ -69,7 +69,7 @@ export function TelegramBotBadge({
 }) {
   if (!chatId) return null;
   // The chat is still linked, but it stopped taking the bot's messages: the
-  // student blocked the bot or deleted the account (ADR-0054). The server
+  // student blocked the bot or deleted the account (ADR-0066). The server
   // clears the mark by itself once the chat takes a message again.
   if (disconnectedAt) {
     return (

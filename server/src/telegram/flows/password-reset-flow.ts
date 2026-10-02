@@ -81,7 +81,7 @@ export async function linkChatIdToStudent(
   studentId: number,
   chatId: string,
 ): Promise<void> {
-  // The chat is writing to the bot right now, so it takes messages (ADR-0054).
+  // The chat is writing to the bot right now, so it takes messages (ADR-0066).
   await prisma.student.update({
     where: { id: studentId },
     data: { telegramChatId: chatId, telegramDisconnectedAt: null },

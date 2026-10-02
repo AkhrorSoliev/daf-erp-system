@@ -41,7 +41,7 @@ function setup() {
   return { prisma, history, logger, telegram, callApi, reach };
 }
 
-describe('StudentChatReach.watch — a send reports the chat state (ADR-0054)', () => {
+describe('StudentChatReach.watch — a send reports the chat state (ADR-0066)', () => {
   it('a message the chat refuses marks every live card on it, once each', async () => {
     const { prisma, history, telegram, callApi } = setup();
     const refused = telegramError(

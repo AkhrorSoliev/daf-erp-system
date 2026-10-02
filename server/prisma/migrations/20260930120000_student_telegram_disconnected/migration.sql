@@ -1,4 +1,4 @@
--- A student's Telegram chat the bot can no longer reach (ADR-0054).
+-- A student's Telegram chat the bot can no longer reach (ADR-0066).
 ALTER TABLE "Student" ADD COLUMN "telegramDisconnectedAt" TIMESTAMP(3);
 
 -- Chats that already refused the bot. Every send to a student is logged in

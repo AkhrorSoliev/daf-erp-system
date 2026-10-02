@@ -565,7 +565,7 @@ model Student {
   telegram               String?
   telegramChatId         String?
   // When the bot learned it can no longer reach the linked chat: the student
-  // blocked the bot or deleted the Telegram account (ADR-0054). Null while the
+  // blocked the bot or deleted the Telegram account (ADR-0066). Null while the
   // chat is reachable. Cleared as soon as the chat is heard from again — an
   // unblock, a delivered message, or the bot linking a chat anew. The link
   // itself stays, so an unblock needs no new registration.

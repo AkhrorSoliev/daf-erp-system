@@ -48,7 +48,7 @@ export interface MyChatMemberUpdate {
 
 /**
  * Whether the bot can still reach a student's linked Telegram chat —
- * `Student.telegramDisconnectedAt` (ADR-0054).
+ * `Student.telegramDisconnectedAt` (ADR-0066).
  *
  * The bot learns it in two ways, both handled here:
  * - Telegram says so: a private chat's `my_chat_member` update is `kicked`

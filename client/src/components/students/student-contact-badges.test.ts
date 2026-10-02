@@ -45,7 +45,7 @@ describe("student card contact badges", () => {
     ).toBe("Telegram botda ro'yxatdan o'tgan");
   });
 
-  // ADR-0054: the chat stays linked, so an unblock needs no new registration,
+  // ADR-0066: the chat stays linked, so an unblock needs no new registration,
   // but the card must stop claiming the bot's messages reach it.
   it("says so when the linked chat refuses the bot", () => {
     expect(

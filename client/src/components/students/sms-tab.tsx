@@ -57,7 +57,7 @@ interface SmsMessageData {
 interface SmsTabProps {
   studentId: number;
   telegramChatId: string | null;
-  /** The linked chat refuses the bot (ADR-0054); sending stays open. */
+  /** The linked chat refuses the bot (ADR-0066); sending stays open. */
   telegramDisconnectedAt: string | null;
 }
 
