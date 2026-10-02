@@ -218,6 +218,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - The heading and the error line use `daftar-hand` — the italic Fraunces, which `daftar-sheet.tsx` declares itself so only the staff sign-in routes download it.
 - `src/app/daftar-theme.test.ts` measures the contrast of all four states (admin/teacher × light/dark) from the token blocks. `.daftar.daftar-lines` and `.dark .daftar` are equally specific; the test also pins their source order.
 - The staff Telegram Mini App entry (`/tg` on `admin.`/`lehrer.`) sits on this sheet too — see "Telegram Mini App" above. Its leaves keep the same row contract.
+- **A staff sign-in ends with a greeting** (`components/auth/daftar-greeting.tsx`): the photo (initial when none) and «Xush kelibsiz, <ism>», then the cabinet after 2s (0.7s under reduced motion). The password form, the Telegram callback (staff hosts) and the staff Mini App all call `useGreeting().greet(user, destination)` where they used to navigate; the student portal and the student Mini App never greet.
 
 #### Student login backdrop (liquid glass)
 

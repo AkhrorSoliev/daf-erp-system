@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
+import { Greeting, useGreeting } from "@/components/auth/daftar-greeting";
 import {
   ArrowClockwise,
   CaretRight,
@@ -77,6 +78,8 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
   const setAuth = useAuth((s) => s.setAuth);
   const clearSession = useAuth((s) => s.clearSession);
   const [view, setView] = useState<View>({ kind: "loading" });
+  // On the staff sheet a sign-in ends with the greeting of the sign-in pages.
+  const { greeted, greet } = useGreeting("replace");
   const initData = useRef("");
   // Xost va `?next=` `start()` da o'qiladi — server render'da `window` yo'q.
   const audience = useRef<MiniAppAudience>("student");
@@ -89,7 +92,8 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
     markMiniAppSignedOut(false);
     markMiniAppSignedIn();
     setAuth(session.user, session.accessToken, session.refreshToken);
-    router.replace(path);
+    if (daftar) greet(session.user, path);
+    else router.replace(path);
   }
 
   async function signInStudent(studentId?: number) {
@@ -203,7 +207,11 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
         }
       />
       {daftar ? (
-        state
+        greeted ? (
+          <Greeting user={greeted} />
+        ) : (
+          state
+        )
       ) : (
         <main className="flex min-h-screen items-center justify-center px-4 py-10">
           <div className="w-full max-w-sm">{state}</div>
