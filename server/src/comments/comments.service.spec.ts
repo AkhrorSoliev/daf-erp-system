@@ -770,7 +770,13 @@ describe('CommentsService', () => {
                     teacherPayExempt: true,
                     lessonStartTime: true,
                     lessonEndTime: true,
-                    group: { select: { name: true } },
+                    // The card names the branch: a CEO in another branch opened these.
+                    group: {
+                      select: {
+                        name: true,
+                        branch: { select: { id: true, name: true } },
+                      },
+                    },
                   },
                 },
               }),
