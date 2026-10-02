@@ -343,7 +343,13 @@ export class GroupsReadService {
     };
   }
 
-  async findOne(id: string, companyId: number, scope: ReportBranchIds) {
+  async findOne(
+    id: string,
+    companyId: number,
+    scope: ReportBranchIds,
+    /** Every branch the caller may open; `scope` is the one selected. */
+    ceiling: ReportBranchIds = scope,
+  ) {
     // Branch-confined as well as company-confined: the group detail page is
     // reachable by id from search, a teacher profile or a pasted link, and it
     // carries the full student roster.
@@ -353,6 +359,32 @@ export class GroupsReadService {
     });
 
     if (!group) {
+      // A group of another branch the caller works in is not "missing": a
+      // CEO in Farg'ona read «guruh mavjud emas» for eight Namangan groups
+      // opened from /tasks and cancelled their lessons (01.10.2026). Name
+      // the branch so the page can switch to it.
+      const wider =
+        scope !== null &&
+        (ceiling === null || ceiling.some((b) => !scope.includes(b)));
+      const elsewhere = wider
+        ? await this.prisma.group.findFirst({
+            where: {
+              id,
+              deletedAt: null,
+              companyId,
+              ...branchIdWhere(ceiling),
+            },
+            select: { branch: { select: { id: true, name: true } } },
+          })
+        : null;
+      if (elsewhere) {
+        throw new NotFoundException({
+          statusCode: 404,
+          error: 'Not Found',
+          message: `Bu guruh «${elsewhere.branch.name}» filialiga tegishli. Ko'rish uchun shu filialni tanlang.`,
+          branch: elsewhere.branch,
+        });
+      }
       throw new NotFoundException(`Guruh #${id} topilmadi`);
     }
 
