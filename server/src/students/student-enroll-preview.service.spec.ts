@@ -247,18 +247,18 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
     );
   });
 
-  it('quotes no month for a group that is still forming, and does not look ahead', async () => {
-    prisma.group.findFirst.mockResolvedValue({
-      ...monthlyGroup,
-      statusEnum: 'FORMING',
-    });
+  it.each([['FORMING'], ['PAUSED']])(
+    'quotes no month for a %s group, and does not look ahead',
+    async (statusEnum) => {
+      prisma.group.findFirst.mockResolvedValue({ ...monthlyGroup, statusEnum });
 
-    const r = await service.preview(studentId, companyId, 10001, groupId);
+      const r = await service.preview(studentId, companyId, 10001, groupId);
 
-    expect(r.firstMonth).toBeNull();
-    expect(r.payable).toBe(0); // a balance of 50 000, nothing due
-    expect(previewChargeForNewEnrollment).not.toHaveBeenCalled();
-  });
+      expect(r.firstMonth).toBeNull();
+      expect(r.payable).toBe(0); // a balance of 50 000, nothing due
+      expect(previewChargeForNewEnrollment).not.toHaveBeenCalled();
+    },
+  );
 
   it('asks a lesson pack for the pack price, with no first month', async () => {
     prisma.group.findFirst.mockResolvedValue(packGroup);
@@ -280,6 +280,23 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
       payable: 1000000,
     });
     expect(previewChargeForNewEnrollment).not.toHaveBeenCalled();
+  });
+
+  it('asks a discounted student for the pack at their discount, as pack billing deducts it', async () => {
+    prisma.group.findFirst.mockResolvedValue(packGroup);
+    prisma.student.findFirst.mockResolvedValue({
+      id: studentId,
+      balance: 0,
+      discountPercent: 10,
+    });
+
+    const r = await service.preview(studentId, companyId, 10001, groupId);
+
+    // A full cycle deducts applyDiscount(1 200 000, 10) = 1 080 000; the
+    // course price shown beside it stays the course's own.
+    expect(r.coursePrice).toBe(1200000);
+    expect(r.discountPercent).toBe(10);
+    expect(r.payable).toBe(1080000);
   });
 
   it('answers 404 for an archived student', async () => {

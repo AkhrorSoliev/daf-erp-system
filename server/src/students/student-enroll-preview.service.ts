@@ -6,6 +6,7 @@ import {
   type ChargeableEnrollment,
 } from '../billing/monthly-charge.service';
 import { chargeStartDate } from '../billing/charge-start-date';
+import { applyDiscount, clampDiscount } from '../billing/monthly-price';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import {
@@ -16,7 +17,10 @@ import {
 
 export interface EnrollPreview {
   paymentModel: PaymentModel;
-  /** `Course.price`: the monthly price for MONTHLY, the pack price otherwise. */
+  /**
+   * `Course.price` before any discount: the monthly price for MONTHLY, the
+   * pack price otherwise.
+   */
   coursePrice: number;
   /** Lessons in one pack; null for a monthly course. */
   lessonPaymentCount: number | null;
@@ -39,7 +43,8 @@ export interface EnrollPreview {
   balance: number;
   /**
    * max(0, due − balance); due = firstMonth.amount (MONTHLY, 0 when null) or
-   * coursePrice (pack — today's dialog rule).
+   * the pack price at the student's discount — what pack billing deducts for
+   * a full cycle.
    */
   payable: number;
 }
@@ -96,8 +101,10 @@ export class StudentEnrollPreviewService {
 
     const monthly = group.course.paymentModel === PaymentModel.MONTHLY;
     let firstMonth: EnrollPreview['firstMonth'] = null;
-    // The two cases `previewChargeForNewEnrollment` refuses itself; past
-    // them, its null means the month leaves nothing to charge.
+    // This gate MUST mirror the refusals of `previewChargeForNewEnrollment`
+    // (not MONTHLY, group not ACTIVE): past it, that method's null can only
+    // mean the month leaves nothing to charge, and only that may roll forward
+    // below. A refusal added there must be added here too.
     if (monthly && group.statusEnum === GroupStatus.ACTIVE) {
       const now = new Date();
       // The enrollment `enrollToGroup` would create: its start day read the
@@ -130,7 +137,15 @@ export class StudentEnrollPreviewService {
         ));
     }
 
-    const due = monthly ? (firstMonth?.amount ?? 0) : group.course.price;
+    // A pack is due as a full cycle at the student's discount, the amount pack
+    // billing deducts (`LessonBillingService`, FULL_CYCLE). A monthly first
+    // month already carries the discount.
+    const due = monthly
+      ? (firstMonth?.amount ?? 0)
+      : applyDiscount(
+          group.course.price,
+          clampDiscount(student.discountPercent),
+        );
     return {
       paymentModel: group.course.paymentModel,
       coursePrice: group.course.price,
