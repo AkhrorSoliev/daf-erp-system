@@ -2,7 +2,6 @@ import { applyDiscount } from '../billing/monthly-price';
 import { DEFAULT_PACK_SIZE, monthOf, nextMonthKey } from './statement-months';
 import {
   METHOD_LABEL,
-  capitalize,
   dayName,
   dm,
   dmy,
@@ -11,6 +10,12 @@ import {
   signed,
   som,
 } from './statement-text';
+import {
+  dueLedger,
+  type DuesTotalView,
+  type DueView,
+  type Tone,
+} from './present-dues';
 import type {
   DueRef,
   ItemKind,
@@ -24,25 +29,12 @@ import type {
 
 export type Voice = 'student' | 'admin';
 
+export type { DuesTotalView, DueView, Tone };
+
 export interface Segment {
   text: string;
   bold?: boolean;
-  tone?: 'red' | 'green' | 'muted';
-}
-
-export interface MonthView {
-  key: MonthKey;
-  label: string;
-  lessons: string;
-  absent: string | null;
-  cost: string | null;
-  costNote: string | null;
-  money: string;
-  running: string;
-  runningTone: 'red' | 'green' | 'muted';
-  details: string[];
-  highlight: boolean;
-  isLast: boolean;
+  tone?: Tone;
 }
 
 export interface StatementView {
@@ -51,18 +43,24 @@ export interface StatementView {
   asOfLine: string;
   answer: { tone: 'debt' | 'credit' | 'zero'; title: string; subtitle: string };
   equation: Segment[];
-  packHint: string | null;
-  months: MonthView[];
+  dues: DueView[];
+  /** Null when the rows alone do not add up to the answer box. */
+  duesTotal: DuesTotalView | null;
+  /** Money on the account beyond every charge. */
+  surplus: { label: string; amount: string } | null;
   sharpNote: Segment[] | null;
-  modelChanges: Array<{ title: string; lines: string[] }>;
-  allocations: Array<{
+  /** The payments alone, oldest first, each with where it went. */
+  payments: Array<{
     date: string;
     what: string;
     amount: string;
     to: string;
     paymentId: string | null;
   }>;
-  footnote: string;
+  /** Their sum; null when there are none. */
+  paidTotal: string | null;
+  /** How to read the statement, one sentence each. */
+  notes: string[];
   /** Admin only: the statement does not reconcile to the balance. */
   warning: string | null;
 }
@@ -75,16 +73,18 @@ const WORDS = {
       `Qarzingiz yo'q. Hisobingizda ${x} so'm ortiqcha pul bor.`,
     zero: "Hisobingiz nolda: qarz ham, ortiqcha pul ham yo'q.",
     paid: "To'lagansiz",
-    lessons: "o'qigan darslaringiz",
+    lessons: 'darslaringiz narxi',
     onAccount: 'hisobingizda',
     midMonth:
       "Oy o'rtasida qo'shilsangiz, faqat qo'shilgan kundan boshlab darslar hisoblanadi.",
     youLeft: 'chiqqansiz',
     yourDiscount: 'sizga ',
-    footnote:
-      "«Oy oxirida» — shu oy oxirigacha to'lagan pulingizdan o'qigan darslaringiz narxi ayirilgani: + ortiqcha, − qarz. " +
-      "«Kelmagan» — sababsiz qoldirilgan dars, u ham hisoblanadi. Pul avval eng eski to'lanmagan darslarga yoziladi. " +
+    surplus: 'Hisobingizda ortiqcha pul',
+    notes: [
+      "To'lovingiz avval eng eski to'lanmagan oyga yoziladi.",
+      '«Kelmagan» — sababsiz qoldirilgan dars. U ham hisoblanadi.',
       "Hujjat tizim tomonidan avtomatik tuzilgan. Savol bo'lsa, filial administratoriga murojaat qiling.",
+    ],
   },
   admin: {
     debt: 'Qarzi',
@@ -92,15 +92,17 @@ const WORDS = {
     credit: (x: string) => `Qarzi yo'q. Hisobida ${x} so'm ortiqcha pul bor.`,
     zero: "Hisobi nolda: qarz ham, ortiqcha pul ham yo'q.",
     paid: "To'lagan",
-    lessons: "o'qigan darslari",
+    lessons: 'darslari narxi',
     onAccount: 'hisobida',
     midMonth:
       "Oy o'rtasida qo'shilsa, qo'shilgan kundan boshlab darslar hisoblanadi.",
     youLeft: 'chiqqan',
     yourDiscount: '',
-    footnote:
-      "«Oy oxirida» — shu oy oxirigacha to'lagan pulidan o'qigan darslari narxi ayirilgani: + ortiqcha, − qarz. " +
-      "«Kelmagan» — sababsiz qoldirilgan dars, u ham hisoblanadi. Pul avval eng eski to'lanmagan darslarga yoziladi.",
+    surplus: 'Hisobida ortiqcha pul',
+    notes: [
+      "To'lov avval eng eski to'lanmagan oyga yoziladi.",
+      '«Kelmagan» — sababsiz qoldirilgan dars. U ham hisoblanadi.',
+    ],
   },
 };
 
@@ -151,32 +153,50 @@ function releaseText(n: StatementNote): string {
 }
 
 function dueLabel(due: DueRef, voice: Voice): string {
-  if (due.kind === 'month') return `${monthName(due.month)} darslari`;
+  if (due.kind === 'month') return monthName(due.month);
   if (due.kind === 'item')
     return `${itemLabel(due.itemKind, voice)} (${dm(due.day)})`;
   return "oldindan to'langan, hali o'tilmagan darslar";
 }
 
-function monthDetails(m: StatementMonth, voice: Voice): string[] {
+/**
+ * The lines under a month. A full month's price needs no line (the notes say
+ * the monthly price once), only the last month states the lesson credit still
+ * waiting, and `coverage` is what closed part of the month without a payment.
+ */
+function monthDetails(
+  m: StatementMonth,
+  table: { isLast: boolean; coverage: string[] },
+): string[] {
   const out: string[] = [];
   const several = m.monthlyParts.length > 1;
   for (const p of m.monthlyParts) {
     const prefix = several ? `${p.group}: ` : '';
-    out.push(
-      p.fromDay && p.lessons < p.planned
-        ? `${prefix}oylik to'lov: ${dayName(p.fromDay)}dan, ${p.planned} darsdan ${p.lessons} tasi × ${som(p.perLesson)}`
-        : `${prefix}oylik to'lov: ${p.lessons} dars × ${som(p.perLesson)}`,
-    );
+    if (p.fromDay && p.lessons < p.planned) {
+      out.push(
+        `${prefix}oylik to'lov: ${dayName(p.fromDay)}dan, ${p.planned} darsdan ${p.lessons} tasi × ${som(p.perLesson)}`,
+      );
+    } else if (several) {
+      out.push(
+        `${prefix}oylik to'lov: ${p.lessons} dars × ${som(p.perLesson)}`,
+      );
+    }
     if (p.creditLessons > 0) {
       out.push(
         `o'tgan oydagi uzrli ${p.creditLessons} dars uchun −${som(p.creditAmount)}`,
       );
     }
-    if (p.excusedLessons > 0) {
+    if (p.excusedLessons > 0 && table.isLast) {
       out.push(
         `uzrli ${p.excusedLessons} dars — ${monthName(nextMonthKey(m.key))} to'lovidan ayriladi`,
       );
     }
+  }
+  const upcoming = m.lessonDays.filter((d) => d.status === 'kelgusi').length;
+  if (m.monthlyParts.length > 0 && upcoming > 0) {
+    out.push(
+      `${upcoming} dars hali o'tilmagan — oylik to'lov oy boshida yoziladi`,
+    );
   }
   const pack = m.packParts.filter((p) => p.lessons > 0);
   if (m.monthlyParts.length > 0) {
@@ -191,17 +211,7 @@ function monthDetails(m: StatementMonth, voice: Voice): string[] {
       byGroup.set(p.group, (byGroup.get(p.group) ?? 0) + p.lessons);
     out.push([...byGroup].map(([g, n]) => `${g} guruhda ${n} dars`).join(', '));
   }
-  if (m.items.length > 0) {
-    const bits = m.paid ? [`to'lov ${som(m.paid)}`] : [];
-    for (const it of m.items) {
-      const label =
-        it.kind === 'correction' && it.description
-          ? it.description
-          : itemLabel(it.kind, voice);
-      bits.push(`${dm(it.day)} ${label} ${signed(it.amount)}`);
-    }
-    out.push(bits.join(' · '));
-  }
+  out.push(...table.coverage);
   for (const n of m.notes) {
     out.push(
       `${dm(n.day)}: ${releaseText(n)} (${som(n.amount)}) — bu darslar hisobga kirmagan`,
@@ -380,35 +390,52 @@ export function presentStatement(
     },
   );
 
-  const months = model.months.map((m, i): MonthView => {
+  const ledger = dueLedger(model, (kind) => itemLabel(kind, voice));
+  const dues: DueView[] = [];
+
+  model.months.forEach((m, i) => {
     const preOnly =
       m.preSystem !== null && m.lessons === 0 && m.cost === 0 && m.money === 0;
     const quiet = !preOnly && m.lessons === 0 && m.cost === 0;
-    return {
+    const isLast = i === model.months.length - 1;
+    const lessons = `${preOnly ? m.preSystem!.lessons : m.lessons} ta`;
+    const cost =
+      preOnly || quiet ? null : m.cost < 0 ? signed(m.cost) : som(m.cost);
+    const costNote = preOnly
+      ? "tizimga qadar to'langan"
+      : quiet
+        ? "hisoblangan dars yo'q"
+        : null;
+    const settled = m.cost > 0 ? ledger.settle(m.key, m.cost) : null;
+    const excused = m.lessonDays.filter((d) => d.status === 'uzrli').length;
+    const marks = preOnly
+      ? []
+      : [
+          m.absent > 0 ? `${m.absent} kelmagan` : '',
+          excused > 0 ? `${excused} uzrli` : '',
+        ].filter(Boolean);
+    dues.push({
       key: m.key,
       label: monthTitle(m.key),
-      lessons: `${preOnly ? m.preSystem!.lessons : m.lessons} ta`,
-      absent: !preOnly && m.absent > 0 ? `${m.absent} kelmagan` : null,
-      cost: preOnly || quiet ? null : m.cost < 0 ? signed(m.cost) : som(m.cost),
-      costNote: preOnly
-        ? "tizimga qadar to'langan"
-        : quiet
-          ? "hisoblangan dars yo'q"
-          : null,
-      money: preOnly
-        ? ''
-        : m.items.length > 0 && m.money !== 0
-          ? signed(m.money)
-          : m.money !== 0
-            ? som(m.money)
-            : '—',
-      running: preOnly ? '' : m.running === 0 ? '0' : signed(m.running),
-      runningTone: m.running > 0 ? 'green' : m.running < 0 ? 'red' : 'muted',
-      details: preOnly ? [] : monthDetails(m, voice),
+      wide: false,
+      bold: isLast,
+      lessons,
+      lessonsNote: marks.length > 0 ? marks.join(' · ') : null,
+      cost,
+      costNote,
+      paid: settled?.paid ?? '',
+      left: settled?.left ?? '',
+      leftTone: settled?.leftTone ?? 'muted',
+      details: preOnly
+        ? []
+        : monthDetails(m, {
+            isLast,
+            coverage: settled?.coverage ?? [],
+          }),
       highlight: m.sharp !== null,
-      isLast: i === model.months.length - 1,
-    };
+    });
   });
+  dues.push(...ledger.extraRows());
 
   const sharp = last?.sharp ?? null;
   const sharpNote: Segment[] | null =
@@ -428,7 +455,8 @@ export function presentStatement(
         ]
       : null;
 
-  const allocations = model.allocations.map((a) => {
+  const paidRows = model.allocations.filter((a) => a.kind === 'payment');
+  const payments = paidRows.map((a) => {
     // Spent whole on one due: its amount is already on the row, say it once.
     const whole = a.to.length === 1 && a.leftover === 0;
     const to = a.to
@@ -444,10 +472,7 @@ export function presentStatement(
         : '';
     return {
       date: dmy(a.day),
-      what:
-        a.kind === 'payment'
-          ? (METHOD_LABEL[a.method ?? ''] ?? "To'lov")
-          : capitalize(itemLabel(a.itemKind ?? 'correction', voice)),
+      what: METHOD_LABEL[a.method ?? ''] ?? "To'lov",
       amount: som(a.amount),
       to: [to, leftover].filter(Boolean).join(' · '),
       paymentId: a.paymentId,
@@ -461,20 +486,29 @@ export function presentStatement(
         : `Pul ${size} darslik paket uchun to'lanadi.`) +
       ` Jadvalda esa har dars o'tilgan oyiga yozilgan, shuning uchun bir oyda ${size} tadan ko'p yoki kam dars bo'lishi mumkin.`;
 
+  const changeLines = model.modelChanges.flatMap(
+    (c) => modelChangeView(c, model, voice).lines,
+  );
+
   return {
     title: "To'lovlar hisoboti",
     studentLine: `${model.student.name} · ID ${model.student.id}${groups}${courseText}`,
     asOfLine: `DaF Sprachzentrum · ${dmy(model.asOf)} holatiga`,
     answer,
     equation,
-    packHint,
-    months,
+    dues,
+    duesTotal: ledger.total(),
+    surplus:
+      model.headline.kind === 'credit'
+        ? { label: w.surplus, amount: `+${som(model.headline.amount)}` }
+        : null,
     sharpNote,
-    modelChanges: model.modelChanges.map((c) =>
-      modelChangeView(c, model, voice),
-    ),
-    allocations,
-    footnote: w.footnote,
+    payments,
+    paidTotal:
+      paidRows.length > 0
+        ? som(paidRows.reduce((s, a) => s + a.amount, 0))
+        : null,
+    notes: [...(packHint ? [packHint] : []), ...changeLines, ...w.notes],
     warning:
       voice === 'admin' && eq.unexplained !== 0
         ? `Hisobot balans bilan ${signed(eq.unexplained)} so'm farq qildi va «tushuntirilmagan farq» qatori qo'shildi. Dasturchiga xabar bering.`
