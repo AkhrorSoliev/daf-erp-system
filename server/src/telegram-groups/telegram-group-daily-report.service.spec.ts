@@ -193,8 +193,17 @@ const DEBT_SPLIT: DebtSplit = {
     count: 48,
     currentMonth: 20_000_000,
     older: 2_300_000,
+    olderCount: 9,
   },
-  notStudying: { total: 9_100_000, count: 31 },
+  notStudying: {
+    total: 9_100_000,
+    count: 31,
+    byKind: {
+      ungrouped: { total: 3_100_000, count: 11 },
+      frozen: { total: 4_000_000, count: 12 },
+      left: { total: 2_000_000, count: 8 },
+    },
+  },
 };
 
 /** `DEBT_SPLIT` with some figures changed. */

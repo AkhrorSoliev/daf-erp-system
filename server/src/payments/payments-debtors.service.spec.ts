@@ -7,7 +7,12 @@ describe('PaymentsDebtorsService', () => {
   let service: PaymentsDebtorsService;
   let debtAge: { getDebtAges: jest.Mock };
   let prisma: {
-    student: { findMany: jest.Mock; count: jest.Mock; aggregate: jest.Mock };
+    student: {
+      findMany: jest.Mock;
+      count: jest.Mock;
+      aggregate: jest.Mock;
+      groupBy: jest.Mock;
+    };
     user: { findUnique: jest.Mock; findFirst: jest.Mock };
     paymentPromise: { count: jest.Mock };
     enrollmentMonthlyCharge: { groupBy: jest.Mock };
@@ -21,6 +26,7 @@ describe('PaymentsDebtorsService', () => {
         aggregate: jest
           .fn()
           .mockResolvedValue({ _sum: { balance: 0 }, _count: 0 }),
+        groupBy: jest.fn().mockResolvedValue([]),
       },
       user: {
         findUnique: jest.fn().mockResolvedValue({ mainBranch: 7 }),
@@ -234,13 +240,12 @@ describe('PaymentsDebtorsService', () => {
 
   describe('getDebtorSummary', () => {
     // `loadDebtSplit` ning o'z o'qishlari: o'qiyotgan qarzdorlar (findMany),
-    // o'qimayotganlar (aggregate) va shu oyning hisoblari (groupBy).
+    // o'qimayotganlar (groupBy, status bo'yicha) va shu oyning hisoblari (groupBy).
     const readsOneStudyingAndTwoNot = () => {
       prisma.student.findMany.mockResolvedValue([{ id: 5, balance: -300_000 }]);
-      prisma.student.aggregate.mockResolvedValue({
-        _sum: { balance: -90_000 },
-        _count: 2,
-      });
+      prisma.student.groupBy.mockResolvedValue([
+        { status: 'FROZEN', _sum: { balance: -90_000 }, _count: { _all: 2 } },
+      ]);
       prisma.enrollmentMonthlyCharge.groupBy.mockResolvedValue([
         { studentId: 5, _sum: { chargedAmount: 450_000 } },
       ]);
@@ -263,8 +268,17 @@ describe('PaymentsDebtorsService', () => {
             count: 1,
             currentMonth: 300_000,
             older: 0,
+            olderCount: 0,
           },
-          notStudying: { total: 90_000, count: 2 },
+          notStudying: {
+            total: 90_000,
+            count: 2,
+            byKind: {
+              ungrouped: { total: 0, count: 0 },
+              frozen: { total: 90_000, count: 2 },
+              left: { total: 0, count: 0 },
+            },
+          },
         },
         openPromises: 5,
         overduePromises: 2,
@@ -277,7 +291,7 @@ describe('PaymentsDebtorsService', () => {
 
       for (const where of [
         prisma.student.findMany.mock.calls[0][0].where,
-        prisma.student.aggregate.mock.calls[0][0].where,
+        prisma.student.groupBy.mock.calls[0][0].where,
       ]) {
         expect(where.branches).toBeUndefined();
         expect(where).toMatchObject({
@@ -313,7 +327,7 @@ describe('PaymentsDebtorsService', () => {
       expect(prisma.student.findMany.mock.calls[0][0].where.branches).toEqual(
         expected,
       );
-      expect(prisma.student.aggregate.mock.calls[0][0].where.branches).toEqual(
+      expect(prisma.student.groupBy.mock.calls[0][0].where.branches).toEqual(
         expected,
       );
     });
@@ -331,14 +345,28 @@ describe('PaymentsDebtorsService', () => {
 
       expect(res).toEqual({
         split: {
-          studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
-          notStudying: { total: 0, count: 0 },
+          studying: {
+            total: 0,
+            count: 0,
+            currentMonth: 0,
+            older: 0,
+            olderCount: 0,
+          },
+          notStudying: {
+            total: 0,
+            count: 0,
+            byKind: {
+              ungrouped: { total: 0, count: 0 },
+              frozen: { total: 0, count: 0 },
+              left: { total: 0, count: 0 },
+            },
+          },
         },
         openPromises: 0,
         overduePromises: 0,
       });
       expect(prisma.student.findMany).not.toHaveBeenCalled();
-      expect(prisma.student.aggregate).not.toHaveBeenCalled();
+      expect(prisma.student.groupBy).not.toHaveBeenCalled();
       expect(prisma.paymentPromise.count).not.toHaveBeenCalled();
     });
 

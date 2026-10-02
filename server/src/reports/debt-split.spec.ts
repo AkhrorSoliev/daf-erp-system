@@ -1,5 +1,17 @@
-import { activeStudentWhere } from '../students/shared/active-student-where';
-import { splitDebt, loadDebtSplit, studyingDebtorWhere } from './debt-split';
+import { Prisma, StudentStatus } from '@prisma/client';
+import {
+  ACTIVE_ENROLLMENT_WHERE,
+  activeStudentWhere,
+  ungroupedStudentWhere,
+} from '../students/shared/active-student-where';
+import {
+  debtKindOf,
+  splitDebt,
+  loadDebtSplit,
+  studyingDebtorWhere,
+} from './debt-split';
+
+const ZERO = { total: 0, count: 0 };
 
 describe('studyingDebtorWhere', () => {
   it('is a live card owing money, in scope, by the faol-o‘quvchi rule — nothing else', () => {
@@ -26,7 +38,7 @@ describe('splitDebt', () => {
         [1, 450_000],
         [2, 450_000],
       ]),
-      notStudying: { sum: -250_000, count: 3 },
+      notStudying: [{ status: 'FROZEN', sum: -250_000, count: 3 }],
     });
     expect(r).toEqual({
       studying: {
@@ -34,8 +46,17 @@ describe('splitDebt', () => {
         count: 2,
         currentMonth: 100_000 + 450_000,
         older: 150_000,
+        olderCount: 1,
       },
-      notStudying: { total: 250_000, count: 3 },
+      notStudying: {
+        total: 250_000,
+        count: 3,
+        byKind: {
+          ungrouped: ZERO,
+          frozen: { total: 250_000, count: 3 },
+          left: ZERO,
+        },
+      },
     });
   });
 
@@ -43,37 +64,159 @@ describe('splitDebt', () => {
     const r = splitDebt({
       studying: [{ id: 1, balance: -80_000 }],
       chargedThisMonth: new Map(),
-      notStudying: { sum: 0, count: 0 },
+      notStudying: [],
     });
     expect(r.studying).toEqual({
       total: 80_000,
       count: 1,
       currentMonth: 0,
       older: 80_000,
+      olderCount: 1,
     });
+  });
+
+  it("counts as «eski qarz» only the debtors whose debt is above this month's charges", () => {
+    const r = splitDebt({
+      studying: [
+        { id: 1, balance: -450_000 }, // exactly this month's charge
+        { id: 2, balance: -100_000 }, // part of it
+        { id: 3, balance: -451_000 }, // 1 000 older
+      ],
+      chargedThisMonth: new Map([
+        [1, 450_000],
+        [2, 450_000],
+        [3, 450_000],
+      ]),
+      notStudying: [],
+    });
+    expect(r.studying.older).toBe(1_000);
+    expect(r.studying.olderCount).toBe(1);
   });
 
   it('nobody owes → zeros', () => {
     const r = splitDebt({
       studying: [],
       chargedThisMonth: new Map(),
-      notStudying: { sum: null, count: 0 },
+      notStudying: [],
     });
     expect(r).toEqual({
-      studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
-      notStudying: { total: 0, count: 0 },
+      studying: {
+        total: 0,
+        count: 0,
+        currentMonth: 0,
+        older: 0,
+        olderCount: 0,
+      },
+      notStudying: {
+        total: 0,
+        count: 0,
+        byKind: { ungrouped: ZERO, frozen: ZERO, left: ZERO },
+      },
     });
+  });
+
+  it('names every not-studying status — ACTIVE guruhsiz, FROZEN muzlatilgan, the rest ketgan — and the parts add up', () => {
+    const r = splitDebt({
+      studying: [],
+      chargedThisMonth: new Map(),
+      notStudying: [
+        { status: 'ACTIVE', sum: -1_280_000, count: 4 },
+        { status: 'FROZEN', sum: -990_000, count: 3 },
+        { status: 'EXPELLED', sum: -600_000, count: 2 },
+        { status: 'GRADUATED', sum: -30_000, count: 1 },
+        { status: 'INACTIVE', sum: -20_000, count: 1 },
+        { status: 'ARCHIVED', sum: -5_000, count: 1 },
+        { status: 'PROSPECT', sum: -1_000, count: 1 },
+      ],
+    });
+    const { byKind } = r.notStudying;
+    expect(byKind).toEqual({
+      ungrouped: { total: 1_280_000, count: 4 },
+      frozen: { total: 990_000, count: 3 },
+      left: { total: 656_000, count: 6 },
+    });
+    expect(
+      byKind.ungrouped.total + byKind.frozen.total + byKind.left.total,
+    ).toBe(r.notStudying.total);
+    expect(
+      byKind.ungrouped.count + byKind.frozen.count + byKind.left.count,
+    ).toBe(r.notStudying.count);
+    expect(r.notStudying).toMatchObject({ total: 2_926_000, count: 13 });
+  });
+});
+
+/**
+ * Evaluates the few where-shapes these predicates use against one student:
+ * `status`, `enrollments.some` / `enrollments.none` of the one active-enrollment
+ * shape, and `NOT`.
+ */
+function matches(
+  where: Prisma.StudentWhereInput,
+  s: { status: string; inActiveGroup: boolean },
+): boolean {
+  if (where.NOT && matches(where.NOT as Prisma.StudentWhereInput, s)) {
+    return false;
+  }
+  if (where.status !== undefined && where.status !== s.status) return false;
+  const e = where.enrollments as { some?: unknown; none?: unknown } | undefined;
+  if (e?.some !== undefined && !s.inActiveGroup) return false;
+  if (e?.none !== undefined && s.inActiveGroup) return false;
+  return true;
+}
+
+describe('debtKindOf', () => {
+  it('status ACTIVE inside the not-studying set is exactly ungroupedStudentWhere()', () => {
+    // Both predicates name the SAME enrollment shape, so «in an active group»
+    // means one thing on either side.
+    expect((activeStudentWhere().enrollments as { some: unknown }).some).toBe(
+      ACTIVE_ENROLLMENT_WHERE,
+    );
+    expect(
+      (ungroupedStudentWhere().enrollments as { none: unknown }).none,
+    ).toBe(ACTIVE_ENROLLMENT_WHERE);
+
+    const notStudying: Prisma.StudentWhereInput = { NOT: activeStudentWhere() };
+    for (const status of Object.values(StudentStatus)) {
+      for (const inActiveGroup of [true, false]) {
+        const s = { status, inActiveGroup };
+        const namedUngrouped =
+          matches(notStudying, s) && debtKindOf(status) === 'ungrouped';
+        expect({ status, inActiveGroup, namedUngrouped }).toEqual({
+          status,
+          inActiveGroup,
+          namedUngrouped: matches(ungroupedStudentWhere(), s),
+        });
+      }
+    }
+  });
+
+  it('FROZEN is muzlatilgan and every other status is ketgan', () => {
+    expect(debtKindOf('FROZEN')).toBe('frozen');
+    for (const status of [
+      'EXPELLED',
+      'GRADUATED',
+      'INACTIVE',
+      'ARCHIVED',
+      'PROSPECT',
+    ]) {
+      expect(debtKindOf(status)).toBe('left');
+    }
   });
 });
 
 describe('loadDebtSplit', () => {
-  it('reads studying debtors by the faol-o‘quvchi rule and everyone else as not studying', async () => {
+  it('reads studying debtors by the faol-o‘quvchi rule and everyone else, by status, as not studying', async () => {
     const prisma = {
       student: {
         findMany: jest.fn().mockResolvedValue([{ id: 5, balance: -300_000 }]),
-        aggregate: jest
-          .fn()
-          .mockResolvedValue({ _sum: { balance: -90_000 }, _count: 2 }),
+        groupBy: jest.fn().mockResolvedValue([
+          { status: 'ACTIVE', _sum: { balance: -50_000 }, _count: { _all: 1 } },
+          {
+            status: 'EXPELLED',
+            _sum: { balance: -40_000 },
+            _count: { _all: 1 },
+          },
+        ]),
       },
       enrollmentMonthlyCharge: {
         groupBy: jest
@@ -95,23 +238,35 @@ describe('loadDebtSplit', () => {
       status: 'ACTIVE',
     });
     expect(studyingWhere.branches).toBeDefined(); // studentBranchWhere
-    expect(prisma.student.aggregate.mock.calls[0][0].where.NOT).toBeDefined();
+    expect(prisma.student.groupBy.mock.calls[0][0]).toMatchObject({
+      by: ['status'],
+      _sum: { balance: true },
+      _count: { _all: true },
+    });
+    expect(prisma.student.groupBy.mock.calls[0][0].where.NOT).toBeDefined();
     expect(r.studying).toEqual({
       total: 300_000,
       count: 1,
       currentMonth: 300_000,
       older: 0,
+      olderCount: 0,
     });
-    expect(r.notStudying).toEqual({ total: 90_000, count: 2 });
+    expect(r.notStudying).toEqual({
+      total: 90_000,
+      count: 2,
+      byKind: {
+        ungrouped: { total: 50_000, count: 1 },
+        frozen: ZERO,
+        left: { total: 40_000, count: 1 },
+      },
+    });
   });
 
   describe('what the three reads filter on', () => {
     const makeDb = () => ({
       student: {
         findMany: jest.fn().mockResolvedValue([{ id: 5, balance: -300_000 }]),
-        aggregate: jest
-          .fn()
-          .mockResolvedValue({ _sum: { balance: null }, _count: 0 }),
+        groupBy: jest.fn().mockResolvedValue([]),
       },
       enrollmentMonthlyCharge: { groupBy: jest.fn().mockResolvedValue([]) },
     });
@@ -139,7 +294,7 @@ describe('loadDebtSplit', () => {
       expect(prisma.student.findMany.mock.calls[0][0].where).toMatchObject(
         activeStudentWhere(),
       );
-      const notStudying = prisma.student.aggregate.mock.calls[0][0].where;
+      const notStudying = prisma.student.groupBy.mock.calls[0][0].where;
       expect(notStudying.NOT).toEqual(activeStudentWhere());
       expect(notStudying).toMatchObject({
         companyId: 1,
@@ -158,7 +313,7 @@ describe('loadDebtSplit', () => {
       expect(scoped.student.findMany.mock.calls[0][0].where.branches).toEqual(
         branch,
       );
-      expect(scoped.student.aggregate.mock.calls[0][0].where.branches).toEqual(
+      expect(scoped.student.groupBy.mock.calls[0][0].where.branches).toEqual(
         branch,
       );
 
@@ -171,7 +326,7 @@ describe('loadDebtSplit', () => {
         everyone.student.findMany.mock.calls[0][0].where.branches,
       ).toBeUndefined();
       expect(
-        everyone.student.aggregate.mock.calls[0][0].where.branches,
+        everyone.student.groupBy.mock.calls[0][0].where.branches,
       ).toBeUndefined();
 
       const nobody = makeDb();
@@ -183,7 +338,7 @@ describe('loadDebtSplit', () => {
       expect(nobody.student.findMany.mock.calls[0][0].where.branches).toEqual(
         matchesNothing,
       );
-      expect(nobody.student.aggregate.mock.calls[0][0].where.branches).toEqual(
+      expect(nobody.student.groupBy.mock.calls[0][0].where.branches).toEqual(
         matchesNothing,
       );
     });
@@ -194,8 +349,6 @@ describe('loadDebtSplit', () => {
         branchIds: [4],
         month: '2026-10',
       });
-      // `toEqual` pins that it carries NO `branchId`: the balance is one, so
-      // the charge of a student the scoped read returned counts in any branch.
       expect(
         prisma.enrollmentMonthlyCharge.groupBy.mock.calls[0][0],
       ).toMatchObject({
@@ -208,6 +361,8 @@ describe('loadDebtSplit', () => {
           status: 'CHARGED',
         },
       });
+      // `toEqual` pins that it carries NO `branchId`: the balance is one, so
+      // the charge of a student the scoped read returned counts in any branch.
       expect(
         prisma.enrollmentMonthlyCharge.groupBy.mock.calls[0][0].where,
       ).toEqual({
@@ -232,6 +387,7 @@ describe('loadDebtSplit', () => {
         count: 0,
         currentMonth: 0,
         older: 0,
+        olderCount: 0,
       });
     });
 

@@ -12,8 +12,22 @@ describe('TelegramGroupStatsService', () => {
   // The debt is `ReportsService.getDebtSplit`'s (ADR-0059).
   const getDebtSplit = jest.fn();
   const NOBODY_OWES: DebtSplit = {
-    studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
-    notStudying: { total: 0, count: 0 },
+    studying: {
+      total: 0,
+      count: 0,
+      currentMonth: 0,
+      older: 0,
+      olderCount: 0,
+    },
+    notStudying: {
+      total: 0,
+      count: 0,
+      byKind: {
+        ungrouped: { total: 0, count: 0 },
+        frozen: { total: 0, count: 0 },
+        left: { total: 0, count: 0 },
+      },
+    },
   };
 
   beforeEach(async () => {
@@ -184,8 +198,17 @@ describe('TelegramGroupStatsService', () => {
         count: 237,
         currentMonth: 41_100_000,
         older: 2_400_000,
+        olderCount: 13,
       },
-      notStudying: { total: 40_600_000, count: 327 },
+      notStudying: {
+        total: 40_600_000,
+        count: 327,
+        byKind: {
+          ungrouped: { total: 15_000_000, count: 128 },
+          frozen: { total: 14_600_000, count: 99 },
+          left: { total: 11_000_000, count: 100 },
+        },
+      },
     };
     const debtors = [
       { id: 10001, firstName: 'Ali', lastName: 'Valiyev', balance: -3_100_000 },

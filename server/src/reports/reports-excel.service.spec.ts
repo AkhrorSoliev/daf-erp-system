@@ -149,8 +149,22 @@ describe('ReportsExcelService', () => {
   // branch; neither equals `debtors.total` (the whole receivable the balance
   // sheet ties to), so a column still reading the old source cannot pass.
   const debtSplit: DebtSplit = {
-    studying: { total: 60_000, count: 2, currentMonth: 25_000, older: 35_000 },
-    notStudying: { total: 20_000, count: 1 },
+    studying: {
+      total: 60_000,
+      count: 2,
+      currentMonth: 25_000,
+      older: 35_000,
+      olderCount: 1,
+    },
+    notStudying: {
+      total: 20_000,
+      count: 1,
+      byKind: {
+        ungrouped: { total: 0, count: 0 },
+        frozen: { total: 20_000, count: 1 },
+        left: { total: 0, count: 0 },
+      },
+    },
   };
   const recon = {
     period: { start: '2026-06-01', end: '2026-06-30' },

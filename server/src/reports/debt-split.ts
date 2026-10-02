@@ -1,4 +1,4 @@
-import { MonthlyChargeStatus, Prisma } from '@prisma/client';
+import { MonthlyChargeStatus, Prisma, StudentStatus } from '@prisma/client';
 import {
   studentBranchWhere,
   type ReportBranchIds,
@@ -20,22 +20,77 @@ export interface DebtSplit {
     currentMonth: number;
     /** 🔴 qolgani. */
     older: number;
+    /** Studying debtors with some «eski qarz» (`older > 0`). */
+    olderCount: number;
   };
-  notStudying: { total: number; count: number };
+  notStudying: {
+    total: number;
+    count: number;
+    /**
+     * «guruhsiz» / «muzlatilgan» / «ketgan» (ADR-0067). Parts of `total` and
+     * `count` by construction — they add up to them exactly.
+     */
+    byKind: { ungrouped: DebtKind; frozen: DebtKind; left: DebtKind };
+  };
+}
+
+/** One part of a debt: how much and how many students owe it. */
+export interface DebtKind {
+  total: number;
+  count: number;
+}
+
+/** One `groupBy(['status'])` row of the not-studying set. */
+export interface NotStudyingByStatus {
+  status: string;
+  sum: number | null;
+  count: number;
+}
+
+/**
+ * Which «o'qimayotgan» kind a not-studying debtor is, from the status alone.
+ *
+ * The not-studying set is `debtorBase ∧ ¬activeStudentWhere()`, and
+ * `activeStudentWhere() = status ACTIVE ∧ enrollments.some(E)`. On a row whose
+ * status IS ACTIVE the negation leaves `¬enrollments.some(E)`, i.e.
+ * `enrollments.none(E)` — exactly `ungroupedStudentWhere()`, which is built
+ * from the same `E` (`ACTIVE_ENROLLMENT_WHERE`). So ACTIVE here means
+ * «guruhsiz»; FROZEN is «muzlatilgan»; every other status (EXPELLED,
+ * GRADUATED, INACTIVE, ARCHIVED with `deletedAt` null, PROSPECT) is «ketgan».
+ */
+export function debtKindOf(
+  status: string,
+): keyof DebtSplit['notStudying']['byKind'] {
+  if (status === StudentStatus.ACTIVE) return 'ungrouped';
+  if (status === StudentStatus.FROZEN) return 'frozen';
+  return 'left';
 }
 
 /** Pure. `shuOy = min(qarz, shu oyning hisoblari)`, `eski = qarz − shuOy`. */
 export function splitDebt(input: {
   studying: readonly { id: number; balance: number }[];
   chargedThisMonth: ReadonlyMap<number, number>;
-  notStudying: { sum: number | null; count: number };
+  notStudying: readonly NotStudyingByStatus[];
 }): DebtSplit {
   let total = 0;
   let currentMonth = 0;
+  let olderCount = 0;
   for (const s of input.studying) {
     const debt = Math.max(0, -s.balance);
+    const thisMonth = Math.min(debt, input.chargedThisMonth.get(s.id) ?? 0);
     total += debt;
-    currentMonth += Math.min(debt, input.chargedThisMonth.get(s.id) ?? 0);
+    currentMonth += thisMonth;
+    if (debt > thisMonth) olderCount += 1;
+  }
+  const byKind = {
+    ungrouped: { total: 0, count: 0 },
+    frozen: { total: 0, count: 0 },
+    left: { total: 0, count: 0 },
+  };
+  for (const row of input.notStudying) {
+    const kind = byKind[debtKindOf(row.status)];
+    kind.total += Math.max(0, -(row.sum ?? 0));
+    kind.count += row.count;
   }
   return {
     studying: {
@@ -43,16 +98,18 @@ export function splitDebt(input: {
       count: input.studying.length,
       currentMonth,
       older: total - currentMonth,
+      olderCount,
     },
     notStudying: {
-      total: Math.max(0, -(input.notStudying.sum ?? 0)),
-      count: input.notStudying.count,
+      total: byKind.ungrouped.total + byKind.frozen.total + byKind.left.total,
+      count: byKind.ungrouped.count + byKind.frozen.count + byKind.left.count,
+      byKind,
     },
   };
 }
 
 type DebtSplitDb = {
-  student: Pick<Prisma.TransactionClient['student'], 'findMany' | 'aggregate'>;
+  student: Pick<Prisma.TransactionClient['student'], 'findMany' | 'groupBy'>;
   enrollmentMonthlyCharge: Pick<
     Prisma.TransactionClient['enrollmentMonthlyCharge'],
     'groupBy'
@@ -97,13 +154,15 @@ export async function loadDebtSplit(
       where: studyingDebtorWhere(companyId, opts.branchIds),
       select: { id: true, balance: true },
     }),
-    prisma.student.aggregate({
+    // One row per status of the not-studying set; `debtKindOf` names each.
+    prisma.student.groupBy({
+      by: ['status'],
       where: {
         ...debtorBase(companyId, opts.branchIds),
         NOT: activeStudentWhere(),
       },
       _sum: { balance: true },
-      _count: true,
+      _count: { _all: true },
     }),
   ]);
   const charges =
@@ -125,6 +184,10 @@ export async function loadDebtSplit(
     chargedThisMonth: new Map(
       charges.map((c) => [c.studentId, c._sum.chargedAmount ?? 0]),
     ),
-    notStudying: { sum: notStudying._sum.balance, count: notStudying._count },
+    notStudying: notStudying.map((r) => ({
+      status: r.status,
+      sum: r._sum.balance,
+      count: r._count._all,
+    })),
   });
 }
