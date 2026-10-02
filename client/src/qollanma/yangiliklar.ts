@@ -8,7 +8,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-02",
     sarlavha: "Menyu va tugmalar rolga moslandi",
-    matn: "Kassirga «Guruhlar» menyusi ko'rinmaydi, guruh nomi unga havolasiz chiqadi va o'quvchi profilida «Chiqarish» tugmasi yo'q. «Qarzdorlik» sahifasidagi «Markaz qoplagani» tabi kassirga ochiladi, «Natijani kiritish» va muzlatilgan pulni siljitish tugmalari esa unga ko'rinmaydi. Administrator ish haqi ma'lumotini server tomondan ham ko'ra olmaydi, qidiruvda xodimlar unga chiqmaydi.",
+    matn: "Kassirga «Guruhlar» menyusi ko'rinmaydi, guruh nomi unga havolasiz chiqadi va o'quvchi profilida «Chiqarish» tugmasi yo'q. «Qarzdorlik» sahifasidagi «Markaz qoplagani» tabi kassirga ochiladi, «Natijani kiritish» va muzlatilgan pulni siljitish tugmalari esa unga ko'rinmaydi. Administrator «Ish haqi» sahifasidagi oylik, avans va to'lov ma'lumotlarini server tomondan ham ko'ra olmaydi, qidiruvda xodimlar unga chiqmaydi.",
     rollar: [1, 2, 3, 5],
     sahifa: { bolim: "boshlash", sahifa: "rollar-va-huquqlar" },
   },
