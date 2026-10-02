@@ -213,7 +213,9 @@ function ConsequenceBox({ consequence }: { consequence: Consequence }) {
       <Icon className="mt-0.5 size-4 shrink-0" />
       <div className="flex flex-col gap-0.5">
         <p className="text-sm font-medium">{consequence.head}</p>
-        <p className="text-xs leading-relaxed">{consequence.line}</p>
+        {consequence.line && (
+          <p className="text-xs leading-relaxed">{consequence.line}</p>
+        )}
       </div>
     </div>
   );

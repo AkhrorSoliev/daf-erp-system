@@ -427,6 +427,29 @@ describe('EnrollmentBillingService.refundPrepaidWithOverride', () => {
     );
   });
 
+  it('takes an attended LATE lesson back to EXCUSED without its minutes (ADR-0048)', async () => {
+    // 3 prepaid + 1 attended lesson the admin says should not count.
+    tx.transaction.findMany.mockResolvedValueOnce([
+      { id: 'cons-1', attendanceId: 'att-1' },
+    ]);
+    tx.attendance.findUnique.mockResolvedValue({
+      date: new Date('2026-09-10T00:00:00Z'),
+      groupId: 'grp-1',
+      studentId: 10001,
+    });
+
+    await service.refundPrepaidWithOverride(tx, {
+      enrollmentId: 'enroll-1',
+      performedById: 99,
+      overrideLessons: 4,
+    });
+
+    expect(tx.attendance.update).toHaveBeenCalledWith({
+      where: { id: 'att-1' },
+      data: { status: 'EXCUSED', lateMinutes: null },
+    });
+  });
+
   it('rejects a hand-typed count on a MONTHLY enrollment and reverses nothing', async () => {
     tx.enrollment.findUnique.mockResolvedValue({
       id: 'enroll-m',
