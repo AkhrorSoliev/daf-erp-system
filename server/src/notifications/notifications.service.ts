@@ -91,7 +91,7 @@ export class NotificationsService {
     await this.prisma.pushSubscription.deleteMany({
       where: { userId, endpoint },
     });
-    return { message: 'Push subscription olib tashlandi' };
+    return { message: 'Bildirishnoma obunasi olib tashlandi' };
   }
 
   /** Register / refresh a native (Expo) push token for the student app. */

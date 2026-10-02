@@ -360,31 +360,31 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
             {/* 5. LTV */}
             <KpiCard
               icon={Users}
-              label="LTV"
+              label="O'quvchi qiymati"
               value={`${fmt(d.ltv)} so'm`}
               color="text-violet-600 dark:text-violet-400"
               tooltip="Bitta o'quvchi shu davrda o'rtacha qancha pul olib kelgan. Yuqori bo'lsa — yaxshi."
-              subtitle="Davriy o'quvchi qiymati"
+              subtitle="Bitta o'quvchidan o'rtacha"
               onClick={() => setChartKey("ltv")}
             />
             {/* 6. CAC */}
             <KpiCard
               icon={UserPlus}
-              label="CAC"
+              label="Jalb qilish narxi"
               value={`${fmt(d.cac)} so'm`}
               color="text-amber-600 dark:text-amber-400"
               tooltip={`Bitta yangi o'quvchi olib kelish qancha turgani. Marketingga ${fmt(d.marketingExpenses)} so'm sarflandi, ${d.newStudentCount} ta yangi o'quvchi keldi.`}
-              subtitle="Jalb qilish narxi"
+              subtitle="Bitta yangi o'quvchiga"
               onClick={() => setChartKey("cac")}
             />
             {/* 7. Marketing ROI */}
             <KpiCard
               icon={Megaphone}
-              label="Marketing ROI"
+              label="Marketing samarasi"
               value={`${d.marketingRoi}%`}
               color={d.marketingRoi > 100 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}
               tooltip="Marketingga sarflangan pul qancha qaytganini ko'rsatadi. 100% dan yuqori bo'lsa — foyda keltiryapti."
-              subtitle="Samaradorlik"
+              subtitle="Sarflangan pulga nisbatan"
               onClick={() => setChartKey("marketingRoi")}
             />
           </>
@@ -826,9 +826,11 @@ function KpiCard({
           onClick={onClick}
           className="rounded-xl border bg-card p-4 space-y-1.5 hover:shadow-md hover:border-primary/30 transition-all text-left w-full cursor-pointer"
         >
-          <div className="flex items-center gap-2 text-muted-foreground">
+          {/* A long name wraps to a second line rather than being cut off (it
+              was at 640 and 768 px); the icon stays level with the first. */}
+          <div className="flex items-start gap-2 text-muted-foreground">
             <Icon className="size-4 shrink-0" />
-            <span className="text-xs font-medium truncate">{label}</span>
+            <span className="text-xs font-medium line-clamp-2">{label}</span>
           </div>
           <p className={`text-lg font-bold leading-tight ${color}`}>{value}</p>
           {subtitle && (

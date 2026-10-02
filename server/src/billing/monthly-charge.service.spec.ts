@@ -1272,6 +1272,151 @@ describe('MonthlyChargeService', () => {
     });
   });
 
+  describe('previewChargeForNewEnrollment (A3.4)', () => {
+    // The group's 13 September lessons (Tue/Thu/Sat, 1 September kept).
+    const SEPT = [
+      '2026-09-01',
+      '2026-09-03',
+      '2026-09-05',
+      '2026-09-08',
+      '2026-09-10',
+      '2026-09-12',
+      '2026-09-15',
+      '2026-09-17',
+      '2026-09-19',
+      '2026-09-22',
+      '2026-09-24',
+      '2026-09-26',
+      '2026-09-29',
+    ];
+    // An enrollment that does not exist yet, as the enroll dialog asks.
+    const newEnrollment = (over: Partial<Record<string, unknown>> = {}) =>
+      enrollment({ id: '', returnedAt: null, ...over });
+    const septemberFrom = (day: string) => ({
+      startDate: new Date(`${day}T00:00:00.000Z`),
+    });
+
+    it('quotes the discounted, prorated first month: 8 of 13 lessons, 10% off', async () => {
+      const r = await service.previewChargeForNewEnrollment(tx, {
+        enrollment: newEnrollment(septemberFrom('2026-09-12')),
+        periodYear: 2026,
+        periodMonth: 9,
+        discountPercent: 10,
+      });
+
+      // 12, 15, 17, 19, 22, 24, 26, 29: 450 000 × 8/13 = 276 923, −10%.
+      expect(r).toEqual({
+        plannedLessons: 13,
+        coveredLessons: 8,
+        amount: 249_231,
+      });
+      // A preview: nothing is written, no ledger row, no salary flag.
+      expect(prismaMock.enrollmentMonthlyCharge.create).not.toHaveBeenCalled();
+      expect(prismaMock.enrollmentMonthlyCharge.update).not.toHaveBeenCalled();
+      expect(txWriteMock.chargeMonthlyFee).not.toHaveBeenCalled();
+      expect(prismaMock.salaryAccrual.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('quotes nothing for a group that is still forming', async () => {
+      const r = await service.previewChargeForNewEnrollment(tx, {
+        enrollment: newEnrollment({
+          group: { ...enrollment().group, statusEnum: 'FORMING' },
+        }),
+        periodYear: 2026,
+        periodMonth: 9,
+      });
+
+      expect(r).toBeNull();
+    });
+
+    it('quotes nothing for a lesson-pack course', async () => {
+      const base = enrollment().group;
+      const r = await service.previewChargeForNewEnrollment(tx, {
+        enrollment: newEnrollment({
+          group: {
+            ...base,
+            course: { ...base.course, paymentModel: 'LESSON_PACK' },
+          },
+        }),
+        periodYear: 2026,
+        periodMonth: 9,
+      });
+
+      expect(r).toBeNull();
+    });
+
+    it('does not cover again the lessons an earlier charge in the same group still pays', async () => {
+      // Taken out of the group on 05.09: that charge still covers 01, 03 and
+      // 05.09. Put back from 05.09, the student owes from 08.09 only.
+      prismaMock.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce([
+        { coveredDates: SEPT, frozenOutDates: SEPT.slice(3) },
+      ]);
+
+      const r = await service.previewChargeForNewEnrollment(tx, {
+        enrollment: newEnrollment(septemberFrom('2026-09-05')),
+        periodYear: 2026,
+        periodMonth: 9,
+      });
+
+      expect(prismaMock.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith({
+        where: {
+          studentId: 10453,
+          groupId: 'grp-1',
+          periodYear: 2026,
+          periodMonth: 9,
+          status: 'CHARGED',
+          // No enrollment id is empty, so every other charge counts.
+          enrollmentId: { not: '' },
+        },
+        select: { coveredDates: true, frozenOutDates: true },
+      });
+      expect(r).toEqual({
+        plannedLessons: 13,
+        coveredLessons: 10, // 08.09 .. 29.09
+        amount: 346_154, // 450 000 × 10/13
+      });
+    });
+
+    it.each([
+      ['a whole month at full price', '2026-09-01', 0, false],
+      ['a mid-month start at 10% off', '2026-09-12', 10, false],
+      ['a return into the same group at 50% off', '2026-09-05', 50, true],
+    ])(
+      'equals what createChargeForEnrollment then charges: %s',
+      async (_label, day, discountPercent, rejoin) => {
+        if (rejoin) {
+          // Both calls read it: the write must see what the preview saw.
+          prismaMock.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+            { coveredDates: SEPT, frozenOutDates: SEPT.slice(3) },
+          ]);
+        }
+        // The dialog asks before the enrollment exists; the write runs on the
+        // enrollment just created. No earlier month, so no carried credit.
+        const shape = septemberFrom(day);
+        const preview = await service.previewChargeForNewEnrollment(tx, {
+          enrollment: newEnrollment(shape),
+          periodYear: 2026,
+          periodMonth: 9,
+          discountPercent,
+        });
+        const charge = await service.createChargeForEnrollment(tx, {
+          enrollment: enrollment({ id: 'enr-new', returnedAt: null, ...shape }),
+          periodYear: 2026,
+          periodMonth: 9,
+          companyId: 1,
+          discountPercent,
+        });
+
+        expect(charge?.creditLessons).toBe(0);
+        expect(preview).toEqual({
+          plannedLessons: charge?.plannedLessons,
+          coveredLessons: charge?.coveredLessons,
+          amount: charge?.chargedAmount,
+        });
+      },
+    );
+  });
+
   describe('createChargesForPeriod', () => {
     // `createChargeForEnrollment` o'zi yuqorida to'liq test qilingan — bu
     // yerda uni stub qilamiz, faqat ko'p yozilishni aylantirish va xatoni

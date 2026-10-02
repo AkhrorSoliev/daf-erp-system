@@ -584,7 +584,7 @@ async function finalizeRegistration(ctx: BotContext, deps: SceneDeps) {
       `Missing required mapsTo values: firstName=${!!firstName} lastName=${!!lastName} phone=${!!phone}`,
     );
     await ctx.reply(
-      "Xatolik: ism / familya / telefon olinmadi. Qaytadan urinib ko'ring (/start).",
+      "Xatolik: ism / familiya / telefon olinmadi. Qaytadan urinib ko'ring (/start).",
       Markup.removeKeyboard(),
     );
     await ctx.scene.leave();

@@ -392,3 +392,70 @@ describe("PaymentsOverview — the debt block", () => {
     );
   });
 });
+
+// The CEO reads Uzbek only (A3.6): the three money cards used to be named by
+// their English abbreviations. Their tooltips already explained each one in
+// Uzbek, and they stay as they are.
+describe("PaymentsOverview — the money cards have Uzbek names", () => {
+  it("names the three cards in Uzbek, with a subtitle each, and prints no LTV, CAC or ROI", () => {
+    const text = render(charges);
+
+    expect(text).toContain("O'quvchi qiymati");
+    expect(text).toContain("Bitta o'quvchidan o'rtacha");
+    expect(text).toContain("Jalb qilish narxi");
+    expect(text).toContain("Bitta yangi o'quvchiga");
+    expect(text).toContain("Marketing samarasi");
+    expect(text).toContain("Sarflangan pulga nisbatan");
+    expect(text).not.toMatch(/\b(LTV|CAC|ROI)\b/);
+    // The old subtitles are gone: «Jalb qilish narxi» is now the card's name,
+    // and «Samaradorlik» only repeated «Marketing samarasi».
+    expect(text).not.toContain("Davriy o'quvchi qiymati");
+    expect(text).not.toContain("Samaradorlik");
+  });
+
+  // Measured in a browser (A3 final wave): at 640 px «To'lov qilganlar»,
+  // «O'quvchi qiymati», «Jalb qilish narxi» and «Marketing samarasi» were cut
+  // off, at 768 px «Marketing samarasi». A name now takes a second line.
+  it("lets every card's name wrap to a second line instead of cutting it off", () => {
+    const html = renderHtml(charges);
+
+    for (const name of [
+      "Tushumlar",
+      "Chiqimlar",
+      "Foyda",
+      "To&#x27;lov qilganlar",
+      "O&#x27;quvchi qiymati",
+      "Jalb qilish narxi",
+      "Marketing samarasi",
+      "O&#x27;rtacha to&#x27;lov",
+    ]) {
+      const classes = html.match(
+        new RegExp(`<span class="([^"]*)">${name}</span>`),
+      )?.[1];
+      expect(classes, name).toContain("line-clamp-2");
+      expect(classes, name).not.toContain("truncate");
+    }
+  });
+
+  // A closed dialog renders nothing, so — like the tooltips above — the chart
+  // dialog's titles are read from its source. They are also the name the
+  // chart's tooltip gives the series, so one list covers both.
+  it("the chart dialog's titles are Uzbek too", () => {
+    const source = readFileSync(
+      join(__dirname, "kpi-chart-dialog.tsx"),
+      "utf-8",
+    );
+    const titles = [...source.matchAll(/^\s*title: "(.*)",$/gm)].map(
+      (m) => m[1],
+    );
+
+    expect(titles).toEqual(
+      expect.arrayContaining([
+        "O'quvchi qiymati",
+        "Jalb qilish narxi",
+        "Marketing samarasi",
+      ]),
+    );
+    expect(titles.join("\n")).not.toMatch(/\b(LTV|CAC|ROI)\b/);
+  });
+});

@@ -662,7 +662,7 @@ describe('ReportsExcelService', () => {
       50_000,
     );
     expect(
-      cellText(findRow(check, '= Sof foyda (footing)').getCell(5).value),
+      cellText(findRow(check, '= Sof foyda (yig‘indi)').getCell(5).value),
     ).toBe('MOS');
   });
 
@@ -1170,6 +1170,31 @@ describe('ReportsExcelService', () => {
         [2],
       );
     });
+
+    it("the debt workbook's notes carry no ledger type or table name (A3.6)", async () => {
+      // «Qarz harakati» and «Oylik qarzdorlik» used to explain themselves in
+      // the ledger's own words: ADJUSTMENT, DEBT_WRITE_OFF, Ledger, Transaction.
+      // No word anchors: a suffixed «Ledgerdan» must be caught too.
+      const english = /ADJUSTMENT|DEBT_WRITE_OFF|Ledger|Transaction/i;
+      const wb = await load(await service.generateDebtHistory(1, null));
+      // A Set: a merged title answers once per merged cell.
+      const found = new Set<string>();
+      let noteBlocks = 0;
+      wb.eachSheet((ws) =>
+        ws.eachRow((row) => {
+          if (cellText(row.getCell(1).value) === 'ⓘ Bu bo‘lim haqida') {
+            noteBlocks++;
+          }
+          row.eachCell((cell) => {
+            const text = cellText(cell.value);
+            if (english.test(text)) found.add(`${ws.name}: ${text}`);
+          });
+        }),
+      );
+      // The notes themselves must have been scanned, or this proves nothing.
+      expect(noteBlocks).toBeGreaterThanOrEqual(2);
+      expect([...found]).toEqual([]);
+    });
   });
 
   describe('carried-over sheet fixes', () => {
@@ -1247,6 +1272,37 @@ describe('ReportsExcelService', () => {
       expect(typewriter).toEqual([]);
     });
 
+    it('«Davomat» says what «Ushlab qolish» divides, and names its trend by month or week', async () => {
+      const texts = (wb: Workbook) => {
+        const out: string[] = [];
+        wb.getWorksheet('Davomat')!.eachRow((r) =>
+          out.push(cellText(r.getCell(1).value)),
+        );
+        return out;
+      };
+
+      const weekly = texts(await buildWorkbook({}));
+      // End-of-period headcount ÷ start-of-period headcount: new students
+      // count, so it can pass 100% (reports-attendance-analytics.service.ts).
+      expect(weekly).toContain(
+        "•  Ushlab qolish — davr oxiridagi o'quvchilar sonining davr boshidagiga nisbati (yangi qo'shilganlar ham kiradi, shuning uchun 100% dan oshishi mumkin).",
+      );
+      expect(weekly).toContain("Haftalar bo'yicha");
+
+      reports.getAttendanceAnalytics.mockResolvedValueOnce({
+        ...(await reports.getAttendanceAnalytics()),
+        bucket: 'month',
+      });
+      expect(texts(await buildWorkbook({}))).toContain("Oylar bo'yicha");
+    });
+
+    it('«Tekshiruv» calls the student balance roll-forward «aylanmasi» in its check row too', async () => {
+      const wb = await buildWorkbook({}, { include: ['buxgalteriya'] });
+      const ws = wb.getWorksheet('Tekshiruv')!;
+      expect(findRow(ws, 'O‘quvchi balansi aylanmasi')).not.toBeNull();
+      expect(findRow(ws, 'O‘quvchi balansi yig‘indisi')).toBeNull();
+    });
+
     it('«Xonalar bandligi» states its window as a dated "Bugungi holat"', async () => {
       const wb = await buildWorkbook({});
       const ws = wb.getWorksheet('Xonalar bandligi')!;
@@ -1254,5 +1310,37 @@ describe('ReportsExcelService', () => {
         'Bugungi holat:',
       );
     });
+  });
+
+  it("«Davomat», «O'qituvchilar samaradorligi», «Tekshiruv» and «Foyda va zarar» carry no English words (A3.6)", async () => {
+    // The CEO's rule (27.09): no English word on a screen, in Excel, PDF or
+    // Telegram. These are the four sheets of the main workbook that still had
+    // one; the debt workbook has its own guard under «generateDebtHistory».
+    const english =
+      /\b(retention|present|absent|late|excused|reconciliation|ties|tie-out|recon|footing|refund|roll-forward|audit|accrual|GL|ACTIVE|FORMING|EXCUSED|churn|vs|trend)\b|P&L/i;
+    const wb = await buildWorkbook(
+      {},
+      { include: ['buxgalteriya', 'marketing'] },
+    );
+    // A Set: a merged title answers once per merged cell.
+    const found = new Set<string>();
+    for (const name of [
+      'Davomat',
+      "O'qituvchilar samaradorligi",
+      'Tekshiruv',
+      'Foyda va zarar',
+    ]) {
+      let cells = 0;
+      wb.getWorksheet(name)!.eachRow((row) =>
+        row.eachCell((cell) => {
+          const text = cellText(cell.value);
+          cells++;
+          if (english.test(text)) found.add(`${name}: ${text}`);
+        }),
+      );
+      // A sheet that fell back to its «ma'lumot yo'q» note would pass vacuously.
+      expect(cells).toBeGreaterThan(10);
+    }
+    expect([...found]).toEqual([]);
   });
 });

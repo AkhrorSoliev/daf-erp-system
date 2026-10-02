@@ -227,6 +227,10 @@ describe('MockExamsService', () => {
       });
       // maxScore auto-sums to subject totals when admin didn't pass one
       expect(createCall.data.maxScore).toBe(60);
+      // The three slots every registration form starts with.
+      expect(
+        (createCall.data.formFields as { label: string }[]).map((f) => f.label),
+      ).toEqual(['Ismingiz', 'Familiyangiz', 'Telefon raqamingiz']);
 
       expect(prisma.mockExam.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -521,6 +525,25 @@ describe('MockExamsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    // Admin shu matnni toast'da o'qiydi: «REGISTRATION_OPEN → ANNOUNCED»
+    // kabi enum nomlari ham, inglizcha so'z ham chiqmasin.
+    it("noto'g'ri o'tishda enum nomlarisiz, oddiy o'zbekcha sabab aytadi", async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+
+      const error = await service
+        .changeStatus('e1', MockExamStatus.ANNOUNCED, 1001, 1, null)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).message).toBe(
+        "Imtihon holatini bu tartibda o'zgartirib bo'lmaydi",
+      );
+      expect(prisma.mockExam.update).not.toHaveBeenCalled();
+    });
+
     it('moves REGISTRATION_OPEN → REGISTRATION_CLOSED and records history', async () => {
       prisma.mockExam.findFirst.mockResolvedValue({
         id: 'e1',
@@ -682,6 +705,36 @@ describe('MockExamsService', () => {
     });
   });
 
+  // Admin bu ikki xabarni toast'da o'qiydi: «ANNOUNCED» enum nomi emas,
+  // sahifadagi holat nomi — «E'lon qilingan» — aytilsin.
+  describe("rebroadcastResults / regeneratePdf — faqat e'lon qilingan imtihon", () => {
+    it.each([
+      [
+        'rebroadcastResults',
+        "Qayta yuborish faqat «E'lon qilingan» holatdagi imtihon uchun mavjud",
+      ],
+      [
+        'regeneratePdf',
+        "PDF faqat «E'lon qilingan» holatdagi imtihon uchun yaratiladi",
+      ],
+    ] as const)(
+      '%s refuses an exam that is not announced, in Uzbek',
+      async (method, expected) => {
+        prisma.mockExam.findFirst.mockResolvedValue({
+          id: 'e1',
+          status: MockExamStatus.GRADING,
+        });
+
+        const error = await service[method]('e1', 1001, null).catch(
+          (e: unknown) => e,
+        );
+
+        expect(error).toBeInstanceOf(BadRequestException);
+        expect((error as BadRequestException).message).toBe(expected);
+      },
+    );
+  });
+
   describe('update formFields', () => {
     const existingDraft = {
       id: 'e1',
@@ -706,7 +759,7 @@ describe('MockExamsService', () => {
         {
           id: 'f2',
           type: 'text',
-          label: 'Familyangiz',
+          label: 'Familiyangiz',
           required: true,
           mapsTo: 'lastName',
         },
@@ -720,6 +773,17 @@ describe('MockExamsService', () => {
       ];
     }
 
+    // Forma saqlanmaganda admin xabarni o'qiydi: ichki nomlar (`firstName`,
+    // `phone`) emas, formadagi so'zlar — «Ism», «Familiya», «Telefon».
+    async function rejectionOf(fields: object[]) {
+      prisma.mockExam.findFirst.mockResolvedValue(existingDraft);
+      const error = await service
+        .update('e1', { formFields: fields as any }, 1001, 1, null)
+        .catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(BadRequestException);
+      return (error as BadRequestException).message;
+    }
+
     it('rejects duplicate field ids', async () => {
       prisma.mockExam.findFirst.mockResolvedValue(existingDraft);
       const fields = validFields();
@@ -729,21 +793,43 @@ describe('MockExamsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('rejects when phone slot is missing', async () => {
-      prisma.mockExam.findFirst.mockResolvedValue(existingDraft);
-      const fields = validFields().filter((f) => f.mapsTo !== 'phone');
-      await expect(
-        service.update('e1', { formFields: fields as any }, 1001, 1, null),
-      ).rejects.toThrow(BadRequestException);
+    it.each([
+      ['firstName', "Ism maydoni majburiy — biror maydonni unga bog'lang"],
+      ['lastName', "Familiya maydoni majburiy — biror maydonni unga bog'lang"],
+      ['phone', "Telefon maydoni majburiy — biror maydonni unga bog'lang"],
+    ])('names the missing %s field in Uzbek', async (slot, expected) => {
+      const fields = validFields().filter((f) => f.mapsTo !== slot);
+      expect(await rejectionOf(fields)).toBe(expected);
+    });
+
+    it('refuses a second field on one slot, in Uzbek', async () => {
+      const fields = validFields();
+      fields.push({
+        id: 'f4',
+        type: 'text',
+        label: 'Yana',
+        required: true,
+        mapsTo: 'lastName',
+      });
+      expect(await rejectionOf(fields)).toBe(
+        "Familiyaga faqat bitta maydon bog'lanishi mumkin",
+      );
+    });
+
+    it('refuses an optional field on a slot, in Uzbek', async () => {
+      const fields = validFields();
+      fields[2].required = false;
+      expect(await rejectionOf(fields)).toBe(
+        "Telefonga bog'langan maydon majburiy bo'lishi kerak",
+      );
     });
 
     it('rejects when phone is bound to a non-phone field', async () => {
-      prisma.mockExam.findFirst.mockResolvedValue(existingDraft);
       const fields = validFields();
       fields[2].type = 'text';
-      await expect(
-        service.update('e1', { formFields: fields as any }, 1001, 1, null),
-      ).rejects.toThrow(BadRequestException);
+      expect(await rejectionOf(fields)).toBe(
+        "Telefon maydonining turi «Telefon» bo'lishi kerak",
+      );
     });
 
     it('rejects select fields with no options', async () => {

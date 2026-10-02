@@ -145,7 +145,7 @@ export async function buildRefundReceiptDoc(
       lineHeight: 1.35,
     },
     footer: (currentPage: number, pageCount: number) => ({
-      text: `${currentPage} of ${pageCount}`,
+      text: `${currentPage} / ${pageCount}`,
       alignment: 'right',
       fontSize: 8,
       color: COLOR.faint,

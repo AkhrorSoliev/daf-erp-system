@@ -22,6 +22,10 @@ import {
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
+import {
+  breakdownRateLabel,
+  type RateBasis,
+} from "@/components/payments/salary-utils";
 import { SalaryMonthlyPanel } from "@/components/shared/salary-monthly-panel";
 
 /**
@@ -46,6 +50,8 @@ interface BreakdownLine {
   lessonDate: string;
   student: { id: number; firstName: string; lastName: string };
   group: { id: string; name: string };
+  // An old server does not send it; the badge then reads «/tsikl».
+  rateBasis?: RateBasis;
   perLessonCost: number;
   amount: number;
   configVersion: {
@@ -185,7 +191,7 @@ export function TeacherSalaryClient() {
   );
 }
 
-function BreakdownTable({
+export function BreakdownTable({
   lines,
   totals,
 }: {
@@ -236,9 +242,7 @@ function BreakdownTable({
               <TableCell>
                 {l.configVersion ? (
                   <Badge variant="outline">
-                    {l.configVersion.salaryType === "PERCENTAGE"
-                      ? `${l.configVersion.value}%`
-                      : `${l.configVersion.value.toLocaleString("uz-UZ")}/cycle`}
+                    {breakdownRateLabel(l.configVersion, l.rateBasis)}
                     {l.configVersion.scope === "GROUP" && " (guruh)"}
                   </Badge>
                 ) : (

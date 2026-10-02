@@ -3,9 +3,28 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { PaymentModel, Prisma } from '@prisma/client';
+import { tashkentMonthKey } from '../common/date/tashkent';
 import { PrismaService } from '../prisma/prisma.service';
+import { isMonthlyBillingMonth } from '../reports/month-charges';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
+
+// The unit a FIXED_PER_STUDENT rate is paid in: «month» — per student per
+// MONTH, «cycle» — per CYCLE (the divisor: ADR-0050, `resolveLessonPricing`).
+// «month» only for a monthly course's lesson in a monthly-billing month: a
+// course that is monthly now still had its May–August lessons accrued per
+// cycle. `lessonDate` is `@db.Date` (UTC midnight), which +5 hours leaves on
+// the same day, so `tashkentMonthKey` gives that calendar month.
+// Accepted edge: a September lesson priced from its pack marker (ADR-0051) reads «month» too.
+function rateBasisOf(
+  lessonDate: Date,
+  paymentModel: PaymentModel,
+): 'month' | 'cycle' {
+  return paymentModel === PaymentModel.MONTHLY &&
+    isMonthlyBillingMonth(tashkentMonthKey(lessonDate))
+    ? 'month'
+    : 'cycle';
+}
 
 /**
  * Per-payment salary breakdown — answers "where did each so'm in this
@@ -168,7 +187,14 @@ export class SalaryBreakdownService {
           select: {
             id: true,
             name: true,
-            course: { select: { name: true, lessonPaymentCount: true } },
+            course: {
+              select: {
+                name: true,
+                lessonPaymentCount: true,
+                // Each line's `rateBasis` comes from it (`rateBasisOf`).
+                paymentModel: true,
+              },
+            },
           },
         },
         salaryConfigVersion: {
@@ -228,6 +254,8 @@ export class SalaryBreakdownService {
         lessonDate: r.lessonDate,
         student: r.student,
         group: r.group,
+        // The rate label on screen reads it: «/o'quvchi/oy» or «/tsikl».
+        rateBasis: rateBasisOf(r.lessonDate, r.group.course.paymentModel),
         perLessonCost: r.perLessonCost,
         amount: r.amount,
         configVersion: r.salaryConfigVersion
