@@ -6,6 +6,7 @@ import {
   MonthlyChargeStatus,
   PaymentModel,
   Prisma,
+  StudentStatus,
   UnmarkedLessonStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -113,6 +114,27 @@ export interface DepartureOutcomesPreview {
     { lessons: number; amount: number; withheld: boolean }
   >;
 }
+
+/** An enrollment loaded to be charged one month on its own. */
+const CHARGEABLE_ENROLLMENT_SELECT = {
+  id: true,
+  studentId: true,
+  groupId: true,
+  startDate: true,
+  createdAt: true,
+  student: { select: { discountPercent: true } },
+  group: {
+    select: {
+      id: true,
+      branchId: true,
+      companyId: true,
+      statusEnum: true,
+      startDate: true,
+      exactDays: true,
+      course: { select: { price: true, paymentModel: true } },
+    },
+  },
+} satisfies Prisma.EnrollmentSelect;
 
 /**
  * Oylik to'lov hisoblarini yaratadi va boshqaradi.
@@ -1431,25 +1453,7 @@ export class MonthlyChargeService {
   ): Promise<{ charged: number; lessons: number } | null> {
     const enr = await tx.enrollment.findUnique({
       where: { id: params.enrollmentId },
-      select: {
-        id: true,
-        studentId: true,
-        groupId: true,
-        startDate: true,
-        createdAt: true,
-        student: { select: { discountPercent: true } },
-        group: {
-          select: {
-            id: true,
-            branchId: true,
-            companyId: true,
-            statusEnum: true,
-            startDate: true,
-            exactDays: true,
-            course: { select: { price: true, paymentModel: true } },
-          },
-        },
-      },
+      select: CHARGEABLE_ENROLLMENT_SELECT,
     });
     if (!enr) return null;
 
@@ -1469,6 +1473,49 @@ export class MonthlyChargeService {
     return charge
       ? { charged: charge.chargedAmount, lessons: charge.coveredLessons }
       : null;
+  }
+
+  /**
+   * Charges the month an enrollment was written in, from its join day, at
+   * once — for a door that writes the enrollment itself and cannot reach this
+   * module: the Telegram self-registration, through STUDENT_SELF_ENROLLED
+   * (`SelfEnrollmentChargeListener`). The admin door does the same inside its
+   * own transaction (`StudentEnrollmentService.chargeMidMonthJoin`). Left to
+   * the 04:00 daily run, a sign-up on a month's last lesson day after that run
+   * was never billed for it: the next run already bills the new month.
+   *
+   * Loads only a live, ACTIVE enrollment of a live, ACTIVE student — the
+   * filter `createChargeForEnrollment` leaves to its caller. Idempotent like
+   * it: a month already charged is returned as it is.
+   */
+  async chargeJoinMonth(
+    tx: Prisma.TransactionClient,
+    params: { enrollmentId: string; companyId: number },
+  ) {
+    const enr = await tx.enrollment.findFirst({
+      where: {
+        id: params.enrollmentId,
+        status: EnrollmentStatus.ACTIVE,
+        deletedAt: null,
+        student: { status: StudentStatus.ACTIVE, deletedAt: null },
+      },
+      select: CHARGEABLE_ENROLLMENT_SELECT,
+    });
+    if (!enr) return null;
+
+    const { student, ...enrollment } = enr;
+    const today = tashkentDateStr(new Date());
+    return this.createChargeForEnrollment(tx, {
+      enrollment: {
+        ...enrollment,
+        status: EnrollmentStatus.ACTIVE,
+        returnedAt: null,
+      },
+      periodYear: Number(today.slice(0, 4)),
+      periodMonth: Number(today.slice(5, 7)),
+      companyId: params.companyId,
+      discountPercent: student.discountPercent,
+    });
   }
 
   /**

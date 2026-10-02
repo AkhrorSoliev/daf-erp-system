@@ -1125,6 +1125,71 @@ describe('MonthlyChargeService', () => {
     });
   });
 
+  describe('chargeJoinMonth', () => {
+    // The enrollment as `chargeJoinMonth` loads it: a self-registration on
+    // Tuesday 29.09.2026, the month's last lesson day of this group.
+    const joined = () => {
+      const { status: _status, ...row } = enrollment({
+        startDate: new Date('2026-09-29T00:00:00Z'),
+        createdAt: new Date('2026-09-29T10:00:00Z'),
+      }) as unknown as Record<string, unknown>;
+      return { ...row, student: { discountPercent: 0 } };
+    };
+
+    beforeEach(() => {
+      // 15:00 Tashkent, long after the 04:00 daily run.
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+      jest.setSystemTime(new Date('2026-09-29T10:00:00Z'));
+      prismaMock.enrollment.findFirst = jest.fn().mockResolvedValue(joined());
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it("charges today's month from the join day at once", async () => {
+      // Waiting for the next daily run lost this lesson for good: on 30.09
+      // that run already bills October.
+      const charge = await service.chargeJoinMonth(tx, {
+        enrollmentId: 'enr-1',
+        companyId: 1,
+      });
+
+      expect(charge).toMatchObject({
+        periodYear: 2026,
+        periodMonth: 9,
+        coveredLessons: 1,
+      });
+      expect((charge as { coveredDates: string[] }).coveredDates).toEqual([
+        '2026-09-29',
+      ]);
+      expect(txWriteMock.chargeMonthlyFee).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 34_615, enrollmentId: 'enr-1' }),
+        tx,
+      );
+    });
+
+    it('loads only a live enrollment of a live, ACTIVE student', async () => {
+      // `createChargeForEnrollment` leaves the student filter to its caller.
+      prismaMock.enrollment.findFirst.mockResolvedValue(null);
+
+      const charge = await service.chargeJoinMonth(tx, {
+        enrollmentId: 'enr-1',
+        companyId: 1,
+      });
+
+      expect(charge).toBeNull();
+      expect(prismaMock.enrollment.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id: 'enr-1',
+            status: 'ACTIVE',
+            deletedAt: null,
+            student: { status: 'ACTIVE', deletedAt: null },
+          },
+        }),
+      );
+      expect(txWriteMock.chargeMonthlyFee).not.toHaveBeenCalled();
+    });
+  });
+
   describe('createChargeForEnrollment — chegirma', () => {
     const baseParams = {
       enrollment: enrollment(),
