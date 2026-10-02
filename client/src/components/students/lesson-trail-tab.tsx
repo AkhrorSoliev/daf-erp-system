@@ -10,15 +10,22 @@ import { Label } from "@/components/ui/label";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import { tashkentNow } from "@/lib/tashkent-time";
 import {
   AttendanceDot,
   getPercentageColor,
   type DotStatus,
 } from "@/components/shared/attendance-dot";
+import { blockCount, blockTitle } from "./lesson-trail-labels";
 
 interface Cycle {
-  cycleSequenceNumber: number;
-  capacity: number; // = kurs lessonPaymentCount (sikl blok o'lchami)
+  /** Absent from an older server: a pack-era cycle. */
+  kind?: "CYCLE" | "MONTH";
+  cycleSequenceNumber: number | null;
+  /** MONTH blocks (ADR-0062): 'YYYY-MM'. */
+  month?: string | null;
+  /** CYCLE: lessonPaymentCount; MONTH: the month's charged lessons; null when unknown. */
+  capacity: number | null;
   lessonCount: number; // shu blokdagi haqiqiy darslar soni
   attended: number;
   firstDate: string;
@@ -28,7 +35,8 @@ interface Cycle {
 interface Lesson {
   date: string;
   status: DotStatus;
-  cycleSequenceNumber: number;
+  cycleSequenceNumber: number | null;
+  month?: string | null;
 }
 
 interface GroupOverview {
@@ -67,15 +75,17 @@ function cycleLabel(c: Cycle): string {
     c.lastDate && c.lastDate !== c.firstDate
       ? `${shortDate(c.firstDate)} — ${shortDate(c.lastDate)}`
       : shortDate(c.firstDate);
-  // To'liq blok → "(12 dars)"; davom etayotgan oxirgi blok → "(4/12 dars)".
-  const count =
-    c.lessonCount < c.capacity
-      ? `${c.lessonCount}/${c.capacity} dars`
-      : `${c.lessonCount} dars`;
-  return `${range} (${count})`;
+  // To'liq blok → "(12 dars)"; davom etayotgan blok → "(4/12 dars)".
+  return `${range} (${blockCount(c.lessonCount, c.capacity)})`;
 }
 
-function LessonTimeline({ lessons }: { lessons: Lesson[] }) {
+function LessonTimeline({
+  lessons,
+  year,
+}: {
+  lessons: Lesson[];
+  year: string;
+}) {
   if (lessons.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
@@ -83,18 +93,22 @@ function LessonTimeline({ lessons }: { lessons: Lesson[] }) {
       </p>
     );
   }
-  // Xronologik nuqtalar; sikl raqami o'zgarganda "N-sikl:" sarlavhasi qo'yiladi.
+  // Chronological dots; a title wherever the block (cycle or month) changes.
   const items: ReactNode[] = [];
-  let seenCycle: number | null = null;
+  let seenBlock: string | null = null;
   lessons.forEach((l, i) => {
-    if (l.cycleSequenceNumber != null && l.cycleSequenceNumber !== seenCycle) {
-      seenCycle = l.cycleSequenceNumber;
+    const block =
+      l.month ??
+      (l.cycleSequenceNumber != null ? String(l.cycleSequenceNumber) : null);
+    const title = block ? blockTitle(l, year) : null;
+    if (block && block !== seenBlock) {
+      seenBlock = block;
       items.push(
         <span
           key={`c-${i}`}
           className="ml-1.5 mr-0.5 text-[10px] font-medium text-muted-foreground first:ml-0"
         >
-          {l.cycleSequenceNumber}-sikl:
+          {title}:
         </span>,
       );
     }
@@ -103,9 +117,7 @@ function LessonTimeline({ lessons }: { lessons: Lesson[] }) {
         key={`${l.date}-${i}`}
         status={l.status}
         date={l.date}
-        cycleLabel={
-          l.cycleSequenceNumber ? `${l.cycleSequenceNumber}-sikl` : null
-        }
+        cycleLabel={title}
       />,
     );
   });
@@ -113,6 +125,7 @@ function LessonTimeline({ lessons }: { lessons: Lesson[] }) {
 }
 
 function GroupCard({ group }: { group: GroupOverview }) {
+  const year = tashkentNow().dateStr.slice(0, 4);
   return (
     <div className="space-y-3 rounded-lg border p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -140,13 +153,16 @@ function GroupCard({ group }: { group: GroupOverview }) {
         </Badge>
       </div>
 
-      {/* Sikllar — sanalar bilan */}
+      {/* Blocks (cycles, then months) with their dates */}
       {group.cycles.length > 0 && (
         <ul className="space-y-0.5 text-xs">
           {group.cycles.map((c) => (
-            <li key={c.cycleSequenceNumber} className="text-muted-foreground">
+            <li
+              key={c.month ?? `sikl-${c.cycleSequenceNumber}`}
+              className="text-muted-foreground"
+            >
               <span className="font-medium text-foreground">
-                {c.cycleSequenceNumber}-sikl:
+                {blockTitle(c, year)}:
               </span>{" "}
               {cycleLabel(c)}
             </li>
@@ -154,8 +170,8 @@ function GroupCard({ group }: { group: GroupOverview }) {
         </ul>
       )}
 
-      {/* Davomat nuqtalari (xronologik, sikl bo'yicha belgilangan) */}
-      <LessonTimeline lessons={group.lessons} />
+      {/* Attendance dots, chronological, titled by block */}
+      <LessonTimeline lessons={group.lessons} year={year} />
     </div>
   );
 }

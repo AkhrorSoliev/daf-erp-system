@@ -69,6 +69,9 @@ export function AttendanceForm({
   const [students, setStudents] = useState<StudentAttendance[]>([]);
   const [debtorStudents, setDebtorStudents] = useState<DebtorStudent[]>([]);
   const [coursePrice, setCoursePrice] = useState<number>(0);
+  const [paymentModel, setPaymentModel] = useState<
+    "MONTHLY" | "LESSON_PACK" | null
+  >(null);
   const [entries, setEntries] = useState<Map<number, AttendanceEntry>>(
     new Map(),
   );
@@ -192,6 +195,7 @@ export function AttendanceForm({
       setStudents(active);
       setDebtorStudents(debtors);
       setCoursePrice(data.coursePrice ?? 0);
+      setPaymentModel(data.paymentModel ?? null);
       setEffectiveTimes({
         start: data.effectiveStartTime ?? null,
         end: data.effectiveEndTime ?? null,
@@ -217,6 +221,7 @@ export function AttendanceForm({
       setStudents([]);
       setDebtorStudents([]);
       setCoursePrice(0);
+      setPaymentModel(null);
       setEffectiveTimes(null);
       setEntries(new Map());
     } finally {
@@ -648,13 +653,15 @@ export function AttendanceForm({
 
       {/* Admin-only debtors quick-action panel: same students already appear
           (with an inline "Qarz" badge) in the main roster above. This panel
-          adds a "To'lov qabul qilish" shortcut so the admin can collect the
-          full cycle in one click. After payment, retroactive billing settles
-          all the unpaid attendance silently. */}
+          adds a "To'lov qabul qilish" shortcut: a pack group suggests the
+          next cycle's price, a monthly group each row's own debt (ADR-0062). */}
       {isAdmin && debtorStudents.length > 0 && (
         <AttendanceDebtorsSection
           debtors={debtorStudents}
-          suggestedAmount={coursePrice}
+          monthly={paymentModel === "MONTHLY"}
+          month={date.slice(0, 7)}
+          // 0 → each row falls back to its own debt.
+          suggestedAmount={paymentModel === "MONTHLY" ? 0 : coursePrice}
           onPaymentSuccess={refreshRows}
         />
       )}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhoneWithCodeInput } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { Greeting, useGreeting } from "@/components/auth/daftar-greeting";
 import { type PortalType, daftarScope } from "@/lib/portal";
 import { DAFTAR_INPUT, DAFTAR_ROW } from "@/components/auth/daftar-field";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
@@ -33,7 +33,6 @@ interface LoginFormProps {
 // whole number of 2rem rows tall — that is what keeps the labels and values on
 // the sheet's ruling, so size a new block the same way.
 export function LoginForm({ portal }: LoginFormProps) {
-  const router = useRouter();
   const { setAuth } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -42,6 +41,7 @@ export function LoginForm({ portal }: LoginFormProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const { greeted, greet } = useGreeting("push");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,7 +59,7 @@ export function LoginForm({ portal }: LoginFormProps) {
       setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
       // Student portal foydalanuvchilarini /portal ga yo'naltirish
       const isStudent = res.data.user?.roles?.some((r: any) => r.id === 6);
-      router.push(portal === "student" || isStudent ? "/portal" : "/");
+      greet(res.data.user, portal === "student" || isStudent ? "/portal" : "/");
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response
         ?.status;
@@ -77,6 +77,8 @@ export function LoginForm({ portal }: LoginFormProps) {
       setLoading(false);
     }
   }
+
+  if (greeted) return <Greeting user={greeted} />;
 
   return (
     <>

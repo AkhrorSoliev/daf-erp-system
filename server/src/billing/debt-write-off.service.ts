@@ -15,6 +15,9 @@ import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-s
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history/entity-history.service';
 
+const MONTHLY_REFUSAL =
+  "Oylik to'lovdagi qarz hisobdan chiqarilmaydi — pul guruhdan chiqarishda tanlangan tartib bo'yicha hal bo'ladi";
+
 /**
  * "Yo'qolgan o'quvchi" — joriy siklda kam yoki umuman kelmagan o'quvchining
  * qarzini hisobdan chiqarish.
@@ -83,6 +86,45 @@ export class DebtWriteOffService {
 
     const balance = enrollment.student.balance;
     const lessonPaymentCount = enrollment.group.course.lessonPaymentCount || 12;
+
+    // ADR-0062: a monthly enrollment's money is settled by the departure
+    // policy (contract 6.2, ADR-0044; trial lesson, ADR-0048) and debt is
+    // never forgiven (CEO, 21.09.2026, answer 9). The cycle math below is
+    // pack-era only — from 01.10 an unpaid student cannot even be marked
+    // ABSENT after the month's first lesson (ADR-0047).
+    const monthlyCharge = await client.enrollmentMonthlyCharge.findFirst({
+      where: { enrollmentId: enrollment.id },
+      select: { id: true },
+    });
+    if (monthlyCharge) {
+      return {
+        eligible: false,
+        reason: 'MONTHLY',
+        details: {
+          studentId: enrollment.studentId,
+          enrollmentId: enrollment.id,
+          groupId: enrollment.groupId,
+          currentBalance: balance,
+          enrollmentStatus: enrollment.status,
+          cycleNumber: 0,
+          cycleStartIndex: 0,
+          cyclePresentCount: 0,
+          cycleLateCount: 0,
+          cycleAbsentCount: 0,
+          cycleExcusedCount: 0,
+          lessonPaymentCount,
+          perLessonCost: 0,
+          theoreticalCycleDebt: 0,
+          suggestedWriteOff: 0,
+          attendedCost: 0,
+          absentCost: 0,
+          realDebtAmount: 0,
+          totalDebtAmount: balance < 0 ? -balance : 0,
+          maxWriteOff: 0,
+        },
+      };
+    }
+
     const perLessonCost = await this.computePerLessonCost(
       client,
       enrollment.id,
@@ -202,7 +244,9 @@ export class DebtWriteOffService {
 
       if (!eligibility.eligible) {
         throw new BadRequestException(
-          `Joriy siklda yo'qolgan o'quvchi sharti bajarilmadi: ${eligibility.reason}`,
+          eligibility.reason === 'MONTHLY'
+            ? MONTHLY_REFUSAL
+            : `Joriy siklda yo'qolgan o'quvchi sharti bajarilmadi: ${eligibility.reason}`,
         );
       }
 
@@ -460,10 +504,13 @@ function countByStatus(records: { status: AttendanceStatus }[]) {
 // `DISABLED` ni bu servis EMAS, `StudentEnrollmentService` qo'yadi:
 // `payment.debtWriteOffEnabled` o'chiq bo'lsa hisob-kitob baribir
 // ko'rsatiladi, lekin `eligible: false` bilan (CEO, 21.09.2026, 9-javob).
+// `MONTHLY` — the enrollment is in the monthly era (ADR-0062): write-off is
+// never offered there.
 export type DebtWriteOffEligibilityReason =
   | 'NO_DEBT'
   | 'NO_ABSENT_IN_CYCLE'
-  | 'DISABLED';
+  | 'DISABLED'
+  | 'MONTHLY';
 
 export interface DebtWriteOffEligibilityDetails {
   studentId: number;

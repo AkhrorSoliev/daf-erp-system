@@ -5,6 +5,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { formatShortDate, MONTH_NAMES } from "./attendance-cycle-utils";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
@@ -38,12 +39,21 @@ export interface StudentAttendance {
 export interface LessonAdmission {
   admitted: boolean;
   // LEFT_OUT: after the lesson, a student the register left out stays out,
-  // paid or not (server `leftOutAfterEnd`).
-  reason: "NOT_APPLIED" | "FIRST_LESSON" | "PAID" | "NOT_PAID" | "LEFT_OUT";
+  // paid or not (server `leftOutAfterEnd`). BELOW_MIN_SHARE: the lessons held
+  // are paid for, the least share of the month is not (ADR-0064).
+  reason:
+    | "NOT_APPLIED"
+    | "FIRST_LESSON"
+    | "PAID"
+    | "NOT_PAID"
+    | "BELOW_MIN_SHARE"
+    | "LEFT_OUT";
   /** The least payment that admits the student today. */
   shortfall: number;
   /** Admitted while owing: the last lesson this month the balance reaches. */
   paidThrough: string | null;
+  /** BELOW_MIN_SHARE only: the share of the month that was asked for. */
+  minPaidPercent?: number;
 }
 
 /** Qarzdorning joriy (eng so'nggi) sikli — sana oralig'i bilan. */
@@ -68,6 +78,33 @@ export interface DebtorStudent {
   debtAmount: number;
   // null = hech qachon to'liq sikl ochilmagan (sof qarz).
   currentCycle?: DebtorCurrentCycle | null;
+  // Monthly group only (ADR-0062); null: no charge for the month yet.
+  monthCoverage?: DebtorMonthCoverage | null;
+}
+
+/** A monthly group's debtor (ADR-0062): how far their money reaches into the register's month. */
+export interface DebtorMonthCoverage {
+  /** The student's lessons this month in the group. */
+  lessons: number;
+  /** How many of them, from the first, are paid. */
+  paid: number;
+  /** The last paid lesson, 'YYYY-MM-DD'; null when none. */
+  paidThrough: string | null;
+}
+
+/** The «Shu oy» cell of a monthly group's debtor (ADR-0062); `month` is 'YYYY-MM'. */
+export function monthCoverageText(
+  month: string,
+  coverage: DebtorMonthCoverage | null | undefined,
+): string {
+  const name = MONTH_NAMES[Number(month.slice(5, 7))] ?? month;
+  if (!coverage) return `${name}: hisob hali yozilmagan`;
+  if (coverage.paid === 0) return `${name}: to'lanmagan`;
+  if (coverage.paid >= coverage.lessons) return `${name}: to'langan`;
+  const through = coverage.paidThrough
+    ? ` (${formatShortDate(coverage.paidThrough)} gacha)`
+    : "";
+  return `${name}: ${coverage.lessons} darsdan ${coverage.paid} tasi to'langan${through}`;
 }
 
 export interface AttendanceEntry {

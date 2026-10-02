@@ -289,6 +289,13 @@ describe('presentStatement', () => {
       expect(v.duesTotal && nb(v.duesTotal.cost)).toBe('467 500');
     });
 
+    it('promises nothing for an excused lesson that has not reduced a charge', () => {
+      const input = debtor();
+      input.charges[0].excusedLessons = 1;
+      const v = presentStatement(buildStatement(input), 'student');
+      expect(v.dues.flatMap((d) => d.details).join('|')).not.toContain('uzrli');
+    });
+
     it('says a full month is charged at its start while lessons are ahead', () => {
       const input = debtor();
       input.asOf = '2026-09-20';

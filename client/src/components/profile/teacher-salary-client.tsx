@@ -50,8 +50,7 @@ interface BreakdownLine {
   lessonDate: string;
   student: { id: number; firstName: string; lastName: string };
   group: { id: string; name: string };
-  // An old server does not send it; the badge then reads «/tsikl».
-  rateBasis?: RateBasis;
+  rateBasis: RateBasis;
   perLessonCost: number;
   amount: number;
   configVersion: {

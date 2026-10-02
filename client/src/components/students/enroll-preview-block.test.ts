@@ -49,6 +49,7 @@ const monthly = (over: Partial<EnrollPreview> = {}): EnrollPreview => ({
     amount: 249231,
   },
   balance: 50000,
+  transferRelease: 0,
   payable: 199231,
   ...over,
 });
@@ -60,6 +61,7 @@ const pack = (over: Partial<EnrollPreview> = {}): EnrollPreview => ({
   discountPercent: 0,
   firstMonth: null,
   balance: 100000,
+  transferRelease: 0,
   payable: 300000,
   ...over,
 });
@@ -215,11 +217,8 @@ describe("EnrollPreviewBlock — a transfer from another group", () => {
     );
   });
 
-  it.each([
-    ["0 (not a transfer)", { transferRelease: 0 }],
-    ["missing (a server older than the field)", {}],
-  ])("leaves the line out when the release is %s", async (_label, over) => {
-    const text = await answered(monthly(over));
+  it("leaves the line out when the release is 0 (not a transfer)", async () => {
+    const text = await answered(monthly({ transferRelease: 0 }));
 
     expect(text).not.toContain("Eski guruhdan");
     expect(text).toContain(`To'lash kerak (taxminan): ${money(199231)}`);
@@ -235,7 +234,7 @@ describe("EnrollPreviewBlock — while it loads and when it fails", () => {
     expect(text).not.toContain("so'm");
   });
 
-  it("shows no money lines when the request fails (a server older than the endpoint), and the date picker stays", async () => {
+  it("shows no money lines when the request fails, and the date picker stays", async () => {
     const text = await answered(new Error("Request failed with status code 404"));
 
     expect(text).toContain("Boshlanish sanasi (qaysi darsdan)");
@@ -279,7 +278,7 @@ describe("EnrollPreviewBlock — the request", () => {
   it("asks afresh each time and does not retry a failed request, whatever the app's defaults say", () => {
     // The app reuses an answer for five minutes (a balance that has moved
     // since would be wrong money) and, in a browser, retries a failure for
-    // seven seconds (an old server's 404 would keep «Hisoblanmoqda…» up).
+    // seven seconds (a failed request would keep «Hisoblanmoqda…» up).
     // Neither shows in the markup, so the options the query registered with
     // are read instead.
     const client = new QueryClient({

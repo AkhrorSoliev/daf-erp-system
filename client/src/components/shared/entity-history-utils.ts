@@ -6,10 +6,12 @@ import {
   Link2,
   MessageSquare,
   Pencil,
+  Plug,
   Plus,
   RefreshCw,
   RotateCcw,
   Trash2,
+  Unplug,
   UserMinus,
   UserPlus,
   type LucideIcon,
@@ -68,6 +70,7 @@ export const FIELD_LABELS: Record<string, string | null> = {
   companyId: null,
   userId: null,
   telegramChatId: null,
+  telegramDisconnectedAt: null,
   // The proved number and its time (ADR-0039) — the card's badge shows the
   // verdict; an archive row carrying the raw columns should not.
   verifiedPhone: null,
@@ -143,6 +146,11 @@ export function getActionInfo(record: HistoryRecord): ActionInfo {
         return { label: "SMS yuborildi", icon: MessageSquare, variant: "default" };
       if (customAction === "SMS_YUBORILMADI")
         return { label: "SMS yuborilmadi", icon: MessageSquare, variant: "destructive" };
+      // The bot learned the student's chat refuses it, or takes it again (ADR-0066).
+      if (customAction === "TELEGRAM_UZILDI")
+        return { label: "Telegram uzildi", icon: Unplug, variant: "destructive" };
+      if (customAction === "TELEGRAM_QAYTA_ULANDI")
+        return { label: "Telegram qayta ulandi", icon: Plug, variant: "default" };
       if (nv?.guruh)
         return { label: "Guruhga qo'shildi", icon: UserPlus, variant: "default" };
       return { label: "Yaratildi", icon: Plus, variant: "default" };

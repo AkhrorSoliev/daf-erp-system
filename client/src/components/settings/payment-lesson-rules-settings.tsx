@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 
-/** The lesson rules of ADR-0047/0048 the CEO can switch without a deploy. */
+/** The lesson rules of ADR-0047/0048/0064 the CEO can change without a deploy. */
 export interface LessonRuleSettings {
   "payment.admissionRuleEnabled": boolean;
   "payment.trialLessonEnabled": boolean;
   "payment.attendanceOpensMinutesBefore": number;
+  "payment.admissionMinPaidPercent": number;
+  "payment.paidThroughReminderDays": number;
 }
 
 interface Props {
@@ -25,10 +27,82 @@ interface Props {
 const COMPANY_ONLY_NOTE =
   "Bu qiymat filial bo'yicha emas — butun kompaniya uchun bitta, shuning uchun faqat markaz rahbari o'zgartira oladi.";
 
+interface NumberRuleProps {
+  /** The PATCH field, also the input's id. */
+  field: string;
+  label: string;
+  hint: string;
+  saved: number;
+  max: number;
+  unit: string;
+  rangeError: string;
+  disabled: boolean;
+  saveField: Props["saveField"];
+  note: React.ReactNode;
+}
+
+/** A whole number from 0 to `max`, saved on blur; anything else is refused and put back. */
+function NumberRule({
+  field,
+  label,
+  hint,
+  saved,
+  max,
+  unit,
+  rangeError,
+  disabled,
+  saveField,
+  note,
+}: NumberRuleProps) {
+  const [input, setInput] = useState(String(saved));
+  // A saved value from the server resets the field (set during render, the
+  // pattern React documents for state derived from a prop).
+  const [shownSaved, setShownSaved] = useState(saved);
+  if (shownSaved !== saved) {
+    setShownSaved(saved);
+    setInput(String(saved));
+  }
+
+  function handleBlur() {
+    const v = Number(input);
+    if (input.trim() === "" || !Number.isInteger(v) || v < 0 || v > max) {
+      toast.error(rangeError);
+      setInput(String(saved));
+      return;
+    }
+    if (v === saved) return;
+    saveField({ [field]: v });
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={field}>{label}</Label>
+      <p className="text-xs text-muted-foreground">{hint}</p>
+      <div className="flex items-center gap-2">
+        <Input
+          id={field}
+          type="number"
+          min={0}
+          max={max}
+          step={1}
+          className="w-full sm:max-w-xs"
+          value={input}
+          disabled={disabled}
+          onChange={(e) => setInput(e.target.value)}
+          onBlur={handleBlur}
+        />
+        <span className="text-sm text-muted-foreground">{unit}</span>
+      </div>
+      {note}
+    </div>
+  );
+}
+
 /**
- * «Darsga qo'yish», «Sinov darsi» and the attendance window lead. All three
- * are company-level on the server, so only the CEO may change them — a
- * branch director sees them and is told why they are locked.
+ * «Darsga qo'yish» with its least share and reminder, «Sinov darsi» and the
+ * attendance window lead. All are company-level on the server, so only the
+ * CEO may change them — a branch director sees them and is told why they are
+ * locked.
  */
 export function PaymentLessonRulesSettings({
   settings,
@@ -37,30 +111,10 @@ export function PaymentLessonRulesSettings({
   saving,
   saveField,
 }: Props) {
-  const saved = settings["payment.attendanceOpensMinutesBefore"];
-  const [minutesInput, setMinutesInput] = useState(String(saved));
-  // A saved value from the server resets the field (set during render, the
-  // pattern React documents for state derived from a prop).
-  const [shownSaved, setShownSaved] = useState(saved);
-  if (shownSaved !== saved) {
-    setShownSaved(saved);
-    setMinutesInput(String(saved));
-  }
-
-  function handleMinutesBlur() {
-    const v = Number(minutesInput);
-    if (minutesInput.trim() === "" || !Number.isInteger(v) || v < 0 || v > 60) {
-      toast.error("Daqiqa 0 dan 60 gacha bo'lgan butun son bo'lishi kerak");
-      setMinutesInput(String(saved));
-      return;
-    }
-    if (v === saved) return;
-    saveField({ attendanceOpensMinutesBefore: v });
-  }
-
   const lockedNote = !isCeo && canEdit && (
     <p className="text-xs text-muted-foreground">{COMPANY_ONLY_NOTE}</p>
   );
+  const numberRule = { disabled: !isCeo || saving, saveField, note: lockedNote };
 
   return (
     <>
@@ -94,6 +148,30 @@ export function PaymentLessonRulesSettings({
         {lockedNote}
       </div>
 
+      {/* Shartnoma 3.2 — oy to'lovining eng kam qismi (ADR-0064) */}
+      <NumberRule
+        {...numberRule}
+        field="admissionMinPaidPercent"
+        label="Darsga kirish uchun oy to'lovining eng kam qismi"
+        hint="2-darsdan boshlab o'quvchi darsga qo'yilishi uchun oy to'lovining kamida shu qismi to'langan bo'lishi kerak (shartnoma 3.2). Har guruhda o'sha guruhning 2-darsidan hisoblanadi. 01.11.2026 dan boshlab ishlaydi. 0 dan 100 gacha; standart 50. 0 qo'yilsa — faqat o'tilgan darslar puli so'raladi. Yuqoridagi qoida o'chirilgan bo'lsa, ishlamaydi."
+        saved={settings["payment.admissionMinPaidPercent"] ?? 50}
+        max={100}
+        unit="%"
+        rangeError="Foiz 0 dan 100 gacha bo'lgan butun son bo'lishi kerak"
+      />
+
+      {/* Shartnoma 3.7 — to'langan darslar tugashidan oldingi eslatma (ADR-0064) */}
+      <NumberRule
+        {...numberRule}
+        field="paidThroughReminderDays"
+        label="To'langan darslar tugashidan necha kun oldin eslatma boshlansin"
+        hint="Oy to'lovini qisman to'lagan o'quvchiga to'lovi yetmaydigan birinchi darsdan shuncha kun oldin boshlab har kuni soat 20:00 da Telegram orqali eslatma boradi (shartnoma 3.7). To'lov kelsa, eslatma to'xtaydi. 0 dan 10 gacha; standart 3. 0 qo'yilsa — eslatma yuborilmaydi. Yuqoridagi qoida o'chirilgan bo'lsa, ishlamaydi."
+        saved={settings["payment.paidThroughReminderDays"] ?? 3}
+        max={10}
+        unit="kun"
+        rangeError="Kun 0 dan 10 gacha bo'lgan butun son bo'lishi kerak"
+      />
+
       <Separator />
 
       {/* Shartnoma 3.5 — sinov darsi (ADR-0048) */}
@@ -124,33 +202,16 @@ export function PaymentLessonRulesSettings({
       <Separator />
 
       {/* Davomat oynasi (ADR-0047) */}
-      <div className="space-y-1.5">
-        <Label htmlFor="attendanceOpensMinutesBefore">
-          Davomat dars boshlanishidan necha daqiqa oldin ochiladi
-        </Label>
-        <p className="text-xs text-muted-foreground">
-          Yangi davomat shu daqiqa oldin ochiladi va dars tugashi bilan
-          yopiladi — barcha rollar uchun bir xil. Olingan davomatni markaz
-          rahbari, filial direktori va administrator dars tugagach ham tuzata
-          oladi. 0 dan 60 gacha; standart 10.
-        </p>
-        <div className="flex items-center gap-2">
-          <Input
-            id="attendanceOpensMinutesBefore"
-            type="number"
-            min={0}
-            max={60}
-            step={1}
-            className="w-full sm:max-w-xs"
-            value={minutesInput}
-            disabled={!isCeo || saving}
-            onChange={(e) => setMinutesInput(e.target.value)}
-            onBlur={handleMinutesBlur}
-          />
-          <span className="text-sm text-muted-foreground">daqiqa</span>
-        </div>
-        {lockedNote}
-      </div>
+      <NumberRule
+        {...numberRule}
+        field="attendanceOpensMinutesBefore"
+        label="Davomat dars boshlanishidan necha daqiqa oldin ochiladi"
+        hint="Yangi davomat shu daqiqa oldin ochiladi va dars tugashi bilan yopiladi — barcha rollar uchun bir xil. Olingan davomatni markaz rahbari, filial direktori va administrator dars tugagach ham tuzata oladi. 0 dan 60 gacha; standart 10."
+        saved={settings["payment.attendanceOpensMinutesBefore"]}
+        max={60}
+        unit="daqiqa"
+        rangeError="Daqiqa 0 dan 60 gacha bo'lgan butun son bo'lishi kerak"
+      />
     </>
   );
 }

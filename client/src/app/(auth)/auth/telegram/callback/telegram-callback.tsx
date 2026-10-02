@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { Greeting, useGreeting } from "@/components/auth/daftar-greeting";
 
 // Telegram → API callback → portal. Bu sahifa faqat bir martalik `handoff`
 // kodini tokenlarga almashtiradi: tokenlar URL'da hech qachon yurmaydi.
@@ -16,6 +17,8 @@ export function TelegramCallback({ sheet = false }: { sheet?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth } = useAuth();
+  // On the staff sheet the sign-in ends with the greeting, as on the form.
+  const { greeted, greet } = useGreeting("replace");
   // Server tomon xatosi (`?error=`) va `handoff` yo'qligi darhol aniqlanadi —
   // lazy initializer'da hisoblanadi, shu bilan effekt ichida sinxron setState
   // chaqirilmaydi (cascading-render lint qoidasi).
@@ -48,12 +51,16 @@ export function TelegramCallback({ sheet = false }: { sheet?: boolean }) {
         const isStudent = res.data.user?.roles?.some(
           (r: { id: number }) => r.id === 6,
         );
-        router.replace(isStudent ? "/portal" : "/");
+        const destination = isStudent ? "/portal" : "/";
+        if (sheet) greet(res.data.user, destination);
+        else router.replace(destination);
       })
       .catch((err) => {
         setError(getErrorMessage(err, "Kirishni tugatib bo'lmadi"));
       });
-  }, [searchParams, setAuth, router]);
+  }, [searchParams, setAuth, router, sheet, greet]);
+
+  if (greeted) return <Greeting user={greeted} />;
 
   return (
     <div className={sheet ? "flex flex-col items-start" : "space-y-4"}>

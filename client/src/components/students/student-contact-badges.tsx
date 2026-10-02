@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { BadgeCheck, Send } from "lucide-react";
+import { BadgeCheck, Send, Unplug } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -16,7 +16,8 @@ import {
 //   code (or an SMS password reset). Nothing else counts: a Telegram account
 //   can carry a different number from the one the student uses.
 // - «Telegram botda» — a Telegram chat is linked to the card, so the bot's
-//   messages reach it. The bot calls this being registered.
+//   messages reach it. The bot calls this being registered. «Telegram
+//   uzilgan» replaces it while the linked chat refuses the bot (ADR-0066).
 
 export function PhoneProofBadge({
   verified,
@@ -59,8 +60,38 @@ export function PhoneProofBadge({
   );
 }
 
-export function TelegramBotBadge({ chatId }: { chatId: string | null }) {
+export function TelegramBotBadge({
+  chatId,
+  disconnectedAt,
+}: {
+  chatId: string | null;
+  disconnectedAt: string | null;
+}) {
   if (!chatId) return null;
+  // The chat is still linked, but it stopped taking the bot's messages: the
+  // student blocked the bot or deleted the account (ADR-0066). The server
+  // clears the mark by itself once the chat takes a message again.
+  if (disconnectedAt) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            tabIndex={0}
+            className="bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
+          >
+            <Unplug />
+            Telegram uzilgan
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-64">
+          {format(new Date(disconnectedAt), "dd.MM.yyyy")} dan beri bot
+          xabarlari yetib bormayapti: o&apos;quvchi botni bloklagan yoki
+          Telegram hisobini o&apos;chirgan. Botga qaytsa, aloqa o&apos;zi
+          tiklanadi.
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
   return (
     <Tooltip>
       <TooltipTrigger asChild>

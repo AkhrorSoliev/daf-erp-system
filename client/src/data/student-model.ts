@@ -46,6 +46,8 @@ export interface Student {
   parentName: string | null;
   telegram: string | null;
   telegramChatId: string | null;
+  /** The linked chat stopped taking the bot's messages (ADR-0066); null while it takes them. */
+  telegramDisconnectedAt: string | null;
   placeOfStudy: string | null;
   address: string | null;
   passportSeries: string | null;
