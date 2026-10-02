@@ -124,6 +124,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0064](0064-darsga-kirish-uchun-oy-tolovining-eng-kam-qismi.md) | Darsga kirish uchun oy to'lovining kamida 50% i (har guruhda o'z 2-darsidan, 01.11.2026 dan); to'langan darslar tugashidan 3 kun oldin eslatma | Qabul qilindi | 2026-10-02 |
 | [0065](0065-tolov-cheki-darhol-ketadi.md) | To'lov cheki va to'lov bekor qilingani haqidagi xabar darhol ketadi; Payme/Click to'lovi ham chek oladi | Qabul qilindi | 2026-10-02 |
 | [0066](0066-telegram-uzilgan-oquvchi.md) | Botni bloklagan o'quvchi «Telegram uzilgan» deb belgilanadi; botga qaytsa belgi o'zi olinadi | Qabul qilindi | 2026-09-30 |
+| [0067](0067-kassa-uch-qism-marketing-va-umumiy-sahifa.md) | Kassaga tushgan pul uch qismda (shu oy, oldindan, eski qarz); marketing ko'rsatkichlari birinchi to'lov bo'yicha; o'qimayotganlar qarzi uch turga bo'linadi; «financial-overview» faqat CEO va filial direktoriga | Qabul qilindi | 2026-10-02 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 
