@@ -10,6 +10,7 @@ import { MonthlyPaymentNoticeService } from './monthly-payment-notice.service';
 import { MonthlyPaymentNoticeCronService } from './monthly-payment-notice-cron.service';
 import { BillingController } from './billing.controller';
 import { StudentDebtNotificationListener } from './student-debt-notification.listener';
+import { SelfEnrollmentChargeListener } from './self-enrollment-charge.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { SalaryModule } from '../salary/salary.module';
 import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module';
@@ -57,6 +58,7 @@ import { SettingsModule } from '../settings/settings.module';
     MonthlyPaymentNoticeService,
     MonthlyPaymentNoticeCronService,
     StudentDebtNotificationListener,
+    SelfEnrollmentChargeListener,
   ],
   exports: [
     LessonBillingService,

@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { BotContext } from '../types/context';
@@ -55,6 +56,7 @@ export function createStudentRegistrationScene(
   _bot: Telegraf<BotContext>,
   entityHistoryService: EntityHistoryService,
   leadOrigin: StudentLeadOriginService,
+  events: Pick<EventEmitter2, 'emitAsync'>,
 ): Scenes.BaseScene<BotContext> {
   const logger = new Logger('StudentRegistrationScene');
   const scene = new Scenes.BaseScene<BotContext>(SCENES.STUDENT_REGISTRATION);
@@ -451,6 +453,7 @@ export function createStudentRegistrationScene(
           leadOrigin,
           data,
           chatId,
+          events,
         ));
       } catch (error) {
         logger.error("Ro'yxatdan o'tishda xatolik", error as Error);
