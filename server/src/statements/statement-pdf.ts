@@ -4,9 +4,8 @@ import type {
   TDocumentDefinitions,
 } from 'pdfmake/interfaces';
 import { renderPdf } from '../receipts/pdf/render';
-import type { MonthView, Segment, StatementView } from './present-statement';
+import type { DueView, Segment, StatementView } from './present-statement';
 
-/** The colours of the layout the CEO approved (v3 mockups, 26.09.2026). */
 const C = {
   blue: '#1F4E78',
   grey: '#666666',
@@ -32,6 +31,12 @@ const section = (title: string): Content => ({
   fontSize: 11.5,
   color: C.blue,
   margin: [0, 9, 0, 4],
+});
+
+const head = (text: string, right = true): TableCell => ({
+  text,
+  bold: true,
+  ...(right ? { alignment: 'right' as const } : {}),
 });
 
 function answerBox(answer: StatementView['answer']): Content {
@@ -62,98 +67,9 @@ function answerBox(answer: StatementView['answer']): Content {
   };
 }
 
-const head = (text: string, right = true): TableCell => ({
-  text,
-  bold: true,
-  ...(right ? { alignment: 'right' as const } : {}),
-});
-
-function monthsTable(
-  months: MonthView[],
-  total: StatementView['monthsTotal'],
-): Content {
-  const body: TableCell[][] = [
-    [
-      head('Oy', false),
-      head('Darslar'),
-      head('Darslar narxi'),
-      head("To'langan"),
-      head('Qarz'),
-    ],
-  ];
-  const lineAfter = new Set<number>();
-  for (const m of months) {
-    const fillColor = m.highlight ? C.highlight : undefined;
-    body.push([
-      { text: m.label, bold: m.isLast, fillColor },
-      {
-        text: [
-          { text: m.lessons },
-          ...(m.absent
-            ? [{ text: ` · ${m.absent}`, color: C.grey, fontSize: 8 }]
-            : []),
-        ],
-        alignment: 'right',
-        fillColor,
-      },
-      m.cost !== null
-        ? { text: m.cost, alignment: 'right', fillColor }
-        : {
-            text: m.costNote ?? '',
-            color: C.grey,
-            fontSize: 8,
-            alignment: 'right',
-            fillColor,
-          },
-      { text: m.covered, alignment: 'right', fillColor },
-      {
-        text: m.left,
-        alignment: 'right',
-        color: TONE[m.leftTone],
-        fillColor,
-      },
-    ]);
-    for (const line of m.details) {
-      body.push([
-        { text: '', fillColor },
-        { text: line, colSpan: 4, color: C.grey, fontSize: 8, fillColor },
-        '',
-        '',
-        '',
-      ]);
-    }
-    lineAfter.add(body.length - 1);
-  }
-  if (total) {
-    body.push([
-      { text: 'Jami', bold: true },
-      '',
-      { text: total.cost, bold: true, alignment: 'right' },
-      { text: total.covered, bold: true, alignment: 'right' },
-      {
-        text: total.left,
-        bold: true,
-        alignment: 'right',
-        color: TONE[total.leftTone],
-      },
-    ]);
-  }
-  const totalLine = total ? body.length - 1 : -1;
-  return {
-    table: { headerRows: 1, widths: [60, 92, 112, 100, '*'], body },
-    layout: {
-      hLineWidth: (i) =>
-        i === 1 || i === totalLine ? 0.8 : lineAfter.has(i - 1) ? 0.3 : 0,
-      hLineColor: (i) => (i === 1 || i === totalLine ? C.blue : C.line),
-      vLineWidth: () => 0,
-      paddingTop: () => 2.5,
-      paddingBottom: () => 2.5,
-    },
-  };
-}
-
+/** What the student paid, oldest first, and which lessons each payment went to. */
 function paymentsTable(
-  rows: StatementView['allocations'],
+  rows: StatementView['payments'],
   total: StatementView['paidTotal'],
 ): Content {
   if (rows.length === 0) return { text: "Hali to'lov qilinmagan." };
@@ -162,7 +78,7 @@ function paymentsTable(
       head('Sana', false),
       head('Usul', false),
       head('Summa'),
-      head('Qaysi darslarga yozildi', false),
+      head('Qaysi oyga yozildi', false),
     ],
     ...rows.map((r): TableCell[] => [
       { text: r.date },
@@ -193,6 +109,111 @@ function paymentsTable(
   };
 }
 
+function dueRow(d: DueView): TableCell[] {
+  const fillColor = d.highlight ? C.highlight : undefined;
+  const label: TableCell = { text: d.label, bold: d.bold, fillColor };
+  const lessons: TableCell = {
+    text: [
+      { text: d.lessons },
+      ...(d.lessonsNote
+        ? [{ text: ` · ${d.lessonsNote}`, color: C.grey, fontSize: 8 }]
+        : []),
+    ],
+    fillColor,
+  };
+  return [
+    ...(d.wide ? [{ ...label, colSpan: 2 }, ''] : [label, lessons]),
+    d.cost !== null
+      ? { text: d.cost, alignment: 'right', fillColor }
+      : {
+          text: d.costNote ?? '',
+          color: C.grey,
+          fontSize: 8,
+          alignment: 'right',
+          fillColor,
+        },
+    { text: d.paid, alignment: 'right', fillColor },
+    {
+      text: d.left,
+      alignment: 'right',
+      color: TONE[d.leftTone],
+      fillColor,
+    },
+  ];
+}
+
+const detailRow = (line: string, fillColor?: string): TableCell[] => [
+  { text: '', fillColor },
+  { text: line, colSpan: 4, color: C.grey, fontSize: 8, fillColor },
+  '',
+  '',
+  '',
+];
+
+/** Each month: its price, what the payments covered of it, what is still owed. */
+function duesTable(view: StatementView): Content {
+  const body: TableCell[][] = [
+    [
+      head('Oy', false),
+      head('Darslar', false),
+      head('Narxi'),
+      head("To'langan"),
+      head('Qarz'),
+    ],
+  ];
+  const thin = new Set<number>();
+  const thick = new Set<number>([1]);
+  for (const d of view.dues) {
+    body.push(dueRow(d));
+    for (const line of d.details) {
+      body.push(detailRow(line, d.highlight ? C.highlight : undefined));
+    }
+    thin.add(body.length);
+  }
+  const total = view.duesTotal;
+  if (total) {
+    thick.add(body.length);
+    body.push([
+      { text: 'Jami', bold: true, colSpan: 2 },
+      '',
+      { text: total.cost, bold: true, alignment: 'right' },
+      { text: total.paid, bold: true, alignment: 'right' },
+      {
+        text: total.left,
+        bold: true,
+        alignment: 'right',
+        color: TONE[total.leftTone],
+      },
+    ]);
+    for (const line of total.details) body.push(detailRow(line));
+  }
+  if (view.surplus) {
+    thin.add(body.length);
+    body.push([
+      { text: view.surplus.label, bold: true, colSpan: 4 },
+      '',
+      '',
+      '',
+      {
+        text: view.surplus.amount,
+        bold: true,
+        alignment: 'right',
+        color: C.green,
+      },
+    ]);
+  }
+  return {
+    table: { headerRows: 1, widths: [56, 140, 90, 90, '*'], body },
+    layout: {
+      hLineWidth: (i) => (thick.has(i) ? 0.8 : thin.has(i) ? 0.3 : 0),
+      hLineColor: (i) => (thick.has(i) ? C.blue : C.line),
+      vLineWidth: () => 0,
+      paddingTop: () => 2.5,
+      paddingBottom: () => 2.5,
+    },
+  };
+}
+
 export function statementDocDefinition(
   view: StatementView,
 ): TDocumentDefinitions {
@@ -208,18 +229,10 @@ export function statementDocDefinition(
       margin: [0, 2, 0, 2],
     },
     section("To'lovlar"),
-    paymentsTable(view.allocations, view.paidTotal),
+    paymentsTable(view.payments, view.paidTotal),
     section("Oylar bo'yicha"),
+    duesTable(view),
   ];
-  if (view.packHint) {
-    content.push({
-      text: view.packHint,
-      color: C.grey,
-      fontSize: 8.3,
-      margin: [0, 0, 0, 3],
-    });
-  }
-  content.push(monthsTable(view.months, view.monthsTotal));
   if (view.sharpNote) {
     content.push({
       table: {
@@ -239,14 +252,12 @@ export function statementDocDefinition(
       margin: [0, 3, 0, 0],
     });
   }
-  for (const change of view.modelChanges) {
-    content.push(section(change.title), { ul: change.lines, fontSize: 9.4 });
-  }
   content.push({
-    text: view.footnote,
-    color: C.grey,
-    fontSize: 8.3,
-    margin: [0, 8, 0, 0],
+    unbreakable: true,
+    stack: [
+      section('Izohlar'),
+      { ul: view.notes, fontSize: 8.6, color: '#444444' },
+    ],
   });
 
   return {
