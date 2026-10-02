@@ -10,15 +10,14 @@ import {
   AttendanceMethod,
   AttendanceStatus,
   EnrollmentStatus,
-  MonthlyChargeStatus,
   PaymentModel,
   Prisma,
-  TransactionType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
+import { trialMonthStudents } from '../billing/trial-month';
 import { whereUserMayAct } from '../common/auth/blocked-user';
 import { rethrowAsConflict } from '../common/transaction-conflict';
 import { isCalendarDateStr } from '../common/date/tashkent';
@@ -37,7 +36,7 @@ import {
   newAttendanceWindow,
   tashkentClock,
 } from './shared/attendance-window';
-import { rosterOnDate, type RosterEnrollment } from './shared/roster-on-date';
+import { rosterOnDate } from './shared/roster-on-date';
 import { closeLessonTask } from '../unmarked-lessons/lesson-task';
 import {
   assertMayAnswer,
@@ -421,19 +420,21 @@ export class AttendanceSaveService {
         // enrollment. Monthly billing moves no balance: a departed student's
         // month paid for the day and is billed as usual — unless a trial
         // lesson gave the month back, which pays the teacher nothing.
-        const trialMonths = isMonthly
-          ? await this.trialMonths(
-              tx,
-              roster.filter((e) => e.status !== EnrollmentStatus.ACTIVE),
-              date,
-            )
-          : new Set<string>();
+        const trialStudents = isMonthly
+          ? await trialMonthStudents(tx, {
+              groupId,
+              day: date,
+              studentIds: roster
+                .filter((e) => e.status !== EnrollmentStatus.ACTIVE)
+                .map((e) => e.studentId),
+            })
+          : new Set<number>();
         const billedEnrollmentIdByStudent = new Map(
           roster
             .filter(
               (e) =>
                 e.status === EnrollmentStatus.ACTIVE ||
-                (isMonthly && !trialMonths.has(e.id)),
+                (isMonthly && !trialStudents.has(e.studentId)),
             )
             .map((e) => [e.studentId, e.id]),
         );
@@ -509,62 +510,6 @@ export class AttendanceSaveService {
         : 'Davomat saqlandi. Ustozga bu dars uchun haq yozilmaydi',
       count: result.written.count,
     };
-  }
-
-  /**
-   * Departed students' enrollments whose month a trial lesson (contract 3.5)
-   * gave back, `date` included: nobody pays the teacher for a trial, so
-   * «Bo'ldi» must not bill them, CEO exemption or not. A quality claim gives
-   * the month back too but keeps the teacher's pay (ADR-0043 §8); the refund's
-   * ledger row tells the two apart. A month that refunded nothing has no row
-   * and is taken for a trial.
-   */
-  private async trialMonths(
-    tx: Tx,
-    departed: RosterEnrollment[],
-    date: string,
-  ): Promise<Set<string>> {
-    if (departed.length === 0) return new Set();
-    const givenBack = await tx.enrollmentMonthlyCharge.findMany({
-      where: {
-        enrollmentId: { in: departed.map((e) => e.id) },
-        periodYear: Number(date.slice(0, 4)),
-        periodMonth: Number(date.slice(5, 7)),
-        status: MonthlyChargeStatus.CHARGED,
-        frozenOutDates: { has: date },
-      },
-      select: { enrollmentId: true },
-    });
-    const ids = new Set(givenBack.map((c) => c.enrollmentId));
-    if (ids.size === 0) return ids;
-    const releases = await tx.transaction.findMany({
-      where: {
-        studentId: {
-          in: departed.filter((e) => ids.has(e.id)).map((e) => e.studentId),
-        },
-        type: TransactionType.ADJUSTMENT,
-        reversedAt: null,
-        metadata: { path: ['kind'], equals: 'monthly-release' },
-      },
-      select: { metadata: true },
-    });
-    for (const { metadata } of releases) {
-      const m = metadata as {
-        enrollmentId?: string;
-        period?: string;
-        policy?: string;
-        trialLesson?: boolean;
-      } | null;
-      if (
-        m?.enrollmentId &&
-        m.period === date.slice(0, 7) &&
-        m.policy === 'QUALITY_CLAIM' &&
-        !m.trialLesson
-      ) {
-        ids.delete(m.enrollmentId);
-      }
-    }
-    return ids;
   }
 
   /** Contract 3.2 (ADR-0047): the roster students the lesson does not admit. */
