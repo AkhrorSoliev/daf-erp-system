@@ -31,6 +31,36 @@ describe("admissionCopy", () => {
     expect(warning).not.toContain("Bugungi");
   });
 
+  describe("below the least share of the month (ADR-0064)", () => {
+    const belowShare = {
+      admitted: false,
+      reason: "BELOW_MIN_SHARE" as const,
+      shortfall: 125000,
+      paidThrough: null,
+      minPaidPercent: 50,
+    };
+
+    it("names the share on the row and to the teacher", () => {
+      expect(admissionCopy(belowShare, false)).toEqual({
+        blocked: true,
+        label: "Oy to'lovining 50% i to'lanmagan · darsga qo'yilmaydi",
+        warning:
+          "Bu o'quvchi oy to'lovining kamida 50% ini to'lamagan. Shartnomaga ko'ra 2-darsdan boshlab shu qismi to'lanmaguncha darsga qo'yilmaydi. Agar u darsda o'tirsa va keyinroq to'lov qilsa ham, bu dars uchun sizga ish haqi yozilmaydi.",
+      });
+    });
+
+    it("tells the admin what brings the student up to the share", () => {
+      expect(admissionCopy(belowShare, true).warning).toBe(
+        `Bu darsga kirishi uchun kamida ${formatPrice(125000)} so'm kerak: oy to'lovining 50% i to'lanishi shart. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.`,
+      );
+    });
+
+    it("is blocked like any unpaid student", () => {
+      expect(markableStudents([{ admission: belowShare }])).toEqual([]);
+      expect(suggestedPaymentAmount(belowShare)).toBe(125000);
+    });
+  });
+
   it("locks a student the register left out, with no payment prompt", () => {
     const leftOut = {
       admitted: false,

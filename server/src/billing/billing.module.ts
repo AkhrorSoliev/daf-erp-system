@@ -34,7 +34,8 @@ import { SettingsModule } from '../settings/settings.module';
  * counterpart of the lesson-pack billing pipeline above.
  *
  * `MonthlyPaymentNoticeCronService` (19:50) queues the month's bill and the
- * 2nd-lesson reminder for the 20:00 Telegram digest (ADR-0042).
+ * 2nd-lesson reminder for the 20:00 Telegram digest (ADR-0042), and contract
+ * 3.7's reminder before a part payer's paid lessons run out (ADR-0064).
  *
  * `LessonAdmissionService` answers contract 3.2 for the attendance roster,
  * its saves and the payment preview (ADR-0047).

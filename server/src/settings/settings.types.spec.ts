@@ -20,6 +20,8 @@ describe('SETTING_DEFINITIONS registry', () => {
         'payment.admissionRuleEnabled',
         'payment.trialLessonEnabled',
         'payment.attendanceOpensMinutesBefore',
+        'payment.admissionMinPaidPercent',
+        'payment.paidThroughReminderDays',
       ].sort(),
     );
   });
@@ -49,6 +51,41 @@ describe('SETTING_DEFINITIONS registry', () => {
       expect(() => def.parse(61)).toThrow();
       expect(() => def.parse(-1)).toThrow();
       expect(() => def.parse(5.5)).toThrow();
+    });
+  });
+
+  describe('ADR-0064 numbers (contract 3.2 and 3.7, 02.10.2026)', () => {
+    it('default to the contract, company-level only', () => {
+      for (const [key, value] of [
+        ['payment.admissionMinPaidPercent', 50],
+        ['payment.paidThroughReminderDays', 3],
+      ] as const) {
+        const def = getSettingDefinition(key);
+        expect(def.defaultValue).toBe(value);
+        expect(def.companyLevelOnly).toBe(true);
+      }
+    });
+
+    it('takes a whole percent from 0 (the rule off) to 100', () => {
+      const def = getSettingDefinition('payment.admissionMinPaidPercent');
+      expect(def.parse(0)).toBe(0);
+      expect(def.parse(100)).toBe(100);
+      for (const bad of [101, -1, 49.5, '50', null]) {
+        expect(() => def.parse(bad)).toThrow(
+          /payment\.admissionMinPaidPercent/,
+        );
+      }
+    });
+
+    it('takes 0 (no reminder) to 10 days', () => {
+      const def = getSettingDefinition('payment.paidThroughReminderDays');
+      expect(def.parse(0)).toBe(0);
+      expect(def.parse(10)).toBe(10);
+      for (const bad of [11, -1, 2.5, '3', null]) {
+        expect(() => def.parse(bad)).toThrow(
+          /payment\.paidThroughReminderDays/,
+        );
+      }
     });
   });
 

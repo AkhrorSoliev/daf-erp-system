@@ -48,6 +48,33 @@ describe("buildQuickAmounts — monthly", () => {
       expect(q.label).not.toMatch(/sikl|dars/i);
     }
   });
+
+  describe("the least share of the month (ADR-0064)", () => {
+    const withShare = (debt: number, amount: number): QuickAmountSource => {
+      const source = monthly(debt, 0);
+      return { ...source, monthly: { ...source.monthly!, minShareDue: { amount, percent: 50 } } };
+    };
+
+    it("offers what the share still asks for, after closing the debt", () => {
+      expect(buildQuickAmounts(withShare(450_000, 225_000))).toEqual([
+        { key: "debt", amount: 450_000, label: "Qarzni yopish", recommended: true },
+        { key: "min-share", amount: 225_000, label: "Kamida 50%", recommended: false },
+      ]);
+    });
+
+    it("rounds it up to a whole 1 000 so'm, so the payment is never one so'm short", () => {
+      expect(buildQuickAmounts(withShare(257_692, 32_692))?.[1]).toMatchObject({
+        key: "min-share",
+        amount: 33_000,
+      });
+    });
+
+    it("leaves it out when closing the debt costs no more", () => {
+      expect(buildQuickAmounts(withShare(225_000, 225_000))).toEqual([
+        { key: "debt", amount: 225_000, label: "Qarzni yopish", recommended: true },
+      ]);
+    });
+  });
 });
 
 describe("buildQuickAmounts — lesson pack", () => {

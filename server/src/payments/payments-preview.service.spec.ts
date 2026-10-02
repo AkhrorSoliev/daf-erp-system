@@ -263,6 +263,59 @@ describe('PaymentsPreviewService', () => {
       );
     });
 
+    describe('the least share (ADR-0064)', () => {
+      const shortOfHalf = (minPaidPercent: number | null) =>
+        admission.reachForPayment.mockImplementation(
+          ({ balanceAfter }: { balanceAfter: number }) =>
+            Promise.resolve({
+              paidThrough: null,
+              next: {
+                date: '2026-11-04',
+                groupName: '#029',
+                needed: -balanceAfter - 225000,
+                minPaidPercent,
+              },
+              clearsDebt: false,
+            }),
+        );
+
+      beforeEach(() => {
+        prisma.student.findFirst.mockResolvedValue({
+          balance: -450000,
+          discountPercent: 0,
+        });
+        prisma.enrollment.findMany.mockResolvedValue([
+          baseEnrollment({ model: 'MONTHLY', price: 450000 }),
+        ]);
+      });
+
+      it('names what it asks for before this payment, whatever amount is typed', async () => {
+        shortOfHalf(50);
+        const res = await service.preview(10001, 100000, 1001, null);
+        expect(res.monthly?.admission?.next?.needed).toBe(125000);
+        expect(res.monthly?.minShareDue).toEqual({
+          amount: 225000,
+          percent: 50,
+        });
+      });
+
+      it('reads the reach once when no amount is typed yet', async () => {
+        shortOfHalf(50);
+        const res = await service.preview(10001, 0, 1001, null);
+        expect(res.monthly?.minShareDue).toEqual({
+          amount: 225000,
+          percent: 50,
+        });
+        expect(admission.reachForPayment).toHaveBeenCalledTimes(1);
+      });
+
+      it('is null when the lessons held, not the share, are short', async () => {
+        shortOfHalf(null);
+        const res = await service.preview(10001, 100000, 1001, null);
+        expect(res.monthly?.minShareDue).toBeNull();
+      });
+    });
+
     it('shows the debt and the next month instead of cycles', async () => {
       prisma.student.findFirst.mockResolvedValue({
         balance: -450000,
@@ -291,6 +344,7 @@ describe('PaymentsPreviewService', () => {
           },
         ],
         admission: null,
+        minShareDue: null,
       });
       expect(res.breakdown).toEqual([
         expect.objectContaining({ kind: 'DEBT_REPAY', amount: 450000 }),
@@ -356,6 +410,7 @@ describe('PaymentsPreviewService', () => {
         discountPercent: 0,
         enrollments: [],
         admission: null,
+        minShareDue: null,
       });
       expect(res.breakdown).toEqual([
         expect.objectContaining({ kind: 'DEBT_REPAY', amount: 120000 }),
