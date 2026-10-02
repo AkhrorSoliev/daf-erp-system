@@ -8,6 +8,7 @@ import { ReportsService } from '../reports/reports.service';
 import { isMonthlyBillingMonth } from '../reports/month-charges';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { formatSum } from './utils/format.util';
+import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
 import { buildMonthChargesLines } from './utils/month-charges-lines.util';
 import {
@@ -278,15 +279,15 @@ export class TelegramGroupReportMenuService {
       const branchIds = reportBranchIdsForGroup(group);
       const monthKey = this.currentMonth();
       const month = this.monthLabel(monthKey);
-      // Four independent reads — the split and the month's headline figure are
-      // new work (the daily report gets them for free, this card does not), so
-      // they run alongside the other two rather than after them.
+      // Five independent reads — the split, the month's headline figure and the
+      // debt are new work (the daily report gets them for free, this card does
+      // not), so they run alongside the other two rather than after them.
       //
       // `o.netProfit` is the legacy cash figure (kassa tushumi − NAQD to'langan
       // oylik). Payroll is paid the following cycle, so its paid leg is ~0 and
       // profit reads far too high — the "+78M June" bug the code names itself.
       // Read the canonical figure the Foyda card and Excel «Sof foyda» use.
-      const [o, canonical, split, monthFigure] = await Promise.all([
+      const [o, canonical, split, monthFigure, debt] = await Promise.all([
         this.reportsFinancial.getFinancialOverview(group.companyId, {
           branchIds,
         }),
@@ -298,6 +299,9 @@ export class TelegramGroupReportMenuService {
         // «Bu oy hisoblandi / To'landi / Qoldi», or «Oy oxiriga kutilyapti»
         // before 2026-09 — for the same month and scope as everything above.
         this.monthFigureLines(group.companyId, branchIds, monthKey),
+        // «O'qiyotganlar qarzi» / «O'qimayotganlar qarzi» — two numbers, from
+        // the one split every surface reads (ADR-0059).
+        this.debtLines(group.companyId, branchIds, monthKey),
       ]);
       const scopeLabel = branchLabelForGroup(
         group,
@@ -315,7 +319,7 @@ export class TelegramGroupReportMenuService {
         canonical !== null
           ? `• Sof foyda: <b>${formatSum(canonical)}</b>`
           : `• Kassa harakati (oyliksiz): <b>${formatSum(o.netProfit)}</b>`,
-        `• Qarzdorlar: <b>${o.forecast.debtorExposure.count}</b> ta — <b>${formatSum(Math.abs(o.forecast.outstandingReceivable))}</b>`,
+        ...debt,
       ];
       await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
     } catch (err: any) {
@@ -401,6 +405,37 @@ export class TelegramGroupReportMenuService {
       return [`• Oy oxiriga kutilyapti: <b>${formatSum(e.expectedValue)}</b>`];
     } catch (err: any) {
       this.logger.warn(`Month figure failed: ${err?.message ?? err}`);
+      return [];
+    }
+  }
+
+  /**
+   * The card's debt: «O'qiyotganlar qarzi», its «shu oy · eski qarz» line and
+   * «O'qimayotganlar qarzi» — two numbers that are never added (ADR-0059),
+   * printed by the 21:00 report's renderer, `buildDebtSplitLines`. They come
+   * from `ReportsService.getDebtSplit` for the group's own scope — the card used
+   * to print the raw overview's status-ACTIVE «Qarzdorlar», which counted an
+   * ungrouped «faol» student as a debtor and every other surface did not.
+   *
+   * The month is passed EXPLICITLY, like the income split's: the card resolves
+   * it once, for its title and every figure on it, and «shu oy» must be that
+   * month.
+   *
+   * Returns no lines on failure: a missing line is honest, a zero would claim
+   * nobody owes — and a broken split costs the card its debt lines, never the
+   * card itself.
+   */
+  private async debtLines(
+    companyId: number,
+    branchIds: ReportBranchIds,
+    month: string,
+  ): Promise<string[]> {
+    try {
+      return buildDebtSplitLines(
+        await this.reports.getDebtSplit(companyId, { branchIds, month }),
+      );
+    } catch (err: any) {
+      this.logger.warn(`Debt split failed: ${err?.message ?? err}`);
       return [];
     }
   }

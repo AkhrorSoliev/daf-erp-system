@@ -10,6 +10,7 @@ describe('PaymentsDebtorsService', () => {
     student: { findMany: jest.Mock; count: jest.Mock; aggregate: jest.Mock };
     user: { findUnique: jest.Mock; findFirst: jest.Mock };
     paymentPromise: { count: jest.Mock };
+    enrollmentMonthlyCharge: { groupBy: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -30,6 +31,7 @@ describe('PaymentsDebtorsService', () => {
         }),
       },
       paymentPromise: { count: jest.fn().mockResolvedValue(0) },
+      enrollmentMonthlyCharge: { groupBy: jest.fn().mockResolvedValue([]) },
     };
 
     debtAge = { getDebtAges: jest.fn().mockResolvedValue(new Map()) };
@@ -231,11 +233,21 @@ describe('PaymentsDebtorsService', () => {
   });
 
   describe('getDebtorSummary', () => {
-    it('returns total/avg debt + promise counts over the same where', async () => {
-      prisma.student.aggregate.mockResolvedValueOnce({
-        _sum: { balance: -300000 },
-        _count: 3,
+    // `loadDebtSplit` ning o'z o'qishlari: o'qiyotgan qarzdorlar (findMany),
+    // o'qimayotganlar (aggregate) va shu oyning hisoblari (groupBy).
+    const readsOneStudyingAndTwoNot = () => {
+      prisma.student.findMany.mockResolvedValue([{ id: 5, balance: -300_000 }]);
+      prisma.student.aggregate.mockResolvedValue({
+        _sum: { balance: -90_000 },
+        _count: 2,
       });
+      prisma.enrollmentMonthlyCharge.groupBy.mockResolvedValue([
+        { studentId: 5, _sum: { chargedAmount: 450_000 } },
+      ]);
+    };
+
+    it("qarz ikki raqam (split) + va'da sonlari; umumiy summa, soni va o'rtachasi yo'q", async () => {
+      readsOneStudyingAndTwoNot();
       prisma.paymentPromise.count
         .mockResolvedValueOnce(5) // open
         .mockResolvedValueOnce(2); // overdue
@@ -243,13 +255,111 @@ describe('PaymentsDebtorsService', () => {
         userId: 1,
         roles: ['CEO'],
       });
+      // toEqual: totalDebt / debtorCount / avgDebt qaytib kelsa shu yerda yiqiladi.
       expect(res).toEqual({
-        totalDebt: 300000,
-        debtorCount: 3,
-        avgDebt: 100000,
+        split: {
+          studying: {
+            total: 300_000,
+            count: 1,
+            currentMonth: 300_000,
+            older: 0,
+          },
+          notStudying: { total: 90_000, count: 2 },
+        },
         openPromises: 5,
         overduePromises: 2,
       });
+    });
+
+    it("kartalar BUTUN qamrovni tasvirlaydi: CEO uchun filial sharti yo'q, boshqa filtr o'qilmaydi", async () => {
+      readsOneStudyingAndTwoNot();
+      await service.getDebtorSummary(1001, { userId: 1, roles: ['CEO'] });
+
+      for (const where of [
+        prisma.student.findMany.mock.calls[0][0].where,
+        prisma.student.aggregate.mock.calls[0][0].where,
+      ]) {
+        expect(where.branches).toBeUndefined();
+        expect(where).toMatchObject({
+          companyId: 1001,
+          deletedAt: null,
+          balance: { lt: 0 },
+        });
+      }
+    });
+
+    it("ro'yxat ishlatadigan filial qamrovining o'zi: filial direktori faqat o'z filialini ko'radi", async () => {
+      const scope = {
+        mainBranch: 7,
+        branches: [{ branchId: 7 }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      };
+      prisma.user.findFirst
+        .mockResolvedValueOnce(scope) // ro'yxat
+        .mockResolvedValueOnce(scope); // kartalar
+      readsOneStudyingAndTwoNot();
+
+      await service.getDebtors(1001, { userId: 9, roles: ['Branch Director'] });
+      const listBranches =
+        prisma.student.findMany.mock.calls[0][0].where.branches;
+      prisma.student.findMany.mockClear();
+      await service.getDebtorSummary(1001, {
+        userId: 9,
+        roles: ['Branch Director'],
+      });
+
+      const expected = { some: { branchId: { in: [7] } } };
+      expect(listBranches).toEqual(expected);
+      expect(prisma.student.findMany.mock.calls[0][0].where.branches).toEqual(
+        expected,
+      );
+      expect(prisma.student.aggregate.mock.calls[0][0].where.branches).toEqual(
+        expected,
+      );
+    });
+
+    it("bo'sh qamrov: nol split, hech qanday o'qish yo'q", async () => {
+      prisma.user.findFirst.mockResolvedValueOnce({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+      const res = await service.getDebtorSummary(1001, {
+        userId: 9,
+        roles: ['Branch Director'],
+      });
+
+      expect(res).toEqual({
+        split: {
+          studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
+          notStudying: { total: 0, count: 0 },
+        },
+        openPromises: 0,
+        overduePromises: 0,
+      });
+      expect(prisma.student.findMany).not.toHaveBeenCalled();
+      expect(prisma.student.aggregate).not.toHaveBeenCalled();
+      expect(prisma.paymentPromise.count).not.toHaveBeenCalled();
+    });
+
+    it("«shu oy» — joriy Toshkent oyi: oy so'ralmaydi", async () => {
+      // 01.10.2026 01:30 Toshkentda, UTC server (Railway) da hali 30.09.
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00.000Z'));
+      try {
+        readsOneStudyingAndTwoNot();
+        await service.getDebtorSummary(1001, { userId: 1, roles: ['CEO'] });
+
+        expect(
+          prisma.enrollmentMonthlyCharge.groupBy.mock.calls[0][0].where,
+        ).toMatchObject({
+          companyId: 1001,
+          studentId: { in: [5] },
+          periodYear: 2026,
+          periodMonth: 10,
+        });
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 });

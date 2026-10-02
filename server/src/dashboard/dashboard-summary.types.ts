@@ -1,3 +1,5 @@
+import type { DebtSplit } from '../reports/debt-split';
+
 /**
  * `GET /dashboard/summary` javobi. Mijozdagi
  * `client/src/components/dashboard/dashboard-summary-types.ts` bilan
@@ -21,7 +23,11 @@ export interface DashboardMoney {
   } | null;
   netProfit: number;
   netProfitBasis: 'recognized' | 'cash';
-  debt: { total: number; count: number };
+  /**
+   * Qarz — ikki alohida raqam, hech qayerda qo'shilmaydi (ADR-0059):
+   * «O'qiyotganlar» (shu oy / eski qarz) va «O'qimayotganlar».
+   */
+  debt: DebtSplit;
 }
 
 export interface DashboardPeople {

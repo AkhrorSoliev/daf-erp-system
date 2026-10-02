@@ -1,3 +1,5 @@
+import type { DebtSplit } from "@/components/payments/payments-overview";
+
 /**
  * `GET /dashboard/summary` javobining shakli.
  *
@@ -35,7 +37,15 @@ export interface DashboardMoney {
    * raqami sof foydadan ancha yuqori chiqadi.
    */
   netProfitBasis: "recognized" | "cash";
-  debt: { total: number; count: number };
+  /**
+   * Qarz — ikki alohida raqam, hech qayerda qo'shilmaydi (ADR-0059):
+   * «O'qiyotganlar» (shu oy / eski qarz) va «O'qimayotganlar».
+   *
+   * Ixtiyoriy, chunki mijoz serverdan oldin chiqishi mumkin, ADR-0059 dan
+   * oldingi server esa `{ total, count }` yuboradi: u holda `studying` yo'q va
+   * karta qiymatsiz chiziladi (nol «hech kim qarzdor emas» deb o'qilardi).
+   */
+  debt?: Partial<DebtSplit>;
 }
 
 /** Rol 1, 2, 3, 5 uchun. */

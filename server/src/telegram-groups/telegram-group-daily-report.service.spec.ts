@@ -3,8 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryMonthlyService } from '../salary/salary-monthly.service';
 import { ReportsService } from '../reports/reports.service';
+import type { DebtSplit } from '../reports/debt-split';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
-import { formatSum } from './utils/format.util';
+import { formatNumber, formatSum } from './utils/format.util';
 
 /**
  * State the fake Prisma reads from. Each field maps to one metric so a test
@@ -25,7 +26,6 @@ interface State {
   todayExpenses: number;
   attendance: Array<{ status: string; _count: number }>;
   lessonGroups: number;
-  debt: { total: number; count: number };
   mtdIncome: number;
   mtdExpenses: number;
   mtdAdvances: number;
@@ -68,7 +68,6 @@ function defaultState(): State {
       { status: 'EXCUSED', _count: 4 },
     ],
     lessonGroups: 18,
-    debt: { total: 22_300_000, count: 48 },
     mtdIncome: 280_000_000,
     mtdExpenses: 95_000_000,
     mtdAdvances: 0,
@@ -91,13 +90,11 @@ function makePrisma(state: State) {
   return {
     company: { findUnique: jest.fn(async () => ({ name: state.companyName })) },
     student: {
+      // No `aggregate`/`findMany`: the debt is `ReportsService.getDebtSplit`'s
+      // (ADR-0059), so a report that reads it from `Student` itself throws here.
       count: jest.fn(async ({ where }: any) =>
         where.createdAt ? state.todayNewStudents : state.activeStudents,
       ),
-      aggregate: jest.fn(async () => ({
-        _sum: { balance: -state.debt.total },
-        _count: state.debt.count,
-      })),
     },
     enrollment: {
       findMany: jest.fn(async ({ where }: any) =>
@@ -185,6 +182,40 @@ function makeSalary(state: State) {
   };
 }
 
+/**
+ * The debt as `ReportsService.getDebtSplit` returns it (ADR-0059): two numbers
+ * that are never added. The studying one is 22.3M / 48, so against the default
+ * yesterday's snapshot (21.1M / 46) it reads ▲ 1 200 000 · +2.
+ */
+const DEBT_SPLIT: DebtSplit = {
+  studying: {
+    total: 22_300_000,
+    count: 48,
+    currentMonth: 20_000_000,
+    older: 2_300_000,
+  },
+  notStudying: { total: 9_100_000, count: 31 },
+};
+
+/** `DEBT_SPLIT` with some figures changed. */
+function splitOf(
+  studying: Partial<DebtSplit['studying']> = {},
+  notStudying: Partial<DebtSplit['notStudying']> = {},
+): DebtSplit {
+  return {
+    studying: { ...DEBT_SPLIT.studying, ...studying },
+    notStudying: { ...DEBT_SPLIT.notStudying, ...notStudying },
+  };
+}
+
+/** A `ReportsService` that answers the split a test wants and little else. */
+function reportsWithDebt(split: DebtSplit) {
+  return {
+    getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 12_345_678 }),
+    getDebtSplit: jest.fn().mockResolvedValue(split),
+  };
+}
+
 async function buildService(prisma: any, salary: any, reports?: any) {
   const module: TestingModule = await Test.createTestingModule({
     providers: [
@@ -194,11 +225,15 @@ async function buildService(prisma: any, salary: any, reports?: any) {
       {
         // The «Sof foyda» line now reads the canonical figure. Default mock
         // returns a fixed number; pass your own to assert the fallback.
+        // `getDebtSplit` answers `DEBT_SPLIT` unless the test passes its own.
         provide: ReportsService,
-        useValue: reports ?? {
-          getMonthlyNetProfit: jest
-            .fn()
-            .mockResolvedValue({ netProfit: 12_345_678 }),
+        useValue: {
+          getDebtSplit: jest.fn().mockResolvedValue(DEBT_SPLIT),
+          ...(reports ?? {
+            getMonthlyNetProfit: jest
+              .fn()
+              .mockResolvedValue({ netProfit: 12_345_678 }),
+          }),
         },
       },
     ],
@@ -243,10 +278,17 @@ describe('TelegramGroupDailyReportService', () => {
     expect(message).toContain(
       '<b>198</b> keldi · <b>6</b> kech · <b>18</b> kelmadi · <b>4</b> uzrli — <b>92%</b>',
     );
-    // 📌 Current state + debt delta (22.3M vs yesterday 21.1M = ▲ 1.2M, +2 debtors).
+    // 📌 Current state + the debt as two numbers (ADR-0059). The first one's
+    // delta: 22.3M vs yesterday 21.1M = ▲ 1.2M, +2 debtors.
     expect(message).toContain("Faol o'quvchilar: <b>1 240</b>");
     expect(message).toContain(
-      "Qarzdorlar: <b>48</b> ta — <b>22 300 000 so'm</b>  (bugun ▲ 1 200 000 · +2)",
+      "• O'qiyotganlar qarzi: <b>48</b> ta — <b>22 300 000 so'm</b>  (bugun ▲ 1 200 000 · +2)",
+    );
+    expect(message).toContain(
+      "   🟡 shu oy 20 000 000 so'm · 🔴 eski qarz 2 300 000 so'm",
+    );
+    expect(message).toContain(
+      "• O'qimayotganlar qarzi: <b>31</b> ta — <b>9 100 000 so'm</b>",
     );
     // 📅 MTD: 280M − 95M = +185M net.
     expect(message).toContain("Tushum (haqiqiy): <b>280 000 000 so'm</b>");
@@ -577,9 +619,19 @@ describe('TelegramGroupDailyReportService', () => {
 
   it('shows a ▼ arrow when debt shrinks vs yesterday', async () => {
     const state = defaultState();
-    state.debt = { total: 20_000_000, count: 44 };
     state.yesterdaySnapshot = { totalDebt: 22_000_000, debtorCount: 48 };
-    const service = await buildService(makePrisma(state), makeSalary(state));
+    const service = await buildService(
+      makePrisma(state),
+      makeSalary(state),
+      reportsWithDebt(
+        splitOf({
+          total: 20_000_000,
+          count: 44,
+          currentMonth: 18_000_000,
+          older: 2_000_000,
+        }),
+      ),
+    );
 
     const { message: raw } = await service.build(1001, null);
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
@@ -597,9 +649,12 @@ describe('TelegramGroupDailyReportService', () => {
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
     // separator; normalize to a regular space so expectations stay readable.
     const message = raw.replace(/\u00A0/g, ' ');
+    // The three lines still print — only the arrow and its figures need
+    // yesterday's snapshot.
     expect(message).toContain(
-      "Qarzdorlar: <b>48</b> ta — <b>22 300 000 so'm</b>",
+      "• O'qiyotganlar qarzi: <b>48</b> ta — <b>22 300 000 so'm</b>\n",
     );
+    expect(message).toContain("• O'qimayotganlar qarzi: <b>31</b> ta");
     expect(message).not.toContain('bugun ▲');
     expect(message).not.toContain('bugun ▼');
   });
@@ -655,7 +710,9 @@ describe('TelegramGroupDailyReportService', () => {
     // formatNumber uses a non-breaking space (U+00A0) as the thousands
     // separator; normalize to a regular space so expectations stay readable.
     const message = raw.replace(/\u00A0/g, ' ');
-    expect(message).toContain('🔴');
+    // The verdict line itself: the debt's «🔴 eski qarz» now puts a 🔴 in every
+    // message, so the bare emoji no longer says anything about the day.
+    expect(message).toContain("🔴 <i>Kun yakuni: e'tibor talab</i>");
     expect(message).toContain("• Sof (bugun): <b>-1 500 000 so'm</b>");
   });
 
@@ -929,5 +986,174 @@ describe('TelegramGroupDailyReportService — «Bu oy hisoblandi» (ADR-0058)', 
     expect(message).toContain('Oy oxiriga kutilyapti');
     expect(message).toContain("Oy rejasidan yig'ildi");
     expect(message).not.toContain('Bu oy hisoblandi');
+  });
+});
+
+/**
+ * ADR-0059: the debt is two numbers that are never added — «O'qiyotganlar»
+ * (students in an active group, with its shu oy / eski qarz split) and
+ * «O'qimayotganlar» (every other non-archived debtor). `ReportsService
+ * .getDebtSplit` is their one source; the ▲/▼ delta, the 🟡 light and the
+ * snapshot data all follow the FIRST number alone.
+ */
+describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', () => {
+  // 21:00 Tashkent on 8 July 2026 — a Wednesday, like the blocks above.
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-08T16:00:00Z'));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  // 237 studying debtors owe 43.5M (41.1M of it this month's charges), 327
+  // others owe 40.6M. Yesterday's snapshot held 43.0M / 235, so the studying
+  // number reads ▲ 500 000 · +2.
+  const split = splitOf(
+    {
+      total: 43_500_000,
+      count: 237,
+      currentMonth: 41_100_000,
+      older: 2_400_000,
+    },
+    { total: 40_600_000, count: 327 },
+  );
+  const yesterday = { totalDebt: 43_000_000, debtorCount: 235 };
+
+  async function buildWith(
+    reports: ReturnType<typeof reportsWithDebt>,
+    overrides: Partial<State> = {},
+    branchIds: number[] | null = null,
+  ) {
+    const state = {
+      ...defaultState(),
+      yesterdaySnapshot: yesterday,
+      ...overrides,
+    };
+    const service = await buildService(
+      makePrisma(state),
+      makeSalary(state),
+      reports,
+    );
+    return service.build(1001, branchIds);
+  }
+
+  it("prints «O'qiyotganlar» with its delta and split, then «O'qimayotganlar»", async () => {
+    const { message } = await buildWith(reportsWithDebt(split));
+
+    // One contiguous block, so a single `toContain` checks wording and order.
+    // `formatSum` / `formatNumber` rather than literals: their thousands
+    // separator is a non-breaking space.
+    const debtBlock = [
+      `• O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>  (bugun ▲ ${formatNumber(500_000)} · +2)`,
+      `   🟡 shu oy ${formatSum(41_100_000)} · 🔴 eski qarz ${formatSum(2_400_000)}`,
+      `• O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+    ].join('\n');
+    expect(message).toContain(debtBlock);
+    // Under «Faol o'quvchilar», in «Hozirgi holat».
+    expect(message.indexOf(debtBlock)).toBeGreaterThan(
+      message.indexOf("• Faol o'quvchilar:"),
+    );
+    // The single combined line is gone.
+    expect(message).not.toContain('Qarzdorlar:');
+  });
+
+  it('never adds the two numbers', async () => {
+    const { message } = await buildWith(reportsWithDebt(split));
+
+    expect(message).not.toContain('Jami qarz');
+    expect(message).not.toContain(formatNumber(43_500_000 + 40_600_000));
+  });
+
+  it('prints no shu oy / eski qarz line when nobody studying owes', async () => {
+    const { message } = await buildWith(
+      reportsWithDebt(
+        splitOf({ total: 0, count: 0, currentMonth: 0, older: 0 }),
+      ),
+      { yesterdaySnapshot: null },
+    );
+
+    expect(message).toContain(
+      [
+        `• O'qiyotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
+        `• O'qimayotganlar qarzi: <b>${formatNumber(31)}</b> ta — <b>${formatSum(9_100_000)}</b>`,
+      ].join('\n'),
+    );
+    expect(message).not.toContain('🟡 shu oy');
+  });
+
+  it('moves the ▲/▼ and the 🟡 light with the studying number only', async () => {
+    // Studying debt is exactly yesterday's; the OTHER number is large and
+    // changed. No arrow, and — with no flag, a positive day and good
+    // attendance — the day stays 🟢.
+    const { message } = await buildWith(
+      reportsWithDebt(
+        splitOf(
+          { total: 43_000_000, count: 235 },
+          { total: 90_000_000, count: 600 },
+        ),
+      ),
+      { flags: [] },
+    );
+
+    expect(message).not.toContain('bugun ▲');
+    expect(message).not.toContain('bugun ▼');
+    expect(message).toContain('Kun yakuni: yaxshi');
+  });
+
+  it.each([
+    [500_000, "Kun yakuni: ehtiyot bo'ling"], // exactly the threshold → 🟡
+    [499_999, 'Kun yakuni: yaxshi'],
+  ])('a studying debt up by %i is read as «%s»', async (growth, subtitle) => {
+    // Yesterday's 235 debtors, their debt up by `growth` in this month's
+    // charges: the split stays whole (total = shu oy + eski qarz).
+    const { message } = await buildWith(
+      reportsWithDebt(
+        splitOf({
+          total: 43_000_000 + growth,
+          count: 235,
+          currentMonth: 40_600_000 + growth,
+          older: 2_400_000,
+        }),
+      ),
+      { flags: [] },
+    );
+
+    // The verdict's subtitle, not its emoji: «🟡 shu oy» is on the debt line.
+    expect(message).toContain(subtitle);
+  });
+
+  it("asks for the report's own scope, and not for a month", async () => {
+    const all = reportsWithDebt(split);
+    await buildWith(all);
+    const branch = reportsWithDebt(split);
+    await buildWith(branch, {}, [2]);
+
+    // «This month» is the current Tashkent month by default, which is the
+    // report's own — passing one would only invite the two to drift.
+    expect(all.getDebtSplit).toHaveBeenCalledTimes(1);
+    expect(all.getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: null });
+    expect(branch.getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: [2] });
+  });
+
+  it('hands the studying number on as the snapshot data', async () => {
+    // `DailySnapshotService` writes the day's row from the same split; both
+    // carry the studying total and count, never the two added.
+    const { snapshot } = await buildWith(reportsWithDebt(split));
+
+    expect(snapshot).toEqual({
+      totalDebt: 43_500_000,
+      debtorCount: 237,
+      activeStudents: 1240,
+      mtdIncome: 280_000_000,
+    });
+  });
+
+  it('does not invent a zero when the split cannot be read', async () => {
+    // Read like the other Prisma figures of the report: a failure fails the
+    // build, so no message claims nobody owes.
+    const reports = {
+      ...reportsWithDebt(split),
+      getDebtSplit: jest.fn().mockRejectedValue(new Error('boom')),
+    };
+
+    await expect(buildWith(reports)).rejects.toThrow('boom');
   });
 });

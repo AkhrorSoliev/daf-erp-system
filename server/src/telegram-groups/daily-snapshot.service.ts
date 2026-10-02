@@ -67,19 +67,11 @@ export class DailySnapshotService {
     const studentBranch =
       branchId === null ? {} : { branches: { some: { branchId } } };
 
-    const [debtors, activeStudents, income, expectation, attribution] =
+    const [debtSplit, activeStudents, income, expectation, attribution] =
       await Promise.all([
-        this.prisma.student.aggregate({
-          where: {
-            companyId,
-            deletedAt: null,
-            status: 'ACTIVE',
-            balance: { lt: 0 },
-            ...studentBranch,
-          },
-          _sum: { balance: true },
-          _count: true,
-        }),
+        // The debt as two numbers (ADR-0059); the month is the current Tashkent
+        // one, which is this snapshot's own.
+        this.reports.getDebtSplit(companyId, { branchIds }),
         // «Faol o'quvchilar» — bosh sahifadagi bilan bitta ta'rif. Bu son
         // kunlik suratga YOZILADI va keyin hisobotda ko'rsatiladi, shuning
         // uchun bu yerdagi chetlanish tarixga ham ko'chib qolardi.
@@ -111,8 +103,13 @@ export class DailySnapshotService {
       ]);
 
     const data = {
-      totalDebt: Math.abs(debtors._sum.balance ?? 0),
-      debtorCount: debtors._count,
+      // «O'qiyotganlar qarzi» — the studying number of the split, the figure the
+      // 21:00 report prints; the next report's ▲/▼ compares against this row.
+      // This service is the row's only writer. «O'qimayotganlar» is not stored,
+      // and the two are never added. Rows written before ADR-0059 hold the old
+      // status-ACTIVE figure here.
+      totalDebt: debtSplit.studying.total,
+      debtorCount: debtSplit.studying.count,
       activeStudents,
       mtdIncome: income._sum.amount ?? 0,
       expectedValue: expectation.expectedValue,

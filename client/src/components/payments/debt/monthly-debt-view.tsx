@@ -29,8 +29,9 @@ import { useDebtFilters } from "./debt-filters-provider";
  * four blocks are not carried over, because on this page they would be saying
  * something the reader can already see:
  *
- *  - the big "Hozirgi qarz" figure is the "Jami qarz" card one tab to the left,
- *    down to the so'm;
+ *  - the big "Hozirgi qarz" figure is this tab's own «Hammasi» status tile,
+ *    down to the so'm (the Qarzdorlar tab has no combined card: its cards are
+ *    the debt as two numbers, ADR-0059);
  *  - "Eng uzoq qarzdorlar" is the debtor list sorted by age, and is now the
  *    "Eng uzoq qarzdor" option on that list's sort — the same people in a
  *    different order never needed a table of their own.

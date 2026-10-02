@@ -34,6 +34,7 @@ import {
   type BalanceWithdrawals,
 } from './balance-withdrawals';
 import { loadMonthCharges } from './month-charges';
+import { loadDebtSplit } from './debt-split';
 
 /** One billable lesson held in a window and the revenue it recognises. */
 export interface HeldLessonValue {
@@ -182,23 +183,12 @@ export class ReportsFinancialService {
     // `ReportsExpectationService.getMonthlyExpectation` instead — calendar-based
     // lesson value. Do not reintroduce a second forecast here.
 
-    // Outstanding receivable (D.2): total unpaid balance across active
-    // debtors. Not a forecast — it's what the center is actually owed today.
-    const receivables = await this.prisma.student.aggregate({
-      where: {
-        companyId,
-        deletedAt: null,
-        status: 'ACTIVE',
-        balance: { lt: 0 },
-        ...studentFilter,
-      },
-      _sum: { balance: true },
-      _count: true,
-    });
-    const outstandingReceivable = Math.abs(receivables._sum.balance ?? 0);
-    const debtorCount = receivables._count;
-    const avgDebt =
-      debtorCount > 0 ? Math.round(outstandingReceivable / debtorCount) : 0;
+    // No debt figure here. What the centre is owed today is two numbers —
+    // «O'qiyotganlar qarzi» and «O'qimayotganlar qarzi» (`debt-split.ts`,
+    // ADR-0059) — and the facade folds them in as `debtSplit`. This read used to
+    // carry its own copy (a status-ACTIVE receivable, its count and an average):
+    // it let an ungrouped «faol» student into «qarzdorlar» that every other
+    // surface left out. Do not reintroduce a second one.
 
     // Salary: paid + pending. Both are reported on the same basis — the
     // dashboard number reflects what actually leaves (or will leave) the
@@ -269,16 +259,6 @@ export class ReportsFinancialService {
         ...branchFilter,
       },
       _sum: { amount: true },
-    });
-
-    const debtors = await this.prisma.student.count({
-      where: {
-        companyId,
-        deletedAt: null,
-        status: 'ACTIVE',
-        balance: { lt: 0 },
-        ...studentFilter,
-      },
     });
 
     const activeStudents = await this.prisma.student.aggregate({
@@ -357,10 +337,6 @@ export class ReportsFinancialService {
           count: m._count,
         })),
       },
-      forecast: {
-        outstandingReceivable,
-        debtorExposure: { count: debtorCount, avgDebt },
-      },
       salary: {
         paid: totalSalaryPaid,
         pending,
@@ -371,7 +347,6 @@ export class ReportsFinancialService {
       },
       expenses: totalExpenseAmount,
       netProfit: totalIncome - totalExpenses,
-      debtorCount: debtors,
       activeBalance: activeStudents._sum.balance ?? 0,
       activeStudentCount: activeStudents._count,
       ltv: Math.round(periodPayerTotal / periodPayerCount),
@@ -433,6 +408,14 @@ export class ReportsFinancialService {
     opts: { month: string; branchIds: ReportBranchIds },
   ) {
     return loadMonthCharges(this.prisma, companyId, opts);
+  }
+
+  /** «O'qiyotganlar» / «O'qimayotganlar» qarzi — ikki alohida raqam (ADR-0059). */
+  getDebtSplit(
+    companyId: number,
+    opts: { branchIds: ReportBranchIds; month?: string },
+  ) {
+    return loadDebtSplit(this.prisma, companyId, opts);
   }
 
   /**

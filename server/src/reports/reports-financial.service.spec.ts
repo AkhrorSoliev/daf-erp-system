@@ -136,6 +136,41 @@ describe('ReportsFinancialService', () => {
       expect(result.netProfit).toBe(-3_100_000);
     });
 
+    // ADR-0059: the debt is the split's — `ReportsService.getDebtSplit`, which
+    // the facade folds in as `debtSplit`. This raw read used to carry a second
+    // copy: a status-ACTIVE receivable (`forecast.outstandingReceivable`), its
+    // count (`debtorExposure`) and a third read of the same count (`debtorCount`).
+    // That copy let an ungrouped «faol» student into «qarzdorlar» while every
+    // other surface left him out.
+    it('carries no debt figure and issues no debtor read', async () => {
+      const result: any = await service.getFinancialOverview(1, period);
+
+      expect(result).not.toHaveProperty('forecast');
+      expect(result).not.toHaveProperty('debtorCount');
+
+      const debtReads = [
+        ...prisma.student.aggregate.mock.calls,
+        ...prisma.student.count.mock.calls,
+      ]
+        .map(([args]: [any]) => args.where)
+        .filter((where: any) => where.balance !== undefined);
+      expect(debtReads).toEqual([]);
+    });
+
+    it("still reads the active students' balance and the new-student count", async () => {
+      await service.getFinancialOverview(1, period);
+
+      // `activeBalance` / `activeStudentCount` are not debt figures: they stay.
+      expect(prisma.student.aggregate).toHaveBeenCalledTimes(1);
+      expect(prisma.student.aggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ companyId: 1, status: 'ACTIVE' }),
+          _sum: { balance: true },
+        }),
+      );
+      expect(prisma.student.count).toHaveBeenCalledTimes(1);
+    });
+
     it('scopes the advance-paid query to TEACHER_ADVANCE + branch and the settled query to a PAID salary run', async () => {
       await service.getFinancialOverview(1, { ...period, branchIds: [42] });
 

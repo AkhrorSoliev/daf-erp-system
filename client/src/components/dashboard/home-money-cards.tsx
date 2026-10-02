@@ -8,15 +8,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
+import type { DebtSplit } from "@/components/payments/payments-overview";
 import type { DashboardMoney } from "./dashboard-summary-types";
 
 interface MoneyCardProps {
   icon: LucideIcon;
   label: string;
-  value: number;
-  hint: string;
+  /** `null` — qiymat yo'q: chiziqcha chiqadi, nol emas. */
+  value: number | null;
+  hint?: string;
   tooltip: string;
   href: string;
   valueClassName?: string;
@@ -48,9 +50,9 @@ function MoneyCard({
               valueClassName,
             )}
           >
-            {formatNumber(value)}
+            {value === null ? "—" : formatNumber(value)}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </Link>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">{tooltip}</TooltipContent>
@@ -58,7 +60,17 @@ function MoneyCard({
   );
 }
 
+/**
+ * Ikki qarz bo'lakli bo'lsagina. ADR-0059 dan oldingi server `{ total, count }`
+ * yuboradi, mijoz esa serverdan oldin chiqishi mumkin: bo'linma yo'q bo'lsa karta
+ * chiziqcha chizadi — nol «hech kim qarzdor emas» deb o'qilardi.
+ */
+function hasSplit(debt: DashboardMoney["debt"]): debt is DebtSplit {
+  return !!debt?.studying && !!debt.notStudying;
+}
+
 export function HomeMoneyCards({ money }: { money: DashboardMoney }) {
+  const split = hasSplit(money.debt) ? money.debt : null;
   // Kanonik sof foyda hisoblanmagan bo'lsa raqam kassa asosida keladi va
   // haqiqiy foydadan ancha yuqori chiqadi — karta buni YASHIRMAYDI, o'z
   // sarlavhasini almashtiradi.
@@ -97,15 +109,23 @@ export function HomeMoneyCards({ money }: { money: DashboardMoney }) {
           href="/payments/overview"
         />
       )}
+      {/* Qarz — ikki alohida raqam (ADR-0059): karta birinchisini ko'rsatadi,
+          ikkinchisi ost-satrda. Ikkalasi serverdan keladi, qo'shilmaydi. */}
       <MoneyCard
         icon={UserMinus}
-        label="Qarzdorlik"
-        value={money.debt.total}
-        hint={`${formatNumber(money.debt.count)} ta qarzdor`}
-        tooltip="Markazga qarzdor o'quvchilarning jami qarzi (so'm)."
+        label="O'qiyotganlar qarzi"
+        value={split ? split.studying.total : null}
+        hint={
+          split
+            ? `${formatNumber(split.studying.count)} ta · o'qimayotganlar ${formatPrice(split.notStudying.total)}`
+            : undefined
+        }
+        tooltip="Faol guruhda o'qiyotganlarning qarzi. O'qimayotganlar (guruhsiz, muzlatilgan, ketgan) qarzi alohida, qo'shilmaydi."
         href="/payments/debt"
         valueClassName={
-          money.debt.total > 0 ? "text-red-600 dark:text-red-400" : undefined
+          split && split.studying.total > 0
+            ? "text-red-600 dark:text-red-400"
+            : undefined
         }
       />
       <MoneyCard

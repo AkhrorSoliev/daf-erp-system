@@ -248,6 +248,25 @@ usulida quriladi (oy boshi + yangi qarz − to'langan = oy oxiri), shuning uchun
 ustunlar yig'indisi to'g'ri chiqadi.
 `reports/reports-debt-history.service.ts`
 
+«Markazga qancha qarz» deb ko'rsatilganda esa qarz **ikki alohida raqam** —
+keyingi ikki yozuv; ular hech qayerda qo'shilmaydi.
+`reports/debt-split.ts`
+
+**O'qiyotganlar qarzi** — «faol o'quvchi»ning (yuqorida) manfiy balansi: statusi
+`ACTIVE`, faol guruhda faol yozuvi bor, kartasi o'chirilmagan. Har o'quvchi uchun
+ikkiga bo'linadi: **shu oy** (🟡) — `min(qarz, shu Toshkent oyining CHARGED
+hisoblari)`, **eski qarz** (🔴) — qolgani. Oyning hisoblari yozilguncha hamma qarz
+«eski qarz» bo'lib o'qiladi. «O'qimayotganlar qarzi» bilan qo'shilmaydi: «jami
+qarz» ham, «o'rtacha qarz» ham yo'q.
+`reports/debt-split.ts` · `docs/adr/0059-qarz-ikki-alohida-raqam.md`
+
+**O'qimayotganlar qarzi** — qarzi bor, lekin «faol o'quvchi» bo'lmaganlar:
+guruhsiz (statusi `ACTIVE` bo'lsa ham), muzlatilgan, ketgan. «O'qiyotganlar
+qarzi» bilan bitta shartning o'zi va inkori (`activeStudentWhere()`), shuning
+uchun har qarzdor aniq bittasida. Arxivdagi karta (`deletedAt`) ikkalasida ham
+sanalmaydi. Hech qayerda o'qiyotganlarnikiga qo'shilmaydi.
+`reports/debt-split.ts` · `docs/adr/0059-qarz-ikki-alohida-raqam.md`
+
 **To'lov va'dasi (PaymentPromise)** — qarzdor «falon kuni to'layman» deganda
 ochiladigan yozuv: `OPEN → KEPT | BROKEN`.
 `payment-promises/`

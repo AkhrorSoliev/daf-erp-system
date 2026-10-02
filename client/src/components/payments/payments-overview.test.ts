@@ -1,6 +1,8 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -21,7 +23,11 @@ vi.mock("@/hooks/use-auth", () => {
 });
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { PaymentsOverview, type MonthCharges } from "./payments-overview";
+import {
+  PaymentsOverview,
+  type DebtSplit,
+  type MonthCharges,
+} from "./payments-overview";
 
 const START = "2026-10-01";
 const END = "2026-10-31";
@@ -37,21 +43,38 @@ const charges: MonthCharges = {
 
 const EXPECTED_MONTH_END = 12_345_678;
 
+// The two debts of «Qarzdorlik» (ADR-0059). `studying.total` is
+// `currentMonth + older` — the split is built that way — but the sum of the two
+// debts (84 100 000) is a figure the page must never print, and a count never
+// equals an amount.
+const DEBT_SPLIT: DebtSplit = {
+  studying: {
+    total: 43_500_000,
+    count: 237,
+    currentMonth: 41_100_000,
+    older: 2_400_000,
+  },
+  notStudying: { total: 40_600_000, count: 327 },
+};
+
 /**
  * The overview as the CEO's request returns it, with only what the card reads.
  * `salaryMonth` is the month of the computed salary («Ustoz oyliklari»); left
  * out, the response carries no computed salary at all.
  */
-const overview = (monthCharges: MonthCharges | null, salaryMonth?: string) => ({
+const overview = (
+  monthCharges: MonthCharges | null,
+  salaryMonth?: string,
+  debtSplit: DebtSplit = DEBT_SPLIT,
+) => ({
   income: { actual: 5_000_000, paymentCount: 3, byMethod: [] },
   forecast: {
     expectedMonthEnd: EXPECTED_MONTH_END,
     expectedHeld: 1_000_000,
     expectedRemaining: 2_000_000,
-    outstandingReceivable: 0,
-    debtorExposure: { count: 0, avgDebt: 0 },
   },
   monthCharges,
+  debtSplit,
   ...(salaryMonth
     ? {
         salary: {
@@ -83,27 +106,66 @@ function norm(html: string): string {
     .replace(/\s+/g, " ");
 }
 
-function render(monthCharges: MonthCharges | null, salaryMonth?: string): string {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderHtml(
+  monthCharges: MonthCharges | null,
+  salaryMonth?: string,
+  debtSplit: DebtSplit = DEBT_SPLIT,
+  writeOffs?: { totalAmount: number; count: number },
+): string {
+  return renderAnswer(overview(monthCharges, salaryMonth, debtSplit), writeOffs);
+}
+
+/**
+ * The page with `answer` in the cache: the overview's response, or the Error
+ * its request failed with. `retryOnMount: false` keeps a failed request failed
+ * — otherwise the page would render its loading skeleton instead.
+ */
+function renderAnswer(
+  answer: object | Error,
+  writeOffs?: { totalAmount: number; count: number },
+): string {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, retryOnMount: false } },
+  });
   // `undefined` twice: no branch is selected in a bare store, and no refreshKey.
-  client.setQueryData(
-    ["financial-overview", undefined, START, END, undefined],
-    overview(monthCharges, salaryMonth),
-  );
-  return norm(
-    renderToStaticMarkup(
+  const key = ["financial-overview", undefined, START, END, undefined];
+  if (answer instanceof Error) {
+    client
+      .getQueryCache()
+      .build(client, { queryKey: key })
+      .setState({ status: "error", error: answer });
+  } else {
+    client.setQueryData(key, answer);
+  }
+  if (writeOffs) {
+    client.setQueryData(
+      ["debt-write-offs-summary", undefined, START, END, undefined],
+      writeOffs,
+    );
+  }
+  return renderToStaticMarkup(
+    createElement(
+      QueryClientProvider,
+      { client },
       createElement(
-        QueryClientProvider,
-        { client },
-        createElement(
-          TooltipProvider,
-          null,
-          createElement(PaymentsOverview, { startDate: START, endDate: END }),
-        ),
+        TooltipProvider,
+        null,
+        createElement(PaymentsOverview, { startDate: START, endDate: END }),
       ),
     ),
   );
 }
+
+function render(
+  monthCharges: MonthCharges | null,
+  salaryMonth?: string,
+  debtSplit: DebtSplit = DEBT_SPLIT,
+): string {
+  return norm(renderHtml(monthCharges, salaryMonth, debtSplit));
+}
+
+// A plain number in the card's own format (no «so'm»), for lines that carry none.
+const num = (n: number) => norm(n.toLocaleString("uz-UZ"));
 
 // A monthly-payment month (ADR-0058) leads with the month's own bill, and the
 // title names that month: a period of several months shows its FIRST month's
@@ -194,5 +256,139 @@ describe("PaymentsOverview — the salary card's month", () => {
     const text = render(charges);
 
     expect(text).toContain("Shu oy uchun hisoblangan");
+  });
+});
+
+// «Qarzdorlik» (ADR-0059) is today's debt in TWO numbers that are never added:
+// «O'qiyotganlar qarzi» with its 🟡 shu oy / 🔴 eski qarz split, and
+// «O'qimayotganlar qarzi». Every figure is the server's `debtSplit`; the old
+// «Jami qarz», «Qarzdor o'quvchilar» and «O'rtacha qarz» rows are gone.
+describe("PaymentsOverview — the debt block", () => {
+  it("is titled «Qarzdorlik» with «Bugungi holat», and shows both debts with their counts", () => {
+    const text = render(charges);
+
+    expect(text).toContain("Qarzdorlik Bugungi holat");
+    expect(text).toContain(`O'qiyotganlar qarzi ${money(43_500_000)} (237 ta)`);
+    expect(text).toContain(
+      `O'qimayotganlar qarzi ${money(40_600_000)} (327 ta)`,
+    );
+  });
+
+  it("splits the studying debt into shu oy and eski qarz on a line of its own", () => {
+    const text = render(charges);
+
+    expect(text).toContain(
+      `🟡 shu oy ${num(41_100_000)} · 🔴 eski qarz ${num(2_400_000)}`,
+    );
+    // The split belongs to the studying row alone: «O'qimayotganlar» has none.
+    expect(text.split("🟡")).toHaveLength(2);
+  });
+
+  it("never adds the two, and the rows A2.4 removed are gone", () => {
+    const text = render(charges);
+
+    expect(text).not.toContain("Jami qarz");
+    expect(text).not.toContain("Qarzdor o'quvchilar");
+    expect(text).not.toContain("O'rtacha qarz");
+    expect(text).not.toContain(num(43_500_000 + 40_600_000));
+  });
+
+  it("is today's debt, so an older month shows the same block", () => {
+    const text = render(null);
+
+    expect(text).toContain("Qarzdorlik Bugungi holat");
+    expect(text).toContain(`O'qiyotganlar qarzi ${money(43_500_000)} (237 ta)`);
+    expect(text).toContain(
+      `O'qimayotganlar qarzi ${money(40_600_000)} (327 ta)`,
+    );
+  });
+
+  it("nobody owes: both rows print zeros, never a dash or a blank", () => {
+    const text = render(charges, undefined, {
+      studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
+      notStudying: { total: 0, count: 0 },
+    });
+
+    expect(text).toContain(`O'qiyotganlar qarzi ${money(0)} (0 ta)`);
+    expect(text).toContain(`🟡 shu oy 0 · 🔴 eski qarz 0`);
+    expect(text).toContain(`O'qimayotganlar qarzi ${money(0)} (0 ta)`);
+  });
+
+  it("keeps the link to the debt page's write-offs", () => {
+    const html = renderHtml(charges, undefined, DEBT_SPLIT, {
+      totalAmount: 1_000_000,
+      count: 2,
+    });
+
+    expect(html).toContain('href="/payments/debt?tab=kechirilgan"');
+    expect(norm(html)).toContain("Hisobdan chiqarilgan");
+  });
+
+  // The client goes live before the server (ADR-0059, item 5), so for a few
+  // minutes it reads the answer of a server older than the split: no
+  // `debtSplit`, and the old receivable fields instead. The block keeps both
+  // labels and draws «—»: a zero would read as «nobody owes», and the old
+  // receivable was every status's debt, not either of the two new numbers.
+  describe("against a server older than the split", () => {
+    const OLD_RECEIVABLE = 19_870_000;
+    const oldAnswer = {
+      income: { actual: 5_000_000, paymentCount: 3, byMethod: [] },
+      forecast: {
+        expectedMonthEnd: EXPECTED_MONTH_END,
+        expectedHeld: 1_000_000,
+        expectedRemaining: 2_000_000,
+        outstandingReceivable: OLD_RECEIVABLE,
+        debtorExposure: { count: 158, avgDebt: 125_759 },
+      },
+      debtorCount: 158,
+      monthCharges: charges,
+    };
+
+    /** The «Qarzdorlik» block's text alone: other cards of a bare answer read 0. */
+    function debtBlock(text: string): string {
+      const start = text.indexOf("Qarzdorlik Bugungi holat");
+      const end = text.indexOf("To'lov usullari");
+      expect(start).toBeGreaterThanOrEqual(0);
+      expect(end).toBeGreaterThan(start);
+      return text.slice(start, end);
+    }
+
+    it("keeps both labels with «—», and draws no zero, no 🟡 line and not the old total", () => {
+      const page = norm(renderAnswer(oldAnswer));
+      const block = debtBlock(page);
+
+      expect(block).toContain("O'qiyotganlar qarzi — O'qimayotganlar qarzi —");
+      expect(block).not.toContain(money(0));
+      expect(block).not.toContain("(0 ta)");
+      expect(block).not.toContain("🟡");
+      expect(page).not.toContain(num(OLD_RECEIVABLE));
+      // The rest of the page reads the old answer as before.
+      expect(page).toContain(`Hisoblandi ${money(900_000)}`);
+    });
+
+    it("a request that failed draws the same dash, not zero debt", () => {
+      const block = debtBlock(norm(renderAnswer(new Error("boom"))));
+
+      expect(block).toContain("O'qiyotganlar qarzi — O'qimayotganlar qarzi —");
+      expect(block).not.toContain(money(0));
+      expect(block).not.toContain("🟡");
+    });
+  });
+
+  // A closed tooltip renders nothing, so the static markup cannot show these two
+  // texts — the same limit `payment-settings-*-guard.test.ts` works around by
+  // reading the source. Whitespace is collapsed (JSX wraps its lines) and
+  // `&apos;` read back as the apostrophe it stands for.
+  it("explains each number in its tooltip", () => {
+    const source = readFileSync(join(__dirname, "payments-overview.tsx"), "utf-8")
+      .replace(/&apos;/g, "'")
+      .replace(/\s+/g, " ");
+
+    expect(source).toContain(
+      "Faol guruhda o'qiyotgan o'quvchilarning qarzi. Shu oy — qarzning shu oy hisobigacha bo'lgan qismi, eski qarz — qolgani.",
+    );
+    expect(source).toContain(
+      "Guruhsiz, muzlatilgan va ketgan o'quvchilarning qarzi. O'qiyotganlar qarziga qo'shilmaydi.",
+    );
   });
 });

@@ -25,6 +25,7 @@ import {
   tashkentDayRange,
   tashkentTodayDate,
 } from './utils/format.util';
+import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
 import { buildMonthChargesLines } from './utils/month-charges-lines.util';
 
@@ -40,7 +41,9 @@ import { buildMonthChargesLines } from './utils/month-charges-lines.util';
  *   💰 Bugungi moliya      — today's cash in (by method), operational spend, net
  *   👥 O'quvchilar harakati — new vs departed students (net) + new leads
  *   🎓 Bugungi o'quv jarayoni — lessons held + attendance breakdown
- *   📌 Hozirgi holat        — active students + debt (with day-over-day ▲/▼)
+ *   📌 Hozirgi holat        — active students + debt as two numbers
+ *                             («O'qiyotganlar» with day-over-day ▲/▼ and its
+ *                             shu oy / eski qarz split, «O'qimayotganlar»)
  *   📅 Oy boshidan          — MTD income (+ this-month / old-debt split, per
  *                             month) / expense / net + lesson collection %;
  *                             from 2026-09 «Bu oy hisoblandi / To'landi /
@@ -54,6 +57,14 @@ import { buildMonthChargesLines } from './utils/month-charges-lines.util';
  * every day at 23:40, including the Sundays and holidays this report skips.
  *
  * Metric semantics mirror the CEO's `/payments/salary` and financial pages:
+ *  - «O'qiyotganlar qarzi» / «O'qimayotganlar qarzi» = the debt as two numbers
+ *    that are never added, from `ReportsService.getDebtSplit` (ADR-0059).
+ *    «O'qiyotganlar» = students in an active group (ADR-0015's «faol
+ *    o'quvchi»), split into this month's charges and older debt; everyone else
+ *    who owes is «O'qimayotganlar». The ▲/▼ delta, the 🟡 light and the
+ *    snapshot's `totalDebt`/`debtorCount` follow «O'qiyotganlar» alone. Never
+ *    re-derive either here — the status-ACTIVE aggregate this replaced counted
+ *    an ungrouped «faol» student as a debtor and no other surface did.
  *  - "Tushum (haqiqiy)" = cash actually received, NOT billed — read from
  *    `getIncomeMonthAttribution` so the two lines under it («Shu oy uchun» and
  *    «Eski qarzlar uchun», per month) decompose the figure printed above them.
@@ -85,7 +96,7 @@ import { buildMonthChargesLines } from './utils/month-charges-lines.util';
 export class TelegramGroupDailyReportService {
   private readonly logger = new Logger(TelegramGroupDailyReportService.name);
 
-  /** Below this, a debt increase is not worth downgrading the day to 🟡. */
+  /** Below this, a rise in «O'qiyotganlar qarzi» is not worth downgrading the day to 🟡. */
   private static readonly DEBT_GROWTH_YELLOW = 500_000;
   /** Today's refund + write-off total at/above this downgrades the day to 🔴. */
   private static readonly BIG_MONEY_OUT_RED = 2_000_000;
@@ -139,10 +150,10 @@ export class TelegramGroupDailyReportService {
   ) {}
 
   /**
-   * Builds the full daily report and returns it alongside the point-in-time
-   * figures the cron should persist as tonight's snapshot (for tomorrow's
-   * ▲/▼ delta). Building does NOT write the snapshot — that is the cron's job
-   * after a confirmed send.
+   * Builds the full daily report and returns it alongside its point-in-time
+   * snapshot figures. Nothing persists them: the day's `DailyFinancialSnapshot`
+   * row has one writer, `DailySnapshotService` (23:40, see the class comment),
+   * and the next report's ▲/▼ reads that row.
    */
   async build(
     companyId: number,
@@ -174,7 +185,7 @@ export class TelegramGroupDailyReportService {
       todayExpenses,
       attendanceBreakdown,
       lessonGroupsToday,
-      debtorAgg,
+      debtSplit,
       monthlyIncome,
       monthlyExpenses,
       monthlyAdvances,
@@ -283,17 +294,10 @@ export class TelegramGroupDailyReportService {
         by: ['groupId'],
         where: { companyId, date: todayDate, ...groupBranchWhere(branchIds) },
       }),
-      this.prisma.student.aggregate({
-        where: {
-          companyId,
-          deletedAt: null,
-          status: 'ACTIVE',
-          balance: { lt: 0 },
-          ...studentBranchWhere(branchIds),
-        },
-        _sum: { balance: true },
-        _count: true,
-      }),
+      // The debt as two numbers that are never added (ADR-0059). It replaces a
+      // status-ACTIVE aggregate that counted an ungrouped «faol» student as a
+      // debtor. The month is the current Tashkent one, which is this report's own.
+      this.reports.getDebtSplit(companyId, { branchIds }),
       this.prisma.payment.aggregate({
         where: {
           companyId,
@@ -404,8 +408,11 @@ export class TelegramGroupDailyReportService {
       attendanceDenom > 0 ? Math.round((attended / attendanceDenom) * 100) : 0;
     const lessonsToday = lessonGroupsToday.length;
 
-    const totalDebt = Math.abs(debtorAgg._sum.balance ?? 0);
-    const debtorCount = debtorAgg._count;
+    // The snapshot, the ▲/▼ delta and the 🟡 light all follow «O'qiyotganlar»;
+    // `DailySnapshotService` writes the same two figures from the same split.
+    // «O'qimayotganlar» is printed and nothing more — it is never added to it.
+    const totalDebt = debtSplit.studying.total;
+    const debtorCount = debtSplit.studying.count;
 
     const mtdIncome = monthlyIncome._sum.amount ?? 0;
     const mtdExpense = monthlyExpenses._sum.amount ?? 0;
@@ -495,9 +502,17 @@ export class TelegramGroupDailyReportService {
     // 📌 Hozirgi holat
     lines.push(`📌 <b>Hozirgi holat</b>`);
     lines.push(`• Faol o'quvchilar: <b>${formatNumber(activeStudents)}</b>`);
-    lines.push(
-      `• Qarzdorlar: <b>${formatNumber(debtorCount)}</b> ta — <b>${formatSum(totalDebt)}</b>${this.buildDebtDeltaSuffix(yesterdaySnapshot, totalDebt, debtorCount)}`,
-    );
+    // The debt (ADR-0059): the lines every Telegram surface prints. Only
+    // «O'qiyotganlar qarzi» carries the ▲/▼ against yesterday.
+    for (const line of buildDebtSplitLines(debtSplit, {
+      studyingSuffix: this.buildDebtDeltaSuffix(
+        yesterdaySnapshot,
+        totalDebt,
+        debtorCount,
+      ),
+    })) {
+      lines.push(line);
+    }
     lines.push('');
 
     // 📅 Oy boshidan
@@ -513,8 +528,8 @@ export class TelegramGroupDailyReportService {
     // `scripts/audit-finance-reconciliation.ts` checks as G1 — and `logIncome
     // BasisDrift` below says so in the log if that ever stops holding.
     //
-    // The snapshot keeps the aggregate on purpose: `DailySnapshotCron` writes
-    // the same row on that basis, and the two writers must agree.
+    // The returned snapshot figures keep the aggregate on purpose: it is the
+    // basis `DailySnapshotService`, the row's only writer, stores `mtdIncome` on.
     this.logIncomeBasisDrift(companyId, attribution, mtdIncome);
     lines.push(
       `• Tushum (haqiqiy): <b>${formatSum(attribution ? attribution.total : mtdIncome)}</b>`,
@@ -1013,7 +1028,9 @@ export class TelegramGroupDailyReportService {
 }
 
 export interface DailySnapshotData {
+  /** «O'qiyotganlar qarzi» — the studying debt, never the two added (ADR-0059). */
   totalDebt: number;
+  /** How many students owe it. */
   debtorCount: number;
   activeStudents: number;
   mtdIncome: number;

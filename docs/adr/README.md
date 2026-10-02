@@ -74,7 +74,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0012](0012-bosh-sahifa-qayta-hisoblamaydi.md) | Bosh sahifa paneli raqamlarni qayta hisoblamaydi | Qabul qilindi | 2026-09-02 |
 | [0013](0013-majburiy-royxat-boshqaruvsiz-qolmaydi.md) | Majburiy tanlov ro'yxati boshqaruv sahifasisiz qolmaydi | Qabul qilindi | 2026-09-03 |
 | [0014](0014-a1-kursi-on-ikki-unitga-bolinadi.md) | A1 kursi o'n ikki unitga bo'linadi | Qabul qilindi | 2026-09-03 |
-| [0015](0015-faol-oquvchi-tarifi-manifest.md) | «Faol o'quvchi» sanog'i manifest bilan majburlanadi | Qabul qilindi | 2026-09-10 |
+| [0015](0015-faol-oquvchi-tarifi-manifest.md) | «Faol o'quvchi» sanog'i manifest bilan majburlanadi | Qabul qilindi; «Pul o'lchovlari ataylab chetda» bandi qarz yuzalari uchun — ADR-0059 bilan o'zgardi | 2026-09-10 |
 | [0016](0016-kun-chegarasi-toshkent-boyicha.md) | Kun chegarasi Toshkent bo'yicha, ustun tipiga qarab | Qabul qilindi | 2026-09-10 |
 | [0017](0017-har-bir-oquvchi-lid-sifatida-tugiladi.md) | Har bir o'quvchi lid sifatida tug'iladi | Qabul qilindi | 2026-09-10 |
 | [0018](0018-oquvchi-lidsiz-tugilmaydi-qorovul-bilan.md) | O'quvchi lidsiz tug'ilmaydi — kafolat qorovul bilan | Qabul qilindi | 2026-09-13 |
@@ -117,6 +117,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0055](0055-balansdan-yechib-olingan-pul-oy-daromadi.md) | Balansdan yechib olingan pul yechilgan oyning daromadi; oy tanlanmaydi | Qabul qilindi | 2026-09-30 |
 | [0056](0056-mock-royxat-manbasi-qatorda.md) | Mock ro'yxati qayerdan kelgani (bot yoki admin) qatorning o'zida yoziladi | Qabul qilindi | 2026-09-30 |
 | [0058](0058-oylik-oyning-asosiy-raqami-hisoblandi.md) | Oylik oyning asosiy raqami hisoblandi / to'landi / qoldi; bekor qilingan qaytarish va kechirish sanalmaydi; oylik qamrovi — filiallar to'plami | Qabul qilindi | 2026-10-01 |
+| [0059](0059-qarz-ikki-alohida-raqam.md) | Qarz ikki alohida raqamda: o'qiyotganlar va o'qimayotganlar qarzi; ikkisi hech qayerda qo'shilmaydi | Qabul qilindi | 2026-10-01 |
 | [0060](0060-sinov-darsi-javobsiz-dars-bilan-hal-qilinmaydi.md) | Sinov darsi javobsiz «Dars bo'ldimi?» bilan hal qilinmaydi: chiqarish va chetlatish avval javobni kutadi | Qabul qilindi | 2026-10-01 |
 | [0063](0063-bekor-qilishni-ochirish-pulni-qaytarib-oladi.md) | Bekor qilishni o'chirish qaytarilgan dars pulini ham qaytarib oladi; o'zgargan yozilishning puli qoldiriladi | Qabul qilindi | 2026-10-02 |
 

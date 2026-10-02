@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
 import type { ReportsService } from '../reports/reports.service';
-import { formatSum } from './utils/format.util';
+import { formatNumber, formatSum } from './utils/format.util';
 
 function makeCtx(chatId = 111) {
   return {
@@ -60,13 +60,10 @@ function makeDeps(
     generate: jest.fn().mockResolvedValue(Buffer.from('xlsx-bytes')),
   };
   const reportsFinancial: any = {
+    // No `forecast` and no debt: the raw overview carries neither any more
+    // (ADR-0059), so a card that still read them would fail loudly here.
     getFinancialOverview: jest.fn().mockResolvedValue({
       income: { actual: 280_000_000, byMethod: [] },
-      forecast: {
-        recognizedRevenueForecast: 420_000_000,
-        outstandingReceivable: -22_300_000,
-        debtorExposure: { count: 48, avgDebt: 0 },
-      },
       salary: { paid: 30_000_000, pending: 0, advances: 0 },
       expenses: 95_000_000,
       netProfit: 185_000_000,
@@ -478,6 +475,149 @@ describe('TelegramGroupReportMenuService', () => {
         expect(text).toContain('Tushum (haqiqiy)');
         expect(text).not.toContain('Bu oy hisoblandi');
         expect(text).not.toContain('Oy oxiriga kutilyapti');
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('boom'));
+      } finally {
+        warn.mockRestore();
+      }
+    });
+  });
+
+  // ADR-0059: the card's debt is TWO numbers — «O'qiyotganlar qarzi» with its
+  // shu oy / eski qarz split, and «O'qimayotganlar qarzi» — read from the
+  // facade's split for the group's own scope, never added and never from the
+  // raw overview (whose status-ACTIVE «Qarzdorlar» count is gone). The lines
+  // are the 21:00 report's, from the shared `buildDebtSplitLines`.
+  describe('the debt lines', () => {
+    const split = {
+      studying: {
+        total: 43_500_000,
+        count: 237,
+        currentMonth: 41_100_000,
+        older: 2_400_000,
+      },
+      notStudying: { total: 40_600_000, count: 327 },
+    };
+    // The card's other reads are not what is under test: they answer plainly.
+    const reportsWith = (overrides: Record<string, jest.Mock> = {}) => ({
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyExpectation: jest
+        .fn()
+        .mockResolvedValue({ expectedValue: 150_000_000 }),
+      getDebtSplit: jest.fn().mockResolvedValue(split),
+      ...overrides,
+    });
+
+    it("prints the 21:00 report's debt lines — «eski qarz», not «eski»", async () => {
+      const { service } = makeDeps({ reports: reportsWith() });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      // `formatSum` / `formatNumber`, not literals: their thousands separator
+      // is a non-breaking space. One contiguous block checks wording and order.
+      const text = ctx.reply.mock.calls[0][0] as string;
+      expect(text).toContain(
+        [
+          `• O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>`,
+          `   🟡 shu oy ${formatSum(41_100_000)} · 🔴 eski qarz ${formatSum(2_400_000)}`,
+          `• O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+        ].join('\n'),
+      );
+      // The card used to print a wording of its own: «eski» alone.
+      expect(text).not.toMatch(/eski (?!qarz)/);
+    });
+
+    it('never adds the two, and the old single «Qarzdorlar» line is gone', async () => {
+      const { service } = makeDeps({ reports: reportsWith() });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      const text = ctx.reply.mock.calls[0][0] as string;
+      expect(text).not.toContain('Qarzdorlar');
+      expect(text).not.toContain('Jami qarz');
+      expect(text).not.toContain(formatSum(43_500_000 + 40_600_000));
+      // Their own lines, not one line holding both.
+      const debtLines = text.split('\n').filter((l) => l.includes('qarzi:'));
+      expect(debtLines).toHaveLength(2);
+    });
+
+    it("asks for the group's branch and the card's own month", async () => {
+      const reports = reportsWith();
+      const { service } = makeDeps({ branchId: 1, reports });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      // The month is passed explicitly, like the income split's: the card
+      // resolves it once, for its title and every figure on it. 08.07.2026 here.
+      expect(reports.getDebtSplit).toHaveBeenCalledTimes(1);
+      expect(reports.getDebtSplit).toHaveBeenCalledWith(1001, {
+        branchIds: [1],
+        month: '2026-07',
+      });
+    });
+
+    it('a group that sees every branch gets the company-wide split', async () => {
+      const reports = reportsWith();
+      const { service } = makeDeps({
+        branchId: null,
+        receivesAllBranches: true,
+        reports,
+      });
+
+      await service.sendFinancialCard(makeCtx());
+
+      expect(reports.getDebtSplit).toHaveBeenCalledWith(1001, {
+        branchIds: null,
+        month: '2026-07',
+      });
+    });
+
+    it('nobody owes: both numbers still print, as zeros, with no shu oy line', async () => {
+      const { service } = makeDeps({
+        reports: reportsWith({
+          getDebtSplit: jest.fn().mockResolvedValue({
+            studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
+            notStudying: { total: 0, count: 0 },
+          }),
+        }),
+      });
+      const ctx = makeCtx();
+
+      await service.sendFinancialCard(ctx);
+
+      const text = ctx.reply.mock.calls[0][0] as string;
+      expect(text).toContain(
+        [
+          `• O'qiyotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
+          `• O'qimayotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
+        ].join('\n'),
+      );
+      // Nothing studying is owed, so there is no split to print.
+      expect(text).not.toContain('shu oy');
+    });
+
+    it('still sends the card, without the debt lines, when the split cannot be read', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      try {
+        const { service } = makeDeps({
+          reports: reportsWith({
+            getDebtSplit: jest.fn().mockRejectedValue(new Error('boom')),
+          }),
+        });
+        const ctx = makeCtx();
+
+        await service.sendFinancialCard(ctx);
+
+        // One message, and it is the card — not the «Ma'lumot yuklanmadi»
+        // apology. A missing line is honest; a zero would claim nobody owes.
+        expect(ctx.reply).toHaveBeenCalledTimes(1);
+        const text = ctx.reply.mock.calls[0][0] as string;
+        expect(text).toContain('Moliyaviy xulosa');
+        expect(text).toContain('Tushum (haqiqiy)');
+        expect(text).not.toContain('qarzi');
+        expect(text).not.toContain('Qarzdorlar');
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('boom'));
       } finally {
         warn.mockRestore();

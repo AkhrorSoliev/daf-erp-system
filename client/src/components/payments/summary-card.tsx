@@ -27,9 +27,10 @@ export function SummaryCard({
    * One short line saying what the number IS. A finance figure under a
    * three-word label is read as whatever the reader already expected — the
    * hint is where "kassadan chiqqan pul" gets said instead of assumed.
-   * Optional, so the cards that need no explaining stay quiet.
+   * Optional, so the cards that need no explaining stay quiet. A node, not a
+   * string, for the card that needs a second line (`<span className="block">`).
    */
-  hint?: string;
+  hint?: React.ReactNode;
 }) {
   const toneClass: Record<SummaryCardTone, string> = {
     red: "bg-red-100 dark:bg-red-900/40",

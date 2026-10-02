@@ -1423,17 +1423,30 @@ describe('ReportsService', () => {
     });
   });
 
+  // The debt reads nothing of the period, but the facade still asks for it on
+  // every overview: the tests of the other blocks stub it so they do not reach
+  // the (mocked, empty) student table.
+  const emptyDebtSplit = {
+    studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
+    notStudying: { total: 0, count: 0 },
+  };
+  const stubDebtSplit = () =>
+    jest
+      .spyOn((service as any).financial, 'getDebtSplit')
+      .mockResolvedValue(emptyDebtSplit);
+
   describe('getFinancialOverview — month-end expectation', () => {
     // 01.10.2026 01:30 in Tashkent; the UTC date is still 30.09.
     beforeEach(() => {
       jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00.000Z'));
+      stubDebtSplit();
     });
     afterEach(() => jest.useRealTimers());
 
     it('projects the month the overview covers: the current Tashkent month by default, else the period start month', async () => {
       jest
         .spyOn((service as any).financial, 'getFinancialOverview')
-        .mockResolvedValue({ income: {}, forecast: {} });
+        .mockResolvedValue({ income: {} });
       const expectation = jest.spyOn(service, 'getMonthlyExpectation');
 
       await service.getFinancialOverview(1001, { branchIds: null });
@@ -1450,18 +1463,14 @@ describe('ReportsService', () => {
     });
 
     // `income.expected` (a second copy of `forecast.expectedMonthEnd`, hard-coded
-    // to 0 in the raw service) had no reader left and was removed.
+    // to 0 in the raw service) had no reader left and was removed. So did the
+    // debt in `forecast` (ADR-0059): the raw service has no `forecast` to give,
+    // and the facade's holds the three expectation figures and nothing else.
     it('folds the expectation into `forecast` alone: `income` passes through untouched', async () => {
       const rawIncome = { actual: 5_000, paymentCount: 1, byMethod: [] };
       jest
         .spyOn((service as any).financial, 'getFinancialOverview')
-        .mockResolvedValue({
-          income: rawIncome,
-          forecast: {
-            outstandingReceivable: 7,
-            debtorExposure: { count: 1, avgDebt: 7 },
-          },
-        });
+        .mockResolvedValue({ income: rawIncome });
       jest.spyOn(service, 'getMonthlyExpectation').mockResolvedValue({
         month: '2026-07',
         heldValue: 100,
@@ -1478,14 +1487,90 @@ describe('ReportsService', () => {
       });
 
       expect(res.forecast).toEqual({
-        outstandingReceivable: 7,
-        debtorExposure: { count: 1, avgDebt: 7 },
         expectedMonthEnd: 300,
         expectedHeld: 100,
         expectedRemaining: 200,
       });
       expect(res.income).toEqual(rawIncome);
       expect(res.income).not.toHaveProperty('expected');
+    });
+  });
+
+  // «Qarzdorlik» (ADR-0059): two numbers, never added, from the one split. The
+  // overview's old debt — `forecast.outstandingReceivable` /
+  // `debtorExposure` / `debtorCount` — counted status ACTIVE only, so an ungrouped
+  // «faol» student sat in «qarzdorlar» there and nowhere else.
+  describe("getFinancialOverview — «O'qiyotganlar qarzi» / «O'qimayotganlar qarzi»", () => {
+    const split = {
+      studying: {
+        total: 43_500_000,
+        count: 237,
+        currentMonth: 41_100_000,
+        older: 2_400_000,
+      },
+      notStudying: { total: 40_600_000, count: 327 },
+    };
+
+    beforeEach(() => {
+      jest
+        .spyOn((service as any).financial, 'getFinancialOverview')
+        .mockResolvedValue({ income: {} });
+    });
+
+    it("returns the split the facade reads, for the overview's own scope", async () => {
+      const getDebtSplit = jest
+        .spyOn((service as any).financial, 'getDebtSplit')
+        .mockResolvedValue(split);
+
+      const res = await service.getFinancialOverview(1001, {
+        branchIds: [7],
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      });
+
+      expect(res.debtSplit).toEqual(split);
+      expect(getDebtSplit).toHaveBeenCalledTimes(1);
+      expect(getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: [7] });
+    });
+
+    it('a company-wide caller gets the company-wide split, not an empty scope', async () => {
+      const getDebtSplit = jest
+        .spyOn((service as any).financial, 'getDebtSplit')
+        .mockResolvedValue(split);
+
+      await service.getFinancialOverview(1001, { branchIds: null });
+
+      expect(getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: null });
+    });
+
+    it("is today's debt: a past period is still split by the CURRENT month", async () => {
+      const getDebtSplit = jest
+        .spyOn((service as any).financial, 'getDebtSplit')
+        .mockResolvedValue(split);
+
+      await service.getFinancialOverview(1001, {
+        branchIds: null,
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+      });
+
+      // «Shu oy» of a debt that stands today is this month's; July's charges
+      // set against today's balance would split it by a month that is over.
+      expect(getDebtSplit.mock.calls[0][1]).not.toHaveProperty('month');
+    });
+
+    it('keeps no combined debt figure beside the two', async () => {
+      jest
+        .spyOn((service as any).financial, 'getDebtSplit')
+        .mockResolvedValue(split);
+
+      const res: any = await service.getFinancialOverview(1001, {
+        branchIds: null,
+      });
+
+      expect(res).not.toHaveProperty('debtorCount');
+      expect(res.forecast).not.toHaveProperty('outstandingReceivable');
+      expect(res.forecast).not.toHaveProperty('debtorExposure');
     });
   });
 
@@ -1502,7 +1587,8 @@ describe('ReportsService', () => {
     beforeEach(() => {
       jest
         .spyOn((service as any).financial, 'getFinancialOverview')
-        .mockResolvedValue({ income: {}, forecast: {} });
+        .mockResolvedValue({ income: {} });
+      stubDebtSplit();
     });
 
     it('a billed month carries the charged figure next to the expectation', async () => {

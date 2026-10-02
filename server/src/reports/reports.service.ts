@@ -469,6 +469,14 @@ export class ReportsService {
     return this.financial.getMonthCharges(companyId, opts);
   }
 
+  /** «O'qiyotganlar» / «O'qimayotganlar» qarzi — ikki alohida raqam (ADR-0059). */
+  getDebtSplit(
+    companyId: number,
+    opts: { branchIds: ReportBranchIds; month?: string },
+  ) {
+    return this.financial.getDebtSplit(companyId, opts);
+  }
+
   /**
    * How «Oy oxiriga kutilyapti» moved day by day this month — straight from
    * `DailyFinancialSnapshot`. Missing days stay missing; a reconstructed point
@@ -508,7 +516,7 @@ export class ReportsService {
     // With no period the overview covers the current TASHKENT month; the UTC
     // date used here before projected last month from 00:00 to 05:00 on the 1st.
     const month = query.startDate?.slice(0, 7) ?? tashkentMonthKey(new Date());
-    const [expectation, monthCharges] = await Promise.all([
+    const [expectation, monthCharges, debtSplit] = await Promise.all([
       this.getMonthlyExpectation(companyId, {
         month,
         branchIds: query.branchIds,
@@ -516,19 +524,25 @@ export class ReportsService {
       isMonthlyBillingMonth(month)
         ? this.getMonthCharges(companyId, { month, branchIds: query.branchIds })
         : Promise.resolve(null),
+      // «Qarzdorlik» is today's debt, whatever period the page asks about, so no
+      // `month`: «shu oy» is the current Tashkent month, not the period's (July's
+      // charges set against today's balance would split it by a month that is
+      // over).
+      this.getDebtSplit(companyId, { branchIds: query.branchIds }),
     ]);
     return {
       ...overview,
       // Only `forecast` carries the month-end expectation. The raw service has
       // none to give, so a caller reaching it directly gets no such fields —
       // not a stale 0 like its old `income.expected`, which `rm:cfin` printed.
+      // The debt left it too (ADR-0059): it is `debtSplit` below, two numbers.
       forecast: {
-        ...overview.forecast,
         expectedMonthEnd: expectation.expectedValue,
         expectedHeld: expectation.heldValue,
         expectedRemaining: expectation.remainingValue,
       },
       monthCharges,
+      debtSplit,
     };
   }
   getFinancialTrend(companyId: number, branchIds: ReportBranchIds) {
