@@ -15,7 +15,7 @@ const ALLOWED: string[] = [
   // Instant by design — the spec's "O'zgarmaydi" table.
   'src/absence-pause/', // auto-pause reminders and pause notices
   'src/telegram/', // bot flows, registration, OTP, mock exams
-  'src/sms/sms.service.ts', // admin free text + lesson cancel/reschedule
+  'src/sms/sms.service.ts', // admin free text, lesson cancel/reschedule, payment receipts (ADR-0065)
   'src/lesson-cancellations/lesson-cancellation-events.listener.ts',
   'src/lesson-reschedules/lesson-reschedule-events.listener.ts',
   'src/attendance/attendance-reminder.service.ts', // lesson start/end reminders

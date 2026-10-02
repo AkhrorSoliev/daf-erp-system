@@ -9,7 +9,7 @@ import { PaymentsController } from './payments.controller';
 import { PaymentEventsListener } from './payment-events.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { BillingModule } from '../billing/billing.module';
-import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module';
+import { SmsModule } from '../sms/sms.module';
 import { MockExamsModule } from '../mock-exams/mock-exams.module';
 import { PaymentPromisesModule } from '../payment-promises/payment-promises.module';
 
@@ -17,7 +17,7 @@ import { PaymentPromisesModule } from '../payment-promises/payment-promises.modu
   imports: [
     TransactionsModule,
     BillingModule,
-    TelegramDigestModule,
+    SmsModule,
     MockExamsModule,
     PaymentPromisesModule,
   ],
