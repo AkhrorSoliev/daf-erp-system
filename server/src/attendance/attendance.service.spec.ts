@@ -79,7 +79,7 @@ describe('AttendanceService', () => {
   let entityHistoryService: any;
   let eventEmitter: { emit: jest.Mock };
   let holidaysService: any;
-  let admission: { forLesson: jest.Mock };
+  let admission: { forLesson: jest.Mock; monthCoverage: jest.Mock };
   let settings: { get: jest.Mock };
 
   beforeEach(async () => {
@@ -156,7 +156,10 @@ describe('AttendanceService', () => {
     };
 
     // Contract 3.2 admission (ADR-0047): nobody blocked unless a test says so.
-    admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
+    admission = {
+      forLesson: jest.fn().mockResolvedValue(new Map()),
+      monthCoverage: jest.fn().mockResolvedValue(new Map()),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -983,6 +986,91 @@ describe('AttendanceService', () => {
           where: expect.objectContaining({ companyId: 1 }),
         }),
       );
+    });
+
+    describe('debtors (ADR-0062)', () => {
+      const debtor = {
+        ...mockEnrollments[0],
+        id: 'enr-1',
+        student: { ...mockEnrollments[0].student, balance: -250000 },
+      };
+
+      beforeEach(() => {
+        prisma.attendance.findMany.mockResolvedValue([]);
+        prisma.enrollment.findMany.mockResolvedValue([
+          debtor,
+          mockEnrollments[1],
+        ]);
+      });
+
+      it("a monthly group shows how far each debtor's money reaches into the month", async () => {
+        prisma.group.findFirst.mockResolvedValue({
+          ...mockGroup,
+          course: { ...mockGroup.course, paymentModel: 'MONTHLY' },
+        });
+        admission.monthCoverage.mockResolvedValue(
+          new Map([
+            [10001, { lessons: 13, paid: 5, paidThrough: '2026-10-12' }],
+          ]),
+        );
+
+        const result = await service.getByDate(
+          'group-uuid-1',
+          '2026-04-01',
+          1,
+          ['Administrator'],
+        );
+
+        expect(result.paymentModel).toBe('MONTHLY');
+        expect(admission.monthCoverage).toHaveBeenCalledWith({
+          groupId: 'group-uuid-1',
+          lessonDay: '2026-04-01',
+          studentIds: [10001],
+        });
+        expect(result.debtorStudents).toEqual([
+          expect.objectContaining({
+            studentId: 10001,
+            currentCycle: null,
+            monthCoverage: { lessons: 13, paid: 5, paidThrough: '2026-10-12' },
+          }),
+        ]);
+      });
+
+      it('a monthly debtor with no charge for the month reads null', async () => {
+        prisma.group.findFirst.mockResolvedValue({
+          ...mockGroup,
+          course: { ...mockGroup.course, paymentModel: 'MONTHLY' },
+        });
+
+        const result = await service.getByDate(
+          'group-uuid-1',
+          '2026-04-01',
+          1,
+          ['Administrator'],
+        );
+
+        expect(result.debtorStudents[0].monthCoverage).toBeNull();
+      });
+
+      it('a pack group keeps the cycle and never asks for month coverage', async () => {
+        prisma.group.findFirst.mockResolvedValue({
+          ...mockGroup,
+          course: { ...mockGroup.course, paymentModel: 'LESSON_PACK' },
+        });
+        prisma.transaction = { findMany: jest.fn().mockResolvedValue([]) };
+
+        const result = await service.getByDate(
+          'group-uuid-1',
+          '2026-04-01',
+          1,
+          ['Administrator'],
+        );
+
+        expect(result.paymentModel).toBe('LESSON_PACK');
+        expect(admission.monthCoverage).not.toHaveBeenCalled();
+        expect(prisma.transaction.findMany).toHaveBeenCalled();
+        expect(result.debtorStudents[0]).not.toHaveProperty('monthCoverage');
+      });
     });
   });
 

@@ -6,10 +6,12 @@ import {
   ADMISSION_START_DAY,
   firstLessonCoverage,
   lessonAdmission,
+  monthReach,
   paymentReach,
   type AdmissionCharge,
   type FirstLessonCoverage,
   type LessonAdmission,
+  type MonthReach,
   type PaymentReach,
 } from './lesson-admission';
 
@@ -71,6 +73,41 @@ export class LessonAdmissionService {
           laterCharges: own.filter((c) => !inMonth(c)),
         }),
       );
+    }
+    return result;
+  }
+
+  /**
+   * «Qarzdorlar» (ADR-0062): how far each student's payments reach into the
+   * group's month of `lessonDay`. A money fact, so neither the 01.10 start
+   * nor `payment.admissionRuleEnabled` gates it. A student missing from the
+   * map has no charge in the group that month.
+   */
+  async monthCoverage(
+    params: { groupId: string; lessonDay: string; studentIds: number[] },
+    client: Reader = this.prisma,
+  ): Promise<Map<number, MonthReach>> {
+    const result = new Map<number, MonthReach>();
+    if (params.studentIds.length === 0) return result;
+    const [year, month] = params.lessonDay.split('-').map(Number);
+    const [students, charges] = await Promise.all([
+      client.student.findMany({
+        where: { id: { in: params.studentIds } },
+        select: { id: true, balance: true },
+      }),
+      this.loadCharges(client, params.studentIds, year, month, true),
+    ]);
+    const inMonth = (c: { periodYear: number; periodMonth: number }) =>
+      c.periodYear === year && c.periodMonth === month;
+    for (const student of students) {
+      const own = charges.filter((c) => c.studentId === student.id);
+      const reach = monthReach({
+        groupId: params.groupId,
+        balance: student.balance,
+        charges: own.filter(inMonth),
+        laterCharges: own.filter((c) => !inMonth(c)),
+      });
+      if (reach) result.set(student.id, reach);
     }
     return result;
   }
