@@ -175,7 +175,7 @@ export function ExamFormBuilderClient({ examId }: Props) {
                   <HelpCircle className="size-3.5 cursor-help text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  Ism, familya va telefon — ro&apos;yxatga olish uchun
+                  Ism, familiya va telefon — ro&apos;yxatga olish uchun
                   majburiy. Ostida qo&apos;shimcha savollar qo&apos;shing.
                 </TooltipContent>
               </Tooltip>

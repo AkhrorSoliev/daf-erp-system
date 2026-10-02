@@ -135,7 +135,7 @@ export function StudentProfilePage() {
             <button
               type="button"
               onClick={() => setNameOpen(true)}
-              aria-label="Ism va familyani o'zgartirish"
+              aria-label="Ism va familiyani o'zgartirish"
               className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-700 transition-colors hover:bg-tint"
             >
               <PencilSimple size={15} weight="bold" />

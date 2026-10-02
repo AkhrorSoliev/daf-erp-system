@@ -172,12 +172,12 @@ export function ManualParticipantDialog({
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="manual-lastName">Familya</Label>
+              <Label htmlFor="manual-lastName">Familiya</Label>
               <Input
                 id="manual-lastName"
                 placeholder="Karimov"
                 {...register("lastName", {
-                  required: "Familyani kiriting",
+                  required: "Familiyani kiriting",
                   maxLength: { value: 100, message: "100 belgi chegarasi" },
                 })}
               />

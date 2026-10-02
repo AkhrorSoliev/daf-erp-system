@@ -382,7 +382,7 @@ export class CustomFormsService {
       // Schema-time validation should have prevented this, but guard
       // against tampered or legacy form schemas.
       throw new BadRequestException(
-        "Ism, familya va telefon maydonlari to'liq emas",
+        "Ism, familiya va telefon maydonlari to'liq emas",
       );
     }
 
@@ -690,7 +690,7 @@ export class CustomFormsService {
    * used to return objects and arrays untouched. Downstream everything does
    * `String(value)`, which turns `{"a":1}` into the literal text
    * `[object Object]` — and for a field with `mapsTo`, that text was written
-   * into the lead's ism / familya / telefon. A crafted POST could therefore
+   * into the lead's ism / familiya / telefon. A crafted POST could therefore
    * plant unreadable rows in the leads board, and nothing in the pipeline
    * would call it an error.
    *

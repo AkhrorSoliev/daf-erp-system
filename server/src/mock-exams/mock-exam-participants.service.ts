@@ -200,7 +200,7 @@ export class MockExamParticipantsService {
     const lastName = dto.lastName.trim();
     if (!firstName || !lastName) {
       throw new BadRequestException(
-        "Ism va familya bo'sh bo'lishi mumkin emas",
+        "Ism va familiya bo'sh bo'lishi mumkin emas",
       );
     }
 

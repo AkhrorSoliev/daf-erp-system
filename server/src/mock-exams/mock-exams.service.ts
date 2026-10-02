@@ -39,9 +39,9 @@ const BOT_PAYLOAD_LENGTH = 10;
 const MAX_PAYLOAD_RETRIES = 5;
 
 /**
- * Ro'yxatdan o'tish formasining uchta bog'lanish joyi admin ko'zida qanday
- * ataladi. Xato xabarlarida `firstName` / `phone` kabi ichki nomlar emas,
- * shu so'zlar chiqadi; `Record` yangi joy qo'shilganda nom yozishni majburlaydi.
+ * How the registration form's three link slots are named to an admin. Error
+ * messages print these words, never internal names like `firstName` or
+ * `phone`; the `Record` forces a name for any slot added later.
  */
 const SLOT_LABELS: Record<MapsToValue, string> = {
   firstName: 'Ism',

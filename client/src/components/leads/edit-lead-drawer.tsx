@@ -126,11 +126,11 @@ export function EditLeadDrawer() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-lastName">Familya</Label>
+                <Label htmlFor="edit-lastName">Familiya</Label>
                 <Input
                   id="edit-lastName"
                   {...register("lastName", {
-                    required: "Familya kiritilishi shart",
+                    required: "Familiya kiritilishi shart",
                   })}
                 />
                 {errors.lastName && (

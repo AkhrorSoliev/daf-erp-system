@@ -50,7 +50,7 @@ interface BreakdownLine {
   lessonDate: string;
   student: { id: number; firstName: string; lastName: string };
   group: { id: string; name: string };
-  // Eski server yubormaydi — belgi o'sha holda «/tsikl» deydi.
+  // An old server does not send it; the badge then reads «/tsikl».
   rateBasis?: RateBasis;
   perLessonCost: number;
   amount: number;
