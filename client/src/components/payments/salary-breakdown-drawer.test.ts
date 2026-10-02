@@ -39,6 +39,7 @@ function line(configVersion: Rate | null) {
     lessonDate: "2026-10-01T00:00:00.000Z",
     student: { id: 10001, firstName: "Ali", lastName: "Valiyev" },
     group: { id: "g1", name: "A1-01", course: { name: "Nemis tili" } },
+    rateBasis: "cycle" as const,
     perLessonCost: 37_500,
     amount: 37_500,
     configVersion,

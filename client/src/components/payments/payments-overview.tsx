@@ -81,10 +81,9 @@ interface FinancialOverview {
   monthCharges: MonthCharges | null;
   /**
    * What the centre is owed TODAY — the period does not change it. Never sent to
-   * Administrator/Cashier. Optional: the client goes live before the server,
-   * and a server older than ADR-0059 sends none — the block then draws «—».
+   * Administrator/Cashier.
    */
-  debtSplit?: DebtSplit;
+  debtSplit: DebtSplit;
   salary: {
     paid: number;
     pending: number;
@@ -252,7 +251,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     );
   }
 
-  const empty: FinancialOverview = {
+  const empty: Omit<FinancialOverview, "debtSplit"> = {
     income: { actual: 0, paymentCount: 0, byMethod: [] },
     forecast: {
       expectedMonthEnd: 0,
@@ -283,13 +282,9 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     forecast: { ...empty.forecast, ...data?.forecast },
     salary: { ...empty.salary, ...data?.salary },
   };
-  // No zero default for the debt: with no split (an older server, or a failed
-  // request) the block draws «—», as the home card and the debt page do. A
-  // zero would read as «nobody owes».
-  const debtSplit =
-    data?.debtSplit?.studying && data.debtSplit.notStudying
-      ? data.debtSplit
-      : null;
+  // No zero default for the debt (`empty` has none): a failed request draws
+  // «—», as the debt page does. A zero would read as «nobody owes».
+  const debtSplit = data?.debtSplit ?? null;
 
   // «Ustoz oyliklari» sarlavhasidagi oy — serverning oyi, umumiy `monthLabel`
   // yozilishida («Oktabr 2026»), «Moliya» kartasidagi `monthShort` bilan bir
@@ -609,8 +604,8 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
 
         {/* Qarzdorlik — bugungi qarz IKKI alohida raqamda (ADR-0059), ikkalasi
             backend `debtSplit`dan. Ular hech qayerda qo'shilmaydi: shuning uchun
-            «Jami qarz» va «O'rtacha qarz» qatorlari yo'q. Javobda bo'linma
-            bo'lmasa (eski server yoki xato) ikkala qator «—», 🟡 qatori yo'q. */}
+            «Jami qarz» va «O'rtacha qarz» qatorlari yo'q. So'rov yiqilsa
+            ikkala qator «—», 🟡 qatori yo'q. */}
         <div className="rounded-xl border bg-card p-4 space-y-3">
           {/* Bu blok tanlangan davrga bog'liq EMAS — u bugungi holat. Yonidagi
               kartalar davr bo'yicha bo'lgani uchun buni aytib qo'yish shart,
@@ -784,7 +779,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
   );
 }
 
-/** «X so'm (N ta)» for one of the two debts, or «—» when the server sent no split. */
+/** «X so'm (N ta)» for one of the two debts, or «—» when the request failed. */
 function DebtAmount({
   debt,
 }: {

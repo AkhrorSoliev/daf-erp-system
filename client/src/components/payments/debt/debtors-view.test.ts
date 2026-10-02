@@ -60,7 +60,7 @@ function norm(html: string): string {
  * under the key the page asks with — no branch is selected in a bare store — so
  * a page that keyed it on anything else would print «—» here.
  */
-function render(summary: object | null = SUMMARY, search = ""): string {
+function render(summary: typeof SUMMARY | null = SUMMARY, search = ""): string {
   url.search = search;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   if (summary) client.setQueryData(["debtors", "summary", undefined], summary);
@@ -130,39 +130,6 @@ describe("DebtorsView — the summary cards", () => {
     expect(text).toContain("O'qiyotganlar qarzi —");
     expect(text).toContain("O'qimayotganlar qarzi —");
     expect(text).not.toContain("🟡");
-  });
-
-  // The client goes live before the server (PR 1 deploys the client first), so
-  // for a few minutes it reads the answer of a server older than ADR-0059:
-  // `totalDebt`, `debtorCount` and `avgDebt`, with no `split`. The two debt cards
-  // then show a dash — a zero would read as «nobody owes», and the old `totalDebt`
-  // was every status's debt, not either of the two new numbers — and the promise
-  // card, which that server answers as before, keeps working.
-  describe("against a server older than the split", () => {
-    const OLD = {
-      totalDebt: 28_453_233,
-      debtorCount: 208,
-      avgDebt: 136_794,
-      openPromises: 9,
-      overduePromises: 5,
-    };
-
-    it("shows a dash on both debt cards, never a zero and never the old total", () => {
-      const text = render(OLD);
-
-      expect(text).toContain("O'qiyotganlar qarzi —");
-      expect(text).toContain("O'qimayotganlar qarzi —");
-      expect(text).not.toContain(money(0));
-      expect(text).not.toContain(num(28_453_233));
-      expect(text).not.toContain("🟡");
-    });
-
-    it("keeps the promise card and the note under the cards", () => {
-      const text = render(OLD);
-
-      expect(text).toContain(`Belgilangan / muddati o'tgan ${num(9)} / ${num(5)}`);
-      expect(text).toContain("Ro'yxat filtrlari bu kartalarga ta'sir qilmaydi");
-    });
   });
 
   // The cards describe the whole branch scope, so the status picked in the list
