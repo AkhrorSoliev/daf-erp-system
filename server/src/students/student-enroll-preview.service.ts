@@ -42,9 +42,14 @@ export interface EnrollPreview {
   /** The student's balance now; negative is a debt. */
   balance: number;
   /**
-   * max(0, due − balance); due = firstMonth.amount (MONTHLY, 0 when null) or
-   * the pack price at the student's discount — what pack billing deducts for
-   * a full cycle.
+   * A transfer (the student is active in another group): what the old
+   * group's month gives back before the new group is charged. 0 otherwise.
+   */
+  transferRelease: number;
+  /**
+   * max(0, due − (balance + transferRelease)); due = firstMonth.amount
+   * (MONTHLY, 0 when null) or the pack price at the student's discount — what
+   * pack billing deducts for a full cycle.
    */
   payable: number;
 }
@@ -53,8 +58,9 @@ export interface EnrollPreview {
  * What adding a student to a group now would charge (A3.4). The enroll dialog
  * shows it before anything is confirmed. A monthly course's first month comes
  * from `previewChargeForNewEnrollment`, which runs the computation the charge
- * itself runs, so the dialog cannot quote a sum the write does not charge. A
- * transfer's release of the old group's month is not in it. Writes nothing.
+ * itself runs, and a transfer's release from `previewReleaseForDeparture`,
+ * the twin of the transfer's own call, so the dialog cannot quote a sum the
+ * write does not charge or credit. Writes nothing.
  */
 @Injectable()
 export class StudentEnrollPreviewService {
@@ -100,13 +106,14 @@ export class StudentEnrollPreviewService {
     await assertCallerInBranch(this.prisma, userId, group.branchId);
 
     const monthly = group.course.paymentModel === PaymentModel.MONTHLY;
+    // The instant an enroll call confirmed now would use.
+    const now = new Date();
     let firstMonth: EnrollPreview['firstMonth'] = null;
     // This gate MUST mirror the refusals of `previewChargeForNewEnrollment`
     // (not MONTHLY, group not ACTIVE): past it, that method's null can only
     // mean the month leaves nothing to charge, and only that may roll forward
     // below. A refusal added there must be added here too.
     if (monthly && group.statusEnum === GroupStatus.ACTIVE) {
-      const now = new Date();
       // The enrollment `enrollToGroup` would create: its start day read the
       // way it reads it, created now, never frozen.
       const enrollment: ChargeableEnrollment = {
@@ -146,6 +153,11 @@ export class StudentEnrollPreviewService {
           group.course.price,
           clampDiscount(student.discountPercent),
         );
+    const transferRelease = await this.transferRelease(
+      studentId,
+      group.id,
+      now,
+    );
     return {
       paymentModel: group.course.paymentModel,
       coursePrice: group.course.price,
@@ -153,8 +165,40 @@ export class StudentEnrollPreviewService {
       discountPercent: student.discountPercent,
       firstMonth,
       balance: student.balance,
-      payable: Math.max(0, due - student.balance),
+      transferRelease,
+      payable: Math.max(0, due - (student.balance + transferRelease)),
     };
+  }
+
+  /**
+   * What `enrollToGroup`'s transfer gives back from the old group's month
+   * before it charges the new one. It closes the student's live ACTIVE
+   * enrollment (one per student, by a unique index) and calls
+   * `reverseChargeForDeparture` with no policy: CENTER_INITIATIVE, and never
+   * contract 3.5, which is for a student leaving. `previewReleaseForDeparture`
+   * is that call's read-only twin; `previewDepartureOutcomes` is not, as it
+   * weighs the trial lesson under every policy and would quote a first-timer's
+   * whole month. 0 when not a transfer, or when the old month has no standing
+   * charge or nothing left to give back. A pack enrollment's prepaid refund
+   * is left out (no pack courses remain), which is why the dialog's figure
+   * says «taxminan».
+   */
+  private async transferRelease(
+    studentId: number,
+    groupId: string,
+    now: Date,
+  ): Promise<number> {
+    const current = await this.prisma.enrollment.findFirst({
+      where: { studentId, deletedAt: null, status: EnrollmentStatus.ACTIVE },
+      select: { id: true, groupId: true },
+    });
+    // The enroll call refuses a student already active in this group.
+    if (!current || current.groupId === groupId) return 0;
+    const release = await this.monthlyChargeService.previewReleaseForDeparture(
+      this.prisma,
+      { enrollmentId: current.id, departureDate: now },
+    );
+    return release?.amount ?? 0;
   }
 
   /** One month's charge for the enrollment, with the month it is for. */

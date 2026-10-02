@@ -75,4 +75,16 @@ describe("texts inside stateful components", () => {
     expect(text).toContain("Kelmagan (sababsiz):");
     expect(text).not.toMatch(/\(PRESENT\/LATE\)|\(ABSENT\)/);
   });
+
+  it("the group change says «guruh almashtirish», as the settings tab names it", () => {
+    const dialog = source("students/enroll-to-group-dialog.tsx");
+    const settings = source("settings/reasons-settings-client.tsx");
+
+    expect(dialog).toContain("Iltimos, guruh almashtirish sababini tanlang");
+    expect(dialog).toContain("Guruh almashtirish sababini tanlang...");
+    expect(settings).toContain("Yangi guruh almashtirish sababi");
+    for (const text of [dialog, settings]) {
+      expect(text).not.toMatch(/[Tt]ransfer sababi/);
+    }
+  });
 });

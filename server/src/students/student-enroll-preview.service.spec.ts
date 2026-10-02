@@ -48,8 +48,10 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
     studentBranch: { findFirst: jest.Mock };
     group: { findFirst: jest.Mock };
     user: { findFirst: jest.Mock };
+    enrollment: { findFirst: jest.Mock };
   };
   let previewChargeForNewEnrollment: jest.Mock;
+  let previewReleaseForDeparture: jest.Mock;
   let service: StudentEnrollPreviewService;
 
   beforeEach(() => {
@@ -69,11 +71,17 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
       },
       group: { findFirst: jest.fn().mockResolvedValue(monthlyGroup) },
       user: { findFirst: jest.fn().mockResolvedValue(ceo) },
+      // No active enrollment anywhere: not a transfer.
+      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
     };
     previewChargeForNewEnrollment = jest.fn().mockResolvedValue(october);
+    previewReleaseForDeparture = jest.fn().mockResolvedValue(null);
     service = new StudentEnrollPreviewService(
       prisma as unknown as PrismaService,
-      { previewChargeForNewEnrollment } as unknown as MonthlyChargeService,
+      {
+        previewChargeForNewEnrollment,
+        previewReleaseForDeparture,
+      } as unknown as MonthlyChargeService,
     );
   });
 
@@ -100,6 +108,7 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
         amount: 249231,
       },
       balance: 50000,
+      transferRelease: 0,
       payable: 199231,
     });
     expect(prisma.group.findFirst).toHaveBeenCalledWith(
@@ -277,6 +286,7 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
       discountPercent: 0,
       firstMonth: null,
       balance: 200000,
+      transferRelease: 0,
       payable: 1000000,
     });
     expect(previewChargeForNewEnrollment).not.toHaveBeenCalled();
@@ -357,6 +367,121 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
 
     expect(r.firstMonth?.amount).toBe(249231);
   });
+
+  describe('a transfer: the student is active in another group', () => {
+    const oldEnrollment = { id: 'enroll-old', groupId: 'group-old' };
+
+    beforeEach(() => {
+      prisma.enrollment.findFirst.mockResolvedValue(oldEnrollment);
+    });
+
+    it("counts what the old group's month gives back: paid for October, moved, nothing left to pay", async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: studentId,
+        balance: 0,
+        discountPercent: 0,
+      });
+      previewReleaseForDeparture.mockResolvedValue({
+        lessons: 13,
+        amount: 415000,
+        period: '2026-10',
+      });
+      previewChargeForNewEnrollment.mockResolvedValue({
+        plannedLessons: 13,
+        coveredLessons: 13,
+        amount: 415000,
+      });
+
+      const r = await service.preview(studentId, companyId, 10001, groupId);
+
+      expect(r.transferRelease).toBe(415000);
+      expect(r.payable).toBe(0);
+      // The enrollment `enrollToGroup` would close: the student's live ACTIVE
+      // one (one per student, by a unique index).
+      expect(prisma.enrollment.findFirst).toHaveBeenCalledWith({
+        where: { studentId, deletedAt: null, status: 'ACTIVE' },
+        select: { id: true, groupId: true },
+      });
+      // Released as of now, the instant the transfer would use.
+      expect(previewReleaseForDeparture).toHaveBeenCalledWith(prisma, {
+        enrollmentId: 'enroll-old',
+        departureDate: NOW,
+      });
+    });
+
+    it('leaves the rest to pay when the release falls short of the first month', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: studentId,
+        balance: 20000,
+        discountPercent: 0,
+      });
+      previewReleaseForDeparture.mockResolvedValue({
+        lessons: 9,
+        amount: 300000,
+        period: '2026-10',
+      });
+      previewChargeForNewEnrollment.mockResolvedValue({
+        plannedLessons: 13,
+        coveredLessons: 13,
+        amount: 415000,
+      });
+
+      const r = await service.preview(studentId, companyId, 10001, groupId);
+
+      // max(0, 415 000 − (20 000 + 300 000))
+      expect(r.payable).toBe(95000);
+    });
+
+    it('counts the release for a pack target too', async () => {
+      prisma.group.findFirst.mockResolvedValue(packGroup);
+      prisma.student.findFirst.mockResolvedValue({
+        id: studentId,
+        balance: 0,
+        discountPercent: 10,
+      });
+      previewReleaseForDeparture.mockResolvedValue({
+        lessons: 13,
+        amount: 415000,
+        period: '2026-10',
+      });
+
+      const r = await service.preview(studentId, companyId, 10001, groupId);
+
+      // max(0, 1 080 000 − 415 000)
+      expect(r.transferRelease).toBe(415000);
+      expect(r.payable).toBe(665000);
+    });
+
+    it('releases nothing when the old month has no standing charge (a pack enrollment, or none written)', async () => {
+      previewReleaseForDeparture.mockResolvedValue(null);
+
+      const r = await service.preview(studentId, companyId, 10001, groupId);
+
+      expect(r.transferRelease).toBe(0);
+      expect(r.payable).toBe(199231); // 249 231 − 50 000, as with no transfer
+    });
+
+    it('is no transfer when the active enrollment is in the target group itself', async () => {
+      // The enroll call refuses this («O'quvchi allaqachon bu guruhda»).
+      prisma.enrollment.findFirst.mockResolvedValue({
+        id: 'enroll-same',
+        groupId,
+      });
+
+      const r = await service.preview(studentId, companyId, 10001, groupId);
+
+      expect(r.transferRelease).toBe(0);
+      expect(previewReleaseForDeparture).not.toHaveBeenCalled();
+    });
+  });
+
+  it('is no transfer without an active enrollment: no release, payable unchanged', async () => {
+    const r = await service.preview(studentId, companyId, 10001, groupId);
+
+    expect(r.transferRelease).toBe(0);
+    expect(r.payable).toBe(199231);
+    expect(previewReleaseForDeparture).not.toHaveBeenCalled();
+  });
 });
 
 /**
@@ -366,6 +491,7 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
  */
 describe('StudentEnrollPreviewService — the first real charge (A3.4)', () => {
   let prisma: Record<string, Record<string, jest.Mock>>;
+  let createAdjustment: jest.Mock;
   let monthlyCharge: MonthlyChargeService;
   let service: StudentEnrollPreviewService;
 
@@ -394,13 +520,37 @@ describe('StudentEnrollPreviewService — the first real charge (A3.4)', () => {
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
       lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
-      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
+      enrollmentMonthlyCharge: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findUnique: jest.fn().mockResolvedValue(null),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      // No active enrollment anywhere: not a transfer.
+      enrollment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      // Contract 3.5: an established student by default, never a trial.
+      attendance: { count: jest.fn().mockResolvedValue(20) },
     };
     const db = prisma as unknown as PrismaService;
+    createAdjustment = jest.fn().mockResolvedValue({ id: 'adj-1' });
+    // The code defaults: rule 6.2 at 40%, the trial lesson switched on.
+    const settings = {
+      get: jest.fn((_companyId: number, key: string) =>
+        Promise.resolve(
+          key === 'payment.noRefundAfterPercent'
+            ? 40
+            : key === 'payment.trialLessonEnabled'
+              ? true
+              : undefined,
+        ),
+      ),
+    };
     monthlyCharge = new MonthlyChargeService(
       db,
-      {} as TransactionsWriteService,
-      {} as SettingsService,
+      { createAdjustment } as unknown as TransactionsWriteService,
+      settings as unknown as SettingsService,
       {} as SalaryAccrualService,
     );
     service = new StudentEnrollPreviewService(db, monthlyCharge);
@@ -451,5 +601,87 @@ describe('StudentEnrollPreviewService — the first real charge (A3.4)', () => {
       amount: 450000,
     });
     expect(quote.mock.calls.map(([, p]) => p.periodMonth)).toEqual([9, 10]);
+  });
+
+  describe("a transfer gives back what the transfer's own call gives back", () => {
+    /** The old group's October: Mon/Wed/Fri, 13 lessons at 80 000. */
+    const OLD_OCTOBER = [
+      '2026-10-02',
+      '2026-10-05',
+      '2026-10-07',
+      '2026-10-09',
+      '2026-10-12',
+      '2026-10-14',
+      '2026-10-16',
+      '2026-10-19',
+      '2026-10-21',
+      '2026-10-23',
+      '2026-10-26',
+      '2026-10-28',
+      '2026-10-30',
+    ];
+
+    beforeEach(() => {
+      prisma.enrollment.findFirst.mockResolvedValue({
+        id: 'enroll-old',
+        groupId: 'group-old',
+      });
+      prisma.enrollment.findUnique.mockResolvedValue({
+        studentId,
+        startDate: null,
+        group: { branchId: 1, exactDays: ['monday', 'wednesday', 'friday'] },
+      });
+      prisma.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-old',
+        groupId: 'group-old',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        coveredDates: OLD_OCTOBER,
+        frozenOutDates: [],
+        perLessonCost: 80000,
+        discountPercent: 0,
+        chargedAmount: 1040000,
+        transactionId: 'tx-old',
+        status: 'CHARGED',
+      });
+    });
+
+    // A transfer names no departure policy, so the write applies
+    // CENTER_INITIATIVE and never contract 3.5: a first-timer moving to
+    // another group gets the unheld lessons back, not the whole month.
+    it.each([
+      ['an established student', 20],
+      [
+        'a first-timer with one lesson held (contract 3.5 is not for transfers)',
+        1,
+      ],
+    ])('%s', async (_label, held) => {
+      prisma.attendance.count.mockResolvedValue(held);
+
+      const r = await service.preview(studentId, companyId, 10001, groupId);
+
+      // Through 14.10 six of the 13 lessons are held: 7 × 80 000 come back.
+      expect(r.transferRelease).toBe(560000);
+      expect(r.payable).toBe(
+        Math.max(0, (r.firstMonth?.amount ?? 0) - (0 + 560000)),
+      );
+
+      // The call `enrollToGroup` makes on a transfer: no policy.
+      const written = await monthlyCharge.reverseChargeForDeparture(
+        prisma as unknown as PrismaService,
+        {
+          enrollmentId: 'enroll-old',
+          departureDate: NOW,
+          companyId,
+          reason: "Guruh o'zgartirilganda",
+          performedById: 10001,
+        },
+      );
+      expect(written?.refunded).toBe(r.transferRelease);
+      expect(createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: r.transferRelease }),
+        prisma,
+      );
+    });
   });
 });

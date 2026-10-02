@@ -2,18 +2,13 @@
 
 import { Calendar as CalendarIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
 import api from "@/lib/api";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
 import { monthShort } from "@/components/payments/salary-utils";
-
-/**
- * `YYYY-MM-DD` of a picked day, in the browser's own calendar. The dialog's
- * enroll call sends the day through this too, so the preview quotes the very
- * day that gets enrolled.
- */
-export const ymd = (d: Date) => format(d, "yyyy-MM-dd");
+// The dialog's enroll call sends the picked day through the same helper, so
+// the preview quotes the very day that gets enrolled.
+import { toApiDateStr } from "@/components/groups/edit-group-form-utils";
 
 /**
  * `GET /students/:id/enroll-preview`: what enrolling the student into the group
@@ -29,8 +24,9 @@ export interface EnrollPreview {
   /** The student's discount, 0–100. */
   discountPercent: number;
   /**
-   * MONTHLY only: the first charge the student will actually get, which can be
-   * next month's. Null when the group is not ACTIVE yet.
+   * MONTHLY only (null for a pack): the first charge the student will actually
+   * get, which can be next month's. Null when the group is not ACTIVE, or when
+   * neither this month nor the next has anything to charge.
    */
   firstMonth: {
     /** `YYYY-MM`. */
@@ -41,6 +37,11 @@ export interface EnrollPreview {
   } | null;
   /** The student's balance now; negative is a debt. */
   balance: number;
+  /**
+   * A transfer: what the old group's month gives back before the new group is
+   * charged; 0 otherwise. Absent from a server older than the field.
+   */
+  transferRelease?: number;
   /** What is still to pay after the balance, as the server worked it out. */
   payable: number;
 }
@@ -63,7 +64,7 @@ export function EnrollPreviewBlock({
   startDate: Date | undefined;
   onStartDateChange: (date: Date | undefined) => void;
 }) {
-  const day = startDate ? ymd(startDate) : null;
+  const day = startDate ? toApiDateStr(startDate) : null;
   const { data: preview, isLoading, isError } = useQuery<EnrollPreview>({
     queryKey: ["enroll-preview", studentId, groupId, day],
     queryFn: () =>
@@ -108,6 +109,7 @@ function PreviewLines({ preview }: { preview: EnrollPreview }) {
     discountPercent,
     firstMonth,
     balance,
+    transferRelease,
     payable,
   } = preview;
   return (
@@ -137,14 +139,22 @@ function PreviewLines({ preview }: { preview: EnrollPreview }) {
           )}
         </>
       ) : (
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">
-            {`Kurs narxi (${lessonPaymentCount} dars):`}
-          </span>
-          <span className="font-mono tabular-nums font-semibold">
-            {formatPrice(coursePrice)} so&apos;m
-          </span>
-        </div>
+        <>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">
+              {`Kurs narxi (${lessonPaymentCount} dars):`}
+            </span>
+            <span className="font-mono tabular-nums font-semibold">
+              {formatPrice(coursePrice)} so&apos;m
+            </span>
+          </div>
+          {discountPercent > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Chegirma:</span>
+              <span className="font-mono tabular-nums">{discountPercent}%</span>
+            </div>
+          )}
+        </>
       )}
       <div className="flex justify-between">
         <span className="text-muted-foreground">O&apos;quvchi balansi:</span>
@@ -154,6 +164,15 @@ function PreviewLines({ preview }: { preview: EnrollPreview }) {
           {formatBalance(balance)}
         </span>
       </div>
+      {/* Absent (an older server) or 0 (not a transfer): no line. */}
+      {transferRelease !== undefined && transferRelease > 0 && (
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Eski guruhdan qaytadi:</span>
+          <span className="font-mono tabular-nums">
+            {formatPrice(transferRelease)} so&apos;m
+          </span>
+        </div>
+      )}
       <div className="flex justify-between border-t pt-1.5 font-semibold">
         <span>To&apos;lash kerak (taxminan):</span>
         <span

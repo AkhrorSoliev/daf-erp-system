@@ -233,7 +233,9 @@ export class StudentEnrollmentService {
           },
         });
         if (!reason) {
-          throw new NotFoundException('Tanlangan transfer sababi topilmadi');
+          throw new NotFoundException(
+            'Tanlangan guruh almashtirish sababi topilmadi',
+          );
         }
         transferReasonId = reason.id;
       } else if (options.transferReasonId) {
@@ -246,7 +248,9 @@ export class StudentEnrollmentService {
           },
         });
         if (!reason) {
-          throw new NotFoundException('Tanlangan transfer sababi topilmadi');
+          throw new NotFoundException(
+            'Tanlangan guruh almashtirish sababi topilmadi',
+          );
         }
         transferReasonId = reason.id;
       }

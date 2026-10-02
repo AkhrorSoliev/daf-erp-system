@@ -138,6 +138,8 @@ describe("EnrollPreviewBlock — a monthly course", () => {
     );
     expect(text).not.toContain("dars): ·");
     expect(text.match(/chegirma/g)).toHaveLength(1);
+    // The pack's own «Chegirma:» line is not drawn for a monthly course.
+    expect(text).not.toContain("Chegirma:");
   });
 
   it("says the bill is written when the group's lessons start, in place of a first-month line", async () => {
@@ -165,6 +167,19 @@ describe("EnrollPreviewBlock — a lesson-pack course", () => {
     expect(text).not.toContain("Oylik narx");
     // A pack never has a first month: its null is not «no lessons yet».
     expect(text).not.toContain("Hisob guruh darslari boshlanganda yoziladi");
+    expect(text).not.toContain("Chegirma");
+  });
+
+  it("names the student's discount on its own line, right after the pack price", async () => {
+    // 400 000 less 10% is the 360 000 pack billing deducts; the server's
+    // `payable` (260 000 after a 100 000 balance) already carries it.
+    const text = await answered(pack({ discountPercent: 10, payable: 260000 }));
+
+    expect(text).toContain(
+      `Kurs narxi (12 dars): ${money(400000)} Chegirma: 10% O'quvchi balansi:`,
+    );
+    expect(text).toContain(`To'lash kerak (taxminan): ${money(260000)}`);
+    expect(text).not.toContain(money(360000));
   });
 });
 
@@ -184,6 +199,30 @@ describe("EnrollPreviewBlock — what is left to pay", () => {
     expect(text).toContain(`To'lash kerak (taxminan): ${money(123456)}`);
     expect(text).not.toContain(money(199231));
     expect(text).not.toContain(money(355000));
+  });
+});
+
+describe("EnrollPreviewBlock — a transfer from another group", () => {
+  it("shows what the old group gives back, right before the line to pay, as the server sent it", async () => {
+    // Paid for October in the old group, moved: the old month gives back
+    // 415 000 and the server's `payable` already counts it.
+    const text = await answered(
+      monthly({ balance: 0, transferRelease: 415000, payable: 0 }),
+    );
+
+    expect(text).toContain(
+      `Eski guruhdan qaytadi: ${money(415000)} To'lash kerak (taxminan): Yetarli`,
+    );
+  });
+
+  it.each([
+    ["0 (not a transfer)", { transferRelease: 0 }],
+    ["missing (a server older than the field)", {}],
+  ])("leaves the line out when the release is %s", async (_label, over) => {
+    const text = await answered(monthly(over));
+
+    expect(text).not.toContain("Eski guruhdan");
+    expect(text).toContain(`To'lash kerak (taxminan): ${money(199231)}`);
   });
 });
 

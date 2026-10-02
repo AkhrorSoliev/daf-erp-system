@@ -34,7 +34,8 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { EnrollPreviewBlock, ymd } from "./enroll-preview-block";
+import { toApiDateStr } from "@/components/groups/edit-group-form-utils";
+import { EnrollPreviewBlock } from "./enroll-preview-block";
 
 interface GroupTeacher {
   id: number;
@@ -249,7 +250,7 @@ export function EnrollToGroupDialog({
   const handleEnroll = async () => {
     if (!selectedId) return;
     if (teachersDiffer && !transferReasonId) {
-      toast.error("Iltimos, transfer sababini tanlang");
+      toast.error("Iltimos, guruh almashtirish sababini tanlang");
       return;
     }
     setSubmitting(true);
@@ -258,7 +259,7 @@ export function EnrollToGroupDialog({
         groupId: selectedId,
         transferReasonId,
         // Backend defaults to today when omitted.
-        ...(startDate && { startDate: ymd(startDate) }),
+        ...(startDate && { startDate: toApiDateStr(startDate) }),
       });
       toast.success("O'quvchi guruhga qo'shildi");
       onEnrolled?.();
@@ -556,7 +557,7 @@ export function EnrollToGroupDialog({
                   onValueChange={(v) => setTransferReasonId(v || undefined)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Transfer sababini tanlang..." />
+                    <SelectValue placeholder="Guruh almashtirish sababini tanlang..." />
                   </SelectTrigger>
                   <SelectContent>
                     {transferReasons.map((r) => (
