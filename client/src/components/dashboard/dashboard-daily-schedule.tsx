@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { RoleLink } from "@/components/shared/role-link";
+import { GROUP_PAGE_ROLES } from "@/lib/role-access";
 import {
   AlertCircle,
   CalendarX,
@@ -22,6 +23,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
+import { useAuth } from "@/hooks/use-auth";
+import { answerState, type UnmarkedLessonInfo } from "@/lib/unmarked-lesson";
 
 interface Teacher {
   id: number;
@@ -43,6 +47,8 @@ export interface DashboardLesson {
   studentCount: number;
   presentCount: number;
   attendanceStatus?: AttendanceStatus;
+  /** «Dars bo'ldimi?» — set when the lesson ended unmarked (ADR-0054). */
+  unmarked?: UnmarkedLessonInfo | null;
 }
 
 function timeToMinutes(time: string): number {
@@ -72,6 +78,8 @@ function getLessonProgress(startTime: string, endTime: string, now: string): num
 interface DashboardDailyScheduleProps {
   lessons: DashboardLesson[];
   isToday?: boolean;
+  date: string;
+  onAnswered?: () => void;
 }
 
 const attendanceBadge: Record<
@@ -106,7 +114,10 @@ const attendanceBadge: Record<
 export function DashboardDailySchedule({
   lessons,
   isToday = true,
+  date,
+  onAnswered,
 }: DashboardDailyScheduleProps) {
+  const user = useAuth((s) => s.user);
   const [now, setNow] = useState(() => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -149,7 +160,7 @@ export function DashboardDailySchedule({
             <TableHead>Ustoz</TableHead>
             <TableHead className="hidden sm:table-cell">Xona</TableHead>
             <TableHead className="w-20 text-center">Keldi</TableHead>
-            <TableHead className="w-40 text-center">Davomat</TableHead>
+            <TableHead className="w-44 text-center">Davomat</TableHead>
             <TableHead className="w-24 text-center">Holat</TableHead>
           </TableRow>
         </TableHeader>
@@ -180,12 +191,13 @@ export function DashboardDailySchedule({
                   {lesson.startTime} – {lesson.endTime}
                 </TableCell>
                 <TableCell className="font-medium text-sm">
-                  <Link
+                  <RoleLink
+                    roles={GROUP_PAGE_ROLES}
                     href={`/groups/${lesson.groupId}`}
-                    className="hover:underline hover:text-primary transition-colors"
+                    linkClassName="hover:underline hover:text-primary transition-colors"
                   >
                     {lesson.groupName}
-                  </Link>
+                  </RoleLink>
                   <span className="sm:hidden text-xs font-normal text-muted-foreground block">
                     {lesson.courseName}
                   </span>
@@ -220,7 +232,19 @@ export function DashboardDailySchedule({
                   </Tooltip>
                 </TableCell>
                 <TableCell className="text-center">
-                  {(() => {
+                  {lesson.unmarked && answerState(lesson.unmarked, user).visible ? (
+                    <UnmarkedLessonPrompt
+                      lesson={{
+                        groupId: lesson.groupId,
+                        groupName: lesson.groupName,
+                        date,
+                        startTime: lesson.startTime,
+                        endTime: lesson.endTime,
+                      }}
+                      info={lesson.unmarked}
+                      onAnswered={onAnswered ?? (() => undefined)}
+                    />
+                  ) : (() => {
                     const att = lesson.attendanceStatus;
                     if (!att) return <span className="text-xs text-muted-foreground">—</span>;
                     const cfg = attendanceBadge[att];

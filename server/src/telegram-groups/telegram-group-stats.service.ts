@@ -7,7 +7,10 @@ import {
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
+import { ReportsService } from '../reports/reports.service';
+import { studyingDebtorWhere } from '../reports/debt-split';
 import { activeStudentWhere } from '../students/shared/active-student-where';
+import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import {
   firstOfThisMonthDate,
   firstOfThisMonthUtc,
@@ -33,15 +36,17 @@ const TEACHER_ROLE_NAME = "O'qituvchi";
  * `common/finance/report-branch-scope` owns all four so these figures slice
  * the same way the web reports do.
  *
- * Targeted queries instead of going through reports/*.service.ts because
- * those services return richer shapes than the bot needs and aren't currently
- * exported from ReportsModule.
+ * Targeted queries instead of going through reports/*.service.ts, whose shapes
+ * are richer than the bot needs — except the debt. It has ONE source,
+ * `ReportsService.getDebtSplit` (ADR-0059): two numbers that are never added,
+ * and never computed here.
  */
 @Injectable()
 export class TelegramGroupStatsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly dailyReport: TelegramGroupDailyReportService,
+    private readonly reports: ReportsService,
   ) {}
 
   // -------------------- /oquvchilar --------------------
@@ -214,38 +219,27 @@ export class TelegramGroupStatsService {
   }
 
   // -------------------- /qarzdorlar --------------------
+  /**
+   * The debt as two numbers that are never added (ADR-0059), from
+   * `ReportsService.getDebtSplit`, in the 21:00 report's lines
+   * (`buildDebtSplitLines`). The five named debtors are the studying side only:
+   * read with `studyingDebtorWhere`, the predicate the split reads its studying
+   * total with, so the list is part of the number printed above it. The id
+   * breaks a tie on balance, so the same five are named every time.
+   */
   async buildDebtorsBlock(
     companyId: number,
     branchIds: ReportBranchIds,
   ): Promise<string> {
-    const [aggregate, top] = await Promise.all([
-      this.prisma.student.aggregate({
-        where: {
-          companyId,
-          deletedAt: null,
-          status: 'ACTIVE',
-          balance: { lt: 0 },
-          ...studentBranchWhere(branchIds),
-        },
-        _sum: { balance: true },
-        _count: true,
-      }),
+    const [split, top] = await Promise.all([
+      this.reports.getDebtSplit(companyId, { branchIds }),
       this.prisma.student.findMany({
-        where: {
-          companyId,
-          deletedAt: null,
-          status: 'ACTIVE',
-          balance: { lt: 0 },
-          ...studentBranchWhere(branchIds),
-        },
-        orderBy: { balance: 'asc' }, // most negative first
+        where: studyingDebtorWhere(companyId, branchIds),
+        orderBy: [{ balance: 'asc' }, { id: 'asc' }], // most negative first
         take: 5,
         select: { id: true, firstName: true, lastName: true, balance: true },
       }),
     ]);
-
-    const totalDebt = Math.abs(aggregate._sum.balance ?? 0);
-    const count = aggregate._count;
 
     const topLines = top
       .map(
@@ -257,9 +251,10 @@ export class TelegramGroupStatsService {
     return [
       `💸 <b>Qarzdorlar</b>`,
       ``,
-      `Soni: <b>${formatNumber(count)}</b>`,
-      `Jami qarz: <b>${formatSum(totalDebt)}</b>`,
-      count > 0 ? `\n<b>Eng katta 5 ta qarzdor:</b>\n${topLines}` : '',
+      ...buildDebtSplitLines(split, { bullet: '' }),
+      split.studying.count > 0
+        ? `\n<b>Eng katta 5 ta qarzdor (o'qiyotganlar):</b>\n${topLines}`
+        : '',
     ]
       .filter(Boolean)
       .join('\n');
@@ -334,7 +329,7 @@ export class TelegramGroupStatsService {
       todayNewStudents,
       activeGroups,
       activeTeachers,
-      debtorAgg,
+      debtSplit,
       monthlyIncome,
       monthlyExpenses,
     ] = await Promise.all([
@@ -374,17 +369,8 @@ export class TelegramGroupStatsService {
             },
           })
         : Promise.resolve(0),
-      this.prisma.student.aggregate({
-        where: {
-          companyId,
-          deletedAt: null,
-          status: 'ACTIVE',
-          balance: { lt: 0 },
-          ...studentBranchWhere(branchIds),
-        },
-        _sum: { balance: true },
-        _count: true,
-      }),
+      // The debt as two numbers that are never added (ADR-0059).
+      this.reports.getDebtSplit(companyId, { branchIds }),
       this.prisma.payment.aggregate({
         where: {
           companyId,
@@ -413,7 +399,7 @@ export class TelegramGroupStatsService {
       `Faol guruhlar: <b>${formatNumber(activeGroups)}</b>`,
       `Faol o'qituvchilar: <b>${formatNumber(activeTeachers)}</b>`,
       ``,
-      `Qarzdorlar: <b>${formatNumber(debtorAgg._count)}</b> ta · <b>${formatSum(Math.abs(debtorAgg._sum.balance ?? 0))}</b>`,
+      ...buildDebtSplitLines(debtSplit, { bullet: '' }),
       ``,
       `Bu oylik tushum: <b>${formatSum(monthlyIncome._sum.amount ?? 0)}</b>`,
       `Bu oylik xarajat: <b>${formatSum(monthlyExpenses._sum.amount ?? 0)}</b>`,

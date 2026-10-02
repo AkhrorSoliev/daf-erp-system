@@ -17,23 +17,37 @@ import {
 } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { MockExamPdfService } from './mock-exam-pdf.service';
+import { MockExamStatsService } from './mock-exam-stats.service';
 import { CreateMockExamDto } from './dto/create-mock-exam.dto';
 import { UpdateMockExamDto } from './dto/update-mock-exam.dto';
 import {
   FormFieldDto,
   MAPS_TO_VALUES,
+  MapsToValue,
   TYPES_WITH_OPTIONS,
 } from '../custom-forms/dto/form-field.dto';
 import { shortId } from '../custom-forms/short-id.util';
 import { isValidMockExamStatusTransition } from './mock-exam-status.util';
 import { applyCompetitionRanks } from './mock-exam-ranking';
 import {
+  effectiveMockFee,
   sanitizeExamTimes,
   sanitizeOfferedLevels,
 } from './mock-exam-pricing.util';
 
 const BOT_PAYLOAD_LENGTH = 10;
 const MAX_PAYLOAD_RETRIES = 5;
+
+/**
+ * How the registration form's three link slots are named to an admin. Error
+ * messages print these words, never internal names like `firstName` or
+ * `phone`; the `Record` forces a name for any slot added later.
+ */
+const SLOT_LABELS: Record<MapsToValue, string> = {
+  firstName: 'Ism',
+  lastName: 'Familiya',
+  phone: 'Telefon',
+};
 
 /**
  * One concrete mock-exam event. CRUD here handles the exam shell only —
@@ -49,6 +63,7 @@ export class MockExamsService {
     private entityHistoryService: EntityHistoryService,
     private mockExamPdfService: MockExamPdfService,
     private eventEmitter: EventEmitter2,
+    private mockExamStats: MockExamStatsService,
   ) {}
 
   /**
@@ -86,7 +101,7 @@ export class MockExamsService {
     });
 
     const totalRevenue = paid.reduce(
-      (sum, p) => sum + (p.feeAmount ?? p.exam.price ?? 0),
+      (sum, p) => sum + effectiveMockFee(p.feeAmount, p.exam.price),
       0,
     );
 
@@ -156,9 +171,11 @@ export class MockExamsService {
         },
       },
     });
+    const totals = await this.mockExamStats.paidTotals(exams);
     return exams.map((exam) => ({
       ...this.toSummary(exam),
       section: exam.section,
+      ...(totals.get(exam.id) ?? { paidCount: 0, revenue: 0 }),
     }));
   }
 
@@ -554,7 +571,7 @@ export class MockExamsService {
     const existing = await this.ensureExamInScope(id, companyId, scope);
     if (!isValidMockExamStatusTransition(existing.status, nextStatus)) {
       throw new BadRequestException(
-        `${existing.status} → ${nextStatus} o'tish ruxsat etilmagan`,
+        "Imtihon holatini bu tartibda o'zgartirib bo'lmaydi",
       );
     }
 
@@ -677,7 +694,7 @@ export class MockExamsService {
     })) as { id: string; status: MockExamStatus };
     if (exam.status !== MockExamStatus.ANNOUNCED) {
       throw new BadRequestException(
-        'Qayta yuborish faqat ANNOUNCED holatdagi imtihon uchun mavjud',
+        "Qayta yuborish faqat «E'lon qilingan» holatdagi imtihon uchun mavjud",
       );
     }
     const cleared = await this.prisma.mockExamParticipant.updateMany({
@@ -706,7 +723,7 @@ export class MockExamsService {
     })) as { id: string; status: MockExamStatus };
     if (exam.status !== MockExamStatus.ANNOUNCED) {
       throw new BadRequestException(
-        'PDF faqat ANNOUNCED holatdagi imtihon uchun yaratiladi',
+        "PDF faqat «E'lon qilingan» holatdagi imtihon uchun yaratiladi",
       );
     }
     return this.mockExamPdfService.generate(id);
@@ -761,7 +778,7 @@ export class MockExamsService {
 
   /**
    * Default 3 required fields that every mock exam form starts with: ism,
-   * familya, telefon — same shape the Telegram bot scene (Faza 4) will
+   * familiya, telefon — same shape the Telegram bot scene (Faza 4) will
    * collect first. Admins add extras via the form builder.
    */
   private defaultFormFields(): Prisma.InputJsonValue {
@@ -776,7 +793,7 @@ export class MockExamsService {
       {
         id: shortId(8),
         type: 'text',
-        label: 'Familyangiz',
+        label: 'Familiyangiz',
         required: true,
         mapsTo: 'lastName',
       },
@@ -822,23 +839,23 @@ export class MockExamsService {
       const matches = fields.filter((f) => f.mapsTo === slot);
       if (matches.length === 0) {
         throw new BadRequestException(
-          `${slot} maydoni majburiy — biror maydonni unga bog'lang`,
+          `${SLOT_LABELS[slot]} maydoni majburiy — biror maydonni unga bog'lang`,
         );
       }
       if (matches.length > 1) {
         throw new BadRequestException(
-          `${slot} ga faqat bitta maydon bog'lanishi mumkin`,
+          `${SLOT_LABELS[slot]}ga faqat bitta maydon bog'lanishi mumkin`,
         );
       }
       const match = matches[0];
       if (!match.required) {
         throw new BadRequestException(
-          `${slot} ga bog'langan maydon majburiy bo'lishi kerak`,
+          `${SLOT_LABELS[slot]}ga bog'langan maydon majburiy bo'lishi kerak`,
         );
       }
       if (slot === 'phone' && match.type !== 'phone') {
         throw new BadRequestException(
-          "Telefon maydonining turi 'phone' bo'lishi kerak",
+          "Telefon maydonining turi «Telefon» bo'lishi kerak",
         );
       }
     }

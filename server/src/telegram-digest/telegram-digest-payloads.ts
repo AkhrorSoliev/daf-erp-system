@@ -84,6 +84,14 @@ export interface AttendanceCompletedDigestPayload {
   excused: number;
 }
 
+/** «Bo'ldi» — the lesson was marked after it ended; no pay (ADR-0054). */
+export interface LessonPayForfeitedDigestPayload {
+  groupId: string;
+  groupName: string;
+  /** Lesson date, 'YYYY-MM-DD'. */
+  date: string;
+}
+
 export interface GroupNewStudentDigestPayload {
   studentId: number;
   name: string;
@@ -147,9 +155,18 @@ export interface MonthlyChargeDigestPayload {
   chargedAmount: number;
   /** 'YYYY-MM-DD' — the student's 2nd lesson of the month (`paymentDueDate`); null with fewer than two lessons. */
   dueDate: string | null;
+  /**
+   * ADR-0064: what of this charge is due by its 2nd lesson (`leastDue`).
+   * Absent: the whole charge is, as before the least share.
+   */
+  minShare?: number;
 }
 
-/** The evening-before reminder of the 2nd lesson (ADR-0042). */
+/**
+ * A payment reminder: the evening before the 2nd lesson (ADR-0042), or, with
+ * `paidThrough`, the days before a part payer's paid lessons run out
+ * (contract 3.7, ADR-0064).
+ */
 export interface PaymentReminderDigestPayload {
   /** Re-read at 20:00: a closed enrollment gets no reminder. */
   enrollmentId: string;
@@ -157,8 +174,25 @@ export interface PaymentReminderDigestPayload {
   periodYear: number;
   /** 1–12. */
   periodMonth: number;
-  /** 'YYYY-MM-DD' — tomorrow's lesson, the student's 2nd of the month. */
+  /**
+   * 'YYYY-MM-DD' — tomorrow's lesson, the student's 2nd of the month. With
+   * `paidThrough`: the first lesson the payments do not reach.
+   */
   lessonDate: string;
+  /**
+   * ADR-0064, the 2nd-lesson reminder under the least share: the least
+   * payment that admits to tomorrow's lesson. `minPaidPercent` only when
+   * the share, not the lessons held, is what is short. No `minDue`: the
+   * reminder every debtor got before it.
+   */
+  minDue?: number;
+  minPaidPercent?: number;
+  /**
+   * Contract 3.7: the last lesson the payments reach, and the Tashkent day
+   * the row was queued for — a row kept after a failed send is not sent on
+   * another day.
+   */
+  paidThrough?: { through: string; queuedFor: string };
 }
 
 /** Fails to compile when a category is added to the enum without a payload. */
@@ -183,6 +217,7 @@ export type DigestPayloadByCategory = EveryCategory<{
   GROUP_STATUS_CHANGE: GroupStatusChangeDigestPayload;
   MONTHLY_CHARGE: MonthlyChargeDigestPayload;
   PAYMENT_REMINDER: PaymentReminderDigestPayload;
+  LESSON_PAY_FORFEITED: LessonPayForfeitedDigestPayload;
 }>;
 
 /** Who each category is written for — a student row read as USER is never rendered. */
@@ -205,6 +240,7 @@ export type RecipientKindByCategory = EveryCategory<{
   GROUP_STATUS_CHANGE: 'GROUP';
   MONTHLY_CHARGE: 'STUDENT';
   PAYMENT_REMINDER: 'STUDENT';
+  LESSON_PAY_FORFEITED: 'USER';
 }>;
 
 /**

@@ -1,5 +1,8 @@
 import { singleBranchId } from '../common/finance/report-branch-scope';
-import { narrowPayrollScope } from './shared/payroll-branch-scope';
+import {
+  narrowPayrollScope,
+  type PayrollBranchScope,
+} from './shared/payroll-branch-scope';
 
 /**
  * `/salary/monthly` took NO branch input at all.
@@ -64,9 +67,19 @@ describe('payroll branch selection', () => {
  * class of split the reports module was rebuilt to remove.
  */
 describe('narrowPayrollScope — ceiling ∩ selection', () => {
-  const CEO = { kind: 'all' } as const;
-  const FARGONA_DIRECTOR = { kind: 'branch', branchId: 1 } as const;
-  const NO_BRANCH = { kind: 'none' } as const;
+  const CEO: PayrollBranchScope = { kind: 'all' };
+  const FARGONA_DIRECTOR: PayrollBranchScope = {
+    kind: 'branches',
+    branchIds: [1],
+    mainBranch: 1,
+  };
+  // Attached to branches 1 and 2 (`UserBranch`), home branch 1.
+  const TWO_BRANCH_DIRECTOR: PayrollBranchScope = {
+    kind: 'branches',
+    branchIds: [1, 2],
+    mainBranch: 1,
+  };
+  const NO_BRANCH: PayrollBranchScope = { kind: 'none' };
 
   it('lets a CEO narrow to the branch they picked', () => {
     expect(narrowPayrollScope(CEO, 2)).toEqual({ branchId: 2, blocked: false });
@@ -111,6 +124,70 @@ describe('narrowPayrollScope — ceiling ∩ selection', () => {
     expect(result.branchId).not.toBe(2);
   });
 
+  /**
+   * A2.8 — a director attached to branches 1 and 2 who picked branch 2 got
+   * `blocked`, because the ceiling was `mainBranch` alone. The net-profit
+   * payroll leg then read 0 and the branch's profit looked too high. The
+   * ceiling is the SET of branches attached to the caller; the pick chooses
+   * within it.
+   */
+  describe('a director attached to several branches (A2.8)', () => {
+    it('serves the branch they picked when it is one of theirs', () => {
+      expect(narrowPayrollScope(TWO_BRANCH_DIRECTOR, 2)).toEqual({
+        branchId: 2,
+        blocked: false,
+      });
+    });
+
+    it('serves their main branch when they pick it', () => {
+      expect(narrowPayrollScope(TWO_BRANCH_DIRECTOR, 1)).toEqual({
+        branchId: 1,
+        blocked: false,
+      });
+    });
+
+    it('REFUSES a branch outside their set, and serves no other branch in its place', () => {
+      const result = narrowPayrollScope(TWO_BRANCH_DIRECTOR, 3);
+      expect(result.blocked).toBe(true);
+      expect(result.branchId).not.toBe(3);
+    });
+
+    it('answers with their main branch when they pick nothing (unchanged tiebreak)', () => {
+      expect(narrowPayrollScope(TWO_BRANCH_DIRECTOR, undefined)).toEqual({
+        branchId: 1,
+        blocked: false,
+      });
+    });
+
+    it('answers with the lowest attached branch when there is no main branch', () => {
+      const attachedOnly: PayrollBranchScope = {
+        kind: 'branches',
+        branchIds: [2, 3],
+        mainBranch: null,
+      };
+      expect(narrowPayrollScope(attachedOnly, undefined)).toEqual({
+        branchId: 2,
+        blocked: false,
+      });
+      expect(narrowPayrollScope(attachedOnly, 3)).toEqual({
+        branchId: 3,
+        blocked: false,
+      });
+    });
+
+    it('an empty set is no scope at all — it must not read as "no filter"', () => {
+      // The resolver turns an empty set into `none`; this guards a hand-built
+      // one. `branchId: undefined, blocked: false` would mean "every branch".
+      const empty: PayrollBranchScope = {
+        kind: 'branches',
+        branchIds: [],
+        mainBranch: null,
+      };
+      expect(narrowPayrollScope(empty, undefined).blocked).toBe(true);
+      expect(narrowPayrollScope(empty, 1).blocked).toBe(true);
+    });
+  });
+
   it('fails CLOSED when the caller has no branch at all', () => {
     // Two production Administrators had a null `mainBranch`. Collapsing that to
     // "no filter" is fail-OPEN: they could see, and `batchPay`, every branch's
@@ -126,8 +203,18 @@ describe('narrowPayrollScope — ceiling ∩ selection', () => {
     // `undefined` means "no filter" downstream, so a confined caller reaching it
     // unblocked would see the whole company. This is the invariant the whole
     // helper exists to hold.
+    const emptySet: PayrollBranchScope = {
+      kind: 'branches',
+      branchIds: [],
+      mainBranch: null,
+    };
     for (const requested of [undefined, 1, 2, 99]) {
-      for (const scope of [FARGONA_DIRECTOR, NO_BRANCH]) {
+      for (const scope of [
+        FARGONA_DIRECTOR,
+        TWO_BRANCH_DIRECTOR,
+        emptySet,
+        NO_BRANCH,
+      ]) {
         const { branchId, blocked } = narrowPayrollScope(scope, requested);
         expect(blocked || branchId !== undefined).toBe(true);
       }

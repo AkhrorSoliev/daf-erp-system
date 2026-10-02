@@ -25,6 +25,7 @@ import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 import { DebtAgeService } from '../common/finance/debt-age.service';
 import { wholeMonthsBetween } from '../common/finance/debt-origin';
 import { equalsOrIn } from '../common/dto/to-array';
+import { loadDebtSplit, splitDebt } from '../reports/debt-split';
 
 @Injectable()
 export class PaymentsDebtorsService {
@@ -60,8 +61,10 @@ export class PaymentsDebtorsService {
   }
 
   /**
-   * Canonical debtor predicate, shared by the list, the count and the summary
-   * aggregate so the page's table and cards can never drift.
+   * Canonical debtor predicate, shared by the list, its count and the Excel
+   * line-item sheet. The page's summary cards do NOT read it: they show the debt
+   * as two numbers from `loadDebtSplit` (ADR-0059), a narrower set that leaves
+   * archived cards out, so they are not expected to add up to this list's total.
    *
    * `status` defaults to ACTIVE because the Excel line-item sheet ties to the
    * balance sheet's `accountsReceivable`, which counts active students — that
@@ -361,19 +364,22 @@ export class PaymentsDebtorsService {
   }
 
   /**
-   * Card-ready aggregate for the debtors page: total owed, debtor count and
-   * average debt (lifted from reports-financial), plus the payment-promise
-   * counts that power the "Va'da / muddati o'tgan" card. Same `where` and
-   * branch scope as the list so the cards always reconcile with the table.
+   * Card-ready aggregate for the debtors page: the debt as TWO numbers
+   * (`split`, ADR-0059) plus the payment-promise counts behind the
+   * «Belgilangan / muddati o'tgan» card. Same branch scope as the list, but NOT
+   * its filters — the cards describe the whole scope and the page says so under
+   * them, so there is no status / search / promise parameter here.
+   *
+   * `split` is `loadDebtSplit`, the one read the Moliya overview, the home card
+   * and the Telegram report share. It is built on the «faol o'quvchi» rule and
+   * leaves archived cards out, so it is not `debtorWhere`'s set: the list below
+   * also shows frozen, expelled and archived debt, and its total is not the sum
+   * of the two numbers (which are never added to each other either). No `month`
+   * is passed: «shu oy» is the current Tashkent month.
    */
   async getDebtorSummary(
     companyId: number,
-    query: {
-      branchId?: number;
-      status?: StudentStatus | 'all';
-      userId: number;
-      roles: string[];
-    },
+    query: { branchId?: number; userId: number; roles: string[] },
   ) {
     const branchIds = await this.resolveBranchScope(
       query.userId,
@@ -382,26 +388,24 @@ export class PaymentsDebtorsService {
     );
     if (branchIds && branchIds.length === 0) {
       return {
-        totalDebt: 0,
-        debtorCount: 0,
-        avgDebt: 0,
+        split: splitDebt({
+          studying: [],
+          chargedThisMonth: new Map(),
+          notStudying: { sum: null, count: 0 },
+        }),
         openPromises: 0,
         overduePromises: 0,
       };
     }
 
-    const where = this.debtorWhere(companyId, branchIds, query.status ?? 'all');
     const promiseScope: Prisma.PaymentPromiseWhereInput = {
       companyId,
       ...(branchIds ? { branchId: { in: branchIds } } : {}),
     };
 
-    const [agg, openPromises, overduePromises] = await Promise.all([
-      this.prisma.student.aggregate({
-        where,
-        _sum: { balance: true },
-        _count: true,
-      }),
+    const [split, openPromises, overduePromises] = await Promise.all([
+      // `undefined` here is "every branch"; the split's own spelling is `null`.
+      loadDebtSplit(this.prisma, companyId, { branchIds: branchIds ?? null }),
       // Active commitments ("Va'da bergan").
       this.prisma.paymentPromise.count({
         where: { ...promiseScope, status: 'OPEN' },
@@ -416,11 +420,7 @@ export class PaymentsDebtorsService {
       }),
     ]);
 
-    const totalDebt = Math.abs(agg._sum.balance ?? 0);
-    const debtorCount = agg._count;
-    const avgDebt = debtorCount > 0 ? Math.round(totalDebt / debtorCount) : 0;
-
-    return { totalDebt, debtorCount, avgDebt, openPromises, overduePromises };
+    return { split, openPromises, overduePromises };
   }
 
   async getPending(

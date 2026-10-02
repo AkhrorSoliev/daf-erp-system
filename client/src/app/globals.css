@@ -10,7 +10,6 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-sans);
   --font-heading: var(--font-heading);
-  --font-serif: var(--font-fraunces);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -51,7 +50,10 @@
   /* --- Lumio (student portal) utility aliases ---
      Raw values live only under `.lumio` (see the scoped block below), so
      these utilities resolve to a color/radius ONLY inside the portal scope
-     and to nothing elsewhere — automatic containment, zero leakage. */
+     and to nothing elsewhere — automatic containment, zero leakage.
+     Never alias a colour Tailwind already has (amber, teal, sky): here it
+     would replace Tailwind's shade on every portal, and staff pages would
+     draw it with no colour. `.lumio` re-points those itself. */
   --color-coral-50: var(--coral-50);
   --color-coral-100: var(--coral-100);
   --color-coral-200: var(--coral-200);
@@ -59,22 +61,9 @@
   --color-coral-500: var(--coral-500);
   --color-coral-600: var(--coral-600);
   --color-coral-700: var(--coral-700);
-  --color-amber-50: var(--amber-50);
-  --color-amber-100: var(--amber-100);
-  --color-amber-500: var(--amber-500);
-  --color-amber-600: var(--amber-600);
-  --color-amber-700: var(--amber-700);
-  --color-teal-50: var(--teal-50);
-  --color-teal-100: var(--teal-100);
-  --color-teal-500: var(--teal-500);
-  --color-teal-600: var(--teal-600);
-  --color-teal-700: var(--teal-700);
   --color-grape-100: var(--grape-100);
   --color-grape-500: var(--grape-500);
   --color-grape-600: var(--grape-600);
-  --color-sky-100: var(--sky-100);
-  --color-sky-500: var(--sky-500);
-  --color-sky-600: var(--sky-600);
   --color-ink-900: var(--ink-900);
   --color-ink-800: var(--ink-800);
   --color-ink-700: var(--ink-700);
@@ -260,6 +249,228 @@
 }
 
 /* ============================================================
+   Staff sign-in — Daftar (scoped override)
+   The admin and teacher logins are one notebook sheet: squared paper and
+   navy ink on the admin portal (bookkeeping), ruled paper and green ink on
+   the teacher portal (writing), the same red margin line on both. Applied
+   via `.daftar` (+ `.daftar-lines` for the ruled variant); the class pair
+   comes from `daftarScope()` in lib/portal.ts, so content Radix portals to
+   <body> (the password-reset dialog) can carry it too.
+   Like `.form-theme` and `.lumio`, the scope re-points the shadcn semantic
+   vars, so every primitive inside it re-themes with no changes of its own.
+   Text is >= 4.5:1 and the field underline (--input) >= 3:1 against the
+   paper in all four states — src/app/daftar-theme.test.ts measures it.
+   ============================================================ */
+.daftar {
+  --daftar-margin: #f0a3a3;
+
+  --background: #fdfdfb;
+  --foreground: #1e293b;
+  --card: #fdfdfb;
+  --card-foreground: #1e293b;
+  --popover: #fdfdfb;
+  --popover-foreground: #1e293b;
+  --primary: #1e3a8a;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f9;
+  --secondary-foreground: #1e293b;
+  --muted: #eef2f9;
+  --muted-foreground: #56657a;
+  --accent: #eef2f9;
+  --accent-foreground: #1e293b;
+  --destructive: #b42318;
+  --border: #d9e3f2;
+  --input: #6f88b3;
+  --ring: #1e3a8a;
+}
+
+/* Teacher portal: ruled paper, green ink. */
+.daftar.daftar-lines {
+  --primary: #14532d;
+  --secondary: #eef5f0;
+  --muted: #eef5f0;
+  --accent: #eef5f0;
+  --input: #5f9072;
+  --ring: #14532d;
+}
+
+/* Night paper. This selector and `.daftar.daftar-lines` are equally specific,
+   so on a dark ruled sheet these values win over the teacher's light ones by
+   source order — keep this block after it, and have the next rule re-state
+   every token the ruled variant sets. */
+.dark .daftar {
+  --daftar-margin: #7a3440;
+
+  --background: #0f1626;
+  --foreground: #e6ecf8;
+  --card: #0f1626;
+  --card-foreground: #e6ecf8;
+  --popover: #0f1626;
+  --popover-foreground: #e6ecf8;
+  --primary: #c9d7f7;
+  --primary-foreground: #0f1626;
+  --secondary: #172238;
+  --secondary-foreground: #e6ecf8;
+  --muted: #172238;
+  --muted-foreground: #9aa7bd;
+  --accent: #172238;
+  --accent-foreground: #e6ecf8;
+  --destructive: #ff8a80;
+  --border: #1c2740;
+  --input: #5a6f9a;
+  --ring: #c9d7f7;
+}
+
+.dark .daftar.daftar-lines {
+  --background: #0e1a14;
+  --foreground: #e8f1eb;
+  --card: #0e1a14;
+  --card-foreground: #e8f1eb;
+  --popover: #0e1a14;
+  --popover-foreground: #e8f1eb;
+  --primary: #bfe3cc;
+  --primary-foreground: #0e1a14;
+  --secondary: #15271d;
+  --secondary-foreground: #e8f1eb;
+  --muted: #15271d;
+  --muted-foreground: #9db3a5;
+  --accent: #15271d;
+  --accent-foreground: #e8f1eb;
+  --border: #1a2c22;
+  --input: #4f7a60;
+  --ring: #bfe3cc;
+}
+
+@layer components {
+  /* The sheet: paper plus its ruling — squared by default, ruled on the
+     teacher portal. The lines are gradients, so there is no image to load.
+     Both rulings share one rhythm: a row is 2rem (every second line of the
+     squared paper), with its rule on the row's last pixel. DaftarSheet lays
+     the writing out in whole rows from the top of the sheet, so it sits on
+     the lines. Sizes are in rem so the ruling scales with the text. */
+  .daftar-sheet {
+    background-color: var(--background);
+    background-image:
+      linear-gradient(transparent calc(100% - 1px), var(--border) calc(100% - 1px)),
+      linear-gradient(90deg, transparent calc(100% - 1px), var(--border) calc(100% - 1px));
+    background-size: 1rem 1rem;
+  }
+  .daftar-lines.daftar-sheet {
+    background-image: linear-gradient(transparent calc(100% - 1px), var(--border) calc(100% - 1px));
+    background-size: 100% 2rem;
+  }
+
+  /* One row of writing: a 2rem line box, nudged down so the text sits on the
+     rule under it instead of floating mid-row. The nudge is in em, so it
+     holds for any text size that fits a row. `--tw-leading` is what
+     Tailwind's `text-*` utilities read for their line height; without it
+     `text-sm` on the same element would bring its own 1.25rem back. */
+  .daftar-row {
+    --tw-leading: 2rem;
+    line-height: 2rem;
+    translate: 0 calc(0.7rem - 0.35em);
+  }
+
+  /* The column starts a whole number of rows below the sheet's 4rem top bar,
+     and a taller window moves it down by whole rows. Centring it instead
+     would let the rows drift off the ruling with the window height. */
+  .daftar-column {
+    margin-top: 2rem;
+  }
+  @media (min-height: 45rem) {
+    .daftar-column {
+      margin-top: 4rem;
+    }
+  }
+  @media (min-height: 52.5rem) {
+    .daftar-column {
+      margin-top: 6rem;
+    }
+  }
+  @media (min-height: 60rem) {
+    .daftar-column {
+      margin-top: 8rem;
+    }
+  }
+  @media (min-height: 67.5rem) {
+    .daftar-column {
+      margin-top: 10rem;
+    }
+  }
+
+  /* The red margin line. It hangs off the content column, not the viewport,
+     so the writing starts at the margin at every width. It runs far past the
+     column both ways; the sheet clips it to the page — with `overflow-clip`,
+     not `hidden`: a hidden box still scrolls when focus moves inside it, and
+     the line's overhang would give it somewhere to scroll to. */
+  .daftar-column::before {
+    content: "";
+    position: absolute;
+    top: -100vh;
+    bottom: -100vh;
+    left: -1rem;
+    width: 1.5px;
+    background-color: var(--daftar-margin);
+    pointer-events: none;
+  }
+  @media (min-width: 40rem) {
+    .daftar-column::before {
+      left: -1.25rem;
+    }
+  }
+
+  /* Handwriting: the italic Fraunces that DaftarSheet loads. */
+  .daftar-hand {
+    font-family: var(--font-daftar-hand), Georgia, serif;
+    font-style: italic;
+  }
+
+  /* The greeting after a sign-in: the photo is set down on the sheet, the
+     name is written from the margin, the rest fades in. `both` holds each
+     piece hidden until its turn. */
+  .daftar-greet-photo {
+    animation: daftar-greet-photo 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  }
+  .daftar-greet-fade {
+    animation: daftar-greet-fade 0.4s ease-out both;
+  }
+  .daftar-greet-write {
+    animation: daftar-greet-write 0.9s ease-out 0.45s both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .daftar-greet-photo,
+    .daftar-greet-fade,
+    .daftar-greet-write {
+      animation: none;
+    }
+  }
+}
+
+@keyframes daftar-greet-photo {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(-14deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(-3deg);
+  }
+}
+@keyframes daftar-greet-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes daftar-greet-write {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ============================================================
    Student Portal — Lumio design system (scoped override)
    Mirrors the student-app (student-app/src/design + daf-design-system)
    Lumio tokens so the portal at student.dafzentrum.uz matches the native
@@ -300,6 +511,22 @@
   --sky-400: #5bb1ff;
   --sky-500: #2e97ff;
   --sky-600: #1b7be0;
+
+  /* Tailwind's own amber, teal and sky shades take Lumio's values inside
+     the portal only (see the note in @theme above). */
+  --color-amber-50: var(--amber-50);
+  --color-amber-100: var(--amber-100);
+  --color-amber-500: var(--amber-500);
+  --color-amber-600: var(--amber-600);
+  --color-amber-700: var(--amber-700);
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-sky-100: var(--sky-100);
+  --color-sky-500: var(--sky-500);
+  --color-sky-600: var(--sky-600);
 
   --ink-900: #0e2a3d; /* headings */
   --ink-800: #1b3a4e;
@@ -1006,4 +1233,23 @@ button {
 .lumio :focus-within > textarea:autofill,
 .lumio :focus-within > select:autofill {
   box-shadow: inset 0 0 0 1000px var(--surface-card);
+}
+
+/* A Daftar field is transparent — the sheet shows through it — so the tint
+   autofill paints on the <input> would sit on the paper as a coloured box.
+   Repaint it in the paper's colour; as with Lumio above, the fill has to be a
+   box-shadow, and Firefox needs its own rule. */
+.daftar input:-webkit-autofill,
+.daftar input:-webkit-autofill:hover,
+.daftar input:-webkit-autofill:active {
+  -webkit-box-shadow: inset 0 0 0 1000px var(--background);
+  box-shadow: inset 0 0 0 1000px var(--background);
+  -webkit-text-fill-color: var(--foreground);
+  caret-color: var(--foreground);
+}
+
+.daftar input:autofill {
+  box-shadow: inset 0 0 0 1000px var(--background);
+  filter: none;
+  caret-color: var(--foreground);
 }

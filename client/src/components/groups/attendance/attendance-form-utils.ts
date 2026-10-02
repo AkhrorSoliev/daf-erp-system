@@ -20,6 +20,8 @@ export interface StudentAttendance {
   isDebtor?: boolean;
   debtAmount?: number;
   status: AttendanceStatus | null;
+  /** Recorded minutes late on a saved LATE row (ADR-0048). */
+  lateMinutes?: number | null;
   note: string | null;
   // Oldindan davomat belgilash (pre-mark) — dars boshlanmasidan oldin admin
   // belgilab qo'ygan kelmaslik. status === null bo'lganda formani urug'lantiradi.
@@ -27,6 +29,30 @@ export interface StudentAttendance {
   plannedKind?: PlannedAbsenceKind | null;
   plannedNote?: string | null;
   plannedBy?: { id: number; firstName: string; lastName: string } | null;
+  // Contract 3.2 (ADR-0047): may this student be marked for this lesson?
+  // Absent on an older server — read as admitted.
+  admission?: LessonAdmission;
+}
+
+/** Contract 3.2 admission of one student to this lesson (ADR-0047). */
+export interface LessonAdmission {
+  admitted: boolean;
+  // LEFT_OUT: after the lesson, a student the register left out stays out,
+  // paid or not (server `leftOutAfterEnd`). BELOW_MIN_SHARE: the lessons held
+  // are paid for, the least share of the month is not (ADR-0064).
+  reason:
+    | "NOT_APPLIED"
+    | "FIRST_LESSON"
+    | "PAID"
+    | "NOT_PAID"
+    | "BELOW_MIN_SHARE"
+    | "LEFT_OUT";
+  /** The least payment that admits the student today. */
+  shortfall: number;
+  /** Admitted while owing: the last lesson this month the balance reaches. */
+  paidThrough: string | null;
+  /** BELOW_MIN_SHARE only: the share of the month that was asked for. */
+  minPaidPercent?: number;
 }
 
 /** Qarzdorning joriy (eng so'nggi) sikli — sana oralig'i bilan. */

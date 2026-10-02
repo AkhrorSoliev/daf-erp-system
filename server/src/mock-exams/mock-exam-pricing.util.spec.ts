@@ -1,6 +1,7 @@
 import { StudentStatus } from '@prisma/client';
 import {
   CEFR_LEVELS,
+  effectiveMockFee,
   isCefrLevel,
   resolveParticipantFee,
   sanitizeExamTimes,
@@ -99,5 +100,19 @@ describe('mock-exam-pricing.util', () => {
       expect(sanitizeExamTimes(undefined)).toEqual([]);
       expect(sanitizeExamTimes('10:00')).toEqual([]);
     });
+  });
+});
+
+describe('effectiveMockFee', () => {
+  it('reads the fee frozen at registration', () => {
+    expect(effectiveMockFee(45000, 55000)).toBe(45000);
+  });
+
+  it('keeps a frozen fee of 0 (free for a DaF student)', () => {
+    expect(effectiveMockFee(0, 55000)).toBe(0);
+  });
+
+  it("falls back to the exam's price on a row from before fees were frozen", () => {
+    expect(effectiveMockFee(null, 55000)).toBe(55000);
   });
 });

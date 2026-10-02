@@ -21,6 +21,7 @@ import {
   Wallet,
 } from "lucide-react";
 import type { KpiKey } from "./kpi-chart-dialog";
+import { monthLabel, monthShort } from "./salary-utils";
 import {
   Tooltip,
   TooltipContent,
@@ -28,30 +29,62 @@ import {
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
+/** «Hisoblandi / To'landi / Qoldi» — server `MonthCharges` (ADR-0058). */
+export interface MonthCharges {
+  month: string;
+  charged: number;
+  paid: number;
+  unpaid: number;
+  paidPct: number | null;
+  students: number;
+}
+
+/**
+ * «O'qiyotganlar qarzi» and «O'qimayotganlar qarzi» — server `DebtSplit`
+ * (ADR-0059). Two numbers that are never added: the first is the debt of
+ * students in an active group (`currentMonth` — the part of it up to this
+ * month's bill, `older` — the rest), the second is everyone else's.
+ */
+export interface DebtSplit {
+  studying: {
+    total: number;
+    count: number;
+    currentMonth: number;
+    older: number;
+  };
+  notStudying: { total: number; count: number };
+}
+
 interface FinancialOverview {
   income: {
-    expected: number;
     actual: number;
-    /** Real lesson value billed in the period (Σ LESSON_DEDUCTION). */
-    billed: number;
     paymentCount: number;
     byMethod: { method: string; amount: number; count: number }[];
   };
-  /**
-   * Month-end expectation and receivables (D.2). `income.expected` above is the
-   * same figure, kept for the Excel path.
-   */
+  /** Month-end expectation (shown for months before the monthly-payment switch). */
   forecast: {
     /** Lessons held-and-paid + the remaining scheduled ones, by lesson value. */
     expectedMonthEnd: number;
     expectedHeld: number;
     expectedRemaining: number;
-    outstandingReceivable: number;
-    debtorExposure: { count: number; avgDebt: number };
   };
+  /**
+   * The month's own bill, paid and unpaid (ADR-0058). `null` for months before
+   * the monthly-payment switch, which keep the «Oy oxiriga kutilyapti» card.
+   * Never sent to Administrator/Cashier.
+   */
+  monthCharges: MonthCharges | null;
+  /**
+   * What the centre is owed TODAY — the period does not change it. Never sent to
+   * Administrator/Cashier. Optional: the client goes live before the server,
+   * and a server older than ADR-0059 sends none — the block then draws «—».
+   */
+  debtSplit?: DebtSplit;
   salary: {
     paid: number;
     pending: number;
@@ -79,7 +112,6 @@ interface FinancialOverview {
   // because teacher salary is paid the following cycle.
   netProfitBasis?: "recognized" | "cash";
   ownMonthProfit?: number | null;
-  debtorCount: number;
   activeBalance: number;
   activeStudentCount: number;
   ltv: number;
@@ -101,19 +133,6 @@ const methodLabels: Record<string, string> = {
 
 function fmt(n: number) {
   return n.toLocaleString("uz-UZ");
-}
-
-const UZ_MONTHS = [
-  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-  "Iyul", "Avgust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr",
-];
-
-/** "2026-07" → "Iyul 2026". Fallback "Shu oy" when the month is unknown. */
-function monthLabel(m?: string) {
-  if (!m) return "Shu oy";
-  const [y, mo] = m.split("-").map(Number);
-  const name = UZ_MONTHS[(mo ?? 0) - 1];
-  return name ? `${name} ${y}` : "Shu oy";
 }
 
 interface PaymentsOverviewProps {
@@ -234,20 +253,18 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
   }
 
   const empty: FinancialOverview = {
-    income: { expected: 0, actual: 0, billed: 0, paymentCount: 0, byMethod: [] },
+    income: { actual: 0, paymentCount: 0, byMethod: [] },
     forecast: {
       expectedMonthEnd: 0,
       expectedHeld: 0,
       expectedRemaining: 0,
-      outstandingReceivable: 0,
-      debtorExposure: { count: 0, avgDebt: 0 },
     },
+    monthCharges: null,
     salary: { paid: 0, pending: 0, advances: 0, computed: null },
     expenses: 0,
     netProfit: 0,
     netProfitBasis: "recognized" as const,
     ownMonthProfit: null,
-    debtorCount: 0,
     activeBalance: 0,
     activeStudentCount: 0,
     ltv: 0,
@@ -263,9 +280,23 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     ...empty,
     ...data,
     income: { ...empty.income, ...data?.income },
-    forecast: { ...empty.forecast, ...data?.forecast, debtorExposure: { ...empty.forecast.debtorExposure, ...data?.forecast?.debtorExposure } },
+    forecast: { ...empty.forecast, ...data?.forecast },
     salary: { ...empty.salary, ...data?.salary },
   };
+  // No zero default for the debt: with no split (an older server, or a failed
+  // request) the block draws «—», as the home card and the debt page do. A
+  // zero would read as «nobody owes».
+  const debtSplit =
+    data?.debtSplit?.studying && data.debtSplit.notStudying
+      ? data.debtSplit
+      : null;
+
+  // «Ustoz oyliklari» sarlavhasidagi oy — serverning oyi, umumiy `monthLabel`
+  // yozilishida («Oktabr 2026»), «Moliya» kartasidagi `monthShort` bilan bir
+  // xil jadvaldan. Server oy aytmasa — «Shu oy».
+  const salaryMonthLabel = d.salary.computed?.month
+    ? monthLabel(d.salary.computed.month)
+    : "Shu oy";
 
   return (
     <div className="space-y-6">
@@ -329,31 +360,31 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
             {/* 5. LTV */}
             <KpiCard
               icon={Users}
-              label="LTV"
+              label="O'quvchi qiymati"
               value={`${fmt(d.ltv)} so'm`}
               color="text-violet-600 dark:text-violet-400"
               tooltip="Bitta o'quvchi shu davrda o'rtacha qancha pul olib kelgan. Yuqori bo'lsa — yaxshi."
-              subtitle="Davriy o'quvchi qiymati"
+              subtitle="Bitta o'quvchidan o'rtacha"
               onClick={() => setChartKey("ltv")}
             />
             {/* 6. CAC */}
             <KpiCard
               icon={UserPlus}
-              label="CAC"
+              label="Jalb qilish narxi"
               value={`${fmt(d.cac)} so'm`}
               color="text-amber-600 dark:text-amber-400"
               tooltip={`Bitta yangi o'quvchi olib kelish qancha turgani. Marketingga ${fmt(d.marketingExpenses)} so'm sarflandi, ${d.newStudentCount} ta yangi o'quvchi keldi.`}
-              subtitle="Jalb qilish narxi"
+              subtitle="Bitta yangi o'quvchiga"
               onClick={() => setChartKey("cac")}
             />
             {/* 7. Marketing ROI */}
             <KpiCard
               icon={Megaphone}
-              label="Marketing ROI"
+              label="Marketing samarasi"
               value={`${d.marketingRoi}%`}
               color={d.marketingRoi > 100 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}
               tooltip="Marketingga sarflangan pul qancha qaytganini ko'rsatadi. 100% dan yuqori bo'lsa — foyda keltiryapti."
-              subtitle="Samaradorlik"
+              subtitle="Sarflangan pulga nisbatan"
               onClick={() => setChartKey("marketingRoi")}
             />
           </>
@@ -373,85 +404,118 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
       {/* ===== Pastki qator: Prognoz, Oyliklar, Qarzdorlik, To'lov usullari — CEO/BD only ===== */}
       {canSeeFinancials && (
       <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
-        {/* Tushum ko'rsatkichlari — Prognoz (bashorat) + Hisoblangan darslar (real) + Tushgan */}
+        {/* Oyning asosiy raqami. Oylik to'lov oylarida (2026-09 dan): hisoblandi /
+            to'landi / qoldi — ADR-0058. Undan oldingi oylar: eski «Oy oxiriga
+            kutilyapti» (bosilsa kunlik siljish). Raqamlarning hammasi serverdan.
+            Karta BIR oyni ko'rsatadi (bir necha oylik davrda — uning boshlang'ich
+            oyini), shuning uchun oy sarlavhada nomlanadi: serverning `month`i,
+            brauzer soati emas. */}
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <p className="text-sm font-medium text-muted-foreground">
-            Tushum ko&apos;rsatkichlari
+            {d.monthCharges
+              ? `${monthShort(d.monthCharges.month)} to'lovlari`
+              : "Tushum ko'rsatkichlari"}
           </p>
-          <div className="space-y-2.5">
-            {/* Oy oxiriga kutilyapti — lesson value, calendar-based */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => setHistoryOpen(true)}
-                  className="flex w-full cursor-pointer items-center justify-between rounded-md px-1 -mx-1 py-0.5 text-left text-sm transition-colors hover:bg-muted/60"
-                >
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <ArrowDownRight className="size-3.5 text-amber-500" />
-                    Oy oxiriga kutilyapti
-                  </span>
-                  <span className="font-medium">
-                    {fmt(d.forecast.expectedMonthEnd)} so&apos;m
-                  </span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-72">
-                Oy oxirigacha hamma dars jadval bo&apos;yicha o&apos;tsa,
-                o&apos;quvchilar jami shuncha darsga pul to&apos;lashi kerak.
-                <br />
-                <br />
-                Shundan {fmt(d.forecast.expectedHeld)} — allaqachon
-                o&apos;tilgan darslar, {fmt(d.forecast.expectedRemaining)} —
-                oy oxirigacha qolgani. Bayramlar, bekor qilingan darslar va
-                har guruhning dars kunlari hisobga olingan.
-                <br />
-                <br />
-                Bu pul qachon kelishini aytmaydi — faqat qancha
-                bo&apos;lishini. Kunma-kun qanday o&apos;zgarganini ko&apos;rish
-                uchun bosing.
-              </TooltipContent>
-            </Tooltip>
-            {/* Hisoblangan darslar — real billed (Σ LESSON_DEDUCTION) */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex justify-between text-sm cursor-help">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <Receipt className="size-3.5 text-sky-500" />
-                    Hisoblangan darslar
-                  </span>
-                  <span className="font-medium">
-                    {fmt(d.income.billed)} so&apos;m
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-64">
-                Shu davrda haqiqatda o&apos;tilgan darslarning puli.
-                O&apos;quvchi to&apos;lagan bo&apos;lsa — tushum, hali
-                to&apos;lamagan bo&apos;lsa — qarz. Ikkalasi ham shu summadan
-                chiqadi.
-              </TooltipContent>
-            </Tooltip>
-            {/* Tushgan tushum — real payments received */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex justify-between text-sm cursor-help">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
-                    <ArrowUpRight className="size-3.5 text-green-500" />
-                    Tushgan tushum
-                  </span>
-                  <span className="font-medium text-green-600">
-                    {fmt(d.income.actual)} so&apos;m
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-64">
-                Shu davrda kassaga haqiqatda kirgan pul — qaysi oy uchun
-                to&apos;langanidan qat&apos;i nazar. Eski qarzni yopgan
-                to&apos;lovlar ham shu yerda.
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          {d.monthCharges ? (
+            <div className="space-y-2.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex justify-between text-sm cursor-help">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <Receipt className="size-3.5 text-blue-500" />
+                      Hisoblandi
+                    </span>
+                    <span className="font-medium">
+                      {fmt(d.monthCharges.charged)} so&apos;m
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-72">
+                  Shu oy uchun o&apos;quvchilarga yozilgan oylik hisoblar
+                  yig&apos;indisi — chegirmalar bilan, ketgan va bekor qilingan
+                  darslar uchun qaytarilgani ayirilgan.
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex justify-between text-sm cursor-help">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <ArrowUpRight className="size-3.5 text-green-500" />
+                      To&apos;landi
+                    </span>
+                    <span className="font-medium text-green-600">
+                      {fmt(d.monthCharges.paid)} so&apos;m
+                      {d.monthCharges.paidPct !== null &&
+                        ` (${d.monthCharges.paidPct}%)`}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-72">
+                  Shu oy hisoblaridan to&apos;langan qismi (qarz kechirilgani
+                  ham shu yerda). To&apos;lov avval eng eski qarzni yopadi:
+                  eski qarzi bor o&apos;quvchining to&apos;lovi avval o&apos;sha
+                  qarzga ketadi.
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex justify-between text-sm cursor-help">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <ArrowDownRight className="size-3.5 text-red-500" />
+                      Qoldi
+                    </span>
+                    <span
+                      className={cn(
+                        "font-medium",
+                        d.monthCharges.unpaid > 0 && "text-red-600",
+                      )}
+                    >
+                      {fmt(d.monthCharges.unpaid)} so&apos;m
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-72">
+                  Shu oy hisoblaridan hali to&apos;lanmagan qismi.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {/* Oy oxiriga kutilyapti — lesson value, calendar-based */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryOpen(true)}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-1 -mx-1 py-0.5 text-left text-sm transition-colors hover:bg-muted/60"
+                  >
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <ArrowDownRight className="size-3.5 text-amber-500" />
+                      Oy oxiriga kutilyapti
+                    </span>
+                    <span className="font-medium">
+                      {fmt(d.forecast.expectedMonthEnd)} so&apos;m
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-72">
+                  Oy oxirigacha hamma dars jadval bo&apos;yicha o&apos;tsa,
+                  o&apos;quvchilar jami shuncha darsga pul to&apos;lashi kerak.
+                  <br />
+                  <br />
+                  Shundan {fmt(d.forecast.expectedHeld)} — allaqachon
+                  o&apos;tilgan darslar, {fmt(d.forecast.expectedRemaining)} —
+                  oy oxirigacha qolgani. Bayramlar, bekor qilingan darslar va
+                  har guruhning dars kunlari hisobga olingan.
+                  <br />
+                  <br />
+                  Bu pul qachon kelishini aytmaydi — faqat qancha
+                  bo&apos;lishini. Kunma-kun qanday o&apos;zgarganini ko&apos;rish
+                  uchun bosing.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </div>
 
         {/* Ustoz oyliklari — tanlangan oy uchun HISOBLANGAN (Excel "Oyliklar"
@@ -467,7 +531,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                   Ustoz oyliklari
                 </p>
                 <p className="text-[10px] text-muted-foreground leading-tight">
-                  {monthLabel(d.salary.computed?.month)} uchun hisoblangan
+                  {salaryMonthLabel} uchun hisoblangan
                   {isCeo && selectedBranch ? " · barcha filiallar" : ""}
                 </p>
               </div>
@@ -543,7 +607,10 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
           )}
         </div>
 
-        {/* Qarzdorlik majmui — backend forecast.outstandingReceivable + debtorExposure */}
+        {/* Qarzdorlik — bugungi qarz IKKI alohida raqamda (ADR-0059), ikkalasi
+            backend `debtSplit`dan. Ular hech qayerda qo'shilmaydi: shuning uchun
+            «Jami qarz» va «O'rtacha qarz» qatorlari yo'q. Javobda bo'linma
+            bo'lmasa (eski server yoki xato) ikkala qator «—», 🟡 qatori yo'q. */}
         <div className="rounded-xl border bg-card p-4 space-y-3">
           {/* Bu blok tanlangan davrga bog'liq EMAS — u bugungi holat. Yonidagi
               kartalar davr bo'yicha bo'lgani uchun buni aytib qo'yish shart,
@@ -561,8 +628,8 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
               </div>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="max-w-64">
-              O&apos;quvchilarning bugungi kundagi jami qarzi — hamma oylar
-              bo&apos;yicha to&apos;planib qolgani.
+              O&apos;quvchilarning bugungi kundagi qarzi — hamma oylar
+              bo&apos;yicha to&apos;planib qolgani, ikki alohida raqamda.
               <br />
               <br />
               Boshqa kartalardan farqi: bu yuqorida tanlangan davrga
@@ -570,22 +637,55 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
             </TooltipContent>
           </Tooltip>
           <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Jami qarz</span>
-              <span className="font-medium text-red-600">
-                {fmt(d.forecast.outstandingReceivable)} so&apos;m
-              </span>
+            {/* O'qiyotganlar qarzi — ostida: qarzning shu oy hisobigacha bo'lgan
+                qismi va qolgani (eski qarz). */}
+            <div className="space-y-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm cursor-help">
+                    <span className="text-muted-foreground">
+                      O&apos;qiyotganlar qarzi
+                    </span>
+                    <span
+                      className={cn(
+                        "ml-auto font-medium",
+                        debtSplit &&
+                          debtSplit.studying.total > 0 &&
+                          "text-red-600",
+                      )}
+                    >
+                      <DebtAmount debt={debtSplit?.studying ?? null} />
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-64">
+                  Faol guruhda o&apos;qiyotgan o&apos;quvchilarning qarzi. Shu
+                  oy — qarzning shu oy hisobigacha bo&apos;lgan qismi, eski
+                  qarz — qolgani.
+                </TooltipContent>
+              </Tooltip>
+              {debtSplit && (
+                <p className="text-right text-[10px] leading-tight text-muted-foreground">
+                  {`🟡 shu oy ${formatPrice(debtSplit.studying.currentMonth)} · 🔴 eski qarz ${formatPrice(debtSplit.studying.older)}`}
+                </p>
+              )}
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Qarzdor o&apos;quvchilar</span>
-              <span className="font-medium">{d.forecast.debtorExposure.count} ta</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">O&apos;rtacha qarz</span>
-              <span className="font-medium">
-                {fmt(d.forecast.debtorExposure.avgDebt)} so&apos;m
-              </span>
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm cursor-help">
+                  <span className="text-muted-foreground">
+                    O&apos;qimayotganlar qarzi
+                  </span>
+                  <span className="ml-auto font-medium">
+                    <DebtAmount debt={debtSplit?.notStudying ?? null} />
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-64">
+                Guruhsiz, muzlatilgan va ketgan o&apos;quvchilarning qarzi.
+                O&apos;qiyotganlar qarziga qo&apos;shilmaydi.
+              </TooltipContent>
+            </Tooltip>
             {canSeeWriteOffSummary && writeOffSummary && (
               <div className="mt-2 border-t pt-2">
                 <Tooltip>
@@ -665,6 +765,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
         startDate={startDate}
         endDate={endDate}
         expectedMonthEnd={d.forecast.expectedMonthEnd}
+        monthCharges={d.monthCharges}
         onSelectKpi={setChartKey}
       />
       )}
@@ -680,6 +781,23 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
       />
       )}
     </div>
+  );
+}
+
+/** «X so'm (N ta)» for one of the two debts, or «—» when the server sent no split. */
+function DebtAmount({
+  debt,
+}: {
+  debt: { total: number; count: number } | null;
+}) {
+  if (!debt) return "—";
+  return (
+    <>
+      {formatPrice(debt.total)} so&apos;m
+      <span className="ml-1 text-xs font-normal text-muted-foreground">
+        ({formatNumber(debt.count)} ta)
+      </span>
+    </>
   );
 }
 
@@ -708,9 +826,11 @@ function KpiCard({
           onClick={onClick}
           className="rounded-xl border bg-card p-4 space-y-1.5 hover:shadow-md hover:border-primary/30 transition-all text-left w-full cursor-pointer"
         >
-          <div className="flex items-center gap-2 text-muted-foreground">
+          {/* A long name wraps to a second line rather than being cut off (it
+              was at 640 and 768 px); the icon stays level with the first. */}
+          <div className="flex items-start gap-2 text-muted-foreground">
             <Icon className="size-4 shrink-0" />
-            <span className="text-xs font-medium truncate">{label}</span>
+            <span className="text-xs font-medium line-clamp-2">{label}</span>
           </div>
           <p className={`text-lg font-bold leading-tight ${color}`}>{value}</p>
           {subtitle && (

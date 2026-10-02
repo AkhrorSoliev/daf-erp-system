@@ -17,8 +17,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/use-auth";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+import { canOpenEmployeeSettings } from "@/lib/settings-nav";
 
 interface SearchItem {
   id: number | string;
@@ -73,6 +75,12 @@ const typeKeys = Object.keys(typeConfig);
 export function SearchResultsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const user = useAuth((s) => s.user);
+  // "users" are staff without the teacher role. Their only page is employee
+  // settings, which sends an Administrator back to /settings.
+  const visibleTypeKeys = canOpenEmployeeSettings(user?.roles.map((r) => r.id) ?? [])
+    ? typeKeys
+    : typeKeys.filter((key) => key !== "users");
 
   const q = searchParams.get("q") || "";
   const type = searchParams.get("type") || "";
@@ -142,7 +150,7 @@ export function SearchResultsPage() {
   }, [q, type, pageParam]);
 
   const totalPages = result ? Math.ceil(result.total / 20) : 0;
-  const currentType = typeConfig[type];
+  const currentType = visibleTypeKeys.includes(type) ? typeConfig[type] : undefined;
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-6">
@@ -160,7 +168,7 @@ export function SearchResultsPage() {
 
         {/* Type tabs */}
         <div className="flex gap-2 flex-wrap">
-          {typeKeys.map((key) => {
+          {visibleTypeKeys.map((key) => {
             const config = typeConfig[key];
             const Icon = config.icon;
             const isActive = type === key;

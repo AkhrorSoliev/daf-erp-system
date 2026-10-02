@@ -208,6 +208,108 @@ describe('paymentReminderSection', () => {
     expect(textOf(blocks).match(/Ertaga/g)).toHaveLength(1);
     expect(blocks.flatMap((x) => x.itemIds)).toEqual([...a.ids, ...b.ids]);
   });
+
+  describe('under the least share (ADR-0064)', () => {
+    const half = (over: Partial<PaymentReminderDigestPayload> = {}) =>
+      reminder({
+        periodMonth: 11,
+        lessonDate: '2026-11-04',
+        minDue: 225000,
+        minPaidPercent: 50,
+        ...over,
+      });
+
+    it('asks for the whole debt first, then names what admits to the lesson', () => {
+      const blocks = paymentReminderSection([half()], 450000, event);
+      expect(textOf(blocks)).toBe(
+        [
+          "⏰ <b>To'lov eslatmasi</b>",
+          "Ertaga (04.11.2026) noyabrning 2-darsi bo'ladi.",
+          "To'lash kerak: <b>450 000 so'm</b>",
+          "Darsga kirish uchun kamida: 225 000 so'm",
+          '',
+          "Shartnomaga ko'ra 2-darsdan boshlab darslarga oy to'lovining kamida yarmi to'langandan keyin qatnashish mumkin. Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha to'liq qilishingizni so'raymiz.",
+        ].join('\n'),
+      );
+    });
+
+    it('never asks for more than is owed now', () => {
+      const text = textOf(paymentReminderSection([half()], 100000, event));
+      expect(text).toContain("Darsga kirish uchun kamida: 100 000 so'm");
+    });
+
+    it('names another share by its percent', () => {
+      const text = textOf(
+        paymentReminderSection([half({ minPaidPercent: 40 })], 450000, event),
+      );
+      expect(text).toContain("oy to'lovining kamida 40% i to'langandan keyin");
+    });
+
+    it('names no share when the lessons held are what is short', () => {
+      const text = textOf(
+        paymentReminderSection(
+          [half({ minDue: 69230, minPaidPercent: undefined })],
+          103845,
+          event,
+        ),
+      );
+      expect(text).toContain("Darsga kirish uchun kamida: 69 230 so'm");
+      expect(text.split('\n').pop()).toBe(
+        "Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha to'liq qilishingizni so'raymiz.",
+      );
+    });
+  });
+
+  it('contract 3.7: says how far the payments reach and by when to pay the rest', () => {
+    const row = reminder({
+      periodMonth: 11,
+      lessonDate: '2026-11-16',
+      paidThrough: { through: '2026-11-13', queuedFor: '2026-11-13' },
+    });
+    expect(textOf(paymentReminderSection([row], 225000, event))).toBe(
+      [
+        "⏰ <b>To'lov eslatmasi</b>",
+        "Noyabr oyi uchun to'lovingiz 13.11.2026 dagi darsgacha yetadi.",
+        "Qolgan to'lov: <b>225 000 so'm</b>",
+        '',
+        "Darslaringiz uzilib qolmasligi uchun to'lovni 16.11.2026 dagi darsgacha amalga oshirishingizni so'raymiz.",
+      ].join('\n'),
+    );
+  });
+});
+
+describe('monthlyBillSection under the least share (ADR-0064)', () => {
+  const november = (over: Partial<MonthlyChargeDigestPayload> = {}) =>
+    bill({
+      periodMonth: 11,
+      price: 450000,
+      chargedAmount: 450000,
+      dueDate: '2026-11-04',
+      minShare: 225000,
+      ...over,
+    });
+  const lines = (balance: number) =>
+    textOf(monthlyBillSection([november()], balance, '2026-11-01', event))
+      .split('\n')
+      .slice(-2);
+
+  it('asks for the whole month by the 2nd lesson, the least share only if that is not possible', () => {
+    expect(lines(-450000)).toEqual([
+      'Muddat: <b>04.11.2026</b> — oyning 2-darsigacha',
+      "Imkoni bo'lmasa, kamida 225 000 so'm; qolgani — to'langan darslar tugaguncha",
+    ]);
+  });
+
+  it('adds the older debt to the least share', () => {
+    expect(lines(-550000)[1]).toContain("kamida 325 000 so'm");
+  });
+
+  it('counts what was carried over: with half already paid only the 2nd-lesson term is named', () => {
+    expect(lines(-207692)).toEqual([
+      "Jami to'lash kerak: <b>207 692 so'm</b>",
+      'Muddat: <b>04.11.2026</b> — oyning 2-darsigacha',
+    ]);
+  });
 });
 
 describe('monthlyPaymentClosing', () => {

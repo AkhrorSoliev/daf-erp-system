@@ -18,6 +18,9 @@ export function departureMoneyNote(
   }
   if (outcome.refunded <= 0) return null;
   const sum = `${formatSom(outcome.refunded)} so'm`;
+  if (outcome.trial) {
+    return `Sinov darsi (3.5): oyning puli to'liq qaytarildi — ${sum}`;
+  }
   switch (outcome.policy) {
     case 'QUALITY_CLAIM':
       return `Sifat bo'yicha shikoyat: oyning ${outcome.lessons} darsi puli to'liq qaytarildi — ${sum}`;

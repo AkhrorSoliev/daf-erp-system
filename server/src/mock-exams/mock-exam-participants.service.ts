@@ -4,7 +4,12 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { MockExamStatus, Prisma, StudentStatus } from '@prisma/client';
+import {
+  MockExamStatus,
+  MockRegistrationChannel,
+  Prisma,
+  StudentStatus,
+} from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -195,7 +200,7 @@ export class MockExamParticipantsService {
     const lastName = dto.lastName.trim();
     if (!firstName || !lastName) {
       throw new BadRequestException(
-        "Ism va familya bo'sh bo'lishi mumkin emas",
+        "Ism va familiya bo'sh bo'lishi mumkin emas",
       );
     }
 
@@ -267,6 +272,7 @@ export class MockExamParticipantsService {
           examTime: dto.examTime ?? null,
           feeAmount,
           companyId,
+          registeredVia: MockRegistrationChannel.ADMIN,
           telegramChatId: dto.telegramChatId?.trim() || null,
           firstName,
           lastName,

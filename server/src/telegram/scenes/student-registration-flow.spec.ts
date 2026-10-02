@@ -1,6 +1,7 @@
 import { registerStudentFromTelegram } from './student-registration-flow';
 import { SELF_SIGNUP_SOURCE } from '../../common/student-origin';
 import { DEFAULT_COMPANY_ID } from '../constants';
+import { STUDENT_SELF_ENROLLED } from '../../common/events/self-enrollment.events';
 
 jest.mock('bcryptjs', () => ({ hash: jest.fn().mockResolvedValue('hashed') }));
 
@@ -28,6 +29,7 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
   let prisma: any;
   let leadOrigin: { recordSelfSignupOrigin: jest.Mock };
   let history: any;
+  let events: { emitAsync: jest.Mock };
 
   beforeEach(() => {
     tx = {
@@ -60,6 +62,7 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
         .mockResolvedValue({ kind: 'created', leadId: 'lead-1' }),
     };
     history = { recordCreate: jest.fn().mockResolvedValue(undefined) };
+    events = { emitAsync: jest.fn().mockResolvedValue([]) };
   });
 
   const run = () =>
@@ -69,6 +72,7 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
       leadOrigin as never,
       data,
       '555000',
+      events,
     );
 
   it('writes the join day as the enrollment start date', async () => {
@@ -87,6 +91,18 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
         // 20:30 UTC on 24.09 is already 25.09 in Tashkent.
         startDate: new Date('2026-09-25T00:00:00.000Z'),
       }),
+    });
+  });
+
+  it('asks billing to charge the join month as soon as the enrollment exists', async () => {
+    // The admin door charges inside its own transaction; this one waited for
+    // the 04:00 daily run, so five students who signed up on 30.09.2026 after
+    // that run were never billed for September.
+    await run();
+
+    expect(events.emitAsync).toHaveBeenCalledWith(STUDENT_SELF_ENROLLED, {
+      enrollmentId: 'enr-1',
+      companyId: DEFAULT_COMPANY_ID,
     });
   });
 

@@ -12,9 +12,14 @@ import {
 import {
   AttendanceStatus,
   EnrollmentStatus,
+  PaymentModel,
   PaymentStatus,
   RefundStatus,
 } from '@prisma/client';
+
+/** Refund quote for a student on a monthly course (spec A3.5, contract 6.2). */
+export const MONTHLY_REFUND_WARNING =
+  "Oylik to'lovda o'qiyotgan o'quvchiga faqat balansdagi ortiqcha pul qaytariladi. Shu oyning puli guruhdan chiqarilganda shartnomaning 6.2-bandi bo'yicha hisoblanadi.";
 
 @Injectable()
 export class RefundsEligibilityService {
@@ -168,10 +173,25 @@ export class RefundsEligibilityService {
     // warning fired for nearly everyone and told nobody anything. There is no
     // total-lessons figure anywhere in the schema to divide by, so the honest
     // move is to say something true instead.
-    const warning =
-      prepaidLessons === 0 && student.balance > 0
-        ? "Oldindan to'langan darsi yo'q — faqat balansdagi puldan qaytariladi"
-        : null;
+    //
+    // Whether there is a warning depends on the quote; the payment model only
+    // picks its sentence. "Only the balance is refunded" is true exactly when
+    // the quote (`maxRefundable`) is made of the balance alone: no prepaid
+    // lessons and a positive balance. A monthly course writes no prepaid
+    // counter, so the pack sentence ("no prepaid lessons") would misdescribe a
+    // monthly student; they get the contract's rule instead (A3.5): this
+    // month's money is settled by clause 6.2 when the student leaves the
+    // group. A monthly enrollment that still carries a stale pack counter has
+    // its value inside the quote, so it gets no warning: the text would
+    // otherwise contradict the ceiling `quickRefund` follows.
+    const isMonthly =
+      enrollment.group.course.paymentModel === PaymentModel.MONTHLY;
+    const balanceOnly = prepaidLessons === 0 && student.balance > 0;
+    const warning = !balanceOnly
+      ? null
+      : isMonthly
+        ? MONTHLY_REFUND_WARNING
+        : "Oldindan to'langan darsi yo'q — faqat balansdagi puldan qaytariladi";
 
     return {
       enrollmentId: enrollment.id,
@@ -304,6 +324,7 @@ export class RefundsEligibilityService {
                   name: true,
                   price: true,
                   lessonPaymentCount: true,
+                  paymentModel: true,
                 },
               },
             },
@@ -345,6 +366,7 @@ export class RefundsEligibilityService {
                 name: true,
                 price: true,
                 lessonPaymentCount: true,
+                paymentModel: true,
               },
             },
           },

@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { formatPrice } from "@/lib/format-utils";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { aggregateLessonModifications } from "./lesson-modifications/aggregate";
 import {
@@ -171,13 +172,15 @@ export function LessonChangesTab({ group }: Props) {
 
   const performDelete = async (
     url: string,
-    successMessage: string,
+    successMessage: string | ((data: unknown) => string),
     rowKey?: string,
   ) => {
     if (rowKey) setBusyRowKey(rowKey);
     try {
-      await api.delete(url);
-      toast.success(successMessage);
+      const { data } = await api.delete(url);
+      toast.success(
+        typeof successMessage === "string" ? successMessage : successMessage(data),
+      );
       refetchAll();
     } catch (err) {
       toast.error(getErrorMessage(err, "O'chirishda xatolik"));
@@ -203,11 +206,22 @@ export function LessonChangesTab({ group }: Props) {
     setConfirmDelete({
       title: "Bekor qilingan dars yozuvini o'chirmoqchimisiz?",
       description:
-        "Diqqat: bu davomat va to'lovni tiklamaydi. Agar dars haqiqatda o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak.",
+        "Bekor qilishda o'quvchilarga qaytarilgan dars puli ulardan qayta yechiladi; shundan beri muzlatilgan yoki guruhdan chiqqan o'quvchining puli qoladi. Davomat tiklanmaydi. Agar dars vaqti o'tib ketgan bo'lsa, u yana «Dars bo'ldimi?» savoliga qaytadi.",
       onConfirm: () =>
         performDelete(
           `/lesson-cancellations/${id}`,
-          "Bekor qilingan dars yozuvi o'chirildi",
+          (data) => {
+            const r = data as {
+              restoredStudents?: number;
+              restoredAmount?: number;
+              keptStudents?: number;
+            };
+            if (!r?.restoredAmount) return "Bekor qilingan dars yozuvi o'chirildi";
+            const kept = r.keptStudents
+              ? `, ${r.keptStudents} o'quvchida qoldi`
+              : "";
+            return `Bekor qilish o'chirildi: ${r.restoredStudents} o'quvchidan ${formatPrice(r.restoredAmount)} so'm qayta yechildi${kept}`;
+          },
           findDateKeyForCancellation(id),
         ),
     });
@@ -231,7 +245,7 @@ export function LessonChangesTab({ group }: Props) {
     setConfirmDelete({
       title: "Ko'chirish yozuvini o'chirmoqchimisiz?",
       description:
-        "Diqqat: bu ikkala sanada (asl va yangi) davomatni avtomatik tiklamaydi. Agar dars haqiqatan asl kunda o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak.",
+        "Diqqat: bu ikkala sanada (asl va yangi) davomatni avtomatik tiklamaydi. Agar asl dars vaqti o'tib ketgan bo'lsa, u yana «Dars bo'ldimi?» savoliga qaytadi.",
       onConfirm: () =>
         performDelete(
           `/lesson-reschedules/${id}`,

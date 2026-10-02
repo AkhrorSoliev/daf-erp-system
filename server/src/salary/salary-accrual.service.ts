@@ -7,6 +7,7 @@ import {
   TransactionType,
 } from '@prisma/client';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
+import { isLessonPayForfeited } from '../unmarked-lessons/forfeited-lessons';
 
 /**
  * Emitted (collected, not sent) when an accrual is carried over into the
@@ -57,9 +58,11 @@ export class SalaryAccrualService {
    * `groupId DESC` is not portable across drivers.
    *
    * FIXED_PER_STUDENT semantics: the configured `value` represents what the
-   * teacher earns from one student over one full cycle (lessonPaymentCount
-   * lessons). Per-lesson is `value / lessonPaymentCount` — NOT `value`,
-   * which would over-pay by N×.
+   * teacher earns from one student over one full cycle. Per-lesson is
+   * `value / divisor` — NOT `value`, which would over-pay by N×. The divisor
+   * is `lessonDivisor` when the caller passes it: on a MONTHLY course the
+   * month's planned lessons, so a 13- and a 14-lesson month pay the same
+   * (ADR-0050). Otherwise it is the course's `lessonPaymentCount` (a pack).
    */
   async createAccrual(params: {
     teacherId: number;
@@ -107,6 +110,16 @@ export class SalaryAccrualService {
     }
 
     const db = params.tx ?? this.prisma;
+
+    // ADR-0054: a lesson nobody marked before it ended never earns the teacher
+    // anything — not live, not deferred, not as a centre top-up. Every accrual
+    // write passes through here, so this one check covers them all.
+    if (await isLessonPayForfeited(db, params.groupId, params.lessonDate)) {
+      this.logger.log(
+        `Accrual skipped for teacher ${params.teacherId}: lesson ${params.groupId} ${params.lessonDate.toISOString().slice(0, 10)} was not marked in time (ADR-0054).`,
+      );
+      return null;
+    }
 
     // Period-closed policy: if the lesson date falls inside a SalaryPayment
     // period that has ALREADY BEEN SETTLED for this teacher — i.e. the payroll

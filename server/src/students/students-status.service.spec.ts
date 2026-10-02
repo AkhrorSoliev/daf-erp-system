@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { StudentsStatusService } from './students-status.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -99,6 +99,7 @@ describe('StudentsStatusService', () => {
           provide: MonthlyChargeService,
           useValue: (monthlyCharge = {
             reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+            assertTrialLessonAnswered: jest.fn().mockResolvedValue(undefined),
           }),
         },
       ],
@@ -332,6 +333,29 @@ describe('StudentsStatusService', () => {
       });
     });
 
+    it("waits for «Dars bo'ldimi?» when it decides a trial lesson, before anything is written", async () => {
+      // The cascade only logs a failed money step, so the check comes first.
+      monthlyCharge.assertTrialLessonAnswered.mockRejectedValueOnce(
+        new BadRequestException("Avval «Dars bo'ldimi?» savoliga javob bering"),
+      );
+
+      await expect(expel()).rejects.toThrow("Avval «Dars bo'ldimi?»");
+      expect(monthlyCharge.assertTrialLessonAnswered).toHaveBeenCalledWith(
+        prisma,
+        { studentId, companyId },
+      );
+      expect(prisma.student.update).not.toHaveBeenCalled();
+      expect(cascadeMock.cascade).not.toHaveBeenCalled();
+    });
+
+    it("reads «Dars bo'ldimi?» only once the student is found and the caller may touch him", async () => {
+      // Another company's (or branch's) student: 404/403, never his lessons.
+      prisma.student.findFirst.mockResolvedValueOnce(null);
+
+      await expect(expel()).rejects.toBeInstanceOf(NotFoundException);
+      expect(monthlyCharge.assertTrialLessonAnswered).not.toHaveBeenCalled();
+    });
+
     it('refuses a chosen policy from anyone else before anything is written', async () => {
       // The first read is the policy check: an administrator is not found.
       prisma.user.findFirst.mockResolvedValueOnce(null);
@@ -454,6 +478,7 @@ describe('StudentsStatusService.pauseForAbsence', () => {
     // chaqirilmaydi — lekin u bo'lmasa servis umuman qurilmaydi.
     const monthlyChargeService = {
       reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+      assertTrialLessonAnswered: jest.fn().mockResolvedValue(undefined),
     };
     const service = new StudentsStatusService(
       prisma as never,
@@ -746,6 +771,7 @@ describe('StudentsStatusService — expelling a frozen student', () => {
     };
     monthlyCharge = {
       reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+      assertTrialLessonAnswered: jest.fn().mockResolvedValue(undefined),
       restoreChargeForReturn: jest.fn().mockResolvedValue(null),
     };
 

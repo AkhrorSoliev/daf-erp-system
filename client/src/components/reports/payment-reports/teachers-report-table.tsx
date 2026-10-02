@@ -22,7 +22,6 @@ export interface TeacherRow {
   groupCount: number;
   courses: string[];
   studentCount: number;
-  totalPayments: number;
   debtAmount: number;
 }
 
@@ -77,7 +76,6 @@ export function TeachersReportTable({
               <TableHead className="text-center">Guruhlari</TableHead>
               <TableHead>Kurslar</TableHead>
               <TableHead className="text-center">Talabalar</TableHead>
-              <TableHead className="text-right">Jami to&apos;lov</TableHead>
               <TableHead className="text-right">Qarzdorlik</TableHead>
             </TableRow>
           </TableHeader>
@@ -85,7 +83,7 @@ export function TeachersReportTable({
             {view === "loading" ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={6}>
                     <Skeleton className="h-6 w-full" />
                   </TableCell>
                 </TableRow>
@@ -93,7 +91,7 @@ export function TeachersReportTable({
             ) : view === "error" ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={6}
                   className="text-center py-8 text-sm text-muted-foreground"
                 >
                   {getErrorMessage(
@@ -105,7 +103,7 @@ export function TeachersReportTable({
             ) : !data || data.teachers.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={6}
                   className="text-center py-8 text-sm text-muted-foreground"
                 >
                   O&apos;qituvchilar topilmadi
@@ -141,9 +139,6 @@ export function TeachersReportTable({
                   </TableCell>
                   <TableCell className="text-center tabular-nums">
                     {t.studentCount}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-medium text-green-600 dark:text-green-400">
-                    {fmt(t.totalPayments)} so&apos;m
                   </TableCell>
                   <TableCell
                     className={`text-right tabular-nums ${

@@ -551,7 +551,7 @@ export function debtFlowSheet(wb: Workbook, history: any) {
   sheetNotes(ws, [
     'Har bir so‘m FAQAT bir marta va faqat o‘zi harakatlangan oyga yoziladi, shuning uchun oqim ustunlari qo‘shiladi.',
     'Oy oxiridagi qarz — muzlagan raqam: o‘tgan oy uchun keyin o‘zgarmaydi. Joriy oy bundan mustasno.',
-    '«Boshqa» — tuzatish (ADJUSTMENT), boshlang‘ich balans va pul qaytarish: qarzni kamaytiradi, lekin markaz yiqqan pul emas.',
+    '«Boshqa» — qo‘lda tuzatish, boshlang‘ich balans, pul qaytarish va bekor qilingan qarz kechirish: qarzni kamaytiradi, lekin markaz yiqqan pul emas.',
     'Qarz = Σ max(0, −balans). Balans manfiydan musbatga o‘tsa, faqat manfiy qismi hisoblanadi.',
   ]);
 }
@@ -645,9 +645,9 @@ export function monthlyDebtSheet(wb: Workbook, debtHistory: any) {
     [
       '"Oy oxiridagi qarz" — o‘sha oy oxirida (Toshkent) balansi manfiy bo‘lgan BARCHA o‘quvchilar qarzi (statusdan qat‘i nazar). Bu raqam muzlagan — keyin o‘zgarmaydi.',
       '"Qarzdorlar" — o‘sha oyni qarz bilan yopgan o‘quvchilar soni (muzlagan). "Qolgan qarzdorlar" — shulardan hozir HALI qarzi qolganlar soni (to‘liq to‘lagan yoki kechirilganlar chiqib ketadi).',
-      '"Undirildi" — o‘sha oy qarzdorlarining keyingi naqd to‘lovlari, har o‘quvchida o‘sha oy qarzi bilan cheklangan (tizim eng eski qarzdan yopadi). "Kechirilgan" — DEBT_WRITE_OFF (naqdsiz, alohida).',
+      '"Undirildi" — o‘sha oy qarzdorlarining keyingi naqd to‘lovlari, har o‘quvchida o‘sha oy qarzi bilan cheklangan (tizim eng eski qarzdan yopadi). "Kechirilgan" — qarz kechirish (naqdsiz, alohida).',
       '"Qolgan qarz" = Oy oxiridagi qarz − Undirildi − Kechirilgan. "Undirish %" = Undirildi ÷ Oy oxiridagi qarz.',
-      'Ledgerdan (Transaction) qayta hisoblangan — kompaniya bo‘yicha (filial kesimi yo‘q).',
+      'Hisob yozuvlaridan qayta hisoblangan — kompaniya bo‘yicha (filial kesimi yo‘q).',
     ],
     9,
   );
@@ -883,14 +883,14 @@ export function reconciliationSheet(
     { width: 10 },
     { width: 40 },
   ];
-  sheetTitle(ws, 'Tekshiruv (reconciliation)', period, 6);
+  sheetTitle(ws, 'Tekshiruv', period, 6);
 
   const opByCat = (pl?.operatingExpenses?.byCategory ?? []).reduce(
     (s: number, e: any) => s + (e.amount ?? 0),
     0,
   );
 
-  sectionHeader(ws, 'Ties (mos kelishi)', 6);
+  sectionHeader(ws, 'Mos kelishi', 6);
   tableHeader(ws, [
     'Tekshiruv',
     'Kutilgan',
@@ -901,10 +901,10 @@ export function reconciliationSheet(
   ]);
   checkRow(
     ws,
-    'To‘lovlar = Foyda-zarar daromad',
+    'To‘lovlar = Foyda va zarar daromad',
     pl?.revenue?.total ?? 0,
     payments?.total ?? 0,
-    'Cash tie-out.',
+    'Kassa mosligi.',
   );
   if (includePointInTime)
     checkRow(
@@ -915,19 +915,19 @@ export function reconciliationSheet(
     );
   checkRow(
     ws,
-    'Xarajatlar = P&L (operatsion + avans)',
+    'Xarajatlar = Foyda va zarar (operatsion + avans)',
     opByCat + (pl?.costOfServices?.teacherAdvances ?? 0),
     expenses?.total ?? 0,
   );
   checkRow(
     ws,
-    'O‘quvchi balansi footing',
+    'O‘quvchi balansi aylanmasi',
     (recon?.student?.opening ?? 0) + (recon?.student?.activityTotal ?? 0),
     recon?.student?.closing ?? 0,
   );
   checkRow(
     ws,
-    'GL recon: Σ balans = Σ ledger (kompaniya)',
+    'Hisob mosligi: Σ balans = Σ yozuvlar (kompaniya)',
     recon?.gl?.storedBalanceSum ?? 0,
     recon?.gl?.ledgerSum ?? 0,
   );
@@ -942,7 +942,7 @@ export function reconciliationSheet(
       ws,
       'Aktiv − (Passiv + Kapital) farqi',
       balGap,
-      'Tizim ikki yozuvli GL emas — 0 ga yaqin bo‘lsa hammasi joyida.',
+      'Tizim ikki yozuvli buxgalteriya emas — 0 ga yaqin bo‘lsa hammasi joyida.',
     );
   }
 
@@ -952,7 +952,7 @@ export function reconciliationSheet(
   const cashPaid =
     (pl?.costOfServices?.teacherSalaries ?? 0) +
     (pl?.operatingExpenses?.adminSalaries ?? 0);
-  sectionHeader(ws, 'Oylik: hisoblangan vs naqd to‘langan (ma‘lumot)', 6);
+  sectionHeader(ws, 'Oylik: hisoblangan va naqd to‘langan (ma‘lumot)', 6);
   kvRow(
     ws,
     'Hisoblangan oylik (sof, shu oy)',
@@ -961,7 +961,7 @@ export function reconciliationSheet(
   );
   kvRow(
     ws,
-    'Naqd to‘langan oylik (P&L)',
+    'Naqd to‘langan oylik (Foyda va zarar)',
     cashPaid,
     'Shu davrda haqiqatan pul chiqarilgan oylik.',
   );
@@ -969,20 +969,24 @@ export function reconciliationSheet(
   // Sof foyda (aniq) — footing so the «Sof foyda» sheet's arithmetic is auditable.
   if (np) {
     const footed =
-      np.revenue -
+      np.revenue +
+      np.balanceWithdrawals -
       np.teacherSalary -
       np.adminSalary -
       np.operatingExpenses -
       np.refunds;
-    sectionHeader(ws, 'Sof foyda (aniq) — footing', 6);
+    sectionHeader(ws, 'Sof foyda (aniq) — yig‘indi tekshiruvi', 6);
     kvRow(ws, 'Tushum', np.revenue);
+    if (np.balanceWithdrawals !== 0) {
+      kvRow(ws, '+ Balansdan yechib olingan', np.balanceWithdrawals);
+    }
     kvRow(ws, `− Ustoz oyligi (${np.teacherSalaryBasis})`, np.teacherSalary);
     kvRow(ws, '− Admin oyligi', np.adminSalary);
     kvRow(ws, '− Operatsion xarajat (avanssiz)', np.operatingExpenses);
-    kvRow(ws, '− Qaytarishlar (refund)', np.refunds);
+    kvRow(ws, '− Qaytarishlar', np.refunds);
     checkRow(
       ws,
-      '= Sof foyda (footing)',
+      '= Sof foyda (yig‘indi)',
       footed,
       np.netProfit,
       'Komponentlar yig‘indisi «Sof foyda» bo‘limidagi raqamga teng bo‘lishi kerak.',
@@ -1010,9 +1014,9 @@ export function reconciliationSheet(
   sheetNotes(
     ws,
     [
-      'Bu bo‘lim hisobotning har bir raqami bir-biriga MOS kelishini isbotlaydi (audit).',
+      'Bu bo‘lim hisobotning har bir raqami bir-biriga MOS kelishini isbotlaydi.',
       'MOS = to‘g‘ri; XATO = nomuvofiqlik (farq ko‘rsatiladi va tuzatilishi kerak).',
-      'Aylanma (roll-forward): oy boshidagi qoldiq + davr harakatlari = oy oxiridagi qoldiq — to‘g‘ri qo‘shilib chiqishi ("footing") kerak.',
+      'Aylanma: oy boshidagi qoldiq + davr harakatlari = oy oxiridagi qoldiq — to‘g‘ri qo‘shilib chiqishi kerak.',
       'O‘quvchi balansi aylanmasidagi satrlar: Hisoblangan darslar = darslar uchun yechilgan pul; Hisobdan chiqarish = kechirilgan qarz; Boshlang‘ich balans = tizimga o‘tishda kiritilgan; Balans yechish = ortiqcha balansni daromadga o‘tkazish; Boshqa = mayda tuzatishlar.',
       'Oylik "hisoblangan" va "naqd to‘langan" farq qiladi — chunki oylik keyingi oy boshida to‘lanadi (bu XATO emas).',
     ],

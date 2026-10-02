@@ -1,17 +1,23 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
+  AttendanceStatus,
   EnrollmentStatus,
   GroupStatus,
   MonthlyChargeStatus,
   PaymentModel,
   Prisma,
+  StudentStatus,
+  UnmarkedLessonStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { SettingsService } from '../settings/settings.service';
+import { SalaryAccrualService } from '../salary/salary-accrual.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
-import { buildHolidayDateSet } from '../holidays/holiday-date-set';
+import { rosterOnDate } from '../attendance/shared/roster-on-date';
+import { lessonKey } from '../unmarked-lessons/forfeited-lessons';
 import { lessonDatesInMonth } from './planned-lessons';
+import { resolveMonthPlan } from './month-plan';
 import {
   applyDiscount,
   applyLessonCredit,
@@ -23,14 +29,20 @@ import { chargeStartDate } from './charge-start-date';
 import { DepartureReleaseInput } from './departure-release';
 import {
   releaseCancelledLesson,
+  restoreCancelledLesson,
   type CancelledLessonReleaseResult,
+  type CancelledLessonRestoreResult,
 } from './cancelled-lesson-release';
 import {
+  AwaitingLesson,
   CONTRACT_62_START_DAY,
   DEPARTURE_POLICIES,
   DeparturePolicy,
   HeldShare,
   policyRelease,
+  trialAwaitsAnswerText,
+  TRIAL_LESSON_MAX_HELD,
+  TRIAL_LESSON_START_DAY,
 } from './departure-policy';
 
 /** Hisob yaratish uchun kerakli yozilish shakli. */
@@ -60,6 +72,21 @@ export interface ChargeableEnrollment {
   };
 }
 
+/**
+ * `planChargeAmounts` natijasi: oyning rejasi, qoplangan sanalar va
+ * summalar — kredit va yozuvlardan oldin.
+ */
+export interface PlannedChargeAmounts {
+  plannedLessons: number;
+  coveredDates: string[];
+  coveredLessons: number;
+  monthlyPrice: number;
+  perLessonCostFull: number;
+  grossAmountFull: number;
+  grossAmountStudent: number;
+  perLessonCostStudent: number;
+}
+
 /** What `reverseChargeForDeparture` did (contract 6.2, ADR-0043). */
 export interface DepartureOutcome {
   refunded: number;
@@ -68,6 +95,8 @@ export interface DepartureOutcome {
   share: HeldShare;
   /** True when rule 6.2 kept the money and nothing was written. */
   withheld: boolean;
+  /** True when contract 3.5 (trial lesson) returned the whole month. */
+  trial: boolean;
 }
 
 /** `previewDepartureOutcomes`: the month's facts and each policy's result. */
@@ -84,12 +113,43 @@ export interface DepartureOutcomesPreview {
   threshold: number;
   /** Whether rule 6.2 applies to this departure day at all. */
   contractApplies: boolean;
+  /**
+   * Contract 3.5: the student has held at most one lesson in all groups, so
+   * leaving now returns the whole month under every policy.
+   */
+  trialLesson: boolean;
+  /**
+   * Contract 3.5 waits for «Dars bo'ldimi?» answers (`trialAwaitsAnswerText`):
+   * the departure is refused until then. Null when nothing waits.
+   */
+  trialAwaitsAnswer: string | null;
   chargedAmount: number;
   outcomes: Record<
     DeparturePolicy,
     { lessons: number; amount: number; withheld: boolean }
   >;
 }
+
+/** An enrollment loaded to be charged one month on its own. */
+const CHARGEABLE_ENROLLMENT_SELECT = {
+  id: true,
+  studentId: true,
+  groupId: true,
+  startDate: true,
+  createdAt: true,
+  student: { select: { discountPercent: true } },
+  group: {
+    select: {
+      id: true,
+      branchId: true,
+      companyId: true,
+      statusEnum: true,
+      startDate: true,
+      exactDays: true,
+      course: { select: { price: true, paymentModel: true } },
+    },
+  },
+} satisfies Prisma.EnrollmentSelect;
 
 /**
  * Oylik to'lov hisoblarini yaratadi va boshqaradi.
@@ -113,6 +173,7 @@ export class MonthlyChargeService {
     private prisma: PrismaService,
     private transactionsWrite: TransactionsWriteService,
     private settingsService: SettingsService,
+    private salaryAccrual: SalaryAccrualService,
   ) {}
 
   /**
@@ -182,83 +243,24 @@ export class MonthlyChargeService {
       return existing;
     }
 
-    const { excludedDates, addedDates } = await this.resolveMonthPlan(
+    const planned = await this.planChargeAmounts(
       tx,
-      enr.groupId,
-      enr.group.branchId,
+      enr,
       periodYear,
       periodMonth,
-    );
-
-    // Guruhning oyi — narxni belgilaydi va MUZLATILADI.
-    const groupDates = lessonDatesInMonth({
-      year: periodYear,
-      month: periodMonth,
-      exactDays: enr.group.exactDays,
-      excludedDates,
-      addedDates,
-    });
-    const plannedLessons = groupDates.length;
-    if (plannedLessons === 0) return null;
-
-    // O'quvchining ulushi — o'rtada qo'shilgan bo'lsa kamroq. SANALARNING
-    // O'ZI ham saqlanadi: `reverseChargeForDeparture` "ketgan kungacha
-    // nechtasi qoplangan edi" degan savolga JONLI kalendardan emas, shu
-    // muzlatilgan ro'yxatdan javob berishi kerak (schema izohi).
-    const fromDate = chargeStartDate(enr);
-    // Ko'chirilgan dars `coveredDates` ga ASL kuni bilan emas, o'zi ROSTDAN
-    // o'tiladigan kuni bilan tushadi — reja bilan bir xil kalendardan.
-    // Aks holda oy o'rtasida ketgan o'quvchi hali o'tilmagan darsni
-    // "qoplangan" deb qoldirib ketardi: `reverseChargeForDeparture` faqat
-    // `d > ketgan kun` bo'lganlarini qaytaradi, bayram kuni esa ketish
-    // kunidan OLDIN turardi (1-sentabr bayrami 25-sentabrga ko'chirilgan,
-    // o'quvchi 10-sentabrda ketgan — bitta dars puli markazda qolib
-    // ketardi). `fromDate` ham shu yerda qo'llanadi: o'quvchi qo'shilishidan
-    // OLDIN o'tilgan qoplama darsini u olmagan, demak to'lamaydi ham.
-    const scheduledDates = lessonDatesInMonth({
-      year: periodYear,
-      month: periodMonth,
-      exactDays: enr.group.exactDays,
-      excludedDates,
-      addedDates,
-      fromDate,
-    });
-    // A student taken out of a group and put back into the SAME group in the
-    // same month has two enrollments there. The earlier one's charge keeps
-    // every date up to the day they left (`reverseChargeForDeparture` returns
-    // only the later ones), so those lessons are paid already: covering them
-    // again here would bill one lesson twice.
-    const paidElsewhere = await this.datesPaidByOtherCharges(tx, {
-      enrollmentId: enr.id,
-      studentId: enr.studentId,
-      groupId: enr.groupId,
-      periodYear,
-      periodMonth,
-    });
-    const coveredDates = scheduledDates.filter((d) => !paidElsewhere.has(d));
-    const coveredLessons = coveredDates.length;
-    if (coveredLessons === 0) return null;
-
-    const monthlyPrice = enr.group.course.price;
-    // CHEGIRMASIZ — o'qituvchi haqi (Task 6) va bu qatorning o'zi shu
-    // ikkisidan hisoblanadi.
-    const perLessonCostFull = perLessonCostForMonth(
-      monthlyPrice,
-      plannedLessons,
-    );
-    const grossAmountFull = proratedMonthlyAmount(
-      monthlyPrice,
-      plannedLessons,
-      coveredLessons,
-    );
-    // Markazning ulushi — o'quvchi aynan shuni to'laydi. Kredit ham shu
-    // chegirmali narxda sarflanadi: aks holda chegirmali o'quvchi to'lagan
-    // pulidan ikki barobar ko'p kredit olardi (task-9c-brief.md).
-    const grossAmountStudent = applyDiscount(grossAmountFull, discountPercent);
-    const perLessonCostStudent = applyDiscount(
-      perLessonCostFull,
       discountPercent,
     );
+    if (!planned) return null;
+    const {
+      plannedLessons,
+      coveredDates,
+      coveredLessons,
+      monthlyPrice,
+      perLessonCostFull,
+      grossAmountFull,
+      grossAmountStudent,
+      perLessonCostStudent,
+    } = planned;
 
     const rawCarried = await this.carriedCredit(
       tx,
@@ -404,6 +406,149 @@ export class MonthlyChargeService {
       where: { id: charge.id },
       data: { transactionId: transaction.id },
     });
+  }
+
+  /**
+   * Hali YO'Q yozilishga `createChargeForEnrollment` qancha yozgan bo'lardi:
+   * o'sha reja, o'sha proratsiya, o'sha chegirma. Yangi yozilishning
+   * o'tkaziladigan uzrli dars krediti yo'q, shuning uchun summa — chegirmali,
+   * proratsiya qilingan narx. Hech narsa yozmaydi; hech narsa yozilmasa
+   * `null`.
+   */
+  async previewChargeForNewEnrollment(
+    db: Prisma.TransactionClient,
+    params: {
+      enrollment: ChargeableEnrollment;
+      periodYear: number;
+      periodMonth: number;
+      discountPercent?: number;
+    },
+  ): Promise<{
+    plannedLessons: number;
+    coveredLessons: number;
+    amount: number;
+  } | null> {
+    const enr = params.enrollment;
+    // `student-enroll-preview.service.ts`dagi darvoza shu ikki rad etishni takrorlaydi — ular birga o'zgaradi.
+    if (enr.group.course.paymentModel !== PaymentModel.MONTHLY) return null;
+    if (enr.group.statusEnum !== GroupStatus.ACTIVE) return null;
+    const planned = await this.planChargeAmounts(
+      db,
+      enr,
+      params.periodYear,
+      params.periodMonth,
+      clampDiscount(params.discountPercent ?? 0),
+    );
+    if (!planned) return null;
+    return {
+      plannedLessons: planned.plannedLessons,
+      coveredLessons: planned.coveredLessons,
+      amount: planned.grossAmountStudent,
+    };
+  }
+
+  /**
+   * Oyning rejasi, qoplangan sanalar va summalar — kredit va yozuvlardan
+   * OLDINGI qism. `createChargeForEnrollment` ham, oldindan ko'rish
+   * (`previewChargeForNewEnrollment`) ham shu BITTA hisobni chaqiradi: oyna
+   * yozuv olmaydigan summani ko'rsata olmasligi uchun. Hech narsa yozmaydi.
+   * `null`: oyda dars yo'q yoki qoplanadigan dars qolmagan.
+   */
+  private async planChargeAmounts(
+    db: Prisma.TransactionClient,
+    enr: ChargeableEnrollment,
+    periodYear: number,
+    periodMonth: number,
+    discountPercent: number,
+  ): Promise<PlannedChargeAmounts | null> {
+    const { excludedDates, addedDates } = await resolveMonthPlan(
+      db,
+      enr.groupId,
+      enr.group.branchId,
+      periodYear,
+      periodMonth,
+    );
+
+    // Guruhning oyi — narxni belgilaydi va MUZLATILADI.
+    const groupDates = lessonDatesInMonth({
+      year: periodYear,
+      month: periodMonth,
+      exactDays: enr.group.exactDays,
+      excludedDates,
+      addedDates,
+    });
+    const plannedLessons = groupDates.length;
+    if (plannedLessons === 0) return null;
+
+    // O'quvchining ulushi — o'rtada qo'shilgan bo'lsa kamroq. SANALARNING
+    // O'ZI ham saqlanadi: `reverseChargeForDeparture` "ketgan kungacha
+    // nechtasi qoplangan edi" degan savolga JONLI kalendardan emas, shu
+    // muzlatilgan ro'yxatdan javob berishi kerak (schema izohi).
+    const fromDate = chargeStartDate(enr);
+    // Ko'chirilgan dars `coveredDates` ga ASL kuni bilan emas, o'zi ROSTDAN
+    // o'tiladigan kuni bilan tushadi — reja bilan bir xil kalendardan.
+    // Aks holda oy o'rtasida ketgan o'quvchi hali o'tilmagan darsni
+    // "qoplangan" deb qoldirib ketardi: `reverseChargeForDeparture` faqat
+    // `d > ketgan kun` bo'lganlarini qaytaradi, bayram kuni esa ketish
+    // kunidan OLDIN turardi (1-sentabr bayrami 25-sentabrga ko'chirilgan,
+    // o'quvchi 10-sentabrda ketgan — bitta dars puli markazda qolib
+    // ketardi). `fromDate` ham shu yerda qo'llanadi: o'quvchi qo'shilishidan
+    // OLDIN o'tilgan qoplama darsini u olmagan, demak to'lamaydi ham.
+    const scheduledDates = lessonDatesInMonth({
+      year: periodYear,
+      month: periodMonth,
+      exactDays: enr.group.exactDays,
+      excludedDates,
+      addedDates,
+      fromDate,
+    });
+    // A student taken out of a group and put back into the SAME group in the
+    // same month has two enrollments there. The earlier one's charge keeps
+    // every date up to the day they left (`reverseChargeForDeparture` returns
+    // only the later ones), so those lessons are paid already: covering them
+    // again here would bill one lesson twice.
+    const paidElsewhere = await this.datesPaidByOtherCharges(db, {
+      enrollmentId: enr.id,
+      studentId: enr.studentId,
+      groupId: enr.groupId,
+      periodYear,
+      periodMonth,
+    });
+    const coveredDates = scheduledDates.filter((d) => !paidElsewhere.has(d));
+    const coveredLessons = coveredDates.length;
+    if (coveredLessons === 0) return null;
+
+    const monthlyPrice = enr.group.course.price;
+    // CHEGIRMASIZ — o'qituvchi haqi (Task 6) va bu qatorning o'zi shu
+    // ikkisidan hisoblanadi.
+    const perLessonCostFull = perLessonCostForMonth(
+      monthlyPrice,
+      plannedLessons,
+    );
+    const grossAmountFull = proratedMonthlyAmount(
+      monthlyPrice,
+      plannedLessons,
+      coveredLessons,
+    );
+    // Markazning ulushi — o'quvchi aynan shuni to'laydi. Kredit ham shu
+    // chegirmali narxda sarflanadi: aks holda chegirmali o'quvchi to'lagan
+    // pulidan ikki barobar ko'p kredit olardi (task-9c-brief.md).
+    const grossAmountStudent = applyDiscount(grossAmountFull, discountPercent);
+    const perLessonCostStudent = applyDiscount(
+      perLessonCostFull,
+      discountPercent,
+    );
+
+    return {
+      plannedLessons,
+      coveredDates,
+      coveredLessons,
+      monthlyPrice,
+      perLessonCostFull,
+      grossAmountFull,
+      grossAmountStudent,
+      perLessonCostStudent,
+    };
   }
 
   /**
@@ -714,7 +859,22 @@ export class MonthlyChargeService {
             'payment.noRefundAfterPercent',
           )
         : 0;
-    const outcome = policyRelease(loaded.input, policy, threshold);
+    // Contract 3.5 is about a student LEAVING: only a removal or an expulsion
+    // names a policy. A freeze, a transfer or a centre closing passes none
+    // and keeps the ordinary rule.
+    const trialLesson =
+      params.policy !== undefined &&
+      (
+        await this.trialLessonVerdict(
+          tx,
+          loaded.enr.studentId,
+          day,
+          params.companyId,
+        )
+      ).trial;
+    const outcome = policyRelease(loaded.input, policy, threshold, {
+      trialLesson,
+    });
     if (outcome.withheld) {
       // Contract 6.2 keeps the money: nothing is written. The caller puts the
       // share into the history so the decision can be explained later.
@@ -724,51 +884,67 @@ export class MonthlyChargeService {
         policy,
         share: outcome.share,
         withheld: true,
+        trial: false,
       };
     }
-    if (!outcome.release) return null;
+    if (!outcome.release && !outcome.trial) return null;
     const { charge, enr, periodYear, periodMonth } = loaded;
+    const coveredDates = charge.coveredDates ?? [];
+    const frozenOutBefore = charge.frozenOutDates ?? [];
+    // Contract 3.5 gives the month back even when it refunds nothing (a 100%
+    // discount, a month the excused credit paid): its days still leave the
+    // charge, so nothing bills them again, and the teacher still earns
+    // nothing for them (below).
     const {
       lessons: remaining,
       amount: refunded,
       frozenOutAfter,
-    } = outcome.release;
-    const coveredDates = charge.coveredDates ?? [];
-    const frozenOutBefore = charge.frozenOutDates ?? [];
+    } = outcome.release ?? {
+      lessons: 0,
+      amount: 0,
+      frozenOutAfter:
+        coveredDates.length > 0
+          ? [...new Set([...frozenOutBefore, ...coveredDates])].sort()
+          : null,
+    };
 
-    await this.transactionsWrite.createAdjustment(
-      {
-        studentId: enr.studentId,
-        amount: refunded,
-        companyId: params.companyId,
-        branchId: enr.group.branchId,
-        description:
-          policy === 'QUALITY_CLAIM'
-            ? `${params.reason} — sifat bo'yicha shikoyat: oyning ${remaining} darsi puli to'liq qaytarildi`
-            : policy === 'LEVEL_COMPLETED'
-              ? `${params.reason} — darajani tugatdi: o'tmagan ${remaining} dars qaytarildi`
-              : `${params.reason} — o'tmagan ${remaining} dars qaytarildi`,
-        performedById: params.performedById,
-        // Lets the payment statement fold this refund into the month's
-        // lessons without parsing the description.
-        metadata: {
-          kind: 'monthly-release',
-          enrollmentId: params.enrollmentId,
-          period: `${periodYear}-${String(periodMonth).padStart(2, '0')}`,
-          lessons: remaining,
-          policy,
-          heldPercent: outcome.share.percent,
-          ...(frozenOutAfter
-            ? {
-                dates: frozenOutAfter.filter(
-                  (d) => !frozenOutBefore.includes(d),
-                ),
-              }
-            : {}),
+    if (refunded > 0) {
+      await this.transactionsWrite.createAdjustment(
+        {
+          studentId: enr.studentId,
+          amount: refunded,
+          companyId: params.companyId,
+          branchId: enr.group.branchId,
+          description: outcome.trial
+            ? `${params.reason} — sinov darsi (3.5): oyning ${remaining} darsi puli to'liq qaytarildi`
+            : policy === 'QUALITY_CLAIM'
+              ? `${params.reason} — sifat bo'yicha shikoyat: oyning ${remaining} darsi puli to'liq qaytarildi`
+              : policy === 'LEVEL_COMPLETED'
+                ? `${params.reason} — darajani tugatdi: o'tmagan ${remaining} dars qaytarildi`
+                : `${params.reason} — o'tmagan ${remaining} dars qaytarildi`,
+          performedById: params.performedById,
+          // Lets the payment statement fold this refund into the month's
+          // lessons without parsing the description.
+          metadata: {
+            kind: 'monthly-release',
+            enrollmentId: params.enrollmentId,
+            period: `${periodYear}-${String(periodMonth).padStart(2, '0')}`,
+            lessons: remaining,
+            policy,
+            ...(outcome.trial ? { trialLesson: true } : {}),
+            heldPercent: outcome.share.percent,
+            ...(frozenOutAfter
+              ? {
+                  dates: frozenOutAfter.filter(
+                    (d) => !frozenOutBefore.includes(d),
+                  ),
+                }
+              : {}),
+          },
         },
-      },
-      tx,
-    );
+        tx,
+      );
+    }
 
     const newCoveredLessons = frozenOutAfter
       ? coveredDates.length - frozenOutAfter.length
@@ -783,12 +959,23 @@ export class MonthlyChargeService {
       },
     });
 
+    if (outcome.trial) {
+      await this.reverseTrialAccruals(tx, {
+        studentId: enr.studentId,
+        groupId: charge.groupId,
+        periodYear,
+        periodMonth,
+        performedById: params.performedById,
+      });
+    }
+
     return {
       refunded,
       lessons: remaining,
       policy,
       share: outcome.share,
       withheld: false,
+      trial: outcome.trial,
     };
   }
 
@@ -837,10 +1024,18 @@ export class MonthlyChargeService {
       params.companyId,
       'payment.noRefundAfterPercent',
     );
+    const verdict = await this.trialLessonVerdict(
+      client,
+      loaded.enr.studentId,
+      day,
+      params.companyId,
+    );
     const outcomes = {} as DepartureOutcomesPreview['outcomes'];
     let share: HeldShare | null = null;
     for (const policy of DEPARTURE_POLICIES) {
-      const r = policyRelease(loaded.input, policy, threshold);
+      const r = policyRelease(loaded.input, policy, threshold, {
+        trialLesson: verdict.trial,
+      });
       share = r.share;
       outcomes[policy] = {
         lessons: r.release?.lessons ?? 0,
@@ -858,9 +1053,182 @@ export class MonthlyChargeService {
       heldPercent: share!.percent,
       threshold,
       contractApplies: day >= CONTRACT_62_START_DAY,
+      trialLesson: verdict.trial,
+      trialAwaitsAnswer:
+        verdict.awaiting.length > 0
+          ? trialAwaitsAnswerText(verdict.awaiting)
+          : null,
       chargedAmount: loaded.charge.chargedAmount,
       outcomes,
     };
+  }
+
+  /**
+   * Contract 3.5 (trial lesson): the student has attended (PRESENT/LATE) at
+   * most one lesson in ALL groups — a first-timer leaving after
+   * the first lesson. Counted across groups so a student moving on after
+   * months elsewhere is never taken for a trial. Before the contract's day
+   * nothing is read.
+   *
+   * A lesson on the student's roster still waiting on «Dars bo'ldimi?» may be
+   * either (CEO, 01.10.2026). When its answer could decide the trial it is
+   * listed in `awaiting` and `trial` is false: the departure waits for the
+   * answer (`assertTrialLessonAnswered`), and one that does not, a question
+   * opened after that check, keeps the ordinary rule.
+   */
+  private async trialLessonVerdict(
+    client: Prisma.TransactionClient,
+    studentId: number,
+    day: string,
+    companyId: number,
+  ): Promise<{ trial: boolean; awaiting: AwaitingLesson[] }> {
+    const none = { trial: false, awaiting: [] };
+    if (day < TRIAL_LESSON_START_DAY) return none;
+    // `payment.trialLessonEnabled`: switched off, the ordinary rule applies.
+    if (
+      !(await this.settingsService.get(companyId, 'payment.trialLessonEnabled'))
+    ) {
+      return none;
+    }
+    const held = await client.attendance.count({
+      where: {
+        studentId,
+        status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
+      },
+    });
+    if (held > TRIAL_LESSON_MAX_HELD) return none;
+
+    // A deleted group's questions stay PENDING for ever: never asked here.
+    const pending = await client.unmarkedLesson.findMany({
+      where: {
+        status: UnmarkedLessonStatus.PENDING,
+        group: {
+          deletedAt: null,
+          enrollments: { some: { studentId, deletedAt: null } },
+        },
+      },
+      select: { groupId: true, date: true, group: { select: { name: true } } },
+      orderBy: { date: 'asc' },
+    });
+    // A lesson his own row already answers is not waiting: ADR-0054's QR race
+    // can leave a row and a question on one lesson, and `held` reads the row.
+    const answered = new Set(
+      pending.length === 0
+        ? []
+        : (
+            await client.attendance.findMany({
+              where: {
+                studentId,
+                OR: pending.map((p) => ({ groupId: p.groupId, date: p.date })),
+              },
+              select: { groupId: true, date: true },
+            })
+          ).map((a) => lessonKey(a.groupId, a.date)),
+    );
+    const awaiting: AwaitingLesson[] = [];
+    for (const p of pending) {
+      if (answered.has(lessonKey(p.groupId, p.date))) continue;
+      const roster = await rosterOnDate(client, p.groupId, p.date);
+      if (roster.some((e) => e.studentId === studentId)) {
+        awaiting.push({
+          date: p.date.toISOString().slice(0, 10),
+          groupName: p.group.name,
+        });
+      }
+    }
+    return held + awaiting.length <= TRIAL_LESSON_MAX_HELD
+      ? { trial: true, awaiting: [] }
+      : { trial: false, awaiting };
+  }
+
+  /**
+   * Refuses a departure whose trial lesson (contract 3.5) an unanswered
+   * «Dars bo'ldimi?» could still decide (CEO, 01.10.2026). The removal and
+   * the expulsion call it before writing anything: an expulsion settles its
+   * months in a cascade that only logs a failed step. Only a departure that
+   * settles a monthly charge reads the trial — `enrollmentId` narrows it to
+   * the one enrollment a removal closes.
+   */
+  async assertTrialLessonAnswered(
+    client: Prisma.TransactionClient,
+    params: {
+      studentId: number;
+      companyId: number;
+      enrollmentId?: string;
+      /** Tashkent 'YYYY-MM-DD'; defaults to now. */
+      today?: string;
+    },
+  ): Promise<void> {
+    const day = params.today ?? tashkentDateStr(new Date());
+    const settled = await client.enrollmentMonthlyCharge.count({
+      where: {
+        studentId: params.studentId,
+        periodYear: Number(day.slice(0, 4)),
+        periodMonth: Number(day.slice(5, 7)),
+        status: MonthlyChargeStatus.CHARGED,
+        enrollment: {
+          deletedAt: null,
+          status: { in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.FROZEN] },
+          ...(params.enrollmentId ? { id: params.enrollmentId } : {}),
+        },
+      },
+    });
+    if (settled === 0) return;
+    const { awaiting } = await this.trialLessonVerdict(
+      client,
+      params.studentId,
+      day,
+      params.companyId,
+    );
+    if (awaiting.length > 0) {
+      throw new BadRequestException(trialAwaitsAnswerText(awaiting));
+    }
+  }
+
+  /**
+   * Contract 3.5 (CEO, 28.09.2026): a trial lesson is paid by nobody — the
+   * student gets the whole month back and the teacher gets nothing for the
+   * month's lessons in this group. Reverses the accruals the lessons wrote,
+   * except those a payroll run has already paid out: money handed over is
+   * not taken back here. The centre never fronts them again: the student's
+   * pair stays under the new-student gate (`NEW_STUDENT_TOPUP_MIN_LESSONS`).
+   */
+  private async reverseTrialAccruals(
+    tx: Prisma.TransactionClient,
+    params: {
+      studentId: number;
+      groupId: string;
+      periodYear: number;
+      periodMonth: number;
+      performedById?: number;
+    },
+  ): Promise<void> {
+    const accruals = await tx.salaryAccrual.findMany({
+      where: {
+        studentId: params.studentId,
+        groupId: params.groupId,
+        attendanceId: { not: null },
+        reversedAt: null,
+        salaryPaymentId: null,
+        lessonDate: {
+          gte: new Date(Date.UTC(params.periodYear, params.periodMonth - 1, 1)),
+          lt: new Date(Date.UTC(params.periodYear, params.periodMonth, 1)),
+        },
+      },
+      select: { userId: true, lessonDate: true },
+    });
+    for (const a of accruals) {
+      await this.salaryAccrual.reverseAccrualForAttendance({
+        teacherId: a.userId,
+        studentId: params.studentId,
+        groupId: params.groupId,
+        lessonDate: a.lessonDate,
+        reversedById: params.performedById,
+        reversalReason:
+          "Sinov darsi (3.5): o'quvchi to'lamaydi, ustozga haq yozilmaydi",
+        tx,
+      });
+    }
   }
 
   /** Reads (never writes) the month charge a departure on `day` would cut. */
@@ -1184,25 +1552,7 @@ export class MonthlyChargeService {
   ): Promise<{ charged: number; lessons: number } | null> {
     const enr = await tx.enrollment.findUnique({
       where: { id: params.enrollmentId },
-      select: {
-        id: true,
-        studentId: true,
-        groupId: true,
-        startDate: true,
-        createdAt: true,
-        student: { select: { discountPercent: true } },
-        group: {
-          select: {
-            id: true,
-            branchId: true,
-            companyId: true,
-            statusEnum: true,
-            startDate: true,
-            exactDays: true,
-            course: { select: { price: true, paymentModel: true } },
-          },
-        },
-      },
+      select: CHARGEABLE_ENROLLMENT_SELECT,
     });
     if (!enr) return null;
 
@@ -1222,6 +1572,49 @@ export class MonthlyChargeService {
     return charge
       ? { charged: charge.chargedAmount, lessons: charge.coveredLessons }
       : null;
+  }
+
+  /**
+   * Charges the month an enrollment was written in, from its join day, at
+   * once — for a door that writes the enrollment itself and cannot reach this
+   * module: the Telegram self-registration, through STUDENT_SELF_ENROLLED
+   * (`SelfEnrollmentChargeListener`). The admin door does the same inside its
+   * own transaction (`StudentEnrollmentService.chargeMidMonthJoin`). Left to
+   * the 04:00 daily run, a sign-up on a month's last lesson day after that run
+   * was never billed for it: the next run already bills the new month.
+   *
+   * Loads only a live, ACTIVE enrollment of a live, ACTIVE student — the
+   * filter `createChargeForEnrollment` leaves to its caller. Idempotent like
+   * it: a month already charged is returned as it is.
+   */
+  async chargeJoinMonth(
+    tx: Prisma.TransactionClient,
+    params: { enrollmentId: string; companyId: number },
+  ) {
+    const enr = await tx.enrollment.findFirst({
+      where: {
+        id: params.enrollmentId,
+        status: EnrollmentStatus.ACTIVE,
+        deletedAt: null,
+        student: { status: StudentStatus.ACTIVE, deletedAt: null },
+      },
+      select: CHARGEABLE_ENROLLMENT_SELECT,
+    });
+    if (!enr) return null;
+
+    const { student, ...enrollment } = enr;
+    const today = tashkentDateStr(new Date());
+    return this.createChargeForEnrollment(tx, {
+      enrollment: {
+        ...enrollment,
+        status: EnrollmentStatus.ACTIVE,
+        returnedAt: null,
+      },
+      periodYear: Number(today.slice(0, 4)),
+      periodMonth: Number(today.slice(5, 7)),
+      companyId: params.companyId,
+      discountPercent: student.discountPercent,
+    });
   }
 
   /**
@@ -1402,156 +1795,6 @@ export class MonthlyChargeService {
   }
 
   /**
-   * Oyning MUZLATILADIGAN rejasi — DAVOMAT KALENDARINING KO'ZGUSI.
-   *
-   * Qaytaradi:
-   *  - `excludedDates` — jadvaldagi kunlardan CHIQADIGANLARI;
-   *  - `addedDates` — jadvalda yo'q, lekin oyga QO'SHILADIGAN kunlar
-   *    (ko'chirilgan darsning yangi kuni).
-   *
-   * QOIDA BITTA: reja soni oyda ROSTDAN o'tiladigan darslar soniga teng
-   * bo'lishi shart. `plannedLessons` endi ikki narsani belgilaydi — bir
-   * darsning muzlatilgan narxi (oy narxi / reja) va FIXED_PER_STUDENT
-   * o'qituvchi haqining bo'luvchisi (1-javob: haq oydagi dars soniga
-   * bog'liq bo'lmasligi kerak). Reja davomatdan bitta kunga farq qilsa,
-   * ustoz oyning 12/13 yoki 14/13 ulushini oladi.
-   *
-   * Shuning uchun bu metod `AttendanceReadService.applyLessonModifications`
-   * ni AYNAN takrorlaydi — u "qaysi kun dars kuni" degan savolning yagona
-   * javobi:
-   *  - bayram kuni asos ro'yxatdan chiqadi (davomatda ham bayram asos
-   *    kunlar ichida yo'q);
-   *  - bekor qilingan dars chiqadi VA o'sha kunga ko'chirib kelishni ham
-   *    to'sadi (davomatdagi `exclude` to'plami);
-   *  - ko'chirilgan darsning ASL kuni chiqadi — yangi kun qayerda
-   *    bo'lishidan qat'i nazar;
-   *  - ko'chirilgan darsning YANGI kuni shu oy ichida bo'lsa qo'shiladi.
-   *    Kun allaqachon jadvalda bo'lsa TO'PLAM uni takrorlamaydi, ya'ni oyga
-   *    ikkinchi dars qo'shilmaydi.
-   *
-   * Ilgari bu yerda faqat BAYRAM ko'chirishlari hisobga olinardi
-   * (`newDate` shu oy ichida + asl kun bayram bo'lishi shart edi), shuning
-   * uchun uchta oddiy ko'chirish rejani davomatdan ayirib yuborardi:
-   * keyingi oyga surish (so'rov qatorni umuman qaytarmasdi), jadvaldagi
-   * kunga surish (bayram emas deb tashlab ketilardi) va boshqa oydan
-   * ko'chirib kelish (reja 13, davomat 14).
-   *
-   * Bayramning shu oy ichidagi qoplamasi endi ALOHIDA qoida emas: bayram
-   * rejadan chiqadi, qoplama kuni esa qo'shiladi — sanoq o'zgarmaydi va
-   * `coveredDates` ga dars ROSTDAN o'tiladigan kun tushadi. Qoplama bekor
-   * qilingan bo'lsa (1-topilma) yangi kun `vetoed` ichida bo'lgani uchun
-   * umuman qo'shilmaydi va bayram rejadan chiqib ketaveradi — alohida
-   * "teskari yozuv" qoidasi kerak emas.
-   *
-   * CHEKLOV — HISOBDAN KEYIN YOZILGAN KO'CHIRISH KO'RINMAYDI. Bu yerda
-   * faqat hisob yozilayotgan DAQIQADA bazada turgan qatorlar ko'rinadi.
-   * `MonthlyBillingCronService` hisobni oyning belgilangan kunida yozadi va
-   * `createChargeForEnrollment` `CHARGED` qatorni qayta hisoblamaydi,
-   * `plannedLessons` ni esa boshqa hech kim yangilamaydi. Bu MA'LUM va
-   * QABUL QILINGAN kamchilik (dizayn hujjati §4): to'liq yechim
-   * `lesson-reschedule.created/updated/deleted` da hisobni qayta
-   * hisoblashni talab qiladi va u pul qatorlariga (`TransactionsWrite
-   * Service`) ham tegadi — alohida vazifa.
-   *
-   * Bayramlar `buildHolidayDateSet` orqali olinadi — u ko'p kunlik
-   * bayramlarni (date..endDate), filial qamrovini (global + shu filial) va
-   * `deletedAt`/`status` filtrlarini to'g'ri hisobga oladi.
-   */
-  private async resolveMonthPlan(
-    tx: Prisma.TransactionClient,
-    groupId: string,
-    branchId: number,
-    year: number,
-    month: number,
-  ): Promise<{ excludedDates: string[]; addedDates: string[] }> {
-    const monthStart = new Date(Date.UTC(year, month - 1, 1));
-    const monthEndExclusive = new Date(Date.UTC(year, month, 1));
-    const monthEndInclusive = new Date(Date.UTC(year, month, 0));
-    const monthStartStr = tashkentDateStr(monthStart);
-    const monthEndStr = tashkentDateStr(monthEndInclusive);
-
-    const [group, holidayDates, cancellations, reschedules] = await Promise.all(
-      [
-        tx.group.findUnique({
-          where: { id: groupId },
-          select: { startDate: true, endDate: true },
-        }),
-        buildHolidayDateSet(tx, monthStart, monthEndInclusive, branchId),
-        tx.lessonCancellation.findMany({
-          where: {
-            groupId,
-            deletedAt: null,
-            date: { gte: monthStart, lt: monthEndExclusive },
-          },
-          select: { date: true },
-        }),
-        // ASL kun YOKI yangi kun shu oyga tegsa — qator kerak. Faqat `newDate`
-        // bo'yicha so'rash keyingi oyga surilgan darsni ko'rinmas qilardi,
-        // faqat `originalDate` bo'yicha so'rash esa boshqa oydan ko'chirib
-        // kelingan darsni. `AttendanceReadService` ham aynan shu OR ni yozadi.
-        tx.lessonReschedule.findMany({
-          where: {
-            groupId,
-            deletedAt: null,
-            OR: [
-              { originalDate: { gte: monthStart, lt: monthEndExclusive } },
-              { newDate: { gte: monthStart, lt: monthEndExclusive } },
-            ],
-          },
-          select: { originalDate: true, newDate: true },
-        }),
-      ],
-    );
-
-    // `vetoed` — davomatdagi `exclude` to'plami: bu kunlarda dars YO'Q va
-    // bu kunlarga boshqa darsni ko'chirib kelib ham bo'lmaydi.
-    const vetoed = new Set<string>();
-    for (const c of cancellations) vetoed.add(tashkentDateStr(c.date));
-    for (const r of reschedules) vetoed.add(tashkentDateStr(r.originalDate));
-
-    // Bayram asos ro'yxatdan chiqadi, LEKIN ko'chirib kelishni to'smaydi:
-    // admin darsni ataylab bayram kuniga ko'chirgan bo'lsa davomat o'sha
-    // kuni dars deb sanaydi (`applyLessonModifications` aynan shunday).
-    const excluded = new Set<string>(vetoed);
-    for (const day of holidayDates) excluded.add(day);
-
-    // Guruhning FAOL OYNASI — ko'chirib kelingan kunga (va FAQAT unga)
-    // qo'llanadi. `AttendanceReadService.getLessonDates` butun oyni
-    // `[group.startDate, group.endDate]` ga qisadi, shuning uchun o'sha
-    // oynadan tashqariga ko'chirilgan dars davomatda HECH QACHON o'tmaydi;
-    // uni rejaga qo'shish `plannedLessons`ni oshirib, dars narxini
-    // pasaytirar va `FIXED_PER_STUDENT` bo'luvchisini kattalashtirardi.
-    // Misol: guruh 20.09 da tugaydi, dars 29.08 -> 25.09 ga ko'chirilgan —
-    // reja 14, davomat 9.
-    //
-    // ASOS RO'YXAT esa ATAYLAB qisilmaydi. Guruh oy o'rtasida boshlansa
-    // `plannedLessons` baribir butun oyning dars kunlari bo'lib qoladi:
-    // dars narxi `oy narxi / plannedLessons` va u BARCHA guruhlarda bir xil
-    // bo'lishi kerak. 7 ga qisilsa, 15-sentabrda boshlangan guruhning bitta
-    // darsi 64 286 so'mga chiqib ketardi (450 000 / 7), ya'ni o'quvchi
-    // guruhi kech boshlangani uchun ikki baravar to'lardi. Hozirgi holda
-    // u 450 000 x 7/13 to'laydi va ustoz ham o'sha ulushni oladi —
-    // ikkalasi ham proporsional. Demak bu yerda «reja = davomat» tengligi
-    // ataylab buziladi; buning sababi dizayn hujjati §4 da yozilgan.
-    const groupStartStr = group?.startDate
-      ? tashkentDateStr(group.startDate)
-      : null;
-    const groupEndStr = group?.endDate ? tashkentDateStr(group.endDate) : null;
-
-    const added = new Set<string>();
-    for (const r of reschedules) {
-      const newDay = tashkentDateStr(r.newDate);
-      if (newDay < monthStartStr || newDay > monthEndStr) continue;
-      if (groupStartStr && newDay < groupStartStr) continue;
-      if (groupEndStr && newDay > groupEndStr) continue;
-      if (vetoed.has(newDay)) continue;
-      added.add(newDay);
-    }
-
-    return { excludedDates: [...excluded], addedDates: [...added] };
-  }
-
-  /**
    * Oyning dars kunlari rejasi: CHIQADIGAN va QO'SHILADIGAN kunlar,
    * 'YYYY-MM-DD' ro'yxatlari. Ikkalasi ham `lessonDatesInMonth` ga
    * uzatiladi — qoidaning to'liq bayoni `resolveMonthPlan` JSDoc'ida.
@@ -1572,7 +1815,7 @@ export class MonthlyChargeService {
     year: number,
     month: number,
   ): Promise<{ excludedDates: string[]; addedDates: string[] }> {
-    return this.resolveMonthPlan(tx, groupId, branchId, year, month);
+    return resolveMonthPlan(tx, groupId, branchId, year, month);
   }
 
   /**
@@ -1584,6 +1827,17 @@ export class MonthlyChargeService {
     params: Parameters<typeof releaseCancelledLesson>[2],
   ): Promise<CancelledLessonReleaseResult> {
     return releaseCancelledLesson(tx, this.transactionsWrite, params);
+  }
+
+  /**
+   * The undo of `releaseCancelledLesson` when its cancellation is deleted
+   * (ADR-0063). The rule lives in `cancelled-lesson-release.ts`.
+   */
+  restoreCancelledLesson(
+    tx: Prisma.TransactionClient,
+    params: Parameters<typeof restoreCancelledLesson>[2],
+  ): Promise<CancelledLessonRestoreResult> {
+    return restoreCancelledLesson(tx, this.transactionsWrite, params);
   }
 
   /**

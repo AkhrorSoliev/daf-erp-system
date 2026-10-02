@@ -382,7 +382,7 @@ export class CustomFormsService {
       // Schema-time validation should have prevented this, but guard
       // against tampered or legacy form schemas.
       throw new BadRequestException(
-        "Ism, familya va telefon maydonlari to'liq emas",
+        "Ism, familiya va telefon maydonlari to'liq emas",
       );
     }
 
@@ -576,12 +576,12 @@ export class CustomFormsService {
         mappingCounts.set(f.mapsTo, (mappingCounts.get(f.mapsTo) ?? 0) + 1);
         if (!f.required) {
           throw new BadRequestException(
-            `Ism / Familya / Telefon ga bog'langan "${f.label}" maydoni majburiy bo'lishi kerak`,
+            `Ism / Familiya / Telefonga bog'langan "${f.label}" maydoni majburiy bo'lishi kerak`,
           );
         }
         if (f.mapsTo === 'phone' && f.type !== 'phone') {
           throw new BadRequestException(
-            `Telefon maydonining turi "phone" bo'lishi kerak`,
+            "Telefon maydonining turi «Telefon» bo'lishi kerak",
           );
         }
       }
@@ -589,12 +589,12 @@ export class CustomFormsService {
     for (const [slot, count] of mappingCounts) {
       if (count === 0) {
         throw new BadRequestException(
-          `${this.slotLabel(slot)} maydoni majburiy — formaga qo'shing va uni "${this.slotLabel(slot)}" ga bog'lang`,
+          `${this.slotLabel(slot)} maydoni majburiy — formaga qo'shing va uni "${this.slotLabel(slot)}"ga bog'lang`,
         );
       }
       if (count > 1) {
         throw new BadRequestException(
-          `${this.slotLabel(slot)} ga faqat bitta maydon bog'lanishi mumkin`,
+          `${this.slotLabel(slot)}ga faqat bitta maydon bog'lanishi mumkin`,
         );
       }
     }
@@ -604,7 +604,7 @@ export class CustomFormsService {
     return slot === 'firstName'
       ? 'Ism'
       : slot === 'lastName'
-        ? 'Familya'
+        ? 'Familiya'
         : 'Telefon';
   }
 
@@ -690,7 +690,7 @@ export class CustomFormsService {
    * used to return objects and arrays untouched. Downstream everything does
    * `String(value)`, which turns `{"a":1}` into the literal text
    * `[object Object]` — and for a field with `mapsTo`, that text was written
-   * into the lead's ism / familya / telefon. A crafted POST could therefore
+   * into the lead's ism / familiya / telefon. A crafted POST could therefore
    * plant unreadable rows in the leads board, and nothing in the pipeline
    * would call it an error.
    *

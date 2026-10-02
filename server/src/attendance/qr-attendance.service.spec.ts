@@ -10,6 +10,13 @@ import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { AttendanceValidationService } from './attendance-validation.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
+import {
+  ENDED_REFUSAL,
+  STUDENT_ENDED_REFUSAL,
+  TEACHER_ENDED_REFUSAL,
+} from './shared/attendance-window';
 
 const validatedGroup = {
   id: 'group-1',
@@ -27,6 +34,8 @@ describe('QrAttendanceService', () => {
   let gateway: any;
   let entityHistory: any;
   let attendanceService: any;
+  let admission: { forLesson: jest.Mock };
+  let validation: { validateLessonDate: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -79,6 +88,9 @@ describe('QrAttendanceService', () => {
       lessonCancellation: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      unmarkedLesson: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
       // Interactive transaction: callback gets prisma itself as tx so all
       // model mocks are reachable inside the $transaction block.
       $transaction: jest.fn((cb) => cb(prisma)),
@@ -107,8 +119,25 @@ describe('QrAttendanceService', () => {
       validateLessonDate: jest.fn().mockResolvedValue({
         group: validatedGroup,
         parsedDate: new Date('2026-04-03T00:00:00.000Z'),
+        effectiveStartTime: '09:00',
+        effectiveEndTime: '11:00',
+        opensMinutesBefore: 10,
       }),
     };
+
+    // A scan re-reads the lesson from the database: its times and the lead.
+    validation = {
+      validateLessonDate: jest.fn().mockResolvedValue({
+        group: validatedGroup,
+        parsedDate: new Date('2026-04-03T00:00:00.000Z'),
+        effectiveStartTime: '09:00',
+        effectiveEndTime: '11:00',
+        opensMinutesBefore: 10,
+      }),
+    };
+
+    // Contract 3.2 admission: nobody blocked unless a test says so.
+    admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
 
     const holidaysService = {
       findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
@@ -126,6 +155,8 @@ describe('QrAttendanceService', () => {
         { provide: NotificationsGateway, useValue: gateway },
         { provide: EntityHistoryService, useValue: entityHistory },
         { provide: AttendanceService, useValue: attendanceService },
+        { provide: AttendanceValidationService, useValue: validation },
+        { provide: LessonAdmissionService, useValue: admission },
         {
           provide: LessonBillingService,
           useValue: { processAttendanceBilling: jest.fn() },
@@ -142,14 +173,54 @@ describe('QrAttendanceService', () => {
   });
 
   describe('startSession', () => {
-    it('should call validateLessonDate before creating session', async () => {
-      await service.startSession('group-1', '2026-04-03', 1, 1, ['Teacher']);
+    beforeEach(() => {
+      jest.useFakeTimers({
+        now: new Date('2026-04-03T05:00:00.000Z'),
+        advanceTimers: true,
+      });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('should validate the lesson and its window before creating session', async () => {
+      await service.startSession('group-1', '2026-04-03', 1, 1);
 
       expect(attendanceService.validateLessonDate).toHaveBeenCalledWith(
         'group-1',
         '2026-04-03',
         1,
-        ['Teacher'],
+      );
+      // The shared window guard also asks whether «Dars bo'ldimi?» was opened.
+      expect(prisma.unmarkedLesson.findUnique).toHaveBeenCalled();
+    });
+
+    it('should refuse a session before the window opens, for every role', async () => {
+      jest.setSystemTime(new Date('2026-04-03T03:49:00.000Z')); // 08:49 Tashkent, lesson 09:00
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1),
+      ).rejects.toThrow(
+        'Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (09:00)',
+      );
+      expect(redis.set).not.toHaveBeenCalled();
+    });
+
+    it("opens with the company's lead: 20 minutes", async () => {
+      attendanceService.validateLessonDate.mockResolvedValue({
+        group: validatedGroup,
+        parsedDate: new Date('2026-04-03T00:00:00.000Z'),
+        effectiveStartTime: '09:00',
+        effectiveEndTime: '11:00',
+        opensMinutesBefore: 20,
+      });
+      jest.setSystemTime(new Date('2026-04-03T03:45:00.000Z')); // 08:45, start − 15
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1),
+      ).resolves.toMatchObject({ expiresIn: 45 });
+
+      jest.setSystemTime(new Date('2026-04-03T03:35:00.000Z')); // start − 25
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1),
+      ).rejects.toThrow(
+        'Davomat dars boshlanishidan 20 daqiqa oldin ochiladi (09:00)',
       );
     });
 
@@ -223,6 +294,63 @@ describe('QrAttendanceService', () => {
       expect(redis.del).toHaveBeenCalledWith('qr-token:old-token');
       expect(result.sessionId).toBeDefined();
       expect(result.token).toBeDefined();
+    });
+
+    it('refuses a session after the lesson ended', async () => {
+      jest.setSystemTime(new Date('2026-04-03T06:00:00.000Z')); // 11:00 Tashkent
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1),
+      ).rejects.toThrow('Dars tugagan');
+    });
+
+    it('tells a teacher-only caller that the administrator answers an ended lesson', async () => {
+      jest.setSystemTime(new Date('2026-04-03T06:00:00.000Z')); // 11:00 Tashkent
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1, ['Teacher']),
+      ).rejects.toThrow(TEACHER_ENDED_REFUSAL);
+      // Teacher + Administrator is not teacher-only.
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1, [
+          'Teacher',
+          'Administrator',
+        ]),
+      ).rejects.toThrow(ENDED_REFUSAL);
+    });
+
+    it("refuses a session once «Dars bo'ldimi?» was asked", async () => {
+      prisma.unmarkedLesson.findUnique.mockResolvedValue({ id: 'u1' });
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1),
+      ).rejects.toThrow('Dars tugagan');
+    });
+
+    it('lives until the lesson ends on the Tashkent clock', async () => {
+      jest.setSystemTime(new Date('2026-04-03T05:30:00.000Z')); // 10:30 Tashkent, lesson ends 11:00
+      await service.startSession('group-1', '2026-04-03', 1, 1);
+
+      const sessionSetCall = redis.set.mock.calls.find((call: any[]) =>
+        call[0].startsWith('qr-session:'),
+      );
+      expect(sessionSetCall[3]).toBe(1800);
+      // The lesson's times are not kept: every scan reads them afresh.
+      const stored = JSON.parse(sessionSetCall[1]);
+      expect(stored).not.toHaveProperty('effectiveStartTime');
+      expect(stored).not.toHaveProperty('effectiveEndTime');
+    });
+
+    it('caps the session at two hours', async () => {
+      attendanceService.validateLessonDate.mockResolvedValue({
+        group: validatedGroup,
+        parsedDate: new Date('2026-04-03T00:00:00.000Z'),
+        effectiveStartTime: '09:00',
+        effectiveEndTime: '20:00',
+      });
+      await service.startSession('group-1', '2026-04-03', 1, 1);
+
+      const sessionSetCall = redis.set.mock.calls.find((call: any[]) =>
+        call[0].startsWith('qr-session:'),
+      );
+      expect(sessionSetCall[3]).toBe(7200);
     });
   });
 
@@ -404,6 +532,111 @@ describe('QrAttendanceService', () => {
       lessonNumber: 15,
     });
 
+    // The 09:00–11:00 lesson of 2026-04-03 is running: 10:00 Tashkent.
+    beforeEach(() => {
+      jest.useFakeTimers({
+        now: new Date('2026-04-03T05:00:00.000Z'),
+        advanceTimers: true,
+      });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it("should refuse a scan once the lesson's window is closed, before contract 3.2", async () => {
+      redis.get.mockResolvedValueOnce(tokenData);
+      // The lesson's times as the database has them now: it ended at 09:30.
+      validation.validateLessonDate.mockResolvedValue({
+        group: validatedGroup,
+        parsedDate: new Date('2026-04-03T00:00:00.000Z'),
+        effectiveStartTime: '08:00',
+        effectiveEndTime: '09:30',
+        opensMinutesBefore: 10,
+      });
+
+      await expect(
+        service.scanQr('valid-token', 10001, 20001, 1),
+      ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
+      expect(validation.validateLessonDate).toHaveBeenCalledWith(
+        'group-1',
+        '2026-04-03',
+        1,
+      );
+      // An ended lesson reports "ended", not "unpaid".
+      expect(admission.forLesson).not.toHaveBeenCalled();
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should refuse a scan for a student contract 3.2 keeps out', async () => {
+      redis.get.mockResolvedValueOnce(tokenData);
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10001,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 1,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+
+      await expect(
+        service.scanQr('valid-token', 10001, 20001, 1),
+      ).rejects.toThrow(
+        "To'lov qilinmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaysiz",
+      );
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should name the least share to a student who paid less than it (ADR-0064)', async () => {
+      redis.get.mockResolvedValueOnce(tokenData);
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10001,
+            {
+              admitted: false,
+              reason: 'BELOW_MIN_SHARE',
+              shortfall: 125000,
+              paidThrough: null,
+              minPaidPercent: 50,
+            },
+          ],
+        ]),
+      );
+
+      await expect(
+        service.scanQr('valid-token', 10001, 20001, 1),
+      ).rejects.toThrow(
+        "Oy to'lovining kamida 50% i to'lanmagan: shartnomaga ko'ra 2-darsdan boshlab shu qismi to'lanmaguncha darsga qo'yilmaysiz",
+      );
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should let a student who has paid scan in', async () => {
+      redis.get
+        .mockResolvedValueOnce(tokenData)
+        .mockResolvedValueOnce(sessionData);
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10001,
+            { admitted: true, reason: 'PAID', shortfall: 0, paidThrough: null },
+          ],
+        ]),
+      );
+
+      const result = await service.scanQr('valid-token', 10001, 20001, 1);
+
+      expect(result.status).toBe('PRESENT');
+      expect(admission.forLesson).toHaveBeenCalledWith({
+        groupId: 'group-1',
+        lessonDay: '2026-04-03',
+        studentIds: [10001],
+      });
+    });
+
     it('should mark attendance as PRESENT and notify teacher', async () => {
       redis.get
         .mockResolvedValueOnce(tokenData) // token lookup
@@ -502,6 +735,121 @@ describe('QrAttendanceService', () => {
       await service.scanQr('valid-token', 10001, 20001, 1);
 
       expect(entityHistory.recordUpdate).toHaveBeenCalled();
+    });
+
+    it('clears the minutes when a scan turns LATE into PRESENT (ADR-0048)', async () => {
+      redis.get
+        .mockResolvedValueOnce(tokenData)
+        .mockResolvedValueOnce(sessionData);
+      prisma.attendance.findUnique.mockResolvedValue({
+        id: 'att-1',
+        status: 'LATE',
+        lateMinutes: 15,
+        groupId: 'group-1',
+        studentId: 10001,
+      });
+
+      await service.scanQr('valid-token', 10001, 20001, 1);
+
+      expect(prisma.attendance.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({
+            status: 'PRESENT',
+            lateMinutes: null,
+          }),
+        }),
+      );
+    });
+
+    // Every scan judges the window by the lesson as the database has it now
+    // (validateLessonDate), never by what the session remembers.
+    describe('the lesson window', () => {
+      const lessonAt = (start: string, end: string, lead = 10) =>
+        validation.validateLessonDate.mockResolvedValue({
+          group: validatedGroup,
+          parsedDate: new Date('2026-04-03T00:00:00.000Z'),
+          effectiveStartTime: start,
+          effectiveEndTime: end,
+          opensMinutesBefore: lead,
+        });
+
+      it('accepts a scan inside the lesson', async () => {
+        redis.get
+          .mockResolvedValueOnce(tokenData)
+          .mockResolvedValueOnce(sessionData);
+
+        const result = await service.scanQr('valid-token', 10001, 20001, 1);
+
+        expect(result.status).toBe('PRESENT');
+        expect(prisma.attendance.upsert).toHaveBeenCalled();
+      });
+
+      it('refuses a scan after the lesson ended', async () => {
+        jest.setSystemTime(new Date('2026-04-03T06:00:00.000Z')); // 11:00 Tashkent
+        redis.get
+          .mockResolvedValueOnce(tokenData)
+          .mockResolvedValueOnce(sessionData);
+
+        await expect(
+          service.scanQr('valid-token', 10001, 20001, 1),
+        ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
+        expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+      });
+
+      it("refuses a scan once «Dars bo'ldimi?» was asked", async () => {
+        prisma.unmarkedLesson.findUnique.mockResolvedValue({ id: 'u1' });
+        redis.get
+          .mockResolvedValueOnce(tokenData)
+          .mockResolvedValueOnce(sessionData);
+
+        await expect(
+          service.scanQr('valid-token', 10001, 20001, 1),
+        ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
+        expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+      });
+
+      // The last token outlives its session by up to TOKEN_TTL (50 s), and
+      // the sweep asks «Dars bo'ldimi?» only at the next :00/:30.
+      it('refuses the live last token after the end, with the session gone and nothing asked yet', async () => {
+        jest.setSystemTime(new Date('2026-04-03T06:00:20.000Z')); // 11:00:20
+        redis.get.mockResolvedValueOnce(tokenData).mockResolvedValueOnce(null);
+
+        await expect(
+          service.scanQr('valid-token', 10001, 20001, 1),
+        ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
+        expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+      });
+
+      it('follows a lesson moved since the session started', async () => {
+        lessonAt('14:00', '15:30'); // now 10:00
+        redis.get
+          .mockResolvedValueOnce(tokenData)
+          .mockResolvedValueOnce(sessionData);
+
+        await expect(
+          service.scanQr('valid-token', 10001, 20001, 1),
+        ).rejects.toThrow(
+          'Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (14:00)',
+        );
+      });
+
+      it("opens with the company's lead: 20 minutes", async () => {
+        lessonAt('10:15', '11:45', 20); // now 10:00, start − 15
+        redis.get
+          .mockResolvedValueOnce(tokenData)
+          .mockResolvedValueOnce(sessionData);
+        await expect(
+          service.scanQr('valid-token', 10001, 20001, 1),
+        ).resolves.toMatchObject({ status: 'PRESENT' });
+
+        lessonAt('10:25', '11:55', 20); // start − 25
+        redis.get.mockResolvedValueOnce(tokenData);
+        await expect(
+          service.scanQr('valid-token', 10001, 20001, 1),
+        ).rejects.toThrow(
+          'Davomat dars boshlanishidan 20 daqiqa oldin ochiladi (10:25)',
+        );
+      });
     });
   });
 });

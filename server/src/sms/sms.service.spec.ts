@@ -167,6 +167,32 @@ describe('SmsService', () => {
       });
     });
 
+    // Staff read both: the SMS tab shows errorMessage, «Tarix» shows holat.
+    it('stores a network failure without the bot token in the request URL', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        telegramChatId: '123456',
+      });
+      mockBot.telegram.sendMessage.mockRejectedValue(
+        new Error(
+          // Invented token: shaped like one, belongs to no bot.
+          'request to https://api.telegram.org/bot123456789:fake_secret-for-tests/sendMessage failed, reason: socket hang up',
+        ),
+      );
+
+      await service.sendToStudent(10001, 'Test message', 'AUTO');
+
+      const expected =
+        'request to https://api.telegram.org/bot***/sendMessage failed, reason: socket hang up';
+      expect(prisma.smsMessage.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ errorMessage: expected }),
+      });
+      expect(entityHistoryService.recordCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newValues: expect.objectContaining({ holat: expected }),
+        }),
+      );
+    });
+
     it('should set senderUserId to null for system messages', async () => {
       prisma.student.findFirst.mockResolvedValue({
         telegramChatId: '123456',

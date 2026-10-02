@@ -28,7 +28,12 @@ export type SettingKey =
   | 'payment.chargeDayOfMonth'
   | 'payment.debtWriteOffEnabled'
   | 'payment.monthlyNoticesEnabled'
-  | 'payment.noRefundAfterPercent';
+  | 'payment.noRefundAfterPercent'
+  | 'payment.admissionRuleEnabled'
+  | 'payment.trialLessonEnabled'
+  | 'payment.attendanceOpensMinutesBefore'
+  | 'payment.admissionMinPaidPercent'
+  | 'payment.paidThroughReminderDays';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -38,6 +43,11 @@ export interface SettingValueMap {
   'payment.debtWriteOffEnabled': boolean;
   'payment.monthlyNoticesEnabled': boolean;
   'payment.noRefundAfterPercent': number;
+  'payment.admissionRuleEnabled': boolean;
+  'payment.trialLessonEnabled': boolean;
+  'payment.attendanceOpensMinutesBefore': number;
+  'payment.admissionMinPaidPercent': number;
+  'payment.paidThroughReminderDays': number;
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -124,6 +134,34 @@ function parsePercent(key: SettingKey, raw: unknown): number {
   );
 }
 
+function parseOpensMinutesBefore(raw: unknown): number {
+  if (
+    typeof raw === 'number' &&
+    Number.isInteger(raw) &&
+    raw >= 0 &&
+    raw <= 60
+  ) {
+    return raw;
+  }
+  throw new BadRequestException(
+    `payment.attendanceOpensMinutesBefore 0 dan 60 gacha bo'lgan butun son bo'lishi kerak, kelgan qiymat: ${JSON.stringify(raw)}`,
+  );
+}
+
+function parseReminderDays(raw: unknown): number {
+  if (
+    typeof raw === 'number' &&
+    Number.isInteger(raw) &&
+    raw >= 0 &&
+    raw <= 10
+  ) {
+    return raw;
+  }
+  throw new BadRequestException(
+    `payment.paidThroughReminderDays 0 dan 10 gacha bo'lgan butun son bo'lishi kerak, kelgan qiymat: ${JSON.stringify(raw)}`,
+  );
+}
+
 export const SETTING_DEFINITIONS: {
   [K in SettingKey]: SettingDefinition<K>;
 } = {
@@ -197,6 +235,54 @@ export const SETTING_DEFINITIONS: {
     parse: (raw) => parsePercent('payment.noRefundAfterPercent', raw),
     // One contract for every branch: a branch director must not move the
     // threshold for their own branch.
+    companyLevelOnly: true,
+  },
+  'payment.admissionRuleEnabled': {
+    key: 'payment.admissionRuleEnabled',
+    // Contract 3.2 (ADR-0047): from the month's 2nd lesson an unpaid student
+    // is not admitted. A switch so the rule can be turned off without a
+    // deploy (CEO, 28.09.2026). Off: every student is admitted, the payment
+    // dialog shows no reach. Read by `LessonAdmissionService` per company.
+    defaultValue: true,
+    parse: (raw) => parseBoolean('payment.admissionRuleEnabled', raw),
+    companyLevelOnly: true,
+  },
+  'payment.trialLessonEnabled': {
+    key: 'payment.trialLessonEnabled',
+    // Contract 3.5 (ADR-0048): a first-timer leaving after one lesson gets
+    // the whole month back and the teacher is not paid for it. Off: the
+    // ordinary departure rule. Read by `MonthlyChargeService` per company.
+    defaultValue: true,
+    parse: (raw) => parseBoolean('payment.trialLessonEnabled', raw),
+    companyLevelOnly: true,
+  },
+  'payment.attendanceOpensMinutesBefore': {
+    key: 'payment.attendanceOpensMinutesBefore',
+    // ADR-0047: the attendance window opens this many minutes before the
+    // lesson starts and closes when it ends. Read by
+    // `AttendanceValidationService` per company; the client reads it from
+    // the roster's `opensMinutesBefore`.
+    defaultValue: 10,
+    parse: parseOpensMinutesBefore,
+    companyLevelOnly: true,
+  },
+  'payment.admissionMinPaidPercent': {
+    key: 'payment.admissionMinPaidPercent',
+    // Contract 3.2 as amended on 02.10.2026 (ADR-0064): from a group's 2nd
+    // lesson of the month at least this share of the month's charge must be
+    // paid. 0: only the lessons held are asked for (ADR-0047 as it was). Read
+    // by `LessonAdmissionService` and the 19:50 notices, per company.
+    defaultValue: 50,
+    parse: (raw) => parsePercent('payment.admissionMinPaidPercent', raw),
+    companyLevelOnly: true,
+  },
+  'payment.paidThroughReminderDays': {
+    key: 'payment.paidThroughReminderDays',
+    // Contract 3.7 (ADR-0064): a part payer is reminded from this many
+    // calendar days before the first lesson their payments do not reach.
+    // 0: no such reminder. Read by `MonthlyPaymentNoticeCronService`.
+    defaultValue: 3,
+    parse: parseReminderDays,
     companyLevelOnly: true,
   },
 };

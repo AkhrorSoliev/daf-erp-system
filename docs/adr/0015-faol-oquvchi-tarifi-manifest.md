@@ -1,6 +1,6 @@
 # ADR-0015 — «Faol o'quvchi» sanog'i manifest bilan majburlanadi
 
-**Holati:** Qabul qilindi
+**Holati:** Qabul qilindi; «Pul o'lchovlari ataylab chetda» bandi qarz yuzalari uchun — ADR-0059 bilan o'zgardi
 **Sana:** 2026-09-10
 **Bog'liq:** ADR-0003 (route siyosati manifesti), ADR-0012 (bosh sahifa qayta hisoblamaydi), `server/src/students/shared/active-student-where.ts`
 

@@ -154,11 +154,14 @@ export function monthsSheet(
 export interface BranchRow {
   branchName: string;
   recognized: number;
+  /** «Yechib olish» inside `netProfit` (ADR-0055); named in the footer. */
+  balanceWithdrawals: number;
   cashIn: number;
   teacherSalary: number;
   operatingExpenses: number;
   refunds: number;
   netProfit: number;
+  /** «O'qiyotganlar qarzi» only (ADR-0059); the header says so. */
   debt: number;
   inGroup: number;
 }
@@ -190,7 +193,7 @@ export function branchesSheet(
     'Xarajat',
     'Qaytarilgan',
     'SOF FOYDA',
-    'Qarz (hozir)',
+    "O'qiyotganlar qarzi (hozir)",
     "Guruhda o'qiyapti",
   ]);
 
@@ -214,12 +217,26 @@ export function branchesSheet(
   totalsBar(ws, ['Jami', ...totals]);
   ws.views = [{ state: 'frozen', ySplit: h.number }];
 
+  // The approved columns stay as they are; a branch whose SOF FOYDA carries a
+  // withdrawal (ADR-0055) is named here instead, so the row still explains
+  // itself.
+  const withdrawn = rows.filter((r) => r.balanceWithdrawals);
   sheetFooter(
     ws,
     [
       "«O'tilgan darslar qiymati» — o'tilgan darslar puli; «Kassaga tushgan pul» — real kirgan pul. Ular teng bo'lishi shart emas.",
       "Bitta ustoz bitta filialda dars o'tadi — oyligi to'liq o'sha filialga yoziladi.",
       "Filiallar yig'indisi «Xulosa» varag'idagi jami raqamga teng.",
+      ...(withdrawn.length
+        ? [
+            `«SOF FOYDA» ichida balansdan yechib olingan pul bor: ${withdrawn
+              .map(
+                (r) =>
+                  `${r.branchName} — ${r.balanceWithdrawals.toLocaleString('ru-RU')} so'm`,
+              )
+              .join(', ')}.`,
+          ]
+        : []),
     ],
     9,
   );

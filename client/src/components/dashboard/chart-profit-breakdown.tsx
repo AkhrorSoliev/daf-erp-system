@@ -23,13 +23,18 @@ export function ChartProfitBreakdownCard({
   const { palette } = useChartTheme();
   const rows = breakdownRows(data);
   const max = Math.max(...rows.map((r) => Math.abs(r.amount)), 1);
+  const withdrawn = data.balanceWithdrawals ?? 0;
 
   return (
     <ChartCard
       title="Pul qayerga ketdi"
-      subtitle={`Bu oy tushum: ${formatNumber(data.revenue)} so'm`}
+      subtitle={
+        withdrawn > 0
+          ? `Bu oy tushum: ${formatNumber(data.revenue)} so'm · balansdan yechilgan: ${formatNumber(withdrawn)} so'm`
+          : `Bu oy tushum: ${formatNumber(data.revenue)} so'm`
+      }
       tooltip={
-        "Tushumdan ustoz va xodim oyligi, operatsion xarajat va qaytarishlar ayirilgach qolgani — sof foyda.\n\n" +
+        "Tushum va balansdan yechib olingan puldan ustoz va xodim oyligi, operatsion xarajat va qaytarishlar ayirilgach qolgani — sof foyda.\n\n" +
         "Bu «Sof foyda» kartasi bilan bitta manbadan keladi, shuning uchun raqamlar har doim mos tushadi."
       }
       isEmpty={rows.length === 0}

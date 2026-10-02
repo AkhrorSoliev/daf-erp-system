@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import type { UnmarkedLessonInfo } from "@/lib/unmarked-lesson";
 
 export type LessonCalendarCellType =
   | "regular"
@@ -39,6 +40,8 @@ export interface LessonCalendarCell {
   movedFrom?: string;
   movedTo?: string;
   cancellationReason?: string;
+  /** «Dars bo'ldimi?» — set when the lesson ended unmarked (ADR-0054). */
+  unmarked?: UnmarkedLessonInfo | null;
 }
 
 interface AttendanceMonthCalendarProps {

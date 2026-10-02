@@ -33,8 +33,13 @@ export class StudentsService {
   ) {
     return this.read.findAll(query, companyId, branchScope);
   }
-  findById(id: number, companyId: number, branchScope: ReportBranchIds) {
-    return this.read.findById(id, companyId, branchScope);
+  findById(
+    id: number,
+    companyId: number,
+    branchScope: ReportBranchIds,
+    ceiling?: ReportBranchIds,
+  ) {
+    return this.read.findById(id, companyId, branchScope, ceiling);
   }
   /**
    * The id-addressed profile reads.
@@ -122,8 +127,14 @@ export class StudentsService {
   ) {
     return this.write.update(id, dto, userId, companyId);
   }
-  delete(id: number, deletedById: number, reason: string, companyId: number) {
-    return this.write.delete(id, deletedById, reason, companyId);
+  delete(
+    id: number,
+    deletedById: number,
+    reason: string | undefined,
+    companyId: number,
+    reasonId?: string,
+  ) {
+    return this.write.delete(id, deletedById, reason, companyId, reasonId);
   }
   createStudentUser(
     studentId: number,

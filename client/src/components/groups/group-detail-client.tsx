@@ -6,6 +6,8 @@ import { Loader2 } from "lucide-react";
 import { GroupInfoCard } from "./group-info-card";
 import { GroupDetailTabs } from "./group-detail-tabs";
 import { EditGroupDrawer } from "./edit-group-drawer";
+import { InOtherBranch } from "@/components/shared/in-other-branch";
+import { otherBranchOf, type OtherBranch } from "@/lib/other-branch";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import type { GroupData } from "@/hooks/use-edit-group";
 import api from "@/lib/api";
@@ -18,6 +20,7 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
   const [group, setGroup] = useState<GroupData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [otherBranch, setOtherBranch] = useState<OtherBranch | null>(null);
   const [commentKey, setCommentKey] = useState(0);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -55,8 +58,10 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
       setGroup(data);
       setName(id, data.name);
       setError(false);
-    } catch {
+      setOtherBranch(null);
+    } catch (err) {
       setError(true);
+      setOtherBranch(otherBranchOf(err));
     } finally {
       setLoading(false);
     }
@@ -71,6 +76,16 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="text-muted-foreground size-6 animate-spin" />
       </div>
+    );
+  }
+
+  if (otherBranch) {
+    return (
+      <InOtherBranch
+        title="Guruh boshqa filialda"
+        what="guruh"
+        branch={otherBranch}
+      />
     );
   }
 
@@ -117,3 +132,4 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
     </>
   );
 }
+

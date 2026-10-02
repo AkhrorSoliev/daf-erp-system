@@ -145,13 +145,17 @@ export class ReportsOverviewService {
       (sum, a) => sum + a._count.id,
       0,
     );
+    const excusedCount = attendanceCounts
+      .filter((a) => a.status === 'EXCUSED')
+      .reduce((sum, a) => sum + a._count.id, 0);
     const presentAndLate = attendanceCounts
       .filter((a) => a.status === 'PRESENT' || a.status === 'LATE')
       .reduce((sum, a) => sum + a._count.id, 0);
+    // Formula from reports-attendance-analytics.service.ts (A2.6):
+    // (PRESENT + LATE) / (PRESENT + LATE + ABSENT), excluding EXCUSED from denominator
+    const denominator = totalAttendance - excusedCount;
     const averageAttendance =
-      totalAttendance > 0
-        ? Math.round((presentAndLate / totalAttendance) * 100)
-        : 0;
+      denominator > 0 ? Math.round((presentAndLate / denominator) * 100) : 0;
 
     const trend =
       lastMonthActiveStudents > 0

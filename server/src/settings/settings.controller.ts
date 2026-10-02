@@ -91,6 +91,30 @@ export class SettingsController {
     if (dto.noRefundAfterPercent !== undefined) {
       edits.push(['payment.noRefundAfterPercent', dto.noRefundAfterPercent]);
     }
+    if (dto.admissionRuleEnabled !== undefined) {
+      edits.push(['payment.admissionRuleEnabled', dto.admissionRuleEnabled]);
+    }
+    if (dto.trialLessonEnabled !== undefined) {
+      edits.push(['payment.trialLessonEnabled', dto.trialLessonEnabled]);
+    }
+    if (dto.attendanceOpensMinutesBefore !== undefined) {
+      edits.push([
+        'payment.attendanceOpensMinutesBefore',
+        dto.attendanceOpensMinutesBefore,
+      ]);
+    }
+    if (dto.admissionMinPaidPercent !== undefined) {
+      edits.push([
+        'payment.admissionMinPaidPercent',
+        dto.admissionMinPaidPercent,
+      ]);
+    }
+    if (dto.paidThroughReminderDays !== undefined) {
+      edits.push([
+        'payment.paidThroughReminderDays',
+        dto.paidThroughReminderDays,
+      ]);
+    }
 
     if (edits.length === 0) {
       throw new BadRequestException('Kamida bitta sozlama yuborilishi kerak');

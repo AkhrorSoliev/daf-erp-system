@@ -3,6 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SalaryMonthlyService } from '../salary/salary-monthly.service';
 import { ReportsService } from '../reports/reports.service';
 import {
+  isMonthlyBillingMonth,
+  type MonthCharges,
+} from '../reports/month-charges';
+import {
   branchIdWhere,
   groupBranchWhere,
   singleBranchId,
@@ -21,7 +25,9 @@ import {
   tashkentDayRange,
   tashkentTodayDate,
 } from './utils/format.util';
+import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
+import { buildMonthChargesLines } from './utils/month-charges-lines.util';
 
 /**
  * Builds the once-a-day 21:00 Telegram daily report — the center's end-of-day
@@ -35,9 +41,14 @@ import { buildIncomeSplitLines } from './utils/income-split.util';
  *   💰 Bugungi moliya      — today's cash in (by method), operational spend, net
  *   👥 O'quvchilar harakati — new vs departed students (net) + new leads
  *   🎓 Bugungi o'quv jarayoni — lessons held + attendance breakdown
- *   📌 Hozirgi holat        — active students + debt (with day-over-day ▲/▼)
+ *   📌 Hozirgi holat        — active students + debt as two numbers
+ *                             («O'qiyotganlar» with day-over-day ▲/▼ and its
+ *                             shu oy / eski qarz split, «O'qimayotganlar»)
  *   📅 Oy boshidan          — MTD income (+ this-month / old-debt split, per
- *                             month) / expense / net + lesson collection %
+ *                             month) / expense / net + lesson collection %;
+ *                             from 2026-09 «Bu oy hisoblandi / To'landi /
+ *                             Qoldi» take the place of the lesson-based
+ *                             collection % and the month-end lines
  *   💵 Ustozlar oyligi      — deserved / students-paid / center-funded, MTD
  *   🚩 Diqqat               — self-suppressing flags (refund / write-off / …)
  *
@@ -46,6 +57,14 @@ import { buildIncomeSplitLines } from './utils/income-split.util';
  * every day at 23:40, including the Sundays and holidays this report skips.
  *
  * Metric semantics mirror the CEO's `/payments/salary` and financial pages:
+ *  - «O'qiyotganlar qarzi» / «O'qimayotganlar qarzi» = the debt as two numbers
+ *    that are never added, from `ReportsService.getDebtSplit` (ADR-0059).
+ *    «O'qiyotganlar» = students in an active group (ADR-0015's «faol
+ *    o'quvchi»), split into this month's charges and older debt; everyone else
+ *    who owes is «O'qimayotganlar». The ▲/▼ delta, the 🟡 light and the
+ *    snapshot's `totalDebt`/`debtorCount` follow «O'qiyotganlar» alone. Never
+ *    re-derive either here — the status-ACTIVE aggregate this replaced counted
+ *    an ungrouped «faol» student as a debtor and no other surface did.
  *  - "Tushum (haqiqiy)" = cash actually received, NOT billed — read from
  *    `getIncomeMonthAttribution` so the two lines under it («Shu oy uchun» and
  *    «Eski qarzlar uchun», per month) decompose the figure printed above them.
@@ -61,6 +80,14 @@ import { buildIncomeSplitLines } from './utils/income-split.util';
  *    whole month. It answers "are we on track", which the held-lessons ratio
  *    cannot — that one can read 50% on the 5th. Same pair of figures the
  *    /payments/overview income drill-down shows, so the two cannot disagree.
+ *  - "Bu oy hisoblandi" / "To'landi" / "Qoldi" = what the month's monthly
+ *    charges came to, how much of it is paid and what is still owed, from
+ *    `ReportsService.getMonthCharges` (ADR-0058). Printed from 2026-09 on, in
+ *    place of "Shundan yig'ildi", "Oy oxiriga kutilyapti" and "Oy rejasidan
+ *    yig'ildi" ("Shu oyning darslari" stays). Those three lines print only
+ *    before 2026-09; from then on they never do, not even when the call fails
+ *    (the month block then simply has no hisoblandi / to'landi / qoldi lines,
+ *    and a warning goes to the log). Never re-derive it here.
  *  - "Markaz qo'shimchasi" = SalaryMonthly `centerFunded` — the center's own
  *    leg of the month: top-up accruals it has already written PLUS the lessons
  *    it still has to front. It does NOT drop to 0 once the month is settled.
@@ -69,7 +96,7 @@ import { buildIncomeSplitLines } from './utils/income-split.util';
 export class TelegramGroupDailyReportService {
   private readonly logger = new Logger(TelegramGroupDailyReportService.name);
 
-  /** Below this, a debt increase is not worth downgrading the day to 🟡. */
+  /** Below this, a rise in «O'qiyotganlar qarzi» is not worth downgrading the day to 🟡. */
   private static readonly DEBT_GROWTH_YELLOW = 500_000;
   /** Today's refund + write-off total at/above this downgrades the day to 🔴. */
   private static readonly BIG_MONEY_OUT_RED = 2_000_000;
@@ -123,10 +150,10 @@ export class TelegramGroupDailyReportService {
   ) {}
 
   /**
-   * Builds the full daily report and returns it alongside the point-in-time
-   * figures the cron should persist as tonight's snapshot (for tomorrow's
-   * ▲/▼ delta). Building does NOT write the snapshot — that is the cron's job
-   * after a confirmed send.
+   * Builds the full daily report and returns it alongside its point-in-time
+   * snapshot figures. Nothing persists them: the day's `DailyFinancialSnapshot`
+   * row has one writer, `DailySnapshotService` (23:40, see the class comment),
+   * and the next report's ▲/▼ reads that row.
    */
   async build(
     companyId: number,
@@ -158,12 +185,13 @@ export class TelegramGroupDailyReportService {
       todayExpenses,
       attendanceBreakdown,
       lessonGroupsToday,
-      debtorAgg,
+      debtSplit,
       monthlyIncome,
       monthlyExpenses,
       monthlyAdvances,
       todayFlags,
       yesterdaySnapshot,
+      staleUnmarked,
     ] = await Promise.all([
       this.prisma.company.findUnique({
         where: { id: companyId },
@@ -266,17 +294,10 @@ export class TelegramGroupDailyReportService {
         by: ['groupId'],
         where: { companyId, date: todayDate, ...groupBranchWhere(branchIds) },
       }),
-      this.prisma.student.aggregate({
-        where: {
-          companyId,
-          deletedAt: null,
-          status: 'ACTIVE',
-          balance: { lt: 0 },
-          ...studentBranchWhere(branchIds),
-        },
-        _sum: { balance: true },
-        _count: true,
-      }),
+      // The debt as two numbers that are never added (ADR-0059). It replaces a
+      // status-ACTIVE aggregate that counted an ungrouped «faol» student as a
+      // debtor. The month is the current Tashkent one, which is this report's own.
+      this.reports.getDebtSplit(companyId, { branchIds }),
       this.prisma.payment.aggregate({
         where: {
           companyId,
@@ -314,11 +335,15 @@ export class TelegramGroupDailyReportService {
       }),
       // One cheap groupBy powers the whole 🚩 Diqqat block: today's refunds,
       // debt write-offs and manual adjustments from the append-only ledger.
+      // Live rows only: cancelling writes a counter-row of the same type with
+      // `reversedTransactionId` set and `reversedAt: null`, so `reversedAt`
+      // alone would still report a refund that was undone.
       this.prisma.transaction.groupBy({
         by: ['type'],
         where: {
           companyId,
           reversedAt: null,
+          reversedTransactionId: null,
           createdAt: { gte: today.start, lt: today.end },
           type: { in: ['REFUND', 'DEBT_WRITE_OFF', 'ADJUSTMENT'] },
           ...branchIdWhere(branchIds),
@@ -338,18 +363,30 @@ export class TelegramGroupDailyReportService {
         },
         orderBy: { date: 'desc' },
       }),
+      // «Dars bo'ldimi?» questions left unanswered for more than a day
+      // (spec 2026-09-29 §3.7) — scoped like the rest of the report.
+      this.prisma.unmarkedLesson.count({
+        where: {
+          companyId,
+          status: 'PENDING',
+          createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          group: { deletedAt: null },
+          ...branchIdWhere(branchIds),
+        },
+      }),
     ]);
 
     // Prognoz + salary top-up are computed separately (heavier, and each is
     // wrapped so a failure degrades gracefully rather than killing the report).
     // Tashkent calendar month of "today" — the window the MTD block reports on.
     const monthKey = tashkentTodayDate().toISOString().slice(0, 7);
-    const [expectedValue, salary, canonicalNet, attribution] =
+    const [expectedValue, salary, canonicalNet, attribution, monthCharges] =
       await Promise.all([
         this.computeExpectation(companyId, monthKey, branchIds),
         this.computeSalaryTopUp(companyId, branchIds),
         this.computeCanonicalNetProfit(companyId, monthKey, branchIds),
         this.computeIncomeAttribution(companyId, branchIds),
+        this.computeMonthCharges(companyId, monthKey, branchIds),
       ]);
 
     // ── Derive figures ────────────────────────────────────────────────────
@@ -371,8 +408,11 @@ export class TelegramGroupDailyReportService {
       attendanceDenom > 0 ? Math.round((attended / attendanceDenom) * 100) : 0;
     const lessonsToday = lessonGroupsToday.length;
 
-    const totalDebt = Math.abs(debtorAgg._sum.balance ?? 0);
-    const debtorCount = debtorAgg._count;
+    // The snapshot, the ▲/▼ delta and the 🟡 light all follow «O'qiyotganlar»;
+    // `DailySnapshotService` writes the same two figures from the same split.
+    // «O'qimayotganlar» is printed and nothing more — it is never added to it.
+    const totalDebt = debtSplit.studying.total;
+    const debtorCount = debtSplit.studying.count;
 
     const mtdIncome = monthlyIncome._sum.amount ?? 0;
     const mtdExpense = monthlyExpenses._sum.amount ?? 0;
@@ -382,7 +422,7 @@ export class TelegramGroupDailyReportService {
     // Cash-only figure, kept for the «kassa harakati» reading below.
     const mtdCashNet = mtdIncome - mtdExpense - mtdAdvance;
 
-    const flags = this.buildFlagLines(todayFlags, attendancePct);
+    const flags = this.buildFlagLines(todayFlags, attendancePct, staleUnmarked);
 
     const debtGrowth = yesterdaySnapshot
       ? totalDebt - yesterdaySnapshot.totalDebt
@@ -462,9 +502,17 @@ export class TelegramGroupDailyReportService {
     // 📌 Hozirgi holat
     lines.push(`📌 <b>Hozirgi holat</b>`);
     lines.push(`• Faol o'quvchilar: <b>${formatNumber(activeStudents)}</b>`);
-    lines.push(
-      `• Qarzdorlar: <b>${formatNumber(debtorCount)}</b> ta — <b>${formatSum(totalDebt)}</b>${this.buildDebtDeltaSuffix(yesterdaySnapshot, totalDebt, debtorCount)}`,
-    );
+    // The debt (ADR-0059): the lines every Telegram surface prints. Only
+    // «O'qiyotganlar qarzi» carries the ▲/▼ against yesterday.
+    for (const line of buildDebtSplitLines(debtSplit, {
+      studyingSuffix: this.buildDebtDeltaSuffix(
+        yesterdaySnapshot,
+        totalDebt,
+        debtorCount,
+      ),
+    })) {
+      lines.push(line);
+    }
     lines.push('');
 
     // 📅 Oy boshidan
@@ -480,8 +528,8 @@ export class TelegramGroupDailyReportService {
     // `scripts/audit-finance-reconciliation.ts` checks as G1 — and `logIncome
     // BasisDrift` below says so in the log if that ever stops holding.
     //
-    // The snapshot keeps the aggregate on purpose: `DailySnapshotCron` writes
-    // the same row on that basis, and the two writers must agree.
+    // The returned snapshot figures keep the aggregate on purpose: it is the
+    // basis `DailySnapshotService`, the row's only writer, stores `mtdIncome` on.
     this.logIncomeBasisDrift(companyId, attribution, mtdIncome);
     lines.push(
       `• Tushum (haqiqiy): <b>${formatSum(attribution ? attribution.total : mtdIncome)}</b>`,
@@ -509,15 +557,28 @@ export class TelegramGroupDailyReportService {
     // `MTD cash ÷ forecast` — two different things over a denominator that is
     // a schedule guess, so it printed 109–115% while the web page called the
     // same month 83%. Now both surfaces divide the SAME two figures.
+    //
+    // From 2026-09 (ADR-0058) the month is read through «Bu oy hisoblandi /
+    // To'landi / Qoldi» instead, and «Shundan yig'ildi», «Oy oxiriga
+    // kutilyapti» and «Oy rejasidan yig'ildi» NEVER print in such a month — not
+    // even when the charges could not be read. They are the lesson-based
+    // figures that are wrong under monthly billing, so a month block without
+    // the new lines is right and one that falls back to these is not.
+    const monthlyBilling = isMonthlyBillingMonth(monthKey);
     if (attribution && attribution.lessonsValue > 0) {
       lines.push(
         `• Shu oyning darslari: <b>${formatSum(attribution.lessonsValue)}</b>`,
       );
-      lines.push(
-        `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth)}</b> (<b>${attribution.pct}%</b>)`,
-      );
+      if (!monthlyBilling) {
+        lines.push(
+          `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth)}</b> (<b>${attribution.pct}%</b>)`,
+        );
+      }
     }
-    if (expectedValue !== null && expectedValue > 0) {
+    if (monthCharges) {
+      // Same lines, same wording as the «Moliyaviy xulosa» card (ADR-0058).
+      for (const line of buildMonthChargesLines(monthCharges)) lines.push(line);
+    } else if (!monthlyBilling && expectedValue !== null && expectedValue > 0) {
       // Lesson value, from the ONE canonical source. The line it replaces was a
       // local `exactDays × 4` walk — a second implementation of a figure the web
       // page also computed, and both were wrong the same way.
@@ -628,6 +689,7 @@ export class TelegramGroupDailyReportService {
       _count: number;
     }>,
     attendancePct: number,
+    staleUnmarked: number,
   ): string[] {
     const lines: string[] = [];
     const flagFor = (type: string) => todayFlags.find((f) => f.type === type);
@@ -663,6 +725,12 @@ export class TelegramGroupDailyReportService {
       attendancePct < TelegramGroupDailyReportService.ATTENDANCE_LOW_PCT
     ) {
       lines.push(`• Davomat past: <b>${attendancePct}%</b>`);
+    }
+
+    if (staleUnmarked > 0) {
+      lines.push(
+        `• Javobsiz darslar (1 kundan ortiq): <b>${staleUnmarked}</b> ta — «Topshiriqlar»da javob bering`,
+      );
     }
 
     return lines;
@@ -745,6 +813,24 @@ export class TelegramGroupDailyReportService {
       this.logger.warn(
         `Expectation failed for company ${companyId} (${month}): ${err?.message ?? err}`,
       );
+      return null;
+    }
+  }
+
+  /** «Bu oy hisoblandi / To'landi / Qoldi» (ADR-0058); null before 2026-09 or on failure. */
+  private async computeMonthCharges(
+    companyId: number,
+    month: string,
+    branchIds: ReportBranchIds,
+  ): Promise<MonthCharges | null> {
+    if (!isMonthlyBillingMonth(month)) return null;
+    try {
+      return await this.reports.getMonthCharges(companyId, {
+        month,
+        branchIds,
+      });
+    } catch (err: any) {
+      this.logger.warn(`Oy hisoblari olinmadi: ${err?.message ?? err}`);
       return null;
     }
   }
@@ -942,7 +1028,9 @@ export class TelegramGroupDailyReportService {
 }
 
 export interface DailySnapshotData {
+  /** «O'qiyotganlar qarzi» — the studying debt, never the two added (ADR-0059). */
   totalDebt: number;
+  /** How many students owe it. */
   debtorCount: number;
   activeStudents: number;
   mtdIncome: number;

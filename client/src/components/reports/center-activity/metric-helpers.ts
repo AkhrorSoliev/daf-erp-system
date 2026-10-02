@@ -122,7 +122,7 @@ export function getUtilizationColor(pct: number): string | undefined {
 
 export const KPI_TOOLTIPS = {
   utilization:
-    "Xonalarning ish vaqti necha foiz darslar bilan band ekanligini ko'rsatadi.\n\nHisob: jami dars soatlari ÷ jami ish soatlari × 100.\n\nYuqori foiz — markaz vaqti yaxshi ishlatilgan. Past foiz — bo'sh vaqtlar ko'p, yangi guruhlar joylashtirish imkoniyati bor.\n\nDIQQAT: bu \"foyda\" emas, vaqt bandligi. Daromad statistikasi alohida \"Potensial qo'shimcha daromad\" KPI'sida.",
+    "Xonalarning ish vaqti necha foiz darslar bilan band ekanligini ko'rsatadi.\n\nHisob: jami dars soatlari ÷ jami ish soatlari × 100.\n\nYuqori foiz — markaz vaqti yaxshi ishlatilgan. Past foiz — bo'sh vaqtlar ko'p, yangi guruhlar joylashtirish imkoniyati bor.\n\nDIQQAT: bu \"foyda\" emas, vaqt bandligi. Daromad statistikasi alohida \"Potensial qo'shimcha daromad\" ko'rsatkichida.",
   emptyHours:
     "Xonalarning bo'sh qolgan ish vaqti soatlari. Hisob: jami ish soatlari − jami dars soatlari. Kam bo'sh vaqt yaxshi foydalanishni bildiradi.",
   activeStudents:
@@ -132,7 +132,7 @@ export const KPI_TOOLTIPS = {
   emptySeats:
     "Jismoniy bo'sh o'rindiqlar soni. Hisob: har xona uchun sig'im − eng ko'p o'quvchili guruh. Bu — bir vaqtning o'zida bo'sh qoladigan o'rindiqlar.",
   extraStudents:
-    "Hozirgi guruhlardagi jami bo'sh enrollment slotlari. Hisob: har guruh uchun (sig'im − o'quvchilar), barcha guruhlar bo'yicha yig'iladi. Yangi guruh ochmasdan, hozirgi guruhlarga nechta o'quvchi qo'shilishi mumkin.",
+    "Hozirgi guruhlardagi jami bo'sh o'rinlar. Hisob: har guruh uchun (sig'im − o'quvchilar), barcha guruhlar bo'yicha yig'iladi. Yangi guruh ochmasdan, hozirgi guruhlarga nechta o'quvchi qo'shilishi mumkin.",
   fik: "FIK (Foydalanish Intensivlik Koeffitsienti). Hisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100. Reja o'rinsoat = sig'im × ish vaqti.",
 };
 
@@ -154,7 +154,7 @@ export const TABLE_TOOLTIPS = {
   totalRevenue:
     "Xonadagi barcha guruhlardan olinadigan jami daromad.\n\nHisob: har guruh uchun (o'quvchilar soni × kurs narxi), so'ng yig'iladi.",
   idleTime:
-    "Xonaning tanlangan davr ichida darslar bilan band bo'lmagan jami soatlari.\n\nHisob: (haftalik ish vaqti − haftalik dars soatlari) × davr haftalari.\n\nYuqoridagi \"Bo'sh vaqtlar\" KPI bilan bir xil davr bo'yicha hisoblanadi — solishtirish to'g'ri keladi.\n\nKam bo'sh vaqt = xona yaxshi ishlatilgan.",
+    "Xonaning tanlangan davr ichida darslar bilan band bo'lmagan jami soatlari.\n\nHisob: (haftalik ish vaqti − haftalik dars soatlari) × davr haftalari.\n\nYuqoridagi \"Bo'sh vaqtlar\" ko'rsatkichi bilan bir xil davr bo'yicha hisoblanadi — solishtirish to'g'ri keladi.\n\nKam bo'sh vaqt = xona yaxshi ishlatilgan.",
   seatHoursScheduled:
     "Xona hozirgi dars jadvalida taklif qilayotgan jami o'rin-soatlar.\n\nO'rinsoat — bu bitta o'rindiq 1 soat ishlatilsa, 1 o'rinsoat hisoblanadi.\n\nHisob: sig'im × jami dars soatlari.\nMisol: 14 ta o'rindiq × 18 soat = 252 o'rinsoat.",
   seatHoursActual:
@@ -162,7 +162,7 @@ export const TABLE_TOOLTIPS = {
   seatHoursPlanned:
     "Agar xona butun haftalik ish vaqtida to'liq sig'imda ishlasa, qancha o'rinsoat bo'lishi mumkin.\n\nHisob: sig'im × haftalik ish vaqti.\nMisol: 14 ta o'rindiq × 84 soat = 1,176 o'rinsoat.\n\nBu — xonaning maksimal nazariy imkoniyati.",
   fik:
-    "FIK — Foydalanish Intensivligi Koeffitsienti.\n\nXonaning o'rin-soat imkoniyatidan necha foizi ishlatilayotganini ko'rsatadi (sig'im × ish vaqti × bandlik).\n\nHisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100.\n\nDIQQAT: bu yuqoridagi \"Vaqt bandligi\" KPI'sidan farq qiladi. Vaqt bandligi xona qancha vaqt darslar bilan band ekanini ko'rsatadi (dars soatlari ÷ ish soatlari). FIK esa o'rin-soatlar nuqtai nazaridan to'liq foydalanish darajasini hisoblaydi.\n\nRanglar:\n• Yashil — 70% va yuqori (yaxshi)\n• Sariq — 40–70% (o'rta)\n• Qizil — 40% dan kam (yomon)",
+    "FIK — Foydalanish Intensivligi Koeffitsienti.\n\nXonaning o'rin-soat imkoniyatidan necha foizi ishlatilayotganini ko'rsatadi (sig'im × ish vaqti × bandlik).\n\nHisob: amaldagi o'rinsoat ÷ reja o'rinsoat × 100.\n\nDIQQAT: bu yuqoridagi \"Vaqt bandligi\" ko'rsatkichidan farq qiladi. Vaqt bandligi xona qancha vaqt darslar bilan band ekanini ko'rsatadi (dars soatlari ÷ ish soatlari). FIK esa o'rin-soatlar nuqtai nazaridan to'liq foydalanish darajasini hisoblaydi.\n\nRanglar:\n• Yashil — 70% va yuqori (yaxshi)\n• Sariq — 40–70% (o'rta)\n• Qizil — 40% dan kam (yomon)",
 };
 
 export const BUCKET_LABELS: Record<CenterActivityBucket, string> = {

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   AttendanceStatus,
+  GroupStatus,
   PaymentModel,
   TransactionType,
 } from '@prisma/client';
@@ -10,6 +11,9 @@ import {
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
 import { applyDiscount, clampDiscount } from '../billing/monthly-price';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
+import type { PaymentReach } from '../billing/lesson-admission';
+import { tashkentDateStr } from '../common/date/tashkent';
 
 export interface PaymentBreakdownItem {
   kind: 'DEBT_REPAY' | 'CYCLE_FULL' | 'CYCLE_PARTIAL' | 'REMAINDER';
@@ -43,6 +47,14 @@ export interface MonthlyPreview {
   nextMonthAmount: number;
   discountPercent: number;
   enrollments: MonthlyPreviewEnrollment[];
+  // Contract 3.2 (ADR-0047): how far the balance after this payment reaches
+  // this month's lessons, and what the next one still needs. Null before the
+  // rule starts or with no lesson left this month.
+  admission: PaymentReach | null;
+  // ADR-0064: what the least share of the month asks for BEFORE this payment,
+  // while it is what keeps the student out of their next lesson — the «50%»
+  // quick amount. Null otherwise.
+  minShareDue: { amount: number; percent: number } | null;
 }
 
 export interface PaymentPreview {
@@ -83,7 +95,10 @@ export interface PaymentPreview {
  */
 @Injectable()
 export class PaymentsPreviewService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private admission: LessonAdmissionService,
+  ) {}
 
   async preview(
     studentId: number,
@@ -106,12 +121,26 @@ export class PaymentsPreviewService {
       throw new Error("O'quvchi topilmadi");
     }
 
+    // Groups that bill, or are about to. `MonthlyChargeService` bills an
+    // enrollment only while its group is ACTIVE (the guard on one enrollment
+    // and the daily run's query), and a PAUSED group's enrollment stays ACTIVE,
+    // so without a filter the dialog asked for a month nobody would bill. A
+    // FORMING group stays in: the status cron makes it ACTIVE on its start date
+    // and the daily run then charges it, and a new student in a forming group
+    // is who the admin takes a first payment from. A PAUSED group has no date
+    // at which billing resumes. This list sums `nextMonthAmount` and picks the
+    // model; the contract 3.2 reach (`monthly.admission`) does not read it — it
+    // loads the student's own month charges.
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         studentId,
         status: 'ACTIVE',
         deletedAt: null,
-        group: { companyId, deletedAt: null },
+        group: {
+          companyId,
+          deletedAt: null,
+          statusEnum: { in: [GroupStatus.ACTIVE, GroupStatus.FORMING] },
+        },
       },
       select: {
         id: true,
@@ -145,12 +174,31 @@ export class PaymentsPreviewService {
         (e) => e.group.course.paymentModel === PaymentModel.MONTHLY,
       )
     ) {
-      return this.buildMonthlyPreview(
+      const monthly = this.buildMonthlyPreview(
         amount,
         student.balance,
         student.discountPercent ?? 0,
         enrollments,
       );
+      if (monthly.monthly) {
+        const today = tashkentDateStr(new Date());
+        const reachAt = (balanceAfter: number) =>
+          this.admission.reachForPayment({
+            studentId,
+            companyId,
+            balanceAfter,
+            today,
+          });
+        const after = await reachAt(newBalance);
+        const before = amount === 0 ? after : await reachAt(student.balance);
+        monthly.monthly.admission = after;
+        const short = before?.next;
+        monthly.monthly.minShareDue =
+          short && short.minPaidPercent !== null
+            ? { amount: short.needed, percent: short.minPaidPercent }
+            : null;
+      }
+      return monthly;
     }
 
     if (enrollments.length > 1) {
@@ -415,7 +463,14 @@ export class PaymentsPreviewService {
       primaryEnrollment: null,
       breakdown,
       model: 'MONTHLY',
-      monthly: { debt, nextMonthAmount, discountPercent, enrollments: lines },
+      monthly: {
+        debt,
+        nextMonthAmount,
+        discountPercent,
+        enrollments: lines,
+        admission: null,
+        minShareDue: null,
+      },
     };
   }
 

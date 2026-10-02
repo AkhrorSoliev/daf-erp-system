@@ -118,7 +118,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   const [latestComment, setLatestComment] = useState<{
     content: string;
     isTask?: boolean;
-    author: { firstName: string; lastName: string };
+    author: { firstName: string; lastName: string } | null;
     createdAt: string;
   } | null>(null);
 
@@ -164,7 +164,9 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   const mobileComment = latestComment
     ? {
         content: latestComment.content,
-        author: `${latestComment.author.firstName} ${latestComment.author.lastName}`,
+        author: latestComment.author
+          ? `${latestComment.author.firstName} ${latestComment.author.lastName}`
+          : "Tizim",
         date: format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm"),
         isTask: latestComment.isTask,
       }

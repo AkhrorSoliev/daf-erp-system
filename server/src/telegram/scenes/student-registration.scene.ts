@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { BotContext } from '../types/context';
@@ -35,7 +36,9 @@ import {
   registerStudentFromTelegram,
   uploadStudentPhoto,
 } from './student-registration-flow';
+import { finishRegistration } from './finish-registration';
 import { withProcessingLock } from '../utils/processing-lock';
+import { describeError } from '../../telegram-digest/telegram-send';
 
 /**
  * Student registration flow:
@@ -53,6 +56,7 @@ export function createStudentRegistrationScene(
   _bot: Telegraf<BotContext>,
   entityHistoryService: EntityHistoryService,
   leadOrigin: StudentLeadOriginService,
+  events: Pick<EventEmitter2, 'emitAsync'>,
 ): Scenes.BaseScene<BotContext> {
   const logger = new Logger('StudentRegistrationScene');
   const scene = new Scenes.BaseScene<BotContext>(SCENES.STUDENT_REGISTRATION);
@@ -379,7 +383,10 @@ export function createStudentRegistrationScene(
 
     try {
       await uploadStudentPhoto(ctx, uploadService, photo.file_id, 'image/jpeg');
-    } catch {
+    } catch (err) {
+      logger.warn(
+        `O'quvchi rasmi yuklanmadi (chat ${ctx.chat.id}): ${describeError(err)}`,
+      );
       await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
@@ -408,7 +415,10 @@ export function createStudentRegistrationScene(
 
     try {
       await uploadStudentPhoto(ctx, uploadService, doc.file_id, mime);
-    } catch {
+    } catch (err) {
+      logger.warn(
+        `O'quvchi rasmi yuklanmadi (chat ${ctx.chat.id}): ${describeError(err)}`,
+      );
       await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
@@ -435,29 +445,16 @@ export function createStudentRegistrationScene(
       const data = ctx.session.data;
       const chatId = String(ctx.chat!.id);
 
+      let plainPassword: string;
       try {
-        const { plainPassword } = await registerStudentFromTelegram(
+        ({ plainPassword } = await registerStudentFromTelegram(
           prisma,
           entityHistoryService,
           leadOrigin,
           data,
           chatId,
-        );
-
-        await ctx.editMessageCaption('✅ Tasdiqlandi!');
-        await ctx.replyWithPhoto(data.photo, {
-          caption:
-            "✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
-            `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
-            `📚 Guruh: ${data.groupName}\n\n` +
-            `🔐 Shaxsiy kabinetingiz:\n` +
-            `🌐 student.dafzentrum.uz\n` +
-            `📱 Login: ${data.phone}\n` +
-            `🔑 Parol: ${plainPassword}\n\n` +
-            'Tez orada sizga darslar haqida xabar beramiz!',
-        });
-
-        await ctx.scene.leave();
+          events,
+        ));
       } catch (error) {
         logger.error("Ro'yxatdan o'tishda xatolik", error as Error);
 
@@ -479,7 +476,23 @@ export function createStudentRegistrationScene(
             ],
           ]),
         );
+        return;
       }
+
+      // The student, their enrollment and their sign-in account exist now.
+      await finishRegistration(
+        ctx,
+        logger,
+        data.photo,
+        "✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
+          `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
+          `📚 Guruh: ${data.groupName}\n\n` +
+          `🔐 Shaxsiy kabinetingiz:\n` +
+          `🌐 student.dafzentrum.uz\n` +
+          `📱 Login: ${data.phone}\n` +
+          `🔑 Parol: ${plainPassword}\n\n` +
+          'Tez orada sizga darslar haqida xabar beramiz!',
+      );
     });
   });
 

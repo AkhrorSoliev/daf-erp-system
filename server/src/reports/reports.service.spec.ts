@@ -22,6 +22,10 @@ import { SalaryPaymentService } from '../salary/salary-payment.service';
 import { SalaryService } from '../salary/salary.service';
 import { PaymentsDebtorsService } from '../payments/payments-debtors.service';
 import { DEPARTURE_GRACE_DAYS } from '../students/shared/departure-episodes';
+import {
+  resolveMonthlyScope,
+  type SalaryMonthlyQuery,
+} from '../salary/shared/resolve-monthly-scope';
 
 /**
  * One teacher change (5 March, 10:00 Tashkent) in group g1 whose five lessons
@@ -157,6 +161,8 @@ describe('ReportsService', () => {
       groupTeacherChangeReason: { findMany: jest.fn().mockResolvedValue([]) },
       enrollmentTransferReason: { findMany: jest.fn().mockResolvedValue([]) },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
+      // «Bu oy hisoblandi» (overview of a billed month): nobody charged → zeros.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
     };
     prisma.enrollment.groupBy = jest.fn();
     prisma.enrollment.findMany = jest.fn().mockResolvedValue([]);
@@ -270,6 +276,30 @@ describe('ReportsService', () => {
         pendingDepartures: 0,
         departureGraceDays: DEPARTURE_GRACE_DAYS,
       });
+    });
+
+    it('should calculate attendance percentage excluding EXCUSED lessons', async () => {
+      prisma.student.count
+        .mockResolvedValueOnce(50) // activeStudents
+        .mockResolvedValueOnce(45) // lastMonthActive
+        .mockResolvedValueOnce(5); // new students
+
+      prisma.group.count.mockResolvedValue(10);
+
+      prisma.attendance.groupBy.mockResolvedValue([
+        { status: 'PRESENT', _count: { id: 70 } },
+        { status: 'LATE', _count: { id: 10 } },
+        { status: 'ABSENT', _count: { id: 10 } },
+        { status: 'EXCUSED', _count: { id: 10 } },
+      ]);
+
+      prisma.lead.count
+        .mockResolvedValueOnce(100) // total
+        .mockResolvedValueOnce(20); // converted
+
+      const result = await service.getKpis(1, {});
+
+      expect(result.averageAttendance).toBe(89); // round(80 / 90 × 100)
     });
 
     it('should handle zero students gracefully', async () => {
@@ -524,94 +554,12 @@ describe('ReportsService', () => {
     });
   });
 
-  describe('isPaymentOnTime', () => {
-    const basePayment = {
-      studentId: 10001,
-      createdAt: new Date('2026-04-15'),
-      contractId: 'c1',
-      contract: {
-        groupId: 'g1',
-        course: { lessonPaymentCount: 12 },
-      },
-    };
-
-    it('returns true when group has ≤3 lessons (new group)', async () => {
-      prisma.attendance.count
-        .mockResolvedValueOnce(2) // groupLessonsTotal
-        .mockResolvedValueOnce(0); // studentLessonsBefore
-
-      const result = await service.isPaymentOnTime(basePayment);
-      expect(result).toBe(true);
-    });
-
-    it('returns true when student starts a new cycle (lessons % count === 0)', async () => {
-      prisma.attendance.count
-        .mockResolvedValueOnce(50) // groupLessonsTotal (existing group)
-        .mockResolvedValueOnce(12); // studentLessonsBefore: exactly 1 cycle done
-
-      const result = await service.isPaymentOnTime(basePayment);
-      expect(result).toBe(true);
-    });
-
-    it('returns false when payment happens mid-cycle', async () => {
-      prisma.attendance.count
-        .mockResolvedValueOnce(50) // groupLessonsTotal
-        .mockResolvedValueOnce(5); // studentLessonsBefore: mid-cycle
-
-      const result = await service.isPaymentOnTime(basePayment);
-      expect(result).toBe(false);
-    });
-
-    it('returns true for a new student joining an existing group (0 lessons attended)', async () => {
-      prisma.attendance.count
-        .mockResolvedValueOnce(50) // groupLessonsTotal
-        .mockResolvedValueOnce(0); // studentLessonsBefore: brand new student
-
-      const result = await service.isPaymentOnTime(basePayment);
-      expect(result).toBe(true);
-    });
-
-    it('uses 20-lesson cycle when course.lessonPaymentCount is 20', async () => {
-      prisma.attendance.count
-        .mockResolvedValueOnce(50) // groupLessonsTotal
-        .mockResolvedValueOnce(20); // exactly 1 cycle of 20
-
-      const payment = {
-        ...basePayment,
-        contract: { groupId: 'g1', course: { lessonPaymentCount: 20 } },
-      };
-      const result = await service.isPaymentOnTime(payment);
-      expect(result).toBe(true);
-    });
-
-    it('returns null when payment has no contract and student has no enrollment', async () => {
-      prisma.enrollment.findFirst.mockResolvedValueOnce(null);
-      const payment = { ...basePayment, contractId: null, contract: null };
-      const result = await service.isPaymentOnTime(payment);
-      expect(result).toBeNull();
-    });
-
-    it('falls back to student enrollment when contract is missing', async () => {
-      prisma.enrollment.findFirst.mockResolvedValueOnce({
-        groupId: 'g2',
-        group: { course: { lessonPaymentCount: 12 } },
-      });
-      prisma.attendance.count
-        .mockResolvedValueOnce(30) // groupLessonsTotal
-        .mockResolvedValueOnce(0); // studentLessonsBefore: new student
-      const payment = { ...basePayment, contractId: null, contract: null };
-      const result = await service.isPaymentOnTime(payment);
-      expect(result).toBe(true);
-    });
-  });
-
   describe('getPaymentReports', () => {
-    it('returns the expected response shape with 4 metric blocks', async () => {
+    it('returns the expected response shape with 3 metric blocks', async () => {
       prisma.payment.aggregate.mockResolvedValue({
         _sum: { amount: 1_000_000 },
         _count: 10,
       });
-      prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.groupBy.mockResolvedValue([]);
       prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
       prisma.transaction.count.mockResolvedValue(0);
@@ -625,9 +573,10 @@ describe('ReportsService', () => {
       });
 
       expect(result).toHaveProperty('totalPayments');
-      expect(result).toHaveProperty('onTimePayments');
       expect(result).toHaveProperty('branchBreakdown');
       expect(result).toHaveProperty('refunds');
+      // «Vaqtida to'lovlar» (12 darslik qoida) oylik tizimda doim xato edi.
+      expect(result).not.toHaveProperty('onTimePayments');
       expect(result.totalPayments.trend).toHaveLength(6);
       expect(result.totalPayments.current).toBe(1_000_000);
     });
@@ -637,7 +586,6 @@ describe('ReportsService', () => {
         _sum: { amount: 500_000 },
         _count: 5,
       });
-      prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.groupBy.mockResolvedValue([]);
       prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
       prisma.transaction.count.mockResolvedValue(0);
@@ -655,7 +603,6 @@ describe('ReportsService', () => {
         _sum: { amount: 0 },
         _count: 0,
       });
-      prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.groupBy.mockResolvedValue([
         { branchId: 1, _sum: { amount: 2_000_000 } },
         { branchId: 2, _sum: { amount: 5_000_000 } },
@@ -682,7 +629,7 @@ describe('ReportsService', () => {
       expect(result).toEqual({ teachers: [] });
     });
 
-    it('aggregates student count, payments, and debt per teacher', async () => {
+    it('aggregates student count and debt per teacher', async () => {
       prisma.user.findMany.mockResolvedValueOnce([
         {
           id: 10001,
@@ -700,12 +647,6 @@ describe('ReportsService', () => {
         { groupId: 'g2', _count: { _all: 5 } },
       ]);
 
-      prisma.payment.findMany.mockResolvedValueOnce([
-        { amount: 500_000, contract: { groupId: 'g1' } },
-        { amount: 300_000, contract: { groupId: 'g2' } },
-        { amount: 200_000, contract: { groupId: 'g1' } },
-      ]);
-
       prisma.student.findMany.mockResolvedValueOnce([
         {
           balance: -100_000,
@@ -716,15 +657,18 @@ describe('ReportsService', () => {
       const result = await service.getTeacherPaymentReports(1, {});
 
       expect(result.teachers).toHaveLength(1);
-      expect(result.teachers[0]).toMatchObject({
+      // toEqual: a revived `totalPayments` (payments looked up through
+      // contracts — always 0) would fail here.
+      expect(result.teachers[0]).toEqual({
         id: 10001,
         name: 'Ali Valiyev',
         groupCount: 2,
         courses: ['B1 German', 'A1 German'],
         studentCount: 15,
-        totalPayments: 1_000_000,
         debtAmount: 100_000,
       });
+      // Payments are no longer looked up at all.
+      expect(prisma.payment.findMany).not.toHaveBeenCalled();
     });
 
     it('filters out teachers with no active groups', async () => {
@@ -741,7 +685,7 @@ describe('ReportsService', () => {
       expect(result.teachers).toEqual([]);
     });
 
-    it('sorts teachers by total payments desc', async () => {
+    it('sorts teachers by debt desc', async () => {
       prisma.user.findMany.mockResolvedValueOnce([
         {
           id: 1,
@@ -760,14 +704,14 @@ describe('ReportsService', () => {
         { groupId: 'g1', _count: { _all: 1 } },
         { groupId: 'g2', _count: { _all: 1 } },
       ]);
-      prisma.payment.findMany.mockResolvedValueOnce([
-        { amount: 100, contract: { groupId: 'g1' } },
-        { amount: 900, contract: { groupId: 'g2' } },
+      prisma.student.findMany.mockResolvedValueOnce([
+        { balance: -100, enrollments: [{ groupId: 'g1' }] },
+        { balance: -900, enrollments: [{ groupId: 'g2' }] },
       ]);
-      prisma.student.findMany.mockResolvedValueOnce([]);
 
       const result = await service.getTeacherPaymentReports(1, {});
       expect(result.teachers.map((t) => t.id)).toEqual([2, 1]);
+      expect(result.teachers.map((t) => t.debtAmount)).toEqual([900, 100]);
     });
   });
 
@@ -793,7 +737,7 @@ describe('ReportsService', () => {
       });
     });
 
-    it('computes per-group stats: students, paid, debtors, expected', async () => {
+    it('computes per-group stats: students, debtors, expected', async () => {
       prisma.user.findFirst.mockResolvedValueOnce({
         id: 10001,
         firstName: 'Ali',
@@ -813,35 +757,49 @@ describe('ReportsService', () => {
         { groupId: 'g1', studentId: 102 },
         { groupId: 'g1', studentId: 103 },
       ]);
-      prisma.payment.findMany.mockResolvedValueOnce([
-        {
-          amount: 300_000,
-          studentId: 101,
-          contract: { groupId: 'g1' },
-        },
-        {
-          amount: 300_000,
-          studentId: 102,
-          contract: { groupId: 'g1' },
-        },
-      ]);
       prisma.student.findMany.mockResolvedValueOnce([
         { balance: -50_000, enrollments: [{ groupId: 'g1' }] },
       ]);
 
       const result = await service.getTeacherGroupsReport(1, 10001, {});
       expect(result.groups).toHaveLength(1);
-      expect(result.groups[0]).toMatchObject({
+      // toEqual: a revived `paidCount` / `totalPayments` (payments looked up
+      // through contracts — always 0) would fail here.
+      expect(result.groups[0]).toEqual({
         id: 'g1',
         name: 'B1-01',
         coursePrice: 300_000,
         totalStudents: 3,
-        paidCount: 2,
         debtorCount: 1,
-        totalPayments: 600_000,
         debtAmount: 50_000,
         expectedAmount: 900_000,
       });
+      // Payments are no longer looked up at all.
+      expect(prisma.payment.findMany).not.toHaveBeenCalled();
+    });
+
+    it('sorts groups by debt desc', async () => {
+      prisma.user.findFirst.mockResolvedValueOnce({
+        id: 10001,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+      });
+      prisma.groupTeacher.findMany.mockResolvedValueOnce([
+        { group: { id: 'g1', name: 'B1-01', course: { price: 300_000 } } },
+        { group: { id: 'g2', name: 'B1-02', course: { price: 300_000 } } },
+      ]);
+      prisma.enrollment.findMany.mockResolvedValueOnce([
+        { groupId: 'g1', studentId: 101 },
+        { groupId: 'g2', studentId: 102 },
+      ]);
+      prisma.student.findMany.mockResolvedValueOnce([
+        { balance: -50_000, enrollments: [{ groupId: 'g1' }] },
+        { balance: -200_000, enrollments: [{ groupId: 'g2' }] },
+      ]);
+
+      const result = await service.getTeacherGroupsReport(1, 10001, {});
+      expect(result.groups.map((g) => g.id)).toEqual(['g2', 'g1']);
+      expect(result.groups.map((g) => g.debtAmount)).toEqual([200_000, 50_000]);
     });
   });
 
@@ -1208,6 +1166,126 @@ describe('ReportsService', () => {
     });
   });
 
+  describe('assembleMonthlyNetProfit', () => {
+    it("adds the month's balance withdrawals as their own leg (ADR-0055)", async () => {
+      const svc: any = service;
+      jest
+        .spyOn(svc.financial, 'valueHeldLessons')
+        .mockResolvedValue([{ value: 100_000 }]);
+      jest
+        .spyOn(svc.financial, 'getPeriodOutflows')
+        .mockResolvedValue({ refunds: 0, writeOffs: 0, providerFees: 0 });
+      jest.spyOn(svc, 'getSalaryMonthly').mockResolvedValue({
+        totals: { covered: 70_000, fullDeserved: 70_000 },
+      });
+      jest.spyOn(svc, 'getProfitLoss').mockResolvedValue({
+        costOfServices: {},
+        operatingExpenses: { adminSalaries: 0, byCategory: [] },
+      });
+      const withdrawals = {
+        total: 30_000,
+        teacherCredited: 30_000,
+        students: [{ studentId: 10001, name: 'Ali Valiyev', amount: 30_000 }],
+      };
+      const load = jest
+        .spyOn(svc, 'getBalanceWithdrawals')
+        .mockResolvedValue(withdrawals);
+
+      const out = await svc.assembleMonthlyNetProfit(1001, {
+        month: '2026-10',
+        branchIds: [1],
+        performedById: 10001,
+      });
+
+      expect(load).toHaveBeenCalledWith(1001, {
+        months: ['2026-10'],
+        branchIds: [1],
+      });
+      expect(out.withdrawals).toBe(withdrawals);
+      expect(out.netProfit.balanceWithdrawals).toBe(30_000);
+      // 100 000 lessons + 30 000 withdrawn − 70 000 teachers.
+      expect(out.netProfit.netProfit).toBe(60_000);
+    });
+
+    /**
+     * A2.8. The payroll leg ran the director's branch scope as `mainBranch`
+     * alone, so a director attached to branches 1 and 2 who picked branch 2 got
+     * a blocked scope: no roster, payroll 0, and the branch's profit looked too
+     * high. The leg below runs the REAL `resolveMonthlyScope`; behind a blocked
+     * scope `SalaryMonthlyService` finds no teachers and returns all-zero totals.
+     */
+    it('subtracts the payroll of the branch a two-branch director picked (A2.8)', async () => {
+      const svc: any = service;
+      jest
+        .spyOn(svc.financial, 'valueHeldLessons')
+        .mockResolvedValue([{ value: 100_000 }]);
+      jest
+        .spyOn(svc.financial, 'getPeriodOutflows')
+        .mockResolvedValue({ refunds: 0, writeOffs: 0, providerFees: 0 });
+      jest.spyOn(svc, 'getProfitLoss').mockResolvedValue({
+        costOfServices: {},
+        operatingExpenses: { adminSalaries: 0, byCategory: [] },
+      });
+      jest
+        .spyOn(svc, 'getBalanceWithdrawals')
+        .mockResolvedValue({ total: 0, teacherCredited: 0, students: [] });
+
+      const salaryPrisma = {
+        company: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue({ systemStartDate: new Date('2026-05-01') }),
+        },
+        salaryPeriodSetting: {
+          findFirst: jest.fn().mockResolvedValue({ cycleStartDay: 1 }),
+        },
+        user: {
+          findUnique: jest.fn().mockResolvedValue({
+            mainBranch: 1,
+            branches: [{ branchId: 1 }, { branchId: 2 }],
+            roles: [{ role: { name: 'Branch Director' } }],
+          }),
+        },
+      } as any;
+      const getMonthly = jest.fn(
+        async (
+          query: SalaryMonthlyQuery,
+          companyId: number,
+          performedById: number,
+        ) => {
+          const scope = await resolveMonthlyScope(
+            salaryPrisma,
+            query,
+            companyId,
+            performedById,
+          );
+          return {
+            totals: scope.blocked
+              ? { covered: 0, fullDeserved: 0 }
+              : { covered: 70_000, fullDeserved: 70_000 },
+          };
+        },
+      );
+      svc.salary = { getMonthly };
+
+      const out = await svc.assembleMonthlyNetProfit(1001, {
+        month: '2026-10',
+        branchIds: [2],
+        performedById: 10768,
+      });
+
+      expect(getMonthly).toHaveBeenCalledWith(
+        { month: '2026-10', branchId: 2, staffBranchBasis: 'home' },
+        1001,
+        10768,
+      );
+      // 100 000 of lessons − 70 000 of branch 2's payroll, not 100 000 against
+      // a payroll leg that a blocked scope had read as 0.
+      expect(out.netProfit.teacherSalary).toBe(70_000);
+      expect(out.netProfit.netProfit).toBe(30_000);
+    });
+  });
+
   describe('getOwnMonthProfit', () => {
     it('combines attribution + net profit into the own-month figure', async () => {
       const svc: any = service;
@@ -1331,10 +1409,10 @@ describe('ReportsService', () => {
       );
 
       expect(redis.get).toHaveBeenCalledWith(
-        'rpt:np:v3:1001:3,7:u10001:2026-08',
+        'rpt:np:v5:1001:3,7:u10001:2026-08',
       );
       expect(redis.setex).toHaveBeenCalledWith(
-        'rpt:np:v3:1001:3,7:u10001:2026-08',
+        'rpt:np:v5:1001:3,7:u10001:2026-08',
         expect.any(Number),
         '4200000',
       );
@@ -1342,6 +1420,209 @@ describe('ReportsService', () => {
         profit: 4_200_000,
         profitBasis: 'kanonik',
       });
+    });
+  });
+
+  // The debt reads nothing of the period, but the facade still asks for it on
+  // every overview: the tests of the other blocks stub it so they do not reach
+  // the (mocked, empty) student table.
+  const emptyDebtSplit = {
+    studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
+    notStudying: { total: 0, count: 0 },
+  };
+  const stubDebtSplit = () =>
+    jest
+      .spyOn((service as any).financial, 'getDebtSplit')
+      .mockResolvedValue(emptyDebtSplit);
+
+  describe('getFinancialOverview — month-end expectation', () => {
+    // 01.10.2026 01:30 in Tashkent; the UTC date is still 30.09.
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00.000Z'));
+      stubDebtSplit();
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('projects the month the overview covers: the current Tashkent month by default, else the period start month', async () => {
+      jest
+        .spyOn((service as any).financial, 'getFinancialOverview')
+        .mockResolvedValue({ income: {} });
+      const expectation = jest.spyOn(service, 'getMonthlyExpectation');
+
+      await service.getFinancialOverview(1001, { branchIds: null });
+      await service.getFinancialOverview(1001, {
+        branchIds: [7],
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+      });
+
+      expect(expectation.mock.calls).toEqual([
+        [1001, { month: '2026-10', branchIds: null }],
+        [1001, { month: '2026-07', branchIds: [7] }],
+      ]);
+    });
+
+    // `income.expected` (a second copy of `forecast.expectedMonthEnd`, hard-coded
+    // to 0 in the raw service) had no reader left and was removed. So did the
+    // debt in `forecast` (ADR-0059): the raw service has no `forecast` to give,
+    // and the facade's holds the three expectation figures and nothing else.
+    it('folds the expectation into `forecast` alone: `income` passes through untouched', async () => {
+      const rawIncome = { actual: 5_000, paymentCount: 1, byMethod: [] };
+      jest
+        .spyOn((service as any).financial, 'getFinancialOverview')
+        .mockResolvedValue({ income: rawIncome });
+      jest.spyOn(service, 'getMonthlyExpectation').mockResolvedValue({
+        month: '2026-07',
+        heldValue: 100,
+        heldLessons: 1,
+        remainingValue: 200,
+        remainingLessons: 2,
+        expectedValue: 300,
+      } as never);
+
+      const res = await service.getFinancialOverview(1001, {
+        branchIds: null,
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+      });
+
+      expect(res.forecast).toEqual({
+        expectedMonthEnd: 300,
+        expectedHeld: 100,
+        expectedRemaining: 200,
+      });
+      expect(res.income).toEqual(rawIncome);
+      expect(res.income).not.toHaveProperty('expected');
+    });
+  });
+
+  // «Qarzdorlik» (ADR-0059): two numbers, never added, from the one split. The
+  // overview's old debt — `forecast.outstandingReceivable` /
+  // `debtorExposure` / `debtorCount` — counted status ACTIVE only, so an ungrouped
+  // «faol» student sat in «qarzdorlar» there and nowhere else.
+  describe("getFinancialOverview — «O'qiyotganlar qarzi» / «O'qimayotganlar qarzi»", () => {
+    const split = {
+      studying: {
+        total: 43_500_000,
+        count: 237,
+        currentMonth: 41_100_000,
+        older: 2_400_000,
+      },
+      notStudying: { total: 40_600_000, count: 327 },
+    };
+
+    beforeEach(() => {
+      jest
+        .spyOn((service as any).financial, 'getFinancialOverview')
+        .mockResolvedValue({ income: {} });
+    });
+
+    it("returns the split the facade reads, for the overview's own scope", async () => {
+      const getDebtSplit = jest
+        .spyOn((service as any).financial, 'getDebtSplit')
+        .mockResolvedValue(split);
+
+      const res = await service.getFinancialOverview(1001, {
+        branchIds: [7],
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      });
+
+      expect(res.debtSplit).toEqual(split);
+      expect(getDebtSplit).toHaveBeenCalledTimes(1);
+      expect(getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: [7] });
+    });
+
+    it('a company-wide caller gets the company-wide split, not an empty scope', async () => {
+      const getDebtSplit = jest
+        .spyOn((service as any).financial, 'getDebtSplit')
+        .mockResolvedValue(split);
+
+      await service.getFinancialOverview(1001, { branchIds: null });
+
+      expect(getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: null });
+    });
+
+    it("is today's debt: a past period is still split by the CURRENT month", async () => {
+      const getDebtSplit = jest
+        .spyOn((service as any).financial, 'getDebtSplit')
+        .mockResolvedValue(split);
+
+      await service.getFinancialOverview(1001, {
+        branchIds: null,
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+      });
+
+      // «Shu oy» of a debt that stands today is this month's; July's charges
+      // set against today's balance would split it by a month that is over.
+      expect(getDebtSplit.mock.calls[0][1]).not.toHaveProperty('month');
+    });
+
+    it('keeps no combined debt figure beside the two', async () => {
+      jest
+        .spyOn((service as any).financial, 'getDebtSplit')
+        .mockResolvedValue(split);
+
+      const res: any = await service.getFinancialOverview(1001, {
+        branchIds: null,
+      });
+
+      expect(res).not.toHaveProperty('debtorCount');
+      expect(res.forecast).not.toHaveProperty('outstandingReceivable');
+      expect(res.forecast).not.toHaveProperty('debtorExposure');
+    });
+  });
+
+  describe('getFinancialOverview — «Bu oy hisoblandi»', () => {
+    const monthCharges = {
+      month: '2026-10',
+      charged: 900_000,
+      paid: 350_000,
+      unpaid: 550_000,
+      paidPct: 38.9,
+      students: 2,
+    };
+
+    beforeEach(() => {
+      jest
+        .spyOn((service as any).financial, 'getFinancialOverview')
+        .mockResolvedValue({ income: {} });
+      stubDebtSplit();
+    });
+
+    it('a billed month carries the charged figure next to the expectation', async () => {
+      const getMonthCharges = jest
+        .spyOn((service as any).financial, 'getMonthCharges')
+        .mockResolvedValue(monthCharges);
+
+      const res = await service.getFinancialOverview(1001, {
+        branchIds: [7],
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      });
+
+      expect(res.monthCharges).toEqual(monthCharges);
+      expect(getMonthCharges).toHaveBeenCalledWith(1001, {
+        month: '2026-10',
+        branchIds: [7],
+      });
+    });
+
+    it('a month before the monthly billing has no charged figure and is not queried', async () => {
+      const getMonthCharges = jest.spyOn(
+        (service as any).financial,
+        'getMonthCharges',
+      );
+
+      const res = await service.getFinancialOverview(1001, {
+        branchIds: null,
+        startDate: '2026-08-01',
+        endDate: '2026-08-31',
+      });
+
+      expect(res.monthCharges).toBeNull();
+      expect(getMonthCharges).not.toHaveBeenCalled();
     });
   });
 });

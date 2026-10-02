@@ -167,22 +167,137 @@ describe('presentStatement', () => {
     const v = presentStatement(buildStatement(debtor()), 'admin');
     expect(nb(v.answer.title)).toBe("Qarzi: 257 500 so'm");
     expect(nb(v.equation.map((s) => s.text).join(''))).toBe(
-      "To'lagan 200 000 − o'qigan darslari 457 500 = −257 500",
+      "To'lagan 200 000 − darslari narxi 457 500 = −257 500",
     );
   });
 
   it('writes the months table with quiet months, absences and the monthly line', () => {
     const v = presentStatement(buildStatement(debtor()), 'student');
     expect(
-      v.months.map((m) => [m.label, m.lessons, m.absent, m.cost, m.costNote]),
+      v.dues.map((m) => [
+        m.label,
+        m.lessons,
+        m.lessonsNote,
+        m.cost,
+        m.costNote,
+      ]),
     ).toEqual([
       ['Iyul', '9 ta', '1 kelmagan', '270\u00a0000', null],
       ['Avgust', '0 ta', null, null, "hisoblangan dars yo'q"],
       ['Sentabr', '5 ta', null, '187\u00a0500', null],
     ]);
-    expect(nb(v.months[2].details[0])).toBe(
+    expect(nb(v.dues[2].details[0])).toBe(
       "oylik to'lov: 19-sentabrdan, 12 darsdan 5 tasi × 37 500",
     );
+  });
+
+  describe('the table of what is paid and what is owed', () => {
+    const rows = (v: ReturnType<typeof presentStatement>) =>
+      v.dues.map((d) => [d.label, nb(d.paid), nb(d.left), d.leftTone]);
+    const paidUp = () => {
+      const input = debtor();
+      input.student.balance = 12_500;
+      input.rows.push(
+        row({
+          type: 'PAYMENT',
+          day: '2026-09-20',
+          amount: 270_000,
+          enrollmentId: null,
+          paymentId: 'p2',
+          paymentMethod: 'PAYME',
+        }),
+      );
+      return input;
+    };
+
+    it('splits each month into paid and owed, adding up to the answer', () => {
+      const v = presentStatement(buildStatement(debtor()), 'student');
+      expect(rows(v)).toEqual([
+        ['Iyul', '200 000', '70 000', 'red'],
+        ['Avgust', '', '', 'muted'],
+        ['Sentabr', '0', '187 500', 'red'],
+      ]);
+      expect(v.duesTotal && nb(v.duesTotal.left)).toBe('257 500');
+      expect(v.surplus).toBeNull();
+    });
+
+    it('lists the payments alone, with their total and the month each went to', () => {
+      const v = presentStatement(buildStatement(paidUp()), 'student');
+      expect(v.payments.map((p) => [p.date, nb(p.amount), nb(p.to)])).toEqual([
+        ['21.07.2026', '200 000', 'iyul'],
+        [
+          '20.09.2026',
+          '270 000',
+          "iyul 70 000, sentabr 187 500 · ortig'i 12 500 hisobingizda (oktabr to'loviga)",
+        ],
+      ]);
+      expect(v.paidTotal && nb(v.paidTotal)).toBe('470 000');
+    });
+
+    it('shows a paid-up student no debt in any month and the money left over', () => {
+      const v = presentStatement(buildStatement(paidUp()), 'student');
+      expect(rows(v)).toEqual([
+        ['Iyul', '270 000', "yo'q", 'green'],
+        ['Avgust', '', '', 'muted'],
+        ['Sentabr', '187 500', "yo'q", 'green'],
+      ]);
+      expect(v.duesTotal?.left).toBe("yo'q");
+      expect(v.surplus && nb(v.surplus.amount)).toBe('+12 500');
+    });
+
+    it('keeps a written-off debt apart from what was paid', () => {
+      const input = debtor();
+      input.student.balance = -187_500;
+      input.rows.push(
+        row({
+          type: 'DEBT_WRITE_OFF',
+          day: '2026-08-14',
+          amount: 70_000,
+          enrollmentId: null,
+        }),
+      );
+      const v = presentStatement(buildStatement(input), 'student');
+      const july = v.dues[0];
+      expect([nb(july.paid), july.left]).toEqual(['200 000', "yo'q"]);
+      expect(july.details.map(nb)).toEqual([
+        '70 000 — qarz kechirildi (14.08)',
+      ]);
+      expect(v.payments).toHaveLength(1);
+      expect(v.duesTotal?.details.map(nb)).toEqual([
+        '70 000 — qarz kechirildi',
+      ]);
+    });
+
+    it('gives a refund paid out a row of its own', () => {
+      const input = paidUp();
+      input.student.balance = 2_500;
+      input.rows.push(
+        row({
+          type: 'REFUND',
+          day: '2026-09-25',
+          amount: -10_000,
+          enrollmentId: null,
+        }),
+      );
+      const v = presentStatement(buildStatement(input), 'student');
+      const refund = v.dues[v.dues.length - 1];
+      expect([refund.label, refund.wide, nb(refund.cost ?? '')]).toEqual([
+        'Sizga naqd qaytarib berildi (25.09)',
+        true,
+        '10 000',
+      ]);
+      expect(v.duesTotal && nb(v.duesTotal.cost)).toBe('467 500');
+    });
+
+    it('says a full month is charged at its start while lessons are ahead', () => {
+      const input = debtor();
+      input.asOf = '2026-09-20';
+      const v = presentStatement(buildStatement(input), 'student');
+      expect(nb(v.dues[2].details.join('|'))).toBe(
+        "oylik to'lov: 19-sentabrdan, 12 darsdan 5 tasi × 37 500|" +
+          "4 dars hali o'tilmagan — oylik to'lov oy boshida yoziladi",
+      );
+    });
   });
 
   it('explains the sharp change in plain words', () => {
@@ -190,20 +305,20 @@ describe('presentStatement', () => {
     expect(nb(v.sharpNote!.map((s) => s.text).join(''))).toBe(
       "Sentabr iyuldan 82 500 so'm kam. Sababi: darslar soni 5 ta (iyulda 9 ta); 1 dars narxi 30 000 → 37 500; 19-sentabrdan #036 guruhda o'qiydi (23-iyuldan beri darsda bo'lmagan); sentabrdan oylik to'lov.",
     );
-    expect(v.months[2].highlight).toBe(true);
+    expect(v.dues[2].highlight).toBe(true);
   });
 
   it('says where each payment went', () => {
     const v = presentStatement(buildStatement(debtor()), 'student');
     expect(
-      v.allocations.map((a) => [
+      v.payments.map((a) => [
         a.date,
         a.what,
         nb(a.amount),
         nb(a.to),
         a.paymentId,
       ]),
-    ).toEqual([['21.07.2026', 'Naqd', '200 000', 'iyul darslari', 'p1']]);
+    ).toEqual([['21.07.2026', 'Naqd', '200 000', 'iyul', 'p1']]);
   });
 
   it('tells a student with money ahead where it goes', () => {
@@ -224,14 +339,14 @@ describe('presentStatement', () => {
       "Qarzingiz yo'q. Hisobingizda 12 500 so'm ortiqcha pul bor.",
     );
     expect(v.answer.subtitle).toBe("U oktabr to'loviga o'tadi.");
-    expect(nb(v.allocations[1].to)).toBe(
-      "iyul darslari 70 000, sentabr darslari 187 500 · ortig'i 12 500 hisobingizda (oktabr to'loviga)",
+    expect(nb(v.payments[1].to)).toBe(
+      "iyul 70 000, sentabr 187 500 · ortig'i 12 500 hisobingizda (oktabr to'loviga)",
     );
   });
 
-  it('says the pack era once, above the table', () => {
+  it('says the pack era once, in the notes', () => {
     const v = presentStatement(buildStatement(debtor()), 'student');
-    expect(v.packHint).toBe(
+    expect(v.notes[0]).toBe(
       "Sentabrgacha pul 12 darslik paket uchun to'lanardi. Jadvalda esa har dars o'tilgan oyiga yozilgan, shuning uchun bir oyda 12 tadan ko'p yoki kam dars bo'lishi mumkin.",
     );
   });
@@ -255,14 +370,14 @@ describe('presentStatement', () => {
         metadata: { marker: 'april-cutover-refund' },
       }),
     );
-    const april = presentStatement(buildStatement(input), 'student').months[0];
+    const april = presentStatement(buildStatement(input), 'student').dues[0];
     expect([
       april.label,
       april.lessons,
       april.cost,
       april.costNote,
-      april.money,
-      april.running,
+      april.paid,
+      april.left,
     ]).toEqual(['Aprel', '4 ta', null, "tizimga qadar to'langan", '', '']);
   });
 

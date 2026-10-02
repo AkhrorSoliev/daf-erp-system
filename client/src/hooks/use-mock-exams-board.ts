@@ -53,6 +53,9 @@ export interface MockExamSummary {
 
 export interface MockExamRow extends MockExamSummary {
   section: { id: string; name: string; color: string | null };
+  /** Paid registrations and their money (list only; a new exam has none yet). */
+  paidCount?: number;
+  revenue?: number;
 }
 
 interface BoardState {

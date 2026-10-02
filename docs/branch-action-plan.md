@@ -174,6 +174,8 @@ Shu sababli ustun qo'shilmadi — o'rniga haqiqiy muammo tuzatildi: **pul to'lay
 | `batchPay` | ✅ filialsiz non-CEO chaqiruvchi endi **bloklanadi** (ilgari **hamma filial** oyligini to'lay olardi) |
 | `payPayment` | ✅ filial tekshiruvi qo'shildi (ilgari **umuman yo'q** edi) |
 
+> **2026-10-01:** `branch` holati `branches` ga almashdi — `mainBranch` ∪ `UserBranch` to'plami; to'lash asosiy filialda qoladi (ADR-0058).
+
 **Qolgani Batch 6 ga ko'chdi:** «Foyda» kartasi va Excel'da filial tushumidan kompaniya oyligi ayirilishi (P37), markaz qo'shimchasining filialga taqsimlanishi (P26).
 
 ### Asl reja (ma'lumot uchun)

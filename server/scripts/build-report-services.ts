@@ -29,6 +29,8 @@ import { HolidaysService } from '../src/holidays/holidays.service';
 import { ExpensesService } from '../src/expenses/expenses.service';
 import { SalaryService } from '../src/salary/salary.service';
 import { SalaryMonthlyService } from '../src/salary/salary-monthly.service';
+import { SalaryMissedLessonsService } from '../src/salary/salary-missed-lessons.service';
+import { ReportsDebtHistoryService } from '../src/reports/reports-debt-history.service';
 import { SalaryStaffMonthlyService } from '../src/salary/salary-monthly-staff.service';
 import { PaymentsDebtorsService } from '../src/payments/payments-debtors.service';
 
@@ -57,6 +59,7 @@ export function buildExcelService(prisma: PrismaService): ReportsExcelService {
   const salaryMonthly = new SalaryMonthlyService(
     prisma as any,
     new SalaryStaffMonthlyService(prisma as any),
+    {} as SalaryMissedLessonsService, // getMonthlyForUser only
   );
   const salary = new SalaryService(
     null as any, // config
@@ -68,12 +71,16 @@ export function buildExcelService(prisma: PrismaService): ReportsExcelService {
     null as any, // payment
     null as any, // settleMonth
   );
-  const debtors = new PaymentsDebtorsService(prisma as any);
+  const debtors = new PaymentsDebtorsService(
+    prisma as any,
+    null as any, // debtAge: getDebtors only, not the workbook
+  );
 
   const reports = new ReportsService(
     overview,
     attendance,
     financial,
+    new ReportsDebtHistoryService(prisma as any),
     payments,
     null as any, // teacherPayments
     null as any, // studentPayments

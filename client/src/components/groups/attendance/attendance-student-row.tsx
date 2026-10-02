@@ -1,16 +1,19 @@
 "use client";
 
-import Link from "next/link";
+import { RoleLink } from "@/components/shared/role-link";
+import { STUDENT_PROFILE_ROLES } from "@/lib/role-access";
 import { useState } from "react";
 import {
   AlertTriangle,
   Check,
   Loader2,
+  Lock,
   ShieldCheck,
   UserX,
   X,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -19,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/format-utils";
+import { lateMinutesText } from "@/lib/late-minutes";
 import {
   STATUS_CONFIG,
   type AttendanceEntry,
@@ -27,6 +31,7 @@ import {
   type StatusOption,
   type StudentAttendance,
 } from "./attendance-form-utils";
+import { admissionCopy } from "./attendance-admission";
 
 interface AttendanceStudentRowProps {
   index: number;
@@ -50,6 +55,8 @@ interface AttendanceStudentRowProps {
     note?: string,
   ) => void;
   onPlanRemove?: (studentId: number) => void;
+  // Admin only: collect the payment that admits a blocked student (ADR-0047).
+  onCollectPayment?: (student: StudentAttendance) => void;
 }
 
 export function AttendanceStudentRow({
@@ -67,8 +74,17 @@ export function AttendanceStudentRow({
   onToggleNote,
   onPlanMark,
   onPlanRemove,
+  onCollectPayment,
 }: AttendanceStudentRowProps) {
   const statusCfg = STATUS_CONFIG.find((s) => s.value === entry?.status);
+  // The saved minutes, only while the row is still marked LATE on screen.
+  const lateText =
+    student.status === "LATE" && entry?.status === "LATE"
+      ? lateMinutesText(student.lateMinutes)
+      : null;
+  // Contract 3.2 (ADR-0047): a blocked student keeps their row, but only an
+  // announced absence («Sababli») can be recorded for them.
+  const admission = admissionCopy(student.admission, isAdmin);
   const rowBg = statusCfg?.activeBg ?? "";
 
   return (
@@ -83,9 +99,11 @@ export function AttendanceStudentRow({
           {index + 1}
         </span>
 
-        <Link
+        <RoleLink
+          roles={STUDENT_PROFILE_ROLES}
           href={`/students/profile/${student.studentId}`}
-          className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="shrink-0 rounded-full"
+          linkClassName="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={`${student.firstName} ${student.lastName} profilini ochish`}
         >
           <Avatar className="size-9 sm:size-10">
@@ -98,17 +116,19 @@ export function AttendanceStudentRow({
               {student.lastName[0]}
             </AvatarFallback>
           </Avatar>
-        </Link>
+        </RoleLink>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <Link
+            <RoleLink
+              roles={STUDENT_PROFILE_ROLES}
               href={`/students/profile/${student.studentId}`}
-              className="truncate text-sm font-medium hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+              className="truncate text-sm font-medium rounded-sm"
+              linkClassName="hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {student.firstName} {student.lastName}
-            </Link>
-            {student.isDebtor && (
+            </RoleLink>
+            {isAdmin && student.isDebtor && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
@@ -123,10 +143,9 @@ export function AttendanceStudentRow({
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Balans manfiy. Davomat olinaveradi va har bir dars
-                  uchun bahosi to&apos;g&apos;ridan-to&apos;g&apos;ri
-                  balansdan ushlanmoqda. To&apos;lov kelganda
-                  o&apos;tilgan darslar hisobi yopiladi.
+                  Oylik to&apos;lov to&apos;liq qilinmagan. 2-darsdan boshlab
+                  o&apos;quvchi to&apos;lagan puli yetgan darslargacha
+                  qatnashadi.
                 </TooltipContent>
               </Tooltip>
             )}
@@ -152,6 +171,24 @@ export function AttendanceStudentRow({
               </Tooltip>
             )}
           </div>
+          {admission.label && (
+            <p
+              className={cn(
+                "flex items-center gap-1 text-[11px] font-medium",
+                admission.blocked
+                  ? "text-yellow-800 dark:text-yellow-300"
+                  : "text-muted-foreground",
+              )}
+            >
+              {admission.blocked && <Lock className="size-3" />}
+              {admission.label}
+            </p>
+          )}
+          {lateText && (
+            <p className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
+              {lateText}
+            </p>
+          )}
           {isAdmin && entry?.note && !isNoteOpen && (
             <p className="truncate text-[11px] text-purple-600 dark:text-purple-400">
               {entry.note}
@@ -173,11 +210,16 @@ export function AttendanceStudentRow({
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  disabled={isLocked}
+                  disabled={
+                    isLocked ||
+                    (admission.blocked && opt.value !== "EXCUSED")
+                  }
                   onClick={() => onSetStatus(student.studentId, opt.value)}
                   className={cn(
                     "flex items-center justify-center rounded-lg border p-2 transition-all sm:p-2.5",
-                    isLocked && "cursor-not-allowed opacity-50",
+                    (isLocked ||
+                      (admission.blocked && opt.value !== "EXCUSED")) &&
+                      "cursor-not-allowed opacity-50",
                     entry?.status === opt.value
                       ? opt.activeColor
                       : entry?.status === null
@@ -226,6 +268,21 @@ export function AttendanceStudentRow({
         </div>
         )}
       </div>
+
+      {admission.warning && !planningMode && (
+        <div className="mt-2 flex flex-col gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-900 dark:border-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-200 sm:ml-[4.25rem]">
+          <p>{admission.warning}</p>
+          {isAdmin && onCollectPayment && (
+            <Button
+              size="sm"
+              className="self-start"
+              onClick={() => onCollectPayment(student)}
+            >
+              To&apos;lov qabul qilish
+            </Button>
+          )}
+        </div>
+      )}
 
       {isAdmin && isNoteOpen && (
         <div className="mt-2 pl-8 sm:pl-[4.25rem]">

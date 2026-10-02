@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SettingsModule } from '../settings/settings.module';
 import { AttendanceService } from './attendance.service';
 import { AttendanceValidationService } from './attendance-validation.service';
 import { AttendanceReadService } from './attendance-read.service';
@@ -11,11 +12,15 @@ import { AttendanceController } from './attendance.controller';
 import { AttendanceReminderService } from './attendance-reminder.service';
 import { AttendanceEventsListener } from './attendance-events.listener';
 import { StudentAttendanceNotificationListener } from './student-attendance-notification.listener';
+import { UnmarkedLessonEventsListener } from './unmarked-lesson-events.listener';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TelegramModule } from '../telegram/telegram.module';
 import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module';
 import { BillingModule } from '../billing/billing.module';
 import { HolidaysModule } from '../holidays/holidays.module';
+import { LessonCancellationsModule } from '../lesson-cancellations/lesson-cancellations.module';
+import { LessonReschedulesModule } from '../lesson-reschedules/lesson-reschedules.module';
+import { UnmarkedLessonsService } from './unmarked-lessons.service';
 
 @Module({
   imports: [
@@ -24,6 +29,9 @@ import { HolidaysModule } from '../holidays/holidays.module';
     BillingModule,
     HolidaysModule,
     TelegramDigestModule,
+    LessonCancellationsModule,
+    LessonReschedulesModule,
+    SettingsModule,
   ],
   controllers: [AttendanceController],
   providers: [
@@ -38,6 +46,8 @@ import { HolidaysModule } from '../holidays/holidays.module';
     AttendanceReminderService,
     AttendanceEventsListener,
     StudentAttendanceNotificationListener,
+    UnmarkedLessonEventsListener,
+    UnmarkedLessonsService,
   ],
   exports: [
     AttendanceService,

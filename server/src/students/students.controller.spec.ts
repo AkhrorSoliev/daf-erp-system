@@ -8,6 +8,7 @@ import { SmsService } from '../sms/sms.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { DebtAgeService } from '../common/finance/debt-age.service';
 import { StudentDeparturePreviewService } from './student-departure-preview.service';
+import { StudentEnrollPreviewService } from './student-enroll-preview.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -24,6 +25,7 @@ describe('StudentsController — debt write-off role guards', () => {
   };
   const mockSmsService = {} as any;
   const mockTransactionsService = {} as any;
+  const mockEnrollPreview = { preview: jest.fn().mockResolvedValue({}) };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -41,6 +43,7 @@ describe('StudentsController — debt write-off role guards', () => {
           provide: StudentDeparturePreviewService,
           useValue: { preview: jest.fn().mockResolvedValue({}) },
         },
+        { provide: StudentEnrollPreviewService, useValue: mockEnrollPreview },
       ],
     }).compile();
 
@@ -185,6 +188,23 @@ describe('StudentsController — debt write-off role guards', () => {
     });
   });
 
+  // O'quvchi profili. Kassir to'lov qabul qilishda ochadi; o'qituvchi yo'q —
+  // shuning uchun guruh sahifasida o'qituvchiga o'quvchi ismi havolasiz
+  // chiziladi (client/src/lib/role-access.ts, STUDENT_PROFILE_ROLES).
+  describe('findById() guard (GET /:id)', () => {
+    it.each([['CEO'], ['Branch Director'], ['Administrator'], ['Cashier']])(
+      'allows %s',
+      (role) => {
+        const ctx = mockExecutionContext(controller.findById, [role]);
+        expect(guard.canActivate(ctx)).toBe(true);
+      },
+    );
+    it('denies Teacher', () => {
+      const ctx = mockExecutionContext(controller.findById, ['Teacher']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
   describe('getDeparturePreview() guard (GET /:id/departure-preview)', () => {
     it.each([['CEO'], ['Branch Director'], ['Administrator']])(
       'allows %s',
@@ -203,6 +223,45 @@ describe('StudentsController — debt write-off role guards', () => {
       expect(
         reflector.get<string[]>(ROLES_KEY, controller.getDeparturePreview),
       ).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    });
+  });
+
+  describe('getEnrollPreview() guard (GET /:id/enroll-preview)', () => {
+    it.each([['CEO'], ['Branch Director'], ['Administrator']])(
+      'allows %s',
+      (role) => {
+        const ctx = mockExecutionContext(controller.getEnrollPreview, [role]);
+        expect(guard.canActivate(ctx)).toBe(true);
+      },
+    );
+    it.each([['Cashier'], ['Teacher'], ['Student']])('denies %s', (role) => {
+      const ctx = mockExecutionContext(controller.getEnrollPreview, [role]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+    it('carries the roles of POST /:id/enroll, the call it previews', () => {
+      const roles = reflector.get<string[]>(
+        ROLES_KEY,
+        controller.getEnrollPreview,
+      );
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+      expect(roles).toEqual(
+        reflector.get<string[]>(ROLES_KEY, controller.enrollToGroup),
+      );
+    });
+    it('passes the student, company, caller, group and start day in that order', async () => {
+      await controller.getEnrollPreview(
+        10453,
+        { groupId: 'grp-1', startDate: '2026-10-17' },
+        1001,
+        10001,
+      );
+      expect(mockEnrollPreview.preview).toHaveBeenCalledWith(
+        10453,
+        1001,
+        10001,
+        'grp-1',
+        '2026-10-17',
+      );
     });
   });
 

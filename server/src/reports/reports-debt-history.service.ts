@@ -180,7 +180,9 @@ const LONGEST_DEBTORS_LIMIT = 10;
  * students, 0 so'm of drift. Reversals are NOT filtered — `reverseTransaction`
  * writes its counter-row with the original's `type`, so including both halves
  * nets them to zero (filtering `reversedAt: null` would keep the undo and drop
- * the original — the bug this service replaces).
+ * the original — the bug this service replaces). `reversedAt` is read only to
+ * LABEL: a decrease from a cancelled write-off is `debtOther`, not
+ * `debtForgiven`.
  *
  * Two different questions live here and are deliberately kept apart:
  *  • the ROLL-FORWARD (`debtAdded/Paid/Forgiven/Other`) — a period measure that
@@ -424,6 +426,10 @@ export class ReportsDebtHistoryService {
    * buckets by construction (the credit consumed a fragment), so this list is
    * the only place it stays visible — and a write-off is the one debt outcome
    * that needs a name and a reason attached to it.
+   *
+   * A cancelled forgiveness is not listed: neither the original (`reversedAt`)
+   * nor the counter-row that undid it (`reversedTransactionId`) — the debt it
+   * erased is back, so nothing was forgiven.
    */
   private async monthWriteOffs(
     companyId: number,
@@ -437,6 +443,8 @@ export class ReportsDebtHistoryService {
         companyId,
         studentId: { in: students.map((s) => s.id) },
         type: TransactionType.DEBT_WRITE_OFF,
+        reversedAt: null,
+        reversedTransactionId: null,
         createdAt: { gte: start, lt: end },
       },
       select: {
@@ -489,6 +497,9 @@ export class ReportsDebtHistoryService {
         type: true,
         amount: true,
         createdAt: true,
+        // Labels a cancelled write-off below; never a filter — both halves of
+        // a cancelled pair stay in the walk, or the balance would not hold.
+        reversedAt: true,
       },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
@@ -553,7 +564,10 @@ export class ReportsDebtHistoryService {
           } else if (r.type === TransactionType.PAYMENT) {
             bucket.debtPaid += -change;
           } else if (r.type === TransactionType.DEBT_WRITE_OFF) {
-            bucket.debtForgiven += -change;
+            // Bekor qilingan kechirish «Kechirildi» emas: u vaqtincha qarzni
+            // kamaytirgan, keyin qaytgan.
+            if (r.reversedAt) bucket.debtOther += -change;
+            else bucket.debtForgiven += -change;
           } else {
             // ADJUSTMENT / INITIAL_BALANCE / REFUND — real debt relief, but not
             // money the centre collected, so it never enters «To'landi».

@@ -500,6 +500,60 @@ describe('TelegramDigestRenderService', () => {
       expect(order).toEqual([...order].sort((a, b) => a - b));
       expect(order.every((i) => i >= 0)).toBe(true);
     });
+
+    it('lists lessons whose pay was lost', () => {
+      const text = textOf(
+        service.renderUser(
+          [
+            row(TelegramDigestCategory.LESSON_PAY_FORFEITED, {
+              groupId: 'g1',
+              groupName: 'A1-01',
+              date: '2026-09-28',
+            }),
+          ],
+          NOW,
+        ),
+      );
+      expect(text).toContain('⚠️ <b>Davomat vaqtida olinmagan darslar</b>');
+      expect(text).toContain('• A1-01 (28.09.2026)');
+      expect(text).toContain('Bu darslar uchun haq yozilmadi.');
+    });
+
+    it('places forfeited section after attendance', () => {
+      const text = textOf(
+        service.renderUser(
+          [
+            row(TelegramDigestCategory.ATTENDANCE_COMPLETED, {
+              groupId: 'g1',
+              groupName: 'A1-01',
+              date: '2026-09-27',
+              present: 1,
+              absent: 0,
+              late: 0,
+              excused: 0,
+            }),
+            row(TelegramDigestCategory.LESSON_PAY_FORFEITED, {
+              groupId: 'g1',
+              groupName: 'A1-02',
+              date: '2026-09-28',
+            }),
+            row(TelegramDigestCategory.SALARY_CARRIED_OVER, {
+              count: 2,
+              total: 500000,
+            }),
+          ],
+          NOW,
+        ),
+      );
+      const attendanceIdx = text.indexOf('✅ <b>Davomat qabul qilindi</b>');
+      const forfeitedIdx = text.indexOf(
+        '⚠️ <b>Davomat vaqtida olinmagan darslar</b>',
+      );
+      const salaryIdx = text.indexOf('💵 <b>Oylik</b>');
+      expect(attendanceIdx).toBeGreaterThanOrEqual(0);
+      expect(forfeitedIdx).toBeGreaterThan(attendanceIdx);
+      expect(salaryIdx).toBeGreaterThan(forfeitedIdx);
+    });
   });
   describe('monthly bill and reminder (ADR-0042)', () => {
     /** 20:00 Tashkent, 01.10.2026. */
@@ -705,6 +759,103 @@ describe('TelegramDigestRenderService', () => {
       expect(text).not.toContain('Joriy balansingiz');
       expect(text).toContain("Qolgan balans: <b>160 000 so'm</b>");
       expect(text.match(/Rahmat!/g)).toHaveLength(1);
+    });
+
+    describe('contract 3.7 — before the paid lessons run out (ADR-0064)', () => {
+      /** 20:00 Tashkent, 13.11.2026: paid through today, 16.11 is not reached. */
+      const NOV_13 = new Date('2026-11-13T15:00:00Z');
+      const paidThrough = (queuedFor: string) =>
+        row(
+          TelegramDigestCategory.PAYMENT_REMINDER,
+          {
+            enrollmentId: 'enr-1',
+            groupName: 'A1-12',
+            periodYear: 2026,
+            periodMonth: 11,
+            lessonDate: '2026-11-16',
+            paidThrough: { through: '2026-11-13', queuedFor },
+          },
+          { relatedEntityId: `paid-through:10042:2026-11-16:${queuedFor}` },
+        );
+
+      it('sends the reminder queued for today, with the reminder closing', async () => {
+        student(-225000);
+        enrollmentOpen();
+        const r = await service.renderStudent(
+          10042,
+          [paidThrough('2026-11-13')],
+          NOV_13,
+        );
+        expect(textOf(r)).toBe(
+          [
+            'Hurmatli Ali!',
+            '',
+            "⏰ <b>To'lov eslatmasi</b>",
+            "Noyabr oyi uchun to'lovingiz 13.11.2026 dagi darsgacha yetadi.",
+            "Qolgan to'lov: <b>225 000 so'm</b>",
+            '',
+            "Darslaringiz uzilib qolmasligi uchun to'lovni 16.11.2026 dagi darsgacha amalga oshirishingizni so'raymiz.",
+            '',
+            "To'lov: markazda, Payme yoki Click orqali.",
+            "Savollar bo'lsa, markaz administratoriga murojaat qiling.",
+            '🔗 Profilingiz: https://student.dafzentrum.uz',
+          ].join('\n'),
+        );
+      });
+
+      it('drops a row kept from an earlier day', async () => {
+        student(-225000);
+        enrollmentOpen();
+        const stale = paidThrough('2026-11-12');
+        const r = await service.renderStudent(10042, [stale], NOV_13);
+        expect(r.blocks).toEqual([]);
+        expect(r.hiddenIds).toEqual([stale.id]);
+      });
+
+      it('gives way to the 2nd-lesson reminder on the same evening', async () => {
+        student(-225000);
+        enrollmentOpen();
+        const eve = row(
+          TelegramDigestCategory.PAYMENT_REMINDER,
+          {
+            enrollmentId: 'enr-1',
+            groupName: 'A1-12',
+            periodYear: 2026,
+            periodMonth: 11,
+            lessonDate: '2026-11-14',
+          },
+          { relatedEntityId: 'enr-1:2026-11-14' },
+        );
+        const other = paidThrough('2026-11-13');
+        const r = await service.renderStudent(10042, [eve, other], NOV_13);
+        const text = textOf(r);
+        expect(text).toContain('Ertaga (14.11.2026)');
+        expect(text).not.toContain('dagi darsgacha yetadi');
+        expect(r.hiddenIds).toEqual([other.id]);
+      });
+
+      it('is sent when the 2nd-lesson reminder falls away with its closed enrollment', async () => {
+        student(-225000);
+        enrollmentOpen(); // only enr-1 is still open
+        const eve = row(
+          TelegramDigestCategory.PAYMENT_REMINDER,
+          {
+            enrollmentId: 'enr-2',
+            groupName: 'B1-3',
+            periodYear: 2026,
+            periodMonth: 11,
+            lessonDate: '2026-11-14',
+          },
+          { relatedEntityId: 'enr-2:2026-11-14' },
+        );
+        const r = await service.renderStudent(
+          10042,
+          [eve, paidThrough('2026-11-13')],
+          NOV_13,
+        );
+        expect(textOf(r)).toContain('13.11.2026 dagi darsgacha yetadi');
+        expect(r.hiddenIds).toEqual([eve.id]);
+      });
     });
   });
 });

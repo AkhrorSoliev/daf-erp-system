@@ -24,9 +24,7 @@ interface GroupRow {
   name: string;
   coursePrice: number;
   totalStudents: number;
-  paidCount: number;
   debtorCount: number;
-  totalPayments: number;
   debtAmount: number;
   expectedAmount: number;
 }
@@ -114,9 +112,7 @@ export function TeacherGroupsDialog({
                   <TableHead>Guruh nomi</TableHead>
                   <TableHead className="text-right">Kurs narxi</TableHead>
                   <TableHead className="text-center">Jami o&apos;quvchi</TableHead>
-                  <TableHead className="text-center">To&apos;laganlar</TableHead>
                   <TableHead className="text-center">Qarzdorlar</TableHead>
-                  <TableHead className="text-right">Jami to&apos;lovlar</TableHead>
                   <TableHead className="text-right">Qarzdorlik</TableHead>
                   <TableHead className="text-right">Kutilgan summa</TableHead>
                 </TableRow>
@@ -142,9 +138,6 @@ export function TeacherGroupsDialog({
                     <TableCell className="text-center tabular-nums">
                       {g.totalStudents}
                     </TableCell>
-                    <TableCell className="text-center tabular-nums text-green-600 dark:text-green-400">
-                      {g.paidCount}
-                    </TableCell>
                     <TableCell
                       className={`text-center tabular-nums ${
                         g.debtorCount > 0
@@ -153,9 +146,6 @@ export function TeacherGroupsDialog({
                       }`}
                     >
                       {g.debtorCount}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums font-medium text-green-600 dark:text-green-400">
-                      {fmt(g.totalPayments)} so&apos;m
                     </TableCell>
                     <TableCell
                       className={`text-right tabular-nums ${

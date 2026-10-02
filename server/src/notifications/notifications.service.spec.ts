@@ -177,7 +177,8 @@ describe('NotificationsService', () => {
       expect(prisma.pushSubscription.deleteMany).toHaveBeenCalledWith({
         where: { userId: 10001, endpoint: 'https://push.example.com/123' },
       });
-      expect(result.message).toBeDefined();
+      // Foydalanuvchi ekranda shu matnni o'qiydi — inglizcha so'zsiz.
+      expect(result.message).toBe('Bildirishnoma obunasi olib tashlandi');
     });
   });
 
