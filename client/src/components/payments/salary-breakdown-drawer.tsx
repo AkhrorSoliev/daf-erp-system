@@ -35,13 +35,20 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { PossibleDeductionsInfo } from "./possible-deductions-info";
+import { breakdownRateLabel } from "./salary-utils";
 import api from "@/lib/api";
+import type { PaymentModel } from "@/lib/payment-model";
 
 interface BreakdownLine {
   id: string;
   lessonDate: string;
   student: { id: number; firstName: string; lastName: string };
-  group: { id: string; name: string; course: { name: string } };
+  group: {
+    id: string;
+    name: string;
+    // Eski server yubormaydi — belgi o'sha holda «/tsikl» deydi.
+    course: { name: string; paymentModel?: PaymentModel };
+  };
   perLessonCost: number;
   amount: number;
   configVersion: {
@@ -495,15 +502,11 @@ function SummaryStat({
   );
 }
 
-function BreakdownRow({ line, index }: { line: BreakdownLine; index: number }) {
+export function BreakdownRow({ line, index }: { line: BreakdownLine; index: number }) {
   const isReversed = !!line.reversedAt;
   const rate = line.configVersion;
   const rateLabel = rate
-    ? rate.salaryType === "PERCENTAGE"
-      ? `${rate.value}%`
-      : rate.salaryType === "FIXED_PER_STUDENT"
-        ? `${fmt(rate.value)}/tsikl`
-        : `${fmt(rate.value)}/oy`
+    ? breakdownRateLabel(rate, line.group.course.paymentModel)
     : "—";
 
   return (

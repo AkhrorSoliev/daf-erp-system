@@ -168,7 +168,16 @@ export class SalaryBreakdownService {
           select: {
             id: true,
             name: true,
-            course: { select: { name: true, lessonPaymentCount: true } },
+            course: {
+              select: {
+                name: true,
+                lessonPaymentCount: true,
+                // Stavka belgisi shunga qaraydi: oylik kursda «/o'quvchi/oy»,
+                // sikl kursida «/tsikl» (FIXED_PER_STUDENT bo'luvchisi —
+                // ADR-0050, `resolveLessonPricing`).
+                paymentModel: true,
+              },
+            },
           },
         },
         salaryConfigVersion: {

@@ -100,4 +100,73 @@ describe('SalaryBreakdownService', () => {
       service.getPaymentBreakdown('sp1', 1, 999),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  describe("kursning to'lov modeli har bir qatorda (A3.2)", () => {
+    // Stavka belgisi kursning modeliga qarab «/o'quvchi/oy» yoki «/tsikl»
+    // deydi. Qator modelni olib kelmasa, ekran faqat «/tsikl» deya oladi.
+    const accrual = (id: string, paymentModel: 'MONTHLY' | 'LESSON_PACK') => ({
+      id,
+      amount: 37_500,
+      perLessonCost: 37_500,
+      lessonDate: new Date('2026-10-01'),
+      creditPeriodDate: null,
+      isCenterTopUp: false,
+      attendanceId: `att-${id}`,
+      reversedAt: null,
+      reversalReason: null,
+      student: { id: 10001, firstName: 'Ali', lastName: 'Valiyev' },
+      group: {
+        id: `g-${id}`,
+        name: `Guruh ${id}`,
+        course: { name: 'Nemis tili', lessonPaymentCount: 12, paymentModel },
+      },
+      salaryConfigVersion: {
+        id: 'v1',
+        salaryType: 'FIXED_PER_STUDENT',
+        value: 450_000,
+        effectiveFrom: new Date('2026-09-01'),
+        effectiveTo: null,
+        config: { groupId: null },
+      },
+      reversedBy: null,
+    });
+
+    beforeEach(() => {
+      prisma.salaryPeriodSetting = {
+        findFirst: jest.fn().mockResolvedValue({ cycleStartDay: 1 }),
+      };
+      prisma.salaryAccrual.findMany.mockResolvedValue([
+        accrual('m', 'MONTHLY'),
+        accrual('p', 'LESSON_PACK'),
+      ]);
+      prisma.lessonTeacherOverride.findMany.mockResolvedValue([]);
+    });
+
+    it.each([
+      [
+        'admin oynasi (getPaymentBreakdown)',
+        (s: SalaryBreakdownService) => s.getPaymentBreakdown('sp1', 1),
+      ],
+      [
+        'ustozning joriy davri (getCurrentCycleBreakdown)',
+        (s: SalaryBreakdownService) => s.getCurrentCycleBreakdown(7, 1),
+      ],
+    ])(
+      "%s: har qator kursning to'lov modelini olib keladi",
+      async (_n, call) => {
+        const { lines } = await call(service);
+
+        expect(lines.map((l) => l.group.course.paymentModel)).toEqual([
+          'MONTHLY',
+          'LESSON_PACK',
+        ]);
+        // Mock o'zi bergan narsani qaytaradi, shuning uchun bazadan haqiqatan
+        // so'ralayotganini select orqali ham tekshiramiz.
+        const { select } = prisma.salaryAccrual.findMany.mock.calls[0][0];
+        expect(select.group.select.course.select).toEqual(
+          expect.objectContaining({ paymentModel: true }),
+        );
+      },
+    );
+  });
 });

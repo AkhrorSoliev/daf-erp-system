@@ -22,7 +22,9 @@ import {
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
+import { breakdownRateLabel } from "@/components/payments/salary-utils";
 import { SalaryMonthlyPanel } from "@/components/shared/salary-monthly-panel";
+import type { PaymentModel } from "@/lib/payment-model";
 
 /**
  * Group context only — no money. Every salary figure on this page comes from
@@ -45,7 +47,12 @@ interface BreakdownLine {
   id: string;
   lessonDate: string;
   student: { id: number; firstName: string; lastName: string };
-  group: { id: string; name: string };
+  group: {
+    id: string;
+    name: string;
+    // Eski server yubormaydi — belgi o'sha holda «/tsikl» deydi.
+    course?: { paymentModel?: PaymentModel };
+  };
   perLessonCost: number;
   amount: number;
   configVersion: {
@@ -185,7 +192,7 @@ export function TeacherSalaryClient() {
   );
 }
 
-function BreakdownTable({
+export function BreakdownTable({
   lines,
   totals,
 }: {
@@ -236,9 +243,10 @@ function BreakdownTable({
               <TableCell>
                 {l.configVersion ? (
                   <Badge variant="outline">
-                    {l.configVersion.salaryType === "PERCENTAGE"
-                      ? `${l.configVersion.value}%`
-                      : `${l.configVersion.value.toLocaleString("uz-UZ")}/cycle`}
+                    {breakdownRateLabel(
+                      l.configVersion,
+                      l.group.course?.paymentModel,
+                    )}
                     {l.configVersion.scope === "GROUP" && " (guruh)"}
                   </Badge>
                 ) : (

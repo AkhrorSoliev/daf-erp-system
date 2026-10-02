@@ -1,5 +1,32 @@
 // Shared helpers for the salary page (matrix + period workflow views).
 
+import { formatNumber } from "@/lib/format-utils";
+import type { PaymentModel } from "@/lib/payment-model";
+
+/**
+ * Hisob-kitob qatoridagi stavka belgisi. Admin oynasi ham, ustozning o'z
+ * sahifasi ham shuni ishlatadi, shuning uchun ikkalasi bir xil yozadi.
+ *
+ * FIXED_PER_STUDENT: oylik kursda stavka o'quvchi boshiga OYIGA (server uni
+ * oyning rejalashtirilgan darslariga bo'ladi), sikl kursida SIKLiga —
+ * ADR-0050, `resolveLessonPricing` (server/src/salary/shared/gap-sweep.ts).
+ * `paymentModel` kelmasa — klient serverdan oldin chiqqan — eski ma'no
+ * qoladi: «/tsikl».
+ */
+export function breakdownRateLabel(
+  rate: { salaryType: string; value: number },
+  paymentModel?: PaymentModel,
+): string {
+  if (rate.salaryType === "PERCENTAGE") return `${rate.value}%`;
+  const value = formatNumber(rate.value);
+  if (rate.salaryType === "FIXED_PER_STUDENT") {
+    return paymentModel === "MONTHLY"
+      ? `${value}/o'quvchi/oy`
+      : `${value}/tsikl`;
+  }
+  return `${value}/oy`;
+}
+
 export const SALARY_STATUS_LABELS: Record<string, string> = {
   CALCULATED: "Hisoblangan",
   APPROVED: "Tasdiqlangan",
