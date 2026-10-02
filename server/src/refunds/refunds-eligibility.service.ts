@@ -174,20 +174,23 @@ export class RefundsEligibilityService {
     // total-lessons figure anywhere in the schema to divide by, so the honest
     // move is to say something true instead.
     //
-    // Oylik kursda `prepaidLessonsRemaining` yozilmaydi, shuning uchun «oldindan
-    // to'langan darsi yo'q» paket modelini tasvirlaydi va har bir oylik
-    // o'quvchiga noto'g'ri gapiradi. Unga shartnoma qoidasi aytiladi (A3.5):
-    // faqat balansdagi ortiqcha pul qaytariladi, shu oyning puli guruhdan
-    // chiqarilganda 6.2-band bo'yicha hisoblanadi.
+    // Ogohlantirish kvotaga bog'liq, model faqat jumlani tanlaydi. «Faqat
+    // balansdagi pul qaytariladi» kvota (`maxRefundable`) haqiqatan shundan
+    // iborat bo'lganda to'g'ri: oldindan to'langan dars yo'q va balans musbat.
+    // Oylik kursda hisoblagich yozilmaydi, shuning uchun paket jumlasi («oldindan
+    // to'langan darsi yo'q») oylik o'quvchiga noto'g'ri gapiradi; unga shartnoma
+    // qoidasi aytiladi (A3.5): shu oyning puli guruhdan chiqarilganda 6.2-band
+    // bo'yicha hisoblanadi. Oylik enrollmentda eski paket hisoblagichi qolgan
+    // bo'lsa, kvota uning qiymatini ham o'z ichiga oladi va ogohlantirish
+    // chiqmaydi: aks holda matn `quickRefund` ergashadigan kvotaga zid bo'lardi.
     const isMonthly =
       enrollment.group.course.paymentModel === PaymentModel.MONTHLY;
-    const warning = isMonthly
-      ? student.balance > 0
+    const balanceOnly = prepaidLessons === 0 && student.balance > 0;
+    const warning = !balanceOnly
+      ? null
+      : isMonthly
         ? MONTHLY_REFUND_WARNING
-        : null
-      : prepaidLessons === 0 && student.balance > 0
-        ? "Oldindan to'langan darsi yo'q — faqat balansdagi puldan qaytariladi"
-        : null;
+        : "Oldindan to'langan darsi yo'q — faqat balansdagi puldan qaytariladi";
 
     return {
       enrollmentId: enrollment.id,

@@ -341,6 +341,30 @@ describe('RefundsEligibilityService', () => {
       );
     });
 
+    // Ogohlantirish kvotaga bog'liq, model faqat jumlani tanlaydi. Oylik
+    // enrollmentda eski paket hisoblagichi qolishi mumkin (orqaga hisoblash
+    // `bill()`, guruh kursini almashtirish, qaytarishni bekor qilish yozadi).
+    // Unda kvota uning qiymatini ham o'z ichiga oladi va `quickRefund` kvotaga
+    // ergashadi, shuning uchun «faqat balansdagi pul» deyish kvotaga zid bo'lardi.
+    it.each(['MONTHLY', 'LESSON_PACK'] as const)(
+      'says nothing when the quote already draws on prepaid lessons (%s)',
+      async (paymentModel) => {
+        prisma.student.findFirst.mockResolvedValue({
+          id: 10001,
+          balance: 150_000,
+        });
+        prisma.enrollment.findMany.mockResolvedValue([
+          { ...enrollmentOf(paymentModel), prepaidLessonsRemaining: 3 },
+        ]);
+        billing.prepaidRefundValue.mockResolvedValue(90_000);
+
+        const result = await service.previewRefund(10001, 1);
+
+        expect(result.maxRefundable).toBe(240_000);
+        expect(result.warning).toBeNull();
+      },
+    );
+
     // Mock Prisma qaytarilgan qatorni `select`ga qaramay beradi: `paymentModel`ni
     // so'rashni unutgan `select` yuqoridagi hamma testdan o'tadi, productionda
     // esa har bir kurs paket yo'liga tushadi. Shuning uchun `select` alohida
