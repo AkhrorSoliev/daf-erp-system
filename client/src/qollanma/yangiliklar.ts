@@ -50,9 +50,9 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-01",
     sarlavha: "To'lamagan o'quvchi oyning 2-darsidan davomatga qo'yilmaydi",
-    matn: "Oylik kursda o'quvchi oyning 1-darsiga to'lovsiz keladi; 2-darsdan boshlab to'lagan puli shu darsgacha yetmasa, davomatda unga «Keldi», «Kelmadi» va «Kechikdi» qo'yib bo'lmaydi, faqat «Sababli». Qatorda «To'lov qilinmagan · darsga qo'yilmaydi» yozuvi va administratorga «To'lov qabul qilish» tugmasi chiqadi; QR bilan ham skanerlay olmaydi. Ustozga bunday o'quvchi uchun haq yozilmaydi. CEO qoidani Sozlamalar → «To'lov» da o'chira oladi. Ilgari qarzdor o'quvchi har darsda boshqalar kabi belgilanardi.",
+    matn: "Oylik kursda o'quvchi oyning o'zining 1-darsiga to'lovsiz keladi; 2-darsdan boshlab to'lagan puli shu darsgacha yetmasa, davomatda unga «Keldi», «Kelmadi» va «Kechikdi» qo'yib bo'lmaydi, faqat «Sababli». Qatorda «To'lov qilinmagan · darsga qo'yilmaydi» yozuvi va administratorga «To'lov qabul qilish» tugmasi chiqadi; QR bilan ham skanerlay olmaydi. Ustozga bunday o'quvchi uchun haq yozilmaydi. CEO qoidani Sozlamalar → «To'lov» da o'chira oladi. Ilgari qarzdor o'quvchi har darsda boshqalar kabi belgilanardi.",
     rollar: [1, 2, 3, 4],
-    sahifa: { bolim: "davomat", sahifa: "davomat-olish" },
+    sahifa: { bolim: "davomat", sahifa: "darsga-qoyish" },
   },
   {
     sana: "2026-10-01",
@@ -93,7 +93,7 @@ export const yangiliklar: Yangilik[] = [
     sarlavha: "«Topshiriqlar»da tizim topshirig'i: «Dars bo'ldimi?»",
     matn: "Dars tugaguncha davomat olinmasa, filial administratorlariga «Tizim» nomidan «Dars bo'ldimi?» topshirig'i keladi. Javobni kartaning o'zida berasiz: «Bo'ldi» davomatni kech kiritadi va ustozga bu dars uchun haq yozilmaydi, «Bo'lmadi» darsni bekor qiladi yoki ko'chiradi. Ilgari tizim «dars bo'lmadi» bilan «davomat unutildi»ni ajrata olmasdi.",
     rollar: [1, 2, 3],
-    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+    sahifa: { bolim: "davomat", sahifa: "dars-boldimi" },
   },
   {
     sana: "2026-09-30",

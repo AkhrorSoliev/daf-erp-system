@@ -20,7 +20,7 @@ export const bolimlar: QollanmaBolim[] = [
   { id: "boshlash", nom: "Boshlash", tavsif: "Kirish, ekran, rollar, topshiriqlar, lug'at", icon: Rocket },
   { id: "oquvchilar", nom: "O'quvchilar", tavsif: "Qabul, guruhga qo'shish, muzlatish, chiqarish", icon: BookOpen },
   { id: "guruhlar", nom: "Guruhlar", tavsif: "Guruh, holatlar, dars o'zgarishlari, jadval", icon: UsersRound },
-  { id: "davomat", nom: "Davomat", tavsif: "Davomat olish, oldindan belgilash, pauza", icon: ClipboardCheck },
+  { id: "davomat", nom: "Davomat", tavsif: "Davomat olish, darsga qo'yish, «Dars bo'ldimi?», pauza", icon: ClipboardCheck },
   { id: "tolovlar", nom: "To'lovlar", tavsif: "Oylik to'lov, dars paketi, qarzdorlik, qaytarish", icon: DollarSign },
   { id: "ustoz-oyligi", nom: "Ustoz oyligi", tavsif: "Stavka, hisoblash, avans, berish", icon: Wallet },
   { id: "xarajatlar", nom: "Xarajatlar", tavsif: "Xarajat va filial kassasi", icon: Receipt },
