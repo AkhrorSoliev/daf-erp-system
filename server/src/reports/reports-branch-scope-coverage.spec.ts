@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsFinancialService } from './reports-financial.service';
 import { ReportsExpectationService } from './reports-expectation.service';
+import { ReportsMarketingService } from './marketing/reports-marketing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { RedisService } from '../redis/redis.service';
@@ -31,6 +32,8 @@ function hasBranchPredicate(where: any): boolean {
   if (where.user !== undefined) return true;
   // Through a joined row that carries it (accruals via their group).
   if (where.group?.branchId !== undefined) return true;
+  // On the student a row belongs to (first payments of the marketing report).
+  if (where.student?.branches !== undefined) return true;
   return false;
 }
 
@@ -376,5 +379,39 @@ describe('branch scope coverage — month charges', () => {
     ).toEqual({ in: [] });
     expect(r.charged).toBe(0);
     expect(prisma.student.findMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The marketing report's own two reads: first payments are scoped by the
+ * student's branch, the MARKETING spend by the expense's. The month charges,
+ * departures and lead sources are read through their own services with the
+ * same list (each has its own coverage).
+ */
+describe('branch scope coverage — marketing', () => {
+  it('scopes the first-payment and the spend reads', async () => {
+    const prisma = {
+      payment: { groupBy: jest.fn().mockResolvedValue([]) },
+      expense: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new ReportsMarketingService(
+      prisma as never,
+      { getMonthCharges: jest.fn().mockResolvedValue(null) } as never,
+      {
+        getDepartedStudentsSummary: jest
+          .fn()
+          .mockResolvedValue({ avgDurationMonths: 0 }),
+      } as never,
+      { getSourceBreakdown: jest.fn().mockResolvedValue([]) } as never,
+    );
+
+    await service.getMarketing(1, { month: '2026-09', branchIds: [2] });
+
+    expect(
+      hasBranchPredicate(prisma.payment.groupBy.mock.calls[0][0].where),
+    ).toBe(true);
+    expect(
+      hasBranchPredicate(prisma.expense.findMany.mock.calls[0][0].where),
+    ).toBe(true);
   });
 });

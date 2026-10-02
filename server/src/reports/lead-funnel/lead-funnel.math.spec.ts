@@ -1,6 +1,7 @@
 import {
   countStages,
   personsAtStage,
+  sourceBreakdown,
   toPersons,
   type CohortLead,
 } from './lead-funnel.math';
@@ -165,5 +166,28 @@ describe('personsAtStage', () => {
       'all',
     );
     expect(ordered.map((p) => p.key)).toEqual(['l:new', 'l:old']);
+  });
+});
+
+describe('sourceBreakdown', () => {
+  it("counts people per source and those who reached «to'lov»; most leads first, «no source» last among equals", () => {
+    const persons = toPersons([
+      lead({ id: 'a', studentId: 11, source: 'Instagram' }),
+      lead({ id: 'b', studentId: 11, source: 'Instagram' }), // the same person
+      lead({ id: 'c', studentId: 12, source: 'Instagram' }),
+      lead({ id: 'd', studentId: null, source: 'Telegram' }),
+      lead({ id: 'e', studentId: 13, source: null }),
+    ]);
+    const sets = {
+      enrolled: new Set([11, 12, 13]),
+      attended: new Set([11, 13]),
+      paid: new Set([11, 13]),
+    };
+
+    expect(sourceBreakdown(persons, sets)).toEqual([
+      { source: 'Instagram', leads: 2, students: 1 },
+      { source: 'Telegram', leads: 1, students: 0 },
+      { source: null, leads: 1, students: 1 },
+    ]);
   });
 });

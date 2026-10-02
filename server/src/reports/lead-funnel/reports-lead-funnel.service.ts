@@ -17,6 +17,7 @@ import {
   type FunnelPerson,
   type FunnelStage,
   personsAtStage,
+  sourceBreakdown,
   type StageSets,
   toPersons,
 } from './lead-funnel.math';
@@ -105,6 +106,24 @@ export class ReportsLeadFunnelService {
       page,
       pageSize,
     };
+  }
+
+  /**
+   * «Manba bo'yicha» of the marketing report: the funnel's OWN cohort for the
+   * period (people deduplicated by phone, branch by `leadAttributionWhere`,
+   * start clamped to `FUNNEL_START_DATE`), one row per lead source.
+   */
+  async getSourceBreakdown(
+    companyId: number,
+    input: FunnelPeriodInput,
+    scope: ReportBranchIds,
+  ) {
+    const { persons, sets } = await this.loadCohort(
+      companyId,
+      resolvePeriod(input),
+      scope,
+    );
+    return sourceBreakdown(persons, sets);
   }
 
   /**
