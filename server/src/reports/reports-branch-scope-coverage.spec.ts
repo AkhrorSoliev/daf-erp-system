@@ -121,6 +121,27 @@ describe('branch scope coverage', () => {
     expect(scoped.map((c) => `${c.model}.${c.method}`)).toEqual([]);
   });
 
+  it("getFinancialOverview scopes yesterday's cash too", async () => {
+    // 15.10.2026 10:00 in Tashkent: the period is the current month, so the
+    // yesterday leg runs.
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-15T05:00:00Z'));
+    try {
+      await service.getFinancialOverview(1, {
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+        branchIds: [2],
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+
+    expect(prisma.payment.aggregate).toHaveBeenCalledTimes(2);
+    const unscoped = everyWhereClause().filter(
+      (c) => !hasBranchPredicate(c.where),
+    );
+    expect(unscoped.map((c) => `${c.model}.${c.method}`)).toEqual([]);
+  });
+
   it('getPeriodOutflows scopes refunds, write-offs AND gateway fees', async () => {
     await service.getPeriodOutflows(1, { ...period, branchIds: [2] });
 
@@ -152,9 +173,8 @@ describe('branch scope coverage', () => {
     expect(unscoped.map((c) => `${c.model}.${c.method}`)).toEqual([]);
   });
 
-  it('getFinancialTrend scopes the count legs, not just the money legs', async () => {
-    // H17: money came from the branch, new-student and payer COUNTS from the
-    // whole company — so an empty branch plotted 0 so'm beside 715 students.
+  it('getFinancialTrend scopes every leg', async () => {
+    // The count legs (H17) went with the marketing series; what is left must still be scoped.
     await service.getFinancialTrend(1, [2]);
 
     const unscoped = everyWhereClause().filter(

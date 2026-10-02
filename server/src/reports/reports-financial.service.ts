@@ -23,8 +23,10 @@ import {
   tashkentMonthKey,
 } from './debt-history.util';
 import {
+  addDaysToDateStr,
   addMonthsToMonthKey,
   tashkentDateStr,
+  tashkentDayRangeUtc,
   tashkentMonthRangeUtc,
   tashkentRangeUtc,
   utcMidnightFromDateStr,
@@ -118,7 +120,7 @@ export class ReportsFinancialService {
   }
 
   /**
-   * Financial overview: expected vs actual income, salary, expenses.
+   * Financial overview: actual income (by method, and yesterday's in the current month), salary, expenses.
    */
   async getFinancialOverview(
     companyId: number,
@@ -272,43 +274,25 @@ export class ReportsFinancialService {
       _sum: { balance: true },
     });
 
-    // Active LTV: period revenue / unique payers in that period.
-    const periodPayerFilter = {
-      companyId,
-      status: 'COMPLETED' as const,
-      createdAt: dateFilter,
-      ...branchFilter,
-    };
-    const [periodPayerIncome, periodUniquePayers] = await Promise.all([
-      this.prisma.payment.aggregate({
-        where: periodPayerFilter,
-        _sum: { amount: true },
-      }),
-      this.prisma.payment.groupBy({
-        by: ['studentId'],
-        where: periodPayerFilter,
-      }),
-    ]);
-
-    const marketingExpenses = await this.prisma.expense.aggregate({
-      where: {
-        companyId,
-        deletedAt: null,
-        category: 'MARKETING',
-        date: { gte: new Date(start), lte: new Date(end) },
-        ...branchFilter,
-      },
-      _sum: { amount: true },
-    });
-
-    const newStudents = await this.prisma.student.count({
-      where: {
-        companyId,
-        deletedAt: null,
-        createdAt: dateFilter,
-        ...studentFilter,
-      },
-    });
+    // «kecha» on /payments/overview: yesterday's Tashkent day, only while the
+    // period is the current month and yesterday belongs to it — on the 1st it
+    // belongs to the month before, so there is none.
+    const today = tashkentDateStr(now);
+    const yesterdayStr = addDaysToDateStr(today, -1);
+    const periodMonth = start.slice(0, 7);
+    const yesterday =
+      periodMonth === tashkentMonthKey(now) &&
+      yesterdayStr.slice(0, 7) === periodMonth
+        ? await this.prisma.payment.aggregate({
+            where: {
+              companyId,
+              status: 'COMPLETED',
+              createdAt: tashkentDayRangeUtc(yesterdayStr),
+              ...branchFilter,
+            },
+            _sum: { amount: true },
+          })
+        : null;
 
     const totalIncome = actualIncome._sum.amount ?? 0;
     const advancesPaidInPeriod = teacherAdvances._sum.amount ?? 0;
@@ -323,9 +307,6 @@ export class ReportsFinancialService {
     const totalSalaryPaid =
       (salaryPaid._sum.amount ?? 0) + advancesSettledInPeriod;
     const totalExpenses = totalExpenseAmount + totalSalaryPaid;
-    const marketingTotal = marketingExpenses._sum.amount ?? 0;
-    const periodPayerTotal = periodPayerIncome._sum.amount ?? 0;
-    const periodPayerCount = periodUniquePayers.length || 1;
 
     return {
       income: {
@@ -336,6 +317,9 @@ export class ReportsFinancialService {
           amount: m._sum.amount ?? 0,
           count: m._count,
         })),
+        yesterday: yesterday
+          ? { date: yesterdayStr, amount: yesterday._sum.amount ?? 0 }
+          : null,
       },
       salary: {
         paid: totalSalaryPaid,
@@ -349,19 +333,6 @@ export class ReportsFinancialService {
       netProfit: totalIncome - totalExpenses,
       activeBalance: activeStudents._sum.balance ?? 0,
       activeStudentCount: activeStudents._count,
-      ltv: Math.round(periodPayerTotal / periodPayerCount),
-      ltvPayerCount: periodUniquePayers.length,
-      cac: newStudents > 0 ? Math.round(marketingTotal / newStudents) : 0,
-      marketingRoi:
-        marketingTotal > 0
-          ? Math.round(((totalIncome - marketingTotal) / marketingTotal) * 100)
-          : 0,
-      avgPayment:
-        actualIncome._count > 0
-          ? Math.round(totalIncome / actualIncome._count)
-          : 0,
-      newStudentCount: newStudents,
-      marketingExpenses: marketingTotal,
     };
   }
 
@@ -841,43 +812,54 @@ export class ReportsFinancialService {
   }
 
   /**
-   * Monthly trend data for the last 6 months — used for KPI card charts.
+   * Monthly trend: six months ending at `month` (the current Tashkent month
+   * when it is absent or later), never before the reporting floor. Read by the
+   * home chart and by the «Oylar bo'yicha» table of /payments/overview,
+   * through `ReportsService.getFinancialTrendCanonical`.
    */
-  async getFinancialTrend(companyId: number, branchIds: ReportBranchIds) {
+  async getFinancialTrend(
+    companyId: number,
+    branchIds: ReportBranchIds,
+    month?: string,
+  ) {
     // Tashkent months. They were built with `new Date(y, m, 1)`, i.e. in the
     // PROCESS timezone (UTC on Railway): every window ran 05:00 → 05:00
     // Tashkent, so a payment made before 05:00 on the 1st counted in the
     // previous month, and until 05:00 the series still ended on that month.
     const current = tashkentMonthKey(new Date());
-    const months = Array.from({ length: 6 }, (_, i) => {
-      const monthKey = addMonthsToMonthKey(current, i - 5);
-      const [year, month] = monthKey.split('-');
-      return {
-        label: `${month}/${year}`,
-        // `YYYY-MM` alongside the display label so callers can ask for the
-        // canonical per-month figure without re-parsing `MM/YYYY`.
-        monthKey,
-        // TIMESTAMP columns: `createdAt`, `paidAt`.
-        instants: tashkentMonthRangeUtc(monthKey),
-        // `Expense.date` is `@db.Date`: plain calendar dates, next month exclusive.
-        dates: {
-          gte: utcMidnightFromDateStr(`${monthKey}-01`),
-          lt: utcMidnightFromDateStr(`${addMonthsToMonthKey(monthKey, 1)}-01`),
-        },
-      };
-    });
+    const end = month && month < current ? month : current;
+    const months = Array.from({ length: 6 }, (_, i) =>
+      addMonthsToMonthKey(end, i - 5),
+    )
+      // Before the floor there is no payroll to set against the cash:
+      // `getSalaryMonthly` would clamp such a month UP to the floor, and its
+      // canonical profit would subtract the floor month's payroll.
+      .filter((monthKey) => monthKey >= DEBT_FLOOR_MONTH)
+      .map((monthKey) => {
+        const [year, mm] = monthKey.split('-');
+        return {
+          label: `${mm}/${year}`,
+          // `YYYY-MM` alongside the display label so callers can ask for the
+          // canonical per-month figure without re-parsing `MM/YYYY`.
+          monthKey,
+          // TIMESTAMP columns: `createdAt`, `paidAt`.
+          instants: tashkentMonthRangeUtc(monthKey),
+          // `Expense.date` is `@db.Date`: plain calendar dates, next month exclusive.
+          dates: {
+            gte: utcMidnightFromDateStr(`${monthKey}-01`),
+            lt: utcMidnightFromDateStr(
+              `${addMonthsToMonthKey(monthKey, 1)}-01`,
+            ),
+          },
+        };
+      });
 
     const branchFilter = branchIdWhere(branchIds);
-    // The count legs (new students, unique payers) and the payroll leg carry
-    // the branch somewhere OTHER than on their own row, and all three were left
-    // unscoped — so a branch series plotted its own money against the whole
-    // company's headcount. Namangan's 2026 row read 0 / 0 / 0 for money beside
-    // "715 new students, 551 payers".
-    const studentFilter = studentBranchWhere(branchIds);
+    // The payroll leg carries the branch on the employee, not on its own row.
     const employeeFilter =
       branchIds === null ? {} : { user: userBranchWhere(branchIds) };
 
-    const result = await Promise.all(
+    return Promise.all(
       months.map(async (m) => {
         const dateFilter = m.instants;
 
@@ -885,9 +867,6 @@ export class ReportsFinancialService {
           income,
           expenseAgg,
           salaryAgg,
-          marketing,
-          newStudents,
-          payerCount,
           advancePaidAgg,
           advanceSettledAgg,
         ] = await Promise.all([
@@ -899,7 +878,6 @@ export class ReportsFinancialService {
               ...branchFilter,
             },
             _sum: { amount: true },
-            _count: true,
           }),
           this.prisma.expense.aggregate({
             where: {
@@ -918,33 +896,6 @@ export class ReportsFinancialService {
               ...employeeFilter,
             },
             _sum: { amount: true },
-          }),
-          this.prisma.expense.aggregate({
-            where: {
-              companyId,
-              deletedAt: null,
-              category: 'MARKETING',
-              date: m.dates,
-              ...branchFilter,
-            },
-            _sum: { amount: true },
-          }),
-          this.prisma.student.count({
-            where: {
-              companyId,
-              deletedAt: null,
-              createdAt: dateFilter,
-              ...studentFilter,
-            },
-          }),
-          this.prisma.payment.groupBy({
-            by: ['studentId'],
-            where: {
-              companyId,
-              status: 'COMPLETED',
-              createdAt: dateFilter,
-              ...branchFilter,
-            },
           }),
           // Advance cash paid this month — netted out of Xarajatlar (avanssiz).
           this.prisma.expense.aggregate({
@@ -971,17 +922,14 @@ export class ReportsFinancialService {
         ]);
 
         const incomeTotal = income._sum.amount ?? 0;
-        const expenseTotal = expenseAgg._sum.amount ?? 0;
-        const salaryTotal = salaryAgg._sum.amount ?? 0;
-        const marketingTotal = marketing._sum.amount ?? 0;
-        const paymentCount = income._count;
-        // Same avanssiz / settlement-based split as getFinancialOverview so the
-        // drill-down chart matches the "Chiqimlar" KPI card: exclude advance
-        // cash from Xarajatlar, add only the advances settled this month.
-        const advancePaid = advancePaidAgg._sum.amount ?? 0;
-        const advanceSettled = advanceSettledAgg._sum.amount ?? 0;
+        // Same avanssiz / settlement-based split as getFinancialOverview:
+        // exclude advance cash from Xarajatlar, add only the advances settled
+        // this month.
         const chiqimTotal =
-          expenseTotal - advancePaid + salaryTotal + advanceSettled;
+          (expenseAgg._sum.amount ?? 0) -
+          (advancePaidAgg._sum.amount ?? 0) +
+          (salaryAgg._sum.amount ?? 0) +
+          (advanceSettledAgg._sum.amount ?? 0);
 
         return {
           month: m.label,
@@ -989,25 +937,9 @@ export class ReportsFinancialService {
           income: incomeTotal,
           expenses: chiqimTotal,
           profit: incomeTotal - chiqimTotal,
-          activeBalance: 0,
-          ltv:
-            payerCount.length > 0
-              ? Math.round(incomeTotal / payerCount.length)
-              : 0,
-          cac: newStudents > 0 ? Math.round(marketingTotal / newStudents) : 0,
-          marketingRoi:
-            marketingTotal > 0
-              ? Math.round(
-                  ((incomeTotal - marketingTotal) / marketingTotal) * 100,
-                )
-              : 0,
-          avgPayment:
-            paymentCount > 0 ? Math.round(incomeTotal / paymentCount) : 0,
         };
       }),
     );
-
-    return result;
   }
 
   /**

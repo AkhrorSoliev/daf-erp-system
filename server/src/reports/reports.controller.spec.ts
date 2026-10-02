@@ -31,6 +31,7 @@ describe('ReportsController — role guards', () => {
     getGroupAnalytics: jest.fn().mockResolvedValue({}),
     getLeadAnalytics: jest.fn().mockResolvedValue({}),
     getFinancialTrend: jest.fn().mockResolvedValue({}),
+    getFinancialTrendCanonical: jest.fn().mockResolvedValue([]),
     getIncomeMonthAttribution: jest.fn().mockResolvedValue({}),
     getFinancialOverview: jest.fn().mockResolvedValue({}),
     getSalaryMonthly: jest.fn().mockResolvedValue({
@@ -42,6 +43,7 @@ describe('ReportsController — role guards', () => {
         covered: 120,
         gap: 0,
       },
+      staffTotals: { monthly: 30, advances: 5, netToPay: 25 },
     }),
     // Canonical monthly net profit — overrides overview.netProfit on the card.
     getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 12_345_678 }),
@@ -52,8 +54,8 @@ describe('ReportsController — role guards', () => {
       netProfit: 12_345_678,
       netProfitBasis: 'recognized',
     }),
-    // «Oyning o'z foydasi» — default resolves so unrelated tests in this file
-    // (which don't care about the field) aren't left exercising the catch path.
+    // «Oyning o'z foydasi» left the overview; kept so the payload test can show
+    // the controller no longer asks for it.
     getOwnMonthProfit: jest.fn().mockResolvedValue({ ownMonthProfit: null }),
     getPaymentReports: jest.fn().mockResolvedValue({}),
     getTeacherPaymentReports: jest.fn().mockResolvedValue({}),
@@ -215,6 +217,7 @@ describe('ReportsController — role guards', () => {
     'getFinancialTrend',
     'getIncomeMonthAttribution',
     'getProfitComposition',
+    'getFinancialOverview',
   ] as const;
 
   // Widened 2026-08-12 for the single debt page (/payments/debt): the debt
@@ -291,7 +294,6 @@ describe('ReportsController — role guards', () => {
   const studentPaymentsEndpoints = [
     'getStudentPaymentsReport',
     'getStudentPaymentsFilterOptions',
-    'getFinancialOverview',
   ] as const;
 
   for (const method of studentPaymentsEndpoints) {
@@ -496,16 +498,16 @@ describe('ReportsController — role guards', () => {
     });
   });
 
-  describe('getFinancialOverview() — sensitive-field stripping', () => {
+  describe('getFinancialOverview() — payload', () => {
     const fullOverview = {
       income: {
         actual: 69126991,
         paymentCount: 212,
         byMethod: [{ method: 'CASH', amount: 5, count: 1 }],
+        yesterday: { date: '2026-07-14', amount: 3 },
       },
       forecast: { expectedMonthEnd: 7, expectedHeld: 3, expectedRemaining: 4 },
       salary: { paid: 8251000, pending: 5, advances: 2 },
-      // «Bu oy hisoblandi» (ADR-0058): money — CEO/BD only, like income.
       monthCharges: {
         month: '2026-10',
         charged: 900_000,
@@ -513,31 +515,34 @@ describe('ReportsController — role guards', () => {
         unpaid: 550_000,
         paidPct: 38.9,
         students: 2,
+        unpaidStudents: 1,
       },
-      // «Qarzdorlik» (ADR-0059): money, CEO/BD only, like income and the rest.
       debtSplit: {
         studying: {
           total: 43_500_000,
           count: 237,
           currentMonth: 41_100_000,
           older: 2_400_000,
+          olderCount: 13,
         },
-        notStudying: { total: 40_600_000, count: 327 },
+        notStudying: {
+          total: 40_600_000,
+          count: 327,
+          byKind: {
+            ungrouped: { total: 15_000_000, count: 128 },
+            frozen: { total: 14_600_000, count: 99 },
+            left: { total: 11_000_000, count: 100 },
+          },
+        },
       },
       expenses: 8251000,
       netProfit: 60875991,
       activeBalance: 1,
       activeStudentCount: 188,
-      ltv: 367697,
-      ltvPayerCount: 188,
-      cac: 0,
-      marketingRoi: 0,
-      avgPayment: 326071,
-      newStudentCount: 0,
-      marketingExpenses: 0,
     };
 
     beforeEach(() => {
+      mockPrisma.user.findFirst.mockResolvedValue(asCeo);
       mockService.getFinancialOverview.mockResolvedValue(fullOverview);
     });
 
@@ -547,15 +552,14 @@ describe('ReportsController — role guards', () => {
 
     const query = {} as any;
 
-    it('returns the FULL payload for CEO', async () => {
+    it.each([
+      [10001, 'CEO'],
+      [10002, 'Branch Director'],
+    ])('returns the whole payload (%i, %s)', async (id) => {
       const res: any = await controller.getFinancialOverview(query, {
-        id: 10001,
+        id,
         companyId: 1,
-        roles: ['CEO'],
       });
-      // Every sensitive field is preserved (the computed-salary fold is additive).
-      // netProfit is the canonical getMonthlyNetProfit figure (overrides the
-      // legacy overview.netProfit), not the raw cash-basis one.
       expect(res).toMatchObject({
         income: fullOverview.income,
         expenses: fullOverview.expenses,
@@ -567,18 +571,11 @@ describe('ReportsController — role guards', () => {
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
     });
 
-    // The canonical figure is not always available. When it fails the endpoint
-    // keeps returning a number — breaking the overview would be worse — but it
-    // used to return the LEGACY CASH figure under the same field name, with no
-    // way for the caller to tell. That number runs high on purpose: teacher
-    // salary is paid the following cycle, so a paidAt-based profit barely
-    // subtracts it. The comment in the controller calls it the +78M June bug.
     describe('net profit basis is stated, not implied', () => {
       it('reports the recognized basis when the canonical figure computes', async () => {
         const res: any = await controller.getFinancialOverview(query, {
           id: 10001,
           companyId: 1,
-          roles: ['CEO'],
         });
 
         expect(res.netProfit).toBe(12_345_678);
@@ -586,8 +583,6 @@ describe('ReportsController — role guards', () => {
       });
 
       it('falls back to cash AND says so', async () => {
-        // Servis kanonik hisobni bajara olmaganda kassa raqamini 'cash' belgisi
-        // bilan qaytaradi; kontroller uni o'zgartirmasdan uzatishi shart.
         mockService.getNetProfitWithBasis.mockResolvedValueOnce({
           netProfit: fullOverview.netProfit,
           netProfitBasis: 'cash',
@@ -596,69 +591,61 @@ describe('ReportsController — role guards', () => {
         const res: any = await controller.getFinancialOverview(query, {
           id: 10001,
           companyId: 1,
-          roles: ['CEO'],
         });
 
-        // The number still comes back — the card must render something…
         expect(res.netProfit).toBe(fullOverview.netProfit);
-        // …but it is labelled for what it is, so the UI can stop calling it
-        // «Foyda».
         expect(res.netProfitBasis).toBe('cash');
       });
+
+      it('hands the service the cash figure as its fallback', async () => {
+        await controller.getFinancialOverview(query, {
+          id: 10001,
+          companyId: 1,
+        });
+
+        expect(mockService.getNetProfitWithBasis).toHaveBeenCalledWith(
+          1,
+          expect.objectContaining({
+            performedById: 10001,
+            cashFallback: fullOverview.netProfit,
+          }),
+        );
+      });
     });
 
-    it('returns the FULL payload for Branch Director', async () => {
-      const res: any = await controller.getFinancialOverview(query, {
-        id: 10002,
-        companyId: 1,
-        roles: ['Branch Director'],
-      });
-      expect(res).toMatchObject({
-        income: fullOverview.income,
-        expenses: fullOverview.expenses,
-        netProfit: 12_345_678,
-        debtSplit: fullOverview.debtSplit,
-      });
-      expect(res.salary.paid).toBe(fullOverview.salary.paid);
-    });
-
-    it('sof foydani servisdan oladi va kassa zaxirasi sifatida overview.netProfit ni uzatadi', async () => {
-      const res: any = await controller.getFinancialOverview(query, {
-        id: 10001,
-        companyId: 1,
-        roles: ['CEO'],
-      });
-
-      expect(res.netProfit).toBe(12_345_678);
-      expect(res.netProfitBasis).toBe('recognized');
-
-      // Eng muhim tasdiq shu: kanonik hisob yiqilganda servis AYNAN shu songa
-      // tushadi. Kontroller noto'g'ri zaxira uzatsa, degradatsiya jimgina
-      // boshqa raqam ko'rsatib turardi.
-      expect(mockService.getNetProfitWithBasis).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          performedById: 10001,
-          cashFallback: fullOverview.netProfit,
-        }),
-      );
-    });
-
-    it('folds the computed monthly teacher salary into salary.computed for CEO (matches the Excel Oyliklar sheet)', async () => {
+    it('folds the teachers’ AND the staff’s salary into salary.computed', async () => {
       const res: any = await controller.getFinancialOverview(query, {
         id: 10001,
         companyId: 1,
-        roles: ['CEO'],
       });
-      // netToPay + advances = gross (avans + oylik jami); hasLessonData true when
-      // the month has per-lesson data.
       expect(res.salary.computed).toEqual({
         month: '2026-07',
         hasLessonData: true,
+        fullDeserved: 120,
         netToPay: 100,
         advances: 20,
-        gross: 120,
+        staff: { monthly: 30, advances: 5, netToPay: 25 },
       });
+    });
+
+    it('takes the salary month from the Tashkent calendar when no period is given', async () => {
+      // 01.10.2026 01:30 in Tashkent; the process (UTC) still says 30.09.
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00.000Z'));
+      try {
+        mockService.getSalaryMonthly.mockClear();
+        await controller.getFinancialOverview(query, {
+          id: 10001,
+          companyId: 1,
+        });
+        expect(mockService.getSalaryMonthly).toHaveBeenCalledWith(
+          1,
+          '2026-10',
+          10001,
+          undefined,
+        );
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     it('degrades salary.computed to null (never throws) when the salary calc fails', async () => {
@@ -666,149 +653,36 @@ describe('ReportsController — role guards', () => {
       const res: any = await controller.getFinancialOverview(query, {
         id: 10001,
         companyId: 1,
-        roles: ['CEO'],
       });
       expect(res.salary.computed).toBeNull();
-      // The rest of the payload is untouched — netProfit is the canonical figure
-      // (getMonthlyNetProfit still succeeds; only the computed-salary fold failed).
       expect(res.netProfit).toBe(12_345_678);
     });
 
-    it('does NOT compute salary for Administrator (no leak, no wasted query)', async () => {
-      mockService.getSalaryMonthly.mockClear();
+    it("no longer computes «Oyning o'z foydasi» (removed from the page)", async () => {
+      mockService.getOwnMonthProfit.mockClear();
       const res: any = await controller.getFinancialOverview(query, {
-        id: 10003,
+        id: 10001,
         companyId: 1,
-        roles: ['Administrator'],
       });
-      expect(res.salary).toBeUndefined();
-      expect(mockService.getSalaryMonthly).not.toHaveBeenCalled();
-    });
-
-    it('returns ONLY payer count + avg payment for Administrator', async () => {
-      const res = await controller.getFinancialOverview(query, {
-        id: 10003,
-        companyId: 1,
-        roles: ['Administrator'],
-      });
-      expect(res).toEqual({ ltvPayerCount: 188, avgPayment: 326071 });
-    });
-
-    it('returns ONLY payer count + avg payment for Cashier', async () => {
-      const res = await controller.getFinancialOverview(query, {
-        id: 10004,
-        companyId: 1,
-        roles: ['Cashier'],
-      });
-      expect(res).toEqual({ ltvPayerCount: 188, avgPayment: 326071 });
-    });
-
-    it('never sends the debt split to Administrator or Cashier — it is a money figure, CEO/BD only', async () => {
-      for (const role of ['Administrator', 'Cashier']) {
-        const res: any = await controller.getFinancialOverview(query, {
-          id: 10003,
-          companyId: 1,
-          roles: [role],
-        });
-        expect(res).not.toHaveProperty('debtSplit');
-        expect(JSON.stringify(res)).not.toContain('43500000');
-      }
-    });
-
-    it('never leaks income / expenses / profit / salary / LTV / CAC / ROI / debt to Administrator', async () => {
-      const res: any = await controller.getFinancialOverview(query, {
-        id: 10003,
-        companyId: 1,
-        roles: ['Administrator'],
-      });
-      expect(res.income).toBeUndefined();
-      expect(res.expenses).toBeUndefined();
-      expect(res.netProfit).toBeUndefined();
-      expect(res.salary).toBeUndefined();
-      expect(res.monthCharges).toBeUndefined();
-      expect(res.forecast).toBeUndefined();
-      expect(res.ltv).toBeUndefined();
-      expect(res.cac).toBeUndefined();
-      expect(res.marketingRoi).toBeUndefined();
-      expect(res.debtSplit).toBeUndefined();
-      expect(res.activeBalance).toBeUndefined();
-    });
-
-    it('grants the full payload when the user holds Administrator AND Branch Director', async () => {
-      const res: any = await controller.getFinancialOverview(query, {
-        id: 10004,
-        companyId: 1,
-        roles: ['Administrator', 'Branch Director'],
-      });
-      expect(res).toMatchObject({
-        income: fullOverview.income,
-        netProfit: 12_345_678,
-      });
-      expect(res.salary.paid).toBe(fullOverview.salary.paid);
+      expect(res).not.toHaveProperty('ownMonthProfit');
+      expect(mockService.getOwnMonthProfit).not.toHaveBeenCalled();
     });
   });
 
-  describe('financial-overview — ownMonthProfit', () => {
-    beforeEach(() => {
-      mockService.getFinancialOverview.mockResolvedValue({
-        ltvPayerCount: 188,
-        avgPayment: 326071,
-      });
-    });
-
-    afterEach(() => {
-      mockService.getFinancialOverview.mockResolvedValue({});
-      mockService.getOwnMonthProfit.mockResolvedValue({ ownMonthProfit: null });
-    });
-
-    const query = {} as any;
-
-    it('adds the own-month profit for a CEO caller', async () => {
-      mockService.getOwnMonthProfit.mockResolvedValueOnce({
-        month: '2026-07',
-        ownMoney: 142_064_938,
-        cashTotal: 170_378_987,
-        netProfit: { netProfit: 35_976_444 },
-        ownMonthProfit: 4_257_391,
-      });
-
-      const out: any = await controller.getFinancialOverview(query, {
-        id: 10_456,
-        companyId: 1,
-        roles: ['CEO'],
-      });
-
-      expect(out.ownMonthProfit).toBe(4_257_391);
-    });
-
-    it('falls back to null when the figure cannot be computed', async () => {
-      mockService.getOwnMonthProfit.mockRejectedValueOnce(new Error('boom'));
-
-      const out: any = await controller.getFinancialOverview(query, {
-        id: 10_456,
-        companyId: 1,
-        roles: ['CEO'],
-      });
-
-      expect(out.ownMonthProfit).toBeNull();
-    });
-
-    it('is stripped for an Administrator caller', async () => {
-      mockService.getOwnMonthProfit.mockResolvedValueOnce({
-        month: '2026-07',
-        ownMoney: 1,
-        cashTotal: 1,
-        netProfit: { netProfit: 1 },
-        ownMonthProfit: 4_257_391,
-      });
-
-      const out: any = await controller.getFinancialOverview(query, {
-        id: 9,
-        companyId: 1,
-        roles: ['Administrator'],
-      });
-
-      expect(out.ownMonthProfit).toBeUndefined();
+  describe('getFinancialTrend() — month anchor', () => {
+    it('hands the asked month and the resolved scope to the canonical trend', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(asCeo);
+      await controller.getFinancialTrend(
+        { month: '2026-08' } as any,
+        1001,
+        10001,
+      );
+      expect(mockService.getFinancialTrendCanonical).toHaveBeenCalledWith(
+        1001,
+        null,
+        10001,
+        '2026-08',
+      );
     });
   });
 

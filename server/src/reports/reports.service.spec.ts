@@ -1423,6 +1423,16 @@ describe('ReportsService', () => {
         profitBasis: 'kanonik',
       });
     });
+
+    it('hands the asked month to the raw trend', async () => {
+      const trend = jest
+        .spyOn((service as any).financial, 'getFinancialTrend')
+        .mockResolvedValue([]);
+
+      await service.getFinancialTrendCanonical(1001, null, 10001, '2026-08');
+
+      expect(trend).toHaveBeenCalledWith(1001, null, '2026-08');
+    });
   });
 
   // The debt reads nothing of the period, but the facade still asks for it on

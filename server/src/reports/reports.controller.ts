@@ -13,7 +13,7 @@ import {
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
-import { ExpectationHistoryQueryDto } from './dto/expectation-history-query.dto';
+import { MonthQueryDto } from './dto/month-query.dto';
 import { DebtHistoryQueryDto } from './dto/debt-history-query.dto';
 import {
   isEmptyScope,
@@ -43,7 +43,7 @@ import { RolesGuard } from '../common/guards';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsExcelService } from './reports-excel.service';
 import { ReportsProfitCompositionService } from './reports-profit-composition.service';
-import { tashkentDateStr } from '../common/date/tashkent';
+import { tashkentDateStr, tashkentMonthKey } from '../common/date/tashkent';
 
 @Controller('reports')
 @UseGuards(RolesGuard)
@@ -156,23 +156,23 @@ export class ReportsController {
     return this.reportsService.getLeadAnalytics(query);
   }
 
-  // 6-month KPI trend chart (income/expenses/profit/LTV/CAC/ROI series).
-  // CEO/BD only — the drill-down is hidden from Administrators on the frontend,
-  // so the endpoint must reject them too (money-series data).
+  // The «Oylar bo'yicha» table of /payments/overview and the home chart: six
+  // months of cash and canonical profit, ending at `?month=` (default: now).
+  // CEO/BD only — money series.
   @Get('financial-trend')
   @Roles('CEO', 'Branch Director')
   async getFinancialTrend(
-    @Query() query: ReportsQueryDto,
+    @Query() query: MonthQueryDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
   ) {
     const branchIds = await this.resolveScope(userId, query.branchId);
-    // Canonical profit per month, day-cached — so the chart behind the Foyda
-    // card plots the same figure the card shows instead of a cash proxy.
+    // Canonical profit per month, day-cached — the figure the profit card shows.
     return this.reportsService.getFinancialTrendCanonical(
       companyId,
       branchIds,
       userId,
+      query.month,
     );
   }
 
@@ -215,18 +215,16 @@ export class ReportsController {
     });
   }
 
-  // Financial overview KPI cards. CEO/BD get the full payload (income, expenses,
-  // profit, salary, LTV, CAC, ROI, forecast, debt). Administrator + Cashier are
-  // intentionally allowed to reach it — but only for the two OPERATIONAL figures
-  // the frontend still shows them ("To'lov qilganlar" = payer count, "O'rtacha
-  // to'lov" = avg payment). Every sensitive money metric is stripped here at the
-  // HTTP boundary so a direct API call can't leak it (frontend hiding alone is
-  // not a security boundary).
+  // «Umumiy ma'lumotlar» — CEO and Branch Director only (ADR-0067). The page
+  // shows Administrator and Cashier only «To'lov qayd qilish» and the recent
+  // payments and does not call this; the two cards they used to get from here
+  // («To'lov qilganlar», «O'rtacha to'lov») were removed, and the redaction
+  // branch with them.
   @Get('financial-overview')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Roles('CEO', 'Branch Director')
   async getFinancialOverview(
     @Query() query: ReportsQueryDto,
-    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
+    @CurrentUser() user: { id: number; companyId: number },
   ) {
     const branchIds = await this.resolveScope(user.id, query.branchId);
     const overview = await this.reportsService.getFinancialOverview(
@@ -238,45 +236,28 @@ export class ReportsController {
       },
     );
 
-    const canSeeFinancials = user.roles.some(
-      (r) => r === 'CEO' || r === 'Branch Director',
-    );
-    if (!canSeeFinancials) {
-      // Operational-only subset for Administrator / Cashier. Nothing that reveals
-      // company revenue, cost, profit, salary, marketing or debt is returned.
-      return {
-        ltvPayerCount: overview.ltvPayerCount,
-        avgPayment: overview.avgPayment,
-      };
-    }
-
-    // Computed monthly teacher salary — the SAME figure the downloaded Excel
-    // "Oyliklar" sheet and the /payments/salary page show (`getMonthly`). Folded
-    // in so the overview's "Ustoz oyliklari" card matches the Excel exactly:
-    //   • netToPay  = sof to'lanadigan (avans ayirilgan) — what teachers receive
-    //   • advances  = shu oydagi avanslar jami
-    //   • gross     = netToPay + advances (avans + oylik jami)
-    // Month = the period's START month, mirroring the Excel's `monthStr`
-    // derivation (`ReportsExcelService.generate`). This is the HISOBLANGAN
-    // (accrual) salary for the month — deliberately a different basis from the
-    // cash-paid `salary.paid` that feeds `netProfit`. Caller id drives branch
-    // scope (CEO/BD → same scope as their salary page). Defensive: a salary-calc
-    // failure must degrade to `computed: null`, never break the whole overview.
-    const now = new Date();
+    // «Oyliklar» card: the month's salary from `getMonthly` — the SAME source
+    // as the /payments/salary page and the Excel «Oyliklar» sheet: teachers'
+    // `fullDeserved` / `netToPay` / `advances` and the non-teaching staff's
+    // `staffTotals`. Month = the period's START month (the Excel `monthStr`
+    // rule); with no period the current TASHKENT month — `getFullYear()` /
+    // `getMonth()` read the process timezone, UTC on Railway, and said last
+    // month until 05:00 on the 1st. A salary-calc failure degrades to `null`,
+    // never breaks the overview.
     const month = query.startDate
       ? query.startDate.slice(0, 7)
-      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      : tashkentMonthKey(new Date());
     let computed: {
       month: string;
       hasLessonData: boolean;
+      fullDeserved: number;
       netToPay: number;
       advances: number;
-      gross: number;
+      staff: { monthly: number; advances: number; netToPay: number };
     } | null = null;
     try {
-      // Branch-scoped like every other figure on this card — an "Oyliklar"
-      // block showing company-wide payroll next to one branch's income is how
-      // the profit number went wrong in the first place.
+      // Branch-scoped like every other figure here: payroll resolves the
+      // caller's own branch set from `user.id`.
       const sm = await this.reportsService.getSalaryMonthly(
         user.companyId,
         month,
@@ -284,9 +265,8 @@ export class ReportsController {
         query.branchId,
       );
       const t = sm.totals;
-      // Config-gap / manual months (e.g. May cutover) have no per-lesson data —
-      // the deserved/covered/centerFunded columns come back as 0 there; the card
-      // renders a "o'tish oyi" note instead of a fake 0, mirroring the Excel "—".
+      // Config-gap / manual months (the May cutover) have no per-lesson data:
+      // the card prints «—» and «o'tish oyi» instead of a fake 0.
       const hasLessonData =
         (t.fullDeserved ?? 0) !== 0 ||
         (t.covered ?? 0) !== 0 ||
@@ -294,35 +274,22 @@ export class ReportsController {
       computed = {
         month: sm.month,
         hasLessonData,
+        fullDeserved: t.fullDeserved,
         netToPay: t.netToPay,
         advances: t.advances,
-        gross: t.netToPay + t.advances,
+        staff: {
+          monthly: sm.staffTotals.monthly,
+          advances: sm.staffTotals.advances,
+          netToPay: sm.staffTotals.netToPay,
+        },
       };
     } catch {
       computed = null;
     }
 
-    // Corrected "Foyda" — the SAME canonical figure as the Excel "Sof foyda":
-    //   dars tushumi (recognized — shu oy o'tilgan darslar)
-    //   − ustoz oyligi (covered + markaz qo'shimchasi, faqat 2026-07 dan)
-    //   − admin oyligi − operatsion xarajat − refund.
-    // The legacy overview.netProfit (kassa tushumi − NAQD to'langan oylik)
-    // grossly overstated profit: teacher salary is paid next cycle, so its
-    // paidAt-based figure was ~0 and barely reduced profit (the +78M June bug).
-    // Defensive: a failure keeps the legacy figure, never breaks the overview —
-    // but it SAYS SO. Falling back silently meant the card kept the label «Foyda»
-    // and a tooltip describing recognized revenue while showing the cash figure
-    // the comment above calls the +78M June bug. The Telegram card already
-    // relabels itself in this situation; the web card could not, because the
-    // response carried no way to tell the two apart.
-    //
-    // The bare `catch {}` also swallowed the reason, so a persistent failure
-    // would have been invisible: a wrong number, no error, nobody looking.
     // Kanonik «Foyda» — Excel «Sof foyda» bilan bir xil raqam. «Kanonik yoki
-    // kassa» qarori `ReportsService.getNetProfitWithBasis` da turadi, chunki
-    // bosh sahifa ham AYNAN shu raqamni ko'rsatishi kerak; qaror ikki joyda
-    // bo'lsa, bir kuni biri o'zgarib, ikki sahifa bir oy uchun ikki xil foyda
-    // ko'rsatib turardi.
+    // kassa» qarori `ReportsService.getNetProfitWithBasis` da turadi; a
+    // failure returns the cash figure labelled `cash`, never silently.
     const { netProfit, netProfitBasis } =
       await this.reportsService.getNetProfitWithBasis(user.companyId, {
         month,
@@ -331,27 +298,10 @@ export class ReportsController {
         cashFallback: overview.netProfit,
       });
 
-    // «Oyning o'z foydasi» — the month's own money against its own costs.
-    // A positive Foyda card can still sit on a month that did not pay for
-    // itself (June 2026: profit +4.7M, own-month −26.8M, propped up by May
-    // debt recovery). Defensive: a failure yields null, never breaks the card.
-    let ownMonthProfit: number | null = null;
-    try {
-      const own = await this.reportsService.getOwnMonthProfit(user.companyId, {
-        month,
-        branchIds,
-        performedById: user.id,
-      });
-      ownMonthProfit = own.ownMonthProfit;
-    } catch {
-      ownMonthProfit = null;
-    }
-
     return {
       ...overview,
       netProfit,
       netProfitBasis,
-      ownMonthProfit,
       salary: { ...overview.salary, computed },
     };
   }
@@ -364,7 +314,7 @@ export class ReportsController {
   async getExpectationHistory(
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
-    @Query() query: ExpectationHistoryQueryDto,
+    @Query() query: MonthQueryDto,
   ) {
     return this.reportsService.getExpectationHistory(companyId, {
       // Its own DTO, not `ReportsQueryDto`: the global ValidationPipe runs with

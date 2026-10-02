@@ -568,8 +568,14 @@ export class ReportsService {
     companyId: number,
     branchIds: ReportBranchIds,
     performedById: number,
+    /** `YYYY-MM` the six months end at; the current month when absent. */
+    month?: string,
   ) {
-    const rows = await this.financial.getFinancialTrend(companyId, branchIds);
+    const rows = await this.financial.getFinancialTrend(
+      companyId,
+      branchIds,
+      month,
+    );
     return Promise.all(
       rows.map(async (row: any) => {
         try {

@@ -157,18 +157,31 @@ describe('ReportsFinancialService', () => {
       expect(debtReads).toEqual([]);
     });
 
-    it("still reads the active students' balance and the new-student count", async () => {
-      await service.getFinancialOverview(1, period);
+    it('reads the active students’ balance and no marketing, payer or new-student leg', async () => {
+      const result: any = await service.getFinancialOverview(1, period);
 
-      // `activeBalance` / `activeStudentCount` are not debt figures: they stay.
       expect(prisma.student.aggregate).toHaveBeenCalledTimes(1);
-      expect(prisma.student.aggregate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ companyId: 1, status: 'ACTIVE' }),
-          _sum: { balance: true },
-        }),
+      expect(prisma.student.count).not.toHaveBeenCalled();
+      // Only the by-method breakdown groups payments now.
+      expect(prisma.payment.groupBy.mock.calls.map(([a]: any) => a.by)).toEqual(
+        [['method']],
       );
-      expect(prisma.student.count).toHaveBeenCalledTimes(1);
+      expect(
+        prisma.expense.aggregate.mock.calls.some(
+          ([a]: any) => a.where.category === 'MARKETING',
+        ),
+      ).toBe(false);
+      for (const gone of [
+        'ltv',
+        'ltvPayerCount',
+        'cac',
+        'marketingRoi',
+        'avgPayment',
+        'newStudentCount',
+        'marketingExpenses',
+      ]) {
+        expect(result).not.toHaveProperty(gone);
+      }
     });
 
     it('scopes the advance-paid query to TEACHER_ADVANCE + branch and the settled query to a PAID salary run', async () => {
@@ -193,6 +206,72 @@ describe('ReportsFinancialService', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('getFinancialOverview — yesterday', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it("sums yesterday's Tashkent day while the period is the current month", async () => {
+      // 15.10.2026 10:00 in Tashkent.
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-15T05:00:00Z'));
+      const yesterdayStart = '2026-10-13T19:00:00.000Z';
+      prisma.payment.aggregate.mockImplementation((args: any) =>
+        Promise.resolve(
+          args.where.createdAt.gte.toISOString() === yesterdayStart
+            ? { _sum: { amount: 2_200_000 }, _count: 3 }
+            : { _sum: { amount: 9_000_000 }, _count: 12 },
+        ),
+      );
+
+      const r = await service.getFinancialOverview(1, {
+        branchIds: [4],
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      });
+
+      expect(r.income.yesterday).toEqual({
+        date: '2026-10-14',
+        amount: 2_200_000,
+      });
+      const [args] = prisma.payment.aggregate.mock.calls.find(
+        ([a]: any) => a.where.createdAt.gte.toISOString() === yesterdayStart,
+      );
+      expect(args.where).toEqual({
+        companyId: 1,
+        status: 'COMPLETED',
+        createdAt: {
+          gte: new Date(yesterdayStart),
+          lt: new Date('2026-10-14T19:00:00.000Z'),
+        },
+        branchId: { in: [4] },
+      });
+    });
+
+    it('is null on the 1st — yesterday belongs to the month before', async () => {
+      // 01.10.2026 01:30 in Tashkent; the UTC date is still 30.09.
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00Z'));
+
+      const r = await service.getFinancialOverview(1, {
+        branchIds: null,
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      });
+
+      expect(r.income.yesterday).toBeNull();
+      expect(prisma.payment.aggregate).toHaveBeenCalledTimes(1); // the month's cash only
+    });
+
+    it('is null for a past month', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-15T05:00:00Z'));
+
+      const r = await service.getFinancialOverview(1, {
+        branchIds: null,
+        startDate: '2026-09-01',
+        endDate: '2026-09-30',
+      });
+
+      expect(r.income.yesterday).toBeNull();
     });
   });
 
@@ -237,10 +316,6 @@ describe('ReportsFinancialService', () => {
         ...prisma.payment.aggregate.mock.calls.map(
           ([a]: any) => a.where.createdAt,
         ),
-        ...prisma.payment.groupBy.mock.calls.map(
-          ([a]: any) => a.where.createdAt,
-        ),
-        ...prisma.student.count.mock.calls.map(([a]: any) => a.where.createdAt),
         ...prisma.salaryPayment.aggregate.mock.calls.map(
           ([a]: any) => a.where.paidAt,
         ),
@@ -275,6 +350,47 @@ describe('ReportsFinancialService', () => {
         '2026-09-01T00:00:00.000Z..2026-10-01T00:00:00.000Z',
         '2026-10-01T00:00:00.000Z..2026-11-01T00:00:00.000Z',
       ]);
+    });
+
+    it('anchors the six months on the asked month and drops the ones before the reporting floor', async () => {
+      const res = await service.getFinancialTrend(1, null, '2026-08');
+
+      expect(res.map((r) => r.monthKey)).toEqual([
+        '2026-05',
+        '2026-06',
+        '2026-07',
+        '2026-08',
+      ]);
+    });
+
+    it('never runs past the current month', async () => {
+      const res = await service.getFinancialTrend(1, null, '2027-03');
+
+      expect(res).toHaveLength(6);
+      expect(res[res.length - 1].monthKey).toBe('2026-10');
+    });
+
+    it('carries no marketing, average-payment or balance series any more', async () => {
+      const res = await service.getFinancialTrend(1, null);
+
+      for (const row of res) {
+        for (const gone of [
+          'ltv',
+          'cac',
+          'marketingRoi',
+          'avgPayment',
+          'activeBalance',
+        ]) {
+          expect(row).not.toHaveProperty(gone);
+        }
+      }
+      expect(prisma.student.count).not.toHaveBeenCalled();
+      expect(prisma.payment.groupBy).not.toHaveBeenCalled();
+      expect(
+        prisma.expense.aggregate.mock.calls.some(
+          ([a]: any) => a.where.category === 'MARKETING',
+        ),
+      ).toBe(false);
     });
   });
 

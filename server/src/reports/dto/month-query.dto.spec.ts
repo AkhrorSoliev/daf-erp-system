@@ -1,5 +1,5 @@
 import { ValidationPipe } from '@nestjs/common';
-import { ExpectationHistoryQueryDto } from './expectation-history-query.dto';
+import { MonthQueryDto } from './month-query.dto';
 
 /**
  * This endpoint shipped returning 400 for every request the UI made. The cause
@@ -11,7 +11,7 @@ import { ExpectationHistoryQueryDto } from './expectation-history-query.dto';
  * These run the REAL pipe with the REAL global settings, so the same mistake
  * cannot come back quietly.
  */
-describe('ExpectationHistoryQueryDto', () => {
+describe('MonthQueryDto', () => {
   // Mirrors main.ts exactly — a laxer pipe here would test nothing.
   const pipe = new ValidationPipe({
     whitelist: true,
@@ -20,7 +20,7 @@ describe('ExpectationHistoryQueryDto', () => {
   });
   const meta = {
     type: 'query' as const,
-    metatype: ExpectationHistoryQueryDto,
+    metatype: MonthQueryDto,
   };
 
   it('accepts the exact query the overview dialog sends', async () => {
