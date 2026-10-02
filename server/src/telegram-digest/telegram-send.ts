@@ -1,3 +1,5 @@
+import { Telegram } from 'telegraf';
+
 export type TelegramFailureKind = 'permanent' | 'content' | 'transient';
 
 export interface TelegramFailure {
@@ -28,8 +30,43 @@ export const MAX_RETRY_AFTER_SECONDS = 30;
 const PERMANENT_BAD_REQUEST =
   /chat not found|user is deactivated|bot was blocked|bot was kicked|PEER_ID_INVALID/i;
 
+/**
+ * A Bot API call goes to `…/bot<token>/<method>`, and a failed call's error
+ * can quote that URL. Error text that is stored or logged comes through here.
+ */
+function redactBotToken(text: string): string {
+  return text.replace(/bot\d+:[A-Za-z0-9_-]+/g, 'bot***');
+}
+
 export function describeError(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+  return redactBotToken(err instanceof Error ? err.message : String(err));
+}
+
+/**
+ * Strips the bot token from every error a Telegram API call throws, at the one
+ * method all of them go through: both bots, and the per-update client behind
+ * `ctx.reply`. Telegraf itself redacts only a request that fails outright; an
+ * error raised once the response is in (a non-JSON body, a body cut off or
+ * timed out) still quotes the URL, and dozens of handlers log `err.message`.
+ * The same error object is rethrown, so `TelegramError.response` still reaches
+ * `classifyTelegramError`. Installed once, from `main.ts`.
+ */
+export function installBotTokenRedaction(): void {
+  const proto = Telegram.prototype as unknown as {
+    callApi: (...args: unknown[]) => Promise<unknown>;
+  };
+  const callApi = proto.callApi;
+  proto.callApi = async function (this: unknown, ...args: unknown[]) {
+    try {
+      return await Reflect.apply(callApi, this, args);
+    } catch (err) {
+      if (err instanceof Error) {
+        err.message = redactBotToken(err.message);
+        if (err.stack) err.stack = redactBotToken(err.stack);
+      }
+      throw err;
+    }
+  };
 }
 
 /**

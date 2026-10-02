@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
+import { LateAttendanceDto } from './dto/late-attendance.dto';
 import { AttendanceValidationService } from './attendance-validation.service';
 import { AttendanceReadService } from './attendance-read.service';
 import { AttendanceStatsService } from './attendance-stats.service';
 import { AttendanceSaveService } from './attendance-save.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
+import { ADMITTED_WITHOUT_RULE, LEFT_OUT } from '../billing/lesson-admission';
 
 @Injectable()
 export class AttendanceService {
@@ -12,15 +15,11 @@ export class AttendanceService {
     private read: AttendanceReadService,
     private stats: AttendanceStatsService,
     private saveService: AttendanceSaveService,
+    private admission: LessonAdmissionService,
   ) {}
 
-  validateLessonDate(
-    groupId: string,
-    date: string,
-    companyId?: number,
-    roles?: string[],
-  ) {
-    return this.validation.validateLessonDate(groupId, date, companyId, roles);
+  validateLessonDate(groupId: string, date: string, companyId?: number) {
+    return this.validation.validateLessonDate(groupId, date, companyId);
   }
 
   getLessonDates(
@@ -32,13 +31,48 @@ export class AttendanceService {
     return this.read.getLessonDates(groupId, month, year, companyId);
   }
 
-  getByDate(
+  /**
+   * The roster plus what the screen must obey: the company's lead
+   * (`opensMinutesBefore`, next to the roster's effective times, so the form
+   * opens the new-register window as the server judges it) and, per student,
+   * whether contract 3.2 admits them to this lesson (ADR-0047). `late` (the
+   * «Bo'ldi» register) is judged by the same rule.
+   */
+  async getByDate(
     groupId: string,
     date: string,
-    companyId?: number,
+    companyId: number,
     roles?: string[],
+    late = false,
   ) {
-    return this.read.getByDate(groupId, date, companyId, roles);
+    const { leftOutStudentIds, ...roster } = await this.read.getByDate(
+      groupId,
+      date,
+      companyId,
+      roles,
+      late,
+    );
+    const [opensMinutesBefore, admission] = await Promise.all([
+      this.validation.opensMinutesBefore(companyId),
+      this.admission.forLesson({
+        groupId,
+        lessonDay: date,
+        studentIds: roster.activeStudents.map((s) => s.studentId),
+      }),
+    ]);
+    // After the lesson a student the register left out stays out, paid or
+    // not — as `save()` judges it.
+    const leftOut = new Set(leftOutStudentIds);
+    return {
+      ...roster,
+      opensMinutesBefore,
+      activeStudents: roster.activeStudents.map((s) => ({
+        ...s,
+        admission: leftOut.has(s.studentId)
+          ? LEFT_OUT
+          : (admission.get(s.studentId) ?? ADMITTED_WITHOUT_RULE),
+      })),
+    };
   }
 
   getLessonSequence(groupId: string, companyId?: number) {
@@ -72,5 +106,23 @@ export class AttendanceService {
     companyId: number,
   ) {
     return this.saveService.save(groupId, date, dto, userId, roles, companyId);
+  }
+
+  saveLate(
+    groupId: string,
+    date: string,
+    dto: LateAttendanceDto,
+    userId: number,
+    roles: string[],
+    companyId: number,
+  ) {
+    return this.saveService.saveLate(
+      groupId,
+      date,
+      dto,
+      userId,
+      roles,
+      companyId,
+    );
   }
 }

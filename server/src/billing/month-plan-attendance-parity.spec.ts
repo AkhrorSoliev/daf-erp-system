@@ -147,6 +147,7 @@ async function planDays(fx: Fixture): Promise<string[]> {
     prisma as never,
     undefined as never,
     undefined as never,
+    undefined as never,
   );
   const plan = await service.resolveMonthPlanDates(
     prisma as never,

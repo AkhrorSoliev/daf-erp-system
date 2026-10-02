@@ -55,7 +55,7 @@ export function CommentItem({
   onDelete,
   onAssigneeStatus,
 }: CommentItemProps) {
-  const isAuthor = comment.author.id === currentUserId;
+  const isAuthor = comment.author?.id === currentUserId;
   const isSystemComment = comment.isSystem;
   const canEdit = (isAuthor || isCeo) && !comment._pending && !isSystemComment;
   const myAssignee = comment.assignees.find((a) => a.userId === currentUserId);
@@ -78,11 +78,11 @@ export function CommentItem({
           </div>
         ) : (
           <Avatar className="size-7 shrink-0 mt-0.5">
-            {comment.author.photo && (
+            {comment.author?.photo && (
               <AvatarImage src={comment.author.photo} />
             )}
             <AvatarFallback className="text-[10px] font-medium">
-              {`${comment.author.firstName?.[0] ?? ""}${comment.author.lastName?.[0] ?? ""}`}
+              {`${comment.author?.firstName?.[0] ?? ""}${comment.author?.lastName?.[0] ?? ""}`}
             </AvatarFallback>
           </Avatar>
         )}
@@ -92,7 +92,9 @@ export function CommentItem({
           {/* Author line */}
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-semibold leading-none">
-              {comment.author.firstName} {comment.author.lastName}
+              {comment.author
+                ? `${comment.author.firstName} ${comment.author.lastName}`
+                : "Tizim"}
             </span>
             <RelativeTime date={comment.createdAt} />
             <SendStatus pending={comment._pending} failed={comment._failed} />
@@ -214,15 +216,17 @@ export function CommentItem({
                   Ko&apos;rdim
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1 rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
-                onClick={() => onAssigneeStatus(comment.id, "DONE")}
-              >
-                <CircleCheck className="size-3" />
-                Bajarildi
-              </Button>
+              {!comment.isSystem && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1 rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                  onClick={() => onAssigneeStatus(comment.id, "DONE")}
+                >
+                  <CircleCheck className="size-3" />
+                  Bajarildi
+                </Button>
+              )}
             </div>
           )}
         </div>

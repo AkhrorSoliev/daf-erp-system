@@ -8,6 +8,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { PaymentPromisesService } from '../payment-promises/payment-promises.service';
 import { EntityHistoryService } from '../common/entity-history';
 import {
   PaymentMethod,
@@ -18,6 +19,7 @@ import {
 import type { SalaryCarriedOverPayload } from '../salary/salary-accrual.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CorrectPaymentDto } from './dto/correct-payment.dto';
+import { rethrowAsConflict } from '../common/transaction-conflict';
 import { PAYMENT_METHOD_LABEL } from './shared/method-label';
 import { formatSom } from './shared/format-som';
 // Aliased: this class carries its own null-tolerant `resolveStudentBranchId`
@@ -90,6 +92,7 @@ export class PaymentsWriteService {
     private lessonBillingService: LessonBillingService,
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
+    private paymentPromises: PaymentPromisesService,
   ) {}
 
   async create(dto: CreatePaymentDto, userId: number, companyId: number) {
@@ -157,8 +160,8 @@ export class PaymentsWriteService {
       resolvedBranchId = contract.branchId;
     }
 
-    const { payment, studentBalance, carriedOver } =
-      await this.prisma.$transaction(
+    const { payment, studentBalance, carriedOver } = await this.prisma
+      .$transaction(
         async (tx) => {
           // Re-resolve AND re-authorise with the transaction client, inside the
           // same Serializable snapshot as the rows below. The pre-check above is
@@ -285,7 +288,8 @@ export class PaymentsWriteService {
           maxWait: 10000,
           timeout: 15000,
         },
-      );
+      )
+      .catch(rethrowAsConflict);
 
     // Queues the student's Telegram receipt for the 20:00 digest (ADR-0025).
     // The digest writes the SmsMessage row, so the receipt still lands in the
@@ -308,6 +312,26 @@ export class PaymentsWriteService {
         companyId,
         items: carriedOver,
       } satisfies SalaryCarriedOverPayload);
+    }
+
+    // ADR-0047 / contract 3.2: a part payment carries a promise for the rest.
+    // The payment stands whatever happens to the promise.
+    if (dto.promiseDate && (studentBalance ?? 0) < 0) {
+      try {
+        await this.paymentPromises.upsertOpenPromise(
+          {
+            studentId: dto.studentId,
+            promiseDate: dto.promiseDate,
+            comment: `Qisman to'lov ${formatSom(dto.amount)} so'm; qolgan ${formatSom(-(studentBalance ?? 0))} so'm`,
+          },
+          userId,
+          companyId,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Promise after payment ${payment.id} failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     }
 
     return { ...payment, studentBalance };
@@ -393,75 +417,77 @@ export class PaymentsWriteService {
       );
     }
 
-    const result = await this.prisma.$transaction(
-      async (tx) => {
-        await this.transactionsService.reverseTransaction(
-          ledgerEntry.id,
-          {
-            performedById: params.performedById,
-            reason: params.reason ?? "To'lov bekor qilindi",
-          },
-          tx,
-        );
+    const result = await this.prisma
+      .$transaction(
+        async (tx) => {
+          await this.transactionsService.reverseTransaction(
+            ledgerEntry.id,
+            {
+              performedById: params.performedById,
+              reason: params.reason ?? "To'lov bekor qilindi",
+            },
+            tx,
+          );
 
-        if (payment.contractId) {
-          await tx.contract.update({
-            where: { id: payment.contractId },
-            data: { paidAmount: { decrement: payment.amount } },
+          if (payment.contractId) {
+            await tx.contract.update({
+              where: { id: payment.contractId },
+              data: { paidAmount: { decrement: payment.amount } },
+            });
+          }
+
+          await tx.payment.update({
+            where: { id },
+            data: { status: PaymentStatus.REVERSED },
           });
-        }
 
-        await tx.payment.update({
-          where: { id },
-          data: { status: PaymentStatus.REVERSED },
-        });
+          await this.entityHistoryService.recordStatusChange({
+            entityType: 'Payment',
+            entityId: id,
+            oldValues: { status: payment.status },
+            newValues: {
+              status: PaymentStatus.REVERSED,
+              reason: params.reason ?? null,
+            },
+            changedById: params.performedById,
+            companyId: params.companyId,
+            tx,
+          });
 
-        await this.entityHistoryService.recordStatusChange({
-          entityType: 'Payment',
-          entityId: id,
-          oldValues: { status: payment.status },
-          newValues: {
-            status: PaymentStatus.REVERSED,
-            reason: params.reason ?? null,
-          },
-          changedById: params.performedById,
-          companyId: params.companyId,
-          tx,
-        });
+          const updatedStudent = await tx.student.findUnique({
+            where: { id: payment.studentId },
+            select: { balance: true },
+          });
 
-        const updatedStudent = await tx.student.findUnique({
-          where: { id: payment.studentId },
-          select: { balance: true },
-        });
+          await this.entityHistoryService.recordStatusChange({
+            entityType: 'Student',
+            entityId: payment.studentId,
+            oldValues: {
+              balans: (updatedStudent?.balance ?? 0) + payment.amount,
+            },
+            newValues: {
+              balans: updatedStudent?.balance ?? 0,
+              summa: -payment.amount,
+              status: "TO'LOV_BEKOR_QILINDI",
+            },
+            changedById: params.performedById,
+            companyId: params.companyId,
+            tx,
+          });
 
-        await this.entityHistoryService.recordStatusChange({
-          entityType: 'Student',
-          entityId: payment.studentId,
-          oldValues: {
-            balans: (updatedStudent?.balance ?? 0) + payment.amount,
-          },
-          newValues: {
-            balans: updatedStudent?.balance ?? 0,
-            summa: -payment.amount,
-            status: "TO'LOV_BEKOR_QILINDI",
-          },
-          changedById: params.performedById,
-          companyId: params.companyId,
-          tx,
-        });
-
-        return {
-          reversedPaymentId: id,
-          amount: payment.amount,
-          studentBalance: updatedStudent?.balance ?? null,
-        };
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10000,
-        timeout: 15000,
-      },
-    );
+          return {
+            reversedPaymentId: id,
+            amount: payment.amount,
+            studentBalance: updatedStudent?.balance ?? null,
+          };
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 10000,
+          timeout: 15000,
+        },
+      )
+      .catch(rethrowAsConflict);
 
     // Tell the student their payment was rolled back. Fire-and-forget,
     // post-commit — mirrors the `payment.received` receipt flow.
@@ -581,35 +607,37 @@ export class PaymentsWriteService {
     // place. This lets an admin fix a mis-recorded method (e.g. CASH →
     // TRANSFER) even after the money was already consumed by lessons.
     if (sameAmount) {
-      const studentBalance = await this.prisma.$transaction(
-        async (tx) => {
-          await tx.payment.update({
-            where: { id },
-            data: { method: newMethod },
-          });
+      const studentBalance = await this.prisma
+        .$transaction(
+          async (tx) => {
+            await tx.payment.update({
+              where: { id },
+              data: { method: newMethod },
+            });
 
-          await this.entityHistoryService.recordUpdate({
-            entityType: 'Payment',
-            entityId: id,
-            oldValues: { method: payment.method },
-            newValues: { method: newMethod },
-            changedById: userId,
-            companyId,
-            tx,
-          });
+            await this.entityHistoryService.recordUpdate({
+              entityType: 'Payment',
+              entityId: id,
+              oldValues: { method: payment.method },
+              newValues: { method: newMethod },
+              changedById: userId,
+              companyId,
+              tx,
+            });
 
-          const student = await tx.student.findUnique({
-            where: { id: payment.studentId },
-            select: { balance: true },
-          });
-          return student?.balance ?? null;
-        },
-        {
-          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-          maxWait: 10000,
-          timeout: 15000,
-        },
-      );
+            const student = await tx.student.findUnique({
+              where: { id: payment.studentId },
+              select: { balance: true },
+            });
+            return student?.balance ?? null;
+          },
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 10000,
+            timeout: 15000,
+          },
+        )
+        .catch(rethrowAsConflict);
 
       // Alert the CEO when a non-CEO relabels a payment method.
       if (!isCeo) {
@@ -942,14 +970,18 @@ export class PaymentsWriteService {
     };
 
     try {
-      // If an outer transaction was provided, run within it; otherwise create our own
+      // If an outer transaction was provided, run within it; otherwise create
+      // our own. A gateway (Payme/Click) passes its own and answers every
+      // error with its provider's code, so only our own maps a conflict to 409.
       const { payment, studentBalance, carriedOver } = outerTx
         ? await executeInTx(outerTx)
-        : await this.prisma.$transaction(executeInTx, {
-            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-            maxWait: 10000,
-            timeout: 15000,
-          });
+        : await this.prisma
+            .$transaction(executeInTx, {
+              isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+              maxWait: 10000,
+              timeout: 15000,
+            })
+            .catch(rethrowAsConflict);
 
       // Telegram receipt — only when we owned the tx (i.e. it has
       // committed by now). When the caller passed `outerTx` they're

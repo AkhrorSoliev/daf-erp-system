@@ -1,4 +1,5 @@
 import { Markup } from 'telegraf';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { BotContext } from '../types/context';
 import { DEFAULT_COMPANY_ID } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -14,6 +15,10 @@ import {
   utcMidnightFromDateStr,
 } from '../../common/date/tashkent';
 import { downloadFile } from '../utils/download.util';
+import {
+  STUDENT_SELF_ENROLLED,
+  type StudentSelfEnrolledEvent,
+} from '../../common/events/self-enrollment.events';
 
 // Session data is untyped in the bot — caller already validated all
 // required fields by the time confirm_student fires.
@@ -42,25 +47,34 @@ export async function uploadStudentPhoto(
   } as Express.Multer.File;
 
   const photoUrl = await uploadService.uploadFile(multerFile, 'students');
-  ctx.session.data.photo = photoUrl;
-  ctx.session.step = 7;
 
   const data = ctx.session.data;
-  await ctx.replyWithPhoto(photoUrl, {
-    caption:
-      "📋 Ma'lumotlaringizni tekshiring:\n\n" +
-      `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
-      `📚 Guruh: ${data.groupName}\n` +
-      `👤 Ism: ${data.firstName}\n` +
-      `👤 Familiya: ${data.lastName}\n` +
-      `📞 Telefon: +998 ${data.phone}`,
-    ...Markup.inlineKeyboard([
-      [
-        Markup.button.callback('✅ Tasdiqlash', 'confirm_student'),
-        Markup.button.callback('🔄 Qayta kiritish', 'restart_student'),
-      ],
-    ]),
-  });
+  try {
+    await ctx.replyWithPhoto(photoUrl, {
+      caption:
+        "📋 Ma'lumotlaringizni tekshiring:\n\n" +
+        `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
+        `📚 Guruh: ${data.groupName}\n` +
+        `👤 Ism: ${data.firstName}\n` +
+        `👤 Familiya: ${data.lastName}\n` +
+        `📞 Telefon: +998 ${data.phone}`,
+      ...Markup.inlineKeyboard([
+        [
+          Markup.button.callback('✅ Tasdiqlash', 'confirm_student'),
+          Markup.button.callback('🔄 Qayta kiritish', 'restart_student'),
+        ],
+      ]),
+    });
+  } catch (err) {
+    // The person is asked to send the photo again, so nobody will confirm
+    // this one: delete it now rather than lose track of it.
+    await uploadService.deleteFile(photoUrl);
+    throw err;
+  }
+  // Only a preview that arrived moves the person on: step 7 waits for its
+  // buttons and ignores a photo sent again.
+  ctx.session.data.photo = photoUrl;
+  ctx.session.step = 7;
 }
 
 /**
@@ -75,6 +89,7 @@ export async function registerStudentFromTelegram(
   leadOrigin: StudentLeadOriginService,
   data: RegistrationData,
   chatId: string,
+  events: Pick<EventEmitter2, 'emitAsync'>,
 ): Promise<{ plainPassword: string }> {
   // Har bir o'quvchi lid yozuvi qoldiradi (ADR-0017). Bu yo'l `/students`
   // eshigidan o'tmaydi — bazaga to'g'ridan yozadi — shuning uchun lidni
@@ -144,6 +159,14 @@ export async function registerStudentFromTelegram(
       transitionAt: enrollment.createdAt,
     },
   });
+
+  // Billing charges the join month now, as the admin door does. Left to the
+  // 04:00 daily run, a sign-up on a month's last lesson day was never billed
+  // for it (30.09.2026: five students).
+  await events.emitAsync(STUDENT_SELF_ENROLLED, {
+    enrollmentId: enrollment.id,
+    companyId: DEFAULT_COMPANY_ID,
+  } satisfies StudentSelfEnrolledEvent);
 
   await entityHistoryService.recordCreate({
     entityType: 'Student',

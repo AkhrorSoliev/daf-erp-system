@@ -59,3 +59,15 @@ export function tashkentDayAsLocalDate(instant: string | Date): Date {
     .map(Number);
   return new Date(year, month - 1, day);
 }
+
+/**
+ * ISO instant of `hour`:00 in Tashkent on the day a `<DatePicker>` shows — the
+ * reverse of `tashkentDayAsLocalDate`, for a day the server checks as a
+ * Tashkent TIME (a task deadline must fall 08:00–18:00). The picker returns
+ * local midnight, and its `toISOString()` is 00:00 in Tashkent itself.
+ */
+export function tashkentInstantOn(pickedDay: Date, hour: number): string {
+  return new Date(
+    Date.UTC(pickedDay.getFullYear(), pickedDay.getMonth(), pickedDay.getDate(), hour - 5),
+  ).toISOString();
+}

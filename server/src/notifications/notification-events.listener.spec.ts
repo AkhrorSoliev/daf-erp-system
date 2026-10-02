@@ -89,6 +89,10 @@ describe('NotificationEventsListener', () => {
           companyId: 1,
         }),
       );
+      expect(pushService.sendToUser).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ url: '/students/profile/10001' }),
+      );
     });
 
     it('includes the performer, old/new amounts and reason in the message', async () => {
@@ -251,6 +255,22 @@ describe('NotificationEventsListener', () => {
           content: 'Hisobotni tayyorlang',
         },
       });
+    });
+
+    it('tells nobody about a system task changing status (no author)', async () => {
+      await listener.handleTaskStatusChanged({
+        comment: { ...comment, authorId: null, author: null },
+        assignee: {
+          userId: 20002,
+          user: { firstName: 'Vali', lastName: 'Aliyev' },
+        },
+        newStatus: 'SEEN',
+      });
+
+      expect(notificationsService.create).not.toHaveBeenCalled();
+      expect(gateway.sendToUser).not.toHaveBeenCalled();
+      expect(pushService.sendToUser).not.toHaveBeenCalled();
+      expect(enqueue).not.toHaveBeenCalled();
     });
   });
 

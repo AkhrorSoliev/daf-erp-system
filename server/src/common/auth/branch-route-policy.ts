@@ -242,6 +242,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /attendance/:groupId/lesson-sequence',
       'GET /attendance/:groupId/stats',
       'POST /attendance/:groupId/date/:date',
+      'POST /attendance/:groupId/date/:date/late',
+      'POST /attendance/:groupId/date/:date/not-held',
       'POST /attendance/:groupId/qr-session/rotate',
       'POST /attendance/:groupId/qr-session/start',
       'POST /attendance/:groupId/qr-session/stop',
@@ -359,7 +361,11 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'the same check as `DELETE /groups/:id`. The payment statement (JSON ' +
       'and PDF) is one more profile read and runs the same check, and so ' +
       'does the departure preview, which reads the month an enrollment of ' +
-      'that student would give back.',
+      'that student would give back. The enroll preview, which reads what ' +
+      "adding the student to a group would charge, checks the student's " +
+      "branch, then the group's (the enroll call checks only the group's " +
+      'branch: a student of another branch is refused, a student with none ' +
+      "takes the group's).",
     routes: [
       'GET /students/:id/status-history',
       'GET /students/:id/balance-summary',
@@ -377,6 +383,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /students/:id/enrollments/:enrollmentId/debt-write-off-eligibility',
       'POST /students/:id/enrollments/:enrollmentId/write-off-cycle-debt',
       'GET /students/:id/departure-preview',
+      'GET /students/:id/enroll-preview',
       'GET /groups/:id/students',
       'GET /groups/:id/status-history',
       'GET /groups/:id/delete-preview',

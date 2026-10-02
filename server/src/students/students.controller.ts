@@ -22,6 +22,7 @@ import { WriteOffCycleDebtDto } from './dto/write-off-cycle-debt.dto';
 import { EnrollToGroupDto } from './dto/enroll-to-group.dto';
 import { DeleteStudentDto } from './dto/delete-student.dto';
 import { DeparturePreviewQueryDto } from './dto/departure-preview-query.dto';
+import { EnrollPreviewQueryDto } from './dto/enroll-preview-query.dto';
 import { SendSmsDto } from '../sms/dto/send-sms.dto';
 import { InitialBalanceDto } from './dto/initial-balance.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -30,6 +31,7 @@ import {
   CurrentUser,
   STAFF_ROLES,
   BranchScope,
+  BranchCeiling,
 } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
@@ -37,6 +39,7 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { DebtAgeService } from '../common/finance/debt-age.service';
 import { DiscountRoleGuard } from './discount-role.guard';
 import { StudentDeparturePreviewService } from './student-departure-preview.service';
+import { StudentEnrollPreviewService } from './student-enroll-preview.service';
 
 @Controller('students')
 export class StudentsController {
@@ -47,6 +50,7 @@ export class StudentsController {
     private transactionsService: TransactionsService,
     private debtAge: DebtAgeService,
     private departurePreview: StudentDeparturePreviewService,
+    private enrollPreview: StudentEnrollPreviewService,
   ) {}
 
   // Staff only. Without this the global JwtAuthGuard let ANY valid token —
@@ -85,8 +89,9 @@ export class StudentsController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() branchScope: ReportBranchIds,
+    @BranchCeiling() ceiling: ReportBranchIds,
   ) {
-    return this.studentsService.findById(id, companyId, branchScope);
+    return this.studentsService.findById(id, companyId, branchScope, ceiling);
   }
 
   @Post()
@@ -285,6 +290,27 @@ export class StudentsController {
     );
   }
 
+  // What adding the student to a group now would charge: a monthly course's
+  // first month, or the pack price, against the balance (A3.4). Read-only;
+  // the same three roles as `POST /:id/enroll`, the call it previews.
+  @Get(':id/enroll-preview')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getEnrollPreview(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: EnrollPreviewQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.enrollPreview.preview(
+      id,
+      companyId,
+      userId,
+      query.groupId,
+      query.startDate,
+    );
+  }
+
   // Eligibility check for the "yo'qolgan o'quvchi" write-off flow. Returns
   // whether the student qualifies (joriy siklda PRESENT/LATE=0 + ABSENT>0
   // + balance<0) and the suggested write-off amount. Frontend uses this
@@ -377,7 +403,13 @@ export class StudentsController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.studentsService.delete(id, userId, dto.reason, companyId);
+    return this.studentsService.delete(
+      id,
+      userId,
+      dto.reason,
+      companyId,
+      dto.reasonId,
+    );
   }
 
   // ===========================================================================

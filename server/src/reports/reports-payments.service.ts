@@ -19,11 +19,14 @@ import {
 const LINE_ITEM_CAP = 10_000;
 
 /**
- * Refunds as the ledger records them — the same rows the net-profit refund
- * figure subtracts (`getPeriodOutflows`). `Refund` carries no branch; its
- * REFUND transaction is stamped with the branch whose kassa paid it out.
- * Reversed originals and their compensating rows are both excluded, so an
- * undone refund counts as nothing. `lt`: the end bound is exclusive.
+ * Refunds as the ledger records them — the rows the net-profit refund figure
+ * subtracts (`getPeriodOutflows`). Both reads filter the same two columns:
+ * `reversedAt: null` leaves out a cancelled original, `reversedTransactionId:
+ * null` its counter-row, so an undone refund counts as nothing in either.
+ * They write the period end differently — `lt` the day after the last day
+ * here, `lte` that day's last millisecond there — which selects the same rows.
+ * `Refund` carries no branch; its REFUND transaction is stamped with the
+ * branch whose kassa paid it out.
  */
 function refundLedgerWhere(
   companyId: number,
@@ -263,28 +266,6 @@ export class ReportsPaymentsService {
           value: m.totalPayments,
         })),
       },
-      onTimePayments: {
-        current: {
-          total: currentMetrics.paymentCount,
-          onTime: currentMetrics.onTimeCount,
-          rate: currentMetrics.onTimeRate,
-        },
-        previous: {
-          total: previousMetrics.paymentCount,
-          onTime: previousMetrics.onTimeCount,
-          rate: previousMetrics.onTimeRate,
-        },
-        change: this.percentChange(
-          currentMetrics.onTimeRate,
-          previousMetrics.onTimeRate,
-        ),
-        trend: trendMetrics.map((m) => ({
-          month: m.month,
-          onTime: m.onTimeCount,
-          late: m.paymentCount - m.onTimeCount,
-          rate: m.onTimeRate,
-        })),
-      },
       branchBreakdown: {
         current: currentMetrics.totalPayments,
         previous: previousMetrics.totalPayments,
@@ -314,63 +295,6 @@ export class ReportsPaymentsService {
     };
   }
 
-  /**
-   * On-time payment rule (v1):
-   * - If the group has had ≤3 attendance records total by payment date → on-time (new group).
-   * - Else, check the student's attended lessons in that group BEFORE the payment:
-   *   if (lessons % lessonPaymentCount) === 0 → on-time (new cycle starts).
-   * - Payments without a resolvable group/course are skipped (returns null).
-   */
-  async isPaymentOnTime(payment: {
-    studentId: number;
-    createdAt: Date;
-    contractId: string | null;
-    contract: {
-      groupId: string | null;
-      course: { lessonPaymentCount: number };
-    } | null;
-  }): Promise<boolean | null> {
-    let groupId = payment.contract?.groupId ?? null;
-    let lessonPaymentCount =
-      payment.contract?.course.lessonPaymentCount ?? null;
-
-    if (!groupId || !lessonPaymentCount) {
-      const enrollment = await this.prisma.enrollment.findFirst({
-        where: {
-          studentId: payment.studentId,
-          deletedAt: null,
-          status: { in: ['ACTIVE', 'FROZEN'] },
-        },
-        select: {
-          groupId: true,
-          group: {
-            select: { course: { select: { lessonPaymentCount: true } } },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (!enrollment) return null;
-      groupId = enrollment.groupId;
-      lessonPaymentCount = enrollment.group.course.lessonPaymentCount;
-    }
-
-    const [groupLessonsTotal, studentLessonsBefore] = await Promise.all([
-      this.prisma.attendance.count({
-        where: { groupId, date: { lte: payment.createdAt } },
-      }),
-      this.prisma.attendance.count({
-        where: {
-          groupId,
-          studentId: payment.studentId,
-          date: { lt: payment.createdAt },
-        },
-      }),
-    ]);
-
-    if (groupLessonsTotal <= 3) return true;
-    return studentLessonsBefore % lessonPaymentCount === 0;
-  }
-
   /** `anchor` is the EXCLUSIVE end of the current window; the last trend month
    *  is the one that window ends in. Months are Tashkent months. */
   private buildMonthlyPeriodsEndingAt(anchor: Date, count: number) {
@@ -393,7 +317,7 @@ export class ReportsPaymentsService {
     const dateFilter = { gte: period.start, lt: period.end };
     const branchFilter = branchIdWhere(branchIds);
 
-    const [paymentsAgg, payments, refundsAgg] = await Promise.all([
+    const [paymentsAgg, refundsAgg] = await Promise.all([
       this.prisma.payment.aggregate({
         where: {
           companyId,
@@ -404,46 +328,18 @@ export class ReportsPaymentsService {
         _sum: { amount: true },
         _count: true,
       }),
-      this.prisma.payment.findMany({
-        where: {
-          companyId,
-          status: 'COMPLETED',
-          createdAt: dateFilter,
-          ...branchFilter,
-        },
-        select: {
-          id: true,
-          studentId: true,
-          createdAt: true,
-          contractId: true,
-          contract: {
-            select: {
-              groupId: true,
-              course: { select: { lessonPaymentCount: true } },
-            },
-          },
-        },
-      }),
       this.prisma.transaction.aggregate({
         where: refundLedgerWhere(companyId, dateFilter, branchIds),
         _sum: { amount: true },
       }),
     ]);
 
-    const onTimeResults = await Promise.all(
-      payments.map((p) => this.isPaymentOnTime(p)),
-    );
-    const onTimeCount = onTimeResults.filter((r) => r === true).length;
-    const paymentCount = payments.length;
-
     return {
       month: period.label,
       totalPayments: paymentsAgg._sum.amount ?? 0,
-      paymentCount,
-      onTimeCount,
-      onTimeRate:
-        paymentCount > 0 ? Math.round((onTimeCount / paymentCount) * 100) : 0,
-      refunds: Math.abs(refundsAgg._sum.amount ?? 0),
+      // Live REFUND rows are negative: the cash returned is their negation.
+      // Not `Math.abs`, which would turn a wrong-signed total into a refund.
+      refunds: 0 - (refundsAgg._sum.amount ?? 0),
     };
   }
 

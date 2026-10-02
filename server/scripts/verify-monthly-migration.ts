@@ -243,6 +243,8 @@ async function main(prisma: PrismaClient) {
     // bu skriptda hech qachon chaqirilmaydi. (Metod `this.resolveMonthPlan`
     // ni chaqiradi, shuning uchun instansiya `new` bilan yasalishi shart.)
     undefined as unknown as never,
+    // SalaryAccrualService — faqat sinov darsi (3.5) ketishida ishlatiladi.
+    undefined as unknown as never,
   );
   const readTx = prisma as unknown as Prisma.TransactionClient;
   const planCache = new Map<

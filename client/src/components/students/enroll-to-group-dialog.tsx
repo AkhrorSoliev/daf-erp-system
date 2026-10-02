@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Calendar as CalendarIcon,
   Loader2,
   Search,
   Users,
@@ -35,8 +34,8 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DatePicker } from "@/components/ui/date-picker";
-import { formatBalance, formatPrice } from "@/lib/format-utils";
+import { toApiDateStr } from "@/components/groups/edit-group-form-utils";
+import { EnrollPreviewBlock } from "./enroll-preview-block";
 
 interface GroupTeacher {
   id: number;
@@ -49,11 +48,7 @@ interface GroupOption {
   id: string;
   name: string;
   statusEnum: string;
-  course: {
-    name: string;
-    price?: number;
-    lessonPaymentCount?: number;
-  } | null;
+  course: { name: string } | null;
   room: { name: string; capacity: number | null } | null;
   teachers: GroupTeacher[];
   studentCount: number;
@@ -113,7 +108,6 @@ export function EnrollToGroupDialog({
   const [addingReason, setAddingReason] = useState(false);
   const [newReasonName, setNewReasonName] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>();
-  const [studentBalance, setStudentBalance] = useState<number>(0);
 
   const qc = useQueryClient();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
@@ -155,26 +149,6 @@ export function EnrollToGroupDialog({
       setStartDate(undefined);
     }
   }, [open]);
-
-  // Fetch the student's current balance once per dialog opening so the price
-  // preview can show "balance vs course price = needs to pay X". We never
-  // refetch on group change — the balance is global to the student, not
-  // group-specific.
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await api.get(`/students/${studentId}`);
-        if (!cancelled) setStudentBalance(data?.balance ?? 0);
-      } catch {
-        if (!cancelled) setStudentBalance(0);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, studentId]);
 
   // Current (active) enrollment group — use first enrolled group as "from".
   // Backend marks the previous ACTIVE enrollment as TRANSFERRED on the new POST.
@@ -276,7 +250,7 @@ export function EnrollToGroupDialog({
   const handleEnroll = async () => {
     if (!selectedId) return;
     if (teachersDiffer && !transferReasonId) {
-      toast.error("Iltimos, transfer sababini tanlang");
+      toast.error("Iltimos, guruh almashtirish sababini tanlang");
       return;
     }
     setSubmitting(true);
@@ -285,9 +259,7 @@ export function EnrollToGroupDialog({
         groupId: selectedId,
         transferReasonId,
         // Backend defaults to today when omitted.
-        ...(startDate && {
-          startDate: `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`,
-        }),
+        ...(startDate && { startDate: toApiDateStr(startDate) }),
       });
       toast.success("O'quvchi guruhga qo'shildi");
       onEnrolled?.();
@@ -298,14 +270,6 @@ export function EnrollToGroupDialog({
       setSubmitting(false);
     }
   };
-
-  // Price preview: course price, what the student already has, and what they
-  // still need to pay. We don't enforce payment here — admin can enroll a
-  // student with zero balance; B.1 ensures the teacher won't accrue salary
-  // until the balance covers a lesson, and the new debtors panel surfaces
-  // the situation in the daily attendance flow.
-  const coursePrice = targetGroup?.course?.price ?? 0;
-  const dueAmount = Math.max(0, coursePrice - studentBalance);
 
   // Enrolled guruhlar tepada, qolganlari pastda
   const sortedGroups = [...groups].sort((a, b) => {
@@ -505,49 +469,16 @@ export function EnrollToGroupDialog({
           )}
         </div>
 
-        {/* Per-group price preview + start date picker. Only renders after a
-            target group is selected — keeps the dialog uncluttered while the
-            user is still browsing groups. */}
-        {targetGroup && coursePrice > 0 && (
-          <div className="space-y-3 rounded-md border bg-muted/30 p-3 text-sm">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <CalendarIcon className="size-3.5" />
-              Boshlanish sanasi (qaysi darsdan)
-            </div>
-            <DatePicker
-              value={startDate}
-              onChange={(d) => setStartDate(d)}
-              placeholder="Bugundan boshlab"
-            />
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  Kurs narxi ({targetGroup.course?.lessonPaymentCount ?? 12} dars):
-                </span>
-                <span className="font-mono tabular-nums font-semibold">
-                  {formatPrice(coursePrice)} so&apos;m
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  O&apos;quvchi balansi:
-                </span>
-                <span className={`font-mono tabular-nums ${studentBalance < 0 ? "text-destructive" : ""}`}>
-                  {formatBalance(studentBalance)}
-                </span>
-              </div>
-              <div className="flex justify-between border-t pt-1.5 font-semibold">
-                <span>To&apos;lash kerak (taxminan):</span>
-                <span
-                  className={`font-mono tabular-nums ${
-                    dueAmount > 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-400"
-                  }`}
-                >
-                  {dueAmount > 0 ? `${formatPrice(dueAmount)} so'm` : "Yetarli"}
-                </span>
-              </div>
-            </div>
-          </div>
+        {/* Start date picker + the server's account of what enrolling charges.
+            Only renders after a target group is selected — keeps the dialog
+            uncluttered while the user is still browsing groups. */}
+        {targetGroup && (
+          <EnrollPreviewBlock
+            studentId={studentId}
+            groupId={targetGroup.id}
+            startDate={startDate}
+            onStartDateChange={setStartDate}
+          />
         )}
 
         {teachersDiffer && (
@@ -626,7 +557,7 @@ export function EnrollToGroupDialog({
                   onValueChange={(v) => setTransferReasonId(v || undefined)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Transfer sababini tanlang..." />
+                    <SelectValue placeholder="Guruh almashtirish sababini tanlang..." />
                   </SelectTrigger>
                   <SelectContent>
                     {transferReasons.map((r) => (

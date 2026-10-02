@@ -1,4 +1,4 @@
-import { istRichtig, normalisieren } from './antwort';
+import { istRichtig, normalisieren, tippfehler } from './antwort';
 
 describe('normalisieren', () => {
   it('katta-kichik harfni tenglashtiradi', () => {
@@ -52,5 +52,37 @@ describe('istRichtig', () => {
     // javobni to'g'ri deb belgilash xato: tinish belgisini bilishi keraki.
     expect(istRichtig('', '.', [])).toBe(false);
     expect(istRichtig('   ', '!', [])).toBe(false);
+  });
+});
+
+describe('tippfehler — one slip, like Duolingo', () => {
+  it.each([
+    ['bahnof', 'Bahnhof'],
+    ['aufwidersehen', 'Auf Wiedersehen'],
+    ['aufwiedersehen', 'Auf Wiedersehen'],
+    ['Deustchland', 'Deutschland'],
+    ['guten morgwn', 'Guten Morgen'],
+    ['der bahnof', 'der Bahnhof'],
+    ['geradaus', 'geradeaus'],
+  ])('%s is a slip of %s', (gegeben, richtig) => {
+    expect(tippfehler(gegeben, [richtig])).toBe(true);
+  });
+
+  it.each([
+    ['hier', 'vier', 'a short word: one letter makes another word'],
+    ['die Bahnhof', 'der Bahnhof', 'the article is grammar, not spelling'],
+    ['wohne', 'wohnen', 'a verb ending is grammar'],
+    ['zwanzik', 'zwanzig', 'a lowercase word ending is not forgiven'],
+    ['Gutn morgn', 'Guten Morgen', 'two slips'],
+    ['bahnhof hier', 'Bahnhof', 'another word count'],
+    ['sehen', 'sein', 'two edits'],
+    ['Bahnhof', 'Bahnhof', 'a correct answer is not a slip'],
+    ['', 'Bahnhof', 'an empty answer'],
+  ])('%s is not a slip of %s (%s)', (gegeben, richtig) => {
+    expect(tippfehler(gegeben, [richtig])).toBe(false);
+  });
+
+  it('checks every accepted form', () => {
+    expect(tippfehler('der bahnof', ['Bahnhof', 'der Bahnhof'])).toBe(true);
   });
 });

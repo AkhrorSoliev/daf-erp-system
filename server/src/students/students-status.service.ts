@@ -26,11 +26,7 @@ import {
 } from './dto/change-student-status.dto';
 import { studentSelect, formatStudent } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
-import {
-  EXIT_REASON_COMMENT_ERROR,
-  EXIT_REASON_COMMENT_MIN_LENGTH,
-  exitReasonRequiresComment,
-} from '../common/exit-reason-comment';
+import { resolvePickedExitReason } from './shared/picked-exit-reason';
 import { buildAutoPauseReason } from '../absence-pause/absence-pause.constants';
 import { assertMayChooseDeparturePolicy } from './shared/departure-policy-access';
 
@@ -202,32 +198,14 @@ export class StudentsStatusService {
             'Bu status uchun sabab tanlash kerak emas',
           );
         }
-        const reason = await this.prisma.studentExitReason.findFirst({
-          where: {
-            id: dto.reasonId,
-            companyId,
-            deletedAt: null,
-            appliesTo: { has: exitType },
-          },
+        const picked = await resolvePickedExitReason(this.prisma, {
+          reasonId: dto.reasonId,
+          comment: reasonText,
+          exitType,
+          companyId,
         });
-        if (!reason) {
-          throw new NotFoundException(
-            'Sabab topilmadi yoki bu holatga taalluqli emas',
-          );
-        }
-        reasonId = reason.id;
-        // "Boshqa sabab" carries no information on its own — the comment IS
-        // the reason, so it becomes mandatory. Other reasons keep it optional.
-        if (
-          exitReasonRequiresComment(reason.name) &&
-          (!reasonText || reasonText.length < EXIT_REASON_COMMENT_MIN_LENGTH)
-        ) {
-          throw new BadRequestException(EXIT_REASON_COMMENT_ERROR);
-        }
-        // Use the reason name as the audit text (free-text reason is appended)
-        reasonText = reasonText
-          ? `${reason.name} — ${reasonText}`
-          : reason.name;
+        reasonId = picked.id;
+        reasonText = picked.text;
       } else if (exitType) {
         // No reasonId — check whether configured reasons exist for this exit
         // type. If yes, force the user to pick one. If not, fall back to
@@ -246,6 +224,16 @@ export class StudentsStatusService {
           throw new BadRequestException('Sababni kiritish majburiy');
         }
       }
+    }
+
+    // Contract 3.5 waits for an unanswered «Dars bo'ldimi?» that could decide
+    // the trial lesson (ADR-0060). Checked before anything is written: the
+    // cascade below settles each month on its own and only logs a refusal.
+    if (dto.status === StudentStatus.EXPELLED) {
+      await this.monthlyChargeService.assertTrialLessonAnswered(this.prisma, {
+        studentId: id,
+        companyId,
+      });
     }
 
     // FROZEN-specific prepaid refund. Runs BEFORE the status flip because

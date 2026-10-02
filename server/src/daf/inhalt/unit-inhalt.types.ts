@@ -42,6 +42,12 @@ export interface Wort extends Sprechbar {
    * `tts` (talaffuz: "Ah") bor.
    */
   anzeige?: string;
+  /**
+   * Other correct spellings ("tschüs" beside "tschüss"). The typing formats
+   * accept them, so a student who wrote a correct German spelling is never
+   * marked wrong.
+   */
+  akzeptiert?: string[];
   /** `true` — mashqda so'raladi; `false` — faqat matnda uchraydi. */
   core: boolean;
   order: number;

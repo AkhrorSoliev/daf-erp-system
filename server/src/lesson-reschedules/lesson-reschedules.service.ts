@@ -13,6 +13,19 @@ import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonRescheduleDto } from './dto/create-lesson-reschedule.dto';
 import { UpdateLessonRescheduleDto } from './dto/update-lesson-reschedule.dto';
 import { resolveBilledEnrollmentId } from '../billing/resolve-billed-enrollment';
+import {
+  assertLinkedMakeUpAhead,
+  assertMakeUpMayMove,
+  markUnmarkedLessonRescheduled,
+  reopenAfterRescheduleRemoved,
+} from '../unmarked-lessons/unmarked-lesson-transitions';
+import { closeQuestionOnFormerMakeUpDay } from '../unmarked-lessons/make-up-day';
+import {
+  UNMARKED_LESSON_NOT_HELD,
+  type UnmarkedLessonNotHeldPayload,
+} from '../unmarked-lessons/unmarked-lesson-events';
+import { loadReaskHolidays } from '../unmarked-lessons/reask-holidays';
+import { rethrowAsConflict } from '../common/transaction-conflict';
 
 /**
  * Payload emitted on lesson-reschedule create / update — consumed by
@@ -31,6 +44,20 @@ export interface LessonReschedulePayload {
   scheduledById: number;
   companyId: number;
 }
+
+const SERIALIZABLE_TX = {
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  maxWait: 10_000,
+  timeout: 30_000,
+} as const;
+
+/**
+ * Every write here checks its unique rows first — a live move's origin and
+ * destination, the day's «Dars bo'ldimi?» row (remove's re-ask) — so a
+ * unique violation is a concurrent duplicate: 409, like a conflict.
+ */
+const asConflict = (err: unknown) =>
+  rethrowAsConflict(err, { duplicate: true });
 
 const DAY_NAME_BY_JS_DAY: Record<number, string> = {
   0: 'sunday',
@@ -140,7 +167,7 @@ export class LessonReschedulesService {
     scheduledById: number,
     roles: string[] = [],
   ) {
-    const reschedule = await this.createInTransaction(
+    const { reschedule, decision } = await this.createInTransaction(
       dto,
       companyId,
       scheduledById,
@@ -161,6 +188,19 @@ export class LessonReschedulesService {
       scheduledById,
       companyId,
     } satisfies LessonReschedulePayload);
+
+    // «Dars bo'ldimi?»: the group is told the lesson moved, like a cancellation.
+    if (decision) {
+      this.eventEmitter.emit(UNMARKED_LESSON_NOT_HELD, {
+        ...decision,
+        reason: dto.reason ?? '',
+        decidedById: scheduledById,
+        outcome: 'RESCHEDULED',
+        newDate: dto.newDate,
+        newLessonStartTime: dto.newLessonStartTime ?? null,
+        newLessonEndTime: dto.newLessonEndTime ?? null,
+      } satisfies UnmarkedLessonNotHeldPayload);
+    }
     return reschedule;
   }
 
@@ -200,8 +240,8 @@ export class LessonReschedulesService {
       );
     }
 
-    return this.prisma.$transaction(
-      async (tx) => {
+    return this.prisma
+      .$transaction(async (tx) => {
         // A reschedule rewrites a group's timetable — its date, room and
         // teacher — and through attendance that reaches billing. Checked here
         // rather than before the transaction because the group is read anyway
@@ -324,7 +364,7 @@ export class LessonReschedulesService {
         for (const a of billable) {
           await tx.attendance.update({
             where: { id: a.id },
-            data: { status: AttendanceStatus.EXCUSED },
+            data: { status: AttendanceStatus.EXCUSED, lateMinutes: null },
           });
           // The enrollment the charge actually landed on — see
           // `resolveBilledEnrollmentId`. Guessing by (student, group) picks an
@@ -387,14 +427,22 @@ export class LessonReschedulesService {
           tx,
         });
 
-        return reschedule;
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 30_000,
-      },
-    );
+        // «Dars bo'ldimi?» (spec §3.5 B): moving a lesson that waits for an
+        // answer answers it — the make-up lesson must still be ahead, and a
+        // lesson answered «Bo'ldi» cannot be moved.
+        const decision = await markUnmarkedLessonRescheduled(tx, {
+          groupId: dto.groupId,
+          originalDate,
+          rescheduleId: reschedule.id,
+          actorId: scheduledById,
+          newDate,
+          newStartTime: effectiveStart,
+          now: new Date(),
+        });
+
+        return { reschedule, decision };
+      }, SERIALIZABLE_TX)
+      .catch(asConflict);
   }
 
   /**
@@ -475,8 +523,8 @@ export class LessonReschedulesService {
       dto.newLessonStartTime !== undefined ||
       dto.newLessonEndTime !== undefined;
 
-    const updated = await this.prisma.$transaction(
-      async (tx) => {
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
         const existing = await tx.lessonReschedule.findFirst({
           where: { id, companyId, deletedAt: null },
           select: {
@@ -547,6 +595,38 @@ export class LessonReschedulesService {
           );
         }
 
+        // Editing the make-up lesson of a «Dars bo'ldimi?» answer keeps it ahead
+        // of now — but only when the edit MOVES it. A reason or room fix on a
+        // make-up lesson that has already started must still go through.
+        const newDateChanged =
+          effectiveNewDate.getTime() !== existing.newDate.getTime();
+        const effectiveNewStart =
+          effectiveStartOverride ?? group.lessonStartTime ?? null;
+        const startChanged =
+          effectiveNewStart !==
+          (existing.newLessonStartTime ?? group.lessonStartTime ?? null);
+        const now = new Date();
+        if (newDateChanged || startChanged) {
+          await assertLinkedMakeUpAhead(tx, {
+            rescheduleId: existing.id,
+            newDate: effectiveNewDate,
+            newStartTime: effectiveNewStart,
+            now,
+          });
+        }
+        // The old make-up day decides a new date: a lesson held there stays
+        // (a second lesson day would count it twice); one still asked about
+        // there may move only ahead of now.
+        if (newDateChanged) {
+          await assertMakeUpMayMove(tx, {
+            groupId: existing.groupId,
+            oldDay: existing.newDate,
+            newDate: effectiveNewDate,
+            newStartTime: effectiveNewStart,
+            now,
+          });
+        }
+
         // Room override scoping — same as create.
         if (effectiveRoomOverride) {
           const room = await tx.room.findFirst({
@@ -566,8 +646,6 @@ export class LessonReschedulesService {
 
         // If newDate is changing, re-run destination checks against the
         // new date so we don't double-book this group there.
-        const newDateChanged =
-          effectiveNewDate.getTime() !== existing.newDate.getTime();
         if (newDateChanged) {
           const existingDestination = await tx.lessonReschedule.findFirst({
             where: {
@@ -633,6 +711,15 @@ export class LessonReschedulesService {
           where: { id: existing.id },
           data,
         });
+        // The old make-up day may have no lesson left: its question closes.
+        if (newDateChanged) {
+          await closeQuestionOnFormerMakeUpDay(tx, {
+            groupId: existing.groupId,
+            day: existing.newDate,
+            actorId: userId,
+            now,
+          });
+        }
 
         await this.entityHistoryService.recordUpdate({
           entityType: 'Group',
@@ -666,13 +753,8 @@ export class LessonReschedulesService {
           effectiveEndOverride,
           reason: dto.reason ?? null,
         };
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 30_000,
-      },
-    );
+      }, SERIALIZABLE_TX)
+      .catch(asConflict);
 
     if (visibleFieldChanged) {
       this.eventEmitter.emit('lesson-reschedule.updated', {
@@ -694,7 +776,12 @@ export class LessonReschedulesService {
   /**
    * Soft delete: removes the reschedule but does NOT auto-restore
    * attendance on either date. Admins must re-take attendance manually
-   * on whichever date the lesson actually happened. UI explains this.
+   * on whichever date the lesson actually happened. UI explains this. The
+   * original lesson is asked about again («Dars bo'ldimi?») when the move
+   * had answered that question, or when the move was made in advance and the
+   * lesson has since ended unmarked on a day that is neither a holiday nor
+   * cancelled — unless the make-up lesson already took place. A question the
+   * sweep opened for the make-up day closes once that day has no lesson.
    */
   async remove(
     id: string,
@@ -712,25 +799,49 @@ export class LessonReschedulesService {
       roles,
       existing.groupId,
     );
-    return this.prisma.$transaction(async (tx) => {
-      const row = await tx.lessonReschedule.update({
-        where: { id },
-        data: { deletedAt: new Date(), deletedById: userId },
-      });
-      await this.entityHistoryService.recordDelete({
-        entityType: 'Group',
-        entityId: existing.groupId,
-        oldValues: {
-          action: 'KOCHIRILGAN_DARS_OCHIRILDI',
-          aslSana: existing.originalDate.toISOString().slice(0, 10),
-          yangiSana: existing.newDate.toISOString().slice(0, 10),
-        },
-        changedById: userId,
-        companyId,
-        tx,
-      });
-      return row;
-    });
+    // The re-asked task skips holidays when it sets its due date.
+    const now = new Date();
+    const holidays = await loadReaskHolidays(
+      this.prisma,
+      existing.groupId,
+      now,
+    );
+    // Serializable, like create and update: the reopen reads, then writes a
+    // row the lesson-end sweep also writes.
+    return this.prisma
+      .$transaction(async (tx) => {
+        const row = await tx.lessonReschedule.update({
+          where: { id },
+          data: { deletedAt: new Date(), deletedById: userId },
+        });
+        await this.entityHistoryService.recordDelete({
+          entityType: 'Group',
+          entityId: existing.groupId,
+          oldValues: {
+            action: 'KOCHIRILGAN_DARS_OCHIRILDI',
+            aslSana: existing.originalDate.toISOString().slice(0, 10),
+            yangiSana: existing.newDate.toISOString().slice(0, 10),
+          },
+          changedById: userId,
+          companyId,
+          tx,
+        });
+        // The make-up day — as this transaction's soft-delete returned it —
+        // may have no lesson left: its question closes.
+        await closeQuestionOnFormerMakeUpDay(tx, {
+          groupId: row.groupId,
+          day: row.newDate,
+          actorId: userId,
+          now,
+        });
+        await reopenAfterRescheduleRemoved(tx, {
+          rescheduleId: id,
+          now,
+          holidays,
+        });
+        return row;
+      }, SERIALIZABLE_TX)
+      .catch(asConflict);
   }
 
   private parseDate(dateStr: string): Date {

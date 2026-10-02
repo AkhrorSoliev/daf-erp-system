@@ -22,6 +22,7 @@ import { som, dbEnvLabel, printHeader, section, run } from './lib/check-cli';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { SalaryStaffMonthlyService } from '../src/salary/salary-monthly-staff.service';
 import { SalaryMonthlyService } from '../src/salary/salary-monthly.service';
+import { SalaryMissedLessonsService } from '../src/salary/salary-missed-lessons.service';
 
 const COMPANY_ID = 1001;
 const EXECUTE = process.argv.includes('--execute');
@@ -106,7 +107,11 @@ async function main(prismaClient: PrismaClient) {
 
   // ─── Tekshiruv: getMonthly qayta ishga tushirib, iyun natijasini ko'rsatish ──
   const staff = new SalaryStaffMonthlyService(prisma);
-  const salaryMonthly = new SalaryMonthlyService(prisma, staff);
+  const salaryMonthly = new SalaryMonthlyService(
+    prisma,
+    staff,
+    {} as SalaryMissedLessonsService, // getMonthlyForUser only
+  );
   const ceo = await prisma.user.findFirst({
     where: { companyId: COMPANY_ID, deletedAt: null, roles: { some: { role: { name: 'CEO' } } } },
     select: { id: true },

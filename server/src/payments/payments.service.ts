@@ -112,12 +112,7 @@ export class PaymentsService {
   }
   getDebtorSummary(
     companyId: number,
-    query: {
-      branchId?: number;
-      status?: StudentStatus | 'all';
-      userId: number;
-      roles: string[];
-    },
+    query: { branchId?: number; userId: number; roles: string[] },
   ) {
     return this.debtors.getDebtorSummary(companyId, query);
   }

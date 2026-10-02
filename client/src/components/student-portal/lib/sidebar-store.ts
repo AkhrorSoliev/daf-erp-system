@@ -66,7 +66,8 @@ export const useSidebar = create<SidebarState>((set, get) => ({
  * The three pieces of chrome whose geometry depends on the rail must agree on
  * its width, so the class fragments live here rather than being retyped in each
  * component. 72px collapsed / 240px expanded; the player clears the rail by
- * 16px.
+ * 16px. CONTENT_INSET also insets a lesson's fixed bottom bar (`PastkiPanel`):
+ * being `fixed`, it sits outside the content column it has to line up with.
  */
 export const RAIL_WIDTH: Record<SidebarMode, string> = {
   auto: "md:w-[72px] lg:w-[240px]",

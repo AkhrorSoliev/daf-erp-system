@@ -248,6 +248,25 @@ usulida quriladi (oy boshi + yangi qarz − to'langan = oy oxiri), shuning uchun
 ustunlar yig'indisi to'g'ri chiqadi.
 `reports/reports-debt-history.service.ts`
 
+«Markazga qancha qarz» deb ko'rsatilganda esa qarz **ikki alohida raqam** —
+keyingi ikki yozuv; ular hech qayerda qo'shilmaydi.
+`reports/debt-split.ts`
+
+**O'qiyotganlar qarzi** — «faol o'quvchi»ning (yuqorida) manfiy balansi: statusi
+`ACTIVE`, faol guruhda faol yozuvi bor, kartasi o'chirilmagan. Har o'quvchi uchun
+ikkiga bo'linadi: **shu oy** (🟡) — `min(qarz, shu Toshkent oyining CHARGED
+hisoblari)`, **eski qarz** (🔴) — qolgani. Oyning hisoblari yozilguncha hamma qarz
+«eski qarz» bo'lib o'qiladi. «O'qimayotganlar qarzi» bilan qo'shilmaydi: «jami
+qarz» ham, «o'rtacha qarz» ham yo'q.
+`reports/debt-split.ts` · `docs/adr/0059-qarz-ikki-alohida-raqam.md`
+
+**O'qimayotganlar qarzi** — qarzi bor, lekin «faol o'quvchi» bo'lmaganlar:
+guruhsiz (statusi `ACTIVE` bo'lsa ham), muzlatilgan, ketgan. «O'qiyotganlar
+qarzi» bilan bitta shartning o'zi va inkori (`activeStudentWhere()`), shuning
+uchun har qarzdor aniq bittasida. Arxivdagi karta (`deletedAt`) ikkalasida ham
+sanalmaydi. Hech qayerda o'qiyotganlarnikiga qo'shilmaydi.
+`reports/debt-split.ts` · `docs/adr/0059-qarz-ikki-alohida-raqam.md`
+
 **To'lov va'dasi (PaymentPromise)** — qarzdor «falon kuni to'layman» deganda
 ochiladigan yozuv: `OPEN → KEPT | BROKEN`.
 `payment-promises/`
@@ -323,17 +342,35 @@ qachon xizmat ko'rsatilgani.
 **«Oy oxiriga kutilyapti» (expectation)** — `expectedValue = heldValue +
 remainingValue`. Chegara — **jonli `LESSON_CONSUMPTION` qatori**, davomat qatori
 emas: qarzdorning darsi o'tilgan, lekin puli kelmagan, shuning uchun u «qolgan»
-tomonda turadi va to'lov kelganda o'zi o'tadi.
-`reports/reports-expectation.service.ts`
+tomonda turadi va to'lov kelganda o'zi o'tadi. Oyning asosiy raqami sifatida
+faqat **2026-09 dan oldingi** oylarda ko'rsatiladi (Moliya kartasi, bosh sahifa,
+Excel 4-bloki, Telegram); undan keyingi oylarda o'rniga «Hisoblandi / To'landi /
+Qoldi» turadi. Hisoblanishda davom etadi: «Foyda tarkibi»ning davom etayotgan
+oy prognozi uni o'qiydi.
+`reports/reports-expectation.service.ts` · `reports/reports-profit-composition.service.ts`
+
+**Hisoblandi / To'landi / Qoldi (month charges)** — oylik to'lov oyining
+(2026-09 dan, `MONTHLY_BILLING_START_MONTH`) asosiy raqami. **Hisoblandi** — oy
+uchun yozilgan CHARGED hisoblar yig'indisi. **Qoldi** — har o'quvchi uchun
+`min(max(0, qarz − keyingi oylar hisobi), shu oy hisobi)`: pul eng eski hisobni
+birinchi yopadi, shuning uchun bugungi qarz eng yangi hisoblarda turadi.
+**To'landi** = hisoblandi − qoldi. U balansdan chiqariladi, kassadan emas:
+pulsiz yopilgan hisob (qarz kechirish, qo'lda kredit) ham «to'landi»ga tushadi,
+oydan tashqari debet (masalan mock imtihon to'lovi) esa avval shu oyga yoziladi.
+Hech qayerda qayta hisoblamang, mijozda ham.
+`reports/month-charges.ts` · `docs/adr/0058-oylik-oyning-asosiy-raqami-hisoblandi.md`
 
 **«Sof foyda»** — tan olingan tushum − **haqli** (deserved) oylik − xarajat −
 qaytarilgan pul. Kassa harakati emas: agar hisob yiqilsa, kartochka
 «Kassa harakati» deb **qayta nomlanadi**, jimgina boshqa raqam ko'rsatmaydi.
 `reports/reports.controller.ts` · `client/src/components/payments/payments-overview.tsx`
 
-**Yig'im foizi (collection ratio)** — oyning **PLANiga** nisbatan yig'ilgan pul.
-Telegram va `/overview` bitta manbadan o'qiydi.
-`reports/reports-financial.service.ts`
+**Yig'im foizi (collection ratio)** — 2026-09 dan boshlab (oylik to'lov oylari)
+**to'landi ÷ hisoblandi**, bir xona kasr; hech narsa hisoblanmagan bo'lsa foiz
+yo'q (`null`). Undan **oldingi** oylarda eski ta'rif qoladi: oyning **PLANiga**
+nisbatan yig'ilgan pul. Ikkala holatda ham Telegram va `/overview` bitta
+manbadan o'qiydi.
+`reports/month-charges.ts` · `reports/reports-financial.service.ts`
 
 **DailyFinancialSnapshot** — har kuni 23:40 da olinadigan surat. Tizimda
 **qayta tiklab bo'lmaydigan yagona yozuv** — uni o'chiradigan skript prod
@@ -410,6 +447,28 @@ o'quvchisi telefon bo'yicha topiladi (chat bo'yicha emas), lekin o'quvchi
 profiliga Telegram faqat «📱 Telefon raqamni yuborish» tugmasi bilan (odamning
 O'Z kontakti) bog'lanadi — aks holda begona odam o'quvchining parolini tiklab
 olardi. `telegram/scenes/mock-exam-registration.scene.ts`
+
+**Ro'yxat manbasi** — `registeredVia`. `BOT` — odam Telegram bot orqali o'zi
+yozilgan. `ADMIN` — ishtirokchini xodim «Qo'lda qo'shish» orqali qo'shgan.
+Qiymatni ikkala yozuvchi o'zi qo'yadi, standart qiymat yo'q. Eski qatorlar
+migratsiyada tarix muallifi va `telegramFirstName` bo'yicha to'ldirilgan
+(ADR-0056).
+`mock-exams/mock-exam-participants.service.ts` (`addManual`),
+`telegram/scenes/mock-exam-registration.scene.ts`
+
+**Imtihon statistikasi** — imtihon sahifasidagi «Umumiy» bo'limining
+tepasidagi blok (`GET /mock-exams/:id/stats`). Summa `feeAmount ?? exam.price`
+bilan hisoblanadi (`effectiveMockFee`). «Mock daromad» kartasi va ro'yxatdagi
+«Tushum» ustuni ham shu qoidani ishlatadi.
+- **DaF o'quvchisi** — ro'yxatdan o'tgan paytda o'quvchi kartasiga mos kelgan
+  odam (`studentId` bor, `convertedAt` yo'q). Keyin o'quvchiga aylantirilgan
+  odam «DaF emas» deb sanaladi.
+- **To'lov turi.** Eski, qo'lda qabul qilingan to'lovning turi saqlanmagan
+  bo'lsa, u «To'lov turi yozilmagan» deb ko'rsatiladi. Tur taxmin qilinmaydi.
+- **Natija yetib borishi.** Natija olishi kerak bo'lganlar (`RESULTS_AUDIENCE`)
+  to'rtga bo'linadi: natija bordi, Telegram bog'lanmagan, yuborib bo'lmadi,
+  hali yuborilmagan.
+`mock-exams/mock-exam-stats.ts`
 
 ---
 

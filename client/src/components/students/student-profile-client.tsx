@@ -7,12 +7,15 @@ import { EditStudentDrawer } from "./edit-student-drawer";
 import { StudentProfileCard } from "./student-profile-card";
 import { StudentProfileTabs } from "./student-profile-tabs";
 import { EnrollToGroupDialog } from "./enroll-to-group-dialog";
+import { InitialBalanceDialog } from "./initial-balance-dialog";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { RefundDialog } from "@/components/payments/refund-dialog";
 import { WithdrawalDialog } from "@/components/payments/withdrawal-dialog";
+import { InOtherBranch } from "@/components/shared/in-other-branch";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import type { Student } from "@/data/student-model";
 import api from "@/lib/api";
+import { otherBranchOf, type OtherBranch } from "@/lib/other-branch";
 
 export function StudentProfileClient({ studentId }: { studentId: string }) {
   const router = useRouter();
@@ -22,11 +25,13 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [otherBranch, setOtherBranch] = useState<OtherBranch | null>(null);
   const [commentKey, setCommentKey] = useState(0);
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [withdrawalOpen, setWithdrawalOpen] = useState(false);
+  const [initialBalanceOpen, setInitialBalanceOpen] = useState(false);
   const [groupsRefreshing, setGroupsRefreshing] = useState(false);
   const setName = useBreadcrumbName((s) => s.setName);
 
@@ -54,8 +59,12 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
       const { data } = await api.get(`/students/${studentId}`);
       setStudent(data);
       setError(false);
-    } catch {
-      if (showLoader) setError(true);
+      setOtherBranch(null);
+    } catch (err) {
+      if (showLoader) {
+        setError(true);
+        setOtherBranch(otherBranchOf(err));
+      }
     } finally {
       if (showLoader) setLoading(false);
       setGroupsRefreshing(false);
@@ -89,6 +98,16 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
     );
   }
 
+  if (otherBranch) {
+    return (
+      <InOtherBranch
+        title="O'quvchi boshqa filialda"
+        what="o'quvchi"
+        branch={otherBranch}
+      />
+    );
+  }
+
   if (error || !student) {
     return (
       <div className="space-y-6">
@@ -115,6 +134,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
             onPaymentHistoryClick={() => handleTabChange("tolovlar")}
             onRefundClick={() => setRefundOpen(true)}
             onWithdrawalClick={() => setWithdrawalOpen(true)}
+            onInitialBalanceClick={() => setInitialBalanceOpen(true)}
             onStatusChanged={refreshStudent}
           />
         </div>
@@ -165,6 +185,13 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
         studentId={student.id}
         studentName={`${student.firstName} ${student.lastName}`}
         onSuccess={() => fetchStudent(false)}
+      />
+      <InitialBalanceDialog
+        open={initialBalanceOpen}
+        onOpenChange={setInitialBalanceOpen}
+        studentId={student.id}
+        studentName={`${student.firstName} ${student.lastName}`}
+        onSaved={() => fetchStudent(false)}
       />
     </>
   );

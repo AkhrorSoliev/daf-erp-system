@@ -500,6 +500,60 @@ describe('TelegramDigestRenderService', () => {
       expect(order).toEqual([...order].sort((a, b) => a - b));
       expect(order.every((i) => i >= 0)).toBe(true);
     });
+
+    it('lists lessons whose pay was lost', () => {
+      const text = textOf(
+        service.renderUser(
+          [
+            row(TelegramDigestCategory.LESSON_PAY_FORFEITED, {
+              groupId: 'g1',
+              groupName: 'A1-01',
+              date: '2026-09-28',
+            }),
+          ],
+          NOW,
+        ),
+      );
+      expect(text).toContain('⚠️ <b>Davomat vaqtida olinmagan darslar</b>');
+      expect(text).toContain('• A1-01 (28.09.2026)');
+      expect(text).toContain('Bu darslar uchun haq yozilmadi.');
+    });
+
+    it('places forfeited section after attendance', () => {
+      const text = textOf(
+        service.renderUser(
+          [
+            row(TelegramDigestCategory.ATTENDANCE_COMPLETED, {
+              groupId: 'g1',
+              groupName: 'A1-01',
+              date: '2026-09-27',
+              present: 1,
+              absent: 0,
+              late: 0,
+              excused: 0,
+            }),
+            row(TelegramDigestCategory.LESSON_PAY_FORFEITED, {
+              groupId: 'g1',
+              groupName: 'A1-02',
+              date: '2026-09-28',
+            }),
+            row(TelegramDigestCategory.SALARY_CARRIED_OVER, {
+              count: 2,
+              total: 500000,
+            }),
+          ],
+          NOW,
+        ),
+      );
+      const attendanceIdx = text.indexOf('✅ <b>Davomat qabul qilindi</b>');
+      const forfeitedIdx = text.indexOf(
+        '⚠️ <b>Davomat vaqtida olinmagan darslar</b>',
+      );
+      const salaryIdx = text.indexOf('💵 <b>Oylik</b>');
+      expect(attendanceIdx).toBeGreaterThanOrEqual(0);
+      expect(forfeitedIdx).toBeGreaterThan(attendanceIdx);
+      expect(salaryIdx).toBeGreaterThan(forfeitedIdx);
+    });
   });
   describe('monthly bill and reminder (ADR-0042)', () => {
     /** 20:00 Tashkent, 01.10.2026. */

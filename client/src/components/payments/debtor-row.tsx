@@ -25,7 +25,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { RoleLink } from "@/components/shared/role-link";
 import { formatBalance, formatPhone } from "@/lib/format-utils";
+import { GROUP_PAGE_ROLES } from "@/lib/role-access";
 import {
   CALL_OUTCOME_INFO,
   type CallOutcome,
@@ -77,7 +79,8 @@ export function DebtorRow({
   debtor: Debtor;
   index: number;
   onRecordPayment: () => void;
-  onLogCall: () => void;
+  /** Berilmasa «Natijani kiritish» chizilmaydi (`POST /call-logs` ga ruxsati yo'q). */
+  onLogCall?: () => void;
 }) {
   const name = `${debtor.firstName} ${debtor.lastName}`;
   return (
@@ -116,13 +119,14 @@ export function DebtorRow({
         {debtor.enrollments.length > 0 ? (
           <div className="flex flex-wrap gap-x-2 gap-y-0.5">
             {debtor.enrollments.map((e) => (
-              <Link
+              <RoleLink
                 key={e.group.id}
+                roles={GROUP_PAGE_ROLES}
                 href={`/groups/${e.group.id}`}
-                className="hover:underline"
+                linkClassName="hover:underline"
               >
                 {e.group.name}
-              </Link>
+              </RoleLink>
             ))}
           </div>
         ) : (
@@ -151,10 +155,12 @@ export function DebtorRow({
               <Plus className="mr-2 size-4" />
               To&apos;lov qayd qilish
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onLogCall}>
-              <PhoneCall className="mr-2 size-4" />
-              Natijani kiritish
-            </DropdownMenuItem>
+            {onLogCall && (
+              <DropdownMenuItem onClick={onLogCall}>
+                <PhoneCall className="mr-2 size-4" />
+                Natijani kiritish
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>

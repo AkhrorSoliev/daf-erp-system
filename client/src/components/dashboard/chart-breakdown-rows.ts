@@ -23,7 +23,10 @@ export interface BreakdownRow {
  * ko'rsatiladi (foiz esa 0 ga tushmaydi, chunki u yolg'on bo'lardi).
  */
 export function breakdownRows(b: ChartProfitBreakdown): BreakdownRow[] {
-  const base = b.revenue > 0 ? b.revenue : 0;
+  // Everything the month earned: lessons plus «Yechib olish» (ADR-0055) —
+  // the rows below add up to exactly this.
+  const income = b.revenue + (b.balanceWithdrawals ?? 0);
+  const base = income > 0 ? income : 0;
   const pct = (n: number) => (base > 0 ? Math.round((n / base) * 100) : 0);
 
   const rows: BreakdownRow[] = [

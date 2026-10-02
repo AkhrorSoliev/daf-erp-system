@@ -26,6 +26,7 @@ import {
   singleBranchId,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
+import { tashkentMonthKey } from '../common/date/tashkent';
 import {
   ReportsProfitLossService,
   ProfitLossQuery,
@@ -47,6 +48,7 @@ import {
 } from './dto/attendance-reports-query.dto';
 import { buildNetProfit, NetProfit } from './reports-excel.helpers';
 import { computeOwnMonthProfit } from './own-month-profit';
+import { isMonthlyBillingMonth } from './month-charges';
 import { ExpensesService } from '../expenses/expenses.service';
 import { SalaryPaymentService } from '../salary/salary-payment.service';
 import { SalaryService } from '../salary/salary.service';
@@ -139,6 +141,13 @@ export class ReportsService {
   ) {
     return this.financial.getRecognizedRevenue(companyId, opts);
   }
+  // «Yechib olish» — revenue of the month it is withdrawn in (ADR-0055).
+  getBalanceWithdrawals(
+    companyId: number,
+    opts: { months: string[]; branchIds: ReportBranchIds },
+  ) {
+    return this.financial.getBalanceWithdrawals(companyId, opts);
+  }
 
   /**
    * Canonical monthly "Sof foyda" — the ONE net-profit figure the Foyda card and
@@ -204,26 +213,29 @@ export class ReportsService {
     const startDate = `${month}-01`;
     const endDate = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
     const scope = { branchIds, startDate, endDate };
-    const [lessons, salaries, profitLoss, outflows] = await Promise.all([
-      this.financial.valueHeldLessons(companyId, {
-        start: new Date(Date.UTC(y, m - 1, 1)),
-        end: new Date(Date.UTC(y, m, 1)),
-        branchIds,
-      }),
-      // Branch-scoped: subtracting company-wide payroll from ONE branch's
-      // revenue is what made a freshly-opened branch look catastrophically
-      // unprofitable in its first month. Staff by HOME branch, so an
-      // administrator attached to two branches is subtracted from one.
-      this.getSalaryMonthly(
-        companyId,
-        month,
-        performedById,
-        singleBranchId(branchIds),
-        'home',
-      ),
-      this.getProfitLoss(companyId, scope),
-      this.getPeriodOutflows(companyId, scope),
-    ]);
+    const [lessons, salaries, profitLoss, outflows, withdrawals] =
+      await Promise.all([
+        this.financial.valueHeldLessons(companyId, {
+          start: new Date(Date.UTC(y, m - 1, 1)),
+          end: new Date(Date.UTC(y, m, 1)),
+          branchIds,
+        }),
+        // Branch-scoped: subtracting company-wide payroll from ONE branch's
+        // revenue is what made a freshly-opened branch look catastrophically
+        // unprofitable in its first month. Staff by HOME branch, so an
+        // administrator attached to two branches is subtracted from one.
+        this.getSalaryMonthly(
+          companyId,
+          month,
+          performedById,
+          singleBranchId(branchIds),
+          'home',
+        ),
+        this.getProfitLoss(companyId, scope),
+        this.getPeriodOutflows(companyId, scope),
+        // «Yechib olish» — revenue of the month it is withdrawn in (ADR-0055).
+        this.getBalanceWithdrawals(companyId, { months: [month], branchIds }),
+      ]);
     const recognizedRevenue = lessons.reduce((sum, l) => sum + l.value, 0);
     return {
       month,
@@ -231,12 +243,14 @@ export class ReportsService {
       salaries,
       profitLoss,
       outflows,
+      withdrawals,
       netProfit: buildNetProfit(
         profitLoss,
         salaries,
         outflows,
         month,
         recognizedRevenue,
+        withdrawals.total,
       ),
     };
   }
@@ -447,6 +461,22 @@ export class ReportsService {
     return this.expectation.getMonthlyExpectation(companyId, opts);
   }
 
+  /** «Bu oy hisoblandi / To'landi / Qoldi» (ADR-0058). */
+  getMonthCharges(
+    companyId: number,
+    opts: { month: string; branchIds: ReportBranchIds },
+  ) {
+    return this.financial.getMonthCharges(companyId, opts);
+  }
+
+  /** «O'qiyotganlar» / «O'qimayotganlar» qarzi — ikki alohida raqam (ADR-0059). */
+  getDebtSplit(
+    companyId: number,
+    opts: { branchIds: ReportBranchIds; month?: string },
+  ) {
+    return this.financial.getDebtSplit(companyId, opts);
+  }
+
   /**
    * How «Oy oxiriga kutilyapti» moved day by day this month — straight from
    * `DailyFinancialSnapshot`. Missing days stay missing; a reconstructed point
@@ -483,22 +513,36 @@ export class ReportsService {
     // Month = the period's START month, the same derivation the salary fold and
     // the Excel `monthStr` already use. Audit H22 (cards sitting on different
     // bases) is a known separate item — do not diverge from the convention here.
-    const month = (
-      query.startDate ?? new Date().toISOString().slice(0, 10)
-    ).slice(0, 7);
-    const expectation = await this.getMonthlyExpectation(companyId, {
-      month,
-      branchIds: query.branchIds,
-    });
+    // With no period the overview covers the current TASHKENT month; the UTC
+    // date used here before projected last month from 00:00 to 05:00 on the 1st.
+    const month = query.startDate?.slice(0, 7) ?? tashkentMonthKey(new Date());
+    const [expectation, monthCharges, debtSplit] = await Promise.all([
+      this.getMonthlyExpectation(companyId, {
+        month,
+        branchIds: query.branchIds,
+      }),
+      isMonthlyBillingMonth(month)
+        ? this.getMonthCharges(companyId, { month, branchIds: query.branchIds })
+        : Promise.resolve(null),
+      // «Qarzdorlik» is today's debt, whatever period the page asks about, so no
+      // `month`: «shu oy» is the current Tashkent month, not the period's (July's
+      // charges set against today's balance would split it by a month that is
+      // over).
+      this.getDebtSplit(companyId, { branchIds: query.branchIds }),
+    ]);
     return {
       ...overview,
-      income: { ...overview.income, expected: expectation.expectedValue },
+      // Only `forecast` carries the month-end expectation. The raw service has
+      // none to give, so a caller reaching it directly gets no such fields —
+      // not a stale 0 like its old `income.expected`, which `rm:cfin` printed.
+      // The debt left it too (ADR-0059): it is `debtSplit` below, two numbers.
       forecast: {
-        ...overview.forecast,
         expectedMonthEnd: expectation.expectedValue,
         expectedHeld: expectation.heldValue,
         expectedRemaining: expectation.remainingValue,
       },
+      monthCharges,
+      debtSplit,
     };
   }
   getFinancialTrend(companyId: number, branchIds: ReportBranchIds) {
@@ -616,17 +660,6 @@ export class ReportsService {
     },
   ) {
     return this.payments.getPaymentReports(companyId, options);
-  }
-  isPaymentOnTime(payment: {
-    studentId: number;
-    createdAt: Date;
-    contractId: string | null;
-    contract: {
-      groupId: string | null;
-      course: { lessonPaymentCount: number };
-    } | null;
-  }) {
-    return this.payments.isPaymentOnTime(payment);
   }
 
   // Teacher payments

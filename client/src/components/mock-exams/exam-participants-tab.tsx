@@ -256,7 +256,7 @@ export function ExamParticipantsTab({
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead className="w-20">ID</TableHead>
-              <TableHead>Ism familya</TableHead>
+              <TableHead>Ism familiya</TableHead>
               <TableHead className="w-16">Daraja</TableHead>
               <TableHead className="w-20">Vaqt</TableHead>
               <TableHead>Telefon</TableHead>

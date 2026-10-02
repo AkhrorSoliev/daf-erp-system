@@ -31,6 +31,17 @@ export interface YolUnitKirish {
    * navbatda" deydi — ikki ekran ziddiyatga kelardi.
    */
   finalTest: LernenSeans | null;
+  /**
+   * `false` — the unit's content is not written yet: its lessons are left
+   * out of the path and of the lock chain, and one «Tez orada» node stands
+   * in for them. Absent (an older server) counts as ready.
+   */
+  bereit?: boolean;
+}
+
+/** A unit the path offers lessons for. */
+function tayyor(unit: YolUnitKirish): boolean {
+  return unit.bereit !== false;
 }
 
 export interface YolTugun {
@@ -66,6 +77,7 @@ export function yolTugunlari(levels: YolDarajaKirish[]): YolTugun[] {
   const hammaSeanslar: Manzilli[] = [];
   for (const daraja of levels) {
     for (const unit of daraja.units) {
+      if (!tayyor(unit)) continue;
       for (const bolim of unit.sections) {
         for (const seans of bolim.lessons) {
           hammaSeanslar.push({ daraja: daraja.level, seans });
@@ -127,6 +139,18 @@ export function yolTugunlari(levels: YolDarajaKirish[]): YolTugun[] {
         daraja: daraja.level,
         holat: "done",
       });
+
+      if (!tayyor(unit)) {
+        tugunlar.push({
+          tur: "tez-orada",
+          id: null,
+          matn: "Tez orada",
+          ostyozuv: null,
+          daraja: daraja.level,
+          holat: "locked",
+        });
+        continue;
+      }
 
       // Bo'limi yo'q unit (eski DiB) — sarlavhadan boshqa hech narsa
       // qo'shilmaydi, yo'l shu yerda yiqilmasligi kerak.

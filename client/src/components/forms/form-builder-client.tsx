@@ -272,7 +272,7 @@ export function FormBuilderClient({ formId }: Props) {
 
       <Section
         title="Forma maydonlari"
-        titleHint="Ism, Familya va Telefon — har qanday formada majburiy (lid yaratish uchun). Ostida o'zingiz xohlagan maydonlarni qo'shing."
+        titleHint="Ism, Familiya va Telefon — har qanday formada majburiy (lid yaratish uchun). Ostida o'zingiz xohlagan maydonlarni qo'shing."
       >
         {typeof errors.fields?.message === "string" && (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
@@ -299,7 +299,7 @@ export function FormBuilderClient({ formId }: Props) {
         <AddFieldMenu onPick={addField} />
       </Section>
 
-      <Section title="Submission qayerga tushadi">
+      <Section title="Javoblar qayerga tushadi">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>1. Ustun</Label>
@@ -390,8 +390,8 @@ export function FormBuilderClient({ formId }: Props) {
                   <HelpCircle className="size-3.5 cursor-help text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  O&apos;chirilsa public havola ishlamaydi va yangi
-                  submission qabul qilinmaydi.
+                  O&apos;chirilsa ochiq havola ishlamaydi va yangi javoblar
+                  qabul qilinmaydi.
                 </TooltipContent>
               </Tooltip>
             </div>

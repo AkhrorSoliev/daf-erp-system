@@ -177,6 +177,7 @@ describe('StudentsService — status methods', () => {
             .MonthlyChargeService,
           useValue: {
             reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+            assertTrialLessonAnswered: jest.fn().mockResolvedValue(undefined),
           },
         },
         // Discount adjustment path — write tests directly exercise this in the
@@ -384,6 +385,74 @@ describe('StudentsService — status methods', () => {
       await expect(service.delete(999, 1, 'Test', 1001)).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    // The status dialog archives through this endpoint with a reason picked
+    // from the ARCHIVE list; it must be recorded as a status change records it.
+    it('records a picked archive reason the way a status change does', async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-dup',
+        name: 'Duplikat yozuv',
+        companyId: 1001,
+        appliesTo: ['ARCHIVE'],
+      });
+
+      await service.delete(1, 2, 'Ikki marta kiritilgan', 1001, 'reason-dup');
+
+      expect(prisma.studentExitReason.findFirst).toHaveBeenCalledWith({
+        where: {
+          id: 'reason-dup',
+          companyId: 1001,
+          deletedAt: null,
+          appliesTo: { has: 'ARCHIVE' },
+        },
+      });
+      expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toStatus: 'ARCHIVED',
+          reason: 'Duplikat yozuv — Ikki marta kiritilgan',
+        }),
+      );
+      expect(prisma.student.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            statusChangeReasonId: 'reason-dup',
+            statusChangeReason: 'Duplikat yozuv — Ikki marta kiritilgan',
+          }),
+        }),
+      );
+    });
+
+    it('refuses a reason that is not on the archive list before writing anything', async () => {
+      await expect(
+        service.delete(1, 2, undefined, 1001, 'reason-expel'),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(statusHistoryService.changeStatus).not.toHaveBeenCalled();
+      expect(prisma.student.update).not.toHaveBeenCalled();
+    });
+
+    // Otherwise the card keeps the id of its previous status's reason, and the
+    // archive-reasons report files the archive under, say, an expulsion reason.
+    it('clears the previous reason id when the archive reason is typed', async () => {
+      await service.delete(1, 2, 'Duplikat yozuv', 1001);
+
+      expect(prisma.student.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ statusChangeReasonId: null }),
+        }),
+      );
+    });
+
+    it('still needs a typed reason of 3+ characters when none is picked', async () => {
+      await expect(service.delete(1, 2, ' ab ', 1001)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.delete(1, 2, undefined, 1001)).rejects.toThrow(
+        BadRequestException,
+      );
+
+      expect(prisma.student.update).not.toHaveBeenCalled();
     });
   });
 

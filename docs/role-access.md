@@ -11,22 +11,23 @@ This document defines the permission model for the DaF ERP system. **Every restr
 | 3 | **Administrator** | Operational access (CRUD for entities) |
 | 4 | **Teacher** | Limited (TBD) |
 | 5 | **Cashier** | Limited (TBD) |
+| 6 | **Student** | Student portal and app only — their own data |
 
 A user can hold **multiple roles** simultaneously (many-to-many via `UserRole`).
 
 ## Portal-Based Access (Subdomain Restriction)
 
-Each subdomain restricts which roles can log in. This is enforced **server-side** during login via `Origin` header check (`portal-roles.config.ts`):
+Each subdomain restricts which roles can log in. This is enforced **server-side** during login from the `Origin` header, or the `X-Portal` header a native app sends (`portal-roles.config.ts`):
 
 | Portal | Domain | Allowed Roles |
 |--------|--------|---------------|
 | Admin panel | `admin.dafzentrum.uz` | CEO (1), Branch Director (2), Administrator (3), Cashier (5) |
 | Teacher portal | `lehrer.dafzentrum.uz` | Teacher (4) |
-| Student portal | `student.dafzentrum.uz` | Not yet implemented |
+| Student portal | `student.dafzentrum.uz` | Student (6) |
 
-- A user with roles that don't match the portal gets `403 Forbidden` on login
+- The account is looked up **among the portal's roles only**, so a user whose roles don't match the portal is not found: `401` "Login yoki parol noto'g'ri", the same answer as a wrong password
 - Localhost bypasses this check (dev mode)
-- To add a new portal: update `PORTAL_ROLES` in `server/src/auth/portal-roles.config.ts`, add CORS origin in `server/src/main.ts`, add DNS + Vercel config
+- To add a new portal: update `PORTAL_ROLES` (and `PORTAL_KEYS` for a native app) in `server/src/auth/portal-roles.config.ts`, add CORS origin in `server/src/main.ts`, add DNS + Vercel config
 
 ## Core Principles
 
@@ -41,7 +42,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
-| View salary (ish haqi) | All staff | Own branch staff | No | No | No |
+| View salary (ish haqi) | All staff | Own branch staff | No (page hidden, salary reads refused — see below) | No | No |
 | View balance | All staff | Own branch staff | No | No | No |
 | Create payment | Yes | Yes | Yes | No | Yes |
 | Reverse payment | Yes | No | No | No | No |
@@ -50,22 +51,37 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | Approve salary | Yes | No | No | No | No |
 | Pay salary | Yes | Own branch | No | No | No |
 | Batch pay salary | Yes | Own branch | No | No | No |
-| View/update salary tax rate | Yes | No | No | No | No |
 | Manage salary period (cycle start day) | Yes | No | No | No | No |
-| Create refund | Yes | Yes | Yes | No | No |
-| Process refund | Yes | Yes | No | No | No |
+| Create refund (one step, `POST /refunds/quick`) | Yes | Yes | Yes | No | No |
+| Process a legacy refund request (`PATCH /refunds/:id/process`, no screen) | Yes | Yes | Yes | No | No |
 | Reverse refund | Yes | No | No | No | No |
-| Create expense | Yes | Yes | Yes | No | No |
+| Create expense | Yes | Yes | No | No | No |
 | Update/delete expense | Yes | Yes | No | No | No |
 | View financial reports | Yes | Own branch | No | No | No |
 | View transactions | Yes | Own branch | No | No | No |
 | Manual adjustment | Yes | Yes | No | No | No |
 
 - **Frontend**: Check `user.roles.some(r => [1, 2].includes(r.id))` before rendering salary/balance UI
-- **Backend**: Use `@Roles('CEO', 'Branch Director')` on salary/reports endpoints; `@Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')` on payment endpoints
+- **Backend**: `@Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')` on payment endpoints; `@Roles('CEO', 'Branch Director')` on expenses and money reports (`financial-overview` also admits Administrator and Cashier, but strips every money field for them); salary writes are CEO/BD or CEO-only, while salary reads also admit Administrator — the decorators in `salary.controller.ts` are the list of record
+- **No tax setting.** The salary tax-rate config and its endpoints were removed: the system computes and withholds no tax, and the salary page shows possible deductions as an informational note only
 - **CEO-only actions**: reverse payment, reverse refund, calculate salary, approve salary — these use `@Roles('CEO')` specifically
 - **Salary config (ADR-0034)**: a Branch Director may create a rate (`POST /salary/config`) only for an ACTIVE, own-branch user who holds the Teacher role and does not also hold CEO or Branch Director — an administrator or cashier who also teaches IS included. Never their own rate, never `FIXED_MONTHLY`, never a date before the current payroll period. Editing or deactivating an existing rate (`PATCH /salary/config/:id`), `POST /salary/config/global` and the payroll period stay CEO-only. A `PERCENTAGE` rate above 100 is rejected for every caller, including the CEO. The caller's roles and branches are read from the database through `whereUserMayAct()`, so a demoted or blocked director sets no rate even while their token still passes the guard ([ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md)).
+- **The salary page's reads are CEO + Branch Director on the server too** (2026-09-30). Every `GET /salary/*` read that only `/payments/salary` uses — `/monthly`, `/overview`, `/matrix`, `/payments`, `/payments/:id/breakdown`, `/accruals/:userId`, `/advances/:userId`, `/advance-calendar`, `/config/:userId`, `/configs/by-users`, `/config-history/:userId`, `/period-settings` — used to admit Administrator while the page was hidden from them. Two salary reads stay open to Administrator because pages they use call them: `GET /salary/timeline/:userId` (teacher profile, «Taymlayn» tab) and `GET /salary/monthly/center-topup` (debt page, below).
 - Full details: see `docs/financial-system.md`
+
+### Debt page (Qarzdorlik, `/payments/debt`)
+
+Every staff role except Teacher sees the same five tabs, «Markaz qoplagani» included (`GET /salary/monthly/center-topup`; Cashier added 2026-09-30, the tab used to answer a cashier with 403). Everyone below the CEO sees their own branch. The actions differ by role:
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| View the five tabs | Yes | Yes | Yes | No | Yes |
+| Record payment («To'lov qayd qilish») | Yes | Yes | Yes | No | Yes |
+| Log a call result («Natijani kiritish», `POST /call-logs`) | Yes | Yes | Yes | No | No |
+| Move a frozen balance (to the center / back to the student) | Yes | Yes | Yes | No | No |
+| Undo a debt write-off | Yes | No | No | No | No |
+
+- **Frontend**: `CALL_LOG_ROLES` and `FROZEN_BALANCE_ACTION_ROLES` in `client/src/lib/role-access.ts` hide the two actions a cashier may not take
 
 ### Groups
 
@@ -78,6 +94,16 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 - **Frontend**: Check `user.roles.some(r => [1, 2, 3].includes(r.id))` for create/edit/delete buttons
 - **Backend**: Use `@Roles('CEO', 'Branch Director', 'Administrator')` on mutation endpoints
+- **A cashier sees no group page**: the server refuses `GET /groups`, `/groups/:id` and `/groups/:id/students`. A cashier-only user gets no «Guruhlar» sidebar item, no «👥 Guruhlar» button in the staff Telegram bot, and group names without a link wherever a cashier meets them (debtor list, home, schedule, student profile). Frontend: `GROUP_PAGE_ROLES` + `RoleLink` (`client/src/components/shared/role-link.tsx`)
+
+### Students
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| Open student profile (`GET /students/:id`) | Yes | Own branch | Yes | No | Yes |
+| Remove from group | Yes | Own branch | Yes | No | No |
+
+- **Frontend**: on group pages a teacher-only user sees student names without a link (`STUDENT_PROFILE_ROLES`). A cashier on a profile sees the «Guruhlar» tab without the «Chiqarish» button
 
 ### Teachers
 
@@ -93,17 +119,20 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
 | Write comment | Yes | Own branch entities | Own branch entities | No | No |
-| Create task (assign) | Yes, anyone | Own branch staff | No | No | No |
+| Create task (assign) | Yes, anyone | Own branch entities | Own branch entities (for /outreach) | No | No |
 | View comments | Yes | Own branch | Own branch | No | No |
 | Delete comment | Any comment | No | No | — | — |
-| Update comment/task | Yes | Yes | Yes | — | — |
+| Update comment/task | Any | Own (author) only | Own (author) only | — | — |
 | Update assignee status | Own assignments | Own assignments | Own assignments | Own assignments | Own assignments |
+
+- **Assignees are checked for company, not branch.** A task on an own-branch entity may be assigned to any non-archived user of the company, the CEO included (`CommentsService.create`).
+- **Deletion is the CEO's alone.** `DELETE /comments/:id` is `@Roles('CEO')` with no author path, so an author cannot delete their own comment or task; editing (`PATCH /comments/:id`) is the author or the CEO.
 
 ### Tasks (Topshiriqlar)
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
-| Create task | Yes | Yes | No | No | No |
+| Create task | Yes | Yes | Yes (for /outreach) | No | No |
 | View own tasks | Yes | Yes | Yes | Yes | Yes |
 | View created tasks | Yes | Yes | No | No | No |
 | Mark task seen/done | Own assignments | Own assignments | Own assignments | Own assignments | Own assignments |
@@ -129,6 +158,8 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 |--------|-----|-----------------|---------------|---------|---------|
 | View settings | Yes | Yes | View only | No | No |
 | Edit settings | Yes | No | No | No | No |
+
+- **Frontend**: the form is read-only for everyone but the CEO and the save button is hidden (`COMPANY_EDIT_ROLES`)
 
 ### Settings — Employees & Branches
 
@@ -218,6 +249,7 @@ Branch Director = 2
 Administrator = 3
 Teacher = 4
 Cashier = 5
+Student = 6
 ```
 
 ### Common frontend patterns

@@ -1,5 +1,6 @@
 import {
   endOfUtcDay,
+  isCalendarDateStr,
   tashkentDateStr,
   tashkentMonthKey,
   tashkentMonthRangeUtc,
@@ -51,6 +52,22 @@ describe('utcMidnightFromDateStr', () => {
     expect(utcMidnightFromDateStr('2026-08-05').toISOString()).toBe(
       '2026-08-05T00:00:00.000Z',
     );
+  });
+});
+
+describe('isCalendarDateStr', () => {
+  it('accepts a real day, a leap day included', () => {
+    expect(isCalendarDateStr('2026-09-30')).toBe(true);
+    expect(isCalendarDateStr('2028-02-29')).toBe(true);
+  });
+
+  // `new Date` turns 2026-02-30 into 02.03 and 2026-13-45 into Invalid Date.
+  it('refuses a day the calendar does not have, and a malformed one', () => {
+    expect(isCalendarDateStr('2026-13-45')).toBe(false);
+    expect(isCalendarDateStr('2026-02-30')).toBe(false);
+    expect(isCalendarDateStr('2026-02-29')).toBe(false);
+    expect(isCalendarDateStr('2026-9-30')).toBe(false);
+    expect(isCalendarDateStr('2026-09-30T00:00')).toBe(false);
   });
 });
 

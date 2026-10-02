@@ -9,7 +9,7 @@ describe('DafPortalReadService', () => {
   let prisma: {
     dafUnit: { findMany: jest.Mock; findUnique: jest.Mock };
     dafLesson: { findMany: jest.Mock; findUnique: jest.Mock };
-    dafLexeme: { findMany: jest.Mock };
+    dafLexeme: { findMany: jest.Mock; groupBy: jest.Mock; count: jest.Mock };
     dafGrammar: { findMany: jest.Mock };
     dafExercise: { findMany: jest.Mock };
     dafSection: { findMany: jest.Mock };
@@ -70,6 +70,8 @@ describe('DafPortalReadService', () => {
             imageKey: null,
           },
         ]),
+        groupBy: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
       },
       dafGrammar: { findMany: jest.fn().mockResolvedValue([]) },
       dafSection: { findMany: jest.fn().mockResolvedValue([]) },
@@ -253,8 +255,74 @@ function fakePrisma() {
     dafLessonProgress: {
       findMany: jest.fn<Promise<any[]>, any[]>(async () => []),
     },
+    dafLexeme: {
+      groupBy: jest.fn<Promise<any[]>, any[]>(async () => []),
+      count: jest.fn<Promise<number>, any[]>(async () => 0),
+    },
   };
 }
+
+describe('bereit — unit has content', () => {
+  const zweiUnits = [
+    {
+      id: 1,
+      level: 'A1',
+      order: 1,
+      titleUz: 'Salom',
+      titleDe: 'Hallo',
+      _count: { lessons: 15 },
+    },
+    {
+      id: 4,
+      level: 'A1',
+      order: 4,
+      titleUz: 'Ovqat',
+      titleDe: 'Essen',
+      _count: { lessons: 18 },
+    },
+  ];
+
+  it('getLevels marks a unit without core words as not ready', async () => {
+    const prisma = fakePrisma();
+    prisma.dafUnit.findMany = jest.fn(async () => zweiUnits);
+    prisma.dafLexeme.groupBy = jest.fn(async () => [
+      { unitId: 1, _count: { _all: 94 } },
+    ]);
+    const levels = await svc(prisma).getLevels(55);
+    const units = levels.find((l) => l.level === 'A1')!.units;
+    expect(units.map((u) => [u.id, u.bereit])).toEqual([
+      [1, true],
+      [4, false],
+    ]);
+  });
+
+  it('getLevels counts only core words that sit in a section', async () => {
+    const prisma = fakePrisma();
+    prisma.dafUnit.findMany = jest.fn(async () => zweiUnits);
+    await svc(prisma).getLevels(55);
+    expect(prisma.dafLexeme.groupBy).toHaveBeenCalledTimes(1);
+    const arg = prisma.dafLexeme.groupBy.mock.calls[0][0];
+    expect(arg.by).toEqual(['unitId']);
+    expect(arg.where).toEqual({
+      unitId: { in: [1, 4] },
+      core: true,
+      sectionId: { not: null },
+    });
+  });
+
+  it('getUnit says whether the unit is ready', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLexeme.count = jest.fn(async () => 0);
+    expect((await svc(prisma).getUnit(1, 55)).bereit).toBe(false);
+    prisma.dafLexeme.count = jest.fn(async () => 30);
+    expect((await svc(prisma).getUnit(1, 55)).bereit).toBe(true);
+    expect(prisma.dafLexeme.count.mock.calls[0][0].where).toEqual({
+      unitId: 1,
+      core: true,
+      sectionId: { not: null },
+    });
+  });
+});
 
 const svc = (prisma: any) =>
   new DafPortalReadService(prisma, { get: () => null } as any);

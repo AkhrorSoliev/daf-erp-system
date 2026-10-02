@@ -9,7 +9,6 @@ export const HOLAT_MATNI: Record<Holat, string> = {
   YASHIL: "Normada",
 };
 
-/** `amber-*` YO'Q — admin mavzusida rangsiz (`activity-format.ts` izohi). */
 const NUQTA: Record<Holat, string> = {
   AKKAUNT_YOQ: "bg-muted-foreground/40",
   HECH_KIRMAGAN: "bg-foreground/70",

@@ -27,9 +27,10 @@ interface Props {
  * Whose debt the dynamics table is about: everyone, or one student status.
  *
  * The old page wrapped these tiles under a large "Hozirgi qarz" headline. That
- * headline is not repeated here — it is the "Jami qarz" card one tab away, to
- * the so'm — but the tiles themselves earn their place, because they are the
- * table's filter and they show what each slice is worth while choosing it.
+ * headline is not repeated here — the «Hammasi» tile already shows that
+ * figure, to the so'm — and the tiles themselves earn their place, because
+ * they are the table's filter and they show what each slice is worth while
+ * choosing it.
  */
 export function DebtStatusFilterBar({
   data,

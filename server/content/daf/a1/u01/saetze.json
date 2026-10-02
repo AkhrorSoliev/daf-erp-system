@@ -307,6 +307,49 @@
    "origin": "GENERATED"
   },
   {
+   "sourceId": "u01-s4-10",
+   "section": "u01-s4",
+   "de": "Ich bin fünfzehn, und du?",
+   "uz": "Men o'n besh yoshdaman, sen-chi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-11",
+   "section": "u01-s4",
+   "de": "Mia ist zwölf, Jonas ist dreizehn.",
+   "uz": "Mia o'n ikki yoshda, Jonas o'n uch yoshda.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Jonas ist dreizehn, Mia ist zwölf."
+   ]
+  },
+  {
+   "sourceId": "u01-s4-12",
+   "section": "u01-s4",
+   "de": "Bist du sechzehn oder siebzehn?",
+   "uz": "Sen o'n olti yoshdamisan yoki o'n yetti?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-13",
+   "section": "u01-s4",
+   "de": "Nein, nicht achtzehn. Neunzehn!",
+   "uz": "Yo'q, o'n sakkiz emas. O'n to'qqiz!",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-14",
+   "section": "u01-s4",
+   "de": "Zehn und vier ist vierzehn.",
+   "uz": "O'n qo'shuv to'rt — o'n to'rt.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
    "sourceId": "u01-s5-01",
    "section": "u01-s5",
    "de": "Buchstabieren Sie das bitte.",

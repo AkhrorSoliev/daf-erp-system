@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { istRichtig, tippfehler } from './antwort';
 import type { FrageFormat, ItemType } from './frage.types';
 
 // The correct answer, recomputed from the material (design D7). Moved out of
@@ -30,6 +31,13 @@ export function richtigeAntwort(
     akzeptiert?: string[];
   },
 ): { richtig: string; akzeptiert: string[] } {
+  // A word's other correct spellings (`DafLexeme.akzeptiert`) — every typed
+  // word format accepts them, with the article wherever the word itself is
+  // accepted with it. For a sentence the same field holds word orders; only
+  // `SATZ_BAUEN` reads it for that.
+  const varianten = material.akzeptiert ?? [];
+  const mitArtikel = (formen: string[]): string[] =>
+    material.artikel ? formen.map((f) => `${material.artikel} ${f}`) : [];
   switch (format) {
     case 'WORT_UZ':
     case 'SATZ_UEBERSETZEN':
@@ -39,7 +47,7 @@ export function richtigeAntwort(
         richtig: material.artikel
           ? `${material.artikel} ${material.de}`
           : material.de,
-        akzeptiert: [material.de],
+        akzeptiert: [material.de, ...varianten, ...mitArtikel(varianten)],
       };
     case 'ARTIKEL':
       if (!material.artikel) {
@@ -53,8 +61,10 @@ export function richtigeAntwort(
       // uni «xato» deyish to'g'ri javobni jazolash bo'lardi. Ro'yxat
       // kontentda qo'lda yoziladi (`saetze.json` → `akzeptiert`), qo'riqchi
       // har biri aynan o'sha so'zlardan tuzilganini tekshiradi.
-      return { richtig: material.de, akzeptiert: material.akzeptiert ?? [] };
+      return { richtig: material.de, akzeptiert: varianten };
     case 'LUECKE':
+      // The blanked word's other spellings ("tschüs").
+      return { richtig: material.de, akzeptiert: varianten };
     case 'REAKTION':
     case 'DIALOG_LUECKE':
       // `DIALOG_LUECKE` — `LUECKE` bilan bir xil oddiy hol: to'g'ri javob
@@ -87,9 +97,11 @@ export function richtigeAntwort(
       // so'zini yozishga majburlardi.
       return {
         richtig: material.de,
-        akzeptiert: material.artikel
-          ? [`${material.artikel} ${material.de}`]
-          : [],
+        akzeptiert: [
+          ...mitArtikel([material.de]),
+          ...varianten,
+          ...mitArtikel(varianten),
+        ],
       };
     case 'BILD_TIPPEN':
       // Typed from the picture alone, so the article is part of the answer:
@@ -97,12 +109,46 @@ export function richtigeAntwort(
       if (!material.artikel) {
         throw new BadRequestException("Bu so'zda artikl yo'q");
       }
-      return { richtig: `${material.artikel} ${material.de}`, akzeptiert: [] };
+      return {
+        richtig: `${material.artikel} ${material.de}`,
+        akzeptiert: mitArtikel(varianten),
+      };
     default:
       throw new BadRequestException(
         `${format} javobi hozircha tekshirilmaydi — savol o'zligi kengayishi kerak`,
       );
   }
+}
+
+/**
+ * Typed-word formats where one slip is forgiven. Choice formats are not
+ * here — a click has no spelling — and neither is `SATZ_BAUEN`, whose tiles
+ * are the words themselves.
+ */
+const TIPPFEHLER_FORMATE = new Set<FrageFormat>([
+  'WORT_TIPPEN',
+  'BILD_TIPPEN',
+  'LUECKE',
+]);
+
+/**
+ * A text answer checked against the material. One slip in a typed word
+ * counts, as on Duolingo, and is reported as `tippfehler` so the answer
+ * panel shows the right spelling.
+ */
+export function textAntwort(
+  format: FrageFormat,
+  material: Parameters<typeof richtigeAntwort>[1],
+  given: string,
+): { isCorrect: boolean; richtig: string; tippfehler: boolean } {
+  const { richtig, akzeptiert } = richtigeAntwort(format, material);
+  if (istRichtig(given, richtig, akzeptiert)) {
+    return { isCorrect: true, richtig, tippfehler: false };
+  }
+  const slip =
+    TIPPFEHLER_FORMATE.has(format) &&
+    tippfehler(given, [richtig, ...akzeptiert]);
+  return { isCorrect: slip, richtig, tippfehler: slip };
 }
 
 /**

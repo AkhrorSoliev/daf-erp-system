@@ -25,3 +25,23 @@ describe("navItems — «Qo'llanma»", () => {
     expect(navItems[i + 1]?.title).toBe("Sozlamalar");
   });
 });
+
+describe("navItems — «Guruhlar»", () => {
+  // `GET /groups` kassirni rad etadi (groups.controller.ts): kassirga
+  // ko'rsatilgan havola faqat 403 ga olib borardi.
+  it("CEO, filial direktori, administrator va o'qituvchiga — kassirga emas", () => {
+    const groups = navItems.find((item) => item.url === "/groups");
+    expect(groups?.visibleForRoles).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe("navItems — Moliya → «Ish haqi»", () => {
+  // Administrator oylikni ko'rmaydi: server ham `GET /salary/monthly` va
+  // sahifaning boshqa o'qishlarini faqat CEO + filial direktoriga beradi.
+  it("faqat CEO va filial direktoriga", () => {
+    const salary = navItems
+      .find((item) => item.url === "/payments")
+      ?.children?.find((child) => child.url === "/payments/salary");
+    expect(salary?.visibleForRoles).toEqual([1, 2]);
+  });
+});

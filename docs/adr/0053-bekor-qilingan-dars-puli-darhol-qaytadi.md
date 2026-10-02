@@ -1,6 +1,6 @@
 # ADR-0053 — Bekor qilingan darsning puli oylik to'lovchilarga darhol qaytadi
 
-**Holati:** Qabul qilindi
+**Holati:** Qabul qilindi; 5-band — ADR-0063 bilan o'zgardi
 **Sana:** 2026-09-29
 **Bog'liq:** `server/src/billing/cancelled-lesson-release.ts`, `server/src/billing/departure-release.ts` (`cancelledLessonRelease`), `server/src/billing/monthly-charge.service.ts` (`releaseCancelledLesson`, `restoreChargeForReturn`), `server/src/lesson-cancellations/lesson-cancellations.service.ts`, ADR-0042, ADR-0044
 

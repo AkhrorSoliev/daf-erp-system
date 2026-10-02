@@ -18,10 +18,9 @@ describe('DailySnapshotService', () => {
       branch: {
         findMany: jest.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]),
       },
+      // No `aggregate`: the debt is `ReportsService.getDebtSplit`'s (ADR-0059),
+      // so a writer that reads it from `Student` itself throws here.
       student: {
-        aggregate: jest
-          .fn()
-          .mockResolvedValue({ _sum: { balance: -500 }, _count: 3 }),
         count: jest.fn().mockResolvedValue(400),
       },
       payment: {
@@ -40,6 +39,11 @@ describe('DailySnapshotService', () => {
       getIncomeMonthAttribution: jest
         .fn()
         .mockResolvedValue({ currentMonth: 6, lessonsValue: 13 }),
+      // Two numbers, never added: 3 studying debtors owe 500, 9 others 7 000.
+      getDebtSplit: jest.fn().mockResolvedValue({
+        studying: { total: 500, count: 3, currentMonth: 200, older: 300 },
+        notStudying: { total: 7_000, count: 9 },
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -70,6 +74,28 @@ describe('DailySnapshotService', () => {
     expect(data.collectedForMonth).toBe(6);
     expect(data.expectedValue).toBe(170);
     expect(data).not.toHaveProperty('collectionPct');
+  });
+
+  it('writes the studying debt — total and count — and never the two added', async () => {
+    await service.persistForCompany(1001);
+
+    // The 21:00 report prints the same «O'qiyotganlar» number, and the next
+    // report's ▲/▼ compares against this row — whose only writer this is.
+    const data = prisma.dailyFinancialSnapshot.create.mock.calls[0][0].data;
+    expect(data.totalDebt).toBe(500);
+    expect(data.debtorCount).toBe(3);
+  });
+
+  it("asks the split for each row's own scope, and not for a month", async () => {
+    await service.persistForCompany(1001);
+
+    // Company-wide row, then one per branch. The month is the current Tashkent
+    // one by default — the snapshot's own.
+    expect(reports.getDebtSplit.mock.calls).toEqual([
+      [1001, { branchIds: null }],
+      [1001, { branchIds: [1] }],
+      [1001, { branchIds: [2] }],
+    ]);
   });
 
   it('never upserts on the compound unique — NULL branchId would not match', async () => {

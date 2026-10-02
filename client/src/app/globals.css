@@ -51,7 +51,10 @@
   /* --- Lumio (student portal) utility aliases ---
      Raw values live only under `.lumio` (see the scoped block below), so
      these utilities resolve to a color/radius ONLY inside the portal scope
-     and to nothing elsewhere — automatic containment, zero leakage. */
+     and to nothing elsewhere — automatic containment, zero leakage.
+     Never alias a colour Tailwind already has (amber, teal, sky): here it
+     would replace Tailwind's shade on every portal, and staff pages would
+     draw it with no colour. `.lumio` re-points those itself. */
   --color-coral-50: var(--coral-50);
   --color-coral-100: var(--coral-100);
   --color-coral-200: var(--coral-200);
@@ -59,22 +62,9 @@
   --color-coral-500: var(--coral-500);
   --color-coral-600: var(--coral-600);
   --color-coral-700: var(--coral-700);
-  --color-amber-50: var(--amber-50);
-  --color-amber-100: var(--amber-100);
-  --color-amber-500: var(--amber-500);
-  --color-amber-600: var(--amber-600);
-  --color-amber-700: var(--amber-700);
-  --color-teal-50: var(--teal-50);
-  --color-teal-100: var(--teal-100);
-  --color-teal-500: var(--teal-500);
-  --color-teal-600: var(--teal-600);
-  --color-teal-700: var(--teal-700);
   --color-grape-100: var(--grape-100);
   --color-grape-500: var(--grape-500);
   --color-grape-600: var(--grape-600);
-  --color-sky-100: var(--sky-100);
-  --color-sky-500: var(--sky-500);
-  --color-sky-600: var(--sky-600);
   --color-ink-900: var(--ink-900);
   --color-ink-800: var(--ink-800);
   --color-ink-700: var(--ink-700);
@@ -300,6 +290,22 @@
   --sky-400: #5bb1ff;
   --sky-500: #2e97ff;
   --sky-600: #1b7be0;
+
+  /* Tailwind's own amber, teal and sky shades take Lumio's values inside
+     the portal only (see the note in @theme above). */
+  --color-amber-50: var(--amber-50);
+  --color-amber-100: var(--amber-100);
+  --color-amber-500: var(--amber-500);
+  --color-amber-600: var(--amber-600);
+  --color-amber-700: var(--amber-700);
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-sky-100: var(--sky-100);
+  --color-sky-500: var(--sky-500);
+  --color-sky-600: var(--sky-600);
 
   --ink-900: #0e2a3d; /* headings */
   --ink-800: #1b3a4e;

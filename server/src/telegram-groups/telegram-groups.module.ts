@@ -5,6 +5,7 @@ import { TelegramAdminBotService } from './telegram-admin-bot.service';
 import { TelegramAdminBotRegistrar } from './telegram-admin-bot-registrar';
 import { TelegramGroupStatsService } from './telegram-group-stats.service';
 import { TelegramGroupBroadcastListener } from './telegram-group-broadcast.listener';
+import { TelegramGroupUnmarkedLessonListener } from './telegram-group-unmarked-lesson.listener';
 import { TelegramGroupDailyCronService } from './telegram-group-daily-cron.service';
 import { DailySnapshotService } from './daily-snapshot.service';
 import { DailySnapshotCron } from './daily-snapshot.cron';
@@ -27,6 +28,7 @@ import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module'
     TelegramGroupDailyReportService,
     TelegramGroupReportMenuService,
     TelegramGroupBroadcastListener,
+    TelegramGroupUnmarkedLessonListener,
     TelegramGroupDailyCronService,
     TelegramGroupAnnouncementService,
     TelegramGroupDigestService,

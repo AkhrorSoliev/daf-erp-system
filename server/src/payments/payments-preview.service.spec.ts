@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { PaymentsPreviewService } from './payments-preview.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { applyDiscount } from '../billing/monthly-price';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 
 const baseEnrollment = (
   overrides: Partial<{
@@ -11,6 +12,7 @@ const baseEnrollment = (
     model: 'LESSON_PACK' | 'MONTHLY';
     groupName: string;
     courseName: string;
+    groupStatus: 'ACTIVE' | 'FORMING' | 'PAUSED';
   }> = {},
 ) => ({
   id: 'enr-1',
@@ -18,6 +20,7 @@ const baseEnrollment = (
   group: {
     id: 'grp-1',
     name: overrides.groupName ?? '#029',
+    statusEnum: overrides.groupStatus ?? 'ACTIVE',
     course: {
       name: overrides.courseName ?? 'Intensive',
       price: overrides.price ?? 414000,
@@ -35,6 +38,7 @@ describe('PaymentsPreviewService', () => {
     transaction: { count: jest.Mock; findMany: jest.Mock };
     attendance: { findMany: jest.Mock };
   };
+  let admission: { reachForPayment: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -46,10 +50,12 @@ describe('PaymentsPreviewService', () => {
       },
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
     };
+    admission = { reachForPayment: jest.fn().mockResolvedValue(null) };
     const mod = await Test.createTestingModule({
       providers: [
         PaymentsPreviewService,
         { provide: PrismaService, useValue: prisma },
+        { provide: LessonAdmissionService, useValue: admission },
       ],
     }).compile();
     service = mod.get(PaymentsPreviewService);
@@ -230,6 +236,33 @@ describe('PaymentsPreviewService', () => {
   });
 
   describe('MONTHLY courses', () => {
+    it('attaches how far a monthly payment reaches (ADR-0047)', async () => {
+      const reach = {
+        paidThrough: '2026-10-05',
+        next: { date: '2026-10-07', groupName: '#029', needed: 3846 },
+        clearsDebt: false,
+      };
+      admission.reachForPayment.mockResolvedValue(reach);
+      prisma.student.findFirst.mockResolvedValue({
+        balance: -450000,
+        discountPercent: 0,
+      });
+      prisma.enrollment.findMany.mockResolvedValue([
+        baseEnrollment({ model: 'MONTHLY', price: 450000 }),
+      ]);
+
+      const res = await service.preview(10001, 100000, 1001, null);
+
+      expect(res.monthly?.admission).toEqual(reach);
+      expect(admission.reachForPayment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: 10001,
+          companyId: 1001,
+          balanceAfter: -350000,
+        }),
+      );
+    });
+
     it('shows the debt and the next month instead of cycles', async () => {
       prisma.student.findFirst.mockResolvedValue({
         balance: -450000,
@@ -257,6 +290,7 @@ describe('PaymentsPreviewService', () => {
             amount: 450000,
           },
         ],
+        admission: null,
       });
       expect(res.breakdown).toEqual([
         expect.objectContaining({ kind: 'DEBT_REPAY', amount: 450000 }),
@@ -321,10 +355,175 @@ describe('PaymentsPreviewService', () => {
         nextMonthAmount: 0,
         discountPercent: 0,
         enrollments: [],
+        admission: null,
       });
       expect(res.breakdown).toEqual([
         expect.objectContaining({ kind: 'DEBT_REPAY', amount: 120000 }),
       ]);
+    });
+
+    /**
+     * Prisma is a mock here, so it answers the one criterion the group-status
+     * tests are about: the group's status in the `where` (one status, or a
+     * list). An unfiltered query returns every row, exactly as the real
+     * database would.
+     */
+    const answerByGroupStatus =
+      (rows: ReturnType<typeof baseEnrollment>[]) =>
+      ({
+        where,
+      }: {
+        where: { group?: { statusEnum?: string | { in: string[] } } };
+      }) => {
+        const wanted = where.group?.statusEnum;
+        return Promise.resolve(
+          rows.filter(
+            (row) =>
+              wanted === undefined ||
+              (typeof wanted === 'string'
+                ? row.group.statusEnum === wanted
+                : wanted.in.includes(row.group.statusEnum)),
+          ),
+        );
+      };
+
+    /**
+     * Monthly billing charges ACTIVE groups only (`MonthlyChargeService`: the
+     * `statusEnum` guard on a single enrollment and on the daily run's query).
+     * An enrollment in a PAUSED group is still ACTIVE, so the preview used to
+     * tell the student to pay a month that would never be charged.
+     */
+    describe('a PAUSED group', () => {
+      it('is not billed next month: only the ACTIVE group is summed', async () => {
+        prisma.student.findFirst.mockResolvedValue({
+          balance: 0,
+          discountPercent: 0,
+        });
+        prisma.enrollment.findMany.mockImplementation(
+          answerByGroupStatus([
+            baseEnrollment({ model: 'MONTHLY', price: 450_000 }),
+            {
+              ...baseEnrollment({
+                model: 'MONTHLY',
+                price: 400_000,
+                groupName: '#031',
+                courseName: 'Standart',
+                groupStatus: 'PAUSED',
+              }),
+              id: 'enr-2',
+            },
+          ]),
+        );
+
+        const res = await service.preview(10001, 100_000, 1001, null);
+
+        expect(res.monthly?.nextMonthAmount).toBe(450_000);
+        expect(res.monthly?.enrollments.map((e) => e.groupName)).toEqual([
+          '#029',
+        ]);
+        expect(res.scenario).toBe('SINGLE_ENROLLMENT');
+      });
+
+      it('leaves a student whose only group is paused with nothing due next month', async () => {
+        prisma.student.findFirst.mockResolvedValue({
+          balance: -120_000,
+          discountPercent: 0,
+        });
+        prisma.enrollment.findMany.mockImplementation(
+          answerByGroupStatus([
+            baseEnrollment({ model: 'MONTHLY', groupStatus: 'PAUSED' }),
+          ]),
+        );
+
+        const res = await service.preview(10001, 120_000, 1001, null);
+
+        expect(res.model).toBe('MONTHLY');
+        expect(res.scenario).toBe('NO_ENROLLMENT');
+        expect(res.monthly).toMatchObject({
+          debt: 120_000,
+          nextMonthAmount: 0,
+          enrollments: [],
+        });
+        // The reach reads the student's own charges, not this list.
+        expect(admission.reachForPayment).toHaveBeenCalledWith(
+          expect.objectContaining({ studentId: 10001, balanceAfter: 0 }),
+        );
+      });
+    });
+
+    /**
+     * A FORMING group is not billed yet, but it will be: the status cron makes
+     * it ACTIVE on its start date and the daily run then writes its first
+     * charge. A new student in a forming group is who the admin takes a first
+     * payment from, so the preview keeps it. A PAUSED group has no date at
+     * which billing resumes, which is why it is the one left out.
+     */
+    describe('a FORMING group', () => {
+      it('still counts: a student whose only group has not started owes the month', async () => {
+        prisma.student.findFirst.mockResolvedValue({
+          balance: 0,
+          discountPercent: 0,
+        });
+        prisma.enrollment.findMany.mockImplementation(
+          answerByGroupStatus([
+            baseEnrollment({
+              model: 'MONTHLY',
+              price: 450_000,
+              groupName: '#032',
+              groupStatus: 'FORMING',
+            }),
+          ]),
+        );
+
+        const res = await service.preview(10001, 450_000, 1001, null);
+
+        expect(res.scenario).toBe('SINGLE_ENROLLMENT');
+        expect(res.monthly?.nextMonthAmount).toBe(450_000);
+        expect(res.monthly?.enrollments.map((e) => e.groupName)).toEqual([
+          '#032',
+        ]);
+      });
+
+      it('is summed beside an ACTIVE group, and a PAUSED one is still left out', async () => {
+        prisma.student.findFirst.mockResolvedValue({
+          balance: 0,
+          discountPercent: 0,
+        });
+        prisma.enrollment.findMany.mockImplementation(
+          answerByGroupStatus([
+            baseEnrollment({ model: 'MONTHLY', price: 450_000 }),
+            {
+              ...baseEnrollment({
+                model: 'MONTHLY',
+                price: 400_000,
+                groupName: '#032',
+                courseName: 'Standart',
+                groupStatus: 'FORMING',
+              }),
+              id: 'enr-2',
+            },
+            {
+              ...baseEnrollment({
+                model: 'MONTHLY',
+                price: 300_000,
+                groupName: '#031',
+                courseName: 'Standart',
+                groupStatus: 'PAUSED',
+              }),
+              id: 'enr-3',
+            },
+          ]),
+        );
+
+        const res = await service.preview(10001, 100_000, 1001, null);
+
+        expect(res.monthly?.nextMonthAmount).toBe(850_000);
+        expect(res.monthly?.enrollments.map((e) => e.groupName)).toEqual([
+          '#029',
+          '#032',
+        ]);
+        expect(res.scenario).toBe('MULTI_ENROLLMENT');
+      });
     });
 
     it('keeps the cycle projection when any enrollment is a lesson pack', async () => {

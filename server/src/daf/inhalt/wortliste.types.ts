@@ -23,6 +23,13 @@ export interface WortEintrag {
    * va qaror yozilmasa keyin uni tekshirib bo'lmaydi.
    */
   grund?: string;
+  /**
+   * `true` — the word is built from words already taught (dreizehn = drei +
+   * zehn, einundzwanzig = eins + und + zwanzig), so it does not count
+   * against a section's or a unit's word budget. It still needs a `grund`:
+   * stepping outside the budget is a decision and must say why.
+   */
+  ausserhalbBudget?: boolean;
 }
 
 export interface WortlisteFile {

@@ -4,34 +4,42 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import { GroupStatus } from '@prisma/client';
 import { DAY_NAME_TO_JS, tashkentDateStr } from './shared/date-utils';
 import { HolidaysService } from '../holidays/holidays.service';
+import {
+  effectiveLessonTimes,
+  lessonHasEnded,
+  tashkentClock,
+} from './shared/attendance-window';
 
 @Injectable()
 export class AttendanceValidationService {
   constructor(
     private prisma: PrismaService,
     private holidaysService: HolidaysService,
+    private settings: SettingsService,
   ) {}
 
-  /** Roles that bypass lesson time restriction */
-  private static readonly TIME_BYPASS_ROLES = new Set([
-    'CEO',
-    'Branch Director',
-    'Administrator',
-  ]);
+  /**
+   * `payment.attendanceOpensMinutesBefore` — how many minutes before the
+   * lesson starts a new register opens (ADR-0048 §5; default 10).
+   */
+  opensMinutesBefore(companyId: number): Promise<number> {
+    return this.settings.get(companyId, 'payment.attendanceOpensMinutesBefore');
+  }
 
   /**
-   * Validate that a date is a valid lesson date for the given group.
-   * Checks: date format, group existence, group status, date range, schedule, holidays, lesson time.
+   * Validate that a date is a lesson of the group: date format, group
+   * existence + company, ACTIVE status, date range, schedule or a moved
+   * lesson, the group's branch holiday. It says nothing about the clock: the
+   * new-register window is `assertAttendanceWindowOpen`'s, for every role
+   * (ADR-0054). Returns the lesson's effective times (a move's own times win,
+   * `effectiveLessonTimes`) and the company's lead, so every caller opens the
+   * window the same way.
    */
-  async validateLessonDate(
-    groupId: string,
-    date: string,
-    companyId?: number,
-    roles?: string[],
-  ) {
+  async validateLessonDate(groupId: string, date: string, companyId?: number) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new BadRequestException(
         "Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting",
@@ -53,6 +61,7 @@ export class AttendanceValidationService {
       select: {
         id: true,
         companyId: true,
+        branchId: true,
         exactDays: true,
         startDate: true,
         endDate: true,
@@ -120,76 +129,48 @@ export class AttendanceValidationService {
       }
     }
 
-    const holiday =
-      await this.holidaysService.findActiveHolidayCovering(parsedDate);
+    const holiday = await this.holidaysService.findActiveHolidayCovering(
+      parsedDate,
+      group.branchId,
+    );
     if (holiday) {
       throw new BadRequestException(`Bu sana bayram kuni: ${holiday.name}`);
     }
 
-    // Lesson time check (server time, only for Teacher/Cashier).
-    // On a moved-lesson day with a per-reschedule time override, use those
-    // times instead of the group's defaults.
-    const canBypassTime = roles?.some((r) =>
-      AttendanceValidationService.TIME_BYPASS_ROLES.has(r),
-    );
-    const effectiveStartTime =
-      isMovedLessonDay && reschedule?.newLessonStartTime
-        ? reschedule.newLessonStartTime
-        : group.lessonStartTime;
-    const effectiveEndTime =
-      isMovedLessonDay && reschedule?.newLessonEndTime
-        ? reschedule.newLessonEndTime
-        : group.lessonEndTime;
-    if (!canBypassTime) {
-      // Production server runs in UTC; lesson times are Asia/Tashkent (UTC+5)
-      const tashkentParts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Tashkent',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).formatToParts(new Date());
-      const part = (type: string) =>
-        tashkentParts.find((p) => p.type === type)!.value;
-      const todayStr = `${part('year')}-${part('month')}-${part('day')}`;
+    const { startTime: effectiveStartTime, endTime: effectiveEndTime } =
+      effectiveLessonTimes(group, isMovedLessonDay ? reschedule : null);
+    const opensMinutesBefore = await this.opensMinutesBefore(group.companyId);
 
-      // A teacher marks only the lesson being taught now. Any other day —
-      // a forgotten past lesson or a future one — is the administrator's
-      // (the reminder after the lesson tells the teacher exactly that).
-      // Checked before the time window, which alone let any non-today date
-      // through.
-      if (date !== todayStr) {
-        throw new BadRequestException(
-          "O'qituvchi davomatni faqat dars kuni belgilaydi. Boshqa kun uchun administratorga murojaat qiling",
-        );
-      }
+    return {
+      group,
+      parsedDate,
+      effectiveStartTime: effectiveStartTime ?? null,
+      effectiveEndTime: effectiveEndTime ?? null,
+      opensMinutesBefore,
+    };
+  }
 
-      if (effectiveStartTime && effectiveEndTime) {
-        const currentMinutes =
-          Number(part('hour')) * 60 + Number(part('minute'));
-        const [startH, startM] = effectiveStartTime.split(':').map(Number);
-        const [endH, endM] = effectiveEndTime.split(':').map(Number);
-        const lessonStart = startH * 60 + startM;
-        const lessonEnd = endH * 60 + endM;
-
-        // 10 daqiqa oldin ochiladi
-        const windowStart = lessonStart - 10;
-
-        if (currentMinutes < windowStart) {
-          throw new BadRequestException(
-            `Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (${effectiveStartTime})`,
-          );
-        }
-        if (currentMinutes > lessonEnd) {
-          throw new BadRequestException(
-            `Dars vaqti tugagan (${effectiveEndTime}). Davomat olish yopilgan`,
-          );
-        }
-      }
+  /**
+   * A pre-marked absence only seeds the lesson's register, so it makes sense
+   * until the lesson ends — on the new-register window's boundary (end minute
+   * closed; a group without times ends at 23:00).
+   */
+  assertLessonNotEnded(
+    lesson: { lessonDay: string; endTime: string | null },
+    now: Date = new Date(),
+  ): void {
+    const { todayStr, nowMinutes } = tashkentClock(now);
+    if (
+      lessonHasEnded({
+        date: lesson.lessonDay,
+        todayStr,
+        nowMinutes,
+        endTime: lesson.endTime,
+      })
+    ) {
+      throw new BadRequestException(
+        "Dars tugagan — kelmaslikni oldindan belgilab bo'lmaydi",
+      );
     }
-
-    return { group, parsedDate };
   }
 }

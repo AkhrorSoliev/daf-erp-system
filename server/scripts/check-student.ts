@@ -9,7 +9,6 @@
  */
 import { PrismaClient } from '@prisma/client';
 import {
-  SYSTEM_START,
   som,
   day,
   dt,
@@ -20,6 +19,7 @@ import {
   run,
   parseArgs,
 } from './lib/check-cli';
+import { chargeMonth, fairBalance } from './lib/fair-balance';
 
 async function main(prisma: PrismaClient) {
   const { positional, full } = parseArgs();
@@ -90,16 +90,60 @@ async function main(prisma: PrismaClient) {
   }
 
   const disc = s.discountPercent || 0;
-  const discMul = 1 - disc / 100;
-  let prepaidValue = 0;
-  let prepaidCount = 0;
-  for (const e of enrollments) {
-    if (e.status === 'ACTIVE' && e.prepaidLessonsRemaining > 0) {
-      prepaidValue += e.prepaidLessonsRemaining * (groupInfo.get(e.groupId)?.perLesson ?? 0);
-      prepaidCount += e.prepaidLessonsRemaining;
-    }
-  }
-  prepaidValue = Math.round(prepaidValue * discMul);
+
+  const [atts, payments, txns, charges] = await Promise.all([
+    prisma.attendance.findMany({
+      where: { studentId: id },
+      orderBy: { date: 'asc' },
+      select: { id: true, date: true, status: true, groupId: true },
+    }),
+    prisma.payment.findMany({
+      where: { studentId: id },
+      orderBy: { createdAt: 'asc' },
+      select: { amount: true, method: true, status: true, source: true, createdAt: true, note: true },
+    }),
+    prisma.transaction.findMany({
+      where: { studentId: id },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        type: true,
+        amount: true,
+        balanceBefore: true,
+        balanceAfter: true,
+        createdAt: true,
+        reversedAt: true,
+        reversedTransactionId: true,
+        description: true,
+        attendanceId: true,
+        enrollmentId: true,
+        metadata: true,
+      },
+    }),
+    prisma.enrollmentMonthlyCharge.findMany({
+      where: { studentId: id },
+      orderBy: [{ periodYear: 'asc' }, { periodMonth: 'asc' }],
+      select: {
+        groupId: true,
+        periodYear: true,
+        periodMonth: true,
+        status: true,
+        chargedAmount: true,
+        coveredLessons: true,
+        plannedLessons: true,
+        creditAmount: true,
+        coveredDates: true,
+      },
+    }),
+  ]);
+  const fair = fairBalance({
+    balance: s.balance,
+    discountPercent: disc,
+    todayRate: new Map([...groupInfo].map(([g, gi]) => [g, gi.perLesson])),
+    enrollments,
+    attendance: atts,
+    txns,
+    charges,
+  });
 
   // ── header + profile + headline ───────────────────────────────────────────
   printHeader(`O'QUVCHI #${s.id} — ${s.firstName} ${s.lastName}`);
@@ -118,8 +162,8 @@ async function main(prisma: PrismaClient) {
 
   section('BALANS');
   console.log(`  Balans            : ${som(s.balance)} so'm`);
-  console.log(`  Prepaid (ushlab)  : ${som(prepaidValue)} so'm  (${prepaidCount} dars)`);
-  console.log(`  Pozitsiya         : ${som(s.balance + prepaidValue)} so'm  (balans + prepaid)`);
+  console.log(`  Prepaid (ushlab)  : ${som(fair.prepaidValue)} so'm  (${fair.prepaidCount} dars)`);
+  console.log(`  Pozitsiya         : ${som(fair.position)} so'm  (balans + prepaid)`);
 
   // ── enrollments ───────────────────────────────────────────────────────────
   section(`ENROLLMENTLAR (${enrollments.length})`);
@@ -142,62 +186,28 @@ async function main(prisma: PrismaClient) {
   );
   console.log(`  → ${Object.entries(statusCount).map(([k, v]) => `${k}:${v}`).join('  ') || '—'}`);
 
-  // ── attendance + billable charge ──────────────────────────────────────────
-  const atts = await prisma.attendance.findMany({
-    where: { studentId: id },
-    orderBy: { date: 'asc' },
-    select: { date: true, status: true, groupId: true },
-  });
-  const startByGroup = new Map<string, string | null>();
-  for (const e of enrollments) {
-    const sd = day(e.startDate);
-    const cur = startByGroup.get(e.groupId);
-    if (cur === undefined) startByGroup.set(e.groupId, sd);
-    else if (sd !== '—' && (!cur || cur === '—' || sd < cur)) startByGroup.set(e.groupId, sd);
-  }
+  // ── attendance ────────────────────────────────────────────────────────────
   const counts: Record<string, number> = {};
-  let billableCharge = 0;
-  let billableCount = 0;
-  for (const a of atts) {
-    counts[a.status] = (counts[a.status] ?? 0) + 1;
-    const d = day(a.date);
-    const start = startByGroup.get(a.groupId);
-    // CLAUDE.md billing matrix: PRESENT/LATE/ABSENT are billable ("lesson held = lesson paid").
-    const billable =
-      ['PRESENT', 'LATE', 'ABSENT'].includes(a.status) &&
-      d >= SYSTEM_START &&
-      (!start || start === '—' || d >= start);
-    if (billable) {
-      billableCharge += groupInfo.get(a.groupId)?.perLesson ?? 0;
-      billableCount++;
-    }
-  }
+  for (const a of atts) counts[a.status] = (counts[a.status] ?? 0) + 1;
   section(`DAVOMAT (${atts.length})`);
   console.log(`  ${Object.entries(counts).map(([k, v]) => `${k}:${v}`).join('  ') || '—'}`);
   console.log(
-    `  Billable (>=01.05, >=start, PRESENT/LATE/ABSENT): ${billableCount} dars → ${som(billableCharge)} so'm (chegirmasiz)`,
+    `  Billable (>=01.05, >=start, PRESENT/LATE/ABSENT): ${fair.billableCount} dars ` +
+      `(01.09 gacha: ${fair.billableBeforeMonthly}, 01.09 dan: ${fair.billableCount - fair.billableBeforeMonthly})`,
   );
   if (full) {
     printTable(
       ['sana', 'status', 'guruh', 'billable'],
-      atts.map((a) => {
-        const d = day(a.date);
-        const start = startByGroup.get(a.groupId);
-        const billable =
-          ['PRESENT', 'LATE', 'ABSENT'].includes(a.status) &&
-          d >= SYSTEM_START &&
-          (!start || start === '—' || d >= start);
-        return [d, a.status, groupInfo.get(a.groupId)?.name ?? a.groupId, billable ? '✓' : ''];
-      }),
+      atts.map((a) => [
+        day(a.date),
+        a.status,
+        groupInfo.get(a.groupId)?.name ?? a.groupId,
+        fair.isBillable(a) ? '✓' : '',
+      ]),
     );
   }
 
   // ── payments ──────────────────────────────────────────────────────────────
-  const payments = await prisma.payment.findMany({
-    where: { studentId: id },
-    orderBy: { createdAt: 'asc' },
-    select: { amount: true, method: true, status: true, source: true, createdAt: true, note: true },
-  });
   const paidSum = payments.filter((p) => p.status === 'COMPLETED').reduce((a, p) => a + p.amount, 0);
   section(`TO'LOVLAR (${payments.length}) — COMPLETED jami: ${som(paidSum)} so'm`);
   printTable(
@@ -207,33 +217,28 @@ async function main(prisma: PrismaClient) {
   );
 
   // ── transactions (ledger) ─────────────────────────────────────────────────
-  const txns = await prisma.transaction.findMany({
-    where: { studentId: id },
-    orderBy: { createdAt: 'asc' },
-    select: {
-      type: true,
-      amount: true,
-      balanceBefore: true,
-      balanceAfter: true,
-      createdAt: true,
-      reversedAt: true,
-      reversedTransactionId: true,
-      description: true,
-    },
-  });
-  const byType: Record<string, { count: number; sum: number }> = {};
+  // Every row is summed, reversed originals AND their reversal rows: the pair
+  // nets to zero. Dropping only the original (reversedAt set) kept the
+  // reversal's opposite sign — #10082's LESSON_DEDUCTION read -1 874 990
+  // instead of -2 166 655.
+  const byType: Record<string, { count: number; voided: number; sum: number }> = {};
   for (const t of txns) {
-    if (t.reversedAt == null) {
-      byType[t.type] = byType[t.type] ?? { count: 0, sum: 0 };
-      byType[t.type].count++;
-      byType[t.type].sum += t.amount;
-    }
+    byType[t.type] = byType[t.type] ?? { count: 0, voided: 0, sum: 0 };
+    byType[t.type].count++;
+    if (t.reversedAt || t.reversedTransactionId) byType[t.type].voided++;
+    byType[t.type].sum += t.amount;
   }
-  section(`LEDGER (${txns.length} ta, aktiv reversedAt=null bo'yicha guruh)`);
+  const ledgerSum = txns.reduce((acc, t) => acc + t.amount, 0);
+  section(`LEDGER (${txns.length} ta; jami = barcha qatorlar, bekor juftlari nolga tushadi)`);
   printTable(
-    ['type', 'soni', 'jami'],
-    Object.entries(byType).map(([k, v]) => [k, v.count, som(v.sum)]),
-    ['l', 'r', 'r'],
+    ['type', 'soni', 'shundan bekor', 'jami'],
+    Object.entries(byType).map(([k, v]) => [k, v.count, v.voided, som(v.sum)]),
+    ['l', 'r', 'r', 'r'],
+  );
+  console.log(
+    `  Σ ledger = ${som(ledgerSum)}  ${
+      ledgerSum === s.balance ? '✓ balansga teng' : `⚠ balansdan farq: ${som(s.balance - ledgerSum)}`
+    }`,
   );
   if (full) {
     console.log('');
@@ -250,33 +255,35 @@ async function main(prisma: PrismaClient) {
     );
   }
 
-  // ── fair-balance reconciliation (same model as audit-overcharged-students) ─
-  const moneyInOther = txns
-    .filter(
-      (t) =>
-        t.reversedAt == null &&
-        // A reversed original (reversedAt set) is excluded above; its REVERSAL row
-        // has reversedAt=null but reversedTransactionId set. Counting the reversal
-        // row alone double-subtracts the undone pair (e.g. a corrected 3.5M payment
-        // showing a phantom -3.5M) — skip reversal rows so the pair nets to zero.
-        t.reversedTransactionId == null &&
-        !['LESSON_DEDUCTION', 'ADJUSTMENT', 'LESSON_CONSUMPTION'].includes(t.type),
-    )
-    .reduce((acc, t) => acc + t.amount, 0);
-  const fairCharge = Math.round(billableCharge * discMul);
-  const fairPosition = moneyInOther - fairCharge;
-  const position = s.balance + prepaidValue;
-  const overcharge = fairPosition - position;
+  // ── fair-balance reconciliation (scripts/lib/fair-balance.ts) ─────────────
   section('ADOLATLI BALANS TEKSHIRUVI');
-  console.log(`  money-in (deduction/adjustment'siz) : ${som(moneyInOther)}`);
-  console.log(`  adolatli dars haqi (chegirmali)     : ${som(fairCharge)}  (${billableCount} dars)`);
-  console.log(`  → adolatli pozitsiya = money-in − haq: ${som(fairPosition)}`);
-  console.log(`  haqiqiy pozitsiya = balans + prepaid : ${som(position)}`);
+  console.log(`  money-in (to'lov va boshqa kirim)    : ${som(fair.moneyIn)}`);
   console.log(
-    `  ORTIQCHA (adolatli − haqiqiy) = ${som(overcharge)} so'm  ${
-      Math.abs(overcharge) < 1000
+    `  darsbay haq, paket narxi (chegirmali): ${som(fair.fairLessonFee)}  (${fair.lessonBilledCount} dars` +
+      `${fair.guessed ? `, ${fair.guessed} tasi ledger narxisiz — taxmin` : ''}` +
+      `${fair.rateCorrection ? `, narx tuzatishi −${som(fair.rateCorrection)}` : ''})`,
+  );
+  console.log(
+    `  oylik hisoblar (01.09 dan)           : ${som(fair.monthlyFee)}  (${fair.liveChargeCount} ta, ${fair.monthlyLessons} dars shu oylarda)`,
+  );
+  for (const c of charges)
+    console.log(
+      `      ${chargeMonth(c)}  ${groupInfo.get(c.groupId)?.name ?? c.groupId}  ${som(c.chargedAmount)}  ` +
+        `(${c.coveredLessons}/${c.plannedLessons} dars${c.creditAmount ? `, kredit −${som(c.creditAmount)}` : ''})` +
+        `${c.status === 'CHARGED' ? '' : `  ${c.status} — hisobga olinmadi`}`,
+    );
+  console.log(`  → adolatli pozitsiya = money-in − haq : ${som(fair.fairPosition)}`);
+  console.log(`  haqiqiy pozitsiya = balans + prepaid  : ${som(fair.position)}`);
+  if (fair.adjustmentSum)
+    console.log(
+      `      (balansdagi ADJUSTMENT tuzatishlari: ${som(fair.adjustmentSum)}` +
+        `${fair.overchargeSum ? `, shundan overcharge*: ${som(fair.overchargeSum)}` : ''})`,
+    );
+  console.log(
+    `  ORTIQCHA (adolatli − haqiqiy) = ${som(fair.difference)} so'm  ${
+      Math.abs(fair.difference) < 1000
         ? '✓ to\'g\'ri keladi'
-        : overcharge > 0
+        : fair.difference > 0
           ? '⚠ ortiqcha hisoblangan (qaytarish kerak)'
           : '⚠ kam hisoblangan (qarzdor)'
     }`,

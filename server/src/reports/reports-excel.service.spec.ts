@@ -2,7 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Workbook, Worksheet } from 'exceljs';
 import { ReportsExcelService } from './reports-excel.service';
 import { ReportsService } from './reports.service';
-import { cellText, tashkentTodayStr } from './reports-excel.helpers';
+import type { DebtSplit } from './debt-split';
+import {
+  cellText,
+  tashkentTodayStr,
+  GREEN,
+  RED,
+} from './reports-excel.helpers';
 
 describe('ReportsExcelService', () => {
   let service: ReportsExcelService;
@@ -139,6 +145,13 @@ describe('ReportsExcelService', () => {
     total: 80_000,
     count: 1,
   };
+  // The debt as two numbers (ADR-0059). «Filiallar» prints the STUDYING one per
+  // branch; neither equals `debtors.total` (the whole receivable the balance
+  // sheet ties to), so a column still reading the old source cannot pass.
+  const debtSplit: DebtSplit = {
+    studying: { total: 60_000, count: 2, currentMonth: 25_000, older: 35_000 },
+    notStudying: { total: 20_000, count: 1 },
+  };
   const recon = {
     period: { start: '2026-06-01', end: '2026-06-30' },
     student: {
@@ -184,6 +197,7 @@ describe('ReportsExcelService', () => {
   const netProfit = {
     revenue: 1_000_000,
     revenueBasis: 'recognized' as const,
+    balanceWithdrawals: 0,
     teacherSalary: 400_000,
     teacherSalaryBasis: 'hisoblangan' as const,
     adminSalaryBasis: 'hisoblangan' as const,
@@ -213,6 +227,15 @@ describe('ReportsExcelService', () => {
     expectedValue: 1_120_000,
     heldValue: 1_000_000,
     remainingValue: 120_000,
+  };
+  // «Bu oy hisoblandi» (ADR-0058) — what block 4 of «Xulosa» reads from 2026-09.
+  const monthCharges = {
+    month: '2026-10',
+    charged: 900_000,
+    paid: 600_000,
+    unpaid: 300_000,
+    paidPct: 66.7,
+    students: 12,
   };
   const studentFlow = {
     month: '2026-06',
@@ -343,7 +366,11 @@ describe('ReportsExcelService', () => {
     // Recognized "dars tushumi" — set equal to cash revenue (1_000_000) so the
     // net-profit expectations isolate the salary top-up gating under test.
     getRecognizedRevenue: jest.fn().mockResolvedValue(1_000_000),
+    getBalanceWithdrawals: jest
+      .fn()
+      .mockResolvedValue({ total: 0, teacherCredited: 0, students: [] }),
     getDebtorLineItems: jest.fn().mockResolvedValue(debtors),
+    getDebtSplit: jest.fn().mockResolvedValue(debtSplit),
     getReconciliation: jest.fn().mockResolvedValue(recon),
     getPeriodOutflows: jest.fn().mockResolvedValue({
       refunds: 10_000,
@@ -371,6 +398,7 @@ describe('ReportsExcelService', () => {
     getOwnMonthProfit: jest.fn().mockResolvedValue(ownMonthProfit),
     getIncomeMonthAttribution: jest.fn().mockResolvedValue(attribution),
     getMonthlyExpectation: jest.fn().mockResolvedValue(expectation),
+    getMonthCharges: jest.fn().mockResolvedValue(monthCharges),
     getStudentFlow: jest.fn().mockResolvedValue(studentFlow),
     // Operational feeds.
     getLeadAnalytics: jest.fn().mockResolvedValue(leads),
@@ -603,6 +631,81 @@ describe('ReportsExcelService', () => {
     expect(findRow(ws, '=  SOF FOYDA').getCell(2).value).toBe(190_000);
   });
 
+  it("adds the month's balance withdrawals to «Xulosa» and the Tekshiruv footing (ADR-0055)", async () => {
+    reports.getBalanceWithdrawals.mockResolvedValue({
+      total: 50_000,
+      teacherCredited: 0,
+      students: [],
+    });
+    const wb = await buildWorkbook(
+      {},
+      {
+        startDate: '2026-06-01',
+        endDate: '2026-06-30',
+        include: ['buxgalteriya'],
+      },
+    );
+    expect(reports.getBalanceWithdrawals).toHaveBeenCalledWith(1, {
+      months: ['2026-06'],
+      branchIds: null,
+    });
+
+    const xulosa = wb.getWorksheet('Xulosa')!;
+    expect(
+      findRow(xulosa, '+  Balansdan yechib olingan').getCell(2).value,
+    ).toBe(50_000);
+    // 290 000 (see the pre-top-up case above) + 50 000 withdrawn.
+    expect(findRow(xulosa, '=  SOF FOYDA').getCell(2).value).toBe(340_000);
+
+    const check = wb.getWorksheet('Tekshiruv')!;
+    expect(findRow(check, '+ Balansdan yechib olingan').getCell(2).value).toBe(
+      50_000,
+    );
+    expect(
+      cellText(findRow(check, '= Sof foyda (yig‘indi)').getCell(5).value),
+    ).toBe('MOS');
+  });
+
+  it('reads withdrawals once over every month of a multi-month export', async () => {
+    reports.getBalanceWithdrawals.mockResolvedValue({
+      total: 80_000,
+      teacherCredited: 0,
+      students: [],
+    });
+    const wb = await buildWorkbook(
+      {},
+      { startDate: '2026-06-01', endDate: '2026-07-31' },
+    );
+
+    expect(reports.getBalanceWithdrawals).toHaveBeenCalledTimes(1);
+    expect(reports.getBalanceWithdrawals).toHaveBeenCalledWith(1, {
+      months: ['2026-06', '2026-07'],
+      branchIds: null,
+    });
+    expect(
+      findRow(
+        wb.getWorksheet('Xulosa')!,
+        '+  Balansdan yechib olingan',
+      ).getCell(2).value,
+    ).toBe(80_000);
+  });
+
+  it('names a branch whose profit includes a withdrawal under «Filiallar»', async () => {
+    reports.getOwnMonthProfit.mockResolvedValue({
+      ...ownMonthProfit,
+      netProfit: { ...netProfit, balanceWithdrawals: 70_000 },
+    });
+    const wb = await buildWorkbook({}, { branchNames: { 1: 'Markaz' } });
+
+    const texts: string[] = [];
+    wb.getWorksheet('Filiallar')!.eachRow((r) =>
+      texts.push(cellText(r.getCell(1).value)),
+    );
+    expect(texts.join('\n')).toContain(
+      `«SOF FOYDA» ichida balansdan yechib olingan pul bor: Markaz — ${(70_000).toLocaleString('ru-RU')} so'm.`,
+    );
+  });
+
   it('totals «Xulosa» block 4 at the full lesson value, not the recognised revenue', async () => {
     // The mock month is IN PROGRESS: 1 000 000 held-and-paid + 120 000 still
     // unpaid = 1 120 000 of lesson value. Footing the block on the recognised
@@ -616,6 +719,158 @@ describe('ReportsExcelService', () => {
       expectation.expectedValue,
     );
     expect(expectation.expectedValue).toBeGreaterThan(1_000_000);
+  });
+
+  describe('«Xulosa» block 4 from the first monthly month (ADR-0058)', () => {
+    const october = { startDate: '2026-10-01', endDate: '2026-10-31' };
+    // Every cell of the sheet, so «does the sheet say X anywhere» is one check.
+    const allText = (ws: Worksheet): string => {
+      const out: string[] = [];
+      ws.eachRow((r) => r.eachCell((c) => out.push(cellText(c.value))));
+      return out.join('\n');
+    };
+    afterEach(() => jest.useRealTimers());
+
+    it("October: block 4 is the month's own bill — charged, paid, unpaid — not the lesson-value breakdown", async () => {
+      const wb = await buildWorkbook({}, october);
+      const ws = wb.getWorksheet('Xulosa')!;
+
+      expect(reports.getMonthCharges).toHaveBeenCalledWith(1, {
+        month: '2026-10',
+        branchIds: null,
+      });
+      const text = allText(ws);
+      expect(text).toContain('4.  OKTABR 2026 OYLIK HISOBLARI');
+      expect(text).not.toContain('DARSLARINING PULI QAYERDAN KELGAN');
+
+      const bill = findRow(ws, 'Oktabr 2026 hisobi');
+      expect(bill.getCell(2).value).toBe(900_000);
+      expect(bill.getCell(3).value).toBe(100);
+      const paid = findRow(ws, "shundan to'langan");
+      expect(paid.getCell(2).value).toBe(600_000);
+      expect(paid.getCell(3).value).toBe(66.7);
+      const unpaid = findRow(ws, "to'lanmagan");
+      expect(unpaid.getCell(2).value).toBe(300_000);
+      expect(unpaid.getCell(3).value).toBe(33.3);
+      // Money still owed is the one cell on the block that is red.
+      expect(unpaid.getCell(2).font.color.argb).toBe(RED);
+      // «Hammasi to'langan» is a claim — it may not appear while money is owed.
+      expect(text).not.toContain("hammasi to'langan");
+    });
+
+    it("October with nothing unpaid: the to'lanmagan row says so in words, in green", async () => {
+      reports.getMonthCharges.mockResolvedValue({
+        ...monthCharges,
+        paid: 900_000,
+        unpaid: 0,
+        paidPct: 100,
+      });
+      const wb = await buildWorkbook({}, october);
+
+      const unpaid = findRow(wb.getWorksheet('Xulosa')!, "to'lanmagan");
+      expect(unpaid).toBeTruthy();
+      expect(unpaid.getCell(2).value).toBe("Yo'q — hammasi to'langan");
+      expect(unpaid.getCell(2).font.color.argb).toBe(GREEN);
+    });
+
+    it("October with nothing charged yet: «—» and its own note, never «hammasi to'langan»", async () => {
+      // 01:00–04:00 on the 1st (before the monthly charge run) or a branch with
+      // no monthly course: there is no bill, so there is nothing to be «all paid».
+      reports.getMonthCharges.mockResolvedValue({
+        ...monthCharges,
+        charged: 0,
+        paid: 0,
+        unpaid: 0,
+        paidPct: null,
+        students: 0,
+      });
+      const wb = await buildWorkbook({}, october);
+      const ws = wb.getWorksheet('Xulosa')!;
+
+      expect(findRow(ws, 'Oktabr 2026 hisobi').getCell(2).value).toBe(0);
+      expect(findRow(ws, "shundan to'langan").getCell(2).value).toBe(0);
+      const unpaid = findRow(ws, "to'lanmagan");
+      expect(unpaid.getCell(2).value).toBe('—');
+      // Neither the red «still owed» nor the green «all paid» style.
+      expect(unpaid.getCell(2).font?.color?.argb).toBeUndefined();
+
+      const text = allText(ws);
+      expect(text).toContain('Bu oy uchun hali oylik hisob yozilmagan.');
+      expect(text).not.toContain("hammasi to'langan");
+      // The usual note is replaced, not joined.
+      expect(text).not.toContain('Oyning boshida yozilgan oylik hisoblar');
+    });
+
+    it('«Izoh» defines the rows block 4 prints, under the names it prints them by', async () => {
+      const wb = await buildWorkbook({}, october);
+      // Excel's own «find» tells ‘ from ', so both sheets are read on one.
+      const plain = (s: string) => s.replace(/[‘’]/g, "'");
+      const sheet = plain(allText(wb.getWorksheet('Xulosa')!));
+      const glossaryRow = findRow(
+        wb.getWorksheet('Izoh')!,
+        'Oy hisobi (oylik hisob)',
+      );
+      expect(glossaryRow).toBeTruthy();
+      const entry = plain(cellText(glossaryRow.getCell(2).value));
+
+      // The first row is the month's name + «hisobi»; the glossary names it by
+      // that suffix and gives the example the sheet shows.
+      expect(sheet).toContain('Oktabr 2026 hisobi');
+      expect(entry).toContain('Oktabr 2026 hisobi');
+      // The two rows below it are quoted exactly as printed.
+      for (const label of ["shundan to'langan", "to'lanmagan"]) {
+        expect(sheet).toContain(label);
+        expect(entry).toContain(label);
+      }
+      expect(sheet).not.toContain('Bu oy hisoblandi');
+    });
+
+    it('September is the first monthly month', async () => {
+      const wb = await buildWorkbook(
+        {},
+        { startDate: '2026-09-01', endDate: '2026-09-30' },
+      );
+
+      expect(reports.getMonthCharges).toHaveBeenCalledWith(1, {
+        month: '2026-09',
+        branchIds: null,
+      });
+      expect(allText(wb.getWorksheet('Xulosa')!)).toContain(
+        '4.  SENTABR 2026 OYLIK HISOBLARI',
+      );
+    });
+
+    it('August 2026 keeps the lesson-value breakdown and reads no month bill', async () => {
+      const wb = await buildWorkbook(
+        {},
+        { startDate: '2026-08-01', endDate: '2026-08-31' },
+      );
+
+      const text = allText(wb.getWorksheet('Xulosa')!);
+      expect(text).toContain('DARSLARINING PULI QAYERDAN KELGAN');
+      expect(text).not.toContain('OYLIK HISOBLARI');
+      expect(reports.getMonthCharges).not.toHaveBeenCalled();
+    });
+
+    it('with no start date the workbook month is the TASHKENT month: October at 01:00 on 01.10', async () => {
+      // 20:00Z on 30.09 is 01:00 on 01.10 in Tashkent. The old
+      // `now.getMonth()` read the PROCESS timezone (UTC on Railway) and built a
+      // September workbook for the first five hours of every month.
+      jest.useFakeTimers({
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      });
+      jest.setSystemTime(new Date('2026-09-30T20:00:00Z'));
+
+      const wb = await buildWorkbook({}, {});
+
+      expect(reports.getMonthCharges).toHaveBeenCalledWith(1, {
+        month: '2026-10',
+        branchIds: null,
+      });
+      expect(allText(wb.getWorksheet('Xulosa')!)).toContain(
+        '4.  OKTABR 2026 OYLIK HISOBLARI',
+      );
+    });
   });
 
   it("renders a Filiallar row per branch, with the branch's WHOLE payroll", async () => {
@@ -639,14 +894,27 @@ describe('ReportsExcelService', () => {
     expect(markaz.getCell(5).value).toBe(netProfit.operatingExpenses);
     expect(markaz.getCell(6).value).toBe(netProfit.refunds);
     expect(markaz.getCell(7).value).toBe(netProfit.netProfit);
-    expect(markaz.getCell(8).value).toBe(debtors.total);
+    // The debt column is the STUDYING debt only (ADR-0059) — not the whole
+    // receivable — and its header says so.
+    expect(findRow(ws, 'Filial').getCell(8).value).toBe(
+      "O'qiyotganlar qarzi (hozir)",
+    );
+    expect(markaz.getCell(8).value).toBe(debtSplit.studying.total);
     expect(markaz.getCell(9).value).toBe(studentFlow.inGroup);
 
     // Each row is that branch's OWN report — re-issued single-branch.
-    expect(reports.getDebtorLineItems).toHaveBeenCalledWith(1, [2]);
+    expect(reports.getDebtSplit).toHaveBeenCalledWith(1, { branchIds: [2] });
     expect(findRow(ws, 'Jami').getCell(4).value).toBe(
       2 * (netProfit.teacherSalary + netProfit.adminSalary),
     );
+  });
+
+  it('a failing per-branch debt read fails the export — a 0 would read as a fact', async () => {
+    reports.getDebtSplit.mockRejectedValue(new Error('boom'));
+
+    await expect(
+      buildWorkbook({}, { branchNames: { 1: 'Markaz' } }),
+    ).rejects.toThrow('boom');
   });
 
   it('Qarzdorlar total ties to the balance-sheet debitorlik', async () => {
@@ -902,6 +1170,31 @@ describe('ReportsExcelService', () => {
         [2],
       );
     });
+
+    it("the debt workbook's notes carry no ledger type or table name (A3.6)", async () => {
+      // «Qarz harakati» and «Oylik qarzdorlik» used to explain themselves in
+      // the ledger's own words: ADJUSTMENT, DEBT_WRITE_OFF, Ledger, Transaction.
+      // No word anchors: a suffixed «Ledgerdan» must be caught too.
+      const english = /ADJUSTMENT|DEBT_WRITE_OFF|Ledger|Transaction/i;
+      const wb = await load(await service.generateDebtHistory(1, null));
+      // A Set: a merged title answers once per merged cell.
+      const found = new Set<string>();
+      let noteBlocks = 0;
+      wb.eachSheet((ws) =>
+        ws.eachRow((row) => {
+          if (cellText(row.getCell(1).value) === 'ⓘ Bu bo‘lim haqida') {
+            noteBlocks++;
+          }
+          row.eachCell((cell) => {
+            const text = cellText(cell.value);
+            if (english.test(text)) found.add(`${ws.name}: ${text}`);
+          });
+        }),
+      );
+      // The notes themselves must have been scanned, or this proves nothing.
+      expect(noteBlocks).toBeGreaterThanOrEqual(2);
+      expect([...found]).toEqual([]);
+    });
   });
 
   describe('carried-over sheet fixes', () => {
@@ -939,7 +1232,7 @@ describe('ReportsExcelService', () => {
       expect(text.join('\n')).toContain('«Boshqa» ulushi');
     });
 
-    it('«Izoh» carries ten plain-language terms and no accounting jargon', async () => {
+    it('«Izoh» carries plain-language terms and no accounting jargon', async () => {
       const wb = await buildWorkbook({});
       const ws = wb.getWorksheet('Izoh')!;
       const text: string[] = [];
@@ -952,6 +1245,64 @@ describe('ReportsExcelService', () => {
       expect(joined).not.toContain('Balanslashuv farqi');
     });
 
+    it('«Izoh» explains the monthly bill under the name block 4 prints and dates the old month-end forecast', async () => {
+      const wb = await buildWorkbook({});
+      const defs = new Map<string, string>();
+      wb.getWorksheet('Izoh')!.eachRow((r) =>
+        defs.set(cellText(r.getCell(1).value), cellText(r.getCell(2).value)),
+      );
+      // «Bu oy hisoblandi» is the home page's and Telegram's label; no row of
+      // this workbook carries it, so the glossary must not define it.
+      expect(defs.has('Bu oy hisoblandi')).toBe(false);
+      expect(defs.get('Oy hisobi (oylik hisob)')).toContain(
+        'shu oy uchun o‘quvchilarga yozilgan oylik hisoblar yig‘indisi',
+      );
+      expect(defs.get('Oy oxiriga kutilyapti')).toContain(
+        '(2026-yil sentabrgacha bo‘lgan oylar)',
+      );
+    });
+
+    it('«Izoh» definitions write the apostrophe one way, ‘ — never a typewriter one', async () => {
+      const wb = await buildWorkbook({});
+      const typewriter: string[] = [];
+      wb.getWorksheet('Izoh')!.eachRow((r) => {
+        const def = cellText(r.getCell(2).value);
+        if (def.includes("'")) typewriter.push(def);
+      });
+      expect(typewriter).toEqual([]);
+    });
+
+    it('«Davomat» says what «Ushlab qolish» divides, and names its trend by month or week', async () => {
+      const texts = (wb: Workbook) => {
+        const out: string[] = [];
+        wb.getWorksheet('Davomat')!.eachRow((r) =>
+          out.push(cellText(r.getCell(1).value)),
+        );
+        return out;
+      };
+
+      const weekly = texts(await buildWorkbook({}));
+      // End-of-period headcount ÷ start-of-period headcount: new students
+      // count, so it can pass 100% (reports-attendance-analytics.service.ts).
+      expect(weekly).toContain(
+        "•  Ushlab qolish — davr oxiridagi o'quvchilar sonining davr boshidagiga nisbati (yangi qo'shilganlar ham kiradi, shuning uchun 100% dan oshishi mumkin).",
+      );
+      expect(weekly).toContain("Haftalar bo'yicha");
+
+      reports.getAttendanceAnalytics.mockResolvedValueOnce({
+        ...(await reports.getAttendanceAnalytics()),
+        bucket: 'month',
+      });
+      expect(texts(await buildWorkbook({}))).toContain("Oylar bo'yicha");
+    });
+
+    it('«Tekshiruv» calls the student balance roll-forward «aylanmasi» in its check row too', async () => {
+      const wb = await buildWorkbook({}, { include: ['buxgalteriya'] });
+      const ws = wb.getWorksheet('Tekshiruv')!;
+      expect(findRow(ws, 'O‘quvchi balansi aylanmasi')).not.toBeNull();
+      expect(findRow(ws, 'O‘quvchi balansi yig‘indisi')).toBeNull();
+    });
+
     it('«Xonalar bandligi» states its window as a dated "Bugungi holat"', async () => {
       const wb = await buildWorkbook({});
       const ws = wb.getWorksheet('Xonalar bandligi')!;
@@ -959,5 +1310,37 @@ describe('ReportsExcelService', () => {
         'Bugungi holat:',
       );
     });
+  });
+
+  it("«Davomat», «O'qituvchilar samaradorligi», «Tekshiruv» and «Foyda va zarar» carry no English words (A3.6)", async () => {
+    // The CEO's rule (27.09): no English word on a screen, in Excel, PDF or
+    // Telegram. These are the four sheets of the main workbook that still had
+    // one; the debt workbook has its own guard under «generateDebtHistory».
+    const english =
+      /\b(retention|present|absent|late|excused|reconciliation|ties|tie-out|recon|footing|refund|roll-forward|audit|accrual|GL|ACTIVE|FORMING|EXCUSED|churn|vs|trend)\b|P&L/i;
+    const wb = await buildWorkbook(
+      {},
+      { include: ['buxgalteriya', 'marketing'] },
+    );
+    // A Set: a merged title answers once per merged cell.
+    const found = new Set<string>();
+    for (const name of [
+      'Davomat',
+      "O'qituvchilar samaradorligi",
+      'Tekshiruv',
+      'Foyda va zarar',
+    ]) {
+      let cells = 0;
+      wb.getWorksheet(name)!.eachRow((row) =>
+        row.eachCell((cell) => {
+          const text = cellText(cell.value);
+          cells++;
+          if (english.test(text)) found.add(`${name}: ${text}`);
+        }),
+      );
+      // A sheet that fell back to its «ma'lumot yo'q» note would pass vacuously.
+      expect(cells).toBeGreaterThan(10);
+    }
+    expect([...found]).toEqual([]);
   });
 });
