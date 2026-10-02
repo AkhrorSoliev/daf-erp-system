@@ -272,7 +272,7 @@ export function FormBuilderClient({ formId }: Props) {
 
       <Section
         title="Forma maydonlari"
-        titleHint="Ism, Familya va Telefon — har qanday formada majburiy (lid yaratish uchun). Ostida o'zingiz xohlagan maydonlarni qo'shing."
+        titleHint="Ism, Familiya va Telefon — har qanday formada majburiy (lid yaratish uchun). Ostida o'zingiz xohlagan maydonlarni qo'shing."
       >
         {typeof errors.fields?.message === "string" && (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">

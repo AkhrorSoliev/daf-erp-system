@@ -9,6 +9,16 @@ import {
   KPI_TOOLTIPS,
   TABLE_TOOLTIPS,
 } from "@/components/reports/center-activity/metric-helpers";
+import {
+  FIELD_TYPE_LABELS as LEAD_FIELD_TYPE_LABELS,
+  customFormSchema,
+  defaultFormFields,
+} from "@/lib/schemas/custom-form-schema";
+import {
+  FIELD_TYPE_LABELS as MOCK_FIELD_TYPE_LABELS,
+  defaultMockExamFormFields,
+  mockExamFormSchema,
+} from "@/lib/schemas/mock-exam-form-schema";
 
 // The CEO's rule (27.09.2026): a file the A3 plan touched keeps no visible
 // English. These are the texts that slipped through the first pass: status
@@ -86,5 +96,80 @@ describe("texts inside stateful components", () => {
     for (const text of [dialog, settings]) {
       expect(text).not.toMatch(/[Tt]ransfer sababi/);
     }
+  });
+});
+
+describe("the lead and mock-exam form builders", () => {
+  const builders = [
+    {
+      name: "lead form",
+      labels: LEAD_FIELD_TYPE_LABELS,
+      parse: (fields: unknown[]) =>
+        customFormSchema.safeParse({ title: "F", sectionId: "s", fields }),
+      defaults: defaultFormFields(),
+    },
+    {
+      name: "mock exam form",
+      labels: MOCK_FIELD_TYPE_LABELS,
+      parse: (fields: unknown[]) => mockExamFormSchema.safeParse({ fields }),
+      defaults: defaultMockExamFormFields(),
+    },
+  ];
+  const slot = (mapsTo: string, type = "text", id = mapsTo) => ({
+    id,
+    type,
+    label: "Maydon",
+    required: true,
+    mapsTo,
+  });
+  const firstName = slot("firstName");
+  const lastName = slot("lastName");
+  const phone = slot("phone", "phone");
+
+  it.each(builders)("the $name names every field type in Uzbek", ({ labels }) => {
+    expect(labels).toEqual({
+      text: "Matn (qisqa)",
+      textarea: "Matn (uzun)",
+      number: "Son",
+      email: "Elektron pochta",
+      phone: "Telefon",
+      select: "Tanlash (ochiladigan ro'yxat)",
+      radio: "Variantlar (bittasini tanlash)",
+      checkbox: "Belgilash (bir nechtasini tanlash)",
+      date: "Sana",
+    });
+  });
+
+  it.each(builders)(
+    "the $name says «Familiya», attaches «ga» and names the phone type «Telefon»",
+    ({ parse }) => {
+      const messages = (fields: unknown[]) => {
+        const result = parse(fields);
+        return result.success ? [] : result.error.issues.map((i) => i.message);
+      };
+
+      expect(messages([firstName, phone])).toContain(
+        `Familiya maydoni majburiy — biror maydonni "Familiya"ga bog'lang`,
+      );
+      expect(
+        messages([firstName, lastName, phone, slot("phone", "phone", "phone-2")]),
+      ).toContain("Telefonga faqat bitta maydon bog'lanishi mumkin");
+      expect(messages([firstName, lastName, slot("phone", "text")])).toContain(
+        "Telefon maydonining turi «Telefon» bo'lishi kerak",
+      );
+    },
+  );
+
+  it.each(builders)("the $name's default surname field asks «Familiyangiz»", ({ defaults }) => {
+    expect(defaults.find((f) => f.mapsTo === "lastName")?.label).toBe(
+      "Familiyangiz",
+    );
+  });
+
+  it("the form builder's hint names «Ism, Familiya va Telefon»", () => {
+    const text = source("forms/form-builder-client.tsx");
+
+    expect(text).toContain("Ism, Familiya va Telefon — har qanday formada majburiy");
+    expect(text).not.toContain("Familya");
   });
 });

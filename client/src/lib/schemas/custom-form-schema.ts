@@ -23,17 +23,17 @@ export const FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   text: "Matn (qisqa)",
   textarea: "Matn (uzun)",
   number: "Son",
-  email: "Email",
+  email: "Elektron pochta",
   phone: "Telefon",
-  select: "Tanlash (dropdown)",
-  radio: "Variantlar (radio)",
-  checkbox: "Belgilash (checkbox)",
+  select: "Tanlash (ochiladigan ro'yxat)",
+  radio: "Variantlar (bittasini tanlash)",
+  checkbox: "Belgilash (bir nechtasini tanlash)",
   date: "Sana",
 };
 
 export const MAPS_TO_LABELS: Record<MapsToValue, string> = {
   firstName: "Ism",
-  lastName: "Familya",
+  lastName: "Familiya",
   phone: "Telefon",
 };
 
@@ -89,13 +89,13 @@ export const customFormSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["fields"],
-          message: `${MAPS_TO_LABELS[slot]} maydoni majburiy — biror maydonni "${MAPS_TO_LABELS[slot]}" ga bog'lang`,
+          message: `${MAPS_TO_LABELS[slot]} maydoni majburiy — biror maydonni "${MAPS_TO_LABELS[slot]}"ga bog'lang`,
         });
       } else if (matches.length > 1) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["fields"],
-          message: `${MAPS_TO_LABELS[slot]} ga faqat bitta maydon bog'lanishi mumkin`,
+          message: `${MAPS_TO_LABELS[slot]}ga faqat bitta maydon bog'lanishi mumkin`,
         });
       } else {
         const match = matches[0];
@@ -110,7 +110,7 @@ export const customFormSchema = z
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["fields", data.fields.indexOf(match), "type"],
-            message: "Telefon maydonining turi 'phone' bo'lishi kerak",
+            message: "Telefon maydonining turi «Telefon» bo'lishi kerak",
           });
         }
       }
@@ -144,7 +144,7 @@ export function defaultFormFields(): FormFieldShape[] {
     {
       id: "default-last-name",
       type: "text",
-      label: "Familyangiz",
+      label: "Familiyangiz",
       required: true,
       mapsTo: "lastName",
     },

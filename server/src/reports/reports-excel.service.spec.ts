@@ -1174,7 +1174,8 @@ describe('ReportsExcelService', () => {
     it("the debt workbook's notes carry no ledger type or table name (A3.6)", async () => {
       // «Qarz harakati» and «Oylik qarzdorlik» used to explain themselves in
       // the ledger's own words: ADJUSTMENT, DEBT_WRITE_OFF, Ledger, Transaction.
-      const english = /\b(ADJUSTMENT|DEBT_WRITE_OFF|Ledger|Transaction)\b/i;
+      // No word anchors: a suffixed «Ledgerdan» must be caught too.
+      const english = /ADJUSTMENT|DEBT_WRITE_OFF|Ledger|Transaction/i;
       const wb = await load(await service.generateDebtHistory(1, null));
       // A Set: a merged title answers once per merged cell.
       const found = new Set<string>();
@@ -1271,6 +1272,37 @@ describe('ReportsExcelService', () => {
       expect(typewriter).toEqual([]);
     });
 
+    it('«Davomat» says what «Ushlab qolish» divides, and names its trend by month or week', async () => {
+      const texts = (wb: Workbook) => {
+        const out: string[] = [];
+        wb.getWorksheet('Davomat')!.eachRow((r) =>
+          out.push(cellText(r.getCell(1).value)),
+        );
+        return out;
+      };
+
+      const weekly = texts(await buildWorkbook({}));
+      // End-of-period headcount ÷ start-of-period headcount: new students
+      // count, so it can pass 100% (reports-attendance-analytics.service.ts).
+      expect(weekly).toContain(
+        "•  Ushlab qolish — davr oxiridagi o'quvchilar sonining davr boshidagiga nisbati (yangi qo'shilganlar ham kiradi, shuning uchun 100% dan oshishi mumkin).",
+      );
+      expect(weekly).toContain("Haftalar bo'yicha");
+
+      reports.getAttendanceAnalytics.mockResolvedValueOnce({
+        ...(await reports.getAttendanceAnalytics()),
+        bucket: 'month',
+      });
+      expect(texts(await buildWorkbook({}))).toContain("Oylar bo'yicha");
+    });
+
+    it('«Tekshiruv» calls the student balance roll-forward «aylanmasi» in its check row too', async () => {
+      const wb = await buildWorkbook({}, { include: ['buxgalteriya'] });
+      const ws = wb.getWorksheet('Tekshiruv')!;
+      expect(findRow(ws, 'O‘quvchi balansi aylanmasi')).not.toBeNull();
+      expect(findRow(ws, 'O‘quvchi balansi yig‘indisi')).toBeNull();
+    });
+
     it('«Xonalar bandligi» states its window as a dated "Bugungi holat"', async () => {
       const wb = await buildWorkbook({});
       const ws = wb.getWorksheet('Xonalar bandligi')!;
@@ -1285,7 +1317,7 @@ describe('ReportsExcelService', () => {
     // Telegram. These are the four sheets of the main workbook that still had
     // one; the debt workbook has its own guard under «generateDebtHistory».
     const english =
-      /\b(retention|present|absent|late|excused|reconciliation|ties|tie-out|recon|footing|refund|roll-forward|audit|accrual|GL|ACTIVE|FORMING|EXCUSED|churn|vs)\b|P&L/i;
+      /\b(retention|present|absent|late|excused|reconciliation|ties|tie-out|recon|footing|refund|roll-forward|audit|accrual|GL|ACTIVE|FORMING|EXCUSED|churn|vs|trend)\b|P&L/i;
     const wb = await buildWorkbook(
       {},
       { include: ['buxgalteriya', 'marketing'] },

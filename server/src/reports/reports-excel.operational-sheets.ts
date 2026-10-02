@@ -368,7 +368,7 @@ export function attendanceSheet(wb: Workbook, att: any, period: string) {
 
   sectionHeader(
     ws,
-    `Trend (${att.bucket === 'month' ? 'oylik' : 'haftalik'})`,
+    `${att.bucket === 'month' ? 'Oylar' : 'Haftalar'} bo'yicha`,
     3,
   );
   const th = tableHeader(ws, ['Davr', 'Davomat %', 'Ushlab qolish %']);
@@ -406,7 +406,7 @@ export function attendanceSheet(wb: Workbook, att: any, period: string) {
     ws,
     [
       "Davomat foizi = kelgan darslar / (jami − sababli). Past davomat = daromad va o'quvchi ketishi xavfi.",
-      "Ushlab qolish — davr davomida qolgan o'quvchilar ulushi.",
+      "Ushlab qolish — davr oxiridagi o'quvchilar sonining davr boshidagiga nisbati (yangi qo'shilganlar ham kiradi, shuning uchun 100% dan oshishi mumkin).",
       "Eng past guruhlar — birinchi navbatda e'tibor talab qiladi.",
       'Rang: qizil = past davomat, yashil = yuqori.',
     ],

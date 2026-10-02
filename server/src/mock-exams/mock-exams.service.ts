@@ -778,7 +778,7 @@ export class MockExamsService {
 
   /**
    * Default 3 required fields that every mock exam form starts with: ism,
-   * familya, telefon — same shape the Telegram bot scene (Faza 4) will
+   * familiya, telefon — same shape the Telegram bot scene (Faza 4) will
    * collect first. Admins add extras via the form builder.
    */
   private defaultFormFields(): Prisma.InputJsonValue {
@@ -793,7 +793,7 @@ export class MockExamsService {
       {
         id: shortId(8),
         type: 'text',
-        label: 'Familyangiz',
+        label: 'Familiyangiz',
         required: true,
         mapsTo: 'lastName',
       },

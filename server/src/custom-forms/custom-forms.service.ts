@@ -576,12 +576,12 @@ export class CustomFormsService {
         mappingCounts.set(f.mapsTo, (mappingCounts.get(f.mapsTo) ?? 0) + 1);
         if (!f.required) {
           throw new BadRequestException(
-            `Ism / Familya / Telefon ga bog'langan "${f.label}" maydoni majburiy bo'lishi kerak`,
+            `Ism / Familiya / Telefonga bog'langan "${f.label}" maydoni majburiy bo'lishi kerak`,
           );
         }
         if (f.mapsTo === 'phone' && f.type !== 'phone') {
           throw new BadRequestException(
-            `Telefon maydonining turi "phone" bo'lishi kerak`,
+            "Telefon maydonining turi «Telefon» bo'lishi kerak",
           );
         }
       }
@@ -589,12 +589,12 @@ export class CustomFormsService {
     for (const [slot, count] of mappingCounts) {
       if (count === 0) {
         throw new BadRequestException(
-          `${this.slotLabel(slot)} maydoni majburiy — formaga qo'shing va uni "${this.slotLabel(slot)}" ga bog'lang`,
+          `${this.slotLabel(slot)} maydoni majburiy — formaga qo'shing va uni "${this.slotLabel(slot)}"ga bog'lang`,
         );
       }
       if (count > 1) {
         throw new BadRequestException(
-          `${this.slotLabel(slot)} ga faqat bitta maydon bog'lanishi mumkin`,
+          `${this.slotLabel(slot)}ga faqat bitta maydon bog'lanishi mumkin`,
         );
       }
     }
@@ -604,7 +604,7 @@ export class CustomFormsService {
     return slot === 'firstName'
       ? 'Ism'
       : slot === 'lastName'
-        ? 'Familya'
+        ? 'Familiya'
         : 'Telefon';
   }
 

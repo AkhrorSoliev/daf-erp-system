@@ -227,6 +227,10 @@ describe('MockExamsService', () => {
       });
       // maxScore auto-sums to subject totals when admin didn't pass one
       expect(createCall.data.maxScore).toBe(60);
+      // The three slots every registration form starts with.
+      expect(
+        (createCall.data.formFields as { label: string }[]).map((f) => f.label),
+      ).toEqual(['Ismingiz', 'Familiyangiz', 'Telefon raqamingiz']);
 
       expect(prisma.mockExam.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -755,7 +759,7 @@ describe('MockExamsService', () => {
         {
           id: 'f2',
           type: 'text',
-          label: 'Familyangiz',
+          label: 'Familiyangiz',
           required: true,
           mapsTo: 'lastName',
         },

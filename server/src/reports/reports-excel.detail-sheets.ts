@@ -921,7 +921,7 @@ export function reconciliationSheet(
   );
   checkRow(
     ws,
-    'O‘quvchi balansi yig‘indisi',
+    'O‘quvchi balansi aylanmasi',
     (recon?.student?.opening ?? 0) + (recon?.student?.activityTotal ?? 0),
     recon?.student?.closing ?? 0,
   );
