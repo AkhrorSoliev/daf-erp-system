@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -13,7 +14,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhoneWithCodeInput } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
+import { type AuthUser, useAuth } from "@/hooks/use-auth";
 import { type PortalType, daftarScope } from "@/lib/portal";
 import { DAFTAR_INPUT, DAFTAR_ROW } from "@/components/auth/daftar-field";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
@@ -24,6 +25,38 @@ import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
 // Eskiz support a brand nik is not required to deliver it, so ESKIZ_FROM stays
 // 4546. See memory: project_eskiz_sms_setup.
 const SMS_PASSWORD_RESET_ENABLED = true;
+
+// How long the greeting stays before the cabinet opens. The session already
+// exists by then; this only delays the navigation.
+const GREETING_MS = 2000;
+const GREETING_REDUCED_MOTION_MS = 700;
+
+/**
+ * Shown in place of the form once the sign-in has succeeded: the employee's
+ * photo (their initial when there is none) and their name, written on the
+ * sheet. Three rows of photo, then text rows — the sheet's row rule holds.
+ */
+function Greeting({ user }: { user: Pick<AuthUser, "firstName" | "photo"> }) {
+  return (
+    <div role="status" className="flex flex-col">
+      <Avatar className="daftar-greet-photo size-24 border-2 border-primary after:hidden">
+        {user.photo ? <AvatarImage src={user.photo} alt="" /> : null}
+        <AvatarFallback className="bg-background text-3xl text-primary">
+          {user.firstName.charAt(0).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      <p className="daftar-row daftar-greet-fade text-sm text-muted-foreground [animation-delay:0.3s]">
+        Xush kelibsiz,
+      </p>
+      <p className="daftar-hand daftar-greet-write translate-y-2 truncate text-[2.75rem] leading-[4rem] font-medium text-primary">
+        {user.firstName}
+      </p>
+      <p className="daftar-row daftar-greet-fade text-sm text-muted-foreground [animation-delay:1.4s]">
+        Kabinet ochilmoqda…
+      </p>
+    </div>
+  );
+}
 
 interface LoginFormProps {
   portal: PortalType;
@@ -42,6 +75,23 @@ export function LoginForm({ portal }: LoginFormProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [greeting, setGreeting] = useState<{
+    user: AuthUser;
+    destination: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!greeting) return;
+    router.prefetch(greeting.destination);
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const timer = window.setTimeout(
+      () => router.push(greeting.destination),
+      reduced ? GREETING_REDUCED_MOTION_MS : GREETING_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [greeting, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,7 +109,10 @@ export function LoginForm({ portal }: LoginFormProps) {
       setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
       // Student portal foydalanuvchilarini /portal ga yo'naltirish
       const isStudent = res.data.user?.roles?.some((r: any) => r.id === 6);
-      router.push(portal === "student" || isStudent ? "/portal" : "/");
+      setGreeting({
+        user: res.data.user,
+        destination: portal === "student" || isStudent ? "/portal" : "/",
+      });
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response
         ?.status;
@@ -77,6 +130,8 @@ export function LoginForm({ portal }: LoginFormProps) {
       setLoading(false);
     }
   }
+
+  if (greeting) return <Greeting user={greeting.user} />;
 
   return (
     <>
