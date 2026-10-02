@@ -6,11 +6,9 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/student-portal/lumio";
 import {
   ArrowClockwise,
   CaretRight,
-  CircleNotch,
   SignIn,
   SignOut,
   TelegramLogo,
@@ -34,7 +32,10 @@ import {
   type MiniAppStudent,
 } from "@/lib/telegram-mini-app";
 import {
+  Action,
   CloseButton,
+  DaftarSkin,
+  Loading,
   Notice,
   NotRegisteredNotice,
   StaffAccountNotice,
@@ -66,8 +67,12 @@ const SESSION_NOT_KEPT =
  * Telegram akkaunti kabinet egasiga bog'langan bo'lsa — avtomatik kiradi
  * (parolsiz), bog'lanmagan bo'lsa — xabar. Telefon/parol formasi bu yerda yo'q:
  * Mini App ichida kirish faqat Telegram orqali.
+ *
+ * `daftar` — the page has put this on the Daftar sheet (the staff hosts): the
+ * same states are then drawn in the sheet's look, and the sheet is the frame.
+ * It changes nothing about who is signed in or how.
  */
-export function MiniAppEntry() {
+export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
   const router = useRouter();
   const setAuth = useAuth((s) => s.setAuth);
   const clearSession = useAuth((s) => s.clearSession);
@@ -171,8 +176,20 @@ export function MiniAppEntry() {
     void signIn();
   }
 
+  const state = (
+    <MiniAppView
+      view={view}
+      onSignIn={(studentId) => void signIn(studentId)}
+      onReenter={() => {
+        markMiniAppSignedOut(false);
+        void signIn();
+      }}
+      onOpenLogin={() => router.replace("/login")}
+    />
+  );
+
   return (
-    <>
+    <DaftarSkin value={daftar}>
       <Script
         src={TELEGRAM_WEB_APP_SCRIPT}
         strategy="afterInteractive"
@@ -185,20 +202,14 @@ export function MiniAppEntry() {
           })
         }
       />
-      <main className="flex min-h-screen items-center justify-center px-4 py-10">
-        <div className="w-full max-w-sm">
-          <MiniAppView
-            view={view}
-            onSignIn={(studentId) => void signIn(studentId)}
-            onReenter={() => {
-              markMiniAppSignedOut(false);
-              void signIn();
-            }}
-            onOpenLogin={() => router.replace("/login")}
-          />
-        </div>
-      </main>
-    </>
+      {daftar ? (
+        state
+      ) : (
+        <main className="flex min-h-screen items-center justify-center px-4 py-10">
+          <div className="w-full max-w-sm">{state}</div>
+        </main>
+      )}
+    </DaftarSkin>
   );
 }
 
@@ -215,12 +226,7 @@ function MiniAppView({
 }) {
   switch (view.kind) {
     case "loading":
-      return (
-        <div className="flex flex-col items-center gap-3 text-ink-500">
-          <CircleNotch className="size-8 animate-spin" weight="bold" />
-          <p className="text-sm font-semibold">Kabinet ochilmoqda…</p>
-        </div>
-      );
+      return <Loading>Kabinet ochilmoqda…</Loading>;
 
     case "outside":
       return (
@@ -229,9 +235,7 @@ function MiniAppView({
           title="Bu sahifa Telegram ichida ochiladi"
           description="Kabinetni Telegram botidagi «Kabinet» tugmasi orqali oching yoki telefon raqam va parol bilan kiring."
         >
-          <Button block onClick={onOpenLogin}>
-            Kirish sahifasi
-          </Button>
+          <Action onClick={onOpenLogin}>Kirish sahifasi</Action>
         </Notice>
       );
 
@@ -242,13 +246,9 @@ function MiniAppView({
           title="Hisobdan chiqdingiz"
           description="Kabinetga qayta kirish uchun tugmani bosing — parol kerak emas."
         >
-          <Button
-            block
-            iconBefore={<SignIn weight="bold" />}
-            onClick={onReenter}
-          >
+          <Action iconBefore={<SignIn weight="bold" />} onClick={onReenter}>
             Qayta kirish
-          </Button>
+          </Action>
           <CloseButton />
         </Notice>
       );
@@ -262,16 +262,15 @@ function MiniAppView({
         >
           <div className="space-y-2">
             {view.students.map((student) => (
-              <Button
+              <Action
                 key={student.id}
-                block
                 variant="secondary"
                 className="justify-between"
                 iconAfter={<CaretRight weight="bold" />}
                 onClick={() => onSignIn(student.id)}
               >
                 {`${student.firstName} ${student.lastName}`.trim()}
-              </Button>
+              </Action>
             ))}
           </div>
         </Notice>
@@ -286,17 +285,17 @@ function MiniAppView({
     case "error":
       return (
         <Notice
+          alert
           icon={<WarningCircle weight="bold" />}
           title="Kirib bo'lmadi"
           description={view.message}
         >
-          <Button
-            block
+          <Action
             iconBefore={<ArrowClockwise weight="bold" />}
             onClick={view.retry}
           >
             Qayta urinish
-          </Button>
+          </Action>
           <CloseButton />
         </Notice>
       );

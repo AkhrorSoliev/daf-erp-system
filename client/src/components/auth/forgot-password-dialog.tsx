@@ -35,12 +35,20 @@ interface ForgotPasswordDialogProps {
    * content to `document.body`, outside the page's `.lumio` wrapper.
    */
   variant?: FpVariant;
+  /**
+   * Extra classes for `DialogContent`. The staff logins pass their Daftar scope
+   * (`daftarScope(portal)`) here, for the reason `lumio` is applied here too:
+   * the content is portalled to `document.body`, where no class on the page
+   * reaches it.
+   */
+  contentClassName?: string;
 }
 
 export function ForgotPasswordDialog({
   open,
   onOpenChange,
   variant = "default",
+  contentClassName,
 }: ForgotPasswordDialogProps) {
   const lumio = variant === "lumio";
 
@@ -165,7 +173,9 @@ export function ForgotPasswordDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className={cn(lumio && "lumio", "sm:max-w-sm")}>
+      <DialogContent
+        className={cn(lumio && "lumio", contentClassName, "sm:max-w-sm")}
+      >
         <DialogHeader>
           <DialogTitle
             className={cn(lumio && "font-display text-xl font-extrabold")}
