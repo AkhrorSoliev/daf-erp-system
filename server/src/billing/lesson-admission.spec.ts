@@ -377,6 +377,63 @@ describe('lessonAdmission — at least half of the month (ADR-0064)', () => {
       expect(admit50(paid(225000), '2026-11-06', both).shortfall).toBe(200000);
     });
   });
+
+  describe('a month split by a transfer or a rejoin is judged whole', () => {
+    // The student's November is still 450 000: `kept` stayed with the closed
+    // enrollment for the lessons held there, the rest is the new charge.
+    const movedAfter = (held: number): AdmissionCharge => ({
+      ...nov005,
+      groupId: 'g020',
+      coveredDates: NOV.slice(held),
+      coveredLessons: 13 - held,
+      chargedAmount: 450000 - held * 34615,
+    });
+    const on2ndLesson = (held: number, paid: number, whole = true) =>
+      lessonAdmission({
+        lessonDay: NOV[held + 1],
+        groupId: 'g020',
+        balance: paid - 450000,
+        charges: [movedAfter(held)],
+        minPaidPercent: 50,
+        closedThisMonth: whole ? held * 34615 : 0,
+      });
+
+    it('two thirds of the month paid is not short of half after a transfer', () => {
+      // 6 lessons held in the old group, 300 000 paid: 8 lessons' worth.
+      expect(on2ndLesson(6, 300000)).toMatchObject({
+        admitted: true,
+        paidThrough: NOV[7],
+      });
+      // Taken of the new charge alone, half of it on top of the old group's
+      // lessons would keep the same student out.
+      expect(on2ndLesson(6, 300000, false).admitted).toBe(false);
+    });
+
+    it('half of the whole month is still asked for', () => {
+      // Moved after one lesson: three lessons held cost 103 845, half is 225 000.
+      expect(on2ndLesson(1, 225000).admitted).toBe(true);
+      expect(on2ndLesson(1, 200000)).toMatchObject({
+        admitted: false,
+        reason: 'BELOW_MIN_SHARE',
+        shortfall: 25000,
+      });
+    });
+
+    it('the payment dialog reads the same reach', () => {
+      expect(
+        paymentReach({
+          today: NOV[7],
+          balanceAfter: 300000 - 450000,
+          charges: [{ ...movedAfter(6), groupName: '#020' }],
+          minPaidPercent: 50,
+          closedThisMonth: 6 * 34615,
+        }),
+      ).toMatchObject({
+        paidThrough: NOV[7],
+        next: { date: NOV[8], minPaidPercent: null },
+      });
+    });
+  });
 });
 
 describe('paymentReach — at least half of the month (ADR-0064)', () => {

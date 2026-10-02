@@ -67,6 +67,13 @@ esa o'quvchiniki va guruhlarga bo'linmaydi. Shuning uchun:
 Misol: ikki guruh, har biri 450 000. 225 000 to'lagan o'quvchi hech biriga
 kirmaydi, 450 000 to'lagani ikkalasiga 6-darsgacha kiradi.
 
+**Oy o'rtasida guruh almashtirgan yoki chiqib qayta qo'shilgan o'quvchi.**
+Yopilgan yozilishda shu oyning hisobi qolgan bo'lsa, oy butun deb hukm
+qilinadi: eng kam qism yopilgan hisob bilan yangi hisobning yig'indisidan
+olinadi (`closedThisMonth`). Yopilgan hisob o'tilgan darslar uchun baribir
+to'liq so'raladi. Eng kam qism faqat yangi hisobdan olinsa, oyning uchdan
+ikkisini to'lagan o'quvchi ko'chgandan keyin darsdan chetda qolardi.
+
 ### 3. Qachondan
 
 01.11.2026 dan boshlab o'tadigan darslar uchun (`MIN_SHARE_START_DAY`).
@@ -185,6 +192,14 @@ tugaguncha».
 - Ikki guruhli o'quvchiga oy hisobi faqat birinchi hisob uchun yuboriladi
   (ADR-0042). Shuning uchun undagi «kamida» summasi ikkinchi guruhning to'liq
   hisobini o'z ichiga oladi, ya'ni keragidan ko'p ko'rsatadi. Ma'lum cheklov.
+- 01.11 dan 2-dars eslatmasi «ertaga 2-dars» ekanini guruhning jonli
+  jadvalidan, darsga qo'yilishni esa hisobdagi kunlardan o'qiydi. Dars
+  ertaroq kunga ko'chirilsa, ikkalasi kelishmaydi va o'sha o'quvchilarga
+  2-dars eslatmasi ketmaydi (oy hisobi ketgan bo'ladi). Ma'lum cheklov.
+- 2-dars eslatmasida «kamida yarmi 2-darsgacha qilinadi» gapi faqat eng kam
+  qism yetmaganda yoziladi. Ikki-uch darslik oyda darslar puli yarmidan ko'p
+  bo'ladi, shunda faqat summa va iltimos qoladi.
+- 3.7 eslatmasi pauzadagi guruhning darsi uchun yuborilmaydi.
 - Davomatni saqlashdagi rad matni (`assertAdmitted`) ikkala sabab uchun bir
   xil qoldi: qator ekranda qulflangan, bu matn faqat to'g'ridan API ga
   murojaatda chiqadi.

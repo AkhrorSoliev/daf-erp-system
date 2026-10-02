@@ -170,13 +170,17 @@ function reminderText(
       `Shartnomaga ko'ra oylik to'lov 2-darsgacha qilinadi. ${ask}`,
     ];
   }
+  // No percent: the lessons held, not the share, are short (a month of two
+  // or three lessons) — the sentence about the share would be untrue.
   const share = p.minPaidPercent === 50 ? 'yarmi' : `${p.minPaidPercent}% i`;
   return [
     tomorrow,
     `Darsga kirish uchun kamida: <b>${formatSum(Math.min(p.minDue, totalDue))}</b>`,
     `Jami to'lash kerak: ${formatSum(totalDue)}`,
     '',
-    `Shartnomaga ko'ra oylik to'lovning kamida ${share} 2-darsgacha qilinadi. ${ask}`,
+    p.minPaidPercent === undefined
+      ? ask
+      : `Shartnomaga ko'ra oylik to'lovning kamida ${share} 2-darsgacha qilinadi. ${ask}`,
   ];
 }
 

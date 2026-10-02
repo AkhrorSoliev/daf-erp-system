@@ -181,8 +181,9 @@ export interface PaymentReminderDigestPayload {
   lessonDate: string;
   /**
    * ADR-0064, the 2nd-lesson reminder under the least share: the least
-   * payment that admits to tomorrow's lesson, and the share it stands for.
-   * Absent: the reminder every debtor got before it.
+   * payment that admits to tomorrow's lesson. `minPaidPercent` only when
+   * the share, not the lessons held, is what is short. No `minDue`: the
+   * reminder every debtor got before it.
    */
   minDue?: number;
   minPaidPercent?: number;

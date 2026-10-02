@@ -429,8 +429,16 @@ describe('MonthlyPaymentNoticeService', () => {
         ];
         forLesson.mockResolvedValue(
           new Map([
-            [10042, { admitted: false, shortfall: 520000 }],
-            [10043, { admitted: true, shortfall: 0 }],
+            [
+              10042,
+              {
+                admitted: false,
+                reason: 'BELOW_MIN_SHARE',
+                shortfall: 520000,
+                minPaidPercent: 50,
+              },
+            ],
+            [10043, { admitted: true, reason: 'PAID', shortfall: 0 }],
           ]),
         );
         await expect(service.queueReminders(1001, NOV_EVE, 50)).resolves.toBe(
@@ -453,6 +461,20 @@ describe('MonthlyPaymentNoticeService', () => {
             minPaidPercent: 50,
           },
         });
+      });
+
+      it('names no share when the lessons held, not the share, keep the student out', async () => {
+        // A three-lesson month: two lessons cost more than half of it.
+        candidates = [november()];
+        forLesson.mockResolvedValue(
+          new Map([
+            [10042, { admitted: false, reason: 'NOT_PAID', shortfall: 160000 }],
+          ]),
+        );
+        await service.queueReminders(1001, NOV_EVE, 50);
+        const { payload } = enqueue.mock.calls[0][0];
+        expect(payload.minDue).toBe(160000);
+        expect(payload).not.toHaveProperty('minPaidPercent');
       });
 
       it.each([
@@ -619,6 +641,13 @@ describe('MonthlyPaymentNoticeService', () => {
         enrollmentId: 'enr-2',
         groupName: 'B1-3',
       });
+    });
+
+    it('stays quiet when that lesson is in a group the notices do not cover (a paused group)', async () => {
+      candidates = [partPayer()];
+      reachOf({ groupName: 'B1-3' });
+      await expect(run()).resolves.toBe(0);
+      expect(enqueue).not.toHaveBeenCalled();
     });
 
     it('one failing student does not stop the rest', async () => {

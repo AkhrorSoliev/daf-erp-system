@@ -176,12 +176,48 @@ describe('LessonAdmissionService', () => {
         studentIds: [1],
       });
 
+    /** What the month's charges on closed enrollments kept (a transfer). */
+    let closed: { studentId: number; chargedAmount: number }[];
+    const closedWhere = { status: { not: 'ACTIVE' }, deletedAt: null };
+
     beforeEach(() => {
       // 100 000 of 300 000 paid: the 2nd lesson is paid for, half is not.
       prisma.student.findMany.mockResolvedValue([
         { id: 1, balance: -200000, companyId: 5 },
       ]);
-      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([novRow]);
+      closed = [];
+      prisma.enrollmentMonthlyCharge.findMany.mockImplementation(
+        (args: { where: { enrollment: { status: unknown } } }) =>
+          Promise.resolve(
+            args.where.enrollment.status === 'ACTIVE' ? [novRow] : closed,
+          ),
+      );
+    });
+
+    it('judges a month split by a transfer whole: the closed charge counts toward the half', async () => {
+      // 100 000 stayed with the old group; 200 000 of the 400 000 month paid.
+      closed = [{ studentId: 1, chargedAmount: 100000 }];
+      const result = await onSecondLesson();
+      expect(result.get(1)).toMatchObject({ admitted: true, reason: 'PAID' });
+      expect(prisma.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith({
+        where: {
+          studentId: { in: [1] },
+          periodYear: 2026,
+          periodMonth: 11,
+          status: 'CHARGED',
+          enrollment: closedWhere,
+        },
+        select: { studentId: true, chargedAmount: true },
+      });
+    });
+
+    it('does not read closed charges where the least share does not apply', async () => {
+      await service.forLesson({
+        groupId: 'g005',
+        lessonDay: '2026-10-05',
+        studentIds: [1],
+      });
+      expect(prisma.enrollmentMonthlyCharge.findMany).toHaveBeenCalledTimes(1);
     });
 
     it('keeps a student below `payment.admissionMinPaidPercent` out', async () => {

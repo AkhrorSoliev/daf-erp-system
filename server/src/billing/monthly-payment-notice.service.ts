@@ -289,9 +289,9 @@ export class MonthlyPaymentNoticeService {
       : null;
     let queued = 0;
     for (const charge of dueTomorrow) {
-      const minDue = shortfalls?.get(charge.enrollmentId);
+      const short = shortfalls?.get(charge.enrollmentId);
       // Under the least share a student the lesson admits is not reminded.
-      if (shortfalls && minDue === undefined) continue;
+      if (shortfalls && !short) continue;
       try {
         await this.digestQueue.enqueue({
           recipientKind: TelegramDigestRecipientKind.STUDENT,
@@ -306,7 +306,7 @@ export class MonthlyPaymentNoticeService {
             periodYear: year,
             periodMonth: month,
             lessonDate: tomorrow,
-            ...(minDue !== undefined && { minDue, minPaidPercent }),
+            ...short,
           },
         });
         queued += 1;
@@ -388,12 +388,13 @@ export class MonthlyPaymentNoticeService {
       if (next.minPaidPercent !== null) continue;
       const monthDue = own.reduce((sum, c) => sum + c.chargedAmount, 0);
       if (own[0].student.balance + monthDue <= 0) continue;
-      const charge =
-        own.find(
-          (c) =>
-            c.group.name === next.groupName &&
-            c.coveredDates.includes(next.date),
-        ) ?? own[0];
+      // `reachForMonth` also reads charges of groups this list leaves out (a
+      // paused group): a lesson there is not announced.
+      const charge = own.find(
+        (c) =>
+          c.group.name === next.groupName && c.coveredDates.includes(next.date),
+      );
+      if (!charge) continue;
       try {
         await this.digestQueue.enqueue({
           recipientKind: TelegramDigestRecipientKind.STUDENT,
@@ -423,14 +424,18 @@ export class MonthlyPaymentNoticeService {
 
   /**
    * What admits each of these enrollments to `lessonDay`, for the ones it
-   * does not admit — one admission read per group. A group whose read fails
-   * is logged and gets no reminder.
+   * does not admit — one admission read per group. The share is named only
+   * when it, not the lessons held, keeps the student out. A group whose read
+   * fails is logged and gets no reminder.
    */
   private async shortfallsFor(
     charges: { enrollmentId: string; groupId: string; studentId: number }[],
     lessonDay: string,
-  ): Promise<Map<string, number>> {
-    const shortfalls = new Map<string, number>();
+  ): Promise<Map<string, { minDue: number; minPaidPercent?: number }>> {
+    const shortfalls = new Map<
+      string,
+      { minDue: number; minPaidPercent?: number }
+    >();
     for (const groupId of new Set(charges.map((c) => c.groupId))) {
       const ofGroup = charges.filter((c) => c.groupId === groupId);
       try {
@@ -442,7 +447,12 @@ export class MonthlyPaymentNoticeService {
         for (const c of ofGroup) {
           const verdict = verdicts.get(c.studentId);
           if (verdict?.admitted === false) {
-            shortfalls.set(c.enrollmentId, verdict.shortfall);
+            shortfalls.set(c.enrollmentId, {
+              minDue: verdict.shortfall,
+              ...(verdict.minPaidPercent !== undefined && {
+                minPaidPercent: verdict.minPaidPercent,
+              }),
+            });
           }
         }
       } catch (err) {

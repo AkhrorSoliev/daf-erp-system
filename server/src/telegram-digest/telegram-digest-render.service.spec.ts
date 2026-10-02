@@ -833,6 +833,29 @@ describe('TelegramDigestRenderService', () => {
         expect(text).not.toContain('dagi darsgacha yetadi');
         expect(r.hiddenIds).toEqual([other.id]);
       });
+
+      it('is sent when the 2nd-lesson reminder falls away with its closed enrollment', async () => {
+        student(-225000);
+        enrollmentOpen(); // only enr-1 is still open
+        const eve = row(
+          TelegramDigestCategory.PAYMENT_REMINDER,
+          {
+            enrollmentId: 'enr-2',
+            groupName: 'B1-3',
+            periodYear: 2026,
+            periodMonth: 11,
+            lessonDate: '2026-11-14',
+          },
+          { relatedEntityId: 'enr-2:2026-11-14' },
+        );
+        const r = await service.renderStudent(
+          10042,
+          [eve, paidThrough('2026-11-13')],
+          NOV_13,
+        );
+        expect(textOf(r)).toContain('13.11.2026 dagi darsgacha yetadi');
+        expect(r.hiddenIds).toEqual([eve.id]);
+      });
     });
   });
 });

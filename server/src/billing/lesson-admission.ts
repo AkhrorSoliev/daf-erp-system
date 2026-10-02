@@ -142,14 +142,29 @@ export function isFirstLessonOfMonth(
  * held, so the reach asks every charge for `max(its lessons through the day,
  * its least share)`. Each group's share starts at its own 2nd lesson and the
  * needs add up; the balance is not split between groups.
+ *
+ * `closedThisMonth` — what the month's charges on enrollments since closed
+ * kept (a transfer, a rejoin): the month is then judged whole. That money is
+ * already owed in full for lessons held, so the least share is taken of the
+ * month's total; taken of the new charge on top of it, a student who paid two
+ * thirds of the month would be kept out.
  */
 function heldForAdmission(
   charges: readonly AdmissionCharge[],
   day: string,
   minPaidPercent: number,
+  closedThisMonth = 0,
 ): number {
   if (minPaidPercent <= 0 || day < MIN_SHARE_START_DAY) {
     return heldAfter(charges, day);
+  }
+  if (closedThisMonth > 0) {
+    const month =
+      closedThisMonth + charges.reduce((sum, c) => sum + c.chargedAmount, 0);
+    return Math.min(
+      heldAfter(charges, day),
+      month - Math.ceil((month * minPaidPercent) / 100),
+    );
   }
   let total = 0;
   for (const c of charges) {
@@ -188,6 +203,8 @@ export function lessonAdmission(input: {
   charges: readonly AdmissionCharge[];
   /** `payment.admissionMinPaidPercent`; absent or 0: only the lessons held are asked for. */
   minPaidPercent?: number;
+  /** What this month's charges on closed enrollments kept (`heldForAdmission`). */
+  closedThisMonth?: number;
   /**
    * The student's charges of later months. The balance already carries
    * them and money settles the oldest charge first, so they count as still
@@ -214,7 +231,13 @@ export function lessonAdmission(input: {
 
   const paid = input.balance + heldLater(input.laterCharges ?? []);
   const reachOn = (day: string) =>
-    paid + heldForAdmission(input.charges, day, input.minPaidPercent ?? 0);
+    paid +
+    heldForAdmission(
+      input.charges,
+      day,
+      input.minPaidPercent ?? 0,
+      input.closedThisMonth,
+    );
   const reach = reachOn(input.lessonDay);
   if (reach < 0) {
     // The least share asks for more than the lessons held do.
@@ -270,6 +293,7 @@ export function paymentReach(input: {
   charges: readonly (AdmissionCharge & { groupName: string })[];
   /** As in `lessonAdmission`. */
   minPaidPercent?: number;
+  closedThisMonth?: number;
 }): PaymentReach | null {
   if (input.today < ADMISSION_START_DAY) return null;
 
@@ -306,7 +330,12 @@ export function paymentReach(input: {
   for (const lesson of upcoming) {
     const reach =
       input.balanceAfter +
-      heldForAdmission(input.charges, lesson.day, input.minPaidPercent ?? 0);
+      heldForAdmission(
+        input.charges,
+        lesson.day,
+        input.minPaidPercent ?? 0,
+        input.closedThisMonth,
+      );
     if (!lesson.free && reach < 0) {
       return {
         paidThrough,

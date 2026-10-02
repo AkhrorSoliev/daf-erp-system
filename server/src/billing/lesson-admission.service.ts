@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
 import {
   ADMISSION_START_DAY,
+  MIN_SHARE_START_DAY,
   firstLessonCoverage,
   lessonAdmission,
   paymentReach,
@@ -37,6 +38,42 @@ export class LessonAdmissionService {
     return this.settings.get(companyId, 'payment.admissionMinPaidPercent');
   }
 
+  /**
+   * What the month's charges on enrollments since closed kept, per student —
+   * a transfer or a rejoin, whose month the least share judges whole
+   * (`heldForAdmission`). Not read where the least share does not apply.
+   */
+  private async closedThisMonth(
+    client: Reader,
+    studentIds: number[],
+    day: string,
+    minPaidPercent: number,
+  ): Promise<Map<number, number>> {
+    const kept = new Map<number, number>();
+    if (minPaidPercent <= 0 || day < MIN_SHARE_START_DAY) return kept;
+    const [year, month] = day.split('-').map(Number);
+    const rows = await client.enrollmentMonthlyCharge.findMany({
+      where: {
+        studentId: { in: studentIds },
+        periodYear: year,
+        periodMonth: month,
+        status: MonthlyChargeStatus.CHARGED,
+        enrollment: {
+          status: { not: EnrollmentStatus.ACTIVE },
+          deletedAt: null,
+        },
+      },
+      select: { studentId: true, chargedAmount: true },
+    });
+    for (const row of rows) {
+      kept.set(
+        row.studentId,
+        (kept.get(row.studentId) ?? 0) + row.chargedAmount,
+      );
+    }
+    return kept;
+  }
+
   /** Contract 3.2 for every student of one lesson. A student missing from the map is admitted. */
   async forLesson(
     params: { groupId: string; lessonDay: string; studentIds: number[] },
@@ -63,6 +100,12 @@ export class LessonAdmissionService {
       month,
       true,
     );
+    const closed = await this.closedThisMonth(
+      client,
+      params.studentIds,
+      params.lessonDay,
+      minPaidPercent,
+    );
     const inMonth = (c: { periodYear: number; periodMonth: number }) =>
       c.periodYear === year && c.periodMonth === month;
     for (const student of students) {
@@ -76,6 +119,7 @@ export class LessonAdmissionService {
           charges: own.filter(inMonth),
           laterCharges: own.filter((c) => !inMonth(c)),
           minPaidPercent,
+          closedThisMonth: closed.get(student.id),
         }),
       );
     }
@@ -171,11 +215,19 @@ export class LessonAdmissionService {
       year,
       month,
     );
+    const minPaidPercent = await this.minPaidPercent(params.companyId);
+    const closed = await this.closedThisMonth(
+      this.prisma,
+      [params.studentId],
+      params.today,
+      minPaidPercent,
+    );
     return paymentReach({
       today: params.today,
       balanceAfter: params.balanceAfter,
       charges,
-      minPaidPercent: await this.minPaidPercent(params.companyId),
+      minPaidPercent,
+      closedThisMonth: closed.get(params.studentId),
     });
   }
 
@@ -204,12 +256,19 @@ export class LessonAdmissionService {
       this.loadCharges(this.prisma, params.studentIds, year, month),
       this.minPaidPercent(params.companyId),
     ]);
+    const closed = await this.closedThisMonth(
+      this.prisma,
+      params.studentIds,
+      params.today,
+      minPaidPercent,
+    );
     for (const student of students) {
       const reach = paymentReach({
         today: `${params.today.slice(0, 8)}01`,
         balanceAfter: student.balance,
         charges: charges.filter((c) => c.studentId === student.id),
         minPaidPercent,
+        closedThisMonth: closed.get(student.id),
       });
       if (reach) result.set(student.id, reach);
     }

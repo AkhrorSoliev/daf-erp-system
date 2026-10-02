@@ -244,6 +244,20 @@ describe('paymentReminderSection', () => {
       );
       expect(text).toContain("to'lovning kamida 40% i 2-darsgacha qilinadi");
     });
+
+    it('names no share when the lessons held are what is short', () => {
+      const text = textOf(
+        paymentReminderSection(
+          [half({ minDue: 69230, minPaidPercent: undefined })],
+          103845,
+          event,
+        ),
+      );
+      expect(text).toContain("Darsga kirish uchun kamida: <b>69 230 so'm</b>");
+      expect(text.split('\n').pop()).toBe(
+        "Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha amalga oshirishingizni so'raymiz.",
+      );
+    });
   });
 
   it('contract 3.7: says how far the payments reach and by when to pay the rest', () => {

@@ -377,8 +377,6 @@ export class TelegramDigestRenderService {
         ? p.paidThrough.queuedFor === today
         : p.lessonDate === tomorrow;
     });
-    const secondLesson = fresh.filter((e) => !reminderOf(e).paidThrough);
-    const dueTomorrow = secondLesson.length > 0 ? secondLesson : fresh;
 
     const standing =
       bills.length === 0
@@ -392,22 +390,23 @@ export class TelegramDigestRenderService {
             select: { id: true },
           });
     const open =
-      dueTomorrow.length === 0
+      fresh.length === 0
         ? []
         : await this.prisma.enrollment.findMany({
             where: {
-              id: { in: dueTomorrow.map((e) => reminderOf(e).enrollmentId) },
+              id: { in: fresh.map((e) => reminderOf(e).enrollmentId) },
               status: EnrollmentStatus.ACTIVE,
             },
             select: { id: true },
           });
     const standingIds = new Set(standing.map((c) => c.id));
     const openIds = new Set(open.map((e) => e.id));
+    const live = fresh.filter((e) => openIds.has(reminderOf(e).enrollmentId));
+    // The 2nd-lesson reminder owns its evening; contract 3.7's gives way.
+    const secondLesson = live.filter((e) => !reminderOf(e).paidThrough);
     return {
       bills: bills.filter((e) => standingIds.has(chargeIdOf(e))),
-      reminders: dueTomorrow.filter((e) =>
-        openIds.has(reminderOf(e).enrollmentId),
-      ),
+      reminders: secondLesson.length > 0 ? secondLesson : live,
     };
   }
 
