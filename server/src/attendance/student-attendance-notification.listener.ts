@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { AttendanceStatus } from '@prisma/client';
+import {
+  AttendanceStatus,
+  MonthlyChargeStatus,
+  PaymentModel,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 
@@ -74,7 +78,7 @@ export class StudentAttendanceNotificationListener {
         lessonStartTime: true,
         lessonEndTime: true,
         room: { select: { name: true } },
-        course: { select: { lessonPaymentCount: true } },
+        course: { select: { lessonPaymentCount: true, paymentModel: true } },
         teachers: {
           select: {
             teacher: { select: { firstName: true, lastName: true } },
@@ -83,13 +87,47 @@ export class StudentAttendanceNotificationListener {
       },
     });
 
-    // Lesson number = how many lessons this student has had (or missed) in
-    // this group up to and including today. Counted per-student so a student
-    // who joined mid-cycle sees their own progress, not the group's.
-    const parsedDate = new Date(date + 'T00:00:00.000Z');
-    const lessonNumber = await this.prisma.attendance.count({
-      where: { studentId, groupId, date: { lte: parsedDate } },
-    });
+    let lessonNumber: number | null = null;
+    let totalLessons: number | null = null;
+    if (group?.course?.paymentModel === PaymentModel.MONTHLY) {
+      // Oylik kursda dars raqami o'quvchining O'Z oyidagi o'rni: shu oyning
+      // CHARGED hisobida (`coveredDates` minus `frozenOutDates`, o'sish
+      // tartibida) bu sana nechanchi, va oyda nechta dars bor. Hech bir hisob
+      // sanani qoplamasa, «Dars:» qatori chiqarilmaydi.
+      const [year, month] = date.split('-').map(Number);
+      const charges = await this.prisma.enrollmentMonthlyCharge.findMany({
+        where: {
+          studentId,
+          groupId,
+          periodYear: year,
+          periodMonth: month,
+          status: MonthlyChargeStatus.CHARGED,
+        },
+        select: { coveredDates: true, frozenOutDates: true },
+      });
+      for (const charge of charges) {
+        const givenBack = new Set(charge.frozenOutDates ?? []);
+        const live = (charge.coveredDates ?? []).filter(
+          (d) => !givenBack.has(d),
+        );
+        const index = live.indexOf(date);
+        if (index >= 0) {
+          lessonNumber = index + 1;
+          totalLessons = live.length;
+          break;
+        }
+      }
+    } else {
+      // Lesson number = how many lessons this student has had (or missed) in
+      // this group up to and including today. Counted per-student so a student
+      // who joined mid-cycle sees their own progress, not the group's.
+      const parsedDate = new Date(date + 'T00:00:00.000Z');
+      const count = await this.prisma.attendance.count({
+        where: { studentId, groupId, date: { lte: parsedDate } },
+      });
+      lessonNumber = count > 0 ? count : null;
+      totalLessons = group?.course?.lessonPaymentCount ?? null;
+    }
 
     const text = buildMessage({
       status: newStatus,
@@ -100,8 +138,8 @@ export class StudentAttendanceNotificationListener {
           `${t.teacher.firstName} ${t.teacher.lastName}`.trim(),
         ) ?? [],
       roomName: group?.room?.name ?? null,
-      lessonNumber: lessonNumber > 0 ? lessonNumber : null,
-      totalLessons: group?.course?.lessonPaymentCount ?? null,
+      lessonNumber,
+      totalLessons,
       date,
       lessonStartTime: group?.lessonStartTime ?? null,
       lessonEndTime: group?.lessonEndTime ?? null,

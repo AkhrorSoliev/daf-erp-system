@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AttendanceStatus } from '@prisma/client';
+import {
+  AttendanceStatus,
+  MonthlyChargeStatus,
+  PaymentModel,
+} from '@prisma/client';
 import {
   AttendanceStudentRecordedPayload,
   StudentAttendanceNotificationListener,
@@ -56,6 +60,9 @@ describe('StudentAttendanceNotificationListener', () => {
       },
       attendance: {
         count: jest.fn().mockResolvedValue(5),
+      },
+      enrollmentMonthlyCharge: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
     };
 
@@ -266,6 +273,141 @@ describe('StudentAttendanceNotificationListener', () => {
         groupId: 'g-1',
         date: { lte: new Date('2026-04-30T00:00:00.000Z') },
       },
+    });
+  });
+
+  describe("oylik kursda dars raqami o'quvchining o'z oyi bo'yicha (A3.3)", () => {
+    // 2026-oktabrning hamma du/chor/ju kunlari — oylik hisobning `coveredDates`i
+    // (`lessonDatesInMonth` shunday, o'sish tartibida beradi).
+    const OCTOBER = [
+      '2026-10-02',
+      '2026-10-05',
+      '2026-10-07',
+      '2026-10-09',
+      '2026-10-12',
+      '2026-10-14',
+      '2026-10-16',
+      '2026-10-19',
+      '2026-10-21',
+      '2026-10-23',
+      '2026-10-26',
+      '2026-10-28',
+      '2026-10-30',
+    ];
+
+    const groupOf = (paymentModel: PaymentModel) => ({
+      lessonStartTime: '18:30',
+      lessonEndTime: '20:00',
+      room: { name: '201-xona' },
+      // `lessonPaymentCount` ham, davomat qatorlari soni ham ataylab oylik
+      // hisobdan farq qiladi: son faqat o'quvchining o'z oyidan chiqishi kerak.
+      course: { lessonPaymentCount: 8, paymentModel },
+      teachers: [],
+    });
+
+    const sentText = () => bot.telegram.sendMessage.mock.calls[0][1];
+
+    beforeEach(() => {
+      prisma.group.findUnique.mockResolvedValue(groupOf(PaymentModel.MONTHLY));
+      prisma.attendance.count.mockResolvedValue(31);
+    });
+
+    it('MONTHLY: 6th covered date with the 4th given back reads 5 / 12', async () => {
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        { coveredDates: OCTOBER, frozenOutDates: [OCTOBER[3]] },
+      ]);
+
+      await listener.handle(basePayload({ date: OCTOBER[5] }));
+
+      expect(sentText()).toContain('<b>Dars:</b> 5 / 12');
+      // Mock so'ralgan ustunlarni emas, bergan qatorini qaytaradi, shuning
+      // uchun so'rovning o'zi tekshiriladi: `select`da `frozenOutDates`
+      // bo'lmasa, haqiqiy bazada u kelmaydi.
+      expect(prisma.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith({
+        where: {
+          studentId: 10042,
+          groupId: 'g-1',
+          periodYear: 2026,
+          periodMonth: 10,
+          status: MonthlyChargeStatus.CHARGED,
+        },
+        select: { coveredDates: true, frozenOutDates: true },
+      });
+      // Eski hisob («shu guruhdagi barcha davomat qatorlari») ishlatilmaydi.
+      expect(prisma.attendance.count).not.toHaveBeenCalled();
+    });
+
+    it('asks the database for the course paymentModel', async () => {
+      await listener.handle(basePayload({ date: OCTOBER[5] }));
+
+      // Mock `paymentModel`ni `select`dan qat'i nazar qaytaradi. `select`da u
+      // bo'lmasa, haqiqiy bazada hamma kurs LESSON_PACK yo'liga tushadi.
+      expect(prisma.group.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            course: {
+              select: { lessonPaymentCount: true, paymentModel: true },
+            },
+          }),
+        }),
+      );
+    });
+
+    it('MONTHLY: the charge that covers the date counts, not an earlier one of the same month', async () => {
+      // O'quvchi oy ichida guruhdan chiqib qaytgan: bir oyda ikkita CHARGED hisob.
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        {
+          coveredDates: OCTOBER.slice(0, 4),
+          frozenOutDates: [OCTOBER[3]],
+        },
+        { coveredDates: OCTOBER.slice(8), frozenOutDates: [] },
+      ]);
+
+      await listener.handle(basePayload({ date: OCTOBER[10] }));
+
+      // OCTOBER[8..12] = 21, 23, 26, 28, 30; 26-sana — shulardan uchinchisi.
+      expect(sentText()).toContain('<b>Dars:</b> 3 / 5');
+    });
+
+    it.each([
+      {
+        name: 'no CHARGED charge for the month',
+        charges: [],
+        date: OCTOBER[5],
+      },
+      {
+        name: 'the date is not covered by any charge',
+        charges: [{ coveredDates: OCTOBER, frozenOutDates: [] }],
+        date: '2026-10-08',
+      },
+      {
+        name: 'the date was given back (frozen out)',
+        charges: [{ coveredDates: OCTOBER, frozenOutDates: [OCTOBER[5]] }],
+        date: OCTOBER[5],
+      },
+    ])('MONTHLY: omits the Dars line when $name', async ({ charges, date }) => {
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue(charges);
+
+      await listener.handle(basePayload({ date }));
+
+      expect(bot.telegram.sendMessage).toHaveBeenCalledTimes(1);
+      expect(sentText()).not.toContain('Dars:');
+    });
+
+    it('LESSON_PACK: stays 5 / 12, counted from attendance rows', async () => {
+      prisma.group.findUnique.mockResolvedValue({
+        ...groupOf(PaymentModel.LESSON_PACK),
+        course: {
+          lessonPaymentCount: 12,
+          paymentModel: PaymentModel.LESSON_PACK,
+        },
+      });
+      prisma.attendance.count.mockResolvedValue(5);
+
+      await listener.handle(basePayload());
+
+      expect(sentText()).toContain('<b>Dars:</b> 5 / 12');
+      expect(prisma.enrollmentMonthlyCharge.findMany).not.toHaveBeenCalled();
     });
   });
 });
