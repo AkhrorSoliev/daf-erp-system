@@ -98,7 +98,7 @@ describe("password-reset.scene — kontakt orqali bog'lanish", () => {
     );
     expect(prisma.student.update).toHaveBeenCalledWith({
       where: { id: 12345 },
-      data: { telegramChatId: '555333' },
+      data: { telegramChatId: '555333', telegramDisconnectedAt: null },
     });
     expect(ctx.session.step).toBe(1);
     expect(ctx.session.data.studentId).toBe(12345);

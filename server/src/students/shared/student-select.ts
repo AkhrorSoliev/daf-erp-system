@@ -13,6 +13,7 @@ export const studentSelect = {
   parentName: true,
   telegram: true,
   telegramChatId: true,
+  telegramDisconnectedAt: true,
   verifiedPhone: true,
   phoneVerifiedAt: true,
   gender: true,
