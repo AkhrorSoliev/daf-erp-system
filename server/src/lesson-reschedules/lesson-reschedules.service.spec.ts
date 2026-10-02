@@ -556,6 +556,23 @@ describe('LessonReschedulesService', () => {
 
       expect(tx.lessonTeacherOverride.update).not.toHaveBeenCalled();
     });
+
+    it('takes a LATE row back to EXCUSED without its minutes (ADR-0048)', async () => {
+      tx.attendance.findMany.mockResolvedValue([
+        { id: 'att-1', studentId: 10001, status: 'LATE' },
+      ]);
+      tx.attendance.update = jest.fn();
+      // No billed enrollment found: the row is flipped, nothing is billed.
+      tx.transaction = { findFirst: jest.fn().mockResolvedValue(null) };
+      tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+
+      await service.create(baseDto, 1, 99);
+
+      expect(tx.attendance.update).toHaveBeenCalledWith({
+        where: { id: 'att-1' },
+        data: { status: 'EXCUSED', lateMinutes: null },
+      });
+    });
   });
 
   describe("create — «Dars bo'ldimi?» (ADR-0054)", () => {

@@ -270,6 +270,8 @@ export class LessonCancellationsService {
             data: {
               status: AttendanceStatus.EXCUSED,
               cancellationId: cancellation.id,
+              // A late arrival's minutes leave with its LATE mark.
+              lateMinutes: null,
             },
           });
 
