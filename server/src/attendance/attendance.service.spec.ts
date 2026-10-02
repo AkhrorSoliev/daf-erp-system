@@ -1049,7 +1049,7 @@ describe('AttendanceService', () => {
           ['Administrator'],
         );
 
-        expect(result.debtorStudents[0].monthCoverage).toBeNull();
+        expect(result.debtorStudents[0]).toMatchObject({ monthCoverage: null });
       });
 
       it('a pack group keeps the cycle and never asks for month coverage', async () => {
