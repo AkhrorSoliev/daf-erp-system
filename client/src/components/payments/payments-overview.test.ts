@@ -392,3 +392,43 @@ describe("PaymentsOverview — the debt block", () => {
     );
   });
 });
+
+// The CEO reads Uzbek only (A3.6): the three money cards used to be named by
+// their English abbreviations. Their tooltips already explained each one in
+// Uzbek, and they stay as they are.
+describe("PaymentsOverview — the money cards have Uzbek names", () => {
+  it("names the three cards in Uzbek, with a subtitle each, and prints no LTV, CAC or ROI", () => {
+    const text = render(charges);
+
+    expect(text).toContain("O'quvchi qiymati");
+    expect(text).toContain("Bitta o'quvchidan o'rtacha");
+    expect(text).toContain("Jalb qilish narxi");
+    expect(text).toContain("Bitta yangi o'quvchiga");
+    expect(text).toContain("Marketing samarasi");
+    expect(text).not.toMatch(/\b(LTV|CAC|ROI)\b/);
+    // The old subtitles are gone: «Jalb qilish narxi» is now the card's name.
+    expect(text).not.toContain("Davriy o'quvchi qiymati");
+  });
+
+  // A closed dialog renders nothing, so — like the tooltips above — the chart
+  // dialog's titles are read from its source. They are also the name the
+  // chart's tooltip gives the series, so one list covers both.
+  it("the chart dialog's titles are Uzbek too", () => {
+    const source = readFileSync(
+      join(__dirname, "kpi-chart-dialog.tsx"),
+      "utf-8",
+    );
+    const titles = [...source.matchAll(/^\s*title: "(.*)",$/gm)].map(
+      (m) => m[1],
+    );
+
+    expect(titles).toEqual(
+      expect.arrayContaining([
+        "O'quvchi qiymati",
+        "Jalb qilish narxi",
+        "Marketing samarasi",
+      ]),
+    );
+    expect(titles.join("\n")).not.toMatch(/\b(LTV|CAC|ROI)\b/);
+  });
+});

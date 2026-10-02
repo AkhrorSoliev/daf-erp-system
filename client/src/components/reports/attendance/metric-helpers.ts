@@ -198,9 +198,9 @@ export const ATTENDANCE_TABLE_TOOLTIPS = {
     "Davomat foizi: (KELDI + KECHIKDI) / Jami yozuvlar × 100.\n\nDarslar bekor qilingan yoki sababli kelmagan yozuvlar yig'indidan chiqariladi.",
   studentCount: "Hozirda guruhda o'qiyotgan faol o'quvchilar soni.",
   startStudentCount:
-    "Tanlangan davr boshida guruhda faol bo'lgan o'quvchilar soni (ACTIVE yoki FROZEN status).",
+    "Tanlangan davr boshida guruhda faol bo'lgan o'quvchilar soni (faol yoki muzlatilgan).",
   endStudentCount:
-    "Tanlangan davr oxirida guruhda faol bo'lgan o'quvchilar soni (ACTIVE yoki FROZEN status).",
+    "Tanlangan davr oxirida guruhda faol bo'lgan o'quvchilar soni (faol yoki muzlatilgan).",
   retention:
     "O'zgarish: o'quvchilar soni davr boshida bo'lgandan necha foizga o'zgargan.\n\n• +45% — guruh kattalashgan\n• 0% — barqaror\n• -20% — guruh kichraygan\n\nHisob: (Yakun − Boshi) / Boshi × 100.\n\nRanglar:\n• Yashil — o'sish (>0%)\n• Kulrang — barqaror (0%)\n• Qizil — yo'qotish (<0%)",
   lessonCount:

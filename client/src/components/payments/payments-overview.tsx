@@ -360,27 +360,27 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
             {/* 5. LTV */}
             <KpiCard
               icon={Users}
-              label="LTV"
+              label="O'quvchi qiymati"
               value={`${fmt(d.ltv)} so'm`}
               color="text-violet-600 dark:text-violet-400"
               tooltip="Bitta o'quvchi shu davrda o'rtacha qancha pul olib kelgan. Yuqori bo'lsa — yaxshi."
-              subtitle="Davriy o'quvchi qiymati"
+              subtitle="Bitta o'quvchidan o'rtacha"
               onClick={() => setChartKey("ltv")}
             />
             {/* 6. CAC */}
             <KpiCard
               icon={UserPlus}
-              label="CAC"
+              label="Jalb qilish narxi"
               value={`${fmt(d.cac)} so'm`}
               color="text-amber-600 dark:text-amber-400"
               tooltip={`Bitta yangi o'quvchi olib kelish qancha turgani. Marketingga ${fmt(d.marketingExpenses)} so'm sarflandi, ${d.newStudentCount} ta yangi o'quvchi keldi.`}
-              subtitle="Jalb qilish narxi"
+              subtitle="Bitta yangi o'quvchiga"
               onClick={() => setChartKey("cac")}
             />
             {/* 7. Marketing ROI */}
             <KpiCard
               icon={Megaphone}
-              label="Marketing ROI"
+              label="Marketing samarasi"
               value={`${d.marketingRoi}%`}
               color={d.marketingRoi > 100 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}
               tooltip="Marketingga sarflangan pul qancha qaytganini ko'rsatadi. 100% dan yuqori bo'lsa — foyda keltiryapti."

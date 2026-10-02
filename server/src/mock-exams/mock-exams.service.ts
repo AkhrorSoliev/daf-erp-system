@@ -559,7 +559,7 @@ export class MockExamsService {
     const existing = await this.ensureExamInScope(id, companyId, scope);
     if (!isValidMockExamStatusTransition(existing.status, nextStatus)) {
       throw new BadRequestException(
-        `${existing.status} → ${nextStatus} o'tish ruxsat etilmagan`,
+        "Imtihon holatini bu tartibda o'zgartirib bo'lmaydi",
       );
     }
 

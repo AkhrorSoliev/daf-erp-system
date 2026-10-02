@@ -1164,7 +1164,7 @@ export class LessonBillingService {
         groupId: p.groupId,
         lessonDate: p.lessonDate,
         reversedById: p.performedById,
-        reversalReason: 'attendance status changed',
+        reversalReason: "davomat holati o'zgardi",
         tx,
       });
     }
@@ -1176,7 +1176,7 @@ export class LessonBillingService {
         consumption.id,
         {
           performedById: p.performedById,
-          reason: 'attendance status changed',
+          reason: "davomat holati o'zgardi",
         },
         tx,
       );
@@ -1206,7 +1206,7 @@ export class LessonBillingService {
           uncoveredDeduction.id,
           {
             performedById: p.performedById,
-            reason: 'attendance status changed',
+            reason: "davomat holati o'zgardi",
           },
           tx,
         );
@@ -1349,7 +1349,7 @@ export class LessonBillingService {
               c.id,
               {
                 performedById: params.performedById,
-                reason: 'LESSON_DEDUCTION reversed',
+                reason: "dars to'lovi bekor qilindi",
               },
               tx,
             );

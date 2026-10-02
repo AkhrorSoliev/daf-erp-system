@@ -521,6 +521,25 @@ describe('MockExamsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    // Admin shu matnni toast'da o'qiydi: «REGISTRATION_OPEN → ANNOUNCED»
+    // kabi enum nomlari ham, inglizcha so'z ham chiqmasin.
+    it("noto'g'ri o'tishda enum nomlarisiz, oddiy o'zbekcha sabab aytadi", async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+
+      const error = await service
+        .changeStatus('e1', MockExamStatus.ANNOUNCED, 1001, 1, null)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).message).toBe(
+        "Imtihon holatini bu tartibda o'zgartirib bo'lmaydi",
+      );
+      expect(prisma.mockExam.update).not.toHaveBeenCalled();
+    });
+
     it('moves REGISTRATION_OPEN → REGISTRATION_CLOSED and records history', async () => {
       prisma.mockExam.findFirst.mockResolvedValue({
         id: 'e1',

@@ -579,9 +579,14 @@ describe('LessonBillingService', () => {
         oldStatus: AttendanceStatus.PRESENT,
         newStatus: AttendanceStatus.EXCUSED,
       });
+      // Sabab daftarda «Bekor qilindi: …» bo'lib saqlanadi va ekranda
+      // o'qiladi — inglizcha emas (A3.6). Eski qatorlar eski matnni saqlaydi.
       expect(transactionsService.reverseLessonConsumption).toHaveBeenCalledWith(
         'cons-existing',
-        expect.objectContaining({ performedById: 99 }),
+        expect.objectContaining({
+          performedById: 99,
+          reason: "davomat holati o'zgardi",
+        }),
         tx,
       );
       expect(tx.enrollment.update).toHaveBeenCalledWith({
@@ -590,7 +595,11 @@ describe('LessonBillingService', () => {
       });
       expect(
         salaryAccrualService.reverseAccrualForAttendance,
-      ).toHaveBeenCalled();
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reversalReason: "davomat holati o'zgardi",
+        }),
+      );
     });
 
     // Misol 7: pul yetmagan, consumption yo'q → prepaid +1 QILMAYDI.
@@ -608,7 +617,11 @@ describe('LessonBillingService', () => {
       // Accrual reverse still attempted (returns null inside the service if missing)
       expect(
         salaryAccrualService.reverseAccrualForAttendance,
-      ).toHaveBeenCalled();
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reversalReason: "davomat holati o'zgardi",
+        }),
+      );
     });
 
     // F-03 regression: a debtor's SINGLE_UNCOVERED lesson (Path D) writes a real
@@ -630,13 +643,19 @@ describe('LessonBillingService', () => {
       });
       expect(transactionsService.reverseLessonConsumption).toHaveBeenCalledWith(
         'cons-existing',
-        expect.objectContaining({ performedById: 99 }),
+        expect.objectContaining({
+          performedById: 99,
+          reason: "davomat holati o'zgardi",
+        }),
         tx,
       );
       // The debt-creating deduction is reversed → balance restored.
       expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
         'ded-uncovered',
-        expect.objectContaining({ performedById: 99 }),
+        expect.objectContaining({
+          performedById: 99,
+          reason: "davomat holati o'zgardi",
+        }),
         tx,
       );
       // No free prepaid lesson.
@@ -1997,6 +2016,35 @@ describe('LessonBillingService', () => {
         where: { id: 'enroll-1' },
         data: { prepaidLessonsRemaining: 0 },
       });
+    });
+
+    // Paketning har bir darsi uchun yozilgan LESSON_CONSUMPTION qatori ham
+    // bekor bo'ladi; uning sababi daftarda «Bekor qilindi: …» bo'lib ekranga
+    // chiqadi (A3.6) — inglizcha enum nomisiz.
+    it('paketdagi dars qatorlarini o`zbekcha sabab bilan bekor qiladi', async () => {
+      tx.transaction.findFirst.mockResolvedValueOnce({
+        id: 'ded-9',
+        enrollmentId: 'enroll-1',
+        reversedAt: null,
+        metadata: { mode: LessonDeductionMode.FULL_CYCLE },
+      });
+      tx.transaction.findMany.mockResolvedValueOnce([
+        { id: 'cons-1' },
+        { id: 'cons-2' },
+      ]);
+
+      await service.reverseLessonDeduction('ded-9', {
+        performedById: 7,
+        companyId: 1,
+      });
+
+      for (const id of ['cons-1', 'cons-2']) {
+        expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+          id,
+          { performedById: 7, reason: "dars to'lovi bekor qilindi" },
+          tx,
+        );
+      }
     });
   });
 });

@@ -128,7 +128,7 @@ export function TelegramAnnounceDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Feature e&apos;loni yuborish</DialogTitle>
+          <DialogTitle>Yangilik e&apos;loni yuborish</DialogTitle>
           <DialogDescription>
             Barcha tasdiqlangan Telegram guruhlarga bir martalik xabar.
             Avval &quot;Ko&apos;rib chiqish&quot; tugmasi bilan tekshiring.
@@ -188,7 +188,7 @@ export function TelegramAnnounceDialog() {
           )}
 
           <div className="space-y-2">
-            <Label>Ko&apos;rinish (preview)</Label>
+            <Label>Ko&apos;rinish</Label>
             <div className="rounded border bg-muted/40 p-3 text-sm whitespace-pre-wrap min-h-24">
               {preview || (
                 <span className="text-muted-foreground">

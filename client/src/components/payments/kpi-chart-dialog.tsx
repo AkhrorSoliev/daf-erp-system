@@ -81,21 +81,21 @@ const kpiConfig: Record<
       "Faol o'quvchilar hisobidagi jami pul. Musbat bo'lsa — oldindan to'langan, manfiy bo'lsa — qarz.",
   },
   ltv: {
-    title: "LTV — O'quvchi qiymati",
+    title: "O'quvchi qiymati",
     color: "#8b5cf6",
     suffix: " so'm",
     description:
       "Bitta o'quvchi o'rtacha qancha pul olib keladi. Yuqori bo'lsa — o'quvchilar uzoq qoladi va ko'proq to'laydi.",
   },
   cac: {
-    title: "CAC — Jalb qilish narxi",
+    title: "Jalb qilish narxi",
     color: "#d97706",
     suffix: " so'm",
     description:
       "Bitta yangi o'quvchi olib kelish uchun o'rtacha qancha sarflangani. Past bo'lsa — marketing samarali.",
   },
   marketingRoi: {
-    title: "Marketing ROI",
+    title: "Marketing samarasi",
     color: "#059669",
     suffix: "%",
     description:

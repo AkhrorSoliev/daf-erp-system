@@ -214,12 +214,12 @@ function EligibleBlock({
           <span className="text-muted-foreground">Sikl raqami:</span>
           <span className="text-right font-medium">#{d.cycleNumber}</span>
 
-          <span className="text-muted-foreground">Qatnashgan (PRESENT/LATE):</span>
+          <span className="text-muted-foreground">Qatnashgan (keldi, kechikdi):</span>
           <span className="text-right font-medium">
             {d.cyclePresentCount + d.cycleLateCount} dars
           </span>
 
-          <span className="text-muted-foreground">Kelmagan (ABSENT):</span>
+          <span className="text-muted-foreground">Kelmagan:</span>
           <span className="text-right font-medium">{d.cycleAbsentCount} dars</span>
 
           <span className="text-muted-foreground">Bir dars narxi:</span>

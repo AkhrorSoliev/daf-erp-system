@@ -239,7 +239,7 @@ export function TelegramGroupsClient() {
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
                 <TableHead>Guruh nomi</TableHead>
-                <TableHead>Chat ID</TableHead>
+                <TableHead>Chat raqami</TableHead>
                 <TableHead>Qo&apos;shilgan vaqt</TableHead>
                 <TableHead className="text-right">Amal</TableHead>
               </TableRow>
