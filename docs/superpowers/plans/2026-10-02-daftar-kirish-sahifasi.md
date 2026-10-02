@@ -8,6 +8,14 @@
 
 **Tech Stack:** Next.js 16.3 (App Router, server components), Tailwind CSS v4, shadcn/ui tokens, `next/font/google`, Vitest (node environment, no DOM).
 
+> **As built (02.10.2026):** the code went one step past the snippets below. The
+> writing sits on the ruling: both papers share a 2rem row (squared paper is
+> 1rem), text rows use `daftar-row`, the column is offset in whole rows instead
+> of being centred, and the sheet is `overflow-clip`. `DAFTAR_ROW` takes its
+> height from the caller, and the default `TelegramLoginButton` writes «yoki»
+> as a row. `client/CLAUDE.md` («Staff sign-in pages (Daftar)») describes the
+> final shape; the token values and the test are as written here.
+
 ## Global Constraints
 
 - The student login (`student.` host: Lumio, photo, `.liquid-glass`) and the Telegram Mini App (`/tg`) must not change.

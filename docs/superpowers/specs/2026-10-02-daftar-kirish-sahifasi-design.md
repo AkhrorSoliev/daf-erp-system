@@ -32,10 +32,16 @@ Qizil hoshiya chizig'i ikkalasida bir xil. Rasm yo'q — chiziqlar sof CSS.
 
 ### Ko'rinish
 
-- **Qog'oz** butun ekranni egallaydi. Katak 24px, chiziq oralig'i 32px.
-- **Ustun** 384px gacha, ekran markazida. Hoshiya chizig'i ustunning chap yonida
-  (telefonda 16px, `sm` dan 20px chapda), sahifaning butun balandligi bo'ylab.
-  Yozuv hoshiyadan boshlanadi.
+- **Qog'oz** butun ekranni egallaydi. Katak 16px, chiziq oralig'i 32px — ikkala
+  qog'ozda qator bir xil: 32px (katakning har ikkinchi chizig'i).
+- **Yozuv chiziq ustida turadi.** Sahifadagi hamma narsa varaq tepasidan butun
+  qatorlar bilan sanaladi (tepa tasma 64px, har yozuv qatori 32px, tugma ikki
+  qatorda), shuning uchun yorliq va qiymatlar chiziqqa tushadi. Shu sabab ustun
+  ekran balandligi bo'yicha markazlanmaydi: oyna balandlashganda butun qatorlar
+  bilan pastga suriladi.
+- **Ustun** 384px gacha, eni bo'yicha markazda. Hoshiya chizig'i ustunning chap
+  yonida (telefonda 16px, `sm` dan 20px chapda), sahifaning butun balandligi
+  bo'ylab. Yozuv hoshiyadan boshlanadi.
 - **Sarlavha**: tepasida kichik «DaF Sprachzentrum», ostida «Boshqaruv» yoki
   «O'qituvchi» — Fraunces kursiv, siyoh rangida (ruchkada yozilgandek).
 - **Maydonlar** («Telefon raqam», «Parol») faqat pastki chiziq bilan — chiziq
