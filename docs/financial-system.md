@@ -853,10 +853,10 @@ Per-student "har so'm qayerga ketdi?" hisoboti.
 | `GET /salary/me/accruals` | auth | Accruals |
 | `GET /salary/me/current-cycle/breakdown` | auth | Joriy davr breakdown |
 | `GET /salary/me/payments/:id/breakdown` | auth | Salary payment (faqat o'zi) |
-| `GET /salary/payments/:id/breakdown` | CEO/BD/Admin | Boshqa ustoz |
-| `GET /salary/config-history/:userId` | CEO/BD/Admin | Salary config tarix |
+| `GET /salary/payments/:id/breakdown` | CEO/BD | Boshqa ustoz |
+| `GET /salary/config-history/:userId` | CEO/BD | Salary config tarix |
 | `GET /salary/timeline/:userId` | CEO/BD/Admin | Birlashtirilgan timeline |
-| `GET /salary/period-settings` | CEO/BD/Admin | Period sozlamalar |
+| `GET /salary/period-settings` | CEO/BD | Period sozlamalar |
 | `POST /salary/period-settings` | CEO | Yangi period |
 | `POST /students/:id/initial-balance` | CEO | Boshlang'ich balans |
 | `GET /transactions/student/:id/lesson-trail` | CEO/BD/Admin/Cashier | Per-student ledger |

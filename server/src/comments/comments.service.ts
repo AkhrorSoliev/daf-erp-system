@@ -406,7 +406,14 @@ export class CommentsService {
                   teacherPayExempt: true,
                   lessonStartTime: true,
                   lessonEndTime: true,
-                  group: { select: { name: true } },
+                  // The board lists every branch's tasks, and group numbers
+                  // repeat across branches: the card names the branch.
+                  group: {
+                    select: {
+                      name: true,
+                      branch: { select: { id: true, name: true } },
+                    },
+                  },
                 },
               },
             },

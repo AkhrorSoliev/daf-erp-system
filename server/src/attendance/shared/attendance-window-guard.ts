@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
   ENDED_REFUSAL,
+  STUDENT_ENDED_REFUSAL,
   TEACHER_ENDED_REFUSAL,
   newAttendanceWindow,
   tashkentClock,
@@ -22,7 +23,8 @@ import {
  * `times` are the lesson's as `validateLessonDate` reads them from the
  * database — every caller, a QR scan included, passes them. A caller who
  * knows it is teacher-only passes `teacherOnly`: an ended lesson then reads
- * `TEACHER_ENDED_REFUSAL`; the other texts are the same for everyone.
+ * `TEACHER_ENDED_REFUSAL`; a student's scan passes `student` and reads
+ * `STUDENT_ENDED_REFUSAL`. The other texts are the same for everyone.
  */
 export async function assertAttendanceWindowOpen(
   db: Pick<Prisma.TransactionClient, 'unmarkedLesson'>,
@@ -37,9 +39,14 @@ export async function assertAttendanceWindowOpen(
       opensMinutesBefore: number;
     };
     teacherOnly?: boolean;
+    student?: boolean;
   },
 ): Promise<void> {
-  const ended = a.teacherOnly ? TEACHER_ENDED_REFUSAL : ENDED_REFUSAL;
+  const ended = a.student
+    ? STUDENT_ENDED_REFUSAL
+    : a.teacherOnly
+      ? TEACHER_ENDED_REFUSAL
+      : ENDED_REFUSAL;
   const { todayStr, nowMinutes } = tashkentClock();
   const refusal = windowRefusal(
     newAttendanceWindow({

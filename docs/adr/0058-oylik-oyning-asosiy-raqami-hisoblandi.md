@@ -128,9 +128,10 @@ Spec A2 ning 4-bandi (qarz ikki raqam) — alohida reja
    (`payPayment`, `batchPay`) to'lovchining asosiy filialida qoladi;
    `mainBranch` bo'sh bo'lsa ikkalasi ham rad etadi. To'lovlar matritsasi
    (`getMatrix`) bu turni o'qimaydi: o'zining `mainBranch` filtri bu ADR
-   bilan o'zgarmagan va u fail-closed emas — Administrator va `mainBranch`
-   i bo'sh direktor u yerda hamma filialni ko'radi (alohida xavfsizlik
-   vazifasi).
+   bilan o'zgarmagan va u fail-closed emas — `mainBranch` i bo'sh yoki
+   Administrator roli ham bor direktor u yerda hamma filialni ko'radi
+   (alohida xavfsizlik vazifasi). Oddiy Administrator 2026-09-30 dan beri
+   `GET /salary/matrix` ga kira olmaydi (faqat CEO va direktor).
 7. **To'lov oynasi va kurs turi.** «Keyingi oy» summasi ACTIVE va FORMING
    guruhlardagi yozilishlarni sanaydi, PAUSED ni emas: oylik hisob PAUSED
    guruhni hisoblamaydi, FORMING esa boshlanish kuni ACTIVE bo'lib

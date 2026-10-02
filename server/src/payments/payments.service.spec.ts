@@ -16,6 +16,7 @@ import { LessonBillingService } from '../billing/lesson-billing.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { MockExamBillingService } from '../mock-exams/mock-exam-billing.service';
 import { PaymentStatus, Prisma } from '@prisma/client';
+import { CONCURRENT_CHANGE_MESSAGE } from '../common/transaction-conflict';
 
 const mockStudent = {
   id: 10001,
@@ -602,6 +603,87 @@ describe('PaymentsService', () => {
       await expect(service.createFromExternal(externalParams)).rejects.toThrow(
         'DB connection failed',
       );
+    });
+  });
+
+  describe('a payment that loses a race (ADR-0054 concurrency rule)', () => {
+    // A concurrent attendance save reads the student's balance for contract
+    // 3.2 inside its Serializable transaction: the loser gets 409, not 500.
+    const conflict = { code: 'P2034' };
+    const concurrent = { message: CONCURRENT_CHANGE_MESSAGE };
+
+    it('create answers 409', async () => {
+      prisma.$transaction.mockRejectedValueOnce(conflict);
+      await expect(
+        service.create(
+          { studentId: 10001, amount: 500000, method: 'CASH' as any },
+          1,
+          1001,
+        ),
+      ).rejects.toMatchObject(concurrent);
+    });
+
+    it('reverse answers 409', async () => {
+      prisma.$transaction.mockRejectedValueOnce(conflict);
+      await expect(
+        service.reverse('payment-uuid-1', {
+          performedById: 1,
+          companyId: 1001,
+        }),
+      ).rejects.toMatchObject(concurrent);
+    });
+
+    it('a method-only correction answers 409', async () => {
+      prisma.payment.findFirst.mockResolvedValue({
+        ...mockPayment,
+        source: 'ADMIN_MANUAL',
+      });
+      prisma.$transaction.mockRejectedValueOnce(conflict);
+      await expect(
+        service.correctAmount(
+          'payment-uuid-1',
+          { correctAmount: 500000, method: 'TRANSFER' as any },
+          1,
+          1001,
+          ['CEO'],
+        ),
+      ).rejects.toMatchObject(concurrent);
+    });
+
+    it('an attached external payment answers 409', async () => {
+      prisma.$transaction.mockRejectedValueOnce(conflict);
+      await expect(
+        service.createFromExternal({
+          studentId: 10001,
+          amount: 300000,
+          method: 'PAYME' as any,
+          externalId: 'ext-1',
+          source: 'MANUAL_ATTACH' as any,
+          companyId: 1001,
+        }),
+      ).rejects.toMatchObject(concurrent);
+    });
+
+    it("leaves a gateway's own transaction to the gateway", async () => {
+      // Payme/Click pass their transaction and answer every error with their
+      // own error code; the conflict reaches them unchanged.
+      const gatewayTx = {
+        ...prisma,
+        payment: { create: jest.fn().mockRejectedValue(conflict) },
+      };
+      await expect(
+        service.createFromExternal(
+          {
+            studentId: 10001,
+            amount: 300000,
+            method: 'PAYME' as any,
+            externalId: 'ext-1',
+            source: 'GATEWAY_WEBHOOK' as any,
+            companyId: 1001,
+          },
+          gatewayTx,
+        ),
+      ).rejects.toBe(conflict);
     });
   });
 

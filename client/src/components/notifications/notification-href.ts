@@ -1,4 +1,5 @@
 import type { AppNotification } from "@/hooks/use-notifications";
+import { GROUP_PAGE_ROLES, STUDENT_PROFILE_ROLES } from "@/lib/role-access";
 import { canOpenEmployeeSettings } from "@/lib/settings-nav";
 
 // What the server points a notification at: a Group (attendance, lesson
@@ -11,6 +12,13 @@ const ENTITY_ROUTES: Record<string, (id: string) => string> = {
   Lead: (id) => `/leads?lead=${id}`,
   User: (id) => `/settings/employees/${id}`,
   AbsencePauseSetting: () => "/settings/absence-pause",
+};
+
+// Sahifani ocholmaydigan ko'ruvchiga havola berilmaydi: server o'sha
+// sahifani rad etadi (o'qituvchiga o'quvchi profili, kassirga guruh).
+const ENTITY_PAGE_ROLES: Record<string, number[]> = {
+  Student: STUDENT_PROFILE_ROLES,
+  Group: GROUP_PAGE_ROLES,
 };
 
 /**
@@ -33,5 +41,7 @@ export function notificationHref(
     // Otherwise it is a task on an employee.
     if (!canOpenEmployeeSettings(roleIds)) return null;
   }
+  const allowed = ENTITY_PAGE_ROLES[relatedEntityType];
+  if (allowed && !roleIds.some((id) => allowed.includes(id))) return null;
   return ENTITY_ROUTES[relatedEntityType]?.(relatedEntityId) ?? null;
 }

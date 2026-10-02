@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { format } from "date-fns";
+import { RoleLink } from "@/components/shared/role-link";
+import { GROUP_PAGE_ROLES } from "@/lib/role-access";
 import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
 import { CalendarIcon, ClockIcon, UsersIcon, UserMinus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -32,9 +33,15 @@ export function StudentGroupCard({
       ? `${group.lessonStartTime} – ${group.lessonEndTime}`
       : null;
 
+  // Kassir o'quvchi profilini ochadi, guruh sahifasini esa yo'q: unga karta
+  // havolasiz, hover rangisiz chiziladi (`group/card` faqat havolada bor).
   return (
-    <Link href={`/groups/${group.id}`}>
-      <div className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
+    <RoleLink
+      roles={GROUP_PAGE_ROLES}
+      href={`/groups/${group.id}`}
+      linkClassName="group/card"
+    >
+      <div className="rounded-lg border bg-card p-4 transition-colors group-hover/card:bg-muted/50">
         {/* Row 1: Name + Status */}
         <div className="mb-3 flex items-center justify-between gap-2">
           <h4 className="font-semibold">{group.name}</h4>
@@ -101,6 +108,6 @@ export function StudentGroupCard({
           )}
         </div>
       </div>
-    </Link>
+    </RoleLink>
   );
 }

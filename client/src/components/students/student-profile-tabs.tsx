@@ -319,7 +319,8 @@ export function StudentProfileTabs({
                 <StudentGroupCard
                   key={g.id}
                   group={g}
-                  onRemove={openRemoveDialog}
+                  // `DELETE /students/:id/enroll/:enrollmentId` kassirni rad etadi.
+                  onRemove={canManage ? openRemoveDialog : undefined}
                 />
               ))}
             </div>

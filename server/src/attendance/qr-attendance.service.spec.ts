@@ -14,6 +14,7 @@ import { AttendanceValidationService } from './attendance-validation.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import {
   ENDED_REFUSAL,
+  STUDENT_ENDED_REFUSAL,
   TEACHER_ENDED_REFUSAL,
 } from './shared/attendance-window';
 
@@ -553,7 +554,7 @@ describe('QrAttendanceService', () => {
 
       await expect(
         service.scanQr('valid-token', 10001, 20001, 1),
-      ).rejects.toThrow(ENDED_REFUSAL);
+      ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
       expect(validation.validateLessonDate).toHaveBeenCalledWith(
         'group-1',
         '2026-04-03',
@@ -766,7 +767,7 @@ describe('QrAttendanceService', () => {
 
         await expect(
           service.scanQr('valid-token', 10001, 20001, 1),
-        ).rejects.toThrow(ENDED_REFUSAL);
+        ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
         expect(prisma.attendance.upsert).not.toHaveBeenCalled();
       });
 
@@ -778,7 +779,7 @@ describe('QrAttendanceService', () => {
 
         await expect(
           service.scanQr('valid-token', 10001, 20001, 1),
-        ).rejects.toThrow(ENDED_REFUSAL);
+        ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
         expect(prisma.attendance.upsert).not.toHaveBeenCalled();
       });
 
@@ -790,7 +791,7 @@ describe('QrAttendanceService', () => {
 
         await expect(
           service.scanQr('valid-token', 10001, 20001, 1),
-        ).rejects.toThrow(ENDED_REFUSAL);
+        ).rejects.toThrow(STUDENT_ENDED_REFUSAL);
         expect(prisma.attendance.upsert).not.toHaveBeenCalled();
       });
 

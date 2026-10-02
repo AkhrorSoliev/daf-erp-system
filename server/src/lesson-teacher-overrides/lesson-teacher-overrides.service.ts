@@ -19,6 +19,7 @@ import {
   resolveBilledEnrollmentId,
   resolveFundingDeductionId,
 } from '../billing/resolve-billed-enrollment';
+import { trialMonthStudents } from '../billing/trial-month';
 
 const DAY_NAME_BY_JS_DAY: Record<number, string> = {
   0: 'sunday',
@@ -344,6 +345,17 @@ export class LessonTeacherOverridesService {
       }
     }
 
+    // Contract 3.5 (ADR-0048 §3): a departed trial student's month was given
+    // back and its teacher pay reversed. `findChargeForLesson` still returns
+    // that charge, so the newly added teacher would be paid for it again.
+    const trialStudents = isMonthly
+      ? await trialMonthStudents(tx, {
+          groupId: p.groupId,
+          day: p.date.toISOString().slice(0, 10),
+          studentIds: attendances.map((a) => a.studentId),
+        })
+      : new Set<number>();
+
     for (const att of attendances) {
       // Reverse accruals for teachers no longer on the lesson.
       for (const teacherId of removed) {
@@ -364,6 +376,7 @@ export class LessonTeacherOverridesService {
       // balance, no accrual to write. (Oylik yo'lda `cons` doim yo'q,
       // shuning uchun bu qorovul faqat eski yo'lga tegishli.)
       if (!isMonthly && !cons) continue;
+      if (trialStudents.has(att.studentId)) continue;
 
       // The enrollment the lesson was CHARGED to, not a (student, group)
       // guess — a student can hold two live enrollments in one group.

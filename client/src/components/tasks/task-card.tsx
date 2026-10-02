@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Bot,
+  Building2,
   User,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -167,8 +168,21 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
           {task.content}
         </p>
 
-        {/* Priority + deadline row */}
+        {/* Branch + priority + deadline row */}
         <div className="flex flex-wrap items-center gap-1.5">
+          {/* The board lists every branch's tasks and group numbers repeat
+              across branches (#003 is in three of them). */}
+          {task.unmarkedLesson?.branchName && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  <Building2 className="size-3" />
+                  {task.unmarkedLesson.branchName}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>Dars shu filialda bo&apos;lgan</TooltipContent>
+            </Tooltip>
+          )}
           {task.priority && (
             <div
               className={cn(
