@@ -101,12 +101,12 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0039](0039-oquvchi-birinchi-kirishda-telefon-jins-yosh.md) | O'quvchi ilovaga kirishdan oldin telefonini SMS bilan tasdiqlaydi, jinsi va tug'ilgan sanasini beradi | Qabul qilindi | 2026-09-27 |
 | [0040](0040-mini-app-ichida-faqat-telegram-orqali-kirish.md) | Mini App ichida o'quvchi faqat Telegram orqali kiradi; bog'lanmagan akkauntga xabar ko'rsatiladi | Qabul qilindi | 2026-09-27 |
 | [0041](0041-guruh-holati-bitta-tranzaksiyada-ozgaradi.md) | Guruh holati bitta tranzaksiyada o'zgaradi: yo hammasi, yo hech narsa | Qabul qilindi | 2026-09-27 |
-| [0042](0042-oylik-tolov-xabari.md) | Oylik to'lov xabari: hisob kuni va 2-dars eslatmasi (Telegram) | Qabul qilindi | 2026-09-27 |
+| [0042](0042-oylik-tolov-xabari.md) | Oylik to'lov xabari: hisob kuni va 2-dars eslatmasi (Telegram) | Qabul qilindi; ADR-0064 bilan to'ldirildi | 2026-09-27 |
 | [0043](0043-shartnoma-6-2-40-foizdan-keyin-pul-qaytmaydi.md) | Shartnoma 6.2: o'quvchi oyning 40% idan ko'pi o'tgach o'zi ketsa, oy to'lovi qaytarilmaydi; boshqa tartibni CEO yoki filial direktori tanlaydi | Almashtirildi — ADR-0044 | 2026-09-27 |
 | [0044](0044-darajani-tugatgan-oquvchi-shartnoma-bajarilgan.md) | Darajani tugatgan o'quvchi: shartnoma bajarilgan, oyning o'tilmagan darslari puli qaytadi; 40% qoidasining to'liq hozirgi holati | Qabul qilindi | 2026-09-27 |
 | [0045](0045-bot-xodimni-taniydi-xodim-kabineti-mini-appda.md) | Bot xodimni Telegram bog'lanishi bilan taniydi; xodim kabineti Mini App'da parolsiz ochiladi | Qabul qilindi | 2026-09-28 |
 | [0046](0046-qabul-qilingan-mock-tolovi-tuzatiladi.md) | Admin qabul qilgan mock to'lovi tuzatiladi va bekor qilinadi; onlayn va balans to'lovi — yo'q | Qabul qilindi | 2026-09-28 |
-| [0047](0047-davomat-oynasi-va-tolovsiz-oquvchi.md) | Davomat dars tugashi bilan yopiladi; to'lov qilmagan o'quvchi 2-darsdan puli yetgan darslargacha qatnashadi | Qabul qilindi; dars tugagach tuzatish — ADR-0054 | 2026-09-27 |
+| [0047](0047-davomat-oynasi-va-tolovsiz-oquvchi.md) | Davomat dars tugashi bilan yopiladi; to'lov qilmagan o'quvchi 2-darsdan puli yetgan darslargacha qatnashadi | Qabul qilindi; dars tugagach tuzatish — ADR-0054; kamida 50% — ADR-0064 | 2026-09-27 |
 | [0048](0048-davomat-2-bosqich-berilmadi-kechikish-sinov-darsi.md) | «Berilmadi» o'qishda hisoblanadi; kechikish daqiqasi; sinov darsi (3.5) oyni to'liq qaytaradi; qarzdorning 1-darsga kelmagani to'lovgacha ustozga yozilmaydi; uchta sozlama | Qabul qilindi; «Berilmadi» — ADR-0054 bilan to'ldirildi; sinov darsi javobsiz dars bilan — ADR-0060 | 2026-09-27 |
 | [0049](0049-markaz-qoplagan-birinchi-dars.md) | Markaz qoplagan 1-dars markazning puli bo'lib ko'rinadi | Rad etildi | 2026-09-28 |
 | [0050](0050-stavka-sanasidan-yozilgan-darslar-qayta-hisoblanadi.md) | Stavka o'z sanasidan beri yozilgan, oyligi hisoblanmagan darslarga ham qo'llanadi; saqlashdan oldin ta'siri ko'rsatiladi | Qabul qilindi | 2026-09-29 |
@@ -120,6 +120,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0059](0059-qarz-ikki-alohida-raqam.md) | Qarz ikki alohida raqamda: o'qiyotganlar va o'qimayotganlar qarzi; ikkisi hech qayerda qo'shilmaydi | Qabul qilindi | 2026-10-01 |
 | [0060](0060-sinov-darsi-javobsiz-dars-bilan-hal-qilinmaydi.md) | Sinov darsi javobsiz «Dars bo'ldimi?» bilan hal qilinmaydi: chiqarish va chetlatish avval javobni kutadi | Qabul qilindi | 2026-10-01 |
 | [0063](0063-bekor-qilishni-ochirish-pulni-qaytarib-oladi.md) | Bekor qilishni o'chirish qaytarilgan dars pulini ham qaytarib oladi; o'zgargan yozilishning puli qoldiriladi | Qabul qilindi | 2026-10-02 |
+| [0064](0064-darsga-kirish-uchun-oy-tolovining-eng-kam-qismi.md) | Darsga kirish uchun oy to'lovining kamida 50% i (har guruhda o'z 2-darsidan, 01.11.2026 dan); to'langan darslar tugashidan 3 kun oldin eslatma | Qabul qilindi | 2026-10-02 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 
