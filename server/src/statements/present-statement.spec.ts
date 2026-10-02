@@ -174,13 +174,19 @@ describe('presentStatement', () => {
   it('writes the months table with quiet months, absences and the monthly line', () => {
     const v = presentStatement(buildStatement(debtor()), 'student');
     expect(
-      v.months.map((m) => [m.label, m.lessons, m.absent, m.cost, m.costNote]),
+      v.dues.map((m) => [
+        m.label,
+        m.lessons,
+        m.lessonsNote,
+        m.cost,
+        m.costNote,
+      ]),
     ).toEqual([
       ['Iyul', '9 ta', '1 kelmagan', '270\u00a0000', null],
       ['Avgust', '0 ta', null, null, "hisoblangan dars yo'q"],
       ['Sentabr', '5 ta', null, '187\u00a0500', null],
     ]);
-    expect(nb(v.months[2].details[0])).toBe(
+    expect(nb(v.dues[2].details[0])).toBe(
       "oylik to'lov: 19-sentabrdan, 12 darsdan 5 tasi × 37 500",
     );
   });
@@ -299,20 +305,20 @@ describe('presentStatement', () => {
     expect(nb(v.sharpNote!.map((s) => s.text).join(''))).toBe(
       "Sentabr iyuldan 82 500 so'm kam. Sababi: darslar soni 5 ta (iyulda 9 ta); 1 dars narxi 30 000 → 37 500; 19-sentabrdan #036 guruhda o'qiydi (23-iyuldan beri darsda bo'lmagan); sentabrdan oylik to'lov.",
     );
-    expect(v.months[2].highlight).toBe(true);
+    expect(v.dues[2].highlight).toBe(true);
   });
 
   it('says where each payment went', () => {
     const v = presentStatement(buildStatement(debtor()), 'student');
     expect(
-      v.allocations.map((a) => [
+      v.payments.map((a) => [
         a.date,
         a.what,
         nb(a.amount),
         nb(a.to),
         a.paymentId,
       ]),
-    ).toEqual([['21.07.2026', 'Naqd', '200 000', 'iyul darslari', 'p1']]);
+    ).toEqual([['21.07.2026', 'Naqd', '200 000', 'iyul', 'p1']]);
   });
 
   it('tells a student with money ahead where it goes', () => {
@@ -333,14 +339,14 @@ describe('presentStatement', () => {
       "Qarzingiz yo'q. Hisobingizda 12 500 so'm ortiqcha pul bor.",
     );
     expect(v.answer.subtitle).toBe("U oktabr to'loviga o'tadi.");
-    expect(nb(v.allocations[1].to)).toBe(
-      "iyul darslari 70 000, sentabr darslari 187 500 · ortig'i 12 500 hisobingizda (oktabr to'loviga)",
+    expect(nb(v.payments[1].to)).toBe(
+      "iyul 70 000, sentabr 187 500 · ortig'i 12 500 hisobingizda (oktabr to'loviga)",
     );
   });
 
-  it('says the pack era once, above the table', () => {
+  it('says the pack era once, in the notes', () => {
     const v = presentStatement(buildStatement(debtor()), 'student');
-    expect(v.packHint).toBe(
+    expect(v.notes[0]).toBe(
       "Sentabrgacha pul 12 darslik paket uchun to'lanardi. Jadvalda esa har dars o'tilgan oyiga yozilgan, shuning uchun bir oyda 12 tadan ko'p yoki kam dars bo'lishi mumkin.",
     );
   });
@@ -364,14 +370,14 @@ describe('presentStatement', () => {
         metadata: { marker: 'april-cutover-refund' },
       }),
     );
-    const april = presentStatement(buildStatement(input), 'student').months[0];
+    const april = presentStatement(buildStatement(input), 'student').dues[0];
     expect([
       april.label,
       april.lessons,
       april.cost,
       april.costNote,
-      april.money,
-      april.running,
+      april.paid,
+      april.left,
     ]).toEqual(['Aprel', '4 ta', null, "tizimga qadar to'langan", '', '']);
   });
 

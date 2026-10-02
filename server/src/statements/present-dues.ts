@@ -13,6 +13,8 @@ export interface DueView {
   /** The label needs the lessons column too (it is not a month). */
   wide: boolean;
   bold: boolean;
+  /** The month, for a month's row. */
+  key: string | null;
   lessons: string;
   lessonsNote: string | null;
   cost: string | null;
@@ -126,6 +128,7 @@ export function dueLedger(
     return rows.map((r): DueView => {
       const s = settle(r.key, r.cost);
       return {
+        key: null,
         label: r.label,
         wide: true,
         bold: false,

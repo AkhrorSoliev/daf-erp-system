@@ -17,25 +17,9 @@ const view = (): StatementView => ({
     { text: ' = ' },
     { text: '−257 500', bold: true, tone: 'red' },
   ],
-  packHint: "Sentabrgacha pul 12 darslik paket uchun to'lanardi.",
-  months: [
-    {
-      key: '2026-09',
-      label: 'Sentabr',
-      lessons: '5 ta',
-      absent: '1 kelmagan',
-      cost: '187 500',
-      costNote: null,
-      money: '—',
-      running: '−257 500',
-      runningTone: 'red',
-      details: ["oylik to'lov: 5 dars × 37 500"],
-      highlight: true,
-      isLast: true,
-    },
-  ],
   dues: [
     {
+      key: '2026-09',
       label: 'Sentabr',
       wide: false,
       bold: true,
@@ -59,22 +43,17 @@ const view = (): StatementView => ({
   },
   surplus: null,
   sharpNote: [{ text: "Sentabr iyuldan 82 500 so'm kam.", bold: true }],
-  modelChanges: [{ title: "Sentabrdan oylik to'lov", lines: ['Bir qator.'] }],
-  allocations: [
+  payments: [
     {
       date: '21.07.2026',
       what: 'Naqd',
       amount: '200 000',
-      to: 'iyul darslari 200 000',
+      to: 'iyul',
       paymentId: 'p1',
     },
   ],
-  payments: [
-    { date: '21.07.2026', what: 'Naqd', amount: '200 000', to: 'iyul' },
-  ],
   paidTotal: '200 000',
   notes: ['Izoh.'],
-  footnote: 'Tab izohi.',
   warning: null,
 });
 
