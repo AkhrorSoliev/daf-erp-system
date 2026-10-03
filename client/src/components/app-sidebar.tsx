@@ -32,6 +32,8 @@ import { BranchSwitcher } from "@/components/branch-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { navItems, type NavItem, type NavItemChild } from "@/lib/nav-items";
 import { useAuth } from "@/hooks/use-auth";
+import { usePendingTaskCount } from "@/hooks/use-pending-task-count";
+import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -39,6 +41,7 @@ export function AppSidebar() {
   const isIconCollapsed = state === "collapsed" && !isMobile;
   const user = useAuth((s) => s.user);
   const userRoleIds = user?.roles.map((r) => r.id) ?? [];
+  const pendingTasks = usePendingTaskCount();
 
   const isVisible = (roles?: number[]) =>
     !roles || roles.some((id) => userRoleIds.includes(id));
@@ -217,20 +220,31 @@ export function AppSidebar() {
                   );
                 }
 
+                // Tasks waiting in «Kutilmoqda» mark the row: red tint, a soft
+                // wave and the count (in the corner when the sidebar is icons).
+                const news = item.url === "/tasks" ? pendingTasks : 0;
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
                       asChild
                       isActive={isItemActive(item)}
                       tooltip={item.title}
+                      className={cn(news > 0 && "sidebar-news")}
                     >
                       <Link
                         href={item.url}
                         onClick={handleNavClick}
                         title={item.title}
                       >
-                        <item.icon />
-                        <span>{item.title}</span>
+                        <item.icon className={cn(news > 0 && "text-red-500")} />
+                        <span className="flex-1 min-w-0 truncate">{item.title}</span>
+                        {news > 0 && (
+                          <span
+                            className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white tabular-nums group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-0 group-data-[collapsible=icon]:right-0 group-data-[collapsible=icon]:h-3.5 group-data-[collapsible=icon]:min-w-3.5 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:text-[9px]"
+                          >
+                            {news > 9 ? "9+" : news}
+                          </span>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                     {item.badgeKey && <NavItemBadge badgeKey={item.badgeKey} />}
