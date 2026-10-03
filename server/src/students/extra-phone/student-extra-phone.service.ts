@@ -108,27 +108,27 @@ export class StudentExtraPhoneService {
     }
     await clearCode(this.redis, 'extra', studentId);
 
-    // Again at write time: the number may have been taken since the code went.
-    await assertExtraPhoneFree(
-      this.prisma,
-      stored.p,
-      this.self(student),
-      'student',
-    );
-    await this.prisma.student.update({
-      where: { id: studentId },
-      data: { extraPhone: stored.p },
-    });
-    await this.entityHistory.recordUpdate({
-      entityType: 'Student',
-      entityId: studentId,
-      oldValues: { extraPhone: student.extraPhone, sabab: null },
-      newValues: {
-        extraPhone: stored.p,
-        sabab: "O'quvchi o'zi qo'shdi, SMS bilan tasdiqladi",
-      },
-      changedById: userId,
-      companyId: student.companyId,
+    // Re-check, write and history in one transaction: the number may have been
+    // taken since the code went, and a history row must not outlive a failed
+    // write (or go missing after a good one).
+    await this.prisma.$transaction(async (tx) => {
+      await assertExtraPhoneFree(tx, stored.p, this.self(student), 'student');
+      await tx.student.update({
+        where: { id: studentId },
+        data: { extraPhone: stored.p },
+      });
+      await this.entityHistory.recordUpdate({
+        entityType: 'Student',
+        entityId: studentId,
+        oldValues: { extraPhone: student.extraPhone, sabab: null },
+        newValues: {
+          extraPhone: stored.p,
+          sabab: "O'quvchi o'zi qo'shdi, SMS bilan tasdiqladi",
+        },
+        changedById: userId,
+        companyId: student.companyId,
+        tx,
+      });
     });
     return this.toStatus(stored.p);
   }
@@ -144,17 +144,20 @@ export class StudentExtraPhoneService {
       throw new BadRequestException("Zaxira raqam yo'q");
     }
     await assertCurrentPassword(this.prisma, userId, currentPassword);
-    await this.prisma.student.update({
-      where: { id: studentId },
-      data: { extraPhone: null },
-    });
-    await this.entityHistory.recordUpdate({
-      entityType: 'Student',
-      entityId: studentId,
-      oldValues: { extraPhone: student.extraPhone, sabab: null },
-      newValues: { extraPhone: null, sabab: "O'quvchi o'zi o'chirdi" },
-      changedById: userId,
-      companyId: student.companyId,
+    await this.prisma.$transaction(async (tx) => {
+      await tx.student.update({
+        where: { id: studentId },
+        data: { extraPhone: null },
+      });
+      await this.entityHistory.recordUpdate({
+        entityType: 'Student',
+        entityId: studentId,
+        oldValues: { extraPhone: student.extraPhone, sabab: null },
+        newValues: { extraPhone: null, sabab: "O'quvchi o'zi o'chirdi" },
+        changedById: userId,
+        companyId: student.companyId,
+        tx,
+      });
     });
     return this.toStatus(null);
   }

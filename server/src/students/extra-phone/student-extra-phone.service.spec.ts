@@ -100,7 +100,13 @@ function build(opts: { extraPhone?: string | null; enabled?: boolean } = {}) {
       }),
     },
     smsMessage: { create: jest.fn().mockResolvedValue({}) },
+    $transaction: jest.fn(),
   };
+  // The transaction client is the same fake: the re-check, the write and the
+  // history row all go through `tx`.
+  prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+    fn(prisma),
+  );
   const eskiz = {
     isConfigured: jest.fn(() => true),
     sendSms: jest.fn().mockResolvedValue({ status: 'waiting' }),
@@ -216,8 +222,10 @@ describe('StudentExtraPhoneService (ADR-0070)', () => {
           },
           changedById: USER_ID,
           companyId: 1,
+          tx: b.prisma,
         }),
       );
+      expect(b.prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(b.redis.store.has(codeKey('extra', STUDENT_ID))).toBe(false);
     });
 
@@ -273,8 +281,10 @@ describe('StudentExtraPhoneService (ADR-0070)', () => {
           oldValues: { extraPhone: BACKUP, sabab: null },
           newValues: { extraPhone: null, sabab: "O'quvchi o'zi o'chirdi" },
           changedById: USER_ID,
+          tx: b.prisma,
         }),
       );
+      expect(b.prisma.$transaction).toHaveBeenCalledTimes(1);
     });
 
     it('has nothing to remove on a card without one', async () => {
