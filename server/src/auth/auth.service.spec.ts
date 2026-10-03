@@ -283,6 +283,98 @@ describe('AuthService', () => {
     });
   });
 
+  describe('backup number — second lookup stage (ADR-0067)', () => {
+    const BACKUP = '935554433';
+    const studentAccount = {
+      id: 7,
+      password: '',
+      roles: [{ role: { id: 6, name: 'Student' } }],
+      branches: [],
+      company: {},
+    };
+
+    it('falls back to a card whose backup number this is, on the student portal', async () => {
+      const hash = await bcrypt.hash('pass123', 10);
+      prisma.user.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ ...studentAccount, password: hash });
+
+      const res = await service.validateUser(`+998 ${BACKUP}`, 'pass123', [6]);
+
+      expect(res).toBeTruthy();
+      expect(prisma.user.findFirst).toHaveBeenCalledTimes(2);
+      const second = prisma.user.findFirst.mock.calls[1][0];
+      expect(second.where).toEqual({
+        student: { is: { extraPhone: BACKUP, deletedAt: null } },
+        deletedAt: null,
+        status: { in: ['ACTIVE', 'INACTIVE'] },
+        roles: { some: { role: { id: 6 } } },
+      });
+      expect(second.orderBy).toEqual({ updatedAt: 'desc' });
+    });
+
+    it('the main number always wins: a wrong password there never reaches the backup stage', async () => {
+      const hash = await bcrypt.hash('other', 10);
+      prisma.user.findFirst.mockResolvedValueOnce({
+        ...studentAccount,
+        id: 8,
+        password: hash,
+      });
+
+      const res = await service.validateUser(BACKUP, 'pass123', [6]);
+
+      expect(res).toBeNull();
+      expect(prisma.user.findFirst).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not look at backup numbers on the staff portals', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+      await service.validateUser(BACKUP, 'pass123', [1, 2, 3, 5]);
+      expect(prisma.user.findFirst).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not look at backup numbers for a legacy username', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+      await service.validateUser('akhror', 'pass123', null);
+      expect(prisma.user.findFirst).toHaveBeenCalledTimes(1);
+    });
+
+    it('looks without a portal restriction (dev) — the backup stage is student-only anyway', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+      await service.validateUser(BACKUP, 'pass123', null);
+      expect(prisma.user.findFirst).toHaveBeenCalledTimes(2);
+      expect(prisma.user.findFirst.mock.calls[1][0].where.roles).toEqual({
+        some: { role: { id: 6 } },
+      });
+    });
+
+    it('the Telegram path (findMany) takes the same second stage', async () => {
+      prisma.user.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([studentAccount]);
+
+      const rows = await service.findAccountsByIdentifier(
+        `998${BACKUP}`,
+        [6],
+        2,
+      );
+
+      expect(rows).toEqual([studentAccount]);
+      const second = prisma.user.findMany.mock.calls[1][0];
+      expect(second.where.student).toEqual({
+        is: { extraPhone: BACKUP, deletedAt: null },
+      });
+      expect(second.take).toBe(2);
+    });
+
+    it('the Telegram path stops at the first stage when it finds anyone', async () => {
+      prisma.user.findMany.mockResolvedValueOnce([studentAccount, { id: 9 }]);
+      const rows = await service.findAccountsByIdentifier(BACKUP, [6], 2);
+      expect(rows).toHaveLength(2);
+      expect(prisma.user.findMany).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('findStaffAccountsByTelegram (ADR-0045)', () => {
     it("parol bilan kirishdagi holat ro'yxatini ishlatadi — Telegram eshigi kengroq emas", async () => {
       prisma.user.findFirst.mockResolvedValue(null);
