@@ -10,7 +10,7 @@ export const yangiliklar: Yangilik[] = [
     sarlavha: "Bekor qilish yozuvini o'chirsangiz, qaytgan pul qayta yechiladi",
     matn: "Guruh sahifasidagi «Dars o'zgarishlari» tabida bekor qilingan darsning yozuvini o'chirsangiz, o'quvchilarga qaytgan dars puli ulardan qayta yechiladi, bekor qilishda o'quvchidan qaytarib olingan keyingi oy krediti esa unga yana beriladi. Dars vaqti o'tib ketgan bo'lsa, u yana «Dars bo'ldimi?» savoliga qaytadi. Bekor qilingandan beri muzlatilgan yoki guruhdan chiqqan o'quvchining puli qaytarib olinmaydi. Ilgari yozuvni o'chirsangiz ham pul o'quvchida qolardi.",
     rollar: [1, 2],
-    sahifa: { bolim: "tolovlar", sahifa: "oylik-tolov" },
+    sahifa: { bolim: "guruhlar", sahifa: "dars-ozgarishlari" },
   },
   {
     sana: "2026-10-02",

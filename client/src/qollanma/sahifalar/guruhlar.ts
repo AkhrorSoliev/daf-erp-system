@@ -40,7 +40,7 @@ export const guruhlar: QollanmaSahifa[] = [
       "guruh havolasi",
       "kassir guruhlar",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-03",
   },
   {
     bolim: "guruhlar",
@@ -78,7 +78,7 @@ export const guruhlar: QollanmaSahifa[] = [
       "filial yopilsa",
       "arxivdan tiklash",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-03",
   },
   {
     bolim: "guruhlar",
@@ -87,7 +87,7 @@ export const guruhlar: QollanmaSahifa[] = [
     qisqacha:
       "Guruh sahifasining «Dars o'zgarishlari» tabida darsni bekor qilasiz, boshqa kunga ko'chirasiz yoki bir kunga o'rinbosar ustoz qo'yasiz. Bekor qilinganda shu kungi davomat belgilari «Sababli» ga o'tadi va oylik to'lovchiga bir dars puli darhol qaytadi; yozuvni o'chirish davomat va pulni tiklamaydi.",
     rollar: [1, 2, 3],
-    adr: ["0053"],
+    adr: ["0053", "0054", "0063"],
     yollar: ["/groups/*"],
     kalitSozlar: [
       "darsni bekor qilish",
@@ -110,7 +110,7 @@ export const guruhlar: QollanmaSahifa[] = [
       "ustoz oyligi qayta hisoblanadi",
       "dars puli qaytadi",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-03",
   },
   {
     bolim: "guruhlar",
@@ -139,7 +139,7 @@ export const guruhlar: QollanmaSahifa[] = [
       "yakshanba",
       "Telegram hisobot",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-03",
   },
   {
     bolim: "guruhlar",
@@ -169,6 +169,6 @@ export const guruhlar: QollanmaSahifa[] = [
       "filial tanlang",
       "bugunga qaytish",
     ],
-    yangilangan: "2026-09-30",
+    yangilangan: "2026-10-03",
   },
 ];

@@ -28,7 +28,7 @@ Filial ish vaqti Sozlamalar → «Filiallar» da «Ish boshlanish vaqti» va «I
 ## Qoidalar
 
 - **Filial qotadi.** Guruh yaratilganda tanlangan filialga tegishli bo'ladi. Tahrirlaganda filial o'zgarmaydi: guruhni boshqa filialga ko'chiradigan amal yo'q.
-- **Kurs va xona shu filialniki.** Boshqa filialning kursi yoki xonasini tanlasangiz, tizim rad etadi: «Tanlangan kurs guruh filialiga tegishli emas — guruh filialidagi kursni tanlang» (xona uchun ham shunga o'xshash xabar). Bu CEO'ga ham tegishli. Forma faqat tanlangan filialning kurs va xonalarini ko'rsatadi.
+- **Kurs va xona shu filialniki.** Boshqa filialning kursi yoki xonasini tanlasangiz, tizim rad etadi: «Tanlangan kurs guruh filialiga tegishli emas — guruh filialidagi kursni tanlang» (xona uchun ham shunga o'xshash xabar). Bu CEO'ga ham tegishli. Forma faqat tanlangan filialning kurs va xonalarini ko'rsatadi. Tahrirlashda faqat o'zgartirgan kurs yoki xonangiz tekshiriladi.
 - **Ustozda ish haqi stavkasi bo'lishi shart.** Stavkasi belgilanmagan ustozni guruhga qo'yib bo'lmaydi: tizim «Bu ustoz(lar)ga ish haqi stavkasi belgilanmagan: ... Avval stavkani belgilang — aks holda ularning darslari uchun oylik yozilmaydi va buni keyin orqaga tuzatib bo'lmaydi.» deb rad etadi. Xuddi shu tekshiruv mavjud guruhda ustozni almashtirganda ham ishlaydi. Stavkani CEO yoki filial direktori [Ish haqi](/payments/salary) sahifasida «Sozlamalar» → «Ustoz stavkalari» bo'limida belgilaydi; administratorga bu sahifa ko'rinmaydi.
 - **Guruh nomi avtomatik.** Tizim filialdagi keyingi raqamni «#001», «#002»... ko'rinishida o'zi qo'yadi. Raqam filial bo'yicha yuritiladi: arxivga tushgan guruhning raqami qayta ishlatilmaydi.
 - **Guruh «Boshlanmagan» bo'lib ochiladi.** Tizim har kecha 00:05 da (Toshkent vaqti) tekshirib, boshlanish sanasi kelgan yoki o'tib ketgan guruhni o'zi «Faol» qiladi. Shu sababli:
@@ -51,7 +51,7 @@ A filialida administrator Bobur 02.10.2026 (juma) kuni yangi guruh ochadi. Filia
 
 Guruhni ro'yxatdagi qator menyusidan («Amallar» → «Tahrirlash») yoki guruh sahifasidagi kartadan («Tahrirlash») ochasiz. «Guruhni tahrirlash» panelida yaratishdagi maydonlar turadi; «Saqlash» ni bosganingizda «Guruh muvaffaqiyatli yangilandi» xabari chiqadi.
 
-- «Guruh nomi» faqat ko'rsatiladi, o'zgartirib bo'lmaydi. Filial ham o'zgarmaydi.
+- «Guruh nomi» faqat ko'rsatiladi, o'zgartirib bo'lmaydi. Filial ham o'zgarmaydi: guruhni boshqa filialga ko'chirish yo'q.
 - Ustozni almashtirsangiz, «Ustoz o'zgartirilmoqda — sababi (ixtiyoriy)» ro'yxati chiqadi. Sabablar Sozlamalar → [Sabablar](/settings/reasons) → «Ustoz o'zgarishi» da yuritiladi; ro'yxatdagi birinchi tanlov — «Sababsiz (ko'rsatilmagan)».
 - Boshlanish sanasini o'zgartirsangiz, kartadagi «Tugash» sanasi qayta hisoblanmaydi.
 - O'zgarishlar guruh sahifasining «Tarix» tabida ko'rinadi.
@@ -69,6 +69,7 @@ Guruhni ro'yxatdagi qator menyusidan («Amallar» → «Tahrirlash») yoki guruh
 | «Bu ustoz(lar)ga ish haqi stavkasi belgilanmagan: ...» | Tanlangan ustozda ish haqi stavkasi yo'q |
 | «Filial tanlanmagan — yuqoridan filialni tanlang» | Yaratayotganda filial tanlanmagan |
 | «Bu filialda guruh yaratish huquqingiz yo'q» | Direktor yoki administrator o'ziga biriktirilmagan filialda guruh yaratmoqchi |
+| «Bu ustoz(lar) boshqa filialga tegishli: ...» | Guruhni tahrirlayotganda boshqa filialga biriktirilgan ustoz tanlangan. Forma faqat guruh filialining ustozlarini ko'rsatadi |
 | «Darajani tanlang», «Kursni tanlang», «Kamida bir kun tanlang», «Dars vaqtini tanlang» | Majburiy maydon bo'sh |
 
 ## Kim qila oladi
@@ -82,11 +83,13 @@ Guruhni ro'yxatdagi qator menyusidan («Amallar» → «Tahrirlash») yoki guruh
 | Kurs va ustoz qo'shish (guruh formasidagi havolalar) | Ha | Ha | — | — |
 | Xona qo'shish | Ha | Ha | Ha | — |
 
-O'qituvchi «Guruhlar» ro'yxatida o'zi biriktirilgan guruhlarni va o'rinbosar bo'lib kirgan guruhni ko'radi ([Darsni bekor qilish, ko'chirish, o'rinbosar](/qollanma/guruhlar/dars-ozgarishlari)). Kassirga menyuda «Guruhlar» ko'rinadi, lekin tizim uni rad etadi: ro'yxat bo'sh chiqadi («Guruhlar topilmadi»), guruh sahifasi esa «Guruh topilmadi» deb yoziladi. Kassir guruhlar bilan ishlay olmaydi.
+O'qituvchi «Guruhlar» ro'yxatida o'zi biriktirilgan guruhlarni va o'rinbosar bo'lib kirgan guruhni ko'radi ([Darsni bekor qilish, ko'chirish, o'rinbosar](/qollanma/guruhlar/dars-ozgarishlari)).
+
+Kassir guruhlar bilan ishlamaydi: menyuda «Guruhlar» yo'q, jadvalda va qarzdorlar ro'yxatida guruh nomi unga havolasiz, oddiy matn bo'lib chiqadi. Manzilni qo'lda yozib ochsa ham tizim uni rad etadi: ro'yxat bo'sh chiqadi, guruh sahifasi ochilmaydi.
 
 ## Tizimda qayerda
 
-- [Guruhlar](/groups) — ro'yxat. Ustunlar: «Nomi», «Daraja / Kurs», «O'qituvchi», «Xona», «Kun / Vaqt», «Holat», «O'quvchilar». «Nomi bo'yicha qidirish...» maydoni guruh nomi bo'yicha ham, ustoz ismi bo'yicha ham topadi. Filtrlar: «Barcha holatlar», «Barcha darajalar», «Barcha turlar», «Barcha xonalar», «Barcha o'qituvchilar».
-- Guruh sahifasi (ro'yxatdagi qatorni bossangiz). Chapda karta: kurs, ustoz, o'quvchilar soni, kunlar, vaqt, xona, «Boshlanish», «Tugash», «Narxi». O'ngda tablar: «Davomat», «Darslar», «O'quvchilar», «Ilova faolligi», «Materiallar», «Imtihonlar», «Dars o'zgarishlari», «Tarix», «Izohlar», «Statistika». «Materiallar» va «Imtihonlar» hozircha bo'sh. «Dars o'zgarishlari», «Tarix» va «Izohlar»ni CEO, direktor va administrator ko'radi.
+- [Guruhlar](/groups) — ro'yxat. Ustunlar: «Nomi», «Daraja / Kurs», «O'qituvchi», «Xona», «Kun / Vaqt», «Holat», «O'quvchilar». «Nomi bo'yicha qidirish...» maydoni guruh nomi bo'yicha ham, ustoz ismi bo'yicha ham topadi. Filtrlar: «Barcha holatlar», «Barcha darajalar», «Barcha turlar», «Barcha xonalar», «Barcha o'qituvchilar» (o'qituvchida bu oxirgisi yo'q); har birida bir nechta variantni tanlash mumkin.
+- Guruh sahifasi (ro'yxatdagi qatorni bossangiz). Guruh tanlangan filialda ochilmasa-yu, sizning boshqa filialingizda bo'lsa, sahifa «Guruh boshqa filialda» deb yozadi va shu filialga o'tish tugmasini beradi. Chapda karta: kurs, ustoz, o'quvchilar soni, kunlar, vaqt, xona, «Boshlanish», «Tugash», «Narxi». O'ngda tablar: «Davomat», «Darslar», «O'quvchilar», «Ilova faolligi», «Materiallar», «Imtihonlar», «Dars o'zgarishlari», «Tarix», «Izohlar», «Statistika». «Materiallar» va «Imtihonlar» hozircha bo'sh. «Dars o'zgarishlari», «Tarix» va «Izohlar»ni CEO, direktor va administrator ko'radi.
 - Kartadagi QR kod tugmasi va havolani nusxalash tugmasi: o'quvchi ularni ochib, Telegram bot orqali shu guruhga ro'yxatdan o'tadi. Filial «Faol» bo'lmasa, QR ham, havola ham berilmaydi: «Filial faol emas — bu filialga Telegram orqali ro'yxatdan o'tib bo'lmaydi.»
 - Sozlamalar → [Kurslar](/settings/courses), [Xonalar](/settings/rooms) — kurs va xona qo'shish. Formada ro'yxat bo'sh bo'lsa, shu yerga olib boradigan havola turadi.
