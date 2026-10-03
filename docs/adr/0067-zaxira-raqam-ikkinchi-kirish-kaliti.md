@@ -19,7 +19,8 @@ o'zi ham profilidan qo'sha olsin, admin kartada barcha raqamlarni ko'rsin.
    kirish» avval hisobning o'z raqamini (hozirgi shart), topilmasa — tirik
    kartaning zaxira raqamini qidiradi. Asosiy raqam har doim ustun: 1-bosqich
    hisob topsa, parol noto'g'ri bo'lsa ham 2-bosqichga o'tilmaydi.
-   2-bosqich faqat o'quvchi portalida (`admin.` / `lehrer.` da yo'q).
+   2-bosqich faqat o'quvchi rolidagi hisoblar uchun, o'quvchi portalida yoki
+   portal cheklanmaganda (lokal, noma'lum Origin); `admin.` / `lehrer.` da yo'q.
 2. **Bitta zaxira raqam — bitta o'quvchi.** Zaxira raqam o'z asosiy raqamiga,
    boshqa o'chirilmagan kartaning asosiy yoki zaxira raqamiga, boshqa tirik
    o'quvchi hisobining kirish raqamiga teng bo'lmaydi (`assertExtraPhoneFree`;
@@ -33,8 +34,11 @@ o'zi ham profilidan qo'sha olsin, admin kartada barcha raqamlarni ko'rsin.
 3. **O'quvchi o'zi: joriy parol + yangi raqamga SMS kod** qo'shish va
    o'zgartirishda, **joriy parol** o'chirishda (ADR-0031). SMS — ADR-0039 kod
    mexanizmi va matni, alohida kod uyasi (`extra_phone:code:*`), umumiy
-   cheklovlar; `STUDENT_PHONE_VERIFICATION_ENABLED` o'chiq bo'lsa bu eshik
-   yopiq — profil «Zaxira raqamni administrator qo'shadi» deb yozadi.
+   cheklovlar. ADR-0039 telefon bosqichi o'chiq bo'lsa
+   (`STUDENT_PHONE_VERIFICATION_ENABLED` o'chiq yoki Eskiz sozlanmagan — kodda
+   `phoneVerificationEnabled`) bu eshik yopiq: zaxira raqami yo'q o'quvchining
+   profili «Zaxira raqamni administrator qo'shadi» deb yozadi, raqami borida —
+   kirish izohini.
    Zaxira raqamni tasdiqlash asosiy raqamni tasdiqlangan qilmaydi.
 4. **O'zgarmaydi:** SMS bilan parol tiklash (faqat asosiy raqam), bot
    sahnalari, Telegram ichidagi kabinet va ilovaning bot orqali kirishi
