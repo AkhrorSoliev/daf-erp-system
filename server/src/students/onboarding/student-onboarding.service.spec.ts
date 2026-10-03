@@ -65,6 +65,7 @@ function build(
   card: Partial<{
     phone: string;
     verifiedPhone: string | null;
+    extraPhone: string | null;
     gender: 'MALE' | 'FEMALE' | null;
     dateOfBirth: Date | null;
   }> = {},
@@ -74,6 +75,7 @@ function build(
     id: STUDENT_ID,
     phone: PHONE,
     verifiedPhone: null as string | null,
+    extraPhone: null as string | null,
     phoneVerifiedAt: null as Date | null,
     gender: null as 'MALE' | 'FEMALE' | null,
     dateOfBirth: null as Date | null,
@@ -510,6 +512,21 @@ describe('StudentOnboardingService (ADR-0039)', () => {
         b.service.sendChangeCode(STUDENT_ID, USER_ID, PHONE, PASSWORD),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(b.eskiz.sendSms).not.toHaveBeenCalled();
+    });
+
+    it("a new main number that was the card's backup number empties the backup (ADR-0067)", async () => {
+      const b = build({ extraPhone: OWN_PHONE });
+      await b.service.sendChangeCode(STUDENT_ID, USER_ID, OWN_PHONE, PASSWORD);
+      const [, message] = b.eskiz.sendSms.mock.calls.at(-1)!;
+      const code = /(\d{4})$/.exec(message)![1];
+
+      await b.service.verifyPhoneCode(STUDENT_ID, USER_ID, code);
+
+      expect(b.row.phone).toBe(OWN_PHONE);
+      expect(b.row.extraPhone).toBeNull();
+      const history = b.entityHistory.recordUpdate.mock.calls.at(-1)![0];
+      expect(history.oldValues.extraPhone).toBe(OWN_PHONE);
+      expect(history.newValues.extraPhone).toBeNull();
     });
 
     it('re-checks the number when the code comes back — taken meanwhile, nothing is written', async () => {

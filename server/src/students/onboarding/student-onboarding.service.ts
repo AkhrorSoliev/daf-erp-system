@@ -284,10 +284,16 @@ export class StudentOnboardingService {
       ? await planPhoneChange(this.prisma, account, nextPhone, { staff: false })
       : null;
 
+    const promotesBackup = student.extraPhone === nextPhone;
     await this.prisma.$transaction(async (tx) => {
       await tx.student.update({
         where: { id: student.id },
-        data: { phone: nextPhone },
+        // The backup number that just became the main number is not a
+        // backup any more (ADR-0067).
+        data: {
+          phone: nextPhone,
+          ...(promotesBackup && { extraPhone: null }),
+        },
       });
       if (account && write) {
         await tx.user.update({ where: { id: account.id }, data: write });
@@ -310,11 +316,13 @@ export class StudentOnboardingService {
       oldValues: {
         phone: student.phone,
         login: account?.login ?? null,
+        ...(promotesBackup && { extraPhone: student.extraPhone }),
         telefonTasdigi: 'tasdiqlanmagan',
       },
       newValues: {
         phone: nextPhone,
         login,
+        ...(promotesBackup && { extraPhone: null }),
         telefonTasdigi: `${nextPhone} SMS orqali tasdiqlandi`,
         sabab: "O'quvchi eski raqam o'rniga o'z raqamini kiritdi",
       },
@@ -385,6 +393,7 @@ const STUDENT_SELECT = {
   id: true,
   phone: true,
   verifiedPhone: true,
+  extraPhone: true,
   gender: true,
   dateOfBirth: true,
   companyId: true,
@@ -395,6 +404,7 @@ type StudentFacts = {
   id: number;
   phone: string;
   verifiedPhone: string | null;
+  extraPhone: string | null;
   gender: Gender | null;
   dateOfBirth: Date | null;
   companyId: number;
