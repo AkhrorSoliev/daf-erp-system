@@ -8,7 +8,12 @@ import { CourseStatus, EnrollmentStatus, PaymentModel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { tashkentDateStr } from '../common/date/tashkent';
 import { courseScheduleSummary } from './course-schedule-summary';
-import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import {
+  StatusHistoryService,
+  StatusCascadeService,
+  groupsCancelledBy,
+} from '../common/status';
+import { assertNoUnansweredLessons } from '../unmarked-lessons/unanswered-lessons';
 import { EntityHistoryService } from '../common/entity-history';
 import { SettingsService } from '../settings/settings.service';
 import { CourseQueryDto } from './dto/course-query.dto';
@@ -314,6 +319,10 @@ export class CoursesService {
       throw new NotFoundException(`Kurs #${id} topilmadi`);
     }
     await this.assertCallerMayTouchCourse(userId, course.branchId);
+
+    // Archiving the course cancels its groups: ADR-0068, as for a branch.
+    const closing = groupsCancelledBy('Course', id, dto.status);
+    if (closing) await assertNoUnansweredLessons(this.prisma, closing);
 
     const auditData = await this.statusHistoryService.changeStatus({
       entityType: 'Course',

@@ -34,6 +34,7 @@ describe('BranchesService — status methods', () => {
       userBranch: { count: jest.fn().mockResolvedValue(0) },
       room: { count: jest.fn().mockResolvedValue(0) },
       course: { count: jest.fn().mockResolvedValue(0) },
+      unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
       // The caller-scope guard reads the acting user; a CEO spans all branches.
       user: {
         findFirst: jest.fn().mockResolvedValue({
@@ -95,6 +96,48 @@ describe('BranchesService — status methods', () => {
         'CLOSED',
         1,
       );
+    });
+
+    // Closing a branch cancels its groups; ADR-0068 keeps a group open while
+    // a «Dars bo'ldimi?» question about it is unanswered.
+    it.each(['CLOSED', 'ARCHIVED'])(
+      'refuses %s while one of its groups has an unanswered lesson, before writing anything',
+      async (status) => {
+        prisma.unmarkedLesson.findMany.mockResolvedValue([
+          {
+            date: new Date('2026-10-01T00:00:00.000Z'),
+            group: { name: '#014' },
+          },
+        ]);
+
+        await expect(
+          service.changeStatus(1, { status: status as any }, 1, 1001),
+        ).rejects.toThrow(
+          "Avval «Dars bo'ldimi?» savoliga javob bering: 01.10 (#014).",
+        );
+        expect(prisma.unmarkedLesson.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              status: 'PENDING',
+              group: {
+                branchId: 1,
+                deletedAt: null,
+                statusEnum: { not: 'ARCHIVED' },
+              },
+            },
+          }),
+        );
+        expect(statusHistoryService.changeStatus).not.toHaveBeenCalled();
+        expect(prisma.branch.update).not.toHaveBeenCalled();
+        expect(statusCascadeService.cascade).not.toHaveBeenCalled();
+      },
+    );
+
+    it('makes a branch inactive without asking: pausing closes no group', async () => {
+      await service.changeStatus(1, { status: 'INACTIVE' as any }, 1, 1001);
+
+      expect(prisma.unmarkedLesson.findMany).not.toHaveBeenCalled();
+      expect(statusCascadeService.cascade).toHaveBeenCalled();
     });
 
     it('throws NotFoundException for missing branch', async () => {
