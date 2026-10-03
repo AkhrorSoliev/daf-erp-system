@@ -61,7 +61,7 @@ export function LeadAdditionalFields({
 
       {visible && (
         <div className="space-y-1.5 rounded-lg border bg-muted/30 p-4">
-          <Label htmlFor="extraPhone">Qo&apos;shimcha telefon</Label>
+          <Label htmlFor="extraPhone">Zaxira raqam</Label>
           <PhoneInput
             id="extraPhone"
             name="extraPhone"
@@ -88,7 +88,7 @@ export function LeadAdditionalFields({
               <Phone className="size-4" />
             </button>
           </TooltipTrigger>
-          <TooltipContent>Qo&apos;shimcha telefon</TooltipContent>
+          <TooltipContent>Zaxira raqam</TooltipContent>
         </Tooltip>
       </div>
     </div>

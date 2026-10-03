@@ -57,7 +57,7 @@ export const FIELD_LABELS: Record<string, string | null> = {
   telefonTasdigi: "Telefon tasdig'i",
   address: "Manzil",
   telegram: "Telegram",
-  extraPhone: "Qo'shimcha telefon",
+  extraPhone: "Zaxira raqam",
   parentName: "Ota-ona ismi",
   parentPhone: "Ota-ona telefoni",
   placeOfStudy: "O'qish joyi",
