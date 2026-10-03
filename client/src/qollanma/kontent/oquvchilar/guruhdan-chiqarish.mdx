@@ -1,0 +1,151 @@
+## Nima bo'ladi
+
+Guruhdan chiqarish o'quvchini bitta guruhdan chiqaradi. O'quvchining holati o'zgarmaydi: u «Faol» bo'lib qoladi; boshqa faol guruhi bo'lmasa, «Guruhlashtirilmagan» ro'yxatiga tushadi ([O'quvchining hayot davri](/qollanma/oquvchilar/hayot-davri)).
+
+- Yozilish yopiladi va kartadagi «Guruhlar» tabidagi faol guruhlar ro'yxatidan yo'qoladi. Qarz kechirish yoqilgan bo'lsa, dars paketi davridagi qarzdor yozilish shu tabdagi «Yopilgan guruhlar (qarzdorlik bilan)» bo'limida «Chiqarilgan» belgisi bilan ko'rinadi ([O'quvchi kartasi](/qollanma/oquvchilar/oquvchi-kartasi)).
+- Sabab majburiy.
+- O'quvchining puli shu sahifadagi qoidalar bo'yicha hisoblanadi: oyning 40% qoidasi va sinov darsi qoidasi.
+
+## Qaysi qoida qachon ishlaydi
+
+Pulni uchta savol hal qiladi: kurs qanday to'lanadi, o'quvchi nechta darsga kelgan va qaysi tartib tanlangan. Sxema shuni ko'rsatadi; har qoida pastda tushuntirilgan.
+
+```mermaid
+flowchart TD
+  A["Guruhdan chiqarish"] --> B{"Kurs qanday to'lanadi?"}
+  B -- "Dars paketi" --> C["O'tilmagan oldindan to'langan darslar puli balansga qaytadi"]
+  B -- "Oylik" --> S{"Hamma guruhda ko'pi bilan 1 ta darsga kelganmi?"}
+  S -- "Ha, lekin javobsiz Dars bo'ldimi? natijani o'zgartirishi mumkin" --> W["Chiqarish rad etiladi: avval savolga javob bering"]
+  S -- "Ha" --> T["Sinov darsi: oyning to'liq puli qaytadi, ustozga haq yozilmaydi"]
+  S -- "Yo'q" --> D{"Qaysi tartib tanlandi?"}
+  D -- "Sifat bo'yicha shikoyat" --> E["Oyning to'liq puli qaytadi"]
+  D -- "Markaz tashabbusi yoki Darajani tugatdi" --> F["O'tilmagan darslar puli qaytadi"]
+  D -- "O'quvchi o'zi to'xtatdi" --> H{"O'tgan darslar 40% dan ko'pmi?"}
+  H -- "Ha" --> I["Pul qaytmaydi"]
+  H -- "Yo'q" --> F
+```
+
+## Oyna
+
+Oyna «Guruhdan chiqarish» deb nomlanadi. Unda quyidagilar bor:
+
+1. **Sabab.** «Sababni tanlang» ro'yxati va «Qo'shimcha izoh (ixtiyoriy)» maydoni. Ro'yxat Sozlamalar → «Sabablar» → «Chiqish va status» da yuritiladi. «Boshqa sabab» tanlansa, izoh majburiy (kamida 5 belgi). Ro'yxat bo'sh bo'lsa, sababni matn bilan yozasiz («Sabab yozing...»).
+2. **Pulni qaytarish tartibi.** «Pul (shartnoma bo'yicha)» blokidagi tanlov. «O'quvchi o'zi to'xtatdi» oldindan tanlangan. Har tartib ostida shu oy uchun nima bo'lishi yozilgan; sinov darsida hamma tartib ostida «Sinov darsi (3.5) — oyning to'liq puli qaytadi» turadi.
+3. **Oy darslari.** Blokning tepasida bir qator: oy, darslar soni, oyning hisobi va bugungi ulush — masalan, «Oktabr: 12 dars, 1 200 000 so'm. Bugun 09.10, o'tgani: 4 ta (33%)». Ostida har dars uchun kvadratcha turadi: ichida oyning shu dars kuni (kalendar sanasi, dars tartibi emas); to'ldirilgani — o'tgan dars, bo'shi — hali o'tmagan. Bugungi dars ham o'tgan hisoblanadi.
+4. **«Chiqarish» tugmasi.** Oyna pul hisobini yuklamaguncha tugma bosilmaydi. Hisob yuklanmasa, blok o'rnida «Pul hisobini yuklab bo'lmadi. Oy to'lovi shartnoma qoidasi bo'yicha hisoblanadi.» chiqadi va chiqarish baribir mumkin: tizim shartnoma qoidasini o'zi qo'llaydi. Chiqarilgandan keyin tartibni tuzatib bo'lmaydi, shuning uchun tasdiqlashdan oldin natija qutisini tekshiring.
+
+**Natija qutisi.** Tanlangan tartib bilan chiqarsangiz balansga nima bo'lishini ko'rsatadi; tartibni o'zgartirsangiz, quti ham o'zgaradi. Uning ostida «Shartnoma 6.2 · 01.10.2026 dan chiqqanlarga qo'llanadi» yozuvi turadi. Quti uch rangda bo'ladi:
+
+| Rang | Qachon | Matn |
+|---|---|---|
+| Yashil | Pul qaytadi | «3 ta o'tilmagan dars puli qaytadi: ... so'm» va «Balans: ... → ... so'm». Dars hali o'tmagan bo'lsa — «Hali dars o'tmagan: ... dars puli to'liq qaytadi»; «Sifat bo'yicha shikoyat»da — «Oyning to'liq puli qaytadi»; sinov darsida — «Sinov darsi (3.5): oyning puli to'liq qaytadi — ... so'm» va «Ustozga bu oyning darslari uchun haq yozilmaydi.» |
+| Sariq | Pul qaytmaydi | «Pul qaytmaydi» va «Oy darslarining 42% o'tgan. Qarz o'zgarmaydi: ... so'm.» (yoki «Balans o'zgarmaydi.») |
+| Sariq | Javob kutilmoqda (sinov darsi) | «Avval «Dars bo'ldimi?» savoliga javob bering ...» |
+| Kulrang | Qaytadigan narsa yo'q | «Qaytadigan dars yo'q» va «Oyning hamma darslari o'tgan.» Oy puli nolga teng sinov darsida — «Sinov darsi (3.5): qaytadigan pul yo'q» |
+
+Pul bloki faqat oylik to'lov modelidagi kursda va shu oyning hisobi yozilgan bo'lsa chiqadi. Dars paketi kursida blok yo'q: oldindan to'langan, hali o'tilmagan darslar puli (to'langan paytdagi dars narxida) o'zi balansga qaytadi.
+
+## Pulni qaytarish tartiblari
+
+| Tartib | Qachon tanlanadi | Nima qaytadi |
+|---|---|---|
+| «O'quvchi o'zi to'xtatdi» | O'quvchi o'z qarori bilan to'xtadi. Oldindan tanlangan | Oyning 40% idan ko'pi o'tmagan bo'lsa — o'tilmagan darslar puli. Ko'pi o'tgan bo'lsa — hech narsa |
+| «Darajani tugatdi» | O'quvchi darajani (A1, A2...) tugatdi: sertifikat olib to'xtaydi yoki keyingi daraja guruhini kutadi | O'tilmagan darslar puli. 40% qoidasi qo'llanmaydi |
+| «Markaz tashabbusi» | Chiqarishni markaz qaror qildi | O'tilmagan darslar puli |
+| «Sifat bo'yicha shikoyat» | O'quvchining sifat bo'yicha shikoyati asosli | Oyning to'liq puli, o'tgan darslar ham. Ustoz oyligi kamaymaydi |
+
+Hamma guruhda ko'pi bilan 1 ta darsga kelgan o'quvchida tartib hal qilmaydi: oyning to'liq puli qaytadi. Pastdagi Sinov darsi (shartnoma 3.5) bo'limiga qarang.
+
+## 40% qoidasi (shartnoma 6.2)
+
+O'quvchi o'zi to'xtatsa va shu oy darslarining 40% idan ko'pi allaqachon o'tgan bo'lsa, oyning puli qaytmaydi. Aynan 40% yoki kamroq o'tgan bo'lsa, o'tilmagan darslar puli qaytadi.
+
+- **Ulush.** Ketish kunigacha o'tgan darslar ÷ oydagi darslar, dars kuni bo'yicha: o'quvchi kelmagan dars ham o'tgan hisoblanadi. Ketish kuni — «Chiqarish» tugmasi bosilgan Toshkent kuni; o'sha kundagi dars ham o'tgan hisoblanadi.
+- **Oy o'rtasida qo'shilgan o'quvchi.** Faqat uning o'z darslari sanaladi: ulush o'z darslariga nisbatan.
+- **Oldin qaytarilgan darslar** (muzlatishda yoki markaz darsni bekor qilganda) ikkala tomondan chiqariladi.
+- **Chegara — kompaniya sozlamasi.** 40% Sozlamalar → «To'lov» → «O'quvchi ketganda» bo'limidagi «Pul qaytarilmaydigan chegara» maydonida turadi. Chegara o'zgarsa, oynadagi matn ham shunga qarab yoziladi.
+- **Sana.** Qoida 01.10.2026 va undan keyin chiqarilganlarga qo'llanadi. Oldin chiqarilganlar eski qoidada qolgan: ularga o'tilmagan darslar puli qaytgan.
+
+## Sinov darsi (shartnoma 3.5)
+
+O'quvchi markazga yangi kelib, ko'pi bilan bitta darsga qatnashgan bo'lsa, shartnoma bo'yicha u hech narsa to'lamaydi. Bu qoida 01.10.2026 dan beri amalda. U shartnoma 3.2 bilan birga ishlaydi: oylik kursda oyning 1-darsiga to'lovsiz kelish mumkin, 2-darsdan puli yetmagan o'quvchi darsga qo'yilmaydi; 01.11.2026 dan o'tadigan darslarga oy to'lovining eng kam qismi (standart 50%) ham shart ([To'lamagan o'quvchi](/qollanma/davomat/darsga-qoyish), [Oylik to'lov](/qollanma/tolovlar/oylik-tolov)).
+
+- **Qachon.** O'quvchi guruhdan chiqarilsa yoki chetlatilsa va u hamma guruhlarda, butun vaqt davomida, ko'pi bilan 1 ta darsga kelgan bo'lsa. Faqat «Keldi» va «Kechikdi» sanaladi; «Kelmadi» va «Sababli» sanalmaydi: bir marta kelib, keyin kelmay qo'ygan o'quvchi ham sinov darsida.
+- **Nima bo'ladi.** Oylik kursda, qaysi tartib tanlangan bo'lishidan qat'i nazar, oyning to'liq puli balansga qaytadi. O'quvchi hali to'lamagan bo'lsa, shu oyning qarzi yopiladi. Ustozga ham shu oyning shu guruhdagi darslari uchun haq yozilmaydi: yozilgan haq qaytarib olinadi, faqat oylik bilan allaqachon to'langani qoladi.
+- **Faqat chiqarish va chetlatish.** Muzlatish, boshqa guruhga o'tkazish, guruh yoki filial yopilishi va kartani arxivga o'tkazish sinov darsi hisoblanmaydi: ularga eski qoida qo'llanadi.
+- **Guruhga qaytarilgan o'quvchi.** Chiqarilib, shu oyning o'zida shu guruhga qaytarilgan o'quvchi sinov darsi hisoblanmaydi: eski yozilishning chiqarilgandan keyingi kunlari yangi yozilishning darslari bo'ladi va u ular uchun yangi yozilishda to'laydi.
+- **Qoidani o'chirish.** CEO uni Sozlamalar → «To'lov» → «O'quvchi ketganda» bo'limidagi «Sinov darsi» tugmasi bilan o'chira oladi; boshida yoqilgan. O'chiq bo'lsa, oddiy tartib ishlaydi (yuqoridagi 40% qoidasi).
+
+**Javobsiz «Dars bo'ldimi?» bo'lsa.** O'quvchi guruhda bo'lgan kunda davomat olinmagan va javobsiz dars uning ikkinchi darsi bo'lib chiqishi mumkin bo'lsa, tizim chiqarishni va chetlatishni rad etadi. Shunda:
+
+1. Savolga javob bering ([Izohlar va topshiriqlar](/qollanma/boshlash/topshiriqlar)).
+2. «Bo'ldi» ni tanlab o'quvchiga belgi qo'ying («Keldi», «Kechikdi», «Kelmadi» yoki «Sababli»; sinov darsini faqat «Keldi» va «Kechikdi» hal qiladi) yoki «Bo'lmadi» ni tanlab darsni bekor qiling yoki ko'chiring.
+3. Keyin o'quvchini chiqaring yoki chetlating.
+
+Javob natijani o'zgartira olmasa (o'quvchi hali birorta darsga kelmagan va javobsiz dars bitta), tizim kutmaydi. Javob kutish faqat oylik kursda va shu oyning hisobi yozilgan bo'lsa ishlaydi.
+
+## Qancha qaytadi
+
+- O'tilmagan har dars uchun bir dars narxi qaytadi. Bir dars narxi — oy narxi ÷ oydagi darslar soni. O'quvchida chegirma bo'lsa, chegirmali narx qaytadi (oyning hisobi yozilgan paytdagi chegirma).
+- Qaytadigan summa oyning hisobida qolgan puldan oshmaydi (masalan, oldin qisman qaytgan bo'lsa).
+- Oynadagi summa — yoziladigan summaning o'zi: ikkalasi bitta hisobdan foydalanadi. Faqat oyna ochilgan kun bo'yicha hisoblaydi, yozuv esa «Chiqarish» bosilgan kun bo'yicha. Tasdiqlashgacha tun yarmidan o'tsa, o'tgan darslar soni, demak natija ham o'zgarishi mumkin: oynani qayta oching.
+
+## Pul qayerga tushadi
+
+- Qaytgan pul o'quvchining balansiga tushadi. Naqd berilmaydi: naqd pulni keyin «To'lov» menyusidagi «Pulni qaytarish» orqali berasiz ([Pulni qaytarish va yechib olish](/qollanma/tolovlar/pul-qaytarish)). Natija qutisidagi eslatmada bu «Pul qaytarish» deb yozilgan.
+- Balansda qarz bo'lsa, qaytgan pul avval qarzni kamaytiradi. Natija qutisida «Qarz: ... → ... so'm» yoki «Qarz yopiladi, balansda ... so'm qoladi» deb yoziladi.
+- Ustoz oyligiga tegilmaydi: tartiblarning hech biri hisoblangan oylikni kamaytirmaydi. «Sifat bo'yicha shikoyat»da ustozga tegishli qismni markaz qoplaydi: oynada «Ustoz oyligi kamaymaydi, farqni markaz qoplaydi.» deb yoziladi. Yagona istisno — sinov darsi: unda ustozga shu oyning darslari uchun haq yozilmaydi.
+- Nima bo'lgani tarixda qoladi: o'quvchi kartasining «Tarix» tabida «Guruhdan chiqarildi» yozuvi («Guruh» va «Sabab» qatorlari), guruhning «Tarix» tabida esa «O'quvchi chiqarildi» yozuvi («O'quvchi» va «Sabab» qatorlari) paydo bo'ladi; yozuvni kim qilgani ham ko'rinadi. Oy puli bilan biror narsa bo'lgan bo'lsa, ikkala yozuvda «Pul» qatori ham chiqadi — masalan, «Shartnoma 6.2: oy darslarining 42% o'tgan (5/12) — oy to'lovi qaytarilmadi» (raqamlar misol uchun).
+
+## Misol
+
+Oylik kurs: oyiga 1 200 000 so'm, oktabrda 12 ta dars, bir dars 100 000 so'm. Oy boshida to'liq hisob yozilgan. Misollarda N-dars kuni — oyning N-darsi o'tadigan kun. Ismlar soxta.
+
+**1-holat: Jasur 4-dars kuni chiqdi.** O'tgan darslar: 4 ÷ 12 = 33%. Bu 40% dan ko'p emas, shuning uchun o'tilmagan 8 dars puli qaytadi: 8 × 100 000 = 800 000 so'm. Oyning hisobi 400 000 so'm (4 dars) bo'lib qoladi. Jasurda 10% chegirma bo'lsa, har dars 90 000 so'm bo'ladi va 8 × 90 000 = 720 000 so'm qaytadi.
+
+**2-holat: Nilufar 5-dars kuni chiqdi.** 12 darsning 40% i — 4,8 dars. Nilufarda 5 dars o'tgan, bu 4,8 dan ko'p (5 ÷ 12 = 42%). Natija tanlangan tartibga bog'liq:
+
+| Tartib | Qaytadi | Hisob |
+|---|---|---|
+| «O'quvchi o'zi to'xtatdi» | 0 so'm | 40% dan ko'p o'tgan: pul qaytmaydi, oyning 1 200 000 so'mi qoladi |
+| «Darajani tugatdi» yoki «Markaz tashabbusi» | 700 000 so'm | 7 o'tilmagan dars × 100 000 |
+| «Sifat bo'yicha shikoyat» | 1 200 000 so'm | oyning hamma darsi: 12 × 100 000 |
+
+**3-holat: aynan 40%.** Boshqa kurs: oyiga 1 000 000 so'm, oyda 10 dars, bir dars 100 000 so'm. Ulugbek 4-dars kuni chiqdi: 4 ÷ 10 = 40%, shuning uchun 6 × 100 000 = 600 000 so'm qaytadi. 5-dars kuni chiqsa (50%), pul qaytmaydi.
+
+**4-holat: oy o'rtasida qo'shilgan.** Dilshod 5-dars kuni qo'shildi: uning 8 ta darsi bor (5-dan 12-gacha), hisobi 800 000 so'm. 8-dars kuni chiqdi: o'z 8 darsidan 4 tasi o'tgan, 4 ÷ 8 = 50%. Bu 40% dan ko'p, shuning uchun pul qaytmaydi.
+
+**5-holat: sinov darsi.** Madina oyga yangi kelgan: u hamma guruhda jami 1 ta darsga (1-darsga) qatnashgan, 2-, 3- va 4-darsga kelmagan. 4-dars kuni administrator uni «O'quvchi o'zi to'xtatdi» tartibi bilan chiqardi. Odatdagi qoidada 4 ÷ 12 = 33% o'tgan hisoblanardi va 8 × 100 000 = 800 000 so'm qaytardi. Lekin Madina ko'pi bilan 1 ta darsga kelgan, shuning uchun sinov darsi ishlaydi: oyning to'liq 1 200 000 so'mi qaytadi. U hali to'lamagan bo'lsa, shu 1 200 000 so'm qarz yopiladi. Ustozga shu oy uchun haq yozilmaydi.
+
+## Istisnolar
+
+40% qoidasi faqat guruhdan chiqarishda va chetlatishda («O'quvchi o'zi to'xtatdi» tartibi) ishlaydi: [Chetlatish, bitirish, arxiv](/qollanma/oquvchilar/chetlatish-va-arxiv). Boshqa hollarda eski qoida: o'tilmagan darslar puli qaytadi.
+
+- **Muzlatish**, **boshqa guruhga o'tkazish**, guruh yoki filial yopilishi, kurs arxivlanishi va guruhni o'chirish — markaz qarori; **kartani arxivga o'tkazish** esa xato yozuvni o'chirish, ketish emas. 40% qoidasi ham, sinov darsi ham ularga tegmaydi.
+- **Butun guruh darajani tugatib «Tugallangan» bo'lsa**, o'tilmagan darslar puli qaytadi va o'quvchilar avtomatik «Bitirgan» bo'ladi.
+- **Oyning hamma darsi o'tgan** bo'lsa yoki muzlatish qolganini allaqachon qaytargan bo'lsa, qaytadigan pul yo'q. Bunda oynada «Pul qaytmaydi» emas, «Qaytadigan dars yo'q» chiqadi: qoida hech narsani ushlab qolmagan.
+- **Qarzdor.** 40% dan keyin ketgan qarzdorning oylik qarzi qoladi va «Qarzdorlik» sahifasida ko'rinadi (sinov darsida shu oyning qarzi yopiladi). Oylik to'lovdagi qarzni kechirib bo'lmaydi: u shu sahifadagi tartib bilan hal bo'ladi. «Qarz kechirishga ruxsat» sozlamasi (boshida o'chiq) faqat dars paketi davridagi yozilishlarga tegishli — [Qarzdorlik](/qollanma/tolovlar/qarzdorlik).
+- **Muzlatilgan o'quvchi.** Uning yozilishi kartadagi faol guruhlar ro'yxatida ko'rinmagani uchun bu oyna orqali chiqarib bo'lmaydi: «Chiqarish» tugmasi faqat faol yozilishlarda bor.
+
+## Kim qila oladi
+
+«Ha» — ekranda tanlov bor va tizim uni qabul qiladi. «—» — ekranda yo'q yoki tanlab bo'lmaydi va tizim rad etadi. Filial direktori va administrator faqat o'z filialidagi o'quvchi bilan ishlaydi.
+
+| Amal | CEO | Filial direktori | Administrator |
+|---|---|---|---|
+| O'quvchini guruhdan chiqarish | Ha | Ha | Ha |
+| «O'quvchi o'zi to'xtatdi» va «Darajani tugatdi» tartibini tanlash | Ha | Ha | Ha |
+| «Markaz tashabbusi» va «Sifat bo'yicha shikoyat» tartibini tanlash | Ha | Ha | — |
+| «Sozlamalar»dagi 40% maydonini ko'rish | Ha | Ha | — |
+| 40% chegarasini o'zgartirish | Ha | — | — |
+| «Sinov darsi» tugmasini o'zgartirish | Ha | — | — |
+
+Sinov darsi tartib tanlashga bog'liq emas: hamma rol uchun bir xil ishlaydi. Administrator oynada faqat «O'quvchi o'zi to'xtatdi» va «Darajani tugatdi» ni ko'radi; ostida «Markaz tashabbusi yoki sifat shikoyatini faqat direktor yoki CEO tanlaydi» yozuvi turadi. Filial direktori 40% maydonini ko'radi, lekin o'zgartira olmaydi: chegara butun kompaniya uchun bitta.
+
+## Tizimda qayerda
+
+- [O'quvchi kartasi](/qollanma/oquvchilar/oquvchi-kartasi) → «Guruhlar» tabi → guruh kartasidagi «Chiqarish» (ustiga olib borsangiz «Guruhdan chiqarish» chiqadi).
+- Guruh sahifasi → «O'quvchilar» tabi → qator menyusidagi «Guruhdan chiqarish».
+- [Aloqa markazi](/outreach) → «Ko'p dars qoldirganlar» → «Chiqarish».
+- «Pul qaytarilmaydigan chegara» (40%) va «Sinov darsi» tugmasi: [To'lov sozlamalari](/settings/payment) — Sozlamalar → «To'lov» → «O'quvchi ketganda» bo'limi. Menyuda faqat CEO va filial direktoriga ko'rinadi; tugmani faqat CEO o'zgartiradi.
+- Oylik to'lov qanday hisoblanishi — [Oylik to'lov](/qollanma/tolovlar/oylik-tolov).

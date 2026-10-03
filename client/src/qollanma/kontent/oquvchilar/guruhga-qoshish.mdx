@@ -1,0 +1,90 @@
+## Qanday qo'shiladi
+
+1. O'quvchi kartasida «Guruhga qo'shish» tugmasini bosing. Ro'yxatdagi qator menyusida bu amal «Guruhga biriktirish» deb yoziladi. O'quvchi allaqachon guruhda bo'lsa, tugma va oyna sarlavhasi «Guruhni o'zgartirish» bo'ladi.
+2. Oynada guruhni tanlang. «Guruh nomi yoki ustoz bo'yicha qidirish...» maydoni qidiradi. Har guruhda nomi, o'quvchilar soni, kurs turi, dars kunlari va vaqti, ustoz va xona ko'rinadi. O'quvchi hozir o'qiyotgan guruh yuqorida turadi, «Qo'shilgan» belgisi bilan xira ko'rinadi va uni tanlab bo'lmaydi.
+3. Guruh tanlangach «Boshlanish sanasi (qaysi darsdan)» maydoni chiqadi. Sana tanlamasangiz, «Bugundan boshlab» hisoblanadi.
+4. «Qo'shish» ni bosing (o'quvchi guruhda bo'lsa, tugma «O'zgartirish» deb yoziladi). «O'quvchi guruhga qo'shildi» xabari chiqadi.
+
+## Oyna pulni oldindan ko'rsatadi
+
+Guruh tanlangach, «Boshlanish sanasi (qaysi darsdan)» maydoni ostida pul qatorlari chiqadi. Summalarni tizim hisoblaydi va «Qo'shish» bosilganda yoziladigan hisob ham shu hisobdan foydalanadi. Hisob yuklanayotganda «Hisoblanmoqda…» turadi; yuklanmasa, pul qatorlari chiqmaydi. Qatorlar faqat ma'lumot: to'lovsiz ham o'quvchini guruhga qo'shish mumkin.
+
+- **Oylik kursda.** «Oylik narx:» — kursning oy narxi. Uning ostida birinchi hisob: «Oktabr uchun (8/12 dars):» — oydagi 12 darsdan o'quvchi to'laydigan 8 tasi va shu darslar puli; o'quvchida chegirma bo'lsa, qatorda «· chegirma 10%» turadi va summa chegirma bilan. Boshlanish sanasi keyingi oyga tushsa yoki shu oyda hisoblanadigan dars qolmagan bo'lsa, qator keyingi oyning nomi va summasi bilan chiqadi. Guruh «Boshlanmagan» yoki «Pauza» holatida bo'lsa (yoki ikki oyda ham hisoblanadigan dars bo'lmasa), o'rniga «Hisob guruh darslari boshlanganda yoziladi» turadi.
+- **Dars paketi kursida.** «Kurs narxi (12 dars):» va chegirma bo'lsa «Chegirma:».
+- **Hammasida.** «O'quvchi balansi:» (qarz bo'lsa minus bilan). Boshqa guruhga o'tkazishda «Eski guruhdan qaytadi:» — eski guruhdagi oyning o'tilmagan darslar puli (pastdagi Boshqa guruhga o'tkazish bo'limi); qaytadigan pul bo'lmasa, bu qator chiqmaydi. Oxirida «To'lash kerak (taxminan):» — to'lanadigan summadan balans va qaytadigan pulni ayirgandagi qolgani (oylik kursda to'lanadigan summa — birinchi hisob, dars paketida — chegirma bilan paket narxi); qolgan bo'lmasa, «Yetarli» deb yoziladi.
+
+## Qaysi guruhga qo'shiladi
+
+- Bir o'quvchi bir vaqtda bitta faol guruhda o'qiydi. Boshqa guruhga qo'shsangiz, eski guruhdagi yozilish yopiladi: o'quvchi o'tkazilgan hisoblanadi (pastdagi bo'limga qarang).
+- Faqat holati «Faol» o'quvchi guruhga qo'shiladi.
+- Guruh «Faol», «Boshlanmagan» yoki «Pauza» holatida bo'lishi kerak. «Tugallangan» yoki bekor qilingan guruhga o'quvchi qo'shib bo'lmaydi.
+- Guruh o'quvchining filialidan bo'ladi. Oyna faqat o'quvchi filialidagi guruhlarni ko'rsatadi. O'quvchida filial hali bo'lmasa, u qo'shilgan guruhning filialini oladi.
+- O'quvchini o'sha guruhga ikkinchi marta qo'shib bo'lmaydi.
+- Filial direktori va administrator faqat o'z filialidagi guruhga o'quvchi qo'sha oladi.
+
+## Oylik kursda oy o'rtasida qo'shilsa
+
+Oylik to'lov modelidagi kursda hisob qo'shilgan zahoti yoziladi: oy boshidagi avtomatik yozuvni kutib o'tirmaydi. Bu hamma yo'lda shunday: kartadagi «Guruhga qo'shish», «Yangi o'quvchi» oynasidagi guruh va lidni o'quvchiga aylantirishdagi guruh. Telegram botda ustoz va guruhni tanlab o'zi ro'yxatdan o'tgan o'quvchining qo'shilgan oyi ham ro'yxatdan o'tgan zahoti hisoblanadi: tungi yurishni kutmaydi.
+
+- Oy narxi guruhning shu oydagi hamma darsiga bo'linadi. O'quvchi «Boshlanish sanasi» dan (shu kun ham) oy oxirigacha bo'lgan darslar uchun to'laydi.
+- Formula: oy narxi × o'quvchining darslari ÷ oydagi hamma darslar. Natija so'mgacha yaxlitlanadi. Butun oyni o'tadigan o'quvchi aynan oy narxini to'laydi.
+- Oydagi darslar sonini bayramlar, bekor qilingan va ko'chirilgan darslar o'zgartiradi.
+- O'quvchida chegirma bo'lsa, u ham qo'llanadi.
+- Boshlanish sanasi guruh ochilishidan oldin bo'lsa ham, hisob guruh ochilgan kundan boshlanadi.
+- O'quvchi hisobni to'lamasa ham, shu guruhdagi oydagi 1-darsiga kela oladi. 2-darsdan boshlab puli yetmagan o'quvchi darsga qo'yilmaydi; 01.11.2026 dan o'tadigan darslarga yana oy to'lovining eng kam qismi (standart 50%) to'langan bo'lishi kerak (shartnoma 3.2; CEO qoidani Sozlamalar → «To'lov» dan o'chirishi mumkin): [To'lamagan o'quvchi](/qollanma/davomat/darsga-qoyish), [Oylik to'lov](/qollanma/tolovlar/oylik-tolov).
+
+## Boshqa guruhga o'tkazish
+
+Kartadagi «Guruhni o'zgartirish» yangi guruhni tanlaydi va bir amalda o'tkazadi. Biror qadam bajarilmasa, o'quvchi eski guruhida qoladi.
+
+- **Sabab.** Eski va yangi guruh ustozlari farq qilsa, sabab majburiy: oynada «Ustoz farqli — sabab majburiy» chiqadi va «Guruh almashtirish sababini tanlang...» ro'yxati ochiladi. Kerakli sabab yo'q bo'lsa, «Sabab boshqa — yangi qo'shish» uni shu yerning o'zida qo'shadi. Ro'yxatni Sozlamalar → «Sabablar» → «Guruh almashtirish» da yuritasiz: oynadagi «Ro'yxatni boshqarish» havolasi shu yerga olib boradi. Ustozlar bir xil bo'lsa, sabab so'ralmaydi.
+- **Dars paketi.** Eski guruhdagi oldindan to'langan, hali o'tilmagan darslar puli (to'langan paytdagi dars narxida) balansga qaytadi.
+- **Oylik kurs, eski guruh.** Shu oydagi hisob o'tkazish kunigacha o'tilgan darslarga qisqartiriladi (o'tkazilgan kun ham o'tilgan hisoblanadi). O'tilmagan darslar puli balansga qaytadi; oyna buni «Eski guruhdan qaytadi» qatorida oldindan ko'rsatadi. Shartnoma 6.2 (40% qoidasi) ham, sinov darsi (3.5) ham o'tkazishga tegmaydi — [Guruhdan chiqarish va pul](/qollanma/oquvchilar/guruhdan-chiqarish).
+- **Oylik kurs, yangi guruh.** Yangi kurs o'z narxida, o'z darslar soniga bo'linib, qolgan darslar uchun olinadi. Bu oy o'rtasida qo'shilish qoidasi bilan bir xil (yuqoriga qarang).
+- **Darsga kirish.** 01.11.2026 dan oy o'rtasida guruhni o'zgartirgan (yoki guruhdan chiqarilib shu oyning o'zida qaytarilgan) o'quvchining oyi darsga kirish uchun butun hisoblanadi: eng kam qism faqat yangi hisobdan emas, eski va yangi hisobning yig'indisidan olinadi ([To'lamagan o'quvchi](/qollanma/davomat/darsga-qoyish)).
+- **Tarix.** O'quvchining «Tarix» tabida «Guruh o'zgartirildi» yozuvi paydo bo'ladi: «Guruh» qatorida eski va yangi guruh turadi. Yangi guruhning tarixiga «O'quvchi qo'shildi» yoziladi. Eski guruhning tarixiga bu o'tkazish yozilmaydi.
+
+## Misol
+
+Oylik kurslar, oktabr. Ismlar soxta.
+
+**Oy o'rtasida qo'shilish.** C guruhi: oyiga 1 200 000 so'm, oktabrda 12 ta dars. Bir dars: 1 200 000 ÷ 12 = 100 000 so'm. Dilshod 5-dars kuni qo'shildi va boshlanish sanasini shu kun qildi. Uning darslari — 5-dan 12-gacha, jami 8 ta. Hisob: 1 200 000 × 8 ÷ 12 = 800 000 so'm. Bu summa qo'shilgan zahoti balansdan yechiladi.
+
+**Boshqa guruhga o'tkazish.** Jasur A guruhida (oyiga 1 200 000 so'm, 12 ta dars, bir dars 100 000 so'm). 4-dars kuni administrator uni B guruhiga o'tkazdi. B — intensiv kurs: oyiga 1 800 000 so'm, oktabrda 15 ta dars, bir dars 120 000 so'm; oyning oxirigacha 10 ta dars qoladi.
+
+1. Eski guruh: 4 ta dars o'tilgan, 8 tasi qolgan. Balansga 8 × 100 000 = 800 000 so'm qaytadi.
+2. Yangi guruh: 1 800 000 × 10 ÷ 15 = 1 200 000 so'm balansdan yechiladi.
+3. Balansdagi o'zgarish: +800 000 − 1 200 000 = −400 000 so'm. Oy uchun jami: eski guruhda 400 000 (4 dars) va yangisida 1 200 000, hammasi 1 600 000 so'm.
+
+Jasurning balansi 0 bo'lsa, o'tkazish oynasi oldindan shuni ko'rsatadi: «Oktabr uchun (10/15 dars): 1 200 000 so'm», «O'quvchi balansi: 0 so'm», «Eski guruhdan qaytadi: 800 000 so'm», «To'lash kerak (taxminan): 400 000 so'm».
+
+## Istisnolar
+
+- Dars paketi kursida oy o'rtasidagi hisob yo'q: darslar davomat olinganda yechiladi. Qo'shilganda balansdan hech narsa yechilmaydi.
+- Guruh «Boshlanmagan» yoki «Pauza» holatida bo'lsa, oylik hisob qo'shilganda yozilmaydi. Guruh «Faol» bo'lgach tizim uni o'zi yozadi. Shu paytgacha o'quvchi faol o'quvchi sanalmaydi: u «Guruhlashtirilmagan» ro'yxatida turadi ([O'quvchining hayot davri](/qollanma/oquvchilar/hayot-davri)).
+- Boshlanish sanasi keyingi oyga tushsa, shu oy uchun hisob hozir yozilmaydi: uni tizim oy boshida yozadi. Oyna ham shu keyingi oyning summasini ko'rsatadi.
+- O'quvchi guruhdan chiqarilib, shu oyning o'zida o'sha guruhga qaytarilsa, bir dars uchun ikki marta to'lamaydi: birinchi hisob chiqqan kunigacha bo'lgan darslarni allaqachon qoplagan.
+- Muzlatilgan, chetlatilgan yoki bitirgan o'quvchida «Guruhga qo'shish» tugmasi ko'rinsa ham, tizim «Faqat faol o'quvchilarni guruhga qo'shish mumkin» deb rad etadi. Avval holatni «Faol» ga qaytaring ([O'quvchining hayot davri](/qollanma/oquvchilar/hayot-davri)).
+- «To'lash kerak (taxminan)» taxminiy: u oyna ochiq turgan paytdagi balans va sana bo'yicha hisoblanadi. «Qo'shish» bosilguncha ikkalasi ham o'zgarishi mumkin.
+
+## Ko'p uchraydigan xabarlar
+
+| Xabar | Sabab |
+|---|---|
+| «Faqat faol o'quvchilarni guruhga qo'shish mumkin» | O'quvchi «Faol» emas |
+| «O'quvchi allaqachon bu guruhda» | Shu guruhda faol yozilishi bor |
+| «Tugallangan yoki bekor qilingan guruhga o'quvchi qo'shib bo'lmaydi» | Guruh «Faol», «Boshlanmagan» yoki «Pauza» emas |
+| «Bu o'quvchi boshqa filialga tegishli — uni bu guruhga qo'shib bo'lmaydi» | Guruh boshqa filialniki |
+| «Ustoz farqli guruhga o'tkazilayotgan o'quvchi uchun sabab tanlash majburiy» | Ustozlar farq qiladi, sabab tanlanmagan |
+
+## Kim qila oladi
+
+CEO, filial direktori va administrator. Filial direktori va administrator faqat o'z filialida ishlaydi. Kassir va o'qituvchi o'quvchini guruhga qo'sha olmaydi.
+
+## Tizimda qayerda
+
+- O'quvchi kartasi ([O'quvchi kartasi](/qollanma/oquvchilar/oquvchi-kartasi)): chap ustundagi «Guruhga qo'shish» yoki «Guruhni o'zgartirish».
+- [O'quvchilar](/students) ro'yxati va guruh sahifasidagi «O'quvchilar» tabi: qator menyusidagi «Guruhga biriktirish».
+- «Yangi o'quvchi» oynasidagi «Guruh (ixtiyoriy)» — [Yangi o'quvchi](/qollanma/oquvchilar/yangi-oquvchi).
+- «Lidlar»da lidni o'quvchiga aylantirganda ham guruh tanlash mumkin (ixtiyoriy).
+- Oylik va dars paketi farqi — [Kurs qanday to'lanadi](/qollanma/tolovlar/tolov-turlari).

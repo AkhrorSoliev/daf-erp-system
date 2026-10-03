@@ -148,3 +148,44 @@ export function personsAtStage(
     })
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
+
+/**
+ * «Manba bo'yicha» (marketing report): people per lead source, how many of
+ * them reached «to'lov», and that share as `rate` (0–100, one decimal — the
+ * Lidlar report's rule; the client only prints it). Sorted by people, most
+ * first; «no source» (null) goes after the named sources it ties with.
+ */
+export function sourceBreakdown(
+  persons: FunnelPerson[],
+  sets: StageSets,
+): { source: string | null; leads: number; students: number; rate: number }[] {
+  const paid = new Set(
+    personsAtStage(persons, sets, 'paid', 'all').map((p) => p.key),
+  );
+  const rows = new Map<
+    string | null,
+    { source: string | null; leads: number; students: number }
+  >();
+  for (const p of persons) {
+    const row = rows.get(p.source) ?? {
+      source: p.source,
+      leads: 0,
+      students: 0,
+    };
+    row.leads += 1;
+    if (paid.has(p.key)) row.students += 1;
+    rows.set(p.source, row);
+  }
+  return [...rows.values()]
+    .map((r) => ({
+      ...r,
+      // A row exists only for a source with at least one lead.
+      rate: Math.round((r.students / r.leads) * 1000) / 10,
+    }))
+    .sort(
+      (a, b) =>
+        b.leads - a.leads ||
+        Number(a.source === null) - Number(b.source === null) ||
+        (a.source ?? '').localeCompare(b.source ?? ''),
+    );
+}

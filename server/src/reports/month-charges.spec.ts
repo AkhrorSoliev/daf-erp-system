@@ -39,6 +39,7 @@ describe('splitMonthCharges', () => {
       unpaid: 0,
       paidPct: 100,
       students: 1,
+      unpaidStudents: 0,
     });
   });
 
@@ -142,6 +143,7 @@ describe('splitMonthCharges', () => {
       unpaid: 0,
       paidPct: null,
       students: 0,
+      unpaidStudents: 0,
     });
   });
 
@@ -154,6 +156,47 @@ describe('splitMonthCharges', () => {
     });
     expect(r.charged).toBe(0);
     expect(r.unpaid).toBe(0);
+  });
+
+  it('counts the students whose unpaid share is above 0, beside the unpaid sum', () => {
+    const r = splitMonthCharges({
+      ...base,
+      rows: [
+        row(1, '2026-10', 450_000),
+        row(2, '2026-10', 450_000),
+        row(3, '2026-10', 450_000),
+      ],
+      balances: new Map([
+        [1, 20_000], // paid
+        [2, -100_000], // part of the month unpaid
+        [3, -600_000], // the whole month unpaid, and older debt
+      ]),
+    });
+    expect(r.students).toBe(3);
+    expect(r.unpaid).toBe(100_000 + 450_000);
+    expect(r.unpaidStudents).toBe(2);
+  });
+
+  it("a debt that sits on a later month's charge does not make this month's student unpaid", () => {
+    const r = splitMonthCharges({
+      ...base,
+      rows: [row(1, '2026-10', 450_000), row(1, '2026-11', 450_000)],
+      balances: new Map([[1, -300_000]]),
+    });
+    expect(r.unpaid).toBe(0);
+    expect(r.unpaidStudents).toBe(0);
+  });
+
+  it('a share that rounds to 0 in the branch is not counted, so the count agrees with unpaid', () => {
+    // 1 so'm of debt over 999 999 + 1 so'm of charges: branch 2's share rounds to 0.
+    const r = splitMonthCharges({
+      month: '2026-10',
+      branchIds: [2],
+      rows: [row(1, '2026-10', 999_999, 1), row(1, '2026-10', 1, 2)],
+      balances: new Map([[1, -1]]),
+    });
+    expect(r.unpaid).toBe(0);
+    expect(r.unpaidStudents).toBe(0);
   });
 });
 

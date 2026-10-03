@@ -21,7 +21,7 @@ export class LessonTeacherOverridesController {
   constructor(private service: LessonTeacherOverridesService) {}
 
   // Reads: same scope as LessonCancellation reads — a teacher can list
-  // overrides for their own groups; admins see everything.
+  // overrides for their own groups, everyone else their own branch's.
   @Get()
   list(
     @Query('groupId') groupId: string,
@@ -42,6 +42,7 @@ export class LessonTeacherOverridesController {
       from,
       to,
       teacherIdScope: isTeacherOnly ? userId : undefined,
+      caller: { userId, roles },
     });
   }
 
@@ -54,8 +55,9 @@ export class LessonTeacherOverridesController {
     @Body() dto: UpsertLessonTeacherOverrideDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.service.upsert(groupId, date, dto, companyId, userId);
+    return this.service.upsert(groupId, date, dto, companyId, userId, roles);
   }
 
   @Delete(':id')
@@ -64,7 +66,8 @@ export class LessonTeacherOverridesController {
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.service.remove(id, companyId, userId);
+    return this.service.remove(id, companyId, userId, roles);
   }
 }

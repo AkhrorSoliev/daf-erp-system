@@ -5,7 +5,12 @@ import {
 } from '@nestjs/common';
 import { BranchStatus, CashAccountType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import {
+  StatusHistoryService,
+  StatusCascadeService,
+  groupsCancelledBy,
+} from '../common/status';
+import { assertNoUnansweredLessons } from '../unmarked-lessons/unanswered-lessons';
 import { EntityHistoryService } from '../common/entity-history';
 import { BranchQueryDto } from './dto/branch-query.dto';
 import { CreateBranchDto } from './dto/create-branch.dto';
@@ -335,6 +340,13 @@ export class BranchesService {
       throw new NotFoundException(`Branch #${id} topilmadi`);
     }
     await this.assertCallerMayTouchBranch(id, userId);
+
+    // Closing the branch cancels its groups, and no group closes with a
+    // «Dars bo'ldimi?» question unanswered (ADR-0068). Checked before the
+    // first write; this path has no transaction, so a question the sweep
+    // opens in the seconds between is left on a cancelled group.
+    const closing = groupsCancelledBy('Branch', String(id), dto.status);
+    if (closing) await assertNoUnansweredLessons(this.prisma, closing);
 
     const auditData = await this.statusHistoryService.changeStatus({
       entityType: 'Branch',

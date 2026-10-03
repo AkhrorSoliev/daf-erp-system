@@ -31,7 +31,7 @@ import {
   type LogCallPrefill,
 } from "@/components/outreach/log-call-dialog";
 import { SummaryCard } from "../summary-card";
-import type { DebtSplit } from "../payments-overview";
+import type { DebtSplit } from "../overview/types";
 import { RecordPaymentDialog } from "../record-payment-dialog";
 import { type Debtor, DebtorRow } from "../debtor-row";
 import { useDebtFilters } from "./debt-filters-provider";

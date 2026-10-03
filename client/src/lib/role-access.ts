@@ -15,6 +15,13 @@ export const STUDENT_PROFILE_ROLES = [1, 2, 3, 5];
 /** `PATCH /company/:id` — company.controller.ts. */
 export const COMPANY_EDIT_ROLES = [1];
 
+/**
+ * `GET /reports/financial-overview` — reports.controller.ts. Faqat CEO va
+ * filial direktori (ADR-0067): Administrator va kassir «Umumiy ma'lumotlar»da
+ * faqat «To'lov qayd qilish» va oxirgi to'lovlarni ko'radi.
+ */
+export const FINANCIAL_OVERVIEW_ROLES = [1, 2];
+
 /** `POST /call-logs` — call-logs.controller.ts («Natijani kiritish»). */
 export const CALL_LOG_ROLES = [1, 2, 3];
 

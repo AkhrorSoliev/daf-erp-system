@@ -55,6 +55,15 @@ ADR **quyidagilar uchun yozilmaydi:**
 
 Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qaror.
 
+**Qo'llanma.** Foydalanuvchiga ko'rinadigan qaror (xodim ko'radigan, qiladigan yoki
+tushuntirishi kerak bo'lgan pul/holat natijasi) — shu PR'da
+`client/src/qollanma/kontent/` dagi sahifa yangilanadi, reyestrdagi `adr` ro'yxatiga
+raqam qo'shiladi va `client/src/qollanma/yangiliklar.ts` ga yozuv tushadi. Faqat
+texnik qaror — `client/src/qollanma/texnik-adrlar.ts` ga sababi bilan. Bu ro'yxat va
+`client/src/qollanma/adr-qamrovi.test.ts` qo'llanmaning qolgan bo'limlari bilan
+qo'shiladi; shundan keyin ikkalasidan hech birida yo'q ADR CI'ni yiqitadi. Hozircha
+buni ko'rib chiquvchi qo'lda tekshiradi.
+
 ---
 
 ## Indeks
@@ -124,6 +133,9 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0064](0064-darsga-kirish-uchun-oy-tolovining-eng-kam-qismi.md) | Darsga kirish uchun oy to'lovining kamida 50% i (har guruhda o'z 2-darsidan, 01.11.2026 dan); to'langan darslar tugashidan 3 kun oldin eslatma | Qabul qilindi | 2026-10-02 |
 | [0065](0065-tolov-cheki-darhol-ketadi.md) | To'lov cheki va to'lov bekor qilingani haqidagi xabar darhol ketadi; Payme/Click to'lovi ham chek oladi | Qabul qilindi | 2026-10-02 |
 | [0066](0066-telegram-uzilgan-oquvchi.md) | Botni bloklagan o'quvchi «Telegram uzilgan» deb belgilanadi; botga qaytsa belgi o'zi olinadi | Qabul qilindi | 2026-09-30 |
+| [0067](0067-kassa-uch-qism-marketing-va-umumiy-sahifa.md) | Kassaga tushgan pul uch qismda (shu oy, oldindan, eski qarz); marketing ko'rsatkichlari birinchi to'lov bo'yicha; o'qimayotganlar qarzi uch turga bo'linadi; «financial-overview» faqat CEO va filial direktoriga | Qabul qilindi | 2026-10-02 |
+| [0068](0068-javobsiz-dars-savoli-bor-guruh-yopilmaydi.md) | «Dars bo'ldimi?» savoliga javob berilmaguncha guruh yopilmaydi; filialni yopish va kursni arxivlash ham | Qabul qilindi | 2026-10-03 |
+| [0069](0069-orinbosar-ustoz-guruh-ustozi-qoidalarida.md) | O'rinbosar ustoz guruh ustozi qoidalariga bo'ysunadi: o'qituvchi roli, guruh filiali, ish haqi stavkasi | Qabul qilindi | 2026-10-03 |
 | [0067](0067-zaxira-raqam-ikkinchi-kirish-kaliti.md) | Zaxira raqam — o'quvchining ikkinchi kirish kaliti; asosiy raqam ustun, o'quvchi o'zi parol + SMS bilan qo'shadi | Qabul qilindi | 2026-10-03 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

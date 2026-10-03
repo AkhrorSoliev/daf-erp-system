@@ -8,6 +8,7 @@ const october = {
   unpaid: 41_100_000,
   paidPct: 76.8,
   students: 237,
+  unpaidStudents: 98,
 };
 
 describe('buildMonthChargesLines', () => {

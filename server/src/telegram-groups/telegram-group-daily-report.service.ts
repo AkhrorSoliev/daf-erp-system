@@ -44,8 +44,9 @@ import { buildMonthChargesLines } from './utils/month-charges-lines.util';
  *   📌 Hozirgi holat        — active students + debt as two numbers
  *                             («O'qiyotganlar» with day-over-day ▲/▼ and its
  *                             shu oy / eski qarz split, «O'qimayotganlar»)
- *   📅 Oy boshidan          — MTD income (+ this-month / old-debt split, per
- *                             month) / expense / net + lesson collection %;
+ *   📅 Oy boshidan          — MTD income (+ this-month / advance / old-debt
+ *                             split, per month) / expense / net + lesson
+ *                             collection %;
  *                             from 2026-09 «Bu oy hisoblandi / To'landi /
  *                             Qoldi» take the place of the lesson-based
  *                             collection % and the month-end lines
@@ -66,8 +67,9 @@ import { buildMonthChargesLines } from './utils/month-charges-lines.util';
  *    re-derive either here — the status-ACTIVE aggregate this replaced counted
  *    an ungrouped «faol» student as a debtor and no other surface did.
  *  - "Tushum (haqiqiy)" = cash actually received, NOT billed — read from
- *    `getIncomeMonthAttribution` so the two lines under it («Shu oy uchun» and
- *    «Eski qarzlar uchun», per month) decompose the figure printed above them.
+ *    `getIncomeMonthAttribution` so the lines under it («Shu oy uchun»,
+ *    «Oldindan (keyingi oy uchun)», «Eski qarzlar uchun», per month) decompose
+ *    the figure printed above them (ADR-0067).
  *    The `Payment` aggregate of the same window still feeds the snapshot.
  *  - "Shu oyning darslari" / "Shundan yig'ildi" = the collection ratio, taken
  *    from `getIncomeMonthAttribution` so the bot and /payments/overview divide
@@ -570,8 +572,9 @@ export class TelegramGroupDailyReportService {
         `• Shu oyning darslari: <b>${formatSum(attribution.lessonsValue)}</b>`,
       );
       if (!monthlyBilling) {
+        // The month's own cash in its old meaning, advance included (ADR-0067).
         lines.push(
-          `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth)}</b> (<b>${attribution.pct}%</b>)`,
+          `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth + attribution.advance)}</b> (<b>${attribution.pct}%</b>)`,
         );
       }
     }
@@ -594,8 +597,10 @@ export class TelegramGroupDailyReportService {
       // Deliberately unclamped: a reading above 100% would mean more was
       // collected than the month is worth, and that should stay visible.
       if (attribution) {
+        // The month's own cash in its old meaning, advance included (ADR-0067).
         const monthPlanPct = Math.round(
-          (attribution.currentMonth / expectedValue) * 100,
+          ((attribution.currentMonth + attribution.advance) / expectedValue) *
+            100,
         );
         lines.push(`• Oy rejasidan yig'ildi: <b>${monthPlanPct}%</b>`);
       }
@@ -844,11 +849,12 @@ export class TelegramGroupDailyReportService {
    * Returns null (block hidden) when no such user exists or the compute fails.
    */
   /**
-   * Month-to-date income composition on the SAME basis as the /overview "Tushum
-   * tarkibi" drill-down — `ReportsFinancialService.getIncomeMonthAttribution`,
-   * which returns the cash total, the split between this month's own income and
-   * late payments settling older debt (broken out per month), and both sides of
-   * the collection ratio, all computed against ONE window.
+   * Month-to-date income composition on the SAME basis as the «Qayerdan keldi»
+   * dialog on «Umumiy ma'lumotlar» — `ReportsFinancialService.getIncomeMonthAttribution`,
+   * which returns the cash total, its three parts — this month's own income,
+   * the advance paid ahead for the next month and late payments settling older
+   * debt (broken out per month), ADR-0067 — and both sides of the collection
+   * ratio, all computed against ONE window.
    *
    * Three lines of the message read this: the income figure and its split, and
    * the collection ratio. The previous ratio line divided MTD cash by the
@@ -891,6 +897,7 @@ export class TelegramGroupDailyReportService {
   ): Promise<{
     total: number;
     currentMonth: number;
+    advance: number;
     lateTotal: number;
     late: Array<{ label: string; amount: number }>;
     lessonsValue: number;
@@ -913,6 +920,7 @@ export class TelegramGroupDailyReportService {
       return {
         total: attribution.total,
         currentMonth: attribution.currentMonth,
+        advance: attribution.advance,
         lateTotal: attribution.lateTotal,
         late: attribution.late,
         lessonsValue: attribution.lessonsValue,

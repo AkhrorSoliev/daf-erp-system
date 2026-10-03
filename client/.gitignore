@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# qollanma skrinshot stsenariysi (server/scripts/qollanma-muhit.ts yozadi)
+scripts/.qollanma-stsenariy.json

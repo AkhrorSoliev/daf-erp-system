@@ -40,6 +40,7 @@ describe('CoursesService — status methods', () => {
       },
       branch: { findFirst: jest.fn() },
       enrollment: { count: jest.fn().mockResolvedValue(0) },
+      unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
       coursePriceSnapshot: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         create: jest.fn().mockResolvedValue({}),
@@ -132,6 +133,48 @@ describe('CoursesService — status methods', () => {
         'DEPRECATED',
         1,
       );
+    });
+
+    // Archiving a course cancels its groups: ADR-0068, as for a branch.
+    it('refuses ARCHIVED while one of its groups has an unanswered lesson, before writing anything', async () => {
+      prisma.unmarkedLesson.findMany.mockResolvedValue([
+        { date: new Date('2026-10-02T00:00:00.000Z'), group: { name: '#011' } },
+      ]);
+
+      await expect(
+        service.changeStatus(
+          'course-1',
+          { status: CourseStatus.ARCHIVED },
+          1,
+          1001,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.unmarkedLesson.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'PENDING',
+            group: {
+              courseId: 'course-1',
+              deletedAt: null,
+              statusEnum: { not: 'ARCHIVED' },
+            },
+          },
+        }),
+      );
+      expect(statusHistoryService.changeStatus).not.toHaveBeenCalled();
+      expect(prisma.course.update).not.toHaveBeenCalled();
+      expect(statusCascadeService.cascade).not.toHaveBeenCalled();
+    });
+
+    it('deprecates a course without asking: no group closes', async () => {
+      await service.changeStatus(
+        'course-1',
+        { status: 'DEPRECATED' as any },
+        1,
+        1001,
+      );
+
+      expect(prisma.unmarkedLesson.findMany).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException for missing course', async () => {
