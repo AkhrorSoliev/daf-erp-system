@@ -45,8 +45,8 @@ describe("dayMonth and som", () => {
   });
 
   it("prints so'm after the number and «—» for a missing figure", () => {
-    expect(som(1_500_000)).toBe(`${(1_500_000).toLocaleString("uz-UZ")} so'm`);
-    expect(som(-500_000)).toBe(`${(-500_000).toLocaleString("uz-UZ")} so'm`);
+    expect(som(1_350_000)).toBe(`${(1_350_000).toLocaleString("uz-UZ")} so'm`);
+    expect(som(-450_000)).toBe(`${(-450_000).toLocaleString("uz-UZ")} so'm`);
     expect(som(null)).toBe("—");
     expect(som(undefined)).toBe("—");
   });
@@ -54,12 +54,12 @@ describe("dayMonth and som", () => {
 
 describe("profitLines", () => {
   const composition = {
-    revenue: { total: 175_400_000 },
-    withdrawals: { total: 1_200_000 },
-    teachers: { total: 80_400_000 },
-    staff: { total: 14_900_000 },
-    expenses: { total: 13_800_000 },
-    refunds: 500_000,
+    revenue: { total: 157_860_000 },
+    withdrawals: { total: 1_080_000 },
+    teachers: { total: 72_360_000 },
+    staff: { total: 13_410_000 },
+    expenses: { total: 12_420_000 },
+    refunds: 450_000,
   };
 
   it("adds up to the net profit, in the dialog's order", () => {
@@ -73,7 +73,7 @@ describe("profitLines", () => {
       "Qaytarilgan pul",
     ]);
     expect(lines.reduce((s, l) => s + l.amount, 0)).toBe(
-      175_400_000 + 1_200_000 - 80_400_000 - 14_900_000 - 13_800_000 - 500_000,
+      157_860_000 + 1_080_000 - 72_360_000 - 13_410_000 - 12_420_000 - 450_000,
     );
   });
 

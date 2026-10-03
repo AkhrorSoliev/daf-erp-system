@@ -4185,8 +4185,8 @@ describe("dayMonth and som", () => {
   });
 
   it("prints so'm after the number and «—» for a missing figure", () => {
-    expect(som(1_500_000)).toBe(`${(1_500_000).toLocaleString("uz-UZ")} so'm`);
-    expect(som(-500_000)).toBe(`${(-500_000).toLocaleString("uz-UZ")} so'm`);
+    expect(som(1_350_000)).toBe(`${(1_350_000).toLocaleString("uz-UZ")} so'm`);
+    expect(som(-450_000)).toBe(`${(-450_000).toLocaleString("uz-UZ")} so'm`);
     expect(som(null)).toBe("—");
     expect(som(undefined)).toBe("—");
   });
@@ -4194,12 +4194,12 @@ describe("dayMonth and som", () => {
 
 describe("profitLines", () => {
   const composition = {
-    revenue: { total: 175_400_000 },
-    withdrawals: { total: 1_200_000 },
-    teachers: { total: 80_400_000 },
-    staff: { total: 14_900_000 },
-    expenses: { total: 13_800_000 },
-    refunds: 500_000,
+    revenue: { total: 157_860_000 },
+    withdrawals: { total: 1_080_000 },
+    teachers: { total: 72_360_000 },
+    staff: { total: 13_410_000 },
+    expenses: { total: 12_420_000 },
+    refunds: 450_000,
   };
 
   it("adds up to the net profit, in the dialog's order", () => {
@@ -4213,7 +4213,7 @@ describe("profitLines", () => {
       "Qaytarilgan pul",
     ]);
     expect(lines.reduce((s, l) => s + l.amount, 0)).toBe(
-      175_400_000 + 1_200_000 - 80_400_000 - 14_900_000 - 13_800_000 - 500_000,
+      157_860_000 + 1_080_000 - 72_360_000 - 13_410_000 - 12_420_000 - 450_000,
     );
   });
 
@@ -4504,31 +4504,31 @@ const pct = (n: number) => norm(`${n.toLocaleString("uz-UZ")}%`);
 
 const OCTOBER: MonthCharges = {
   month: "2026-10",
-  charged: 177_000_000,
-  paid: 135_900_000,
-  unpaid: 41_100_000,
+  charged: 159_300_000,
+  paid: 122_310_000,
+  unpaid: 36_990_000,
   paidPct: 76.8,
-  students: 479,
-  unpaidStudents: 237,
+  students: 452,
+  unpaidStudents: 219,
 };
 
 // The not-studying kinds add up to the total and the count; no figure here is
 // the sum of the two debts, which the page must never print.
 const SPLIT: DebtSplit = {
-  studying: { total: 43_500_000, count: 300, currentMonth: 41_100_000, older: 2_400_000, olderCount: 13 },
+  studying: { total: 39_150_000, count: 300, currentMonth: 36_990_000, older: 2_160_000, olderCount: 11 },
   notStudying: {
-    total: 57_100_000,
-    count: 327,
+    total: 51_390_000,
+    count: 305,
     byKind: {
-      ungrouped: { total: 21_300_000, count: 128 },
-      frozen: { total: 19_800_000, count: 99 },
-      left: { total: 16_000_000, count: 100 },
+      ungrouped: { total: 19_170_000, count: 118 },
+      frozen: { total: 17_820_000, count: 91 },
+      left: { total: 14_400_000, count: 96 },
     },
   },
 };
 
 const overview = (monthCharges: MonthCharges | null, debtSplit: DebtSplit = SPLIT): FinancialOverview => ({
-  income: { actual: 182_700_000, paymentCount: 612, byMethod: [], yesterday: { date: "2026-10-14", amount: 2_200_000 } },
+  income: { actual: 164_430_000, paymentCount: 612, byMethod: [], yesterday: { date: "2026-10-14", amount: 1_980_000 } },
   monthCharges,
   debtSplit,
   salary: { computed: null },
@@ -4538,7 +4538,7 @@ const PAYMENTS = {
   data: [
     {
       id: "p1",
-      amount: 450_000,
+      amount: 405_000,
       method: "CASH",
       createdAt: "2026-10-15T04:00:00.000Z",
       student: { id: 10501, firstName: "Ali", lastName: "Valiyev", groups: [{ id: "g1", name: "A1-07" }, { id: "g2", name: "B1-02" }] },
@@ -4546,7 +4546,7 @@ const PAYMENTS = {
     },
     {
       id: "p2",
-      amount: 300_000,
+      amount: 270_000,
       method: "CLICK",
       createdAt: "2026-10-15T03:00:00.000Z",
       student: { id: 10502, firstName: "Vali", lastName: "Aliyev", groups: [] },
@@ -4586,9 +4586,9 @@ describe("OverviewPage — the current month (CEO)", () => {
     expect(text).toContain("Umumiy ma'lumotlar");
     expect(html).toContain('data-tour="payment-record"');
     expect(text).toContain("Oktabr oyi to'lovlari");
-    expect(text).toContain(`Hisoblandi ${money(177_000_000)} ${num(479)} o'quvchiga`);
-    expect(text).toContain(`To'landi ${money(135_900_000)} ${pct(76.8)}`);
-    expect(text).toContain(`Qoldi ${money(41_100_000)} ${num(237)} o'quvchi to'lamagan`);
+    expect(text).toContain(`Hisoblandi ${money(159_300_000)} ${num(452)} o'quvchiga`);
+    expect(text).toContain(`To'landi ${money(122_310_000)} ${pct(76.8)}`);
+    expect(text).toContain(`Qoldi ${money(36_990_000)} ${num(219)} o'quvchi to'lamagan`);
     expect(html).toContain('href="/payments/debt"');
     expect(text).toContain("Kim to'lamagan →");
   });
@@ -4596,13 +4596,13 @@ describe("OverviewPage — the current month (CEO)", () => {
   it("shows today's debt as two numbers with the three not-studying kinds, never added", () => {
     const { text } = render({ seed: seedMonth("2026-10", overview(OCTOBER)) });
 
-    expect(text).toContain(`Eski qarz — o'qiyotganlar ${money(2_400_000)} ${num(13)} o'quvchi · o'tgan oylardan qolgan`);
-    expect(text).toContain(`O'qimayotganlar qarzi ${money(57_100_000)} ${num(327)} kishi · undirish ishi`);
-    expect(text).toContain(`guruhsiz · ${num(128)} ${money(21_300_000)}`);
-    expect(text).toContain(`muzlatilgan · ${num(99)} ${money(19_800_000)}`);
-    expect(text).toContain(`ketgan · ${num(100)} ${money(16_000_000)}`);
-    expect(text).not.toContain(num(2_400_000 + 57_100_000));
-    expect(text).not.toContain(num(43_500_000 + 57_100_000));
+    expect(text).toContain(`Eski qarz — o'qiyotganlar ${money(2_160_000)} ${num(11)} o'quvchi · o'tgan oylardan qolgan`);
+    expect(text).toContain(`O'qimayotganlar qarzi ${money(51_390_000)} ${num(305)} kishi · undirish ishi`);
+    expect(text).toContain(`guruhsiz · ${num(118)} ${money(19_170_000)}`);
+    expect(text).toContain(`muzlatilgan · ${num(91)} ${money(17_820_000)}`);
+    expect(text).toContain(`ketgan · ${num(96)} ${money(14_400_000)}`);
+    expect(text).not.toContain(num(2_160_000 + 51_390_000));
+    expect(text).not.toContain(num(39_150_000 + 51_390_000));
   });
 
   it("lists the recent payments with each student's groups now, «—» without one", () => {
@@ -4621,16 +4621,16 @@ describe("OverviewPage — the current month (CEO)", () => {
   });
 
   it("against a server older than B1 leaves the new counts out instead of printing them wrong", () => {
-    const oldCharges: MonthCharges = { month: "2026-10", charged: 177_000_000, paid: 135_900_000, unpaid: 41_100_000, paidPct: 76.8, students: 479 };
+    const oldCharges: MonthCharges = { month: "2026-10", charged: 159_300_000, paid: 122_310_000, unpaid: 36_990_000, paidPct: 76.8, students: 452 };
     const oldSplit: DebtSplit = {
-      studying: { total: 43_500_000, count: 300, currentMonth: 41_100_000, older: 2_400_000 },
-      notStudying: { total: 57_100_000, count: 327 },
+      studying: { total: 39_150_000, count: 300, currentMonth: 36_990_000, older: 2_160_000 },
+      notStudying: { total: 51_390_000, count: 305 },
     };
     const { text } = render({ seed: seedMonth("2026-10", overview(oldCharges, oldSplit)) });
 
-    expect(text).toContain(`Qoldi ${money(41_100_000)}`);
+    expect(text).toContain(`Qoldi ${money(36_990_000)}`);
     expect(text).not.toContain("o'quvchi to'lamagan");
-    expect(text).toContain(`Eski qarz — o'qiyotganlar ${money(2_400_000)}`);
+    expect(text).toContain(`Eski qarz — o'qiyotganlar ${money(2_160_000)}`);
     expect(text).not.toContain("o'tgan oylardan qolgan");
     expect(text).not.toContain("guruhsiz");
     expect(text).not.toMatch(/undefined|NaN/);
@@ -5275,16 +5275,16 @@ function amountAfter(text: string, label: string): number {
   return Number(m[1].replace(/ /g, ""));
 }
 
-// 150.4 + 15.6 + 16.7 = 182.7 (mln); the late months add up to the late part.
+// 135.36 + 14.04 + 15.03 = 164.43 (mln); the late months add up to the late part.
 const ATTRIBUTION: IncomeAttribution = {
-  total: 182_700_000,
-  currentMonth: 150_400_000,
-  advance: 15_600_000,
+  total: 164_430_000,
+  currentMonth: 135_360_000,
+  advance: 14_040_000,
   advanceStudents: 31,
-  lateTotal: 16_700_000,
+  lateTotal: 15_030_000,
   late: [
-    { monthKey: "2026-09", label: "Sentabr 2026", amount: 12_100_000 },
-    { monthKey: "2026-08", label: "Avgust 2026", amount: 4_600_000 },
+    { monthKey: "2026-09", label: "Sentabr 2026", amount: 10_890_000 },
+    { monthKey: "2026-08", label: "Avgust 2026", amount: 4_140_000 },
   ],
   payerCount: 409,
   paymentCount: 612,
@@ -5294,38 +5294,38 @@ const ATTRIBUTION: IncomeAttribution = {
 
 const OVERVIEW: FinancialOverview = {
   income: {
-    actual: 182_700_000,
+    actual: 164_430_000,
     paymentCount: 612,
     byMethod: [
-      { method: "CASH", amount: 120_000_000, count: 400 },
-      { method: "CLICK", amount: 62_700_000, count: 212 },
+      { method: "CASH", amount: 108_000_000, count: 400 },
+      { method: "CLICK", amount: 56_430_000, count: 212 },
     ],
-    yesterday: { date: "2026-10-14", amount: 2_200_000 },
+    yesterday: { date: "2026-10-14", amount: 1_980_000 },
   },
   monthCharges: null,
   salary: {
     computed: {
       month: "2026-10",
       hasLessonData: true,
-      fullDeserved: 80_400_000,
-      netToPay: 66_600_000,
-      advances: 13_800_000,
-      staff: { monthly: 14_900_000, advances: 0, netToPay: 14_900_000 },
+      fullDeserved: 72_360_000,
+      netToPay: 59_940_000,
+      advances: 12_420_000,
+      staff: { monthly: 13_410_000, advances: 0, netToPay: 13_410_000 },
     },
   },
 };
 
-// 175.4 − 80.4 − 14.9 − 12.6 − 0.5 = 67.0 (mln).
+// 157.86 − 72.36 − 13.41 − 11.34 − 0.45 = 60.30 (mln).
 const COMPOSITION: ProfitComposition = {
   month: "2026-10",
-  netProfit: 67_000_000,
-  revenue: { total: 175_400_000 },
+  netProfit: 60_300_000,
+  revenue: { total: 157_860_000 },
   withdrawals: { total: 0 },
-  teachers: { total: 80_400_000 },
-  staff: { total: 14_900_000 },
-  expenses: { total: 12_600_000 },
-  refunds: 500_000,
-  forecast: { expectedNetProfit: 58_000_000 },
+  teachers: { total: 72_360_000 },
+  staff: { total: 13_410_000 },
+  expenses: { total: 11_340_000 },
+  refunds: 450_000,
+  forecast: { expectedNetProfit: 52_200_000 },
 };
 
 function render(element: ReactElement, seed: (client: QueryClient) => void = () => {}): string {
@@ -5346,9 +5346,9 @@ describe("CashCard", () => {
   it("prints the month's cash, the old-debt part and yesterday in the current month", () => {
     const text = render(createElement(CashCard, { month: "2026-10", isCurrent: true }), seedMonth("2026-10"));
 
-    expect(text).toContain(`Kassaga tushdi ${money(182_700_000)}`);
-    expect(text).toContain(`shundan eski qarzlardan ${money(16_700_000)}`);
-    expect(text).toContain(`kecha (14.10) ${money(2_200_000)}`);
+    expect(text).toContain(`Kassaga tushdi ${money(164_430_000)}`);
+    expect(text).toContain(`shundan eski qarzlardan ${money(15_030_000)}`);
+    expect(text).toContain(`kecha (14.10) ${money(1_980_000)}`);
     expect(text).toContain("Qayerdan keldi →");
   });
 
@@ -5367,20 +5367,20 @@ describe("«Qayerdan keldi»", () => {
   it("prints the three parts and they add up to the cash", () => {
     const text = render(createElement(IncomeBreakdown, { month: "2026-10", data: ATTRIBUTION, byMethod: OVERVIEW.income.byMethod }));
 
-    expect(text).toContain(`Oktabr oyi to'lovi ${money(150_400_000)}`);
-    expect(text).toContain(`Noyabr uchun oldindan ${money(15_600_000)} 31 o'quvchining balansida turibdi`);
-    expect(text).toContain(`Eski qarzlar uchun ${money(16_700_000)} 58 ta to'lov, 41 o'quvchi`);
-    expect(text).toContain(`Sentabr 2026 qarzi ${money(12_100_000)}`);
-    expect(text).toContain(`Avgust 2026 qarzi ${money(4_600_000)}`);
+    expect(text).toContain(`Oktabr oyi to'lovi ${money(135_360_000)}`);
+    expect(text).toContain(`Noyabr uchun oldindan ${money(14_040_000)} 31 o'quvchining balansida turibdi`);
+    expect(text).toContain(`Eski qarzlar uchun ${money(15_030_000)} 58 ta to'lov, 41 o'quvchi`);
+    expect(text).toContain(`Sentabr 2026 qarzi ${money(10_890_000)}`);
+    expect(text).toContain(`Avgust 2026 qarzi ${money(4_140_000)}`);
     expect(
       amountAfter(text, "Oktabr oyi to'lovi") + amountAfter(text, "Noyabr uchun oldindan") + amountAfter(text, "Eski qarzlar uchun"),
     ).toBe(ATTRIBUTION.total);
-    expect(text).toContain(`Qanday to'landi Naqd · ${money(120_000_000)} Click · ${money(62_700_000)}`);
+    expect(text).toContain(`Qanday to'landi Naqd · ${money(108_000_000)} Click · ${money(56_430_000)}`);
   });
 
   it("leaves out a part that is 0", () => {
     const text = render(
-      createElement(IncomeBreakdown, { month: "2026-10", data: { ...ATTRIBUTION, advance: 0, total: 167_100_000 }, byMethod: [] }),
+      createElement(IncomeBreakdown, { month: "2026-10", data: { ...ATTRIBUTION, advance: 0, total: 150_390_000 }, byMethod: [] }),
     );
 
     expect(text).not.toContain("uchun oldindan");
@@ -5388,8 +5388,8 @@ describe("«Qayerdan keldi»", () => {
   });
 
   it("the sub-line counts payments and students; an older server's missing count is left out", () => {
-    expect(norm(incomeSummary(ATTRIBUTION))).toBe(`Jami ${money(182_700_000)} · 612 ta to'lov · 409 o'quvchi`);
-    expect(norm(incomeSummary({ ...ATTRIBUTION, paymentCount: undefined }))).toBe(`Jami ${money(182_700_000)} · 409 o'quvchi`);
+    expect(norm(incomeSummary(ATTRIBUTION))).toBe(`Jami ${money(164_430_000)} · 612 ta to'lov · 409 o'quvchi`);
+    expect(norm(incomeSummary({ ...ATTRIBUTION, paymentCount: undefined }))).toBe(`Jami ${money(164_430_000)} · 409 o'quvchi`);
   });
 });
 
@@ -5397,17 +5397,17 @@ describe("SalaryCard", () => {
   it("adds the teachers' full pay and the staff's monthly pay, with the advance and what is left to give", () => {
     const text = render(createElement(SalaryCard, { month: "2026-10", isCurrent: true }), seedMonth("2026-10"));
 
-    expect(text).toContain(`Oyliklar ${money(95_300_000)}`);
-    expect(text).toContain(`ustozlar ${money(80_400_000)} · xodimlar ${money(14_900_000)}`);
-    expect(text).toContain(`avans berilgan ${money(13_800_000)}`);
-    expect(text).toContain(`oy oxirida beriladi ${money(81_500_000)}`);
+    expect(text).toContain(`Oyliklar ${money(85_770_000)}`);
+    expect(text).toContain(`ustozlar ${money(72_360_000)} · xodimlar ${money(13_410_000)}`);
+    expect(text).toContain(`avans berilgan ${money(12_420_000)}`);
+    expect(text).toContain(`oy oxirida beriladi ${money(73_350_000)}`);
     expect(text).not.toContain("o'tish oyi");
   });
 
   it("a past month says «avansdan keyin»", () => {
     const text = render(createElement(SalaryCard, { month: "2026-09", isCurrent: false }), seedMonth("2026-09"));
 
-    expect(text).toContain(`avansdan keyin ${money(81_500_000)}`);
+    expect(text).toContain(`avansdan keyin ${money(73_350_000)}`);
     expect(text).not.toContain("oy oxirida beriladi");
   });
 
@@ -5419,15 +5419,15 @@ describe("SalaryCard", () => {
           month: "2026-05",
           hasLessonData: false,
           fullDeserved: 0,
-          netToPay: 52_000_000,
-          advances: 3_000_000,
-          staff: { monthly: 14_900_000, advances: 0, netToPay: 14_900_000 },
+          netToPay: 46_800_000,
+          advances: 2_700_000,
+          staff: { monthly: 13_410_000, advances: 0, netToPay: 13_410_000 },
         },
       },
     };
     const text = render(createElement(SalaryCard, { month: "2026-05", isCurrent: false }), seedMonth("2026-05", may));
 
-    expect(text).toContain(`Oyliklar — ustozlar — · xodimlar ${money(14_900_000)}`);
+    expect(text).toContain(`Oyliklar — ustozlar — · xodimlar ${money(13_410_000)}`);
     expect(text).toContain("o'tish oyi");
   });
 });
@@ -5436,22 +5436,22 @@ describe("ProfitCard", () => {
   it("prints the profit with the lines it comes from, and they add up", () => {
     const text = render(createElement(ProfitCard, { month: "2026-10", isCurrent: true }), seedMonth("2026-10"));
 
-    expect(text).toContain(`Foyda ${money(67_000_000)}`);
-    expect(text).toContain(`darslar puli ${money(175_400_000)}`);
-    expect(text).toContain(`chiqimlar ${money(-108_400_000)}`);
-    expect(text).toContain(`oy oxiriga taxminan ${money(58_000_000)}`);
+    expect(text).toContain(`Foyda ${money(60_300_000)}`);
+    expect(text).toContain(`darslar puli ${money(157_860_000)}`);
+    expect(text).toContain(`chiqimlar ${money(-97_560_000)}`);
+    expect(text).toContain(`oy oxiriga taxminan ${money(52_200_000)}`);
     expect(text).not.toContain("balansdan yechib olingan");
     expect(amountAfter(text, "darslar puli") + amountAfter(text, "chiqimlar")).toBe(amountAfter(text, "Foyda"));
   });
 
   it("shows a withdrawal when there is one, and no month-end estimate for a past month", () => {
-    const withWithdrawal = { ...COMPOSITION, withdrawals: { total: 1_000_000 }, netProfit: 68_000_000 };
+    const withWithdrawal = { ...COMPOSITION, withdrawals: { total: 900_000 }, netProfit: 61_200_000 };
     const text = render(
       createElement(ProfitCard, { month: "2026-09", isCurrent: false }),
       seedMonth("2026-09", OVERVIEW, withWithdrawal),
     );
 
-    expect(text).toContain(`balansdan yechib olingan ${money(1_000_000)}`);
+    expect(text).toContain(`balansdan yechib olingan ${money(900_000)}`);
     expect(text).not.toContain("oy oxiriga taxminan");
   });
 });
@@ -5480,10 +5480,10 @@ describe("«Qanday hisoblandi»", () => {
 
 describe("MonthsTable", () => {
   const TREND: TrendRow[] = [
-    { monthKey: "2026-05", income: 160_000_000, profit: 20_000_000, profitBasis: "kanonik" },
-    { monthKey: "2026-08", income: 170_000_000, profit: 99_000_000, profitBasis: "kassa" },
-    { monthKey: "2026-09", income: 175_000_000, profit: 60_000_000, profitBasis: "kanonik" },
-    { monthKey: "2026-10", income: 182_700_000, profit: 67_000_000, profitBasis: "kanonik" },
+    { monthKey: "2026-05", income: 144_000_000, profit: 18_000_000, profitBasis: "kanonik" },
+    { monthKey: "2026-08", income: 153_000_000, profit: 89_100_000, profitBasis: "kassa" },
+    { monthKey: "2026-09", income: 157_500_000, profit: 54_000_000, profitBasis: "kanonik" },
+    { monthKey: "2026-10", income: 164_430_000, profit: 60_300_000, profitBasis: "kanonik" },
   ];
 
   it("lists the months newest first with the canonical profit, «—» where it failed, and the notes", () => {
@@ -5492,11 +5492,11 @@ describe("MonthsTable", () => {
     );
 
     expect(text.indexOf("Oktabr 2026")).toBeLessThan(text.indexOf("Sentabr 2026"));
-    expect(text).toContain(`Oktabr 2026 ${money(182_700_000)} ${money(67_000_000)} oy tugamagan`);
-    expect(text).toContain(`Sentabr 2026 ${money(175_000_000)} ${money(60_000_000)}`);
-    expect(text).toContain(`Avgust 2026 ${money(170_000_000)} — 12 talik tizim`);
-    expect(text).not.toContain(money(99_000_000));
-    expect(text).toContain(`May 2026 ${money(160_000_000)} ${money(20_000_000)} 12 talik tizim`);
+    expect(text).toContain(`Oktabr 2026 ${money(164_430_000)} ${money(60_300_000)} oy tugamagan`);
+    expect(text).toContain(`Sentabr 2026 ${money(157_500_000)} ${money(54_000_000)}`);
+    expect(text).toContain(`Avgust 2026 ${money(153_000_000)} — 12 talik tizim`);
+    expect(text).not.toContain(money(89_100_000));
+    expect(text).toContain(`May 2026 ${money(144_000_000)} ${money(18_000_000)} 12 talik tizim`);
   });
 });
 ```

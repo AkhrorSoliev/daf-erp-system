@@ -43,31 +43,31 @@ const pct = (n: number) => norm(`${n.toLocaleString("uz-UZ")}%`);
 
 const OCTOBER: MonthCharges = {
   month: "2026-10",
-  charged: 177_000_000,
-  paid: 135_900_000,
-  unpaid: 41_100_000,
+  charged: 159_300_000,
+  paid: 122_310_000,
+  unpaid: 36_990_000,
   paidPct: 76.8,
-  students: 479,
-  unpaidStudents: 237,
+  students: 452,
+  unpaidStudents: 219,
 };
 
 // The not-studying kinds add up to the total and the count; no figure here is
 // the sum of the two debts, which the page must never print.
 const SPLIT: DebtSplit = {
-  studying: { total: 43_500_000, count: 300, currentMonth: 41_100_000, older: 2_400_000, olderCount: 13 },
+  studying: { total: 39_150_000, count: 300, currentMonth: 36_990_000, older: 2_160_000, olderCount: 11 },
   notStudying: {
-    total: 57_100_000,
-    count: 327,
+    total: 51_390_000,
+    count: 305,
     byKind: {
-      ungrouped: { total: 21_300_000, count: 128 },
-      frozen: { total: 19_800_000, count: 99 },
-      left: { total: 16_000_000, count: 100 },
+      ungrouped: { total: 19_170_000, count: 118 },
+      frozen: { total: 17_820_000, count: 91 },
+      left: { total: 14_400_000, count: 96 },
     },
   },
 };
 
 const overview = (monthCharges: MonthCharges | null, debtSplit: DebtSplit = SPLIT): FinancialOverview => ({
-  income: { actual: 182_700_000, paymentCount: 612, byMethod: [], yesterday: { date: "2026-10-14", amount: 2_200_000 } },
+  income: { actual: 164_430_000, paymentCount: 612, byMethod: [], yesterday: { date: "2026-10-14", amount: 1_980_000 } },
   monthCharges,
   debtSplit,
   salary: { computed: null },
@@ -77,7 +77,7 @@ const PAYMENTS = {
   data: [
     {
       id: "p1",
-      amount: 450_000,
+      amount: 405_000,
       method: "CASH",
       createdAt: "2026-10-15T04:00:00.000Z",
       student: { id: 10501, firstName: "Ali", lastName: "Valiyev", groups: [{ id: "g1", name: "A1-07" }, { id: "g2", name: "B1-02" }] },
@@ -85,7 +85,7 @@ const PAYMENTS = {
     },
     {
       id: "p2",
-      amount: 300_000,
+      amount: 270_000,
       method: "CLICK",
       createdAt: "2026-10-15T03:00:00.000Z",
       student: { id: 10502, firstName: "Vali", lastName: "Aliyev", groups: [] },
@@ -125,9 +125,9 @@ describe("OverviewPage — the current month (CEO)", () => {
     expect(text).toContain("Umumiy ma'lumotlar");
     expect(html).toContain('data-tour="payment-record"');
     expect(text).toContain("Oktabr oyi to'lovlari");
-    expect(text).toContain(`Hisoblandi ${money(177_000_000)} ${num(479)} o'quvchiga`);
-    expect(text).toContain(`To'landi ${money(135_900_000)} ${pct(76.8)}`);
-    expect(text).toContain(`Qoldi ${money(41_100_000)} ${num(237)} o'quvchi to'lamagan`);
+    expect(text).toContain(`Hisoblandi ${money(159_300_000)} ${num(452)} o'quvchiga`);
+    expect(text).toContain(`To'landi ${money(122_310_000)} ${pct(76.8)}`);
+    expect(text).toContain(`Qoldi ${money(36_990_000)} ${num(219)} o'quvchi to'lamagan`);
     expect(html).toContain('href="/payments/debt"');
     expect(text).toContain("Kim to'lamagan →");
   });
@@ -135,13 +135,13 @@ describe("OverviewPage — the current month (CEO)", () => {
   it("shows today's debt as two numbers with the three not-studying kinds, never added", () => {
     const { text } = render({ seed: seedMonth("2026-10", overview(OCTOBER)) });
 
-    expect(text).toContain(`Eski qarz — o'qiyotganlar ${money(2_400_000)} ${num(13)} o'quvchi · o'tgan oylardan qolgan`);
-    expect(text).toContain(`O'qimayotganlar qarzi ${money(57_100_000)} ${num(327)} kishi · undirish ishi`);
-    expect(text).toContain(`guruhsiz · ${num(128)} ${money(21_300_000)}`);
-    expect(text).toContain(`muzlatilgan · ${num(99)} ${money(19_800_000)}`);
-    expect(text).toContain(`ketgan · ${num(100)} ${money(16_000_000)}`);
-    expect(text).not.toContain(num(2_400_000 + 57_100_000));
-    expect(text).not.toContain(num(43_500_000 + 57_100_000));
+    expect(text).toContain(`Eski qarz — o'qiyotganlar ${money(2_160_000)} ${num(11)} o'quvchi · o'tgan oylardan qolgan`);
+    expect(text).toContain(`O'qimayotganlar qarzi ${money(51_390_000)} ${num(305)} kishi · undirish ishi`);
+    expect(text).toContain(`guruhsiz · ${num(118)} ${money(19_170_000)}`);
+    expect(text).toContain(`muzlatilgan · ${num(91)} ${money(17_820_000)}`);
+    expect(text).toContain(`ketgan · ${num(96)} ${money(14_400_000)}`);
+    expect(text).not.toContain(num(2_160_000 + 51_390_000));
+    expect(text).not.toContain(num(39_150_000 + 51_390_000));
   });
 
   it("lists the recent payments with each student's groups now, «—» without one", () => {
@@ -160,16 +160,16 @@ describe("OverviewPage — the current month (CEO)", () => {
   });
 
   it("against a server older than B1 leaves the new counts out instead of printing them wrong", () => {
-    const oldCharges: MonthCharges = { month: "2026-10", charged: 177_000_000, paid: 135_900_000, unpaid: 41_100_000, paidPct: 76.8, students: 479 };
+    const oldCharges: MonthCharges = { month: "2026-10", charged: 159_300_000, paid: 122_310_000, unpaid: 36_990_000, paidPct: 76.8, students: 452 };
     const oldSplit: DebtSplit = {
-      studying: { total: 43_500_000, count: 300, currentMonth: 41_100_000, older: 2_400_000 },
-      notStudying: { total: 57_100_000, count: 327 },
+      studying: { total: 39_150_000, count: 300, currentMonth: 36_990_000, older: 2_160_000 },
+      notStudying: { total: 51_390_000, count: 305 },
     };
     const { text } = render({ seed: seedMonth("2026-10", overview(oldCharges, oldSplit)) });
 
-    expect(text).toContain(`Qoldi ${money(41_100_000)}`);
+    expect(text).toContain(`Qoldi ${money(36_990_000)}`);
     expect(text).not.toContain("o'quvchi to'lamagan");
-    expect(text).toContain(`Eski qarz — o'qiyotganlar ${money(2_400_000)}`);
+    expect(text).toContain(`Eski qarz — o'qiyotganlar ${money(2_160_000)}`);
     expect(text).not.toContain("o'tgan oylardan qolgan");
     expect(text).not.toContain("guruhsiz");
     expect(text).not.toMatch(/undefined|NaN/);
