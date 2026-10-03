@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-03",
+    sarlavha: "Bayramning oxirgi kunida ham Telegram hisobot va eslatmalar ketmaydi",
+    matn: "Bir kunlik bayramda va ko'p kunlik bayramning oxirgi kunida Telegram guruhlariga kunlik hisobot (21:00) va kunlik xabarlar (20:00) yuborilmaydi, topshiriq eslatmasi va to'lov va'dalarini tekshirish ham o'tkazib yuboriladi. Ilgari shu kunlarda ular baribir ishlardi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "guruhlar", sahifa: "bayramlar" },
+  },
+  {
+    sana: "2026-10-03",
     sarlavha: "Kirish sahifasi daftar varag'iga o'xshaydi, kirgach salom yoziladi",
     matn: "Admin panel va o'qituvchi portalining kirish sahifasi endi daftar varag'i: admin panelda katakli, o'qituvchi portalida chiziqli. Sarlavha «Boshqaruv» yoki «O'qituvchi». Parol bilan, «Telegram orqali kirish» bilan yoki Telegram botdagi kabinet orqali kirgach ekranda rasmingiz va «Xush kelibsiz,» ismingiz yoziladi, taxminan 2 soniyadan keyin kabinet ochiladi.",
     rollar: [1, 2, 3, 4, 5],
