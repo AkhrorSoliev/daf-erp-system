@@ -31,6 +31,6 @@ describe("payment.monthlyNoticesEnabled sozlamasi UI'da", () => {
   });
 
   it("CEO ko'radigan nom joyida", () => {
-    expect(SOURCE).toContain("O&apos;quvchiga oylik to&apos;lov xabari");
+    expect(SOURCE).toContain("O'quvchiga oylik to'lov xabari");
   });
 });
