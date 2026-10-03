@@ -59,8 +59,10 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 tushuntirishi kerak bo'lgan pul/holat natijasi) — shu PR'da
 `client/src/qollanma/kontent/` dagi sahifa yangilanadi, reyestrdagi `adr` ro'yxatiga
 raqam qo'shiladi va `client/src/qollanma/yangiliklar.ts` ga yozuv tushadi. Faqat
-texnik qaror — `client/src/qollanma/texnik-adrlar.ts` ga sababi bilan. Ikkalasidan
-biri bo'lmasa, `client/src/qollanma/adr-qamrovi.test.ts` CI'ni yiqitadi.
+texnik qaror — `client/src/qollanma/texnik-adrlar.ts` ga sababi bilan. Bu ro'yxat va
+`client/src/qollanma/adr-qamrovi.test.ts` qo'llanmaning qolgan bo'limlari bilan
+qo'shiladi; shundan keyin ikkalasidan hech birida yo'q ADR CI'ni yiqitadi. Hozircha
+buni ko'rib chiquvchi qo'lda tekshiradi.
 
 ---
 

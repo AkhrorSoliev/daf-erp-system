@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import { bolimlar, bolimTopish } from "@/qollanma/bolimlar";
+import { sahifalar } from "@/qollanma/sahifalar";
 import { QollanmaBolimSahifasi } from "@/components/qollanma/qollanma-bolim-sahifasi";
 
+// Hali sahifasi yo'q bo'lim 404 beradi — «rolingiz uchun sahifa yo'q» deb aldamaydi.
 export function generateStaticParams() {
-  return bolimlar.map((b) => ({ bolim: b.id }));
+  return bolimlar.filter((b) => sahifalar.some((s) => s.bolim === b.id)).map((b) => ({ bolim: b.id }));
 }
 
 export const dynamicParams = false;
