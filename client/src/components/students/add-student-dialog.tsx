@@ -99,6 +99,7 @@ export function AddStudentDialog({
       firstName: "",
       lastName: "",
       phone: "",
+      extraPhone: "",
       groupId: undefined,
       sourceId: "",
     },
@@ -140,6 +141,7 @@ export function AddStudentDialog({
         firstName: "",
         lastName: "",
         phone: "",
+        extraPhone: "",
         groupId: undefined,
         sourceId: "",
       });
@@ -158,6 +160,7 @@ export function AddStudentDialog({
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         phone: values.phone,
+        extraPhone: values.extraPhone || undefined,
         branchIds: [selectedBranch.id],
         sourceId: values.sourceId,
       });
@@ -253,6 +256,29 @@ export function AddStudentDialog({
             {form.formState.errors.phone && (
               <p className="text-xs text-destructive">
                 {form.formState.errors.phone.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Zaxira raqam (ixtiyoriy)</Label>
+            <Controller
+              control={form.control}
+              name="extraPhone"
+              render={({ field }) => (
+                <PhoneInput
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  name={field.name}
+                />
+              )}
+            />
+            <p className="text-xs text-muted-foreground">
+              O&apos;quvchi bu raqam bilan ham tizimga kira oladi.
+            </p>
+            {form.formState.errors.extraPhone && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.extraPhone.message}
               </p>
             )}
           </div>

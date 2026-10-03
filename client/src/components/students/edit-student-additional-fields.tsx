@@ -8,6 +8,7 @@ import {
   CreditCard,
   Users,
   Plus,
+  Phone,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,12 @@ interface EditStudentAdditionalFieldsProps {
 }
 
 const sections = [
+  {
+    key: "extraPhone",
+    icon: Phone,
+    tooltip: "Zaxira raqam",
+    fields: ["extraPhone"] as const,
+  },
   {
     key: "placeOfStudy",
     icon: GraduationCap,
@@ -54,7 +61,16 @@ const sections = [
 export function EditStudentAdditionalFields({
   form,
 }: EditStudentAdditionalFieldsProps) {
-  const [visible, setVisible] = useState<Set<string>>(new Set());
+  // A section whose field already holds a value opens at once: a backup number
+  // is a sign-in key (ADR-0067), and an editor that hides it is wrong.
+  const [visible, setVisible] = useState<Set<string>>(
+    () =>
+      new Set(
+        sections
+          .filter((s) => s.fields.some((f) => Boolean(form.getValues(f))))
+          .map((s) => s.key),
+      ),
+  );
   const iconsRef = useRef<HTMLDivElement>(null);
 
   const toggle = (key: string) => {
@@ -96,6 +112,31 @@ export function EditStudentAdditionalFields({
       {/* Dynamic fields — above icons */}
       {hasAnyVisible && (
         <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+          {visible.has("extraPhone") && (
+            <div className="space-y-1.5">
+              <Label>Zaxira raqam</Label>
+              <Controller
+                control={form.control}
+                name="extraPhone"
+                render={({ field }) => (
+                  <PhoneInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    name={field.name}
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                O&apos;quvchi bu raqam bilan ham tizimga kira oladi.
+              </p>
+              {form.formState.errors.extraPhone && (
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.extraPhone.message}
+                </p>
+              )}
+            </div>
+          )}
+
           {visible.has("placeOfStudy") && (
             <div className="space-y-1.5">
               <Label>O&apos;quv joyi</Label>

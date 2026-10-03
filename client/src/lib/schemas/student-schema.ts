@@ -60,6 +60,7 @@ export const addStudentSchema = z.object({
     .string()
     .length(9, "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak")
     .regex(/^\d{9}$/, "Faqat raqamlar kiritilishi mumkin"),
+  extraPhone: phoneDigits.optional(),
   groupId: z.string().optional(),
   // Har bir o'quvchi lid sifatida tug'iladi: to'g'ridan qo'shilgan o'quvchining
   // manbasi boshqa hech qayerdan bilinmaydi, shuning uchun majburiy.
