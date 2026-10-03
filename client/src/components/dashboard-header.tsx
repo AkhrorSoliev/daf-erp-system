@@ -10,6 +10,7 @@ import { SearchDropdown } from "@/components/global-search/search-dropdown";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { PushPermissionPrompt } from "@/components/notifications/push-permission-prompt";
 import { QollanmaYordamTugmasi } from "@/components/qollanma/qollanma-yordam-tugmasi";
 import { TashkentClock } from "@/components/tashkent-clock";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -90,6 +91,8 @@ export function DashboardHeader() {
           <AppBreadcrumb />
         )}
       </div>
+
+      <PushPermissionPrompt />
     </header>
   );
 }
