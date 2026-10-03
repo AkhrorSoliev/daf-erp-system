@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { MiniAppEntry } from "@/components/telegram-mini-app/mini-app-entry";
+import { getPortalType } from "@/lib/portal";
+import { miniAppAudienceForHost } from "@/lib/telegram-mini-app";
+import { DaftarSheet } from "../daftar-sheet";
 
 export const metadata: Metadata = {
   title: "DaF — kabinet",
@@ -22,8 +26,24 @@ export const viewport: Viewport = {
  * xostida (ADR-0045) — qaysi kabinet ekanini `MiniAppEntry` xostdan biladi.
  * Middleware'da ochiq: bu yerga sessiyasiz kelinadi, sessiyani shu sahifa
  * yaratadi.
+ *
+ * The host also picks the look, here on the server, so the first paint is
+ * already the right one: the staff cabinet is written on the Daftar sheet of
+ * the staff sign-in pages, the student cabinet stays Lumio.
  */
-export default function TelegramMiniAppPage() {
+export default async function TelegramMiniAppPage() {
+  const headersList = await headers();
+  const host =
+    headersList.get("x-forwarded-host") || headersList.get("host") || "";
+
+  if (miniAppAudienceForHost(host) === "staff") {
+    return (
+      <DaftarSheet portal={getPortalType(host)}>
+        <MiniAppEntry daftar />
+      </DaftarSheet>
+    );
+  }
+
   return (
     <div className="lumio min-h-screen bg-background text-foreground antialiased">
       <MiniAppEntry />

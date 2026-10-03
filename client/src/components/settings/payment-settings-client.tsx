@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import toast from "react-hot-toast";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -15,17 +13,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SettingsPageHeader } from "./settings-page-header";
+import {
+  NumberSetting,
+  SettingRow,
+  SettingsSection,
+} from "./payment-settings-parts";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { PAYMENT_MODEL_LABELS, type PaymentModel } from "@/lib/payment-model";
-import {
-  PaymentLessonRulesSettings,
-  type LessonRuleSettings,
-} from "./payment-lesson-rules-settings";
 
-interface PaymentSettingsValues extends LessonRuleSettings {
+interface PaymentSettingsValues {
   "payment.defaultModel": PaymentModel;
   "payment.excusedCreditEnabled": boolean;
   "payment.excusedCreditMonthlyCap": number | null;
@@ -33,39 +32,43 @@ interface PaymentSettingsValues extends LessonRuleSettings {
   "payment.debtWriteOffEnabled": boolean;
   "payment.monthlyNoticesEnabled": boolean;
   "payment.noRefundAfterPercent": number;
+  // The lesson rules of ADR-0047/0048/0064.
+  "payment.admissionRuleEnabled": boolean;
+  "payment.trialLessonEnabled": boolean;
+  "payment.attendanceOpensMinutesBefore": number;
+  "payment.admissionMinPaidPercent": number;
+  "payment.paidThroughReminderDays": number;
 }
 
 /** Har bir sozlama kaliti uchun — o'ziga xos qiymatga ega filiallar ro'yxati. */
 type BranchOverrides = Record<keyof PaymentSettingsValues, number[]>;
 
+/** 1–28: every month has these days, February included. */
+const CHARGE_DAYS = Array.from({ length: 28 }, (_, i) => String(i + 1));
+
+const TITLE = "To'lov";
+const DESCRIPTION =
+  "To'lov va darsga qo'yish qoidalari. O'zgarish darhol kuchga kiradi.";
+
 export function PaymentSettingsClient() {
   const authUser = useAuth((s) => s.user);
   const canEdit = authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
   const isCeo = authUser?.roles.some((r) => r.id === 1) ?? false;
-  // `payment.chargeDayOfMonth` faqat kompaniya darajasida ishlaydi — oylik
-  // hisob-kitob croni va qorovul uni HECH QACHON filial bo'yicha o'qimaydi
-  // (backend `SettingsService.set` buni ham majburlaydi). Shuning uchun
-  // Filial direktori buni o'zgartira olmaydi — lekin ko'ra oladi va NEGA
-  // o'zgartira olmasligini tushunadi, boshqaruv shunchaki yashirilmaydi.
-  const canEditChargeDay = isCeo;
+  // Most of this page is company-level: the backend (`SettingsService.set`)
+  // refuses a branch director's write to those keys. The director still SEES
+  // them, with a lock and one banner saying why, rather than a hidden control
+  // or a switch that never saves.
 
   const [settings, setSettings] = useState<PaymentSettingsValues | null>(null);
   // CEO kompaniya darajasida ko'rayotganda backend qaysi filiallar o'z
   // override'iga ega ekanini ham qaytaradi (`GET /settings/payment` —
   // faqat `branchId` so'ralmaganda). Filial direktori buni hech qachon
-  // olmaydi — ular har doim o'z filialiga qulflanadi, "boshqa filialda
-  // qanday" degan savol ularga tegishli emas.
+  // olmaydi — ular har doim o'z filialiga qulflanadi.
   const [branchOverrides, setBranchOverrides] =
     useState<BranchOverrides | null>(null);
   const branches = useBranchSwitcher((s) => s.branches);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  // Raqamli maydonlar o'z matn holatini alohida saqlaydi — `settings` faqat
-  // serverdan tasdiqlangan qiymatni ushlab turadi, shuning uchun input hech
-  // qachon oraliq/noto'g'ri qiymat bilan "settings"ni buzmaydi.
-  const [capInput, setCapInput] = useState("");
-  const [dayInput, setDayInput] = useState("1");
-  const [percentInput, setPercentInput] = useState("40");
 
   useEffect(() => {
     async function fetchSettings() {
@@ -73,10 +76,6 @@ export function PaymentSettingsClient() {
         const { data } = await api.get("/settings/payment");
         setSettings(data.settings);
         setBranchOverrides(data.branchOverrides ?? null);
-        const cap = data.settings["payment.excusedCreditMonthlyCap"];
-        setCapInput(cap === null || cap === undefined ? "" : String(cap));
-        setDayInput(String(data.settings["payment.chargeDayOfMonth"]));
-        setPercentInput(String(data.settings["payment.noRefundAfterPercent"]));
       } catch (error) {
         toast.error(
           getErrorMessage(error, "Sozlamalarni yuklashda xatolik yuz berdi"),
@@ -94,10 +93,6 @@ export function PaymentSettingsClient() {
     try {
       const { data } = await api.patch("/settings/payment", patch);
       setSettings(data.settings);
-      const cap = data.settings["payment.excusedCreditMonthlyCap"];
-      setCapInput(cap === null || cap === undefined ? "" : String(cap));
-      setDayInput(String(data.settings["payment.chargeDayOfMonth"]));
-      setPercentInput(String(data.settings["payment.noRefundAfterPercent"]));
       toast.success("Sozlama saqlandi");
     } catch (error) {
       toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
@@ -106,57 +101,12 @@ export function PaymentSettingsClient() {
     }
   }
 
-  function handleCapBlur() {
-    if (!settings) return;
-    const trimmed = capInput.trim();
-    const nextCap = trimmed === "" ? null : Number(trimmed);
-    if (nextCap !== null && (!Number.isInteger(nextCap) || nextCap < 0)) {
-      toast.error("Limit manfiy bo'lmagan butun son yoki bo'sh bo'lishi kerak");
-      setCapInput(
-        settings["payment.excusedCreditMonthlyCap"] === null
-          ? ""
-          : String(settings["payment.excusedCreditMonthlyCap"]),
-      );
-      return;
-    }
-    if (nextCap === settings["payment.excusedCreditMonthlyCap"]) return;
-    saveField({ excusedCreditMonthlyCap: nextCap });
-  }
-
-  function handleDayBlur() {
-    if (!settings) return;
-    const v = Number(dayInput);
-    if (!Number.isInteger(v) || v < 1 || v > 28) {
-      toast.error(
-        "Hisob-kitob kuni 1 dan 28 gacha bo'lgan butun son bo'lishi kerak",
-      );
-      setDayInput(String(settings["payment.chargeDayOfMonth"]));
-      return;
-    }
-    if (v === settings["payment.chargeDayOfMonth"]) return;
-    saveField({ chargeDayOfMonth: v });
-  }
-
-  function handlePercentBlur() {
-    if (!settings) return;
-    const v = Number(percentInput);
-    if (percentInput.trim() === "" || !Number.isInteger(v) || v < 0 || v > 100) {
-      toast.error("Foiz 0 dan 100 gacha bo'lgan butun son bo'lishi kerak");
-      setPercentInput(String(settings["payment.noRefundAfterPercent"]));
-      return;
-    }
-    if (v === settings["payment.noRefundAfterPercent"]) return;
-    saveField({ noRefundAfterPercent: v });
-  }
-
   /**
-   * "Bu yerda ko'rsatilgan qiymat kompaniya darajasidagi — quyidagi
-   * filiallarda BOSHQACHA qiymat saqlangan" eslatmasi. Bu ekran hozircha
-   * filial bo'yicha tahrirlashni taklif qilmaydi (faqat kompaniya
-   * darajasini o'qiydi/yozadi) — shuning uchun eng kamida override
-   * borligini KO'RINADIGAN qilib qo'yamiz, aks holda CEO bitta "umumiy"
-   * qiymatni ko'rib, aslida bir filialda boshqacha ishlayotganidan
-   * bexabar qoladi.
+   * Bu ekran faqat kompaniya darajasini o'qiydi/yozadi, shuning uchun
+   * filialda BOSHQACHA qiymat saqlangani ko'rinib turishi kerak — aks holda
+   * CEO bitta "umumiy" qiymatni ko'rib, bir filialda boshqacha ishlayotganidan
+   * bexabar qoladi. Faqat filial bo'yicha yozilishi mumkin bo'lgan kalitlar
+   * uchun chaqiriladi.
    */
   function renderOverrideNote(settingKey: keyof PaymentSettingsValues) {
     if (!isCeo || !branchOverrides) return null;
@@ -167,15 +117,18 @@ export function PaymentSettingsClient() {
     );
     return (
       <p className="text-xs text-amber-600 dark:text-amber-400">
-        Filiallarda boshqacha qiymat saqlangan: {names.join(", ")}.
+        Bu filiallarda boshqa qiymat turibdi: {names.join(", ")}.
       </p>
     );
   }
 
   if (loading) {
     return (
-      <div className="flex h-48 items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      <div className="space-y-4">
+        <SettingsPageHeader title={TITLE} description={DESCRIPTION} />
+        {[3, 2, 4].map((rows, i) => (
+          <Skeleton key={i} className="w-full rounded-xl" style={{ height: rows * 72 }} />
+        ))}
       </div>
     );
   }
@@ -183,285 +136,296 @@ export function PaymentSettingsClient() {
   if (!settings) {
     return (
       <div className="space-y-6">
-        <SettingsPageHeader
-          title="To'lov"
-          description="Kurs to'lov modeli va hisob-kitob qoidalari"
-        />
+        <SettingsPageHeader title={TITLE} description={DESCRIPTION} />
         <p className="text-sm text-muted-foreground">
-          Sozlamalarni yuklab bo'lmadi. Sahifani qayta yuklab ko'ring.
+          Sozlamalarni yuklab bo&apos;lmadi. Sahifani qayta yuklab ko&apos;ring.
         </p>
       </div>
     );
   }
 
+  const admissionOn = settings["payment.admissionRuleEnabled"];
+  const creditOn = settings["payment.excusedCreditEnabled"];
+
   return (
-    <div className="space-y-6">
+    <div className="max-w-3xl space-y-4">
       <SettingsPageHeader
-        title="To'lov"
-        description="Kurs to'lov modeli va hisob-kitob qoidalari — bu yerdagi o'zgarish barcha yangi hisob-kitoblarga darhol ta'sir qiladi"
+        title={TITLE}
+        description={DESCRIPTION}
+        action={
+          saving && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" />
+              Saqlanmoqda...
+            </span>
+          )
+        }
       />
 
-      <div className="space-y-5">
-        {/* Standart to'lov modeli */}
-        <div className="space-y-1.5">
-          <Label htmlFor="defaultModel">
-            Yangi kurslar uchun standart to&apos;lov modeli
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            Yangi kurs qo&apos;shilganda, agar kurs uchun aniq model tanlanmasa,
-            shu model ishlatiladi. Mavjud kurslarga ta&apos;sir qilmaydi.
-          </p>
-          <Select
-            value={settings["payment.defaultModel"]}
-            disabled={!canEdit || saving}
-            onValueChange={(v) => saveField({ defaultModel: v })}
-          >
-            <SelectTrigger id="defaultModel" className="w-full sm:max-w-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(PAYMENT_MODEL_LABELS) as PaymentModel[]).map(
-                (model) => (
-                  <SelectItem key={model} value={model}>
-                    {PAYMENT_MODEL_LABELS[model]}
+      {!canEdit && (
+        <p className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
+          Bu bo&apos;limni faqat markaz rahbari va filial direktori tahrirlashi
+          mumkin.
+        </p>
+      )}
+      {!isCeo && canEdit && (
+        <p className="flex items-start gap-2 rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
+          <Lock className="mt-0.5 size-4 shrink-0" />
+          <span>
+            Qulf belgili sozlamalar filial bo&apos;yicha emas, butun kompaniya
+            uchun bitta, shuning uchun faqat markaz rahbari o&apos;zgartira
+            oladi.
+          </span>
+        </p>
+      )}
+
+      <SettingsSection title="Hisob-kitob">
+        <SettingRow
+          label="Standart to'lov modeli"
+          htmlFor="defaultModel"
+          hint="Yangi kursda model tanlanmasa, shu ishlatiladi. Mavjud kurslarga ta'sir qilmaydi."
+          note={renderOverrideNote("payment.defaultModel")}
+          control={
+            <Select
+              value={settings["payment.defaultModel"]}
+              disabled={!canEdit || saving}
+              onValueChange={(v) => saveField({ defaultModel: v })}
+            >
+              <SelectTrigger id="defaultModel" className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(PAYMENT_MODEL_LABELS) as PaymentModel[]).map(
+                  (model) => (
+                    <SelectItem key={model} value={model}>
+                      {PAYMENT_MODEL_LABELS[model]}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
+          }
+        />
+        {/* chargeDayOfMonth companyLevelOnly — oylik hisob croni uni hech
+            qachon filial bo'yicha o'qimaydi, backend filial yozuvini rad
+            etadi; shuning uchun override eslatmasi yo'q. */}
+        <SettingRow
+          label="Oylik hisob kuni"
+          htmlFor="chargeDayOfMonth"
+          hint="«Oylik» kurslarda har oy shu kuni yangi to'lov hisobi yoziladi."
+          details="1 dan 28 gacha tanlanadi, chunki fevralda 28 kun bor."
+          locked={!isCeo}
+          control={
+            <Select
+              value={String(settings["payment.chargeDayOfMonth"])}
+              disabled={!isCeo || saving}
+              onValueChange={(v) => saveField({ chargeDayOfMonth: Number(v) })}
+            >
+              <SelectTrigger id="chargeDayOfMonth" className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {CHARGE_DAYS.map((day) => (
+                  <SelectItem key={day} value={day}>
+                    {day}-kun
                   </SelectItem>
-                ),
-              )}
-            </SelectContent>
-          </Select>
-          {renderOverrideNote("payment.defaultModel")}
-        </div>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
+      </SettingsSection>
 
-        <Separator />
-
-        {/* Sababli dars krediti */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between rounded-lg border px-4 py-3">
-            <div className="pr-4">
-              <p className="text-sm font-medium">
-                Sababli darsning krediti keyingi oyga o&apos;tsin
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Yoqilsa, o&apos;quvchi sababli sabab bilan qoldirgan darsning
-                puli hisobdan chiqarilmaydi va keyingi oyning to&apos;lovidan
-                ayiriladi (kredit sifatida). O&apos;chirilsa, sababli dars ham
-                oddiy dars kabi hisoblanadi.
-              </p>
-            </div>
+      <SettingsSection title="Sababli darslar">
+        <SettingRow
+          label="Sababli dars puli keyingi oyga o'tsin"
+          hint="Sababli qoldirilgan darsning puli keyingi oy to'lovidan ayiriladi."
+          details="O'chirilsa, sababli dars ham oddiy dars kabi hisoblanadi."
+          note={renderOverrideNote("payment.excusedCreditEnabled")}
+          control={
             <Switch
-              checked={settings["payment.excusedCreditEnabled"]}
+              checked={creditOn}
+              aria-label="Sababli dars puli keyingi oyga o'tsin"
               disabled={!canEdit || saving}
               onCheckedChange={(checked) =>
                 saveField({ excusedCreditEnabled: checked })
               }
             />
-          </div>
-          {renderOverrideNote("payment.excusedCreditEnabled")}
-        </div>
-
-        {/* Kredit oylik limiti */}
-        <div className="space-y-1.5">
-          <Label htmlFor="excusedCreditMonthlyCap">
-            Oyiga eng ko&apos;p nechta kredit dars o&apos;tkazilishi mumkin
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            Yuqoridagi sozlama yoqilgan bo&apos;lsa ishlaydi. Bo&apos;sh
-            qoldirilsa — cheklov yo&apos;q, istalgan sondagi sababli dars kredit
-            sifatida keyingi oyga o&apos;tishi mumkin.
-          </p>
-          <Input
-            id="excusedCreditMonthlyCap"
-            type="number"
-            min={0}
-            step={1}
-            placeholder="Cheklovsiz"
-            className="w-full sm:max-w-xs"
-            value={capInput}
-            disabled={
-              !canEdit || saving || !settings["payment.excusedCreditEnabled"]
+          }
+        >
+          <SettingRow
+            label="Oyiga eng ko'pi bilan"
+            htmlFor="excusedCreditMonthlyCap"
+            hint="Bo'sh qoldirilsa, cheklov yo'q."
+            note={renderOverrideNote("payment.excusedCreditMonthlyCap")}
+            control={
+              <NumberSetting
+                id="excusedCreditMonthlyCap"
+                saved={settings["payment.excusedCreditMonthlyCap"]}
+                unit="dars"
+                allowEmpty
+                placeholder="Cheklovsiz"
+                rangeError="Limit manfiy bo'lmagan butun son yoki bo'sh bo'lishi kerak"
+                disabled={!canEdit || saving || !creditOn}
+                onSave={(v) => saveField({ excusedCreditMonthlyCap: v })}
+              />
             }
-            onChange={(e) => setCapInput(e.target.value)}
-            onBlur={handleCapBlur}
           />
-          {renderOverrideNote("payment.excusedCreditMonthlyCap")}
-        </div>
+        </SettingRow>
+      </SettingsSection>
 
-        <Separator />
-
-        {/* Hisob-kitob kuni */}
-        <div className="space-y-1.5">
-          <Label htmlFor="chargeDayOfMonth">
-            Oyning qaysi kunida oylik hisob-kitob yaratiladi
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            &laquo;Oylik&raquo; modelidagi kurslar uchun har oy shu kunda yangi
-            to&apos;lov talabi (charge) hosil bo&apos;ladi. 1 dan 28 gacha —
-            fevral oyi uchun cheklov.
-          </p>
-          <Input
-            id="chargeDayOfMonth"
-            type="number"
-            min={1}
-            max={28}
-            className="w-full sm:max-w-xs"
-            value={dayInput}
-            disabled={!canEditChargeDay || saving}
-            onChange={(e) => setDayInput(e.target.value)}
-            onBlur={handleDayBlur}
-          />
-          {!canEditChargeDay && canEdit && (
-            <p className="text-xs text-muted-foreground">
-              Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta
-              (oylik hisob-kitob croni shunday ishlaydi), shuning uchun faqat
-              markaz rahbari o&apos;zgartira oladi.
-            </p>
-          )}
-          {/* chargeDayOfMonth companyLevelOnly — filial override HECH
-              QACHON bo'lmaydi (backend uni rad etadi), shuning uchun bu
-              yerda override eslatmasi ko'rsatilmaydi. */}
-        </div>
-
-        <Separator />
-
-        {/* Qarz kechirishga ruxsat */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between rounded-lg border px-4 py-3">
-            <div className="pr-4">
-              <p className="text-sm font-medium">Qarz kechirishga ruxsat</p>
-              <p className="text-xs text-muted-foreground">
-                O&apos;chirilgan bo&apos;lsa (standart holat) —
-                o&apos;quvchining qarzi hech qachon kechirilmaydi: guruhdan
-                chiqarish oynasidagi va profildagi hisobdan chiqarish tugmasi
-                ishlamaydi, server ham so&apos;rovni rad etadi, qarz butun
-                tarixi bilan joyida qoladi. Yoqilgan bo&apos;lsa — administrator
-                sabab yozib va summani qaytadan terib qarzni kechira oladi.
-              </p>
-            </div>
+      {/* Shartnoma 3.2 va 3.7 (ADR-0047, ADR-0064) hamda oylik xabar
+          (ADR-0042) — hammasi companyLevelOnly, faqat CEO. */}
+      <SettingsSection title="To'lamagan o'quvchilar">
+        <SettingRow
+          label="To'lamagan o'quvchi 2-darsdan qo'yilmasin"
+          hint="1-darsga to'lovsiz kelish mumkin, keyin faqat puli yetgan darslarga qo'yiladi."
+          details="To'lamaganlar davomatda qulf bilan ko'rinadi va ularni belgilab bo'lmaydi. O'chirilsa, hamma o'quvchi darsga qo'yiladi va to'lov oynasida «qaysi darsgacha yetadi» ko'rinmaydi. Standart holat: yoqilgan. Shartnoma 3.2."
+          locked={!isCeo}
+          control={
             <Switch
-              checked={settings["payment.debtWriteOffEnabled"]}
+              checked={admissionOn}
+              aria-label="To'lamagan o'quvchi 2-darsdan qo'yilmasin"
               disabled={!isCeo || saving}
               onCheckedChange={(checked) =>
-                saveField({ debtWriteOffEnabled: checked })
+                saveField({ admissionRuleEnabled: checked })
               }
             />
-          </div>
-          {!isCeo && canEdit && (
-            <p className="text-xs text-muted-foreground">
-              Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
-              shuning uchun faqat markaz rahbari o&apos;zgartira oladi.
-            </p>
-          )}
-          {/* debtWriteOffEnabled ham companyLevelOnly — CEO buni butun
-              kompaniya uchun hal qildi va backend filial bo'yicha yozishni
-              rad etadi, shuning uchun filial override eslatmasi bu yerda
-              hech qachon ma'noga ega bo'lmaydi.
-
-              Tugma ham `isCeo` bilan qulflanadi (`canEdit` emas): `canEdit`
-              filial direktorini ham o'z ichiga oladi, lekin uning har bir
-              yozuvini `SettingsService.set` rad etadi — ya'ni u bosadigan,
-              lekin hech qachon saqlanmaydigan tugma bo'lardi va xato
-              xabarida unga sozlama kalitining o'zi ko'rinardi. Yuqoridagi
-              `chargeDayOfMonth` bloki aynan shu naqshni ishlatadi. */}
-        </div>
-
-        <Separator />
-
-        {/* O'quvchiga oylik to'lov xabari (ADR-0042) — company-level like the
-            switch above, so it is locked to the CEO the same way. */}
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between rounded-lg border px-4 py-3">
-            <div className="pr-4">
-              <p className="text-sm font-medium">
-                O&apos;quvchiga oylik to&apos;lov xabari
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Yoqilgan bo&apos;lsa (standart holat) — oy hisobi yozilgan kuni
-                o&apos;quvchiga Telegram orqali shu oy uchun qancha to&apos;lash
-                kerakligi, hali to&apos;lamaganlarga esa oyning 2-darsidan bir
-                kun oldin eslatma boradi. Ikkalasi ham soat 20:00 dagi kunlik
-                xabar bilan birga keladi. O&apos;chirilsa — bu ikki xabar
-                yuborilmaydi.
-              </p>
-            </div>
+          }
+        >
+          <SettingRow
+            label="Darsga kirish uchun eng kam to'lov"
+            htmlFor="admissionMinPaidPercent"
+            hint="2-darsdan boshlab darsga kirish uchun oy to'lovining kamida shu qismi to'langan bo'lishi kerak."
+            details="Har guruhda o'sha guruhning 2-darsidan hisoblanadi. 0 qo'yilsa, faqat o'tilgan darslar puli so'raladi. Standart: 50%. 01.11.2026 dan ishlaydi. Shartnoma 3.2."
+            locked={!isCeo}
+            control={
+              <NumberSetting
+                id="admissionMinPaidPercent"
+                saved={settings["payment.admissionMinPaidPercent"] ?? 50}
+                max={100}
+                unit="%"
+                rangeError="Foiz 0 dan 100 gacha bo'lgan butun son bo'lishi kerak"
+                disabled={!isCeo || saving || !admissionOn}
+                onSave={(v) => saveField({ admissionMinPaidPercent: v })}
+              />
+            }
+          />
+          <SettingRow
+            label="To'lov tugashidan oldin eslatma"
+            htmlFor="paidThroughReminderDays"
+            hint="Puli yetmaydigan birinchi darsdan shuncha kun oldin har kuni 20:00 da Telegram'da eslatma boradi."
+            details="To'lov kelsa, eslatma to'xtaydi. 0 qo'yilsa, eslatma yuborilmaydi. Standart: 3 kun. Shartnoma 3.7."
+            locked={!isCeo}
+            control={
+              <NumberSetting
+                id="paidThroughReminderDays"
+                saved={settings["payment.paidThroughReminderDays"] ?? 3}
+                max={10}
+                unit="kun"
+                rangeError="Kun 0 dan 10 gacha bo'lgan butun son bo'lishi kerak"
+                disabled={!isCeo || saving || !admissionOn}
+                onSave={(v) => saveField({ paidThroughReminderDays: v })}
+              />
+            }
+          />
+        </SettingRow>
+        <SettingRow
+          label="O'quvchiga oylik to'lov xabari"
+          hint="Hisob kuni o'quvchiga Telegram'da shu oy uchun qancha to'lash kerakligi yuboriladi."
+          details="To'lamaganlarga oyning 2-darsidan bir kun oldin eslatma ham boradi. Ikkalasi soat 20:00 dagi kunlik xabar bilan keladi. O'chirilsa, bu ikki xabar yuborilmaydi. Standart holat: yoqilgan."
+          locked={!isCeo}
+          control={
             <Switch
               checked={settings["payment.monthlyNoticesEnabled"]}
               disabled={!isCeo || saving}
+              aria-label="O'quvchiga oylik to'lov xabari"
               onCheckedChange={(checked) =>
                 saveField({ monthlyNoticesEnabled: checked })
               }
             />
-          </div>
-          {!isCeo && canEdit && (
-            <p className="text-xs text-muted-foreground">
-              Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
-              shuning uchun faqat markaz rahbari o&apos;zgartira oladi.
-            </p>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Shartnoma 6.2 — pul qaytarilmaydigan chegara (ADR-0043) */}
-        <div className="space-y-1.5">
-          <Label htmlFor="noRefundAfterPercent">
-            Oyning necha foizi o&apos;tgach pul qaytarilmaydi
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            O&apos;quvchi o&apos;zi to&apos;xtatganda (guruhdan chiqarish yoki
-            chetlatish) oy darslarining shu foizidan ko&apos;pi o&apos;tgan
-            bo&apos;lsa, oy to&apos;lovi qaytarilmaydi — shartnomaning 6.2
-            bandi. Shu foiz yoki undan kam o&apos;tgan bo&apos;lsa,
-            o&apos;tilmagan darslar puli qaytadi. 01.10.2026 dan chiqqanlarga
-            qo&apos;llanadi.
-          </p>
-          <div className="flex items-center gap-2">
-            <Input
-              id="noRefundAfterPercent"
-              type="number"
-              min={0}
-              max={100}
-              step={1}
-              className="w-full sm:max-w-xs"
-              value={percentInput}
-              disabled={!isCeo || saving}
-              onChange={(e) => setPercentInput(e.target.value)}
-              onBlur={handlePercentBlur}
-            />
-            <span className="text-sm text-muted-foreground">%</span>
-          </div>
-          {!isCeo && canEdit && (
-            <p className="text-xs text-muted-foreground">
-              Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
-              shuning uchun faqat markaz rahbari o&apos;zgartira oladi.
-            </p>
-          )}
-          {/* noRefundAfterPercent ham companyLevelOnly — backend filial
-              bo'yicha yozishni rad etadi, shuning uchun override eslatmasi
-              bu yerda ham yo'q. */}
-        </div>
-
-        <PaymentLessonRulesSettings
-          settings={settings}
-          isCeo={isCeo}
-          canEdit={canEdit}
-          saving={saving}
-          saveField={saveField}
+          }
         />
-      </div>
+      </SettingsSection>
 
-      {saving && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Loader2 className="size-3.5 animate-spin" />
-          Saqlanmoqda...
-        </div>
-      )}
+      {/* Shartnoma 6.2 (ADR-0043), sinov darsi 3.5 (ADR-0048) va qarz
+          kechirish — hammasi companyLevelOnly, faqat CEO. Qulflangan tugma
+          `isCeo` bilan (`canEdit` emas): direktorning yozuvini backend rad
+          etadi, `canEdit` u bosadigan-u saqlanmaydigan tugma berardi. */}
+      <SettingsSection title="O'quvchi ketganda">
+        <SettingRow
+          label="Pul qaytarilmaydigan chegara"
+          htmlFor="noRefundAfterPercent"
+          hint="O'quvchi ketganda oy darslarining shu qismidan ko'pi o'tgan bo'lsa, oy puli qaytarilmaydi."
+          details="Kamroq o'tgan bo'lsa, o'tilmagan darslar puli qaytadi. Guruhdan chiqarish va chetlatishga tegishli. 01.10.2026 dan chiqqanlarga qo'llanadi. Shartnoma 6.2."
+          locked={!isCeo}
+          control={
+            <NumberSetting
+              id="noRefundAfterPercent"
+              saved={settings["payment.noRefundAfterPercent"]}
+              max={100}
+              unit="%"
+              rangeError="Foiz 0 dan 100 gacha bo'lgan butun son bo'lishi kerak"
+              disabled={!isCeo || saving}
+              onSave={(v) => saveField({ noRefundAfterPercent: v })}
+            />
+          }
+        />
+        <SettingRow
+          label="Sinov darsi"
+          hint="1 tadan ko'p darsga kelmagan o'quvchi ketsa, oy puli to'liq qaytadi."
+          details="«Keldi» va «Kechikdi» belgilari sanaladi. Qarzi 0 bo'ladi, ustozga o'sha oy darslari uchun haq yozilmaydi. O'chirilsa, yuqoridagi foiz qoidasi ishlaydi. Standart holat: yoqilgan. Shartnoma 3.5."
+          locked={!isCeo}
+          control={
+            <Switch
+              checked={settings["payment.trialLessonEnabled"]}
+              aria-label="Sinov darsi"
+              disabled={!isCeo || saving}
+              onCheckedChange={(checked) =>
+                saveField({ trialLessonEnabled: checked })
+              }
+            />
+          }
+        />
+        <SettingRow
+          label="Qarz kechirishga ruxsat"
+          hint="O'chiq bo'lsa, qarzni hech kim kechira olmaydi. Yoqilsa, administrator sabab yozib kechiradi."
+          details="O'chiq (standart holat) bo'lsa, qarz hech qachon kechirilmaydi: guruhdan chiqarish oynasidagi va profildagi kechirish tugmasi ishlamaydi, qarz butun tarixi bilan joyida qoladi. Yoqilsa, administrator sabab yozib va summani qayta terib kechiradi."
+          locked={!isCeo}
+          control={
+            <Switch
+              checked={settings["payment.debtWriteOffEnabled"]}
+              disabled={!isCeo || saving}
+              aria-label="Qarz kechirishga ruxsat"
+              onCheckedChange={(checked) =>
+                saveField({ debtWriteOffEnabled: checked })
+              }
+            />
+          }
+        />
+      </SettingsSection>
 
-      {!canEdit && (
-        <p className="text-xs text-muted-foreground">
-          Bu bo&apos;limni faqat markaz rahbari va filial direktori tahrirlashi
-          mumkin.
-        </p>
-      )}
+      {/* Davomat oynasi (ADR-0047) — companyLevelOnly. */}
+      <SettingsSection title="Davomat">
+        <SettingRow
+          label="Davomat ochilish vaqti"
+          htmlFor="attendanceOpensMinutesBefore"
+          hint="Yangi davomat dars boshlanishidan shuncha oldin ochiladi va dars tugashi bilan yopiladi."
+          details="Barcha rollar uchun bir xil. Olingan davomatni markaz rahbari, filial direktori va administrator dars tugagach ham tuzata oladi. Standart: 10 daqiqa."
+          locked={!isCeo}
+          control={
+            <NumberSetting
+              id="attendanceOpensMinutesBefore"
+              saved={settings["payment.attendanceOpensMinutesBefore"]}
+              max={60}
+              unit="daqiqa"
+              rangeError="Daqiqa 0 dan 60 gacha bo'lgan butun son bo'lishi kerak"
+              disabled={!isCeo || saving}
+              onSave={(v) => saveField({ attendanceOpensMinutesBefore: v })}
+            />
+          }
+        />
+      </SettingsSection>
     </div>
   );
 }

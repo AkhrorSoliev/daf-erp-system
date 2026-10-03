@@ -20,7 +20,10 @@ describe('LessonAdmissionService', () => {
     student: { findMany: jest.fn(), findUnique: jest.fn() },
     enrollmentMonthlyCharge: { findMany: jest.fn() },
   };
-  const settings = { get: jest.fn().mockResolvedValue(true) };
+  // Every switch on, the least share at the contract's 50%.
+  const bySettingKey = (_companyId: number, key: string) =>
+    Promise.resolve(key === 'payment.admissionMinPaidPercent' ? 50 : true);
+  const settings = { get: jest.fn(bySettingKey) };
   const service = new LessonAdmissionService(
     prisma as never,
     settings as never,
@@ -28,7 +31,7 @@ describe('LessonAdmissionService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    settings.get.mockResolvedValue(true);
+    settings.get.mockImplementation(bySettingKey);
   });
 
   it('admits everyone and reads no charge when contract 3.2 is switched off', async () => {
@@ -145,8 +148,152 @@ describe('LessonAdmissionService', () => {
     });
     expect(reach).toEqual({
       paidThrough: '2026-10-05',
-      next: { date: '2026-10-07', groupName: '#005', needed: 100000 },
+      next: {
+        date: '2026-10-07',
+        groupName: '#005',
+        needed: 100000,
+        minPaidPercent: null,
+      },
       clearsDebt: false,
+    });
+  });
+
+  describe('at least half of the month (ADR-0064)', () => {
+    // November: 10 lessons at 30 000 — two lessons cost 60 000, half is 150 000.
+    const novRow = {
+      ...chargeRow(1),
+      periodMonth: 11,
+      coveredLessons: 10,
+      perLessonCost: 30000,
+      coveredDates: [2, 4, 6, 9, 11, 13, 16, 18, 20, 23].map(
+        (d) => `2026-11-${String(d).padStart(2, '0')}`,
+      ),
+    };
+    const onSecondLesson = () =>
+      service.forLesson({
+        groupId: 'g005',
+        lessonDay: '2026-11-04',
+        studentIds: [1],
+      });
+
+    /** What the month's charges on closed enrollments kept (a transfer). */
+    let closed: { studentId: number; chargedAmount: number }[];
+    const closedWhere = { status: { not: 'ACTIVE' }, deletedAt: null };
+
+    beforeEach(() => {
+      // 100 000 of 300 000 paid: the 2nd lesson is paid for, half is not.
+      prisma.student.findMany.mockResolvedValue([
+        { id: 1, balance: -200000, companyId: 5 },
+      ]);
+      closed = [];
+      prisma.enrollmentMonthlyCharge.findMany.mockImplementation(
+        (args: { where: { enrollment: { status: unknown } } }) =>
+          Promise.resolve(
+            args.where.enrollment.status === 'ACTIVE' ? [novRow] : closed,
+          ),
+      );
+    });
+
+    it('judges a month split by a transfer whole: the closed charge counts toward the half', async () => {
+      // 100 000 stayed with the old group; 200 000 of the 400 000 month paid.
+      closed = [{ studentId: 1, chargedAmount: 100000 }];
+      const result = await onSecondLesson();
+      expect(result.get(1)).toMatchObject({ admitted: true, reason: 'PAID' });
+      expect(prisma.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith({
+        where: {
+          studentId: { in: [1] },
+          periodYear: 2026,
+          periodMonth: 11,
+          status: 'CHARGED',
+          enrollment: closedWhere,
+        },
+        select: { studentId: true, chargedAmount: true },
+      });
+    });
+
+    it('does not read closed charges where the least share does not apply', async () => {
+      await service.forLesson({
+        groupId: 'g005',
+        lessonDay: '2026-10-05',
+        studentIds: [1],
+      });
+      expect(prisma.enrollmentMonthlyCharge.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps a student below `payment.admissionMinPaidPercent` out', async () => {
+      const result = await onSecondLesson();
+      expect(result.get(1)).toMatchObject({
+        admitted: false,
+        reason: 'BELOW_MIN_SHARE',
+        shortfall: 50000,
+      });
+      expect(settings.get).toHaveBeenCalledWith(
+        5,
+        'payment.admissionMinPaidPercent',
+      );
+    });
+
+    it('0% asks only for the lessons held', async () => {
+      settings.get.mockImplementation((_companyId: number, key: string) =>
+        Promise.resolve(key === 'payment.admissionMinPaidPercent' ? 0 : true),
+      );
+      const result = await onSecondLesson();
+      expect(result.get(1)).toMatchObject({ admitted: true, reason: 'PAID' });
+    });
+
+    it('tells the payment dialog that it is the half that is short', async () => {
+      const reach = await service.reachForPayment({
+        studentId: 1,
+        companyId: 5,
+        balanceAfter: -200000,
+        today: '2026-11-04',
+      });
+      expect(reach).toMatchObject({
+        paidThrough: null,
+        next: { date: '2026-11-04', needed: 50000, minPaidPercent: 50 },
+      });
+    });
+
+    describe('reachForMonth (contract 3.7)', () => {
+      const forMonth = () =>
+        service.reachForMonth({
+          companyId: 5,
+          studentIds: [1],
+          today: '2026-11-18',
+        });
+
+      it("walks the month from its first lesson with the student's balance", async () => {
+        // Half paid: five lessons of ten, the 6th (13.11) is already behind.
+        prisma.student.findMany.mockResolvedValue([
+          { id: 1, balance: -150000 },
+        ]);
+        const reach = await forMonth();
+        expect(reach.get(1)).toEqual({
+          paidThrough: '2026-11-11',
+          next: {
+            date: '2026-11-13',
+            groupName: '#005',
+            needed: 30000,
+            minPaidPercent: null,
+          },
+          clearsDebt: false,
+        });
+        expect(prisma.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              studentId: { in: [1] },
+              periodYear: 2026,
+              periodMonth: 11,
+            }),
+          }),
+        );
+      });
+
+      it('is empty when contract 3.2 is switched off', async () => {
+        settings.get.mockResolvedValue(false);
+        expect((await forMonth()).size).toBe(0);
+        expect(prisma.student.findMany).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -241,5 +388,33 @@ describe('LessonAdmissionService', () => {
       ).resolves.toBe(false);
       expect(prisma.student.findUnique).not.toHaveBeenCalled();
     });
+  });
+
+  it("measures how far each debtor's payments reach into the month, whatever the rule switch (ADR-0062)", async () => {
+    settings.get.mockResolvedValue(false);
+    prisma.student.findMany.mockResolvedValue([
+      { id: 1, balance: -300000 },
+      { id: 2, balance: -100000 },
+      { id: 3, balance: -50000 },
+    ]);
+    prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+      chargeRow(1),
+      chargeRow(2),
+    ]);
+
+    const result = await service.monthCoverage({
+      groupId: 'g005',
+      lessonDay: '2026-10-05',
+      studentIds: [1, 2, 3],
+    });
+
+    expect(result.get(1)).toEqual({ lessons: 3, paid: 0, paidThrough: null });
+    expect(result.get(2)).toEqual({
+      lessons: 3,
+      paid: 2,
+      paidThrough: '2026-10-05',
+    });
+    expect(result.has(3)).toBe(false); // no charge this month
+    expect(settings.get).not.toHaveBeenCalled();
   });
 });

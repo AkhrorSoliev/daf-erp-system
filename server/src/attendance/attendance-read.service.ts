@@ -8,6 +8,7 @@ import {
   AttendanceMethod,
   AttendanceStatus,
   EnrollmentStatus,
+  PaymentModel,
 } from '@prisma/client';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 import {
@@ -586,7 +587,9 @@ export class AttendanceReadService {
         id: true,
         lessonStartTime: true,
         lessonEndTime: true,
-        course: { select: { price: true, lessonPaymentCount: true } },
+        course: {
+          select: { price: true, lessonPaymentCount: true, paymentModel: true },
+        },
       },
     });
     if (!group) throw new NotFoundException('Guruh topilmadi');
@@ -739,7 +742,11 @@ export class AttendanceReadService {
         lastCoveredDate: string | null;
       }
     >();
-    if (debtorBase.length > 0) {
+    // A monthly group's debtors get «Shu oy» from the facade instead
+    // (ADR-0062): its charge rows never open a cycle, so the cycle read would
+    // only find a stale pack from before the switch.
+    const monthly = group.course.paymentModel === PaymentModel.MONTHLY;
+    if (debtorBase.length > 0 && !monthly) {
       const { byDeduction } = await computeEnrollmentCoverage(
         this.prisma as unknown as CoveragePrismaLike,
         debtorBase.map((s) => s.enrollmentId),
@@ -777,6 +784,7 @@ export class AttendanceReadService {
       debtorStudents,
       perLessonCost,
       coursePrice: group.course.price,
+      paymentModel: group.course.paymentModel,
       effectiveStartTime,
       effectiveEndTime,
       // After the lesson, the students the register left out.

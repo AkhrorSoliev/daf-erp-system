@@ -39,9 +39,9 @@ export interface EnrollPreview {
   balance: number;
   /**
    * A transfer: what the old group's month gives back before the new group is
-   * charged; 0 otherwise. Absent from a server older than the field.
+   * charged; 0 otherwise.
    */
-  transferRelease?: number;
+  transferRelease: number;
   /** What is still to pay after the balance, as the server worked it out. */
   payable: number;
 }
@@ -50,8 +50,8 @@ export interface EnrollPreview {
  * The start-date picker and the money of enrolling into the selected group.
  * The money is informational: enrolling is never held up by it (an unpaid
  * student is the debtors panel's business), so while it loads, and when the
- * request fails (a server older than the endpoint answers 404), the picker
- * stays and the money lines are left out. There is no client-side fallback.
+ * request fails, the picker stays and the money lines are left out. There is
+ * no client-side fallback.
  */
 export function EnrollPreviewBlock({
   studentId,
@@ -74,8 +74,8 @@ export function EnrollPreviewBlock({
         })
         .then((r) => r.data),
     // The balance and today's date both move, so an old answer is never reused
-    // as a fresh one. No retries: an old server's 404 is final, and the
-    // loading line must not wait seconds to find that out.
+    // as a fresh one. No retries: the money is only informational, so a
+    // failure drops the lines at once instead of holding «Hisoblanmoqda…».
     staleTime: 0,
     retry: false,
   });
@@ -164,8 +164,8 @@ function PreviewLines({ preview }: { preview: EnrollPreview }) {
           {formatBalance(balance)}
         </span>
       </div>
-      {/* Absent (an older server) or 0 (not a transfer): no line. */}
-      {transferRelease !== undefined && transferRelease > 0 && (
+      {/* 0 (not a transfer): no line. */}
+      {transferRelease > 0 && (
         <div className="flex justify-between">
           <span className="text-muted-foreground">Eski guruhdan qaytadi:</span>
           <span className="font-mono tabular-nums">

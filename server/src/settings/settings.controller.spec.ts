@@ -268,6 +268,29 @@ describe('SettingsController — branch scope', () => {
     );
   });
 
+  it('the ADR-0064 numbers are written through their registry keys, 0 included', async () => {
+    prisma.user.findFirst.mockResolvedValue(ceoUser);
+    await controller.updatePayment(
+      { admissionMinPaidPercent: 0, paidThroughReminderDays: 3 } as any,
+      1,
+      1001,
+    );
+    expect(settingsService.set).toHaveBeenCalledWith(
+      1001,
+      'payment.admissionMinPaidPercent',
+      0,
+      1,
+      undefined,
+    );
+    expect(settingsService.set).toHaveBeenCalledWith(
+      1001,
+      'payment.paidThroughReminderDays',
+      3,
+      1,
+      undefined,
+    );
+  });
+
   it('excusedCreditEnabled: false is written too (same !== undefined guard)', async () => {
     prisma.user.findFirst.mockResolvedValue(ceoUser);
     await controller.updatePayment(
