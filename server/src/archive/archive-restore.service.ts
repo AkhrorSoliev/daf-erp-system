@@ -24,7 +24,10 @@ import {
   signInAccountChange,
 } from '../common/auth/student-account';
 import { loginForPhone } from '../common/auth/phone-account-rules';
-import { findExtraPhoneHolder } from '../students/shared/extra-phone-rule';
+import {
+  findExtraPhoneHolder,
+  type ExtraPhoneHolder,
+} from '../students/shared/extra-phone-rule';
 import {
   ENTITY_DEFAULT_STATUS,
   ENTITY_TYPE_MAP,
@@ -33,6 +36,18 @@ import {
   getStatusField,
   parseId,
 } from './shared/archive-meta';
+
+/** The history reason for a backup number the restore had to drop (ADR-0067). */
+function droppedBackupReason(holder: ExtraPhoneHolder): string {
+  switch (holder.kind) {
+    case 'card':
+      return `Arxivdan tiklanganda: raqam boshqa o'quvchida (#${holder.studentId})`;
+    case 'account':
+      return `Arxivdan tiklanganda: raqam boshqa o'quvchi hisobida (#${holder.userId})`;
+    case 'own-main':
+      return 'Arxivdan tiklanganda: zaxira raqam asosiy raqam bilan bir xil edi';
+  }
+}
 
 @Injectable()
 export class ArchiveRestoreService {
@@ -120,34 +135,29 @@ export class ArchiveRestoreService {
           : null;
         if (droppedBackup) restoreData.extraPhone = null;
 
-        // The card and its sign-in account come back together (ADR-0033).
+        // The card and its sign-in account come back together (ADR-0033);
+        // the history row of a dropped backup number commits with them.
         await this.prisma.$transaction(async (tx) => {
           await tx.student.update({
             where: { id: parsedId as number },
             data: restoreData,
           });
           await this.reopenStudentAccount(tx, record, userId);
+          if (droppedBackup) {
+            await this.entityHistoryService.recordUpdate({
+              entityType: 'Student',
+              entityId: parsedId as number,
+              oldValues: { extraPhone: record.extraPhone, sabab: null },
+              newValues: {
+                extraPhone: null,
+                sabab: droppedBackupReason(droppedBackup),
+              },
+              changedById: userId,
+              companyId: record.companyId ?? undefined,
+              tx,
+            });
+          }
         });
-
-        if (droppedBackup) {
-          const holder =
-            droppedBackup.kind === 'card'
-              ? `#${droppedBackup.studentId}`
-              : droppedBackup.kind === 'account'
-                ? `hisob #${droppedBackup.userId}`
-                : 'asosiy raqam';
-          await this.entityHistoryService.recordUpdate({
-            entityType: 'Student',
-            entityId: parsedId as number,
-            oldValues: { extraPhone: record.extraPhone, sabab: null },
-            newValues: {
-              extraPhone: null,
-              sabab: `Arxivdan tiklanganda: raqam boshqa o'quvchida (${holder})`,
-            },
-            changedById: userId,
-            companyId: record.companyId ?? undefined,
-          });
-        }
       } else {
         await delegate.update({
           where: { id: parsedId },

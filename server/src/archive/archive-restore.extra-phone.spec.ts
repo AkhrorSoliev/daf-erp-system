@@ -20,7 +20,7 @@ describe('ArchiveRestoreService — backup number on restore (ADR-0067)', () => 
   let history: any;
   let service: ArchiveRestoreService;
 
-  function build(holder: any) {
+  function build(holder: any, card: typeof CARD = CARD) {
     tx = { student: { update: jest.fn().mockResolvedValue({}) }, user: {} };
     prisma = {
       student: {
@@ -28,7 +28,7 @@ describe('ArchiveRestoreService — backup number on restore (ADR-0067)', () => 
         // 3rd: the rule's "another card on the backup number".
         findFirst: jest
           .fn()
-          .mockResolvedValueOnce(CARD)
+          .mockResolvedValueOnce(card)
           .mockResolvedValueOnce(null)
           .mockResolvedValueOnce(holder),
         update: jest.fn(),
@@ -68,6 +68,41 @@ describe('ArchiveRestoreService — backup number on restore (ADR-0067)', () => 
         },
         changedById: 7,
         companyId: 1001,
+        tx,
+      }),
+    );
+  });
+
+  it('names the account when a live student account holds the backup number', async () => {
+    build(null);
+    prisma.user.findFirst.mockResolvedValue({ id: 30077 });
+    await service.restore(ArchiveEntityType.STUDENTS, 20001, 7, 1001);
+    expect(tx.student.update.mock.calls[0][0].data.extraPhone).toBeNull();
+    expect(history.recordUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newValues: {
+          extraPhone: null,
+          sabab:
+            "Arxivdan tiklanganda: raqam boshqa o'quvchi hisobida (#30077)",
+        },
+        tx,
+      }),
+    );
+  });
+
+  it('clears a backup number equal to the main number with its own reason', async () => {
+    build(null, { ...CARD, extraPhone: CARD.phone });
+    await service.restore(ArchiveEntityType.STUDENTS, 20001, 7, 1001);
+    expect(tx.student.update.mock.calls[0][0].data.extraPhone).toBeNull();
+    expect(history.recordUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        oldValues: { extraPhone: '901112233', sabab: null },
+        newValues: {
+          extraPhone: null,
+          sabab:
+            'Arxivdan tiklanganda: zaxira raqam asosiy raqam bilan bir xil edi',
+        },
+        tx,
       }),
     );
   });
