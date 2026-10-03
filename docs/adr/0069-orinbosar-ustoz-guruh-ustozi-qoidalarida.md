@@ -1,4 +1,4 @@
-# ADR-0067 — O'rinbosar ustoz guruh ustozi qoidalariga bo'ysunadi: o'qituvchi roli, guruh filiali, ish haqi stavkasi
+# ADR-0069 — O'rinbosar ustoz guruh ustozi qoidalariga bo'ysunadi: o'qituvchi roli, guruh filiali, ish haqi stavkasi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-03
