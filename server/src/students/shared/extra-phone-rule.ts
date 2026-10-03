@@ -26,6 +26,8 @@ export const EXTRA_PHONE_TAKEN_ACCOUNT_STAFF_MESSAGE =
   "Bu raqam boshqa o'quvchi hisobida bor";
 export const extraPhoneTakenStaffMessage = (name: string) =>
   `Bu raqam boshqa o'quvchida bor: ${name}`;
+export const EXTRA_PHONE_TAKEN_ELSEWHERE_STAFF_MESSAGE =
+  "Bu raqam boshqa filialdagi o'quvchida bor";
 
 /**
  * Another live student account that signs in with this number (by `phone` or
@@ -84,12 +86,18 @@ export async function findExtraPhoneHolder(
   return account ? { kind: 'account', userId: account.id } : null;
 }
 
-/** Throws 400 when the number is not free; the text depends on who asked. */
+/**
+ * Throws 400 when the number is not free; the text depends on who asked.
+ * The check is global (sign-in is), but staff see the holder's name only when
+ * `opts.mayName` says they may open that student — otherwise a number typed
+ * into one branch's form would read out another branch's student.
+ */
 export async function assertExtraPhoneFree(
   db: ExtraPhoneDb,
   phone: string,
   self: ExtraPhoneSelf,
   audience: 'staff' | 'student',
+  opts?: { mayName?: (studentId: number) => Promise<boolean> },
 ): Promise<void> {
   const holder = await findExtraPhoneHolder(db, phone, self);
   if (!holder) return;
@@ -99,9 +107,13 @@ export async function assertExtraPhoneFree(
   if (audience === 'student') {
     throw new BadRequestException(EXTRA_PHONE_TAKEN_STUDENT_MESSAGE);
   }
+  if (holder.kind === 'account') {
+    throw new BadRequestException(EXTRA_PHONE_TAKEN_ACCOUNT_STAFF_MESSAGE);
+  }
+  const mayName = (await opts?.mayName?.(holder.studentId)) === true;
   throw new BadRequestException(
-    holder.kind === 'card'
+    mayName
       ? extraPhoneTakenStaffMessage(holder.name)
-      : EXTRA_PHONE_TAKEN_ACCOUNT_STAFF_MESSAGE,
+      : EXTRA_PHONE_TAKEN_ELSEWHERE_STAFF_MESSAGE,
   );
 }

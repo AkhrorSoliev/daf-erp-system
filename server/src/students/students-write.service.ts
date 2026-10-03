@@ -119,6 +119,19 @@ export class StudentsWriteService {
         dto.extraPhone,
         { studentId: null, userId: null, phone: dto.phone },
         'staff',
+        {
+          // Name the holder only to staff who may open that student.
+          mayName: (holderId) =>
+            assertCallerMayTouchStudent(
+              this.prisma,
+              userId,
+              holderId,
+              companyId,
+            ).then(
+              () => true,
+              () => false,
+            ),
+        },
       );
     }
 
@@ -294,6 +307,19 @@ export class StudentsWriteService {
         nextExtraPhone,
         { studentId: id, userId: student.userId, phone: nextPhone },
         'staff',
+        {
+          // Name the holder only to staff who may open that student.
+          mayName: (holderId) =>
+            assertCallerMayTouchStudent(
+              this.prisma,
+              userId,
+              holderId,
+              companyId,
+            ).then(
+              () => true,
+              () => false,
+            ),
+        },
       );
     }
 

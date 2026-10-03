@@ -12,6 +12,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { TransactionsService } from '../transactions/transactions.service';
 import {
   EXTRA_PHONE_IS_MAIN_MESSAGE,
+  EXTRA_PHONE_TAKEN_ELSEWHERE_STAFF_MESSAGE,
   extraPhoneTakenStaffMessage,
 } from './shared/extra-phone-rule';
 
@@ -83,15 +84,44 @@ describe('StudentsWriteService — backup number (ADR-0070)', () => {
   describe('update', () => {
     it("refuses a backup number another student's card holds, naming them", async () => {
       // 1st: the card being edited; 2nd: the branch guard's existence check;
-      // 3rd: the rule's "another card on the number".
+      // 3rd: the rule's "another card on the number"; 4th: the naming check's
+      // existence lookup (the caller is a CEO, who may open every student).
       prisma.student.findFirst
         .mockResolvedValueOnce(student)
         .mockResolvedValueOnce({ id: 10077 })
-        .mockResolvedValueOnce(HOLDER);
+        .mockResolvedValueOnce(HOLDER)
+        .mockResolvedValueOnce({ id: HOLDER.id });
 
       await expect(
         service.update(10077, { extraPhone: '935554433' }, CEO, COMPANY),
       ).rejects.toThrow(extraPhoneTakenStaffMessage('Vali Aliyev'));
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('does not name a holder the caller may not open (another branch)', async () => {
+      const ADMIN = 10002;
+      prisma.user.findFirst.mockResolvedValue({
+        id: ADMIN,
+        mainBranch: 1,
+        branches: [{ branchId: 1 }],
+        roles: [{ role: { name: 'Administrator' } }],
+      });
+      // The edited card is in branch 1 (the caller's), the holder in branch 2.
+      prisma.studentBranch.findFirst
+        .mockResolvedValueOnce({ branchId: 1 })
+        .mockResolvedValueOnce({ branchId: 2 });
+      prisma.student.findFirst
+        .mockResolvedValueOnce(student)
+        .mockResolvedValueOnce({ id: 10077 })
+        .mockResolvedValueOnce(HOLDER)
+        .mockResolvedValueOnce({ id: HOLDER.id });
+
+      const err = await service
+        .update(10077, { extraPhone: '935554433' }, ADMIN, COMPANY)
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(BadRequestException);
+      expect(err.message).toBe(EXTRA_PHONE_TAKEN_ELSEWHERE_STAFF_MESSAGE);
+      expect(err.message).not.toContain('Vali');
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 

@@ -29,7 +29,10 @@ o'zi ham profilidan qo'sha olsin, admin kartada barcha raqamlarni ko'rsin.
    boshqa o'chirilmagan kartaning asosiy yoki zaxira raqamiga, boshqa tirik
    o'quvchi hisobining kirish raqamiga teng bo'lmaydi (`assertExtraPhoneFree`;
    xodim hisobi to'siq emas — ADR-0022). Admin tahriri va yaratishi 400 bilan
-   rad etadi; lid aylantirish va arxivdan tiklash to'xtamaydi — band raqam
+   rad etadi. Tekshiruv butun tizim bo'yicha (kirish ham shunday), lekin
+   egasining ismi xodimga faqat u ocha oladigan o'quvchi bo'lsa yoziladi;
+   aks holda «Bu raqam boshqa filialdagi o'quvchida bor» — bir filial
+   xodimi raqam yozib, boshqa filial o'quvchisining ismini bilib olmasin; lid aylantirish va arxivdan tiklash to'xtamaydi — band raqam
    ko'chmaydi / olib tashlanadi; olib tashlash kartaning tarixiga tiklash
    tranzaksiyasi ichida yoziladi. Asosiy raqam boshqa
    o'quvchining zaxira raqamiga o'zgarsa, saqlash to'xtatilmaydi — eski zaxira

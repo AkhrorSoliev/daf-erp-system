@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import {
   EXTRA_PHONE_IS_MAIN_MESSAGE,
   EXTRA_PHONE_TAKEN_ACCOUNT_STAFF_MESSAGE,
+  EXTRA_PHONE_TAKEN_ELSEWHERE_STAFF_MESSAGE,
   EXTRA_PHONE_TAKEN_STUDENT_MESSAGE,
   assertExtraPhoneFree,
   extraPhoneTakenStaffMessage,
@@ -75,14 +76,17 @@ describe('extra-phone-rule (ADR-0070)', () => {
     expect(d.user.findFirst.mock.calls[0][0].where.id).toBeUndefined();
   });
 
-  it('staff are told who holds the number, a student is not', async () => {
+  it('staff who may open the holder are told who it is, a student is not', async () => {
     const taken = db({ id: 10999, firstName: 'Vali', lastName: 'Aliyev' });
+    const mayName = jest.fn().mockResolvedValue(true);
     const staffErr = await assertExtraPhoneFree(
       taken as any,
       NUMBER,
       SELF,
       'staff',
+      { mayName },
     ).catch((e) => e);
+    expect(mayName).toHaveBeenCalledWith(10999);
     expect(staffErr).toBeInstanceOf(BadRequestException);
     expect(staffErr.message).toBe(
       "Bu raqam boshqa o'quvchida bor: Vali Aliyev",
@@ -112,6 +116,30 @@ describe('extra-phone-rule (ADR-0070)', () => {
     ).rejects.toThrow(EXTRA_PHONE_IS_MAIN_MESSAGE);
     expect(extraPhoneTakenStaffMessage('Vali Aliyev')).toBe(staffErr.message);
     expect(EXTRA_PHONE_TAKEN_STUDENT_MESSAGE).toBe(studentErr.message);
+  });
+
+  it('staff who may not open the holder get no name (another branch)', async () => {
+    const taken = db({ id: 10999, firstName: 'Vali', lastName: 'Aliyev' });
+    const err = await assertExtraPhoneFree(
+      taken as any,
+      NUMBER,
+      SELF,
+      'staff',
+      {
+        mayName: () => Promise.resolve(false),
+      },
+    ).catch((e) => e);
+    expect(err).toBeInstanceOf(BadRequestException);
+    expect(err.message).toBe(EXTRA_PHONE_TAKEN_ELSEWHERE_STAFF_MESSAGE);
+    expect(err.message).toBe("Bu raqam boshqa filialdagi o'quvchida bor");
+    expect(err.message).not.toContain('Vali');
+  });
+
+  it('staff with no mayName get no name either (fail closed)', async () => {
+    const taken = db({ id: 10999, firstName: 'Vali', lastName: 'Aliyev' });
+    await expect(
+      assertExtraPhoneFree(taken as any, NUMBER, SELF, 'staff'),
+    ).rejects.toThrow(EXTRA_PHONE_TAKEN_ELSEWHERE_STAFF_MESSAGE);
   });
 
   it('a free number passes', async () => {
