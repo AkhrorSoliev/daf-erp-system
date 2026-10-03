@@ -42,6 +42,8 @@ export class DashboardController {
     @Query() query: TodayScheduleQueryDto,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() branchScope: ReportBranchIds,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
     // The timetable is inherently per-branch (it is laid out against ONE
     // branch's rooms and working hours), so `query.branchId` used to be taken
@@ -57,10 +59,16 @@ export class DashboardController {
     if (branchId == null) {
       throw new BadRequestException('Filial tanlanishi shart');
     }
+    // A pure teacher gets their own lessons only, like every other
+    // teacher-scoped read. The page used to receive the whole branch's day
+    // and hide the rest in the browser.
+    const isTeacherOnly =
+      roles.length > 0 && roles.every((r) => r === 'Teacher');
     return this.dashboardService.getTodaySchedule(
       branchId,
       companyId,
       query.date,
+      isTeacherOnly ? userId : undefined,
     );
   }
   /**
