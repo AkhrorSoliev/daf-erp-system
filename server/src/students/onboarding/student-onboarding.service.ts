@@ -19,7 +19,7 @@ import {
   missingOnboardingSteps,
 } from '../shared/student-onboarding';
 import { markPhoneVerified } from '../shared/mark-phone-verified';
-import { STUDENT_ROLE_ID } from '../shared/student-select';
+import { findStudentAccountOnNumber } from '../shared/extra-phone-rule';
 import { planPhoneChange } from '../../common/auth/phone-account-rules';
 import {
   INVALID_CODE_MESSAGE,
@@ -375,15 +375,7 @@ export class StudentOnboardingService {
         where: { phone, deletedAt: null, id: { not: student.id } },
         select: { id: true },
       }),
-      this.prisma.user.findFirst({
-        where: {
-          OR: [{ phone }, { login: phone }],
-          deletedAt: null,
-          roles: { some: { roleId: STUDENT_ROLE_ID } },
-          ...(student.userId !== null && { id: { not: student.userId } }),
-        },
-        select: { id: true },
-      }),
+      findStudentAccountOnNumber(this.prisma, phone, student.userId),
     ]);
     if (card || account) throw new BadRequestException(NUMBER_TAKEN_MESSAGE);
   }

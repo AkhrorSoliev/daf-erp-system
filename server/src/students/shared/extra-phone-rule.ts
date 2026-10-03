@@ -1,14 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
+import type { PrismaService } from '../../prisma/prisma.service';
 import { STUDENT_ROLE_ID } from './student-select';
 
-/**
- * Is a backup number (`Student.extraPhone`) free to take? ADR-0067: a backup
- * number is a sign-in key, and one number signs exactly one student in — so
- * it may not be this card's own main number, another live card's main or
- * backup number, or another live student account's sign-in number. Staff
- * accounts do not count (ADR-0022: the same person may be staff). Every
- * writer of `extraPhone` asks here and nowhere else.
- */
 export type ExtraPhoneHolder =
   | { kind: 'own-main' }
   | { kind: 'card'; studentId: number; name: string }
@@ -23,14 +16,8 @@ export type ExtraPhoneSelf = {
   phone: string;
 };
 
-type Db = {
-  student: {
-    findFirst: (args: any) => Promise<any>;
-  };
-  user: {
-    findFirst: (args: any) => Promise<any>;
-  };
-};
+// `Pick`, not `PrismaService`: a transaction client has the same two models.
+export type ExtraPhoneDb = Pick<PrismaService, 'student' | 'user'>;
 
 export const EXTRA_PHONE_IS_MAIN_MESSAGE =
   "Zaxira raqam asosiy raqam bilan bir xil bo'lmasin";
@@ -38,10 +25,40 @@ export const EXTRA_PHONE_TAKEN_STUDENT_MESSAGE = "Bu raqamni qo'shib bo'lmaydi";
 export const EXTRA_PHONE_TAKEN_ACCOUNT_STAFF_MESSAGE =
   "Bu raqam boshqa o'quvchi hisobida bor";
 export const extraPhoneTakenStaffMessage = (name: string) =>
-  `Bu raqam boshqa o'quvchida bor: ${name}`.trim();
+  `Bu raqam boshqa o'quvchida bor: ${name}`;
 
+/**
+ * Another live student account that signs in with this number (by `phone` or
+ * `login`), or null. Staff accounts do not count (ADR-0022: the same person
+ * may be staff). `excludeUserId` is the account being written, null for none.
+ * The one account-holder predicate: the backup-number rule and the first-run
+ * number change both ask here.
+ */
+export function findStudentAccountOnNumber(
+  db: ExtraPhoneDb,
+  phone: string,
+  excludeUserId: number | null,
+): Promise<{ id: number } | null> {
+  return db.user.findFirst({
+    where: {
+      OR: [{ phone }, { login: phone }],
+      deletedAt: null,
+      roles: { some: { roleId: STUDENT_ROLE_ID } },
+      ...(excludeUserId !== null && { id: { not: excludeUserId } }),
+    },
+    select: { id: true },
+  });
+}
+
+/**
+ * Is a backup number (`Student.extraPhone`) free to take? ADR-0067: a backup
+ * number is a sign-in key, and one number signs exactly one student in — so
+ * it may not be this card's own main number, another live card's main or
+ * backup number, or another live student account's sign-in number. Every
+ * writer of `extraPhone` asks here and nowhere else.
+ */
 export async function findExtraPhoneHolder(
-  db: Db,
+  db: ExtraPhoneDb,
   phone: string,
   self: ExtraPhoneSelf,
 ): Promise<ExtraPhoneHolder | null> {
@@ -63,21 +80,13 @@ export async function findExtraPhoneHolder(
     };
   }
 
-  const account = await db.user.findFirst({
-    where: {
-      deletedAt: null,
-      OR: [{ phone }, { login: phone }],
-      roles: { some: { roleId: STUDENT_ROLE_ID } },
-      ...(self.userId !== null && { id: { not: self.userId } }),
-    },
-    select: { id: true },
-  });
+  const account = await findStudentAccountOnNumber(db, phone, self.userId);
   return account ? { kind: 'account', userId: account.id } : null;
 }
 
 /** Throws 400 when the number is not free; the text depends on who asked. */
 export async function assertExtraPhoneFree(
-  db: Db,
+  db: ExtraPhoneDb,
   phone: string,
   self: ExtraPhoneSelf,
   audience: 'staff' | 'student',
