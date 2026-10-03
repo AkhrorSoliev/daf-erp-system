@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CALL_LOG_ROLES,
   COMPANY_EDIT_ROLES,
+  FINANCIAL_OVERVIEW_ROLES,
   FROZEN_BALANCE_ACTION_ROLES,
   GROUP_PAGE_ROLES,
   STUDENT_PROFILE_ROLES,
@@ -89,5 +90,14 @@ describe("qarzdorlik sahifasining amallari (/payments/debt)", () => {
     expect(hasAnyRole(roles(ADMINISTRATOR), FROZEN_BALANCE_ACTION_ROLES)).toBe(
       true,
     );
+  });
+});
+
+describe("Umumiy ma'lumotlar — GET /reports/financial-overview (reports.controller.ts)", () => {
+  it("faqat CEO va filial direktori", () => {
+    expect(hasAnyRole(roles(CEO), FINANCIAL_OVERVIEW_ROLES)).toBe(true);
+    expect(hasAnyRole(roles(BRANCH_DIRECTOR), FINANCIAL_OVERVIEW_ROLES)).toBe(true);
+    expect(hasAnyRole(roles(ADMINISTRATOR), FINANCIAL_OVERVIEW_ROLES)).toBe(false);
+    expect(hasAnyRole(roles(CASHIER), FINANCIAL_OVERVIEW_ROLES)).toBe(false);
   });
 });

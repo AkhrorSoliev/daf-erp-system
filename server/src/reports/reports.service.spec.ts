@@ -1291,7 +1291,8 @@ describe('ReportsService', () => {
       const svc: any = service;
       jest.spyOn(svc, 'getIncomeMonthAttribution').mockResolvedValue({
         total: 170_378_987,
-        currentMonth: 142_064_938,
+        currentMonth: 100_000_000,
+        advance: 42_064_938,
         lateTotal: 28_314_049,
         late: [],
       });
@@ -1322,6 +1323,7 @@ describe('ReportsService', () => {
         .mockResolvedValue({
           total: 0,
           currentMonth: 0,
+          advance: 0,
           lateTotal: 0,
           late: [],
         });
@@ -1395,9 +1397,13 @@ describe('ReportsService', () => {
 
   describe('getFinancialTrendCanonical — cache key', () => {
     it('keys a multi-branch scope by its own branch set, never the company entry', async () => {
+      // The earlier month goes through the day cache; the last (anchor) one is live.
       jest
         .spyOn((service as any).financial, 'getFinancialTrend')
-        .mockResolvedValue([{ monthKey: '2026-08', profit: 0 }]);
+        .mockResolvedValue([
+          { monthKey: '2026-08', profit: 0 },
+          { monthKey: '2026-09', profit: 0 },
+        ]);
       jest
         .spyOn(service, 'getMonthlyNetProfit')
         .mockResolvedValue({ netProfit: 4_200_000 } as any);
@@ -1420,6 +1426,53 @@ describe('ReportsService', () => {
         profit: 4_200_000,
         profitBasis: 'kanonik',
       });
+    });
+
+    it('computes the anchor (last) month live and never reads or writes its cache; earlier months keep the cache', async () => {
+      jest
+        .spyOn((service as any).financial, 'getFinancialTrend')
+        .mockResolvedValue([
+          { monthKey: '2026-08', profit: 0 },
+          { monthKey: '2026-09', profit: 0 },
+        ]);
+      // A stale cached figure sits under BOTH months.
+      redis.get.mockResolvedValue('1111');
+      const np = jest
+        .spyOn(service, 'getMonthlyNetProfit')
+        .mockResolvedValue({ netProfit: 2_500_000 } as any);
+
+      const rows = await service.getFinancialTrendCanonical(1001, null, 10001);
+
+      // Earlier month: served from the cache, nothing computed for it.
+      expect(rows[0]).toMatchObject({ profit: 1111, profitBasis: 'kanonik' });
+      expect(redis.get).toHaveBeenCalledWith(
+        'rpt:np:v5:1001:all:u10001:2026-08',
+      );
+      // Anchor month: the live figure, the cache untouched for its key.
+      expect(rows[1]).toMatchObject({
+        profit: 2_500_000,
+        profitBasis: 'kanonik',
+      });
+      expect(np).toHaveBeenCalledTimes(1);
+      expect(np).toHaveBeenCalledWith(1001, {
+        month: '2026-09',
+        branchIds: null,
+        performedById: 10001,
+      });
+      expect(redis.get).not.toHaveBeenCalledWith(
+        'rpt:np:v5:1001:all:u10001:2026-09',
+      );
+      expect(redis.setex).not.toHaveBeenCalled();
+    });
+
+    it('hands the asked month to the raw trend', async () => {
+      const trend = jest
+        .spyOn((service as any).financial, 'getFinancialTrend')
+        .mockResolvedValue([]);
+
+      await service.getFinancialTrendCanonical(1001, null, 10001, '2026-08');
+
+      expect(trend).toHaveBeenCalledWith(1001, null, '2026-08');
     });
   });
 

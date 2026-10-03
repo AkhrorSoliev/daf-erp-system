@@ -756,6 +756,16 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'ids from the already-scoped lessons.',
     routes: ['GET /reports/profit-composition'],
   },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      'The marketing report resolves its scope with `resolveCallerReportBranchIds` ' +
+      '(ceiling ∩ requested, 403 on an empty scope) and hands the one list to ' +
+      'every leg: first payments through `studentBranchWhere`, MARKETING spend ' +
+      'through `branchIdWhere`, and the month charges, departures and lead-source ' +
+      'cohort through their own services with the same list.',
+    routes: ['GET /reports/marketing'],
+  },
 ];
 
 /**

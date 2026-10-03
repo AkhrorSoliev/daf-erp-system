@@ -62,7 +62,9 @@ async function main() {
 
     console.log(`══════ ${monthKey}  (${startDate} … ${endDate}) ══════`);
     console.log(`Jami tushum              : ${fmt(r.total)}`);
-    console.log(`  shu davr uchun         : ${fmt(r.currentMonth)}`);
+    console.log(
+      `  shu davr uchun         : ${fmt(r.currentMonth + r.advance)}`,
+    );
     console.log(`  eski qarz uchun        : ${fmt(r.lateTotal)}`);
     console.log(`Shu davrning darslari    : ${fmt(r.lessonsValue)}`);
     console.log(`YANGI  «Yig'im»          : ${r.collectionPct}%`);

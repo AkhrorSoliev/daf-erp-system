@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsFinancialService } from './reports-financial.service';
 import { ReportsExpectationService } from './reports-expectation.service';
+import { ReportsMarketingService } from './marketing/reports-marketing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { RedisService } from '../redis/redis.service';
@@ -31,6 +32,8 @@ function hasBranchPredicate(where: any): boolean {
   if (where.user !== undefined) return true;
   // Through a joined row that carries it (accruals via their group).
   if (where.group?.branchId !== undefined) return true;
+  // On the student a row belongs to (first payments of the marketing report).
+  if (where.student?.branches !== undefined) return true;
   return false;
 }
 
@@ -121,6 +124,27 @@ describe('branch scope coverage', () => {
     expect(scoped.map((c) => `${c.model}.${c.method}`)).toEqual([]);
   });
 
+  it("getFinancialOverview scopes yesterday's cash too", async () => {
+    // 15.10.2026 10:00 in Tashkent: the period is the current month, so the
+    // yesterday leg runs.
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-15T05:00:00Z'));
+    try {
+      await service.getFinancialOverview(1, {
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+        branchIds: [2],
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+
+    expect(prisma.payment.aggregate).toHaveBeenCalledTimes(2);
+    const unscoped = everyWhereClause().filter(
+      (c) => !hasBranchPredicate(c.where),
+    );
+    expect(unscoped.map((c) => `${c.model}.${c.method}`)).toEqual([]);
+  });
+
   it('getPeriodOutflows scopes refunds, write-offs AND gateway fees', async () => {
     await service.getPeriodOutflows(1, { ...period, branchIds: [2] });
 
@@ -152,9 +176,8 @@ describe('branch scope coverage', () => {
     expect(unscoped.map((c) => `${c.model}.${c.method}`)).toEqual([]);
   });
 
-  it('getFinancialTrend scopes the count legs, not just the money legs', async () => {
-    // H17: money came from the branch, new-student and payer COUNTS from the
-    // whole company — so an empty branch plotted 0 so'm beside 715 students.
+  it('getFinancialTrend scopes every leg', async () => {
+    // The count legs (H17) went with the marketing series; what is left must still be scoped.
     await service.getFinancialTrend(1, [2]);
 
     const unscoped = everyWhereClause().filter(
@@ -356,5 +379,39 @@ describe('branch scope coverage — month charges', () => {
     ).toEqual({ in: [] });
     expect(r.charged).toBe(0);
     expect(prisma.student.findMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The marketing report's own two reads: first payments are scoped by the
+ * student's branch, the MARKETING spend by the expense's. The month charges,
+ * departures and lead sources are read through their own services with the
+ * same list (each has its own coverage).
+ */
+describe('branch scope coverage — marketing', () => {
+  it('scopes the first-payment and the spend reads', async () => {
+    const prisma = {
+      payment: { groupBy: jest.fn().mockResolvedValue([]) },
+      expense: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new ReportsMarketingService(
+      prisma as never,
+      { getMonthCharges: jest.fn().mockResolvedValue(null) } as never,
+      {
+        getDepartedStudentsSummary: jest
+          .fn()
+          .mockResolvedValue({ avgDurationMonths: 0 }),
+      } as never,
+      { getSourceBreakdown: jest.fn().mockResolvedValue([]) } as never,
+    );
+
+    await service.getMarketing(1, { month: '2026-09', branchIds: [2] });
+
+    expect(
+      hasBranchPredicate(prisma.payment.groupBy.mock.calls[0][0].where),
+    ).toBe(true);
+    expect(
+      hasBranchPredicate(prisma.expense.findMany.mock.calls[0][0].where),
+    ).toBe(true);
   });
 });

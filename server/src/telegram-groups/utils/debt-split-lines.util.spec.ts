@@ -11,8 +11,17 @@ const split: DebtSplit = {
     count: 12,
     currentMonth: 1_500_000,
     older: 2_100_000,
+    olderCount: 5,
   },
-  notStudying: { total: 900_000, count: 7 },
+  notStudying: {
+    total: 900_000,
+    count: 7,
+    byKind: {
+      ungrouped: { total: 300_000, count: 2 },
+      frozen: { total: 400_000, count: 3 },
+      left: { total: 200_000, count: 2 },
+    },
+  },
 };
 
 const studyingLine = `• O'qiyotganlar qarzi: <b>${formatNumber(12)}</b> ta — <b>${formatSum(3_600_000)}</b>`;
@@ -40,7 +49,13 @@ describe('buildDebtSplitLines', () => {
 
   it('leaves the shu oy / eski qarz line out when nobody studying owes', () => {
     const lines = buildDebtSplitLines({
-      studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
+      studying: {
+        total: 0,
+        count: 0,
+        currentMonth: 0,
+        older: 0,
+        olderCount: 0,
+      },
       notStudying: split.notStudying,
     });
 

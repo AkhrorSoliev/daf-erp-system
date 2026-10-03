@@ -76,7 +76,10 @@ describe('PaymentsService', () => {
       studentBranch: {
         findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
       },
-      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
+      enrollment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       // Debtor reads resolve the caller's branch ceiling from their record.
       // Default caller here is a CEO, i.e. unrestricted.
       user: {
@@ -764,11 +767,106 @@ describe('PaymentsService', () => {
       );
 
       expect(result).toEqual({
-        data: [mockPaymentWithRelations],
+        data: [
+          {
+            ...mockPaymentWithRelations,
+            student: { ...mockPaymentWithRelations.student, groups: [] },
+          },
+        ],
         total: 1,
         page: 1,
         pageSize: 10,
       });
+    });
+
+    it("adds each student's groups now, read in ONE query for the whole page", async () => {
+      prisma.payment.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          student: { id: 10001, firstName: 'Ali', lastName: 'Valiyev' },
+        },
+        {
+          id: 'p2',
+          student: { id: 10002, firstName: 'Vali', lastName: 'Aliyev' },
+        },
+        {
+          id: 'p3',
+          student: { id: 10001, firstName: 'Ali', lastName: 'Valiyev' },
+        },
+      ]);
+      prisma.payment.count.mockResolvedValue(3);
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, group: { id: 'g1', name: 'A1-07' } },
+        { studentId: 10001, group: { id: 'g2', name: 'B1-02' } },
+      ]);
+
+      const result = await service.findAll({} as any, 1001, null);
+
+      expect(prisma.enrollment.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.enrollment.findMany.mock.calls[0][0]).toEqual({
+        where: {
+          studentId: { in: [10001, 10002] },
+          deletedAt: null,
+          status: 'ACTIVE',
+          group: {},
+        },
+        select: {
+          studentId: true,
+          group: { select: { id: true, name: true } },
+        },
+        orderBy: { group: { name: 'asc' } },
+      });
+      expect(result.data.map((r: any) => r.student.groups)).toEqual([
+        [
+          { id: 'g1', name: 'A1-07' },
+          { id: 'g2', name: 'B1-02' },
+        ],
+        [],
+        [
+          { id: 'g1', name: 'A1-07' },
+          { id: 'g2', name: 'B1-02' },
+        ],
+      ]);
+    });
+
+    it("does not list a group in a branch outside the caller's scope", async () => {
+      prisma.payment.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          student: { id: 10001, firstName: 'Ali', lastName: 'Valiyev' },
+        },
+      ]);
+      prisma.payment.count.mockResolvedValue(1);
+      // One student, two live groups: one in branch 2, one in branch 3.
+      const live = [
+        { studentId: 10001, branchId: 3, group: { id: 'g9', name: 'A2-01' } },
+        { studentId: 10001, branchId: 2, group: { id: 'g1', name: 'B1-02' } },
+      ];
+      prisma.enrollment.findMany.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          live
+            .filter((e) => where.group.branchId.in.includes(e.branchId))
+            .map(({ studentId, group }) => ({ studentId, group })),
+        ),
+      );
+
+      const result = await service.findAll({} as any, 1001, [2]);
+
+      expect(prisma.enrollment.findMany.mock.calls[0][0].where.group).toEqual({
+        branchId: { in: [2] },
+      });
+      expect(result.data[0].student.groups).toEqual([
+        { id: 'g1', name: 'B1-02' },
+      ]);
+    });
+
+    it('reads no enrollments for an empty page', async () => {
+      prisma.payment.findMany.mockResolvedValue([]);
+      prisma.payment.count.mockResolvedValue(0);
+
+      await service.findAll({} as any, 1001, null);
+
+      expect(prisma.enrollment.findMany).not.toHaveBeenCalled();
     });
 
     it('should apply date range filters when both startDate and endDate provided', async () => {
