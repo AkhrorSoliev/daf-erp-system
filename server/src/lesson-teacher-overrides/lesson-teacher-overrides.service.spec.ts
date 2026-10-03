@@ -711,6 +711,62 @@ describe('LessonTeacherOverridesService', () => {
       expect(tx.lessonTeacherOverride.update).not.toHaveBeenCalled();
     });
 
+    it("removes a substitute in the caller's own branch", async () => {
+      tx.user.findFirst.mockResolvedValue({
+        ...otherBranchAdmin,
+        mainBranch: 1,
+        branches: [{ branchId: 1 }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+      tx.lessonTeacherOverride.findFirst.mockResolvedValue({
+        id: 'override-1',
+        groupId: 'group-1',
+        date: new Date('2026-05-13T00:00:00Z'),
+        teacherIds: [10042],
+      });
+      tx.lessonTeacherOverride.update.mockResolvedValue({});
+
+      await service.remove('override-1', 1, 99, ['Branch Director']);
+
+      expect(tx.lessonTeacherOverride.update).toHaveBeenCalled();
+    });
+
+    describe('a CEO attached to another branch', () => {
+      beforeEach(() => {
+        tx.user.findFirst.mockResolvedValue({
+          ...otherBranchAdmin,
+          roles: [{ role: { name: 'CEO' } }],
+        });
+      });
+
+      it("sets a substitute in any branch's group", async () => {
+        await service.upsert(
+          'group-1',
+          wednesday,
+          { teacherIds: [10042] },
+          1,
+          99,
+          ['CEO'],
+        );
+
+        expect(tx.lessonTeacherOverride.create).toHaveBeenCalled();
+      });
+
+      it("removes a substitute in any branch's group", async () => {
+        tx.lessonTeacherOverride.findFirst.mockResolvedValue({
+          id: 'override-1',
+          groupId: 'group-1',
+          date: new Date('2026-05-13T00:00:00Z'),
+          teacherIds: [10042],
+        });
+        tx.lessonTeacherOverride.update.mockResolvedValue({});
+
+        await service.remove('override-1', 1, 99, ['CEO']);
+
+        expect(tx.lessonTeacherOverride.update).toHaveBeenCalled();
+      });
+    });
+
     it("refuses to list another branch's substitutes", async () => {
       tx.user.findFirst.mockResolvedValue(otherBranchAdmin);
       tx.lessonTeacherOverride.findMany = jest.fn();
