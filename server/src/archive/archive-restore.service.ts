@@ -24,6 +24,7 @@ import {
   signInAccountChange,
 } from '../common/auth/student-account';
 import { loginForPhone } from '../common/auth/phone-account-rules';
+import { findExtraPhoneHolder } from '../students/shared/extra-phone-rule';
 import {
   ENTITY_DEFAULT_STATUS,
   ENTITY_TYPE_MAP,
@@ -108,6 +109,17 @@ export class ArchiveRestoreService {
       }
 
       if (entityType === ArchiveEntityType.STUDENTS) {
+        // A backup number another live student took while this card was
+        // archived does not come back as a sign-in key (ADR-0067).
+        const droppedBackup = record.extraPhone
+          ? await findExtraPhoneHolder(this.prisma, record.extraPhone, {
+              studentId: record.id,
+              userId: record.userId,
+              phone: record.phone,
+            })
+          : null;
+        if (droppedBackup) restoreData.extraPhone = null;
+
         // The card and its sign-in account come back together (ADR-0033).
         await this.prisma.$transaction(async (tx) => {
           await tx.student.update({
@@ -116,6 +128,26 @@ export class ArchiveRestoreService {
           });
           await this.reopenStudentAccount(tx, record, userId);
         });
+
+        if (droppedBackup) {
+          const holder =
+            droppedBackup.kind === 'card'
+              ? `#${droppedBackup.studentId}`
+              : droppedBackup.kind === 'account'
+                ? `hisob #${droppedBackup.userId}`
+                : 'asosiy raqam';
+          await this.entityHistoryService.recordUpdate({
+            entityType: 'Student',
+            entityId: parsedId as number,
+            oldValues: { extraPhone: record.extraPhone, sabab: null },
+            newValues: {
+              extraPhone: null,
+              sabab: `Arxivdan tiklanganda: raqam boshqa o'quvchida (${holder})`,
+            },
+            changedById: userId,
+            companyId: record.companyId ?? undefined,
+          });
+        }
       } else {
         await delegate.update({
           where: { id: parsedId },
