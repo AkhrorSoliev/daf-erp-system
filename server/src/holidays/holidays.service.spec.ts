@@ -245,6 +245,45 @@ describe('HolidaysService', () => {
       });
     });
 
+    // The settings form drops `endDate` once it is cleared, and the write then
+    // sets `endDate = date`. With `date` unchanged that still shortens a
+    // multi-day holiday, so it is a date change too.
+    describe('a multi-day holiday sent back with no endDate', () => {
+      beforeEach(() => {
+        prisma.holiday.findFirst.mockResolvedValue({
+          ...mockHoliday,
+          date: new Date('2026-03-20'),
+          endDate: new Date('2026-03-22'),
+        });
+      });
+
+      it('is refused once the holiday has moved group schedules', async () => {
+        prisma.groupHolidayExtension.count.mockResolvedValue(2);
+        await expect(
+          service.update('h-1', { date: '2026-03-20' }, 7, COMPANY_ID),
+        ).rejects.toThrow(/allaqachon guruh jadvallariga/);
+        expect(prisma.holiday.update).not.toHaveBeenCalled();
+      });
+
+      it('shortens it to one day when nothing was moved yet', async () => {
+        prisma.groupHolidayExtension.count.mockResolvedValue(0);
+        await service.update('h-1', { date: '2026-03-20' }, 7, COMPANY_ID);
+        expect(prisma.holiday.update).toHaveBeenCalledWith({
+          where: { id: 'h-1' },
+          data: {
+            date: new Date('2026-03-20'),
+            endDate: new Date('2026-03-20'),
+          },
+        });
+      });
+
+      it('a name-only edit still goes through', async () => {
+        prisma.groupHolidayExtension.count.mockResolvedValue(2);
+        await service.update('h-1', { name: "Navro'z" }, 7, COMPANY_ID);
+        expect(prisma.holiday.update).toHaveBeenCalled();
+      });
+    });
+
     it('throws NotFoundException when holiday is missing', async () => {
       prisma.holiday.findFirst.mockResolvedValue(null);
       await expect(

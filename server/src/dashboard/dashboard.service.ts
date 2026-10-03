@@ -25,7 +25,12 @@ export class DashboardService {
     private holidaysService: HolidaysService,
   ) {}
 
-  async getTodaySchedule(branchId: number, companyId: number, date?: string) {
+  async getTodaySchedule(
+    branchId: number,
+    companyId: number,
+    date?: string,
+    teacherId?: number,
+  ) {
     // Calendar date in Asia/Tashkent — stable across UTC vs Tashkent servers.
     // Attendance.date and Holiday.date are stored as UTC midnight (see
     // attendance-validation.service.ts:36), so queries must use the same shape.
@@ -94,6 +99,9 @@ export class DashboardService {
           statusEnum: { in: ['ACTIVE', 'FORMING'] },
           isActive: true,
           exactDays: { has: dayName },
+          ...(teacherId !== undefined && {
+            teachers: { some: { teacherId } },
+          }),
           lessonStartTime: { not: null },
           lessonEndTime: { not: null },
           AND: [
