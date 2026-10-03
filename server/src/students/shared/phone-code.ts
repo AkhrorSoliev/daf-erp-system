@@ -33,7 +33,7 @@ export const INVALID_CODE_MESSAGE = "Kod noto'g'ri yoki muddati tugagan";
 
 /**
  * What the code is about: the card's own number (ADR-0039) or the backup
- * number (ADR-0067). Each purpose has its own code slot, so a code sent for
+ * number (ADR-0070). Each purpose has its own code slot, so a code sent for
  * one can never write the other. Every limit above is per student and shared
  * by both purposes.
  */
@@ -309,7 +309,7 @@ export async function clearCode(
  * checks (resource name with its type + what the code is for). Submit
  * "DaF Sprachzentrum mobil ilovasida telefon raqamingizni tasdiqlash uchun kod: 0000"
  * for moderation before setting STUDENT_PHONE_VERIFICATION_ENABLED=true.
- * Pure ASCII = one SMS segment. The backup number (ADR-0067) uses the same
+ * Pure ASCII = one SMS segment. The backup number (ADR-0070) uses the same
  * text: it is a phone number being confirmed, nothing else.
  */
 export function buildPhoneVerifyMessage(code: string): string {

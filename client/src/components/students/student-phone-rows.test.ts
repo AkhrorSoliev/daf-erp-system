@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { studentPhoneRows } from "./student-phone-rows";
 
-// ADR-0067: the card shows every number the student has, each named, and says
+// ADR-0070: the card shows every number the student has, each named, and says
 // which of them open the portal. An empty one is not drawn.
 describe("studentPhoneRows", () => {
   it("names all three and marks the two sign-in keys", () => {

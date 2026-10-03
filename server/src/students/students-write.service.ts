@@ -112,7 +112,7 @@ export class StudentsWriteService {
       );
     }
 
-    // A backup number is a sign-in key (ADR-0067): one number, one student.
+    // A backup number is a sign-in key (ADR-0070): one number, one student.
     if (dto.extraPhone) {
       await assertExtraPhoneFree(
         this.prisma,
@@ -280,7 +280,7 @@ export class StudentsWriteService {
     }
 
     // The backup number after this save, checked when it or the main number
-    // moves (ADR-0067): the rule also refuses a main number that lands on the
+    // moves (ADR-0070): the rule also refuses a main number that lands on the
     // card's own backup number.
     const nextPhone = dto.phone ?? student.phone;
     const nextExtraPhone =

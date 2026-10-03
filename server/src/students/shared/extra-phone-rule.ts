@@ -51,7 +51,7 @@ export function findStudentAccountOnNumber(
 }
 
 /**
- * Is a backup number (`Student.extraPhone`) free to take? ADR-0067: a backup
+ * Is a backup number (`Student.extraPhone`) free to take? ADR-0070: a backup
  * number is a sign-in key, and one number signs exactly one student in — so
  * it may not be this card's own main number, another live card's main or
  * backup number, or another live student account's sign-in number. Every

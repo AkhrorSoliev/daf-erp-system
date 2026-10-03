@@ -62,7 +62,7 @@ export function EditStudentAdditionalFields({
   form,
 }: EditStudentAdditionalFieldsProps) {
   // A section whose field already holds a value opens at once: a backup number
-  // is a sign-in key (ADR-0067), and an editor that hides it is wrong.
+  // is a sign-in key (ADR-0070), and an editor that hides it is wrong.
   const [visible, setVisible] = useState<Set<string>>(
     () =>
       new Set(

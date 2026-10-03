@@ -283,7 +283,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('backup number — second lookup stage (ADR-0067)', () => {
+  describe('backup number — second lookup stage (ADR-0070)', () => {
     const BACKUP = '935554433';
     const studentAccount = {
       id: 7,

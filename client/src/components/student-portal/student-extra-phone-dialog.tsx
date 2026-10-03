@@ -31,7 +31,7 @@ export interface StudentExtraPhoneDialogProps {
 type Stage = "form" | "code";
 
 /**
- * The student's backup sign-in number (ADR-0067). A new number is confirmed by
+ * The student's backup sign-in number (ADR-0070). A new number is confirmed by
  * a code to it, behind the current password (ADR-0031); removing it asks the
  * password alone. Every answer is the new status, written into the cache.
  */

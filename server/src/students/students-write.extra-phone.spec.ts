@@ -16,10 +16,10 @@ import {
 } from './shared/extra-phone-rule';
 
 /**
- * ADR-0067: a backup number is a sign-in key, so staff may not give a student
+ * ADR-0070: a backup number is a sign-in key, so staff may not give a student
  * a number another student already signs in with, nor the card's own number.
  */
-describe('StudentsWriteService — backup number (ADR-0067)', () => {
+describe('StudentsWriteService — backup number (ADR-0070)', () => {
   let service: StudentsWriteService;
   let prisma: any;
 

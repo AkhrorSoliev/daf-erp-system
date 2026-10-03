@@ -289,7 +289,7 @@ export class StudentOnboardingService {
       await tx.student.update({
         where: { id: student.id },
         // The backup number that just became the main number is not a
-        // backup any more (ADR-0067).
+        // backup any more (ADR-0070).
         data: {
           phone: nextPhone,
           ...(promotesBackup && { extraPhone: null }),

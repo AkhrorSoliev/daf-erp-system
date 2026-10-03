@@ -22,7 +22,7 @@
   - `Bu raqam boshqa o'quvchida bor: <Ism Familiya>` (staff), `Bu raqam boshqa o'quvchi hisobida bor` (staff, account only)
   - `Bu raqamni qo'shib bo'lmaydi` (student)
   - `Zaxira raqamni hozircha administrator qo'shadi` (door closed)
-- Binding ADRs: 0022 (one person — one account per role), 0031 (own sign-in keys change only with the current password → `OwnPasswordAttemptGuard`), 0032/0033 (card ↔ account), 0039 (SMS proof, the `STUDENT_PHONE_VERIFICATION_ENABLED` switch), 0040/0045 (bot and Mini App are NOT changed). New ADR: **0067** — check `docs/adr/README.md` on `origin/main` for the next free number before committing Task 13.
+- Binding ADRs: 0022 (one person — one account per role), 0031 (own sign-in keys change only with the current password → `OwnPasswordAttemptGuard`), 0032/0033 (card ↔ account), 0039 (SMS proof, the `STUDENT_PHONE_VERIFICATION_ENABLED` switch), 0040/0045 (bot and Mini App are NOT changed). New ADR: **0070** — check `docs/adr/README.md` on `origin/main` for the next free number before committing Task 13.
 - Guard specs that must stay green: `server/src/students/student-phone.single-source.spec.ts`, `server/src/students/phone-proof.single-source.spec.ts`, `server/src/common/guards/own-password-attempt.routes.spec.ts`, `server/src/common/auth/branch-route-policy.spec.ts`, `server/src/common/auth/student-account.single-source.spec.ts`.
 
 ---
@@ -42,7 +42,7 @@
 - `server/src/students/extra-phone/dto/extra-phone-send-code.dto.ts`, `extra-phone-verify.dto.ts`, `extra-phone-remove.dto.ts`
 - `server/src/students/students-write.extra-phone.spec.ts`
 - `server/src/archive/archive-restore.extra-phone.spec.ts`
-- `docs/adr/0067-zaxira-raqam-ikkinchi-kirish-kaliti.md`
+- `docs/adr/0070-zaxira-raqam-ikkinchi-kirish-kaliti.md`
 
 **Server — modify**
 - `server/src/students/onboarding/student-onboarding.service.ts` — delegate to `phone-code.ts`; clear own `extraPhone` when the new main number equals it.
@@ -300,7 +300,7 @@ export const INVALID_CODE_MESSAGE = "Kod noto'g'ri yoki muddati tugagan";
 
 /**
  * What the code is about: the card's own number (ADR-0039) or the backup
- * number (ADR-0067). Each purpose has its own code slot, so a code sent for
+ * number (ADR-0070). Each purpose has its own code slot, so a code sent for
  * one can never write the other. Every limit above is per student and shared
  * by both purposes.
  */
@@ -579,7 +579,7 @@ export async function clearCode(
  * checks (resource name with its type + what the code is for). Submit
  * "DaF Sprachzentrum mobil ilovasida telefon raqamingizni tasdiqlash uchun kod: 0000"
  * for moderation before setting STUDENT_PHONE_VERIFICATION_ENABLED=true.
- * Pure ASCII = one SMS segment. The backup number (ADR-0067) uses the same
+ * Pure ASCII = one SMS segment. The backup number (ADR-0070) uses the same
  * text: it is a phone number being confirmed, nothing else.
  */
 export function buildPhoneVerifyMessage(code: string): string {
@@ -757,7 +757,7 @@ function db(card: any = null, account: any = null) {
   };
 }
 
-describe('extra-phone-rule (ADR-0067)', () => {
+describe('extra-phone-rule (ADR-0070)', () => {
   it('a free number has no holder', async () => {
     const d = db();
     expect(await findExtraPhoneHolder(d as any, NUMBER, SELF)).toBeNull();
@@ -853,7 +853,7 @@ import { BadRequestException } from '@nestjs/common';
 import { STUDENT_ROLE_ID } from './student-select';
 
 /**
- * Is a backup number (`Student.extraPhone`) free to take? ADR-0067: a backup
+ * Is a backup number (`Student.extraPhone`) free to take? ADR-0070: a backup
  * number is a sign-in key, and one number signs exactly one student in — so
  * it may not be this card's own main number, another live card's main or
  * backup number, or another live student account's sign-in number. Staff
@@ -994,10 +994,10 @@ import {
 } from './shared/extra-phone-rule';
 
 /**
- * ADR-0067: a backup number is a sign-in key, so staff may not give a student
+ * ADR-0070: a backup number is a sign-in key, so staff may not give a student
  * a number another student already signs in with, nor the card's own number.
  */
-describe('StudentsWriteService — backup number (ADR-0067)', () => {
+describe('StudentsWriteService — backup number (ADR-0070)', () => {
   let service: StudentsWriteService;
   let prisma: any;
 
@@ -1157,7 +1157,7 @@ import { assertExtraPhoneFree } from './shared/extra-phone-rule';
 
 In `create`, right after the `if (existing) { throw … 'Bu telefon raqam allaqachon tizimda mavjud' }` block:
 ```ts
-    // A backup number is a sign-in key (ADR-0067): one number, one student.
+    // A backup number is a sign-in key (ADR-0070): one number, one student.
     if (dto.extraPhone) {
       await assertExtraPhoneFree(
         this.prisma,
@@ -1171,7 +1171,7 @@ In `create`, right after the `if (existing) { throw … 'Bu telefon raqam allaqa
 In `update`, right after the `if (dto.phone && dto.phone !== student.phone) { … phoneTaken … }` block and before the `dto.password` check:
 ```ts
     // The backup number after this save, checked when it or the main number
-    // moves (ADR-0067): the rule also refuses a main number that lands on the
+    // moves (ADR-0070): the rule also refuses a main number that lands on the
     // card's own backup number.
     const nextPhone = dto.phone ?? student.phone;
     const nextExtraPhone =
@@ -1232,7 +1232,7 @@ First add `user: { findFirst: jest.fn().mockResolvedValue(null) },` to the `pris
       convertedStudentId: null,
     };
 
-    it("copies the lead's backup number when no student holds it (ADR-0067)", async () => {
+    it("copies the lead's backup number when no student holds it (ADR-0070)", async () => {
       prisma.lead.findFirst.mockResolvedValue(leadWithBackup);
       students.create.mockResolvedValue({ id: 10007 });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
@@ -1273,7 +1273,7 @@ import { findExtraPhoneHolder } from '../students/shared/extra-phone-rule';
 ```
 Right before `const student = await this.studentsService.create(` insert:
 ```ts
-      // The lead's backup number becomes a sign-in key on the card (ADR-0067).
+      // The lead's backup number becomes a sign-in key on the card (ADR-0070).
       // One another student already signs in with stays on the lead — the
       // conversion itself never fails over a backup number.
       const extraPhone =
@@ -1317,10 +1317,10 @@ import { ArchiveRestoreService } from './archive-restore.service';
 import { ArchiveEntityType } from './dto/archive-query.dto';
 
 /**
- * ADR-0067: a restored card may not bring back a backup number another live
+ * ADR-0070: a restored card may not bring back a backup number another live
  * student now signs in with. The restore goes through; the number goes.
  */
-describe('ArchiveRestoreService — backup number on restore (ADR-0067)', () => {
+describe('ArchiveRestoreService — backup number on restore (ADR-0070)', () => {
   const CARD = {
     id: 20001,
     phone: '901112233',
@@ -1405,7 +1405,7 @@ Replace the STUDENTS branch:
 ```ts
       if (entityType === ArchiveEntityType.STUDENTS) {
         // A backup number another live student took while this card was
-        // archived does not come back as a sign-in key (ADR-0067).
+        // archived does not come back as a sign-in key (ADR-0070).
         const droppedBackup = record.extraPhone
           ? await findExtraPhoneHolder(this.prisma, record.extraPhone, {
               studentId: record.id,
@@ -1472,7 +1472,7 @@ git commit -m "feat(archive): tiklangan kartaning band zaxira raqami olib tashla
 The spec's `build()` row has no `extraPhone`; extend the `card` parameter type with `extraPhone: string | null` and add `extraPhone: null as string | null,` to `row`. Then add, inside the describe that covers «Yo'q, boshqa raqam» (search the file for `sendChangeCode` tests and add next to them):
 
 ```ts
-  it("a new main number that was the card's backup number empties the backup (ADR-0067)", async () => {
+  it("a new main number that was the card's backup number empties the backup (ADR-0070)", async () => {
     const b = build({ extraPhone: OWN_PHONE });
     await b.service.sendChangeCode(STUDENT_ID, USER_ID, OWN_PHONE, PASSWORD);
     const [, message] = b.eskiz.sendSms.mock.calls.at(-1)!;
@@ -1501,7 +1501,7 @@ In `student-onboarding.service.ts`:
 - In `replaceCardNumber`, inside the transaction, replace `data: { phone: nextPhone },` with:
 ```ts
           // The backup number that just became the main number is not a
-          // backup any more (ADR-0067).
+          // backup any more (ADR-0070).
           data: {
             phone: nextPhone,
             ...(student.extraPhone === nextPhone && { extraPhone: null }),
@@ -1534,7 +1534,7 @@ git commit -m "feat(onboarding): asosiy raqam o'z zaxira raqamiga ko'chsa zaxira
 Append inside `describe('AuthService', …)` (after the `findAccountsByIdentifier` describe):
 
 ```ts
-  describe('backup number — second lookup stage (ADR-0067)', () => {
+  describe('backup number — second lookup stage (ADR-0070)', () => {
     const BACKUP = '935554433';
     const studentAccount = {
       id: 7,
@@ -1626,7 +1626,7 @@ Append inside `describe('AuthService', …)` (after the `findAccountsByIdentifie
 - [ ] **Step 2: Run — the new describe must fail**
 
 ```bash
-cd server && npx jest src/auth/auth.service.spec.ts -t "ADR-0067"
+cd server && npx jest src/auth/auth.service.spec.ts -t "ADR-0070"
 ```
 
 - [ ] **Step 3: Implement**
@@ -1634,7 +1634,7 @@ cd server && npx jest src/auth/auth.service.spec.ts -t "ADR-0067"
 In `auth.service.ts`, add after `buildAccountLookup`:
 ```ts
   /**
-   * Zaxira raqam ham kirish kaliti (ADR-0067) — faqat o'quvchi portalida va
+   * Zaxira raqam ham kirish kaliti (ADR-0070) — faqat o'quvchi portalida va
    * faqat hech bir hisob bu raqamni O'ZINIKI deb javob bermaganda: kartadagi
    * asosiy raqam har doim ustun (`findAccountByIdentifier` va
    * `findAccountsByIdentifier` avval uni, keyin buni so'raydi). Kimlik
@@ -1692,7 +1692,7 @@ and
     return extra ? this.prisma.user.findMany({ ...extra, take }) : [];
   }
 ```
-Add to the `findAccountsByIdentifier` doc comment one line: `Ikkinchi bosqich (zaxira raqam, ADR-0067) ham shu yerda — Telegram yo'li parol yo'lidan keng bo'lmasin.`
+Add to the `findAccountsByIdentifier` doc comment one line: `Ikkinchi bosqich (zaxira raqam, ADR-0070) ham shu yerda — Telegram yo'li parol yo'lidan keng bo'lmasin.`
 
 - [ ] **Step 4: Run the whole auth spec + the Telegram OAuth spec, typecheck, format, commit**
 
@@ -1859,7 +1859,7 @@ async function sendAndCatchCode(b: ReturnType<typeof build>, phone = BACKUP) {
   return /(\d{4})$/.exec(message)![1];
 }
 
-describe('StudentExtraPhoneService (ADR-0067)', () => {
+describe('StudentExtraPhoneService (ADR-0070)', () => {
   it('status: the number and whether the door is open', async () => {
     expect(await build({ extraPhone: BACKUP }).service.status(STUDENT_ID)).toEqual({
       phone: BACKUP,
@@ -2060,7 +2060,7 @@ export const EXTRA_PHONE_DOOR_CLOSED_MESSAGE =
   "Zaxira raqamni hozircha administrator qo'shadi";
 
 /**
- * The student's own backup number (ADR-0067): a second sign-in key they add,
+ * The student's own backup number (ADR-0070): a second sign-in key they add,
  * change or remove behind their current password (ADR-0031); a new number is
  * proved by an SMS code to it first (ADR-0039's machinery, its own code slot).
  * The door is open only while the ADR-0039 phone step is switched on — the
@@ -2262,7 +2262,7 @@ import { RolesGuard, StudentCardGuard } from '../../common/guards';
 import { OwnPasswordAttemptGuard } from '../../common/guards/own-password-attempt.guard';
 import { StudentExtraPhoneController } from './student-extra-phone.controller';
 
-describe('StudentExtraPhoneController (ADR-0067)', () => {
+describe('StudentExtraPhoneController (ADR-0070)', () => {
   it('is Student-only, and refuses a token with no student card', () => {
     const reflector = new Reflector();
     expect(reflector.get(ROLES_KEY, StudentExtraPhoneController)).toEqual([
@@ -2386,7 +2386,7 @@ import { ExtraPhoneVerifyDto } from './dto/extra-phone-verify.dto';
 import { ExtraPhoneRemoveDto } from './dto/extra-phone-remove.dto';
 
 /**
- * The student's own backup number (ADR-0067). Every route is the caller's own
+ * The student's own backup number (ADR-0070). Every route is the caller's own
  * card: the id comes from the token, never from the request.
  */
 @Controller('student-portal/extra-phone')
@@ -2450,7 +2450,7 @@ export class StudentExtraPhoneController {
     policy: 'SELF',
     reason:
       "Keyed on `@CurrentUser('studentId')` behind `StudentCardGuard` — the " +
-      "student's own backup number (ADR-0067): read, added or changed behind " +
+      "student's own backup number (ADR-0070): read, added or changed behind " +
       'their current password and an SMS code to the new number, or removed ' +
       'behind the password. No student id comes from the request, and the ' +
       'row written is always the caller card, whatever its branch.',
@@ -2524,7 +2524,7 @@ const text = (values: Partial<EditStudentFormValues>) =>
     .replace(/&#x27;/g, "'")
     .replace(/\s+/g, " ");
 
-// ADR-0067: the backup number is a sign-in key, so the editor must SHOW the
+// ADR-0070: the backup number is a sign-in key, so the editor must SHOW the
 // one the card already has — the panel used to open with every section hidden.
 describe("student edit — additional fields", () => {
   it("opens the backup-number section when the card has one, with the sign-in hint", () => {
@@ -2568,7 +2568,7 @@ In `edit-student-additional-fields.tsx`:
 3. Replace `const [visible, setVisible] = useState<Set<string>>(new Set());` with:
 ```ts
   // A section whose field already holds a value opens at once: a backup number
-  // is a sign-in key (ADR-0067), and an editor that hides it is wrong.
+  // is a sign-in key (ADR-0070), and an editor that hides it is wrong.
   const [visible, setVisible] = useState<Set<string>>(
     () =>
       new Set(
@@ -2666,7 +2666,7 @@ git commit -m "feat(client): admin o'quvchi formasida «Zaxira raqam» maydoni"
 import { describe, expect, it } from "vitest";
 import { studentPhoneRows } from "./student-phone-rows";
 
-// ADR-0067: the card shows every number the student has, each named, and says
+// ADR-0070: the card shows every number the student has, each named, and says
 // which of them open the portal. An empty one is not drawn.
 describe("studentPhoneRows", () => {
   it("names all three and marks the two sign-in keys", () => {
@@ -2708,7 +2708,7 @@ export interface StudentPhoneRow {
   key: "phone" | "extraPhone" | "parentPhone";
   label: string;
   phone: string;
-  /** Opens the student portal (ADR-0067: the main and the backup number do). */
+  /** Opens the student portal (ADR-0070: the main and the backup number do). */
   signIn: boolean;
 }
 
@@ -2798,7 +2798,7 @@ git commit -m "feat(client): o'quvchi kartasida barcha raqamlar nomi bilan; bitt
 
 `lib/types.ts` — append:
 ```ts
-/** The student's backup sign-in number (ADR-0067) and whether they may edit it. */
+/** The student's backup sign-in number (ADR-0070) and whether they may edit it. */
 export interface ExtraPhoneStatus {
   phone: string | null;
   /** False while SMS verification is switched off: staff add the number then. */
@@ -2809,7 +2809,7 @@ export interface ExtraPhoneStatus {
 ```ts
 export const EXTRA_PHONE_QUERY_KEY = ["student-portal", "extra-phone"] as const;
 
-// The backup number and whether the student may change it (ADR-0067). Each
+// The backup number and whether the student may change it (ADR-0070). Each
 // write answers with the new status, which goes straight into this cache.
 export function useExtraPhone() {
   return useQuery<ExtraPhoneStatus>({
@@ -2826,7 +2826,7 @@ export function useExtraPhone() {
 import { describe, expect, it } from "vitest";
 import { extraPhoneRowState } from "./extra-phone-row-state";
 
-// ADR-0067: one row on Profile. What it says depends on whether the student
+// ADR-0070: one row on Profile. What it says depends on whether the student
 // has a backup number and whether the SMS door is open.
 describe("extraPhoneRowState", () => {
   it("is hidden until the status answers", () => {
@@ -2886,7 +2886,7 @@ export const EXTRA_PHONE_SIGN_IN_NOTE =
   "Bu raqam bilan ham tizimga kira olasiz. Parolni tiklash kodi faqat asosiy raqamga boradi.";
 export const EXTRA_PHONE_STAFF_ONLY_NOTE = "Zaxira raqamni administrator qo'shadi.";
 
-/** What the Profile row shows for the backup number (ADR-0067). */
+/** What the Profile row shows for the backup number (ADR-0070). */
 export function extraPhoneRowState(
   status: ExtraPhoneStatus | undefined,
 ): ExtraPhoneRowState | null {
@@ -2941,7 +2941,7 @@ export interface StudentExtraPhoneDialogProps {
 type Stage = "form" | "code";
 
 /**
- * The student's backup sign-in number (ADR-0067). A new number is confirmed by
+ * The student's backup sign-in number (ADR-0070). A new number is confirmed by
  * a code to it, behind the current password (ADR-0031); removing it asks the
  * password alone. Every answer is the new status, written into the cache.
  */
@@ -3249,10 +3249,10 @@ git commit -m "feat(portal): profilda «Zaxira raqam» qatori — parol + SMS ko
 
 ---
 
-### Task 13: ADR-0067, index row, `server/CLAUDE.md`
+### Task 13: ADR-0070, index row, `server/CLAUDE.md`
 
 **Files:**
-- Create: `docs/adr/0067-zaxira-raqam-ikkinchi-kirish-kaliti.md`
+- Create: `docs/adr/0070-zaxira-raqam-ikkinchi-kirish-kaliti.md`
 - Modify: `docs/adr/README.md` (table, after the 0066 row), `server/CLAUDE.md` (after the ADR-0032 bullet under «#### Phone-based login (all roles)»)
 
 - [ ] **Step 1: Check the number is still free**
@@ -3260,12 +3260,12 @@ git commit -m "feat(portal): profilda «Zaxira raqam» qatori — parol + SMS ko
 ```bash
 git fetch -q origin && git ls-tree --name-only origin/main docs/adr/ | tail -3
 ```
-Expected: the last file is `0066-…`. If `0067-…` exists on `origin/main`, use the next free number in every place below (file name, title, README row, CLAUDE.md, and the `ADR-0067` mentions in code comments: `git grep -n "ADR-0067" -- server client` lists them).
+Expected: the last file is `0066-…`. If `0067-…` exists on `origin/main`, use the next free number in every place below (file name, title, README row, CLAUDE.md, and the `ADR-0070` mentions in code comments: `git grep -n "ADR-0070" -- server client` lists them).
 
 - [ ] **Step 2: Write the ADR**
 
 ```markdown
-# ADR-0067 — Zaxira raqam o'quvchining ikkinchi kirish kaliti; asosiy raqam ustun
+# ADR-0070 — Zaxira raqam o'quvchining ikkinchi kirish kaliti; asosiy raqam ustun
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-03
@@ -3340,19 +3340,19 @@ hisobning parolini talab qiladi.
 
 `docs/adr/README.md`, after the 0066 row:
 ```markdown
-| [0067](0067-zaxira-raqam-ikkinchi-kirish-kaliti.md) | Zaxira raqam — o'quvchining ikkinchi kirish kaliti; asosiy raqam ustun, o'quvchi o'zi parol + SMS bilan qo'shadi | Qabul qilindi | 2026-10-03 |
+| [0070](0070-zaxira-raqam-ikkinchi-kirish-kaliti.md) | Zaxira raqam — o'quvchining ikkinchi kirish kaliti; asosiy raqam ustun, o'quvchi o'zi parol + SMS bilan qo'shadi | Qabul qilindi | 2026-10-03 |
 ```
 
 `server/CLAUDE.md`, under «#### Phone-based login (all roles)», right after the ADR-0032 bullet («**A student signs in with the number on their card (ADR-0032).** …»):
 ```markdown
-- **A student's backup number is a second sign-in key (ADR-0067).** `findAccountByIdentifier` / `findAccountsByIdentifier` try the account's own number first and, finding nobody, a live card's `Student.extraPhone` (`buildExtraPhoneLookup`: student role only, so never on `admin.`/`lehrer.`; a password that fails against the main-number account never reaches this stage). One number signs one student in: every write of `extraPhone` — admin create/update, lead conversion, archive restore, the student's own `POST /student-portal/extra-phone/*` — goes through `students/shared/extra-phone-rule.ts` (`assertExtraPhoneFree`); staff get a 400, conversion and restore drop the taken number instead. The student adds or changes it behind the current password AND an SMS code to the new number (ADR-0039's machinery, extracted to `students/shared/phone-code.ts`, own slot `extra_phone:code:*`, shared limits) and removes it behind the password; the door is closed while `STUDENT_PHONE_VERIFICATION_ENABLED` is off. SMS password reset, the bot scenes and the Mini App read the main number / the linked chat only.
+- **A student's backup number is a second sign-in key (ADR-0070).** `findAccountByIdentifier` / `findAccountsByIdentifier` try the account's own number first and, finding nobody, a live card's `Student.extraPhone` (`buildExtraPhoneLookup`: student role only, so never on `admin.`/`lehrer.`; a password that fails against the main-number account never reaches this stage). One number signs one student in: every write of `extraPhone` — admin create/update, lead conversion, archive restore, the student's own `POST /student-portal/extra-phone/*` — goes through `students/shared/extra-phone-rule.ts` (`assertExtraPhoneFree`); staff get a 400, conversion and restore drop the taken number instead. The student adds or changes it behind the current password AND an SMS code to the new number (ADR-0039's machinery, extracted to `students/shared/phone-code.ts`, own slot `extra_phone:code:*`, shared limits) and removes it behind the password; the door is closed while `STUDENT_PHONE_VERIFICATION_ENABLED` is off. SMS password reset, the bot scenes and the Mini App read the main number / the linked chat only.
 ```
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/adr/0067-zaxira-raqam-ikkinchi-kirish-kaliti.md docs/adr/README.md server/CLAUDE.md
-git commit -m "docs(adr): ADR-0067 — zaxira raqam ikkinchi kirish kaliti"
+git add docs/adr/0070-zaxira-raqam-ikkinchi-kirish-kaliti.md docs/adr/README.md server/CLAUDE.md
+git commit -m "docs(adr): ADR-0070 — zaxira raqam ikkinchi kirish kaliti"
 ```
 
 ---

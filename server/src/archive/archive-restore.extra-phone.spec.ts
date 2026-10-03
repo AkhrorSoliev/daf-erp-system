@@ -2,10 +2,10 @@ import { ArchiveRestoreService } from './archive-restore.service';
 import { ArchiveEntityType } from './dto/archive-query.dto';
 
 /**
- * ADR-0067: a restored card may not bring back a backup number another live
+ * ADR-0070: a restored card may not bring back a backup number another live
  * student now signs in with. The restore goes through; the number goes.
  */
-describe('ArchiveRestoreService — backup number on restore (ADR-0067)', () => {
+describe('ArchiveRestoreService — backup number on restore (ADR-0070)', () => {
   const CARD = {
     id: 20001,
     phone: '901112233',

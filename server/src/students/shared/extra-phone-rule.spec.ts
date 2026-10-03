@@ -19,7 +19,7 @@ function db(card: any = null, account: any = null) {
   };
 }
 
-describe('extra-phone-rule (ADR-0067)', () => {
+describe('extra-phone-rule (ADR-0070)', () => {
   it('a free number has no holder', async () => {
     const d = db();
     expect(await findExtraPhoneHolder(d as any, NUMBER, SELF)).toBeNull();

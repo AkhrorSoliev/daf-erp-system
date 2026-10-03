@@ -960,7 +960,7 @@ export class LeadsService {
         );
       }
 
-      // The lead's backup number becomes a sign-in key on the card (ADR-0067).
+      // The lead's backup number becomes a sign-in key on the card (ADR-0070).
       // One another student already signs in with stays on the lead — the
       // conversion itself never fails over a backup number.
       const extraPhone =

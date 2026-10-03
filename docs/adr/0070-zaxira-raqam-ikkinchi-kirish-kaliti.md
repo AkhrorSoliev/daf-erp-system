@@ -1,4 +1,4 @@
-# ADR-0067 — Zaxira raqam o'quvchining ikkinchi kirish kaliti; asosiy raqam ustun
+# ADR-0070 — Zaxira raqam o'quvchining ikkinchi kirish kaliti; asosiy raqam ustun
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-03

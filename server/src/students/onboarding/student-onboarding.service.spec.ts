@@ -514,7 +514,7 @@ describe('StudentOnboardingService (ADR-0039)', () => {
       expect(b.eskiz.sendSms).not.toHaveBeenCalled();
     });
 
-    it("a new main number that was the card's backup number empties the backup (ADR-0067)", async () => {
+    it("a new main number that was the card's backup number empties the backup (ADR-0070)", async () => {
       const b = build({ extraPhone: OWN_PHONE });
       await b.service.sendChangeCode(STUDENT_ID, USER_ID, OWN_PHONE, PASSWORD);
       const [, message] = b.eskiz.sendSms.mock.calls.at(-1)!;

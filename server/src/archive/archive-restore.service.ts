@@ -37,7 +37,7 @@ import {
   parseId,
 } from './shared/archive-meta';
 
-/** The history reason for a backup number the restore had to drop (ADR-0067). */
+/** The history reason for a backup number the restore had to drop (ADR-0070). */
 function droppedBackupReason(holder: ExtraPhoneHolder): string {
   switch (holder.kind) {
     case 'card':
@@ -125,7 +125,7 @@ export class ArchiveRestoreService {
 
       if (entityType === ArchiveEntityType.STUDENTS) {
         // A backup number another live student took while this card was
-        // archived does not come back as a sign-in key (ADR-0067).
+        // archived does not come back as a sign-in key (ADR-0070).
         const droppedBackup = record.extraPhone
           ? await findExtraPhoneHolder(this.prisma, record.extraPhone, {
               studentId: record.id,

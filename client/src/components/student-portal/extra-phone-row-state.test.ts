@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { extraPhoneRowState } from "./extra-phone-row-state";
 
-// ADR-0067: one row on Profile. What it says depends on whether the student
+// ADR-0070: one row on Profile. What it says depends on whether the student
 // has a backup number and whether the SMS door is open.
 describe("extraPhoneRowState", () => {
   it("is hidden until the status answers", () => {

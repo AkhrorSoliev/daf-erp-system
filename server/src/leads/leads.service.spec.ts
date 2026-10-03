@@ -40,7 +40,7 @@ describe('LeadsService', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
       },
-      // Backup-number rule (ADR-0067): another student account on the number.
+      // Backup-number rule (ADR-0070): another student account on the number.
       user: { findFirst: jest.fn().mockResolvedValue(null) },
       mockExamParticipant: { findMany: jest.fn().mockResolvedValue([]) },
       // Comment counts are grouped, not relation-counted (polymorphic table).
@@ -993,7 +993,7 @@ describe('LeadsService', () => {
       convertedStudentId: null,
     };
 
-    it("copies the lead's backup number when no student holds it (ADR-0067)", async () => {
+    it("copies the lead's backup number when no student holds it (ADR-0070)", async () => {
       prisma.lead.findFirst.mockResolvedValue(leadWithBackup);
       students.create.mockResolvedValue({ id: 10007 });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1' });

@@ -13,7 +13,7 @@ export const EXTRA_PHONE_SIGN_IN_NOTE =
   "Bu raqam bilan ham tizimga kira olasiz. Parolni tiklash kodi faqat asosiy raqamga boradi.";
 export const EXTRA_PHONE_STAFF_ONLY_NOTE = "Zaxira raqamni administrator qo'shadi.";
 
-/** What the Profile row shows for the backup number (ADR-0067). */
+/** What the Profile row shows for the backup number (ADR-0070). */
 export function extraPhoneRowState(
   status: ExtraPhoneStatus | undefined,
 ): ExtraPhoneRowState | null {

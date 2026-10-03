@@ -5,7 +5,7 @@ import { RolesGuard, StudentCardGuard } from '../../common/guards';
 import { OwnPasswordAttemptGuard } from '../../common/guards/own-password-attempt.guard';
 import { StudentExtraPhoneController } from './student-extra-phone.controller';
 
-describe('StudentExtraPhoneController (ADR-0067)', () => {
+describe('StudentExtraPhoneController (ADR-0070)', () => {
   it('is Student-only, and refuses a token with no student card', () => {
     const reflector = new Reflector();
     expect(reflector.get(ROLES_KEY, StudentExtraPhoneController)).toEqual([

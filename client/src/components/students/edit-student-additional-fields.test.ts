@@ -34,7 +34,7 @@ const text = (values: Partial<EditStudentFormValues>) =>
     .replace(/&#x27;/g, "'")
     .replace(/\s+/g, " ");
 
-// ADR-0067: the backup number is a sign-in key, so the editor must SHOW the
+// ADR-0070: the backup number is a sign-in key, so the editor must SHOW the
 // one the card already has — the panel used to open with every section hidden.
 describe("student edit — additional fields", () => {
   it("opens the backup-number section when the card has one, with the sign-in hint", () => {

@@ -34,7 +34,7 @@ export function useStudentOnboarding() {
 
 export const EXTRA_PHONE_QUERY_KEY = ["student-portal", "extra-phone"] as const;
 
-// The backup number and whether the student may change it (ADR-0067). Each
+// The backup number and whether the student may change it (ADR-0070). Each
 // write answers with the new status, which goes straight into this cache.
 export function useExtraPhone() {
   return useQuery<ExtraPhoneStatus>({

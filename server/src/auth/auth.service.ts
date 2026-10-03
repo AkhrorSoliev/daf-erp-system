@@ -123,7 +123,7 @@ export class AuthService {
   }
 
   /**
-   * Zaxira raqam ham kirish kaliti (ADR-0067) — faqat o'quvchi portalida va
+   * Zaxira raqam ham kirish kaliti (ADR-0070) — faqat o'quvchi portalida va
    * faqat hech bir hisob bu raqamni O'ZINIKI deb javob bermaganda: kartadagi
    * asosiy raqam har doim ustun (`findAccountByIdentifier` va
    * `findAccountsByIdentifier` avval uni, keyin buni so'raydi). Kimlik
@@ -184,7 +184,7 @@ export class AuthService {
    * (Telegram OAuth) esa bu ikkinchi omilni olib tashlaydi va odamni BEGONA
    * akkauntga kiritib qo'yishi mumkin — shuning uchun u yo'l noaniqlikni
    * ko'rishi va yopiq holatga o'tishi kerak. Bu yerda faqat sanaladi; qarorni
-   * chaqiruvchi qabul qiladi. Ikkinchi bosqich (zaxira raqam, ADR-0067) ham shu
+   * chaqiruvchi qabul qiladi. Ikkinchi bosqich (zaxira raqam, ADR-0070) ham shu
    * yerda — Telegram yo'li parol yo'lidan keng bo'lmasin.
    */
   async findAccountsByIdentifier(

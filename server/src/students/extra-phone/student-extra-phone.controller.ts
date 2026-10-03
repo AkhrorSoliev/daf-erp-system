@@ -15,7 +15,7 @@ import { ExtraPhoneVerifyDto } from './dto/extra-phone-verify.dto';
 import { ExtraPhoneRemoveDto } from './dto/extra-phone-remove.dto';
 
 /**
- * The student's own backup number (ADR-0067). Every route is the caller's own
+ * The student's own backup number (ADR-0070). Every route is the caller's own
  * card: the id comes from the token, never from the request.
  */
 @Controller('student-portal/extra-phone')

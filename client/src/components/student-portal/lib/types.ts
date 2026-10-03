@@ -117,7 +117,7 @@ export interface OnboardingStatus {
   phoneVerified: boolean;
 }
 
-/** The student's backup sign-in number (ADR-0067) and whether they may edit it. */
+/** The student's backup sign-in number (ADR-0070) and whether they may edit it. */
 export interface ExtraPhoneStatus {
   phone: string | null;
   /** False while SMS verification is switched off: staff add the number then. */

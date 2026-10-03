@@ -4,7 +4,7 @@ export interface StudentPhoneRow {
   key: "phone" | "extraPhone" | "parentPhone";
   label: string;
   phone: string;
-  /** Opens the student portal (ADR-0067: the main and the backup number do). */
+  /** Opens the student portal (ADR-0070: the main and the backup number do). */
   signIn: boolean;
   /** `tel:` link from the last nine digits (parentPhone is not validated on the server). */
   telHref: string;

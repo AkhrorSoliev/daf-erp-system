@@ -32,7 +32,7 @@ export const EXTRA_PHONE_DOOR_CLOSED_MESSAGE =
   "Zaxira raqamni hozircha administrator qo'shadi";
 
 /**
- * The student's own backup number (ADR-0067): a second sign-in key they add,
+ * The student's own backup number (ADR-0070): a second sign-in key they add,
  * change or remove behind their current password (ADR-0031); a new number is
  * proved by an SMS code to it first (ADR-0039's machinery, its own code slot).
  * The door is open only while the ADR-0039 phone step is switched on — the

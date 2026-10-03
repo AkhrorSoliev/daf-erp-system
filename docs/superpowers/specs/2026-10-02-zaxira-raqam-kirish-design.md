@@ -1,6 +1,6 @@
 # Zaxira raqam bilan kirish — dizayn
 
-**Sana:** 2026-10-02 (qayta ko'rib chiqildi 2026-10-03) · **Holati:** CEO bilan kelishildi · **ADR:** 0067 (shu ish bilan bitta PR'da)
+**Sana:** 2026-10-02 (qayta ko'rib chiqildi 2026-10-03) · **Holati:** CEO bilan kelishildi · **ADR:** 0070 (shu ish bilan bitta PR'da)
 
 ## Maqsad
 
@@ -180,7 +180,7 @@ tarixiga `EntityHistoryService.recordUpdate` bilan yoziladi: «Zaxira raqam:
 eski → yangi», muallif — o'quvchi. Admin o'zgarishi hozirgidek yoziladi.
 Arxivdan tiklashda olib tashlangan raqam ham yoziladi.
 
-### 7. ADR-0067
+### 7. ADR-0070
 
 «Zaxira raqam — o'quvchining ikkinchi kirish kaliti»: ikki bosqichli
 qidiruv va asosiy raqam ustunligi; faqat o'quvchi portali, faqat parol va

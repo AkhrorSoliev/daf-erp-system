@@ -127,7 +127,7 @@ async function sendAndCatchCode(b: ReturnType<typeof build>, phone = BACKUP) {
   return /(\d{4})$/.exec(message)![1];
 }
 
-describe('StudentExtraPhoneService (ADR-0067)', () => {
+describe('StudentExtraPhoneService (ADR-0070)', () => {
   it('status: the number and whether the door is open', async () => {
     expect(
       await build({ extraPhone: BACKUP }).service.status(STUDENT_ID),
