@@ -1,16 +1,11 @@
 import {
   BadRequestException,
-  HttpException,
-  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHash, randomInt } from 'crypto';
-import * as bcrypt from 'bcryptjs';
-import { Gender, SmsMessageStatus, SmsMessageType } from '@prisma/client';
+import { Gender } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { EskizService } from '../../eskiz/eskiz.service';
@@ -26,51 +21,30 @@ import {
 import { markPhoneVerified } from '../shared/mark-phone-verified';
 import { STUDENT_ROLE_ID } from '../shared/student-select';
 import { planPhoneChange } from '../../common/auth/phone-account-rules';
+import {
+  INVALID_CODE_MESSAGE,
+  type PhoneCodeDeps,
+  type SendResult,
+  assertNumberNotFlooded,
+  assertVerifyAllowed,
+  clearCode,
+  hashCode,
+  issuePhoneCode,
+  readStoredCode,
+  rejectCode,
+} from '../shared/phone-code';
+import {
+  WRONG_CURRENT_PASSWORD_MESSAGE,
+  assertCurrentPassword,
+} from '../shared/current-password';
 import { UpdateOnboardingProfileDto } from './dto/update-onboarding-profile.dto';
 
-// ── Code policy — the forgot-password OTP's numbers, keyed on the student ────
-// The caller is signed in, so there is nothing to hide about the account: the
-// errors below say exactly what happened, unlike the anonymous reset flow.
-const CODE_TTL_SEC = 5 * 60;
-const CODE_MAX_ATTEMPTS = 3;
-const RESEND_COOLDOWN_SEC = 60;
-// Higher than the reset's 3: this step is compulsory, and a student whose SMS
-// is slow should not be locked out of the app until tomorrow after three taps.
-const DAILY_LIMIT = 5;
-const DAILY_TTL_SEC = 24 * 60 * 60;
-// A legitimate student needs at most 15 verify calls a day (5 codes × 3 tries).
-const VERIFY_HOURLY_LIMIT = 30;
-const HOUR_SEC = 60 * 60;
-// Codes to one NEW number a day. The student chooses that number, so without
-// this one account could keep texting a stranger (the per-student cap bounds
-// the total, this bounds the victim).
-const NUMBER_DAILY_LIMIT = 3;
+// The spec imports these from here; the definitions moved to shared modules.
+export { buildPhoneVerifyMessage } from '../shared/phone-code';
+export { WRONG_CURRENT_PASSWORD_MESSAGE };
 
-const codeKey = (studentId: number) => `phone_verify:code:${studentId}`;
-const cooldownKey = (studentId: number) => `phone_verify:cooldown:${studentId}`;
-const dailyKey = (studentId: number) => `phone_verify:daily:${studentId}`;
-const verifyKey = (studentId: number) => `phone_verify:verify:${studentId}`;
-const globalKey = (hourBucket: number) => `phone_verify:global:${hourBucket}`;
-const numberDailyKey = (phone: string) => `phone_verify:number_daily:${phone}`;
-
-const INVALID_CODE_MESSAGE = "Kod noto'g'ri yoki muddati tugagan";
-export const WRONG_CURRENT_PASSWORD_MESSAGE = "Joriy parol noto'g'ri";
 export const NUMBER_TAKEN_MESSAGE =
   "Bu raqam boshqa o'quvchi hisobiga biriktirilgan. Administratorga murojaat qiling";
-
-interface StoredCode {
-  h: string; // sha256(code)
-  n: number; // attempts left
-  p: string; // the number the code went to
-  /**
-   * Set only when the student is REPLACING the card's number: the number the
-   * card carried when the code was sent. The code then proves `p`, and a
-   * correct code writes `p` onto the card in place of `from`.
-   */
-  from?: string;
-}
-
-type SendResult = { phone: string; expiresInSec: number; resendInSec: number };
 
 export interface OnboardingStatus {
   /** Steps still owed, in the order the clients show them. Empty = done. */
@@ -106,6 +80,16 @@ export class StudentOnboardingService {
     this.globalHourlyCap =
       Number(config.get<string>('PHONE_VERIFY_SMS_GLOBAL_HOURLY_CAP', '300')) ||
       300;
+  }
+
+  private get codeDeps(): PhoneCodeDeps {
+    return {
+      prisma: this.prisma,
+      redis: this.redis,
+      eskiz: this.eskiz,
+      logger: this.logger,
+      globalHourlyCap: this.globalHourlyCap,
+    };
   }
 
   /** Also needs Eskiz credentials: without them no code can ever arrive. */
@@ -180,7 +164,9 @@ export class StudentOnboardingService {
         "Bu raqamga SMS yuborib bo'lmaydi. Administratorga murojaat qiling",
       );
     }
-    return this.issueCode(student, student.phone);
+    return issuePhoneCode(this.codeDeps, 'card', student, student.phone, {
+      typedByStudent: false,
+    });
   }
 
   /**
@@ -213,17 +199,14 @@ export class StudentOnboardingService {
         'Bu raqam kartangizda turibdi — «Ha, kod yuborish» ni tanlang',
       );
     }
-    await this.assertCurrentPassword(userId, currentPassword);
+    await assertCurrentPassword(this.prisma, userId, currentPassword);
     await this.assertNumberFree(phone, student);
 
-    const sentToNumber = Number(await this.redis.get(numberDailyKey(phone)));
-    if ((sentToNumber || 0) >= NUMBER_DAILY_LIMIT) {
-      throw new HttpException(
-        "Bu raqamga bugun ko'p kod yuborildi. Ertaga qayta urinib ko'ring",
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-    return this.issueCode(student, phone, student.phone);
+    await assertNumberNotFlooded(this.redis, phone);
+    return issuePhoneCode(this.codeDeps, 'card', student, phone, {
+      from: student.phone,
+      typedByStudent: true,
+    });
   }
 
   /** Checks the code; on success the card's number is marked as proved. */
@@ -232,60 +215,29 @@ export class StudentOnboardingService {
     userId: number,
     code: string,
   ): Promise<OnboardingStatus> {
-    if (
-      (await this.hit(verifyKey(studentId), HOUR_SEC)) > VERIFY_HOURLY_LIMIT
-    ) {
-      throw new HttpException(
-        "Juda ko'p urinish. Birozdan keyin qayta urinib ko'ring",
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
+    await assertVerifyAllowed(this.redis, studentId);
 
     const student = await this.load(studentId);
     if (isPhoneVerified(student)) return this.toStatus(student);
     this.assertStepOpen(student);
 
-    const raw = await this.redis.get(codeKey(studentId));
-    if (!raw) throw new BadRequestException(INVALID_CODE_MESSAGE);
-
-    let stored: StoredCode;
-    try {
-      stored = JSON.parse(raw) as StoredCode;
-    } catch {
-      await this.redis.del(codeKey(studentId));
-      throw new BadRequestException(INVALID_CODE_MESSAGE);
-    }
+    const stored = await readStoredCode(this.redis, 'card', studentId);
+    if (!stored) throw new BadRequestException(INVALID_CODE_MESSAGE);
 
     // The card must still carry the number it had when the code was sent.
     // Staff changing it in between voids the code: it was about a card that
     // no longer exists in that form.
     const replacing = stored.from !== undefined;
     if ((replacing ? stored.from : stored.p) !== student.phone) {
-      await this.redis.del(codeKey(studentId));
+      await clearCode(this.redis, 'card', studentId);
       throw new BadRequestException(INVALID_CODE_MESSAGE);
     }
 
-    if (this.hash(code) !== stored.h) {
-      const left = stored.n - 1;
-      if (left <= 0) {
-        await this.redis.del(codeKey(studentId));
-        throw new BadRequestException(
-          "Kod noto'g'ri. Iltimos, yangi kod so'rang.",
-        );
-      }
-      const ttl = await this.redis.ttl(codeKey(studentId));
-      await this.redis.set(
-        codeKey(studentId),
-        JSON.stringify({ ...stored, n: left } satisfies StoredCode),
-        'EX',
-        ttl > 0 ? ttl : CODE_TTL_SEC,
-      );
-      throw new BadRequestException(
-        `Kod noto'g'ri. Qolgan urinishlar: ${left}`,
-      );
+    if (hashCode(code) !== stored.h) {
+      await rejectCode(this.redis, 'card', studentId, stored);
     }
 
-    await this.redis.del(codeKey(studentId));
+    await clearCode(this.redis, 'card', studentId);
     if (replacing) {
       await this.replaceCardNumber(student, userId, stored.p);
       return this.status(studentId);
@@ -406,20 +358,6 @@ export class StudentOnboardingService {
     }
   }
 
-  private async assertCurrentPassword(
-    userId: number,
-    currentPassword: string,
-  ): Promise<void> {
-    const user = await this.prisma.user.findFirst({
-      where: { id: userId, deletedAt: null },
-      select: { password: true },
-    });
-    const ok =
-      !!user?.password &&
-      (await bcrypt.compare(currentPassword, user.password));
-    if (!ok) throw new BadRequestException(WRONG_CURRENT_PASSWORD_MESSAGE);
-  }
-
   /**
    * A number already signing another student in may not be taken by this
    * one. Card phones are unique among live students (the staff edit refuses
@@ -449,142 +387,6 @@ export class StudentOnboardingService {
     ]);
     if (card || account) throw new BadRequestException(NUMBER_TAKEN_MESSAGE);
   }
-
-  /**
-   * Sends one code to `target` under the shared limits. `from` marks a
-   * replacement of the card's number (see `StoredCode.from`).
-   */
-  private async issueCode(
-    student: StudentFacts,
-    target: string,
-    from?: string,
-  ): Promise<SendResult> {
-    const studentId = student.id;
-    const cooldown = await this.redis.ttl(cooldownKey(studentId));
-    if (cooldown > 0) {
-      throw new HttpException(
-        `Kodni ${cooldown} soniyadan keyin qayta yuborish mumkin`,
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-    const sentToday = Number(await this.redis.get(dailyKey(studentId))) || 0;
-    if (sentToday >= DAILY_LIMIT) {
-      throw new HttpException(
-        "Bugungi SMS limiti tugadi. Ertaga qayta urinib ko'ring yoki administratorga murojaat qiling",
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-    // Global hourly circuit-breaker: the Eskiz balance is real money, and the
-    // day this step is switched on every student asks at once.
-    if (
-      (await this.hit(globalKey(this.hourBucket()), HOUR_SEC)) >
-      this.globalHourlyCap
-    ) {
-      this.logger.error(
-        `Phone-verify global hourly cap (${this.globalHourlyCap}) reached — SMS suppressed`,
-      );
-      throw new HttpException(
-        "Hozir SMS yuborish vaqtincha cheklangan. Birozdan keyin qayta urinib ko'ring",
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    await this.redis.set(
-      cooldownKey(studentId),
-      '1',
-      'EX',
-      RESEND_COOLDOWN_SEC,
-    );
-    await this.hit(dailyKey(studentId), DAILY_TTL_SEC);
-    if (from !== undefined)
-      await this.hit(numberDailyKey(target), DAILY_TTL_SEC);
-
-    const code = String(randomInt(1000, 10000)); // 1000–9999, no leading zero
-    await this.redis.set(
-      codeKey(studentId),
-      JSON.stringify({
-        h: this.hash(code),
-        n: CODE_MAX_ATTEMPTS,
-        p: target,
-        ...(from !== undefined && { from }),
-      } satisfies StoredCode),
-      'EX',
-      CODE_TTL_SEC,
-    );
-
-    let errorMessage: string | null = null;
-    try {
-      await this.eskiz.sendSms(target, buildPhoneVerifyMessage(code));
-    } catch (error) {
-      errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Telefon tasdiqlash SMS yuborilmadi (student ${studentId}): ${errorMessage}`,
-      );
-    }
-    await this.recordSms(
-      student,
-      from === undefined
-        ? 'Telefon tasdiqlash kodi yuborildi'
-        : `Yangi raqamni tasdiqlash kodi yuborildi: ${target}`,
-      errorMessage,
-    );
-
-    if (errorMessage) {
-      // Nothing reached the phone: the code is useless and the failure was
-      // ours, so the student gets the attempt back.
-      await this.redis.del(codeKey(studentId));
-      await this.redis.decr(dailyKey(studentId));
-      if (from !== undefined) await this.redis.decr(numberDailyKey(target));
-      throw new ServiceUnavailableException(
-        "SMS yuborilmadi. Birozdan keyin qayta urinib ko'ring",
-      );
-    }
-
-    return {
-      phone: target,
-      expiresInSec: CODE_TTL_SEC,
-      resendInSec: RESEND_COOLDOWN_SEC,
-    };
-  }
-
-  /** Audit row — the code itself is never stored, only that one was sent. */
-  private async recordSms(
-    student: StudentFacts,
-    content: string,
-    errorMessage: string | null,
-  ): Promise<void> {
-    await this.prisma.smsMessage
-      .create({
-        data: {
-          studentId: student.id,
-          content,
-          type: SmsMessageType.AUTO,
-          status: errorMessage
-            ? SmsMessageStatus.FAILED
-            : SmsMessageStatus.SENT,
-          errorMessage,
-          companyId: student.companyId,
-        },
-      })
-      .catch((e) =>
-        this.logger.warn(`SmsMessage audit yozilmadi: ${(e as Error).message}`),
-      );
-  }
-
-  private hash(code: string): string {
-    return createHash('sha256').update(code).digest('hex');
-  }
-
-  private hourBucket(): number {
-    return Math.floor(Date.now() / (HOUR_SEC * 1000));
-  }
-
-  /** INCR + (re)set TTL on every hit, so the key is never left without one. */
-  private async hit(key: string, ttlSec: number): Promise<number> {
-    const n = await this.redis.incr(key);
-    await this.redis.expire(key, ttlSec);
-    return n;
-  }
 }
 
 const STUDENT_SELECT = {
@@ -606,16 +408,3 @@ type StudentFacts = {
   companyId: number;
   userId: number | null;
 };
-
-/**
- * The SMS text. Like the reset code's, it must byte-match a template Eskiz has
- * moderated, or the gateway rejects it — and this one is NOT the reset
- * template: the purpose clause differs, which is exactly what moderation
- * checks (resource name with its type + what the code is for). Submit
- * "DaF Sprachzentrum mobil ilovasida telefon raqamingizni tasdiqlash uchun kod: 0000"
- * for moderation before setting STUDENT_PHONE_VERIFICATION_ENABLED=true.
- * Pure ASCII = one SMS segment.
- */
-export function buildPhoneVerifyMessage(code: string): string {
-  return `DaF Sprachzentrum mobil ilovasida telefon raqamingizni tasdiqlash uchun kod: ${code}`;
-}
