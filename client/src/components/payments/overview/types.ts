@@ -86,6 +86,8 @@ export interface IncomeAttribution {
 export interface ProfitComposition {
   month: string;
   netProfit: number;
+  /** `naqd` — the teacher leg fell back to cash paid (no computed salary). */
+  teacherSalaryBasis?: "hisoblangan" | "naqd";
   revenue: { total: number };
   withdrawals?: { total: number };
   teachers: { total: number };

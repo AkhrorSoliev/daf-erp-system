@@ -29,19 +29,28 @@ const methodColors: Record<string, string> = {
   TRANSFER: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
 };
 
-/**
- * Block 5 — «Oxirgi to'lovlar»: the ten latest payments in the branch scope.
- * «Guruh» is the student's group NOW, not a property of the payment.
- */
-export function RecentPayments() {
+/** The ten latest payments in the branch scope. */
+export function useRecentPayments() {
   const branchId = useBranchId();
-  const { data, isPending, isError, refetch } = useQuery({
+  return useQuery({
     queryKey: ["recent-payments", branchId],
     queryFn: () =>
       api
         .get<{ data: Payment[]; total: number }>("/payments", { params: { branchId, pageSize: 10, page: 1 } })
         .then((r) => r.data),
+    // Financial data always refetches, like the page's other blocks: with the
+    // app's 5-minute default a Payme/Click payment would show in «Kassaga
+    // tushdi» but not here.
+    staleTime: 0,
   });
+}
+
+/**
+ * Block 5 — «Oxirgi to'lovlar»: the ten latest payments in the branch scope.
+ * «Guruh» is the student's group NOW, not a property of the payment.
+ */
+export function RecentPayments() {
+  const { data, isPending, isError, refetch } = useRecentPayments();
 
   if (isPending) {
     return (

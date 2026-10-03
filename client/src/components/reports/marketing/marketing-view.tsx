@@ -1,7 +1,7 @@
 "use client";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, formatPercent } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { monthLabel } from "@/components/payments/salary-utils";
 import { som } from "@/components/payments/overview/overview-math";
@@ -32,10 +32,12 @@ export function MarketingReportView({ data }: { data: MarketingReport }) {
       <div className="space-y-2 rounded-xl border bg-card p-4">
         <p className="font-medium">Marketing samarasi</p>
         <p className="text-sm">{roiSentence(data)}</p>
-        <p className="text-xs text-amber-700 dark:text-amber-400">
-          Bu yuqori chegara: hamma yangi o&apos;quvchi ham reklamadan kelmagan. Lid manbasi yozilganlar bo&apos;yicha
-          aniq hisob — pastda.
-        </p>
+        {data.roi != null && (
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            Bu yuqori chegara: hamma yangi o&apos;quvchi ham reklamadan kelmagan. Lid manbasi yozilganlar bo&apos;yicha
+            aniq hisob — pastda.
+          </p>
+        )}
       </div>
 
       <section className="space-y-2">
@@ -86,25 +88,22 @@ export function MarketingReportView({ data }: { data: MarketingReport }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.sources.map((s, i) => {
-                const rate = s.leads > 0 ? Math.round((s.students / s.leads) * 100) : 0;
-                return (
-                  <TableRow key={s.source ?? "none"}>
-                    <TableCell className="border-r text-muted-foreground">{i + 1}</TableCell>
-                    <TableCell>{s.source ?? "Manba yozilmagan"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatNumber(s.leads)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatNumber(s.students)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="w-10 tabular-nums">{rate}%</span>
-                        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
-                          <div className="h-full rounded-full bg-primary/60" style={{ width: `${Math.min(rate, 100)}%` }} />
-                        </div>
+              {data.sources.map((s, i) => (
+                <TableRow key={s.source ?? "none"}>
+                  <TableCell className="border-r text-muted-foreground">{i + 1}</TableCell>
+                  <TableCell>{s.source ?? "Manba yozilmagan"}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatNumber(s.leads)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatNumber(s.students)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="w-12 tabular-nums">{formatPercent(s.rate)}</span>
+                      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-primary/60" style={{ width: `${Math.min(s.rate, 100)}%` }} />
                       </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         )}

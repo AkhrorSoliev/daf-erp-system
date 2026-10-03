@@ -25,12 +25,13 @@ const REPORT: MarketingReport = {
   ltv: { value: 1_258_000, avgMonths: 3.4, monthlyCharge: 370_000 },
   months: [OCTOBER, SEPTEMBER, JUNE],
   sources: [
-    { source: "Instagram", leads: 40, students: 10 },
-    { source: null, leads: 5, students: 1 },
+    { source: "Instagram", leads: 40, students: 10, rate: 25 },
+    { source: null, leads: 3, students: 1, rate: 33.3 },
   ],
 };
 
-const render = (data: MarketingReport) => norm(renderToStaticMarkup(createElement(MarketingReportView, { data })));
+const markup = (data: MarketingReport) => renderToStaticMarkup(createElement(MarketingReportView, { data }));
+const render = (data: MarketingReport) => norm(markup(data));
 
 describe("MarketingReportView", () => {
   it("shows the four cards with their sub-lines", () => {
@@ -51,6 +52,10 @@ describe("MarketingReportView", () => {
     expect(text).toContain("Bu yuqori chegara: hamma yangi o'quvchi ham reklamadan kelmagan.");
   });
 
+  it("has no upper-bound warning when there is no figure to bound", () => {
+    expect(render({ ...REPORT, roi: null })).not.toContain("Bu yuqori chegara");
+  });
+
   it("lists the months with «13×» and «3,4×», a transition month muted with «*» and «—»", () => {
     const text = render(REPORT);
 
@@ -60,12 +65,15 @@ describe("MarketingReportView", () => {
     expect(text).toContain("* May–iyun — tizimga o'tish oylari");
   });
 
-  it("lists the lead sources with their conversion, «Manba yozilmagan» for none", () => {
+  it("lists the lead sources with the server's conversion rate, «Manba yozilmagan» for none", () => {
     const text = render(REPORT);
 
     expect(text).toContain("Manba bo'yicha (lid manbasi yozilganlar)");
     expect(text).toContain("Instagram 40 10 25%");
-    expect(text).toContain("Manba yozilmagan 5 1 20%");
+    // The server's one-decimal rate, printed as sent (the client divides nothing).
+    expect(text).toContain(`Manba yozilmagan 3 1 ${oneDecimal(33.3)}%`);
+    // The bar is drawn from the same rate.
+    expect(markup(REPORT)).toContain("width:33.3%");
     expect(text).toContain("Lid manbasi 10.09.2026 dan beri yoziladi.");
   });
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { formatNumber } from "@/lib/format-utils";
+import { cn } from "@/lib/utils";
 import { BlockError, BlockSkeleton } from "./block-state";
 import { som } from "./overview-math";
 import { useFinancialOverview } from "./queries";
@@ -27,7 +28,14 @@ export function DebtCards({ month }: { month: string }) {
     <div className="grid gap-3 md:grid-cols-2">
       <div className="space-y-1 rounded-xl border bg-card p-4">
         <p className="text-sm text-muted-foreground">Eski qarz — o&apos;qiyotganlar</p>
-        <p className="text-2xl font-bold tabular-nums text-red-600 dark:text-red-400">{som(split.studying.older)}</p>
+        <p
+          className={cn(
+            "text-2xl font-bold tabular-nums",
+            split.studying.older > 0 && "text-red-600 dark:text-red-400",
+          )}
+        >
+          {som(split.studying.older)}
+        </p>
         {split.studying.olderCount != null && (
           <p className="text-xs text-muted-foreground">
             {formatNumber(split.studying.olderCount)} o&apos;quvchi · o&apos;tgan oylardan qolgan

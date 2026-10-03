@@ -1,4 +1,4 @@
-import { formatPrice } from "@/lib/format-utils";
+import { formatBalance } from "@/lib/format-utils";
 import type { ProfitComposition } from "./types";
 
 /** Nothing is reported before this month (the company's first month in the system). */
@@ -32,9 +32,9 @@ export function dayMonth(date: string): string {
   return `${date.slice(8, 10)}.${date.slice(5, 7)}`;
 }
 
-/** "1 500 000 so'm"; a missing figure is «—». */
+/** "1 500 000 so'm"; a missing figure is «—». A negated 0 (`-0`) prints «0 so'm», never «-0». */
 export function som(amount: number | null | undefined): string {
-  return amount == null ? "—" : `${formatPrice(amount)} so'm`;
+  return amount == null ? "—" : formatBalance(amount);
 }
 
 /** A payment method's name, never the stored value. */

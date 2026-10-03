@@ -42,7 +42,8 @@ export function ProfitDialog({
 
 /**
  * The lines, signed, then «Foyda». From 2026-07 teacher pay is the full
- * deserved figure, so only from then is it the Ish haqi page's total.
+ * deserved figure, so only from then — and only when the server computed it
+ * rather than falling back to cash paid — is it the Ish haqi page's total.
  */
 export function ProfitBreakdown({ month, composition }: { month: string; composition: ProfitComposition }) {
   return (
@@ -57,7 +58,7 @@ export function ProfitBreakdown({ month, composition }: { month: string; composi
         <span>Foyda</span>
         <span className="tabular-nums">{som(composition.netProfit)}</span>
       </div>
-      {month >= FULL_TEACHER_PAY_MONTH && (
+      {month >= FULL_TEACHER_PAY_MONTH && composition.teacherSalaryBasis === "hisoblangan" && (
         <p className="text-xs text-muted-foreground">Ustozlar oyligi — Ish haqi sahifasidagi jami bilan bir xil</p>
       )}
     </div>

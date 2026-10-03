@@ -84,4 +84,15 @@ describe("profitLines", () => {
       "Balansdan yechib olingan",
     );
   });
+
+  it("never prints «-0», for som(-0) or a zero leg of the equation", () => {
+    expect(som(-0)).toBe("0 so'm");
+    // A zero cost leg is negated into -0 by profitLines.
+    const printed = profitLines({ ...composition, staff: { total: 0 }, expenses: { total: 0 } }).map(
+      (l) => `${l.label} ${som(l.amount)}`,
+    );
+    expect(printed).toContain("Xodimlar oyligi 0 so'm");
+    expect(printed).toContain("Boshqa xarajatlar 0 so'm");
+    expect(printed.join(" | ")).not.toContain("-0 so'm");
+  });
 });

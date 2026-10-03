@@ -14,7 +14,9 @@ export function BlockError({ title, onRetry }: { title: string; onRetry: () => v
   return (
     <div className="space-y-2 rounded-xl border bg-card p-4">
       <p className="text-sm font-medium text-muted-foreground">{title}</p>
-      <p className="text-sm text-muted-foreground">Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+      <p role="alert" className="text-sm text-muted-foreground">
+        Ma&apos;lumotni yuklab bo&apos;lmadi
+      </p>
       <Button variant="outline" size="sm" onClick={onRetry}>
         Qayta urinish
       </Button>

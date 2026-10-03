@@ -188,13 +188,17 @@ describe("the lead and mock-exam form builders", () => {
 
 // The CEO's rule (27.09.2026): the three marketing figures have Uzbek names
 // («O'quvchi qiymati», «Jalb qilish narxi», «Marketing samarasi»). No file of
-// the two B1 folders may carry the English abbreviations.
+// the two B1 folders, nor the month stepper both pages use, may carry the
+// English abbreviations.
 describe("the overview and marketing pages (B1)", () => {
-  const files = ["payments/overview", "reports/marketing"].flatMap((dir) =>
-    readdirSync(join(__dirname, "..", "components", dir))
-      .filter((f) => /\.tsx?$/.test(f) && !f.endsWith(".test.ts"))
-      .map((f) => `${dir}/${f}`),
-  );
+  const files = [
+    ...["payments/overview", "reports/marketing"].flatMap((dir) =>
+      readdirSync(join(__dirname, "..", "components", dir))
+        .filter((f) => /\.tsx?$/.test(f) && !f.endsWith(".test.ts"))
+        .map((f) => `${dir}/${f}`),
+    ),
+    "shared/month-stepper.tsx",
+  ];
 
   it("finds the new files", () => {
     expect(files.length).toBeGreaterThan(10);

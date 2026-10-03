@@ -15,6 +15,7 @@ import { MonthsTable } from "./months-table";
 import { ProfitBreakdown } from "./profit-dialog";
 import { ProfitCard } from "./profit-card";
 import { useFinancialOverview, useFinancialTrend, useIncomeAttribution, useProfitComposition } from "./queries";
+import { useRecentPayments } from "./recent-payments";
 import { SalaryCard } from "./salary-card";
 import type { FinancialOverview, IncomeAttribution, ProfitComposition, TrendRow } from "./types";
 
@@ -84,6 +85,7 @@ const OVERVIEW: FinancialOverview = {
 const COMPOSITION: ProfitComposition = {
   month: "2026-10",
   netProfit: 67_000_000,
+  teacherSalaryBasis: "hisoblangan",
   revenue: { total: 175_400_000 },
   withdrawals: { total: 0 },
   teachers: { total: 80_400_000 },
@@ -236,10 +238,17 @@ describe("«Qanday hisoblandi»", () => {
     expect(text).not.toContain("Balansdan yechib olingan");
   });
 
-  it("says the teacher pay matches the Ish haqi page from 2026-07 only", () => {
+  it("says the teacher pay matches the Ish haqi page from 2026-07 only, and only when it was computed", () => {
     const check = "Ustozlar oyligi — Ish haqi sahifasidagi jami bilan bir xil";
-    expect(render(createElement(ProfitBreakdown, { month: "2026-07", composition: COMPOSITION }))).toContain(check);
-    expect(render(createElement(ProfitBreakdown, { month: "2026-06", composition: COMPOSITION }))).not.toContain(check);
+    const breakdown = (month: string, composition: ProfitComposition) =>
+      render(createElement(ProfitBreakdown, { month, composition }));
+
+    expect(breakdown("2026-07", COMPOSITION)).toContain(check);
+    expect(breakdown("2026-06", COMPOSITION)).not.toContain(check);
+    // Cash paid stood in for the teacher leg: not the Ish haqi page's figure.
+    expect(breakdown("2026-07", { ...COMPOSITION, teacherSalaryBasis: "naqd" })).not.toContain(check);
+    // An older server sends no basis: the line is left out.
+    expect(breakdown("2026-07", { ...COMPOSITION, teacherSalaryBasis: undefined })).not.toContain(check);
   });
 });
 
@@ -273,6 +282,7 @@ describe("Refreshing", () => {
     });
     seedMonth("2026-10")(client);
     client.setQueryData(["financial-trend", undefined, "2026-10"], []);
+    client.setQueryData(["recent-payments", undefined], { data: [], total: 0 });
     // On the server render, `isFetching` says whether the block fetches when it mounts.
     function Probe() {
       const fetching = {
@@ -280,6 +290,7 @@ describe("Refreshing", () => {
         attribution: useIncomeAttribution("2026-10").isFetching,
         profit: useProfitComposition("2026-10").isFetching,
         trend: useFinancialTrend("2026-10").isFetching,
+        recent: useRecentPayments().isFetching,
       };
       return Object.entries(fetching)
         .map(([block, yes]) => `${block} ${yes}`)
@@ -287,6 +298,6 @@ describe("Refreshing", () => {
     }
     const text = renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(Probe)));
 
-    expect(text).toBe("overview true, attribution true, profit true, trend true");
+    expect(text).toBe("overview true, attribution true, profit true, trend true, recent true");
   });
 });

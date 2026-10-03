@@ -17,8 +17,8 @@ export interface MarketingReport extends MarketingMonth {
   ltv: { value: number; avgMonths: number; monthlyCharge: number } | null;
   /** The asked month first, back to 2026-05. */
   months: MarketingMonth[];
-  /** Lead sources of the month; null before 10.09.2026. */
-  sources: { source: string | null; leads: number; students: number }[] | null;
+  /** Lead sources of the month; null before 10.09.2026. `rate` — «Aylanish», 0–100, the server's. */
+  sources: { source: string | null; leads: number; students: number; rate: number }[] | null;
 }
 
 /** "13" from 10 up, "3,4" below it. */
