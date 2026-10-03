@@ -4,8 +4,8 @@ Tizimga telefon raqam va parol bilan kirasiz. Kirish sahifasi rolingizga qarab i
 
 | Kim | Qayerdan kiradi |
 |---|---|
-| CEO, filial direktori, administrator, kassir | Admin paneldan. Manzili «admin.» bilan boshlanadi; sahifada «DaF Sprachzentrum» va «Hisobingizga kiring» yozuvi turadi. |
-| O'qituvchi | O'qituvchi portalidan. Manzili «lehrer.» bilan boshlanadi; sahifada «O'qituvchi portali» yozuvi turadi. |
+| CEO, filial direktori, administrator, kassir | Admin paneldan. Manzili «admin.» bilan boshlanadi. Kirish sahifasi katakli daftar varag'iga o'xshaydi: tepada «DaF Sprachzentrum», sarlavhasi «Boshqaruv». |
+| O'qituvchi | O'qituvchi portalidan. Manzili «lehrer.» bilan boshlanadi. Kirish sahifasi chiziqli daftar varag'iga o'xshaydi: sarlavhasi «O'qituvchi». |
 
 Manzilni bilmasangiz, rahbaringizdan so'rang. O'quvchilarning portali alohida: xodim hisobi bilan u yerdan kirib bo'lmaydi.
 
@@ -16,6 +16,9 @@ Har portal faqat o'z xodimlarini qidiradi. Shuning uchun noto'g'ri portaldan kir
 1. «Telefon raqam» maydoniga raqamingizni mamlakat kodi bilan yozing, masalan 998 90 123 45 67. Maydon oldida «+» belgisi turadi, bo'sh joylarni tizim o'zi qo'yadi.
 2. «Parol» maydoniga parolingizni yozing. Ko'z belgisi parolni ko'rsatadi yoki yashiradi.
 3. «Kirish» tugmasini bosing.
+4. Ekranda rasmingiz (rasm bo'lmasa, ismingizning bosh harfi), «Xush kelibsiz,» va ismingiz yoziladi, pastida «Kabinet ochilmoqda…» turadi. Taxminan 2 soniyadan keyin bosh sahifa o'zi ochiladi.
+
+Raqam yoki parol xato bo'lsa, xabar maydonlar tepasida qizil yozuvda chiqadi («Ko'p uchraydigan xatolar» bo'limiga qarang).
 
 Chet el raqami ham shunday yoziladi: avval mamlakat kodi, keyin raqam. Raqam 15 ta raqamgacha bo'lishi mumkin. O'zbek raqamini 998 siz, 9 ta raqam qilib yozsangiz ham qabul qilinadi.
 
@@ -29,9 +32,27 @@ Parol formasi ostida, «yoki» yozuvidan keyin «Telegram orqali kirish» tugmas
 
 1. Tugmani bosing. Telegramning kirish sahifasi ochiladi.
 2. Telegramda kirishga ruxsat bering.
-3. Tizim sizni parolsiz kiritadi va bosh sahifani ochadi.
+3. Tizim sizni parolsiz kiritadi: parol bilan kirgandagidek «Xush kelibsiz,» va ismingiz yoziladi, so'ng bosh sahifa ochiladi.
 
-Tizim sizni Telegram hisobingizdagi telefon raqam bo'yicha topadi. Shu raqam tizimdagi telefon raqamingiz bilan bir xil bo'lishi kerak. Mos kelmasa, xabar chiqadi: «Ko'p uchraydigan xatolar» bo'limiga qarang.
+Tizim sizni Telegram hisobingizdagi telefon raqam bo'yicha topadi. Shu raqam tizimdagi telefon raqamingiz bilan bir xil bo'lishi kerak. Mos kelmasa, xabar chiqadi va «Kirish sahifasiga qaytish» havolasi turadi: «Ko'p uchraydigan xatolar» bo'limiga qarang.
+
+## Telegram botdagi «Kabinet»
+
+Telegram hisobingiz xodim hisobingizga bog'langan bo'lsa, kabinetni parolsiz, Telegramning o'zida ochasiz. Kabinet — shu portalning o'zi: faqat o'qituvchi roli bor xodimga «lehrer.» portali, boshqa roli borlarga «admin.» portali ochiladi.
+
+1. Botga /start yuboring. Bot xodim menyusini chiqaradi: «💼 Kabinet», «📅 Jadval», «👥 Guruhlar» va o'qituvchida «💰 Oyligim». Kassirda «Guruhlar» tugmasi yo'q.
+2. «💼 Kabinet» ni bosing. Xabar maydoni yonidagi doimiy «Kabinet» tugmasi ham kabinetni ochadi.
+3. Ekranda «Xush kelibsiz,» va ismingiz yoziladi, so'ng Profil sahifangiz ochiladi. «Jadval», «Guruhlar» va «Oyligim» tugmalari tegishli sahifaning o'zini ochadi.
+
+Kabinetda telefon va parol so'ralmaydi: kirish faqat Telegram orqali bo'ladi. Menyudagi «Chiqish» ni bossangiz, «Hisobdan chiqdingiz» oynasi chiqadi: «Qayta kirish» sizni parolsiz qaytaradi, «Yopish» kabinetni yopadi.
+
+### Telegram hali bog'lanmagan bo'lsa
+
+1. Botga /xodim yuboring.
+2. «📱 Telefon raqamni yuborish» tugmasi bilan o'z raqamingizni yuboring. Raqam tizimdagi xodim hisobingizning telefoni bilan bir xil bo'lishi kerak.
+3. «Telegram'ingiz xodim hisobingizga bog'landi.» xabari va xodim menyusi chiqadi.
+
+Botda xodim havolasi orqali o'zi ro'yxatdan o'tgan xodim allaqachon bog'langan bo'ladi. Raqam mos kelmasa, bot «Bu raqam bilan xodim hisobi topilmadi.» deydi: «Ko'p uchraydigan xatolar» bo'limidagi «Bu Telegram raqami tizimda yo'q» qatoriga qarang.
 
 ## Parolni unutdingizmi?
 
@@ -106,6 +127,7 @@ Diqqat: kirishlar tugasa ham, tugatilgan qurilmaga brauzer bildirishnomalari kel
 - Telefon raqam bir xil bo'lishi mumkin. Lekin bitta telefonga bitta ishlab turgan xodim hisobi to'g'ri keladi: yangi xodim roli mavjud hisobga qo'shiladi.
 - Masalan, administrator va o'qituvchi roli bitta hisobda bo'lsa, admin panelga ham, o'qituvchi portaliga ham shu hisob bilan kirasiz.
 - O'quvchi hisobi xodim hisobiga xalaqit bermaydi. O'quvchi portaliga o'quvchi parolingiz bilan kirasiz.
+- Telegram hisobingiz o'quvchi kartasiga ham bog'langan bo'lsa, bot menyusida «🎓 O'quvchi kabineti» tugmasi ham turadi: «💼 Kabinet» xodim kabinetini, bu tugma o'quvchi kabinetini ochadi.
 
 ## Ko'p uchraydigan xatolar
 
@@ -122,8 +144,12 @@ Diqqat: kirishlar tugasa ham, tugatilgan qurilmaga brauzer bildirishnomalari kel
 | «Sessiya muddati tugadi. Iltimos, qaytadan urinib ko'ring.» | Kodni tasdiqlaganingizdan keyin 10 daqiqa o'tgan | Parolni tiklashni boshidan boshlang |
 | «Joriy parol noto'g'ri» | Profilda joriy parol xato yozilgan | To'g'ri parolni yozing; unutgan bo'lsangiz, avval parolni tiklang |
 | «Bu telefon raqam boshqa xodim hisobiga tegishli» | Yangi raqam boshqa xodimda turibdi | Boshqa raqam yozing yoki rahbaringizga murojaat qiling |
+| «Telegram akkauntingiz xodim hisobiga bog'lanmagan» (kabinet ochilganda) | Bu Telegram hisobi hech bir xodim hisobiga bog'lanmagan | Botga qaytib /xodim yuboring va raqamingizni yuboring, so'ng kabinetni qayta oching. Raqam tizimdagidan farq qilsa, yuqoridagi «Bu Telegram raqami tizimda yo'q» qatoridagi yo'ldan boring |
+| «Siz xodim sifatida ro'yxatdan o'tgansiz» (kabinet ochilganda) | Siz o'quvchilar kabinetini ochdingiz, Telegramingiz esa xodim hisobingizga bog'langan | Botga qaytib «💼 Kabinet» tugmasini bosing |
+| «Kirib bo'lmadi» (kabinet ochilganda) | Internet yo'q yoki kirish bu oynada saqlanmadi: Telegram'ning brauzer versiyasida shunday bo'lishi mumkin | «Qayta urinish» ni bosing. Brauzer versiyasida bo'lsa, kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching |
 
 ## Tizimda qayerda
 
-- Kirish sahifasi — «Kim qayerdan kiradi» jadvalidagi manzillarda turadi. Kirmagan bo'lsangiz, tizim o'zi shu sahifani ochadi.
+- Kirish sahifasi — «Kim qayerdan kiradi» jadvalidagi manzillarda turadi. Kirmagan bo'lsangiz, tizim o'zi shu sahifani ochadi. Sahifa tagida «Maxfiylik siyosati» va «Yordam» havolalari turadi: «Yordam» Telegram orqali yordam olish uchun.
+- Telegram bot — «💼 Kabinet» tugmasi va xabar maydoni yonidagi «Kabinet» tugmasi xodim kabinetini ochadi («Telegram botdagi «Kabinet»» bo'limiga qarang).
 - [Profil](/profile) — «Tahrirlash» (ism, rasm, telefon), «Parolni o'zgartirish» va «Boshqa qurilmalardan chiqish». Menyu pastidagi ismingizni bossangiz, «Profil» chiqadi.

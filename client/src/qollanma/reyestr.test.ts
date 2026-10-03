@@ -111,6 +111,17 @@ describe("qo'llanma reyestri", () => {
     expect(xato).toEqual([]);
   });
 
+  it("MDX'dagi har /qollanma/<bo'lim>/<sahifa> havolasi reyestrdagi sahifaga olib boradi", () => {
+    const bor = new Set(sahifalar.map((s) => `${s.bolim}/${s.sahifa}`));
+    const xato = fayllar.flatMap((f) =>
+      [...readFileSync(f, "utf8").matchAll(/\]\(\/qollanma\/([a-z0-9-]+)\/([a-z0-9-]+)[)#]/g)]
+        .map((m) => `${m[1]}/${m[2]}`)
+        .filter((kalit) => !bor.has(kalit))
+        .map((kalit) => `${relative(KONTENT, f)}: ${kalit}`),
+    );
+    expect(xato).toEqual([]);
+  });
+
   it("har <Skrinshot> manbasi /qollanma/rasmlar/ ostida", () => {
     const xato = fayllar.flatMap((f) =>
       [...readFileSync(f, "utf8").matchAll(/<Skrinshot[^>]*\ssrc="([^"]+)"/g)]

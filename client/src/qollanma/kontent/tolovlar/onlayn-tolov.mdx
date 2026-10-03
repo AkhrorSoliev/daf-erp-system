@@ -2,7 +2,7 @@
 
 1. **O'quvchi to'laydi.** O'quvchi portalda «To'lovlar» sahifasini ochadi. «Balansni to'ldirish» kartasida summani yozadi (kamida 1 000 so'm; tezkor tugmalar 100 000 dan 700 000 so'mgacha) va Payme yoki Click tugmasini bosadi. Portal uni to'lov tizimi sahifasiga o'tkazadi.
 2. **Pul balansga tushadi.** To'lov tizimi to'lov haqida tizimimizga xabar beradi. Tizim o'quvchini ID raqami bo'yicha topadi va pulni balansga qo'shadi. Xodim hech narsa qilmaydi.
-3. **O'quvchi natijani ko'radi.** Portal balansni yangilaydi: «Joriy balans» o'zgaradi, «Balans tarixi» da «To'lov qabul qilindi» yozuvi paydo bo'ladi.
+3. **O'quvchi natijani ko'radi.** Portal balansni yangilaydi: «Joriy balans» o'zgaradi, «Balans tarixi» da «To'lov qabul qilindi» yozuvi paydo bo'ladi. Telegram bog'langan bo'lsa, pul balansga tushgan zahoti botdan chek ham keladi.
 
 Onlayn to'lov qo'lda qayd qilingan to'lov kabi ishlaydi: balans minusda bo'lsa, avval qarzni yopadi; qarz to'liq yopilsa, ochiq to'lov va'dasi bajarilgan hisoblanadi; dars paketida ustoz ulushi yoziladi. Batafsil — [To'lov qayd qilish](/qollanma/tolovlar/tolov-qayd-qilish).
 
@@ -16,7 +16,7 @@ Yakunlanmagan to'lov cheksiz turmaydi: Payme to'lovi 12 soatdan keyin, Click to'
 
 - «Umumiy ma'lumotlar» sahifasidagi «Oxirgi to'lovlar» jadvalida onlayn to'lovning «Usul» ustunida «Payme» yoki «Click» turadi, «Qabul qildi» ustunida esa «—»: uni xodim qayd qilmagan.
 - O'quvchi kartasining «To'lovlar» tabida to'lov boshqalar kabi turadi va uning «Chek» havolasi bor.
-- Onlayn to'lov uchun tizim o'quvchiga Telegramda chek yubormaydi. Chek faqat xodim qayd qilgan to'lov uchun ketadi.
+- O'quvchiga Telegramda chek onlayn to'lovga ham, xodim qayd qilgan to'lovga ham bir xil ketadi: to'lov balansga yozilgan zahoti, kunlik xabar soat 20:00 ni kutmasdan. Chekda summa, «Payme» yoki «Click», joriy balans va kvitansiya havolasi bor. To'lov balansga yozilmasa, chek ketmaydi. Telegram bog'lanmagan o'quvchiga hech narsa ketmaydi, «Telegram uzilgan» belgisi turgan o'quvchiga esa xabar yuboriladi, lekin yetib bormaydi ([To'lov qayd qilish](/qollanma/tolovlar/tolov-qayd-qilish)).
 - Onlayn to'lovning summasini to'g'rilab bo'lmaydi: u to'lov tizimiga tegishli. Tizim rad etadi: «Faqat qo'lda kiritilgan to'lovni to'g'rilash mumkin» ([To'lovni to'g'rilash](/qollanma/tolovlar/tolovni-togrilash)).
 - To'lov tizimi komissiyasi balansga ta'sir qilmaydi: o'quvchi to'lagan summaning hammasi balansga tushadi.
 
@@ -42,7 +42,7 @@ Moliya → «To'lov tizimlari jurnali» sahifasi to'lov tizimlaridan kelgan so'r
 
 ## Payme to'lovni bekor qilsa
 
-Payme yakunlangan to'lovni bekor qilsa, tizimdagi to'lov ham bekor qilinadi: balans shuncha kamayadi va o'quvchiga shu kuni soat 20:00 da to'lov bekor qilingani haqida xabar boradi (Telegram bog'langan bo'lsa); xabarda sabab sifatida «Payme CancelTransaction» deb yoziladi. Balansda shuncha pul bo'lmasa, balans minusga tushadi.
+Payme yakunlangan to'lovni bekor qilsa, tizimdagi to'lov ham bekor qilinadi: balans shuncha kamayadi va o'quvchiga darhol (kunlik xabar soat 20:00 ni kutmasdan) to'lov bekor qilingani haqida xabar boradi (Telegram bog'langan bo'lsa); xabarda sabab sifatida «Payme CancelTransaction» deb yoziladi. Balansda shuncha pul bo'lmasa, balans minusga tushadi.
 
 Dars paketida pul allaqachon darslarga sarflangan bo'lsa, tizim bekor qilishni rad etadi va to'lov joyida qoladi. Bunday holatni hal qiladigan tugma ekranda yo'q.
 
@@ -57,7 +57,7 @@ Oylik kurs. Jasur qarzdor: balansi −700 000 so'm. Telegram bog'langan. Ism so
 1. Jasur portalda «To'lovlar» sahifasini ochdi. «Balansni to'ldirish» kartasida 700 000 so'm tezkor tugmasini bosdi, keyin Payme tugmasini. Portal uni Payme sahifasiga o'tkazdi, u yerda Jasur to'lovni tasdiqladi.
 2. Payme tizimimizga xabar berdi va pul balansga tushdi: −700 000 dan 0 gacha. Qarz yopildi, xodim hech narsa qilmadi.
 3. Portalda «Joriy balans» yangilandi, «Balans tarixi» da «To'lov qabul qilindi» yozuvi paydo bo'ldi.
-4. Administrator «Umumiy ma'lumotlar» → «Oxirgi to'lovlar» da to'lovni ko'radi: «Usul» — «Payme», «Qabul qildi» — «—». Jasurga Telegramda chek ketmaydi.
+4. Administrator «Umumiy ma'lumotlar» → «Oxirgi to'lovlar» da to'lovni ko'radi: «Usul» — «Payme», «Qabul qildi» — «—». Jasurga Telegramda chek pul tushgan zahoti kelgan.
 
 ## Istisnolar
 

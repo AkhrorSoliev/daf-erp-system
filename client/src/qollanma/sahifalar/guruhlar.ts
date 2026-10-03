@@ -85,9 +85,9 @@ export const guruhlar: QollanmaSahifa[] = [
     sahifa: "dars-ozgarishlari",
     sarlavha: "Darsni bekor qilish, ko'chirish, o'rinbosar",
     qisqacha:
-      "Guruh sahifasining «Dars o'zgarishlari» tabida darsni bekor qilasiz, boshqa kunga ko'chirasiz yoki bir kunga o'rinbosar ustoz qo'yasiz. Bekor qilinganda shu kungi davomat belgilari «Sababli» ga o'tadi va oylik to'lovchiga bir dars puli darhol qaytadi; yozuvni o'chirish davomat va pulni tiklamaydi.",
+      "Guruh sahifasining «Dars o'zgarishlari» tabida darsni bekor qilasiz, boshqa kunga ko'chirasiz yoki bir kunga o'rinbosar ustoz qo'yasiz. Bekor qilinganda shu kungi davomat belgilari «Sababli» ga o'tadi va oylik to'lovchiga bir dars puli darhol qaytadi; bekor qilish yozuvini o'chirsangiz qaytgan pul qayta yechiladi, davomat esa tiklanmaydi.",
     rollar: [1, 2, 3],
-    adr: ["0053", "0054", "0063"],
+    adr: ["0048", "0053", "0054", "0063"],
     yollar: ["/groups/*"],
     kalitSozlar: [
       "darsni bekor qilish",
@@ -109,6 +109,11 @@ export const guruhlar: QollanmaSahifa[] = [
       "ko'chirishni tahrirlash",
       "ustoz oyligi qayta hisoblanadi",
       "dars puli qaytadi",
+      "o'rinbosarga haq yozilmaydi",
+      "qarzdorning birinchi darsi",
+      "sinov darsi",
+      "o'rinbosar stavka",
+      "bekor qilishni o'chirish",
     ],
     yangilangan: "2026-10-03",
   },
@@ -146,7 +151,7 @@ export const guruhlar: QollanmaSahifa[] = [
     sahifa: "jadval",
     sarlavha: "Jadval",
     qisqacha:
-      "«Jadval» tanlangan kun va filial uchun guruhlarning darslarini xonalar bo'yicha «Grid»da yoki «Ro'yxat»da ko'rsatadi; o'qituvchi faqat o'z darslarini ko'radi. Jadval bekor qilingan va ko'chirilgan darsni hamda o'rinbosar ustozni hisobga olmaydi.",
+      "«Jadval» tanlangan kun va filial uchun guruhlarning darslarini xonalar bo'yicha «Grid»da yoki «Ro'yxat»da ko'rsatadi; o'qituvchiga faqat o'z darslari ko'rsatiladi. Jadval bekor qilingan va ko'chirilgan darsni hamda o'rinbosar ustozni hisobga olmaydi.",
     rollar: [1, 2, 3, 4, 5],
     adr: [],
     yollar: ["/schedule"],
