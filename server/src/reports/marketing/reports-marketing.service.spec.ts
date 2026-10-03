@@ -60,7 +60,7 @@ describe('ReportsMarketingService', () => {
       avgDurationMonths: 3.4,
     });
     leadFunnel.getSourceBreakdown.mockResolvedValue([
-      { source: 'Instagram', leads: 12, students: 3 },
+      { source: 'Instagram', leads: 12, students: 3, rate: 25 },
     ]);
   });
 
@@ -89,7 +89,7 @@ describe('ReportsMarketingService', () => {
       roi: 3.38,
       transition: false,
       ltv: { value: 1_530_000, avgMonths: 3.4, monthlyCharge: 450_000 },
-      sources: [{ source: 'Instagram', leads: 12, students: 3 }],
+      sources: [{ source: 'Instagram', leads: 12, students: 3, rate: 25 }],
     });
     expect(r.months[1]).toMatchObject({
       month: '2026-09',

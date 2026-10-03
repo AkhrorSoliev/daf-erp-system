@@ -849,8 +849,8 @@ export class TelegramGroupDailyReportService {
    * Returns null (block hidden) when no such user exists or the compute fails.
    */
   /**
-   * Month-to-date income composition on the SAME basis as the /overview "Tushum
-   * tarkibi" drill-down — `ReportsFinancialService.getIncomeMonthAttribution`,
+   * Month-to-date income composition on the SAME basis as the «Qayerdan keldi»
+   * dialog on «Umumiy ma'lumotlar» — `ReportsFinancialService.getIncomeMonthAttribution`,
    * which returns the cash total, its three parts — this month's own income,
    * the advance paid ahead for the next month and late payments settling older
    * debt (broken out per month), ADR-0067 — and both sides of the collection

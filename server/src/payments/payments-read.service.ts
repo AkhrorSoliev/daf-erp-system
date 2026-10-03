@@ -87,11 +87,15 @@ export class PaymentsReadService {
             studentId: { in: studentIds },
             deletedAt: null,
             status: EnrollmentStatus.ACTIVE,
+            // The same scope as the payment rows: a group in a branch the
+            // caller cannot see is not listed beside the payment.
+            group: branchIdWhere(branchIds),
           },
           select: {
             studentId: true,
             group: { select: { id: true, name: true } },
           },
+          orderBy: { group: { name: 'asc' } },
         })
       : [];
     const groupsOf = new Map<number, { id: string; name: string }[]>();

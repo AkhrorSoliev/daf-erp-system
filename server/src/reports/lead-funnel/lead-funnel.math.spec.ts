@@ -185,9 +185,26 @@ describe('sourceBreakdown', () => {
     };
 
     expect(sourceBreakdown(persons, sets)).toEqual([
-      { source: 'Instagram', leads: 2, students: 1 },
-      { source: 'Telegram', leads: 1, students: 0 },
-      { source: null, leads: 1, students: 1 },
+      { source: 'Instagram', leads: 2, students: 1, rate: 50 },
+      { source: 'Telegram', leads: 1, students: 0, rate: 0 },
+      { source: null, leads: 1, students: 1, rate: 100 },
+    ]);
+  });
+
+  it('gives the rate to one decimal, the Lidlar report rule', () => {
+    const persons = toPersons([
+      lead({ id: 'a', studentId: 21, source: 'Facebook' }),
+      lead({ id: 'b', studentId: 22, source: 'Facebook' }),
+      lead({ id: 'c', studentId: 23, source: 'Facebook' }),
+    ]);
+    const sets = {
+      enrolled: new Set([21, 22, 23]),
+      attended: new Set([21, 22]),
+      paid: new Set([21, 22]),
+    };
+
+    expect(sourceBreakdown(persons, sets)).toEqual([
+      { source: 'Facebook', leads: 3, students: 2, rate: 66.7 },
     ]);
   });
 });

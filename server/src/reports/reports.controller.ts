@@ -320,7 +320,7 @@ export class ReportsController {
       // Its own DTO, not `ReportsQueryDto`: the global ValidationPipe runs with
       // `forbidNonWhitelisted`, so a `month` the shared DTO does not declare is
       // a 400 — which is how this shipped broken.
-      month: query.month ?? new Date().toISOString().slice(0, 7),
+      month: query.month ?? tashkentMonthKey(new Date()),
       branchIds: await this.resolveScope(userId, query.branchId),
     });
   }

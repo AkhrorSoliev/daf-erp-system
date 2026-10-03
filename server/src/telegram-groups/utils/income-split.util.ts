@@ -5,7 +5,10 @@ export interface IncomeSplitInput {
   total: number;
   /** Paid for the period's OWN month(s). */
   currentMonth: number;
-  /** Paid ahead for the next month: still on the balance at the period end. */
+  /**
+   * Paid ahead: in-scope money still on the balance at the period end, or
+   * spent by a debit after the period end.
+   */
   advance: number;
   /** Paid against debt carried in from earlier months. */
   lateTotal: number;

@@ -285,8 +285,8 @@ describe('ReportsLeadFunnelService', () => {
     // Lead 'a' (Instagram) never enrolled; lead 'b' (Telegram bot) attended but
     // has not paid.
     expect(r).toEqual([
-      { source: 'Instagram', leads: 1, students: 0 },
-      { source: 'Telegram bot', leads: 1, students: 0 },
+      { source: 'Instagram', leads: 1, students: 0, rate: 0 },
+      { source: 'Telegram bot', leads: 1, students: 0, rate: 0 },
     ]);
     expect(prisma.lead.findMany.mock.calls[0][0].where.createdAt.gte).toEqual(
       new Date('2026-09-09T19:00:00.000Z'), // 10.09 00:00 Tashkent

@@ -30,7 +30,6 @@ describe('ReportsController — role guards', () => {
     getAttendanceAnalytics: jest.fn().mockResolvedValue({}),
     getGroupAnalytics: jest.fn().mockResolvedValue({}),
     getLeadAnalytics: jest.fn().mockResolvedValue({}),
-    getFinancialTrend: jest.fn().mockResolvedValue({}),
     getFinancialTrendCanonical: jest.fn().mockResolvedValue([]),
     getIncomeMonthAttribution: jest.fn().mockResolvedValue({}),
     getFinancialOverview: jest.fn().mockResolvedValue({}),

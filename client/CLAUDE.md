@@ -762,7 +762,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 ### Marketing report (`/reports/marketing`, ADR-0067)
 
 - `components/reports/marketing/` — `marketing-client.tsx` (month picker `?month=`, `GET /reports/marketing`), `marketing-view.tsx` (four cards, «Marketing samarasi», «Oylar bo'yicha», «Manba bo'yicha»), `marketing-format.ts` (pure: «13×», the sentence). CEO/BD only (`reports-nav.ts`, `CEO_BD`).
-- Every figure is the server's except «Manba bo'yicha»'s «Aylanish» (students ÷ leads of the server's row); a null one prints «—». Transition months (May–June 2026) print the new-student count with «*» and «—» for the rest, with the footnote. No visible LTV, CAC or ROI — `lib/uzbek-only-texts.test.ts` scans both B1 folders for them.
+- Every figure is the server's, «Manba bo'yicha»'s «Aylanish» included (the row's `rate`, printed with `formatPercent`); a null one prints «—». Transition months (May–June 2026) print the new-student count with «*» and «—» for the rest, with the footnote. No visible LTV, CAC or ROI — `lib/uzbek-only-texts.test.ts` scans both B1 folders for them.
 
 ### Salary Breakdown Drawer
 

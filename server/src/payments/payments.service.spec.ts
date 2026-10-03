@@ -808,11 +808,13 @@ describe('PaymentsService', () => {
           studentId: { in: [10001, 10002] },
           deletedAt: null,
           status: 'ACTIVE',
+          group: {},
         },
         select: {
           studentId: true,
           group: { select: { id: true, name: true } },
         },
+        orderBy: { group: { name: 'asc' } },
       });
       expect(result.data.map((r: any) => r.student.groups)).toEqual([
         [
@@ -824,6 +826,37 @@ describe('PaymentsService', () => {
           { id: 'g1', name: 'A1-07' },
           { id: 'g2', name: 'B1-02' },
         ],
+      ]);
+    });
+
+    it("does not list a group in a branch outside the caller's scope", async () => {
+      prisma.payment.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          student: { id: 10001, firstName: 'Ali', lastName: 'Valiyev' },
+        },
+      ]);
+      prisma.payment.count.mockResolvedValue(1);
+      // One student, two live groups: one in branch 2, one in branch 3.
+      const live = [
+        { studentId: 10001, branchId: 3, group: { id: 'g9', name: 'A2-01' } },
+        { studentId: 10001, branchId: 2, group: { id: 'g1', name: 'B1-02' } },
+      ];
+      prisma.enrollment.findMany.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          live
+            .filter((e) => where.group.branchId.in.includes(e.branchId))
+            .map(({ studentId, group }) => ({ studentId, group })),
+        ),
+      );
+
+      const result = await service.findAll({} as any, 1001, [2]);
+
+      expect(prisma.enrollment.findMany.mock.calls[0][0].where.group).toEqual({
+        branchId: { in: [2] },
+      });
+      expect(result.data[0].student.groups).toEqual([
+        { id: 'g1', name: 'B1-02' },
       ]);
     });
 
