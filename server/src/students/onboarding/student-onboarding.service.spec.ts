@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { computeChangedFields } from '../../common/entity-history/diff.util';
 import * as bcrypt from 'bcryptjs';
 import {
   NUMBER_TAKEN_MESSAGE,
@@ -475,6 +476,15 @@ describe('StudentOnboardingService (ADR-0039)', () => {
           }),
           changedById: USER_ID,
         }),
+      );
+      // The reason survives the diff only when oldValues carries it too.
+      const { oldValues, newValues } =
+        b.entityHistory.recordUpdate.mock.calls[0][0];
+      expect(
+        computeChangedFields(oldValues, newValues)?.newValues,
+      ).toHaveProperty(
+        'sabab',
+        "O'quvchi eski raqam o'rniga o'z raqamini kiritdi",
       );
     });
 

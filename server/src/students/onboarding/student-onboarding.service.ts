@@ -318,6 +318,8 @@ export class StudentOnboardingService {
         login: account?.login ?? null,
         ...(promotesBackup && { extraPhone: student.extraPhone }),
         telefonTasdigi: 'tasdiqlanmagan',
+        // A key missing from oldValues is dropped by the diff (server/CLAUDE.md).
+        sabab: null,
       },
       newValues: {
         phone: nextPhone,

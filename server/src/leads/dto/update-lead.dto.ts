@@ -29,7 +29,7 @@ export class UpdateLeadDto {
    */
   @IsOptional()
   @Matches(/^(\d{9})?$/, {
-    message: "Qo'shimcha telefon raqami 9 ta raqamdan iborat bo'lishi kerak",
+    message: "Zaxira raqam 9 ta raqamdan iborat bo'lishi kerak",
   })
   extraPhone?: string;
 
