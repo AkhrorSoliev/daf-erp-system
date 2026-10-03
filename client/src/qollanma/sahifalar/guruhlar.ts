@@ -47,7 +47,7 @@ export const guruhlar: QollanmaSahifa[] = [
     sahifa: "guruh-holatlari",
     sarlavha: "Guruh holatlari",
     qisqacha:
-      "Guruh «Boshlanmagan» bo'lib ochiladi, «Faol» bo'ladi, keyin «Pauza»ga tushishi, «Tugallangan» yoki «Bekor qilingan» bo'lishi mumkin; oxirgi ikki holatdan qaytish yo'q. Tugallanganda faol o'quvchilar bitiradi, muzlatilganlar chiqariladi; bekor qilinganda hammasi chiqariladi, pul balansga qaytadi; o'zgarish yo to'liq bajariladi, yo umuman.",
+      "Guruh «Boshlanmagan» bo'lib ochiladi, «Faol» bo'ladi, keyin «Pauza»ga tushishi, «Tugallangan» yoki «Bekor qilingan» bo'lishi mumkin; oxirgi ikki holatdan qaytish yo'q. Tugallanganda faol o'quvchilarning yozilishi tugaydi (boshqa faol guruhi yo'q o'quvchi «Bitirgan» bo'ladi), muzlatilganlar chiqariladi; bekor qilinganda hammasi chiqariladi, pul balansga qaytadi; o'zgarish yo to'liq bajariladi, yo umuman.",
     rollar: [1, 2, 3],
     adr: ["0036", "0041"],
     yollar: ["/groups/*"],
@@ -122,7 +122,7 @@ export const guruhlar: QollanmaSahifa[] = [
     sahifa: "bayramlar",
     sarlavha: "Bayramlar",
     qisqacha:
-      "Bayram Sozlamalar → «Dam olish kunlari» da butun markaz uchun kiritiladi: shu kunlarda davomat olinmaydi, dars eslatmalari va Telegram guruh hisobotlari ketmaydi. Tugash sanasi bor «Faol» va «Boshlanmagan» guruhlarning tugash sanasi bayramga tushgan dars kunlariga suriladi.",
+      "Bayram Sozlamalar → «Dam olish kunlari» da butun markaz uchun kiritiladi: shu kunlarda davomat olinmaydi va dars eslatmalari ketmaydi. Tugash sanasi bor «Faol» va «Boshlanmagan» guruhlarning tugash sanasi bayramga tushgan dars kunlariga suriladi.",
     rollar: [1, 2, 3],
     adr: [],
     yollar: ["/settings/holidays"],
