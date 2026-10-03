@@ -225,8 +225,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
-      'Lessons — attendance and the three modules that manipulate the same ' +
-      'lessons. All four resolve through `assertCallerMayTouchGroup`: a PURE ' +
+      'Lessons — attendance and the four modules that manipulate the same ' +
+      'lessons (cancellations, reschedules, planned absences, substitute ' +
+      'teachers). All five resolve through `assertCallerMayTouchGroup`: a PURE ' +
       'teacher by group assignment (the stronger test — being in the branch ' +
       "does not entitle you to another teacher's register), everyone else by " +
       "the group's branch. Attendance alone had this rule, privately, so " +
@@ -256,6 +257,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'DELETE /lesson-reschedules/:id',
       'POST /planned-absences/:groupId/date/:date',
       'DELETE /planned-absences/:id',
+      'GET /lesson-teacher-overrides',
+      'PUT /lesson-teacher-overrides/:groupId/:date',
+      'DELETE /lesson-teacher-overrides/:id',
     ],
   },
   {
@@ -772,7 +776,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /group-teacher-change-reasons/:id',
   'DELETE /holidays/:id',
   'DELETE /lead-sources/:id',
-  'DELETE /lesson-teacher-overrides/:id',
   'DELETE /mock-exam-sections/:id',
   'DELETE /notifications/devices',
   'DELETE /notifications/push/unsubscribe',
@@ -802,7 +805,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /leads/:id/hover-summary',
   'GET /leads/by-student/:studentId',
   'GET /lesson-reschedules/available-rooms',
-  'GET /lesson-teacher-overrides',
   'GET /mock-exam-sections',
   'GET /notifications',
   'GET /notifications/stream',
@@ -857,7 +859,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /telegram-groups/announce',
   'POST /telegram/employee-link',
   'POST /upload',
-  'PUT /lesson-teacher-overrides/:groupId/:date',
 ];
 
 /**
@@ -871,4 +872,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 91;
+export const UNREVIEWED_BUDGET = 88;

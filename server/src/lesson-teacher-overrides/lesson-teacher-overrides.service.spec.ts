@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { LessonTeacherOverridesService } from './lesson-teacher-overrides.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
@@ -7,6 +11,9 @@ import { EntityHistoryService } from '../common/entity-history';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import { SettingsService } from '../settings/settings.service';
+
+/** Users holding the Teacher role in these cases. */
+const TEACHER_IDS = new Set([10042, 10043, 10044]);
 
 describe('LessonTeacherOverridesService', () => {
   let service: LessonTeacherOverridesService;
@@ -35,6 +42,42 @@ describe('LessonTeacherOverridesService', () => {
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       // Trial-lesson months (contract 3.5): none by default.
       enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
+      user: {
+        // The caller (`assertCallerMayTouchGroup`): a CEO spans every branch,
+        // the shape the existing cases assume.
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+        // Substitute checks: the role lookup sees only TEACHER_IDS, nobody is
+        // in another branch, names for error texts.
+        findMany: jest.fn(({ where }) => {
+          if (where.roles) {
+            return Promise.resolve(
+              where.id.in
+                .filter((id: number) => TEACHER_IDS.has(id))
+                .map((id: number) => ({ id })),
+            );
+          }
+          if (where.branches) return Promise.resolve([]);
+          return Promise.resolve(
+            where.id.in.map((id: number) => ({
+              id,
+              firstName: 'Ustoz',
+              lastName: String(id),
+            })),
+          );
+        }),
+      },
+      // Every teacher has a rate by default.
+      employeeSalaryConfig: {
+        findMany: jest.fn(({ where }) =>
+          Promise.resolve(
+            where.userId.in.map((userId: number) => ({ userId })),
+          ),
+        ),
+      },
     };
     // `recomputeAccruals` guruh kursining `paymentModel` ini o'qiydi.
     // Standart — LESSON_PACK, ya'ni eski yo'l.
@@ -43,9 +86,6 @@ describe('LessonTeacherOverridesService', () => {
     });
     prisma = {
       ...tx,
-      user: {
-        findMany: jest.fn().mockResolvedValue([{ id: 10042 }, { id: 10043 }]),
-      },
       $transaction: jest.fn((cb) => cb(tx)),
     };
     salaryAccrual = {
@@ -605,6 +645,129 @@ describe('LessonTeacherOverridesService', () => {
     );
   });
 
+  // The lesson's pay follows the override, so it answers to the same branch
+  // rule as cancelling the lesson, and the substitute to the same rules as
+  // the group's own teacher.
+  describe('branch confinement', () => {
+    const wednesday = '2026-05-13';
+    const otherBranchAdmin = {
+      mainBranch: 2,
+      branches: [{ branchId: 2 }],
+      roles: [{ role: { name: 'Administrator' } }],
+    };
+
+    beforeEach(() => {
+      tx.group.findFirst.mockResolvedValue({
+        id: 'group-1',
+        branchId: 1,
+        exactDays: ['wednesday'],
+      });
+      tx.lessonTeacherOverride.findFirst.mockResolvedValue(null);
+      tx.lessonTeacherOverride.create.mockResolvedValue({ id: 'override-1' });
+    });
+
+    it("refuses to set a substitute in another branch's group", async () => {
+      tx.user.findFirst.mockResolvedValue(otherBranchAdmin);
+
+      await expect(
+        service.upsert('group-1', wednesday, { teacherIds: [10042] }, 1, 99, [
+          'Administrator',
+        ]),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("sets a substitute in the caller's own branch", async () => {
+      tx.user.findFirst.mockResolvedValue({
+        ...otherBranchAdmin,
+        mainBranch: 1,
+        branches: [{ branchId: 1 }],
+      });
+
+      await service.upsert(
+        'group-1',
+        wednesday,
+        { teacherIds: [10042] },
+        1,
+        99,
+        ['Administrator'],
+      );
+
+      expect(tx.lessonTeacherOverride.create).toHaveBeenCalled();
+    });
+
+    it("refuses to remove a substitute in another branch's group", async () => {
+      tx.user.findFirst.mockResolvedValue(otherBranchAdmin);
+      tx.lessonTeacherOverride.findFirst.mockResolvedValue({
+        id: 'override-1',
+        groupId: 'group-1',
+        date: new Date('2026-05-13T00:00:00Z'),
+        teacherIds: [10042],
+      });
+
+      await expect(
+        service.remove('override-1', 1, 99, ['Branch Director']),
+      ).rejects.toThrow(ForbiddenException);
+      expect(tx.lessonTeacherOverride.update).not.toHaveBeenCalled();
+    });
+
+    it("refuses to list another branch's substitutes", async () => {
+      tx.user.findFirst.mockResolvedValue(otherBranchAdmin);
+      tx.lessonTeacherOverride.findMany = jest.fn();
+
+      await expect(
+        service.findByGroup('group-1', 1, {
+          caller: { userId: 99, roles: ['Administrator'] },
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(tx.lessonTeacherOverride.findMany).not.toHaveBeenCalled();
+    });
+
+    it('refuses a substitute who is not a teacher', async () => {
+      await expect(
+        service.upsert('group-1', wednesday, { teacherIds: [10050] }, 1, 99),
+      ).rejects.toThrow(/o'qituvchi emas: 10050/);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses a teacher of another branch', async () => {
+      tx.user.findMany.mockImplementation(({ where }) =>
+        Promise.resolve(
+          where.branches
+            ? [{ id: 10042, firstName: 'Ali', lastName: 'Valiyev' }]
+            : [{ id: 10042 }],
+        ),
+      );
+
+      await expect(
+        service.upsert('group-1', wednesday, { teacherIds: [10042] }, 1, 99),
+      ).rejects.toThrow(/boshqa filialga tegishli: Ali Valiyev/);
+      expect(tx.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            branches: { some: {}, none: { branchId: 1 } },
+          }),
+        }),
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses a teacher with no salary rate', async () => {
+      tx.employeeSalaryConfig.findMany.mockResolvedValue([]);
+
+      const attempt = service.upsert(
+        'group-1',
+        wednesday,
+        { teacherIds: [10042] },
+        1,
+        99,
+      );
+      await expect(attempt).rejects.toThrow(BadRequestException);
+      await expect(attempt).rejects.toThrow(/stavkasi belgilanmagan/);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+  });
+
   describe('remove', () => {
     it('throws NotFoundException when override is missing', async () => {
       tx.lessonTeacherOverride.findFirst.mockResolvedValue(null);
@@ -620,6 +783,7 @@ describe('LessonTeacherOverridesService', () => {
         date: new Date('2026-05-13T00:00:00Z'),
         teacherIds: [10042],
       });
+      tx.group.findFirst.mockResolvedValue({ branchId: 1 });
       tx.lessonTeacherOverride.update.mockResolvedValue({});
       tx.groupTeacher.findMany.mockResolvedValue([{ teacherId: 10001 }]);
 
