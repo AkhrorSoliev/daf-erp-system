@@ -21,7 +21,10 @@ import {
   tokenSessionVersion,
 } from '../common/auth/session-version';
 import { STUDENT_ROLE_ID } from '../students/shared/student-select';
-import { isStudentOnlyAccount } from '../common/auth/student-account';
+import {
+  isStudentOnlyAccount,
+  STUDENT_ONLY_ACCOUNT,
+} from '../common/auth/student-account';
 import { SIGN_IN_USER_STATUSES } from '../common/auth/blocked-user';
 import { staffLinkedToChatWhere } from '../common/auth/staff-telegram';
 
@@ -123,6 +126,38 @@ export class AuthService {
   }
 
   /**
+   * Zaxira raqam ham kirish kaliti (ADR-0070) — faqat o'quvchi portalida va
+   * faqat hech bir hisob bu raqamni O'ZINIKI deb javob bermaganda: kartadagi
+   * asosiy raqam har doim ustun (`findAccountByIdentifier` va
+   * `findAccountsByIdentifier` avval uni, keyin buni so'raydi). Kimlik
+   * telefon bo'lmasa yoki portal o'quvchini qabul qilmasa — `null`.
+   */
+  private buildExtraPhoneLookup(
+    login: string,
+    allowedRoleIds?: number[] | null,
+  ) {
+    if (allowedRoleIds && !allowedRoleIds.includes(STUDENT_ROLE_ID)) {
+      return null;
+    }
+    const digits = (login ?? '').replace(/\D/g, '');
+    const normalized = digits ? normalizeSharedPhone(digits) : null;
+    if (!normalized) return null;
+    return {
+      where: {
+        student: { is: { extraPhone: normalized, deletedAt: null } },
+        deletedAt: null,
+        status: { in: [...SIGN_IN_USER_STATUSES] },
+        // Faqat o'quvchi rolidagi hisob: Telegram yo'li token'ni hisobning
+        // HAMMA rollari bilan beradi, aralash (xodim + o'quvchi) hisobning zaxira
+        // raqami esa o'sha raqam egasiga parolsiz xodim token'ini berardi.
+        ...STUDENT_ONLY_ACCOUNT,
+      },
+      orderBy: { updatedAt: 'desc' as const },
+      include: SESSION_USER_INCLUDE,
+    };
+  }
+
+  /**
    * Kimlikni (telefon yoki eski username) akkauntga aylantiradi.
    *
    * NEGA AJRATILGAN: parol bilan kirish va Telegram OAuth bir xil qoidadan
@@ -133,9 +168,12 @@ export class AuthService {
     login: string,
     allowedRoleIds?: number[] | null,
   ) {
-    return this.prisma.user.findFirst(
+    const own = await this.prisma.user.findFirst(
       this.buildAccountLookup(login, allowedRoleIds),
     );
+    if (own) return own;
+    const extra = this.buildExtraPhoneLookup(login, allowedRoleIds);
+    return extra ? this.prisma.user.findFirst(extra) : null;
   }
 
   /**
@@ -152,17 +190,21 @@ export class AuthService {
    * (Telegram OAuth) esa bu ikkinchi omilni olib tashlaydi va odamni BEGONA
    * akkauntga kiritib qo'yishi mumkin — shuning uchun u yo'l noaniqlikni
    * ko'rishi va yopiq holatga o'tishi kerak. Bu yerda faqat sanaladi; qarorni
-   * chaqiruvchi qabul qiladi.
+   * chaqiruvchi qabul qiladi. Ikkinchi bosqich (zaxira raqam, ADR-0070) ham shu
+   * yerda — Telegram yo'li parol yo'lidan keng bo'lmasin.
    */
   async findAccountsByIdentifier(
     login: string,
     allowedRoleIds?: number[] | null,
     take = 2,
   ) {
-    return this.prisma.user.findMany({
+    const own = await this.prisma.user.findMany({
       ...this.buildAccountLookup(login, allowedRoleIds),
       take,
     });
+    if (own.length > 0) return own;
+    const extra = this.buildExtraPhoneLookup(login, allowedRoleIds);
+    return extra ? this.prisma.user.findMany({ ...extra, take }) : [];
   }
 
   /**

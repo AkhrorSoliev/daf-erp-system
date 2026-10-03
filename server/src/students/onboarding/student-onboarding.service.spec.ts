@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { computeChangedFields } from '../../common/entity-history/diff.util';
 import * as bcrypt from 'bcryptjs';
 import {
   NUMBER_TAKEN_MESSAGE,
@@ -65,6 +66,7 @@ function build(
   card: Partial<{
     phone: string;
     verifiedPhone: string | null;
+    extraPhone: string | null;
     gender: 'MALE' | 'FEMALE' | null;
     dateOfBirth: Date | null;
   }> = {},
@@ -74,6 +76,7 @@ function build(
     id: STUDENT_ID,
     phone: PHONE,
     verifiedPhone: null as string | null,
+    extraPhone: null as string | null,
     phoneVerifiedAt: null as Date | null,
     gender: null as 'MALE' | 'FEMALE' | null,
     dateOfBirth: null as Date | null,
@@ -474,6 +477,15 @@ describe('StudentOnboardingService (ADR-0039)', () => {
           changedById: USER_ID,
         }),
       );
+      // The reason survives the diff only when oldValues carries it too.
+      const { oldValues, newValues } =
+        b.entityHistory.recordUpdate.mock.calls[0][0];
+      expect(
+        computeChangedFields(oldValues, newValues)?.newValues,
+      ).toHaveProperty(
+        'sabab',
+        "O'quvchi eski raqam o'rniga o'z raqamini kiritdi",
+      );
     });
 
     it('asks for the current password first — a wrong one sends nothing and reveals nothing', async () => {
@@ -510,6 +522,21 @@ describe('StudentOnboardingService (ADR-0039)', () => {
         b.service.sendChangeCode(STUDENT_ID, USER_ID, PHONE, PASSWORD),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(b.eskiz.sendSms).not.toHaveBeenCalled();
+    });
+
+    it("a new main number that was the card's backup number empties the backup (ADR-0070)", async () => {
+      const b = build({ extraPhone: OWN_PHONE });
+      await b.service.sendChangeCode(STUDENT_ID, USER_ID, OWN_PHONE, PASSWORD);
+      const [, message] = b.eskiz.sendSms.mock.calls.at(-1)!;
+      const code = /(\d{4})$/.exec(message)![1];
+
+      await b.service.verifyPhoneCode(STUDENT_ID, USER_ID, code);
+
+      expect(b.row.phone).toBe(OWN_PHONE);
+      expect(b.row.extraPhone).toBeNull();
+      const history = b.entityHistory.recordUpdate.mock.calls.at(-1)![0];
+      expect(history.oldValues.extraPhone).toBe(OWN_PHONE);
+      expect(history.newValues.extraPhone).toBeNull();
     });
 
     it('re-checks the number when the code comes back — taken meanwhile, nothing is written', async () => {

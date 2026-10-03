@@ -2,6 +2,7 @@ import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { UsersController } from '../../users/users.controller';
 import { StudentPortalController } from '../../students/student-portal.controller';
 import { StudentOnboardingController } from '../../students/onboarding/student-onboarding.controller';
+import { StudentExtraPhoneController } from '../../students/extra-phone/student-extra-phone.controller';
 import { RolesGuard } from './roles.guard';
 import { OwnPasswordAttemptGuard } from './own-password-attempt.guard';
 
@@ -19,6 +20,14 @@ const doors: Array<[string, (...args: any[]) => unknown]> = [
   [
     'POST /student-portal/onboarding/phone/change-code',
     StudentOnboardingController.prototype.sendChangeCode,
+  ],
+  [
+    'POST /student-portal/extra-phone/send-code',
+    StudentExtraPhoneController.prototype.sendCode,
+  ],
+  [
+    'POST /student-portal/extra-phone/remove',
+    StudentExtraPhoneController.prototype.remove,
   ],
 ];
 

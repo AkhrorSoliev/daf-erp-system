@@ -40,6 +40,8 @@ describe('LeadsService', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      // Backup-number rule (ADR-0070): another student account on the number.
+      user: { findFirst: jest.fn().mockResolvedValue(null) },
       mockExamParticipant: { findMany: jest.fn().mockResolvedValue([]) },
       // Comment counts are grouped, not relation-counted (polymorphic table).
       comment: {
@@ -975,6 +977,49 @@ describe('LeadsService', () => {
         1,
         { kind: 'LEAD', leadId: 'lead-1' },
       );
+    });
+
+    const leadWithBackup = {
+      id: 'lead-1',
+      firstName: 'Aziz',
+      lastName: 'Karimov',
+      phone: '901234567',
+      extraPhone: '935554433',
+      gender: null,
+      telegram: null,
+      parentPhone: null,
+      parentName: null,
+      statusEnum: 'NEW',
+      convertedStudentId: null,
+    };
+
+    it("copies the lead's backup number when no student holds it (ADR-0070)", async () => {
+      prisma.lead.findFirst.mockResolvedValue(leadWithBackup);
+      students.create.mockResolvedValue({ id: 10007 });
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
+
+      await service.convert('lead-1', { branchId: 5 }, 1001, 1, null);
+
+      expect(students.create.mock.calls[0][0].extraPhone).toBe('935554433');
+    });
+
+    it('leaves a backup number another student holds on the lead; conversion goes on', async () => {
+      prisma.lead.findFirst.mockResolvedValue(leadWithBackup);
+      // 1st: the main-number duplicate guard → none; 2nd: the rule → a holder.
+      prisma.student.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 10999,
+          firstName: 'Vali',
+          lastName: 'Aliyev',
+        });
+      students.create.mockResolvedValue({ id: 10007 });
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
+
+      await service.convert('lead-1', { branchId: 5 }, 1001, 1, null);
+
+      expect(students.create).toHaveBeenCalledTimes(1);
+      expect(students.create.mock.calls[0][0].extraPhone).toBeUndefined();
     });
 
     it('enrolls the new student into the chosen group using the group branch', async () => {

@@ -13,6 +13,7 @@ import { leadBranchWhere } from './shared/lead-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
 import { StudentEnrollmentService } from '../students/student-enrollment.service';
+import { findExtraPhoneHolder } from '../students/shared/extra-phone-rule';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { MoveLeadDto } from './dto/move-lead.dto';
@@ -959,12 +960,25 @@ export class LeadsService {
         );
       }
 
+      // The lead's backup number becomes a sign-in key on the card (ADR-0070).
+      // One another student already signs in with stays on the lead — the
+      // conversion itself never fails over a backup number.
+      const extraPhone =
+        lead.extraPhone &&
+        !(await findExtraPhoneHolder(this.prisma, lead.extraPhone, {
+          studentId: null,
+          userId: null,
+          phone: lead.phone,
+        }))
+          ? lead.extraPhone
+          : undefined;
+
       const student = await this.studentsService.create(
         {
           firstName: lead.firstName,
           lastName: lead.lastName,
           phone: lead.phone,
-          extraPhone: lead.extraPhone ?? undefined,
+          extraPhone,
           gender: lead.gender ?? undefined,
           telegram: lead.telegram ?? undefined,
           parentPhone: lead.parentPhone ?? undefined,

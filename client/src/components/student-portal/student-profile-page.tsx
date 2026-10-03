@@ -10,11 +10,14 @@ import {
   Camera,
   CircleNotch,
   PencilSimple,
+  Plus,
   Trash,
 } from "@phosphor-icons/react";
 import { Screen, StackHeader, Card, Avatar, LoadingCards } from "./lumio";
 import { StudentNameDialog } from "./student-name-dialog";
-import { useStudentProfile } from "./lib/queries";
+import { StudentExtraPhoneDialog } from "./student-extra-phone-dialog";
+import { extraPhoneRowState } from "./extra-phone-row-state";
+import { useExtraPhone, useStudentProfile } from "./lib/queries";
 import type { StudentProfile } from "./lib/types";
 
 function InfoRow({
@@ -45,6 +48,16 @@ export function StudentProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [nameOpen, setNameOpen] = useState(false);
+  const { data: extraPhone } = useExtraPhone();
+  // The mode outlives the open flag so the dialog keeps its content while it
+  // fades out (a remove dialog must not flash the add form on close).
+  const [extraPhoneOpen, setExtraPhoneOpen] = useState(false);
+  const [extraPhoneMode, setExtraPhoneMode] = useState<"set" | "remove">("set");
+  const extraRow = extraPhoneRowState(extraPhone);
+  function openExtraPhone(mode: "set" | "remove") {
+    setExtraPhoneMode(mode);
+    setExtraPhoneOpen(true);
+  }
 
   async function uploadPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -156,6 +169,55 @@ export function StudentProfilePage() {
 
           <div className="w-full">
             <InfoRow label="Telefon" value={formatPhone(profile.phone)} />
+            {extraRow ? (
+              <div className="border-b border-line py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm font-semibold text-ink-500">
+                    Zaxira raqam
+                  </span>
+                  <span className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                    <span className="truncate text-right font-display font-bold text-ink-900">
+                      {extraRow.value}
+                    </span>
+                    {extraRow.actions.includes("add") ? (
+                      <button
+                        type="button"
+                        onClick={() => openExtraPhone("set")}
+                        aria-label="Zaxira raqam qo'shish"
+                        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-700 transition-colors hover:bg-tint"
+                      >
+                        <Plus size={15} weight="bold" />
+                      </button>
+                    ) : null}
+                    {extraRow.actions.includes("change") ? (
+                      <button
+                        type="button"
+                        onClick={() => openExtraPhone("set")}
+                        aria-label="Zaxira raqamni o'zgartirish"
+                        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-700 transition-colors hover:bg-tint"
+                      >
+                        <PencilSimple size={15} weight="bold" />
+                      </button>
+                    ) : null}
+                    {extraRow.actions.includes("remove") ? (
+                      <button
+                        type="button"
+                        onClick={() => openExtraPhone("remove")}
+                        aria-label="Zaxira raqamni o'chirish"
+                        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-danger transition-colors hover:bg-tint"
+                      >
+                        <Trash size={15} weight="bold" />
+                      </button>
+                    ) : null}
+                  </span>
+                </div>
+                {extraRow.note ? (
+                  <p className="mt-1 text-xs font-semibold text-ink-500">
+                    {extraRow.note}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <InfoRow label="Login" value={profile.login} />
             <InfoRow label="Telegram" value={profile.telegram} />
             <InfoRow label="Filial" value={branchNames} last />
@@ -164,6 +226,11 @@ export function StudentProfilePage() {
       ) : null}
 
       <StudentNameDialog open={nameOpen} onOpenChange={setNameOpen} />
+      <StudentExtraPhoneDialog
+        open={extraPhoneOpen}
+        onOpenChange={setExtraPhoneOpen}
+        mode={extraPhoneMode}
+      />
     </Screen>
   );
 }

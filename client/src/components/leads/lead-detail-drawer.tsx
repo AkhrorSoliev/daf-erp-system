@@ -504,7 +504,7 @@ export function LeadDetailDrawer() {
                   <DetailRow label="Telefon" value={formatPhone(lead.phone)} />
                   {lead.extraPhone && (
                     <DetailRow
-                      label="Qo'shimcha telefon"
+                      label="Zaxira raqam"
                       value={formatPhone(lead.extraPhone)}
                     />
                   )}

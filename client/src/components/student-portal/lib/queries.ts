@@ -2,7 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
-import type { OnboardingStatus, StudentProfile } from "./types";
+import type {
+  ExtraPhoneStatus,
+  OnboardingStatus,
+  StudentProfile,
+} from "./types";
 
 // Shared profile query — one stable cache key across every screen + the shell,
 // so the balance, name and photo stay in sync without duplicate fetches.
@@ -25,5 +29,16 @@ export function useStudentOnboarding() {
     // The gate shows a spinner until this answers and fails open on an error;
     // the default three retries would hold the spinner for ~7 s first.
     retry: 1,
+  });
+}
+
+export const EXTRA_PHONE_QUERY_KEY = ["student-portal", "extra-phone"] as const;
+
+// The backup number and whether the student may change it (ADR-0070). Each
+// write answers with the new status, which goes straight into this cache.
+export function useExtraPhone() {
+  return useQuery<ExtraPhoneStatus>({
+    queryKey: EXTRA_PHONE_QUERY_KEY,
+    queryFn: () => api.get("/student-portal/extra-phone").then((r) => r.data),
   });
 }

@@ -119,9 +119,10 @@ export class TelegramOauthService {
 
     // Portal rollari — parol bilan kirishdagi AYNAN shu mantiq.
     const allowedRoleIds = getAllowedRoleIds(stored.portalOrigin);
-    // `take: 2` — bizga faqat "bittami yoki ko'pmi" javobi kerak, va shu bitta
-    // so'rov g'olib qatorni ham beradi (tartib `findAccountByIdentifier` bilan
-    // bir xil), ya'ni ikkinchi bor bazaga bormaymiz.
+    // `take: 2` — bizga faqat "bittami yoki ko'pmi" javobi kerak, va shu
+    // natija g'olib qatorni ham beradi (tartib `findAccountByIdentifier` bilan
+    // bir xil). So'rov bitta yoki ikkita: hisobning o'z raqami hech kimni
+    // topmasa, zaxira raqam bosqichi (ADR-0070) ham so'raladi.
     const matches = await this.authService.findAccountsByIdentifier(
       identity.phoneNumber,
       allowedRoleIds,

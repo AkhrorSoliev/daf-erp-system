@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { formatPhone } from "@/lib/format-utils";
 import { ageFromStoredDate } from "@/lib/age";
 import { PhoneProofBadge, TelegramBotBadge } from "./student-contact-badges";
+import { studentPhoneRows } from "./student-phone-rows";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -183,15 +184,28 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
 
       {/* Contact info */}
       <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Telefon:</span>
-          <a
-            href={`tel:+998${student.phone}`}
-            className="text-blue-600 hover:underline dark:text-blue-400"
-          >
-            {formatPhone(student.phone)}
-          </a>
-        </div>
+        {studentPhoneRows(student).map((row) => (
+          <div key={row.key} className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0} className="text-muted-foreground">
+                  {row.label}:
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {row.signIn
+                  ? "Bu raqam bilan tizimga kiradi"
+                  : "Kirish uchun ishlatilmaydi"}
+              </TooltipContent>
+            </Tooltip>
+            <a
+              href={row.telHref}
+              className="text-blue-600 hover:underline dark:text-blue-400"
+            >
+              {formatPhone(row.phone)}
+            </a>
+          </div>
+        ))}
         <div className="flex flex-wrap gap-1.5">
           <PhoneProofBadge
             verified={student.phoneVerified}

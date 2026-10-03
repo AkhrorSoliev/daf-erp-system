@@ -25,6 +25,10 @@ import {
 } from '../common/auth/student-account';
 import { loginForPhone } from '../common/auth/phone-account-rules';
 import {
+  findExtraPhoneHolder,
+  type ExtraPhoneHolder,
+} from '../students/shared/extra-phone-rule';
+import {
   ENTITY_DEFAULT_STATUS,
   ENTITY_TYPE_MAP,
   archiveScope,
@@ -32,6 +36,18 @@ import {
   getStatusField,
   parseId,
 } from './shared/archive-meta';
+
+/** The history reason for a backup number the restore had to drop (ADR-0070). */
+function droppedBackupReason(holder: ExtraPhoneHolder): string {
+  switch (holder.kind) {
+    case 'card':
+      return `Arxivdan tiklanganda: raqam boshqa o'quvchida (#${holder.studentId})`;
+    case 'account':
+      return `Arxivdan tiklanganda: raqam boshqa o'quvchi hisobida (#${holder.userId})`;
+    case 'own-main':
+      return 'Arxivdan tiklanganda: zaxira raqam asosiy raqam bilan bir xil edi';
+  }
+}
 
 @Injectable()
 export class ArchiveRestoreService {
@@ -108,13 +124,39 @@ export class ArchiveRestoreService {
       }
 
       if (entityType === ArchiveEntityType.STUDENTS) {
-        // The card and its sign-in account come back together (ADR-0033).
+        // A backup number another live student took while this card was
+        // archived does not come back as a sign-in key (ADR-0070).
+        const droppedBackup = record.extraPhone
+          ? await findExtraPhoneHolder(this.prisma, record.extraPhone, {
+              studentId: record.id,
+              userId: record.userId,
+              phone: record.phone,
+            })
+          : null;
+        if (droppedBackup) restoreData.extraPhone = null;
+
+        // The card and its sign-in account come back together (ADR-0033);
+        // the history row of a dropped backup number commits with them.
         await this.prisma.$transaction(async (tx) => {
           await tx.student.update({
             where: { id: parsedId as number },
             data: restoreData,
           });
           await this.reopenStudentAccount(tx, record, userId);
+          if (droppedBackup) {
+            await this.entityHistoryService.recordUpdate({
+              entityType: 'Student',
+              entityId: parsedId as number,
+              oldValues: { extraPhone: record.extraPhone, sabab: null },
+              newValues: {
+                extraPhone: null,
+                sabab: droppedBackupReason(droppedBackup),
+              },
+              changedById: userId,
+              companyId: record.companyId ?? undefined,
+              tx,
+            });
+          }
         });
       } else {
         await delegate.update({

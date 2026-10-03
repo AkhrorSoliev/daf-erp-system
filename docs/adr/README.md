@@ -136,6 +136,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0067](0067-kassa-uch-qism-marketing-va-umumiy-sahifa.md) | Kassaga tushgan pul uch qismda (shu oy, oldindan, eski qarz); marketing ko'rsatkichlari birinchi to'lov bo'yicha; o'qimayotganlar qarzi uch turga bo'linadi; «financial-overview» faqat CEO va filial direktoriga | Qabul qilindi | 2026-10-02 |
 | [0068](0068-javobsiz-dars-savoli-bor-guruh-yopilmaydi.md) | «Dars bo'ldimi?» savoliga javob berilmaguncha guruh yopilmaydi; filialni yopish va kursni arxivlash ham | Qabul qilindi | 2026-10-03 |
 | [0069](0069-orinbosar-ustoz-guruh-ustozi-qoidalarida.md) | O'rinbosar ustoz guruh ustozi qoidalariga bo'ysunadi: o'qituvchi roli, guruh filiali, ish haqi stavkasi | Qabul qilindi | 2026-10-03 |
+| [0070](0070-zaxira-raqam-ikkinchi-kirish-kaliti.md) | Zaxira raqam — o'quvchining ikkinchi kirish kaliti; asosiy raqam ustun, o'quvchi o'zi parol + SMS bilan qo'shadi | Qabul qilindi | 2026-10-03 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 
