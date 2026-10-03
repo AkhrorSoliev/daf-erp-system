@@ -27,4 +27,10 @@ describe("hisobotlar bo'limiga kirish", () => {
     expect(canEnterReports([5])).toBe(false);
     expect(canOpenReportPath([5], "/reports/leads")).toBe(false);
   });
+
+  it("Marketing — pul hisoboti: CEO va filial direktori ochadi, administrator ochmaydi", () => {
+    expect(canOpenReportPath([1], "/reports/marketing")).toBe(true);
+    expect(canOpenReportPath([2], "/reports/marketing")).toBe(true);
+    expect(canOpenReportPath([3], "/reports/marketing")).toBe(false);
+  });
 });

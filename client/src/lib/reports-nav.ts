@@ -7,6 +7,7 @@ import {
   Activity,
   CalendarCheck,
   Send,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -51,6 +52,8 @@ export const reportsNavSections: ReportsNavSection[] = [
     title: "Marketing va faoliyat",
     items: [
       { title: "Lidlar hisoboti", url: "/reports/leads", icon: UserPlus, visibleForRoles: [1, 2, 3] },
+      // Pul hisoboti — CEO/BD (server: `GET /reports/marketing`, ADR-0067).
+      { title: "Marketing", url: "/reports/marketing", icon: Megaphone, visibleForRoles: CEO_BD },
       { title: "Markaz faoliyat statistikasi", url: "/reports/activity", icon: Activity, visibleForRoles: CEO_BD },
       { title: "Davomat statistikasi", url: "/reports/attendance", icon: CalendarCheck, visibleForRoles: CEO_BD },
       { title: "Bot hisoboti", url: "/reports/bot", icon: Send, visibleForRoles: CEO_BD },

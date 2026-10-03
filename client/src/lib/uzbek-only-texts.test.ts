@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -183,5 +183,24 @@ describe("the lead and mock-exam form builders", () => {
 
     expect(text).toContain("Ism, Familiya va Telefon — har qanday formada majburiy");
     expect(text).not.toContain("Familya");
+  });
+});
+
+// The CEO's rule (27.09.2026): the three marketing figures have Uzbek names
+// («O'quvchi qiymati», «Jalb qilish narxi», «Marketing samarasi»). No file of
+// the two B1 folders may carry the English abbreviations.
+describe("the overview and marketing pages (B1)", () => {
+  const files = ["payments/overview", "reports/marketing"].flatMap((dir) =>
+    readdirSync(join(__dirname, "..", "components", dir))
+      .filter((f) => /\.tsx?$/.test(f) && !f.endsWith(".test.ts"))
+      .map((f) => `${dir}/${f}`),
+  );
+
+  it("finds the new files", () => {
+    expect(files.length).toBeGreaterThan(10);
+  });
+
+  it.each(files)("%s carries no LTV, CAC or ROI", (file) => {
+    expect(source(file)).not.toMatch(/\b(LTV|CAC|ROI)\b/);
   });
 });
