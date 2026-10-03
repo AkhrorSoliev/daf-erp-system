@@ -21,7 +21,6 @@ import {
 } from "@/hooks/use-notifications";
 import { useAuth } from "@/hooks/use-auth";
 import { useSSE } from "@/hooks/use-sse";
-import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { notificationHref } from "./notification-href";
 
 const TYPE_ICONS: Record<string, typeof MessageSquare> = {
@@ -89,9 +88,8 @@ export function NotificationBell() {
 
   const initialized = useRef(false);
 
-  // Initialize SSE and push
+  // Initialize SSE
   useSSE();
-  usePushNotifications();
 
   // Fetch unread count on mount
   useEffect(() => {
