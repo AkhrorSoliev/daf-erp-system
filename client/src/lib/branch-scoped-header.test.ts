@@ -43,6 +43,14 @@ const BRANCH_INDEPENDENT: Record<string, string> = {
   "hooks/use-push-notifications.ts":
     "Registers this DEVICE for push. Device tokens belong to the browser, " +
     "not to a branch.",
+  "hooks/use-pending-task-count.ts":
+    "Counts my tasks in «Kutilmoqda» for the sidebar's «Topshiriqlar» row. " +
+    "GET /comments/my-tasks filters by the assignee alone " +
+    "(comments.service.ts getMyTasks), so the count covers every branch.",
+  "hooks/use-tasks-board.ts":
+    "Reached only because the sidebar subscribes to it to recount. Its " +
+    "requests are keyed on the person (assignee or author), every branch, " +
+    "and the store is still reset on a switch (registerBranchScopedStore).",
 };
 
 function resolveImport(spec: string): string | null {

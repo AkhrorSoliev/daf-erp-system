@@ -444,6 +444,45 @@
       animation: none;
     }
   }
+
+  /* The sidebar's «Topshiriqlar» row while tasks wait in «Kutilmoqda»: a
+     faint red tint and a soft red wave that crosses the row, then rests for
+     the second half of the cycle. */
+  .sidebar-news {
+    position: relative;
+    isolation: isolate;
+    background-color: rgba(239, 68, 68, 0.08);
+  }
+  .sidebar-news::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(239, 68, 68, 0.2),
+      transparent
+    );
+    transform: translateX(-100%);
+    animation: sidebar-news-wave 3.4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar-news::after {
+      display: none;
+    }
+  }
+}
+
+@keyframes sidebar-news-wave {
+  0% {
+    transform: translateX(-100%);
+  }
+  50%,
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes daftar-greet-photo {
