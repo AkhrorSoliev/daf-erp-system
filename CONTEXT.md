@@ -273,7 +273,22 @@ guruhsiz (statusi `ACTIVE` bo'lsa ham), muzlatilgan, ketgan. «O'qiyotganlar
 qarzi» bilan bitta shartning o'zi va inkori (`activeStudentWhere()`), shuning
 uchun har qarzdor aniq bittasida. Arxivdagi karta (`deletedAt`) ikkalasida ham
 sanalmaydi. Hech qayerda o'qiyotganlarnikiga qo'shilmaydi.
+Uch turga bo'linadi (ADR-0067): **guruhsiz** — statusi `ACTIVE` (o'qimayotganlar
+ichida bu aynan `ungroupedStudentWhere()`), **muzlatilgan** — `FROZEN`,
+**ketgan** — qolgan har qanday status; uchalasi jamini beradi.
 `reports/debt-split.ts` · `docs/adr/0059-qarz-ikki-alohida-raqam.md`
+
+**Kassaga tushdi (uch qism)** — davrda tushgan to'lovlar: **shu oy uchun** (davr
+hisobini to'lagan), **oldindan** (davr oxirida balansda turgan yoki davrdan
+keyingi hisobni to'lagan) va **eski qarzlar uchun** (oldingi oylar qarzi).
+Ledger qayta o'ynaladi, balans bo'laklari eng eskisidan sarflanadi.
+`reports/reports-financial.service.ts` (`getIncomeMonthAttribution`) · `docs/adr/0067-kassa-uch-qism-marketing-va-umumiy-sahifa.md`
+
+**Yangi o'quvchi (marketing)** — birinchi COMPLETED to'lovi shu oyga tushgan,
+arxivlanmagan, filial qamrovida, kamida bitta o'chirilmagan yozilishi bor karta.
+2026-07 dan oldingi oylar — o'tish oylari: ularning yangi o'quvchisi «*» bilan
+ko'rsatiladi, jalb qilish narxi, hozirgacha to'lagan va samara hisoblanmaydi.
+`reports/marketing/marketing.math.ts` · ADR-0067
 
 **To'lov va'dasi (PaymentPromise)** — qarzdor «falon kuni to'layman» deganda
 ochiladigan yozuv: `OPEN → KEPT | BROKEN`.
@@ -369,9 +384,10 @@ Hech qayerda qayta hisoblamang, mijozda ham.
 `reports/month-charges.ts` · `docs/adr/0058-oylik-oyning-asosiy-raqami-hisoblandi.md`
 
 **«Sof foyda»** — tan olingan tushum − **haqli** (deserved) oylik − xarajat −
-qaytarilgan pul. Kassa harakati emas: agar hisob yiqilsa, kartochka
-«Kassa harakati» deb **qayta nomlanadi**, jimgina boshqa raqam ko'rsatmaydi.
-`reports/reports.controller.ts` · `client/src/components/payments/payments-overview.tsx`
+qaytarilgan pul. Kassa harakati emas: agar hisob yiqilsa, bosh sahifa kartasi
+«Foyda (kassa asosida)» deb **qayta nomlanadi**, «Oylar bo'yicha» jadvali «—»
+chizadi — jimgina boshqa raqam ko'rsatilmaydi.
+`reports/reports.controller.ts` · `client/src/components/dashboard/home-money-cards.tsx`
 
 **Yig'im foizi (collection ratio)** — 2026-09 dan boshlab (oylik to'lov oylari)
 **to'landi ÷ hisoblandi**, bir xona kasr; hech narsa hisoblanmagan bo'lsa foiz

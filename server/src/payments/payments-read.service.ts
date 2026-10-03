@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaymentStatus, Prisma } from '@prisma/client';
+import { EnrollmentStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { PaymentQueryDto } from './dto/payment-query.dto';
 import {
   ReportBranchIds,
@@ -55,7 +55,7 @@ export class PaymentsReadService {
         }),
     };
 
-    const [data, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.payment.findMany({
         where,
         select: {
@@ -77,6 +77,37 @@ export class PaymentsReadService {
       }),
       this.prisma.payment.count({ where }),
     ]);
+
+    // The student's groups NOW (live active enrollments) — a label for the row,
+    // not a property of the payment. One query for the whole page.
+    const studentIds = [...new Set(rows.map((r) => r.student.id))];
+    const enrollments = studentIds.length
+      ? await this.prisma.enrollment.findMany({
+          where: {
+            studentId: { in: studentIds },
+            deletedAt: null,
+            status: EnrollmentStatus.ACTIVE,
+            // The same scope as the payment rows: a group in a branch the
+            // caller cannot see is not listed beside the payment.
+            group: branchIdWhere(branchIds),
+          },
+          select: {
+            studentId: true,
+            group: { select: { id: true, name: true } },
+          },
+          orderBy: { group: { name: 'asc' } },
+        })
+      : [];
+    const groupsOf = new Map<number, { id: string; name: string }[]>();
+    for (const e of enrollments) {
+      const list = groupsOf.get(e.studentId) ?? [];
+      list.push(e.group);
+      groupsOf.set(e.studentId, list);
+    }
+    const data = rows.map((r) => ({
+      ...r,
+      student: { ...r.student, groups: groupsOf.get(r.student.id) ?? [] },
+    }));
 
     return { data, total, page, pageSize };
   }

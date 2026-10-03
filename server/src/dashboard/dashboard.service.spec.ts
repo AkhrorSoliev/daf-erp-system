@@ -195,6 +195,25 @@ describe('DashboardService', () => {
       );
     });
 
+    it("keeps a teacher's day to the groups they teach", async () => {
+      await service.getTodaySchedule(1, 1001, '2026-04-13', 10042);
+
+      expect(prisma.group.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            teachers: { some: { teacherId: 10042 } },
+          }),
+        }),
+      );
+    });
+
+    it('does not narrow the day when no teacher is given', async () => {
+      await service.getTodaySchedule(1, 1001, '2026-04-13');
+
+      const [{ where }] = prisma.group.findMany.mock.calls[0];
+      expect(where).not.toHaveProperty('teachers');
+    });
+
     it('should query correct day name for the given date', async () => {
       // 2026-04-13 is a Monday
       await service.getTodaySchedule(1, 1001, '2026-04-13');

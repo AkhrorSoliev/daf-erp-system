@@ -6,7 +6,7 @@ import { ArrowUpRight, CalendarClock } from "lucide-react";
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
-import type { DebtSplit } from "@/components/payments/payments-overview";
+import type { DebtSplit } from "@/components/payments/overview/types";
 
 interface DebtorSummary {
   /** The debt as two numbers (ADR-0059); the banner names only the first. */

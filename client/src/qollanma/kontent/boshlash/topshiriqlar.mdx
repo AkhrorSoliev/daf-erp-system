@@ -1,0 +1,114 @@
+## Izoh va topshiriq
+
+- **Izoh** — yozuv. U o'quvchi, o'qituvchi, xodim, guruh yoki lid sahifasidagi «Izohlar» tabida turadi; kim va qachon yozgani ko'rinadi.
+- **Topshiriq** — ijrochisi bor izoh. Ijrochi topshiriqning holatini o'zi belgilaydi: «Kutilmoqda», «Ko'rildi» yoki «Bajarildi».
+
+Tizim ham izoh yozadi: odam o'quvchi, xodim yoki guruhning holatini o'zgartirsa, «Status o'zgartirildi: Faol → Muzlatilgan» kabi qator paydo bo'ladi. Uni tahrirlab bo'lmaydi. Holat o'zi o'zgarsa (masalan, avtomatik pauzada), bunday qator yozilmaydi. Tizim topshiriq ham beradi: dars tugaguncha davomat olinmasa, filial administratorlariga «Dars bo'ldimi?» topshirig'i keladi (pastdagi alohida bo'limga qarang).
+
+Izohlar faqat o'z filialingizdagi yozuvlarda ko'rinadi va yoziladi: boshqa filial yozuvining izohini tizim rad etadi. CEO bundan mustasno, u hamma filialni ko'radi. Hali filialga biriktirilmagan lidning izohlari esa hamma filialga ochiq.
+
+## Izoh yozish
+
+1. O'quvchi, o'qituvchi, xodim yoki guruh sahifasida «Izohlar» tabini oching. Lidda — lid kartochkasidagi «Izohlar» tabini.
+2. «Izoh yozing...» maydoniga matnni yozing.
+3. «Yuborish» ni bosing (yoki Ctrl+Enter).
+
+O'quvchi va guruh kartasidagi «So'nggi izoh» bloki eng oxirgi izohni ko'rsatadi.
+
+Izohni muallifi yoki CEO tahrirlaydi: izoh ustiga kursor olib borsangiz, uch nuqtali menyu chiqadi, unda «Tahrirlash» bor. «O'chirish» faqat CEO'ga ko'rinadi va izohni darhol, qaytarib bo'lmaydigan qilib o'chiradi.
+
+## Topshiriq berish
+
+1. Izoh maydoniga matnni yozing.
+2. «Topshiriq» kalitini yoqing.
+3. «Kimga topshiriq berilsin?» ostidan ijrochini tanlang. Bir nechta ijrochi tanlash mumkin.
+4. Xohlasangiz, «Muddat» sanasini va «Ustuvorlik» ni tanlang: «Oddiy», «O'rta», «Yuqori» yoki «Shoshilinch».
+5. «Yuborish» ni bosing. Ijrochi tanlanmaguncha tugma ishlamaydi.
+
+«Topshiriq» kaliti izoh maydonida CEO va filial direktoriga ko'rinadi. Ijrochi sifatida filial direktori va administrator hisoblari tanlanadi: sizga ko'rinadigan filiallardagi faol xodimlar, o'zingizdan tashqari. Mos xodim bo'lmasa, «Topshiriq berish mumkin bo'lgan xodimlar topilmadi» yozuvi chiqadi.
+
+Muddat shu kunning 18:00 si (Toshkent vaqti) bo'ladi: maydonda faqat sana tanlanadi, soat tanlanmaydi. Yakshanbani tanlab bo'lmaydi, chunki tizim topshiriq muddatini faqat dushanba–shanba kunlari 08:00 dan 18:00 gacha qabul qiladi.
+
+## «Topshiriqlar» sahifasi
+
+Chap menyudagi «Topshiriqlar» hamma xodimga ochiq. Sahifada uchta ustun bor: «Kutilmoqda», «Ko'rildi», «Bajarildi». Karta topshiriq matnini, ustuvorlikni va muddat belgisini ko'rsatadi.
+
+Kartada ustuvorlik nomi formadagidan farq qiladi: «Oddiy» o'rniga «Past», «O'rta» o'rniga «O'rtacha» ko'rinadi.
+
+Matnini yoki «... sahifasiga o'tish» havolasini bossangiz, topshiriq yozilgan sahifa ochiladi: o'quvchi, guruh yoki xodim sahifasi. Lidga yozilgan topshiriq «Lidlar» sahifasida shu lidning kartochkasini ochadi. O'qituvchi profiliga yozilgan topshiriq ham xodim sahifasini ochadi. Havola faqat shu sahifani ocha oladigan xodimga beriladi:
+
+- xodim sahifasi — faqat CEO va filial direktoriga; administratorning kartasida bu havola chiqmaydi;
+- o'quvchi sahifasi — CEO, direktor, administrator va kassirga;
+- guruh sahifasi — kassirdan boshqa hammaga.
+
+CEO va filial direktorida ikkita tab bor. Boshqa rollarda tab yo'q: ular faqat o'zlariga berilgan topshiriqlarni ko'radi.
+
+| Tab | Nimani ko'rsatadi | Kartani ustunlar orasida ko'chirish |
+|---|---|---|
+| «Menga berilgan» | Sizga berilgan topshiriqlar | Mumkin |
+| «Men bergan» | Siz bergan topshiriqlar | Mumkin emas, faqat ko'rish |
+
+- Muddat belgisi muddat qo'yilgan topshiriqda chiqadi: «Bugun - 02.10.2026» (bugun tugaydi) yoki «Muddati o'tgan - 01.10.2026». Boshqa kunda faqat sana ko'rinadi.
+- «Men bergan» tabida karta hamma ijrochi bajargandagina «Bajarildi» ustuniga tushadi; birortasi ko'rgan bo'lsa «Ko'rildi» da, hech kim ko'rmagan bo'lsa «Kutilmoqda» da turadi. Ijrochi belgisi ustiga kursor olib borsangiz, uning holati chiqadi.
+
+### Holatni o'zgartirish
+
+Ijrochi holatni ikki yo'l bilan o'zgartiradi:
+
+- Izoh ostidagi tugmalar bilan: «Ko'rdim» (faqat «Kutilmoqda» bo'lganda) va «Bajarildi». «Bajarildi» bosilgach tugmalar yo'qoladi.
+- «Menga berilgan» tabida kartani boshqa ustunga sudrab. Tizim «Statusni o'zgartirish» oynasida so'raydi; «Tasdiqlash» ni bosasiz.
+
+Ijrochi faqat o'z holatini o'zgartiradi. Bir topshiriqda bir nechta ijrochi bo'lsa, har biri o'zinikini belgilaydi; topshiriq «Bajarildi» belgisini hamma bajargandagina oladi.
+
+## Tizim topshirig'i: «Dars bo'ldimi?»
+
+Dars tugaguncha davomat olinmasa (dars bekor qilinmagan, ko'chirilmagan va bayram emas), tizim shu filialning faol administratorlariga topshiriq beradi: «Guruh nomi, 01.10.2026 18:00–19:30: davomat olinmadi. Dars bo'ldimi?». Administrator bo'lmasa, topshiriq filial direktorlariga, ular ham bo'lmasa CEO ga boradi. Topshiriq dars tugagach birinchi tekshiruvda (har soatning :00 va :30 daqiqasida) ochiladi.
+
+- Muallifi «Tizim» deb yoziladi, ustuvorligi — «Yuqori». «Men bergan» tabida bunday topshiriq chiqmaydi.
+- Kartada filial nomi ko'rinadi: «Topshiriqlar» sahifasi hamma filialdagi topshiriqlaringizni ko'rsatadi, guruh raqamlari esa filiallarda takrorlanadi.
+- Javobni kartaning ichida berasiz: «Dars bo'ldimi?» savoli va ikkita tugma turadi. «Bo'ldi» — davomatni kech kiritasiz, ustozga bu dars uchun haq yozilmaydi. «Bo'lmadi» — darsni bekor qilasiz (o'quvchilarga pul qaytadi) yoki boshqa kunga ko'chirasiz. Javob berilgach topshiriq o'zi «Bajarildi» ga o'tadi. Batafsil — [Dars bo'ldimi?](/qollanma/davomat/dars-boldimi).
+- Birinchi bo'lib «Ko'rdim» bosgan yoki javob bergan administrator topshiriqni oladi: boshqa administratorlarning kartasi yo'qoladi. Kartasi hali yo'qolmagan administrator bossa, «Bu topshiriqni ... oldi» xabari chiqadi. Filial direktori va CEO savolga istalgan paytda javob bera oladi.
+- Bunday topshiriqni tahrirlab ham, o'chirib ham bo'lmaydi va «Bajarildi» ustuniga qo'lda o'tkazib bo'lmaydi: «Bu topshiriq darsga javob berilganda o'zi yopiladi».
+- Muddati — keyingi ish kuni soat 10:00 (yakshanba va bayram kunlari o'tkazib yuboriladi). Javob berilmasa, o'sha kuni 09:00 da «Topshiriq muddati yaqinlashmoqda» eslatmasi keladi.
+- Buning uchun «Yangi topshiriq» xabari yuborilmaydi: administratorga dars tugaganda «Davomat olinmadi» xabari keladi.
+
+Topshiriq guruhning «Izohlar» tabida ham turadi; u yerda administrator uni faqat «Ko'rdim» deb belgilaydi, «Bajarildi» tugmasi chiqmaydi.
+
+## Xabarlar va eslatma
+
+- Topshiriq berilganda ijrochiga «Yangi topshiriq» xabari keladi. Topshiriq yangilansa yoki o'chirilsa, ijrochiga shu haqda xabar boradi.
+- Ijrochi «Ko'rdim» yoki «Bajarildi» ni bossa, topshiriqni bergan odamga xabar boradi. Tizim topshirig'ida bergan odam yo'q, shuning uchun bunday xabar yuborilmaydi.
+- Muddat qo'yilgan topshiriqda muddatga 1 soatdan kam qolganda, hali «Bajarildi» qilinmagan ijrochiga bitta eslatma keladi: «Topshiriq muddati yaqinlashmoqda». Tizim buni har soat boshida, 08:00 dan 18:00 gacha, dushanba–shanba kunlari tekshiradi: muddat 18:00 bo'lsa, eslatma 17:00 da keladi.
+- Xabarlar yuqori paneldagi qo'ng'iroq belgisida va (yoqilgan bo'lsa) brauzer bildirishnomasi sifatida keladi. Xabarni bossangiz, tegishli sahifa ochiladi. Telegram ulangan bo'lsa, «Yangi topshiriq», yangilanish va holat xabarlari kechki 20:00 dagi kunlik xabarga qo'shiladi. Eslatma esa Telegramga yuborilmaydi.
+- Faol bo'lmagan (nofaol, to'xtatilgan, ishdan bo'shatilgan yoki arxivlangan) ijrochiga xabar va eslatma yuborilmaydi.
+
+## Misol
+
+Filial direktori Aziza o'quvchi Dilshodning profilidagi «Izohlar» tabida yozadi: «Ota-onasi bilan bog'lanib, to'lov sanasini aniqlang». U «Topshiriq» kalitini yoqadi, ijrochi qilib administrator Boburni tanlaydi, ustuvorlik — «Yuqori», muddat — juma kuni. «Yuborish» ni bosadi.
+
+Bobur «Yangi topshiriq» xabarini oladi va «Topshiriqlar» sahifasida kartani «Kutilmoqda» ustunida ko'radi. Matnni o'qib, «Ko'rdim» ni bosadi: karta «Ko'rildi» ga o'tadi, Azizaga xabar boradi. Ish tugagach Bobur «Bajarildi» ni bosadi. Aziza o'z «Topshiriqlar» sahifasidagi «Men bergan» tabida kartani «Bajarildi» ustunida ko'radi. Muddat juma kunining 18:00 si edi, shuning uchun ish bajarilmasa, Bobur juma kuni 17:00 da eslatma olardi.
+
+Tizim topshirig'i: 01.10.2026 da bir guruhning darsi tugadi, lekin davomat olinmadi. Administrator Bobur «Topshiriqlar»da «Tizim» topshirig'ini ko'radi, kartadagi «Bo'ldi» ni bosadi va kim kelganini belgilaydi. Dars hisoblanadi, topshiriq «Bajarildi» ga o'tadi, boshqa administratorlarning kartasi yo'qoladi, ustozga esa bu dars uchun haq yozilmaydi.
+
+## Istisnolar
+
+- «Men bergan» tabida holatni o'zgartirib bo'lmaydi: holatni faqat ijrochi belgilaydi.
+- Ijrochi o'ziga berilmagan topshiriqning holatini o'zgartira olmaydi: «Sizga bu topshiriq berilmagan» chiqadi.
+- Izohni faqat muallifi yoki CEO tahrirlaydi; o'chirishni faqat CEO qiladi. Tizim topshirig'ini CEO ham tahrirlay yoki o'chira olmaydi.
+- Boshqa filialning o'quvchisi, guruhi yoki xodimi sahifasida izoh yoza olmaysiz (CEO bundan mustasno).
+
+## Kim qila oladi
+
+- **Izoh yozish va o'qish** — CEO, filial direktori, administrator. Boshqa rollarga «Izohlar» tabi ko'rinmaydi.
+- **Topshiriq berish** — izoh maydonidagi «Topshiriq» kaliti CEO va filial direktoriga ko'rinadi.
+- **«Men bergan» tabi** — CEO va filial direktori.
+- **O'ziga berilgan topshiriqni ko'rish va belgilash** — topshiriq berilgan har qanday xodim; «Topshiriqlar» sahifasi hamma rolga ochiq.
+- **«Dars bo'ldimi?» ga javob berish** — CEO, filial direktori va administrator; administrator uchun — topshiriqni boshqa administrator olmagan bo'lsa. «Ustoz aybdor emas — haq yozilsin» belgisini faqat CEO qo'yadi.
+- **Izohni tahrirlash** — muallifi yoki CEO (tizim topshirig'ini hech kim tahrirlay olmaydi).
+- **Izoh yoki topshiriqni o'chirish** — faqat CEO (tizim topshirig'ini CEO ham o'chira olmaydi).
+
+## Tizimda qayerda
+
+- [Topshiriqlar](/tasks) — chap menyudagi sahifa: doska va tablar.
+- «Izohlar» tabi — o'quvchi, o'qituvchi, xodim va guruh sahifalarida, lid kartochkasida. Masalan, [O'quvchilar](/students) ro'yxatidan o'quvchini ochib, «Izohlar» tabiga o'ting.
+- Yuqori paneldagi qo'ng'iroq belgisi — topshiriq xabarlari.

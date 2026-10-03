@@ -11,6 +11,7 @@ import { BranchSwitcher } from "@/components/branch-switcher";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { PushPermissionPrompt } from "@/components/notifications/push-permission-prompt";
+import { QollanmaYordamTugmasi } from "@/components/qollanma/qollanma-yordam-tugmasi";
 import { TashkentClock } from "@/components/tashkent-clock";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/use-auth";
@@ -67,6 +68,8 @@ export function DashboardHeader() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* key: sarlavha marshrutlar orasida saqlanadi; key bo'lmasa ochiq qolgan panel «orqaga»dan keyin o'zi qayta ochiladi */}
+          <QollanmaYordamTugmasi key={pathname} />
           <TashkentClock />
           <NotificationBell />
           <div className="hidden sm:block">

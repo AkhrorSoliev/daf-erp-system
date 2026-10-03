@@ -21,6 +21,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
+    "qollanma:baza": "bash scripts/qollanma-baza.sh",
+    "qollanma:api": "bash scripts/qollanma-api.sh",
     "daf:harvest": "ts-node scripts/daf-harvest.ts",
     "daf:upload-media": "ts-node scripts/daf-upload-media.ts",
     "daf:media-manifest": "ts-node scripts/daf-media-manifest.ts",

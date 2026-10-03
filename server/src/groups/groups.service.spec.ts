@@ -192,6 +192,7 @@ describe('GroupsService — status methods', () => {
             _count: { enrollments: 0 },
           }),
         },
+        unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
       };
       prisma.$transaction.mockImplementation((arg: any) =>
         typeof arg === 'function' ? arg(tx) : Promise.all(arg),
@@ -453,6 +454,49 @@ describe('GroupsService — status methods', () => {
           1001,
         ),
       ).rejects.toThrow(`"CANCELLED" dan "COMPLETED" ga o'tish mumkin emas`);
+    });
+
+    // ADR-0068: 02.10.2026 #011 was completed nine minutes after its
+    // «Dars bo'ldimi?» question opened, and the question stayed on five
+    // administrators' boards for a group nobody runs.
+    it.each(['COMPLETED', 'CANCELLED'])(
+      'refuses %s while a lesson question is unanswered, writing nothing',
+      async (status) => {
+        tx.unmarkedLesson.findMany.mockResolvedValue([
+          {
+            date: new Date('2026-10-02T00:00:00.000Z'),
+            group: { name: '#011' },
+          },
+        ]);
+
+        await expect(
+          service.changeStatus('group-1', { status: status as any }, 1, 1001),
+        ).rejects.toThrow(
+          "Avval «Dars bo'ldimi?» savoliga javob bering: 02.10 (#011).",
+        );
+        expect(tx.unmarkedLesson.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { status: 'PENDING', group: { id: 'group-1' } },
+          }),
+        );
+        expect(
+          statusCascadeService.cascadeGroupStatusChange,
+        ).not.toHaveBeenCalled();
+        expect(tx.group.update).not.toHaveBeenCalled();
+        expect(entityHistoryService.emitStatusChanged).not.toHaveBeenCalled();
+      },
+    );
+
+    it('pauses a group without asking about its questions: they stay open', async () => {
+      await service.changeStatus(
+        'group-1',
+        { status: 'PAUSED' as any },
+        1,
+        1001,
+      );
+
+      expect(tx.unmarkedLesson.findMany).not.toHaveBeenCalled();
+      expect(tx.group.update).toHaveBeenCalled();
     });
 
     it('throws NotFoundException for a missing group and opens no transaction', async () => {

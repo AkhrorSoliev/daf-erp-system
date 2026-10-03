@@ -14,12 +14,15 @@ import {
   Images,
   Smartphone,
   Wallet,
+  LifeBuoy,
   type LucideIcon,
 } from "lucide-react";
 import { paymentsNavItems } from "./payments-nav";
 import { reportsNavSections } from "./reports-nav";
 import { dafNavItems } from "./daf-nav";
 import { GROUP_PAGE_ROLES } from "./role-access";
+
+export type NavBadgeKey = "qollanma-yangiliklar";
 
 export interface NavItemChild {
   title: string;
@@ -39,6 +42,8 @@ export interface NavItem {
   visibleForRoles?: number[];
   /** When provided, the item renders as a collapsible group with these sub-links. */
   children?: NavItemChild[];
+  /** Menyu bandining o'ng tomonidagi belgi (masalan, o'qilmagan yangiliklar soni). */
+  badgeKey?: NavBadgeKey;
 }
 
 const reportsChildren: NavItemChild[] = reportsNavSections.flatMap((s) => s.items);
@@ -89,6 +94,8 @@ export const navItems: NavItem[] = [
     visibleForRoles: [1, 2, 3],
     children: reportsChildren,
   },
+  // Qo'llanma hamma xodimga ochiq; sahifalar rolga qarab filtrlanadi.
+  { title: "Qo'llanma", url: "/qollanma", icon: LifeBuoy, badgeKey: "qollanma-yangiliklar" },
   // Not a dropdown: at 12 entries it pushed the rest of the sidebar down when
   // opened. The list lives on the /settings page — its source is settings-nav.ts.
   {

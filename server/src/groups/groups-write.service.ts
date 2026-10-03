@@ -32,6 +32,10 @@ import {
 } from './shared/group-include';
 import { GroupHolidayCascadeService } from './group-holiday-cascade.service';
 import { computeNextGroupNumber } from './shared/next-group-number';
+import {
+  assertTeachersHaveRate,
+  assertTeachersInGroupBranch,
+} from './shared/teacher-assignment';
 import { utcMidnightFromDateStr } from '../common/date/tashkent';
 
 @Injectable()
@@ -85,7 +89,7 @@ export class GroupsWriteService {
           "Ba'zi o'qituvchilar topilmadi yoki o'qituvchi emas",
         );
       }
-      await this.assertTeachersHaveRate(dto.teacherIds);
+      await assertTeachersHaveRate(this.prisma, dto.teacherIds);
     }
 
     let endDate: Date | undefined;
@@ -219,40 +223,6 @@ export class GroupsWriteService {
   }
 
   /**
-   * A teacher must have a salary rate BEFORE they are put in front of a class.
-   *
-   * `createAccrual` silently returns null when no rate version covers the
-   * lesson date, and a rate cannot be back-dated into a closed payroll period —
-   * so lessons taught without a rate earn the teacher nothing, permanently.
-   * That is exactly how ~20 mln so'm went missing in May 2026. Blocking the
-   * assignment is the last point where this is still fixable.
-   */
-  private async assertTeachersHaveRate(teacherIds: number[]): Promise<void> {
-    if (!teacherIds.length) return;
-    const withRate = await this.prisma.employeeSalaryConfig.findMany({
-      where: { userId: { in: teacherIds }, isActive: true },
-      select: { userId: true },
-      distinct: ['userId'],
-    });
-    const haveRate = new Set(withRate.map((c) => c.userId));
-    const missing = teacherIds.filter((id) => !haveRate.has(id));
-    if (!missing.length) return;
-
-    const users = await this.prisma.user.findMany({
-      where: { id: { in: missing } },
-      select: { firstName: true, lastName: true },
-    });
-    const names = users
-      .map((u) => `${u.firstName} ${u.lastName}`.trim())
-      .join(', ');
-    throw new BadRequestException(
-      `Bu ustoz(lar)ga ish haqi stavkasi belgilanmagan: ${names}. ` +
-        `Avval stavkani belgilang — aks holda ularning darslari uchun oylik ` +
-        `yozilmaydi va buni keyin orqaga tuzatib bo'lmaydi.`,
-    );
-  }
-
-  /**
    * A group's course must belong to the group's own branch.
    *
    * The course carries the price every student in the group pays
@@ -349,29 +319,12 @@ export class GroupsWriteService {
         );
       }
 
-      // A teacher belongs to exactly one branch, and every lesson's pay is
-      // booked to the branch of the group it was held in. Assigning a teacher
-      // to another branch's group would therefore charge one branch's payroll
-      // to the other. Only an explicit mismatch is blocked — a teacher with no
-      // branch attached yet is left to the onboarding rules.
-      const foreign = await this.prisma.user.findMany({
-        where: {
-          id: { in: dto.teacherIds },
-          branches: { some: {}, none: { branchId: existing.branchId } },
-        },
-        select: { id: true, firstName: true, lastName: true },
-      });
-      if (foreign.length) {
-        const names = foreign
-          .map((t) => `${t.firstName} ${t.lastName}`.trim())
-          .join(', ');
-        throw new BadRequestException(
-          `Bu ustoz(lar) boshqa filialga tegishli: ${names}. ` +
-            `Guruh filiali bilan mos ustoz tanlang.`,
-        );
-      }
-
-      await this.assertTeachersHaveRate(dto.teacherIds);
+      await assertTeachersInGroupBranch(
+        this.prisma,
+        dto.teacherIds,
+        existing.branchId,
+      );
+      await assertTeachersHaveRate(this.prisma, dto.teacherIds);
     }
 
     // A changed course or room must belong to the group's own branch — the

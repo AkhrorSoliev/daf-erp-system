@@ -203,9 +203,13 @@ export class HolidaysService {
     // edit doesn't accidentally count as a date change.
     const currentDateStr = tashkentDateStr(holiday.date);
     const currentEndDateStr = tashkentDateStr(holiday.endDate);
+    // Compare the dates the write below PRODUCES, not just the fields sent:
+    // with `date` and no `endDate` it sets `endDate = date` (the settings form
+    // leaves `endDate` out once it is cleared), which shortens a multi-day
+    // holiday all the same.
     const wantsDateChange =
-      (dto.date !== undefined && dto.date !== currentDateStr) ||
-      (dto.endDate !== undefined && dto.endDate !== currentEndDateStr);
+      (dto.date ?? currentDateStr) !== currentDateStr ||
+      (dto.endDate ?? dto.date ?? currentEndDateStr) !== currentEndDateStr;
 
     if (wantsDateChange) {
       const extensionCount = await this.prisma.groupHolidayExtension.count({

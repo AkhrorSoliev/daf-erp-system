@@ -73,21 +73,54 @@ describe('DashboardController', () => {
         { branchId: 1, date: '2026-04-13' },
         1001,
         null,
+        10406,
+        ['Administrator'],
       );
 
       expect(mockService.getTodaySchedule).toHaveBeenCalledWith(
         1,
         1001,
         '2026-04-13',
+        undefined,
       );
     });
 
     it('should delegate to service without date when not provided', async () => {
-      await controller.getTodaySchedule({ branchId: 2 }, 1001, null);
+      await controller.getTodaySchedule({ branchId: 2 }, 1001, null, 10406, [
+        'CEO',
+      ]);
 
       expect(mockService.getTodaySchedule).toHaveBeenCalledWith(
         2,
         1001,
+        undefined,
+        undefined,
+      );
+    });
+
+    it('narrows a pure teacher to their own lessons', async () => {
+      await controller.getTodaySchedule({ branchId: 1 }, 1001, null, 10042, [
+        'Teacher',
+      ]);
+
+      expect(mockService.getTodaySchedule).toHaveBeenCalledWith(
+        1,
+        1001,
+        undefined,
+        10042,
+      );
+    });
+
+    it('leaves a teacher who also holds another staff role on the whole day', async () => {
+      await controller.getTodaySchedule({ branchId: 1 }, 1001, null, 10042, [
+        'Teacher',
+        'Administrator',
+      ]);
+
+      expect(mockService.getTodaySchedule).toHaveBeenCalledWith(
+        1,
+        1001,
+        undefined,
         undefined,
       );
     });

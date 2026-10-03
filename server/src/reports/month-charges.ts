@@ -29,6 +29,11 @@ export interface MonthCharges {
   paidPct: number | null;
   /** Students with a charge in scope. */
   students: number;
+  /**
+   * Students whose unpaid share in scope is above 0 — counted in
+   * `splitMonthCharges` where `unpaid` is summed, so the two cannot disagree.
+   */
+  unpaidStudents: number;
 }
 
 export interface MonthChargeRow {
@@ -78,13 +83,16 @@ export function splitMonthCharges(input: {
   let charged = 0;
   let unpaid = 0;
   let students = 0;
+  let unpaidStudents = 0;
   for (const [studentId, s] of per) {
     if (s.scope <= 0) continue;
     students += 1;
     charged += s.scope;
     const debt = Math.max(0, -(input.balances.get(studentId) ?? 0));
     const unpaidAll = Math.min(Math.max(0, debt - s.later), s.all);
-    unpaid += Math.round((unpaidAll * s.scope) / s.all);
+    const share = Math.round((unpaidAll * s.scope) / s.all);
+    unpaid += share;
+    if (share > 0) unpaidStudents += 1;
   }
   const paid = charged - unpaid;
   return {
@@ -94,6 +102,7 @@ export function splitMonthCharges(input: {
     unpaid,
     paidPct: charged > 0 ? Math.round((paid / charged) * 1000) / 10 : null,
     students,
+    unpaidStudents,
   };
 }
 

@@ -11,6 +11,12 @@ import {
   TransactionType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
+import { TEACHER_ROLE_ID } from '../groups/shared/group-include';
+import {
+  assertTeachersHaveRate,
+  assertTeachersInGroupBranch,
+} from '../groups/shared/teacher-assignment';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
@@ -58,8 +64,23 @@ export class LessonTeacherOverridesService {
   async findByGroup(
     groupId: string,
     companyId: number,
-    options?: { from?: string; to?: string; teacherIdScope?: number },
+    options?: {
+      from?: string;
+      to?: string;
+      teacherIdScope?: number;
+      caller?: { userId: number; roles: string[] };
+    },
   ) {
+    // Same rule as cancellations: a teacher is kept to their own groups below,
+    // everyone else to the group's branch.
+    if (options?.teacherIdScope === undefined && options?.caller) {
+      await assertCallerMayTouchGroup(
+        this.prisma,
+        options.caller.userId,
+        options.caller.roles,
+        groupId,
+      );
+    }
     if (options?.teacherIdScope !== undefined) {
       const isAssigned = await this.prisma.groupTeacher.findFirst({
         where: { groupId, teacherId: options.teacherIdScope },
@@ -103,9 +124,18 @@ export class LessonTeacherOverridesService {
     dto: UpsertLessonTeacherOverrideDto,
     companyId: number,
     userId: number,
+    roles: string[] = [],
   ) {
     const date = this.parseDate(dateStr);
-    await this.ensureTeachersValid(dto.teacherIds, companyId);
+    // Re-assigning a lesson's teachers moves its pay (accruals are reversed
+    // and re-written below), so it is the same authority as cancelling it.
+    await assertCallerMayTouchGroup(this.prisma, userId, roles, groupId);
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, companyId, deletedAt: null },
+      select: { branchId: true },
+    });
+    if (!group) throw new NotFoundException('Guruh topilmadi');
+    await this.ensureTeachersValid(dto.teacherIds, companyId, group.branchId);
 
     const newTeacherIds = [...new Set(dto.teacherIds)].sort((a, b) => a - b);
 
@@ -208,13 +238,19 @@ export class LessonTeacherOverridesService {
   /**
    * Soft-delete the override. Recomputes accruals back to `Group.teachers`.
    */
-  async remove(id: string, companyId: number, userId: number) {
+  async remove(
+    id: string,
+    companyId: number,
+    userId: number,
+    roles: string[] = [],
+  ) {
     return this.prisma.$transaction(
       async (tx) => {
         const existing = await tx.lessonTeacherOverride.findFirst({
           where: { id, companyId, deletedAt: null },
         });
         if (!existing) throw new NotFoundException('Override topilmadi');
+        await assertCallerMayTouchGroup(tx, userId, roles, existing.groupId);
 
         const oldTeacherIds = [...existing.teacherIds].sort((a, b) => a - b);
         const newTeacherIds = await this.defaultTeacherIds(
@@ -535,18 +571,34 @@ export class LessonTeacherOverridesService {
     }
   }
 
-  private async ensureTeachersValid(teacherIds: number[], companyId: number) {
+  /**
+   * A substitute is paid for the lesson exactly like the group's own teacher,
+   * so the group's teacher rules apply: a teacher, of the group's branch, with
+   * a salary rate (`GroupsWriteService.update` checks the same three).
+   */
+  private async ensureTeachersValid(
+    teacherIds: number[],
+    companyId: number,
+    groupBranchId: number,
+  ) {
     const found = await this.prisma.user.findMany({
-      where: { id: { in: teacherIds }, companyId, deletedAt: null },
+      where: {
+        id: { in: teacherIds },
+        companyId,
+        deletedAt: null,
+        roles: { some: { roleId: TEACHER_ROLE_ID } },
+      },
       select: { id: true },
     });
     const foundIds = new Set(found.map((u) => u.id));
     const missing = teacherIds.filter((id) => !foundIds.has(id));
     if (missing.length > 0) {
       throw new BadRequestException(
-        `Quyidagi xodim(lar) topilmadi: ${missing.join(', ')}`,
+        `Quyidagi xodim(lar) topilmadi yoki o'qituvchi emas: ${missing.join(', ')}`,
       );
     }
+    await assertTeachersInGroupBranch(this.prisma, teacherIds, groupBranchId);
+    await assertTeachersHaveRate(this.prisma, teacherIds);
   }
 
   private parseDate(dateStr: string): Date {

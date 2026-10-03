@@ -1,5 +1,7 @@
 import { ReportsLeadFunnelService } from './lead-funnel/reports-lead-funnel.service';
 import { ReportsLeadFunnelController } from './lead-funnel/reports-lead-funnel.controller';
+import { ReportsMarketingService } from './marketing/reports-marketing.service';
+import { ReportsMarketingController } from './marketing/reports-marketing.controller';
 import { Module } from '@nestjs/common';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
@@ -30,7 +32,11 @@ import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [HolidaysModule, ExpensesModule, SalaryModule, PaymentsModule],
-  controllers: [ReportsController, ReportsLeadFunnelController],
+  controllers: [
+    ReportsController,
+    ReportsLeadFunnelController,
+    ReportsMarketingController,
+  ],
   providers: [
     ReportsService,
     ReportsOverviewService,
@@ -54,6 +60,7 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsStudentFlowService,
     ReportsLeadFunnelService,
     ReportsProfitCompositionService,
+    ReportsMarketingService,
   ],
   // Exposed so the Telegram admin bot's report menu can generate the same
   // financial Excel workbook + in-chat summary the /payments panel uses.

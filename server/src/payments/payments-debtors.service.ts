@@ -391,7 +391,7 @@ export class PaymentsDebtorsService {
         split: splitDebt({
           studying: [],
           chargedThisMonth: new Map(),
-          notStudying: { sum: null, count: 0 },
+          notStudying: [],
         }),
         openPromises: 0,
         overduePromises: 0,

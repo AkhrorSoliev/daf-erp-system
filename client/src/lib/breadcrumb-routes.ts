@@ -24,6 +24,7 @@ export const routeLabels: Record<string, string> = {
   graduates: "Bitiruvchilar",
   activity: "Markaz faoliyati",
   attendance: "Davomat statistikasi",
+  marketing: "Marketing",
   profile: "Profil",
   settings: "Sozlamalar",
   general: "Umumiy sozlamalar",
@@ -75,4 +76,6 @@ export const routeLabels: Record<string, string> = {
   // (haqiqatan "/media/assets" mavjud), shuning uchun breadcrumbda ko'rinishi
   // kerak.
   assets: "Media fayllari",
+  qollanma: "Qo'llanma",
+  yangiliklar: "Nima yangi",
 };
