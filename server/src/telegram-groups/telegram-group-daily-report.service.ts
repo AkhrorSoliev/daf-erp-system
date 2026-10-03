@@ -44,8 +44,9 @@ import { buildMonthChargesLines } from './utils/month-charges-lines.util';
  *   📌 Hozirgi holat        — active students + debt as two numbers
  *                             («O'qiyotganlar» with day-over-day ▲/▼ and its
  *                             shu oy / eski qarz split, «O'qimayotganlar»)
- *   📅 Oy boshidan          — MTD income (+ this-month / old-debt split, per
- *                             month) / expense / net + lesson collection %;
+ *   📅 Oy boshidan          — MTD income (+ this-month / advance / old-debt
+ *                             split, per month) / expense / net + lesson
+ *                             collection %;
  *                             from 2026-09 «Bu oy hisoblandi / To'landi /
  *                             Qoldi» take the place of the lesson-based
  *                             collection % and the month-end lines
@@ -850,9 +851,10 @@ export class TelegramGroupDailyReportService {
   /**
    * Month-to-date income composition on the SAME basis as the /overview "Tushum
    * tarkibi" drill-down — `ReportsFinancialService.getIncomeMonthAttribution`,
-   * which returns the cash total, the split between this month's own income and
-   * late payments settling older debt (broken out per month), and both sides of
-   * the collection ratio, all computed against ONE window.
+   * which returns the cash total, its three parts — this month's own income,
+   * the advance paid ahead for the next month and late payments settling older
+   * debt (broken out per month), ADR-0067 — and both sides of the collection
+   * ratio, all computed against ONE window.
    *
    * Three lines of the message read this: the income figure and its split, and
    * the collection ratio. The previous ratio line divided MTD cash by the

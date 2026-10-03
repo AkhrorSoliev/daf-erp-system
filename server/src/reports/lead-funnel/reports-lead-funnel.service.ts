@@ -110,8 +110,10 @@ export class ReportsLeadFunnelService {
 
   /**
    * «Manba bo'yicha» of the marketing report: the funnel's OWN cohort for the
-   * period (people deduplicated by phone, branch by `leadAttributionWhere`,
-   * start clamped to `FUNNEL_START_DATE`), one row per lead source.
+   * period (`toPersons`: a converted lead counts once per student card, any
+   * other lead once on its own — never merged by phone; branch by
+   * `leadAttributionWhere`, start clamped to `FUNNEL_START_DATE`), one row per
+   * lead source.
    */
   async getSourceBreakdown(
     companyId: number,

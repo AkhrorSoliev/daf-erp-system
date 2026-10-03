@@ -97,10 +97,15 @@ qildi:
      (`toPersons`); filial `leadAttributionWhere`, boshlanishi
      `FUNNEL_START_DATE` = 2026-09-10. «O'quvchi bo'ldi» — voronkaning «to'lov»
      bosqichiga yetganlar.
-   - Eski formulalar `financial-overview` va 6 oylik `financial-trend`dan olib
-     tashlandi (`ltv`, `ltvPayerCount`, `cac`, `marketingRoi`, `avgPayment` va
-     ularni boqqan `newStudentCount`, `marketingExpenses`). Ekranda inglizcha
-     qisqartma yo'q.
+   - Eski formulalar va ular bilan ketgan maydonlar olib tashlandi:
+     - `financial-overview`dan: `ltv`, `ltvPayerCount`, `cac`, `marketingRoi`,
+       `avgPayment`, ularni boqqan `newStudentCount` va `marketingExpenses`,
+       shuningdek `ownMonthProfit` (4-band) va `salary.computed.gross` (o'rniga
+       `fullDeserved` va `staff`);
+     - 6 oylik `financial-trend`dan: `ltv`, `cac`, `marketingRoi`, `avgPayment`
+       va doim 0 bo'lgan `activeBalance`.
+
+     Ekranda inglizcha qisqartma yo'q.
 3. **O'qimayotganlar qarzi uch turga bo'linadi** (`debt-split.ts`; ADR-0059ga
    qo'shimcha, uni almashtirmaydi). O'qimayotganlar to'plami (`NOT
    activeStudentWhere()`) bitta `groupBy(['status'])` bilan o'qiladi:
@@ -125,7 +130,7 @@ qildi:
    `getOwnMonthProfit`).
 
 **Ataylab o'zgarmadi:**
-- Excel kitobi va yillik trend — eski ma'noda qoladi (1-banddagi o'qiydiganlar);
+- Excel kitobi (1-banddagi o'qiydiganlar) va yillik trend — o'zgarmaydi;
 - `GET /reports/expectation-history` va 23:40 surati (surat qayta qurilmaydi);
 - `GET /reports/debt-write-offs-summary` (uni Qarzdorlik qismi joylaydi);
 - Telegram qarz qatorlari — o'qimayotganlarning uch turini chop etmaydi;
