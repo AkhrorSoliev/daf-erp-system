@@ -25,6 +25,8 @@ export function MarketingClient() {
       api
         .get<MarketingReport>("/reports/marketing", { params: { branchId: selectedBranch?.id, month } })
         .then((r) => r.data),
+    // Money figures: fetch again on every visit, like the overview blocks (the app default is 5 minutes).
+    staleTime: 0,
   });
 
   return (
