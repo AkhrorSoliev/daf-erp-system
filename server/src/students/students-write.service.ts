@@ -35,6 +35,7 @@ import { studentSelect, formatStudent } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { resolvePickedExitReason } from './shared/picked-exit-reason';
+import { assertExtraPhoneFree } from './shared/extra-phone-rule';
 
 @Injectable()
 export class StudentsWriteService {
@@ -108,6 +109,16 @@ export class StudentsWriteService {
     if (existing) {
       throw new BadRequestException(
         'Bu telefon raqam allaqachon tizimda mavjud',
+      );
+    }
+
+    // A backup number is a sign-in key (ADR-0067): one number, one student.
+    if (dto.extraPhone) {
+      await assertExtraPhoneFree(
+        this.prisma,
+        dto.extraPhone,
+        { studentId: null, userId: null, phone: dto.phone },
+        'staff',
       );
     }
 
@@ -266,6 +277,24 @@ export class StudentsWriteService {
           'Bu telefon raqam allaqachon tizimda mavjud',
         );
       }
+    }
+
+    // The backup number after this save, checked when it or the main number
+    // moves (ADR-0067): the rule also refuses a main number that lands on the
+    // card's own backup number.
+    const nextPhone = dto.phone ?? student.phone;
+    const nextExtraPhone =
+      dto.extraPhone === undefined ? student.extraPhone : dto.extraPhone;
+    if (
+      nextExtraPhone &&
+      (nextExtraPhone !== student.extraPhone || nextPhone !== student.phone)
+    ) {
+      await assertExtraPhoneFree(
+        this.prisma,
+        nextExtraPhone,
+        { studentId: id, userId: student.userId, phone: nextPhone },
+        'staff',
+      );
     }
 
     if (dto.password !== undefined && !student.userId) {
