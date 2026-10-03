@@ -1,6 +1,7 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
+import { STUDENT_ONLY_ACCOUNT } from '../common/auth/student-account';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -308,7 +309,10 @@ describe('AuthService', () => {
         student: { is: { extraPhone: BACKUP, deletedAt: null } },
         deletedAt: null,
         status: { in: ['ACTIVE', 'INACTIVE'] },
-        roles: { some: { role: { id: 6 } } },
+        AND: [
+          { roles: { some: { roleId: 6 } } },
+          { roles: { every: { roleId: 6 } } },
+        ],
       });
       expect(second.orderBy).toEqual({ updatedAt: 'desc' });
     });
@@ -343,9 +347,9 @@ describe('AuthService', () => {
       prisma.user.findFirst.mockResolvedValue(null);
       await service.validateUser(BACKUP, 'pass123', null);
       expect(prisma.user.findFirst).toHaveBeenCalledTimes(2);
-      expect(prisma.user.findFirst.mock.calls[1][0].where.roles).toEqual({
-        some: { role: { id: 6 } },
-      });
+      expect(prisma.user.findFirst.mock.calls[1][0].where.AND).toEqual(
+        STUDENT_ONLY_ACCOUNT.AND,
+      );
     });
 
     it('the Telegram path (findMany) takes the same second stage', async () => {
@@ -365,6 +369,20 @@ describe('AuthService', () => {
         is: { extraPhone: BACKUP, deletedAt: null },
       });
       expect(second.take).toBe(2);
+    });
+
+    it('a mixed staff + student account is never matched by a backup number (no password on the Telegram path)', async () => {
+      prisma.user.findMany.mockResolvedValue([]);
+
+      await service.findAccountsByIdentifier(BACKUP, [6], 2);
+
+      const second = prisma.user.findMany.mock.calls[1][0];
+      // Every role must be Student: an account that also holds a staff role
+      // would get a token with all its roles from whoever owns this number.
+      expect(second.where.AND).toContainEqual({
+        roles: { every: { roleId: 6 } },
+      });
+      expect(second.where.roles).toBeUndefined();
     });
 
     it('the Telegram path stops at the first stage when it finds anyone', async () => {

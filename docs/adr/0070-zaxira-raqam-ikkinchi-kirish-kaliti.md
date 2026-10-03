@@ -19,8 +19,12 @@ o'zi ham profilidan qo'sha olsin, admin kartada barcha raqamlarni ko'rsin.
    kirish» avval hisobning o'z raqamini (hozirgi shart), topilmasa — tirik
    kartaning zaxira raqamini qidiradi. Asosiy raqam har doim ustun: 1-bosqich
    hisob topsa, parol noto'g'ri bo'lsa ham 2-bosqichga o'tilmaydi.
-   2-bosqich faqat o'quvchi rolidagi hisoblar uchun, o'quvchi portalida yoki
-   portal cheklanmaganda (lokal, noma'lum Origin); `admin.` / `lehrer.` da yo'q.
+   2-bosqich faqat o'quvchi rolidan boshqa roli yo'q hisoblar uchun
+   (`STUDENT_ONLY_ACCOUNT`), o'quvchi portalida yoki portal cheklanmaganda
+   (lokal, noma'lum Origin); `admin.` / `lehrer.` da yo'q. Sabab: Telegram
+   yo'li token'ni hisobning HAMMA rollari bilan beradi — xodim + o'quvchi
+   hisobining zaxira raqami o'sha raqam egasiga parolsiz xodim token'ini
+   berardi.
 2. **Bitta zaxira raqam — bitta o'quvchi.** Zaxira raqam o'z asosiy raqamiga,
    boshqa o'chirilmagan kartaning asosiy yoki zaxira raqamiga, boshqa tirik
    o'quvchi hisobining kirish raqamiga teng bo'lmaydi (`assertExtraPhoneFree`;
@@ -65,7 +69,9 @@ botga asosiy raqami bilan bog'langan; chat bitta ustun, ikki raqam uni
 ## Oqibatlari
 
 Admin kiritgan zaxira raqam darhol kalit: o'quvchi `student.` da parol yoki
-Telegram tugmasi bilan kiradi. Admin xato yozgan raqam egasi Telegram orqali
+Telegram tugmasi bilan kiradi. Zaxira raqam faqat faqat-o'quvchi hisobni
+ochadi: xodim roli ham bor hisobning kartasidagi zaxira raqam kirish kaliti
+emas (ADR-0022 bo'yicha bunday hisob bo'lmasligi kerak; bo'lsa — yopiq). Admin xato yozgan raqam egasi Telegram orqali
 kira oladi — asosiy raqamdagi xavf bilan bir xil. Liddagi «Zaxira raqam»
 o'quvchiga ko'chganda kalit bo'ladi. O'quvchi «Parolni unutdingizmi?»ga
 zaxira raqamini yozsa kod kelmaydi — profil qatori shuni aytadi.

@@ -21,7 +21,10 @@ import {
   tokenSessionVersion,
 } from '../common/auth/session-version';
 import { STUDENT_ROLE_ID } from '../students/shared/student-select';
-import { isStudentOnlyAccount } from '../common/auth/student-account';
+import {
+  isStudentOnlyAccount,
+  STUDENT_ONLY_ACCOUNT,
+} from '../common/auth/student-account';
 import { SIGN_IN_USER_STATUSES } from '../common/auth/blocked-user';
 import { staffLinkedToChatWhere } from '../common/auth/staff-telegram';
 
@@ -144,7 +147,10 @@ export class AuthService {
         student: { is: { extraPhone: normalized, deletedAt: null } },
         deletedAt: null,
         status: { in: [...SIGN_IN_USER_STATUSES] },
-        roles: { some: { role: { id: STUDENT_ROLE_ID } } },
+        // Faqat o'quvchi rolidagi hisob: Telegram yo'li token'ni hisobning
+        // HAMMA rollari bilan beradi, aralash (xodim + o'quvchi) hisobning zaxira
+        // raqami esa o'sha raqam egasiga parolsiz xodim token'ini berardi.
+        ...STUDENT_ONLY_ACCOUNT,
       },
       orderBy: { updatedAt: 'desc' as const },
       include: SESSION_USER_INCLUDE,
