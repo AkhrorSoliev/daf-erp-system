@@ -76,4 +76,6 @@ export const routeLabels: Record<string, string> = {
   // (haqiqatan "/media/assets" mavjud), shuning uchun breadcrumbda ko'rinishi
   // kerak.
   assets: "Media fayllari",
+  qollanma: "Qo'llanma",
+  yangiliklar: "Nima yangi",
 };

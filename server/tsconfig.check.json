@@ -58,6 +58,9 @@
     "scripts/settle-past-salary-months.ts",
     "scripts/lib/past-salary-month-plan.ts",
     "scripts/lib/past-salary-month-plan.spec.ts",
+    "scripts/qollanma-muhit.ts",
+    "scripts/lib/qollanma-baza.ts",
+    "scripts/lib/qollanma-baza.spec.ts",
     "scripts/open-unmarked-lessons.ts",
     "scripts/lib/open-unmarked-args.ts",
     "scripts/lib/open-unmarked-args.spec.ts"

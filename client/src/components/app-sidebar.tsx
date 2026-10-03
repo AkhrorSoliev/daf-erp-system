@@ -27,6 +27,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { SidebarUserFooter } from "@/components/sidebar-user-footer";
+import { NavItemBadge } from "@/components/nav-item-badge";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { navItems, type NavItem, type NavItemChild } from "@/lib/nav-items";
@@ -232,6 +233,7 @@ export function AppSidebar() {
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
+                    {item.badgeKey && <NavItemBadge badgeKey={item.badgeKey} />}
                   </SidebarMenuItem>
                 );
               })}
