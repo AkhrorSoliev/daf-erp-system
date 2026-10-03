@@ -65,6 +65,7 @@ export function useProfitComposition(month: string) {
           params: { branchId, ...monthRange(month) },
         })
         .then((r) => r.data),
+    staleTime: 0,
   });
 }
 
@@ -81,5 +82,6 @@ export function useFinancialTrend(month: string) {
           params: { branchId, ...(month !== currentMonthKey() && { month }) },
         })
         .then((r) => r.data),
+    staleTime: 0,
   });
 }

@@ -14,6 +14,7 @@ import { IncomeBreakdown, incomeSummary } from "./income-dialog";
 import { MonthsTable } from "./months-table";
 import { ProfitBreakdown } from "./profit-dialog";
 import { ProfitCard } from "./profit-card";
+import { useFinancialOverview, useFinancialTrend, useIncomeAttribution, useProfitComposition } from "./queries";
 import { SalaryCard } from "./salary-card";
 import type { FinancialOverview, IncomeAttribution, ProfitComposition, TrendRow } from "./types";
 
@@ -261,5 +262,31 @@ describe("MonthsTable", () => {
     expect(text).toContain(`Avgust 2026 ${money(170_000_000)} — 12 talik tizim`);
     expect(text).not.toContain(money(99_000_000));
     expect(text).toContain(`May 2026 ${money(160_000_000)} ${money(20_000_000)} 12 talik tizim`);
+  });
+});
+
+describe("Refreshing", () => {
+  it("every money block fetches again when the page opens, though the app keeps answers fresh for 5 minutes", () => {
+    // The app-wide defaults, as `providers/query-provider.tsx` sets them.
+    const client = new QueryClient({
+      defaultOptions: { queries: { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false } },
+    });
+    seedMonth("2026-10")(client);
+    client.setQueryData(["financial-trend", undefined, "2026-10"], []);
+    // On the server render, `isFetching` says whether the block fetches when it mounts.
+    function Probe() {
+      const fetching = {
+        overview: useFinancialOverview("2026-10").isFetching,
+        attribution: useIncomeAttribution("2026-10").isFetching,
+        profit: useProfitComposition("2026-10").isFetching,
+        trend: useFinancialTrend("2026-10").isFetching,
+      };
+      return Object.entries(fetching)
+        .map(([block, yes]) => `${block} ${yes}`)
+        .join(", ");
+    }
+    const text = renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(Probe)));
+
+    expect(text).toBe("overview true, attribution true, profit true, trend true");
   });
 });
