@@ -65,6 +65,28 @@ export function StudentExtraPhoneDialog({
     return () => clearTimeout(t);
   }, [cooldown]);
 
+  // A request in flight cannot be walked away from: a late answer would land
+  // in a dialog that was already closed and reset. The password never outlives
+  // the dialog.
+  function handleOpenChange(next: boolean) {
+    if (!next && busy) return;
+    if (!next) setPassword("");
+    onOpenChange(next);
+  }
+
+  // Success path: `busy` is still true here, so it bypasses the guard above.
+  function finish() {
+    setPassword("");
+    onOpenChange(false);
+  }
+
+  function backToForm() {
+    setStage("form");
+    setCode("");
+    setPassword("");
+    setError("");
+  }
+
   function applyStatus(status: ExtraPhoneStatus) {
     queryClient.setQueryData<ExtraPhoneStatus>(EXTRA_PHONE_QUERY_KEY, status);
     queryClient.setQueryData<StudentProfile>(
@@ -115,7 +137,7 @@ export function StudentExtraPhoneDialog({
       );
       applyStatus(res.data);
       toast.success("Zaxira raqam saqlandi");
-      onOpenChange(false);
+      finish();
     } catch (err) {
       setError(getErrorMessage(err, "Kod noto'g'ri yoki muddati tugagan"));
       setCode("");
@@ -138,7 +160,7 @@ export function StudentExtraPhoneDialog({
       );
       applyStatus(res.data);
       toast.success("Zaxira raqam o'chirildi");
-      onOpenChange(false);
+      finish();
     } catch (err) {
       setError(getErrorMessage(err, "O'chirishda xatolik"));
     } finally {
@@ -154,14 +176,16 @@ export function StudentExtraPhoneDialog({
         : "Zaxira raqam";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="lumio sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display text-xl font-extrabold">
             {title}
           </DialogTitle>
         </DialogHeader>
+        {/* noValidate: the Uzbek messages below speak, not the browser's tooltip. */}
         <form
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
             if (mode === "remove") void remove();
@@ -194,7 +218,22 @@ export function StudentExtraPhoneDialog({
               <Field label="SMS kod">
                 <FpCodeInput lumio value={code} onChange={setCode} />
               </Field>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={backToForm}
+                disabled={busy}
+              >
+                Raqamni o&apos;zgartirish
+              </Button>
             </>
+          ) : null}
+
+          {mode === "remove" ? (
+            <p className="px-1 text-xs font-semibold text-ink-500">
+              O&apos;chirilgach bu raqam bilan tizimga kira olmaysiz.
+            </p>
           ) : null}
 
           {stage === "form" ? (
@@ -230,13 +269,17 @@ export function StudentExtraPhoneDialog({
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
                 disabled={busy}
               >
                 Bekor qilish
               </Button>
             )}
-            <Button type="submit" loading={busy}>
+            <Button
+              type="submit"
+              variant={mode === "remove" ? "danger" : "primary"}
+              loading={busy}
+            >
               {mode === "remove"
                 ? "O'chirish"
                 : stage === "code"
