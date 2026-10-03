@@ -38,7 +38,7 @@ describe('DailySnapshotService', () => {
         .mockResolvedValue({ expectedValue: 170, heldValue: 13 }),
       getIncomeMonthAttribution: jest
         .fn()
-        .mockResolvedValue({ currentMonth: 6, lessonsValue: 13 }),
+        .mockResolvedValue({ currentMonth: 4, advance: 2, lessonsValue: 13 }),
       // Two numbers, never added: 3 studying debtors owe 500, 9 others 7 000.
       getDebtSplit: jest.fn().mockResolvedValue({
         studying: { total: 500, count: 3, currentMonth: 200, older: 300 },

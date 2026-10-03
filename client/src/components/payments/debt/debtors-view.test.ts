@@ -23,7 +23,7 @@ vi.mock("@/hooks/use-auth", () => {
   return { useAuth };
 });
 
-import type { DebtSplit } from "../payments-overview";
+import type { DebtSplit } from "../overview/types";
 import { DebtFiltersProvider } from "./debt-filters-provider";
 import { DebtorsView } from "./debtors-view";
 

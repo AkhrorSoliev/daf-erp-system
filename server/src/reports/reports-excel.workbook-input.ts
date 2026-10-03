@@ -173,12 +173,15 @@ export function buildSummaryInput(s: SummarySources): SummaryInput {
   const paidNextMonth =
     (s.attributionNext?.late ?? []).find((l: any) => l.monthKey === s.month)
       ?.amount ?? 0;
+  // The month's own cash in its old meaning (ADR-0067): `currentMonth +
+  // advance`. Block 3 must still foot to the cash-in and the lesson-money
+  // block to the month's value; the Excel workbook is not part of B1.
+  const paidInMonth = s.attributionCur.currentMonth + s.attributionCur.advance;
   const lessonMoney = {
-    paidInMonth: s.attributionCur.currentMonth,
+    paidInMonth,
     paidNextMonth,
     unpaid: s.expectation.remainingValue,
-    paidEarlier:
-      s.recognizedRevenue - s.attributionCur.currentMonth - paidNextMonth,
+    paidEarlier: s.recognizedRevenue - paidInMonth - paidNextMonth,
     // The block foots to the month's FULL lesson value, not its recognized
     // revenue. `recognized` counts lessons held AND paid, so the first three
     // rows sum to exactly that (`heldValue`); `unpaid` is the expectation
@@ -213,7 +216,7 @@ export function buildSummaryInput(s: SummarySources): SummaryInput {
     },
     attribution: {
       total: s.attributionCur.total,
-      currentMonth: s.attributionCur.currentMonth,
+      currentMonth: paidInMonth,
       late: s.attributionCur.late,
     },
     paymentCount: (s.payments?.rows ?? []).length,

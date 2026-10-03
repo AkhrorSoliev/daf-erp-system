@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { DebtSplit } from "@/components/payments/payments-overview";
+import type { DebtSplit } from "@/components/payments/overview/types";
 import { OverduePromisesBanner } from "./overdue-promises-banner";
 
 const SPLIT: DebtSplit = {

@@ -96,7 +96,7 @@ describe("HomeMoneyCards — the month card", () => {
     expect(text).not.toContain("hisob yozilmagan");
   });
 
-  // The drill-down says the same words (income-attribution-panel.test.ts):
+  // The overview's month card says the same words (overview/month-charges-card.tsx):
   // «to'lov yo'q» read as «charged, nobody paid», which is not this state.
   it("nothing charged says «hisob yozilmagan», with no percentage to print", () => {
     const text = render({
@@ -151,7 +151,7 @@ describe("HomeMoneyCards — the debt card", () => {
   });
 
   // A closed tooltip renders nothing, so the static markup cannot show it — the
-  // text is read from the source (payments-overview.test.ts does the same).
+  // text is read from the source (uzbek-only-texts.test.ts does the same).
   it("explains itself in the tooltip and says the two are not added", () => {
     const source = readFileSync(join(__dirname, "home-money-cards.tsx"), "utf-8")
       .replace(/&apos;/g, "'")

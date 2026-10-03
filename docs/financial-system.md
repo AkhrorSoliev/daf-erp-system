@@ -372,16 +372,14 @@ Oylik hisoblashda (calculateMonthlySalaries):
 
 | Method | Endpoint | Roles | Tavsif |
 |--------|----------|-------|--------|
-| `GET` | `/api/reports/financial-overview` | CEO, BD | Tushum, xarajat, foyda, LTV, CAC, ROI |
+| `GET` | `/api/reports/financial-overview` | CEO, BD | Tushum (usullar, kecha), oy hisoblari, qarz, oylik, foyda |
 | `GET` | `/api/reports/financial-trend` | CEO, BD | Oxirgi 6 oy trend |
+| `GET` | `/api/reports/marketing` | CEO, BD | Marketing: sarf, yangi o'quvchilar, jalb qilish narxi, o'quvchi qiymati, samara (ADR-0067) |
 | `GET` | `/api/reports/kpis` | CEO, BD | Faol o'quvchilar, guruhlar, davomat, lidlar |
 
 **Financial overview formulalari:**
 - `Chiqimlar = expenses + salary.paid`
 - `Foyda = tushumlar - chiqimlar`
-- `LTV = davrdagi tushum / noyob to'lovchilar soni`
-- `CAC = marketing xarajati / yangi o'quvchilar soni`
-- `Marketing ROI = (tushum - marketing) / marketing × 100%`
 
 ---
 
@@ -389,7 +387,8 @@ Oylik hisoblashda (calculateMonthlySalaries):
 
 | Sahifa | Yo'l | Tavsif |
 |--------|------|--------|
-| Umumiy ma'lumotlar | `/payments/overview` | KPI kartalar, davr tanlash, to'lov usullari, oxirgi to'lovlar |
+| Umumiy ma'lumotlar | `/payments/overview` | Oy tanlash, oy to'lovlari, qarz, kassa/oylik/foyda kartalari, oylar jadvali, oxirgi to'lovlar (ADR-0067) |
+| Marketing | `/reports/marketing` | Sarf, yangi o'quvchilar, jalb qilish narxi, o'quvchi qiymati, samara, manba bo'yicha |
 | Ish haqi | `/payments/salary` | Oylik jadval + "Oylik belgilash" dialog + batch to'lash + CEO uchun "Sozlamalar" dropdown (Xodim stavkalari, Hisoblash davri) |
 | Xarajatlar | `/payments/expenses` | Xarajatlar CRUD (branchId bilan) |
 | Qarzdorlar | `/payments/debtors` | Balansi minus o'quvchilar ro'yxati |

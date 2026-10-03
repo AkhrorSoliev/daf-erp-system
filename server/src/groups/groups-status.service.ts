@@ -14,6 +14,7 @@ import {
   EntityHistoryService,
   type EntityStatusChangedEvent,
 } from '../common/entity-history';
+import { assertNoUnansweredLessons } from '../unmarked-lessons/unanswered-lessons';
 import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
 import {
   groupInclude,
@@ -41,6 +42,12 @@ const STATUS_NOT_CHANGED =
  * and an expired or closed transaction (P2028).
  */
 const RETRYABLE_TRANSACTION_CODES = new Set(['P2034', 'P2028']);
+
+/** The statuses that end a group: nobody asks about its lessons after them. */
+const CLOSING_STATUSES = new Set<GroupStatus>([
+  GroupStatus.COMPLETED,
+  GroupStatus.CANCELLED,
+]);
 
 @Injectable()
 export class GroupsStatusService {
@@ -107,6 +114,12 @@ export class GroupsStatusService {
             companyId: group.companyId,
             tx,
           });
+
+          // Read on the transaction: a question the sweep opens meanwhile
+          // conflicts with it instead of being left behind (ADR-0068).
+          if (CLOSING_STATUSES.has(dto.status)) {
+            await assertNoUnansweredLessons(tx, { id });
+          }
 
           await this.entityHistoryService.recordStatusChange({
             entityType: 'Group',

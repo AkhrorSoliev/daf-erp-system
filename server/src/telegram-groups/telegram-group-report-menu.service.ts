@@ -293,7 +293,7 @@ export class TelegramGroupReportMenuService {
         }),
         this.canonicalNetProfit(group.companyId, monthKey, branchIds),
         // Which months this month's cash actually belongs to — the same split
-        // the /payments/overview "Tushum tarkibi" drill-down and the 21:00
+        // the «Qayerdan keldi» dialog on «Umumiy ma'lumotlar» and the 21:00
         // report show, over the month this card is titled with.
         this.incomeSplit(group.companyId, branchIds, monthKey),
         // «Bu oy hisoblandi / To'landi / Qoldi», or «Oy oxiriga kutilyapti»
@@ -333,10 +333,11 @@ export class TelegramGroupReportMenuService {
   }
 
   /**
-   * The «Tushum tarkibi» figures for the card's month — how much of the cash is
-   * this month's own income and how much settled older months' debt, per month.
-   * Same service the /payments/overview drill-down and the 21:00 report read,
-   * so the three surfaces cannot disagree.
+   * The income split for the card's month — how much of the cash is
+   * this month's own income, how much was paid ahead for the next month and
+   * how much settled older months' debt, per month.
+   * Same service the «Qayerdan keldi» dialog on «Umumiy ma'lumotlar» and the
+   * 21:00 report read, so the three surfaces cannot disagree.
    *
    * Returns null on failure: a broken split costs the card its three extra
    * lines, never the card itself.
@@ -352,6 +353,7 @@ export class TelegramGroupReportMenuService {
   ): Promise<{
     total: number;
     currentMonth: number;
+    advance: number;
     lateTotal: number;
     late: Array<{ label: string; amount: number }>;
   } | null> {
@@ -364,6 +366,7 @@ export class TelegramGroupReportMenuService {
       return {
         total: a.total,
         currentMonth: a.currentMonth,
+        advance: a.advance,
         lateTotal: a.lateTotal,
         late: a.late,
       };

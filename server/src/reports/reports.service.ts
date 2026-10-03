@@ -348,15 +348,16 @@ export class ReportsService {
       }),
       this.getMonthlyNetProfit(companyId, { month, branchIds, performedById }),
     ]);
+    // The month's own cash in its old meaning (ADR-0067): money paid ahead for
+    // the next month was part of `currentMonth` when this figure was defined,
+    // and the Excel «Xulosa» sheet still reads it that way.
+    const ownMoney = attribution.currentMonth + attribution.advance;
     return {
       month,
-      ownMoney: attribution.currentMonth,
+      ownMoney,
       cashTotal: attribution.total,
       netProfit,
-      ownMonthProfit: computeOwnMonthProfit(
-        attribution.currentMonth,
-        netProfit,
-      ),
+      ownMonthProfit: computeOwnMonthProfit(ownMoney, netProfit),
     };
   }
 
@@ -545,9 +546,6 @@ export class ReportsService {
       debtSplit,
     };
   }
-  getFinancialTrend(companyId: number, branchIds: ReportBranchIds) {
-    return this.financial.getFinancialTrend(companyId, branchIds);
-  }
 
   /**
    * The trend series with `profit` replaced by the CANONICAL monthly net profit
@@ -560,6 +558,10 @@ export class ReportsService {
    * `net-profit-cache.ts`). The first chart open of the Tashkent day pays,
    * later ones are free.
    *
+   * The LAST row is the anchor month — the one the overview's Foyda card shows.
+   * The card computes live, so that row does too and skips the cache: a day-old
+   * cached figure there would put two Foyda numbers on one page for one month.
+   *
    * Any month whose canonical figure cannot be produced keeps its cash value
    * and is flagged, so a failure degrades one point rather than the chart.
    */
@@ -567,23 +569,38 @@ export class ReportsService {
     companyId: number,
     branchIds: ReportBranchIds,
     performedById: number,
+    /** `YYYY-MM` the six months end at; the current month when absent. */
+    month?: string,
   ) {
-    const rows = await this.financial.getFinancialTrend(companyId, branchIds);
+    const rows = await this.financial.getFinancialTrend(
+      companyId,
+      branchIds,
+      month,
+    );
+    const live = async (monthKey: string) =>
+      (
+        await this.getMonthlyNetProfit(companyId, {
+          month: monthKey,
+          branchIds,
+          performedById,
+        })
+      ).netProfit;
     return Promise.all(
-      rows.map(async (row: any) => {
+      rows.map(async (row: any, i: number) => {
         try {
-          const profit = await cachedNetProfit(
-            this.redis,
-            { companyId, branchIds, performedById, monthKey: row.monthKey },
-            async () => {
-              const np = await this.getMonthlyNetProfit(companyId, {
-                month: row.monthKey,
-                branchIds,
-                performedById,
-              });
-              return np.netProfit;
-            },
-          );
+          const profit =
+            i === rows.length - 1
+              ? await live(row.monthKey)
+              : await cachedNetProfit(
+                  this.redis,
+                  {
+                    companyId,
+                    branchIds,
+                    performedById,
+                    monthKey: row.monthKey,
+                  },
+                  () => live(row.monthKey),
+                );
           return { ...row, profit, profitBasis: 'kanonik' as const };
         } catch {
           return { ...row, profitBasis: 'kassa' as const };

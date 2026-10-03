@@ -1,4 +1,4 @@
-import type { DebtSplit } from "@/components/payments/payments-overview";
+import type { DebtSplit } from "@/components/payments/overview/types";
 
 /**
  * `GET /dashboard/summary` javobining shakli.

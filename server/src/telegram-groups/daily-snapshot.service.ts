@@ -114,7 +114,10 @@ export class DailySnapshotService {
       mtdIncome: income._sum.amount ?? 0,
       expectedValue: expectation.expectedValue,
       lessonsHeldValue: attribution.lessonsValue,
-      collectedForMonth: attribution.currentMonth,
+      // The month's own cash with the advance — the meaning this column was
+      // written with before the advance got its own part (ADR-0067). This
+      // record cannot be rebuilt, so its meaning must not move.
+      collectedForMonth: attribution.currentMonth + attribution.advance,
       // The collection PERCENTAGE is deliberately not stored: it is derivable
       // from the two figures above, and a stored copy can drift from them.
     };

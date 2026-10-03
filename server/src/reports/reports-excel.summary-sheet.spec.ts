@@ -284,6 +284,7 @@ describe('summarySheetV2', () => {
           unpaid: 300_000,
           paidPct: 66.7,
           students: 12,
+          unpaidStudents: 4,
         },
       }),
     );

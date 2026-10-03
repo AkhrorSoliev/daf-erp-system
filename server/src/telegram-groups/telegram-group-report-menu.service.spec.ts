@@ -343,7 +343,8 @@ describe('TelegramGroupReportMenuService', () => {
     const ctx = makeCtx();
     reportsFinancial.getIncomeMonthAttribution = jest.fn().mockResolvedValue({
       total: 280_000_000,
-      currentMonth: 210_000_000,
+      currentMonth: 180_000_000,
+      advance: 30_000_000,
       lateTotal: 70_000_000,
       late: [
         { monthKey: '2026-06', label: 'Iyun 2026', amount: 50_000_000 },
@@ -357,7 +358,10 @@ describe('TelegramGroupReportMenuService', () => {
 
     const text = (ctx.reply.mock.calls[0][0] as string).replace(/\u00A0/g, ' ');
     expect(text).toContain("• Tushum (haqiqiy): <b>280 000 000 so'm</b>");
-    expect(text).toContain("   Shu oy uchun: <b>210 000 000 so'm</b> (75%)");
+    expect(text).toContain("   Shu oy uchun: <b>180 000 000 so'm</b> (64%)");
+    expect(text).toContain(
+      "   Oldindan (keyingi oy uchun): <b>30 000 000 so'm</b> (11%)",
+    );
     expect(text).toContain(
       "   Eski qarzlar uchun: <b>70 000 000 so'm</b> (25%)",
     );

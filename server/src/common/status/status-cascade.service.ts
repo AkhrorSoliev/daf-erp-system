@@ -99,6 +99,33 @@ export function groupClosingReason(
  */
 export type CascadeEntityType = 'Branch' | 'Course' | 'Student';
 
+/**
+ * The groups a branch or course status change cancels, or null when it
+ * cancels none. `cascade()` closes exactly these, and the branch and course
+ * services check them before writing anything (ADR-0068: no group closes
+ * with a «Dars bo'ldimi?» question unanswered).
+ */
+export function groupsCancelledBy(
+  entityType: CascadeEntityType,
+  entityId: string,
+  newStatus: string,
+): Prisma.GroupWhereInput | null {
+  const live = {
+    deletedAt: null,
+    statusEnum: { not: GroupStatus.ARCHIVED },
+  };
+  if (
+    entityType === 'Branch' &&
+    (newStatus === BranchStatus.CLOSED || newStatus === BranchStatus.ARCHIVED)
+  ) {
+    return { branchId: Number(entityId), ...live };
+  }
+  if (entityType === 'Course' && newStatus === CourseStatus.ARCHIVED) {
+    return { courseId: entityId, ...live };
+  }
+  return null;
+}
+
 /** One enrolment's month settled by a student's departure (ADR-0043). */
 export interface DepartureMoneyNote {
   groupName: string;
@@ -742,11 +769,7 @@ export class StatusCascadeService {
         newStatus === BranchStatus.ARCHIVED
       ) {
         // Guruhlar → CANCELLED
-        const groupFilter = {
-          branchId,
-          deletedAt: null,
-          statusEnum: { not: GroupStatus.ARCHIVED },
-        };
+        const groupFilter = groupsCancelledBy('Branch', entityId, newStatus)!;
         await this.recordGroupBatchStatusChange(
           groupFilter,
           GroupStatus.CANCELLED,
@@ -842,11 +865,7 @@ export class StatusCascadeService {
     if (entityType === 'Course') {
       if (newStatus === CourseStatus.ARCHIVED) {
         // Guruhlar → CANCELLED
-        const groupFilter = {
-          courseId: entityId,
-          deletedAt: null,
-          statusEnum: { not: GroupStatus.ARCHIVED },
-        };
+        const groupFilter = groupsCancelledBy('Course', entityId, newStatus)!;
         await this.recordGroupBatchStatusChange(
           groupFilter,
           GroupStatus.CANCELLED,

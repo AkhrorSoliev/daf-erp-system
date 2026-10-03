@@ -78,7 +78,7 @@ describe("TelegramAnnounceDialog — Uzbek only", () => {
   });
 
   // A toast is not part of the markup, so the source is read, as
-  // `payments-overview.test.ts` does for the tooltips a closed card hides.
+  // `home-money-cards.test.ts` does for the tooltip a closed card hides.
   it("the dry-run toast says «Ko'rinish tayyor»", () => {
     const source = readFileSync(
       join(__dirname, "telegram-announce-dialog.tsx"),
