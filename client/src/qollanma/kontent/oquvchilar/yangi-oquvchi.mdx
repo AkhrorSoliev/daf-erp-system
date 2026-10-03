@@ -9,6 +9,7 @@
 |---|---|---|
 | «Ism» va «Familiya» | Ha | Har biri kamida 2 ta belgi |
 | «Telefon raqam» | Ha | +998 oldindan yozilgan, 9 ta raqam yoziladi |
+| «Zaxira raqam (ixtiyoriy)» | Yo'q | O'quvchining ikkinchi raqami. O'quvchi bu raqam bilan ham kiradi (pastdagi «Zaxira raqam» bo'limiga qarang) |
 | «Qayerdan bildi?» | Ha | O'quvchi markazni qayerdan bilgani: manba ro'yxatdan tanlanadi. Telefon raqami mos lidga to'g'ri kelsa, manba o'sha lidniki qoladi |
 | «Guruh (ixtiyoriy)» | Yo'q | Shu filialdagi guruh. «Guruh nomini qidirish...» maydonida qidirasiz, «Tozalash» tanlovni bekor qiladi |
 
@@ -27,7 +28,7 @@ Boshqa ma'lumotlar — Telegram, tug'ilgan sana, jins, izoh, ota-ona, manzil, pa
 
 ## Telefon — o'quvchining kirish raqami
 
-O'quvchi o'quvchi portaliga va ilovaga kartadagi telefon raqami bilan kiradi. Kirish raqami va kartadagi raqam — bitta.
+O'quvchi o'quvchi portaliga va ilovaga kartadagi telefon raqami bilan kiradi. Kirish raqami va kartadagi asosiy raqam — bitta. Kartada zaxira raqam ham bo'lsa, o'quvchi portalga u bilan ham kiradi (pastga qarang).
 
 - Bir raqam bitta tirik kartada turadi (barcha filiallar bo'yicha tekshiriladi). Raqam boshqa kartada bo'lsa, «Bu telefon raqam allaqachon tizimda mavjud» chiqadi.
 - Kartadagi raqamni «Tahrirlash» oynasida o'zgartirsangiz, kirish raqami ham shu zahoti o'zgaradi. Eski raqam kirish uchun endi ishlamaydi: o'tish davri yo'q. Sabab: eski raqam boshqa odamga o'tgan bo'lishi mumkin.
@@ -40,6 +41,17 @@ O'quvchi o'quvchi portaliga va ilovaga kartadagi telefon raqami bilan kiradi. Ki
 Kartadagi raqam — kirish kaliti. Uni o'quvchining o'zidan eshitib, ehtiyot bo'lib yozing: noto'g'ri raqam yozilsa, o'quvchi o'z raqami bilan kira olmaydi.
 
 </Eslatma>
+
+### Zaxira raqam
+
+«Zaxira raqam» — o'quvchining ikkinchi raqami. U ham o'quvchi portalini ochadi: o'quvchi shu raqam va o'z paroli bilan yoki «Telegram orqali kirish» tugmasi bilan kiradi.
+
+- Maydon ixtiyoriy. Uni yangi o'quvchi oynasida yoki keyin kartadagi «Tahrirlash» → «Qo'shimcha ma'lumotlar» da yozasiz.
+- Bitta o'quvchiga bitta zaxira raqam. Bir raqam faqat bitta o'quvchini ochadi: raqam boshqa o'quvchida bo'lsa, saqlanmaydi va sababi yoziladi («Ko'p uchraydigan xatolar» jadvaliga qarang).
+- «Parolni unutdingizmi?» SMS kodini faqat asosiy raqamga yuboradi. Telegram bot ham zaxira raqamni tanimaydi.
+- O'quvchi portaldagi Profil sahifasida «Zaxira raqam» qatorini ko'radi. Telefonni SMS kod bilan tasdiqlash yoqilgan bo'lsa (pastdagi bo'limga qarang), u raqamni o'zi qo'shadi yoki almashtiradi: parolini va yangi raqamga kelgan SMS kodni yozadi; o'chirish uchun faqat parol so'raladi. Yoqilmagan bo'lsa, u yerda «Zaxira raqamni administrator qo'shadi.» yoziladi.
+
+Zaxira raqam ham kirish kaliti: uni ham o'quvchining o'zidan eshitib yozing.
 
 ## O'quvchi parolni qanday oladi
 
@@ -99,6 +111,10 @@ Tizim buni o'zi biladi: Telegram botning bloklanganini xabar qiladi yoki bot yub
 |---|---|---|
 | «Yangi o'quvchi» tugmasi o'chiq, ustida «Avval filial tanlang» | Yuqori panelda «Barcha filiallar» tanlangan | Yuqoridan bitta filialni tanlang |
 | «Bu telefon raqam allaqachon tizimda mavjud» | Raqam boshqa tirik kartada turibdi. Tekshiruv barcha filiallar bo'yicha, shuning uchun o'sha karta boshqa filialda bo'lishi mumkin | O'quvchini shu raqam bilan qidiring va o'sha kartadan foydalaning. Topolmasangiz, karta boshqa filialda: CEO barcha filiallarda qidira oladi |
+| «Bu raqam boshqa o'quvchida bor: ism familiya» | Zaxira raqam boshqa o'quvchining asosiy yoki zaxira raqami | Boshqa raqam yozing yoki maydonni bo'sh qoldiring. Raqam o'sha o'quvchiniki emas bo'lsa, avval uning kartasidan olib tashlang |
+| «Bu raqam boshqa filialdagi o'quvchida bor» | Raqam siz ocha olmaydigan o'quvchida turibdi. Uning ismi sizga ko'rsatilmaydi | Boshqa raqam yozing yoki rahbaringizga murojaat qiling |
+| «Bu raqam boshqa o'quvchi hisobida bor» | Raqam bilan boshqa o'quvchi tizimga kiradi | Boshqa raqam yozing |
+| «Zaxira raqam asosiy raqam bilan bir xil bo'lmasin» | Ikkala maydonga bir xil raqam yozilgan | Boshqa raqam yozing yoki zaxira raqamni bo'sh qoldiring |
 | «Ism kamida 2 ta belgidan iborat bo'lishi kerak» yoki «Familiya kamida 2 ta belgidan iborat bo'lishi kerak» | Maydon bo'sh yoki bir belgi | Kamida 2 ta belgi yozing |
 | «Telefon raqam 9 ta raqamdan iborat bo'lishi kerak» | +998 dan keyingi raqamlar to'liq emas | 9 ta raqam yozing |
 | «Qayerdan bildi?» maydonini tanlang | Manba tanlanmagan | Ro'yxatdan manbani tanlang |

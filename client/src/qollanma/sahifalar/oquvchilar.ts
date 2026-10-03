@@ -39,9 +39,9 @@ export const oquvchilar: QollanmaSahifa[] = [
     sahifa: "yangi-oquvchi",
     sarlavha: "Yangi o'quvchi",
     qisqacha:
-      "Yangi o'quvchi «O'quvchilar» sahifasida qo'lda yoki Telegram havolasi orqali qo'shiladi. Filial majburiy va bitta; telefon raqam o'quvchining kirish raqami, kartada o'zgarsa kirish ham o'zgaradi. Bot xabarlari yetib bormasa, kartada «Telegram uzilgan» belgisi chiqadi.",
+      "Yangi o'quvchi «O'quvchilar» sahifasida qo'lda yoki Telegram havolasi orqali qo'shiladi. Filial majburiy va bitta; telefon raqam o'quvchining kirish raqami, kartada o'zgarsa kirish ham o'zgaradi; zaxira raqam bilan ham kiradi. Bot xabarlari yetib bormasa, kartada «Telegram uzilgan» belgisi chiqadi.",
     rollar: [1, 2, 3],
-    adr: ["0032", "0039", "0066"],
+    adr: ["0032", "0039", "0066", "0070"],
     yollar: ["/students"],
     kalitSozlar: [
       "yangi o'quvchi",
@@ -51,6 +51,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "manba",
       "telefon raqam",
       "kirish raqami",
+      "zaxira raqam",
       "login",
       "parol",
       "yangi parol",
@@ -76,11 +77,13 @@ export const oquvchilar: QollanmaSahifa[] = [
     qisqacha:
       "Karta chapda o'quvchi ma'lumotlari, balans va amallarni, o'ngda 10 ta tabni ko'rsatadi. «To'lovlar» tabi o'quvchi qancha to'lagani, har oyning narxi, to'langani va qarzi hamda balans nimadan chiqqanini tushuntiradi.",
     rollar: [1, 2, 3],
-    adr: ["0004", "0037", "0047", "0062", "0064", "0066"],
+    adr: ["0004", "0037", "0047", "0062", "0064", "0066", "0070"],
     yollar: ["/students/profile/*"],
     kalitSozlar: [
       "o'quvchi kartasi",
       "profil",
+      "zaxira raqam",
+      "ota-ona raqami",
       "tab",
       "guruhlar",
       "to'lovlar",

@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-03",
+    sarlavha: "O'quvchi zaxira raqami bilan ham kiradi",
+    matn: "O'quvchi kartasiga «Zaxira raqam» yozish mumkin: yangi o'quvchi oynasida yoki kartadagi «Tahrirlash» → «Qo'shimcha ma'lumotlar» da. O'quvchi o'quvchi portaliga shu raqam bilan ham kiradi: parol bilan yoki «Telegram orqali kirish» tugmasi bilan. Bir raqam faqat bitta o'quvchida turadi, boshqa o'quvchidagi raqam saqlanmaydi. Kartada endi barcha raqamlar nomi bilan chiqadi: «Asosiy», «Zaxira», «Ota-ona». Parolni tiklash uchun SMS kod faqat asosiy raqamga boradi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "yangi-oquvchi" },
+  },
+  {
+    sana: "2026-10-03",
     sarlavha: "Bayramning oxirgi kunida ham Telegram hisobot va eslatmalar ketmaydi",
     matn: "Bir kunlik bayramda va ko'p kunlik bayramning oxirgi kunida Telegram guruhlariga kunlik hisobot (21:00) va kunlik xabarlar (20:00) yuborilmaydi, topshiriq eslatmasi va to'lov va'dalarini tekshirish ham o'tkazib yuboriladi. Ilgari shu kunlarda ular baribir ishlardi.",
     rollar: [1, 2, 3],
