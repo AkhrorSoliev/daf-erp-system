@@ -38,23 +38,31 @@ export const settingsNavSections: SettingsNavSection[] = [
   {
     title: "Administratsiya",
     items: [
+      // Kurslar, Xonalar, Dam olish kunlari: backend writes are
+      // @Roles('CEO', 'Branch Director', 'Administrator') (adding a course is
+      // CEO/BD only, and the page hides that button). The reads are open to
+      // all staff, but these pages exist to edit — a cashier on them saw
+      // add/edit/delete buttons that all answered 403.
       {
         title: "Kurslar",
         url: "/settings/courses",
         icon: BookOpen,
         description: "Kurslarni boshqarish va yangi kurs qo'shish",
+        visibleForRoles: [1, 2, 3],
       },
       {
         title: "Xonalar",
         url: "/settings/rooms",
         icon: DoorOpen,
         description: "Filiallardagi xonalarni boshqarish",
+        visibleForRoles: [1, 2, 3],
       },
       {
         title: "Dam olish kunlari",
         url: "/settings/holidays",
         icon: CalendarOff,
         description: "Rasmiy bayramlar va dam olish kunlari",
+        visibleForRoles: [1, 2, 3],
       },
       {
         // Backend: /student-exit-reasons, /enrollment-transfer-reasons,
@@ -152,6 +160,18 @@ export function getVisibleSettingsSections(roleIds: number[]): SettingsNavSectio
       ),
     }))
     .filter((section) => section.items.length > 0);
+}
+
+/**
+ * Whether these roles may open a /settings page or a page under it: the roles
+ * its entry is shown to. SettingsLayoutShell sends anyone else back, so a typed
+ * URL meets the same rule as the list. A path no entry owns is not restricted.
+ */
+export function canOpenSettingsPath(pathname: string, roleIds: number[]): boolean {
+  const item = settingsNavSections
+    .flatMap((section) => section.items)
+    .find((entry) => pathname === entry.url || pathname.startsWith(`${entry.url}/`));
+  return !item?.visibleForRoles || item.visibleForRoles.some((id) => roleIds.includes(id));
 }
 
 /**
