@@ -108,6 +108,12 @@ Keyinchalik kimdir asosiy raqamini boshqa o'quvchining zaxira raqamiga
 o'zgartirsa, saqlash to'xtatilmaydi: 1-bo'lim bo'yicha asosiy raqam yutadi,
 eski zaxira raqam o'z-o'zidan kalit bo'lmay qoladi.
 
+Asosiy raqam o'quvchining **o'z** zaxira raqamiga teng bo'lib qolsa:
+admin tahririda 400 («Zaxira raqam asosiy raqam bilan bir xil bo'lmasin» —
+admin bittasini o'zgartiradi); ADR-0039 «Yo'q, boshqa raqam» yo'lida
+(`replaceCardNumber`) zaxira raqam asosiyga ko'chgan hisoblanadi — o'sha
+tranzaksiyada bo'shatiladi va tarixga yoziladi.
+
 ### 3. Admin oynasi — zaxira raqamni kiritish
 
 - O'quvchini tahrirlash oynasining «Qo'shimcha ma'lumotlar» paneliga
