@@ -188,7 +188,9 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
           <div key={row.key} className="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-muted-foreground">{row.label}:</span>
+                <span tabIndex={0} className="text-muted-foreground">
+                  {row.label}:
+                </span>
               </TooltipTrigger>
               <TooltipContent>
                 {row.signIn
@@ -197,7 +199,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
               </TooltipContent>
             </Tooltip>
             <a
-              href={`tel:+998${row.phone}`}
+              href={row.telHref}
               className="text-blue-600 hover:underline dark:text-blue-400"
             >
               {formatPhone(row.phone)}
