@@ -11,11 +11,15 @@ import { currentMonthKey } from "@/components/payments/salary-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { FINANCIAL_OVERVIEW_ROLES, hasAnyRole } from "@/lib/role-access";
+import { CashCard } from "./cash-card";
 import { DebtCards } from "./debt-cards";
 import { MonthChargesCard } from "./month-charges-card";
+import { MonthsTable } from "./months-table";
 import { REPORT_FLOOR_MONTH, clampMonth, monthRange } from "./overview-math";
+import { ProfitCard } from "./profit-card";
 import { OVERVIEW_QUERY_KEYS } from "./queries";
 import { RecentPayments } from "./recent-payments";
+import { SalaryCard } from "./salary-card";
 
 const FILTERS = { month: { type: "string" as const, defaultValue: "" } };
 
@@ -70,6 +74,12 @@ export function OverviewPage() {
         <>
           <MonthChargesCard month={month} isCurrent={isCurrent} />
           {isCurrent && <DebtCards month={month} />}
+          <div className="grid gap-3 lg:grid-cols-3">
+            <CashCard month={month} isCurrent={isCurrent} />
+            <SalaryCard month={month} isCurrent={isCurrent} />
+            <ProfitCard month={month} isCurrent={isCurrent} />
+          </div>
+          <MonthsTable month={month} current={current} />
         </>
       )}
 

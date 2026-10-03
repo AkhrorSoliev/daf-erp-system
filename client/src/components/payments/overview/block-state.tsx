@@ -21,3 +21,13 @@ export function BlockError({ title, onRetry }: { title: string; onRetry: () => v
     </div>
   );
 }
+
+/** One labelled figure inside a card: «avans berilgan … so'm». */
+export function MoneyRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-2 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums">{value}</span>
+    </div>
+  );
+}
