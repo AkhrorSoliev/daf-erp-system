@@ -697,6 +697,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
+      "Keyed on `@CurrentUser('studentId')` behind `StudentCardGuard` — the " +
+      "student's own backup number (ADR-0067): read, added or changed behind " +
+      'their current password and an SMS code to the new number, or removed ' +
+      'behind the password. No student id comes from the request, and the ' +
+      'row written is always the caller card, whatever its branch.',
+    routes: [
+      'GET /student-portal/extra-phone',
+      'POST /student-portal/extra-phone/remove',
+      'POST /student-portal/extra-phone/send-code',
+      'POST /student-portal/extra-phone/verify',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
       'The catalogue itself is COMPANY_WIDE (see above) — these two routes moved ' +
       'out of that block because the RESPONSE is no longer just the catalogue. ' +
       "`getLevels`/`getUnit` now read `DafLessonProgress` for the caller's own " +

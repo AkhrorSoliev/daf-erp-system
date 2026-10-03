@@ -20,6 +20,8 @@ import { AuthModule } from '../auth/auth.module';
 import { EskizModule } from '../eskiz/eskiz.module';
 import { StudentOnboardingController } from './onboarding/student-onboarding.controller';
 import { StudentOnboardingService } from './onboarding/student-onboarding.service';
+import { StudentExtraPhoneController } from './extra-phone/student-extra-phone.controller';
+import { StudentExtraPhoneService } from './extra-phone/student-extra-phone.service';
 import { StudentDeparturePreviewService } from './student-departure-preview.service';
 import { StudentEnrollPreviewService } from './student-enroll-preview.service';
 
@@ -39,6 +41,7 @@ import { StudentEnrollPreviewService } from './student-enroll-preview.service';
     StudentsController,
     StudentPortalController,
     StudentOnboardingController,
+    StudentExtraPhoneController,
   ],
   providers: [
     StudentsService,
@@ -50,6 +53,7 @@ import { StudentEnrollPreviewService } from './student-enroll-preview.service';
     StudentPortalReadService,
     StudentPortalWriteService,
     StudentOnboardingService,
+    StudentExtraPhoneService,
     StudentDeparturePreviewService,
     StudentEnrollPreviewService,
   ],
