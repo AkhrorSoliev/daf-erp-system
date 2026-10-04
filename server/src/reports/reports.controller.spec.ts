@@ -518,19 +518,19 @@ describe('ReportsController — role guards', () => {
       },
       debtSplit: {
         studying: {
-          total: 43_500_000,
-          count: 237,
-          currentMonth: 41_100_000,
-          older: 2_400_000,
+          total: 39_150_000,
+          count: 219,
+          currentMonth: 36_990_000,
+          older: 2_160_000,
           olderCount: 13,
         },
         notStudying: {
-          total: 40_600_000,
-          count: 327,
+          total: 36_540_000,
+          count: 305,
           byKind: {
-            ungrouped: { total: 15_000_000, count: 128 },
-            frozen: { total: 14_600_000, count: 99 },
-            left: { total: 11_000_000, count: 100 },
+            ungrouped: { total: 13_500_000, count: 118 },
+            frozen: { total: 13_140_000, count: 91 },
+            left: { total: 9_900_000, count: 96 },
           },
         },
       },

@@ -1556,12 +1556,12 @@ describe('ReportsService', () => {
   describe("getFinancialOverview — «O'qiyotganlar qarzi» / «O'qimayotganlar qarzi»", () => {
     const split = {
       studying: {
-        total: 43_500_000,
-        count: 237,
-        currentMonth: 41_100_000,
-        older: 2_400_000,
+        total: 39_150_000,
+        count: 219,
+        currentMonth: 36_990_000,
+        older: 2_160_000,
       },
-      notStudying: { total: 40_600_000, count: 327 },
+      notStudying: { total: 36_540_000, count: 305 },
     };
 
     beforeEach(() => {

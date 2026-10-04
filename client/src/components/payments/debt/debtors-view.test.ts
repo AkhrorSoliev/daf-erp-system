@@ -28,15 +28,15 @@ import { DebtFiltersProvider } from "./debt-filters-provider";
 import { DebtorsView } from "./debtors-view";
 
 // The two debts (ADR-0059) — chosen so that no count equals an amount and the
-// sum of the two totals (84 100 000) is a figure the page must never print.
+// sum of the two totals (75 690 000) is a figure the page must never print.
 const SPLIT: DebtSplit = {
   studying: {
-    total: 43_500_000,
-    count: 237,
-    currentMonth: 41_100_000,
-    older: 2_400_000,
+    total: 39_150_000,
+    count: 219,
+    currentMonth: 36_990_000,
+    older: 2_160_000,
   },
-  notStudying: { total: 40_600_000, count: 327 },
+  notStudying: { total: 36_540_000, count: 305 },
 };
 
 const SUMMARY = { split: SPLIT, openPromises: 9, overduePromises: 5 };
@@ -84,10 +84,10 @@ describe("DebtorsView — the summary cards", () => {
     const text = render();
 
     expect(text).toContain(
-      `O'qiyotganlar qarzi ${money(43_500_000)} ${num(237)} ta`,
+      `O'qiyotganlar qarzi ${money(39_150_000)} ${num(219)} ta`,
     );
     expect(text).toContain(
-      `O'qimayotganlar qarzi ${money(40_600_000)} ${num(327)} ta`,
+      `O'qimayotganlar qarzi ${money(36_540_000)} ${num(305)} ta`,
     );
   });
 
@@ -95,7 +95,7 @@ describe("DebtorsView — the summary cards", () => {
     const text = render();
 
     expect(text).toContain(
-      `🟡 shu oy ${num(41_100_000)} · 🔴 eski qarz ${num(2_400_000)}`,
+      `🟡 shu oy ${num(36_990_000)} · 🔴 eski qarz ${num(2_160_000)}`,
     );
     // Only the first number is split: one such line on the page.
     expect(text.match(/🟡/g)).toHaveLength(1);
@@ -107,7 +107,7 @@ describe("DebtorsView — the summary cards", () => {
     expect(text).not.toContain("Jami qarz");
     expect(text).not.toContain("Qarzdorlar soni");
     expect(text).not.toContain("O'rtacha qarz");
-    expect(text).not.toContain(num(43_500_000 + 40_600_000));
+    expect(text).not.toContain(num(39_150_000 + 36_540_000));
   });
 
   it("keeps the promise card", () => {
@@ -138,10 +138,10 @@ describe("DebtorsView — the summary cards", () => {
     const text = render(SUMMARY, "holat=FROZEN");
 
     expect(text).toContain(
-      `O'qiyotganlar qarzi ${money(43_500_000)} ${num(237)} ta`,
+      `O'qiyotganlar qarzi ${money(39_150_000)} ${num(219)} ta`,
     );
     expect(text).toContain(
-      `O'qimayotganlar qarzi ${money(40_600_000)} ${num(327)} ta`,
+      `O'qimayotganlar qarzi ${money(36_540_000)} ${num(305)} ta`,
     );
   });
 });

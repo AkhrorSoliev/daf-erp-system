@@ -15,12 +15,12 @@ const EXPECTED_MONTH_END = 176_200_000;
 // summasiga teng emas.
 const DEBT: DashboardMoney["debt"] = {
   studying: {
-    total: 43_500_000,
-    count: 237,
-    currentMonth: 41_100_000,
-    older: 2_400_000,
+    total: 39_150_000,
+    count: 219,
+    currentMonth: 36_990_000,
+    older: 2_160_000,
   },
-  notStudying: { total: 40_600_000, count: 327 },
+  notStudying: { total: 36_540_000, count: 305 },
 };
 
 const money: DashboardMoney = {
@@ -117,7 +117,7 @@ describe("HomeMoneyCards — the debt card", () => {
     const text = render(money);
 
     expect(text).toContain(
-      `O'qiyotganlar qarzi ${fmt(43_500_000)} ${fmt(237)} ta · o'qimayotganlar ${fmt(40_600_000)}`,
+      `O'qiyotganlar qarzi ${fmt(39_150_000)} ${fmt(219)} ta · o'qimayotganlar ${fmt(36_540_000)}`,
     );
   });
 
@@ -126,7 +126,7 @@ describe("HomeMoneyCards — the debt card", () => {
 
     expect(text).not.toContain("Qarzdorlik");
     expect(text).not.toContain("ta qarzdor");
-    expect(text).not.toContain(fmt(43_500_000 + 40_600_000));
+    expect(text).not.toContain(fmt(39_150_000 + 36_540_000));
     // The 🟡/🔴 split belongs to the debt page and the Moliya block, not here.
     expect(text).not.toContain("eski qarz");
   });
@@ -140,13 +140,13 @@ describe("HomeMoneyCards — the debt card", () => {
       ...money,
       debt: {
         studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
-        notStudying: { total: 40_600_000, count: 327 },
+        notStudying: { total: 36_540_000, count: 305 },
       },
     });
     // The other number being large does not redden the card: only the first does.
     expect(settled).not.toContain("text-red-600");
     expect(norm(settled)).toContain(
-      `O'qiyotganlar qarzi ${fmt(0)} ${fmt(0)} ta · o'qimayotganlar ${fmt(40_600_000)}`,
+      `O'qiyotganlar qarzi ${fmt(0)} ${fmt(0)} ta · o'qimayotganlar ${fmt(36_540_000)}`,
     );
   });
 
