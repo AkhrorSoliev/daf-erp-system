@@ -9,7 +9,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PriceInput } from "@/components/ui/price-input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CALL_OUTCOME_INFO } from "@/components/outreach/outreach-types";
 import type { LogCallPrefill } from "@/components/outreach/log-call-dialog";
@@ -39,7 +39,10 @@ export function DebtDrawer({ studentId, onClose, onPay, onLogCall }: {
   return (
     <Sheet open={studentId !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
-        <SheetHeader className="border-b px-6 py-4"><SheetTitle>{name || "O'quvchi"}</SheetTitle></SheetHeader>
+        <SheetHeader className="border-b px-6 py-4">
+          <SheetTitle>{name || "O'quvchi"}</SheetTitle>
+          <SheetDescription className="sr-only">O&apos;quvchining qarzi, to&apos;lovlari va va&apos;dasi</SheetDescription>
+        </SheetHeader>
         {isError ? (
           <p className="p-6 text-sm text-muted-foreground">Ma&apos;lumotni yuklab bo&apos;lmadi</p>
         ) : isPending || !data ? (
@@ -90,18 +93,21 @@ export function DebtDrawerBody({ drawer: d, promiseState, promiseFailed = false,
           <span className="text-muted-foreground">Qarz</span>
           <span className="text-xl font-bold text-red-600 dark:text-red-400">{formatBalance(d.debt)}</span>
         </div>
-        <Section title="Oylar bo'yicha">
-          {d.months.length === 0 ? <p className="text-muted-foreground">—</p> : d.months.map((m, i) => (
-            <div key={m.month ?? `${m.label}-${i}`} className="flex justify-between gap-3 border-b py-1.5 last:border-0">
-              {m.month ? (
-                <><span>{monthLabel(m.month)}</span><span className="text-right text-muted-foreground">{drawerMonthText(m)}</span></>
-              ) : (
-                // A mock fee, a refund paid out, the pack's lessons ahead: the statement's own label.
-                <span>{m.label} — <span className="text-muted-foreground">{drawerMonthText(m)}</span></span>
-              )}
-            </div>
-          ))}
-        </Section>
+        {/* No lines when they would not add up to the debt (the server sends none). */}
+        {d.months.length > 0 && (
+          <Section title="Oylar bo'yicha">
+            {d.months.map((m, i) => (
+              <div key={m.month ?? `${m.label}-${i}`} className="flex justify-between gap-3 border-b py-1.5 last:border-0">
+                {m.month ? (
+                  <><span>{monthLabel(m.month)}</span><span className="text-right text-muted-foreground">{drawerMonthText(m)}</span></>
+                ) : (
+                  // A mock fee, a refund paid out, the pack's lessons ahead: the statement's own label.
+                  <span>{m.label} — <span className="text-muted-foreground">{drawerMonthText(m)}</span></span>
+                )}
+              </div>
+            ))}
+          </Section>
+        )}
         <Section title="Oxirgi to'lov">
           <p>{d.lastPayment
             ? `${instantDate(d.lastPayment.createdAt)} · ${formatBalance(d.lastPayment.amount)} · ${PAYMENT_METHOD_LABELS[d.lastPayment.method] ?? d.lastPayment.method}`
@@ -146,7 +152,11 @@ export function PromiseForm({ studentId, debt, range, onClose }: {
       invalidateDebt(qc);
       onClose();
     },
-    onError: (e) => toast.error(getErrorMessage(e, "Va'dani saqlashda xatolik")),
+    onError: (e) => {
+      toast.error(getErrorMessage(e, "Va'dani saqlashda xatolik"));
+      // A refusal may mean someone else wrote this month's promise meanwhile: the button and the form follow the fresh state.
+      qc.invalidateQueries({ queryKey: ["promise-month", studentId] });
+    },
   });
   const row = "grid grid-cols-[110px_1fr] items-center gap-2";
   return (

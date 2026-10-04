@@ -39,6 +39,13 @@ describe("DebtDrawerBody (spec §2.5)", () => {
     expect(text).toContain("Hali aloqa bo'lmagan");
   });
 
+  it("no month lines (they would not add up to the debt): no «Oylar bo'yicha» block at all", () => {
+    expect(norm(html())).toContain("Oylar bo'yicha");
+    const text = norm(html({ drawer: { ...DRAWER, months: [] } }));
+    expect(text).not.toContain("Oylar bo'yicha");
+    expect(text).toContain(`Qarz ${num(500_000)} so'm`);
+  });
+
   it("a line that is not a month's lessons reads «<label> — qoldi Z»", () => {
     expect(norm(html())).toContain(`Sinov imtihoni — qoldi ${num(40_000)}`);
   });
