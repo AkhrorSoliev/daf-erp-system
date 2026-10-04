@@ -243,10 +243,10 @@ export const tolovlar: QollanmaSahifa[] = [
     sahifa: "qarzdorlik",
     sarlavha: "Qarzdorlik",
     qisqacha:
-      "«Qarzdorlik» sahifasi kim qarzdor, qancha va qachondan beri ekanini ko'rsatadi. Qarz ikki alohida raqamda: o'qiyotganlar qarzi va o'qimayotganlar qarzi. Besh tab qarzdorlarni, markaz qoplagan pulni, qarzning oylarini, kechirilganlarni va muzlatilganlar pulini ochadi. Qarzni kechirish CEO qarori bilan o'chiq, oylik davrdagi qarz esa umuman kechirilmaydi.",
+      "«Qarzdorlik» sahifasi bugungi qarzni uch bo'limda ko'rsatadi: «Shu oy», «Eski qarz» va «O'qimayotganlar»; uchala jami qo'shilmaydi. Qatorni bosib o'quvchi oynasini ochasiz: oylar bo'yicha qarz, aloqa, to'lov va va'da. To'lov va'dasi ko'pi bilan 7 kunga, oyiga bir marta yoziladi.",
     rollar: [1, 2, 3, 5],
-    adr: ["0058", "0059", "0062"],
-    yollar: ["/payments/debt"],
+    adr: ["0058", "0059", "0062", "0072"],
+    yollar: ["/payments/debt", "/payments/debt-history", "/payments/debt-write-offs", "/payments/frozen-balances"],
     kalitSozlar: [
       "qarzdorlik",
       "qarzdorlar",
@@ -274,7 +274,11 @@ export const tolovlar: QollanmaSahifa[] = [
       "eski qarz",
       "qarzdorlar paneli",
       "shu oy ustuni",
+      "shu oy",
+      "o'qimayotganlar",
+      "va'da yozish",
+      "qo'ng'iroq natijasi",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-04",
   },
 ];

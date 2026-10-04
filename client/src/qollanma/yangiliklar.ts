@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-04",
+    sarlavha: "«Qarzdorlik» uch bo'limda, to'lov va'dasi 7 kungacha va oyiga bir marta",
+    matn: "«Qarzdorlik» sahifasi endi bugungi qarzni uch bo'limda ko'rsatadi: «Shu oy», «Eski qarz» va «O'qimayotganlar»; har bo'limda jami va soni, uchalasi qo'shilmaydi. Qatorni bossangiz o'quvchi oynasi ochiladi: oylar bo'yicha qarz, oxirgi to'lov, aloqa va amallar. To'lov va'dasi bugundan ko'pi bilan 7 kunga va o'quvchiga oyiga bir marta yoziladi — o'quvchi oynasida, qo'ng'iroq natijasida va qisman to'lovda bir xil. Qarz tarixi, kechirilgan qarzlar va muzlatilganlar puli alohida sahifalarga ko'chdi; «Markaz qoplagani» Ish haqi sahifasida, faqat CEO va filial direktoriga.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "tolovlar", sahifa: "qarzdorlik" },
+  },
+  {
     sana: "2026-10-03",
     sarlavha: "O'quvchi zaxira raqami bilan ham kiradi",
     matn: "O'quvchi kartasiga «Zaxira raqam» yozish mumkin: yangi o'quvchi oynasida yoki kartadagi «Tahrirlash» → «Qo'shimcha ma'lumotlar» da. O'quvchi o'quvchi portaliga shu raqam bilan ham kiradi: parol bilan yoki «Telegram orqali kirish» tugmasi bilan. Bir raqam faqat bitta o'quvchida turadi, boshqa o'quvchidagi raqam saqlanmaydi. Kartada endi barcha raqamlar nomi bilan chiqadi: «Asosiy», «Zaxira», «Ota-ona». Parolni tiklash uchun SMS kod faqat asosiy raqamga boradi.",

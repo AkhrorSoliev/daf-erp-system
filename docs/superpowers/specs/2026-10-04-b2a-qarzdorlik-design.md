@@ -71,7 +71,7 @@ Definitions:
 ### 2.5 Drawer (row click)
 
 - Name, «ID · phone · group (· holat)», **Qarz** (the student's whole debt, both parts).
-- **Oylar bo'yicha:** one line per month with debt: «hisoblandi X · to'landi Y · qoldi Z» (a month with no charge line in the data shows «qoldi Z» alone).
+- **Oylar bo'yicha:** one line per month with debt: «hisoblandi X · to'landi Y · qoldi Z», where to'landi = hisoblandi − qoldi (any credit counts as paid, ADR-0058), so the line always adds up. Any other due (a mock fee, a refund paid out, the pack's lessons ahead) is its own line, labelled as the statement labels it, with «qoldi Z» alone.
 - **Oxirgi to'lov:** «dd.MM.yyyy · amount · method», or «Hali to'lov qilmagan».
 - **Aloqa va va'da:** latest call log line; current promise («Va'da: X so'm, dd.MM gacha» + its pill); «Hali aloqa bo'lmagan» when none.
 - Actions:
@@ -113,8 +113,8 @@ One rule in `PaymentPromisesService`, applied to every write: `create` (the draw
 ## 5. Server changes (summary)
 
 1. **`debt-split.ts`**: a pure per-student row function (studying rows with `currentMonth` / `older`, not-studying rows with `kind` and their current-month part) from which `splitDebt`'s totals are summed; new `studying.currentMonthCount`, `notStudying.currentMonth`. The charges read covers every debtor in the base (today only the studying ones). Existing readers' figures do not change.
-2. **New `GET /payments/debt/list`** (`?tab=&kind=&groupId=&teacherId=&promise=&sort=&search=&page=&pageSize=`) — rows of one tab from the function above, enriched in batched reads (groups/teachers, last group, due date, promise, last call, last payment, months), filtered, sorted and paged on the server; returns `{ data, total, page, pageSize, sum }` plus the tab totals and the difference amount. Roles: every staff role that opens the page today (CEO, BD, Administrator, Cashier); branch scope as the debtor summary (`studentBranchWhere`, empty scope → nothing).
-3. **New `GET /payments/debt/students/:id`** — the drawer: debt, months (statement allocation), last payment, latest call, current-month promise. Same roles; branch-checked (another branch's student → 404, ADR-0063 style).
+2. **New `GET /payments/debt/list`** (`?tab=&kind=&groupIds=&teacherIds=&promise=&sort=&search=&page=&pageSize=`; `groupIds` and `teacherIds` take several values) — rows of one tab from the function above, enriched in batched reads (groups/teachers, last group, due date, promise, last call, last payment, months), filtered, sorted and paged on the server; returns `{ data, total, page, pageSize, sum }` plus the tab totals and the difference amount. Roles: every staff role that opens the page today (CEO, BD, Administrator, Cashier); branch scope as the debtor summary (`studentBranchWhere`, empty scope → nothing).
+3. **New `GET /payments/debt/students/:id`** — the drawer: debt, months (statement allocation), last payment, latest call, the latest promise of any month (this month's promise state — what the form may offer — comes from `GET /payment-promises/month`). Same roles; branch-checked (another branch's student → 404, ADR-0063 style).
 4. **New `GET /payments/debt/excel`** — same query as the list, all rows, xlsx.
 5. **`PaymentPromisesService`**: the rule of §4; the payment write validates a promise before writing.
 6. **`GET /salary/monthly/center-topup`**: CEO/BD.

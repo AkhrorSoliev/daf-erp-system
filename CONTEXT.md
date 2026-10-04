@@ -291,8 +291,17 @@ ko'rsatiladi, jalb qilish narxi, hozirgacha to'lagan va samara hisoblanmaydi.
 `reports/marketing/marketing.math.ts` · ADR-0067
 
 **To'lov va'dasi (PaymentPromise)** — qarzdor «falon kuni to'layman» deganda
-ochiladigan yozuv: `OPEN → KEPT | BROKEN`.
-`payment-promises/`
+ochiladigan yozuv: `OPEN → KEPT | BROKEN | CANCELLED`. Sanasi — bugundan bugun + 7
+gacha bo'lgan Toshkent kuni; o'quvchiga bir Toshkent oyida bitta va'da (`createdAt`
+bo'yicha); shu oyning ochiq va'dasi sanasi yozilgan kunidan 7 kun ichida o'zgaradi.
+To'lov va qo'ng'iroq uni yozishdan oldin tekshiradi.
+`payment-promises/promise-rule.ts` · `docs/adr/0072-qarzdorlik-qatorlari-va-vada-qoidasi.md`
+
+**Qarzdorlik bo'limlari** — «Shu oy» (o'qiyotgan, qarzining shu oy qismi bor), «Eski
+qarz» (o'qiyotgan, o'tgan oylardan qarzi bor), «O'qimayotganlar» (butun qarz). Ikkala
+qismi bor o'quvchi ikkala o'qiyotganlar bo'limida turadi; bo'lim jami — uning
+qatorlari yig'indisi.
+`reports/debt-split.ts` (`debtTabAmount`) · ADR-0072
 
 ---
 
