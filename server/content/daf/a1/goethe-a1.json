@@ -1,2695 +1,3672 @@
 {
  "source": "https://www.goethe.de/pro/relaunch/prf/de/A1_SD1_Wortliste_02.pdf",
- "words": [
+ "woerter": [
   {
-   "artikel": null,
-   "wort": "ab"
+   "wort": "ab",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "aber"
+   "wort": "aber",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "abfahren"
+   "wort": "abfahren",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "abgeben"
+   "wort": "Abfahrt",
+   "artikel": "die",
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "abholen"
+   "wort": "abgeben",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Absender"
+   "wort": "abholen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "Achtung"
+   "wort": "Absender",
+   "artikel": "der"
   },
   {
+   "wort": "Achtung",
+   "artikel": null
+  },
+  {
+   "wort": "Adresse",
    "artikel": "die",
-   "wort": "Adresse"
+   "plural": "-en"
   },
   {
-   "artikel": null,
-   "wort": "all-"
+   "wort": "all-",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "allein"
+   "wort": "allein",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "also"
+   "wort": "also",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "alt"
+   "wort": "alt",
+   "artikel": null
+  },
+  {
+   "wort": "Alter",
+   "artikel": "das"
   },
   {
+   "wort": "an",
+   "artikel": null
+  },
+  {
+   "wort": "anbieten",
+   "artikel": null
+  },
+  {
+   "wort": "Angebot",
    "artikel": "das",
-   "wort": "Alter"
+   "plural": "-e",
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "an"
+   "wort": "ander-",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "anbieten"
+   "wort": "anfangen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "ander-"
+   "wort": "Anfang",
+   "artikel": "der",
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "anfangen"
+   "wort": "anklicken",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "anklicken"
+   "wort": "ankommen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "ankommen"
+   "wort": "Ankunft",
+   "artikel": "die"
   },
   {
-   "artikel": "die",
-   "wort": "Ankunft"
+   "wort": "ankreuzen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "ankreuzen"
+   "wort": "anmachen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "anmachen"
+   "wort": "anmelden",
+   "artikel": null
   },
   {
+   "wort": "Anmeldung",
    "artikel": "die",
-   "wort": "Anrede"
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "anrufen"
+   "wort": "Anrede",
+   "artikel": "die"
+  },
+  {
+   "wort": "anrufen",
+   "artikel": null
   },
   {
+   "wort": "Anruf",
    "artikel": "der",
-   "wort": "Anruf"
+   "plural": "-e"
   },
   {
-   "artikel": null,
-   "wort": "INVeNTAre"
+   "wort": "Anrufbeantworter",
+   "artikel": "der",
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "Alphabetische"
+   "wort": "Ansage",
+   "artikel": "die",
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "wortliste"
+   "wort": "Anschluss",
+   "artikel": "der"
   },
   {
-   "artikel": "die",
-   "wort": "Ansage"
+   "wort": "an sein",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Anschluss"
+   "wort": "antworten",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "antworten"
+   "wort": "Antwort",
+   "artikel": "die",
+   "plural": "-en",
+   "neben": true
   },
   {
+   "wort": "Anzeige",
    "artikel": "die",
-   "wort": "Anzeige"
+   "plural": "-n"
+  },
+  {
+   "wort": "anziehen",
+   "artikel": null
   },
   {
+   "wort": "Apartment",
    "artikel": "das",
-   "wort": "Apartment"
+   "plural": "-s"
   },
   {
+   "wort": "Apfel",
    "artikel": "der",
-   "wort": "Apfel"
+   "plural": "-¨"
   },
   {
-   "artikel": "der",
-   "wort": "Appetit"
+   "wort": "Appetit",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "arbeiten"
+   "wort": "arbeiten",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "arbeitslos"
+   "wort": "Arbeit",
+   "artikel": "die",
+   "plural": "-en",
+   "neben": true
   },
   {
+   "wort": "arbeitslos",
+   "artikel": null
+  },
+  {
+   "wort": "Arbeitsplatz",
    "artikel": "der",
-   "wort": "Arbeitsplatz"
+   "plural": "-¨e"
   },
   {
+   "wort": "Arm",
    "artikel": "der",
-   "wort": "Arm"
+   "plural": "-e"
   },
   {
+   "wort": "Arzt",
    "artikel": "der",
-   "wort": "Arzt"
+   "plural": "-¨e"
   },
   {
-   "artikel": null,
-   "wort": "auch"
+   "wort": "auch",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "auf"
+   "wort": "auf",
+   "artikel": null
   },
   {
+   "wort": "Aufgabe",
    "artikel": "die",
-   "wort": "Aufgabe"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "aufhören"
+   "wort": "aufhören",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "aufstehen"
+   "wort": "auf sein",
+   "artikel": null
+  },
+  {
+   "wort": "aufstehen",
+   "artikel": null
   },
   {
+   "wort": "Aufzug",
    "artikel": "der",
-   "wort": "Aufzug"
+   "plural": "-¨e"
   },
   {
+   "wort": "Auge",
    "artikel": "das",
-   "wort": "Auge"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "aus"
+   "wort": "aus",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Ausflug"
+   "wort": "Ausflug",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "ausfüllen"
+   "wort": "ausfüllen",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Ausgang"
+   "wort": "Ausgang",
+   "artikel": "der"
   },
   {
+   "wort": "Auskunft",
    "artikel": "die",
-   "wort": "Auskunft"
+   "plural": "-¨e"
   },
   {
-   "artikel": "das",
-   "wort": "Ausland"
+   "wort": "Ausland",
+   "artikel": "das"
+  },
+  {
+   "wort": "Ausländer",
+   "artikel": "der",
+   "plural": "-",
+   "neben": true
   },
   {
+   "wort": "ausländisch",
    "artikel": null,
-   "wort": "ausmachen"
+   "neben": true
   },
   {
+   "wort": "ausmachen",
+   "artikel": null
+  },
+  {
+   "wort": "Aussage",
    "artikel": "die",
-   "wort": "Aussage"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "aussehen"
+   "wort": "aussehen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "aussteigen"
+   "wort": "aus sein",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Ausweis"
+   "wort": "aussteigen",
+   "artikel": null
+  },
+  {
+   "wort": "Ausweis",
+   "artikel": "der"
+  },
+  {
+   "wort": "ausziehen",
+   "artikel": null
   },
   {
+   "wort": "Auto",
    "artikel": "das",
-   "wort": "Auto"
+   "plural": "-s"
   },
   {
+   "wort": "Autobahn",
    "artikel": "die",
-   "wort": "Autobahn"
+   "plural": "-en"
   },
   {
-   "artikel": "der",
-   "wort": "Automat"
+   "wort": "Automat",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "automatisch"
+   "wort": "automatisch",
+   "artikel": null
   },
   {
+   "wort": "Baby",
    "artikel": "das",
-   "wort": "Baby"
+   "plural": "-s"
   },
   {
-   "artikel": "die",
-   "wort": "Bäckerei"
+   "wort": "Bäckerei",
+   "artikel": "die"
   },
   {
-   "artikel": "das",
-   "wort": "Bad"
+   "wort": "Bad",
+   "artikel": "das"
   },
   {
-   "artikel": null,
-   "wort": "baden"
+   "wort": "baden",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Bahn"
+   "wort": "Bahn",
+   "artikel": "die"
   },
   {
-   "artikel": "der",
-   "wort": "Bahnhof"
+   "wort": "Bahnhof",
+   "artikel": "der"
   },
   {
-   "artikel": "der",
-   "wort": "Bahnsteig"
+   "wort": "Bahnsteig",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "bald"
+   "wort": "bald",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Balkon"
+   "wort": "Balkon",
+   "artikel": "der"
   },
   {
+   "wort": "Banane",
    "artikel": "die",
-   "wort": "Banane"
+   "plural": "-n"
   },
   {
-   "artikel": "die",
-   "wort": "Bank"
+   "wort": "Bank",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "bar"
+   "wort": "bar",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Bauch"
+   "wort": "Bauch",
+   "artikel": "der"
   },
   {
+   "wort": "Baum",
    "artikel": "der",
-   "wort": "Baum"
+   "plural": "-¨e"
   },
   {
+   "wort": "Beamte",
    "artikel": "der",
-   "wort": "Beamte"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "bedeuten"
+   "wort": "bedeuten",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "beginnen"
+   "wort": "beginnen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "bei"
+   "wort": "bei",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "beide"
+   "wort": "beide",
+   "artikel": null
   },
   {
+   "wort": "Bein",
    "artikel": "das",
-   "wort": "Bein"
+   "plural": "-e"
   },
   {
+   "wort": "Beispiel",
    "artikel": "das",
-   "wort": "Beispiel"
+   "plural": "-e"
   },
   {
+   "wort": "zum Beispiel",
    "artikel": null,
-   "wort": "bekannt"
+   "neben": true,
+   "varianten": [
+    "z. B."
+   ]
   },
   {
-   "artikel": null,
-   "wort": "der"
+   "wort": "bekannt",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "bekommen"
+   "wort": "Bekannte",
+   "artikel": "der/die",
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "benutzen"
+   "wort": "bekommen",
+   "artikel": null
+  },
+  {
+   "wort": "benutzen",
+   "artikel": null
   },
   {
+   "wort": "Beruf",
    "artikel": "der",
-   "wort": "Beruf"
+   "plural": "-e"
   },
   {
-   "artikel": null,
-   "wort": "besetzt"
+   "wort": "besetzt",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "besichtigen"
+   "wort": "besichtigen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "besser"
+   "wort": "besser",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "best-"
+   "wort": "best-",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "bestellen"
+   "wort": "bestellen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "besuchen"
+   "wort": "besuchen",
+   "artikel": null
   },
   {
+   "wort": "Bett",
    "artikel": "das",
-   "wort": "Bett"
+   "plural": "-en"
   },
   {
-   "artikel": null,
-   "wort": "bezahlen"
+   "wort": "bezahlen",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Bier"
+   "wort": "Bier",
+   "artikel": "das"
   },
   {
+   "wort": "Bild",
    "artikel": "das",
-   "wort": "Bild"
+   "plural": "-er"
   },
   {
-   "artikel": null,
-   "wort": "billig"
+   "wort": "billig",
+   "artikel": null
   },
   {
+   "wort": "Birne",
    "artikel": "die",
-   "wort": "Birne"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "bis"
+   "wort": "bis",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "bisschen"
+   "wort": "bisschen",
+   "artikel": null
   },
   {
+   "wort": "bitte",
    "artikel": null,
-   "wort": "bitte"
+   "auch": [
+    "Bitte"
+   ]
   },
   {
+   "wort": "bitten",
    "artikel": null,
-   "wort": "bitter"
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "bleiben"
+   "wort": "bitter",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Bleistift"
+   "wort": "bleiben",
+   "artikel": null
   },
   {
+   "wort": "Bleistift",
    "artikel": "der",
-   "wort": "Blick"
+   "plural": "-e"
   },
   {
+   "wort": "Blick",
+   "artikel": "der"
+  },
+  {
+   "wort": "Blume",
    "artikel": "die",
-   "wort": "Blume"
+   "plural": "-n"
   },
   {
-   "artikel": "der",
-   "wort": "Bogen"
+   "wort": "Bogen",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "böse"
+   "wort": "böse",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "brauchen"
+   "wort": "brauchen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "breit"
+   "wort": "breit",
+   "artikel": null
   },
   {
+   "wort": "Brief",
    "artikel": "der",
-   "wort": "Brief"
+   "plural": "-e"
   },
   {
+   "wort": "Briefmarke",
    "artikel": "die",
-   "wort": "Briefmarke"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "bringen"
+   "wort": "bringen",
+   "artikel": null
   },
   {
+   "wort": "Brot",
    "artikel": "das",
-   "wort": "Brot"
+   "plural": "-e"
   },
   {
+   "wort": "Brötchen",
    "artikel": "das",
-   "wort": "Brötchen"
+   "plural": "-"
   },
   {
+   "wort": "Bruder",
    "artikel": "der",
-   "wort": "Bruder"
+   "plural": "-¨"
   },
   {
+   "wort": "Buch",
    "artikel": "das",
-   "wort": "Buch"
+   "plural": "-¨er"
   },
   {
+   "wort": "Buchstabe",
    "artikel": "der",
-   "wort": "Buchstabe"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "buchstabieren"
+   "wort": "buchstabieren",
+   "artikel": null
   },
   {
+   "wort": "Bus",
    "artikel": "der",
-   "wort": "Bus"
+   "plural": "-se"
   },
   {
-   "artikel": "die",
-   "wort": "Butter"
+   "wort": "Butter",
+   "artikel": "die"
   },
   {
+   "wort": "Café",
    "artikel": "das",
-   "wort": "Caf"
+   "plural": "-s"
   },
   {
-   "artikel": "der",
-   "wort": "Chef"
+   "wort": "CD",
+   "artikel": "die",
+   "plural": "-s"
+  },
+  {
+   "wort": "Chef",
+   "artikel": "der"
   },
   {
+   "wort": "circa",
    "artikel": null,
-   "wort": "circa"
+   "varianten": [
+    "ca."
+   ]
   },
   {
+   "wort": "Computer",
    "artikel": "der",
-   "wort": "Computer"
+   "plural": "-"
   },
   {
-   "artikel": null,
-   "wort": "da"
+   "wort": "da",
+   "artikel": null
   },
   {
+   "wort": "Dame",
    "artikel": "die",
-   "wort": "Dame"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "daneben"
+   "wort": "daneben",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "danken"
+   "wort": "danken",
+   "artikel": null
   },
   {
+   "wort": "Dank",
+   "artikel": "der",
+   "neben": true
+  },
+  {
+   "wort": "danke",
    "artikel": null,
-   "wort": "dann"
+   "neben": true
   },
   {
-   "artikel": "das",
-   "wort": "Datum"
+   "wort": "dann",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "dauern"
+   "wort": "Datum",
+   "artikel": "das"
   },
   {
-   "artikel": null,
-   "wort": "dein-"
+   "wort": "dauern",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "denn"
+   "wort": "dein-",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "dich"
+   "wort": "denn",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "dies-"
+   "wort": "der",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "dir"
+   "wort": "die",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Disco"
+   "wort": "das",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Doktor"
+   "wort": "dich",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Doppelzimmer"
+   "wort": "dies-",
+   "artikel": null
+  },
+  {
+   "wort": "dir",
+   "artikel": null
+  },
+  {
+   "wort": "Disco",
+   "artikel": "die"
+  },
+  {
+   "wort": "Doktor",
+   "artikel": "der"
+  },
+  {
+   "wort": "Doppelzimmer",
+   "artikel": "das"
   },
   {
+   "wort": "Dorf",
    "artikel": "das",
-   "wort": "Dorf"
+   "plural": "-¨er"
   },
   {
-   "artikel": null,
-   "wort": "dort"
+   "wort": "dort",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "draußen"
+   "wort": "dorther",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "drucken"
+   "wort": "dorthin",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "drücken"
+   "wort": "draußen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "durch"
+   "wort": "drucken",
+   "artikel": null
+  },
+  {
+   "wort": "Drucker",
+   "artikel": "der",
+   "plural": "-",
+   "neben": true
+  },
+  {
+   "wort": "drücken",
+   "artikel": null
+  },
+  {
+   "wort": "durch",
+   "artikel": null
   },
   {
+   "wort": "Durchsage",
    "artikel": "die",
-   "wort": "Durchsage"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "dürfen"
+   "wort": "dürfen",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Durst"
+   "wort": "Durst",
+   "artikel": "der"
+  },
+  {
+   "wort": "duschen",
+   "artikel": null
+  },
+  {
+   "wort": "Dusche",
+   "artikel": "die",
+   "neben": true
   },
   {
+   "wort": "Ecke",
    "artikel": "die",
-   "wort": "Ecke"
+   "plural": "-n"
   },
   {
+   "wort": "Ehefrau",
    "artikel": "die",
-   "wort": "Ehefrau"
+   "plural": "-en"
   },
   {
+   "wort": "Ehemann",
    "artikel": "der",
-   "wort": "Ehemann"
+   "plural": "-¨er"
   },
   {
+   "wort": "Ei",
    "artikel": "das",
-   "wort": "Ei"
+   "plural": "-er"
   },
   {
-   "artikel": null,
-   "wort": "eilig"
+   "wort": "eilig",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "ein-"
+   "wort": "ein-",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "einfach"
+   "wort": "einfach",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Eingang"
+   "wort": "Eingang",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "einkaufen"
+   "wort": "einkaufen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "einladen"
+   "wort": "einladen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "einmal"
+   "wort": "Einladung",
+   "artikel": "die",
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "einsteigen"
+   "wort": "einmal",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Eintritt"
+   "wort": "einsteigen",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Einzelzimmer"
+   "wort": "Eintritt",
+   "artikel": "der"
+  },
+  {
+   "wort": "Einzelzimmer",
+   "artikel": "das"
   },
   {
+   "wort": "Eltern",
    "artikel": "die",
-   "wort": "Eltern"
+   "plural": "(pl.)"
   },
   {
+   "wort": "E-Mail",
    "artikel": "die",
-   "wort": "E-Mail"
+   "plural": "-s"
   },
   {
+   "wort": "Empfänger",
    "artikel": "der",
-   "wort": "Empfänger"
+   "plural": "-"
   },
   {
-   "artikel": null,
-   "wort": "empfehlen"
+   "wort": "empfehlen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "enden"
+   "wort": "enden",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "entschuldigen"
+   "wort": "Ende",
+   "artikel": "das",
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "er"
+   "wort": "entschuldigen",
+   "artikel": null
+  },
+  {
+   "wort": "Entschuldigung",
+   "artikel": "die",
+   "neben": true
+  },
+  {
+   "wort": "er",
+   "artikel": null
   },
   {
+   "wort": "Ergebnis",
    "artikel": "das",
-   "wort": "Ergebnis"
+   "plural": "-se"
   },
   {
-   "artikel": null,
-   "wort": "erklären"
+   "wort": "erklären",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "erlauben"
+   "wort": "erlauben",
+   "artikel": null
   },
   {
+   "wort": "Erwachsene",
    "artikel": "der",
-   "wort": "Erwachsene"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "erzählen"
+   "wort": "erzählen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "es"
+   "wort": "es",
+   "artikel": null
   },
   {
+   "wort": "essen",
    "artikel": null,
-   "wort": "essen"
+   "auch": [
+    "Essen"
+   ]
   },
   {
-   "artikel": null,
-   "wort": "euer"
+   "wort": "euer",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "fahren"
+   "wort": "fahren",
+   "artikel": null
+  },
+  {
+   "wort": "Fahrer",
+   "artikel": "der",
+   "neben": true
   },
   {
+   "wort": "Fahrkarte",
    "artikel": "die",
-   "wort": "Fahrkarte"
+   "plural": "-n"
   },
   {
+   "wort": "Fahrrad",
    "artikel": "das",
-   "wort": "Fahrrad"
+   "plural": "-¨er"
   },
   {
-   "artikel": null,
-   "wort": "falsch"
+   "wort": "falsch",
+   "artikel": null
   },
   {
+   "wort": "Familie",
    "artikel": "die",
-   "wort": "Familie"
+   "plural": "-n"
+  },
+  {
+   "wort": "Familienname",
+   "artikel": "der",
+   "neben": true
   },
   {
+   "wort": "Familienstand",
+   "artikel": "der",
+   "neben": true
+  },
+  {
+   "wort": "Farbe",
    "artikel": "die",
-   "wort": "Farbe"
+   "plural": "-n"
   },
   {
+   "wort": "Fax",
    "artikel": "das",
-   "wort": "Fax"
+   "plural": "-e"
   },
   {
-   "artikel": null,
-   "wort": "Feier-"
+   "wort": "Feier-",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "feiern"
+   "wort": "feiern",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "fehlen"
+   "wort": "fehlen",
+   "artikel": null
   },
   {
+   "wort": "Fehler",
    "artikel": "der",
-   "wort": "Fehler"
+   "plural": "-"
   },
   {
-   "artikel": null,
-   "wort": "fernsehen"
+   "wort": "fernsehen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "fertig"
+   "wort": "fertig",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Feuer"
+   "wort": "Feuer",
+   "artikel": "das"
   },
   {
-   "artikel": "das",
-   "wort": "Fieber"
+   "wort": "Fieber",
+   "artikel": "das"
   },
   {
+   "wort": "Film",
    "artikel": "der",
-   "wort": "Film"
+   "plural": "-e"
   },
   {
-   "artikel": null,
-   "wort": "finden"
+   "wort": "finden",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Firma"
+   "wort": "Firma",
+   "artikel": "die"
   },
   {
+   "wort": "Fisch",
    "artikel": "der",
-   "wort": "Fisch"
+   "plural": "-e"
   },
   {
+   "wort": "Flasche",
    "artikel": "die",
-   "wort": "Flasche"
+   "plural": "-n"
   },
   {
-   "artikel": "das",
-   "wort": "Fleisch"
+   "wort": "Fleisch",
+   "artikel": "das"
+  },
+  {
+   "wort": "fliegen",
+   "artikel": null
   },
   {
+   "wort": "abfliegen",
    "artikel": null,
-   "wort": "fliegen"
+   "neben": true
   },
   {
+   "wort": "Abflug",
    "artikel": "der",
-   "wort": "Flughafen"
+   "neben": true
   },
   {
-   "artikel": "das",
-   "wort": "Flugzeug"
+   "wort": "Flughafen",
+   "artikel": "der"
   },
   {
+   "wort": "Flugzeug",
+   "artikel": "das"
+  },
+  {
+   "wort": "Formular",
    "artikel": "das",
-   "wort": "Formular"
+   "plural": "-e"
   },
   {
+   "wort": "Foto",
    "artikel": "das",
-   "wort": "Foto"
+   "plural": "-s"
   },
   {
-   "artikel": null,
-   "wort": "fragen"
+   "wort": "fragen",
+   "artikel": null
   },
   {
+   "wort": "Frage",
    "artikel": "die",
-   "wort": "Frau"
+   "plural": "-n",
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "frei"
+   "wort": "Frau",
+   "artikel": "die",
+   "plural": "-en"
   },
   {
-   "artikel": "die",
-   "wort": "Freizeit"
+   "wort": "frei",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "fremd"
+   "wort": "Freizeit",
+   "artikel": "die"
+  },
+  {
+   "wort": "fremd",
+   "artikel": null
+  },
+  {
+   "wort": "freuen",
+   "artikel": null
   },
   {
+   "wort": "Freund",
    "artikel": "der",
-   "wort": "Freund"
+   "plural": "-e"
   },
   {
-   "artikel": null,
-   "wort": "früher"
+   "wort": "früher",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "frühstücken"
+   "wort": "frühstücken",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Führung"
+   "wort": "Frühstück",
+   "artikel": "das",
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "für"
+   "wort": "Führung",
+   "artikel": "die"
   },
   {
-   "artikel": "der",
-   "wort": "Fuß"
+   "wort": "für",
+   "artikel": null
   },
   {
+   "wort": "Fuß",
    "artikel": "der",
-   "wort": "Fußball"
+   "plural": "-¨e"
   },
   {
-   "artikel": "der",
-   "wort": "Garten"
+   "wort": "Fußball",
+   "artikel": "der"
+  },
+  {
+   "wort": "Garten",
+   "artikel": "der"
   },
   {
+   "wort": "Gast",
    "artikel": "der",
-   "wort": "Gast"
+   "plural": "-¨e"
   },
   {
-   "artikel": null,
-   "wort": "geben"
+   "wort": "geben",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "geboren"
+   "wort": "geboren",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Geburtsjahr"
+   "wort": "Geburtsjahr",
+   "artikel": "das"
   },
   {
-   "artikel": "der",
-   "wort": "Geburtsort"
+   "wort": "Geburtsort",
+   "artikel": "der"
   },
   {
-   "artikel": "der",
-   "wort": "Geburtstag"
+   "wort": "Geburtstag",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "gefallen"
+   "wort": "gefallen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "gegen"
+   "wort": "gegen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "gehen"
+   "wort": "gehen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "gehören"
+   "wort": "gehören",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Geld"
+   "wort": "Geld",
+   "artikel": "das"
   },
   {
-   "artikel": "das",
-   "wort": "Gemüse"
+   "wort": "Gemüse",
+   "artikel": "das"
   },
   {
-   "artikel": "das",
-   "wort": "Gepäck"
+   "wort": "Gepäck",
+   "artikel": "das"
   },
   {
-   "artikel": null,
-   "wort": "gerade"
+   "wort": "gerade",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "geradeaus"
+   "wort": "geradeaus",
+   "artikel": null
   },
   {
+   "wort": "gern",
    "artikel": null,
-   "wort": "gern"
+   "varianten": [
+    "gerne"
+   ]
   },
   {
+   "wort": "Geschäft",
    "artikel": "das",
-   "wort": "Geschäft"
+   "plural": "-e"
   },
   {
+   "wort": "Geschenk",
    "artikel": "das",
-   "wort": "Geschenk"
+   "plural": "-e"
   },
   {
+   "wort": "Geschwister",
    "artikel": "die",
-   "wort": "Geschwister"
+   "plural": "(pl.)"
   },
   {
+   "wort": "Gespräch",
    "artikel": "das",
-   "wort": "Gespräch"
+   "plural": "-e"
   },
   {
-   "artikel": null,
-   "wort": "gestern"
+   "wort": "gestern",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "gestorben"
+   "wort": "gestorben",
+   "artikel": null
   },
   {
+   "wort": "Getränk",
    "artikel": "das",
-   "wort": "Getränk"
+   "plural": "-e"
   },
   {
-   "artikel": "das",
-   "wort": "Gewicht"
+   "wort": "Gewicht",
+   "artikel": "das"
   },
   {
-   "artikel": null,
-   "wort": "gewinnen"
+   "wort": "gewinnen",
+   "artikel": null
   },
   {
+   "wort": "Glas",
    "artikel": "das",
-   "wort": "Glas"
+   "plural": "-¨er"
   },
   {
-   "artikel": null,
-   "wort": "glauben"
+   "wort": "glauben",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "gleich"
+   "wort": "gleich",
+   "artikel": null
   },
   {
+   "wort": "Gleis",
    "artikel": "das",
-   "wort": "Gleis"
+   "plural": "-e"
   },
   {
-   "artikel": "das",
-   "wort": "Glück"
+   "wort": "Glück",
+   "artikel": "das"
   },
   {
-   "artikel": null,
-   "wort": "glücklich"
+   "wort": "glücklich",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Glückwunsch"
+   "wort": "Glückwunsch",
+   "artikel": "der"
   },
   {
+   "wort": "Grad",
    "artikel": null,
-   "wort": "Grad"
+   "gruppe": "Maße und Gewichte"
   },
   {
-   "artikel": null,
-   "wort": "gratulieren"
+   "wort": "gratulieren",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "grillen"
+   "wort": "grillen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "groß"
+   "wort": "groß",
+   "artikel": null
+  },
+  {
+   "wort": "Größe",
+   "artikel": "die",
+   "neben": true
   },
   {
+   "wort": "Großeltern",
    "artikel": "die",
-   "wort": "Großeltern"
+   "plural": "(pl.)"
   },
   {
+   "wort": "Großmutter",
    "artikel": "die",
-   "wort": "Gruppe"
+   "neben": true
   },
   {
+   "wort": "Großvater",
    "artikel": "der",
-   "wort": "Gruß"
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "gültig"
+   "wort": "Gruppe",
+   "artikel": "die",
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "günstig"
+   "wort": "Gruß",
+   "artikel": "der",
+   "plural": "-¨e"
   },
   {
-   "artikel": null,
-   "wort": "gut"
+   "wort": "gültig",
+   "artikel": null
+  },
+  {
+   "wort": "günstig",
+   "artikel": null
+  },
+  {
+   "wort": "gut",
+   "artikel": null
   },
   {
+   "wort": "Haar",
    "artikel": "das",
-   "wort": "Haar"
+   "plural": "-e"
   },
   {
-   "artikel": null,
-   "wort": "haben"
+   "wort": "haben",
+   "artikel": null
   },
   {
+   "wort": "Hähnchen",
    "artikel": "das",
-   "wort": "Hähnchen"
+   "plural": "-"
   },
   {
-   "artikel": "die",
-   "wort": "Halbpension"
+   "wort": "Halbpension",
+   "artikel": "die"
   },
   {
-   "artikel": "die",
-   "wort": "Halle"
+   "wort": "Halle",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "hallo"
+   "wort": "hallo",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "halten"
+   "wort": "halten",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Haltestelle"
+   "wort": "Haltestelle",
+   "artikel": "die"
   },
   {
+   "wort": "Hand",
    "artikel": "die",
-   "wort": "Hand"
+   "plural": "-¨e"
   },
   {
+   "wort": "Handy",
    "artikel": "das",
-   "wort": "Handy"
+   "plural": "-s"
   },
   {
+   "wort": "Haus",
    "artikel": "das",
-   "wort": "Haus"
+   "plural": "-¨er"
   },
   {
+   "wort": "Hausaufgabe",
    "artikel": "die",
-   "wort": "Hausaufgabe"
+   "plural": "-n"
   },
   {
+   "wort": "Hausfrau",
    "artikel": "die",
-   "wort": "Hausfrau"
+   "plural": "-en"
   },
   {
-   "artikel": "die",
-   "wort": "Heimat"
+   "wort": "Hausmann",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "heiraten"
+   "wort": "Heimat",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "heißen"
+   "wort": "heiraten",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "helfen"
+   "wort": "heißen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "hell"
+   "wort": "helfen",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Herd"
+   "wort": "hell",
+   "artikel": null
+  },
+  {
+   "wort": "Herd",
+   "artikel": "der"
   },
   {
+   "wort": "Herr",
    "artikel": "der",
-   "wort": "Herr"
+   "plural": "-en"
   },
   {
-   "artikel": null,
-   "wort": "herzlich"
+   "wort": "herzlich",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "heute"
+   "wort": "heute",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "hier"
+   "wort": "hier",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Hilfe"
+   "wort": "Hilfe",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "hinten"
+   "wort": "hinten",
+   "artikel": null
   },
   {
+   "wort": "Hobby",
    "artikel": "das",
-   "wort": "Hobby"
+   "plural": "-s"
   },
   {
-   "artikel": null,
-   "wort": "hoch"
+   "wort": "hoch",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Hochzeit"
+   "wort": "Hochzeit",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "holen"
+   "wort": "holen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "hören"
+   "wort": "hören",
+   "artikel": null
   },
   {
+   "wort": "Hotel",
    "artikel": "das",
-   "wort": "Hotel"
+   "plural": "-s"
   },
   {
+   "wort": "Hund",
    "artikel": "der",
-   "wort": "Hund"
+   "plural": "-e"
   },
   {
-   "artikel": "der",
-   "wort": "Hunger"
+   "wort": "Hunger",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "ich"
+   "wort": "ich",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "ihr"
+   "wort": "ihr",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "immer"
+   "wort": "ihm",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "in"
+   "wort": "ihn",
+   "artikel": null
+  },
+  {
+   "wort": "immer",
+   "artikel": null
+  },
+  {
+   "wort": "in",
+   "artikel": null
   },
   {
+   "wort": "Information",
    "artikel": "die",
-   "wort": "Information"
+   "plural": "-en"
   },
   {
-   "artikel": null,
-   "wort": "international"
+   "wort": "international",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Internet"
+   "wort": "Internet",
+   "artikel": "das"
   },
   {
-   "artikel": null,
-   "wort": "ja"
+   "wort": "ja",
+   "artikel": null
   },
   {
+   "wort": "Jacke",
    "artikel": "die",
-   "wort": "Jacke"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "jed-"
+   "wort": "jed-",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "jetzt"
+   "wort": "jetzt",
+   "artikel": null
   },
   {
+   "wort": "Job",
    "artikel": "der",
-   "wort": "Job"
+   "plural": "-s"
   },
   {
+   "wort": "Jugendliche",
    "artikel": "der",
-   "wort": "Jugendliche"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "jung"
+   "wort": "jung",
+   "artikel": null
   },
   {
+   "wort": "Junge",
    "artikel": "der",
-   "wort": "Junge"
+   "plural": "-n"
   },
   {
-   "artikel": "der",
-   "wort": "Kaffee"
+   "wort": "Kaffee",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "kaputt"
+   "wort": "kaputt",
+   "artikel": null
   },
   {
+   "wort": "Karte",
    "artikel": "die",
-   "wort": "Karte"
+   "plural": "-n"
   },
   {
+   "wort": "Kreditkarte",
    "artikel": "die",
-   "wort": "Kartoffel"
+   "plural": "-n",
+   "neben": true
   },
   {
+   "wort": "Kartoffel",
    "artikel": "die",
-   "wort": "Kasse"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "kaufen"
+   "wort": "Kasse",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "kein"
+   "wort": "kaufen",
+   "artikel": null
+  },
+  {
+   "wort": "kein",
+   "artikel": null
+  },
+  {
+   "wort": "kennen",
+   "artikel": null
   },
   {
+   "wort": "kennenlernen",
    "artikel": null,
-   "wort": "kennen"
+   "neben": true
   },
   {
+   "wort": "Kind",
    "artikel": "das",
-   "wort": "Kind"
+   "plural": "-er"
   },
   {
-   "artikel": "der",
-   "wort": "Kindergarten"
+   "wort": "Kindergarten",
+   "artikel": "der"
   },
   {
+   "wort": "Kino",
    "artikel": "das",
-   "wort": "Kino"
+   "plural": "-s"
   },
   {
-   "artikel": "der",
-   "wort": "Kiosk"
+   "wort": "Kiosk",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "klar"
+   "wort": "klar",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Klasse"
+   "wort": "Klasse",
+   "artikel": "die"
   },
   {
-   "artikel": "die",
-   "wort": "Kleidung"
+   "wort": "Kleidung",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "klein"
+   "wort": "klein",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "kochen"
+   "wort": "kochen",
+   "artikel": null
   },
   {
+   "wort": "Koffer",
    "artikel": "der",
-   "wort": "Koffer"
+   "plural": "-"
   },
   {
+   "wort": "Kollege",
    "artikel": "der",
-   "wort": "Kollege"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "kommen"
+   "wort": "kommen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "können"
+   "wort": "können",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Konto"
+   "wort": "Konto",
+   "artikel": "das"
   },
   {
-   "artikel": "der",
-   "wort": "Kopf"
+   "wort": "Kopf",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "kosten"
+   "wort": "kosten",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "krank"
+   "wort": "krank",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "kriegen"
+   "wort": "kriegen",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Küche"
+   "wort": "Küche",
+   "artikel": "die"
   },
   {
-   "artikel": "der",
-   "wort": "Kuchen"
+   "wort": "Kuchen",
+   "artikel": "der"
   },
   {
-   "artikel": "der",
-   "wort": "Kugelschreiber"
+   "wort": "Kugelschreiber",
+   "artikel": "der"
   },
   {
-   "artikel": "der",
-   "wort": "Kühlschrank"
+   "wort": "Kühlschrank",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "kulturell"
+   "wort": "kulturell",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "sich"
+   "wort": "kümmern",
+   "artikel": null
   },
   {
+   "wort": "Kunde",
    "artikel": "der",
-   "wort": "Kunde"
+   "plural": "-n"
   },
   {
+   "wort": "Kurs",
    "artikel": "der",
-   "wort": "Kurs"
+   "plural": "-e"
   },
   {
-   "artikel": null,
-   "wort": "kurz"
+   "wort": "kurz",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "lachen"
+   "wort": "lachen",
+   "artikel": null
   },
   {
+   "wort": "Laden",
    "artikel": "der",
-   "wort": "Laden"
+   "plural": "-¨"
   },
   {
+   "wort": "Land",
    "artikel": "das",
-   "wort": "Land"
+   "plural": "-¨er"
   },
   {
-   "artikel": null,
-   "wort": "lang"
+   "wort": "lang",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "lange"
+   "wort": "lange",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "langsam"
+   "wort": "langsam",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "laufen"
+   "wort": "laufen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "laut"
+   "wort": "laut",
+   "artikel": null
   },
   {
+   "wort": "leben",
    "artikel": null,
-   "wort": "leben"
+   "auch": [
+    "Leben"
+   ]
   },
   {
-   "artikel": null,
-   "wort": "ledig"
+   "wort": "Lebensmittel",
+   "artikel": "die",
+   "plural": "(pl.)",
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "legen"
+   "wort": "ledig",
+   "artikel": null
+  },
+  {
+   "wort": "legen",
+   "artikel": null
   },
   {
+   "wort": "Lehrer",
    "artikel": "der",
-   "wort": "Lehrer"
+   "plural": "-"
   },
   {
-   "artikel": null,
-   "wort": "leicht"
+   "wort": "leicht",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "leider"
+   "wort": "leider",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "leise"
+   "wort": "leise",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "lernen"
+   "wort": "lernen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "lesen"
+   "wort": "lesen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "letzt-"
+   "wort": "letzt-",
+   "artikel": null
   },
   {
+   "wort": "Leute",
    "artikel": "die",
-   "wort": "Leute"
+   "plural": "(pl.)"
   },
   {
-   "artikel": "das",
-   "wort": "Licht"
+   "wort": "Licht",
+   "artikel": "das"
+  },
+  {
+   "wort": "lieb-",
+   "artikel": null
   },
   {
+   "wort": "lieben",
    "artikel": null,
-   "wort": "lieb-"
+   "neben": true
   },
   {
+   "wort": "lieber",
    "artikel": null,
-   "wort": "Lieblings-"
+   "neben": true
   },
   {
+   "wort": "Lieblings-",
+   "artikel": null
+  },
+  {
+   "wort": "Lied",
    "artikel": "das",
-   "wort": "Lied"
+   "plural": "-er"
   },
   {
-   "artikel": null,
-   "wort": "liegen"
+   "wort": "liegen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "links"
+   "wort": "links",
+   "artikel": null
   },
   {
+   "wort": "Lkw",
    "artikel": "der",
-   "wort": "Lkw"
+   "plural": "-s"
   },
   {
-   "artikel": "das",
-   "wort": "Lokal"
+   "wort": "Lokal",
+   "artikel": "das"
   },
   {
+   "wort": "Lösung",
    "artikel": "die",
-   "wort": "Lösung"
+   "plural": "-en"
   },
   {
-   "artikel": null,
-   "wort": "lustig"
+   "wort": "lustig",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "machen"
+   "wort": "machen",
+   "artikel": null
   },
   {
+   "wort": "Mädchen",
    "artikel": "das",
-   "wort": "Mädchen"
+   "plural": "-"
   },
   {
-   "artikel": null,
-   "wort": "man"
+   "wort": "man",
+   "artikel": null
   },
   {
+   "wort": "Mann",
    "artikel": "der",
-   "wort": "Mann"
+   "plural": "-¨er"
   },
   {
+   "wort": "männlich",
+   "artikel": null,
+   "neben": true
+  },
+  {
+   "wort": "Maschine",
    "artikel": "die",
-   "wort": "Maschine"
+   "plural": "-n"
   },
   {
-   "artikel": "das",
-   "wort": "Meer"
+   "wort": "Meer",
+   "artikel": "das"
   },
   {
-   "artikel": null,
-   "wort": "mehr"
+   "wort": "mehr",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "mein"
+   "wort": "mein",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "meist-"
+   "wort": "meist-",
+   "artikel": null
   },
   {
+   "wort": "Mensch",
    "artikel": "der",
-   "wort": "Mensch"
+   "plural": "-en"
   },
   {
-   "artikel": null,
-   "wort": "mieten"
+   "wort": "mieten",
+   "artikel": null
   },
   {
+   "wort": "Miete",
    "artikel": "die",
-   "wort": "Milch"
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "mit"
+   "wort": "Milch",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "mitbringen"
+   "wort": "mit",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "mitkommen"
+   "wort": "mitbringen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "mitmachen"
+   "wort": "mitkommen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "mitnehmen"
+   "wort": "mitmachen",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Mitte"
+   "wort": "mitnehmen",
+   "artikel": null
+  },
+  {
+   "wort": "Mitte",
+   "artikel": "die"
   },
   {
+   "wort": "Möbel",
    "artikel": "die",
-   "wort": "Möbel"
+   "plural": "(pl.)"
   },
   {
-   "artikel": null,
-   "wort": "möchten"
+   "wort": "möchten",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "mögen"
+   "wort": "mögen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "möglich"
+   "wort": "möglich",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Moment"
+   "wort": "Moment",
+   "artikel": "der"
   },
   {
+   "wort": "morgen",
    "artikel": null,
-   "wort": "morgen"
+   "auch": [
+    "Morgen"
+   ]
   },
   {
-   "artikel": null,
-   "wort": "müde"
+   "wort": "müde",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Mund"
+   "wort": "Mund",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "müssen"
+   "wort": "müssen",
+   "artikel": null
   },
   {
+   "wort": "Mutter",
    "artikel": "die",
-   "wort": "Mutter"
+   "plural": "-¨"
   },
   {
+   "wort": "nach",
    "artikel": null,
-   "wort": "nach"
+   "gruppe": "Uhrzeit"
   },
   {
-   "artikel": null,
-   "wort": "nächst-"
+   "wort": "nächst-",
+   "artikel": null
   },
   {
+   "wort": "Name",
    "artikel": "der",
-   "wort": "Name"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "nehmen"
+   "wort": "nehmen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "nein"
+   "wort": "nein",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "neu"
+   "wort": "neu",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "nicht"
+   "wort": "nicht",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "nichts"
+   "wort": "nichts",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "nie"
+   "wort": "nie",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "noch"
+   "wort": "noch",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "normal"
+   "wort": "normal",
+   "artikel": null
   },
   {
+   "wort": "Nummer",
    "artikel": "die",
-   "wort": "Nummer"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "nur"
+   "wort": "nur",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "oben"
+   "wort": "oben",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Obst"
+   "wort": "Obst",
+   "artikel": "das"
   },
   {
-   "artikel": null,
-   "wort": "oder"
+   "wort": "oder",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "öffnen"
+   "wort": "öffnen",
+   "artikel": null
   },
   {
+   "wort": "geöffnet",
    "artikel": null,
-   "wort": "oft"
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "ohne"
+   "wort": "oft",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Öl"
+   "wort": "ohne",
+   "artikel": null
+  },
+  {
+   "wort": "Öl",
+   "artikel": "das"
   },
   {
+   "wort": "Oma",
    "artikel": "die",
-   "wort": "Oma"
+   "plural": "-s"
   },
   {
+   "wort": "Opa",
    "artikel": "der",
-   "wort": "Opa"
+   "plural": "-s"
   },
   {
-   "artikel": "die",
-   "wort": "Ordnung"
+   "wort": "Ordnung",
+   "artikel": "die"
   },
   {
+   "wort": "Ort",
    "artikel": "der",
-   "wort": "Ort"
+   "plural": "-e"
   },
   {
-   "artikel": "das",
-   "wort": "Papier"
+   "wort": "Papier",
+   "artikel": "das"
   },
   {
+   "wort": "Papiere",
    "artikel": "die",
-   "wort": "Papiere"
+   "plural": "(pl.)"
   },
   {
+   "wort": "Partner",
    "artikel": "der",
-   "wort": "Partner"
+   "plural": "-"
   },
   {
+   "wort": "Partnerin",
    "artikel": "die",
-   "wort": "Partnerin"
+   "plural": "-nen"
   },
   {
-   "artikel": "die",
-   "wort": "Party"
+   "wort": "Party",
+   "artikel": "die"
   },
   {
+   "wort": "Pass",
    "artikel": "der",
-   "wort": "Pass"
+   "plural": "-¨e"
   },
   {
+   "wort": "Pause",
    "artikel": "die",
-   "wort": "Pause"
+   "plural": "-n"
   },
   {
+   "wort": "Plan",
    "artikel": "der",
-   "wort": "Plan"
+   "plural": "-¨e"
   },
   {
+   "wort": "Platz",
    "artikel": "der",
-   "wort": "Platz"
+   "plural": "-¨e"
   },
   {
-   "artikel": "die",
-   "wort": "Polizei"
+   "wort": "Polizei",
+   "artikel": "die"
   },
   {
+   "wort": "Pommes frites",
    "artikel": "die",
-   "wort": "Pommes"
+   "plural": "(pl.)"
   },
   {
-   "artikel": "die",
-   "wort": "Post"
+   "wort": "Post",
+   "artikel": "die"
   },
   {
-   "artikel": "die",
-   "wort": "Postleitzahl"
+   "wort": "Postleitzahl",
+   "artikel": "die"
   },
   {
-   "artikel": "das",
-   "wort": "Praktikum"
+   "wort": "Praktikum",
+   "artikel": "das"
   },
   {
-   "artikel": "die",
-   "wort": "Praxis"
+   "wort": "Praxis",
+   "artikel": "die"
   },
   {
+   "wort": "Preis",
    "artikel": "der",
-   "wort": "Preis"
+   "plural": "-e"
   },
   {
+   "wort": "Problem",
    "artikel": "das",
-   "wort": "Problem"
+   "plural": "-e"
   },
   {
+   "wort": "Prospekt",
    "artikel": "der",
-   "wort": "Prospekt"
+   "plural": "-e"
   },
   {
-   "artikel": "die",
-   "wort": "Prüfung"
+   "wort": "Prüfung",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "pünktlich"
+   "wort": "pünktlich",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "Rad"
+   "wort": "Rad fahren",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "rauchen"
+   "wort": "rauchen",
+   "artikel": null
   },
   {
+   "wort": "Raum",
    "artikel": "der",
-   "wort": "Raum"
+   "plural": "-¨e"
   },
   {
+   "wort": "Rechnung",
    "artikel": "die",
-   "wort": "Rechnung"
+   "plural": "-en"
   },
   {
-   "artikel": null,
-   "wort": "rechts"
+   "wort": "rechts",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "regnen"
+   "wort": "regnen",
+   "artikel": null
   },
   {
+   "wort": "Regen",
    "artikel": "der",
-   "wort": "Reis"
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "reisen"
+   "wort": "Reis",
+   "artikel": "der"
   },
   {
-   "artikel": null,
-   "wort": "reparieren"
+   "wort": "reisen",
+   "artikel": null
+  },
+  {
+   "wort": "Reise",
+   "artikel": "die",
+   "neben": true
   },
   {
+   "wort": "Reisebüro",
    "artikel": "das",
-   "wort": "Restaurant"
+   "plural": "-s",
+   "neben": true
+  },
+  {
+   "wort": "Reiseführer",
+   "artikel": "der",
+   "neben": true
+  },
+  {
+   "wort": "reparieren",
+   "artikel": null
   },
   {
+   "wort": "Reparatur",
    "artikel": "die",
-   "wort": "Rezeption"
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "richtig"
+   "wort": "Restaurant",
+   "artikel": "das",
+   "plural": "-s"
   },
   {
-   "artikel": null,
-   "wort": "riechen"
+   "wort": "Rezeption",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "ruhig"
+   "wort": "richtig",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Saft"
+   "wort": "riechen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "sagen"
+   "wort": "ruhig",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Salat"
+   "wort": "Saft",
+   "artikel": "der"
   },
   {
-   "artikel": "das",
-   "wort": "Salz"
+   "wort": "sagen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "Satz"
+   "wort": "Salat",
+   "artikel": "der"
   },
   {
-   "artikel": "die",
-   "wort": "S-Bahn"
+   "wort": "Salz",
+   "artikel": "das"
   },
   {
+   "wort": "Satz",
    "artikel": "der",
-   "wort": "Schalter"
+   "plural": "-¨e"
   },
   {
-   "artikel": null,
-   "wort": "scheinen"
+   "wort": "S-Bahn",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "schicken"
+   "wort": "Schalter",
+   "artikel": "der"
+  },
+  {
+   "wort": "scheinen",
+   "artikel": null
+  },
+  {
+   "wort": "schicken",
+   "artikel": null
   },
   {
+   "wort": "Schild",
    "artikel": "das",
-   "wort": "Schild"
+   "plural": "-er"
   },
   {
+   "wort": "Schinken",
    "artikel": "der",
-   "wort": "Schinken"
+   "plural": "-"
   },
   {
-   "artikel": null,
-   "wort": "schlafen"
+   "wort": "schlafen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "schlecht"
+   "wort": "schlecht",
+   "artikel": null
+  },
+  {
+   "wort": "schließen",
+   "artikel": null
   },
   {
+   "wort": "geschlossen",
    "artikel": null,
-   "wort": "schließen"
+   "neben": true
   },
   {
-   "artikel": "der",
-   "wort": "Schluss"
+   "wort": "Schluss",
+   "artikel": "der"
   },
   {
+   "wort": "Schlüssel",
    "artikel": "der",
-   "wort": "Schlüssel"
+   "plural": "-"
   },
   {
-   "artikel": null,
-   "wort": "schmecken"
+   "wort": "schmecken",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "schnell"
+   "wort": "schnell",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "schon"
+   "wort": "schon",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "schön"
+   "wort": "schön",
+   "artikel": null
   },
   {
+   "wort": "Schrank",
    "artikel": "der",
-   "wort": "Schrank"
+   "plural": "-¨e"
   },
   {
-   "artikel": null,
-   "wort": "schreiben"
+   "wort": "schreiben",
+   "artikel": null
   },
   {
+   "wort": "Schuh",
    "artikel": "der",
-   "wort": "Schuh"
+   "plural": "-e"
   },
   {
-   "artikel": "die",
-   "wort": "Schule"
+   "wort": "Schule",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "schwer"
+   "wort": "Schüler",
+   "artikel": "der",
+   "plural": "-",
+   "neben": true
+  },
+  {
+   "wort": "schwer",
+   "artikel": null
   },
   {
+   "wort": "Schwester",
    "artikel": "die",
-   "wort": "Schwester"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "schwimmen"
+   "wort": "schwimmen",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "See"
+   "wort": "Schwimmbad",
+   "artikel": "das",
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "sehen"
+   "wort": "See",
+   "artikel": "der"
   },
   {
+   "wort": "sehen",
+   "artikel": null
+  },
+  {
+   "wort": "Sehenswürdigkeit",
    "artikel": "die",
-   "wort": "Sehenswürdigkeit"
+   "plural": "-en"
   },
   {
-   "artikel": null,
-   "wort": "sehr"
+   "wort": "sehr",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "sein"
+   "wort": "sein",
+   "artikel": null
   },
   {
+   "wort": "weg sein",
    "artikel": null,
-   "wort": "seit"
+   "neben": true
   },
   {
+   "wort": "zu sein",
    "artikel": null,
-   "wort": "selbstständig"
+   "neben": true
   },
   {
-   "artikel": null,
-   "wort": "sie"
+   "wort": "seit",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "Sie"
+   "wort": "selbstständig",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "sitzen"
+   "wort": "sich",
+   "artikel": null
   },
   {
+   "wort": "sie",
    "artikel": null,
-   "wort": "so"
+   "auch": [
+    "Sie"
+   ]
   },
   {
-   "artikel": "das",
-   "wort": "Sofa"
+   "wort": "sitzen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "sofort"
+   "wort": "so",
+   "artikel": null
+  },
+  {
+   "wort": "Sofa",
+   "artikel": "das"
+  },
+  {
+   "wort": "sofort",
+   "artikel": null
   },
   {
+   "wort": "Sohn",
    "artikel": "der",
-   "wort": "Sohn"
+   "plural": "-¨e"
   },
   {
-   "artikel": null,
-   "wort": "sollen"
+   "wort": "sollen",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Sonne"
+   "wort": "Sonne",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "spät"
+   "wort": "spät",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "später"
+   "wort": "später",
+   "artikel": null
   },
   {
-   "artikel": "die",
-   "wort": "Speisekarte"
+   "wort": "Speisekarte",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "spielen"
+   "wort": "spielen",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Sport"
+   "wort": "Sport",
+   "artikel": "der"
   },
   {
+   "wort": "Sprache",
    "artikel": "die",
-   "wort": "Sprache"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "sprechen"
+   "wort": "sprechen",
+   "artikel": null
   },
   {
+   "wort": "Stadt",
    "artikel": "die",
-   "wort": "Stadt"
+   "plural": "-¨e"
   },
   {
-   "artikel": null,
-   "wort": "stehen"
+   "wort": "stehen",
+   "artikel": null
   },
   {
+   "wort": "Stelle",
    "artikel": "die",
-   "wort": "Stelle"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "stellen"
+   "wort": "stellen",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Stock"
+   "wort": "Stock",
+   "artikel": "der"
   },
   {
+   "wort": "Straße",
    "artikel": "die",
-   "wort": "Straße"
+   "plural": "-n"
   },
   {
-   "artikel": "die",
-   "wort": "Straßenbahn"
+   "wort": "Straßenbahn",
+   "artikel": "die"
   },
   {
-   "artikel": null,
-   "wort": "studieren"
+   "wort": "studieren",
+   "artikel": null
   },
   {
-   "artikel": "das",
-   "wort": "Studium"
+   "wort": "Studium",
+   "artikel": "das"
+  },
+  {
+   "wort": "Student",
+   "artikel": "der",
+   "plural": "-en",
+   "neben": true
   },
   {
+   "wort": "Stunde",
    "artikel": "die",
-   "wort": "Stunde"
+   "plural": "-n",
+   "gruppe": "Zeitmaße, Zeitangaben"
   },
   {
-   "artikel": null,
-   "wort": "suchen"
+   "wort": "suchen",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "tanzen"
+   "wort": "tanzen",
+   "artikel": null
   },
   {
+   "wort": "Tasche",
    "artikel": "die",
-   "wort": "Tasche"
+   "plural": "-n"
   },
   {
+   "wort": "Taxi",
    "artikel": "das",
-   "wort": "Taxi"
+   "plural": "-s"
   },
   {
-   "artikel": "der",
-   "wort": "Tee"
+   "wort": "Tee",
+   "artikel": "der"
   },
   {
+   "wort": "Teil",
    "artikel": "der",
-   "wort": "Teil"
+   "plural": "-e"
   },
   {
-   "artikel": null,
-   "wort": "telefonieren"
+   "wort": "telefonieren",
+   "artikel": null
   },
   {
-   "artikel": "der",
-   "wort": "Termin"
+   "wort": "Telefon",
+   "artikel": "das",
+   "neben": true
   },
   {
+   "wort": "Termin",
    "artikel": "der",
-   "wort": "Test"
+   "plural": "-e"
   },
   {
-   "artikel": null,
-   "wort": "teuer"
+   "wort": "Test",
+   "artikel": "der"
+  },
+  {
+   "wort": "teuer",
+   "artikel": null
   },
   {
+   "wort": "Text",
    "artikel": "der",
-   "wort": "Text"
+   "plural": "-e"
   },
   {
-   "artikel": "das",
-   "wort": "Thema"
+   "wort": "Thema",
+   "artikel": "das"
   },
   {
+   "wort": "Ticket",
    "artikel": "das",
-   "wort": "Ticket"
+   "plural": "-s"
   },
   {
+   "wort": "Tisch",
    "artikel": "der",
-   "wort": "Tisch"
+   "plural": "-e"
   },
   {
+   "wort": "Tochter",
    "artikel": "die",
-   "wort": "Tochter"
+   "plural": "-¨"
   },
   {
+   "wort": "Toilette",
    "artikel": "die",
-   "wort": "Toilette"
+   "plural": "-en"
   },
   {
+   "wort": "Tomate",
    "artikel": "die",
-   "wort": "Tomate"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "tot"
+   "wort": "tot",
+   "artikel": null
+  },
+  {
+   "wort": "treffen",
+   "artikel": null
   },
   {
+   "wort": "Treppe",
    "artikel": "die",
-   "wort": "Treppe"
+   "plural": "-n"
   },
   {
-   "artikel": null,
-   "wort": "trinken"
+   "wort": "trinken",
+   "artikel": null
   },
   {
-   "artikel": null,
-   "wort": "tschüss"
+   "wort": "tschüss",
+   "artikel": null
   },
   {
+   "wort": "tun",
+   "artikel": null
+  },
+  {
+   "wort": "über",
    "artikel": null,
-   "wort": "tun"
+   "gruppe": "Maße und Gewichte"
+  },
+  {
+   "wort": "übernachten",
+   "artikel": null
+  },
+  {
+   "wort": "überweisen",
+   "artikel": null
+  },
+  {
+   "wort": "Uhr",
+   "artikel": "die",
+   "gruppe": "Uhrzeit"
+  },
+  {
+   "wort": "um",
+   "artikel": null
   },
   {
+   "wort": "umziehen",
+   "artikel": null
+  },
+  {
+   "wort": "und",
+   "artikel": null
+  },
+  {
+   "wort": "unser-",
+   "artikel": null
+  },
+  {
+   "wort": "unten",
+   "artikel": null
+  },
+  {
+   "wort": "unter",
    "artikel": null,
-   "wort": "über"
+   "gruppe": "Maße und Gewichte"
+  },
+  {
+   "wort": "Unterricht",
+   "artikel": "der"
+  },
+  {
+   "wort": "unterschreiben",
+   "artikel": null
+  },
+  {
+   "wort": "Unterschrift",
+   "artikel": "die",
+   "neben": true
+  },
+  {
+   "wort": "Urlaub",
+   "artikel": "der"
+  },
+  {
+   "wort": "Vater",
+   "artikel": "der",
+   "plural": "-¨"
+  },
+  {
+   "wort": "verboten",
+   "artikel": null
+  },
+  {
+   "wort": "verdienen",
+   "artikel": null
+  },
+  {
+   "wort": "Verein",
+   "artikel": "der"
+  },
+  {
+   "wort": "verheiratet",
+   "artikel": null
+  },
+  {
+   "wort": "verkaufen",
+   "artikel": null
+  },
+  {
+   "wort": "Verkäufer",
+   "artikel": "der",
+   "plural": "-",
+   "neben": true
+  },
+  {
+   "wort": "vermieten",
+   "artikel": null
   },
   {
+   "wort": "Vermieter",
+   "artikel": "der",
+   "neben": true
+  },
+  {
+   "wort": "verstehen",
+   "artikel": null
+  },
+  {
+   "wort": "Verwandte",
+   "artikel": "der",
+   "plural": "-n"
+  },
+  {
+   "wort": "viel",
+   "artikel": null
+  },
+  {
+   "wort": "vielleicht",
+   "artikel": null
+  },
+  {
+   "wort": "von",
+   "artikel": null
+  },
+  {
+   "wort": "vor",
    "artikel": null,
-   "wort": "übernachten"
+   "gruppe": "Uhrzeit"
+  },
+  {
+   "wort": "Vorname",
+   "artikel": "der",
+   "plural": "-n"
+  },
+  {
+   "wort": "Vorsicht",
+   "artikel": "die"
+  },
+  {
+   "wort": "vorstellen",
+   "artikel": null
+  },
+  {
+   "wort": "Vorwahl",
+   "artikel": "die"
+  },
+  {
+   "wort": "wandern",
+   "artikel": null
+  },
+  {
+   "wort": "wann",
+   "artikel": null
+  },
+  {
+   "wort": "warten",
+   "artikel": null
+  },
+  {
+   "wort": "warum",
+   "artikel": null
+  },
+  {
+   "wort": "was",
+   "artikel": null
+  },
+  {
+   "wort": "was für ein",
+   "artikel": null
+  },
+  {
+   "wort": "waschen",
+   "artikel": null
+  },
+  {
+   "wort": "Wasser",
+   "artikel": "das"
+  },
+  {
+   "wort": "weh tun",
+   "artikel": null
+  },
+  {
+   "wort": "weiblich",
+   "artikel": null
+  },
+  {
+   "wort": "Wein",
+   "artikel": "der"
+  },
+  {
+   "wort": "weit",
+   "artikel": null
+  },
+  {
+   "wort": "weiter",
+   "artikel": null
+  },
+  {
+   "wort": "welch-",
+   "artikel": null
+  },
+  {
+   "wort": "Welt",
+   "artikel": "die"
+  },
+  {
+   "wort": "wenig",
+   "artikel": null
+  },
+  {
+   "wort": "wer",
+   "artikel": null
+  },
+  {
+   "wort": "werden",
+   "artikel": null
+  },
+  {
+   "wort": "Wetter",
+   "artikel": "das"
+  },
+  {
+   "wort": "wichtig",
+   "artikel": null
+  },
+  {
+   "wort": "wie",
+   "artikel": null
+  },
+  {
+   "wort": "wiederholen",
+   "artikel": null
+  },
+  {
+   "wort": "Wiederhören",
+   "artikel": "das"
+  },
+  {
+   "wort": "Wiedersehen",
+   "artikel": "das"
+  },
+  {
+   "wort": "wie viel",
+   "artikel": null
+  },
+  {
+   "wort": "willkommen",
+   "artikel": null
+  },
+  {
+   "wort": "Wind",
+   "artikel": "der"
+  },
+  {
+   "wort": "wir",
+   "artikel": null
+  },
+  {
+   "wort": "wissen",
+   "artikel": null
+  },
+  {
+   "wort": "wo",
+   "artikel": null
+  },
+  {
+   "wort": "woher",
+   "artikel": null
+  },
+  {
+   "wort": "wohin",
+   "artikel": null
+  },
+  {
+   "wort": "wohnen",
+   "artikel": null
+  },
+  {
+   "wort": "Wohnung",
+   "artikel": "die",
+   "plural": "-en",
+   "neben": true
   },
   {
+   "wort": "wollen",
+   "artikel": null
+  },
+  {
+   "wort": "Wort",
+   "artikel": "das",
+   "plural": "-¨er/-e"
+  },
+  {
+   "wort": "wunderbar",
+   "artikel": null
+  },
+  {
+   "wort": "zahlen",
+   "artikel": null
+  },
+  {
+   "wort": "Zeit",
+   "artikel": "die"
+  },
+  {
+   "wort": "zurzeit",
    "artikel": null,
-   "wort": "überweisen"
+   "neben": true
   },
   {
+   "wort": "Zeitung",
    "artikel": "die",
-   "wort": "Uhr"
+   "plural": "-en"
+  },
+  {
+   "wort": "Zigarette",
+   "artikel": "die",
+   "plural": "-n"
+  },
+  {
+   "wort": "Zimmer",
+   "artikel": "das",
+   "plural": "-"
+  },
+  {
+   "wort": "Zoll",
+   "artikel": "der"
+  },
+  {
+   "wort": "zu",
+   "artikel": null
+  },
+  {
+   "wort": "zufrieden",
+   "artikel": null
   },
   {
+   "wort": "Zug",
+   "artikel": "der",
+   "plural": "-¨e"
+  },
+  {
+   "wort": "zurück",
+   "artikel": null
+  },
+  {
+   "wort": "zusammen",
+   "artikel": null
+  },
+  {
+   "wort": "zwischen",
+   "artikel": null
+  },
+  {
+   "wort": "eins",
    "artikel": null,
-   "wort": "um"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "zwei",
    "artikel": null,
-   "wort": "umziehen"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "drei",
    "artikel": null,
-   "wort": "und"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "vier",
    "artikel": null,
-   "wort": "unser-"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "fünf",
    "artikel": null,
-   "wort": "unten"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "sechs",
    "artikel": null,
-   "wort": "unter"
+   "gruppe": "Zahlen"
   },
   {
-   "artikel": "der",
-   "wort": "Unterricht"
+   "wort": "sieben",
+   "artikel": null,
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "acht",
    "artikel": null,
-   "wort": "unterschreiben"
+   "gruppe": "Zahlen"
   },
   {
-   "artikel": "der",
-   "wort": "Urlaub"
+   "wort": "neun",
+   "artikel": null,
+   "gruppe": "Zahlen"
   },
   {
-   "artikel": "der",
-   "wort": "Vater"
+   "wort": "zehn",
+   "artikel": null,
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "elf",
    "artikel": null,
-   "wort": "verboten"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "zwölf",
    "artikel": null,
-   "wort": "verdienen"
+   "gruppe": "Zahlen"
   },
   {
-   "artikel": "der",
-   "wort": "Verein"
+   "wort": "dreizehn",
+   "artikel": null,
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "vierzehn",
    "artikel": null,
-   "wort": "verheiratet"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "fünfzehn",
    "artikel": null,
-   "wort": "verkaufen"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "sechzehn",
    "artikel": null,
-   "wort": "vermieten"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "siebzehn",
    "artikel": null,
-   "wort": "verstehen"
+   "gruppe": "Zahlen"
   },
   {
-   "artikel": "der",
-   "wort": "Verwandte"
+   "wort": "achtzehn",
+   "artikel": null,
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "neunzehn",
    "artikel": null,
-   "wort": "viel"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "zwanzig",
    "artikel": null,
-   "wort": "vielleicht"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "einundzwanzig",
    "artikel": null,
-   "wort": "von"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "dreißig",
    "artikel": null,
-   "wort": "vor"
+   "gruppe": "Zahlen"
   },
   {
-   "artikel": "der",
-   "wort": "Vorname"
+   "wort": "vierzig",
+   "artikel": null,
+   "gruppe": "Zahlen"
+  },
+  {
+   "wort": "fünfzig",
+   "artikel": null,
+   "gruppe": "Zahlen"
+  },
+  {
+   "wort": "sechzig",
+   "artikel": null,
+   "gruppe": "Zahlen"
+  },
+  {
+   "wort": "siebzig",
+   "artikel": null,
+   "gruppe": "Zahlen"
+  },
+  {
+   "wort": "achtzig",
+   "artikel": null,
+   "gruppe": "Zahlen"
+  },
+  {
+   "wort": "neunzig",
+   "artikel": null,
+   "gruppe": "Zahlen"
+  },
+  {
+   "wort": "hundert",
+   "artikel": null,
+   "gruppe": "Zahlen",
+   "varianten": [
+    "einhundert"
+   ]
+  },
+  {
+   "wort": "hunderteins",
+   "artikel": null,
+   "gruppe": "Zahlen"
+  },
+  {
+   "wort": "zweihundert",
+   "artikel": null,
+   "gruppe": "Zahlen"
+  },
+  {
+   "wort": "tausend",
+   "artikel": null,
+   "gruppe": "Zahlen",
+   "varianten": [
+    "eintausend"
+   ]
   },
   {
+   "wort": "Million",
    "artikel": "die",
-   "wort": "Vorsicht"
+   "plural": "-en",
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "Milliarde",
    "artikel": "die",
-   "wort": "Vorwahl"
+   "plural": "-n",
+   "gruppe": "Zahlen"
+  },
+  {
+   "wort": "erste",
+   "artikel": null,
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "zweite",
    "artikel": null,
-   "wort": "wandern"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "dritte",
    "artikel": null,
-   "wort": "wann"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "vierte",
    "artikel": null,
-   "wort": "warten"
+   "gruppe": "Zahlen"
   },
   {
+   "wort": "halb",
    "artikel": null,
-   "wort": "warum"
+   "gruppe": "Datum; Uhrzeit"
   },
   {
+   "wort": "Viertel",
    "artikel": null,
-   "wort": "was"
+   "gruppe": "Datum; Uhrzeit"
+  },
+  {
+   "wort": "null",
+   "artikel": null,
+   "gruppe": "Uhrzeit",
+   "auch": [
+    "Null"
+   ]
+  },
+  {
+   "wort": "Sekunde",
+   "artikel": "die",
+   "plural": "-n",
+   "gruppe": "Zeitmaße, Zeitangaben"
+  },
+  {
+   "wort": "Minute",
+   "artikel": "die",
+   "plural": "-n",
+   "gruppe": "Zeitmaße, Zeitangaben"
+  },
+  {
+   "wort": "Tag",
+   "artikel": "der",
+   "plural": "-e",
+   "gruppe": "Zeitmaße, Zeitangaben; Tag/Tageszeiten"
+  },
+  {
+   "wort": "Woche",
+   "artikel": "die",
+   "plural": "-n",
+   "gruppe": "Zeitmaße, Zeitangaben"
+  },
+  {
+   "wort": "Jahr",
+   "artikel": "das",
+   "plural": "-e",
+   "gruppe": "Zeitmaße, Zeitangaben"
+  },
+  {
+   "wort": "Wochentag",
+   "artikel": "der",
+   "plural": "-e",
+   "gruppe": "Woche/Wochentage"
+  },
+  {
+   "wort": "Wochenende",
+   "artikel": "das",
+   "gruppe": "Woche/Wochentage"
+  },
+  {
+   "wort": "Sonntag",
+   "artikel": "der",
+   "gruppe": "Woche/Wochentage"
+  },
+  {
+   "wort": "Montag",
+   "artikel": "der",
+   "gruppe": "Woche/Wochentage"
+  },
+  {
+   "wort": "Dienstag",
+   "artikel": "der",
+   "gruppe": "Woche/Wochentage"
+  },
+  {
+   "wort": "Mittwoch",
+   "artikel": "der",
+   "gruppe": "Woche/Wochentage"
+  },
+  {
+   "wort": "Donnerstag",
+   "artikel": "der",
+   "gruppe": "Woche/Wochentage"
+  },
+  {
+   "wort": "Freitag",
+   "artikel": "der",
+   "gruppe": "Woche/Wochentage"
+  },
+  {
+   "wort": "Samstag",
+   "artikel": "der",
+   "gruppe": "Woche/Wochentage"
+  },
+  {
+   "wort": "Sonnabend",
+   "artikel": "der",
+   "gruppe": "Woche/Wochentage"
+  },
+  {
+   "wort": "Vormittag",
+   "artikel": "der",
+   "plural": "-e",
+   "gruppe": "Tag/Tageszeiten"
+  },
+  {
+   "wort": "Mittag",
+   "artikel": "der",
+   "gruppe": "Tag/Tageszeiten"
+  },
+  {
+   "wort": "Nachmittag",
+   "artikel": "der",
+   "plural": "-e",
+   "gruppe": "Tag/Tageszeiten"
+  },
+  {
+   "wort": "Abend",
+   "artikel": "der",
+   "plural": "-e",
+   "gruppe": "Tag/Tageszeiten"
+  },
+  {
+   "wort": "Nacht",
+   "artikel": "die",
+   "plural": "-¨e",
+   "gruppe": "Tag/Tageszeiten"
+  },
+  {
+   "wort": "Monat",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "Januar",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "Februar",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "März",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "April",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "Mai",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "Juni",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "Juli",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
   },
   {
+   "wort": "August",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "September",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "Oktober",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "November",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "Dezember",
+   "artikel": "der",
+   "gruppe": "Monat/Monatsnamen"
+  },
+  {
+   "wort": "Frühling",
+   "artikel": "der",
+   "gruppe": "Jahr/Jahreszeiten"
+  },
+  {
+   "wort": "Frühjahr",
    "artikel": "das",
-   "wort": "Wasser"
+   "gruppe": "Jahr/Jahreszeiten"
+  },
+  {
+   "wort": "Sommer",
+   "artikel": "der",
+   "gruppe": "Jahr/Jahreszeiten"
+  },
+  {
+   "wort": "Herbst",
+   "artikel": "der",
+   "gruppe": "Jahr/Jahreszeiten"
+  },
+  {
+   "wort": "Winter",
+   "artikel": "der",
+   "gruppe": "Jahr/Jahreszeiten"
   },
   {
+   "wort": "Euro",
    "artikel": null,
-   "wort": "weh"
+   "gruppe": "Währungen"
   },
   {
+   "wort": "Cent",
    "artikel": null,
-   "wort": "weiblich"
+   "gruppe": "Währungen"
   },
   {
-   "artikel": "der",
-   "wort": "Wein"
+   "wort": "Meter",
+   "artikel": null,
+   "gruppe": "Maße und Gewichte"
   },
   {
+   "wort": "Zentimeter",
    "artikel": null,
-   "wort": "weit"
+   "gruppe": "Maße und Gewichte"
   },
   {
+   "wort": "Kilometer",
    "artikel": null,
-   "wort": "weiter"
+   "gruppe": "Maße und Gewichte"
   },
   {
+   "wort": "Quadratmeter",
    "artikel": null,
-   "wort": "welch-"
+   "gruppe": "Maße und Gewichte"
   },
   {
-   "artikel": "die",
-   "wort": "Welt"
+   "wort": "minus",
+   "artikel": null,
+   "gruppe": "Maße und Gewichte"
   },
   {
+   "wort": "plus",
    "artikel": null,
-   "wort": "wenig"
+   "gruppe": "Maße und Gewichte"
   },
   {
+   "wort": "Prozent",
    "artikel": null,
-   "wort": "wer"
+   "gruppe": "Maße und Gewichte"
   },
   {
+   "wort": "Liter",
    "artikel": null,
-   "wort": "werden"
+   "gruppe": "Maße und Gewichte"
   },
   {
-   "artikel": "das",
-   "wort": "Wetter"
+   "wort": "Gramm",
+   "artikel": null,
+   "gruppe": "Maße und Gewichte"
   },
   {
+   "wort": "Pfund",
    "artikel": null,
-   "wort": "wichtig"
+   "gruppe": "Maße und Gewichte"
   },
   {
+   "wort": "Kilo",
    "artikel": null,
-   "wort": "wie"
+   "gruppe": "Maße und Gewichte",
+   "varianten": [
+    "Kilogramm"
+   ]
   },
   {
+   "wort": "Deutschland",
    "artikel": null,
-   "wort": "wiederholen"
+   "gruppe": "Länder/Ländernamen/Nationalitäten"
   },
   {
-   "artikel": "das",
-   "wort": "Wiederhören"
+   "wort": "Deutsche",
+   "artikel": "der/die",
+   "plural": "-n",
+   "gruppe": "Länder/Ländernamen/Nationalitäten",
+   "varianten": [
+    "Deutscher"
+   ]
   },
   {
-   "artikel": "das",
-   "wort": "Wiedersehen"
+   "wort": "deutsch",
+   "artikel": null,
+   "gruppe": "Länder/Ländernamen/Nationalitäten"
   },
   {
+   "wort": "Europa",
    "artikel": null,
-   "wort": "willkommen"
+   "gruppe": "Länder/Ländernamen/Nationalitäten"
   },
   {
-   "artikel": "der",
-   "wort": "Wind"
+   "wort": "Europäer",
+   "artikel": null,
+   "gruppe": "Länder/Ländernamen/Nationalitäten"
   },
   {
+   "wort": "europäisch",
    "artikel": null,
-   "wort": "wir"
+   "gruppe": "Länder/Ländernamen/Nationalitäten"
   },
   {
+   "wort": "Türkei",
    "artikel": null,
-   "wort": "wissen"
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
+   "wort": "Türke",
    "artikel": null,
-   "wort": "wo"
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
+   "wort": "Türkin",
    "artikel": null,
-   "wort": "woher"
+   "plural": "-nen",
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
+   "wort": "türkisch",
    "artikel": null,
-   "wort": "wohin"
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
+   "wort": "Finnland",
    "artikel": null,
-   "wort": "wohnen"
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
+   "wort": "Finne",
    "artikel": null,
-   "wort": "wollen"
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
-   "artikel": "das",
-   "wort": "Wort"
+   "wort": "Finnin",
+   "artikel": null,
+   "plural": "-nen",
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
+   "wort": "finnisch",
    "artikel": null,
-   "wort": "wunderbar"
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
+   "wort": "Mexiko",
    "artikel": null,
-   "wort": "zahlen"
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
-   "artikel": "die",
-   "wort": "Zeit"
+   "wort": "Mexikaner",
+   "artikel": null,
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
-   "artikel": "die",
-   "wort": "Zeitung"
+   "wort": "Mexikanerin",
+   "artikel": null,
+   "plural": "-nen",
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
-   "artikel": "die",
-   "wort": "Zigarette"
+   "wort": "mexikanisch",
+   "artikel": null,
+   "gruppe": "Länder/Ländernamen/Nationalitäten (Beispiel)"
   },
   {
-   "artikel": "das",
-   "wort": "Zimmer"
+   "wort": "schwarz",
+   "artikel": null,
+   "gruppe": "Farben"
   },
   {
-   "artikel": "der",
-   "wort": "Zoll"
+   "wort": "weiß",
+   "artikel": null,
+   "gruppe": "Farben"
   },
   {
+   "wort": "grau",
    "artikel": null,
-   "wort": "zu"
+   "gruppe": "Farben"
   },
   {
+   "wort": "rot",
    "artikel": null,
-   "wort": "zufrieden"
+   "gruppe": "Farben"
   },
   {
-   "artikel": "der",
-   "wort": "Zug"
+   "wort": "blau",
+   "artikel": null,
+   "gruppe": "Farben"
   },
   {
+   "wort": "gelb",
    "artikel": null,
-   "wort": "zurück"
+   "gruppe": "Farben"
   },
   {
+   "wort": "grün",
    "artikel": null,
-   "wort": "zusammen"
+   "gruppe": "Farben"
+  },
+  {
+   "wort": "braun",
+   "artikel": null,
+   "gruppe": "Farben"
+  },
+  {
+   "wort": "Norden",
+   "artikel": "der",
+   "gruppe": "Himmelsrichtungen"
+  },
+  {
+   "wort": "Süden",
+   "artikel": "der",
+   "gruppe": "Himmelsrichtungen"
+  },
+  {
+   "wort": "Westen",
+   "artikel": "der",
+   "gruppe": "Himmelsrichtungen"
+  },
+  {
+   "wort": "Osten",
+   "artikel": "der",
+   "gruppe": "Himmelsrichtungen"
+  },
+  {
+   "wort": "Antwortbogen",
+   "artikel": "der",
+   "gruppe": "Prüfungsaufgaben (S. 5)"
   },
   {
+   "wort": "ergänzen",
    "artikel": null,
-   "wort": "zwischen"
+   "gruppe": "Prüfungsaufgaben (S. 5)"
   },
   {
+   "wort": "zuordnen",
    "artikel": null,
-   "wort": "dem"
+   "gruppe": "Prüfungsaufgaben (S. 5)"
   }
- ],
- "gruppen": {
-  "zahlen": [
-   {
-    "artikel": null,
-    "wort": "null"
-   },
-   {
-    "artikel": null,
-    "wort": "eins"
-   },
-   {
-    "artikel": null,
-    "wort": "zwei"
-   },
-   {
-    "artikel": null,
-    "wort": "drei"
-   },
-   {
-    "artikel": null,
-    "wort": "vier"
-   },
-   {
-    "artikel": null,
-    "wort": "fünf"
-   },
-   {
-    "artikel": null,
-    "wort": "sechs"
-   },
-   {
-    "artikel": null,
-    "wort": "sieben"
-   },
-   {
-    "artikel": null,
-    "wort": "acht"
-   },
-   {
-    "artikel": null,
-    "wort": "neun"
-   },
-   {
-    "artikel": null,
-    "wort": "zehn"
-   },
-   {
-    "artikel": null,
-    "wort": "elf"
-   },
-   {
-    "artikel": null,
-    "wort": "zwölf"
-   },
-   {
-    "artikel": null,
-    "wort": "dreizehn"
-   },
-   {
-    "artikel": null,
-    "wort": "vierzehn"
-   },
-   {
-    "artikel": null,
-    "wort": "fünfzehn"
-   },
-   {
-    "artikel": null,
-    "wort": "sechzehn"
-   },
-   {
-    "artikel": null,
-    "wort": "siebzehn"
-   },
-   {
-    "artikel": null,
-    "wort": "achtzehn"
-   },
-   {
-    "artikel": null,
-    "wort": "neunzehn"
-   },
-   {
-    "artikel": null,
-    "wort": "zwanzig"
-   },
-   {
-    "artikel": null,
-    "wort": "einundzwanzig"
-   },
-   {
-    "artikel": null,
-    "wort": "dreißig"
-   },
-   {
-    "artikel": null,
-    "wort": "vierzig"
-   },
-   {
-    "artikel": null,
-    "wort": "fünfzig"
-   },
-   {
-    "artikel": null,
-    "wort": "sechzig"
-   },
-   {
-    "artikel": null,
-    "wort": "siebzig"
-   },
-   {
-    "artikel": null,
-    "wort": "achtzig"
-   },
-   {
-    "artikel": null,
-    "wort": "neunzig"
-   },
-   {
-    "artikel": null,
-    "wort": "hundert"
-   },
-   {
-    "artikel": null,
-    "wort": "tausend"
-   }
-  ],
-  "wochentage": [
-   {
-    "artikel": "der",
-    "wort": "Montag"
-   },
-   {
-    "artikel": "der",
-    "wort": "Dienstag"
-   },
-   {
-    "artikel": "der",
-    "wort": "Mittwoch"
-   },
-   {
-    "artikel": "der",
-    "wort": "Donnerstag"
-   },
-   {
-    "artikel": "der",
-    "wort": "Freitag"
-   },
-   {
-    "artikel": "der",
-    "wort": "Samstag"
-   },
-   {
-    "artikel": "der",
-    "wort": "Sonntag"
-   }
-  ],
-  "monate": [
-   {
-    "artikel": "der",
-    "wort": "Januar"
-   },
-   {
-    "artikel": "der",
-    "wort": "Februar"
-   },
-   {
-    "artikel": "der",
-    "wort": "März"
-   },
-   {
-    "artikel": "der",
-    "wort": "April"
-   },
-   {
-    "artikel": "der",
-    "wort": "Mai"
-   },
-   {
-    "artikel": "der",
-    "wort": "Juni"
-   },
-   {
-    "artikel": "der",
-    "wort": "Juli"
-   },
-   {
-    "artikel": "der",
-    "wort": "August"
-   },
-   {
-    "artikel": "der",
-    "wort": "September"
-   },
-   {
-    "artikel": "der",
-    "wort": "Oktober"
-   },
-   {
-    "artikel": "der",
-    "wort": "November"
-   },
-   {
-    "artikel": "der",
-    "wort": "Dezember"
-   }
-  ],
-  "jahreszeiten": [
-   {
-    "artikel": "der",
-    "wort": "Frühling"
-   },
-   {
-    "artikel": "der",
-    "wort": "Sommer"
-   },
-   {
-    "artikel": "der",
-    "wort": "Herbst"
-   },
-   {
-    "artikel": "der",
-    "wort": "Winter"
-   }
-  ]
- }
+ ]
 }

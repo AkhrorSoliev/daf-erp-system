@@ -54,9 +54,6 @@ function main(): void {
   }
   const code = `u${String(Number(process.argv[i + 1])).padStart(2, '0')}`;
 
-  // `validateWortliste` butun GoetheFile'ni oladi — sonlarning raqam
-  // ko'rinishi va yopiq guruhlar (`isWordInGoetheA1` orqali) shu yerda
-  // markazlashgan holda tekshiriladi.
   const wortliste = read<WortlisteFile>('wortliste.json');
   const problems = validateWortliste(
     wortliste,

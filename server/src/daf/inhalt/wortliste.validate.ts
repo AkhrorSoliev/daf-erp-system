@@ -32,13 +32,9 @@ export function kernwoerterImBudget(
  * to'ladi, va hali yozilmagan bo'limni «bo'sh» deb aybdor qilish butun
  * faylni 12 unit tugagunga qadar qizil holatda ushlab turardi.
  *
- * Uchinchi argument BUTUN `GoetheFile`ni oladi (nafaqat alifbohla
- * ro'yxatni) — Goethe-tegishlilik `isWordInGoetheA1` orqali tekshiriladi,
- * shu bilan yopiq guruhlar (sonlar, hafta kunlari, ...) ham, ularning
- * raqam ko'rinishlari ham bir joyda, bir xil qoida bilan hisobga olinadi.
- * Har bir chaqiruv nuqtasi endi shunchaki `goethe`ni butunligicha uzatadi —
- * "sonlarni qanday tekshirish kerak" degan bilim faqat shu yerda va
- * `isWordInGoetheA1`da yashaydi, chaqiruv nuqtalarida takrorlanmaydi.
+ * The third argument is the whole `GoetheFile`: whether a word is on the
+ * Goethe list is decided by `isWordInGoetheA1` alone (spelling variants,
+ * homographs, stems like `dies-`, the word groups), not by each caller.
  */
 export function validateWortliste(
   file: WortlisteFile,

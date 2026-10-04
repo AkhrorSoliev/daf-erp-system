@@ -40,10 +40,10 @@ function kurs(): KursFile {
 
 const GOETHE: GoetheFile = {
   source: 'test',
-  words: [
-    { artikel: null, wort: 'hallo' },
-    { artikel: null, wort: 'tschuess' },
-    { artikel: 'der', wort: 'Name' },
+  woerter: [
+    { wort: 'hallo', artikel: null },
+    { wort: 'tschuess', artikel: null },
+    { wort: 'Name', artikel: 'der' },
   ],
 };
 
@@ -59,7 +59,7 @@ function fullSection(code: string, prefix: string): WortEintrag[] {
 function goetheFor(entries: WortEintrag[]): GoetheFile {
   return {
     source: 'test',
-    words: entries.map((e) => ({ artikel: null, wort: e.wort })),
+    woerter: entries.map((e) => ({ wort: e.wort, artikel: null })),
   };
 }
 

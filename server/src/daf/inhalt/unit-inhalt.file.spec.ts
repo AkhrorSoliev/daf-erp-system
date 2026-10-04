@@ -110,9 +110,6 @@ describe('A1 kontentining umumiy qoidalari', () => {
   });
 
   it('so`z taqsimoti validatordan o`tadi', () => {
-    // `validateWortliste` butun GoetheFile'ni oladi — sonlarning raqam
-    // ko'rinishi (`isWordInGoetheA1` orqali) va yopiq guruhlar shu yerda,
-    // markazlashgan holda tekshiriladi.
     expect(validateWortliste(wortliste, kurs, goethe)).toEqual([]);
   });
 
