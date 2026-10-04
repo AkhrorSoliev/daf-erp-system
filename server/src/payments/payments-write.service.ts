@@ -32,6 +32,13 @@ import {
 } from '../common/auth/financial-write-scope';
 
 /**
+ * ADR-0047: a part payment's promise is written only while the balance stays
+ * below zero. The pre-write check and the write both ask this one question.
+ */
+const writesPromise = (balanceAfter: number | null | undefined): boolean =>
+  (balanceAfter ?? 0) < 0;
+
+/**
  * Emitted after a successful payment commit (manual or gateway). Consumed
  * by `PaymentEventsListener` to send a Telegram receipt to the student.
  */
@@ -168,13 +175,22 @@ export class PaymentsWriteService {
 
     // ADR-0072: a promise that breaks the rule is refused before anything is
     // written — the payment must never stand half-done because of its promise.
+    // Only a promise that will be written is checked: a payment that clears the
+    // debt is never refused for a date it would throw away. Retro billing can
+    // only lower the balance, so a debt this check sees stays a debt.
     if (dto.promiseDate) {
-      await this.paymentPromises.assertPromiseAllowed({
-        studentId: dto.studentId,
-        companyId,
-        promiseDate: dto.promiseDate,
-        mode: 'upsert',
+      const before = await this.prisma.student.findUnique({
+        where: { id: dto.studentId },
+        select: { balance: true },
       });
+      if (writesPromise((before?.balance ?? 0) + dto.amount)) {
+        await this.paymentPromises.assertPromiseAllowed({
+          studentId: dto.studentId,
+          companyId,
+          promiseDate: dto.promiseDate,
+          mode: 'upsert',
+        });
+      }
     }
 
     const { payment, studentBalance, carriedOver } = await this.prisma
@@ -332,7 +348,7 @@ export class PaymentsWriteService {
 
     // ADR-0047 / contract 3.2: a part payment carries a promise for the rest.
     // The payment stands whatever happens to the promise.
-    if (dto.promiseDate && (studentBalance ?? 0) < 0) {
+    if (dto.promiseDate && writesPromise(studentBalance)) {
       try {
         await this.paymentPromises.upsertOpenPromise(
           {

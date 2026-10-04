@@ -17,6 +17,7 @@ describe('PaymentPromisesService', () => {
       create: jest.Mock;
       findFirst: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
       findMany: jest.Mock;
     };
   };
@@ -46,6 +47,7 @@ describe('PaymentPromisesService', () => {
           .mockImplementation(({ data }) => ({ id: 'p1', ...data })),
         findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn().mockResolvedValue({ id: 'p1', status: 'CANCELLED' }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         findMany: jest.fn().mockResolvedValue([]),
       },
     };
@@ -109,21 +111,23 @@ describe('PaymentPromisesService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('maps the OPEN-per-student unique violation (P2002) to a friendly 400', async () => {
+    it("a racing first write (P2002) gets the month rule's own refusal", async () => {
       prisma.paymentPromise.create.mockRejectedValueOnce(
         new Prisma.PrismaClientKnownRequestError('dup', {
           code: 'P2002',
           clientVersion: 'x',
         }),
       );
-      await expect(
-        service.create(
+      const err = await service
+        .create(
           { studentId: 10264, promiseDate: '2026-06-12', comment: 'x' },
           99,
           1001,
           null,
-        ),
-      ).rejects.toBeInstanceOf(BadRequestException);
+        )
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(BadRequestException);
+      expect((err as BadRequestException).message).toBe(PROMISE_MONTH_REFUSAL);
     });
   });
 
@@ -172,7 +176,7 @@ describe('PaymentPromisesService', () => {
           companyId: 1001,
         }),
       });
-      expect(prisma.paymentPromise.update).not.toHaveBeenCalled();
+      expect(prisma.paymentPromise.updateMany).not.toHaveBeenCalled();
       expect(history.recordCreate).toHaveBeenCalled();
     });
 
@@ -188,8 +192,8 @@ describe('PaymentPromisesService', () => {
         99,
         1001,
       );
-      expect(prisma.paymentPromise.update).toHaveBeenCalledWith({
-        where: { id: 'p1' },
+      expect(prisma.paymentPromise.updateMany).toHaveBeenCalledWith({
+        where: { id: 'p1', status: 'OPEN' },
         data: expect.objectContaining({
           comment: 'yangi sana',
           reminderFiredAt: null,
@@ -197,6 +201,24 @@ describe('PaymentPromisesService', () => {
       });
       expect(prisma.paymentPromise.create).not.toHaveBeenCalled();
       expect(history.recordUpdate).toHaveBeenCalled();
+    });
+
+    it('a promise resolved meanwhile (KEPT by a payment) is not moved: the month refusal', async () => {
+      prisma.paymentPromise.findFirst.mockResolvedValueOnce({
+        id: 'p1',
+        status: 'OPEN',
+        createdAt: new Date('2026-06-08T05:00:00Z'),
+        promiseDate: new Date('2026-06-10'),
+      });
+      prisma.paymentPromise.updateMany.mockResolvedValueOnce({ count: 0 });
+      await expect(
+        service.upsertOpenPromise(
+          { studentId: 10264, promiseDate: '2026-06-14', comment: 'x' },
+          99,
+          1001,
+        ),
+      ).rejects.toThrow(new BadRequestException(PROMISE_MONTH_REFUSAL));
+      expect(history.recordUpdate).not.toHaveBeenCalled();
     });
 
     it('throws NotFound when the student does not exist', async () => {
@@ -328,19 +350,31 @@ describe('PaymentPromisesService', () => {
       });
     });
 
-    it("closes an OPEN promise left from an earlier month before writing the month's first", async () => {
-      prisma.paymentPromise.findFirst
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'old' });
+    it("closes an OPEN promise left from an earlier month before writing the month's first — both in the transaction", async () => {
+      const tx = {
+        paymentPromise: {
+          findFirst: jest.fn().mockResolvedValue({ id: 'old' }),
+          update: jest.fn().mockResolvedValue({}),
+          create: jest.fn(({ data }: { data: object }) => ({
+            id: 'p2',
+            ...data,
+          })),
+        },
+      };
+      prisma.$transaction.mockImplementationOnce(
+        (fn: (t: unknown) => unknown) => fn(tx),
+      );
       await service.create(dto, 99, 1001, null);
-      expect(prisma.paymentPromise.update).toHaveBeenCalledWith({
+      expect(tx.paymentPromise.update).toHaveBeenCalledWith({
         where: { id: 'old' },
         data: expect.objectContaining({
           status: 'CANCELLED',
           resolvedById: 99,
         }),
       });
-      expect(prisma.paymentPromise.create).toHaveBeenCalled();
+      expect(tx.paymentPromise.create).toHaveBeenCalled();
+      expect(prisma.paymentPromise.update).not.toHaveBeenCalled();
+      expect(prisma.paymentPromise.create).not.toHaveBeenCalled();
       expect(history.recordStatusChange).toHaveBeenCalledWith(
         expect.objectContaining({
           newValues: expect.objectContaining({
@@ -361,7 +395,7 @@ describe('PaymentPromisesService', () => {
           1001,
         ),
       ).rejects.toThrow(PROMISE_DATE_REFUSAL);
-      expect(prisma.paymentPromise.update).not.toHaveBeenCalled();
+      expect(prisma.paymentPromise.updateMany).not.toHaveBeenCalled();
     });
 
     it('assertPromiseAllowed is the same rule, for the payment and the call log', async () => {

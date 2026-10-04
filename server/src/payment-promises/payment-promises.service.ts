@@ -16,6 +16,7 @@ import {
   tashkentMonthRangeUtc,
 } from '../common/date/tashkent';
 import {
+  PROMISE_MONTH_REFUSAL,
   promiseDateRange,
   promiseRefusal,
   type PromiseMonthState,
@@ -163,6 +164,7 @@ export class PaymentPromisesService {
       },
       userId,
       companyId,
+      now,
     );
   }
 
@@ -176,7 +178,7 @@ export class PaymentPromisesService {
     params: { studentId: number; promiseDate: string; comment: string },
     userId: number,
     companyId: number,
-  ) {
+  ): Promise<void> {
     const student = await this.prisma.student.findFirst({
       where: { id: params.studentId, companyId, deletedAt: null },
       select: { id: true, balance: true },
@@ -188,10 +190,11 @@ export class PaymentPromisesService {
     if (refusal) throw new BadRequestException(refusal);
     const comment = params.comment.trim();
     if (month) {
-      // The rule let it through, so this is the month's OPEN promise.
+      // The rule let it through, so this is the month's OPEN promise — unless a
+      // payment resolved it (KEPT) since: then it is no longer this month's to move.
       const promiseDate = new Date(params.promiseDate);
-      const updated = await this.prisma.paymentPromise.update({
-        where: { id: month.id },
+      const { count } = await this.prisma.paymentPromise.updateMany({
+        where: { id: month.id, status: 'OPEN' },
         // reminderFiredAt: null re-arms the overdue cron for the new date.
         data: {
           promiseDate,
@@ -200,6 +203,7 @@ export class PaymentPromisesService {
           reminderFiredAt: null,
         },
       });
+      if (count === 0) throw new BadRequestException(PROMISE_MONTH_REFUSAL);
       await this.entityHistory.recordUpdate({
         entityType: 'Student',
         entityId: String(params.studentId),
@@ -208,9 +212,9 @@ export class PaymentPromisesService {
         changedById: userId,
         companyId,
       });
-      return updated;
+      return;
     }
-    return this.writeNewPromise(
+    await this.writeNewPromise(
       {
         studentId: params.studentId,
         promiseDate: params.promiseDate,
@@ -220,6 +224,7 @@ export class PaymentPromisesService {
       },
       userId,
       companyId,
+      now,
     );
   }
 
@@ -238,9 +243,11 @@ export class PaymentPromisesService {
     },
     userId: number,
     companyId: number,
+    /** The instant the rule was checked against: the month starts from the same clock. */
+    now: Date,
   ) {
     const branchId = await this.resolveStudentBranch(p.studentId, companyId);
-    const monthStart = tashkentMonthRangeUtc(tashkentMonthKey(new Date())).gte;
+    const monthStart = tashkentMonthRangeUtc(tashkentMonthKey(now)).gte;
     try {
       const { promise, superseded } = await this.prisma.$transaction(
         async (tx) => {
@@ -309,13 +316,13 @@ export class PaymentPromisesService {
       });
       return promise;
     } catch (err) {
+      // Only a race reaches the unique index now: another first write of the
+      // month committed between the rule check and this insert.
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
       ) {
-        throw new BadRequestException(
-          "Bu o'quvchida belgilangan to'lov sanasi allaqachon mavjud",
-        );
+        throw new BadRequestException(PROMISE_MONTH_REFUSAL);
       }
       throw err;
     }

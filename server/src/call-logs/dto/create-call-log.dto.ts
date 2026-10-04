@@ -32,13 +32,13 @@ export class CreateCallLogDto {
   // Optional payment date — only honored when outcome is WILL_PAY. Creates or
   // updates the student's OPEN payment promise so it shows on "To'lov sanalari".
   @IsOptional()
-  @IsDateString()
+  @IsDateString({ strict: true })
   promiseDate?: string;
 
   // Optional "call again later" date for non-payment outcomes (NO_ANSWER /
   // ANSWERED / WILL_COME). Stored on the CallLog only — does NOT create a
   // payment promise. For WILL_PAY use promiseDate instead.
   @IsOptional()
-  @IsDateString()
+  @IsDateString({ strict: true })
   followUpAt?: string;
 }

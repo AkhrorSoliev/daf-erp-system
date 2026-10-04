@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsDateString,
   IsOptional,
+  Max,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -14,7 +15,7 @@ export class CreatePaymentPromiseDto {
   studentId: number;
 
   // ISO date — the day the student committed to pay by.
-  @IsDateString()
+  @IsDateString({ strict: true })
   promiseDate: string;
 
   // Izoh majburiy — har bir to'lov sanasi konteksti bilan yoziladi.
@@ -27,5 +28,6 @@ export class CreatePaymentPromiseDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(2_147_483_647) // int4
   promisedAmount?: number;
 }
