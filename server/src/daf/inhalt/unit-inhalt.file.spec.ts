@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import {
-  kernwoerterImBudget,
+  goetheOhnePlan,
   validateWortliste,
-  UNIT_WORDS_MAX,
+  vergleicheMitPlan,
 } from './wortliste.validate';
 import {
   validateEindeutigkeit,
@@ -110,7 +110,29 @@ describe('A1 kontentining umumiy qoidalari', () => {
   });
 
   it('so`z taqsimoti validatordan o`tadi', () => {
-    expect(validateWortliste(wortliste, kurs, goethe)).toEqual([]);
+    expect(validateWortliste(wortliste, kurs, goethe, hilfswoerter)).toEqual(
+      [],
+    );
+  });
+
+  it('every Goethe A1 word is planned (ADR-0071)', () => {
+    // By the end of A1 every word of the list is taught: as a drilled word,
+    // a helper word, or left out by a recorded decision (`ausgenommen`).
+    expect(goetheOhnePlan(goethe, wortliste, hilfswoerter)).toEqual([]);
+  });
+
+  it('kurs.json word budgets equal the plan', () => {
+    const geplant = new Map<string, number>();
+    for (const e of wortliste.eintraege) {
+      if (!e.ausserhalbBudget) {
+        geplant.set(e.section, (geplant.get(e.section) ?? 0) + 1);
+      }
+    }
+    const abweichend = kurs.units
+      .flatMap((u) => u.sections)
+      .filter((s) => s.wordBudget !== (geplant.get(s.code) ?? 0))
+      .map((s) => `${s.code}: ${s.wordBudget} ≠ ${geplant.get(s.code) ?? 0}`);
+    expect(abweichend).toEqual([]);
   });
 
   it('yordamchi so`zlar ro`yxati o`z qoidalaridan o`tadi', () => {
@@ -137,23 +159,12 @@ describe.each(UNITS)('%s — so`zlar', (unit) => {
     expect(yetishmayapti).toEqual([]);
   });
 
-  it(`${UNIT_WORDS_MAX} ta asosiy so\`z bor`, () => {
-    // Words built from taught ones (dreizehn, einundzwanzig) are outside
-    // the budget (`ausserhalbBudget` in wortliste.json).
-    expect(kernwoerterImBudget(woerter.woerter, wortliste)).toBe(
-      UNIT_WORDS_MAX,
-    );
-  });
-
-  it('har asosiy so`z taqsimotda ham bor', () => {
-    const inListe = new Set(
-      wortliste.eintraege.map((e) => e.wort.toLowerCase()),
-    );
-    const yetishmayapti = woerter.woerter
-      .filter((w) => w.core)
-      .map((w) => w.de)
-      .filter((de) => !inListe.has(de.toLowerCase()));
-    expect(yetishmayapti).toEqual([]);
+  it('core words are exactly the plan, section by section', () => {
+    // ADR-0071: the plan is the unit's word list. Words planned for the
+    // backfill (`nachtrag`) are not due yet.
+    expect(
+      vergleicheMitPlan(woerter.woerter, wortliste, sectionsOf(unit)),
+    ).toEqual({ fehlt: [], ueberzaehlig: [] });
   });
 
   it('har so`zning o`zbekchasi bor', () => {

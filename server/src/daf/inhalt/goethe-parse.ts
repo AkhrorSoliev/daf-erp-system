@@ -414,19 +414,34 @@ export function mergeGoethe(eintraege: GoetheEintrag[]): GoetheEintrag[] {
   );
 }
 
+/** Endings a lowercase stem entry takes: `dies-` → diese, diesem, diesen… */
+const STAMM_ENDUNGEN = ['', 'e', 'em', 'en', 'er', 'es', 's', 'ens'];
+
+/**
+ * Whether `wort` is built on a stem entry printed with a final `-`: a
+ * lowercase stem only inflects (`dies-` → diesen, `meist-` → meistens, but
+ * not Diesel), a capitalised one starts compounds (`Lieblings-` →
+ * Lieblingsfilm).
+ */
+export function passtZumStamm(stamm: string, wort: string): boolean {
+  const s = stamm.slice(0, -1).toLowerCase();
+  const w = wort.toLowerCase();
+  if (stamm[0] === stamm[0].toLowerCase()) {
+    return STAMM_ENDUNGEN.some((e) => w === s + e);
+  }
+  return w.startsWith(s) && w.length > s.length;
+}
+
 /**
  * Whether `wort` is an A1 word: equal, ignoring case, to an entry's `wort`,
- * one of its `varianten` or `auch`, or starting with a stem entry (`dies-`
- * covers diesen, `Lieblings-` covers Lieblingsessen).
+ * one of its `varianten` or `auch`, or built on a stem entry
+ * (`passtZumStamm`).
  */
 export function isWordInGoetheA1(wort: string, file: GoetheFile): boolean {
   const w = wort.toLowerCase();
   return file.woerter.some((e) =>
-    [e.wort, ...(e.varianten ?? []), ...(e.auch ?? [])].some((form) => {
-      const f = form.toLowerCase();
-      // ponytail: any continuation of a stem counts, so `ein-` also accepts
-      // Einbahnstraße; limit lowercase stems to inflection endings if it bites.
-      return f.endsWith('-') ? w.startsWith(f.slice(0, -1)) : f === w;
-    }),
+    [e.wort, ...(e.varianten ?? []), ...(e.auch ?? [])].some((form) =>
+      form.endsWith('-') ? passtZumStamm(form, wort) : form.toLowerCase() === w,
+    ),
   );
 }

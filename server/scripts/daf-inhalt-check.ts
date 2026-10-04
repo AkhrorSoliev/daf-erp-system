@@ -8,9 +8,9 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import {
-  kernwoerterImBudget,
-  UNIT_WORDS_MAX,
+  goetheOhnePlan,
   validateWortliste,
+  vergleicheMitPlan,
 } from '../src/daf/inhalt/wortliste.validate';
 import { validateEindeutigkeit } from '../src/daf/inhalt/unit-inhalt.validate';
 import { validateHoerFragen } from '../src/daf/inhalt/hoer-fragen.validate';
@@ -55,10 +55,14 @@ function main(): void {
   const code = `u${String(Number(process.argv[i + 1])).padStart(2, '0')}`;
 
   const wortliste = read<WortlisteFile>('wortliste.json');
-  const problems = validateWortliste(
-    wortliste,
-    read<KursFile>('kurs.json'),
-    read<GoetheFile>('goethe-a1.json'),
+  const kurs = read<KursFile>('kurs.json');
+  const goethe = read<GoetheFile>('goethe-a1.json');
+  const hilfs = read<HilfswoerterFile>('hilfswoerter.json');
+  const problems = validateWortliste(wortliste, kurs, goethe, hilfs);
+  problems.push(
+    ...goetheOhnePlan(goethe, wortliste, hilfs).map(
+      (w) => `${w}: Goethe so'zi rejada yo'q`,
+    ),
   );
 
   const woerterPath = join(A1, code, 'woerter.json');
@@ -66,12 +70,19 @@ function main(): void {
     problems.push(`${code}: woerter.json yo'q`);
   } else {
     const w = read<WoerterFile>(code, 'woerter.json');
-    // Words built from taught ones (`ausserhalbBudget`) do not count.
-    const core = kernwoerterImBudget(w.woerter, wortliste);
-    if (core !== UNIT_WORDS_MAX)
-      problems.push(
-        `${code}: ${core} ta asosiy so'z — ${UNIT_WORDS_MAX} kerak`,
-      );
+    // ADR-0071: the unit's core words are its plan, section by section.
+    const sections =
+      kurs.units.find((u) => u.code === code)?.sections.map((s) => s.code) ??
+      [];
+    const { fehlt, ueberzaehlig } = vergleicheMitPlan(
+      w.woerter,
+      wortliste,
+      sections,
+    );
+    problems.push(
+      ...fehlt.map((k) => `${k}: rejada bor, asosiy so'z emas`),
+      ...ueberzaehlig.map((k) => `${k}: asosiy so'z, rejada yo'q`),
+    );
 
     // Iboralar fayli bo'lmasligi mumkin (unit hali yozilayotgan bo'lsa) —
     // u holda so'zlar baribir tekshiriladi.
@@ -102,7 +113,7 @@ function main(): void {
     problems.push(`${code}: grammatik.json yo'q`);
   } else {
     const g = read<GrammatikFile>(code, 'grammatik.json');
-    const unit = read<KursFile>('kurs.json').units.find((u) => u.code === code);
+    const unit = kurs.units.find((u) => u.code === code);
     const want = unit?.sections.length ?? 0;
     if (g.regeln.length !== want) {
       problems.push(`${code}: ${g.regeln.length} qoida — ${want} kerak`);
@@ -114,8 +125,6 @@ function main(): void {
     problems.push(`${code}: dialoge.json yo'q`);
   } else {
     const dialoge = read<DialogeFile>(code, 'dialoge.json');
-    const kurs = read<KursFile>('kurs.json');
-    const hilfswoerter = read<HilfswoerterFile>('hilfswoerter.json');
     const sections = sectionsInCourseOrder(kurs);
     // Tanish so'zlar — testdagi bilan bir xil manba: matni bor hamma unit.
     const alleWoerter: Wort[] = kurs.units
@@ -127,7 +136,7 @@ function main(): void {
       unknownWordsIn(
         text,
         known.get(section) ?? new Set<string>(),
-        hilfsSetFor(section, hilfswoerter, sections),
+        hilfsSetFor(section, hilfs, sections),
       );
     problems.push(
       ...dialoge.dialoge.flatMap((d) =>

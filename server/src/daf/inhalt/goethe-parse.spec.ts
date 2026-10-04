@@ -190,6 +190,12 @@ describe('isWordInGoetheA1', () => {
     expect(isWordInGoetheA1('Lieblingsfilm', file)).toBe(true);
   });
 
+  it('a lowercase stem only inflects, a capitalised one starts compounds', () => {
+    expect(isWordInGoetheA1('diesem', file)).toBe(true);
+    expect(isWordInGoetheA1('Diesel', file)).toBe(false);
+    expect(isWordInGoetheA1('Lieblings', file)).toBe(false);
+  });
+
   it('matches a group word', () => {
     expect(isWordInGoetheA1('juli', file)).toBe(true);
   });

@@ -1,45 +1,28 @@
 import type { KursFile } from '../kurs/kurs.types';
+import { UNIT_WORDS_MAX, WORDS_MAX, WORDS_MIN } from '../kurs/kurs.validate';
 import type { GoetheFile } from './goethe-parse';
-import { isWordInGoetheA1 } from './goethe-parse';
+import { isWordInGoetheA1, passtZumStamm } from './goethe-parse';
+import type { HilfswoerterFile } from './unit-inhalt.types';
 import type { WortlisteFile } from './wortliste.types';
 
-export const WORDS_MIN = 8;
-export const WORDS_MAX = 12;
-export const UNIT_WORDS_MAX = 50;
-
-/**
- * A unit's core words that count against its budget — every core word but
- * those built from taught ones (`ausserhalbBudget`). One definition for the
- * unit file spec and `daf:inhalt-check`.
- */
-export function kernwoerterImBudget(
-  woerter: Array<{ de: string; core: boolean }>,
-  file: WortlisteFile,
-): number {
-  const ausserhalb = new Set(
-    file.eintraege
-      .filter((e) => e.ausserhalbBudget)
-      .map((e) => e.wort.toLowerCase()),
-  );
-  return woerter.filter((w) => w.core && !ausserhalb.has(w.de.toLowerCase()))
-    .length;
-}
+export { UNIT_WORDS_MAX, WORDS_MAX, WORDS_MIN };
 
 /**
  * So'z taqsimotini tekshiradi.
  *
- * BOSHLANGAN bo'limgagina hajm qoidasi qo'llanadi: fayl bosqichma-bosqich
- * to'ladi, va hali yozilmagan bo'limni «bo'sh» deb aybdor qilish butun
- * faylni 12 unit tugagunga qadar qizil holatda ushlab turardi.
+ * Hajm qoidasi yozuvi bor bo'limga qo'llanadi: reja butun A1 ni tutadi
+ * (ADR-0071), `nachtrag` so'zlari ham hisobda.
  *
  * The third argument is the whole `GoetheFile`: whether a word is on the
  * Goethe list is decided by `isWordInGoetheA1` alone (spelling variants,
  * homographs, stems like `dies-`, the word groups), not by each caller.
+ * With `hilfs` it also refuses a word that is both drilled and a helper word.
  */
 export function validateWortliste(
   file: WortlisteFile,
   kurs: KursFile,
   goethe: GoetheFile,
+  hilfs?: HilfswoerterFile,
 ): string[] {
   const problems: string[] = [];
 
@@ -85,6 +68,22 @@ export function validateWortliste(
     }
   }
 
+  for (const a of file.ausgenommen ?? []) {
+    if (a.grund.trim() === '') {
+      problems.push(`${a.wort}: o\`rgatilmaydi, lekin sababi yozilmagan`);
+    }
+    if (seen.has(a.wort.toLowerCase())) {
+      problems.push(`${a.wort}: ham rejada, ham o\`rgatilmaydiganlar ichida`);
+    }
+  }
+
+  for (const h of hilfs?.eintraege ?? []) {
+    const section = seen.get(h.wort.toLowerCase());
+    if (section !== undefined) {
+      problems.push(`${h.wort}: ham ${section} so\`zi, ham yordamchi so\`z`);
+    }
+  }
+
   for (const [code, n] of bySection) {
     if (n < WORDS_MIN || n > WORDS_MAX) {
       problems.push(
@@ -102,4 +101,63 @@ export function validateWortliste(
   }
 
   return problems;
+}
+
+/**
+ * Goethe A1 words the plan leaves out (ADR-0071: by the end of A1 every one
+ * is taught). A word is planned when it, a spelling variant or a homograph
+ * is a plan entry, a phrase entry's `deckt`, a helper word or a decided
+ * exception (`ausgenommen`); a stem entry when a planned word is built on it.
+ */
+export function goetheOhnePlan(
+  goethe: GoetheFile,
+  file: WortlisteFile,
+  hilfs: HilfswoerterFile,
+): string[] {
+  const geplant = [
+    ...file.eintraege.flatMap((e) => [e.wort, ...(e.deckt ?? [])]),
+    ...hilfs.eintraege.map((h) => h.wort),
+    ...(file.ausgenommen ?? []).map((a) => a.wort),
+  ];
+  const klein = new Set(geplant.map((w) => w.toLowerCase()));
+  return goethe.woerter
+    .filter((g) =>
+      [g.wort, ...(g.varianten ?? []), ...(g.auch ?? [])].every((form) =>
+        form.endsWith('-')
+          ? !geplant.some((w) => passtZumStamm(form, w))
+          : !klein.has(form.toLowerCase()),
+      ),
+    )
+    .map((g) => g.wort);
+}
+
+/**
+ * A written unit's core words against its plan: `fehlt` — planned for one of
+ * `sections` but not a core word there (`nachtrag` words are not due yet);
+ * `ueberzaehlig` — a core word the plan does not put in that section.
+ * Entries read `section|word`, lowercase.
+ */
+export function vergleicheMitPlan(
+  woerter: Array<{ de: string; section: string; core: boolean }>,
+  file: WortlisteFile,
+  sections: string[],
+): { fehlt: string[]; ueberzaehlig: string[] } {
+  const imUnit = new Set(sections);
+  const plan = new Set(
+    file.eintraege
+      .filter((e) => imUnit.has(e.section) && !e.nachtrag)
+      .map((e) => `${e.section}|${e.wort.toLowerCase()}`),
+  );
+  const alle = new Set(
+    file.eintraege.map((e) => `${e.section}|${e.wort.toLowerCase()}`),
+  );
+  const kern = new Set(
+    woerter
+      .filter((w) => w.core)
+      .map((w) => `${w.section}|${w.de.toLowerCase()}`),
+  );
+  return {
+    fehlt: [...plan].filter((k) => !kern.has(k)),
+    ueberzaehlig: [...kern].filter((k) => !alle.has(k)),
+  };
 }

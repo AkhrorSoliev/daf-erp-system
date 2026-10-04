@@ -1,5 +1,13 @@
-import { validateWortliste } from './wortliste.validate';
+import {
+  goetheOhnePlan,
+  UNIT_WORDS_MAX,
+  validateWortliste,
+  vergleicheMitPlan,
+  WORDS_MAX,
+  WORDS_MIN,
+} from './wortliste.validate';
 import type { WortlisteFile, WortEintrag } from './wortliste.types';
+import type { HilfswoerterFile } from './unit-inhalt.types';
 import type { KursFile } from '../kurs/kurs.types';
 import type { GoetheFile } from './goethe-parse';
 
@@ -97,18 +105,30 @@ describe('validateWortliste', () => {
     expect(p.some((x) => x.includes('xaritada yo`q'))).toBe(true);
   });
 
+  const oraliq = `${WORDS_MIN}–${WORDS_MAX}`;
+
   it('boshlangan bo`limda 8 dan kam so`z bo`lsa aytadi', () => {
     const eintraege = [eintrag('a0'), eintrag('a1')];
     const file: WortlisteFile = { level: 'A1', eintraege };
     const p = validateWortliste(file, kurs(), goetheFor(eintraege));
-    expect(p.some((x) => x.includes('8–12'))).toBe(true);
+    expect(p.some((x) => x.includes(oraliq))).toBe(true);
   });
 
-  it('bo`limda 12 dan ko`p so`z bo`lsa aytadi', () => {
-    const eintraege = Array.from({ length: 13 }, (_, i) => eintrag(`a${i}`));
+  it('bo`limda chegaradan ko`p so`z bo`lsa aytadi', () => {
+    const eintraege = Array.from({ length: WORDS_MAX + 1 }, (_, i) =>
+      eintrag(`a${i}`),
+    );
     const file: WortlisteFile = { level: 'A1', eintraege };
     const p = validateWortliste(file, kurs(), goetheFor(eintraege));
-    expect(p.some((x) => x.includes('8–12'))).toBe(true);
+    expect(p.some((x) => x.includes(oraliq))).toBe(true);
+  });
+
+  it('a section pool of up to forty words is fine (ADR-0071)', () => {
+    const eintraege = Array.from({ length: WORDS_MAX }, (_, i) =>
+      eintrag(`a${i}`),
+    );
+    const file: WortlisteFile = { level: 'A1', eintraege };
+    expect(validateWortliste(file, kurs(), goetheFor(eintraege))).toEqual([]);
   });
 
   it('a word built from taught words stays outside the budget', () => {
@@ -132,7 +152,7 @@ describe('validateWortliste', () => {
     expect(p.some((x) => x.includes('z0') && x.includes('sabab'))).toBe(true);
   });
 
-  it('unitning 50 so`z chegarasini aytadi', () => {
+  it('unitning so`z chegarasini aytadi', () => {
     const k = kurs();
     k.units[0].sections.push(
       {
@@ -170,11 +190,42 @@ describe('validateWortliste', () => {
       'u01-s4',
       'u01-s5',
     ].flatMap((c, n) =>
-      Array.from({ length: 11 }, (_, i) => eintrag(`w${n}_${i}`, c)),
+      Array.from({ length: WORDS_MAX - 1 }, (_, i) => eintrag(`w${n}_${i}`, c)),
     );
     const file: WortlisteFile = { level: 'A1', eintraege };
     const p = validateWortliste(file, k, goetheFor(eintraege));
-    expect(p.some((x) => x.includes('50 so`zdan ko`p'))).toBe(true);
+    expect(p.some((x) => x.includes(`${UNIT_WORDS_MAX} so\`zdan ko\`p`))).toBe(
+      true,
+    );
+  });
+
+  it('a decided exception needs a reason and cannot also be planned', () => {
+    const eintraege = fullSection('u01-s1', 'a');
+    const file: WortlisteFile = {
+      level: 'A1',
+      eintraege,
+      ausgenommen: [
+        { wort: 'Bier', artikel: 'das', grund: ' ' },
+        { wort: 'a0', artikel: null, grund: 'test' },
+      ],
+    };
+    const p = validateWortliste(file, kurs(), goetheFor(eintraege));
+    expect(p.some((x) => x.startsWith('Bier') && x.includes('sabab'))).toBe(
+      true,
+    );
+    expect(p.some((x) => x.startsWith('a0') && x.includes('ham rejada'))).toBe(
+      true,
+    );
+  });
+
+  it('a word cannot be both drilled and a helper word', () => {
+    const eintraege = fullSection('u01-s1', 'a');
+    const file: WortlisteFile = { level: 'A1', eintraege };
+    const hilfs: HilfswoerterFile = {
+      eintraege: [{ wort: 'A3', grund: 'test' }],
+    };
+    const p = validateWortliste(file, kurs(), goetheFor(eintraege), hilfs);
+    expect(p).toEqual([`A3: ham u01-s1 so\`zi, ham yordamchi so\`z`]);
   });
 
   it('Goethe ro`yxatida yo`q so`zni sababsiz qabul qilmaydi', () => {
@@ -200,5 +251,113 @@ describe('validateWortliste', () => {
     expect(problems.length).toBeGreaterThanOrEqual(2);
     expect(problems.some((x) => x.includes('xaritada yo`q'))).toBe(true);
     expect(problems.some((x) => x.includes('ro`yxatida yo`q'))).toBe(true);
+  });
+});
+
+describe('goetheOhnePlan — Goethe words the plan leaves out (ADR-0071)', () => {
+  const goethe: GoetheFile = {
+    source: 'test',
+    woerter: [
+      { wort: 'Tag', artikel: 'der' },
+      { wort: 'gern', artikel: null, varianten: ['gerne'] },
+      { wort: 'essen', artikel: null, auch: ['Essen'] },
+      { wort: 'Wiederhören', artikel: 'das' },
+      { wort: 'aber', artikel: null },
+      { wort: 'Bier', artikel: 'das' },
+      { wort: 'dies-', artikel: null },
+      { wort: 'Lieblings-', artikel: null },
+      { wort: 'Hund', artikel: 'der' },
+    ],
+  };
+  const hilfs: HilfswoerterFile = { eintraege: [{ wort: 'aber', grund: 't' }] };
+  const plan = (woerter: string[], deckt?: string[]): WortlisteFile => ({
+    level: 'A1',
+    eintraege: woerter.map((w, i) => ({
+      ...eintrag(w),
+      ...(i === 0 && deckt ? { deckt } : {}),
+    })),
+    ausgenommen: [{ wort: 'Bier', artikel: 'das', grund: 'CEO qarori' }],
+  });
+
+  it('counts plan words, variants, homographs, helper words and exceptions', () => {
+    const p = plan(
+      [
+        'auf Wiederhören',
+        'Tag',
+        'gerne',
+        'Essen',
+        'diesen',
+        'Lieblingsfilm',
+        'Hund',
+      ],
+      ['Wiederhören'],
+    );
+    expect(goetheOhnePlan(goethe, p, hilfs)).toEqual([]);
+  });
+
+  it('lists what is missing', () => {
+    expect(
+      goetheOhnePlan(goethe, plan(['Tag', 'gern', 'essen']), hilfs),
+    ).toEqual(['Wiederhören', 'dies-', 'Lieblings-', 'Hund']);
+  });
+
+  it('a phrase covers a headword only when it says so', () => {
+    const p = plan(['auf Wiederhören']);
+    expect(goetheOhnePlan(goethe, p, hilfs)).toContain('Wiederhören');
+  });
+
+  it('a lowercase stem needs an inflected form, not any word that starts with it', () => {
+    const p = plan(['Diesel']);
+    expect(goetheOhnePlan(goethe, p, hilfs)).toContain('dies-');
+  });
+});
+
+describe('vergleicheMitPlan — a written unit against its plan (ADR-0071)', () => {
+  const file: WortlisteFile = {
+    level: 'A1',
+    eintraege: [
+      eintrag('hallo', 'u01-s1'),
+      eintrag('Name', 'u01-s1'),
+      { ...eintrag('ciao', 'u01-s1'), nachtrag: true },
+      eintrag('fremd', 'u02-s1'),
+    ],
+  };
+  const wort = (de: string, section = 'u01-s1', core = true) => ({
+    de,
+    section,
+    core,
+  });
+
+  it('finds nothing when the core words are the plan', () => {
+    expect(
+      vergleicheMitPlan([wort('hallo'), wort('Name')], file, ['u01-s1']),
+    ).toEqual({ fehlt: [], ueberzaehlig: [] });
+  });
+
+  it('a backfill word is not due yet, but may already be written', () => {
+    expect(
+      vergleicheMitPlan([wort('hallo'), wort('Name'), wort('ciao')], file, [
+        'u01-s1',
+      ]),
+    ).toEqual({ fehlt: [], ueberzaehlig: [] });
+  });
+
+  it('reports a planned word that is missing and a core word that is not planned', () => {
+    expect(
+      vergleicheMitPlan(
+        [wort('hallo'), wort('tschüss'), wort('Name', 'u01-s1', false)],
+        file,
+        ['u01-s1'],
+      ),
+    ).toEqual({ fehlt: ['u01-s1|name'], ueberzaehlig: ['u01-s1|tschüss'] });
+  });
+
+  it('a word in the wrong section counts both ways', () => {
+    expect(
+      vergleicheMitPlan([wort('hallo'), wort('Name', 'u01-s2')], file, [
+        'u01-s1',
+        'u01-s2',
+      ]),
+    ).toEqual({ fehlt: ['u01-s1|name'], ueberzaehlig: ['u01-s2|name'] });
   });
 });
