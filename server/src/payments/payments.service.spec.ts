@@ -56,7 +56,10 @@ describe('PaymentsService', () => {
   let entityHistoryService: any;
   let lessonBillingService: any;
   let eventEmitter: any;
-  let paymentPromises: { upsertOpenPromise: jest.Mock };
+  let paymentPromises: {
+    upsertOpenPromise: jest.Mock;
+    assertPromiseAllowed: jest.Mock;
+  };
 
   beforeEach(async () => {
     prisma = {
@@ -145,7 +148,10 @@ describe('PaymentsService', () => {
         .mockResolvedValue({ paidCount: 0, deductedAmount: 0 }),
     };
 
-    paymentPromises = { upsertOpenPromise: jest.fn().mockResolvedValue({}) };
+    paymentPromises = {
+      upsertOpenPromise: jest.fn().mockResolvedValue({}),
+      assertPromiseAllowed: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -281,6 +287,38 @@ describe('PaymentsService', () => {
           companyId,
         ),
       ).resolves.toEqual(expect.objectContaining({ id: mockPayment.id }));
+    });
+
+    it('refuses a bad promise before anything is written (ADR-0072)', async () => {
+      paymentPromises.assertPromiseAllowed.mockRejectedValueOnce(
+        new BadRequestException("Va'da sanasi"),
+      );
+      await expect(
+        service.create(
+          { ...dto, promiseDate: '2026-12-31' },
+          userId,
+          companyId,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(transactionsService.recordPayment).not.toHaveBeenCalled();
+    });
+
+    it('checks the promise with the upsert rule, and nothing without one', async () => {
+      await service.create(
+        { ...dto, promiseDate: '2026-10-07' },
+        userId,
+        companyId,
+      );
+      expect(paymentPromises.assertPromiseAllowed).toHaveBeenCalledWith({
+        studentId: dto.studentId,
+        companyId,
+        promiseDate: '2026-10-07',
+        mode: 'upsert',
+      });
+      paymentPromises.assertPromiseAllowed.mockClear();
+      await service.create(dto, userId, companyId);
+      expect(paymentPromises.assertPromiseAllowed).not.toHaveBeenCalled();
     });
 
     it('writes no promise when the payment clears the debt', async () => {

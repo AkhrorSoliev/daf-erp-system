@@ -166,6 +166,17 @@ export class PaymentsWriteService {
       resolvedBranchId = contract.branchId;
     }
 
+    // ADR-0072: a promise that breaks the rule is refused before anything is
+    // written — the payment must never stand half-done because of its promise.
+    if (dto.promiseDate) {
+      await this.paymentPromises.assertPromiseAllowed({
+        studentId: dto.studentId,
+        companyId,
+        promiseDate: dto.promiseDate,
+        mode: 'upsert',
+      });
+    }
+
     const { payment, studentBalance, carriedOver } = await this.prisma
       .$transaction(
         async (tx) => {

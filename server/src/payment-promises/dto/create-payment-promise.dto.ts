@@ -1,4 +1,11 @@
-import { IsInt, IsString, IsNotEmpty, IsDateString } from 'class-validator';
+import {
+  IsInt,
+  IsString,
+  IsNotEmpty,
+  IsDateString,
+  IsOptional,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreatePaymentPromiseDto {
@@ -14,4 +21,11 @@ export class CreatePaymentPromiseDto {
   @IsString()
   @IsNotEmpty({ message: 'Izoh kiritilishi shart' })
   comment: string;
+
+  // ADR-0072: the drawer's «Summa». Optional — the call and payment dialogs send none.
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  promisedAmount?: number;
 }

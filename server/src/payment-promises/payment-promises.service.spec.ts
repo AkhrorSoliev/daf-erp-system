@@ -4,10 +4,12 @@ import { Prisma } from '@prisma/client';
 import { PaymentPromisesService } from './payment-promises.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { PROMISE_DATE_REFUSAL, PROMISE_MONTH_REFUSAL } from './promise-rule';
 
 describe('PaymentPromisesService', () => {
   let service: PaymentPromisesService;
   let prisma: {
+    $transaction: jest.Mock;
     student: { findFirst: jest.Mock };
     enrollment: { findFirst: jest.Mock };
     studentBranch: { findFirst: jest.Mock };
@@ -25,7 +27,12 @@ describe('PaymentPromisesService', () => {
   };
 
   beforeEach(async () => {
+    jest.useFakeTimers({
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    });
+    jest.setSystemTime(new Date('2026-06-10T07:00:00Z'));
     prisma = {
+      $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(prisma)),
       student: {
         findFirst: jest.fn().mockResolvedValue({ id: 10264, balance: -50000 }),
       },
@@ -37,7 +44,7 @@ describe('PaymentPromisesService', () => {
         create: jest
           .fn()
           .mockImplementation(({ data }) => ({ id: 'p1', ...data })),
-        findFirst: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn().mockResolvedValue({ id: 'p1', status: 'CANCELLED' }),
         findMany: jest.fn().mockResolvedValue([]),
       },
@@ -58,6 +65,8 @@ describe('PaymentPromisesService', () => {
 
     service = module.get(PaymentPromisesService);
   });
+
+  afterEach(() => jest.useRealTimers());
 
   describe('create', () => {
     it('snapshots balance, resolves branch from active enrollment, records history', async () => {
@@ -170,10 +179,12 @@ describe('PaymentPromisesService', () => {
     it('updates the existing OPEN promise date instead of creating', async () => {
       prisma.paymentPromise.findFirst.mockResolvedValueOnce({
         id: 'p1',
+        status: 'OPEN',
+        createdAt: new Date('2026-06-08T05:00:00Z'),
         promiseDate: new Date('2026-06-10'),
       });
       await service.upsertOpenPromise(
-        { studentId: 10264, promiseDate: '2026-06-20', comment: 'yangi sana' },
+        { studentId: 10264, promiseDate: '2026-06-14', comment: 'yangi sana' },
         99,
         1001,
       );
@@ -258,6 +269,141 @@ describe('PaymentPromisesService', () => {
       // No student lookup at all: the gate short-circuits rather than running a
       // query whose predicate would be empty.
       expect(prisma.paymentPromise.findMany).toHaveBeenCalled();
+    });
+  });
+
+  describe('the promise rule (ADR-0072)', () => {
+    const dto = {
+      studentId: 10264,
+      promiseDate: '2026-06-12',
+      comment: 'Maoshdan keyin',
+    };
+    const open = (createdAt: string) => ({
+      id: 'p1',
+      status: 'OPEN',
+      createdAt: new Date(createdAt),
+      promiseDate: new Date('2026-06-10'),
+    });
+
+    it('looks the month up by createdAt over the Tashkent month', async () => {
+      jest.setSystemTime(new Date('2026-10-31T20:30:00Z')); // 01.11 01:30 Tashkent
+      await service.create(
+        { ...dto, promiseDate: '2026-11-03' },
+        99,
+        1001,
+        null,
+      );
+      expect(prisma.paymentPromise.findFirst.mock.calls[0][0]).toMatchObject({
+        where: {
+          studentId: 10264,
+          companyId: 1001,
+          createdAt: {
+            gte: new Date('2026-10-31T19:00:00.000Z'),
+            lt: new Date('2026-11-30T19:00:00.000Z'),
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    });
+
+    it('refuses a second promise in the month, and a date past +7 — writing nothing', async () => {
+      prisma.paymentPromise.findFirst.mockResolvedValueOnce({
+        id: 'p0',
+        status: 'KEPT',
+        createdAt: new Date('2026-06-02T05:00:00Z'),
+      });
+      await expect(service.create(dto, 99, 1001, null)).rejects.toThrow(
+        PROMISE_MONTH_REFUSAL,
+      );
+      await expect(
+        service.create({ ...dto, promiseDate: '2026-06-18' }, 99, 1001, null),
+      ).rejects.toThrow(PROMISE_DATE_REFUSAL);
+      expect(prisma.paymentPromise.create).not.toHaveBeenCalled();
+    });
+
+    it('stores the drawer amount', async () => {
+      await service.create({ ...dto, promisedAmount: 350_000 }, 99, 1001, null);
+      expect(prisma.paymentPromise.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ promisedAmount: 350_000 }),
+      });
+    });
+
+    it("closes an OPEN promise left from an earlier month before writing the month's first", async () => {
+      prisma.paymentPromise.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'old' });
+      await service.create(dto, 99, 1001, null);
+      expect(prisma.paymentPromise.update).toHaveBeenCalledWith({
+        where: { id: 'old' },
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          resolvedById: 99,
+        }),
+      });
+      expect(prisma.paymentPromise.create).toHaveBeenCalled();
+      expect(history.recordStatusChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newValues: expect.objectContaining({
+            sabab: "Yangi oy va'dasi bilan almashtirildi",
+          }),
+        }),
+      );
+    });
+
+    it("an upsert cannot push this month's promise past its creation day + 7", async () => {
+      prisma.paymentPromise.findFirst.mockResolvedValueOnce(
+        open('2026-06-08T05:00:00Z'),
+      );
+      await expect(
+        service.upsertOpenPromise(
+          { studentId: 10264, promiseDate: '2026-06-16', comment: 'x' },
+          99,
+          1001,
+        ),
+      ).rejects.toThrow(PROMISE_DATE_REFUSAL);
+      expect(prisma.paymentPromise.update).not.toHaveBeenCalled();
+    });
+
+    it('assertPromiseAllowed is the same rule, for the payment and the call log', async () => {
+      const check = (promiseDate: string) =>
+        service.assertPromiseAllowed({
+          studentId: 10264,
+          companyId: 1001,
+          promiseDate,
+          mode: 'upsert',
+        });
+      await expect(check('2026-06-30')).rejects.toThrow(PROMISE_DATE_REFUSAL);
+      await expect(check('2026-06-12')).resolves.toBeUndefined();
+    });
+
+    it("monthState: the month's promise, the create range and the edit range; confined like every read", async () => {
+      expect(await service.monthState(10264, 1001, null)).toEqual({
+        monthPromise: null,
+        create: { from: '2026-06-10', to: '2026-06-17' },
+        edit: null,
+      });
+      prisma.paymentPromise.findFirst.mockResolvedValueOnce({
+        id: 'p1',
+        status: 'OPEN',
+        promiseDate: new Date('2026-06-12T18:00:00.000Z'),
+        promisedAmount: null,
+        createdAt: new Date('2026-06-08T05:00:00.000Z'),
+      });
+      expect(await service.monthState(10264, 1001, null)).toEqual({
+        monthPromise: {
+          id: 'p1',
+          status: 'OPEN',
+          promiseDate: '2026-06-12T18:00:00.000Z',
+          promisedAmount: null,
+          createdAt: '2026-06-08T05:00:00.000Z',
+        },
+        create: null,
+        edit: { from: '2026-06-10', to: '2026-06-15' },
+      });
+      prisma.student.findFirst.mockResolvedValueOnce(null);
+      await expect(service.monthState(10264, 1001, [2])).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 });

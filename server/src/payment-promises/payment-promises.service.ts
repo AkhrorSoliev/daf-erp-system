@@ -11,6 +11,15 @@ import {
   ReportBranchIds,
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
+import {
+  tashkentMonthKey,
+  tashkentMonthRangeUtc,
+} from '../common/date/tashkent';
+import {
+  promiseDateRange,
+  promiseRefusal,
+  type PromiseMonthState,
+} from './promise-rule';
 
 @Injectable()
 export class PaymentPromisesService {
@@ -50,12 +59,77 @@ export class PaymentPromisesService {
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
   }
 
+  /** The student's latest promise created in the current Tashkent month, any status. */
+  private monthPromise(studentId: number, companyId: number, now: Date) {
+    return this.prisma.paymentPromise.findFirst({
+      where: {
+        studentId,
+        companyId,
+        createdAt: tashkentMonthRangeUtc(tashkentMonthKey(now)),
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        status: true,
+        promiseDate: true,
+        promisedAmount: true,
+        createdAt: true,
+      },
+    });
+  }
+
   /**
-   * Record a debtor's commitment to pay by a date. One OPEN promise per
-   * student is enforced by a partial unique index (P2002 → friendly Uzbek
-   * 400). The promise auto-resolves to KEPT when a payment restores the
-   * balance (see PaymentsWriteService.settleKeptPromises), or is flipped to
-   * BROKEN by the daily cron if the date passes while the student still owes.
+   * The promise rule (ADR-0072) as a check. The payment and the call log call
+   * it BEFORE their own writes, so a bad promise is a 400 with nothing saved —
+   * a payment never stands half-done because of its promise.
+   */
+  async assertPromiseAllowed(p: {
+    studentId: number;
+    companyId: number;
+    promiseDate: string;
+    mode: 'create' | 'upsert';
+  }): Promise<void> {
+    const now = new Date();
+    const refusal = promiseRefusal(
+      now,
+      await this.monthPromise(p.studentId, p.companyId, now),
+      p.mode,
+      p.promiseDate,
+    );
+    if (refusal) throw new BadRequestException(refusal);
+  }
+
+  /** `GET /payment-promises/month`: what the drawer form and the dialogs may offer. */
+  async monthState(
+    studentId: number,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<PromiseMonthState> {
+    await this.assertStudentInScope(studentId, companyId, branchIds);
+    const now = new Date();
+    const p = await this.monthPromise(studentId, companyId, now);
+    const create = promiseDateRange(now, p, 'create');
+    const edit =
+      p?.status === 'OPEN' ? promiseDateRange(now, p, 'upsert') : null;
+    return {
+      monthPromise: p
+        ? {
+            id: p.id,
+            status: p.status,
+            promiseDate: p.promiseDate.toISOString(),
+            promisedAmount: p.promisedAmount,
+            createdAt: p.createdAt.toISOString(),
+          }
+        : null,
+      create: 'refusal' in create ? null : create,
+      edit: edit && !('refusal' in edit) ? edit : null,
+    };
+  }
+
+  /**
+   * Record a debtor's commitment to pay by a date — at most 7 days ahead and
+   * once per Tashkent month (ADR-0072). It resolves to KEPT when a payment
+   * restores the balance, or to BROKEN by the daily cron.
    */
   async create(
     dto: CreatePaymentPromiseDto,
@@ -69,35 +143,160 @@ export class PaymentPromisesService {
       select: { id: true, balance: true },
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
+    const now = new Date();
+    const refusal = promiseRefusal(
+      now,
+      await this.monthPromise(dto.studentId, companyId, now),
+      'create',
+      dto.promiseDate,
+    );
+    if (refusal) throw new BadRequestException(refusal);
+    return this.writeNewPromise(
+      {
+        studentId: dto.studentId,
+        promiseDate: dto.promiseDate,
+        comment: dto.comment.trim(),
+        promisedAmount: dto.promisedAmount ?? null,
+        balance: student.balance,
+      },
+      userId,
+      companyId,
+    );
+  }
 
-    const branchId = await this.resolveStudentBranch(dto.studentId, companyId);
-
-    try {
-      const promise = await this.prisma.paymentPromise.create({
+  /**
+   * Create-or-update the month's promise (the call flow's «To'laydi» + sana,
+   * and a part payment's date for the rest). This month's OPEN promise gets
+   * the new date — only within 7 days of its creation day; otherwise the
+   * month's first promise is written (ADR-0072).
+   */
+  async upsertOpenPromise(
+    params: { studentId: number; promiseDate: string; comment: string },
+    userId: number,
+    companyId: number,
+  ) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: params.studentId, companyId, deletedAt: null },
+      select: { id: true, balance: true },
+    });
+    if (!student) throw new NotFoundException("O'quvchi topilmadi");
+    const now = new Date();
+    const month = await this.monthPromise(params.studentId, companyId, now);
+    const refusal = promiseRefusal(now, month, 'upsert', params.promiseDate);
+    if (refusal) throw new BadRequestException(refusal);
+    const comment = params.comment.trim();
+    if (month) {
+      // The rule let it through, so this is the month's OPEN promise.
+      const promiseDate = new Date(params.promiseDate);
+      const updated = await this.prisma.paymentPromise.update({
+        where: { id: month.id },
+        // reminderFiredAt: null re-arms the overdue cron for the new date.
         data: {
-          studentId: dto.studentId,
-          promiseDate: new Date(dto.promiseDate),
-          comment: dto.comment.trim(),
-          status: 'OPEN',
+          promiseDate,
+          comment,
           balanceAtPromise: student.balance,
-          createdById: userId,
-          branchId,
-          companyId,
+          reminderFiredAt: null,
         },
       });
+      await this.entityHistory.recordUpdate({
+        entityType: 'Student',
+        entityId: String(params.studentId),
+        oldValues: { toLovSanasi: month.promiseDate.toISOString() },
+        newValues: { toLovSanasi: promiseDate.toISOString() },
+        changedById: userId,
+        companyId,
+      });
+      return updated;
+    }
+    return this.writeNewPromise(
+      {
+        studentId: params.studentId,
+        promiseDate: params.promiseDate,
+        comment,
+        promisedAmount: null,
+        balance: student.balance,
+      },
+      userId,
+      companyId,
+    );
+  }
 
+  /**
+   * Writes the month's first promise. An OPEN promise left from an earlier
+   * month is closed first (CANCELLED): one OPEN promise per student is a
+   * partial unique index, and the old one is not this month's (ADR-0072).
+   */
+  private async writeNewPromise(
+    p: {
+      studentId: number;
+      promiseDate: string;
+      comment: string;
+      promisedAmount: number | null;
+      balance: number;
+    },
+    userId: number,
+    companyId: number,
+  ) {
+    const branchId = await this.resolveStudentBranch(p.studentId, companyId);
+    try {
+      const { promise, superseded } = await this.prisma.$transaction(
+        async (tx) => {
+          const old = await tx.paymentPromise.findFirst({
+            where: { studentId: p.studentId, companyId, status: 'OPEN' },
+            select: { id: true },
+          });
+          if (old) {
+            await tx.paymentPromise.update({
+              where: { id: old.id },
+              data: {
+                status: 'CANCELLED',
+                resolvedAt: new Date(),
+                resolvedById: userId,
+              },
+            });
+          }
+          const promise = await tx.paymentPromise.create({
+            data: {
+              studentId: p.studentId,
+              promiseDate: new Date(p.promiseDate),
+              comment: p.comment,
+              promisedAmount: p.promisedAmount,
+              status: 'OPEN',
+              balanceAtPromise: p.balance,
+              createdById: userId,
+              branchId,
+              companyId,
+            },
+          });
+          return { promise, superseded: Boolean(old) };
+        },
+      );
+      if (superseded) {
+        await this.entityHistory.recordStatusChange({
+          entityType: 'Student',
+          entityId: String(p.studentId),
+          oldValues: { vada: 'OCHIQ' },
+          newValues: {
+            vada: 'BEKOR_QILINDI',
+            action: "TO'LOV_VA'DASI_BEKOR_QILINDI",
+            sabab: "Yangi oy va'dasi bilan almashtirildi",
+          },
+          changedById: userId,
+          companyId,
+        });
+      }
       await this.entityHistory.recordCreate({
         entityType: 'Student',
-        entityId: String(dto.studentId),
+        entityId: String(p.studentId),
         newValues: {
           action: "TO'LOV_VA'DASI_BERILDI",
-          sana: dto.promiseDate,
-          izoh: dto.comment.trim(),
+          sana: p.promiseDate,
+          izoh: p.comment,
+          ...(p.promisedAmount != null && { summa: p.promisedAmount }),
         },
         changedById: userId,
         companyId,
       });
-
       return promise;
     } catch (err) {
       if (
@@ -110,84 +309,6 @@ export class PaymentPromisesService {
       }
       throw err;
     }
-  }
-
-  /**
-   * Create-or-update the student's OPEN payment promise. Used by the outreach
-   * call flow ("To'laydi" + sana): an admin re-calling a debtor can set a new
-   * date without first cancelling the old one. If an OPEN promise exists its
-   * date/comment are refreshed (and the overdue cron re-armed); otherwise a new
-   * one is created. Returns the promise.
-   */
-  async upsertOpenPromise(
-    params: { studentId: number; promiseDate: string; comment: string },
-    userId: number,
-    companyId: number,
-  ) {
-    const student = await this.prisma.student.findFirst({
-      where: { id: params.studentId, companyId, deletedAt: null },
-      select: { id: true, balance: true },
-    });
-    if (!student) throw new NotFoundException("O'quvchi topilmadi");
-
-    const comment = params.comment.trim();
-    const promiseDate = new Date(params.promiseDate);
-
-    const existing = await this.prisma.paymentPromise.findFirst({
-      where: { studentId: params.studentId, companyId, status: 'OPEN' },
-      select: { id: true, promiseDate: true },
-    });
-
-    if (existing) {
-      const updated = await this.prisma.paymentPromise.update({
-        where: { id: existing.id },
-        data: {
-          promiseDate,
-          comment,
-          balanceAtPromise: student.balance,
-          // Re-arm the overdue reminder cron for the new date.
-          reminderFiredAt: null,
-        },
-      });
-      await this.entityHistory.recordUpdate({
-        entityType: 'Student',
-        entityId: String(params.studentId),
-        oldValues: { toLovSanasi: existing.promiseDate.toISOString() },
-        newValues: { toLovSanasi: promiseDate.toISOString() },
-        changedById: userId,
-        companyId,
-      });
-      return updated;
-    }
-
-    const branchId = await this.resolveStudentBranch(
-      params.studentId,
-      companyId,
-    );
-    const created = await this.prisma.paymentPromise.create({
-      data: {
-        studentId: params.studentId,
-        promiseDate,
-        comment,
-        status: 'OPEN',
-        balanceAtPromise: student.balance,
-        createdById: userId,
-        branchId,
-        companyId,
-      },
-    });
-    await this.entityHistory.recordCreate({
-      entityType: 'Student',
-      entityId: String(params.studentId),
-      newValues: {
-        action: "TO'LOV_VA'DASI_BERILDI",
-        sana: params.promiseDate,
-        izoh: comment,
-      },
-      changedById: userId,
-      companyId,
-    });
-    return created;
   }
 
   async cancel(
