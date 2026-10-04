@@ -4,6 +4,7 @@ import {
   goetheOhnePlan,
   validateWortliste,
   vergleicheMitPlan,
+  zaehltImBudget,
 } from './wortliste.validate';
 import {
   validateEindeutigkeit,
@@ -121,10 +122,23 @@ describe('A1 kontentining umumiy qoidalari', () => {
     expect(goetheOhnePlan(goethe, wortliste, hilfswoerter)).toEqual([]);
   });
 
+  it('no unit teaches a word the plan leaves out by decision', () => {
+    // CEO 03.10.2026: Bier, Wein, Schinken are never taught. A non-core
+    // word in woerter.json would still make them usable in every text.
+    const ausgenommen = new Set(
+      (wortliste.ausgenommen ?? []).map((a) => a.wort.toLowerCase()),
+    );
+    expect(
+      ALLE_WOERTER.filter((w) => ausgenommen.has(w.de.toLowerCase())).map(
+        (w) => w.sourceId,
+      ),
+    ).toEqual([]);
+  });
+
   it('kurs.json word budgets equal the plan', () => {
     const geplant = new Map<string, number>();
     for (const e of wortliste.eintraege) {
-      if (!e.ausserhalbBudget) {
+      if (zaehltImBudget(e)) {
         geplant.set(e.section, (geplant.get(e.section) ?? 0) + 1);
       }
     }

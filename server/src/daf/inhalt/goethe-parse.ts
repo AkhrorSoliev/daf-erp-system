@@ -415,11 +415,11 @@ export function mergeGoethe(eintraege: GoetheEintrag[]): GoetheEintrag[] {
 }
 
 /** Endings a lowercase stem entry takes: `dies-` → diese, diesem, diesen… */
-const STAMM_ENDUNGEN = ['', 'e', 'em', 'en', 'er', 'es', 's', 'ens'];
+const STAMM_ENDUNGEN = ['', 'e', 'em', 'en', 'er', 'es', 's'];
 
 /**
  * Whether `wort` is built on a stem entry printed with a final `-`: a
- * lowercase stem only inflects (`dies-` → diesen, `meist-` → meistens, but
+ * lowercase stem only inflects (`dies-` → diesen, `meist-` → meisten, but
  * not Diesel), a capitalised one starts compounds (`Lieblings-` →
  * Lieblingsfilm).
  */

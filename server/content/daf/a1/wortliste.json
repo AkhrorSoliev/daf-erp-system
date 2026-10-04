@@ -38,7 +38,7 @@
    "artikel": null,
    "section": "u01-s1",
    "core": true,
-   "grund": "PDF chiqarishda tushib qolgan — er/sie/wir/ihr/Sie ro'yxatda bor, 'du' yo'q; standart A1 shaxs olmoshi"
+   "grund": "Goethe A1 ro'yxatida bosh so'z sifatida yo'q (sie, Sie, er, wir bor); standart A1 shaxs olmoshi"
   },
   {
    "wort": "sein",
@@ -63,20 +63,26 @@
    "artikel": null,
    "section": "u01-s2",
    "core": true,
-   "grund": "ibora — 'gut' Goethe ro'yxatida bor, 'Tag' esa PDF chiqarishda alohida ko'rinmagan (Goethe A1 rasmiy so'zi bo'lsa ham)"
+   "grund": "ibora — 'gut' va 'Tag' Goethe ro'yxatida bor, lekin tayyor salomlashish iborasi sifatida alohida o'rgatiladi"
   },
   {
    "wort": "Auf Wiedersehen",
    "artikel": null,
    "section": "u01-s2",
    "core": true,
-   "grund": "ibora — 'Wiedersehen' Goethe ro'yxatida bor, lekin 'auf' bilan qo'shilgan tayyor rasmiy xayrlashish iborasi sifatida yozilgan"
+   "grund": "ibora — 'Wiedersehen' Goethe ro'yxatida bor, lekin 'auf' bilan qo'shilgan tayyor rasmiy xayrlashish iborasi sifatida yozilgan",
+   "deckt": [
+    "Wiedersehen"
+   ]
   },
   {
    "wort": "Sie",
    "artikel": null,
    "section": "u01-s2",
-   "core": true
+   "core": true,
+   "deckt": [
+    "sie"
+   ]
   },
   {
    "wort": "Frau",
@@ -179,7 +185,10 @@
    "wort": "null",
    "artikel": null,
    "section": "u01-s4",
-   "core": true
+   "core": true,
+   "deckt": [
+    "Null"
+   ]
   },
   {
    "wort": "eins",
@@ -1059,7 +1068,7 @@
    "wort": "moin",
    "artikel": null,
    "section": "u01-s1",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Salom va xayr (ADR-0071)",
    "nachtrag": true
   },
@@ -1204,11 +1213,14 @@
    "nachtrag": true
   },
   {
-   "wort": "deutsch",
+   "wort": "Deutsch",
    "artikel": null,
    "section": "u01-s3",
    "core": true,
-   "nachtrag": true
+   "nachtrag": true,
+   "deckt": [
+    "deutsch"
+   ]
   },
   {
    "wort": "ein bisschen",
@@ -1321,15 +1333,18 @@
    "nachtrag": true
   },
   {
-   "wort": "türkisch",
+   "wort": "Türkisch",
    "artikel": null,
    "section": "u01-s3",
    "core": true,
-   "nachtrag": true
+   "nachtrag": true,
+   "deckt": [
+    "türkisch"
+   ]
   },
   {
    "wort": "Deutsche",
-   "artikel": "der/die",
+   "artikel": null,
    "section": "u01-s3",
    "core": true,
    "nachtrag": true
@@ -1388,6 +1403,14 @@
    "artikel": null,
    "section": "u01-s3",
    "core": true,
+   "nachtrag": true
+  },
+  {
+   "wort": "Usbekisch",
+   "artikel": null,
+   "section": "u01-s3",
+   "core": true,
+   "grund": "o'zimizniki: o'quvchining ona tili (ADR-0071)",
    "nachtrag": true
   },
   {
@@ -1527,7 +1550,7 @@
   },
   {
    "wort": "Großeltern",
-   "artikel": "die",
+   "artikel": null,
    "section": "u02-s1",
    "core": true,
    "nachtrag": true
@@ -1592,7 +1615,7 @@
   },
   {
    "wort": "Verwandte",
-   "artikel": "der/die",
+   "artikel": null,
    "section": "u02-s1",
    "core": true,
    "nachtrag": true
@@ -1634,7 +1657,7 @@
   },
   {
    "wort": "Geschwister",
-   "artikel": "die",
+   "artikel": null,
    "section": "u02-s2",
    "core": true,
    "nachtrag": true
@@ -1660,6 +1683,13 @@
    "section": "u02-s2",
    "core": true,
    "grund": "A1 mavzu lug'ati: Bu mening akam (ADR-0071)",
+   "nachtrag": true
+  },
+  {
+   "wort": "zweihundert",
+   "artikel": null,
+   "section": "u02-s2",
+   "core": true,
    "nachtrag": true
   },
   {
@@ -2017,14 +2047,14 @@
   },
   {
    "wort": "Jugendliche",
-   "artikel": "der/die",
+   "artikel": null,
    "section": "u02-s5",
    "core": true,
    "nachtrag": true
   },
   {
    "wort": "Bekannte",
-   "artikel": "der/die",
+   "artikel": null,
    "section": "u02-s5",
    "core": true,
    "nachtrag": true
@@ -2038,7 +2068,7 @@
   },
   {
    "wort": "Erwachsene",
-   "artikel": "der",
+   "artikel": null,
    "section": "u02-s5",
    "core": true,
    "nachtrag": true
@@ -2233,7 +2263,7 @@
    "nachtrag": true
   },
   {
-   "wort": "da vorne",
+   "wort": "vorne",
    "artikel": null,
    "section": "u03-s2",
    "core": true,
@@ -2434,7 +2464,7 @@
   },
   {
    "wort": "Lebensmittel",
-   "artikel": "die",
+   "artikel": null,
    "section": "u04-s1",
    "core": true
   },
@@ -2624,6 +2654,33 @@
    "section": "u04-s1",
    "core": true,
    "grund": "osh retsepti uchun qo'shildi (ADR-0071)"
+  },
+  {
+   "wort": "zum Beispiel",
+   "artikel": null,
+   "section": "u04-s1",
+   "core": true
+  },
+  {
+   "wort": "Orange",
+   "artikel": "die",
+   "section": "u04-s1",
+   "core": true,
+   "grund": "o'zimizniki: o'zbek o'quvchisi uchun kundalik so'z (ADR-0071)"
+  },
+  {
+   "wort": "Traube",
+   "artikel": "die",
+   "section": "u04-s1",
+   "core": true,
+   "grund": "o'zimizniki: o'zbek o'quvchisi uchun kundalik so'z (ADR-0071)"
+  },
+  {
+   "wort": "Melone",
+   "artikel": "die",
+   "section": "u04-s1",
+   "core": true,
+   "grund": "o'zimizniki: o'zbek o'quvchisi uchun kundalik so'z (ADR-0071)"
   },
   {
    "wort": "Supermarkt",
@@ -2820,15 +2877,27 @@
    "wort": "Verpackung",
    "artikel": "die",
    "section": "u04-s2",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Supermarketda (ADR-0071)"
   },
   {
    "wort": "Maß",
    "artikel": "das",
    "section": "u04-s2",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Supermarketda (ADR-0071)"
+  },
+  {
+   "wort": "billig",
+   "artikel": null,
+   "section": "u04-s2",
+   "core": true
+  },
+  {
+   "wort": "Kasse",
+   "artikel": "die",
+   "section": "u04-s2",
+   "core": true
   },
   {
    "wort": "bar",
@@ -2870,7 +2939,7 @@
    "wort": "Vorliebe",
    "artikel": "die",
    "section": "u04-s3",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Nimani yoqtirasan? (ADR-0071)"
   },
   {
@@ -2927,7 +2996,7 @@
   },
   {
    "wort": "Spaghetti",
-   "artikel": "die",
+   "artikel": null,
    "section": "u04-s3",
    "core": true,
    "grund": "A1 mavzu lug'ati: Nimani yoqtirasan? (ADR-0071)"
@@ -2948,7 +3017,7 @@
   },
   {
    "wort": "Pommes frites",
-   "artikel": "die",
+   "artikel": null,
    "section": "u04-s3",
    "core": true
   },
@@ -3010,7 +3079,7 @@
    "wort": "Schweinefleisch",
    "artikel": "das",
    "section": "u04-s3",
-   "core": true,
+   "core": false,
    "grund": "CEO qarori (03.10.2026): faqat rad etish uchun o'rgatiladi («Ich esse kein Schweinefleisch.»)"
   },
   {
@@ -3019,6 +3088,19 @@
    "section": "u04-s3",
    "core": true,
    "grund": "A1 mavzu lug'ati: Nimani yoqtirasan? (ADR-0071)"
+  },
+  {
+   "wort": "Essen",
+   "artikel": "das",
+   "section": "u04-s3",
+   "core": true
+  },
+  {
+   "wort": "scharf",
+   "artikel": null,
+   "section": "u04-s3",
+   "core": true,
+   "grund": "o'zimizniki: o'zbek o'quvchisi uchun kundalik so'z (ADR-0071)"
   },
   {
    "wort": "Frühstück",
@@ -3150,13 +3232,6 @@
    "core": true
   },
   {
-   "wort": "Stollen",
-   "artikel": "der",
-   "section": "u04-s4",
-   "core": true,
-   "grund": "A1 mavzu lug'ati: Nonushta, tushlik, kechki ovqat (ADR-0071)"
-  },
-  {
    "wort": "Appetit",
    "artikel": "der",
    "section": "u04-s4",
@@ -3175,6 +3250,12 @@
    "section": "u04-s4",
    "core": true,
    "grund": "A1 mavzu lug'ati: Nonushta, tushlik, kechki ovqat (ADR-0071)"
+  },
+  {
+   "wort": "Morgen",
+   "artikel": "der",
+   "section": "u04-s4",
+   "core": true
   },
   {
    "wort": "Restaurant",
@@ -3398,6 +3479,20 @@
    "grund": "A1 mavzu lug'ati: Restoranda (ADR-0071)"
   },
   {
+   "wort": "halal",
+   "artikel": null,
+   "section": "u04-s5",
+   "core": true,
+   "grund": "o'zimizniki: halol taomni so'rash uchun (ADR-0071)"
+  },
+  {
+   "wort": "vegetarisch",
+   "artikel": null,
+   "section": "u04-s5",
+   "core": true,
+   "grund": "o'zimizniki: go'shtsiz taomni so'rash uchun (ADR-0071)"
+  },
+  {
    "wort": "Rezept",
    "artikel": "das",
    "section": "u04-s6",
@@ -3575,7 +3670,7 @@
    "wort": "Alkohol",
    "artikel": "der",
    "section": "u04-s6",
-   "core": true,
+   "core": false,
    "grund": "CEO qarori (03.10.2026): faqat rad etish uchun o'rgatiladi («Ich trinke keinen Alkohol.»)"
   },
   {
@@ -3591,6 +3686,13 @@
    "section": "u04-s6",
    "core": true,
    "grund": "osh retsepti uchun qo'shildi (ADR-0071)"
+  },
+  {
+   "wort": "braten",
+   "artikel": null,
+   "section": "u04-s6",
+   "core": true,
+   "grund": "o'zimizniki: o'zbek o'quvchisi uchun kundalik so'z (ADR-0071)"
   },
   {
    "wort": "Uhrzeit",
@@ -3627,7 +3729,7 @@
    "wort": "halbe Stunde",
    "artikel": "die",
    "section": "u05-s1",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Soat necha? (ADR-0071)"
   },
   {
@@ -3933,7 +4035,7 @@
    "wort": "Uni",
    "artikel": "die",
    "section": "u05-s3",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Kun tartibim (ADR-0071)"
   },
   {
@@ -4087,7 +4189,7 @@
    "wort": "wie lange",
    "artikel": null,
    "section": "u05-s4",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Uchrashuvlar (ADR-0071)"
   },
   {
@@ -4212,7 +4314,7 @@
    "wort": "einkaufen gehen",
    "artikel": null,
    "section": "u05-s5",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Uyda (ADR-0071)"
   },
   {
@@ -4496,6 +4598,13 @@
   {
    "wort": "meistens",
    "artikel": null,
+   "section": "u06-s1",
+   "core": true,
+   "grund": "A1 mavzu lug'ati: Sevimli mashg'ulot (ADR-0071)"
+  },
+  {
+   "wort": "Fernsehen",
+   "artikel": "das",
    "section": "u06-s1",
    "core": true
   },
@@ -5191,6 +5300,12 @@
    "core": true
   },
   {
+   "wort": "Frühjahr",
+   "artikel": "das",
+   "section": "u06-s4",
+   "core": true
+  },
+  {
    "wort": "Verabredung",
    "artikel": "die",
    "section": "u06-s5",
@@ -5289,13 +5404,6 @@
    "artikel": "die",
    "section": "u06-s5",
    "core": true
-  },
-  {
-   "wort": "Mail",
-   "artikel": "die",
-   "section": "u06-s5",
-   "core": true,
-   "grund": "A1 mavzu lug'ati: Uchrashuvni kelishish (ADR-0071)"
   },
   {
    "wort": "reagieren",
@@ -6080,16 +6188,13 @@
    "core": true
   },
   {
-   "wort": "Frühjahr",
-   "artikel": "das",
-   "section": "u07-s4",
-   "core": true
-  },
-  {
    "wort": "E-Mail",
    "artikel": "die",
    "section": "u07-s4",
-   "core": true
+   "core": true,
+   "deckt": [
+    "Mail"
+   ]
   },
   {
    "wort": "Brief",
@@ -7620,7 +7725,7 @@
   },
   {
    "wort": "Möbel",
-   "artikel": "die",
+   "artikel": null,
    "section": "u09-s2",
    "core": true
   },
@@ -7794,11 +7899,10 @@
    "core": true
   },
   {
-   "wort": "vorne",
+   "wort": "liegen",
    "artikel": null,
    "section": "u09-s2",
-   "core": true,
-   "grund": "A1 mavzu lug'ati: Mebel (ADR-0071)"
+   "core": true
   },
   {
    "wort": "aussehen",
@@ -8022,12 +8126,6 @@
    "core": true
   },
   {
-   "wort": "zweihundert",
-   "artikel": null,
-   "section": "u09-s4",
-   "core": true
-  },
-  {
    "wort": "maximal",
    "artikel": null,
    "section": "u09-s4",
@@ -8040,12 +8138,6 @@
    "section": "u09-s4",
    "core": true,
    "grund": "A1 mavzu lug'ati: Uy izlash (ADR-0071)"
-  },
-  {
-   "wort": "billig",
-   "artikel": null,
-   "section": "u09-s4",
-   "core": true
   },
   {
    "wort": "günstig",
@@ -8183,6 +8275,12 @@
    "section": "u09-s4",
    "core": true,
    "grund": "A1 mavzu lug'ati: Uy izlash (ADR-0071)"
+  },
+  {
+   "wort": "Kosten",
+   "artikel": null,
+   "section": "u09-s4",
+   "core": true
   },
   {
    "wort": "Stapel",
@@ -8465,7 +8563,7 @@
    "wort": "erlaubt sein",
    "artikel": null,
    "section": "u09-s6",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Qo'shnilar va qoidalar (ADR-0071)"
   },
   {
@@ -8537,6 +8635,12 @@
   {
    "wort": "schließen",
    "artikel": null,
+   "section": "u09-s6",
+   "core": true
+  },
+  {
+   "wort": "Gefallen",
+   "artikel": "der",
    "section": "u09-s6",
    "core": true
   },
@@ -9185,6 +9289,12 @@
    "grund": "A1 mavzu lug'ati: Tarjimai hol (ADR-0071)"
   },
   {
+   "wort": "Leben",
+   "artikel": "das",
+   "section": "u10-s3",
+   "core": true
+  },
+  {
    "wort": "Formular",
    "artikel": "das",
    "section": "u10-s4",
@@ -9346,7 +9456,7 @@
    "wort": "fehlend",
    "artikel": null,
    "section": "u10-s4",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Ariza (ADR-0071)"
   },
   {
@@ -9727,7 +9837,7 @@
    "wort": "Pulli",
    "artikel": "der",
    "section": "u11-s1",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Kiyim (ADR-0071)"
   },
   {
@@ -10071,12 +10181,6 @@
   {
    "wort": "bezahlen",
    "artikel": null,
-   "section": "u11-s3",
-   "core": true
-  },
-  {
-   "wort": "Kasse",
-   "artikel": "die",
    "section": "u11-s3",
    "core": true
   },
@@ -10760,12 +10864,6 @@
    "grund": "A1 mavzu lug'ati: Sayohat manzillari (ADR-0071)"
   },
   {
-   "wort": "liegen",
-   "artikel": null,
-   "section": "u12-s1",
-   "core": true
-  },
-  {
    "wort": "rund",
    "artikel": null,
    "section": "u12-s1",
@@ -10875,7 +10973,7 @@
   },
   {
    "wort": "Achtung",
-   "artikel": "die",
+   "artikel": null,
    "section": "u12-s2",
    "core": true
   },
@@ -11104,7 +11202,7 @@
   },
   {
    "wort": "Papiere",
-   "artikel": "die",
+   "artikel": null,
    "section": "u12-s3",
    "core": true
   },
@@ -11197,7 +11295,7 @@
   },
   {
    "wort": "Daten",
-   "artikel": "die",
+   "artikel": null,
    "section": "u12-s3",
    "core": true,
    "grund": "A1 mavzu lug'ati: Mehmonxonada (ADR-0071)"
@@ -11208,6 +11306,12 @@
    "section": "u12-s3",
    "core": true,
    "grund": "A1 mavzu lug'ati: Mehmonxonada (ADR-0071)"
+  },
+  {
+   "wort": "Bitte",
+   "artikel": "die",
+   "section": "u12-s3",
+   "core": false
   },
   {
    "wort": "Urlaub",
@@ -11268,7 +11372,7 @@
    "wort": "shoppen gehen",
    "artikel": null,
    "section": "u12-s4",
-   "core": true,
+   "core": false,
    "grund": "A1 mavzu lug'ati: Ta'tilda (ADR-0071)"
   },
   {
@@ -11653,6 +11757,13 @@
    "grund": "A1 mavzu lug'ati: Xat yozish (ADR-0071)"
   },
   {
+   "wort": "Stollen",
+   "artikel": "der",
+   "section": "u12-s5",
+   "core": true,
+   "grund": "A1 mavzu lug'ati: Xat yozish (ADR-0071)"
+  },
+  {
    "wort": "Kapitel",
    "artikel": "das",
    "section": "u12-s6",
@@ -11711,12 +11822,6 @@
    "section": "u12-s6",
    "core": true,
    "grund": "A1 mavzu lug'ati: Xayr! (ADR-0071)"
-  },
-  {
-   "wort": "Wiedersehen",
-   "artikel": "das",
-   "section": "u12-s6",
-   "core": true
   },
   {
    "wort": "Schluss",

@@ -196,6 +196,15 @@ describe('isWordInGoetheA1', () => {
     expect(isWordInGoetheA1('Lieblings', file)).toBe(false);
   });
 
+  it('an adverb on -ens is not an inflected form of a stem', () => {
+    const f: GoetheFile = {
+      source: 't',
+      woerter: [{ wort: 'meist-', artikel: null }],
+    };
+    expect(isWordInGoetheA1('meisten', f)).toBe(true);
+    expect(isWordInGoetheA1('meistens', f)).toBe(false);
+  });
+
   it('matches a group word', () => {
     expect(isWordInGoetheA1('juli', file)).toBe(true);
   });

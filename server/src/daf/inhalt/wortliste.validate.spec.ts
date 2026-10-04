@@ -137,7 +137,8 @@ describe('validateWortliste', () => {
       ausserhalbBudget: true,
       grund: 'son: birlik + zehn',
     }));
-    const eintraege = [...fullSection('u01-s1', 'a'), ...abgeleitet];
+    const voll = Array.from({ length: WORDS_MAX }, (_, i) => eintrag(`a${i}`));
+    const eintraege = [...voll, ...abgeleitet];
     const file: WortlisteFile = { level: 'A1', eintraege };
     expect(validateWortliste(file, kurs(), goetheFor(eintraege))).toEqual([]);
   });
@@ -222,10 +223,54 @@ describe('validateWortliste', () => {
     const eintraege = fullSection('u01-s1', 'a');
     const file: WortlisteFile = { level: 'A1', eintraege };
     const hilfs: HilfswoerterFile = {
-      eintraege: [{ wort: 'A3', grund: 'test' }],
+      eintraege: [
+        { wort: 'a3', grund: 'test' },
+        { wort: 'A4', grund: 'another word: case differs' },
+      ],
     };
     const p = validateWortliste(file, kurs(), goetheFor(eintraege), hilfs);
-    expect(p).toEqual([`A3: ham u01-s1 so\`zi, ham yordamchi so\`z`]);
+    expect(p).toEqual([`a3: ham u01-s1 so\`zi, ham yordamchi so\`z`]);
+  });
+
+  it('a non-core plan word does not count against the pool', () => {
+    const voll = Array.from({ length: WORDS_MAX }, (_, i) => eintrag(`a${i}`));
+    const nurText = { ...eintrag('Schweinefleisch'), core: false };
+    const eintraege = [...voll, nurText];
+    const file: WortlisteFile = { level: 'A1', eintraege };
+    expect(validateWortliste(file, kurs(), goetheFor(eintraege))).toEqual([]);
+  });
+
+  it('a word that differs only in case is another word', () => {
+    const eintraege = [
+      ...fullSection('u01-s1', 'a'),
+      eintrag('essen'),
+      eintrag('Essen'),
+    ];
+    const file: WortlisteFile = { level: 'A1', eintraege };
+    expect(validateWortliste(file, kurs(), goetheFor(eintraege))).toEqual([]);
+  });
+
+  it('an excluded word cannot come back as a helper word or a phrase it covers', () => {
+    const eintraege = [
+      ...fullSection('u01-s1', 'a').slice(1),
+      { ...eintrag('a0'), deckt: ['Wein'] },
+    ];
+    const file: WortlisteFile = {
+      level: 'A1',
+      eintraege,
+      ausgenommen: [
+        { wort: 'Bier', artikel: 'das', grund: 'CEO qarori' },
+        { wort: 'Wein', artikel: 'der', grund: 'CEO qarori' },
+      ],
+    };
+    const hilfs: HilfswoerterFile = {
+      eintraege: [{ wort: 'Bier', grund: 't' }],
+    };
+    const p = validateWortliste(file, kurs(), goetheFor(eintraege), hilfs);
+    expect(p.filter((x) => x.includes('ham rejada'))).toEqual([
+      `Bier: ham rejada, ham o\`rgatilmaydiganlar ichida`,
+      `Wein: ham rejada, ham o\`rgatilmaydiganlar ichida`,
+    ]);
   });
 
   it('Goethe ro`yxatida yo`q so`zni sababsiz qabul qilmaydi', () => {
@@ -285,6 +330,7 @@ describe('goetheOhnePlan — Goethe words the plan leaves out (ADR-0071)', () =>
         'auf Wiederhören',
         'Tag',
         'gerne',
+        'essen',
         'Essen',
         'diesen',
         'Lieblingsfilm',
@@ -298,7 +344,13 @@ describe('goetheOhnePlan — Goethe words the plan leaves out (ADR-0071)', () =>
   it('lists what is missing', () => {
     expect(
       goetheOhnePlan(goethe, plan(['Tag', 'gern', 'essen']), hilfs),
-    ).toEqual(['Wiederhören', 'dies-', 'Lieblings-', 'Hund']);
+    ).toEqual(['Essen', 'Wiederhören', 'dies-', 'Lieblings-', 'Hund']);
+  });
+
+  it('a homograph that differs only in case needs its own entry', () => {
+    // «essen» (to eat) does not teach «das Essen» (the meal), nor the reverse.
+    expect(goetheOhnePlan(goethe, plan(['essen']), hilfs)).toContain('Essen');
+    expect(goetheOhnePlan(goethe, plan(['Essen']), hilfs)).toContain('essen');
   });
 
   it('a phrase covers a headword only when it says so', () => {
@@ -319,6 +371,7 @@ describe('vergleicheMitPlan — a written unit against its plan (ADR-0071)', () 
       eintrag('hallo', 'u01-s1'),
       eintrag('Name', 'u01-s1'),
       { ...eintrag('ciao', 'u01-s1'), nachtrag: true },
+      { ...eintrag('Schweinefleisch', 'u01-s1'), core: false },
       eintrag('fremd', 'u02-s1'),
     ],
   };
@@ -328,36 +381,61 @@ describe('vergleicheMitPlan — a written unit against its plan (ADR-0071)', () 
     core,
   });
 
+  const nurText = wort('Schweinefleisch', 'u01-s1', false);
+
   it('finds nothing when the core words are the plan', () => {
     expect(
-      vergleicheMitPlan([wort('hallo'), wort('Name')], file, ['u01-s1']),
+      vergleicheMitPlan([wort('hallo'), wort('Name'), nurText], file, [
+        'u01-s1',
+      ]),
     ).toEqual({ fehlt: [], ueberzaehlig: [] });
+  });
+
+  it('a non-core plan word must be in the unit, and not as a drilled word', () => {
+    expect(
+      vergleicheMitPlan([wort('hallo'), wort('Name')], file, ['u01-s1']),
+    ).toEqual({ fehlt: ['u01-s1|Schweinefleisch'], ueberzaehlig: [] });
+    expect(
+      vergleicheMitPlan(
+        [wort('hallo'), wort('Name'), wort('Schweinefleisch')],
+        file,
+        ['u01-s1'],
+      ),
+    ).toEqual({ fehlt: [], ueberzaehlig: ['u01-s1|Schweinefleisch'] });
   });
 
   it('a backfill word is not due yet, but may already be written', () => {
     expect(
-      vergleicheMitPlan([wort('hallo'), wort('Name'), wort('ciao')], file, [
-        'u01-s1',
-      ]),
+      vergleicheMitPlan(
+        [wort('hallo'), wort('Name'), wort('ciao'), nurText],
+        file,
+        ['u01-s1'],
+      ),
     ).toEqual({ fehlt: [], ueberzaehlig: [] });
   });
 
   it('reports a planned word that is missing and a core word that is not planned', () => {
     expect(
       vergleicheMitPlan(
-        [wort('hallo'), wort('tschüss'), wort('Name', 'u01-s1', false)],
+        [
+          wort('hallo'),
+          wort('tschüss'),
+          wort('Name', 'u01-s1', false),
+          nurText,
+        ],
         file,
         ['u01-s1'],
       ),
-    ).toEqual({ fehlt: ['u01-s1|name'], ueberzaehlig: ['u01-s1|tschüss'] });
+    ).toEqual({ fehlt: ['u01-s1|Name'], ueberzaehlig: ['u01-s1|tschüss'] });
   });
 
   it('a word in the wrong section counts both ways', () => {
     expect(
-      vergleicheMitPlan([wort('hallo'), wort('Name', 'u01-s2')], file, [
-        'u01-s1',
-        'u01-s2',
-      ]),
-    ).toEqual({ fehlt: ['u01-s1|name'], ueberzaehlig: ['u01-s2|name'] });
+      vergleicheMitPlan(
+        [wort('hallo'), wort('Name', 'u01-s2'), nurText],
+        file,
+        ['u01-s1', 'u01-s2'],
+      ),
+    ).toEqual({ fehlt: ['u01-s1|Name'], ueberzaehlig: ['u01-s2|Name'] });
   });
 });

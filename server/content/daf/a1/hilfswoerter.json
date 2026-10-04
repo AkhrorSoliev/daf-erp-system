@@ -612,11 +612,6 @@
       "abSection": "u04-s2"
     },
     {
-      "wort": "von ... bis",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u05-s4"
-    },
-    {
       "wort": "alle",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u02-s5"
@@ -662,11 +657,6 @@
       "abSection": "u03-s2"
     },
     {
-      "wort": "bis zu",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s3"
-    },
-    {
       "wort": "okay",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u03-s3"
@@ -685,11 +675,6 @@
       "wort": "unser",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u02-s5"
-    },
-    {
-      "wort": "noch mal",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u01-s5"
     },
     {
       "wort": "denn",
@@ -752,11 +737,6 @@
       "abSection": "u04-s2"
     },
     {
-      "wort": "rund um",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s1"
-    },
-    {
       "wort": "als",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u07-s1"
@@ -817,11 +797,6 @@
       "abSection": "u04-s5"
     },
     {
-      "wort": "die meisten",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s5"
-    },
-    {
       "wort": "gar",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u04-s3"
@@ -832,11 +807,6 @@
       "abSection": "u07-s5"
     },
     {
-      "wort": "schon wieder",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u06-s4"
-    },
-    {
       "wort": "ebenso",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u05-s2"
@@ -845,11 +815,6 @@
       "wort": "kaum",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u10-s3"
-    },
-    {
-      "wort": "nur noch",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s2"
     },
     {
       "wort": "her",
@@ -897,21 +862,6 @@
       "abSection": "u09-s2"
     },
     {
-      "wort": "nicht mehr",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u08-s5"
-    },
-    {
-      "wort": "ein paar",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "zum Beispiel",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s1"
-    },
-    {
       "wort": "jeder",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u03-s5"
@@ -927,27 +877,7 @@
       "abSection": "u04-s3"
     },
     {
-      "wort": "viel zu",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u11-s2"
-    },
-    {
-      "wort": "auf jeden Fall",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u11-s4"
-    },
-    {
-      "wort": "nicht nur",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u11-s4"
-    },
-    {
       "wort": "danach",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "zum Schluss",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u05-s3"
     },
@@ -965,6 +895,21 @@
       "wort": "tatsächlich",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u12-s5"
+    },
+    {
+      "wort": "meisten",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u07-s5"
+    },
+    {
+      "wort": "jeden",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u11-s4"
+    },
+    {
+      "wort": "Fall",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u11-s4"
     }
   ]
 }
