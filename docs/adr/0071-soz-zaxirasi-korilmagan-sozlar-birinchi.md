@@ -24,10 +24,12 @@ qolgan so'zlari chiqsin.
    o'sha mavzudagi so'zlari kiradi; aniq byudjet (`wortliste` qoidasi)
    taqsimot rejasi bilan birga o'zgaradi.
 2. **Dars ko'rilmagan so'zlarni birinchi so'raydi.** So'z ko'rilgan =
-   o'quvchida `DafLexemeState` qatori bor. `baueSeans` tartibi: o'z bo'limi
-   → ko'rilmagan so'z → format moyilligi. So'zsiz savollar (gap, ibora,
-   dialog) ko'rilmagan so'z bilan teng turadi, faqat ko'rilgan so'zning
-   savoli orqaga suriladi. Bu tartib, xilma-xillik qoidalari (format
+   o'quvchida `DafLexemeState` qatori bor. `baueSeans` o'z bo'limini va
+   format moyilligini avvalgidek oldinga qo'yadi, keyin har bosqich ichida
+   so'z savollari turgan o'rinlarga avval ko'rilmagan so'zlarni qo'yadi
+   (juft savolida bitta ko'rilmagan so'z yetarli). Gap, ibora va dialog
+   savollari o'z o'rnida qoladi, ya'ni seansdagi so'z va gap savollari
+   nisbati o'zgarmaydi. Bu faqat tartib: xilma-xillik qoidalari (format
    chegarasi, ketma-ketlik, `MIN_FORMATE`) o'zgarmaydi.
 3. **Hisoblagich.** Unit sahifasi bo'limning «So'zlar: ko'rilgan / jami»
    sonini ko'rsatadi; server uni o'quvchining holatlaridan sanaydi
@@ -45,6 +47,10 @@ qolgan so'zlari chiqsin.
   A1 oxirida Netzwerkning yarmi mashqlarda bo'lmasdi.
 - **Tasodifiy tanlov (hozirgidek), faqat zaxira katta.** Qayta o'tishlar bir
   xil so'zlarni qaytarishi mumkin edi; ko'rilmagan so'zga yetish kafolatsiz.
+- **So'zsiz savol ko'rilmagan so'z bilan teng.** Birinchi qurilgan variant.
+  Bo'lim so'zlari hammasi ko'rilgach, gap va dialog savollari doim oldinda
+  turardi: takror dars, o'tish darsi va yakuniy sinov so'z savollarining
+  ko'pini yo'qotardi.
 
 ## Oqibatlar
 

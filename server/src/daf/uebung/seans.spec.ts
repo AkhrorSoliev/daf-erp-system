@@ -1,4 +1,10 @@
-import { baueSeans, FORMAT_MAX_PRO_SEANS, MIN_FORMATE, capFuer } from './seans';
+import {
+  baueSeans,
+  FORMAT_MAX_PRO_SEANS,
+  MIN_FORMATE,
+  capFuer,
+  neuheit,
+} from './seans';
 import type { Frage, FrageFormat } from './frage.types';
 
 function f(
@@ -516,17 +522,89 @@ describe('baueSeans — words the student has not seen first (ADR-0071)', () => 
     const eigenGesehen = formatlar.flatMap((fmt, i) =>
       Array.from({ length: 3 }, (_, j) => f(fmt, 3000 + i * 10 + j)),
     );
-    const altNeu = neue;
     const istEigen = (q: Frage) => q.itemId >= 3000;
+    // Own words are all seen here, older ones all unseen.
+    const nurAltNeu = (q: Frage) => istNeu(q) && !istEigen(q);
     const plan = baueSeans(
-      [...altNeu, ...eigenGesehen],
+      [...neue, ...eigenGesehen],
       12,
       () => 0.9999,
       [],
       [],
       istEigen,
-      istNeu,
+      nurAltNeu,
     );
     expect(plan.fragen.filter(istEigen)).toHaveLength(12);
+  });
+
+  // Sentence, phrase and dialog questions: no word, so `neu` gives null.
+  const saetze = (
+    ['SATZ_BAUEN', 'SATZ_UEBERSETZEN', 'REAKTION'] as const
+  ).flatMap((fmt, i) =>
+    Array.from({ length: 3 }, (_, j) =>
+      f(fmt, 5000 + i * 10 + j, [`SATZ:${5000 + i * 10 + j}`]),
+    ),
+  );
+  const neuOderNull = (q: Frage) =>
+    q.belegteItems[0].startsWith('WORT:') ? istNeu(q) : null;
+
+  it('once every word is seen, a round is built as without the key', () => {
+    const ohne = baueSeans([...gesehen, ...saetze], 12, rnd, [], ['WORT_UZ']);
+    const mit = baueSeans(
+      [...gesehen, ...saetze],
+      12,
+      rnd,
+      [],
+      ['WORT_UZ'],
+      undefined,
+      neuOderNull,
+    );
+    expect(mit.fragen).toEqual(ohne.fragen);
+  });
+
+  it('sentences keep their share while unseen words lead the word questions', () => {
+    const alle = [...gesehen, ...neue, ...saetze];
+    const ohne = baueSeans(alle, 12, rnd, [], []);
+    const mit = baueSeans(alle, 12, rnd, [], [], undefined, neuOderNull);
+    const satzZahl = (p: typeof mit) =>
+      p.fragen.filter((q) => neuOderNull(q) === null).length;
+    expect(satzZahl(ohne)).toBeGreaterThan(0);
+    expect(satzZahl(mit)).toBe(satzZahl(ohne));
+    expect(mit.fragen.filter((q) => neuOderNull(q) === false)).toEqual([]);
+  });
+
+  it('an unseen word comes before a seen one in the lesson`s preferred format', () => {
+    // Only seen words in the preferred format, so its cap cannot hide the order.
+    const plan = baueSeans(
+      [...gesehen, ...neue.filter((q) => q.format !== 'WORT_UZ')],
+      12,
+      () => 0.9999,
+      [],
+      ['WORT_UZ'],
+      undefined,
+      istNeu,
+    );
+    expect(plan.fragen.filter(istNeu)).toHaveLength(12);
+  });
+});
+
+describe('neuheit — does a question bring an unseen word (ADR-0071)', () => {
+  const neue = new Set(['WORT:2', 'WORT:4']);
+
+  it('a word question is new when its word is unseen', () => {
+    expect(neuheit(f('WORT_UZ', 2), neue)).toBe(true);
+    expect(neuheit(f('WORT_UZ', 1), neue)).toBe(false);
+  });
+
+  it('a pair is new when any one of its words is unseen', () => {
+    expect(neuheit(f('PAAR', 9, ['WORT:1', 'WORT:2', 'WORT:3']), neue)).toBe(
+      true,
+    );
+    expect(neuheit(f('PAAR', 9, ['WORT:1', 'WORT:3']), neue)).toBe(false);
+  });
+
+  it('a gap sentence counts by its word, a plain sentence asks none', () => {
+    expect(neuheit(f('LUECKE', 7, ['SATZ:7', 'WORT:4']), neue)).toBe(true);
+    expect(neuheit(f('SATZ_BAUEN', 7, ['SATZ:7']), neue)).toBeNull();
   });
 });

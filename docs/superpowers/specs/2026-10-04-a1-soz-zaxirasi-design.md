@@ -37,10 +37,16 @@ o'quvchi darsni qayta o'tgan sari ko'rmagan so'zlari chiqadi.
 
 - So'z **ko'rilgan** = o'quvchida shu so'z uchun `DafLexemeState` qatori bor
   (u so'zga birinchi javob berilganda yoziladi).
-- `baueSeans` tartib kalitiga yangi pog'ona: **o'z bo'limi** (eng kuchli) →
-  **ko'rilmagan so'z** → format moyilligi. So'zsiz savol (gap, ibora, dialog)
-  ko'rilmagan so'z bilan teng turadi — gaplar va dialoglar orqaga surilmaydi,
-  faqat KO'RILGAN so'zning savoli keyinga o'tadi.
+- `baueSeans` avvalgidek o'z bo'limini, keyin format moyilligini oldinga
+  qo'yadi. Shundan keyin har bosqich ichida **so'z savollari** turgan
+  o'rinlarga avval ko'rilmagan so'zlar, keyin ko'rilganlari qo'yiladi.
+  Juft (`PAAR`) savolida bitta so'z ko'rilmagan bo'lsa ham u yangi.
+- Gap, ibora va dialog savollari **o'z o'rnida qoladi**: seansdagi so'z va
+  gap savollari nisbati avvalgidek. So'zlar yangi bo'lganda gaplar siqib
+  chiqarilmaydi, hammasi ko'rilgach so'z mashqi yo'qolmaydi. (Birinchi
+  variantda so'zsiz savol ko'rilmagan so'z bilan teng turardi; ko'rik
+  ko'rsatdi: bo'lim so'zlari ko'rilgach, takror dars va yakuniy sinov
+  deyarli faqat gap va dialogdan iborat bo'lib qolardi.)
 - Bu faqat TARTIB: format chegarasi, ketma-ketlik, `MIN_FORMATE` va
   «bir material bir seansda bir marta» qoidalari o'zgarmaydi.
 - O'tish darsi va yakuniy sinovda o'z bo'limi qoidasi yo'q — u yerda butun
@@ -56,6 +62,10 @@ o'quvchi darsni qayta o'tgan sari ko'rmagan so'zlari chiqadi.
   «Yana mashq qilish · 14 yangi so'z». Hammasi ko'rilgach — yashil belgi.
 - Dars birinchi o'tishdayoq «bajarildi» bo'ladi (hozirgidek), yo'l
   to'xtamaydi. Eski server `woerter` yubormasa, hisoblagich chizilmaydi.
+- Darsni qayta ochish serverdan YANGI seans so'raydi: seans ekrandan
+  chiqilganda keshda qolmaydi (`gcTime: 0`; takrorlash ham shunday).
+  Darsni yarmida tashlab chiqish hisoblagichni eskirgan deb belgilaydi —
+  har javob o'quvchining so'z holatini allaqachon yozgan.
 
 ### 2.3. So'z taqsimoti va byudjet (2-bosqich)
 
@@ -80,10 +90,15 @@ Ovoz va rasm har unit uchun alohida, narx aytilib so'raladi.
 
 ## 3. Sinov
 
-- `seans.spec.ts`: ko'rilmagan so'z savoli ko'rilganidan oldin; so'zsiz savol
-  ko'rilgan so'z savolidan oldin; o'z bo'limi ko'rilmaganlikdan kuchli.
+- `seans.spec.ts`: ko'rilmagan so'z savoli ko'rilganidan oldin; format
+  moyilligidan ham kuchli; o'z bo'limi undan kuchli; hamma so'z ko'rilgach
+  seans kalitsiz qurilgandek; gaplar ulushi o'zgarmaydi; `neuheit` (juft,
+  bo'shliqli gap, oddiy gap).
 - `uebung.service.spec.ts`: holati bor so'z keyingi seansda faqat boshqa
-  so'zlar tugaganda chiqadi (haqiqiy servis, soxta prisma).
+  so'zlar tugaganda chiqadi; o'tish darsi va yakuniy sinovda ham; so'z va
+  gap savollari tartibi so'zlar ko'rilgan-ko'rilmaganiga qaramay bir xil
+  (haqiqiy servis, soxta prisma).
 - `daf-portal-read.service.spec.ts`: `woerter` soni — core + tarjimali,
-  o'quvchining holatlari bo'yicha.
-- Mijoz: hisoblagich matni va «yangi so'z» qatori (vitest).
+  o'quvchining holatlari bo'yicha; yo'lda hamma unit uchun ikki so'rov.
+- Mijoz: hisoblagich matni va «yangi so'z» qatori (faqat bo'lim darslarida);
+  tark etilgan seans keshda qolmaydi, hisoblagich eskiradi (vitest).

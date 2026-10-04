@@ -397,23 +397,52 @@ describe('woerter — seen / total words per section (ADR-0071)', () => {
     });
   });
 
-  it('getLevels attaches them too, with two queries for every unit', async () => {
+  it('getLevels attaches them too, with two queries for all units together', async () => {
     const prisma = mitZaehlung();
-    prisma.dafUnit.findMany = jest.fn(async () => [
-      {
-        id: 1,
-        level: 'A1',
-        order: 4,
-        titleUz: 'Ovqat',
-        titleDe: 'Essen',
-        _count: { lessons: 18 },
-      },
+    const unit = (id: number, order: number) => ({
+      id,
+      level: 'A1',
+      order,
+      titleUz: `Unit ${order}`,
+      titleDe: `Unit ${order}`,
+      _count: { lessons: 18 },
+    });
+    prisma.dafUnit.findMany = jest.fn(async () => [unit(1, 4), unit(2, 5)]);
+    const bolim = (id: number, unitId: number, order: number) => ({
+      id,
+      unitId,
+      order,
+      code: `s${id}`,
+      titleUz: `S${id}`,
+      titleDe: `S${id}`,
+    });
+    prisma.dafSection.findMany = jest.fn(async () => [
+      bolim(70, 1, 1),
+      bolim(71, 1, 2),
+      bolim(72, 2, 1),
     ]);
+    prisma.dafLexeme.groupBy = jest.fn(async (args: any) => {
+      if (args.by[0] !== 'sectionId') return [];
+      return args.where.states
+        ? [
+            { sectionId: 70, _count: { _all: 14 } },
+            { sectionId: 72, _count: { _all: 5 } },
+          ]
+        : [
+            { sectionId: 70, _count: { _all: 28 } },
+            { sectionId: 71, _count: { _all: 9 } },
+            { sectionId: 72, _count: { _all: 12 } },
+          ];
+    });
+
     const levels = await svc(prisma).getLevels(55);
-    const unit = levels.find((l) => l.level === 'A1')!.units[0];
-    expect(unit.sections.map((s) => s.woerter)).toEqual([
-      { jami: 28, gesehen: 14 },
-      { jami: 9, gesehen: 0 },
+    const units = levels.find((l) => l.level === 'A1')!.units;
+    expect(units.map((u) => u.sections.map((s) => s.woerter))).toEqual([
+      [
+        { jami: 28, gesehen: 14 },
+        { jami: 9, gesehen: 0 },
+      ],
+      [{ jami: 12, gesehen: 5 }],
     ]);
     expect(
       prisma.dafLexeme.groupBy.mock.calls.filter(

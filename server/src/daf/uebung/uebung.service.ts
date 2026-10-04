@@ -37,7 +37,7 @@ import {
   zuordnen,
   ZUORDNEN_JUFT,
 } from './satz-fragen';
-import { baueSeans } from './seans';
+import { baueSeans, neuheit } from './seans';
 import { seansYigindisi } from './seans-natija';
 import { ohneWiederholteFormate } from './wiederholte-formate';
 import {
@@ -341,13 +341,8 @@ export class UebungService {
       kind === 'SECTION_A' || kind === 'SECTION_B'
         ? (f: Frage) => f.belegteItems.some((k) => eigene.has(k))
         : undefined;
-    // Unseen words before seen ones (ADR-0071). A question about no word
-    // (sentence, phrase, dialog) counts as new, so only a question made of
-    // seen words alone moves back.
-    const nochNeu = (f: Frage) => {
-      const woerter = f.belegteItems.filter((k) => k.startsWith('WORT:'));
-      return woerter.length === 0 || woerter.some((k) => neueWoerter.has(k));
-    };
+    // Unseen words before seen ones among the word questions (ADR-0071).
+    const nochNeu = (f: Frage) => neuheit(f, neueWoerter);
     const { fragen, nichtPlatziert } = baueSeans(
       kandidaten,
       uzunlik,

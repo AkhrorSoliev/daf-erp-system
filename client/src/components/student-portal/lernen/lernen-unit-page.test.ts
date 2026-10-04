@@ -51,6 +51,8 @@ const unit: LernenUnit = {
       lessons: [
         seans(1, "SECTION_A", "2026-10-04T10:00:00Z"),
         seans(2, "SECTION_B", null),
+        // A finished bridge is not a section lesson: no «Yana mashq» under it.
+        seans(5, "BRIDGE", "2026-10-04T11:00:00Z"),
       ],
       woerter: { jami: 28, gesehen: 14 },
     },

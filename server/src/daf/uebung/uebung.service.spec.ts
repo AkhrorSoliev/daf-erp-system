@@ -560,9 +560,10 @@ describe('UebungService.seans — DIALOG_LUECKE', () => {
 });
 
 describe('UebungService.seans — words not seen yet first (ADR-0071)', () => {
-  // Twenty words in the lesson's section; the student has met the first
-  // ten. A lesson repeat must ask the other ten before any of these.
-  function zwanzigWoerter() {
+  // Twenty words in the lesson's section; the student has met those below
+  // `gesehenBis` (by default the first ten). A lesson repeat must ask the
+  // others before any of these.
+  function zwanzigWoerter(gesehenBis = 610, kind = 'SECTION_A') {
     const prisma = fakePrisma();
     const woerter = Array.from({ length: 20 }, (_, i) => ({
       id: 600 + i,
@@ -590,11 +591,52 @@ describe('UebungService.seans — words not seen yet first (ADR-0071)', () => {
       if (where.dueAt) return [];
       const ids: number[] = where.lexemeId?.in ?? [];
       return ids
-        .filter((id) => id < 610)
+        .filter((id) => id < gesehenBis)
         .map((id) => ({ lexemeId: id, lastFormat: null }));
     }) as any;
+    prisma.dafLesson.findUnique = jest.fn(async () => ({
+      id: 100,
+      unitId: 1,
+      sectionId: 7,
+      kind,
+      section: { id: 7, code: 'u01-s1', order: 1, unitId: 1 },
+    })) as any;
     return prisma;
   }
+
+  const wortSavol = (f: { itemType: string; format: string }) =>
+    f.itemType === 'WORT' && f.format !== 'PAAR';
+
+  it.each(['BRIDGE', 'UNIT_TEST'])(
+    'the %s lesson asks the unit`s unseen words first too',
+    async (kind) => {
+      for (let seed = 1; seed <= 20; seed += 1) {
+        const fragen = await new UebungService(
+          zwanzigWoerter(605, kind) as any,
+        ).seans(100, 55, mulberry32(seed));
+        const einzelWort = fragen.filter(wortSavol);
+        expect(einzelWort.length).toBeGreaterThan(0);
+        for (const f of einzelWort)
+          expect(f.itemId).toBeGreaterThanOrEqual(605);
+      }
+    },
+  );
+
+  it('keeps the round`s mix of word and sentence questions, seen words or not', async () => {
+    // Every word seen, or none: only which word is asked may change, never
+    // how many word questions the round holds or where sentences stand.
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const runde = async (gesehenBis: number) =>
+        (
+          await new UebungService(zwanzigWoerter(gesehenBis) as any).seans(
+            100,
+            55,
+            mulberry32(seed),
+          )
+        ).map((f) => `${f.itemType}:${f.format}`);
+      expect(await runde(620)).toEqual(await runde(600));
+    }
+  });
 
   it('asks no seen word while unseen ones are left', async () => {
     for (let seed = 1; seed <= 20; seed += 1) {
