@@ -22,7 +22,7 @@ import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { invalidateDebt } from "@/components/payments/debt/debt-queries";
-import { dateFromDay, usePromiseMonth } from "@/components/payments/promise-month";
+import { capToRange, dateFromDay, usePromiseMonth } from "@/components/payments/promise-month";
 import {
   CALL_OUTCOME_INFO,
   type CallLogsResponse,
@@ -107,7 +107,9 @@ function CallForm({
   const promiseMonth = usePromiseMonth(isPay ? prefill.studentId : null);
   const payRange = promiseMonth.data ? (promiseMonth.data.edit ?? promiseMonth.data.create) : null;
   const promiseTaken = isPay && !!promiseMonth.data && !payRange;
-  const sendsDate = !!selectedDate && !promiseTaken;
+  // A day picked before the range arrived is clamped into it, as the payment dialog does.
+  const date = isPay ? capToRange(selectedDate, payRange) : selectedDate;
+  const sendsDate = !!date && !promiseTaken;
 
   // Oldingi qo'ng'iroq izohlari — admin yangi izoh yozishda kontekst ko'rsin.
   const { data: history, isLoading: historyLoading } = useQuery({
@@ -129,8 +131,8 @@ function CallForm({
       // "To'laydi" → payment promise (promiseDate); other outcomes → callback
       // date (followUpAt). The server keeps the two concepts separate.
       let dateIso: string | undefined;
-      if (selectedDate && sendsDate) {
-        const d = new Date(selectedDate);
+      if (date && sendsDate) {
+        const d = new Date(date);
         d.setHours(23, 59, 59, 0);
         dateIso = d.toISOString();
       }
@@ -248,7 +250,7 @@ function CallForm({
           <div className="space-y-1">
             <Label className="text-xs">{dateField.label}</Label>
             <DatePicker
-              value={selectedDate}
+              value={date}
               onChange={(d) => setSelectedDate(d ?? null)}
               minDate={isPay && payRange ? dateFromDay(payRange.from) : new Date()}
               maxDate={isPay && payRange ? dateFromDay(payRange.to) : undefined}

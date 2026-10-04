@@ -34,10 +34,13 @@ import {
 } from "@/components/ui/select";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
-import { tashkentNow } from "@/lib/tashkent-time";
-import { dayMonth } from "./debt/debt-format";
 import { invalidateDebt } from "./debt/debt-queries";
-import { capToRange, dateFromDay, usePromiseMonth } from "./promise-month";
+import {
+  capToRange,
+  dateFromDay,
+  paymentPromiseAsk,
+  usePromiseMonth,
+} from "./promise-month";
 import {
   MONTHLY_PAYMENT_EXPLANATION,
   buildQuickAmounts,
@@ -223,16 +226,13 @@ export function RecordPaymentDialog({
   // Contract 3.2: how far this amount reaches, and — when it leaves a debt —
   // the promise for the rest, defaulting to the first lesson it does not reach.
   const reach = preview?.monthly?.admission ?? null;
-  // ADR-0072: at most 7 days ahead, once a month. The server writes the
-  // month's first promise (`create`) or moves its OPEN one (`edit`); with
-  // neither (the month's promise is closed, or past its 7 days) no date is
-  // asked or sent, else the whole part payment is refused.
+  // ADR-0072: at most 7 days ahead, once a month (paymentPromiseAsk).
   const promiseMonth = usePromiseMonth(selectedStudent?.id ?? null);
-  const promiseRange = promiseMonth.data
-    ? (promiseMonth.data.create ?? promiseMonth.data.edit)
-    : null;
-  const closedPromise = promiseRange ? null : (promiseMonth.data?.monthPromise ?? null);
-  const needsPromise = promiseNeeded(reach) && !closedPromise;
+  const {
+    needsPromise,
+    range: promiseRange,
+    hint: promiseHint,
+  } = paymentPromiseAsk(promiseNeeded(reach), promiseMonth);
   const promiseDate = capToRange(
     pickedPromiseDate ?? (reach ? promiseDefaultDate(reach) : null),
     promiseRange,
@@ -479,10 +479,8 @@ export function RecordPaymentDialog({
                   </p>
                 </div>
               )}
-              {promiseNeeded(reach) && closedPromise && (
-                <p className="text-muted-foreground">
-                  Shu oy va&apos;da yozilgan: {dayMonth(tashkentNow(new Date(closedPromise.promiseDate)).dateStr)} gacha. Yangisi so&apos;ralmaydi.
-                </p>
+              {promiseHint && (
+                <p className="text-muted-foreground">{promiseHint}</p>
               )}
             </div>
           )}

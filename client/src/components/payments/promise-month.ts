@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
+import { instantDayMonth } from "./debt/debt-format";
 import type { PromiseMonthState } from "./debt/debt-types";
 
 /**
@@ -22,6 +23,24 @@ export function usePromiseMonth(studentId: number | null) {
 export function dateFromDay(day: string): Date {
   const [y, m, d] = day.split("-").map(Number);
   return new Date(y, m - 1, d);
+}
+
+/**
+ * What the payment dialog asks of a part payment. The server checks a sent
+ * date before the payment, so a date is sent only inside the month's range:
+ * the first promise (`create`) or moving its OPEN one (`edit`). A closed
+ * promise, or a lookup that failed, asks nothing and says why — a payment is
+ * never refused over a promise.
+ */
+export function paymentPromiseAsk(partPayment: boolean, month: { data?: PromiseMonthState; isError: boolean }) {
+  const range = month.data ? (month.data.create ?? month.data.edit) : null;
+  if (!partPayment) return { needsPromise: false, range, hint: null };
+  if (month.isError) return { needsPromise: false, range, hint: "Va'da holatini yuklab bo'lmadi — sana so'ralmaydi." };
+  const closed = range ? null : (month.data?.monthPromise ?? null);
+  if (closed) {
+    return { needsPromise: false, range, hint: `Shu oy va'da yozilgan: ${instantDayMonth(closed.promiseDate)} gacha. Yangisi so'ralmaydi.` };
+  }
+  return { needsPromise: true, range, hint: null };
 }
 
 /** A default day clamped into the allowed range (no range → unchanged). */

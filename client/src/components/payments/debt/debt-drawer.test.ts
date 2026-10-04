@@ -64,6 +64,13 @@ describe("DebtDrawerBody (spec §2.5)", () => {
     expect(raw).toMatch(/<button[^>]*\sdisabled=""[^>]*>(?:(?!<\/button>).)*Va&#x27;da yozish/);
     expect(html()).not.toMatch(/<button[^>]*\sdisabled=""[^>]*>(?:(?!<\/button>).)*Va&#x27;da yozish/);
   });
+
+  it("a failed promise lookup disables «Va'da yozish» and says so", () => {
+    const raw = html({ promiseState: null, promiseFailed: true });
+    expect(norm(raw)).toContain("Va'da holatini yuklab bo'lmadi");
+    expect(raw).toMatch(/<button[^>]*\sdisabled=""[^>]*>(?:(?!<\/button>).)*Va&#x27;da yozish/);
+    expect(norm(html())).not.toContain("Va'da holatini yuklab bo'lmadi");
+  });
 });
 
 describe("PromiseForm", () => {

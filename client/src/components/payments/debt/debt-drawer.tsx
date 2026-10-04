@@ -49,6 +49,7 @@ export function DebtDrawer({ studentId, onClose, onPay, onLogCall }: {
             key={data.student.id}
             drawer={data}
             promiseState={promise.data ?? null}
+            promiseFailed={promise.isError}
             canLogCalls={hasAnyRole(roles, CALL_LOG_ROLES)}
             canPdf={hasAnyRole(roles, STATEMENT_ROLES)}
             onPay={() => onPay({ id: data.student.id, firstName: data.student.firstName, lastName: data.student.lastName, balance: -data.debt, suggested: data.debt })}
@@ -67,8 +68,8 @@ const Section = ({ title, children }: { title: string; children: ReactNode }) =>
   </section>
 );
 
-export function DebtDrawerBody({ drawer: d, promiseState, canLogCalls, canPdf, onPay, onLogCall }: {
-  drawer: DrawerData; promiseState: PromiseMonthState | null; canLogCalls: boolean; canPdf: boolean; onPay: () => void; onLogCall: () => void;
+export function DebtDrawerBody({ drawer: d, promiseState, promiseFailed = false, canLogCalls, canPdf, onPay, onLogCall }: {
+  drawer: DrawerData; promiseState: PromiseMonthState | null; promiseFailed?: boolean; canLogCalls: boolean; canPdf: boolean; onPay: () => void; onLogCall: () => void;
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const monthTaken = promiseState?.monthPromise != null;
@@ -123,6 +124,7 @@ export function DebtDrawerBody({ drawer: d, promiseState, canLogCalls, canPdf, o
         {canLogCalls && <Button variant="outline" onClick={onLogCall}><Phone className="mr-1 size-4" />Qo&apos;ng&apos;iroq natijasi</Button>}
         {canPdf && <Button variant="outline" onClick={pdf}><FileText className="mr-1 size-4" />To&apos;lovlar hisoboti (PDF)</Button>}
         {monthTaken && <p className="w-full text-xs text-muted-foreground">Bu o&apos;quvchiga shu oy va&apos;da yozilgan</p>}
+        {promiseFailed && !monthTaken && <p className="w-full text-xs text-muted-foreground">Va&apos;da holatini yuklab bo&apos;lmadi</p>}
       </div>
     </>
   );
