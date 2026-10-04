@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Clock, Download } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
+import { LogCallDialog, type LogCallPrefill } from "@/components/outreach/log-call-dialog";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { downloadAuthedFile } from "@/lib/download-file";
@@ -13,6 +14,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentNow } from "@/lib/tashkent-time";
 import { cn } from "@/lib/utils";
 import { RecordPaymentDialog } from "../record-payment-dialog";
+import { DebtDrawer } from "./debt-drawer";
 import { DebtFilterBar } from "./debt-filter-bar";
 import { dayMonth, KIND_LABEL, sumLine, TAB_LABEL, tabRule, tabSubline } from "./debt-format";
 import { useDebtList } from "./debt-queries";
@@ -35,6 +37,8 @@ export function DebtPage() {
   const tab = activeTab(filters);
   const { data, isPending, isPlaceholderData, isError, refetch } = useDebtList(filters);
   const [payTarget, setPayTarget] = useState<PayTarget | null>(null);
+  const [drawerId, setDrawerId] = useState<number | null>(null);
+  const [callTarget, setCallTarget] = useState<LogCallPrefill | null>(null);
   const today = tashkentNow().dateStr;
   const monthKey = today.slice(0, 7);
 
@@ -95,7 +99,7 @@ export function DebtPage() {
       ) : (
         // The previous page stays dimmed and inert until the next one answers.
         <div aria-busy={isPlaceholderData} className={cn(isPlaceholderData && "pointer-events-none opacity-60")}>
-          <DebtTable tab={tab} rows={data?.data} loading={isPending} filtered={hasDebtFilter(filters)} offset={(filters.page - 1) * filters.pageSize} today={today}
+          <DebtTable tab={tab} rows={data?.data} loading={isPending} filtered={hasDebtFilter(filters)} offset={(filters.page - 1) * filters.pageSize} today={today} onOpen={setDrawerId}
             onPay={(r) => setPayTarget({ id: r.studentId, firstName: r.firstName, lastName: r.lastName, balance: -r.debt, suggested: r.debt })} />
         </div>
       )}
@@ -116,6 +120,10 @@ export function DebtPage() {
 
       <RecordPaymentDialog open={payTarget !== null} onOpenChange={(open) => !open && setPayTarget(null)}
         preSelectedStudent={payTarget} suggestedAmount={payTarget?.suggested} />
+      <DebtDrawer studentId={drawerId} onClose={() => setDrawerId(null)}
+        onPay={(t) => { setDrawerId(null); setPayTarget(t); }}
+        onLogCall={(p) => { setDrawerId(null); setCallTarget(p); }} />
+      <LogCallDialog open={callTarget !== null} onOpenChange={(open) => !open && setCallTarget(null)} prefill={callTarget} />
     </div>
   );
 }

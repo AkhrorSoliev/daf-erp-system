@@ -22,6 +22,7 @@ import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { invalidateDebt } from "@/components/payments/debt/debt-queries";
+import { dateFromDay, usePromiseMonth } from "@/components/payments/promise-month";
 import {
   CALL_OUTCOME_INFO,
   type CallLogsResponse,
@@ -99,6 +100,14 @@ function CallForm({
   // Dual-purpose: a payment date for "To'laydi", else a "call again later" date.
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const dateField = outcome ? DATE_FIELD[outcome] : undefined;
+  // ADR-0072: «To'laydi» moves this month's OPEN promise (within 7 days of when
+  // it was written) or writes the month's first; a month whose promise is
+  // closed takes no date.
+  const isPay = outcome === "WILL_PAY";
+  const promiseMonth = usePromiseMonth(isPay ? prefill.studentId : null);
+  const payRange = promiseMonth.data ? (promiseMonth.data.edit ?? promiseMonth.data.create) : null;
+  const promiseTaken = isPay && !!promiseMonth.data && !payRange;
+  const sendsDate = !!selectedDate && !promiseTaken;
 
   // Oldingi qo'ng'iroq izohlari — admin yangi izoh yozishda kontekst ko'rsin.
   const { data: history, isLoading: historyLoading } = useQuery({
@@ -119,9 +128,8 @@ function CallForm({
       // End-of-day so a same-day date isn't flagged overdue immediately.
       // "To'laydi" → payment promise (promiseDate); other outcomes → callback
       // date (followUpAt). The server keeps the two concepts separate.
-      const isPay = outcome === "WILL_PAY";
       let dateIso: string | undefined;
-      if (selectedDate) {
+      if (selectedDate && sendsDate) {
         const d = new Date(selectedDate);
         d.setHours(23, 59, 59, 0);
         dateIso = d.toISOString();
@@ -136,8 +144,7 @@ function CallForm({
       });
     },
     onSuccess: () => {
-      const withDate = !!selectedDate;
-      const isPay = outcome === "WILL_PAY";
+      const withDate = sendsDate;
       toast.success(
         withDate && isPay
           ? "Qo'ng'iroq qayd qilindi, to'lov sanasi belgilandi"
@@ -226,8 +233,9 @@ function CallForm({
                 className="justify-start"
                 onClick={() => {
                   setOutcome(o.value);
-                  // Drop a stray date when switching to an outcome without one.
-                  if (!DATE_FIELD[o.value]) setSelectedDate(null);
+                  // Drop a stray date when switching to an outcome without one,
+                  // or between a payment date and a callback date.
+                  if (!DATE_FIELD[o.value] || (o.value === "WILL_PAY") !== isPay) setSelectedDate(null);
                 }}
               >
                 {o.label}
@@ -236,16 +244,26 @@ function CallForm({
           </div>
         </div>
 
-        {dateField && (
+        {dateField && !promiseTaken && (
           <div className="space-y-1">
             <Label className="text-xs">{dateField.label}</Label>
             <DatePicker
               value={selectedDate}
               onChange={(d) => setSelectedDate(d ?? null)}
-              minDate={new Date()}
+              minDate={isPay && payRange ? dateFromDay(payRange.from) : new Date()}
+              maxDate={isPay && payRange ? dateFromDay(payRange.to) : undefined}
             />
-            <p className="text-[11px] text-muted-foreground">{dateField.help}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {isPay && promiseMonth.data?.edit
+                ? "Shu oy yozilgan va'daning sanasi o'zgaradi (ko'pi bilan 7 kunga)."
+                : dateField.help}
+            </p>
           </div>
+        )}
+        {promiseTaken && (
+          <p className="text-[11px] text-muted-foreground">
+            Bu o&apos;quvchiga shu oy va&apos;da yozilgan — to&apos;lov sanasi kiritilmaydi.
+          </p>
         )}
 
         <div className="space-y-1">
@@ -270,7 +288,7 @@ function CallForm({
         </Button>
         <Button
           onClick={() => submit.mutate()}
-          disabled={!outcome || submit.isPending}
+          disabled={!outcome || submit.isPending || (isPay && !!selectedDate && promiseMonth.isPending)}
         >
           {submit.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
           Saqlash
