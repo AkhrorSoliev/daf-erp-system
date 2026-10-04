@@ -29,7 +29,7 @@ export const CALL_LOG_ROLES = [1, 2, 3];
 export const STATEMENT_ROLES = [1, 2, 3];
 
 /**
- * `POST /withdrawals` va `POST /refunds/quick` — «Muzlatilgan puli» tabining
+ * `POST /withdrawals` va `POST /refunds/quick` — «Muzlatilganlarning puli» sahifasining
  * ikki amali: markaz hisobiga o'tkazish va o'quvchiga qaytarish.
  */
 export const FROZEN_BALANCE_ACTION_ROLES = [1, 2, 3];
