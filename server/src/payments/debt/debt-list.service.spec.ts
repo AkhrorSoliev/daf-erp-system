@@ -1,10 +1,16 @@
-import { NotFoundException } from '@nestjs/common';
+import { Logger, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Workbook } from 'exceljs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DebtAgeService } from '../../common/finance/debt-age.service';
 import { MonthlyPaymentNoticeService } from '../../billing/monthly-payment-notice.service';
 import { StatementService } from '../../statements/statement.service';
+import { allocate, headlineOf } from '../../statements/statement-analysis';
+import type {
+  StatementMonth,
+  StatementRow,
+} from '../../statements/statement.types';
+import { drawerMonths } from './debt-list.math';
 import { DebtListService } from './debt-list.service';
 import type { DebtListQueryDto } from './dto/debt-list-query.dto';
 
@@ -369,6 +375,68 @@ describe('DebtListService', () => {
       expect(statements.build).toHaveBeenCalledWith(10001, 1001);
     });
 
+    it('month lines that do not add up to «Qarz» are left out and logged (a negative month)', async () => {
+      // Made-up: March 400 000, April −100 000 (a release in a month with no
+      // lessons), May 400 000, one payment of 500 000 → balance −200 000. The
+      // statement's FIFO skips the negative month, so May alone claims 300 000.
+      const months = [
+        { key: '2026-03', cost: 400_000, items: [] },
+        { key: '2026-04', cost: -100_000, items: [] },
+        { key: '2026-05', cost: 400_000, items: [] },
+      ] as unknown as StatementMonth[];
+      const payment = {
+        day: '2026-03-10',
+        at: '2026-03-10T05:00:00.000Z',
+        amount: 500_000,
+        paymentMethod: 'CASH',
+        paymentId: 'pay-1',
+      } as StatementRow;
+      const model = {
+        months,
+        headline: headlineOf(-200_000, allocate(months, [payment], 0).unpaid),
+      };
+      expect(drawerMonths(model).map((l) => [l.month, l.left])).toEqual([
+        ['2026-05', 300_000],
+      ]);
+      statements.build.mockResolvedValue(model);
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        phone: '901112233',
+        balance: -200_000,
+        status: 'ACTIVE',
+      });
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      try {
+        expect(await service.student(1001, null, null, 10001)).toMatchObject({
+          debt: 200_000,
+          months: [],
+        });
+        expect(warn).toHaveBeenCalledWith(
+          'Debt drawer for student 10001: month lines add up to 300000, debt is 200000',
+        );
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('a failing statement blanks only the months; payment, call and promise stay', async () => {
+      statements.build.mockRejectedValue(new Error('odd ledger'));
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      try {
+        expect(await service.student(1001, null, null, 10001)).toMatchObject({
+          debt: 500_000,
+          months: [],
+          lastPayment: { amount: 400_000 },
+          promise: { state: 'open' },
+        });
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('10001'));
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
     it('a frozen student is «muzlatilgan», shown with the last group', async () => {
       prisma.student.findFirst.mockResolvedValue({
         id: 10003,
@@ -410,6 +478,22 @@ describe('DebtListService', () => {
       });
       expect(statements.build).not.toHaveBeenCalled();
     });
+
+    it('a wider ceiling that does not hold the student either: a plain 404', async () => {
+      prisma.student.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      const err = await service
+        .student(1001, [1], [1, 2], 10001)
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(NotFoundException);
+      expect((err as NotFoundException).getResponse()).not.toHaveProperty(
+        'branch',
+      );
+      expect(prisma.student.findFirst.mock.calls[1][0].where.branches).toEqual({
+        some: { branchId: { in: [1, 2] } },
+      });
+    });
   });
 
   describe('excel', () => {
@@ -432,6 +516,15 @@ describe('DebtListService', () => {
       expect(ids).toEqual(list.data.map((d) => d.studentId));
       expect(ws.getRow(ws.rowCount).getCell(1).value).toBe('Jami');
       expect(ws.getRow(ws.rowCount).getCell(7).value).toBe(550_000);
+    });
+
+    it("text cells print so'm the way the page does; amount columns stay numbers", async () => {
+      const { buffer } = await service.excel(1001, null, q({ tab: 'eski' }));
+      const wb = new Workbook();
+      await wb.xlsx.load(buffer as unknown as ArrayBuffer);
+      const row = wb.worksheets[0].getRow(2);
+      expect(row.getCell(9).value).toBe('Sentabr: 50 000');
+      expect(row.getCell(7).value).toBe(50_000);
     });
   });
 });

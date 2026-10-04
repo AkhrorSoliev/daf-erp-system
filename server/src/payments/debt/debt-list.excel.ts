@@ -2,7 +2,7 @@ import { Workbook } from 'exceljs';
 import { OUTCOME_LABEL } from '../../call-logs/call-logs.service';
 import { tashkentDateStr } from '../../common/date/tashkent';
 import type { DebtTab } from '../../reports/debt-split';
-import { dm, monthTitle } from '../../statements/statement-text';
+import { dm, monthTitle, som } from '../../statements/statement-text';
 import type { DebtListItem } from './debt-list.math';
 
 type Cell = string | number;
@@ -69,7 +69,9 @@ const col = {
     header: 'Qaysi oylardan',
     width: 30,
     value: (r) =>
-      r.months.map((m) => `${monthTitle(m.monthKey)}: ${m.amount}`).join('; '),
+      r.months
+        .map((m) => `${monthTitle(m.monthKey)}: ${som(m.amount)}`)
+        .join('; '),
   },
 } satisfies Record<string, Column>;
 const amount = (header: string): Column => ({
@@ -111,7 +113,7 @@ const COLUMNS: Record<DebtTab, Column[]> = {
       width: 18,
       value: (r) =>
         r.lastPayment
-          ? `${day(r.lastPayment.createdAt)} · ${r.lastPayment.amount}`
+          ? `${day(r.lastPayment.createdAt)} · ${som(r.lastPayment.amount)}`
           : '',
     },
     col.promise,
