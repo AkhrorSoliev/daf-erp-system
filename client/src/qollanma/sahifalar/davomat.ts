@@ -38,7 +38,7 @@ export const davomat: QollanmaSahifa[] = [
       "dars tugagan",
       "kechikish daqiqasi",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-04",
   },
   {
     bolim: "davomat",
@@ -69,7 +69,7 @@ export const davomat: QollanmaSahifa[] = [
       "darsga kirish uchun eng kam to'lov",
       "shu oy ustuni",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-04",
   },
   {
     bolim: "davomat",

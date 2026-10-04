@@ -104,6 +104,128 @@ describe("admissionCopy", () => {
   });
 });
 
+describe("admissionCopy with the server's reach", () => {
+  // October at #069: 13 lessons, 417 857 charged.
+  const reach = (over: object = {}) => ({
+    lessons: 13,
+    paidLessons: 10,
+    lastPaid: "2026-10-24",
+    monthCharged: 417857,
+    monthPaid: 337500,
+    next: { date: "2026-10-27", needed: 15715 },
+    ...over,
+  });
+  const label = (admission: object, isAdmin = true) =>
+    admissionCopy(admission as never, isAdmin).label;
+
+  it("a first lesson names how far the money reaches", () => {
+    expect(
+      label({
+        admitted: true,
+        reason: "FIRST_LESSON",
+        shortfall: 0,
+        paidThrough: "2026-10-24",
+        reach: reach(),
+      }),
+    ).toBe("Qisman to'lagan · 13 darsdan 10 tasi · 24.10 gacha");
+  });
+
+  it("a later lesson counts the lessons too", () => {
+    expect(
+      label({
+        admitted: true,
+        reason: "PAID",
+        shortfall: 0,
+        paidThrough: "2026-10-24",
+        reach: reach(),
+      }),
+    ).toBe("Qisman to'lagan · 13 darsdan 10 tasi · 24.10 gacha");
+  });
+
+  describe("a first lesson the money does not pass", () => {
+    const unpaidFirst = {
+      admitted: true,
+      reason: "FIRST_LESSON" as const,
+      shortfall: 0,
+      paidThrough: null,
+      reach: reach({
+        paidLessons: 0,
+        lastPaid: null,
+        monthPaid: 0,
+        next: { date: "2026-10-05", needed: 213000 },
+      }),
+    };
+
+    it("tells the admin what the next lesson needs", () => {
+      expect(label(unpaidFirst)).toBe(
+        `1-dars to'lovsiz · keyingi dars (05.10) uchun kamida ${formatPrice(213000)} so'm kerak`,
+      );
+    });
+
+    it("gives the teacher no amount", () => {
+      expect(label(unpaidFirst, false)).toBe(
+        "1-dars to'lovsiz · keyingi darsdan to'lov kerak",
+      );
+    });
+  });
+
+  it("says nothing once the month is paid, a later month owed or not", () => {
+    expect(
+      label({
+        admitted: true,
+        reason: "PAID",
+        shortfall: 0,
+        paidThrough: "2026-10-31",
+        reach: reach({ paidLessons: 13, next: null }),
+      }),
+    ).toBeNull();
+  });
+
+  describe("a blocked student is labelled by what he paid", () => {
+    const blockedWith = (reason: string, over: object) => ({
+      admitted: false,
+      reason,
+      shortfall: 125000,
+      paidThrough: null,
+      minPaidPercent: reason === "BELOW_MIN_SHARE" ? 50 : undefined,
+      reach: reach(over),
+    });
+
+    it("nothing paid reads «not paid», whichever rule keeps him out", () => {
+      for (const reason of ["NOT_PAID", "BELOW_MIN_SHARE"]) {
+        expect(label(blockedWith(reason, { monthPaid: 0 }))).toBe(
+          "To'lov qilinmagan · darsga qo'yilmaydi",
+        );
+      }
+    });
+
+    it("short of the least share names the share paid, rounded down", () => {
+      expect(
+        label(
+          blockedWith("BELOW_MIN_SHARE", {
+            monthCharged: 450000,
+            monthPaid: 223000, // 49.6%
+          }),
+        ),
+      ).toBe("Oyning 49% i to'langan · kamida 50% kerak · darsga qo'yilmaydi");
+    });
+
+    it("a part payer the lessons outran names how far the money went", () => {
+      expect(
+        label(
+          blockedWith("NOT_PAID", {
+            monthPaid: 180000,
+            lastPaid: "2026-10-12",
+          }),
+        ),
+      ).toBe("Qisman to'lagan · puli 12.10 gacha yetdi · darsga qo'yilmaydi");
+      expect(
+        label(blockedWith("NOT_PAID", { monthPaid: 16670, lastPaid: null })),
+      ).toBe("Qisman to'lagan · darsga qo'yilmaydi");
+    });
+  });
+});
+
 describe("markableStudents", () => {
   const paid = {
     admitted: true,

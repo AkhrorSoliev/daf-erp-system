@@ -7,6 +7,7 @@ import {
   lessonAdmission,
   monthReach,
   paymentReach,
+  withoutReachForPastLesson,
   type AdmissionCharge,
   type CoverageCharge,
 } from './lesson-admission';
@@ -65,6 +66,14 @@ describe('lessonAdmission', () => {
       reason: 'FIRST_LESSON',
       shortfall: 0,
       paidThrough: null,
+      reach: {
+        lessons: 13,
+        paidLessons: 0,
+        lastPaid: null,
+        monthCharged: 450000,
+        monthPaid: 0,
+        next: { date: '2026-10-05', needed: 450000 - 11 * 34615 },
+      },
     });
   });
 
@@ -74,6 +83,7 @@ describe('lessonAdmission', () => {
       reason: 'NOT_PAID',
       shortfall: 450000 - 11 * 34615,
       paidThrough: null,
+      reach: expect.objectContaining({ paidLessons: 0, monthPaid: 0 }),
     });
   });
 
@@ -84,6 +94,10 @@ describe('lessonAdmission', () => {
       reason: 'PAID',
       shortfall: 0,
       paidThrough: '2026-10-05',
+      reach: expect.objectContaining({
+        paidLessons: 2,
+        lastPaid: '2026-10-05',
+      }),
     });
   });
 
@@ -97,6 +111,14 @@ describe('lessonAdmission', () => {
       reason: 'PAID',
       shortfall: 0,
       paidThrough: '2026-10-09',
+      reach: {
+        lessons: 13,
+        paidLessons: 4,
+        lastPaid: '2026-10-09',
+        monthCharged: 450000,
+        monthPaid: 150000,
+        next: { date: '2026-10-12', needed: 300000 - 8 * 34615 },
+      },
     });
   });
 
@@ -262,6 +284,7 @@ describe('lessonAdmission — at least half of the month (ADR-0064)', () => {
       shortfall: 225000,
       paidThrough: null,
       minPaidPercent: 50,
+      reach: expect.objectContaining({ monthPaid: 0 }),
     });
   });
 
@@ -279,6 +302,7 @@ describe('lessonAdmission — at least half of the month (ADR-0064)', () => {
       reason: 'PAID',
       shortfall: 0,
       paidThrough: '2026-11-13',
+      reach: expect.objectContaining({ paidLessons: 6, monthPaid: 225000 }),
     });
     // The 7th lesson needs what the six after it do not hold: the old reach rule again.
     expect(admit50(-225000, '2026-11-16')).toMatchObject({
@@ -434,6 +458,100 @@ describe('lessonAdmission — at least half of the month (ADR-0064)', () => {
         next: { date: NOV[8], minPaidPercent: null },
       });
     });
+  });
+});
+
+describe('lessonAdmission — what the register row says', () => {
+  it('a first lesson names how far a part payment reaches', () => {
+    // 150 000 paid: the first lesson is free, the money reaches 09.10.
+    expect(admit(-300000, '2026-10-02')).toMatchObject({
+      reason: 'FIRST_LESSON',
+      paidThrough: '2026-10-09',
+      reach: { lessons: 13, paidLessons: 4, monthPaid: 150000 },
+    });
+  });
+
+  it('a first lesson paid in full says nothing is owed', () => {
+    expect(admit(0, '2026-10-02')).toMatchObject({
+      paidThrough: null,
+      reach: { paidLessons: 13, lastPaid: '2026-10-30', next: null },
+    });
+  });
+
+  it('a part payer kept out late in the month keeps what he paid', () => {
+    // 180 000 paid (40%): it reaches five lessons, the sixth is refused as
+    // NOT_PAID — the row must not read «nothing paid».
+    expect(admit(-270000, '2026-10-14')).toMatchObject({
+      admitted: false,
+      reason: 'NOT_PAID',
+      reach: { paidLessons: 5, lastPaid: '2026-10-12', monthPaid: 180000 },
+    });
+  });
+
+  it('older debt is settled first: nothing of this month is paid', () => {
+    expect(admit(-550000, '2026-10-05').reach?.monthPaid).toBe(0);
+  });
+
+  it("a month covered while a later month is owed reaches the month's end", () => {
+    const nov: AdmissionCharge = {
+      ...g005,
+      coveredDates: OCT.map((d) => d.replace('-10-', '-11-')),
+    };
+    const verdict = lessonAdmission({
+      lessonDay: '2026-10-05',
+      groupId: 'g005',
+      balance: -450000,
+      charges: [g005],
+      laterCharges: [nov],
+    });
+    expect(verdict.reach).toMatchObject({
+      paidLessons: 13,
+      monthPaid: 450000,
+      next: null,
+    });
+  });
+
+  it('from 01.11 a student who paid nothing is kept out with nothing paid', () => {
+    // BELOW_MIN_SHARE is the reason, but the row must say «not paid».
+    expect(admit50(-450000, '2026-11-04').reach?.monthPaid).toBe(0);
+    expect(admit50(-350000, '2026-11-04').reach?.monthPaid).toBe(100000);
+  });
+
+  it("a transfer's month is the old charge's share plus the new charge", () => {
+    const moved = {
+      ...nov005,
+      coveredDates: NOV.slice(6),
+      chargedAmount: 242305,
+    };
+    const verdict = lessonAdmission({
+      lessonDay: NOV[7],
+      groupId: 'g005',
+      balance: 300000 - 450000,
+      charges: [moved],
+      minPaidPercent: 50,
+      closedThisMonth: 6 * 34615,
+    });
+    expect(verdict.reach).toMatchObject({
+      monthCharged: 6 * 34615 + 242305,
+      monthPaid: 6 * 34615 + 242305 - 150000,
+    });
+  });
+});
+
+describe('withoutReachForPastLesson', () => {
+  it("drops an admitted student's reach and date", () => {
+    const past = withoutReachForPastLesson(admit(-300000, '2026-10-05'));
+    expect(past).toEqual({
+      admitted: true,
+      reason: 'PAID',
+      shortfall: 0,
+      paidThrough: null,
+    });
+  });
+
+  it('keeps a blocked student as he is', () => {
+    const blocked = admit(-450000, '2026-10-05');
+    expect(withoutReachForPastLesson(blocked)).toBe(blocked);
   });
 });
 

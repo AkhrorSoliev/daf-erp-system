@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-04",
+    sarlavha: "Davomatda puli qaysi darsgacha yetishi 1-darsdan ko'rinadi",
+    matn: "Oylik kursda oyni to'liq to'lamagan o'quvchining davomat qatorida endi oyning 1-darsida ham puli oyning nechta darsiga va qaysi kungacha yetishi yoziladi: «Qisman to'lagan · 12 darsdan 5 tasi · 14.10 gacha». 1-darsga to'lovsiz kelgan, puli keyingi darsga yetmaydigan o'quvchida «1-dars to'lovsiz · keyingi darsdan to'lov kerak» chiqadi, administrator keyingi dars uchun kerakli summani ham ko'radi. Darsga qo'yilmagan o'quvchining yozuvi endi u shu oy uchun qancha to'laganini aytadi: hech narsa to'lamagan bo'lsa — «To'lov qilinmagan», qisman to'lagan bo'lsa — «Qisman to'lagan · puli 08.10 gacha yetdi» yoki (01.11.2026 dan) «Oyning 22% i to'langan · kamida 50% kerak». Ilgari 1-darsda hech narsa yozilmasdi, qisman to'lagan o'quvchiga ham «To'lov qilinmagan» deb yozilardi. O'tgan kunning davomatida «… gacha» yozuvi chiqmaydi.",
+    rollar: [1, 2, 3, 4],
+    sahifa: { bolim: "davomat", sahifa: "darsga-qoyish" },
+  },
+  {
     sana: "2026-10-03",
     sarlavha: "O'quvchi zaxira raqami bilan ham kiradi",
     matn: "O'quvchi kartasiga «Zaxira raqam» yozish mumkin: yangi o'quvchi oynasida yoki kartadagi «Tahrirlash» → «Qo'shimcha ma'lumotlar» da. O'quvchi o'quvchi portaliga shu raqam bilan ham kiradi: parol bilan yoki «Telegram orqali kirish» tugmasi bilan. Bir raqam faqat bitta o'quvchida turadi, boshqa o'quvchidagi raqam saqlanmaydi. Kartada endi barcha raqamlar nomi bilan chiqadi: «Asosiy», «Zaxira», «Ota-ona». Parolni tiklash uchun SMS kod faqat asosiy raqamga boradi.",
