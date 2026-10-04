@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
+import { invalidateDebt } from "./debt/debt-queries";
 import {
   MONTHLY_PAYMENT_EXPLANATION,
   buildQuickAmounts,
@@ -262,7 +263,8 @@ export function RecordPaymentDialog({
       onOpenChange(false);
       resetForm();
       onSuccess?.();
-      queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
+      // Every debt figure (the debt page's list and drawer, the overview) moves with a payment.
+      invalidateDebt(queryClient);
       queryClient.invalidateQueries({ queryKey: ["recent-payments"] });
       queryClient.invalidateQueries({ queryKey: ["student-payments"] });
     } catch (err: unknown) {

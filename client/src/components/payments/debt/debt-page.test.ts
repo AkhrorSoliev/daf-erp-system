@@ -97,6 +97,15 @@ describe("DebtPage — the Shu oy tab", () => {
     expect(render("tab=eski")).not.toContain("guruhdan chiqqanlarning");
   });
 
+  it("an empty tab says so plainly; only a filtered one suggests widening the filter", () => {
+    const empty = { ...RESPONSE, data: [], total: 0, sum: 0 };
+    const plain = render("", empty);
+    expect(plain).toContain("Bu bo'limda qarzdor yo'q");
+    expect(plain).not.toContain("qidiruvni tozalab");
+    expect(render("search=ali", empty)).toContain("Hech kim topilmadi — qidiruvni tozalab yoki filtrni kengaytirib ko'ring");
+    expect(render("tab=eski&kind=frozen", empty)).toContain("Bu bo'limda qarzdor yo'q");
+  });
+
   it("«Jami» without a filter, «Topildi» with one", () => {
     expect(render()).toContain(`Jami: ${money(1_350_000)} · ${num(4)} ta`);
     expect(render("search=ali")).toContain(`Topildi: 1 ta · ${money(1_350_000)}`);

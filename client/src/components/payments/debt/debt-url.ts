@@ -20,19 +20,49 @@ export interface DebtFilters {
   promise: string; sort: string; page: number; pageSize: number;
 }
 
-export const readDebtFilters = (search: string) => readFilters(DEBT_LIST_SCHEMA, new URLSearchParams(search)) as unknown as DebtFilters;
-
 export const activeTab = (f: Pick<DebtFilters, "tab">): DebtTab =>
   (DEBT_TABS as readonly string[]).includes(f.tab) ? (f.tab as DebtTab) : "shu-oy";
 
-/** Any list filter set — sort and paging are not filters (spec §2.4 «Topildi»). */
-export const hasDebtFilter = (f: DebtFilters) => Boolean(f.search || f.kind || f.groupIds.length || f.teacherIds.length || f.promise);
+// The server's own lists (`dto/debt-list-query.dto.ts`); PAGE_SIZES are the pager's choices.
+const KINDS = ["ungrouped", "frozen", "left"];
+const PROMISES = ["open", "broken", "none"];
+const SORTS = ["debt", "oldest", "broken", "name"];
+const PAGE_SIZES = [10, 20, 30, 40, 50];
+const oneOf = (v: string, allowed: string[], fallback: string) => (allowed.includes(v) ? v : fallback);
 
-/** `GET /payments/debt/list` / `excel` query: the URL's own names. */
-export function debtListParams(f: DebtFilters) {
+/**
+ * The URL with every value the server would refuse replaced by its default, so
+ * an old bookmark (`?sort=debt_low`, `?page=0`) opens the list instead of a 400.
+ */
+export function cleanDebtFilters(f: DebtFilters): DebtFilters {
   const tab = activeTab(f);
   return {
-    tab, search: f.search || undefined, kind: tab === "chiqqan" && f.kind ? f.kind : undefined,
+    tab,
+    search: f.search.slice(0, 100),
+    kind: tab === "chiqqan" ? oneOf(f.kind, KINDS, "") : "",
+    groupIds: f.groupIds,
+    teacherIds: f.teacherIds.filter((id) => /^\d+$/.test(id)),
+    promise: oneOf(f.promise, PROMISES, ""),
+    sort: oneOf(f.sort, SORTS, "debt"),
+    page: Number.isInteger(f.page) && f.page >= 1 ? f.page : 1,
+    pageSize: PAGE_SIZES.includes(f.pageSize) ? f.pageSize : 20,
+  };
+}
+
+export const readDebtFilters = (search: string) =>
+  cleanDebtFilters(readFilters(DEBT_LIST_SCHEMA, new URLSearchParams(search)) as unknown as DebtFilters);
+
+/** Any list filter set — sort and paging are not filters (spec §2.4 «Topildi»); kind counts only in O'qimayotganlar. */
+export function hasDebtFilter(filters: DebtFilters) {
+  const f = cleanDebtFilters(filters);
+  return Boolean(f.search || f.kind || f.groupIds.length || f.teacherIds.length || f.promise);
+}
+
+/** `GET /payments/debt/list` / `excel` query: the URL's own names. */
+export function debtListParams(filters: DebtFilters) {
+  const f = cleanDebtFilters(filters);
+  return {
+    tab: f.tab as DebtTab, search: f.search || undefined, kind: f.kind || undefined,
     groupIds: listParam(f.groupIds), teacherIds: listParam(f.teacherIds), promise: f.promise || undefined,
     sort: f.sort, page: f.page, pageSize: f.pageSize,
   };

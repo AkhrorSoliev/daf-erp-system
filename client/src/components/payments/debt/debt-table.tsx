@@ -73,10 +73,12 @@ function DueCellView({ due, today }: { due: string | null; today: string }) {
   return c.overdue ? <Pill tone="red">{c.text}</Pill> : <span>{c.text}</span>;
 }
 
-export function DebtTable({ tab, rows, loading, offset, today, onOpen, onPay }: {
+export function DebtTable({ tab, rows, loading, filtered, offset, today, onOpen, onPay }: {
   tab: DebtTab;
   rows: DebtListItem[] | undefined;
   loading: boolean;
+  /** A list filter is set: the empty state then suggests widening it. */
+  filtered: boolean;
   /** (page − 1) × pageSize, for the `#` column. */
   offset: number;
   today: string;
@@ -85,7 +87,11 @@ export function DebtTable({ tab, rows, loading, offset, today, onOpen, onPay }: 
 }) {
   if (loading) return <div className="space-y-2">{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-12 rounded" />)}</div>;
   if (!rows?.length) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">Hech kim topilmadi — qidiruvni tozalab yoki filtrni kengaytirib ko&apos;ring</p>;
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        {filtered ? "Hech kim topilmadi — qidiruvni tozalab yoki filtrni kengaytirib ko'ring" : "Bu bo'limda qarzdor yo'q"}
+      </p>
+    );
   }
   return (
     <div className="rounded-md border">

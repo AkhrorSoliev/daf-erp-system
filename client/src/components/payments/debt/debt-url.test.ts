@@ -38,4 +38,21 @@ describe("the URL state and the request", () => {
     expect(hasDebtFilter(readDebtFilters("groupIds=g1"))).toBe(true);
     expect(hasDebtFilter(readDebtFilters("promise=none"))).toBe(true);
   });
+
+  it("the kind is a filter only in O'qimayotganlar", () => {
+    expect(hasDebtFilter(readDebtFilters("tab=eski&kind=frozen"))).toBe(false);
+    expect(hasDebtFilter(readDebtFilters("tab=chiqqan&kind=frozen"))).toBe(true);
+  });
+
+  it("a value the server would refuse falls back to its default, so an old bookmark still opens", () => {
+    expect(debtListParams(readDebtFilters("sort=debt_low&promise=overdue&page=0&pageSize=7"))).toMatchObject({
+      sort: "debt", promise: undefined, page: 1, pageSize: 20,
+    });
+    expect(debtListParams(readDebtFilters("page=-3")).page).toBe(1);
+    expect(debtListParams(readDebtFilters("page=abc")).page).toBe(1);
+    expect(debtListParams(readDebtFilters("page=4&pageSize=50"))).toMatchObject({ page: 4, pageSize: 50 });
+    expect(debtListParams(readDebtFilters("tab=chiqqan&kind=xyz")).kind).toBeUndefined();
+    expect(debtListParams(readDebtFilters("teacherIds=abc,20001")).teacherIds).toBe("20001");
+    expect(debtListParams(readDebtFilters(`search=${"a".repeat(150)}`)).search).toHaveLength(100);
+  });
 });

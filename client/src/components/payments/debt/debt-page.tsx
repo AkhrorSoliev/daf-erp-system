@@ -3,7 +3,6 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, Clock, Download } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { TablePagination } from "@/components/outreach/table-pagination";
@@ -16,9 +15,9 @@ import { cn } from "@/lib/utils";
 import { RecordPaymentDialog } from "../record-payment-dialog";
 import { DebtFilterBar } from "./debt-filter-bar";
 import { dayMonth, KIND_LABEL, sumLine, TAB_LABEL, tabRule, tabSubline } from "./debt-format";
-import { invalidateDebt, useDebtList } from "./debt-queries";
+import { useDebtList } from "./debt-queries";
 import { DebtTable } from "./debt-table";
-import { activeTab, DEBT_LIST_SCHEMA, debtListParams, hasDebtFilter, type DebtFilters } from "./debt-url";
+import { activeTab, cleanDebtFilters, DEBT_LIST_SCHEMA, debtListParams, hasDebtFilter, type DebtFilters } from "./debt-url";
 import { DEBT_TABS, type DebtKind, type DebtListResponse, type DebtTab, type PayTarget } from "./debt-types";
 
 const TAB_DOT: Record<DebtTab, string> = { "shu-oy": "bg-amber-500", eski: "bg-red-500", chiqqan: "bg-muted-foreground" };
@@ -31,10 +30,10 @@ const KINDS: ("" | DebtKind)[] = ["", "ungrouped", "frozen", "left"];
  */
 export function DebtPage() {
   const { filters: raw, setFilters } = useUrlFilters(DEBT_LIST_SCHEMA);
-  const filters = raw as DebtFilters;
+  // A value the server would refuse (an old bookmark) is read as its default.
+  const filters = cleanDebtFilters(raw as DebtFilters);
   const tab = activeTab(filters);
-  const qc = useQueryClient();
-  const { data, isPending, isError, refetch } = useDebtList(filters);
+  const { data, isPending, isPlaceholderData, isError, refetch } = useDebtList(filters);
   const [payTarget, setPayTarget] = useState<PayTarget | null>(null);
   const today = tashkentNow().dateStr;
   const monthKey = today.slice(0, 7);
@@ -94,8 +93,11 @@ export function DebtPage() {
           <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>Qayta urinish</Button>
         </div>
       ) : (
-        <DebtTable tab={tab} rows={data?.data} loading={isPending} offset={(filters.page - 1) * filters.pageSize} today={today}
-          onPay={(r) => setPayTarget({ id: r.studentId, firstName: r.firstName, lastName: r.lastName, balance: -r.debt, suggested: r.debt })} />
+        // The previous page stays dimmed and inert until the next one answers.
+        <div aria-busy={isPlaceholderData} className={cn(isPlaceholderData && "pointer-events-none opacity-60")}>
+          <DebtTable tab={tab} rows={data?.data} loading={isPending} filtered={hasDebtFilter(filters)} offset={(filters.page - 1) * filters.pageSize} today={today}
+            onPay={(r) => setPayTarget({ id: r.studentId, firstName: r.firstName, lastName: r.lastName, balance: -r.debt, suggested: r.debt })} />
+        </div>
       )}
 
       {data && data.total > 0 && (
@@ -113,7 +115,7 @@ export function DebtPage() {
       </div>
 
       <RecordPaymentDialog open={payTarget !== null} onOpenChange={(open) => !open && setPayTarget(null)}
-        preSelectedStudent={payTarget} suggestedAmount={payTarget?.suggested} onSuccess={() => invalidateDebt(qc)} />
+        preSelectedStudent={payTarget} suggestedAmount={payTarget?.suggested} />
     </div>
   );
 }

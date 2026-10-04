@@ -21,6 +21,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { invalidateDebt } from "@/components/payments/debt/debt-queries";
 import {
   CALL_OUTCOME_INFO,
   type CallLogsResponse,
@@ -144,11 +145,11 @@ function CallForm({
             ? "Qo'ng'iroq qayd qilindi, keyingi bog'lanish sanasi belgilandi"
             : "Qo'ng'iroq qayd qilindi",
       );
-      // Prefix-invalidate every outreach list + stats, plus the history tab and
-      // the debtors page (a payment promise may have been created/updated).
+      // Prefix-invalidate every outreach list + stats, the history tab and every
+      // debt figure: the debt page's last call and promise may have changed.
       queryClient.invalidateQueries({ queryKey: ["outreach"] });
       queryClient.invalidateQueries({ queryKey: ["call-logs"] });
-      queryClient.invalidateQueries({ queryKey: ["debtors"] });
+      invalidateDebt(queryClient);
       onSuccess();
     },
     onError: (error) =>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, type QueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, type QueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { debtListParams, type DebtFilters } from "./debt-url";
@@ -14,6 +14,8 @@ export function useDebtList(f: DebtFilters) {
   return useQuery({
     queryKey: debtListKey(selectedBranch?.id, params),
     queryFn: () => api.get<DebtListResponse>("/payments/debt/list", { params }).then((r) => r.data),
+    // Totals, chips, options and the pager stay on screen while the next page or filter loads.
+    placeholderData: keepPreviousData,
   });
 }
 
