@@ -26,7 +26,11 @@ describe('DebtListController — role guards', () => {
     controller = module.get(DebtListController);
   });
 
-  const handlers = () => [controller.list];
+  const handlers = () => [
+    controller.list,
+    controller.student,
+    controller.excel,
+  ];
   const ctx = (roles: string[]) =>
     ({
       getHandler: () => controller.list,
@@ -59,5 +63,21 @@ describe('DebtListController — role guards', () => {
   it('list passes the resolved scope', async () => {
     await controller.list({ tab: 'eski' } as never, 1001, [4]);
     expect(debts.list).toHaveBeenCalledWith(1001, [4], { tab: 'eski' });
+  });
+
+  it('the drawer gets the scope and the ceiling', async () => {
+    await controller.student(10001, 1001, [4], [4, 5]);
+    expect(debts.student).toHaveBeenCalledWith(1001, [4], [4, 5], 10001);
+  });
+
+  it('the Excel is an xlsx attachment named by the service', async () => {
+    const res = { setHeader: jest.fn(), end: jest.fn() };
+    await controller.excel({ tab: 'eski' } as never, 1001, null, res as never);
+    expect(debts.excel).toHaveBeenCalledWith(1001, null, { tab: 'eski' });
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'Content-Disposition',
+      'attachment; filename="f.xlsx"',
+    );
+    expect(res.end).toHaveBeenCalledWith(Buffer.from('x'));
   });
 });

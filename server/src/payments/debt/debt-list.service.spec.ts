@@ -1,4 +1,6 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { Workbook } from 'exceljs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DebtAgeService } from '../../common/finance/debt-age.service';
 import { MonthlyPaymentNoticeService } from '../../billing/monthly-payment-notice.service';
@@ -271,6 +273,165 @@ describe('DebtListService', () => {
       });
       expect(none.tabs['shu-oy']).toEqual({ total: 0, count: 0 });
       expect(prisma.enrollment.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('student (the drawer)', () => {
+    const MODEL = {
+      asOf: '2026-10-14',
+      months: [
+        { key: '2026-09', cost: 450_000 },
+        { key: '2026-10', cost: 450_000 },
+      ],
+      allocations: [
+        {
+          kind: 'payment',
+          to: [{ due: { kind: 'month', month: '2026-09' }, amount: 400_000 }],
+        },
+      ],
+      headline: {
+        kind: 'debt',
+        amount: 500_000,
+        unpaid: [
+          { due: { kind: 'month', month: '2026-10' }, amount: 450_000 },
+          { due: { kind: 'month', month: '2026-09' }, amount: 50_000 },
+        ],
+      },
+    };
+    beforeEach(() => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        phone: '901112233',
+        balance: -500_000,
+        status: 'ACTIVE',
+      });
+      prisma.payment.findFirst.mockResolvedValue({
+        createdAt: new Date('2026-09-20T09:00:00Z'),
+        amount: 400_000,
+        method: 'CASH',
+      });
+      prisma.callLog.findFirst.mockResolvedValue(null);
+      prisma.paymentPromise.findFirst.mockResolvedValue({
+        status: 'OPEN',
+        promiseDate: new Date('2026-10-17T18:00:00Z'),
+        promisedAmount: 500_000,
+      });
+      statements.build.mockResolvedValue(MODEL);
+    });
+
+    it('reads the debt, the months from the statement allocation, the last payment and the promise', async () => {
+      expect(await service.student(1001, null, null, 10001)).toEqual({
+        student: {
+          id: 10001,
+          firstName: 'Ali',
+          lastName: 'Valiyev',
+          phone: '901112233',
+        },
+        kind: null,
+        groups: [
+          {
+            id: 'g1',
+            name: 'A1-01',
+            teachers: [{ id: 20001, name: 'Olim Karimov' }],
+          },
+        ],
+        debt: 500_000,
+        months: [
+          {
+            month: '2026-09',
+            label: null,
+            charged: 450_000,
+            paid: 400_000,
+            left: 50_000,
+          },
+          {
+            month: '2026-10',
+            label: null,
+            charged: 450_000,
+            paid: 0,
+            left: 450_000,
+          },
+        ],
+        lastPayment: {
+          createdAt: '2026-09-20T09:00:00.000Z',
+          amount: 400_000,
+          method: 'CASH',
+        },
+        lastCall: null,
+        promise: {
+          state: 'open',
+          promiseDate: '2026-10-17',
+          promisedAmount: 500_000,
+        },
+      });
+      expect(statements.build).toHaveBeenCalledWith(10001, 1001);
+    });
+
+    it('a frozen student is «muzlatilgan», shown with the last group', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10003,
+        firstName: 'Sobir',
+        lastName: 'Karimov',
+        phone: null,
+        balance: -300_000,
+        status: 'FROZEN',
+      });
+      expect(await service.student(1001, null, null, 10003)).toMatchObject({
+        kind: 'frozen',
+        groups: [expect.objectContaining({ id: 'g1' })],
+        debt: 300_000,
+      });
+    });
+
+    it("another branch's student is a 404 — named when the caller works there too (ADR-0063)", async () => {
+      prisma.student.findFirst.mockResolvedValueOnce(null);
+      await expect(service.student(1001, [1], [1], 10001)).rejects.toThrow(
+        "O'quvchi topilmadi",
+      );
+      expect(prisma.student.findFirst.mock.calls[0][0].where).toMatchObject({
+        id: 10001,
+        companyId: 1001,
+        deletedAt: null,
+        branches: { some: { branchId: { in: [1] } } },
+      });
+      prisma.student.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          branches: [{ branch: { id: 2, name: 'Ikkinchi filial' } }],
+        });
+      const err = await service
+        .student(1001, [1], [1, 2], 10001)
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(NotFoundException);
+      expect((err as NotFoundException).getResponse()).toMatchObject({
+        branch: { id: 2, name: 'Ikkinchi filial' },
+      });
+      expect(statements.build).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('excel', () => {
+    it('writes the same rows as the list, every page, plus a «Jami» row', async () => {
+      const list = await service.list(1001, null, q({ pageSize: 100 }));
+      const { buffer, filename } = await service.excel(
+        1001,
+        null,
+        q({ pageSize: 1 }),
+      );
+      expect(filename).toBe('qarzdorlik-shu-oy-2026-10-14.xlsx');
+      const wb = new Workbook();
+      await wb.xlsx.load(buffer as unknown as ArrayBuffer);
+      const ws = wb.worksheets[0];
+      expect(ws.name).toBe('Shu oy');
+      expect(ws.getRow(1).getCell(7).value).toBe('Qarz');
+      const ids: unknown[] = [];
+      for (let r = 2; r < ws.rowCount; r++)
+        ids.push(ws.getRow(r).getCell(2).value);
+      expect(ids).toEqual(list.data.map((d) => d.studentId));
+      expect(ws.getRow(ws.rowCount).getCell(1).value).toBe('Jami');
+      expect(ws.getRow(ws.rowCount).getCell(7).value).toBe(550_000);
     });
   });
 });

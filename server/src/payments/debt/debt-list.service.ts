@@ -1,19 +1,30 @@
-import { Injectable } from '@nestjs/common';
-import { PaymentStatus, Prisma, TransactionType } from '@prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  PaymentStatus,
+  Prisma,
+  StudentStatus,
+  TransactionType,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DebtAgeService } from '../../common/finance/debt-age.service';
 import {
   branchIdWhere,
+  studentBranchWhere,
   type ReportBranchIds,
 } from '../../common/finance/report-branch-scope';
 import { tashkentDateStr, tashkentMonthKey } from '../../common/date/tashkent';
 import { MonthlyPaymentNoticeService } from '../../billing/monthly-payment-notice.service';
 import {
+  debtKindOf,
   debtTabAmount,
   loadDebtRows,
   type DebtTab,
 } from '../../reports/debt-split';
+import { ceilingIsWider, inOtherBranch } from '../../common/auth/other-branch';
+import { StatementService } from '../../statements/statement.service';
+import { debtListWorkbook } from './debt-list.excel';
 import {
+  drawerMonths,
   filterDebtRows,
   filterOptions,
   groupsOf,
@@ -21,6 +32,7 @@ import {
   sortDebtRows,
   tabTotals,
   toListRow,
+  type DebtDrawer,
   type DebtListItem,
   type DebtListResponse,
   type DebtListRow,
@@ -59,6 +71,7 @@ export class DebtListService {
     private prisma: PrismaService,
     private debtAge: DebtAgeService,
     private notices: MonthlyPaymentNoticeService,
+    private statements: StatementService,
   ) {}
 
   async list(
@@ -103,6 +116,139 @@ export class DebtListService {
       options,
       writeOffCount,
     };
+  }
+
+  /**
+   * The drawer (spec §2.5). One read open to every role of the page — the
+   * statement endpoints refuse Cashier. Its months are the statement model's
+   * own allocation (`drawerMonths`), never a new calculation.
+   */
+  async student(
+    companyId: number,
+    scope: ReportBranchIds,
+    ceiling: ReportBranchIds,
+    id: number,
+  ): Promise<DebtDrawer> {
+    const student = await this.prisma.student.findFirst({
+      where: { id, companyId, deletedAt: null, ...studentBranchWhere(scope) },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        balance: true,
+        status: true,
+      },
+    });
+    if (!student) throw await this.notFound(companyId, id, scope, ceiling);
+    const latest = { orderBy: { createdAt: 'desc' as const } };
+    const [enrollments, model, payment, call, promise] = await Promise.all([
+      this.prisma.enrollment.findMany({
+        where: { studentId: id, deletedAt: null },
+        ...latest,
+        select: ENROLLMENT_SELECT,
+      }),
+      this.statements.build(id, companyId),
+      this.prisma.payment.findFirst({
+        where: { companyId, studentId: id, status: PaymentStatus.COMPLETED },
+        ...latest,
+        select: { createdAt: true, amount: true, method: true },
+      }),
+      this.prisma.callLog.findFirst({
+        where: { companyId, studentId: id },
+        ...latest,
+        select: {
+          createdAt: true,
+          outcome: true,
+          note: true,
+          calledBy: { select: { firstName: true, lastName: true } },
+        },
+      }),
+      this.prisma.paymentPromise.findFirst({
+        where: { companyId, studentId: id },
+        ...latest,
+        select: { status: true, promiseDate: true, promisedAmount: true },
+      }),
+    ]);
+    // The split's rule on one card: studying = ACTIVE with a live active group.
+    const studying =
+      student.status === StudentStatus.ACTIVE &&
+      groupsOf(null, enrollments).length > 0;
+    const kind = studying ? null : debtKindOf(student.status);
+    return {
+      student: {
+        id: student.id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        phone: student.phone,
+      },
+      kind,
+      groups: groupsOf(kind, enrollments),
+      debt: Math.max(0, -student.balance),
+      months: drawerMonths(model),
+      lastPayment: payment
+        ? {
+            createdAt: payment.createdAt.toISOString(),
+            amount: payment.amount,
+            method: payment.method,
+          }
+        : null,
+      lastCall: call
+        ? {
+            createdAt: call.createdAt.toISOString(),
+            outcome: call.outcome,
+            note: call.note,
+            calledByName:
+              `${call.calledBy.firstName} ${call.calledBy.lastName}`.trim(),
+          }
+        : null,
+      promise: promiseCell(promise, tashkentDateStr(new Date())),
+    };
+  }
+
+  /** The open tab with its filters, every page, as xlsx (spec §2.7). */
+  async excel(
+    companyId: number,
+    scope: ReportBranchIds,
+    q: DebtListQueryDto,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const now = new Date();
+    const { rows } = await this.tabRows(companyId, scope, q, now);
+    const items = await this.withPageFacts(companyId, rows, q.tab, now);
+    return {
+      buffer: await debtListWorkbook(q.tab, items),
+      filename: `qarzdorlik-${q.tab}-${tashkentDateStr(now)}.xlsx`,
+    };
+  }
+
+  /** ADR-0063: a student of another branch the caller works in is named, not «missing». */
+  private async notFound(
+    companyId: number,
+    id: number,
+    scope: ReportBranchIds,
+    ceiling: ReportBranchIds,
+  ): Promise<NotFoundException> {
+    if (ceilingIsWider(scope, ceiling)) {
+      const elsewhere = await this.prisma.student.findFirst({
+        where: {
+          id,
+          companyId,
+          deletedAt: null,
+          ...studentBranchWhere(ceiling),
+        },
+        select: {
+          branches: {
+            where: ceiling === null ? {} : { branchId: { in: ceiling } },
+            select: { branch: { select: { id: true, name: true } } },
+            orderBy: { branchId: 'asc' },
+            take: 1,
+          },
+        },
+      });
+      const branch = elsewhere?.branches[0]?.branch;
+      if (branch) return inOtherBranch("o'quvchi", branch);
+    }
+    return new NotFoundException("O'quvchi topilmadi");
   }
 
   /** Every row of the tab, filtered and sorted — the pages and the Excel are cut from it. */
