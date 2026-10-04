@@ -7,6 +7,8 @@ import { PaymentsPreviewService } from './payments-preview.service';
 import { PaymentsFrozenBalanceService } from './payments-frozen-balance.service';
 import { PaymentsController } from './payments.controller';
 import { PaymentEventsListener } from './payment-events.listener';
+import { DebtListController } from './debt/debt-list.controller';
+import { DebtListService } from './debt/debt-list.service';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { BillingModule } from '../billing/billing.module';
 import { SmsModule } from '../sms/sms.module';
@@ -21,7 +23,7 @@ import { PaymentPromisesModule } from '../payment-promises/payment-promises.modu
     MockExamsModule,
     PaymentPromisesModule,
   ],
-  controllers: [PaymentsController],
+  controllers: [PaymentsController, DebtListController],
   providers: [
     PaymentsService,
     PaymentsWriteService,
@@ -30,6 +32,7 @@ import { PaymentPromisesModule } from '../payment-promises/payment-promises.modu
     PaymentsPreviewService,
     PaymentsFrozenBalanceService,
     PaymentEventsListener,
+    DebtListService,
   ],
   exports: [PaymentsService, PaymentsDebtorsService],
 })
