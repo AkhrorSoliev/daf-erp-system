@@ -1,0 +1,41 @@
+import { describe, expect, it } from "vitest";
+import { debtListParams, hasDebtFilter, legacyDebtRedirect, readDebtFilters } from "./debt-url";
+
+describe("legacyDebtRedirect — old links keep working (spec §2.6)", () => {
+  it("sends the old tabs to their new homes", () => {
+    expect(legacyDebtRedirect({ tab: "oylik" })).toBe("/payments/debt-history");
+    expect(legacyDebtRedirect({ tab: "kechirilgan" })).toBe("/payments/debt-write-offs");
+    expect(legacyDebtRedirect({ tab: "muzlatilgan" })).toBe("/payments/frozen-balances");
+    expect(legacyDebtRedirect({ tab: "markaz" })).toBe("/payments/salary?tab=markaz");
+    expect(legacyDebtRedirect({ tab: "markaz", month: "2026-08" })).toBe("/payments/salary?tab=markaz&month=2026-08");
+  });
+
+  it("the old debtor list becomes Shu oy; the outreach banner's promise link maps", () => {
+    expect(legacyDebtRedirect({ tab: "qarzdorlar", search: "ali", holat: "FROZEN" })).toBe("/payments/debt?search=ali");
+    expect(legacyDebtRedirect({ promise: "overdue" })).toBe("/payments/debt?promise=broken");
+    expect(legacyDebtRedirect({ promise: "has_open" })).toBe("/payments/debt?promise=open");
+  });
+
+  it("leaves the new URLs alone", () => {
+    expect(legacyDebtRedirect({})).toBeNull();
+    expect(legacyDebtRedirect({ tab: "eski", promise: "broken" })).toBeNull();
+  });
+});
+
+describe("the URL state and the request", () => {
+  it("defaults: Shu oy, largest debt, page 1 of 20; the kind only in O'qimayotganlar", () => {
+    expect(debtListParams(readDebtFilters(""))).toEqual({
+      tab: "shu-oy", search: undefined, kind: undefined, groupIds: undefined, teacherIds: undefined,
+      promise: undefined, sort: "debt", page: 1, pageSize: 20,
+    });
+    expect(debtListParams(readDebtFilters("tab=eski&kind=frozen")).kind).toBeUndefined();
+    expect(debtListParams(readDebtFilters("tab=chiqqan&kind=frozen")).kind).toBe("frozen");
+    expect(debtListParams(readDebtFilters("tab=xyz")).tab).toBe("shu-oy");
+  });
+
+  it("a filter is search, kind, group, teacher or promise — sort and paging are not", () => {
+    expect(hasDebtFilter(readDebtFilters("sort=name&page=3"))).toBe(false);
+    expect(hasDebtFilter(readDebtFilters("groupIds=g1"))).toBe(true);
+    expect(hasDebtFilter(readDebtFilters("promise=none"))).toBe(true);
+  });
+});
