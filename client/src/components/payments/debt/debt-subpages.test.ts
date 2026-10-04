@@ -10,7 +10,7 @@ const src = (file: string) => readFileSync(join(__dirname, "..", file), "utf-8")
 
 describe("debt sub-pages (spec B2a §2.6)", () => {
   it("each has a back link to Qarzdorlik and its title", () => {
-    const html = renderToStaticMarkup(createElement(DebtSubpage, { title: "Muzlatilganlarning puli", children: "x" }));
+    const html = renderToStaticMarkup(createElement(DebtSubpage, { title: "Muzlatilganlarning puli" }, "x"));
     expect(html).toContain('href="/payments/debt"');
     expect(html).toContain("Qarzdorlik");
     expect(html).toContain("Muzlatilganlarning puli");
