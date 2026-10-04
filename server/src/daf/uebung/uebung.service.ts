@@ -23,7 +23,7 @@ import type {
   MaterialWort,
   PublicFrage,
 } from './frage.types';
-import { toPublic } from './frage.types';
+import { materialSchluessel, toPublic } from './frage.types';
 import { dialogLuecke } from './dialog-fragen';
 import { eigeneSchluessel } from './eigener-abschnitt';
 import { hoerenWahl } from './hoer-fragen';
@@ -324,7 +324,7 @@ export class UebungService {
     // qaytadi — shuning uchun bu yerda 404 EMAS, bo'sh massiv qaytariladi.
     // Darsning O'ZI topilmasa (`null`) `baueKandidaten` hamon 404 tashlaydi.
     if (!natija) return [];
-    const { pflicht, kandidaten, kind, eigene } = natija;
+    const { pflicht, kandidaten, kind, eigene, neueWoerter } = natija;
 
     // Seans turining moyilligi (Vazifa 3) — QAT'IY BO'LINISH EMAS,
     // TARTIB. To'liq izoh `kind-formate.ts`da: kurs dizayni 16 format
@@ -341,6 +341,13 @@ export class UebungService {
       kind === 'SECTION_A' || kind === 'SECTION_B'
         ? (f: Frage) => f.belegteItems.some((k) => eigene.has(k))
         : undefined;
+    // Unseen words before seen ones (ADR-0071). A question about no word
+    // (sentence, phrase, dialog) counts as new, so only a question made of
+    // seen words alone moves back.
+    const nochNeu = (f: Frage) => {
+      const woerter = f.belegteItems.filter((k) => k.startsWith('WORT:'));
+      return woerter.length === 0 || woerter.some((k) => neueWoerter.has(k));
+    };
     const { fragen, nichtPlatziert } = baueSeans(
       kandidaten,
       uzunlik,
@@ -348,6 +355,7 @@ export class UebungService {
       pflicht,
       bevorzugteFormate(kind),
       eigenerAbschnitt,
+      nochNeu,
     );
 
     // Yakuniy sinovdan faqat to'liq 15 savolli seansda o'tiladi
@@ -812,6 +820,8 @@ export class UebungService {
     kind: string | null;
     /** Material keys of the lesson's own section (`materialSchluessel`). */
     eigene: Set<string>;
+    /** `WORT:` keys of the words the student has never answered (ADR-0071). */
+    neueWoerter: Set<string>;
   } | null> {
     const lesson = await this.prisma.dafLesson.findUnique({
       where: { id: lessonId },
@@ -1113,6 +1123,13 @@ export class UebungService {
       eigene: eigeneSchluessel(
         section ? sectionCodeById.get(section.id) : undefined,
         { coreWords, sentences, phrases, dialoge },
+      ),
+      // A word is seen once it has a state row: `aktualisiereZustand` writes
+      // it on the first answer. The same query fed `letzterFormatByWort`.
+      neueWoerter: new Set(
+        coreWords
+          .filter((w) => !letzterFormatByWort.has(w.id))
+          .map((w) => materialSchluessel('WORT', w.id)),
       ),
     };
   }

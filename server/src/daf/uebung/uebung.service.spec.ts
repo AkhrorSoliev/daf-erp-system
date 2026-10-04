@@ -559,6 +559,59 @@ describe('UebungService.seans — DIALOG_LUECKE', () => {
   });
 });
 
+describe('UebungService.seans — words not seen yet first (ADR-0071)', () => {
+  // Twenty words in the lesson's section; the student has met the first
+  // ten. A lesson repeat must ask the other ten before any of these.
+  function zwanzigWoerter() {
+    const prisma = fakePrisma();
+    const woerter = Array.from({ length: 20 }, (_, i) => ({
+      id: 600 + i,
+      de: `wort${600 + i}`,
+      uz: `soz${600 + i}`,
+      artikel: null,
+      anzeige: null,
+      core: true,
+      sectionId: 7,
+      unitId: 1,
+      audioKey: null,
+      imageKey: null,
+      bildTippen: false,
+    }));
+    prisma.dafLexeme.findMany = jest.fn(async (args: any = {}) => {
+      const where = args?.where ?? {};
+      return woerter.filter(
+        (l) =>
+          (!where.sectionId?.in || where.sectionId.in.includes(l.sectionId)) &&
+          (!where.id?.in || where.id.in.includes(l.id)),
+      );
+    }) as any;
+    prisma.dafLexemeState.findMany = jest.fn(async (args: any = {}) => {
+      const where = args?.where ?? {};
+      if (where.dueAt) return [];
+      const ids: number[] = where.lexemeId?.in ?? [];
+      return ids
+        .filter((id) => id < 610)
+        .map((id) => ({ lexemeId: id, lastFormat: null }));
+    }) as any;
+    return prisma;
+  }
+
+  it('asks no seen word while unseen ones are left', async () => {
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const fragen = await new UebungService(zwanzigWoerter() as any).seans(
+        100,
+        55,
+        mulberry32(seed),
+      );
+      const einzelWort = fragen.filter(
+        (f) => f.itemType === 'WORT' && f.format !== 'PAAR',
+      );
+      expect(einzelWort.length).toBeGreaterThan(0);
+      for (const f of einzelWort) expect(f.itemId).toBeGreaterThanOrEqual(610);
+    }
+  });
+});
+
 describe('UebungService.seans — qaytarish (wiederholung)', () => {
   it('muddati kelgan so`z seansga kiradi, ikkitadan oshmaydi va boshqa formatda so`raladi', async () => {
     const prisma = fakePrisma();

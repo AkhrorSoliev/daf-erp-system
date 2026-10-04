@@ -87,6 +87,11 @@ export function baueSeans(
   // only an ordering, so caps, no-repeat and `MIN_FORMATE` still hold and
   // older sections fill in when the own section runs out.
   vorrang?: (f: Frage) => boolean,
+  // Words the student has not seen before seen ones (ADR-0071): a
+  // section's word pool is larger than one lesson, and every repeat of the
+  // lesson must bring the words still unmet. Weaker than `vorrang`,
+  // stronger than the format preference; like both, only an ordering.
+  neu?: (f: Frage) => boolean,
 ): SeansPlan {
   const pool = [...kandidaten];
   // Tasodifiy tartib: har seans boshqacha boshlansin.
@@ -101,9 +106,11 @@ export function baueSeans(
   // barqaror, ya'ni bir xil ustunlikdagi (ikkalasi ham afzal yoki
   // ikkalasi ham emas) nomzodlarning o'zaro tartibi tasodifiy
   // aralashtirilganidek qoladi.
-  if (bevorzugt.length > 0 || vorrang) {
+  if (bevorzugt.length > 0 || vorrang || neu) {
     const ustunlik = (f: Frage): number =>
-      (vorrang && !vorrang(f) ? 2 : 0) + (bevorzugt.includes(f.format) ? 0 : 1);
+      (vorrang && !vorrang(f) ? 4 : 0) +
+      (neu && !neu(f) ? 2 : 0) +
+      (bevorzugt.includes(f.format) ? 0 : 1);
     pool.sort((a, b) => ustunlik(a) - ustunlik(b));
   }
 

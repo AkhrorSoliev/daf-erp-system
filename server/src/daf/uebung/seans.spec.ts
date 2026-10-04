@@ -462,3 +462,71 @@ describe('baueSeans — the lesson`s own section first (2026-09-30)', () => {
     expect(plan.fragen.filter(istEigen)).toHaveLength(4);
   });
 });
+
+describe('baueSeans — words the student has not seen first (ADR-0071)', () => {
+  // A section's word pool is larger than one lesson: each repeat of the
+  // lesson must bring the words the student has not met yet.
+  const formatlar: FrageFormat[] = [
+    'WORT_UZ',
+    'UZ_WORT',
+    'ARTIKEL',
+    'LUECKE',
+    'SATZ_BAUEN',
+    'AUDIO_WORT',
+  ];
+  const gesehen = formatlar.flatMap((fmt, i) =>
+    Array.from({ length: 3 }, (_, j) => f(fmt, i * 10 + j)),
+  );
+  const neue = formatlar.flatMap((fmt, i) =>
+    Array.from({ length: 3 }, (_, j) => f(fmt, 1000 + i * 10 + j)),
+  );
+  const istNeu = (q: Frage) => q.itemId >= 1000;
+
+  it('fills the session with unseen words when it can', () => {
+    const plan = baueSeans(
+      [...gesehen, ...neue],
+      12,
+      () => 0.9999,
+      [],
+      [],
+      undefined,
+      istNeu,
+    );
+    expect(plan.fragen.filter(istNeu)).toHaveLength(12);
+    expect(
+      new Set(plan.fragen.map((q) => q.format)).size,
+    ).toBeGreaterThanOrEqual(MIN_FORMATE);
+  });
+
+  it('fills with seen words when the unseen run out', () => {
+    const plan = baueSeans(
+      [...gesehen, ...neue.slice(0, 4)],
+      12,
+      () => 0.9999,
+      [],
+      [],
+      undefined,
+      istNeu,
+    );
+    expect(plan.fragen).toHaveLength(12);
+    expect(plan.fragen.filter(istNeu)).toHaveLength(4);
+  });
+
+  it('the lesson`s own section still comes before unseen words of older sections', () => {
+    const eigenGesehen = formatlar.flatMap((fmt, i) =>
+      Array.from({ length: 3 }, (_, j) => f(fmt, 3000 + i * 10 + j)),
+    );
+    const altNeu = neue;
+    const istEigen = (q: Frage) => q.itemId >= 3000;
+    const plan = baueSeans(
+      [...altNeu, ...eigenGesehen],
+      12,
+      () => 0.9999,
+      [],
+      [],
+      istEigen,
+      istNeu,
+    );
+    expect(plan.fragen.filter(istEigen)).toHaveLength(12);
+  });
+});
