@@ -122,7 +122,9 @@ export class PaymentPromisesService {
           }
         : null,
       create: 'refusal' in create ? null : create,
-      edit: edit && !('refusal' in edit) ? edit : null,
+      // A promise older than its creation day + 7 has an empty window
+      // (from > to): nothing to offer the date picker.
+      edit: edit && !('refusal' in edit) && edit.from <= edit.to ? edit : null,
     };
   }
 
@@ -238,11 +240,19 @@ export class PaymentPromisesService {
     companyId: number,
   ) {
     const branchId = await this.resolveStudentBranch(p.studentId, companyId);
+    const monthStart = tashkentMonthRangeUtc(tashkentMonthKey(new Date())).gte;
     try {
       const { promise, superseded } = await this.prisma.$transaction(
         async (tx) => {
+          // Only an earlier month's promise: this month's OPEN one (a racing
+          // first write) must hit the unique index (P2002), not be cancelled.
           const old = await tx.paymentPromise.findFirst({
-            where: { studentId: p.studentId, companyId, status: 'OPEN' },
+            where: {
+              studentId: p.studentId,
+              companyId,
+              status: 'OPEN',
+              createdAt: { lt: monthStart },
+            },
             select: { id: true },
           });
           if (old) {

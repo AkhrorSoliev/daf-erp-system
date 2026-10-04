@@ -405,5 +405,33 @@ describe('PaymentPromisesService', () => {
         NotFoundException,
       );
     });
+
+    it('monthState offers no edit range once the creation day + 7 has passed', async () => {
+      // A promise written before the rule, on 02.06, for a date past +7:
+      // on 10.06 its window (… 09.06) is already behind today.
+      prisma.paymentPromise.findFirst.mockResolvedValueOnce({
+        id: 'p1',
+        status: 'OPEN',
+        promiseDate: new Date('2026-06-25T00:00:00.000Z'),
+        promisedAmount: null,
+        createdAt: new Date('2026-06-02T05:00:00.000Z'),
+      });
+      const state = await service.monthState(10264, 1001, null);
+      expect(state.edit).toBeNull();
+      expect(state.create).toBeNull();
+    });
+
+    it("only an earlier month's OPEN promise is closed, never this month's", async () => {
+      await service.create(dto, 99, 1001, null);
+      // Call 0 is the month lookup; call 1 is the cancel step inside the tx.
+      expect(prisma.paymentPromise.findFirst.mock.calls[1][0]).toMatchObject({
+        where: {
+          studentId: 10264,
+          companyId: 1001,
+          status: 'OPEN',
+          createdAt: { lt: new Date('2026-05-31T19:00:00.000Z') }, // 01.06 00:00 Tashkent
+        },
+      });
+    });
   });
 });
