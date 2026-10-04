@@ -22,7 +22,8 @@ import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { invalidateDebt } from "@/components/payments/debt/debt-queries";
-import { capToRange, dateFromDay, usePromiseMonth } from "@/components/payments/promise-month";
+import { callPromiseAsk, capToRange, dateFromDay, PROMISE_MOVE_NOTE, usePromiseMonth } from "@/components/payments/promise-month";
+import { tashkentInstantOn } from "@/lib/tashkent-time";
 import {
   CALL_OUTCOME_INFO,
   type CallLogsResponse,
@@ -52,8 +53,8 @@ const OUTCOME_OPTIONS: { value: CallOutcome; label: string }[] = [
 ];
 
 // Which outcomes reveal the optional date field, and how it's framed. "To'laydi"
-// sets a payment promise (promiseDate → "To'lov sanalari"); the others set a
-// "call again later" date (followUpAt) shown as a badge on the debtors page.
+// sets a payment promise (promiseDate → the debt page's «Va'da» column); the
+// others set a "call again later" date (followUpAt).
 // "O'qishni tashladi" (LEFT) has no date.
 const FOLLOW_UP_HELP =
   "Sana kiritilsa, shu kuni qayta bog'lanish kerakligi belgilanadi.";
@@ -62,7 +63,7 @@ const DATE_FIELD: Partial<
 > = {
   WILL_PAY: {
     label: "To'lov sanasi (ixtiyoriy)",
-    help: 'Sana kiritilsa, "To\'lov sanalari" bo\'limiga qo\'shiladi.',
+    help: "Sana kiritilsa, «Qarzdorlik» sahifasidagi «Va'da» ustunida ko'rinadi. Ko'pi bilan 7 kunga, oyiga 1 marta.",
   },
   NO_ANSWER: { label: "Keyingi bog'lanish sanasi (ixtiyoriy)", help: FOLLOW_UP_HELP },
   ANSWERED: { label: "Keyingi bog'lanish sanasi (ixtiyoriy)", help: FOLLOW_UP_HELP },
@@ -100,16 +101,16 @@ function CallForm({
   // Dual-purpose: a payment date for "To'laydi", else a "call again later" date.
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const dateField = outcome ? DATE_FIELD[outcome] : undefined;
-  // ADR-0072: «To'laydi» moves this month's OPEN promise (within 7 days of when
-  // it was written) or writes the month's first; a month whose promise is
-  // closed takes no date.
+  // ADR-0072 (callPromiseAsk): «To'laydi» moves this month's OPEN promise or
+  // writes the month's first; a closed promise or a failed lookup takes no date.
   const isPay = outcome === "WILL_PAY";
   const promiseMonth = usePromiseMonth(isPay ? prefill.studentId : null);
-  const payRange = promiseMonth.data ? (promiseMonth.data.edit ?? promiseMonth.data.create) : null;
-  const promiseTaken = isPay && !!promiseMonth.data && !payRange;
+  const ask = callPromiseAsk(promiseMonth);
+  const payRange = isPay ? ask.range : null;
+  const noPayDate = isPay && !ask.asksDate;
   // A day picked before the range arrived is clamped into it, as the payment dialog does.
   const date = isPay ? capToRange(selectedDate, payRange) : selectedDate;
-  const sendsDate = !!date && !promiseTaken;
+  const sendsDate = !!date && !noPayDate;
 
   // Oldingi qo'ng'iroq izohlari — admin yangi izoh yozishda kontekst ko'rsin.
   const { data: history, isLoading: historyLoading } = useQuery({
@@ -127,15 +128,11 @@ function CallForm({
   const submit = useMutation({
     mutationFn: async () => {
       if (!outcome) throw new Error("Natija tanlanmagan");
-      // End-of-day so a same-day date isn't flagged overdue immediately.
-      // "To'laydi" → payment promise (promiseDate); other outcomes → callback
-      // date (followUpAt). The server keeps the two concepts separate.
-      let dateIso: string | undefined;
-      if (date && sendsDate) {
-        const d = new Date(date);
-        d.setHours(23, 59, 59, 0);
-        dateIso = d.toISOString();
-      }
+      // 23:00 Tashkent of the picked day: a same-day date isn't flagged overdue
+      // at once, and the server reads the picked day whatever the browser's
+      // zone. "To'laydi" → payment promise (promiseDate); other outcomes →
+      // callback date (followUpAt). The server keeps the two concepts separate.
+      const dateIso = date && sendsDate ? tashkentInstantOn(date, 23) : undefined;
       await api.post("/call-logs", {
         studentId: prefill.studentId,
         reason: prefill.reason,
@@ -246,7 +243,7 @@ function CallForm({
           </div>
         </div>
 
-        {dateField && !promiseTaken && (
+        {dateField && !noPayDate && (
           <div className="space-y-1">
             <Label className="text-xs">{dateField.label}</Label>
             <DatePicker
@@ -256,17 +253,11 @@ function CallForm({
               maxDate={isPay && payRange ? dateFromDay(payRange.to) : undefined}
             />
             <p className="text-[11px] text-muted-foreground">
-              {isPay && promiseMonth.data?.edit
-                ? "Shu oy yozilgan va'daning sanasi o'zgaradi (ko'pi bilan 7 kunga)."
-                : dateField.help}
+              {isPay && ask.moves ? PROMISE_MOVE_NOTE : dateField.help}
             </p>
           </div>
         )}
-        {promiseTaken && (
-          <p className="text-[11px] text-muted-foreground">
-            Bu o&apos;quvchiga shu oy va&apos;da yozilgan — to&apos;lov sanasi kiritilmaydi.
-          </p>
-        )}
+        {noPayDate && <p className="text-[11px] text-muted-foreground">{ask.hint}</p>}
 
         <div className="space-y-1">
           <Label className="text-xs">Izoh (ixtiyoriy)</Label>
@@ -290,7 +281,8 @@ function CallForm({
         </Button>
         <Button
           onClick={() => submit.mutate()}
-          disabled={!outcome || submit.isPending || (isPay && !!selectedDate && promiseMonth.isPending)}
+          // A promise date waits for a fresh range: a cached one may be stale.
+          disabled={!outcome || submit.isPending || (isPay && sendsDate && (promiseMonth.isPending || promiseMonth.isFetching))}
         >
           {submit.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
           Saqlash

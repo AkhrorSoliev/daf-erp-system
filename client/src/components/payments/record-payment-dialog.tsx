@@ -39,6 +39,7 @@ import {
   capToRange,
   dateFromDay,
   paymentPromiseAsk,
+  PROMISE_MOVE_NOTE,
   usePromiseMonth,
 } from "./promise-month";
 import {
@@ -232,9 +233,12 @@ export function RecordPaymentDialog({
     needsPromise,
     range: promiseRange,
     hint: promiseHint,
+    movesFrom,
   } = paymentPromiseAsk(promiseNeeded(reach), promiseMonth);
+  // Moving the month's OPEN promise starts from its own day, so saving never
+  // shifts it without the cashier changing the date.
   const promiseDate = capToRange(
-    pickedPromiseDate ?? (reach ? promiseDefaultDate(reach) : null),
+    pickedPromiseDate ?? movesFrom ?? (reach ? promiseDefaultDate(reach) : null),
     promiseRange,
   );
 
@@ -475,7 +479,9 @@ export function RecordPaymentDialog({
                     className="h-8 w-48 text-xs"
                   />
                   <p className="text-muted-foreground">
-                    To&apos;lov va&apos;dasi: ko&apos;pi bilan 7 kunga, oyiga 1 marta.
+                    {movesFrom
+                      ? PROMISE_MOVE_NOTE
+                      : "To'lov va'dasi: ko'pi bilan 7 kunga, oyiga 1 marta."}
                   </p>
                 </div>
               )}
@@ -583,7 +589,11 @@ export function RecordPaymentDialog({
               !selectedStudent ||
               rawAmount < 1000 ||
               submitting ||
-              (needsPromise && (!promiseDate || promiseMonth.isPending))
+              // A promise date waits for a fresh range: a cached one may be stale.
+              (needsPromise &&
+                (!promiseDate ||
+                  promiseMonth.isPending ||
+                  promiseMonth.isFetching))
             }
           >
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
