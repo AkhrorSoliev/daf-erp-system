@@ -239,13 +239,19 @@ describe('PaymentsDebtorsService', () => {
   });
 
   describe('getDebtorSummary', () => {
-    // `loadDebtSplit` ning o'z o'qishlari: o'qiyotgan qarzdorlar (findMany),
-    // o'qimayotganlar (groupBy, status bo'yicha) va shu oyning hisoblari (groupBy).
+    // `loadDebtRows` reads the studying debtors and, per student, the
+    // not-studying ones (the read carrying `NOT`), then this month's charges.
     const readsOneStudyingAndTwoNot = () => {
-      prisma.student.findMany.mockResolvedValue([{ id: 5, balance: -300_000 }]);
-      prisma.student.groupBy.mockResolvedValue([
-        { status: 'FROZEN', _sum: { balance: -90_000 }, _count: { _all: 2 } },
-      ]);
+      prisma.student.findMany.mockImplementation(({ where }) =>
+        Promise.resolve(
+          where.NOT
+            ? [
+                { id: 6, balance: -40_000, status: 'FROZEN' },
+                { id: 7, balance: -50_000, status: 'FROZEN' },
+              ]
+            : [{ id: 5, balance: -300_000 }],
+        ),
+      );
       prisma.enrollmentMonthlyCharge.groupBy.mockResolvedValue([
         { studentId: 5, _sum: { chargedAmount: 450_000 } },
       ]);
@@ -267,12 +273,14 @@ describe('PaymentsDebtorsService', () => {
             total: 300_000,
             count: 1,
             currentMonth: 300_000,
+            currentMonthCount: 1,
             older: 0,
             olderCount: 0,
           },
           notStudying: {
             total: 90_000,
             count: 2,
+            currentMonth: 0,
             byKind: {
               ungrouped: { total: 0, count: 0 },
               frozen: { total: 90_000, count: 2 },
@@ -291,7 +299,7 @@ describe('PaymentsDebtorsService', () => {
 
       for (const where of [
         prisma.student.findMany.mock.calls[0][0].where,
-        prisma.student.groupBy.mock.calls[0][0].where,
+        prisma.student.findMany.mock.calls[1][0].where,
       ]) {
         expect(where.branches).toBeUndefined();
         expect(where).toMatchObject({
@@ -327,7 +335,7 @@ describe('PaymentsDebtorsService', () => {
       expect(prisma.student.findMany.mock.calls[0][0].where.branches).toEqual(
         expected,
       );
-      expect(prisma.student.groupBy.mock.calls[0][0].where.branches).toEqual(
+      expect(prisma.student.findMany.mock.calls[1][0].where.branches).toEqual(
         expected,
       );
     });
@@ -349,12 +357,14 @@ describe('PaymentsDebtorsService', () => {
             total: 0,
             count: 0,
             currentMonth: 0,
+            currentMonthCount: 0,
             older: 0,
             olderCount: 0,
           },
           notStudying: {
             total: 0,
             count: 0,
+            currentMonth: 0,
             byKind: {
               ungrouped: { total: 0, count: 0 },
               frozen: { total: 0, count: 0 },
@@ -381,7 +391,7 @@ describe('PaymentsDebtorsService', () => {
           prisma.enrollmentMonthlyCharge.groupBy.mock.calls[0][0].where,
         ).toMatchObject({
           companyId: 1001,
-          studentId: { in: [5] },
+          studentId: { in: [5, 6, 7] },
           periodYear: 2026,
           periodMonth: 10,
         });
