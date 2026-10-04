@@ -18,7 +18,8 @@ vi.mock("@/hooks/use-auth", () => {
   return { useAuth };
 });
 
-import { debtListKey } from "./debt-queries";
+import { debtListKey, keepWithinTab, retryDrawer } from "./debt-queries";
+import { searchBoxAfterUrl } from "./debt-filter-bar";
 import { debtListParams, readDebtFilters } from "./debt-url";
 import { DebtPage } from "./debt-page";
 import type { DebtListItem, DebtListResponse } from "./debt-types";
@@ -142,5 +143,36 @@ describe("DebtPage — links and language", () => {
     for (const s of ["", "tab=eski", "tab=chiqqan"]) {
       expect(render(s)).not.toMatch(/\b(debt|promise|search|total|tab|ungrouped|frozen|left|open|broken|loading|error)\b/i);
     }
+  });
+});
+
+describe("DebtPage — between two answers", () => {
+  const key = (search: string) => debtListKey(undefined, debtListParams(readDebtFilters(search)));
+
+  it("keeps the last answer while the same tab loads, never across tabs", () => {
+    expect(keepWithinTab("shu-oy")(RESPONSE, { queryKey: key("page=2") })).toBe(RESPONSE);
+    expect(keepWithinTab("eski")(RESPONSE, { queryKey: key("") })).toBeUndefined();
+    expect(keepWithinTab("eski")(undefined, undefined)).toBeUndefined();
+  });
+
+  it("a page past the last one shows the skeleton, not a false «qarzdor yo'q»", () => {
+    const text = render("page=3", { ...RESPONSE, data: [], total: 25 });
+    expect(text).not.toContain("Bu bo'limda qarzdor yo'q");
+    expect(text).toContain(`Jami: ${money(1_350_000)}`);
+  });
+
+  it("the drawer retries a server or network failure at most twice, never a 404", () => {
+    expect(retryDrawer(0, { response: { status: 500 } })).toBe(true);
+    expect(retryDrawer(1, new Error("Network Error"))).toBe(true);
+    expect(retryDrawer(2, { response: { status: 503 } })).toBe(false);
+    expect(retryDrawer(0, { response: { status: 404 } })).toBe(false);
+    expect(retryDrawer(0, { response: { status: 403 } })).toBe(false);
+  });
+
+  it("the search box keeps what was typed when its own write comes back; an outside change replaces it", () => {
+    expect(searchBoxAfterUrl("alim", "ali", "ali")).toBe("alim");
+    expect(searchBoxAfterUrl("ali ", "ali", "ali")).toBe("ali ");
+    expect(searchBoxAfterUrl("alim", "", "ali")).toBe("");
+    expect(searchBoxAfterUrl("", "vali", "")).toBe("vali");
   });
 });

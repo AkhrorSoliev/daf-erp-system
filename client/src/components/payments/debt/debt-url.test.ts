@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { debtListParams, hasDebtFilter, legacyDebtRedirect, readDebtFilters } from "./debt-url";
+import { debtListParams, hasDebtFilter, lastPageIfPast, legacyDebtRedirect, readDebtFilters } from "./debt-url";
 
 describe("legacyDebtRedirect — old links keep working (spec §2.6)", () => {
   it("sends the old tabs to their new homes", () => {
@@ -8,6 +8,11 @@ describe("legacyDebtRedirect — old links keep working (spec §2.6)", () => {
     expect(legacyDebtRedirect({ tab: "muzlatilgan" })).toBe("/payments/frozen-balances");
     expect(legacyDebtRedirect({ tab: "markaz" })).toBe("/payments/salary?tab=markaz");
     expect(legacyDebtRedirect({ tab: "markaz", month: "2026-08" })).toBe("/payments/salary?tab=markaz&month=2026-08");
+  });
+
+  it("carries the filter the history page still reads", () => {
+    expect(legacyDebtRedirect({ tab: "oylik", holat: "inactive" })).toBe("/payments/debt-history?holat=inactive");
+    expect(legacyDebtRedirect({ tab: "oylik", holat: ["active", "x"] })).toBe("/payments/debt-history?holat=active");
   });
 
   it("the old debtor list becomes Shu oy; the outreach banner's promise link maps", () => {
@@ -54,5 +59,21 @@ describe("the URL state and the request", () => {
     expect(debtListParams(readDebtFilters("tab=chiqqan&kind=xyz")).kind).toBeUndefined();
     expect(debtListParams(readDebtFilters("teacherIds=abc,20001")).teacherIds).toBe("20001");
     expect(debtListParams(readDebtFilters(`search=${"a".repeat(150)}`)).search).toHaveLength(100);
+  });
+
+  it("the search is trimmed; whitespace alone is no search and no «Topildi»", () => {
+    expect(debtListParams(readDebtFilters("search=%20%20ali%20")).search).toBe("ali");
+    expect(debtListParams(readDebtFilters("search=%20%20%20")).search).toBeUndefined();
+    expect(hasDebtFilter(readDebtFilters("search=%20%20%20"))).toBe(false);
+  });
+
+  it("a page past the last one goes to the last page that has rows", () => {
+    expect(lastPageIfPast(3, 20, 25, 0)).toBe(2);
+    expect(lastPageIfPast(9, 20, 5, 0)).toBe(1);
+    expect(lastPageIfPast(2, 20, 25, 5)).toBeNull();
+    expect(lastPageIfPast(1, 20, 25, 0)).toBeNull();
+    expect(lastPageIfPast(3, 20, 0, 0)).toBeNull();
+    // Rows the total does not explain: nowhere to go, so no write loop.
+    expect(lastPageIfPast(2, 20, 25, 0)).toBeNull();
   });
 });

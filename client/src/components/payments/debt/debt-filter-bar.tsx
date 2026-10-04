@@ -5,8 +5,11 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { DebtFilters } from "./debt-url";
+import { cleanSearch, type DebtFilters } from "./debt-url";
 import type { DebtListResponse } from "./debt-types";
+
+/** The search box after the URL's search changed: the bar's own write keeps what was typed since; anything else replaces it. */
+export const searchBoxAfterUrl = (box: string, url: string, written: string) => (url === written ? box : url);
 
 const PROMISE_OPTIONS = [
   { value: "all", label: "Va'da: hammasi" },
@@ -28,16 +31,23 @@ export function DebtFilterBar({ filters, setFilters, options }: {
   options: DebtListResponse["options"] | undefined;
 }) {
   // A local mirror keeps typing smooth; the URL gets it after a 300 ms pause.
-  // A URL change from outside (a redirect, the back button) resets the mirror.
+  // Only a URL change from outside (a redirect, the back button) resets the
+  // mirror: the bar's own write coming back keeps what was typed since.
   const [search, setSearch] = useState(filters.search);
   const [urlSearch, setUrlSearch] = useState(filters.search);
+  const [written, setWritten] = useState(filters.search);
   if (urlSearch !== filters.search) {
     setUrlSearch(filters.search);
-    setSearch(filters.search);
+    setWritten(filters.search);
+    setSearch(searchBoxAfterUrl(search, filters.search, written));
   }
   useEffect(() => {
-    if (search === filters.search) return;
-    const t = setTimeout(() => setFilters({ search, page: 1 }), 300);
+    const next = cleanSearch(search);
+    if (next === filters.search) return;
+    const t = setTimeout(() => {
+      setWritten(next);
+      setFilters({ search: next, page: 1 });
+    }, 300);
     return () => clearTimeout(t);
   }, [search, filters.search, setFilters]);
 

@@ -30,6 +30,9 @@ const SORTS = ["debt", "oldest", "broken", "name"];
 const PAGE_SIZES = [10, 20, 30, 40, 50];
 const oneOf = (v: string, allowed: string[], fallback: string) => (allowed.includes(v) ? v : fallback);
 
+/** The search as the server reads it: trimmed, at most 100 characters; whitespace alone is no search. */
+export const cleanSearch = (s: string) => s.trim().slice(0, 100);
+
 /**
  * The URL with every value the server would refuse replaced by its default, so
  * an old bookmark (`?sort=debt_low`, `?page=0`) opens the list instead of a 400.
@@ -38,7 +41,7 @@ export function cleanDebtFilters(f: DebtFilters): DebtFilters {
   const tab = activeTab(f);
   return {
     tab,
-    search: f.search.slice(0, 100),
+    search: cleanSearch(f.search),
     kind: tab === "chiqqan" ? oneOf(f.kind, KINDS, "") : "",
     groupIds: f.groupIds,
     teacherIds: f.teacherIds.filter((id) => /^\d+$/.test(id)),
@@ -68,6 +71,17 @@ export function debtListParams(filters: DebtFilters) {
   };
 }
 
+/**
+ * A page past the last one (its last debtor just paid, an old bookmark, a
+ * branch switch) answers with no rows while `total` says there are some: the
+ * last page that has rows. Null when the page is fine.
+ */
+export function lastPageIfPast(page: number, pageSize: number, total: number, rows: number): number | null {
+  if (page <= 1 || rows > 0 || total <= 0) return null;
+  const last = Math.max(1, Math.ceil(total / pageSize));
+  return last < page ? last : null;
+}
+
 /** The old page's links (spec §2.6): its tabs moved out, its promise filter got new values. Null for a new URL. */
 export function legacyDebtRedirect(sp: Record<string, string | string[] | undefined>): string | null {
   const one = (k: string) => {
@@ -75,7 +89,11 @@ export function legacyDebtRedirect(sp: Record<string, string | string[] | undefi
     return Array.isArray(v) ? v[0] : v;
   };
   const tab = one("tab");
-  if (tab === "oylik") return "/payments/debt-history";
+  if (tab === "oylik") {
+    // The history page's own filter keeps its name.
+    const holat = one("holat");
+    return `/payments/debt-history${holat ? `?holat=${encodeURIComponent(holat)}` : ""}`;
+  }
   if (tab === "kechirilgan") return "/payments/debt-write-offs";
   if (tab === "muzlatilgan") return "/payments/frozen-balances";
   if (tab === "markaz") {

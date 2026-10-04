@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, Clock, Download } from "lucide-react";
 import toast from "react-hot-toast";
@@ -19,7 +19,7 @@ import { DebtFilterBar } from "./debt-filter-bar";
 import { dayMonth, KIND_LABEL, sumLine, TAB_LABEL, tabRule, tabSubline } from "./debt-format";
 import { useDebtList } from "./debt-queries";
 import { DebtTable } from "./debt-table";
-import { activeTab, cleanDebtFilters, DEBT_LIST_SCHEMA, debtListParams, hasDebtFilter, type DebtFilters } from "./debt-url";
+import { activeTab, cleanDebtFilters, DEBT_LIST_SCHEMA, debtListParams, hasDebtFilter, lastPageIfPast, type DebtFilters } from "./debt-url";
 import { DEBT_TABS, type DebtKind, type DebtListResponse, type DebtTab, type PayTarget } from "./debt-types";
 
 const TAB_DOT: Record<DebtTab, string> = { "shu-oy": "bg-amber-500", eski: "bg-red-500", chiqqan: "bg-muted-foreground" };
@@ -41,6 +41,13 @@ export function DebtPage() {
   const [callTarget, setCallTarget] = useState<LogCallPrefill | null>(null);
   const today = tashkentNow().dateStr;
   const monthKey = today.slice(0, 7);
+  // A page past the last one goes to the last page that has rows (never a false «qarzdor yo'q»).
+  const lastPage = data && !isPlaceholderData ? lastPageIfPast(filters.page, filters.pageSize, data.total, data.data.length) : null;
+  useEffect(() => {
+    if (lastPage !== null) setFilters({ page: lastPage });
+  }, [lastPage, setFilters]);
+  // A kept empty answer is not the new one: skeleton, not «qarzdor yo'q», until it lands.
+  const tableLoading = isPending || lastPage !== null || (isPlaceholderData && !data?.data.length);
 
   const exportExcel = async () => {
     // The list's own query; the server ignores page and pageSize for the Excel.
@@ -89,7 +96,7 @@ export function DebtPage() {
       )}
 
       <DebtFilterBar filters={filters} setFilters={setFilters} options={data?.options} />
-      {data && <p className="text-sm text-muted-foreground">{sumLine(hasDebtFilter(filters), data.total, data.sum, data.tabs[tab])}</p>}
+      {data && !isPlaceholderData && <p className="text-sm text-muted-foreground">{sumLine(hasDebtFilter(filters), data.total, data.sum, data.tabs[tab])}</p>}
 
       {isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
@@ -99,7 +106,7 @@ export function DebtPage() {
       ) : (
         // The previous page stays dimmed and inert until the next one answers.
         <div aria-busy={isPlaceholderData} className={cn(isPlaceholderData && "pointer-events-none opacity-60")}>
-          <DebtTable tab={tab} rows={data?.data} loading={isPending} filtered={hasDebtFilter(filters)} offset={(filters.page - 1) * filters.pageSize} today={today} onOpen={setDrawerId}
+          <DebtTable tab={tab} rows={data?.data} loading={tableLoading} filtered={hasDebtFilter(filters)} offset={(filters.page - 1) * filters.pageSize} today={today} onOpen={setDrawerId}
             onPay={(r) => setPayTarget({ id: r.studentId, firstName: r.firstName, lastName: r.lastName, balance: -r.debt, suggested: r.debt })} />
         </div>
       )}
