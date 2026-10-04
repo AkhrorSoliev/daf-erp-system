@@ -3,7 +3,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DebtFiltersProvider, useDebtFilters } from "./debt-filters-provider";
 import { DebtorsView } from "./debtors-view";
-import { CenterTopUpView } from "./center-topup-view";
 import { MonthlyDebtView } from "./monthly-debt-view";
 import { WriteOffsView } from "./write-offs-view";
 import { FrozenBalanceView } from "./frozen-balance-view";
@@ -29,7 +28,6 @@ import { FrozenBalanceView } from "./frozen-balance-view";
  */
 const TABS = [
   { value: "qarzdorlar", label: "Qarzdorlar" },
-  { value: "markaz", label: "Markaz qoplagani" },
   { value: "oylik", label: "Oylik qarzdorlik" },
   { value: "kechirilgan", label: "Kechirilganlar" },
   { value: "muzlatilgan", label: "Muzlatilgan puli" },
@@ -78,9 +76,6 @@ function DebtPageTabs() {
 
         <TabsContent value="qarzdorlar" className="mt-6">
           <DebtorsView />
-        </TabsContent>
-        <TabsContent value="markaz" className="mt-6">
-          <CenterTopUpView />
         </TabsContent>
         <TabsContent value="oylik" className="mt-6">
           <MonthlyDebtView />
