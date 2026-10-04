@@ -32,7 +32,8 @@ export function OverduePromisesBanner() {
   const { selectedBranch } = useBranchSwitcher();
 
   const { data } = useQuery({
-    // The same entry the debt page's cards read: the summary has no filters.
+    // Only this banner reads the summary now (the debt page has no cards). The
+    // "debtors" prefix is what invalidateDebt refreshes after a payment or a call.
     queryKey: ["debtors", "summary", selectedBranch?.id],
     queryFn: () =>
       api
@@ -46,7 +47,7 @@ export function OverduePromisesBanner() {
 
   return (
     <Link
-      href="/payments/debt?promise=overdue"
+      href="/payments/debt?promise=broken"
       className="group flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-amber-800 dark:bg-amber-950/40 dark:hover:bg-amber-950/60"
     >
       <div className="flex items-center gap-3">
