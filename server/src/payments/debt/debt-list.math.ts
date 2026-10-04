@@ -7,7 +7,12 @@ import {
   type DebtSplit,
   type DebtTab,
 } from '../../reports/debt-split';
-import type { StatementModel } from '../../statements/statement.types';
+import { dueLabel } from '../../statements/present-statement';
+import { capitalize } from '../../statements/statement-text';
+import type {
+  StatementModel,
+  StatementMonth,
+} from '../../statements/statement.types';
 
 export type PromiseFilter = 'open' | 'broken' | 'none';
 export type DebtSort = 'debt' | 'oldest' | 'broken' | 'name';
@@ -27,6 +32,7 @@ export interface PromiseCell {
 /** One enrollment as the list reads it (newest first). */
 export interface EnrollmentFact {
   status: string;
+  deletedAt: Date | null;
   group: {
     id: string;
     name: string;
@@ -66,9 +72,15 @@ export interface DebtListItem extends DebtListRow {
   lastPayment: { createdAt: string; amount: number } | null;
 }
 
+/** One line of the drawer's «Oylar bo'yicha». */
 export interface DrawerMonth {
-  month: string;
+  /** The lesson month (`YYYY-MM`); null on a line that is not a month's lessons. */
+  month: string | null;
+  /** The statement's own label of a non-month line; null on a month line. */
+  label: string | null;
+  /** The month's charge; null on a non-month line. */
   charged: number | null;
+  /** `charged − left`: payments and credits alike (ADR-0058); null on a non-month line. */
   paid: number | null;
   left: number;
 }
@@ -118,13 +130,16 @@ export function groupsOf(
   kind: DebtKindKey | null,
   enrollments: readonly EnrollmentFact[],
 ): DebtGroup[] {
-  // `ACTIVE_ENROLLMENT_WHERE` on a loaded row.
+  // `ACTIVE_ENROLLMENT_WHERE` on a loaded row: a live ACTIVE enrollment in a live ACTIVE group.
   const live = (e: EnrollmentFact) =>
+    e.deletedAt === null &&
     e.status === 'ACTIVE' &&
     e.group.deletedAt === null &&
     e.group.statusEnum === 'ACTIVE';
   const picked =
-    kind === null ? enrollments.filter(live) : enrollments.slice(0, 1);
+    kind === null
+      ? enrollments.filter(live)
+      : enrollments.filter((e) => e.deletedAt === null).slice(0, 1);
   return picked.map(({ group: g }) => ({
     id: g.id,
     name: g.name,
@@ -310,43 +325,32 @@ export function tabTotals(split: DebtSplit) {
 }
 
 /**
- * The drawer's «Oylar bo'yicha», from the statement's own FIFO allocation
- * (ADR-0037) — never a second calculation. One line per month with debt left:
- * a month's lessons (charged, paid by payments, left), and in the same month
- * any other unpaid charge (a mock fee, a refund paid out) adds to `left`. A
- * month whose debt is only such charges has no `charged`/`paid`.
+ * The drawer's «Oylar bo'yicha», read off the statement's own FIFO (ADR-0037)
+ * — never a second calculation. One line per unpaid due, oldest first:
+ * - a lesson month: `charged` is the month's charge, `left` what is still
+ *   unpaid of it, and `paid = charged − left`, so every credit counts as paid,
+ *   as in `MonthCharges` (ADR-0058), and the line always adds up;
+ * - any other due (a mock fee, a refund paid out, the pack's lessons ahead) is
+ *   its own line, labelled as the statement labels it, with `left` only.
+ * The lines' `left` add up to the whole debt (`headline.amount`).
  */
-export function drawerMonths(
-  model: Pick<StatementModel, 'asOf' | 'months' | 'allocations' | 'headline'>,
-): DrawerMonth[] {
-  const lines = new Map<string, DrawerMonth>();
-  for (const u of model.headline.unpaid) {
-    const month =
-      u.due.kind === 'month'
-        ? u.due.month
-        : u.due.kind === 'item'
-          ? u.due.day.slice(0, 7)
-          : model.asOf.slice(0, 7);
-    const line = lines.get(month) ?? {
-      month,
-      charged: null,
-      paid: null,
-      left: 0,
-    };
-    line.left += u.amount;
-    if (u.due.kind === 'month') {
-      const key = u.due.month;
-      line.charged = model.months.find((m) => m.key === key)?.cost ?? null;
-      line.paid = model.allocations
-        .filter((a) => a.kind === 'payment')
-        .flatMap((a) => a.to)
-        .reduce(
-          (s, t) =>
-            t.due.kind === 'month' && t.due.month === key ? s + t.amount : s,
-          0,
-        );
+export function drawerMonths(model: {
+  months: readonly Pick<StatementMonth, 'key' | 'cost'>[];
+  headline: StatementModel['headline'];
+}): DrawerMonth[] {
+  // `unpaid` is newest first; the drawer reads oldest first.
+  return [...model.headline.unpaid].reverse().map(({ due, amount: left }) => {
+    if (due.kind !== 'month') {
+      const label = capitalize(dueLabel(due, 'admin'));
+      return { month: null, label, charged: null, paid: null, left };
     }
-    lines.set(month, line);
-  }
-  return [...lines.values()].sort((a, b) => a.month.localeCompare(b.month));
+    const charged = model.months.find((m) => m.key === due.month)?.cost ?? left;
+    return {
+      month: due.month,
+      label: null,
+      charged,
+      paid: charged - left,
+      left,
+    };
+  });
 }

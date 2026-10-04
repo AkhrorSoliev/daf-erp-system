@@ -70,9 +70,22 @@ describe('promiseCell', () => {
 
 describe('groupsOf', () => {
   const facts: EnrollmentFact[] = [
-    { status: 'ACTIVE', group: group('g2', 2) },
-    { status: 'DROPPED', group: group('g1', 1) },
-    { status: 'ACTIVE', group: group('g3', 3, { statusEnum: 'COMPLETED' }) },
+    { status: 'ACTIVE', deletedAt: null, group: group('g2', 2) },
+    { status: 'DROPPED', deletedAt: null, group: group('g1', 1) },
+    {
+      status: 'ACTIVE',
+      deletedAt: null,
+      group: group('g3', 3, { statusEnum: 'COMPLETED' }),
+    },
+  ];
+  // Newest first: a soft-deleted ACTIVE enrollment in a live ACTIVE group.
+  const withDeleted: EnrollmentFact[] = [
+    {
+      status: 'ACTIVE',
+      deletedAt: new Date('2026-10-02T09:00:00Z'),
+      group: group('g4', 4),
+    },
+    ...facts,
   ];
   it('studying: live ACTIVE enrollments in live ACTIVE groups, with their teachers', () => {
     expect(groupsOf(null, facts)).toEqual([
@@ -82,6 +95,10 @@ describe('groupsOf', () => {
   it('not studying: the latest enrollment, whatever its status; none without one', () => {
     expect(groupsOf('left', facts).map((g) => g.id)).toEqual(['g2']);
     expect(groupsOf('ungrouped', [])).toEqual([]);
+  });
+  it('a soft-deleted enrollment is neither live nor the last group', () => {
+    expect(groupsOf(null, withDeleted).map((g) => g.id)).toEqual(['g2']);
+    expect(groupsOf('left', withDeleted).map((g) => g.id)).toEqual(['g2']);
   });
 });
 
@@ -146,6 +163,17 @@ describe('filterDebtRows', () => {
       },
       groups: [{ id: 'g2', name: 'B', teachers: [{ id: 2, name: 'T2' }] }],
     }),
+    row({
+      studentId: 10003,
+      firstName: 'Sardor',
+      lastName: 'Karimov',
+      phone: '935554466',
+      promise: {
+        state: 'open',
+        promiseDate: '2026-10-16',
+        promisedAmount: 50_000,
+      },
+    }),
   ];
   const ids = (f: Parameters<typeof filterDebtRows>[1]) =>
     filterDebtRows(rows, f).map((r) => r.studentId);
@@ -161,21 +189,22 @@ describe('filterDebtRows', () => {
     expect(ids({ teacherIds: [2] })).toEqual([10002]);
     expect(ids({ promise: 'broken' })).toEqual([10002]);
     expect(ids({ promise: 'none' })).toEqual([10001]);
-    expect(ids({ promise: 'open' })).toEqual([]);
+    expect(ids({ promise: 'open' })).toEqual([10003]);
   });
 });
 
 describe('sortDebtRows', () => {
+  // Four sorts, four different orders: a sort that falls back to another fails.
   const a = row({
     studentId: 1,
-    firstName: 'Zarina',
-    amount: 300,
-    oldestMonth: '2026-09',
+    firstName: 'Anvar',
+    amount: 500,
+    oldestMonth: '2026-07',
   });
   const b = row({
     studentId: 2,
-    firstName: 'Anvar',
-    amount: 900,
+    firstName: 'Bobur',
+    amount: 100,
     oldestMonth: null,
     promise: {
       state: 'broken',
@@ -185,17 +214,17 @@ describe('sortDebtRows', () => {
   });
   const c = row({
     studentId: 3,
-    firstName: 'Bobur',
-    amount: 500,
-    oldestMonth: '2026-07',
+    firstName: 'Zarina',
+    amount: 900,
+    oldestMonth: '2026-09',
   });
   const order = (s: Parameters<typeof sortDebtRows>[1]) =>
     sortDebtRows([a, b, c], s).map((r) => r.studentId);
   it('largest debt first; oldest month first (undated last); broken first; by name', () => {
-    expect(order('debt')).toEqual([2, 3, 1]);
-    expect(order('oldest')).toEqual([3, 1, 2]);
+    expect(order('debt')).toEqual([3, 1, 2]);
+    expect(order('oldest')).toEqual([1, 3, 2]);
     expect(order('broken')).toEqual([2, 3, 1]);
-    expect(order('name')).toEqual([2, 3, 1]);
+    expect(order('name')).toEqual([1, 2, 3]);
   });
 });
 
@@ -225,50 +254,75 @@ describe('filterOptions', () => {
 });
 
 describe('drawerMonths', () => {
-  it("reads the statement's own allocation: charged, paid by payments, left — oldest first", () => {
-    const model = {
-      asOf: '2026-10-14',
-      months: [
-        { key: '2026-09', cost: 450_000 },
-        { key: '2026-10', cost: 450_000 },
-      ],
-      allocations: [
+  // FIFO by hand: dues Sep 450 000 (01.09), mock fee 30 000 (20.09),
+  // Oct 450 000 (01.10), the pack's lessons ahead 60 000 (last). A 40 000
+  // discount credit (05.09) and a 300 000 payment (10.09) both go to September.
+  // Balance −(900 000 + 30 000 + 60 000) + 340 000 = −650 000.
+  const model: Parameters<typeof drawerMonths>[0] = {
+    months: [
+      { key: '2026-09', cost: 450_000 },
+      { key: '2026-10', cost: 450_000 },
+    ],
+    headline: {
+      kind: 'debt',
+      amount: 650_000,
+      // Newest first, as the statement gives it.
+      unpaid: [
+        { due: { kind: 'prepaid' }, amount: 60_000 },
+        { due: { kind: 'month', month: '2026-10' }, amount: 450_000 },
         {
-          kind: 'payment',
-          to: [{ due: { kind: 'month', month: '2026-09' }, amount: 300_000 }],
+          due: { kind: 'item', itemKind: 'mock-fee', day: '2026-09-20' },
+          amount: 30_000,
         },
-        {
-          kind: 'credit',
-          to: [{ due: { kind: 'month', month: '2026-09' }, amount: 100_000 }],
-        },
+        { due: { kind: 'month', month: '2026-09' }, amount: 110_000 },
       ],
-      headline: {
-        kind: 'debt',
-        amount: 530_000,
-        unpaid: [
-          {
-            due: { kind: 'item', itemKind: 'mockExamFee', day: '2026-08-20' },
-            amount: 30_000,
-          },
-          { due: { kind: 'month', month: '2026-10' }, amount: 450_000 },
-          { due: { kind: 'month', month: '2026-09' }, amount: 50_000 },
-        ],
+    },
+  };
+  it('a month line adds up (credits count as paid); every other due is its own line', () => {
+    expect(drawerMonths(model)).toEqual([
+      {
+        month: '2026-09',
+        label: null,
+        charged: 450_000,
+        paid: 340_000,
+        left: 110_000,
       },
-    };
-    expect(drawerMonths(model as never)).toEqual([
-      { month: '2026-08', charged: null, paid: null, left: 30_000 },
-      { month: '2026-09', charged: 450_000, paid: 300_000, left: 50_000 },
-      { month: '2026-10', charged: 450_000, paid: 0, left: 450_000 },
+      {
+        month: null,
+        label: 'Mock imtihon (20.09)',
+        charged: null,
+        paid: null,
+        left: 30_000,
+      },
+      {
+        month: '2026-10',
+        label: null,
+        charged: 450_000,
+        paid: 0,
+        left: 450_000,
+      },
+      {
+        month: null,
+        label: "Oldindan to'langan, hali o'tilmagan darslar",
+        charged: null,
+        paid: null,
+        left: 60_000,
+      },
     ]);
+  });
+  it("the lines' left add up to the whole debt, and each month line to charged − paid", () => {
+    const lines = drawerMonths(model);
+    expect(lines.reduce((s, l) => s + l.left, 0)).toBe(model.headline.amount);
+    for (const l of lines.filter((x) => x.month !== null)) {
+      expect((l.charged ?? 0) - (l.paid ?? 0)).toBe(l.left);
+    }
   });
   it('a student who owes nothing has no months', () => {
     expect(
       drawerMonths({
-        asOf: '2026-10-14',
         months: [],
-        allocations: [],
         headline: { kind: 'credit', amount: 5, unpaid: [] },
-      } as never),
+      }),
     ).toEqual([]);
   });
 });
