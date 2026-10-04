@@ -11,7 +11,6 @@ describe('PaymentsDebtorsService', () => {
       findMany: jest.Mock;
       count: jest.Mock;
       aggregate: jest.Mock;
-      groupBy: jest.Mock;
     };
     user: { findUnique: jest.Mock; findFirst: jest.Mock };
     paymentPromise: { count: jest.Mock };
@@ -26,7 +25,6 @@ describe('PaymentsDebtorsService', () => {
         aggregate: jest
           .fn()
           .mockResolvedValue({ _sum: { balance: 0 }, _count: 0 }),
-        groupBy: jest.fn().mockResolvedValue([]),
       },
       user: {
         findUnique: jest.fn().mockResolvedValue({ mainBranch: 7 }),
@@ -376,7 +374,6 @@ describe('PaymentsDebtorsService', () => {
         overduePromises: 0,
       });
       expect(prisma.student.findMany).not.toHaveBeenCalled();
-      expect(prisma.student.groupBy).not.toHaveBeenCalled();
       expect(prisma.paymentPromise.count).not.toHaveBeenCalled();
     });
 

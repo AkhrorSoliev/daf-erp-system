@@ -223,6 +223,8 @@ describe('debtRows / debtTabAmount — the one tab rule (ADR-0072)', () => {
     expect(s.notStudying.total).toBe(sum('chiqqan'));
     expect(s.notStudying.count).toBe(tab('chiqqan').length);
     expect(s.notStudying.currentMonth).toBe(200_000);
+    // Student 4 has a charge this month: its kind still takes the whole debt.
+    expect(s.notStudying.byKind.frozen).toEqual({ total: 300_000, count: 1 });
     expect(s.studying.total).toBe(780_000);
     expect(s.studying.currentMonth + s.studying.older).toBe(s.studying.total);
   });
