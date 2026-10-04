@@ -100,7 +100,7 @@ export function DebtTable({ tab, rows, loading, filtered, offset, today, onOpen,
           <TableRow>
             <TableHead className="w-12 border-r">#</TableHead>
             {HEADS[tab].map((h, i) => <TableHead key={h} className={i === AMOUNT_AT[tab] ? "text-right" : undefined}>{h}</TableHead>)}
-            <TableHead className="w-20" />
+            <TableHead className="w-20"><span className="sr-only">Amal</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -110,7 +110,8 @@ export function DebtTable({ tab, rows, loading, filtered, offset, today, onOpen,
               tabIndex={onOpen ? 0 : undefined}
               className={onOpen ? "cursor-pointer" : undefined}
               onClick={() => onOpen?.(r.studentId)}
-              onKeyDown={(e) => { if (e.key === "Enter") onOpen?.(r.studentId); }}
+              // Only the row itself: an Enter on «To'lov» inside it must not open the drawer too.
+              onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) onOpen?.(r.studentId); }}
             >
               <TableCell className="border-r text-muted-foreground">{offset + i + 1}</TableCell>
               <TableCell><NameCell r={r} tab={tab} /></TableCell>
