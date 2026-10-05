@@ -26,7 +26,7 @@ import { PrismaClient, Prisma, TransactionType } from '@prisma/client';
 import { som, dt, printHeader, section, printTable, run } from './lib/check-cli';
 
 const EXAM_ID = '1ba9ff96-fd58-4400-b831-323f6f420fc1';
-const PERFORMED_BY = 10000; // CEO — Orif Akhmadaliyev
+const PERFORMED_BY = 10000; // CEO
 const MARKER = 'mock-overcharge-2026-08';
 const REASON =
   "Mock imtihon puli kassada naqd to'langan, balansdan ortiqcha yechilgan (mock-overcharge-2026-08)";

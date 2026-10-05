@@ -69,8 +69,8 @@ describe('SalaryOverviewService', () => {
   it('maps live totals per teacher and counts their active students', async () => {
     prisma.user.findMany.mockResolvedValue([
       {
-        id: 10010,
-        firstName: 'Jamsher',
+        id: 10001,
+        firstName: 'Ali',
         lastName: 'A',
         isActive: true,
         branches: [{ branch: { id: 1, name: 'Asosiy' } }],
@@ -80,7 +80,7 @@ describe('SalaryOverviewService', () => {
     prisma.employeeSalaryConfig.findMany.mockResolvedValue([
       {
         id: 'c1',
-        userId: 10010,
+        userId: 10001,
         salaryType: 'PERCENTAGE',
         value: 30,
         groupId: null,
@@ -89,7 +89,7 @@ describe('SalaryOverviewService', () => {
     ]);
     prisma.groupTeacher.findMany.mockResolvedValue([
       {
-        teacherId: 10010,
+        teacherId: 10001,
         group: {
           id: 'g1',
           exactDays: ['MON', 'WED', 'FRI'], // 3 → lessonsPerMonth = 12
@@ -99,19 +99,19 @@ describe('SalaryOverviewService', () => {
       },
     ]);
     prisma.salaryAccrual.groupBy.mockResolvedValue([
-      { userId: 10010, _sum: { amount: 123_456 } },
+      { userId: 10001, _sum: { amount: 123_456 } },
     ]);
     prisma.salaryPayment.groupBy.mockResolvedValue([
-      { userId: 10010, _sum: { amount: 700_000 } },
+      { userId: 10001, _sum: { amount: 700_000 } },
     ]);
     prisma.expense.groupBy.mockResolvedValue([
-      { relatedUserId: 10010, _sum: { amount: 50_000 } },
+      { relatedUserId: 10001, _sum: { amount: 50_000 } },
     ]);
     prisma.salaryPayment.findMany.mockResolvedValue([
       // createdAt DESC — first row is the latest.
       {
         id: 'p1',
-        userId: 10010,
+        userId: 10001,
         amount: 100_000,
         status: 'CALCULATED',
         periodStart: new Date('2026-06-01'),
@@ -119,7 +119,7 @@ describe('SalaryOverviewService', () => {
       },
       {
         id: 'p0',
-        userId: 10010,
+        userId: 10001,
         amount: 90_000,
         status: 'PAID',
         periodStart: new Date('2026-05-01'),

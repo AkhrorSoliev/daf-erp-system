@@ -72,13 +72,13 @@ describe('assertCallerInBranch', () => {
 
   it('passes for the caller’s own branch', async () => {
     await expect(
-      assertCallerInBranch(prismaWith(director), 10768, 1),
+      assertCallerInBranch(prismaWith(director), 10012, 1),
     ).resolves.toBeUndefined();
   });
 
   it('throws for another branch', async () => {
     await expect(
-      assertCallerInBranch(prismaWith(director), 10768, 2),
+      assertCallerInBranch(prismaWith(director), 10012, 2),
     ).rejects.toThrow(/ruxsat yo'q/);
   });
 
@@ -104,7 +104,7 @@ describe('assertCallerInBranch', () => {
 
   it('carries a caller-supplied message', async () => {
     await expect(
-      assertCallerInBranch(prismaWith(director), 10768, 2, 'Maxsus xabar'),
+      assertCallerInBranch(prismaWith(director), 10012, 2, 'Maxsus xabar'),
     ).rejects.toThrow('Maxsus xabar');
   });
 });

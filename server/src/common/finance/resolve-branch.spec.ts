@@ -94,7 +94,7 @@ describe('tryResolveUserBranchId', () => {
     const prisma = prismaMock({
       user: { mainBranch: 2, branches: [{ branchId: 1 }] },
     });
-    await expect(tryResolveUserBranchId(prisma, 10768)).resolves.toBe(2);
+    await expect(tryResolveUserBranchId(prisma, 10012)).resolves.toBe(2);
   });
 
   it('falls back to the single UserBranch row when mainBranch is null', async () => {

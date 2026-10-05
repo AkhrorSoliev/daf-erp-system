@@ -136,10 +136,10 @@ const namanganish = {
     { id: 10796, userId: null },
   ],
   userBranches: [
-    { userId: 10562, branchId: 1 }, // CEO — ikkala filialda
-    { userId: 10562, branchId: 2 },
-    { userId: 10768, branchId: 2 },
-    { userId: 10904, branchId: 2 },
+    { userId: 10011, branchId: 1 }, // CEO — ikkala filialda
+    { userId: 10011, branchId: 2 },
+    { userId: 10012, branchId: 2 },
+    { userId: 10013, branchId: 2 },
   ],
   groups: [{ id: 'g-1', branchId: 2 }],
   rooms: [{ id: 'r-1', branchId: 2 }],
@@ -166,9 +166,9 @@ describe('buildBranchResetPlan', () => {
   it("ikkala filialdagi foydalanuvchini o'chirish ro'yxatidan chiqarib tashlaydi", async () => {
     const plan = await buildBranchResetPlan(fakePrisma(namanganish), 2);
 
-    expect(plan.staffUserIds.sort()).toEqual([10768, 10904]);
-    expect(plan.staffUserIds).not.toContain(10562);
-    expect(plan.keptUserIds).toEqual([10562]);
+    expect(plan.staffUserIds.sort()).toEqual([10012, 10013]);
+    expect(plan.staffUserIds).not.toContain(10011);
+    expect(plan.keptUserIds).toEqual([10011]);
   });
 
   it("mavjud bo'lmagan filial uchun xato tashlaydi", async () => {
@@ -215,8 +215,8 @@ describe('verifyBranchResetPlan', () => {
 
   it('boshqa filialda ham turgan xodim rejaga sizib kirsa tutadi', async () => {
     const [prisma, plan] = await clean();
-    plan.staffUserIds.push(10562); // CEO'ni qo'lda kiritib ko'ramiz
-    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/10562/);
+    plan.staffUserIds.push(10011); // CEO'ni qo'lda kiritib ko'ramiz
+    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/10011/);
   });
 
   it('boshqa filialning xonasi yoki kursini tutadi', async () => {
@@ -276,7 +276,7 @@ describe('assertNoInboundReferences', () => {
       {
         ...namanganish,
         groups: [...namanganish.groups, { id: 'g-fargona', branchId: 1 }],
-        groupTeachers: [{ groupId: 'g-fargona', teacherId: 10768 }],
+        groupTeachers: [{ groupId: 'g-fargona', teacherId: 10012 }],
       },
       {},
     );
@@ -343,7 +343,7 @@ describe('assertNoInboundReferences', () => {
       {
         ...namanganish,
         groups: [...namanganish.groups, { id: 'g-fargona', branchId: 1 }],
-        groupTeachers: [{ groupId: 'g-fargona', teacherId: 10768 }],
+        groupTeachers: [{ groupId: 'g-fargona', teacherId: 10012 }],
       },
       { mockExamParticipant: [{ id: 'mep-1', studentId: 10795 }] },
     );
@@ -549,7 +549,7 @@ describe('assertNoBlockingDependents', () => {
 
   it('xodim yozgan izohni (Comment.authorId) tutadi', async () => {
     const prisma = fakePrismaWithMoney(namanganish, {
-      comment: [{ id: 'cm-1', authorId: 10768 }],
+      comment: [{ id: 'cm-1', authorId: 10012 }],
     });
     const plan = await buildBranchResetPlan(prisma, 2);
     await expect(assertNoBlockingDependents(prisma, plan)).rejects.toThrow(
@@ -570,7 +570,7 @@ describe('assertNoBlockingDependents', () => {
   it('topilgan har bir bloklovchi jadvalni bitta xabarda sanaydi, faqat birinchisini emas', async () => {
     const prisma = fakePrismaWithMoney(namanganish, {
       attendance: [{ id: 'a-1', groupId: 'g-1', studentId: 99999 }],
-      comment: [{ id: 'cm-1', authorId: 10768 }],
+      comment: [{ id: 'cm-1', authorId: 10012 }],
     });
     const plan = await buildBranchResetPlan(prisma, 2);
     await expect(assertNoBlockingDependents(prisma, plan)).rejects.toThrow(

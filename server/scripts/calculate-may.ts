@@ -2,7 +2,7 @@
  * STEP 3 — settle the May 2026 payroll from the backfilled accruals, using the
  * NEW merge-idempotent calculation code directly against prod (so we don't have
  * to deploy first, and the deployed old code's non-idempotent accrual branch
- * can't duplicate Saidaxon/Sohibaxon's existing May payments).
+ * can't duplicate the two teachers' existing May payments).
  *
  * Instantiates SalaryCalculationService on a raw PrismaClient and runs
  * calculateMonthlySalaries(company, { asOfDate: 2026-05-15 }) → resolves the
