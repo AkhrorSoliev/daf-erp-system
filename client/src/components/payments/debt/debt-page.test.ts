@@ -149,9 +149,10 @@ describe("DebtPage — links and language", () => {
 describe("DebtPage — between two answers", () => {
   const key = (search: string) => debtListKey(undefined, debtListParams(readDebtFilters(search)));
 
-  it("keeps the last answer while the same tab loads, never across tabs", () => {
+  it("keeps the last answer while the same tab loads; across tabs only the tab totals", () => {
     expect(keepWithinTab("shu-oy")(RESPONSE, { queryKey: key("page=2") })).toBe(RESPONSE);
-    expect(keepWithinTab("eski")(RESPONSE, { queryKey: key("") })).toBeUndefined();
+    const across = keepWithinTab("eski")(RESPONSE, { queryKey: key("") });
+    expect(across).toMatchObject({ data: [], total: 0, sum: 0, tabs: RESPONSE.tabs });
     expect(keepWithinTab("eski")(undefined, undefined)).toBeUndefined();
   });
 

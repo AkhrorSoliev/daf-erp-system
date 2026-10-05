@@ -11,11 +11,12 @@ export const debtListKey = (branchId: number | undefined, params: ReturnType<typ
 /**
  * Totals, chips, options and the pager stay on screen while the next page or
  * filter of the SAME tab loads. Another tab has other columns and other
- * amounts, so a tab switch shows the skeleton instead of the old rows.
+ * amounts, so a tab switch drops the old rows (skeleton, no pager) and keeps
+ * only what does not depend on the tab: the three tab totals and the options.
  */
 export const keepWithinTab = (tab: DebtTab) =>
   (prev: DebtListResponse | undefined, prevQuery?: { queryKey: ReturnType<typeof debtListKey> }) =>
-    prevQuery?.queryKey[2].tab === tab ? prev : undefined;
+    !prev || prevQuery?.queryKey[2].tab === tab ? prev : { ...prev, data: [], total: 0, sum: 0 };
 
 /** A drawer request is retried only when the server or the network failed, at most twice: a 404 or a 403 will not change. */
 export function retryDrawer(failureCount: number, error: unknown) {
