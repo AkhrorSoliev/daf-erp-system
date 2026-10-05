@@ -28,16 +28,17 @@ interface ReportsNavSection {
 const CEO_BD = [1, 2];
 
 /**
- * Administrator hisobotlar bo'limida faqat Lidlar hisobotini ko'radi (CEO
- * qarori, 13.09.2026). Qolganlari — pul va markaz ko'rsatkichlari — CEO/BD.
- * Backend ham shunday: `reports/lead-funnel` Administrator'ga ochiq, qolgan
- * pul hisobotlari `@Roles('CEO', 'Branch Director')`.
+ * Administrator hisobotlar bo'limida Lidlar va To'lov hisobotlarini ko'radi
+ * (CEO qarori: Lidlar 13.09.2026, To'lov hisobotlari 05.10.2026). Qolganlari —
+ * pul va markaz ko'rsatkichlari — CEO/BD. Backend ham shunday:
+ * `reports/lead-funnel` va `reports/payment-reports*` Administrator'ga ochiq,
+ * qolgan pul hisobotlari `@Roles('CEO', 'Branch Director')`.
  */
 export const reportsNavSections: ReportsNavSection[] = [
   {
     title: "Moliyaviy hisobotlar",
     items: [
-      { title: "To'lov hisobotlari", url: "/reports/payment-reports", icon: Receipt, visibleForRoles: CEO_BD },
+      { title: "To'lov hisobotlari", url: "/reports/payment-reports", icon: Receipt, visibleForRoles: [1, 2, 3] },
       { title: "O'quvchi to'lovi", url: "/reports/student-payments", icon: Wallet, visibleForRoles: CEO_BD },
     ],
   },

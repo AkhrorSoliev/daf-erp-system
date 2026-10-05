@@ -61,17 +61,18 @@ export class PaymentsDebtorsService {
   }
 
   /**
-   * Canonical debtor predicate, shared by the list, its count and the Excel
-   * line-item sheet. The page's summary cards do NOT read it: they show the debt
-   * as two numbers from `loadDebtSplit` (ADR-0059), a narrower set that leaves
-   * archived cards out, so they are not expected to add up to this list's total.
+   * Canonical debtor predicate, shared by `GET /payments/debtors` (the home
+   * page's top-5 debtors and older clients), its count and the Excel line-item
+   * sheet. `getDebtorSummary` does NOT read it: it gives the debt as two
+   * numbers from `loadDebtSplit` (ADR-0059), a narrower set that leaves
+   * archived cards out, so the two are not expected to add up. The debt page
+   * itself reads `loadDebtRows` (ADR-0072), not this.
    *
    * `status` defaults to ACTIVE because the Excel line-item sheet ties to the
    * balance sheet's `accountsReceivable`, which counts active students — that
-   * caller must not move. The PAGE passes `'all'`: a frozen or expelled student
-   * still owes the money, and hiding them made the debtors tab report
-   * 37 998 992 while the monthly tab reported 84 555 445 on the same screen,
-   * with the 45 mln difference sitting in students nobody could open.
+   * caller must not move. `getDebtors` defaults to `'all'`: a frozen or expelled
+   * student still owes the money, and hiding them once made one screen show two
+   * debt totals that disagreed, the difference in students nobody could open.
    */
   private debtorWhere(
     companyId: number,
@@ -364,18 +365,18 @@ export class PaymentsDebtorsService {
   }
 
   /**
-   * Card-ready aggregate for the debtors page: the debt as TWO numbers
-   * (`split`, ADR-0059) plus the payment-promise counts behind the
-   * «Belgilangan / muddati o'tgan» card. Same branch scope as the list, but NOT
-   * its filters — the cards describe the whole scope and the page says so under
-   * them, so there is no status / search / promise parameter here.
+   * `GET /payments/debtors/summary`: the debt as TWO numbers (`split`,
+   * ADR-0059) plus the open and overdue promise counts. Read by the outreach
+   * banner and the home page's attention block (which needs only the overdue
+   * count). Same branch scope as `getDebtors`, none of its filters — there is
+   * no status / search / promise parameter here.
    *
    * `split` is `loadDebtSplit`, the one read the Moliya overview, the home card
    * and the Telegram report share. It is built on the «faol o'quvchi» rule and
-   * leaves archived cards out, so it is not `debtorWhere`'s set: the list below
-   * also shows frozen, expelled and archived debt, and its total is not the sum
-   * of the two numbers (which are never added to each other either). No `month`
-   * is passed: «shu oy» is the current Tashkent month.
+   * leaves archived cards out, so it is not `debtorWhere`'s set (which also
+   * holds frozen, expelled and archived debt), and the two numbers are never
+   * added to each other. No `month` is passed: «shu oy» is the current
+   * Tashkent month.
    */
   async getDebtorSummary(
     companyId: number,

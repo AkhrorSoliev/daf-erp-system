@@ -72,6 +72,10 @@ export default function Profile() {
               </Pressable>
 
               <Text variant="title">{`${p.firstName} ${p.lastName}`.trim()}</Text>
+              {/* Payme and Click take this number as the account; selectable so it can be copied. */}
+              <Text variant="label" selectable className="rounded-full border border-border px-3 py-1">
+                {`ID: ${p.id}`}
+              </Text>
 
               <View className="w-full">
                 <Row label={t.profile.phone} value={formatPhone(p.phone)} />

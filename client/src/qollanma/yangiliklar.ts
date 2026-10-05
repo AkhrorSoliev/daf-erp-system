@@ -6,6 +6,25 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-05",
+    sarlavha: "O'quvchi ID raqami ko'proq joyda chiqadi",
+    matn: "O'quvchilar ro'yxatida va guruh sahifasidagi o'quvchilar ro'yxatida tartib raqami yonida «ID» ustuni turadi. O'quvchi o'z ID raqamini portaldagi «Profil» va «To'lovlar» sahifalarida ko'radi va bir bosishda nusxalaydi; botdagi «💳 To'lovlar» xabari ham ism va ID bilan boshlanadi. Bu raqam Payme va Click'da o'quvchining hisob raqami: ota-ona Payme yoki Click ilovasidan to'laganda shu raqamni kiritadi.",
+    rollar: [1, 2, 3, 4],
+    sahifa: { bolim: "oquvchilar", sahifa: "oquvchi-kartasi" },
+  },
+  {
+    sana: "2026-10-04",
+    sarlavha: "«Qarzdorlik» uch bo'limda, to'lov va'dasi 7 kungacha va oyiga bir marta",
+    matn: "«Qarzdorlik» sahifasi endi bugungi qarzni uch bo'limda ko'rsatadi: «Shu oy», «Eski qarz» va «O'qimayotganlar»; har bo'limda jami va soni, uchalasi qo'shilmaydi. Qatorni bossangiz o'quvchi oynasi ochiladi: oylar bo'yicha qarz, oxirgi to'lov, aloqa va amallar. To'lov va'dasi bugundan ko'pi bilan 7 kunga va o'quvchiga oyiga bir marta yoziladi — o'quvchi oynasida, qo'ng'iroq natijasida va qisman to'lovda bir xil. Qarz tarixi, kechirilgan qarzlar va muzlatilganlar puli alohida sahifalarga ko'chdi; «Markaz qoplagani» Ish haqi sahifasida, faqat CEO va filial direktoriga.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "tolovlar", sahifa: "qarzdorlik" },
+  },
+  {
+    sana: "2026-10-04",
+    sarlavha: "Qo'llanma bo'limlari o'ng tomonda, sahifa bilan birga ketmaydi",
+    matn: "Qo'llanmada bo'limlar ro'yxati endi o'ng tomonda turadi va sahifani pastga aylantirganda ham ko'rinib turadi. Telefonda «Bo'limlar» tugmasi ro'yxatni o'ngdan ochadi. Shu bilan birga davomatdagi «Saqlash» tugmasi uzun ro'yxatda ekran pastida turadi, forma va sinov imtihoni formasini tuzishda yon panel joyida turadi.",
+  },
+  {
     sana: "2026-10-03",
     sarlavha: "O'quvchi zaxira raqami bilan ham kiradi",
     matn: "O'quvchi kartasiga «Zaxira raqam» yozish mumkin: yangi o'quvchi oynasida yoki kartadagi «Tahrirlash» → «Qo'shimcha ma'lumotlar» da. O'quvchi o'quvchi portaliga shu raqam bilan ham kiradi: parol bilan yoki «Telegram orqali kirish» tugmasi bilan. Bir raqam faqat bitta o'quvchida turadi, boshqa o'quvchidagi raqam saqlanmaydi. Kartada endi barcha raqamlar nomi bilan chiqadi: «Asosiy», «Zaxira», «Ota-ona». Parolni tiklash uchun SMS kod faqat asosiy raqamga boradi.",

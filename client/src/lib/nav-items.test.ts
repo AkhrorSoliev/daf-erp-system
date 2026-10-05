@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { navItems } from "./nav-items";
+import { isNavChildActive, navItems } from "./nav-items";
 
 describe("navItems — «Sozlamalar»", () => {
   it("dropdown emas, /settings sahifasiga oddiy havola", () => {
@@ -43,5 +43,22 @@ describe("navItems — Moliya → «Ish haqi»", () => {
       .find((item) => item.url === "/payments")
       ?.children?.find((child) => child.url === "/payments/salary");
     expect(salary?.visibleForRoles).toEqual([1, 2]);
+  });
+});
+
+describe("navItems — Moliya → «Qarzdorlik» stays lit on its sub-pages (spec B2a §2.6)", () => {
+  const debt = navItems
+    .find((item) => item.url === "/payments")
+    ?.children?.find((child) => child.url === "/payments/debt");
+
+  it.each(["/payments/debt", "/payments/debt-history", "/payments/debt-write-offs", "/payments/frozen-balances"])(
+    "%s highlights «Qarzdorlik»",
+    (path) => {
+      expect(debt && isNavChildActive(path, debt)).toBe(true);
+    },
+  );
+
+  it("another Moliya page does not", () => {
+    expect(debt && isNavChildActive("/payments/salary", debt)).toBe(false);
   });
 });

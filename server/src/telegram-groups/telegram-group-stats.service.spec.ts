@@ -16,12 +16,14 @@ describe('TelegramGroupStatsService', () => {
       total: 0,
       count: 0,
       currentMonth: 0,
+      currentMonthCount: 0,
       older: 0,
       olderCount: 0,
     },
     notStudying: {
       total: 0,
       count: 0,
+      currentMonth: 0,
       byKind: {
         ungrouped: { total: 0, count: 0 },
         frozen: { total: 0, count: 0 },
@@ -197,12 +199,14 @@ describe('TelegramGroupStatsService', () => {
         total: 39_150_000,
         count: 219,
         currentMonth: 36_990_000,
+        currentMonthCount: 0,
         older: 2_160_000,
         olderCount: 13,
       },
       notStudying: {
         total: 36_540_000,
         count: 305,
+        currentMonth: 0,
         byKind: {
           ungrouped: { total: 13_500_000, count: 118 },
           frozen: { total: 13_140_000, count: 91 },

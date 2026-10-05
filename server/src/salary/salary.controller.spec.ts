@@ -125,26 +125,20 @@ describe('SalaryController @Roles metadata', () => {
     });
   });
 
-  describe("«Markaz qoplagani» — /payments/debt tabi, o'qituvchidan boshqa har bir xodimga", () => {
-    // Qarzdorlik sahifasi ko'ruvchiga qarab shaklini o'zgartirmaydi
-    // (2026-08-12 qarori, server/CLAUDE.md «Key access rules»). Bu tab ham
-    // o'sha sahifaniki, lekin kassir uni ochganda 403 olardi.
-    it('getCenterTopUpStudents allows CEO/BD/Administrator/Cashier', () => {
+  describe('«Markaz qoplagani» — the salary page tab, CEO and Branch Director only (ADR-0072)', () => {
+    it('getCenterTopUpStudents allows CEO and Branch Director only', () => {
       expect(rolesFor('getCenterTopUpStudents')).toEqual([
         'CEO',
         'Branch Director',
-        'Administrator',
-        'Cashier',
       ]);
     });
 
-    it('RolesGuard lets a Cashier in and keeps a Teacher out', () => {
-      expect(
-        guard.canActivate(ctx('getCenterTopUpStudents', ['Cashier'])),
-      ).toBe(true);
-      expect(() =>
-        guard.canActivate(ctx('getCenterTopUpStudents', ['Teacher'])),
-      ).toThrow(ForbiddenException);
+    it('RolesGuard keeps an Administrator and a Cashier out', () => {
+      for (const role of ['Administrator', 'Cashier']) {
+        expect(() =>
+          guard.canActivate(ctx('getCenterTopUpStudents', [role])),
+        ).toThrow(ForbiddenException);
+      }
     });
   });
 

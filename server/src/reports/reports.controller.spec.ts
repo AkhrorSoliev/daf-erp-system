@@ -209,9 +209,6 @@ describe('ReportsController — role guards', () => {
   }
 
   const narrowedEndpoints = [
-    'getPaymentReports',
-    'getTeacherPaymentReports',
-    'getTeacherGroupsReport',
     'getMonthlyDebtRecovery',
     'getFinancialTrend',
     'getIncomeMonthAttribution',
@@ -351,48 +348,36 @@ describe('ReportsController — role guards', () => {
     });
   });
 
-  describe('getPaymentReports() — method-level @Roles', () => {
-    it('should have @Roles(CEO, Branch Director) on the handler', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.getPaymentReports,
-      );
-      expect(roles).toEqual(['CEO', 'Branch Director']);
-    });
+  // /reports/payment-reports page: open to the Administrator too (CEO,
+  // 05.10.2026). The branch scope still confines them to their own branch(es).
+  for (const method of [
+    'getPaymentReports',
+    'getTeacherPaymentReports',
+    'getTeacherGroupsReport',
+  ] as const) {
+    describe(`${method}() — method-level @Roles`, () => {
+      it('should have @Roles(CEO, Branch Director, Administrator) on the handler', () => {
+        const roles = reflector.get<string[]>(ROLES_KEY, controller[method]);
+        expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+      });
 
-    it('should allow CEO', () => {
-      const ctx = mockExecutionContext(controller.getPaymentReports, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
+      it('should allow CEO, Branch Director and Administrator', () => {
+        for (const role of ['CEO', 'Branch Director', 'Administrator']) {
+          expect(
+            guard.canActivate(mockExecutionContext(controller[method], [role])),
+          ).toBe(true);
+        }
+      });
 
-    it('should allow Branch Director', () => {
-      const ctx = mockExecutionContext(controller.getPaymentReports, [
-        'Branch Director',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
+      it('should deny Cashier and Teacher', () => {
+        for (const role of ['Cashier', 'Teacher']) {
+          expect(() =>
+            guard.canActivate(mockExecutionContext(controller[method], [role])),
+          ).toThrow(ForbiddenException);
+        }
+      });
     });
-
-    it('should deny Administrator (method-level narrower than class-level)', () => {
-      const ctx = mockExecutionContext(controller.getPaymentReports, [
-        'Administrator',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Cashier', () => {
-      const ctx = mockExecutionContext(controller.getPaymentReports, [
-        'Cashier',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Teacher', () => {
-      const ctx = mockExecutionContext(controller.getPaymentReports, [
-        'Teacher',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
+  }
 
   // Role coverage for getDebtWriteOffsSummary lives in the `debtPageEndpoints`
   // loop above — it is one of the four the debt page reads.

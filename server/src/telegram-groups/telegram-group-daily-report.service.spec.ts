@@ -192,12 +192,14 @@ const DEBT_SPLIT: DebtSplit = {
     total: 20_070_000,
     count: 48,
     currentMonth: 18_000_000,
+    currentMonthCount: 0,
     older: 2_070_000,
     olderCount: 9,
   },
   notStudying: {
     total: 8_190_000,
     count: 29,
+    currentMonth: 0,
     byKind: {
       ungrouped: { total: 2_790_000, count: 10 },
       frozen: { total: 3_600_000, count: 11 },
@@ -670,6 +672,7 @@ describe('TelegramGroupDailyReportService', () => {
           total: 20_000_000,
           count: 44,
           currentMonth: 18_000_000,
+          currentMonthCount: 0,
           older: 2_000_000,
         }),
       ),
@@ -1054,11 +1057,13 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
       total: 39_150_000,
       count: 219,
       currentMonth: 36_990_000,
+      currentMonthCount: 0,
       older: 2_160_000,
     },
     {
       total: 36_540_000,
       count: 305,
+      currentMonth: 0,
       byKind: {
         ungrouped: { total: 11_340_000, count: 94 },
         frozen: { total: 16_200_000, count: 136 },
@@ -1120,6 +1125,7 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
           total: 0,
           count: 0,
           currentMonth: 0,
+          currentMonthCount: 0,
           older: 0,
           olderCount: 0,
         }),
@@ -1147,6 +1153,7 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
           {
             total: 90_000_000,
             count: 600,
+            currentMonth: 0,
             byKind: {
               ungrouped: { total: 30_000_000, count: 200 },
               frozen: { total: 40_000_000, count: 270 },

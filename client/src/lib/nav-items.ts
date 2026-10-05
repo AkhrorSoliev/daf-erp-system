@@ -32,7 +32,13 @@ export interface NavItemChild {
   visibleForRoles?: number[];
   /** Optional nested sub-items rendered as an inner dropdown. */
   children?: NavItemChild[];
+  /** Extra path prefixes that also mark the item active (its pages that live outside `url`). */
+  activePrefixes?: string[];
 }
+
+/** The sidebar's active check for a sub-item: its own url or any of its `activePrefixes`. */
+export const isNavChildActive = (pathname: string, child: NavItemChild) =>
+  [child.url, ...(child.activePrefixes ?? [])].some((p) => pathname.startsWith(p));
 
 export interface NavItem {
   title: string;

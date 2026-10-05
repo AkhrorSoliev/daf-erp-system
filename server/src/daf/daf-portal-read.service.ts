@@ -41,6 +41,13 @@ export interface BolimGuruhi {
   titleUz: string;
   titleDe: string;
   lessons: LernenSeansItem[];
+  /** The section's askable words and how many the student has met (ADR-0071). */
+  woerter: SozHisobi;
+}
+
+export interface SozHisobi {
+  jami: number;
+  gesehen: number;
 }
 
 export interface LevelPathItem {
@@ -68,6 +75,9 @@ export interface LevelPathItem {
  * same rule decides whether a unit is ready (`bereit`).
  */
 const TAYYOR_SOZ = { core: true, sectionId: { not: null } } as const;
+
+/** A word a lesson can ask: core, with a translation (`toWort` drops the rest). */
+const SORALADIGAN_SOZ = { core: true, uz: { not: null } } as const;
 
 /** `gruppiereLektionen` ga beriladigan xom qatorlar — DB select shakli. */
 interface XomDars {
@@ -104,6 +114,42 @@ export class DafPortalReadService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
+
+  /**
+   * Per section: the words a lesson can ask, and how many of them this
+   * student has met (a state row exists, ADR-0071). Two queries, whatever
+   * the number of sections.
+   */
+  private async sozHisobi(
+    studentId: number,
+    sectionIds: number[],
+  ): Promise<Map<number, SozHisobi>> {
+    const hisob = new Map<number, SozHisobi>();
+    if (sectionIds.length === 0) return hisob;
+    const where = { sectionId: { in: sectionIds }, ...SORALADIGAN_SOZ };
+    const [jami, gesehen] = await Promise.all([
+      this.prisma.dafLexeme.groupBy({
+        by: ['sectionId'],
+        where,
+        _count: { _all: true },
+      }),
+      this.prisma.dafLexeme.groupBy({
+        by: ['sectionId'],
+        where: { ...where, states: { some: { studentId } } },
+        _count: { _all: true },
+      }),
+    ]);
+    for (const r of jami) {
+      if (r.sectionId != null) {
+        hisob.set(r.sectionId, { jami: r._count._all, gesehen: 0 });
+      }
+    }
+    for (const r of gesehen) {
+      const h = r.sectionId != null ? hisob.get(r.sectionId) : undefined;
+      if (h) h.gesehen = r._count._all;
+    }
+    return hisob;
+  }
 
   /** R2 kalitini ommaviy manzilga aylantiradi. */
   private mediaUrl(key: string | null): string | null {
@@ -199,6 +245,10 @@ export class DafPortalReadService {
       _count: { _all: true },
     });
     const tayyorUnitlar = new Set(tayyorlar.map((t) => t.unitId));
+    const sozlar = await this.sozHisobi(
+      studentId,
+      sections.map((s) => s.id),
+    );
 
     const bolimlarByUnit = new Map<number, XomBolim[]>();
     for (const s of sections) {
@@ -237,6 +287,7 @@ export class DafPortalReadService {
             darslarByUnit.get(u.id) ?? [],
             bolimlarByUnit.get(u.id) ?? [],
             fortschritt,
+            sozlar,
           );
           return {
             id: u.id,
@@ -269,6 +320,7 @@ export class DafPortalReadService {
     lessons: XomDars[],
     sections: XomBolim[],
     fortschritt: XomFortschritt[],
+    sozlar: Map<number, SozHisobi>,
   ): {
     lessons: LernenSeansItem[];
     sections: BolimGuruhi[];
@@ -355,6 +407,7 @@ export class DafPortalReadService {
         titleUz: s.titleUz,
         titleDe: s.titleDe,
         lessons: bySection.get(s.id) ?? [],
+        woerter: sozlar.get(s.id) ?? { jami: 0, gesehen: 0 },
       }));
 
     return { lessons: alle, sections: sectionGruppen, finalTest };
@@ -431,11 +484,15 @@ export class DafPortalReadService {
     // Guruhlash mantiqi `getLevels` bilan BIR XIL xususiy metodda — u
     // yerda ham har unit shu tarzda guruhlanadi. Ikkala joyda alohida
     // yozilsa, ular asta-sekin bir-biridan farqlanib ketardi.
+    const sozlar = await this.sozHisobi(
+      studentId,
+      sections.map((s) => s.id),
+    );
     const {
       lessons: alle,
       sections: sectionGruppen,
       finalTest,
-    } = this.gruppiereLektionen(unitId, lessons, sections, fortschritt);
+    } = this.gruppiereLektionen(unitId, lessons, sections, fortschritt, sozlar);
 
     const tayyorSozlar = await this.prisma.dafLexeme.count({
       where: { unitId, ...TAYYOR_SOZ },

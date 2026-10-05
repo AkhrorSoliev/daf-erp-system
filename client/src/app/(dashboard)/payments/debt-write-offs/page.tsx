@@ -1,7 +1,11 @@
-import { redirect } from "next/navigation";
+import { DebtSubpage } from "@/components/payments/debt/debt-subpage";
+import { WriteOffsView } from "@/components/payments/debt/write-offs-view";
 
-// Moved into /payments/debt as the "Kechirilganlar" tab. Redirected rather than
-// deleted, for the same reason as the debtor list before it.
+// A real page again (spec B2a §2.6). No Suspense: the view keeps no URL state.
 export default function DebtWriteOffsPage() {
-  redirect("/payments/debt?tab=kechirilgan");
+  return (
+    <DebtSubpage title="Kechirilgan qarzlar arxivi">
+      <WriteOffsView />
+    </DebtSubpage>
+  );
 }

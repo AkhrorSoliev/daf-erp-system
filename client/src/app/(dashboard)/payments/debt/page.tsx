@@ -1,13 +1,16 @@
 import { Suspense } from "react";
-import { DebtPageClient } from "@/components/payments/debt/debt-page-client";
+import { redirect } from "next/navigation";
+import { DebtPage } from "@/components/payments/debt/debt-page";
+import { legacyDebtRedirect } from "@/components/payments/debt/debt-url";
 
-// Suspense is required, not decorative: the client reads `useSearchParams`
-// (tab + filters live in the URL), which bails out of static prerendering
-// without a boundary and fails `npm run build`.
-export default function DebtPage() {
+// Old links (?tab=oylik, ?promise=overdue, …) still land (spec B2a §2.6).
+// Suspense: the page keeps its tab and filters in the URL (`useSearchParams`).
+export default async function DebtRoute({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const to = legacyDebtRedirect(await searchParams);
+  if (to) redirect(to);
   return (
     <Suspense>
-      <DebtPageClient />
+      <DebtPage />
     </Suspense>
   );
 }

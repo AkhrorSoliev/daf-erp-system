@@ -30,7 +30,7 @@ import { SidebarUserFooter } from "@/components/sidebar-user-footer";
 import { NavItemBadge } from "@/components/nav-item-badge";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { navItems, type NavItem, type NavItemChild } from "@/lib/nav-items";
+import { isNavChildActive, navItems, type NavItem, type NavItemChild } from "@/lib/nav-items";
 import { useAuth } from "@/hooks/use-auth";
 import { usePendingTaskCount } from "@/hooks/use-pending-task-count";
 import { cn } from "@/lib/utils";
@@ -51,7 +51,7 @@ export function AppSidebar() {
   const isItemActive = (item: NavItem) =>
     item.url === "/" ? pathname === "/" : pathname.startsWith(item.url);
 
-  const isChildActive = (child: NavItemChild) => pathname.startsWith(child.url);
+  const isChildActive = (child: NavItemChild) => isNavChildActive(pathname, child);
 
   const activeParentUrl = filteredItems.find(
     (item) => item.children && item.children.length > 0 && isItemActive(item),
