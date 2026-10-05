@@ -12,7 +12,10 @@ export default function DashboardLayout({
   return (
     <SidebarProvider defaultOpen={false}>
       <AppSidebar />
-      <SidebarInset className="min-w-0 overflow-x-hidden">
+      {/* `clip`, not `hidden`: a hidden box becomes its own scroll container,
+          and `sticky` inside it never sticks (the guide's menu, the form
+          builders' side panels, the attendance save bar). */}
+      <SidebarInset className="min-w-0 overflow-x-clip">
         <DashboardHeader />
         {/* `<main>` lives in a client component so it can be re-keyed on a
             branch switch — that is what makes the ~47 pages fetching outside

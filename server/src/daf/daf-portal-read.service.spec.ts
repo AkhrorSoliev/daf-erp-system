@@ -300,8 +300,11 @@ describe('bereit — unit has content', () => {
     const prisma = fakePrisma();
     prisma.dafUnit.findMany = jest.fn(async () => zweiUnits);
     await svc(prisma).getLevels(55);
-    expect(prisma.dafLexeme.groupBy).toHaveBeenCalledTimes(1);
-    const arg = prisma.dafLexeme.groupBy.mock.calls[0][0];
+    const byUnit = prisma.dafLexeme.groupBy.mock.calls.filter(
+      (c: any[]) => c[0].by[0] === 'unitId',
+    );
+    expect(byUnit).toHaveLength(1);
+    const arg = byUnit[0][0];
     expect(arg.by).toEqual(['unitId']);
     expect(arg.where).toEqual({
       unitId: { in: [1, 4] },
@@ -326,6 +329,128 @@ describe('bereit — unit has content', () => {
 
 const svc = (prisma: any) =>
   new DafPortalReadService(prisma, { get: () => null } as any);
+
+describe('woerter — seen / total words per section (ADR-0071)', () => {
+  // Section 70 holds 28 askable words and the student has met 14; section
+  // 71 holds 9 and none is met yet.
+  function mitZaehlung() {
+    const prisma = fakePrisma();
+    prisma.dafSection.findMany = jest.fn(async () => [
+      {
+        id: 70,
+        unitId: 1,
+        order: 1,
+        code: 'u04-s1',
+        titleUz: 'Oziq-ovqat',
+        titleDe: 'Lebensmittel',
+      },
+      {
+        id: 71,
+        unitId: 1,
+        order: 2,
+        code: 'u04-s2',
+        titleUz: 'Supermarket',
+        titleDe: 'Im Supermarkt',
+      },
+    ]);
+    prisma.dafLexeme.groupBy = jest.fn(async (args: any) => {
+      if (args.by[0] !== 'sectionId') return [];
+      return args.where.states
+        ? [{ sectionId: 70, _count: { _all: 14 } }]
+        : [
+            { sectionId: 70, _count: { _all: 28 } },
+            { sectionId: 71, _count: { _all: 9 } },
+          ];
+    });
+    return prisma;
+  }
+
+  it('getUnit gives each section its seen and total words', async () => {
+    const unit = await svc(mitZaehlung()).getUnit(1, 55);
+    expect(unit.sections.map((s) => [s.id, s.woerter])).toEqual([
+      [70, { jami: 28, gesehen: 14 }],
+      [71, { jami: 9, gesehen: 0 }],
+    ]);
+  });
+
+  it('counts askable words only, and the seen ones of this student', async () => {
+    const prisma = mitZaehlung();
+    await svc(prisma).getUnit(1, 55);
+    const bySection = prisma.dafLexeme.groupBy.mock.calls
+      .map((c: any[]) => c[0])
+      .filter((a: any) => a.by[0] === 'sectionId');
+    expect(bySection).toHaveLength(2);
+    const [jami, gesehen] = [
+      bySection.find((a: any) => !a.where.states),
+      bySection.find((a: any) => a.where.states),
+    ];
+    expect(jami.where).toEqual({
+      sectionId: { in: [70, 71] },
+      core: true,
+      uz: { not: null },
+    });
+    expect(gesehen.where).toEqual({
+      sectionId: { in: [70, 71] },
+      core: true,
+      uz: { not: null },
+      states: { some: { studentId: 55 } },
+    });
+  });
+
+  it('getLevels attaches them too, with two queries for all units together', async () => {
+    const prisma = mitZaehlung();
+    const unit = (id: number, order: number) => ({
+      id,
+      level: 'A1',
+      order,
+      titleUz: `Unit ${order}`,
+      titleDe: `Unit ${order}`,
+      _count: { lessons: 18 },
+    });
+    prisma.dafUnit.findMany = jest.fn(async () => [unit(1, 4), unit(2, 5)]);
+    const bolim = (id: number, unitId: number, order: number) => ({
+      id,
+      unitId,
+      order,
+      code: `s${id}`,
+      titleUz: `S${id}`,
+      titleDe: `S${id}`,
+    });
+    prisma.dafSection.findMany = jest.fn(async () => [
+      bolim(70, 1, 1),
+      bolim(71, 1, 2),
+      bolim(72, 2, 1),
+    ]);
+    prisma.dafLexeme.groupBy = jest.fn(async (args: any) => {
+      if (args.by[0] !== 'sectionId') return [];
+      return args.where.states
+        ? [
+            { sectionId: 70, _count: { _all: 14 } },
+            { sectionId: 72, _count: { _all: 5 } },
+          ]
+        : [
+            { sectionId: 70, _count: { _all: 28 } },
+            { sectionId: 71, _count: { _all: 9 } },
+            { sectionId: 72, _count: { _all: 12 } },
+          ];
+    });
+
+    const levels = await svc(prisma).getLevels(55);
+    const units = levels.find((l) => l.level === 'A1')!.units;
+    expect(units.map((u) => u.sections.map((s) => s.woerter))).toEqual([
+      [
+        { jami: 28, gesehen: 14 },
+        { jami: 9, gesehen: 0 },
+      ],
+      [{ jami: 12, gesehen: 5 }],
+    ]);
+    expect(
+      prisma.dafLexeme.groupBy.mock.calls.filter(
+        (c: any[]) => c[0].by[0] === 'sectionId',
+      ),
+    ).toHaveLength(2);
+  });
+});
 
 describe('getLevels — ilgarilash', () => {
   it('har unitga tugallangan seans sonini qo`shadi', async () => {

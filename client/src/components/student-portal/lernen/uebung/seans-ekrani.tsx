@@ -12,6 +12,7 @@ import { RadioSessionToggle } from "../../radio/radio-session-toggle";
 import { useSidebar } from "../../lib/sidebar-store";
 import { LernenLessonPage } from "../lernen-lesson-page";
 import {
+  sozHisobiniEskirt,
   useAbschluss,
   useErsatz,
   useFortschritt,
@@ -125,6 +126,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const fortschritt = useFortschritt();
   // The bottom bar is `fixed`; it needs the rail's width to stay clear of it.
   const sidebarMode = useSidebar((s) => s.mode);
+
+  // Leaving mid-round must not leave the word counters behind (ADR-0071).
+  React.useEffect(() => () => sozHisobiniEskirt(qc), [qc]);
 
   const unitId = darsMi ? (lesson.data?.unit.id ?? null) : null;
   const chiqishHref = unitId
