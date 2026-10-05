@@ -12,7 +12,7 @@
 
 - Filial: `Branch.id = 2`, `companyId = 1001`, DB dagi nomi aynan `Namangan filali` (bitta `i` tushib qolgan — tasdiqlash satri shunday yozilishi shart).
 - Hech qanday `deleteMany` ochiq `branchId` sharti bilan chaqirilmaydi. Har bir o'chirish tranzaksiya boshida bir marta yig'ilgan aniq ID ro'yxatiga tayanadi.
-- CEO Sherali Yodgorov (`User.id = 10562`) va uning `UserBranch(userId=10562, branchId=2)` qatori tegilmaydi.
+- CEO akkaunti (`User.id = <CEO_ID>`) va uning `UserBranch(userId=<CEO_ID>, branchId=2)` qatori tegilmaydi.
 - `Branch` qatorining o'zi, 2 ta `CashAccount` va `systemKey='NEW'` `LeadColumn` + uning `LeadSection` i saqlanadi. Ular `branches.service.create()` da faqat bir marta quriladi va UI'dan qayta yaratib bo'lmaydi.
 - Kod izohlari va CLI chiqishi lotin alifbosidagi o'zbek tilida. Kirill yoki arab harflari ishlatilmaydi.
 - Farg'ona filiali (`Branch.id = 1`) ga tegishli bironta qator o'zgarmasligi kerak. Skriptning oldin/keyin sanoq tekshiruvi buni TO'LIQ ISBOTLAMAYDI — u faqat YUQORI CHEGARA (tenglik emas: `$transaction` davomida parallel yozuvlar bo'lishi mumkin), va u SET NULL/CASCADE orqali sodir bo'ladigan, sonni o'zgartirmaydigan mutatsiyalarni (masalan `Contract.groupId` NULL bo'lib qolishi) umuman ko'ra olmaydi. Bunday mutatsiyalarni oldindan yo'qqa chiqarish uchun alohida `assertNoInboundReferences` qorovuli bor (Task 2ga qo'shimcha, quyida) — u reja TASHQARISIDAGI hech bir qator reja ICHIDAGI ID ga ishora qilmasligini tranzaksiya boshlanishidan oldin ham, ichida ham tekshiradi. Filialning o'zi, uning `CashAccount`lari va lid ustuni/bo'limi esa alohida, ANIQ TENGLIK bilan tekshiriladi (`preservedTotals`) — chunki oldin/keyin sanoq bu filialni ATAYLAB chetlab o'tadi.
@@ -156,10 +156,10 @@ const namanganish = {
     { id: 10796, userId: null },
   ],
   userBranches: [
-    { userId: 10562, branchId: 1 }, // CEO — ikkala filialda
-    { userId: 10562, branchId: 2 },
-    { userId: 10768, branchId: 2 },
-    { userId: 10904, branchId: 2 },
+    { userId: 10011, branchId: 1 }, // CEO — ikkala filialda
+    { userId: 10011, branchId: 2 },
+    { userId: 10012, branchId: 2 },
+    { userId: 10013, branchId: 2 },
   ],
   groups: [{ id: 'g-1', branchId: 2 }],
   rooms: [{ id: 'r-1', branchId: 2 }],
@@ -186,9 +186,9 @@ describe('buildBranchResetPlan', () => {
   it('ikkala filialdagi foydalanuvchini o\'chirish ro\'yxatidan chiqarib tashlaydi', async () => {
     const plan = await buildBranchResetPlan(fakePrisma(namanganish), 2);
 
-    expect(plan.staffUserIds.sort()).toEqual([10768, 10904]);
-    expect(plan.staffUserIds).not.toContain(10562);
-    expect(plan.keptUserIds).toEqual([10562]);
+    expect(plan.staffUserIds.sort()).toEqual([10012, 10013]);
+    expect(plan.staffUserIds).not.toContain(10011);
+    expect(plan.keptUserIds).toEqual([10011]);
   });
 
   it('mavjud bo\'lmagan filial uchun xato tashlaydi', async () => {
@@ -230,8 +230,8 @@ describe('verifyBranchResetPlan', () => {
 
   it('boshqa filialda ham turgan xodim rejaga sizib kirsa tutadi', async () => {
     const [prisma, plan] = await clean();
-    plan.staffUserIds.push(10562); // CEO'ni qo'lda kiritib ko'ramiz
-    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/10562/);
+    plan.staffUserIds.push(10011); // CEO'ni qo'lda kiritib ko'ramiz
+    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/10011/);
   });
 
   it('boshqa filialning xonasi yoki kursini tutadi', async () => {
@@ -661,8 +661,8 @@ const PLAN: BranchResetPlan = {
   branchName: 'Namangan filali',
   studentIds: [10795, 10796],
   studentUserIds: [20795],
-  staffUserIds: [10768, 10904],
-  keptUserIds: [10562],
+  staffUserIds: [10012, 10013],
+  keptUserIds: [10011],
   enrollmentIds: ['e-1'],
   groupIds: ['g-1'],
   roomIds: ['r-1'],
@@ -740,7 +740,7 @@ describe('executeBranchReset', () => {
     await executeBranchReset(tx, PLAN);
 
     for (const call of calls) {
-      expect(JSON.stringify(call.where)).not.toContain('10562');
+      expect(JSON.stringify(call.where)).not.toContain('10011');
     }
   });
 
@@ -1434,7 +1434,7 @@ Expected — jadval AYNAN shu sonlarni ko'rsatishi kerak (2026-08-19 da o'lchang
 | Kurs | 4 |
 | Kunlik surat | 14 |
 
-Shuningdek: `Filial: Namangan filali (#2)` va `Bir nechta filialda turgan foydalanuvchilar: 10562`.
+Shuningdek: `Filial: Namangan filali (#2)` va `Bir nechta filialda turgan foydalanuvchilar: <CEO_ID>`.
 
 **Agar sonlar farq qilsa — to'xtang.** Bu 2026-08-19 dan beri filialda ish boshlanganini bildiradi; oldin nima o'zgarganini aniqlash kerak.
 
@@ -1463,7 +1463,7 @@ Run:
 ```bash
 cd server && railway run npx ts-node scripts/reset-branch.ts --branch=2
 ```
-Expected: barcha sanoqlar 0, `Bir nechta filialda turgan foydalanuvchilar: 10562` hali ham ko'rinadi, `DRY-RUN`.
+Expected: barcha sanoqlar 0, `Bir nechta filialda turgan foydalanuvchilar: <CEO_ID>` hali ham ko'rinadi, `DRY-RUN`.
 
 - [ ] **Step 5: Saqlanishi kerak bo'lgan narsalar joyidaligini tekshirish**
 
@@ -1477,7 +1477,7 @@ const p = makePrisma();
   console.log('branch:', b?.name, b?.startOfWorkingDay, b?.endOfWorkingDay, b?.status);
   console.log('cashAccounts:', await p.cashAccount.count({ where: { branchId: 2 } }));
   console.log('leadColumns:', await p.leadColumn.count({ where: { branchId: 2 } }));
-  console.log('ceoLink:', await p.userBranch.count({ where: { userId: 10562, branchId: 2 } }));
+  console.log('ceoLink:', await p.userBranch.count({ where: { userId: <CEO_ID>, branchId: 2 } }));
   console.log('fargonaStudents:', await p.studentBranch.count({ where: { branchId: 1 } }));
   console.log('fargonaGroups:', await p.group.count({ where: { branchId: 1 } }));
   console.log('fargonaStaff:', await p.userBranch.count({ where: { branchId: 1 } }));

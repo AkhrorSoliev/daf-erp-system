@@ -56,13 +56,13 @@ yuklamasi, real ish emas. Buni quyidagi nollar tasdiqlaydi:
 
 `UserBranch.branchId = 2` bo'lgan foydalanuvchilar, **CEO'dan tashqari**:
 
-- #10768 Sardorbek Maqsudaliyev — Branch Director, Administrator
-- #10772 Namangan Test — Teacher
-- #10774 Komila Jalolxonova — Teacher
-- #10775 Gulyoraoy Hamroxo'jayeva — Teacher
-- #10776 Madina Meliboyeva — Teacher
-- #10777 Nozima Mamadjanova — Teacher
-- #10904 Marxaboxon Jamoliddinova — Administrator, Cashier
+- filial direktori — Branch Director, Administrator
+- sinov akkaunti («Namangan Test») — Teacher
+- ustoz A — Teacher
+- ustoz B — Teacher
+- ustoz C — Teacher
+- ustoz D — Teacher
+- administrator-kassir — Administrator, Cashier
 
 ## 3. Izolyatsiya isboti
 
@@ -75,7 +75,7 @@ Namangan'da Farg'ona bilan ulashilgan **hech narsa yo'q**:
 - Namangan kursiga bog'langan shartnoma: **0**
 - Namangan xonasiga bog'langan `LessonReschedule`: **0**
 
-Yagona kesishuv nuqtasi — **CEO Sherali Yodgorov #10562**, yagona ikkala filialda
+Yagona kesishuv nuqtasi — **CEO**, yagona ikkala filialda
 turgan foydalanuvchi (roli: CEO, Branch Director, Administrator; `mainBranch = 1`).
 U o'chmaydi va uning `UserBranch(2)` qatoriga tegilmaydi.
 
@@ -164,7 +164,7 @@ noto'g'ri taassurot qoldirmasligi kerak, jimgina e'tiborsiz qoldirilmaydi.
    begona ID topilsa — `throw`, tranzaksiya bekor.
 3. **CEO qorovuli:** o'chiriladigan foydalanuvchilar ro'yxatidan `UserBranch`
    qatorlari soni 1 dan ko'p bo'lgan har qanday foydalanuvchi chiqarib tashlanadi.
-   Hozir bu faqat #10562, lekin qoida umumiy.
+   Hozir bu faqat CEO, lekin qoida umumiy.
 4. **Bitta `$transaction`** — yarim o'chgan holat bo'lishi mumkin emas.
 5. **Oldin/keyin sanoq — YUQORI CHEGARA, TENGLIK EMAS.** Skript boshqa
    filiallarga tegishli (branch-scoped) hamda kompaniya bo'ylab olingan
@@ -254,7 +254,7 @@ ichkariga qaragan bog'lanishlar) jimgina o'tdi.
 | `groupTeacher(History)` | 0 | | `dailyFinancialSnapshot` | 14 |
 
 Jami 1281 qator. `user` 91 = 84 o'quvchi akkaunti + 7 xodim. Guruh 12 = 11
-tirik + 1 arxivdagi (`#010`, 05.08 da Sardorbek Maqsudaliyev tomonidan yumshoq
+tirik + 1 arxivdagi (`#010`, 05.08 da filial direktori tomonidan yumshoq
 o'chirilgan) — hard reset arxivni ham tozalaydi, aks holda qayta ochilgan
 filial arxivida hech qachon yo'qolmaydigan guruh qolib ketardi.
 
@@ -264,7 +264,7 @@ Saqlanishi shart bo'lgan qatorlar — oldin/keyin qat'iy tenglik:
 `branch` 1→1, `cashAccount` 2→2, `leadColumn` 1→1, `leadSection` 1→1.
 Filial `Namangan filali`, ACTIVE, 08:00–22:00, telefon 883885550 saqlandi;
 kassa hisoblari (CASH + BANK, balans 0), `Yangi Lidlar [NEW]` ustuni va uning
-bo'limi joyida; CEO Sherali Yodgorov (#10562) va uning filial bog'lanishi
+bo'limi joyida; CEO va uning filial bog'lanishi
 tegilmadi.
 
 Farg'ona (#1) mustaqil ravishda qayta o'lchandi va bironta qatori

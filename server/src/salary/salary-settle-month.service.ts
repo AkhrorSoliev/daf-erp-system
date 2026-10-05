@@ -238,8 +238,8 @@ export class SalarySettleMonthService {
 /**
  * Spread each branch's named per-account amounts across that branch's payments.
  *
- * The operator says "68 737 619 left the kassa and 11 346 096 left the bank",
- * not "Jamsher's share left the kassa" — a month later nobody reconstructs the
+ * The operator says "60 000 000 left the kassa and 10 000 000 left the bank",
+ * not "teacher A's share left the kassa" — a month later nobody reconstructs the
  * per-person routing, and asking for it would invite guesses. So this walks the
  * payments in order and draws from each account until it is exhausted, letting
  * ONE payment straddle two accounts (`recordSalaryPayment` writes a movement

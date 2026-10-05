@@ -133,7 +133,7 @@ describe('SalaryPaymentService.getMatrix', () => {
         .mockResolvedValueOnce({ mainBranch: 2 }); // payee
       prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
 
-      await expect(service.payPayment('sp-1', 10768, 1)).rejects.toThrow(
+      await expect(service.payPayment('sp-1', 10012, 1)).rejects.toThrow(
         /filialingizga tegishli emas/,
       );
       expect(prisma.salaryPayment.update).not.toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe('SalaryPaymentService.getMatrix', () => {
       });
       prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
 
-      await expect(service.payPayment('sp-1', 10768, 1)).rejects.toThrow(
+      await expect(service.payPayment('sp-1', 10012, 1)).rejects.toThrow(
         /filialingizga tegishli emas/,
       );
     });
@@ -170,7 +170,7 @@ describe('SalaryPaymentService.getMatrix', () => {
           .mockResolvedValueOnce({ mainBranch: 1 }); // payee
         prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
 
-        await service.payPayment('sp-1', 10768, 1);
+        await service.payPayment('sp-1', 10012, 1);
 
         expect(transactions.recordSalaryPayment).toHaveBeenCalledWith(
           expect.objectContaining({ userId: 555, amount: 1_000_000 }),
@@ -188,7 +188,7 @@ describe('SalaryPaymentService.getMatrix', () => {
           .mockResolvedValueOnce({ mainBranch: 2 });
         prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
 
-        await expect(service.payPayment('sp-1', 10768, 1)).rejects.toThrow(
+        await expect(service.payPayment('sp-1', 10012, 1)).rejects.toThrow(
           /filialingizga tegishli emas/,
         );
         expect(transactions.recordSalaryPayment).not.toHaveBeenCalled();
@@ -207,7 +207,7 @@ describe('SalaryPaymentService.getMatrix', () => {
           .mockResolvedValueOnce({ mainBranch: null });
         prisma.salaryPayment.findFirst.mockResolvedValue(CALCULATED);
 
-        await expect(service.payPayment('sp-1', 10768, 1)).rejects.toThrow(
+        await expect(service.payPayment('sp-1', 10012, 1)).rejects.toThrow(
           /filialingizga tegishli emas/,
         );
         expect(transactions.recordSalaryPayment).not.toHaveBeenCalled();
@@ -221,7 +221,7 @@ describe('SalaryPaymentService.getMatrix', () => {
       });
 
       await expect(
-        service.batchPay({ companyId: 1 } as any, 10768),
+        service.batchPay({ companyId: 1 } as any, 10012),
       ).rejects.toThrow(/asosiy filialingiz belgilanmagan/);
       expect(prisma.salaryPayment.findMany).not.toHaveBeenCalled();
     });

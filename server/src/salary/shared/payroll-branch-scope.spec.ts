@@ -41,7 +41,7 @@ describe('resolvePayrollBranchScope', () => {
   it('confines a single-branch Branch Director to their own branch', async () => {
     const scope = await resolvePayrollBranchScope(
       prismaWith({ mainBranch: 2, roles: ['Branch Director'] }),
-      10768,
+      10012,
     );
     expect(scope).toEqual({
       kind: 'branches',
@@ -58,7 +58,7 @@ describe('resolvePayrollBranchScope', () => {
         branches: [2, 1],
         roles: ['Branch Director'],
       }),
-      10768,
+      10012,
     );
     expect(scope).toEqual({
       kind: 'branches',
@@ -88,7 +88,7 @@ describe('resolvePayrollBranchScope', () => {
     // `select` shows that the real query reads `UserBranch` at all. Without
     // it a multi-branch director would silently stay on `mainBranch`.
     const prisma = prismaWith({ mainBranch: 1, roles: ['Branch Director'] });
-    await resolvePayrollBranchScope(prisma, 10768);
+    await resolvePayrollBranchScope(prisma, 10012);
     expect(prisma.user.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({
         select: expect.objectContaining({
@@ -102,7 +102,7 @@ describe('resolvePayrollBranchScope', () => {
   it('blocks a confined caller whose branch is unknown (fail closed)', async () => {
     const scope = await resolvePayrollBranchScope(
       prismaWith({ mainBranch: null, roles: ['Branch Director'] }),
-      10768,
+      10012,
     );
     expect(scope).toEqual({ kind: 'none' });
   });

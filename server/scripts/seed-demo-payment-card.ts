@@ -1,9 +1,8 @@
 /**
  * seed-demo-payment-card — FAQAT DEV BAZA UCHUN.
  *
- * O'quvchi #10460 (Javohirbek Hamraliyev) ning PRODdagi haqiqiy ledgerini
- * dev bazada aynan tiklaydi, shunda «Bu pul nimaga ketdi» kartasini
- * localhostda bir xil raqamlar bilan ko'rish mumkin.
+ * Namunaviy o'quvchi ledgerini dev bazada quradi, shunda «Bu pul nimaga
+ * ketdi» kartasini localhostda tayyor raqamlar bilan ko'rish mumkin.
  *
  * Idempotent: qayta yugurtirilsa avvalgi demo o'quvchini tozalab qayta quradi.
  *
@@ -18,7 +17,7 @@ const PROD_HOST = 'ep-orange-bonus';
 const DEMO_PHONE = '900000460';
 const PER_LESSON = 33333;
 
-/** [sana, tur, summa, dars sanalari?] — PRODdagi zanjirning aynan o'zi. */
+/** [sana, tur, summa, dars sanalari?] — namunaviy zanjir. */
 const LEDGER: Array<{
   at: string;
   kind: 'PAYMENT' | 'DEDUCTION';
@@ -99,8 +98,8 @@ async function main() {
 
   const student = await prisma.student.create({
     data: {
-      firstName: 'Javohirbek',
-      lastName: 'Hamraliyev (DEMO)',
+      firstName: 'Ali',
+      lastName: 'Valiyev (DEMO)',
       phone: DEMO_PHONE,
       status: 'ACTIVE',
       balance: 0,
