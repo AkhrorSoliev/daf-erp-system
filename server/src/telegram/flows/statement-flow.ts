@@ -72,9 +72,16 @@ export async function linkChat(
   });
 }
 
-/** The statement's answer box as a chat message. */
-export function statementMessage(answer: StatementView['answer']): string {
-  return `💳 ${answer.title}\n${answer.subtitle}`;
+/**
+ * The statement's answer box as a chat message, under the student's name and
+ * ID. The ID is the account Payme and Click take, and a parent's chat can hold
+ * several students, so the message says whose statement it is.
+ */
+export function statementMessage(
+  answer: StatementView['answer'],
+  student: { id: number; name: string },
+): string {
+  return `${student.name} · ID ${student.id}\n💳 ${answer.title}\n${answer.subtitle}`;
 }
 
 /**
@@ -90,7 +97,7 @@ export async function statementForChat(
 ): Promise<{ text: string; document: { source: Buffer; filename: string } }> {
   const { buffer, model } = await statements.pdf(studentId, companyId);
   return {
-    text: statementMessage(present(model, 'student').answer),
+    text: statementMessage(present(model, 'student').answer, model.student),
     document: { source: buffer, filename: statementFilename(model) },
   };
 }

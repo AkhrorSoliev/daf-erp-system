@@ -92,7 +92,7 @@ describe('TelegramStatementService', () => {
     expect(bot.telegram.sendMessage).toHaveBeenCalledWith(
       CHAT,
       // The student's voice, as the bot speaks — not the admin wording.
-      expect.stringMatching(/^💳 Qarzingiz yo'q\./),
+      expect.stringMatching(/^Ali Valiyev · ID 10001\n💳 Qarzingiz yo'q\./),
     );
     expect(bot.telegram.sendDocument).toHaveBeenCalledWith(CHAT, {
       source: Buffer.from('%PDF-1.3'),
