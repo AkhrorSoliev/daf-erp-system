@@ -34,6 +34,14 @@ import {
 } from "@/components/ui/select";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
+import { invalidateDebt } from "./debt/debt-queries";
+import {
+  capToRange,
+  dateFromDay,
+  paymentPromiseAsk,
+  PROMISE_MOVE_NOTE,
+  usePromiseMonth,
+} from "./promise-month";
 import {
   MONTHLY_PAYMENT_EXPLANATION,
   buildQuickAmounts,
@@ -219,9 +227,20 @@ export function RecordPaymentDialog({
   // Contract 3.2: how far this amount reaches, and — when it leaves a debt —
   // the promise for the rest, defaulting to the first lesson it does not reach.
   const reach = preview?.monthly?.admission ?? null;
-  const needsPromise = promiseNeeded(reach);
-  const promiseDate =
-    pickedPromiseDate ?? (reach ? promiseDefaultDate(reach) : null);
+  // ADR-0072: at most 7 days ahead, once a month (paymentPromiseAsk).
+  const promiseMonth = usePromiseMonth(selectedStudent?.id ?? null);
+  const {
+    needsPromise,
+    range: promiseRange,
+    hint: promiseHint,
+    movesFrom,
+  } = paymentPromiseAsk(promiseNeeded(reach), promiseMonth);
+  // Moving the month's OPEN promise starts from its own day, so saving never
+  // shifts it without the cashier changing the date.
+  const promiseDate = capToRange(
+    pickedPromiseDate ?? movesFrom ?? (reach ? promiseDefaultDate(reach) : null),
+    promiseRange,
+  );
 
   // Months for a monthly student, cycles for a lesson pack; null → fixed grid.
   const quickAmounts = preview ? buildQuickAmounts(preview) : null;
@@ -262,7 +281,8 @@ export function RecordPaymentDialog({
       onOpenChange(false);
       resetForm();
       onSuccess?.();
-      queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
+      // Every debt figure (the debt page's list and drawer, the overview) moves with a payment.
+      invalidateDebt(queryClient);
       queryClient.invalidateQueries({ queryKey: ["recent-payments"] });
       queryClient.invalidateQueries({ queryKey: ["student-payments"] });
     } catch (err: unknown) {
@@ -454,14 +474,19 @@ export function RecordPaymentDialog({
                     id="promise-date"
                     value={promiseDate}
                     onChange={(d) => setPickedPromiseDate(d ?? null)}
-                    minDate={startOfToday()}
+                    minDate={promiseRange ? dateFromDay(promiseRange.from) : startOfToday()}
+                    maxDate={promiseRange ? dateFromDay(promiseRange.to) : undefined}
                     className="h-8 w-48 text-xs"
                   />
                   <p className="text-muted-foreground">
-                    To&apos;lov va&apos;dasi. To&apos;lovsiz muddat
-                    cho&apos;zilmaydi.
+                    {movesFrom
+                      ? PROMISE_MOVE_NOTE
+                      : "To'lov va'dasi: ko'pi bilan 7 kunga, oyiga 1 marta."}
                   </p>
                 </div>
+              )}
+              {promiseHint && (
+                <p className="text-muted-foreground">{promiseHint}</p>
               )}
             </div>
           )}
@@ -564,7 +589,11 @@ export function RecordPaymentDialog({
               !selectedStudent ||
               rawAmount < 1000 ||
               submitting ||
-              (needsPromise && !promiseDate)
+              // A promise date waits for a fresh range: a cached one may be stale.
+              (needsPromise &&
+                (!promiseDate ||
+                  promiseMonth.isPending ||
+                  promiseMonth.isFetching))
             }
           >
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}

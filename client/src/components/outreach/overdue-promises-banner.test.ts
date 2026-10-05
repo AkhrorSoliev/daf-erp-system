@@ -66,8 +66,8 @@ describe("OverduePromisesBanner", () => {
     expect(text).not.toContain(num(43_500_000 + 40_600_000));
   });
 
-  it("still opens the overdue promises", () => {
-    expect(render(summary(5))).toContain('href="/payments/debt?promise=overdue"');
+  it("opens the broken promises straight away, not through the old-link redirect", () => {
+    expect(render(summary(5))).toContain('href="/payments/debt?promise=broken"');
   });
 
   it("renders nothing when no promise is overdue, or before the answer", () => {

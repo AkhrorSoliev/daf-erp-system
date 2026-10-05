@@ -25,8 +25,11 @@ export const FINANCIAL_OVERVIEW_ROLES = [1, 2];
 /** `POST /call-logs` — call-logs.controller.ts («Natijani kiritish»). */
 export const CALL_LOG_ROLES = [1, 2, 3];
 
+/** `GET /students/:id/statement.pdf` — statements.controller.ts. Kassir yo'q. */
+export const STATEMENT_ROLES = [1, 2, 3];
+
 /**
- * `POST /withdrawals` va `POST /refunds/quick` — «Muzlatilgan puli» tabining
+ * `POST /withdrawals` va `POST /refunds/quick` — «Muzlatilganlarning puli» sahifasining
  * ikki amali: markaz hisobiga o'tkazish va o'quvchiga qaytarish.
  */
 export const FROZEN_BALANCE_ACTION_ROLES = [1, 2, 3];

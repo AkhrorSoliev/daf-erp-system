@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { SalaryBreakdownDrawer } from "./salary-breakdown-drawer";
 import { SalaryMonthlyView } from "./salary-monthly-view";
 import { SalaryAdvancesTab } from "./salary-advances-tab";
+import { CenterTopUpView } from "./debt/center-topup-view";
 import { resolveSalarySettingsAccess } from "./salary-settings-access";
 
 /** URL'ga yozilmaydigan standart tab. */
@@ -65,6 +66,7 @@ export function SalaryClient() {
         <TabsList>
           <TabsTrigger value="oyliklar">Oyliklar</TabsTrigger>
           <TabsTrigger value="avanslar">Avanslar</TabsTrigger>
+          <TabsTrigger value="markaz">Markaz qoplagani</TabsTrigger>
         </TabsList>
 
         <TabsContent value="oyliklar">
@@ -80,6 +82,10 @@ export function SalaryClient() {
 
         <TabsContent value="avanslar">
           <SalaryAdvancesTab canPay={canPay} />
+        </TabsContent>
+
+        <TabsContent value="markaz">
+          <CenterTopUpView />
         </TabsContent>
       </Tabs>
 

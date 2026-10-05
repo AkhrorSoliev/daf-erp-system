@@ -2039,6 +2039,7 @@ model PaymentPromise {
   promisedAmount   Int? // so'm; nullable for "to'layman" promises without a figure
   // Full timestamp, NOT @db.Date — avoids Tashkent-offset truncation breaking
   // `promiseDate < now` range comparisons (same lesson as creditPeriodDate).
+  // Always the last millisecond of the promised Tashkent day (`promiseDayEnd`).
   promiseDate      DateTime
   comment          String?
   status           PaymentPromiseStatus @default(OPEN)

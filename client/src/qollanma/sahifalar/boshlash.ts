@@ -164,6 +164,6 @@ export const boshlash: QollanmaSahifa[] = [
       "telegram kabinet",
       "bot bloklangan",
     ],
-    yangilangan: "2026-10-04",
+    yangilangan: "2026-10-05",
   },
 ];
