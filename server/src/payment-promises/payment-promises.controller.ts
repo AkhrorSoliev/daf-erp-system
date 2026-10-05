@@ -41,6 +41,16 @@ export class PaymentPromisesController {
     return this.promises.cancel(id, userId, companyId, scope);
   }
 
+  /** This month's promise and the days a promise may name (ADR-0072). */
+  @Get('month')
+  monthState(
+    @Query('studentId', ParseIntPipe) studentId: number,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.promises.monthState(studentId, companyId, scope);
+  }
+
   @Get()
   findByStudent(
     @Query('studentId', ParseIntPipe) studentId: number,

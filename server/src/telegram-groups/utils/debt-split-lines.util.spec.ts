@@ -10,12 +10,14 @@ const split: DebtSplit = {
     total: 3_600_000,
     count: 12,
     currentMonth: 1_500_000,
+    currentMonthCount: 0,
     older: 2_100_000,
     olderCount: 5,
   },
   notStudying: {
     total: 900_000,
     count: 7,
+    currentMonth: 0,
     byKind: {
       ungrouped: { total: 300_000, count: 2 },
       frozen: { total: 400_000, count: 3 },
@@ -53,6 +55,7 @@ describe('buildDebtSplitLines', () => {
         total: 0,
         count: 0,
         currentMonth: 0,
+        currentMonthCount: 0,
         older: 0,
         olderCount: 0,
       },

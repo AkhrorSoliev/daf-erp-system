@@ -115,10 +115,8 @@ export class SalaryController {
   // CEO-only. Read = CEO/BD.
   //
   // «Ish haqi» sahifasi o'qiydigan hamma narsa CEO + BD ga: Administrator
-  // oylikni ko'rmaydi (docs/role-access.md). Istisnolar ikkita va ikkalasi
-  // ham admin ko'radigan sahifadan chaqiriladi: `timeline/:userId`
-  // (o'qituvchi profilining «Taymlayn» tabi) va `monthly/center-topup`
-  // (qarzdorlik sahifasining «Markaz qoplagani» tabi).
+  // oylikni ko'rmaydi (docs/role-access.md). Istisno bitta: `timeline/:userId`
+  // (o'qituvchi profilining «Taymlayn» tabi) — admin ko'radigan sahifadan.
   // =========================================================================
 
   @Get('config/:userId')
@@ -361,17 +359,13 @@ export class SalaryController {
 
   /**
    * "Qolgan (markaz)" drill-down — markaz qaysi o'quvchilar uchun ustozlarga
-   * pul to'lab bergani va o'sha pul kimdan undirilishi kerakligi.
-   *
-   * Bugun uni `/payments/debt` ning «Markaz qoplagani» tabi o'qiydi, shuning
-   * uchun gate — qarzdorlik sahifasining boshqa o'qishlari bilan bir xil:
-   * o'qituvchidan boshqa har bir xodim (2026-08-12 qarori, server/CLAUDE.md
-   * «Key access rules»). Kassir 30.09.2026 da qo'shildi — undan oldin tab
-   * unga 403 berardi. Filial chegarasi `resolveMonthlyScope` da: CEO dan
-   * boshqa hamma o'z filialiga qamaladi.
+   * pul to'lab bergani va o'sha pul kimdan undirilishi kerakligi. Uni Ish haqi
+   * sahifasining «Markaz qoplagani» tabi o'qiydi, shuning uchun gate — sahifa
+   * bilan bir xil: CEO va filial direktori (ADR-0072). Filial chegarasi
+   * `resolveMonthlyScope` da.
    */
   @Get('monthly/center-topup')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Roles('CEO', 'Branch Director')
   getCenterTopUpStudents(
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') userId: number,

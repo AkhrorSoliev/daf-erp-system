@@ -19,7 +19,7 @@ const REASON_LABEL: Record<CallReason, string> = {
   REMOVAL: 'Ko‘p dars qoldirgani',
   OTHER: 'Boshqa',
 };
-const OUTCOME_LABEL: Record<CallOutcome, string> = {
+export const OUTCOME_LABEL: Record<CallOutcome, string> = {
   ANSWERED: 'Gaplashildi',
   NO_ANSWER: 'Javob bermadi',
   PROMISED: 'Keladi / to‘laydi dedi', // legacy
@@ -79,6 +79,16 @@ export class CallLogsService {
       dto.outcome !== 'WILL_PAY' && dto.followUpAt
         ? new Date(dto.followUpAt)
         : null;
+
+    // ADR-0072: the promise is checked before the call is saved.
+    if (dto.outcome === 'WILL_PAY' && dto.promiseDate) {
+      await this.paymentPromises.assertPromiseAllowed({
+        studentId: dto.studentId,
+        companyId,
+        promiseDate: dto.promiseDate,
+        mode: 'upsert',
+      });
+    }
 
     const log = await this.prisma.callLog.create({
       data: {

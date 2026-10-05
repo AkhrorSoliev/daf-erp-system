@@ -15,6 +15,7 @@ describe('PaymentPromisesController — role guards', () => {
     create: jest.fn().mockResolvedValue({}),
     cancel: jest.fn().mockResolvedValue({}),
     findByStudent: jest.fn().mockResolvedValue([]),
+    monthState: jest.fn().mockResolvedValue({}),
   };
 
   beforeEach(async () => {
@@ -74,5 +75,11 @@ describe('PaymentPromisesController — role guards', () => {
 
     controller.cancel('p1', 99, 1001, [2]);
     expect(mockService.cancel).toHaveBeenCalledWith('p1', 99, 1001, [2]);
+  });
+
+  it('GET /payment-promises/month keeps the class roles and passes the resolved scope', async () => {
+    expect(reflector.get(ROLES_KEY, controller.monthState)).toBeUndefined();
+    await controller.monthState(10264, 1001, [4]);
+    expect(mockService.monthState).toHaveBeenCalledWith(10264, 1001, [4]);
   });
 });

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CallLogsService } from './call-logs.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -15,7 +15,10 @@ describe('CallLogsService', () => {
     callLog: { create: jest.Mock; findMany: jest.Mock; count: jest.Mock };
   };
   let history: { recordCreate: jest.Mock };
-  let promises: { upsertOpenPromise: jest.Mock };
+  let promises: {
+    upsertOpenPromise: jest.Mock;
+    assertPromiseAllowed: jest.Mock;
+  };
 
   beforeEach(async () => {
     prisma = {
@@ -41,7 +44,10 @@ describe('CallLogsService', () => {
       },
     };
     history = { recordCreate: jest.fn().mockResolvedValue(undefined) };
-    promises = { upsertOpenPromise: jest.fn().mockResolvedValue({ id: 'p1' }) };
+    promises = {
+      upsertOpenPromise: jest.fn().mockResolvedValue({ id: 'p1' }),
+      assertPromiseAllowed: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -56,6 +62,26 @@ describe('CallLogsService', () => {
   });
 
   describe('create', () => {
+    it('refuses a bad promise before the call log is written (ADR-0072)', async () => {
+      promises.assertPromiseAllowed.mockRejectedValueOnce(
+        new BadRequestException('x'),
+      );
+      await expect(
+        service.create(
+          {
+            studentId: 10264,
+            reason: 'DEBT',
+            outcome: 'WILL_PAY',
+            promiseDate: '2026-06-30T18:59:59.000Z',
+          },
+          99,
+          1001,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.callLog.create).not.toHaveBeenCalled();
+      expect(promises.upsertOpenPromise).not.toHaveBeenCalled();
+    });
+
     it('resolves branch from active enrollment, trims note, records history', async () => {
       const res = await service.create(
         {
