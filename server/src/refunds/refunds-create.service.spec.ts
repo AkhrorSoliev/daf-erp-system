@@ -18,7 +18,7 @@ jest.mock('../common/auth/financial-write-scope', () => ({
  *
  * The version this replaces credited `deductions − PRESENT/LATE` back to the
  * balance without touching `prepaidLessonsRemaining`, so the same lessons
- * stayed covered while their money returned. #10393 gained 266 664 so'm that
+ * stayed covered while their money returned. One student gained 200 000 so'm that
  * way, and the credit was re-offered in full on every subsequent refund.
  */
 describe('RefundsCreateService.quickRefund', () => {
@@ -112,9 +112,9 @@ describe('RefundsCreateService.quickRefund', () => {
   });
 
   it('cancels the fewest lessons that cover the shortfall', async () => {
-    // #10393 exactly: 17 so'm free, six lessons ahead, 100 000 asked for.
-    // Shortfall is 99 983 — two lessons (66 666) fall short, three (99 999) do it.
-    student.balance = 17;
+    // 1 000 so'm free, six lessons ahead, 90 000 asked for.
+    // Shortfall is 89 000 — two lessons (66 666) fall short, three (99 999) do it.
+    student.balance = 1_000;
     enrollment.prepaidLessonsRemaining = 6;
     enrollmentBilling.prepaidRefundValue.mockImplementation(pricedPerLesson);
 
@@ -127,7 +127,7 @@ describe('RefundsCreateService.quickRefund', () => {
   });
 
   it('refuses more than balance plus prepaid value, writing nothing', async () => {
-    student.balance = 17;
+    student.balance = 1_000;
     enrollment.prepaidLessonsRemaining = 6;
     enrollmentBilling.prepaidRefundValue.mockImplementation(pricedPerLesson);
 

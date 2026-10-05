@@ -174,7 +174,7 @@ export class RefundsProcessService {
    * A quick refund funds itself by cancelling prepaid lessons, so undoing it
    * means undoing that too: reverse the release ADJUSTMENT and put the lessons
    * back on the enrollment. Without this the student kept the credit and lost
-   * the lessons — which is how #10655's phantom balance had to be cleaned up by
+   * the lessons — which is how one student's phantom balance had to be cleaned up by
    * hand in July 2026.
    *
    * Guardrails:

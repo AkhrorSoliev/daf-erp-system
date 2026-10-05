@@ -5,7 +5,7 @@ const MON_WED_FRI = () => [1, 3, 5];
 
 describe('projectLessonDates', () => {
   it('projects the remaining prepaid lessons onto the group schedule', () => {
-    // #10601: 19.08.2026 (chorshanba) gacha 3 ta dars o'tilgan, 7 tasi qolgan.
+    // 19.08.2026 (chorshanba) gacha 3 ta dars o'tilgan, 7 tasi qolgan.
     const dates = projectLessonDates({
       afterDateStr: '2026-08-19',
       count: 7,

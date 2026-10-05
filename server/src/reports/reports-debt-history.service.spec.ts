@@ -415,7 +415,7 @@ describe('ReportsDebtHistoryService', () => {
     it('splits ONE student across the months their unpaid charges landed in', async () => {
       // The defect this replaced: a frozen debtor showed the same cumulative
       // figure under every month, so "how much of this is June's?" had no
-      // answer. #10399 read 815 163 under both June and July in production.
+      // answer. One debtor read 800 000 under both June and July in production.
       setup(
         [student(10001, -300_000)],
         [

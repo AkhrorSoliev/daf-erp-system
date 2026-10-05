@@ -13,7 +13,7 @@ import {
  * bo'lib tug'iladi. Shuning uchun ledger replay'da oldindan to'langan bo'lakning
  * sanasi `null` bo'ladi va to'lov kartasi "10 ta darsga yetdi · 12.08 — 19.08"
  * deb yozardi: son 10 ta darsni, sana esa faqat o'tib bo'lgan 3 tasini
- * tasvirlardi (#10601).
+ * tasvirlardi.
  *
  * Bu FAKT emas, PROYEKSIYA
  * ------------------------

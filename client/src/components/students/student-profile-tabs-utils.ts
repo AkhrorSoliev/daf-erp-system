@@ -88,7 +88,7 @@ export interface StudentTransaction {
     // `lessonCount` — shu pul to'lagan darslarning HAMMASI (o'tilgani ham,
     // oldindan to'langani ham). `firstLessonDate`/`lastLessonDate` oralig'i
     // esa faqat O'TILGANLARINI qamraydi — ikkisini bitta qatorda yonma-yon
-    // yozish (#10601: "10 ta darsga yetdi · 12.08 — 19.08") ikki xil
+    // yozish (masalan: "10 ta darsga yetdi · 12.08 — 19.08") ikki xil
     // to'plamni bitta gap qilib ko'rsatgan edi. Shuning uchun quyidagi ikki
     // son bor: qaysi qismi o'tilgan, qaysi qismi oldinda.
     lessonCount: number;

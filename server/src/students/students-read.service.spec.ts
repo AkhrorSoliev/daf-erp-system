@@ -349,7 +349,7 @@ describe('StudentsReadService', () => {
     // read top-to-bottom as newest-to-oldest. The old `status asc, createdAt
     // asc` mixed two different measures — an ACTIVE group sat on top no matter
     // how long ago its last lesson was, and the closed ones below ran oldest
-    // first. Real case: #10399, whose August ACTIVE group was listed above the
+    // first. Real case: a student whose August ACTIVE group was listed above the
     // May/June closed ones, which were themselves in reverse order.
     it('orders groups by their most recent lesson, newest first', async () => {
       prisma.student.findFirst.mockResolvedValue({ id: 10001 });

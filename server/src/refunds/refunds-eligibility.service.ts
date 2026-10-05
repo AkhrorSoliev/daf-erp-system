@@ -154,8 +154,8 @@ export class RefundsEligibilityService {
     // the ABSENT lessons — which ARE billable here — plus lessons already
     // reserved for future dates. Handing it back credited students money
     // nobody had paid, and because `prepaidLessonsRemaining` went untouched the
-    // same lessons stayed covered, so one payment was counted twice. #10393 was
-    // credited 266 664 so'm that way on 2026-08-18, #10655 233 331 before that.
+    // same lessons stayed covered, so one payment was counted twice. One student was
+    // credited 200 000 so'm that way, another 180 000 before that.
     const prepaidLessons = enrollment.prepaidLessonsRemaining;
     const prepaidValue = await this.enrollmentBilling.prepaidRefundValue(
       this.prisma,

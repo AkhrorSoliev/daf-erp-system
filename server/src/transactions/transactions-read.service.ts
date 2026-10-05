@@ -141,7 +141,7 @@ export class TransactionsReadService {
 
       // The debt spell RESETS the moment the balance recovers. Counting from
       // the first time a student ever dipped made the figure only ever grow:
-      // #10460 paid 800 000 so'm after their first dip and the card still read
+      // a student paid off their debt after the first dip and the card still read
       // "25 ta dars to'lovsiz" while they owed exactly one lesson.
       if (row.balanceAfter < 0) {
         if (debtSinceDate === null) debtSinceDate = row.createdAt;

@@ -703,11 +703,11 @@ export class SalaryMonthlyService {
     //
     // The MONTH scopes the set of students, not the debt of each. Two attempts
     // to scope the debt itself were both wrong on production July 2026. The
-    // month's lesson cost (21 234 015) ignores every payment made since —
-    // #10026 showed 345 000 while owing 156 000. Capping at `min(debt, lesson
-    // cost)` (18 865 019) was worse in a quieter way: the drill-down then
-    // reported 466 662 for #10058 while his profile said 624 989, so the admin
-    // ringing him had two numbers and no rule for choosing. A balance settles
+    // month's lesson cost ignores every payment made since — one student
+    // showed 300 000 while owing 120 000. Capping at `min(debt, lesson cost)`
+    // was worse in a quieter way: the drill-down then reported 400 000 for
+    // another while their profile said 600 000, so the admin ringing them had
+    // two numbers and no rule for choosing. A balance settles
     // oldest-first across every month; it has no per-month share to report.
     //
     // A student who has cleared their balance contributes 0, which is why

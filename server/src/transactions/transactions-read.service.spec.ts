@@ -294,7 +294,7 @@ describe('TransactionsReadService', () => {
 
     it('projects when the prepaid lessons ahead will run out', async () => {
       const ts = (v: string) => new Date(`${v}T00:00:00Z`);
-      // #10601: 440 000 so'm 10 darslik paketni to'ladi, 3 tasi o'tilgan.
+      // Bir o'quvchi 10 darslik paketni to'ladi, 3 tasi o'tilgan.
       // Karta "10 ta darsga yetdi · 12.08 — 19.08" deb yozardi — son 10 ta
       // darsni, sana esa 3 tasini tasvirlardi. Endi qolgan 7 tasi guruh
       // jadvaliga (du/chor/juma) proyeksiya qilinadi.
@@ -367,7 +367,7 @@ describe('TransactionsReadService', () => {
       prisma.attendance.findFirst.mockResolvedValue({ date: ts('2026-08-19') });
 
       const res = await service.findByStudent(
-        10601,
+        10002,
         {} as TransactionQueryDto,
         1001,
         null,
@@ -443,7 +443,7 @@ describe('TransactionsReadService', () => {
       ]);
 
       const res = await service.findByStudent(
-        10601,
+        10002,
         {} as TransactionQueryDto,
         1001,
         null,
@@ -592,8 +592,8 @@ describe('TransactionsReadService', () => {
       // who paid off their debt and later fell one lesson short still read
       // "25 ta dars to'lovsiz". Only the CURRENT spell counts.
       prisma.student.findFirst.mockResolvedValue({
-        id: 10460,
-        balance: -33325,
+        id: 10003,
+        balance: -33333,
       });
       prisma.transaction.findMany.mockResolvedValueOnce([
         {
@@ -623,13 +623,13 @@ describe('TransactionsReadService', () => {
         {
           type: 'LESSON_CONSUMPTION',
           amount: 0,
-          balanceAfter: -33325,
+          balanceAfter: -33333,
           createdAt: ts('2026-08-04'),
         },
       ]);
       prisma.enrollment.findFirst.mockResolvedValue(null);
 
-      const res = await service.getBalanceSummary(10460, 1001);
+      const res = await service.getBalanceSummary(10003, 1001);
 
       expect(res.debtSinceDate).toEqual(ts('2026-08-04'));
       expect(res.unpaidLessonsCount).toBe(1);

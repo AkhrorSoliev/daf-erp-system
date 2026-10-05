@@ -192,8 +192,8 @@ describe('splitLessonSlices — oylik qator', () => {
   });
 });
 
-describe('replayStudentLedger — #10460 golden fixture', () => {
-  // O'quvchi #10460 (Javohirbek Hamraliyev) ning PRODdagi haqiqiy ledgeri:
+describe('replayStudentLedger — golden fixture', () => {
+  // PRODdagi bir o'quvchi ledgeri shaklida (ismsiz, id'siz):
   // 3 ta to'lov + 19 ta dars yechimi. Bu aynan foydalanuvchi shikoyat qilgan
   // holat — 21.07 kartasi "233 339 balansda qoldi" deb ko'rsatgan, o'quvchi
   // esa o'sha payt 33 325 so'm qarzdor edi.
@@ -430,7 +430,7 @@ describe('replayStudentLedger — the defect classes this replaces', () => {
   });
 
   it('separates lessons already held from prepaid ones still ahead', () => {
-    // #10601 (12.08.2026): 440 000 so'm 10 darslik paketni to'ladi, lekin
+    // Bir o'quvchi 12.08.2026 da 10 darslik paketni to'ladi, lekin
     // o'sha paytda faqat 3 tasi o'tilgan edi. Karta "10 ta darsga yetdi ·
     // 12.08 — 19.08" deb yozardi — son 10 ta darsni, sana esa faqat 3 tasini
     // tasvirlardi. Endi qolgani alohida sanaladi.

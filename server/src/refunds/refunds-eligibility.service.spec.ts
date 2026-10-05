@@ -201,7 +201,7 @@ describe('RefundsEligibilityService', () => {
    */
   describe('what may be refunded', () => {
     it('is the free balance plus the value of the prepaid lessons', async () => {
-      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 17 });
+      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 1_000 });
       prisma.enrollment.findMany.mockResolvedValue([
         { ...enrollmentRow, prepaidLessonsRemaining: 6 },
       ]);
@@ -211,7 +211,7 @@ describe('RefundsEligibilityService', () => {
 
       expect(result.prepaidLessons).toBe(6);
       expect(result.prepaidValue).toBe(199_998);
-      expect(result.maxRefundable).toBe(200_015);
+      expect(result.maxRefundable).toBe(200_998);
     });
 
     it('does not grow with ABSENT lessons', async () => {

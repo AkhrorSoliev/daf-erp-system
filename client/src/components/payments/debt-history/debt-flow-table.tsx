@@ -27,7 +27,7 @@ import type { DebtHistoryResponse, DebtMonth } from "./types";
  *
  * It replaced a month-end-balance series, which could not answer the question
  * being asked. A frozen debtor showed the same cumulative figure under every
- * month (#10399 read 815 163 in both June and July), so "how much of this is
+ * month (one debtor read 800 000 in both June and July), so "how much of this is
  * June's?" had no answer, and overlapping balances meant the «Jami» row had to
  * be left blank.
  *
