@@ -100,7 +100,7 @@ Loyiha qoidasi: *har bir jadval, dialog ichidagisi ham, 10 qatordan sahifalanadi
 
 - **Foyda ikki marta kamaymaydi.** «Sof foyda» *deserved* (hisoblangan) oylikni ayiradi, `paidAt` ni emas — foyda raqami o'zgarmaydi. O'zgaradigani faqat kassa asosidagi ko'rsatkichlar: `/overview` dagi «Ustoz oyliklari — to'langan», Excel «Oyliklar» varag'i va Foyda-zarar hisoboti. Pul siz tanlagan sana tushgan oyga yoziladi.
 - **Iyun/iyul yopilgan davrga aylanadi.** Shundan keyin qarzdor o'quvchi iyun/iyul darsini to'lasa, ustozning hisobi `creditPeriodDate` orqali joriy oyga (avgustga) o'tadi va «Oldingi oydan» yorlig'i bilan ko'rinadi. Bu loyihaning mavjud, to'g'ri xatti-harakati — yo'qotish yo'q.
-- **Iyun oyida 6 ta ustozda ikkitadan qator bor** (masalan Gulnozaxon: 4 466 790 va 200 004) — qayta hisoblash va kechikkan to'lov qoldiqlari. Ikkalasi ham ro'yxatda ko'rinadi va ikkalasi ham yopiladi.
+- **Iyun oyida 6 ta ustozda ikkitadan qator bor** (masalan bir ustozda 4 000 000 va 200 000) — qayta hisoblash va kechikkan to'lov qoldiqlari. Ikkalasi ham ro'yxatda ko'rinadi va ikkalasi ham yopiladi.
 - **Kassa balansi tushadi.** Farg'ona kassasi 96 130 000, banki 51 008 316. 130 471 145 so'mni qanday taqsimlash CEO ning qaroriga qoladi (ikki oy — ikki dialog, har birida o'z hisobi).
 
 ## 5. Testlar

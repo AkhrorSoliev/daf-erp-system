@@ -384,7 +384,7 @@ Commit `c490d68` (2026-07-29) `getMonthlyNetProfit` va Foyda kartasiga filial qa
 - `branchIds` bilan qamrovlanadi: `getProfitLoss`, `getPaymentLineItems`, `getExpenseLineItems`, `getBalanceSheet`, `getDebtorLineItems`
 - `branchWhere()` esa `branchIds` ni **ustun qo'yadi** ([period-helpers.ts:50-53](../server/src/common/finance/period-helpers.ts#L50))
 
-**Prod o'lchov:** Filial direktori #10768 (Namangan) default «Barcha filiallarim» bilan export qilsa — «Asosiy xulosa» Tushum = **162 127 987** (Farg'onaning hammasi), «To'lovlar»/«Xarajatlar»/«Foyda va zarar»/«Balans»/«Qarzdorlar» = **0**, muqovada esa «Namangan filali» yozilgan.
+**Prod o'lchov:** Namangan filial direktori (BD) default «Barcha filiallarim» bilan export qilsa — «Asosiy xulosa» Tushum = **162 127 987** (Farg'onaning hammasi), «To'lovlar»/«Xarajatlar»/«Foyda va zarar»/«Balans»/«Qarzdorlar» = **0**, muqovada esa «Namangan filali» yozilgan.
 
 ### H9 — «Asosiy xulosa» da 8 qatordan 3 tasi doim 0% ko'rsatadi
 [reports-excel.sheets.ts:111-113](../server/src/reports/reports-excel.sheets.ts#L111) — «Jami qarz», «Qarzdorlar soni», «Faol o'quvchilar» — bular sana filtrisiz live snapshot, lekin «davrlar taqqoslashi» jadvaliga qo'yilgan. `Joriy` va `O'tgan davr` ustunlari **doim teng**, «Farq 0 / O'zgarish 0.0%» yashil rangda chiqadi.
@@ -429,18 +429,18 @@ Va `/payments/debtors` sahifasi to'g'ri filial bo'yicha hisoblaydi ([payments-de
 [reports.controller.ts:154-161](../server/src/reports/reports.controller.ts#L154) (`financial-overview`), `:121` (`financial-trend`), `:134-138` (`income-month-attribution`) faqat `query.branchId` ni uzatadi; `getFinancialOverview` da `branchIds` parametri umuman yo'q.
 `/branches` esa rol bo'yicha qamrovlanmagan ([branches.service.ts:20-39](../server/src/branches/branches.service.ts#L20)), ya'ni BD switcher'da **barcha filiallarni** ko'radi va default eng eskisiga tushadi.
 
-**Prod o'lchov:** BD #10768 (mainBranch=2) default switcher (#1 Farg'ona) bilan: overview Tushum = 162 127 987, Excel «Daromad»/«Foyda va zarar» Jami daromad = 0; overview «Kechirilgan qarz» = 0, Farg'onaning haqiqiysi = 966 657 (7 ta).
+**Prod o'lchov:** Namangan BD (mainBranch=2) default switcher (#1 Farg'ona) bilan: overview Tushum = 162 127 987, Excel «Daromad»/«Foyda va zarar» Jami daromad = 0; overview «Kechirilgan qarz» = 0, Farg'onaning haqiqiysi = 966 657 (7 ta).
 
 ### H15 — «Xarajatlar» sahifasi va Excel varag'i boshqa qoida bilan qamrovlanadi
 - `ExpensesService.buildWhere` ([expenses.service.ts:141](../server/src/expenses/expenses.service.ts#L141)) — ro'yxat, kartalar, PDF — **faqat** `query.branchId` bo'yicha. Controller chaqiruvchining qamrovini umuman uzatmaydi.
 - `exportAllForReport` ([expenses.service.ts:260](../server/src/expenses/expenses.service.ts#L260)) esa `branchWhere(query)` ishlatadi, ya'ni BD ning `branchIds` i **ustun qo'yiladi** va export dialogida tanlangan filial jimgina e'tiborsiz qoldiriladi.
 
-**Prod o'lchov (iyul 2026):** BD #10768 (Namangan) `/payments/expenses` da **20 377 000** so'm ko'radi (PDF ham), o'sha davr uchun workbook «Xarajatlar» varag'i esa **0**. Butun tarix: 168 668 000 vs 0 (195 xarajatning hammasi 1-filialda).
+**Prod o'lchov (iyul 2026):** Namangan BD `/payments/expenses` da **20 377 000** so'm ko'radi (PDF ham), o'sha davr uchun workbook «Xarajatlar» varag'i esa **0**. Butun tarix: 168 668 000 vs 0 (195 xarajatning hammasi 1-filialda).
 
 ### H16 — Bitta workbook ichida filial qamrovi aralash (BD uchun)
 [reports.controller.ts:383-393](../server/src/reports/reports.controller.ts#L383) BD qamrovini `branchIds` ga soladi, lekin Excel service'da u faqat `branchWhere` asosidagi chaqiruvlarga (P&L, To'lovlar, Xarajatlar, Balans) va `debtorBranchIds` ga yetadi. `getFinancialOverview`, `getSalaryMonthly`, `getFinancialTrend`, `getPeriodOutflows`, `getRecognizedRevenue` faqat `query.branchId` oladi (web client uni default yubormaydi), `getReconciliation` esa filialni umuman qabul qilmaydi — ya'ni **«Tekshiruv» varag'i doim company-wide**.
 
-**Prod o'lchov:** BD #10768 default export — «Foyda va zarar» daromad = 0, «Asosiy xulosa» daromad = 162 127 987, «Oyliklar» = company-wide. Bitta faylda uch xil qamrov.
+**Prod o'lchov:** Namangan BD default export — «Foyda va zarar» daromad = 0, «Asosiy xulosa» daromad = 162 127 987, «Oyliklar» = company-wide. Bitta faylda uch xil qamrov.
 
 ### H17 — «Yillar kesimida» varag'i pulni filialdan, sanoqni kompaniyadan oladi
 [reports-financial.service.ts:951-957](../server/src/reports/reports-financial.service.ts#L951) `getYearlyTrend` da `newStudents` va `payerCount` company-wide, tushum/xarajat/marketing esa filial bo'yicha. [comparison-sheets.ts:210-216](../server/src/reports/reports-excel.comparison-sheets.ts#L210) ikkisini bir varaqqa chiqaradi.

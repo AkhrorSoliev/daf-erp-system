@@ -6,15 +6,15 @@
 
 ## Nima uchun
 
-2026-08-18 da #10393 Ismatullo Qurbonboyevga 100 000 so'm qaytarildi. Shu bilan
-birga tizim uning hisobiga **266 664 so'm mavjud bo'lmagan kredit** yozdi.
+2026-08-18 da bir o'quvchiga (O'quvchi X) 150 000 so'm qaytarildi. Shu bilan
+birga tizim uning hisobiga **299 997 so'm mavjud bo'lmagan kredit** yozdi.
 Tekshiruv shuni ko'rsatdiki, bu bir martalik xato emas: xuddi shu narsa
-2026-07-03 da #10655 Omina Madraximovada ham bo'lgan (233 331 so'm, qo'lda
+iyul boshida boshqa bir o'quvchida (O'quvchi Y) ham bo'lgan (133 332 so'm, qo'lda
 bekor qilingan, sabab tuzatilmagan).
 
 **Prod ko'lami (2026-08-18):** 420 faol enrollmentdan **281 tasida** xato
 takrorlanadi; agar hammasiga qaytarish ochilsa jami **54 876 717 so'm**
-noto'g'ri kreditlanadi. Eng kattasi — #10221, 666 660 so'm.
+noto'g'ri kreditlanadi. Eng kattasi — bitta o'quvchida 599 994 so'm.
 
 ## Ildiz sabab
 
@@ -47,14 +47,14 @@ kamaymaydi — shuning uchun bitta pul ikki joyda turadi.
 | # | Muammo | Og'irlik |
 |---|--------|----------|
 | M1 | `overDeducted` = ABSENT + prepaid; kreditlanadi, lekin `prepaidLessonsRemaining` kamaymaydi → pul ikki marta sanaladi | Kritik |
-| M2 | `overDeducted` qaytarishdan keyin ham o'zgarmaydi → har yangi qaytarish uni qaytadan kreditlaydi (#10393: limit 266 681 → 433 345) | Kritik |
-| M3 | Qaytarilgan summadan qat'i nazar `overDeducted` **to'liq** kreditlanadi (100 000 qaytarildi → 266 664 kreditlandi) | Kritik |
+| M2 | `overDeducted` qaytarishdan keyin ham o'zgarmaydi → har yangi qaytarish uni qaytadan kreditlaydi (O'quvchi X: limit 300 039 → 450 036) | Kritik |
+| M3 | Qaytarilgan summadan qat'i nazar `overDeducted` **to'liq** kreditlanadi (150 000 qaytarildi → 299 997 kreditlandi) | Kritik |
 | M4 | Tayyor `refundPrepaidToBalance` ishlatilmagan; xato nusxa yozilgan | Jiddiy |
 | M5 | `reverse()` juft `ADJUSTMENT` ni bekor qilmaydi → fantom kredit qoladi | Jiddiy |
 | M6 | `Math.round(course.price / lessonPaymentCount)` — chegirma, shartnoma narxi va sikl yaxlitlash qoldig'i e'tiborsiz; `perLessonPrice()`/`resolvePrepaidRefund()` bor | Jiddiy |
 | M7 | ABSENT «foydalanilmagan» deb sanaladi; aslida ABSENT to'lanadi | Jiddiy |
 | M8 | `previewRefund` istalgan enrollmentni qabul qiladi, `quickRefund` faqat ACTIVE ni → dialog ko'rsatgan guruhda «Qaytarish» 400 beradi | O'rta |
-| M9 | «50% o'tilgan» maxraji `lessonPaymentCount` (sikl=12), kursning umumiy darslari emas — bazada bunday maydon umuman yo'q. #10393: 19/12 = 158% | O'rta |
+| M9 | «50% o'tilgan» maxraji `lessonPaymentCount` (sikl=12), kursning umumiy darslari emas — bazada bunday maydon umuman yo'q. O'quvchi X: 19/12 = 158% | O'rta |
 | M10 | Serverda takroriy so'rov himoyasi yo'q — ikki marta bosilsa ikkita qaytarish | O'rta |
 | M11 | `create()` oqimi hech qaysi ekranga ulanmagan, lekin API'da ochiq; `paidAmount` o'quvchi darajasida, `consumedAmount` enrollment darajasida → ko'p guruhli o'quvchida ortiqcha qaytarish | O'rta |
 
@@ -133,8 +133,8 @@ ga qaytaradi.
 
 ### 6. Ma'lumot tuzatish
 
-`#10393` dagi 266 664 lik `ADJUSTMENT` bekor qilinadi → balans −99 983,
-pozitsiya 100 015. Bu to'g'ri holat: darslariga ajratilgan puldan 100 000 naqd
+O'quvchi X dagi 299 997 lik `ADJUSTMENT` bekor qilinadi → balans −149 958,
+pozitsiya 16 707. Bu to'g'ri holat: darslariga ajratilgan puldan 150 000 naqd
 chiqqan.
 
 ## Nima o'zgarmaydi
@@ -148,4 +148,4 @@ chiqqan.
 
 Har bir tuzatishga birlik test. Ish tugagach prod bazasi qayta auditdan
 o'tkaziladi: (a) fantom kredit qolmagani, (b) `overDeducted > 0` ko'rsatkichi
-endi ma'nosini yo'qotgani, (c) #10393 pozitsiyasi 100 015.
+endi ma'nosini yo'qotgani, (c) O'quvchi X pozitsiyasi 16 707.
