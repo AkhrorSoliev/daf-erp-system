@@ -715,6 +715,66 @@ describe('AttendanceService', () => {
       });
     });
 
+    describe("an earlier day's register", () => {
+      beforeEach(() => {
+        jest.useFakeTimers({
+          doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+        });
+        jest.setSystemTime(new Date('2026-10-07T04:30:00.000Z')); // 07.10
+      });
+      afterEach(() => jest.useRealTimers());
+      const reach = {
+        lessons: 13,
+        paidLessons: 4,
+        lastPaid: '2026-10-09',
+        monthCharged: 450000,
+        monthPaid: 150000,
+        next: null,
+      };
+
+      it("drops an admitted student's reach, keeps a blocked one's", async () => {
+        prisma.attendance.findMany.mockResolvedValue([]);
+        admission.forLesson.mockResolvedValue(
+          new Map([
+            [
+              10001,
+              {
+                admitted: true,
+                reason: 'PAID',
+                shortfall: 0,
+                paidThrough: '2026-10-09',
+                reach,
+              },
+            ],
+            [
+              10002,
+              {
+                admitted: false,
+                reason: 'NOT_PAID',
+                shortfall: 69231,
+                paidThrough: null,
+                reach,
+              },
+            ],
+          ]),
+        );
+        const past = await service.getByDate('group-uuid-1', '2026-10-05', 1);
+        expect(past.activeStudents[0].admission).toEqual({
+          admitted: true,
+          reason: 'PAID',
+          shortfall: 0,
+          paidThrough: null,
+        });
+        expect(past.activeStudents[1].admission).toMatchObject({ reach });
+
+        const today = await service.getByDate('group-uuid-1', '2026-10-07', 1);
+        expect(today.activeStudents[0].admission).toMatchObject({
+          paidThrough: '2026-10-09',
+          reach,
+        });
+      });
+    });
+
     describe('after the lesson, a student the register left out', () => {
       beforeEach(() => {
         jest.useFakeTimers({

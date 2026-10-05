@@ -41,6 +41,31 @@ export interface LessonAdmission {
   paidThrough: string | null;
   /** `BELOW_MIN_SHARE` only: the share of the month that was asked for. */
   minPaidPercent?: number;
+  /**
+   * What the register's row says about the money. Present wherever the rule
+   * judged the lesson — the first lesson of the month included, which the
+   * verdict alone says nothing about.
+   */
+  reach?: AdmissionReach;
+}
+
+/** How far the payments reach into this group's month. */
+export interface AdmissionReach {
+  /** The student's lessons this month in the group, frozen-out ones excluded. */
+  lessons: number;
+  /** How many of them, from the first, the payments reach. */
+  paidLessons: number;
+  /** The last of those; null when not even the first. */
+  lastPaid: string | null;
+  /**
+   * The month's charges, closed enrollments' share included, and how much of
+   * them is paid: money settles the oldest charge first, so the debt beyond
+   * later months' charges is this month's (`MonthCharges`' rule).
+   */
+  monthCharged: number;
+  monthPaid: number;
+  /** The first lesson after this one the payments do not reach, and what it needs. */
+  next: { date: string; needed: number } | null;
 }
 
 export const ADMITTED_WITHOUT_RULE: LessonAdmission = {
@@ -220,15 +245,6 @@ export function lessonAdmission(input: {
   // the way instead of blocking on missing data.
   if (lessons.length === 0) return ADMITTED_WITHOUT_RULE;
 
-  if (isFirstLessonOfMonth(lessons, input.lessonDay)) {
-    return {
-      admitted: true,
-      reason: 'FIRST_LESSON',
-      shortfall: 0,
-      paidThrough: null,
-    };
-  }
-
   const paid = input.balance + heldLater(input.laterCharges ?? []);
   const reachOn = (day: string) =>
     paid +
@@ -238,30 +254,67 @@ export function lessonAdmission(input: {
       input.minPaidPercent ?? 0,
       input.closedThisMonth,
     );
-  const reach = reachOn(input.lessonDay);
-  if (reach < 0) {
-    // The least share asks for more than the lessons held do.
-    const belowMinShare =
-      reach < paid + heldAfter(input.charges, input.lessonDay);
+  // The reach falls day by day, so the paid lessons are a run from the first.
+  let paidLessons = 0;
+  while (paidLessons < lessons.length && reachOn(lessons[paidLessons]) >= 0) {
+    paidLessons += 1;
+  }
+  const lastPaid = paidLessons > 0 ? lessons[paidLessons - 1] : null;
+  const unpaidDay = lessons.find(
+    (day) => day > input.lessonDay && reachOn(day) < 0,
+  );
+  const monthCharged =
+    (input.closedThisMonth ?? 0) +
+    input.charges.reduce((sum, c) => sum + c.chargedAmount, 0);
+  const reach: AdmissionReach = {
+    lessons: lessons.length,
+    paidLessons,
+    lastPaid,
+    monthCharged,
+    monthPaid: monthCharged - Math.min(Math.max(0, -paid), monthCharged),
+    next: unpaidDay ? { date: unpaidDay, needed: -reachOn(unpaidDay) } : null,
+  };
+  // Admitted while owing: the last lesson the balance reaches.
+  const paidThrough = input.balance < 0 ? lastPaid : null;
+
+  if (isFirstLessonOfMonth(lessons, input.lessonDay)) {
     return {
-      admitted: false,
-      reason: belowMinShare ? 'BELOW_MIN_SHARE' : 'NOT_PAID',
-      shortfall: -reach,
-      paidThrough: null,
-      ...(belowMinShare && { minPaidPercent: input.minPaidPercent }),
+      admitted: true,
+      reason: 'FIRST_LESSON',
+      shortfall: 0,
+      paidThrough,
+      reach,
     };
   }
 
-  let paidThrough: string | null = null;
-  if (input.balance < 0) {
-    paidThrough = input.lessonDay;
-    for (const day of lessons) {
-      if (day <= input.lessonDay) continue;
-      if (reachOn(day) < 0) break;
-      paidThrough = day;
-    }
+  const today = reachOn(input.lessonDay);
+  if (today < 0) {
+    // The least share asks for more than the lessons held do.
+    const belowMinShare =
+      today < paid + heldAfter(input.charges, input.lessonDay);
+    return {
+      admitted: false,
+      reason: belowMinShare ? 'BELOW_MIN_SHARE' : 'NOT_PAID',
+      shortfall: -today,
+      paidThrough: null,
+      ...(belowMinShare && { minPaidPercent: input.minPaidPercent }),
+      reach,
+    };
   }
-  return { admitted: true, reason: 'PAID', shortfall: 0, paidThrough };
+  return { admitted: true, reason: 'PAID', shortfall: 0, paidThrough, reach };
+}
+
+/**
+ * A past lesson's register: what the payments reach today says nothing about
+ * that day, so an admitted student's row carries no reach. A blocked one keeps
+ * it — the row still says why he was kept out.
+ */
+export function withoutReachForPastLesson(
+  admission: LessonAdmission,
+): LessonAdmission {
+  if (!admission.admitted || !admission.reach) return admission;
+  const { reach: _reach, ...rest } = admission;
+  return { ...rest, paidThrough: null };
 }
 
 /** How far the payments reach into one group's month (ADR-0062). */
