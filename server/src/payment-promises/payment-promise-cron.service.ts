@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
+import { tashkentDateStr, tashkentDayStartUtc } from '../common/date/tashkent';
 
 export interface PaymentPromiseOverduePayload {
   promiseId: string;
@@ -50,7 +51,9 @@ export class PaymentPromiseCronService {
     const due = await this.prisma.paymentPromise.findMany({
       where: {
         status: 'OPEN',
-        promiseDate: { lte: now },
+        // By Tashkent day: a promise for D is broken only once D is over, so
+        // the 09:00 run on D leaves it alone whatever instant it was stored at.
+        promiseDate: { lt: tashkentDayStartUtc(tashkentDateStr(now)) },
         reminderFiredAt: null,
         student: { balance: { lt: 0 }, deletedAt: null },
       },
