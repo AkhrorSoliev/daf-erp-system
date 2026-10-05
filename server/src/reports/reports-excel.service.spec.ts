@@ -153,12 +153,14 @@ describe('ReportsExcelService', () => {
       total: 60_000,
       count: 2,
       currentMonth: 25_000,
+      currentMonthCount: 0,
       older: 35_000,
       olderCount: 1,
     },
     notStudying: {
       total: 20_000,
       count: 1,
+      currentMonth: 0,
       byKind: {
         ungrouped: { total: 0, count: 0 },
         frozen: { total: 20_000, count: 1 },

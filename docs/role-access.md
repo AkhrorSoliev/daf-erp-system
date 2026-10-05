@@ -66,22 +66,24 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 - **No tax setting.** The salary tax-rate config and its endpoints were removed: the system computes and withholds no tax, and the salary page shows possible deductions as an informational note only
 - **CEO-only actions**: reverse payment, reverse refund, calculate salary, approve salary — these use `@Roles('CEO')` specifically
 - **Salary config (ADR-0034)**: a Branch Director may create a rate (`POST /salary/config`) only for an ACTIVE, own-branch user who holds the Teacher role and does not also hold CEO or Branch Director — an administrator or cashier who also teaches IS included. Never their own rate, never `FIXED_MONTHLY`, never a date before the current payroll period. Editing or deactivating an existing rate (`PATCH /salary/config/:id`), `POST /salary/config/global` and the payroll period stay CEO-only. A `PERCENTAGE` rate above 100 is rejected for every caller, including the CEO. The caller's roles and branches are read from the database through `whereUserMayAct()`, so a demoted or blocked director sets no rate even while their token still passes the guard ([ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md)).
-- **The salary page's reads are CEO + Branch Director on the server too** (2026-09-30). Every `GET /salary/*` read that only `/payments/salary` uses — `/monthly`, `/overview`, `/matrix`, `/payments`, `/payments/:id/breakdown`, `/accruals/:userId`, `/advances/:userId`, `/advance-calendar`, `/config/:userId`, `/configs/by-users`, `/config-history/:userId`, `/period-settings` — used to admit Administrator while the page was hidden from them. Two salary reads stay open to Administrator because pages they use call them: `GET /salary/timeline/:userId` (teacher profile, «Taymlayn» tab) and `GET /salary/monthly/center-topup` (debt page, below).
+- **The salary page's reads are CEO + Branch Director on the server too** (2026-09-30). Every `GET /salary/*` read that only `/payments/salary` uses — `/monthly`, `/overview`, `/matrix`, `/payments`, `/payments/:id/breakdown`, `/accruals/:userId`, `/advances/:userId`, `/advance-calendar`, `/config/:userId`, `/configs/by-users`, `/config-history/:userId`, `/period-settings` — used to admit Administrator while the page was hidden from them. One salary read stays open to Administrator because a page they use calls it: `GET /salary/timeline/:userId` (teacher profile, «Taymlayn» tab). `GET /salary/monthly/center-topup` is CEO/BD (ADR-0072).
 - Full details: see `docs/financial-system.md`
 
 ### Debt page (Qarzdorlik, `/payments/debt`)
 
-Every staff role except Teacher sees the same five tabs, «Markaz qoplagani» included (`GET /salary/monthly/center-topup`; Cashier added 2026-09-30, the tab used to answer a cashier with 403). Everyone below the CEO sees their own branch. The actions differ by role:
+Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qarz / O'qimayotganlar), the student drawer and the Excel (`/payments/debt/*`, ADR-0072), and the three linked pages (debt history, write-off archive, frozen balances). «Markaz qoplagani» moved to the salary page and is CEO/BD (`GET /salary/monthly/center-topup`). Everyone below the CEO sees their own branch. The actions differ by role:
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
-| View the five tabs | Yes | Yes | Yes | No | Yes |
+| View the three tabs, the drawer and the linked pages | Yes | Yes | Yes | No | Yes |
 | Record payment («To'lov qayd qilish») | Yes | Yes | Yes | No | Yes |
-| Log a call result («Natijani kiritish», `POST /call-logs`) | Yes | Yes | Yes | No | No |
+| Log a call result («Qo'ng'iroq natijasi», `POST /call-logs`) | Yes | Yes | Yes | No | No |
+| Write a payment promise («Va'da yozish», ≤ 7 days, once a month) | Yes | Yes | Yes | No | Yes |
+| Payment statement PDF (drawer) | Yes | Yes | Yes | No | No |
 | Move a frozen balance (to the center / back to the student) | Yes | Yes | Yes | No | No |
 | Undo a debt write-off | Yes | No | No | No | No |
 
-- **Frontend**: `CALL_LOG_ROLES` and `FROZEN_BALANCE_ACTION_ROLES` in `client/src/lib/role-access.ts` hide the two actions a cashier may not take
+- **Frontend**: `CALL_LOG_ROLES`, `STATEMENT_ROLES` and `FROZEN_BALANCE_ACTION_ROLES` in `client/src/lib/role-access.ts` hide the actions a cashier may not take
 
 ### Groups
 

@@ -41,7 +41,7 @@ export function DebtCards({ month }: { month: string }) {
             {formatNumber(split.studying.olderCount)} o&apos;quvchi · o&apos;tgan oylardan qolgan
           </p>
         )}
-        <Link href="/payments/debt" className="text-sm font-medium text-primary hover:underline">
+        <Link href="/payments/debt?tab=eski" className="text-sm font-medium text-primary hover:underline">
           Ro&apos;yxat →
         </Link>
       </div>
@@ -61,7 +61,7 @@ export function DebtCards({ month }: { month: string }) {
             ))}
           </ul>
         )}
-        <Link href="/payments/debt" className="text-sm font-medium text-primary hover:underline">
+        <Link href="/payments/debt?tab=chiqqan" className="text-sm font-medium text-primary hover:underline">
           Undirish ro&apos;yxati →
         </Link>
       </div>

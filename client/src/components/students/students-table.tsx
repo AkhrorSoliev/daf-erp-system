@@ -59,7 +59,7 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
             className="relative flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
           >
             <div className="text-muted-foreground mt-1 w-5 shrink-0 text-xs">
-              {isTeacher ? `#${student.id}` : index + 1}
+              {(page - 1) * pageSize + index + 1}
             </div>
             <AvatarWithPreview src={student.photo} alt={`${student.firstName} ${student.lastName}`}>
               <Avatar className="size-10 shrink-0">
@@ -84,6 +84,7 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
                 <a href={`tel:+998${student.phone}`} className="relative z-10 hover:underline" onClick={(e) => e.stopPropagation()}>
                   {formatPhone(student.phone)}
                 </a>
+                <span className="tabular-nums"> · ID {student.id}</span>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-wrap gap-1">
@@ -139,6 +140,7 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
+              <TableHead className="w-16">ID</TableHead>
               <TableHead className="w-10">Rasm</TableHead>
               <TableHead className="min-w-30">Ism familiya</TableHead>
               <TableHead className="min-w-32">
@@ -158,7 +160,10 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
                 className="relative cursor-pointer hover:bg-muted/50"
               >
                 <TableCell className="border-r text-muted-foreground">
-                  {isTeacher ? `#${student.id}` : (page - 1) * pageSize + index + 1}
+                  {(page - 1) * pageSize + index + 1}
+                </TableCell>
+                <TableCell className="tabular-nums text-muted-foreground">
+                  {student.id}
                 </TableCell>
                 <TableCell>
                   <AvatarWithPreview src={student.photo} alt={`${student.firstName} ${student.lastName}`}>

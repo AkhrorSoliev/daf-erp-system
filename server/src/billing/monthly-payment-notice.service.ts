@@ -423,6 +423,65 @@ export class MonthlyPaymentNoticeService {
   }
 
   /**
+   * The month's «To'lov muddati» per student, for the debt list (ADR-0072) —
+   * the bill's due date (ADR-0042): the 2nd lesson of the month on the live
+   * calendar of the student's first standing charge, counted from their first
+   * covered lesson of the month in any group. A student with no CHARGED charge
+   * this month, or fewer than two lessons, is left out (the list prints «—»).
+   */
+  async dueDates(
+    companyId: number,
+    studentIds: number[],
+    monthKey: string,
+  ): Promise<Map<number, string>> {
+    const out = new Map<number, string>();
+    if (studentIds.length === 0) return out;
+    const [year, month] = monthKey.split('-').map(Number);
+    const charges = await this.prisma.enrollmentMonthlyCharge.findMany({
+      where: {
+        companyId,
+        studentId: { in: studentIds },
+        periodYear: year,
+        periodMonth: month,
+        status: MonthlyChargeStatus.CHARGED,
+      },
+      select: {
+        id: true,
+        studentId: true,
+        groupId: true,
+        branchId: true,
+        createdAt: true,
+        coveredDates: true,
+        group: { select: { exactDays: true } },
+      },
+    });
+    const byStudent = new Map<number, typeof charges>();
+    for (const c of charges) {
+      byStudent.set(c.studentId, [...(byStudent.get(c.studentId) ?? []), c]);
+    }
+    const plans = new Map<string, MonthPlan>();
+    for (const [studentId, own] of byStudent) {
+      const first = own.reduce((a, b) => (writtenBefore(b, a) ? b : a));
+      try {
+        const due = await this.secondLesson(plans, {
+          groupId: first.groupId,
+          branchId: first.branchId,
+          exactDays: first.group.exactDays,
+          year,
+          month,
+          fromDate: earliest(own.flatMap((c) => c.coveredDates)),
+        });
+        if (due) out.set(studentId, due);
+      } catch (err) {
+        this.logger.error(
+          `Due date for student ${studentId} not resolved: ${describeError(err)}`,
+        );
+      }
+    }
+    return out;
+  }
+
+  /**
    * What admits each of these enrollments to `lessonDay`, for the ones it
    * does not admit — one admission read per group. The share is named only
    * when it, not the lessons held, keeps the student out. A group whose read

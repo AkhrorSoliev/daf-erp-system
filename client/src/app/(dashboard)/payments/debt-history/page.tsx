@@ -1,8 +1,17 @@
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { DebtFiltersProvider } from "@/components/payments/debt/debt-filters-provider";
+import { DebtSubpage } from "@/components/payments/debt/debt-subpage";
+import { MonthlyDebtView } from "@/components/payments/debt/monthly-debt-view";
 
-// Moved into /payments/debt as the "Oylik qarzdorlik" tab. A redirect, not a
-// deletion: this path is in browser histories, bookmarks and Telegram messages,
-// and a 404 would read as the report being gone.
+// A real page again (spec B2a §2.6). Suspense: the view keeps its status filter in the URL.
 export default function DebtHistoryPage() {
-  redirect("/payments/debt?tab=oylik");
+  return (
+    <Suspense>
+      <DebtFiltersProvider>
+        <DebtSubpage title="Oylar bo'yicha qarz tarixi">
+          <MonthlyDebtView />
+        </DebtSubpage>
+      </DebtFiltersProvider>
+    </Suspense>
+  );
 }

@@ -67,6 +67,7 @@ import { SettingsModule } from '../settings/settings.module';
     DebtWriteOffService,
     MonthlyChargeService,
     LessonAdmissionService,
+    MonthlyPaymentNoticeService,
   ],
 })
 export class BillingModule {}

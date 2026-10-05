@@ -9,11 +9,12 @@ describe("hisobotlar bo'limiga kirish", () => {
     }
   });
 
-  it("administrator faqat Lidlar hisobotini ochadi", () => {
+  it("administrator Lidlar va To'lov hisobotlarini ochadi, boshqa pul hisobotlarini ochmaydi", () => {
     expect(canEnterReports([3])).toBe(true);
     expect(canOpenReportPath([3], "/reports")).toBe(true);
     expect(canOpenReportPath([3], "/reports/leads")).toBe(true);
-    expect(canOpenReportPath([3], "/reports/payment-reports")).toBe(false);
+    expect(canOpenReportPath([3], "/reports/payment-reports")).toBe(true);
+    expect(canOpenReportPath([3], "/reports/student-payments")).toBe(false);
     expect(canOpenReportPath([3], "/reports/departed-students")).toBe(false);
   });
 
@@ -26,6 +27,8 @@ describe("hisobotlar bo'limiga kirish", () => {
     expect(canEnterReports([4])).toBe(false);
     expect(canEnterReports([5])).toBe(false);
     expect(canOpenReportPath([5], "/reports/leads")).toBe(false);
+    expect(canOpenReportPath([4], "/reports/payment-reports")).toBe(false);
+    expect(canOpenReportPath([5], "/reports/payment-reports")).toBe(false);
   });
 
   it("Marketing — pul hisoboti: CEO va filial direktori ochadi, administrator ochmaydi", () => {

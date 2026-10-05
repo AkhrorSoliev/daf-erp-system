@@ -47,12 +47,12 @@ export const routeLabels: Record<string, string> = {
   archive: "Arxiv",
   overview: "Umumiy ma'lumotlar",
   pending: "Kutilyotgan to'lovlar",
-  // /payments/debt — qarzdorlik bo'yicha yagona sahifa: qarzdorlar ro'yxati,
-  // markaz qoplagani, oylik qarzdorlik va kechirilganlar. The three paths it
-  // replaced only redirect now, so they never render a breadcrumb and need no
-  // label — a label for a segment nobody can land on is one more thing to keep
-  // true for no reader.
+  // /payments/debt — qarzdorlik sahifasi (uch bo'lim). Uning eski tablari endi
+  // alohida sahifalar: qarz tarixi, kechirilganlar, muzlatilganlar puli.
   debt: "Qarzdorlik",
+  "debt-history": "Qarz tarixi",
+  "debt-write-offs": "Kechirilgan qarzlar",
+  "frozen-balances": "Muzlatilganlarning puli",
   expenses: "Xarajatlar",
   // "Oyliklar" — the monthly payroll list (teachers + fixed-salary staff).
   // "Ish haqi" stays the term for ONE person's salary (profile tabs), so the
