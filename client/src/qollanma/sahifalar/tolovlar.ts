@@ -245,7 +245,7 @@ export const tolovlar: QollanmaSahifa[] = [
     qisqacha:
       "«Qarzdorlik» sahifasi bugungi qarzni uch bo'limda ko'rsatadi: «Shu oy», «Eski qarz» va «O'qimayotganlar»; uchala jami qo'shilmaydi. Qatorni bosib o'quvchi oynasini ochasiz: oylar bo'yicha qarz, aloqa, to'lov va va'da. To'lov va'dasi ko'pi bilan 7 kunga, oyiga bir marta yoziladi.",
     rollar: [1, 2, 3, 5],
-    adr: ["0058", "0059", "0062", "0072"],
+    adr: ["0058", "0059", "0062", "0072", "0073"],
     yollar: ["/payments/debt", "/payments/debt-history", "/payments/debt-write-offs", "/payments/frozen-balances"],
     kalitSozlar: [
       "qarzdorlik",
@@ -279,6 +279,6 @@ export const tolovlar: QollanmaSahifa[] = [
       "va'da yozish",
       "qo'ng'iroq natijasi",
     ],
-    yangilangan: "2026-10-04",
+    yangilangan: "2026-10-05",
   },
 ];

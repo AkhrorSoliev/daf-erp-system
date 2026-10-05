@@ -8,7 +8,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-05",
     sarlavha: "To'lovlar hisobotida minusli oy eng eski qarzni yopadi",
-    matn: "Oyda qaytgan pul shu oy darslarining narxidan ko'p bo'lsa (oy narxi minus bilan chiqsa), bu pul endi to'lov kabi eng eski qarzni yopadi. Javob qutisi ostidagi satr va «Oylar bo'yicha» jadvalining «Qarz» ustuni doim javob qutisidagi qarzga teng, bunday hisobotda ham «Jami» qatori chiqadi. Ilgari minusli oy hisobga kirmay, oylar qarzi haqiqiy qarzdan ko'p ko'rinishi mumkin edi.",
+    matn: "Oyda qaytgan pul shu oy darslarining narxidan ko'p bo'lsa (oy narxi minus bilan chiqsa), bu pul endi to'lov kabi eng eski qarzni yopadi. Javob qutisi ostidagi satr va «Oylar bo'yicha» jadvalining «Qarz» ustuni doim javob qutisidagi qarzga teng, bunday hisobotda ham «Jami» qatori chiqadi. «Qarzdorlik» sahifasidagi o'quvchi oynasida ham «Oylar bo'yicha» bunday o'quvchida endi chiqadi. Ilgari minusli oy hisobga kirmay, oylar qarzi haqiqiy qarzdan ko'p ko'rinishi mumkin edi.",
     rollar: [1, 2, 3],
     sahifa: { bolim: "oquvchilar", sahifa: "oquvchi-kartasi" },
   },

@@ -10,7 +10,6 @@ import type {
   StatementMonth,
   StatementRow,
 } from '../../statements/statement.types';
-import { drawerMonths } from './debt-list.math';
 import { DebtListService } from './debt-list.service';
 import type { DebtListQueryDto } from './dto/debt-list-query.dto';
 
@@ -375,10 +374,10 @@ describe('DebtListService', () => {
       expect(statements.build).toHaveBeenCalledWith(10001, 1001);
     });
 
-    it('month lines that do not add up to «Qarz» are left out and logged (a negative month)', async () => {
+    it('a negative month is spent as a credit, so the month lines add up to «Qarz» (ADR-0073)', async () => {
       // Made-up: March 400 000, April −100 000 (a release in a month with no
       // lessons), May 400 000, one payment of 500 000 → balance −200 000. The
-      // statement's FIFO skips the negative month, so May alone claims 300 000.
+      // statement's FIFO spends April's 100 000 like a payment, so May owes 200 000.
       const months = [
         { key: '2026-03', cost: 400_000, items: [] },
         { key: '2026-04', cost: -100_000, items: [] },
@@ -395,9 +394,6 @@ describe('DebtListService', () => {
         months,
         headline: headlineOf(-200_000, allocate(months, [payment], 0).unpaid),
       };
-      expect(drawerMonths(model).map((l) => [l.month, l.left])).toEqual([
-        ['2026-05', 300_000],
-      ]);
       statements.build.mockResolvedValue(model);
       prisma.student.findFirst.mockResolvedValue({
         id: 10001,
@@ -407,18 +403,12 @@ describe('DebtListService', () => {
         balance: -200_000,
         status: 'ACTIVE',
       });
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-      try {
-        expect(await service.student(1001, null, null, 10001)).toMatchObject({
-          debt: 200_000,
-          months: [],
-        });
-        expect(warn).toHaveBeenCalledWith(
-          'Debt drawer for student 10001: month lines add up to 300000, debt is 200000',
-        );
-      } finally {
-        warn.mockRestore();
-      }
+      expect(await service.student(1001, null, null, 10001)).toMatchObject({
+        debt: 200_000,
+        months: [
+          { month: '2026-05', charged: 400_000, paid: 200_000, left: 200_000 },
+        ],
+      });
     });
 
     it('a failing statement blanks only the months; payment, call and promise stay', async () => {
