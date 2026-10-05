@@ -196,21 +196,21 @@ describe('TelegramGroupStatsService', () => {
   describe('debt as two numbers (ADR-0059)', () => {
     const split: DebtSplit = {
       studying: {
-        total: 43_500_000,
-        count: 237,
-        currentMonth: 41_100_000,
+        total: 39_150_000,
+        count: 219,
+        currentMonth: 36_990_000,
         currentMonthCount: 0,
-        older: 2_400_000,
+        older: 2_160_000,
         olderCount: 13,
       },
       notStudying: {
-        total: 40_600_000,
-        count: 327,
+        total: 36_540_000,
+        count: 305,
         currentMonth: 0,
         byKind: {
-          ungrouped: { total: 15_000_000, count: 128 },
-          frozen: { total: 14_600_000, count: 99 },
-          left: { total: 11_000_000, count: 100 },
+          ungrouped: { total: 13_500_000, count: 118 },
+          frozen: { total: 13_140_000, count: 91 },
+          left: { total: 9_900_000, count: 96 },
         },
       },
     };
@@ -242,9 +242,9 @@ describe('TelegramGroupStatsService', () => {
     // `formatSum` / `formatNumber`, not literals: their thousands separator is
     // a non-breaking space. One contiguous block checks wording and order.
     const debtBlock = [
-      `O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>`,
-      `   🟡 shu oy ${formatSum(41_100_000)} · 🔴 eski qarz ${formatSum(2_400_000)}`,
-      `O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+      `O'qiyotganlar qarzi: <b>${formatNumber(219)}</b> ta — <b>${formatSum(39_150_000)}</b>`,
+      `   🟡 shu oy ${formatSum(36_990_000)} · 🔴 eski qarz ${formatSum(2_160_000)}`,
+      `O'qimayotganlar qarzi: <b>${formatNumber(305)}</b> ta — <b>${formatSum(36_540_000)}</b>`,
     ].join('\n');
 
     it('/qarzdorlar prints both totals, then the five largest studying debtors', async () => {
@@ -265,7 +265,7 @@ describe('TelegramGroupStatsService', () => {
       // The single combined total is gone, and the two are never added.
       expect(text).not.toContain('Jami qarz');
       expect(text).not.toContain('Soni:');
-      expect(text).not.toContain(formatNumber(43_500_000 + 40_600_000));
+      expect(text).not.toContain(formatNumber(39_150_000 + 36_540_000));
     });
 
     it("lists the debtors by the split's own studying predicate, biggest debt first, ties by id", async () => {
@@ -289,7 +289,7 @@ describe('TelegramGroupStatsService', () => {
     it('/qarzdorlar names nobody when no studying student owes, but still prints both numbers', async () => {
       getDebtSplit.mockResolvedValue({
         studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
-        notStudying: { total: 40_600_000, count: 327 },
+        notStudying: { total: 36_540_000, count: 305 },
       });
 
       const text = await (
@@ -300,7 +300,7 @@ describe('TelegramGroupStatsService', () => {
         `O'qiyotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
       );
       expect(text).toContain(
-        `O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+        `O'qimayotganlar qarzi: <b>${formatNumber(305)}</b> ta — <b>${formatSum(36_540_000)}</b>`,
       );
       expect(text).not.toContain('Eng katta');
       // Nothing studying is owed, so there is no split to print.
@@ -315,7 +315,7 @@ describe('TelegramGroupStatsService', () => {
       expect(text).toContain(debtBlock);
       expect(text).not.toContain('• ');
       expect(text).not.toContain('Qarzdorlar');
-      expect(text).not.toContain(formatNumber(43_500_000 + 40_600_000));
+      expect(text).not.toContain(formatNumber(39_150_000 + 36_540_000));
       expect(getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: [2] });
     });
   });

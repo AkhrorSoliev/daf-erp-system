@@ -397,17 +397,17 @@ describe('TelegramGroupReportMenuService', () => {
   describe('the month line', () => {
     const monthCharges = {
       month: '2026-10',
-      charged: 177_000_000,
-      paid: 135_900_000,
-      unpaid: 41_100_000,
+      charged: 159_300_000,
+      paid: 122_310_000,
+      unpaid: 36_990_000,
       paidPct: 76.8,
-      students: 237,
+      students: 219,
     };
     // `formatSum`, not a literal: its thousands separator is a non-breaking space.
     const chargesBlock = [
-      `• Bu oy hisoblandi: <b>${formatSum(177_000_000)}</b>`,
-      `• To'landi: <b>${formatSum(135_900_000)}</b> (<b>76.8%</b>)`,
-      `• Qoldi: <b>${formatSum(41_100_000)}</b>`,
+      `• Bu oy hisoblandi: <b>${formatSum(159_300_000)}</b>`,
+      `• To'landi: <b>${formatSum(122_310_000)}</b> (<b>76.8%</b>)`,
+      `• Qoldi: <b>${formatSum(36_990_000)}</b>`,
     ].join('\n');
     const reportsWith = (overrides: Record<string, jest.Mock> = {}) => ({
       getMonthlyNetProfit: jest
@@ -494,12 +494,12 @@ describe('TelegramGroupReportMenuService', () => {
   describe('the debt lines', () => {
     const split = {
       studying: {
-        total: 43_500_000,
-        count: 237,
-        currentMonth: 41_100_000,
-        older: 2_400_000,
+        total: 39_150_000,
+        count: 219,
+        currentMonth: 36_990_000,
+        older: 2_160_000,
       },
-      notStudying: { total: 40_600_000, count: 327 },
+      notStudying: { total: 36_540_000, count: 305 },
     };
     // The card's other reads are not what is under test: they answer plainly.
     const reportsWith = (overrides: Record<string, jest.Mock> = {}) => ({
@@ -522,9 +522,9 @@ describe('TelegramGroupReportMenuService', () => {
       const text = ctx.reply.mock.calls[0][0] as string;
       expect(text).toContain(
         [
-          `• O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>`,
-          `   🟡 shu oy ${formatSum(41_100_000)} · 🔴 eski qarz ${formatSum(2_400_000)}`,
-          `• O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+          `• O'qiyotganlar qarzi: <b>${formatNumber(219)}</b> ta — <b>${formatSum(39_150_000)}</b>`,
+          `   🟡 shu oy ${formatSum(36_990_000)} · 🔴 eski qarz ${formatSum(2_160_000)}`,
+          `• O'qimayotganlar qarzi: <b>${formatNumber(305)}</b> ta — <b>${formatSum(36_540_000)}</b>`,
         ].join('\n'),
       );
       // The card used to print a wording of its own: «eski» alone.
@@ -540,7 +540,7 @@ describe('TelegramGroupReportMenuService', () => {
       const text = ctx.reply.mock.calls[0][0] as string;
       expect(text).not.toContain('Qarzdorlar');
       expect(text).not.toContain('Jami qarz');
-      expect(text).not.toContain(formatSum(43_500_000 + 40_600_000));
+      expect(text).not.toContain(formatSum(39_150_000 + 36_540_000));
       // Their own lines, not one line holding both.
       const debtLines = text.split('\n').filter((l) => l.includes('qarzi:'));
       expect(debtLines).toHaveLength(2);

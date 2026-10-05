@@ -3,20 +3,20 @@ import { formatSum } from './format.util';
 
 const october = {
   month: '2026-10',
-  charged: 177_000_000,
-  paid: 135_900_000,
-  unpaid: 41_100_000,
+  charged: 159_300_000,
+  paid: 122_310_000,
+  unpaid: 36_990_000,
   paidPct: 76.8,
-  students: 237,
+  students: 219,
   unpaidStudents: 98,
 };
 
 describe('buildMonthChargesLines', () => {
   it("prints hisoblandi, to'landi with its share, and qoldi", () => {
     expect(buildMonthChargesLines(october)).toEqual([
-      `• Bu oy hisoblandi: <b>${formatSum(177_000_000)}</b>`,
-      `• To'landi: <b>${formatSum(135_900_000)}</b> (<b>76.8%</b>)`,
-      `• Qoldi: <b>${formatSum(41_100_000)}</b>`,
+      `• Bu oy hisoblandi: <b>${formatSum(159_300_000)}</b>`,
+      `• To'landi: <b>${formatSum(122_310_000)}</b> (<b>76.8%</b>)`,
+      `• Qoldi: <b>${formatSum(36_990_000)}</b>`,
     ]);
   });
 
@@ -39,7 +39,7 @@ describe('buildMonthChargesLines', () => {
     const lines = buildMonthChargesLines({
       ...october,
       paid: 0,
-      unpaid: 177_000_000,
+      unpaid: 159_300_000,
       paidPct: 0,
     });
 
