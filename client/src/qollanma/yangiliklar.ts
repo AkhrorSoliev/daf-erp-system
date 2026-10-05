@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-05",
+    sarlavha: "Davomatda puli qaysi darsgacha yetishi 1-darsdan ko'rinadi",
+    matn: "Oylik kursda oyni to'liq to'lamagan o'quvchining davomat qatorida endi oyning 1-darsida ham puli oyning nechta darsiga va qaysi kungacha yetishi yoziladi: «Qisman to'lagan · 12 darsdan 5 tasi · 14.10 gacha». 1-darsga to'lovsiz kelgan, puli keyingi darsga yetmaydigan o'quvchida «1-dars to'lovsiz · keyingi darsdan to'lov kerak» chiqadi, administrator keyingi dars uchun kerakli summani ham ko'radi. Darsga qo'yilmagan o'quvchining yozuvi endi u shu oy uchun qancha to'laganini aytadi: hech narsa to'lamagan bo'lsa — «To'lov qilinmagan», qisman to'lagan bo'lsa — «Qisman to'lagan · puli 08.10 gacha yetdi» yoki (01.11.2026 dan) «Oyning 22% i to'langan · kamida 50% kerak». Ilgari 1-darsda hech narsa yozilmasdi, qisman to'lagan o'quvchiga ham «To'lov qilinmagan» deb yozilardi. O'tgan kunning davomatida «… gacha» yozuvi chiqmaydi.",
+    rollar: [1, 2, 3, 4],
+    sahifa: { bolim: "davomat", sahifa: "darsga-qoyish" },
+  },
+  {
+    sana: "2026-10-05",
     sarlavha: "To'lov va'dasi o'z kuni tugagach buziladi",
     matn: "To'lov oynasida yozilgan va'da shu kunning o'zida soat 09:00 da «buzildi» bo'lib, bildirishnoma kelardi — «Qarzdorlik» sahifasi esa uni hali «kun.oy gacha» deb ko'rsatardi. Endi qayerda yozilganidan qat'i nazar, va'da o'z kuni tugagandan keyingina, keyingi 09:00 tekshiruvida buziladi.",
     rollar: [1, 2, 3, 5],

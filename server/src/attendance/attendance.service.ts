@@ -7,7 +7,12 @@ import { AttendanceReadService } from './attendance-read.service';
 import { AttendanceStatsService } from './attendance-stats.service';
 import { AttendanceSaveService } from './attendance-save.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
-import { ADMITTED_WITHOUT_RULE, LEFT_OUT } from '../billing/lesson-admission';
+import {
+  ADMITTED_WITHOUT_RULE,
+  LEFT_OUT,
+  withoutReachForPastLesson,
+} from '../billing/lesson-admission';
+import { tashkentDateStr } from './shared/date-utils';
 
 @Injectable()
 export class AttendanceService {
@@ -73,15 +78,19 @@ export class AttendanceService {
     // After the lesson a student the register left out stays out, paid or
     // not — as `save()` judges it.
     const leftOut = new Set(leftOutStudentIds);
+    // An earlier day's register: today's reach is no news about that lesson.
+    const past = date < tashkentDateStr(new Date());
     return {
       ...roster,
       opensMinutesBefore,
-      activeStudents: roster.activeStudents.map((s) => ({
-        ...s,
-        admission: leftOut.has(s.studentId)
-          ? LEFT_OUT
-          : (admission.get(s.studentId) ?? ADMITTED_WITHOUT_RULE),
-      })),
+      activeStudents: roster.activeStudents.map((s) => {
+        const verdict = admission.get(s.studentId) ?? ADMITTED_WITHOUT_RULE;
+        if (leftOut.has(s.studentId)) return { ...s, admission: LEFT_OUT };
+        return {
+          ...s,
+          admission: past ? withoutReachForPastLesson(verdict) : verdict,
+        };
+      }),
       debtorStudents: monthReach
         ? roster.debtorStudents.map((s) => ({
             ...s,
