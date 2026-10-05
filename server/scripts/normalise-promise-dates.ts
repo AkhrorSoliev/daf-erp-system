@@ -1,7 +1,9 @@
 /**
  * One-off: store every `PaymentPromise.promiseDate` as the last millisecond of
- * its Tashkent day (`promiseDayEnd`, the rule new writes follow). The day a
- * row names never changes — only the instant inside that day.
+ * the day it meant (`promiseDayEnd`, the rule new writes follow). The day is
+ * read by `legacyPromiseDay` (the stored UTC date), not by Tashkent day: the
+ * old dialogs' browser-local 23:59:59 from a UTC+3 browser reads one Tashkent
+ * day late. A row stored at a time of day no writer produced is skipped.
  *
  * Dry run (default, read-only) — counts and promise ids:
  *   cd server && railway run npx ts-node scripts/normalise-promise-dates.ts
@@ -20,6 +22,7 @@ import {
   TASHKENT_OFFSET_MS,
 } from '../src/common/date/tashkent';
 import { promiseDayEnd } from '../src/payment-promises/promise-rule';
+import { legacyPromiseDay } from './lib/promise-legacy-day';
 
 /** 'HH:MM:SS.mmm' Tashkent wall clock of an instant. */
 const tashkentClock = (d: Date) =>
@@ -50,9 +53,18 @@ async function main() {
       },
       orderBy: { createdAt: 'asc' },
     });
-    const plans = rows
-      .map((r) => ({ ...r, to: promiseDayEnd(r.promiseDate) }))
-      .filter((p) => p.to.getTime() !== p.promiseDate.getTime());
+    const unknown = rows.filter((r) => legacyPromiseDay(r.promiseDate) == null);
+    const known = rows.flatMap((r) => {
+      const day = legacyPromiseDay(r.promiseDate);
+      return day ? [{ ...r, day, to: promiseDayEnd(day) }] : [];
+    });
+    const plans = known.filter(
+      (p) => p.to.getTime() !== p.promiseDate.getTime(),
+    );
+    // Rows the Tashkent-day readers (debt page, overdue alert) show a day late.
+    const dayLate = plans.filter(
+      (p) => tashkentDateStr(p.promiseDate) !== p.day,
+    );
 
     const byClock = new Map<string, number>();
     const byStatus = new Map<string, number>();
@@ -63,8 +75,15 @@ async function main() {
     }
 
     console.log(`Jami va'dalar: ${rows.length}`);
-    console.log(`Allaqachon kun oxirida: ${rows.length - plans.length}`);
+    console.log(`Allaqachon kun oxirida: ${known.length - plans.length}`);
     console.log(`Qayta yoziladi: ${plans.length}`);
+    console.log(
+      `  shundan Toshkent kuni bo'yicha 1 kun kech ko'rinayotgani: ${dayLate.length}`,
+    );
+    console.log(
+      `Noma'lum shakl, tegilmaydi: ${unknown.length}` +
+        (unknown.length ? ` [${unknown.map((r) => r.id).join(', ')}]` : ''),
+    );
     for (const [clock, n] of [...byClock].sort()) {
       console.log(`  - Toshkent ${clock} da saqlangan: ${n}`);
     }
@@ -73,11 +92,11 @@ async function main() {
     }
 
     // The bug's footprint: flipped to BROKEN on (or before) the promised day.
-    const early = rows.filter(
+    const early = known.filter(
       (r) =>
         r.status === 'BROKEN' &&
         r.reminderFiredAt != null &&
-        tashkentDateStr(r.reminderFiredAt) <= tashkentDateStr(r.promiseDate),
+        tashkentDateStr(r.reminderFiredAt) <= r.day,
     );
     console.log(
       `\nO'z kunida «buzildi» bo'lgan va'dalar (holati o'zgarmaydi): ${early.length}` +
