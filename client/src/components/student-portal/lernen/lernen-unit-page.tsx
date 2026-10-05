@@ -11,11 +11,13 @@ import {
   Button,
   EmptyState,
   LoadingCards,
+  ProgressBar,
 } from "../lumio";
 import { useLernenUnit } from "./queries";
 import { loadState } from "../lib/load-state";
 import { LoadFailed } from "../load-failed";
 import { seansHolatlari, type SeansHolatBelgisi } from "./fortschritt";
+import { sozHisoblagichi, type SozHisoblagichi } from "./soz-hisoblagichi";
 import type { LernenSeans } from "./types";
 
 /**
@@ -64,12 +66,20 @@ function SeansRow({
   seans,
   holat,
   onOpen,
+  yanaMashq,
 }: {
   seans: LernenSeans;
   holat: SeansHolatBelgisi;
   onOpen: (id: number) => void;
+  /** Under a finished section lesson while the section has unmet words. */
+  yanaMashq?: string | null;
 }) {
   const qulf = holat === "QULF";
+  const izoh =
+    holat === "BAJARILGAN" &&
+    (seans.kind === "SECTION_A" || seans.kind === "SECTION_B")
+      ? yanaMashq
+      : null;
   return (
     <button
       type="button"
@@ -83,15 +93,44 @@ function SeansRow({
       )}
     >
       <SeansBelgi holat={holat} />
-      <span
-        className={cn(
-          "min-w-0 flex-1 truncate font-semibold",
-          qulf ? "text-ink-400" : "text-ink-900",
-        )}
-      >
-        {seansNomi(seans)}
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            "block truncate font-semibold",
+            qulf ? "text-ink-400" : "text-ink-900",
+          )}
+        >
+          {seansNomi(seans)}
+        </span>
+        {izoh ? (
+          <span className="block truncate text-xs font-semibold text-coral-600">
+            {izoh}
+          </span>
+        ) : null}
       </span>
     </button>
+  );
+}
+
+/** The section's word counter: «So'zlar: 14 / 28» and a thin bar (ADR-0071). */
+function SozlarQatori({ hisob }: { hisob: SozHisoblagichi }) {
+  return (
+    <div className="space-y-1 px-1">
+      <p
+        className={cn(
+          "flex items-center gap-1 text-xs font-bold tabular-nums",
+          hisob.tugadi ? "text-success" : "text-ink-500",
+        )}
+      >
+        {hisob.tugadi ? <CheckCircle size={14} weight="fill" aria-hidden /> : null}
+        {hisob.matn}
+      </p>
+      <ProgressBar
+        value={hisob.foiz}
+        height={6}
+        color={hisob.tugadi ? "var(--success)" : "var(--coral-500)"}
+      />
+    </div>
   );
 }
 
@@ -164,28 +203,33 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
             {data.label} · {data.titleDe}
           </p>
 
-          {data.sections.map((section) => (
-            <section key={section.id} className="space-y-2">
-              <div className="px-1">
-                <h2 className="font-display text-base font-extrabold text-ink-900">
-                  {section.order}. {section.titleUz}
-                </h2>
-                <p className="text-xs font-semibold text-ink-400">
-                  {section.titleDe}
-                </p>
-              </div>
-              <div className="space-y-2">
-                {section.lessons.map((l) => (
-                  <SeansRow
-                    key={l.id}
-                    seans={l}
-                    holat={holatMap.get(l.id) ?? "QULF"}
-                    onOpen={openLesson}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+          {data.sections.map((section) => {
+            const hisob = sozHisoblagichi(section.woerter);
+            return (
+              <section key={section.id} className="space-y-2">
+                <div className="px-1">
+                  <h2 className="font-display text-base font-extrabold text-ink-900">
+                    {section.order}. {section.titleUz}
+                  </h2>
+                  <p className="text-xs font-semibold text-ink-400">
+                    {section.titleDe}
+                  </p>
+                </div>
+                {hisob ? <SozlarQatori hisob={hisob} /> : null}
+                <div className="space-y-2">
+                  {section.lessons.map((l) => (
+                    <SeansRow
+                      key={l.id}
+                      seans={l}
+                      holat={holatMap.get(l.id) ?? "QULF"}
+                      onOpen={openLesson}
+                      yanaMashq={hisob?.yanaMashq}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
 
           {data.finalTest ? (
             <section className="space-y-2 border-t border-line pt-4">

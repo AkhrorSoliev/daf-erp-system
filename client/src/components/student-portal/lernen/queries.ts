@@ -1,6 +1,12 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import api from "@/lib/api";
 import type {
   AbschlussErgebnis,
@@ -98,7 +104,18 @@ export function useRecordAttempt() {
 
 /** Darsning 12 savoli. To'g'ri javoblar ichida YO'Q. */
 export function useUebungSeans(lessonId: number) {
-  return useQuery<PublicFrage[]>({
+  return useQuery(uebungSeansQuery(lessonId));
+}
+
+/**
+ * `gcTime: 0` — a round is dropped as soon as its screen is left, so opening
+ * the lesson again asks the server for a NEW round, unseen words first
+ * (ADR-0071). Kept in the cache, the old round came back within five minutes:
+ * the same 12 questions under a unit page promising «Yana mashq qilish · N
+ * yangi so'z». The round's progress lives in the screen, not in this cache.
+ */
+export function uebungSeansQuery(lessonId: number) {
+  return queryOptions<PublicFrage[]>({
     queryKey: ["lernen", "uebung", lessonId],
     queryFn: () =>
       api.get(`${BASE}/lessons/${lessonId}/uebung`).then((r) => r.data),
@@ -107,7 +124,19 @@ export function useUebungSeans(lessonId: number) {
     // o'quvchining o'rnini yo'qotardi.
     refetchOnWindowFocus: false,
     staleTime: Infinity,
+    gcTime: 0,
   });
+}
+
+/**
+ * Leaving a round marks the word counters stale (ADR-0071): every answer has
+ * already written the student's word state, and `abschluss` refreshes the
+ * unit page and the path only when a round ends. Nothing refetches here; the
+ * page that shows the counter refetches when it opens.
+ */
+export function sozHisobiniEskirt(qc: QueryClient) {
+  void qc.invalidateQueries({ queryKey: ["lernen", "unit"], refetchType: "none" });
+  void qc.invalidateQueries({ queryKey: ["lernen", "levels"], refetchType: "none" });
 }
 
 /** Javobni tekshiradi. To'g'ri javob FAQAT shu javobda keladi. */
@@ -266,11 +295,21 @@ export function useReyting(scope: "gruppe" | "zentrum") {
  * yagona boshqa chaqiruvchi (`wiederholung/page.tsx`) doim yoqiq kerak.
  */
 export function useWiederholung(enabled: boolean = true) {
-  return useQuery<PublicFrage[]>({
+  return useQuery(wiederholungQuery(enabled));
+}
+
+/**
+ * `gcTime: 0` for the same reason as a lesson round: invalidating alone left
+ * the old questions in the cache, and the next review started from them
+ * while the fresh set was still loading.
+ */
+export function wiederholungQuery(enabled: boolean = true) {
+  return queryOptions<PublicFrage[]>({
     queryKey: ["lernen", "wiederholung"],
     queryFn: () => api.get(`${BASE}/wiederholung/uebung`).then((r) => r.data),
     enabled,
     refetchOnWindowFocus: false,
     staleTime: Infinity,
+    gcTime: 0,
   });
 }
