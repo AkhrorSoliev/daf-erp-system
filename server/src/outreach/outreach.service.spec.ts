@@ -266,6 +266,54 @@ describe('OutreachService', () => {
       expect(res.items[0].isOverdue).toBe(true);
       expect(res.items[1].isOverdue).toBe(false);
     });
+
+    it("today's promise is not overdue before the Tashkent day ends, whatever instant it holds", async () => {
+      jest.useFakeTimers({
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      });
+      jest.setSystemTime(new Date('2026-10-14T07:00:00Z')); // 14.10 12:00 Tashkent
+      const student = {
+        id: 501,
+        firstName: 'A',
+        lastName: 'B',
+        phone: '',
+        parentPhone: null,
+        photo: null,
+        balance: -1000,
+        enrollments: [],
+      };
+      prisma.paymentPromise.findMany.mockResolvedValue([
+        // 14.10 as the payment dialog stored it before the fix: 05:00 Tashkent.
+        {
+          id: 'today',
+          promiseDate: new Date('2026-10-14T00:00:00.000Z'),
+          comment: null,
+          createdAt: new Date(),
+          student,
+        },
+        {
+          id: 'yesterday',
+          promiseDate: new Date('2026-10-13T18:59:59.999Z'),
+          comment: null,
+          createdAt: new Date(),
+          student,
+        },
+      ]);
+      try {
+        const res = await service.getActivePromises({
+          userId: 10001,
+          companyId: 1,
+          roles: ['CEO'],
+          branchScope: null,
+        });
+        const overdue = Object.fromEntries(
+          res.items.map((i) => [i.promiseId, i.isOverdue]),
+        );
+        expect(overdue).toEqual({ today: false, yesterday: true });
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 
   describe('getRemovalQueue', () => {

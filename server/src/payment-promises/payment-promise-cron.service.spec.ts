@@ -78,4 +78,32 @@ describe('PaymentPromiseCronService', () => {
     );
     expect(res).toEqual({ processed: 1 });
   });
+
+  describe('by Tashkent day: a promise for D breaks only once D is over', () => {
+    beforeEach(() => {
+      jest.useFakeTimers({
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      });
+      jest.setSystemTime(new Date('2026-10-14T04:00:00Z')); // 14.10 09:00 Tashkent
+    });
+    afterEach(() => jest.useRealTimers());
+
+    /** What the findMany bound lets through, as Postgres would apply it. */
+    const selects = async (stored: string) => {
+      await service.run();
+      const bound = prisma.paymentPromise.findMany.mock.calls[0][0].where
+        .promiseDate as { lt: Date };
+      expect(bound).toEqual({ lt: expect.any(Date) });
+      return new Date(stored) < bound.lt;
+    };
+
+    it("today's promise is not broken at 09:00, even one stored at 05:00 Tashkent", async () => {
+      expect(await selects('2026-10-14T00:00:00.000Z')).toBe(false); // payment dialog, before the fix
+      expect(await selects('2026-10-14T18:59:59.999Z')).toBe(false);
+    });
+
+    it("yesterday's promise is broken, however late in the day it was stored", async () => {
+      expect(await selects('2026-10-13T18:59:59.999Z')).toBe(true);
+    });
+  });
 });

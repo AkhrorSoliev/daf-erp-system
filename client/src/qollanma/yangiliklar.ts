@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-05",
+    sarlavha: "To'lov va'dasi o'z kuni tugagach buziladi",
+    matn: "To'lov oynasida yozilgan va'da shu kunning o'zida soat 09:00 da «buzildi» bo'lib, bildirishnoma kelardi — «Qarzdorlik» sahifasi esa uni hali «kun.oy gacha» deb ko'rsatardi. Endi qayerda yozilganidan qat'i nazar, va'da o'z kuni tugagandan keyingina, keyingi 09:00 tekshiruvida buziladi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "tolovlar", sahifa: "qarzdorlik" },
+  },
+  {
+    sana: "2026-10-05",
     sarlavha: "O'quvchi ID raqami ko'proq joyda chiqadi",
     matn: "O'quvchilar ro'yxatida va guruh sahifasidagi o'quvchilar ro'yxatida tartib raqami yonida «ID» ustuni turadi. O'quvchi o'z ID raqamini portaldagi «Profil» va «To'lovlar» sahifalarida ko'radi va bir bosishda nusxalaydi; botdagi «💳 To'lovlar» xabari ham ism va ID bilan boshlanadi. Bu raqam Payme va Click'da o'quvchining hisob raqami: ota-ona Payme yoki Click ilovasidan to'laganda shu raqamni kiritadi.",
     rollar: [1, 2, 3, 4],

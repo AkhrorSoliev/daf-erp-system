@@ -18,6 +18,7 @@ import {
 import {
   PROMISE_MONTH_REFUSAL,
   promiseDateRange,
+  promiseDayEnd,
   promiseRefusal,
   type PromiseMonthState,
 } from './promise-rule';
@@ -192,7 +193,7 @@ export class PaymentPromisesService {
     if (month) {
       // The rule let it through, so this is the month's OPEN promise — unless a
       // payment resolved it (KEPT) since: then it is no longer this month's to move.
-      const promiseDate = new Date(params.promiseDate);
+      const promiseDate = promiseDayEnd(params.promiseDate);
       const { count } = await this.prisma.paymentPromise.updateMany({
         where: { id: month.id, status: 'OPEN' },
         // reminderFiredAt: null re-arms the overdue cron for the new date.
@@ -275,7 +276,7 @@ export class PaymentPromisesService {
           const promise = await tx.paymentPromise.create({
             data: {
               studentId: p.studentId,
-              promiseDate: new Date(p.promiseDate),
+              promiseDate: promiseDayEnd(p.promiseDate),
               comment: p.comment,
               promisedAmount: p.promisedAmount,
               status: 'OPEN',
