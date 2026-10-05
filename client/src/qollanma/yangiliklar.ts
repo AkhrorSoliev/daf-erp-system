@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-05",
+    sarlavha: "To'lov va'dasi o'z kuni tugagach buziladi",
+    matn: "To'lov oynasida yozilgan va'da shu kunning o'zida soat 09:00 da «buzildi» bo'lib, bildirishnoma kelardi — «Qarzdorlik» sahifasi esa uni hali «kun.oy gacha» deb ko'rsatardi. Endi qayerda yozilganidan qat'i nazar, va'da o'z kuni tugagandan keyingina, keyingi 09:00 tekshiruvida buziladi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "tolovlar", sahifa: "qarzdorlik" },
+  },
+  {
     sana: "2026-10-04",
     sarlavha: "«Qarzdorlik» uch bo'limda, to'lov va'dasi 7 kungacha va oyiga bir marta",
     matn: "«Qarzdorlik» sahifasi endi bugungi qarzni uch bo'limda ko'rsatadi: «Shu oy», «Eski qarz» va «O'qimayotganlar»; har bo'limda jami va soni, uchalasi qo'shilmaydi. Qatorni bossangiz o'quvchi oynasi ochiladi: oylar bo'yicha qarz, oxirgi to'lov, aloqa va amallar. To'lov va'dasi bugundan ko'pi bilan 7 kunga va o'quvchiga oyiga bir marta yoziladi — o'quvchi oynasida, qo'ng'iroq natijasida va qisman to'lovda bir xil. Qarz tarixi, kechirilgan qarzlar va muzlatilganlar puli alohida sahifalarga ko'chdi; «Markaz qoplagani» Ish haqi sahifasida, faqat CEO va filial direktoriga.",
