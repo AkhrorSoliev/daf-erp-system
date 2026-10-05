@@ -584,8 +584,11 @@ export class ReportsController {
     return scope;
   }
 
+  // /reports/payment-reports sahifasi va uning «O'qituvchilar» jadvali
+  // Administrator'ga ham ochiq (CEO, 05.10.2026). Filial doirasi o'zgarmaydi:
+  // `@BranchScope()` Administrator'ni o'z filiali(lari) bilan cheklaydi.
   @Get('payment-reports')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   getPaymentReports(
     @Query() query: PaymentReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -601,7 +604,7 @@ export class ReportsController {
   }
 
   @Get('payment-reports/teachers')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   getTeacherPaymentReports(
     @Query() query: PaymentReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -615,7 +618,7 @@ export class ReportsController {
   }
 
   @Get('payment-reports/teachers/:teacherId/groups')
-  @Roles('CEO', 'Branch Director')
+  @Roles('CEO', 'Branch Director', 'Administrator')
   getTeacherGroupsReport(
     @Param('teacherId', ParseIntPipe) teacherId: number,
     @Query() query: PaymentReportsQueryDto,

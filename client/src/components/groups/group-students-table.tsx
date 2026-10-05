@@ -103,6 +103,7 @@ export function GroupStudentsTable({ students, onStudentDeleted }: GroupStudents
         <TableHeader>
           <TableRow>
             <TableHead className="w-8 border-r">#</TableHead>
+            <TableHead className="w-16">ID</TableHead>
             <TableHead className="w-10">Rasm</TableHead>
             <TableHead className="min-w-30">Ism familiya</TableHead>
             <TableHead className="hidden min-w-32 sm:table-cell">
@@ -123,6 +124,9 @@ export function GroupStudentsTable({ students, onStudentDeleted }: GroupStudents
             >
               <TableCell className="border-r text-muted-foreground">
                 {index + 1}
+              </TableCell>
+              <TableCell className="tabular-nums text-muted-foreground">
+                {student.id}
               </TableCell>
               <TableCell>
                 <AvatarWithPreview src={student.photo} alt={`${student.firstName} ${student.lastName}`}>
