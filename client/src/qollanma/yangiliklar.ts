@@ -13,6 +13,13 @@ export const yangiliklar: Yangilik[] = [
     sahifa: { bolim: "oquvchilar", sahifa: "oquvchi-kartasi" },
   },
   {
+    sana: "2026-10-05",
+    sarlavha: "O'quvchi ID raqami ko'proq joyda chiqadi",
+    matn: "O'quvchilar ro'yxatida va guruh sahifasidagi o'quvchilar ro'yxatida tartib raqami yonida «ID» ustuni turadi. O'quvchi o'z ID raqamini portaldagi «Profil» va «To'lovlar» sahifalarida ko'radi va bir bosishda nusxalaydi; botdagi «💳 To'lovlar» xabari ham ism va ID bilan boshlanadi. Bu raqam Payme va Click'da o'quvchining hisob raqami: ota-ona Payme yoki Click ilovasidan to'laganda shu raqamni kiritadi.",
+    rollar: [1, 2, 3, 4],
+    sahifa: { bolim: "oquvchilar", sahifa: "oquvchi-kartasi" },
+  },
+  {
     sana: "2026-10-04",
     sarlavha: "Qo'llanma bo'limlari o'ng tomonda, sahifa bilan birga ketmaydi",
     matn: "Qo'llanmada bo'limlar ro'yxati endi o'ng tomonda turadi va sahifani pastga aylantirganda ham ko'rinib turadi. Telefonda «Bo'limlar» tugmasi ro'yxatni o'ngdan ochadi. Shu bilan birga davomatdagi «Saqlash» tugmasi uzun ro'yxatda ekran pastida turadi, forma va sinov imtihoni formasini tuzishda yon panel joyida turadi.",

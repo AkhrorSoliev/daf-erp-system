@@ -30,6 +30,7 @@ import { useStudentProfile } from "./lib/queries";
 import { loadState } from "./lib/load-state";
 import { LoadFailed } from "./load-failed";
 import { GatewayHandoff } from "./gateway-handoff";
+import { StudentIdCopy } from "./student-id-copy";
 import { StatementCard } from "./statement-card";
 import type { PaymentHistory as PaymentHistoryData } from "./lib/types";
 
@@ -341,6 +342,14 @@ export function StudentPaymentSummary() {
                   To&apos;lov sahifasiga o&apos;tkazilmoqda...
                 </p>
               ) : null}
+
+              <div className="flex flex-col items-center gap-2 border-t border-line pt-4 text-center">
+                <p className="text-xs font-semibold text-ink-500">
+                  Payme yoki Click ilovasidan to&apos;lasangiz, shu raqamni
+                  kiriting:
+                </p>
+                <StudentIdCopy id={profile.id} />
+              </div>
             </Card>
           </FadeIn>
         </div>

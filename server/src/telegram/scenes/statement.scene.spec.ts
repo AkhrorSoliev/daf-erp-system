@@ -82,7 +82,7 @@ const pickCtx = (studentId: number, ids: number[]) =>
 
 const MODEL = {
   asOf: '2026-09-26',
-  student: { id: ALI.id, firstName: 'Ali', lastName: 'Test' },
+  student: { id: ALI.id, name: 'Ali Test', firstName: 'Ali', lastName: 'Test' },
 } as any;
 
 describe("statement scene (💳 To'lovlar)", () => {
@@ -251,14 +251,19 @@ describe("statement scene (💳 To'lovlar)", () => {
 });
 
 describe('statementMessage', () => {
-  it('is the answer box: title, then the line under it', () => {
+  it("is the student's name and ID, then the answer box: title, then the line under it", () => {
     expect(
-      statementMessage({
-        tone: 'credit',
-        title: "Qarzingiz yo'q.",
-        subtitle: "U oktabr to'loviga o'tadi.",
-      }),
-    ).toBe("💳 Qarzingiz yo'q.\nU oktabr to'loviga o'tadi.");
+      statementMessage(
+        {
+          tone: 'credit',
+          title: "Qarzingiz yo'q.",
+          subtitle: "U oktabr to'loviga o'tadi.",
+        },
+        { id: 10487, name: 'Aziza Karimova' },
+      ),
+    ).toBe(
+      "Aziza Karimova · ID 10487\n💳 Qarzingiz yo'q.\nU oktabr to'loviga o'tadi.",
+    );
   });
 });
 
@@ -281,7 +286,9 @@ describe('statementForChat', () => {
 
     expect(statements.pdf).toHaveBeenCalledWith(10001, 1001);
     expect(present).toHaveBeenCalledWith(MODEL, 'student');
-    expect(out.text).toBe("💳 Qarzingiz yo'q.\nHammasi joyida.");
+    expect(out.text).toBe(
+      "Ali Test · ID 10001\n💳 Qarzingiz yo'q.\nHammasi joyida.",
+    );
     expect(out.document).toEqual({
       source: Buffer.from('%PDF'),
       filename: 'Test-A-10001-26-09-2026.pdf',

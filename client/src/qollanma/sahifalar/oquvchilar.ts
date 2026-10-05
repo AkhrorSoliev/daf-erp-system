@@ -115,6 +115,8 @@ export const oquvchilar: QollanmaSahifa[] = [
       "yopilgan guruhlar",
       "uzrli dars",
       "telegram uzilgan",
+      "id",
+      "o'quvchi raqami",
     ],
     yangilangan: "2026-10-05",
   },

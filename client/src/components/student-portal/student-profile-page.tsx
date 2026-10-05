@@ -14,6 +14,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import { Screen, StackHeader, Card, Avatar, LoadingCards } from "./lumio";
+import { StudentIdCopy } from "./student-id-copy";
 import { StudentNameDialog } from "./student-name-dialog";
 import { StudentExtraPhoneDialog } from "./student-extra-phone-dialog";
 import { extraPhoneRowState } from "./extra-phone-row-state";
@@ -154,6 +155,8 @@ export function StudentProfilePage() {
               <PencilSimple size={15} weight="bold" />
             </button>
           </div>
+
+          <StudentIdCopy id={profile.id} />
 
           {profile.photo ? (
             <button
