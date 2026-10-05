@@ -3,13 +3,16 @@
 import { MonthPicker } from "@/components/ui/month-picker";
 import { currentMonthKey } from "../salary-utils";
 import { ALL_MONTHS, CenterTopUpContent } from "./center-topup-content";
-import { useDebtFilters } from "./debt-filters-provider";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 
 /** Payroll top-up started here; earlier months have nothing to report. */
 const FLOOR_MONTH = "2026-07";
 
+/** Only the month: the tab lives on the salary page now (ADR-0072). Empty = the whole period. */
+const CENTER_TOPUP_SCHEMA = { month: { type: "string", defaultValue: "" } } as const;
+
 /**
- * "Markaz qoplagani" as a tab: the same list the salary page shows in a dialog,
+ * "Markaz qoplagani" — a tab of the salary page (ADR-0072),
  * over a chosen month or — by default — every month.
  *
  * The default is deliberately the whole period, not the current month. A
@@ -24,7 +27,7 @@ const FLOOR_MONTH = "2026-07";
  * clear option.
  */
 export function CenterTopUpView() {
-  const { filters, setFilters } = useDebtFilters();
+  const { filters, setFilters } = useUrlFilters(CENTER_TOPUP_SCHEMA);
   const month = filters.month;
 
   return (
@@ -42,8 +45,8 @@ export function CenterTopUpView() {
         <MonthPicker
           value={month || null}
           placeholder="Butun davr"
-          onChange={(v) => setFilters({ month: v, page: 1 })}
-          onClear={() => setFilters({ month: "", page: 1 })}
+          onChange={(v) => setFilters({ month: v })}
+          onClear={() => setFilters({ month: "" })}
           minMonth={FLOOR_MONTH}
           maxMonth={currentMonthKey()}
           className="w-56 shrink-0"

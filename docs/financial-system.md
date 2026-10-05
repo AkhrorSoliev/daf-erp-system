@@ -318,6 +318,10 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | `GET` | `/api/payments/:id` | CEO, BD, Admin, Cashier | Bitta to'lov detali |
 | `GET` | `/api/payments/student/:id` | CEO, BD, Admin, Cashier | O'quvchi to'lov tarixi |
 | `GET` | `/api/payments/debtors` | CEO, BD, Admin, Cashier | Balansi minus o'quvchilar |
+| `GET` | `/api/payments/debt/list` | CEO, BD, Admin, Cashier | Qarzdorlik bo'limi: qatorlar, bo'lim jamilari, filtr/saralash/sahifa (ADR-0072) |
+| `GET` | `/api/payments/debt/students/:id` | CEO, BD, Admin, Cashier | O'quvchi tortmasi: qarz, oylar, oxirgi to'lov, aloqa, va'da |
+| `GET` | `/api/payments/debt/excel` | CEO, BD, Admin, Cashier | Ochiq bo'lim Excel'da |
+| `GET` | `/api/payment-promises/month` | CEO, BD, Admin, Cashier | Shu oy va'dasi va ruxsat etilgan kunlar |
 | `GET` | `/api/payments/pending-students` | CEO, BD, Admin, Cashier | To'lov kutilayotganlar (balance < 0) |
 
 ### 4.2 Transactions — Tranzaksiyalar
@@ -391,7 +395,7 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | Marketing | `/reports/marketing` | Sarf, yangi o'quvchilar, jalb qilish narxi, o'quvchi qiymati, samara, manba bo'yicha |
 | Ish haqi | `/payments/salary` | Oylik jadval + "Oylik belgilash" dialog + batch to'lash + CEO uchun "Sozlamalar" dropdown (Xodim stavkalari, Hisoblash davri) |
 | Xarajatlar | `/payments/expenses` | Xarajatlar CRUD (branchId bilan) |
-| Qarzdorlar | `/payments/debtors` | Balansi minus o'quvchilar ro'yxati |
+| Qarzdorlik | `/payments/debt` | Shu oy · Eski qarz · O'qimayotganlar, o'quvchi tortmasi (ADR-0072) |
 | Student profil | "To'lovlar" tab | To'lov tarixi + balans tarixi |
 | Teacher profil | "Ish haqi" tab | Kutilayotgan vs haqiqiy oylik, guruhlar bo'yicha |
 

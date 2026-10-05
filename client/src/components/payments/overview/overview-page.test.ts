@@ -133,7 +133,11 @@ describe("OverviewPage — the current month (CEO)", () => {
   });
 
   it("shows today's debt as two numbers with the three not-studying kinds, never added", () => {
-    const { text } = render({ seed: seedMonth("2026-10", overview(OCTOBER)) });
+    const { text, html } = render({ seed: seedMonth("2026-10", overview(OCTOBER)) });
+
+    // Each card opens its own tab of the debt page.
+    expect(html).toContain('href="/payments/debt?tab=eski"');
+    expect(html).toContain('href="/payments/debt?tab=chiqqan"');
 
     expect(text).toContain(`Eski qarz — o'qiyotganlar ${money(2_160_000)} ${num(11)} o'quvchi · o'tgan oylardan qolgan`);
     expect(text).toContain(`O'qimayotganlar qarzi ${money(51_390_000)} ${num(305)} kishi · undirish ishi`);

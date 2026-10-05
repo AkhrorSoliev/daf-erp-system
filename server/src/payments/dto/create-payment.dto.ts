@@ -39,6 +39,6 @@ export class CreatePaymentDto {
 
   // ADR-0047: a part payment carries the date the rest will be paid by.
   @IsOptional()
-  @IsDateString()
+  @IsDateString({ strict: true })
   promiseDate?: string;
 }

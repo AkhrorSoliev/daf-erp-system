@@ -9,62 +9,46 @@ To'lov avval eng eski qarzni yopadi. Qarz o'quvchi muzlatilsa, chetlatilsa yoki 
 
 ## Sahifa
 
-Moliya → «Qarzdorlik» sahifasi «Kim qarzdor, qancha va nima qilingan — hammasi shu yerda» deb tushuntiriladi. Tepasida tablar turadi; ochiq tab havolada saqlanadi, filtrlar ham. Beshta tab bor:
+Moliya → «Qarzdorlik» bugungi holatni ko'rsatadi: sarlavha yonida «Bugungi holat · kun.oy» va «Excel». Oy tanlanmaydi. Tepada uchta bo'lim tugmasi turadi, har birida jami va soni; uchta jami hech qachon qo'shilmaydi va sahifada umumiy yig'indi yo'q. Ochiq bo'lim va filtrlar havolada saqlanadi.
 
-| Tab | Nimani ko'rsatadi |
-|---|---|
-| «Qarzdorlar» | Balansi minus o'quvchilar ro'yxati, to'lov va qo'ng'iroq amallari bilan |
-| «Markaz qoplagani» | Markaz o'quvchi to'lamagan darslar uchun ustozlarga to'lab bergan pul va uni kimdan undirish kerakligi |
-| «Oylik qarzdorlik» | Bugungi qarz qaysi oylarda paydo bo'lgani |
-| «Kechirilganlar» | Kechirilgan (hisobdan chiqarilgan) qarzlar |
-| «Muzlatilgan puli» | Muzlatilgan, balansida hali pul qolgan o'quvchilar |
+| Bo'lim | Kimlar | Summa |
+|---|---|---|
+| «Shu oy» | O'qiyotgan, qarzining shu oy hisobigacha bo'lgan qismi bor o'quvchilar | Qarzning shu oy qismi |
+| «Eski qarz» | O'qiyotgan, o'tgan oylardan qarzi qolgan o'quvchilar | Qarzning qolgan qismi |
+| «O'qimayotganlar» | Hozir hech qaysi guruhda o'qimayotganlar: guruhsiz, muzlatilgan, ketgan | Butun qarz |
 
-### «Qarzdorlar» tabi
+Ikkala qismi bor o'quvchi ikkala o'qiyotganlar bo'limida turadi: qatordagi «+ eski qarz ...» yoki «+ shu oy ...» belgisi ikkinchi qismni aytadi. Bu bir qarzning ikki ko'rinishi, ikki qarz emas. Bo'lim jami doim uning qatorlari yig'indisiga teng. Arxivdagi o'quvchi bo'limlarda yo'q.
 
-Sahifada «Balansi minus bo'lgan o'quvchilar — muzlatilgan va chetlatilganlar ham, chunki qarz ular bilan ketmaydi» deb yoziladi. Ro'yxat hamma holatdagi o'quvchini, arxivdagilarni ham o'z ichiga oladi.
+«Shu oy» bo'limida, shu oy guruhdan chiqqanlarning shu oy qarzi bo'lsa, «Shu oy guruhdan chiqqanlarning shu oy qarzi — ... — «O'qimayotganlar» bo'limida.» qatori chiqadi: «Umumiy ma'lumotlar»dagi «Qoldi» ularni ham sanaydi, bu sahifada ular «O'qimayotganlar»da turadi.
 
-- **Kartalar** ro'yxat ustida turadi: «O'qiyotganlar qarzi», «O'qimayotganlar qarzi» va «Belgilangan / muddati o'tgan» (to'lov va'dalari soni). Ular pastda tushuntirilgan.
-- **Filtrlar:** qidiruv (ism, telefon yoki ID); saralash — «Eng katta qarz», «Eng kichik qarz», «Ism (A-Z)», «Eng uzoq qarzdor»; holat — «Barcha holatlar», «Faol», «Muzlatilgan», «Chetlatilgan», «Bitirgan», «Arxivlangan»; va'da bo'yicha — «Sana belgilangan», «Muddati o'tgan».
-- **Ustunlar:** «O'quvchi», «Telefon», «Guruh», «To'lov sanasi / Izoh», «Qarz» va «Qachondan beri».
-- **Qator menyusi (⋯, amallar menyusi):** «To'lov qayd qilish» ([To'lov qayd qilish](/qollanma/tolovlar/tolov-qayd-qilish)) va «Natijani kiritish». Guruh nomi kassirga havolasiz yoziladi: guruh sahifasi unga ochiq emas.
+### Ustunlar va filtrlar
 
-### «Qarzdorlar»: qarz ikki raqamda
+- **«Shu oy»:** «O'quvchi» (ism, ID, telefon), «Guruh» (ostida ustoz), «Qarz», «To'lov muddati», «Va'da», «Oxirgi aloqa».
+- **«Eski qarz»:** «O'quvchi», «Guruh», «Eski qarz», «Qaysi oylardan» (qarz qaysi oylarda paydo bo'lgani), «Oxirgi to'lov», «Va'da».
+- **«O'qimayotganlar»:** «O'quvchi», «Holat» (guruhsiz / muzlatilgan / ketgan), «Oxirgi guruh», «Qarz», «Qaysi oylardan», «Oxirgi aloqa»; tepada «Hammasi», «Guruhsiz», «Muzlatilgan», «Ketgan» tugmalari soni bilan.
+- Har qatorning oxirida «To'lov» tugmasi turadi: to'lov oynasi shu o'quvchi va uning qarzi bilan ochiladi.
 
-Qarz hech qayerda bitta jamiga qo'shilmaydi: «Jami qarz», «Qarzdorlar soni» va «O'rtacha qarz» kartalari yo'q.
+«To'lov muddati» — o'quvchining shu oydagi 2-darsi, to'lov xabaridagi sananing o'zi: kunigacha «kun.oy gacha», shu kuni va keyin qizil «o'tgan · kun.oy»; oyda ikki darsi bo'lmasa «—». «Va'da»: ochiq — yashil «kun.oy gacha», buzilgan — qizil «buzildi · kun.oy». «Oxirgi aloqa» — oxirgi qo'ng'iroq sanasi va natijasi, bo'lmasa «aloqa bo'lmagan».
 
-- **«O'qiyotganlar qarzi»** — faol guruhda o'qiyotgan (holati «Faol» va faol guruhda yozilishi bor) o'quvchilarning qarzi. Kartada summa, «N ta» va ostida «🟡 shu oy ... · 🔴 eski qarz ...» turadi: «🟡 shu oy» — qarzning shu oyda yozilgan oylik hisoblargacha bo'lgan qismi, «🔴 eski qarz» — qolgani. Oyning hisoblari hali yozilmagan bo'lsa, hamma qarz «eski qarz» bo'lib turadi.
-- **«O'qimayotganlar qarzi»** — qolganlarniki: faol guruhi yo'q, muzlatilgan, chetlatilgan va bitirgan o'quvchilar. Kartada summa va «N ta» turadi.
-- Arxivdagi o'quvchining qarzi ikkala kartada ham sanalmaydi.
-- Kartalar butun filial qamrovini ko'rsatadi: ro'yxat filtrlari ularga ta'sir qilmaydi (sahifada «Ro'yxat filtrlari bu kartalarga ta'sir qilmaydi» deb yoziladi). Ro'yxat esa standart holda «Barcha holatlar»ni, arxivdagilarni ham ko'rsatadi, shuning uchun u kartalarga mos tushmasligi mumkin.
-- Shu ikki raqam Moliya → «Umumiy ma'lumotlar» dagi «Qarzdorlik» blokida va Bosh sahifada (ikkalasini faqat CEO va filial direktori ko'radi), shuningdek Telegram hisobotlarida turadi. «Aloqa markazi» sahifasidagi banner faqat birinchisini ko'rsatadi.
+Filtrlar: qidiruv (ism, telefon yoki ID), «Barcha guruhlar», «Barcha ustozlar» (bo'limning o'z qatorlaridan), «Va'da: hammasi» / «Va'da berganlar» / «Va'dasi buzilgan» / «Va'dasiz», saralash — «Eng katta qarz», «Eng uzoq qarzdor», «Va'dasi buzilganlar birinchi», «Ism (A–Z)». Filtr qo'yilsa «Topildi: N ta · X so'm», qo'yilmasa «Jami: X so'm · N ta». Sahifada 20 tadan.
 
-### «Qarzdorlar»: «Qachondan beri»
+### O'quvchi oynasi
 
-Ustunda «shu oydan», «1 oy», «2 oy» va hokazo turadi, ostida sana. Bu — uzluksiz qarz davri boshlangan kun: o'quvchi qarzini nolga tushirib, keyin yana qarzdor bo'lsa, sanoq qaytadan boshlanadi. Qarz 3 oy va undan uzoq bo'lsa, yozuv qizil bo'ladi. Ustiga olib borsangiz, «... dan beri qarzdor» va har oyning to'lanmagan qismi chiqadi. Ustun kuniga bir marta hisoblanadi: bugun paydo bo'lgan qarz uchun «—» turishi mumkin.
+Qatorni bossangiz, o'ng tomondan oyna ochiladi: «Qarz» (o'quvchining butun qarzi), «Oylar bo'yicha» (har oy: «hisoblandi · to'landi · qoldi»; oylar qarzga to'g'ri kelmasa, bu bo'lim chiqmaydi), «Oxirgi to'lov», «Aloqa va va'da». Amallar: «To'lov qayd qilish» ([To'lov qayd qilish](/qollanma/tolovlar/tolov-qayd-qilish)), «Va'da yozish» (Summa — boshlanishda butun qarz, Qachongacha va Izoh; Izoh majburiy, usiz «Saqlash» bosilmaydi), «Qo'ng'iroq natijasi», «To'lovlar hisoboti (PDF)».
 
-### «Qarzdorlar»: «Natijani kiritish» va to'lov va'dasi
+### To'lov va'dasi
 
-Oyna qarzdor bilan bo'lgan aloqa natijasini yozadi:
+Va'da sanasi bugundan boshlab ko'pi bilan 7 kun keyin bo'ladi va o'quvchiga oyiga bitta va'da yoziladi. Qoida hamma joyda bir xil: o'quvchi oynasidagi «Va'da yozish», qo'ng'iroq natijasidagi «To'laydi» va qisman to'lovdagi «Qolgan qismi qachon to'lanadi?». Shu oy va'da yozilgan bo'lsa, «Va'da yozish» bosilmaydi va «Bu o'quvchiga shu oy va'da yozilgan» yoziladi. Qo'ng'iroqdagi «To'laydi» va qisman to'lov shu oyning ochiq va'dasi sanasini o'zgartiradi — faqat va'da yozilgan kundan 7 kun ichida; undan keyin, yoki shu oyning va'dasi yopilgan bo'lsa, yangi sana so'ralmaydi. O'tgan oydan qolgan ochiq va'da shu oyning birinchi va'dasi yozilganda bekor bo'ladi.
 
-- «Natija»: «Gaplashildi», «Javob bermadi», «Keladi», «To'laydi» yoki «O'qishni tashladi».
-- «To'laydi» tanlansa, «To'lov sanasi (ixtiyoriy)» chiqadi. Sana kiritilsa, o'quvchining to'lov va'dasi ochiladi: qatorda sana ko'rinadi va filtrda «Sana belgilangan» ga tushadi.
-- «Gaplashildi», «Javob bermadi» va «Keladi» tanlansa, «Keyingi bog'lanish sanasi (ixtiyoriy)» chiqadi: qatorda «Keyingi aloqa: ...» belgisi turadi. «O'qishni tashladi» da sana maydoni yo'q.
-- «Izoh (ixtiyoriy)» va «Saqlash».
+Va'da sanasi o'tgan va o'quvchi hali qarzdor bo'lsa, tizim uni dushanbadan shanbagacha har kuni soat 09:00 da «buzildi» deb belgilaydi; shu payt CEO'ga va o'quvchi filialining administratorlariga bildirishnoma boradi. To'lov qarzni butunlay yopsa, ochiq va'da bajarilgan hisoblanadi. Va'da o'quvchini darsga kiritmaydi.
 
-Va'da sanasi o'tgan va o'quvchi hali qarzdor bo'lsa, tizim uni dushanbadan shanbagacha har kuni soat 09:00 da «muddati o'tgan» deb belgilaydi; shu payt CEO'ga va o'quvchi filialining administratorlariga bildirishnoma boradi. Bitta va'da bir marta eslatiladi. To'lov qarzni butunlay yopsa (balans nolga yoki plyusga chiqsa), ochiq va'da bajarilgan hisoblanadi.
+### Pastdagi havolalar
 
-### «Markaz qoplagani»
+«Oylar bo'yicha qarz tarixi», «Kechirilgan qarzlar arxivi · N ta» va «Muzlatilganlarning puli» — alohida sahifalar, har birida «← Qarzdorlik». «Markaz qoplagani» endi Ish haqi sahifasining tabi (faqat CEO va filial direktori).
 
-2026 yil iyuldan markaz o'quvchilar to'lamagan darslar uchun ustozlarga pulni o'z hisobidan to'lab beradi; tab shu pul kimdan undirilishini ko'rsatadi.
+### Oylar bo'yicha qarz tarixi
 
-- **Kartalar:** «Markaz to'lagan» (oy yopilmagan bo'lsa — «Markaz to'laydi»), «Hali qaytmagan» («Qoplanishi kerak»), «O'quvchilar», «Faol emas».
-- **Ustunlar:** «O'quvchi», «Guruh», «Markaz qoplagan oylar», «Darslar», «Markaz hali olmagan» va «Jami qarzi» (o'quvchining profilidagi to'liq qarzi).
-- **Davr tanlovi** boshlanishda «Butun davr»; bitta oyni ham tanlash mumkin. U qaysi oydagi darslar hisoblanishini belgilaydi, qarz summasini emas.
-- Puli to'liq qaytgan o'quvchi ro'yxatda yo'q. Faol bo'lmagan (muzlatilgan, chetlatilgan, arxiv) o'quvchilar haqida ogohlantirish chiqadi: ular darsga kelmaydi, bu pul o'zi qaytmaydi.
-
-### «Oylik qarzdorlik»
-
-Tab bugungi qarz qaysi oylarda paydo bo'lganini ko'rsatadi. Jadvalda «Oy», «Qarz» (shu oydan hali to'lanmagan qism) va «Qarzdorlar» (shu oy qarzi hali yopilmagan o'quvchilar soni) turadi. «Jami» qatori bugungi jami qarzni beradi: to'langan qism eng eski oydan ayriladi, shuning uchun summalar unga teng. Qarzdorlar soni qo'shilmaydi: bir o'quvchi bir necha oyda qarzdor bo'lishi mumkin.
+Sahifa bugungi qarz qaysi oylarda paydo bo'lganini ko'rsatadi. Jadvalda «Oy», «Qarz» (shu oydan hali to'lanmagan qism) va «Qarzdorlar» (shu oy qarzi hali yopilmagan o'quvchilar soni) turadi. «Jami» qatori bugungi jami qarzni beradi: to'langan qism eng eski oydan ayriladi, shuning uchun summalar unga teng. Qarzdorlar soni qo'shilmaydi: bir o'quvchi bir necha oyda qarzdor bo'lishi mumkin.
 
 - Oyni bossangiz, shu oydan qarzi qolgan o'quvchilar ro'yxati ochiladi (ikkinchi tabda — shu oyda kechirilgan, keyin qaytarib olinmagan qarzlar). Qarzi boshqa oylarga ham tarqalgan o'quvchida «N oy» belgisi turadi.
 - Joriy oy qatorida «hali tugamagan» belgisi turadi: raqam har kuni o'zgaradi, oy tugagach qotadi.
@@ -73,19 +57,19 @@ Tab bugungi qarz qaysi oylarda paydo bo'lganini ko'rsatadi. Jadvalda «Oy», «Q
 
 <Eslatma tur="diqqat">
 
-Tab tepasidagi tavsif va jadval ostidagi izohlar («Butun kompaniya bo'yicha», «Har oy oxirida qancha qarz bo'lgan», «Hozirgi qarz») eskirgan. Aslida tab bugungi qarzni oylar bo'yicha taqsimlaydi, filial bo'yicha chegaralanadi, bugungi jami qarz esa tabning «Hammasi» kartasida turadi.
+Sahifa tepasidagi tavsif va jadval ostidagi izohlar («Butun kompaniya bo'yicha», «Har oy oxirida qancha qarz bo'lgan», «Hozirgi qarz») eskirgan. Aslida sahifa bugungi qarzni oylar bo'yicha taqsimlaydi, filial bo'yicha chegaralanadi, bugungi jami qarz esa sahifaning «Hammasi» kartasida turadi.
 
 </Eslatma>
 
-### «Kechirilganlar»
+### Kechirilgan qarzlar arxivi
 
-Hisobdan chiqarilgan (kechirilgan) qarzlar ro'yxati. Kechirish faqat oylik hisobi hech yozilmagan, ya'ni dars paketi davridagi yozilishda taklif qilinadi. Oylik davrdagi qarz kechirilmaydi: oylikda ketgan o'quvchining puli guruhdan chiqarishdagi tartib bilan hal bo'ladi ([Guruhdan chiqarish](/qollanma/oquvchilar/guruhdan-chiqarish)). Dars paketi davridagi yozilishda kechirish uchun balans minusda va joriy siklda kamida bitta «Kelmadi» bo'lishi kerak. Joriy sikl — o'quvchining shu guruhdagi darslari kursning sikl hajmi bo'yicha sanalganda hozir to'lib borayotgan sikl (bekor qilingan darslar sanalmaydi), kalendar oy emas. Guruhdan chiqarish oynasida summani tanlaysiz — «Real qarz» (kelmagan darslar narxi, qarzdan oshmaydi), «Jami qarz» yoki «Boshqa summa» — va kamida 5 belgili izoh yozasiz. Tabning o'z tavsifi («O'quvchi o'qishni tashlagani uchun undirilmaydigan deb belgilangan qarzlar») shartni to'liq aytmaydi.
+Hisobdan chiqarilgan (kechirilgan) qarzlar ro'yxati. Kechirish faqat oylik hisobi hech yozilmagan, ya'ni dars paketi davridagi yozilishda taklif qilinadi. Oylik davrdagi qarz kechirilmaydi: oylikda ketgan o'quvchining puli guruhdan chiqarishdagi tartib bilan hal bo'ladi ([Guruhdan chiqarish](/qollanma/oquvchilar/guruhdan-chiqarish)). Dars paketi davridagi yozilishda kechirish uchun balans minusda va joriy siklda kamida bitta «Kelmadi» bo'lishi kerak. Joriy sikl — o'quvchining shu guruhdagi darslari kursning sikl hajmi bo'yicha sanalganda hozir to'lib borayotgan sikl (bekor qilingan darslar sanalmaydi), kalendar oy emas. Guruhdan chiqarish oynasida summani tanlaysiz — «Real qarz» (kelmagan darslar narxi, qarzdan oshmaydi), «Jami qarz» yoki «Boshqa summa» — va kamida 5 belgili izoh yozasiz. Sahifaning o'z tavsifi («O'quvchi o'qishni tashlagani uchun undirilmaydigan deb belgilangan qarzlar») shartni to'liq aytmaydi.
 
 Filtrlar: sana oralig'i va «Qaytarib olinganlarsiz» / «Qaytarib olinganlari bilan». Tepada «Kechirilgan qarz» va «Nechta marta» turadi (faqat kuchda qolgan kechirishlar). Ustunlar: «Sana», «O'quvchi», «Kelmagan darslar», «Kechirilgan», «Sabab», «Kim kechirdi». Kechirishni faqat CEO «Kechirishni qaytarib olish» bilan bekor qiladi (sabab kamida 5 belgi): o'quvchi yana qarzdor bo'ladi.
 
-### «Muzlatilgan puli»
+### Muzlatilganlarning puli
 
-Muzlatilgan, balansi musbat va muzlatilganiga 30 kundan ortiq bo'lgan o'quvchilar. Muzlatilganda oyning qolgan puli balansga qaytadi va tegilmay turib qoladi: bu tab shu pul haqida qaror qilish uchun. Ustunlar: «O'quvchi», «Muzlatilgan» (sana va necha kun), «Balansi», «Oxirgi to'lov». Qator menyusida ikki amal: «Markaz hisobiga o'tkazish» va «O'quvchiga qaytarish» ([Pulni qaytarish va yechib olish](/qollanma/tolovlar/pul-qaytarish)); kassirga bu menyu chiqmaydi.
+Muzlatilgan, balansi musbat va muzlatilganiga 30 kundan ortiq bo'lgan o'quvchilar. Muzlatilganda oyning qolgan puli balansga qaytadi va tegilmay turib qoladi: bu sahifa shu pul haqida qaror qilish uchun. Ustunlar: «O'quvchi», «Muzlatilgan» (sana va necha kun), «Balansi», «Oxirgi to'lov». Qator menyusida ikki amal: «Markaz hisobiga o'tkazish» va «O'quvchiga qaytarish» ([Pulni qaytarish va yechib olish](/qollanma/tolovlar/pul-qaytarish)); kassirga bu menyu chiqmaydi.
 
 ## Qarz kechirish o'chiq
 
@@ -93,36 +77,38 @@ CEO 21.09.2026 da qarz kechirilmasligini belgilagan: qarz butun tarixi bilan saq
 
 - O'chiq bo'lsa, guruhdan chiqarish oynasida «Qarzni hisobdan chiqarish» bloki chiqmaydi va izoh yozilmaydi. O'quvchi kartasida «Yopilgan guruhlar (qarzdorlik bilan)» bo'limi umuman chiqmaydi.
 - Yoqilgan bo'lsa ham, kechirish oylik davrdagi yozilishga taklif qilinmaydi: faqat dars paketi davridagi yopilgan yozilishga. Qanday ishlashi — [Guruhdan chiqarish](/qollanma/oquvchilar/guruhdan-chiqarish).
-- Ilgari kechirilgan qarzlar «Kechirilganlar» tabida turadi.
+- Ilgari kechirilgan qarzlar «Kechirilgan qarzlar arxivi» sahifasida turadi.
 
 ## Misol
 
 Oylik kurs, oyiga 1 200 000 so'm. Ism soxta.
 
-1. Jasur sentabr va oktabr hisobini to'lamadi: balansi −2 400 000 so'm. Oktabr o'rtasida «Qarzdorlar» tabida uning qarzi 2 400 000 so'm, «Qachondan beri» ustunida «1 oy» va sentabrdagi sana turadi.
+1. Jasur sentabr va oktabr hisobini to'lamadi: balansi −2 400 000 so'm. Oktabr o'rtasida «Shu oy» bo'limida 1 200 000 so'm (ostida «+ eski qarz 1 200 000»), «Eski qarz» bo'limida 1 200 000 so'm turadi.
 2. Jasur 1 500 000 so'm to'ladi. To'lov avval eng eski qarzni yopadi: sentabr — 1 200 000 so'm, oktabrdan — 300 000 so'm. Qarz 900 000 so'm qoldi.
-3. «Oylik qarzdorlik» tabida sentabr qatorida «to'liq yopilgan», oktabr qatorida 900 000 so'm turadi. Jasur qarzdor bo'lib qoladi, shuning uchun «Qachondan beri» sentabrdan hisoblanadi.
-4. Administrator «Natijani kiritish» da «To'laydi» ni tanlab, sana qo'ydi: qatorda sana belgisi paydo bo'ldi. Sana o'tgach Jasur hali qarzdor bo'lsa, tizim va'dani «muddati o'tgan» deb belgilaydi.
+3. «Oylar bo'yicha qarz tarixi» sahifasida sentabr qatorida «to'liq yopilgan», oktabr qatorida 900 000 so'm turadi.
+4. Administrator «Qo'ng'iroq natijasi» da «To'laydi» ni tanlab, sana qo'ydi: «Va'da» ustunida «kun.oy gacha» paydo bo'ldi (sana bugundan ko'pi bilan 7 kun keyin). Sana o'tgach Jasur hali qarzdor bo'lsa, tizim va'dani «buzildi» deb belgilaydi.
 
 ## Istisnolar
 
-- «Kutilyotgan to'lovlar» sahifasi boshqa: u faqat guruhdagi yozilishi «Faol» bo'lgan qarzdorlarni ko'rsatadi (guruhning o'z holati tekshirilmaydi). Muzlatilgan, chetlatilgan, bitirgan, guruhdan chiqarilgan va arxivdagi qarzdorlar faqat «Qarzdorlik» sahifasida turadi.
+- «Kutilyotgan to'lovlar» sahifasi boshqa: u faqat guruhdagi yozilishi «Faol» bo'lgan qarzdorlarni ko'rsatadi (guruhning o'z holati tekshirilmaydi). Muzlatilgan, chetlatilgan, bitirgan va guruhdan chiqarilgan qarzdorlar faqat «Qarzdorlik» sahifasida, «O'qimayotganlar» bo'limida turadi.
 - 40% qoidasidan keyin ketgan qarzdorning oylik qarzi to'liq qoladi va shu sahifada ko'rinadi ([Guruhdan chiqarish](/qollanma/oquvchilar/guruhdan-chiqarish)).
 - Chetlatilgan, muzlatilgan va bitirgan o'quvchi portalga kira oladi va qarzini onlayn to'lashi mumkin ([Payme va Click](/qollanma/tolovlar/onlayn-tolov)).
 
 ## Kim qila oladi
 
-«Ha» — ekranda tugma bor va tizim amalni qabul qiladi. «—» — ekranda yo'q yoki tizim rad etadi. Filial direktori, administrator va kassir faqat o'z filialidagi qarzdorlarni ko'radi; CEO — yuqori paneldagi filial tanlagichida tanlangan filialni, «Barcha filiallar» tanlangan bo'lsa hammasini. Bu «Oylik qarzdorlik» tabiga ham tegishli.
+«Ha» — ekranda tugma bor va tizim amalni qabul qiladi. «—» — ekranda yo'q yoki tizim rad etadi. Filial direktori, administrator va kassir faqat o'z filialidagi qarzdorlarni ko'radi; CEO — yuqori paneldagi filial tanlagichida tanlangan filialni, «Barcha filiallar» tanlangan bo'lsa hammasini. Bu qarz tarixi sahifasiga ham tegishli.
 
 | Amal | CEO | Filial direktori | Administrator | Kassir |
 |---|---|---|---|---|
-| Sahifani ochish, «Qarzdorlar» ro'yxatini ko'rish | Ha | Ha | Ha | Ha |
-| To'lov qayd qilish (qator menyusi) | Ha | Ha | Ha | Ha |
-| «Natijani kiritish» (qo'ng'iroq natijasi, to'lov va'dasi) | Ha | Ha | Ha | — (menyuda yo'q) |
-| «Oylik qarzdorlik» va «Kechirilganlar» tablarini ko'rish, Excel yuklash | Ha | Ha | Ha | Ha |
-| «Markaz qoplagani» tabini ko'rish | Ha | Ha | Ha | Ha |
-| «Muzlatilgan puli» ro'yxatini ko'rish | Ha | Ha | Ha | Ha |
-| «Muzlatilgan puli» dagi amallar («Markaz hisobiga o'tkazish», «O'quvchiga qaytarish») | Ha | Ha | Ha | — (amallar ustuni yo'q) |
+| Sahifani ochish, uchta bo'lim va o'quvchi oynasini ko'rish, Excel | Ha | Ha | Ha | Ha |
+| To'lov qayd qilish | Ha | Ha | Ha | Ha |
+| «Va'da yozish» | Ha | Ha | Ha | Ha |
+| «Qo'ng'iroq natijasi» | Ha | Ha | Ha | — (tugma yo'q) |
+| «To'lovlar hisoboti (PDF)» | Ha | Ha | Ha | — (tugma yo'q) |
+| Qarz tarixi va kechirilgan qarzlar sahifalari | Ha | Ha | Ha | Ha |
+| «Markaz qoplagani» (Ish haqi sahifasi) | Ha | Ha | — | — |
+| «Muzlatilganlarning puli» ro'yxatini ko'rish | Ha | Ha | Ha | Ha |
+| «Muzlatilganlarning puli» dagi amallar («Markaz hisobiga o'tkazish», «O'quvchiga qaytarish») | Ha | Ha | Ha | — (amallar ustuni yo'q) |
 | «Kechirishni qaytarib olish» | Ha | — | — | — |
 
 ## Tizimda qayerda

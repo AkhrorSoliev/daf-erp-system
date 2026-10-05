@@ -6,26 +6,31 @@ import { PaymentsMobileMenu } from "./payments-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+const CEO_BD_ONLY_PATHS = ["/payments/expenses", "/payments/salary"];
+
 export function PaymentsLayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isMobile = useIsMobile();
   const user = useAuth((s) => s.user);
 
-  // Xarajatlar sahifasi faqat CEO (1) va Filial direktori (2) uchun — backend'da
-  // ham @Roles('CEO', 'Branch Director'). Admin/Kassir linkni ko'rmaydi va bu yerda
-  // to'g'ridan-to'g'ri kirsa /payments ga qaytariladi.
-  const canSeeExpenses = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
-  const blockExpenses =
-    !!user && pathname.startsWith("/payments/expenses") && !canSeeExpenses;
+  // Xarajatlar va Ish haqi sahifalari faqat CEO (1) va Filial direktori (2)
+  // uchun — backend'da ham @Roles('CEO', 'Branch Director'). Admin/Kassir
+  // linkni ko'rmaydi va bu yerga to'g'ridan-to'g'ri (yoki eski
+  // «?tab=markaz» havolasi orqali) kirsa /payments ga qaytariladi.
+  const isCeoOrDirector = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const blocked =
+    !!user &&
+    !isCeoOrDirector &&
+    CEO_BD_ONLY_PATHS.some((p) => pathname.startsWith(p));
 
   useEffect(() => {
-    if (blockExpenses) {
+    if (blocked) {
       router.replace("/payments");
     }
-  }, [blockExpenses, router]);
+  }, [blocked, router]);
 
-  if (blockExpenses) {
+  if (blocked) {
     return null;
   }
 
