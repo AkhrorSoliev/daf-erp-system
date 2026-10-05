@@ -6,6 +6,11 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-04",
+    sarlavha: "Qo'llanma bo'limlari o'ng tomonda, sahifa bilan birga ketmaydi",
+    matn: "Qo'llanmada bo'limlar ro'yxati endi o'ng tomonda turadi va sahifani pastga aylantirganda ham ko'rinib turadi. Telefonda «Bo'limlar» tugmasi ro'yxatni o'ngdan ochadi. Shu bilan birga davomatdagi «Saqlash» tugmasi uzun ro'yxatda ekran pastida turadi, forma va sinov imtihoni formasini tuzishda yon panel joyida turadi.",
+  },
+  {
     sana: "2026-10-03",
     sarlavha: "O'quvchi zaxira raqami bilan ham kiradi",
     matn: "O'quvchi kartasiga «Zaxira raqam» yozish mumkin: yangi o'quvchi oynasida yoki kartadagi «Tahrirlash» → «Qo'shimcha ma'lumotlar» da. O'quvchi o'quvchi portaliga shu raqam bilan ham kiradi: parol bilan yoki «Telegram orqali kirish» tugmasi bilan. Bir raqam faqat bitta o'quvchida turadi, boshqa o'quvchidagi raqam saqlanmaydi. Kartada endi barcha raqamlar nomi bilan chiqadi: «Asosiy», «Zaxira», «Ota-ona». Parolni tiklash uchun SMS kod faqat asosiy raqamga boradi.",
