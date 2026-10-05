@@ -2,6 +2,7 @@ import {
   PROMISE_DATE_REFUSAL,
   PROMISE_MONTH_REFUSAL,
   promiseDateRange,
+  promiseDayEnd,
   promiseRefusal,
 } from './promise-rule';
 
@@ -78,6 +79,25 @@ describe('promise rule (ADR-0072)', () => {
       expect(
         promiseDateRange(new Date('2026-11-03T07:00:00Z'), p, 'upsert'),
       ).toEqual({ from: '2026-11-03', to: '2026-11-09' });
+    });
+  });
+
+  describe('promiseDayEnd — one stored instant per Tashkent day', () => {
+    const END_OF_14_10 = new Date('2026-10-14T18:59:59.999Z'); // 14.10 23:59:59.999 Tashkent
+
+    it("every writer's form of 14.10 is stored as the last millisecond of 14.10 Tashkent", () => {
+      for (const sent of [
+        '2026-10-14', // payment dialog — 00:00 UTC, 05:00 Tashkent
+        '2026-10-14T18:00:00.000Z', // debt drawer and call dialog — 23:00 Tashkent
+        '2026-10-14T18:59:59.000Z', // the old call dialog — 23:59:59 Tashkent
+        '2026-10-13T19:00:00.000Z', // 00:00 Tashkent
+      ]) {
+        expect(promiseDayEnd(sent)).toEqual(END_OF_14_10);
+      }
+    });
+
+    it('is idempotent, so a second run of the data script changes nothing', () => {
+      expect(promiseDayEnd(promiseDayEnd('2026-10-14'))).toEqual(END_OF_14_10);
     });
   });
 });

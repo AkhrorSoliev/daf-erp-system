@@ -257,12 +257,13 @@ export class OutreachService {
       orderBy: { promiseDate: 'asc' },
     });
 
-    const now = Date.now();
+    // By Tashkent day, like the cron: a promise for today is not overdue yet.
+    const today = tashkentDateStr(new Date());
     const items = promises
       .map((p) => ({
         promiseId: p.id,
         promiseDate: p.promiseDate.toISOString(),
-        isOverdue: p.promiseDate.getTime() < now,
+        isOverdue: tashkentDateStr(p.promiseDate) < today,
         comment: p.comment,
         createdAt: p.createdAt.toISOString(),
         student: {

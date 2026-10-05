@@ -1,4 +1,8 @@
-import { addDaysToDateStr, tashkentDateStr } from '../common/date/tashkent';
+import {
+  addDaysToDateStr,
+  tashkentDateStr,
+  tashkentDayRangeUtc,
+} from '../common/date/tashkent';
 
 /** A promise names a day at most this many Tashkent days ahead (CEO, 04.10.2026; ADR-0072). */
 export const PROMISE_MAX_DAYS = 7;
@@ -58,6 +62,18 @@ export function promiseRefusal(
   // the call dialog's end-of-day instant both land on that Tashkent day.
   const day = tashkentDateStr(new Date(promiseDate));
   return day < range.from || day > range.to ? PROMISE_DATE_REFUSAL : null;
+}
+
+/**
+ * Pure. The one instant stored for a promise: the last millisecond of the
+ * Tashkent day the client named (23:59:59.999 Tashkent). The writers send
+ * different instants for the same day — the payment dialog a 'YYYY-MM-DD'
+ * (05:00 Tashkent), the debt drawer and the call dialog 23:00 — so a promise
+ * for D could read as overdue on D itself. Idempotent.
+ */
+export function promiseDayEnd(promiseDate: string | Date): Date {
+  const day = tashkentDateStr(new Date(promiseDate));
+  return new Date(tashkentDayRangeUtc(day).lt.getTime() - 1);
 }
 
 /** `GET /payment-promises/month` — what the promise form and both dialogs may offer. */

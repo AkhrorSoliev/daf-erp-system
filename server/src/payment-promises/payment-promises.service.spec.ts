@@ -99,6 +99,20 @@ describe('PaymentPromisesService', () => {
       expect(res.id).toBe('p1');
     });
 
+    it("stores the day's last Tashkent millisecond, not the instant the client sent", async () => {
+      await service.create(
+        { studentId: 501, promiseDate: '2026-06-12', comment: 'x' },
+        99,
+        1001,
+        null,
+      );
+      expect(prisma.paymentPromise.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          promiseDate: new Date('2026-06-12T18:59:59.999Z'),
+        }),
+      });
+    });
+
     it('throws NotFound when the student does not exist', async () => {
       prisma.student.findFirst.mockResolvedValueOnce(null);
       await expect(
@@ -201,6 +215,43 @@ describe('PaymentPromisesService', () => {
       });
       expect(prisma.paymentPromise.create).not.toHaveBeenCalled();
       expect(history.recordUpdate).toHaveBeenCalled();
+    });
+
+    it("a moved promise (the call dialog's 23:00) is stored as the day's last Tashkent millisecond", async () => {
+      prisma.paymentPromise.findFirst.mockResolvedValueOnce({
+        id: 'p1',
+        status: 'OPEN',
+        createdAt: new Date('2026-06-08T05:00:00Z'),
+        promiseDate: new Date('2026-06-10T18:59:59.999Z'),
+      });
+      await service.upsertOpenPromise(
+        {
+          studentId: 501,
+          promiseDate: '2026-06-14T18:00:00.000Z',
+          comment: 'x',
+        },
+        99,
+        1001,
+      );
+      expect(prisma.paymentPromise.updateMany).toHaveBeenCalledWith({
+        where: { id: 'p1', status: 'OPEN' },
+        data: expect.objectContaining({
+          promiseDate: new Date('2026-06-14T18:59:59.999Z'),
+        }),
+      });
+    });
+
+    it("a first promise from a part payment ('YYYY-MM-DD') is stored the same way", async () => {
+      await service.upsertOpenPromise(
+        { studentId: 501, promiseDate: '2026-06-15', comment: 'x' },
+        99,
+        1001,
+      );
+      expect(prisma.paymentPromise.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          promiseDate: new Date('2026-06-15T18:59:59.999Z'),
+        }),
+      });
     });
 
     it('a promise resolved meanwhile (KEPT by a payment) is not moved: the month refusal', async () => {
