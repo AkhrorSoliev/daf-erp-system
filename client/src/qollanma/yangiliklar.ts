@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-05",
+    sarlavha: "To'lovlar hisobotida minusli oy eng eski qarzni yopadi",
+    matn: "Oyda qaytgan pul shu oy darslarining narxidan ko'p bo'lsa (oy narxi minus bilan chiqsa), bu pul endi to'lov kabi eng eski qarzni yopadi. Javob qutisi ostidagi satr va «Oylar bo'yicha» jadvalining «Qarz» ustuni doim javob qutisidagi qarzga teng, bunday hisobotda ham «Jami» qatori chiqadi. Ilgari minusli oy hisobga kirmay, oylar qarzi haqiqiy qarzdan ko'p ko'rinishi mumkin edi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "oquvchi-kartasi" },
+  },
+  {
     sana: "2026-10-03",
     sarlavha: "O'quvchi zaxira raqami bilan ham kiradi",
     matn: "O'quvchi kartasiga «Zaxira raqam» yozish mumkin: yangi o'quvchi oynasida yoki kartadagi «Tahrirlash» → «Qo'shimcha ma'lumotlar» da. O'quvchi o'quvchi portaliga shu raqam bilan ham kiradi: parol bilan yoki «Telegram orqali kirish» tugmasi bilan. Bir raqam faqat bitta o'quvchida turadi, boshqa o'quvchidagi raqam saqlanmaydi. Kartada endi barcha raqamlar nomi bilan chiqadi: «Asosiy», «Zaxira», «Ota-ona». Parolni tiklash uchun SMS kod faqat asosiy raqamga boradi.",

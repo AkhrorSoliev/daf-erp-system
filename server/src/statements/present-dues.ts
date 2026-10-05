@@ -1,4 +1,4 @@
-import { capitalize, dm, som } from './statement-text';
+import { capitalize, dm, monthName, som } from './statement-text';
 import type { Day, DueRef, ItemKind, StatementModel } from './statement.types';
 
 export type Tone = 'red' | 'green' | 'muted';
@@ -63,7 +63,7 @@ export function dueLedger(
   const paidOf = new Map<string, number>();
   const creditsOf = new Map<
     string,
-    Array<{ kind: ItemKind; day: Day; amount: number }>
+    Array<{ label: string; day: Day | null; amount: number }>
   >();
   for (const a of model.allocations) {
     for (const t of a.to) {
@@ -71,16 +71,23 @@ export function dueLedger(
       if (a.kind === 'payment') {
         paidOf.set(key, (paidOf.get(key) ?? 0) + t.amount);
       } else {
+        // A negative month (ADR-0073) is named by its month, not a day.
+        const credit = a.month
+          ? {
+              label: `${monthName(a.month)}da qaytarilgan dars puli`,
+              day: null,
+            }
+          : { label: itemLabel(a.itemKind ?? 'correction'), day: a.day };
         creditsOf.set(key, [
           ...(creditsOf.get(key) ?? []),
-          { kind: a.itemKind ?? 'correction', day: a.day, amount: t.amount },
+          { ...credit, amount: t.amount },
         ]);
       }
     }
   }
 
   const sums = { cost: 0, paid: 0, left: 0 };
-  const credited = new Map<ItemKind, number>();
+  const credited = new Map<string, number>();
 
   const settle = (key: string, cost: number): Settled => {
     const paid = paidOf.get(key) ?? 0;
@@ -90,14 +97,15 @@ export function dueLedger(
     sums.paid += paid;
     sums.left += left;
     for (const c of credits) {
-      credited.set(c.kind, (credited.get(c.kind) ?? 0) + c.amount);
+      credited.set(c.label, (credited.get(c.label) ?? 0) + c.amount);
     }
     return {
       paid: som(paid),
       left: left > 0 ? som(left) : "yo'q",
       leftTone: left > 0 ? 'red' : 'green',
       coverage: credits.map(
-        (c) => `${som(c.amount)} — ${itemLabel(c.kind)} (${dm(c.day)})`,
+        (c) =>
+          `${som(c.amount)} — ${c.label}` + (c.day ? ` (${dm(c.day)})` : ''),
       ),
     };
   };
@@ -149,14 +157,13 @@ export function dueLedger(
   const total = (): DuesTotalView | null => {
     const debt = model.headline.kind === 'debt' ? model.headline.amount : 0;
     if (sums.cost <= 0 || sums.left !== debt) return null;
-    if (model.months.some((m) => m.cost < 0)) return null;
     return {
       cost: som(sums.cost),
       paid: som(sums.paid),
       left: sums.left > 0 ? som(sums.left) : "yo'q",
       leftTone: sums.left > 0 ? 'red' : 'green',
       details: [...credited].map(
-        ([kind, amount]) => `${som(amount)} — ${itemLabel(kind)}`,
+        ([label, amount]) => `${som(amount)} — ${label}`,
       ),
     };
   };

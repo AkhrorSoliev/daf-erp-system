@@ -216,6 +216,8 @@ export interface Allocation {
   kind: 'payment' | 'credit';
   method: string | null;
   itemKind: ItemKind | null;
+  /** A month with a negative cost, spent as a credit (ADR-0073). */
+  month: MonthKey | null;
   paymentId: string | null;
   amount: number;
   to: Array<{ due: DueRef; amount: number }>;

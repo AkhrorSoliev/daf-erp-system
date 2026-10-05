@@ -268,6 +268,36 @@ describe('presentStatement', () => {
       ]);
     });
 
+    it('spends a month with more money returned than charged on the oldest debt', () => {
+      const input = debtor();
+      input.student.balance = -207_500;
+      input.rows.push(
+        row({
+          type: 'ADJUSTMENT',
+          day: '2026-08-10',
+          amount: 50_000,
+          enrollmentId: null,
+          metadata: { kind: 'monthly-release', period: '2026-08' },
+        }),
+      );
+      const v = presentStatement(buildStatement(input), 'student');
+      expect(nb(v.answer.subtitle)).toBe(
+        'sentabr darslari uchun 187 500 · iyuldan qolgan 20 000',
+      );
+      expect(rows(v)).toEqual([
+        ['Iyul', '200 000', '20 000', 'red'],
+        ['Avgust', '', '', 'muted'],
+        ['Sentabr', '0', '187 500', 'red'],
+      ]);
+      expect(nb(v.dues[0].details.at(-1) ?? '')).toBe(
+        '50 000 — avgustda qaytarilgan dars puli',
+      );
+      expect(v.duesTotal && nb(v.duesTotal.left)).toBe('207 500');
+      expect(v.duesTotal?.details.map(nb)).toEqual([
+        '50 000 — avgustda qaytarilgan dars puli',
+      ]);
+    });
+
     it('gives a refund paid out a row of its own', () => {
       const input = paidUp();
       input.student.balance = 2_500;
