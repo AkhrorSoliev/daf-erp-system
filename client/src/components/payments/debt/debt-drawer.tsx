@@ -93,7 +93,7 @@ export function DebtDrawerBody({ drawer: d, promiseState, promiseFailed = false,
           <span className="text-muted-foreground">Qarz</span>
           <span className="text-xl font-bold text-red-600 dark:text-red-400">{formatBalance(d.debt)}</span>
         </div>
-        {/* No lines when they would not add up to the debt (the server sends none). */}
+        {/* No lines when the statement could not be built (the server sends none). */}
         {d.months.length > 0 && (
           <Section title="Oylar bo'yicha">
             {d.months.map((m, i) => (

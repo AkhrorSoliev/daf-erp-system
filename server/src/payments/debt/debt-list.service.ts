@@ -22,7 +22,6 @@ import {
 } from '../../reports/debt-split';
 import { ceilingIsWider, inOtherBranch } from '../../common/auth/other-branch';
 import { StatementService } from '../../statements/statement.service';
-import type { StatementModel } from '../../statements/statement.types';
 import { debtListWorkbook } from './debt-list.excel';
 import {
   drawerMonths,
@@ -34,7 +33,6 @@ import {
   tabTotals,
   toListRow,
   type DebtDrawer,
-  type DrawerMonth,
   type DebtListItem,
   type DebtListResponse,
   type DebtListRow,
@@ -196,7 +194,7 @@ export class DebtListService {
       kind,
       groups: groupsOf(kind, enrollments),
       debt,
-      months: this.monthsAddingUpTo(id, model, debt),
+      months: model ? drawerMonths(model) : [],
       lastPayment: payment
         ? {
             createdAt: payment.createdAt.toISOString(),
@@ -230,27 +228,6 @@ export class DebtListService {
       buffer: await debtListWorkbook(q.tab, items),
       filename: `qarzdorlik-${q.tab}-${tashkentDateStr(now)}.xlsx`,
     };
-  }
-
-  /**
-   * The drawer's month lines, or none when their «qoldi» does not add up to
-   * «Qarz»: a month with a negative cost is dropped by the statement's FIFO
-   * (`allocate`), so the lines would claim more than the whole debt. Logged
-   * like `StatementService.build` logs `unexplained`; the client hides the block.
-   */
-  private monthsAddingUpTo(
-    id: number,
-    model: StatementModel | null,
-    debt: number,
-  ): DrawerMonth[] {
-    if (!model) return [];
-    const lines = drawerMonths(model);
-    const left = lines.reduce((s, l) => s + l.left, 0);
-    if (left === debt) return lines;
-    this.logger.warn(
-      `Debt drawer for student ${id}: month lines add up to ${left}, debt is ${debt}`,
-    );
-    return [];
   }
 
   /** ADR-0063: a student of another branch the caller works in is named, not «missing». */
