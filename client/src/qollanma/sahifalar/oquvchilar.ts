@@ -117,8 +117,11 @@ export const oquvchilar: QollanmaSahifa[] = [
       "telegram uzilgan",
       "id",
       "o'quvchi raqami",
+      "barcha yozuvlar",
+      "bekor qilingan yozuv",
+      "balans tarixi",
     ],
-    yangilangan: "2026-10-05",
+    yangilangan: "2026-10-06",
   },
   {
     bolim: "oquvchilar",

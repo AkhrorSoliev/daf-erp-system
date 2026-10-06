@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-06",
+    sarlavha: "«Barcha yozuvlar»da bekor qilingan yozuv belgilanadi",
+    matn: "O'quvchi kartasidagi «To'lovlar» tabining «Barcha yozuvlar» ro'yxatida bekor qilingan yozuvning summasi endi chizib qo'yiladi, yonida «Bekor qilingan» belgisi va qachon, nima sababdan bekor qilingani yoziladi. Uni bekor qilgan yozuv «Bekor qilish» belgisi bilan qaysi kundagi qancha summani qaytarganini aytadi. Ilgari ikkalasi oddiy yozuvdek ko'rinardi: masalan, oylik to'lovga o'tishda bekor qilingan dars pullari hali yechilgandek tuyulardi. O'quvchi portalidagi «Balans tarixi» ham shunday ko'rsatadi va u yerdan 0 so'mlik dars yozuvlari olib tashlandi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "oquvchi-kartasi" },
+  },
+  {
+    sana: "2026-10-06",
     sarlavha: "«Qarzdorlik»da o'quvchi oynasi topiladigan va o'qiladigan bo'ldi",
     matn: "Qarzdorlar jadvalida har qatorda «To'lov» yonida «Batafsil» tugmasi paydo bo'ldi, o'quvchi ismi havola rangida, jadval ustida esa «O'quvchi ustiga bosing…» degan eslatma turadi: ilgari qatorni bosish mumkinligi hech qayerda ko'rinmasdi. O'ng tomondagi oyna ham qayta tuzildi: telefon va guruh (ustoz bilan) tepada, qarz katta qizil kartada «N oy bo'yicha · eng eskisi …» izohi bilan, va'da o'z rangli kartasida, oylar «Hisoblandi · To'landi · Qoldi» ustunli jadvalda «Jami» bilan, oxirgi aloqada esa kim qo'ng'iroq qilgani va izoh. Asosiy amal «To'lov qayd qilish» pastda to'liq enda turadi.",
     rollar: [1, 2, 3, 5],
