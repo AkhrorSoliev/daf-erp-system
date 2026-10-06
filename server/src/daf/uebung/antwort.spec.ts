@@ -1,4 +1,21 @@
-import { istRichtig, normalisieren, tippfehler } from './antwort';
+import { editAbstand, istRichtig, normalisieren, tippfehler } from './antwort';
+
+describe('editAbstand', () => {
+  it.each([
+    ['', '', 0],
+    ['', 'abc', 3],
+    ['abc', '', 3],
+    ['abc', 'abc', 0],
+    ['kitten', 'sitting', 3],
+    ['deutsch', 'deustch', 1],
+    ['ab', 'ba', 1],
+    ['dreissig', 'drei', 4],
+    ['ca', 'abc', 3],
+  ])('%s → %s = %d', (a, b, d) => {
+    expect(editAbstand(a, b)).toBe(d);
+    expect(editAbstand(b, a)).toBe(d);
+  });
+});
 
 describe('normalisieren', () => {
   it('katta-kichik harfni tenglashtiradi', () => {

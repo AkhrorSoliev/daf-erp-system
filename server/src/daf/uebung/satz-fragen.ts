@@ -162,11 +162,16 @@ export function satzUebersetzen(
   // made this the easiest question on production (97% right first time,
   // 21–29.09) — one familiar word gave the answer away. Stable sort over a
   // shuffled list, then three of the best five, so chance stays.
+  // The count is taken once per sentence, not inside the comparison.
   const zielWoerter = new Set(woerterVon(normalisieren(ziel.de)));
   const gemeinsam = (s: MaterialSatz) =>
     woerterVon(normalisieren(s.de)).filter((w) => zielWoerter.has(w)).length;
   const falsch = mischen(
-    [...kandidaten].sort((a, b) => gemeinsam(b) - gemeinsam(a)).slice(0, 5),
+    kandidaten
+      .map((s) => ({ s, n: gemeinsam(s) }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 5)
+      .map((k) => k.s),
     rnd,
   )
     .slice(0, 3)

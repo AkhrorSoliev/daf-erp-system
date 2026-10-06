@@ -5,6 +5,7 @@ import {
   wortArt,
   zahlenFalle,
 } from './ablenker';
+import * as antwort from './antwort';
 import type { MaterialWort } from './frage.types';
 
 function w(
@@ -346,5 +347,22 @@ describe('waehleAblenker', () => {
     const texte = r.map((x) => x.uz);
     expect(new Set(texte).size).toBe(3);
     expect(texte).not.toContain('salom!');
+  });
+
+  it('measures each candidate once, not once per comparison', () => {
+    // u04 has 183 drilled words: the sort recomputed the edit distance in
+    // every comparison and one session took 3 s of CPU.
+    const spy = jest.spyOn(antwort, 'editAbstand');
+    const pool = Array.from({ length: 100 }, (_, i) =>
+      w(100 + i, `Wort${i}`, `so'z ${i}`, { artikel: 'das' }),
+    );
+    waehleAblenker(pool[0], pool, {
+      feld: (x) => x.de,
+      aehnlich: true,
+      bedeutung: true,
+      rnd,
+    });
+    expect(spy.mock.calls.length).toBeLessThanOrEqual(pool.length);
+    spy.mockRestore();
   });
 });
