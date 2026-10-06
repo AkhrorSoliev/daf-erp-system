@@ -317,10 +317,11 @@ describe('SalaryCenterTopUpService', () => {
     ]);
     prisma.student.findMany.mockResolvedValue([
       // Owes LESS than the two lessons cost — he has paid since. Reporting the
-      // lesson cost (66 666) is the #10026 defect: twice the real figure.
+      // lesson cost (66 666) is the first defect: over three times the real
+      // figure.
       student(10001, { balance: -20_000 }),
       // Owes MORE than this month's one lesson. Capping at the lesson cost is
-      // the #10058 defect: the row said 466 662, the profile said 624 989.
+      // the second defect: the row and the profile showed different debts.
       student(10002, { balance: -500_000 }),
       // Cleared: nothing to collect, never listed.
       student(10003, { balance: 5_000 }),
@@ -349,13 +350,13 @@ describe('SalaryCenterTopUpService', () => {
       accrual({ studentId: 10002, attendanceId: 'a2' }),
     ]);
     prisma.student.findMany.mockResolvedValue([
-      student(10001, { balance: -329 }),
+      student(10001, { balance: -500 }),
       student(10002, { balance: -50_000 }),
     ]);
     prisma.transaction.findMany.mockResolvedValue([
-      // Paid all but 329 of a 33 333 lesson: the centre's 20 000 came back with
-      // that payment, so at most 329 of it is still out. Production #10593.
-      { attendanceId: 'a1', metadata: { uncoveredAmount: 329 } },
+      // Paid all but 500 of a 33 333 lesson: the centre's 20 000 came back with
+      // that payment, so at most 500 of it is still out.
+      { attendanceId: 'a1', metadata: { uncoveredAmount: 500 } },
       // Settled to the last so'm — the accrual flag has simply not caught up.
       { attendanceId: 'a2', metadata: { uncoveredAmount: 0 } },
     ]);
@@ -364,13 +365,13 @@ describe('SalaryCenterTopUpService', () => {
 
     expect(res.data).toHaveLength(1);
     expect(res.data[0].student.id).toBe(10001);
-    expect(res.data[0].centerUnrecovered).toBe(329);
+    expect(res.data[0].centerUnrecovered).toBe(500);
     // The spend itself is untouched by any of this — it is what left the till.
     expect(res.data[0].centerPaid).toBe(20_000);
     // ...and the month's total still matches the card the drill-down opens
     // from, repaid students included.
     expect(res.totals.centerPaid).toBe(40_000);
-    expect(res.totals.centerUnrecovered).toBe(329);
+    expect(res.totals.centerUnrecovered).toBe(500);
   });
 
   it('never claims back more than the student owes in total', async () => {

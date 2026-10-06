@@ -46,9 +46,9 @@ import {
  *
  * The debt is deliberately NOT sliced by month, and two attempts to slice it
  * were both wrong. Reporting the month's lesson cost ignores every payment made
- * since (#10026 showed 345 000 while owing 156 000). Capping it at
- * `min(debt, month's lessons)` failed more quietly: #10058 then read 466 662
- * against a profile saying 624 989, leaving an admin mid-call with two numbers
+ * since (one student showed 300 000 while owing 120 000). Capping it at
+ * `min(debt, month's lessons)` failed more quietly: another then read 400 000
+ * against a profile saying 600 000, leaving an admin mid-call with two numbers
  * and no way to choose. A balance settles oldest-first across every month, so
  * it has no per-month share to report; what the month scopes is who appears
  * here and what the center paid for them.
@@ -386,8 +386,8 @@ export class SalaryCenterTopUpService {
     // advance is repaid out of whatever the student pays for that lesson, so
     // what is still owed TO THE CENTRE for it can never exceed either side:
     // `min(advance, outstanding)`. A lesson 99% paid leaves the centre the last
-    // 1%, not the whole advance — production #10593 read "markaz 16 667" beside
-    // a 329 so'm balance and had an admin ringing to collect an advance that
+    // 1%, not the whole advance — one student read "markaz 16 667" beside
+    // a 500 so'm balance and had an admin ringing to collect an advance that
     // had already come back with the payment.
     //
     // No row at all (a forecast lesson, not billed yet) means nothing has been
@@ -571,13 +571,13 @@ export class SalaryCenterTopUpService {
            *
            * Capped twice, and both caps earn their place. Per lesson, by what
            * is still owed ON that lesson: an advance cannot outlive the payment
-           * that repaid it (#10593 — 16 667 fronted, 329 left). Then per
+           * that repaid it (one student: 16 667 fronted, 500 left). Then per
            * student, by their whole balance: nobody can be made to return more
            * than they owe. The second cap is not belt-and-braces — the
            * per-lesson figure comes from deduction metadata that only settles
            * when retroactive billing runs, and for the students whose
            * settlement is still pending it reads high. Production 2026-08-18:
-           * 14 rows claimed more than the student owed, #10439 claiming 80 000
+           * 14 rows claimed more than the student owed, one claiming 50 000
            * from someone at a zero balance. Capping here keeps the column
            * inside the "Jami qarzi" beside it, which is the whole it is a part
            * of, without waiting on that backlog to clear.
@@ -591,10 +591,10 @@ export class SalaryCenterTopUpService {
            *
            * This is deliberately NOT month-scoped, and two earlier attempts to
            * make it so were both wrong. The month's lesson cost ignores every
-           * payment since (#10026 read 345 000 while owing 156 000). Capping it
-           * at `min(debt, month's lessons)` was worse in a quieter way: #10058
-           * then read 466 662 while his profile said 624 989, so an admin on
-           * the phone had two numbers and no way to choose.
+           * payment since (one student read 300 000 while owing 120 000).
+           * Capping it at `min(debt, month's lessons)` was worse in a quieter
+           * way: another then read 400 000 while their profile said 600 000,
+           * so an admin on the phone had two numbers and no way to choose.
            *
            * A balance cannot be divided by month — the ledger settles
            * oldest-first across everything — and an admin does not collect a
@@ -652,7 +652,7 @@ export class SalaryCenterTopUpService {
     // Nothing left to bring in — the advance came back with the student's
     // payment — so the row is not an answer to "who do I ring". The accrual
     // flag is simply coarser than the money: it clears only when a lesson is
-    // settled to the last so'm, which is why #10593 sat on this list owing 329
+    // settled to the last so'm, which is why one student sat on this list owing 500
     // after the centre's 16 667 had already returned.
     const rows = allRows.filter((r) => r.centerUnrecovered > 0);
 

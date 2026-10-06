@@ -327,10 +327,10 @@ describe('EnrollmentBillingService.releasePrepaidLessons', () => {
   });
 
   it('prices the release off the deduction batch, discount and all', async () => {
-    // 7-lesson batch charged 233 331 — the shape #10393 actually had.
+    // A 6-lesson batch at 33 333 a lesson.
     tx.transaction.findFirst.mockResolvedValue({
-      amount: -233_331,
-      metadata: { perLessonCost: 33_333, lessonsCovered: 7 },
+      amount: -199_998,
+      metadata: { perLessonCost: 33_333, lessonsCovered: 6 },
     });
 
     const result = await service.releasePrepaidLessons(tx, {

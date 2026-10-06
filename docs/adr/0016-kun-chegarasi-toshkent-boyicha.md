@@ -6,7 +6,7 @@
 
 ## Kontekst
 
-O'quvchi #10652 Click orqali 50 000 so'm to'ladi. Chekda: **06.08.2026, 00:18:46**.
+Bir o'quvchi Click orqali 120 000 so'm to'ladi. Chekda: **06.08.2026, 00:18:46**.
 Bazada: `2026-08-05T19:18:44Z`. Ikkalasi ham to'g'ri — markaz Toshkentda
 (UTC+5), baza esa UTC saqlaydi.
 

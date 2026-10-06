@@ -125,8 +125,8 @@ const PAGE_SIZES = [10, 20, 30, 40, 50];
  * balance simply goes negative), so when that student finally pays there is
  * nothing left for retroactive billing to settle and the flag is never cleared.
  * Production July 2026: all 622 fronted lessons already carried a
- * `LESSON_CONSUMPTION`, and 6 students back at a zero balance (#10210 paid
- * 490 000 on 05.08) were still on the list.
+ * `LESSON_CONSUMPTION`, and 6 students back at a zero balance (one had paid
+ * off their whole debt) were still on the list.
  *
  * The live balance is the ledger's own answer to "does this person still owe us
  * anything", so that is what decides.
@@ -411,7 +411,7 @@ export function CenterTopUpContent({ month }: Props) {
               {/* NOT "which months is the debt from" — that is a different set
                   and a bigger one. Production August 2026: the center fronted
                   only July, while these students' debt runs from May
-                  (#10050 owes 633 323 dating to 2026-05). Naming this column
+                  (one student's 600 000 dates to 2026-05). Naming this column
                   after the debt would have it answer a question it cannot. */}
               <TableHead>
                 {isForecast ? "Qoplanadigan oylar" : "Markaz qoplagan oylar"}
@@ -419,10 +419,10 @@ export function CenterTopUpContent({ month }: Props) {
               <TableHead className="text-right">Darslar</TableHead>
               {/* ONE money column per row, deliberately. The centre's spend
                   used to sit beside it and read as a second thing to collect:
-                  #10593 showed "markaz 16 667" next to "qarzi 329" and the
-                  question it produced every time was why we were chasing 329
+                  one student showed "markaz 16 667" next to "qarzi 500" and the
+                  question it produced every time was why we were chasing 500
                   after paying out 16 667. The answer — the student had already
-                  paid 33 004 of the lesson, so the advance came back with it —
+                  paid 32 833 of the lesson, so the advance came back with it —
                   is a fact about the past, and an admin ringing someone needs
                   only the figure they will read out. The spend stays on the
                   summary card above, where it is a company total, not an
@@ -433,7 +433,7 @@ export function CenterTopUpContent({ month }: Props) {
               {/* The whole the column before it is a part of. An admin on the
                   phone asks for the DEBT, not for the centre's share of it, and
                   that debt routinely predates the top-up era: production August
-                  2026 fronted July only, while #10050's 633 323 dates to May.
+                  2026 fronted July only, while one student's 600 000 dates to May.
                   The badge opens the month-by-month split, because a single
                   figure spanning four months reads as one month's arrears. */}
               <TableHead className="border-l text-right">

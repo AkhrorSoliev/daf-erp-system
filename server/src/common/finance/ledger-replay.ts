@@ -65,7 +65,7 @@ export interface ReplayRow {
  *
  * Pul FIFO'si paket darajasida emas, AYNAN SHU bo'laklar darajasida
  * taqsimlanadi. Aks holda paketning bir qismini moliyalagan to'lov butun
- * paketning sana oralig'ini meros qilib olardi (#10460 da 21.07 to'lovi
+ * paketning sana oralig'ini meros qilib olardi (bir o'quvchida 21.07 to'lovi
  * "21.07 — 04.08" deb ko'rsatilardi, to'g'risi "21.07 — 30.07").
  */
 export interface LessonSlice {
@@ -88,7 +88,7 @@ export interface CreditAllocation {
    * `lessonCount` dan ALLAQACHON O'TILGANI — ya'ni sanasi bor qismi.
    * `firstLessonDate`/`lastLessonDate` oralig'i aynan shu darslarni qamraydi,
    * `lessonCount` ni emas. Ikkisi teng bo'lmasa, karta oraliqni butun songa
-   * tegishli qilib ko'rsatmasligi kerak (#10601: 10 dars, oraliq 3 tasiniki).
+   * tegishli qilib ko'rsatmasligi kerak (masalan, 10 dars, oraliq 3 tasiniki).
    */
   heldLessonCount: number;
   /** `lessonCount` dan hali O'TILMAGANI — oldindan to'langan darslar. */
@@ -244,7 +244,7 @@ export function replayStudentLedger(
    * ayirmasi. Har qatordan OLDIN o'zaro yopamiz, shunda `toPreviousDebt`
    * admin ko'radigan SOF qarzga aynan teng bo'ladi.
    *
-   * Oxirgi qatordan keyin ATAYLAB yopilmaydi: #10460 da 8 so'm naqd va
+   * Oxirgi qatordan keyin ATAYLAB yopilmaydi: golden fixture'da 8 so'm naqd va
    * 33 333 qarz yonma-yon qoladi, chunki 04.08 darsi butunlay to'lanmagan
    * (biller "all-or-nothing" — pastga qarang), 8 so'm esa hech narsa
    * sotib olmagan.
@@ -270,7 +270,7 @@ export function replayStudentLedger(
     }
   };
 
-  // Bir dars bo'lagi ikki kredit o'rtasida bo'linishi mumkin (#10460 da 07.07
+  // Bir dars bo'lagi ikki kredit o'rtasida bo'linishi mumkin (golden fixture'da 07.07
   // darsi 25.06 va 21.07 to'lovlari orasida bo'lingan). Pul ikki marta
   // sanalmaydi, lekin DARS SONI har ikkala kartada 1 deb ko'rinadi — shuning
   // uchun har kredit o'zi tekkan bo'laklarni yodda tutadi.

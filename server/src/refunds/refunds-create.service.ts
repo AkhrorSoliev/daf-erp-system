@@ -48,7 +48,7 @@ export class RefundsCreateService {
    * the ABSENT lessons (billable here) plus lessons still reserved. The lessons
    * stayed covered while their money came back, and since neither side of the
    * subtraction changed, the next refund offered the whole thing again.
-   * #10393 was credited 266 664 so'm on 2026-08-18, #10655 233 331 before it.
+   * One student was credited 200 000 so'm that way, another 180 000 before.
    *
    * All ledger writes happen inside one Serializable transaction.
    */

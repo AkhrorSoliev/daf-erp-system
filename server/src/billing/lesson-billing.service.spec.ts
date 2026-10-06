@@ -744,8 +744,8 @@ describe('LessonBillingService', () => {
     it('still settles deferred salary when the roster is empty', async () => {
       // The lessons were taught while the student was enrolled; the enrolment
       // going FROZEN/DROPPED afterwards does not un-teach them. Returning early
-      // here left #10210 with 491 664 of coverage unapplied after they paid
-      // 490 000 and cleared their balance.
+      // here left a student's deferred coverage unapplied after they paid
+      // and cleared their balance.
       tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
       tx.transaction.findMany = jest.fn().mockResolvedValue([
         {

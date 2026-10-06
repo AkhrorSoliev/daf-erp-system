@@ -8,14 +8,14 @@
 Bitta ustoz uchun tizim to'rt xil raqam ko'rsatadi va ularning hech biri
 "bu ustozga qancha to'lashimiz kerak" degan savolga javob bermaydi.
 
-Prod misoli — #10005 Gulnozaxon Saloxiddinova (2026-07-29 holatiga):
+Prod misoli — Ustoz A (2026-07-29 holatiga):
 
 | Qayerda | Raqam | Aslida nima |
 |---|---|---|
-| `/payments/salary` → To'liq ishlangan | 9 233 518 | Faqat iyul: o'tilgan darslar × stavka |
-| Profil kartasi → Balans | 14 133 616 | `User.balance` — iyun+iyul accruallari yig'indisi, hech qachon kamaymagan |
-| Profil → Ish haqi → Kutilayotgan (oylik) | 10 200 204 | Prognoz: 51 faol o'quvchi × 12 dars × 16 667 (real darslar emas) |
-| Profil → Ish haqi → Haqiqiy yig'ilgan | 7 766 822 | To'lanmagan accruallar, **davr filtri yo'q** (iyun + iyul aralash) |
+| `/payments/salary` → To'liq ishlangan | 8 600 172 | Faqat iyul: o'tilgan darslar × stavka |
+| Profil kartasi → Balans | 13 100 262 | `User.balance` — iyun+iyul accruallari yig'indisi, hech qachon kamaymagan |
+| Profil → Ish haqi → Kutilayotgan (oylik) | 9 000 180 | Prognoz: 45 faol o'quvchi × 12 dars × 16 667 (real darslar emas) |
+| Profil → Ish haqi → Haqiqiy yig'ilgan | 7 133 476 | To'lanmagan accruallar, **davr filtri yo'q** (iyun + iyul aralash) |
 
 Sabablari:
 
@@ -24,11 +24,11 @@ Sabablari:
    prognoz.
 2. Profil kartasidagi `User.balance` faqat o'sadi: u har accrualda oshadi
    ([salary-accrual.service.ts:363-366]) va faqat oylik `PAID` bo'lganda
-   kamayadi. #10005 uchun uchala `SalaryPayment` ham `CALCULATED` holatida.
+   kamayadi. Ustoz A uchun uchala `SalaryPayment` ham `CALCULATED` holatida.
 3. Avans (`TEACHER_ADVANCE`) ledgerga `teacherId` bilan yoziladi, lekin
    `User.balance` ga tegmaydi ([transactions-write.service.ts:618-631]),
    shuning uchun balans real qarzdan avans miqdoricha ko'p ko'rsatadi
-   (#10005 uchun 3 400 000).
+   (Ustoz A uchun 2 800 000).
 
 ## Tamoyil
 

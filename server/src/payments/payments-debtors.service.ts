@@ -83,8 +83,8 @@ export class PaymentsDebtorsService {
     // hides soft-deleted rows, and this is a deliberate exception: a debt is
     // not archived along with the record. Production carried 4 of them owing
     // 1 019 318, and the reasons show why leaving them out was wrong — "o'qishni
-    // tashladi", "darsga kelmagan, qarzdorlik yozgan". (One, #10323, is a
-    // duplicate account whose 153 328 is phantom; it now becomes visible enough
+    // tashladi", "darsga kelmagan, qarzdorlik yozgan". (One is a
+    // duplicate account whose balance is phantom; it now becomes visible enough
     // to clean up rather than quietly padding a total nobody could open.)
     const archived = status === 'all' || status === StudentStatus.ARCHIVED;
     return {

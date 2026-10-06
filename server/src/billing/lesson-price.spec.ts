@@ -42,7 +42,7 @@ describe('lesson-price', () => {
 
   it('takes the remainder OFF the last lesson when the price rounds up', () => {
     // 500 000 / 12: the old rule charged 41 667 twelve times = 500 004, i.e. it
-    // OVERCHARGED — the direction that manufactured tiny debts (#10048 owed
+    // OVERCHARGED — the direction that manufactured tiny debts (one student owed
     // 12 so'm this way, three cycles of 4).
     const prices = cycle(ROUNDS_UP.price, ROUNDS_UP.count);
     expect(prices.slice(0, 11)).toEqual(Array(11).fill(41_667));

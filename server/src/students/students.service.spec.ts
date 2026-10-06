@@ -709,7 +709,7 @@ describe('StudentsService — status methods', () => {
     });
 
     it('writes no ledger row for a student with a long history', async () => {
-      // #10080's shape: 41 past lessons, 0% -> 50%. That one moved 449 995.
+      // A real long-history shape: 41 past lessons, 0% -> 50%.
       setup({
         oldDiscount: 0,
         pastDeductions: Array.from({ length: 41 }, () => ({

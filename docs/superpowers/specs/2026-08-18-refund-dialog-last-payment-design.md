@@ -9,8 +9,8 @@
 (`paidAmount` — barcha COMPLETED to'lovlar yig'indisi), lekin **oxirgi to'lovi**
 haqida hech narsa ko'rsatmaydi.
 
-Operator pulni oxirgi to'lovdan qaytaradi — masalan #10393 Ismatullo
-Qurbonboyev uchun 100 000 so'm. Buni to'g'ri qilish uchun oxirgi to'lov qancha
+Operator pulni oxirgi to'lovdan qaytaradi — masalan bir o'quvchi
+uchun 150 000 so'm. Buni to'g'ri qilish uchun oxirgi to'lov qancha
 bo'lgani va qaysi usulda kelgani ko'rinib turishi kerak. Hozir buning uchun
 dialogni yopib, o'quvchi profilidagi to'lovlar jadvaliga o'tish kerak.
 

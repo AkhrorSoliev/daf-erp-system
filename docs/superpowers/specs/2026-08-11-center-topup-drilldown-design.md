@@ -95,7 +95,7 @@ bayroq abadiy `true` bo'lib qoladi.
 Dalil (prod, iyul 2026):
 - markaz qoplagan **622 darsning 622 tasida** ham `LESSON_CONSUMPTION` bor — hammasi o'quvchiga
   allaqachon yozilgan;
-- #10210 Muhsinjon Alamjonov 05.08 da 490 000 to'lagan, balansi 6 — lekin hali ro'yxatda.
+- O'quvchi X avgust boshida 350 000 to'lagan, balansi 3 — lekin hali ro'yxatda.
 
 Joriy balans kesimida:
 
@@ -117,8 +117,8 @@ to'lagan qatorlar bo'yicha bir martalik tozalash.
 
 ### Ikkinchi, kichikroq nomuvofiqlik
 
-#10210 uchun «Qarz (shu darslar)» 541 671 (13 × 41 667) deydi, lekin ledger o'sha 13 dars uchun
-aslida 458 331 yechgan (10 tasi 33 333 dan, 3 tasi 41 667 dan). O'quvchi #027 (400 000 lik kurs)
+O'quvchi X uchun «Qarz (shu darslar)» 375 003 (9 × 41 667) deydi, lekin ledger o'sha 9 dars uchun
+aslida 324 999 yechgan (6 tasi 33 333 dan, 3 tasi 41 667 dan). O'quvchi X #027 (400 000 lik kurs)
 dan #041 (500 000 lik) ga o'tgan; billing eski tsikl narxida davom etgan, top-up accrual esa
 yangi guruh narxini muhrlagan. Hozircha tuzatilmadi.
 

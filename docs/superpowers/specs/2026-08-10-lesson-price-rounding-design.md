@@ -26,7 +26,7 @@ Bu farq faqat qarzdorga darslar **bittalab** yozilganda (`SINGLE_UNCOVERED`) va 
 | shundan ≤50 so'm (yaxlitlash chiqindisi) | 104 ta | 718 so'm |
 | shundan manfiy (qarzdor bo'lib ko'rinadi) | 8 ta | 1 679 so'm |
 
-Misollar: `#10005` — 10 ta dars, 3 so'm chiqindi. `#10008` — 30 ta dars, 10 so'm chiqindi.
+Misollar: O'quvchi X — 10 ta dars, 3 so'm chiqindi. O'quvchi Y — 30 ta dars, 10 so'm chiqindi.
 
 **Nima bu muammo emas:** `329`/`659`/`665` so'mlik qoldiqlar yaxlitlashdan emas — o'quvchi yumaloq summa to'laydi (`433 000`), dars esa `33 333` turadi, ular hech qachon to'g'ri kelmaydi. Bu design ularni tuzatmaydi.
 
@@ -110,7 +110,7 @@ Kurs kesimida bir tsiklning xatosi (`round(narx/dars) × dars − narx`):
 | **Standart B2, B1, B1 Telc** | **500 000 / 12** | **+4** | **ortiqcha yozadi → QARZ tug'iladi** |
 | A2, Intensive | 450 000 / 12, 690 000 / 20 | 0 | toza |
 
-1000 so'mdan kam qarzi bor 8 ta o'quvchidan **4 tasining qarzi aynan +4 ning karrasi** va ular 500 000 lik kursda: #10435, #10045, #10433 (1 tsikl), #10048 (3 tsikl) — jami 24 so'm. Qolgan 4 tasi (2, 329, 659, 665) yaxlitlashdan emas: uchtasi 400 000 lik kursda, u yerda xato teskari yo'nalishda.
+1000 so'mdan kam qarzi bor 8 ta o'quvchidan **4 tasining qarzi aynan +4 ning karrasi** va ular 500 000 lik kursda: uchtasi 1 tsikl, bittasi 3 tsikl — jami 24 so'm. Qolgan 4 tasi (2, 329, 659, 665) yaxlitlashdan emas: uchtasi 400 000 lik kursda, u yerda xato teskari yo'nalishda.
 
 **Muhim natija:** gap faqat hisobot shovqinida emas — 500 000 lik kurslarda o'quvchidan har tsiklda **4 so'm ortiqcha undirilmoqda**. Tuzatish buni to'xtatadi.
 

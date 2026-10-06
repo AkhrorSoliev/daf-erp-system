@@ -416,7 +416,7 @@ Mavjud `ledger filter regression` describe blokini butunlay o'chir — u endi ma
 ```ts
 describe('prepaid asosidagi limit', () => {
   it("maxRefundable = balans + prepaid qiymati", async () => {
-    prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 17 });
+    prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 1_000 });
     prisma.enrollment.findMany.mockResolvedValue([
       { ...enrollmentRow, prepaidLessonsRemaining: 6 },
     ]);
@@ -426,7 +426,7 @@ describe('prepaid asosidagi limit', () => {
 
     expect(result.prepaidLessons).toBe(6);
     expect(result.prepaidValue).toBe(199_998);
-    expect(result.maxRefundable).toBe(200_015);
+    expect(result.maxRefundable).toBe(200_998);
   });
 
   it('ABSENT darslar limitni oshirmaydi', async () => {
@@ -655,7 +655,7 @@ describe('RefundsCreateService.quickRefund', () => {
   });
 
   it('balans yetmasa yetarli sondagi darsni bekor qiladi', async () => {
-    student.balance = 17;
+    student.balance = 1_000;
     enrollment.prepaidLessonsRemaining = 6;
     // 1 dars = 33 333, 2 dars = 66 666, 3 dars = 99 999, 4 dars = 133 332
     enrollmentBilling.prepaidRefundValue.mockImplementation(
@@ -663,11 +663,11 @@ describe('RefundsCreateService.quickRefund', () => {
     );
 
     await service.quickRefund(
-      { studentId: 10001, enrollmentId: 'enr-1', amount: 100_000, refundMethod: 'CASH' },
+      { studentId: 10001, enrollmentId: 'enr-1', amount: 90_000, refundMethod: 'CASH' },
       99, 1,
     );
 
-    // Yetishmovchilik: 100 000 − 17 = 99 983.
+    // Yetishmovchilik: 90 000 − 1 000 = 89 000.
     // 2 dars = 66 666 (kam), 3 dars = 99 999 (yetadi) → 3 dars bekor qilinadi.
     expect(enrollmentBilling.releasePrepaidLessons).toHaveBeenCalledWith(
       expect.anything(),
@@ -676,7 +676,7 @@ describe('RefundsCreateService.quickRefund', () => {
   });
 
   it('limitdan oshsa rad etadi va hech narsa yozmaydi', async () => {
-    student.balance = 17;
+    student.balance = 1_000;
     enrollment.prepaidLessonsRemaining = 6;
     enrollmentBilling.prepaidRefundValue.mockResolvedValue(199_998);
 
@@ -1141,7 +1141,7 @@ git commit -m "Say in the dialog which lessons a refund will cancel"
 
 ---
 
-### Task 9: #10393 ni tuzatish va bazani qayta audit qilish
+### Task 9: O'quvchi X hisobini tuzatish va bazani qayta audit qilish
 
 **Files:**
 - Create: `server/scripts/fix-refund-phantom-credit.ts`
@@ -1153,7 +1153,7 @@ Skript `--dry-run` (standart) va `--apply` rejimlarida ishlaydi. Har bir COMPLET
 - [ ] **Step 2: Dry-run**
 
 Run: `cd server && railway run npx ts-node --transpile-only scripts/fix-refund-phantom-credit.ts`
-Expected: bitta nomzod — #10393, 266 664 so'm. (#10655 allaqachon bekor qilingan, ro'yxatga tushmasligi kerak.)
+Expected: bitta nomzod — O'quvchi X, 299 997 so'm. (O'quvchi Y niki allaqachon bekor qilingan, ro'yxatga tushmasligi kerak.)
 
 - [ ] **Step 3: Natijani CEO ga ko'rsat va tasdiq ol**
 
@@ -1165,8 +1165,8 @@ Run: `cd server && railway run npx ts-node --transpile-only scripts/fix-refund-p
 
 - [ ] **Step 5: Tekshir**
 
-Run: `cd server && railway run npx ts-node --transpile-only scripts/check-student.ts 10393`
-Expected: balans −99 983, pozitsiya 100 015.
+Run: `cd server && railway run npx ts-node --transpile-only scripts/check-student.ts <studentId>` (O'quvchi X)
+Expected: balans −149 958, pozitsiya 16 707.
 
 - [ ] **Step 6: Commit**
 

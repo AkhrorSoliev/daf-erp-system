@@ -37,17 +37,17 @@ Xodimlar oyligini boshqarish
 ## 5. Ko'rinish 1 — Oylar kesimida (matritsa, DEFAULT)
 ```
 ┌─ Workflow holati: Iyun 2026 ──────────────────────────────────────────────┐
-│  Hisoblangan 5 (12.4M)   Tasdiqlangan 0   To'langan 0    [Iyunni boshqarish →] │
+│  Hisoblangan 5 (10.9M)   Tasdiqlangan 0   To'langan 0    [Iyunni boshqarish →] │
 └───────────────────────────────────────────────────────────────────────────┘
 
 Ustoz \ Oy          Mart       Aprel      May         Iyun
 ──────────────────────────────────────────────────────────────────────────
-Jamsher #10010      —          —          20 840 343  hisoblanmagan
-Eldor #10008        —          —          7 566 591   —
-Sohibaxon #10006    —          —          6 566 601   —
+Ustoz A             —          —          18 352 410  hisoblanmagan
+Ustoz B             —          —          7 208 335   —
+Ustoz C             —          —          6 125 060   —
 ... (sticky birinchi ustun: ustoz)
 ──────────────────────────────────────────────────────────────────────────
-JAMI                ...        ...        57 179 981  ...
+JAMI                ...        ...        51 870 245  ...
 ```
 - **Qator** = ustoz (sticky, chap), **ustun** = oy (sticky header). **Katak** = summa + holat rangi.
 - **Holat ranglari**: Hisoblangan (amber), Tasdiqlangan (blue), To'langan (green), yo'q (faint "—").
@@ -64,8 +64,8 @@ Bosqich:  ● Hisoblangan 5   →   ○ Tasdiqlangan 0   →   ○ To'langan 0
                                           [Hammasini tasdiqlash]  [Hammasini to'lash (0)]
 
 #  Ustoz                 Summa        Holat         Amal
-1  Jamsher #10010        20 840 343   Hisoblangan   [Tasdiqlash]
-2  Eldor #10008          7 566 591    Hisoblangan   [Tasdiqlash]
+1  Ustoz A               18 352 410   Hisoblangan   [Tasdiqlash]
+2  Ustoz B               7 208 335    Hisoblangan   [Tasdiqlash]
 ...                                                  ↑ keyingi bosqich tugmasi
 ```
 - **Stepper** (Hisoblangan → Tasdiqlangan → To'langan) — har bosqichda nechta yozuv borligi. 3 bosqich aniq ko'rinadi (tushunmovchilik #3 hal bo'ladi).

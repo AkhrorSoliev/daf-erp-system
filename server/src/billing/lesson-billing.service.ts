@@ -460,8 +460,8 @@ export class LessonBillingService {
     // simply does nothing without them, but Phase 2 does not: a student can owe
     // for lessons already taught after they were frozen, dropped or expelled,
     // and their payment still has to credit the teacher and clear the centre's
-    // advance. Returning here skipped that entirely — #10210 paid 490 000 on
-    // 05.08, cleared their balance, and 491 664 of deferred coverage stayed
+    // advance. Returning here skipped that entirely — one student paid off
+    // their whole debt, and the deferred coverage behind it stayed
     // unapplied because their enrolments had gone FROZEN. Five students on
     // production sat in that state.
     let billedCount = 0;
