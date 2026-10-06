@@ -1,6 +1,6 @@
 /**
  * Formal-statement + framing sheet builders for the "Moliyaviy hisobot"
- * workbook: Muqova / Foyda va zarar / Balans / To'lov usullari / Izoh.
+ * workbook: Foyda va zarar / Balans / To'lov usullari / Izoh.
  * «Asosiy xulosa» lives in reports-excel.summary-sheet.ts; the line-item +
  * reconciliation builders live in reports-excel.detail-sheets.ts. Data params
  * are loosely typed (`any`) — the shapes come straight from the ReportsService
@@ -8,7 +8,6 @@
  */
 import { Workbook } from 'exceljs';
 import {
-  NAVY,
   SUBTLE,
   GREEN,
   RED,
@@ -26,66 +25,6 @@ import {
   kvRow,
   sheetNotes,
 } from './reports-excel.helpers';
-
-// ---- Sheet 1: Muqova ----
-export function coverSheet(
-  wb: Workbook,
-  companyName: string,
-  branchLabel: string,
-  period: string,
-  companyWide: boolean,
-  generatedAt: string,
-) {
-  const ws = wb.addWorksheet('Muqova');
-  ws.columns = [{ width: 30 }, { width: 60 }];
-  const t = ws.addRow([companyName]);
-  t.font = { bold: true, size: 18, color: { argb: NAVY } };
-  t.alignment = { horizontal: 'center' };
-  ws.mergeCells(t.number, 1, t.number, 2);
-  const s = ws.addRow(['Moliyaviy hisobot']);
-  s.font = { bold: true, size: 13 };
-  s.alignment = { horizontal: 'center' };
-  ws.mergeCells(s.number, 1, s.number, 2);
-  ws.addRow([]);
-
-  const info = (k: string, v: string) => {
-    const r = ws.addRow([k, v]);
-    r.getCell(1).font = { bold: true };
-    return r;
-  };
-  info('Hisobot davri:', period);
-  info('Filial:', branchLabel);
-  info('Valyuta:', "Barcha summalar — so'm");
-  info('Yaratilgan:', generatedAt);
-
-  sectionHeader(ws, 'Mundarija', 2);
-  const toc = [
-    [
-      'Asosiy xulosa',
-      'Sodda tilda umumiy natija va joriy-vs-o‘tgan taqqoslash',
-    ],
-    ['Sof foyda', 'Aniq natija: tushum − hisoblangan oylik − xarajat − refund'],
-    ['Foyda va zarar', 'Daromad − tannarx − xarajat = foyda + marja'],
-    ['Pul oqimi', 'Kassa kirim/chiqim va davr oxiri qoldig‘i'],
-    ['Balans', 'Aktiv, passiv, kapital (joriy holat)'],
-    ['To‘lovlar', 'Davrdagi har bir qabul qilingan to‘lov'],
-    ['Xarajatlar', 'Davrdagi har bir xarajat'],
-    ['Oyliklar', 'Ustozlar oyligi (davrda to‘langan)'],
-    ['Qarzdorlar', 'Qarzdor o‘quvchilar ro‘yxati'],
-    ['Oylik dinamika', 'So‘nggi 6 oy: tushum/chiqim/foyda'],
-    ['Oylik qarzdorlik', 'Har oy qancha qarz bilan yopilgani + undirish'],
-    ...(companyWide
-      ? [['Filial kesimida', 'Filiallar bo‘yicha tushum/chiqim/foyda/qarz']]
-      : []),
-    ['To‘lov usullari', 'To‘lov usuli va daromad turi bo‘yicha'],
-    ['Tekshiruv', 'Reconciliation (MOS/XATO) va aylanmalar'],
-    ['Izoh / Lug‘at', 'Atamalarning sodda izohi'],
-  ];
-  toc.forEach(([name, desc], i) => {
-    const r = ws.addRow([`${i + 2}. ${name}`, desc]);
-    r.getCell(2).font = { color: { argb: SUBTLE } };
-  });
-}
 
 // ---- Sheet 3: Sof foyda (the single, clear "aniq sof foyda") ----
 /**
