@@ -34,7 +34,12 @@ const total = (parts: Array<{ cost: number; lessons: number }>) => ({
   lessons: parts.reduce((s, p) => s + p.lessons, 0),
 });
 
-/** FIFO: payments and credits, by date, pay the oldest unpaid lessons first. */
+/**
+ * FIFO: payments and credits, by date, pay the oldest unpaid lessons first.
+ * A month whose cost is negative (more lesson money returned in it than its
+ * lessons cost) is a credit dated that month, so the unpaid dues always add up
+ * to the debt (ADR-0073).
+ */
 export function allocate(
   months: StatementMonth[],
   payments: StatementRow[],
@@ -78,6 +83,7 @@ export function allocate(
       kind: 'payment' as const,
       method: p.paymentMethod,
       itemKind: null,
+      month: null,
       paymentId: p.paymentId,
       amount: p.amount,
     })),
@@ -90,10 +96,23 @@ export function allocate(
           kind: 'credit' as const,
           method: null,
           itemKind: i.kind,
+          month: null,
           paymentId: null,
           amount: i.amount,
         })),
     ),
+    ...months
+      .filter((m) => m.cost < 0)
+      .map((m) => ({
+        day: `${m.key}-01`,
+        at: null,
+        kind: 'credit' as const,
+        method: null,
+        itemKind: null,
+        month: m.key,
+        paymentId: null,
+        amount: -m.cost,
+      })),
   ].sort((x, y) => x.day.localeCompare(y.day));
 
   const allocations = sources.map((s): Allocation => {

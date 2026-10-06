@@ -7,8 +7,8 @@ const PLAN: BranchResetPlan = {
   companyId: 1,
   studentIds: [10795, 10796],
   studentUserIds: [20795],
-  staffUserIds: [10768, 10904],
-  keptUserIds: [10562],
+  staffUserIds: [10012, 10013],
+  keptUserIds: [10011],
   enrollmentIds: ['e-1'],
   groupIds: ['g-1'],
   roomIds: ['r-1'],
@@ -149,7 +149,7 @@ describe('executeBranchReset', () => {
     await executeBranchReset(tx, PLAN);
 
     for (const call of calls) {
-      expect(JSON.stringify(call.where)).not.toContain('10562');
+      expect(JSON.stringify(call.where)).not.toContain('10011');
     }
   });
 

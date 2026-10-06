@@ -179,6 +179,11 @@ export interface LernenSectionGroup {
   titleUz: string;
   titleDe: string;
   lessons: LernenSeans[];
+  /**
+   * The section's askable words and how many the student has met
+   * (ADR-0071). Absent from an older server: then no counter is drawn.
+   */
+  woerter?: { jami: number; gesehen: number };
 }
 
 export interface LernenUnit {

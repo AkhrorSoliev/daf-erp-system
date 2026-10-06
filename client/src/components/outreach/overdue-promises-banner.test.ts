@@ -7,12 +7,12 @@ import { OverduePromisesBanner } from "./overdue-promises-banner";
 
 const SPLIT: DebtSplit = {
   studying: {
-    total: 43_500_000,
-    count: 237,
-    currentMonth: 41_100_000,
-    older: 2_400_000,
+    total: 39_150_000,
+    count: 219,
+    currentMonth: 36_990_000,
+    older: 2_160_000,
   },
-  notStudying: { total: 40_600_000, count: 327 },
+  notStudying: { total: 36_540_000, count: 305 },
 };
 
 const summary = (overduePromises: number) => ({
@@ -54,7 +54,7 @@ describe("OverduePromisesBanner", () => {
 
     expect(text).toContain(`${num(5)} ta to'lov sanasi o'tib ketgan`);
     expect(text).toContain(
-      `O'qiyotganlar qarzi ${money(43_500_000)} · ${num(9)} ta sana kutilmoqda`,
+      `O'qiyotganlar qarzi ${money(39_150_000)} · ${num(9)} ta sana kutilmoqda`,
     );
     expect(text).not.toContain("Jami qarz");
   });
@@ -62,12 +62,12 @@ describe("OverduePromisesBanner", () => {
   it("prints only the first number, never the other and never their sum", () => {
     const text = norm(render(summary(5)));
 
-    expect(text).not.toContain(num(40_600_000));
-    expect(text).not.toContain(num(43_500_000 + 40_600_000));
+    expect(text).not.toContain(num(36_540_000));
+    expect(text).not.toContain(num(39_150_000 + 36_540_000));
   });
 
-  it("still opens the overdue promises", () => {
-    expect(render(summary(5))).toContain('href="/payments/debt?promise=overdue"');
+  it("opens the broken promises straight away, not through the old-link redirect", () => {
+    expect(render(summary(5))).toContain('href="/payments/debt?promise=broken"');
   });
 
   it("renders nothing when no promise is overdue, or before the answer", () => {

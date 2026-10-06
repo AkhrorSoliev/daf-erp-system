@@ -34,13 +34,13 @@ describe('SalarySettleMonthService', () => {
 
   const payment = (over: Partial<any> = {}) => ({
     id: 'sp-1',
-    userId: 10010,
+    userId: 10001,
     amount: 1_000_000,
     status: 'CALCULATED',
     note: null,
     user: {
-      firstName: 'Jamsher',
-      lastName: 'Murtazoxonov',
+      firstName: 'Ali',
+      lastName: 'Valiyev',
       mainBranch: 1,
       branches: [],
     },
@@ -100,7 +100,7 @@ describe('SalarySettleMonthService', () => {
       expect(res.rows).toHaveLength(1);
       expect(res.rows[0]).toMatchObject({
         paymentId: 'sp-1',
-        fullName: 'Jamsher Murtazoxonov',
+        fullName: 'Ali Valiyev',
         branchId: 1,
         branchName: "Farg'ona",
         amount: 1_000_000,
@@ -174,11 +174,11 @@ describe('SalarySettleMonthService', () => {
         payment(),
         payment({
           id: 'sp-2',
-          userId: 10505,
+          userId: 10009,
           amount: 0,
           user: {
-            firstName: 'Muzzammila',
-            lastName: 'Sobirova',
+            firstName: 'Vali',
+            lastName: 'Aliyev',
             mainBranch: null,
             branches: [],
           },
@@ -219,7 +219,7 @@ describe('SalarySettleMonthService', () => {
 
       expect(transactions.recordSalaryPayment).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 10010,
+          userId: 10001,
           amount: 1_000_000,
           salaryPaymentId: 'sp-1',
           cashSlices: [{ cashAccountId: 'acc-1', amount: 1_000_000 }],
@@ -274,7 +274,7 @@ describe('SalarySettleMonthService', () => {
     // The July payroll was handed over part cash, part card.
     const twoPayments = () => [
       payment({ id: 'sp-1', amount: 700_000 }),
-      payment({ id: 'sp-2', userId: 10008, amount: 300_000 }),
+      payment({ id: 'sp-2', userId: 10021, amount: 300_000 }),
     ];
 
     it('refuses a split whose parts do not add up to the branch total', async () => {

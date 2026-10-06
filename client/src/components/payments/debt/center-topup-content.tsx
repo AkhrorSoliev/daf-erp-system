@@ -179,7 +179,7 @@ export function CenterTopUpContent({ month }: Props) {
 
   const allMonths = month === ALL_MONTHS;
 
-  const { data, isLoading } = useQuery<TopUpResponse>({
+  const { data, isLoading, isError } = useQuery<TopUpResponse>({
     queryKey: ["salary-center-topup", month],
     queryFn: async () => {
       const res = await api.get("/salary/monthly/center-topup", {
@@ -267,6 +267,15 @@ export function CenterTopUpContent({ month }: Props) {
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-10 w-full" />
         ))}
+      </div>
+    );
+  }
+
+  // A failed request is not "everything collected" — never fall into the empty state.
+  if (isError && !data) {
+    return (
+      <div className="py-10 text-center text-sm text-muted-foreground">
+        Ma&apos;lumotni yuklab bo&apos;lmadi.
       </div>
     );
   }

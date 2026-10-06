@@ -128,7 +128,7 @@ describe('TransactionsWriteService — branch stamping', () => {
       prisma.user.findUnique.mockResolvedValue({ mainBranch: 2, branches: [] });
 
       await service.recordSalaryPayment({
-        userId: 10768,
+        userId: 10012,
         amount: 3_000_000,
         salaryPaymentId: 'sp-1',
         companyId: COMPANY,

@@ -152,7 +152,7 @@ function releaseText(n: StatementNote): string {
   return [WHY[n.why], what].filter(Boolean).join(' ');
 }
 
-function dueLabel(due: DueRef, voice: Voice): string {
+export function dueLabel(due: DueRef, voice: Voice): string {
   if (due.kind === 'month') return monthName(due.month);
   if (due.kind === 'item')
     return `${itemLabel(due.itemKind, voice)} (${dm(due.day)})`;

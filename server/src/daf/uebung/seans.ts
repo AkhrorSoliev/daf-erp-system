@@ -16,6 +16,18 @@ export function capFuer(format: FrageFormat): number {
   return FORMAT_CAP[format] ?? FORMAT_MAX_PRO_SEANS;
 }
 
+/**
+ * Whether a question brings a word the student has not seen (ADR-0071):
+ * true when any of its words is unseen (a pair counts with one), false
+ * when all are seen, null when it asks no word at all (sentence, phrase,
+ * dialog) — `baueSeans` leaves those where they are.
+ */
+export function neuheit(f: Frage, neueWoerter: Set<string>): boolean | null {
+  const woerter = f.belegteItems.filter((k) => k.startsWith('WORT:'));
+  if (woerter.length === 0) return null;
+  return woerter.some((k) => neueWoerter.has(k));
+}
+
 export interface SeansPlan {
   fragen: Frage[];
   verwendeteFormate: FrageFormat[];
@@ -87,6 +99,12 @@ export function baueSeans(
   // only an ordering, so caps, no-repeat and `MIN_FORMATE` still hold and
   // older sections fill in when the own section runs out.
   vorrang?: (f: Frage) => boolean,
+  // Words the student has not seen before seen ones (ADR-0071): a
+  // section's word pool is larger than one lesson, and every repeat of the
+  // lesson must bring the words still unmet. `neuheit` gives true / false
+  // for a question about words and null for one about none. Like the keys
+  // above, only an ordering.
+  neu?: (f: Frage) => boolean | null,
 ): SeansPlan {
   const pool = [...kandidaten];
   // Tasodifiy tartib: har seans boshqacha boshlansin.
@@ -101,10 +119,32 @@ export function baueSeans(
   // barqaror, ya'ni bir xil ustunlikdagi (ikkalasi ham afzal yoki
   // ikkalasi ham emas) nomzodlarning o'zaro tartibi tasodifiy
   // aralashtirilganidek qoladi.
+  const stufe = (f: Frage): number => (vorrang && !vorrang(f) ? 2 : 0);
   if (bevorzugt.length > 0 || vorrang) {
     const ustunlik = (f: Frage): number =>
-      (vorrang && !vorrang(f) ? 2 : 0) + (bevorzugt.includes(f.format) ? 0 : 1);
+      stufe(f) + (bevorzugt.includes(f.format) ? 0 : 1);
     pool.sort((a, b) => ustunlik(a) - ustunlik(b));
+  }
+
+  // Unseen words first, among the word questions only: inside each
+  // `vorrang` tier the places that hold a word question are refilled with
+  // the unseen ones first. A sentence, phrase or dialog question keeps its
+  // place, so a round holds as many word questions as before — it neither
+  // starves sentences while words are new nor words once all are seen.
+  if (neu) {
+    for (const s of new Set(pool.map(stufe))) {
+      const plaetze = pool.flatMap((f, i) =>
+        stufe(f) === s && neu(f) !== null ? [i] : [],
+      );
+      const woerter = plaetze.map((i) => pool[i]);
+      const neuZuerst = [
+        ...woerter.filter((f) => neu(f) === true),
+        ...woerter.filter((f) => neu(f) === false),
+      ];
+      plaetze.forEach((platz, k) => {
+        pool[platz] = neuZuerst[k];
+      });
+    }
   }
 
   const fragen: Frage[] = [];

@@ -151,7 +151,7 @@ function MoneyOrDash({
  * from "Jami qo'shdi" / "Undirildi" rather than merely differently coloured.
  *
  * It is a `<Link>`, not a button opening a dialog. The same list already lives
- * on /payments/debt, and a dialog holding a second copy meant two places to
+ * in this page's «Markaz qoplagani» tab, and a dialog holding a second copy meant two places to
  * keep in step — plus a list nobody could open in a new tab or send to a
  * colleague. Falls back to plain text at zero: an affordance leading to an
  * empty list is worse than none.
@@ -583,7 +583,7 @@ export function SalaryMonthlyView({
               </div>
               <DrillDownAmount
                 value={totals.centerOwedByStudents}
-                href={`/payments/debt?tab=markaz&month=${shownMonth}`}
+                href={`/payments/salary?tab=markaz&month=${shownMonth}`}
                 label="O'quvchilardan olinishi kerak bo'lgan summa — kimdan undirish kerakligini ko'rish"
               />
               <div className="mt-0.5 text-xs text-muted-foreground">
@@ -599,7 +599,7 @@ export function SalaryMonthlyView({
                   of students it is owed by. */}
               <DrillDownAmount
                 value={totals.centerStillFronted}
-                href={`/payments/debt?tab=markaz&month=${shownMonth}`}
+                href={`/payments/salary?tab=markaz&month=${shownMonth}`}
                 label="Markaz qoplagan, hali qaytmagan summa — kimdan undirish kerakligini ko'rish"
                 className="text-amber-700 dark:text-amber-400"
               />

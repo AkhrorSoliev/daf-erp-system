@@ -676,4 +676,39 @@ describe('MonthlyPaymentNoticeService', () => {
       expect(enqueue).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe("dueDates (the debt list's «To'lov muddati»)", () => {
+    it("is the 2nd lesson on the first charge's live calendar, from the first covered lesson", async () => {
+      candidates = [charge({ coveredDates: OCTOBER.slice(2) })]; // joined on 07.10
+      expect(
+        (await service.dueDates(1001, [10042], '2026-10')).get(10042),
+      ).toBe('2026-10-09');
+      expect(findMany.mock.calls[0][0].where).toMatchObject({
+        companyId: 1001,
+        studentId: { in: [10042] },
+        periodYear: 2026,
+        periodMonth: 10,
+        status: MonthlyChargeStatus.CHARGED,
+      });
+    });
+
+    it('a lesson cancelled after the charge moves it (the live calendar)', async () => {
+      candidates = [charge()];
+      resolvePlan.mockResolvedValue({
+        excludedDates: ['2026-10-05'],
+        addedDates: [],
+      });
+      expect(
+        (await service.dueDates(1001, [10042], '2026-10')).get(10042),
+      ).toBe('2026-10-07');
+    });
+
+    it('leaves out a student with fewer than two lessons, and reads nothing for nobody', async () => {
+      candidates = [charge({ coveredDates: ['2026-10-30'] })];
+      expect((await service.dueDates(1001, [10042], '2026-10')).size).toBe(0);
+      findMany.mockClear();
+      expect((await service.dueDates(1001, [], '2026-10')).size).toBe(0);
+      expect(findMany).not.toHaveBeenCalled();
+    });
+  });
 });

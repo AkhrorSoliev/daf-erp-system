@@ -17,6 +17,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { MockExamBillingService } from '../mock-exams/mock-exam-billing.service';
 import { PaymentStatus, Prisma } from '@prisma/client';
 import { CONCURRENT_CHANGE_MESSAGE } from '../common/transaction-conflict';
+import { PROMISE_MONTH_REFUSAL } from '../payment-promises/promise-rule';
 
 const mockStudent = {
   id: 10001,
@@ -56,7 +57,10 @@ describe('PaymentsService', () => {
   let entityHistoryService: any;
   let lessonBillingService: any;
   let eventEmitter: any;
-  let paymentPromises: { upsertOpenPromise: jest.Mock };
+  let paymentPromises: {
+    upsertOpenPromise: jest.Mock;
+    assertPromiseAllowed: jest.Mock;
+  };
 
   beforeEach(async () => {
     prisma = {
@@ -145,7 +149,10 @@ describe('PaymentsService', () => {
         .mockResolvedValue({ paidCount: 0, deductedAmount: 0 }),
     };
 
-    paymentPromises = { upsertOpenPromise: jest.fn().mockResolvedValue({}) };
+    paymentPromises = {
+      upsertOpenPromise: jest.fn().mockResolvedValue({}),
+      assertPromiseAllowed: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -281,6 +288,58 @@ describe('PaymentsService', () => {
           companyId,
         ),
       ).resolves.toEqual(expect.objectContaining({ id: mockPayment.id }));
+    });
+
+    it('refuses a bad promise before anything is written (ADR-0072)', async () => {
+      prisma.student.findUnique.mockResolvedValue({ balance: -850000 });
+      paymentPromises.assertPromiseAllowed.mockRejectedValueOnce(
+        new BadRequestException("Va'da sanasi"),
+      );
+      await expect(
+        service.create(
+          { ...dto, promiseDate: '2026-12-31' },
+          userId,
+          companyId,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(transactionsService.recordPayment).not.toHaveBeenCalled();
+    });
+
+    it('checks the promise with the upsert rule, and nothing without one', async () => {
+      prisma.student.findUnique.mockResolvedValue({ balance: -850000 });
+      await service.create(
+        { ...dto, promiseDate: '2026-10-07' },
+        userId,
+        companyId,
+      );
+      expect(paymentPromises.assertPromiseAllowed).toHaveBeenCalledWith({
+        studentId: dto.studentId,
+        companyId,
+        promiseDate: '2026-10-07',
+        mode: 'upsert',
+      });
+      paymentPromises.assertPromiseAllowed.mockClear();
+      await service.create(dto, userId, companyId);
+      expect(paymentPromises.assertPromiseAllowed).not.toHaveBeenCalled();
+    });
+
+    it('a payment that clears the debt is never refused for a promise it would not write', async () => {
+      prisma.student.findUnique
+        .mockResolvedValueOnce({ balance: -300000 })
+        .mockResolvedValueOnce({ balance: 200000 });
+      paymentPromises.assertPromiseAllowed.mockRejectedValue(
+        new BadRequestException(PROMISE_MONTH_REFUSAL),
+      );
+      await expect(
+        service.create(
+          { ...dto, promiseDate: '2026-10-07' },
+          userId,
+          companyId,
+        ),
+      ).resolves.toEqual(expect.objectContaining({ id: mockPayment.id }));
+      expect(paymentPromises.assertPromiseAllowed).not.toHaveBeenCalled();
+      expect(paymentPromises.upsertOpenPromise).not.toHaveBeenCalled();
     });
 
     it('writes no promise when the payment clears the debt', async () => {

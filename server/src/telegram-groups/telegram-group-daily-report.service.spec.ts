@@ -75,7 +75,7 @@ function defaultState(): State {
       { type: 'REFUND', amount: -350_000, count: 1 },
       { type: 'DEBT_WRITE_OFF', amount: 900_000, count: 1 },
     ],
-    yesterdaySnapshot: { totalDebt: 21_100_000, debtorCount: 46 },
+    yesterdaySnapshot: { totalDebt: 18_990_000, debtorCount: 46 },
     forecastEnrollments: [],
     ceo: { id: 1 },
     salaryTotals: {
@@ -184,24 +184,26 @@ function makeSalary(state: State) {
 
 /**
  * The debt as `ReportsService.getDebtSplit` returns it (ADR-0059): two numbers
- * that are never added. The studying one is 22.3M / 48, so against the default
- * yesterday's snapshot (21.1M / 46) it reads ▲ 1 200 000 · +2.
+ * that are never added. The studying one is 20.07M / 48, so against the default
+ * yesterday's snapshot (18.99M / 46) it reads ▲ 1 080 000 · +2.
  */
 const DEBT_SPLIT: DebtSplit = {
   studying: {
-    total: 22_300_000,
+    total: 20_070_000,
     count: 48,
-    currentMonth: 20_000_000,
-    older: 2_300_000,
+    currentMonth: 18_000_000,
+    currentMonthCount: 0,
+    older: 2_070_000,
     olderCount: 9,
   },
   notStudying: {
-    total: 9_100_000,
-    count: 31,
+    total: 8_190_000,
+    count: 29,
+    currentMonth: 0,
     byKind: {
-      ungrouped: { total: 3_100_000, count: 11 },
-      frozen: { total: 4_000_000, count: 12 },
-      left: { total: 2_000_000, count: 8 },
+      ungrouped: { total: 2_790_000, count: 10 },
+      frozen: { total: 3_600_000, count: 11 },
+      left: { total: 1_800_000, count: 8 },
     },
   },
 };
@@ -288,16 +290,16 @@ describe('TelegramGroupDailyReportService', () => {
       '<b>198</b> keldi · <b>6</b> kech · <b>18</b> kelmadi · <b>4</b> uzrli — <b>92%</b>',
     );
     // 📌 Current state + the debt as two numbers (ADR-0059). The first one's
-    // delta: 22.3M vs yesterday 21.1M = ▲ 1.2M, +2 debtors.
+    // delta: 20.07M vs yesterday 18.99M = ▲ 1.08M, +2 debtors.
     expect(message).toContain("Faol o'quvchilar: <b>1 240</b>");
     expect(message).toContain(
-      "• O'qiyotganlar qarzi: <b>48</b> ta — <b>22 300 000 so'm</b>  (bugun ▲ 1 200 000 · +2)",
+      "• O'qiyotganlar qarzi: <b>48</b> ta — <b>20 070 000 so'm</b>  (bugun ▲ 1 080 000 · +2)",
     );
     expect(message).toContain(
-      "   🟡 shu oy 20 000 000 so'm · 🔴 eski qarz 2 300 000 so'm",
+      "   🟡 shu oy 18 000 000 so'm · 🔴 eski qarz 2 070 000 so'm",
     );
     expect(message).toContain(
-      "• O'qimayotganlar qarzi: <b>31</b> ta — <b>9 100 000 so'm</b>",
+      "• O'qimayotganlar qarzi: <b>29</b> ta — <b>8 190 000 so'm</b>",
     );
     // 📅 MTD: 280M − 95M = +185M net.
     expect(message).toContain("Tushum (haqiqiy): <b>280 000 000 so'm</b>");
@@ -670,6 +672,7 @@ describe('TelegramGroupDailyReportService', () => {
           total: 20_000_000,
           count: 44,
           currentMonth: 18_000_000,
+          currentMonthCount: 0,
           older: 2_000_000,
         }),
       ),
@@ -694,9 +697,9 @@ describe('TelegramGroupDailyReportService', () => {
     // The three lines still print — only the arrow and its figures need
     // yesterday's snapshot.
     expect(message).toContain(
-      "• O'qiyotganlar qarzi: <b>48</b> ta — <b>22 300 000 so'm</b>\n",
+      "• O'qiyotganlar qarzi: <b>48</b> ta — <b>20 070 000 so'm</b>\n",
     );
-    expect(message).toContain("• O'qimayotganlar qarzi: <b>31</b> ta");
+    expect(message).toContain("• O'qimayotganlar qarzi: <b>29</b> ta");
     expect(message).not.toContain('bugun ▲');
     expect(message).not.toContain('bugun ▼');
   });
@@ -729,7 +732,7 @@ describe('TelegramGroupDailyReportService', () => {
   it('collapses 🚩 Diqqat to a clean line and goes 🟢 when nothing is wrong', async () => {
     const state = defaultState();
     state.flags = []; // no refunds/write-offs/adjustments
-    state.yesterdaySnapshot = { totalDebt: 22_300_000, debtorCount: 48 }; // no debt growth
+    state.yesterdaySnapshot = { totalDebt: 20_070_000, debtorCount: 48 }; // no debt growth
     const service = await buildService(makePrisma(state), makeSalary(state));
 
     const { message: raw } = await service.build(1001, null);
@@ -892,19 +895,19 @@ describe('TelegramGroupDailyReportService — «Bu oy hisoblandi» (ADR-0058)', 
   const OCTOBER = new Date('2026-10-08T16:00:00Z');
   const monthCharges = {
     month: '2026-10',
-    charged: 177_000_000,
-    paid: 135_900_000,
-    unpaid: 41_100_000,
+    charged: 159_300_000,
+    paid: 122_310_000,
+    unpaid: 36_990_000,
     paidPct: 76.8,
-    students: 237,
+    students: 219,
   };
   // The message is `lines.join('\n')`, so the three lines are ONE contiguous
   // block and a single `toContain` checks the wording and the order. `formatSum`
   // rather than a literal: its thousands separator is a non-breaking space.
   const chargesBlock = [
-    `• Bu oy hisoblandi: <b>${formatSum(177_000_000)}</b>`,
-    `• To'landi: <b>${formatSum(135_900_000)}</b> (<b>76.8%</b>)`,
-    `• Qoldi: <b>${formatSum(41_100_000)}</b>`,
+    `• Bu oy hisoblandi: <b>${formatSum(159_300_000)}</b>`,
+    `• To'landi: <b>${formatSum(122_310_000)}</b> (<b>76.8%</b>)`,
+    `• Qoldi: <b>${formatSum(36_990_000)}</b>`,
   ].join('\n');
 
   /**
@@ -1046,27 +1049,29 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
   });
   afterEach(() => jest.useRealTimers());
 
-  // 237 studying debtors owe 43.5M (41.1M of it this month's charges), 327
-  // others owe 40.6M. Yesterday's snapshot held 43.0M / 235, so the studying
-  // number reads ▲ 500 000 · +2.
+  // 219 studying debtors owe 39.15M (36.99M of it this month's charges), 305
+  // others owe 36.54M. Yesterday's snapshot held 38.7M / 217, so the studying
+  // number reads ▲ 450 000 · +2.
   const split = splitOf(
     {
-      total: 43_500_000,
-      count: 237,
-      currentMonth: 41_100_000,
-      older: 2_400_000,
+      total: 39_150_000,
+      count: 219,
+      currentMonth: 36_990_000,
+      currentMonthCount: 0,
+      older: 2_160_000,
     },
     {
-      total: 40_600_000,
-      count: 327,
+      total: 36_540_000,
+      count: 305,
+      currentMonth: 0,
       byKind: {
-        ungrouped: { total: 12_600_000, count: 101 },
-        frozen: { total: 18_000_000, count: 146 },
-        left: { total: 10_000_000, count: 80 },
+        ungrouped: { total: 11_340_000, count: 94 },
+        frozen: { total: 16_200_000, count: 136 },
+        left: { total: 9_000_000, count: 75 },
       },
     },
   );
-  const yesterday = { totalDebt: 43_000_000, debtorCount: 235 };
+  const yesterday = { totalDebt: 38_700_000, debtorCount: 217 };
 
   async function buildWith(
     reports: ReturnType<typeof reportsWithDebt>,
@@ -1093,9 +1098,9 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
     // `formatSum` / `formatNumber` rather than literals: their thousands
     // separator is a non-breaking space.
     const debtBlock = [
-      `• O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>  (bugun ▲ ${formatNumber(500_000)} · +2)`,
-      `   🟡 shu oy ${formatSum(41_100_000)} · 🔴 eski qarz ${formatSum(2_400_000)}`,
-      `• O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+      `• O'qiyotganlar qarzi: <b>${formatNumber(219)}</b> ta — <b>${formatSum(39_150_000)}</b>  (bugun ▲ ${formatNumber(450_000)} · +2)`,
+      `   🟡 shu oy ${formatSum(36_990_000)} · 🔴 eski qarz ${formatSum(2_160_000)}`,
+      `• O'qimayotganlar qarzi: <b>${formatNumber(305)}</b> ta — <b>${formatSum(36_540_000)}</b>`,
     ].join('\n');
     expect(message).toContain(debtBlock);
     // Under «Faol o'quvchilar», in «Hozirgi holat».
@@ -1110,7 +1115,7 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
     const { message } = await buildWith(reportsWithDebt(split));
 
     expect(message).not.toContain('Jami qarz');
-    expect(message).not.toContain(formatNumber(43_500_000 + 40_600_000));
+    expect(message).not.toContain(formatNumber(39_150_000 + 36_540_000));
   });
 
   it('prints no shu oy / eski qarz line when nobody studying owes', async () => {
@@ -1120,6 +1125,7 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
           total: 0,
           count: 0,
           currentMonth: 0,
+          currentMonthCount: 0,
           older: 0,
           olderCount: 0,
         }),
@@ -1130,7 +1136,7 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
     expect(message).toContain(
       [
         `• O'qiyotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
-        `• O'qimayotganlar qarzi: <b>${formatNumber(31)}</b> ta — <b>${formatSum(9_100_000)}</b>`,
+        `• O'qimayotganlar qarzi: <b>${formatNumber(29)}</b> ta — <b>${formatSum(8_190_000)}</b>`,
       ].join('\n'),
     );
     expect(message).not.toContain('🟡 shu oy');
@@ -1143,10 +1149,11 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
     const { message } = await buildWith(
       reportsWithDebt(
         splitOf(
-          { total: 43_000_000, count: 235 },
+          { total: 38_700_000, count: 217 },
           {
             total: 90_000_000,
             count: 600,
+            currentMonth: 0,
             byKind: {
               ungrouped: { total: 30_000_000, count: 200 },
               frozen: { total: 40_000_000, count: 270 },
@@ -1167,15 +1174,15 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
     [500_000, "Kun yakuni: ehtiyot bo'ling"], // exactly the threshold → 🟡
     [499_999, 'Kun yakuni: yaxshi'],
   ])('a studying debt up by %i is read as «%s»', async (growth, subtitle) => {
-    // Yesterday's 235 debtors, their debt up by `growth` in this month's
+    // Yesterday's 217 debtors, their debt up by `growth` in this month's
     // charges: the split stays whole (total = shu oy + eski qarz).
     const { message } = await buildWith(
       reportsWithDebt(
         splitOf({
-          total: 43_000_000 + growth,
-          count: 235,
-          currentMonth: 40_600_000 + growth,
-          older: 2_400_000,
+          total: 38_700_000 + growth,
+          count: 217,
+          currentMonth: 36_540_000 + growth,
+          older: 2_160_000,
         }),
       ),
       { flags: [] },
@@ -1204,8 +1211,8 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
     const { snapshot } = await buildWith(reportsWithDebt(split));
 
     expect(snapshot).toEqual({
-      totalDebt: 43_500_000,
-      debtorCount: 237,
+      totalDebt: 39_150_000,
+      debtorCount: 219,
       activeStudents: 1240,
       mtdIncome: 280_000_000,
     });

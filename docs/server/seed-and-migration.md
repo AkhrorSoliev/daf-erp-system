@@ -97,7 +97,7 @@ All users have password: `123456`
 |-------|------|------|--------|
 | `ceo` | CEO Admin | CEO | Farg'ona |
 
-Additionally, 10 teachers are created with individual logins (e.g. `jamsher_murtazoxonov`, password: `teacher123`), 6 rooms, 2 courses (Standart + Intensiv), and ~45 groups with full schedule data (days, time slots, room/teacher assignments).
+Additionally, each branch gets staff with generated logins (`bd<branchId>`, `admin<branchId>`, `kassir<branchId>`, and teachers as `t<branchId>_<firstname><n>`), plus rooms, courses and groups with full schedule data (days, time slots, room/teacher assignments).
 
 ### Seed Behavior
 

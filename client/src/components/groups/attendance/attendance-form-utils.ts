@@ -54,6 +54,19 @@ export interface LessonAdmission {
   paidThrough: string | null;
   /** BELOW_MIN_SHARE only: the share of the month that was asked for. */
   minPaidPercent?: number;
+  /**
+   * How far the payments reach into this group's month (server
+   * `AdmissionReach`). Absent on an older server and on an earlier day's
+   * register for an admitted student.
+   */
+  reach?: {
+    lessons: number;
+    paidLessons: number;
+    lastPaid: string | null;
+    monthCharged: number;
+    monthPaid: number;
+    next: { date: string; needed: number } | null;
+  };
 }
 
 /** Qarzdorning joriy (eng so'nggi) sikli — sana oralig'i bilan. */

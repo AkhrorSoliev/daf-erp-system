@@ -1,6 +1,6 @@
 # ADR-0037 — To'lovlar hisoboti: pul dars o'tilgan oyga yoziladi, ichki tuzatishlar darsga qo'shiladi, taqsimot FIFO
 
-**Holati:** Qabul qilindi
+**Holati:** Qabul qilindi; 5-band: narxi manfiy chiqqan oy kredit bo'lib FIFO'da taqsimlanadi — ADR-0073
 **Sana:** 2026-09-26
 **Bog'liq:** `server/src/statements/`, `docs/superpowers/specs/2026-09-26-tolovlar-hisoboti-design.md`, ADR-0004, `server/src/common/finance/ledger-replay.ts`
 

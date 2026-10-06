@@ -90,7 +90,7 @@ After seeding, these accounts are available:
 |-------|----------|------|
 | `ceo` | `123456` | CEO |
 
-The seed also creates 10 teachers with individual logins (e.g. `jamsher_murtazoxonov`, password: `teacher123`), 6 rooms, 2 courses, and ~45 groups with schedule data.
+The seed also creates per-branch staff with generated logins (`bd<branchId>`, `admin<branchId>`, `kassir<branchId>`, and teachers as `t<branchId>_<firstname><n>`, all with password `123456`), plus rooms, courses and groups with schedule data.
 
 ## Useful Commands
 
