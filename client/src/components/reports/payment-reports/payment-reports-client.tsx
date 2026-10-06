@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TeachersReportTable, type TeacherRow } from "./teachers-report-table";
 import { TeacherGroupsDialog } from "./teacher-groups-dialog";
 import { reportViewState, retryUnlessRefused } from "./report-view-state";
+import { comparisonLabel } from "./payment-report-period";
 
 type CardKey = "totalPayments" | "branchBreakdown" | "refunds";
 
@@ -54,6 +55,8 @@ interface PaymentReportsResponse {
     count: number;
     trend: { month: string; value: number }[];
   };
+  /** Yangi server maydoni — eski server javobida bo'lmaydi. */
+  comparedTo?: { startDate: string; endDate: string };
 }
 
 function fmt(n: number): string {
@@ -163,6 +166,9 @@ export function PaymentReportsClient() {
     retry: retryUnlessRefused,
   });
   const view = reportViewState({ data, isError });
+  const compareLabel = data?.comparedTo
+    ? comparisonLabel(data.comparedTo, new Date())
+    : "oldingi davrga nisbatan";
 
   return (
     <div className="space-y-4">
@@ -206,6 +212,7 @@ export function PaymentReportsClient() {
               label="Jami to'lov summasi"
               value={`${fmt(data.totalPayments.current)} so'm`}
               change={data.totalPayments.change}
+              compareLabel={compareLabel}
               valueColor="text-green-600 dark:text-green-400"
               tooltip="Tanlangan davrdagi barcha tasdiqlangan to'lovlar yig'indisi"
               onClick={() => setActiveCard("totalPayments")}
@@ -216,6 +223,7 @@ export function PaymentReportsClient() {
               label="Filiallar bo'yicha"
               value={`${fmt(data.branchBreakdown.current)} so'm`}
               change={data.branchBreakdown.change}
+              compareLabel={compareLabel}
               tooltip="Tanlangan davrdagi jami to'lovlar, filiallar kesimida. Tafsilotlar uchun bosing."
               onClick={() => setActiveCard("branchBreakdown")}
             />
@@ -228,6 +236,7 @@ export function PaymentReportsClient() {
               label="Qaytarilgan to'lovlar"
               value={`${fmt(data.refunds.current)} so'm`}
               change={data.refunds.change}
+              compareLabel={compareLabel}
               valueColor={
                 data.refunds.current > 0
                   ? "text-red-600 dark:text-red-400"

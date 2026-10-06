@@ -12,6 +12,11 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import {
+  DATE_PRESETS,
+  activePreset,
+  presetRange,
+} from "./payment-report-period";
 
 export interface PaymentReportsFilter {
   branchId: number | null;
@@ -84,9 +89,11 @@ export function PaymentReportsFilterBar({
   onChange,
 }: PaymentReportsFilterBarProps) {
   const branches = useBranchSwitcher((s) => s.branches);
-  const currentYear = new Date().getFullYear();
+  const today = new Date();
+  const currentYear = today.getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - 4 + i);
   const hasCustomRange = value.rangeStart !== null && value.rangeEnd !== null;
+  const selectedPreset = activePreset(value.rangeStart, value.rangeEnd, today);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -151,6 +158,27 @@ export function PaymentReportsFilterBar({
           ))}
         </SelectContent>
       </Select>
+
+      <div className="flex items-center gap-1">
+        {DATE_PRESETS.map((preset) => {
+          const selected = selectedPreset === preset.key;
+          return (
+            <Button
+              key={preset.key}
+              variant={selected ? "default" : "outline"}
+              size="sm"
+              className="h-9"
+              aria-pressed={selected}
+              onClick={() => {
+                const r = presetRange(preset.key, today);
+                onChange({ ...value, rangeStart: r.start, rangeEnd: r.end });
+              }}
+            >
+              {preset.label}
+            </Button>
+          );
+        })}
+      </div>
 
       <div className="flex items-center gap-1">
         <DatePicker

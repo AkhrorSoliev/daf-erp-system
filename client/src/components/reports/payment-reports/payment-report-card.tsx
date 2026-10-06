@@ -14,6 +14,8 @@ interface PaymentReportCardProps {
   label: string;
   value: string;
   change: number;
+  /** Foiz nima bilan solishtirilgani, masalan «05.10 bilan solishtirganda». */
+  compareLabel: string;
   valueColor?: string;
   tooltip?: string;
   onClick?: () => void;
@@ -24,6 +26,7 @@ export function PaymentReportCard({
   label,
   value,
   change,
+  compareLabel,
   valueColor,
   tooltip,
   onClick,
@@ -56,9 +59,7 @@ export function PaymentReportCard({
           {isUp ? "+" : ""}
           {change}%
         </span>
-        <span className="text-xs text-muted-foreground">
-          o&apos;tgan oyga nisbatan
-        </span>
+        <span className="text-xs text-muted-foreground">{compareLabel}</span>
       </div>
     </button>
   );
