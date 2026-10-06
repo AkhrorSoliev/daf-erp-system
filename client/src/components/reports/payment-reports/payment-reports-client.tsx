@@ -31,8 +31,13 @@ import { TeachersReportTable, type TeacherRow } from "./teachers-report-table";
 import { TeacherGroupsDialog } from "./teacher-groups-dialog";
 import { reportViewState, retryUnlessRefused } from "./report-view-state";
 import { comparisonLabel } from "./payment-report-period";
+import {
+  PaymentMethodsCard,
+  type PaymentMethodsReport,
+} from "./payment-methods-card";
+import { PaymentMethodsDialog } from "./payment-methods-dialog";
 
-type CardKey = "totalPayments" | "branchBreakdown" | "refunds";
+type CardKey = "totalPayments" | "methods" | "branchBreakdown" | "refunds";
 
 interface PaymentReportsResponse {
   totalPayments: {
@@ -55,7 +60,8 @@ interface PaymentReportsResponse {
     count: number;
     trend: { month: string; value: number }[];
   };
-  /** Yangi server maydoni — eski server javobida bo'lmaydi. */
+  /** Yangi server maydonlari — eski server javobida bo'lmaydi. */
+  methods?: PaymentMethodsReport;
   comparedTo?: { startDate: string; endDate: string };
 }
 
@@ -195,7 +201,7 @@ export function PaymentReportsClient() {
       ) : view === "loading" || !data ? (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 5 }).map((_, i) => (
+            {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-36 rounded-xl" />
             ))}
           </div>
@@ -217,6 +223,13 @@ export function PaymentReportsClient() {
               tooltip="Tanlangan davrdagi barcha tasdiqlangan to'lovlar yig'indisi"
               onClick={() => setActiveCard("totalPayments")}
             />
+
+            {data.methods && (
+              <PaymentMethodsCard
+                methods={data.methods}
+                onClick={() => setActiveCard("methods")}
+              />
+            )}
 
             <PaymentReportCard
               icon={Building2}
@@ -257,6 +270,16 @@ export function PaymentReportsClient() {
             onMonthsChange={setMonths}
             trend={data.totalPayments.trend}
           />
+
+          {data.methods && (
+            <PaymentMethodsDialog
+              open={activeCard === "methods"}
+              onOpenChange={(o) => !o && setActiveCard(null)}
+              trend={data.methods.trend}
+              months={months}
+              onMonthsChange={setMonths}
+            />
+          )}
 
           <BranchBreakdownDialog
             open={activeCard === "branchBreakdown"}
