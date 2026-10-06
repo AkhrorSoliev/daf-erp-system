@@ -47,6 +47,7 @@ export function PaymentMethodsCard({ methods, onClick }: PaymentMethodsCardProps
               share={`${m.share}%`}
             />
           ))}
+          <span className="col-span-4 border-t" aria-hidden />
           <MethodRow
             label="Jami"
             amount={methods.total.amount}
@@ -73,7 +74,7 @@ function MethodRow({
   share: string;
   total?: boolean;
 }) {
-  const line = total ? "border-t pt-1.5 font-semibold" : "";
+  const line = total ? "font-semibold" : "";
   return (
     <>
       <span className={line}>{label}</span>

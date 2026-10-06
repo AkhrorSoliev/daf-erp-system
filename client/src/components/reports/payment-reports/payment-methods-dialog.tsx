@@ -92,7 +92,11 @@ export function PaymentMethodsDialog({
                   cursor={{ fill: "rgba(100, 116, 139, 0.12)" }}
                   content={<MethodsTooltip />}
                 />
-                <Legend formatter={(value) => methodLabel(String(value))} />
+                {/* Ustunlar tartibida (Naqd, Payme, Click…), alifboda emas. */}
+                <Legend
+                  itemSorter={null}
+                  formatter={(value) => methodLabel(String(value))}
+                />
                 {methods.map((m) => (
                   <Bar
                     key={m}
