@@ -1,0 +1,1722 @@
+{
+ "unit": "u04",
+ "woerter": [
+  {
+   "sourceId": "u04-s1-lebensmittel",
+   "section": "u04-s1",
+   "de": "Lebensmittel",
+   "uz": "oziq-ovqat",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u04-s1-brot",
+   "section": "u04-s1",
+   "de": "Brot",
+   "artikel": "das",
+   "plural": "Brote",
+   "uz": "non",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u04-s1-butter",
+   "section": "u04-s1",
+   "de": "Butter",
+   "artikel": "die",
+   "uz": "sariyog'",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u04-s1-kaese",
+   "section": "u04-s1",
+   "de": "Käse",
+   "artikel": "der",
+   "uz": "pishloq",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u04-s1-milch",
+   "section": "u04-s1",
+   "de": "Milch",
+   "artikel": "die",
+   "uz": "sut",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u04-s1-ei",
+   "section": "u04-s1",
+   "de": "Ei",
+   "artikel": "das",
+   "plural": "Eier",
+   "uz": "tuxum",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u04-s1-fleisch",
+   "section": "u04-s1",
+   "de": "Fleisch",
+   "artikel": "das",
+   "uz": "go'sht",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u04-s1-haehnchen",
+   "section": "u04-s1",
+   "de": "Hähnchen",
+   "artikel": "das",
+   "plural": "Hähnchen",
+   "uz": "tovuq go'shti",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u04-s1-wurst",
+   "section": "u04-s1",
+   "de": "Wurst",
+   "artikel": "die",
+   "plural": "Würste",
+   "uz": "kolbasa",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u04-s1-wuerstchen",
+   "section": "u04-s1",
+   "de": "Würstchen",
+   "artikel": "das",
+   "plural": "Würstchen",
+   "uz": "sosiska",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u04-s1-fisch",
+   "section": "u04-s1",
+   "de": "Fisch",
+   "artikel": "der",
+   "plural": "Fische",
+   "uz": "baliq",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u04-s1-reis",
+   "section": "u04-s1",
+   "de": "Reis",
+   "artikel": "der",
+   "uz": "guruch",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u04-s1-nudel",
+   "section": "u04-s1",
+   "de": "Nudel",
+   "artikel": "die",
+   "plural": "Nudeln",
+   "uz": "makaron",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u04-s1-obst",
+   "section": "u04-s1",
+   "de": "Obst",
+   "artikel": "das",
+   "uz": "meva",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u04-s1-apfel",
+   "section": "u04-s1",
+   "de": "Apfel",
+   "artikel": "der",
+   "plural": "Äpfel",
+   "uz": "olma",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u04-s1-banane",
+   "section": "u04-s1",
+   "de": "Banane",
+   "artikel": "die",
+   "plural": "Bananen",
+   "uz": "banan",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u04-s1-birne",
+   "section": "u04-s1",
+   "de": "Birne",
+   "artikel": "die",
+   "plural": "Birnen",
+   "uz": "nok",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u04-s1-gemuese",
+   "section": "u04-s1",
+   "de": "Gemüse",
+   "artikel": "das",
+   "uz": "sabzavot",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u04-s1-kartoffel",
+   "section": "u04-s1",
+   "de": "Kartoffel",
+   "artikel": "die",
+   "plural": "Kartoffeln",
+   "uz": "kartoshka",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u04-s1-tomate",
+   "section": "u04-s1",
+   "de": "Tomate",
+   "artikel": "die",
+   "plural": "Tomaten",
+   "uz": "pomidor",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u04-s1-gurke",
+   "section": "u04-s1",
+   "de": "Gurke",
+   "artikel": "die",
+   "plural": "Gurken",
+   "uz": "bodring",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u04-s1-zwiebel",
+   "section": "u04-s1",
+   "de": "Zwiebel",
+   "artikel": "die",
+   "plural": "Zwiebeln",
+   "uz": "piyoz",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u04-s1-salat",
+   "section": "u04-s1",
+   "de": "Salat",
+   "artikel": "der",
+   "plural": "Salate",
+   "uz": "salat",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u04-s1-schokolade",
+   "section": "u04-s1",
+   "de": "Schokolade",
+   "artikel": "die",
+   "uz": "shokolad",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u04-s1-keks",
+   "section": "u04-s1",
+   "de": "Keks",
+   "artikel": "der",
+   "plural": "Kekse",
+   "uz": "pechenye",
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u04-s1-olive",
+   "section": "u04-s1",
+   "de": "Olive",
+   "artikel": "die",
+   "plural": "Oliven",
+   "uz": "zaytun",
+   "core": true,
+   "order": 26
+  },
+  {
+   "sourceId": "u04-s1-rindfleisch",
+   "section": "u04-s1",
+   "de": "Rindfleisch",
+   "artikel": "das",
+   "uz": "mol go'shti",
+   "core": true,
+   "order": 27
+  },
+  {
+   "sourceId": "u04-s1-lammfleisch",
+   "section": "u04-s1",
+   "de": "Lammfleisch",
+   "artikel": "das",
+   "uz": "qo'y go'shti",
+   "core": true,
+   "order": 28
+  },
+  {
+   "sourceId": "u04-s1-karotte",
+   "section": "u04-s1",
+   "de": "Karotte",
+   "artikel": "die",
+   "plural": "Karotten",
+   "uz": "sabzi",
+   "core": true,
+   "order": 29
+  },
+  {
+   "sourceId": "u04-s1-knoblauch",
+   "section": "u04-s1",
+   "de": "Knoblauch",
+   "artikel": "der",
+   "uz": "sarimsoq",
+   "core": true,
+   "order": 30
+  },
+  {
+   "sourceId": "u04-s1-zum-beispiel",
+   "section": "u04-s1",
+   "de": "zum Beispiel",
+   "uz": "masalan",
+   "core": true,
+   "order": 31
+  },
+  {
+   "sourceId": "u04-s1-orange",
+   "section": "u04-s1",
+   "de": "Orange",
+   "artikel": "die",
+   "plural": "Orangen",
+   "uz": "apelsin",
+   "core": true,
+   "order": 32
+  },
+  {
+   "sourceId": "u04-s1-traube",
+   "section": "u04-s1",
+   "de": "Traube",
+   "artikel": "die",
+   "plural": "Trauben",
+   "uz": "uzum",
+   "core": true,
+   "order": 33
+  },
+  {
+   "sourceId": "u04-s1-melone",
+   "section": "u04-s1",
+   "de": "Melone",
+   "artikel": "die",
+   "plural": "Melonen",
+   "uz": "qovun",
+   "core": true,
+   "order": 34
+  },
+  {
+   "sourceId": "u04-s2-supermarkt",
+   "section": "u04-s2",
+   "de": "Supermarkt",
+   "artikel": "der",
+   "plural": "Supermärkte",
+   "uz": "supermarket",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u04-s2-geschaeft",
+   "section": "u04-s2",
+   "de": "Geschäft",
+   "artikel": "das",
+   "plural": "Geschäfte",
+   "uz": "do'kon",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u04-s2-baeckerei",
+   "section": "u04-s2",
+   "de": "Bäckerei",
+   "artikel": "die",
+   "plural": "Bäckereien",
+   "uz": "novvoyxona",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u04-s2-baecker",
+   "section": "u04-s2",
+   "de": "Bäcker",
+   "artikel": "der",
+   "plural": "Bäcker",
+   "uz": "novvoy",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u04-s2-metzgerei",
+   "section": "u04-s2",
+   "de": "Metzgerei",
+   "artikel": "die",
+   "plural": "Metzgereien",
+   "uz": "go'sht do'koni",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u04-s2-einkaufen",
+   "section": "u04-s2",
+   "de": "einkaufen",
+   "uz": "xarid qilmoq",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u04-s2-kaufen",
+   "section": "u04-s2",
+   "de": "kaufen",
+   "uz": "sotib olmoq",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u04-s2-einkaufszettel",
+   "section": "u04-s2",
+   "de": "Einkaufszettel",
+   "artikel": "der",
+   "plural": "Einkaufszettel",
+   "uz": "xarid ro'yxati",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u04-s2-liste",
+   "section": "u04-s2",
+   "de": "Liste",
+   "artikel": "die",
+   "plural": "Listen",
+   "uz": "ro'yxat",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u04-s2-einkaufswagen",
+   "section": "u04-s2",
+   "de": "Einkaufswagen",
+   "artikel": "der",
+   "plural": "Einkaufswagen",
+   "uz": "xarid aravachasi",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u04-s2-tuete",
+   "section": "u04-s2",
+   "de": "Tüte",
+   "artikel": "die",
+   "plural": "Tüten",
+   "uz": "paket",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u04-s2-frisch",
+   "section": "u04-s2",
+   "de": "frisch",
+   "uz": "yangi, sarxil",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u04-s2-stueck",
+   "section": "u04-s2",
+   "de": "Stück",
+   "artikel": "das",
+   "plural": "Stücke",
+   "uz": "bo'lak, dona",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u04-s2-preis",
+   "section": "u04-s2",
+   "de": "Preis",
+   "artikel": "der",
+   "plural": "Preise",
+   "uz": "narx",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u04-s2-kosten",
+   "section": "u04-s2",
+   "de": "kosten",
+   "uz": "turmoq (narxi)",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u04-s2-wie-viel",
+   "section": "u04-s2",
+   "de": "wie viel",
+   "uz": "qancha",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u04-s2-teuer",
+   "section": "u04-s2",
+   "de": "teuer",
+   "uz": "qimmat",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u04-s2-geld",
+   "section": "u04-s2",
+   "de": "Geld",
+   "artikel": "das",
+   "uz": "pul",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u04-s2-euro",
+   "section": "u04-s2",
+   "de": "Euro",
+   "artikel": "der",
+   "uz": "yevro",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u04-s2-cent",
+   "section": "u04-s2",
+   "de": "Cent",
+   "artikel": "der",
+   "uz": "sent",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u04-s2-insgesamt",
+   "section": "u04-s2",
+   "de": "insgesamt",
+   "uz": "jami",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u04-s2-geben",
+   "section": "u04-s2",
+   "de": "geben",
+   "uz": "bermoq",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u04-s2-wechseln",
+   "section": "u04-s2",
+   "de": "wechseln",
+   "uz": "almashtirmoq",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u04-s2-stimmen",
+   "section": "u04-s2",
+   "de": "stimmen",
+   "uz": "to'g'ri bo'lmoq",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u04-s2-kassenzettel",
+   "section": "u04-s2",
+   "de": "Kassenzettel",
+   "artikel": "der",
+   "plural": "Kassenzettel",
+   "uz": "kassa cheki",
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u04-s2-drankommen",
+   "section": "u04-s2",
+   "de": "drankommen",
+   "uz": "navbati kelmoq",
+   "core": true,
+   "order": 26
+  },
+  {
+   "sourceId": "u04-s2-becher",
+   "section": "u04-s2",
+   "de": "Becher",
+   "artikel": "der",
+   "plural": "Becher",
+   "uz": "stakancha",
+   "core": true,
+   "order": 27
+  },
+  {
+   "sourceId": "u04-s2-dose",
+   "section": "u04-s2",
+   "de": "Dose",
+   "artikel": "die",
+   "plural": "Dosen",
+   "uz": "konserva bankasi",
+   "core": true,
+   "order": 28
+  },
+  {
+   "sourceId": "u04-s2-packung",
+   "section": "u04-s2",
+   "de": "Packung",
+   "artikel": "die",
+   "plural": "Packungen",
+   "uz": "qadoq",
+   "core": true,
+   "order": 29
+  },
+  {
+   "sourceId": "u04-s2-verpackung",
+   "section": "u04-s2",
+   "de": "Verpackung",
+   "artikel": "die",
+   "plural": "Verpackungen",
+   "uz": "o'ram",
+   "core": false,
+   "order": 30
+  },
+  {
+   "sourceId": "u04-s2-mass",
+   "section": "u04-s2",
+   "de": "Maß",
+   "artikel": "das",
+   "uz": "o'lchov",
+   "core": false,
+   "order": 31
+  },
+  {
+   "sourceId": "u04-s2-billig",
+   "section": "u04-s2",
+   "de": "billig",
+   "uz": "arzon",
+   "core": true,
+   "order": 32
+  },
+  {
+   "sourceId": "u04-s2-kasse",
+   "section": "u04-s2",
+   "de": "Kasse",
+   "artikel": "die",
+   "plural": "Kassen",
+   "uz": "kassa",
+   "core": true,
+   "order": 33
+  },
+  {
+   "sourceId": "u04-s2-bar",
+   "section": "u04-s2",
+   "de": "bar",
+   "uz": "naqd",
+   "core": true,
+   "order": 34
+  },
+  {
+   "sourceId": "u04-s3-essen",
+   "section": "u04-s3",
+   "de": "essen",
+   "uz": "yemoq",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u04-s3-trinken",
+   "section": "u04-s3",
+   "de": "trinken",
+   "uz": "ichmoq",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u04-s3-gern",
+   "section": "u04-s3",
+   "de": "gern",
+   "uz": "yoqtirib",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u04-s3-lieber",
+   "section": "u04-s3",
+   "de": "lieber",
+   "uz": "afzalroq",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u04-s3-moegen",
+   "section": "u04-s3",
+   "de": "mögen",
+   "uz": "yoqtirmoq",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u04-s3-vorliebe",
+   "section": "u04-s3",
+   "de": "Vorliebe",
+   "artikel": "die",
+   "uz": "xush ko'rish",
+   "core": false,
+   "order": 6
+  },
+  {
+   "sourceId": "u04-s3-schmecken",
+   "section": "u04-s3",
+   "de": "schmecken",
+   "uz": "ta'mi yoqmoq",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u04-s3-lecker",
+   "section": "u04-s3",
+   "de": "lecker",
+   "uz": "mazali",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u04-s3-bitter",
+   "section": "u04-s3",
+   "de": "bitter",
+   "uz": "taxir",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u04-s3-probieren",
+   "section": "u04-s3",
+   "de": "probieren",
+   "uz": "tatib ko'rmoq",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u04-s3-hunger",
+   "section": "u04-s3",
+   "de": "Hunger",
+   "artikel": "der",
+   "uz": "ochlik",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u04-s3-durst",
+   "section": "u04-s3",
+   "de": "Durst",
+   "artikel": "der",
+   "uz": "chanqoqlik",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u04-s3-satt",
+   "section": "u04-s3",
+   "de": "satt",
+   "uz": "to'q",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u04-s3-pizza",
+   "section": "u04-s3",
+   "de": "Pizza",
+   "artikel": "die",
+   "plural": "Pizzas",
+   "uz": "pitsa",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u04-s3-spaghetti",
+   "section": "u04-s3",
+   "de": "Spaghetti",
+   "uz": "spagetti",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u04-s3-doener",
+   "section": "u04-s3",
+   "de": "Döner",
+   "artikel": "der",
+   "plural": "Döner",
+   "uz": "doner",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u04-s3-sushi",
+   "section": "u04-s3",
+   "de": "Sushi",
+   "artikel": "das",
+   "uz": "sushi",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u04-s3-pommes-frites",
+   "section": "u04-s3",
+   "de": "Pommes frites",
+   "uz": "kartoshka fri",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u04-s3-asiatisch",
+   "section": "u04-s3",
+   "de": "asiatisch",
+   "uz": "osiyocha",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u04-s3-eis",
+   "section": "u04-s3",
+   "de": "Eis",
+   "artikel": "das",
+   "uz": "muzqaymoq",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u04-s3-wasser",
+   "section": "u04-s3",
+   "de": "Wasser",
+   "artikel": "das",
+   "uz": "suv",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u04-s3-saft",
+   "section": "u04-s3",
+   "de": "Saft",
+   "artikel": "der",
+   "plural": "Säfte",
+   "uz": "sharbat",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u04-s3-apfelsaft",
+   "section": "u04-s3",
+   "de": "Apfelsaft",
+   "artikel": "der",
+   "uz": "olma sharbati",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u04-s3-orangensaft",
+   "section": "u04-s3",
+   "de": "Orangensaft",
+   "artikel": "der",
+   "uz": "apelsin sharbati",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u04-s3-limonade",
+   "section": "u04-s3",
+   "de": "Limonade",
+   "artikel": "die",
+   "plural": "Limonaden",
+   "uz": "limonad",
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u04-s3-cola",
+   "section": "u04-s3",
+   "de": "Cola",
+   "artikel": "die",
+   "uz": "kola",
+   "core": true,
+   "order": 26
+  },
+  {
+   "sourceId": "u04-s3-schweinefleisch",
+   "section": "u04-s3",
+   "de": "Schweinefleisch",
+   "artikel": "das",
+   "uz": "cho'chqa go'shti",
+   "core": false,
+   "order": 27
+  },
+  {
+   "sourceId": "u04-s3-suess",
+   "section": "u04-s3",
+   "de": "süß",
+   "uz": "shirin",
+   "core": true,
+   "order": 28
+  },
+  {
+   "sourceId": "u04-s3-das-essen",
+   "section": "u04-s3",
+   "de": "Essen",
+   "artikel": "das",
+   "uz": "ovqat",
+   "core": true,
+   "order": 29
+  },
+  {
+   "sourceId": "u04-s3-scharf",
+   "section": "u04-s3",
+   "de": "scharf",
+   "uz": "achchiq (qalampirli)",
+   "core": true,
+   "order": 30
+  },
+  {
+   "sourceId": "u04-s4-fruehstueck",
+   "section": "u04-s4",
+   "de": "Frühstück",
+   "artikel": "das",
+   "uz": "nonushta",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u04-s4-fruehstuecken",
+   "section": "u04-s4",
+   "de": "frühstücken",
+   "uz": "nonushta qilmoq",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u04-s4-mittagessen",
+   "section": "u04-s4",
+   "de": "Mittagessen",
+   "artikel": "das",
+   "uz": "tushlik",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u04-s4-zu-mittag-essen",
+   "section": "u04-s4",
+   "de": "zu Mittag essen",
+   "uz": "tushlik qilmoq",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u04-s4-abendessen",
+   "section": "u04-s4",
+   "de": "Abendessen",
+   "artikel": "das",
+   "uz": "kechki ovqat",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u04-s4-mahlzeit",
+   "section": "u04-s4",
+   "de": "Mahlzeit",
+   "artikel": "die",
+   "plural": "Mahlzeiten",
+   "uz": "ovqat mahali",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u04-s4-vormittag",
+   "section": "u04-s4",
+   "de": "Vormittag",
+   "artikel": "der",
+   "plural": "Vormittage",
+   "uz": "tushgacha vaqt",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u04-s4-mittag",
+   "section": "u04-s4",
+   "de": "Mittag",
+   "artikel": "der",
+   "uz": "tush payti",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u04-s4-nachmittag",
+   "section": "u04-s4",
+   "de": "Nachmittag",
+   "artikel": "der",
+   "plural": "Nachmittage",
+   "uz": "tushdan keyingi vaqt",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u04-s4-abend",
+   "section": "u04-s4",
+   "de": "Abend",
+   "artikel": "der",
+   "plural": "Abende",
+   "uz": "oqshom",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u04-s4-uhr",
+   "section": "u04-s4",
+   "de": "Uhr",
+   "artikel": "die",
+   "plural": "Uhren",
+   "uz": "soat",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u04-s4-broetchen",
+   "section": "u04-s4",
+   "de": "Brötchen",
+   "artikel": "das",
+   "plural": "Brötchen",
+   "uz": "bulochka",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u04-s4-butterbrot",
+   "section": "u04-s4",
+   "de": "Butterbrot",
+   "artikel": "das",
+   "plural": "Butterbrote",
+   "uz": "sariyog'li non",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u04-s4-sandwich",
+   "section": "u04-s4",
+   "de": "Sandwich",
+   "artikel": "das",
+   "plural": "Sandwiches",
+   "uz": "sendvich",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u04-s4-marmelade",
+   "section": "u04-s4",
+   "de": "Marmelade",
+   "artikel": "die",
+   "uz": "murabbo",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u04-s4-joghurt",
+   "section": "u04-s4",
+   "de": "Joghurt",
+   "artikel": "der",
+   "uz": "yogurt",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u04-s4-muesli",
+   "section": "u04-s4",
+   "de": "Müsli",
+   "artikel": "das",
+   "uz": "myusli",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u04-s4-kaffee",
+   "section": "u04-s4",
+   "de": "Kaffee",
+   "artikel": "der",
+   "uz": "qahva",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u04-s4-tee",
+   "section": "u04-s4",
+   "de": "Tee",
+   "artikel": "der",
+   "uz": "choy",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u04-s4-kuchen",
+   "section": "u04-s4",
+   "de": "Kuchen",
+   "artikel": "der",
+   "plural": "Kuchen",
+   "uz": "pirog",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u04-s4-appetit",
+   "section": "u04-s4",
+   "de": "Appetit",
+   "artikel": "der",
+   "uz": "ishtaha",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u04-s4-guten-appetit",
+   "section": "u04-s4",
+   "de": "guten Appetit",
+   "uz": "yoqimli ishtaha",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u04-s4-gleichfalls",
+   "section": "u04-s4",
+   "de": "gleichfalls",
+   "uz": "sizga ham",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u04-s4-morgen",
+   "section": "u04-s4",
+   "de": "Morgen",
+   "artikel": "der",
+   "uz": "tong",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u04-s5-restaurant",
+   "section": "u04-s5",
+   "de": "Restaurant",
+   "artikel": "das",
+   "plural": "Restaurants",
+   "uz": "restoran",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u04-s5-cafe",
+   "section": "u04-s5",
+   "de": "Café",
+   "artikel": "das",
+   "plural": "Cafés",
+   "uz": "kafe",
+   "core": true,
+   "order": 2,
+   "akzeptiert": [
+    "Cafe"
+   ]
+  },
+  {
+   "sourceId": "u04-s5-lokal",
+   "section": "u04-s5",
+   "de": "Lokal",
+   "artikel": "das",
+   "plural": "Lokale",
+   "uz": "ovqatlanish joyi",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u04-s5-selbstbedienung",
+   "section": "u04-s5",
+   "de": "Selbstbedienung",
+   "artikel": "die",
+   "uz": "o'z-o'ziga xizmat",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u04-s5-zu-zweit",
+   "section": "u04-s5",
+   "de": "zu zweit",
+   "uz": "ikki kishi bo'lib",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u04-s5-zu-dritt",
+   "section": "u04-s5",
+   "de": "zu dritt",
+   "uz": "uch kishi bo'lib",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u04-s5-speisekarte",
+   "section": "u04-s5",
+   "de": "Speisekarte",
+   "artikel": "die",
+   "plural": "Speisekarten",
+   "uz": "menyu",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u04-s5-waehlen",
+   "section": "u04-s5",
+   "de": "wählen",
+   "uz": "tanlamoq",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u04-s5-bestellen",
+   "section": "u04-s5",
+   "de": "bestellen",
+   "uz": "buyurtma bermoq",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u04-s5-bestellung",
+   "section": "u04-s5",
+   "de": "Bestellung",
+   "artikel": "die",
+   "uz": "buyurtma",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u04-s5-moechten",
+   "section": "u04-s5",
+   "de": "möchten",
+   "uz": "xohlamoq",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u04-s5-kellner",
+   "section": "u04-s5",
+   "de": "Kellner",
+   "artikel": "der",
+   "plural": "Kellner",
+   "uz": "ofitsiant",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u04-s5-kellnerin",
+   "section": "u04-s5",
+   "de": "Kellnerin",
+   "artikel": "die",
+   "plural": "Kellnerinnen",
+   "uz": "ofitsiant ayol",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u04-s5-bringen",
+   "section": "u04-s5",
+   "de": "bringen",
+   "uz": "olib kelmoq",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u04-s5-gericht",
+   "section": "u04-s5",
+   "de": "Gericht",
+   "artikel": "das",
+   "plural": "Gerichte",
+   "uz": "taom",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u04-s5-spezialitaet",
+   "section": "u04-s5",
+   "de": "Spezialität",
+   "artikel": "die",
+   "plural": "Spezialitäten",
+   "uz": "o'ziga xos taom",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u04-s5-fischgericht",
+   "section": "u04-s5",
+   "de": "Fischgericht",
+   "artikel": "das",
+   "uz": "baliq taomi",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u04-s5-suppe",
+   "section": "u04-s5",
+   "de": "Suppe",
+   "artikel": "die",
+   "plural": "Suppen",
+   "uz": "sho'rva",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u04-s5-tomatensuppe",
+   "section": "u04-s5",
+   "de": "Tomatensuppe",
+   "artikel": "die",
+   "uz": "pomidor sho'rvasi",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u04-s5-schnitzel",
+   "section": "u04-s5",
+   "de": "Schnitzel",
+   "artikel": "das",
+   "plural": "Schnitzel",
+   "uz": "shnitsel",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u04-s5-dessert",
+   "section": "u04-s5",
+   "de": "Dessert",
+   "artikel": "das",
+   "plural": "Desserts",
+   "uz": "desert",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u04-s5-getraenk",
+   "section": "u04-s5",
+   "de": "Getränk",
+   "artikel": "das",
+   "plural": "Getränke",
+   "uz": "ichimlik",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u04-s5-apfelschorle",
+   "section": "u04-s5",
+   "de": "Apfelschorle",
+   "artikel": "die",
+   "uz": "gazli olma sharbati",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u04-s5-rechnung",
+   "section": "u04-s5",
+   "de": "Rechnung",
+   "artikel": "die",
+   "plural": "Rechnungen",
+   "uz": "hisob",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u04-s5-zahlen",
+   "section": "u04-s5",
+   "de": "zahlen",
+   "uz": "hisobni to'lamoq",
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u04-s5-getrennt",
+   "section": "u04-s5",
+   "de": "getrennt",
+   "uz": "alohida",
+   "core": true,
+   "order": 26
+  },
+  {
+   "sourceId": "u04-s5-trinkgeld",
+   "section": "u04-s5",
+   "de": "Trinkgeld",
+   "artikel": "das",
+   "uz": "choychaqa",
+   "core": true,
+   "order": 27
+  },
+  {
+   "sourceId": "u04-s5-gabel",
+   "section": "u04-s5",
+   "de": "Gabel",
+   "artikel": "die",
+   "plural": "Gabeln",
+   "uz": "sanchqi",
+   "core": true,
+   "order": 28
+  },
+  {
+   "sourceId": "u04-s5-loeffel",
+   "section": "u04-s5",
+   "de": "Löffel",
+   "artikel": "der",
+   "plural": "Löffel",
+   "uz": "qoshiq",
+   "core": true,
+   "order": 29
+  },
+  {
+   "sourceId": "u04-s5-messer",
+   "section": "u04-s5",
+   "de": "Messer",
+   "artikel": "das",
+   "plural": "Messer",
+   "uz": "pichoq",
+   "core": true,
+   "order": 30
+  },
+  {
+   "sourceId": "u04-s5-serviette",
+   "section": "u04-s5",
+   "de": "Serviette",
+   "artikel": "die",
+   "plural": "Servietten",
+   "uz": "salfetka",
+   "core": true,
+   "order": 31
+  },
+  {
+   "sourceId": "u04-s5-tasse",
+   "section": "u04-s5",
+   "de": "Tasse",
+   "artikel": "die",
+   "plural": "Tassen",
+   "uz": "chashka",
+   "core": true,
+   "order": 32
+  },
+  {
+   "sourceId": "u04-s5-teller",
+   "section": "u04-s5",
+   "de": "Teller",
+   "artikel": "der",
+   "plural": "Teller",
+   "uz": "likopcha",
+   "core": true,
+   "order": 33
+  },
+  {
+   "sourceId": "u04-s5-halal",
+   "section": "u04-s5",
+   "de": "halal",
+   "uz": "halol",
+   "core": true,
+   "order": 34
+  },
+  {
+   "sourceId": "u04-s5-vegetarisch",
+   "section": "u04-s5",
+   "de": "vegetarisch",
+   "uz": "go'shtsiz",
+   "core": true,
+   "order": 35
+  },
+  {
+   "sourceId": "u04-s6-rezept",
+   "section": "u04-s6",
+   "de": "Rezept",
+   "artikel": "das",
+   "plural": "Rezepte",
+   "uz": "retsept",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u04-s6-kochen",
+   "section": "u04-s6",
+   "de": "kochen",
+   "uz": "ovqat pishirmoq",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u04-s6-brauchen",
+   "section": "u04-s6",
+   "de": "brauchen",
+   "uz": "kerak bo'lmoq",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u04-s6-schneiden",
+   "section": "u04-s6",
+   "de": "schneiden",
+   "uz": "kesmoq",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u04-s6-schaelen",
+   "section": "u04-s6",
+   "de": "schälen",
+   "uz": "po'stini archmoq",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u04-s6-mischen",
+   "section": "u04-s6",
+   "de": "mischen",
+   "uz": "aralashtirmoq",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u04-s6-grillen",
+   "section": "u04-s6",
+   "de": "grillen",
+   "uz": "mangalda pishirmoq",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u04-s6-grillparty",
+   "section": "u04-s6",
+   "de": "Grillparty",
+   "artikel": "die",
+   "uz": "mangal ziyofati",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u04-s6-fertig",
+   "section": "u04-s6",
+   "de": "fertig",
+   "uz": "tayyor",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u04-s6-kilo",
+   "section": "u04-s6",
+   "de": "Kilo",
+   "artikel": "das",
+   "uz": "kilogramm",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u04-s6-pfund",
+   "section": "u04-s6",
+   "de": "Pfund",
+   "artikel": "das",
+   "uz": "yarim kilo",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u04-s6-gramm",
+   "section": "u04-s6",
+   "de": "Gramm",
+   "artikel": "das",
+   "uz": "gramm",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u04-s6-liter",
+   "section": "u04-s6",
+   "de": "Liter",
+   "artikel": "der",
+   "uz": "litr",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u04-s6-flasche",
+   "section": "u04-s6",
+   "de": "Flasche",
+   "artikel": "die",
+   "plural": "Flaschen",
+   "uz": "shisha",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u04-s6-glas",
+   "section": "u04-s6",
+   "de": "Glas",
+   "artikel": "das",
+   "plural": "Gläser",
+   "uz": "stakan",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u04-s6-deckel",
+   "section": "u04-s6",
+   "de": "Deckel",
+   "artikel": "der",
+   "plural": "Deckel",
+   "uz": "qopqoq",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u04-s6-circa",
+   "section": "u04-s6",
+   "de": "circa",
+   "uz": "taxminan",
+   "core": true,
+   "order": 17,
+   "akzeptiert": [
+    "zirka"
+   ]
+  },
+  {
+   "sourceId": "u04-s6-mehr",
+   "section": "u04-s6",
+   "de": "mehr",
+   "uz": "ko'proq",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u04-s6-wenig",
+   "section": "u04-s6",
+   "de": "wenig",
+   "uz": "oz",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u04-s6-doppelt",
+   "section": "u04-s6",
+   "de": "doppelt",
+   "uz": "ikki baravar",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u04-s6-salz",
+   "section": "u04-s6",
+   "de": "Salz",
+   "artikel": "das",
+   "uz": "tuz",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u04-s6-pfeffer",
+   "section": "u04-s6",
+   "de": "Pfeffer",
+   "artikel": "der",
+   "uz": "qora murch",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u04-s6-zucker",
+   "section": "u04-s6",
+   "de": "Zucker",
+   "artikel": "der",
+   "uz": "shakar",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u04-s6-oel",
+   "section": "u04-s6",
+   "de": "Öl",
+   "artikel": "das",
+   "uz": "o'simlik yog'i",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u04-s6-essig",
+   "section": "u04-s6",
+   "de": "Essig",
+   "artikel": "der",
+   "uz": "sirka",
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u04-s6-sahne",
+   "section": "u04-s6",
+   "de": "Sahne",
+   "artikel": "die",
+   "uz": "qaymoq",
+   "core": true,
+   "order": 26
+  },
+  {
+   "sourceId": "u04-s6-champignon",
+   "section": "u04-s6",
+   "de": "Champignon",
+   "artikel": "der",
+   "plural": "Champignons",
+   "uz": "qo'ziqorin",
+   "core": true,
+   "order": 27
+  },
+  {
+   "sourceId": "u04-s6-alkohol",
+   "section": "u04-s6",
+   "de": "Alkohol",
+   "artikel": "der",
+   "uz": "spirtli ichimlik",
+   "core": false,
+   "order": 28
+  },
+  {
+   "sourceId": "u04-s6-zubereiten",
+   "section": "u04-s6",
+   "de": "zubereiten",
+   "uz": "taom tayyorlamoq",
+   "core": true,
+   "order": 29
+  },
+  {
+   "sourceId": "u04-s6-topf",
+   "section": "u04-s6",
+   "de": "Topf",
+   "artikel": "der",
+   "plural": "Töpfe",
+   "uz": "qozon",
+   "core": true,
+   "order": 30
+  },
+  {
+   "sourceId": "u04-s6-braten",
+   "section": "u04-s6",
+   "de": "braten",
+   "uz": "qovurmoq",
+   "core": true,
+   "order": 31
+  }
+ ]
+}

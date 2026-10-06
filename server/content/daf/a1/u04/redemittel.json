@@ -1,0 +1,145 @@
+{
+  "unit": "u04",
+  "phrasen": [
+    {
+      "section": "u04-s1",
+      "funktion": "fragen, was etwas ist",
+      "funktionUz": "mahsulot nimaligini taxmin qilib so'rash",
+      "de": "Ist das eine Melone?",
+      "uz": "Bu qovunmi?"
+    },
+    {
+      "section": "u04-s1",
+      "funktion": "sagen, was man hat",
+      "funktionUz": "uyda nima borligini aytish",
+      "de": "Wir haben Brot und Käse.",
+      "uz": "Bizda non va pishloq bor."
+    },
+    {
+      "section": "u04-s1",
+      "funktion": "sagen, was fehlt",
+      "funktionUz": "uyda nima yo'qligini aytish",
+      "de": "Wir haben keine Eier.",
+      "uz": "Bizda tuxum yo'q."
+    },
+    {
+      "section": "u04-s2",
+      "funktion": "nach dem Preis fragen",
+      "funktionUz": "narxini so'rash",
+      "de": "Was kostet das?",
+      "uz": "Bu qancha turadi?"
+    },
+    {
+      "section": "u04-s2",
+      "funktion": "etwas verlangen",
+      "funktionUz": "sotuvchidan kerakli narsani so'rab olish",
+      "de": "Geben Sie mir bitte drei Äpfel.",
+      "uz": "Menga uchta olma bering, iltimos."
+    },
+    {
+      "section": "u04-s2",
+      "funktion": "den Einkauf beenden",
+      "funktionUz": "xarid tugaganini aytish",
+      "de": "Das ist alles, danke.",
+      "uz": "Shu xolos, rahmat."
+    },
+    {
+      "section": "u04-s3",
+      "funktion": "nach Vorlieben fragen",
+      "funktionUz": "qanday ovqatni yaxshi ko'rishini so'rash",
+      "de": "Was isst du gern?",
+      "uz": "Nimani yeyishni yaxshi ko'rasan?"
+    },
+    {
+      "section": "u04-s3",
+      "funktion": "Schweinefleisch ablehnen",
+      "funktionUz": "cho'chqa go'shtini yemasligini aytish",
+      "de": "Ich esse kein Schweinefleisch.",
+      "uz": "Men cho'chqa go'shtini yemayman."
+    },
+    {
+      "section": "u04-s3",
+      "funktion": "sagen, dass es schmeckt",
+      "funktionUz": "ovqat mazali ekanini aytish",
+      "de": "Das schmeckt gut!",
+      "uz": "Bu mazali ekan!"
+    },
+    {
+      "section": "u04-s3",
+      "funktion": "Hunger haben",
+      "funktionUz": "qorni ochganini aytish",
+      "de": "Ich habe Hunger.",
+      "uz": "Qornim och."
+    },
+    {
+      "section": "u04-s4",
+      "funktion": "guten Appetit wünschen",
+      "funktionUz": "ovqat oldidan yoqimli ishtaha tilash",
+      "de": "Guten Appetit!",
+      "uz": "Yoqimli ishtaha!"
+    },
+    {
+      "section": "u04-s4",
+      "funktion": "den Wunsch erwidern",
+      "funktionUz": "tilakka javoban o'sha tilakni qaytarish",
+      "de": "Danke, gleichfalls!",
+      "uz": "Rahmat, sizga ham!"
+    },
+    {
+      "section": "u04-s4",
+      "funktion": "nach der Essenszeit fragen",
+      "funktionUz": "nonushta vaqtini so'rash",
+      "de": "Um wie viel Uhr frühstückt ihr?",
+      "uz": "Soat nechada nonushta qilasizlar?"
+    },
+    {
+      "section": "u04-s5",
+      "funktion": "etwas bestellen",
+      "funktionUz": "ofitsiantga taom buyurtma qilish",
+      "de": "Ich hätte gern eine Suppe.",
+      "uz": "Menga bitta sho'rva bersangiz."
+    },
+    {
+      "section": "u04-s5",
+      "funktion": "nach der Rechnung fragen",
+      "funktionUz": "hisobni so'rash",
+      "de": "Die Rechnung, bitte!",
+      "uz": "Hisobni keltiring, iltimos!"
+    },
+    {
+      "section": "u04-s5",
+      "funktion": "nach halal fragen",
+      "funktionUz": "go'sht halolligini so'rash",
+      "de": "Ist das Fleisch halal?",
+      "uz": "Go'sht halolmi?"
+    },
+    {
+      "section": "u04-s5",
+      "funktion": "Trinkgeld geben",
+      "funktionUz": "qaytimni choychaqa sifatida qoldirish",
+      "de": "Stimmt so!",
+      "uz": "Qaytimi kerak emas!"
+    },
+    {
+      "section": "u04-s6",
+      "funktion": "nach der Menge fragen",
+      "funktionUz": "qancha miqdor kerakligini so'rash",
+      "de": "Wie viel Reis brauchen wir?",
+      "uz": "Bizga qancha guruch kerak?"
+    },
+    {
+      "section": "u04-s6",
+      "funktion": "Alkohol ablehnen",
+      "funktionUz": "spirtli ichimlik ichmasligini aytish",
+      "de": "Ich trinke keinen Alkohol.",
+      "uz": "Men spirtli ichimlik ichmayman."
+    },
+    {
+      "section": "u04-s6",
+      "funktion": "sagen, dass das Essen fertig ist",
+      "funktionUz": "ovqat tayyor bo'lganini aytish",
+      "de": "Das Essen ist fertig!",
+      "uz": "Ovqat tayyor!"
+    }
+  ]
+}
