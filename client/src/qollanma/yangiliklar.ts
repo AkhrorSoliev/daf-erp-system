@@ -6,6 +6,12 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-06",
+    sarlavha: "«To'lov hisobotlari»da to'lov usullari va «Bugun» tugmasi",
+    matn: "Hisobotlar bo'limidagi «To'lov hisobotlari» sahifasida yangi «To'lov usullari» kartasi bor: tanlangan davrda naqd, Payme, Click, o'tkazma va Uzum orqali qancha pul kelgani, nechta to'lov bo'lgani va har usulning ulushi. Kartani bossangiz oylar bo'yicha usullar grafigi ochiladi. Filtrga «Bugun», «Kecha» va «Shu hafta» (dushanbadan bugungacha) tugmalari qo'shildi. Kartalar ostida endi qaysi kunlar bilan solishtirilgani yoziladi, masalan «05.10 bilan solishtirganda»; ilgari har doim «o'tgan oyga nisbatan» deb yozilardi. Sahifa administratorga ham ochiq, u faqat o'z filiali raqamlarini ko'radi.",
+    rollar: [1, 2, 3],
+  },
+  {
     sana: "2026-10-05",
     sarlavha: "To'lovlar hisobotida minusli oy eng eski qarzni yopadi",
     matn: "Oyda qaytgan pul shu oy darslarining narxidan ko'p bo'lsa (oy narxi minus bilan chiqsa), bu pul endi to'lov kabi eng eski qarzni yopadi. Javob qutisi ostidagi satr va «Oylar bo'yicha» jadvalining «Qarz» ustuni doim javob qutisidagi qarzga teng, bunday hisobotda ham «Jami» qatori chiqadi. «Qarzdorlik» sahifasidagi o'quvchi oynasida ham «Oylar bo'yicha» bunday o'quvchida endi chiqadi. Ilgari minusli oy hisobga kirmay, oylar qarzi haqiqiy qarzdan ko'p ko'rinishi mumkin edi.",

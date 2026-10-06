@@ -46,6 +46,30 @@ function compactFmt(n: number): string {
   return String(n);
 }
 
+export function MonthsToggle({
+  months,
+  onMonthsChange,
+}: {
+  months: 3 | 6;
+  onMonthsChange: (months: 3 | 6) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {([3, 6] as const).map((m) => (
+        <Button
+          key={m}
+          variant={months === m ? "default" : "outline"}
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => onMonthsChange(m)}
+        >
+          {m} oy
+        </Button>
+      ))}
+    </div>
+  );
+}
+
 export function PaymentReportDialog({
   open,
   onOpenChange,
@@ -65,24 +89,7 @@ export function PaymentReportDialog({
           <p className="text-sm text-muted-foreground">{description}</p>
         </DialogHeader>
 
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant={months === 3 ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => onMonthsChange(3)}
-          >
-            3 oy
-          </Button>
-          <Button
-            variant={months === 6 ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => onMonthsChange(6)}
-          >
-            6 oy
-          </Button>
-        </div>
+        <MonthsToggle months={months} onMonthsChange={onMonthsChange} />
 
         {trend.length === 0 ? (
           <div className="flex h-64 items-center justify-center">

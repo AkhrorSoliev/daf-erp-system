@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TransactionType } from '@prisma/client';
+import { PaymentMethod, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolvePeriod } from '../common/finance/period-helpers';
 import {
@@ -9,6 +9,7 @@ import {
 import {
   addDaysToDateStr,
   addMonthsToMonthKey,
+  tashkentDateStr,
   tashkentDayStartUtc,
   tashkentMonthKey,
   tashkentMonthRangeUtc,
@@ -292,6 +293,33 @@ export class ReportsPaymentsService {
           value: m.refunds,
         })),
       },
+      methods: {
+        current: currentMetrics.byMethod
+          .map((m) => ({
+            ...m,
+            share:
+              currentMetrics.totalPayments > 0
+                ? Math.round((m.amount / currentMetrics.totalPayments) * 100)
+                : 0,
+          }))
+          .sort((a, b) => b.amount - a.amount),
+        total: {
+          amount: currentMetrics.totalPayments,
+          count: currentMetrics.paymentCount,
+        },
+        trend: trendMetrics.map((m) => ({
+          month: m.month,
+          byMethod: Object.fromEntries(
+            m.byMethod.map((r) => [r.method, r.amount]),
+          ) as Partial<Record<PaymentMethod, number>>,
+        })),
+      },
+      // What every card's change compares against: the equally long window
+      // ending where the period starts, as inclusive Tashkent days.
+      comparedTo: {
+        startDate: tashkentDateStr(previousStart),
+        endDate: tashkentDateStr(new Date(previousEnd.getTime() - 1)),
+      },
     };
   }
 
@@ -315,16 +343,24 @@ export class ReportsPaymentsService {
     branchIds: ReportBranchIds,
   ) {
     const dateFilter = { gte: period.start, lt: period.end };
-    const branchFilter = branchIdWhere(branchIds);
+    // The methods split reads the same rows as the total, so its rows add up
+    // to the «Jami to'lov summasi» card.
+    const paymentWhere = {
+      companyId,
+      status: 'COMPLETED' as const,
+      createdAt: dateFilter,
+      ...branchIdWhere(branchIds),
+    };
 
-    const [paymentsAgg, refundsAgg] = await Promise.all([
+    const [paymentsAgg, byMethod, refundsAgg] = await Promise.all([
       this.prisma.payment.aggregate({
-        where: {
-          companyId,
-          status: 'COMPLETED',
-          createdAt: dateFilter,
-          ...branchFilter,
-        },
+        where: paymentWhere,
+        _sum: { amount: true },
+        _count: true,
+      }),
+      this.prisma.payment.groupBy({
+        by: ['method'],
+        where: paymentWhere,
         _sum: { amount: true },
         _count: true,
       }),
@@ -337,6 +373,12 @@ export class ReportsPaymentsService {
     return {
       month: period.label,
       totalPayments: paymentsAgg._sum.amount ?? 0,
+      paymentCount: paymentsAgg._count,
+      byMethod: byMethod.map((r) => ({
+        method: r.method,
+        amount: r._sum.amount ?? 0,
+        count: r._count,
+      })),
       // Live REFUND rows are negative: the cash returned is their negation.
       // Not `Math.abs`, which would turn a wrong-signed total into a refund.
       refunds: 0 - (refundsAgg._sum.amount ?? 0),
