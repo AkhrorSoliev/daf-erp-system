@@ -2,6 +2,7 @@
 
 import { Wallet } from "lucide-react";
 import { formatNumber } from "@/lib/format-utils";
+import { cn } from "@/lib/utils";
 import { PAYMENT_METHOD_LABELS } from "@/components/payments/overview/overview-math";
 
 /** `GET /reports/payment-reports` → `methods`. Har son serverniki. */
@@ -37,22 +38,19 @@ export function PaymentMethodsCard({ methods, onClick }: PaymentMethodsCardProps
           Tanlangan davrda to&apos;lov yo&apos;q
         </p>
       ) : (
-        <div className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-3 gap-y-1.5 text-sm tabular-nums">
+        <div className="space-y-2 text-sm tabular-nums">
           {methods.current.map((m) => (
             <MethodRow
               key={m.method}
               label={methodLabel(m.method)}
+              meta={`${formatNumber(m.count)} ta · ${m.share}%`}
               amount={m.amount}
-              count={m.count}
-              share={`${m.share}%`}
             />
           ))}
-          <span className="col-span-4 border-t" aria-hidden />
           <MethodRow
             label="Jami"
+            meta={`${formatNumber(methods.total.count)} ta`}
             amount={methods.total.amount}
-            count={methods.total.count}
-            share=""
             total
           />
         </div>
@@ -61,32 +59,37 @@ export function PaymentMethodsCard({ methods, onClick }: PaymentMethodsCardProps
   );
 }
 
+/**
+ * Bir usul: chapda nomi va «48 ta · 52%», o'ngda summa. Tor kartada izoh
+ * nom ostiga tushadi, summa esa hech qachon ikki qatorga bo'linmaydi.
+ */
 function MethodRow({
   label,
+  meta,
   amount,
-  count,
-  share,
   total = false,
 }: {
   label: string;
+  meta: string;
   amount: number;
-  count: number;
-  share: string;
   total?: boolean;
 }) {
-  const line = total ? "font-semibold" : "";
   return (
-    <>
-      <span className={line}>{label}</span>
-      <span className={`text-right font-semibold ${line}`}>
+    <div
+      className={cn(
+        "flex items-baseline justify-between gap-3",
+        total && "border-t pt-2 font-semibold",
+      )}
+    >
+      <div className="min-w-0">
+        <span className="mr-2">{label}</span>
+        <span className="whitespace-nowrap text-xs font-normal text-muted-foreground">
+          {meta}
+        </span>
+      </div>
+      <span className="whitespace-nowrap font-semibold">
         {formatNumber(amount)} so&apos;m
       </span>
-      <span className={`text-right text-xs text-muted-foreground ${line}`}>
-        {formatNumber(count)} ta
-      </span>
-      <span className={`w-9 text-right text-xs text-muted-foreground ${line}`}>
-        {share}
-      </span>
-    </>
+    </div>
   );
 }
