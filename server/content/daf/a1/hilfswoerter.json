@@ -465,6 +465,451 @@
       "wort": "wartet",
       "grund": "warten fe'lining er/sie shakli (u03-s5)",
       "abSection": "u03-s5"
+    },
+    {
+      "wort": "tschüs",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u01-s1"
+    },
+    {
+      "wort": "einhundert",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s2"
+    },
+    {
+      "wort": "eintausend",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s2"
+    },
+    {
+      "wort": "gerne",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "ab",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u05-s4"
+    },
+    {
+      "wort": "aber",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "auf",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u01-s5"
+    },
+    {
+      "wort": "bei",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s3"
+    },
+    {
+      "wort": "durch",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "für",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "kein",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s3"
+    },
+    {
+      "wort": "leider",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u05-s4"
+    },
+    {
+      "wort": "nach",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "noch",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u01-s5"
+    },
+    {
+      "wort": "so",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s4"
+    },
+    {
+      "wort": "über",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u09-s2"
+    },
+    {
+      "wort": "viel",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s3"
+    },
+    {
+      "wort": "von",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s1"
+    },
+    {
+      "wort": "zu",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "andere",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s5"
+    },
+    {
+      "wort": "ganz",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u01-s1"
+    },
+    {
+      "wort": "den",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "zuerst",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "darauf",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u09-s2"
+    },
+    {
+      "wort": "wirklich",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s4"
+    },
+    {
+      "wort": "jede",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "mehrere",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "weitere",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u07-s4"
+    },
+    {
+      "wort": "pro",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "alle",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s5"
+    },
+    {
+      "wort": "gegenseitig",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u10-s2"
+    },
+    {
+      "wort": "bisschen",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "also",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "bis",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u01-s1"
+    },
+    {
+      "wort": "da",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s2"
+    },
+    {
+      "wort": "euer",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u07-s5"
+    },
+    {
+      "wort": "schon",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s5"
+    },
+    {
+      "wort": "vor",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s2"
+    },
+    {
+      "wort": "okay",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "genau",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "diese",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "unser",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s5"
+    },
+    {
+      "wort": "denn",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u06-s5"
+    },
+    {
+      "wort": "dich",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "gleich",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "ihn",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "nichts",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s4"
+    },
+    {
+      "wort": "nur",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s4"
+    },
+    {
+      "wort": "seit",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u07-s1"
+    },
+    {
+      "wort": "um",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s4"
+    },
+    {
+      "wort": "uns",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "alles",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "etwas",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "sonst",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "als",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u07-s1"
+    },
+    {
+      "wort": "wen",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u06-s5"
+    },
+    {
+      "wort": "euch",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "mich",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "wieder",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "selbst",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "beide",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u02-s1"
+    },
+    {
+      "wort": "doch",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u06-s3"
+    },
+    {
+      "wort": "anders",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u07-s1"
+    },
+    {
+      "wort": "endlich",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u07-s2"
+    },
+    {
+      "wort": "wem",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u07-s3"
+    },
+    {
+      "wort": "dazu",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "gar",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "eigentlich",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u07-s5"
+    },
+    {
+      "wort": "ebenso",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u05-s2"
+    },
+    {
+      "wort": "kaum",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u10-s3"
+    },
+    {
+      "wort": "her",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u10-s3"
+    },
+    {
+      "wort": "ihm",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u08-s2"
+    },
+    {
+      "wort": "gegen",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u08-s3"
+    },
+    {
+      "wort": "sich",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u08-s3"
+    },
+    {
+      "wort": "unter",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u09-s2"
+    },
+    {
+      "wort": "hurra",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u08-s5"
+    },
+    {
+      "wort": "total",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u08-s2"
+    },
+    {
+      "wort": "jemand",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u08-s4"
+    },
+    {
+      "wort": "hinter",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u09-s2"
+    },
+    {
+      "wort": "jeder",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u03-s5"
+    },
+    {
+      "wort": "daneben",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u09-s2"
+    },
+    {
+      "wort": "ohne",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "danach",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "außerhalb",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u09-s4"
+    },
+    {
+      "wort": "erst",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "tatsächlich",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u12-s5"
+    },
+    {
+      "wort": "meisten",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u07-s5"
+    },
+    {
+      "wort": "jeden",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u11-s4"
+    },
+    {
+      "wort": "Fall",
+      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+      "abSection": "u11-s4"
     }
   ]
 }

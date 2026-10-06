@@ -1,7 +1,12 @@
-import { validateKurs } from './kurs.validate';
+import {
+  UNIT_WORDS_MAX,
+  validateKurs,
+  WORDS_MAX,
+  WORDS_MIN,
+} from './kurs.validate';
 import type { KursFile, KursUnitSpec } from './kurs.types';
 
-/** 6 bo'limli unitda byudjet 8, 5 bo'limlida 10 — ikkalasi ham 50 ga sig'adi. */
+/** 6 bo'limli unitda byudjet 8, 5 bo'limlida 10 — ikkalasi ham chegaraga sig'adi. */
 function unit(order: number, sectionCount = 5): KursUnitSpec {
   const code = `u${String(order).padStart(2, '0')}`;
   const budget = sectionCount === 6 ? 8 : 10;
@@ -57,14 +62,14 @@ describe('validateKurs', () => {
 
   it('bo`limning so`z byudjeti chegaradan chiqsa aytadi', () => {
     const f = fullKurs();
-    f.units[0].sections[0].wordBudget = 13;
-    expect(has(validateKurs(f), "8–12 so'z")).toBe(true);
+    f.units[0].sections[0].wordBudget = WORDS_MAX + 1;
+    expect(has(validateKurs(f), `${WORDS_MIN}–${WORDS_MAX} so'z`)).toBe(true);
   });
 
-  it('unitning jami byudjeti 50 dan oshsa aytadi', () => {
+  it('unitning jami byudjeti chegaradan oshsa aytadi', () => {
     const f = fullKurs();
-    f.units[0].sections.forEach((s) => (s.wordBudget = 12));
-    expect(has(validateKurs(f), "50 so'zdan ko'p")).toBe(true);
+    f.units[0].sections.forEach((s) => (s.wordBudget = WORDS_MAX));
+    expect(has(validateKurs(f), `${UNIT_WORDS_MAX} so'zdan ko'p`)).toBe(true);
   });
 
   it('takrorlangan bo`lim kalitini aytadi', () => {

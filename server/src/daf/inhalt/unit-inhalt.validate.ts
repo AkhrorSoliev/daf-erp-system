@@ -108,6 +108,13 @@ export function validateHilfswoerter(
       problems.push(`${e.wort}: sababi yozilmagan`);
     }
 
+    // The text guard checks one token at a time, so a phrase never matches.
+    if (/\s/.test(e.wort.trim())) {
+      problems.push(
+        `${e.wort}: bitta so'z bo'lishi kerak — ibora tekshiruvda hech narsani ochmaydi`,
+      );
+    }
+
     const kernId = kern.get(wort);
     if (kernId !== undefined) {
       problems.push(

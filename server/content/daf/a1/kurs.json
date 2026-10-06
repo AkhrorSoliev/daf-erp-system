@@ -15,7 +15,7 @@
           "titleUz": "Salom va xayr",
           "grammar": "Personalpronomen ich/du, sein",
           "grammarUz": "ich/du olmoshlari va sein fe'li",
-          "wordBudget": 10
+          "wordBudget": 17
         },
         {
           "order": 2,
@@ -24,7 +24,7 @@
           "titleUz": "Rasmiy salomlashish",
           "grammar": "Sie-Form, W-Frage",
           "grammarUz": "Sie shakli va so'roq gap",
-          "wordBudget": 10
+          "wordBudget": 23
         },
         {
           "order": 3,
@@ -33,7 +33,7 @@
           "titleUz": "Qayerdansan?",
           "grammar": "Verben kommen/wohnen, aus/in",
           "grammarUz": "kommen/wohnen tuslanishi, aus/in",
-          "wordBudget": 10
+          "wordBudget": 38
         },
         {
           "order": 4,
@@ -42,7 +42,7 @@
           "titleUz": "0–19 sonlari",
           "grammar": "Zahlen, Telefonnummer",
           "grammarUz": "sonlar va telefon raqami",
-          "wordBudget": 10
+          "wordBudget": 17
         },
         {
           "order": 5,
@@ -51,7 +51,7 @@
           "titleUz": "Alifbo",
           "grammar": "buchstabieren, Wie schreibt man das?",
           "grammarUz": "harflab aytish",
-          "wordBudget": 10
+          "wordBudget": 18
         }
       ]
     },
@@ -69,7 +69,7 @@
           "titleUz": "Mening oilam",
           "grammar": "Possessivartikel mein/dein",
           "grammarUz": "mening/sening",
-          "wordBudget": 10
+          "wordBudget": 25
         },
         {
           "order": 2,
@@ -78,7 +78,7 @@
           "titleUz": "Bu mening akam",
           "grammar": "Verb haben, Zahlen 20–100",
           "grammarUz": "haben fe'li, 20–100 sonlari",
-          "wordBudget": 10
+          "wordBudget": 20
         },
         {
           "order": 3,
@@ -87,7 +87,7 @@
           "titleUz": "Kasblar",
           "grammar": "Beruf ohne Artikel, -in",
           "grammarUz": "kasb artiklsiz, ayol shakli",
-          "wordBudget": 10
+          "wordBudget": 35
         },
         {
           "order": 4,
@@ -96,7 +96,7 @@
           "titleUz": "U qanday odam?",
           "grammar": "sein + Adjektiv",
           "grammarUz": "sein va sifat",
-          "wordBudget": 10
+          "wordBudget": 24
         },
         {
           "order": 5,
@@ -105,7 +105,7 @@
           "titleUz": "Do'stlar va hamkasblar",
           "grammar": "Personalpronomen er/sie/wir",
           "grammarUz": "er/sie/wir olmoshlari",
-          "wordBudget": 10
+          "wordBudget": 21
         }
       ]
     },
@@ -123,7 +123,7 @@
           "titleUz": "Shahardagi joylar",
           "grammar": "bestimmter Artikel der/die/das",
           "grammarUz": "aniq artikl",
-          "wordBudget": 10
+          "wordBudget": 24
         },
         {
           "order": 2,
@@ -132,7 +132,7 @@
           "titleUz": "Pochta qayerda?",
           "grammar": "Präposition in/an/neben, Wo?",
           "grammarUz": "joy ko'makchilari",
-          "wordBudget": 10
+          "wordBudget": 23
         },
         {
           "order": 3,
@@ -141,7 +141,7 @@
           "titleUz": "Vokzalga qanday boraman?",
           "grammar": "zum/zur, Imperativ Sie-Form",
           "grammarUz": "zum/zur va buyruq shakli",
-          "wordBudget": 10
+          "wordBudget": 17
         },
         {
           "order": 4,
@@ -150,7 +150,7 @@
           "titleUz": "Transport",
           "grammar": "mit + Dativ",
           "grammarUz": "mit bilan qaratqich",
-          "wordBudget": 10
+          "wordBudget": 21
         },
         {
           "order": 5,
@@ -159,7 +159,7 @@
           "titleUz": "Ishga boradigan yo'lim",
           "grammar": "Verbposition, Zeitangabe",
           "grammarUz": "fe'lning o'rni va vaqt",
-          "wordBudget": 10
+          "wordBudget": 17
         }
       ]
     },
@@ -177,7 +177,7 @@
           "titleUz": "Oziq-ovqat",
           "grammar": "unbestimmter Artikel ein/eine",
           "grammarUz": "noaniq artikl",
-          "wordBudget": 8
+          "wordBudget": 34
         },
         {
           "order": 2,
@@ -186,7 +186,7 @@
           "titleUz": "Supermarketda",
           "grammar": "Plural, Preise",
           "grammarUz": "ko'plik va narx",
-          "wordBudget": 8
+          "wordBudget": 32
         },
         {
           "order": 3,
@@ -195,7 +195,7 @@
           "titleUz": "Nimani yoqtirasan?",
           "grammar": "essen/trinken, gern",
           "grammarUz": "o'zgaruvchi fe'llar va gern",
-          "wordBudget": 8
+          "wordBudget": 28
         },
         {
           "order": 4,
@@ -204,7 +204,7 @@
           "titleUz": "Nonushta, tushlik, kechki ovqat",
           "grammar": "Zeitangaben am/um",
           "grammarUz": "am/um bilan vaqt",
-          "wordBudget": 8
+          "wordBudget": 24
         },
         {
           "order": 5,
@@ -213,7 +213,7 @@
           "titleUz": "Restoranda",
           "grammar": "möchten, Ich hätte gern",
           "grammarUz": "buyurtma iboralari",
-          "wordBudget": 8
+          "wordBudget": 35
         },
         {
           "order": 6,
@@ -222,7 +222,7 @@
           "titleUz": "Retsept va miqdor",
           "grammar": "Akkusativ einen/eine/ein",
           "grammarUz": "tushum kelishigi",
-          "wordBudget": 8
+          "wordBudget": 30
         }
       ]
     },
@@ -240,7 +240,7 @@
           "titleUz": "Soat necha?",
           "grammar": "Uhrzeit",
           "grammarUz": "soatni aytish",
-          "wordBudget": 10
+          "wordBudget": 19
         },
         {
           "order": 2,
@@ -249,7 +249,7 @@
           "titleUz": "Hafta kunlari",
           "grammar": "Präposition am",
           "grammarUz": "am ko'makchisi",
-          "wordBudget": 10
+          "wordBudget": 25
         },
         {
           "order": 3,
@@ -258,7 +258,7 @@
           "titleUz": "Kun tartibim",
           "grammar": "trennbare Verben",
           "grammarUz": "ajraladigan fe'llar",
-          "wordBudget": 10
+          "wordBudget": 19
         },
         {
           "order": 4,
@@ -267,7 +267,7 @@
           "titleUz": "Uchrashuvlar",
           "grammar": "von … bis, um",
           "grammarUz": "vaqt oralig'i",
-          "wordBudget": 10
+          "wordBudget": 19
         },
         {
           "order": 5,
@@ -276,7 +276,7 @@
           "titleUz": "Uyda",
           "grammar": "Modalverb müssen",
           "grammarUz": "müssen modal fe'li",
-          "wordBudget": 10
+          "wordBudget": 18
         }
       ]
     },
@@ -294,7 +294,7 @@
           "titleUz": "Sevimli mashg'ulot",
           "grammar": "Verb + gern, oft/nie",
           "grammarUz": "gern va takrorlanish",
-          "wordBudget": 10
+          "wordBudget": 35
         },
         {
           "order": 2,
@@ -303,7 +303,7 @@
           "titleUz": "Sport va musiqa",
           "grammar": "Modalverb können",
           "grammarUz": "können modal fe'li",
-          "wordBudget": 10
+          "wordBudget": 34
         },
         {
           "order": 3,
@@ -312,7 +312,7 @@
           "titleUz": "Kinoga boramizmi?",
           "grammar": "wollen, ins/in die",
           "grammarUz": "wollen va yo'nalish",
-          "wordBudget": 10
+          "wordBudget": 35
         },
         {
           "order": 4,
@@ -321,7 +321,7 @@
           "titleUz": "Ob-havo",
           "grammar": "es ist / es gibt",
           "grammarUz": "es ist va es gibt",
-          "wordBudget": 10
+          "wordBudget": 36
         },
         {
           "order": 5,
@@ -330,7 +330,7 @@
           "titleUz": "Uchrashuvni kelishish",
           "grammar": "Wortstellung: Zeit vor Ort",
           "grammarUz": "vaqt joydan oldin",
-          "wordBudget": 10
+          "wordBudget": 30
         }
       ]
     },
@@ -348,7 +348,7 @@
           "titleUz": "Kasb va ish joyi",
           "grammar": "arbeiten als, Wo?",
           "grammarUz": "als bilan kasb",
-          "wordBudget": 8
+          "wordBudget": 33
         },
         {
           "order": 2,
@@ -357,7 +357,7 @@
           "titleUz": "Ish kunim",
           "grammar": "trennbare Verben: anfangen",
           "grammarUz": "anfangen/aufhören",
-          "wordBudget": 8
+          "wordBudget": 22
         },
         {
           "order": 3,
@@ -366,7 +366,7 @@
           "titleUz": "Telefonda",
           "grammar": "Redemittel am Telefon",
           "grammarUz": "telefon iboralari",
-          "wordBudget": 8
+          "wordBudget": 32
         },
         {
           "order": 4,
@@ -375,7 +375,7 @@
           "titleUz": "Xat va uchrashuv",
           "grammar": "Datum, am + Datum",
           "grammarUz": "sana va am",
-          "wordBudget": 8
+          "wordBudget": 33
         },
         {
           "order": 5,
@@ -384,7 +384,7 @@
           "titleUz": "Ofisda",
           "grammar": "Possessivartikel unser/euer",
           "grammarUz": "bizning/sizning",
-          "wordBudget": 8
+          "wordBudget": 32
         },
         {
           "order": 6,
@@ -393,7 +393,7 @@
           "titleUz": "Ishdagi muammolar",
           "grammar": "müssen/dürfen",
           "grammarUz": "müssen va dürfen",
-          "wordBudget": 8
+          "wordBudget": 23
         }
       ]
     },
@@ -411,7 +411,7 @@
           "titleUz": "Tana a'zolari",
           "grammar": "Plural der Körperteile",
           "grammarUz": "tana a'zolari ko'pligi",
-          "wordBudget": 10
+          "wordBudget": 24
         },
         {
           "order": 2,
@@ -420,7 +420,7 @@
           "titleUz": "Men kasalman",
           "grammar": "Schmerzen haben, tut weh",
           "grammarUz": "og'riqni aytish",
-          "wordBudget": 10
+          "wordBudget": 22
         },
         {
           "order": 3,
@@ -429,7 +429,7 @@
           "titleUz": "Shifokorda",
           "grammar": "Imperativ Sie-Form",
           "grammarUz": "shifokor buyrug'i",
-          "wordBudget": 10
+          "wordBudget": 31
         },
         {
           "order": 4,
@@ -438,7 +438,7 @@
           "titleUz": "Dori va dorixona",
           "grammar": "Modalverb sollen",
           "grammarUz": "sollen modal fe'li",
-          "wordBudget": 10
+          "wordBudget": 25
         },
         {
           "order": 5,
@@ -447,7 +447,7 @@
           "titleUz": "Sog'lom yashash",
           "grammar": "Negation kein/nicht",
           "grammarUz": "kein va nicht",
-          "wordBudget": 10
+          "wordBudget": 34
         }
       ]
     },
@@ -465,7 +465,7 @@
           "titleUz": "Xonalar",
           "grammar": "es gibt + Akkusativ",
           "grammarUz": "es gibt tuzilmasi",
-          "wordBudget": 8
+          "wordBudget": 21
         },
         {
           "order": 2,
@@ -474,7 +474,7 @@
           "titleUz": "Mebel",
           "grammar": "Wechselpräposition + Dativ",
           "grammarUz": "in/auf/unter joy ma'nosida",
-          "wordBudget": 8
+          "wordBudget": 28
         },
         {
           "order": 3,
@@ -483,7 +483,7 @@
           "titleUz": "Uyim qanday",
           "grammar": "Adjektive groß/klein/hell",
           "grammarUz": "tavsiflovchi sifatlar",
-          "wordBudget": 8
+          "wordBudget": 25
         },
         {
           "order": 4,
@@ -492,7 +492,7 @@
           "titleUz": "Uy izlash",
           "grammar": "Zahlen: Miete, Quadratmeter",
           "grammarUz": "ijara va maydon",
-          "wordBudget": 8
+          "wordBudget": 32
         },
         {
           "order": 5,
@@ -501,7 +501,7 @@
           "titleUz": "Ko'chish",
           "grammar": "Dativ mit dem/der",
           "grammarUz": "mit bilan jo'nalish",
-          "wordBudget": 8
+          "wordBudget": 30
         },
         {
           "order": 6,
@@ -510,7 +510,7 @@
           "titleUz": "Qo'shnilar va qoidalar",
           "grammar": "dürfen / nicht dürfen",
           "grammarUz": "ruxsat va taqiq",
-          "wordBudget": 8
+          "wordBudget": 24
         }
       ]
     },
@@ -528,7 +528,7 @@
           "titleUz": "Til o'rganish",
           "grammar": "wollen/können takrori",
           "grammarUz": "modal fe'llar takrori",
-          "wordBudget": 10
+          "wordBudget": 33
         },
         {
           "order": 2,
@@ -537,7 +537,7 @@
           "titleUz": "Kursda",
           "grammar": "Imperativ du-Form",
           "grammarUz": "du buyruq shakli",
-          "wordBudget": 10
+          "wordBudget": 35
         },
         {
           "order": 3,
@@ -546,7 +546,7 @@
           "titleUz": "Tarjimai hol",
           "grammar": "Perfekt mit haben",
           "grammarUz": "haben bilan o'tgan zamon",
-          "wordBudget": 10
+          "wordBudget": 29
         },
         {
           "order": 4,
@@ -555,7 +555,7 @@
           "titleUz": "Ariza",
           "grammar": "förmliche Redemittel",
           "grammarUz": "rasmiy iboralar",
-          "wordBudget": 10
+          "wordBudget": 30
         },
         {
           "order": 5,
@@ -564,7 +564,7 @@
           "titleUz": "Kelajak rejalari",
           "grammar": "möchte … werden",
           "grammarUz": "kelajak niyati",
-          "wordBudget": 10
+          "wordBudget": 29
         }
       ]
     },
@@ -582,7 +582,7 @@
           "titleUz": "Kiyim",
           "grammar": "Plural, Adjektiv + Farbe",
           "grammarUz": "ko'plik va rang",
-          "wordBudget": 10
+          "wordBudget": 34
         },
         {
           "order": 2,
@@ -591,7 +591,7 @@
           "titleUz": "Rang va o'lcham",
           "grammar": "Welcher/Welche/Welches",
           "grammarUz": "qaysi? so'rog'i",
-          "wordBudget": 10
+          "wordBudget": 30
         },
         {
           "order": 3,
@@ -600,7 +600,7 @@
           "titleUz": "Do'konda",
           "grammar": "Fragen im Geschäft",
           "grammarUz": "do'kondagi savollar",
-          "wordBudget": 10
+          "wordBudget": 33
         },
         {
           "order": 4,
@@ -609,7 +609,7 @@
           "titleUz": "Bu menga yoqadi",
           "grammar": "gefallen + Dativ, mir/dir",
           "grammarUz": "mir/dir olmoshlari",
-          "wordBudget": 10
+          "wordBudget": 28
         },
         {
           "order": 5,
@@ -618,7 +618,7 @@
           "titleUz": "Almashtirish",
           "grammar": "Perfekt: ich habe gekauft",
           "grammarUz": "o'tgan zamon takrori",
-          "wordBudget": 10
+          "wordBudget": 21
         }
       ]
     },
@@ -636,7 +636,7 @@
           "titleUz": "Sayohat manzillari",
           "grammar": "nach/in + Land",
           "grammarUz": "mamlakatga yo'nalish",
-          "wordBudget": 8
+          "wordBudget": 37
         },
         {
           "order": 2,
@@ -645,7 +645,7 @@
           "titleUz": "Vokzal va aeroportda",
           "grammar": "von … nach, Uhrzeit",
           "grammarUz": "yo'nalish va vaqt",
-          "wordBudget": 8
+          "wordBudget": 32
         },
         {
           "order": 3,
@@ -654,7 +654,7 @@
           "titleUz": "Mehmonxonada",
           "grammar": "Redemittel: reservieren",
           "grammarUz": "joy band qilish",
-          "wordBudget": 8
+          "wordBudget": 26
         },
         {
           "order": 4,
@@ -663,7 +663,7 @@
           "titleUz": "Ta'tilda",
           "grammar": "Perfekt: regelmäßig/unregelmäßig",
           "grammarUz": "o'tgan zamon shakllari",
-          "wordBudget": 8
+          "wordBudget": 30
         },
         {
           "order": 5,
@@ -672,7 +672,7 @@
           "titleUz": "Xat yozish",
           "grammar": "Wortstellung in der Vergangenheit",
           "grammarUz": "o'tgan zamonda so'z tartibi",
-          "wordBudget": 8
+          "wordBudget": 35
         },
         {
           "order": 6,
@@ -681,7 +681,7 @@
           "titleUz": "Xayr!",
           "grammar": "Wiederholung: alle Redemittel",
           "grammarUz": "barcha iboralar takrori",
-          "wordBudget": 8
+          "wordBudget": 22
         }
       ]
     }

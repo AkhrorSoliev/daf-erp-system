@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import {
   validateEindeutigkeit,
+  validateHilfswoerter,
   validateSatzAlternativen,
 } from './unit-inhalt.validate';
 import type { WoerterFile, RedemittelFile, Satz } from './unit-inhalt.types';
@@ -149,5 +150,21 @@ describe('gapning muqobil so`z tartiblari', () => {
       ]),
     ]);
     expect(p).toHaveLength(2);
+  });
+});
+
+describe('validateHilfswoerter', () => {
+  it('a helper word is one word: the text guard checks token by token', () => {
+    const p = validateHilfswoerter(
+      {
+        eintraege: [
+          { wort: 'meisten', grund: 't' },
+          { wort: 'auf jeden Fall', grund: 't' },
+        ],
+      },
+      [],
+    );
+    expect(p).toHaveLength(1);
+    expect(p[0]).toContain('auf jeden Fall');
   });
 });

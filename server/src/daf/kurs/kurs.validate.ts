@@ -4,9 +4,14 @@ export const UNIT_COUNT = 12;
 export const SECTION_COUNT = 64;
 export const SECTIONS_MIN = 5;
 export const SECTIONS_MAX = 6;
+/**
+ * A section's word pool, and a unit's (ADR-0071). The pool is larger than
+ * one lesson: each repeat asks the words still unmet, so 40 words take about
+ * four rounds. One definition, read by the course map and the word plan.
+ */
 export const WORDS_MIN = 8;
-export const WORDS_MAX = 12;
-export const UNIT_WORDS_MAX = 50;
+export const WORDS_MAX = 40;
+export const UNIT_WORDS_MAX = 190;
 
 /**
  * Xaritani tekshiradi va muammolar ro'yxatini qaytaradi.

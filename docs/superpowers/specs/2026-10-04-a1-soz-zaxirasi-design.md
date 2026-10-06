@@ -73,13 +73,61 @@ o'quvchi darsni qayta o'tgan sari ko'rmagan so'zlari chiqadi.
   `core` so'zi; guruh so'zlari (hafta kunlari, oylar, ranglar, mamlakatlar)
   blok holida; kichik so'zlar (aber, oder…) grammatika va gaplar ichida
   (`hilfswoerter`).
-- Netzwerk so'zlari: mintaqaviy (Avstriya/Shveytsariya), mashq kitobi va
-  dars ichidagi grammatika atamalaridan tashqari hammasi.
-- `wortliste` qoidasi o'zgaradi: bo'lim byudjeti 8–12 dan kattaroq oraliqqa
-  (aniq son 2-bosqich rejasida, taqsimotdan keyin), unit cheki 50 dan
-  yuqoriga. Repoga Goethe asosidagi qamrov tekshiruvi qo'shiladi: A1 oxiriga
-  Goethe so'zi rejadan tushib qolsa, test o'tmaydi. Netzwerk qamrovi
+- Netzwerk so'zlari: mintaqaviy (Avstriya/Shveytsariya) variantlari va
+  grammatika atamalaridan tashqari hammasi. Ish daftari so'zlari ham kiradi:
+  dastlab ularni chiqarish rejalashtirilgan edi, lekin ro'yxatda Teller,
+  Messer, Nase, Zahn, Tür, Umzug kabi asosiy so'zlar chiqdi.
+- Repoga Goethe asosidagi qamrov tekshiruvi qo'shiladi: A1 oxiriga Goethe
+  so'zi rejadan tushib qolsa, test o'tmaydi. Netzwerk qamrovi
   scratchpad'dagi skript bilan o'lchanadi.
+
+**Bajarildi (04.10):**
+
+- **Goethe ro'yxati** rasmiy PDF'dan skript bilan qayta olindi
+  (`daf:goethe-extract -- --tsv`): 812 so'z, shundan 53 yasalgan va 132 guruh
+  so'zi. Eski nusxada tushib qolgan so'zlar (Tag, danke, Arbeit…) bor,
+  ko'chirishdagi «axlat» yo'q. `dies-` kabi o'zak yozuv: kichik harflisi
+  faqat qo'shimcha oladi (diesen, Diesel emas), kattasi qo'shma so'z
+  boshlaydi (Lieblingsfilm).
+- **Reja butun A1 ni tutadi** (`wortliste.json`, 1775 so'z): u01 122, u02
+  129, u03 102, u04 188, u05 104, u06 170, u07 175, u08 136, u09 161, u10 157,
+  u11 147, u12 184. Yozilgan unitlarga qo'shiladigan 191 so'z
+  `nachtrag: true` (5-bosqichda matnga kiradi). Ibora Goethe bosh so'zini
+  o'rgatsa — `deckt` («auf Wiederhören» → Wiederhören, «Deutsch» →
+  deutsch). CEO qarori bilan o'rgatilmaydigan Goethe so'zlari —
+  `ausgenommen`, sababi bilan (Bier, Wein, Schinken). Yordamchi so'zlar 191
+  ta (89 tasi yangi).
+- **Faqat matnda turadigan so'z** (`core: false`, 15 ta): rejada bor, gap va
+  dialogda ishlatiladi, lekin alohida so'ralmaydi va javob varianti bo'lib
+  chiqmaydi. Bular: CEO qarori bilan faqat rad etish gaplaridagi
+  Schweinefleisch va Alkohol; boshqa so'zning ikkinchi shakli (Pulli, Uni,
+  shoppen gehen…) va kam foydali so'zlar (Maß, Verpackung, Vorliebe).
+- **So'z aynan yozilishi bilan solishtiriladi**: «essen» (yemoq) va «das
+  Essen» (ovqat), «morgen» va «der Morgen» — ikki so'z. Birinchi variant
+  ularni bitta hisoblagani uchun «Ovqat va ichimlik» unitida «das Essen»
+  yo'q edi, qamrov testi esa buni ko'rmasdi (ko'rik topdi).
+- **Byudjet**: bo'limga 8–40, unitga 190 tagacha so'raladigan so'z
+  (`kurs.validate.ts` — yagona manba, `wortliste.validate.ts` undan oladi;
+  `core: false` va `ausserhalbBudget` hisobga kirmaydi). `kurs.json`dagi har
+  bo'lim byudjeti rejadagi so'raladigan so'zlar soniga teng (test).
+- **Yozilgan unit = rejasi**: asosiy so'zlar rejaga bo'limma-bo'lim aynan
+  teng, matn so'zlari unitda bor (`vergleicheMitPlan`), «unitda aniq 50
+  so'z» qoidasi o'rniga.
+- **Qamrov testi** (`goetheOhnePlan`): har Goethe A1 so'zi rejada, yordamchi
+  so'zlarda yoki `ausgenommen`da. Natija: 812 dan 812, shundan 3 tasi CEO
+  qarori bilan chiqarilgan. Yordamchi so'z bitta so'z bo'ladi (matn
+  tekshiruvi so'zma-so'z ishlaydi, ibora hech narsani ochmaydi).
+- **Netzwerk qamrovi** (scratchpad, repoga tushmaydi): 1844 dan ≈1756 (95%)
+  rejada. Chetda: grammatika atamalari, Avstriya/Shveytsariya variantlari,
+  alkogol so'zlari va bir so'zning ikkinchi yozilishi.
+- **O'zimizning so'zlar**: osh retsepti va kundalik hayot uchun Karotte, Knoblauch,
+  Rindfleisch, Lammfleisch, Topf, halal, vegetarisch, Orange, Traube, Melone,
+  scharf, braten, Usbekisch; rad etish uchun Schweinefleisch, Alkohol (CEO
+  03.10). Goethe'ning «bar» so'zi (naqd pul) alkogol qoidasiga kirmaydi va
+  o'rgatiladi.
+- O'zbekcha tarjimalar repoga hali tushmaydi: ular unit yozilganda
+  `woerter.json`ga kiradi; taqsimotdagi taxminiy tarjimalar unit yozuvchisi
+  uchun scratchpad'da qoladi.
 
 ### 2.4. Keyingi bosqichlar
 

@@ -6,8 +6,10 @@
  * bo'yicha yagona bo'lishi kerak (bir so'z ikki bo'limda o'rgatilmaydi),
  * tarjima esa unitning ichki ishi.
  *
- * Fayl BOSQICHMA-BOSQICH to'ladi: unit yozilganda uning so'zlari
- * qo'shiladi. To'liq bo'lishi shart emas, ziddiyatsiz bo'lishi shart.
+ * Fayl butun A1 rejasini tutadi (ADR-0071): hali yozilmagan unitlarning
+ * so'zlari ham shu yerda. Har Goethe A1 so'zi shu yerda, yordamchi
+ * so'zlarda yoki `ausgenommen`da turadi; yozilgan unitning asosiy so'zlari
+ * rejaning o'zi (`nachtrag`dan tashqari).
  */
 export interface WortEintrag {
   wort: string;
@@ -30,9 +32,32 @@ export interface WortEintrag {
    * stepping outside the budget is a decision and must say why.
    */
   ausserhalbBudget?: boolean;
+  /**
+   * `true` — planned for a unit whose text is already written; the text
+   * gets the word in the backfill step (ADR-0071). Until then the unit's
+   * own words need not contain it.
+   */
+  nachtrag?: boolean;
+  /**
+   * Goethe headwords this entry teaches when its own spelling differs:
+   * «auf Wiederhören» teaches «Wiederhören».
+   */
+  deckt?: string[];
+}
+
+/** A Goethe word deliberately not taught, with the decision behind it. */
+export interface AusgenommenesWort {
+  wort: string;
+  artikel: string | null;
+  grund: string;
 }
 
 export interface WortlisteFile {
   level: 'A1';
   eintraege: WortEintrag[];
+  /**
+   * Goethe words not taught by decision (CEO 03.10.2026: pork and alcohol
+   * only to refuse them). The coverage check counts them as decided.
+   */
+  ausgenommen?: AusgenommenesWort[];
 }

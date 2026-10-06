@@ -1,50 +1,65 @@
 /**
- * Goethe A1 Wortliste'sini `goethe-a1.json` ga ajratadi.
+ * Writes `content/daf/a1/goethe-a1.json` from the Goethe A1 word list.
  *
- *   npm run daf:goethe-extract -- --txt /yo'l/wortliste.txt
+ *   npm run daf:goethe-extract -- --tsv wortliste.tsv
  *
- * PDF'ni o'qish bu skriptning ishi EMAS: PDF matni bir marta, qo'lda
- * chiqariladi (`python3 -c "from pypdf import PdfReader; ..."`) va shu
- * yerga matn fayli sifatida beriladi. Sabab — PDF kutubxonasi server
- * bog'liqliklariga kirmaydi, va ajratish bir martalik ish.
+ * One manual step comes first: turn the official PDF
+ * (https://www.goethe.de/pro/relaunch/prf/de/A1_SD1_Wortliste_02.pdf) into
+ * word positions with poppler's pdftotext:
+ *
+ *   pdftotext -tsv A1_SD1_Wortliste_02.pdf wortliste.tsv
+ *
+ * Reading the PDF is not this script's job: pdftotext is not a server
+ * dependency, and the extraction is rare. The TSV is not committed. After a
+ * run, `npx jest src/daf/inhalt` checks the written file.
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { dirname, join } from 'path';
+import { readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import {
-  parseGoetheLines,
+  GOETHE_GRUPPEN,
+  mergeGoethe,
+  parseGoetheTsv,
   type GoetheFile,
-  GOETHE_ZAHLEN,
-  GOETHE_WOCHENTAGE,
-  GOETHE_MONATE,
-  GOETHE_JAHRESZEITEN,
 } from '../src/daf/inhalt/goethe-parse';
 
 const OUT = join(__dirname, '..', 'content', 'daf', 'a1', 'goethe-a1.json');
-const SOURCE = 'https://www.goethe.de/pro/relaunch/prf/de/A1_SD1_Wortliste_02.pdf';
+const SOURCE =
+  'https://www.goethe.de/pro/relaunch/prf/de/A1_SD1_Wortliste_02.pdf';
 
 function main(): void {
-  const i = process.argv.indexOf('--txt');
+  const i = process.argv.indexOf('--tsv');
   if (i === -1 || !process.argv[i + 1]) {
-    console.error('Kerak: --txt <matn fayli>');
+    console.error('Needed: --tsv <output of pdftotext -tsv>');
+    process.exit(1);
+  }
+  const tsv = readFileSync(process.argv[i + 1], 'utf8');
+
+  // The groups are hand-transcribed: each word must be printed on pp. 5–8.
+  const seiten5bis8 = tsv
+    .split('\n')
+    .map((l) => l.split('\t'))
+    .filter((r) => r[0] === '5' && +r[1] >= 5 && +r[1] <= 8)
+    .map((r) => r[11])
+    .join(' ')
+    .replace(/­/g, ''); // soft hyphen, as in "Antwort­bogen"
+  const fehlt = GOETHE_GRUPPEN.filter((e) => !seiten5bis8.includes(e.wort));
+  if (fehlt.length > 0) {
+    console.error(
+      `Not on pp. 5–8 of the PDF: ${fehlt.map((e) => e.wort).join(', ')}`,
+    );
     process.exit(1);
   }
 
-  const lines = readFileSync(process.argv[i + 1], 'utf8').split('\n');
-  const words = parseGoetheLines(lines);
-
-  const gruppen = {
-    zahlen: GOETHE_ZAHLEN,
-    wochentage: GOETHE_WOCHENTAGE,
-    monate: GOETHE_MONATE,
-    jahreszeiten: GOETHE_JAHRESZEITEN,
+  const alphabetisch = parseGoetheTsv(tsv);
+  const file: GoetheFile = {
+    source: SOURCE,
+    woerter: mergeGoethe([...alphabetisch, ...GOETHE_GRUPPEN]),
   };
-
-  const file: GoetheFile = { source: SOURCE, words, gruppen };
-  mkdirSync(dirname(OUT), { recursive: true });
   writeFileSync(OUT, `${JSON.stringify(file, null, 1)}\n`, 'utf8');
 
-  const gruppenCount = Object.values(gruppen).reduce((sum, arr) => sum + arr.length, 0);
-  console.log(`${words.length} ta bosh so'z va ${gruppenCount} ta gruppali so'z yozildi.`);
+  console.log(
+    `${file.woerter.length} words written: ${alphabetisch.length} from the alphabetical list, ${GOETHE_GRUPPEN.length} from the groups, merged.`,
+  );
 }
 
 main();
