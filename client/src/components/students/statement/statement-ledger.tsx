@@ -15,9 +15,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { reversalNote } from "@/lib/ledger-reversal";
 import { cn } from "@/lib/utils";
 import {
   TRANSACTION_TYPE_INFO,
@@ -34,10 +40,101 @@ const LEDGER_TYPES =
 
 type LedgerRow = Pick<
   StudentTransaction,
-  "id" | "type" | "amount" | "balanceAfter" | "description" | "createdAt"
+  | "id"
+  | "type"
+  | "amount"
+  | "balanceAfter"
+  | "description"
+  | "createdAt"
+  | "reversal"
 >;
 
 const signed = (n: number) => (n > 0 ? `+${formatNumber(n)}` : formatNumber(n));
+
+/**
+ * One ledger line. A cancelled row keeps its place (the balance column is a
+ * running total and needs it) but is struck through and says when it was
+ * cancelled; the row that cancelled it is labelled «Bekor qilish» and names
+ * the row it undid.
+ */
+export function LedgerTableRow({ row: r, index }: { row: LedgerRow; index: number }) {
+  const reversal = r.reversal ?? null;
+  const cancelled = reversal?.kind === "reversed";
+  const undo = reversal?.kind === "undo";
+  const typeInfo = TRANSACTION_TYPE_INFO[r.type];
+
+  return (
+    <TableRow className={cn(cancelled && "text-muted-foreground")}>
+      <TableCell className="border-r text-muted-foreground">
+        {index + 1}
+      </TableCell>
+      <TableCell className="whitespace-nowrap">
+        {format(new Date(r.createdAt), "dd.MM.yyyy, HH:mm")}
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap items-center gap-1">
+          {undo ? (
+            <Badge variant="secondary" className="text-[10px]">
+              Bekor qilish
+            </Badge>
+          ) : (
+            <Badge
+              variant={typeInfo?.variant ?? "outline"}
+              className={cn("text-[10px]", cancelled && "opacity-60")}
+            >
+              {typeInfo?.label ?? r.type}
+            </Badge>
+          )}
+          {cancelled && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="outline"
+                  className="cursor-help border-dashed text-[10px] text-muted-foreground"
+                >
+                  Bekor qilingan
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64">
+                Bu yozuv keyinroq bekor qilingan. Uni ro&apos;yxatdagi «Bekor
+                qilish» yozuvi qaytargan, balansda ikkalasi bir-birini yopadi.
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </TableCell>
+      <TableCell
+        className={cn(
+          "text-right font-mono tabular-nums",
+          cancelled
+            ? "text-muted-foreground line-through"
+            : r.amount < 0
+              ? "text-red-600 dark:text-red-400"
+              : "text-emerald-600 dark:text-emerald-400",
+        )}
+      >
+        {signed(r.amount)}
+      </TableCell>
+      <TableCell className="text-right font-mono tabular-nums">
+        {formatNumber(r.balanceAfter)}
+      </TableCell>
+      <TableCell className="max-w-80 text-xs whitespace-normal text-muted-foreground">
+        {undo ? (
+          reversalNote(reversal)
+        ) : (
+          <>
+            {r.description}
+            {cancelled && (
+              <span className="block text-amber-700 dark:text-amber-400">
+                {reversalNote(reversal)}
+              </span>
+            )}
+          </>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}
 
 /**
  * "Barcha yozuvlar": the raw ledger behind the statement, newest first.
@@ -107,40 +204,7 @@ export function StatementLedger({
             </TableHeader>
             <TableBody>
               {rows.map((r, i) => (
-                <TableRow key={r.id}>
-                  <TableCell className="border-r text-muted-foreground">
-                    {i + 1}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {format(new Date(r.createdAt), "dd.MM.yyyy, HH:mm")}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        TRANSACTION_TYPE_INFO[r.type]?.variant ?? "outline"
-                      }
-                      className="text-[10px]"
-                    >
-                      {TRANSACTION_TYPE_INFO[r.type]?.label ?? r.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      "text-right font-mono tabular-nums",
-                      r.amount < 0
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-emerald-600 dark:text-emerald-400",
-                    )}
-                  >
-                    {signed(r.amount)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">
-                    {formatNumber(r.balanceAfter)}
-                  </TableCell>
-                  <TableCell className="max-w-80 text-xs whitespace-normal text-muted-foreground">
-                    {r.description}
-                  </TableCell>
-                </TableRow>
+                <LedgerTableRow key={r.id} row={r} index={i} />
               ))}
               {loading &&
                 rows.length === 0 &&

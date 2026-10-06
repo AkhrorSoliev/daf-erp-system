@@ -1,6 +1,8 @@
 // Student portal API response shapes. Mirror of the backend
 // `student-portal.service` (also mirrored by student-app/src/api/types.ts).
 
+import type { LedgerReversal } from "@/lib/ledger-reversal";
+
 export interface Teacher {
   id: number;
   firstName: string;
@@ -98,6 +100,9 @@ export interface TransactionItem {
   balanceAfter: number;
   description: string | null;
   createdAt: string;
+  // A cancelled row, or the row that cancelled one (optional while an older
+  // API may still answer).
+  reversal?: LedgerReversal | null;
 }
 
 export interface PaymentHistory {
