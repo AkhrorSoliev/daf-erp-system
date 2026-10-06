@@ -91,6 +91,12 @@ describe("DebtPage — the Shu oy tab", () => {
     expect(text).toContain("aloqa bo'lmagan");
   });
 
+  it("says the row opens, and gives every row a «Batafsil» button beside «To'lov»", () => {
+    const text = render();
+    expect(text).toContain("O'quvchi ustiga bosing — qarz tafsiloti, aloqa va va'da o'ng tomonda ochiladi");
+    expect(text).toContain("To'lov Batafsil");
+  });
+
   it("prints the difference line only when it is above 0, and only here", () => {
     const line = `Shu oy guruhdan chiqqanlarning shu oy qarzi — ${money(160_000)} — «O'qimayotganlar» bo'limida.`;
     expect(render()).toContain(line);

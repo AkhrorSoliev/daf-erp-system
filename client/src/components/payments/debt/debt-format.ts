@@ -15,11 +15,17 @@ export const instantDate = (iso: string) => {
   const d = tashkentNow(new Date(iso)).dateStr;
   return `${dayMonth(d)}.${d.slice(0, 4)}`;
 };
+/** An instant → its Tashkent 'dd.MM.yyyy, HH:mm'. */
+export const instantDateTime = (iso: string) => {
+  const { minutes } = tashkentNow(new Date(iso));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${instantDate(iso)}, ${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+};
 
 /** The line under the tab buttons — the mock-up's `rule` texts (spec §2.2). */
 export function tabRule(tab: DebtTab, monthKey: string): string {
   if (tab === "shu-oy") {
-    return `${monthShort(monthKey)} to'lovini hali to'liq to'lamagan o'qiyotgan o'quvchilar. To'lov muddati — shartnoma bo'yicha oyning 2-darsigacha. Qatorni bosing: oylar bo'yicha qarz, aloqa tarixi va amallar ochiladi.`;
+    return `${monthShort(monthKey)} to'lovini hali to'liq to'lamagan o'qiyotgan o'quvchilar. To'lov muddati — shartnoma bo'yicha oyning 2-darsigacha.`;
   }
   if (tab === "eski") return "O'qiyotgan, lekin o'tgan oylardan qarzi qolgan o'quvchilar. Shartnomaga ko'ra 2-darsga kirish uchun eski qarz ham to'lanishi kerak.";
   return "Hozir hech qaysi guruhda o'qimayotganlar: guruhsiz qolgan, muzlatilgan yoki ketgan. Bu — undirish ro'yxati: qo'ng'iroq, va'da, to'lov.";
@@ -40,11 +46,14 @@ export function dueCell(due: string | null, today: string): { text: string; over
 
 export const promiseText = (p: PromiseCell) => (p.state === "open" ? `${dayMonth(p.promiseDate)} gacha` : `buzildi · ${dayMonth(p.promiseDate)}`);
 
-/** The drawer's «Va'da: X so'm, dd.MM gacha». */
-export const promiseLine = (p: PromiseCell) =>
-  p.promisedAmount != null
-    ? `Va'da: ${formatPrice(p.promisedAmount)} so'm, ${dayMonth(p.promiseDate)} gacha`
-    : `Va'da: ${dayMonth(p.promiseDate)} gacha`;
+/** The drawer's promise card: its title and «X so'm · dd.MM gacha» («… gacha edi» once broken). */
+export const promiseCard = (p: PromiseCell) => {
+  const day = `${dayMonth(p.promiseDate)} gacha${p.state === "broken" ? " edi" : ""}`;
+  return {
+    title: p.state === "open" ? "Va'da berilgan" : "Va'da buzildi",
+    detail: p.promisedAmount != null ? `${formatPrice(p.promisedAmount)} so'm · ${day}` : day,
+  };
+};
 
 export const lastCallText = (c: DebtListItem["lastCall"]) => (c ? `${instantDayMonth(c.createdAt)} · ${CALL_OUTCOME_INFO[c.outcome].label}` : null);
 
@@ -52,8 +61,13 @@ export const lastCallText = (c: DebtListItem["lastCall"]) => (c ? `${instantDayM
 export const sumLine = (filtered: boolean, total: number, sum: number, tab: TabTotal) =>
   filtered ? `Topildi: ${formatNumber(total)} ta · ${formatPrice(sum)} so'm` : `Jami: ${formatPrice(tab.total)} so'm · ${formatNumber(tab.count)} ta`;
 
-/** One drawer month line; a non-month line (a mock fee, a refund paid out) has only `left`. */
-export const drawerMonthText = (m: Pick<DebtDrawer["months"][number], "month" | "charged" | "paid" | "left">) =>
-  m.charged === null
-    ? `qoldi ${formatPrice(m.left)}`
-    : `hisoblandi ${formatPrice(m.charged)} · to'landi ${formatPrice(m.paid ?? 0)} · qoldi ${formatPrice(m.left)}`;
+/** The drawer header's «ID · holat»: a debtor without a kind is in a group. */
+export const drawerStatus = (kind: DebtKind | null) => (kind ? KIND_LABEL[kind].toLowerCase() : "o'qiyapti");
+
+/** The line under the drawer's total: how many months the debt spans and the oldest. Null without month lines. */
+export function debtSpan(months: DebtDrawer["months"]): string | null {
+  const keys = months.flatMap((m) => (m.month && m.left > 0 ? [m.month] : [])).sort();
+  if (keys.length === 0) return null;
+  const oldest = monthShort(keys[0]).toLowerCase();
+  return keys.length === 1 ? `${oldest} oyi uchun` : `${keys.length} oy bo'yicha · eng eskisi ${oldest}`;
+}

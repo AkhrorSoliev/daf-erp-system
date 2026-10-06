@@ -2,12 +2,13 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
+import { formatPhone } from "@/lib/format-utils";
 import { DebtDrawerBody, PromiseForm } from "./debt-drawer";
 import type { DebtDrawer, PromiseMonthState } from "./debt-types";
 
 const DRAWER: DebtDrawer = {
   student: { id: 10001, firstName: "Ali", lastName: "Valiyev", phone: "901112233" },
-  kind: null, groups: [{ id: "g1", name: "A1-01", teachers: [] }], debt: 500_000,
+  kind: null, groups: [{ id: "g1", name: "A1-01", teachers: [{ id: 10020, name: "Olim Karimov" }] }], debt: 140_000,
   months: [
     { month: "2026-08", label: null, charged: null, paid: null, left: 30_000 },
     { month: "2026-09", label: null, charged: 450_000, paid: 380_000, left: 70_000 },
@@ -28,31 +29,44 @@ const html = (over: Partial<Parameters<typeof DebtDrawerBody>[0]> = {}) =>
   renderToStaticMarkup(createElement(DebtDrawerBody, { drawer: DRAWER, promiseState: FREE, canLogCalls: true, canPdf: true, onPay: noop, onLogCall: noop, ...over }));
 
 describe("DebtDrawerBody (spec §2.5)", () => {
-  it("prints the debt, the months, and the empty payment and contact lines", () => {
+  it("prints the contacts, the debt with its span, the months as columns, and the empty payment and contact lines", () => {
     const text = norm(html());
-    expect(text).toContain("ID 10001");
-    expect(text).toContain("A1-01");
-    expect(text).toContain(`Qarz ${num(500_000)} so'm`);
-    expect(text).toContain(`Avgust 2026 qoldi ${num(30_000)}`);
-    expect(text).toContain(`Sentabr 2026 hisoblandi ${num(450_000)} · to'landi ${num(380_000)} · qoldi ${num(70_000)}`);
+    expect(text).toContain(norm(formatPhone("901112233")));
+    expect(text).toContain("A1-01 · Olim Karimov");
+    expect(text).toContain(`Umumiy qarz ${num(140_000)} so'm 2 oy bo'yicha · eng eskisi avgust`);
+    expect(text).toContain("Oy Hisoblandi To'landi Qoldi");
+    expect(text).toContain(`Avgust 2026 — — ${num(30_000)}`);
+    expect(text).toContain(`Sentabr 2026 ${num(450_000)} ${num(380_000)} ${num(70_000)}`);
+    expect(text).toContain(`Jami ${num(140_000)}`);
+    expect(text).toContain("Va'da yo'q");
     expect(text).toContain("Hali to'lov qilmagan");
     expect(text).toContain("Hali aloqa bo'lmagan");
+  });
+
+  it("the last payment and the last call: method, amount, who called, when, and the note", () => {
+    const text = norm(html({ drawer: { ...DRAWER,
+      lastPayment: { createdAt: "2026-08-12T06:00:00Z", amount: 350_000, method: "CASH" },
+      lastCall: { createdAt: "2026-10-03T09:20:00Z", outcome: "WILL_PAY", note: "Maosh olgach to'laydi", calledByName: "Kamola" } } }));
+    expect(text).toContain(`12.08.2026 · Naqd ${num(350_000)} so'm`);
+    expect(text).toContain("To'laydi 03.10.2026, 14:20 · Kamola «Maosh olgach to'laydi»");
   });
 
   it("no month lines (they would not add up to the debt): no «Oylar bo'yicha» block at all", () => {
     expect(norm(html())).toContain("Oylar bo'yicha");
     const text = norm(html({ drawer: { ...DRAWER, months: [] } }));
     expect(text).not.toContain("Oylar bo'yicha");
-    expect(text).toContain(`Qarz ${num(500_000)} so'm`);
+    expect(text).toContain(`Umumiy qarz ${num(140_000)} so'm`);
   });
 
-  it("a line that is not a month's lessons reads «<label> — qoldi Z»", () => {
-    expect(norm(html())).toContain(`Sinov imtihoni — qoldi ${num(40_000)}`);
+  it("a line that is not a month's lessons keeps its label and shows only what is left", () => {
+    expect(norm(html())).toContain(`Sinov imtihoni — — ${num(40_000)}`);
   });
 
-  it("names the promise with its amount", () => {
-    const text = norm(html({ drawer: { ...DRAWER, promise: { state: "open", promiseDate: "2026-10-17", promisedAmount: 350_000 } } }));
-    expect(text).toContain(`Va'da: ${num(350_000)} so'm, 17.10 gacha`);
+  it("the promise card: open with its amount, broken with «edi»", () => {
+    const open = norm(html({ drawer: { ...DRAWER, promise: { state: "open", promiseDate: "2026-10-17", promisedAmount: 350_000 } } }));
+    expect(open).toContain(`Va'da berilgan ${num(350_000)} so'm · 17.10 gacha`);
+    const broken = norm(html({ drawer: { ...DRAWER, promise: { state: "broken", promiseDate: "2026-10-05", promisedAmount: null } } }));
+    expect(broken).toContain("Va'da buzildi 05.10 gacha edi");
   });
 
   it("the actions follow the roles: a cashier gets neither the call result nor the PDF", () => {

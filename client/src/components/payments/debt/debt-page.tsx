@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, Clock, Download } from "lucide-react";
+import { ArrowRight, Clock, Download, MousePointerClick } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { LogCallDialog, type LogCallPrefill } from "@/components/outreach/log-call-dialog";
@@ -97,6 +97,13 @@ export function DebtPage() {
 
       <DebtFilterBar filters={filters} setFilters={setFilters} options={data?.options} />
       {data && !isPlaceholderData && <p className="text-sm text-muted-foreground">{sumLine(hasDebtFilter(filters), data.total, data.sum, data.tabs[tab])}</p>}
+      {/* Nothing else on the row says it opens: until this line, admins found the drawer by accident. */}
+      {data && data.total > 0 && (
+        <p className="flex items-center gap-2 rounded-md bg-primary/5 px-3 py-2 text-sm text-primary">
+          <MousePointerClick className="size-4 shrink-0" />
+          O&apos;quvchi ustiga bosing — qarz tafsiloti, aloqa va va&apos;da o&apos;ng tomonda ochiladi
+        </p>
+      )}
 
       {isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">

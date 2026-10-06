@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatNumber } from "@/lib/format-utils";
-import { drawerMonthText, dueCell, promiseLine, promiseText, sumLine, tabRule } from "./debt-format";
+import { debtSpan, drawerStatus, dueCell, instantDateTime, promiseCard, promiseText, sumLine, tabRule } from "./debt-format";
 
 describe("debt cells (spec §2.3–2.5)", () => {
   it("«To'lov muddati»: «dd.MM gacha» before the day, red «o'tgan · dd.MM» on and after it", () => {
@@ -12,7 +12,10 @@ describe("debt cells (spec §2.3–2.5)", () => {
   it("«Va'da»: open and broken, and the drawer's line", () => {
     expect(promiseText({ state: "open", promiseDate: "2026-10-17", promisedAmount: null })).toBe("17.10 gacha");
     expect(promiseText({ state: "broken", promiseDate: "2026-10-09", promisedAmount: null })).toBe("buzildi · 09.10");
-    expect(promiseLine({ state: "open", promiseDate: "2026-10-17", promisedAmount: 350_000 })).toBe(`Va'da: ${formatNumber(350_000)} so'm, 17.10 gacha`);
+    expect(promiseCard({ state: "open", promiseDate: "2026-10-17", promisedAmount: 350_000 }))
+      .toEqual({ title: "Va'da berilgan", detail: `${formatNumber(350_000)} so'm · 17.10 gacha` });
+    expect(promiseCard({ state: "broken", promiseDate: "2026-10-05", promisedAmount: null }))
+      .toEqual({ title: "Va'da buzildi", detail: "05.10 gacha edi" });
   });
 
   it("«Topildi» with a filter, «Jami» (the tab's total) without", () => {
@@ -20,10 +23,20 @@ describe("debt cells (spec §2.3–2.5)", () => {
     expect(sumLine(false, 3, 905_000, { total: 1_350_000, count: 4 })).toBe(`Jami: ${formatNumber(1_350_000)} so'm · 4 ta`);
   });
 
-  it("the drawer's month line", () => {
-    expect(drawerMonthText({ month: "2026-09", charged: 450_000, paid: 400_000, left: 50_000 }))
-      .toBe(`hisoblandi ${formatNumber(450_000)} · to'landi ${formatNumber(400_000)} · qoldi ${formatNumber(50_000)}`);
-    expect(drawerMonthText({ month: "2026-08", charged: null, paid: null, left: 30_000 })).toBe(`qoldi ${formatNumber(30_000)}`);
+  it("the drawer's span line counts only months still owed, and names the oldest", () => {
+    const line = (month: string | null, left: number) => ({ month, label: month ? null : "Sinov imtihoni", charged: null, paid: null, left });
+    expect(debtSpan([line("2026-10", 400_000), line("2026-08", 250_000), line("2026-09", 0), line(null, 40_000)])).toBe("2 oy bo'yicha · eng eskisi avgust");
+    expect(debtSpan([line("2026-09", 70_000)])).toBe("sentabr oyi uchun");
+    expect(debtSpan([line(null, 40_000)])).toBeNull();
+  });
+
+  it("the drawer's status: «o'qiyapti» without a kind", () => {
+    expect(drawerStatus(null)).toBe("o'qiyapti");
+    expect(drawerStatus("frozen")).toBe("muzlatilgan");
+  });
+
+  it("an instant's Tashkent date and time", () => {
+    expect(instantDateTime("2026-10-03T09:20:00Z")).toBe("03.10.2026, 14:20");
   });
 
   it("the Shu oy rule names the month and drops «(1-oktabrdan amal qiladi)»", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,7 +23,7 @@ export const Pill = ({ tone, children }: { tone: keyof typeof PILL; children: Re
 );
 const Dash = () => <span className="text-muted-foreground">—</span>;
 
-export const PromiseCellView = ({ p }: { p: PromiseCell | null }) =>
+const PromiseCellView = ({ p }: { p: PromiseCell | null }) =>
   p ? <Pill tone={p.state === "open" ? "green" : "red"}>{promiseText(p)}</Pill> : <Dash />;
 
 /** Spec §2.3, after `#`. The amount column (AMOUNT_AT) is right-aligned. */
@@ -33,10 +34,11 @@ const HEADS: Record<DebtTab, string[]> = {
 };
 const AMOUNT_AT: Record<DebtTab, number> = { "shu-oy": 2, eski: 2, chiqqan: 3 };
 
-function NameCell({ r, tab }: { r: DebtListItem; tab: DebtTab }) {
+function NameCell({ r, tab, openable }: { r: DebtListItem; tab: DebtTab; openable: boolean }) {
   return (
     <div>
-      <div className="font-medium">{r.firstName} {r.lastName}</div>
+      {/* Coloured like a link: the row opens the student's drawer. */}
+      <div className={cn("font-medium", openable && "text-primary group-hover:underline")}>{r.firstName} {r.lastName}</div>
       <div className="text-xs text-muted-foreground">ID {r.studentId}{r.phone ? ` · ${formatPhone(r.phone)}` : ""}</div>
       {tab === "shu-oy" && r.otherPart > 0 && <div className="mt-1"><Pill tone="red">+ eski qarz {formatPrice(r.otherPart)}</Pill></div>}
       {tab === "eski" && r.otherPart > 0 && <div className="mt-1"><Pill tone="amber">+ shu oy {formatPrice(r.otherPart)}</Pill></div>}
@@ -100,7 +102,7 @@ export function DebtTable({ tab, rows, loading, filtered, offset, today, onOpen,
           <TableRow>
             <TableHead className="w-12 border-r">#</TableHead>
             {HEADS[tab].map((h, i) => <TableHead key={h} className={i === AMOUNT_AT[tab] ? "text-right" : undefined}>{h}</TableHead>)}
-            <TableHead className="w-20"><span className="sr-only">Amal</span></TableHead>
+            <TableHead className="w-0"><span className="sr-only">Amal</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -108,13 +110,13 @@ export function DebtTable({ tab, rows, loading, filtered, offset, today, onOpen,
             <TableRow
               key={r.studentId}
               tabIndex={onOpen ? 0 : undefined}
-              className={onOpen ? "cursor-pointer" : undefined}
+              className={onOpen ? "group cursor-pointer" : undefined}
               onClick={() => onOpen?.(r.studentId)}
               // Only the row itself: an Enter on «To'lov» inside it must not open the drawer too.
               onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) onOpen?.(r.studentId); }}
             >
               <TableCell className="border-r text-muted-foreground">{offset + i + 1}</TableCell>
-              <TableCell><NameCell r={r} tab={tab} /></TableCell>
+              <TableCell><NameCell r={r} tab={tab} openable={!!onOpen} /></TableCell>
               {tab === "chiqqan" ? (
                 <>
                   <TableCell>{r.kind && <Pill tone={r.kind === "frozen" ? "amber" : "muted"}>{KIND_LABEL[r.kind].toLowerCase()}</Pill>}</TableCell>
@@ -143,7 +145,14 @@ export function DebtTable({ tab, rows, loading, filtered, offset, today, onOpen,
                 </>
               )}
               <TableCell className="text-right">
-                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onPay(r); }}>To&apos;lov</Button>
+                <div className="flex justify-end gap-1.5">
+                  <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onPay(r); }}>To&apos;lov</Button>
+                  {onOpen && (
+                    <Button size="sm" variant="ghost" className="text-muted-foreground group-hover:text-foreground" onClick={(e) => { e.stopPropagation(); onOpen(r.studentId); }}>
+                      Batafsil<ChevronRight className="ml-0.5 size-4" />
+                    </Button>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
