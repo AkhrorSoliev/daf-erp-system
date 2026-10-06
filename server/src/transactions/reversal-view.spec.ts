@@ -5,10 +5,23 @@ const at = (s: string) => new Date(`${s}T10:00:00Z`);
 describe('reversalReason', () => {
   it('drops the standard prefix', () => {
     expect(
+      reversalReason("Bekor qilindi: Summa to'g'rilandi: profil 2ta"),
+    ).toBe("Summa to'g'rilandi: profil 2ta");
+  });
+
+  it('says what the monthly switch did with the lesson money', () => {
+    expect(
       reversalReason(
         "Bekor qilindi: Oylik to'lovga o'tish migratsiyasi — 2026-09",
       ),
-    ).toBe("Oylik to'lovga o'tish migratsiyasi — 2026-09");
+    ).toBe(
+      "Oylik to'lovga o'tildi, bu dars puli sentabr oylik to'loviga kirdi",
+    );
+    expect(
+      reversalReason(
+        "Bekor qilindi: Oylik to'lovga o'tish migratsiyasi — 2026-10",
+      ),
+    ).toBe("Oylik to'lovga o'tildi, bu dars puli oktabr oylik to'loviga kirdi");
   });
 
   it('has no reason when only the row id was written', () => {
