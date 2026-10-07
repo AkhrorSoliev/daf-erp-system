@@ -95,11 +95,14 @@ describe('TasksReadService', () => {
   });
 
   describe('list', () => {
-    it('refuses the «all» view to someone who is not a director', async () => {
-      await expect(service.list({ view: 'all' }, admin())).rejects.toThrow(
-        ForbiddenException,
-      );
-      expect(prisma.task.findMany).not.toHaveBeenCalled();
+    it('narrows the «all» view for a non-manager to tasks they wrote or take part in, with no branch clause', async () => {
+      await service.list({ view: 'all' }, admin());
+      expect(prisma.task.findMany).toHaveBeenCalledTimes(1);
+      const where = prisma.task.findMany.mock.calls[0][0].where;
+      expect(where.AND).toContainEqual({
+        OR: [{ authorId: 30 }, { participants: { some: { userId: 30 } } }],
+      });
+      expect(JSON.stringify(where)).not.toContain('"branchId"');
     });
 
     it('scopes every query to the actor company', async () => {

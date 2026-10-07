@@ -89,9 +89,8 @@ export class TasksReadService {
     } else if (dto.view === 'created') {
       and.push({ authorId: actor.userId });
     } else {
-      if (actor.scope.kind !== 'all' && highestRoleId(actor.roleIds) !== 2) {
-        throw new ForbiddenException('«Barchasi» faqat rahbarlarga ochiq');
-      }
+      // «all» is what the viewer may see (spec §5.2): a manager gets the branch or
+      // the company, anyone else the tasks they wrote or take part in.
       and.push(this.visibilityWhere(actor));
     }
     if (dto.status?.length) {
