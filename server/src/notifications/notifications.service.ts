@@ -11,6 +11,7 @@ export interface CreateNotificationParams {
   relatedEntityType?: string;
   relatedEntityId?: string;
   commentId?: string;
+  taskId?: string;
   companyId: number;
 }
 
@@ -28,6 +29,7 @@ export class NotificationsService {
         relatedEntityType: params.relatedEntityType,
         relatedEntityId: params.relatedEntityId,
         commentId: params.commentId,
+        taskId: params.taskId,
         companyId: params.companyId,
       },
     });
