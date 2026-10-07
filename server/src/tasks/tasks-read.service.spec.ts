@@ -188,7 +188,37 @@ describe('TasksReadService', () => {
       });
     });
 
-    it('does not count batches at all when no copy is on the page, or off «created»', async () => {
+    it('«all» collapses separate copies for a manager, totals counting the whole batch', async () => {
+      prisma.task.findMany.mockResolvedValue([
+        makeCard({ id: 'a', batchId: 'B', status: 'DONE' }),
+        makeCard({
+          id: 'b',
+          batchId: 'B',
+          participants: [
+            { userId: 41, role: 'ASSIGNEE', seenAt: null, user: person(41) },
+          ],
+        }),
+      ]);
+      prisma.task.groupBy.mockResolvedValue([
+        { batchId: 'B', status: 'DONE', _count: { _all: 1 } },
+        { batchId: 'B', status: 'NEW', _count: { _all: 3 } },
+      ]);
+      const page = await service.list({ view: 'all' }, director());
+      expect(prisma.task.groupBy).toHaveBeenCalledWith({
+        by: ['batchId', 'status'],
+        where: { companyId: 1, batchId: { in: ['B'] } },
+        _count: { _all: true },
+      });
+      expect(page.data).toHaveLength(1);
+      expect(page.data[0].batch).toEqual({
+        total: 4,
+        done: 1,
+        statuses: ['NEW', 'NEW', 'NEW', 'DONE'],
+      });
+      expect(page.data[0].assignees.map((a) => a.id)).toEqual([40, 41]);
+    });
+
+    it('does not count batches at all when no copy is on the page, or on «my»', async () => {
       await service.list({ view: 'created' }, admin());
       prisma.task.findMany.mockResolvedValue([
         makeCard({ id: 'a', batchId: 'B' }),
@@ -204,25 +234,31 @@ describe('TasksReadService', () => {
       expect(prisma.task.findMany).not.toHaveBeenCalled();
     });
 
-    describe('the DONE window', () => {
-      it.each([[['DONE']], [['DONE', 'CANCELLED']]])(
-        'limits DONE rows to closedDays when the status filter is %j',
+    describe('the closed window', () => {
+      it.each([[['DONE']], [['DONE', 'CANCELLED']], [['CANCELLED']]])(
+        'limits DONE (by closedAt) and CANCELLED (by cancelledAt) rows to closedDays when the status filter is %j',
         async (status) => {
           const before = Date.now();
           await service.list({ view: 'my', status, closedDays: 3 }, admin());
           const and = prisma.task.findMany.mock.calls[0][0].where.AND;
-          const clause = and.find(
-            (c: any) => c.OR?.[0]?.status?.not === 'DONE',
-          );
+          const clause = and.find((c: any) => c.OR?.[0]?.status?.notIn);
           expect(clause).toEqual({
             OR: [
-              { status: { not: 'DONE' } },
+              { status: { notIn: ['DONE', 'CANCELLED'] } },
               { status: 'DONE', closedAt: { gte: expect.any(Date) } },
+              {
+                status: 'CANCELLED',
+                cancelledAt: { gte: expect.any(Date) },
+              },
             ],
           });
-          const gte: Date = clause.OR[1].closedAt.gte;
-          expect(gte.getTime()).toBeGreaterThanOrEqual(before - 3 * 864e5);
-          expect(gte.getTime()).toBeLessThanOrEqual(Date.now() - 3 * 864e5);
+          for (const gte of [
+            clause.OR[1].closedAt.gte,
+            clause.OR[2].cancelledAt.gte,
+          ] as Date[]) {
+            expect(gte.getTime()).toBeGreaterThanOrEqual(before - 3 * 864e5);
+            expect(gte.getTime()).toBeLessThanOrEqual(Date.now() - 3 * 864e5);
+          }
           expect(and).toContainEqual({ status: { in: status } });
         },
       );
@@ -231,21 +267,26 @@ describe('TasksReadService', () => {
         const before = Date.now();
         await service.list({ view: 'my', status: ['DONE'] }, admin());
         const and = prisma.task.findMany.mock.calls[0][0].where.AND;
-        const gte: Date = and.find(
-          (c: any) => c.OR?.[0]?.status?.not === 'DONE',
-        ).OR[1].closedAt.gte;
-        expect(gte.getTime()).toBeGreaterThanOrEqual(before - 14 * 864e5);
-        expect(gte.getTime()).toBeLessThanOrEqual(Date.now() - 14 * 864e5);
+        const clause = and.find((c: any) => c.OR?.[0]?.status?.notIn);
+        for (const gte of [
+          clause.OR[1].closedAt.gte,
+          clause.OR[2].cancelledAt.gte,
+        ] as Date[]) {
+          expect(gte.getTime()).toBeGreaterThanOrEqual(before - 14 * 864e5);
+          expect(gte.getTime()).toBeLessThanOrEqual(Date.now() - 14 * 864e5);
+        }
       });
 
-      it('leaves the other statuses unwindowed', async () => {
+      it('leaves the open statuses unwindowed', async () => {
         await service.list(
-          { view: 'my', status: ['NEW', 'CANCELLED'] },
+          { view: 'my', status: ['NEW', 'IN_REVIEW'] },
           admin(),
         );
-        expect(
-          JSON.stringify(prisma.task.findMany.mock.calls[0][0].where),
-        ).not.toContain('closedAt');
+        const where = JSON.stringify(
+          prisma.task.findMany.mock.calls[0][0].where,
+        );
+        expect(where).not.toContain('closedAt');
+        expect(where).not.toContain('cancelledAt');
       });
     });
   });
@@ -414,7 +455,51 @@ describe('TasksReadService', () => {
           onTimePercent: 50,
         },
       ]);
-      expect(out.totals).toEqual({ open: 2, overdue: 1, doneThisMonth: 2 });
+      expect(out.totals).toEqual({
+        open: 2,
+        overdue: 1,
+        doneThisMonth: 2,
+        onTime: 1,
+        withDue: 2,
+      });
+    });
+
+    it('totals carry the on-time counters summed over everyone, not an average of shares', async () => {
+      const mk = (id: number) => ({
+        ...person(id),
+        roles: [{ role: { name: 'Teacher' } }],
+        branches: [],
+      });
+      const done = (userId: number, closed: string, due: string | null) => ({
+        userId,
+        user: mk(userId),
+        task: {
+          status: 'DONE',
+          dueAt: due ? new Date(due) : null,
+          closedAt: new Date(closed),
+        },
+      });
+      prisma.taskParticipant.findMany.mockResolvedValue([
+        // 40: one task closed, with a due date, on time (100%)
+        done(40, '2026-10-05T10:00:00.000Z', '2026-10-05T13:00:00.000Z'),
+        // 41: three closed, only one with a due date, and late (0%)
+        done(41, '2026-10-06T10:00:00.000Z', '2026-10-05T13:00:00.000Z'),
+        done(41, '2026-10-06T10:00:00.000Z', null),
+        done(41, '2026-10-06T10:00:00.000Z', null),
+      ]);
+      const out = await service.workload({ month: '2026-10' }, director());
+      expect(out.data.map((d) => [d.user.id, d.onTimePercent])).toEqual(
+        expect.arrayContaining([
+          [40, 100],
+          [41, 0],
+        ]),
+      );
+      // 1 on time of 2 with a due date = 50%; the mean of 100 and 0 weighted by closed tasks would say 25.
+      expect(out.totals).toMatchObject({
+        doneThisMonth: 4,
+        onTime: 1,
+        withDue: 2,
+      });
     });
   });
 

@@ -97,17 +97,15 @@ export class TasksReadService {
     if (dto.status?.length) {
       and.push({ status: { in: dto.status as TaskStatus[] } });
     }
-    if (dto.status?.includes('DONE')) {
-      // The DONE column is a recent window; the other statuses are not.
+    if (dto.status?.some((s) => s === 'DONE' || s === 'CANCELLED')) {
+      // Closed tasks are a recent window; the open statuses are not. A cancelled
+      // task has no `closedAt` (spec keeps the two apart), so it is cut by `cancelledAt`.
+      const since = new Date(Date.now() - (dto.closedDays ?? 14) * 864e5);
       and.push({
         OR: [
-          { status: { not: 'DONE' } },
-          {
-            status: 'DONE',
-            closedAt: {
-              gte: new Date(Date.now() - (dto.closedDays ?? 14) * 864e5),
-            },
-          },
+          { status: { notIn: ['DONE', 'CANCELLED'] } },
+          { status: 'DONE', closedAt: { gte: since } },
+          { status: 'CANCELLED', cancelledAt: { gte: since } },
         ],
       });
     }
@@ -150,10 +148,11 @@ export class TasksReadService {
       take: limit + 1,
     });
     const page = rows.slice(0, limit);
-    // Separate copies collapse into one card for their author (spec §4.3),
-    // whose totals count the WHOLE batch, not just the copies on this page.
+    // Separate copies collapse into one card for their author (spec §4.3) and
+    // for a manager reading «all», whose totals count the WHOLE batch, not
+    // just the copies on this page.
     let data: (TaskCard & { batch?: BatchInfo })[];
-    if (dto.view === 'created') {
+    if (dto.view === 'created' || dto.view === 'all') {
       const batchIds = [
         ...new Set(
           page.map((r) => r.batchId).filter((b): b is string => b !== null),
@@ -354,7 +353,8 @@ export class TasksReadService {
       }
       byUser.set(r.userId, e);
     }
-    const data = [...byUser.values()]
+    const entries = [...byUser.values()];
+    const data = entries
       .map((e) => ({
         user: {
           id: e.user.id,
@@ -376,6 +376,9 @@ export class TasksReadService {
       open: data.reduce((s, d) => s + d.open, 0),
       overdue: data.reduce((s, d) => s + d.overdue, 0),
       doneThisMonth: data.reduce((s, d) => s + d.doneThisMonth, 0),
+      // The company-wide on-time share is onTime / withDue; per-person shares cannot be averaged into it.
+      onTime: entries.reduce((s, e) => s + e.onTime, 0),
+      withDue: entries.reduce((s, e) => s + e.withDue, 0),
     };
     return { month, data, totals };
   }
