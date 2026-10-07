@@ -35,3 +35,5 @@ export function taskEntityHref(
   if (allowed && !roleIds.some((id) => allowed.includes(id))) return null;
   return ENTITY_ROUTES[entityType]?.(entityId) ?? null;
 }
+
+export const taskHref = (id: string) => `/tasks?task=${id}`;

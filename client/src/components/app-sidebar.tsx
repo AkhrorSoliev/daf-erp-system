@@ -32,7 +32,7 @@ import { BranchSwitcher } from "@/components/branch-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { isNavChildActive, navItems, type NavItem, type NavItemChild } from "@/lib/nav-items";
 import { useAuth } from "@/hooks/use-auth";
-import { usePendingTaskCount } from "@/hooks/use-pending-task-count";
+import { useTaskCounts } from "@/hooks/use-task-counts";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
@@ -41,7 +41,7 @@ export function AppSidebar() {
   const isIconCollapsed = state === "collapsed" && !isMobile;
   const user = useAuth((s) => s.user);
   const userRoleIds = user?.roles.map((r) => r.id) ?? [];
-  const pendingTasks = usePendingTaskCount();
+  const { my: pendingTasks, myOverdue } = useTaskCounts();
 
   const isVisible = (roles?: number[]) =>
     !roles || roles.some((id) => userRoleIds.includes(id));
@@ -220,27 +220,34 @@ export function AppSidebar() {
                   );
                 }
 
-                // Tasks waiting in «Kutilmoqda» mark the row: red tint, a soft
-                // wave and the count (in the corner when the sidebar is icons).
+                // My open tasks show as a count (in the corner when the
+                // sidebar is icons); an overdue one turns the row red with a
+                // soft wave, otherwise the badge keeps the primary colour.
                 const news = item.url === "/tasks" ? pendingTasks : 0;
+                const overdue = item.url === "/tasks" && myOverdue > 0;
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
                       asChild
                       isActive={isItemActive(item)}
                       tooltip={item.title}
-                      className={cn(news > 0 && "sidebar-news")}
+                      className={cn(overdue && "sidebar-news")}
                     >
                       <Link
                         href={item.url}
                         onClick={handleNavClick}
                         title={item.title}
                       >
-                        <item.icon className={cn(news > 0 && "text-red-500")} />
+                        <item.icon className={cn(overdue && "text-red-500")} />
                         <span className="flex-1 min-w-0 truncate">{item.title}</span>
                         {news > 0 && (
                           <span
-                            className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white tabular-nums group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-0 group-data-[collapsible=icon]:right-0 group-data-[collapsible=icon]:h-3.5 group-data-[collapsible=icon]:min-w-3.5 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:text-[9px]"
+                            className={cn(
+                              "flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-0 group-data-[collapsible=icon]:right-0 group-data-[collapsible=icon]:h-3.5 group-data-[collapsible=icon]:min-w-3.5 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:text-[9px]",
+                              overdue
+                                ? "bg-red-500 text-white"
+                                : "bg-primary text-primary-foreground",
+                            )}
                           >
                             {news > 9 ? "9+" : news}
                           </span>

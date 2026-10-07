@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { taskEntityHref } from "./task-entity-href";
+import { taskEntityHref, taskHref } from "./task-href";
 
 const CEO = [1];
 const BRANCH_DIRECTOR = [2];
@@ -52,5 +52,11 @@ describe("taskEntityHref", () => {
       "/students/profile/10001",
     );
     expect(taskEntityHref("Group", "g1", [5, 4])).toBe("/groups/g1");
+  });
+});
+
+describe("taskHref", () => {
+  it("opens the task drawer on the tasks page", () => {
+    expect(taskHref("t1")).toBe("/tasks?task=t1");
   });
 });
