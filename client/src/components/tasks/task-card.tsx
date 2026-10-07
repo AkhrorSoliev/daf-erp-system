@@ -26,6 +26,20 @@ function Person({ p, className }: { p: TaskPerson; className?: string }) {
   );
 }
 
+function SeenMark({ unseen }: { unseen: boolean }) {
+  const label = unseen ? "Hali ko'rmadi" : "Ko'rdi";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span role="img" aria-label={label} className="inline-flex">
+          {unseen ? <EyeOff className="size-3 text-amber-600" /> : <Eye className="size-3 text-muted-foreground" />}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function DueBadge({ dueAt, closedAt }: { dueAt: string | null; closedAt: string | null }) {
   if (!dueAt) return null;
   const now = new Date();
@@ -43,7 +57,9 @@ interface Props { task: TaskCardData; dragEnabled: boolean; isOverlay?: boolean;
 
 export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props) {
   const openTask = useTasks((s) => s.openTask);
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id, disabled: !dragEnabled });
+  // A closed card is never dragged out of «Bajarildi».
+  const canDrag = dragEnabled && task.status !== "DONE";
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id, disabled: !canDrag });
   const style = isOverlay || !transform ? undefined : { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.5 : 1 };
   const isSystem = task.kind !== "MANUAL";
   const unseen = showAssignees && task.assignees.length > 0 && task.assignees.every((a) => a.seenAt === null);
@@ -54,10 +70,13 @@ export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props)
       style={style}
       role="button"
       tabIndex={0}
-      {...(isOverlay || !dragEnabled ? {} : { ...listeners, ...attributes })}
+      {...(isOverlay || !canDrag ? {} : { ...listeners, ...attributes })}
       onClick={() => openTask(task.id)}
-      onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) openTask(task.id); }}
-      className={cn("rounded-lg border bg-card p-3 shadow-sm cursor-pointer space-y-2", dragEnabled && "active:cursor-grabbing", isOverlay && "shadow-lg ring-2 ring-primary/20 rotate-2", task.status === "DONE" && "opacity-80")}
+      onKeyDown={(e) => {
+        // Only the card itself: Enter/Space inside the lesson prompt belong to its buttons.
+        if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); openTask(task.id); }
+      }}
+      className={cn("rounded-lg border bg-card p-3 shadow-sm cursor-pointer space-y-2 outline-none focus-visible:ring-2 focus-visible:ring-primary/40", canDrag && "active:cursor-grabbing", isOverlay && "shadow-lg ring-2 ring-primary/20 rotate-2", task.status === "DONE" && "opacity-80")}
     >
       <div className="flex flex-wrap items-center gap-1.5">
         {isSystem && <span className="inline-flex items-center gap-1 rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium text-background"><Bot className="size-3" />Tizim</span>}
@@ -102,7 +121,7 @@ export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props)
         {task.author ? <span className="truncate text-[11px] text-muted-foreground max-w-32">{task.author.firstName} {task.author.lastName}</span> : <span className="text-[11px] text-muted-foreground">Tizim</span>}
         {showAssignees ? (
           <div className="flex items-center gap-1">
-            {unseen ? <EyeOff className="size-3 text-amber-600" /> : <Eye className="size-3 text-muted-foreground" />}
+            <SeenMark unseen={unseen} />
             <div className="flex -space-x-1">{task.assignees.slice(0, 4).map((a) => <Person key={a.id} p={a} />)}</div>
           </div>
         ) : (

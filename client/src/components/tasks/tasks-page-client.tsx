@@ -42,14 +42,20 @@ export function TasksPageClient() {
   const urlTask = searchParams.get("task");
 
   // A tab switch is a different list: set the view and load its board (once).
+  // Not before the user is known: auth hydrates in an effect, and a manager's
+  // `?tab=all` would first resolve to «my» and fetch it for nothing.
+  const ready = !!user;
   useEffect(() => {
-    if (tab === "workload") return;
+    if (!ready || tab === "workload") return;
     const s = useTasks.getState();
     if (s.view !== tab) s.setView(tab);
-    // «Menga berilgan» has no assignee filter; one left over from «Men bergan» would empty it.
-    if (tab === "my" && s.filters.assigneeId?.length) s.setFilters({ ...s.filters, assigneeId: undefined });
+    // Each tab has one of the two person filters: «Menga berilgan» filters by
+    // author, the others by assignee. One left over from another tab would
+    // silently narrow (or empty) this one.
+    const left = tab === "my" ? s.filters.assigneeId : s.filters.authorId;
+    if (left?.length) s.setFilters({ ...s.filters, ...(tab === "my" ? { assigneeId: undefined } : { authorId: undefined }) });
     if (tab !== "all") void s.fetchBoard();
-  }, [tab]);
+  }, [tab, ready]);
   // The link opens a task once per change of `?task=`; closing it strips the param.
   useEffect(() => { if (urlTask) openTask(urlTask); }, [urlTask, openTask]);
   // A phone gets the list (the board is for a wide screen).
