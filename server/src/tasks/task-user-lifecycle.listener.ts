@@ -83,6 +83,12 @@ export class TaskUserLifecycleListener {
             where: { taskId: t.id, userId: e.userId },
           });
           if (toUserIds.length) {
+            // A successor who already watches the task becomes its assignee:
+            // the unique index would skip the insert and leave nobody on it.
+            await tx.taskParticipant.updateMany({
+              where: { taskId: t.id, userId: { in: toUserIds } },
+              data: { role: 'ASSIGNEE' },
+            });
             await tx.taskParticipant.createMany({
               data: toUserIds.map((userId) => ({
                 taskId: t.id,

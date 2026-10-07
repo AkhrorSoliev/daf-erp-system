@@ -20,7 +20,11 @@ function row(over: Record<string, unknown> = {}) {
 
 function setup(rows: unknown[]) {
   const tx = {
-    taskParticipant: { deleteMany: jest.fn(), createMany: jest.fn() },
+    taskParticipant: {
+      deleteMany: jest.fn(),
+      updateMany: jest.fn(),
+      createMany: jest.fn(),
+    },
     taskEvent: { create: jest.fn() },
     taskOutbox: { deleteMany: jest.fn(), createMany: jest.fn() },
     task: { update: jest.fn() },
@@ -91,6 +95,49 @@ describe('TaskUserLifecycleListener', () => {
           participants: [{ userId: 5, role: 'ASSIGNEE' }],
         }),
       }),
+    );
+  });
+
+  it('a successor who already watches the task ends as its one assignee', async () => {
+    // The author (5) watches their own task; the sole assignee leaves.
+    const { listener, tx, emitter } = setup([
+      row({
+        participants: [
+          { userId: LEAVER, role: 'ASSIGNEE' },
+          { userId: 5, role: 'WATCHER' },
+        ],
+      }),
+    ]);
+    // The rows as the table keeps them: one per user, a repeated insert is
+    // skipped (the unique index + skipDuplicates), so only an update can
+    // change a watcher's role.
+    const table = new Map<number, string>([
+      [LEAVER, 'ASSIGNEE'],
+      [5, 'WATCHER'],
+    ]);
+    tx.taskParticipant.deleteMany.mockImplementation(
+      ({ where }: { where: { userId: number } }) => table.delete(where.userId),
+    );
+    tx.taskParticipant.updateMany.mockImplementation(
+      ({
+        where,
+        data,
+      }: {
+        where: { userId: { in: number[] } };
+        data: { role: string };
+      }) =>
+        where.userId.in.forEach((u) => table.has(u) && table.set(u, data.role)),
+    );
+    tx.taskParticipant.createMany.mockImplementation(
+      ({ data }: { data: { userId: number; role: string }[] }) =>
+        data.forEach((d) => table.has(d.userId) || table.set(d.userId, d.role)),
+    );
+    await listener.onDeactivated(event);
+
+    expect([...table]).toEqual([[5, 'ASSIGNEE']]);
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'task.reassigned',
+      expect.objectContaining({ toUserIds: [5] }),
     );
   });
 
