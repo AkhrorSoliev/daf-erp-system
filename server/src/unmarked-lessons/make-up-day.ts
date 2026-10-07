@@ -81,7 +81,7 @@ export async function closeQuestionOnFormerMakeUpDay(
 ): Promise<void> {
   const row = await tx.unmarkedLesson.findUnique({
     where: { groupId_date: { groupId: args.groupId, date: args.day } },
-    select: { id: true, status: true, taskCommentId: true },
+    select: { id: true, status: true, taskId: true },
   });
   if (!row || row.status !== 'PENDING') return;
   if (await isLessonDay(tx, args.groupId, args.day)) return;
@@ -93,5 +93,5 @@ export async function closeQuestionOnFormerMakeUpDay(
       decidedAt: args.now,
     },
   });
-  await closeLessonTask(tx, row.taskCommentId, args.actorId);
+  await closeLessonTask(tx, row.taskId, args.actorId);
 }

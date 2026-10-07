@@ -267,7 +267,7 @@ async function main() {
               select: { id: true },
             });
             if (marked || asked) return false;
-            const taskCommentId = await createLessonTask(tx, {
+            const taskId = await createLessonTask(tx, {
               companyId: f.group.companyId,
               branchId: f.group.branchId,
               groupId: f.group.id,
@@ -287,7 +287,7 @@ async function main() {
                 lessonEndTime: endTime,
                 teacherPayExempt: true,
                 exemptReason: EXEMPT_REASON,
-                taskCommentId,
+                taskId,
               },
             });
             // The group's history says the question was asked, as `openOne` does.

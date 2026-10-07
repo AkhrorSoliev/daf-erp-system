@@ -23,7 +23,7 @@ function makeTx() {
       findUnique: jest.fn().mockResolvedValue({
         id: 'u2',
         status: 'PENDING',
-        taskCommentId: 'c3',
+        taskId: 'c3',
       }),
       update: jest.fn(),
       updateMany: jest.fn(),
@@ -32,10 +32,16 @@ function makeTx() {
     lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
     lessonCancellation: { findFirst: jest.fn().mockResolvedValue(null) },
     holiday: { findMany: jest.fn().mockResolvedValue([]) },
-    commentAssignee: {
-      findUnique: jest.fn().mockResolvedValue(null),
-      updateMany: jest.fn(),
+    taskParticipant: {
+      findMany: jest.fn().mockResolvedValue([]),
+      deleteMany: jest.fn(),
     },
+    task: {
+      update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
+    taskEvent: { create: jest.fn() },
+    taskOutbox: { deleteMany: jest.fn() },
   } as any;
 }
 
@@ -59,7 +65,12 @@ describe('closeQuestionOnFormerMakeUpDay', () => {
       where: { id: 'u2' },
       data: { status: 'NOT_HELD', decidedById: 9, decidedAt: now },
     });
-    expect(tx.commentAssignee.updateMany).toHaveBeenCalled();
+    expect(tx.task.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'c3' }),
+        data: expect.objectContaining({ status: 'DONE' }),
+      }),
+    );
   });
 
   it('keeps it on a day another live move still lands on', async () => {

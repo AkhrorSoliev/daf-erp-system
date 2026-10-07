@@ -112,7 +112,9 @@ describe('GroupsService — status methods', () => {
         updateMany: jest.fn(),
       },
       unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
-      commentAssignee: { updateMany: jest.fn() },
+      task: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      taskEvent: { create: jest.fn() },
+      taskOutbox: { deleteMany: jest.fn() },
       $transaction: jest.fn((arg) =>
         typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
       ),
@@ -532,7 +534,9 @@ describe('GroupsService — status methods', () => {
         group: { update: jest.fn().mockResolvedValue({}) },
         statusHistory: { create: jest.fn().mockResolvedValue({}) },
         unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
-        commentAssignee: { updateMany: jest.fn() },
+        task: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        taskEvent: { create: jest.fn() },
+        taskOutbox: { deleteMany: jest.fn() },
       };
       prisma.$transaction.mockImplementation((arg: any) =>
         typeof arg === 'function' ? arg(tx) : Promise.all(arg),
@@ -604,15 +608,18 @@ describe('GroupsService — status methods', () => {
     });
 
     it("closes the group's unanswered «Dars bo'ldimi?» tasks", async () => {
-      tx.unmarkedLesson.findMany.mockResolvedValue([{ taskCommentId: 'c1' }]);
+      tx.unmarkedLesson.findMany.mockResolvedValue([{ taskId: 'c1' }]);
       await service.delete('group-1', 1, 1001);
       expect(tx.unmarkedLesson.findMany).toHaveBeenCalledWith({
         where: { groupId: 'group-1', status: 'PENDING' },
-        select: { taskCommentId: true },
+        select: { taskId: true },
       });
-      expect(tx.commentAssignee.updateMany).toHaveBeenCalledWith({
-        where: { commentId: 'c1', status: { not: 'DONE' } },
-        data: { status: 'DONE', doneAt: expect.any(Date) },
+      expect(tx.task.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'c1',
+          status: { in: ['NEW', 'IN_PROGRESS', 'IN_REVIEW'] },
+        },
+        data: { status: 'DONE', closedAt: expect.any(Date) },
       });
     });
 

@@ -466,7 +466,7 @@ export class AttendanceSaveService {
           // The lesson is over: «Bo'ldi» records no late minutes.
           late: { rosterTaken: false, minutesNow: null },
         });
-        await closeLessonTask(tx, row.taskCommentId, userId);
+        await closeLessonTask(tx, row.taskId, userId);
         return {
           written,
           exempt,

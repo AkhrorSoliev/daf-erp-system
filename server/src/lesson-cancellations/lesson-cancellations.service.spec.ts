@@ -53,7 +53,7 @@ describe('LessonCancellationsService', () => {
         update: jest.fn(),
         create: jest.fn(),
       },
-      comment: { create: jest.fn().mockResolvedValue({ id: 'c1' }) },
+      task: { create: jest.fn().mockResolvedValue({ id: 'c1' }) },
       // `remove` reads the branch's holidays so the re-asked task skips them.
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       enrollment: {
@@ -376,7 +376,7 @@ describe('LessonCancellationsService', () => {
         lessonStartTime: '16:00',
         lessonEndTime: '17:30',
         status: 'PENDING',
-        taskCommentId: null,
+        taskId: null,
       });
       tx.group.findUnique.mockResolvedValue({ name: '#014' });
 
@@ -578,7 +578,7 @@ describe('LessonCancellationsService', () => {
           deletedAt: null,
         });
         tx.user.findMany.mockResolvedValue([{ id: 3 }]);
-        tx.comment.create.mockResolvedValue({ id: 'c2' });
+        tx.task.create.mockResolvedValue({ id: 'c2' });
       });
       afterEach(() => jest.useRealTimers());
 
@@ -589,7 +589,7 @@ describe('LessonCancellationsService', () => {
           expect.objectContaining({
             data: expect.objectContaining({
               status: 'PENDING',
-              taskCommentId: 'c2',
+              taskId: 'c2',
             }),
           }),
         );
@@ -619,10 +619,10 @@ describe('LessonCancellationsService', () => {
         expect(tx.holiday.findMany.mock.invocationCallOrder[0]).toBeLessThan(
           prisma.$transaction.mock.invocationCallOrder[0],
         );
-        expect(tx.comment.create).toHaveBeenCalledWith(
+        expect(tx.task.create).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              dueDate: new Date('2026-10-02T05:00:00.000Z'),
+              dueAt: new Date('2026-10-02T05:00:00.000Z'),
             }),
           }),
         );
