@@ -46,7 +46,8 @@ export function describeEvent(ev: TaskEvent): { actor: string; text: string } {
     case "AUTO_CLOSED":
       return { actor: SYSTEM_NAME, text: str(ev.meta, "reason") === "GROUP_DELETED" ? "yopdi (guruh o'chirildi)" : "yopdi (darsga javob berildi)" };
     case "REASSIGNED": return { actor, text: "ishdan ketgani uchun topshiriq o'tkazildi" };
-    default: return { actor, text: ev.type };
+    // A type this client does not know yet: a line anyone can read, never an enum name.
+    default: return { actor, text: "yangilanish kiritdi" };
   }
 }
 

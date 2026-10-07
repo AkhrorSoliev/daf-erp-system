@@ -11,16 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import type { TaskAccess, TaskDetail } from "@/hooks/use-tasks";
+import { footerActions } from "./task-drawer-footer-rules";
 import { useTaskWrite } from "./use-task-write";
 
 type Move = "IN_PROGRESS" | "IN_REVIEW" | "DONE";
 const MOVED: Record<Move, string> = { IN_PROGRESS: "Topshiriq boshlandi", IN_REVIEW: "Tekshiruvga yuborildi", DONE: "Topshiriq bajarildi" };
 
-/**
- * What the viewer can do with the task now, mirroring the server's table
- * (task-transitions.ts): the assignee starts and finishes, the author reviews,
- * and a system task is only ever started by hand, because it closes itself.
- */
+/** The buttons come from `footerActions` (what the server allows); this draws them and asks the questions. */
 export function TaskDrawerFooter({ task, access }: { task: TaskDetail; access: TaskAccess }) {
   const me = useAuth((s) => s.user?.id);
   const { busy, run } = useTaskWrite();
@@ -28,16 +25,10 @@ export function TaskDrawerFooter({ task, access }: { task: TaskDetail; access: T
   const [returning, setReturning] = useState(false);
   const [reason, setReason] = useState("");
 
-  const system = task.kind !== "MANUAL";
-  // The author is the only assignee: their task skips the review step.
-  const isSelf = me !== undefined && task.author?.id === me && task.assignees.length === 1 && task.assignees[0].id === me;
+  const actions = footerActions(task, access, me);
+  const finish = actions.done?.target;
   const unchecked = task.stepsTotal - task.stepsDone;
-  const working = access.isAssignee && (task.status === "NEW" || task.status === "IN_PROGRESS");
-  const canStart = working && task.status === "NEW";
-  const canFinish = working && !system;
-  const canReview = access.canManage && !system && task.status === "IN_REVIEW";
-  const waiting = access.isAssignee && !system && task.status === "IN_REVIEW" && !canReview;
-  if (!canStart && !canFinish && !canReview && !waiting) return null;
+  if (!actions.start && !actions.done && !actions.accept && !actions.return && !actions.label) return null;
 
   const send = async (to: Move) => {
     if (await run(api.post(`/tasks/${task.id}/status`, { status: to }), "Holatni o'zgartirishda xatolik yuz berdi")) toast.success(MOVED[to]);
@@ -58,26 +49,25 @@ export function TaskDrawerFooter({ task, access }: { task: TaskDetail; access: T
       setReason("");
     }
   };
-  const finishTo: Move = isSelf ? "DONE" : "IN_REVIEW";
 
   return (
     <footer className="flex flex-wrap items-center justify-end gap-2 border-t px-4 py-3">
-      {waiting && <span className="mr-auto text-xs text-muted-foreground">Beruvchi tekshirmoqda</span>}
-      {canStart && (
+      {actions.label && <span className="mr-auto text-xs text-muted-foreground">{actions.label}</span>}
+      {actions.start && (
         <Button variant="outline" disabled={busy} onClick={() => move("IN_PROGRESS")}><Play className="mr-1 size-4" />Boshladim</Button>
       )}
-      {canFinish && (
-        <Button disabled={busy} onClick={() => move(finishTo)}>
+      {finish && (
+        <Button disabled={busy} onClick={() => move(finish)}>
           {busy ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Check className="mr-1 size-4" />}Bajardim
         </Button>
       )}
-      {canReview && (
-        <>
-          <Button variant="outline" disabled={busy} onClick={() => setReturning(true)}><Undo2 className="mr-1 size-4" />Qaytarish</Button>
-          <Button disabled={busy} onClick={() => void review("ACCEPT")}>
-            {busy ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Check className="mr-1 size-4" />}Qabul qilish
-          </Button>
-        </>
+      {actions.return && (
+        <Button variant="outline" disabled={busy} onClick={() => setReturning(true)}><Undo2 className="mr-1 size-4" />Qaytarish</Button>
+      )}
+      {actions.accept && (
+        <Button disabled={busy} onClick={() => void review("ACCEPT")}>
+          {busy ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Check className="mr-1 size-4" />}Qabul qilish
+        </Button>
       )}
 
       <AlertDialog open={warn !== null} onOpenChange={(o) => { if (!o) setWarn(null); }}>

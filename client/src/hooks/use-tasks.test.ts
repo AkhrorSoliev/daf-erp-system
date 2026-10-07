@@ -361,11 +361,22 @@ describe("applyDetail / reloadDetail", () => {
     await vi.waitFor(() => expect(state().detail?.events.map((e) => e.id)).toEqual(["e1", "e2"]));
   });
 
-  it("ignores the written task when another one is open now", () => {
+  it("ignores the written task when another one is open now: board patched, drawer and feed untouched", () => {
+    seed([card("other")]);
     open([]);
     state().applyDetail(detailOf("other", { title: "x" }));
     expect(state().detail?.task.id).toBe("a");
     expect(state().detail?.task.title).toBe("a");
+    expect(state().columns.NEW.items[0].title).toBe("x");
+    // No re-read of a task nobody is looking at.
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it("does not re-read anything once the drawer is closed", () => {
+    seed([card("a")]);
+    state().applyDetail(detailOf("a", { title: "x" }));
+    expect(state().columns.NEW.items[0].title).toBe("x");
+    expect(get).not.toHaveBeenCalled();
   });
 
   it("keeps a comment posted while the re-read was in flight", async () => {
@@ -374,7 +385,7 @@ describe("applyDetail / reloadDetail", () => {
     get.mockReturnValueOnce(inFlight.promise);
 
     const reload = state().reloadDetail("a");
-    state().appendEvent(ev("mine", "2026-10-07T10:09:00Z"));
+    state().appendEvent("a", ev("mine", "2026-10-07T10:09:00Z"));
     inFlight.resolve(payload("a", [ev("e1", "2026-10-07T10:00:00Z")]));
     await reload;
 
@@ -408,8 +419,8 @@ describe("appendEvent", () => {
     seed([card("a", { eventsCount: 1 })]);
     useTasks.setState({ openTaskId: "a", detail: payload("a", [ev("e1", "2026-10-07T10:00:00Z")], { eventsCount: 1 }).data });
 
-    state().appendEvent(ev("c1", "2026-10-07T10:01:00Z"));
-    state().appendEvent(ev("c1", "2026-10-07T10:01:00Z"));
+    state().appendEvent("a", ev("c1", "2026-10-07T10:01:00Z"));
+    state().appendEvent("a", ev("c1", "2026-10-07T10:01:00Z"));
 
     expect(state().detail?.events.map((e) => e.id)).toEqual(["e1", "c1"]);
     expect(state().detail?.task.eventsCount).toBe(2);
@@ -417,7 +428,14 @@ describe("appendEvent", () => {
   });
 
   it("does nothing when no task is open", () => {
-    state().appendEvent(ev("c1", "2026-10-07T10:01:00Z"));
+    state().appendEvent("a", ev("c1", "2026-10-07T10:01:00Z"));
     expect(state().detail).toBeNull();
+  });
+
+  it("leaves the open task alone when the comment was posted to another one", () => {
+    useTasks.setState({ openTaskId: "b", detail: payload("b", [ev("e1", "2026-10-07T10:00:00Z")]).data });
+    state().appendEvent("a", ev("c1", "2026-10-07T10:01:00Z"));
+    expect(state().detail?.events.map((e) => e.id)).toEqual(["e1"]);
+    expect(state().detail?.task.eventsCount).toBe(0);
   });
 });

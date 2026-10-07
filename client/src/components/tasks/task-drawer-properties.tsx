@@ -125,13 +125,12 @@ function PriorityRow({ task, canEdit }: { task: TaskDetail; canEdit: boolean }) 
     return <span className={cn("rounded px-1.5 py-0.5 text-xs font-medium", PRIORITY_CLASS[task.priority])}>{PRIORITY_LABEL[task.priority]}</span>;
   }
   return (
-    <div role="radiogroup" aria-label="Muhimlik" className="inline-flex rounded-md border">
+    <div role="group" aria-label="Muhimlik" className="inline-flex rounded-md border">
       {PRIORITIES.map((p) => (
         <button
           key={p}
           type="button"
-          role="radio"
-          aria-checked={task.priority === p}
+          aria-pressed={task.priority === p}
           disabled={busy}
           onClick={() => { if (p !== task.priority) void run(api.patch(`/tasks/${task.id}`, { priority: p })); }}
           className={cn("px-2.5 py-1 text-xs", task.priority === p ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-muted/50")}

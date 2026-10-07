@@ -52,8 +52,9 @@ describe("describeEvent", () => {
     expect(line({ type: "REASSIGNED", actorId: null, actor: null, meta: { from: 1, to: [2] } })).toBe("Tizim ishdan ketgani uchun topshiriq o'tkazildi");
   });
 
-  it("falls back to the type name for one it does not know", () => {
-    expect(line({ type: "SOMETHING_NEW" })).toBe("Aziz Karimov SOMETHING_NEW");
+  it("falls back to a plain line for a type it does not know, not the type's name", () => {
+    expect(line({ type: "SOMETHING_NEW" })).toBe("Aziz Karimov yangilanish kiritdi");
+    expect(line({ type: "SOMETHING_NEW", actorId: null, actor: null, via: "SYSTEM" })).toBe("Tizim yangilanish kiritdi");
   });
 
   it("returns a comment's text untouched", () => {

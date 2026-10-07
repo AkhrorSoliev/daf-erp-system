@@ -20,24 +20,33 @@ import { useTaskWrite } from "./use-task-write";
 
 // One drawer shows the open task. The first instance to mount wins; a second
 // one (the entity panel mounts its own) renders nothing, so two sheets never
-// open on the same `openTaskId`. The flag lives outside React, and instances
-// read it through useSyncExternalStore, which is how a mount effect can change
-// what the first render drew without setting state inside the effect.
+// open on the same `openTaskId`; when the owner unmounts, a waiting one takes
+// over. The owner lives outside React, and instances read it through
+// useSyncExternalStore, which is how a mount effect can change what the first
+// render drew without setting state inside the effect.
 let owner: symbol | null = null;
 const watchers = new Set<() => void>();
+const notify = () => watchers.forEach((fn) => fn());
 const subscribe = (fn: () => void) => { watchers.add(fn); return () => void watchers.delete(fn); };
 
 function useOwnsDrawer(): boolean {
   const [me] = useState(() => Symbol("task-drawer"));
   useEffect(() => {
-    if (owner) return;
-    owner = me;
-    watchers.forEach((fn) => fn());
+    // Runs on mount and whenever any instance lets go; only a free slot is taken.
+    const claim = () => {
+      if (owner !== null) return;
+      owner = me;
+      notify();
+    };
+    watchers.add(claim);
+    claim();
     return () => {
+      watchers.delete(claim);
+      if (owner !== me) return;
       owner = null;
-      watchers.forEach((fn) => fn());
       // Leaving the page must not leave a task «open» for the next visit.
       useTasks.getState().openTask(null);
+      notify();
     };
   }, [me]);
   return useSyncExternalStore(subscribe, () => owner === me, () => false);
@@ -148,8 +157,9 @@ export function TaskDrawer({ onClose }: { onClose: () => void }) {
         showCloseButton={false}
         aria-describedby={undefined}
         className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
-        // Escape in a field ends the editing there, not the whole drawer.
-        onEscapeKeyDown={(e) => { if (e.target instanceof Element && e.target.closest("input, textarea")) e.preventDefault(); }}
+        // Escape in an EditableText field ends that edit, not the whole drawer;
+        // anywhere else (the composer, the add-step field) it closes the drawer.
+        onEscapeKeyDown={(e) => { if (e.target instanceof Element && e.target.closest("[data-editable]")) e.preventDefault(); }}
       >
         {detail && (openTaskId === null || detail.task.id === openTaskId)
           ?<DrawerBody key={detail.task.id} detail={detail} onClose={close} />

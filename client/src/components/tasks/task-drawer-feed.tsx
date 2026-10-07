@@ -56,7 +56,7 @@ function Composer({ taskId }: { taskId: string }) {
     try {
       const { data } = await api.post<TaskEvent>(`/tasks/${taskId}/events`, { text: text.trim() });
       setText("");
-      appendEvent(data);
+      appendEvent(taskId, data);
       requestAnimationFrame(() => endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" }));
     } catch (error) {
       toast.error(getErrorMessage(error, "Izoh yuborishda xatolik yuz berdi"));

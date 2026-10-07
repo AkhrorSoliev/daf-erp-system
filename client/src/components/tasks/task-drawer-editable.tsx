@@ -34,9 +34,10 @@ export function EditableText({ value, canEdit, multiline = false, placeholder, m
     if (e.key === "Escape") { e.currentTarget.value = value; e.currentTarget.blur(); }
     else if (e.key === "Enter" && (!multiline || e.ctrlKey || e.metaKey)) { e.preventDefault(); e.currentTarget.blur(); }
   };
+  // `data-editable` tells the drawer that Escape here belongs to the field (see TaskDrawer).
   return multiline ? (
-    <Textarea autoFocus defaultValue={value} maxLength={maxLength} placeholder={placeholder} rows={3} className={className} onBlur={(e) => finish(e.currentTarget)} onKeyDown={onKeyDown} />
+    <Textarea data-editable autoFocus defaultValue={value} maxLength={maxLength} placeholder={placeholder} rows={3} className={className} onBlur={(e) => finish(e.currentTarget)} onKeyDown={onKeyDown} />
   ) : (
-    <Input autoFocus defaultValue={value} maxLength={maxLength} placeholder={placeholder} className={cn("h-9", className)} onBlur={(e) => finish(e.currentTarget)} onKeyDown={onKeyDown} />
+    <Input data-editable autoFocus defaultValue={value} maxLength={maxLength} placeholder={placeholder} className={cn("h-9", className)} onBlur={(e) => finish(e.currentTarget)} onKeyDown={onKeyDown} />
   );
 }

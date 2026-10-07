@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 import type { TaskAccess, TaskDetail } from "@/hooks/use-tasks";
+import { EditableText } from "./task-drawer-editable";
 import { isOpenStatus } from "./task-labels";
 import { useTaskWrite } from "./use-task-write";
 
@@ -21,12 +22,12 @@ export function TaskDrawerSteps({ task, access }: { task: TaskDetail; access: Ta
   if (total === 0 && !canWork) return null;
 
   const base = `/tasks/${task.id}/steps`;
-  const add = () => {
+  const add = async () => {
     const title = (draft ?? "").trim();
-    if (!title) return;
-    // The field stays open for the next step; Escape closes it.
-    setDraft("");
-    void run(api.post(base, { title }), "Qadam qo'shishda xatolik yuz berdi");
+    if (!title || busy) return;
+    // The field stays open for the next step (Escape closes it), and keeps what
+    // was typed when the request fails. Typing on while it runs is not wiped.
+    if (await run(api.post(base, { title }), "Qadam qo'shishda xatolik yuz berdi")) setDraft((cur) => (cur === draft ? "" : cur));
   };
 
   return (
@@ -48,7 +49,16 @@ export function TaskDrawerSteps({ task, access }: { task: TaskDetail; access: Ta
               aria-label={s.title}
               onCheckedChange={(v) => void run(api.patch(`${base}/${s.id}`, { done: v === true }))}
             />
-            <span className={s.doneAt ? "flex-1 break-words text-muted-foreground line-through" : "flex-1 break-words"}>{s.title}</span>
+            <div className={s.doneAt ? "min-w-0 flex-1 break-words text-muted-foreground line-through" : "min-w-0 flex-1 break-words"}>
+              <EditableText
+                value={s.title}
+                canEdit={canManage && !busy}
+                placeholder="Qadam nomi"
+                maxLength={200}
+                className="text-sm"
+                onSave={(title) => void run(api.patch(`${base}/${s.id}`, { title }), "Qadam nomini saqlashda xatolik yuz berdi")}
+              />
+            </div>
             {canManage && (
               <Button variant="ghost" size="icon-xs" aria-label="Qadamni o'chirish" disabled={busy} onClick={() => void run(api.delete(`${base}/${s.id}`), "Qadamni o'chirishda xatolik yuz berdi")}>
                 <Trash2 className="size-3.5" />
@@ -60,7 +70,7 @@ export function TaskDrawerSteps({ task, access }: { task: TaskDetail; access: Ta
       {canWork && (draft === null ? (
         <Button variant="ghost" size="sm" onClick={() => setDraft("")}><Plus className="mr-1 size-3" />Qadam qo&apos;shish</Button>
       ) : (
-        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); add(); }}>
+        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void add(); }}>
           <Input
             autoFocus
             value={draft}
@@ -68,7 +78,6 @@ export function TaskDrawerSteps({ task, access }: { task: TaskDetail; access: Ta
             maxLength={200}
             className="h-8"
             placeholder="Qadam nomi"
-            onKeyDown={(e) => { if (e.key === "Escape") setDraft(null); }}
           />
           <Button type="submit" size="sm" className="h-8" disabled={busy || !draft.trim()}>Qo&apos;shish</Button>
         </form>

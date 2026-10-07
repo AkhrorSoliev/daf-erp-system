@@ -69,7 +69,7 @@ interface TasksState {
   reloadDetail: (id: string) => Promise<void>;
   /** A write's answer: shown in the drawer, patched on the board, feed re-read. */
   applyDetail: (task: TaskDetail) => void;
-  appendEvent: (ev: TaskEvent) => void;
+  appendEvent: (taskId: string, ev: TaskEvent) => void;
 }
 
 function filterParams(f: TaskFilters) {
@@ -200,13 +200,17 @@ export const useTasks = create<TasksState>((set, get) => ({
     }
   },
   applyDetail: (task) => {
-    set((s) => (s.detail?.task.id === task.id ? { detail: { ...s.detail, task } } : {}));
+    // A write can answer after the drawer moved on to another copy (or closed):
+    // the board still learns of it, the drawer and its feed are left alone.
+    const shown = get().detail?.task.id === task.id;
+    if (shown) set((s) => (s.detail ? { detail: { ...s.detail, task } } : {}));
     get().patchTask(task);
-    void get().reloadDetail(task.id);
+    if (shown) void get().reloadDetail(task.id);
   },
-  appendEvent: (ev) => {
+  appendEvent: (taskId, ev) => {
     const cur = get().detail;
-    if (!cur || cur.events.some((e) => e.id === ev.id)) return;
+    // A comment belongs to the task it was posted to, not to whichever is open now.
+    if (!cur || cur.task.id !== taskId || cur.events.some((e) => e.id === ev.id)) return;
     const task = { ...cur.task, eventsCount: cur.task.eventsCount + 1 };
     set({ detail: { ...cur, task, events: [...cur.events, ev] } });
     get().patchTask(task);
