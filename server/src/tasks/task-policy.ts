@@ -55,9 +55,12 @@ export function assignableRoleIds(
 }
 
 function sharesBranch(caller: PolicyPerson, target: PolicyPerson): boolean {
-  if (caller.branchIds === 'all') return true;
-  if (target.branchIds === 'all') return false;
-  return target.branchIds.some((b) => caller.branchIds.includes(b));
+  // Hoisted into consts: TypeScript drops a property's narrowing inside a callback.
+  const callerIds = caller.branchIds;
+  const targetIds = target.branchIds;
+  if (callerIds === 'all') return true;
+  if (targetIds === 'all') return false;
+  return targetIds.some((b) => callerIds.includes(b));
 }
 
 export function canAssignTo(
