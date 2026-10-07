@@ -54,6 +54,7 @@ describe('LessonCancellationsService', () => {
         create: jest.fn(),
       },
       task: { create: jest.fn().mockResolvedValue({ id: 'c1' }) },
+      taskOutbox: { deleteMany: jest.fn(), createMany: jest.fn() },
       // `remove` reads the branch's holidays so the re-asked task skips them.
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       enrollment: {

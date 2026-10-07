@@ -46,6 +46,7 @@ describe('UnmarkedLessonsService', () => {
       },
       user: { findMany: jest.fn().mockResolvedValue([{ id: 3 }]) },
       task: { create: jest.fn().mockResolvedValue({ id: 'c1' }) },
+      taskOutbox: { deleteMany: jest.fn(), createMany: jest.fn() },
     };
     prisma = {
       group: {

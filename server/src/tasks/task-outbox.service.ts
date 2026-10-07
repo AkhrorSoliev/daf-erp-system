@@ -10,6 +10,58 @@ import { OPEN_STATUSES } from './task-transitions';
 type Db = PrismaService | Prisma.TransactionClient;
 const REMINDER_LEAD_MS = 60 * 60 * 1000;
 
+export interface OutboxTask {
+  id: string;
+  dueAt: Date | null;
+  authorId: number | null;
+  participants: { userId: number; role: 'ASSIGNEE' | 'WATCHER' }[];
+}
+
+/**
+ * (Re)writes the time-based rows for a task. A free function so a plain writer
+ * with no Nest instance (the «Dars bo'ldimi?» task) can schedule too; the
+ * service method delegates here.
+ */
+export async function scheduleTaskOutbox(
+  db: Db,
+  task: OutboxTask,
+): Promise<void> {
+  // Sent rows go too: the unique key (task, user, channel, kind) would make
+  // createMany skip a new OVERDUE after a deadline moved past an old one.
+  // A sent row's sendAfter is in the past, so it is never written again.
+  await db.taskOutbox.deleteMany({ where: { taskId: task.id } });
+  const dueAt = task.dueAt;
+  if (!dueAt) return;
+  const assignees = task.participants
+    .filter((p) => p.role === 'ASSIGNEE')
+    .map((p) => p.userId);
+  const overdueTo = [
+    ...new Set([
+      ...assignees,
+      ...(task.authorId !== null ? [task.authorId] : []),
+    ]),
+  ];
+  const rows = [
+    ...assignees.map((userId) => ({
+      taskId: task.id,
+      userId,
+      channel: 'INAPP' as const,
+      kind: 'REMINDER' as const,
+      sendAfter: new Date(dueAt.getTime() - REMINDER_LEAD_MS),
+    })),
+    ...overdueTo.map((userId) => ({
+      taskId: task.id,
+      userId,
+      channel: 'INAPP' as const,
+      kind: 'OVERDUE' as const,
+      sendAfter: dueAt,
+    })),
+  ].filter((r) => r.sendAfter.getTime() > Date.now());
+  if (rows.length) {
+    await db.taskOutbox.createMany({ data: rows, skipDuplicates: true });
+  }
+}
+
 @Injectable()
 export class TaskOutboxService {
   private readonly logger = new Logger(TaskOutboxService.name);
@@ -24,49 +76,8 @@ export class TaskOutboxService {
   ) {}
 
   /** (Re)writes the time-based rows for a task; called on create, participant and due changes. */
-  async schedule(
-    db: Db,
-    task: {
-      id: string;
-      dueAt: Date | null;
-      authorId: number | null;
-      participants: { userId: number; role: 'ASSIGNEE' | 'WATCHER' }[];
-    },
-  ): Promise<void> {
-    // Sent rows go too: the unique key (task, user, channel, kind) would make
-    // createMany skip a new OVERDUE after a deadline moved past an old one.
-    // A sent row's sendAfter is in the past, so it is never written again.
-    await db.taskOutbox.deleteMany({ where: { taskId: task.id } });
-    const dueAt = task.dueAt;
-    if (!dueAt) return;
-    const assignees = task.participants
-      .filter((p) => p.role === 'ASSIGNEE')
-      .map((p) => p.userId);
-    const overdueTo = [
-      ...new Set([
-        ...assignees,
-        ...(task.authorId !== null ? [task.authorId] : []),
-      ]),
-    ];
-    const rows = [
-      ...assignees.map((userId) => ({
-        taskId: task.id,
-        userId,
-        channel: 'INAPP' as const,
-        kind: 'REMINDER' as const,
-        sendAfter: new Date(dueAt.getTime() - REMINDER_LEAD_MS),
-      })),
-      ...overdueTo.map((userId) => ({
-        taskId: task.id,
-        userId,
-        channel: 'INAPP' as const,
-        kind: 'OVERDUE' as const,
-        sendAfter: dueAt,
-      })),
-    ].filter((r) => r.sendAfter.getTime() > Date.now());
-    if (rows.length) {
-      await db.taskOutbox.createMany({ data: rows, skipDuplicates: true });
-    }
+  schedule(db: Db, task: OutboxTask): Promise<void> {
+    return scheduleTaskOutbox(db, task);
   }
 
   @Cron('0 * * * * *', { timeZone: 'Asia/Tashkent' })

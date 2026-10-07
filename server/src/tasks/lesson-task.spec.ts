@@ -84,6 +84,7 @@ describe('createLessonTask', () => {
     const tx = {
       user: { findMany: jest.fn().mockResolvedValue([{ id: 3 }, { id: 4 }]) },
       task: { create: jest.fn().mockResolvedValue({ id: 't1' }) },
+      taskOutbox: { deleteMany: jest.fn(), createMany: jest.fn() },
     } as any;
     expect(await createLessonTask(tx, args)).toBe('t1');
     expect(tx.task.create).toHaveBeenCalledWith({
@@ -110,6 +111,52 @@ describe('createLessonTask', () => {
       },
       select: { id: true },
     });
+  });
+
+  it('queues the reminder an hour before the deadline and the overdue notice at it, for every administrator', async () => {
+    const dueAt = new Date(Date.now() + 3 * 3_600_000);
+    const tx = {
+      user: { findMany: jest.fn().mockResolvedValue([{ id: 3 }, { id: 4 }]) },
+      task: { create: jest.fn().mockResolvedValue({ id: 't1' }) },
+      taskOutbox: { deleteMany: jest.fn(), createMany: jest.fn() },
+    } as any;
+    await createLessonTask(tx, { ...args, dueAt });
+    const { data } = tx.taskOutbox.createMany.mock.calls[0][0];
+    const reminderAt = new Date(dueAt.getTime() - 3_600_000);
+    expect(data).toEqual(
+      expect.arrayContaining([
+        {
+          taskId: 't1',
+          userId: 3,
+          channel: 'INAPP',
+          kind: 'REMINDER',
+          sendAfter: reminderAt,
+        },
+        {
+          taskId: 't1',
+          userId: 4,
+          channel: 'INAPP',
+          kind: 'REMINDER',
+          sendAfter: reminderAt,
+        },
+        {
+          taskId: 't1',
+          userId: 3,
+          channel: 'INAPP',
+          kind: 'OVERDUE',
+          sendAfter: dueAt,
+        },
+        {
+          taskId: 't1',
+          userId: 4,
+          channel: 'INAPP',
+          kind: 'OVERDUE',
+          sendAfter: dueAt,
+        },
+      ]),
+    );
+    // No author on a system task, so nobody but the assignees is told.
+    expect(data).toHaveLength(4);
   });
 
   it('writes nothing when nobody can take it', async () => {
@@ -206,7 +253,11 @@ describe('closeLessonTask', () => {
       data: { status: 'DONE', closedAt: expect.any(Date) },
     });
     expect(t.taskEvent.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ actorId: null, type: 'AUTO_CLOSED' }),
+      data: expect.objectContaining({
+        actorId: null,
+        type: 'AUTO_CLOSED',
+        meta: { reason: 'GROUP_DELETED' },
+      }),
     });
   });
 
@@ -238,6 +289,7 @@ describe('claimSystemTask', () => {
         deleteMany: jest.fn(),
       },
       task: { update: jest.fn() },
+      taskOutbox: { deleteMany: jest.fn() },
       unmarkedLesson: { updateMany: jest.fn() },
     }) as any;
 
@@ -257,6 +309,14 @@ describe('claimSystemTask', () => {
     });
   });
 
+  it('takes the removed assignees’ unsent reminders with them', async () => {
+    const t = tx([3, 4, 5]);
+    await claimSystemTask(t, 't1', 3);
+    expect(t.taskOutbox.deleteMany).toHaveBeenCalledWith({
+      where: { taskId: 't1', userId: { in: [4, 5] }, sentAt: null },
+    });
+  });
+
   it('queues on the lesson row before touching the other assignees', async () => {
     // Two administrators pressing at once each delete the other's copy and
     // then wait on the lesson row: a deadlock. Taking the lesson row first
@@ -273,6 +333,7 @@ describe('claimSystemTask', () => {
     const t = tx([4]);
     expect(await claimSystemTask(t, 't1', 3)).toBe(false);
     expect(t.taskParticipant.deleteMany).not.toHaveBeenCalled();
+    expect(t.taskOutbox.deleteMany).not.toHaveBeenCalled();
     expect(t.task.update).not.toHaveBeenCalled();
   });
 });

@@ -64,7 +64,7 @@ describe('LessonReschedulesService', () => {
         deleteMany: jest.fn(),
       },
       taskEvent: { create: jest.fn() },
-      taskOutbox: { deleteMany: jest.fn() },
+      taskOutbox: { deleteMany: jest.fn(), createMany: jest.fn() },
       // A reschedule rewrites a group's timetable, so the caller is now checked
       // against that group's branch (`assertCallerMayTouchGroup`). A CEO spans
       // every branch — the shape these cases assume.

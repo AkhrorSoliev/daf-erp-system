@@ -6,6 +6,8 @@ import {
   utcMidnightFromDateStr,
 } from '../common/date/tashkent';
 import { claimSystemTask } from './task-claim';
+import { scheduleTaskOutbox } from './task-outbox.service';
+import { OPEN_STATUSES } from './task-transitions';
 
 export { claimSystemTask };
 
@@ -131,6 +133,17 @@ export async function createLessonTask(
     },
     select: { id: true },
   });
+  // The reminder an hour before `dueAt` and the overdue notice at it
+  // (ADR-0054 rule 6), written like any other task's.
+  await scheduleTaskOutbox(tx, {
+    id: task.id,
+    dueAt: args.dueAt,
+    authorId: null,
+    participants: assigneeIds.map((userId) => ({
+      userId,
+      role: 'ASSIGNEE' as const,
+    })),
+  });
   return task.id;
 }
 
@@ -160,7 +173,7 @@ export async function closeLessonTask(
     });
   }
   const { count } = await tx.task.updateMany({
-    where: { id: taskId, status: { in: ['NEW', 'IN_PROGRESS', 'IN_REVIEW'] } },
+    where: { id: taskId, status: { in: [...OPEN_STATUSES] } },
     data: {
       status: 'DONE',
       closedAt: new Date(),
@@ -173,7 +186,10 @@ export async function closeLessonTask(
         taskId,
         type: 'AUTO_CLOSED',
         actorId,
-        meta: { reason: 'LESSON_ANSWERED' },
+        // A person answering, or the system closing it with its group.
+        meta: {
+          reason: actorId !== null ? 'LESSON_ANSWERED' : 'GROUP_DELETED',
+        },
         via: 'SYSTEM',
       },
     });

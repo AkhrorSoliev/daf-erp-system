@@ -120,7 +120,12 @@ describe('LeadsService', () => {
       expect(prisma.comment.groupBy).toHaveBeenCalledWith(
         expect.objectContaining({
           by: ['entityId'],
-          where: { entityType: 'Lead', entityId: { in: ['lead-1', 'lead-2'] } },
+          where: {
+            entityType: 'Lead',
+            entityId: { in: ['lead-1', 'lead-2'] },
+            // A migrated task is not a comment.
+            isTask: false,
+          },
         }),
       );
       expect(result).toEqual([
@@ -287,7 +292,7 @@ describe('LeadsService', () => {
 
       expect(prisma.comment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Lead' },
+          where: { entityType: 'Lead', isTask: false },
           distinct: ['entityId'],
         }),
       );

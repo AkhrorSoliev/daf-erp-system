@@ -64,7 +64,7 @@ export class LeadsService {
     if (leadIds.length === 0) return new Map();
     const grouped = await this.prisma.comment.groupBy({
       by: ['entityId'],
-      where: { entityType: 'Lead', entityId: { in: leadIds } },
+      where: { entityType: 'Lead', entityId: { in: leadIds }, isTask: false },
       _count: { _all: true },
     });
     return new Map(grouped.map((g) => [g.entityId, g._count._all]));
@@ -122,7 +122,7 @@ export class LeadsService {
     // exactly what we want when no lead has a comment yet.
     if (query.hasComments !== undefined) {
       const commented = await this.prisma.comment.findMany({
-        where: { entityType: 'Lead' },
+        where: { entityType: 'Lead', isTask: false },
         distinct: ['entityId'],
         select: { entityId: true },
       });

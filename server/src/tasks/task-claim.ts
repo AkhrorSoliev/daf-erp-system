@@ -24,6 +24,14 @@ export async function claimSystemTask(
     await tx.taskParticipant.deleteMany({
       where: { taskId, role: 'ASSIGNEE', userId: { not: userId } },
     });
+    // The copies that went take their unsent reminders with them.
+    await tx.taskOutbox.deleteMany({
+      where: {
+        taskId,
+        userId: { in: rows.map((r) => r.userId).filter((id) => id !== userId) },
+        sentAt: null,
+      },
+    });
   }
   return true;
 }
