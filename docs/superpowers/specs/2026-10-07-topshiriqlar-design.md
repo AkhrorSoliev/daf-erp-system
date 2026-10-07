@@ -552,8 +552,9 @@ Server avval, sayt keyin.
 
 ## 12. ADR
 
-PR'da raqamlanadi (hozir 0073 band):
-- **ADR-A**: Topshiriq izoh emas, alohida bo'lim; holat topshiriqniki
+ADR-A **0074** raqamini oldi (1-bosqich PR'i, `docs/adr/0074-topshiriq-alohida-bolim.md`);
+ADR-B 2-bosqich PR'ida raqamlanadi (0074 dan keyingi birinchi bo'sh raqam):
+- **ADR-A (= ADR-0074)**: Topshiriq izoh emas, alohida bo'lim; holat topshiriqniki
   (Yangi → Jarayonda → Tekshiruvda → Bajarildi); tizim topshirig'ini faqat
   manbasi yopadi; berish zinasi yuqoridan pastga.
 - **ADR-B**: ADR-0025 ning o'zgarishi — topshiriq xabarlari darhol, tugmalar
