@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -18,5 +18,11 @@ export function useTaskCounts(): TaskCounts & { refetch: () => void } {
   // gets a new identity on every loading flag and would refetch for nothing.
   const version = useTasks((s) => s.version);
   useEffect(() => { void refetch({ cancelRefetch: false }); }, [lastNotificationId, version, refetch]);
-  return { ...data, refetch: () => void refetch() };
+  // The page streams in after the sidebar, whose query may already hold the
+  // counts, so the page's hydration render would print «1» over the server's
+  // «0». Zeros until hydration is over keep both renders equal.
+  const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
+  return { ...(hydrated ? data : ZERO), refetch: () => void refetch() };
 }
+
+const noSubscribe = () => () => {};
