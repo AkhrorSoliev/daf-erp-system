@@ -94,9 +94,7 @@ function CommentTooltipBody({ lead }: { lead: LeadCard }) {
 
   return (
     <div className="block max-w-[240px] space-y-1 text-left">
-      <div className="flex items-center gap-1.5">
-        <span className="font-medium">{c.authorName}</span>
-      </div>
+      <span className="block font-medium">{c.authorName}</span>
       <p className="line-clamp-4 whitespace-pre-wrap break-words opacity-90">
         {c.content}
       </p>
