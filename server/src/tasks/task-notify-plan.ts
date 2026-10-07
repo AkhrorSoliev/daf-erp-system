@@ -1,4 +1,5 @@
 import type { NotificationType } from '@prisma/client';
+import { TASHKENT_OFFSET_MS } from '../common/date/tashkent';
 import {
   TASK_EVENTS,
   type TaskAssignedPayload,
@@ -29,6 +30,15 @@ const assignees = (t: TaskEventTask) =>
   t.participants.filter((p) => p.role === 'ASSIGNEE').map((p) => p.userId);
 const watchers = (t: TaskEventTask) =>
   t.participants.filter((p) => p.role === 'WATCHER').map((p) => p.userId);
+/** Nobody is told about what they just did themselves. */
+const notActor = (ids: number[], actorId: number | null) =>
+  ids.filter((u) => u !== actorId);
+const pad2 = (n: number) => String(n).padStart(2, '0');
+/** `dd.MM, HH:mm` on the Tashkent clock. */
+const tashkentStamp = (d: Date) => {
+  const t = new Date(d.getTime() + TASHKENT_OFFSET_MS);
+  return `${pad2(t.getUTCDate())}.${pad2(t.getUTCMonth() + 1)}, ${pad2(t.getUTCHours())}:${pad2(t.getUTCMinutes())}`;
+};
 const everyone = (t: TaskEventTask) => [
   ...new Set([
     ...(t.authorId !== null ? [t.authorId] : []),
@@ -68,13 +78,24 @@ export function planNotices(
   switch (event) {
     case TASK_EVENTS.ASSIGNED: {
       const p = payload as TaskAssignedPayload;
-      return mk(
-        p.userIds,
-        'TASK_ASSIGNED',
-        'Yangi topshiriq',
-        `${who(names, p.actorId)} sizga topshiriq berdi: «${clip(p.task.title)}»`,
-        true,
-      );
+      const added = notActor(p.userIds, p.actorId);
+      const watching = new Set(watchers(p.task));
+      return [
+        ...mk(
+          added.filter((u) => !watching.has(u)),
+          'TASK_ASSIGNED',
+          'Yangi topshiriq',
+          `${who(names, p.actorId)} sizga topshiriq berdi: «${clip(p.task.title)}»`,
+          true,
+        ),
+        ...mk(
+          added.filter((u) => watching.has(u)),
+          'TASK_ASSIGNED',
+          'Kuzatuvchi qilindingiz',
+          `${who(names, p.actorId)} sizni kuzatuvchi qildi: «${clip(p.task.title)}»`,
+          false,
+        ),
+      ];
     }
     case TASK_EVENTS.REASSIGNED: {
       const p = payload as TaskReassignedPayload;
@@ -89,7 +110,7 @@ export function planNotices(
     case TASK_EVENTS.UNASSIGNED: {
       const p = payload as TaskUnassignedPayload;
       return mk(
-        p.userIds,
+        notActor(p.userIds, p.actorId),
         'TASK_UPDATED',
         'Topshiriqdan olib tashlandingiz',
         `${who(names, p.actorId)}: «${clip(p.task.title)}»`,
@@ -98,7 +119,7 @@ export function planNotices(
     }
     case TASK_EVENTS.REVIEW_REQUESTED: {
       const p = payload as TaskReviewRequestedPayload;
-      if (p.task.authorId === null) return [];
+      if (p.task.authorId === null || p.task.authorId === p.actorId) return [];
       return mk(
         [p.task.authorId],
         'TASK_REVIEW',
@@ -111,17 +132,17 @@ export function planNotices(
       const p = payload as TaskReviewedPayload;
       return p.accepted
         ? mk(
-            [...assignees(p.task), ...watchers(p.task)],
+            notActor([...assignees(p.task), ...watchers(p.task)], p.actorId),
             'TASK_STATUS_CHANGED',
             'Qabul qilindi',
             `${who(names, p.actorId)} qabul qildi: «${clip(p.task.title)}»`,
             false,
           )
         : mk(
-            assignees(p.task),
+            notActor(assignees(p.task), p.actorId),
             'TASK_STATUS_CHANGED',
             'Topshiriq qaytarildi',
-            `${who(names, p.actorId)}: «${p.reason ?? ''}» — ${clip(p.task.title, 60)}`,
+            `${who(names, p.actorId)}: «${clip(p.reason ?? '', 80)}» — ${clip(p.task.title, 60)}`,
             true,
           );
     }
@@ -170,7 +191,7 @@ export function planNotices(
         assignees(p.task).filter((u) => u !== p.actorId),
         'TASK_UPDATED',
         "Muddat o'zgardi",
-        `«${clip(p.task.title)}»`,
+        `«${clip(p.task.title)}» — ${p.task.dueAt ? `yangi muddat: ${tashkentStamp(p.task.dueAt)}` : 'muddat olib tashlandi'}`,
         false,
       );
     }

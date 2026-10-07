@@ -13,6 +13,8 @@ const REMINDER_LEAD_MS = 60 * 60 * 1000;
 @Injectable()
 export class TaskOutboxService {
   private readonly logger = new Logger(TaskOutboxService.name);
+  /** A slow run must not be picked up again by the next tick and double-send. */
+  private draining = false;
 
   constructor(
     private prisma: PrismaService,
@@ -69,6 +71,16 @@ export class TaskOutboxService {
 
   @Cron('0 * * * * *', { timeZone: 'Asia/Tashkent' })
   async drain(): Promise<number> {
+    if (this.draining) return 0;
+    this.draining = true;
+    try {
+      return await this.drainDue();
+    } finally {
+      this.draining = false;
+    }
+  }
+
+  private async drainDue(): Promise<number> {
     const now = new Date();
     const due = await this.prisma.taskOutbox.findMany({
       where: {
@@ -118,6 +130,17 @@ export class TaskOutboxService {
             sentAt: now,
             lastError: open ? 'user inactive' : 'task closed',
           },
+        });
+        continue;
+      }
+      // The OVERDUE row covers a deadline that has already passed.
+      if (
+        row.kind === 'REMINDER' &&
+        (!row.task.dueAt || row.task.dueAt.getTime() <= now.getTime())
+      ) {
+        await this.prisma.taskOutbox.update({
+          where: { id: row.id },
+          data: { sentAt: now, lastError: 'stale reminder' },
         });
         continue;
       }

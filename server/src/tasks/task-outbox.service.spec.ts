@@ -58,6 +58,22 @@ describe('TaskOutboxService', () => {
     expect(rows[0].sendAfter.getTime()).toBe(dueAt.getTime() - 3600_000);
   });
 
+  it('schedule with a due 30 minutes ahead writes only the OVERDUE rows (the reminder time has passed)', async () => {
+    const dueAt = new Date(Date.now() + 30 * 60_000);
+    await svc.schedule(prisma, {
+      id: 't1',
+      dueAt,
+      authorId: 30,
+      participants: [{ userId: 40, role: 'ASSIGNEE' }],
+    });
+    const rows = prisma.taskOutbox.createMany.mock.calls[0][0].data;
+    expect(rows.map((r: any) => [r.userId, r.kind])).toEqual([
+      [40, 'OVERDUE'],
+      [30, 'OVERDUE'],
+    ]);
+    expect(rows[0].sendAfter.getTime()).toBe(dueAt.getTime());
+  });
+
   it('schedule clears every earlier row, sent ones included, so a moved deadline notifies again', async () => {
     await svc.schedule(prisma, {
       id: 't1',
@@ -99,7 +115,7 @@ describe('TaskOutboxService', () => {
       id: 't-' + id,
       title: 'A',
       status,
-      dueAt: new Date(),
+      dueAt: new Date(Date.now() + 30 * 60_000),
       companyId: 1,
       author: null,
     },
@@ -179,6 +195,62 @@ describe('TaskOutboxService', () => {
         lastError: 'boom',
       },
     });
+  });
+
+  it('drain marks a reminder whose deadline has passed as stale instead of sending it', async () => {
+    prisma.taskOutbox.findMany.mockResolvedValue([
+      row('o1', 'NEW', {
+        task: {
+          id: 't-o1',
+          title: 'A',
+          status: 'NEW',
+          dueAt: new Date(Date.now() - 60_000),
+          companyId: 1,
+          author: null,
+        },
+      }),
+      row('o2', 'NEW', {
+        kind: 'OVERDUE',
+        task: {
+          id: 't-o2',
+          title: 'B',
+          status: 'NEW',
+          dueAt: new Date(Date.now() - 60_000),
+          companyId: 1,
+          author: null,
+        },
+      }),
+    ]);
+    expect(await svc.drain()).toBe(1);
+    expect(notif.create).toHaveBeenCalledTimes(1);
+    expect(notif.create).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'TASK_OVERDUE' }),
+    );
+    expect(prisma.taskOutbox.update).toHaveBeenCalledWith({
+      where: { id: 'o1' },
+      data: expect.objectContaining({ lastError: 'stale reminder' }),
+    });
+  });
+
+  it('a second drain while one is running does nothing, and the guard is released afterwards', async () => {
+    let release!: (v: unknown[]) => void;
+    prisma.taskOutbox.findMany.mockReturnValueOnce(
+      new Promise<unknown[]>((r) => (release = r)),
+    );
+    const first = svc.drain();
+    expect(await svc.drain()).toBe(0);
+    expect(prisma.taskOutbox.findMany).toHaveBeenCalledTimes(1);
+    release([]);
+    await first;
+    await svc.drain();
+    expect(prisma.taskOutbox.findMany).toHaveBeenCalledTimes(2);
+  });
+
+  it('the guard is released even when a run throws', async () => {
+    prisma.taskOutbox.findMany.mockRejectedValueOnce(new Error('db down'));
+    await expect(svc.drain()).rejects.toThrow('db down');
+    await expect(svc.drain()).resolves.toBe(0);
+    expect(prisma.taskOutbox.findMany).toHaveBeenCalledTimes(2);
   });
 
   it('drain with nothing due does not look anyone up', async () => {

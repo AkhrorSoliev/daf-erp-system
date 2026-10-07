@@ -129,10 +129,8 @@ export async function updateFieldsTx(
     data,
     select: TASK_DETAIL_SELECT,
   });
-  if (dueChanged) {
-    // The old reminders are for the old due date.
-    await tx.taskOutbox.deleteMany({ where: { taskId: id, sentAt: null } });
-    if (updated.dueAt) await schedule(tx, updated);
-  }
+  // The old reminders are for the old due date. `schedule` clears the task's
+  // rows itself and writes new ones only when a due date is left.
+  if (dueChanged) await schedule(tx, updated);
   return { updated, dueChanged };
 }

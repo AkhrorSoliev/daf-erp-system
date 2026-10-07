@@ -825,13 +825,26 @@ describe('TasksService writes', () => {
       title: 'Y',
       dueAt: new Date('2026-10-08T13:00:00.000Z'),
     });
-    expect(prisma.taskOutbox.deleteMany).toHaveBeenCalledWith({
-      where: { taskId: 't1', sentAt: null },
-    });
-    expect(outbox.schedule).toHaveBeenCalled();
+    // The outbox's own `schedule` clears the old rows; no second delete here.
+    expect(prisma.taskOutbox.deleteMany).not.toHaveBeenCalled();
+    expect(outbox.schedule).toHaveBeenCalledWith(
+      prisma,
+      expect.objectContaining({ id: 't1' }),
+    );
     expect(emitter.emit).toHaveBeenCalledWith(
       TASK_EVENTS.DUE_CHANGED,
       expect.anything(),
+    );
+  });
+
+  it('clearing the due date still hands the task to schedule so its rows are cleared', async () => {
+    prisma.task.findFirst.mockResolvedValue(
+      makeRow({ dueAt: new Date('2026-10-08T13:00:00.000Z') }),
+    );
+    await service.update('t1', { dueAt: null }, authorActor());
+    expect(outbox.schedule).toHaveBeenCalledWith(
+      prisma,
+      expect.objectContaining({ id: 't1', dueAt: null }),
     );
   });
 

@@ -33,26 +33,6 @@ export class NotificationEventsListener {
   ) {}
 
   /**
-   * Resolve which of the given user ids are still active recipients
-   * (deletedAt:null AND isActive:true AND status:ACTIVE). Deactivated /
-   * suspended / terminated / archived users must NOT receive notifications —
-   * the same filter the payment/salary handlers already apply. (F-05)
-   */
-  private async filterActiveRecipientIds(userIds: number[]): Promise<number[]> {
-    if (userIds.length === 0) return [];
-    const active = await this.prisma.user.findMany({
-      where: {
-        id: { in: userIds },
-        deletedAt: null,
-        isActive: true,
-        status: UserStatus.ACTIVE,
-      },
-      select: { id: true },
-    });
-    return active.map((u) => u.id);
-  }
-
-  /**
    * Alerts the company's CEO(s) when a non-CEO operator corrects a payment
    * amount — a financial-control guardrail. Fans out to all four channels.
    */
