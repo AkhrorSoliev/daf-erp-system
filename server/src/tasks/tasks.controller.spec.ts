@@ -1,6 +1,7 @@
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
+import { RolesGuard } from '../common/guards';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { TasksReadService } from './tasks-read.service';
@@ -22,9 +23,18 @@ describe('TasksController guards', () => {
     expect(roles).toEqual([...STAFF_ROLES]);
     expect(roles).not.toContain('Student');
   });
-  it('parses the branch header: digits → number, anything else → null', () => {
+  it('runs RolesGuard, so the @Roles metadata is actually enforced', () => {
+    const guards = Reflect.getMetadata('__guards__', TasksController) as
+      | unknown[]
+      | undefined;
+    expect(guards).toContain(RolesGuard);
+  });
+  it('parses the branch header: a positive int32-safe integer → number, anything else → null', () => {
     expect(controller.pickBranch('12')).toBe(12);
     expect(controller.pickBranch('all')).toBeNull();
     expect(controller.pickBranch(undefined)).toBeNull();
+    for (const bad of ['', '0', '12abc', '-1', ' 12', '007', '1234567890']) {
+      expect(controller.pickBranch(bad)).toBeNull();
+    }
   });
 });

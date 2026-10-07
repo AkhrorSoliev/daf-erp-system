@@ -37,7 +37,9 @@ export class TasksController {
   ) {}
 
   pickBranch(header: string | undefined): number | null {
-    return header && /^\d+$/.test(header) ? Number(header) : null;
+    // A positive integer of at most 9 digits: always inside Postgres int4,
+    // never `0`, never zero-padded.
+    return header && /^[1-9]\d{0,8}$/.test(header) ? Number(header) : null;
   }
 
   private actor(
