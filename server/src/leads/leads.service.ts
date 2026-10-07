@@ -391,12 +391,12 @@ export class LeadsService {
     }
 
     const latest = await this.prisma.comment.findFirst({
-      where: { entityType: 'Lead', entityId: id },
+      // A migrated task (`isTask`) stays hidden, like in the comment list.
+      where: { entityType: 'Lead', entityId: id, isTask: false },
       orderBy: { createdAt: 'desc' },
       select: {
         content: true,
         createdAt: true,
-        isTask: true,
         author: { select: { firstName: true, lastName: true } },
       },
     });
@@ -415,7 +415,6 @@ export class LeadsService {
             authorName: latest.author ? fullName(latest.author) : 'Tizim',
             content: latest.content,
             createdAt: latest.createdAt,
-            isTask: latest.isTask,
           }
         : null,
     };

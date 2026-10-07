@@ -375,6 +375,8 @@ type MoneyModel =
   | 'lessonTeacherOverride'
   | 'comment'
   | 'commentAssignee'
+  | 'task'
+  | 'taskParticipant'
   | 'employeeSalaryConfig'
   | 'salaryPayment'
   // `assertNoInboundReferences` bilan bog'liq — SET NULL/CASCADE bilan
@@ -427,6 +429,8 @@ function fakePrismaWithMoney(
     'lessonTeacherOverride',
     'comment',
     'commentAssignee',
+    'task',
+    'taskParticipant',
     'employeeSalaryConfig',
     'salaryPayment',
     'mockExamParticipant',
@@ -554,6 +558,17 @@ describe('assertNoBlockingDependents', () => {
     const plan = await buildBranchResetPlan(prisma, 2);
     await expect(assertNoBlockingDependents(prisma, plan)).rejects.toThrow(
       /Comment\.authorId: 1/,
+    );
+  });
+
+  it("xodim ijrochi bo'lgan topshiriqni (TaskParticipant.userId) va yozgan topshiriqni (Task.authorId) tutadi", async () => {
+    const prisma = fakePrismaWithMoney(namanganish, {
+      task: [{ id: 't-1', authorId: 10012 }],
+      taskParticipant: [{ id: 'tp-1', userId: 10012 }],
+    });
+    const plan = await buildBranchResetPlan(prisma, 2);
+    await expect(assertNoBlockingDependents(prisma, plan)).rejects.toThrow(
+      /Task\.authorId: 1[\s\S]*TaskParticipant\.userId: 1/,
     );
   });
 

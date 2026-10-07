@@ -427,19 +427,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
-      'Own tasks, own authorship. `my-tasks` and `assignee-status` are keyed ' +
-      "on the caller's own `CommentAssignee` row; `created-tasks` on " +
-      '`authorId`. `PATCH` and `DELETE /comments/:id` are author-or-CEO, ' +
+      'Own authorship. `PATCH` and `DELETE /comments/:id` are author-or-CEO, ' +
       "which is STRICTER than branch — a director cannot edit a colleague's " +
       'note even inside their own branch — so a branch check would add ' +
-      'nothing.',
-    routes: [
-      'GET /comments/my-tasks',
-      'GET /comments/created-tasks',
-      'PATCH /comments/:id',
-      'PATCH /comments/:id/assignee-status',
-      'DELETE /comments/:id',
-    ],
+      'nothing. (Tasks left comments for `/tasks`; the `my-tasks`, ' +
+      '`created-tasks` and `assignee-status` routes are gone.)',
+    routes: ['PATCH /comments/:id', 'DELETE /comments/:id'],
   },
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
