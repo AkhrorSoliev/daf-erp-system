@@ -14,33 +14,40 @@ import {
   resolveCallerBranchScope,
   type CallerBranchScope,
 } from '../common/auth/branch-scope';
-import { assertCallerMayTouchCommentEntity } from '../common/auth/comment-entity-scope';
-import {
-  whereUserMayAct,
-  SIGN_IN_USER_STATUSES,
-} from '../common/auth/blocked-user';
-import { isCalendarDateStr } from '../common/date/tashkent';
+import { whereUserMayAct } from '../common/auth/blocked-user';
 import { isTransactionConflict } from '../common/transaction-conflict';
 import {
-  canAssignTo,
-  canWatch,
   resolveAccess,
   type PolicyPerson,
   type TaskAccess,
 } from './task-policy';
-import { assertManualDueAt, defaultDueAt } from './task-due';
+import { assertManualDueAt } from './task-due';
 import {
   TASK_DETAIL_SELECT,
   TASK_EVENT_SELECT,
   toTaskDetail,
+  type TaskCtx,
   type TaskDetail,
+  type TaskEventRow,
+  type TaskRow,
 } from './task-select';
 import { resolveTaskBranchId } from './task-branch';
-import { checkTransition, OPEN_STATUSES } from './task-transitions';
+import { parseDueInput, requireText } from './task-input';
+import { loadAndCheckPeople, loadPeople } from './task-people';
+import { cancelTx, changeStatusTx, reviewTx } from './task-status-writes';
+import { addStepTx, deleteStepTx, updateStepTx } from './task-step-writes';
+import { setParticipantsTx, updateFieldsTx } from './task-edit-writes';
 import { TaskOutboxService } from './task-outbox.service';
-import { TASK_EVENTS, type TaskEventTask } from './task-events';
+import { TASK_EVENTS, toEventTask, type TaskEventTask } from './task-events';
+import { assertMayLinkEntity, createCopiesTx } from './task-create';
 import type { CreateTaskDto } from './dto/create-task.dto';
 import type { UpdateTaskDto } from './dto/update-task.dto';
+
+// Callers import these from here; the code lives in focused files.
+export { claimSystemTask } from './task-claim';
+export { parseDueInput } from './task-input';
+export { toPolicyPerson } from './task-people';
+export type { TaskEventRow } from './task-select';
 
 export interface TaskActor {
   userId: number;
@@ -51,104 +58,7 @@ export interface TaskActor {
   headerBranchId: number | null;
 }
 
-const PERSON_SELECT = {
-  id: true,
-  firstName: true,
-  lastName: true,
-  photo: true,
-  telegramChatId: true,
-  roles: { select: { role: { select: { id: true, name: true } } } },
-  branches: { select: { branchId: true } },
-  mainBranch: true,
-} as const;
-
-export function toPolicyPerson(u: {
-  id: number;
-  roles: { role: { id: number } }[];
-  branches: { branchId: number }[];
-  mainBranch: number | null;
-}): PolicyPerson {
-  const roleIds = u.roles.map((r) => r.role.id);
-  const branchIds = [
-    ...new Set([
-      ...u.branches.map((b) => b.branchId),
-      ...(u.mainBranch ? [u.mainBranch] : []),
-    ]),
-  ];
-  return {
-    id: u.id,
-    roleIds,
-    branchIds: roleIds.includes(1) ? 'all' : branchIds,
-  };
-}
-
-/** An ISO instant: date, `T`, time and a zone (`Z` or `±hh:mm`). */
-const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/;
-
-/**
- * A bare `YYYY-MM-DD` day → 18:00 Tashkent; an ISO instant as is; empty → no due.
- * Anything else (a loose `Date.parse` string, a time without a zone, a
- * non-string) is a 400: `new Date` would read a zone-less time in the PROCESS
- * timezone (UTC on Railway), i.e. guess which timezone was meant.
- */
-export function parseDueInput(raw: unknown): Date | null {
-  if (raw === null || raw === undefined || raw === '') return null;
-  if (typeof raw !== 'string') {
-    throw new BadRequestException("Muddat noto'g'ri");
-  }
-  if (isCalendarDateStr(raw)) return defaultDueAt(raw);
-  const d = new Date(raw);
-  if (!ISO_INSTANT.test(raw) || Number.isNaN(d.getTime())) {
-    throw new BadRequestException("Muddat noto'g'ri");
-  }
-  return d;
-}
-
-/** Trimmed text, or a 400: the DTOs trim too, but Telegram and other callers skip them. */
-function requireText(raw: string, message: string): string {
-  const text = raw.trim();
-  if (!text) throw new BadRequestException(message);
-  return text;
-}
-
-/** Steps belong to manual tasks that are still open. */
-function assertStepsEditable(row: { kind: string; status: TaskStatus }) {
-  if (row.kind !== 'MANUAL') {
-    throw new BadRequestException("Tizim topshirig'ida qadam yo'q");
-  }
-  if (!OPEN_STATUSES.includes(row.status)) {
-    throw new BadRequestException("Yopilgan topshiriq o'zgartirilmaydi");
-  }
-}
-
-/** First assignee to act takes a system task; the other copies go (ADR-0054). */
-export async function claimSystemTask(
-  tx: Prisma.TransactionClient,
-  taskId: string,
-  userId: number,
-): Promise<boolean> {
-  const rows = await tx.taskParticipant.findMany({
-    where: { taskId, role: 'ASSIGNEE' },
-    select: { userId: true },
-  });
-  if (!rows.some((r) => r.userId === userId)) return false;
-  // Lesson row first (lock order), same as before the move.
-  await tx.unmarkedLesson.updateMany({
-    where: { taskId },
-    data: { claimedById: userId },
-  });
-  await tx.task.update({
-    where: { id: taskId },
-    data: { claimedById: userId },
-  });
-  if (rows.length > 1) {
-    await tx.taskParticipant.deleteMany({
-      where: { taskId, role: 'ASSIGNEE', userId: { not: userId } },
-    });
-  }
-  return true;
-}
-
+/** The one door to tasks: owns the transaction and the events (emitted after the commit). */
 @Injectable()
 export class TasksService {
   constructor(
@@ -192,52 +102,23 @@ export class TasksService {
   }
 
   /** Live staff of this company; missing ids are a 400 carrying `missingMessage`. */
-  async loadPeople(
-    ids: number[],
-    companyId: number,
-    missingMessage = 'Ijrochilardan biri topilmadi yoki faol emas',
-  ) {
-    const unique = [...new Set(ids)];
-    if (unique.length === 0) return [];
-    const rows = await this.prisma.user.findMany({
-      where: {
-        id: { in: unique },
-        companyId,
-        deletedAt: null,
-        status: { in: [...SIGN_IN_USER_STATUSES] },
-        roles: { some: { role: { id: { in: [1, 2, 3, 4, 5] } } } },
-      },
-      select: PERSON_SELECT,
-    });
-    if (rows.length !== unique.length) {
-      throw new BadRequestException(missingMessage);
-    }
-    return rows;
+  loadPeople(ids: number[], companyId: number, missingMessage?: string) {
+    return loadPeople(this.prisma, ids, companyId, missingMessage);
   }
 
-  /**
-   * Live staff for both lists, each inside the caller's reach. No name in the
-   * refusal: it must not tell the caller who someone outside their ladder is.
-   */
-  private async loadAndCheckPeople(
+  /** Both lists live and inside the caller's reach (403 otherwise, no names). */
+  private checkPeople(
     assigneeIds: number[],
     watcherIds: number[],
     actor: TaskActor,
   ) {
-    const caller = this.actorPerson(actor);
-    const assignees = await this.loadPeople(assigneeIds, actor.companyId);
-    const watchers = await this.loadPeople(
-      watcherIds,
+    return loadAndCheckPeople(
+      this.prisma,
+      this.actorPerson(actor),
       actor.companyId,
-      'Kuzatuvchilardan biri topilmadi yoki faol emas',
+      assigneeIds,
+      watcherIds,
     );
-    if (!assignees.every((u) => canAssignTo(caller, toPolicyPerson(u)))) {
-      throw new ForbiddenException('Bu xodimga topshiriq bera olmaysiz');
-    }
-    if (!watchers.every((u) => canWatch(caller, toPolicyPerson(u)))) {
-      throw new ForbiddenException('Bu xodimni kuzatuvchi qila olmaysiz');
-    }
-    return { assignees, watchers };
   }
 
   private async holidaySet(branchId: number | null, around: Date) {
@@ -247,24 +128,7 @@ export class TasksService {
   }
 
   async create(dto: CreateTaskDto, actor: TaskActor): Promise<TaskDetail[]> {
-    if (dto.entityType && dto.entityId) {
-      await assertCallerMayTouchCommentEntity(
-        this.prisma,
-        actor.userId,
-        actor.roleNames,
-        dto.entityType,
-        dto.entityId,
-        actor.companyId,
-      );
-      // The generic entity guard does not scope a User by company.
-      if (dto.entityType === 'User') {
-        const linked = await this.prisma.user.findFirst({
-          where: { id: Number(dto.entityId), companyId: actor.companyId },
-          select: { id: true },
-        });
-        if (!linked) throw new NotFoundException('Xodim topilmadi');
-      }
-    }
+    await assertMayLinkEntity(this.prisma, actor, dto);
     const branchId = await resolveTaskBranchId(this.prisma, {
       companyId: actor.companyId,
       entityType: dto.entityType,
@@ -272,7 +136,7 @@ export class TasksService {
       headerBranchId: actor.headerBranchId,
       callerScope: actor.scope,
     });
-    const { assignees, watchers } = await this.loadAndCheckPeople(
+    const { assignees, watchers } = await this.checkPeople(
       dto.assigneeIds,
       dto.watcherIds ?? [],
       actor,
@@ -289,56 +153,25 @@ export class TasksService {
         ? assignees.map((a) => [a.id])
         : [assignees.map((a) => a.id)];
     const batchId = groups.length > 1 ? randomUUID() : null;
-    const steps = (dto.steps ?? []).map((s, i) => ({
-      title: s.title.trim(),
-      position: i,
-    }));
 
     // All copies and their reminder rows commit together: a half-made batch
     // would leave the author with copies that were never assigned.
     const rows = await this.prisma.$transaction(
-      async (tx) => {
-        const made: { ids: number[]; row: TaskRow }[] = [];
-        for (const ids of groups) {
-          const row = await tx.task.create({
-            data: {
-              companyId: actor.companyId,
-              branchId,
-              kind: 'MANUAL',
-              title: dto.title.trim(),
-              description: dto.description?.trim() || null,
-              priority: dto.priority ?? 'MEDIUM',
-              dueAt,
-              authorId: actor.userId,
-              entityType: dto.entityType ?? null,
-              entityId: dto.entityId ?? null,
-              batchId,
-              participants: {
-                create: [
-                  ...ids.map((userId) => ({
-                    userId,
-                    role: 'ASSIGNEE' as const,
-                  })),
-                  ...watcherIds.map((userId) => ({
-                    userId,
-                    role: 'WATCHER' as const,
-                  })),
-                ],
-              },
-              steps: { create: steps },
-              events: {
-                create: [
-                  { type: 'CREATED', actorId: actor.userId, via: 'WEB' },
-                ],
-              },
-            },
-            select: TASK_DETAIL_SELECT,
-          });
-          if (dueAt) await this.outbox.schedule(tx, row);
-          made.push({ ids, row });
-        }
-        return made;
-      },
+      (tx) =>
+        createCopiesTx(
+          tx,
+          {
+            companyId: actor.companyId,
+            branchId,
+            authorId: actor.userId,
+            dto,
+            dueAt,
+            batchId,
+            watcherIds,
+          },
+          groups,
+          this.schedule,
+        ),
       { maxWait: 10_000, timeout: 15_000 },
     );
 
@@ -360,29 +193,8 @@ export class TasksService {
     return rows.map(({ row }) => toTaskDetail(row));
   }
 
-  eventTask(r: {
-    id: string;
-    companyId: number;
-    title: string;
-    kind: string;
-    authorId: number | null;
-    dueAt: Date | null;
-    status: TaskStatus;
-    participants: { userId: number; role: 'ASSIGNEE' | 'WATCHER' }[];
-  }): TaskEventTask {
-    return {
-      id: r.id,
-      companyId: r.companyId,
-      title: r.title,
-      kind: r.kind,
-      authorId: r.authorId,
-      dueAt: r.dueAt,
-      status: r.status,
-      participants: r.participants.map((p) => ({
-        userId: p.userId,
-        role: p.role,
-      })),
-    };
+  eventTask(r: Parameters<typeof toEventTask>[0]): TaskEventTask {
+    return toEventTask(r);
   }
 
   /** Loads a task the caller may see, with its access; 404 for an invisible one. */
@@ -390,7 +202,7 @@ export class TasksService {
     tx: Prisma.TransactionClient | PrismaService,
     id: string,
     actor: TaskActor,
-  ) {
+  ): Promise<TaskCtx> {
     const row = await tx.task.findFirst({
       where: { id, companyId: actor.companyId },
       select: TASK_DETAIL_SELECT,
@@ -427,6 +239,20 @@ export class TasksService {
     }
   }
 
+  /** One serializable transaction over a task the caller may see. */
+  private inTask<T>(
+    id: string,
+    actor: TaskActor,
+    fn: (tx: Prisma.TransactionClient, ctx: TaskCtx) => Promise<T>,
+  ): Promise<T> {
+    return this.runSerializable(async (tx) =>
+      fn(tx, await this.loadForAccess(tx, id, actor)),
+    );
+  }
+
+  private schedule = (tx: Prisma.TransactionClient, task: TaskRow) =>
+    this.outbox.schedule(tx, task);
+
   // ---------- status ----------
 
   async changeStatus(
@@ -434,74 +260,9 @@ export class TasksService {
     to: Exclude<TaskStatus, 'CANCELLED'>,
     actor: TaskActor,
   ): Promise<TaskDetail> {
-    const { from, updated } = await this.runSerializable(async (tx) => {
-      const { row, access } = await this.loadForAccess(tx, id, actor);
-      if (!access.canWork) {
-        throw new ForbiddenException('Bu topshiriqda siz ijrochi emassiz');
-      }
-      // A manager who is not an assignee moves a task only through review and
-      // cancel, never through a plain status change.
-      if (!access.isAssignee) {
-        throw new BadRequestException(
-          'Qabul qilish yoki qaytarish tugmasidan foydalaning',
-        );
-      }
-      // An author who is also the only assignee acts as the assignee, so their
-      // own task goes straight to DONE.
-      const assignees = row.participants.filter((p) => p.role === 'ASSIGNEE');
-      const selfTask =
-        assignees.length === 1 &&
-        assignees[0].userId === row.authorId &&
-        row.authorId === actor.userId;
-      const verdict = checkTransition({
-        from: row.status,
-        to,
-        by: 'ASSIGNEE',
-        selfTask,
-        kind: row.kind,
-        requiresPhoto: row.requiresPhoto,
-        // No photo upload in this phase: a task that requires one cannot go to review.
-        hasFreshPhoto: false,
-      });
-      if (!verdict.ok) throw new BadRequestException(verdict.message);
-
-      // The first assignee to act takes a system task (claimSystemTask also
-      // writes `claimedById` and drops the other assignees).
-      if (
-        row.kind !== 'MANUAL' &&
-        access.isAssignee &&
-        row.claimedById === null
-      ) {
-        await claimSystemTask(tx, id, actor.userId);
-      }
-      const now = new Date();
-      const data: Prisma.TaskUncheckedUpdateInput = { status: to };
-      if (to === 'IN_PROGRESS' && !row.startedAt) data.startedAt = now;
-      if (to === 'IN_REVIEW') data.reviewRequestedAt = now;
-      if (to === 'DONE') data.closedAt = now;
-      const updated = await tx.task.update({
-        where: { id },
-        data,
-        select: TASK_DETAIL_SELECT,
-      });
-      await tx.taskEvent.create({
-        data: {
-          taskId: id,
-          type: 'STATUS',
-          actorId: actor.userId,
-          meta: { from: row.status, to },
-          via: 'WEB',
-        },
-      });
-      await tx.taskParticipant.updateMany({
-        where: { taskId: id, userId: actor.userId, seenAt: null },
-        data: { seenAt: now },
-      });
-      if (to === 'DONE') {
-        await tx.taskOutbox.deleteMany({ where: { taskId: id, sentAt: null } });
-      }
-      return { from: row.status, updated };
-    });
+    const { from, updated } = await this.inTask(id, actor, (tx, ctx) =>
+      changeStatusTx(tx, ctx, to, actor.userId),
+    );
     const task = this.eventTask(updated);
     this.emitter.emit(TASK_EVENTS.STATUS_CHANGED, {
       task,
@@ -528,51 +289,9 @@ export class TasksService {
     if (action === 'RETURN' && !trimmed) {
       throw new BadRequestException('Qaytarish sababini yozing');
     }
-    const updated = await this.runSerializable(async (tx) => {
-      const { row, access } = await this.loadForAccess(tx, id, actor);
-      if (!access.canManage) {
-        throw new ForbiddenException('Faqat beruvchi tekshira oladi');
-      }
-      const to: TaskStatus = action === 'ACCEPT' ? 'DONE' : 'IN_PROGRESS';
-      const verdict = checkTransition({
-        from: row.status,
-        to,
-        by: 'MANAGER',
-        selfTask: false,
-        kind: row.kind,
-        requiresPhoto: row.requiresPhoto,
-        hasFreshPhoto: true,
-      });
-      if (!verdict.ok) throw new BadRequestException(verdict.message);
-      const now = new Date();
-      const data: Prisma.TaskUncheckedUpdateInput =
-        action === 'ACCEPT'
-          ? { status: 'DONE', closedAt: now }
-          : {
-              status: 'IN_PROGRESS',
-              returnedCount: { increment: 1 },
-              lastReturnedAt: now,
-            };
-      const u = await tx.task.update({
-        where: { id },
-        data,
-        select: TASK_DETAIL_SELECT,
-      });
-      await tx.taskEvent.create({
-        data: {
-          taskId: id,
-          type: action === 'ACCEPT' ? 'STATUS' : 'RETURN',
-          actorId: actor.userId,
-          text: action === 'RETURN' ? trimmed : null,
-          meta: { from: row.status, to },
-          via: 'WEB',
-        },
-      });
-      if (action === 'ACCEPT') {
-        await tx.taskOutbox.deleteMany({ where: { taskId: id, sentAt: null } });
-      }
-      return u;
-    });
+    const updated = await this.inTask(id, actor, (tx, ctx) =>
+      reviewTx(tx, ctx, action, trimmed, actor.userId),
+    );
     this.emitter.emit(TASK_EVENTS.REVIEWED, {
       task: this.eventTask(updated),
       actorId: actor.userId,
@@ -588,42 +307,9 @@ export class TasksService {
     actor: TaskActor,
   ): Promise<TaskDetail> {
     const text = reason?.trim() || null;
-    const updated = await this.runSerializable(async (tx) => {
-      const { row, access } = await this.loadForAccess(tx, id, actor);
-      if (!access.canManage) {
-        throw new ForbiddenException('Faqat beruvchi bekor qila oladi');
-      }
-      const verdict = checkTransition({
-        from: row.status,
-        to: 'CANCELLED',
-        by: 'MANAGER',
-        selfTask: false,
-        kind: row.kind,
-        requiresPhoto: false,
-        hasFreshPhoto: true,
-      });
-      if (!verdict.ok) throw new BadRequestException(verdict.message);
-      const u = await tx.task.update({
-        where: { id },
-        data: {
-          status: 'CANCELLED',
-          cancelledAt: new Date(),
-          cancelReason: text,
-        },
-        select: TASK_DETAIL_SELECT,
-      });
-      await tx.taskEvent.create({
-        data: {
-          taskId: id,
-          type: 'CANCELLED',
-          actorId: actor.userId,
-          text,
-          via: 'WEB',
-        },
-      });
-      await tx.taskOutbox.deleteMany({ where: { taskId: id, sentAt: null } });
-      return u;
-    });
+    const updated = await this.inTask(id, actor, (tx, ctx) =>
+      cancelTx(tx, ctx, text, actor.userId),
+    );
     this.emitter.emit(TASK_EVENTS.CANCELLED, {
       task: this.eventTask(updated),
       actorId: actor.userId,
@@ -673,96 +359,25 @@ export class TasksService {
     if (!first.access.canManage) {
       throw new ForbiddenException("Ijrochilarni faqat beruvchi o'zgartiradi");
     }
-    await this.loadAndCheckPeople(assigneeIds, watcherIds, actor);
-    const assigneeSet = new Set(assigneeIds);
-    const wanted = new Map<number, 'ASSIGNEE' | 'WATCHER'>([
-      ...[...assigneeSet].map((u) => [u, 'ASSIGNEE'] as const),
-      ...[...new Set(watcherIds)]
-        .filter((w) => !assigneeSet.has(w))
-        .map((u) => [u, 'WATCHER'] as const),
-    ]);
-
-    const r = await this.runSerializable(async (tx) => {
-      const { row, access } = await this.loadForAccess(tx, id, actor);
-      if (!access.canManage) {
-        throw new ForbiddenException(
-          "Ijrochilarni faqat beruvchi o'zgartiradi",
-        );
-      }
-      if (row.kind !== 'MANUAL') {
-        throw new BadRequestException(
-          "Tizim topshirig'ining ijrochisi o'zgartirilmaydi",
-        );
-      }
-      if (!OPEN_STATUSES.includes(row.status)) {
-        throw new BadRequestException("Yopilgan topshiriq o'zgartirilmaydi");
-      }
-      const was = new Map(row.participants.map((p) => [p.userId, p.role]));
-      const removed = [...was.keys()].filter((u) => !wanted.has(u));
-      // New people and people whose role flipped (assignee ↔ watcher).
-      const added = [...wanted].filter(([u, role]) => was.get(u) !== role);
-      if (!added.length && !removed.length) {
-        return { updated: row, added: [], removed: [] };
-      }
-
-      if (removed.length) {
-        await tx.taskParticipant.deleteMany({
-          where: { taskId: id, userId: { in: removed } },
-        });
-        await tx.taskOutbox.deleteMany({
-          where: { taskId: id, userId: { in: removed }, sentAt: null },
-        });
-      }
-      for (const role of ['ASSIGNEE', 'WATCHER'] as const) {
-        const flipped = added
-          .filter(([u, to]) => to === role && was.has(u))
-          .map(([u]) => u);
-        if (flipped.length) {
-          await tx.taskParticipant.updateMany({
-            where: { taskId: id, userId: { in: flipped } },
-            data: { role },
-          });
-        }
-      }
-      const fresh = added.filter(([u]) => !was.has(u));
-      if (fresh.length) {
-        await tx.taskParticipant.createMany({
-          data: fresh.map(([userId, role]) => ({ taskId: id, userId, role })),
-          skipDuplicates: true,
-        });
-      }
-      const addedIds = added.map(([u]) => u);
-      await tx.taskEvent.create({
-        data: {
-          taskId: id,
-          type: 'ASSIGNEE',
-          actorId: actor.userId,
-          meta: { added: addedIds, removed },
-          via: 'WEB',
-        },
-      });
-      const updated = await tx.task.findFirst({
-        where: { id },
-        select: TASK_DETAIL_SELECT,
-      });
-      if (!updated) throw new NotFoundException('Topshiriq topilmadi');
-      if (updated.dueAt) await this.outbox.schedule(tx, updated);
-      return { updated, added: addedIds, removed };
-    });
+    await this.checkPeople(assigneeIds, watcherIds, actor);
+    const r = await this.inTask(id, actor, (tx, ctx) =>
+      setParticipantsTx(
+        tx,
+        ctx,
+        assigneeIds,
+        watcherIds,
+        actor.userId,
+        this.schedule,
+      ),
+    );
     const task = this.eventTask(r.updated);
-    if (r.added.length) {
-      this.emitter.emit(TASK_EVENTS.ASSIGNED, {
-        task,
-        actorId: actor.userId,
-        userIds: r.added,
-      });
-    }
-    if (r.removed.length) {
-      this.emitter.emit(TASK_EVENTS.UNASSIGNED, {
-        task,
-        actorId: actor.userId,
-        userIds: r.removed,
-      });
+    for (const [event, userIds] of [
+      [TASK_EVENTS.ASSIGNED, r.added],
+      [TASK_EVENTS.UNASSIGNED, r.removed],
+    ] as const) {
+      if (userIds.length) {
+        this.emitter.emit(event, { task, actorId: actor.userId, userIds });
+      }
     }
     return toTaskDetail(r.updated);
   }
@@ -783,35 +398,9 @@ export class TasksService {
     actor: TaskActor,
   ): Promise<TaskDetail> {
     const text = requireText(title, 'Qadam nomini yozing');
-    await this.runSerializable(async (tx) => {
-      const { row, access } = await this.loadForAccess(tx, id, actor);
-      if (!access.canWork) {
-        throw new ForbiddenException(
-          "Qadam qo'shish uchun ijrochi yoki beruvchi bo'lish kerak",
-        );
-      }
-      assertStepsEditable(row);
-      const max = await tx.taskStep.aggregate({
-        where: { taskId: id },
-        _max: { position: true },
-      });
-      await tx.taskStep.create({
-        data: {
-          taskId: id,
-          title: text,
-          position: (max._max.position ?? -1) + 1,
-        },
-      });
-      await tx.taskEvent.create({
-        data: {
-          taskId: id,
-          type: 'STEP',
-          actorId: actor.userId,
-          meta: { action: 'added', title: text },
-          via: 'WEB',
-        },
-      });
-    });
+    await this.inTask(id, actor, (tx, ctx) =>
+      addStepTx(tx, ctx, text, actor.userId),
+    );
     return this.reload(id, actor);
   }
 
@@ -825,64 +414,9 @@ export class TasksService {
       patch.title === undefined
         ? undefined
         : requireText(patch.title, 'Qadam nomini yozing');
-    await this.runSerializable(async (tx) => {
-      const { row, access } = await this.loadForAccess(tx, id, actor);
-      if (title !== undefined && !access.canManage) {
-        throw new ForbiddenException(
-          "Qadam nomini faqat beruvchi o'zgartiradi",
-        );
-      }
-      if (patch.done !== undefined && !access.canWork) {
-        throw new ForbiddenException(
-          'Qadamni ijrochi yoki beruvchi belgilaydi',
-        );
-      }
-      assertStepsEditable(row);
-      // Scoped by the task: a step id of another task is not found.
-      const step = await tx.taskStep.findFirst({
-        where: { id: stepId, taskId: id },
-      });
-      if (!step) throw new NotFoundException('Qadam topilmadi');
-      // Only a real change is written or logged: ticking a done step again
-      // would restamp who finished it and when.
-      const newTitle =
-        title !== undefined && title !== step.title ? title : undefined;
-      const doneChanged =
-        patch.done !== undefined && patch.done !== (step.doneAt !== null);
-      if (newTitle === undefined && !doneChanged) return;
-      const data: Prisma.TaskStepUncheckedUpdateInput = {};
-      if (newTitle !== undefined) data.title = newTitle;
-      if (doneChanged) {
-        data.doneAt = patch.done ? new Date() : null;
-        data.doneById = patch.done ? actor.userId : null;
-      }
-      await tx.taskStep.update({ where: { id: stepId }, data });
-      if (newTitle !== undefined) {
-        await tx.taskEvent.create({
-          data: {
-            taskId: id,
-            type: 'STEP',
-            actorId: actor.userId,
-            meta: { action: 'renamed', from: step.title, to: newTitle },
-            via: 'WEB',
-          },
-        });
-      }
-      if (doneChanged) {
-        await tx.taskEvent.create({
-          data: {
-            taskId: id,
-            type: 'STEP',
-            actorId: actor.userId,
-            meta: {
-              action: patch.done ? 'done' : 'undone',
-              title: newTitle ?? step.title,
-            },
-            via: 'WEB',
-          },
-        });
-      }
-    });
+    await this.inTask(id, actor, (tx, ctx) =>
+      updateStepTx(tx, ctx, stepId, { title, done: patch.done }, actor.userId),
+    );
     return this.reload(id, actor);
   }
 
@@ -891,31 +425,9 @@ export class TasksService {
     stepId: string,
     actor: TaskActor,
   ): Promise<TaskDetail> {
-    await this.runSerializable(async (tx) => {
-      const { row, access } = await this.loadForAccess(tx, id, actor);
-      if (!access.canManage) {
-        throw new ForbiddenException("Qadamni faqat beruvchi o'chiradi");
-      }
-      assertStepsEditable(row);
-      // Scoped by the task: a step id of another task is not found.
-      const step = await tx.taskStep.findFirst({
-        where: { id: stepId, taskId: id },
-      });
-      if (!step) throw new NotFoundException('Qadam topilmadi');
-      const { count } = await tx.taskStep.deleteMany({
-        where: { id: stepId, taskId: id },
-      });
-      if (count === 0) throw new NotFoundException('Qadam topilmadi');
-      await tx.taskEvent.create({
-        data: {
-          taskId: id,
-          type: 'STEP',
-          actorId: actor.userId,
-          meta: { action: 'deleted', title: step.title },
-          via: 'WEB',
-        },
-      });
-    });
+    await this.inTask(id, actor, (tx, ctx) =>
+      deleteStepTx(tx, ctx, stepId, actor.userId),
+    );
     return this.reload(id, actor);
   }
 
@@ -962,42 +474,9 @@ export class TasksService {
       const { row } = await this.loadForAccess(this.prisma, id, actor);
       holidays = await this.holidaySet(row.branchId, dueAt);
     }
-    const { updated, dueChanged } = await this.runSerializable(async (tx) => {
-      const { row, access } = await this.loadForAccess(tx, id, actor);
-      if (!access.canManage) {
-        throw new ForbiddenException("Faqat beruvchi o'zgartira oladi");
-      }
-      if (row.kind !== 'MANUAL') {
-        throw new BadRequestException("Tizim topshirig'i tahrirlanmaydi");
-      }
-      if (!OPEN_STATUSES.includes(row.status)) {
-        throw new BadRequestException("Yopilgan topshiriq o'zgartirilmaydi");
-      }
-      const data: Prisma.TaskUncheckedUpdateInput = {};
-      if (dto.title !== undefined) data.title = dto.title.trim();
-      if (dto.description !== undefined) {
-        data.description = dto.description?.trim() || null;
-      }
-      if (dto.priority !== undefined) data.priority = dto.priority;
-      let dueChanged = false;
-      if (dueAt !== undefined) {
-        if (dueAt) assertManualDueAt(dueAt, holidays);
-        data.dueAt = dueAt;
-        dueChanged =
-          (dueAt?.getTime() ?? null) !== (row.dueAt?.getTime() ?? null);
-      }
-      const updated = await tx.task.update({
-        where: { id },
-        data,
-        select: TASK_DETAIL_SELECT,
-      });
-      if (dueChanged) {
-        // The old reminders are for the old due date.
-        await tx.taskOutbox.deleteMany({ where: { taskId: id, sentAt: null } });
-        if (updated.dueAt) await this.outbox.schedule(tx, updated);
-      }
-      return { updated, dueChanged };
-    });
+    const { updated, dueChanged } = await this.inTask(id, actor, (tx, ctx) =>
+      updateFieldsTx(tx, ctx, dto, dueAt, holidays, this.schedule),
+    );
     if (dueChanged) {
       this.emitter.emit(TASK_EVENTS.DUE_CHANGED, {
         task: this.eventTask(updated),
@@ -1012,8 +491,3 @@ export class TasksService {
     return toTaskDetail(row);
   }
 }
-
-type TaskRow = Prisma.TaskGetPayload<{ select: typeof TASK_DETAIL_SELECT }>;
-export type TaskEventRow = Prisma.TaskEventGetPayload<{
-  select: typeof TASK_EVENT_SELECT;
-}>;

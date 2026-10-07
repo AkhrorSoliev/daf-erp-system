@@ -24,6 +24,32 @@ export interface TaskEventTask {
   participants: { userId: number; role: 'ASSIGNEE' | 'WATCHER' }[];
 }
 
+/** The slice of a loaded task that every listener needs. */
+export function toEventTask(r: {
+  id: string;
+  companyId: number;
+  title: string;
+  kind: string;
+  authorId: number | null;
+  dueAt: Date | null;
+  status: TaskStatus;
+  participants: { userId: number; role: 'ASSIGNEE' | 'WATCHER' }[];
+}): TaskEventTask {
+  return {
+    id: r.id,
+    companyId: r.companyId,
+    title: r.title,
+    kind: r.kind,
+    authorId: r.authorId,
+    dueAt: r.dueAt,
+    status: r.status,
+    participants: r.participants.map((p) => ({
+      userId: p.userId,
+      role: p.role,
+    })),
+  };
+}
+
 export interface TaskAssignedPayload {
   task: TaskEventTask;
   actorId: number | null;

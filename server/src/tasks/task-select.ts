@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import type { TaskAccess } from './task-policy';
 
 const PERSON = {
   id: true,
@@ -89,6 +90,13 @@ export const TASK_EVENT_SELECT = {
 
 type CardRow = Prisma.TaskGetPayload<{ select: typeof TASK_CARD_SELECT }>;
 type DetailRow = Prisma.TaskGetPayload<{ select: typeof TASK_DETAIL_SELECT }>;
+
+export type TaskRow = DetailRow;
+export type TaskEventRow = Prisma.TaskEventGetPayload<{
+  select: typeof TASK_EVENT_SELECT;
+}>;
+/** A task the caller may see, with what they may do to it (`loadForAccess`). */
+export type TaskCtx = { row: TaskRow; access: TaskAccess };
 
 function person(
   u: {
