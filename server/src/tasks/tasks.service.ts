@@ -371,13 +371,21 @@ export class TasksService {
       ),
     );
     const task = this.eventTask(r.updated);
-    for (const [event, userIds] of [
-      [TASK_EVENTS.ASSIGNED, r.added],
-      [TASK_EVENTS.UNASSIGNED, r.removed],
-    ] as const) {
-      if (userIds.length) {
-        this.emitter.emit(event, { task, actorId: actor.userId, userIds });
-      }
+    // Two plain emits, not a loop over the event names: `event-wiring.spec.ts`
+    // reads the name at the call site and skips a variable.
+    if (r.added.length) {
+      this.emitter.emit(TASK_EVENTS.ASSIGNED, {
+        task,
+        actorId: actor.userId,
+        userIds: r.added,
+      });
+    }
+    if (r.removed.length) {
+      this.emitter.emit(TASK_EVENTS.UNASSIGNED, {
+        task,
+        actorId: actor.userId,
+        userIds: r.removed,
+      });
     }
     return toTaskDetail(r.updated);
   }

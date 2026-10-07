@@ -16,9 +16,10 @@ import { join } from 'path';
  * switched on, this test has to learn about them — the assertion below would
  * start reporting listeners that do exist.
  *
- * Names arrive two ways: a string literal at the call site, and a constant
- * like `USER_DEACTIVATED_EVENT`. The first scan of this codebase only matched
- * literals and silently skipped four emits, so both are resolved here.
+ * Names arrive three ways: a string literal at the call site, a constant like
+ * `USER_DEACTIVATED_EVENT`, and a member of an exported object such as
+ * `TASK_EVENTS.ASSIGNED`. The first scan of this codebase only matched
+ * literals and silently skipped four emits, so all three are resolved here.
  */
 
 const SRC = join(__dirname, '..');
@@ -63,6 +64,22 @@ for (const { source } of files) {
   }
 }
 
+/**
+ * `export const TASK_EVENTS = { ASSIGNED: 'task.assigned', … } as const;` —
+ * the members of an exported object literal, named `TASK_EVENTS.ASSIGNED` at
+ * the call site. Without this every `emit(TASK_EVENTS.X, …)` and
+ * `@OnEvent(TASK_EVENTS.X)` is invisible to the scan and goes unchecked.
+ */
+for (const { source } of files) {
+  for (const obj of source.matchAll(
+    /export const (\w+)\s*=\s*\{([^}]*)\}\s*as const/g,
+  )) {
+    for (const member of obj[2].matchAll(/(\w+)\s*:\s*['"`]([^'"`]+)['"`]/g)) {
+      constants.set(`${obj[1]}.${member[1]}`, member[2]);
+    }
+  }
+}
+
 /** A literal or a resolvable constant; anything else is unknown. */
 function eventName(raw: string): string | null {
   const literal = raw.match(/^['"`]([^'"`]+)['"`]$/);
@@ -96,6 +113,15 @@ describe('event wiring', () => {
     // skipped every one of them without saying so.
     expect(constants.get('USER_DEACTIVATED_EVENT')).toBe('user.deactivated');
     expect(emitted.has('user.deactivated')).toBe(true);
+  });
+
+  it('resolves members of an exported event object (TASK_EVENTS.X)', () => {
+    expect(constants.get('TASK_EVENTS.ASSIGNED')).toBe('task.assigned');
+    // Task events are really checked on both sides, not skipped.
+    for (const name of ['task.assigned', 'task.reassigned']) {
+      expect(emitted.has(name)).toBe(true);
+      expect(heard.has(name)).toBe(true);
+    }
   });
 
   it('every emitted event has a listener', () => {
