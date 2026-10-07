@@ -63,7 +63,9 @@
     "scripts/lib/qollanma-baza.spec.ts",
     "scripts/open-unmarked-lessons.ts",
     "scripts/lib/open-unmarked-args.ts",
-    "scripts/lib/open-unmarked-args.spec.ts"
+    "scripts/lib/open-unmarked-args.spec.ts",
+    "scripts/migrate-comment-tasks.ts",
+    "scripts/lib/comment-task-map.ts"
   ],
   "exclude": ["node_modules", "dist", "src/generated"]
 }
