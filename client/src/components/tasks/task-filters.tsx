@@ -9,7 +9,7 @@ import { useTasks, type TaskCard, type TaskFilters as Filters, type TaskPerson, 
 import { PRIORITY_LABEL, STATUS_COLUMNS } from "./task-labels";
 import { useAssignable } from "./use-assignable";
 
-const DUE_OPTIONS = [
+export const DUE_OPTIONS = [
   { value: "all", label: "Barcha muddatlar" },
   { value: "overdue", label: "Muddati o'tgan" },
   { value: "today", label: "Bugun" },
@@ -24,7 +24,7 @@ function change(patch: Partial<Filters>) {
   void fetchBoard();
 }
 
-const personOption = (p: TaskPerson): MultiSelectOption => ({
+export const personOption = (p: TaskPerson): MultiSelectOption => ({
   value: String(p.id),
   label: `${p.firstName} ${p.lastName}`,
   avatarUrl: p.photo,

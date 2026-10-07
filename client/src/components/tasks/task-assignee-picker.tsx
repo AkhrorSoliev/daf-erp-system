@@ -6,9 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAssignable, type AssignableUser } from "./use-assignable";
+import { ROLE_LABEL, ROLE_ORDER } from "./task-labels";
 
-const ROLE_ORDER = ["CEO", "Branch Director", "Administrator", "Cashier", "Teacher"];
-const ROLE_LABEL: Record<string, string> = { CEO: "Rahbar", "Branch Director": "Filial direktori", Administrator: "Administrator", Cashier: "Kassir", Teacher: "Ustoz" };
 // A search box on a short list is noise (client/CLAUDE.md, «Searchable Select»).
 const SEARCH_FROM = 8;
 

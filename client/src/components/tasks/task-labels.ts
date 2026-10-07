@@ -22,3 +22,6 @@ export const KIND_LABEL: Record<TaskKind, string> = {
   MANUAL: "", LESSON_QUESTION: "Dars bo'ldimi?", CALLBACK: "Qayta qo'ng'iroq", BROKEN_PROMISE: "Buzilgan va'da", UNCALLED_LEAD: "Qo'ng'iroqsiz lid",
 };
 export const ENTITY_LABEL: Record<string, string> = { Student: "O'quvchi", User: "Xodim", Group: "Guruh", Lead: "Lid" };
+/** Role names as the server sends them, highest first, and how they read on screen. */
+export const ROLE_ORDER = ["CEO", "Branch Director", "Administrator", "Cashier", "Teacher"];
+export const ROLE_LABEL: Record<string, string> = { CEO: "Rahbar", "Branch Director": "Filial direktori", Administrator: "Administrator", Cashier: "Kassir", Teacher: "Ustoz" };

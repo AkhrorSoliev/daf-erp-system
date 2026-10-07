@@ -72,7 +72,7 @@ interface TasksState {
   appendEvent: (taskId: string, ev: TaskEvent) => void;
 }
 
-function filterParams(f: TaskFilters) {
+export function filterParams(f: TaskFilters) {
   return { due: f.due, priority: f.priority?.join(","), authorId: f.authorId?.join(","), assigneeId: f.assigneeId?.join(","), branchId: f.branchId?.join(","), q: f.q || undefined };
 }
 
