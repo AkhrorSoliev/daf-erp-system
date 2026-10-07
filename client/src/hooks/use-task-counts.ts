@@ -14,7 +14,9 @@ export function useTaskCounts(): TaskCounts & { refetch: () => void } {
     staleTime: 0, refetchInterval: 60_000, refetchOnWindowFocus: true,
   });
   const lastNotificationId = useNotifications((s) => s.notifications[0]?.id);
-  const columns = useTasks((s) => s.columns);
-  useEffect(() => { void refetch({ cancelRefetch: false }); }, [lastNotificationId, columns, refetch]);
+  // A number the store bumps when a card changes, not the `columns` object: that
+  // gets a new identity on every loading flag and would refetch for nothing.
+  const version = useTasks((s) => s.version);
+  useEffect(() => { void refetch({ cancelRefetch: false }); }, [lastNotificationId, version, refetch]);
   return { ...data, refetch: () => void refetch() };
 }
