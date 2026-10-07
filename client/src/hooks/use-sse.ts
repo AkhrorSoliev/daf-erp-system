@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import Cookies from "js-cookie";
 import { useNotifications } from "./use-notifications";
+import { useTasks } from "./use-tasks";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
@@ -47,6 +48,10 @@ export function useSSE() {
                 const payload = JSON.parse(line.slice(6));
                 if (payload.type === "notification" && payload.notification) {
                   addNotification(payload.notification);
+                }
+                if (payload.type === "task.updated" && typeof payload.taskId === "string") {
+                  void useTasks.getState().refreshTask(payload.taskId);
+                  if (useTasks.getState().openTaskId === payload.taskId) void useTasks.getState().loadDetail(payload.taskId);
                 }
               } catch {
                 // ignore parse errors
