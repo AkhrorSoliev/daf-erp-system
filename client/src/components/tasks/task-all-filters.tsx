@@ -8,12 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import type { TaskFilters, TaskStatus } from "@/hooks/use-tasks";
-import { withSelected, type AllQuery } from "./task-all-table-rules";
+import { CLOSED_DAYS, withSelected, type AllQuery } from "./task-all-table-rules";
 import { DUE_OPTIONS, personOption } from "./task-filters";
-import { STATUS_LABEL } from "./task-labels";
+import { STATUS_LABEL, isOpenStatus } from "./task-labels";
 import { useAssignable } from "./use-assignable";
 
-const STATUS_OPTIONS: MultiSelectOption[] = Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }));
+// Closed tasks are listed for the last CLOSED_DAYS days only; the choice says so.
+const STATUS_OPTIONS: MultiSelectOption[] = Object.entries(STATUS_LABEL).map(([value, label]) => ({
+  value, label: isOpenStatus(value as TaskStatus) ? label : `${label} (${CLOSED_DAYS} kun)`,
+}));
 const ids = (v: string[]) => (v.length ? v.map(Number) : undefined);
 
 interface Props { query: AllQuery; setQuery: Dispatch<SetStateAction<AllQuery>> }
@@ -80,7 +83,7 @@ export function TaskAllFilters({ query, setQuery }: Props) {
       {/* A pick in «Holat» already names the statuses, so the toggle has nothing to add then. */}
       <label className="flex items-center gap-2 text-sm">
         <Switch checked={query.showClosed} disabled={query.statuses.length > 0} onCheckedChange={(showClosed) => setQuery((q) => ({ ...q, showClosed }))} />
-        Yopilganlar
+        Yopilganlar ({CLOSED_DAYS} kun)
       </label>
     </div>
   );

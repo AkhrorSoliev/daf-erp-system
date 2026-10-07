@@ -6,17 +6,16 @@ import { allTabHref, onTimeTile, personLine } from "./task-workload-rules";
 vi.mock("@/lib/api", () => ({ default: {} }));
 
 describe("onTimeTile", () => {
-  it("mean of the shares weighted by what each person closed", () => {
-    // (10 × 100 + 30 × 50) / 40 = 62.5 → 63
-    expect(onTimeTile([{ doneThisMonth: 10, onTimePercent: 100 }, { doneThisMonth: 30, onTimePercent: 50 }])).toBe(63);
+  it("is onTime over withDue, rounded", () => {
+    expect(onTimeTile({ onTime: 1, withDue: 2 })).toBe(50);
+    expect(onTimeTile({ onTime: 2, withDue: 3 })).toBe(67);
+    expect(onTimeTile({ onTime: 0, withDue: 4 })).toBe(0);
   });
-  it("leaves out people without a share (nothing closed with a due date)", () => {
-    expect(onTimeTile([{ doneThisMonth: 4, onTimePercent: null }, { doneThisMonth: 2, onTimePercent: 50 }])).toBe(50);
+  it("counts every task with a due date once, so it is not the mean of people's shares (1 of 1 and 0 of 5 is 17%, not 50%)", () => {
+    expect(onTimeTile({ onTime: 1, withDue: 6 })).toBe(17);
   });
-  it("null when there is nothing to average", () => {
-    expect(onTimeTile([])).toBeNull();
-    expect(onTimeTile([{ doneThisMonth: 3, onTimePercent: null }])).toBeNull();
-    expect(onTimeTile([{ doneThisMonth: 0, onTimePercent: 100 }])).toBeNull();
+  it("is null when nothing closed this month had a due date", () => {
+    expect(onTimeTile({ onTime: 0, withDue: 0 })).toBeNull();
   });
 });
 

@@ -65,7 +65,11 @@ export function TasksPageClient() {
     const qs = p.toString();
     router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
   }, [pathname, router, searchParams]);
-  const setTab = (next: string) => editParams((p) => (next === "my" ? p.delete("tab") : p.set("tab", next)));
+  // `assignee` is «Yuklama»'s hand-off to «Barchasi», read once there; it must not outlive the tab it was meant for.
+  const setTab = (next: string) => editParams((p) => {
+    p.delete("assignee");
+    if (next === "my") p.delete("tab"); else p.set("tab", next);
+  });
   const closeTask = () => { openTask(null); editParams((p) => p.delete("task")); };
 
   // `?task=` and the store's `openTaskId` follow each other, so a refresh keeps

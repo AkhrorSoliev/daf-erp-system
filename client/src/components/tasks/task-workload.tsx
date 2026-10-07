@@ -14,6 +14,8 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentNow } from "@/lib/tashkent-time";
 import { cn } from "@/lib/utils";
+import { initialBranchFilter } from "./task-all-table-rules";
+import { rowAsButton } from "./task-row-button";
 import { TaskTile } from "./task-tile";
 import { allTabHref, onTimeTile, personLine, type WorkloadData, type WorkloadRow } from "./task-workload-rules";
 
@@ -32,9 +34,8 @@ function OnTime({ percent }: { percent: number | null }) {
 function Person({ row, index }: { row: WorkloadRow; index: number }) {
   const router = useRouter();
   const { user } = row;
-  const go = () => router.push(allTabHref(user.id));
   return (
-    <TableRow tabIndex={0} onClick={go} onKeyDown={(e) => { if (e.key === "Enter") go(); }} className="cursor-pointer">
+    <TableRow {...rowAsButton(() => router.push(allTabHref(user.id)))}>
       <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
@@ -59,16 +60,27 @@ function Person({ row, index }: { row: WorkloadRow; index: number }) {
 /** «Yuklama»: who carries how much, per month and branch. A row opens that person's tasks in «Barchasi». */
 export function TaskWorkload() {
   const branches = useBranchSwitcher((s) => s.branches);
+  const selected = useBranchSwitcher((s) => s.selectedBranch);
   const [thisMonth] = useState(currentMonth);
   const [month, setMonth] = useState(thisMonth);
-  const [branchId, setBranchId] = useState<number | null>(null);
+  // The branch select starts at the header's branch (the endpoint is not narrowed by it).
+  const [branchId, setBranchId] = useState<number | null>(() => initialBranchFilter(selected)?.[0] ?? null);
+  // On a hard load the switcher resolves after this mounted: start from its branch then too.
+  // (A later switch remounts the page, so this fires at most once per mount.)
+  const [adopted, setAdopted] = useState(selected);
+  if (selected !== adopted) {
+    setAdopted(selected);
+    setBranchId(initialBranchFilter(selected)?.[0] ?? null);
+  }
   // No retry: a 403 is final (the global interceptor has already toasted it) and would toast again on each attempt.
+  // staleTime 0: these counts move with every task, and a manager comes back to this page after changing some.
   const { data, isError, error, refetch } = useQuery({
     queryKey: ["tasks", "workload", month, branchId],
     queryFn: async () => (await api.get<WorkloadData>("/tasks/workload", { params: { month, branchId: branchId ?? undefined } })).data,
     retry: false,
+    staleTime: 0,
   });
-  const onTime = data ? onTimeTile(data.data) : null;
+  const onTime = data ? onTimeTile(data.totals) : null;
 
   return (
     <div className="space-y-4">
@@ -82,6 +94,9 @@ export function TaskWorkload() {
           </SelectContent>
         </Select>
       </div>
+      <p className="text-xs text-muted-foreground">
+        «Ochiq» va «Muddati o&apos;tgan» — bugungi holat; «Shu oy bajardi» va «O&apos;z vaqtida» — tanlangan oy.
+      </p>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <TaskTile label="Ochiq" value={data ? String(data.totals.open) : "…"} />
         <TaskTile label="Muddati o'tgan" value={data ? String(data.totals.overdue) : "…"} tone={data && data.totals.overdue > 0 ? "text-red-700 dark:text-red-400" : undefined} />

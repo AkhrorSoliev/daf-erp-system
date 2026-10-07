@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TaskCard, TaskPerson } from "@/hooks/use-tasks";
-import { allParams, allTiles, assigneeFromUrl, assigneeLabel, branchLabel, statusesToAsk, topicLine, withSelected, type AllQuery } from "./task-all-table-rules";
+import {
+  allParams, allTiles, appendPage, assigneeFromUrl, assigneeLabel, branchLabel, failedResult, initialBranchFilter, loadedResult,
+  statusesToAsk, topicLine, withSelected, type AllQuery,
+} from "./task-all-table-rules";
 
 // use-tasks pulls in the axios instance; nothing here calls it.
 vi.mock("@/lib/api", () => ({ default: {} }));
@@ -35,10 +38,12 @@ describe("allParams", () => {
     expect(p.q).toBeUndefined();
     expect(p.cursor).toBeUndefined();
   });
-  it("closedDays=30 whenever DONE is asked for, and only then", () => {
+  it("closedDays=30 whenever a closed status (done or cancelled) is asked for, and only then", () => {
     expect(allParams(query({ showClosed: true })).closedDays).toBe(30);
     expect(allParams(query({ statuses: ["DONE"] })).closedDays).toBe(30);
-    expect(allParams(query({ statuses: ["CANCELLED"] })).closedDays).toBeUndefined();
+    expect(allParams(query({ statuses: ["CANCELLED"] })).closedDays).toBe(30);
+    expect(allParams(query({ statuses: ["NEW", "IN_REVIEW"] })).closedDays).toBeUndefined();
+    expect(allParams(query()).closedDays).toBeUndefined();
   });
   it("passes the cursor on", () => {
     expect(allParams(query(), "abc").cursor).toBe("abc");
@@ -69,19 +74,73 @@ describe("allTiles", () => {
     card({ id: "f", status: "CANCELLED", dueAt: "2026-10-01T10:00:00Z" }),
   ];
   it("counts open, overdue and in-review from the open rows only", () => {
-    expect(allTiles(rows, now, true)).toMatchObject({ open: 3, overdue: 2, review: 1 });
+    expect(allTiles(rows, now, true, false)).toMatchObject({ open: 3, overdue: 2, review: 1 });
   });
   it("closed today follows the Tashkent day", () => {
-    expect(allTiles(rows, now, true).closedToday).toBe(1);
+    expect(allTiles(rows, now, true, false).closedToday).toBe(1);
     // 19:00Z is already tomorrow in Tashkent, 18:59Z still yesterday
-    expect(allTiles([card({ status: "DONE", closedAt: "2026-10-06T19:00:00Z" })], now, true).closedToday).toBe(1);
-    expect(allTiles([card({ status: "DONE", closedAt: "2026-10-06T18:59:59Z" })], now, true).closedToday).toBe(0);
+    expect(allTiles([card({ status: "DONE", closedAt: "2026-10-06T19:00:00Z" })], now, true, false).closedToday).toBe(1);
+    expect(allTiles([card({ status: "DONE", closedAt: "2026-10-06T18:59:59Z" })], now, true, false).closedToday).toBe(0);
   });
   it("closed today is unknown (null) while no closed task is asked for", () => {
-    expect(allTiles(rows.slice(0, 3), now, false).closedToday).toBeNull();
+    expect(allTiles(rows.slice(0, 3), now, false, false).closedToday).toBeNull();
   });
   it("an empty list is all zeros", () => {
-    expect(allTiles([], now, true)).toEqual({ open: 0, overdue: 0, review: 0, closedToday: 0 });
+    expect(allTiles([], now, true, false)).toEqual({ open: 0, overdue: 0, review: 0, closedToday: 0, more: false });
+  });
+});
+
+describe("the table's result", () => {
+  const now = new Date("2026-10-07T05:00:00Z");
+  const q1 = query();
+  const row = (id: string, over: Partial<TaskCard> = {}) => card({ id, ...over });
+
+  it("a loaded page carries its tiles, flagged as lower bounds while a cursor remains", () => {
+    const r = loadedResult(q1, [row("a"), row("b", { status: "IN_REVIEW" })], "next", now);
+    expect(r).toMatchObject({ query: q1, cursor: "next", failed: false });
+    expect(r.tiles).toEqual({ open: 2, overdue: 0, review: 1, closedToday: null, more: true });
+    expect(loadedResult(q1, [], null, now).tiles?.more).toBe(false);
+  });
+
+  it("a failed load shows no rows but keeps the tiles of the last good answer", () => {
+    const good = loadedResult(q1, [row("a"), row("b")], null, now);
+    const q2 = query({ showClosed: true });
+    const failed = failedResult(good, q2);
+    expect(failed).toMatchObject({ query: q2, rows: [], cursor: null, failed: true });
+    expect(failed.tiles).toBe(good.tiles); // not zeros
+    expect(failedResult(null, q2).tiles).toBeNull();
+  });
+
+  it("«Bugun yopildi» is computed for the query the rows answer, so a pending toggle does not zero it", () => {
+    const withClosed = query({ showClosed: true });
+    const done = row("d", { status: "DONE", closedAt: "2026-10-07T01:00:00Z" });
+    expect(loadedResult(withClosed, [done], null, now).tiles?.closedToday).toBe(1);
+    expect(loadedResult(q1, [done], null, now).tiles?.closedToday).toBeNull();
+  });
+
+  describe("appendPage («Keyingi»)", () => {
+    const first = loadedResult(q1, [row("a"), row("b")], "c1", now);
+    it("appends new ids, drops ones already held, replaces the cursor and recounts the tiles", () => {
+      const next = appendPage(first, q1, [row("b"), row("c", { status: "IN_REVIEW" })], "c2", now)!;
+      expect(next.rows.map((t) => t.id)).toEqual(["a", "b", "c"]);
+      expect(next.cursor).toBe("c2");
+      expect(next.tiles).toMatchObject({ open: 3, review: 1, more: true });
+    });
+    it("the last page clears the cursor", () => {
+      expect(appendPage(first, q1, [row("c")], null, now)!.cursor).toBeNull();
+    });
+    it("a page that answers another query is ignored", () => {
+      const moved = query({ showClosed: true });
+      expect(appendPage(first, moved, [row("c")], null, now)).toBe(first);
+      expect(appendPage(null, q1, [row("c")], null, now)).toBeNull();
+    });
+  });
+});
+
+describe("initialBranchFilter", () => {
+  it("starts the filter at the switcher's branch, and at nothing for «Barcha filiallar»", () => {
+    expect(initialBranchFilter({ id: 3 })).toEqual([3]);
+    expect(initialBranchFilter(null)).toBeUndefined();
   });
 });
 

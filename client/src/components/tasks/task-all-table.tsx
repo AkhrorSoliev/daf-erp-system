@@ -11,17 +11,24 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useTasks, type TaskCard as TaskCardData } from "@/hooks/use-tasks";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { cn } from "@/lib/utils";
 import { TaskAllFilters } from "./task-all-filters";
-import { allParams, allTiles, assigneeFromUrl, assigneeLabel, branchLabel, statusesToAsk, topicLine, type AllQuery } from "./task-all-table-rules";
+import {
+  CLOSED_DAYS, allParams, appendPage, assigneeFromUrl, assigneeLabel, branchLabel, closedAsked, failedResult,
+  initialBranchFilter, loadedResult, topicLine, type AllQuery, type AllResult, type AllTiles,
+} from "./task-all-table-rules";
 import { isOpenStatus } from "./task-labels";
 import { DueBadge } from "./task-card";
+import { rowAsButton } from "./task-row-button";
 import { TaskStatusPill } from "./task-status-pill";
 import { TaskTile } from "./task-tile";
 
 type Page = { data: TaskCardData[]; nextCursor: string | null };
-// `query` names the request these rows answer; a different query means they are on their way out.
-type Result = { query: AllQuery; rows: TaskCardData[]; cursor: string | null; failed: boolean };
+
+function figure(tiles: AllTiles | null, pick: (t: AllTiles) => number | null, failed: boolean): string {
+  if (!tiles) return failed ? "—" : "…";
+  const n = pick(tiles);
+  return n === null ? "—" : `${n}${tiles.more ? "+" : ""}`;
+}
 
 function Row({ task, index, branches }: { task: TaskCardData; index: number; branches: { id: number; name: string }[] }) {
   const openTask = useTasks((s) => s.openTask);
@@ -29,12 +36,7 @@ function Row({ task, index, branches }: { task: TaskCardData; index: number; bra
   // DueBadge reads any `closedAt` as «done, no longer late»; a cancelled task has none.
   const settled = isOpenStatus(task.status) ? null : (task.closedAt ?? task.createdAt);
   return (
-    <TableRow
-      tabIndex={0}
-      onClick={() => openTask(task.id)}
-      onKeyDown={(e) => { if (e.key === "Enter") openTask(task.id); }}
-      className="cursor-pointer"
-    >
+    <TableRow {...rowAsButton(() => openTask(task.id))}>
       <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
       <TableCell className="max-w-80 whitespace-normal">
         <div className="flex items-start gap-1.5">
@@ -55,23 +57,38 @@ function Row({ task, index, branches }: { task: TaskCardData; index: number; bra
 /** «Barchasi»: every task the manager may see, with its own filters (not the board's). */
 export function TaskAllTable() {
   const searchParams = useSearchParams();
+  const selected = useBranchSwitcher((s) => s.selectedBranch);
   // «Yuklama» sends a row here as `?assignee=<id>`; read once, the filter is the table's own after that.
-  const [query, setQuery] = useState<AllQuery>(() => ({ filters: { assigneeId: assigneeFromUrl(searchParams.get("assignee")) }, statuses: [], showClosed: false }));
-  const [result, setResult] = useState<Result | null>(null);
+  // The «Filial» filter starts at the header's branch (the list endpoint is not narrowed by it).
+  const [query, setQuery] = useState<AllQuery>(() => ({
+    filters: { assigneeId: assigneeFromUrl(searchParams.get("assignee")), branchId: initialBranchFilter(selected) },
+    statuses: [], showClosed: false,
+  }));
+  // On a hard load the switcher resolves after this mounted: start from its branch then too.
+  // (A later switch remounts the page, so this fires at most once per mount.)
+  const [adopted, setAdopted] = useState(selected);
+  if (selected !== adopted) {
+    setAdopted(selected);
+    setQuery((q) => ({ ...q, filters: { ...q.filters, branchId: initialBranchFilter(selected) } }));
+  }
+  const [result, setResult] = useState<AllResult | null>(null);
   const [moreBusy, setMoreBusy] = useState(false);
   const branches = useBranchSwitcher((s) => s.branches);
+  // A write made in the drawer bumps this; the rows are read again, quietly (same query, so nothing dims).
+  const version = useTasks((s) => s.version);
 
   useEffect(() => {
     let stale = false;
     api.get<Page>("/tasks", { params: allParams(query) })
-      .then(({ data }) => { if (!stale) setResult({ query, rows: data.data, cursor: data.nextCursor, failed: false }); })
+      .then(({ data }) => { if (!stale) setResult(loadedResult(query, data.data, data.nextCursor, new Date())); })
       .catch((error) => {
         if (stale) return;
         toast.error(getErrorMessage(error, "Topshiriqlarni yuklashda xatolik"));
-        setResult({ query, rows: [], cursor: null, failed: true });
+        // A quiet re-read that fails keeps the rows on screen; a load that fails shows the error.
+        setResult((prev) => (prev && prev.query === query && !prev.failed ? prev : failedResult(prev, query)));
       });
     return () => { stale = true; };
-  }, [query]);
+  }, [query, version]);
 
   async function loadMore() {
     if (!result?.cursor || moreBusy || result.query !== query) return;
@@ -79,11 +96,8 @@ export function TaskAllTable() {
     try {
       const { data } = await api.get<Page>("/tasks", { params: allParams(query, result.cursor) });
       // The filters may have moved on while this was in flight: then the rows belong to nobody.
-      setResult((prev) => {
-        if (!prev || prev.query !== query) return prev;
-        const seen = new Set(prev.rows.map((t) => t.id));
-        return { ...prev, rows: [...prev.rows, ...data.data.filter((t) => !seen.has(t.id))], cursor: data.nextCursor };
-      });
+      const now = new Date();
+      setResult((prev) => appendPage(prev, query, data.data, data.nextCursor, now));
     } catch (error) {
       toast.error(getErrorMessage(error, "Topshiriqlarni yuklashda xatolik"));
     } finally {
@@ -93,21 +107,20 @@ export function TaskAllTable() {
 
   const rows = result?.rows ?? [];
   const refreshing = result !== null && result.query !== query;
-  const closedAsked = statusesToAsk(query).some((s) => !isOpenStatus(s));
-  const tiles = allTiles(rows, new Date(), closedAsked);
-  const more = result?.cursor ? "+" : "";
-  const num = (n: number | null) => (result === null ? "…" : n === null ? "—" : `${n}${more}`);
+  const tiles = result?.tiles ?? null;
+  const failed = result?.failed ?? false;
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <TaskTile label="Ochiq" value={num(tiles.open)} />
-        <TaskTile label="Muddati o'tgan" value={num(tiles.overdue)} tone={tiles.overdue > 0 ? "text-red-700 dark:text-red-400" : undefined} />
-        <TaskTile label="Tekshiruvda" value={num(tiles.review)} />
-        <TaskTile label="Bugun yopildi" value={num(tiles.closedToday)} />
+        <TaskTile label="Ochiq" value={figure(tiles, (t) => t.open, failed)} />
+        <TaskTile label="Muddati o'tgan" value={figure(tiles, (t) => t.overdue, failed)} tone={tiles && tiles.overdue > 0 ? "text-red-700 dark:text-red-400" : undefined} />
+        <TaskTile label="Tekshiruvda" value={figure(tiles, (t) => t.review, failed)} />
+        <TaskTile label="Bugun yopildi" value={figure(tiles, (t) => t.closedToday, failed)} />
       </div>
       <TaskAllFilters query={query} setQuery={setQuery} />
-      <div className={cn("rounded-lg border", refreshing && "opacity-60")}>
+      {/* Not paged by size: the rows come by cursor, «Keyingi» adds the next 50. */}
+      <div className={refreshing ? "rounded-lg border opacity-60" : "rounded-lg border"}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -127,14 +140,16 @@ export function TaskAllTable() {
             {rows.map((t, i) => <Row key={t.id} task={t} index={i} branches={branches} />)}
           </TableBody>
         </Table>
-        {result?.failed && (
+        {failed && (
           <div className="flex flex-col items-center gap-2 py-10 text-sm text-muted-foreground">
             Topshiriqlarni yuklab bo&apos;lmadi
             <Button variant="outline" size="sm" onClick={() => setQuery((q) => ({ ...q }))}>Qayta urinish</Button>
           </div>
         )}
-        {result && !result.failed && rows.length === 0 && (
-          <p className="py-10 text-center text-sm text-muted-foreground">Topshiriq topilmadi — filtrlarni o&apos;zgartirib ko&apos;ring</p>
+        {result && !failed && rows.length === 0 && (
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            {closedAsked(query) ? `Oxirgi ${CLOSED_DAYS} kunda topilmadi` : "Topshiriq topilmadi"} — filtrlarni o&apos;zgartirib ko&apos;ring
+          </p>
         )}
       </div>
       {result?.cursor && !refreshing && (

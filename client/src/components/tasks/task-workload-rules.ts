@@ -5,19 +5,12 @@ export interface WorkloadRow {
   user: { id: number; firstName: string; lastName: string; photo: string | null; roleNames: string[]; branchNames: string[] };
   open: number; overdue: number; doneThisMonth: number; onTimePercent: number | null;
 }
-export interface WorkloadData { month: string; data: WorkloadRow[]; totals: { open: number; overdue: number; doneThisMonth: number } }
+export interface WorkloadTotals { open: number; overdue: number; doneThisMonth: number; onTime: number; withDue: number }
+export interface WorkloadData { month: string; data: WorkloadRow[]; totals: WorkloadTotals }
 
-// The server sends per-person shares only, so the company figure is their mean weighted by the tasks each closed
-// (not by those with a due date): an approximation of ΣonTime/ΣwithDue. Null when no row has a share.
-export function onTimeTile(rows: Pick<WorkloadRow, "doneThisMonth" | "onTimePercent">[]): number | null {
-  let weight = 0;
-  let sum = 0;
-  for (const r of rows) {
-    if (r.onTimePercent === null) continue;
-    weight += r.doneThisMonth;
-    sum += r.doneThisMonth * r.onTimePercent;
-  }
-  return weight > 0 ? Math.round(sum / weight) : null;
+/** The company-wide share of tasks closed by their due date, among those closed this month that had one; null when none had. */
+export function onTimeTile(totals: Pick<WorkloadTotals, "onTime" | "withDue">): number | null {
+  return totals.withDue > 0 ? Math.round((100 * totals.onTime) / totals.withDue) : null;
 }
 
 /** «Ustoz · Farg'ona»: the person's highest role (as the assignee picker lists them) and their branches. */
