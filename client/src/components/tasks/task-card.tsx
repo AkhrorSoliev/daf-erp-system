@@ -1,308 +1,113 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useDraggable } from "@dnd-kit/core";
-import { format, parseISO, isToday, isPast } from "date-fns";
-import {
-  CalendarClock,
-  AlertTriangle,
-  ArrowUpRight,
-  Bot,
-  Building2,
-  User,
-} from "lucide-react";
+import { Bot, CalendarClock, Camera, CheckSquare, Eye, EyeOff, Link2, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/use-auth";
-import type { TaskItem, TaskPriority } from "@/hooks/use-tasks-board";
-import { useTasksBoard } from "@/hooks/use-tasks-board";
-import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
-import { taskEntityHref } from "./task-entity-href";
+import { useTasks, type TaskCard as TaskCardData, type TaskPerson } from "@/hooks/use-tasks";
+import { cn } from "@/lib/utils";
+import { ENTITY_LABEL, KIND_LABEL, PRIORITY_CLASS, PRIORITY_LABEL } from "./task-labels";
+import { dueState, formatDue } from "./task-due";
 
-const PRIORITY_CONFIG: Record<
-  TaskPriority,
-  { label: string; className: string }
-> = {
-  URGENT: {
-    label: "Shoshilinch",
-    className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  },
-  HIGH: {
-    label: "Yuqori",
-    className:
-      "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-  },
-  MEDIUM: {
-    label: "O'rtacha",
-    className:
-      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  },
-  LOW: {
-    label: "Past",
-    className:
-      "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400",
-  },
-};
+const initials = (p: TaskPerson) => `${p.firstName.charAt(0)}${p.lastName.charAt(0)}`;
 
-const ENTITY_LABEL_MAP: Record<string, string> = {
-  Student: "Talaba",
-  User: "Xodim",
-  Group: "Guruh",
-  Lead: "Lid",
-};
-
-interface TaskCardProps {
-  task: TaskItem;
-  isOverlay?: boolean;
-  isDragDisabled: boolean;
+function Person({ p, className }: { p: TaskPerson; className?: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Avatar className={cn("size-5 border-2 border-card", className)}>
+          {p.photo && <AvatarImage src={p.photo} alt={p.firstName} />}
+          <AvatarFallback className="text-[8px]">{initials(p)}</AvatarFallback>
+        </Avatar>
+      </TooltipTrigger>
+      <TooltipContent>{p.firstName} {p.lastName}{p.seenAt === null ? " — hali ko'rmadi" : ""}</TooltipContent>
+    </Tooltip>
+  );
 }
 
-export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
-  const router = useRouter();
-  const tab = useTasksBoard((s) => s.tab);
-  const user = useAuth((s) => s.user);
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging,
-  } = useDraggable({
-    id: task.id,
-    disabled: isDragDisabled,
-  });
-
-  const style =
-    isOverlay || !transform
-      ? undefined
-      : {
-          transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-          opacity: isDragging ? 0.5 : 1,
-        };
-
-  const authorInitials = task.author
-    ? task.author.firstName.charAt(0) + task.author.lastName.charAt(0)
-    : "";
-
-  const entityLabel = ENTITY_LABEL_MAP[task.entityType] ?? task.entityType;
-  const entityUrl = taskEntityHref(
-    task.entityType,
-    task.entityId,
-    user?.roles.map((r) => r.id) ?? [],
+export function DueBadge({ dueAt, closedAt }: { dueAt: string | null; closedAt: string | null }) {
+  if (!dueAt) return null;
+  const now = new Date();
+  const state = closedAt ? "later" : dueState(dueAt, now);
+  const cls = state === "overdue" ? "text-red-700 dark:text-red-400 font-medium" : state === "today" ? "text-amber-700 dark:text-amber-400 font-medium" : "text-muted-foreground";
+  return (
+    <span className={cn("inline-flex items-center gap-1 text-[11px]", cls)}>
+      <CalendarClock className="size-3" />
+      {state === "overdue" ? `Muddati o'tdi · ${formatDue(dueAt, now)}` : formatDue(dueAt, now)}
+    </span>
   );
+}
 
-  function handleClick() {
-    if (entityUrl) {
-      router.push(entityUrl);
-    }
-  }
+interface Props { task: TaskCardData; dragEnabled: boolean; isOverlay?: boolean; showAssignees: boolean }
 
-  function renderDeadlineBadge() {
-    if (!task.dueDate) return null;
-
-    const date = parseISO(task.dueDate);
-    const formatted = format(date, "dd.MM.yyyy");
-
-    let badgeClass =
-      "bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400";
-    let label = formatted;
-
-    if (isToday(date)) {
-      badgeClass =
-        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
-      label = `Bugun - ${formatted}`;
-    } else if (isPast(date)) {
-      badgeClass =
-        "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
-      label = `Muddati o'tgan - ${formatted}`;
-    }
-
-    return (
-      <div
-        className={cn(
-          "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
-          badgeClass
-        )}
-      >
-        <CalendarClock className="size-3" />
-        {label}
-      </div>
-    );
-  }
+export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props) {
+  const openTask = useTasks((s) => s.openTask);
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id, disabled: !dragEnabled });
+  const style = isOverlay || !transform ? undefined : { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.5 : 1 };
+  const isSystem = task.kind !== "MANUAL";
+  const unseen = showAssignees && task.assignees.length > 0 && task.assignees.every((a) => a.seenAt === null);
 
   return (
     <div
       ref={isOverlay ? undefined : setNodeRef}
       style={style}
-      {...(isOverlay || isDragDisabled ? {} : { ...listeners, ...attributes })}
-      className={cn(
-        "rounded-lg border bg-card p-3 shadow-sm",
-        !isDragDisabled && "cursor-grab active:cursor-grabbing",
-        isDragDisabled && entityUrl && "cursor-pointer",
-        isOverlay && "shadow-lg ring-2 ring-primary/20 rotate-2"
-      )}
-      onClick={isDragDisabled ? handleClick : undefined}
+      role="button"
+      tabIndex={0}
+      {...(isOverlay || !dragEnabled ? {} : { ...listeners, ...attributes })}
+      onClick={() => openTask(task.id)}
+      onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) openTask(task.id); }}
+      className={cn("rounded-lg border bg-card p-3 shadow-sm cursor-pointer space-y-2", dragEnabled && "active:cursor-grabbing", isOverlay && "shadow-lg ring-2 ring-primary/20 rotate-2", task.status === "DONE" && "opacity-80")}
     >
-      <div className="space-y-2">
-        {/* Content */}
-        <p
-          className={cn(
-            "text-sm leading-snug line-clamp-3",
-            entityUrl && "cursor-pointer hover:text-primary transition-colors"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleClick();
-          }}
-          onPointerDown={(e) => {
-            if (!isDragDisabled) e.stopPropagation();
-          }}
-        >
-          {task.content}
-        </p>
-
-        {/* Branch + priority + deadline row */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          {/* The board lists every branch's tasks and group numbers repeat
-              across branches (#003 is in three of them). */}
-          {task.unmarkedLesson?.branchName && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  <Building2 className="size-3" />
-                  {task.unmarkedLesson.branchName}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>Dars shu filialda bo&apos;lgan</TooltipContent>
-            </Tooltip>
-          )}
-          {task.priority && (
-            <div
-              className={cn(
-                "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
-                PRIORITY_CONFIG[task.priority].className
-              )}
-            >
-              <AlertTriangle className="size-3" />
-              {PRIORITY_CONFIG[task.priority].label}
-            </div>
-          )}
-          {renderDeadlineBadge()}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {isSystem && <span className="inline-flex items-center gap-1 rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium text-background"><Bot className="size-3" />Tizim</span>}
+        {isSystem && KIND_LABEL[task.kind] && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{KIND_LABEL[task.kind]}</span>}
+        {task.priority !== "MEDIUM" && <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", PRIORITY_CLASS[task.priority])}>{PRIORITY_LABEL[task.priority]}</span>}
+        {task.requiresPhoto && <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"><Camera className="size-3" />Rasm bilan</span>}
+        {task.batch && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Har biriga alohida · {task.batch.total}</span>}
+      </div>
+      <p className={cn("text-sm leading-snug line-clamp-3", task.status === "DONE" && "text-muted-foreground")}>{task.title}</p>
+      {task.unmarkedLesson?.branchName && <p className="text-[11px] text-muted-foreground">{task.unmarkedLesson.branchName}</p>}
+      {task.batch && (
+        <div className="space-y-1">
+          <div className="h-1.5 rounded bg-muted"><div className="h-full rounded bg-emerald-500" style={{ width: `${(100 * task.batch.done) / task.batch.total}%` }} /></div>
+          <p className="text-[11px] text-muted-foreground">{task.batch.done}/{task.batch.total} bajardi</p>
         </div>
-
-        {/* Entity link */}
-        {entityUrl && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleClick();
-                }}
-                onPointerDown={(e) => {
-                  if (!isDragDisabled) e.stopPropagation();
-                }}
-              >
-                <ArrowUpRight className="size-3" />
-                {entityLabel} sahifasiga o&apos;tish
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{entityLabel} sahifasini ochish</TooltipContent>
-          </Tooltip>
-        )}
-
-        {task.unmarkedLesson?.status === "PENDING" && (
-          // Stop the card's drag and click from firing inside the prompt and
-          // its dialogs (React events bubble through portals).
-          <div
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <UnmarkedLessonPrompt
-              lesson={{
-                groupId: task.unmarkedLesson.groupId,
-                groupName: task.unmarkedLesson.groupName,
-                date: task.unmarkedLesson.date,
-                startTime: task.unmarkedLesson.lessonStartTime,
-                endTime: task.unmarkedLesson.lessonEndTime,
-              }}
-              info={{
-                id: task.unmarkedLesson.id,
-                status: task.unmarkedLesson.status,
-                teacherPayExempt: task.unmarkedLesson.teacherPayExempt,
-                lessonStartTime: task.unmarkedLesson.lessonStartTime,
-                lessonEndTime: task.unmarkedLesson.lessonEndTime,
-                // A viewer who still has the task holds it or nobody does:
-                // the server deletes the other copies when someone takes it.
-                claimedBy: null,
-              }}
-              onAnswered={() => void useTasksBoard.getState().fetchMyTasks()}
-              className="w-full"
-            />
+      )}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+        {task.stepsTotal > 0 && <span className="inline-flex items-center gap-1"><CheckSquare className="size-3" />{task.stepsDone}/{task.stepsTotal}</span>}
+        {task.eventsCount > 1 && <span className="inline-flex items-center gap-1"><MessageSquare className="size-3" />{task.eventsCount - 1}</span>}
+        {task.entityType && <span className="inline-flex items-center gap-1"><Link2 className="size-3" />{ENTITY_LABEL[task.entityType] ?? task.entityType}</span>}
+        <DueBadge dueAt={task.dueAt} closedAt={task.closedAt} />
+      </div>
+      {task.unmarkedLesson?.status === "PENDING" && (
+        // Keep the card's drag and click out of the prompt and its dialogs
+        // (React events bubble through portals).
+        <div onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+          <UnmarkedLessonPrompt
+            lesson={{ groupId: task.unmarkedLesson.groupId, groupName: task.unmarkedLesson.groupName, date: task.unmarkedLesson.date, startTime: task.unmarkedLesson.lessonStartTime, endTime: task.unmarkedLesson.lessonEndTime }}
+            info={{
+              id: task.unmarkedLesson.id, status: task.unmarkedLesson.status, teacherPayExempt: task.unmarkedLesson.teacherPayExempt,
+              lessonStartTime: task.unmarkedLesson.lessonStartTime, lessonEndTime: task.unmarkedLesson.lessonEndTime,
+              // A viewer who still has the task holds it or nobody does: the
+              // server deletes the other copies when someone takes it.
+              claimedBy: null,
+            }}
+            onAnswered={() => void useTasks.getState().refreshTask(task.id)}
+            className="w-full"
+          />
+        </div>
+      )}
+      <div className="flex items-center justify-between border-t pt-1.5">
+        {task.author ? <span className="truncate text-[11px] text-muted-foreground max-w-32">{task.author.firstName} {task.author.lastName}</span> : <span className="text-[11px] text-muted-foreground">Tizim</span>}
+        {showAssignees ? (
+          <div className="flex items-center gap-1">
+            {unseen ? <EyeOff className="size-3 text-amber-600" /> : <Eye className="size-3 text-muted-foreground" />}
+            <div className="flex -space-x-1">{task.assignees.slice(0, 4).map((a) => <Person key={a.id} p={a} />)}</div>
           </div>
+        ) : (
+          <div className="flex -space-x-1">{task.assignees.slice(0, 3).map((a) => <Person key={a.id} p={a} />)}</div>
         )}
-
-        {/* Footer: author + assignees */}
-        <div className="flex items-center justify-between pt-1 border-t">
-          {task.author ? (
-            <div className="flex items-center gap-1.5">
-              <Avatar className="size-5">
-                {task.author.photo && (
-                  <AvatarImage src={task.author.photo} alt={task.author.firstName} />
-                )}
-                <AvatarFallback className="text-[8px]">
-                  {authorInitials}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-[11px] text-muted-foreground truncate max-w-24">
-                {task.author.firstName} {task.author.lastName}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5">
-              <span className="flex size-5 items-center justify-center rounded-full bg-muted">
-                <Bot className="size-3 text-muted-foreground" />
-              </span>
-              <span className="text-[11px] text-muted-foreground">Tizim</span>
-            </div>
-          )}
-
-          {tab === "created" && task.assignees.length > 0 && (
-            <div className="flex items-center -space-x-1">
-              {task.assignees.slice(0, 3).map((assignee) => (
-                <Tooltip key={assignee.id}>
-                  <TooltipTrigger asChild>
-                    <Avatar className="size-5 border-2 border-card">
-                      <AvatarFallback className="text-[8px]">
-                        <User className="size-3" />
-                      </AvatarFallback>
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {assignee.firstName} {assignee.lastName} — {assignee.status === "DONE" ? "Bajarildi" : assignee.status === "SEEN" ? "Ko'rdi" : "Kutilmoqda"}
-                  </TooltipContent>
-                </Tooltip>
-              ))}
-              {task.assignees.length > 3 && (
-                <Badge
-                  variant="secondary"
-                  className="h-5 px-1 text-[9px] ml-1"
-                >
-                  +{task.assignees.length - 3}
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
