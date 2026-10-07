@@ -74,7 +74,11 @@ describe('TasksReadService', () => {
 
   beforeEach(() => {
     prisma = {
-      task: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn() },
+      task: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
       taskEvent: { findMany: jest.fn().mockResolvedValue([]) },
       taskParticipant: { findMany: jest.fn().mockResolvedValue([]) },
       user: { findMany: jest.fn().mockResolvedValue([]) },
@@ -144,21 +148,142 @@ describe('TasksReadService', () => {
           ],
         }),
       ]);
+      prisma.task.groupBy.mockResolvedValue([
+        { batchId: 'B', status: 'DONE', _count: { _all: 1 } },
+        { batchId: 'B', status: 'NEW', _count: { _all: 1 } },
+      ]);
       const page = await service.list({ view: 'created' }, admin());
       expect(page.data).toHaveLength(1);
       expect(page.data[0].batch).toEqual({
         total: 2,
         done: 1,
-        statuses: ['DONE', 'NEW'],
+        statuses: ['NEW', 'DONE'],
       });
       expect(page.data[0].assignees.map((a) => a.id)).toEqual([40, 41]);
+    });
+
+    it('«created» totals count the whole batch, not just the filtered page', async () => {
+      // Filtered to DONE, the page holds one copy of a five-copy batch.
+      prisma.task.findMany.mockResolvedValue([
+        makeCard({ id: 'a', batchId: 'B', status: 'DONE' }),
+      ]);
+      prisma.task.groupBy.mockResolvedValue([
+        { batchId: 'B', status: 'NEW', _count: { _all: 2 } },
+        { batchId: 'B', status: 'DONE', _count: { _all: 3 } },
+      ]);
+      const page = await service.list(
+        { view: 'created', status: ['DONE'] },
+        admin(),
+      );
+      expect(prisma.task.groupBy).toHaveBeenCalledWith({
+        by: ['batchId', 'status'],
+        where: { companyId: 1, batchId: { in: ['B'] } },
+        _count: { _all: true },
+      });
+      expect(page.data).toHaveLength(1);
+      expect(page.data[0].batch).toEqual({
+        total: 5,
+        done: 3,
+        statuses: ['NEW', 'NEW', 'DONE', 'DONE', 'DONE'],
+      });
+    });
+
+    it('does not count batches at all when no copy is on the page, or off «created»', async () => {
+      await service.list({ view: 'created' }, admin());
+      prisma.task.findMany.mockResolvedValue([
+        makeCard({ id: 'a', batchId: 'B' }),
+      ]);
+      await service.list({ view: 'my' }, admin());
+      expect(prisma.task.groupBy).not.toHaveBeenCalled();
+    });
+
+    it('refuses a cursor that does not decode instead of serving page one', async () => {
+      await expect(
+        service.list({ view: 'my', cursor: 'zzz' }, admin()),
+      ).rejects.toThrow("Sahifa belgisi noto'g'ri");
+      expect(prisma.task.findMany).not.toHaveBeenCalled();
+    });
+
+    describe('the DONE window', () => {
+      it.each([[['DONE']], [['DONE', 'CANCELLED']]])(
+        'limits DONE rows to closedDays when the status filter is %j',
+        async (status) => {
+          const before = Date.now();
+          await service.list({ view: 'my', status, closedDays: 3 }, admin());
+          const and = prisma.task.findMany.mock.calls[0][0].where.AND;
+          const clause = and.find(
+            (c: any) => c.OR?.[0]?.status?.not === 'DONE',
+          );
+          expect(clause).toEqual({
+            OR: [
+              { status: { not: 'DONE' } },
+              { status: 'DONE', closedAt: { gte: expect.any(Date) } },
+            ],
+          });
+          const gte: Date = clause.OR[1].closedAt.gte;
+          expect(gte.getTime()).toBeGreaterThanOrEqual(before - 3 * 864e5);
+          expect(gte.getTime()).toBeLessThanOrEqual(Date.now() - 3 * 864e5);
+          expect(and).toContainEqual({ status: { in: status } });
+        },
+      );
+
+      it('defaults to 14 days', async () => {
+        const before = Date.now();
+        await service.list({ view: 'my', status: ['DONE'] }, admin());
+        const and = prisma.task.findMany.mock.calls[0][0].where.AND;
+        const gte: Date = and.find(
+          (c: any) => c.OR?.[0]?.status?.not === 'DONE',
+        ).OR[1].closedAt.gte;
+        expect(gte.getTime()).toBeGreaterThanOrEqual(before - 14 * 864e5);
+        expect(gte.getTime()).toBeLessThanOrEqual(Date.now() - 14 * 864e5);
+      });
+
+      it('leaves the other statuses unwindowed', async () => {
+        await service.list(
+          { view: 'my', status: ['NEW', 'CANCELLED'] },
+          admin(),
+        );
+        expect(
+          JSON.stringify(prisma.task.findMany.mock.calls[0][0].where),
+        ).not.toContain('closedAt');
+      });
     });
   });
 
   describe('collapseBatches', () => {
     it('leaves batch-less cards alone', () => {
       const cards = [{ batchId: null, status: 'NEW' as const, assignees: [] }];
-      expect(collapseBatches(cards)).toEqual(cards);
+      expect(collapseBatches(cards, new Map())).toEqual(cards);
+    });
+
+    it('merges assignees into a copy of the head list, never into the input', () => {
+      const a = {
+        batchId: 'B',
+        status: 'NEW' as const,
+        assignees: [{ id: 1 }],
+      };
+      const b = {
+        batchId: 'B',
+        status: 'NEW' as const,
+        assignees: [{ id: 2 }],
+      };
+      const out = collapseBatches([a, b], new Map());
+      expect(out).toHaveLength(1);
+      expect(out[0].assignees).toEqual([{ id: 1 }, { id: 2 }]);
+      expect(a.assignees).toEqual([{ id: 1 }]);
+    });
+
+    it('prefers the batch totals over the copies on the page', () => {
+      const card = { batchId: 'B', status: 'DONE' as const, assignees: [] };
+      const stats = new Map([
+        ['B', { total: 5, done: 3, statuses: [] as ('NEW' | 'DONE')[] }],
+      ]);
+      expect(collapseBatches([card], stats)[0].batch).toBe(stats.get('B'));
+      expect(collapseBatches([card], new Map())[0].batch).toEqual({
+        total: 1,
+        done: 1,
+        statuses: ['DONE'],
+      });
     });
   });
 
@@ -202,6 +327,39 @@ describe('TasksReadService', () => {
         batchId: 'B',
         companyId: 1,
       });
+    });
+  });
+
+  describe('counts', () => {
+    it('counts «created» once per batch', async () => {
+      // Two single tasks, and one batch of three copies that are all open.
+      prisma.task.count.mockImplementation(
+        ({ where }: { where: { batchId?: null; status?: unknown } }) =>
+          Promise.resolve(where.batchId === null ? 2 : 0),
+      );
+      prisma.task.findMany.mockResolvedValue([{ batchId: 'B' }]);
+      const out = await service.counts(admin());
+      expect(out.created).toBe(3);
+      expect(prisma.task.findMany).toHaveBeenCalledWith({
+        where: {
+          companyId: 1,
+          authorId: 30,
+          status: { in: ['NEW', 'IN_PROGRESS', 'IN_REVIEW'] },
+          batchId: { not: null },
+        },
+        distinct: ['batchId'],
+        select: { batchId: true },
+      });
+    });
+
+    it('keeps «my», «myOverdue» and «review» as plain counts', async () => {
+      prisma.task.count
+        .mockResolvedValueOnce(4) // my
+        .mockResolvedValueOnce(1) // myOverdue
+        .mockResolvedValueOnce(0) // created, singles
+        .mockResolvedValueOnce(2); // review
+      const out = await service.counts(admin());
+      expect(out).toEqual({ my: 4, myOverdue: 1, created: 0, review: 2 });
     });
   });
 
@@ -288,11 +446,33 @@ describe('TasksReadService', () => {
       expect(out.ladder).toEqual([3, 4, 5]);
     });
 
-    it('confines a non-CEO caller to their branches in the query', async () => {
+    it('confines a non-CEO caller to their branches in the query, CEOs aside', async () => {
       await service.assignable(admin());
       const where = prisma.user.findMany.mock.calls[0][0].where;
       expect(where.companyId).toBe(1);
       expect(JSON.stringify(where.OR)).toContain('"in":[1]');
+      expect(where.OR).toContainEqual({
+        roles: { some: { role: { id: 1 } } },
+      });
+    });
+
+    it('offers a branch-less CEO as a watcher, never as an assignee', async () => {
+      const boss = { ...staff(1, 1), mainBranch: null, branches: [] };
+      prisma.user.findMany.mockResolvedValue([
+        staff(30, 3),
+        staff(40, 4),
+        boss,
+      ]);
+      const out = await service.assignable(admin());
+      expect(out.watchers.map((u) => u.id)).toEqual([30, 40, 1]);
+      expect(out.assignees.map((u) => u.id)).toEqual([30, 40]);
+      expect(out.watchers[2].branchNames).toEqual([]);
+    });
+
+    it('does not widen the query for a CEO caller', async () => {
+      await service.assignable(ceo());
+      const where = prisma.user.findMany.mock.calls[0][0].where;
+      expect(where.OR).toBeUndefined();
     });
   });
 });

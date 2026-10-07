@@ -139,6 +139,7 @@ describe('TasksService.create', () => {
       branchId: 1,
       priority: 'MEDIUM',
       kind: 'MANUAL',
+      batchId: null,
     });
     expect(data.participants.create).toEqual([
       { userId: 40, role: 'ASSIGNEE' },
@@ -153,11 +154,51 @@ describe('TasksService.create', () => {
     );
   });
 
-  it('refuses an assignee outside the ladder', async () => {
-    prisma.user.findMany.mockResolvedValue([BD_OTHER]);
+  it('commits the batch inside one transaction with a patient budget', async () => {
+    await service.create({ title: 'X', assigneeIds: [40] }, actor());
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      maxWait: 10_000,
+      timeout: 15_000,
+    });
+  });
+
+  it('refuses an assignee outside the ladder, without naming them', async () => {
+    prisma.user.findMany.mockResolvedValue([
+      { ...BD_OTHER, firstName: 'Zafar', lastName: 'Karimov' },
+    ]);
+    const err = await service
+      .create({ title: 'X', assigneeIds: [20] }, actor())
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect((err as ForbiddenException).message).toBe(
+      'Bu xodimga topshiriq bera olmaysiz',
+    );
+  });
+
+  it('refuses a watcher outside the caller reach, without naming them', async () => {
+    prisma.user.findMany
+      .mockResolvedValueOnce([TEACHER])
+      .mockResolvedValueOnce([BD_OTHER]);
+    const err = await service
+      .create({ title: 'X', assigneeIds: [40], watcherIds: [20] }, actor())
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect((err as ForbiddenException).message).toBe(
+      'Bu xodimni kuzatuvchi qila olmaysiz',
+    );
+    expect(prisma.task.create).not.toHaveBeenCalled();
+  });
+
+  it('names the watcher list when a watcher id is unknown', async () => {
+    prisma.user.findMany
+      .mockResolvedValueOnce([TEACHER])
+      .mockResolvedValueOnce([]);
     await expect(
-      service.create({ title: 'X', assigneeIds: [20] }, actor()),
-    ).rejects.toThrow(ForbiddenException);
+      service.create(
+        { title: 'X', assigneeIds: [40], watcherIds: [99] },
+        actor(),
+      ),
+    ).rejects.toThrow('Kuzatuvchilardan biri topilmadi yoki faol emas');
   });
 
   it('refuses an unknown or inactive assignee', async () => {
@@ -191,7 +232,7 @@ describe('TasksService.create', () => {
     );
     expect(prisma.task.create).toHaveBeenCalledTimes(2);
     const [a, b] = prisma.task.create.mock.calls.map((c: any) => c[0].data);
-    expect(a.batchId).toBeDefined();
+    expect(typeof a.batchId).toBe('string');
     expect(a.batchId).toBe(b.batchId);
     expect(a.participants.create).toEqual([{ userId: 40, role: 'ASSIGNEE' }]);
     expect(out).toHaveLength(2);
@@ -269,6 +310,9 @@ describe('parseDueInput', () => {
     expect(parseDueInput('2026-10-08T09:30:00.000Z')?.toISOString()).toBe(
       '2026-10-08T09:30:00.000Z',
     );
+    expect(parseDueInput('2026-10-08T09:30:00-05:00')?.toISOString()).toBe(
+      '2026-10-08T14:30:00.000Z',
+    );
   });
 
   it('reads nothing as no due date', () => {
@@ -285,6 +329,10 @@ describe('parseDueInput', () => {
     '10/08/2026',
     'Oct 8, 2026',
     '2026-10-08T25:00:00Z',
+    // An instant without a zone would be read in the PROCESS timezone.
+    '2026-10-08T09:30:00',
+    '2026-10-08T09:30',
+    '2026-10-08T09:30:00.000',
   ])('refuses %s', (raw) => {
     expect(() => parseDueInput(raw)).toThrow(BadRequestException);
   });

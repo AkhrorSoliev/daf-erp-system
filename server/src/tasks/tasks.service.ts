@@ -79,12 +79,14 @@ export function toPolicyPerson(u: {
   };
 }
 
-const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T/;
+/** An ISO instant: date, `T`, time and a zone (`Z` or `±hh:mm`). */
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/;
 
 /**
  * A bare `YYYY-MM-DD` day → 18:00 Tashkent; an ISO instant as is; empty → no due.
- * Anything else (a loose `Date.parse` string, a non-string) is a 400, never a
- * guess at which timezone was meant.
+ * Anything else (a loose `Date.parse` string, a time without a zone, a
+ * non-string) is a 400: `new Date` would read a zone-less time in the PROCESS
+ * timezone (UTC on Railway), i.e. guess which timezone was meant.
  */
 export function parseDueInput(raw: unknown): Date | null {
   if (raw === null || raw === undefined || raw === '') return null;
@@ -141,8 +143,12 @@ export class TasksService {
     };
   }
 
-  /** Live staff of this company; missing ids are a 400. */
-  async loadPeople(ids: number[], companyId: number) {
+  /** Live staff of this company; missing ids are a 400 carrying `missingMessage`. */
+  async loadPeople(
+    ids: number[],
+    companyId: number,
+    missingMessage = 'Ijrochilardan biri topilmadi yoki faol emas',
+  ) {
     const unique = [...new Set(ids)];
     if (unique.length === 0) return [];
     const rows = await this.prisma.user.findMany({
@@ -156,9 +162,7 @@ export class TasksService {
       select: PERSON_SELECT,
     });
     if (rows.length !== unique.length) {
-      throw new BadRequestException(
-        'Ijrochilardan biri topilmadi yoki faol emas',
-      );
+      throw new BadRequestException(missingMessage);
     }
     return rows;
   }
@@ -200,20 +204,15 @@ export class TasksService {
     const watchers = await this.loadPeople(
       dto.watcherIds ?? [],
       actor.companyId,
+      'Kuzatuvchilardan biri topilmadi yoki faol emas',
     );
-    for (const u of assignees) {
-      if (!canAssignTo(caller, toPolicyPerson(u))) {
-        throw new ForbiddenException(
-          `${u.firstName} ${u.lastName} ga topshiriq bera olmaysiz`,
-        );
-      }
+    // No name in the refusal: it must not tell the caller who someone outside
+    // their ladder is.
+    if (!assignees.every((u) => canAssignTo(caller, toPolicyPerson(u)))) {
+      throw new ForbiddenException('Bu xodimga topshiriq bera olmaysiz');
     }
-    for (const u of watchers) {
-      if (!canWatch(caller, toPolicyPerson(u))) {
-        throw new ForbiddenException(
-          `${u.firstName} ${u.lastName} ni kuzatuvchi qila olmaysiz`,
-        );
-      }
+    if (!watchers.every((u) => canWatch(caller, toPolicyPerson(u)))) {
+      throw new ForbiddenException('Bu xodimni kuzatuvchi qila olmaysiz');
     }
     const dueAt = parseDueInput(dto.dueAt);
     if (dueAt) assertManualDueAt(dueAt, await this.holidaySet(branchId, dueAt));
@@ -234,46 +233,51 @@ export class TasksService {
 
     // All copies and their reminder rows commit together: a half-made batch
     // would leave the author with copies that were never assigned.
-    const rows = await this.prisma.$transaction(async (tx) => {
-      const made: { ids: number[]; row: TaskRow }[] = [];
-      for (const ids of groups) {
-        const row = await tx.task.create({
-          data: {
-            companyId: actor.companyId,
-            branchId,
-            kind: 'MANUAL',
-            title: dto.title.trim(),
-            description: dto.description?.trim() || null,
-            priority: dto.priority ?? 'MEDIUM',
-            dueAt,
-            authorId: actor.userId,
-            entityType: dto.entityType ?? null,
-            entityId: dto.entityId ?? null,
-            batchId,
-            participants: {
-              create: [
-                ...ids.map((userId) => ({
-                  userId,
-                  role: 'ASSIGNEE' as const,
-                })),
-                ...watcherIds.map((userId) => ({
-                  userId,
-                  role: 'WATCHER' as const,
-                })),
-              ],
+    const rows = await this.prisma.$transaction(
+      async (tx) => {
+        const made: { ids: number[]; row: TaskRow }[] = [];
+        for (const ids of groups) {
+          const row = await tx.task.create({
+            data: {
+              companyId: actor.companyId,
+              branchId,
+              kind: 'MANUAL',
+              title: dto.title.trim(),
+              description: dto.description?.trim() || null,
+              priority: dto.priority ?? 'MEDIUM',
+              dueAt,
+              authorId: actor.userId,
+              entityType: dto.entityType ?? null,
+              entityId: dto.entityId ?? null,
+              batchId,
+              participants: {
+                create: [
+                  ...ids.map((userId) => ({
+                    userId,
+                    role: 'ASSIGNEE' as const,
+                  })),
+                  ...watcherIds.map((userId) => ({
+                    userId,
+                    role: 'WATCHER' as const,
+                  })),
+                ],
+              },
+              steps: { create: steps },
+              events: {
+                create: [
+                  { type: 'CREATED', actorId: actor.userId, via: 'WEB' },
+                ],
+              },
             },
-            steps: { create: steps },
-            events: {
-              create: [{ type: 'CREATED', actorId: actor.userId, via: 'WEB' }],
-            },
-          },
-          select: TASK_DETAIL_SELECT,
-        });
-        if (dueAt) await this.outbox.schedule(tx, row);
-        made.push({ ids, row });
-      }
-      return made;
-    });
+            select: TASK_DETAIL_SELECT,
+          });
+          if (dueAt) await this.outbox.schedule(tx, row);
+          made.push({ ids, row });
+        }
+        return made;
+      },
+      { maxWait: 10_000, timeout: 15_000 },
+    );
 
     // Notifications go out only once the rows are committed.
     for (const { ids, row } of rows) {

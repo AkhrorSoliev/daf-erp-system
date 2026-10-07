@@ -34,6 +34,13 @@ import type { ListTasksDto } from './dto/list-tasks.dto';
 import type { WorkloadQueryDto } from './dto/workload-query.dto';
 
 const OPEN = [...OPEN_STATUSES];
+const STATUS_ORDER: TaskStatus[] = [
+  'NEW',
+  'IN_PROGRESS',
+  'IN_REVIEW',
+  'DONE',
+  'CANCELLED',
+];
 
 @Injectable()
 export class TasksReadService {
@@ -90,11 +97,18 @@ export class TasksReadService {
     if (dto.status?.length) {
       and.push({ status: { in: dto.status as TaskStatus[] } });
     }
-    if (dto.status?.length === 1 && dto.status[0] === 'DONE') {
+    if (dto.status?.includes('DONE')) {
+      // The DONE column is a recent window; the other statuses are not.
       and.push({
-        closedAt: {
-          gte: new Date(Date.now() - (dto.closedDays ?? 14) * 864e5),
-        },
+        OR: [
+          { status: { not: 'DONE' } },
+          {
+            status: 'DONE',
+            closedAt: {
+              gte: new Date(Date.now() - (dto.closedDays ?? 14) * 864e5),
+            },
+          },
+        ],
       });
     }
     if (dto.assigneeId?.length) {
@@ -117,6 +131,9 @@ export class TasksReadService {
       and.push({ entityType: dto.entityType, entityId: dto.entityId });
     }
     const cursor = decodeCursor(dto.cursor);
+    if (dto.cursor && !cursor) {
+      throw new BadRequestException("Sahifa belgisi noto'g'ri");
+    }
     if (cursor) {
       and.push({
         OR: [
@@ -133,16 +150,55 @@ export class TasksReadService {
       take: limit + 1,
     });
     const page = rows.slice(0, limit);
-    // Separate copies collapse into one card for their author (spec §4.3).
-    const data: (TaskCard & { batch?: BatchInfo })[] =
-      dto.view === 'created'
-        ? collapseBatches(page.map(toTaskCard))
-        : page.map(toTaskCard);
+    // Separate copies collapse into one card for their author (spec §4.3),
+    // whose totals count the WHOLE batch, not just the copies on this page.
+    let data: (TaskCard & { batch?: BatchInfo })[];
+    if (dto.view === 'created') {
+      const batchIds = [
+        ...new Set(
+          page.map((r) => r.batchId).filter((b): b is string => b !== null),
+        ),
+      ];
+      data = collapseBatches(
+        page.map(toTaskCard),
+        await this.batchStats(batchIds, actor.companyId),
+      );
+    } else {
+      data = page.map(toTaskCard);
+    }
     return {
       data,
       nextCursor:
         rows.length > limit ? encodeCursor(page[page.length - 1]) : null,
     };
+  }
+
+  /** Every copy of each batch by status, whatever the list filters left on the page. */
+  private async batchStats(
+    batchIds: string[],
+    companyId: number,
+  ): Promise<Map<string, BatchInfo>> {
+    const stats = new Map<string, BatchInfo>();
+    if (batchIds.length === 0) return stats;
+    const groups = await this.prisma.task.groupBy({
+      by: ['batchId', 'status'],
+      where: { companyId, batchId: { in: batchIds } },
+      _count: { _all: true },
+    });
+    for (const g of groups) {
+      if (g.batchId === null) continue;
+      const s = stats.get(g.batchId) ?? { total: 0, done: 0, statuses: [] };
+      s.total += g._count._all;
+      if (g.status === 'DONE') s.done += g._count._all;
+      for (let i = 0; i < g._count._all; i++) s.statuses.push(g.status);
+      stats.set(g.batchId, s);
+    }
+    for (const s of stats.values()) {
+      s.statuses.sort(
+        (a, b) => STATUS_ORDER.indexOf(a) - STATUS_ORDER.indexOf(b),
+      );
+    }
+    return stats;
   }
 
   async detail(id: string, actor: TaskActor, before?: string) {
@@ -188,15 +244,20 @@ export class TasksReadService {
       status: { in: OPEN },
       participants: { some: { userId: actor.userId, role: 'ASSIGNEE' } },
     };
-    const [my, myOverdue, created, review] = await Promise.all([
+    const authoredOpen: Prisma.TaskWhereInput = {
+      companyId: actor.companyId,
+      authorId: actor.userId,
+      status: { in: OPEN },
+    };
+    const [my, myOverdue, singles, openBatches, review] = await Promise.all([
       this.prisma.task.count({ where: myWhere }),
       this.prisma.task.count({ where: { ...myWhere, dueAt: { lt: now } } }),
-      this.prisma.task.count({
-        where: {
-          companyId: actor.companyId,
-          authorId: actor.userId,
-          status: { in: OPEN },
-        },
+      this.prisma.task.count({ where: { ...authoredOpen, batchId: null } }),
+      // «Har biriga alohida» copies are one item for their author.
+      this.prisma.task.findMany({
+        where: { ...authoredOpen, batchId: { not: null } },
+        distinct: ['batchId'],
+        select: { batchId: true },
       }),
       this.prisma.task.count({
         where: {
@@ -206,7 +267,12 @@ export class TasksReadService {
         },
       }),
     ]);
-    return { my, myOverdue, created, review };
+    return {
+      my,
+      myOverdue,
+      created: singles + openBatches.length,
+      review,
+    };
   }
 
   /** Spec §4.5: per assignee — open, overdue, done this month, on-time share. */
@@ -332,6 +398,9 @@ export class TasksReadService {
               },
               { mainBranch: { in: actor.scope.branchIds } },
               { id: actor.userId },
+              // A CEO has no branch of their own by design, and is someone
+              // anyone below may name as a watcher (`canWatch` decides).
+              { roles: { some: { role: { id: 1 } } } },
             ],
           }),
     };
@@ -372,39 +441,48 @@ export class TasksReadService {
 
 type BatchInfo = { total: number; done: number; statuses: TaskStatus[] };
 
-/** «Men bergan»: one card per batch, carrying every copy's status. */
+/**
+ * «Men bergan»: one card per batch. `batch` carries the totals of the WHOLE
+ * batch (`stats`, counted over every copy, whatever the list filters left on
+ * the page); the page's own copies only fill the card's assignee list. A batch
+ * missing from `stats` falls back to the copies on the page.
+ */
 export function collapseBatches<
   T extends {
     batchId: string | null;
     status: TaskStatus;
     assignees: unknown[];
   },
->(cards: T[]): (T & { batch?: BatchInfo })[] {
+>(
+  cards: T[],
+  stats: ReadonlyMap<string, BatchInfo>,
+): (T & { batch?: BatchInfo })[] {
   const seen = new Map<string, T & { batch?: BatchInfo }>();
+  const onPage = new Map<string, BatchInfo>();
   const out: (T & { batch?: BatchInfo })[] = [];
   for (const c of cards) {
     if (!c.batchId) {
       out.push(c);
       continue;
     }
+    const local = onPage.get(c.batchId) ?? { total: 0, done: 0, statuses: [] };
+    local.total++;
+    local.statuses.push(c.status);
+    if (c.status === 'DONE') local.done++;
+    onPage.set(c.batchId, local);
+
     const head = seen.get(c.batchId);
     if (!head) {
-      const h = {
-        ...c,
-        batch: {
-          total: 1,
-          done: c.status === 'DONE' ? 1 : 0,
-          statuses: [c.status],
-        },
-      };
+      // Own copy of the list: the merge below must not write into the input.
+      const h = { ...c, assignees: [...c.assignees] };
       seen.set(c.batchId, h);
       out.push(h);
     } else {
-      head.batch!.total++;
-      head.batch!.statuses.push(c.status);
-      if (c.status === 'DONE') head.batch!.done++;
       head.assignees.push(...c.assignees);
     }
+  }
+  for (const [batchId, head] of seen) {
+    head.batch = stats.get(batchId) ?? onPage.get(batchId);
   }
   return out;
 }
