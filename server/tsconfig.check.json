@@ -65,7 +65,8 @@
     "scripts/lib/open-unmarked-args.ts",
     "scripts/lib/open-unmarked-args.spec.ts",
     "scripts/migrate-comment-tasks.ts",
-    "scripts/lib/comment-task-map.ts"
+    "scripts/lib/comment-task-map.ts",
+    "scripts/lib/comment-task-apply.ts"
   ],
   "exclude": ["node_modules", "dist", "src/generated"]
 }

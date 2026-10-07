@@ -9,15 +9,19 @@
  *
  * Without `--apply` it is a dry run: the connection is read-only (the script
  * checks that it took effect and stops otherwise) and it prints one line per
- * comment. With `--apply` each comment is written in its own transaction and
- * stamped with `Comment.migratedTaskId`, so a repeat run skips what is done; a
- * comment that fails is logged, the run goes on, and the exit code is 1.
+ * comment. With `--apply` each comment is written in its own transaction
+ * (`lib/comment-task-apply.ts`) and stamped with `Comment.migratedTaskId`, so a
+ * repeat run skips what is done; a comment that fails is logged, the run goes
+ * on, and the exit code is 1. The run ends with a check: no comment task left
+ * unmigrated, and as many of this run's tasks open as were mapped open.
  *
  * A «Dars bo'ldimi?» task takes its status from its UnmarkedLesson row (the
  * administrators who did not take it keep a PENDING copy for ever). If the same
  * lesson was asked again after the deploy, an OPEN task with its sourceKey
  * already exists and the partial unique index `task_open_source_unique` would
  * refuse a second one: the old comment then becomes a DONE row, "superseded".
+ * A system comment its lesson no longer points at is closed too (`no-lesson`).
+ * An open task is given its reminder and overdue notice (`TaskOutbox`).
  *
  * This file is one of the three allowed writers of `Task` rows (see the model's
  * comment in schema.prisma); the scan in `task-write.single-source.spec.ts`
@@ -29,11 +33,9 @@ import {
   tryResolveUserBranchId,
 } from '../src/common/finance/resolve-branch';
 import { printHeader, run } from './lib/check-cli';
-import { mapCommentTask } from './lib/comment-task-map';
+import { planCommentTask, tryApplyCommentTask } from './lib/comment-task-apply';
 
 const APPLY = process.argv.includes('--apply');
-/** Neon cold start: the default 5 s interactive timeout is too tight. */
-const TX_OPTIONS = { maxWait: 10_000, timeout: 15_000 };
 
 function readOnlyUrl(url: string): string {
   const u = new URL(url);
@@ -88,6 +90,7 @@ run(async (prisma) => {
   });
   console.log(`candidates: ${rows.length}`);
 
+  const migrated: string[] = [];
   let open = 0;
   let done = 0;
   let failed = 0;
@@ -120,53 +123,23 @@ run(async (prisma) => {
         branchId = await tryResolveUserBranchId(prisma, Number(c.entityId));
       }
 
-      const m = mapCommentTask(c, branchId);
-      let task = m.task;
-      let note = '';
-      if (task.sourceKey && task.status !== 'DONE') {
-        const holder = await prisma.task.findFirst({
-          where: {
-            sourceKey: task.sourceKey,
-            status: { in: [...OPEN_STATUSES] },
-          },
-          select: { id: true },
-        });
-        if (holder) {
-          task = { ...task, status: 'DONE', closedAt: task.createdAt };
-          note = `  (superseded by ${holder.id})`;
-        }
-      }
+      const m = await planCommentTask(prisma, c, branchId);
+      const { task } = m;
+      const notes =
+        (m.noLesson ? '  [no-lesson]' : '') +
+        (m.supersededBy ? `  (superseded by ${m.supersededBy})` : '');
       console.log(
-        `${c.id} ${task.kind.padEnd(16)} ${task.status.padEnd(12)} ${m.participants.length} assignee(s) → ${task.title.slice(0, 60)}${note}`,
+        `${c.id} ${task.kind.padEnd(16)} ${task.status.padEnd(12)} ${m.participants.length} assignee(s) branch=${branchId ?? 'none'} → ${task.title.slice(0, 60)}${notes}`,
       );
 
       if (APPLY) {
-        await prisma.$transaction(async (tx) => {
-          const t = await tx.task.create({
-            data: {
-              ...task,
-              participants: { create: m.participants },
-              events: { create: m.events },
-            },
-            select: { id: true },
-          });
-          await tx.comment.update({
-            where: { id: c.id },
-            data: { migratedTaskId: t.id },
-          });
-          await tx.notification.updateMany({
-            where: { commentId: c.id },
-            data: { taskId: t.id },
-          });
-          // Only a lesson no task points at yet: a re-asked question's lesson
-          // already carries the new one.
-          if (c.unmarkedLesson) {
-            await tx.unmarkedLesson.updateMany({
-              where: { id: c.unmarkedLesson.id, taskId: null },
-              data: { taskId: t.id },
-            });
-          }
-        }, TX_OPTIONS);
+        const r = await tryApplyCommentTask(prisma, c, m);
+        if (!r.ok) {
+          failed++;
+          console.error(`FAILED ${c.id}: ${r.error}`);
+          continue;
+        }
+        migrated.push(r.taskId);
       }
       if (task.status === 'DONE') done++;
       else open++;
@@ -181,12 +154,16 @@ run(async (prisma) => {
   if (failed > 0) process.exitCode = 1;
 
   if (APPLY) {
-    const [tasks, comments] = await Promise.all([
-      prisma.task.count(),
-      prisma.comment.count({ where: { isTask: true } }),
+    const [unmigrated, openNow] = await Promise.all([
+      prisma.comment.count({ where: { isTask: true, migratedTaskId: null } }),
+      prisma.task.count({
+        where: { id: { in: migrated }, status: { in: [...OPEN_STATUSES] } },
+      }),
     ]);
+    const ok = unmigrated === 0 && openNow === open;
     console.log(
-      `check: Task=${tasks} isTask comments=${comments} ${tasks >= comments ? 'OK' : 'MISMATCH'}`,
+      `check: unmigrated=${unmigrated} (want 0) open=${openNow} (want ${open}) ${ok ? 'OK' : 'MISMATCH'}`,
     );
+    if (!ok) process.exitCode = 1;
   }
 });
