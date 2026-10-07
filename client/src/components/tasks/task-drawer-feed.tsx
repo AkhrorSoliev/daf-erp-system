@@ -9,9 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useTasks, type TaskEvent } from "@/hooks/use-tasks";
+import { tashkentDayAndTime } from "./task-due";
 import { describeEvent, viaLabel } from "./task-feed-text";
 
-const when = (iso: string) => format(new Date(iso), "dd.MM, HH:mm");
+// The Tashkent day and time, not the browser's zone (every other time on the page is Tashkent).
+const when = (iso: string) => {
+  const { day, time } = tashkentDayAndTime(iso);
+  return `${format(day, "dd.MM")}, ${time}`;
+};
 
 function Comment({ ev }: { ev: TaskEvent }) {
   const { actor, text } = describeEvent(ev);
