@@ -17,6 +17,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { Student } from "@/data/student-model";
 import { useAuth } from "@/hooks/use-auth";
+import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import { StudentAppActivityTab } from "./student-app-activity-tab";
 import { StudentGroupCard } from "./student-group-card";
 import { PaymentStatement } from "./statement/payment-statement";
@@ -298,6 +299,13 @@ export function StudentProfileTabs({
 
         {/* Guruhlar */}
         <TabsContent value="guruhlar">
+          <EntityTasksPanel
+            className="mb-4"
+            entityType="Student"
+            entityId={String(student.id)}
+            entityLabel={`${student.firstName} ${student.lastName}`}
+          />
+
           {isUngrouped && (
             <div className="mb-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
               <AlertTriangle className="size-4 shrink-0" />

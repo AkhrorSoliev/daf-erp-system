@@ -2,9 +2,6 @@
 
 import {
   Check,
-  CircleCheck,
-  CircleDot,
-  ListTodo,
   MoreHorizontal,
   Pencil,
   RefreshCw,
@@ -20,7 +17,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AssigneeChip,
   RelativeTime,
   SendStatus,
   type CommentData,
@@ -38,7 +34,6 @@ interface CommentItemProps {
   onCancelEdit: () => void;
   onSaveEdit: (commentId: string) => void;
   onDelete: (commentId: string) => void;
-  onAssigneeStatus: (commentId: string, status: "SEEN" | "DONE") => void;
 }
 
 export function CommentItem({
@@ -53,16 +48,10 @@ export function CommentItem({
   onCancelEdit,
   onSaveEdit,
   onDelete,
-  onAssigneeStatus,
 }: CommentItemProps) {
   const isAuthor = comment.author?.id === currentUserId;
   const isSystemComment = comment.isSystem;
   const canEdit = (isAuthor || isCeo) && !comment._pending && !isSystemComment;
-  const myAssignee = comment.assignees.find((a) => a.userId === currentUserId);
-  const allDone =
-    comment.isTask &&
-    comment.assignees.length > 0 &&
-    comment.assignees.every((a) => a.status === "DONE");
 
   return (
     <div
@@ -98,19 +87,6 @@ export function CommentItem({
             </span>
             <RelativeTime date={comment.createdAt} />
             <SendStatus pending={comment._pending} failed={comment._failed} />
-
-            {comment.isTask && (
-              <span
-                className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                  allDone
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                    : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                }`}
-              >
-                <ListTodo className="size-2.5" />
-                {allDone ? "Bajarildi" : "Topshiriq"}
-              </span>
-            )}
 
             {canEdit && !isEditing && (
               <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
@@ -191,43 +167,6 @@ export function CommentItem({
             >
               {comment.content}
             </p>
-          )}
-
-          {/* Task assignees */}
-          {comment.isTask && comment.assignees.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              {comment.assignees.map((assignee) => (
-                <AssigneeChip key={assignee.id} assignee={assignee} />
-              ))}
-            </div>
-          )}
-
-          {/* My action buttons */}
-          {myAssignee && myAssignee.status !== "DONE" && (
-            <div className="flex items-center gap-2 pt-1.5">
-              {myAssignee.status === "PENDING" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs gap-1 rounded-full"
-                  onClick={() => onAssigneeStatus(comment.id, "SEEN")}
-                >
-                  <CircleDot className="size-3" />
-                  Ko&apos;rdim
-                </Button>
-              )}
-              {!comment.isSystem && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs gap-1 rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
-                  onClick={() => onAssigneeStatus(comment.id, "DONE")}
-                >
-                  <CircleCheck className="size-3" />
-                  Bajarildi
-                </Button>
-              )}
-            </div>
           )}
         </div>
       </div>

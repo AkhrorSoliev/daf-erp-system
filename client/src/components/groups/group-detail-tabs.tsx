@@ -18,6 +18,7 @@ import { GroupAppActivityTab } from "./app-activity/group-app-activity-tab";
 import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
+import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import api from "@/lib/api";
 
 function EmptyState({ message }: { message: string }) {
@@ -181,6 +182,12 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
 
       {/* Davomat */}
       <TabsContent value="davomat">
+        <EntityTasksPanel
+          className="mb-4"
+          entityType="Group"
+          entityId={group.id}
+          entityLabel={group.name}
+        />
         {attendanceVisible ? (
           <AttendanceTab group={group} />
         ) : (

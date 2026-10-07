@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { create } from "zustand";
 import type { TaskCreateContext } from "./task-create-dialog";
 
@@ -14,3 +16,18 @@ export const useEntityContext = create<EntityContextState>((set) => ({
   set: (context) => set({ context }),
   clear: () => set({ context: null }),
 }));
+
+/**
+ * Publishes the entity page that is open, and withdraws it when the page goes.
+ * `entityId` is `null` while the page is still loading (or a drawer is shut): nothing is published then.
+ */
+export function usePublishEntity(entityType: string, entityId: string | null, entityLabel: string) {
+  const pathname = usePathname();
+  const set = useEntityContext((s) => s.set);
+  const clear = useEntityContext((s) => s.clear);
+  useEffect(() => {
+    if (entityId === null) return;
+    set({ entityType, entityId, entityLabel, pathname });
+    return clear;
+  }, [entityType, entityId, entityLabel, pathname, set, clear]);
+}

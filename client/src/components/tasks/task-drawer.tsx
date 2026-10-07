@@ -142,14 +142,15 @@ function DrawerSkeleton({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function TaskDrawer({ onClose }: { onClose: () => void }) {
+/** `onClose` is for what the page does besides closing the drawer (the tasks page drops `?task=`). */
+export function TaskDrawer({ onClose }: { onClose?: () => void }) {
   const openTaskId = useTasks((s) => s.openTaskId);
   const detail = useTasks((s) => s.detail);
   const openTask = useTasks((s) => s.openTask);
   const owns = useOwnsDrawer();
   if (!owns) return null;
 
-  const close = () => { openTask(null); onClose(); };
+  const close = () => { openTask(null); onClose?.(); };
   return (
     <Sheet open={openTaskId !== null} onOpenChange={(open) => { if (!open) close(); }}>
       <SheetContent

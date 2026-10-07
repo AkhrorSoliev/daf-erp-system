@@ -65,7 +65,6 @@ export const FIELD_LABELS: Record<string, string | null> = {
   // Yashiriladigan texnik field lar
   id: null,
   action: null,
-  isTask: null,
   commentId: null,
   companyId: null,
   userId: null,

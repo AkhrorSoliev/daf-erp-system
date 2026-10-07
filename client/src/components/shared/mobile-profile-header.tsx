@@ -58,7 +58,6 @@ interface MobileProfileHeaderProps {
     content: string;
     author: string;
     date: string;
-    isTask?: boolean;
   } | null;
 }
 
@@ -202,12 +201,6 @@ export function MobileProfileHeader({
             <span className="font-medium">{latestComment.author}</span>
             <span>&middot;</span>
             <span>{latestComment.date}</span>
-            {latestComment.isTask && (
-              <>
-                <span>&middot;</span>
-                <span className="text-amber-600 dark:text-amber-400 font-medium">Topshiriq</span>
-              </>
-            )}
           </div>
         </div>
       )}
