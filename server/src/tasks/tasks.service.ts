@@ -111,6 +111,16 @@ function requireText(raw: string, message: string): string {
   return text;
 }
 
+/** Steps belong to manual tasks that are still open. */
+function assertStepsEditable(row: { kind: string; status: TaskStatus }) {
+  if (row.kind !== 'MANUAL') {
+    throw new BadRequestException("Tizim topshirig'ida qadam yo'q");
+  }
+  if (!OPEN_STATUSES.includes(row.status)) {
+    throw new BadRequestException("Yopilgan topshiriq o'zgartirilmaydi");
+  }
+}
+
 /** First assignee to act takes a system task; the other copies go (ADR-0054). */
 export async function claimSystemTask(
   tx: Prisma.TransactionClient,
@@ -429,9 +439,15 @@ export class TasksService {
       if (!access.canWork) {
         throw new ForbiddenException('Bu topshiriqda siz ijrochi emassiz');
       }
+      // A manager who is not an assignee moves a task only through review and
+      // cancel, never through a plain status change.
+      if (!access.isAssignee) {
+        throw new BadRequestException(
+          'Qabul qilish yoki qaytarish tugmasidan foydalaning',
+        );
+      }
       // An author who is also the only assignee acts as the assignee, so their
       // own task goes straight to DONE.
-      const by = access.isAssignee ? 'ASSIGNEE' : 'MANAGER';
       const assignees = row.participants.filter((p) => p.role === 'ASSIGNEE');
       const selfTask =
         assignees.length === 1 &&
@@ -440,7 +456,7 @@ export class TasksService {
       const verdict = checkTransition({
         from: row.status,
         to,
-        by,
+        by: 'ASSIGNEE',
         selfTask,
         kind: row.kind,
         requiresPhoto: row.requiresPhoto,
@@ -651,6 +667,12 @@ export class TasksService {
     if (assigneeIds.length === 0) {
       throw new BadRequestException('Kamida bitta ijrochi kerak');
     }
+    // The task first: whoever cannot see it gets the 404, and cannot use the
+    // people checks below to probe which ids exist.
+    const first = await this.loadForAccess(this.prisma, id, actor);
+    if (!first.access.canManage) {
+      throw new ForbiddenException("Ijrochilarni faqat beruvchi o'zgartiradi");
+    }
     await this.loadAndCheckPeople(assigneeIds, watcherIds, actor);
     const assigneeSet = new Set(assigneeIds);
     const wanted = new Map<number, 'ASSIGNEE' | 'WATCHER'>([
@@ -762,12 +784,13 @@ export class TasksService {
   ): Promise<TaskDetail> {
     const text = requireText(title, 'Qadam nomini yozing');
     await this.runSerializable(async (tx) => {
-      const { access } = await this.loadForAccess(tx, id, actor);
+      const { row, access } = await this.loadForAccess(tx, id, actor);
       if (!access.canWork) {
         throw new ForbiddenException(
           "Qadam qo'shish uchun ijrochi yoki beruvchi bo'lish kerak",
         );
       }
+      assertStepsEditable(row);
       const max = await tx.taskStep.aggregate({
         where: { taskId: id },
         _max: { position: true },
@@ -803,7 +826,7 @@ export class TasksService {
         ? undefined
         : requireText(patch.title, 'Qadam nomini yozing');
     await this.runSerializable(async (tx) => {
-      const { access } = await this.loadForAccess(tx, id, actor);
+      const { row, access } = await this.loadForAccess(tx, id, actor);
       if (title !== undefined && !access.canManage) {
         throw new ForbiddenException(
           "Qadam nomini faqat beruvchi o'zgartiradi",
@@ -814,19 +837,38 @@ export class TasksService {
           'Qadamni ijrochi yoki beruvchi belgilaydi',
         );
       }
+      assertStepsEditable(row);
       // Scoped by the task: a step id of another task is not found.
       const step = await tx.taskStep.findFirst({
         where: { id: stepId, taskId: id },
       });
       if (!step) throw new NotFoundException('Qadam topilmadi');
+      // Only a real change is written or logged: ticking a done step again
+      // would restamp who finished it and when.
+      const newTitle =
+        title !== undefined && title !== step.title ? title : undefined;
+      const doneChanged =
+        patch.done !== undefined && patch.done !== (step.doneAt !== null);
+      if (newTitle === undefined && !doneChanged) return;
       const data: Prisma.TaskStepUncheckedUpdateInput = {};
-      if (title !== undefined) data.title = title;
-      if (patch.done !== undefined) {
+      if (newTitle !== undefined) data.title = newTitle;
+      if (doneChanged) {
         data.doneAt = patch.done ? new Date() : null;
         data.doneById = patch.done ? actor.userId : null;
       }
       await tx.taskStep.update({ where: { id: stepId }, data });
-      if (patch.done !== undefined) {
+      if (newTitle !== undefined) {
+        await tx.taskEvent.create({
+          data: {
+            taskId: id,
+            type: 'STEP',
+            actorId: actor.userId,
+            meta: { action: 'renamed', from: step.title, to: newTitle },
+            via: 'WEB',
+          },
+        });
+      }
+      if (doneChanged) {
         await tx.taskEvent.create({
           data: {
             taskId: id,
@@ -834,7 +876,7 @@ export class TasksService {
             actorId: actor.userId,
             meta: {
               action: patch.done ? 'done' : 'undone',
-              title: title ?? step.title,
+              title: newTitle ?? step.title,
             },
             via: 'WEB',
           },
@@ -849,15 +891,31 @@ export class TasksService {
     stepId: string,
     actor: TaskActor,
   ): Promise<TaskDetail> {
-    const { access } = await this.loadForAccess(this.prisma, id, actor);
-    if (!access.canManage) {
-      throw new ForbiddenException("Qadamni faqat beruvchi o'chiradi");
-    }
-    const step = await this.prisma.taskStep.findFirst({
-      where: { id: stepId, taskId: id },
+    await this.runSerializable(async (tx) => {
+      const { row, access } = await this.loadForAccess(tx, id, actor);
+      if (!access.canManage) {
+        throw new ForbiddenException("Qadamni faqat beruvchi o'chiradi");
+      }
+      assertStepsEditable(row);
+      // Scoped by the task: a step id of another task is not found.
+      const step = await tx.taskStep.findFirst({
+        where: { id: stepId, taskId: id },
+      });
+      if (!step) throw new NotFoundException('Qadam topilmadi');
+      const { count } = await tx.taskStep.deleteMany({
+        where: { id: stepId, taskId: id },
+      });
+      if (count === 0) throw new NotFoundException('Qadam topilmadi');
+      await tx.taskEvent.create({
+        data: {
+          taskId: id,
+          type: 'STEP',
+          actorId: actor.userId,
+          meta: { action: 'deleted', title: step.title },
+          via: 'WEB',
+        },
+      });
     });
-    if (!step) throw new NotFoundException('Qadam topilmadi');
-    await this.prisma.taskStep.delete({ where: { id: stepId } });
     return this.reload(id, actor);
   }
 
@@ -896,6 +954,14 @@ export class TasksService {
     dto: UpdateTaskDto,
     actor: TaskActor,
   ): Promise<TaskDetail> {
+    const dueAt =
+      dto.dueAt === undefined ? undefined : parseDueInput(dto.dueAt);
+    // The holiday lookup is a read of its own: it runs before the transaction.
+    let holidays: ReadonlySet<string> = new Set();
+    if (dueAt) {
+      const { row } = await this.loadForAccess(this.prisma, id, actor);
+      holidays = await this.holidaySet(row.branchId, dueAt);
+    }
     const { updated, dueChanged } = await this.runSerializable(async (tx) => {
       const { row, access } = await this.loadForAccess(tx, id, actor);
       if (!access.canManage) {
@@ -914,11 +980,8 @@ export class TasksService {
       }
       if (dto.priority !== undefined) data.priority = dto.priority;
       let dueChanged = false;
-      if (dto.dueAt !== undefined) {
-        const dueAt = parseDueInput(dto.dueAt);
-        if (dueAt) {
-          assertManualDueAt(dueAt, await this.holidaySet(row.branchId, dueAt));
-        }
+      if (dueAt !== undefined) {
+        if (dueAt) assertManualDueAt(dueAt, holidays);
         data.dueAt = dueAt;
         dueChanged =
           (dueAt?.getTime() ?? null) !== (row.dueAt?.getTime() ?? null);

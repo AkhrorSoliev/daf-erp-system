@@ -81,6 +81,7 @@ let service: TasksService;
 let prisma: any;
 let emitter: { emit: jest.Mock };
 let outbox: { schedule: jest.Mock };
+let holidays: { buildHolidayDateSet: jest.Mock };
 
 beforeEach(async () => {
   prisma = {
@@ -99,17 +100,13 @@ beforeEach(async () => {
   };
   emitter = { emit: jest.fn() };
   outbox = { schedule: jest.fn() };
+  holidays = { buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()) };
   const mod = await Test.createTestingModule({
     providers: [
       TasksService,
       { provide: PrismaService, useValue: prisma },
       { provide: EventEmitter2, useValue: emitter },
-      {
-        provide: HolidaysService,
-        useValue: {
-          buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
-        },
-      },
+      { provide: HolidaysService, useValue: holidays },
       { provide: TaskOutboxService, useValue: outbox },
     ],
   }).compile();
@@ -331,10 +328,13 @@ describe('TasksService writes', () => {
     prisma.taskStep = {
       create: jest.fn().mockResolvedValue({}),
       update: jest.fn().mockResolvedValue({}),
-      delete: jest.fn(),
-      findFirst: jest
-        .fn()
-        .mockResolvedValue({ id: 's1', taskId: 't1', doneAt: null }),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findFirst: jest.fn().mockResolvedValue({
+        id: 's1',
+        taskId: 't1',
+        title: 'Old',
+        doneAt: null,
+      }),
       aggregate: jest.fn().mockResolvedValue({ _max: { position: 1 } }),
     };
     prisma.taskEvent = {
@@ -392,6 +392,17 @@ describe('TasksService writes', () => {
     await expect(
       service.changeStatus('t1', 'DONE', assigneeActor()),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('a manager who is not an assignee cannot change status, only review or cancel', async () => {
+    prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'IN_REVIEW' }));
+    await expect(
+      service.changeStatus('t1', 'IN_PROGRESS', authorActor()),
+    ).rejects.toThrow('Qabul qilish yoki qaytarish tugmasidan foydalaning');
+    await expect(
+      service.changeStatus('t1', 'DONE', authorActor()),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.task.update).not.toHaveBeenCalled();
   });
 
   it('an author who is the only assignee closes their own task directly', async () => {
@@ -537,6 +548,10 @@ describe('TasksService writes', () => {
     expect(prisma.task.update.mock.calls[0][0].data).toMatchObject({
       claimedById: 40,
     });
+    // Lock order: the lesson row first, then the task.
+    expect(
+      prisma.unmarkedLesson.updateMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(prisma.task.update.mock.invocationCallOrder[0]);
   });
 
   it('claimSystemTask refuses someone who is not an assignee and changes nothing', async () => {
@@ -646,6 +661,19 @@ describe('TasksService writes', () => {
     expect(emitter.emit).not.toHaveBeenCalled();
   });
 
+  it('setParticipants answers an outsider 404 before it looks any person up', async () => {
+    await expect(
+      service.setParticipants('t1', [40], [], {
+        ...assigneeActor(),
+        userId: 99,
+      }),
+    ).rejects.toThrow('Topshiriq topilmadi');
+    await expect(
+      service.setParticipants('t1', [40], [], assigneeActor()),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.user.findMany).not.toHaveBeenCalled();
+  });
+
   it('markSeen stamps seenAt once', async () => {
     await service.markSeen('t1', assigneeActor());
     expect(prisma.taskParticipant.updateMany).toHaveBeenCalledWith({
@@ -673,7 +701,75 @@ describe('TasksService writes', () => {
       service.deleteStep('t1', 's1', assigneeActor()),
     ).rejects.toThrow(ForbiddenException);
     await service.deleteStep('t1', 's1', authorActor());
-    expect(prisma.taskStep.delete).toHaveBeenCalled();
+    expect(prisma.taskStep.deleteMany).toHaveBeenCalledWith({
+      where: { id: 's1', taskId: 't1' },
+    });
+    expect(prisma.taskEvent.create.mock.calls.at(-1)[0].data).toMatchObject({
+      type: 'STEP',
+      actorId: 30,
+      meta: { action: 'deleted', title: 'Old' },
+    });
+  });
+
+  it('a rename is logged with the old and the new title; a repeat tick is a no-op', async () => {
+    await service.updateStep('t1', 's1', { title: 'New' }, authorActor());
+    expect(prisma.taskStep.update.mock.calls[0][0].data).toEqual({
+      title: 'New',
+    });
+    expect(prisma.taskEvent.create.mock.calls[0][0].data).toMatchObject({
+      type: 'STEP',
+      meta: { action: 'renamed', from: 'Old', to: 'New' },
+    });
+
+    prisma.taskStep.update.mockClear();
+    prisma.taskEvent.create.mockClear();
+    // Same title again, and "done" on a step that is already done.
+    prisma.taskStep.findFirst.mockResolvedValue({
+      id: 's1',
+      taskId: 't1',
+      title: 'Old',
+      doneAt: new Date(),
+    });
+    await service.updateStep(
+      't1',
+      's1',
+      { title: 'Old', done: true },
+      authorActor(),
+    );
+    expect(prisma.taskStep.update).not.toHaveBeenCalled();
+    expect(prisma.taskEvent.create).not.toHaveBeenCalled();
+    // Un-ticking a done step is a real change.
+    await service.updateStep('t1', 's1', { done: false }, authorActor());
+    expect(prisma.taskStep.update.mock.calls[0][0].data).toEqual({
+      doneAt: null,
+      doneById: null,
+    });
+    expect(prisma.taskEvent.create.mock.calls[0][0].data).toMatchObject({
+      meta: { action: 'undone', title: 'Old' },
+    });
+  });
+
+  it('steps are refused on a system task and on a closed one', async () => {
+    prisma.task.findFirst.mockResolvedValue(
+      makeRow({ kind: 'LESSON_QUESTION', authorId: null }),
+    );
+    await expect(service.addStep('t1', 'A', assigneeActor())).rejects.toThrow(
+      "Tizim topshirig'ida qadam yo'q",
+    );
+
+    prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'DONE' }));
+    await expect(service.addStep('t1', 'A', assigneeActor())).rejects.toThrow(
+      "Yopilgan topshiriq o'zgartirilmaydi",
+    );
+    await expect(
+      service.updateStep('t1', 's1', { done: true }, assigneeActor()),
+    ).rejects.toThrow(BadRequestException);
+    await expect(service.deleteStep('t1', 's1', authorActor())).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(prisma.taskStep.create).not.toHaveBeenCalled();
+    expect(prisma.taskStep.update).not.toHaveBeenCalled();
+    expect(prisma.taskStep.deleteMany).not.toHaveBeenCalled();
   });
 
   it('a step of another task is not found, and is never touched', async () => {
@@ -687,8 +783,16 @@ describe('TasksService writes', () => {
     expect(prisma.taskStep.findFirst).toHaveBeenCalledWith({
       where: { id: 'foreign', taskId: 't1' },
     });
-    expect(prisma.taskStep.delete).not.toHaveBeenCalled();
+    expect(prisma.taskStep.deleteMany).not.toHaveBeenCalled();
     expect(prisma.taskStep.update).not.toHaveBeenCalled();
+  });
+
+  it('a step that vanished between the lookup and the delete is not found', async () => {
+    prisma.taskStep.deleteMany.mockResolvedValue({ count: 0 });
+    await expect(service.deleteStep('t1', 's1', authorActor())).rejects.toThrow(
+      'Qadam topilmadi',
+    );
+    expect(prisma.taskEvent.create).not.toHaveBeenCalled();
   });
 
   it('addComment writes COMMENT and emits commented', async () => {
@@ -731,6 +835,21 @@ describe('TasksService writes', () => {
     );
   });
 
+  it('update refuses a closed task', async () => {
+    prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'DONE' }));
+    await expect(
+      service.update('t1', { title: 'Y' }, authorActor()),
+    ).rejects.toThrow("Yopilgan topshiriq o'zgartirilmaydi");
+    expect(prisma.task.update).not.toHaveBeenCalled();
+  });
+
+  it('update looks the holidays up before the transaction opens', async () => {
+    await service.update('t1', { dueAt: '2026-10-08' }, authorActor());
+    expect(
+      holidays.buildHolidayDateSet.mock.invocationCallOrder[0],
+    ).toBeLessThan(prisma.$transaction.mock.invocationCallOrder[0]);
+  });
+
   it('duplicate copies title, priority, participants, steps as NEW by the actor', async () => {
     prisma.task.findFirst.mockResolvedValue(
       makeRow({
@@ -748,6 +867,7 @@ describe('TasksService writes', () => {
     await service.duplicate('t1', authorActor());
     const data = prisma.task.create.mock.calls.at(-1)[0].data;
     // `status` is not written: the column defaults to NEW.
+    expect(data.status).toBeUndefined();
     expect(data).toMatchObject({
       title: 'X',
       authorId: 30,
