@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { CallerBranchScope } from '../common/auth/branch-scope';
@@ -8,6 +8,14 @@ import {
 } from '../common/finance/resolve-branch';
 
 type Db = PrismaService | Prisma.TransactionClient;
+
+/** Student and User ids are integers; anything else would reach Prisma as NaN. */
+function numericEntityId(entityId: string): number {
+  if (!/^\d+$/.test(entityId)) {
+    throw new BadRequestException("Bog'liq obyekt identifikatori noto'g'ri");
+  }
+  return Number(entityId);
+}
 
 /**
  * Spec §3.1: the entity's branch, else the author's header pick, else null.
@@ -27,23 +35,29 @@ export async function resolveTaskBranchId(
   if (entityType && entityId) {
     switch (entityType) {
       case 'Student':
-        return tryResolveStudentBranchId(db, Number(entityId), args.companyId);
+        return tryResolveStudentBranchId(
+          db,
+          numericEntityId(entityId),
+          args.companyId,
+        );
       case 'Group': {
         const g = await db.group.findFirst({
-          where: { id: entityId },
+          where: { id: entityId, companyId: args.companyId },
           select: { branchId: true },
         });
         return g?.branchId ?? null;
       }
       case 'Lead': {
         const l = await db.lead.findFirst({
-          where: { id: entityId },
+          where: { id: entityId, companyId: args.companyId },
           select: { branchId: true },
         });
         return l?.branchId ?? null;
       }
       case 'User':
-        return tryResolveUserBranchId(db, Number(entityId));
+        return tryResolveUserBranchId(db, numericEntityId(entityId));
+      default:
+        throw new BadRequestException("Bog'liq obyekt turi noto'g'ri");
     }
   }
   if (args.headerBranchId === null) {
