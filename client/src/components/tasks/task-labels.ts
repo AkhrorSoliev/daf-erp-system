@@ -3,6 +3,8 @@ import type { TaskKind, TaskPriority, TaskStatus } from "@/hooks/use-tasks";
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   NEW: "Yangi", IN_PROGRESS: "Jarayonda", IN_REVIEW: "Tekshiruvda", DONE: "Bajarildi", CANCELLED: "Bekor qilingan",
 };
+/** A task in one of these can still be edited and moved; DONE and CANCELLED are closed for good. */
+export const isOpenStatus = (s: TaskStatus) => s === "NEW" || s === "IN_PROGRESS" || s === "IN_REVIEW";
 export const STATUS_COLUMNS: { id: TaskStatus; label: string; dot: string }[] = [
   { id: "NEW", label: "Yangi", dot: "bg-gray-400" },
   { id: "IN_PROGRESS", label: "Jarayonda", dot: "bg-blue-500" },

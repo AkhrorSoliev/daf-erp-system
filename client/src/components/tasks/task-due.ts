@@ -18,6 +18,12 @@ export function dueState(dueAt: string | null, now: Date): DueState {
   if (diff <= 6) return "soon";
   return "later";
 }
+/** The Tashkent day of an instant as local midnight (what the DatePicker holds) and its "HH:mm"; the inverse of `tashkentDateTime`. */
+export function tashkentDayAndTime(iso: string): { day: Date; time: string } {
+  const d = new Date(iso);
+  const t = new Date(d.getTime() + OFFSET);
+  return { day: new Date(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()), time: hhmm(d) };
+}
 export function formatDue(dueAt: string, now: Date): string {
   const d = new Date(dueAt);
   const diff = tDay(d) - tDay(now);

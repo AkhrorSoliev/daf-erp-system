@@ -56,8 +56,6 @@ export function TasksPageClient() {
     if (left?.length) s.setFilters({ ...s.filters, ...(tab === "my" ? { assigneeId: undefined } : { authorId: undefined }) });
     if (tab !== "all") void s.fetchBoard();
   }, [tab, ready]);
-  // The link opens a task once per change of `?task=`; closing it strips the param.
-  useEffect(() => { if (urlTask) openTask(urlTask); }, [urlTask, openTask]);
   // A phone gets the list (the board is for a wide screen).
   useEffect(() => { if (isMobile) setLayout("list"); }, [isMobile, setLayout]);
 
@@ -69,6 +67,19 @@ export function TasksPageClient() {
   }, [pathname, router, searchParams]);
   const setTab = (next: string) => editParams((p) => (next === "my" ? p.delete("tab") : p.set("tab", next)));
   const closeTask = () => { openTask(null); editParams((p) => p.delete("task")); };
+
+  // `?task=` and the store's `openTaskId` follow each other, so a refresh keeps
+  // the drawer and a card (which opens through the store) leaves a link behind.
+  // Both read the store afresh, never the render's copy: a change made by the
+  // first effect must not be undone by the second one in the same commit.
+  useEffect(() => {
+    if (urlTask && useTasks.getState().openTaskId !== urlTask) openTask(urlTask);
+  }, [urlTask, openTask]);
+  const openTaskId = useTasks((s) => s.openTaskId);
+  useEffect(() => {
+    const open = useTasks.getState().openTaskId;
+    if (open && open !== urlTask) editParams((p) => p.set("task", open));
+  }, [openTaskId, urlTask, editParams]);
 
   const showBoard = tab === "my" || tab === "created";
   return (

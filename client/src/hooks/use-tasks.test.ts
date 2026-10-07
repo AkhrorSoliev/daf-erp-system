@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AxiosError, type AxiosResponse } from "axios";
-import { useTasks, type TaskCard, type TaskStatus } from "./use-tasks";
+import { useTasks, type TaskAccess, type TaskCard, type TaskDetail, type TaskDetailPayload, type TaskEvent, type TaskStatus } from "./use-tasks";
 
-const { get, toastError } = vi.hoisted(() => ({
+const { get, post, toastError } = vi.hoisted(() => ({
   get: vi.fn<(url: string, config?: { params?: Record<string, unknown> }) => Promise<unknown>>(),
+  post: vi.fn<(url: string) => Promise<unknown>>(),
   toastError: vi.fn(),
 }));
-vi.mock("@/lib/api", () => ({ default: { get } }));
+vi.mock("@/lib/api", () => ({ default: { get, post } }));
 vi.mock("react-hot-toast", () => ({ default: { error: toastError } }));
 
 type Page = { data: { data: TaskCard[]; nextCursor: string | null } };
@@ -38,6 +39,7 @@ const seed = (cards: TaskCard[]) =>
 beforeEach(() => {
   useTasks.setState(useTasks.getInitialState(), true);
   get.mockReset();
+  post.mockReset();
   toastError.mockReset();
 });
 
@@ -267,5 +269,155 @@ describe("patchTask", () => {
     state().patchTask(card("ghost"));
     state().removeTask("a");
     expect(state().version).toBe(v0 + 3);
+  });
+});
+
+const detailOf = (id: string, over: Partial<TaskDetail> = {}): TaskDetail => ({
+  ...card(id), description: null, lastReturnedAt: null, cancelReason: null, steps: [], ...over,
+});
+const ev = (id: string, createdAt: string, over: Partial<TaskEvent> = {}): TaskEvent => ({
+  id, type: "COMMENT", actorId: 1, text: id, meta: null, via: "WEB", createdAt, actor: null, ...over,
+});
+const access: TaskAccess = { isAuthor: true, isAssignee: false, isWatcher: false, isManager: false, canView: true, canManage: true, canWork: true };
+const payload = (id: string, events: TaskEvent[] = [], task: Partial<TaskDetail> = {}): { data: TaskDetailPayload } => ({
+  data: { task: detailOf(id, task), events, access, batch: [] },
+});
+
+describe("openTask / loadDetail", () => {
+  it("opens a task: clears the old detail, loads the new one and marks it seen", async () => {
+    useTasks.setState({ detail: payload("old").data });
+    post.mockResolvedValue({});
+    get.mockResolvedValueOnce(payload("a", [ev("e1", "2026-10-07T10:00:00Z")]));
+
+    state().openTask("a");
+    expect(state().openTaskId).toBe("a");
+    expect(state().detail).toBeNull();
+    await vi.waitFor(() => expect(state().detail?.task.id).toBe("a"));
+
+    expect(get).toHaveBeenCalledWith("/tasks/a");
+    expect(post).toHaveBeenCalledWith("/tasks/a/seen");
+  });
+
+  it("drops the answer of a task that is no longer the open one", async () => {
+    const first = deferred<unknown>();
+    get.mockReturnValueOnce(first.promise).mockResolvedValueOnce(payload("b"));
+    post.mockResolvedValue({});
+
+    state().openTask("a");
+    state().openTask("b");
+    await vi.waitFor(() => expect(state().detail?.task.id).toBe("b"));
+    first.resolve(payload("a"));
+    await first.promise;
+    await Promise.resolve();
+
+    expect(state().detail?.task.id).toBe("b");
+  });
+
+  it("drops the answer when the drawer was closed meanwhile", async () => {
+    const inFlight = deferred<unknown>();
+    get.mockReturnValueOnce(inFlight.promise);
+
+    state().openTask("a");
+    state().openTask(null);
+    inFlight.resolve(payload("a"));
+    await inFlight.promise;
+    await Promise.resolve();
+
+    expect(state().detail).toBeNull();
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("closes the drawer and says so when the task cannot be loaded", async () => {
+    get.mockRejectedValueOnce(httpError(404));
+    state().openTask("gone");
+    await vi.waitFor(() => expect(toastError).toHaveBeenCalled());
+    expect(state().openTaskId).toBeNull();
+    expect(state().detail).toBeNull();
+  });
+
+  it("keeps the detail while closing, so the drawer does not blink", async () => {
+    useTasks.setState({ openTaskId: "a", detail: payload("a").data });
+    state().openTask(null);
+    expect(state().openTaskId).toBeNull();
+    expect(state().detail?.task.id).toBe("a");
+  });
+});
+
+describe("applyDetail / reloadDetail", () => {
+  const open = (events: TaskEvent[]) => useTasks.setState({ openTaskId: "a", detail: { ...payload("a", events).data } });
+
+  it("shows the written task, patches the board and re-reads the feed", async () => {
+    seed([card("a")]);
+    open([ev("e1", "2026-10-07T10:00:00Z", { type: "CREATED" })]);
+    get.mockResolvedValueOnce(payload("a", [
+      ev("e1", "2026-10-07T10:00:00Z", { type: "CREATED" }),
+      ev("e2", "2026-10-07T10:05:00Z", { type: "STATUS", meta: { to: "IN_PROGRESS" } }),
+    ], { status: "IN_PROGRESS" }));
+
+    state().applyDetail(detailOf("a", { status: "IN_PROGRESS" }));
+    expect(state().detail?.task.status).toBe("IN_PROGRESS");
+    expect(ids("IN_PROGRESS")).toEqual(["a"]);
+
+    await vi.waitFor(() => expect(state().detail?.events.map((e) => e.id)).toEqual(["e1", "e2"]));
+  });
+
+  it("ignores the written task when another one is open now", () => {
+    open([]);
+    state().applyDetail(detailOf("other", { title: "x" }));
+    expect(state().detail?.task.id).toBe("a");
+    expect(state().detail?.task.title).toBe("a");
+  });
+
+  it("keeps a comment posted while the re-read was in flight", async () => {
+    const inFlight = deferred<unknown>();
+    open([ev("e1", "2026-10-07T10:00:00Z")]);
+    get.mockReturnValueOnce(inFlight.promise);
+
+    const reload = state().reloadDetail("a");
+    state().appendEvent(ev("mine", "2026-10-07T10:09:00Z"));
+    inFlight.resolve(payload("a", [ev("e1", "2026-10-07T10:00:00Z")]));
+    await reload;
+
+    expect(state().detail?.events.map((e) => e.id)).toEqual(["e1", "mine"]);
+  });
+
+  it("ignores an older re-read that lands after a newer one", async () => {
+    const older = deferred<unknown>();
+    open([ev("e1", "2026-10-07T10:00:00Z")]);
+    get.mockReturnValueOnce(older.promise).mockResolvedValueOnce(payload("a", [ev("e1", "2026-10-07T10:00:00Z"), ev("e2", "2026-10-07T10:01:00Z")]));
+
+    const first = state().reloadDetail("a");
+    await state().reloadDetail("a");
+    older.resolve(payload("a", [ev("e1", "2026-10-07T10:00:00Z")]));
+    await first;
+
+    expect(state().detail?.events.map((e) => e.id)).toEqual(["e1", "e2"]);
+  });
+
+  it("keeps what is shown when the re-read fails", async () => {
+    open([ev("e1", "2026-10-07T10:00:00Z")]);
+    get.mockRejectedValueOnce(httpError(500));
+    await state().reloadDetail("a");
+    expect(state().detail?.events.map((e) => e.id)).toEqual(["e1"]);
+    expect(toastError).not.toHaveBeenCalled();
+  });
+});
+
+describe("appendEvent", () => {
+  it("adds the comment once and counts it on the card", () => {
+    seed([card("a", { eventsCount: 1 })]);
+    useTasks.setState({ openTaskId: "a", detail: payload("a", [ev("e1", "2026-10-07T10:00:00Z")], { eventsCount: 1 }).data });
+
+    state().appendEvent(ev("c1", "2026-10-07T10:01:00Z"));
+    state().appendEvent(ev("c1", "2026-10-07T10:01:00Z"));
+
+    expect(state().detail?.events.map((e) => e.id)).toEqual(["e1", "c1"]);
+    expect(state().detail?.task.eventsCount).toBe(2);
+    expect(state().columns.NEW.items[0].eventsCount).toBe(2);
+  });
+
+  it("does nothing when no task is open", () => {
+    state().appendEvent(ev("c1", "2026-10-07T10:01:00Z"));
+    expect(state().detail).toBeNull();
   });
 });

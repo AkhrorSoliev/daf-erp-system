@@ -25,6 +25,8 @@ export interface TaskStep { id: string; title: string; position: number; doneAt:
 export interface TaskEvent { id: string; type: string; actorId: number | null; text: string | null; meta: Record<string, unknown> | null; via: "WEB" | "TELEGRAM" | "SYSTEM"; createdAt: string; actor: TaskPerson | null }
 export interface TaskDetail extends TaskCard { description: string | null; lastReturnedAt: string | null; cancelReason: string | null; steps: TaskStep[] }
 export interface TaskAccess { isAuthor: boolean; isAssignee: boolean; isWatcher: boolean; isManager: boolean; canView: boolean; canManage: boolean; canWork: boolean }
+/** The answer of `GET /tasks/:id`; `events` ascending (the last 50), `batch` only for an author's separate copies. */
+export interface TaskDetailPayload { task: TaskDetail; events: TaskEvent[]; access: TaskAccess; batch: TaskCard[] }
 export interface TaskFilters { due?: "overdue" | "today" | "week"; priority?: TaskPriority[]; authorId?: number[]; assigneeId?: number[]; branchId?: number[]; q?: string }
 
 // `reqId` names the request whose answer the column is waiting for; an answer
@@ -37,6 +39,9 @@ const emptyColumns = (): Record<TaskStatus, Column> => ({
 const ALL_STATUSES = Object.keys(emptyColumns()) as TaskStatus[];
 const BOARD_STATUSES = STATUS_COLUMNS.map((c) => c.id);
 let lastReqId = 0;
+// Like `reqId`, for the drawer: a newer load / reload makes an older answer stale.
+let lastLoadReq = 0;
+let lastReloadReq = 0;
 
 type StoreView = Exclude<TaskView, "workload">;
 
@@ -48,6 +53,8 @@ interface TasksState {
   /** Bumped whenever a card is added, changed or dropped; the sidebar counts follow it. */
   version: number;
   openTaskId: string | null;
+  /** What the drawer shows for `openTaskId`; `null` while it loads. */
+  detail: TaskDetailPayload | null;
   setView: (v: StoreView) => void;
   setLayout: (l: "board" | "list") => void;
   setFilters: (f: TaskFilters) => void;
@@ -57,10 +64,24 @@ interface TasksState {
   patchTask: (card: TaskCard) => void;
   removeTask: (id: string) => void;
   openTask: (id: string | null) => void;
+  loadDetail: (id: string) => Promise<void>;
+  /** Re-reads the open task quietly: the feed and what the viewer may do after a write. */
+  reloadDetail: (id: string) => Promise<void>;
+  /** A write's answer: shown in the drawer, patched on the board, feed re-read. */
+  applyDetail: (task: TaskDetail) => void;
+  appendEvent: (ev: TaskEvent) => void;
 }
 
 function filterParams(f: TaskFilters) {
   return { due: f.due, priority: f.priority?.join(","), authorId: f.authorId?.join(","), assigneeId: f.assigneeId?.join(","), branchId: f.branchId?.join(","), q: f.q || undefined };
+}
+
+// Events the answer does not hold yet (a comment posted while it was in flight) stay.
+function mergeEvents(server: TaskEvent[], local: TaskEvent[]): TaskEvent[] {
+  const have = new Set(server.map((e) => e.id));
+  const oldest = server[0]?.createdAt ?? "";
+  const extra = local.filter((e) => !have.has(e.id) && e.createdAt > oldest);
+  return extra.length ? [...server, ...extra].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)) : server;
 }
 
 // The order the server lists a column in: newest first, id as the tie-break.
@@ -69,7 +90,7 @@ const newestFirst = (a: TaskCard, b: TaskCard) =>
 
 export const useTasks = create<TasksState>((set, get) => ({
   view: "my", layout: "board", filters: {}, columns: emptyColumns(), version: 0,
-  openTaskId: null,
+  openTaskId: null, detail: null,
   // A different view or filter is a different list: drop the cards, and with
   // them (reqId 0) the answer of any request still in flight.
   setView: (view) => set({ view, columns: emptyColumns() }),
@@ -143,7 +164,53 @@ export const useTasks = create<TasksState>((set, get) => ({
     for (const st of ALL_STATUSES) columns[st] = { ...columns[st], items: columns[st].items.filter((t) => t.id !== id) };
     return { columns, version: s.version + 1 };
   }),
-  openTask: (openTaskId) => set({ openTaskId }),
+  openTask: (openTaskId) => {
+    // Closing keeps `detail`, so the drawer does not turn into a skeleton while it slides out.
+    set(openTaskId ? { openTaskId, detail: null } : { openTaskId });
+    if (openTaskId) void get().loadDetail(openTaskId);
+  },
+
+  loadDetail: async (id) => {
+    const reqId = ++lastLoadReq;
+    // Another task was opened (or the drawer closed) while this one was in flight.
+    const stale = () => reqId !== lastLoadReq || get().openTaskId !== id;
+    try {
+      const { data } = await api.get<TaskDetailPayload>(`/tasks/${id}`);
+      if (stale()) return;
+      set({ detail: data });
+      void api.post(`/tasks/${id}/seen`).catch(() => {});
+    } catch (error) {
+      if (stale()) return;
+      set({ detail: null, openTaskId: null });
+      toast.error(getErrorMessage(error, "Topshiriq topilmadi"));
+    }
+  },
+  reloadDetail: async (id) => {
+    const reqId = ++lastReloadReq;
+    try {
+      const { data } = await api.get<TaskDetailPayload>(`/tasks/${id}`);
+      const cur = get().detail;
+      if (reqId !== lastReloadReq || cur?.task.id !== id) return;
+      set({ detail: { ...data, events: mergeEvents(data.events, cur.events) } });
+      // A write's own answer can predate its event (the comment count) or the
+      // system's follow-up; tell the board only when this read differs.
+      if (JSON.stringify(data.task) !== JSON.stringify(cur.task)) get().patchTask(data.task);
+    } catch {
+      // The drawer keeps what it shows; the write it follows has already answered.
+    }
+  },
+  applyDetail: (task) => {
+    set((s) => (s.detail?.task.id === task.id ? { detail: { ...s.detail, task } } : {}));
+    get().patchTask(task);
+    void get().reloadDetail(task.id);
+  },
+  appendEvent: (ev) => {
+    const cur = get().detail;
+    if (!cur || cur.events.some((e) => e.id === ev.id)) return;
+    const task = { ...cur.task, eventsCount: cur.task.eventsCount + 1 };
+    set({ detail: { ...cur, task, events: [...cur.events, ev] } });
+    get().patchTask(task);
+  },
 }));
 
 // Tasks hang off branch-scoped entities and «Barchasi» is branch-filtered.

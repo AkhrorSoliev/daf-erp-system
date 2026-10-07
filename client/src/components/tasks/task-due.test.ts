@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { dueState, formatDue, groupByDue } from "./task-due";
+import { dueState, formatDue, groupByDue, tashkentDayAndTime } from "./task-due";
+import { tashkentDateTime } from "./task-create-dialog";
 
 const now = new Date("2026-10-07T05:00:00Z"); // 10:00 Tashkent, Wednesday
 const card = (id: string, dueAt: string | null, priority = "MEDIUM") => ({ id, dueAt, priority });
@@ -81,5 +82,21 @@ describe("formatDue", () => {
   it("Tashkent midnight decides «Bugun» / «Ertaga»", () => {
     expect(formatDue("2026-10-07T18:59:59Z", now)).toBe("Bugun 23:59");
     expect(formatDue("2026-10-07T19:00:00Z", now)).toBe("Ertaga 00:00");
+  });
+});
+
+describe("tashkentDayAndTime", () => {
+  it("reads the Tashkent day and time, whatever the machine's zone", () => {
+    const { day, time } = tashkentDayAndTime("2026-10-07T13:00:00Z");
+    expect([day.getFullYear(), day.getMonth(), day.getDate(), time]).toEqual([2026, 9, 7, "18:00"]);
+  });
+  it("moves to the next Tashkent day after 19:00 UTC", () => {
+    const { day, time } = tashkentDayAndTime("2026-10-07T19:30:00Z");
+    expect([day.getDate(), time]).toEqual([8, "00:30"]);
+  });
+  it("round-trips through tashkentDateTime", () => {
+    const iso = "2026-10-12T04:30:00.000Z";
+    const { day, time } = tashkentDayAndTime(iso);
+    expect(tashkentDateTime(day, time)).toBe(iso);
   });
 });
