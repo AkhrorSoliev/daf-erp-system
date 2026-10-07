@@ -12,7 +12,7 @@ import { useTaskCounts } from "@/hooks/use-task-counts";
 import { TaskBoard } from "./task-board";
 import { TaskList } from "./task-list";
 import { TaskFilters } from "./task-filters";
-import { TaskCreateDialog, useTaskCreate } from "./task-create-dialog";
+import { useTaskCreate } from "./task-create-dialog";
 import { TaskDrawer } from "./task-drawer";
 import { TaskAllTable } from "./task-all-table";
 import { TaskWorkload } from "./task-workload";
@@ -100,7 +100,6 @@ export function TasksPageClient() {
       {tab === "created" && (layout === "board" ? <TaskBoard dragEnabled={false} showAssignees /> : <TaskList showAssignees />)}
       {tab === "all" && <TaskAllTable />}
       {tab === "workload" && <TaskWorkload />}
-      <TaskCreateDialog />
       <TaskDrawer onClose={closeTask} />
     </div>
   );

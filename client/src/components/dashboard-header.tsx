@@ -13,6 +13,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { PushPermissionPrompt } from "@/components/notifications/push-permission-prompt";
 import { QollanmaYordamTugmasi } from "@/components/qollanma/qollanma-yordam-tugmasi";
 import { TashkentClock } from "@/components/tashkent-clock";
+import { HeaderTaskButton } from "@/components/tasks/header-task-button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/use-auth";
 import { routeLabels } from "@/lib/breadcrumb-routes";
@@ -70,6 +71,7 @@ export function DashboardHeader() {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* key: sarlavha marshrutlar orasida saqlanadi; key bo'lmasa ochiq qolgan panel «orqaga»dan keyin o'zi qayta ochiladi */}
           <QollanmaYordamTugmasi key={pathname} />
+          <HeaderTaskButton />
           <TashkentClock />
           <NotificationBell />
           <div className="hidden sm:block">
