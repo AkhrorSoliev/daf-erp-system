@@ -151,8 +151,15 @@ Each feature area has its own folder under `components/`:
 
 | Component | Description |
 |-----------|-------------|
-| `tasks-board-client.tsx` | Task board container |
-| Task board components | Kanban-style task management |
+| `tasks-page-client.tsx` | `/tasks` page: tabs via `?tab=`, `?task=<id>` opens the drawer |
+| `task-board.tsx`, `task-list.tsx` | Board (drag with `task-drop.ts` rules) and list of the status columns |
+| `task-all-table.tsx` | «Barchasi» table (managers) |
+| `task-workload.tsx` | «Yuklama» per-person workload (managers) |
+| `task-drawer.tsx` | Task drawer (+ `task-drawer-*.tsx` parts): properties, steps, discussion, review buttons |
+| `task-create-dialog.tsx`, `header-task-button.tsx` | Create dialog and the header «+ Topshiriq» |
+| `entity-tasks-panel.tsx` | «Topshiriqlar» block on student, group, lead, teacher and employee pages |
+
+Plus `*-rules.ts` helpers (pure rules with vitest tests) and the store `hooks/use-tasks.ts`.
 
 ### Notifications (`components/notifications/`)
 
@@ -164,8 +171,8 @@ Each feature area has its own folder under `components/`:
 
 | Component | Description |
 |-----------|-------------|
-| `comment-list.tsx` | Reusable comment list (comments + tasks) |
-| `comment-form.tsx` | Comment/task creation form |
+| `comment-list.tsx` | Reusable comment list |
+| `comment-form.tsx` | Comment creation form (`entityType`, `entityId`, `content`) |
 | `entity-history-table.tsx` | Reusable entity change history table |
 
 ### Leads (`components/leads/`)

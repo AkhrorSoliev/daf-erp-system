@@ -82,7 +82,6 @@ export function GroupInfoCard({
 
   const [latestComment, setLatestComment] = useState<{
     content: string;
-    isTask?: boolean;
     author: { firstName: string; lastName: string } | null;
     createdAt: string;
   } | null>(null);
@@ -245,14 +244,6 @@ export function GroupInfoCard({
                       "dd.MM.yyyy, HH:mm",
                     )}
                   </span>
-                  {latestComment.isTask && (
-                    <>
-                      <span>&middot;</span>
-                      <span className="text-amber-600 dark:text-amber-400 font-medium">
-                        Topshiriq
-                      </span>
-                    </>
-                  )}
                 </div>
               </div>
             ) : (

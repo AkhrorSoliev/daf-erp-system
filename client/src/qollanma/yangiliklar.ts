@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-07",
+    sarlavha: "Topshiriqlar — alohida bo'lim",
+    matn: "Topshiriqlar endi izohdan alohida bo'limda: «Topshiriqlar» sahifasida doska va ro'yxat bor, topshiriq Yangi → Jarayonda → Tekshiruvda → Bajarildi yo'lidan o'tadi — ijrochi «Boshladim» va «Bajardim» ni bosadi, beruvchi «Qabul qilish» yoki «Qaytarish» ni. Topshiriqni yuqori paneldagi «+ Topshiriq» tugmasi beradi: o'quvchi, guruh, lid yoki xodim sahifasi ochiq bo'lsa, topshiriq shu sahifaga bog'lanadi, o'sha sahifalarda esa «Topshiriqlar» bloki turadi. Kartani bossangiz varaq ochiladi: unda kichik qadamlar, muhokama va o'zgarishlar tarixi bor. Izohlar ichida yozilgan eski topshiriqlar yangi bo'limga ko'chirildi; izoh endi faqat yozuv.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
     sana: "2026-10-06",
     sarlavha: "«Barcha yozuvlar»da bekor qilingan yozuv belgilanadi",
     matn: "O'quvchi kartasidagi «To'lovlar» tabining «Barcha yozuvlar» ro'yxatida bekor qilingan yozuvning summasi endi chizib qo'yiladi, yonida «Bekor qilingan» belgisi va qachon, nima sababdan bekor qilingani yoziladi. Uni bekor qilgan yozuv «Bekor qilish» belgisi bilan qaysi kundagi qancha summani qaytarganini aytadi. Ilgari ikkalasi oddiy yozuvdek ko'rinardi: masalan, oylik to'lovga o'tishda bekor qilingan dars pullari hali yechilgandek tuyulardi. O'quvchi portalidagi «Balans tarixi» ham shunday ko'rsatadi va u yerdan 0 so'mlik dars yozuvlari olib tashlandi.",

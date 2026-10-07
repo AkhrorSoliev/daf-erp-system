@@ -3,12 +3,13 @@ import api from "@/lib/api";
 
 export interface AppNotification {
   id: string;
-  type: "COMMENT" | "TASK_ASSIGNED" | "TASK_STATUS_CHANGED" | "SYSTEM";
+  type: string;
   title: string;
   message: string;
   relatedEntityType: string | null;
   relatedEntityId: string | null;
   commentId: string | null;
+  taskId: string | null;
   isRead: boolean;
   createdAt: string;
 }

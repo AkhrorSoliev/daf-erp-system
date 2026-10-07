@@ -26,7 +26,7 @@ const pending = {
   teacherPayExempt: false,
   exemptReason: null,
   claimedById: null,
-  taskCommentId: 'c1',
+  taskId: 'c1',
   lessonStartTime: '16:00',
   lessonEndTime: '17:30',
 };
@@ -109,12 +109,17 @@ describe('AttendanceSaveService.saveLate', () => {
           scheduleSnapshots: [],
         }),
       },
-      commentAssignee: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'ca1', seenAt: null }),
+      // The answerer (user 3) is one of the task's assignees.
+      taskParticipant: {
+        findMany: jest.fn().mockResolvedValue([{ userId: 3 }]),
         deleteMany: jest.fn(),
-        update: jest.fn(),
-        updateMany: jest.fn(),
       },
+      task: {
+        update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      taskEvent: { create: jest.fn() },
+      taskOutbox: { deleteMany: jest.fn() },
       user: {
         findUnique: jest
           .fn()
@@ -201,10 +206,14 @@ describe('AttendanceSaveService.saveLate', () => {
       tx,
       expect.objectContaining({ enrollmentId: 'e1', studentId: 10001 }),
     );
-    expect(tx.commentAssignee.update).toHaveBeenCalled(); // task taken and closed
+    expect(tx.task.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'DONE' }),
+      }),
+    ); // task taken and closed
     // the answerer holds the task, even without pressing «Ko'rdim» first
     expect(tx.unmarkedLesson.updateMany).toHaveBeenCalledWith({
-      where: { taskCommentId: 'c1' },
+      where: { taskId: 'c1' },
       data: { claimedById: 3 },
     });
     expect(result.message).toBe(

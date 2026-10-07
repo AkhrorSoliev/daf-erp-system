@@ -340,29 +340,29 @@ Get group status change history.
 
 ---
 
-## Comments & Tasks
+## Comments
+
+A comment is plain text on an entity. Tasks are not comments any more: see **Tasks** below (ADR-0074).
 
 ### POST /comments `Roles: CEO, BD, Administrator`
 
-Create a comment or task.
+Create a comment.
 
 **Body:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `entityType` | string | Yes | e.g. "Student", "Group" |
+| `entityType` | string | Yes | One of `COMMENTABLE_ENTITY_TYPES`, e.g. "Student", "Group" |
 | `entityId` | string | Yes | Entity ID |
 | `content` | string | Yes | Comment text |
-| `isTask` | boolean | No | If true, creates a task (CEO/BD only) |
-| `assigneeIds` | number[] | No | User IDs to assign (tasks only) |
-| `dueDate` | string (ISO) | No | Task due date |
-| `priority` | string | No | LOW, MEDIUM, HIGH, or URGENT |
+
+Any other field (`isTask`, `assigneeIds`, `dueDate`, `priority`) is rejected with 400.
 
 ---
 
 ### GET /comments `Roles: CEO, BD, Administrator`
 
-List comments for an entity.
+List comments for an entity (rows that were once tasks, `isTask = true`, are not returned).
 
 **Query Parameters:** `entityType`, `entityId`, `page`, `pageSize`
 
@@ -376,25 +376,9 @@ Get the latest comment for an entity.
 
 ---
 
-### GET /comments/my-tasks
-
-Get tasks assigned to the current user.
-
-**Query Parameters:** `page`, `pageSize`, `status?` (PENDING, SEEN, DONE)
-
----
-
-### GET /comments/created-tasks `Roles: CEO, BD`
-
-Get tasks created by the current user.
-
-**Query Parameters:** `page`, `pageSize`
-
----
-
 ### PATCH /comments/:id `Roles: CEO, BD, Administrator`
 
-Update a comment/task (content, dueDate, priority).
+Edit a comment's `content`; the author or the CEO only.
 
 ---
 
@@ -404,15 +388,91 @@ Delete a comment.
 
 ---
 
-### PATCH /comments/:id/assignee-status
+## Tasks
 
-Update assignee status on a task.
+All routes are `@Roles(...STAFF_ROLES)`; `TaskPolicy` (`server/src/tasks/task-policy.ts`) narrows who may see or do what. Ids are UUIDs.
+
+### GET /tasks
+
+List tasks, newest first, cursor-paged (`{ data, nextCursor }`).
+
+**Query Parameters:** `view` (`my` assigned to me, `created` written by me, `all` everything the caller may see), `status[]`, `assigneeId[]`, `authorId[]`, `branchId[]`, `priority[]`, `due` (`overdue`, `today`, `week`), `q`, `entityType` + `entityId`, `closedDays` (window for DONE / CANCELLED, default 14), `cursor`, `limit` (1–100, default 50)
+
+---
+
+### GET /tasks/counts
+
+Counts for the sidebar and tab badges (`my`, `myOverdue`, `created`, `review`).
+
+### GET /tasks/workload
+
+Per-person workload for a month; managers only (CEO, BD — others get 403). **Query Parameters:** `month` (`YYYY-MM`), `branchId`
+
+### GET /tasks/assignable
+
+People the caller may assign or add as watchers. **Query Parameters:** `entityType`, `entityId`
+
+---
+
+### POST /tasks
+
+Create a task (one `Task` per assignee when `separateCopies` is true, all sharing a `batchId`).
 
 **Body:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `status` | string | Yes | SEEN or DONE |
+| `title` | string | Yes | 1–200 characters |
+| `assigneeIds` | number[] | Yes | At least one; must be on the caller's ladder |
+| `watcherIds` | number[] | No | Watchers |
+| `description` | string | No | Up to 5000 characters |
+| `dueAt` | string | No | ISO instant, or `YYYY-MM-DD` (18:00 Tashkent); 08:00–22:00, never Sunday or a holiday |
+| `priority` | string | No | LOW, MEDIUM (default), HIGH, URGENT |
+| `entityType`, `entityId` | string | No | Both or neither |
+| `separateCopies` | boolean | No | A separate task for each assignee |
+| `steps` | `{ title }[]` | No | Checklist |
+
+---
+
+### GET /tasks/:id
+
+The drawer payload: the task, its events (discussion and history), the caller's access and the batch.
+
+### PATCH /tasks/:id
+
+Edit `title`, `description`, `priority` or `dueAt` (`null` clears it); the author or a manager, manual open tasks only.
+
+### POST /tasks/:id/status
+
+Move the caller's own task: `{ status: NEW | IN_PROGRESS | IN_REVIEW | DONE }`. Managers who are not assignees use review or cancel instead.
+
+### POST /tasks/:id/review
+
+Author or manager: `{ action: ACCEPT | RETURN, reason? }`. RETURN needs a reason.
+
+### POST /tasks/:id/cancel
+
+Author or manager: `{ reason? }`.
+
+### POST /tasks/:id/duplicate
+
+Copy a task (the way to reopen a closed one).
+
+### PUT /tasks/:id/participants
+
+Replace the assignees and watchers: `{ assigneeIds, watcherIds? }`.
+
+### POST /tasks/:id/seen
+
+Mark the caller as having opened the task.
+
+### POST /tasks/:id/steps · PATCH /tasks/:id/steps/:stepId · DELETE /tasks/:id/steps/:stepId
+
+Add a step (`{ title }`), tick or rename it (`{ done?, title? }`), remove it.
+
+### POST /tasks/:id/events
+
+Add a comment to the discussion: `{ text }`.
 
 ---
 

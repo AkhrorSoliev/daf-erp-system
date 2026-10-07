@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Bell, CheckCheck, MessageSquare, ListTodo, Info } from "lucide-react";
+import { Bell, CheckCheck, MessageSquare, ListTodo, Info, CheckSquare, AlarmClock, Clock, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -28,6 +28,11 @@ const TYPE_ICONS: Record<string, typeof MessageSquare> = {
   TASK_ASSIGNED: ListTodo,
   TASK_STATUS_CHANGED: CheckCheck,
   SYSTEM: Info,
+  TASK_REVIEW: CheckSquare,
+  TASK_OVERDUE: AlarmClock,
+  TASK_REMINDER: Clock,
+  TASK_UPDATED: MessageSquare,
+  TASK_DELETED: XCircle,
 };
 
 function NotificationItem({

@@ -24,7 +24,7 @@ export class PaymentPromiseCronService {
   ) {}
 
   // Daily at 09:00 Tashkent, Mon–Sat (Sundays excluded by the cron itself).
-  // Active holidays short-circuit below. Mirrors TaskReminderService.
+  // Active holidays short-circuit below.
   @Cron('0 0 9 * * 1-6', { timeZone: 'Asia/Tashkent' })
   async checkOverduePromises() {
     await this.run();

@@ -33,7 +33,7 @@ const row = (over = {}) => ({
   status: 'PENDING',
   teacherPayExempt: false,
   claimedById: null,
-  taskCommentId: 'c1',
+  taskId: 'c1',
   ...over,
 });
 
@@ -76,17 +76,19 @@ function makeTx(mocks: any = {}) {
       findMany: jest.fn().mockResolvedValue([]),
       ...mocks.holiday,
     },
-    commentAssignee: {
-      findUnique: jest.fn().mockResolvedValue(null),
+    taskParticipant: {
+      findMany: jest.fn().mockResolvedValue([]),
       deleteMany: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      ...mocks.commentAssignee,
+      ...mocks.taskParticipant,
     },
+    taskEvent: { create: jest.fn(), ...mocks.taskEvent },
+    taskOutbox: { deleteMany: jest.fn(), ...mocks.taskOutbox },
     user: { findMany: jest.fn().mockResolvedValue([{ id: 3 }]), ...mocks.user },
-    comment: {
+    task: {
       create: jest.fn().mockResolvedValue({ id: 'c2' }),
-      ...mocks.comment,
+      update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      ...mocks.task,
     },
   } as any;
 }
@@ -110,9 +112,13 @@ describe('markUnmarkedLessonCancelled', () => {
         decidedAt: expect.any(Date),
       },
     });
-    expect(tx.commentAssignee.updateMany).toHaveBeenCalled();
+    expect(tx.task.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'DONE' }),
+      }),
+    );
     expect(tx.unmarkedLesson.updateMany).toHaveBeenCalledWith({
-      where: { taskCommentId: 'c1' },
+      where: { taskId: 'c1' },
       data: { claimedById: 9 },
     });
     expect(decision).toEqual({
@@ -137,7 +143,7 @@ describe('markUnmarkedLessonCancelled', () => {
         actorId: 9,
       }),
     ).not.toBeNull();
-    expect(tx.commentAssignee.updateMany).not.toHaveBeenCalled();
+    expect(tx.task.updateMany).not.toHaveBeenCalled();
   });
 
   it('does nothing for a lesson nobody asked about', async () => {
@@ -238,7 +244,7 @@ describe('reopening', () => {
       now,
       holidays: new Set(),
     });
-    expect(tx.comment.create).toHaveBeenCalled();
+    expect(tx.task.create).toHaveBeenCalled();
     expect(tx.unmarkedLesson.update).toHaveBeenCalledWith({
       where: { id: 'u1' },
       data: {
@@ -248,7 +254,7 @@ describe('reopening', () => {
         decidedById: null,
         decidedAt: null,
         claimedById: null,
-        taskCommentId: 'c2',
+        taskId: 'c2',
       },
     });
   });
@@ -268,7 +274,7 @@ describe('reopening', () => {
         groupId: 'g1',
         date,
         teacherPayExempt: true,
-        taskCommentId: 'c2',
+        taskId: 'c2',
       }),
     });
   });
@@ -349,10 +355,8 @@ describe('reopening', () => {
       holidays,
     });
     // Task due date should be Oct 2 at 05:00 UTC (10:00 Tashkent)
-    const createCall = tx.comment.create.mock.calls[0][0];
-    expect(createCall.data.dueDate).toEqual(
-      new Date('2026-10-02T05:00:00.000Z'),
-    );
+    const createCall = tx.task.create.mock.calls[0][0];
+    expect(createCall.data.dueAt).toEqual(new Date('2026-10-02T05:00:00.000Z'));
   });
 
   it('skips multiple holidays when calculating task due date for reschedule', async () => {
@@ -369,10 +373,8 @@ describe('reopening', () => {
       holidays,
     });
     // Task due date should be Oct 5 at 05:00 UTC (10:00 Tashkent)
-    const createCall = tx.comment.create.mock.calls[0][0];
-    expect(createCall.data.dueDate).toEqual(
-      new Date('2026-10-05T05:00:00.000Z'),
-    );
+    const createCall = tx.task.create.mock.calls[0][0];
+    expect(createCall.data.dueAt).toEqual(new Date('2026-10-05T05:00:00.000Z'));
   });
 
   it('puts a moved answer back to PENDING', async () => {
@@ -413,7 +415,7 @@ describe('reopening', () => {
       expect.objectContaining({ where: { groupId: 'g1', date } }),
     );
     expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
-    expect(tx.comment.create).not.toHaveBeenCalled();
+    expect(tx.task.create).not.toHaveBeenCalled();
   });
 
   // The make-up lesson was held on 29.09: asking about 28.09 again and
@@ -439,7 +441,7 @@ describe('reopening', () => {
       });
       expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
       expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
-      expect(tx.comment.create).not.toHaveBeenCalled();
+      expect(tx.task.create).not.toHaveBeenCalled();
     },
   );
 });
@@ -498,12 +500,12 @@ describe('reopenAfterRescheduleRemoved — a move made in advance', () => {
         lessonEndTime: '17:30',
         teacherPayExempt: true,
         exemptReason: MOVED_BEFORE_REASON,
-        taskCommentId: 'c2',
+        taskId: 'c2',
       },
     });
     expect(MOVED_BEFORE_REASON).toBe("Dars oldindan ko'chirilgan edi");
     // Wednesday 30.09 → the next working day is Thursday 01.10, 10:00 Tashkent.
-    expect(tx.comment.create.mock.calls[0][0].data.dueDate).toEqual(
+    expect(tx.task.create.mock.calls[0][0].data.dueAt).toEqual(
       new Date('2026-10-01T05:00:00.000Z'),
     );
   });
@@ -514,7 +516,7 @@ describe('reopenAfterRescheduleRemoved — a move made in advance', () => {
       ...args,
       holidays: new Set(['2026-10-01']),
     });
-    expect(tx.comment.create.mock.calls[0][0].data.dueDate).toEqual(
+    expect(tx.task.create.mock.calls[0][0].data.dueAt).toEqual(
       new Date('2026-10-02T05:00:00.000Z'),
     );
   });
@@ -716,10 +718,10 @@ describe('closeTasksOfDeletedGroup', () => {
   it('closes the tasks of every pending lesson', async () => {
     const tx = makeTx();
     tx.unmarkedLesson.findMany.mockResolvedValue([
-      { taskCommentId: 'c1' },
-      { taskCommentId: 'c3' },
+      { taskId: 'c1' },
+      { taskId: 'c3' },
     ]);
     await closeTasksOfDeletedGroup(tx, 'g1');
-    expect(tx.commentAssignee.updateMany).toHaveBeenCalledTimes(2);
+    expect(tx.task.updateMany).toHaveBeenCalledTimes(2);
   });
 });

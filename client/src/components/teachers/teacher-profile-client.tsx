@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
+import { usePublishEntity } from "@/components/tasks/entity-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -69,6 +70,12 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   useEffect(() => {
     fetchTeacher();
   }, [fetchTeacher]);
+
+  usePublishEntity(
+    "User",
+    teacher ? String(teacher.id) : null,
+    teacher ? `${teacher.firstName} ${teacher.lastName}` : "",
+  );
 
   const handleDelete = () => {
     if (!teacher) return;

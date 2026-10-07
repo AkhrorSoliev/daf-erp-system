@@ -132,6 +132,8 @@ enum NotificationType {
   TASK_DELETED
   TASK_UPDATED
   TASK_REMINDER
+  TASK_REVIEW
+  TASK_OVERDUE
   SYSTEM
   LESSON_STARTED
   ATTENDANCE_ADMIN_ALERT
@@ -151,6 +153,57 @@ enum TaskPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum TaskStatus {
+  NEW
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum TaskKind {
+  MANUAL
+  LESSON_QUESTION
+  CALLBACK
+  BROKEN_PROMISE
+  UNCALLED_LEAD
+}
+
+enum TaskParticipantRole {
+  ASSIGNEE
+  WATCHER
+}
+
+enum TaskEventType {
+  CREATED
+  COMMENT
+  VOICE
+  FILE
+  STATUS
+  RETURN
+  STEP
+  ASSIGNEE
+  CANCELLED
+  AUTO_CLOSED
+  REASSIGNED
+}
+
+enum TaskEventVia {
+  WEB
+  TELEGRAM
+  SYSTEM
+}
+
+enum TaskOutboxChannel {
+  INAPP
+  TELEGRAM
+}
+
+enum TaskOutboxKind {
+  REMINDER
+  OVERDUE
 }
 
 // ===== FINANCIAL SYSTEM ENUMS =====
@@ -341,6 +394,9 @@ model User {
   statusChanges                    StatusHistory[]            @relation("StatusChangedBy")
   entityChanges                    EntityHistory[]            @relation("EntityHistoryChangedBy")
   comments                         Comment[]                  @relation("CommentAuthor")
+  tasksAuthored                    Task[]                     @relation("TaskAuthor")
+  taskParticipations               TaskParticipant[]          @relation("TaskParticipantUser")
+  taskEvents                       TaskEvent[]                @relation("TaskEventActor")
   commentAssignees                 CommentAssignee[]          @relation("CommentAssignees")
   notifications                    Notification[]             @relation("UserNotifications")
   pushSubscriptions                PushSubscription[]         @relation("UserPushSubscriptions")
@@ -1656,6 +1712,7 @@ model Company {
   rooms                       Room[]
   groups                      Group[]
   comments                    Comment[]
+  tasks                       Task[]
   attendances                 Attendance[]
   plannedAbsences             PlannedAbsence[]
   paymentPromises             PaymentPromise[]
@@ -1848,6 +1905,8 @@ model Comment {
   isSystem   Boolean       @default(false)
   dueDate    DateTime?
   priority   TaskPriority?
+  /// Set by scripts/migrate-comment-tasks.ts; such rows are hidden from comment lists.
+  migratedTaskId String?
   /// NULL = a task the system gave (ADR-0054); the UI shows «Tizim».
   authorId   Int?
   author     User?         @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
@@ -1884,6 +1943,123 @@ model CommentAssignee {
   @@index([userId, status])
 }
 
+/// Spec 2026-10-07 §3. The only writers are `tasks/tasks.service.ts`,
+/// `tasks/lesson-task.ts` and `scripts/migrate-comment-tasks.ts`
+/// (`task-write.single-source.spec.ts`).
+model Task {
+  id                String       @id @default(uuid())
+  companyId         Int
+  company           Company      @relation(fields: [companyId], references: [id])
+  /// The entity's branch, else the author's header pick; null for a branch-less
+  /// CEO task or an unassigned lead.
+  branchId          Int?
+  kind              TaskKind     @default(MANUAL)
+  title             String
+  description       String?
+  status            TaskStatus   @default(NEW)
+  priority          TaskPriority @default(MEDIUM)
+  dueAt             DateTime?
+  /// NULL = Tizim.
+  authorId          Int?
+  author            User?        @relation("TaskAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  entityType        String?
+  entityId          String?
+  requiresPhoto     Boolean      @default(false)
+  /// «Har biriga alohida» copies share one batch.
+  batchId           String?
+  /// `unmarked:<groupId>:<YYYY-MM-DD>`, `calllog:<id>`, `promise:<id>`, `lead:<id>`.
+  /// Unique while the task is open (partial index in the migration).
+  sourceKey         String?
+  /// System task: the first assignee to act.
+  claimedById       Int?
+  returnedCount     Int          @default(0)
+  lastReturnedAt    DateTime?
+  startedAt         DateTime?
+  reviewRequestedAt DateTime?
+  closedAt          DateTime?
+  cancelledAt       DateTime?
+  cancelReason      String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  participants   TaskParticipant[]
+  steps          TaskStep[]
+  events         TaskEvent[]
+  outbox         TaskOutbox[]
+  notifications  Notification[]
+  unmarkedLesson UnmarkedLesson?   @relation("UnmarkedLessonTaskRow")
+
+  @@index([companyId, status, dueAt])
+  @@index([branchId, status])
+  @@index([authorId, status])
+  @@index([batchId])
+  @@index([entityType, entityId])
+  @@index([sourceKey])
+}
+
+model TaskParticipant {
+  id        String              @id @default(uuid())
+  taskId    String
+  task      Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User                @relation("TaskParticipantUser", fields: [userId], references: [id])
+  role      TaskParticipantRole @default(ASSIGNEE)
+  /// First time this person opened the task sheet.
+  seenAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@unique([taskId, userId])
+  @@index([userId, role])
+}
+
+model TaskStep {
+  id        String    @id @default(uuid())
+  taskId    String
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title     String
+  position  Int
+  doneAt    DateTime?
+  doneById  Int?
+  createdAt DateTime  @default(now())
+
+  @@index([taskId, position])
+}
+
+/// Discussion and history in one stream (spec §3.4).
+model TaskEvent {
+  id        String        @id @default(uuid())
+  taskId    String
+  task      Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  type      TaskEventType
+  /// NULL = Tizim.
+  actorId   Int?
+  actor     User?         @relation("TaskEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  text      String?
+  meta      Json?
+  via       TaskEventVia  @default(WEB)
+  createdAt DateTime      @default(now())
+
+  @@index([taskId, createdAt])
+}
+
+/// Time-based notices (spec §9.3). INAPP in this phase; TELEGRAM in phase 2.
+model TaskOutbox {
+  id        String            @id @default(uuid())
+  taskId    String
+  task      Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    Int
+  channel   TaskOutboxChannel
+  kind      TaskOutboxKind
+  sendAfter DateTime
+  attempts  Int               @default(0)
+  sentAt    DateTime?
+  lastError String?
+  createdAt DateTime          @default(now())
+
+  @@unique([taskId, userId, channel, kind])
+  @@index([sendAfter, sentAt])
+}
+
 model Notification {
   id                String           @id @default(uuid())
   userId            Int
@@ -1895,6 +2071,8 @@ model Notification {
   relatedEntityId   String?
   commentId         String?
   comment           Comment?         @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  taskId            String?
+  task              Task?            @relation(fields: [taskId], references: [id], onDelete: SetNull)
   isRead            Boolean          @default(false)
   companyId         Int
   createdAt         DateTime         @default(now())
@@ -2458,6 +2636,9 @@ model UnmarkedLesson {
   rescheduleId     String?
   taskCommentId    String?              @unique
   taskComment      Comment?             @relation("UnmarkedLessonTask", fields: [taskCommentId], references: [id], onDelete: SetNull)
+  /// The «Dars bo'ldimi?» task row (spec 2026-10-07). `taskCommentId` stays until the cleanup PR.
+  taskId           String?              @unique
+  task             Task?                @relation("UnmarkedLessonTaskRow", fields: [taskId], references: [id], onDelete: SetNull)
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
 

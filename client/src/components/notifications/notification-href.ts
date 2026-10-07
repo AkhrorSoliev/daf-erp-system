@@ -12,6 +12,7 @@ const ENTITY_ROUTES: Record<string, (id: string) => string> = {
   Lead: (id) => `/leads?lead=${id}`,
   User: (id) => `/settings/employees/${id}`,
   AbsencePauseSetting: () => "/settings/absence-pause",
+  Task: (id) => `/tasks?task=${id}`,
 };
 
 // Sahifani ocholmaydigan ko'ruvchiga havola berilmaydi: server o'sha

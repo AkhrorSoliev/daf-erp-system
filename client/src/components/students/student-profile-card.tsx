@@ -115,7 +115,6 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
 
   const [latestComment, setLatestComment] = useState<{
     content: string;
-    isTask?: boolean;
     author: { firstName: string; lastName: string } | null;
     createdAt: string;
   } | null>(null);
@@ -435,12 +434,6 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                   <span className="font-medium">{latestComment.author ? `${latestComment.author.firstName} ${latestComment.author.lastName}` : "Tizim"}</span>
                   <span>&middot;</span>
                   <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
-                  {latestComment.isTask && (
-                    <>
-                      <span>&middot;</span>
-                      <span className="text-amber-600 dark:text-amber-400 font-medium">Topshiriq</span>
-                    </>
-                  )}
                 </div>
               </div>
             ) : (

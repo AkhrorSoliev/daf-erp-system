@@ -65,6 +65,7 @@ export const FIELD_LABELS: Record<string, string | null> = {
   // Yashiriladigan texnik field lar
   id: null,
   action: null,
+  // Old COMMENT_ADDED history rows (from before the task mode was removed) still carry it.
   isTask: null,
   commentId: null,
   companyId: null,

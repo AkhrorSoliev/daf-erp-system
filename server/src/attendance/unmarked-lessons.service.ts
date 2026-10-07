@@ -171,7 +171,7 @@ export class UnmarkedLessonsService {
         });
         if (open) return false;
 
-        const taskCommentId = await createLessonTask(tx, {
+        const taskId = await createLessonTask(tx, {
           companyId: lesson.companyId,
           branchId: lesson.branchId,
           groupId: lesson.groupId,
@@ -189,7 +189,7 @@ export class UnmarkedLessonsService {
             date: today,
             lessonStartTime: lesson.startTime,
             lessonEndTime: lesson.endTime,
-            taskCommentId,
+            taskId,
           },
         });
         await this.history.recordCreate({

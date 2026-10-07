@@ -72,6 +72,23 @@ describe('NotificationsService', () => {
       });
       expect(result).toEqual(mockNotification);
     });
+
+    it('stores the task a notification belongs to', async () => {
+      await service.create({
+        userId: 10001,
+        type: NotificationType.TASK_ASSIGNED,
+        title: 'Yangi topshiriq',
+        message: 'Test message',
+        relatedEntityType: 'Task',
+        relatedEntityId: 'task-uuid-1',
+        taskId: 'task-uuid-1',
+        companyId: 1001,
+      });
+
+      expect(prisma.notification.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ taskId: 'task-uuid-1' }),
+      });
+    });
   });
 
   describe('findByUser', () => {

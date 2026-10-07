@@ -17,6 +17,7 @@ import { PossibleDeductionsInfo } from "@/components/payments/possible-deduction
 import type { EmployeeUser } from "@/hooks/use-edit-employee";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
+import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import api from "@/lib/api";
 
 const TEACHER_ROLE_ID = 4;
@@ -47,6 +48,14 @@ export function EmployeeProfileTabs({
   const canSeeTimeline =
     user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const isTeacher = employee.roles.some((r) => r.id === TEACHER_ROLE_ID);
+  const tasksPanel = (
+    <EntityTasksPanel
+      className="mb-4"
+      entityType="User"
+      entityId={String(employee.id)}
+      entityLabel={`${employee.firstName} ${employee.lastName}`}
+    />
+  );
 
   const defaultTab = isTeacher ? "guruhlar" : "izohlar";
 
@@ -163,6 +172,7 @@ export function EmployeeProfileTabs({
       {/* Guruhlar — faqat o'qituvchilar uchun */}
       {isTeacher && (
         <TabsContent value="guruhlar">
+          {tasksPanel}
           {groupsLoading ? (
             <div className="flex h-24 items-center justify-center rounded-md border">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
@@ -175,6 +185,7 @@ export function EmployeeProfileTabs({
 
       {/* Izohlar */}
       <TabsContent value="izohlar">
+        {!isTeacher && tasksPanel}
         {commentsVisible ? (
           <div className="space-y-4">
             <CommentForm

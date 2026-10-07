@@ -132,44 +132,6 @@ export function CommentList({
     }
   };
 
-  const handleAssigneeStatus = async (
-    commentId: string,
-    status: "SEEN" | "DONE",
-  ) => {
-    try {
-      const { data } = await api.patch(
-        `/comments/${commentId}/assignee-status`,
-        { status },
-      );
-      setComments((prev) =>
-        prev.map((c) =>
-          c.id === commentId
-            ? {
-                ...c,
-                assignees: c.assignees.map((a) =>
-                  a.userId === user?.id
-                    ? {
-                        ...a,
-                        status: data.status,
-                        seenAt: data.seenAt,
-                        doneAt: data.doneAt,
-                      }
-                    : a,
-                ),
-              }
-            : c,
-        ),
-      );
-      toast.success(
-        status === "SEEN"
-          ? "Ko'rildi deb belgilandi"
-          : "Bajarildi deb belgilandi",
-      );
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Xatolik yuz berdi"));
-    }
-  };
-
   const totalPages = Math.ceil(total / pageSize);
 
   if (loading && comments.length === 0 && !optimisticComments?.length) {
@@ -225,7 +187,6 @@ export function CommentList({
               onCancelEdit={cancelEdit}
               onSaveEdit={saveEdit}
               onDelete={handleDelete}
-              onAssigneeStatus={handleAssigneeStatus}
             />
           </div>
         ))}

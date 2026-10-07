@@ -427,19 +427,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
-      'Own tasks, own authorship. `my-tasks` and `assignee-status` are keyed ' +
-      "on the caller's own `CommentAssignee` row; `created-tasks` on " +
-      '`authorId`. `PATCH` and `DELETE /comments/:id` are author-or-CEO, ' +
+      'Own authorship. `PATCH` and `DELETE /comments/:id` are author-or-CEO, ' +
       "which is STRICTER than branch — a director cannot edit a colleague's " +
       'note even inside their own branch — so a branch check would add ' +
-      'nothing.',
-    routes: [
-      'GET /comments/my-tasks',
-      'GET /comments/created-tasks',
-      'PATCH /comments/:id',
-      'PATCH /comments/:id/assignee-status',
-      'DELETE /comments/:id',
-    ],
+      'nothing. (Tasks left comments for `/tasks`; the `my-tasks`, ' +
+      '`created-tasks` and `assignee-status` routes are gone.)',
+    routes: ['PATCH /comments/:id', 'DELETE /comments/:id'],
   },
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
@@ -784,6 +777,53 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'through `branchIdWhere`, and the month charges, departures and lead-source ' +
       'cohort through their own services with the same list.',
     routes: ['GET /reports/marketing'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      'The task module does not take `@BranchScope()`: `TasksService.loadActor` ' +
+      "builds the caller's `TaskActor` from the DATABASE (roles, and " +
+      '`resolveCallerBranchScope` for `scope`), never from the token, and every ' +
+      'list-shaped read applies that scope itself — `TasksReadService.' +
+      'visibilityWhere` (own tasks, plus the branch for a Branch Director), the ' +
+      'workload branch filter and the assignable-people filter. A create takes ' +
+      "the task's branch from `resolveTaskBranchId` (the linked entity's " +
+      'branch, else the `X-Branch-Id` pick), which refuses a branch outside ' +
+      "the caller's scope instead of widening it.",
+    routes: [
+      'GET /tasks',
+      'GET /tasks/assignable',
+      'GET /tasks/counts',
+      'GET /tasks/workload',
+      'POST /tasks',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Every id-addressed task route loads the task through `TasksService.' +
+      'loadForAccess`, which finds it by id AND company and runs `resolveAccess` ' +
+      "on the RECORD: the caller must be the task's author, an assignee, a " +
+      'watcher, or its manager (the CEO, or a Branch Director whose branches ' +
+      "include the task's own `branchId`). Anyone else gets the same 404 as for " +
+      "a missing id, so another branch's task id leaks nothing. The write " +
+      'routes then check `canManage` / `canWork` from that same access result; a ' +
+      'duplicate creates the copy through the same branch resolution as a new ' +
+      'task.',
+    routes: [
+      'DELETE /tasks/:id/steps/:stepId',
+      'GET /tasks/:id',
+      'PATCH /tasks/:id',
+      'PATCH /tasks/:id/steps/:stepId',
+      'POST /tasks/:id/cancel',
+      'POST /tasks/:id/duplicate',
+      'POST /tasks/:id/events',
+      'POST /tasks/:id/review',
+      'POST /tasks/:id/seen',
+      'POST /tasks/:id/status',
+      'POST /tasks/:id/steps',
+      'PUT /tasks/:id/participants',
+    ],
   },
 ];
 

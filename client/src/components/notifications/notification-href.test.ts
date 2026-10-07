@@ -78,4 +78,9 @@ describe("notificationHref", () => {
     ).toBeNull();
     expect(notificationHref(task("Branch", "1001"), CEO)).toBeNull();
   });
+
+  it("a task notification opens the task drawer", () => {
+    expect(notificationHref({ type: "TASK_ASSIGNED", relatedEntityType: "Task", relatedEntityId: "t1" }, [4])).toBe("/tasks?task=t1");
+    expect(notificationHref({ type: "TASK_REVIEW", relatedEntityType: "Task", relatedEntityId: "t1" }, [3])).toBe("/tasks?task=t1");
+  });
 });

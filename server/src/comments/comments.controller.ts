@@ -16,8 +16,6 @@ import {
   CommentQueryDto,
   LatestCommentQueryDto,
 } from './dto/comment-query.dto';
-import { TaskQueryDto } from './dto/task-query.dto';
-import { UpdateAssigneeStatusDto } from './dto/update-assignee-status.dto';
 import { Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -35,36 +33,7 @@ export class CommentsController {
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('roles') roles: string[],
   ) {
-    // CEO, BD, and Administrator can create task comments. Administrator was
-    // added so the "Aloqa markazi" (/outreach) callback flow works for the
-    // role that actually runs it day-to-day.
-    if (dto.isTask) {
-      const canAssign =
-        roles.includes('CEO') ||
-        roles.includes('Branch Director') ||
-        roles.includes('Administrator');
-      if (!canAssign) {
-        dto.isTask = false;
-        dto.assigneeIds = undefined;
-      }
-    }
-
     return this.commentsService.create(dto, userId, companyId, roles);
-  }
-
-  @Get('my-tasks')
-  getMyTasks(@Query() query: TaskQueryDto, @CurrentUser('id') userId: number) {
-    return this.commentsService.getMyTasks(userId, query);
-  }
-
-  @Get('created-tasks')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
-  getCreatedTasks(
-    @Query() query: TaskQueryDto,
-    @CurrentUser('id') userId: number,
-  ) {
-    return this.commentsService.getCreatedTasks(userId, query);
   }
 
   @Get()
@@ -115,18 +84,5 @@ export class CommentsController {
   delete(@Param('id') id: string, @CurrentUser('companyId') companyId: number) {
     // RolesGuard already ensures only CEO can reach here
     return this.commentsService.delete(id, companyId);
-  }
-
-  @Patch(':id/assignee-status')
-  updateAssigneeStatus(
-    @Param('id') commentId: string,
-    @Body() dto: UpdateAssigneeStatusDto,
-    @CurrentUser('id') userId: number,
-  ) {
-    return this.commentsService.updateAssigneeStatus(
-      commentId,
-      userId,
-      dto.status,
-    );
   }
 }

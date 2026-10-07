@@ -120,7 +120,12 @@ describe('LeadsService', () => {
       expect(prisma.comment.groupBy).toHaveBeenCalledWith(
         expect.objectContaining({
           by: ['entityId'],
-          where: { entityType: 'Lead', entityId: { in: ['lead-1', 'lead-2'] } },
+          where: {
+            entityType: 'Lead',
+            entityId: { in: ['lead-1', 'lead-2'] },
+            // A migrated task is not a comment.
+            isTask: false,
+          },
         }),
       );
       expect(result).toEqual([
@@ -287,7 +292,7 @@ describe('LeadsService', () => {
 
       expect(prisma.comment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Lead' },
+          where: { entityType: 'Lead', isTask: false },
           distinct: ['entityId'],
         }),
       );
@@ -1174,7 +1179,6 @@ describe('LeadsService', () => {
       prisma.comment.findFirst.mockResolvedValue({
         content: 'Ertaga qayta qo‘ng‘iroq',
         createdAt: new Date('2026-06-16T11:00:00Z'),
-        isTask: false,
         author: { firstName: 'Dilnoza', lastName: 'Karimova' },
       });
 
@@ -1182,7 +1186,7 @@ describe('LeadsService', () => {
 
       expect(prisma.comment.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Lead', entityId: 'lead-1' },
+          where: { entityType: 'Lead', entityId: 'lead-1', isTask: false },
           orderBy: { createdAt: 'desc' },
         }),
       );
@@ -1191,7 +1195,6 @@ describe('LeadsService', () => {
         expect.objectContaining({
           authorName: 'Dilnoza Karimova',
           content: 'Ertaga qayta qo‘ng‘iroq',
-          isTask: false,
         }),
       );
     });

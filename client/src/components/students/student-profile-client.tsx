@@ -13,6 +13,7 @@ import { RefundDialog } from "@/components/payments/refund-dialog";
 import { WithdrawalDialog } from "@/components/payments/withdrawal-dialog";
 import { InOtherBranch } from "@/components/shared/in-other-branch";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
+import { usePublishEntity } from "@/components/tasks/entity-context";
 import type { Student } from "@/data/student-model";
 import api from "@/lib/api";
 import { otherBranchOf, type OtherBranch } from "@/lib/other-branch";
@@ -89,6 +90,12 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
       setName(String(student.id), `${student.firstName} ${student.lastName}`);
     }
   }, [student, setName]);
+
+  usePublishEntity(
+    "Student",
+    student ? String(student.id) : null,
+    student ? `${student.firstName} ${student.lastName}` : "",
+  );
 
   if (loading) {
     return (
