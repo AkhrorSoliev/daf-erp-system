@@ -6,6 +6,12 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-08",
+    sarlavha: "Lidlar sahifasi tepasida asosiy raqamlar",
+    matn: "«Lidlar» sahifasida doska ustida beshta karta turadi. «Hozir» qismida: doskada nechta lid kutyapti va ulardan nechtasiga hali qo'ng'iroq qilinmagan (shundan nechtasi 7 kundan beri kutyapti). Bu kartani bossangiz, o'sha lidlar ro'yxati ochiladi. «Davr bo'yicha» qismida «Bu hafta», «Shu oy» yoki «O'tgan oy» uchun: nechta yangi lid kelgani (eng ko'p kelgan ikki manba bilan), nechtasi o'quvchi bo'lgani va nechtasi yo'qotilgani. Faqat doskadagi lidlar sanaladi: o'quvchilar sahifasidan yoki Telegram bot orqali to'g'ridan qo'shilgan o'quvchilar bu raqamlarga kirmaydi. Raqamlar tepada tanlangan filial bo'yicha chiqadi.",
+    rollar: [1, 2, 3],
+  },
+  {
     sana: "2026-10-07",
     sarlavha: "Topshiriqlar — alohida bo'lim",
     matn: "Topshiriqlar endi izohdan alohida bo'limda: «Topshiriqlar» sahifasida doska va ro'yxat bor, topshiriq Yangi → Jarayonda → Tekshiruvda → Bajarildi yo'lidan o'tadi — ijrochi «Boshladim» va «Bajardim» ni bosadi, beruvchi «Qabul qilish» yoki «Qaytarish» ni. Topshiriqni yuqori paneldagi «+ Topshiriq» tugmasi beradi: o'quvchi, guruh, lid yoki xodim sahifasi ochiq bo'lsa, topshiriq shu sahifaga bog'lanadi, o'sha sahifalarda esa «Topshiriqlar» bloki turadi. Kartani bossangiz varaq ochiladi: unda kichik qadamlar, muhokama va o'zgarishlar tarixi bor. Izohlar ichida yozilgan eski topshiriqlar yangi bo'limga ko'chirildi; izoh endi faqat yozuv.",

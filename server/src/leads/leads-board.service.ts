@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { LeadStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ReportBranchIds,
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
-import { leadBranchWhere } from './shared/lead-scope';
+import { activeBoardLeadWhere } from './shared/lead-scope';
 
 /**
  * Builds the leads board: every column with its sections and a per-section
@@ -55,13 +54,7 @@ export class LeadsBoardService {
       // Converted leads have left the funnel — they now live in the students
       // list, so they must not be counted on the active board. (LOST leads are
       // already excluded because deleting a lead sets deletedAt.)
-      where: {
-        deletedAt: null,
-        companyId,
-        sectionId: { not: null },
-        statusEnum: { not: LeadStatus.CONVERTED },
-        ...leadBranchWhere(scope),
-      },
+      where: activeBoardLeadWhere(companyId, scope),
       _count: true,
     });
     const countBySection = new Map<string, number>();

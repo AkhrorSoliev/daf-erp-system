@@ -13,6 +13,7 @@ import {
 import { LeadsService } from './leads.service';
 import { LeadsBoardService } from './leads-board.service';
 import { LeadsArchiveService } from './leads-archive.service';
+import { LeadsStatsService } from './leads-stats.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { MoveLeadDto } from './dto/move-lead.dto';
@@ -22,6 +23,7 @@ import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RestoreLeadDto } from './dto/restore-lead.dto';
 import { RemoveLeadDto } from './dto/remove-lead.dto';
+import { LeadStatsQueryDto } from './dto/lead-stats-query.dto';
 import { CurrentUser, Roles, BranchScope } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
@@ -34,6 +36,7 @@ export class LeadsController {
     private readonly leadsService: LeadsService,
     private readonly boardService: LeadsBoardService,
     private readonly archiveService: LeadsArchiveService,
+    private readonly statsService: LeadsStatsService,
   ) {}
 
   // Filtered, paginated flat list — used by the filter view.
@@ -54,6 +57,17 @@ export class LeadsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.boardService.getBoard(companyId, scope);
+  }
+
+  // Figures above the board. Declared before ':id' so "/leads/stats" is not
+  // captured as an id.
+  @Get('stats')
+  getStats(
+    @Query() query: LeadStatsQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.statsService.getStats(companyId, scope, query.period);
   }
 
   // Archived leads + sections (two-column leads archive). Declared before ':id'
