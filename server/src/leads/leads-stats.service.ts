@@ -12,7 +12,7 @@ import {
   tashkentRangeUtc,
 } from '../common/date/tashkent';
 import { activeBoardLeadWhere, leadBranchWhere } from './shared/lead-scope';
-import type { LeadStatsPeriod } from './dto/lead-stats-query.dto';
+import type { LeadStatCard, LeadStatsPeriod } from './dto/lead-stats-query.dto';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const TOP_SOURCES = 2;
@@ -39,6 +39,32 @@ export function leadStatsRange(
 }
 
 /**
+ * The leads behind one period card. `getStats` counts this and `GET /leads?card=`
+ * lists it, so a card and the list it opens can never disagree. Board leads only
+ * (a section is set). "created" ignores `deletedAt`: a lead lost later still
+ * arrived in the period. The branch sits under AND so the list's search OR
+ * cannot replace it.
+ */
+export function statCardWhere(
+  card: LeadStatCard,
+  companyId: number,
+  scope: ReportBranchIds | undefined,
+  range: { gte: Date; lt: Date },
+): Prisma.LeadWhereInput {
+  const boardLead: Prisma.LeadWhereInput = {
+    companyId,
+    sectionId: { not: null },
+    AND: [leadBranchWhere(scope)],
+  };
+  if (card === 'created') return { ...boardLead, createdAt: range };
+  return {
+    ...boardLead,
+    statusEnum: card === 'converted' ? LeadStatus.CONVERTED : LeadStatus.LOST,
+    statusChangedAt: range,
+  };
+}
+
+/**
  * The figures above the leads board (spec 2026-10-08). Every count is of board
  * leads only (a section is set): leads written for students who came in
  * through `/students`, the bot or a mock exam have no section and are
@@ -57,13 +83,7 @@ export class LeadsStatsService {
     const onBoard = activeBoardLeadWhere(companyId, scope);
     const uncalled: Prisma.LeadWhereInput = { ...onBoard, calledAt: null };
     const range = leadStatsRange(period, now);
-    const boardLead: Prisma.LeadWhereInput = {
-      companyId,
-      sectionId: { not: null },
-      ...leadBranchWhere(scope),
-    };
-    // A lead lost later still arrived in the period, so deletedAt is not read.
-    const created: Prisma.LeadWhereInput = { ...boardLead, createdAt: range };
+    const created = statCardWhere('created', companyId, scope, range);
 
     const [
       onBoardCount,
@@ -91,18 +111,10 @@ export class LeadsStatsService {
         take: TOP_SOURCES,
       }),
       this.prisma.lead.count({
-        where: {
-          ...boardLead,
-          statusEnum: LeadStatus.CONVERTED,
-          statusChangedAt: range,
-        },
+        where: statCardWhere('converted', companyId, scope, range),
       }),
       this.prisma.lead.count({
-        where: {
-          ...boardLead,
-          statusEnum: LeadStatus.LOST,
-          statusChangedAt: range,
-        },
+        where: statCardWhere('lost', companyId, scope, range),
       }),
     ]);
 

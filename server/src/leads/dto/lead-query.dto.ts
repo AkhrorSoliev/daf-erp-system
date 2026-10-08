@@ -11,6 +11,12 @@ import { Transform } from 'class-transformer';
 import { LeadStatus } from '@prisma/client';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { toStringArray } from '../../common/dto/to-array';
+import {
+  LEAD_STAT_CARDS,
+  LEAD_STATS_PERIODS,
+  type LeadStatCard,
+  type LeadStatsPeriod,
+} from './lead-stats-query.dto';
 
 export class LeadQueryDto extends PaginationDto {
   // Free-text search across first name, last name and phone.
@@ -70,4 +76,16 @@ export class LeadQueryDto extends PaginationDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
+
+  /**
+   * A stats card's leads: the list shows exactly what the card counts
+   * (`statCardWhere`), archived lost leads included. `period` is the card's.
+   */
+  @IsOptional()
+  @IsIn(LEAD_STAT_CARDS)
+  card?: LeadStatCard;
+
+  @IsOptional()
+  @IsIn(LEAD_STATS_PERIODS)
+  period?: LeadStatsPeriod;
 }

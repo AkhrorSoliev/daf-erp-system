@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { LeadsService } from './leads.service';
+import { leadStatsRange } from './leads-stats.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
@@ -136,6 +137,27 @@ describe('LeadsService', () => {
   });
 
   describe('findAll', () => {
+    it('a stats card lists exactly what the card counts, archived leads included', async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll(
+        { card: 'created', period: 'week', search: 'Ali' },
+        1001,
+        [3],
+      );
+
+      const where = prisma.lead.findMany.mock.calls[0][0].where;
+      expect(where).not.toHaveProperty('deletedAt');
+      expect(where.sectionId).toEqual({ not: null });
+      expect(where.createdAt).toEqual(leadStatsRange('week', new Date()));
+      // The search OR must not replace the branch predicate.
+      expect(where.AND).toEqual([
+        { OR: [{ branchId: { in: [3] } }, { branchId: null }] },
+      ]);
+      expect(where.OR).toBeDefined();
+    });
+
     it('bir nechta bosqich tanlansa `in` bilan filtrlaydi', async () => {
       prisma.lead.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);

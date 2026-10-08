@@ -2,6 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { LeadsStatsService, leadStatsRange } from './leads-stats.service';
 import { LeadStatsQueryDto } from './dto/lead-stats-query.dto';
+import { LeadQueryDto } from './dto/lead-query.dto';
 
 // Thursday 2026-10-08, 02:00 Tashkent (still 07.10 in UTC).
 const NOW = new Date('2026-10-07T21:00:00Z');
@@ -59,7 +60,7 @@ describe('LeadsStatsService', () => {
       expect(where).toMatchObject({
         companyId: 1,
         sectionId: { not: null },
-        ...branch,
+        AND: [branch],
       });
     }
   });
@@ -112,5 +113,14 @@ describe('LeadStatsQueryDto', () => {
 
   it('rejects anything else', () => {
     expect(errors('year')).toHaveLength(1);
+  });
+
+  it('the list takes the three period cards only', () => {
+    const listErrors = (card: unknown) =>
+      validateSync(plainToInstance(LeadQueryDto, { card }));
+    for (const c of ['created', 'converted', 'lost']) {
+      expect(listErrors(c)).toHaveLength(0);
+    }
+    expect(listErrors('onBoard')).toHaveLength(1);
   });
 });

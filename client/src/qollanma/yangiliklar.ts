@@ -8,7 +8,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-08",
     sarlavha: "Lidlar sahifasi tepasida asosiy raqamlar",
-    matn: "«Lidlar» sahifasida doska ustida beshta karta turadi. «Hozir» qismida: doskada nechta lid kutyapti va ulardan nechtasiga hali qo'ng'iroq qilinmagan (shundan nechtasi 7 kundan beri kutyapti). Bu kartani bossangiz, o'sha lidlar ro'yxati ochiladi. «Davr bo'yicha» qismida «Bu hafta», «Shu oy» yoki «O'tgan oy» uchun: nechta yangi lid kelgani (eng ko'p kelgan ikki manba bilan), nechtasi o'quvchi bo'lgani va nechtasi yo'qotilgani. Faqat doskadagi lidlar sanaladi: o'quvchilar sahifasidan yoki Telegram bot orqali to'g'ridan qo'shilgan o'quvchilar bu raqamlarga kirmaydi. Raqamlar tepada tanlangan filial bo'yicha chiqadi.",
+    matn: "«Lidlar» sahifasida doska ustida beshta karta turadi. «Hozir» qismida: doskada nechta lid kutyapti va ulardan nechtasiga hali qo'ng'iroq qilinmagan (shundan nechtasi 7 kundan beri kutyapti). «Davr bo'yicha» qismida «Bu hafta», «Shu oy» yoki «O'tgan oy» uchun: nechta yangi lid kelgani (eng ko'p kelgan ikki manba bilan), nechtasi o'quvchi bo'lgani va nechtasi yo'qotilgani. Har kartani bossangiz, aynan o'sha lidlar ro'yxati ochiladi (yo'qotilganlar ham, «Yo'qotilgan» belgisi bilan); «Doskada» doskaga qaytaradi. Faqat doskadagi lidlar sanaladi: o'quvchilar sahifasidan yoki Telegram bot orqali to'g'ridan qo'shilgan o'quvchilar bu raqamlarga kirmaydi. Raqamlar tepada tanlangan filial bo'yicha chiqadi.",
     rollar: [1, 2, 3],
   },
   {

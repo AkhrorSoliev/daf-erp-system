@@ -44,3 +44,32 @@ export function topSourcesLine(sources: LeadStats["flow"]["topSources"]) {
   if (sources.length === 0) return null;
   return sources.map((s) => `${s.name} ${s.count}`).join(" · ");
 }
+
+export type StatCard = "onBoard" | "uncalled" | "created" | "converted" | "lost";
+
+export const STAT_CARD_LABELS: Record<StatCard, string> = {
+  onBoard: "Doskada",
+  uncalled: "Qo'ng'iroq qilinmagan",
+  created: "Yangi lidlar",
+  converted: "O'quvchi bo'ldi",
+  lost: "Yo'qotildi",
+};
+
+/**
+ * The list filters a card click writes. Every other filter is cleared, so the
+ * list holds exactly the card's leads: "Doskada" goes back to the board,
+ * "uncalled" is the NEW + not-called list, the period cards ask the server for
+ * the card's own set (`GET /leads?card=`).
+ */
+export function cardFilters(card: StatCard) {
+  return {
+    search: "",
+    holati: card === "uncalled" ? UNCALLED_HOLATI : [],
+    sourceId: [],
+    columnId: [],
+    startDate: "",
+    endDate: "",
+    karta: card === "created" || card === "converted" || card === "lost" ? card : "",
+    page: 1,
+  };
+}

@@ -20,10 +20,11 @@ import { LEAD_FILTER_SCHEMA } from "./lead-filter-schema";
 import {
   LEAD_STATS_PERIODS,
   LEAD_STATS_SCHEMA,
-  UNCALLED_HOLATI,
+  cardFilters,
   parseStatsPeriod,
   topSourcesLine,
   type LeadStats,
+  type StatCard,
 } from "./lead-stats";
 
 /**
@@ -38,7 +39,9 @@ export function LeadsStatsStrip() {
   const revision = useLeadsBoard((s) => s.revision);
   const { filters: statsFilters, setFilter: setStatsFilter } =
     useUrlFilters(LEAD_STATS_SCHEMA);
-  const { setFilters: setLeadFilters } = useUrlFilters(LEAD_FILTER_SCHEMA);
+  const { filters: leadFilters, setFilters: setLeadFilters } =
+    useUrlFilters(LEAD_FILTER_SCHEMA);
+  const open = (card: StatCard) => setLeadFilters(cardFilters(card));
   const period = parseStatsPeriod(statsFilters.period);
 
   const { data, isPending, isError } = useQuery({
@@ -66,6 +69,8 @@ export function LeadsStatsStrip() {
             value={data?.now.onBoard}
             sub="ustunlarda kutyapti"
             loading={isPending}
+            onClick={() => open("onBoard")}
+            hint="Doskani ko'rsatish"
           />
           <StatCard
             icon={<PhoneOff className="size-4" />}
@@ -78,7 +83,7 @@ export function LeadsStatsStrip() {
             }
             tone="urgent"
             loading={isPending}
-            onClick={() => setLeadFilters({ holati: UNCALLED_HOLATI, page: 1 })}
+            onClick={() => open("uncalled")}
             hint="Qo'ng'iroq qilinmagan yangi lidlar ro'yxatini ochish"
           />
         </div>
@@ -113,6 +118,9 @@ export function LeadsStatsStrip() {
             value={data?.flow.created}
             sub={(data && topSourcesLine(data.flow.topSources)) ?? "doskaga tushdi"}
             loading={isPending}
+            active={leadFilters.karta === "created"}
+            onClick={() => open("created")}
+            hint="Shu davrda kelgan lidlar ro'yxatini ochish"
           />
           <StatCard
             icon={<GraduationCap className="size-4" />}
@@ -121,6 +129,9 @@ export function LeadsStatsStrip() {
             sub="guruhga qo'shildi"
             tone="good"
             loading={isPending}
+            active={leadFilters.karta === "converted"}
+            onClick={() => open("converted")}
+            hint="Shu davrda o'quvchi bo'lganlar ro'yxatini ochish"
           />
           <StatCard
             icon={<UserX className="size-4" />}
@@ -128,6 +139,9 @@ export function LeadsStatsStrip() {
             value={data?.flow.lost}
             sub="arxivga o'tdi"
             loading={isPending}
+            active={leadFilters.karta === "lost"}
+            onClick={() => open("lost")}
+            hint="Shu davrda yo'qotilganlar ro'yxatini ochish"
           />
         </div>
       </section>
@@ -150,6 +164,7 @@ function StatCard({
   loading,
   onClick,
   hint,
+  active = false,
 }: {
   icon: ReactNode;
   label: string;
@@ -159,6 +174,7 @@ function StatCard({
   loading: boolean;
   onClick?: () => void;
   hint?: string;
+  active?: boolean;
 }) {
   if (loading) return <Skeleton className="h-[86px] rounded-xl" />;
 
@@ -178,6 +194,7 @@ function StatCard({
   const frame = cn(
     "min-w-0 rounded-xl border bg-card px-3 py-2.5 text-left",
     tone === "urgent" && "border-orange-300 dark:border-orange-900",
+    active && "ring-2 ring-primary",
   );
 
   if (!onClick) return <div className={frame}>{body}</div>;
@@ -186,6 +203,7 @@ function StatCard({
       type="button"
       onClick={onClick}
       title={hint}
+      aria-pressed={active}
       className={cn(frame, "transition-colors hover:bg-muted/50")}
     >
       {body}

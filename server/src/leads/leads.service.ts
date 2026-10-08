@@ -10,6 +10,7 @@ import {
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
 import { leadBranchWhere } from './shared/lead-scope';
+import { leadStatsRange, statCardWhere } from './leads-stats.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
 import { StudentEnrollmentService } from '../students/student-enrollment.service';
@@ -91,11 +92,14 @@ export class LeadsService {
     // database, names and phone numbers included. The branch predicate goes
     // under AND because `leadBranchWhere` produces an `OR` and so does the
     // search filter below; spreading both would let the search erase it.
-    const where: Prisma.LeadWhereInput = {
-      deletedAt: null,
-      companyId,
-      AND: [leadBranchWhere(scope)],
-    };
+    const where: Prisma.LeadWhereInput = query.card
+      ? statCardWhere(
+          query.card,
+          companyId,
+          scope,
+          leadStatsRange(query.period ?? 'month', new Date()),
+        )
+      : { deletedAt: null, companyId, AND: [leadBranchWhere(scope)] };
 
     const search = query.search?.trim();
     if (search) {
@@ -155,6 +159,7 @@ export class LeadsService {
           statusEnum: true,
           createdAt: true,
           statusChangedAt: true,
+          deletedAt: true,
           convertedStudentId: true,
           source: { select: { id: true, name: true } },
           section: {
