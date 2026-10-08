@@ -132,3 +132,11 @@ qatori kabi. Ekrandagi matnlar faqat o'zbekcha, inglizcha so'z yo'q.
   «boglana olmadik» alohida sanaladi. Avval sabablar ro'yxati kerak.
 - **Ustun bo'yicha sonlar.** Ular ustun sarlavhasida allaqachon bor.
 - **«Oraliq» davri.** CEO so'rasa qo'shiladi.
+
+## Yangilanish (08.10, CEO savolidan keyin)
+
+Endi hamma karta bosiladi. Davr kartalari `GET /leads?card=created|converted|lost&period=…`
+ro'yxatini ochadi: server kartani sanagan shartning o'zini (`statCardWhere`) ishlatadi,
+shuning uchun ro'yxatdagi son kartadagi bilan teng. Arxivdagi lidlar ham chiqadi —
+«Yo'qotilgan» / «Arxivda» belgisi bilan, amallarsiz. Karta bosilganda boshqa filtrlar
+tozalanadi; «Doskada» doskaga qaytaradi.
