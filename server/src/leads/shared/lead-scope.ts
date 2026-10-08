@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { LeadStatus, Prisma } from '@prisma/client';
 import { ReportBranchIds } from '../../common/finance/report-branch-scope';
 
 /**
@@ -52,4 +52,27 @@ export function leadAttributionWhere(
 /** The unassigned bucket itself, for reporting it explicitly. */
 export function leadUnassignedWhere(): Prisma.LeadWhereInput {
   return { branchId: null };
+}
+
+/**
+ * A lead standing on the board: it has a section, is not archived and has not
+ * become a student. The board's per-section counts and the stats strip's
+ * "Doskada" figure both read this, so the strip always equals the sum of the
+ * column counts.
+ *
+ * `sectionId` is what separates a board lead from an origin record: a student
+ * added through `/students`, the Telegram bot or a mock exam leaves a lead
+ * with no section that is CONVERTED at once (`student-lead-origin.service.ts`).
+ */
+export function activeBoardLeadWhere(
+  companyId: number,
+  scope: ReportBranchIds | undefined,
+): Prisma.LeadWhereInput {
+  return {
+    deletedAt: null,
+    companyId,
+    sectionId: { not: null },
+    statusEnum: { not: LeadStatus.CONVERTED },
+    ...leadBranchWhere(scope),
+  };
 }
