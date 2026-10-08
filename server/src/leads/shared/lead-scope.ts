@@ -73,6 +73,7 @@ export function activeBoardLeadWhere(
     companyId,
     sectionId: { not: null },
     statusEnum: { not: LeadStatus.CONVERTED },
-    ...leadBranchWhere(scope),
+    // Under AND, so a caller that adds a search OR keeps the branch.
+    AND: [leadBranchWhere(scope)],
   };
 }

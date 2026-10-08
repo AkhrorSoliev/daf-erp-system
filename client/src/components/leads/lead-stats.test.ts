@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseStatsPeriod, topSourcesLine } from "./lead-stats";
 import { leadHolatiParams } from "./lead-filter-schema";
-import { UNCALLED_HOLATI } from "./lead-stats";
+import { UNCALLED_HOLATI, cardFilters } from "./lead-stats";
 
 describe("parseStatsPeriod", () => {
   it("keeps the three periods", () => {
@@ -36,5 +36,27 @@ describe("topSourcesLine", () => {
 
   it("is null with no sources", () => {
     expect(topSourcesLine([])).toBeNull();
+  });
+});
+
+describe("cardFilters", () => {
+  it("clears every other filter so the list holds the card's leads", () => {
+    expect(cardFilters("created")).toMatchObject({
+      search: "",
+      holati: [],
+      sourceId: [],
+      startDate: "",
+      karta: "created",
+      page: 1,
+    });
+  });
+
+  it("opens the board, the uncalled list or a period card", () => {
+    expect(cardFilters("onBoard")).toMatchObject({ karta: "", holati: [] });
+    expect(cardFilters("uncalled")).toMatchObject({
+      karta: "",
+      holati: UNCALLED_HOLATI,
+    });
+    expect(cardFilters("lost").karta).toBe("lost");
   });
 });

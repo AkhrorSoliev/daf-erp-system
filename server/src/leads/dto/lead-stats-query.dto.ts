@@ -9,3 +9,7 @@ export class LeadStatsQueryDto {
   @IsIn(LEAD_STATS_PERIODS)
   period?: LeadStatsPeriod;
 }
+
+/** The period cards whose leads the list can show (`GET /leads?card=`). */
+export const LEAD_STAT_CARDS = ['created', 'converted', 'lost'] as const;
+export type LeadStatCard = (typeof LEAD_STAT_CARDS)[number];
