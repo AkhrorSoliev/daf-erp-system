@@ -34,6 +34,21 @@ export const STATEMENT_ROLES = [1, 2, 3];
  */
 export const FROZEN_BALANCE_ACTION_ROLES = [1, 2, 3];
 
+/**
+ * `POST /refunds/quick` — refunds.controller.ts: pulni qaytarish so'rovini ochish
+ * (spec B2b §1). «Qaytariladigan pul» oynasining qolgan amallari ham shu ro'yxat
+ * bilan ochiladi, chunki ularning `@Roles`i bir xil: `POST /students/:id/balance-notices`
+ * (xabar berish), `POST /withdrawals` (markaz hisobiga o'tkazish), `PATCH /students/:id/status`
+ * va `POST /students/:id/enroll` (students.controller.ts). Kassir yo'q.
+ */
+export const REFUND_REQUEST_ROLES = [1, 2, 3];
+
+/** `POST /refunds/:id/hand-over` — refunds.controller.ts («Berildi»). Kassir ham. */
+export const REFUND_HAND_OVER_ROLES = [1, 2, 3, 5];
+
+/** `POST /refunds/:id/cancel` — refunds.controller.ts. Faqat CEO va filial direktori. */
+export const REFUND_CANCEL_ROLES = [1, 2];
+
 /** `/contract-documents/*` — contract-documents.controller.ts. Kassir va o'qituvchi yo'q. */
 export const CONTRACT_ROLES = [1, 2, 3];
 

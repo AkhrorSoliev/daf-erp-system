@@ -5,6 +5,9 @@ import {
   FINANCIAL_OVERVIEW_ROLES,
   FROZEN_BALANCE_ACTION_ROLES,
   GROUP_PAGE_ROLES,
+  REFUND_CANCEL_ROLES,
+  REFUND_HAND_OVER_ROLES,
+  REFUND_REQUEST_ROLES,
   STUDENT_PROFILE_ROLES,
   hasAnyRole,
 } from "./role-access";
@@ -99,5 +102,22 @@ describe("Umumiy ma'lumotlar — GET /reports/financial-overview (reports.contro
     expect(hasAnyRole(roles(BRANCH_DIRECTOR), FINANCIAL_OVERVIEW_ROLES)).toBe(true);
     expect(hasAnyRole(roles(ADMINISTRATOR), FINANCIAL_OVERVIEW_ROLES)).toBe(false);
     expect(hasAnyRole(roles(CASHIER), FINANCIAL_OVERVIEW_ROLES)).toBe(false);
+  });
+});
+
+describe("«Qaytariladigan pul» amallari (spec B2b, refunds.controller.ts)", () => {
+  it("so'rov ochish — POST /refunds/quick: kassirga yo'q", () => {
+    expect(REFUND_REQUEST_ROLES).toEqual([CEO, BRANCH_DIRECTOR, ADMINISTRATOR]);
+    expect(hasAnyRole(roles(CASHIER), REFUND_REQUEST_ROLES)).toBe(false);
+  });
+
+  it("«Berildi» — POST /refunds/:id/hand-over: kassir ham", () => {
+    expect(REFUND_HAND_OVER_ROLES).toEqual([CEO, BRANCH_DIRECTOR, ADMINISTRATOR, CASHIER]);
+  });
+
+  it("bekor qilish — POST /refunds/:id/cancel: faqat CEO va filial direktori", () => {
+    expect(hasAnyRole(roles(BRANCH_DIRECTOR), REFUND_CANCEL_ROLES)).toBe(true);
+    expect(hasAnyRole(roles(ADMINISTRATOR), REFUND_CANCEL_ROLES)).toBe(false);
+    expect(hasAnyRole(roles(CASHIER), REFUND_CANCEL_ROLES)).toBe(false);
   });
 });
