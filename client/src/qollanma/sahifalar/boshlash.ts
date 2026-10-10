@@ -84,7 +84,7 @@ export const boshlash: QollanmaSahifa[] = [
       "guruhlar kassirga ko'rinmaydi",
       "davomat ochilish vaqti",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "boshlash",
@@ -141,7 +141,7 @@ export const boshlash: QollanmaSahifa[] = [
     qisqacha:
       "Tizimda uchraydigan atamalar alifbo tartibida: rollar, o'quvchi va guruh holatlari, davomat, qarz, to'lov va oylik so'zlari bir-ikki gapda tushuntirilgan.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0015", "0047", "0048", "0054", "0055", "0058", "0059", "0060", "0062", "0064", "0065", "0066"],
+    adr: ["0015", "0047", "0048", "0054", "0055", "0058", "0059", "0060", "0062", "0064", "0065", "0066", "0077"],
     yollar: [],
     kalitSozlar: [
       "atama",
@@ -181,6 +181,6 @@ export const boshlash: QollanmaSahifa[] = [
       "telegram kabinet",
       "bot bloklangan",
     ],
-    yangilangan: "2026-10-05",
+    yangilangan: "2026-10-10",
   },
 ];

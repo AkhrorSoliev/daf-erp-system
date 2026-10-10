@@ -51,7 +51,7 @@ describe("navItems — Moliya → «Qarzdorlik» stays lit on its sub-pages (spe
     .find((item) => item.url === "/payments")
     ?.children?.find((child) => child.url === "/payments/debt");
 
-  it.each(["/payments/debt", "/payments/debt-history", "/payments/debt-write-offs", "/payments/frozen-balances"])(
+  it.each(["/payments/debt", "/payments/debt-history", "/payments/debt-write-offs"])(
     "%s highlights «Qarzdorlik»",
     (path) => {
       expect(debt && isNavChildActive(path, debt)).toBe(true);
@@ -60,5 +60,23 @@ describe("navItems — Moliya → «Qarzdorlik» stays lit on its sub-pages (spe
 
   it("another Moliya page does not", () => {
     expect(debt && isNavChildActive("/payments/salary", debt)).toBe(false);
+    // The frozen balances moved to «Qaytariladigan pul» (spec B2b §3.8).
+    expect(debt && isNavChildActive("/payments/frozen-balances", debt)).toBe(false);
+  });
+});
+
+describe("navItems — Moliya → «Qaytariladigan pul» (spec B2b §3)", () => {
+  const children = navItems.find((item) => item.url === "/payments")?.children ?? [];
+  const refunds = children.find((child) => child.url === "/payments/refunds");
+
+  it("right after «Ish haqi», for every role that sees Moliya", () => {
+    const i = children.findIndex((child) => child.url === "/payments/refunds");
+    expect(children[i - 1]?.url).toBe("/payments/salary");
+    expect(refunds?.title).toBe("Qaytariladigan pul");
+    expect(refunds?.visibleForRoles).toEqual([1, 2, 3, 5]);
+  });
+
+  it("stays lit on its history page", () => {
+    expect(refunds && isNavChildActive("/payments/refunds/history", refunds)).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
@@ -24,46 +24,48 @@ const SORT_OPTIONS = [
   { value: "name", label: "Ism (A–Z)" },
 ];
 
+/**
+ * A search box written to the URL after a 300 ms pause (the debt and the refunds
+ * pages). `value` is the URL's search; `onSearch` writes it and puts the page back
+ * to 1 — pass a stable callback. Only a URL change from outside (a redirect, the
+ * back button) resets the box: its own write coming back keeps what was typed since.
+ */
+export function UrlSearchBox({ value, onSearch, label }: { value: string; onSearch: (search: string) => void; label: string }) {
+  const [search, setSearch] = useState(value);
+  const [urlSearch, setUrlSearch] = useState(value);
+  const [written, setWritten] = useState(value);
+  if (urlSearch !== value) {
+    setUrlSearch(value);
+    setWritten(value);
+    setSearch(searchBoxAfterUrl(search, value, written));
+  }
+  useEffect(() => {
+    const next = cleanSearch(search);
+    if (next === value) return;
+    const t = setTimeout(() => {
+      setWritten(next);
+      onSearch(next);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search, value, onSearch]);
+  return (
+    <div className="relative w-full sm:w-72">
+      <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ism, telefon yoki ID" spellCheck={false} aria-label={label} className="pl-8" />
+    </div>
+  );
+}
+
 /** The debt list's filters (spec §2.4). Options come from the open tab's own rows; every change goes back to page 1. */
 export function DebtFilterBar({ filters, setFilters, options }: {
   filters: DebtFilters;
   setFilters: (u: Partial<DebtFilters>) => void;
   options: DebtListResponse["options"] | undefined;
 }) {
-  // A local mirror keeps typing smooth; the URL gets it after a 300 ms pause.
-  // Only a URL change from outside (a redirect, the back button) resets the
-  // mirror: the bar's own write coming back keeps what was typed since.
-  const [search, setSearch] = useState(filters.search);
-  const [urlSearch, setUrlSearch] = useState(filters.search);
-  const [written, setWritten] = useState(filters.search);
-  if (urlSearch !== filters.search) {
-    setUrlSearch(filters.search);
-    setWritten(filters.search);
-    setSearch(searchBoxAfterUrl(search, filters.search, written));
-  }
-  useEffect(() => {
-    const next = cleanSearch(search);
-    if (next === filters.search) return;
-    const t = setTimeout(() => {
-      setWritten(next);
-      setFilters({ search: next, page: 1 });
-    }, 300);
-    return () => clearTimeout(t);
-  }, [search, filters.search, setFilters]);
-
+  const onSearch = useCallback((search: string) => setFilters({ search, page: 1 }), [setFilters]);
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="relative w-full sm:w-72">
-        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Ism, telefon yoki ID"
-          spellCheck={false}
-          aria-label="Qarzdorni qidirish"
-          className="pl-8"
-        />
-      </div>
+      <UrlSearchBox value={filters.search} onSearch={onSearch} label="Qarzdorni qidirish" />
       <MultiSelectCombobox
         options={(options?.groups ?? []).map((g) => ({ value: g.id, label: g.name }))}
         selected={filters.groupIds}

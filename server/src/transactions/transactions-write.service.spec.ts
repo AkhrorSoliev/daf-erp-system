@@ -107,7 +107,7 @@ describe('TransactionsWriteService — branch stamping', () => {
   });
 
   describe('recordRefund', () => {
-    it('stamps the branch and takes the cash out of that branch kassa', async () => {
+    it('stamps the branch and moves no cash — the drawer is touched at hand-over (ADR-0077)', async () => {
       await service.recordRefund({
         studentId: STUDENT,
         amount: 50_000,
@@ -115,11 +115,14 @@ describe('TransactionsWriteService — branch stamping', () => {
         companyId: COMPANY,
       });
 
-      expect(createdData()).toEqual(expect.objectContaining({ branchId: 2 }));
-      expect(cash.recordOutflow).toHaveBeenCalledWith(
-        expect.objectContaining({ branchId: 2 }),
-        expect.anything(),
+      expect(createdData()).toEqual(
+        expect.objectContaining({
+          branchId: 2,
+          amount: -50_000,
+          description: 'Pul qaytarish',
+        }),
       );
+      expect(cash.recordOutflow).not.toHaveBeenCalled();
     });
   });
 

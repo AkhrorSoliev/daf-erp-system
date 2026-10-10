@@ -3,6 +3,7 @@ import {
   addDaysToDateStr,
   tashkentDateStr,
 } from '../attendance/shared/date-utils';
+import { tashkentDayStartUtc } from '../common/date/tashkent';
 
 /**
  * "Bu oraliqda qaysi kunlar bayram?" — `HolidaysService` dan AJRATILGAN
@@ -65,4 +66,31 @@ export async function buildHolidayDateSet(
     }
   }
   return set;
+}
+
+/**
+ * How far ahead a bank-day term reads holidays. Ten bank days cross at most
+ * one 60-day holiday (the cap on a holiday's length) plus weekends.
+ */
+export const TERM_HOLIDAY_HORIZON_DAYS = 120;
+
+/**
+ * The holidays a bank-day term starting on `fromDateStr` can cross: the
+ * branch's own and the company-wide ones (ADR-0077). `branchId` null reads
+ * every branch's — only a branch-less card gets there, and money paths refuse
+ * those before.
+ */
+export function termHolidays(
+  db: HolidayDateSetDb,
+  fromDateStr: string,
+  branchId: number | null,
+): Promise<Set<string>> {
+  return buildHolidayDateSet(
+    db,
+    tashkentDayStartUtc(fromDateStr),
+    tashkentDayStartUtc(
+      addDaysToDateStr(fromDateStr, TERM_HOLIDAY_HORIZON_DAYS),
+    ),
+    branchId,
+  );
 }

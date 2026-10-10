@@ -312,7 +312,7 @@ describe('presentStatement', () => {
       const v = presentStatement(buildStatement(input), 'student');
       const refund = v.dues[v.dues.length - 1];
       expect([refund.label, refund.wide, nb(refund.cost ?? '')]).toEqual([
-        'Sizga naqd qaytarib berildi (25.09)',
+        'Pul qaytarish (25.09)',
         true,
         '10 000',
       ]);

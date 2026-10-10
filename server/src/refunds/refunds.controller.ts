@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Patch,
   Body,
   Param,
   ParseIntPipe,
@@ -10,8 +9,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RefundsService } from './refunds.service';
-import { ProcessRefundDto } from './dto/process-refund.dto';
 import { QuickRefundDto } from './dto/quick-refund.dto';
+import { HandOverRefundDto } from './dto/hand-over-refund.dto';
+import { CancelRefundDto } from './dto/cancel-refund.dto';
+import { RefundListQueryDto } from './dto/refund-list-query.dto';
 import { BranchScope, CurrentUser, Roles } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
@@ -46,24 +47,43 @@ export class RefundsController {
     );
   }
 
+  /**
+   * History page (ADR-0077): `?status=COMPLETED,REJECTED&page&pageSize`. Read by
+   * the Cashier too. Was company-wide: a Namangan director read every Fargona
+   * refund, with the student's name and the amount on each row.
+   */
   @Get()
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   findAll(
+    @Query() q: RefundListQueryDto,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
   ) {
-    // Was company-wide: a Namangan director read every Fargona refund, with the
-    // student's name and the amount on each row.
-    return this.refundsService.findAll(companyId, scope);
+    return this.refundsService.findAll(companyId, scope, q);
   }
 
-  @Patch(':id/process')
-  process(
+  /** «Berildi» — the money leaves the chosen drawer (ADR-0077). */
+  @Post(':id/hand-over')
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  handOver(
     @Param('id') id: string,
-    @Body() dto: ProcessRefundDto,
+    @Body() dto: HandOverRefundDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.refundsService.process(id, dto, userId, companyId);
+    return this.refundsService.handOver(id, dto, userId, companyId);
+  }
+
+  /** «Bekor qilish» of a request not yet handed over (ADR-0077). */
+  @Post(':id/cancel')
+  @Roles('CEO', 'Branch Director')
+  cancel(
+    @Param('id') id: string,
+    @Body() dto: CancelRefundDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.refundsService.cancel(id, dto, userId, companyId);
   }
 
   /**

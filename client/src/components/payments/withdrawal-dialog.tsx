@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -27,6 +27,9 @@ import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { currentMonthKey, monthLabel } from "./salary-utils";
+import { invalidateRefunds } from "./refunds/refunds-queries";
+import { TransferNote } from "./refunds/transfer-note";
+import type { TransferState } from "./refunds/refunds-types";
 
 interface TeacherSuggestion {
   userId: number;
@@ -41,6 +44,8 @@ interface WithdrawalPreview {
   currentBalance: number;
   maxWithdrawable: number;
   teacherSuggestions: TeacherSuggestion[];
+  /** Spec B2b §5.2: the transfer condition, shown before anything is typed. */
+  transfer: TransferState;
 }
 
 interface Props {
@@ -68,6 +73,8 @@ export function WithdrawalDialog({
   const [teacherUserId, setTeacherUserId] = useState<string>("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Bumped after a notice is given: the preview is read again (it is a plain request, not a React Query key).
+  const [previewTick, setPreviewTick] = useState(0);
 
   const resetForm = useCallback(() => {
     setAmount("");
@@ -96,11 +103,27 @@ export function WithdrawalDialog({
         setLoadError(getErrorMessage(err, "Ma'lumotlarni yuklashda xatolik"));
       })
       .finally(() => setLoading(false));
-  }, [open, studentId]);
+  }, [open, studentId, previewTick]);
+
+  // Spec B2b §5.1: without a notice the transfer stays locked, and this dialog is the only place a studying student's notice can be given.
+  const giveNotice = useMutation({
+    mutationFn: (channel: "BOT" | "CALL") =>
+      api.post(`/students/${studentId}/balance-notices`, { channel }),
+    onSuccess: (_answer, channel) => {
+      toast.success(channel === "BOT" ? "Xabar yuborildi" : "Xabar qayd qilindi");
+      invalidateRefunds(queryClient);
+      setPreviewTick((n) => n + 1);
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, "Xabarni saqlab bo'lmadi"));
+      invalidateRefunds(queryClient);
+    },
+  });
 
   const rawAmount = parseInt(amount || "0", 10) || 0;
   const overMax = preview ? rawAmount > preview.maxWithdrawable : false;
   const noBalance = preview ? preview.maxWithdrawable <= 0 : false;
+  const locked = preview ? !preview.transfer.allowed : false;
 
   const teacherOptions = useMemo(() => {
     if (!preview) return [] as TeacherSuggestion[];
@@ -118,7 +141,7 @@ export function WithdrawalDialog({
     creditTeacher && (!teacherUserId || teacherOptions.length === 0);
 
   const handleSubmit = async () => {
-    if (!preview || rawAmount <= 0 || overMax || teacherMissing) return;
+    if (!preview || rawAmount <= 0 || overMax || teacherMissing || locked) return;
     setSubmitting(true);
     try {
       await api.post("/withdrawals", {
@@ -136,10 +159,10 @@ export function WithdrawalDialog({
       onOpenChange(false);
       resetForm();
       onSuccess?.();
-      queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
-      queryClient.invalidateQueries({ queryKey: ["student-payments"] });
+      invalidateRefunds(queryClient);
     } catch (err) {
       toast.error(getErrorMessage(err, "Yechib olishda xatolik yuz berdi"));
+      invalidateRefunds(queryClient);
     } finally {
       setSubmitting(false);
     }
@@ -154,12 +177,12 @@ export function WithdrawalDialog({
         if (!v) resetForm();
       }}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>Yechib olish</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="rounded-md border p-3">
             <p className="text-sm font-medium">
               #{studentId} {studentName}
@@ -199,6 +222,31 @@ export function WithdrawalDialog({
                 </div>
               </div>
 
+              <TransferNote transfer={preview.transfer} />
+
+              {preview.transfer.notice === null && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={giveNotice.isPending}
+                    onClick={() => giveNotice.mutate("BOT")}
+                  >
+                    Botga xabar yuborish
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={giveNotice.isPending}
+                    onClick={() => giveNotice.mutate("CALL")}
+                  >
+                    Qo&apos;ng&apos;iroq qilib aytildi
+                  </Button>
+                </div>
+              )}
+
               {noBalance && (
                 <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
                   <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-600" />
@@ -213,7 +261,7 @@ export function WithdrawalDialog({
                 <PriceInput
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  disabled={noBalance}
+                  disabled={noBalance || locked}
                 />
                 {overMax && (
                   <p className="text-xs text-destructive">
@@ -240,7 +288,7 @@ export function WithdrawalDialog({
                   <Switch
                     checked={creditTeacher}
                     onCheckedChange={setCreditTeacher}
-                    disabled={noBalance}
+                    disabled={noBalance || locked}
                   />
                 </div>
                 {creditTeacher && (
@@ -288,7 +336,7 @@ export function WithdrawalDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-t px-6 py-4">
           <Button
             variant="outline"
             onClick={() => {
@@ -306,6 +354,7 @@ export function WithdrawalDialog({
               rawAmount <= 0 ||
               overMax ||
               noBalance ||
+              locked ||
               teacherMissing ||
               submitting ||
               loading

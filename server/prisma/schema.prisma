@@ -423,6 +423,10 @@ model User {
   performedTransactions Transaction[]   @relation("TransactionPerformedBy")
   reversedTransactions  Transaction[]   @relation("TransactionReversedBy")
   processedRefunds      Refund[]        @relation("RefundProcessedBy")
+  requestedRefunds      Refund[]        @relation("RefundRequestedBy")
+  handedOverRefunds     Refund[]        @relation("RefundHandedOverBy")
+  cancelledRefunds      Refund[]        @relation("RefundCancelledBy")
+  balanceNotices        BalanceNotice[] @relation("BalanceNoticeCreatedBy")
   paidSalaries          SalaryPayment[] @relation("SalaryPaidBy")
   createdExpenses       Expense[]       @relation("ExpenseCreatedBy")
   deletedExpenses       Expense[]       @relation("ExpenseDeletedBy")
@@ -707,6 +711,7 @@ model Student {
   discounts         Discount[]
   scholarships      Scholarship[]
   monthlyCharges    EnrollmentMonthlyCharge[]
+  balanceNotices    BalanceNotice[]
 
   @@index([deletedAt])
   @@index([status])
@@ -2841,6 +2846,19 @@ model Refund {
   processedBy      User?          @relation("RefundProcessedBy", fields: [processedById], references: [id])
   processedAt      DateTime?
   dueDate          DateTime?
+  // B2b (ADR-0077): a refund is a request until the money is handed over.
+  // `dueDate` above is the 10th bank day after the request, 00:00 Tashkent.
+  requestedById    Int?
+  requestedBy      User?          @relation("RefundRequestedBy", fields: [requestedById], references: [id])
+  handedOverAt     DateTime?
+  handedOverById   Int?
+  handedOverBy     User?          @relation("RefundHandedOverBy", fields: [handedOverById], references: [id])
+  cashAccountId    String?
+  cashAccount      CashAccount?   @relation(fields: [cashAccountId], references: [id])
+  cancelledAt      DateTime?
+  cancelledById    Int?
+  cancelledBy      User?          @relation("RefundCancelledBy", fields: [cancelledById], references: [id])
+  cancelReason     String?
   companyId        Int
   receiptCode      String?        @unique
   createdAt        DateTime       @default(now())
@@ -2853,6 +2871,34 @@ model Refund {
   @@index([enrollmentId])
   @@index([companyId])
   @@index([status])
+}
+
+enum BalanceNoticeChannel {
+  BOT
+  CALL
+}
+
+/// «Pulingizni olib keting» — told to a student who is not studying and has
+/// money on the balance. The latest one given in the student's current state
+/// (`createdAt ≥ Student.statusChangedAt`) starts the clock that unlocks the
+/// transfer to the centre: 10 bank days, then 30 days (ADR-0077).
+model BalanceNotice {
+  id           String               @id @default(uuid())
+  studentId    Int
+  student      Student              @relation(fields: [studentId], references: [id])
+  companyId    Int
+  channel      BalanceNoticeChannel
+  /// The balance at the moment of the notice.
+  amount       Int
+  note         String?
+  /// The SmsMessage row of a BOT notice.
+  smsMessageId String?
+  createdById  Int
+  createdBy    User                 @relation("BalanceNoticeCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime             @default(now())
+
+  @@index([studentId, createdAt])
+  @@index([companyId])
 }
 
 model Expense {
@@ -3043,6 +3089,7 @@ model CashAccount {
   deletedAt DateTime?
 
   movements CashMovement[]
+  refunds   Refund[]
 
   @@index([companyId])
   @@index([branchId])

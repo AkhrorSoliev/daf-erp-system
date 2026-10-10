@@ -68,6 +68,11 @@ interface ChangeStatusDialogProps {
   entityName: string;
   currentStatus: string;
   onStatusChanged?: (newStatus: string) => void;
+  /**
+   * A status picked in advance (the «Qaytariladigan pul» drawer's «Qaytdi» → ACTIVE).
+   * Read on mount only: mount the dialog fresh for each use.
+   */
+  initialStatus?: string;
 }
 
 export function ChangeStatusDialog({
@@ -78,8 +83,9 @@ export function ChangeStatusDialog({
   entityName,
   currentStatus,
   onStatusChanged,
+  initialStatus,
 }: ChangeStatusDialogProps) {
-  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState(initialStatus ?? "");
   const [reason, setReason] = useState("");
   const [reasonId, setReasonId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

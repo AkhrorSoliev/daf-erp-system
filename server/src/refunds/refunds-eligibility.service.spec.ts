@@ -51,6 +51,10 @@ describe('RefundsEligibilityService', () => {
       refund: {
         aggregate: jest.fn().mockResolvedValue({ _sum: { approvedAmount: 0 } }),
       },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     billing = { prepaidRefundValue: jest.fn().mockResolvedValue(0) };
@@ -475,5 +479,110 @@ describe('RefundsEligibilityService', () => {
     expect(result.prepaidLessons).toBe(5);
     expect(result.prepaidValue).toBe(166_665);
     expect(billing.prepaidRefundValue).toHaveBeenCalled();
+  });
+
+  describe('the due date (ADR-0077)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers({
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      });
+      jest.setSystemTime(new Date('2026-09-28T06:00:00Z'));
+      prisma.holiday.findMany.mockResolvedValue([
+        {
+          date: new Date('2026-10-01T00:00:00Z'),
+          endDate: new Date('2026-10-01T00:00:00Z'),
+        },
+      ]);
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it("quotes the 10th bank day after today, with the student branch's holidays", async () => {
+      const out = await service.previewRefund(10001, 1);
+      expect(out.dueDate).toBe('2026-10-13');
+      expect(prisma.holiday.findMany.mock.calls[0][0].where.OR).toEqual([
+        { branchId: null },
+        { branchId: 1 },
+      ]);
+    });
+
+    it('the balance-only quote carries it too', async () => {
+      prisma.enrollment.findFirst.mockResolvedValueOnce(null);
+      const out = await service.previewRefund(10001, 1);
+      expect(out.enrollmentId).toBeNull();
+      expect(out.dueDate).toBe('2026-10-13');
+    });
+  });
+
+  it('counts an open request among the earlier refunds — its money already left the balance', async () => {
+    await service.previewRefund(10001, 1);
+    expect(prisma.refund.aggregate.mock.calls[0][0].where.status.in).toContain(
+      'REQUESTED',
+    );
+  });
+
+  describe('findAll — the history list (ADR-0077)', () => {
+    const ROW = {
+      id: 'r-1',
+      status: 'COMPLETED',
+      requestedAmount: 90_000,
+      approvedAmount: 90_000,
+      reason: null,
+      createdAt: new Date('2026-09-20T07:00:00Z'),
+      dueDate: null,
+      handedOverAt: null,
+      processedAt: new Date('2026-09-20T07:00:00Z'),
+      refundMethod: 'CASH',
+      cancelledAt: null,
+      cancelReason: null,
+      student: {
+        id: 10001,
+        firstName: 'Ali',
+        lastName: 'Karimov',
+        phone: '901112233',
+      },
+      handedOverBy: null,
+      processedBy: { id: 20001, firstName: 'Nodira', lastName: 'Test' },
+      cancelledBy: null,
+    };
+    beforeEach(() => {
+      prisma.refund.findMany = jest.fn().mockResolvedValue([ROW]);
+      prisma.refund.count = jest.fn().mockResolvedValue(11);
+    });
+
+    it('filters by a status list, scopes by the student branch, pages newest request first', async () => {
+      const out = await service.findAll(1, [1], {
+        status: ['COMPLETED', 'REJECTED'],
+        page: 2,
+        pageSize: 10,
+      } as never);
+      const args = prisma.refund.findMany.mock.calls[0][0];
+      expect(args.where).toEqual({
+        companyId: 1,
+        student: { branches: { some: { branchId: { in: [1] } } } },
+        status: { in: ['COMPLETED', 'REJECTED'] },
+      });
+      expect(args).toMatchObject({
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        skip: 10,
+        take: 10,
+      });
+      expect(out).toMatchObject({ total: 11, page: 2, pageSize: 10 });
+      expect(out.data[0]).toMatchObject({
+        id: 'r-1',
+        amount: 90_000,
+        handedOverAt: '2026-09-20T07:00:00.000Z',
+      });
+    });
+
+    it('one status is an equals; none means every status', async () => {
+      await service.findAll(1, null, { status: ['REQUESTED'] } as never);
+      expect(prisma.refund.findMany.mock.calls[0][0].where.status).toBe(
+        'REQUESTED',
+      );
+      await service.findAll(1, null, {} as never);
+      expect(
+        prisma.refund.findMany.mock.calls[1][0].where.status,
+      ).toBeUndefined();
+    });
   });
 });

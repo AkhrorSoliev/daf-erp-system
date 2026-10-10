@@ -143,6 +143,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0074](0074-topshiriq-alohida-bolim.md) | Topshiriq izohning turi emas, alohida bo'lim: bitta holat, tekshiruv bosqichi (Yangi → Jarayonda → Tekshiruvda → Bajarildi), yuqoridan pastga berish zinasi, tizim topshirig'ini faqat manbasi yopadi, `Task*` ga yozish faqat `src/tasks/` da | Qabul qilindi | 2026-10-07 |
 | [0075](0075-shartnoma-hujjati-alohida-jadval.md) | Shartnoma hujjati alohida `ContractDocument` jadvalida: qiymatlar tuzilganda muhrlanadi, matn versiyalanadi, guruh almashganda bog'lanish o'tadi, eski `Contract` ishlatilmaydi | Qabul qilindi | 2026-10-10 |
 | [0076](0076-qongiroqcha-kutilayotgan-xabar-ozi-yopiladi.md) | Qo'ng'iroqcha: son faqat sizdan ish kutayotgan o'qilmagan xabarlarni sanaydi, ish bajarilganda xabar o'zi yopiladi, bir xil dars xabarlari bitta qatorga yig'iladi; bir martalik tozalash hech narsani o'chirmaydi | Qabul qilindi | 2026-10-10 |
+| [0077](0077-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md) | Pul qaytarish so'rov bilan: balans so'rov kuni so'ralgan summaga kamayadi, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin ochiladi | Qabul qilindi | 2026-10-10 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

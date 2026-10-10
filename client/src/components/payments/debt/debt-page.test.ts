@@ -137,11 +137,12 @@ describe("DebtPage — the other tabs", () => {
 });
 
 describe("DebtPage — links and language", () => {
-  it("links the history, the write-off archive with its count, the frozen balances; names Ish haqi", () => {
+  it("links the history and the write-off archive with its count; names Ish haqi and «Qaytariladigan pul»", () => {
     const text = render();
     expect(text).toContain("Oylar bo'yicha qarz tarixi");
     expect(text).toContain(`Kechirilgan qarzlar arxivi · ${num(6)} ta`);
-    expect(text).toContain("Muzlatilganlarning puli");
+    expect(text).toContain("Muzlatilganlarning markazda turgan puli — «Qaytariladigan pul» sahifasida.");
+    expect(text).not.toContain("Muzlatilganlarning puli");
     expect(text).toContain("Markaz qoplagani — Ish haqi sahifasida.");
   });
 
