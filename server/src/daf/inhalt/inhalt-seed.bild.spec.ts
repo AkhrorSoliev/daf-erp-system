@@ -105,6 +105,39 @@ describe('InhaltSeedService — pictures', () => {
   });
 });
 
+describe('InhaltSeedService — dialog pictures', () => {
+  function mitDialog(): InhaltFiles {
+    const f = files();
+    f.dialoge.dialoge = [
+      {
+        id: 'u01-d1',
+        section: 'u01-s1',
+        titelDe: 'Hallo',
+        titelUz: 'Salom',
+        zeilen: [{ sprecher: 'A', de: 'Hallo!', uz: 'Salom!' }],
+      } as any,
+    ];
+    return f;
+  }
+  const dialogUpsert = (prisma: ReturnType<typeof fakePrisma>) =>
+    (prisma.dafDialog.upsert.mock.calls as any[])[0][0];
+
+  it('writes the dialog picture key from the manifest', async () => {
+    const prisma = fakePrisma();
+    const f = mitDialog();
+    f.dialogBilder = { 'u01-d1': KEY };
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    expect(dialogUpsert(prisma).create.imageKey).toBe(KEY);
+    expect(dialogUpsert(prisma).update.imageKey).toBe(KEY);
+  });
+
+  it('clears the key of a dialog missing from the manifest', async () => {
+    const prisma = fakePrisma();
+    await new InhaltSeedService(prisma as any).seed('u01', mitDialog());
+    expect(dialogUpsert(prisma).update.imageKey).toBeNull();
+  });
+});
+
 describe('InhaltSeedService — accepted spellings', () => {
   it('writes a word`s other spellings, and clears them when removed', async () => {
     const prisma = fakePrisma();

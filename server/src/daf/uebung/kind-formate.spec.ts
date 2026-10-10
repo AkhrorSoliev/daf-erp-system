@@ -23,6 +23,12 @@ describe('bevorzugteFormate', () => {
     );
   });
 
+  it('the listening sentence follows SATZ_BAUEN in Ishlatish and is in the unit test', () => {
+    const b = bevorzugteFormate('SECTION_B');
+    expect(b.indexOf('SATZ_HOEREN')).toBe(b.indexOf('SATZ_BAUEN') + 1);
+    expect(bevorzugteFormate('UNIT_TEST')).toContain('SATZ_HOEREN');
+  });
+
   it("O'tish sinovida moyillik YO'Q — ataylab aralash", () => {
     expect(bevorzugteFormate('BRIDGE')).toEqual([]);
   });
@@ -49,6 +55,7 @@ describe('bevorzugteFormate', () => {
       'ARTIKEL',
       'LUECKE',
       'SATZ_BAUEN',
+      'SATZ_HOEREN',
       'SATZ_UEBERSETZEN',
       'REAKTION',
       'ZUORDNEN',

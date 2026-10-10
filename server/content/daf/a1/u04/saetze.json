@@ -1,0 +1,1633 @@
+{
+ "unit": "u04",
+ "saetze": [
+  {
+   "sourceId": "u04-s1-01",
+   "section": "u04-s1",
+   "de": "Wir haben kein Brot.",
+   "uz": "Bizda non yo'q.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Kein Brot haben wir."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-02",
+   "section": "u04-s1",
+   "de": "Hier ist die Milch.",
+   "uz": "Sut shu yerda.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Milch ist hier."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-03",
+   "section": "u04-s1",
+   "de": "Ist das eine Orange?",
+   "uz": "Bu apelsinmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s1-04",
+   "section": "u04-s1",
+   "de": "Das ist keine Tomate.",
+   "uz": "Bu pomidor emas.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Keine Tomate ist das."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-05",
+   "section": "u04-s1",
+   "de": "Ich nehme ein Ei.",
+   "uz": "Men bitta tuxum olaman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ein Ei nehme ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-06",
+   "section": "u04-s1",
+   "de": "Der Käse kommt aus Deutschland.",
+   "uz": "Pishloq Germaniyadan keladi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Aus Deutschland kommt der Käse."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-07",
+   "section": "u04-s1",
+   "de": "Wo ist der Knoblauch?",
+   "uz": "Sarimsoq qayerda?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s1-08",
+   "section": "u04-s1",
+   "de": "Gibt es hier Fisch?",
+   "uz": "Bu yerda baliq bormi?",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gibt es Fisch hier?"
+   ]
+  },
+  {
+   "sourceId": "u04-s1-09",
+   "section": "u04-s1",
+   "de": "Ich nehme Obst, zum Beispiel Bananen.",
+   "uz": "Men meva olaman, masalan, banan.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Obst nehme ich, zum Beispiel Bananen."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-10",
+   "section": "u04-s1",
+   "de": "Ist das Rindfleisch oder Lammfleisch?",
+   "uz": "Bu mol go'shtimi yoki qo'y go'shti?",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ist das Lammfleisch oder Rindfleisch?"
+   ]
+  },
+  {
+   "sourceId": "u04-s1-11",
+   "section": "u04-s1",
+   "de": "Lena nimmt zwei Kekse.",
+   "uz": "Lena ikkita pechenye oladi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zwei Kekse nimmt Lena.",
+    "Kekse nimmt Lena zwei."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-12",
+   "section": "u04-s1",
+   "de": "Ich finde die Schokolade nicht.",
+   "uz": "Shokoladni topa olmayapman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Schokolade finde ich nicht."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-13",
+   "section": "u04-s1",
+   "de": "Die Lebensmittel sind hier.",
+   "uz": "Oziq-ovqatlar shu yerda.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hier sind die Lebensmittel."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-14",
+   "section": "u04-s1",
+   "de": "Ich suche die Butter.",
+   "uz": "Men sariyog'ni qidiryapman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Butter suche ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-15",
+   "section": "u04-s1",
+   "de": "Lena nimmt keine Wurst.",
+   "uz": "Lena kolbasa olmaydi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Keine Wurst nimmt Lena.",
+    "Wurst nimmt Lena keine."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-16",
+   "section": "u04-s1",
+   "de": "Das Würstchen ist sehr klein.",
+   "uz": "Sosiska juda kichkina.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr klein ist das Würstchen."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-17",
+   "section": "u04-s1",
+   "de": "Heute gibt es Nudeln.",
+   "uz": "Bugun makaron bor.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es gibt heute Nudeln.",
+    "Nudeln gibt es heute."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-18",
+   "section": "u04-s1",
+   "de": "Ich nehme die Birne, nicht den Apfel.",
+   "uz": "Men olmani emas, nokni olaman.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Birne nehme ich, nicht den Apfel."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-19",
+   "section": "u04-s1",
+   "de": "Ich nehme Gemüse und Reis.",
+   "uz": "Men sabzavot va guruch olaman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gemüse und Reis nehme ich.",
+    "Ich nehme Reis und Gemüse.",
+    "Reis und Gemüse nehme ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-20",
+   "section": "u04-s1",
+   "de": "Ist das eine Gurke?",
+   "uz": "Bu bodringmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s1-21",
+   "section": "u04-s1",
+   "de": "Mia macht Salat.",
+   "uz": "Mia salat qiladi.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Salat macht Mia."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-22",
+   "section": "u04-s1",
+   "de": "Hier sind Oliven.",
+   "uz": "Mana zaytun.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Oliven sind hier."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-23",
+   "section": "u04-s1",
+   "de": "Jonas nimmt eine Karotte.",
+   "uz": "Jonas bitta sabzi oladi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Eine Karotte nimmt Jonas."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-24",
+   "section": "u04-s1",
+   "de": "Die Trauben kommen aus Usbekistan.",
+   "uz": "Uzum O'zbekistondan keladi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Aus Usbekistan kommen die Trauben."
+   ]
+  },
+  {
+   "sourceId": "u04-s1-25",
+   "section": "u04-s1",
+   "de": "Die Melone ist sehr groß.",
+   "uz": "Qovun juda katta.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr groß ist die Melone."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-01",
+   "section": "u04-s2",
+   "de": "Was kostet ein Stück Käse?",
+   "uz": "Bir bo'lak pishloq qancha turadi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s2-02",
+   "section": "u04-s2",
+   "de": "Die Äpfel kosten drei Euro.",
+   "uz": "Olmalar uch yevro turadi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Drei Euro kosten die Äpfel."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-03",
+   "section": "u04-s2",
+   "de": "Das Brot ist sehr frisch.",
+   "uz": "Non juda yangi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr frisch ist das Brot."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-04",
+   "section": "u04-s2",
+   "de": "Der Fisch ist heute billig.",
+   "uz": "Bugun baliq arzon.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute ist der Fisch billig.",
+    "Billig ist der Fisch heute."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-05",
+   "section": "u04-s2",
+   "de": "Die Schokolade ist sehr teuer.",
+   "uz": "Shokolad juda qimmat.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr teuer ist die Schokolade."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-06",
+   "section": "u04-s2",
+   "de": "Wir gehen heute einkaufen.",
+   "uz": "Bugun biz xaridga boramiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute gehen wir einkaufen.",
+    "Einkaufen gehen wir heute."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-07",
+   "section": "u04-s2",
+   "de": "Eine Packung Milch, bitte.",
+   "uz": "Bir qadoq sut, iltimos.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte eine Packung Milch."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-08",
+   "section": "u04-s2",
+   "de": "Die Kasse ist dort.",
+   "uz": "Kassa ana u yerda.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Dort ist die Kasse."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-09",
+   "section": "u04-s2",
+   "de": "Wo ist der Einkaufszettel?",
+   "uz": "Xarid ro'yxati qayerda?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s2-10",
+   "section": "u04-s2",
+   "de": "Ich habe kein Geld.",
+   "uz": "Menda pul yo'q.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Kein Geld habe ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-11",
+   "section": "u04-s2",
+   "de": "Die Bäckerei ist neben dem Supermarkt.",
+   "uz": "Novvoyxona supermarket yonida.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Neben dem Supermarkt ist die Bäckerei."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-12",
+   "section": "u04-s2",
+   "de": "Das kostet insgesamt elf Euro.",
+   "uz": "Bu jami o'n bir yevro turadi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Insgesamt kostet das elf Euro.",
+    "Elf Euro kostet das insgesamt."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-13",
+   "section": "u04-s2",
+   "de": "Der Preis ist gut.",
+   "uz": "Narxi yaxshi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gut ist der Preis."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-14",
+   "section": "u04-s2",
+   "de": "Das Geschäft ist neben der Post.",
+   "uz": "Do'kon pochta yonida.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Neben der Post ist das Geschäft."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-15",
+   "section": "u04-s2",
+   "de": "Der Bäcker macht Brot.",
+   "uz": "Novvoy non yopadi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Brot macht der Bäcker."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-16",
+   "section": "u04-s2",
+   "de": "Die Metzgerei ist dort links.",
+   "uz": "Go'sht do'koni ana u yerda, chapda.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Dort links ist die Metzgerei."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-17",
+   "section": "u04-s2",
+   "de": "Wir kaufen heute Obst.",
+   "uz": "Bugun biz meva sotib olamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute kaufen wir Obst.",
+    "Obst kaufen wir heute."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-18",
+   "section": "u04-s2",
+   "de": "Hier ist die Liste.",
+   "uz": "Mana ro'yxat.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Liste ist hier."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-19",
+   "section": "u04-s2",
+   "de": "Ich nehme den Einkaufswagen.",
+   "uz": "Men xarid aravachasini olaman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Den Einkaufswagen nehme ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-20",
+   "section": "u04-s2",
+   "de": "Eine Tüte, bitte.",
+   "uz": "Bitta paket, iltimos.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte eine Tüte."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-21",
+   "section": "u04-s2",
+   "de": "Wie viel kostet das Brot?",
+   "uz": "Non qancha turadi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s2-22",
+   "section": "u04-s2",
+   "de": "Das kostet neunundneunzig Cent.",
+   "uz": "Bu to'qson to'qqiz sent turadi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Neunundneunzig Cent kostet das."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-23",
+   "section": "u04-s2",
+   "de": "Geben Sie mir bitte die Milch.",
+   "uz": "Menga sutni bering, iltimos.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte geben Sie mir die Milch.",
+    "Geben Sie mir die Milch, bitte."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-24",
+   "section": "u04-s2",
+   "de": "Wechseln Sie bitte zehn Euro.",
+   "uz": "Iltimos, o'n yevroni maydalab bering.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte wechseln Sie zehn Euro.",
+    "Wechseln Sie zehn Euro, bitte."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-25",
+   "section": "u04-s2",
+   "de": "Die Preise stimmen nicht.",
+   "uz": "Narxlar to'g'ri emas.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s2-26",
+   "section": "u04-s2",
+   "de": "Hier ist der Kassenzettel.",
+   "uz": "Mana kassa cheki.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Der Kassenzettel ist hier."
+   ]
+  },
+  {
+   "sourceId": "u04-s2-27",
+   "section": "u04-s2",
+   "de": "Wer kommt dran?",
+   "uz": "Kimning navbati?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s2-28",
+   "section": "u04-s2",
+   "de": "Ich kaufe eine Dose Tomaten.",
+   "uz": "Men bir banka pomidor konservasi olaman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Eine Dose Tomaten kaufe ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-01",
+   "section": "u04-s3",
+   "de": "Jonas hat Hunger.",
+   "uz": "Jonasning qorni och.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hunger hat Jonas."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-02",
+   "section": "u04-s3",
+   "de": "Hast du Durst?",
+   "uz": "Chanqadingmi?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s3-03",
+   "section": "u04-s3",
+   "de": "Ich bin satt, danke.",
+   "uz": "Rahmat, men to'qman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Danke, ich bin satt.",
+    "Satt bin ich, danke."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-04",
+   "section": "u04-s3",
+   "de": "Isst Lena gern Spaghetti?",
+   "uz": "Lena spagettini yaxshi ko'radimi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s3-05",
+   "section": "u04-s3",
+   "de": "Die Pizza ist sehr lecker.",
+   "uz": "Pitsa juda mazali.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr lecker ist die Pizza."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-06",
+   "section": "u04-s3",
+   "de": "Die Schokolade ist bitter.",
+   "uz": "Shokolad taxir.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitter ist die Schokolade."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-07",
+   "section": "u04-s3",
+   "de": "Das Essen ist zu scharf.",
+   "uz": "Ovqat qalampirdan haddan tashqari achchiq.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zu scharf ist das Essen."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-08",
+   "section": "u04-s3",
+   "de": "Trinkst du lieber Wasser?",
+   "uz": "Sen suvni afzal ko'rasanmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s3-09",
+   "section": "u04-s3",
+   "de": "Ich probiere das Sushi.",
+   "uz": "Men sushini tatib ko'raman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Das Sushi probiere ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-10",
+   "section": "u04-s3",
+   "de": "Das Eis ist sehr süß.",
+   "uz": "Muzqaymoq juda shirin.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr süß ist das Eis."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-11",
+   "section": "u04-s3",
+   "de": "Thomas isst gern Döner.",
+   "uz": "Thomas donerni yaxshi ko'radi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Döner isst Thomas gern.",
+    "Gern isst Thomas Döner."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-12",
+   "section": "u04-s3",
+   "de": "Ich trinke gern Orangensaft.",
+   "uz": "Men apelsin sharbatini yaxshi ko'raman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Orangensaft trinke ich gern.",
+    "Gern trinke ich Orangensaft."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-13",
+   "section": "u04-s3",
+   "de": "Isst du gern asiatisch?",
+   "uz": "Osiyo taomlarini yaxshi ko'rasanmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s3-14",
+   "section": "u04-s3",
+   "de": "Jonas mag keine Limonade.",
+   "uz": "Jonas limonadni yoqtirmaydi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Keine Limonade mag Jonas.",
+    "Limonade mag Jonas keine."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-15",
+   "section": "u04-s3",
+   "de": "Mögen Sie Fisch?",
+   "uz": "Siz baliqni yoqtirasizmi?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s3-16",
+   "section": "u04-s3",
+   "de": "Schmecken die Äpfel gut?",
+   "uz": "Olmalarning ta'mi yaxshimi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s3-17",
+   "section": "u04-s3",
+   "de": "Wir probieren das Eis.",
+   "uz": "Biz muzqaymoqni tatib ko'ramiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Das Eis probieren wir."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-18",
+   "section": "u04-s3",
+   "de": "Ich esse gern Pommes frites.",
+   "uz": "Men kartoshka frini yaxshi ko'raman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Pommes frites esse ich gern.",
+    "Gern esse ich Pommes frites."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-19",
+   "section": "u04-s3",
+   "de": "Der Saft ist sehr süß.",
+   "uz": "Sharbat juda shirin.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr süß ist der Saft."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-20",
+   "section": "u04-s3",
+   "de": "Lena trinkt Apfelsaft.",
+   "uz": "Lena olma sharbati ichadi.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Apfelsaft trinkt Lena."
+   ]
+  },
+  {
+   "sourceId": "u04-s3-21",
+   "section": "u04-s3",
+   "de": "Thomas trinkt gern Cola.",
+   "uz": "Thomas kolani yaxshi ko'radi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Cola trinkt Thomas gern.",
+    "Gern trinkt Thomas Cola."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-01",
+   "section": "u04-s4",
+   "de": "Am Morgen frühstücken wir zusammen.",
+   "uz": "Ertalab birga nonushta qilamiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wir frühstücken am Morgen zusammen.",
+    "Zusammen frühstücken wir am Morgen."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-02",
+   "section": "u04-s4",
+   "de": "Das Frühstück ist um sieben Uhr.",
+   "uz": "Nonushta soat yettida.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Um sieben Uhr ist das Frühstück."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-03",
+   "section": "u04-s4",
+   "de": "Ich trinke am Morgen Tee.",
+   "uz": "Men ertalab choy ichaman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Morgen trinke ich Tee.",
+    "Tee trinke ich am Morgen."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-04",
+   "section": "u04-s4",
+   "de": "Lena isst gern Kuchen.",
+   "uz": "Lena pirogni yaxshi ko'radi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Kuchen isst Lena gern.",
+    "Gern isst Lena Kuchen."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-05",
+   "section": "u04-s4",
+   "de": "Wir essen um eins zu Mittag.",
+   "uz": "Biz soat birda tushlik qilamiz.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Um eins essen wir zu Mittag.",
+    "Zu Mittag essen wir um eins."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-06",
+   "section": "u04-s4",
+   "de": "Das Abendessen ist um acht Uhr.",
+   "uz": "Kechki ovqat soat sakkizda.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Um acht Uhr ist das Abendessen."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-07",
+   "section": "u04-s4",
+   "de": "Am Nachmittag trinken wir Kaffee.",
+   "uz": "Tushdan keyin qahva ichamiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wir trinken am Nachmittag Kaffee.",
+    "Kaffee trinken wir am Nachmittag."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-08",
+   "section": "u04-s4",
+   "de": "Ich esse ein Butterbrot.",
+   "uz": "Men sariyog'li non yeyman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ein Butterbrot esse ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-09",
+   "section": "u04-s4",
+   "de": "Das Brötchen ist sehr frisch.",
+   "uz": "Bulochka juda yangi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr frisch ist das Brötchen."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-10",
+   "section": "u04-s4",
+   "de": "Am Vormittag arbeite ich.",
+   "uz": "Tushgacha men ishlayman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich arbeite am Vormittag."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-11",
+   "section": "u04-s4",
+   "de": "Mia isst Joghurt mit Obst.",
+   "uz": "Mia mevali yogurt yeydi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Joghurt mit Obst isst Mia.",
+    "Mit Obst isst Mia Joghurt."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-12",
+   "section": "u04-s4",
+   "de": "Ich mag keine Marmelade.",
+   "uz": "Men murabboni yoqtirmayman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Keine Marmelade mag ich.",
+    "Marmelade mag ich keine."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-13",
+   "section": "u04-s4",
+   "de": "Ein Sandwich, bitte.",
+   "uz": "Bitta sendvich, iltimos.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte ein Sandwich."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-14",
+   "section": "u04-s4",
+   "de": "Das Mittagessen ist um zwölf Uhr.",
+   "uz": "Tushlik soat o'n ikkida.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Um zwölf Uhr ist das Mittagessen."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-15",
+   "section": "u04-s4",
+   "de": "Frühstück ist die erste Mahlzeit am Tag.",
+   "uz": "Nonushta — kunning birinchi ovqat mahali.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die erste Mahlzeit am Tag ist Frühstück."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-16",
+   "section": "u04-s4",
+   "de": "Am Abend esse ich Brot.",
+   "uz": "Kechqurun men non yeyman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich esse am Abend Brot.",
+    "Brot esse ich am Abend."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-17",
+   "section": "u04-s4",
+   "de": "Lena isst Müsli mit Milch.",
+   "uz": "Lena sutli myusli yeydi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Müsli mit Milch isst Lena.",
+    "Mit Milch isst Lena Müsli."
+   ]
+  },
+  {
+   "sourceId": "u04-s4-18",
+   "section": "u04-s4",
+   "de": "Guten Appetit, Jonas!",
+   "uz": "Yoqimli ishtaha, Jonas!",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Jonas, guten Appetit!"
+   ]
+  },
+  {
+   "sourceId": "u04-s4-19",
+   "section": "u04-s4",
+   "de": "Danke, Mia, gleichfalls!",
+   "uz": "Rahmat, Mia, senga ham!",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Danke, gleichfalls, Mia!",
+    "Mia, danke, gleichfalls!"
+   ]
+  },
+  {
+   "sourceId": "u04-s4-20",
+   "section": "u04-s4",
+   "de": "Zwei Becher Joghurt, bitte.",
+   "uz": "Ikki stakancha yogurt, iltimos.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte zwei Becher Joghurt."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-01",
+   "section": "u04-s5",
+   "de": "Ich möchte Pizza essen.",
+   "uz": "Men pitsa yemoqchiman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Pizza möchte ich essen.",
+    "Pizza essen möchte ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-02",
+   "section": "u04-s5",
+   "de": "Möchtest du etwas trinken?",
+   "uz": "Biror narsa ichasanmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s5-03",
+   "section": "u04-s5",
+   "de": "Ich möchte bitte bestellen.",
+   "uz": "Men buyurtma bermoqchiman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich möchte bestellen, bitte.",
+    "Bitte, ich möchte bestellen."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-04",
+   "section": "u04-s5",
+   "de": "Der Kellner bringt die Suppe.",
+   "uz": "Ofitsiant sho'rvani olib keladi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Suppe bringt der Kellner."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-05",
+   "section": "u04-s5",
+   "de": "Die Kellnerin bringt die Speisekarte.",
+   "uz": "Ofitsiant ayol menyuni olib keladi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Speisekarte bringt die Kellnerin."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-06",
+   "section": "u04-s5",
+   "de": "Ich zahle bar.",
+   "uz": "Men naqd to'layman.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bar zahle ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-07",
+   "section": "u04-s5",
+   "de": "Wir zahlen getrennt, bitte.",
+   "uz": "Alohida to'laymiz, iltimos.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wir zahlen bitte getrennt.",
+    "Bitte, wir zahlen getrennt."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-08",
+   "section": "u04-s5",
+   "de": "Das Café ist neben dem Kino.",
+   "uz": "Kafe kinoteatr yonida.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Neben dem Kino ist das Café."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-09",
+   "section": "u04-s5",
+   "de": "Ist die Suppe vegetarisch?",
+   "uz": "Sho'rva go'shtsizmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s5-10",
+   "section": "u04-s5",
+   "de": "Ist das Schnitzel halal?",
+   "uz": "Shnitsel halolmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s5-11",
+   "section": "u04-s5",
+   "de": "Hier sind Messer und Gabel.",
+   "uz": "Mana pichoq va sanchqi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Messer und Gabel sind hier.",
+    "Hier sind Gabel und Messer.",
+    "Gabel und Messer sind hier."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-12",
+   "section": "u04-s5",
+   "de": "Das Dessert ist sehr süß.",
+   "uz": "Desert juda shirin.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr süß ist das Dessert."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-13",
+   "section": "u04-s5",
+   "de": "Bringen Sie bitte die Rechnung.",
+   "uz": "Iltimos, hisobni olib keling.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte bringen Sie die Rechnung.",
+    "Bringen Sie die Rechnung, bitte."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-14",
+   "section": "u04-s5",
+   "de": "Das Trinkgeld ist für Claudia.",
+   "uz": "Choychaqa Claudia uchun.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Für Claudia ist das Trinkgeld."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-15",
+   "section": "u04-s5",
+   "de": "Wir sind zu zweit.",
+   "uz": "Biz ikki kishimiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zu zweit sind wir."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-16",
+   "section": "u04-s5",
+   "de": "Das Restaurant ist am Bahnhof.",
+   "uz": "Restoran vokzal yonida.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Bahnhof ist das Restaurant."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-17",
+   "section": "u04-s5",
+   "de": "Das Lokal ist klein, aber gut.",
+   "uz": "Bu ovqatlanish joyi kichik, lekin yaxshi.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Klein, aber gut ist das Lokal."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-18",
+   "section": "u04-s5",
+   "de": "Hier ist Selbstbedienung.",
+   "uz": "Bu yerda o'z-o'ziga xizmat.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s5-19",
+   "section": "u04-s5",
+   "de": "Wir sind heute zu dritt.",
+   "uz": "Bugun biz uch kishimiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute sind wir zu dritt.",
+    "Zu dritt sind wir heute."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-20",
+   "section": "u04-s5",
+   "de": "Wählen Sie bitte ein Getränk.",
+   "uz": "Iltimos, ichimlik tanlang.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte wählen Sie ein Getränk.",
+    "Wählen Sie ein Getränk, bitte."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-21",
+   "section": "u04-s5",
+   "de": "Die Bestellung kommt gleich.",
+   "uz": "Buyurtma hozir keladi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gleich kommt die Bestellung."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-22",
+   "section": "u04-s5",
+   "de": "Möchten Sie bestellen?",
+   "uz": "Buyurtma bermoqchimisiz?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s5-23",
+   "section": "u04-s5",
+   "de": "Ich nehme ein Gericht aus Usbekistan.",
+   "uz": "Men o'zbekcha taom olaman.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ein Gericht aus Usbekistan nehme ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-24",
+   "section": "u04-s5",
+   "de": "Was ist hier die Spezialität?",
+   "uz": "Bu yerning o'ziga xos taomi nima?",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Was ist die Spezialität hier?"
+   ]
+  },
+  {
+   "sourceId": "u04-s5-25",
+   "section": "u04-s5",
+   "de": "Ich nehme das Fischgericht.",
+   "uz": "Men baliq taomini olaman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Das Fischgericht nehme ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-26",
+   "section": "u04-s5",
+   "de": "Die Tomatensuppe ist sehr lecker.",
+   "uz": "Pomidor sho'rvasi juda mazali.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr lecker ist die Tomatensuppe."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-27",
+   "section": "u04-s5",
+   "de": "Eine Apfelschorle, bitte.",
+   "uz": "Bitta gazli olma sharbati, iltimos.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte eine Apfelschorle."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-28",
+   "section": "u04-s5",
+   "de": "Wo ist der Löffel?",
+   "uz": "Qoshiq qayerda?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s5-29",
+   "section": "u04-s5",
+   "de": "Eine Serviette, bitte.",
+   "uz": "Bitta salfetka, iltimos.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte eine Serviette."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-30",
+   "section": "u04-s5",
+   "de": "Die Tasse ist sehr klein.",
+   "uz": "Chashka juda kichkina.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr klein ist die Tasse."
+   ]
+  },
+  {
+   "sourceId": "u04-s5-31",
+   "section": "u04-s5",
+   "de": "Der Teller ist sehr groß.",
+   "uz": "Likopcha juda katta.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr groß ist der Teller."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-01",
+   "section": "u04-s6",
+   "de": "Wir brauchen ein Kilo Kartoffeln.",
+   "uz": "Bizga bir kilo kartoshka kerak.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ein Kilo Kartoffeln brauchen wir.",
+    "Kartoffeln brauchen wir ein Kilo."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-02",
+   "section": "u04-s6",
+   "de": "Ich kaufe einen Liter Milch.",
+   "uz": "Men bir litr sut sotib olaman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Einen Liter Milch kaufe ich.",
+    "Milch kaufe ich einen Liter."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-03",
+   "section": "u04-s6",
+   "de": "Hast du eine Flasche Öl?",
+   "uz": "Senda bir shisha yog' bormi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s6-04",
+   "section": "u04-s6",
+   "de": "Die Suppe ist gleich fertig.",
+   "uz": "Sho'rva hozir tayyor bo'ladi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gleich ist die Suppe fertig.",
+    "Fertig ist die Suppe gleich."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-05",
+   "section": "u04-s6",
+   "de": "Wir schneiden die Zwiebeln.",
+   "uz": "Biz piyozni to'graymiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Zwiebeln schneiden wir."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-06",
+   "section": "u04-s6",
+   "de": "Zuerst schälen wir die Kartoffeln.",
+   "uz": "Avval kartoshkani archamiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wir schälen zuerst die Kartoffeln.",
+    "Die Kartoffeln schälen wir zuerst."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-07",
+   "section": "u04-s6",
+   "de": "Dann mischen wir Essig und Öl.",
+   "uz": "Keyin sirka va yog'ni aralashtiramiz.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wir mischen dann Essig und Öl.",
+    "Dann mischen wir Öl und Essig.",
+    "Wir mischen dann Öl und Essig.",
+    "Essig und Öl mischen wir dann.",
+    "Öl und Essig mischen wir dann."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-08",
+   "section": "u04-s6",
+   "de": "Wir grillen heute Hähnchen.",
+   "uz": "Bugun tovuq go'shtini mangalda pishiramiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute grillen wir Hähnchen.",
+    "Hähnchen grillen wir heute."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-09",
+   "section": "u04-s6",
+   "de": "Brauchst du mehr Salz?",
+   "uz": "Senga ko'proq tuz kerakmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u04-s6-10",
+   "section": "u04-s6",
+   "de": "Ich nehme wenig Zucker.",
+   "uz": "Men shakarni oz solaman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wenig Zucker nehme ich.",
+    "Zucker nehme ich wenig."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-11",
+   "section": "u04-s6",
+   "de": "Wir brauchen circa ein Pfund Fleisch.",
+   "uz": "Bizga taxminan yarim kilo go'sht kerak.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Circa ein Pfund Fleisch brauchen wir.",
+    "Fleisch brauchen wir circa ein Pfund."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-12",
+   "section": "u04-s6",
+   "de": "Ein Glas Wasser, bitte.",
+   "uz": "Bir stakan suv, iltimos.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte ein Glas Wasser."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-13",
+   "section": "u04-s6",
+   "de": "Wir kochen heute zusammen.",
+   "uz": "Bugun birga ovqat pishiramiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute kochen wir zusammen.",
+    "Zusammen kochen wir heute."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-14",
+   "section": "u04-s6",
+   "de": "Wir braten das Fleisch in Öl.",
+   "uz": "Go'shtni yog'da qovuramiz.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Das Fleisch braten wir in Öl.",
+    "In Öl braten wir das Fleisch."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-15",
+   "section": "u04-s6",
+   "de": "Der Topf hat keinen Deckel.",
+   "uz": "Qozonning qopqog'i yo'q.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Keinen Deckel hat der Topf.",
+    "Deckel hat der Topf keinen."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-16",
+   "section": "u04-s6",
+   "de": "Wir brauchen doppelt so viel Reis.",
+   "uz": "Bizga ikki baravar ko'p guruch kerak.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Doppelt so viel Reis brauchen wir.",
+    "Reis brauchen wir doppelt so viel."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-17",
+   "section": "u04-s6",
+   "de": "Thomas macht eine Grillparty.",
+   "uz": "Thomas mangal ziyofati qiladi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Eine Grillparty macht Thomas."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-18",
+   "section": "u04-s6",
+   "de": "Ein bisschen Pfeffer, bitte.",
+   "uz": "Ozgina qora murch, iltimos.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte ein bisschen Pfeffer."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-19",
+   "section": "u04-s6",
+   "de": "Das Rezept kommt aus Usbekistan.",
+   "uz": "Retsept O'zbekistondan.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Aus Usbekistan kommt das Rezept."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-20",
+   "section": "u04-s6",
+   "de": "Wir brauchen hundert Gramm Käse.",
+   "uz": "Bizga yuz gramm pishloq kerak.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hundert Gramm Käse brauchen wir.",
+    "Käse brauchen wir hundert Gramm."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-21",
+   "section": "u04-s6",
+   "de": "Wir brauchen auch Sahne.",
+   "uz": "Bizga qaymoq ham kerak.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sahne brauchen wir auch.",
+    "Auch Sahne brauchen wir."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-22",
+   "section": "u04-s6",
+   "de": "Wir braten die Champignons.",
+   "uz": "Biz qo'ziqorinlarni qovuramiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Champignons braten wir."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-23",
+   "section": "u04-s6",
+   "de": "Ich möchte den Salat zubereiten.",
+   "uz": "Men salatni tayyorlamoqchiman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Den Salat möchte ich zubereiten.",
+    "Den Salat zubereiten möchte ich."
+   ]
+  },
+  {
+   "sourceId": "u04-s6-24",
+   "section": "u04-s6",
+   "de": "Lena hat heute keinen Appetit.",
+   "uz": "Bugun Lenaning ishtahasi yo'q.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute hat Lena keinen Appetit.",
+    "Keinen Appetit hat Lena heute.",
+    "Appetit hat Lena heute keinen."
+   ]
+  }
+ ]
+}

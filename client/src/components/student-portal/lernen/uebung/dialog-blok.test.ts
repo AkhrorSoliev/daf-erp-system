@@ -49,6 +49,24 @@ describe("ajratDialogQatorlari", () => {
     expect(natija.every((q) => !q.boshMi)).toBe(true);
   });
 
+  it("gapiruvchi yonidagi qavsdagi izohni nomdan ajratadi", () => {
+    const natija = ajratDialogQatorlari("Mia (boshqa xonadan): Kein Brot?");
+    expect(natija).toEqual([
+      { sprecher: "Mia", izoh: "boshqa xonadan", matn: "Kein Brot?", boshMi: false },
+    ]);
+  });
+
+  it("qavs ichidagi ikki nuqtasiz qatorni sahna izohi deb belgilaydi", () => {
+    const natija = ajratDialogQatorlari("(Ertalab. Jonas oshxonada.)\nJonas: Hm.");
+    expect(natija[0]).toEqual({
+      sprecher: null,
+      matn: "Ertalab. Jonas oshxonada.",
+      boshMi: false,
+      sahna: true,
+    });
+    expect(natija[1]).toEqual({ sprecher: "Jonas", matn: "Hm.", boshMi: false });
+  });
+
   it("bir necha satrni tartibda ajratadi", () => {
     const matn = "Anna: Guten Tag!\nBen: ___\nAnna: Danke, gut.";
     const natija = ajratDialogQatorlari(matn);

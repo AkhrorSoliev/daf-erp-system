@@ -45,7 +45,7 @@ import { harakat, koersatma } from "./koersatma";
 import { OvozTugmasi } from "./ovoz-tugmasi";
 import { PastkiPanel } from "./pastki-panel";
 import { Tanlash } from "./tanlash";
-import { RasmTanlash, SavolRasmi } from "./rasm-tanlash";
+import { RasmTanlash, SavolRasmi, SuhbatRasmi } from "./rasm-tanlash";
 import { rasmlarniOldindanYukla } from "./rasm-oldindan";
 import { JavobPaneli } from "./javob-paneli";
 import { DeWort } from "./de-wort";
@@ -227,7 +227,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
       ? (tanlangan ?? "")
       : rejim === "YOZISH"
         ? yozilgan.trim()
-        : yigilgan.join(" "); // SATZ_BAUEN
+        : yigilgan.join(" "); // SATZ_BAUEN, SATZ_HOEREN
 
   const tayyor =
     tanlashRejimi
@@ -902,9 +902,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
         <p className="text-sm font-semibold uppercase tracking-wide text-ink-400">
           {koersatma(frage.format)}
         </p>
-        {/* `AUDIO_WORT`/`WORT_TIPPEN`da `prompt` ATAYLAB bo'sh (server
-            Task 3) — so'zning o'zi javob, tugma savol matnining o'rnini
-            egallaydi. `autoPlay` ANIQ beriladi (standart endi `false`) —
+        {/* `AUDIO_WORT`/`WORT_TIPPEN`/`SATZ_HOEREN`da `prompt` ATAYLAB bo'sh
+            (server Task 3) — so'z yoki gapning o'zi javob, tugma savol
+            matnining o'rnini egallaydi. `autoPlay` ANIQ beriladi (standart endi `false`) —
             savol chiqishi bilan ovoz o'zi yangrashi FAQAT shu ekranda
             to'g'ri, standartga suyanib qolmaslik kerak. */}
         {frage.format === "HOEREN_WAHL" && frage.audioUrl ? (
@@ -914,13 +914,17 @@ export function SeansEkrani(props: SeansEkraniProps) {
         ) : frage.audioUrl ? (
           <OvozTugmasi url={frage.audioUrl} autoPlay />
         ) : null}
-        {/* `BILD_TIPPEN`: the picture is the question (`prompt` is empty). */}
-        {frage.bildUrl ? <SavolRasmi url={frage.bildUrl} /> : null}
+        {/* `BILD_TIPPEN`: the picture is the question (`prompt` is empty).
+            `DIALOG_LUECKE` draws its story picture above the dialog below. */}
+        {frage.bildUrl && frage.format !== "DIALOG_LUECKE" ? <SavolRasmi url={frage.bildUrl} /> : null}
         {frage.format === "DIALOG_LUECKE" ? (
           // Butun suhbat ekranda — savol matni o'rniga (dizayn D7 / brief §5):
           // server `prompt`ni tayyor satr qilib yuboradi, mijoz uni faqat
           // chiroyli chizadi.
-          <DialogBlok matn={frage.prompt} />
+          <>
+            {frage.bildUrl ? <SuhbatRasmi url={frage.bildUrl} alt={frage.titel ?? "Suhbat rasmi"} /> : null}
+            <DialogBlok matn={frage.prompt} />
+          </>
         ) : frage.prompt ? (
           <p className="text-2xl font-bold text-ink-900 sm:text-3xl">
             <DeWort text={frage.prompt} />
@@ -980,6 +984,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
             onJuft={onJuft}
           />
         ) : (
+          // `SATZ_HOEREN` uses the same tiles: only its question differs
+          // (the audio button above instead of the Uzbek prompt).
           <Yigish
             format="SATZ_BAUEN"
             options={frage.options}
@@ -990,7 +996,12 @@ export function SeansEkrani(props: SeansEkraniProps) {
           />
         )}
         {natija?.transkript ? (
-          <TranskriptBlok zeilen={natija.transkript} />
+          <TranskriptBlok
+            zeilen={natija.transkript}
+            sahna={natija.transkriptSahna}
+            bild={natija.transkriptBild}
+            titel={natija.transkriptTitel}
+          />
         ) : null}
       </main>
 

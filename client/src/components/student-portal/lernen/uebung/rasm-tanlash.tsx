@@ -90,3 +90,21 @@ export function SavolRasmi({ url }: { url: string }) {
     />
   );
 }
+
+/**
+ * A dialog's story picture, across the content column: above a gap-fill
+ * dialog, and at the top of the text after a listening answer. The box
+ * keeps 4:3 before the file arrives, so the dialog below does not jump.
+ */
+export function SuhbatRasmi({ url, alt }: { url: string; alt: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={alt}
+      loading="lazy"
+      className="aspect-[4/3] w-full rounded-2xl bg-tint object-cover"
+      draggable={false}
+    />
+  );
+}

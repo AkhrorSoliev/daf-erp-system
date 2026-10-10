@@ -218,5 +218,301 @@
   "u03-s4-haltestelle": {
     "szene": "a glass bus stop shelter with a bench inside, at the edge of an empty road",
     "tippen": true
+  },
+  "u04-s1-brot": {
+    "szene": "a round loaf of brown German bread with a few slices cut off, lying on a wooden board",
+    "tippen": true
+  },
+  "u04-s1-butter": {
+    "szene": "a yellow block of butter on a small white butter dish, with one curl of butter on top",
+    "tippen": true
+  },
+  "u04-s1-kaese": {
+    "szene": "a big wedge of yellow cheese with round holes",
+    "tippen": true
+  },
+  "u04-s1-milch": {
+    "szene": "a tall glass full of bright white milk next to a blue and white milk jug, on a pale blue background",
+    "tippen": true
+  },
+  "u04-s1-ei": {
+    "szene": "two brown eggs lying side by side on a plain surface, no bird, no hen, no nest",
+    "tippen": true
+  },
+  "u04-s1-haehnchen": {
+    "szene": "a golden roast chicken on a white platter",
+    "tippen": false
+  },
+  "u04-s1-wurst": {
+    "szene": "a long salami sausage with a few round slices cut off in front of it",
+    "tippen": false
+  },
+  "u04-s1-fisch": {
+    "szene": "one whole raw silver fish lying on crushed ice",
+    "tippen": true
+  },
+  "u04-s1-reis": {
+    "szene": "a white bowl full of cooked white rice",
+    "tippen": true
+  },
+  "u04-s1-apfel": {
+    "szene": "one shiny red apple with a green leaf on the stem",
+    "tippen": true
+  },
+  "u04-s1-banane": {
+    "szene": "one ripe yellow banana",
+    "tippen": true
+  },
+  "u04-s1-birne": {
+    "szene": "one ripe green-yellow pear with a brown stem",
+    "tippen": true
+  },
+  "u04-s1-kartoffel": {
+    "szene": "three raw brown potatoes",
+    "tippen": true
+  },
+  "u04-s1-tomate": {
+    "szene": "one ripe red tomato with a green stem",
+    "tippen": true
+  },
+  "u04-s1-gurke": {
+    "szene": "one long green cucumber",
+    "tippen": true
+  },
+  "u04-s1-zwiebel": {
+    "szene": "one golden-brown onion with dry papery skin",
+    "tippen": true
+  },
+  "u04-s1-salat": {
+    "szene": "one fresh head of green lettuce",
+    "tippen": false
+  },
+  "u04-s1-schokolade": {
+    "szene": "a bar of dark chocolate, partly unwrapped, with two squares broken off",
+    "tippen": true
+  },
+  "u04-s1-keks": {
+    "szene": "three round golden butter cookies",
+    "tippen": false
+  },
+  "u04-s1-olive": {
+    "szene": "a small white bowl full of green olives",
+    "tippen": true
+  },
+  "u04-s1-karotte": {
+    "szene": "two orange carrots with green leafy tops",
+    "tippen": false
+  },
+  "u04-s1-knoblauch": {
+    "szene": "one white garlic bulb with two separate cloves beside it",
+    "tippen": true
+  },
+  "u04-s1-orange": {
+    "szene": "one whole orange fruit and one orange cut in half showing the inside",
+    "tippen": true
+  },
+  "u04-s1-traube": {
+    "szene": "one bunch of green grapes",
+    "tippen": true
+  },
+  "u04-s1-melone": {
+    "szene": "one big oval yellow melon with one slice cut out, showing pale orange flesh",
+    "tippen": true
+  },
+  "u04-s2-supermarkt": {
+    "szene": "the outside of a big modern supermarket with wide glass windows and automatic doors, shelves with fruit visible inside, no people",
+    "tippen": true
+  },
+  "u04-s2-baeckerei": {
+    "szene": "a small bakery shop window full of loaves of bread and pretzels on wooden shelves, with a striped awning above, no people",
+    "tippen": true
+  },
+  "u04-s2-baecker": {
+    "szene": "a smiling male baker in a white uniform and a tall white hat holding a tray of fresh bread",
+    "tippen": true
+  },
+  "u04-s2-metzgerei": {
+    "szene": "a butcher shop counter with a glass display case full of red meat cuts and hanging sausages behind it, no people",
+    "tippen": false
+  },
+  "u04-s2-einkaufswagen": {
+    "szene": "one empty metal shopping cart seen from the side",
+    "tippen": true
+  },
+  "u04-s2-tuete": {
+    "szene": "a brown paper shopping bag full of groceries, a baguette and green leaves sticking out of the top",
+    "tippen": false
+  },
+  "u04-s2-geld": {
+    "szene": "a few paper banknotes fanned out and a small pile of coins, with no numbers or letters on them",
+    "tippen": true
+  },
+  "u04-s2-kassenzettel": {
+    "szene": "a long white paper shop receipt, large and filling the frame, slightly curled, printed with rows of short grey lines, a torn zigzag edge at the bottom, on a pale yellow background",
+    "tippen": false
+  },
+  "u04-s2-dose": {
+    "szene": "one closed silver tin can with no label",
+    "tippen": true
+  },
+  "u04-s2-kasse": {
+    "szene": "a supermarket checkout counter with a cash register and an open cash drawer, no people",
+    "tippen": true
+  },
+  "u04-s3-pizza": {
+    "szene": "a whole round pizza with tomato sauce, melted cheese and basil leaves",
+    "tippen": true
+  },
+  "u04-s3-spaghetti": {
+    "szene": "a white plate of spaghetti pasta with red tomato sauce, no fork",
+    "tippen": false
+  },
+  "u04-s3-doener": {
+    "szene": "a döner kebab wrapped in flat bread, filled with sliced meat, lettuce and tomato",
+    "tippen": true
+  },
+  "u04-s3-sushi": {
+    "szene": "six pieces of sushi rolls with rice and green seaweed on a dark wooden board",
+    "tippen": true
+  },
+  "u04-s3-pommes-frites": {
+    "szene": "a red paper cone full of golden French fries",
+    "tippen": false
+  },
+  "u04-s3-eis": {
+    "szene": "an ice cream cone with two round scoops, one pink and one white",
+    "tippen": true
+  },
+  "u04-s3-wasser": {
+    "szene": "one clear glass of plain water with small drops on the outside, nothing else",
+    "tippen": true
+  },
+  "u04-s3-apfelsaft": {
+    "szene": "a glass of golden apple juice with one green apple beside it",
+    "tippen": true
+  },
+  "u04-s3-orangensaft": {
+    "szene": "a glass of orange juice with half an orange beside it",
+    "tippen": true
+  },
+  "u04-s3-limonade": {
+    "szene": "a glass jug of pale yellow lemonade with lemon slices and ice cubes floating in it",
+    "tippen": true
+  },
+  "u04-s3-cola": {
+    "szene": "a glass of dark brown cola with bubbles and ice cubes",
+    "tippen": true
+  },
+  "u04-s4-uhr": {
+    "szene": "one round white wall clock with black hands",
+    "tippen": true
+  },
+  "u04-s4-marmelade": {
+    "szene": "a glass jar of red strawberry jam with a red checked cloth on the lid",
+    "tippen": true
+  },
+  "u04-s4-joghurt": {
+    "szene": "a small white cup of yogurt with a few blueberries on top",
+    "tippen": true
+  },
+  "u04-s4-muesli": {
+    "szene": "a bowl of muesli with oat flakes, nuts and raisins",
+    "tippen": true
+  },
+  "u04-s4-kaffee": {
+    "szene": "a white cup of black coffee with rising steam on a saucer, coffee beans scattered beside it",
+    "tippen": true
+  },
+  "u04-s4-tee": {
+    "szene": "a round teapot pouring golden tea into a small glass cup",
+    "tippen": true
+  },
+  "u04-s4-kuchen": {
+    "szene": "a round chocolate cake with one slice cut out",
+    "tippen": true
+  },
+  "u04-s4-sandwich": {
+    "szene": "a sandwich made of two slices of white bread with lettuce, tomato and cheese, cut diagonally",
+    "tippen": true
+  },
+  "u04-s5-restaurant": {
+    "szene": "the inside of an empty restaurant dining room with tables covered in white tablecloths and chairs around them, no people",
+    "tippen": false
+  },
+  "u04-s5-speisekarte": {
+    "szene": "an open dark red menu folder with only grey lines inside",
+    "tippen": false
+  },
+  "u04-s5-kellner": {
+    "szene": "a male waiter in a black vest and bow tie carrying an empty round silver tray on one hand",
+    "tippen": true
+  },
+  "u04-s5-kellnerin": {
+    "szene": "a female waiter in a black vest holding a small notepad and a pencil",
+    "tippen": true
+  },
+  "u04-s5-suppe": {
+    "szene": "a deep white bowl of vegetable soup with steam rising, no spoon",
+    "tippen": true
+  },
+  "u04-s5-schnitzel": {
+    "szene": "a large golden-brown breaded Wiener schnitzel with a rough crispy breadcrumb crust on a white plate, a lemon wedge beside it, no fork and no knife",
+    "tippen": true
+  },
+  "u04-s5-gabel": {
+    "szene": "one silver fork",
+    "tippen": true
+  },
+  "u04-s5-loeffel": {
+    "szene": "one silver spoon",
+    "tippen": true
+  },
+  "u04-s5-messer": {
+    "szene": "one silver table knife",
+    "tippen": true
+  },
+  "u04-s5-serviette": {
+    "szene": "one folded white cloth napkin",
+    "tippen": true
+  },
+  "u04-s5-teller": {
+    "szene": "one empty round white plate seen from slightly above",
+    "tippen": true
+  },
+  "u04-s6-grillparty": {
+    "szene": "friends standing around a charcoal grill in a green garden in the evening, string lights above them",
+    "tippen": false
+  },
+  "u04-s6-salz": {
+    "szene": "one glass salt shaker full of white salt, with a few white crystals spilled beside it",
+    "tippen": true
+  },
+  "u04-s6-pfeffer": {
+    "szene": "one wooden pepper mill with black peppercorns scattered beside it",
+    "tippen": true
+  },
+  "u04-s6-zucker": {
+    "szene": "a small white bowl of white sugar cubes",
+    "tippen": true
+  },
+  "u04-s6-oel": {
+    "szene": "a glass bottle of golden sunflower oil with one sunflower beside it",
+    "tippen": true
+  },
+  "u04-s6-sahne": {
+    "szene": "a glass bowl of white whipped cream",
+    "tippen": false
+  },
+  "u04-s6-champignon": {
+    "szene": "four white button mushrooms",
+    "tippen": false
+  },
+  "u04-s6-topf": {
+    "szene": "one empty steel cooking pot with two handles and no lid",
+    "tippen": true
+  },
+  "u04-s6-deckel": {
+    "szene": "a single round steel lid of a cooking pot lying on its own, seen from above at an angle, with a small black knob in its centre, no pot",
+    "tippen": true
   }
 }

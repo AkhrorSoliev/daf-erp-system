@@ -321,6 +321,21 @@ function fakePrisma() {
     },
     dafDialog: {
       findMany: jest.fn(async () => dialog),
+      // HOEREN_WAHL javobidan keyingi transkript: sahna + satrlar bitta so'rovda.
+      findUnique: jest.fn(async ({ where }: any) => {
+        const d = dialog.find((x) => x.id === where.id);
+        return d
+          ? {
+              sahnaUz: null,
+              zeilen: d.zeilen.map((z) => ({
+                sprecher: z.sprecher,
+                de: z.de,
+                uz: z.uz,
+                izohUz: null,
+              })),
+            }
+          : null;
+      }),
     },
     dafDialogLine: {
       findUnique: jest.fn(async ({ where }: any) => {
@@ -330,16 +345,6 @@ function fakePrisma() {
         }
         return null;
       }),
-      findMany: jest.fn(
-        async ({ where }: any) =>
-          dialog
-            .find((d) => d.id === where.dialogId)
-            ?.zeilen.map((z) => ({
-              sprecher: z.sprecher,
-              de: z.de,
-              uz: z.uz,
-            })) ?? [],
-      ),
     },
     dafHoerFrage: {
       findUnique: jest.fn(async ({ where }: any) => {
@@ -3168,15 +3173,47 @@ describe('HOEREN_WAHL', () => {
     expect(r.isCorrect).toBe(true);
     expect(r.richtig).toBe('gut');
     expect(r.transkript).toEqual([
-      { sprecher: 'A', de: 'Hallo!', uz: 'Salom!' },
+      { sprecher: 'A', de: 'Hallo!', uz: 'Salom!', izohUz: null },
       {
         sprecher: 'B',
         de: 'Hallo, wie geht es dir?',
         uz: 'Salom, ahvoling qalay?',
+        izohUz: null,
       },
-      { sprecher: 'A', de: 'Gut, danke.', uz: 'Yaxshi, rahmat.' },
-      { sprecher: 'B', de: 'Bis bald!', uz: "Ko'rishguncha!" },
+      { sprecher: 'A', de: 'Gut, danke.', uz: 'Yaxshi, rahmat.', izohUz: null },
+      { sprecher: 'B', de: 'Bis bald!', uz: "Ko'rishguncha!", izohUz: null },
     ]);
+    expect(r.transkriptSahna).toBeNull();
+  });
+
+  it('pruefen: transkript sahna va satr izohini olib keladi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafDialog.findUnique = jest.fn(async () => ({
+      sahnaUz: 'Ertalab. A oshxonada.',
+      zeilen: [
+        { sprecher: 'A', de: 'Hallo!', uz: 'Salom!', izohUz: null },
+        {
+          sprecher: 'B',
+          de: 'Hallo, wie geht es dir?',
+          uz: 'Salom, ahvoling qalay?',
+          izohUz: 'boshqa xonadan',
+        },
+      ],
+    })) as any;
+    const r = await new UebungService(prisma as any, config as any).pruefen(
+      {
+        itemType: 'HOERFRAGE',
+        itemId: 401,
+        format: 'HOEREN_WAHL',
+        given: 'gut',
+      },
+      ctx,
+    );
+    expect(r.transkriptSahna).toBe('Ertalab. A oshxonada.');
+    expect(r.transkript?.[1].izohUz).toBe('boshqa xonadan');
+    expect(prisma.dafDialog.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 201 } }),
+    );
   });
 
   it('pruefen: xato javob ham transkriptni ochadi, ball yo`q, Leitner yo`q', async () => {
@@ -3481,5 +3518,73 @@ describe('seans — yakuniy sinov (UNIT_TEST)', () => {
     );
     expect(fragen).toEqual([]);
     expect(prisma.dafSection.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('SATZ_HOEREN', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+  const config = {
+    get: (k: string) =>
+      k === 'R2_PUBLIC_URL' ? 'https://r2.example' : undefined,
+  };
+  /** One sentence with audio — SATZ_UEBERSETZEN needs three others, so the
+   * only sentence questions are SATZ_BAUEN and SATZ_HOEREN. */
+  const mitSatzAudio = () => {
+    const prisma = fakePrisma();
+    prisma.dafSentence.findMany = jest.fn(async () => [
+      {
+        id: 11,
+        de: 'Ich bin Anna.',
+        uz: 'Men Annaman.',
+        sectionId: 7,
+        akzeptiert: [],
+        audioKey: 'daf/audio/s11.mp3',
+      },
+    ]) as any;
+    return prisma;
+  };
+
+  it('the replacement of a SATZ_BAUEN is the listening question, with a full URL', async () => {
+    const f = await new UebungService(
+      mitSatzAudio() as any,
+      config as any,
+    ).ersatz(100, 55, 'SATZ', 11, 'SATZ_BAUEN');
+    expect(f).not.toBeNull();
+    expect(f!.format).toBe('SATZ_HOEREN');
+    expect(f!.audioUrl).toBe('https://r2.example/daf/audio/s11.mp3');
+    expect(f!.prompt).toBe('');
+    expect(f!.hilfe).toBeNull();
+    expect(Object.keys(f!)).not.toContain('richtig');
+  });
+
+  it('without R2_PUBLIC_URL there is no listening question', async () => {
+    const f = await new UebungService(mitSatzAudio() as any).ersatz(
+      100,
+      55,
+      'SATZ',
+      11,
+      'SATZ_BAUEN',
+    );
+    expect(f).toBeNull();
+  });
+
+  it('an accepted other word order is correct', async () => {
+    const prisma = fakePrisma();
+    prisma.dafSentence.findUnique = jest.fn(async () => ({
+      de: 'Ich wohne in Deutschland.',
+      uz: 'Men Germaniyada yashayman.',
+      akzeptiert: ['In Deutschland wohne ich.'],
+    })) as any;
+    const r = await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'SATZ',
+        itemId: 15,
+        format: 'SATZ_HOEREN',
+        given: 'In Deutschland wohne Ich',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe('Ich wohne in Deutschland.');
   });
 });
