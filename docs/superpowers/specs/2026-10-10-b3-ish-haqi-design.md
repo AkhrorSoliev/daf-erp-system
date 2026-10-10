@@ -118,7 +118,9 @@ Cron: `applyPendingAdvances` (both the accrual and the FIXED_MONTHLY branch) cal
 
 Read side (`getMonthly`, `getMonthlyForUser`, the detail endpoint, Telegram, Excel, the B1 card — all through `getMonthly`):
 - Month with a payment: `advances` = Σ advances with `settledBySalaryPaymentId = payment.id`; `netToPay = payment.amount` (unchanged).
-- Month without a payment: `advances = planAdvanceNetting(unsettled, base, nextMonthStart).total`, where `base` is today's pre-advance figure (`accrued + gap` in top-up months, `accrued` before, staff `monthly`); `netToPay = base − advances`.
+- The current (open) month: `advances` = Σ of every unsettled advance dated before `nextMonthStart`, not capped — the month's earnings are still growing, and capping by today's partial figure would show 0 mid-month for an advance the month-end payout will take; `netToPay = max(0, base − advances)`.
+- A past month without a payment (the hours before the cron): `advances = planAdvanceNetting(unsettled, base, nextMonthStart).total` — exactly what the cron will net; `netToPay = base − advances`.
+- `base` is the pre-advance figure (`accrued + gap` in top-up months, `accrued` before, staff `monthly`).
 
 Consequence to state in the ADR: until 02:00 on the 1st, an unsettled advance of the closed month also appears in the new month's open view; the cron settles it a few hours later.
 
