@@ -1007,6 +1007,14 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /salary/monthly/user/:userId/detail": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/monthly/user/:userId/lessons": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /salary/overview": [
     "Branch Director",
     "CEO"

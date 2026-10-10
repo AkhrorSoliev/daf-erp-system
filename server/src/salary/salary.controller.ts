@@ -11,6 +11,7 @@ import {
 import { SalaryService } from './salary.service';
 import { TeacherTimelineService } from './teacher-timeline.service';
 import { SalaryBreakdownService } from './salary-breakdown.service';
+import { SalaryMonthlyDetailService } from './salary-monthly-detail.service';
 import { SalaryAdvanceCalendarService } from './salary-advance-calendar.service';
 import { SalaryPeriodSettingsService } from './salary-period-settings.service';
 import {
@@ -45,6 +46,7 @@ export class SalaryController {
     private advanceCalendarService: SalaryAdvanceCalendarService,
     private centerTopUpService: SalaryCenterTopUpService,
     private staffConfigService: SalaryStaffConfigService,
+    private monthlyDetailService: SalaryMonthlyDetailService,
   ) {}
 
   // =========================================================================
@@ -410,6 +412,59 @@ export class SalaryController {
       query,
       companyId,
       performedById,
+    );
+  }
+
+  /**
+   * The row drawer of the «Ish haqi» page: one person's row for a month plus
+   * what the drawer reads off other tables (the payout of a PAID month, the
+   * payee's cash accounts, the difference since the cron calculated).
+   *
+   * Scoped by the header like `/salary/monthly`, because the drawer opens from
+   * that page; a person outside the scope is a named 404.
+   */
+  @Get('monthly/user/:userId/detail')
+  @Can('salary.view')
+  getMonthlyDetail(
+    @Param('userId', ParseIntPipe) targetUserId: number,
+    @Query() query: SalaryMonthlyQueryDto,
+    @CurrentUser('id') performedById: number,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.monthlyDetailService.getDetail(
+      targetUserId,
+      { month: query.month, branchId: singleBranchId(scope) },
+      companyId,
+      performedById,
+    );
+  }
+
+  /**
+   * The month's live (unpaid) accruals of one person — the CSV source for a
+   * month the cron has not calculated yet. A calculated month keeps
+   * `GET /salary/payments/:id/breakdown`.
+   */
+  @Get('monthly/user/:userId/lessons')
+  @Can('salary.view')
+  async getMonthlyLessons(
+    @Param('userId', ParseIntPipe) targetUserId: number,
+    @Query() query: SalaryMonthlyQueryDto,
+    @CurrentUser('id') performedById: number,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    // The detail service resolves the person first (404 outside the scope).
+    const period = await this.monthlyDetailService.getPeriod(
+      targetUserId,
+      { month: query.month, branchId: singleBranchId(scope) },
+      companyId,
+      performedById,
+    );
+    return this.breakdownService.getPeriodBreakdown(
+      targetUserId,
+      companyId,
+      period,
     );
   }
 

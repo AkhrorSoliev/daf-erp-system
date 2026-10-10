@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { SalaryController } from './salary.controller';
+import { NotFoundException } from '@nestjs/common';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
 const CEO_ONLY = ['CEO'];
@@ -106,6 +107,9 @@ describe('SalaryController — route access', () => {
       'getCenterTopUpStudents',
       // Money for ONE named teacher — the profile salary tab and card.
       'getMonthlyForUser',
+      // The row drawer: the same person's month, and its live accruals.
+      'getMonthlyDetail',
+      'getMonthlyLessons',
       'getAdvanceCalendar',
       'getPaymentBreakdown',
     ] as const;
@@ -178,5 +182,83 @@ describe('SalaryController — route access', () => {
         ]);
       },
     );
+  });
+});
+
+describe('SalaryController — the row drawer routes', () => {
+  const period = {
+    periodStart: new Date('2026-08-31T19:00:00Z'),
+    periodEnd: new Date('2026-09-30T18:59:59.999Z'),
+    periodStartDate: new Date('2026-09-01T00:00:00Z'),
+    periodEndDateExclusive: new Date('2026-10-01T00:00:00Z'),
+    cycleStartDay: 1,
+  };
+  const detailService = {
+    getDetail: jest.fn(),
+    getPeriod: jest.fn(),
+  };
+  const breakdownService = { getPeriodBreakdown: jest.fn() };
+  const controller = new SalaryController(
+    {} as never,
+    {} as never,
+    breakdownService as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    detailService as never,
+  );
+
+  beforeEach(() => jest.resetAllMocks());
+
+  it('detail follows the header: only the month and the single scoped branch go down', async () => {
+    detailService.getDetail.mockResolvedValue({ kind: 'teacher' });
+
+    await controller.getMonthlyDetail(
+      10001,
+      { month: '2026-09', search: 'ignored' },
+      10009,
+      1,
+      [3],
+    );
+
+    expect(detailService.getDetail).toHaveBeenCalledWith(
+      10001,
+      { month: '2026-09', branchId: 3 },
+      1,
+      10009,
+    );
+  });
+
+  it("lessons reads the month's period from the detail service, then its breakdown", async () => {
+    detailService.getPeriod.mockResolvedValue(period);
+    breakdownService.getPeriodBreakdown.mockResolvedValue({ lines: [] });
+
+    await expect(
+      controller.getMonthlyLessons(10001, { month: '2026-09' }, 10009, 1, [3]),
+    ).resolves.toEqual({ lines: [] });
+
+    expect(detailService.getPeriod).toHaveBeenCalledWith(
+      10001,
+      { month: '2026-09', branchId: 3 },
+      1,
+      10009,
+    );
+    expect(breakdownService.getPeriodBreakdown).toHaveBeenCalledWith(
+      10001,
+      1,
+      period,
+    );
+  });
+
+  it('lessons for a person outside the scope is a 404 and reads no accruals', async () => {
+    detailService.getPeriod.mockRejectedValue(
+      new NotFoundException('Bu oyda xodim topilmadi'),
+    );
+
+    await expect(
+      controller.getMonthlyLessons(10001, { month: '2026-09' }, 10009, 1, [3]),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(breakdownService.getPeriodBreakdown).not.toHaveBeenCalled();
   });
 });

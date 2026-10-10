@@ -201,4 +201,51 @@ describe('SalaryBreakdownService', () => {
       });
     });
   });
+
+  describe('getPeriodBreakdown — a named month, not "now"', () => {
+    const period = {
+      periodStart: new Date('2026-08-31T19:00:00Z'),
+      periodEnd: new Date('2026-09-30T18:59:59.999Z'),
+      periodStartDate: new Date('2026-09-01T00:00:00Z'),
+      periodEndDateExclusive: new Date('2026-10-01T00:00:00Z'),
+    };
+
+    it("reads the person's unpaid accruals of that period with the column-aware bounds", async () => {
+      prisma.salaryAccrual.findMany.mockResolvedValue([]);
+
+      const res = await service.getPeriodBreakdown(10001, 1, period);
+
+      expect(prisma.salaryAccrual.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: 10001,
+            companyId: 1,
+            salaryPaymentId: null,
+            OR: [
+              {
+                creditPeriodDate: {
+                  gte: period.periodStart,
+                  lte: period.periodEnd,
+                },
+              },
+              {
+                creditPeriodDate: null,
+                lessonDate: {
+                  gte: period.periodStartDate,
+                  lt: period.periodEndDateExclusive,
+                },
+              },
+            ],
+          },
+        }),
+      );
+      // The shape getCurrentCycleBreakdown returns.
+      expect(res.period).toEqual({
+        periodStart: period.periodStart,
+        periodEnd: period.periodEnd,
+      });
+      expect(res.lines).toEqual([]);
+      expect(res.totals).toMatchObject({ accrualCount: 0, amountTotal: 0 });
+    });
+  });
 });

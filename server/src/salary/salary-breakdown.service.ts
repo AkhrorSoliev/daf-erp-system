@@ -127,6 +127,27 @@ export class SalaryBreakdownService {
     };
   }
 
+  /**
+   * Breakdown of one person's live (unpaid) accruals for a named period — the
+   * salary page's CSV for a month the cron has not calculated yet. The same
+   * shape `getCurrentCycleBreakdown` returns, for any month.
+   */
+  async getPeriodBreakdown(
+    userId: number,
+    companyId: number,
+    period: {
+      periodStart: Date;
+      periodEnd: Date;
+      periodStartDate: Date;
+      periodEndDateExclusive: Date;
+    },
+  ) {
+    return {
+      period: { periodStart: period.periodStart, periodEnd: period.periodEnd },
+      ...(await this.fetchAccrualBreakdown(userId, companyId, period)),
+    };
+  }
+
   // ---------- internals ----------
 
   private async fetchAccrualBreakdown(
