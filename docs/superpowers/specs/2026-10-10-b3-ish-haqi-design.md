@@ -162,13 +162,13 @@ Body becomes required: `{ paidAt: 'YYYY-MM-DD', cashSlices: [{ cashAccountId, am
 
 Checks, all before any write: payment of the company and APPROVED (`assertValidTransition`); `paidAt` per `parseSettlePaidAt`; every slice amount > 0, Σ slices = `payment.amount` (empty only when the amount is 0); every account active, not deleted, of the company and of the payee's branch (the payee's `mainBranch`). A payee without `mainBranch` is refused: «Xodimning filiali aniqlanmagan — oylikni berib bo'lmaydi». Refusals in Uzbek, e.g. «Kassa xodim filialiga tegishli emas», «Naqd va karta yig'indisi oylikka teng emas».
 
-Write: through `writeSettledRows` with one row and the plan's `cashSlices` (one Serializable tx: re-read, `recordSalaryPayment` with the slices, `status PAID`, `paidAt` = the chosen day, `paidById`, the note). The ledger description stays «Oylik to'landi» for this route (the settle routes keep theirs). A second click finds PAID and returns 409 «Bu oylik allaqachon berilgan».
+Write: its own Serializable transaction (re-read, `recordSalaryPayment` with the slices, `status PAID`, `paidAt` = the chosen day, `paidById`, the note); a 0 so'm payment writes no ledger row. The ledger description stays «Oylik to'landi» for this route (the settle routes keep theirs). A second click finds PAID and returns 409 «Bu oylik allaqachon berilgan».
 
 `batchPay` (no client caller) is left as is.
 
 ### 5.3 Event
 
-After commit, the two routes a person uses to turn a payment PAID — single pay and settle-month — emit `salary.paid` `{ salaryPaymentId, companyId }` once per payment (`SALARY_EVENTS.PAID` constant at each call site, so the event-wiring scan sees it). `SalarySettleAllocatedService` (used only by the past-months script) does not emit: closing old months must not message staff.
+After commit, the two routes a person uses to turn a payment PAID — single pay and settle-month — emit `salary.paid` `{ salaryPaymentId, companyId }` once per payment (`SALARY_PAID_EVENT` constant at each call site, so the event-wiring scan sees it). `SalarySettleAllocatedService` (used only by the past-months script) does not emit: closing old months must not message staff.
 
 ## 6. Staff bot message
 
