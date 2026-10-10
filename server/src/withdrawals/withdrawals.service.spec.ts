@@ -370,7 +370,7 @@ describe('WithdrawalsService', () => {
     });
   });
 
-  describe('the transfer condition (ADR-0076)', () => {
+  describe('the transfer condition (ADR-0077)', () => {
     const create = () =>
       service.create(
         { studentId: 10001, amount: 100_000, creditTeacher: false },

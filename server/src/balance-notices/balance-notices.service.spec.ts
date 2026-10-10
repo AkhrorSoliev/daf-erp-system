@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SmsService } from '../sms/sms.service';
 import { EntityHistoryService } from '../common/entity-history';
 
-describe('BalanceNoticesService (ADR-0076)', () => {
+describe('BalanceNoticesService (ADR-0077)', () => {
   let service: BalanceNoticesService;
   let prisma: any;
   let sms: { sendToStudent: jest.Mock };

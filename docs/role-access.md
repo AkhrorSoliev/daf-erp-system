@@ -52,7 +52,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | Pay salary | Yes | Own branch | No | No | No |
 | Batch pay salary | Yes | Own branch | No | No | No |
 | Manage salary period (cycle start day) | Yes | No | No | No | No |
-| Open refund request (`POST /refunds/quick`, ADR-0076) | Yes | Yes | Yes | No | No |
+| Open refund request (`POST /refunds/quick`, ADR-0077) | Yes | Yes | Yes | No | No |
 | Hand refund over («Berildi», `POST /refunds/:id/hand-over`) | Yes | Yes | Yes | No | Yes |
 | Cancel refund request (`POST /refunds/:id/cancel`) | Yes | Yes | No | No | No |
 | Give balance notice (`POST /students/:id/balance-notices`) | Yes | Yes | Yes | No | No |
@@ -74,7 +74,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 ### Debt page (Qarzdorlik, `/payments/debt`)
 
-Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qarz / O'qimayotganlar), the student drawer and the Excel (`/payments/debt/*`, ADR-0072), and the two linked pages (debt history, write-off archive); frozen balances moved to «Qaytariladigan pul» (ADR-0076). «Markaz qoplagani» moved to the salary page and is CEO/BD (`GET /salary/monthly/center-topup`). Everyone below the CEO sees their own branch. The actions differ by role:
+Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qarz / O'qimayotganlar), the student drawer and the Excel (`/payments/debt/*`, ADR-0072), and the two linked pages (debt history, write-off archive); frozen balances moved to «Qaytariladigan pul» (ADR-0077). «Markaz qoplagani» moved to the salary page and is CEO/BD (`GET /salary/monthly/center-topup`). Everyone below the CEO sees their own branch. The actions differ by role:
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|

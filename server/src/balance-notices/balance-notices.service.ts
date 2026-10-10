@@ -31,7 +31,7 @@ export class BalanceNoticesService {
   ) {}
 
   /**
-   * «Xabar berish» (ADR-0076). BOT: the pinned text goes out at once through
+   * «Xabar berish» (ADR-0077). BOT: the pinned text goes out at once through
    * the student's SMS log; only a delivered message writes the notice. CALL:
    * the staff member called and marks it. Either starts the transfer clock.
    */

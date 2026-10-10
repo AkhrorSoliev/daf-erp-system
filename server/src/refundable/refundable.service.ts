@@ -112,7 +112,7 @@ export interface RefundableDrawer {
 }
 
 /**
- * «Qaytariladigan pul» (spec B2b §3, ADR-0076): the money of students who are
+ * «Qaytariladigan pul» (spec B2b §3, ADR-0077): the money of students who are
  * not studying, by ADR-0067's kinds, and the open refund requests. Every row
  * of every tab is built in one batch (three queries) — the totals, the chips,
  * the pages and the Excel are cut from it.

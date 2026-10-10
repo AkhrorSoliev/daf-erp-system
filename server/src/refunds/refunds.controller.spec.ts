@@ -50,7 +50,7 @@ describe('RefundsController — role guards', () => {
     ).toThrow(ForbiddenException);
   });
 
-  // ADR-0076: «Berildi» and «Bekor qilish» replace the old approve/complete
+  // ADR-0077: «Berildi» and «Bekor qilish» replace the old approve/complete
   // route, so nothing may pay out through it any more.
   it('has no PATCH :id/process handler', () => {
     expect('process' in controller).toBe(false);

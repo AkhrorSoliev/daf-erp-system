@@ -614,7 +614,7 @@ export class TransactionsWriteService {
 
   /**
    * Record a refund: the REFUND ledger row and the balance, nothing else
-   * (ADR-0076 — the drawer is touched at hand-over).
+   * (ADR-0077 — the drawer is touched at hand-over).
    */
   async recordRefund(
     params: {
@@ -660,7 +660,7 @@ export class TransactionsWriteService {
         data: { balance: balanceAfter },
       });
 
-      // No cash moves here (ADR-0076): a refund is a request until «Berildi»,
+      // No cash moves here (ADR-0077): a refund is a request until «Berildi»,
       // and the hand-over writes the drawer's movement against this row.
 
       return transaction;

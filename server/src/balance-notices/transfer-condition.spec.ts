@@ -7,7 +7,7 @@ import {
 
 const none = new Set<string>();
 
-describe('transfer condition (ADR-0076)', () => {
+describe('transfer condition (ADR-0077)', () => {
   describe('latestValidNotice', () => {
     const notice = {
       createdAt: new Date('2026-10-10T07:00:00Z'),

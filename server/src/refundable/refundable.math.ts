@@ -10,7 +10,7 @@ import {
 } from '../balance-notices/transfer-condition';
 import { dm } from '../statements/statement-text';
 
-/** «Qaytariladigan pul» (spec B2b §3, ADR-0076). Pure. */
+/** «Qaytariladigan pul» (spec B2b §3, ADR-0077). Pure. */
 
 export type RefundableTab = 'muzlatilgan' | 'guruhsiz' | 'ketgan';
 export const REFUNDABLE_TABS: readonly RefundableTab[] = [

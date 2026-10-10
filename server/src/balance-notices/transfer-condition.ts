@@ -4,7 +4,7 @@ import { addDaysToDateStr, tashkentDateStr } from '../common/date/tashkent';
 import { dm } from '../statements/statement-text';
 
 /**
- * «Markaz hisobiga o'tkazish» opens only after the student was told (ADR-0076):
+ * «Markaz hisobiga o'tkazish» opens only after the student was told (ADR-0077):
  * the notice starts the 10-bank-day refund term, then the contract's 30 days.
  * Pure — `loadTransferState` reads the notice and the holidays.
  */

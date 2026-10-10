@@ -176,7 +176,7 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 | lessonsCompleted | Int | O'tilgan darslar soni |
 | totalLessons | Int | Jami darslar |
 | deductions | Json? | Tafsilot: consumedFromLedger, lessonsObserved, perLessonCost, previousRefunds, tax, bankFee |
-| status | RefundStatus | `REQUESTED` (so'rov) → `COMPLETED` («Berildi») yoki `REJECTED` (bekor qilindi), ADR-0076; `APPROVED`/`PROCESSING` yozilmaydi |
+| status | RefundStatus | `REQUESTED` (so'rov) → `COMPLETED` («Berildi») yoki `REJECTED` (bekor qilindi), ADR-0077; `APPROVED`/`PROCESSING` yozilmaydi |
 | refundMethod | PaymentMethod? | Qaytarish usuli |
 
 **Hisoblash qoidalari (`quickRefund`, bir qadam):**
@@ -184,7 +184,7 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 - `maxRefundable = max(0, balance + prepaidRefundValue(prepaidLessonsRemaining))`. Avval bo'sh balans olinadi, yetmasa eng kam sonli dars bekor qilinadi (`releasePrepaidLessons`: darslar puli `ADJUSTMENT` bilan balansga qaytadi va hisobchi o'sha qadamda kamayadi).
 - **«50%+ dars o'tilgan → qaytarish yo'q» qoidasi yo'q.** U sikl hajmiga (`lessonPaymentCount`) bo'linardi, kursga emas, shuning uchun olib tashlangan. Oylik kursdan ketishdagi 40% qoidasi — alohida qaror (ADR-0044).
 
-**Status (ADR-0076):** `quickRefund` so'rov ochadi (`REQUESTED`): balans darhol kamayadi, kassa harakati yo'q, muddat — 10 bank kuni (`dueDate`). «Berildi» (`POST /refunds/:id/hand-over`) kassadan chiqimni yozadi va `COMPLETED` qiladi; `POST /refunds/:id/cancel` (CEO, filial direktori) pul va darslarni qaytarib `REJECTED` qiladi. `PATCH /refunds/:id/process` o'chirilgan.
+**Status (ADR-0077):** `quickRefund` so'rov ochadi (`REQUESTED`): balans darhol kamayadi, kassa harakati yo'q, muddat — 10 bank kuni (`dueDate`). «Berildi» (`POST /refunds/:id/hand-over`) kassadan chiqimni yozadi va `COMPLETED` qiladi; `POST /refunds/:id/cancel` (CEO, filial direktori) pul va darslarni qaytarib `REJECTED` qiladi. `PATCH /refunds/:id/process` o'chirilgan.
 
 #### Expense — Xarajatlar
 

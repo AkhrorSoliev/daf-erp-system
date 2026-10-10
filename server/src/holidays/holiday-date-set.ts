@@ -76,7 +76,7 @@ export const TERM_HOLIDAY_HORIZON_DAYS = 120;
 
 /**
  * The holidays a bank-day term starting on `fromDateStr` can cross: the
- * branch's own and the company-wide ones (ADR-0076). `branchId` null reads
+ * branch's own and the company-wide ones (ADR-0077). `branchId` null reads
  * every branch's — only a branch-less card gets there, and money paths refuse
  * those before.
  */

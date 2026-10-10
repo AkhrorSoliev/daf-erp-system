@@ -7,7 +7,7 @@
 - https://claude.ai/artifact/T2jLrgummxVZWAZsQErZ2m — the new parts: pending refunds, «Berildi», notice, transfer condition (CEO-approved 10.10)
 
 **Builds on:** ADR-0055 (a withdrawal is revenue of its month), ADR-0058 (a cancelled refund counts in neither month), ADR-0059/0067 (not-studying kinds), ADR-0066 (a chat can refuse the bot), ADR-0072 (B2a), the Refunds Module rules in `server/CLAUDE.md`.
-**Decision record:** ADR-0076 (written in the same PR).
+**Decision record:** ADR-0077 (written in the same PR).
 
 ## 1. Why and where this fits
 

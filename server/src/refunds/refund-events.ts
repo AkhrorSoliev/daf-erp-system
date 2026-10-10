@@ -1,5 +1,5 @@
 /**
- * Refund events (ADR-0076), emitted only AFTER the transaction that wrote the
+ * Refund events (ADR-0077), emitted only AFTER the transaction that wrote the
  * change has committed. The payload is ids only: the listener re-reads what
  * the student's message needs, so it always tells the committed truth.
  */

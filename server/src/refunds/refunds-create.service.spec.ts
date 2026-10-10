@@ -269,7 +269,7 @@ describe('RefundsCreateService.quickRefund', () => {
     );
   });
 
-  describe('the request (ADR-0076)', () => {
+  describe('the request (ADR-0077)', () => {
     beforeEach(() => {
       jest.useFakeTimers({
         doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],

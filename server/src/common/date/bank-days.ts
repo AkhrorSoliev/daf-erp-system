@@ -1,7 +1,7 @@
 import { addDaysToDateStr, dayOfWeekForDateStr } from './tashkent';
 
 /**
- * Bank days (ADR-0076): Monday–Friday, not a holiday of the student's branch.
+ * Bank days (ADR-0077): Monday–Friday, not a holiday of the student's branch.
  * The centre's holiday table stands in for the bank calendar; transferred
  * working Saturdays are not modelled. Pure: the caller loads `holidays`
  * (`termHolidays`).

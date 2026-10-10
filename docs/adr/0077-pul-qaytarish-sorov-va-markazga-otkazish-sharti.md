@@ -1,4 +1,4 @@
-# ADR-0076 — Pul qaytarish so'rov bilan: balans so'rov kuni 0, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin
+# ADR-0077 — Pul qaytarish so'rov bilan: balans so'rov kuni 0, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-10

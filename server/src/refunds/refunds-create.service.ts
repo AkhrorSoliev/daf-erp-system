@@ -36,7 +36,7 @@ export class RefundsCreateService {
   ) {}
 
   /**
-   * Opens a refund request (ADR-0076). The admin types the amount; the money
+   * Opens a refund request (ADR-0077). The admin types the amount; the money
    * comes off the balance now (ledger REFUND row), leaves the branch drawer
    * only at «Berildi» (`RefundsProcessService.handOver`), and is due on the
    * 10th bank day.
@@ -101,7 +101,7 @@ export class RefundsCreateService {
         studentId: dto.studentId,
         enrollmentId: enrollment.id,
         approvedAmount: dto.amount,
-        // An open request is as much a duplicate as a payout (ADR-0076).
+        // An open request is as much a duplicate as a payout (ADR-0077).
         status: { in: [RefundStatus.REQUESTED, RefundStatus.COMPLETED] },
         createdAt: { gte: new Date(Date.now() - 60_000) },
       },
@@ -182,7 +182,7 @@ export class RefundsCreateService {
             lessonsCompleted: lessonsAttended,
             totalLessons,
             deductions,
-            // ADR-0076: a request. The money leaves the drawer and the method
+            // ADR-0077: a request. The money leaves the drawer and the method
             // is known only at hand-over (`RefundsProcessService.handOver`).
             status: RefundStatus.REQUESTED,
             reason: dto.reason,
@@ -279,7 +279,7 @@ export class RefundsCreateService {
         studentId: dto.studentId,
         enrollmentId: null,
         approvedAmount: dto.amount,
-        // An open request is as much a duplicate as a payout (ADR-0076).
+        // An open request is as much a duplicate as a payout (ADR-0077).
         status: { in: [RefundStatus.REQUESTED, RefundStatus.COMPLETED] },
         createdAt: { gte: new Date(Date.now() - 60_000) },
       },

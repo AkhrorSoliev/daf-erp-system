@@ -18,7 +18,7 @@ const CEO = {
   roles: [{ role: { name: 'CEO' } }],
 };
 
-/** «Berildi» and «Bekor qilish» on a refund request (ADR-0076). */
+/** «Berildi» and «Bekor qilish» on a refund request (ADR-0077). */
 describe('RefundsProcessService — hand-over and cancel', () => {
   let service: RefundsProcessService;
   let prisma: any;

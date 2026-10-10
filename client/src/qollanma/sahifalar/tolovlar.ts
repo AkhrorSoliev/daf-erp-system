@@ -216,7 +216,7 @@ export const tolovlar: QollanmaSahifa[] = [
     qisqacha:
       "Pulni qaytarish so'rov bilan: «So'rovni ochish» bosilganda balans darhol kamayadi, pul 10 bank kuni ichida kassadan beriladi va «Berildi» bilan belgilanadi; berilmagan so'rovni CEO yoki filial direktori bekor qiladi. «Yechib olish» balansdagi pulni o'quvchiga bermay markaz hisobiga o'tkazadi (yechib olingan oyning foydasiga) — faqat o'quvchiga xabar berilib, 10 bank kuni va yana 30 kun o'tgach.",
     rollar: [1, 2, 3, 5],
-    adr: ["0055", "0058", "0076"],
+    adr: ["0055", "0058", "0077"],
     yollar: [],
     kalitSozlar: [
       "pulni qaytarish",
@@ -294,7 +294,7 @@ export const tolovlar: QollanmaSahifa[] = [
     qisqacha:
       "«Qaytariladigan pul» sahifasi o'qimayotgan o'quvchilarning balansida qolgan pulini uch bo'limda (muzlatilganlar, guruhsiz, ketganlar) va ochiq pulni qaytarish so'rovlarini ko'rsatadi. Bu yerda pul berilgani belgilanadi («Berildi»), o'quvchiga xabar beriladi va shart bajarilgach pul markaz hisobiga o'tkaziladi.",
     rollar: [1, 2, 3, 5],
-    adr: ["0067", "0076"],
+    adr: ["0067", "0077"],
     yollar: ["/payments/refunds", "/payments/refunds/history"],
     kalitSozlar: [
       "qaytariladigan pul",

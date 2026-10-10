@@ -35,7 +35,7 @@ interface Facts {
 
 /**
  * Tells the student at once, on Telegram, that their refund request was
- * opened, handed over or cancelled (spec §5.4, ADR-0076 — an addition to
+ * opened, handed over or cancelled (spec §5.4, ADR-0077 — an addition to
  * ADR-0025's instant list, like the payment receipt). Pattern of
  * `PaymentEventsListener`: SmsService writes the SmsMessage row and the
  * history line; a student without a linked chat is skipped; an error is

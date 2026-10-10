@@ -29,7 +29,7 @@ export const PAYMENT_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
 };
 
 export const REFUND_TRANSITIONS: Record<RefundStatus, RefundStatus[]> = {
-  // ADR-0076: a request is handed over or cancelled. APPROVED and PROCESSING
+  // ADR-0077: a request is handed over or cancelled. APPROVED and PROCESSING
   // stay in the enum for old rows and are never written.
   REQUESTED: [RefundStatus.COMPLETED, RefundStatus.REJECTED],
   APPROVED: [],

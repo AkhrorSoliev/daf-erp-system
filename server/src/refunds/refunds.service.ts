@@ -21,7 +21,7 @@ export class RefundsService {
     return this.createService.quickRefund(dto, userId, companyId);
   }
 
-  // Hand over / cancel (ADR-0076)
+  // Hand over / cancel (ADR-0077)
   handOver(
     id: string,
     dto: HandOverRefundDto,

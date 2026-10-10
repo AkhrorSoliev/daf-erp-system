@@ -20,7 +20,7 @@ import { RefundableService } from './refundable.service';
 import { RefundableQueryDto } from './dto/refundable-query.dto';
 
 /**
- * «Qaytariladigan pul» reads (spec B2b §3, ADR-0076). Every staff role but
+ * «Qaytariladigan pul» reads (spec B2b §3, ADR-0077). Every staff role but
  * Teacher reads; the writes keep their own gates. Scope: the header branch.
  */
 @Controller('refundable')

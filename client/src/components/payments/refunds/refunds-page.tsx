@@ -35,7 +35,7 @@ const TAB_DOT: Record<RefundableTab, string> = { muzlatilgan: "bg-amber-500", gu
 const AGE_CHIPS: ("" | AgeBucket)[] = ["", ...AGE_BUCKETS];
 
 /**
- * «Qaytariladigan pul» (spec B2b §3, ADR-0076): the money of students who are not
+ * «Qaytariladigan pul» (spec B2b §3, ADR-0077): the money of students who are not
  * studying, in three tabs, and the open refund requests. Every figure is the
  * server's; the summary is the one place the three tabs are added (money held).
  */
