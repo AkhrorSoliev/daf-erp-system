@@ -16,7 +16,7 @@ import { GroupRowActions } from "./group-row-actions";
 import { LevelBadge } from "./level-badge";
 import { CoveringBadge } from "./covering-badge";
 import type { GroupData } from "@/hooks/use-edit-group";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 
 import { formatWeekdays } from "@/lib/weekdays";
 
@@ -35,8 +35,7 @@ export function GroupsTable({
   onDeleted,
   onStatusChanged,
 }: GroupsTableProps) {
-  const user = useAuth((s) => s.user);
-  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canManage = useCan("groups.manage");
 
   if (groups.length === 0) {
     return (

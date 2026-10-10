@@ -37,7 +37,7 @@ import {
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useScheduleAvailability } from "@/hooks/use-schedule-availability";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { groupFormEmptyHints, type EmptyHint } from "./group-form-empty-hints";
 import { SelectEmptyState } from "./select-empty-state";
 import api from "@/lib/api";
@@ -61,12 +61,8 @@ export function EditGroupForm({
   const { setSubmitting, setHasConflict } = useEditGroup();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
-  // Pull `user` and build the array outside the selector: `.map()` inside a
-  // selector returns a new array every render, which zustand v5 turns into
-  // an infinite render loop (the `home-overview.tsx` pattern).
-  const user = useAuth((s) => s.user);
-  const roleIds = user?.roles.map((r) => r.id) ?? [];
-  const emptyHints = groupFormEmptyHints(roleIds, selectedBranch?.id ?? null);
+  const can = usePermissions((s) => s.can);
+  const emptyHints = groupFormEmptyHints(can, selectedBranch?.id ?? null);
   // The drawer closes when the link is clicked — otherwise `useEditGroup.open`
   // would stay true and the form would pop back open on returning to /groups.
   const renderEmpty = (hint: EmptyHint) => (

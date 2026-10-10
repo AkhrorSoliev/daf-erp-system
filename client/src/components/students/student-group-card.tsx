@@ -1,8 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { RoleLink } from "@/components/shared/role-link";
-import { GROUP_PAGE_ROLES } from "@/lib/role-access";
+import { CanLink } from "@/components/shared/can-link";
 import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
 import { CalendarIcon, ClockIcon, UsersIcon, UserMinus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -36,8 +35,8 @@ export function StudentGroupCard({
   // Kassir o'quvchi profilini ochadi, guruh sahifasini esa yo'q: unga karta
   // havolasiz, hover rangisiz chiziladi (`group/card` faqat havolada bor).
   return (
-    <RoleLink
-      roles={GROUP_PAGE_ROLES}
+    <CanLink
+      perm="groups.view"
       href={`/groups/${group.id}`}
       linkClassName="group/card"
     >
@@ -108,6 +107,6 @@ export function StudentGroupCard({
           )}
         </div>
       </div>
-    </RoleLink>
+    </CanLink>
   );
 }

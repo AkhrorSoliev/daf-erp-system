@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { canForRoles } from "@/test-support/server-catalog";
 import type { BranchReadiness } from "./launch-types";
 import { resolveLaunchVisibility } from "./resolve-launch-visibility";
 
@@ -12,7 +13,7 @@ const readiness = (over: Partial<BranchReadiness> = {}): BranchReadiness => ({
 });
 
 const base = {
-  roleIds: [2],
+  can: canForRoles([2]),
   selectedBranchId: 2,
   readiness: readiness(),
   flags: { seen: false, celebrated: false, launched: false },
@@ -24,21 +25,21 @@ describe("resolveLaunchVisibility", () => {
   });
 
   it("a CEO who picked a specific branch sees it too", () => {
-    expect(resolveLaunchVisibility({ ...base, roleIds: [1] })).toBe("journey");
+    expect(resolveLaunchVisibility({ ...base, can: canForRoles([1]) })).toBe("journey");
   });
 
   it("a CEO on \"All branches\" does not see it", () => {
     expect(
-      resolveLaunchVisibility({ ...base, roleIds: [1], selectedBranchId: null }),
+      resolveLaunchVisibility({ ...base, can: canForRoles([1]), selectedBranchId: null }),
     ).toBe("hidden");
   });
 
   it.each([[[3]], [[4]], [[5]], [[3, 5]], [[]]])("hidden for roles %j", (roleIds) => {
-    expect(resolveLaunchVisibility({ ...base, roleIds })).toBe("hidden");
+    expect(resolveLaunchVisibility({ ...base, can: canForRoles(roleIds) })).toBe("hidden");
   });
 
   it("director + administrator — sees it", () => {
-    expect(resolveLaunchVisibility({ ...base, roleIds: [2, 3] })).toBe("journey");
+    expect(resolveLaunchVisibility({ ...base, can: canForRoles([2, 3]) })).toBe("journey");
   });
 
   it("the request failed or has not arrived yet → hidden", () => {

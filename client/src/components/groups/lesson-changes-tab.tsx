@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -87,11 +87,9 @@ interface Props {
 const TEACHER_ROLE_ID = 4;
 
 export function LessonChangesTab({ group }: Props) {
-  const user = useAuth((s) => s.user);
   const queryClient = useQueryClient();
-  const canCreate =
-    user?.roles?.some((r) => [1, 2, 3].includes(r.id)) ?? false;
-  const canDelete = user?.roles?.some((r) => [1, 2].includes(r.id)) ?? false;
+  const canCreate = useCan("lessons.change");
+  const canDelete = useCan("lessons.change-delete");
 
   const cancellationsQuery = useQuery({
     queryKey: ["lesson-cancellations", group.id],

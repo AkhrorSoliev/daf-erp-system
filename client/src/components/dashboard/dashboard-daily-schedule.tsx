@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RoleLink } from "@/components/shared/role-link";
-import { GROUP_PAGE_ROLES } from "@/lib/role-access";
+import { CanLink } from "@/components/shared/can-link";
 import {
   AlertCircle,
   CalendarX,
@@ -191,13 +190,13 @@ export function DashboardDailySchedule({
                   {lesson.startTime} – {lesson.endTime}
                 </TableCell>
                 <TableCell className="font-medium text-sm">
-                  <RoleLink
-                    roles={GROUP_PAGE_ROLES}
+                  <CanLink
+                    perm="groups.view"
                     href={`/groups/${lesson.groupId}`}
                     linkClassName="hover:underline hover:text-primary transition-colors"
                   >
                     {lesson.groupName}
-                  </RoleLink>
+                  </CanLink>
                   <span className="sm:hidden text-xs font-normal text-muted-foreground block">
                     {lesson.courseName}
                   </span>
