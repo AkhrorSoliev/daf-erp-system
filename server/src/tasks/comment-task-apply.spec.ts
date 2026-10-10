@@ -128,6 +128,8 @@ describe('applyCommentTask', () => {
       expect(scheduleTaskOutbox).toHaveBeenCalledTimes(1);
       expect(scheduleTaskOutbox).toHaveBeenCalledWith(tx, {
         id: 't-new',
+        kind: 'MANUAL',
+        priority: 'HIGH',
         dueAt: manual.dueDate,
         authorId: 30,
         participants: [

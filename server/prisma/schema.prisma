@@ -204,6 +204,14 @@ enum TaskOutboxChannel {
 enum TaskOutboxKind {
   REMINDER
   OVERDUE
+  NOTICE
+}
+
+enum TaskTelegramPurpose {
+  NOTICE
+  RETURN_PROMPT
+  /// Not used before phase 3 (photo upload).
+  PHOTO_PROMPT
 }
 
 // ===== FINANCIAL SYSTEM ENUMS =====
@@ -2005,12 +2013,13 @@ model Task {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
-  participants   TaskParticipant[]
-  steps          TaskStep[]
-  events         TaskEvent[]
-  outbox         TaskOutbox[]
-  notifications  Notification[]
-  unmarkedLesson UnmarkedLesson?   @relation("UnmarkedLessonTaskRow")
+  participants     TaskParticipant[]
+  steps            TaskStep[]
+  events           TaskEvent[]
+  outbox           TaskOutbox[]
+  telegramMessages TaskTelegramMessage[]
+  notifications    Notification[]
+  unmarkedLesson   UnmarkedLesson?       @relation("UnmarkedLessonTaskRow")
 
   @@index([companyId, status, dueAt])
   @@index([branchId, status])
@@ -2065,7 +2074,8 @@ model TaskEvent {
   @@index([taskId, createdAt])
 }
 
-/// Time-based notices (spec §9.3). INAPP in this phase; TELEGRAM in phase 2.
+/// Notices waiting for their time (spec §9.3): REMINDER / OVERDUE on both
+/// channels, and Telegram notices held for the night quiet or a retry (NOTICE).
 model TaskOutbox {
   id        String            @id @default(uuid())
   taskId    String
@@ -2077,10 +2087,34 @@ model TaskOutbox {
   attempts  Int               @default(0)
   sentAt    DateTime?
   lastError String?
+  /// NOTICE only: the planned `TgNotice` (task-notify-plan.ts).
+  payload   Json?
   createdAt DateTime          @default(now())
 
-  @@unique([taskId, userId, channel, kind])
+  /// Several notices of one task may wait for one person overnight, so the
+  /// key is a plain index. Prisma cannot express a partial index: the
+  /// migration also creates the UNIQUE "TaskOutbox_time_row_key" on
+  /// (taskId, userId, channel, kind) WHERE kind IN ('REMINDER','OVERDUE'),
+  /// which keeps the time rows one per person and lets `skipDuplicates` work.
+  @@index([taskId, userId])
   @@index([sendAfter, sentAt])
+}
+
+/// A bot message about a task (spec §6.2): a reply to it is routed to the task.
+model TaskTelegramMessage {
+  id        String              @id @default(uuid())
+  chatId    String
+  messageId Int
+  taskId    String
+  task      Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  /// Whom it was sent to (a bare id, like TaskOutbox.userId).
+  userId    Int
+  purpose   TaskTelegramPurpose
+  companyId Int
+  createdAt DateTime            @default(now())
+
+  @@unique([chatId, messageId])
+  @@index([taskId])
 }
 
 model Notification {

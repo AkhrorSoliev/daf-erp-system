@@ -848,6 +848,29 @@ describe('TasksService writes', () => {
     );
   });
 
+  it('a changed priority reschedules the outbox (an URGENT task is exempt from night quiet) without a due.changed', async () => {
+    prisma.task.findFirst.mockResolvedValue(
+      makeRow({ dueAt: new Date('2026-10-08T13:00:00.000Z') }),
+    );
+    await service.update('t1', { priority: 'URGENT' }, authorActor());
+    expect(outbox.schedule).toHaveBeenCalledWith(
+      prisma,
+      expect.objectContaining({ id: 't1', priority: 'URGENT' }),
+    );
+    expect(emitter.emit).not.toHaveBeenCalledWith(
+      TASK_EVENTS.DUE_CHANGED,
+      expect.anything(),
+    );
+  });
+
+  it('the same priority sent again leaves the outbox alone', async () => {
+    prisma.task.findFirst.mockResolvedValue(
+      makeRow({ dueAt: new Date('2026-10-08T13:00:00.000Z') }),
+    );
+    await service.update('t1', { priority: 'MEDIUM' }, authorActor());
+    expect(outbox.schedule).not.toHaveBeenCalled();
+  });
+
   it('update refuses a closed task', async () => {
     prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'DONE' }));
     await expect(

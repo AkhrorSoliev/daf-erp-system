@@ -130,7 +130,11 @@ export async function updateFieldsTx(
     select: TASK_DETAIL_SELECT,
   });
   // The old reminders are for the old due date. `schedule` clears the task's
-  // rows itself and writes new ones only when a due date is left.
-  if (dueChanged) await schedule(tx, updated);
+  // time rows itself and writes new ones only when a due date is left. A
+  // changed priority moves them too: an URGENT task is exempt from the night
+  // quiet, so its Telegram rows have a different time.
+  const priorityChanged =
+    dto.priority !== undefined && dto.priority !== row.priority;
+  if (dueChanged || priorityChanged) await schedule(tx, updated);
   return { updated, dueChanged };
 }

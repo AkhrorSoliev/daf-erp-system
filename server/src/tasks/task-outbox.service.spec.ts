@@ -38,10 +38,20 @@ describe('TaskOutboxService', () => {
     svc = mod.get(TaskOutboxService);
   });
 
+  const written = () =>
+    prisma.taskOutbox.createMany.mock.calls[0][0].data as any[];
+  const inapp = () => written().filter((r) => r.channel === 'INAPP');
+  const telegram = () =>
+    written()
+      .filter((r) => r.channel === 'TELEGRAM')
+      .map((r) => [r.userId, r.kind, r.sendAfter.toISOString()]);
+
   it('schedule writes REMINDER for assignees and OVERDUE for assignees + author, only in the future', async () => {
     const dueAt = new Date(Date.now() + 3 * 3600_000);
     await svc.schedule(prisma, {
       id: 't1',
+      kind: 'MANUAL' as const,
+      priority: 'MEDIUM' as const,
       dueAt,
       authorId: 30,
       participants: [
@@ -49,7 +59,7 @@ describe('TaskOutboxService', () => {
         { userId: 50, role: 'WATCHER' },
       ],
     });
-    const rows = prisma.taskOutbox.createMany.mock.calls[0][0].data;
+    const rows = inapp();
     expect(rows.map((r: any) => [r.userId, r.kind])).toEqual([
       [40, 'REMINDER'],
       [40, 'OVERDUE'],
@@ -62,11 +72,13 @@ describe('TaskOutboxService', () => {
     const dueAt = new Date(Date.now() + 30 * 60_000);
     await svc.schedule(prisma, {
       id: 't1',
+      kind: 'MANUAL' as const,
+      priority: 'MEDIUM' as const,
       dueAt,
       authorId: 30,
       participants: [{ userId: 40, role: 'ASSIGNEE' }],
     });
-    const rows = prisma.taskOutbox.createMany.mock.calls[0][0].data;
+    const rows = inapp();
     expect(rows.map((r: any) => [r.userId, r.kind])).toEqual([
       [40, 'OVERDUE'],
       [30, 'OVERDUE'],
@@ -74,21 +86,25 @@ describe('TaskOutboxService', () => {
     expect(rows[0].sendAfter.getTime()).toBe(dueAt.getTime());
   });
 
-  it('schedule clears every earlier row, sent ones included, so a moved deadline notifies again', async () => {
+  it('schedule clears every earlier time row, sent ones included, and keeps queued Telegram notices', async () => {
     await svc.schedule(prisma, {
       id: 't1',
+      kind: 'MANUAL' as const,
+      priority: 'MEDIUM' as const,
       dueAt: new Date(Date.now() + 3 * 3600_000),
       authorId: 30,
       participants: [{ userId: 40, role: 'ASSIGNEE' }],
     });
     expect(prisma.taskOutbox.deleteMany).toHaveBeenCalledWith({
-      where: { taskId: 't1' },
+      where: { taskId: 't1', kind: { in: ['REMINDER', 'OVERDUE'] } },
     });
   });
 
   it('schedule without a due date only clears', async () => {
     await svc.schedule(prisma, {
       id: 't1',
+      kind: 'MANUAL' as const,
+      priority: 'MEDIUM' as const,
       dueAt: null,
       authorId: 30,
       participants: [{ userId: 40, role: 'ASSIGNEE' }],
@@ -100,6 +116,8 @@ describe('TaskOutboxService', () => {
   it('schedule with a past due writes nothing (the overdue notice would be noise)', async () => {
     await svc.schedule(prisma, {
       id: 't1',
+      kind: 'MANUAL' as const,
+      priority: 'MEDIUM' as const,
       dueAt: new Date(Date.now() - 1000),
       authorId: 30,
       participants: [{ userId: 40, role: 'ASSIGNEE' }],
@@ -256,5 +274,87 @@ describe('TaskOutboxService', () => {
   it('drain with nothing due does not look anyone up', async () => {
     expect(await svc.drain()).toBe(0);
     expect(prisma.user.findMany).not.toHaveBeenCalled();
+  });
+
+  describe('Telegram time rows (spec §6.4, §9.3)', () => {
+    afterEach(() => jest.useRealTimers());
+    const base = {
+      id: 't1',
+      kind: 'MANUAL' as const,
+      authorId: 30,
+      participants: [{ userId: 40, role: 'ASSIGNEE' as const }],
+    };
+
+    it('writes a TELEGRAM row next to every in-app row; a night one waits for 08:00', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-12T05:00:00.000Z'));
+      // Due 13.10 08:30 Tashkent: the reminder (07:30) falls in the quiet hours.
+      await svc.schedule(prisma, {
+        ...base,
+        priority: 'MEDIUM',
+        dueAt: new Date('2026-10-13T03:30:00.000Z'),
+      });
+      expect(telegram()).toEqual([
+        [40, 'REMINDER', '2026-10-13T03:00:00.000Z'],
+        [40, 'OVERDUE', '2026-10-13T03:30:00.000Z'],
+        [30, 'OVERDUE', '2026-10-13T03:30:00.000Z'],
+      ]);
+      expect(inapp()[0].sendAfter.toISOString()).toBe(
+        '2026-10-13T02:30:00.000Z',
+      );
+    });
+
+    it('an URGENT task is told at night too', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-12T05:00:00.000Z'));
+      // Due 12.10 22:00 Tashkent.
+      await svc.schedule(prisma, {
+        ...base,
+        priority: 'URGENT',
+        dueAt: new Date('2026-10-12T17:00:00.000Z'),
+      });
+      expect(telegram()).toContainEqual([
+        40,
+        'OVERDUE',
+        '2026-10-12T17:00:00.000Z',
+      ]);
+    });
+
+    it("«Dars bo'ldimi?» gets no Telegram rows", async () => {
+      await svc.schedule(prisma, {
+        ...base,
+        kind: 'LESSON_QUESTION',
+        priority: 'HIGH',
+        authorId: null,
+        dueAt: new Date(Date.now() + 3 * 3600_000),
+      });
+      expect(telegram()).toEqual([]);
+      expect(inapp()).toHaveLength(2);
+    });
+
+    it('skips a duplicate time row instead of failing (partial unique index)', async () => {
+      await svc.schedule(prisma, {
+        ...base,
+        priority: 'MEDIUM',
+        dueAt: new Date(Date.now() + 3 * 3600_000),
+      });
+      expect(prisma.taskOutbox.createMany.mock.calls[0][0].skipDuplicates).toBe(
+        true,
+      );
+    });
+  });
+
+  it('purge drops sent rows and dead rows older than 30 days', async () => {
+    prisma.taskOutbox.deleteMany.mockResolvedValue({ count: 4 });
+    await expect(svc.purge(new Date('2026-11-10T22:00:00.000Z'))).resolves.toBe(
+      4,
+    );
+    const before = new Date('2026-10-11T22:00:00.000Z');
+    expect(prisma.taskOutbox.deleteMany).toHaveBeenCalledWith({
+      where: {
+        OR: [
+          { sentAt: { lt: before } },
+          { sentAt: null, attempts: { gte: 3 }, createdAt: { lt: before } },
+        ],
+      },
+    });
   });
 });

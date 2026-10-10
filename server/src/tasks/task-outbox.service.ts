@@ -1,17 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { Prisma, UserStatus } from '@prisma/client';
+import { Prisma, TaskKind, TaskPriority, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
 import { OPEN_STATUSES } from './task-transitions';
+import { telegramSendAfter } from './task-quiet-hours';
 
 type Db = PrismaService | Prisma.TransactionClient;
 const REMINDER_LEAD_MS = 60 * 60 * 1000;
+const SENT_KEEP_MS = 30 * 24 * 3600_000;
 
 export interface OutboxTask {
   id: string;
+  kind: TaskKind;
+  priority: TaskPriority;
   dueAt: Date | null;
   authorId: number | null;
   participants: { userId: number; role: 'ASSIGNEE' | 'WATCHER' }[];
@@ -26,10 +30,12 @@ export async function scheduleTaskOutbox(
   db: Db,
   task: OutboxTask,
 ): Promise<void> {
-  // Sent rows go too: the unique key (task, user, channel, kind) would make
-  // createMany skip a new OVERDUE after a deadline moved past an old one.
-  // A sent row's sendAfter is in the past, so it is never written again.
-  await db.taskOutbox.deleteMany({ where: { taskId: task.id } });
+  // Sent time rows go too, so a deadline moved past an old one notifies
+  // again. Telegram notices queued for the morning (NOTICE) are not time
+  // rows and stay.
+  await db.taskOutbox.deleteMany({
+    where: { taskId: task.id, kind: { in: ['REMINDER', 'OVERDUE'] } },
+  });
   const dueAt = task.dueAt;
   if (!dueAt) return;
   const assignees = task.participants
@@ -41,22 +47,43 @@ export async function scheduleTaskOutbox(
       ...(task.authorId !== null ? [task.authorId] : []),
     ]),
   ];
-  const rows = [
+  const now = Date.now();
+  const due = [
     ...assignees.map((userId) => ({
-      taskId: task.id,
       userId,
-      channel: 'INAPP' as const,
       kind: 'REMINDER' as const,
-      sendAfter: new Date(dueAt.getTime() - REMINDER_LEAD_MS),
+      at: new Date(dueAt.getTime() - REMINDER_LEAD_MS),
     })),
     ...overdueTo.map((userId) => ({
-      taskId: task.id,
       userId,
-      channel: 'INAPP' as const,
       kind: 'OVERDUE' as const,
-      sendAfter: dueAt,
+      at: dueAt,
     })),
-  ].filter((r) => r.sendAfter.getTime() > Date.now());
+  ].filter((r) => r.at.getTime() > now);
+  // «Dars bo'ldimi?» never goes to Telegram (spec §6.1): the lesson-end
+  // message already covers it.
+  const toTelegram = task.kind !== 'LESSON_QUESTION';
+  const rows = [
+    ...due.map((r) => ({
+      taskId: task.id,
+      userId: r.userId,
+      channel: 'INAPP' as const,
+      kind: r.kind,
+      sendAfter: r.at,
+    })),
+    ...(toTelegram
+      ? due.map((r) => ({
+          taskId: task.id,
+          userId: r.userId,
+          channel: 'TELEGRAM' as const,
+          kind: r.kind,
+          // The night shift is decided now; the drain only looks at sendAfter.
+          sendAfter: telegramSendAfter(r.at, task.priority),
+        }))
+      : []),
+  ];
+  // skipDuplicates leans on the partial unique index TaskOutbox_time_row_key
+  // (REMINDER / OVERDUE rows, one per task, person, channel and kind).
   if (rows.length) {
     await db.taskOutbox.createMany({ data: rows, skipDuplicates: true });
   }
@@ -75,7 +102,10 @@ export class TaskOutboxService {
     private push: PushService,
   ) {}
 
-  /** (Re)writes the time-based rows for a task; called on create, participant and due changes. */
+  /**
+   * (Re)writes the time-based rows (in-app and Telegram) for a task; called on
+   * create and on participant, due-date and priority changes.
+   */
   schedule(db: Db, task: OutboxTask): Promise<void> {
     return scheduleTaskOutbox(db, task);
   }
@@ -89,6 +119,21 @@ export class TaskOutboxService {
     } finally {
       this.draining = false;
     }
+  }
+
+  /** Spec §9.6: sent rows, and rows that failed three times, go after 30 days. */
+  @Cron('0 0 3 * * *', { timeZone: 'Asia/Tashkent' })
+  async purge(now = new Date()): Promise<number> {
+    const before = new Date(now.getTime() - SENT_KEEP_MS);
+    const { count } = await this.prisma.taskOutbox.deleteMany({
+      where: {
+        OR: [
+          { sentAt: { lt: before } },
+          { sentAt: null, attempts: { gte: 3 }, createdAt: { lt: before } },
+        ],
+      },
+    });
+    return count;
   }
 
   private async drainDue(): Promise<number> {
