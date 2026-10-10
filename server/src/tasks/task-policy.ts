@@ -1,16 +1,12 @@
+import { ROLE_ID } from '../common/auth/role-ids';
+
 /**
  * Pure permission rules for tasks (spec 2026-10-07 §5). No Prisma here: the
  * service loads people and passes them in, so every rule is unit-testable and,
  * later, the Ruxsatlar tizimi can replace a function body without touching
  * callers.
  */
-export const ROLE_ID = {
-  CEO: 1,
-  BRANCH_DIRECTOR: 2,
-  ADMINISTRATOR: 3,
-  TEACHER: 4,
-  CASHIER: 5,
-} as const;
+export { ROLE_ID };
 
 /** The target's HIGHEST role (smallest id) must be inside the caller's list. */
 const ASSIGN_LADDER: Record<number, readonly number[]> = {
