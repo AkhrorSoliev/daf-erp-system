@@ -266,6 +266,13 @@ enum ContractStatus {
   REFUNDED
 }
 
+/// How a contract document was signed (ADR-0075). Stage 1 writes PAPER only;
+/// BOT arrives with the Telegram «Roziman» stage.
+enum ContractSignMethod {
+  PAPER
+  BOT
+}
+
 enum SalaryType {
   PERCENTAGE
   FIXED_PER_STUDENT
@@ -422,6 +429,10 @@ model User {
   relatedExpenses       Expense[]       @relation("ExpenseRelatedUser")
   deletedContracts      Contract[]      @relation("ContractDeletedBy")
 
+  contractDocumentsCreated   ContractDocument[] @relation("ContractDocumentCreatedBy")
+  contractDocumentsSigned    ContractDocument[] @relation("ContractDocumentSignedBy")
+  contractDocumentsCancelled ContractDocument[] @relation("ContractDocumentCancelledBy")
+
   teacherHistoryChanges GroupTeacherHistory[] @relation("GroupTeacherHistoryChangedBy")
 
   // Activity report snapshot authorship
@@ -472,16 +483,20 @@ model UserBranch {
 }
 
 model Branch {
-  id                Int          @id @default(autoincrement())
-  name              String
-  address           String?
-  phone             String?
-  isActive          Boolean      @default(true)
-  status            BranchStatus @default(ACTIVE)
-  startOfWorkingDay String?
-  endOfWorkingDay   String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  id                     Int          @id @default(autoincrement())
+  name                   String
+  address                String?
+  phone                  String?
+  // Shartnoma uchun (ADR-0075): sarlavhadagi shahar va Ijrochi vakili.
+  city                   String?
+  representativeName     String?
+  representativePosition String?
+  isActive               Boolean      @default(true)
+  status                 BranchStatus @default(ACTIVE)
+  startOfWorkingDay      String?
+  endOfWorkingDay        String?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
 
   statusChangedAt    DateTime?
   statusChangedById  Int?
@@ -495,18 +510,19 @@ model Branch {
   deletedBy       User?     @relation("BranchDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  users           UserBranch[]
-  studentBranches StudentBranch[]
-  rooms           Room[]
-  groups          Group[]
-  courses         Course[]
-  telegramGroups  TelegramGroup[]
-  leads           Lead[]
-  leadColumns     LeadColumn[]
-  mockExams       MockExam[]
-  holidays        Holiday[]
-  monthlyCharges  EnrollmentMonthlyCharge[]
-  settings        Setting[]
+  users             UserBranch[]
+  studentBranches   StudentBranch[]
+  rooms             Room[]
+  groups            Group[]
+  courses           Course[]
+  telegramGroups    TelegramGroup[]
+  leads             Lead[]
+  leadColumns       LeadColumn[]
+  mockExams         MockExam[]
+  holidays          Holiday[]
+  monthlyCharges    EnrollmentMonthlyCharge[]
+  settings          Setting[]
+  contractDocuments ContractDocument[]
 
   @@index([deletedAt])
   @@index([status])
@@ -679,6 +695,7 @@ model Student {
   payments          Payment[]
   transactions      Transaction[]             @relation("StudentTransactions")
   contracts         Contract[]
+  contractDocuments ContractDocument[]
   refunds           Refund[]
   salaryAccruals    SalaryAccrual[]           @relation("StudentSalaryAccruals")
   paymentPromises   PaymentPromise[]
@@ -1407,6 +1424,11 @@ model Enrollment {
   startDate               DateTime?
   createdAt               DateTime         @default(now())
 
+  // The contract document this enrollment is under (ADR-0075). Carried to the
+  // new enrollment on a group transfer, cleared when the contract is cancelled.
+  contractDocumentId String?
+  contractDocument   ContractDocument? @relation(fields: [contractDocumentId], references: [id], onDelete: SetNull)
+
   statusChangedAt    DateTime?
   statusChangedById  Int?
   statusChangeReason String?
@@ -1431,6 +1453,7 @@ model Enrollment {
   @@index([status])
   @@index([departureReasonId])
   @@index([transferReasonId])
+  @@index([contractDocumentId])
 }
 
 /// Oylik to'lov modelining yagona haqiqat manbasi: har yozilish, har oy
@@ -1897,28 +1920,28 @@ model EnrollmentTransferReason {
 }
 
 model Comment {
-  id         String        @id @default(uuid())
-  entityType String
-  entityId   String
-  content    String
-  isTask     Boolean       @default(false)
-  isSystem   Boolean       @default(false)
-  dueDate    DateTime?
-  priority   TaskPriority?
+  id             String        @id @default(uuid())
+  entityType     String
+  entityId       String
+  content        String
+  isTask         Boolean       @default(false)
+  isSystem       Boolean       @default(false)
+  dueDate        DateTime?
+  priority       TaskPriority?
   /// Set by scripts/migrate-comment-tasks.ts; such rows are hidden from comment lists.
   migratedTaskId String?
   /// NULL = a task the system gave (ADR-0054); the UI shows «Tizim».
-  authorId   Int?
-  author     User?         @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
-  companyId  Int
-  company    Company       @relation(fields: [companyId], references: [id])
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  authorId       Int?
+  author         User?         @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  companyId      Int
+  company        Company       @relation(fields: [companyId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  assignees     CommentAssignee[]
-  notifications Notification[]
+  assignees      CommentAssignee[]
+  notifications  Notification[]
   /// The unmarked lesson this system task asks about (ADR-0054).
-  unmarkedLesson UnmarkedLesson? @relation("UnmarkedLessonTask")
+  unmarkedLesson UnmarkedLesson?   @relation("UnmarkedLessonTask")
 
   @@index([entityType, entityId])
   @@index([authorId])
@@ -2429,6 +2452,40 @@ model Contract {
   @@index([companyId])
   @@index([status])
   @@index([deletedAt])
+}
+
+/// Ta'lim xizmati shartnomasining hujjati (ADR-0075). Eski `Contract` dan
+/// alohida: uni pul kodi o'qiydi (`per-lesson-price.ts`, to'lov, qaytarish).
+/// `fields` — PDF'ga tushadigan hamma qiymat, shartnoma tuzilganda muhrlanadi.
+model ContractDocument {
+  id              String              @id @default(uuid())
+  companyId       Int
+  number          String
+  studentId       Int
+  student         Student             @relation(fields: [studentId], references: [id])
+  branchId        Int
+  branch          Branch              @relation(fields: [branchId], references: [id])
+  templateVersion Int
+  contractDate    DateTime            @db.Date
+  fields          Json
+  createdById     Int?
+  createdBy       User?               @relation("ContractDocumentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  signedAt        DateTime?
+  signedById      Int?
+  signedBy        User?               @relation("ContractDocumentSignedBy", fields: [signedById], references: [id], onDelete: SetNull)
+  signMethod      ContractSignMethod?
+  cancelledAt     DateTime?
+  cancelledById   Int?
+  cancelledBy     User?               @relation("ContractDocumentCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  cancelReason    String?
+
+  enrollments Enrollment[]
+
+  @@unique([companyId, number])
+  @@index([studentId])
+  @@index([branchId])
 }
 
 model EmployeeSalaryConfig {

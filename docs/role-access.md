@@ -85,6 +85,19 @@ Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qa
 
 - **Frontend**: `CALL_LOG_ROLES`, `STATEMENT_ROLES` and `FROZEN_BALANCE_ACTION_ROLES` in `client/src/lib/role-access.ts` hide the actions a cashier may not take
 
+### Student contracts
+
+The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-0075). Everyone below the CEO acts only on students of their own branch.
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| See contracts, open the PDF | Yes | Yes | Yes | No | No |
+| Create, edit an unsigned contract, mark it signed on paper | Yes | Yes | Yes | No | No |
+| Cancel an unsigned contract | Yes | Yes | Yes | No | No |
+| Cancel a signed contract | Yes | No | No | No | No |
+
+- **Frontend**: `CONTRACT_ROLES` and `SIGNED_CONTRACT_CANCEL_ROLES` in `client/src/lib/role-access.ts`
+
 ### Groups
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |

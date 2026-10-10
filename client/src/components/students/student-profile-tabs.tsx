@@ -18,6 +18,8 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import type { Student } from "@/data/student-model";
 import { useAuth } from "@/hooks/use-auth";
 import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
+import { CONTRACT_ROLES, hasAnyRole } from "@/lib/role-access";
+import { StudentContractsTab } from "./contracts/student-contracts-tab";
 import { StudentAppActivityTab } from "./student-app-activity-tab";
 import { StudentGroupCard } from "./student-group-card";
 import { PaymentStatement } from "./statement/payment-statement";
@@ -54,6 +56,7 @@ export function StudentProfileTabs({
 }: StudentProfileTabsProps) {
   const user = useAuth((s) => s.user);
   const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canContracts = hasAnyRole(user?.roles, CONTRACT_ROLES);
   const [localGroups, setLocalGroups] = useState(student.groups);
   const isUngrouped = student.isActive && localGroups.length === 0;
   const [historyVisible, setHistoryVisible] = useState(false);
@@ -67,6 +70,8 @@ export function StudentProfileTabs({
   const darslarShown = useRef(false);
   const [ilovaVisible, setIlovaVisible] = useState(false);
   const ilovaShown = useRef(false);
+  const [contractsVisible, setContractsVisible] = useState(false);
+  const contractsShown = useRef(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
   );
@@ -150,6 +155,10 @@ export function StudentProfileTabs({
       if (value === "ilova" && !ilovaShown.current) {
         ilovaShown.current = true;
         setIlovaVisible(true);
+      }
+      if (value === "shartnomalar" && !contractsShown.current) {
+        contractsShown.current = true;
+        setContractsVisible(true);
       }
     },
     [],
@@ -272,6 +281,9 @@ export function StudentProfileTabs({
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
           {canManage && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
+          {canContracts && (
+            <TabsTrigger value="shartnomalar">Shartnomalar</TabsTrigger>
+          )}
           {canManage && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
           {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
           {canManage && (
@@ -358,6 +370,18 @@ export function StudentProfileTabs({
             <EmptyState message="To'lov ma'lumotlari mavjud emas" />
           )}
         </TabsContent>
+
+        {/* Shartnomalar (ADR-0075) */}
+        {canContracts && (
+          <TabsContent value="shartnomalar">
+            {contractsVisible && (
+              <StudentContractsTab
+                studentId={student.id}
+                onStudentChanged={onEnrollmentChange}
+              />
+            )}
+          </TabsContent>
+        )}
 
         {/* Darslar — davomat + sikl/to'lov monitoringi */}
         <TabsContent value="darslar">

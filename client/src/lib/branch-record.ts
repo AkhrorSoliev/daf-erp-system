@@ -9,6 +9,9 @@ export interface BranchApiRow {
   status: string;
   startOfWorkingDay?: string | null;
   endOfWorkingDay?: string | null;
+  city?: string | null;
+  representativeName?: string | null;
+  representativePosition?: string | null;
 }
 
 /**
@@ -24,6 +27,9 @@ export function toBranch(row: BranchApiRow): Branch {
     status: row.status,
     startOfWorkingDay: row.startOfWorkingDay ?? "",
     endOfWorkingDay: row.endOfWorkingDay ?? "",
+    city: row.city ?? "",
+    representativeName: row.representativeName ?? "",
+    representativePosition: row.representativePosition ?? "",
   };
 }
 
@@ -33,6 +39,9 @@ export interface BranchFormValues {
   phone: string;
   startOfWorkingDay: string;
   endOfWorkingDay: string;
+  city: string;
+  representativeName: string;
+  representativePosition: string;
 }
 
 /**
@@ -47,5 +56,8 @@ export function branchUpdateBody(values: BranchFormValues) {
     phone: values.phone || undefined,
     startOfWorkingDay: values.startOfWorkingDay || undefined,
     endOfWorkingDay: values.endOfWorkingDay || undefined,
+    city: values.city.trim() || undefined,
+    representativeName: values.representativeName.trim() || undefined,
+    representativePosition: values.representativePosition.trim() || undefined,
   };
 }

@@ -14,6 +14,13 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-10",
+    sarlavha: "O'quvchi shartnomasi tizimda tuziladi",
+    matn: "O'quvchi profilida «Shartnomalar» tabi qo'shildi. «Shartnoma tuzish» kurs, guruh, ustoz, jadval, narx va chegirmani o'quvchining ma'lumotlaridan o'zi to'ldiradi; Buyurtmachining pasporti, manzili va kursga kiradigan narsalarni shu oynada kiritasiz. Bir nechta kurs bitta shartnomaga yoki har biri alohida shartnomaga kiradi. «PDF» chop etishga tayyor shartnomani ochadi, Buyurtmachi imzolagach «Qog'ozda imzolandi» bosiladi. Shartnoma tuzishdan oldin filial sozlamasiga shahar, manzil, vakil ismi va lavozimini kiriting.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "shartnoma" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Telegramni botda raqam bilan bog'lash",
     matn: "Administrator qo'lda qo'shgan o'quvchi yoki xodim endi Telegramini botning o'zida bog'laydi: /start yuboradi, «📱 Hisobimni bog'lash» tugmasini bosadi va «📱 Telefon raqamni yuborish» bilan o'z raqamini yuboradi. Raqam o'quvchi kartasida bo'lsa, karta bog'lanadi (bitta raqamdagi aka-ukalar birga), xodim hisobida bo'lsa, xodim hisobi bog'lanadi va xodim menyusi chiqadi. Raqam topilmasa, bot «Bu raqam tizimda topilmadi.» deydi va hech narsa o'zgarmaydi. Tugma faqat Telegram hali hech kimga bog'lanmagan bo'lsa chiqadi. Bog'lash telefonni tasdiqlamaydi, login va parol o'zgarmaydi.",
     rollar: [1, 2, 3, 4, 5],
