@@ -53,6 +53,8 @@ export const routeLabels: Record<string, string> = {
   "debt-history": "Qarz tarixi",
   "debt-write-offs": "Kechirilgan qarzlar",
   "frozen-balances": "Muzlatilganlarning puli",
+  // /payments/refunds — «Qaytariladigan pul» (spec B2b).
+  refunds: "Qaytariladigan pul",
   expenses: "Xarajatlar",
   // "Oyliklar" — the monthly payroll list (teachers + fixed-salary staff).
   // "Ish haqi" stays the term for ONE person's salary (profile tabs), so the

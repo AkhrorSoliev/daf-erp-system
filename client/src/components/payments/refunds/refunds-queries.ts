@@ -15,11 +15,15 @@ export const refundHistoryKey = (branchId: number | undefined, page: number, pag
 /**
  * The summary, the pending block, the tab totals and the pager stay on screen
  * while the next page, chip or search of the SAME tab loads. Another tab has
- * other columns, so a tab switch drops only the rows (skeleton).
+ * other columns, so a tab switch drops only the rows (skeleton). Another branch's
+ * answer is never kept at all: every figure on it belongs to that branch.
  */
-export const keepWithinRefundTab = (tab: RefundableTab) =>
-  (prev: RefundableListResponse | undefined, prevQuery?: { queryKey: ReturnType<typeof refundableListKey> }) =>
-    !prev || prevQuery?.queryKey[2].tab === tab ? prev : { ...prev, rows: { ...prev.rows, data: [], total: 0 } };
+export const keepWithinRefundTab = (tab: RefundableTab, branchId?: number) =>
+  (prev: RefundableListResponse | undefined, prevQuery?: { queryKey: ReturnType<typeof refundableListKey> }) => {
+    if (!prev) return prev;
+    if (prevQuery && prevQuery.queryKey[1] !== branchId) return undefined;
+    return prevQuery?.queryKey[2].tab === tab ? prev : { ...prev, rows: { ...prev.rows, data: [], total: 0 } };
+  };
 
 export function useRefundableList(f: RefundsFilters) {
   const { selectedBranch } = useBranchSwitcher();
@@ -27,7 +31,7 @@ export function useRefundableList(f: RefundsFilters) {
   return useQuery({
     queryKey: refundableListKey(selectedBranch?.id, params),
     queryFn: () => api.get<RefundableListResponse>("/refundable/list", { params }).then((r) => r.data),
-    placeholderData: keepWithinRefundTab(params.tab),
+    placeholderData: keepWithinRefundTab(params.tab, selectedBranch?.id),
     // «Bugungi holat»: a hand-over at another desk shows on return.
     staleTime: 0,
   });

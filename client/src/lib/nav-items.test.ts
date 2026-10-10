@@ -62,3 +62,19 @@ describe("navItems — Moliya → «Qarzdorlik» stays lit on its sub-pages (spe
     expect(debt && isNavChildActive("/payments/salary", debt)).toBe(false);
   });
 });
+
+describe("navItems — Moliya → «Qaytariladigan pul» (spec B2b §3)", () => {
+  const children = navItems.find((item) => item.url === "/payments")?.children ?? [];
+  const refunds = children.find((child) => child.url === "/payments/refunds");
+
+  it("right after «Ish haqi», for every role that sees Moliya", () => {
+    const i = children.findIndex((child) => child.url === "/payments/refunds");
+    expect(children[i - 1]?.url).toBe("/payments/salary");
+    expect(refunds?.title).toBe("Qaytariladigan pul");
+    expect(refunds?.visibleForRoles).toEqual([1, 2, 3, 5]);
+  });
+
+  it("stays lit on its history page", () => {
+    expect(refunds && isNavChildActive("/payments/refunds/history", refunds)).toBe(true);
+  });
+});
