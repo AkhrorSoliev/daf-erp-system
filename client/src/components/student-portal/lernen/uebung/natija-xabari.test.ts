@@ -67,6 +67,10 @@ describe("xatoYorligi", () => {
     expect(xatoYorligi("WORT_TIPPEN", "")).toBe("Eshitish savoli");
   });
 
+  it("SATZ_HOEREN uchun ham — gap promptda yo'q, u javobning o'zi", () => {
+    expect(xatoYorligi("SATZ_HOEREN", "")).toBe("Eshitish savoli");
+  });
+
   it("qolgan formatlarda promptning o'zini qaytaradi", () => {
     expect(xatoYorligi("WORT_UZ", "Bu so'z nimani anglatadi?")).toBe(
       "Bu so'z nimani anglatadi?",

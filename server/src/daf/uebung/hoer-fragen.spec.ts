@@ -104,3 +104,15 @@ describe('hoerenWahl', () => {
     ).toBeNull();
   });
 });
+
+describe('hoerenWahl — dialog picture', () => {
+  it('does NOT send the picture with the question (it shows the answers)', () => {
+    const f = hoerenWahl(
+      { ...dialog(), imageKey: 'daf/bild/abc.jpg' },
+      () => 0,
+      mediaUrl,
+    )!;
+    expect(f.bildUrl).toBeUndefined();
+    expect(JSON.stringify(f)).not.toContain('daf/bild/abc.jpg');
+  });
+});

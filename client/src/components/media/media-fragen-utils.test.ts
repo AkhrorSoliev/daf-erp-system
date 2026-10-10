@@ -13,6 +13,8 @@ describe("vorschauShakli", () => {
     // bo'sh qator bo'lib chiqardi.
     expect(vorschauShakli("AUDIO_WORT")).toBe("OVOZ");
     expect(vorschauShakli("WORT_TIPPEN")).toBe("OVOZ");
+    // Eshitib gap tuzish: savol — gap audiosi, javob — gapning o'zi.
+    expect(vorschauShakli("SATZ_HOEREN")).toBe("OVOZ");
   });
   it("juftlash formatlarida juftlar ro`yxati", () => {
     expect(vorschauShakli("PAAR")).toBe("JUFT");

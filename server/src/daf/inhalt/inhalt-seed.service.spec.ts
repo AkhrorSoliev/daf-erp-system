@@ -1,5 +1,6 @@
 import { InhaltSeedService } from './inhalt-seed.service';
 import type { InhaltFiles } from './inhalt-seed.service';
+import { satzTextHash } from './satz-audio';
 
 function files(): InhaltFiles {
   return {
@@ -678,6 +679,37 @@ describe('InhaltSeedService', () => {
     expect(calls[0][0].create.audioKey).toBeNull();
   });
 
+  it('sentence audioKey comes from the manifest only while its text hash matches', async () => {
+    const prisma = fakePrisma();
+    const f = files();
+    const satz = f.saetze.saetze[0];
+    f.satzAudio = {
+      [satz.sourceId]: { key: 'daf/audio/s.mp3', textHash: satzTextHash(satz) },
+    };
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    const erst = prisma.dafSentence.upsert.mock.calls[0][0];
+    expect(erst.create.audioKey).toBe('daf/audio/s.mp3');
+    expect(erst.update.audioKey).toBe('daf/audio/s.mp3');
+
+    // The sentence was edited after its audio was made: the old recording
+    // would say something the tiles cannot build, so the seed clears it.
+    const geaendert = files();
+    geaendert.saetze.saetze[0].de = 'Ich bin Mia.';
+    geaendert.satzAudio = f.satzAudio;
+    await new InhaltSeedService(prisma as any).seed('u01', geaendert);
+    expect(
+      prisma.dafSentence.upsert.mock.calls[1][0].update.audioKey,
+    ).toBeNull();
+  });
+
+  it('sentence audioKey is null without a manifest', async () => {
+    const prisma = fakePrisma();
+    await new InhaltSeedService(prisma as any).seed('u01', files());
+    expect(
+      prisma.dafSentence.upsert.mock.calls[0][0].create.audioKey,
+    ).toBeNull();
+  });
+
   it('eshitish savollarini dialog kaliti + tartib bilan yozadi', async () => {
     const prisma = fakePrisma();
     await new InhaltSeedService(prisma as any).seed('u01', files());
@@ -710,6 +742,25 @@ describe('InhaltSeedService', () => {
     const yana = files();
     await new InhaltSeedService(prisma as any).seed('u01', yana);
     expect(prisma.dafDialog.upsert.mock.calls[1][0].update.audioKey).toBeNull();
+  });
+
+  it('sahna va satr izohini yozadi; fayldan olib tashlansa null ga qaytaradi', async () => {
+    const prisma = fakePrisma();
+    const f = files();
+    f.dialoge.dialoge[0].sahnaUz = 'Ertalab. Anna oshxonada.';
+    f.dialoge.dialoge[0].zeilen[1].izohUz = 'boshqa xonadan';
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    expect(prisma.dafDialog.upsert.mock.calls[0][0].create.sahnaUz).toBe(
+      'Ertalab. Anna oshxonada.',
+    );
+    const lines = prisma.dafDialogLine.upsert.mock.calls.map((c) => c[0]);
+    expect(lines[0].create.izohUz).toBeNull();
+    expect(lines[1].create.izohUz).toBe('boshqa xonadan');
+
+    await new InhaltSeedService(prisma as any).seed('u01', files());
+    expect(prisma.dafDialog.upsert.mock.calls[1][0].update.sahnaUz).toBeNull();
+    const again = prisma.dafDialogLine.upsert.mock.calls.map((c) => c[0]);
+    expect(again[3].update.izohUz).toBeNull();
   });
 
   it('fayldan yo`qolgan dialogning savollari satrlaridan OLDIN o`chiriladi', async () => {

@@ -35,17 +35,17 @@ import { FalAblehnungError } from '../src/daf/media/fal-client';
 // faqat sof funksiyalarni sinaydi.
 
 describe('pruefeBudget', () => {
-  it('chegara qiymati aniq 400 (brifda qat`iy belgilangan)', () => {
+  it('chegara qiymati aniq 2000 (eng katta unit u04 — 1 322 belgi)', () => {
     // Ko'rikda topilgan zaiflik: pastdagi "aynan chegarada" testi
     // `BELGI_CHEGARASI`ning O'ZIDAN foydalanardi, shuning uchun chegara
     // qiymati o'zgarib qolsa ham (masalan 400 → 4000) o'sha test hech
     // qachon buni ushlamas edi (o'z-o'ziga qarshi solishtirilgani uchun
     // doim to'g'ri chiqadi). Qiymat shu yerda AYNAN raqam bilan qadaladi.
-    expect(BELGI_CHEGARASI).toBe(400);
+    expect(BELGI_CHEGARASI).toBe(2000);
   });
 
-  it('400 belgidan oshsa to`xtaydi', () => {
-    expect(() => pruefeBudget(401)).toThrow(/400/);
+  it('2000 belgidan oshsa to`xtaydi', () => {
+    expect(() => pruefeBudget(2001)).toThrow(/2000/);
   });
 
   it('chegara ichida o`tadi', () => {
@@ -53,11 +53,11 @@ describe('pruefeBudget', () => {
   });
 
   it("chegaraning aynan o'zida o'tadi (qat'iy oshish emas)", () => {
-    // Literal `400` — `BELGI_CHEGARASI`ga emas, xuddi shu qiymatga
-    // tekshiriladi: yuqoridagi test allaqachon konstantani 400ga
+    // Literal `2000` — `BELGI_CHEGARASI`ga emas, xuddi shu qiymatga
+    // tekshiriladi: yuqoridagi test allaqachon konstantani 2000ga
     // qadagan, shuning uchun bu yerda simvolga ishonish endi ortiqcha
     // bilvosita bog'liqlik yaratardi.
-    expect(() => pruefeBudget(400)).not.toThrow();
+    expect(() => pruefeBudget(2000)).not.toThrow();
   });
 });
 
@@ -461,14 +461,15 @@ describe('parseUnitArg', () => {
 });
 
 describe('budget for the units that follow unit 1', () => {
-  // One run per unit must fit under the 400-character guard, or the
+  // One run per unit must fit under the 2000-character guard, or the
   // script stops before the first paid call. Measured on the written
   // files: u02 = 359 (54 words with the compound numbers of 2026-09-30;
   // fünfunddreißig is spoken as "fünf-und-dreißig"),
-  // u03 = 281.
+  // u03 = 281, u04 = 1 322 (188 words).
   it.each([
     ['u02', 54],
     ['u03', 50],
+    ['u04', 188],
   ])('%s words fit one run', (unit, anzahl) => {
     const dataset: WoerterFile = JSON.parse(
       readFileSync(woerterPfad(unit), 'utf8'),

@@ -21,6 +21,12 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-10",
+    sarlavha: "DaF ilovasida A1 4-unit «Essen und Trinken» va yangi «Eshitib gap tuzish» mashqi",
+    matn: "O'quvchi ilovasida A1 kursining 4-uniti ochildi: ovqat, ichimlik, do'kon va restoran mavzusidagi 188 so'z, 149 gap va 9 ta dialog. Dialoglar hayotdagidek: fonda bozor, oshxona yoki restoran shovqini, eshik va muzlatkich ovozi eshitiladi, boshqa xonadan gapirgan odamning ovozi uzoqdan keladi. Har dialogning yozma matnida sahna izohi bor («Ertalab. Jonas oshxonada», «boshqa xonadan»), har dialogga butun hikoyani ko'rsatadigan bitta rasm chizilgan. Ovqat va idish so'zlarining 74 tasiga rasm bor. Yangi mashq — «Eshitib gap tuzish»: o'quvchi nemischa gapni eshitadi va uni so'zlardan yig'adi.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Botdan guruhga yozilish endi administrator tasdig'i bilan",
     matn: "Guruhning QR kodi yoki havolasi orqali botda ro'yxatdan o'tgan odam endi darhol o'quvchi bo'lmaydi: u so'rov yuboradi. Filial administratorlariga «Yangi o'quvchi so'rovi» topshirig'i chiqadi (qo'ng'iroqchada va Telegram botda ham). Topshiriq varag'ida o'quvchining rasmi, telefoni, Telegram nomi va tizim topgan belgilar (avvalgi lid, arxivdagi karta, guruhda shu ismli o'quvchi) turadi. «Tasdiqlash» bosilganda karta ochiladi, o'quvchi guruhga qo'shiladi, oylik pul shu kundan hisoblanadi va login-parol botga boradi; kerak bo'lsa boshqa guruhni tanlash mumkin. «Rad etish» da sabab yoziladi — uni faqat xodimlar ko'radi, o'quvchiga sababsiz xabar boradi. Bir kundan ortiq javobsiz so'rovlar 21:00 hisobotida sanaladi, 7 kun ichida javob berilmagan so'rov o'zi yopiladi. Bot endi yopilgan guruhga va ishlamayotgan ustozga yozmaydi.",
     rollar: [1, 2, 3],

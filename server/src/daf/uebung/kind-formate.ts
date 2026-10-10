@@ -8,9 +8,9 @@ import type { FrageFormat } from './frage.types';
  * format, no two in a row, at least `MIN_FORMATE` formats). When this was
  * written only 10 formats existed and a strict split would have left a
  * session with three, contradicting `MIN_FORMATE`. With the picture formats
- * the engine has 16 (not quite the course design's list: `WAHL` and
- * `HOEREN_TABELLE` are still missing) and SECTION_A / SECTION_B prefer six
- * each, so with enough material the ordering already behaves like a split —
+ * and `SATZ_HOEREN` the engine has 17 (not quite the course design's list:
+ * `WAHL` and `HOEREN_TABELLE` are still missing) and SECTION_A / SECTION_B
+ * prefer six and seven, so with enough material the ordering already behaves like a split —
  * and it still falls back when material is missing (a unit whose pictures
  * are not made yet simply asks other formats).
  *
@@ -31,6 +31,7 @@ const XARITA: Record<string, FrageFormat[]> = {
     'ARTIKEL',
     'LUECKE',
     'SATZ_BAUEN',
+    'SATZ_HOEREN',
     'WORT_TIPPEN',
     'BILD_TIPPEN',
   ],
@@ -44,6 +45,7 @@ const XARITA: Record<string, FrageFormat[]> = {
     'DIALOG_LUECKE',
     'SATZ_UEBERSETZEN',
     'HOEREN_WAHL',
+    'SATZ_HOEREN',
   ],
 };
 

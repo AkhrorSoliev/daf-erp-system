@@ -107,18 +107,18 @@ export function woerterPfad(unit: string): string {
 }
 
 /**
- * Narx chegarasi (belgi soni). Brifda qat'iy belgilangan — 53 so'z = 278
- * belgi, chegara 400: xato kirish ma'lumotidan (masalan butun boshqa
- * unit tasodifan qo'shilib qolishi) saqlaydi.
+ * Narx chegarasi (belgi soni). Eng katta unit — u04, 188 so'z = 1 322
+ * belgi; chegara 2000 ($0.02): xato kirish ma'lumotidan (masalan bir
+ * nechta unit tasodifan qo'shilib qolishi) saqlaydi.
  */
-export const BELGI_CHEGARASI = 400;
+export const BELGI_CHEGARASI = 2000;
 
 /**
  * Haqiqiy chaqiruv (dry-run emas) uchun kerak bo'ladigan muhit
  * o'zgaruvchilari — `daf-gen-images.ts` dagi bilan bir xil naqsh: hammasi
  * bir joyda tekshiriladi, yarim ishlab keyin yiqilish yo'q.
  */
-const REQUIRED_ENV = [
+export const REQUIRED_ENV = [
   'FAL_KEY',
   'R2_ENDPOINT',
   'R2_ACCESS_KEY_ID',
@@ -249,7 +249,7 @@ export function schluesselFuerWort(wort: SprachEintrag): string {
 export const RUXSAT_ETILGAN_STIMMELAR: readonly string[] = ['Johanna'];
 
 /** The Inworld voice id behind each allowed `--stimme` value. */
-const INWORLD_STIMMEN: Readonly<Record<string, string>> = {
+export const INWORLD_STIMMEN: Readonly<Record<string, string>> = {
   Johanna: 'Johanna (de)',
 };
 

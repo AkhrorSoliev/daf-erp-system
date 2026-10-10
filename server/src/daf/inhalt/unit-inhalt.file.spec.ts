@@ -31,8 +31,10 @@ import type { KursFile } from '../kurs/kurs.types';
 import type { GoetheFile } from './goethe-parse';
 import { validateHoerFragen } from './hoer-fragen.validate';
 import { validateDialogAudio, type DialogAudioManifest } from './dialog-audio';
+import { validateSatzAudio, type SatzAudioManifest } from './satz-audio';
 import { bildPlanFuerUnit, validateBildPlan, type BildPlan } from './bild-plan';
 import type { BildManifest } from '../media/bild-keys';
+import { validateDialogBilder } from './dialog-bilder';
 
 const A1 = join(__dirname, '..', '..', '..', 'content', 'daf', 'a1');
 const read = <T>(...p: string[]): T =>
@@ -265,6 +267,22 @@ describe.each(UNITS)('%s — so`zlar', (unit) => {
   });
 });
 
+describe('dialog rasmlari', () => {
+  it('manifest kalitlari — mavjud dialoglar, qiymati daf/bild/<hex>.jpg', () => {
+    const dialogIds = new Set(
+      UNITS.flatMap((unit) =>
+        readOrEmpty<DialogeFile>(
+          { unit, dialoge: [] },
+          unit,
+          'dialoge.json',
+        ).dialoge.map((d) => d.id),
+      ),
+    );
+    const manifest = readOrEmpty<BildManifest>({}, 'dialog-bilder.json');
+    expect(validateDialogBilder(manifest, dialogIds)).toEqual([]);
+  });
+});
+
 describe.each(UNITS)('%s — grammatika va iboralar', (unit) => {
   const grammatik = readOrEmpty<GrammatikFile>(
     { unit, regeln: [] },
@@ -402,6 +420,22 @@ describe.each(UNITS)('%s — dialoglar', (unit) => {
     expect(shubhali).toEqual([]);
   });
 
+  it('sahna va satr izohlari lotincha, bo`sh emas, ikki nuqtasiz', () => {
+    // Mashq matnida izoh `Mia (izoh): ...` bo'lib chiqadi va mijoz satrni
+    // birinchi ikki nuqtada bo'ladi — izoh ichidagi «:» gapiruvchini buzadi.
+    const notLotin = /[Ѐ-ԯ؀-ۿ]/;
+    const yomon = (s: string | undefined) =>
+      s !== undefined &&
+      (s.trim() === '' || s.includes(':') || notLotin.test(s));
+    const shubhali = dialoge.dialoge.flatMap((d) => [
+      ...(yomon(d.sahnaUz) ? [`${d.id}: ${d.sahnaUz}`] : []),
+      ...d.zeilen
+        .filter((z) => yomon(z.izohUz))
+        .map((z) => `${d.id}: ${z.izohUz}`),
+    ]);
+    expect(shubhali).toEqual([]);
+  });
+
   it('dialoglarda shu bo`lim yoki oldingisidan tashqari notanish so`z yo`q', () => {
     const unbekannt = new Set<string>();
     for (const d of dialoge.dialoge) {
@@ -489,6 +523,13 @@ describe.each(UNITS)('%s — gaplar', (unit) => {
 
   it('muqobil so`z tartiblari aynan gapning so`zlaridan tuzilgan', () => {
     expect(validateSatzAlternativen(saetze.saetze)).toEqual([]);
+  });
+
+  it('audio manifesti gap matni bilan mos', () => {
+    // A sentence edited after its audio was made would be silently dropped
+    // from SATZ_HOEREN by the seed; this names it before the commit.
+    const manifest = readOrEmpty<SatzAudioManifest>({}, 'satz-audio.json');
+    expect(validateSatzAudio(saetze.saetze, manifest)).toEqual([]);
   });
 
   it('gaplarda shu bo`lim yoki oldingisidan tashqari notanish so`z yo`q', () => {

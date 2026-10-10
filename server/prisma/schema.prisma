@@ -3738,10 +3738,17 @@ model DafDialog {
   sectionId Int
   titelDe   String
   titelUz   String
+  /// Sahna izohi (o'zbekcha): suhbat qayerda, kim bilan boshlanadi. Mashq
+  /// matnida va eshitishdan keyingi matnda birinchi qator bo'lib chiqadi.
+  sahnaUz   String?
   /// Butun suhbatning R2 kaliti — `text-to-dialogue` bitta fayl beradi,
   /// satrma-satr emas. `null` — ovoz hali yasalmagan, eshitish savoli
   /// qurilmaydi. Manba — `content/daf/a1/dialog-audio.json`.
   audioKey  String?
+  /// Butun hikoyani ko'rsatadigan bitta rasm — tasodifiy R2 kaliti
+  /// (`daf/bild/<hex>.jpg`). `null` — rasm yo'q. Manba —
+  /// `content/daf/a1/dialog-bilder.json`.
+  imageKey  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3765,6 +3772,8 @@ model DafDialogLine {
   de       String
   tts      String?
   uz       String
+  /// Satr yonidagi sahna izohi (o'zbekcha), masalan «boshqa xonadan».
+  izohUz   String?
   audioKey String?
 
   dialog DafDialog @relation(fields: [dialogId], references: [id])

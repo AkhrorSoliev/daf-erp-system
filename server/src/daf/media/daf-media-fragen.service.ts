@@ -15,6 +15,7 @@ import {
   luecke,
   reaktion,
   satzBauen,
+  satzHoeren,
   satzUebersetzen,
   zuordnen,
 } from '../uebung/satz-fragen';
@@ -153,6 +154,8 @@ export const VORSCHAU_BAUER: Record<
   LUECKE: (m, r) =>
     m.saetze.map((s) => luecke(s, m.woerter, r)).filter(nichtNull),
   SATZ_BAUEN: (m, r) => m.saetze.map((s) => satzBauen(s, r)).filter(nichtNull),
+  SATZ_HOEREN: (m, r) =>
+    m.saetze.map((s) => satzHoeren(s, r, m.mediaUrl)).filter(nichtNull),
   SATZ_UEBERSETZEN: (m, r) =>
     m.saetze.map((s) => satzUebersetzen(s, m.saetze, r)).filter(nichtNull),
   REAKTION: (m, r) =>
@@ -269,7 +272,13 @@ export class DafMediaFragenService {
         this.prisma.dafSentence.findMany({
           where: { sectionId: { in: sectionIds } },
           orderBy: { order: 'asc' },
-          select: { id: true, de: true, uz: true, akzeptiert: true },
+          select: {
+            id: true,
+            de: true,
+            uz: true,
+            akzeptiert: true,
+            audioKey: true,
+          },
         } as any),
         this.prisma.dafPhrase.findMany({
           where: { sectionId: { in: sectionIds } },
@@ -305,6 +314,7 @@ export class DafMediaFragenService {
       de: string;
       uz: string;
       akzeptiert: string[];
+      audioKey?: string | null;
     }
     interface PhraseRow {
       id: number;
@@ -354,6 +364,7 @@ export class DafMediaFragenService {
       uz: s.uz,
       sectionCode: '',
       akzeptiert: s.akzeptiert,
+      audioKey: s.audioKey ?? null,
     }));
 
     const phrasen: MaterialPhrase[] = (phrasenRows as PhraseRow[]).map((p) => ({

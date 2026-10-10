@@ -7,6 +7,7 @@ import {
   type MaterialSatz,
   type MaterialWort,
 } from './frage.types';
+import type { MediaUrlResolver } from './wort-fragen';
 
 function mischen<T>(items: T[], rnd: () => number): T[] {
   const out = [...items];
@@ -140,6 +141,28 @@ export function satzBauen(satz: MaterialSatz, rnd: () => number): Frage | null {
   };
 }
 
+/**
+ * `SATZ_HOEREN` — gapni eshitib, o'sha bo'laklardan tuzish (CEO, 10.10.2026).
+ *
+ * `SATZ_BAUEN`ning eshitish egizagi: bo'laklar, javob, `akzeptiert` va
+ * `belegteItems` AYNAN o'sha (bitta gap seansda ikki xil so'ralmaydi).
+ * Farqi — o'zbekcha YO'Q: tarjima javobni aytib qo'yardi, savol esa
+ * eshitishni tekshiradi. Audiosiz yoki `R2_PUBLIC_URL`siz qurilmaydi
+ * (`audioWort` qoidasi — xom kalit mijozga ketmaydi).
+ */
+export function satzHoeren(
+  satz: MaterialSatz,
+  rnd: () => number,
+  mediaUrl: MediaUrlResolver,
+): Frage | null {
+  if (!satz.audioKey) return null;
+  const audioUrl = mediaUrl(satz.audioKey);
+  if (!audioUrl) return null;
+  const bauen = satzBauen(satz, rnd);
+  if (!bauen) return null;
+  return { ...bauen, format: 'SATZ_HOEREN', prompt: '', audioUrl };
+}
+
 export function satzUebersetzen(
   ziel: MaterialSatz,
   andere: MaterialSatz[],
@@ -162,11 +185,16 @@ export function satzUebersetzen(
   // made this the easiest question on production (97% right first time,
   // 21–29.09) — one familiar word gave the answer away. Stable sort over a
   // shuffled list, then three of the best five, so chance stays.
+  // The count is taken once per sentence, not inside the comparison.
   const zielWoerter = new Set(woerterVon(normalisieren(ziel.de)));
   const gemeinsam = (s: MaterialSatz) =>
     woerterVon(normalisieren(s.de)).filter((w) => zielWoerter.has(w)).length;
   const falsch = mischen(
-    [...kandidaten].sort((a, b) => gemeinsam(b) - gemeinsam(a)).slice(0, 5),
+    kandidaten
+      .map((s) => ({ s, n: gemeinsam(s) }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 5)
+      .map((k) => k.s),
     rnd,
   )
     .slice(0, 3)

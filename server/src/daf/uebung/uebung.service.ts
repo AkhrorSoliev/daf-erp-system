@@ -33,6 +33,7 @@ import {
   luecke,
   reaktion,
   satzBauen,
+  satzHoeren,
   satzUebersetzen,
   zuordnen,
   ZUORDNEN_JUFT,
@@ -207,6 +208,14 @@ export interface AbschlussNatija {
   sinov?: YakuniySinovNatijasi;
 }
 
+/** Eshitishdan keyin ochiladigan suhbat satri; `izohUz` — sahna izohi yoki `null`. */
+export interface TranskriptZeile {
+  sprecher: string;
+  de: string;
+  uz: string;
+  izohUz: string | null;
+}
+
 export interface PruefenErgebnis {
   isCorrect: boolean;
   richtig: string;
@@ -215,7 +224,17 @@ export interface PruefenErgebnis {
    * (o'quvchi nimani eshitmaganini ko'radi). Boshqa formatda `undefined`,
    * savol bilan birga hech qachon yuborilmaydi (D6/D7).
    */
-  transkript?: Array<{ sprecher: string; de: string; uz: string }>;
+  transkript?: TranskriptZeile[];
+  /** `transkript` bilan birga: suhbat sahnasi (o'zbekcha), yo'q bo'lsa `null`. */
+  transkriptSahna?: string | null;
+  /**
+   * With `transkript`: the dialog's picture URL, `null` when there is none.
+   * Only after the answer — with the question it would show answers like
+   * «Was kauft Mia?».
+   */
+  transkriptBild?: string | null;
+  /** With `transkript`: the dialog's title (the picture's `alt`). */
+  transkriptTitel?: string;
   /**
    * Picture formats only: the word itself ("der Bahnhof"), sent after the
    * answer so the student learns what was heard or shown.
@@ -904,6 +923,7 @@ export class UebungService {
       uz: string;
       sectionId: number | null;
       akzeptiert: string[];
+      audioKey?: string | null;
     }
     interface PhraseRow {
       id: number;
@@ -915,9 +935,17 @@ export class UebungService {
     interface DialogRow {
       id: number;
       titelDe: string;
+      sahnaUz?: string | null;
       sectionId: number;
-      zeilen: Array<{ id: number; sprecher: string; de: string; uz: string }>;
+      zeilen: Array<{
+        id: number;
+        sprecher: string;
+        de: string;
+        uz: string;
+        izohUz?: string | null;
+      }>;
       audioKey: string | null;
+      imageKey?: string | null;
       fragen: Array<{
         id: number;
         frageDe: string;
@@ -936,6 +964,7 @@ export class UebungService {
       uz: s.uz,
       sectionCode: kodVon(s.sectionId),
       akzeptiert: s.akzeptiert,
+      audioKey: s.audioKey ?? null,
     });
     const toPhrase = (p: PhraseRow): MaterialPhrase => ({
       id: p.id,
@@ -948,13 +977,16 @@ export class UebungService {
       id: d.id,
       titelDe: d.titelDe,
       sectionCode: kodVon(d.sectionId),
+      sahnaUz: d.sahnaUz ?? null,
       zeilen: d.zeilen.map((z) => ({
         id: z.id,
         sprecher: z.sprecher,
         de: z.de,
         uz: z.uz,
+        izohUz: z.izohUz ?? null,
       })),
       audioKey: d.audioKey,
+      imageKey: d.imageKey ?? null,
       fragen: d.fragen.map((f) => ({
         id: f.id,
         frageDe: f.frageDe,
@@ -1067,6 +1099,9 @@ export class UebungService {
       if (lu) rohKandidaten.push(lu);
       const sb = satzBauen(s, rnd);
       if (sb) rohKandidaten.push(sb);
+      // `null` until the sentence has audio — the format turns itself on.
+      const sh = satzHoeren(s, rnd, (key) => this.mediaUrl(key));
+      if (sh) rohKandidaten.push(sh);
       const su = satzUebersetzen(s, sentences, rnd);
       if (su) rohKandidaten.push(su);
     }
@@ -1090,7 +1125,9 @@ export class UebungService {
       const andereZeilen = dialoge
         .filter((o) => o.id !== d.id)
         .flatMap((o) => o.zeilen);
-      const dl = dialogLuecke(d, andereZeilen, rnd);
+      const dl = dialogLuecke(d, andereZeilen, rnd, (key) =>
+        this.mediaUrl(key),
+      );
       if (dl) rohKandidaten.push(dl);
     }
 
@@ -1502,12 +1539,31 @@ export class UebungService {
     }
 
     if (format === 'HOEREN_WAHL' && material.dialogId != null) {
-      const zeilen = (await this.prisma.dafDialogLine.findMany({
-        where: { dialogId: material.dialogId },
-        orderBy: { order: 'asc' },
-        select: { sprecher: true, de: true, uz: true },
-      } as any)) as Array<{ sprecher: string; de: string; uz: string }>;
-      return { isCorrect, richtig, transkript: zeilen };
+      const d = (await this.prisma.dafDialog.findUnique({
+        where: { id: material.dialogId },
+        select: {
+          titelDe: true,
+          sahnaUz: true,
+          imageKey: true,
+          zeilen: {
+            orderBy: { order: 'asc' },
+            select: { sprecher: true, de: true, uz: true, izohUz: true },
+          },
+        },
+      } as any)) as {
+        titelDe: string;
+        sahnaUz: string | null;
+        imageKey: string | null;
+        zeilen: TranskriptZeile[];
+      } | null;
+      return {
+        isCorrect,
+        richtig,
+        transkript: d?.zeilen ?? [],
+        transkriptSahna: d?.sahnaUz ?? null,
+        transkriptBild: d?.imageKey ? this.mediaUrl(d.imageKey) : null,
+        transkriptTitel: d?.titelDe ?? '',
+      };
     }
     return {
       isCorrect,

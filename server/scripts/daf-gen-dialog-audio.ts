@@ -47,22 +47,41 @@
  */
 import 'dotenv/config';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { mkdtemp, rm } from 'fs/promises';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { S3Client } from '@aws-sdk/client-s3';
 import { R2Uploader } from '../src/daf-content/media/r2-uploader';
-import {
-  FalAblehnungError,
-  FalClient,
-  type GeminiDialog,
-} from '../src/daf/media/fal-client';
-import { neuerAudioSchluessel } from '../src/daf/media/audio-keys';
-import { polstereMp3, POLSTER_KENNUNG } from '../src/daf/media/audio-polster';
+import { FalClient, type GeminiDialog } from '../src/daf/media/fal-client';
+import { polstereMp3 } from '../src/daf/media/audio-polster';
 import {
   DIALOG_AUDIO_MODELL,
   dialogTextHash,
   type DialogAudioManifest,
 } from '../src/daf/inhalt/dialog-audio';
 import type { Dialog, DialogeFile } from '../src/daf/inhalt/unit-inhalt.types';
+import {
+  pruefeHoerspiel,
+  type HoerspielRegie,
+} from '../src/daf/media/hoerspiel';
+import {
+  teileMehrstimmig,
+  zeichenMehrstimmig,
+} from '../src/daf/media/mehrstimmig';
+import {
+  benoetigteGeraeusche,
+  entscheideDialoge,
+  GERAEUSCH_PREIS_SEK,
+  GERAEUSCH_SEK_CHEGARASI,
+} from '../src/daf/media/hoerspiel-auftrag';
+import {
+  erstelleMehrstimmig,
+  erstelleMische,
+  erzeugeGeraeusche,
+  ladeGeraeuschManifest,
+  mischeUndLade,
+  r2Laden,
+} from './lib/hoerspiel-lauf';
 
 const A1 = join(__dirname, '..', 'content', 'daf', 'a1');
 const MANIFEST_PATH = join(A1, 'dialog-audio.json');
@@ -82,12 +101,6 @@ export const BELGI_CHEGARASI_DIALOG = 7200;
 /** Appended to every scene: A1 learners need clear speech at a calm pace. */
 export const DIALOG_STIL_ZUSATZ = 'Deutlich, in ruhigem Tempo.';
 
-/**
- * A content-checker refusal costs nothing and passes when the same request
- * is sent again (2026-09-25), so it is retried; no other error is.
- */
-export const ABLEHNUNG_VERSUCHE = 3;
-
 const REQUIRED_ENV = [
   'FAL_KEY',
   'R2_ENDPOINT',
@@ -98,10 +111,14 @@ const REQUIRED_ENV = [
 
 export type Stimmen = Record<string, string>;
 
-/** `dialog-regie.json`: per dialog a German scene and one tone per line. */
+/**
+ * `dialog-regie.json`: per dialog a German scene and one tone per line;
+ * `hoerspiel` (optional) makes the realistic version — room tone, sound
+ * effects between the lines, lines from another room (`hoerspiel.ts`).
+ */
 export type DialogRegie = Record<
   string,
-  { szene: string; toene: Array<string | null> }
+  { szene: string; toene: Array<string | null>; hoerspiel?: HoerspielRegie }
 >;
 
 // A tone becomes "[tone]" in the prompt: plain lowercase English words, so
@@ -172,6 +189,13 @@ export function geminiDialog(
     }
   }
 
+  if (r.hoerspiel) {
+    const probleme = pruefeHoerspiel(r.hoerspiel, dialog.zeilen.length);
+    if (probleme.length > 0) {
+      throw new Error(`${dialog.id}: ${probleme.join('; ')}`);
+    }
+  }
+
   const prompt = dialog.zeilen
     .map((z, i) => {
       const ton = r.toene[i];
@@ -217,7 +241,11 @@ export function zuGenerierenDialoge(
 /** Billed characters: the prompt and the style instructions. */
 export function gesamtZeichenDialoge(anfragen: GeminiDialog[]): number {
   return anfragen.reduce(
-    (sum, a) => sum + a.prompt.length + a.styleInstructions.length,
+    (sum, a) =>
+      sum +
+      (a.speakers.length > 2
+        ? zeichenMehrstimmig(teileMehrstimmig(a))
+        : a.prompt.length + a.styleInstructions.length),
     0,
   );
 }
@@ -284,101 +312,15 @@ function ladeDialoge(): Dialog[] {
   return einzeln.length > 0 ? alle.filter((d) => einzeln.includes(d.id)) : alle;
 }
 
-export type DialogGenerierFn = (
-  dialog: Dialog,
-  anfrage: GeminiDialog,
-) => Promise<{ key: string; polster?: string }>;
-
-/**
- * Dialoglarni BIRIN-KETIN ishlaydi (2026-09-12 ko'rik, F2): har biri
- * `generiere` bilan yasaladi/yuklanadi, DARHOL manifestga (modeli bilan)
- * yoziladi va `speichereManifest` bilan diskka saqlanadi — keyingisiga
- * o'tishdan OLDIN. N-dialog yiqilsa xato tashqariga uloqtiriladi va sikl
- * TO'XTAYDI, lekin 1..N-1 allaqachon manifestda VA diskda saqlangan —
- * pul yo'qolmaydi, qayta yuritish faqat to'xtagan joydan davom etadi.
- *
- * `manifest` argument sifatida MUTATSIYA qilinadi (nusxa emas) — xato
- * tashlangandan keyin ham chaqiruvchi yozilgan yozuvlarni ko'ra oladi.
- */
-export async function generiereDialogeNacheinander(
-  dialoge: Dialog[],
-  anfrageById: Map<string, GeminiDialog>,
-  manifest: DialogAudioManifest,
-  generiere: DialogGenerierFn,
-  speichereManifest: (manifest: DialogAudioManifest) => void,
-): Promise<void> {
-  for (const d of dialoge) {
-    let result: { key: string; polster?: string };
-    try {
-      result = await generiere(d, anfrageById.get(d.id)!);
-    } catch (err) {
-      throw new Error(
-        `"${d.titelDe}" (${d.id}) yasalmadi/yuklanmadi: ${(err as Error).message}`,
-      );
-    }
-    manifest[d.id] = {
-      key: result.key,
-      textHash: dialogTextHash(d.zeilen),
-      ...(result.polster ? { polster: result.polster } : {}),
-      modell: DIALOG_AUDIO_MODELL,
-    };
-    speichereManifest(manifest);
-    console.log(
-      `  ${d.id}: ${d.titelDe} → yasaldi, yuklandi, manifestga yozildi`,
-    );
-  }
-}
-
-/**
- * Bitta dialog uchun to'liq quvur: fal.ai orqali yasaydi (rad etilsa
- * shu so'rovni yana yuboradi), baytlarni yuklab oladi, JIMLIK QO'SHADI
- * (`polster`), YANGI tasodifiy kalit bilan R2'ga yuklaydi.
- *
- * Bog'liqliklar (fal, uploader, fetchFn, polster) INJEKTSIYA QILINADI —
- * testlar soxta (network'siz) nusxalar bilan ishlaydi. Kalit har doim
- * YANGI va tasodifiy (`neuerAudioSchluessel()`), demak R2'da hech qachon
- * oldindan mavjud bo'lmaydi.
- */
-export function erstelleGeneriere(
-  fal: Pick<FalClient, 'dialogGemini'>,
-  uploader: Pick<R2Uploader, 'uploadBytes'>,
-  fetchFn: typeof fetch,
-  polster: (bytes: Buffer) => Promise<Buffer>,
-): DialogGenerierFn {
-  return async (d, anfrage) => {
-    let sourceUrl: string | undefined;
-    for (let versuch = 1; sourceUrl === undefined; versuch++) {
-      try {
-        sourceUrl = await fal.dialogGemini(anfrage);
-      } catch (err) {
-        if (
-          !(err instanceof FalAblehnungError) ||
-          versuch >= ABLEHNUNG_VERSUCHE
-        ) {
-          throw err;
-        }
-        console.log(
-          `    ${d.id}: fal.ai rad etdi (${versuch}-marta), yana so'rayapman`,
-        );
-      }
-    }
-    // Pul xavfsizligi: bu yerdan keyin HALI uchta bosqich bor (yuklab
-    // olish, jimlik, R2'ga yuklash) — birortasi yiqilsa, ENDIGINA PULLIK
-    // yasalgan audio hech qayerga yozilmagan bo'lardi. `sourceUrl`
-    // fal.ai'ning VAQTINCHALIK ommaviy manzili (sir emas) — konsolga
-    // chiqarilishi qo'lda tiklab olish imkonini beradi.
-    console.log(`    ${d.id}: fal.ai natijasi — ${sourceUrl}`);
-    const res = await fetchFn(sourceUrl);
-    if (!res.ok) {
-      throw new Error(`fal.ai audiosi yuklab olinmadi — HTTP ${res.status}`);
-    }
-    const roh = Buffer.from(await res.arrayBuffer());
-    const gepolstert = await polster(roh);
-    const key = neuerAudioSchluessel();
-    await uploader.uploadBytes(key, gepolstert);
-    return { key, polster: POLSTER_KENNUNG };
-  };
-}
+// The generation pipeline lives in `lib/dialog-generieren.ts`; it is
+// re-exported here, where its tests and the rest of the script expect it.
+export {
+  ABLEHNUNG_VERSUCHE,
+  erstelleGeneriere,
+  generiereDialogeNacheinander,
+  type DialogErgebnis,
+  type DialogGenerierFn,
+} from './lib/dialog-generieren';
 
 async function main(): Promise<void> {
   const stimmen = JSON.parse(readFileSync(STIMMEN_PATH, 'utf8')) as Stimmen;
@@ -386,25 +328,60 @@ async function main(): Promise<void> {
   const manifest: DialogAudioManifest = existsSync(MANIFEST_PATH)
     ? (JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')) as DialogAudioManifest)
     : {};
+  const speichere = (m: DialogAudioManifest) =>
+    writeFileSync(MANIFEST_PATH, JSON.stringify(m, null, 2) + '\n');
 
-  const qoldi = zuGenerierenDialoge(ladeDialoge(), manifest);
-  console.log(`${qoldi.length} ta dialogga ovoz kerak.`);
-  if (qoldi.length === 0) {
+  // `sprechen`: new or edited text, paid to Gemini. `mischen`: only the
+  // realistic mix changed and the raw recording is kept — free.
+  const ausgewaehlt = ladeDialoge();
+  const { sprechen, mischen } = entscheideDialoge(ausgewaehlt, regie, manifest);
+  // `--neu-mischen`: remix every selected realistic dialog from its kept raw
+  // recording (free), e.g. after the cutting itself was improved.
+  if (process.argv.includes('--neu-mischen')) {
+    for (const d of ausgewaehlt) {
+      const e = manifest[d.id];
+      const offen = !sprechen.includes(d) && !mischen.includes(d);
+      if (offen && e?.rohKey && regie[d.id]?.hoerspiel) mischen.push(d);
+    }
+  }
+  console.log(
+    `${sprechen.length} ta dialogga ovoz kerak, ${mischen.length} tasi faqat qayta aralashtiriladi.`,
+  );
+  if (sprechen.length === 0 && mischen.length === 0) {
     console.log("Qilinadigan ish yo'q.");
     return;
   }
   // Every request is built and checked BEFORE the network — a missing
-  // voice, scene or tone stops the run while nothing has been paid.
+  // voice, scene, tone or effect stops the run while nothing has been paid.
   const anfrageById = new Map(
-    qoldi.map((d) => [d.id, geminiDialog(d, stimmen, regie)]),
+    sprechen.map((d) => [d.id, geminiDialog(d, stimmen, regie)]),
   );
+  for (const d of mischen) geminiDialog(d, stimmen, regie);
 
   const zeichen = gesamtZeichenDialoge([...anfrageById.values()]);
   console.log(
     `Jami belgi: ${zeichen} (≈ $${((zeichen / 1000) * NARX_1000_BELGI).toFixed(3)}).`,
   );
   pruefeDialogBudget(zeichen);
+
+  const geraeuschManifest = ladeGeraeuschManifest();
+  const neueGeraeusche = benoetigteGeraeusche(
+    [...sprechen, ...mischen],
+    regie,
+    geraeuschManifest,
+  );
+  const sek = neueGeraeusche.reduce((n, g) => n + g.sek, 0);
+  console.log(
+    `Yangi effektlar: ${neueGeraeusche.length} ta, ${sek} s (≈ $${(sek * GERAEUSCH_PREIS_SEK).toFixed(3)}).`,
+  );
+  if (sek > GERAEUSCH_SEK_CHEGARASI) {
+    throw new Error(
+      `Effektlar chegarasi oshib ketdi: ${sek} s (chegara ${GERAEUSCH_SEK_CHEGARASI}). Chaqiruv TO'XTATILDI.`,
+    );
+  }
   if (process.argv.includes('--dry-run')) {
+    for (const g of neueGeraeusche)
+      console.log(`  effekt: «${g.sfx}» ${g.sek} s${g.loop ? ' (fon)' : ''}`);
     console.log('--dry-run: hech narsa yuborilmadi.');
     return;
   }
@@ -426,17 +403,46 @@ async function main(): Promise<void> {
     },
   });
   const uploader = new R2Uploader(s3, process.env.R2_BUCKET_NAME!);
+  const laden = r2Laden(s3, process.env.R2_BUCKET_NAME!);
+  const dir = await mkdtemp(join(tmpdir(), 'daf-hoerspiel-sfx-'));
+  const mischDeps = { manifest: geraeuschManifest, laden, uploader, dir };
 
-  await generiereDialogeNacheinander(
-    qoldi,
-    anfrageById,
-    manifest,
-    erstelleGeneriere(fal, uploader, fetch, polstereMp3),
-    (m) => writeFileSync(MANIFEST_PATH, JSON.stringify(m, null, 2) + '\n'),
-  );
-  console.log(
-    `Manifest yangilandi: ${MANIFEST_PATH} (${qoldi.length} ta dialog).`,
-  );
+  try {
+    await erzeugeGeraeusche(neueGeraeusche, {
+      fal,
+      uploader,
+      fetchFn: fetch,
+      manifest: geraeuschManifest,
+      dir,
+    });
+
+    await generiereDialogeNacheinander(
+      sprechen,
+      anfrageById,
+      manifest,
+      erstelleGeneriere(
+        fal,
+        uploader,
+        fetch,
+        polstereMp3,
+        erstelleMische(regie, uploader, mischDeps),
+        erstelleMehrstimmig(fal, fetch, ABLEHNUNG_VERSUCHE),
+      ),
+      speichere,
+    );
+
+    for (const d of mischen) {
+      const eintrag = manifest[d.id];
+      const roh = await laden(eintrag.rohKey!);
+      const m = await mischeUndLade(d, roh, regie[d.id].hoerspiel!, mischDeps);
+      manifest[d.id] = { ...eintrag, ...m };
+      speichere(manifest);
+      console.log(`  ${d.id}: ${d.titelDe} → qayta aralashtirildi, yuklandi`);
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+  console.log(`Manifest yangilandi: ${MANIFEST_PATH}.`);
 }
 
 if (require.main === module) {

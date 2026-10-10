@@ -31,6 +31,7 @@ const ALLE_FRAGE_FORMATLAR: Record<FrageFormat, true> = {
   ARTIKEL: true,
   LUECKE: true,
   SATZ_BAUEN: true,
+  SATZ_HOEREN: true,
   SATZ_UEBERSETZEN: true,
   REAKTION: true,
   ZUORDNEN: true,

@@ -13,17 +13,21 @@ const execFileAsync = promisify(execFile);
  */
 export const BILD_PX = 512;
 
-/** ffmpeg arguments: scale to a px square, JPEG quality 4. Pure. */
+/**
+ * ffmpeg arguments: scale to `px` × `hoehe` (a square by default; `-2` keeps
+ * the picture's proportions, as dialog pictures need), JPEG quality 4. Pure.
+ */
 export function bildFfmpegArgs(
   eingabe: string,
   ausgabe: string,
   px: number,
+  hoehe: number = px,
 ): string[] {
   return [
     '-i',
     eingabe,
     '-vf',
-    `scale=${px}:${px}`,
+    `scale=${px}:${hoehe}`,
     '-q:v',
     '4',
     '-y',
@@ -39,6 +43,7 @@ export function bildFfmpegArgs(
 export async function verkleinereBild(
   eingabe: Buffer,
   px: number = BILD_PX,
+  hoehe: number = px,
 ): Promise<Buffer> {
   if (!Number.isInteger(px) || px <= 0) {
     throw new Error(`Rasm o'lchami musbat butun son bo'lishi kerak: ${px}`);
@@ -51,7 +56,7 @@ export async function verkleinereBild(
     try {
       await execFileAsync(
         'ffmpeg',
-        bildFfmpegArgs(kirishYoli, chiqishYoli, px),
+        bildFfmpegArgs(kirishYoli, chiqishYoli, px, hoehe),
       );
     } catch (err) {
       const e = err as NodeJS.ErrnoException & { stderr?: string };

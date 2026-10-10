@@ -13,6 +13,7 @@ export type FrageFormat =
   | "ARTIKEL"
   | "LUECKE"
   | "SATZ_BAUEN"
+  | "SATZ_HOEREN"
   | "SATZ_UEBERSETZEN"
   | "REAKTION"
   | "ZUORDNEN"
