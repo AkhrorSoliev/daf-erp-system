@@ -6,6 +6,7 @@ import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { TasksReadService } from './tasks-read.service';
 import { TaskAutoCloseListener } from './task-auto-close.listener';
+import { TaskAutoService } from './task-auto.service';
 import { TaskNotifyListener } from './task-notify.listener';
 import { TaskOutboxService } from './task-outbox.service';
 import { TaskUserLifecycleListener } from './task-user-lifecycle.listener';
@@ -24,6 +25,7 @@ import { TaskTelegramHandler } from './telegram/task-telegram.handler';
     TasksReadService,
     TaskNotifyListener,
     TaskAutoCloseListener,
+    TaskAutoService,
     TaskOutboxService,
     TaskUserLifecycleListener,
     TaskTelegramSender,

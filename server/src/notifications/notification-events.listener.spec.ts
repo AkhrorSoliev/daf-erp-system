@@ -263,6 +263,17 @@ describe('NotificationEventsListener', () => {
         promiseIds: ['pp-1', 'pp-2'],
       });
 
+      // CEOs only: the branch's administrators get tasks (ADR-0082).
+      expect(prisma.user.findMany).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          isActive: true,
+          status: 'ACTIVE',
+          companyId: 1,
+          roles: { some: { role: { name: 'CEO' } } },
+        },
+        select: { id: true },
+      });
       expect(sendMessage).toHaveBeenCalledTimes(1);
       const text = sendMessage.mock.calls[0][1] as string;
       expect(text).toContain("Bugun 1 ta to'lov va'dasi bajarilmadi");

@@ -148,9 +148,10 @@ export class NotificationEventsListener {
    * One branch's payment promises that passed their date while the students
    * are still in debt (flipped to BROKEN by the 09:00 cron), as ONE list:
    * debt, group, phones, the promise and its note, what changed since and how
-   * often the student broke one. Goes to the branch's Administrators plus the
-   * company CEOs. Fans out to all four channels; the bell and push get the
-   * names only, Telegram the whole list.
+   * often the student broke one. Goes to the company CEOs only: the branch's
+   * administrators get one «Buzilgan va'da» task per student instead
+   * (`TaskAutoService`, ADR-0082), never both. Fans out to all four
+   * channels; the bell and push get the names only, Telegram the whole list.
    */
   @OnEvent('payment-promise.overdue')
   async handlePaymentPromiseOverdue(payload: PaymentPromiseOverduePayload) {
@@ -173,15 +174,7 @@ export class NotificationEventsListener {
             isActive: true,
             status: UserStatus.ACTIVE,
             companyId: payload.companyId,
-            OR: [
-              { roles: { some: { role: { name: 'CEO' } } } },
-              {
-                roles: { some: { role: { name: 'Administrator' } } },
-                ...(payload.branchId
-                  ? { branches: { some: { branchId: payload.branchId } } }
-                  : {}),
-              },
-            ],
+            roles: { some: { role: { name: 'CEO' } } },
           },
           select: { id: true },
         }),
