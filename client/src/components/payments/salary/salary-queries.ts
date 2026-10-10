@@ -59,3 +59,34 @@ export function useInvalidateSalary(): () => Promise<void> {
     );
   }, [queryClient]);
 }
+
+/**
+ * The tab labels' amounts (Decision 12): «Avanslar · X» is the month's
+ * advance-calendar total, «Markaz qoplagani · X» the whole period's
+ * outstanding center top-up. The keys and the answers are the two tabs' own,
+ * so a tab that opens reuses the request. `undefined` while loading.
+ */
+export function useSalaryTabTotals(month: string): { advances?: number; centerOutstanding?: number } {
+  const advances = useQuery({
+    queryKey: ["salary-advance-calendar", month],
+    queryFn: () =>
+      api
+        .get<{ totals: { total: number } }>("/salary/advance-calendar", { params: { month } })
+        .then((r) => r.data),
+    select: (d) => d.totals.total,
+    staleTime: 0,
+  });
+  const center = useQuery({
+    // `"all"` is `ALL_MONTHS` of debt/center-topup-content.tsx.
+    queryKey: ["salary-center-topup", "all"],
+    queryFn: () =>
+      api
+        .get<{ totals: { centerUnrecovered: number } }>("/salary/monthly/center-topup", {
+          params: { allMonths: "true" },
+        })
+        .then((r) => r.data),
+    select: (d) => d.totals.centerUnrecovered,
+    staleTime: 0,
+  });
+  return { advances: advances.data, centerOutstanding: center.data };
+}

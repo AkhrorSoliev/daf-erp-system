@@ -2,22 +2,46 @@
 
 import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Plus, Settings2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MonthPicker } from "@/components/ui/month-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCan, usePermissions } from "@/hooks/use-permissions";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { SalaryBreakdownDrawer } from "./salary-breakdown-drawer";
 import { SalaryMonthlyView } from "./salary-monthly-view";
 import { SalaryAdvancesTab } from "./salary-advances-tab";
+import { SalaryAdvanceDialog } from "./salary-advance-dialog";
+import { SalarySettingsSheet } from "./salary-settings-sheet";
 import { CenterTopUpView } from "./debt/center-topup-view";
 import { resolveSalarySettingsAccess } from "./salary-settings-access";
+import { currentMonthKey } from "./salary-utils";
+import { mln } from "./salary/salary-page-model";
+import { useInvalidateSalary, useSalaryMonthly, useSalaryTabTotals } from "./salary/salary-queries";
 
 /** URL'ga yozilmaydigan standart tab. */
 const DEFAULT_TAB = "oyliklar";
+
+const FALLBACK_FLOOR = "2026-05";
+
+/**
+ * `month` is shared by all three tabs; `search` is the Oyliklar filter, read
+ * here so the header's monthly query is the view's own (one request).
+ */
+const HEADER_SCHEMA = {
+  month: { type: "string" as const, defaultValue: "" },
+  search: { type: "string" as const, defaultValue: "" },
+};
+
+/** «Avanslar · 4,5 mln»; the amount is left out while loading and at 0 (Decision 12). */
+const tabLabel = (name: string, amount: number | undefined) => (amount ? `${name} · ${mln(amount)}` : name);
 
 export function SalaryClient() {
   const canClose = useCan("salary.close");
   const canPay = useCan("salary.pay");
   const can = usePermissions((s) => s.can);
   const settingsAccess = resolveSalarySettingsAccess(can);
+  const invalidateSalary = useInvalidateSalary();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -35,46 +59,67 @@ export function SalaryClient() {
     [router, pathname, searchParams],
   );
 
-  const [refreshKey, setRefreshKey] = useState(0);
-  const bumpRefresh = useCallback(() => setRefreshKey((k) => k + 1), []);
-  const [breakdownPaymentId, setBreakdownPaymentId] = useState<string | null>(
-    null,
-  );
+  const { filters, setFilters } = useUrlFilters(HEADER_SCHEMA);
+  const maxMonth = currentMonthKey();
+  const month = filters.month || maxMonth;
+  const { data: monthly } = useSalaryMonthly(month, filters.search);
+  const tabTotals = useSalaryTabTotals(month);
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [advanceOpen, setAdvanceOpen] = useState(false);
+  const [breakdownPaymentId, setBreakdownPaymentId] = useState<string | null>(null);
+
+  // Until the row drawer (Task 10): a row with a payment opens the payment's
+  // breakdown, as before; a row without one opens nothing yet.
+  const openRow = (userId: number) => {
+    const row = [...(monthly?.data ?? []), ...(monthly?.staff ?? [])].find((r) => r.user.id === userId);
+    if (row?.payment) setBreakdownPaymentId(row.payment.id);
+  };
 
   return (
-    <div className="space-y-6">
-      <div>
-        {/* Sahifa sarlavhasi "Ish haqi" — tab nomlari ("Oyliklar" / "Avanslar")
-            bilan takrorlanmasin. Sahifa ustozlarni ham, oylik xodimlarni ham
-            qamraydi. */}
-        <h2 className="font-heading text-lg font-semibold tracking-tight">
-          Ish haqi
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Tanlangan oyda kimga qancha to&apos;lanishi va qaysi kuni qancha avans
-          berilgani
-        </p>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-heading text-lg font-semibold tracking-tight">Ish haqi</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* «Markaz qoplagani» has its own picker, where an empty month means the whole period. */}
+          {activeTab !== "markaz" && (
+            <MonthPicker
+              value={monthly?.month ?? month}
+              minMonth={monthly?.floorMonth ?? FALLBACK_FLOOR}
+              maxMonth={maxMonth}
+              onChange={(m) => setFilters({ month: m })}
+              className="w-full sm:w-52"
+            />
+          )}
+          {settingsAccess.canOpen && (
+            <Button variant="outline" data-tour="salary-settings" onClick={() => setSettingsOpen(true)}>
+              <Settings2 data-icon="inline-start" />
+              Stavkalar
+            </Button>
+          )}
+          {canPay && (
+            <Button onClick={() => setAdvanceOpen(true)}>
+              <Plus data-icon="inline-start" />
+              Avans berish
+            </Button>
+          )}
+        </div>
       </div>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={handleTabChange}
-        className="space-y-4"
-      >
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col gap-4">
+        <TabsList className="max-w-full overflow-x-auto">
           <TabsTrigger value="oyliklar">Oyliklar</TabsTrigger>
-          <TabsTrigger value="avanslar">Avanslar</TabsTrigger>
-          <TabsTrigger value="markaz">Markaz qoplagani</TabsTrigger>
+          <TabsTrigger value="avanslar">{tabLabel("Avanslar", tabTotals.advances)}</TabsTrigger>
+          <TabsTrigger value="markaz">{tabLabel("Markaz qoplagani", tabTotals.centerOutstanding)}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="oyliklar">
           <SalaryMonthlyView
+            month={month}
+            onOpenRow={openRow}
             canClose={canClose}
-            canPay={canPay}
             settingsAccess={settingsAccess}
-            onOpenBreakdown={setBreakdownPaymentId}
-            refreshKey={refreshKey}
-            bumpRefresh={bumpRefresh}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
         </TabsContent>
 
@@ -87,12 +132,25 @@ export function SalaryClient() {
         </TabsContent>
       </Tabs>
 
+      {/* Rates — CEO sees everything; a director only their own branch's teacher rates (ADR-0034) */}
+      {settingsAccess.canOpen && (
+        <SalarySettingsSheet
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          period={monthly?.period ?? null}
+          onChanged={invalidateSalary}
+          access={settingsAccess}
+        />
+      )}
+
+      {canPay && <SalaryAdvanceDialog open={advanceOpen} onOpenChange={setAdvanceOpen} onSaved={invalidateSalary} />}
+
       <SalaryBreakdownDrawer
         salaryPaymentId={breakdownPaymentId}
         onClose={() => setBreakdownPaymentId(null)}
         canClose={canClose}
         canPay={canPay}
-        onChanged={bumpRefresh}
+        onChanged={invalidateSalary}
       />
     </div>
   );

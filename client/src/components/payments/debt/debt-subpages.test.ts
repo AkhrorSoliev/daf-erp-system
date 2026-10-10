@@ -38,8 +38,9 @@ describe("«Muzlatilganlarning puli» moved to «Qaytariladigan pul» (spec B2b 
 describe("«Markaz qoplagani» lives on Ish haqi (ADR-0072)", () => {
   it("the salary page has the tab, and its card links there, never to the debt page", () => {
     expect(src("salary-client.tsx")).toContain('value="markaz"');
-    expect(src("salary-monthly-view.tsx")).not.toContain("/payments/debt?tab=markaz");
-    expect(src("salary-monthly-view.tsx")).toContain("/payments/salary?tab=markaz&month=");
+    // The undirish card moved onto the tab itself (B3 spec §2.4).
+    expect(src("salary/salary-center-recovery-card.tsx")).not.toContain("/payments/debt?tab=markaz");
+    expect(src("salary/salary-center-recovery-card.tsx")).toContain("/payments/salary?tab=markaz&month=");
   });
 
   it("the month lives in its own URL state, not the debt page's", () => {
