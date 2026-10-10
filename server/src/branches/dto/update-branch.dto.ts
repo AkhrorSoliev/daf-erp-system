@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Matches } from 'class-validator';
+import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 // No isActive and no status: a branch's state changes only through
 // PATCH /branches/:id/status, which records history and runs the cascade.
@@ -27,4 +27,20 @@ export class UpdateBranchDto {
   @IsString()
   @Matches(/^\d{2}:\d{2}$/, { message: "Vaqt formati HH:mm bo'lishi kerak" })
   endOfWorkingDay?: string;
+
+  // Printed on the student contract (ADR-0075).
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  representativeName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  representativePosition?: string;
 }

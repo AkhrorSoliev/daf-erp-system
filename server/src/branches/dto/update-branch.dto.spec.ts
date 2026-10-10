@@ -31,4 +31,21 @@ describe('UpdateBranchDto', () => {
     expect(await rejected({ isActive: false })).toEqual(['isActive']);
     expect(await rejected({ status: 'INACTIVE' })).toEqual(['status']);
   });
+
+  it('accepts the contract fields (ADR-0075)', async () => {
+    expect(
+      await rejected({
+        city: 'Namangan',
+        representativeName: 'Karimov Anvar',
+        representativePosition: 'Direktor',
+      }),
+    ).toEqual([]);
+  });
+
+  it('caps the contract fields', async () => {
+    expect(await rejected({ city: 'x'.repeat(101) })).toEqual(['city']);
+    expect(await rejected({ representativeName: 'x'.repeat(151) })).toEqual([
+      'representativeName',
+    ]);
+  });
 });

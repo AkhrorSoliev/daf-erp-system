@@ -40,6 +40,9 @@ export function EditBranchForm({
       phone: branch?.phone ?? "",
       startOfWorkingDay: branch?.startOfWorkingDay ?? "",
       endOfWorkingDay: branch?.endOfWorkingDay ?? "",
+      city: branch?.city ?? "",
+      representativeName: branch?.representativeName ?? "",
+      representativePosition: branch?.representativePosition ?? "",
     },
   });
 
@@ -54,6 +57,10 @@ export function EditBranchForm({
           phone: values.phone || undefined,
           startOfWorkingDay: values.startOfWorkingDay || undefined,
           endOfWorkingDay: values.endOfWorkingDay || undefined,
+          city: values.city.trim() || undefined,
+          representativeName: values.representativeName.trim() || undefined,
+          representativePosition:
+            values.representativePosition.trim() || undefined,
           companyId: companyId ? Number(companyId) : undefined,
         });
 
@@ -154,6 +161,54 @@ export function EditBranchForm({
               )}
             />
           </div>
+        </div>
+      </section>
+
+      <section className="space-y-5 border-t px-6 py-5">
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Shartnoma uchun
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Bu maydonlar o&apos;quvchi shartnomasiga chiqadi. To&apos;ldirilmaguncha
+            filial o&apos;quvchilariga shartnoma tuzilmaydi.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="address">Manzil</Label>
+          <Input
+            id="address"
+            placeholder="Masalan: Namangan sh., Istiqlol ko'chasi, 48"
+            {...form.register("address")}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="city">Shahar</Label>
+            <Input id="city" placeholder="Namangan" {...form.register("city")} />
+            <p className="text-xs text-muted-foreground">
+              «shahri» so&apos;zi shartnomada o&apos;zi qo&apos;shiladi
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="representativePosition">Vakil lavozimi</Label>
+            <Input
+              id="representativePosition"
+              placeholder="Direktor"
+              {...form.register("representativePosition")}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="representativeName">Vakil F.I.O.</Label>
+          <Input
+            id="representativeName"
+            placeholder="Familiya Ism Otasining ismi"
+            {...form.register("representativeName")}
+          />
         </div>
       </section>
     </form>

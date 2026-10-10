@@ -34,6 +34,15 @@ export const STATEMENT_ROLES = [1, 2, 3];
  */
 export const FROZEN_BALANCE_ACTION_ROLES = [1, 2, 3];
 
+/** `/contract-documents/*` — contract-documents.controller.ts. Kassir va o'qituvchi yo'q. */
+export const CONTRACT_ROLES = [1, 2, 3];
+
+/**
+ * Imzolangan shartnomani bekor qilish — faqat CEO
+ * (`ContractLifecycleService.cancel`, rol bazadan o'qiladi).
+ */
+export const SIGNED_CONTRACT_CANCEL_ROLES = [1];
+
 export function hasAnyRole(
   roles: { id: number }[] | undefined,
   allowed: number[],
