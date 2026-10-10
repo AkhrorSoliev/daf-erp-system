@@ -6,6 +6,12 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-10",
+    sarlavha: "DaF ilovasida A1 4-unit «Essen und Trinken» va yangi «Eshitib gap tuzish» mashqi",
+    matn: "O'quvchi ilovasida A1 kursining 4-uniti ochildi: ovqat, ichimlik, do'kon va restoran mavzusidagi 188 so'z, 149 gap va 9 ta dialog. Dialoglar hayotdagidek: fonda bozor, oshxona yoki restoran shovqini, eshik va muzlatkich ovozi eshitiladi, boshqa xonadan gapirgan odamning ovozi uzoqdan keladi. Har dialogning yozma matnida sahna izohi bor («Ertalab. Jonas oshxonada», «boshqa xonadan»), har dialogga butun hikoyani ko'rsatadigan bitta rasm chizilgan. Ovqat va idish so'zlarining 74 tasiga rasm bor. Yangi mashq — «Eshitib gap tuzish»: o'quvchi nemischa gapni eshitadi va uni so'zlardan yig'adi.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
     sana: "2026-10-06",
     sarlavha: "«Qarzdorlik»da o'quvchi oynasi topiladigan va o'qiladigan bo'ldi",
     matn: "Qarzdorlar jadvalida har qatorda «To'lov» yonida «Batafsil» tugmasi paydo bo'ldi, o'quvchi ismi havola rangida, jadval ustida esa «O'quvchi ustiga bosing…» degan eslatma turadi: ilgari qatorni bosish mumkinligi hech qayerda ko'rinmasdi. O'ng tomondagi oyna ham qayta tuzildi: telefon va guruh (ustoz bilan) tepada, qarz katta qizil kartada «N oy bo'yicha · eng eskisi …» izohi bilan, va'da o'z rangli kartasida, oylar «Hisoblandi · To'landi · Qoldi» ustunli jadvalda «Jami» bilan, oxirgi aloqada esa kim qo'ng'iroq qilgani va izoh. Asosiy amal «To'lov qayd qilish» pastda to'liq enda turadi.",
