@@ -217,7 +217,20 @@
       "cheerful",
       "decisive",
       "happy"
-    ]
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "busy outdoor farmers market, indistinct crowd murmur and distant vendors, no clear words",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 8,
+          "sfx": "fruit being put into a paper bag, paper rustling",
+          "sek": 2
+        }
+      ]
+    }
   },
   "u04-d2": {
     "szene": "Am Abend in der Küche. Jonas schneidet Gemüse für einen Salat, Mia kommt herein.",
@@ -230,7 +243,20 @@
       "pleased",
       "friendly",
       "satisfied"
-    ]
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "quiet home kitchen room tone with a faint fridge hum, no voices",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "a kitchen knife chopping vegetables on a wooden board",
+          "sek": 3
+        }
+      ]
+    }
   },
   "u04-d3": {
     "szene": "Im Supermarkt an der Kasse. Jonas kauft ein, die Kassiererin Sabine scannt die Waren.",
@@ -243,7 +269,25 @@
       "decisive",
       "polite",
       "cheerful"
-    ]
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "supermarket ambience with soft indistinct murmur and distant checkout beeps, no music, no clear words",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "a supermarket barcode scanner beeping twice",
+          "sek": 1.5
+        },
+        {
+          "vor": 8,
+          "sfx": "coins dropped onto a shop counter",
+          "sek": 2
+        }
+      ]
+    }
   },
   "u04-d4": {
     "szene": "Mittagspause auf der Straße vor dem Büro. Thomas und Mia überlegen, was sie essen.",
@@ -256,7 +300,13 @@
       "pleased",
       "curious",
       "friendly"
-    ]
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a city street at midday, light traffic and footsteps on the pavement, no voices",
+        "sek": 15
+      }
+    }
   },
   "u04-d5": {
     "szene": "Morgens in einer Wohnung. Mia ist im Schlafzimmer und ruft von weitem; Jonas steht in der Küche am Kühlschrank. Dann kommt Mia in die Küche, geht zur Bäckerei und kommt nach einer Weile mit frischen Brötchen zurück.",
@@ -269,7 +319,44 @@
       "pleased",
       "cheerful",
       "happy"
-    ]
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a quiet flat in the morning, birds chirping faintly outside the window, no voices",
+        "sek": 15
+      },
+      "fern": [
+        1,
+        3
+      ],
+      "geraeusche": [
+        {
+          "vor": 2,
+          "sfx": "a fridge door opening with a soft suction sound",
+          "sek": 2.5
+        },
+        {
+          "vor": 5,
+          "sfx": "footsteps walking across a wooden floor",
+          "sek": 2
+        },
+        {
+          "vor": 7,
+          "sfx": "a front door closing",
+          "sek": 1.5
+        },
+        {
+          "vor": 7,
+          "sfx": "a coffee machine brewing and hissing",
+          "sek": 3
+        },
+        {
+          "vor": 7,
+          "sfx": "a front door of a flat opening and closing",
+          "sek": 1.5
+        }
+      ]
+    }
   },
   "u04-d6": {
     "szene": "Am Abend in einem gemütlichen Restaurant. Thomas und Julia sitzen am Tisch, die Kellnerin Claudia kommt.",
@@ -282,7 +369,13 @@
       "polite",
       "friendly",
       "polite"
-    ]
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a cosy restaurant in the evening, cutlery clinking and indistinct quiet conversations, no clear words",
+        "sek": 15
+      }
+    }
   },
   "u04-d7": {
     "szene": "In einem Café am Nachmittag. Jonas und seine Schwiegermutter Helga sind fertig; beide wollen bezahlen.",
@@ -295,7 +388,20 @@
       "polite",
       "generous",
       "laughing"
-    ]
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a cafe with an espresso machine in the background and soft indistinct chatter, no clear words",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 7,
+          "sfx": "coins and a banknote placed on a cafe table",
+          "sek": 2
+        }
+      ]
+    }
   },
   "u04-d8": {
     "szene": "In Mias Küche am Nachmittag. Mia möchte für ihre Mutter Helga ein Gericht aus Usbekistan kochen.",
@@ -308,7 +414,25 @@
       "helpful",
       "proud",
       "delighted"
-    ]
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "quiet home kitchen room tone with a faint fridge hum, no voices",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 7,
+          "sfx": "a front door of a flat opening and closing",
+          "sek": 1.5
+        },
+        {
+          "vor": 7,
+          "sfx": "onions and meat sizzling in hot oil in a large pot",
+          "sek": 4
+        }
+      ]
+    }
   },
   "u04-d9": {
     "szene": "Eine Grillparty in Thomas’ Garten am Abend. Thomas steht am Grill, Mia kommt an.",
@@ -321,6 +445,24 @@
       "polite",
       "cheerful",
       "delighted"
-    ]
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a garden barbecue party in the evening, distant laughter and crickets, no clear words",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "meat sizzling on a charcoal grill",
+          "sek": 3
+        },
+        {
+          "vor": 7,
+          "sfx": "a glass bottle opened with a fizz and poured into a glass",
+          "sek": 2.5
+        }
+      ]
+    }
   }
 }

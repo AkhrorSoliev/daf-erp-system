@@ -83,6 +83,25 @@ Ovozda sahna effektlar bilan beriladi (eshik, muzlatkich, uzoqdan ovoz) —
 qaytadan hisoblanardi. Tuzatildi (commit `db8cdc00`): u04 — 0,11 s, u03 —
 0,01 s. Mashqlarning o'zi o'zgarmadi.
 
+## 4.1. Rasm va ovoz (CEO ruxsati 10.10, chegara $1.20)
+
+- **Rasm — 74 ta** (ovqat, ichimlik, idish, do'konlar; `bild-plan.json`). Umumiy so'z
+  (Obst, Gemüse, Fleisch, Getränk), bir-biriga o'xshash juft (Rind-/Lammfleisch,
+  Brot/Brötchen, Saft/Apfelsaft, Glas/Wasser, Tasse/Kaffee) va mavhum so'zga rasm
+  yo'q: bitta rasm ikki so'zga to'g'ri javob bo'lib qolmasin. 5 tasi qayta chizildi
+  (Ei yonida tovuq, Deckel o'rniga qozon, xira Kassenzettel, Schnitzel, Milch).
+- **So'z ovozi — 188 ta**, Inworld Johanna (kurs ovozi).
+- **Dialoglar — hayotiy ovoz.** `dialog-regie.json` → `hoerspiel`: fon shovqini
+  (`atmo`, 15 s halqa), satrlar orasidagi effektlar (`geraeusche`, `vor` = qaysi satrdan
+  oldin) va boshqa xonadan gapiradigan satrlar (`fern`). Gemini yozuvi har jimlikdan
+  bo'laklarga bo'linadi, har bo'lakni whisper alohida eshitadi, bo'laklar satrlarga
+  eng mos guruhlanadi — kesish doim jimlikda. Xom yozuv (`rohKey`) saqlanadi:
+  aralashmani o'zgartirish bepul; effektlar `geraeusche.json` keshida, bir marta to'lanadi.
+- **Uch kishilik dialog** (d6, d7): Gemini bitta so'rovda faqat 2 ovoz oladi. Ko'p
+  gapiradigan ikkisi birga, uchinchisining har satri alohida yasaladi va o'z joyiga
+  qo'yiladi (`mehrstimmig.ts`).
+- **Gap ovozi** — yangi «eshitib gap tuzish» mashqi (`SATZ_HOEREN`) uchun 149 gap.
+
 ## 5. Tartib
 
 1. Matn → avtomatik tekshiruv (`daf:inhalt-check --unit 4`, `jest src/daf`).
