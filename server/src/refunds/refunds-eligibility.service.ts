@@ -7,6 +7,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { tryResolveStudentBranchId } from '../common/finance/resolve-branch';
 import { refundDueDate } from './refund-due-date';
+import { REFUND_HISTORY_SELECT, toRefundHistoryRow } from './refund-view';
+import { RefundListQueryDto } from './dto/refund-list-query.dto';
+import { equalsOrIn } from '../common/dto/to-array';
 import {
   ReportBranchIds,
   studentBranchWhere,
@@ -16,6 +19,7 @@ import {
   EnrollmentStatus,
   PaymentModel,
   PaymentStatus,
+  Prisma,
   RefundStatus,
 } from '@prisma/client';
 
@@ -402,7 +406,8 @@ export class RefundsEligibilityService {
   }
 
   /**
-   * The refund list, confined to the caller's branches.
+   * The refund history list, confined to the caller's branches; paged, and
+   * `status` filters by a list (ADR-0075).
    *
    * It was `where: { companyId }` alone — every refund in the company, with the
    * student's name, the amount and the group. A Namangan director opening
@@ -414,29 +419,28 @@ export class RefundsEligibilityService {
    * the enrollment's group would disagree for a student who transferred
    * branches after the refund was raised.
    */
-  async findAll(companyId: number, branchIds: ReportBranchIds) {
-    return this.prisma.refund.findMany({
-      where: { companyId, student: studentBranchWhere(branchIds) },
-      select: {
-        id: true,
-        requestedAmount: true,
-        approvedAmount: true,
-        lessonsCompleted: true,
-        totalLessons: true,
-        status: true,
-        reason: true,
-        createdAt: true,
-        student: { select: { id: true, firstName: true, lastName: true } },
-        enrollment: {
-          select: {
-            id: true,
-            group: { select: { id: true, name: true } },
-          },
-        },
-        contract: { select: { id: true, contractNumber: true } },
-        processedBy: { select: { id: true, firstName: true, lastName: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(
+    companyId: number,
+    branchIds: ReportBranchIds,
+    q: RefundListQueryDto,
+  ) {
+    const page = q.page ?? 1;
+    const pageSize = q.pageSize ?? 10;
+    const where: Prisma.RefundWhereInput = {
+      companyId,
+      student: studentBranchWhere(branchIds),
+      status: equalsOrIn(q.status),
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.refund.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: REFUND_HISTORY_SELECT,
+      }),
+      this.prisma.refund.count({ where }),
+    ]);
+    return { data: rows.map(toRefundHistoryRow), total, page, pageSize };
   }
 }

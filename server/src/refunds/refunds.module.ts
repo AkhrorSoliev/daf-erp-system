@@ -6,9 +6,10 @@ import { RefundsEligibilityService } from './refunds-eligibility.service';
 import { RefundsController } from './refunds.controller';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { BillingModule } from '../billing/billing.module';
+import { CashAccountsModule } from '../cash-accounts/cash-accounts.module';
 
 @Module({
-  imports: [TransactionsModule, BillingModule],
+  imports: [TransactionsModule, BillingModule, CashAccountsModule],
   controllers: [RefundsController],
   providers: [
     RefundsService,

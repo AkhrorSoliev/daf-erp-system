@@ -62,4 +62,37 @@ describe('RefundsController — role guards', () => {
     ).toThrow(ForbiddenException);
     expect(guard.canActivate(ctx(controller.reverse, ['CEO']))).toBe(true);
   });
+
+  it.each([['CEO'], ['Branch Director'], ['Administrator'], ['Cashier']])(
+    'handOver («Berildi») allows %s',
+    (role) => {
+      expect(guard.canActivate(ctx(controller.handOver, [role]))).toBe(true);
+    },
+  );
+
+  it('handOver denies Teacher', () => {
+    expect(() =>
+      guard.canActivate(ctx(controller.handOver, ['Teacher'])),
+    ).toThrow(ForbiddenException);
+  });
+
+  it.each([['CEO'], ['Branch Director']])('cancel allows %s', (role) => {
+    expect(guard.canActivate(ctx(controller.cancel, [role]))).toBe(true);
+  });
+
+  it.each([['Administrator'], ['Cashier'], ['Teacher']])(
+    'cancel denies %s',
+    (role) => {
+      expect(() => guard.canActivate(ctx(controller.cancel, [role]))).toThrow(
+        ForbiddenException,
+      );
+    },
+  );
+
+  it('the history list is open to the Cashier, not the Teacher', () => {
+    expect(guard.canActivate(ctx(controller.findAll, ['Cashier']))).toBe(true);
+    expect(() =>
+      guard.canActivate(ctx(controller.findAll, ['Teacher'])),
+    ).toThrow(ForbiddenException);
+  });
 });

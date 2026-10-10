@@ -519,4 +519,70 @@ describe('RefundsEligibilityService', () => {
       'REQUESTED',
     );
   });
+
+  describe('findAll — the history list (ADR-0075)', () => {
+    const ROW = {
+      id: 'r-1',
+      status: 'COMPLETED',
+      requestedAmount: 90_000,
+      approvedAmount: 90_000,
+      reason: null,
+      createdAt: new Date('2026-09-20T07:00:00Z'),
+      dueDate: null,
+      handedOverAt: null,
+      processedAt: new Date('2026-09-20T07:00:00Z'),
+      refundMethod: 'CASH',
+      cancelledAt: null,
+      cancelReason: null,
+      student: {
+        id: 10001,
+        firstName: 'Ali',
+        lastName: 'Karimov',
+        phone: '901112233',
+      },
+      handedOverBy: null,
+      processedBy: { id: 20001, firstName: 'Nodira', lastName: 'Test' },
+      cancelledBy: null,
+    };
+    beforeEach(() => {
+      prisma.refund.findMany = jest.fn().mockResolvedValue([ROW]);
+      prisma.refund.count = jest.fn().mockResolvedValue(11);
+    });
+
+    it('filters by a status list, scopes by the student branch, pages newest request first', async () => {
+      const out = await service.findAll(1, [1], {
+        status: ['COMPLETED', 'REJECTED'],
+        page: 2,
+        pageSize: 10,
+      } as never);
+      const args = prisma.refund.findMany.mock.calls[0][0];
+      expect(args.where).toEqual({
+        companyId: 1,
+        student: { branches: { some: { branchId: { in: [1] } } } },
+        status: { in: ['COMPLETED', 'REJECTED'] },
+      });
+      expect(args).toMatchObject({
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        skip: 10,
+        take: 10,
+      });
+      expect(out).toMatchObject({ total: 11, page: 2, pageSize: 10 });
+      expect(out.data[0]).toMatchObject({
+        id: 'r-1',
+        amount: 90_000,
+        handedOverAt: '2026-09-20T07:00:00.000Z',
+      });
+    });
+
+    it('one status is an equals; none means every status', async () => {
+      await service.findAll(1, null, { status: ['REQUESTED'] } as never);
+      expect(prisma.refund.findMany.mock.calls[0][0].where.status).toBe(
+        'REQUESTED',
+      );
+      await service.findAll(1, null, {} as never);
+      expect(
+        prisma.refund.findMany.mock.calls[1][0].where.status,
+      ).toBeUndefined();
+    });
+  });
 });
