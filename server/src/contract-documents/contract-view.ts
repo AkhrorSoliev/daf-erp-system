@@ -92,6 +92,17 @@ export function contractStatus(doc: {
   return doc.signedAt ? 'SIGNED' : 'UNSIGNED';
 }
 
+export async function loadContractView(
+  db: Pick<Prisma.TransactionClient, 'contractDocument'>,
+  id: string,
+): Promise<ContractView> {
+  const doc = await db.contractDocument.findUniqueOrThrow({
+    where: { id },
+    include: CONTRACT_VIEW_INCLUDE,
+  });
+  return toContractView(doc);
+}
+
 export function toContractView(doc: ContractWithView): ContractView {
   return {
     id: doc.id,

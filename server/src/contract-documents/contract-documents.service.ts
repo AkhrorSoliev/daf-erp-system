@@ -8,7 +8,6 @@ import { Prisma } from '@prisma/client';
 import { applyDiscount, clampDiscount } from '../billing/monthly-price';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import {
-  isCalendarDateStr,
   tashkentDateStr,
   utcMidnightFromDateStr,
 } from '../common/date/tashkent';
@@ -29,23 +28,19 @@ import {
   missingBranchFields,
   personName,
   storedBirthDay,
-  type ContractCourseExtras,
   type ContractFields,
 } from './contract-fields';
+import { assertCourseExtras, assertDay, extrasOf } from './contract-input';
 import { nextContractNumber } from './contract-number';
 import {
   CONTRACT_VIEW_INCLUDE,
+  loadContractView,
   toContractView,
   type ContractPrefill,
   type ContractView,
   type ContractsList,
 } from './contract-view';
-import type {
-  ContractCourseExtrasDto,
-  CreateContractDocumentDto,
-} from './dto/contract-document.dto';
-
-type Db = PrismaService | Prisma.TransactionClient;
+import type { CreateContractDocumentDto } from './dto/contract-document.dto';
 
 const LIVE_STATUSES = ['ACTIVE', 'FROZEN'] as const;
 
@@ -118,41 +113,11 @@ export function uncoveredWhere(studentId: number): Prisma.EnrollmentWhereInput {
   };
 }
 
-function assertDay(value: string | undefined): void {
-  if (value !== undefined && !isCalendarDateStr(value)) {
-    throw new BadRequestException(`Sana noto'g'ri: ${value}`);
-  }
-}
-
-export function assertCourseExtras(
-  courses: ContractCourseExtrasDto[] | undefined,
-): void {
-  for (const c of courses ?? []) {
-    assertDay(c.firstPaymentDate);
-    assertDay(c.discountFrom);
-    assertDay(c.discountTo);
-    if (c.discountFrom && c.discountTo && c.discountFrom > c.discountTo) {
-      throw new BadRequestException(
-        "Chegirma muddatining oxiri boshidan oldin bo'lishi mumkin emas",
-      );
-    }
-  }
-}
-
-export function extrasOf(
-  dto: ContractCourseExtrasDto | undefined,
-): Partial<ContractCourseExtras> {
-  if (!dto) return {};
-  return {
-    firstPaymentAmount: dto.firstPaymentAmount,
-    firstPaymentDate: dto.firstPaymentDate,
-    discountReason: dto.discountReason,
-    discountFrom: dto.discountFrom,
-    discountTo: dto.discountTo,
-    includes: dto.includes,
-  };
-}
-
+/**
+ * Reading a student's contracts and making a new one (ADR-0075). What
+ * happens to a contract afterwards — edit, signing, cancelling, printing —
+ * is `ContractLifecycleService`.
+ */
 @Injectable()
 export class ContractDocumentsService {
   constructor(
@@ -425,7 +390,7 @@ export class ContractDocumentsService {
           companyId,
           tx,
         });
-        return this.loadView(tx, doc.id);
+        return loadContractView(tx, doc.id);
       }, SERIALIZABLE)
       .catch((err: unknown) => rethrowAsConflict(err, { duplicate: true }));
   }
@@ -459,13 +424,5 @@ export class ContractDocumentsService {
       tx,
     });
     return typed;
-  }
-
-  protected async loadView(db: Db, id: string): Promise<ContractView> {
-    const doc = await db.contractDocument.findUniqueOrThrow({
-      where: { id },
-      include: CONTRACT_VIEW_INCLUDE,
-    });
-    return toContractView(doc);
   }
 }
