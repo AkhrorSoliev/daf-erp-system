@@ -12,6 +12,7 @@ import { RedisModule } from '../redis/redis.module';
 import { RedisService } from '../redis/redis.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { TaskAutoCloseListener } from './task-auto-close.listener';
+import { TaskAutoLeadsService } from './task-auto-leads.service';
 import { TaskAutoService } from './task-auto.service';
 import { TaskTelegramHandler } from './telegram/task-telegram.handler';
 import { TaskTelegramListener } from './telegram/task-telegram.listener';
@@ -58,6 +59,7 @@ describe('TasksModule — DI graph', () => {
       TaskTelegramOutbox,
       TaskAutoCloseListener,
       TaskAutoService,
+      TaskAutoLeadsService,
       TaskTelegramHandler,
       TelegramService,
     ]) {

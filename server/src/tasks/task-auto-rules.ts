@@ -90,7 +90,8 @@ export type AutoCloseReason =
   | 'CALL_LOGGED'
   | 'LEAD_CALLED'
   | 'LEAD_STATUS_CHANGED'
-  | 'LEAD_GONE';
+  | 'LEAD_GONE'
+  | 'STUDENT_GONE';
 
 // ---------- when ----------
 
