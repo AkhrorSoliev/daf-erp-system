@@ -141,6 +141,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0072](0072-qarzdorlik-qatorlari-va-vada-qoidasi.md) | Qarzdorlik sahifasi qarz bo'linishining qatorlarini ko'rsatadi; to'lov va'dasi ko'pi bilan 7 kunga, oyiga bir marta; «Markaz qoplagani» faqat CEO va filial direktoriga | Qabul qilindi | 2026-10-04 |
 | [0073](0073-tolovlar-hisoboti-manfiy-oy-kredit.md) | To'lovlar hisoboti: narxi manfiy chiqqan oy kredit bo'lib FIFO'da taqsimlanadi, to'lanmagan qatorlar doim qarzga teng | Qabul qilindi | 2026-10-05 |
 | [0074](0074-topshiriq-alohida-bolim.md) | Topshiriq izohning turi emas, alohida bo'lim: bitta holat, tekshiruv bosqichi (Yangi → Jarayonda → Tekshiruvda → Bajarildi), yuqoridan pastga berish zinasi, tizim topshirig'ini faqat manbasi yopadi, `Task*` ga yozish faqat `src/tasks/` da | Qabul qilindi | 2026-10-07 |
+| [0075](0075-shartnoma-hujjati-alohida-jadval.md) | Shartnoma hujjati alohida `ContractDocument` jadvalida: qiymatlar tuzilganda muhrlanadi, matn versiyalanadi, guruh almashganda bog'lanish o'tadi, eski `Contract` ishlatilmaydi | Qabul qilindi | 2026-10-10 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 
