@@ -86,9 +86,8 @@ shartsiz ochiq edi.
 - Mavjud 7 ta `COMPLETED` qaytarish o'zgarmaydi; tarixda ularning `processedAt`i
   «Berildi» sanasi sifatida chiqadi.
 - Xabarsiz o'quvchining pulini markazga o'tkazib bo'lmaydi — yangi tartib profildagi
-  «Yechib olish»ni ham to'xtatadi. Hozir o'qiyotgan o'quvchiga xabar berib bo'lmaydi
-  (tugma faqat o'qimayotganlar ro'yxatidagi panelda): uning pulini markazga
-  o'tkazish ham yopiq turadi. Bu ataylab — o'qiyotganning balansi keyingi oyning pulidir.
+  «Yechib olish»ni ham to'xtatadi. Xabarni «Qaytariladigan pul» sahifasidagi
+  panelda berish mumkin, xabar hali yo'q bo'lsa — «Yechib olish» oynasining o'zida ham.
 - Kvitansiya kodi (`Refund.receiptCode`) PDF birinchi ochilganda beriladi (dangasa),
   ya'ni faqat «Berildi»dan keyin; so'rovning o'zida kod yo'q.
 - Bot xabari darhol ketadi (ADR-0025 ro'yxatiga qo'shimcha): `SmsService.sendToStudent`
