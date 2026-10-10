@@ -7,23 +7,20 @@ import {
   Param,
   ParseIntPipe,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { RefundsService } from './refunds.service';
 import { ProcessRefundDto } from './dto/process-refund.dto';
 import { QuickRefundDto } from './dto/quick-refund.dto';
-import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('refunds')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class RefundsController {
   constructor(private refundsService: RefundsService) {}
 
   @Post('quick')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('refunds.create')
   quickRefund(
     @Body() dto: QuickRefundDto,
     @CurrentUser('id') userId: number,
@@ -33,7 +30,7 @@ export class RefundsController {
   }
 
   @Get('preview/:studentId')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('refunds.create')
   previewRefund(
     @Param('studentId', ParseIntPipe) studentId: number,
     @CurrentUser('companyId') companyId: number,
@@ -47,6 +44,7 @@ export class RefundsController {
   }
 
   @Get()
+  @Can('refunds.create')
   findAll(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
@@ -57,6 +55,7 @@ export class RefundsController {
   }
 
   @Patch(':id/process')
+  @Can('refunds.create')
   process(
     @Param('id') id: string,
     @Body() dto: ProcessRefundDto,
@@ -67,12 +66,12 @@ export class RefundsController {
   }
 
   /**
-   * Reverse a COMPLETED refund. CEO-only: unwinds a payout that has
-   * already moved money out of the center. Ledger-first — the Refund
-   * row stays, a reversal Transaction is written.
+   * Reverse a COMPLETED refund. Gated by `money.undo`: unwinds a payout
+   * that has already moved money out of the center. Ledger-first — the
+   * Refund row stays, a reversal Transaction is written.
    */
   @Post(':id/reverse')
-  @Roles('CEO')
+  @Can('money.undo')
   reverse(
     @Param('id') id: string,
     @Body('reason') reason: string | undefined,

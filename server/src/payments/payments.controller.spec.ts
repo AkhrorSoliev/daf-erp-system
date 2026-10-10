@@ -1,15 +1,103 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('PaymentsController — role guards', () => {
+const FOUR_ROLES = ['Administrator', 'Branch Director', 'CEO', 'Cashier'];
+
+describe('PaymentsController — route access', () => {
+  // Recording a payment, and the live projection the record dialog shows.
+  const CREATES = ['create', 'attachExternal', 'preview'] as const;
+  // The payments list, one payment, and the students nobody has paid yet.
+  const VIEWS = ['findAll', 'findOne', 'getPending'] as const;
+  // The debt lists: debtors, a group's debtors and the frozen students' money.
+  const DEBTS = [
+    'getDebtors',
+    'getDebtorsForGroup',
+    'getFrozenBalances',
+  ] as const;
+
+  it.each(CREATES)(
+    '%s is gated by the payment recording capability',
+    (name) => {
+      expect(routeAccess(PaymentsController, name)).toEqual({
+        kind: 'can',
+        keys: ['payments.create'],
+      });
+    },
+  );
+
+  it.each(VIEWS)('%s is gated by the payments view capability', (name) => {
+    expect(routeAccess(PaymentsController, name)).toEqual({
+      kind: 'can',
+      keys: ['payments.view'],
+    });
+  });
+
+  it.each(DEBTS)('%s is gated by the debt view capability', (name) => {
+    expect(routeAccess(PaymentsController, name)).toEqual({
+      kind: 'can',
+      keys: ['debt.view'],
+    });
+  });
+
+  it('the debtors summary also serves the home page', () => {
+    expect(routeAccess(PaymentsController, 'getDebtorSummary')).toEqual({
+      kind: 'can',
+      keys: ['debt.view', 'dashboard.view'],
+    });
+  });
+
+  it("a student's payments serve both the profile and the payment dialog", () => {
+    expect(routeAccess(PaymentsController, 'findByStudent')).toEqual({
+      kind: 'can',
+      keys: ['students.profile', 'payments.create'],
+    });
+  });
+
+  it.each([
+    ...CREATES,
+    ...VIEWS,
+    ...DEBTS,
+    'getDebtorSummary',
+    'findByStudent',
+  ])('%s admits the three admin roles and the Cashier by default', (name) => {
+    expect(defaultRolesOf(PaymentsController, name)).toEqual(FOUR_ROLES);
+  });
+
+  describe('correct() — payment amount correction', () => {
+    it('is gated by the payment correction capability', () => {
+      expect(routeAccess(PaymentsController, 'correct')).toEqual({
+        kind: 'can',
+        keys: ['payments.correct'],
+      });
+    });
+
+    it('admits the three admin roles by default, not the Cashier or the Teacher', () => {
+      expect(defaultRolesOf(PaymentsController, 'correct')).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
+    });
+  });
+
+  describe('reverse() — payment reversal', () => {
+    it('is gated by the undo capability', () => {
+      expect(routeAccess(PaymentsController, 'reverse')).toEqual({
+        kind: 'can',
+        keys: ['money.undo'],
+      });
+    });
+
+    it('admits the CEO by default, nobody else', () => {
+      expect(defaultRolesOf(PaymentsController, 'reverse')).toEqual(['CEO']);
+    });
+  });
+});
+
+describe('PaymentsController — delegation', () => {
   let controller: PaymentsController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockService = {
     create: jest.fn().mockResolvedValue({}),
@@ -33,54 +121,9 @@ describe('PaymentsController — role guards', () => {
     }).compile();
 
     controller = module.get(PaymentsController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => PaymentsController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
-
   describe('correct() — payment amount correction', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.correct);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-
-    it('should allow CEO to correct', () => {
-      const ctx = mockExecutionContext(controller.correct, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should allow Branch Director to correct', () => {
-      const ctx = mockExecutionContext(controller.correct, ['Branch Director']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should allow Administrator to correct', () => {
-      const ctx = mockExecutionContext(controller.correct, ['Administrator']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Cashier from correcting', () => {
-      const ctx = mockExecutionContext(controller.correct, ['Cashier']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Teacher from correcting', () => {
-      const ctx = mockExecutionContext(controller.correct, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
     it('should delegate to PaymentsService.correctAmount with user id, companyId and roles', () => {
       const dto = { correctAmount: 400000, reason: 'Ortiqcha summa' };
       controller.correct('payment-1', dto, 99, 1001, ['Administrator']);
@@ -147,42 +190,6 @@ describe('PaymentsController — role guards', () => {
   });
 
   describe('frozen-balances list', () => {
-    it('has the same @Roles metadata as the debtors endpoint (both fall back to the class-level guard)', () => {
-      const frozenRoles = reflector.get<string[] | undefined>(
-        ROLES_KEY,
-        controller.getFrozenBalances,
-      );
-      const debtorsRoles = reflector.get<string[] | undefined>(
-        ROLES_KEY,
-        controller.getDebtors,
-      );
-      // Neither endpoint declares its own @Roles() — both rely purely on the
-      // controller class-level @Roles('CEO', 'Branch Director',
-      // 'Administrator', 'Cashier'). Method-level metadata is therefore
-      // undefined for both, and RolesGuard falls back to the class.
-      expect(frozenRoles).toEqual(debtorsRoles);
-      expect(frozenRoles).toBeUndefined();
-    });
-
-    it('should allow CEO, Branch Director, Administrator and Cashier (class-level guard)', () => {
-      for (const role of [
-        'CEO',
-        'Branch Director',
-        'Administrator',
-        'Cashier',
-      ]) {
-        const ctx = mockExecutionContext(controller.getFrozenBalances, [role]);
-        expect(guard.canActivate(ctx)).toBe(true);
-      }
-    });
-
-    it('should deny Teacher (class-level guard)', () => {
-      const ctx = mockExecutionContext(controller.getFrozenBalances, [
-        'Teacher',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
     it('delegates getFrozenBalances with branch scope (userId + roles)', () => {
       controller.getFrozenBalances(
         { branchId: 2, page: 1, pageSize: 10 } as any,
@@ -197,23 +204,6 @@ describe('PaymentsController — role guards', () => {
         userId: 99,
         roles: ['Branch Director'],
       });
-    });
-  });
-
-  describe('reverse() — payment reversal', () => {
-    it('should have @Roles(CEO) metadata (CEO-only)', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.reverse);
-      expect(roles).toEqual(['CEO']);
-    });
-
-    it('should allow CEO to reverse', () => {
-      const ctx = mockExecutionContext(controller.reverse, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Administrator from reversing', () => {
-      const ctx = mockExecutionContext(controller.reverse, ['Administrator']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
 });

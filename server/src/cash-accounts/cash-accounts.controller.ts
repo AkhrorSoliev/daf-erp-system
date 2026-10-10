@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { CashAccountsService } from './cash-accounts.service';
 import { CreateCashAccountDto } from './dto/create-cash-account.dto';
@@ -16,14 +15,13 @@ import { CashAccountQueryDto } from './dto/cash-account-query.dto';
 import { MovementQueryDto } from './dto/movement-query.dto';
 import { TransferDto } from './dto/transfer.dto';
 import { ReconcileDto } from './dto/reconcile.dto';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 
-// Cash accounts are financial configuration → CEO and Branch Director only
+// Cash accounts are financial configuration, gated by `cash.manage`
 // (mirrors salary config + financial reports access).
 @Controller('cash-accounts')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director')
+@Can('cash.manage')
 export class CashAccountsController {
   constructor(private cashAccountsService: CashAccountsService) {}
 

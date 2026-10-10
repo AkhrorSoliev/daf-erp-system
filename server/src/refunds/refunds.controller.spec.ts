@@ -1,59 +1,40 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { RefundsController } from './refunds.controller';
-import { RefundsService } from './refunds.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
 // Kassir pul qaytarmaydi (docs/role-access.md, «Create refund»). Qarzdorlik
 // sahifasining «Muzlatilgan puli» tabi shu sababli kassirga qator amallarini
 // ko'rsatmaydi — bu test o'sha yashirishning server tomoni.
-describe('RefundsController — role guards', () => {
-  let controller: RefundsController;
-  let guard: RolesGuard;
+describe('RefundsController — route access', () => {
+  const REFUNDS = [
+    'quickRefund',
+    'previewRefund',
+    'findAll',
+    'process',
+  ] as const;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [RefundsController],
-      providers: [{ provide: RefundsService, useValue: {} }],
-    }).compile();
-
-    controller = module.get(RefundsController);
-    guard = new RolesGuard(new Reflector());
+  it.each(REFUNDS)('%s is gated by the refund capability', (name) => {
+    expect(routeAccess(RefundsController, name)).toEqual({
+      kind: 'can',
+      keys: ['refunds.create'],
+    });
   });
 
-  function ctx(handler: (...args: unknown[]) => unknown, roles: string[]) {
-    return {
-      getHandler: () => handler,
-      getClass: () => RefundsController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    } as any;
-  }
-
-  it('class-level @Roles is CEO, Branch Director, Administrator', () => {
-    expect(new Reflector().get<string[]>(ROLES_KEY, RefundsController)).toEqual(
-      ['CEO', 'Branch Director', 'Administrator'],
-    );
-  });
-
-  it.each([['CEO'], ['Branch Director'], ['Administrator']])(
-    'quickRefund allows %s',
-    (role) => {
-      expect(guard.canActivate(ctx(controller.quickRefund, [role]))).toBe(true);
+  it.each(REFUNDS)(
+    '%s admits the three admin roles by default, not the Cashier or the Teacher',
+    (name) => {
+      expect(defaultRolesOf(RefundsController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
     },
   );
 
-  it.each([['Cashier'], ['Teacher']])('quickRefund denies %s', (role) => {
-    expect(() =>
-      guard.canActivate(ctx(controller.quickRefund, [role])),
-    ).toThrow(ForbiddenException);
-  });
-
-  it('reverse is CEO-only', () => {
-    expect(() =>
-      guard.canActivate(ctx(controller.reverse, ['Branch Director'])),
-    ).toThrow(ForbiddenException);
-    expect(guard.canActivate(ctx(controller.reverse, ['CEO']))).toBe(true);
+  it('reverse is gated by the undo capability and admits the CEO by default, nobody else', () => {
+    expect(routeAccess(RefundsController, 'reverse')).toEqual({
+      kind: 'can',
+      keys: ['money.undo'],
+    });
+    expect(defaultRolesOf(RefundsController, 'reverse')).toEqual(['CEO']);
   });
 });

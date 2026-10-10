@@ -1,17 +1,41 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { ExpensesController } from './expenses.controller';
 import { ExpensesService } from './expenses.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
 
-describe('ExpensesController — role guards + export delegation', () => {
+describe('ExpensesController — route access', () => {
+  const READS = ['findAll', 'exportPdf'] as const;
+  const WRITES = ['create', 'update', 'remove'] as const;
+
+  it.each(READS)('%s is gated by the expenses view capability', (name) => {
+    expect(routeAccess(ExpensesController, name)).toEqual({
+      kind: 'can',
+      keys: ['expenses.view'],
+    });
+  });
+
+  it.each(WRITES)('%s is gated by the expenses manage capability', (name) => {
+    expect(routeAccess(ExpensesController, name)).toEqual({
+      kind: 'can',
+      keys: ['expenses.manage'],
+    });
+  });
+
+  it.each([...READS, ...WRITES])(
+    '%s admits the Branch Director and the CEO by default, not the Administrator, Cashier or Teacher',
+    (name) => {
+      expect(defaultRolesOf(ExpensesController, name)).toEqual([
+        'Branch Director',
+        'CEO',
+      ]);
+    },
+  );
+});
+
+describe('ExpensesController — export delegation', () => {
   let controller: ExpensesController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   // A CEO caller: `resolveCallerBranchScope` returns { kind: 'all' }, so the
   // resolved report scope is null (every branch).
@@ -44,43 +68,9 @@ describe('ExpensesController — role guards + export delegation', () => {
     }).compile();
 
     controller = module.get(ExpensesController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
-  });
-
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => ExpensesController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
-
-  it('restricts the controller to CEO, Branch Director at class level', () => {
-    const roles = reflector.get<string[]>(ROLES_KEY, ExpensesController);
-    expect(roles).toEqual(['CEO', 'Branch Director']);
   });
 
   describe('pdf endpoint', () => {
-    it('allows CEO / Branch Director', () => {
-      for (const role of ['CEO', 'Branch Director']) {
-        const ctx = mockExecutionContext(controller.exportPdf, [role]);
-        expect(guard.canActivate(ctx)).toBe(true);
-      }
-    });
-
-    it('denies Administrator, Cashier and Teacher', () => {
-      for (const role of ['Administrator', 'Cashier', 'Teacher']) {
-        const ctx = mockExecutionContext(controller.exportPdf, [role]);
-        expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-      }
-    });
-
     it('streams a PDF: delegates to generateExpensesPdf and sets headers', async () => {
       const query = {} as ExpenseQueryDto;
       const headers: Record<string, string | number> = {};

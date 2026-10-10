@@ -5,16 +5,14 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  UseGuards,
 } from '@nestjs/common';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 import { WithdrawalsService } from './withdrawals.service';
 
 @Controller('withdrawals')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Can('balance.withdraw')
 export class WithdrawalsController {
   constructor(private withdrawalsService: WithdrawalsService) {}
 
