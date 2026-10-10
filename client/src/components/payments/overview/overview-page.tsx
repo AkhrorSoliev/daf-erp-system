@@ -8,9 +8,8 @@ import { MonthStepper } from "@/components/shared/month-stepper";
 import { ExportOptionsPopover } from "@/components/payments/export-options-popover";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { currentMonthKey } from "@/components/payments/salary-utils";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan, usePermissionsReady } from "@/hooks/use-permissions";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { FINANCIAL_OVERVIEW_ROLES, hasAnyRole } from "@/lib/role-access";
 import { CashCard } from "./cash-card";
 import { DebtCards } from "./debt-cards";
 import { MonthChargesCard } from "./month-charges-card";
@@ -30,8 +29,10 @@ const FILTERS = { month: { type: "string" as const, defaultValue: "" } };
  * money endpoint for them — it is CEO/BD on the server (ADR-0067).
  */
 export function OverviewPage() {
-  const user = useAuth((s) => s.user);
-  const canSeeMoney = hasAnyRole(user?.roles, FINANCIAL_OVERVIEW_ROLES);
+  const canSeeMoney = useCan("reports.finance");
+  // The "recent payments only" layout is the answer for a viewer WITHOUT the
+  // capability, so it waits for the list: until then it is not known who that is.
+  const minimalLayout = usePermissionsReady() && !canSeeMoney;
   const queryClient = useQueryClient();
   const [recording, setRecording] = useState(false);
   const { filters, setFilter } = useUrlFilters(FILTERS);
@@ -83,7 +84,7 @@ export function OverviewPage() {
         </>
       )}
 
-      {(isCurrent || !canSeeMoney) && (
+      {(isCurrent || minimalLayout) && (
         <section className="space-y-3">
           <h3 className="font-heading text-base font-semibold">Oxirgi to&apos;lovlar</h3>
           <RecentPayments />

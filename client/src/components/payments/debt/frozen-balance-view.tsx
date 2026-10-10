@@ -24,8 +24,7 @@ import {
 import api from "@/lib/api";
 import { formatBalance } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
-import { useAuth } from "@/hooks/use-auth";
-import { FROZEN_BALANCE_ACTION_ROLES, hasAnyRole } from "@/lib/role-access";
+import { useCan } from "@/hooks/use-permissions";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import { WithdrawalDialog } from "../withdrawal-dialog";
 import { RefundDialog } from "../refund-dialog";
@@ -70,10 +69,10 @@ export function FrozenBalanceView() {
   const { selectedBranch } = useBranchSwitcher();
   const queryClient = useQueryClient();
   const { filters, setFilter, setFilters } = useDebtFilters();
-  // Ro'yxat hamma xodimga, pulni siljitish esa kassirga emas.
-  const canMoveBalance = useAuth((s) =>
-    hasAnyRole(s.user?.roles, FROZEN_BALANCE_ACTION_ROLES),
-  );
+  // The list is open to every staff role; each action has its own capability.
+  const canWithdraw = useCan("balance.withdraw");
+  const canRefund = useCan("refunds.create");
+  const canMoveBalance = canWithdraw || canRefund;
 
   const [withdrawalTarget, setWithdrawalTarget] =
     useState<ActionTarget | null>(null);
@@ -188,23 +187,27 @@ export function FrozenBalanceView() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  setWithdrawalTarget({
-                                    id: row.studentId,
-                                    name,
-                                  })
-                                }
-                              >
-                                Markaz hisobiga o&apos;tkazish
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  setRefundTarget({ id: row.studentId, name })
-                                }
-                              >
-                                O&apos;quvchiga qaytarish
-                              </DropdownMenuItem>
+                              {canWithdraw && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setWithdrawalTarget({
+                                      id: row.studentId,
+                                      name,
+                                    })
+                                  }
+                                >
+                                  Markaz hisobiga o&apos;tkazish
+                                </DropdownMenuItem>
+                              )}
+                              {canRefund && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setRefundTarget({ id: row.studentId, name })
+                                  }
+                                >
+                                  O&apos;quvchiga qaytarish
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { Student } from "@/data/student-model";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import { StudentAppActivityTab } from "./student-app-activity-tab";
 import { StudentGroupCard } from "./student-group-card";
@@ -52,8 +52,12 @@ export function StudentProfileTabs({
   activeTab,
   onTabChange,
 }: StudentProfileTabsProps) {
-  const user = useAuth((s) => s.user);
-  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  // One flag per thing the profile offers; each is the capability the server
+  // asks for on the matching route.
+  const canSeeDetails = useCan("students.details");
+  const canSeeComments = useCan(["comments.write", "students.details"]);
+  const canSendSms = useCan("students.sms");
+  const canEnroll = useCan("students.enroll");
   const [localGroups, setLocalGroups] = useState(student.groups);
   const isUngrouped = student.isActive && localGroups.length === 0;
   const [historyVisible, setHistoryVisible] = useState(false);
@@ -77,18 +81,22 @@ export function StudentProfileTabs({
   const smsShown = useRef(false);
 
   useEffect(() => {
-    if (!canManage) return;
+    if (!canSendSms) return;
     api
       .get(`/students/${student.id}/sms`, { params: { page: 1, pageSize: 1 } })
       .then((res) => setSmsCount(res.data.total))
       .catch(() => {});
+  }, [student.id, canSendSms]);
+
+  useEffect(() => {
+    if (!canSeeDetails) return;
     api
       .get(`/entity-history/Student/${student.id}`, {
         params: { page: 1, pageSize: 1 },
       })
       .then((res) => setHistoryCount(res.data.total))
       .catch(() => {});
-  }, [student.id, canManage]);
+  }, [student.id, canSeeDetails]);
 
   // Sync local groups when student prop changes (after background refresh)
   useEffect(() => {
@@ -192,7 +200,7 @@ export function StudentProfileTabs({
             `/students/${student.id}/enrollments/${removeEnrollmentId}/debt-write-off-eligibility`,
           )
           .then((r) => r.data),
-      enabled: removeDialogOpen && !!removeEnrollmentId && canManage,
+      enabled: removeDialogOpen && !!removeEnrollmentId && canEnroll,
       staleTime: 0,
     });
 
@@ -271,18 +279,18 @@ export function StudentProfileTabs({
       >
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
-          {canManage && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
-          {canManage && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
-          {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
-          {canManage && (
+          {canSeeDetails && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
+          {canSeeDetails && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
+          {canSeeComments && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
+          {canSeeDetails && (
             <TabsTrigger value="qongiroq">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
           )}
-          {canManage && (
+          {canSendSms && (
             <TabsTrigger value="sms">
               SMS{smsCount ? ` (${smsCount > 99 ? "99+" : smsCount})` : ""}
             </TabsTrigger>
           )}
-          {canManage && (
+          {canSeeDetails && (
             <TabsTrigger value="tarix">
               Tarix
               {historyCount
@@ -290,11 +298,11 @@ export function StudentProfileTabs({
                 : ""}
             </TabsTrigger>
           )}
-          {canManage && <TabsTrigger value="lid">Lid tarixi</TabsTrigger>}
-          {canManage && (
+          {canSeeDetails && <TabsTrigger value="lid">Lid tarixi</TabsTrigger>}
+          {canSeeDetails && (
             <TabsTrigger value="mock-imtihonlar">Mock imtihonlar</TabsTrigger>
           )}
-          {canManage && <TabsTrigger value="ilova">Ilova</TabsTrigger>}
+          {canSeeDetails && <TabsTrigger value="ilova">Ilova</TabsTrigger>}
         </TabsList>
 
         {/* Guruhlar */}
@@ -328,7 +336,7 @@ export function StudentProfileTabs({
                   key={g.id}
                   group={g}
                   // `DELETE /students/:id/enroll/:enrollmentId` kassirni rad etadi.
-                  onRemove={canManage ? openRemoveDialog : undefined}
+                  onRemove={canEnroll ? openRemoveDialog : undefined}
                 />
               ))}
             </div>
@@ -338,7 +346,7 @@ export function StudentProfileTabs({
             </div>
           )}
 
-          {canManage && (
+          {canSeeDetails && (
             <StudentClosedEnrollmentsSection
               studentId={student.id}
               visible={student.balance < 0}
@@ -433,7 +441,7 @@ export function StudentProfileTabs({
         </TabsContent>
 
         {/* Ilova — ilovadagi faollik */}
-        {canManage && (
+        {canSeeDetails && (
           <TabsContent value="ilova">
             {ilovaVisible && <StudentAppActivityTab studentId={student.id} />}
           </TabsContent>

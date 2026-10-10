@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { format } from "date-fns";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import {
   DepartedStudentsFilterBar,
   defaultFilter,
@@ -81,10 +81,7 @@ export function DepartedStudentsClient() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const user = useAuth((s) => s.user);
-
-  const canManageReasons =
-    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canManageReasons = useCan("settings.reference");
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 

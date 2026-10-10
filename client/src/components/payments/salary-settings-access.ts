@@ -1,3 +1,5 @@
+import type { Can } from "@/lib/permission-check";
+
 /**
  * ⚙ Salary settings — who sees what (ADR-0034).
  *
@@ -15,10 +17,10 @@ export interface SalarySettingsAccess {
 }
 
 export function resolveSalarySettingsAccess(
-  roleIds: number[],
+  can: Can,
 ): SalarySettingsAccess {
-  const ceo = roleIds.includes(1);
-  const director = roleIds.includes(2);
+  const ceo = can("salary.rate-edit");
+  const director = can("salary.rate");
   return {
     canOpen: ceo || director,
     canManageCompanyPayroll: ceo,
