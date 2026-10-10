@@ -197,6 +197,28 @@ export class FalClient {
   }
 
   /**
+   * One dialog line voiced alone, for a speaker beyond the two that
+   * Gemini's dialogue mode takes (`mehrstimmig.ts`). Same model, language
+   * and scene as the dialogue request, so the voice matches.
+   */
+  async sprecheGemini(
+    prompt: string,
+    voice: string,
+    styleInstructions: string,
+  ): Promise<string> {
+    const out = await this.run(TTS_GEMINI_MODEL, {
+      prompt,
+      voice,
+      style_instructions: styleInstructions,
+      language_code: 'German (Germany)',
+      output_format: 'mp3',
+    });
+    const url = out?.audio?.url;
+    if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');
+    return url;
+  }
+
+  /**
    * One sound effect for a realistic dialog (a door, a fridge, a room tone).
    * `loop` makes a room tone that repeats without a seam. A prompt influence
    * of 0.5 keeps the sound close to what was asked for.

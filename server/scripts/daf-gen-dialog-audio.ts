@@ -52,13 +52,8 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { S3Client } from '@aws-sdk/client-s3';
 import { R2Uploader } from '../src/daf-content/media/r2-uploader';
-import {
-  FalAblehnungError,
-  FalClient,
-  type GeminiDialog,
-} from '../src/daf/media/fal-client';
-import { neuerAudioSchluessel } from '../src/daf/media/audio-keys';
-import { polstereMp3, POLSTER_KENNUNG } from '../src/daf/media/audio-polster';
+import { FalClient, type GeminiDialog } from '../src/daf/media/fal-client';
+import { polstereMp3 } from '../src/daf/media/audio-polster';
 import {
   DIALOG_AUDIO_MODELL,
   dialogTextHash,
@@ -70,12 +65,18 @@ import {
   type HoerspielRegie,
 } from '../src/daf/media/hoerspiel';
 import {
+  teileMehrstimmig,
+  zeichenMehrstimmig,
+} from '../src/daf/media/mehrstimmig';
+import {
   benoetigteGeraeusche,
   entscheideDialoge,
   GERAEUSCH_PREIS_SEK,
   GERAEUSCH_SEK_CHEGARASI,
 } from '../src/daf/media/hoerspiel-auftrag';
 import {
+  erstelleMehrstimmig,
+  erstelleMische,
   erzeugeGeraeusche,
   ladeGeraeuschManifest,
   mischeUndLade,
@@ -99,12 +100,6 @@ export const BELGI_CHEGARASI_DIALOG = 7200;
 
 /** Appended to every scene: A1 learners need clear speech at a calm pace. */
 export const DIALOG_STIL_ZUSATZ = 'Deutlich, in ruhigem Tempo.';
-
-/**
- * A content-checker refusal costs nothing and passes when the same request
- * is sent again (2026-09-25), so it is retried; no other error is.
- */
-export const ABLEHNUNG_VERSUCHE = 3;
 
 const REQUIRED_ENV = [
   'FAL_KEY',
@@ -246,7 +241,11 @@ export function zuGenerierenDialoge(
 /** Billed characters: the prompt and the style instructions. */
 export function gesamtZeichenDialoge(anfragen: GeminiDialog[]): number {
   return anfragen.reduce(
-    (sum, a) => sum + a.prompt.length + a.styleInstructions.length,
+    (sum, a) =>
+      sum +
+      (a.speakers.length > 2
+        ? zeichenMehrstimmig(teileMehrstimmig(a))
+        : a.prompt.length + a.styleInstructions.length),
     0,
   );
 }
@@ -313,115 +312,15 @@ function ladeDialoge(): Dialog[] {
   return einzeln.length > 0 ? alle.filter((d) => einzeln.includes(d.id)) : alle;
 }
 
-export interface DialogErgebnis {
-  key: string;
-  polster?: string;
-  rohKey?: string;
-  hoerspiel?: string;
-}
-
-export type DialogGenerierFn = (
-  dialog: Dialog,
-  anfrage: GeminiDialog,
-) => Promise<DialogErgebnis>;
-
-/**
- * Dialoglarni BIRIN-KETIN ishlaydi (2026-09-12 ko'rik, F2): har biri
- * `generiere` bilan yasaladi/yuklanadi, DARHOL manifestga (modeli bilan)
- * yoziladi va `speichereManifest` bilan diskka saqlanadi — keyingisiga
- * o'tishdan OLDIN. N-dialog yiqilsa xato tashqariga uloqtiriladi va sikl
- * TO'XTAYDI, lekin 1..N-1 allaqachon manifestda VA diskda saqlangan —
- * pul yo'qolmaydi, qayta yuritish faqat to'xtagan joydan davom etadi.
- *
- * `manifest` argument sifatida MUTATSIYA qilinadi (nusxa emas) — xato
- * tashlangandan keyin ham chaqiruvchi yozilgan yozuvlarni ko'ra oladi.
- */
-export async function generiereDialogeNacheinander(
-  dialoge: Dialog[],
-  anfrageById: Map<string, GeminiDialog>,
-  manifest: DialogAudioManifest,
-  generiere: DialogGenerierFn,
-  speichereManifest: (manifest: DialogAudioManifest) => void,
-): Promise<void> {
-  for (const d of dialoge) {
-    let result: DialogErgebnis;
-    try {
-      result = await generiere(d, anfrageById.get(d.id)!);
-    } catch (err) {
-      throw new Error(
-        `"${d.titelDe}" (${d.id}) yasalmadi/yuklanmadi: ${(err as Error).message}`,
-      );
-    }
-    manifest[d.id] = {
-      key: result.key,
-      textHash: dialogTextHash(d.zeilen),
-      ...(result.polster ? { polster: result.polster } : {}),
-      modell: DIALOG_AUDIO_MODELL,
-      ...(result.rohKey ? { rohKey: result.rohKey } : {}),
-      ...(result.hoerspiel ? { hoerspiel: result.hoerspiel } : {}),
-    };
-    speichereManifest(manifest);
-    console.log(
-      `  ${d.id}: ${d.titelDe} → yasaldi, yuklandi, manifestga yozildi`,
-    );
-  }
-}
-
-/**
- * Bitta dialog uchun to'liq quvur: fal.ai orqali yasaydi (rad etilsa
- * shu so'rovni yana yuboradi), baytlarni yuklab oladi, JIMLIK QO'SHADI
- * (`polster`), YANGI tasodifiy kalit bilan R2'ga yuklaydi.
- *
- * Bog'liqliklar (fal, uploader, fetchFn, polster) INJEKTSIYA QILINADI —
- * testlar soxta (network'siz) nusxalar bilan ishlaydi. Kalit har doim
- * YANGI va tasodifiy (`neuerAudioSchluessel()`), demak R2'da hech qachon
- * oldindan mavjud bo'lmaydi.
- */
-export function erstelleGeneriere(
-  fal: Pick<FalClient, 'dialogGemini'>,
-  uploader: Pick<R2Uploader, 'uploadBytes'>,
-  fetchFn: typeof fetch,
-  polster: (bytes: Buffer) => Promise<Buffer>,
-  // A dialog with `hoerspiel` directions is mixed instead of padded (the
-  // mix pads it the same way); null for every other dialog.
-  mische?: (d: Dialog, roh: Buffer) => Promise<DialogErgebnis | null>,
-): DialogGenerierFn {
-  return async (d, anfrage) => {
-    let sourceUrl: string | undefined;
-    for (let versuch = 1; sourceUrl === undefined; versuch++) {
-      try {
-        sourceUrl = await fal.dialogGemini(anfrage);
-      } catch (err) {
-        if (
-          !(err instanceof FalAblehnungError) ||
-          versuch >= ABLEHNUNG_VERSUCHE
-        ) {
-          throw err;
-        }
-        console.log(
-          `    ${d.id}: fal.ai rad etdi (${versuch}-marta), yana so'rayapman`,
-        );
-      }
-    }
-    // Pul xavfsizligi: bu yerdan keyin HALI uchta bosqich bor (yuklab
-    // olish, jimlik, R2'ga yuklash) — birortasi yiqilsa, ENDIGINA PULLIK
-    // yasalgan audio hech qayerga yozilmagan bo'lardi. `sourceUrl`
-    // fal.ai'ning VAQTINCHALIK ommaviy manzili (sir emas) — konsolga
-    // chiqarilishi qo'lda tiklab olish imkonini beradi.
-    console.log(`    ${d.id}: fal.ai natijasi — ${sourceUrl}`);
-    const res = await fetchFn(sourceUrl);
-    if (!res.ok) {
-      throw new Error(`fal.ai audiosi yuklab olinmadi — HTTP ${res.status}`);
-    }
-    const roh = Buffer.from(await res.arrayBuffer());
-    const gemischt = mische ? await mische(d, roh) : null;
-    if (gemischt) return gemischt;
-    const gepolstert = await polster(roh);
-    const key = neuerAudioSchluessel();
-    await uploader.uploadBytes(key, gepolstert);
-    return { key, polster: POLSTER_KENNUNG };
-  };
-}
+// The generation pipeline lives in `lib/dialog-generieren.ts`; it is
+// re-exported here, where its tests and the rest of the script expect it.
+export {
+  ABLEHNUNG_VERSUCHE,
+  erstelleGeneriere,
+  generiereDialogeNacheinander,
+  type DialogErgebnis,
+  type DialogGenerierFn,
+} from './lib/dialog-generieren';
 
 async function main(): Promise<void> {
   const stimmen = JSON.parse(readFileSync(STIMMEN_PATH, 'utf8')) as Stimmen;
@@ -434,11 +333,17 @@ async function main(): Promise<void> {
 
   // `sprechen`: new or edited text, paid to Gemini. `mischen`: only the
   // realistic mix changed and the raw recording is kept — free.
-  const { sprechen, mischen } = entscheideDialoge(
-    ladeDialoge(),
-    regie,
-    manifest,
-  );
+  const ausgewaehlt = ladeDialoge();
+  const { sprechen, mischen } = entscheideDialoge(ausgewaehlt, regie, manifest);
+  // `--neu-mischen`: remix every selected realistic dialog from its kept raw
+  // recording (free), e.g. after the cutting itself was improved.
+  if (process.argv.includes('--neu-mischen')) {
+    for (const d of ausgewaehlt) {
+      const e = manifest[d.id];
+      const offen = !sprechen.includes(d) && !mischen.includes(d);
+      if (offen && e?.rohKey && regie[d.id]?.hoerspiel) mischen.push(d);
+    }
+  }
   console.log(
     `${sprechen.length} ta dialogga ovoz kerak, ${mischen.length} tasi faqat qayta aralashtiriladi.`,
   );
@@ -515,15 +420,14 @@ async function main(): Promise<void> {
       sprechen,
       anfrageById,
       manifest,
-      erstelleGeneriere(fal, uploader, fetch, polstereMp3, async (d, roh) => {
-        const h = regie[d.id]?.hoerspiel;
-        if (!h) return null;
-        // The raw recording is kept first: a later change of the mix then
-        // costs nothing.
-        const rohKey = neuerAudioSchluessel();
-        await uploader.uploadBytes(rohKey, roh);
-        return { ...(await mischeUndLade(d, roh, h, mischDeps)), rohKey };
-      }),
+      erstelleGeneriere(
+        fal,
+        uploader,
+        fetch,
+        polstereMp3,
+        erstelleMische(regie, uploader, mischDeps),
+        erstelleMehrstimmig(fal, fetch, ABLEHNUNG_VERSUCHE),
+      ),
       speichere,
     );
 

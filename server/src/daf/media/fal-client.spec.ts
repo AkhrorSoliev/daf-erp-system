@@ -297,3 +297,32 @@ describe('FalClient.geraeusch', () => {
     await expect(c.geraeusch('door', 2, false)).rejects.toThrow(/effekt/i);
   });
 });
+
+describe('FalClient.sprecheGemini', () => {
+  it('voices one line alone: one voice, German, scene apart, no speakers', async () => {
+    const calls: Array<{ url: string; body: any }> = [];
+    const fetchFn = (async (url: string, init: any) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ audio: { url: 'https://x/e.mp3' } }),
+        text: async () => '',
+      };
+    }) as unknown as typeof fetch;
+    const url = await new FalClient('k', fetchFn).sprecheGemini(
+      '[cheerful] Und ich möchte ein Schnitzel.',
+      'Iapetus',
+      'Im Restaurant.',
+    );
+    expect(url).toBe('https://x/e.mp3');
+    expect(calls[0].url).toBe('https://fal.run/fal-ai/gemini-3.1-flash-tts');
+    expect(calls[0].body).toEqual({
+      prompt: '[cheerful] Und ich möchte ein Schnitzel.',
+      voice: 'Iapetus',
+      style_instructions: 'Im Restaurant.',
+      language_code: 'German (Germany)',
+      output_format: 'mp3',
+    });
+  });
+});

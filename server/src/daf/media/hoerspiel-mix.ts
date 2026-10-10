@@ -8,11 +8,12 @@ import {
   mischFfmpegArgs,
   mischPlan,
   parseStille,
-  schnitte,
-  whisperWoerter,
-  zeilenSpannen,
+  sprachStuecke,
+  teileZeilen,
   type HoerspielRegie,
+  type Stueck,
 } from './hoerspiel';
+import { zusammenFfmpegArgs, type Platz } from './mehrstimmig';
 
 const run = promisify(execFile);
 
@@ -21,12 +22,17 @@ export const WHISPER_MODELL =
   process.env.WHISPER_MODEL ??
   join(homedir(), 'whisper-models', 'ggml-small.bin');
 
-async function tool(cmd: string, args: string[]): Promise<string> {
+/** Runs a local tool; `nurStdout` drops the log lines a tool writes to stderr. */
+async function tool(
+  cmd: string,
+  args: string[],
+  nurStdout = false,
+): Promise<string> {
   try {
     const { stdout, stderr } = await run(cmd, args, {
       maxBuffer: 64 * 1024 * 1024,
     });
-    return `${stdout}\n${stderr}`;
+    return nurStdout ? stdout : `${stdout}\n${stderr}`;
   } catch (err) {
     const e = err as NodeJS.ErrnoException & { stderr?: string };
     throw new Error(`${cmd} ishlamadi: ${e.stderr?.trim() || e.message}`);
@@ -49,9 +55,60 @@ export async function dauerSek(datei: string): Promise<number> {
 }
 
 /**
+ * The cut times between the lines of a raw dialog (see `teileZeilen`).
+ * Exported for the cut check, which listens to every piece it produces.
+ */
+export async function findeSchnitte(
+  dir: string,
+  roh: string,
+  dauer: number,
+  zeilen: string[],
+): Promise<number[]> {
+  const still = await tool('ffmpeg', [
+    '-i',
+    roh,
+    '-af',
+    'silencedetect=noise=-38dB:d=0.18',
+    '-f',
+    'null',
+    '-',
+  ]);
+  // Each piece of speech is transcribed alone, padded with silence so
+  // whisper hears a short piece as speech.
+  const stuecke: Stueck[] = [];
+  for (const [i, p] of sprachStuecke(parseStille(still), dauer).entries()) {
+    const wav = join(dir, `p${i}.wav`);
+    await tool('ffmpeg', [
+      '-y',
+      '-ss',
+      String(Math.max(0, p.start - 0.05)),
+      '-to',
+      String(p.ende + 0.05),
+      '-i',
+      roh,
+      '-af',
+      'adelay=400|400,apad=pad_dur=0.4',
+      '-ar',
+      '16000',
+      '-ac',
+      '1',
+      wav,
+    ]);
+    const text = await tool(
+      'whisper-cli',
+      ['-m', WHISPER_MODELL, '-l', 'de', '-nt', '-np', '-f', wav],
+      true,
+    );
+    stuecke.push({ ...p, text: text.replace(/\s+/g, ' ').trim() });
+  }
+  return teileZeilen(zeilen, stuecke);
+}
+
+/**
  * Turns one raw Gemini dialog into the realistic version. Every step is
- * local (ffmpeg, whisper.cpp); nothing here is paid. A line whisper cannot
- * find stops the mix with an error instead of cutting in the wrong place.
+ * local (ffmpeg, whisper.cpp); nothing here is paid. A line the pieces
+ * cannot be matched to stops the mix with an error instead of cutting in
+ * the wrong place.
  */
 export async function mischeHoerspiel(input: {
   roh: Buffer;
@@ -66,36 +123,7 @@ export async function mischeHoerspiel(input: {
     await writeFile(roh, input.roh);
     const dauer = await dauerSek(roh);
 
-    const wav = join(dir, 'roh.wav');
-    await tool('ffmpeg', ['-y', '-i', roh, '-ar', '16000', '-ac', '1', wav]);
-    await tool('whisper-cli', [
-      '-m',
-      WHISPER_MODELL,
-      '-l',
-      'de',
-      '-ml',
-      '1',
-      '-sow',
-      '-oj',
-      '-of',
-      join(dir, 'roh'),
-      '-np',
-      '-f',
-      wav,
-    ]);
-    const json = JSON.parse(await readFile(join(dir, 'roh.json'), 'utf8'));
-    const spannen = zeilenSpannen(input.zeilen, whisperWoerter(json));
-
-    const still = await tool('ffmpeg', [
-      '-i',
-      roh,
-      '-af',
-      'silencedetect=noise=-38dB:d=0.18',
-      '-f',
-      'null',
-      '-',
-    ]);
-    const cuts = schnitte(spannen, parseStille(still));
+    const cuts = await findeSchnitte(dir, roh, dauer, input.zeilen);
 
     const geraeuschDauer = new Map<string, number>();
     for (const [id, datei] of input.geraeusche) {
@@ -117,6 +145,50 @@ export async function mischeHoerspiel(input: {
       }),
     );
     return { mp3: await readFile(ausgabe), schnitte: cuts };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * A dialog of more than two speakers, rebuilt from its pieces: the main
+ * take (the two busiest speakers) is cut at its turns and every single line
+ * goes back into its place (`mehrstimmig.ts`). The result is one recording,
+ * like any other dialog's.
+ */
+export async function setzeZusammen(input: {
+  haupt: Buffer;
+  /** spoken text of the main take's lines, in order */
+  hauptZeilen: string[];
+  /** 0-based dialog line → its single-voice recording */
+  einzeln: Map<number, Buffer>;
+  reihenfolge: Platz[];
+}): Promise<Buffer> {
+  const dir = await mkdtemp(join(tmpdir(), 'daf-mehrstimmig-'));
+  try {
+    const haupt = join(dir, 'haupt.mp3');
+    await writeFile(haupt, input.haupt);
+    const dauer = await dauerSek(haupt);
+    const schnitte = await findeSchnitte(dir, haupt, dauer, input.hauptZeilen);
+    const einzeln = new Map<number, string>();
+    for (const [i, bytes] of input.einzeln) {
+      const datei = join(dir, `e${i}.mp3`);
+      await writeFile(datei, bytes);
+      einzeln.set(i, datei);
+    }
+    const ausgabe = join(dir, 'dialog.mp3');
+    await tool(
+      'ffmpeg',
+      zusammenFfmpegArgs({
+        reihenfolge: input.reihenfolge,
+        schnitte,
+        dauer,
+        haupt,
+        einzeln,
+        ausgabe,
+      }),
+    );
+    return await readFile(ausgabe);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

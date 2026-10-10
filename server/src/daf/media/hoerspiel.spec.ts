@@ -6,85 +6,10 @@ import {
   mischPlan,
   parseStille,
   pruefeHoerspiel,
-  schnitte,
-  whisperWoerter,
-  zeilenSpannen,
+  sprachStuecke,
+  teileZeilen,
   type HoerspielRegie,
 } from './hoerspiel';
-
-const w = (text: string, from: number, to: number) => ({ text, from, to });
-
-describe('whisperWoerter', () => {
-  it('reads word segments in seconds and drops empty ones', () => {
-    const json = {
-      transcription: [
-        { offsets: { from: 0, to: 980 }, text: '' },
-        { offsets: { from: 980, to: 1340 }, text: ' Markus,' },
-        { offsets: { from: 1340, to: 1940 }, text: ' gibt' },
-      ],
-    };
-    expect(whisperWoerter(json)).toEqual([
-      w('Markus,', 0.98, 1.34),
-      w('gibt', 1.34, 1.94),
-    ]);
-  });
-});
-
-describe('zeilenSpannen', () => {
-  const zeilen = ['Hallo Mia!', 'Kein Brot?', 'Nein, kein Brot.'];
-
-  it('finds where each line starts and ends', () => {
-    const woerter = [
-      w('Hallo', 0.5, 0.8),
-      w('Mia!', 0.8, 1.2),
-      w('Kein', 1.6, 1.9),
-      w('Brot?', 1.9, 2.3),
-      w('Nein,', 2.8, 3.1),
-      w('kein', 3.1, 3.4),
-      w('Brot.', 3.4, 3.9),
-    ];
-    expect(zeilenSpannen(zeilen, woerter)).toEqual([
-      { start: 0.5, ende: 1.2 },
-      { start: 1.6, ende: 2.3 },
-      { start: 2.8, ende: 3.9 },
-    ]);
-  });
-
-  it('survives a misheard and an extra word', () => {
-    const woerter = [
-      w('Halo', 0.5, 0.8),
-      w('Mia', 0.8, 1.2),
-      w('äh', 1.3, 1.4),
-      w('Kein', 1.6, 1.9),
-      w('Brot', 1.9, 2.3),
-      w('Nein', 2.8, 3.1),
-      w('kein', 3.1, 3.4),
-      w('Brot', 3.4, 3.9),
-    ];
-    const s = zeilenSpannen(zeilen, woerter);
-    expect(s[1]).toEqual({ start: 1.6, ende: 2.3 });
-    expect(s[2]).toEqual({ start: 2.8, ende: 3.9 });
-  });
-
-  it('a one-word line heard wrong still gets its place (u03-d2 "Gankke")', () => {
-    const s = zeilenSpannen(
-      ['Es ist klein.', 'Danke!', 'Bitte!'],
-      [
-        w('Es', 0.1, 0.3),
-        w('ist', 0.3, 0.5),
-        w('klein.', 0.5, 0.9),
-        w('Gankke!', 1.3, 1.7),
-        w('Bitte!', 2.1, 2.5),
-      ],
-    );
-    expect(s[1]).toEqual({ start: 1.3, ende: 1.7 });
-  });
-
-  it('refuses when a line was not heard at all', () => {
-    const woerter = [w('Hallo', 0.5, 0.8), w('Mia', 0.8, 1.2)];
-    expect(() => zeilenSpannen(zeilen, woerter)).toThrow(/2-satr/);
-  });
-});
 
 describe('parseStille', () => {
   it('pairs silence starts and ends from ffmpeg output', () => {
@@ -101,24 +26,83 @@ describe('parseStille', () => {
   });
 });
 
-describe('schnitte', () => {
-  const spannen = [
-    { start: 0.5, ende: 1.2 },
-    { start: 1.6, ende: 2.3 },
-    { start: 2.8, ende: 3.9 },
-  ];
+describe('sprachStuecke', () => {
+  it('returns the speech between silences and drops tiny bursts', () => {
+    expect(
+      sprachStuecke(
+        [
+          { start: 0, ende: 0.29 },
+          { start: 0.92, ende: 1.63 },
+          { start: 2.16, ende: 2.2 },
+          { start: 2.25, ende: 3.0 },
+        ],
+        4,
+      ),
+    ).toEqual([
+      { start: 0.29, ende: 0.92 },
+      { start: 1.63, ende: 2.16 },
+      { start: 3.0, ende: 4 },
+    ]);
+  });
+});
 
-  it('cuts in the middle of the silence between two lines', () => {
-    const stille = [
-      { start: 0.9, ende: 1.0 }, // a pause inside line 1
-      { start: 1.22, ende: 1.58 },
-      { start: 2.32, ende: 2.78 },
-    ];
-    expect(schnitte(spannen, stille)).toEqual([1.4, 2.55]);
+describe('teileZeilen', () => {
+  const s = (text: string, start: number, ende: number) => ({
+    text,
+    start,
+    ende,
   });
 
-  it('falls back to the gap between the words when no silence is near', () => {
-    expect(schnitte(spannen, [])).toEqual([1.4, 2.55]);
+  it('groups pieces into lines and cuts in the gap between two lines', () => {
+    const cuts = teileZeilen(
+      ['Hallo Mia!', 'Hm... Käse, Butter... aber kein Brot!', 'Kein Brot?'],
+      [
+        s('Hallo Mia!', 0.3, 1.2),
+        s('Käse, Butter.', 1.6, 2.8),
+        s('Aber kein Brot.', 3.4, 4.5),
+        s('Kein Brot?', 5.0, 5.8),
+      ],
+    );
+    expect(cuts).toEqual([1.4, 4.75]);
+  });
+
+  it('two lines that say the same words are still told apart (u04-d3)', () => {
+    const cuts = teileZeilen(
+      ['Guten Tag!', 'Guten Tag! Was kostet die Melone?'],
+      [
+        s('Guten Tag.', 0.29, 0.92),
+        s('Guten Tag.', 1.63, 2.16),
+        s('Was kostet die Melone?', 3.0, 4.6),
+      ],
+    );
+    expect(cuts).toEqual([1.275]);
+  });
+
+  it('a one-word line heard wrong keeps its place (u03-d2 «Gankke»)', () => {
+    const cuts = teileZeilen(
+      ['Es ist klein.', 'Danke!', 'Bitte!'],
+      [
+        s('Es ist klein.', 0.1, 0.9),
+        s('Gankke!', 1.3, 1.7),
+        s('Bitte!', 2.1, 2.5),
+      ],
+    );
+    expect(cuts).toEqual([1.1, 1.9]);
+  });
+
+  it('refuses when there are fewer pieces than lines', () => {
+    expect(() =>
+      teileZeilen(['Hallo!', 'Tschüss!'], [s('Hallo Tschüss', 0, 1)]),
+    ).toThrow(/bo'lak/);
+  });
+
+  it('refuses when a longer line matches no word at all', () => {
+    expect(() =>
+      teileZeilen(
+        ['Hallo Mia!', 'Wie geht es dir?'],
+        [s('Hallo Mia!', 0, 1), s('Ganz anders hier', 1.5, 2.5)],
+      ),
+    ).toThrow(/2-satr/);
   });
 });
 

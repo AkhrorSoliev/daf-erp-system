@@ -9,7 +9,13 @@ import { join } from 'path';
 import { randomBytes } from 'crypto';
 import { GetObjectCommand, type S3Client } from '@aws-sdk/client-s3';
 import type { R2Uploader } from '../../src/daf-content/media/r2-uploader';
-import type { FalClient } from '../../src/daf/media/fal-client';
+import {
+  FalAblehnungError,
+  type FalClient,
+  type GeminiDialog,
+} from '../../src/daf/media/fal-client';
+import { teileMehrstimmig } from '../../src/daf/media/mehrstimmig';
+import { polstereMp3 } from '../../src/daf/media/audio-polster';
 import { neuerAudioSchluessel } from '../../src/daf/media/audio-keys';
 import { POLSTER_KENNUNG } from '../../src/daf/media/audio-polster';
 import {
@@ -17,7 +23,10 @@ import {
   hoerspielHash,
   type HoerspielRegie,
 } from '../../src/daf/media/hoerspiel';
-import { mischeHoerspiel } from '../../src/daf/media/hoerspiel-mix';
+import {
+  mischeHoerspiel,
+  setzeZusammen,
+} from '../../src/daf/media/hoerspiel-mix';
 import type {
   GeraeuschAuftrag,
   GeraeuschManifest,
@@ -138,4 +147,92 @@ export async function mischeUndLade(
   const key = neuerAudioSchluessel();
   await deps.uploader.uploadBytes(key, mp3);
   return { key, hoerspiel: hoerspielHash(h), polster: POLSTER_KENNUNG };
+}
+
+/**
+ * The mix step of a new recording: the raw recording is kept first (a later
+ * change of the mix is then free), then mixed. A failed mix never loses the
+ * paid recording: it goes in padded, without the mix (no `hoerspiel` hash),
+ * and the next run remixes it for free.
+ */
+export function erstelleMische(
+  regie: Record<string, { hoerspiel?: HoerspielRegie }>,
+  uploader: Pick<R2Uploader, 'uploadBytes'>,
+  mischDeps: Parameters<typeof mischeUndLade>[3],
+) {
+  return async (d: Dialog, roh: Buffer) => {
+    const h = regie[d.id]?.hoerspiel;
+    if (!h) return null;
+    const rohKey = neuerAudioSchluessel();
+    await uploader.uploadBytes(rohKey, roh);
+    try {
+      return { ...(await mischeUndLade(d, roh, h, mischDeps)), rohKey };
+    } catch (err) {
+      console.error(
+        `    ${d.id}: aralashtirilmadi (${(err as Error).message}) — oddiy ovoz saqlandi, keyingi yurishda bepul qayta aralashtiriladi`,
+      );
+      const key = neuerAudioSchluessel();
+      await uploader.uploadBytes(key, await polstereMp3(roh));
+      return { key, polster: POLSTER_KENNUNG, rohKey };
+    }
+  };
+}
+
+async function mitAblehnung<T>(
+  f: () => Promise<T>,
+  id: string,
+  versuche: number,
+): Promise<T> {
+  for (let versuch = 1; ; versuch++) {
+    try {
+      return await f();
+    } catch (err) {
+      if (!(err instanceof FalAblehnungError) || versuch >= versuche) throw err;
+      console.log(
+        `    ${id}: fal.ai rad etdi (${versuch}-marta), yana so'rayapman`,
+      );
+    }
+  }
+}
+
+/**
+ * A dialog of more than two speakers (`mehrstimmig.ts`): the two busiest
+ * speakers in one Gemini request, every other line alone, rebuilt in order.
+ * fal.ai's temporary URLs are printed so a paid piece can be recovered.
+ */
+export function erstelleMehrstimmig(
+  fal: Pick<FalClient, 'dialogGemini' | 'sprecheGemini'>,
+  fetchFn: typeof fetch,
+  versuche: number,
+) {
+  return async (d: Dialog, anfrage: GeminiDialog): Promise<Buffer> => {
+    const t = teileMehrstimmig(anfrage);
+    const holen = async (url: string, wofuer: string) => {
+      console.log(`    ${d.id}: ${wofuer} — ${url}`);
+      const res = await fetchFn(url);
+      if (!res.ok) throw new Error(`yuklab olinmadi — HTTP ${res.status}`);
+      return Buffer.from(await res.arrayBuffer());
+    };
+    const haupt = await holen(
+      await mitAblehnung(() => fal.dialogGemini(t.haupt), d.id, versuche),
+      'asosiy suhbat',
+    );
+    const einzeln = new Map<number, Buffer>();
+    for (const e of t.einzeln) {
+      const url = await mitAblehnung(
+        () => fal.sprecheGemini(e.prompt, e.voice, e.styleInstructions),
+        d.id,
+        versuche,
+      );
+      einzeln.set(e.index, await holen(url, `${e.index + 1}-satr alohida`));
+    }
+    return setzeZusammen({
+      haupt,
+      hauptZeilen: t.reihenfolge.flatMap((p, i) =>
+        'haupt' in p ? [d.zeilen[i].tts ?? d.zeilen[i].de] : [],
+      ),
+      einzeln,
+      reihenfolge: t.reihenfolge,
+    });
+  };
 }

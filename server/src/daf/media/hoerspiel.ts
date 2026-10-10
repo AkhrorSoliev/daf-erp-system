@@ -7,10 +7,14 @@ import { createHash } from 'crypto';
  * room tone loops under everything. This file is the pure part (plans and
  * ffmpeg arguments); `hoerspiel-mix.ts` runs ffmpeg and whisper.
  *
- * Where a line starts and ends is not guessed from silences alone: a pause
- * inside a line ("Hm... Käse, Butter...") can be longer than the gap between
- * two speakers. whisper.cpp gives every word a time, the words are aligned
- * to the script, and only then is the cut snapped to the nearest silence.
+ * Where a line starts and ends: the recording is split into speech pieces at
+ * every silence, whisper.cpp transcribes each piece on its own, and the
+ * pieces are grouped into the script's lines (every line gets at least one
+ * piece, the grouping whose words fit the script best wins). A pause inside
+ * a line only makes that line two pieces, and two speakers saying the same
+ * words in a row («Guten Tag!» — «Guten Tag!») stay two pieces, which a
+ * transcript of the whole dialog merged into one. Every cut is therefore in
+ * a silence.
  */
 
 /** One sound effect placed before line `vor` (1-based; N+1 = after the last). */
@@ -27,12 +31,6 @@ export interface HoerspielRegie {
   geraeusche?: Geraeusch[];
   /** 1-based lines spoken from another room. */
   fern?: number[];
-}
-
-export interface Wort {
-  text: string;
-  from: number;
-  to: number;
 }
 
 export interface Spanne {
@@ -98,19 +96,6 @@ export function pruefeHoerspiel(h: HoerspielRegie, zeilen: number): string[] {
   return probleme;
 }
 
-/** whisper-cli `-ml 1 -sow -oj` JSON → words with times in seconds. */
-export function whisperWoerter(json: {
-  transcription: Array<{ offsets: { from: number; to: number }; text: string }>;
-}): Wort[] {
-  return json.transcription
-    .map((t) => ({
-      text: t.text.trim(),
-      from: t.offsets.from / 1000,
-      to: t.offsets.to / 1000,
-    }))
-    .filter((x) => x.text !== '');
-}
-
 function norm(s: string): string {
   return s
     .toLowerCase()
@@ -137,73 +122,6 @@ function aehnlich(a: string, b: string): boolean {
   return Math.max(ea - i + 1, eb - i + 1) <= 1;
 }
 
-/**
- * Aligns the script's words to the heard words (edit-distance alignment,
- * misheard and extra words allowed) and returns each line's first start and
- * last end. A line with no word matched is a broken recording: refuse.
- */
-export function zeilenSpannen(zeilen: string[], woerter: Wort[]): Spanne[] {
-  const soll: Array<{ w: string; zeile: number }> = [];
-  zeilen.forEach((z, i) => {
-    for (const t of z.split(/\s+/)) {
-      const n = norm(t);
-      if (n) soll.push({ w: n, zeile: i });
-    }
-  });
-  const ist = woerter.map((x) => norm(x.text));
-  const m = soll.length;
-  const n = ist.length;
-  // dp[i][j]: cost of aligning soll[0..i) with ist[0..j)
-  const dp: number[][] = Array.from({ length: m + 1 }, () =>
-    new Array<number>(n + 1).fill(0),
-  );
-  for (let i = 1; i <= m; i++) dp[i][0] = i;
-  for (let j = 1; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const passt = aehnlich(soll[i - 1].w, ist[j - 1]) ? 0 : 2;
-      dp[i][j] = Math.min(
-        dp[i - 1][j - 1] + passt,
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-      );
-    }
-  }
-  const spannen: Array<Spanne | null> = zeilen.map(() => null);
-  let i = m;
-  let j = n;
-  while (i > 0 && j > 0) {
-    const kosten = aehnlich(soll[i - 1].w, ist[j - 1]) ? 0 : 2;
-    // A diagonal step places the heard word in that line even when it was
-    // misheard: a one-word line ("Danke!" heard as "Gankke") must not lose
-    // its place.
-    if (dp[i][j] === dp[i - 1][j - 1] + kosten) {
-      const z = soll[i - 1].zeile;
-      const wort = woerter[j - 1];
-      const s = spannen[z];
-      spannen[z] = s
-        ? {
-            start: Math.min(s.start, wort.from),
-            ende: Math.max(s.ende, wort.to),
-          }
-        : { start: wort.from, ende: wort.to };
-      i--;
-      j--;
-    } else if (dp[i][j] === dp[i - 1][j] + 1) {
-      i--;
-    } else if (dp[i][j] === dp[i][j - 1] + 1) {
-      j--;
-    } else {
-      i--;
-      j--;
-    }
-  }
-  return spannen.map((s, k) => {
-    if (!s) throw new Error(`${k + 1}-satr ovozda topilmadi`);
-    return s;
-  });
-}
-
 /** ffmpeg `silencedetect` stderr → silences. */
 export function parseStille(stderr: string): Spanne[] {
   const out: Spanne[] = [];
@@ -222,30 +140,96 @@ export function parseStille(stderr: string): Spanne[] {
 
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
 
+/** Speech between the silences; a burst under 0.08 s is a click, not speech. */
+export function sprachStuecke(stille: Spanne[], dauer: number): Spanne[] {
+  const out: Spanne[] = [];
+  let t = 0;
+  for (const st of [...stille].sort((x, y) => x.start - y.start)) {
+    if (st.start - t >= 0.08) out.push({ start: r3(t), ende: r3(st.start) });
+    t = Math.max(t, st.ende);
+  }
+  if (dauer - t >= 0.08) out.push({ start: r3(t), ende: r3(dauer) });
+  return out;
+}
+
+export interface Stueck extends Spanne {
+  /** whisper's transcript of this piece alone */
+  text: string;
+}
+
+const woerterVon = (s: string) =>
+  s
+    .split(/\s+/)
+    .map(norm)
+    .filter((w) => w !== '');
+
+/** Word edit distance; a misheard word costs as much as a missing one. */
+function wortAbstand(a: string[], b: string[]): number {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (aehnlich(a[i - 1], b[j - 1]) ? 0 : 1),
+      );
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
 /**
- * One cut between every two lines: the middle of the silence that best
- * covers the gap whisper heard, else the middle of that gap.
+ * Groups the pieces into the lines and returns the cut times, one between
+ * every two lines, in the middle of the silence that separates them.
  */
-export function schnitte(spannen: Spanne[], stille: Spanne[]): number[] {
-  const cuts: number[] = [];
-  for (let k = 1; k < spannen.length; k++) {
-    const von = spannen[k - 1].ende - 0.3;
-    const bis = spannen[k].start + 0.3;
-    let best: Spanne | null = null;
-    let bestUeberlappung = 0;
-    for (const s of stille) {
-      const u = Math.min(bis, s.ende) - Math.max(von, s.start);
-      if (u > bestUeberlappung) {
-        best = s;
-        bestUeberlappung = u;
+export function teileZeilen(zeilen: string[], stuecke: Stueck[]): number[] {
+  const n = zeilen.length;
+  const m = stuecke.length;
+  if (m < n) {
+    throw new Error(
+      `ovozda ${m} ta bo'lak, dialogda ${n} ta satr — har satrga bo'lak yetmaydi`,
+    );
+  }
+  const soll = zeilen.map(woerterVon);
+  const ist = stuecke.map((s) => woerterVon(s.text));
+  const gruppe = (j: number, k: number) => ist.slice(j, k).flat();
+  // best[i][k]: lowest cost of the first i lines over the first k pieces.
+  const best = Array.from({ length: n + 1 }, () =>
+    new Array<number>(m + 1).fill(Infinity),
+  );
+  const von = Array.from({ length: n + 1 }, () =>
+    new Array<number>(m + 1).fill(-1),
+  );
+  best[0][0] = 0;
+  for (let i = 1; i <= n; i++) {
+    for (let k = i; k <= m - (n - i); k++) {
+      for (let j = i - 1; j < k; j++) {
+        if (best[i - 1][j] === Infinity) continue;
+        const c = best[i - 1][j] + wortAbstand(soll[i - 1], gruppe(j, k));
+        if (c < best[i][k]) {
+          best[i][k] = c;
+          von[i][k] = j;
+        }
       }
     }
-    const cut = best
-      ? (best.start + best.ende) / 2
-      : (spannen[k - 1].ende + spannen[k].start) / 2;
-    cuts.push(r3(Math.max(cut, cuts[cuts.length - 1] ?? 0)));
   }
-  return cuts;
+  const grenzen: number[] = [m];
+  for (let i = n, k = m; i > 0; i--) {
+    k = von[i][k];
+    grenzen.unshift(k);
+  }
+  for (let i = 0; i < n; i++) {
+    const w = gruppe(grenzen[i], grenzen[i + 1]);
+    const treffer = soll[i].some((x) => w.some((y) => aehnlich(x, y)));
+    if (!treffer && soll[i].length > 1) {
+      throw new Error(`${i + 1}-satr ovozda topilmadi`);
+    }
+  }
+  return grenzen
+    .slice(1, -1)
+    .map((g) => r3((stuecke[g - 1].ende + stuecke[g].start) / 2));
 }
 
 export interface Clip {
