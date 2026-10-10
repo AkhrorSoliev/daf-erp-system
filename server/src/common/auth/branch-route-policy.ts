@@ -220,7 +220,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /expenses/pdf',
       'GET /payments/debtors',
       'GET /payments/debtors/summary',
-      'GET /payments/frozen-balances',
       'GET /transactions/debt-write-offs',
     ],
   },

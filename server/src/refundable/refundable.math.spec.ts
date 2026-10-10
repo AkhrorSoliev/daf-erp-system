@@ -164,6 +164,15 @@ describe('refundable math (ADR-0075)', () => {
         '2 bank kuni qoldi',
       );
     });
+    it('the due day itself is «bugun oxirgi kun», not «0 bank kuni qoldi»', () => {
+      expect(pendingDue('2026-10-14', '2026-10-14', none)).toEqual({
+        overdue: false,
+        bankDays: 0,
+      });
+      expect(pendingDueLabel({ overdue: false, bankDays: 0 })).toBe(
+        'bugun oxirgi kun',
+      );
+    });
     it('overdue counts the bank days since the due day', () => {
       expect(pendingDue('2026-10-10', '2026-10-07', none)).toEqual({
         overdue: true,

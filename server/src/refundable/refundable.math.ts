@@ -241,7 +241,12 @@ export function toPendingRow(
 
 /** The pill as text (Excel; the client renders its own). */
 export function pendingDueLabel(d: PendingDue): string {
-  if (!d.overdue) return `${d.bankDays} bank kuni qoldi`;
+  if (!d.overdue) {
+    // Zero bank days left is the due day itself.
+    return d.bankDays > 0
+      ? `${d.bankDays} bank kuni qoldi`
+      : 'bugun oxirgi kun';
+  }
   return d.bankDays > 0
     ? `muddati o'tdi · ${d.bankDays} bank kuni`
     : "muddati o'tdi";
