@@ -162,4 +162,57 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
       data: { userId: 20001 },
     });
   });
+
+  it('runs the caller step inside the card transaction, with the new id', async () => {
+    const inTx = jest.fn().mockResolvedValue(undefined);
+
+    await registerStudentFromTelegram(
+      prisma,
+      history,
+      leadOrigin as never,
+      data,
+      '555000',
+      events,
+      { actorId: 10002, inTx },
+    );
+
+    expect(inTx).toHaveBeenCalledWith(tx, 11094);
+  });
+
+  it('writes nothing after the transaction when the caller step refuses', async () => {
+    const inTx = jest.fn().mockRejectedValue(new Error('allaqachon'));
+
+    await expect(
+      registerStudentFromTelegram(
+        prisma,
+        history,
+        leadOrigin as never,
+        data,
+        '555000',
+        events,
+        { actorId: 10002, inTx },
+      ),
+    ).rejects.toThrow('allaqachon');
+    expect(prisma.enrollment.create).not.toHaveBeenCalled();
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it('records the approving administrator on the lead and on every history row', async () => {
+    await registerStudentFromTelegram(
+      prisma,
+      history,
+      leadOrigin as never,
+      data,
+      '555000',
+      events,
+      { actorId: 10002 },
+    );
+
+    expect(leadOrigin.recordSelfSignupOrigin.mock.calls[0][1].userId).toBe(
+      10002,
+    );
+    for (const [row] of history.recordCreate.mock.calls) {
+      expect(row.changedById).toBe(10002);
+    }
+  });
 });

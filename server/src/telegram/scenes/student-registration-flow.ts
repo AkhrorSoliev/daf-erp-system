@@ -1,5 +1,6 @@
 import { Markup } from 'telegraf';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { Prisma } from '@prisma/client';
 import { BotContext } from '../types/context';
 import { DEFAULT_COMPANY_ID } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -78,6 +79,17 @@ export async function uploadStudentPhoto(
 }
 
 /**
+ * What an approval adds (ADR-0080): the administrator who approved, recorded
+ * on the lead and on every history row, and a step that runs inside the card's
+ * own transaction — the request is taken there, so a second approval writes
+ * no second card.
+ */
+export interface RegistrationOptions {
+  actorId?: number;
+  inTx?: (tx: Prisma.TransactionClient, studentId: number) => Promise<void>;
+}
+
+/**
  * Telegram bot orqali yangi o'quvchini ro'yxatdan o'tkazish:
  * Student → Enrollment → User (login/parol) yaratiladi va
  * har bir bosqich uchun audit yozuvi qo'shiladi.
@@ -90,6 +102,7 @@ export async function registerStudentFromTelegram(
   data: RegistrationData,
   chatId: string,
   events: Pick<EventEmitter2, 'emitAsync'>,
+  options: RegistrationOptions = {},
 ): Promise<{ plainPassword: string }> {
   // Har bir o'quvchi lid yozuvi qoldiradi (ADR-0017). Bu yo'l `/students`
   // eshigidan o'tmaydi — bazaga to'g'ridan yozadi — shuning uchun lidni
@@ -119,12 +132,13 @@ export async function registerStudentFromTelegram(
         phone: created.phone,
         branchId: data.branchId,
         companyId: DEFAULT_COMPANY_ID,
-        // Bot orqali odam O'ZI ro'yxatdan o'tadi — aylantirgan admin yo'q.
-        userId: undefined,
+        // The approving administrator; none before ADR-0080.
+        userId: options.actorId,
       },
       SELF_SIGNUP_SOURCE.TELEGRAM_BOT,
     );
 
+    if (options.inTx) await options.inTx(tx, created.id);
     return created;
   });
 
@@ -138,6 +152,7 @@ export async function registerStudentFromTelegram(
       action: 'TELEGRAM_ROYXATDAN_OTDI',
     },
     companyId: DEFAULT_COMPANY_ID,
+    changedById: options.actorId,
   });
 
   // The join day, like the admin flow writes it (UTC midnight of the Tashkent
@@ -177,6 +192,7 @@ export async function registerStudentFromTelegram(
       action: 'GURUHGA_QOSHILDI',
     },
     companyId: DEFAULT_COMPANY_ID,
+    changedById: options.actorId,
   });
 
   await entityHistoryService.recordCreate({
@@ -188,6 +204,7 @@ export async function registerStudentFromTelegram(
       status: 'ACTIVE',
     },
     companyId: DEFAULT_COMPANY_ID,
+    changedById: options.actorId,
   });
 
   await entityHistoryService.recordCreate({
@@ -199,6 +216,7 @@ export async function registerStudentFromTelegram(
       oquvchiId: student.id,
     },
     companyId: DEFAULT_COMPANY_ID,
+    changedById: options.actorId,
   });
 
   // The card's sign-in account (ADR-0033). The bot shows this password to
