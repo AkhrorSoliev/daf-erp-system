@@ -8,7 +8,6 @@ import {
   ParseIntPipe,
   Query,
   Res,
-  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
@@ -38,16 +37,14 @@ import {
   AttendanceByGroupQueryDto,
   AttendanceTeacherPerfQueryDto,
 } from './dto/attendance-reports-query.dto';
-import { Roles, CurrentUser, BranchScope } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser, BranchScope } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsExcelService } from './reports-excel.service';
 import { ReportsProfitCompositionService } from './reports-profit-composition.service';
 import { tashkentDateStr, tashkentMonthKey } from '../common/date/tashkent';
 
 @Controller('reports')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class ReportsController {
   private readonly logger = new Logger(ReportsController.name);
 
@@ -59,6 +56,7 @@ export class ReportsController {
   ) {}
 
   @Get('kpis')
+  @Can('reports.students')
   getKpis(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -68,6 +66,7 @@ export class ReportsController {
   }
 
   @Get('room-utilization')
+  @Can('reports.students')
   getRoomUtilization(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -80,6 +79,7 @@ export class ReportsController {
   }
 
   @Get('center-activity')
+  @Can('reports.students')
   getCenterActivity(
     @Query() query: CenterActivityQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -92,6 +92,7 @@ export class ReportsController {
   }
 
   @Get('teacher-performance')
+  @Can('reports.students')
   getTeacherPerformance(
     @Query() query: AttendanceTeacherPerfQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -104,6 +105,7 @@ export class ReportsController {
   }
 
   @Get('attendance-analytics')
+  @Can('reports.students')
   getAttendanceAnalytics(
     @Query() query: AttendanceAnalyticsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -116,6 +118,7 @@ export class ReportsController {
   }
 
   @Get('attendance-by-group')
+  @Can('reports.students')
   getAttendanceByGroup(
     @Query() query: AttendanceByGroupQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -128,6 +131,7 @@ export class ReportsController {
   }
 
   @Get('attendance-by-course')
+  @Can('reports.students')
   getAttendanceByCourse(
     @Query() query: AttendanceByCourseQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -140,6 +144,7 @@ export class ReportsController {
   }
 
   @Get('group-analytics')
+  @Can('reports.students')
   getGroupAnalytics(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -152,6 +157,7 @@ export class ReportsController {
   }
 
   @Get('lead-analytics')
+  @Can('reports.leads')
   getLeadAnalytics(@Query() query: ReportsQueryDto) {
     return this.reportsService.getLeadAnalytics(query);
   }
@@ -160,7 +166,7 @@ export class ReportsController {
   // months of cash and canonical profit, ending at `?month=` (default: now).
   // CEO/BD only — money series.
   @Get('financial-trend')
-  @Roles('CEO', 'Branch Director')
+  @Can('reports.finance')
   async getFinancialTrend(
     @Query() query: MonthQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -181,7 +187,7 @@ export class ReportsController {
   // LATE payments settling debt carried in from prior months (broken out by
   // month). Money breakdown → CEO/BD only, like `financial-trend`.
   @Get('income-month-attribution')
-  @Roles('CEO', 'Branch Director')
+  @Can('reports.finance')
   async getIncomeMonthAttribution(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -199,7 +205,7 @@ export class ReportsController {
   // the period's START month, the same rule the card uses. Money breakdown →
   // CEO/BD only, like the card itself.
   @Get('profit-composition')
-  @Roles('CEO', 'Branch Director')
+  @Can('reports.finance')
   async getProfitComposition(
     @Query() query: ReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -221,7 +227,7 @@ export class ReportsController {
   // («To'lov qilganlar», «O'rtacha to'lov») were removed, and the redaction
   // branch with them.
   @Get('financial-overview')
-  @Roles('CEO', 'Branch Director')
+  @Can('reports.finance')
   async getFinancialOverview(
     @Query() query: ReportsQueryDto,
     @CurrentUser() user: { id: number; companyId: number },
@@ -310,7 +316,7 @@ export class ReportsController {
   // daily snapshot. CEO + BD only — same gate as every other money figure.
   // Missing days are returned as missing; nothing is reconstructed.
   @Get('expectation-history')
-  @Roles('CEO', 'Branch Director')
+  @Can('reports.finance')
   async getExpectationHistory(
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
@@ -330,7 +336,7 @@ export class ReportsController {
   // Company-wide (student balances aren't cleanly branch-scoped). CEO + BD only
   // — Administrators shouldn't see company-wide debt aggregates.
   @Get('monthly-debt-recovery')
-  @Roles('CEO', 'Branch Director')
+  @Can('reports.finance')
   getMonthlyDebtRecovery(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
@@ -345,7 +351,7 @@ export class ReportsController {
   //
   // Declared BEFORE the ":monthKey" param route so "history" isn't captured.
   @Get('monthly-debt-recovery/history')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('debt.view')
   getDebtHistory(
     @Query() query: DebtHistoryQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -359,7 +365,7 @@ export class ReportsController {
   // that month in debt"; this answers "whose charges FROM that month are still
   // unpaid", so the same student shows a different figure under each month.
   @Get('monthly-debt-recovery/:monthKey/aging')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('debt.view')
   getMonthAgingDetail(
     @Param('monthKey') monthKey: string,
     @Query() query: DebtHistoryQueryDto,
@@ -383,7 +389,7 @@ export class ReportsController {
   // Undirildi + Kechirilgan sheets). CEO/BD only. Note: this static route must
   // be declared BEFORE the ":monthKey" param route so "excel" isn't captured.
   @Get('monthly-debt-recovery/excel')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('debt.view')
   async exportMonthlyDebtExcel(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
@@ -405,7 +411,7 @@ export class ReportsController {
 
   // Per-month drill-down: who owed at month-end, who paid, who was written off.
   @Get('monthly-debt-recovery/:monthKey/detail')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('debt.view')
   getMonthDebtDetail(
     @Param('monthKey') monthKey: string,
     @CurrentUser('companyId') companyId: number,
@@ -421,11 +427,10 @@ export class ReportsController {
 
   // KPI summary for the "yo'qolgan o'quvchi" write-off flow — total
   // amount + operation count for the period. CEO sees the whole company;
-  // Branch Director is auto-scoped to their UserBranch rows. Restricted
-  // tighter than the class default since Administrators should not see
-  // financial-correction aggregates.
+  // Branch Director is auto-scoped to their UserBranch rows. Gated by the
+  // debt view capability, the same as the debt page it sits on.
   @Get('debt-write-offs-summary')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('debt.view')
   async getDebtWriteOffsSummary(
     @Query() query: ReportsQueryDto,
     @CurrentUser()
@@ -439,11 +444,11 @@ export class ReportsController {
     });
   }
 
-  // The "Hisobot" Excel workbook — CEO + BD only. Ten sheets by default;
-  // `?include=buxgalteriya,marketing,qarzdorlar` bolts on the opt-in groups.
-  // Auth-gated by @Roles; the frontend fetches it as a blob.
+  // The "Hisobot" Excel workbook — needs the finance report capability. Ten
+  // sheets by default; `?include=buxgalteriya,marketing,qarzdorlar` bolts on
+  // the opt-in groups. The frontend fetches it as a blob.
   @Get('financial-excel')
-  @Roles('CEO', 'Branch Director')
+  @Can('reports.finance')
   async exportFinancialExcel(
     @Query() query: ReportsQueryDto,
     @CurrentUser() user: { id: number; companyId: number; roles: string[] },
@@ -588,7 +593,7 @@ export class ReportsController {
   // Administrator'ga ham ochiq (CEO, 05.10.2026). Filial doirasi o'zgarmaydi:
   // `@BranchScope()` Administrator'ni o'z filiali(lari) bilan cheklaydi.
   @Get('payment-reports')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('reports.payments')
   getPaymentReports(
     @Query() query: PaymentReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -604,7 +609,7 @@ export class ReportsController {
   }
 
   @Get('payment-reports/teachers')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('reports.payments')
   getTeacherPaymentReports(
     @Query() query: PaymentReportsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -618,7 +623,7 @@ export class ReportsController {
   }
 
   @Get('payment-reports/teachers/:teacherId/groups')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('reports.payments')
   getTeacherGroupsReport(
     @Param('teacherId', ParseIntPipe) teacherId: number,
     @Query() query: PaymentReportsQueryDto,
@@ -633,7 +638,7 @@ export class ReportsController {
   }
 
   @Get('student-payments')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('reports.finance')
   getStudentPaymentsReport(
     @Query() query: StudentPaymentsReportQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -653,6 +658,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/summary')
+  @Can('reports.students')
   getDepartedStudentsSummary(
     @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -666,6 +672,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/dynamics')
+  @Can('reports.students')
   getDepartedStudentsDynamics(
     @Query() query: DepartedStudentsRangeQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -679,6 +686,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/by-status')
+  @Can('reports.students')
   getDepartedStudentsByStatus(
     @Query() query: DepartedStudentsBranchQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -690,6 +698,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/reasons')
+  @Can('reports.students')
   getDepartedStudentsReasons(
     @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -705,6 +714,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/teacher-change-reasons')
+  @Can('reports.students')
   getTeacherChangeReasons(
     @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -720,6 +730,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/transfer-reasons')
+  @Can('reports.students')
   getTransferReasons(
     @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -735,6 +746,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/list')
+  @Can('reports.students')
   getDepartedStudentsList(
     @Query() query: DepartedStudentsListQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -750,6 +762,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/by-reason')
+  @Can('reports.students')
   getDepartedStudentsByReason(
     @Query() query: DepartedStudentsByReasonQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -768,6 +781,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/group-by')
+  @Can('reports.students')
   getDepartedStudentsGroupBy(
     @Query() query: DepartedStudentsGroupByQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -780,6 +794,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/teacher-changes-list')
+  @Can('reports.students')
   getTeacherChangesList(
     @Query() query: DepartedStudentsTeacherChangesQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -796,6 +811,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/transferred-list')
+  @Can('reports.students')
   getTransferredList(
     @Query() query: DepartedStudentsTransferredQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -814,6 +830,7 @@ export class ReportsController {
   }
 
   @Get('departed-students/departed-after-change')
+  @Can('reports.students')
   getDepartedAfterTeacherChangeList(
     @Query() query: DepartedStudentsSummaryQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -827,7 +844,7 @@ export class ReportsController {
   }
 
   @Get('student-payments/filter-options')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('reports.finance', 'reports.students')
   getStudentPaymentsFilterOptions(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,

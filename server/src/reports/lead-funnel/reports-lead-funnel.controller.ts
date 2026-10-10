@@ -1,12 +1,6 @@
-import {
-  Controller,
-  ForbiddenException,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { Roles, CurrentUser, BranchScope } from '../../common/decorators';
-import { RolesGuard } from '../../common/guards';
+import { Controller, ForbiddenException, Get, Query } from '@nestjs/common';
+import { CurrentUser, BranchScope } from '../../common/decorators';
+import { Can } from '../../common/permissions/access.decorators';
 import {
   isEmptyScope,
   type ReportBranchIds,
@@ -19,12 +13,11 @@ import {
 
 /**
  * Lid voronkasi. Pul hisoboti emas, sotuv va operatsion ko'rsatkich —
- * shuning uchun Administrator ham ko'radi (reports kontrollerining umumiy
- * qoidasi bilan bir xil).
+ * shuning uchun u pul hisobotlarining emas, lid hisobotlarining imkoniyatiga
+ * (`reports.leads`) bog'langan.
  */
 @Controller('reports/lead-funnel')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Can('reports.leads')
 export class ReportsLeadFunnelController {
   constructor(private readonly funnel: ReportsLeadFunnelService) {}
 
