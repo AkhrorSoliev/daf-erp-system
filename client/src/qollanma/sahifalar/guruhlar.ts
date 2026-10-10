@@ -124,7 +124,7 @@ export const guruhlar: QollanmaSahifa[] = [
     qisqacha:
       "Bayram Sozlamalar → «Dam olish kunlari» da butun markaz yoki bitta filial uchun kiritiladi (butun markaz bayramini faqat CEO kiritadi): shu kunlarda davomat olinmaydi va dars eslatmalari ketmaydi. Tugash sanasi bor «Faol» va «Boshlanmagan» guruhlarning tugash sanasi bayramga tushgan dars kunlariga suriladi.",
     rollar: [1, 2, 3],
-    adr: [],
+    adr: ["0081"],
     yollar: ["/settings/holidays"],
     kalitSozlar: [
       "bayram",
