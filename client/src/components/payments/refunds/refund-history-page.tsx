@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { TablePagination } from "@/components/outreach/table-pagination";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { formatPhone, formatPrice } from "@/lib/format-utils";
 import { instantDayMonth } from "../debt/debt-format";
+import { lastPageIfPast } from "../debt/debt-url";
 import { Pill } from "../debt/debt-table";
 import { handedCell } from "./refunds-format";
 import { useRefundHistory } from "./refunds-queries";
@@ -33,7 +35,12 @@ function HandedCell({ row }: { row: RefundHistoryRow }) {
 export function RefundHistoryPage() {
   const { filters, setFilters } = useUrlFilters(HISTORY_SCHEMA);
   const { page, pageSize } = cleanHistoryPage(filters.page, filters.pageSize);
-  const { data, isError, refetch } = useRefundHistory(page, pageSize);
+  const { data, isPlaceholderData, isError, refetch } = useRefundHistory(page, pageSize);
+  // A page past the last one (an old bookmark, a bigger page size) goes to the last page that has rows.
+  const last = data && !isPlaceholderData ? lastPageIfPast(page, pageSize, data.total, data.data.length) : null;
+  useEffect(() => {
+    if (last !== null) setFilters({ page: last });
+  }, [last, setFilters]);
   return (
     <div className="space-y-4">
       <Link href="/payments/refunds" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
@@ -48,7 +55,7 @@ export function RefundHistoryPage() {
           <p>Tarixni yuklab bo'lmadi.</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>Qayta urinish</Button>
         </div>
-      ) : !data ? (
+      ) : !data || last !== null ? (
         <div className="space-y-2">{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-12 rounded" />)}</div>
       ) : data.data.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">Hali berilgan yoki bekor qilingan so'rov yo'q</p>

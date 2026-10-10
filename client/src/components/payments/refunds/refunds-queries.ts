@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery, type QueryClient } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { retryDrawer } from "../debt/debt-queries";
@@ -47,13 +47,18 @@ export function useRefundableStudent(id: number | null) {
   });
 }
 
+/** The pager stays while another page of the SAME branch loads; another branch's rows are never kept. */
+export const keepWithinBranch = (branchId?: number) =>
+  (prev: RefundHistoryResponse | undefined, prevQuery?: { queryKey: ReturnType<typeof refundHistoryKey> }) =>
+    prevQuery && prevQuery.queryKey[1] !== branchId ? undefined : prev;
+
 export function useRefundHistory(page: number, pageSize: number) {
   const { selectedBranch } = useBranchSwitcher();
   return useQuery({
     queryKey: refundHistoryKey(selectedBranch?.id, page, pageSize),
     queryFn: () =>
       api.get<RefundHistoryResponse>("/refunds", { params: { status: "COMPLETED,REJECTED", page, pageSize } }).then((r) => r.data),
-    placeholderData: keepPreviousData,
+    placeholderData: keepWithinBranch(selectedBranch?.id),
   });
 }
 

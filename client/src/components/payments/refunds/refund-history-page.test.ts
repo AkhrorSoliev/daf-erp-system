@@ -6,13 +6,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { routeLabels } from "@/lib/breadcrumb-routes";
 import { formatNumber } from "@/lib/format-utils";
 
+const nav = vi.hoisted(() => ({ search: "" }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/payments/refunds/history",
   useRouter: () => ({ push() {}, replace() {}, back() {}, prefetch() {} }),
-  useSearchParams: () => new URLSearchParams(""),
+  useSearchParams: () => new URLSearchParams(nav.search),
 }));
 
-import { refundHistoryKey } from "./refunds-queries";
+import { keepWithinBranch, refundHistoryKey } from "./refunds-queries";
 import { RefundHistoryPage } from "./refund-history-page";
 import type { RefundHistoryResponse, RefundHistoryRow } from "./refunds-types";
 
@@ -30,9 +31,9 @@ const RESPONSE: RefundHistoryResponse = { data: [GIVEN, CANCELLED], total: 2, pa
 
 const norm = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
 
-function render(response: RefundHistoryResponse | null = RESPONSE) {
+function render(response: RefundHistoryResponse | null = RESPONSE, page = 1) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  if (response) client.setQueryData(refundHistoryKey(undefined, 1, 10), response);
+  if (response) client.setQueryData(refundHistoryKey(undefined, page, 10), response);
   return norm(renderToStaticMarkup(createElement(QueryClientProvider, { client },
     createElement(TooltipProvider, null, createElement(RefundHistoryPage)))));
 }
@@ -49,6 +50,23 @@ describe("RefundHistoryPage (spec §3.6)", () => {
 
   it("empty history says so", () => {
     expect(render({ data: [], total: 0, page: 1, pageSize: 10 })).toContain("Hali berilgan yoki bekor qilingan so'rov yo'q");
+  });
+
+  it("a page past the last one shows a skeleton, not the empty text, while it moves to the last page", () => {
+    nav.search = "page=3";
+    try {
+      const text = render({ data: [], total: 12, page: 3, pageSize: 10 }, 3);
+      expect(text).not.toContain("Hali berilgan yoki bekor qilingan so'rov yo'q");
+    } finally {
+      nav.search = "";
+    }
+  });
+
+  it("the previous page is kept only for the same branch", () => {
+    expect(keepWithinBranch(2)(RESPONSE, { queryKey: refundHistoryKey(2, 1, 10) })).toBe(RESPONSE);
+    expect(keepWithinBranch(2)(RESPONSE, { queryKey: refundHistoryKey(1, 1, 10) })).toBeUndefined();
+    expect(keepWithinBranch(undefined)(RESPONSE, { queryKey: refundHistoryKey(1, 1, 10) })).toBeUndefined();
+    expect(keepWithinBranch(2)(undefined, undefined)).toBeUndefined();
   });
 
   it("the breadcrumb names both segments", () => {
