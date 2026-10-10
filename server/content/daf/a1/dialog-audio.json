@@ -178,5 +178,61 @@
     "modell": "fal-ai/gemini-3.1-flash-tts",
     "rohKey": "daf/audio/87809fd6f32d34987a80c8293d0b1eda.mp3",
     "hoerspiel": "2739a22a2e6f8583"
+  },
+  "u05-d1": {
+    "key": "daf/audio/d8e61d2c2c90dcc625e22f3770701652.mp3",
+    "textHash": "f2b3538a41c7e6b8",
+    "polster": "700/1000",
+    "modell": "fal-ai/gemini-3.1-flash-tts",
+    "rohKey": "daf/audio/1c826de4819f722e032bdad3cdcb163d.mp3",
+    "hoerspiel": "fb7d90c1df117cf9"
+  },
+  "u05-d2": {
+    "key": "daf/audio/5fd4a955341ea513304028051b28d649.mp3",
+    "textHash": "67af85172b9ff8c9",
+    "polster": "700/1000",
+    "modell": "fal-ai/gemini-3.1-flash-tts",
+    "rohKey": "daf/audio/c813466fcd55b655ac0bd04020c91bb7.mp3",
+    "hoerspiel": "5f8e6f00f86f920a"
+  },
+  "u05-d3": {
+    "key": "daf/audio/97894fa22c3d3489362265d96ec4cb35.mp3",
+    "textHash": "4c831817f3cae516",
+    "polster": "700/1000",
+    "modell": "fal-ai/gemini-3.1-flash-tts",
+    "rohKey": "daf/audio/e46c51c6d32c56a187a2e617dcefe4ed.mp3",
+    "hoerspiel": "7a462a737da0fcfe"
+  },
+  "u05-d4": {
+    "key": "daf/audio/b5f07c7647ec21b5b86c8c2b90bda236.mp3",
+    "textHash": "87ee53160cd9f0ab",
+    "polster": "700/1000",
+    "modell": "fal-ai/gemini-3.1-flash-tts",
+    "rohKey": "daf/audio/e6f4f28aa3260eea5136ff95cdbb4a86.mp3",
+    "hoerspiel": "8eeece80f1018360"
+  },
+  "u05-d5": {
+    "key": "daf/audio/51f4ffbc5be688b9a90d032f3c025271.mp3",
+    "textHash": "9d138db6dda42337",
+    "polster": "700/1000",
+    "modell": "fal-ai/gemini-3.1-flash-tts",
+    "rohKey": "daf/audio/68dd02784888995e9735586ec867748b.mp3",
+    "hoerspiel": "00b029f2961c7a7f"
+  },
+  "u05-d6": {
+    "key": "daf/audio/37b81d63c01a712084667f72ec773427.mp3",
+    "textHash": "86f5e2441a88de27",
+    "polster": "700/1000",
+    "modell": "fal-ai/gemini-3.1-flash-tts",
+    "rohKey": "daf/audio/bee44df41ef5c700ef060b9a45e965ce.mp3",
+    "hoerspiel": "685bea7ce152828d"
+  },
+  "u05-d7": {
+    "key": "daf/audio/8b4e6a1206e8058d37dcb5ee8b8de407.mp3",
+    "textHash": "1b0f23e938a3d247",
+    "polster": "700/1000",
+    "modell": "fal-ai/gemini-3.1-flash-tts",
+    "rohKey": "daf/audio/bf8059e437cca3e52893ec2bd60823ee.mp3",
+    "hoerspiel": "1514a82016400afb"
   }
 }
