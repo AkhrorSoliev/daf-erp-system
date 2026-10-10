@@ -29,7 +29,7 @@ CEO decisions (10.10.2026):
 
 ## 2. The page — `/payments/salary`
 
-Roles unchanged: CEO and Branch Director (`payments-layout-shell.tsx`, nav `[1, 2]`, server `@Roles('CEO','Branch Director')`). Branch: the header switcher (`@BranchScope()` → `narrowPayrollScope`).
+Access unchanged (capabilities, ADR-0079): the page and its reads need `salary.view` (CEO, Branch Director by default); «Tasdiqlash» and the month-wide settle need `salary.close` (CEO); «Berildi» needs `salary.pay` (CEO, Branch Director); advances need the expense capability they already use. Branch: the header switcher (`@BranchScope()` → `narrowPayrollScope`).
 
 ### 2.1 Header
 
@@ -56,7 +56,7 @@ Months without per-lesson data (`hasLessonData` false, e.g. May) keep today's am
 
 Amber card, shown only when it has a row:
 1. **Lessons without a rate** — for every teacher row with `noConfigUnits > 0`: «**N ta darsga ustoz haqi yozilmagan** — {Ism} uchun stavka qo'yilmagan.» One row per teacher, button «Stavka qo'yish» (opens the settings sheet). CEO and BD.
-2. **Staff without a salary** — active staff (§7.2) of the scope with no FIXED_MONTHLY version covering the month: «**N xodimning oyligi hisoblanmaydi** — {Ism}, {Ism} uchun oylik summa kiritilmagan.» Button «Stavka qo'yish». CEO only (only the CEO edits staff rates).
+2. **Staff without a salary** — active staff (§7.2) of the scope with no FIXED_MONTHLY version covering the month: «**N xodimning oyligi hisoblanmaydi** — {Ism}, {Ism} uchun oylik summa kiritilmagan.» Button «Stavka qo'yish». Shown only to a viewer who can edit staff rates (the settings sheet's staff section rule, `resolveSalarySettingsAccess`).
 
 ### 2.4 One table
 
@@ -64,7 +64,7 @@ Search («Ism yoki ID», `?search=`) and a segment «Hammasi · N» / «Ustozlar
 
 Columns: Xodim (name; sub-line role — «Ustoz» or the staff `position`, «Nofaol» badge kept), Nimadan, Ishladi, Avans, Beriladi, Holat. Teachers first (today's order), then staff. Footer «Jami · N kishi» with the three sums. Row click (and Enter/Space) opens the drawer (§2.5) — for every row, calculated or not.
 
-- **Nimadan:** teachers «N guruh · M o'quvchi» (distinct groups / students of the month's lessons, from the same pass, §7.1); staff «qat'iy oylik», plus «· d/D kun» when prorated.
+- **Nimadan:** teachers «N guruh · M o'quvchi» (distinct groups / students of the month's lessons, from the same pass, §7.1); staff «qat'iy oylik», plus «· d/D kun» when prorated (`fixedMonthlyCoverage` next to `prorateFixedMonthly`: active days / period days).
 - **Ishladi:** teachers `fullDeserved`, staff `monthly`.
 - **Avans:** §3. «0» muted when 0.
 - **Beriladi:** `netToPay`, bold.
@@ -155,7 +155,7 @@ Title «{Ism} — {oy} oyligi berildi». Muted «Pul tanlangan kassa va kartadan
 
 ### 5.2 Server — `POST /salary/payments/:id/pay`
 
-Body becomes required: `{ paidAt: 'YYYY-MM-DD', cashSlices: [{ cashAccountId, amount }], note? }` (`PayPaymentDto`). Roles CEO/BD (unchanged); the existing home-branch check for BD stays.
+Body becomes required: `{ paidAt: 'YYYY-MM-DD', cashSlices: [{ cashAccountId, amount }], note? }` (`PayPaymentDto`). Capability `salary.pay` (unchanged); the existing home-branch check for a non-CEO payer stays.
 
 Checks, all before any write: payment of the company and APPROVED (`assertValidTransition`); `paidAt` per `parseSettlePaidAt`; every slice amount > 0, Σ slices = `payment.amount` (empty only when the amount is 0); every account active, not deleted, of the company and of the payee's branch (the payee's `mainBranch`). A payee without `mainBranch` is refused: «Xodimning filiali aniqlanmagan — oylikni berib bo'lmaydi». Refusals in Uzbek, e.g. «Kassa xodim filialiga tegishli emas», «Naqd va karta yig'indisi oylikka teng emas».
 
@@ -165,7 +165,7 @@ Write: through `writeSettledRows` with one row and the plan's `cashSlices` (one 
 
 ### 5.3 Event
 
-After commit, every route that turns a payment PAID — single pay, settle-month, settle-allocated — emits `salary.paid` `{ salaryPaymentId, companyId }` once per payment (`SALARY_EVENTS.PAID` constant at each call site, so the event-wiring scan sees it).
+After commit, the two routes a person uses to turn a payment PAID — single pay and settle-month — emit `salary.paid` `{ salaryPaymentId, companyId }` once per payment (`SALARY_EVENTS.PAID` constant at each call site, so the event-wiring scan sees it). `SalarySettleAllocatedService` (used only by the past-months script) does not emit: closing old months must not message staff.
 
 ## 6. Staff bot message
 
@@ -210,8 +210,8 @@ Rahmat!
 ### 7.1 `getMonthly` and the detail endpoint
 
 - `getMonthly`: `monthState` (§4); advances per §3; per teacher `groupCount` and `studentCount` and per-group buckets (`groupId`, name, students, lessons, `amount`, `covered`, `centerFunded`, rate label) collected in the SAME per-lesson pass that builds `fullDeserved`, so Σ group amounts = `fullDeserved` (test). `attention` (§2.3): `lessonsWithoutRate[{userId, name, units}]`, `staffWithoutRate[{userId, name}]`.
-- `GET /salary/monthly/user/:userId/detail?month=` (CEO/BD, `@BranchScope()`, ADR-0063-style named 404 outside scope): the person's row from `getMonthlyForUser`, groups, the netted advances (id, date, amount, method, given by), rate label(s), the payout (`paidAt`, slices with account name and type, `paidBy`) when PAID, and the frozen-vs-live difference (§2.5).
-- `GET /salary/monthly/user/:userId/lessons?month=` (CEO/BD, scoped): the CSV source for an open month — the existing `fetchAccrualBreakdown` with the period filter (calculated months keep `GET /salary/payments/:id/breakdown`).
+- `GET /salary/monthly/user/:userId/detail?month=` (`salary.view`, `@BranchScope()`, ADR-0063-style named 404 outside scope): the person's row from `getMonthlyForUser`, groups, the netted advances (id, date, amount, method, given by), rate label(s), the payout (`paidAt`, slices with account name and type, `paidBy`) when PAID, and the frozen-vs-live difference (§2.5).
+- `GET /salary/monthly/user/:userId/lessons?month=` (`salary.view`, scoped): the CSV source for an open month — the existing `fetchAccrualBreakdown` with the period filter (calculated months keep `GET /salary/payments/:id/breakdown`).
 
 ### 7.2 Staff without a salary
 
@@ -223,7 +223,7 @@ Users of the scope who are not deleted, `status` ACTIVE, `isActive`, have no Tea
 - `PayPaymentDto`, `payPayment` rewrite (§5.2), events (§5.3), `salary-paid-text.ts` + listener.
 - `advance-calendar` branch scope (§2.6) and the advances' «ushlanadi/ushlangan» month per row (`settledMonth` or `ownMonth`).
 - `period-settings` refusal (§2.8).
-- Route manifest (`branch-route-policy.ts`) entries for the two new routes; `docs/role-access.md`, `server/CLAUDE.md` (salary section, the instant-sender list) follow.
+- Route manifest (`branch-route-policy.ts`) entries and `route-access.snapshot.json` rows (Branch Director, CEO) for the two new routes, both `@Can('salary.view')`; `docs/role-access.md`, `server/CLAUDE.md` (salary section, the instant-sender list) follow.
 
 ## 8. Client
 
