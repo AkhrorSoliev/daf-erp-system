@@ -1,6 +1,6 @@
 # A1 4-unit «Essen und Trinken» matni — dizayn
 
-**Sana:** 06.10.2026 · **Holat:** yozildi, CEO ko'rigini kutadi
+**Sana:** 06.10.2026, 2-variant 10.10.2026 · **Holat:** yozildi, CEO ko'rigini kutadi
 **Asos:** ADR-0071 (so'z zaxirasi), 3-bosqich. So'z rejasi PR #664 bilan
 birlashgan (`wortliste.json`). CEO 06.10: «So'z ro'yxati shu holicha olinadi.
 Keraksiz so'z chiqsa, matnni ko'rganingizda olib tashlaymiz.»
@@ -13,9 +13,9 @@ Keraksiz so'z chiqsa, matnni ko'rganingizda olib tashlaymiz.»
 | Bo'lim | 6: s1 34 · s2 34 · s3 30 · s4 24 · s5 35 · s6 31 so'z |
 | Grammatika qoidasi | 6 (har bo'limga bitta), 5–6 misoldan |
 | Ibora | 20 (har bo'limga 3–4) |
-| Dialog | 9 (s1, s5, s6 da ikkitadan), 66 satr, 18 eshitish savoli |
-| Gap | 86 (har bo'limga 12–15), 3–7 so'zli, ko'pchiligida boshqa to'g'ri so'z tartiblari (`akzeptiert`) |
-| Yordamchi so'z | +35 (fe'l shakllari: esse/isst, trinke, mag, möchte, hätte …; artikllar: keine, einen, keinen) — har biri o'z bo'limidan ochiladi |
+| Dialog | 9 (s1, s5, s6 da ikkitadan), 72 satr, 18 eshitish savoli; har biri tugal hikoya, sahna izohi bilan (§2.1) |
+| Gap | 149 (har bo'limga 21–30): mashqda so'raladigan har so'z kamida bitta gapda (183 tadan 182 tasi; drankommen faqat ajralgan shaklda — «Wer kommt dran?»). 3–7 so'zli, ko'pchiligida boshqa to'g'ri so'z tartiblari (`akzeptiert`) |
+| Yordamchi so'z | +40 (hm, oh, mama, dran, koche; fe'l shakllari: esse/isst, trinke, mag, möchte, hätte …; artikllar: keine, einen, keinen) — har biri o'z bo'limidan ochiladi |
 
 So'zlarning o'zbekchasi 2-bosqich rejasidan (CEO ko'rgan sahifa) olindi. Ikki so'z
 o'zgardi, chunki ma'nosi boshqa so'z bilan ustma-ust tushardi: einkaufen «xarid
@@ -30,17 +30,32 @@ Thomas va Julia — do'stlar, Sabine — kassir, Claudia — ofitsiant.
 Bitta dialogda bir xil ovozli ikki kishi bo'lmaydi: erkaklar (Iapetus) bittadan,
 Mia/Claudia/Sabine/Anna (Erinome) bittadan, Helga/Julia (Callirrhoe) bittadan.
 
-| Dialog | Bo'lim | Kimlar | Mazmuni |
+| Dialog | Bo'lim | Kimlar | Hikoya: boshi → muammo → yechim → oxiri |
 |---|---|---|---|
-| d1 Haben wir Brot? | s1 | Jonas, Mia | Uyda nima bor, nima yo'q |
-| d2 Eine Melone aus Usbekistan | s1 | Helga, Mia | Bozorda O'zbekiston qovuni va uzumi |
-| d3 Was kostet die Melone? | s2 | Jonas, Sabine | Kassada narx so'rash |
-| d4 Was isst du gern? | s3 | Thomas, Mia | Yoqtirgan ovqat; cho'chqa go'shtini yemaslik |
-| d5 Guten Appetit! | s4 | Mia, Jonas | Nonushta, soat nechada |
-| d6 Im Restaurant | s5 | Claudia, Thomas, Julia | Buyurtma berish |
-| d7 Die Rechnung, bitte! | s5 | Jonas, Claudia, Helga | Hisob, choychaqa |
-| d8 Ein Rezept aus Usbekistan | s6 | Helga, Mia | Osh uchun nima va qancha kerak |
-| d9 Die Grillparty | s6 | Thomas, Mia | Halol go'sht; spirtli ichimlikni rad etish |
+| d1 Melonen aus Usbekistan | s1 | Helga, Mia | Bozorda qovun qidirishadi → yo'q → Mia chapda topadi → ikkita qovun, uzum |
+| d2 Salat mit Käse | s1 | Jonas, Mia | Jonas salat qilyapti → pomidor yo'q → pishloq qo'shadi → pishloqli salat va non |
+| d3 An der Kasse | s2 | Jonas, Sabine | Qovun narxi → qimmat → banan arzon → banan, non, sut, besh yevro |
+| d4 Was essen wir heute? | s3 | Thomas, Mia | Qorin och → doner, lekin cho'chqa go'shti? → tovuqli → ikkita doner, suv |
+| d5 Kein Brot zum Frühstück | s4 | Mia, Jonas | Nonushtaga nima bor (boshqa xonadan) → non yo'q → Mia novvoyxonaga → bulochka va qahva |
+| d6 Im Restaurant | s5 | Claudia, Julia, Thomas | Menyu → Julia go'sht yemaydi → pomidor sho'rvasi → buyurtma «Kommt gleich!» |
+| d7 Wer zahlt? | s5 | Jonas, Helga, Claudia | Hisob → ikkalasi to'lamoqchi → Jonas to'laydi, «Stimmt so!» → Helga: «ertaga men» |
+| d8 Ein Rezept aus Usbekistan | s6 | Mia, Helga | Mia osh pishiradi → sabzi yo'q → Helga olib keladi → «sehr lecker» |
+| d9 Die Grillparty | s6 | Thomas, Mia | Mangal → go'sht halolmi? → hammasi halol; spirtli ichimlikni rad etadi → tovuq mazali |
+
+### 2.1. Dialog — tugal hikoya (CEO 06.10)
+
+1-variantdagi dialoglar «Mia, bizda non bormi?» kabi to'g'ridan-to'g'ri savoldan
+boshlanardi. CEO: «nimadan boshlanib nimadan tugaganini tushunib bo'lmayapti».
+Endi har dialogning birinchi satrlarida vaziyat va maqsad eshitiladi, o'rtada
+muammo va yechim, oxirida aniq yakun bor.
+
+Yozma matnda sahna o'zbekcha izoh bilan beriladi (yangi nemischa so'z
+qo'shmaydi): dialogning `sahnaUz`i (qayerda, kim bilan) va satrning `izohUz`i
+(masalan «boshqa xonadan»). Ilova ularni bo'sh joy mashqida va eshitishdan
+keyin ochiladigan matnda ko'rsatadi (`DafDialog.sahnaUz`, `DafDialogLine.izohUz`).
+Izohda ikki nuqta bo'lmaydi: mijoz satrni birinchi ikki nuqtada bo'ladi.
+Ovozda sahna effektlar bilan beriladi (eshik, muzlatkich, uzoqdan ovoz) —
+`dialog-regie.json`dagi `szene` va har satrning `toene`si.
 
 ## 3. Qoidalar
 

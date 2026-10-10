@@ -4,112 +4,126 @@
   {
    "id": "u04-d1",
    "section": "u04-s1",
-   "titelDe": "Haben wir Brot?",
-   "titelUz": "Bizda non bormi?",
+   "titelDe": "Melonen aus Usbekistan",
+   "titelUz": "O'zbekiston qovuni",
+   "sahnaUz": "Bozor. Helga qizi Mia bilan qovun qidiryapti.",
    "zeilen": [
     {
-     "sprecher": "Jonas",
-     "de": "Mia, haben wir Brot?",
-     "uz": "Mia, bizda non bormi?"
+     "sprecher": "Helga",
+     "de": "Mia, ich suche Melonen. Gibt es hier Melonen?",
+     "uz": "Mia, men qovun qidiryapman. Bu yerda qovun bormi?"
     },
     {
      "sprecher": "Mia",
-     "de": "Ja, hier ist ein Brot.",
-     "uz": "Ha, mana bitta non."
+     "de": "Hier sind Äpfel, Birnen und Trauben. Aber keine Melonen.",
+     "uz": "Bu yerda olma, nok va uzum bor. Lekin qovun yo'q."
     },
     {
-     "sprecher": "Jonas",
-     "de": "Und Butter? Haben wir Butter?",
-     "uz": "Sariyog'-chi? Sariyog' bormi?"
-    },
-    {
-     "sprecher": "Mia",
-     "de": "Nein, wir haben keine Butter.",
-     "uz": "Yo'q, sariyog'imiz yo'q."
-    },
-    {
-     "sprecher": "Jonas",
-     "de": "Keine Butter? Und Käse?",
-     "uz": "Sariyog' yo'qmi? Pishloq-chi?"
+     "sprecher": "Helga",
+     "de": "Keine Melonen? Hm...",
+     "uz": "Qovun yo'qmi? Hm..."
     },
     {
      "sprecher": "Mia",
-     "de": "Käse haben wir. Und Eier und Milch auch.",
-     "uz": "Pishloq bor. Tuxum bilan sut ham bor."
+     "de": "Mama! Da, dort links! Neben den Tomaten!",
+     "uz": "Mama! Ana, chap tomonda! Pomidorlar yonida!",
+     "izohUz": "bir oz naridan chaqiradi"
+    },
+    {
+     "sprecher": "Helga",
+     "de": "Oh, Melonen aus Usbekistan!",
+     "uz": "Voy, O'zbekiston qovuni!"
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Ja, die Melonen sind sehr groß!",
+     "uz": "Ha, qovunlar juda katta!"
+    },
+    {
+     "sprecher": "Helga",
+     "de": "Gut, ich nehme zwei Melonen. Und du?",
+     "uz": "Yaxshi, men ikkita qovun olaman. Sen-chi?"
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Ich nehme die Trauben.",
+     "uz": "Men uzum olaman."
     }
    ],
    "fragen": [
-    { "frageDe": "Was haben Jonas und Mia nicht?", "frageUz": "Jonas bilan Miada nima yo'q?", "richtig": "Butter", "falsch": ["Brot", "Käse"] },
-    { "frageDe": "Was haben Jonas und Mia noch?", "frageUz": "Jonas bilan Miada yana nima bor?", "richtig": "Eier und Milch", "falsch": ["Fisch und Reis", "Obst und Gemüse"] }
+    { "frageDe": "Was sucht Helga?", "frageUz": "Helga nimani qidiryapti?", "richtig": "Melonen", "falsch": ["Trauben", "Tomaten"] },
+    { "frageDe": "Was nimmt Mia?", "frageUz": "Mia nima oladi?", "richtig": "die Trauben", "falsch": ["die Melonen", "die Birnen"] }
    ]
   },
   {
    "id": "u04-d2",
    "section": "u04-s1",
-   "titelDe": "Eine Melone aus Usbekistan",
-   "titelUz": "O'zbekiston qovuni",
+   "titelDe": "Salat mit Käse",
+   "titelUz": "Pishloqli salat",
+   "sahnaUz": "Kechqurun. Jonas oshxonada salat qilyapti, Mia kiradi.",
    "zeilen": [
     {
-     "sprecher": "Helga",
-     "de": "Mia, was ist das?",
-     "uz": "Mia, bu nima?"
+     "sprecher": "Mia",
+     "de": "Jonas, was machst du?",
+     "uz": "Jonas, nima qilyapsan?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Ich mache Salat. Hier sind Gurken, Zwiebeln und Oliven.",
+     "uz": "Salat qilyapman. Mana bodring, piyoz va zaytun."
     },
     {
      "sprecher": "Mia",
-     "de": "Das ist eine Melone aus Usbekistan.",
-     "uz": "Bu O'zbekistondan kelgan qovun."
+     "de": "Und Tomaten? Haben wir Tomaten?",
+     "uz": "Pomidor-chi? Bizda pomidor bormi?"
     },
     {
-     "sprecher": "Helga",
-     "de": "Eine Melone aus Usbekistan? Und die Trauben auch?",
-     "uz": "O'zbekistondan kelgan qovunmi? Uzum ham o'sha yerdanmi?"
-    },
-    {
-     "sprecher": "Mia",
-     "de": "Ja, die Trauben kommen auch aus Usbekistan.",
-     "uz": "Ha, uzum ham O'zbekistondan keladi."
-    },
-    {
-     "sprecher": "Helga",
-     "de": "Und das? Ist das ein Apfel?",
-     "uz": "Anavi-chi? Olmami?"
+     "sprecher": "Jonas",
+     "de": "Nein, wir haben keine Tomaten.",
+     "uz": "Yo'q, bizda pomidor yo'q."
     },
     {
      "sprecher": "Mia",
-     "de": "Nein, das ist kein Apfel. Das ist eine Birne.",
-     "uz": "Yo'q, bu olma emas. Bu nok."
+     "de": "Keine Tomaten? Dann Käse! Käse ist auch gut.",
+     "uz": "Pomidor yo'qmi? Unda pishloq! Pishloq ham yaxshi."
     },
     {
-     "sprecher": "Helga",
-     "de": "Eine Birne? Die Birne ist sehr groß!",
-     "uz": "Nokmi? Nok juda katta ekan!"
+     "sprecher": "Jonas",
+     "de": "Gut! Wo ist der Käse?",
+     "uz": "Yaxshi! Pishloq qayerda?"
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Hier, links. Und das Brot auch.",
+     "uz": "Mana, chapda. Non ham shu yerda."
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "So, Salat mit Käse und Brot. Sehr gut!",
+     "uz": "Mana, pishloqli salat va non. Juda yaxshi!"
     }
    ],
    "fragen": [
-    { "frageDe": "Was kommt noch aus Usbekistan?", "frageUz": "O'zbekistondan yana nima keladi?", "richtig": "die Trauben", "falsch": ["die Birnen", "die Äpfel"] },
-    { "frageDe": "Wie ist die Birne?", "frageUz": "Nok qanday?", "richtig": "sehr groß", "falsch": ["sehr klein", "sehr alt"] }
+    { "frageDe": "Was macht Jonas?", "frageUz": "Jonas nima qilyapti?", "richtig": "Salat", "falsch": ["Brot", "Käse"] },
+    { "frageDe": "Was haben Jonas und Mia nicht?", "frageUz": "Jonas bilan Miada nima yo'q?", "richtig": "Tomaten", "falsch": ["Gurken", "Oliven"] }
    ]
   },
   {
    "id": "u04-d3",
    "section": "u04-s2",
-   "titelDe": "Was kostet die Melone?",
-   "titelUz": "Qovun qancha turadi?",
+   "titelDe": "An der Kasse",
+   "titelUz": "Kassada",
+   "sahnaUz": "Supermarket kassasi. Jonas xarid qilyapti, kassir — Sabine.",
    "zeilen": [
     {
-     "sprecher": "Jonas",
-     "de": "Guten Tag! Was kosten die Tomaten?",
-     "uz": "Xayrli kun! Pomidorlar qancha turadi?"
-    },
-    {
      "sprecher": "Sabine",
-     "de": "Die Tomaten kosten zwei Euro.",
-     "uz": "Pomidorlar ikki yevro turadi."
+     "de": "Guten Tag!",
+     "uz": "Xayrli kun!"
     },
     {
      "sprecher": "Jonas",
-     "de": "Das ist billig! Und was kostet die Melone?",
-     "uz": "Arzon ekan! Qovun-chi, qancha turadi?"
+     "de": "Guten Tag! Was kostet die Melone?",
+     "uz": "Xayrli kun! Qovun qancha turadi?"
     },
     {
      "sprecher": "Sabine",
@@ -118,127 +132,145 @@
     },
     {
      "sprecher": "Jonas",
-     "de": "Sechs Euro fünfzig für eine Melone? Das ist teuer!",
-     "uz": "Bitta qovunga olti yevro ellik sentmi? Qimmat-ku!"
+     "de": "Sechs Euro fünfzig? Das ist teuer! Was kosten die Bananen?",
+     "uz": "Olti yevro ellik sentmi? Qimmat-ku! Banan qancha turadi?"
     },
     {
      "sprecher": "Sabine",
-     "de": "Ja, aber die Melone ist sehr frisch.",
-     "uz": "Ha, lekin qovun juda yangi."
+     "de": "Die Bananen sind billig. Ein Euro zwanzig.",
+     "uz": "Banan arzon. Bir yevro yigirma sent."
     },
     {
      "sprecher": "Jonas",
-     "de": "Sehr frisch? Gut. Was kosten Melone und Tomaten?",
-     "uz": "Juda yangimi? Yaxshi. Qovun bilan pomidor qancha turadi?"
+     "de": "Gut, dann Bananen, Brot und Milch. Keine Melone.",
+     "uz": "Yaxshi, unda banan, non va sut. Qovun kerak emas."
     },
     {
      "sprecher": "Sabine",
-     "de": "Melone und Tomaten? Das macht insgesamt acht Euro fünfzig.",
-     "uz": "Qovun bilan pomidormi? Hammasi bo'lib sakkiz yevro ellik sent."
+     "de": "Bananen, Brot und Milch? Das macht insgesamt fünf Euro.",
+     "uz": "Banan, non va sutmi? Hammasi bo'lib besh yevro."
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Hier sind fünf Euro. Danke, tschüss!",
+     "uz": "Mana besh yevro. Rahmat, xayr!"
     }
    ],
    "fragen": [
-    { "frageDe": "Was kosten die Tomaten?", "frageUz": "Pomidorlar qancha turadi?", "richtig": "zwei Euro", "falsch": ["sechs Euro", "acht Euro"] },
-    { "frageDe": "Wie ist die Melone?", "frageUz": "Qovun qanday?", "richtig": "sehr frisch", "falsch": ["sehr billig", "sehr klein"] }
+    { "frageDe": "Was kostet die Melone?", "frageUz": "Qovun qancha turadi?", "richtig": "sechs Euro fünfzig", "falsch": ["ein Euro zwanzig", "fünf Euro"] },
+    { "frageDe": "Was kauft Jonas nicht?", "frageUz": "Jonas nimani olmaydi?", "richtig": "die Melone", "falsch": ["die Bananen", "die Milch"] }
    ]
   },
   {
    "id": "u04-d4",
    "section": "u04-s3",
-   "titelDe": "Was isst du gern?",
-   "titelUz": "Nimani yaxshi ko'rasan?",
+   "titelDe": "Was essen wir heute?",
+   "titelUz": "Bugun nima yeymiz?",
+   "sahnaUz": "Tushlik tanaffusi. Thomas bilan Mia ofisdan chiqib, nima yeyishni tanlashyapti.",
    "zeilen": [
     {
      "sprecher": "Thomas",
-     "de": "Mia, was isst du gern?",
-     "uz": "Mia, nimani yeyishni yaxshi ko'rasan?"
+     "de": "Mia, ich habe Hunger! Was essen wir heute?",
+     "uz": "Mia, qornim och! Bugun nima yeymiz?"
     },
     {
      "sprecher": "Mia",
-     "de": "Ich esse gern Fisch mit Reis.",
-     "uz": "Guruch bilan baliqni yaxshi ko'raman."
+     "de": "Hm... Pizza? Ich esse gern Pizza.",
+     "uz": "Hm... pitsami? Men pitsani yaxshi ko'raman."
     },
     {
      "sprecher": "Thomas",
-     "de": "Fisch mit Reis? Und isst du auch Fleisch?",
-     "uz": "Guruch bilan baliqmi? Go'sht ham yeysanmi?"
+     "de": "Pizza? Ich esse lieber Döner.",
+     "uz": "Pitsami? Men donerni afzal ko'raman."
     },
     {
      "sprecher": "Mia",
-     "de": "Ja, Hähnchen und Rindfleisch. Aber ich esse kein Schweinefleisch.",
-     "uz": "Ha, tovuq va mol go'shti. Lekin cho'chqa go'shtini yemayman."
+     "de": "Döner? Aber ich esse kein Schweinefleisch.",
+     "uz": "Donermi? Lekin men cho'chqa go'shtini yemayman."
     },
     {
      "sprecher": "Thomas",
-     "de": "Okay, Fisch und Hähnchen. Und was trinkst du gern?",
-     "uz": "Xo'p, baliq va tovuq. Nima ichishni yaxshi ko'rasan?"
+     "de": "Der Döner hier ist mit Hähnchen. Sehr lecker!",
+     "uz": "Bu yerdagi doner tovuq go'shtidan. Juda mazali!"
     },
     {
      "sprecher": "Mia",
-     "de": "Ich trinke gern Apfelsaft. Cola mag ich nicht.",
-     "uz": "Olma sharbatini yaxshi ko'raman. Kolani yoqtirmayman."
+     "de": "Mit Hähnchen? Dann gern Döner!",
+     "uz": "Tovuq go'shtidanmi? Unda doner, mamnuniyat bilan!"
     },
     {
      "sprecher": "Thomas",
-     "de": "Keine Cola? Ich trinke auch lieber Apfelsaft.",
-     "uz": "Kola ichmaysanmi? Men ham olma sharbatini afzal ko'raman."
+     "de": "Und was trinkst du? Cola?",
+     "uz": "Nima ichasan? Kolami?"
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Nein, Cola mag ich nicht. Wasser, bitte. Also, zwei Döner!",
+     "uz": "Yo'q, kolani yoqtirmayman. Suv, iltimos. Demak, ikkita doner!"
     }
    ],
    "fragen": [
-    { "frageDe": "Was isst Mia gern?", "frageUz": "Mia nimani yeyishni yaxshi ko'radi?", "richtig": "Fisch mit Reis", "falsch": ["Pizza", "Döner"] },
-    { "frageDe": "Was trinkt Mia gern?", "frageUz": "Mia nima ichishni yaxshi ko'radi?", "richtig": "Apfelsaft", "falsch": ["Cola", "Wasser"] }
+    { "frageDe": "Was isst Thomas lieber?", "frageUz": "Thomas nimani afzal ko'radi?", "richtig": "Döner", "falsch": ["Pizza", "Fisch"] },
+    { "frageDe": "Was trinkt Mia?", "frageUz": "Mia nima ichadi?", "richtig": "Wasser", "falsch": ["Cola", "Saft"] }
    ]
   },
   {
    "id": "u04-d5",
    "section": "u04-s4",
-   "titelDe": "Guten Appetit!",
-   "titelUz": "Yoqimli ishtaha!",
+   "titelDe": "Kein Brot zum Frühstück",
+   "titelUz": "Nonushtaga non yo'q",
+   "sahnaUz": "Ertalab. Jonas oshxonada, Mia boshqa xonada.",
    "zeilen": [
     {
      "sprecher": "Mia",
-     "de": "Guten Morgen, Jonas! Trinkst du Kaffee oder Tee?",
-     "uz": "Xayrli tong, Jonas! Qahva ichasanmi yoki choy?"
+     "de": "Jonas, was gibt es zum Frühstück?",
+     "uz": "Jonas, nonushtaga nima bor?",
+     "izohUz": "boshqa xonadan"
     },
     {
      "sprecher": "Jonas",
-     "de": "Kaffee, bitte. Was gibt es zum Frühstück?",
-     "uz": "Qahva, iltimos. Nonushtaga nima bor?"
+     "de": "Hm... Käse, Butter, Marmelade... aber kein Brot!",
+     "uz": "Hm... pishloq, sariyog', murabbo... lekin non yo'q!",
+     "izohUz": "oshxonani qarab chiqib, baland ovozda"
     },
     {
      "sprecher": "Mia",
-     "de": "Es gibt Brötchen, Butter und Marmelade.",
-     "uz": "Bulochka, sariyog' va murabbo bor."
+     "de": "Kein Brot? Und Brötchen?",
+     "uz": "Non yo'qmi? Bulochka-chi?",
+     "izohUz": "boshqa xonadan"
     },
     {
      "sprecher": "Jonas",
-     "de": "Brötchen mit Marmelade? Sehr gut! Und Lena?",
-     "uz": "Murabboli bulochkami? Juda yaxshi! Lena-chi?"
+     "de": "Auch keine Brötchen. Nichts!",
+     "uz": "Bulochka ham yo'q. Hech narsa!",
+     "izohUz": "baland ovozda"
     },
     {
      "sprecher": "Mia",
-     "de": "Lena isst Müsli mit Joghurt.",
-     "uz": "Lena yogurtli myusli yeydi."
+     "de": "Okay. Ich gehe zur Bäckerei. Die Bäckerei ist an der Ecke.",
+     "uz": "Xo'p. Men novvoyxonaga boraman. Novvoyxona burchakda.",
+     "izohUz": "oshxonaga kirib"
     },
     {
      "sprecher": "Jonas",
-     "de": "Um wie viel Uhr fährt Lena zur Schule?",
-     "uz": "Lena maktabga soat nechada boradi?"
+     "de": "Gut! Und ich mache Kaffee.",
+     "uz": "Yaxshi! Men esa qahva damlayman."
     },
     {
      "sprecher": "Mia",
-     "de": "Um acht Uhr. Guten Appetit!",
-     "uz": "Soat sakkizda. Yoqimli ishtaha!"
+     "de": "So, vier Brötchen! Ganz frisch.",
+     "uz": "Mana, to'rtta bulochka! Yangi-yangi.",
+     "izohUz": "Mia chiqib ketadi, qahva qaynaydi, Mia qaytib keladi"
     },
     {
      "sprecher": "Jonas",
-     "de": "Danke, gleichfalls!",
-     "uz": "Rahmat, senga ham!"
+     "de": "Brötchen und Kaffee! Guten Appetit, Mia!",
+     "uz": "Bulochka va qahva! Yoqimli ishtaha, Mia!"
     }
    ],
    "fragen": [
-    { "frageDe": "Was trinkt Jonas?", "frageUz": "Jonas nima ichadi?", "richtig": "Kaffee", "falsch": ["Tee", "Saft"] },
-    { "frageDe": "Was isst Lena?", "frageUz": "Lena nima yeydi?", "richtig": "Müsli mit Joghurt", "falsch": ["Brötchen mit Marmelade", "Brot mit Käse"] }
+    { "frageDe": "Was haben Jonas und Mia nicht?", "frageUz": "Jonas bilan Miada nima yo'q?", "richtig": "Brot und Brötchen", "falsch": ["Käse und Butter", "Kaffee und Marmelade"] },
+    { "frageDe": "Was kauft Mia?", "frageUz": "Mia nima sotib oladi?", "richtig": "vier Brötchen", "falsch": ["zwei Brote", "vier Kuchen"] }
    ]
   },
   {
@@ -246,6 +278,7 @@
    "section": "u04-s5",
    "titelDe": "Im Restaurant",
    "titelUz": "Restoranda",
+   "sahnaUz": "Kechqurun restoran. Thomas va Julia stolda, ofitsiant — Claudia.",
    "zeilen": [
     {
      "sprecher": "Claudia",
@@ -253,19 +286,19 @@
      "uz": "Xayrli kech! Mana menyu."
     },
     {
-     "sprecher": "Thomas",
-     "de": "Danke. Was ist heute die Spezialität?",
-     "uz": "Rahmat. Bugun qanday o'ziga xos taom bor?"
+     "sprecher": "Julia",
+     "de": "Danke. Ich esse kein Fleisch. Was ist vegetarisch?",
+     "uz": "Rahmat. Men go'sht yemayman. Qaysi taom go'shtsiz?"
     },
     {
      "sprecher": "Claudia",
-     "de": "Heute ist die Spezialität ein Fischgericht.",
-     "uz": "Bugun o'ziga xos taomimiz — baliq taomi."
+     "de": "Die Tomatensuppe ist vegetarisch. Sehr lecker!",
+     "uz": "Pomidor sho'rvasi go'shtsiz. Juda mazali!"
     },
     {
      "sprecher": "Julia",
-     "de": "Gut, ich hätte gern das Fischgericht.",
-     "uz": "Yaxshi, menga baliq taomini bersangiz."
+     "de": "Gut, ich hätte gern die Tomatensuppe.",
+     "uz": "Yaxshi, menga pomidor sho'rvasini bersangiz."
     },
     {
      "sprecher": "Thomas",
@@ -284,20 +317,21 @@
     },
     {
      "sprecher": "Claudia",
-     "de": "Also ein Fischgericht, ein Schnitzel und zwei Wasser.",
-     "uz": "Demak, bitta baliq taomi, bitta shnitsel va ikkita suv."
+     "de": "Also eine Tomatensuppe, ein Schnitzel und zwei Wasser. Kommt gleich!",
+     "uz": "Demak, bitta pomidor sho'rvasi, bitta shnitsel va ikkita suv. Hozir keladi!"
     }
    ],
    "fragen": [
-    { "frageDe": "Was bestellt Julia?", "frageUz": "Julia nima buyurtma qiladi?", "richtig": "das Fischgericht", "falsch": ["ein Schnitzel", "die Tomatensuppe"] },
-    { "frageDe": "Was trinken Thomas und Julia?", "frageUz": "Thomas bilan Julia nima ichishadi?", "richtig": "Wasser", "falsch": ["Apfelschorle", "Cola"] }
+    { "frageDe": "Was isst Julia nicht?", "frageUz": "Julia nimani yemaydi?", "richtig": "Fleisch", "falsch": ["Suppe", "Gemüse"] },
+    { "frageDe": "Was bestellt Thomas?", "frageUz": "Thomas nima buyurtma qiladi?", "richtig": "ein Schnitzel mit Pommes frites", "falsch": ["die Tomatensuppe", "ein Fischgericht"] }
    ]
   },
   {
    "id": "u04-d7",
    "section": "u04-s5",
-   "titelDe": "Die Rechnung, bitte!",
-   "titelUz": "Hisobni keltiring!",
+   "titelDe": "Wer zahlt?",
+   "titelUz": "Kim to'laydi?",
+   "sahnaUz": "Kafe. Jonas qaynonasi Helga bilan qahva ichib bo'ldi.",
    "zeilen": [
     {
      "sprecher": "Jonas",
@@ -305,19 +339,24 @@
      "uz": "Kechirasiz! Hisobni keltiring, iltimos!"
     },
     {
-     "sprecher": "Claudia",
-     "de": "Gern. Zusammen oder getrennt?",
-     "uz": "Mamnuniyat bilan. Birga to'laysizmi yoki alohida?"
+     "sprecher": "Helga",
+     "de": "Jonas, nein! Heute zahle ich.",
+     "uz": "Jonas, yo'q! Bugun men to'layman."
     },
     {
      "sprecher": "Jonas",
-     "de": "Zusammen, bitte. Ich zahle.",
-     "uz": "Birga, iltimos. Men to'layman."
+     "de": "Nein, Helga, ich zahle. Bitte!",
+     "uz": "Yo'q, Helga, men to'layman. Iltimos!"
     },
     {
-     "sprecher": "Helga",
-     "de": "Danke, Jonas!",
-     "uz": "Rahmat, Jonas!"
+     "sprecher": "Claudia",
+     "de": "Zusammen oder getrennt?",
+     "uz": "Birga to'laysizmi yoki alohida?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Zusammen, bitte.",
+     "uz": "Birga, iltimos."
     },
     {
      "sprecher": "Claudia",
@@ -330,13 +369,13 @@
      "uz": "Mana o'n besh yevro. Qaytimi kerak emas!"
     },
     {
-     "sprecher": "Claudia",
-     "de": "Danke! Auf Wiedersehen!",
-     "uz": "Rahmat! Xayr!"
+     "sprecher": "Helga",
+     "de": "Danke, Jonas! Aber morgen zahle ich!",
+     "uz": "Rahmat, Jonas! Lekin ertaga men to'layman!"
     }
    ],
    "fragen": [
-    { "frageDe": "Wer zahlt?", "frageUz": "Kim to'laydi?", "richtig": "Jonas", "falsch": ["Helga", "Claudia"] },
+    { "frageDe": "Wer zahlt heute?", "frageUz": "Bugun kim to'laydi?", "richtig": "Jonas", "falsch": ["Helga", "Claudia"] },
     { "frageDe": "Was kosten Kaffee und Kuchen?", "frageUz": "Qahva bilan pirog qancha turadi?", "richtig": "zwölf Euro", "falsch": ["fünfzehn Euro", "zwei Euro"] }
    ]
   },
@@ -345,51 +384,53 @@
    "section": "u04-s6",
    "titelDe": "Ein Rezept aus Usbekistan",
    "titelUz": "O'zbekcha retsept",
+   "sahnaUz": "Mianing oshxonasi. Mia onasi Helgaga o'zbekcha taom pishirmoqchi.",
    "zeilen": [
     {
-     "sprecher": "Helga",
-     "de": "Mia, was kochst du heute?",
-     "uz": "Mia, bugun nima pishiryapsan?"
-    },
-    {
      "sprecher": "Mia",
-     "de": "Ein Gericht aus Usbekistan, mit Reis und Fleisch.",
-     "uz": "O'zbekcha taom, guruch va go'sht bilan."
+     "de": "Mama, heute koche ich ein Gericht aus Usbekistan!",
+     "uz": "Mama, bugun o'zbekcha taom pishiraman!"
     },
     {
      "sprecher": "Helga",
-     "de": "Mit Reis und Fleisch? Wie viel Reis brauchen wir?",
-     "uz": "Guruch va go'sht bilanmi? Bizga qancha guruch kerak?"
+     "de": "Aus Usbekistan? Was brauchst du?",
+     "uz": "O'zbekchami? Senga nima kerak?"
     },
     {
      "sprecher": "Mia",
-     "de": "Wir brauchen ein Kilo Reis und ein Kilo Lammfleisch.",
-     "uz": "Bir kilo guruch va bir kilo qo'y go'shti kerak."
+     "de": "Ein Kilo Reis, ein Kilo Lammfleisch, Zwiebeln und Karotten.",
+     "uz": "Bir kilo guruch, bir kilo qo'y go'shti, piyoz va sabzi."
     },
     {
      "sprecher": "Helga",
-     "de": "Und Karotten? Und Zwiebeln?",
-     "uz": "Sabzi-chi? Piyoz-chi?"
+     "de": "Reis und Fleisch sind hier. Aber wir haben keine Karotten!",
+     "uz": "Guruch bilan go'sht shu yerda. Lekin sabzi yo'q!"
     },
     {
      "sprecher": "Mia",
-     "de": "Auch ein Kilo Karotten und zwei Zwiebeln.",
-     "uz": "Bir kilo sabzi va ikkita piyoz ham."
+     "de": "Keine Karotten? Ohne Karotten geht es nicht!",
+     "uz": "Sabzi yo'qmi? Sabzisiz bo'lmaydi!"
     },
     {
      "sprecher": "Helga",
-     "de": "Gut. Ich schneide die Zwiebeln.",
-     "uz": "Yaxshi. Men piyozni to'grayman."
+     "de": "Okay, ich kaufe Karotten. Der Supermarkt ist an der Ecke.",
+     "uz": "Xo'p, men sabzi olib kelaman. Supermarket burchakda."
     },
     {
      "sprecher": "Mia",
-     "de": "Danke! Und ich schäle die Karotten.",
-     "uz": "Rahmat! Men esa sabzini archaman."
+     "de": "So, das Essen ist fertig. Guten Appetit, Mama!",
+     "uz": "Mana, ovqat tayyor. Yoqimli ishtaha, mama!",
+     "izohUz": "Helga sabzi olib keladi; qozonda yog' shivirlaydi"
+    },
+    {
+     "sprecher": "Helga",
+     "de": "Danke! Hm, das Gericht aus Usbekistan ist sehr lecker!",
+     "uz": "Rahmat! Hm, o'zbekcha taom juda mazali!"
     }
    ],
    "fragen": [
-    { "frageDe": "Wie viel Reis brauchen sie?", "frageUz": "Ularga qancha guruch kerak?", "richtig": "ein Kilo", "falsch": ["zwei Kilo", "ein Pfund"] },
-    { "frageDe": "Was schneidet Helga?", "frageUz": "Helga nimani to'graydi?", "richtig": "die Zwiebeln", "falsch": ["die Karotten", "das Fleisch"] }
+    { "frageDe": "Was haben Mia und Helga nicht?", "frageUz": "Mia bilan Helgada nima yo'q?", "richtig": "Karotten", "falsch": ["Reis", "Fleisch"] },
+    { "frageDe": "Wie ist das Gericht?", "frageUz": "Taom qanday?", "richtig": "sehr lecker", "falsch": ["sehr scharf", "sehr bitter"] }
    ]
   },
   {
@@ -397,6 +438,7 @@
    "section": "u04-s6",
    "titelDe": "Die Grillparty",
    "titelUz": "Mangal ziyofati",
+   "sahnaUz": "Thomasning bog'i. Mangal ziyofati, Mia keladi.",
    "zeilen": [
     {
      "sprecher": "Thomas",
@@ -405,23 +447,23 @@
     },
     {
      "sprecher": "Mia",
-     "de": "Sehr gut! Ist das Fleisch halal?",
-     "uz": "Juda yaxshi! Go'sht halolmi?"
+     "de": "Hallo Thomas! Ist das Fleisch halal?",
+     "uz": "Salom, Thomas! Go'sht halolmi?"
     },
     {
      "sprecher": "Thomas",
-     "de": "Ja, das Hähnchen und das Lammfleisch sind halal.",
-     "uz": "Ha, tovuq ham, qo'y go'shti ham halol."
+     "de": "Ja, alles ist halal.",
+     "uz": "Ha, hammasi halol."
     },
     {
      "sprecher": "Mia",
-     "de": "Alles halal? Danke, Thomas! Was grillst du noch?",
-     "uz": "Hammasi halolmi? Rahmat, Thomas! Mangalda yana nima pishiryapsan?"
+     "de": "Sehr gut! Ich esse gern Lammfleisch.",
+     "uz": "Juda yaxshi! Men qo'y go'shtini yaxshi ko'raman."
     },
     {
      "sprecher": "Thomas",
-     "de": "Auch Champignons. Und was trinkst du?",
-     "uz": "Qo'ziqorin ham. Nima ichasan?"
+     "de": "Und was trinkst du?",
+     "uz": "Nima ichasan?"
     },
     {
      "sprecher": "Mia",
@@ -430,13 +472,18 @@
     },
     {
      "sprecher": "Thomas",
-     "de": "Ja, Apfelschorle und Wasser. Hier, bitte!",
-     "uz": "Ha, gazli olma sharbati ham, suv ham bor. Mana, marhamat!"
+     "de": "Ja, hier, bitte! Und das Hähnchen ist fertig.",
+     "uz": "Ha, mana, marhamat! Tovuq go'shti ham tayyor."
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Danke! Hm, das Hähnchen ist sehr lecker!",
+     "uz": "Rahmat! Hm, tovuq go'shti juda mazali!"
     }
    ],
    "fragen": [
-    { "frageDe": "Was grillt Thomas noch?", "frageUz": "Thomas mangalda yana nima pishiradi?", "richtig": "Champignons", "falsch": ["Kartoffeln", "Fisch"] },
-    { "frageDe": "Was trinkt Mia?", "frageUz": "Mia nima ichadi?", "richtig": "Apfelschorle", "falsch": ["Cola", "Kaffee"] }
+    { "frageDe": "Was trinkt Mia?", "frageUz": "Mia nima ichadi?", "richtig": "Apfelschorle", "falsch": ["Cola", "Tee"] },
+    { "frageDe": "Was ist fertig?", "frageUz": "Nima tayyor?", "richtig": "das Hähnchen", "falsch": ["die Suppe", "der Kaffee"] }
    ]
   }
  ]

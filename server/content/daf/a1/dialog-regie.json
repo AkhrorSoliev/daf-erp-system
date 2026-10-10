@@ -207,68 +207,72 @@
     ]
   },
   "u04-d1": {
-    "szene": "Jonas und Mia stehen am Morgen in der Küche und schauen, was sie zu Hause haben.",
+    "szene": "Ein lauter Wochenmarkt am Vormittag. Helga sucht mit ihrer Tochter Mia Melonen; Mia geht ein paar Schritte voraus.",
     "toene": [
       "curious",
-      "friendly",
-      "curious",
-      "apologetic",
-      "surprised",
-      "reassuring"
+      "searching",
+      "disappointed",
+      "calling excitedly",
+      "delighted",
+      "cheerful",
+      "decisive",
+      "happy"
     ]
   },
   "u04-d2": {
-    "szene": "Helga und Mia gehen über einen Markt; an einem Stand liegen Früchte aus Usbekistan.",
+    "szene": "Am Abend in der Küche. Jonas schneidet Gemüse für einen Salat, Mia kommt herein.",
     "toene": [
       "curious",
-      "cheerful",
-      "surprised",
-      "proud",
+      "busy and friendly",
       "curious",
-      "amused",
-      "impressed"
+      "apologetic",
+      "helpful",
+      "pleased",
+      "friendly",
+      "satisfied"
     ]
   },
   "u04-d3": {
-    "szene": "Jonas kauft im Supermarkt ein und spricht an der Kasse mit der Kassiererin Sabine.",
+    "szene": "Im Supermarkt an der Kasse. Jonas kauft ein, die Kassiererin Sabine scannt die Waren.",
     "toene": [
       "friendly",
       "polite",
-      "pleased",
       "polite",
-      "shocked",
-      "persuasive",
+      "surprised",
+      "helpful",
       "decisive",
-      "friendly"
+      "polite",
+      "cheerful"
     ]
   },
   "u04-d4": {
-    "szene": "Thomas und Mia sitzen in der Mittagspause zusammen und reden über Essen.",
+    "szene": "Mittagspause auf der Straße vor dem Büro. Thomas und Mia überlegen, was sie essen.",
     "toene": [
-      "curious",
-      "cheerful",
-      "curious",
-      "firm",
+      "hungry",
+      "thinking",
       "friendly",
-      "cheerful",
-      "laughing"
+      "hesitant",
+      "reassuring",
+      "pleased",
+      "curious",
+      "friendly"
     ]
   },
   "u04-d5": {
-    "szene": "Mia und Jonas frühstücken am Morgen in der Küche; ihre kleine Tochter Lena isst mit.",
+    "szene": "Morgens in einer Wohnung. Mia ist im Schlafzimmer und ruft von weitem; Jonas steht in der Küche am Kühlschrank. Dann kommt Mia in die Küche, geht zur Bäckerei und kommt nach einer Weile mit frischen Brötchen zurück.",
     "toene": [
-      "warm",
-      "sleepy",
-      "cheerful",
+      "calling from another room",
+      "calling out loudly",
+      "calling from another room surprised",
+      "calling back loudly",
+      "calm and practical",
       "pleased",
-      "warm",
-      "curious",
       "cheerful",
-      "warm"
+      "happy"
     ]
   },
   "u04-d6": {
-    "szene": "Thomas und Julia essen am Abend im Restaurant; die Kellnerin Claudia bedient sie.",
+    "szene": "Am Abend in einem gemütlichen Restaurant. Thomas und Julia sitzen am Tisch, die Kellnerin Claudia kommt.",
     "toene": [
       "polite",
       "friendly",
@@ -281,40 +285,42 @@
     ]
   },
   "u04-d7": {
-    "szene": "Jonas und seine Schwiegermutter Helga sitzen in einem Café; Jonas möchte bezahlen.",
+    "szene": "In einem Café am Nachmittag. Jonas und seine Schwiegermutter Helga sind fertig; beide wollen bezahlen.",
     "toene": [
       "polite",
+      "insisting",
+      "firm but warm",
+      "polite",
+      "polite",
       "polite",
       "generous",
-      "grateful",
-      "polite",
-      "generous",
-      "cheerful"
+      "laughing"
     ]
   },
   "u04-d8": {
-    "szene": "Helga besucht Mia in der Küche; Mia kocht ein Gericht aus Usbekistan.",
+    "szene": "In Mias Küche am Nachmittag. Mia möchte für ihre Mutter Helga ein Gericht aus Usbekistan kochen.",
     "toene": [
-      "curious",
-      "proud",
-      "interested",
-      "explaining",
+      "excited",
       "curious",
       "explaining",
+      "worried",
+      "alarmed",
       "helpful",
-      "grateful"
+      "proud",
+      "delighted"
     ]
   },
   "u04-d9": {
-    "szene": "Thomas grillt im Garten für seine Freunde; Mia kommt zur Grillparty.",
+    "szene": "Eine Grillparty in Thomas’ Garten am Abend. Thomas steht am Grill, Mia kommt an.",
     "toene": [
       "cheerful",
-      "happy",
+      "friendly",
       "reassuring",
-      "grateful",
+      "happy",
       "friendly",
       "polite",
-      "cheerful"
+      "cheerful",
+      "delighted"
     ]
   }
 }
