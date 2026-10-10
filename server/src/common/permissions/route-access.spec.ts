@@ -4,8 +4,12 @@ describe('accessSummary', () => {
   it('writes a public route and an any-account route the snapshot way', () => {
     expect(accessSummary({ kind: 'public' })).toBe('PUBLIC');
     expect(accessSummary({ kind: 'anyUser' })).toBe('ANY');
-    // A legacy route with no @Roles admitted any signed-in account.
-    expect(accessSummary({ kind: 'none' })).toBe('ANY');
+  });
+
+  it('writes an unmarked route as NONE, which no snapshot row equals', () => {
+    // PermissionGuard refuses a route with no marker; summarising it as 'ANY'
+    // would let the equivalence row of a forgotten route pass.
+    expect(accessSummary({ kind: 'none' })).toBe('NONE');
   });
 
   it('lists the student and the five staff roles', () => {
@@ -17,15 +21,6 @@ describe('accessSummary', () => {
       'Cashier',
       'Teacher',
     ]);
-  });
-
-  it('sorts a legacy @Roles list and drops repeats', () => {
-    expect(
-      accessSummary({
-        kind: 'roles',
-        roles: ['CEO', 'Branch Director', 'CEO'],
-      }),
-    ).toEqual(['Branch Director', 'CEO']);
   });
 
   it('turns capabilities into the CEO plus the union of their defaults', () => {

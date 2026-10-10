@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ROLE_ID } from '../auth/role-ids';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { BLOCKED_ACCOUNT_MESSAGE } from '../guards/jwt-auth.guard';
 import { ACCESS_KEY, RouteAccessMeta } from './access.decorators';
 import { CallerAccess, PermissionsService } from './permissions.service';
 
@@ -25,7 +26,7 @@ export function allows(access: RouteAccessMeta, caller: CallerAccess): boolean {
   switch (access.kind) {
     case 'anyUser':
       // forUser() gives a blocked, archived or deleted account no role at all;
-      // every live account (a student included) holds at least one.
+      // every account that can sign in holds at least one role (a student too).
       return caller.roleIds.length > 0;
     case 'anyStaff':
       return caller.roleIds.some((id) => STAFF_ROLE_IDS.includes(id));
@@ -43,8 +44,10 @@ export function allows(access: RouteAccessMeta, caller: CallerAccess): boolean {
  * 1. Replace `request.user.roles` with the roles the DATABASE holds now, so
  *    every later check — `@CurrentUser('roles')`, branch scope, rank rules —
  *    sees the account as it is, not as it was when the token was signed.
- * 2. Check the route's marker (`@Can`, `@AnyStaff`, `@AnyUser`,
- *    `@StudentOnly`) against the caller's capabilities.
+ * 2. Refuse an account that holds no role (blocked, archived, deleted) with
+ *    `JwtAuthGuard`'s blocked message, then check the route's marker (`@Can`,
+ *    `@AnyStaff`, `@AnyUser`, `@StudentOnly`) against the caller's
+ *    capabilities.
  */
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -69,6 +72,10 @@ export class PermissionGuard implements CanActivate {
 
     const caller = await this.permissions.forUser(user.id);
     user.roles = [...caller.roleNames];
+    // No role at all = blocked, archived or deleted: say so, not «no permission».
+    if (caller.roleIds.length === 0) {
+      throw new ForbiddenException(BLOCKED_ACCOUNT_MESSAGE);
+    }
 
     const access = this.reflector.getAllAndOverride<
       RouteAccessMeta | undefined

@@ -83,11 +83,20 @@ describe('PermissionGuard', () => {
     );
   });
 
-  it('refuses @AnyUser to an account that holds no role (blocked)', async () => {
-    // forUser() answers with no role for a blocked, archived or deleted account.
-    const { context } = contextFor({ access: { kind: 'anyUser' } }, { id: 7 });
-    await expect(guardFor([]).canActivate(context)).rejects.toThrow(
-      ForbiddenException,
+  it('tells a blocked account so, on @AnyUser and on @Can routes alike', async () => {
+    // forUser() answers with no role for a blocked, archived or deleted
+    // account; the message is JwtAuthGuard's, not «no permission».
+    const blocked = new ForbiddenException('Hisobingiz bloklangan');
+    const anyUser = contextFor({ access: { kind: 'anyUser' } }, { id: 7 });
+    await expect(guardFor([]).canActivate(anyUser.context)).rejects.toThrow(
+      blocked,
+    );
+    const can = contextFor(
+      { access: { kind: 'can', keys: ['expenses.view'] } },
+      { id: 8 },
+    );
+    await expect(guardFor([]).canActivate(can.context)).rejects.toThrow(
+      blocked,
     );
   });
 

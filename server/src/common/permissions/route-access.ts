@@ -3,17 +3,17 @@ import { PERMISSIONS, PermissionDef } from './permission-catalog';
 
 /**
  * What a route admits by default, written the way `@Roles(...)` used to say
- * it: `'PUBLIC'`, `'ANY'` (any signed-in account) or a sorted list of role
- * names. The equivalence spec compares this with the snapshot of `main` taken
- * before the conversion (`route-access.snapshot.json`).
+ * it: `'PUBLIC'`, `'ANY'` (any signed-in account), `'NONE'` (no marker at all:
+ * `PermissionGuard` refuses it, and no snapshot row ever says so) or a sorted
+ * list of role names. The equivalence spec compares this with the snapshot of
+ * `main` taken before the conversion (`route-access.snapshot.json`).
  */
-export type AccessSummary = 'PUBLIC' | 'ANY' | string[];
+export type AccessSummary = 'PUBLIC' | 'ANY' | 'NONE' | string[];
 
 /** The shape both the route inventory and the decorator metadata share. */
 export interface AccessLike {
   kind: string;
   keys?: readonly string[];
-  roles?: readonly string[];
 }
 
 export const STAFF_ROLE_NAMES = [
@@ -29,14 +29,13 @@ export function accessSummary(access: AccessLike): AccessSummary {
     case 'public':
       return 'PUBLIC';
     case 'anyUser':
-    case 'none':
       return 'ANY';
+    case 'none':
+      return 'NONE';
     case 'student':
       return ['Student'];
     case 'anyStaff':
       return [...STAFF_ROLE_NAMES];
-    case 'roles':
-      return [...new Set(access.roles ?? [])].sort();
     case 'can': {
       const names = new Set<string>(['CEO']);
       for (const key of access.keys ?? []) {

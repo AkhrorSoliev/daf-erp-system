@@ -241,7 +241,7 @@ When a **Branch Director** accesses data, the backend must automatically filter 
 
 When adding a role-restricted feature:
 
-1. **Backend:** give the route one marker — `@Can('key')` for an action, `@AnyStaff()` for reference data or the caller's own data, `@AnyUser()` for any signed-in account, `@StudentOnly()` for the student portal. A new action reuses a capability or adds one to the catalog (Uzbek label, section, default roles, `requires`). Add the route's row to `route-access.snapshot.json`.
+1. **Backend:** give the route one marker — `@Can('key')` for an action, `@AnyStaff()` for reference data or the caller's own data, `@AnyUser()` for any signed-in account that is not blocked, `@StudentOnly()` for the student portal. A new action reuses a capability or adds one to the catalog (Uzbek label, section, default roles, `requires`). Add the route's row to `route-access.snapshot.json`.
 2. **Backend:** if a Branch Director or an Administrator may call it, scope the data by branch in the service.
 3. **Frontend:** hide what the user may not use with `useCan('key')` (or `CanLink` for a link to a page).
 4. **Docs:** update this file's default tables.

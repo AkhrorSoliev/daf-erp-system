@@ -107,12 +107,21 @@ function firstStringArg(d: ts.Decorator): string {
   return first && ts.isStringLiteral(first) ? first.text : '';
 }
 
+/**
+ * The arguments of an access decorator, all of which must be string literals.
+ * Skipping one (`@Can('a', KEYS.B)` read as `['a']`) would make the snapshot
+ * comparison under-report what the guard admits at runtime (a ∪ B) — the one
+ * way the «nothing changed» proof can lie — so anything else throws.
+ */
 function stringArgs(d: ts.Decorator): string[] {
-  const args = decoratorArgs(d);
-  if (!args) return [];
   const out: string[] = [];
-  for (const a of args) {
-    if (ts.isStringLiteral(a)) out.push(a.text);
+  for (const a of decoratorArgs(d) ?? []) {
+    if (!ts.isStringLiteral(a)) {
+      throw new Error(
+        `Unsupported @${decoratorName(d)} argument in ${d.getSourceFile().fileName}: ${a.getText()}`,
+      );
+    }
+    out.push(a.text);
   }
   return out;
 }
@@ -127,6 +136,7 @@ function accessOf(decorators: readonly ts.Decorator[]): {
     .filter((n): n is string => n !== null && ACCESS_DECORATORS.includes(n));
   const dec = decorators.find((d) => markers.includes(decoratorName(d) ?? ''));
   if (!dec) return { access: null, markers };
+  const keys = stringArgs(dec);
   switch (decoratorName(dec)) {
     case 'AnyUser':
       return { access: { kind: 'anyUser' }, markers };
@@ -136,7 +146,7 @@ function accessOf(decorators: readonly ts.Decorator[]): {
       return { access: { kind: 'student' }, markers };
     case 'Can':
     default:
-      return { access: { kind: 'can', keys: stringArgs(dec) }, markers };
+      return { access: { kind: 'can', keys }, markers };
   }
 }
 
@@ -145,6 +155,80 @@ function joinPath(prefix: string, sub: string): string {
     .flatMap((p) => p.split('/'))
     .filter((p) => p.length > 0);
   return '/' + parts.join('/');
+}
+
+/** The routes one controller file declares (the source text is passed in so a spec can feed it a snippet). */
+export function routesInSource(
+  file: string,
+  text: string,
+  repoRoot: string,
+): DiscoveredRoute[] {
+  const routes: DiscoveredRoute[] = [];
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+
+  for (const stmt of source.statements) {
+    if (!ts.isClassDeclaration(stmt)) continue;
+
+    const classDecorators = decoratorsOf(stmt);
+    const controllerDec = classDecorators.find(
+      (d) => decoratorName(d) === 'Controller',
+    );
+    if (!controllerDec) continue;
+
+    const prefix = firstStringArg(controllerDec);
+    const classPublic = classDecorators.some(
+      (d) => decoratorName(d) === 'Public',
+    );
+    const classAccess = accessOf(classDecorators);
+    const controllerName = stmt.name?.text ?? '(anonymous)';
+
+    for (const member of stmt.members) {
+      if (!ts.isMethodDeclaration(member)) continue;
+
+      const memberDecorators = decoratorsOf(member);
+      const memberAccess = accessOf(memberDecorators);
+      const isPublic =
+        classPublic ||
+        memberDecorators.some((d) => decoratorName(d) === 'Public');
+
+      // A handler's parameters carry `@BranchScope()`.
+      const hasBranchScope = member.parameters.some((p) =>
+        decoratorsOf(p).some((d) => decoratorName(d) === 'BranchScope'),
+      );
+
+      for (const dec of memberDecorators) {
+        const name = decoratorName(dec);
+        const method = name ? METHOD_DECORATORS[name] : undefined;
+        if (!method) continue;
+
+        const path = joinPath(prefix, firstStringArg(dec));
+        routes.push({
+          key: `${method} ${path}`,
+          method,
+          path,
+          controller: controllerName,
+          handler:
+            member.name && ts.isIdentifier(member.name)
+              ? member.name.text
+              : '?',
+          file: file.startsWith(repoRoot)
+            ? file.slice(repoRoot.length + 1)
+            : file,
+          hasBranchScope,
+          isPublic,
+          access: isPublic
+            ? { kind: 'public' }
+            : (memberAccess.access ?? classAccess.access ?? { kind: 'none' }),
+          accessMarkers: {
+            handler: memberAccess.markers,
+            controller: classAccess.markers,
+          },
+        });
+      }
+    }
+  }
+
+  return routes;
 }
 
 /**
@@ -159,78 +243,9 @@ export function discoverRoutes(
   srcDir: string,
   repoRoot: string,
 ): DiscoveredRoute[] {
-  const routes: DiscoveredRoute[] = [];
-
-  for (const file of listFiles(srcDir)) {
-    const source = ts.createSourceFile(
-      file,
-      readFileSync(file, 'utf8'),
-      ts.ScriptTarget.Latest,
-      true,
-    );
-
-    for (const stmt of source.statements) {
-      if (!ts.isClassDeclaration(stmt)) continue;
-
-      const classDecorators = decoratorsOf(stmt);
-      const controllerDec = classDecorators.find(
-        (d) => decoratorName(d) === 'Controller',
-      );
-      if (!controllerDec) continue;
-
-      const prefix = firstStringArg(controllerDec);
-      const classPublic = classDecorators.some(
-        (d) => decoratorName(d) === 'Public',
-      );
-      const classAccess = accessOf(classDecorators);
-      const controllerName = stmt.name?.text ?? '(anonymous)';
-
-      for (const member of stmt.members) {
-        if (!ts.isMethodDeclaration(member)) continue;
-
-        const memberDecorators = decoratorsOf(member);
-        const memberAccess = accessOf(memberDecorators);
-        const isPublic =
-          classPublic ||
-          memberDecorators.some((d) => decoratorName(d) === 'Public');
-
-        // A handler's parameters carry `@BranchScope()`.
-        const hasBranchScope = member.parameters.some((p) =>
-          decoratorsOf(p).some((d) => decoratorName(d) === 'BranchScope'),
-        );
-
-        for (const dec of memberDecorators) {
-          const name = decoratorName(dec);
-          const method = name ? METHOD_DECORATORS[name] : undefined;
-          if (!method) continue;
-
-          const path = joinPath(prefix, firstStringArg(dec));
-          routes.push({
-            key: `${method} ${path}`,
-            method,
-            path,
-            controller: controllerName,
-            handler:
-              member.name && ts.isIdentifier(member.name)
-                ? member.name.text
-                : '?',
-            file: file.startsWith(repoRoot)
-              ? file.slice(repoRoot.length + 1)
-              : file,
-            hasBranchScope,
-            isPublic,
-            access: isPublic
-              ? { kind: 'public' }
-              : (memberAccess.access ?? classAccess.access ?? { kind: 'none' }),
-            accessMarkers: {
-              handler: memberAccess.markers,
-              controller: classAccess.markers,
-            },
-          });
-        }
-      }
-    }
-  }
+  const routes = listFiles(srcDir).flatMap((file) =>
+    routesInSource(file, readFileSync(file, 'utf8'), repoRoot),
+  );
 
   // Deterministic order so a diff of the manifest is readable.
   return routes.sort((a, b) => a.key.localeCompare(b.key));
