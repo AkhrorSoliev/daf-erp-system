@@ -7,7 +7,7 @@ import {
 
 const none = new Set<string>();
 
-describe('bank days (ADR-0075)', () => {
+describe('bank days (ADR-0076)', () => {
   it('Saturday, Sunday and a holiday are not bank days', () => {
     expect(isBankDay('2026-10-10', none)).toBe(false); // Saturday
     expect(isBankDay('2026-10-11', none)).toBe(false); // Sunday

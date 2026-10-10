@@ -481,7 +481,7 @@ describe('RefundsEligibilityService', () => {
     expect(billing.prepaidRefundValue).toHaveBeenCalled();
   });
 
-  describe('the due date (ADR-0075)', () => {
+  describe('the due date (ADR-0076)', () => {
     beforeEach(() => {
       jest.useFakeTimers({
         doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
@@ -520,7 +520,7 @@ describe('RefundsEligibilityService', () => {
     );
   });
 
-  describe('findAll — the history list (ADR-0075)', () => {
+  describe('findAll — the history list (ADR-0076)', () => {
     const ROW = {
       id: 'r-1',
       status: 'COMPLETED',

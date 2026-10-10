@@ -66,7 +66,7 @@ const q = (over: Partial<RefundableQueryDto> = {}) =>
 const emptyScope = (where: any) =>
   where.branches?.some?.branchId?.in?.length === 0;
 
-describe('RefundableService (ADR-0075)', () => {
+describe('RefundableService (ADR-0076)', () => {
   let service: RefundableService;
   let prisma: any;
 

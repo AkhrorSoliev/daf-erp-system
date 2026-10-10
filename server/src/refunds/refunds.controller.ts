@@ -48,7 +48,7 @@ export class RefundsController {
   }
 
   /**
-   * History page (ADR-0075): `?status=COMPLETED,REJECTED&page&pageSize`. Read by
+   * History page (ADR-0076): `?status=COMPLETED,REJECTED&page&pageSize`. Read by
    * the Cashier too. Was company-wide: a Namangan director read every Fargona
    * refund, with the student's name and the amount on each row.
    */
@@ -62,7 +62,7 @@ export class RefundsController {
     return this.refundsService.findAll(companyId, scope, q);
   }
 
-  /** «Berildi» — the money leaves the chosen drawer (ADR-0075). */
+  /** «Berildi» — the money leaves the chosen drawer (ADR-0076). */
   @Post(':id/hand-over')
   @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   handOver(
@@ -74,7 +74,7 @@ export class RefundsController {
     return this.refundsService.handOver(id, dto, userId, companyId);
   }
 
-  /** «Bekor qilish» of a request not yet handed over (ADR-0075). */
+  /** «Bekor qilish» of a request not yet handed over (ADR-0076). */
   @Post(':id/cancel')
   @Roles('CEO', 'Branch Director')
   cancel(

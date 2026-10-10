@@ -25,7 +25,7 @@ export class QuickRefundDto {
   @Min(1)
   amount: number;
 
-  // Ignored since ADR-0075: the method is the drawer's, chosen at hand-over.
+  // Ignored since ADR-0076: the method is the drawer's, chosen at hand-over.
   // Still accepted so a dialog opened before the deploy keeps working.
   @IsOptional()
   @IsEnum(PaymentMethod)

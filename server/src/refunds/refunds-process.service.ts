@@ -38,7 +38,7 @@ export class RefundsProcessService {
   ) {}
 
   /**
-   * «Berildi» (ADR-0075): the money leaves the chosen drawer of the student's
+   * «Berildi» (ADR-0076): the money leaves the chosen drawer of the student's
    * branch. The balance already went to 0 at the request; this writes only the
    * cash movement (linked to the request's REFUND row, so `reverse` unwinds
    * it), closes the request and makes the receipt available.
@@ -138,7 +138,7 @@ export class RefundsProcessService {
   }
 
   /**
-   * «Bekor qilish» (ADR-0075): a request not yet handed over is undone — the
+   * «Bekor qilish» (ADR-0076): a request not yet handed over is undone — the
    * REFUND row and the release adjustment are reversed (balance and lessons
    * back) and the request becomes REJECTED. The pair counts in neither month
    * (ADR-0058).

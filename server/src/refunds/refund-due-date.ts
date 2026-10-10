@@ -7,7 +7,7 @@ import {
 
 /**
  * When a refund opened now must be handed over: the 10th bank day after today,
- * with the holidays of the student's branch (ADR-0075). 'YYYY-MM-DD'.
+ * with the holidays of the student's branch (ADR-0076). 'YYYY-MM-DD'.
  */
 export async function refundDueDate(
   db: HolidayDateSetDb,

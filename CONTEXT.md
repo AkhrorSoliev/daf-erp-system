@@ -250,8 +250,15 @@ kurs narxi. Bo'luvchi — `course.lessonPaymentCount || 12`.
 
 **Pul qaytarish (refund)** — faqat ikki manbadan moliyalanadi: erkin balans va
 `prepaidLessonsRemaining`. O'tilgan darsga ketgan pul qaytmaydi. Qaytarish
-oldindan to'langan darsni **bekor qiladi**.
+oldindan to'langan darsni **bekor qiladi**. ADR-0076 dan beri **so'rov**: balans
+so'rov kuni kamayadi, pul kassadan «Berildi»da chiqadi, muddat — 10 **bank kuni**
+(dushanba–juma, filial bayramlari sanalmaydi).
 `refunds/refunds-create.service.ts`
+
+**Xabar (balance notice)** — o'qimayotgan o'quvchiga «pulingizni olib keting»
+deyilgani (bot yoki qo'ng'iroq). Faqat hozirgi holatida berilgani hisoblanadi; markaz
+hisobiga o'tkazish undan 10 bank kuni va yana 30 kun o'tgach ochiladi.
+`balance-notices/transfer-condition.ts`
 
 **«Bu pul ketdi» (payment destination)** — ma'lum bir to'lov qayerga sarflanganini
 ko'rsatadi. Ledger'ga **langarlanadi**, qayta qurilmaydi; reversal filtri va

@@ -29,7 +29,7 @@
 - **Branch rules:** reads take `@BranchScope()` (header; listed nowhere in the route manifest — see Spec conflicts 1); id-addressed writes check the student's branch with `assertCallerMayWriteForStudent` (returns the branch id); `[]` = nothing, `null` = every branch; another branch's student on a detail read is ADR-0063's named 404.
 - Every new or changed `@Roles` gets a controller guard spec.
 - **Commits:** one per task, tests passing, English message ending with the line `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Never `git stash`, never `git reset --hard`, never force-push. `git add` only the paths a task names.
-- **ADR-0075 is written in this PR** (Task 9). Before pushing, re-check `docs/adr/README.md` on `main` for a colliding 0075 and renumber with `git mv` if needed.
+- **ADR-0076 is written in this PR** (Task 9). Before pushing, re-check `docs/adr/README.md` on `main` for a colliding 0076 and renumber with `git mv` if needed (it was 0075 until main took that number for the contract document).
 - Rollout (not a task here): the migration (Task 2) ships with the server; the old client's «Muzlatilganlarning puli» page stops working when `GET /payments/frozen-balances` is deleted, so the two halves deploy together, on the CEO's go-ahead, never across the 02:00 / 03:10 / 04:00 crons or at 23:00.
 
 ---
@@ -55,7 +55,7 @@
 17. **Excel:** pending sheet = every `REQUESTED` refund in scope; the three student sheets = every row of the tab, with the active search applied; no age chip, no paging.
 18. **Notice needs a positive balance** (400 «O'quvchi hisobida pul yo'q»): there is nothing to tell, and `amount` would be 0. The note is trimmed and optional for both channels.
 19. **A failed bot send leaves its SMS log row** (SmsService always logs the attempt, as on the «SMS» tab) but writes no notice.
-20. **The bot notice goes out at once** through `SmsService.sendToStudent` (a staff-pressed button, like the manual SMS); recorded in ADR-0075 as an addition to ADR-0025's instant list. `src/telegram-digest/direct-send.guard.spec.ts` needs no change (no new `.sendMessage(` caller).
+20. **The bot notice goes out at once** through `SmsService.sendToStudent` (a staff-pressed button, like the manual SMS); recorded in ADR-0076 as an addition to ADR-0025's instant list. `src/telegram-digest/direct-send.guard.spec.ts` needs no change (no new `.sendMessage(` caller).
 21. **`transferTerm(noticeDay, holidays) → { termEnds, allowedFrom }`** is the one implementation of the spec's `transferAllowedFrom`; the preview, the drawer, the withdrawal refusal and the bot text all read it.
 22. **Withdrawal preview and the drawer carry the same `transfer: TransferState`** object (`notice`, `termEnds`, `allowedFrom`, `allowed`, `refusal` — the exact 400 text `POST /withdrawals` would answer), nested rather than spread, so the client renders one shape in both places.
 23. **«Telegram bot ulangan»** = `telegramChatId` set AND `telegramDisconnectedAt` null (ADR-0066's reachable chat).
@@ -97,7 +97,7 @@
 | `server/src/payments/{payments-frozen-balance.service.ts,payments-frozen-balance.service.spec.ts,dto/frozen-balances-query.dto.ts}` | deleted | 8 |
 | `server/src/payments/{payments.controller.ts,payments.controller.spec.ts,payments.service.ts,payments.service.spec.ts,payments.module.ts,payments.branch-isolation.spec.ts}` | frozen route out | 8 |
 | `server/src/statements/present-statement.ts` (+spec) | «pul qaytarish» | 9 |
-| `docs/adr/0075-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md`, `docs/adr/README.md`, `server/CLAUDE.md`, `docs/role-access.md`, `docs/financial-system.md`, `CONTEXT.md` | docs | 9 |
+| `docs/adr/0076-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md`, `docs/adr/README.md`, `server/CLAUDE.md`, `docs/role-access.md`, `docs/financial-system.md`, `CONTEXT.md` | docs | 9 |
 
 ---
 
@@ -133,7 +133,7 @@ import {
 
 const none = new Set<string>();
 
-describe('bank days (ADR-0075)', () => {
+describe('bank days (ADR-0076)', () => {
   it('Saturday, Sunday and a holiday are not bank days', () => {
     expect(isBankDay('2026-10-10', none)).toBe(false); // Saturday
     expect(isBankDay('2026-10-11', none)).toBe(false); // Sunday
@@ -232,7 +232,7 @@ Expected: FAIL — `Cannot find module './bank-days'` and `termHolidays is not a
 import { addDaysToDateStr, dayOfWeekForDateStr } from './tashkent';
 
 /**
- * Bank days (ADR-0075): Monday–Friday, not a holiday of the student's branch.
+ * Bank days (ADR-0076): Monday–Friday, not a holiday of the student's branch.
  * The centre's holiday table stands in for the bank calendar; transferred
  * working Saturdays are not modelled. Pure: the caller loads `holidays`
  * (`termHolidays`).
@@ -290,7 +290,7 @@ export const TERM_HOLIDAY_HORIZON_DAYS = 120;
 
 /**
  * The holidays a bank-day term starting on `fromDateStr` can cross: the
- * branch's own and the company-wide ones (ADR-0075). `branchId` null reads
+ * branch's own and the company-wide ones (ADR-0076). `branchId` null reads
  * every branch's — only a branch-less card gets there, and money paths refuse
  * those before.
  */
@@ -345,7 +345,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: Edit `model Refund`** — insert after the line `dueDate          DateTime?` inside `model Refund`:
 
 ```prisma
-  // B2b (ADR-0075): a refund is a request until the money is handed over.
+  // B2b (ADR-0076): a refund is a request until the money is handed over.
   // `dueDate` above is the 10th bank day after the request, 00:00 Tashkent.
   requestedById    Int?
   requestedBy      User?          @relation("RefundRequestedBy", fields: [requestedById], references: [id])
@@ -394,7 +394,7 @@ enum BalanceNoticeChannel {
 /// «Pulingizni olib keting» — told to a student who is not studying and has
 /// money on the balance. The latest one given in the student's current state
 /// (`createdAt ≥ Student.statusChangedAt`) starts the clock that unlocks the
-/// transfer to the centre: 10 bank days, then 30 days (ADR-0075).
+/// transfer to the centre: 10 bank days, then 30 days (ADR-0076).
 model BalanceNotice {
   id           String               @id @default(uuid())
   studentId    Int
@@ -418,7 +418,7 @@ model BalanceNotice {
 - [ ] **Step 4: Write the migration** — `server/prisma/migrations/20261010180000_b2b_refund_request_balance_notice/migration.sql`:
 
 ```sql
--- B2b (ADR-0075): a refund is a request until the money is handed over, and a
+-- B2b (ADR-0076): a refund is a request until the money is handed over, and a
 -- balance notice starts the clock for moving unclaimed money to the centre.
 -- Every new column is nullable: the existing refunds stay as they are.
 
@@ -580,7 +580,7 @@ and in the providers `{ provide: EntityHistoryService, useValue: history }`.
 (d) add a new describe at the end of the outer describe:
 
 ```ts
-  describe('the request (ADR-0075)', () => {
+  describe('the request (ADR-0076)', () => {
     beforeEach(() => {
       jest.useFakeTimers({
         doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
@@ -674,7 +674,7 @@ In `server/src/refunds/refunds-eligibility.service.spec.ts` add to the `prisma` 
 and append:
 
 ```ts
-  describe('the due date (ADR-0075)', () => {
+  describe('the due date (ADR-0076)', () => {
     beforeEach(() => {
       jest.useFakeTimers({
         doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
@@ -718,7 +718,7 @@ In `server/src/transactions/transactions-write.service.spec.ts` replace the `rec
 
 ```ts
   describe('recordRefund', () => {
-    it('stamps the branch and moves no cash — the drawer is touched at hand-over (ADR-0075)', async () => {
+    it('stamps the branch and moves no cash — the drawer is touched at hand-over (ADR-0076)', async () => {
       await service.recordRefund({
         studentId: STUDENT,
         amount: 50_000,
@@ -759,7 +759,7 @@ import {
 
 /**
  * When a refund opened now must be handed over: the 10th bank day after today,
- * with the holidays of the student's branch (ADR-0075). 'YYYY-MM-DD'.
+ * with the holidays of the student's branch (ADR-0076). 'YYYY-MM-DD'.
  */
 export async function refundDueDate(
   db: HolidayDateSetDb,
@@ -832,7 +832,7 @@ In `quickRefund`, replace the head (from `await assertCallerMayWriteForStudent(`
 In BOTH duplicate guards replace `status: RefundStatus.COMPLETED,` with:
 
 ```ts
-        // An open request is as much a duplicate as a payout (ADR-0075).
+        // An open request is as much a duplicate as a payout (ADR-0076).
         status: { in: [RefundStatus.REQUESTED, RefundStatus.COMPLETED] },
 ```
 
@@ -860,7 +860,7 @@ The enrollment path's `tx.refund.create` data becomes:
             lessonsCompleted: lessonsAttended,
             totalLessons,
             deductions,
-            // ADR-0075: a request. The money leaves the drawer and the method
+            // ADR-0076: a request. The money leaves the drawer and the method
             // is known only at hand-over (`RefundsProcessService.handOver`).
             status: RefundStatus.REQUESTED,
             reason: dto.reason,
@@ -921,12 +921,12 @@ its history `newValues`:
 
 and it returns `return refundView(refundRow);`.
 
-Update the method's doc comment first paragraph to: «Opens a refund request (ADR-0075). The admin types the amount; the money comes off the balance now (ledger REFUND row), leaves the branch drawer only at «Berildi» (`RefundsProcessService.handOver`), and is due on the 10th bank day.» — keep the funding paragraphs below it.
+Update the method's doc comment first paragraph to: «Opens a refund request (ADR-0076). The admin types the amount; the money comes off the balance now (ledger REFUND row), leaves the branch drawer only at «Berildi» (`RefundsProcessService.handOver`), and is due on the 10th bank day.» — keep the funding paragraphs below it.
 
 - [ ] **Step 5: `QuickRefundDto.refundMethod` becomes optional**
 
 ```ts
-  // Ignored since ADR-0075: the method is the drawer's, chosen at hand-over.
+  // Ignored since ADR-0076: the method is the drawer's, chosen at hand-over.
   // Still accepted so a dialog opened before the deploy keeps working.
   @IsOptional()
   @IsEnum(PaymentMethod)
@@ -945,7 +945,7 @@ import { refundDueDate } from './refund-due-date';
 Add `RefundStatus.REQUESTED` first in both `priorRefunds` status lists. Add the private helper:
 
 ```ts
-  /** The due date a request opened now would get (ADR-0075). */
+  /** The due date a request opened now would get (ADR-0076). */
   private async dueDateFor(studentId: number, companyId: number) {
     return refundDueDate(
       this.prisma,
@@ -961,7 +961,7 @@ and add `dueDate: await this.dueDateFor(studentId, companyId),` as the last fiel
 In `transactions-write.service.ts` `recordRefund`: change both `description: 'Pul qaytarildi'` occurrences to the single ledger one `description: 'Pul qaytarish',`, and replace the `await this.cashMovements.recordOutflow(…)` block (with its comment) by:
 
 ```ts
-      // No cash moves here (ADR-0075): a refund is a request until «Berildi»,
+      // No cash moves here (ADR-0076): a refund is a request until «Berildi»,
       // and the hand-over writes the drawer's movement against this row.
 ```
 
@@ -971,7 +971,7 @@ Change the `CASH_FLOW_TYPES` comment's last sentence to: «REFUND's movement is 
 
 ```ts
 export const REFUND_TRANSITIONS: Record<RefundStatus, RefundStatus[]> = {
-  // ADR-0075: a request is handed over or cancelled. APPROVED and PROCESSING
+  // ADR-0076: a request is handed over or cancelled. APPROVED and PROCESSING
   // stay in the enum for old rows and are never written.
   REQUESTED: [RefundStatus.COMPLETED, RefundStatus.REJECTED],
   APPROVED: [],
@@ -1068,7 +1068,7 @@ const row = (over: Record<string, unknown> = {}) =>
   }) as never;
 
 describe('toRefundHistoryRow', () => {
-  it('a refund paid out before ADR-0075 shows its processedAt as «Berildi»', () => {
+  it('a refund paid out before ADR-0076 shows its processedAt as «Berildi»', () => {
     const out = toRefundHistoryRow(
       row({
         processedAt: new Date('2026-09-20T07:00:00Z'),
@@ -1142,7 +1142,7 @@ const CEO = {
   roles: [{ role: { name: 'CEO' } }],
 };
 
-/** «Berildi» and «Bekor qilish» on a refund request (ADR-0075). */
+/** «Berildi» and «Bekor qilish» on a refund request (ADR-0076). */
 describe('RefundsProcessService — hand-over and cancel', () => {
   let service: RefundsProcessService;
   let prisma: any;
@@ -1501,7 +1501,7 @@ In `server/src/refunds/refunds.controller.spec.ts` append inside the describe:
 In `server/src/refunds/refunds-eligibility.service.spec.ts` append:
 
 ```ts
-  describe('findAll — the history list (ADR-0075)', () => {
+  describe('findAll — the history list (ADR-0076)', () => {
     const ROW = {
       id: 'r-1',
       status: 'COMPLETED',
@@ -1674,7 +1674,7 @@ const person = (u: { id: number; firstName: string; lastName: string } | null) =
   u ? { id: u.id, name: `${u.firstName} ${u.lastName}`.trim() } : null;
 
 /**
- * One history line. A refund paid out before ADR-0075 was handed over on the
+ * One history line. A refund paid out before ADR-0076 was handed over on the
  * spot, so its `processedAt` / `processedBy` stand for «Berildi».
  */
 export function toRefundHistoryRow(r: RefundHistoryFact): RefundHistoryRow {
@@ -1745,7 +1745,7 @@ export class RefundsProcessService {
   ) {}
 
   /**
-   * «Berildi» (ADR-0075): the money leaves the chosen drawer of the student's
+   * «Berildi» (ADR-0076): the money leaves the chosen drawer of the student's
    * branch. The balance already went to 0 at the request; this writes only the
    * cash movement (linked to the request's REFUND row, so `reverse` unwinds
    * it), closes the request and makes the receipt available.
@@ -1840,7 +1840,7 @@ export class RefundsProcessService {
   }
 
   /**
-   * «Bekor qilish» (ADR-0075): a request not yet handed over is undone — the
+   * «Bekor qilish» (ADR-0076): a request not yet handed over is undone — the
    * REFUND row and the release adjustment are reversed (balance and lessons
    * back) and the request becomes REJECTED. The pair counts in neither month
    * (ADR-0058).
@@ -2031,7 +2031,7 @@ export class RefundsProcessService {
 }
 ```
 
-- [ ] **Step 6: `findAll` becomes the history list** — in `refunds-eligibility.service.ts` replace `findAll` (keep its doc comment's branch paragraph, add «paged; `status` filters by a list (ADR-0075)») with:
+- [ ] **Step 6: `findAll` becomes the history list** — in `refunds-eligibility.service.ts` replace `findAll` (keep its doc comment's branch paragraph, add «paged; `status` filters by a list (ADR-0076)») with:
 
 ```ts
   async findAll(
@@ -2080,7 +2080,7 @@ and change `findAll` to `findAll(companyId: number, branchIds: ReportBranchIds, 
 `refunds.controller.ts` — replace the `findAll` handler and add two handlers (imports: `HandOverRefundDto`, `CancelRefundDto`, `RefundListQueryDto`):
 
 ```ts
-  /** History page (ADR-0075): `?status=COMPLETED,REJECTED&page&pageSize`. Read by the Cashier too. */
+  /** History page (ADR-0076): `?status=COMPLETED,REJECTED&page&pageSize`. Read by the Cashier too. */
   @Get()
   @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   findAll(
@@ -2091,7 +2091,7 @@ and change `findAll` to `findAll(companyId: number, branchIds: ReportBranchIds, 
     return this.refundsService.findAll(companyId, scope, q);
   }
 
-  /** «Berildi» — the money leaves the chosen drawer (ADR-0075). */
+  /** «Berildi» — the money leaves the chosen drawer (ADR-0076). */
   @Post(':id/hand-over')
   @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
   handOver(
@@ -2103,7 +2103,7 @@ and change `findAll` to `findAll(companyId: number, branchIds: ReportBranchIds, 
     return this.refundsService.handOver(id, dto, userId, companyId);
   }
 
-  /** «Bekor qilish» of a request not yet handed over (ADR-0075). */
+  /** «Bekor qilish» of a request not yet handed over (ADR-0076). */
   @Post(':id/cancel')
   @Roles('CEO', 'Branch Director')
   cancel(
@@ -2201,7 +2201,7 @@ import {
 
 const none = new Set<string>();
 
-describe('transfer condition (ADR-0075)', () => {
+describe('transfer condition (ADR-0076)', () => {
   describe('latestValidNotice', () => {
     const notice = { createdAt: new Date('2026-10-10T07:00:00Z'), channel: 'BOT' as const };
 
@@ -2308,7 +2308,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SmsService } from '../sms/sms.service';
 import { EntityHistoryService } from '../common/entity-history';
 
-describe('BalanceNoticesService (ADR-0075)', () => {
+describe('BalanceNoticesService (ADR-0076)', () => {
   let service: BalanceNoticesService;
   let prisma: any;
   let sms: { sendToStudent: jest.Mock };
@@ -2533,7 +2533,7 @@ import { addDaysToDateStr, tashkentDateStr } from '../common/date/tashkent';
 import { dm } from '../statements/statement-text';
 
 /**
- * «Markaz hisobiga o'tkazish» opens only after the student was told (ADR-0075):
+ * «Markaz hisobiga o'tkazish» opens only after the student was told (ADR-0076):
  * the notice starts the 10-bank-day refund term, then the contract's 30 days.
  * Pure — `loadTransferState` reads the notice and the holidays.
  */
@@ -2767,7 +2767,7 @@ export class BalanceNoticesService {
   ) {}
 
   /**
-   * «Xabar berish» (ADR-0075). BOT: the pinned text goes out at once through
+   * «Xabar berish» (ADR-0076). BOT: the pinned text goes out at once through
    * the student's SMS log; only a delivered message writes the notice. CALL:
    * the staff member called and marks it. Either starts the transfer clock.
    */
@@ -2862,7 +2862,7 @@ import { RolesGuard } from '../common/guards';
 import { BalanceNoticesService } from './balance-notices.service';
 import { CreateBalanceNoticeDto } from './dto/create-balance-notice.dto';
 
-/** «Xabar berish» from the «Qaytariladigan pul» drawer (ADR-0075). Not for the Cashier. */
+/** «Xabar berish» from the «Qaytariladigan pul» drawer (ADR-0076). Not for the Cashier. */
 @Controller('students')
 @UseGuards(RolesGuard)
 @Roles('CEO', 'Branch Director', 'Administrator')
@@ -2952,7 +2952,7 @@ In `withdrawals.service.spec.ts`: add `statusChangedAt: new Date('2026-01-01T07:
 Append:
 
 ```ts
-  describe('the transfer condition (ADR-0075)', () => {
+  describe('the transfer condition (ADR-0076)', () => {
     const create = () =>
       service.create(
         { studentId: 10001, amount: 100_000, creditTeacher: false },
@@ -3036,7 +3036,7 @@ import { loadTransferState } from '../balance-notices/load-transfer-state';
 `preview`: add `statusChangedAt: true` to the student `select`, and before the `return`:
 
 ```ts
-    // The lock every withdrawal dialog shows before anything is typed (ADR-0075).
+    // The lock every withdrawal dialog shows before anything is typed (ADR-0076).
     const transfer = await loadTransferState(
       this.prisma,
       student,
@@ -3051,13 +3051,13 @@ and add `transfer,` as the last field of the returned object.
 
 ```ts
     // The money goes to the centre only after the student was told and the
-    // term passed: notice + 10 bank days + 30 days (ADR-0075). Every
+    // term passed: notice + 10 bank days + 30 days (ADR-0076). Every
     // withdrawal, the profile's «Yechib olish» included.
     const transfer = await loadTransferState(this.prisma, student, branchId, new Date());
     if (!transfer.allowed) throw new BadRequestException(transfer.refusal);
 ```
 
-Add to the `create` doc comment: «Refused until the transfer condition holds (ADR-0075).»
+Add to the `create` doc comment: «Refused until the transfer condition holds (ADR-0076).»
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -3139,7 +3139,7 @@ const student = (over: Partial<RefundableStudentFact> = {}): RefundableStudentFa
   ...over,
 });
 
-describe('refundable math (ADR-0075)', () => {
+describe('refundable math (ADR-0076)', () => {
   it("ADR-0067's kinds: FROZEN, ungrouped ACTIVE, anything else", () => {
     expect(refundableTab('FROZEN')).toBe('muzlatilgan');
     expect(refundableTab('ACTIVE')).toBe('guruhsiz');
@@ -3308,7 +3308,7 @@ import {
 } from '../balance-notices/transfer-condition';
 import { dm } from '../statements/statement-text';
 
-/** «Qaytariladigan pul» (spec B2b §3, ADR-0075). Pure. */
+/** «Qaytariladigan pul» (spec B2b §3, ADR-0076). Pure. */
 
 export type RefundableTab = 'muzlatilgan' | 'guruhsiz' | 'ketgan';
 export const REFUNDABLE_TABS: readonly RefundableTab[] = [
@@ -3623,7 +3623,7 @@ const q = (over: Partial<RefundableQueryDto> = {}) =>
   ({ tab: 'muzlatilgan', page: 1, pageSize: 20, pendingPage: 1, pendingPageSize: 10, ...over }) as RefundableQueryDto;
 const emptyScope = (where: any) => where.branches?.some?.branchId?.in?.length === 0;
 
-describe('RefundableService (ADR-0075)', () => {
+describe('RefundableService (ADR-0076)', () => {
   let service: RefundableService;
   let prisma: any;
 
@@ -4183,7 +4183,7 @@ export interface RefundableDrawer {
 }
 
 /**
- * «Qaytariladigan pul» (spec B2b §3, ADR-0075): the money of students who are
+ * «Qaytariladigan pul» (spec B2b §3, ADR-0076): the money of students who are
  * not studying, by ADR-0067's kinds, and the open refund requests. Every row
  * of every tab is built in one batch (three queries) — the totals, the chips,
  * the pages and the Excel are cut from it.
@@ -4487,7 +4487,7 @@ import { RefundableService } from './refundable.service';
 import { RefundableQueryDto } from './dto/refundable-query.dto';
 
 /**
- * «Qaytariladigan pul» reads (spec B2b §3, ADR-0075). Every staff role but
+ * «Qaytariladigan pul» reads (spec B2b §3, ADR-0076). Every staff role but
  * Teacher reads; the writes keep their own gates. Scope: the header branch.
  */
 @Controller('refundable')
@@ -4579,11 +4579,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 9: Statement label, ADR-0075, docs
+### Task 9: Statement label, ADR-0076, docs
 
 **Files:**
 - Modify: `server/src/statements/present-statement.ts`, `server/src/statements/present-statement.spec.ts`
-- Create: `docs/adr/0075-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md`
+- Create: `docs/adr/0076-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md`
 - Modify: `docs/adr/README.md`, `server/CLAUDE.md`, `docs/role-access.md`, `docs/financial-system.md`, `CONTEXT.md`
 
 **Interfaces:**
@@ -4600,7 +4600,7 @@ Expected: FAIL — received «Sizga naqd qaytarib berildi (25.09)».
 - [ ] **Step 3: Implement** — in `present-statement.ts`:
 
 ```ts
-  // ADR-0075: at the request the money has not been handed over yet, and it
+  // ADR-0076: at the request the money has not been handed over yet, and it
   // may leave by card — so neither «naqd» nor «berildi».
   refund: { student: 'pul qaytarish', admin: 'pul qaytarish' },
 ```
@@ -4610,10 +4610,10 @@ Expected: FAIL — received «Sizga naqd qaytarib berildi (25.09)».
 Run: `cd server && npx jest src/statements`
 Expected: PASS.
 
-- [ ] **Step 5: Write ADR-0075** — `docs/adr/0075-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md`:
+- [ ] **Step 5: Write ADR-0076** — `docs/adr/0076-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md`:
 
 ```markdown
-# ADR-0075 — Pul qaytarish so'rov bilan: balans so'rov kuni 0, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin
+# ADR-0076 — Pul qaytarish so'rov bilan: balans so'rov kuni 0, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-10
@@ -4697,10 +4697,10 @@ shartsiz ochiq edi.
   «Yechib olish»ni ham to'xtatadi.
 ```
 
-- [ ] **Step 6: Index row** — in `docs/adr/README.md`, after the `[0074]` row:
+- [ ] **Step 6: Index row** — in `docs/adr/README.md`, after the `[0075]` row (main took 0075 for the contract document; this ADR is 0076):
 
 ```markdown
-| [0075](0075-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md) | Pul qaytarish so'rov bilan: balans so'rov kuni 0, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin ochiladi | Qabul qilindi | 2026-10-10 |
+| [0076](0076-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md) | Pul qaytarish so'rov bilan: balans so'rov kuni 0, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin ochiladi | Qabul qilindi | 2026-10-10 |
 ```
 
 - [ ] **Step 7: `server/CLAUDE.md`** — four edits:
@@ -4711,7 +4711,7 @@ with:
 
 ```markdown
 - **Endpoints**: `GET /refunds/preview/:studentId` (+ `dueDate`), `POST /refunds/quick` (opens a request), `POST /refunds/:id/hand-over` («Berildi», Cashier too), `POST /refunds/:id/cancel` (CEO/BD), `GET /refunds` (history, `?status=` list, paged, Cashier too), `POST /refunds/:id/reverse` (CEO-only)
-- **A refund is a request first (ADR-0075).** `quickRefund` writes `REQUESTED` with `requestedById` and `dueDate` = the 10th bank day after today (`refundDueDate`: `addBankDays` from `common/date/bank-days.ts` over `termHolidays` of the student's branch), releases prepaid lessons as before and calls `recordRefund` — the REFUND ledger row and the balance, **no `CashMovement`** (`recordRefund` writes none any more). «Berildi» (`RefundsProcessService.handOver`) re-reads the row in a Serializable transaction, refuses anything but `REQUESTED` (409 «So'rov allaqachon yopilgan»), writes the OUTFLOW from the chosen account of the student's branch against the REFUND row, sets `COMPLETED`, `handedOverAt/By`, `cashAccountId`, `refundMethod` (CASH account → CASH, else TRANSFER) and `processedAt/By`; the receipt opens only then. `cancel` (reason required) reverses the REFUND row and the release ADJUSTMENT and gives the lessons back (`unwindLedger`, shared with `reverse`), then `REJECTED` + `cancelledAt/By/cancelReason`. History: `PUL_QAYTARISH_SOROVI`, `PUL_QAYTARIB_BERILDI`, `PUL_QAYTARISH_BEKOR_QILINDI`. Ledger readers see the refund on the request day; the cash drawer on the hand-over day. `Refund.dueDate` is stored as 00:00 Tashkent and sent as `'YYYY-MM-DD'` (`refundView`).
+- **A refund is a request first (ADR-0076).** `quickRefund` writes `REQUESTED` with `requestedById` and `dueDate` = the 10th bank day after today (`refundDueDate`: `addBankDays` from `common/date/bank-days.ts` over `termHolidays` of the student's branch), releases prepaid lessons as before and calls `recordRefund` — the REFUND ledger row and the balance, **no `CashMovement`** (`recordRefund` writes none any more). «Berildi» (`RefundsProcessService.handOver`) re-reads the row in a Serializable transaction, refuses anything but `REQUESTED` (409 «So'rov allaqachon yopilgan»), writes the OUTFLOW from the chosen account of the student's branch against the REFUND row, sets `COMPLETED`, `handedOverAt/By`, `cashAccountId`, `refundMethod` (CASH account → CASH, else TRANSFER) and `processedAt/By`; the receipt opens only then. `cancel` (reason required) reverses the REFUND row and the release ADJUSTMENT and gives the lessons back (`unwindLedger`, shared with `reverse`), then `REJECTED` + `cancelledAt/By/cancelReason`. History: `PUL_QAYTARISH_SOROVI`, `PUL_QAYTARIB_BERILDI`, `PUL_QAYTARISH_BEKOR_QILINDI`. Ledger readers see the refund on the request day; the cash drawer on the hand-over day. `Refund.dueDate` is stored as 00:00 Tashkent and sent as `'YYYY-MM-DD'` (`refundView`).
 ```
 
 (b) Replace
@@ -4726,7 +4726,7 @@ with
 with:
 
 ```markdown
-- **Status transitions**: `REQUESTED → [COMPLETED, REJECTED]` (ADR-0075). `APPROVED` and `PROCESSING` stay in the enum for old rows and are never written; `PATCH /refunds/:id/process` is deleted.
+- **Status transitions**: `REQUESTED → [COMPLETED, REJECTED]` (ADR-0076). `APPROVED` and `PROCESSING` stay in the enum for old rows and are never written; `PATCH /refunds/:id/process` is deleted.
 - Reverse CEO-only, for a COMPLETED refund (ledger + the hand-over cash movement); contract stays REFUNDED (manual re-open if needed). A request is cancelled, not reversed.
 ```
 
@@ -4737,13 +4737,13 @@ with
 and after its `- **Endpoints**: \`GET /withdrawals/preview/:studentId\`, \`POST /withdrawals\`` line add:
 
 ```markdown
-- **Transfer condition (ADR-0075)**: `create` refuses (400) unless the student's latest **valid** balance notice (`BalanceNotice`, `createdAt ≥ Student.statusChangedAt`) exists and today (Tashkent) ≥ notice + 10 bank days + 30 days (`transferTerm`, `balance-notices/transfer-condition.ts`). The refusal texts are the spec's; `loadTransferState` is the one reader (create, preview's `transfer`, the refundable drawer). Every withdrawal, the profile's «Yechib olish» included. Notices: `POST /students/:id/balance-notices` (CEO/BD/Admin) — `BOT` sends the CEO-approved text (`balance-notice-text.ts`, pinned by a test) at once through `SmsService` and writes the notice only when it was delivered; `CALL` marks a phone call.
+- **Transfer condition (ADR-0076)**: `create` refuses (400) unless the student's latest **valid** balance notice (`BalanceNotice`, `createdAt ≥ Student.statusChangedAt`) exists and today (Tashkent) ≥ notice + 10 bank days + 30 days (`transferTerm`, `balance-notices/transfer-condition.ts`). The refusal texts are the spec's; `loadTransferState` is the one reader (create, preview's `transfer`, the refundable drawer). Every withdrawal, the profile's «Yechib olish» included. Notices: `POST /students/:id/balance-notices` (CEO/BD/Admin) — `BOT` sends the CEO-approved text (`balance-notice-text.ts`, pinned by a test) at once through `SmsService` and writes the notice only when it was delivered; `CALL` marks a phone call.
 ```
 
 (e) In «Key access rules», replace
 `and no «Muzlatilganlarning puli» row actions (\`POST /withdrawals\`, \`POST /refunds/quick\`)`
 with
-`and, on «Qaytariladigan pul» (\`GET /refundable/*\`, \`GET /refunds\`, ADR-0075), no request, notice or transfer (\`POST /refunds/quick\`, \`POST /students/:id/balance-notices\`, \`POST /withdrawals\`) — but «Berildi» (\`POST /refunds/:id/hand-over\`)`.
+`and, on «Qaytariladigan pul» (\`GET /refundable/*\`, \`GET /refunds\`, ADR-0076), no request, notice or transfer (\`POST /refunds/quick\`, \`POST /students/:id/balance-notices\`, \`POST /withdrawals\`) — but «Berildi» (\`POST /refunds/:id/hand-over\`)`.
 
 (f) In the «RBAC for Financial Features» table replace the row `| Create refund                                    | ✅  | ✅  |  ✅   |   ❌    |   ❌    |` with:
 
@@ -4758,19 +4758,19 @@ with
 - [ ] **Step 8: `docs/role-access.md`** — replace the rows `| Create refund (one step, \`POST /refunds/quick\`) | Yes | Yes | Yes | No | No |` and `| Process a legacy refund request (\`PATCH /refunds/:id/process\`, no screen) | Yes | Yes | Yes | No | No |` with:
 
 ```markdown
-| Open refund request (`POST /refunds/quick`, ADR-0075) | Yes | Yes | Yes | No | No |
+| Open refund request (`POST /refunds/quick`, ADR-0076) | Yes | Yes | Yes | No | No |
 | Hand refund over («Berildi», `POST /refunds/:id/hand-over`) | Yes | Yes | Yes | No | Yes |
 | Cancel refund request (`POST /refunds/:id/cancel`) | Yes | Yes | No | No | No |
 | Give balance notice (`POST /students/:id/balance-notices`) | Yes | Yes | Yes | No | No |
 | «Qaytariladigan pul» page and refund history (`GET /refundable/*`, `GET /refunds`) | Yes | Own branch | Own branch | No | Own branch |
 ```
 
-In the «Debt page» paragraph replace `and the three linked pages (debt history, write-off archive, frozen balances)` with `and the two linked pages (debt history, write-off archive); frozen balances moved to «Qaytariladigan pul» (ADR-0075)`, and delete the row `| Move a frozen balance (to the center / back to the student) | Yes | Yes | Yes | No | No |`.
+In the «Debt page» paragraph replace `and the three linked pages (debt history, write-off archive, frozen balances)` with `and the two linked pages (debt history, write-off archive); frozen balances moved to «Qaytariladigan pul» (ADR-0076)`, and delete the row `| Move a frozen balance (to the center / back to the student) | Yes | Yes | Yes | No | No |`.
 
-- [ ] **Step 9: `docs/financial-system.md`** — (a) the `Refund` table row `| status | RefundStatus | Yangi refund darhol \`COMPLETED\`; \`REQUESTED\`/\`APPROVED\` faqat eski qatorlarda |` becomes `| status | RefundStatus | \`REQUESTED\` (so'rov) → \`COMPLETED\` («Berildi») yoki \`REJECTED\` (bekor qilindi), ADR-0075; \`APPROVED\`/\`PROCESSING\` yozilmaydi |`; (b) the paragraph starting `**Status:** \`quickRefund\` \`COMPLETED\` ni darhol yozadi.` becomes:
+- [ ] **Step 9: `docs/financial-system.md`** — (a) the `Refund` table row `| status | RefundStatus | Yangi refund darhol \`COMPLETED\`; \`REQUESTED\`/\`APPROVED\` faqat eski qatorlarda |` becomes `| status | RefundStatus | \`REQUESTED\` (so'rov) → \`COMPLETED\` («Berildi») yoki \`REJECTED\` (bekor qilindi), ADR-0076; \`APPROVED\`/\`PROCESSING\` yozilmaydi |`; (b) the paragraph starting `**Status:** \`quickRefund\` \`COMPLETED\` ni darhol yozadi.` becomes:
 
 ```markdown
-**Status (ADR-0075):** `quickRefund` so'rov ochadi (`REQUESTED`): balans darhol kamayadi, kassa harakati yo'q, muddat — 10 bank kuni (`dueDate`). «Berildi» (`POST /refunds/:id/hand-over`) kassadan chiqimni yozadi va `COMPLETED` qiladi; `POST /refunds/:id/cancel` (CEO, filial direktori) pul va darslarni qaytarib `REJECTED` qiladi. `PATCH /refunds/:id/process` o'chirilgan.
+**Status (ADR-0076):** `quickRefund` so'rov ochadi (`REQUESTED`): balans darhol kamayadi, kassa harakati yo'q, muddat — 10 bank kuni (`dueDate`). «Berildi» (`POST /refunds/:id/hand-over`) kassadan chiqimni yozadi va `COMPLETED` qiladi; `POST /refunds/:id/cancel` (CEO, filial direktori) pul va darslarni qaytarib `REJECTED` qiladi. `PATCH /refunds/:id/process` o'chirilgan.
 ```
 
 (c) In «4.5 Refunds» replace the table rows for `/api/refunds/quick`, `/api/refunds` and `/api/refunds/:id/process` with:
@@ -4795,7 +4795,7 @@ In the «Debt page» paragraph replace `and the three linked pages (debt history
 ```markdown
 **Pul qaytarish (refund)** — faqat ikki manbadan moliyalanadi: erkin balans va
 `prepaidLessonsRemaining`. O'tilgan darsga ketgan pul qaytmaydi. Qaytarish
-oldindan to'langan darsni **bekor qiladi**. ADR-0075 dan beri **so'rov**: balans
+oldindan to'langan darsni **bekor qiladi**. ADR-0076 dan beri **so'rov**: balans
 so'rov kuni kamayadi, pul kassadan «Berildi»da chiqadi, muddat — 10 **bank kuni**
 (dushanba–juma, filial bayramlari sanalmaydi).
 `refunds/refunds-create.service.ts`
@@ -4814,8 +4814,8 @@ Expected: all green.
 - [ ] **Step 12: Commit**
 
 ```bash
-git add server/src/statements/present-statement.ts server/src/statements/present-statement.spec.ts docs/adr/0075-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md docs/adr/README.md server/CLAUDE.md docs/role-access.md docs/financial-system.md CONTEXT.md
-git commit -m "docs(refunds): ADR-0075, statement label and docs for refund requests
+git add server/src/statements/present-statement.ts server/src/statements/present-statement.spec.ts docs/adr/0076-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md docs/adr/README.md server/CLAUDE.md docs/role-access.md docs/financial-system.md CONTEXT.md
+git commit -m "docs(refunds): ADR-0076, statement label and docs for refund requests
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -4999,7 +4999,7 @@ All routes under `/api`. Dates: `'YYYY-MM-DD'` = a Tashkent day; ISO strings = i
 | §6 migration | 2 |
 | §7 modules, route manifest | 3, 4, 5, 8 (Spec conflict 1) |
 | §9 tests | every task |
-| ADR-0075, server/CLAUDE.md | 9 |
+| ADR-0076, server/CLAUDE.md | 9 |
 
 
 ---
@@ -7176,7 +7176,7 @@ const TAB_DOT: Record<RefundableTab, string> = { muzlatilgan: "bg-amber-500", gu
 const AGE_CHIPS: ("" | AgeBucket)[] = ["", ...AGE_BUCKETS];
 
 /**
- * «Qaytariladigan pul» (spec B2b §3, ADR-0075): the money of students who are not
+ * «Qaytariladigan pul» (spec B2b §3, ADR-0076): the money of students who are not
  * studying, in three tabs, and the open refund requests. Every figure is the
  * server's; the summary is the one place the three tabs are added (money held).
  */
@@ -7908,7 +7908,7 @@ EOF
 - Test: existing `client/src/qollanma/*.test.ts` (registry, search, roles, route match)
 
 **Interfaces:**
-- Consumes: routes from Tasks 14–15 (`/payments/refunds`, `/payments/refunds/history` — the registry test checks a `page.tsx` exists for every `yollar` pattern); ADR number from server Task 9 (`0075`; if it was renumbered on `main`, use that number everywhere below).
+- Consumes: routes from Tasks 14–15 (`/payments/refunds`, `/payments/refunds/history` — the registry test checks a `page.tsx` exists for every `yollar` pattern); ADR number from server Task 9 (`0076`; if it was renumbered on `main`, use that number everywhere below).
 - Produces: guide page `tolovlar/qaytariladigan-pul`; news entry; updated `pul-qaytarish`, `qarzdorlik`, `rollar-va-huquqlar`, `lugat`.
 
 - [ ] **Step 1: Add the registry entry first (the registry test then fails on the missing MDX)**
@@ -7923,7 +7923,7 @@ In `client/src/qollanma/sahifalar/tolovlar.ts`, append a new object after the «
     qisqacha:
       "«Qaytariladigan pul» sahifasi o'qimayotgan o'quvchilarning balansida qolgan pulini uch bo'limda (muzlatilganlar, guruhsiz, ketganlar) va ochiq pulni qaytarish so'rovlarini ko'rsatadi. Bu yerda pul berilgani belgilanadi («Berildi»), o'quvchiga xabar beriladi va shart bajarilgach pul markaz hisobiga o'tkaziladi.",
     rollar: [1, 2, 3, 5],
-    adr: ["0067", "0075"],
+    adr: ["0067", "0076"],
     yollar: ["/payments/refunds", "/payments/refunds/history"],
     kalitSozlar: [
       "qaytariladigan pul",
@@ -7955,7 +7955,7 @@ In the same file:
     qisqacha:
       "Pulni qaytarish so'rov bilan: «So'rovni ochish» bosilganda balans darhol kamayadi, pul 10 bank kuni ichida kassadan beriladi va «Berildi» bilan belgilanadi; berilmagan so'rovni CEO yoki filial direktori bekor qiladi. «Yechib olish» balansdagi pulni o'quvchiga bermay markaz hisobiga o'tkazadi (yechib olingan oyning foydasiga) — faqat o'quvchiga xabar berilib, 10 bank kuni va yana 30 kun o'tgach.",
     rollar: [1, 2, 3, 5],
-    adr: ["0055", "0058", "0075"],
+    adr: ["0055", "0058", "0076"],
 ```
 
   in its `kalitSozlar` replace the line `      "qaytarish usuli",` with
@@ -8339,7 +8339,7 @@ with
 
 ```
 | `/payments/debt-history`, `/payments/debt-write-offs` | `debt/debt-subpage.tsx` + the existing views | Real pages again (B2a): the month-by-month history and the write-off archive, each with «← Qarzdorlik». `/payments/debtors` still redirects to `/payments/debt`; `/payments/frozen-balances` redirects to `/payments/refunds?tab=muzlatilgan` (B2b). |
-| `/payments/refunds` | `refunds/refunds-page.tsx` | **«Qaytariladigan pul» (spec B2b, ADR-0075).** One request, `GET /refundable/list` (`refunds-queries.ts`); URL `REFUNDS_SCHEMA`: `tab=muzlatilgan|guruhsiz|ketgan`, `age=upto30|d31to60|over60` (Muzlatilganlar only), `search`, `page`/`pageSize` (20), `pendingPage`/`pendingPageSize` (10). «Bugungi holat · dd.MM» and «Excel» (`GET /refundable/excel?search=`). The summary «O'qimayotganlarning markazda turgan puli» is the one place the three tabs are added (money held). «Kutilayotgan qaytarishlar»: every `REQUESTED` refund, the pill from the server's `due` (`duePill`: «N bank kuni qoldi», amber at ≤ 2, «bugun oxirgi kun», «muddati o'tdi · N bank kuni»), «Berildi» (`REFUND_HAND_OVER_ROLES`, Cashier included; drawers from the list's `cashAccounts` of the row's branch, because `GET /cash-accounts` is CEO/BD-only) and «Bekor qilish» (`REFUND_CANCEL_ROLES`, required reason) in `refunds/pending-dialogs.tsx`. Tab buttons with the server's totals; `refunds-tables.tsx` prints «Xabar» from the latest valid notice. Row click opens `refundable-drawer.tsx` (`GET /refundable/students/:id`): facts, then «Nima qilish mumkin» for `REFUND_REQUEST_ROLES` only — «Qaytdi» (`ChangeStatusDialog` with `initialStatus="ACTIVE"`), «Guruhga qo'shish» (`EnrollToGroupDialog` with the student's branch), the refund dialog, «Xabar berish» (the server's `noticePreview`, never composed on the client; `POST /students/:id/balance-notices`) and «Markaz hisobiga o'tkazish» (locked with the server's `transfer.refusal`, `transfer-note.tsx`). The drawer closes before any dialog opens. Every mutation runs `invalidateRefunds` (list, drawer, history, `financial-overview`, `student-payments`, debt keys), never optimistic. |
+| `/payments/refunds` | `refunds/refunds-page.tsx` | **«Qaytariladigan pul» (spec B2b, ADR-0076).** One request, `GET /refundable/list` (`refunds-queries.ts`); URL `REFUNDS_SCHEMA`: `tab=muzlatilgan|guruhsiz|ketgan`, `age=upto30|d31to60|over60` (Muzlatilganlar only), `search`, `page`/`pageSize` (20), `pendingPage`/`pendingPageSize` (10). «Bugungi holat · dd.MM» and «Excel» (`GET /refundable/excel?search=`). The summary «O'qimayotganlarning markazda turgan puli» is the one place the three tabs are added (money held). «Kutilayotgan qaytarishlar»: every `REQUESTED` refund, the pill from the server's `due` (`duePill`: «N bank kuni qoldi», amber at ≤ 2, «bugun oxirgi kun», «muddati o'tdi · N bank kuni»), «Berildi» (`REFUND_HAND_OVER_ROLES`, Cashier included; drawers from the list's `cashAccounts` of the row's branch, because `GET /cash-accounts` is CEO/BD-only) and «Bekor qilish» (`REFUND_CANCEL_ROLES`, required reason) in `refunds/pending-dialogs.tsx`. Tab buttons with the server's totals; `refunds-tables.tsx` prints «Xabar» from the latest valid notice. Row click opens `refundable-drawer.tsx` (`GET /refundable/students/:id`): facts, then «Nima qilish mumkin» for `REFUND_REQUEST_ROLES` only — «Qaytdi» (`ChangeStatusDialog` with `initialStatus="ACTIVE"`), «Guruhga qo'shish» (`EnrollToGroupDialog` with the student's branch), the refund dialog, «Xabar berish» (the server's `noticePreview`, never composed on the client; `POST /students/:id/balance-notices`) and «Markaz hisobiga o'tkazish» (locked with the server's `transfer.refusal`, `transfer-note.tsx`). The drawer closes before any dialog opens. Every mutation runs `invalidateRefunds` (list, drawer, history, `financial-overview`, `student-payments`, debt keys), never optimistic. |
 | `/payments/refunds/history` | `refunds/refund-history-page.tsx` | `GET /refunds?status=COMPLETED,REJECTED`, newest request first, `?page=&pageSize=` (10). «Berildi» = «dd.MM · naqd|karta» or the «bekor qilindi» pill with the reason in a tooltip; «← Qaytariladigan pul». |
 ```
 
@@ -8402,5 +8402,5 @@ Expected: every test file passes, tsc prints nothing, eslint reports `0 errors` 
 
 None — every client need is in the API contract. Two notes for the reviewer:
 
-- **Spec gap, not a contract gap: a studying student can never be given a notice.** The notice buttons live only in the drawer, and the drawer opens only from the list of non-studying students; the profile has no «Xabar berish». Because §5.2 applies to every withdrawal, the profile's «Yechib olish» stays locked forever for a student who is studying. Proposal: accept it (a studying student's balance is next month's money, spec §3.2) and say so in ADR-0075; if the CEO wants it, add «Xabar berish» to the profile's «To'lov» menu later, reusing `NoticeOption`.
+- **Spec gap, not a contract gap: a studying student can never be given a notice.** The notice buttons live only in the drawer, and the drawer opens only from the list of non-studying students; the profile has no «Xabar berish». Because §5.2 applies to every withdrawal, the profile's «Yechib olish» stays locked forever for a student who is studying. Proposal: accept it (a studying student's balance is next month's money, spec §3.2) and say so in ADR-0076; if the CEO wants it, add «Xabar berish» to the profile's «To'lov» menu later, reusing `NoticeOption`.
 - **The client relies on `chips` being the frozen tab's counts on every tab** (the «Muzlatilganlar» button's «N tasi 30 kundan oshgan» shows on all tabs). The server plan's `RefundableService.list` already computes them from every row, whatever `tab` is; keep it that way.

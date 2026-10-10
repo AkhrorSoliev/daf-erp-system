@@ -220,7 +220,7 @@ export class RefundsEligibilityService {
     };
   }
 
-  /** The due date a request opened now would get (ADR-0075). */
+  /** The due date a request opened now would get (ADR-0076). */
   private async dueDateFor(studentId: number, companyId: number) {
     return refundDueDate(
       this.prisma,
@@ -407,7 +407,7 @@ export class RefundsEligibilityService {
 
   /**
    * The refund history list, confined to the caller's branches; paged, and
-   * `status` filters by a list (ADR-0075).
+   * `status` filters by a list (ADR-0076).
    *
    * It was `where: { companyId }` alone — every refund in the company, with the
    * student's name, the amount and the group. A Namangan director opening

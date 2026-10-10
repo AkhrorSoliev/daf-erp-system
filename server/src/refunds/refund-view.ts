@@ -62,7 +62,7 @@ const person = (
 ) => (u ? { id: u.id, name: `${u.firstName} ${u.lastName}`.trim() } : null);
 
 /**
- * One history line. A refund paid out before ADR-0075 was handed over on the
+ * One history line. A refund paid out before ADR-0076 was handed over on the
  * spot, so its `processedAt` / `processedBy` stand for «Berildi».
  */
 export function toRefundHistoryRow(r: RefundHistoryFact): RefundHistoryRow {

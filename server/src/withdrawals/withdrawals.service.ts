@@ -99,7 +99,7 @@ export class WithdrawalsService {
       }
     }
 
-    // The lock every withdrawal dialog shows before anything is typed (ADR-0075).
+    // The lock every withdrawal dialog shows before anything is typed (ADR-0076).
     const transfer = await loadTransferState(
       this.prisma,
       student,
@@ -128,7 +128,7 @@ export class WithdrawalsService {
    * underlying lesson), dated the day of the withdrawal so it lands in the
    * open payroll period.
    *
-   * Refused until the transfer condition holds (ADR-0075).
+   * Refused until the transfer condition holds (ADR-0076).
    *
    * All writes happen in one Serializable transaction.
    */
@@ -155,7 +155,7 @@ export class WithdrawalsService {
     }
 
     // The money goes to the centre only after the student was told and the
-    // term passed: notice + 10 bank days + 30 days (ADR-0075). Every
+    // term passed: notice + 10 bank days + 30 days (ADR-0076). Every
     // withdrawal, the profile's «Yechib olish» included. The student's branch
     // decides the holidays, not the caller's.
     const transfer = await loadTransferState(

@@ -32,7 +32,7 @@ const row = (over: Record<string, unknown> = {}) =>
   }) as never;
 
 describe('toRefundHistoryRow', () => {
-  it('a refund paid out before ADR-0075 shows its processedAt as «Berildi»', () => {
+  it('a refund paid out before ADR-0076 shows its processedAt as «Berildi»', () => {
     const out = toRefundHistoryRow(
       row({
         processedAt: new Date('2026-09-20T07:00:00Z'),

@@ -176,7 +176,7 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 | lessonsCompleted | Int | O'tilgan darslar soni |
 | totalLessons | Int | Jami darslar |
 | deductions | Json? | Tafsilot: consumedFromLedger, lessonsObserved, perLessonCost, previousRefunds, tax, bankFee |
-| status | RefundStatus | Yangi refund darhol `COMPLETED`; `REQUESTED`/`APPROVED` faqat eski qatorlarda |
+| status | RefundStatus | `REQUESTED` (so'rov) → `COMPLETED` («Berildi») yoki `REJECTED` (bekor qilindi), ADR-0076; `APPROVED`/`PROCESSING` yozilmaydi |
 | refundMethod | PaymentMethod? | Qaytarish usuli |
 
 **Hisoblash qoidalari (`quickRefund`, bir qadam):**
@@ -184,7 +184,7 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 - `maxRefundable = max(0, balance + prepaidRefundValue(prepaidLessonsRemaining))`. Avval bo'sh balans olinadi, yetmasa eng kam sonli dars bekor qilinadi (`releasePrepaidLessons`: darslar puli `ADJUSTMENT` bilan balansga qaytadi va hisobchi o'sha qadamda kamayadi).
 - **«50%+ dars o'tilgan → qaytarish yo'q» qoidasi yo'q.** U sikl hajmiga (`lessonPaymentCount`) bo'linardi, kursga emas, shuning uchun olib tashlangan. Oylik kursdan ketishdagi 40% qoidasi — alohida qaror (ADR-0044).
 
-**Status:** `quickRefund` `COMPLETED` ni darhol yozadi. So'rov → tasdiq → to'lov oqimi (`POST /refunds`) o'chirilgan. Eski `REQUESTED`/`APPROVED` qatorlarni faqat `PATCH /refunds/:id/process` yopadi (ekrani yo'q).
+**Status (ADR-0076):** `quickRefund` so'rov ochadi (`REQUESTED`): balans darhol kamayadi, kassa harakati yo'q, muddat — 10 bank kuni (`dueDate`). «Berildi» (`POST /refunds/:id/hand-over`) kassadan chiqimni yozadi va `COMPLETED` qiladi; `POST /refunds/:id/cancel` (CEO, filial direktori) pul va darslarni qaytarib `REJECTED` qiladi. `PATCH /refunds/:id/process` o'chirilgan.
 
 #### Expense — Xarajatlar
 
@@ -358,9 +358,10 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | Method | Endpoint | Roles | Tavsif |
 |--------|----------|-------|--------|
 | `GET` | `/api/refunds/preview/:studentId` | CEO, BD, Admin | Qancha qaytarish mumkin (bo'sh balans + o'tilmagan darslar) |
-| `POST` | `/api/refunds/quick` | CEO, BD, Admin | Bir qadamda qaytarish — darhol `COMPLETED` |
-| `GET` | `/api/refunds` | CEO, BD, Admin | Ro'yxat (filial bo'yicha) |
-| `PATCH` | `/api/refunds/:id/process` | CEO, BD, Admin | Faqat eski `REQUESTED`/`APPROVED` qatorlar uchun; ekrani yo'q |
+| `POST` | `/api/refunds/quick` | CEO, BD, Admin | So'rov ochish — `REQUESTED`, muddat 10 bank kuni |
+| `POST` | `/api/refunds/:id/hand-over` | CEO, BD, Admin, Cashier | «Berildi» — kassadan chiqim, `COMPLETED` |
+| `POST` | `/api/refunds/:id/cancel` | CEO, BD | So'rovni bekor qilish — `REJECTED` |
+| `GET` | `/api/refunds` | CEO, BD, Admin, Cashier | Tarix (`?status=`, sahifali, filial bo'yicha) |
 | `POST` | `/api/refunds/:id/reverse` | **CEO** | Refundni bekor qilish |
 
 ### 4.6 Expenses — Xarajatlar
@@ -432,8 +433,10 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | Oylik tasdiqlash | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Oylik to'lash | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Hisoblash davrini boshqarish | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Refund yaratish | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Refund bekor qilish | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Pul qaytarish so'rovi | ✅ | ✅ | ✅ | ❌ | ❌ |
+| «Berildi» | ✅ | ✅ | ✅ | ✅ | ❌ |
+| So'rovni bekor qilish | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Berilgan refundni bekor qilish (reverse) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Xarajat yaratish | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Xarajat tahrirlash | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Moliyaviy hisobotlar | ✅ | ✅ | ❌ | ❌ | ❌ |

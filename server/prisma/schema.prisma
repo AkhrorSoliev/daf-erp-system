@@ -2838,7 +2838,7 @@ model Refund {
   processedBy      User?          @relation("RefundProcessedBy", fields: [processedById], references: [id])
   processedAt      DateTime?
   dueDate          DateTime?
-  // B2b (ADR-0075): a refund is a request until the money is handed over.
+  // B2b (ADR-0076): a refund is a request until the money is handed over.
   // `dueDate` above is the 10th bank day after the request, 00:00 Tashkent.
   requestedById    Int?
   requestedBy      User?          @relation("RefundRequestedBy", fields: [requestedById], references: [id])
@@ -2873,7 +2873,7 @@ enum BalanceNoticeChannel {
 /// «Pulingizni olib keting» — told to a student who is not studying and has
 /// money on the balance. The latest one given in the student's current state
 /// (`createdAt ≥ Student.statusChangedAt`) starts the clock that unlocks the
-/// transfer to the centre: 10 bank days, then 30 days (ADR-0075).
+/// transfer to the centre: 10 bank days, then 30 days (ADR-0076).
 model BalanceNotice {
   id           String               @id @default(uuid())
   studentId    Int

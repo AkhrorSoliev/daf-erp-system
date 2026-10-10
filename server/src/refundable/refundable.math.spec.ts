@@ -31,7 +31,7 @@ const student = (
   ...over,
 });
 
-describe('refundable math (ADR-0075)', () => {
+describe('refundable math (ADR-0076)', () => {
   it("ADR-0067's kinds: FROZEN, ungrouped ACTIVE, anything else", () => {
     expect(refundableTab('FROZEN')).toBe('muzlatilgan');
     expect(refundableTab('ACTIVE')).toBe('guruhsiz');

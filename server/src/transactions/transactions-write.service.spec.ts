@@ -107,7 +107,7 @@ describe('TransactionsWriteService — branch stamping', () => {
   });
 
   describe('recordRefund', () => {
-    it('stamps the branch and moves no cash — the drawer is touched at hand-over (ADR-0075)', async () => {
+    it('stamps the branch and moves no cash — the drawer is touched at hand-over (ADR-0076)', async () => {
       await service.recordRefund({
         studentId: STUDENT,
         amount: 50_000,
