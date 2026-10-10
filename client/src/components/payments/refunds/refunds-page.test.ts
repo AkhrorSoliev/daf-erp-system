@@ -1,4 +1,4 @@
-import { createElement } from "react";
+import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -21,8 +21,8 @@ vi.mock("@/hooks/use-auth", () => {
 
 import { keepWithinRefundTab, refundableListKey } from "./refunds-queries";
 import { readRefundsFilters, refundableListParams } from "./refunds-url";
-import { RefundsPage } from "./refunds-page";
-import type { PendingRefundRow, RefundableListResponse, RefundableRow } from "./refunds-types";
+import { ActionDialog, RefundsPage } from "./refunds-page";
+import type { DrawerStudent, PendingRefundRow, RefundableListResponse, RefundableRow } from "./refunds-types";
 
 // Made-up names and figures; the summary is the sum of the three tabs, as the server sends it.
 const ROW: RefundableRow = {
@@ -165,5 +165,20 @@ describe("RefundsPage — between two answers", () => {
   it("a page past the last one shows the skeleton, not a false «yo'q»", () => {
     const text = render("page=3", { ...RESPONSE, rows: { ...RESPONSE.rows, data: [], total: 25 } });
     expect(text).not.toContain("Bu bo'limda puli qolgan o'quvchi yo'q");
+  });
+});
+
+describe("RefundsPage — the dialogs a drawer option opens", () => {
+  const STUDENT: DrawerStudent = { id: 10001, firstName: "Ali", lastName: "Valiyev", phone: "901112233", status: "FROZEN", branchId: 1 };
+
+  // The status and enroll dialogs call back only after a success, but a refusal often means another desk already moved the student.
+  it.each(["return", "enroll"] as const)("«%s» refetches the page's data whenever it closes, never when it opens", (kind) => {
+    const calls: string[] = [];
+    const dialog = ActionDialog({ action: { kind, student: STUDENT }, onClose: () => calls.push("close"), onDone: () => calls.push("done") });
+    const { onOpenChange } = (dialog as ReactElement<{ onOpenChange: (open: boolean) => void }>).props;
+    onOpenChange(true);
+    expect(calls).toEqual([]);
+    onOpenChange(false);
+    expect(calls).toEqual(["done", "close"]);
   });
 });

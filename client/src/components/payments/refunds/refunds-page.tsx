@@ -63,8 +63,11 @@ export function RefundsPage() {
   // A kept empty answer is not the new one: skeleton, not «yo'q», until it lands.
   const rowsLoading = isPending || lastRows !== null || (isPlaceholderData && !data?.rows.data.length);
   const onSearch = useCallback((search: string) => setFilters({ search, page: 1 }), [setFilters]);
-  // A request another desk closed meanwhile is gone from the fresh list: its dialog goes with it.
+  // A request another desk closed meanwhile is gone from the fresh list: its dialog goes with it, and
+  // the target is forgotten so the dialog cannot come back if the row shows up again (another page).
   const stillPending = (row: PendingRefundRow) => !fresh || fresh.pending.data.some((r) => r.id === row.id);
+  if (handOver && !stillPending(handOver)) setHandOver(null);
+  if (cancel && !stillPending(cancel)) setCancel(null);
 
   const exportExcel = async () => {
     // The server applies only the search to the Excel (every tab, every page).
@@ -164,8 +167,8 @@ export function RefundsPage() {
       <RefundableDrawer studentId={drawerId} canAct={hasAnyRole(roles, REFUND_REQUEST_ROLES)} onClose={() => setDrawerId(null)}
         onAction={(kind, student) => { setDrawerId(null); setAction({ kind, student }); }} />
       {action && <ActionDialog key={`${action.kind}-${action.student.id}`} action={action} onClose={() => setAction(null)} onDone={() => invalidateRefunds(qc)} />}
-      {handOver && stillPending(handOver) && <HandOverDialog target={handOver} accounts={data?.cashAccounts ?? []} onClose={() => setHandOver(null)} />}
-      {cancel && stillPending(cancel) && <CancelRefundDialog target={cancel} onClose={() => setCancel(null)} />}
+      {handOver && <HandOverDialog target={handOver} accounts={data?.cashAccounts ?? []} onClose={() => setHandOver(null)} />}
+      {cancel && <CancelRefundDialog target={cancel} onClose={() => setCancel(null)} />}
     </div>
   );
 }
@@ -196,26 +199,29 @@ function TabButtons({ data, active, onSelect }: {
 /**
  * The existing dialog a drawer option opens (spec §3.5). The page keys it by the
  * option and the student, so each use mounts fresh: `ChangeStatusDialog` reads
- * `initialStatus` on mount only. The refund and withdrawal dialogs refresh the
- * page's keys themselves.
+ * `initialStatus` on mount only. Closing it, for any reason, refetches the page's
+ * keys: the status and enroll dialogs call back only on success, and a refusal
+ * often means another desk already moved the student.
  */
-function ActionDialog({ action: { kind, student }, onClose, onDone }: {
+export function ActionDialog({ action: { kind, student }, onClose, onDone }: {
   action: { kind: DrawerAction; student: DrawerStudent }; onClose: () => void; onDone: () => void;
 }) {
   const name = `${student.firstName} ${student.lastName}`;
   const onOpenChange = (open: boolean) => {
-    if (!open) onClose();
+    if (open) return;
+    onDone();
+    onClose();
   };
   if (kind === "refund") return <RefundDialog open onOpenChange={onOpenChange} studentId={student.id} studentName={name} />;
   if (kind === "transfer") return <WithdrawalDialog open onOpenChange={onOpenChange} studentId={student.id} studentName={name} />;
   if (kind === "return") {
     return (
       <ChangeStatusDialog open onOpenChange={onOpenChange} entityType="students" entityId={student.id} entityName={name}
-        currentStatus={student.status} initialStatus="ACTIVE" onStatusChanged={onDone} />
+        currentStatus={student.status} initialStatus="ACTIVE" />
     );
   }
   return (
     <EnrollToGroupDialog open onOpenChange={onOpenChange} studentId={student.id} studentName={name}
-      enrolledGroupIds={[]} studentBranchId={student.branchId} onEnrolled={onDone} />
+      enrolledGroupIds={[]} studentBranchId={student.branchId} />
   );
 }
