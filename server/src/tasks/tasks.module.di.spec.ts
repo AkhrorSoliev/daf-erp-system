@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisModule } from '../redis/redis.module';
 import { RedisService } from '../redis/redis.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { TaskAutoCloseListener } from './task-auto-close.listener';
 import { TaskTelegramHandler } from './telegram/task-telegram.handler';
 import { TaskTelegramListener } from './telegram/task-telegram.listener';
 import { TaskTelegramOutbox } from './telegram/task-telegram-outbox.service';
@@ -54,6 +55,7 @@ describe('TasksModule — DI graph', () => {
       TaskTelegramSender,
       TaskTelegramListener,
       TaskTelegramOutbox,
+      TaskAutoCloseListener,
       TaskTelegramHandler,
       TelegramService,
     ]) {

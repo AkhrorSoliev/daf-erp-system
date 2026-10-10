@@ -309,6 +309,11 @@ describe('NotificationResolverService', () => {
     expect(whereOf(2)).toEqual({ companyId: 1, taskId: 't1', ...OPEN });
   });
 
+  it('task.auto-closed closes every notice of the task', async () => {
+    await resolver.onTaskAutoClosed({ task: task('DONE') });
+    expect(whereOf()).toEqual({ companyId: 1, taskId: 't1', ...OPEN });
+  });
+
   it("closes a removed assignee's notices of that task only", async () => {
     await resolver.onTaskUnassigned({ task: task('NEW'), userIds: [40, 41] });
     expect(whereOf()).toEqual({

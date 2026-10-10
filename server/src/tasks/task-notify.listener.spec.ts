@@ -225,6 +225,16 @@ describe('TaskNotifyListener', () => {
     });
   });
 
+  it('an automatic close writes no notice and refreshes the open pages', async () => {
+    await listener.onAutoClosed({ task: { ...task, status: 'DONE' } });
+    expect(notif.create).not.toHaveBeenCalled();
+    expect(push.sendToUser).not.toHaveBeenCalled();
+    expect(gateway.sendToUser).toHaveBeenCalledWith(40, {
+      type: 'task.updated',
+      taskId: 't1',
+    });
+  });
+
   it('listens to every task event', () => {
     const listened = Object.getOwnPropertyNames(TaskNotifyListener.prototype)
       .flatMap(
@@ -236,13 +246,6 @@ describe('TaskNotifyListener', () => {
       )
       .map((m) => m.event)
       .sort();
-    // TODO(phase 4a, Task 3): `task.auto-closed` gets its listener
-    // (`onAutoClosed`) together with its emitter, which event-wiring.spec.ts
-    // requires in the same commit. Delete this filter then.
-    expect(listened).toEqual(
-      Object.values(TASK_EVENTS)
-        .filter((e) => e !== TASK_EVENTS.AUTO_CLOSED)
-        .sort(),
-    );
+    expect(listened).toEqual(Object.values(TASK_EVENTS).sort());
   });
 });

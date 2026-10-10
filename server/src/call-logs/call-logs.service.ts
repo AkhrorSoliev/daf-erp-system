@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CallOutcome, CallReason, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
@@ -8,6 +9,10 @@ import {
   tashkentDayRangeUtc,
 } from '../attendance/shared/date-utils';
 import { PaymentPromisesService } from '../payment-promises/payment-promises.service';
+import {
+  CALL_LOG_CREATED,
+  type CallLogCreatedPayload,
+} from './call-log-events';
 import { CreateCallLogDto } from './dto/create-call-log.dto';
 import { ListCallLogsQueryDto } from './dto/list-call-logs-query.dto';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
@@ -43,6 +48,7 @@ export class CallLogsService {
     private prisma: PrismaService,
     private entityHistory: EntityHistoryService,
     private paymentPromises: PaymentPromisesService,
+    private events: EventEmitter2,
   ) {}
 
   /**
@@ -130,6 +136,13 @@ export class CallLogsService {
         companyId,
       );
     }
+
+    // After the row and the promise are written (no transaction here):
+    // automatic tasks close (TaskAutoCloseListener) and a callback is asked
+    // for (TaskAutoService).
+    this.events.emit(CALL_LOG_CREATED, {
+      callLog: log,
+    } satisfies CallLogCreatedPayload);
 
     return log;
   }
