@@ -14,6 +14,13 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-10",
+    sarlavha: "Ish haqi sahifasi yangilandi",
+    matn: "«Ish haqi» sahifasida endi bitta jadval va oy holati bor: oy davom etyaptimi, hisoblanganmi, tasdiqlanganmi yoki berilganmi — bir qarashda ko'rinadi. «Berildi» pul berilgan kun va naqd/karta summalarini so'raydi, pul tanlangan kassa va hisobdan chiqadi, xodimga bot orqali xabar boradi. Avans berilgan oyining oyligidan ushlanadi; «Avans» ustuni aynan shu oylikdan ushlanadigan summani ko'rsatadi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "tolovlar", sahifa: "ish-haqi" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Filial chegarasi mustahkamlandi",
     matn: "Filial direktori va administrator endi faqat o'z filialining ma'lumotini ko'radi va o'zgartiradi: o'quvchi balansini tuzatish, guruh jadvali, lidlar, oylik ro'yxati va ustoz stavkalari boshqa filial bo'yicha ochilmaydi. Yangi filialni faqat CEO ochadi. O'z oyligini «to'landi» deb belgilash va o'ziga avans yozishni endi boshqa rahbar qiladi. Ustoz stavkalari taymlaynda faqat oylikni ko'radiganlarga ko'rinadi. Bir nechta filialga biriktirilgan (CEO bo'lmagan) xodim Excel hisobotini endi bitta filial bo'yicha oladi.",
     rollar: [1, 2, 3],

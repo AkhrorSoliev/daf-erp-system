@@ -20,6 +20,7 @@ import { SalaryCalculationService } from './salary-calculation.service';
 import { SalaryPaymentService } from './salary-payment.service';
 import { SalarySettleMonthService } from './salary-settle-month.service';
 import { SettleMonthDto } from './dto/settle-month.dto';
+import { PayPaymentDto } from './dto/pay-payment.dto';
 
 @Injectable()
 export class SalaryService {
@@ -132,21 +133,6 @@ export class SalaryService {
     );
   }
 
-  // Per-teacher advance breakdown for the salary "Avans" cell drawer.
-  getAdvancesForUser(
-    userId: number,
-    query: SalaryMonthlyQuery,
-    companyId: number,
-    performedById: number,
-  ) {
-    return this.monthly.getAdvancesForUser(
-      userId,
-      query,
-      companyId,
-      performedById,
-    );
-  }
-
   // Calculation
   calculateMonthlySalaries(companyId: number, opts?: { asOfDate?: Date }) {
     return this.calculation.calculateMonthlySalaries(companyId, opts);
@@ -173,8 +159,13 @@ export class SalaryService {
   approvePayment(id: string, companyId: number) {
     return this.payment.approvePayment(id, companyId);
   }
-  payPayment(id: string, performedById: number, companyId: number) {
-    return this.payment.payPayment(id, performedById, companyId);
+  payPayment(
+    id: string,
+    dto: PayPaymentDto,
+    performedById: number,
+    companyId: number,
+  ) {
+    return this.payment.payPayment(id, dto, performedById, companyId);
   }
 
   // Month-wide settle for payroll handed over outside the system.

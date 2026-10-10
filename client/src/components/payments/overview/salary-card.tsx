@@ -25,7 +25,7 @@ export function SalaryCard({ month, isCurrent }: { month: string; isCurrent: boo
       <p className="text-xs text-muted-foreground">
         ustozlar {som(teachers)} · xodimlar {som(staff?.monthly)}
       </p>
-      <MoneyRow label="avans berilgan" value={som(s && staff ? s.advances + staff.advances : null)} />
+      <MoneyRow label="avans (ushlanadi)" value={som(s && staff ? s.advances + staff.advances : null)} />
       <MoneyRow
         label={isCurrent ? "oy oxirida beriladi" : "avansdan keyin"}
         value={som(s && staff ? s.netToPay + staff.netToPay : null)}
