@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { UploadModule } from '../upload/upload.module';
+import { JoinRequestDecisionsService } from './join-request-decisions.service';
 import { StudentJoinRequestsService } from './student-join-requests.service';
 
 /**
@@ -9,7 +10,7 @@ import { StudentJoinRequestsService } from './student-join-requests.service';
  */
 @Module({
   imports: [UploadModule],
-  providers: [StudentJoinRequestsService],
-  exports: [StudentJoinRequestsService],
+  providers: [StudentJoinRequestsService, JoinRequestDecisionsService],
+  exports: [StudentJoinRequestsService, JoinRequestDecisionsService],
 })
 export class StudentJoinRequestsModule {}

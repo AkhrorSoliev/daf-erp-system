@@ -54,7 +54,7 @@ const NOT_A_USER_PASSWORD: { file: string; where: string; why: string }[] = [
     why: 'the welcome message for the account just created',
   },
   {
-    file: 'src/student-join-requests/student-join-requests.service.ts',
+    file: 'src/student-join-requests/join-request-decisions.service.ts',
     where: 'joinRequestApprovedText',
     why: 'the approval message for the account just created',
   },
