@@ -11,6 +11,8 @@ export const OPEN_STATUSES: readonly TaskStatus[] = [
 export const PHOTO_REQUIRED_MESSAGE =
   "Tekshiruvga yuborish uchun rasm qo'shing";
 export const SYSTEM_CLOSES_MESSAGE = "Bu topshiriqni tizim o'zi yopadi";
+/** The refusal to anybody but the giver (or a manager); the Telegram button shows it too. */
+export const ONLY_GIVER_REVIEWS = 'Faqat beruvchi tekshira oladi';
 
 type Args = {
   from: TaskStatus;

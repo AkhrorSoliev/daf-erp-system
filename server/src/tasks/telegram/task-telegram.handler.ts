@@ -14,12 +14,11 @@ import { TelegramService } from '../../telegram/telegram.service';
 import type { BotContext } from '../../telegram/types/context';
 import { describeError } from '../../telegram-digest/telegram-send';
 import { TasksService, type TaskActor } from '../tasks.service';
-import { OPEN_STATUSES } from '../task-transitions';
+import { ONLY_GIVER_REVIEWS, OPEN_STATUSES } from '../task-transitions';
 import {
   ADDED_TO_TASK,
   NOT_IN_REVIEW,
   NOT_YOURS,
-  ONLY_GIVER_REVIEWS,
   RETURN_PLACEHOLDER,
   SEVERAL_ACCOUNTS,
   STEP_GONE,
@@ -172,11 +171,17 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
       await this.answer(ctx);
     } catch (err) {
       if (!(err instanceof HttpException)) throw err;
-      await this.answer(ctx, err.message);
-      // The service no longer lets this person see the task: the card, which
-      // is not scoped to them, must not be redrawn for them.
-      if (err instanceof NotFoundException) return this.dropButtons(ctx);
+      // The task itself is lost to this person (a vanished step is not): its
+      // card, which is not scoped to them, is not redrawn for them.
+      if (
+        err instanceof NotFoundException &&
+        !(await this.lookup(me, taskId))
+      ) {
+        await this.answer(ctx, NOT_YOURS);
+        return this.dropButtons(ctx);
+      }
       // A stale message: say why, then show the task as it is now.
+      await this.answer(ctx, err.message);
     }
     await this.drawCard(
       ctx,
@@ -448,21 +453,32 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
       return true;
     }
     try {
-      if (link.purpose === 'RETURN_PROMPT') {
-        const task = await this.tasks.review(
-          link.taskId,
-          'RETURN',
-          text,
-          me.actor,
-        );
-        await ctx.reply(
-          returnedReply(
-            task.assignees.map((a) => shortName(a.firstName, a.lastName)),
-          ),
-        );
-      } else {
-        await this.tasks.addComment(link.taskId, text, me.actor);
-        await ctx.reply(ADDED_TO_TASK);
+      switch (link.purpose) {
+        case 'RETURN_PROMPT': {
+          const task = await this.tasks.review(
+            link.taskId,
+            'RETURN',
+            text,
+            me.actor,
+          );
+          await this.ack(
+            ctx,
+            returnedReply(
+              task.assignees.map((a) => shortName(a.firstName, a.lastName)),
+            ),
+          );
+          break;
+        }
+        case 'NOTICE':
+          await this.tasks.addComment(link.taskId, text, me.actor);
+          await this.ack(ctx, ADDED_TO_TASK);
+          break;
+        default:
+          // PHOTO_PROMPT (phase 3) or a later purpose: give it a case above.
+          this.logger.warn(
+            `task ${link.taskId}: a reply to a ${link.purpose} message was not stored`,
+          );
+          await ctx.reply(TEXT_ONLY);
       }
     } catch (err) {
       if (!(err instanceof HttpException)) throw err;
@@ -471,5 +487,14 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
       );
     }
     return true;
+  }
+
+  /** The write is committed: a lost «done» message is logged, never TRY_LATER (a resend would repeat it). */
+  private async ack(ctx: BotContext, text: string): Promise<void> {
+    await ctx
+      .reply(text)
+      .catch((err) =>
+        this.logger.warn(`task reply not confirmed: ${describeError(err)}`),
+      );
   }
 }

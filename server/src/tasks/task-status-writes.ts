@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { Prisma, TaskEventVia, TaskStatus } from '@prisma/client';
 import { claimSystemTask } from './task-claim';
 import { TASK_DETAIL_SELECT, type TaskCtx, type TaskRow } from './task-select';
-import { checkTransition } from './task-transitions';
+import { ONLY_GIVER_REVIEWS, checkTransition } from './task-transitions';
 
 type Tx = Prisma.TransactionClient;
 
@@ -89,7 +89,7 @@ export async function reviewTx(
 ): Promise<TaskRow> {
   const id = row.id;
   if (!access.canManage) {
-    throw new ForbiddenException('Faqat beruvchi tekshira oladi');
+    throw new ForbiddenException(ONLY_GIVER_REVIEWS);
   }
   const to: TaskStatus = action === 'ACCEPT' ? 'DONE' : 'IN_PROGRESS';
   const verdict = checkTransition({

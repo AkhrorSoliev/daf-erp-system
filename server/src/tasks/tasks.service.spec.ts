@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { TaskOutboxService } from './task-outbox.service';
 import { TASK_EVENTS } from './task-events';
+import { ONLY_GIVER_REVIEWS } from './task-transitions';
 
 const ADMIN = {
   id: 30,
@@ -478,11 +479,34 @@ describe('TasksService writes', () => {
     });
   });
 
+  it('a review reason over 1000 characters is a 400 for every door (the website DTO says the same)', async () => {
+    prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'IN_REVIEW' }));
+    const tooLong = 'x'.repeat(1001);
+    await expect(
+      service.review('t1', 'RETURN', tooLong, authorActor()),
+    ).rejects.toThrow('Sabab 1000 belgidan oshmasin');
+    await expect(
+      service.review('t1', 'ACCEPT', tooLong, authorActor()),
+    ).rejects.toThrow('Sabab 1000 belgidan oshmasin');
+    expect(prisma.task.update).not.toHaveBeenCalled();
+    // The reason is trimmed first: 1000 characters plus spaces still passes.
+    await service.review(
+      't1',
+      'RETURN',
+      ` ${'x'.repeat(1000)} `,
+      authorActor(),
+    );
+    expect(prisma.task.update).toHaveBeenCalledTimes(1);
+  });
+
   it('assignee cannot review (403)', async () => {
     prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'IN_REVIEW' }));
     await expect(
       service.review('t1', 'ACCEPT', undefined, assigneeActor()),
     ).rejects.toThrow(ForbiddenException);
+    await expect(
+      service.review('t1', 'ACCEPT', undefined, assigneeActor()),
+    ).rejects.toThrow(ONLY_GIVER_REVIEWS);
   });
 
   it('cancel by author: CANCELLED, outbox rows dropped, event emitted', async () => {

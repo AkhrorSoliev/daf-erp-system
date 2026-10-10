@@ -32,7 +32,12 @@ import {
   type TaskRow,
 } from './task-select';
 import { resolveTaskBranchId } from './task-branch';
-import { parseDueInput, requireText } from './task-input';
+import {
+  REVIEW_REASON_MAX,
+  REVIEW_REASON_TOO_LONG,
+  parseDueInput,
+  requireText,
+} from './task-input';
 import { loadAndCheckPeople, loadPeople } from './task-people';
 import { cancelTx, changeStatusTx, reviewTx } from './task-status-writes';
 import { addStepTx, deleteStepTx, updateStepTx } from './task-step-writes';
@@ -292,6 +297,10 @@ export class TasksService {
     const trimmed = reason?.trim() ?? '';
     if (action === 'RETURN' && !trimmed) {
       throw new BadRequestException('Qaytarish sababini yozing');
+    }
+    // The web DTO says the same; Telegram skips the DTO.
+    if (trimmed.length > REVIEW_REASON_MAX) {
+      throw new BadRequestException(REVIEW_REASON_TOO_LONG);
     }
     const updated = await this.inTask(id, actor, (tx, ctx) =>
       reviewTx(tx, ctx, action, trimmed, actor.userId, actor.via),

@@ -49,15 +49,13 @@ export interface TgListItem {
 export const NOT_YOURS = 'Bu topshiriq sizda emas';
 export const SEVERAL_ACCOUNTS =
   "Bu Telegram bir nechta xodim hisobiga bog'langan. Administrator bilan bog'laning.";
-export const TEXT_ONLY =
-  "Hozircha faqat matnli javob qabul qilinadi. Rasm, fayl va ovozni saytda qo'shing.";
+// No upload on the website either before phase 3: nothing to point to.
+export const TEXT_ONLY = 'Hozircha faqat matnli javob qabul qilinadi.';
 export const ADDED_TO_TASK = "Topshiriqqa qo'shildi.";
 export const RETURN_PROMPT =
   'Qaytarish sababini shu xabarga javob qilib yozing.';
 export const RETURN_PLACEHOLDER = 'Qaytarish sababi';
 export const NOT_IN_REVIEW = 'Topshiriq tekshiruvda emas';
-/** The service's own refusal to anybody but the giver (or a manager). */
-export const ONLY_GIVER_REVIEWS = 'Faqat beruvchi tekshira oladi';
 export const STEP_GONE = 'Qadam topilmadi';
 export const TRY_LATER = "Xatolik yuz berdi. Keyinroq urinib ko'ring.";
 const PHOTO_LINE = "Rasm bilan tasdiqlanadi: rasm saytda qo'shiladi.";
