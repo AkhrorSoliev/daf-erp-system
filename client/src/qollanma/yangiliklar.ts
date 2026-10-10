@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "Topshiriqlar Telegram'da",
+    matn: "Topshiriq xabarlari endi Telegram botga darhol keladi, kechqurungi umumiy xabarni kutmaydi: sizga berilganda, tekshiruvga kelganda, qabul qilinganda yoki qaytarilganda, yangi izoh yozilganda, muddatga 1 soat qolganda va muddat o'tganda. Xabar ostida tugmalar bor: «Boshladim», «Bajardim», «Qabul qilish», «Qaytarish», «Qadamlar», «Ochish». Tugma bosilganda yangi xabar kelmaydi, o'sha xabar yangilanadi. Xabarga javob qilib yozilgan matn topshiriqqa izoh bo'lib tushadi; «Qaytarish» dan keyingi javob — qaytarish sababi. Bot menyusida yangi «📋 Topshiriqlarim» tugmasi ochiq topshiriqlaringizni ko'rsatadi. Tugmani ko'rish uchun botga /start yuboring. Soat 22:00 dan 08:00 gacha tayyor bo'lgan xabar ertalab 08:00 da keladi, «Shoshilinch» topshiriq xabari esa darhol. Kuzatuvchiga botda faqat «Bajarildi» va «Bekor qilindi» keladi. Rasm, fayl va ovozli javob hozircha qabul qilinmaydi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Qo'ng'iroqcha qayta qurildi",
     matn: "Qo'ng'iroq belgisidagi raqam endi faqat sizdan ish kutayotgan xabarlarni sanaydi: davomat eslatmasi, sizga berilgan yoki tekshiruvga kelgan topshiriq, buzilgan to'lov va'dasi. Ish bajarilishi bilan xabar o'zi yopiladi: davomat olinsa, dars bekor qilinsa yoki ko'chirilsa — davomat eslatmalari, topshiriq yopilsa — uning xabarlari, qarz to'lansa — va'da xabari. Ertalabki «Bugun N ta to'lov va'dasi bajarilmadi» ro'yxati undagi hamma o'quvchi qarzini to'lagach yopiladi (1 000 so'mdan kam qolsa ham bo'ladi), shu filialning keyingi yangi ro'yxati kelsa — eskisi ham. Panelda «Kutilmoqda» va «Hammasi» bo'limlari va «Topshiriqlar», «Davomat», «To'lovlar» bo'yicha saralash bor; bir kundagi bir xil davomat eslatmalari bitta qatorga yig'iladi («Davomat olinmagan · 3 guruh»). Yangi «Barcha bildirishnomalar» sahifasida hamma xabar kunlar bo'yicha turadi va ulardan qidirsa bo'ladi. Yangi tizim yoqilgan kuni 7 kundan eski xabarlar bir marta tozalandi: kutilayotganlari (ochiq topshiriqlarnikidan tashqari) yopildi, o'qilmaganlari «o'qilgan» deb belgilandi, xabarlarning o'zi o'chirilmadi. Davomat dars boshlanishidan oldin olingan bo'lsa, o'qituvchiga «Dars boshlandi» eslatmasi endi bormaydi; bekor qilingan yoki ko'chirilgan darsga davomat eslatmalari yuborilmaydi. Kuni o'tib ketgan va «Dars bo'ldimi?» savoli kutilmayotgan davomat eslatmasi har kecha soat 03:00 da o'zi yopiladi.",
     rollar: [1, 2, 3, 4, 5],
