@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { tashkentMonthKey } from '../common/date/tashkent';
+import {
+  addMonthsToMonthKey,
+  tashkentMonthKey,
+  tashkentMonthRangeUtc,
+} from '../common/date/tashkent';
 import { resolveMonthlyScope } from './shared/resolve-monthly-scope';
 
 /** Avans berilgan bitta kun. */
@@ -27,7 +31,8 @@ export interface AdvanceCalendarRow {
   settledPeriodEnd: Date | null;
   /**
    * Qaysi oyning oyligidan ushlanadi (`YYYY-MM`): hisoblangan avansda — uni
-   * ushlagan to'lovning oyi, hisoblanmaganida — avansning o'z oyi (B3 §2.6).
+   * ushlagan to'lovning oyi, hisoblanmaganida — o'z oyidan boshlab shu xodimga
+   * hali oylik hisoblanmagan birinchi oy (B3 §2.6).
    */
   deductMonth: string;
   user: {
@@ -162,7 +167,8 @@ export class SalaryAdvanceCalendarService {
               settledPeriodStart: e.settledBySalaryPayment?.periodStart ?? null,
               settledPeriodEnd: e.settledBySalaryPayment?.periodEnd ?? null,
               // `periodStart` is a Tashkent-midnight instant; `Expense.date` is
-              // a date-only column, so its UTC slice is already the day.
+              // a date-only column, so its UTC slice is already the day. An
+              // unsettled advance's month is corrected below.
               deductMonth: e.settledBySalaryPayment
                 ? tashkentMonthKey(e.settledBySalaryPayment.periodStart)
                 : dayKey(e.date).slice(0, 7),
@@ -177,6 +183,8 @@ export class SalaryAdvanceCalendarService {
           ]
         : [],
     );
+
+    await this.rollUnsettledForward(advances, companyId, month);
 
     const byDay = new Map<string, AdvanceCalendarDay>();
     const employees = new Set<number>();
@@ -255,5 +263,43 @@ export class SalaryAdvanceCalendarService {
       },
       advances,
     };
+  }
+
+  /**
+   * An unsettled advance comes out of the first payroll that has not been
+   * calculated yet: when its own month already has a non-cancelled payment for
+   * that person (the advance was entered after the cron, or did not fit and
+   * rolled over), the next payout that nets it is a later month.
+   */
+  private async rollUnsettledForward(
+    advances: AdvanceCalendarRow[],
+    companyId: number,
+    month: string,
+  ): Promise<void> {
+    const unsettled = advances.filter((a) => !a.settled);
+    if (unsettled.length === 0) return;
+
+    const payments = await this.prisma.salaryPayment.findMany({
+      where: {
+        companyId,
+        userId: { in: [...new Set(unsettled.map((a) => a.user.id))] },
+        status: { not: 'CANCELLED' },
+        periodStart: { gte: tashkentMonthRangeUtc(month).gte },
+      },
+      select: { userId: true, periodStart: true },
+    });
+    const calculated = new Map<number, Set<string>>();
+    for (const p of payments) {
+      const months = calculated.get(p.userId) ?? new Set<string>();
+      months.add(tashkentMonthKey(p.periodStart));
+      calculated.set(p.userId, months);
+    }
+
+    for (const a of unsettled) {
+      const months = calculated.get(a.user.id);
+      while (months?.has(a.deductMonth)) {
+        a.deductMonth = addMonthsToMonthKey(a.deductMonth, 1);
+      }
+    }
   }
 }

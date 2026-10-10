@@ -92,7 +92,7 @@ Replaces `SalaryBreakdownDrawer` and `SalaryAdvanceBreakdownDrawer` on this page
 
 Calendar and day panel unchanged. Added under them: a table of the month's advances (by date, newest first) — Sana, Kimga, Summa, Naqd / karta, Kim berdi, Holat:
 - settled → «{oy} oyligidan ushlangan» (green), `{oy}` = the settling payment's month;
-- unsettled → «{oy} oyligidan ushlanadi» (amber), `{oy}` = the advance's own month (§3).
+- unsettled → «{oy} oyligidan ushlanadi» (amber), `{oy}` = the first month from the advance's own month on whose payroll for that person is not calculated yet (its own month, unless the cron already ran or it rolled over) (§3).
 
 Footnote: «Avans berilgan oyining oyligidan ushlanadi.»
 `GET /salary/advance-calendar` gains `@BranchScope()` and `narrowPayrollScope`, so the tab follows the header switcher like `/salary/monthly`.
