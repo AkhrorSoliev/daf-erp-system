@@ -24,7 +24,9 @@ const STAFF_ROLE_IDS: readonly number[] = [
 export function allows(access: RouteAccessMeta, caller: CallerAccess): boolean {
   switch (access.kind) {
     case 'anyUser':
-      return true;
+      // forUser() gives a blocked, archived or deleted account no role at all;
+      // every live account (a student included) holds at least one.
+      return caller.roleIds.length > 0;
     case 'anyStaff':
       return caller.roleIds.some((id) => STAFF_ROLE_IDS.includes(id));
     case 'student':

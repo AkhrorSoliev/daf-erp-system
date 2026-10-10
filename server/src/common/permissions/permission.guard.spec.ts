@@ -2,7 +2,8 @@ import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { ACCESS_KEY, RouteAccessMeta } from './access.decorators';
-import { PermissionGuard } from './permission.guard';
+import { PermissionGuard, allows } from './permission.guard';
+import type { CallerAccess } from './permissions.service';
 import { fakePermissions } from './testing';
 
 function contextFor(
@@ -80,6 +81,29 @@ describe('PermissionGuard', () => {
     await expect(guardFor([1]).canActivate(context)).rejects.toThrow(
       ForbiddenException,
     );
+  });
+
+  it('refuses @AnyUser to an account that holds no role (blocked)', async () => {
+    // forUser() answers with no role for a blocked, archived or deleted account.
+    const { context } = contextFor({ access: { kind: 'anyUser' } }, { id: 7 });
+    await expect(guardFor([]).canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('allows() passes @AnyUser only to a caller who holds a role', () => {
+    const noRole: CallerAccess = {
+      roleIds: [],
+      roleNames: [],
+      keys: new Set(),
+    };
+    const student: CallerAccess = {
+      ...noRole,
+      roleIds: [6],
+      roleNames: ['Student'],
+    };
+    expect(allows({ kind: 'anyUser' }, noRole)).toBe(false);
+    expect(allows({ kind: 'anyUser' }, student)).toBe(true);
   });
 
   it('refuses a non-public route with no signed-in user', async () => {

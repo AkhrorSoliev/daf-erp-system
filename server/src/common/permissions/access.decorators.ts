@@ -14,7 +14,7 @@ export type RouteAccessMeta =
   | { readonly kind: 'student' }
   | { readonly kind: 'can'; readonly keys: readonly PermissionKey[] };
 
-/** Any signed-in account, staff or student; the handler serves the caller's own data. */
+/** Any signed-in account that is not blocked, staff or student; the handler serves the caller's own data. */
 export const AnyUser = () =>
   SetMetadata<string, RouteAccessMeta>(ACCESS_KEY, { kind: 'anyUser' });
 
