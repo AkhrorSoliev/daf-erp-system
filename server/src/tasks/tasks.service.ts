@@ -32,7 +32,12 @@ import {
   type TaskRow,
 } from './task-select';
 import { resolveTaskBranchId } from './task-branch';
-import { parseDueInput, requireText } from './task-input';
+import {
+  REVIEW_REASON_MAX,
+  REVIEW_REASON_TOO_LONG,
+  parseDueInput,
+  requireText,
+} from './task-input';
 import { loadAndCheckPeople, loadPeople } from './task-people';
 import { cancelTx, changeStatusTx, reviewTx } from './task-status-writes';
 import { addStepTx, deleteStepTx, updateStepTx } from './task-step-writes';
@@ -56,6 +61,8 @@ export interface TaskActor {
   roleNames: string[];
   scope: CallerBranchScope;
   headerBranchId: number | null;
+  /** Where the action came from; the task's history records it. Unset = WEB. */
+  via?: 'WEB' | 'TELEGRAM';
 }
 
 /** The one door to tasks: owns the transaction and the events (emitted after the commit). */
@@ -181,12 +188,14 @@ export class TasksService {
         task: this.eventTask(row),
         actorId: actor.userId,
         userIds: ids,
+        created: true,
       });
       if (watcherIds.length) {
         this.emitter.emit(TASK_EVENTS.ASSIGNED, {
           task: this.eventTask(row),
           actorId: actor.userId,
           userIds: watcherIds,
+          created: true,
         });
       }
     }
@@ -261,7 +270,7 @@ export class TasksService {
     actor: TaskActor,
   ): Promise<TaskDetail> {
     const { from, updated } = await this.inTask(id, actor, (tx, ctx) =>
-      changeStatusTx(tx, ctx, to, actor.userId),
+      changeStatusTx(tx, ctx, to, actor.userId, actor.via),
     );
     const task = this.eventTask(updated);
     this.emitter.emit(TASK_EVENTS.STATUS_CHANGED, {
@@ -289,8 +298,12 @@ export class TasksService {
     if (action === 'RETURN' && !trimmed) {
       throw new BadRequestException('Qaytarish sababini yozing');
     }
+    // The web DTO says the same; Telegram skips the DTO.
+    if (trimmed.length > REVIEW_REASON_MAX) {
+      throw new BadRequestException(REVIEW_REASON_TOO_LONG);
+    }
     const updated = await this.inTask(id, actor, (tx, ctx) =>
-      reviewTx(tx, ctx, action, trimmed, actor.userId),
+      reviewTx(tx, ctx, action, trimmed, actor.userId, actor.via),
     );
     this.emitter.emit(TASK_EVENTS.REVIEWED, {
       task: this.eventTask(updated),
@@ -385,6 +398,7 @@ export class TasksService {
         task,
         actorId: actor.userId,
         userIds: r.removed,
+        removedAssigneeIds: r.removedAssignees,
       });
     }
     return toTaskDetail(r.updated);
@@ -406,10 +420,9 @@ export class TasksService {
     actor: TaskActor,
   ): Promise<TaskDetail> {
     const text = requireText(title, 'Qadam nomini yozing');
-    await this.inTask(id, actor, (tx, ctx) =>
+    return this.stepWrite(id, actor, (tx, ctx) =>
       addStepTx(tx, ctx, text, actor.userId),
     );
-    return this.reload(id, actor);
   }
 
   async updateStep(
@@ -422,10 +435,16 @@ export class TasksService {
       patch.title === undefined
         ? undefined
         : requireText(patch.title, 'Qadam nomini yozing');
-    await this.inTask(id, actor, (tx, ctx) =>
-      updateStepTx(tx, ctx, stepId, { title, done: patch.done }, actor.userId),
+    return this.stepWrite(id, actor, (tx, ctx) =>
+      updateStepTx(
+        tx,
+        ctx,
+        stepId,
+        { title, done: patch.done },
+        actor.userId,
+        actor.via,
+      ),
     );
-    return this.reload(id, actor);
   }
 
   async deleteStep(
@@ -433,10 +452,28 @@ export class TasksService {
     stepId: string,
     actor: TaskActor,
   ): Promise<TaskDetail> {
-    await this.inTask(id, actor, (tx, ctx) =>
+    return this.stepWrite(id, actor, (tx, ctx) =>
       deleteStepTx(tx, ctx, stepId, actor.userId),
     );
-    return this.reload(id, actor);
+  }
+
+  /**
+   * A step write and the task read it answers with, in ONE transaction. The
+   * read used to come after the commit: when it failed, the caller got an
+   * error for a write that was saved, and a retry repeated it (the bot's
+   * second press un-ticked the step). Now a failing read rolls the write back,
+   * so an error always means nothing was saved.
+   */
+  private stepWrite(
+    id: string,
+    actor: TaskActor,
+    write: (tx: Prisma.TransactionClient, ctx: TaskCtx) => Promise<void>,
+  ): Promise<TaskDetail> {
+    return this.inTask(id, actor, async (tx, ctx) => {
+      await write(tx, ctx);
+      const { row } = await this.loadForAccess(tx, id, actor);
+      return toTaskDetail(row);
+    });
   }
 
   // ---------- discussion ----------
@@ -455,7 +492,7 @@ export class TasksService {
         type: 'COMMENT',
         actorId: actor.userId,
         text: body,
-        via: 'WEB',
+        via: actor.via ?? 'WEB',
       },
       select: TASK_EVENT_SELECT,
     });
@@ -492,10 +529,5 @@ export class TasksService {
       });
     }
     return toTaskDetail(updated);
-  }
-
-  private async reload(id: string, actor: TaskActor): Promise<TaskDetail> {
-    const { row } = await this.loadForAccess(this.prisma, id, actor);
-    return toTaskDetail(row);
   }
 }

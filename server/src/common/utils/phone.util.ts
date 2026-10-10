@@ -60,3 +60,15 @@ export function isUzbekPhone(normalized: string): boolean {
 /** Kontakt rad etilganda ko'rsatiladigan xabar. */
 export const SHARED_PHONE_INVALID =
   "Telefon raqamni o'qib bo'lmadi. Iltimos, tugma orqali qayta yuboring.";
+
+/**
+ * `905351099` → `+998 90 535 10 99`. A stored Uzbek number is 9 digits
+ * (`Branch.phone`, `Company.phone`); a leading 998 and punctuation are
+ * dropped first. Any other length is shown raw — a message with an odd number
+ * beats one with none.
+ */
+export function formatUzPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '').replace(/^998(?=\d{9}$)/, '');
+  if (digits.length !== 9) return `+998 ${digits}`;
+  return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
+}

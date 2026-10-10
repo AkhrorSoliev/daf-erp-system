@@ -33,6 +33,14 @@ export const STAFF_PAGES = {
   salary: '/profile/salary',
 } as const;
 
+/**
+ * «📋 Topshiriqlarim»: a callback the tasks module answers
+ * (`src/tasks/telegram/`, ADR-0078). Only this string lives here, so
+ * src/telegram never imports src/tasks.
+ */
+export const STAFF_TASKS_ACTION = 'tk:list';
+export const STAFF_TASKS_BUTTON_TEXT = '📋 Topshiriqlarim';
+
 /** Botga tanish xodim: kabinet shu ma'lumot bilan quriladi. */
 export interface StaffAccount {
   id: number;
@@ -118,7 +126,8 @@ const GROUPS_PAGE_ROLE_IDS = [1, 2, 3, 4];
 
 /**
  * Xodim menyusi. Kabinet profilni ochadi; jadval — har bir xodim ko'radigan
- * sahifa; guruhlar — kassirdan boshqa hamma; oylik — ustozning o'z sahifasi.
+ * sahifa; guruhlar — kassirdan boshqa hamma; topshiriqlar — hamma xodim;
+ * oylik — ustozning o'z sahifasi.
  * Telegram o'quvchi kartasiga ham bog'langan bo'lsa (o'quvchi ustoz bo'lgan
  * yoki farzandi o'qiydi) — o'quvchi kabineti ham.
  */
@@ -144,6 +153,7 @@ export function staffMenuKeyboard(
   const rows = [
     [Markup.button.webApp(STAFF_CABINET_BUTTON_TEXT, cabinetUrl)],
     pages,
+    [Markup.button.callback(STAFF_TASKS_BUTTON_TEXT, STAFF_TASKS_ACTION)],
   ];
   if (account.roleIds.includes(TEACHER_ROLE_ID)) {
     rows.push([

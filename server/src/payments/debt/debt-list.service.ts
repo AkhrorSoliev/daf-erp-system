@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   PaymentStatus,
   Prisma,
@@ -20,7 +20,7 @@ import {
   loadDebtRows,
   type DebtTab,
 } from '../../reports/debt-split';
-import { ceilingIsWider, inOtherBranch } from '../../common/auth/other-branch';
+import { studentNotFound } from '../../common/auth/other-branch';
 import { StatementService } from '../../statements/statement.service';
 import { debtListWorkbook } from './debt-list.excel';
 import {
@@ -142,7 +142,8 @@ export class DebtListService {
         status: true,
       },
     });
-    if (!student) throw await this.notFound(companyId, id, scope, ceiling);
+    if (!student)
+      throw await studentNotFound(this.prisma, companyId, id, scope, ceiling);
     const latest = { orderBy: { createdAt: 'desc' as const } };
     const [enrollments, model, payment, call, promise] = await Promise.all([
       this.prisma.enrollment.findMany({
@@ -228,36 +229,6 @@ export class DebtListService {
       buffer: await debtListWorkbook(q.tab, items),
       filename: `qarzdorlik-${q.tab}-${tashkentDateStr(now)}.xlsx`,
     };
-  }
-
-  /** ADR-0063: a student of another branch the caller works in is named, not «missing». */
-  private async notFound(
-    companyId: number,
-    id: number,
-    scope: ReportBranchIds,
-    ceiling: ReportBranchIds,
-  ): Promise<NotFoundException> {
-    if (ceilingIsWider(scope, ceiling)) {
-      const elsewhere = await this.prisma.student.findFirst({
-        where: {
-          id,
-          companyId,
-          deletedAt: null,
-          ...studentBranchWhere(ceiling),
-        },
-        select: {
-          branches: {
-            where: ceiling === null ? {} : { branchId: { in: ceiling } },
-            select: { branch: { select: { id: true, name: true } } },
-            orderBy: { branchId: 'asc' },
-            take: 1,
-          },
-        },
-      });
-      const branch = elsewhere?.branches[0]?.branch;
-      if (branch) return inOtherBranch("o'quvchi", branch);
-    }
-    return new NotFoundException("O'quvchi topilmadi");
   }
 
   /** Every row of the tab, filtered and sorted — the pages and the Excel are cut from it. */

@@ -1,4 +1,8 @@
-import { normalizeSharedPhone, isUzbekPhone } from './phone.util';
+import {
+  formatUzPhone,
+  normalizeSharedPhone,
+  isUzbekPhone,
+} from './phone.util';
 
 /**
  * Kontakt tugmasidan kelgan raqam. Telegram uni O'ZI beradi — xato terilgan
@@ -67,5 +71,17 @@ describe('isUzbekPhone', () => {
 
   it('chet el raqamini rad etadi', () => {
     expect(isUzbekPhone('491749493338')).toBe(false);
+  });
+});
+
+describe('formatUzPhone', () => {
+  it('prints a stored 9-digit number as «+998 XX XXX XX XX»', () => {
+    expect(formatUzPhone('901234567')).toBe('+998 90 123 45 67');
+  });
+  it('drops a leading 998 and any punctuation', () => {
+    expect(formatUzPhone('+998 (90) 123-45-67')).toBe('+998 90 123 45 67');
+  });
+  it('shows any other length raw rather than inventing a shape', () => {
+    expect(formatUzPhone('12345')).toBe('+998 12345');
   });
 });

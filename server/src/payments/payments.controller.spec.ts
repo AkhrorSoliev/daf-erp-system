@@ -10,12 +10,8 @@ describe('PaymentsController — route access', () => {
   const CREATES = ['create', 'attachExternal', 'preview'] as const;
   // The payments list, one payment, and the students nobody has paid yet.
   const VIEWS = ['findAll', 'findOne', 'getPending'] as const;
-  // The debt lists: debtors, a group's debtors and the frozen students' money.
-  const DEBTS = [
-    'getDebtors',
-    'getDebtorsForGroup',
-    'getFrozenBalances',
-  ] as const;
+  // The debt lists: debtors and a group's debtors.
+  const DEBTS = ['getDebtors', 'getDebtorsForGroup'] as const;
 
   it.each(CREATES)(
     '%s is gated by the payment recording capability',
@@ -111,7 +107,6 @@ describe('PaymentsController — delegation', () => {
     getDebtorSummary: jest.fn().mockResolvedValue({}),
     getPending: jest.fn().mockResolvedValue({}),
     getDebtorsForGroup: jest.fn().mockResolvedValue({}),
-    getFrozenBalances: jest.fn().mockResolvedValue({}),
   };
 
   beforeEach(async () => {
@@ -185,24 +180,6 @@ describe('PaymentsController — delegation', () => {
         branchId: 5,
         userId: 99,
         roles: ['CEO'],
-      });
-    });
-  });
-
-  describe('frozen-balances list', () => {
-    it('delegates getFrozenBalances with branch scope (userId + roles)', () => {
-      controller.getFrozenBalances(
-        { branchId: 2, page: 1, pageSize: 10 } as any,
-        99,
-        1001,
-        ['Branch Director'],
-      );
-      expect(mockService.getFrozenBalances).toHaveBeenCalledWith(1001, {
-        branchId: 2,
-        page: 1,
-        pageSize: 10,
-        userId: 99,
-        roles: ['Branch Director'],
       });
     });
   });

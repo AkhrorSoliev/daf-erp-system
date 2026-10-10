@@ -21,7 +21,13 @@ export async function setParticipantsTx(
   watcherIds: number[],
   userId: number,
   schedule: ScheduleOutbox,
-): Promise<{ updated: TaskRow; added: number[]; removed: number[] }> {
+): Promise<{
+  updated: TaskRow;
+  added: number[];
+  removed: number[];
+  /** The part of `removed` that were assignees. */
+  removedAssignees: number[];
+}> {
   const id = row.id;
   if (!access.canManage) {
     throw new ForbiddenException("Ijrochilarni faqat beruvchi o'zgartiradi");
@@ -34,15 +40,13 @@ export async function setParticipantsTx(
   if (!OPEN_STATUSES.includes(row.status)) {
     throw new BadRequestException("Yopilgan topshiriq o'zgartirilmaydi");
   }
-  const plan = planParticipantChange(
-    new Map(row.participants.map((p) => [p.userId, p.role])),
-    assigneeIds,
-    watcherIds,
-  );
+  const was = new Map(row.participants.map((p) => [p.userId, p.role]));
+  const plan = planParticipantChange(was, assigneeIds, watcherIds);
   const { removed, flipped, fresh, added } = plan;
   if (!added.length && !removed.length) {
-    return { updated: row, added: [], removed: [] };
+    return { updated: row, added: [], removed: [], removedAssignees: [] };
   }
+  const removedAssignees = removed.filter((u) => was.get(u) === 'ASSIGNEE');
 
   if (removed.length) {
     await tx.taskParticipant.deleteMany({
@@ -86,7 +90,7 @@ export async function setParticipantsTx(
   });
   if (!updated) throw new NotFoundException('Topshiriq topilmadi');
   if (updated.dueAt) await schedule(tx, updated);
-  return { updated, added, removed };
+  return { updated, added, removed, removedAssignees };
 }
 
 /**
@@ -130,7 +134,11 @@ export async function updateFieldsTx(
     select: TASK_DETAIL_SELECT,
   });
   // The old reminders are for the old due date. `schedule` clears the task's
-  // rows itself and writes new ones only when a due date is left.
-  if (dueChanged) await schedule(tx, updated);
+  // time rows itself and writes new ones only when a due date is left. A
+  // changed priority moves them too: an URGENT task is exempt from the night
+  // quiet, so its Telegram rows have a different time.
+  const priorityChanged =
+    dto.priority !== undefined && dto.priority !== row.priority;
+  if (dueChanged || priorityChanged) await schedule(tx, updated);
   return { updated, dueChanged };
 }

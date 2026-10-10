@@ -153,22 +153,27 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
       'Id-addressed money paths. The branch is resolved from the record and the ' +
-      'caller is verified against it — before the transaction for a cheap refusal ' +
-      'and again INSIDE it with the transaction client, because a student can ' +
-      'change branch between the two. Taking the header instead would let the ' +
-      'branch a user happens to be viewing decide where money is booked.',
+      'caller is verified against it before the write. `POST /payments` checks ' +
+      'again INSIDE its transaction with the transaction client, because a ' +
+      'student can change branch between the two; the other routes here (the ' +
+      'refund routes and `POST /students/:id/balance-notices` among them) check ' +
+      "the student's branch once, before the write. Taking the header instead " +
+      'would let the branch a user happens to be viewing decide where money ' +
+      'is booked.',
     routes: [
       'POST /payments',
       'POST /payments/:id/correct',
       'POST /payments/:id/reverse',
       'POST /payments/attach-external',
       'POST /refunds/:id/reverse',
+      'POST /refunds/:id/hand-over',
+      'POST /refunds/:id/cancel',
       'POST /refunds/quick',
-      'PATCH /refunds/:id/process',
       'GET /refunds/preview/:studentId',
       'POST /transactions/adjustment',
       'POST /withdrawals',
       'GET /withdrawals/preview/:studentId',
+      'POST /students/:id/balance-notices',
       'POST /billing/debt-write-offs/:id/reverse',
       'POST /billing/lesson-deduction/:id/reverse',
       'POST /billing/retroactive/:studentId',
@@ -243,7 +248,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /expenses/pdf',
       'GET /payments/debtors',
       'GET /payments/debtors/summary',
-      'GET /payments/frozen-balances',
       'GET /transactions/debt-write-offs',
     ],
   },

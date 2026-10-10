@@ -6,9 +6,9 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
 import { TASK_EVENTS, type TaskEventTask } from './task-events';
-import { planNotices } from './task-notify-plan';
+import { noticeUserIds, planNotices } from './task-notify-plan';
 
-/** Bell + SSE + push for every task event. Telegram joins in phase 2. */
+/** Bell + SSE + push for every task event. Telegram is `telegram/task-telegram.listener.ts`, from the same plan. */
 @Injectable()
 export class TaskNotifyListener {
   private readonly logger = new Logger(TaskNotifyListener.name);
@@ -59,13 +59,7 @@ export class TaskNotifyListener {
 
   private async handle(event: string, payload: { task: TaskEventTask }) {
     const task = payload.task;
-    const ids = [
-      ...new Set([
-        ...(task.authorId !== null ? [task.authorId] : []),
-        ...task.participants.map((p) => p.userId),
-        ...extraIds(payload),
-      ]),
-    ];
+    const ids = noticeUserIds(payload);
     try {
       // Names come from every row: the leaver on a reassignment is no longer
       // active but is still named in the message. Only live users are told.
@@ -134,20 +128,4 @@ export class TaskNotifyListener {
       }
     }
   }
-}
-
-function extraIds(p: unknown): number[] {
-  const x = p as {
-    actorId?: number | null;
-    userIds?: number[];
-    toUserIds?: number[];
-    fromUserId?: number;
-  };
-  return [
-    // The actor may be neither author nor participant (a CEO cancelling).
-    ...(typeof x.actorId === 'number' ? [x.actorId] : []),
-    ...(x.userIds ?? []),
-    ...(x.toUserIds ?? []),
-    ...(x.fromUserId !== undefined ? [x.fromUserId] : []),
-  ];
 }

@@ -84,16 +84,16 @@ export const boshlash: QollanmaSahifa[] = [
       "guruhlar kassirga ko'rinmaydi",
       "davomat ochilish vaqti",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "boshlash",
     sahifa: "topshiriqlar",
     sarlavha: "Topshiriqlar",
     qisqacha:
-      "Topshiriq izohdan alohida: u «Topshiriqlar» sahifasida doska (Yangi → Jarayonda → Tekshiruvda → Bajarildi) va ro'yxat ko'rinishida turadi, uni yuqori paneldagi «+ Topshiriq» tugmasi bilan berasiz. CEO hammaga, filial direktori o'z filialiga, administrator o'z filialidagi administrator, kassir va ustozga topshiriq beradi, ustoz va kassir faqat o'ziga; ijrochi «Boshladim» va «Bajardim» ni bosadi, beruvchi «Qabul qilish» yoki «Qaytarish» ni. Davomat olinmagan darsda administratorga «Dars bo'ldimi?» topshirig'ini tizim beradi; CEO va filial direktori «Barchasi» va «Yuklama» tablarini ham ko'radi.",
+      "Topshiriq izohdan alohida: u «Topshiriqlar» sahifasida doska (Yangi → Jarayonda → Tekshiruvda → Bajarildi) va ro'yxat ko'rinishida turadi, uni yuqori paneldagi «+ Topshiriq» tugmasi bilan berasiz. CEO hammaga, filial direktori o'z filialiga, administrator o'z filialidagi administrator, kassir va ustozga topshiriq beradi, ustoz va kassir faqat o'ziga; ijrochi «Boshladim» va «Bajardim» ni bosadi, beruvchi «Qabul qilish» yoki «Qaytarish» ni. Davomat olinmagan darsda administratorga «Dars bo'ldimi?» topshirig'ini tizim beradi; CEO va filial direktori «Barchasi» va «Yuklama» tablarini ham ko'radi. Topshiriq xabarlari Telegram botga ham darhol keladi (kechasi — ertalab 08:00 da), tugmalar va javob bilan.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0054", "0063", "0074"],
+    adr: ["0054", "0063", "0074", "0078"],
     yollar: ["/tasks"],
     kalitSozlar: [
       "topshiriq",
@@ -131,8 +131,10 @@ export const boshlash: QollanmaSahifa[] = [
       "bo'ldi",
       "bo'lmadi",
       "davomat olinmadi",
+      "telegram",
+      "topshiriqlarim",
     ],
-    yangilangan: "2026-10-07",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "boshlash",
@@ -141,7 +143,7 @@ export const boshlash: QollanmaSahifa[] = [
     qisqacha:
       "Tizimda uchraydigan atamalar alifbo tartibida: rollar, o'quvchi va guruh holatlari, davomat, qarz, to'lov va oylik so'zlari bir-ikki gapda tushuntirilgan.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0015", "0047", "0048", "0054", "0055", "0058", "0059", "0060", "0062", "0064", "0065", "0066"],
+    adr: ["0015", "0047", "0048", "0054", "0055", "0058", "0059", "0060", "0062", "0064", "0065", "0066", "0077"],
     yollar: [],
     kalitSozlar: [
       "atama",
@@ -181,6 +183,6 @@ export const boshlash: QollanmaSahifa[] = [
       "telegram kabinet",
       "bot bloklangan",
     ],
-    yangilangan: "2026-10-05",
+    yangilangan: "2026-10-10",
   },
 ];

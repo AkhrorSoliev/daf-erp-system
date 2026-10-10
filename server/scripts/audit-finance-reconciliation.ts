@@ -769,8 +769,13 @@ async function main(prisma: PrismaClient) {
       const e2: any[] = [];
       const e2expected: any[] = [];
       const e3: any[] = [];
+      const requestedRefundIds = new Set(
+        (await prisma.refund.findMany({ where: { companyId: COMPANY_ID, status: 'REQUESTED' }, select: { id: true } })).map((r) => r.id),
+      );
       for (const t of txns) {
         if (!CASH_FLOW_TYPES.has(t.type)) continue;
+        // ADR-0077: an open (REQUESTED) refund has its REFUND row and no cash movement until «Berildi».
+        if (t.type === 'REFUND' && t.refundId != null && requestedRefundIds.has(t.refundId)) continue;
         // Reversal rows unwind the ORIGINAL's movement (keyed to the original
         // transactionId), so they never carry their own movement — skip them.
         if (t.reversedTransactionId != null) continue;

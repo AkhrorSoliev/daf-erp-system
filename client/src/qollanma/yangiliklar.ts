@@ -7,6 +7,27 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "Topshiriqlar Telegram'da",
+    matn: "Topshiriq xabarlari endi Telegram botga darhol keladi, kechqurungi umumiy xabarni kutmaydi: sizga berilganda, tekshiruvga kelganda, qabul qilinganda yoki qaytarilganda, yangi izoh yozilganda, muddatga 1 soat qolganda va muddat o'tganda (muddat eslatmasi bugundan keyin berilgan yoki muddati o'zgartirilgan topshiriqlarga keladi). Xabar ostida tugmalar bor: «Boshladim», «Bajardim», «Qabul qilish», «Qaytarish», «Qadamlar», «Ochish». Holat tugmalari bosilganda o'sha xabarning o'zi yangilanadi; «Qaytarish» sabab so'raydigan yangi xabar yuboradi, «📋 Topshiriqlarim» dagi raqam esa topshiriqni alohida xabar qilib yuboradi. Xabarga javob qilib yozilgan matn topshiriqqa izoh bo'lib tushadi; «Qaytarish» dan keyingi javob — qaytarish sababi. Bot menyusida yangi «📋 Topshiriqlarim» tugmasi ochiq topshiriqlaringizni ko'rsatadi. Tugmani ko'rish uchun botga /start yuboring. Soat 22:00 dan 08:00 gacha tayyor bo'lgan xabar ertalab 08:00 da keladi, «Shoshilinch» topshiriq xabari esa darhol. Kuzatuvchiga botda faqat «Bajarildi» va «Bekor qilindi» keladi. Rasm, fayl va ovozli javob hozircha qabul qilinmaydi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-10-10",
+    sarlavha: "Lid voronkasi yangi ko'rinishda",
+    matn: "«Lidlar hisoboti»dagi voronka qayta chizildi: har bosqich blokining kengligi endi aynan odam soniga teng (44 kishi 157 ning 28 foizi bo'lsa, blok ham 28 foiz), kichik bosqich kattalashtirib ko'rsatilmaydi. Bloklar orasida keyingi bosqichga necha foiz o'tgani, o'ng chetda esa necha kishi o'tmagani yoziladi. Foizlar butun son (13,4% emas, 13%), bosh sahifadagi voronka qatorida ham. Bosqich ustiga sichqonchani olib borsangiz, lidlarning necha foizi ekani chiqadi; bosqichni bosganda ro'yxat avvalgidek ochiladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "hayot-davri" },
+  },
+  {
+    sana: "2026-10-10",
+    sarlavha: "«Qaytariladigan pul» sahifasi va pulni qaytarish so'rovi",
+    matn: "Moliya bo'limida yangi «Qaytariladigan pul» sahifasi bor: muzlatilgan, guruhsiz va ketgan o'quvchilarning balansida qolgan puli uch bo'limda, tepada esa ochiq pulni qaytarish so'rovlari. Pulni qaytarish endi so'rov orqali: «So'rovni ochish» bosilganda balans darhol kamayadi, pul esa 10 bank kuni ichida kassadan beriladi va «Berildi» bilan belgilanadi (kassir ham bosa oladi); hali berilmagan so'rovni CEO yoki filial direktori bekor qiladi. O'quvchiga «pulingizni olib keting» deb bot orqali xabar yuboriladi yoki qo'ng'iroq belgilanadi; o'quvchi pul qaytarish so'rovi ochilgani, pul berilgani va so'rov bekor qilingani haqida ham bot orqali xabar oladi. «Markaz hisobiga o'tkazish» va «Yechib olish» xabardan 10 bank kuni va yana 30 kun o'tgach ochiladi. «Muzlatilganlarning puli» sahifasi shu yerga ko'chdi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "tolovlar", sahifa: "qaytariladigan-pul" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Qo'ng'iroqcha qayta qurildi",
     matn: "Qo'ng'iroq belgisidagi raqam endi faqat sizdan ish kutayotgan xabarlarni sanaydi: davomat eslatmasi, sizga berilgan yoki tekshiruvga kelgan topshiriq, buzilgan to'lov va'dasi. Ish bajarilishi bilan xabar o'zi yopiladi: davomat olinsa, dars bekor qilinsa yoki ko'chirilsa — davomat eslatmalari, topshiriq yopilsa — uning xabarlari, qarz to'lansa — va'da xabari. Ertalabki «Bugun N ta to'lov va'dasi bajarilmadi» ro'yxati undagi hamma o'quvchi qarzini to'lagach yopiladi (1 000 so'mdan kam qolsa ham bo'ladi), shu filialning keyingi yangi ro'yxati kelsa — eskisi ham. Panelda «Kutilmoqda» va «Hammasi» bo'limlari va «Topshiriqlar», «Davomat», «To'lovlar» bo'yicha saralash bor; bir kundagi bir xil davomat eslatmalari bitta qatorga yig'iladi («Davomat olinmagan · 3 guruh»). Yangi «Barcha bildirishnomalar» sahifasida hamma xabar kunlar bo'yicha turadi va ulardan qidirsa bo'ladi. Yangi tizim yoqilgan kuni 7 kundan eski xabarlar bir marta tozalandi: kutilayotganlari (ochiq topshiriqlarnikidan tashqari) yopildi, o'qilmaganlari «o'qilgan» deb belgilandi, xabarlarning o'zi o'chirilmadi. Davomat dars boshlanishidan oldin olingan bo'lsa, o'qituvchiga «Dars boshlandi» eslatmasi endi bormaydi; bekor qilingan yoki ko'chirilgan darsga davomat eslatmalari yuborilmaydi. Kuni o'tib ketgan va «Dars bo'ldimi?» savoli kutilmayotgan davomat eslatmasi har kecha soat 03:00 da o'zi yopiladi.",
     rollar: [1, 2, 3, 4, 5],

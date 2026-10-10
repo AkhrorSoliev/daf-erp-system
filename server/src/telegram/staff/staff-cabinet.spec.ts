@@ -4,6 +4,8 @@ import {
 } from '../../common/auth/staff-telegram';
 import {
   STAFF_CABINET_BUTTON_TEXT,
+  STAFF_TASKS_ACTION,
+  STAFF_TASKS_BUTTON_TEXT,
   StaffCabinet,
   findStaffForChat,
   staffMenuKeyboard,
@@ -146,6 +148,7 @@ describe('staffMenuKeyboard', () => {
         ['📅 Jadval', `${LEHRER_URL}?next=%2Fschedule`],
         ['👥 Guruhlar', `${LEHRER_URL}?next=%2Fgroups`],
       ],
+      [['📋 Topshiriqlarim', undefined]],
       [['💰 Oyligim', `${LEHRER_URL}?next=%2Fprofile%2Fsalary`]],
     ]);
   });
@@ -153,7 +156,7 @@ describe('staffMenuKeyboard', () => {
   it("ustoz bo'lmagan xodimda oylik tugmasi yo'q", () => {
     const rows = buttons(staffMenuKeyboard(GULNOZA, ADMIN_URL));
 
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     expect(JSON.stringify(rows)).not.toContain('Oyligim');
   });
 
@@ -170,7 +173,18 @@ describe('staffMenuKeyboard', () => {
     expect(buttons(staffMenuKeyboard(MALIKA, ADMIN_URL))).toEqual([
       [[STAFF_CABINET_BUTTON_TEXT, ADMIN_URL]],
       [['📅 Jadval', `${ADMIN_URL}?next=%2Fschedule`]],
+      [['📋 Topshiriqlarim', undefined]],
     ]);
+  });
+
+  it('every staff member gets «📋 Topshiriqlarim» (answered by the tasks module)', () => {
+    for (const account of [DOSTON, GULNOZA, MALIKA]) {
+      const markup: any = staffMenuKeyboard(account, ADMIN_URL);
+      const button = markup.reply_markup.inline_keyboard
+        .flat()
+        .find((b: any) => b.text === STAFF_TASKS_BUTTON_TEXT);
+      expect(button.callback_data).toBe(STAFF_TASKS_ACTION);
+    }
   });
 
   it('kassir ham, ustoz ham — guruhlar tugmasi bor (ustoz roli ochadi)', () => {

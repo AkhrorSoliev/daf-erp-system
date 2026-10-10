@@ -71,6 +71,8 @@ export async function applyCommentTask(
   if (OPEN_STATUSES.includes(m.task.status)) {
     await scheduleTaskOutbox(tx, {
       id: t.id,
+      kind: m.task.kind,
+      priority: m.task.priority,
       dueAt: m.task.dueAt,
       authorId: m.task.authorId,
       participants: m.participants.map((p) => ({

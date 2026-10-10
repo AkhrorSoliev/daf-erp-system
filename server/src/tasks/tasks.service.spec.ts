@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { TaskOutboxService } from './task-outbox.service';
 import { TASK_EVENTS } from './task-events';
+import { ONLY_GIVER_REVIEWS } from './task-transitions';
 
 const ADMIN = {
   id: 30,
@@ -260,6 +261,14 @@ describe('TasksService.create', () => {
     expect(order).toEqual(['commit', 'emit']);
   });
 
+  it('marks task.assigned as a new task (Telegram says «Yangi topshiriq»)', async () => {
+    await service.create({ title: 'X', assigneeIds: [40] }, actor());
+    expect(emitter.emit).toHaveBeenCalledWith(
+      TASK_EVENTS.ASSIGNED,
+      expect.objectContaining({ created: true, userIds: [40] }),
+    );
+  });
+
   describe('a linked employee', () => {
     const link = { title: 'X', assigneeIds: [40], entityType: 'User' };
 
@@ -470,11 +479,34 @@ describe('TasksService writes', () => {
     });
   });
 
+  it('a review reason over 1000 characters is a 400 for every door (the website DTO says the same)', async () => {
+    prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'IN_REVIEW' }));
+    const tooLong = 'x'.repeat(1001);
+    await expect(
+      service.review('t1', 'RETURN', tooLong, authorActor()),
+    ).rejects.toThrow('Sabab 1000 belgidan oshmasin');
+    await expect(
+      service.review('t1', 'ACCEPT', tooLong, authorActor()),
+    ).rejects.toThrow('Sabab 1000 belgidan oshmasin');
+    expect(prisma.task.update).not.toHaveBeenCalled();
+    // The reason is trimmed first: 1000 characters plus spaces still passes.
+    await service.review(
+      't1',
+      'RETURN',
+      ` ${'x'.repeat(1000)} `,
+      authorActor(),
+    );
+    expect(prisma.task.update).toHaveBeenCalledTimes(1);
+  });
+
   it('assignee cannot review (403)', async () => {
     prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'IN_REVIEW' }));
     await expect(
       service.review('t1', 'ACCEPT', undefined, assigneeActor()),
     ).rejects.toThrow(ForbiddenException);
+    await expect(
+      service.review('t1', 'ACCEPT', undefined, assigneeActor()),
+    ).rejects.toThrow(ONLY_GIVER_REVIEWS);
   });
 
   it('cancel by author: CANCELLED, outbox rows dropped, event emitted', async () => {
@@ -580,7 +612,35 @@ describe('TasksService writes', () => {
     );
     expect(emitter.emit).toHaveBeenCalledWith(
       TASK_EVENTS.UNASSIGNED,
-      expect.objectContaining({ userIds: [40] }),
+      expect.objectContaining({ userIds: [40], removedAssigneeIds: [40] }),
+    );
+  });
+
+  it('setParticipants names which of the removed were assignees (a removed watcher is not)', async () => {
+    prisma.task.findFirst.mockResolvedValue(
+      makeRow({
+        participants: [
+          {
+            userId: 40,
+            role: 'ASSIGNEE',
+            seenAt: null,
+            user: { id: 40, firstName: 'T', lastName: 'U', photo: null },
+          },
+          {
+            userId: 41,
+            role: 'WATCHER',
+            seenAt: null,
+            user: { id: 41, firstName: 'V', lastName: 'W', photo: null },
+          },
+        ],
+      }),
+    );
+    prisma.user.findMany.mockResolvedValue([{ ...TEACHER, id: 42 }]);
+    // 40 (assignee) and 41 (watcher) both leave; 42 takes over.
+    await service.setParticipants('t1', [42], [], authorActor());
+    expect(emitter.emit).toHaveBeenCalledWith(
+      TASK_EVENTS.UNASSIGNED,
+      expect.objectContaining({ userIds: [40, 41], removedAssigneeIds: [40] }),
     );
   });
 
@@ -848,6 +908,29 @@ describe('TasksService writes', () => {
     );
   });
 
+  it('a changed priority reschedules the outbox (an URGENT task is exempt from night quiet) without a due.changed', async () => {
+    prisma.task.findFirst.mockResolvedValue(
+      makeRow({ dueAt: new Date('2026-10-08T13:00:00.000Z') }),
+    );
+    await service.update('t1', { priority: 'URGENT' }, authorActor());
+    expect(outbox.schedule).toHaveBeenCalledWith(
+      prisma,
+      expect.objectContaining({ id: 't1', priority: 'URGENT' }),
+    );
+    expect(emitter.emit).not.toHaveBeenCalledWith(
+      TASK_EVENTS.DUE_CHANGED,
+      expect.anything(),
+    );
+  });
+
+  it('the same priority sent again leaves the outbox alone', async () => {
+    prisma.task.findFirst.mockResolvedValue(
+      makeRow({ dueAt: new Date('2026-10-08T13:00:00.000Z') }),
+    );
+    await service.update('t1', { priority: 'MEDIUM' }, authorActor());
+    expect(outbox.schedule).not.toHaveBeenCalled();
+  });
+
   it('update refuses a closed task', async () => {
     prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'DONE' }));
     await expect(
@@ -891,6 +974,59 @@ describe('TasksService writes', () => {
     expect(data.participants.create).toEqual([
       { userId: 40, role: 'ASSIGNEE' },
     ]);
+  });
+
+  describe('an action from Telegram is logged as such', () => {
+    const tg = () => ({ ...assigneeActor(), via: 'TELEGRAM' as const });
+
+    it('status change', async () => {
+      await service.changeStatus('t1', 'IN_PROGRESS', tg());
+      expect(prisma.taskEvent.create.mock.calls[0][0].data.via).toBe(
+        'TELEGRAM',
+      );
+    });
+
+    it('comment', async () => {
+      await service.addComment('t1', 'hi', tg());
+      expect(prisma.taskEvent.create.mock.calls[0][0].data.via).toBe(
+        'TELEGRAM',
+      );
+    });
+
+    it('step tick', async () => {
+      await service.updateStep('t1', 's1', { done: true }, tg());
+      expect(prisma.taskEvent.create.mock.calls[0][0].data.via).toBe(
+        'TELEGRAM',
+      );
+    });
+
+    it('return with a reason', async () => {
+      prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'IN_REVIEW' }));
+      await service.review('t1', 'RETURN', 'Doska artilmagan', {
+        ...authorActor(),
+        via: 'TELEGRAM',
+      });
+      expect(prisma.taskEvent.create.mock.calls[0][0].data).toMatchObject({
+        type: 'RETURN',
+        via: 'TELEGRAM',
+      });
+    });
+
+    it('the website stays WEB', async () => {
+      await service.changeStatus('t1', 'IN_PROGRESS', assigneeActor());
+      expect(prisma.taskEvent.create.mock.calls[0][0].data.via).toBe('WEB');
+    });
+  });
+
+  it('setParticipants: an added assignee is not a new task', async () => {
+    // The same setup as «setParticipants emits assigned for added and unassigned for removed».
+    prisma.user.findMany.mockResolvedValue([{ ...TEACHER, id: 41 }]);
+    await service.setParticipants('t1', [41], [], authorActor());
+    const assigned = emitter.emit.mock.calls.find(
+      ([name]) => name === TASK_EVENTS.ASSIGNED,
+    );
+    expect(assigned?.[1]).toMatchObject({ userIds: [41] });
+    expect(assigned?.[1].created).toBeUndefined();
   });
 });
 

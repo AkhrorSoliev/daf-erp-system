@@ -77,7 +77,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     qisqacha:
       "Karta chapda o'quvchi ma'lumotlari, balans va amallarni, o'ngda 11 ta tabni ko'rsatadi. «To'lovlar» tabi o'quvchi qancha to'lagani, har oyning narxi, to'langani va qarzi hamda balans nimadan chiqqanini tushuntiradi.",
     rollar: [1, 2, 3],
-    adr: ["0004", "0037", "0047", "0062", "0064", "0066", "0070", "0073"],
+    adr: ["0004", "0037", "0047", "0062", "0064", "0066", "0070", "0073", "0077"],
     yollar: ["/students/profile/*"],
     kalitSozlar: [
       "o'quvchi kartasi",
@@ -162,7 +162,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     qisqacha:
       "Muzlatilgan o'quvchi davomatdan chiqadi, undan dars puli yechilmaydi va oyning o'tilmagan darslar puli balansga qaytadi. Qaytganda oylik kursda faqat qaytgan kundan keyingi darslar hisoblanadi.",
     rollar: [1, 2, 3],
-    adr: ["0023", "0043", "0048", "0053", "0064"],
+    adr: ["0023", "0043", "0048", "0053", "0064", "0077"],
     yollar: ["/students/profile/*"],
     kalitSozlar: [
       "muzlatish",
@@ -176,7 +176,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "muzlatilgan puli",
       "qaytgan kun",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "oquvchilar",
@@ -185,7 +185,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     qisqacha:
       "Guruhdan chiqarishda pulni qaytarish tartibi tanlanadi. 01.10.2026 dan beri o'quvchi o'zi to'xtatsa va oyning 40% idan ko'pi o'tgan bo'lsa, oylik puli qaytmaydi; hamma guruhda ko'pi bilan 1 ta darsga kelgan o'quvchiga esa oyning to'liq puli qaytadi (sinov darsi). Qaytgan pul balansga tushadi, naqd berilmaydi.",
     rollar: [1, 2, 3],
-    adr: ["0043", "0044", "0048", "0060", "0062", "0064"],
+    adr: ["0043", "0044", "0048", "0060", "0062", "0064", "0077"],
     yollar: ["/students/profile/*"],
     kalitSozlar: [
       "guruhdan chiqarish",
@@ -212,7 +212,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "guruhga qaytarilgan",
       "pul qaytarilmaydigan chegara",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "oquvchilar",

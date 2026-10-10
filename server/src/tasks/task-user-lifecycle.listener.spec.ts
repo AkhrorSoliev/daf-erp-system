@@ -326,9 +326,9 @@ describe('TaskUserLifecycleListener', () => {
     ]);
     await listener.onDeactivated(event);
 
-    // The task's rows are rewritten for the new set of assignees.
+    // The task's time rows are rewritten for the new set of assignees.
     expect(tx.taskOutbox.deleteMany).toHaveBeenCalledWith({
-      where: { taskId: 't1' },
+      where: { taskId: 't1', kind: { in: ['REMINDER', 'OVERDUE'] } },
     });
     const { data } = tx.taskOutbox.createMany.mock.calls[0][0];
     expect(data).toEqual(
