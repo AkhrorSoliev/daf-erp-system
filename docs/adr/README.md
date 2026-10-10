@@ -96,7 +96,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0025](0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md) | Ko'pchilik Telegram xabari kunlik yagona navbatga jamlanadi, darhol yubormaydi | Qabul qilindi | 2026-09-23 |
 | [0026](0026-rol-berish-shipi-ikkala-eshikda.md) | Rol faqat chaqiruvchining shipi ichida beriladi va olinadi | Qabul qilindi | 2026-09-24 |
 | [0027](0027-xodim-hisobini-faqat-yuqoridagi-rahbar-ozgartiradi.md) | Xodim hisobini faqat undan yuqoridagi rahbar o'zgartiradi | Qabul qilindi | 2026-09-24 |
-| [0028](0028-bloklangan-xodim-hech-narsa-bermaydi.md) | Bloklangan xodim hech narsa bera olmaydi, uning tokeni keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
+| [0028](0028-bloklangan-xodim-hech-narsa-bermaydi.md) | Bloklangan xodim hech narsa bera olmaydi, uning tokeni keyingi so'rovda to'xtaydi | Qabul qilindi; «rol o'zgarishi tokenni to'xtatmaydi» qismi — ADR-0077 bilan almashtirildi | 2026-09-24 |
 | [0029](0029-xodim-havolasi-uch-kun-ishlaydi.md) | Xodim havolasi uch kun ishlaydi, berilgan vaqti imzo ichida | Qabul qilindi | 2026-09-24 |
 | [0030](0030-parol-ozgarsa-boshqa-kirishlar-toxtaydi.md) | Parol o'zgarsa, hisobning boshqa kirishlari keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
 | [0031](0031-oz-kirish-kalitingiz-joriy-parol-bilan-ozgaradi.md) | O'z kirish kalitingiz faqat joriy parol bilan o'zgaradi | Qabul qilindi; o'quvchi qismi — ADR-0039 | 2026-09-24 |
@@ -141,7 +141,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0072](0072-qarzdorlik-qatorlari-va-vada-qoidasi.md) | Qarzdorlik sahifasi qarz bo'linishining qatorlarini ko'rsatadi; to'lov va'dasi ko'pi bilan 7 kunga, oyiga bir marta; «Markaz qoplagani» faqat CEO va filial direktoriga | Qabul qilindi | 2026-10-04 |
 | [0073](0073-tolovlar-hisoboti-manfiy-oy-kredit.md) | To'lovlar hisoboti: narxi manfiy chiqqan oy kredit bo'lib FIFO'da taqsimlanadi, to'lanmagan qatorlar doim qarzga teng | Qabul qilindi | 2026-10-05 |
 | [0074](0074-topshiriq-alohida-bolim.md) | Topshiriq izohning turi emas, alohida bo'lim: bitta holat, tekshiruv bosqichi (Yangi → Jarayonda → Tekshiruvda → Bajarildi), yuqoridan pastga berish zinasi, tizim topshirig'ini faqat manbasi yopadi, `Task*` ga yozish faqat `src/tasks/` da | Qabul qilindi | 2026-10-07 |
-| [0077](0077-imkoniyat-rol-emas.md) | Ruxsat — imkoniyat, rol — kimlik: route'lar katalogdagi imkoniyat bilan tekshiriladi, rollar har so'rovda bazadan | Qabul qilindi | 2026-10-10 |
+| [0077](0077-imkoniyat-rol-emas.md) | Ruxsat imkoniyat bilan tekshiriladi, rol faqat kimlikni bildiradi | Qabul qilindi | 2026-10-10 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

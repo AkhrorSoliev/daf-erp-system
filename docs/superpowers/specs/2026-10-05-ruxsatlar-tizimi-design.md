@@ -199,7 +199,7 @@ Har bir route'da aniq bitta belgi bo'ladi:
 |---|---|---|
 | `@Public()` | ochiq | o'zgarmaydi (24) |
 | `@StudentOnly()` | o'quvchi portali | `@Roles('Student')` o'rniga (39) |
-| `@AnyUser()` | har qanday kirgan hisob, faqat o'z ma'lumoti | bugun `@Roles` siz route'lar (15) |
+| `@AnyUser()` | bloklanmagan har qanday kirgan hisob, faqat o'z ma'lumoti | bugun `@Roles` siz route'lar (15) |
 | `@AnyStaff()` | har qanday xodim: ma'lumotnomalar, o'z ma'lumoti, topshiriqlar | ma'lumotnoma ro'yxatlari, fayl yuklash, o'z telefoni, `/salary/me/*`, `/tasks/*` (33) |
 | `@Can(...keys)` | sanab o'tilgan imkoniyatlardan **birortasi** bo'lsa | qolgan xodim route'lari (342) |
 
