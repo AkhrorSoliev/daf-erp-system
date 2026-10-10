@@ -53,6 +53,11 @@ const NOT_A_USER_PASSWORD: { file: string; where: string; why: string }[] = [
     where: 'buildStaffCredentialsMessage',
     why: 'the welcome message for the account just created',
   },
+  {
+    file: 'src/student-join-requests/student-join-requests.service.ts',
+    where: 'joinRequestApprovedText',
+    why: 'the approval message for the account just created',
+  },
 ];
 
 const FIX =
