@@ -23,6 +23,7 @@ describe('GroupsService — status methods', () => {
   let statusHistoryService: any;
   let statusCascadeService: any;
   let entityHistoryService: any;
+  let emitter: { emit: jest.Mock };
 
   const mockGroup = {
     id: 'group-1',
@@ -43,6 +44,7 @@ describe('GroupsService — status methods', () => {
   };
 
   beforeEach(async () => {
+    emitter = { emit: jest.fn() };
     prisma = {
       group: {
         findFirst: jest.fn().mockResolvedValue(mockGroup),
@@ -159,7 +161,7 @@ describe('GroupsService — status methods', () => {
             emitStatusChanged: jest.fn(),
           },
         },
-        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: EventEmitter2, useValue: emitter },
         {
           provide: require('./group-holiday-cascade.service')
             .GroupHolidayCascadeService,
@@ -608,11 +610,13 @@ describe('GroupsService — status methods', () => {
     });
 
     it("closes the group's unanswered «Dars bo'ldimi?» tasks", async () => {
-      tx.unmarkedLesson.findMany.mockResolvedValue([{ taskId: 'c1' }]);
+      tx.unmarkedLesson.findMany.mockResolvedValue([
+        { taskId: 'c1', date: new Date('2026-10-09T00:00:00.000Z') },
+      ]);
       await service.delete('group-1', 1, 1001);
       expect(tx.unmarkedLesson.findMany).toHaveBeenCalledWith({
         where: { groupId: 'group-1', status: 'PENDING' },
-        select: { taskId: true },
+        select: { taskId: true, date: true },
       });
       expect(tx.task.updateMany).toHaveBeenCalledWith({
         where: {
@@ -621,6 +625,49 @@ describe('GroupsService — status methods', () => {
         },
         data: { status: 'DONE', closedAt: expect.any(Date) },
       });
+    });
+
+    // The notices those tasks and that day's alerts waited on close with them
+    // (NotificationResolverService hears this), after the commit.
+    it('tells the notification resolver of every closed question, after the commit', async () => {
+      tx.unmarkedLesson.findMany.mockResolvedValue([
+        { taskId: 'c1', date: new Date('2026-10-08T00:00:00.000Z') },
+        { taskId: 'c2', date: new Date('2026-10-09T00:00:00.000Z') },
+      ]);
+      prisma.$transaction.mockImplementation(async (arg: any) => {
+        const result = await arg(tx);
+        // Nothing is emitted while the transaction is still open.
+        expect(emitter.emit).not.toHaveBeenCalled();
+        return result;
+      });
+
+      await service.delete('group-1', 1, 1001);
+
+      expect(emitter.emit).toHaveBeenCalledTimes(2);
+      expect(emitter.emit).toHaveBeenCalledWith('unmarked-lesson.closed', {
+        companyId: 1001,
+        groupId: 'group-1',
+        date: '2026-10-08',
+      });
+      expect(emitter.emit).toHaveBeenCalledWith('unmarked-lesson.closed', {
+        companyId: 1001,
+        groupId: 'group-1',
+        date: '2026-10-09',
+      });
+    });
+
+    it('emits nothing when no question was waiting, or when the deletion fails', async () => {
+      await service.delete('group-1', 1, 1001);
+      expect(emitter.emit).not.toHaveBeenCalled();
+
+      tx.unmarkedLesson.findMany.mockResolvedValue([
+        { taskId: 'c1', date: new Date('2026-10-09T00:00:00.000Z') },
+      ]);
+      tx.group.update.mockRejectedValue(new Error('lock timeout'));
+      await expect(service.delete('group-1', 1, 1001)).rejects.toThrow(
+        'lock timeout',
+      );
+      expect(emitter.emit).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException for a missing group and changes nothing', async () => {
