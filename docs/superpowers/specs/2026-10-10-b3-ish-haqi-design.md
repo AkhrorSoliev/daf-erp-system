@@ -212,7 +212,7 @@ Rahmat!
 
 ### 7.1 `getMonthly` and the detail endpoint
 
-- `getMonthly`: `monthState` (§4); advances per §3; per teacher `groupCount` and `studentCount` and per-group buckets (`groupId`, name, students, lessons, `amount`, `covered`, `centerFunded`, rate label) collected in the SAME per-lesson pass that builds `fullDeserved`, so Σ group amounts = `fullDeserved` (test). `attention` (§2.3): `lessonsWithoutRate[{userId, name, units}]`, `staffWithoutRate[{userId, name}]`.
+- `getMonthly`: `monthState` (§4); advances per §3; per teacher `groupCount` and `studentCount` and per-group buckets (`groupId`, name, students, lessons, `amount`, rate; the covered / centre split stays per teacher — the unpaid monthly share is known per teacher only) collected in the SAME per-lesson pass that builds `fullDeserved`, so Σ group amounts = `fullDeserved` (test). `attention` (§2.3): `lessonsWithoutRate[{userId, name, units}]`, `staffWithoutRate[{userId, name}]`.
 - `GET /salary/monthly/user/:userId/detail?month=` (`salary.view`, `@BranchScope()`, ADR-0063-style named 404 outside scope): the person's row from `getMonthlyForUser`, groups, the netted advances (id, date, amount, method, given by), rate label(s), the payout (`paidAt`, slices with account name and type, `paidBy`) when PAID, and the frozen-vs-live difference (§2.5).
 - `GET /salary/monthly/user/:userId/lessons?month=` (`salary.view`, scoped): the CSV source for an open month — the existing `fetchAccrualBreakdown` with the period filter (calculated months keep `GET /salary/payments/:id/breakdown`).
 
