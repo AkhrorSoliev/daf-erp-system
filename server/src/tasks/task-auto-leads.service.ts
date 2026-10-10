@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
-import { tashkentDateStr, tashkentDayRangeUtc } from '../common/date/tashkent';
+import {
+  TASHKENT_OFFSET_MS,
+  tashkentDateStr,
+  tashkentDayRangeUtc,
+  tashkentDayStartUtc,
+} from '../common/date/tashkent';
 import { buildHolidayDateSet } from '../holidays/holiday-date-set';
 import { MIN_ALERT_DEBT } from '../payment-promises/overdue-digest';
 import {
@@ -27,6 +32,7 @@ import { OPEN_STATUSES } from './task-transitions';
 // ponytail: 200 leads a company an hour; a bigger backlog waits for the next run.
 const LEAD_BATCH = 200;
 const OPEN = [...OPEN_STATUSES];
+const PROMISE_CRON_HOUR = 9;
 
 /**
  * The hourly run of the automatic tasks (spec §7, §9.6), 08:00–18:00
@@ -106,16 +112,24 @@ export class TaskAutoLeadsService {
   }
 
   private async leadTasks(companyId: number, since: Date, now: Date) {
-    const open = await this.prisma.task.findMany({
-      where: { companyId, kind: 'UNCALLED_LEAD', status: { in: OPEN } },
-      select: { entityId: true },
+    const tasks = await this.prisma.task.findMany({
+      where: { companyId, kind: 'UNCALLED_LEAD' },
+      select: { entityId: true, status: true },
     });
-    const openLeadIds = open
-      .map((t) => t.entityId)
-      .filter((id): id is string => id !== null);
+    const withEntity = tasks.filter(
+      (t): t is typeof t & { entityId: string } => t.entityId !== null,
+    );
+    const openLeadIds = withEntity
+      .filter((t) => OPEN.includes(t.status))
+      .map((t) => t.entityId);
+    // A lead is tasked once, ever: one called (task closed) and then un-marked
+    // does not open a fresh task.
+    // ponytail: grows with every tasked lead (Prisma's ~32k parameter limit);
+    // past that, narrow it to tasks created since `since`.
+    const taskedLeadIds = [...new Set(withEntity.map((t) => t.entityId))];
     return {
       closed: await this.closeResolved(companyId, openLeadIds),
-      created: await this.openTasks(companyId, since, now, openLeadIds),
+      created: await this.openTasks(companyId, since, now, taskedLeadIds),
     };
   }
 
@@ -197,7 +211,7 @@ export class TaskAutoLeadsService {
     companyId: number,
     since: Date,
     now: Date,
-    openLeadIds: string[],
+    taskedLeadIds: string[],
   ): Promise<number> {
     const leads = await this.prisma.lead.findMany({
       where: {
@@ -207,8 +221,8 @@ export class TaskAutoLeadsService {
           gte: since,
           lt: new Date(now.getTime() - UNCALLED_LEAD_AGE_MS),
         },
-        // Before `take`: old open tasks must never starve newer leads.
-        ...(openLeadIds.length > 0 ? { id: { notIn: openLeadIds } } : {}),
+        // Before `take`: leads that already have a task must never starve newer ones.
+        ...(taskedLeadIds.length > 0 ? { id: { notIn: taskedLeadIds } } : {}),
       },
       select: { id: true, firstName: true, lastName: true, branchId: true },
       orderBy: { createdAt: 'asc' },
@@ -221,84 +235,120 @@ export class TaskAutoLeadsService {
     >();
     let made = 0;
     for (const lead of leads) {
-      let branch = perBranch.get(lead.branchId);
-      if (!branch) {
-        const holidays = await buildHolidayDateSet(
-          this.prisma,
-          now,
-          new Date(now.getTime() + 14 * 864e5),
-          lead.branchId,
+      // One bad lead must not stop the rest of the batch.
+      try {
+        if (await this.openTask(companyId, lead, now, perBranch)) made++;
+      } catch (err) {
+        this.logger.error(
+          `uncalled lead ${lead.id}: task failed: ${(err as Error).message}`,
         );
-        branch = {
-          assigneeIds: await autoTaskAssigneeIds(
-            this.prisma,
-            companyId,
-            lead.branchId,
-          ),
-          dueAt: systemDueAt(tashkentDateStr(now), holidays, now),
-        };
-        perBranch.set(lead.branchId, branch);
       }
-      const task = await createSystemTask(this.prisma, {
-        companyId,
-        branchId: lead.branchId,
-        kind: 'UNCALLED_LEAD',
-        ...uncalledLeadText({
-          name: `${lead.lastName} ${lead.firstName}`.trim(),
-        }),
-        dueAt: branch.dueAt,
-        entityId: lead.id,
-        sourceKey: sourceKeyOf('UNCALLED_LEAD', lead.id),
-        assigneeIds: branch.assigneeIds,
-      });
-      if (!task) continue;
-      made++;
-      this.emitter.emit(TASK_EVENTS.ASSIGNED, {
-        task,
-        actorId: null,
-        userIds: branch.assigneeIds,
-        created: true,
-      } satisfies TaskAssignedPayload);
     }
     return made;
   }
 
+  private async openTask(
+    companyId: number,
+    lead: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      branchId: number | null;
+    },
+    now: Date,
+    perBranch: Map<number | null, { assigneeIds: number[]; dueAt: Date }>,
+  ): Promise<boolean> {
+    let branch = perBranch.get(lead.branchId);
+    if (!branch) {
+      const holidays = await buildHolidayDateSet(
+        this.prisma,
+        now,
+        new Date(now.getTime() + 14 * 864e5),
+        lead.branchId,
+      );
+      branch = {
+        assigneeIds: await autoTaskAssigneeIds(
+          this.prisma,
+          companyId,
+          lead.branchId,
+        ),
+        dueAt: systemDueAt(tashkentDateStr(now), holidays, now),
+      };
+      perBranch.set(lead.branchId, branch);
+    }
+    const task = await createSystemTask(this.prisma, {
+      companyId,
+      branchId: lead.branchId,
+      kind: 'UNCALLED_LEAD',
+      ...uncalledLeadText({
+        name: `${lead.lastName} ${lead.firstName}`.trim(),
+      }),
+      dueAt: branch.dueAt,
+      entityId: lead.id,
+      sourceKey: sourceKeyOf('UNCALLED_LEAD', lead.id),
+      assigneeIds: branch.assigneeIds,
+    });
+    if (!task) return false;
+    this.emitter.emit(TASK_EVENTS.ASSIGNED, {
+      task,
+      actorId: null,
+      userIds: branch.assigneeIds,
+      created: true,
+    } satisfies TaskAssignedPayload);
+    return true;
+  }
+
   /**
    * Promises the 09:00 cron broke TODAY (Tashkent) whose student still owes
-   * the alert threshold and that have no task under their key at all, open or
-   * closed (a closed one was made and solved). `onPromisesBroken` is the
-   * writer, so the rules (one task per student, ladder, due) stay in one place.
+   * the alert threshold. `onPromisesBroken` makes ONE task per student, so
+   * "already handled" is judged per student: one with a BROKEN_PROMISE task
+   * open, created today or closed today (an old task that was open at 09:00
+   * made the event skip them, and its closing since must not hand them a
+   * fresh task) is left alone. `onPromisesBroken` is the writer, so the rules
+   * (latest promise, ladder, due) stay in one place.
    */
   private async retryBrokenPromises(
     companyId: number,
     now: Date,
   ): Promise<void> {
+    // The promise cron runs at 09:00 and flips the statuses a moment before it
+    // emits: the retry starts at 10:00.
+    if (this.tashkentHour(now) === PROMISE_CRON_HOUR) return;
+    const today = tashkentDateStr(now);
     const promises = await this.prisma.paymentPromise.findMany({
       where: {
         companyId,
         status: 'BROKEN',
-        reminderFiredAt: tashkentDayRangeUtc(tashkentDateStr(now)),
+        reminderFiredAt: tashkentDayRangeUtc(today),
         student: { deletedAt: null, balance: { lte: -MIN_ALERT_DEBT } },
       },
-      select: { id: true, branchId: true },
+      select: { id: true, branchId: true, studentId: true },
     });
     if (promises.length === 0) return;
-    const made = new Set(
+    const todayStart = tashkentDayStartUtc(today);
+    const handled = new Set(
       (
         await this.prisma.task.findMany({
           where: {
             companyId,
-            sourceKey: {
-              in: promises.map((p) => sourceKeyOf('BROKEN_PROMISE', p.id)),
+            kind: 'BROKEN_PROMISE',
+            entityType: 'Student',
+            entityId: {
+              in: [...new Set(promises.map((p) => String(p.studentId)))],
             },
+            OR: [
+              { status: { in: OPEN } },
+              { createdAt: { gte: todayStart } },
+              { closedAt: { gte: todayStart } },
+            ],
           },
-          select: { sourceKey: true },
+          select: { entityId: true },
         })
-      ).map((t) => t.sourceKey),
+      ).map((t) => t.entityId),
     );
     const byBranch = new Map<number | null, string[]>();
     for (const p of promises) {
-      if (made.has(sourceKeyOf('BROKEN_PROMISE', p.id))) continue;
+      if (handled.has(String(p.studentId))) continue;
       byBranch.set(p.branchId, [...(byBranch.get(p.branchId) ?? []), p.id]);
     }
     for (const [branchId, promiseIds] of byBranch) {
@@ -307,5 +357,9 @@ export class TaskAutoLeadsService {
         now,
       );
     }
+  }
+
+  private tashkentHour(now: Date): number {
+    return new Date(now.getTime() + TASHKENT_OFFSET_MS).getUTCHours();
   }
 }

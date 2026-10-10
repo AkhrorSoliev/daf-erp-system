@@ -22,14 +22,23 @@ const made = (id: string) => ({
   participants: [],
 });
 
+interface PromiseTask {
+  entityId: string;
+  status: string;
+  createdAt: Date;
+  closedAt: Date | null;
+}
+const OPEN_STATUS = ['NEW', 'IN_PROGRESS', 'IN_REVIEW'];
+
 interface Opts {
   leads?: any[];
   openLeadTasks?: string[]; // leads that already have an open task
+  closedLeadTasks?: string[]; // leads whose task was closed
   live?: string[]; // of those, the leads that still wait for a call
   openStudentTasks?: string[]; // students with an open BROKEN_PROMISE / CALLBACK
   archived?: number[];
-  promises?: { id: string; branchId: number | null }[];
-  promiseTasks?: string[]; // sourceKeys already under a task (open or closed)
+  promises?: { id: string; branchId: number | null; studentId: number }[];
+  promiseTasks?: PromiseTask[]; // BROKEN_PROMISE tasks of those students
 }
 
 function setup(opts: Opts = {}) {
@@ -42,14 +51,37 @@ function setup(opts: Opts = {}) {
     task: {
       findMany: jest.fn(async ({ where }: any) => {
         if (where.kind === 'UNCALLED_LEAD') {
-          return (opts.openLeadTasks ?? []).map((entityId) => ({ entityId }));
+          return [
+            ...(opts.openLeadTasks ?? []).map((entityId) => ({
+              entityId,
+              status: 'NEW',
+            })),
+            ...(opts.closedLeadTasks ?? []).map((entityId) => ({
+              entityId,
+              status: 'DONE',
+            })),
+          ];
         }
         if (where.kind?.in) {
           return (opts.openStudentTasks ?? []).map((entityId) => ({
             entityId,
           }));
         }
-        return (opts.promiseTasks ?? []).map((sourceKey) => ({ sourceKey }));
+        // The retry: a BROKEN_PROMISE task of the student that is open, made
+        // today or closed today (the query's own OR, evaluated here).
+        return (opts.promiseTasks ?? [])
+          .filter(
+            (t) =>
+              where.entityId.in.includes(t.entityId) &&
+              where.OR.some((c: any) =>
+                c.status
+                  ? OPEN_STATUS.includes(t.status)
+                  : c.createdAt
+                    ? t.createdAt >= c.createdAt.gte
+                    : !!t.closedAt && t.closedAt >= c.closedAt.gte,
+              ),
+          )
+          .map((t) => ({ entityId: t.entityId }));
       }),
     },
     lead: {
@@ -227,14 +259,27 @@ describe('TaskAutoLeadsService', () => {
   });
 
   describe("retry of today's broken promises", () => {
-    it('asks for those broken today that still owe, and hands the ones without any task to the writer', async () => {
+    const OLD = new Date('2026-10-05T05:00:00.000Z');
+    const TODAY_0900 = new Date('2026-10-12T04:00:00.000Z');
+    const MON_1100 = new Date('2026-10-12T06:00:00.000Z');
+    const MON_0930 = new Date('2026-10-12T04:30:00.000Z');
+    const TODAY_START = new Date('2026-10-11T19:00:00.000Z');
+
+    it('asks for those broken today that still owe, and hands the students without a task to the writer', async () => {
       const { service, prisma, taskAuto } = setup({
         promises: [
-          { id: 'p1', branchId: 2 },
-          { id: 'p2', branchId: 2 },
-          { id: 'p3', branchId: null },
+          { id: 'p1', branchId: 2, studentId: 10001 },
+          { id: 'p2', branchId: 2, studentId: 10002 },
+          { id: 'p3', branchId: null, studentId: 10003 },
         ],
-        promiseTasks: ['promise:p2'],
+        promiseTasks: [
+          {
+            entityId: '10002',
+            status: 'NEW',
+            createdAt: TODAY_0900,
+            closedAt: null,
+          },
+        ],
       });
       await service.run(MON_1000);
       expect(prisma.paymentPromise.findMany).toHaveBeenCalledWith(
@@ -243,7 +288,7 @@ describe('TaskAutoLeadsService', () => {
             companyId: 1,
             status: 'BROKEN',
             reminderFiredAt: {
-              gte: new Date('2026-10-11T19:00:00.000Z'),
+              gte: TODAY_START,
               lt: new Date('2026-10-12T19:00:00.000Z'),
             },
             student: { deletedAt: null, balance: { lte: -1000 } },
@@ -261,14 +306,109 @@ describe('TaskAutoLeadsService', () => {
       );
     });
 
-    it('every promise already has a task (open or closed): nothing is retried', async () => {
+    it('a student with a task made today (even under another promise) is not retried', async () => {
+      // Two promises of one student broke today; the event made one task.
       const { service, taskAuto } = setup({
-        promises: [{ id: 'p1', branchId: 2 }],
-        promiseTasks: ['promise:p1'],
+        promises: [
+          { id: 'p1', branchId: 2, studentId: 10001 },
+          { id: 'p1b', branchId: 2, studentId: 10001 },
+        ],
+        promiseTasks: [
+          {
+            entityId: '10001',
+            status: 'DONE',
+            createdAt: TODAY_0900,
+            closedAt: MON_0930,
+          },
+        ],
       });
       await service.run(MON_1000);
       expect(taskAuto.onPromisesBroken).not.toHaveBeenCalled();
     });
+
+    it('an old task that was open at 09:00 made the event skip the new promise; closing it later brings no fresh task', async () => {
+      const { service, taskAuto } = setup({
+        promises: [{ id: 'p_new', branchId: 2, studentId: 10001 }],
+        promiseTasks: [
+          {
+            entityId: '10001',
+            status: 'DONE',
+            createdAt: OLD,
+            closedAt: MON_1100,
+          },
+        ],
+      });
+      await service.run(new Date('2026-10-12T07:00:00.000Z')); // 12:00, after the call
+      expect(taskAuto.onPromisesBroken).not.toHaveBeenCalled();
+    });
+
+    it('the same old task still open: not retried either', async () => {
+      const { service, taskAuto } = setup({
+        promises: [{ id: 'p_new', branchId: 2, studentId: 10001 }],
+        promiseTasks: [
+          {
+            entityId: '10001',
+            status: 'IN_PROGRESS',
+            createdAt: OLD,
+            closedAt: null,
+          },
+        ],
+      });
+      await service.run(MON_1000);
+      expect(taskAuto.onPromisesBroken).not.toHaveBeenCalled();
+    });
+
+    it('two promises of one student without any task go to the writer together (it makes one task)', async () => {
+      const { service, taskAuto } = setup({
+        promises: [
+          { id: 'p1', branchId: 2, studentId: 10001 },
+          { id: 'p1b', branchId: 2, studentId: 10001 },
+        ],
+      });
+      await service.run(MON_1000);
+      expect(taskAuto.onPromisesBroken).toHaveBeenCalledTimes(1);
+      expect(taskAuto.onPromisesBroken).toHaveBeenCalledWith(
+        { companyId: 1, branchId: 2, promiseIds: ['p1', 'p1b'] },
+        MON_1000,
+      );
+    });
+
+    it('the 09:00 hour belongs to the promise cron: no retry then', async () => {
+      const { service, prisma, taskAuto } = setup({
+        promises: [{ id: 'p1', branchId: 2, studentId: 10001 }],
+      });
+      await service.run(TODAY_0900);
+      expect(prisma.paymentPromise.findMany).not.toHaveBeenCalled();
+      expect(taskAuto.onPromisesBroken).not.toHaveBeenCalled();
+    });
+  });
+
+  it('a lead whose task was closed (called) and then un-marked gets no fresh task', async () => {
+    const { service, prisma } = setup({
+      leads: [lead('l1'), lead('l2')],
+      closedLeadTasks: ['l1'],
+    });
+    expect(await service.run(MON_1000)).toEqual({ created: 1, closed: 0 });
+    const where = prisma.lead.findMany.mock.calls.find(
+      ([a]: any) => !a.where.id?.in,
+    )![0].where;
+    expect(where.id).toEqual({ notIn: ['l1'] });
+    expect((createSystemTask as jest.Mock).mock.calls[0][1].entityId).toBe(
+      'l2',
+    );
+    // a closed task is nothing for the sweep to close
+    expect(autoCloseTasks).not.toHaveBeenCalled();
+  });
+
+  it('one lead failing does not stop the rest of the batch', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const { service } = setup({ leads: [lead('l1'), lead('l2')] });
+    (createSystemTask as jest.Mock)
+      .mockReset()
+      .mockRejectedValueOnce(new Error('db'))
+      .mockImplementation(async (_p, i) => made(i.sourceKey));
+    expect(await service.run(MON_1000)).toEqual({ created: 1, closed: 0 });
+    expect(createSystemTask).toHaveBeenCalledTimes(2);
   });
 
   it('one failing step does not cost the company the others', async () => {
