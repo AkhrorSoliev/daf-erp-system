@@ -1,8 +1,8 @@
-# ADR-0077 — Pul qaytarish so'rov bilan: balans so'rov kuni 0, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin
+# ADR-0077 — Pul qaytarish so'rov bilan: balans so'rov kuni so'ralgan summaga kamayadi, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-10
-**Bog'liq:** ADR-0025, ADR-0055, ADR-0058, ADR-0063, ADR-0066, ADR-0067, ADR-0072, `server/src/refunds/`, `server/src/refundable/`, `server/src/balance-notices/`, `server/src/refunds/refund-student-messages.listener.ts`, `server/src/withdrawals/`, `server/src/common/date/bank-days.ts`, `server/prisma/migrations/20261010180000_b2b_refund_request_balance_notice`, `docs/superpowers/specs/2026-10-10-b2b-qaytariladigan-pul-design.md`, `docs/superpowers/plans/2026-10-10-b2b-qaytariladigan-pul.md`
+**Bog'liq:** ADR-0025, ADR-0055, ADR-0058, ADR-0059, ADR-0063, ADR-0066, ADR-0067, ADR-0072, `server/src/refunds/`, `server/src/refundable/`, `server/src/balance-notices/`, `server/src/refunds/refund-student-messages.listener.ts`, `server/src/withdrawals/`, `server/src/common/date/bank-days.ts`, `server/prisma/migrations/20261010180000_b2b_refund_request_balance_notice`, `docs/superpowers/specs/2026-10-10-b2b-qaytariladigan-pul-design.md`, `docs/superpowers/plans/2026-10-10-b2b-qaytariladigan-pul.md`
 
 ## Kontekst
 
@@ -17,14 +17,14 @@ shartsiz ochiq edi.
 ## Qaror (CEO, 10.10.2026)
 
 1. **Har qaytarish so'rov orqali.** `Refund.status`: `REQUESTED` (so'rov ochiq,
-   balans allaqachon 0, pul berilmagan) → `COMPLETED` («Berildi») yoki `REJECTED`
+   summa balansdan allaqachon olingan, pul berilmagan) → `COMPLETED` («Berildi») yoki `REJECTED`
    (bekor qilindi). `APPROVED` va `PROCESSING` eski qatorlar uchun enumda qoladi,
    yangisi yozilmaydi. `PATCH /refunds/:id/process` o'chirildi.
 2. **So'rov** (`POST /refunds/quick`, CEO, filial direktori, administrator): bitta
    Serializable tranzaksiyada `Refund` `REQUESTED`, `requestedById`, `dueDate` = bugundan
    keyingi 10-bank kuni; kerak bo'lsa oldindan to'langan darslar bekor qilinadi
    (o'zgarmagan); `REFUND` ledger qatori va balans. **Kassa harakati yozilmaydi**
-   (`recordRefund` endi kassaga tegmaydi). Balans so'rov paytidanoq 0 — pul darsga,
+   (`recordRefund` endi kassaga tegmaydi). So'ralgan summa balansdan so'rov paytidanoq olinadi (butun balans so'ralsa, balans 0) — bu pul darsga,
    yechib olishga yoki boshqa qaytarishga sarflanmaydi. Bir xil (o'quvchi, guruh,
    summa) bo'yicha 60 soniya ichida ochiq yoki berilgan qaytarish bo'lsa, takror so'rov
    rad etiladi.
@@ -73,7 +73,7 @@ shartsiz ochiq edi.
 O'quvchi to'rtta xabar oladi: balans haqidagi xabar (7-band) va qaytarishning uch bosqichi —
 so'rov ochildi, pul berildi, so'rov bekor qilindi. Hammasi Telegram HTML: muhim joylar qalin,
 qatorlar bo'lingan, «Hurmatli {Ism}!» (ism bo'sh bo'lsa «Assalomu alaykum!»), summa
-`formatSum`, sana «{kun}-{oy}gacha», telefon «+998 XX XXX XX XX». Matnlar spec §5.3–§5.4 da va
+`formatSum`, muddat va ochilish sanasi «{kun}-{oy}gacha» («Berildi» xabarida berilgan kun dd.MM.yyyy), telefon «+998 XX XXX XX XX». Matnlar spec §5.3–§5.4 da va
 testlar bilan mahkamlangan (`balance-notice-text.ts`, `refund-student-text.ts`): so'zma-so'z
 o'zgartirilmaydi.
 
@@ -106,7 +106,7 @@ o'zgartirilmaydi.
   oxiridagi kassa qoldig'i va ledger bir kunda farq qilishi kutilgan holat.
 - `recordRefund` kassaga yozmaydi; kassa harakatini faqat hand-over yozadi. Yangi
   joydan `recordRefund` chaqirilsa, kassa yo'li o'ylanishi kerak.
-- Mavjud 7 ta `COMPLETED` qaytarish o'zgarmaydi; tarixda ularning `processedAt`i
+- Mavjud `COMPLETED` qaytarishlar o'zgarmaydi; tarixda ularning `processedAt`i
   «Berildi» sanasi sifatida chiqadi.
 - Xabarsiz o'quvchining pulini markazga o'tkazib bo'lmaydi — yangi tartib profildagi
   «Yechib olish»ni ham to'xtatadi. Xabarni «Qaytariladigan pul» sahifasidagi

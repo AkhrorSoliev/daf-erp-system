@@ -243,7 +243,7 @@ Pul hisobingizga qaytdi — joriy balansingiz: <b>{balans}</b>
 
 - `Refund`: add `requestedById Int?`, `handedOverAt DateTime?`, `handedOverById Int?`, `cashAccountId String?` (`CashAccount.id` is a uuid), `cancelledAt DateTime?`, `cancelledById Int?`, `cancelReason String?` (+ relations to `User` / `CashAccount`). `dueDate` is reused for the 10-bank-day deadline.
 - New `enum BalanceNoticeChannel { BOT CALL }` and `model BalanceNotice` (§5.1), indexes `(studentId, createdAt)`, `(companyId)`.
-- No data backfill: the 7 existing refunds are COMPLETED and stay as they are.
+- No data backfill: the existing refunds are COMPLETED and stay as they are.
 
 ## 7. Server modules
 

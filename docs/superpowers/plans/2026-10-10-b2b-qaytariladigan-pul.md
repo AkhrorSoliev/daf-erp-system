@@ -4691,7 +4691,7 @@ shartsiz ochiq edi.
   oxiridagi kassa qoldig'i va ledger bir kunda farq qilishi kutilgan holat.
 - `recordRefund` kassaga yozmaydi; kassa harakatini faqat hand-over yozadi. Yangi
   joydan `recordRefund` chaqirilsa, kassa yo'li o'ylanishi kerak.
-- Mavjud 7 ta `COMPLETED` qaytarish o'zgarmaydi; tarixda ularning `processedAt`i
+- Mavjud `COMPLETED` qaytarishlar o'zgarmaydi; tarixda ularning `processedAt`i
   «Berildi» sanasi sifatida chiqadi.
 - Xabarsiz o'quvchining pulini markazga o'tkazib bo'lmaydi — yangi tartib profildagi
   «Yechib olish»ni ham to'xtatadi.
