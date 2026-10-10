@@ -671,6 +671,7 @@
     "CEO",
     "Cashier"
   ],
+  "GET /permissions/me": "ANY",
   "GET /public/forms/:slug": "PUBLIC",
   "GET /receipts/:id/verify": "PUBLIC",
   "GET /receipts/payment/:id.pdf": "PUBLIC",

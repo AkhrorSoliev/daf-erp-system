@@ -61,6 +61,7 @@ import { SettingsModule } from './settings/settings.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
 import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
+import { PermissionGuard } from './common/permissions/permission.guard';
 import { PermissionsModule } from './common/permissions/permissions.module';
 import { validateEnv } from './config/env.validation';
 
@@ -145,6 +146,13 @@ import { validateEnv } from './config/env.validation';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // Runs after JwtAuthGuard (`request.user` exists) and before
+    // BranchScopeGuard: it refreshes `request.user.roles` from the database
+    // and checks the route's capability marker (spec 2026-10-05 §7.4).
+    {
+      provide: APP_GUARD,
+      useClass: PermissionGuard,
     },
     // Runs after JwtAuthGuard (APP_GUARD order is registration order), so
     // `request.user` is populated by the time it resolves the scope. It only
