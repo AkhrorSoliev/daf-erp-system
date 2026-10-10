@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "Qo'ng'iroqcha qayta qurildi",
+    matn: "Qo'ng'iroq belgisidagi raqam endi faqat sizdan ish kutayotgan xabarlarni sanaydi: davomat eslatmasi, sizga berilgan yoki tekshiruvga kelgan topshiriq, buzilgan to'lov va'dasi. Ish bajarilishi bilan xabar o'zi yopiladi: davomat olinsa, dars bekor qilinsa yoki ko'chirilsa — davomat eslatmalari, topshiriq yopilsa — uning xabarlari, qarz to'lansa — va'da xabari. Panelda «Kutilmoqda» va «Hammasi» bo'limlari va «Topshiriqlar», «Davomat», «To'lovlar» bo'yicha saralash bor; bir kundagi bir xil davomat eslatmalari bitta qatorga yig'iladi («Davomat olinmagan · 3 guruh»). Yangi «Barcha bildirishnomalar» sahifasida hamma xabar kunlar bo'yicha turadi va ulardan qidirsa bo'ladi. Yangi tizim yoqilgan kuni 7 kundan eski xabarlar bir marta tozalandi: kutilayotganlari yopildi, o'qilmaganlari «o'qilgan» deb belgilandi, xabarlarning o'zi o'chirilmadi. Davomat dars boshlanishidan oldin olingan bo'lsa, o'qituvchiga «Dars boshlandi» eslatmasi endi bormaydi; bekor qilingan yoki ko'chirilgan darsga davomat eslatmalari yuborilmaydi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "O'quvchi shartnomasi tizimda tuziladi",
     matn: "O'quvchi profilida «Shartnomalar» tabi qo'shildi. «Shartnoma tuzish» kurs, guruh, ustoz, jadval, narx va chegirmani o'quvchining ma'lumotlaridan o'zi to'ldiradi; Buyurtmachining pasporti, manzili va kursga kiradigan narsalarni shu oynada kiritasiz. Bir nechta kurs bitta shartnomaga yoki har biri alohida shartnomaga kiradi. «PDF» chop etishga tayyor shartnomani ochadi, Buyurtmachi imzolagach «Qog'ozda imzolandi» bosiladi. Shartnoma tuzishdan oldin filial sozlamasiga shahar, manzil, vakil ismi va lavozimini kiriting.",
     rollar: [1, 2, 3],
