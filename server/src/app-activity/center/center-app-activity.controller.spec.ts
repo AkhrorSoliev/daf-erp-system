@@ -1,20 +1,7 @@
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../../common/decorators';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { defaultRolesOf, routeAccess } from '../../common/permissions/testing';
 import { CenterAppActivityController } from './center-app-activity.controller';
 
-function mockExecutionContext(handler: unknown, roles: string[]) {
-  return {
-    getHandler: () => handler,
-    getClass: () => CenterAppActivityController,
-    switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-  } as never;
-}
-
 describe('CenterAppActivityController', () => {
-  const reflector = new Reflector();
-  const guard = new RolesGuard(reflector);
   const markaz = {
     umumiy: jest.fn().mockResolvedValue({ ok: 1 }),
     oquvchilar: jest.fn().mockResolvedValue({ ok: 2 }),
@@ -24,19 +11,17 @@ describe('CenterAppActivityController', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  it("sinf darajasida rollar: CEO, Branch Director, Administrator — o'qituvchi yo'q", () => {
-    expect(
-      reflector.get<string[]>(ROLES_KEY, CenterAppActivityController),
-    ).toEqual(['CEO', 'Branch Director', 'Administrator']);
+  it('every route is gated by the DaF activity capability; default roles CEO, Branch Director, Administrator, no Teacher', () => {
     for (const metod of ['umumiy', 'oquvchilar', 'telefonlar'] as const) {
-      expect(
-        guard.canActivate(
-          mockExecutionContext(controller[metod], ['Administrator']),
-        ),
-      ).toBe(true);
-      expect(() =>
-        guard.canActivate(mockExecutionContext(controller[metod], ['Teacher'])),
-      ).toThrow(ForbiddenException);
+      expect(routeAccess(CenterAppActivityController, metod)).toEqual({
+        kind: 'can',
+        keys: ['daf.activity'],
+      });
+      expect(defaultRolesOf(CenterAppActivityController, metod)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
     }
   });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useNotifications, type AppNotification } from "@/hooks/use-notifications";
 import { notificationHref } from "./notification-href";
 
@@ -13,10 +13,10 @@ import { notificationHref } from "./notification-href";
  */
 export function useNotificationActions(afterOpen?: () => void) {
   const router = useRouter();
-  const roles = useAuth((s) => s.user?.roles);
+  const can = usePermissions((s) => s.can);
   const markRead = useNotifications((s) => s.markRead);
 
-  const hrefOf = (n: AppNotification) => notificationHref(n, roles?.map((r) => r.id) ?? []);
+  const hrefOf = (n: AppNotification) => notificationHref(n, can);
   const onOpen = (n: AppNotification) => {
     if (!n.isRead) void markRead(n.id);
     const url = hrefOf(n);

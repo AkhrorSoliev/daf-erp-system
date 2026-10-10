@@ -1,12 +1,5 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  UseGuards,
-} from '@nestjs/common';
-import { Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Can } from '../common/permissions/access.decorators';
 import {
   DafMediaOverviewService,
   type MediaOverview,
@@ -29,8 +22,7 @@ import {
  * Yozish imkoniyati studiya qurilganda qo'shiladi.
  */
 @Controller('daf/media')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Can('media.view')
 export class DafMediaController {
   constructor(
     private readonly service: DafMediaOverviewService,

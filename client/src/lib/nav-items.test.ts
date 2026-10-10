@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isNavChildActive, navItems } from "./nav-items";
+import { canForRoles } from "@/test-support/server-catalog";
+import { isNavChildActive, isNavGateOpen, navItems } from "./nav-items";
 
 describe("navItems — «Sozlamalar»", () => {
   it("dropdown emas, /settings sahifasiga oddiy havola", () => {
@@ -18,8 +19,9 @@ describe("navItems — «Qo'llanma»", () => {
     expect(i).toBeGreaterThan(-1);
     const item = navItems[i];
     expect(item.url).toBe("/qollanma");
-    // visibleForRoles yo'q = hamma xodim ko'radi; sahifalar rolga qarab filtrlanadi.
-    expect(item.visibleForRoles).toBeUndefined();
+    // No gate = every staff member sees it; the guide filters its pages itself.
+    expect(item.permission).toBeUndefined();
+    expect(item.forRoles).toBeUndefined();
     expect(item.badgeKey).toBe("qollanma-yangiliklar");
     expect(navItems[i - 1]?.title).toBe("Hisobotlar");
     expect(navItems[i + 1]?.title).toBe("Sozlamalar");
@@ -31,7 +33,7 @@ describe("navItems — «Guruhlar»", () => {
   // ko'rsatilgan havola faqat 403 ga olib borardi.
   it("CEO, filial direktori, administrator va o'qituvchiga — kassirga emas", () => {
     const groups = navItems.find((item) => item.url === "/groups");
-    expect(groups?.visibleForRoles).toEqual([1, 2, 3, 4]);
+    expect(groups?.permission).toBe("groups.view");
   });
 });
 
@@ -42,7 +44,7 @@ describe("navItems — Moliya → «Ish haqi»", () => {
     const salary = navItems
       .find((item) => item.url === "/payments")
       ?.children?.find((child) => child.url === "/payments/salary");
-    expect(salary?.visibleForRoles).toEqual([1, 2]);
+    expect(salary?.permission).toBe("salary.view");
   });
 });
 
@@ -73,10 +75,32 @@ describe("navItems — Moliya → «Qaytariladigan pul» (spec B2b §3)", () => 
     const i = children.findIndex((child) => child.url === "/payments/refunds");
     expect(children[i - 1]?.url).toBe("/payments/salary");
     expect(refunds?.title).toBe("Qaytariladigan pul");
-    expect(refunds?.visibleForRoles).toEqual([1, 2, 3, 5]);
+    expect(refunds?.permission).toBe("debt.view");
+    const seenBy = [1, 2, 3, 4, 5].filter((role) => refunds && isNavGateOpen(refunds, canForRoles([role]), [role]));
+    expect(seenBy).toEqual([1, 2, 3, 5]);
   });
 
   it("stays lit on its history page", () => {
     expect(refunds && isNavChildActive("/payments/refunds/history", refunds)).toBe(true);
+  });
+});
+
+describe("navItems — every role sees the same menu as before capabilities", () => {
+  // The menus each role saw when the menu was gated by role ids (2026-10-10).
+  const BEFORE: Record<string, string[]> = {
+    "1": ["/", "/schedule", "/teachers", "/students", "/leads", "/outreach", "/mock-exams", "/groups", "/tasks", "/media", "/daf", "/payments", "/reports", "/qollanma", "/settings"],
+    "2": ["/", "/schedule", "/teachers", "/students", "/leads", "/outreach", "/mock-exams", "/groups", "/tasks", "/media", "/daf", "/payments", "/reports", "/qollanma", "/settings"],
+    "3": ["/", "/schedule", "/teachers", "/students", "/leads", "/outreach", "/mock-exams", "/groups", "/tasks", "/media", "/daf", "/payments", "/reports", "/qollanma", "/settings"],
+    "4": ["/", "/schedule", "/groups", "/tasks", "/profile/salary", "/qollanma"],
+    "5": ["/", "/schedule", "/tasks", "/payments", "/qollanma"],
+  };
+
+  it.each(Object.keys(BEFORE))("role %s", (role) => {
+    const roleIds = [Number(role)];
+    const can = canForRoles(roleIds);
+    const visible = navItems
+      .filter((item) => isNavGateOpen(item, can, roleIds))
+      .map((item) => item.url);
+    expect(visible).toEqual(BEFORE[role]);
   });
 });

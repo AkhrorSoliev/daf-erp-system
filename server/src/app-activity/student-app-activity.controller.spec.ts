@@ -1,23 +1,11 @@
 import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../common/decorators';
-import { RolesGuard } from '../common/guards/roles.guard';
 import * as studentScope from '../common/auth/student-branch-scope';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { StudentAppActivityController } from './student-app-activity.controller';
 
 jest.mock('../common/auth/student-branch-scope');
 
-function mockExecutionContext(handler: unknown, roles: string[]) {
-  return {
-    getHandler: () => handler,
-    getClass: () => StudentAppActivityController,
-    switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-  } as never;
-}
-
 describe('StudentAppActivityController', () => {
-  const reflector = new Reflector();
-  const guard = new RolesGuard(reflector);
   const prisma = {};
   const stats = {
     guruhFaolligi: jest.fn().mockResolvedValue({ ok: 1 }),
@@ -31,20 +19,16 @@ describe('StudentAppActivityController', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('oquvchi: rollar CEO, Branch Director, Administrator', () => {
-    expect(reflector.get<string[]>(ROLES_KEY, controller.oquvchi)).toEqual([
-      'CEO',
-      'Branch Director',
+  it('oquvchi: gated by the student details capability, default roles CEO, Branch Director, Administrator', () => {
+    expect(routeAccess(StudentAppActivityController, 'oquvchi')).toEqual({
+      kind: 'can',
+      keys: ['students.details'],
+    });
+    expect(defaultRolesOf(StudentAppActivityController, 'oquvchi')).toEqual([
       'Administrator',
+      'Branch Director',
+      'CEO',
     ]);
-    expect(
-      guard.canActivate(
-        mockExecutionContext(controller.oquvchi, ['Administrator']),
-      ),
-    ).toBe(true);
-    expect(() =>
-      guard.canActivate(mockExecutionContext(controller.oquvchi, ['Teacher'])),
-    ).toThrow(ForbiddenException);
   });
 
   it('oquvchi: qorovul chaqiriladi, keyin servis; davr 30', async () => {

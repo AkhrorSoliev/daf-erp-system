@@ -25,6 +25,8 @@ import type { ContractStatus, ContractView } from "./contract-types";
 interface Props {
   contract: ContractView;
   isCeo: boolean;
+  /** `students.manage`: edit, sign and cancel. Without it the card only prints. */
+  canManage: boolean;
   busy: boolean;
   onPdf: () => void;
   onEdit: () => void;
@@ -45,14 +47,15 @@ const stamp = (iso: string) => format(new Date(iso), "dd.MM.yyyy, HH:mm");
 export function ContractCard({
   contract: c,
   isCeo,
+  canManage,
   busy,
   onPdf,
   onEdit,
   onSign,
   onCancel,
 }: Props) {
-  const unsigned = c.status === "UNSIGNED";
-  const cancellable = canCancel(c, isCeo);
+  const unsigned = canManage && c.status === "UNSIGNED";
+  const cancellable = canManage && canCancel(c, isCeo);
   return (
     <article className="space-y-3 rounded-lg border p-4">
       <header className="flex flex-wrap items-center gap-2">

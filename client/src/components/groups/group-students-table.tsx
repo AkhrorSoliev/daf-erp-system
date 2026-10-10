@@ -15,8 +15,7 @@ import {
 import { StudentRowActions } from "@/components/students/student-row-actions";
 import { formatPhone } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
-import { STUDENT_PROFILE_ROLES, hasAnyRole } from "@/lib/role-access";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import type { Student } from "@/data/student-model";
 
 export interface GroupStudent {
@@ -81,11 +80,9 @@ interface GroupStudentsTableProps {
 }
 
 export function GroupStudentsTable({ students, onStudentDeleted }: GroupStudentsTableProps) {
-  const user = useAuth((s) => s.user);
-  const canManage =
-    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canManage = useCan("students.enroll");
   // O'qituvchi guruhini ko'radi, o'quvchi profilini esa server unga bermaydi.
-  const canOpenProfile = hasAnyRole(user?.roles, STUDENT_PROFILE_ROLES);
+  const canOpenProfile = useCan("students.profile");
 
   if (students.length === 0) {
     return (

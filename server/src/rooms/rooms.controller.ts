@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { RoomQueryDto } from './dto/room-query.dto';
@@ -15,20 +14,20 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CountByBranchQueryDto } from './dto/count-by-branch-query.dto';
 import { ChangeRoomStatusDto } from './dto/change-room-status.dto';
+import { CurrentUser, BranchScope } from '../common/decorators';
 import {
-  CurrentUser,
-  Roles,
-  STAFF_ROLES,
-  BranchScope,
-} from '../common/decorators';
+  AnyStaff,
+  AnyUser,
+  Can,
+} from '../common/permissions/access.decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
 
 @Controller('rooms')
 export class RoomsController {
   constructor(private roomsService: RoomsService) {}
 
   @Get('count-by-branch')
+  @AnyUser()
   countByBranch(
     @Query() query: CountByBranchQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -38,8 +37,7 @@ export class RoomsController {
 
   // Staff only — a student-portal token used to read this too.
   // (room list feeds group forms and the occupancy view.)
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @AnyStaff()
   @Get()
   findAll(
     @Query() query: RoomQueryDto,
@@ -50,8 +48,7 @@ export class RoomsController {
   }
 
   // Staff only, same reason as the list above.
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @AnyStaff()
   @Get(':id')
   findOne(
     @Param('id') id: string,
@@ -62,8 +59,7 @@ export class RoomsController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   create(
     @Body() dto: CreateRoomDto,
     @CurrentUser('id') userId: number,
@@ -73,8 +69,7 @@ export class RoomsController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateRoomDto,
@@ -85,8 +80,7 @@ export class RoomsController {
   }
 
   @Patch(':id/status')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   changeStatus(
     @Param('id') id: string,
     @Body() dto: ChangeRoomStatusDto,
@@ -97,8 +91,7 @@ export class RoomsController {
   }
 
   @Get(':id/status-history')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   getStatusHistory(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -108,8 +101,7 @@ export class RoomsController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   delete(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,

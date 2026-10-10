@@ -1,14 +1,13 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { OutreachService } from './outreach.service';
-import { Roles, BranchScope } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { BranchScope } from '../common/decorators';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { TodayAbsenteesQueryDto } from './dto/today-absentees-query.dto';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('outreach')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Can('outreach.view')
 export class OutreachController {
   constructor(private outreach: OutreachService) {}
 

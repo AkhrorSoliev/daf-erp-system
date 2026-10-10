@@ -7,23 +7,21 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { CustomFormsService } from './custom-forms.service';
 import { CustomFormSubmissionsService } from './custom-form-submissions.service';
 import { CreateCustomFormDto } from './dto/create-custom-form.dto';
 import { UpdateCustomFormDto } from './dto/update-custom-form.dto';
 import { SubmissionQueryDto } from './dto/submission-query.dto';
-import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 // The PUBLIC submit + schema routes live on `PublicFormsController`, not here.
 // They must stay unscoped: a form is filled in by someone with no session at
 // all, and its branch comes from the section it routes into.
 @Controller('custom-forms')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Can('leads.forms')
 export class CustomFormsController {
   constructor(
     private readonly service: CustomFormsService,

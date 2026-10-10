@@ -1,6 +1,6 @@
 # ADR-0028 — Bloklangan xodim hech narsa bera olmaydi, uning tokeni keyingi so'rovda to'xtaydi
 
-**Holati:** Qabul qilindi
+**Holati:** Qabul qilindi; «rol o'zgarishi tokenni to'xtatmaydi» qismi — ADR-0079 bilan almashtirildi
 **Sana:** 2026-09-24
 **Bog'liq:** ADR-0002 (fail-closed qamrov), ADR-0022 (xodim havolasi), ADR-0026 (rol berish shipi), `server/src/common/auth/blocked-user.ts`, `server/src/common/guards/jwt-auth.guard.ts`, `server/src/telegram/telegram.service.ts`, `server/src/users/users.service.ts`, `docs/role-access.md`
 

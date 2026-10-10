@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { canForRoles } from "@/test-support/server-catalog";
 import {
   canDirectorRate,
   resolveSalarySettingsAccess,
@@ -6,7 +7,7 @@ import {
 
 describe("resolveSalarySettingsAccess", () => {
   it("CEO: everything", () => {
-    expect(resolveSalarySettingsAccess([1])).toEqual({
+    expect(resolveSalarySettingsAccess(canForRoles([1]))).toEqual({
       canOpen: true,
       canManageCompanyPayroll: true,
       canDeactivateRate: true,
@@ -14,7 +15,7 @@ describe("resolveSalarySettingsAccess", () => {
   });
 
   it("a branch director: only teacher rates (ADR-0034)", () => {
-    expect(resolveSalarySettingsAccess([2])).toEqual({
+    expect(resolveSalarySettingsAccess(canForRoles([2]))).toEqual({
       canOpen: true,
       canManageCompanyPayroll: false,
       canDeactivateRate: false,
@@ -22,11 +23,11 @@ describe("resolveSalarySettingsAccess", () => {
   });
 
   it("director + administrator — director's rights", () => {
-    expect(resolveSalarySettingsAccess([2, 3]).canOpen).toBe(true);
+    expect(resolveSalarySettingsAccess(canForRoles([2, 3])).canOpen).toBe(true);
   });
 
   it.each([[[3]], [[4]], [[5]], [[]]])('%j: no "Sozlamalar"', (roleIds) => {
-    expect(resolveSalarySettingsAccess(roleIds).canOpen).toBe(false);
+    expect(resolveSalarySettingsAccess(canForRoles(roleIds)).canOpen).toBe(false);
   });
 });
 

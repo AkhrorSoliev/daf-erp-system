@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RoleLink } from "@/components/shared/role-link";
-import { GROUP_PAGE_ROLES } from "@/lib/role-access";
+import { CanLink } from "@/components/shared/can-link";
 import { AlertCircle, CalendarX, CheckCircle2, Clock, Users } from "lucide-react";
 import {
   Tooltip,
@@ -469,8 +468,8 @@ function LessonSegmentCard({
     >
       <Tooltip>
         <TooltipTrigger asChild>
-          <RoleLink
-            roles={GROUP_PAGE_ROLES}
+          <CanLink
+            perm="groups.view"
             href={`/groups/${lesson.groupId}`}
             className={`block h-full relative overflow-hidden rounded-md border ${colorClass} ${borderOverride} transition-colors`}
           >
@@ -535,7 +534,7 @@ function LessonSegmentCard({
                 </p>
               )}
             </div>
-          </RoleLink>
+          </CanLink>
         </TooltipTrigger>
         <TooltipContent>
           <div className="space-y-0.5">

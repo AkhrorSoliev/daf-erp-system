@@ -143,6 +143,13 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'SELF',
+    reason:
+      "The caller's own capability list, read through " +
+      "`PermissionsService.forUser(@CurrentUser('id'))`. No branch question.",
+    routes: ['GET /permissions/me'],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
       'Id-addressed money paths. The branch is resolved from the record and the ' +

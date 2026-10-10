@@ -26,7 +26,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 
 interface Props {
   period: { periodStart: string; periodEnd: string; cycleStartDay: number };
-  isCeo: boolean;
+  canClose: boolean;
   onChanged: () => void;
 }
 
@@ -44,7 +44,7 @@ const DAY_OPTIONS = Array.from({ length: 28 }, (_, i) => i + 1);
  * the change is confirmed (it closes the running cycle on the old schedule and
  * the new one applies from the next cycle, enforced server-side).
  */
-export function SalaryPeriodControl({ period, isCeo, onChanged }: Props) {
+export function SalaryPeriodControl({ period, canClose, onChanged }: Props) {
   const [pendingDay, setPendingDay] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -68,7 +68,7 @@ export function SalaryPeriodControl({ period, isCeo, onChanged }: Props) {
       <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
       <span className="text-muted-foreground">Hisoblash davri:</span>
 
-      {isCeo ? (
+      {canClose ? (
         <Select
           value={String(period.cycleStartDay)}
           onValueChange={(v) => setPendingDay(Number(v))}

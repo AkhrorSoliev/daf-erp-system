@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan, usePermissions } from "@/hooks/use-permissions";
 import { SalaryBreakdownDrawer } from "./salary-breakdown-drawer";
 import { SalaryMonthlyView } from "./salary-monthly-view";
 import { SalaryAdvancesTab } from "./salary-advances-tab";
@@ -14,12 +14,10 @@ import { resolveSalarySettingsAccess } from "./salary-settings-access";
 const DEFAULT_TAB = "oyliklar";
 
 export function SalaryClient() {
-  const user = useAuth((s) => s.user);
-  const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
-  const canPay = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
-  const settingsAccess = resolveSalarySettingsAccess(
-    user?.roles.map((r) => r.id) ?? [],
-  );
+  const canClose = useCan("salary.close");
+  const canPay = useCan("salary.pay");
+  const can = usePermissions((s) => s.can);
+  const settingsAccess = resolveSalarySettingsAccess(can);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -71,7 +69,7 @@ export function SalaryClient() {
 
         <TabsContent value="oyliklar">
           <SalaryMonthlyView
-            isCeo={isCeo}
+            canClose={canClose}
             canPay={canPay}
             settingsAccess={settingsAccess}
             onOpenBreakdown={setBreakdownPaymentId}
@@ -92,7 +90,7 @@ export function SalaryClient() {
       <SalaryBreakdownDrawer
         salaryPaymentId={breakdownPaymentId}
         onClose={() => setBreakdownPaymentId(null)}
-        isCeo={isCeo}
+        canClose={canClose}
         canPay={canPay}
         onChanged={bumpRefresh}
       />

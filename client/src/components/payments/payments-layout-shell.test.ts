@@ -11,6 +11,15 @@ vi.mock("@/hooks/use-auth", () => ({
   useAuth: (select: (s: unknown) => unknown) => select({ user: { roles: [{ id: state.roleId }] } }),
 }));
 vi.mock("./payments-mobile-menu", () => ({ PaymentsMobileMenu: () => null }));
+// No server to ask for the capability list here: the server's default list for the role.
+vi.mock("@/hooks/use-permissions", async () => {
+  const { canForRoles } = await import("@/test-support/server-catalog");
+  return {
+    usePermissions: (select: (s: { can: ReturnType<typeof canForRoles> }) => unknown) =>
+      select({ can: canForRoles([state.roleId]) }),
+    usePermissionsReady: () => true,
+  };
+});
 
 import { PaymentsLayoutShell } from "./payments-layout-shell";
 

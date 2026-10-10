@@ -1,18 +1,16 @@
 import 'reflect-metadata';
 import { NotFoundException, RequestMethod } from '@nestjs/common';
-import { RolesGuard } from '../common/guards';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { StudentActivityController } from './student-activity.controller';
 
 describe('StudentActivityController', () => {
-  it('faqat Student roli, RolesGuard bilan', () => {
-    expect(Reflect.getMetadata('roles', StudentActivityController)).toEqual([
+  it('is student-only at class level', () => {
+    expect(routeAccess(StudentActivityController, 'heartbeat')).toEqual({
+      kind: 'student',
+    });
+    expect(defaultRolesOf(StudentActivityController, 'heartbeat')).toEqual([
       'Student',
     ]);
-    const guards = Reflect.getMetadata(
-      '__guards__',
-      StudentActivityController,
-    ) as unknown[];
-    expect(guards).toContain(RolesGuard);
   });
 
   it('POST student-portal/activity', () => {

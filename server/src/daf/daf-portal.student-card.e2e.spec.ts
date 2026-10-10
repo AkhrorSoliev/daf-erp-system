@@ -4,9 +4,13 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { Server } from 'http';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { PermissionGuard } from '../common/permissions/permission.guard';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { DafPortalController } from './daf-portal.controller';
 import { DafPortalReadService } from './daf-portal-read.service';
@@ -109,6 +113,18 @@ const STUDENT = {
   studentId: 10500,
 };
 
+// The roles the database holds for each test account (6 = Student, 4 =
+// Teacher). The global PermissionGuard reads them there, not from the token.
+const ROLE_IDS_BY_USER: Record<number, number[]> = {
+  20001: [6],
+  20002: [6, 4],
+  20003: [4],
+  20004: [6],
+};
+const permissions = {
+  forUser: (id: number) => fakePermissions(ROLE_IDS_BY_USER[id]).forUser(id),
+} as unknown as PermissionsService;
+
 describe('DafPortalController — a token without studentId', () => {
   let app: INestApplication;
   let server: Server;
@@ -120,6 +136,10 @@ describe('DafPortalController — a token without studentId', () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [DafPortalController],
       providers: [
+        // The app registers it globally; it runs before the controller's
+        // StudentCardGuard.
+        { provide: APP_GUARD, useClass: PermissionGuard },
+        { provide: PermissionsService, useValue: permissions },
         {
           provide: DafPortalReadService,
           useValue: new DafPortalReadService(prisma, config),

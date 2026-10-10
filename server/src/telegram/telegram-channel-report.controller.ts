@@ -1,6 +1,5 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { Roles } from '../common/decorators/roles.decorator';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { Controller, Get, Query } from '@nestjs/common';
+import { Can } from '../common/permissions/access.decorators';
 import { TelegramService } from './telegram.service';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
 import { tashkentMonthRangeUtc } from '../common/date/tashkent';
@@ -14,15 +13,15 @@ import { tashkentMonthRangeUtc } from '../common/date/tashkent';
  * Frontenddagi URL (/reports/bot) bunga bog'liq emas.
  */
 /**
- * ROLLAR: faqat CEO + Branch Director. Bu ATAYLAB `/reports` bo'limining
- * mavjud darajasiga moslashtirilgan — `ReportsLayoutShell` o'sha bo'limni
- * `[1, 2]` rollariga cheklaydi, ya'ni Administrator sahifaga umuman kira
- * olmaydi. Backendga Administrator qo'shilsa, frontend bilan zid bo'lardi
- * (CLAUDE.md: ikkala qatlam doim bir xil bo'lishi shart).
+ * IMKONIYAT: `reports.students` (odatda faqat CEO + Branch Director). Bu
+ * ATAYLAB `/reports` bo'limining mavjud darajasiga moslashtirilgan —
+ * `ReportsLayoutShell` o'sha bo'limni CEO va Branch Director'ga cheklaydi,
+ * ya'ni Administrator sahifaga umuman kira olmaydi. Backendga Administrator
+ * qo'shilsa, frontend bilan zid bo'lardi (CLAUDE.md: ikkala qatlam doim bir
+ * xil bo'lishi shart).
  */
 @Controller('telegram/channel-report')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director')
+@Can('reports.students')
 export class TelegramChannelReportController {
   constructor(
     private readonly telegram: TelegramService,

@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { formatNumber } from "@/lib/format-utils";
+import { canForRoles } from "@/test-support/server-catalog";
 import { RefundableDrawerBody } from "./refundable-drawer";
 import { TransferNote } from "./transfer-note";
 import type { RefundableDrawer, TransferState } from "./refunds-types";
@@ -25,9 +26,10 @@ const DRAWER: RefundableDrawer = {
 const norm = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, " ");
 const num = (n: number) => norm(formatNumber(n));
 const noop = () => {};
-const html = (over: Partial<RefundableDrawer> = {}, canAct = true) =>
+// The server's default capabilities: the CEO unless a test names other roles.
+const html = (over: Partial<RefundableDrawer> = {}, roleIds: number[] = [1]) =>
   renderToStaticMarkup(createElement(QueryClientProvider, { client: new QueryClient() },
-    createElement(RefundableDrawerBody, { drawer: { ...DRAWER, ...over }, canAct, onAction: noop })));
+    createElement(RefundableDrawerBody, { drawer: { ...DRAWER, ...over }, can: canForRoles(roleIds), onAction: noop })));
 const disabledButton = (raw: string, label: string) => new RegExp(`<button[^>]*\\sdisabled=""[^>]*>(?:(?!</button>).)*${label}`).test(raw);
 
 describe("RefundableDrawerBody (spec §3.5)", () => {
@@ -84,7 +86,7 @@ describe("RefundableDrawerBody (spec §3.5)", () => {
   });
 
   it("a cashier reads the facts only: no options at all", () => {
-    const text = norm(html({}, false));
+    const text = norm(html({}, [5]));
     expect(text).toContain("Markazdagi puli");
     for (const s of ["Nima qilish mumkin", "Pulni o'quvchiga qaytarish", "Xabar berish", "Markaz hisobiga o'tkazish"]) expect(text).not.toContain(s);
   });

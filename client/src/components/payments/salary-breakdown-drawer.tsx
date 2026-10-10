@@ -97,8 +97,8 @@ interface BreakdownResponse {
 interface Props {
   salaryPaymentId: string | null;
   onClose: () => void;
-  /** CEO can approve; CEO/BD can pay. Drives the footer workflow buttons. */
-  isCeo?: boolean;
+  /** `salary.close` approves; `salary.pay` pays. Drives the footer workflow buttons. */
+  canClose?: boolean;
   canPay?: boolean;
   /** Called after approve/pay so the parent (matrix) refetches. */
   onChanged?: () => void;
@@ -172,7 +172,7 @@ export function breakdownCsvRows(lines: BreakdownLine[]): (string | number)[][] 
 export function SalaryBreakdownDrawer({
   salaryPaymentId,
   onClose,
-  isCeo = false,
+  canClose = false,
   canPay = false,
   onChanged,
 }: Props) {
@@ -449,11 +449,11 @@ export function SalaryBreakdownDrawer({
 
         {/* === Workflow footer === */}
         {data &&
-          ((data.payment.status === "CALCULATED" && isCeo) ||
+          ((data.payment.status === "CALCULATED" && canClose) ||
             (data.payment.status === "APPROVED" && canPay) ||
             data.payment.status === "PAID") && (
             <SheetFooter className="border-t px-6 py-4 shrink-0">
-              {data.payment.status === "CALCULATED" && isCeo && (
+              {data.payment.status === "CALCULATED" && canClose && (
                 <div className="flex w-full items-center justify-between gap-3">
                   <p className="text-xs text-muted-foreground">
                     Tasdiqlash — pul harakatisiz tekshiruv.

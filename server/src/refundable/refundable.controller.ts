@@ -5,27 +5,21 @@ import {
   ParseIntPipe,
   Query,
   Res,
-  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import {
-  BranchCeiling,
-  BranchScope,
-  CurrentUser,
-  Roles,
-} from '../common/decorators';
+import { BranchCeiling, BranchScope, CurrentUser } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 import { RefundableService } from './refundable.service';
 import { RefundableQueryDto } from './dto/refundable-query.dto';
 
 /**
  * «Qaytariladigan pul» reads (spec B2b §3, ADR-0077). Every staff role but
  * Teacher reads; the writes keep their own gates. Scope: the header branch.
+ * The debt page's capability: these replace its frozen balances list.
  */
 @Controller('refundable')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+@Can('debt.view')
 export class RefundableController {
   constructor(private readonly refundable: RefundableService) {}
 

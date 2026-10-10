@@ -111,6 +111,8 @@ describe("every fetching zustand store is accounted for", () => {
       "notifications are addressed to a USER, not a branch; the unread badge must not blank out on a switch",
     "use-push-notifications.ts":
       "browser push subscription — a device concern, no server rows",
+    "use-permissions.ts":
+      "capabilities follow the user's roles, not a branch; clearing them on a switch would blank every menu until the refetch lands",
   };
 
   const hooksDir = join(__dirname, "..", "hooks");

@@ -8,11 +8,10 @@ import {
   Post,
   Query,
   Res,
-  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { ContractDocumentsService } from './contract-documents.service';
 import { ContractLifecycleService } from './contract-lifecycle.service';
 import {
@@ -23,13 +22,11 @@ import {
 } from './dto/contract-document.dto';
 
 /**
- * Student contracts (ADR-0075). The roles of the student profile's tabs;
- * every route checks the student's branch in the service
- * (`assertCallerMayTouchStudent`).
+ * Student contracts (ADR-0075). Reads are a profile tab (`students.details`),
+ * writes are `students.manage`; every route checks the student's branch in
+ * the service (`assertCallerMayTouchStudent`).
  */
 @Controller('contract-documents')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class ContractDocumentsController {
   constructor(
     private readonly documents: ContractDocumentsService,
@@ -37,6 +34,7 @@ export class ContractDocumentsController {
   ) {}
 
   @Get()
+  @Can('students.details')
   list(
     @Query() query: StudentContractsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -46,6 +44,7 @@ export class ContractDocumentsController {
   }
 
   @Get('prefill')
+  @Can('students.details')
   prefill(
     @Query() query: StudentContractsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -55,6 +54,7 @@ export class ContractDocumentsController {
   }
 
   @Post()
+  @Can('students.manage')
   create(
     @Body() dto: CreateContractDocumentDto,
     @CurrentUser('companyId') companyId: number,
@@ -64,6 +64,7 @@ export class ContractDocumentsController {
   }
 
   @Patch(':id')
+  @Can('students.manage')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateContractDocumentDto,
@@ -74,6 +75,7 @@ export class ContractDocumentsController {
   }
 
   @Post(':id/sign')
+  @Can('students.manage')
   sign(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('companyId') companyId: number,
@@ -83,6 +85,7 @@ export class ContractDocumentsController {
   }
 
   @Post(':id/cancel')
+  @Can('students.manage')
   cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CancelContractDocumentDto,
@@ -93,6 +96,7 @@ export class ContractDocumentsController {
   }
 
   @Get(':id/pdf')
+  @Can('students.details')
   async pdf(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('companyId') companyId: number,

@@ -1,95 +1,97 @@
 import 'reflect-metadata';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../common/decorators/roles.decorator';
-import { RolesGuard } from '../common/guards/roles.guard';
 import { SalaryController } from './salary.controller';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('SalaryController @Roles metadata', () => {
-  // The whole controller is gated by RolesGuard. We assert the per-method
-  // metadata here so a refactor that accidentally widens the gate is
-  // caught by tests, not by an audit.
-  const reflector = new Reflector();
-  const guard = new RolesGuard(reflector);
+const CEO_ONLY = ['CEO'];
+const CEO_AND_BRANCH_DIRECTOR = ['Branch Director', 'CEO'];
 
-  function rolesFor(method: keyof SalaryController): string[] {
-    const handler = SalaryController.prototype[method] as any;
-    return reflector.get<string[]>(ROLES_KEY, handler) ?? [];
-  }
-
-  function ctx(method: keyof SalaryController, roles: string[]) {
-    return {
-      getHandler: () => SalaryController.prototype[method],
-      getClass: () => SalaryController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    } as any;
+describe('SalaryController — route access', () => {
+  // Pins every salary route's marker and the roles it admits by default, so a
+  // refactor that accidentally widens the gate is caught by tests, not by an
+  // audit.
+  function expectCan(method: string, key: string) {
+    expect(routeAccess(SalaryController, method)).toEqual({
+      kind: 'can',
+      keys: [key],
+    });
   }
 
   describe('CEO-only writes (Faza 2 narrowing)', () => {
-    // A company-wide bulk rate moves every branch at once — CEO only.
-    it('applyGlobalConfig requires CEO', () => {
-      expect(rolesFor('applyGlobalConfig')).toEqual(['CEO']);
-    });
-
-    it('createPeriodSetting requires CEO', () => {
-      expect(rolesFor('createPeriodSetting')).toEqual(['CEO']);
-    });
-
-    it.each(['calculateSalaries', 'previewPeriod', 'approvePayment'] as const)(
-      '%s requires CEO',
+    // A company-wide bulk rate moves every branch at once — CEO only. A
+    // director's PATCH could mark a closed config active with no open version,
+    // or edit a rate the director could never have created — so the edit path
+    // stays CEO-only too. Only `POST /salary/config` (a new version) is shared
+    // with the director (ADR-0034).
+    it.each(['applyGlobalConfig', 'updateConfig'] as const)(
+      '%s is gated by the rate-edit capability, CEO by default',
       (method) => {
-        expect(rolesFor(method)).toEqual(['CEO']);
+        expectCan(method, 'salary.rate-edit');
+        expect(defaultRolesOf(SalaryController, method)).toEqual(CEO_ONLY);
       },
     );
 
-    // A director's PATCH could mark a closed config active with no open
-    // version, or edit a rate the director could never have created — so the
-    // edit path stays CEO-only. Only `POST /salary/config` (a new version) is
-    // shared with the director (ADR-0034).
-    it('updateConfig requires CEO', () => {
-      expect(rolesFor('updateConfig')).toEqual(['CEO']);
-    });
-
-    // A month-wide settle is irreversible and spans every branch's payroll, so
-    // it sits with the CEO writes rather than with the per-payment payouts a
-    // Branch Director may run.
-    it.each(['previewSettleMonth', 'settleMonth'] as const)(
-      '%s requires CEO',
+    // Cron-internal calculation, its approval and the period settings; a
+    // month-wide settle is irreversible and spans every branch's payroll, so
+    // it sits here rather than with the per-payment payouts.
+    it.each([
+      'calculateSalaries',
+      'previewPeriod',
+      'approvePayment',
+      'previewSettleMonth',
+      'settleMonth',
+      'createPeriodSetting',
+    ] as const)(
+      '%s is gated by the salary close capability, CEO by default',
       (method) => {
-        expect(rolesFor(method)).toEqual(['CEO']);
+        expectCan(method, 'salary.close');
+        expect(defaultRolesOf(SalaryController, method)).toEqual(CEO_ONLY);
       },
     );
   });
 
-  describe('CEO + Branch Director allowed (payouts)', () => {
+  describe('Payouts', () => {
     it.each(['payPayment', 'batchPay'] as const)(
-      '%s allows CEO and Branch Director',
+      '%s is gated by the pay capability, CEO and Branch Director by default',
       (method) => {
-        expect(rolesFor(method)).toEqual(['CEO', 'Branch Director']);
+        expectCan(method, 'salary.pay');
+        expect(defaultRolesOf(SalaryController, method)).toEqual(
+          CEO_AND_BRANCH_DIRECTOR,
+        );
       },
     );
   });
 
   describe('Teacher rate writes — CEO + own-branch Branch Director (ADR-0034)', () => {
-    // The role gate only admits the director; WHICH teacher they may touch is
+    // The capability only admits the director; WHICH teacher they may touch is
     // decided in `shared/teacher-rate-permission.ts` (own branch, holds
     // Teacher, not CEO/Branch Director, not self, active, not FIXED_MONTHLY).
-    it('createConfig allows CEO and Branch Director', () => {
-      expect(rolesFor('createConfig')).toEqual(['CEO', 'Branch Director']);
+    it('createConfig is gated by the rate capability, CEO and Branch Director by default', () => {
+      expectCan('createConfig', 'salary.rate');
+      expect(defaultRolesOf(SalaryController, 'createConfig')).toEqual(
+        CEO_AND_BRANCH_DIRECTOR,
+      );
     });
 
     // A preview reveals what the save would do to a teacher's pay (ADR-0050),
     // so it admits exactly who may save — never wider.
-    it('previewConfig admits exactly the roles createConfig does', () => {
-      expect(rolesFor('previewConfig')).toEqual(rolesFor('createConfig'));
+    it('previewConfig carries the same marker and admits the same roles as createConfig', () => {
+      expect(routeAccess(SalaryController, 'previewConfig')).toEqual(
+        routeAccess(SalaryController, 'createConfig'),
+      );
+      expect(defaultRolesOf(SalaryController, 'previewConfig')).toEqual(
+        defaultRolesOf(SalaryController, 'createConfig'),
+      );
     });
   });
 
-  describe("«Ish haqi» sahifasining o'qishlari — faqat CEO + Branch Director", () => {
-    // Administrator oylikni ko'rmaydi (docs/role-access.md, «View salary»).
-    // «Ish haqi» sahifasi undan aprel oyidan beri yashirin, server esa shu
-    // endpointlarni unga ochiq qoldirgan edi: manzilni qo'lda yozgan admin
-    // har bir ustozning oyligini o'qiy olardi. 30.09.2026 da yopildi.
+  describe('«Ish haqi» page reads — CEO and Branch Director by default', () => {
+    // An Administrator does not see salaries (docs/role-access.md, «View
+    // salary»). The «Ish haqi» page has been hidden from them since April,
+    // while the server left these endpoints open to them: an administrator
+    // typing the address by hand could read every teacher's pay. Closed on
+    // 30.09.2026. «Markaz qoplagani» (getCenterTopUpStudents) is a tab of the
+    // same page (ADR-0072), and getStaffConfig carries the administrative
+    // staff's own pay, so both follow the page.
     const pageReads = [
       'getConfig',
       'getConfigsForUsers',
@@ -99,85 +101,83 @@ describe('SalaryController @Roles metadata', () => {
       'findPayments',
       'getMatrix',
       'getOverview',
+      'getStaffConfig',
       'getMonthly',
+      'getCenterTopUpStudents',
+      // Money for ONE named teacher — the profile salary tab and card.
+      'getMonthlyForUser',
       'getAdvances',
       'getAdvanceCalendar',
       'getPaymentBreakdown',
     ] as const;
-    it.each(pageReads)('%s allows CEO and Branch Director only', (method) => {
-      expect(rolesFor(method)).toEqual(['CEO', 'Branch Director']);
-    });
 
-    it('RolesGuard refuses an Administrator on /salary/monthly', () => {
-      expect(() =>
-        guard.canActivate(ctx('getMonthly', ['Administrator'])),
-      ).toThrow(ForbiddenException);
+    it.each(pageReads)(
+      '%s is gated by the salary view capability',
+      (method) => {
+        expectCan(method, 'salary.view');
+      },
+    );
+
+    it.each(pageReads)(
+      '%s admits the CEO and the Branch Director by default, not the Administrator or the Cashier',
+      (method) => {
+        expect(defaultRolesOf(SalaryController, method)).toEqual(
+          CEO_AND_BRANCH_DIRECTOR,
+        );
+      },
+    );
+
+    // Two lists sit side by side in one dialog (⚙ Sozlamalar → «Xodimlar
+    // stavkalari»): whoever sees one must see the other, or the dialog opens
+    // half 403.
+    it('getStaffConfig admits exactly the roles of the teacher rate list beside it', () => {
+      expect(defaultRolesOf(SalaryController, 'getStaffConfig')).toEqual(
+        defaultRolesOf(SalaryController, 'getOverview'),
+      );
     });
   });
 
-  describe("Taymlayn — o'qituvchi profilining tabi, admin ham ko'radi", () => {
-    it('getTimeline allows CEO/BD/Administrator', () => {
-      expect(rolesFor('getTimeline')).toEqual([
-        'CEO',
-        'Branch Director',
+  describe("Taymlayn — the teacher profile's tab, the Administrator sees it too", () => {
+    it('getTimeline is gated by the teacher view capability, Administrator included by default', () => {
+      expectCan('getTimeline', 'teachers.view');
+      expect(defaultRolesOf(SalaryController, 'getTimeline')).toEqual([
         'Administrator',
-      ]);
-    });
-  });
-
-  describe('«Markaz qoplagani» — the salary page tab, CEO and Branch Director only (ADR-0072)', () => {
-    it('getCenterTopUpStudents allows CEO and Branch Director only', () => {
-      expect(rolesFor('getCenterTopUpStudents')).toEqual([
-        'CEO',
         'Branch Director',
+        'CEO',
       ]);
-    });
-
-    it('RolesGuard keeps an Administrator and a Cashier out', () => {
-      for (const role of ['Administrator', 'Cashier']) {
-        expect(() =>
-          guard.canActivate(ctx('getCenterTopUpStudents', [role])),
-        ).toThrow(ForbiddenException);
-      }
     });
   });
 
-  describe('Self-service (any authenticated user via @CurrentUser)', () => {
-    // The me/* endpoints rely on the controller-level @Roles which include
-    // 'Teacher'. They have no method-level @Roles override.
+  describe('Self-service (the caller reads their own pay via @CurrentUser)', () => {
+    // The me/* handlers pass the caller's own id to the service, so any staff
+    // member may call them — a Cashier on payroll included (Appendix C of the
+    // permissions plan).
     const selfEndpoints = [
       'getMySummary',
       'getMyAccruals',
       'getMyCurrentCycleBreakdown',
       'getMyPaymentBreakdown',
-      // "Mening oyligim" — the same monthly row /payments/salary shows.
+      // «Mening oyligim» — the same monthly row /payments/salary shows.
       'getMyMonthly',
     ] as const;
-    it.each(selfEndpoints)('%s has no method-level role override', (method) => {
-      expect(rolesFor(method)).toEqual([]);
-    });
-  });
 
-  describe('Staff rate list (⚙ Sozlamalar → Xodimlar stavkalari)', () => {
-    // This list carries the pay of the administrative staff themselves —
-    // including whoever is looking at it — so it follows the "Salary config"
-    // row of docs/role-access.md. Administrator is deliberately excluded.
-    it('getStaffConfig allows CEO and Branch Director only', () => {
-      expect(rolesFor('getStaffConfig')).toEqual(['CEO', 'Branch Director']);
+    it.each(selfEndpoints)('%s is open to any staff account', (method) => {
+      expect(routeAccess(SalaryController, method)).toEqual({
+        kind: 'anyStaff',
+      });
     });
 
-    // Ikki ro'yxat bitta oynada yonma-yon turadi: birini ko'rgan boshqasini
-    // ham ko'rishi kerak, aks holda oyna yarmi 403 bilan ochiladi.
-    it('admits exactly the roles of the teacher rate list beside it', () => {
-      expect(rolesFor('getStaffConfig')).toEqual(rolesFor('getOverview'));
-    });
-  });
-
-  describe('Per-user monthly row (profile tab + profile card)', () => {
-    // Money for ONE named teacher — same gate as the profile salary tab it
-    // backs (`/teachers/:id/salary-summary`), i.e. Administrator is excluded.
-    it('getMonthlyForUser allows CEO and Branch Director only', () => {
-      expect(rolesFor('getMonthlyForUser')).toEqual(['CEO', 'Branch Director']);
-    });
+    it.each(selfEndpoints)(
+      '%s admits all five staff roles, the Cashier included',
+      (method) => {
+        expect(defaultRolesOf(SalaryController, method)).toEqual([
+          'Administrator',
+          'Branch Director',
+          'CEO',
+          'Cashier',
+          'Teacher',
+        ]);
+      },
+    );
   });
 });

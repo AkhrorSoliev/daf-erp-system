@@ -1,55 +1,58 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { ROLES_KEY } from '../common/decorators/roles.decorator';
-import { RolesGuard } from '../common/guards';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { CommentsController } from './comments.controller';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 
-const rolesOf = (handler: unknown) =>
-  Reflect.getMetadata(ROLES_KEY, handler as object) as string[] | undefined;
-
-describe('CommentsController — role gates', () => {
+describe('CommentsController — route access', () => {
   const proto = CommentsController.prototype;
+  const READS = ['findByEntity', 'getLatestComment'] as const;
 
   // The old in-handler check ("only CEO/BD/Administrator may make a task")
   // went with task comments; now the route itself is the gate.
-  it('create admits CEO, Branch Director and Administrator only', () => {
-    expect(rolesOf(proto.create)).toEqual([
-      'CEO',
-      'Branch Director',
-      'Administrator',
-    ]);
+  it.each(['create', 'update'] as const)(
+    '%s is gated by the comment writing capability',
+    (name) => {
+      expect(routeAccess(CommentsController, name)).toEqual({
+        kind: 'can',
+        keys: ['comments.write'],
+      });
+    },
+  );
+
+  // Reading a thread is part of looking at the record it hangs off, so every
+  // screen that shows such a thread keeps it open.
+  it.each(READS)('%s is open to every screen that shows a thread', (name) => {
+    expect(routeAccess(CommentsController, name)).toEqual({
+      kind: 'can',
+      keys: [
+        'comments.write',
+        'students.details',
+        'groups.manage',
+        'teachers.view',
+        'employees.view',
+      ],
+    });
   });
 
-  it('reads and edits admit CEO, Branch Director and Administrator', () => {
-    for (const handler of [
-      proto.findByEntity,
-      proto.getLatestComment,
-      proto.update,
-    ]) {
-      expect(rolesOf(handler)).toEqual([
-        'CEO',
-        'Branch Director',
+  it.each(['create', 'update', ...READS] as const)(
+    '%s admits the CEO, Branch Director and Administrator by default',
+    (name) => {
+      expect(defaultRolesOf(CommentsController, name)).toEqual([
         'Administrator',
+        'Branch Director',
+        'CEO',
       ]);
-    }
-  });
+    },
+  );
 
-  it('delete is CEO only', () => {
-    expect(rolesOf(proto.delete)).toEqual(['CEO']);
-  });
-
-  it('every route runs RolesGuard', () => {
-    for (const handler of [
-      proto.create,
-      proto.findByEntity,
-      proto.getLatestComment,
-      proto.update,
-      proto.delete,
-    ]) {
-      expect(Reflect.getMetadata('__guards__', handler)).toContain(RolesGuard);
-    }
+  it('delete is gated by the comment moderation capability, which only the CEO holds by default', () => {
+    expect(routeAccess(CommentsController, 'delete')).toEqual({
+      kind: 'can',
+      keys: ['comments.delete'],
+    });
+    expect(defaultRolesOf(CommentsController, 'delete')).toEqual(['CEO']);
   });
 
   // Tasks live under /tasks now; the comment routes for them are gone.

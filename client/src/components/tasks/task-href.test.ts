@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { canForRoles } from "@/test-support/server-catalog";
 import { taskEntityHref, taskHref } from "./task-href";
 
-const CEO = [1];
-const BRANCH_DIRECTOR = [2];
-const ADMINISTRATOR = [3];
+const CEO = canForRoles([1]);
+const BRANCH_DIRECTOR = canForRoles([2]);
+const ADMINISTRATOR = canForRoles([3]);
 
 describe("taskEntityHref", () => {
   it("opens a lead in the leads board drawer, since a lead has no page of its own", () => {
@@ -19,14 +20,14 @@ describe("taskEntityHref", () => {
     expect(taskEntityHref("User", "10407", BRANCH_DIRECTOR)).toBe(
       "/settings/employees/10407",
     );
-    expect(taskEntityHref("User", "10407", [2, 3])).toBe(
+    expect(taskEntityHref("User", "10407", canForRoles([2, 3]))).toBe(
       "/settings/employees/10407",
     );
   });
 
   it("gives an Administrator no employee link: settings would send them back to /settings", () => {
     expect(taskEntityHref("User", "10407", ADMINISTRATOR)).toBeNull();
-    expect(taskEntityHref("User", "10407", [3, 4])).toBeNull();
+    expect(taskEntityHref("User", "10407", canForRoles([3, 4]))).toBeNull();
   });
 
   it("keeps the student and group pages", () => {
@@ -41,17 +42,17 @@ describe("taskEntityHref", () => {
   });
 
   // Server bu sahifalarni shu rollarga bermaydi: GET /students/:id da
-  // o'qituvchi, GET /groups/:id da kassir yo'q (src/lib/role-access.ts).
+  // o'qituvchi, GET /groups/:id da kassir yo'q (capabilities students.profile and groups.view).
   it("gives a teacher-only viewer no student link and a cashier-only viewer no group link", () => {
-    expect(taskEntityHref("Student", "10001", [4])).toBeNull();
-    expect(taskEntityHref("Group", "g1", [5])).toBeNull();
+    expect(taskEntityHref("Student", "10001", canForRoles([4]))).toBeNull();
+    expect(taskEntityHref("Group", "g1", canForRoles([5]))).toBeNull();
   });
 
   it("lets another role the viewer holds open the page", () => {
-    expect(taskEntityHref("Student", "10001", [4, 5])).toBe(
+    expect(taskEntityHref("Student", "10001", canForRoles([4, 5]))).toBe(
       "/students/profile/10001",
     );
-    expect(taskEntityHref("Group", "g1", [5, 4])).toBe("/groups/g1");
+    expect(taskEntityHref("Group", "g1", canForRoles([5, 4]))).toBe("/groups/g1");
   });
 });
 

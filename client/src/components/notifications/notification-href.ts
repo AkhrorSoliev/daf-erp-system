@@ -1,5 +1,6 @@
 import type { AppNotification } from "@/hooks/use-notifications";
-import { GROUP_PAGE_ROLES, STUDENT_PROFILE_ROLES } from "@/lib/role-access";
+import type { Can } from "@/lib/permission-check";
+import type { PermissionKey } from "@/lib/permission-keys";
 import { canOpenEmployeeSettings } from "@/lib/settings-nav";
 
 // What the server points a notification at: a Group (attendance, lesson
@@ -17,11 +18,11 @@ const ENTITY_ROUTES: Record<string, (id: string) => string> = {
   BrokenPromises: () => "/payments/debt?promise=broken",
 };
 
-// Sahifani ocholmaydigan ko'ruvchiga havola berilmaydi: server o'sha
-// sahifani rad etadi (o'qituvchiga o'quvchi profili, kassirga guruh).
-const ENTITY_PAGE_ROLES: Record<string, number[]> = {
-  Student: STUDENT_PROFILE_ROLES,
-  Group: GROUP_PAGE_ROLES,
+// A viewer who cannot open the page gets no link: the server refuses that page
+// (a teacher the student profile, a cashier the group page).
+const ENTITY_PAGE_PERMISSION: Record<string, PermissionKey> = {
+  Student: "students.profile",
+  Group: "groups.view",
 };
 
 /**
@@ -33,7 +34,7 @@ export function notificationHref(
     AppNotification,
     "type" | "relatedEntityType" | "relatedEntityId"
   >,
-  roleIds: number[],
+  can: Can,
 ): string | null {
   const { type, relatedEntityType, relatedEntityId } = notification;
   if (!relatedEntityType || !relatedEntityId) return null;
@@ -42,9 +43,9 @@ export function notificationHref(
     // from a closed month, sent to that teacher.
     if (type === "SYSTEM") return "/profile/salary";
     // Otherwise it is a task on an employee.
-    if (!canOpenEmployeeSettings(roleIds)) return null;
+    if (!canOpenEmployeeSettings(can)) return null;
   }
-  const allowed = ENTITY_PAGE_ROLES[relatedEntityType];
-  if (allowed && !roleIds.some((id) => allowed.includes(id))) return null;
+  const needed = ENTITY_PAGE_PERMISSION[relatedEntityType];
+  if (needed && !can(needed)) return null;
   return ENTITY_ROUTES[relatedEntityType]?.(relatedEntityId) ?? null;
 }

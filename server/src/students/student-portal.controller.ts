@@ -25,8 +25,8 @@ import { ChangePortalPasswordDto } from './dto/change-portal-password.dto';
 import { UpdatePortalNameDto } from './dto/update-portal-name.dto';
 import { InitPaymentDto } from './dto/init-payment.dto';
 import { ScanQrDto } from '../attendance/dto/qr-session.dto';
-import { Roles, CurrentUser } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { StudentOnly } from '../common/permissions/access.decorators';
 import { OwnPasswordAttemptGuard } from '../common/guards/own-password-attempt.guard';
 import { AuthService } from '../auth/auth.service';
 import { PaymentMethod } from '@prisma/client';
@@ -42,40 +42,35 @@ export class StudentPortalController {
   ) {}
 
   @Get('profile')
-  @UseGuards(RolesGuard)
-  @Roles('Student')
+  @StudentOnly()
   getProfile(@CurrentUser('studentId') studentId: number) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
     return this.studentPortalService.getProfile(studentId);
   }
 
   @Get('schedule')
-  @UseGuards(RolesGuard)
-  @Roles('Student')
+  @StudentOnly()
   getSchedule(@CurrentUser('studentId') studentId: number) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
     return this.studentPortalService.getSchedule(studentId);
   }
 
   @Get('attendance/stats')
-  @UseGuards(RolesGuard)
-  @Roles('Student')
+  @StudentOnly()
   getAttendanceStats(@CurrentUser('studentId') studentId: number) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
     return this.studentPortalService.getAttendanceStats(studentId);
   }
 
   @Get('attendance/history')
-  @UseGuards(RolesGuard)
-  @Roles('Student')
+  @StudentOnly()
   getAttendanceHistory(@CurrentUser('studentId') studentId: number) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
     return this.studentPortalService.getAttendanceHistory(studentId);
   }
 
   @Patch('name')
-  @UseGuards(RolesGuard)
-  @Roles('Student')
+  @StudentOnly()
   updateName(
     @CurrentUser('studentId') studentId: number,
     @CurrentUser('id') userId: number,
@@ -86,8 +81,8 @@ export class StudentPortalController {
   }
 
   @Patch('password')
-  @UseGuards(RolesGuard, OwnPasswordAttemptGuard)
-  @Roles('Student')
+  @UseGuards(OwnPasswordAttemptGuard)
+  @StudentOnly()
   async changePassword(
     @CurrentUser('id') userId: number,
     @CurrentUser('studentId') studentId: number,
@@ -110,8 +105,7 @@ export class StudentPortalController {
   // rejects both regardless; these options just stop a large body from being
   // buffered before that happens.
   @Post('photo')
-  @UseGuards(RolesGuard)
-  @Roles('Student')
+  @StudentOnly()
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: MAX_UPLOAD_BYTES },
@@ -133,8 +127,7 @@ export class StudentPortalController {
   }
 
   @Delete('photo')
-  @UseGuards(RolesGuard)
-  @Roles('Student')
+  @StudentOnly()
   removePhoto(
     @CurrentUser('studentId') studentId: number,
     @CurrentUser('id') userId: number,
@@ -144,8 +137,7 @@ export class StudentPortalController {
   }
 
   @Get('payments')
-  @UseGuards(RolesGuard)
-  @Roles('Student')
+  @StudentOnly()
   getPayments(@CurrentUser('studentId') studentId: number) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
     return this.studentPortalService.getPaymentHistory(studentId);
@@ -156,8 +148,7 @@ export class StudentPortalController {
    * Returns the checkout URL — the frontend redirects the student there.
    */
   @Post('payments/init')
-  @UseGuards(RolesGuard)
-  @Roles('Student')
+  @StudentOnly()
   async initPayment(
     @CurrentUser('studentId') studentId: number,
     @CurrentUser('companyId') companyId: number,
@@ -250,8 +241,7 @@ export class StudentPortalController {
   }
 
   @Post('attendance/scan')
-  @UseGuards(RolesGuard)
-  @Roles('Student')
+  @StudentOnly()
   scanQr(
     @Body() dto: ScanQrDto,
     @CurrentUser('studentId') studentId: number,

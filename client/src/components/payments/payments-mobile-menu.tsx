@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { paymentsNavItems } from "@/lib/payments-nav";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions, usePermissionsReady } from "@/hooks/use-permissions";
 
 export function PaymentsMobileMenu() {
-  const user = useAuth((s) => s.user);
-  const userRoleIds = user?.roles.map((r) => r.id) ?? [];
+  const can = usePermissions((s) => s.can);
+  const ready = usePermissionsReady();
+
+  // Until the capability list is known every item is hidden; an empty bordered
+  // card would show in its place.
+  if (!ready) return null;
 
   const visibleItems = paymentsNavItems.filter((item) => {
-    if (!item.visibleForRoles) return true;
-    return item.visibleForRoles.some((id) => userRoleIds.includes(id));
+    return !item.permission || can(item.permission);
   });
 
   return (

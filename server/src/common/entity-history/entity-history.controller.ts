@@ -1,16 +1,25 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { EntityHistoryService } from './entity-history.service';
 import { HistoryQueryDto } from './dto/history-query.dto';
-import { CurrentUser, Roles } from '../decorators';
-import { RolesGuard } from '../guards';
+import { CurrentUser } from '../decorators';
+import { Can } from '../permissions/access.decorators';
 
 @Controller('entity-history')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class EntityHistoryController {
   constructor(private entityHistoryService: EntityHistoryService) {}
 
+  // Every page with a history tab lists its own capability, so turning one
+  // page off never breaks another's history.
   @Get(':entityType/:entityId')
+  @Can(
+    'students.details',
+    'groups.manage',
+    'teachers.view',
+    'employees.view',
+    'settings.reference',
+    'settings.branches',
+    'leads.view',
+  )
   getHistory(
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,

@@ -6,25 +6,23 @@ import {
   Param,
   Query,
   ParseIntPipe,
-  UseGuards,
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CorrectPaymentDto } from './dto/correct-payment.dto';
 import { PaymentQueryDto } from './dto/payment-query.dto';
 import { AttachExternalPaymentDto } from './dto/attach-external.dto';
-import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import { CurrentUser, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 import { PaymentSource } from '@prisma/client';
 
 @Controller('payments')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
 export class PaymentsController {
   constructor(private paymentsService: PaymentsService) {}
 
   @Post()
+  @Can('payments.create')
   create(
     @Body() dto: CreatePaymentDto,
     @CurrentUser('id') userId: number,
@@ -40,12 +38,12 @@ export class PaymentsController {
    * Payment.(method, externalId, companyId) unique.
    */
   /**
-   * Reverse a posted payment. CEO-only because it unwinds cash that has
-   * already been recorded. Follows the append-only ledger rule: a reversal
-   * Transaction is written rather than editing the Payment row.
+   * Reverse a posted payment. Gated by `money.undo` because it unwinds cash
+   * that has already been recorded. Follows the append-only ledger rule: a
+   * reversal Transaction is written rather than editing the Payment row.
    */
   @Post(':id/reverse')
-  @Roles('CEO')
+  @Can('money.undo')
   reverse(
     @Param('id') id: string,
     @Body('reason') reason: string | undefined,
@@ -62,13 +60,13 @@ export class PaymentsController {
   /**
    * Correct a wrong amount on a manual payment (e.g. cashier typed an
    * extra zero). Reverses the wrong payment and re-posts it at the right
-   * amount. Allowed for CEO / Branch Director / Administrator — non-CEO
-   * callers are bound to a 72h window (enforced in the service). The
-   * service also rejects gateway payments and funds already spent on
-   * lessons. A `reason` is mandatory and lands in the audit trail.
+   * amount. Gated by `payments.correct`; callers other than the CEO are
+   * bound to a 72h window (enforced in the service). The service also
+   * rejects gateway payments and funds already spent on lessons. A
+   * `reason` is mandatory and lands in the audit trail.
    */
   @Post(':id/correct')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('payments.correct')
   correct(
     @Param('id') id: string,
     @Body() dto: CorrectPaymentDto,
@@ -86,6 +84,7 @@ export class PaymentsController {
   }
 
   @Post('attach-external')
+  @Can('payments.create')
   attachExternal(
     @Body() dto: AttachExternalPaymentDto,
     @CurrentUser('id') userId: number,
@@ -107,6 +106,7 @@ export class PaymentsController {
   }
 
   @Get()
+  @Can('payments.view')
   findAll(
     @Query() query: PaymentQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -122,6 +122,7 @@ export class PaymentsController {
    * (debt repaid → new cycles → leftover balance) as they type the amount.
    */
   @Get('preview')
+  @Can('payments.create')
   preview(
     @Query('studentId', ParseIntPipe) studentId: number,
     @Query('amount', ParseIntPipe) amount: number,
@@ -139,6 +140,7 @@ export class PaymentsController {
   }
 
   @Get('debtors')
+  @Can('debt.view')
   getDebtors(
     @Query() query: PaymentQueryDto,
     @CurrentUser('id') userId: number,
@@ -166,6 +168,7 @@ export class PaymentsController {
    * scope, so the list's `studentStatus` is not read here.
    */
   @Get('debtors/summary')
+  @Can('debt.view', 'dashboard.view')
   getDebtorSummary(
     @Query() query: PaymentQueryDto,
     @CurrentUser('id') userId: number,
@@ -180,6 +183,7 @@ export class PaymentsController {
   }
 
   @Get('pending-students')
+  @Can('payments.view')
   getPending(
     @Query() query: PaymentQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -193,6 +197,7 @@ export class PaymentsController {
   }
 
   @Get('debtors/group/:groupId')
+  @Can('debt.view')
   getDebtorsForGroup(
     @Param('groupId') groupId: string,
     @CurrentUser('companyId') companyId: number,
@@ -206,6 +211,7 @@ export class PaymentsController {
   }
 
   @Get(':id')
+  @Can('payments.view')
   findOne(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -215,6 +221,7 @@ export class PaymentsController {
   }
 
   @Get('student/:studentId')
+  @Can('students.profile', 'payments.create')
   findByStudent(
     @Param('studentId', ParseIntPipe) studentId: number,
     @Query() query: PaymentQueryDto,

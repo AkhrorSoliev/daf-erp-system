@@ -6,10 +6,9 @@ import {
   HttpCode,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
-import { CurrentUser, Public, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser, Public } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { PaymeService } from './payme/payme.service';
 import { ClickService } from './click/click.service';
 import { UzumService } from './uzum.service';
@@ -35,10 +34,10 @@ export class GatewaysController {
 
   /**
    * Admin audit log — list payment gateway webhook events with filters.
-   * CEO-only: raw webhook payloads may contain sensitive transaction details.
+   * Gated by `payments.gateway-log`: raw webhook payloads may contain
+   * sensitive transaction details.
    */
-  @UseGuards(RolesGuard)
-  @Roles('CEO')
+  @Can('payments.gateway-log')
   @Get('events')
   listEvents(
     @Query() query: GatewayEventsQueryDto,

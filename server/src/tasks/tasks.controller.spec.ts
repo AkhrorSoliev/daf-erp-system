@@ -1,10 +1,18 @@
-import { Reflector } from '@nestjs/core';
+import { PATH_METADATA } from '@nestjs/common/constants';
 import { Test } from '@nestjs/testing';
-import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { ACCESS_KEY } from '../common/permissions/access.decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { TasksReadService } from './tasks-read.service';
+
+const proto = TasksController.prototype as unknown as Record<string, unknown>;
+const routeNames = Object.getOwnPropertyNames(proto).filter(
+  (name) =>
+    name !== 'constructor' &&
+    typeof proto[name] === 'function' &&
+    Reflect.hasMetadata(PATH_METADATA, proto[name] as object),
+);
 
 describe('TasksController guards', () => {
   let controller: TasksController;
@@ -18,16 +26,23 @@ describe('TasksController guards', () => {
     }).compile();
     controller = mod.get(TasksController);
   });
-  it('is open to every staff role and closed to students', () => {
-    const roles = new Reflector().get<string[]>(ROLES_KEY, TasksController);
-    expect(roles).toEqual([...STAFF_ROLES]);
-    expect(roles).not.toContain('Student');
+  it('carries the any-staff marker at class level; the task policy narrows further', () => {
+    expect(Reflect.getMetadata(ACCESS_KEY, TasksController)).toEqual({
+      kind: 'anyStaff',
+    });
   });
-  it('runs RolesGuard, so the @Roles metadata is actually enforced', () => {
-    const guards = Reflect.getMetadata('__guards__', TasksController) as
-      | unknown[]
-      | undefined;
-    expect(guards).toContain(RolesGuard);
+  it('gives all seventeen routes the any-staff marker: every staff role, never the student', () => {
+    expect(routeNames).toHaveLength(17);
+    for (const name of routeNames) {
+      expect(routeAccess(TasksController, name)).toEqual({ kind: 'anyStaff' });
+      expect(defaultRolesOf(TasksController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+        'Cashier',
+        'Teacher',
+      ]);
+    }
   });
   it('parses the branch header: a positive int32-safe integer → number, anything else → null', () => {
     expect(controller.pickBranch('12')).toBe(12);

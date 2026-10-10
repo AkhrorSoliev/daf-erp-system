@@ -2,6 +2,8 @@
 
 This document defines the permission model for the DaF ERP system. **Every restriction listed here must be enforced on both the backend (API) and frontend (UI).**
 
+> **Since ADR-0079 the source of truth is the capability catalog** (`server/src/common/permissions/permission-catalog.ts`). Every route checks a capability (`@Can`), and every screen asks `useCan(...)`. The tables below describe the **default** state — what each role holds until the CEO changes it (stage 2). When a table and the catalog disagree, the catalog wins and the table is corrected.
+
 ## Roles
 
 | ID | Name | Scope |
@@ -33,7 +35,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 1. **CEO sees and does everything** — no restrictions, all branches
 2. **Branch Director = CEO within their branch** — full access but scoped to their own branch and its staff
-3. **Dual enforcement** — every role-restricted feature must be guarded on **both** backend (`@Roles` + `RolesGuard`) and frontend (conditional rendering via `useAuth`)
+3. **Dual enforcement** — every role-restricted feature must be guarded on **both** backend (a capability marker, `@Can(...)`) and frontend (conditional rendering via `useCan(...)`)
 4. **Hide, don't disable** — if a user lacks permission, the UI element (button, tab, column, page) must be **hidden entirely**, not shown in a disabled state
 
 ## Permission Matrix
@@ -64,11 +66,11 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | View transactions | Yes | Own branch | No | No | No |
 | Manual adjustment | Yes | Yes | No | No | No |
 
-- **Frontend**: Check `user.roles.some(r => [1, 2].includes(r.id))` before rendering salary/balance UI
-- **Frontend («Qaytariladigan pul»)**: `REFUND_REQUEST_ROLES`, `REFUND_HAND_OVER_ROLES` and `REFUND_CANCEL_ROLES` in `client/src/lib/role-access.ts` gate the request, «Berildi» and «Bekor qilish» actions
-- **Backend**: `@Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')` on payment endpoints; `@Roles('CEO', 'Branch Director')` on expenses and money reports (`financial-overview` and `marketing` included — since ADR-0067 the overview no longer admits Administrator and Cashier; their «Umumiy ma'lumotlar» is payment recording and the recent payments); salary writes are CEO/BD or CEO-only, while salary reads also admit Administrator — the decorators in `salary.controller.ts` are the list of record
+- **Frontend**: gate salary/balance UI with `useCan("salary.view")`
+- **Frontend («Qaytariladigan pul»)**: `useCan("refunds.create")`, `useCan("refunds.hand-over")` and `useCan("refunds.cancel")` gate the request, «Berildi» and «Bekor qilish» actions; `useCan("balance.withdraw")` gates «Xabar berish» and «Markaz hisobiga o'tkazish»
+- **Backend**: `@Can('payments.create')` on payment endpoints; `@Can('expenses.view')` / `@Can('expenses.manage')` on expenses and `@Can('reports.finance')` on money reports (`financial-overview` and `marketing` included — since ADR-0067 the overview no longer admits Administrator and Cashier; their «Umumiy ma'lumotlar» is payment recording and the recent payments); salary writes are CEO/BD or CEO-only — the decorators in `salary.controller.ts` are the list of record
 - **No tax setting.** The salary tax-rate config and its endpoints were removed: the system computes and withholds no tax, and the salary page shows possible deductions as an informational note only
-- **CEO-only actions**: reverse payment, reverse refund, calculate salary, approve salary — these use `@Roles('CEO')` specifically
+- **CEO-only actions**: reverse payment, reverse refund, calculate salary, approve salary — no other role holds them by default (`money.undo`, `salary.close`)
 - **Salary config (ADR-0034)**: a Branch Director may create a rate (`POST /salary/config`) only for an ACTIVE, own-branch user who holds the Teacher role and does not also hold CEO or Branch Director — an administrator or cashier who also teaches IS included. Never their own rate, never `FIXED_MONTHLY`, never a date before the current payroll period. Editing or deactivating an existing rate (`PATCH /salary/config/:id`), `POST /salary/config/global` and the payroll period stay CEO-only. A `PERCENTAGE` rate above 100 is rejected for every caller, including the CEO. The caller's roles and branches are read from the database through `whereUserMayAct()`, so a demoted or blocked director sets no rate even while their token still passes the guard ([ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md)).
 - **The salary page's reads are CEO + Branch Director on the server too** (2026-09-30). Every `GET /salary/*` read that only `/payments/salary` uses — `/monthly`, `/overview`, `/matrix`, `/payments`, `/payments/:id/breakdown`, `/accruals/:userId`, `/advances/:userId`, `/advance-calendar`, `/config/:userId`, `/configs/by-users`, `/config-history/:userId`, `/period-settings` — used to admit Administrator while the page was hidden from them. One salary read stays open to Administrator because a page they use calls it: `GET /salary/timeline/:userId` (teacher profile, «Taymlayn» tab). `GET /salary/monthly/center-topup` is CEO/BD (ADR-0072).
 - Full details: see `docs/financial-system.md`
@@ -86,7 +88,7 @@ Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qa
 | Payment statement PDF (drawer) | Yes | Yes | Yes | No | No |
 | Undo a debt write-off | Yes | No | No | No | No |
 
-- **Frontend**: `CALL_LOG_ROLES` and `STATEMENT_ROLES` in `client/src/lib/role-access.ts` hide the actions a cashier may not take
+- **Frontend**: `useCan("calls.log")` and `useCan("students.details")` (the statement PDF) hide the actions a cashier may not take
 
 ### Student contracts
 
@@ -99,7 +101,8 @@ The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-00
 | Cancel an unsigned contract | Yes | Yes | Yes | No | No |
 | Cancel a signed contract | Yes | No | No | No | No |
 
-- **Frontend**: `CONTRACT_ROLES` and `SIGNED_CONTRACT_CANCEL_ROLES` in `client/src/lib/role-access.ts`
+- **Backend**: `@Can('students.details')` on the reads (list, prefill, PDF), `@Can('students.manage')` on the writes (create, edit, sign, cancel). Cancelling a signed contract is CEO identity, checked by `ContractLifecycleService.cancel` against the role read from the database
+- **Frontend**: the tab shows with `useCan("students.details")`; «Shartnoma tuzish» and the card actions with `useCan("students.manage")`; the CEO-only cancel of a signed contract is an identity check (`SIGNED_CONTRACT_CANCEL_ROLE_IDS` in `student-contracts-tab.tsx`)
 
 ### Groups
 
@@ -110,9 +113,9 @@ The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-00
 | Update group | Yes | Own branch | Yes | No | No |
 | Delete group | Yes | Own branch | Yes | No | No |
 
-- **Frontend**: Check `user.roles.some(r => [1, 2, 3].includes(r.id))` for create/edit/delete buttons
-- **Backend**: Use `@Roles('CEO', 'Branch Director', 'Administrator')` on mutation endpoints
-- **A cashier sees no group page**: the server refuses `GET /groups`, `/groups/:id` and `/groups/:id/students`. A cashier-only user gets no «Guruhlar» sidebar item, no «👥 Guruhlar» button in the staff Telegram bot, and group names without a link wherever a cashier meets them (debtor list, home, schedule, student profile). Frontend: `GROUP_PAGE_ROLES` + `RoleLink` (`client/src/components/shared/role-link.tsx`)
+- **Frontend**: `useCan("groups.manage")` for create/edit/delete buttons
+- **Backend**: `@Can('groups.manage')` on mutation endpoints
+- **A cashier sees no group page**: the server refuses `GET /groups`, `/groups/:id` and `/groups/:id/students`. A cashier-only user gets no «Guruhlar» sidebar item, no «👥 Guruhlar» button in the staff Telegram bot, and group names without a link wherever a cashier meets them (debtor list, home, schedule, student profile). Frontend: `"groups.view"` + `CanLink` (`client/src/components/shared/can-link.tsx`)
 
 ### Students
 
@@ -121,7 +124,7 @@ The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-00
 | Open student profile (`GET /students/:id`) | Yes | Own branch | Yes | No | Yes |
 | Remove from group | Yes | Own branch | Yes | No | No |
 
-- **Frontend**: on group pages a teacher-only user sees student names without a link (`STUDENT_PROFILE_ROLES`). A cashier on a profile sees the «Guruhlar» tab without the «Chiqarish» button
+- **Frontend**: on group pages a teacher-only user sees student names without a link (`"students.profile"` + `CanLink`). A cashier on a profile sees the «Guruhlar» tab without the «Chiqarish» button
 
 ### Teachers
 
@@ -144,7 +147,7 @@ The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-00
 | Update assignee status | Own assignments | Own assignments | Own assignments | Own assignments | Own assignments |
 
 - **Assignees are checked for company, not branch.** A task on an own-branch entity may be assigned to any non-archived user of the company, the CEO included (`CommentsService.create`).
-- **Deletion is the CEO's alone.** `DELETE /comments/:id` is `@Roles('CEO')` with no author path, so an author cannot delete their own comment or task; editing (`PATCH /comments/:id`) is the author or the CEO.
+- **Deletion is the CEO's alone.** `DELETE /comments/:id` is `@Can('comments.delete')` (only the CEO holds it by default) with no author path, so an author cannot delete their own comment or task; editing (`PATCH /comments/:id`) is the author or the CEO.
 
 ### Tasks (Topshiriqlar)
 
@@ -170,6 +173,8 @@ The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-00
 |--------|-----|-----------------|---------------|---------|---------|
 | View reports | Yes | Yes | No | No | No |
 
+Ketgan o'quvchilar, davomat, markaz faoliyati va o'quvchi to'lovlari hisobotlari serverda ham faqat CEO va filial direktoriga (ADR-0079; ilgari menyuda yashirin, serverda adminga ochiq edi).
+
 ### Settings — General (Company Info)
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
@@ -177,7 +182,7 @@ The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-00
 | View settings | Yes | Yes | View only | No | No |
 | Edit settings | Yes | No | No | No | No |
 
-- **Frontend**: the form is read-only for everyone but the CEO and the save button is hidden (`COMPANY_EDIT_ROLES`)
+- **Frontend**: the form is read-only for everyone but the CEO and the save button is hidden (`useCan("settings.company")`)
 
 ### Settings — Employees & Branches
 
@@ -198,7 +203,7 @@ Creating an employee IS granting access, so a caller may hand out only the roles
 | Administrator | Teacher, Cashier |
 
 - **The most senior role decides.** A caller holding several roles gets the ceiling of the highest of CEO, Branch Director and Administrator. Holding none of them means nothing is grantable.
-- **Both doors read the caller from the database**, not from the token: roles, branches, and whether the account may still act (`whereUserMayAct()`). An unknown, archived or blocked (SUSPENDED, TERMINATED, ARCHIVED) caller grants nothing at either door. An access token outlives an archive, a block or a demotion by up to an hour, and a signed link works for three days, so a link minted from a stale token would keep its old authority that long ([ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md)).
+- **Both doors read the caller from the database**, not from the token: roles, branches, and whether the account may still act (`whereUserMayAct()`). An unknown, archived or blocked (SUSPENDED, TERMINATED, ARCHIVED) caller grants nothing at either door. A signed link works for three days, so a link minted with authority the caller no longer had would keep it that long, which is why the doors read the database themselves ([ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md)).
 - **Self-edits are included.** Acting on yourself skips the branch-overlap check, not this one: an Administrator cannot make themselves a Branch Director.
 - **Only accounts inside your ceiling can be reshaped.** When a write changes the role set, every role on both sides of the change (held now, held after) must be inside the caller's ceiling. An Administrator may add or remove Teacher and Cashier on a teacher, but may not change the role set of a Branch Director who shares their branch, of another Administrator, or of themselves, not even to add Teacher. Those changes belong to someone above them.
 - **An unchanged role set is not a grant.** The employee form sends `roleIds` on every save; the sets are compared (order ignored), so editing a name or a phone number is never refused by this rule.
@@ -233,13 +238,13 @@ A registration link (`POST /telegram/employee-link`) creates a working staff acc
 - The age is checked when the link is opened, so a registration started inside the three days can finish later.
 - The branch page also shows the link as text: minted when the page was opened, replaced on every copy. In a tab left open for more than three days, selecting that text by hand instead of pressing "Nusxalash" copies a dead link.
 
-#### A blocked employee's token stops at once; a demoted one's does not
+#### A blocked or demoted employee's token stops within seconds
 
-An access token lives an hour and nothing re-reads the account on each request, so `@Roles()` checks the roles the token was issued with. The decision and its alternatives: [ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md).
+An access token lives an hour, but `PermissionGuard` reads the account's roles and status from the database on every request ([ADR-0079](adr/0079-imkoniyat-rol-emas.md)), so neither a block nor a role change waits for the token to expire. The blocking half: [ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md).
 
 - **Blocking cuts off the tokens already issued.** Setting an employee to SUSPENDED, TERMINATED or ARCHIVED, or archiving them, on either the employee page (`UsersService`) or the teacher page (`TeachersService`) writes `user:blocked:<id>`, and `JwtAuthGuard` refuses that token on its next request ("Hisobingiz bloklangan"). Setting the employee back to ACTIVE or INACTIVE lifts it. Sign-in and token refresh already refused blocked accounts; the key is what stops the token issued before the block.
-- **Redis is a cache, not the authority.** If Redis is unreachable the guard lets the request through rather than failing everyone, and a blocked token then works until it expires (at most an hour). The two doors that grant access (above) do not depend on it: they refuse a blocked caller from their own database read.
-- **A role change does not cut off a token.** A demoted employee keeps their old role's pages for up to an hour, until the token is refreshed. They cannot create accounts or links above their new level in that hour, because both doors read the database.
+- **Redis is a cache, not the authority.** If Redis is unreachable `JwtAuthGuard` lets the request through rather than failing everyone, but `PermissionGuard` still reads the database: a blocked account holds no role and no capability, and `@AnyUser()` needs a role too, so it is refused on every route that is not `@Public()` (within the 10-second cache of `PermissionsService`). The two doors that grant access (above) do not depend on Redis either: they refuse a blocked caller from their own database read.
+- **A role change takes effect within 10 seconds.** A demoted employee loses the old role's pages and actions as soon as the 10-second cache in `PermissionsService` expires; the token itself is not replaced, only what it is allowed to do.
 
 ### Branch Director Scope Filtering
 
@@ -253,11 +258,10 @@ When a **Branch Director** accesses data, the backend must automatically filter 
 
 When adding a role-restricted feature:
 
-1. **Backend**: Add `@UseGuards(RolesGuard)` + `@Roles(...)` to the controller endpoint
-2. **Backend**: If Branch Director has access, add branch-scope filtering in the service
-3. **Frontend**: Use `useAuth` hook to check roles and conditionally render UI
-4. **Frontend**: Use role IDs (not names) for checks: `user.roles.some(r => [1, 2].includes(r.id))`
-5. **Docs**: Update this file's permission matrix
+1. **Backend:** give the route one marker — `@Can('key')` for an action, `@AnyStaff()` for reference data or the caller's own data, `@AnyUser()` for any signed-in account that is not blocked, `@StudentOnly()` for the student portal. A new action reuses a capability or adds one to the catalog (Uzbek label, section, default roles, `requires`). Add the route's row to `route-access.snapshot.json`.
+2. **Backend:** if a Branch Director or an Administrator may call it, scope the data by branch in the service.
+3. **Frontend:** hide what the user may not use with `useCan('key')` (or `CanLink` for a link to a page).
+4. **Docs:** update this file's default tables.
 
 ## Role ID Quick Reference
 
@@ -273,10 +277,7 @@ Student = 6
 ### Common frontend patterns
 
 ```tsx
-// CEO + Branch Director only (e.g. salary, teacher management, reports)
-const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
-const canManageTeachers = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
-
-// CEO + Branch Director + Administrator (e.g. group/student management)
-const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+const canManage = useCan("groups.manage");           // one capability
+const canSearch = useCan(["students.list", "leads.view"]); // any of several
+<CanLink perm="groups.view" href={`/groups/${id}`}>{name}</CanLink>
 ```

@@ -1,6 +1,7 @@
 import { Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard, StudentCardGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { StudentCardGuard } from '../common/guards';
+import { StudentOnly } from '../common/permissions/access.decorators';
 import { TelegramStatementService } from './telegram-statement.service';
 
 /**
@@ -10,8 +11,8 @@ import { TelegramStatementService } from './telegram-statement.service';
  * `StatementsModule`, and the reverse import would be a cycle.
  */
 @Controller('student-portal')
-@UseGuards(RolesGuard, StudentCardGuard)
-@Roles('Student')
+@UseGuards(StudentCardGuard)
+@StudentOnly()
 export class TelegramStatementController {
   constructor(private readonly sender: TelegramStatementService) {}
 

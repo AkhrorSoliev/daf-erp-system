@@ -1,16 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { TelegramChannelReportController } from './telegram-channel-report.controller';
 import { TelegramService } from './telegram.service';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
 describe('TelegramChannelReportController', () => {
   let controller: TelegramChannelReportController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const gateStats = {
     getSummary: jest.fn().mockResolvedValue({
@@ -38,47 +33,31 @@ describe('TelegramChannelReportController', () => {
       providers: [
         { provide: TelegramService, useValue: telegram },
         { provide: TelegramChannelGateStatsService, useValue: gateStats },
-        Reflector,
-        RolesGuard,
       ],
     }).compile();
 
     controller = moduleRef.get(TelegramChannelReportController);
-    reflector = moduleRef.get(Reflector);
-    guard = moduleRef.get(RolesGuard);
   });
 
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => TelegramChannelReportController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    } as any;
-  }
+  describe('route access', () => {
+    it.each(['summary', 'list'] as const)(
+      '%s is gated by the student reports capability',
+      (method) => {
+        expect(routeAccess(TelegramChannelReportController, method)).toEqual({
+          kind: 'can',
+          keys: ['reports.students'],
+        });
+      },
+    );
 
-  describe('rol himoyasi', () => {
-    it('sinf darajasida @Roles(CEO, Branch Director) bor', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        TelegramChannelReportController,
-      );
-      expect(roles).toEqual(['CEO', 'Branch Director']);
-    });
-
-    it.each(['CEO', 'Branch Director'])('%s ga ruxsat beradi', (role) => {
-      const ctx = mockExecutionContext(controller.summary, [role]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    // Administrator ATAYLAB rad etiladi — /reports bo'limi ham unga yopiq.
-    it.each(['Administrator', 'Teacher', 'Cashier'])(
-      '%s ni rad etadi',
-      (role) => {
-        const ctx = mockExecutionContext(controller.summary, [role]);
-        expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    // The Administrator is refused ON PURPOSE: the /reports section is closed
+    // to them in the menu too.
+    it.each(['summary', 'list'] as const)(
+      '%s admits the CEO and the Branch Director by default, nobody else',
+      (method) => {
+        expect(defaultRolesOf(TelegramChannelReportController, method)).toEqual(
+          ['Branch Director', 'CEO'],
+        );
       },
     );
   });

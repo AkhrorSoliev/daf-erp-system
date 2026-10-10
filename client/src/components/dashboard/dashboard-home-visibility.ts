@@ -1,3 +1,4 @@
+import type { Can } from "@/lib/permission-check";
 import type {
   DashboardAttention,
   DashboardNextLesson,
@@ -11,12 +12,6 @@ import type {
  * ko'rishi — moliyaviy ma'lumot ko'rsatilishini hal qiladigan qaror, u
  * sinovsiz qolmasligi kerak. Shuning uchun u shu yerda, sof funksiya sifatida.
  */
-
-export const ROLE_CEO = 1;
-export const ROLE_BRANCH_DIRECTOR = 2;
-export const ROLE_ADMIN = 3;
-export const ROLE_TEACHER = 4;
-export const ROLE_CASHIER = 5;
 
 export interface HomeSections {
   /** 4 ta pul kartasi. */
@@ -38,30 +33,18 @@ export interface HomeSections {
   leadFunnelDetails: boolean;
 }
 
-/**
- * «Faqat o'qituvchi» — 1/2/3 rollaridan birortasi ham yo'q foydalanuvchi.
- * Bunday odam `/` da boshqaruv paneli emas, jadvalni ko'radi.
- */
-export function isTeacherOnly(roleIds: number[]): boolean {
-  if (!roleIds.includes(ROLE_TEACHER)) return false;
-  return !roleIds.some(
-    (id) => id === ROLE_CEO || id === ROLE_BRANCH_DIRECTOR || id === ROLE_ADMIN,
-  );
-}
-
-export function resolveHomeSections(roleIds: number[]): HomeSections {
-  const has = (id: number) => roleIds.includes(id);
-  const money = has(ROLE_CEO) || has(ROLE_BRANCH_DIRECTOR);
-  const outreach = money || has(ROLE_ADMIN);
-  const staff = outreach || has(ROLE_CASHIER);
+export function resolveHomeSections(can: Can): HomeSections {
+  const money = can("reports.finance");
+  const outreach = can("outreach.view");
+  const staff = can("dashboard.view");
   return {
     money,
     people: staff,
     attention: staff,
     attentionOutreachRows: outreach,
     nextLessons: staff,
-    leadFunnel: outreach,
-    leadFunnelDetails: outreach,
+    leadFunnel: can("reports.leads"),
+    leadFunnelDetails: can("reports.leads"),
   };
 }
 

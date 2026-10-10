@@ -5,8 +5,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, DoorOpen, Users } from "lucide-react";
 import { pickNextLessons } from "./dashboard-home-visibility";
 import type { DashboardNextLesson } from "./dashboard-summary-types";
-import { RoleLink } from "@/components/shared/role-link";
-import { GROUP_PAGE_ROLES } from "@/lib/role-access";
+import { CanLink } from "@/components/shared/can-link";
 
 /** "HH:mm" ko'rinishidagi hozirgi mahalliy vaqt. */
 function nowHhMm(): string {
@@ -60,8 +59,8 @@ export function HomeNextLessons({
         <ul className="divide-y">
           {next.map((l) => (
             <li key={l.groupId}>
-              <RoleLink
-                roles={GROUP_PAGE_ROLES}
+              <CanLink
+                perm="groups.view"
                 href={`/groups/${l.groupId}`}
                 className="flex items-center gap-3 px-4 py-3"
                 linkClassName="transition-colors hover:bg-accent/40"
@@ -85,7 +84,7 @@ export function HomeNextLessons({
                   <Users className="size-3.5" />
                   {l.studentCount}
                 </span>
-              </RoleLink>
+              </CanLink>
             </li>
           ))}
         </ul>

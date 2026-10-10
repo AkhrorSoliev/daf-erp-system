@@ -7,22 +7,20 @@ import {
   Param,
   Put,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { LessonTeacherOverridesService } from './lesson-teacher-overrides.service';
 import { UpsertLessonTeacherOverrideDto } from './dto/upsert-lesson-teacher-override.dto';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('lesson-teacher-overrides')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
 export class LessonTeacherOverridesController {
   constructor(private service: LessonTeacherOverridesService) {}
 
   // Reads: same scope as LessonCancellation reads — a teacher can list
   // overrides for their own groups, everyone else their own branch's.
   @Get()
+  @Can('groups.view')
   list(
     @Query('groupId') groupId: string,
     @Query('from') from: string | undefined,
@@ -48,7 +46,7 @@ export class LessonTeacherOverridesController {
 
   // Upsert: idempotent per (groupId, date). Writes are admin-only.
   @Put(':groupId/:date')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('lessons.change')
   upsert(
     @Param('groupId') groupId: string,
     @Param('date') date: string,
@@ -61,7 +59,7 @@ export class LessonTeacherOverridesController {
   }
 
   @Delete(':id')
-  @Roles('CEO', 'Branch Director')
+  @Can('lessons.change-delete')
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,

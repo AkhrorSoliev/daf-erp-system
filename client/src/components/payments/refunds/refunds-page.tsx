@@ -1,21 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Clock, Download, MousePointerClick } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TablePagination } from "@/components/outreach/table-pagination";
+import { CanLink } from "@/components/shared/can-link";
 import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { EnrollToGroupDialog } from "@/components/students/enroll-to-group-dialog";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan, usePermissions } from "@/hooks/use-permissions";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { downloadAuthedFile } from "@/lib/download-file";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { hasAnyRole, REFUND_CANCEL_ROLES, REFUND_HAND_OVER_ROLES, REFUND_REQUEST_ROLES } from "@/lib/role-access";
 import { tashkentNow } from "@/lib/tashkent-time";
 import { cn } from "@/lib/utils";
 import { RefundDialog } from "../refund-dialog";
@@ -46,7 +45,9 @@ export function RefundsPage() {
   const filters = cleanRefundsFilters(raw as RefundsFilters);
   const tab = refundsTab(filters);
   const { data, isPending, isPlaceholderData, isError, refetch } = useRefundableList(filters);
-  const roles = useAuth((s) => s.user?.roles);
+  const can = usePermissions((s) => s.can);
+  const canHandOver = useCan("refunds.hand-over");
+  const canCancel = useCan("refunds.cancel");
   const [drawerId, setDrawerId] = useState<number | null>(null);
   const [action, setAction] = useState<{ kind: DrawerAction; student: DrawerStudent } | null>(null);
   const [handOver, setHandOver] = useState<PendingRefundRow | null>(null);
@@ -100,9 +101,11 @@ export function RefundsPage() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium text-muted-foreground">Kutilayotgan qaytarishlar</p>
           {data && (
-            <Link href="/payments/refunds/history" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+            // The history reads GET /refunds: whoever opens or hands over a refund.
+            <CanLink href="/payments/refunds/history" perm={["refunds.create", "refunds.hand-over"]}
+              className="inline-flex items-center gap-1 text-sm font-medium" linkClassName="text-primary hover:underline">
               Tarix · {formatNumber(data.pending.historyCount)} ta<ArrowRight className="size-3.5" />
-            </Link>
+            </CanLink>
           )}
         </div>
         {data && data.pending.total > 0 && <p className="text-lg font-bold tabular-nums">{pendingSumLine(data.pending.sum, data.pending.total)}</p>}
@@ -114,7 +117,7 @@ export function RefundsPage() {
         ) : (
           <div aria-busy={isPlaceholderData} className={cn("space-y-3", isPlaceholderData && "pointer-events-none opacity-60")}>
             <PendingTable rows={data.pending.data} offset={(filters.pendingPage - 1) * filters.pendingPageSize}
-              canHandOver={hasAnyRole(roles, REFUND_HAND_OVER_ROLES)} canCancel={hasAnyRole(roles, REFUND_CANCEL_ROLES)}
+              canHandOver={canHandOver} canCancel={canCancel}
               onHandOver={setHandOver} onCancel={setCancel} />
             <TablePagination total={data.pending.total} page={filters.pendingPage} pageSize={filters.pendingPageSize}
               onPageChange={(p) => setFilters({ pendingPage: p })} onPageSizeChange={(s) => setFilters({ pendingPageSize: s, pendingPage: 1 })} />
@@ -164,7 +167,7 @@ export function RefundsPage() {
           onPageChange={(p) => setFilters({ page: p })} onPageSizeChange={(s) => setFilters({ pageSize: s, page: 1 })} />
       )}
 
-      <RefundableDrawer studentId={drawerId} canAct={hasAnyRole(roles, REFUND_REQUEST_ROLES)} onClose={() => setDrawerId(null)}
+      <RefundableDrawer studentId={drawerId} can={can} onClose={() => setDrawerId(null)}
         onAction={(kind, student) => { setDrawerId(null); setAction({ kind, student }); }} />
       {action && <ActionDialog key={`${action.kind}-${action.student.id}`} action={action} onClose={() => setAction(null)} onDone={() => invalidateRefunds(qc)} />}
       {handOver && <HandOverDialog target={handOver} accounts={data?.cashAccounts ?? []} onClose={() => setHandOver(null)} />}

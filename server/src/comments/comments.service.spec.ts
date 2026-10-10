@@ -3,6 +3,9 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { ROLE_ID } from '../common/auth/role-ids';
+import { fakePermissions } from '../common/permissions/testing';
 
 const mockComment = {
   id: 'comment-uuid-1',
@@ -64,16 +67,23 @@ describe('CommentsService', () => {
       recordRestore: jest.fn(),
     };
 
+    service = await serviceHeldBy([ROLE_ID.CEO]);
+  });
+
+  // `roleIds` are the roles the caller holds in the database; the
+  // capabilities they carry come from the catalog defaults.
+  async function serviceHeldBy(roleIds: number[]) {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommentsService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: entityHistoryService },
+        { provide: PermissionsService, useValue: fakePermissions(roleIds) },
       ],
     }).compile();
 
-    service = module.get(CommentsService);
-  });
+    return module.get(CommentsService);
+  }
 
   describe('create', () => {
     it('should create a regular comment', async () => {
@@ -200,11 +210,11 @@ describe('CommentsService', () => {
         content: 'Yangilangan izoh',
       });
 
-      const result = await service.update(
+      const administrator = await serviceHeldBy([ROLE_ID.ADMINISTRATOR]);
+      const result = await administrator.update(
         'comment-uuid-1',
         { content: 'Yangilangan izoh' },
         1, // authorId matches
-        ['Administrator'],
         1001,
       );
 
@@ -233,35 +243,36 @@ describe('CommentsService', () => {
         'comment-uuid-1',
         { content: 'CEO tahrir qildi' },
         1,
-        ['CEO'],
         1001,
       );
 
       expect(result.content).toBe('CEO tahrir qildi');
     });
 
-    it('should throw if non-author non-CEO tries to update', async () => {
+    it("should throw if a caller without the moderation capability tries to update another author's comment", async () => {
       prisma.comment.findFirst.mockResolvedValue({
         ...mockComment,
         authorId: 999,
       });
+      prisma.comment.update = jest.fn();
 
+      const administrator = await serviceHeldBy([ROLE_ID.ADMINISTRATOR]);
       await expect(
-        service.update(
+        administrator.update(
           'comment-uuid-1',
           { content: 'test' },
           10001,
-          ['Administrator'],
           1001,
         ),
       ).rejects.toThrow(ForbiddenException);
+      expect(prisma.comment.update).not.toHaveBeenCalled();
     });
 
     it('should throw if comment not found', async () => {
       prisma.comment.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.update('nonexistent', { content: 'test' }, 1, ['CEO'], 1001),
+        service.update('nonexistent', { content: 'test' }, 1, 1001),
       ).rejects.toThrow(NotFoundException);
     });
   });

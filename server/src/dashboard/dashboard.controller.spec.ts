@@ -1,14 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Reflector } from '@nestjs/core';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 import { DashboardSummaryService } from './dashboard-summary.service';
 import { DashboardChartsService } from './dashboard-charts.service';
-import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
 describe('DashboardController', () => {
   let controller: DashboardController;
-  let reflector: Reflector;
 
   const mockService = {
     getTodaySchedule: jest.fn().mockResolvedValue({
@@ -51,7 +49,6 @@ describe('DashboardController', () => {
     }).compile();
 
     controller = module.get(DashboardController);
-    reflector = new Reflector();
   });
 
   it('should be defined', () => {
@@ -60,12 +57,16 @@ describe('DashboardController', () => {
 
   describe('getTodaySchedule()', () => {
     it('is staff-only — a student-portal token must not read it', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.getTodaySchedule,
-      );
-      expect(roles).toEqual(expect.arrayContaining([...STAFF_ROLES]));
-      expect(roles).not.toContain('Student');
+      expect(routeAccess(DashboardController, 'getTodaySchedule')).toEqual({
+        kind: 'anyStaff',
+      });
+      expect(defaultRolesOf(DashboardController, 'getTodaySchedule')).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+        'Cashier',
+        'Teacher',
+      ]);
     });
 
     it('should delegate to service with correct params', async () => {
@@ -128,12 +129,15 @@ describe('DashboardController', () => {
   describe('getSummary()', () => {
     it("o'qituvchi va o'quvchiga yopiq, qolgan xodimlarga ochiq", () => {
       // O'qituvchi `/` da jadvalni ko'radi; bu endpoint esa markazning pul
-      // ko'rsatkichlarini olib keladi, shuning uchun STAFF_ROLES yetarli emas.
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.getSummary);
-      expect(roles).toEqual([
-        'CEO',
-        'Branch Director',
+      // ko'rsatkichlarini olib keladi, shuning uchun AnyStaff() yetarli emas.
+      expect(routeAccess(DashboardController, 'getSummary')).toEqual({
+        kind: 'can',
+        keys: ['dashboard.view'],
+      });
+      expect(defaultRolesOf(DashboardController, 'getSummary')).toEqual([
         'Administrator',
+        'Branch Director',
+        'CEO',
         'Cashier',
       ]);
     });
@@ -155,11 +159,14 @@ describe('DashboardController', () => {
   });
   describe('getCharts()', () => {
     it("o'qituvchi va o'quvchiga yopiq, qolgan xodimlarga ochiq", () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.getCharts);
-      expect(roles).toEqual([
-        'CEO',
-        'Branch Director',
+      expect(routeAccess(DashboardController, 'getCharts')).toEqual({
+        kind: 'can',
+        keys: ['dashboard.view'],
+      });
+      expect(defaultRolesOf(DashboardController, 'getCharts')).toEqual([
         'Administrator',
+        'Branch Director',
+        'CEO',
         'Cashier',
       ]);
     });

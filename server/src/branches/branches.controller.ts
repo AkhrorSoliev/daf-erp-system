@@ -7,21 +7,15 @@ import {
   Param,
   Query,
   ParseIntPipe,
-  UseGuards,
 } from '@nestjs/common';
 import { BranchesService } from './branches.service';
 import { BranchQueryDto } from './dto/branch-query.dto';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
 import { ChangeBranchStatusDto } from './dto/change-branch-status.dto';
-import {
-  CurrentUser,
-  Roles,
-  STAFF_ROLES,
-  BranchCeiling,
-} from '../common/decorators';
+import { CurrentUser, BranchCeiling } from '../common/decorators';
+import { AnyStaff, Can } from '../common/permissions/access.decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
 
 @Controller('branches')
 export class BranchesController {
@@ -29,8 +23,7 @@ export class BranchesController {
 
   // Staff only — a student-portal token used to read this too.
   // (branch list feeds the branch switcher and report filter bars.)
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @AnyStaff()
   @Get()
   findAll(
     @Query() query: BranchQueryDto,
@@ -44,8 +37,7 @@ export class BranchesController {
   }
 
   // Staff only, same reason as the list above.
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @AnyStaff()
   @Get(':id')
   findOne(
     @Param('id', ParseIntPipe) id: number,
@@ -65,8 +57,7 @@ export class BranchesController {
    * not happen is the branch quietly LOOKING ready while a teacher accrues
    * nothing for every lesson they teach.
    */
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('settings.branches')
   @Get(':id/readiness')
   getReadiness(
     @Param('id', ParseIntPipe) id: number,
@@ -77,8 +68,7 @@ export class BranchesController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('settings.branches')
   create(
     @Body() dto: CreateBranchDto,
     @CurrentUser('id') userId: number,
@@ -88,8 +78,7 @@ export class BranchesController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('settings.branches')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateBranchDto,
@@ -100,8 +89,7 @@ export class BranchesController {
   }
 
   @Patch(':id/status')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('settings.branches')
   changeStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ChangeBranchStatusDto,
@@ -112,8 +100,7 @@ export class BranchesController {
   }
 
   @Get(':id/status-history')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('settings.branches')
   getStatusHistory(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,

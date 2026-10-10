@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 import { canOpenEmployeeSettings } from "@/lib/settings-nav";
@@ -75,10 +75,10 @@ const typeKeys = Object.keys(typeConfig);
 export function SearchResultsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const user = useAuth((s) => s.user);
+  const can = usePermissions((s) => s.can);
   // "users" are staff without the teacher role. Their only page is employee
   // settings, which sends an Administrator back to /settings.
-  const visibleTypeKeys = canOpenEmployeeSettings(user?.roles.map((r) => r.id) ?? [])
+  const visibleTypeKeys = canOpenEmployeeSettings(can)
     ? typeKeys
     : typeKeys.filter((key) => key !== "users");
 

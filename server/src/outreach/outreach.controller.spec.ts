@@ -1,15 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { OutreachController } from './outreach.controller';
 import { OutreachService } from './outreach.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('OutreachController — role guards', () => {
+describe('OutreachController', () => {
   let controller: OutreachController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockService = {
     getStats: jest.fn().mockResolvedValue({}),
@@ -26,67 +21,34 @@ describe('OutreachController — role guards', () => {
     }).compile();
 
     controller = module.get(OutreachController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => OutreachController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
+  const handlers = [
+    'getStats',
+    'getTodayAbsentees',
+    'getRemovalQueue',
+    'getAutoPaused',
+    'getActivePromises',
+  ] as const;
 
-  describe('class-level @Roles metadata', () => {
-    it('should restrict to CEO, Branch Director, Administrator', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, OutreachController);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-  });
-
-  const handlers: Array<{
-    name: string;
-    handler: (...args: unknown[]) => unknown;
-  }> = [
-    { name: 'getStats', handler: () => null },
-    { name: 'getTodayAbsentees', handler: () => null },
-    { name: 'getRemovalQueue', handler: () => null },
-    { name: 'getActivePromises', handler: () => null },
-  ];
-
-  handlers.forEach(({ name }) => {
-    describe(`${name}() guard`, () => {
-      const h = () => null;
-      it('allows CEO', () => {
-        expect(guard.canActivate(mockExecutionContext(h, ['CEO']))).toBe(true);
-      });
-      it('allows Branch Director', () => {
-        expect(
-          guard.canActivate(mockExecutionContext(h, ['Branch Director'])),
-        ).toBe(true);
-      });
-      it('allows Administrator', () => {
-        expect(
-          guard.canActivate(mockExecutionContext(h, ['Administrator'])),
-        ).toBe(true);
-      });
-      it('denies Teacher', () => {
-        expect(() =>
-          guard.canActivate(mockExecutionContext(h, ['Teacher'])),
-        ).toThrow(ForbiddenException);
-      });
-      it('denies Cashier', () => {
-        expect(() =>
-          guard.canActivate(mockExecutionContext(h, ['Cashier'])),
-        ).toThrow(ForbiddenException);
+  describe('route access', () => {
+    it.each(handlers)('%s is gated by the outreach capability', (name) => {
+      expect(routeAccess(OutreachController, name)).toEqual({
+        kind: 'can',
+        keys: ['outreach.view'],
       });
     });
+
+    it.each(handlers)(
+      '%s admits the three admin roles by default, not the Teacher or the Cashier',
+      (name) => {
+        expect(defaultRolesOf(OutreachController, name)).toEqual([
+          'Administrator',
+          'Branch Director',
+          'CEO',
+        ]);
+      },
+    );
   });
 
   // Sanity check that the controller actually delegates to the service —

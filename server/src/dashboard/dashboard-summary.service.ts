@@ -4,6 +4,7 @@ import { PaymentsService } from '../payments/payments.service';
 import { OutreachService } from '../outreach/outreach.service';
 import { DashboardService } from './dashboard.service';
 import { RedisService } from '../redis/redis.service';
+import { PermissionsService } from '../common/permissions/permissions.service';
 import { tashkentMonthKey } from '../common/date/tashkent';
 import {
   isEmptyScope,
@@ -48,6 +49,7 @@ export class DashboardSummaryService {
     private readonly outreach: OutreachService,
     private readonly dashboard: DashboardService,
     private readonly redis: RedisService,
+    private readonly permissions: PermissionsService,
   ) {}
 
   async getSummary(ctx: SummaryContext): Promise<DashboardSummaryResponse> {
@@ -58,9 +60,9 @@ export class DashboardSummaryService {
       throw new ForbiddenException('Bu filial sizning ruxsatingizda emas');
     }
 
-    const canSeeMoney =
-      ctx.roles.includes('CEO') || ctx.roles.includes('Branch Director');
-    const canSeeOutreach = canSeeMoney || ctx.roles.includes('Administrator');
+    const caller = await this.permissions.forUser(ctx.userId);
+    const canSeeMoney = caller.keys.has('reports.finance');
+    const canSeeOutreach = caller.keys.has('outreach.view');
     // Kesh kaliti rol darajasini o'z ichiga oladi: bir rolning yozuvi
     // boshqasiga hech qachon berilmaydi.
     const tier = canSeeMoney ? 'money' : canSeeOutreach ? 'outreach' : 'basic';

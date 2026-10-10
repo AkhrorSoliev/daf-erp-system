@@ -19,6 +19,7 @@ import {
   SettingsSection,
 } from "./payment-settings-parts";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan, usePermissionsReady } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -52,7 +53,10 @@ const DESCRIPTION =
 
 export function PaymentSettingsClient() {
   const authUser = useAuth((s) => s.user);
-  const canEdit = authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const canEdit = useCan("settings.payment");
+  // The "read only" note below waits for the list, so it never flashes at an editor.
+  const permissionsReady = usePermissionsReady();
+  // Company-level settings stay with the CEO by identity (see the lock below).
   const isCeo = authUser?.roles.some((r) => r.id === 1) ?? false;
   // Most of this page is company-level: the backend (`SettingsService.set`)
   // refuses a branch director's write to those keys. The director still SEES
@@ -162,7 +166,7 @@ export function PaymentSettingsClient() {
         }
       />
 
-      {!canEdit && (
+      {permissionsReady && !canEdit && (
         <p className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
           Bu bo&apos;limni faqat markaz rahbari va filial direktori tahrirlashi
           mumkin.

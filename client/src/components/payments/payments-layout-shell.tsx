@@ -5,13 +5,16 @@ import { useEffect } from "react";
 import { PaymentsMobileMenu } from "./payments-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePermissions, usePermissionsReady } from "@/hooks/use-permissions";
+import type { PermissionKey } from "@/lib/permission-keys";
 
-// Path prefix -> the role ids that may open it (the backend's @Roles of its endpoints).
-const ROLE_GATED_PATHS: { prefix: string; roles: number[] }[] = [
-  { prefix: "/payments/expenses", roles: [1, 2] },
-  { prefix: "/payments/salary", roles: [1, 2] },
-  // «Qaytariladigan pul» and its history: CEO, Branch Director, Administrator, Cashier.
-  { prefix: "/payments/refunds", roles: [1, 2, 3, 5] },
+/** Moliya pages some Moliya users may not open, and the capability each needs. */
+const PAGE_PERMISSIONS: Array<[string, PermissionKey | readonly PermissionKey[]]> = [
+  ["/payments/expenses", "expenses.view"],
+  ["/payments/salary", "salary.view"],
+  // «Qaytariladigan pul» history (GET /refunds) before the page itself (GET /refundable/list).
+  ["/payments/refunds/history", ["refunds.create", "refunds.hand-over"]],
+  ["/payments/refunds", "debt.view"],
 ];
 
 export function PaymentsLayoutShell({ children }: { children: React.ReactNode }) {
@@ -20,16 +23,15 @@ export function PaymentsLayoutShell({ children }: { children: React.ReactNode })
   const isMobile = useIsMobile();
   const user = useAuth((s) => s.user);
 
-  // Xarajatlar va Ish haqi sahifalari faqat CEO (1) va Filial direktori (2)
-  // uchun — backend'da ham @Roles('CEO', 'Branch Director'). Admin/Kassir
-  // linkni ko'rmaydi va bu yerga to'g'ridan-to'g'ri (yoki eski
-  // «?tab=markaz» havolasi orqali) kirsa /payments ga qaytariladi. Qaytariladigan
-  // pul sahifasi o'qituvchiga yopiq: u yerda har bir so'rov 403 qaytaradi.
-  const blocked =
-    !!user &&
-    ROLE_GATED_PATHS.some(
-      (p) => pathname.startsWith(p.prefix) && !user.roles.some((r) => p.roles.includes(r.id)),
-    );
+  // Xarajatlar, Ish haqi and Qaytariladigan pul need their own capability
+  // (the server checks the same). Whoever lacks it does not see the link, and
+  // a direct visit (or an old «?tab=markaz» link) goes back to /payments. Wait
+  // for the capability list before redirecting, so a fresh sign-in is not
+  // bounced.
+  const can = usePermissions((s) => s.can);
+  const ready = usePermissionsReady();
+  const needed = PAGE_PERMISSIONS.find(([prefix]) => pathname.startsWith(prefix))?.[1];
+  const blocked = !!user && ready && needed !== undefined && !can(needed);
 
   useEffect(() => {
     if (blocked) {
@@ -37,7 +39,7 @@ export function PaymentsLayoutShell({ children }: { children: React.ReactNode })
     }
   }, [blocked, router]);
 
-  if (blocked) {
+  if (blocked || (!!user && needed !== undefined && !ready)) {
     return null;
   }
 

@@ -30,6 +30,7 @@ import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { TelegramAnnounceDialog } from "./telegram-announce-dialog";
 
 interface PendingGroup {
@@ -60,7 +61,11 @@ interface ApprovedGroup {
 export function TelegramGroupsClient() {
   const queryClient = useQueryClient();
   const user = useAuth((s) => s.user);
+  // The «Barcha filiallar» flag is the CEO by identity; the announcement and the
+  // bot disconnect are the `telegram.announce` capability (DELETE and POST announce).
   const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
+  const canAnnounce = useCan("telegram.announce");
+  const showActions = isCeo || canAnnounce;
   const { selectedBranch } = useBranchSwitcher();
   const [confirmAction, setConfirmAction] = useState<{
     kind: "approve" | "reject" | "unlink";
@@ -211,7 +216,7 @@ export function TelegramGroupsClient() {
             ro&apos;yxatda paydo bo&apos;ladi. Tasdiqlangach komandalar guruh ichida ishlay boshlaydi.
           </p>
         </div>
-        {isCeo && <TelegramAnnounceDialog />}
+        {canAnnounce && <TelegramAnnounceDialog />}
       </div>
 
       <section className="space-y-3">
@@ -315,7 +320,7 @@ export function TelegramGroupsClient() {
                 <TableHead>Filial</TableHead>
                 <TableHead>Tasdiqlovchi</TableHead>
                 <TableHead>Tasdiqlangan</TableHead>
-                <TableHead className="text-right">Amal</TableHead>
+                {showActions && <TableHead className="text-right">Amal</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -352,41 +357,45 @@ export function TelegramGroupsClient() {
                       ? format(new Date(g.approvedAt), "dd.MM.yyyy, HH:mm")
                       : "—"}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {isCeo && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            scopeMutation.mutate({
-                              id: g.id,
-                              receivesAllBranches: !g.receivesAllBranches,
-                            })
-                          }
-                          disabled={anyPending}
-                          title={
-                            g.receivesAllBranches
-                              ? "Faqat tanlangan filialga bog'lash"
-                              : "Barcha filiallarni kuzatadigan qilish"
-                          }
-                        >
-                          {g.receivesAllBranches
-                            ? "Filialga bog'lash"
-                            : "Barcha filiallar"}
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setConfirmAction({ kind: "unlink", group: g })}
-                        disabled={anyPending}
-                      >
-                        <Trash2 className="size-4 mr-1" />
-                        Uzish
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {showActions && (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {isCeo && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              scopeMutation.mutate({
+                                id: g.id,
+                                receivesAllBranches: !g.receivesAllBranches,
+                              })
+                            }
+                            disabled={anyPending}
+                            title={
+                              g.receivesAllBranches
+                                ? "Faqat tanlangan filialga bog'lash"
+                                : "Barcha filiallarni kuzatadigan qilish"
+                            }
+                          >
+                            {g.receivesAllBranches
+                              ? "Filialga bog'lash"
+                              : "Barcha filiallar"}
+                          </Button>
+                        )}
+                        {canAnnounce && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setConfirmAction({ kind: "unlink", group: g })}
+                            disabled={anyPending}
+                          >
+                            <Trash2 className="size-4 mr-1" />
+                            Uzish
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

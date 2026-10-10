@@ -6,25 +6,22 @@ import {
   Param,
   ParseIntPipe,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { RefundsService } from './refunds.service';
 import { QuickRefundDto } from './dto/quick-refund.dto';
 import { HandOverRefundDto } from './dto/hand-over-refund.dto';
 import { CancelRefundDto } from './dto/cancel-refund.dto';
 import { RefundListQueryDto } from './dto/refund-list-query.dto';
-import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('refunds')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class RefundsController {
   constructor(private refundsService: RefundsService) {}
 
   @Post('quick')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('refunds.create')
   quickRefund(
     @Body() dto: QuickRefundDto,
     @CurrentUser('id') userId: number,
@@ -34,7 +31,7 @@ export class RefundsController {
   }
 
   @Get('preview/:studentId')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('refunds.create')
   previewRefund(
     @Param('studentId', ParseIntPipe) studentId: number,
     @CurrentUser('companyId') companyId: number,
@@ -53,7 +50,7 @@ export class RefundsController {
    * refund, with the student's name and the amount on each row.
    */
   @Get()
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('refunds.create', 'refunds.hand-over')
   findAll(
     @Query() q: RefundListQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -64,7 +61,7 @@ export class RefundsController {
 
   /** «Berildi» — the money leaves the chosen drawer (ADR-0077). */
   @Post(':id/hand-over')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('refunds.hand-over')
   handOver(
     @Param('id') id: string,
     @Body() dto: HandOverRefundDto,
@@ -76,7 +73,7 @@ export class RefundsController {
 
   /** «Bekor qilish» of a request not yet handed over (ADR-0077). */
   @Post(':id/cancel')
-  @Roles('CEO', 'Branch Director')
+  @Can('refunds.cancel')
   cancel(
     @Param('id') id: string,
     @Body() dto: CancelRefundDto,
@@ -87,12 +84,12 @@ export class RefundsController {
   }
 
   /**
-   * Reverse a COMPLETED refund. CEO-only: unwinds a payout that has
-   * already moved money out of the center. Ledger-first — the Refund
-   * row stays, a reversal Transaction is written.
+   * Reverse a COMPLETED refund. Gated by `money.undo`: unwinds a payout
+   * that has already moved money out of the center. Ledger-first — the
+   * Refund row stays, a reversal Transaction is written.
    */
   @Post(':id/reverse')
-  @Roles('CEO')
+  @Can('money.undo')
   reverse(
     @Param('id') id: string,
     @Body('reason') reason: string | undefined,

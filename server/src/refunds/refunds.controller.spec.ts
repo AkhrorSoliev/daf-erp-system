@@ -1,98 +1,75 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { RefundsController } from './refunds.controller';
-import { RefundsService } from './refunds.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-// Kassir pul qaytarmaydi (docs/role-access.md, «Create refund»). Qarzdorlik
-// sahifasining «Muzlatilgan puli» tabi shu sababli kassirga qator amallarini
-// ko'rsatmaydi — bu test o'sha yashirishning server tomoni.
-describe('RefundsController — role guards', () => {
-  let controller: RefundsController;
-  let guard: RolesGuard;
+const THREE_ADMIN_ROLES = ['Administrator', 'Branch Director', 'CEO'];
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [RefundsController],
-      providers: [{ provide: RefundsService, useValue: {} }],
-    }).compile();
+// Kassir pul qaytarish so'rovini ochmaydi (docs/role-access.md, «Open refund
+// request»), lekin «Berildi» bosadi. «Qaytariladigan pul» sahifasi shu sababli
+// kassirga so'rov ochish amallarini ko'rsatmaydi — bu test o'sha yashirishning
+// server tomoni.
+describe('RefundsController — route access', () => {
+  const REQUESTS = ['quickRefund', 'previewRefund'] as const;
 
-    controller = module.get(RefundsController);
-    guard = new RolesGuard(new Reflector());
+  it.each(REQUESTS)('%s is gated by the refund capability', (name) => {
+    expect(routeAccess(RefundsController, name)).toEqual({
+      kind: 'can',
+      keys: ['refunds.create'],
+    });
   });
 
-  function ctx(handler: (...args: unknown[]) => unknown, roles: string[]) {
-    return {
-      getHandler: () => handler,
-      getClass: () => RefundsController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    } as any;
-  }
-
-  it('class-level @Roles is CEO, Branch Director, Administrator', () => {
-    expect(new Reflector().get<string[]>(ROLES_KEY, RefundsController)).toEqual(
-      ['CEO', 'Branch Director', 'Administrator'],
-    );
-  });
-
-  it.each([['CEO'], ['Branch Director'], ['Administrator']])(
-    'quickRefund allows %s',
-    (role) => {
-      expect(guard.canActivate(ctx(controller.quickRefund, [role]))).toBe(true);
-    },
-  );
-
-  it.each([['Cashier'], ['Teacher']])('quickRefund denies %s', (role) => {
-    expect(() =>
-      guard.canActivate(ctx(controller.quickRefund, [role])),
-    ).toThrow(ForbiddenException);
-  });
-
-  // ADR-0077: «Berildi» and «Bekor qilish» replace the old approve/complete
-  // route, so nothing may pay out through it any more.
-  it('has no PATCH :id/process handler', () => {
-    expect('process' in controller).toBe(false);
-  });
-
-  it('reverse is CEO-only', () => {
-    expect(() =>
-      guard.canActivate(ctx(controller.reverse, ['Branch Director'])),
-    ).toThrow(ForbiddenException);
-    expect(guard.canActivate(ctx(controller.reverse, ['CEO']))).toBe(true);
-  });
-
-  it.each([['CEO'], ['Branch Director'], ['Administrator'], ['Cashier']])(
-    'handOver («Berildi») allows %s',
-    (role) => {
-      expect(guard.canActivate(ctx(controller.handOver, [role]))).toBe(true);
-    },
-  );
-
-  it('handOver denies Teacher', () => {
-    expect(() =>
-      guard.canActivate(ctx(controller.handOver, ['Teacher'])),
-    ).toThrow(ForbiddenException);
-  });
-
-  it.each([['CEO'], ['Branch Director']])('cancel allows %s', (role) => {
-    expect(guard.canActivate(ctx(controller.cancel, [role]))).toBe(true);
-  });
-
-  it.each([['Administrator'], ['Cashier'], ['Teacher']])(
-    'cancel denies %s',
-    (role) => {
-      expect(() => guard.canActivate(ctx(controller.cancel, [role]))).toThrow(
-        ForbiddenException,
+  it.each(REQUESTS)(
+    '%s admits the three admin roles by default, not the Cashier or the Teacher',
+    (name) => {
+      expect(defaultRolesOf(RefundsController, name)).toEqual(
+        THREE_ADMIN_ROLES,
       );
     },
   );
 
-  it('the history list is open to the Cashier, not the Teacher', () => {
-    expect(guard.canActivate(ctx(controller.findAll, ['Cashier']))).toBe(true);
-    expect(() =>
-      guard.canActivate(ctx(controller.findAll, ['Teacher'])),
-    ).toThrow(ForbiddenException);
+  // ADR-0077: «Berildi» and «Bekor qilish» replace the old approve/complete
+  // route, so nothing may pay out through it any more.
+  it('has no PATCH :id/process handler', () => {
+    expect('process' in RefundsController.prototype).toBe(false);
+  });
+
+  it('the history list is open to whoever opens or hands over a refund: the Cashier too, not the Teacher', () => {
+    expect(routeAccess(RefundsController, 'findAll')).toEqual({
+      kind: 'can',
+      keys: ['refunds.create', 'refunds.hand-over'],
+    });
+    expect(defaultRolesOf(RefundsController, 'findAll')).toEqual([
+      ...THREE_ADMIN_ROLES,
+      'Cashier',
+    ]);
+  });
+
+  it('handOver («Berildi») admits the three admin roles and the Cashier by default', () => {
+    expect(routeAccess(RefundsController, 'handOver')).toEqual({
+      kind: 'can',
+      keys: ['refunds.hand-over'],
+    });
+    expect(defaultRolesOf(RefundsController, 'handOver')).toEqual([
+      ...THREE_ADMIN_ROLES,
+      'Cashier',
+    ]);
+  });
+
+  it('cancel admits the CEO and the Branch Director by default, nobody else', () => {
+    expect(routeAccess(RefundsController, 'cancel')).toEqual({
+      kind: 'can',
+      keys: ['refunds.cancel'],
+    });
+    expect(defaultRolesOf(RefundsController, 'cancel')).toEqual([
+      'Branch Director',
+      'CEO',
+    ]);
+  });
+
+  it('reverse is gated by the undo capability and admits the CEO by default, nobody else', () => {
+    expect(routeAccess(RefundsController, 'reverse')).toEqual({
+      kind: 'can',
+      keys: ['money.undo'],
+    });
+    expect(defaultRolesOf(RefundsController, 'reverse')).toEqual(['CEO']);
   });
 });

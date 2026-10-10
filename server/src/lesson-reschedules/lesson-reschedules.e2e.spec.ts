@@ -4,7 +4,6 @@ import { APP_GUARD } from '@nestjs/core';
 import request from 'supertest';
 import { LessonReschedulesController } from './lesson-reschedules.controller';
 import { LessonReschedulesService } from './lesson-reschedules.service';
-import { RolesGuard } from '../common/guards';
 
 describe('LessonReschedulesController (e2e validation)', () => {
   let app: INestApplication;
@@ -19,10 +18,7 @@ describe('LessonReschedulesController (e2e validation)', () => {
         { provide: LessonReschedulesService, useValue: { findAvailableRooms } },
         { provide: APP_GUARD, useValue: { canActivate: () => true } },
       ],
-    })
-      .overrideGuard(RolesGuard)
-      .useValue({ canActivate: () => true })
-      .compile();
+    }).compile();
 
     app = moduleRef.createNestApplication();
     app.useGlobalPipes(

@@ -1,15 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { CallLogsController } from './call-logs.controller';
 import { CallLogsService } from './call-logs.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('CallLogsController — role guards', () => {
+describe('CallLogsController', () => {
   let controller: CallLogsController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockService = {
     create: jest.fn().mockResolvedValue({ id: 'c1' }),
@@ -23,35 +18,32 @@ describe('CallLogsController — role guards', () => {
     }).compile();
 
     controller = module.get(CallLogsController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
 
-  function ctx(roles: string[]) {
-    return {
-      getHandler: () => () => null,
-      getClass: () => CallLogsController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    } as any;
-  }
+  describe('route access', () => {
+    it('logging a call result is gated by the call-log capability', () => {
+      expect(routeAccess(CallLogsController, 'create')).toEqual({
+        kind: 'can',
+        keys: ['calls.log'],
+      });
+    });
 
-  it('restricts to CEO, Branch Director, Administrator', () => {
-    const roles = reflector.get<string[]>(ROLES_KEY, CallLogsController);
-    expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-  });
+    it('reading the call log is open to the outreach and the student details capabilities', () => {
+      expect(routeAccess(CallLogsController, 'list')).toEqual({
+        kind: 'can',
+        keys: ['outreach.view', 'students.details'],
+      });
+    });
 
-  it('allows CEO / Branch Director / Administrator', () => {
-    expect(guard.canActivate(ctx(['CEO']))).toBe(true);
-    expect(guard.canActivate(ctx(['Branch Director']))).toBe(true);
-    expect(guard.canActivate(ctx(['Administrator']))).toBe(true);
-  });
-
-  it('denies Teacher and Cashier', () => {
-    expect(() => guard.canActivate(ctx(['Teacher']))).toThrow(
-      ForbiddenException,
-    );
-    expect(() => guard.canActivate(ctx(['Cashier']))).toThrow(
-      ForbiddenException,
+    it.each(['create', 'list'])(
+      '%s admits the three admin roles by default, not the Teacher or the Cashier',
+      (name) => {
+        expect(defaultRolesOf(CallLogsController, name)).toEqual([
+          'Administrator',
+          'Branch Director',
+          'CEO',
+        ]);
+      },
     );
   });
 

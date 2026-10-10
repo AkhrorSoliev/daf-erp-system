@@ -9,11 +9,9 @@ import {
   Post,
   Put,
   Query,
-  UseGuards,
 } from '@nestjs/common';
-import { Roles, STAFF_ROLES } from '../common/decorators';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { RolesGuard } from '../common/guards';
+import { AnyStaff } from '../common/permissions/access.decorators';
 import { TasksService, type TaskActor } from './tasks.service';
 import { TasksReadService } from './tasks-read.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -28,8 +26,8 @@ import { CreateTaskEventDto } from './dto/task-event.dto';
 import { WorkloadQueryDto } from './dto/workload-query.dto';
 
 @Controller('tasks')
-@UseGuards(RolesGuard)
-@Roles(...STAFF_ROLES)
+// The ladder in `task-policy.ts` (ADR-0074) decides who may assign whom.
+@AnyStaff()
 export class TasksController {
   constructor(
     private tasks: TasksService,

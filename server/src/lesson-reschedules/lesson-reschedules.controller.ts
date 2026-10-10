@@ -8,22 +8,20 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { LessonReschedulesService } from './lesson-reschedules.service';
 import { CreateLessonRescheduleDto } from './dto/create-lesson-reschedule.dto';
 import { UpdateLessonRescheduleDto } from './dto/update-lesson-reschedule.dto';
 import { AvailableRoomsQueryDto } from './dto/available-rooms-query.dto';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('lesson-reschedules')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
 export class LessonReschedulesController {
   constructor(private service: LessonReschedulesService) {}
 
   @Get()
+  @Can('groups.view')
   list(
     @Query('groupId') groupId: string,
     @Query('from') from: string | undefined,
@@ -46,7 +44,7 @@ export class LessonReschedulesController {
   }
 
   @Get('available-rooms')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('lessons.change')
   availableRooms(
     @Query() query: AvailableRoomsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -55,7 +53,7 @@ export class LessonReschedulesController {
   }
 
   @Post()
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('lessons.change')
   create(
     @Body() dto: CreateLessonRescheduleDto,
     @CurrentUser('id') userId: number,
@@ -66,7 +64,7 @@ export class LessonReschedulesController {
   }
 
   @Patch(':id')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('lessons.change')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateLessonRescheduleDto,
@@ -78,7 +76,7 @@ export class LessonReschedulesController {
   }
 
   @Delete(':id')
-  @Roles('CEO', 'Branch Director')
+  @Can('lessons.change-delete')
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,

@@ -1,4 +1,4 @@
-import { ROLE_BRANCH_DIRECTOR, ROLE_CEO } from "../dashboard-home-visibility";
+import type { Can } from "@/lib/permission-check";
 import type { BranchReadiness } from "./launch-types";
 
 export type LaunchVisibility = "hidden" | "journey" | "celebrate";
@@ -8,8 +8,8 @@ export type LaunchVisibility = "hidden" | "journey" | "celebrate";
  * is also open only to them — a request from anyone else triggers a global
  * 403 toast — so this function also decides whether to enable the request.
  */
-export function canSeeLaunchJourney(roleIds: number[]): boolean {
-  return roleIds.includes(ROLE_CEO) || roleIds.includes(ROLE_BRANCH_DIRECTOR);
+export function canSeeLaunchJourney(can: Can): boolean {
+  return can("settings.branches");
 }
 
 /**
@@ -26,13 +26,13 @@ export function canSeeLaunchJourney(roleIds: number[]): boolean {
  * resurrect the `journey` map for a branch that has already launched.
  */
 export function resolveLaunchVisibility(input: {
-  roleIds: number[];
+  can: Can;
   selectedBranchId: number | null;
   readiness: BranchReadiness | undefined;
   flags: { seen: boolean; celebrated: boolean; launched: boolean };
 }): LaunchVisibility {
-  const { roleIds, selectedBranchId, readiness, flags } = input;
-  if (!canSeeLaunchJourney(roleIds)) return "hidden";
+  const { can, selectedBranchId, readiness, flags } = input;
+  if (!canSeeLaunchJourney(can)) return "hidden";
   // CEO on "All branches": which branch's journey this is is ambiguous.
   if (selectedBranchId === null) return "hidden";
   if (flags.launched) {

@@ -1,7 +1,7 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { BranchScope, CurrentUser, Roles } from '../../common/decorators';
+import { Controller, Get, Query } from '@nestjs/common';
+import { BranchScope, CurrentUser } from '../../common/decorators';
+import { Can } from '../../common/permissions/access.decorators';
 import type { ReportBranchIds } from '../../common/finance/report-branch-scope';
-import { RolesGuard } from '../../common/guards/roles.guard';
 import { AppActivityQueryDto } from '../dto/app-activity-query.dto';
 import {
   CenterStudentsQueryDto,
@@ -19,8 +19,7 @@ import { CenterAppActivityService } from './center-app-activity.service';
  * etadi. O'qituvchi bu bo'limni ko'rmaydi — u guruh tabidan foydalanadi.
  */
 @Controller('app-activity/center')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Can('daf.activity')
 export class CenterAppActivityController {
   constructor(private readonly markaz: CenterAppActivityService) {}
 

@@ -19,6 +19,7 @@ import { PushSubscriptionDto } from './dto/push-subscription.dto';
 import { RegisterDeviceDto } from './dto/register-device.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators';
+import { AnyUser } from '../common/permissions/access.decorators';
 
 @Controller('notifications')
 export class NotificationsController {
@@ -29,6 +30,7 @@ export class NotificationsController {
   ) {}
 
   @Get()
+  @AnyUser()
   findAll(
     @CurrentUser('id') userId: number,
     @Query() query: NotificationQueryDto,
@@ -37,12 +39,14 @@ export class NotificationsController {
   }
 
   @Get('unread-count')
+  @AnyUser()
   getUnreadCount(@CurrentUser('id') userId: number) {
     return this.notificationsService.getUnreadCount(userId);
   }
 
   /** The page's left list: what waits, everything, and each group. */
   @Get('counts')
+  @AnyUser()
   getCounts(@CurrentUser('id') userId: number) {
     return this.notificationsService.getCounts(userId);
   }
@@ -54,6 +58,7 @@ export class NotificationsController {
   }
 
   @Get('stream')
+  @AnyUser()
   @Header('Content-Type', 'text/event-stream')
   @Header('Cache-Control', 'no-cache')
   @Header('Connection', 'keep-alive')
@@ -75,16 +80,19 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
+  @AnyUser()
   markRead(@Param('id') id: string, @CurrentUser('id') userId: number) {
     return this.notificationsService.markRead(id, userId);
   }
 
   @Patch('read-all')
+  @AnyUser()
   markAllRead(@CurrentUser('id') userId: number) {
     return this.notificationsService.markAllRead(userId);
   }
 
   @Post('push/subscribe')
+  @AnyUser()
   subscribePush(
     @CurrentUser('id') userId: number,
     @Body() dto: PushSubscriptionDto,
@@ -98,6 +106,7 @@ export class NotificationsController {
   }
 
   @Delete('push/unsubscribe')
+  @AnyUser()
   unsubscribePush(
     @CurrentUser('id') userId: number,
     @Body() dto: { endpoint: string },
@@ -107,6 +116,7 @@ export class NotificationsController {
 
   // Native app: register / unregister an Expo push token for the current user.
   @Post('devices')
+  @AnyUser()
   registerDevice(
     @CurrentUser('id') userId: number,
     @Body() dto: RegisterDeviceDto,
@@ -120,6 +130,7 @@ export class NotificationsController {
   }
 
   @Delete('devices')
+  @AnyUser()
   unregisterDevice(
     @CurrentUser('id') userId: number,
     @Body() dto: { token: string },

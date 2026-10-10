@@ -1,59 +1,52 @@
 import { Gauge, Users, type LucideIcon } from "lucide-react";
+import type { Can } from "./permission-check";
+import type { PermissionKey } from "./permission-keys";
 
 export interface DafNavItem {
   title: string;
   url: string;
   icon: LucideIcon;
-  /** When set, only users with at least one matching role ID see the item. */
-  visibleForRoles?: number[];
+  /** Shown to users who hold this capability. Omit to show to all. */
+  permission?: PermissionKey;
 }
 
-/** Bo'lim egalari — CEO, Filial direktori, Administrator. O'qituvchi o'z guruhining «Ilova faolligi» tabidan ko'radi. */
-const CEO_BD_ADMIN = [1, 2, 3];
-
+// Section holders: CEO, Branch Director, Administrator (`daf.activity`). A
+// teacher sees the app activity in their own group's «Ilova faolligi» tab.
 export const dafNavItems: DafNavItem[] = [
   {
     title: "Umumiy holat",
     url: "/daf",
     icon: Gauge,
-    visibleForRoles: CEO_BD_ADMIN,
+    permission: "daf.activity",
   },
   {
     title: "O'quvchilar",
     url: "/daf/oquvchilar",
     icon: Users,
-    visibleForRoles: CEO_BD_ADMIN,
+    permission: "daf.activity",
   },
 ];
 
-const hasAny = (roleIds: number[], allowed: number[]) =>
-  allowed.some((id) => roleIds.includes(id));
-
-export function canEnterDaf(roleIds: number[]): boolean {
-  return dafNavItems.some(
-    (i) => !i.visibleForRoles || hasAny(roleIds, i.visibleForRoles),
-  );
+export function canEnterDaf(can: Can): boolean {
+  return dafNavItems.some((i) => !i.permission || can(i.permission));
 }
 
 /**
- * Bu sahifani ocha oladimi. Menyuda yo'q yangi yo'l (kelajakdagi /daf/kontent
- * kabi) faqat CEO ga qoladi — yangi sahifa o'z-o'zidan adminga ochilib
- * ketmasin. `reports-nav.ts`dagi `canOpenReportPath` xuddi shu g'oyadan, lekin
- * qattiqroq: o'sha yerda mos kelmagan yo'l CEO+BD ga qaytadi ([1,2]), bu yerda
- * esa faqat CEO ga ([1]).
+ * May the user open this page. A path the menu does not list (a future
+ * `/daf/kontent`) stays with the CEO alone — a new page never opens to an
+ * administrator by itself. Stricter than `canOpenReportPath`, on purpose.
  */
-export function canOpenDafPath(roleIds: number[], pathname: string): boolean {
+export function canOpenDafPath(
+  can: Can,
+  pathname: string,
+  roleIds: readonly number[],
+): boolean {
   const path = pathname.replace(/\/+$/, "") || "/";
-  // `i.url !== "/daf"` sharti bo'lmasa: "/daf" — ro'yxatdagi ROOT element,
-  // `find` esa birinchi mosni oladi. Shu shartsiz "/daf" o'zini har qanday
-  // `/daf/...` pastki yo'liga ham prefiks sifatida moslashtirar edi (masalan
-  // kelajakda qo'shiladigan, menyuda yo'q "/daf/kontent"), va u holda pastdagi
-  // `if (!item) return roleIds.includes(1)` qorovuli hech qachon ishlamay,
-  // "/daf" ning CEO_BD_ADMIN ruxsati barcha kelajakdagi pastki yo'llarga ham
-  // sirg'alib o'tardi.
+  // Without `i.url !== "/daf"`, the root item would match every `/daf/...`
+  // path as a prefix and the CEO-only fallback below would never run.
   const item = dafNavItems.find(
     (i) => path === i.url || (i.url !== "/daf" && path.startsWith(`${i.url}/`)),
   );
   if (!item) return roleIds.includes(1);
-  return !item.visibleForRoles || hasAny(roleIds, item.visibleForRoles);
+  return !item.permission || can(item.permission);
 }

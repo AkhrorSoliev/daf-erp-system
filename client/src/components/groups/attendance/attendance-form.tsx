@@ -27,7 +27,7 @@ import {
   newAttendanceWindow,
   OPENS_MINUTES_BEFORE,
 } from "@/lib/attendance-window";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
@@ -60,9 +60,8 @@ export function AttendanceForm({
   onBack,
   onSaved,
 }: AttendanceFormProps) {
-  const user = useAuth((s) => s.user);
-  const isAdmin =
-    user?.roles.some((r: { id: number }) => [1, 2, 3].includes(r.id)) ?? false;
+  const isAdmin = useCan("attendance.fix");
+  const canCollect = useCan("payments.create");
 
   const statusOptions = isAdmin ? STATUS_CONFIG : STATUS_CONFIG.slice(0, 2);
 
@@ -620,7 +619,7 @@ export function AttendanceForm({
               }
               onPlanMark={planMark}
               onPlanRemove={planRemove}
-              onCollectPayment={isAdmin ? setPaymentFor : undefined}
+              onCollectPayment={canCollect ? setPaymentFor : undefined}
             />
           ))}
         </div>
@@ -655,7 +654,7 @@ export function AttendanceForm({
           (with an inline "Qarz" badge) in the main roster above. This panel
           adds a "To'lov qabul qilish" shortcut: a pack group suggests the
           next cycle's price, a monthly group each row's own debt (ADR-0062). */}
-      {isAdmin && debtorStudents.length > 0 && (
+      {canCollect && debtorStudents.length > 0 && (
         <AttendanceDebtorsSection
           debtors={debtorStudents}
           monthly={paymentModel === "MONTHLY"}

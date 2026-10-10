@@ -1,28 +1,20 @@
-import {
-  Body,
-  Controller,
-  Param,
-  ParseIntPipe,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { LessonBillingService } from './lesson-billing.service';
 import { DebtWriteOffService } from './debt-write-off.service';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { ReverseConsumptionDto } from '../transactions/dto/reverse-consumption.dto';
 import { ReverseDebtWriteOffDto } from '../transactions/dto/reverse-debt-write-off.dto';
 
 /**
- * Q4 — Admin-only correction endpoint for un-billing a LESSON_DEDUCTION
- * batch. Distinct from the regular attendance flip path (which handles
- * "this single lesson didn't happen"); this one undoes an entire prepaid
- * batch when the deduction itself was wrong (wrong group, wrong amount,
- * etc). Cascades reversal to every salary accrual the batch covered and
- * resets the enrollment's prepaid counter.
+ * Q4 — Correction endpoint (`balance.adjust`) for un-billing a
+ * LESSON_DEDUCTION batch. Distinct from the regular attendance flip path
+ * (which handles "this single lesson didn't happen"); this one undoes an
+ * entire prepaid batch when the deduction itself was wrong (wrong group,
+ * wrong amount, etc). Cascades reversal to every salary accrual the batch
+ * covered and resets the enrollment's prepaid counter.
  */
 @Controller('billing')
-@UseGuards(RolesGuard)
 export class BillingController {
   constructor(
     private lessonBillingService: LessonBillingService,
@@ -30,7 +22,7 @@ export class BillingController {
   ) {}
 
   @Post('lesson-deduction/:id/reverse')
-  @Roles('CEO', 'Branch Director')
+  @Can('balance.adjust')
   reverseLessonDeduction(
     @Param('id') id: string,
     @Body() dto: ReverseConsumptionDto,
@@ -60,7 +52,7 @@ export class BillingController {
    * this endpoint is mostly for one-off corrections.
    */
   @Post('retroactive/:studentId')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('balance.adjust')
   runRetroactiveBilling(
     @Param('studentId', ParseIntPipe) studentId: number,
     @CurrentUser('id') userId: number,
@@ -74,7 +66,7 @@ export class BillingController {
   }
 
   /**
-   * CEO-only reversal of a `DEBT_WRITE_OFF` audit row — restores the
+   * Reversal (`money.undo`) of a `DEBT_WRITE_OFF` audit row — restores the
    * original debt by writing the inverse Transaction. Used when an admin
    * wrote off a student that turned out to have a valid disputed payment
    * or any other case where the write-off was a mistake.
@@ -84,7 +76,7 @@ export class BillingController {
    * student's balance returns to its pre-write-off state.
    */
   @Post('debt-write-offs/:id/reverse')
-  @Roles('CEO')
+  @Can('money.undo')
   reverseDebtWriteOff(
     @Param('id') id: string,
     @Body() dto: ReverseDebtWriteOffDto,

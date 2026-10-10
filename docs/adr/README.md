@@ -96,7 +96,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0025](0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md) | Ko'pchilik Telegram xabari kunlik yagona navbatga jamlanadi, darhol yubormaydi | Qisman almashtirildi — ADR-0078 | 2026-09-23 |
 | [0026](0026-rol-berish-shipi-ikkala-eshikda.md) | Rol faqat chaqiruvchining shipi ichida beriladi va olinadi | Qabul qilindi | 2026-09-24 |
 | [0027](0027-xodim-hisobini-faqat-yuqoridagi-rahbar-ozgartiradi.md) | Xodim hisobini faqat undan yuqoridagi rahbar o'zgartiradi | Qabul qilindi | 2026-09-24 |
-| [0028](0028-bloklangan-xodim-hech-narsa-bermaydi.md) | Bloklangan xodim hech narsa bera olmaydi, uning tokeni keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
+| [0028](0028-bloklangan-xodim-hech-narsa-bermaydi.md) | Bloklangan xodim hech narsa bera olmaydi, uning tokeni keyingi so'rovda to'xtaydi | Qabul qilindi; «rol o'zgarishi tokenni to'xtatmaydi» qismi — ADR-0079 bilan almashtirildi | 2026-09-24 |
 | [0029](0029-xodim-havolasi-uch-kun-ishlaydi.md) | Xodim havolasi uch kun ishlaydi, berilgan vaqti imzo ichida | Qabul qilindi | 2026-09-24 |
 | [0030](0030-parol-ozgarsa-boshqa-kirishlar-toxtaydi.md) | Parol o'zgarsa, hisobning boshqa kirishlari keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
 | [0031](0031-oz-kirish-kalitingiz-joriy-parol-bilan-ozgaradi.md) | O'z kirish kalitingiz faqat joriy parol bilan o'zgaradi | Qabul qilindi; o'quvchi qismi — ADR-0039 | 2026-09-24 |
@@ -145,6 +145,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0076](0076-qongiroqcha-kutilayotgan-xabar-ozi-yopiladi.md) | Qo'ng'iroqcha: son faqat sizdan ish kutayotgan o'qilmagan xabarlarni sanaydi, ish bajarilganda xabar o'zi yopiladi, bir xil dars xabarlari bitta qatorga yig'iladi; bir martalik tozalash hech narsani o'chirmaydi | Qabul qilindi | 2026-10-10 |
 | [0077](0077-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md) | Pul qaytarish so'rov bilan: balans so'rov kuni so'ralgan summaga kamayadi, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin ochiladi | Qabul qilindi | 2026-10-10 |
 | [0078](0078-topshiriq-xabarlari-telegramga-darhol.md) | Topshiriq xabarlari Telegram'ga darhol, tugmalar bilan ketadi (holat tugmalari xabarni tahrirlaydi, javob — izoh yoki qaytarish sababi); 22:00–08:00 tungi tinchlik, «Shoshilinch» bundan mustasno; 20:00 yig'madan chiqdi | Qabul qilindi | 2026-10-10 |
+| [0079](0079-imkoniyat-rol-emas.md) | Ruxsat imkoniyat bilan tekshiriladi, rol faqat kimlikni bildiradi | Qabul qilindi | 2026-10-10 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

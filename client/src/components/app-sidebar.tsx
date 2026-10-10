@@ -30,8 +30,15 @@ import { SidebarUserFooter } from "@/components/sidebar-user-footer";
 import { NavItemBadge } from "@/components/nav-item-badge";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { isNavChildActive, navItems, type NavItem, type NavItemChild } from "@/lib/nav-items";
+import {
+  isNavChildActive,
+  isNavGateOpen,
+  navItems,
+  type NavItem,
+  type NavItemChild,
+} from "@/lib/nav-items";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useTaskCounts } from "@/hooks/use-task-counts";
 import { cn } from "@/lib/utils";
 
@@ -41,12 +48,12 @@ export function AppSidebar() {
   const isIconCollapsed = state === "collapsed" && !isMobile;
   const user = useAuth((s) => s.user);
   const userRoleIds = user?.roles.map((r) => r.id) ?? [];
+  const can = usePermissions((s) => s.can);
   const { my: pendingTasks, myOverdue } = useTaskCounts();
 
-  const isVisible = (roles?: number[]) =>
-    !roles || roles.some((id) => userRoleIds.includes(id));
-
-  const filteredItems = navItems.filter((item) => isVisible(item.visibleForRoles));
+  const filteredItems = navItems.filter((item) =>
+    isNavGateOpen(item, can, userRoleIds),
+  );
 
   const isItemActive = (item: NavItem) =>
     item.url === "/" ? pathname === "/" : pathname.startsWith(item.url);
@@ -92,7 +99,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {filteredItems.map((item) => {
                 const visibleChildren = item.children?.filter((c) =>
-                  isVisible(c.visibleForRoles)
+                  isNavGateOpen(c, can, userRoleIds),
                 );
 
                 if (visibleChildren && visibleChildren.length > 0) {
@@ -146,7 +153,7 @@ export function AppSidebar() {
                           <SidebarMenuSub>
                             {visibleChildren.map((child) => {
                               const grandChildren = child.children?.filter((gc) =>
-                                isVisible(gc.visibleForRoles)
+                                isNavGateOpen(gc, can, userRoleIds),
                               );
 
                               if (grandChildren && grandChildren.length > 0) {

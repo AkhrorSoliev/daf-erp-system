@@ -5,17 +5,15 @@ import {
   Delete,
   Param,
   Query,
-  UseGuards,
   BadRequestException,
 } from '@nestjs/common';
 import { ArchiveService } from './archive.service';
 import { ArchiveEntityType, ArchiveQueryDto } from './dto/archive-query.dto';
-import { Roles, CurrentUser } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('archive')
-@UseGuards(RolesGuard)
-@Roles('CEO')
+@Can('settings.archive')
 export class ArchiveController {
   constructor(private archiveService: ArchiveService) {}
 

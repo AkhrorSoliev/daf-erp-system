@@ -1,22 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Reflector } from '@nestjs/core';
 import { DafMediaController } from './daf-media.controller';
 import { DafMediaOverviewService } from './media/daf-media-overview.service';
 import { DafMediaCoverageService } from './media/daf-media-coverage.service';
 import { DafMediaInhaltService } from './media/daf-media-inhalt.service';
 import { DafMediaFragenService } from './media/daf-media-fragen.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
 /**
  * Roldan tashqari, `coverage()` haqiqatan ham yangi xizmatga delegatsiya
  * qilishini ham tekshiradi — aks holda ikkala endpoint bir xil eski
  * manifestni qaytarib qolishi mumkin edi.
  */
-describe('DafMediaController — role guard', () => {
+describe('DafMediaController — route access', () => {
   let controller: DafMediaController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const overviewService = {
     overview: jest.fn().mockReturnValue({ vorhanden: false }),
@@ -48,31 +44,23 @@ describe('DafMediaController — role guard', () => {
     }).compile();
 
     controller = module.get(DafMediaController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(roles: string[]) {
-    return {
-      getHandler: () => controller.coverage,
-      getClass: () => DafMediaController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    } as any;
-  }
-
-  it('sinf darajasida CEO / Branch Director / Administrator metadatasi bor', () => {
-    const roles = reflector.get<string[]>(ROLES_KEY, DafMediaController);
-    expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+  it('every route is gated by the media view capability', () => {
+    for (const method of ['coverage', 'overview', 'fragen', 'inhalt']) {
+      expect(routeAccess(DafMediaController, method)).toEqual({
+        kind: 'can',
+        keys: ['media.view'],
+      });
+    }
   });
 
-  it('CEO uchun ruxsat beradi', () => {
-    expect(guard.canActivate(mockExecutionContext(['CEO']))).toBe(true);
-  });
-
-  it('Teacher uchun rad etadi', () => {
-    expect(() => guard.canActivate(mockExecutionContext(['Teacher']))).toThrow(
-      "Sizga bu amalni bajarishga ruxsat yo'q",
-    );
+  it('admits the CEO, the Branch Director and the Administrator by default, not the Teacher', () => {
+    expect(defaultRolesOf(DafMediaController, 'coverage')).toEqual([
+      'Administrator',
+      'Branch Director',
+      'CEO',
+    ]);
   });
 
   it('coverage() DafMediaCoverageService.coverage()ga delegatsiya qiladi', async () => {

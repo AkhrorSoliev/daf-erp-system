@@ -64,10 +64,13 @@ import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
 import { ContractDocumentsModule } from './contract-documents/contract-documents.module';
 import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
+import { PermissionGuard } from './common/permissions/permission.guard';
+import { PermissionsModule } from './common/permissions/permissions.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
   imports: [
+    PermissionsModule,
     // `validate` runs BEFORE any module is constructed, so a missing key kills
     // the boot instead of surfacing as a 500 on the first request that needs
     // it. See `config/env.validation.ts` for why that trade is worth it here.
@@ -149,6 +152,13 @@ import { validateEnv } from './config/env.validation';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // Runs after JwtAuthGuard (`request.user` exists) and before
+    // BranchScopeGuard: it refreshes `request.user.roles` from the database
+    // and checks the route's capability marker (spec 2026-10-05 §7.4).
+    {
+      provide: APP_GUARD,
+      useClass: PermissionGuard,
     },
     // Runs after JwtAuthGuard (APP_GUARD order is registration order), so
     // `request.user` is populated by the time it resolves the scope. It only

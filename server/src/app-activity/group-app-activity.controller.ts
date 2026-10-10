@@ -1,14 +1,7 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppActivityStatsService } from './app-activity-stats.service';
 import { AppActivityQueryDto } from './dto/app-activity-query.dto';
@@ -30,8 +23,7 @@ export class GroupAppActivityController {
   ) {}
 
   @Get(':id/app-activity')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('groups.view')
   async guruh(
     @Param('id') id: string,
     @Query() query: AppActivityQueryDto,
@@ -49,8 +41,7 @@ export class GroupAppActivityController {
   }
 
   @Get(':id/app-activity/students/:studentId')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('groups.view')
   async oquvchi(
     @Param('id') id: string,
     @Param('studentId', ParseIntPipe) studentId: number,

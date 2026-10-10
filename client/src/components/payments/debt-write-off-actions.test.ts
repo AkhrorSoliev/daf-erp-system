@@ -3,10 +3,10 @@ import { canUndoWriteOff } from "./debt-write-off-actions";
 
 describe("canUndoWriteOff", () => {
   const original = { reversedAt: null, reversedTransactionId: null };
-  it("lets the CEO undo an original still in effect", () => {
+  it("lets a user who may undo reverse an original still in effect", () => {
     expect(canUndoWriteOff(true, original)).toBe(true);
   });
-  it("never offers undo to anyone but the CEO", () => {
+  it("never offers undo to a user who may not undo", () => {
     expect(canUndoWriteOff(false, original)).toBe(false);
   });
   it("hides undo on an original already undone", () => {

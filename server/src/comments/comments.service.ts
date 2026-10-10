@@ -12,6 +12,7 @@ import {
   LatestCommentQueryDto,
 } from './dto/comment-query.dto';
 import { assertCallerMayTouchCommentEntity } from '../common/auth/comment-entity-scope';
+import { PermissionsService } from '../common/permissions/permissions.service';
 
 const commentInclude = {
   author: {
@@ -29,6 +30,7 @@ export class CommentsService {
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
+    private permissions: PermissionsService,
   ) {}
 
   /**
@@ -160,7 +162,6 @@ export class CommentsService {
     id: string,
     dto: UpdateCommentDto,
     userId: number,
-    roles: string[],
     companyId: number,
   ) {
     const comment = await this.prisma.comment.findFirst({
@@ -172,8 +173,8 @@ export class CommentsService {
       throw new NotFoundException('Izoh topilmadi');
     }
 
-    const isCeo = roles.includes('CEO');
-    if (comment.authorId !== userId && !isCeo) {
+    const mayModerate = await this.permissions.has(userId, 'comments.delete');
+    if (comment.authorId !== userId && !mayModerate) {
       throw new ForbiddenException(
         'Faqat muallif yoki CEO izohni tahrirlay oladi',
       );

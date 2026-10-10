@@ -1,23 +1,11 @@
 import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../common/decorators';
-import { RolesGuard } from '../common/guards/roles.guard';
 import * as groupScope from '../common/auth/group-branch-scope';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { GroupAppActivityController } from './group-app-activity.controller';
 
 jest.mock('../common/auth/group-branch-scope');
 
-function mockExecutionContext(handler: unknown, roles: string[]) {
-  return {
-    getHandler: () => handler,
-    getClass: () => GroupAppActivityController,
-    switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-  } as never;
-}
-
 describe('GroupAppActivityController', () => {
-  const reflector = new Reflector();
-  const guard = new RolesGuard(reflector);
   const prisma = {
     group: {
       findFirst: jest.fn().mockResolvedValue({ level: 'A2' }),
@@ -36,19 +24,17 @@ describe('GroupAppActivityController', () => {
   beforeEach(() => jest.clearAllMocks());
 
   for (const metod of ['guruh', 'oquvchi'] as const) {
-    it(`${metod}: rollar CEO, Branch Director, Administrator, Teacher`, () => {
-      expect(reflector.get<string[]>(ROLES_KEY, controller[metod])).toEqual([
-        'CEO',
-        'Branch Director',
+    it(`${metod}: gated by the group view capability, default roles CEO, Branch Director, Administrator, Teacher`, () => {
+      expect(routeAccess(GroupAppActivityController, metod)).toEqual({
+        kind: 'can',
+        keys: ['groups.view'],
+      });
+      expect(defaultRolesOf(GroupAppActivityController, metod)).toEqual([
         'Administrator',
+        'Branch Director',
+        'CEO',
         'Teacher',
       ]);
-      expect(
-        guard.canActivate(mockExecutionContext(controller[metod], ['Teacher'])),
-      ).toBe(true);
-      expect(() =>
-        guard.canActivate(mockExecutionContext(controller[metod], ['Cashier'])),
-      ).toThrow(ForbiddenException);
     });
   }
 

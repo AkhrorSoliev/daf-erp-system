@@ -1,19 +1,22 @@
 import { GUARDS_METADATA } from '@nestjs/common/constants';
-import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../../common/decorators';
-import { RolesGuard, StudentCardGuard } from '../../common/guards';
+import { StudentCardGuard } from '../../common/guards';
 import { OwnPasswordAttemptGuard } from '../../common/guards/own-password-attempt.guard';
+import { defaultRolesOf, routeAccess } from '../../common/permissions/testing';
 import { StudentExtraPhoneController } from './student-extra-phone.controller';
 
 describe('StudentExtraPhoneController (ADR-0070)', () => {
   it('is Student-only, and refuses a token with no student card', () => {
-    const reflector = new Reflector();
-    expect(reflector.get(ROLES_KEY, StudentExtraPhoneController)).toEqual([
-      'Student',
-    ]);
+    for (const method of ['status', 'sendCode', 'verify', 'remove']) {
+      expect(routeAccess(StudentExtraPhoneController, method)).toEqual({
+        kind: 'student',
+      });
+      expect(defaultRolesOf(StudentExtraPhoneController, method)).toEqual([
+        'Student',
+      ]);
+    }
     expect(
       Reflect.getMetadata(GUARDS_METADATA, StudentExtraPhoneController),
-    ).toEqual([RolesGuard, StudentCardGuard]);
+    ).toEqual([StudentCardGuard]);
   });
 
   it('caps password attempts on the two routes that ask for it (ADR-0031)', () => {

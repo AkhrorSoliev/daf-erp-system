@@ -57,7 +57,7 @@ import {
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { canUndoWriteOff } from "./debt-write-off-actions";
 
@@ -102,8 +102,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 const REVERSE_REASON_MIN = 5;
 
 export function DebtWriteOffsClient() {
-  const user = useAuth((s) => s.user);
-  const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
+  const canUndo = useCan("money.undo");
   const { selectedBranch } = useBranchSwitcher();
   const queryClient = useQueryClient();
 
@@ -251,7 +250,7 @@ export function DebtWriteOffsClient() {
         isLoading={isLoading}
         page={page}
         pageSize={pageSize}
-        isCeo={isCeo}
+        canUndo={canUndo}
         onReverseClick={(row) => {
           setReverseTarget(row);
           setReverseReason("");
@@ -339,14 +338,14 @@ function DebtWriteOffsTable({
   isLoading,
   page,
   pageSize,
-  isCeo,
+  canUndo,
   onReverseClick,
 }: {
   rows: DebtWriteOffRow[];
   isLoading: boolean;
   page: number;
   pageSize: number;
-  isCeo: boolean;
+  canUndo: boolean;
   onReverseClick: (row: DebtWriteOffRow) => void;
 }) {
   if (isLoading) {
@@ -442,7 +441,7 @@ function DebtWriteOffsTable({
                   : "Tizim"}
               </TableCell>
               <TableCell>
-                {canUndoWriteOff(isCeo, row) ? (
+                {canUndoWriteOff(canUndo, row) ? (
                   <DropdownMenu>
                     <Tooltip>
                       <TooltipTrigger asChild>

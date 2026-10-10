@@ -8,8 +8,9 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard, StudentCardGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { StudentCardGuard } from '../common/guards';
+import { StudentOnly } from '../common/permissions/access.decorators';
 import { DafPortalReadService } from './daf-portal-read.service';
 import { DafAttemptService } from './daf-attempt.service';
 import { CheckDrillDto, CreateAttemptDto } from './dto/create-attempt.dto';
@@ -37,8 +38,8 @@ import { ReytingQueryDto } from './dto/reyting-query.dto';
  * Prisma would otherwise read `{ studentId: undefined }` as "no filter".
  */
 @Controller('student-portal/lernen')
-@UseGuards(RolesGuard, StudentCardGuard)
-@Roles('Student')
+@UseGuards(StudentCardGuard)
+@StudentOnly()
 export class DafPortalController {
   constructor(
     private readonly read: DafPortalReadService,

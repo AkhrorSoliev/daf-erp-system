@@ -6,19 +6,19 @@ import {
   Get,
   Patch,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from './settings.service';
 import { GetPaymentSettingsDto } from './dto/get-payment-settings.dto';
 import { UpdatePaymentSettingsDto } from './dto/update-payment-settings.dto';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { resolveCallerBranchScope } from '../common/auth/branch-scope';
 import { SettingKey } from './settings.types';
 
 /**
- * `/settings` panelining "To'lov" bo'limi — CEO/direktor uchun.
+ * `/settings` panelining "To'lov" bo'limi — `settings.payment` imkoniyati
+ * bor foydalanuvchilar uchun.
  *
  * Filial qamrovi qoidasi (`server/CLAUDE.md` "Object-level branch
  * confinement"ga mos): CEO kompaniya darajasida VA istalgan filialda
@@ -26,8 +26,7 @@ import { SettingKey } from './settings.types';
  * oladi — kompaniya darajasidagi qiymatga hech qachon tegmaydi.
  */
 @Controller('settings')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director')
+@Can('settings.payment')
 export class SettingsController {
   constructor(
     private settingsService: SettingsService,

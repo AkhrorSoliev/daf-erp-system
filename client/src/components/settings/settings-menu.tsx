@@ -4,16 +4,18 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getVisibleSettingsSections } from "@/lib/settings-nav";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export function SettingsMenu() {
   const user = useAuth((s) => s.user);
+  const can = usePermissions((s) => s.can);
 
   // On a hard reload the user is read from a cookie inside a useEffect, so it
   // is not there yet on the first render. Rendering now would show only the
   // items open to everyone and then jump as the rest appear.
   if (!user) return null;
 
-  const sections = getVisibleSettingsSections(user.roles.map((r) => r.id));
+  const sections = getVisibleSettingsSections(can);
 
   return (
     <div className="max-w-3xl space-y-5">

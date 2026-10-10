@@ -9,7 +9,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import api from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import type { TaskAccess, TaskDetail, TaskPerson, TaskPriority } from "@/hooks/use-tasks";
 import { tashkentDateTime } from "./task-create-dialog";
 import { TaskAssigneePicker } from "./task-assignee-picker";
@@ -143,8 +143,8 @@ function PriorityRow({ task, canEdit }: { task: TaskDetail; canEdit: boolean }) 
 }
 
 function EntityLink({ type, id }: { type: string; id: string }) {
-  const user = useAuth((s) => s.user);
-  const href = taskEntityHref(type, id, user?.roles.map((r) => r.id) ?? []);
+  const can = usePermissions((s) => s.can);
+  const href = taskEntityHref(type, id, can);
   const label = ENTITY_LABEL[type] ?? type;
   // A viewer without the page gets the name of the thing, not a link that ends in a 403.
   if (!href) return <span className="inline-flex items-center gap-1"><Link2 className="size-3.5" />{label}</span>;

@@ -4,7 +4,6 @@ import {
   ForbiddenException,
   ValidationPipe,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import type { Response } from 'express';
 import { ReportsController } from './reports.controller';
 import { ReportsQueryDto } from './dto/reports-query.dto';
@@ -12,16 +11,14 @@ import { ReportsService } from './reports.service';
 import { ReportsExcelService } from './reports-excel.service';
 import { ReportsProfitCompositionService } from './reports-profit-composition.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
+import type { PermissionKey } from '../common/permissions/permission-catalog';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
 import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
 
-describe('ReportsController — role guards', () => {
+describe('ReportsController', () => {
   let controller: ReportsController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockService = {
     getKpis: jest.fn().mockResolvedValue({}),
@@ -136,195 +133,130 @@ describe('ReportsController — role guards', () => {
     }).compile();
 
     controller = module.get(ReportsController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => ReportsController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
+  // Every route's marker, grouped by capability. `roles` is who the catalog
+  // admits by default (the CEO always); a route that took the Administrator or
+  // the Cashier out in Appendix C (`intentional-access-changes.ts`) lists the
+  // narrowed set.
+  const routeGroups: {
+    capability: string;
+    keys: PermissionKey[];
+    roles: string[];
+    handlers: (keyof ReportsController)[];
+  }[] = [
+    {
+      // Money figures and workbooks.
+      capability: 'finance',
+      keys: ['reports.finance'],
+      roles: ['Branch Director', 'CEO'],
+      handlers: [
+        'getFinancialTrend',
+        'getIncomeMonthAttribution',
+        'getProfitComposition',
+        'getFinancialOverview',
+        'getExpectationHistory',
+        'getMonthlyDebtRecovery',
+        'exportFinancialExcel',
+        // Only the «O'quvchi to'lovi» report calls it, and its menu entry is
+        // CEO/BD only: the Administrator and the Cashier left (Appendix C).
+        'getStudentPaymentsReport',
+      ],
+    },
+    {
+      // /reports/payment-reports page: open to the Administrator too (CEO,
+      // 05.10.2026). The branch scope still confines them to their own
+      // branch(es).
+      capability: 'payment reports',
+      keys: ['reports.payments'],
+      roles: ['Administrator', 'Branch Director', 'CEO'],
+      handlers: [
+        'getPaymentReports',
+        'getTeacherPaymentReports',
+        'getTeacherGroupsReport',
+      ],
+    },
+    {
+      capability: 'lead reports',
+      keys: ['reports.leads'],
+      roles: ['Administrator', 'Branch Director', 'CEO'],
+      handlers: ['getLeadAnalytics'],
+    },
+    {
+      // Attendance, activity and departed-students reports: their menu entries
+      // are CEO/BD only, so the Administrator left (Appendix C).
+      capability: 'student reports',
+      keys: ['reports.students'],
+      roles: ['Branch Director', 'CEO'],
+      handlers: [
+        'getKpis',
+        'getRoomUtilization',
+        'getCenterActivity',
+        'getTeacherPerformance',
+        'getAttendanceAnalytics',
+        'getAttendanceByGroup',
+        'getAttendanceByCourse',
+        'getGroupAnalytics',
+        'getDepartedStudentsSummary',
+        'getDepartedStudentsDynamics',
+        'getDepartedStudentsByStatus',
+        'getDepartedStudentsReasons',
+        'getTeacherChangeReasons',
+        'getTransferReasons',
+        'getDepartedStudentsList',
+        'getDepartedStudentsByReason',
+        'getDepartedStudentsGroupBy',
+        'getTeacherChangesList',
+        'getTransferredList',
+        'getDepartedAfterTeacherChangeList',
+      ],
+    },
+    {
+      // Widened 2026-08-12 for the single debt page (/payments/debt): the debt
+      // history, its month drill-down and its Excel are tabs there, and the
+      // CEO's call was that the page must not change shape by viewer.
+      // `getDebtWriteOffsSummary` joins them for the same reason.
+      // `getMonthlyDebtRecovery` is NOT here — it is the cohort report behind
+      // the Excel workbook, not a page.
+      capability: 'debt page',
+      keys: ['debt.view'],
+      roles: ['Administrator', 'Branch Director', 'CEO', 'Cashier'],
+      handlers: [
+        'getDebtHistory',
+        'getMonthAgingDetail',
+        'exportMonthlyDebtExcel',
+        'getMonthDebtDetail',
+        'getDebtWriteOffsSummary',
+      ],
+    },
+    {
+      // The filter lists of the «O'quvchi to'lovi» and «Ketgan o'quvchilar»
+      // reports, both CEO/BD only.
+      capability: 'payment and student report filters',
+      keys: ['reports.finance', 'reports.students'],
+      roles: ['Branch Director', 'CEO'],
+      handlers: ['getStudentPaymentsFilterOptions'],
+    },
+  ];
 
-  // Class-level guard
-  describe('class-level @Roles', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) on the controller class', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, ReportsController);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-  });
-
-  const endpoints = [
-    'getKpis',
-    'getRoomUtilization',
-    'getTeacherPerformance',
-    'getAttendanceAnalytics',
-    'getGroupAnalytics',
-    'getLeadAnalytics',
-    'getDepartedStudentsSummary',
-    'getDepartedStudentsDynamics',
-    'getDepartedStudentsReasons',
-    'getDepartedStudentsGroupBy',
-    'getDepartedStudentsList',
-    'getDepartedStudentsByReason',
-    'getDepartedStudentsByStatus',
-  ] as const;
-
-  for (const method of endpoints) {
-    describe(`${method}()`, () => {
-      it('should allow CEO', () => {
-        const ctx = mockExecutionContext(controller[method], ['CEO']);
-        expect(guard.canActivate(ctx)).toBe(true);
+  for (const { capability, keys, roles, handlers } of routeGroups) {
+    describe(`${capability} routes`, () => {
+      it.each(handlers)(`%s is gated by ${keys.join(' or ')}`, (method) => {
+        expect(routeAccess(ReportsController, method)).toEqual({
+          kind: 'can',
+          keys,
+        });
       });
 
-      it('should allow Branch Director', () => {
-        const ctx = mockExecutionContext(controller[method], [
-          'Branch Director',
-        ]);
-        expect(guard.canActivate(ctx)).toBe(true);
-      });
-
-      it('should allow Administrator', () => {
-        const ctx = mockExecutionContext(controller[method], ['Administrator']);
-        expect(guard.canActivate(ctx)).toBe(true);
-      });
-
-      it('should deny Teacher', () => {
-        const ctx = mockExecutionContext(controller[method], ['Teacher']);
-        expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-      });
-
-      it('should deny Cashier', () => {
-        const ctx = mockExecutionContext(controller[method], ['Cashier']);
-        expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-      });
-    });
-  }
-
-  const narrowedEndpoints = [
-    'getMonthlyDebtRecovery',
-    'getFinancialTrend',
-    'getIncomeMonthAttribution',
-    'getProfitComposition',
-    'getFinancialOverview',
-  ] as const;
-
-  // Widened 2026-08-12 for the single debt page (/payments/debt): the debt
-  // history, its month drill-down and its Excel are tabs there, and the CEO's
-  // call was that the page must not change shape by viewer. `getDebtWriteOffsSummary`
-  // joins them for the same reason. `getMonthlyDebtRecovery` above is NOT in this
-  // set — it is the cohort report behind the Excel workbook, not a page.
-  const debtPageEndpoints = [
-    'getDebtHistory',
-    'getMonthDebtDetail',
-    'exportMonthlyDebtExcel',
-    'getDebtWriteOffsSummary',
-  ] as const;
-
-  for (const method of debtPageEndpoints) {
-    describe(`${method}() — debt page, every staff role`, () => {
-      it(`allows CEO, BD, Administrator and Cashier on ${method}`, () => {
-        expect(reflector.get<string[]>(ROLES_KEY, controller[method])).toEqual([
-          'CEO',
-          'Branch Director',
-          'Administrator',
-          'Cashier',
-        ]);
-        for (const role of [
-          'CEO',
-          'Branch Director',
-          'Administrator',
-          'Cashier',
-        ]) {
-          expect(
-            guard.canActivate(mockExecutionContext(controller[method], [role])),
-          ).toBe(true);
-        }
-      });
-
-      it('still denies Teacher', () => {
-        expect(() =>
-          guard.canActivate(
-            mockExecutionContext(controller[method], ['Teacher']),
-          ),
-        ).toThrow(ForbiddenException);
-      });
-    });
-  }
-
-  for (const method of narrowedEndpoints) {
-    describe(`${method}() — method-level @Roles`, () => {
-      it(`should have @Roles(CEO, Branch Director) on ${method}`, () => {
-        const roles = reflector.get<string[]>(ROLES_KEY, controller[method]);
-        expect(roles).toEqual(['CEO', 'Branch Director']);
-      });
-
-      it('should allow CEO and Branch Director', () => {
-        expect(
-          guard.canActivate(mockExecutionContext(controller[method], ['CEO'])),
-        ).toBe(true);
-        expect(
-          guard.canActivate(
-            mockExecutionContext(controller[method], ['Branch Director']),
-          ),
-        ).toBe(true);
-      });
-
-      it('should deny Administrator, Cashier, Teacher', () => {
-        for (const role of ['Administrator', 'Cashier', 'Teacher']) {
-          expect(() =>
-            guard.canActivate(mockExecutionContext(controller[method], [role])),
-          ).toThrow(ForbiddenException);
-        }
-      });
+      it.each(handlers)(
+        `%s admits ${roles.join(', ')} by default, nobody else`,
+        (method) => {
+          expect(defaultRolesOf(ReportsController, method)).toEqual(roles);
+        },
+      );
     });
   }
 
-  const studentPaymentsEndpoints = [
-    'getStudentPaymentsReport',
-    'getStudentPaymentsFilterOptions',
-  ] as const;
-
-  for (const method of studentPaymentsEndpoints) {
-    describe(`${method}() — method-level @Roles`, () => {
-      it(`should have @Roles(CEO, Branch Director, Administrator, Cashier) on ${method}`, () => {
-        const roles = reflector.get<string[]>(ROLES_KEY, controller[method]);
-        expect(roles).toEqual([
-          'CEO',
-          'Branch Director',
-          'Administrator',
-          'Cashier',
-        ]);
-      });
-
-      it('should allow CEO, Branch Director, Administrator, Cashier', () => {
-        for (const role of [
-          'CEO',
-          'Branch Director',
-          'Administrator',
-          'Cashier',
-        ]) {
-          expect(
-            guard.canActivate(mockExecutionContext(controller[method], [role])),
-          ).toBe(true);
-        }
-      });
-
-      it('should deny Teacher', () => {
-        const ctx = mockExecutionContext(controller[method], ['Teacher']);
-        expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-      });
-    });
-  }
-
-  // Method-level @Roles('CEO', 'Branch Director') on getPaymentReports
   describe('getProfitComposition() — month and scope', () => {
     beforeEach(() => mockComposition.getProfitComposition.mockClear());
 
@@ -345,79 +277,6 @@ describe('ReportsController — role guards', () => {
       await controller.getProfitComposition({} as any, 1001, 10001);
       const arg = mockComposition.getProfitComposition.mock.calls[0][1];
       expect(arg.month).toMatch(/^\d{4}-\d{2}$/);
-    });
-  });
-
-  // /reports/payment-reports page: open to the Administrator too (CEO,
-  // 05.10.2026). The branch scope still confines them to their own branch(es).
-  for (const method of [
-    'getPaymentReports',
-    'getTeacherPaymentReports',
-    'getTeacherGroupsReport',
-  ] as const) {
-    describe(`${method}() — method-level @Roles`, () => {
-      it('should have @Roles(CEO, Branch Director, Administrator) on the handler', () => {
-        const roles = reflector.get<string[]>(ROLES_KEY, controller[method]);
-        expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-      });
-
-      it('should allow CEO, Branch Director and Administrator', () => {
-        for (const role of ['CEO', 'Branch Director', 'Administrator']) {
-          expect(
-            guard.canActivate(mockExecutionContext(controller[method], [role])),
-          ).toBe(true);
-        }
-      });
-
-      it('should deny Cashier and Teacher', () => {
-        for (const role of ['Cashier', 'Teacher']) {
-          expect(() =>
-            guard.canActivate(mockExecutionContext(controller[method], [role])),
-          ).toThrow(ForbiddenException);
-        }
-      });
-    });
-  }
-
-  // Role coverage for getDebtWriteOffsSummary lives in the `debtPageEndpoints`
-  // loop above — it is one of the four the debt page reads.
-  describe('getDebtWriteOffsSummary() — still closed to Teacher', () => {
-    it('denies Teacher', () => {
-      const ctx = mockExecutionContext(controller.getDebtWriteOffsSummary, [
-        'Teacher',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
-  // Financial Excel export — CEO + Branch Director only.
-  describe('exportFinancialExcel() — guard (CEO + BD only)', () => {
-    it('should have @Roles(CEO, Branch Director)', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.exportFinancialExcel,
-      );
-      expect(roles).toEqual(['CEO', 'Branch Director']);
-    });
-
-    it('allows CEO and Branch Director', () => {
-      for (const role of ['CEO', 'Branch Director']) {
-        expect(
-          guard.canActivate(
-            mockExecutionContext(controller.exportFinancialExcel, [role]),
-          ),
-        ).toBe(true);
-      }
-    });
-
-    it('denies Administrator, Cashier, Teacher', () => {
-      for (const role of ['Administrator', 'Cashier', 'Teacher']) {
-        expect(() =>
-          guard.canActivate(
-            mockExecutionContext(controller.exportFinancialExcel, [role]),
-          ),
-        ).toThrow(ForbiddenException);
-      }
     });
   });
 

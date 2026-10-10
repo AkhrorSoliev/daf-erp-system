@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { LeadsService } from './leads.service';
 import { LeadsBoardService } from './leads-board.service';
@@ -24,13 +23,11 @@ import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RestoreLeadDto } from './dto/restore-lead.dto';
 import { RemoveLeadDto } from './dto/remove-lead.dto';
 import { LeadStatsQueryDto } from './dto/lead-stats-query.dto';
-import { CurrentUser, Roles, BranchScope } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('leads')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class LeadsController {
   constructor(
     private readonly leadsService: LeadsService,
@@ -41,6 +38,7 @@ export class LeadsController {
 
   // Filtered, paginated flat list — used by the filter view.
   @Get()
+  @Can('leads.view')
   findAll(
     @Query() query: LeadQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -52,6 +50,7 @@ export class LeadsController {
   // Full board: columns -> sections -> per-section lead counts.
   // Declared before ':id' so "/leads/board" is not captured as an id.
   @Get('board')
+  @Can('leads.view')
   getBoard(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
@@ -62,6 +61,7 @@ export class LeadsController {
   // Figures above the board. Declared before ':id' so "/leads/stats" is not
   // captured as an id.
   @Get('stats')
+  @Can('leads.view')
   getStats(
     @Query() query: LeadStatsQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -73,6 +73,7 @@ export class LeadsController {
   // Archived leads + sections (two-column leads archive). Declared before ':id'
   // so "/leads/archive" is not captured as an id.
   @Get('archive')
+  @Can('leads.view')
   getArchive(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
@@ -82,6 +83,7 @@ export class LeadsController {
 
   // Lazily loaded when a section is expanded on the board.
   @Get('sections/:sectionId/leads')
+  @Can('leads.view')
   getSectionLeads(
     @Param('sectionId') sectionId: string,
     @CurrentUser('companyId') companyId: number,
@@ -93,6 +95,7 @@ export class LeadsController {
   // Lazy hover preview (caller + latest comment). Declared before ':id' so the
   // extra path segment isn't swallowed by the generic detail route.
   @Get(':id/hover-summary')
+  @Can('leads.view')
   getHoverSummary(@Param('id') id: string) {
     return this.leadsService.getHoverSummary(id);
   }
@@ -101,11 +104,13 @@ export class LeadsController {
   // tarixi" tab. Declared before ':id' so the segment isn't captured as a lead
   // id. studentId is a numeric student id, not a lead uuid.
   @Get('by-student/:studentId')
+  @Can('leads.view', 'students.details')
   findByStudentId(@Param('studentId', ParseIntPipe) studentId: number) {
     return this.leadsService.findByStudentId(studentId);
   }
 
   @Get(':id')
+  @Can('leads.view')
   findOne(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -115,6 +120,7 @@ export class LeadsController {
   }
 
   @Post()
+  @Can('leads.manage')
   create(
     @Body() dto: CreateLeadDto,
     @CurrentUser('companyId') companyId: number,
@@ -128,12 +134,14 @@ export class LeadsController {
   // Declared before ':id/move' and ':id' so "/leads/reorder" is not captured
   // as an id. Reorders the leads within one section (pure ordering).
   @Patch('reorder')
+  @Can('leads.manage')
   reorder(@Body() dto: ReorderLeadsDto) {
     return this.leadsService.reorder(dto);
   }
 
   // Declared before ':id' so "/leads/:id/move" resolves to the move handler.
   @Patch(':id/move')
+  @Can('leads.manage')
   move(
     @Param('id') id: string,
     @Body() dto: MoveLeadDto,
@@ -146,6 +154,7 @@ export class LeadsController {
 
   // Toggle the "called" marker — declared before ':id' so it resolves here.
   @Patch(':id/called')
+  @Can('leads.manage', 'leads.forms')
   markCalled(
     @Param('id') id: string,
     @Body() dto: MarkCalledLeadDto,
@@ -157,6 +166,7 @@ export class LeadsController {
   }
 
   @Post(':id/convert')
+  @Can('leads.manage')
   convert(
     @Param('id') id: string,
     @Body() dto: ConvertLeadDto,
@@ -169,6 +179,7 @@ export class LeadsController {
 
   // Restores an archived lead into a chosen column + section.
   @Post(':id/restore')
+  @Can('leads.manage')
   restore(
     @Param('id') id: string,
     @Body() dto: RestoreLeadDto,
@@ -180,6 +191,7 @@ export class LeadsController {
   }
 
   @Patch(':id')
+  @Can('leads.manage')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateLeadDto,
@@ -193,6 +205,7 @@ export class LeadsController {
   // Deleting a lead marks it LOST with a mandatory reason (sent in the body)
   // and archives it. The reason is surfaced in the leads archive + audit trail.
   @Delete(':id')
+  @Can('leads.manage')
   remove(
     @Param('id') id: string,
     @Body() dto: RemoveLeadDto,

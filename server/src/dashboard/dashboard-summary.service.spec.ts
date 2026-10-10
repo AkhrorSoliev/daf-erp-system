@@ -1,5 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { DashboardSummaryService } from './dashboard-summary.service';
+import { ROLE_ID } from '../common/auth/role-ids';
+import { fakePermissions } from '../common/permissions/testing';
 
 // «Qarz — ikki raqam» (ADR-0059). `ReportsService.getFinancialOverview` uni
 // `debtSplit` sifatida o'zi qaytaradi — bosh sahifa qarzni shundan oladi.
@@ -66,7 +68,12 @@ const todaySchedule = {
   ],
 };
 
-function makeService(overrides: Record<string, any> = {}) {
+// `roleIds` are the roles the caller holds in the database; the capabilities
+// they carry come from the catalog defaults (`fakePermissions`).
+function makeService(
+  overrides: Record<string, any> = {},
+  roleIds: number[] = [ROLE_ID.CEO],
+) {
   const reports = {
     getFinancialOverview: jest.fn().mockResolvedValue(financialOverview),
     getNetProfitWithBasis: jest.fn().mockResolvedValue({
@@ -107,6 +114,7 @@ function makeService(overrides: Record<string, any> = {}) {
     outreach,
     dashboard,
     redis as any,
+    fakePermissions(roleIds),
   );
   return { service, reports, payments, outreach, dashboard, redis };
 }
@@ -117,6 +125,8 @@ const CEO = {
   roles: ['CEO'],
   branchScope: [1],
 };
+const ADMINISTRATOR = { ...CEO, roles: ['Administrator'] };
+const CASHIER = { ...CEO, roles: ['Cashier'] };
 
 describe('DashboardSummaryService.getSummary', () => {
   it("CEO uchun pul bloki to'ladi", async () => {
@@ -192,8 +202,8 @@ describe('DashboardSummaryService.getSummary', () => {
   });
 
   it('administrator uchun pul bloki null va moliya servisi umuman chaqirilmaydi', async () => {
-    const { service, reports } = makeService();
-    const res = await service.getSummary({ ...CEO, roles: ['Administrator'] });
+    const { service, reports } = makeService({}, [ROLE_ID.ADMINISTRATOR]);
+    const res = await service.getSummary(ADMINISTRATOR);
 
     expect(res.money).toBeNull();
     expect(reports.getFinancialOverview).not.toHaveBeenCalled();
@@ -202,21 +212,24 @@ describe('DashboardSummaryService.getSummary', () => {
   });
 
   it('kassir uchun outreach sonlari nol, top qarzdorlar qoladi', async () => {
-    const { service, payments, outreach } = makeService({
-      payments: {
-        getDebtors: jest.fn().mockResolvedValue({
-          data: [
-            {
-              id: 10061,
-              firstName: 'Sardor',
-              lastName: 'Nazarov',
-              balance: -1_240_000,
-            },
-          ],
-        }),
+    const { service, payments, outreach } = makeService(
+      {
+        payments: {
+          getDebtors: jest.fn().mockResolvedValue({
+            data: [
+              {
+                id: 10061,
+                firstName: 'Sardor',
+                lastName: 'Nazarov',
+                balance: -1_240_000,
+              },
+            ],
+          }),
+        },
       },
-    });
-    const res = await service.getSummary({ ...CEO, roles: ['Cashier'] });
+      [ROLE_ID.CASHIER],
+    );
+    const res = await service.getSummary(CASHIER);
 
     expect(outreach.getStats).not.toHaveBeenCalled();
     expect(res.attention).toEqual({
@@ -267,14 +280,29 @@ describe('DashboardSummaryService.getSummary', () => {
   });
 
   it("kesh kaliti rol darajasini o'z ichiga oladi", async () => {
-    const { service, redis } = makeService();
-    await service.getSummary(CEO);
-    await service.getSummary({ ...CEO, roles: ['Administrator'] });
+    const ceo = makeService();
+    await ceo.service.getSummary(CEO);
+    const administrator = makeService({}, [ROLE_ID.ADMINISTRATOR]);
+    await administrator.service.getSummary(ADMINISTRATOR);
 
-    const keys = redis.setex.mock.calls.map((c: any[]) => c[0]);
-    expect(keys[0]).toContain(':money');
-    expect(keys[1]).toContain(':outreach');
-    expect(keys[0]).not.toBe(keys[1]);
+    const ceoKey = ceo.redis.setex.mock.calls[0][0];
+    const administratorKey = administrator.redis.setex.mock.calls[0][0];
+    expect(ceoKey).toContain(':money');
+    expect(administratorKey).toContain(':outreach');
+    expect(ceoKey).not.toBe(administratorKey);
+  });
+
+  it("reads the caller's capabilities from the database, not the roles in the token", async () => {
+    // A token issued while the account was a Cashier; the database now says
+    // Administrator: the outreach rows follow the database.
+    const { service, outreach, redis } = makeService({}, [
+      ROLE_ID.ADMINISTRATOR,
+    ]);
+    const res = await service.getSummary(CASHIER);
+
+    expect(res.money).toBeNull();
+    expect(outreach.getStats).toHaveBeenCalled();
+    expect(redis.setex.mock.calls[0][0]).toContain(':outreach');
   });
 
   it('filial tanlanmasa jadval null, todayLessons ham null', async () => {
