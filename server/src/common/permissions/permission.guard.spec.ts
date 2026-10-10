@@ -75,8 +75,17 @@ describe('PermissionGuard', () => {
     );
   });
 
-  it('leaves a route without a marker to the legacy RolesGuard (transition)', async () => {
+  it('refuses a route that declares no access at all', async () => {
     const { context } = contextFor({}, { id: 6 });
-    await expect(guardFor([]).canActivate(context)).resolves.toBe(true);
+    await expect(guardFor([1]).canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('refuses a non-public route with no signed-in user', async () => {
+    const { context } = contextFor({ access: { kind: 'anyUser' } }, undefined);
+    await expect(guardFor([1]).canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 });

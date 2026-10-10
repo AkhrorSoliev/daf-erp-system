@@ -12,8 +12,8 @@ import { AccessSummary, accessSummary } from './route-access';
  * the capability conversion (`route-access.snapshot.json`), except for the
  * reviewed, explained differences in `intentional-access-changes.ts`.
  *
- * A route still on `@Roles` (or with no marker) is compared with the
- * snapshot as is: its intentional change applies once it is converted.
+ * The second block is the manifest: every route carries exactly one marker
+ * (or `@Public()`), because `PermissionGuard` refuses one without.
  */
 // The server package root, as `branch-route-policy.spec.ts` uses it.
 const SERVER_ROOT = join(__dirname, '..', '..', '..');
@@ -32,8 +32,6 @@ function applyChange(summary: AccessSummary, change: AccessChange): string[] {
   return [...out].sort();
 }
 
-const LEGACY = new Set(['roles', 'none']);
-
 describe('route access equals the snapshot taken before capabilities', () => {
   it('has a snapshot row for every route and no row for a route that is gone', () => {
     expect(Object.keys(before).sort()).toEqual(routes.map((r) => r.key).sort());
@@ -47,10 +45,38 @@ describe('route access equals the snapshot taken before capabilities', () => {
 
   it.each(routes.map((r) => [r.key, r] as const))('%s', (key, route) => {
     const change = INTENTIONAL_ACCESS_CHANGES[key];
-    const expected =
-      change && !LEGACY.has(route.access.kind)
-        ? applyChange(before[key], change)
-        : before[key];
+    const expected = change ? applyChange(before[key], change) : before[key];
     expect(accessSummary(route.access)).toEqual(expected);
+  });
+});
+
+describe('route manifest: every route declares exactly one access', () => {
+  it('has a marker or @Public() on every route', () => {
+    const unmarked = routes
+      .filter((r) => r.access.kind === 'none')
+      .map((r) => r.key);
+    expect(unmarked).toEqual([]);
+  });
+
+  it('puts at most one marker on a handler and at most one on a controller', () => {
+    const doubled = routes
+      .filter(
+        (r) =>
+          r.accessMarkers.handler.length > 1 ||
+          r.accessMarkers.controller.length > 1,
+      )
+      .map((r) => r.key);
+    expect(doubled).toEqual([]);
+  });
+
+  it('names only catalog capabilities in @Can', () => {
+    for (const route of routes) {
+      if (route.access.kind !== 'can') continue;
+      expect({ key: route.key, keys: route.access.keys.length }).not.toEqual({
+        key: route.key,
+        keys: 0,
+      });
+      expect(() => accessSummary(route.access)).not.toThrow();
+    }
   });
 });

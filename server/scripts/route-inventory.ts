@@ -40,27 +40,10 @@ export type RouteAccess =
   | { kind: 'anyStaff' }
   | { kind: 'student' }
   | { kind: 'can'; keys: string[] }
-  /** Legacy `@Roles(...)`; gone after the conversion. */
-  | { kind: 'roles'; roles: string[] }
-  /** No marker at all: a legacy route open to any signed-in account. */
+  /** No marker at all: PermissionGuard refuses it, and the manifest reports it. */
   | { kind: 'none' };
 
-const ACCESS_DECORATORS = [
-  'AnyUser',
-  'AnyStaff',
-  'StudentOnly',
-  'Can',
-  'Roles',
-];
-
-/** What `...STAFF_ROLES` spreads to (`common/decorators/staff-roles.ts`). */
-const STAFF_ROLE_NAMES = [
-  'CEO',
-  'Branch Director',
-  'Administrator',
-  'Teacher',
-  'Cashier',
-];
+const ACCESS_DECORATORS = ['AnyUser', 'AnyStaff', 'StudentOnly', 'Can'];
 
 export interface DiscoveredRoute {
   /** `GET /payments/:id` — the manifest key. */
@@ -130,14 +113,6 @@ function stringArgs(d: ts.Decorator): string[] {
   const out: string[] = [];
   for (const a of args) {
     if (ts.isStringLiteral(a)) out.push(a.text);
-    // `@Roles(...STAFF_ROLES)` is the only spread the code base uses.
-    else if (
-      ts.isSpreadElement(a) &&
-      ts.isIdentifier(a.expression) &&
-      a.expression.text === 'STAFF_ROLES'
-    ) {
-      out.push(...STAFF_ROLE_NAMES);
-    }
   }
   return out;
 }
@@ -160,9 +135,8 @@ function accessOf(decorators: readonly ts.Decorator[]): {
     case 'StudentOnly':
       return { access: { kind: 'student' }, markers };
     case 'Can':
-      return { access: { kind: 'can', keys: stringArgs(dec) }, markers };
     default:
-      return { access: { kind: 'roles', roles: stringArgs(dec) }, markers };
+      return { access: { kind: 'can', keys: stringArgs(dec) }, markers };
   }
 }
 

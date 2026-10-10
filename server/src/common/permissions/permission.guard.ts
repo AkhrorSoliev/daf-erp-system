@@ -62,8 +62,8 @@ export class PermissionGuard implements CanActivate {
       .switchToHttp()
       .getRequest<{ user?: { id?: number; roles?: string[] } }>();
     const user = request.user;
-    // A non-public route with no user was already refused by JwtAuthGuard.
-    if (user?.id == null) return true;
+    // JwtAuthGuard normally refuses first; this is defence in depth.
+    if (user?.id == null) throw new ForbiddenException(FORBIDDEN_MESSAGE);
 
     const caller = await this.permissions.forUser(user.id);
     user.roles = [...caller.roleNames];
@@ -71,10 +71,9 @@ export class PermissionGuard implements CanActivate {
     const access = this.reflector.getAllAndOverride<
       RouteAccessMeta | undefined
     >(ACCESS_KEY, targets);
-    // Transition: a route still on `@Roles` is checked by RolesGuard. Task 14
-    // turns this into a refusal once no such route is left.
-    if (!access) return true;
-    if (allows(access, caller)) return true;
+    // Fail closed: a route without a marker is a forgotten route. The
+    // manifest in `permission-routes.spec.ts` stops one from being merged.
+    if (access && allows(access, caller)) return true;
     throw new ForbiddenException(FORBIDDEN_MESSAGE);
   }
 }
