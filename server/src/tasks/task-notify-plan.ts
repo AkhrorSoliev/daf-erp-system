@@ -50,7 +50,16 @@ type Names = ReadonlyMap<number, string>;
 type TgFor = (userId: number) => TgNotice | null;
 const bellOnly: TgFor = () => null;
 
-const clip = (s: string, n = 80) => (s.length > n ? s.slice(0, n) + '…' : s);
+/**
+ * Cuts by code points, so an emoji at the cut is never left as a lone
+ * surrogate (the text reaches Telegram). The same shape as `clip` in
+ * telegram/task-telegram-text.ts, which is not imported here: this file is the
+ * lower layer, and that one pulls in telegraf.
+ */
+const clip = (s: string, n = 80) => {
+  const a = Array.from(s);
+  return a.length > n ? a.slice(0, n).join('') + '…' : s;
+};
 const who = (names: Names, id: number | null) =>
   id === null ? 'Tizim' : (names.get(id) ?? "Noma'lum");
 const assignees = (t: TaskEventTask) =>

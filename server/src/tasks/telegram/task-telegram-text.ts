@@ -343,7 +343,7 @@ function stateButtons(view: TgTaskView, viewerId: number): TgButtons {
     if (view.status === 'NEW') {
       row.push(cb('Boshladim', tkData('start', view.id)));
     }
-    // A photo is added on the website only until phase 3: no «Bajardim» here.
+    // No upload anywhere until phase 3 (the service refuses the review too): no «Bajardim».
     if (!view.requiresPhoto) row.push(cb('Bajardim', tkData('done', view.id)));
     if (row.length) rows.push(row);
   }

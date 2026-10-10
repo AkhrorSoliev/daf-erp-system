@@ -420,10 +420,9 @@ export class TasksService {
     actor: TaskActor,
   ): Promise<TaskDetail> {
     const text = requireText(title, 'Qadam nomini yozing');
-    await this.inTask(id, actor, (tx, ctx) =>
+    return this.stepWrite(id, actor, (tx, ctx) =>
       addStepTx(tx, ctx, text, actor.userId),
     );
-    return this.reload(id, actor);
   }
 
   async updateStep(
@@ -436,7 +435,7 @@ export class TasksService {
       patch.title === undefined
         ? undefined
         : requireText(patch.title, 'Qadam nomini yozing');
-    await this.inTask(id, actor, (tx, ctx) =>
+    return this.stepWrite(id, actor, (tx, ctx) =>
       updateStepTx(
         tx,
         ctx,
@@ -446,7 +445,6 @@ export class TasksService {
         actor.via,
       ),
     );
-    return this.reload(id, actor);
   }
 
   async deleteStep(
@@ -454,10 +452,28 @@ export class TasksService {
     stepId: string,
     actor: TaskActor,
   ): Promise<TaskDetail> {
-    await this.inTask(id, actor, (tx, ctx) =>
+    return this.stepWrite(id, actor, (tx, ctx) =>
       deleteStepTx(tx, ctx, stepId, actor.userId),
     );
-    return this.reload(id, actor);
+  }
+
+  /**
+   * A step write and the task read it answers with, in ONE transaction. The
+   * read used to come after the commit: when it failed, the caller got an
+   * error for a write that was saved, and a retry repeated it (the bot's
+   * second press un-ticked the step). Now a failing read rolls the write back,
+   * so an error always means nothing was saved.
+   */
+  private stepWrite(
+    id: string,
+    actor: TaskActor,
+    write: (tx: Prisma.TransactionClient, ctx: TaskCtx) => Promise<void>,
+  ): Promise<TaskDetail> {
+    return this.inTask(id, actor, async (tx, ctx) => {
+      await write(tx, ctx);
+      const { row } = await this.loadForAccess(tx, id, actor);
+      return toTaskDetail(row);
+    });
   }
 
   // ---------- discussion ----------
@@ -513,10 +529,5 @@ export class TasksService {
       });
     }
     return toTaskDetail(updated);
-  }
-
-  private async reload(id: string, actor: TaskActor): Promise<TaskDetail> {
-    const { row } = await this.loadForAccess(this.prisma, id, actor);
-    return toTaskDetail(row);
   }
 }
