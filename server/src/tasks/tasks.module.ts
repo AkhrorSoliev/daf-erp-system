@@ -11,6 +11,7 @@ import { TaskUserLifecycleListener } from './task-user-lifecycle.listener';
 import { TaskTelegramSender } from './telegram/task-telegram.sender';
 import { TaskTelegramListener } from './telegram/task-telegram.listener';
 import { TaskTelegramOutbox } from './telegram/task-telegram-outbox.service';
+import { TaskTelegramHandler } from './telegram/task-telegram.handler';
 
 @Module({
   // TelegramModule gives the main bot (`TelegramService.getBot()`). One way
@@ -26,6 +27,7 @@ import { TaskTelegramOutbox } from './telegram/task-telegram-outbox.service';
     TaskTelegramSender,
     TaskTelegramListener,
     TaskTelegramOutbox,
+    TaskTelegramHandler,
   ],
   exports: [TasksService],
 })
