@@ -1,7 +1,9 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationType } from '@prisma/client';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { encodeCursor } from '../tasks/task-cursor';
 
 const mockNotification = {
   id: 'notif-uuid-1',
@@ -27,6 +29,7 @@ describe('NotificationsService', () => {
         create: jest.fn().mockResolvedValue(mockNotification),
         findMany: jest.fn().mockResolvedValue([mockNotification]),
         count: jest.fn().mockResolvedValue(1),
+        groupBy: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       pushSubscription: {
@@ -135,48 +138,104 @@ describe('NotificationsService', () => {
   });
 
   describe('findByUser', () => {
-    it('should return paginated notifications', async () => {
-      const result = await service.findByUser(10001, { page: 1, pageSize: 20 });
+    const rows = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        ...mockNotification,
+        id: `id-${i}`,
+        createdAt: new Date(Date.UTC(2026, 9, 10, 10, 0, 0) - i * 60_000),
+      }));
 
-      expect(prisma.notification.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { userId: 10001 },
-          orderBy: { createdAt: 'desc' },
-          skip: 0,
-          take: 20,
-        }),
-      );
-      expect(result).toEqual({
-        data: [mockNotification],
-        total: 1,
-        page: 1,
-        pageSize: 20,
-      });
+    it('pages newest first with a keyset cursor and serves each row with its group', async () => {
+      const three = rows(3);
+      prisma.notification.findMany.mockResolvedValue(three);
+
+      const res = await service.findByUser(10001, { pageSize: 2 });
+
+      const arg = prisma.notification.findMany.mock.calls[0][0];
+      expect(arg.where).toEqual({ AND: [{ userId: 10001 }] });
+      expect(arg.orderBy).toEqual([{ createdAt: 'desc' }, { id: 'desc' }]);
+      expect(arg.take).toBe(3);
+      expect(res.data.map((r) => r.id)).toEqual(['id-0', 'id-1']);
+      expect(res.data[0].group).toBe('task');
+      expect(res.nextCursor).toBe(encodeCursor(three[1]));
     });
 
-    it('should handle page 2', async () => {
+    it('filters what waits, by group and by text, and continues after a cursor', async () => {
       prisma.notification.findMany.mockResolvedValue([]);
-      prisma.notification.count.mockResolvedValue(25);
+      const at = new Date('2026-10-10T05:00:00.000Z');
 
-      const result = await service.findByUser(10001, { page: 2, pageSize: 20 });
+      const res = await service.findByUser(10001, {
+        filter: 'pending',
+        type: 'payment',
+        q: '  Sardor ',
+        cursor: encodeCursor({ createdAt: at, id: 'id-9' }),
+      });
 
-      expect(prisma.notification.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: 20, take: 20 }),
-      );
-      expect(result.page).toBe(2);
+      expect(prisma.notification.findMany.mock.calls[0][0].where.AND).toEqual([
+        { userId: 10001 },
+        { actionRequired: true, resolvedAt: null },
+        { type: { in: ['PAYMENT_PROMISE_OVERDUE'] } },
+        {
+          OR: [
+            { title: { contains: 'Sardor', mode: 'insensitive' } },
+            { message: { contains: 'Sardor', mode: 'insensitive' } },
+          ],
+        },
+        {
+          OR: [
+            { createdAt: { lt: at } },
+            { createdAt: at, id: { lt: 'id-9' } },
+          ],
+        },
+      ]);
+      expect(res).toEqual({ data: [], nextCursor: null });
+    });
+
+    it('refuses a cursor it did not issue', async () => {
+      await expect(
+        service.findByUser(10001, { cursor: 'bm90LWEtY3Vyc29y' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('getUnreadCount', () => {
-    it('should return unread count', async () => {
+    it('counts only what waits for the user and is unread (the badge)', async () => {
+      prisma.notification.count.mockResolvedValue(5);
+      expect(await service.getUnreadCount(10001)).toEqual({ count: 5 });
+      expect(prisma.notification.count).toHaveBeenCalledWith({
+        where: {
+          userId: 10001,
+          actionRequired: true,
+          resolvedAt: null,
+          isRead: false,
+        },
+      });
+    });
+  });
+
+  describe('getCounts', () => {
+    it("adds the user's rows up by group, beside what waits", async () => {
+      prisma.notification.groupBy.mockResolvedValue([
+        { type: 'TASK_REVIEW', _count: { _all: 4 } },
+        { type: 'ATTENDANCE_ADMIN_ALERT', _count: { _all: 10 } },
+        { type: 'LESSON_STARTED', _count: { _all: 2 } },
+        { type: 'SYSTEM', _count: { _all: 1 } },
+      ]);
       prisma.notification.count.mockResolvedValue(5);
 
-      const result = await service.getUnreadCount(10001);
-
-      expect(prisma.notification.count).toHaveBeenCalledWith({
-        where: { userId: 10001, isRead: false },
+      expect(await service.getCounts(10001)).toEqual({
+        pending: 5,
+        all: 17,
+        groups: { task: 4, attendance: 12, payment: 0, system: 1 },
       });
-      expect(result).toEqual({ count: 5 });
+      expect(prisma.notification.groupBy).toHaveBeenCalledWith({
+        by: ['type'],
+        where: { userId: 10001 },
+        _count: { _all: true },
+      });
+      expect(prisma.notification.count).toHaveBeenCalledWith({
+        where: { userId: 10001, actionRequired: true, resolvedAt: null },
+      });
     });
   });
 

@@ -41,6 +41,12 @@ export class NotificationsController {
     return this.notificationsService.getUnreadCount(userId);
   }
 
+  /** The page's left list: what waits, everything, and each group. */
+  @Get('counts')
+  getCounts(@CurrentUser('id') userId: number) {
+    return this.notificationsService.getCounts(userId);
+  }
+
   @Public()
   @Get('vapid-public-key')
   getVapidPublicKey() {
