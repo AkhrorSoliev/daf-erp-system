@@ -13,6 +13,20 @@ export const yangiliklar: Yangilik[] = [
     sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
   },
   {
+    sana: "2026-10-11",
+    sarlavha: "Shartnomadagi ma'lumot o'quvchi profiliga yoziladi",
+    matn: "Shartnoma oynasida kiritilgan pasport, manzil, Telegram, ota-onaning ismi va telefoni endi o'quvchi profiliga ham yoziladi. Profilda bo'sh bo'lsa, saqlashda to'ldiriladi. Profildagidan farq qilsa, maydon ostida sariq ogohlantirish chiqadi: o'quvchidan qayta so'rab, «Profildagisi to'g'ri» yoki «Yangisi to'g'ri — profilni yangilash» ni tanlang. O'quvchining o'z telefon raqami bu yerdan o'zgarmaydi. Oyna endi profildagi ma'lumot bilan to'ldiriladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "shartnoma" },
+  },
+  {
+    sana: "2026-10-10",
+    sarlavha: "Ish haqi sahifasi yangilandi",
+    matn: "«Ish haqi» sahifasida endi bitta jadval va oy holati bor: oy davom etyaptimi, hisoblanganmi, tasdiqlanganmi yoki berilganmi — bir qarashda ko'rinadi. «Berildi» pul berilgan kun va naqd/karta summalarini so'raydi, pul tanlangan kassa va hisobdan chiqadi, xodimga bot orqali xabar boradi. Avans berilgan oyining oyligidan ushlanadi; «Avans» ustuni aynan shu oylikdan ushlanadigan summani ko'rsatadi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "tolovlar", sahifa: "ish-haqi" },
+  },
+  {
     sana: "2026-10-10",
     sarlavha: "Filial chegarasi mustahkamlandi",
     matn: "Filial direktori va administrator endi faqat o'z filialining ma'lumotini ko'radi va o'zgartiradi: o'quvchi balansini tuzatish, guruh jadvali, lidlar, oylik ro'yxati va ustoz stavkalari boshqa filial bo'yicha ochilmaydi. Yangi filialni faqat CEO ochadi. O'z oyligini «to'landi» deb belgilash va o'ziga avans yozishni endi boshqa rahbar qiladi. Ustoz stavkalari taymlaynda faqat oylikni ko'radiganlarga ko'rinadi. Bir nechta filialga biriktirilgan (CEO bo'lmagan) xodim Excel hisobotini endi bitta filial bo'yicha oladi.",

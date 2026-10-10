@@ -21,6 +21,7 @@ import {
 } from './contract-fields';
 import { assertCourseExtras, assertDay, extrasOf } from './contract-input';
 import { loadContractView, type ContractView } from './contract-view';
+import { PROFILE_SELECT, syncStudentProfile } from './profile-sync-apply';
 import type { UpdateContractDocumentDto } from './dto/contract-document.dto';
 import { renderContractPdf } from './pdf/contract-pdf';
 
@@ -97,9 +98,28 @@ export class ContractLifecycleService {
       };
     }
 
-    if (changed.length === 0) return loadContractView(this.prisma, id);
+    if (changed.length === 0 && !dto.customer) {
+      return loadContractView(this.prisma, id);
+    }
 
     return this.prisma.$transaction(async (tx) => {
+      if (dto.customer) {
+        const profile = await tx.student.findFirst({
+          where: { id: doc.studentId, companyId },
+          select: PROFILE_SELECT,
+        });
+        if (profile) {
+          await syncStudentProfile(tx, this.history, {
+            studentId: doc.studentId,
+            profile,
+            customer: next.customer,
+            updates: dto.profileUpdates,
+            companyId,
+            userId,
+          });
+        }
+      }
+      if (changed.length === 0) return loadContractView(tx, id);
       const res = await tx.contractDocument.updateMany({
         where: { id, signedAt: null, cancelledAt: null },
         data: { fields: next as unknown as Prisma.InputJsonValue },

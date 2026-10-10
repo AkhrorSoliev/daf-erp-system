@@ -148,6 +148,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0079](0079-imkoniyat-rol-emas.md) | Ruxsat imkoniyat bilan tekshiriladi, rol faqat kimlikni bildiradi | Qabul qilindi | 2026-10-10 |
 | [0080](0080-botdan-qoshilish-sorov-va-tasdiq.md) | Botdan ro'yxatdan o'tish so'rov: administrator tasdiqlamaguncha karta, guruh, hisob va pul yozilmaydi; 7 kunda o'zi yopiladi, hech qachon o'zi tasdiqlanmaydi; bot guruh va ustoz holatini tekshiradi | Qabul qilindi | 2026-10-10 |
 | [0081](0081-filial-chegarasi-qoidalari.md) | Filial chegarasi: bayram filialga tegishli, filialni faqat CEO ochadi, o'z oyligini o'zi to'lamaydi | Qabul qilindi | 2026-10-10 |
+| [0082](0082-avans-oz-oyidan-ushlanadi-berildi-sana-va-kassa.md) | Avans o'z oyining oyligidan ushlanadi (sanasi davr oxiridan oldingisi, cron va hisobot bitta funksiya bilan); «Berildi» kun va naqd/karta summalarini so'raydi, xodimga bot xabari boradi; hisoblash davri — faqat kalendar oyi | Qabul qilindi | 2026-10-10 |
 | [0083](0083-avtomatik-topshiriqlar.md) | Tizim uch topshiriqni o'zi beradi: buzilgan va'da (har o'quvchiga, administratorlarga — ertalabki ro'yxat o'rniga), qayta qo'ng'iroq (qo'ng'iroqdagi sana kuni), qo'ng'iroqsiz lid (24 soat, faqat yangi lidlar); faqat manbasi yopadi; 21:00 hisobotida topshiriqlar qatori | Qabul qilindi | 2026-10-11 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

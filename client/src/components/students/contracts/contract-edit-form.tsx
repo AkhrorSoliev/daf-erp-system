@@ -10,6 +10,13 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { ContractCourseExtras } from "./contract-course-extras";
 import { ContractCustomerFields } from "./contract-customer-fields";
 import {
+  profileConflicts,
+  profileUpdatesBody,
+  unsettled,
+  type ProfileField,
+  type StudentProfile,
+} from "./contract-profile";
+import {
   courseDraftFromFields,
   customerDraftFromFields,
   formProblem,
@@ -21,11 +28,13 @@ import type { ContractView, CustomerKind } from "./contract-types";
 
 interface Props {
   contract: ContractView;
+  /** The student's profile today, to settle differences with it. */
+  profile: StudentProfile;
   onCancel: () => void;
   onSaved: (view: ContractView) => void;
 }
 
-export function ContractEditForm({ contract, onCancel, onSaved }: Props) {
+export function ContractEditForm({ contract, profile, onCancel, onSaved }: Props) {
   const f = contract.fields;
   const [customer, setCustomer] = useState<CustomerDraft>(() =>
     customerDraftFromFields(f.customer),
@@ -34,7 +43,13 @@ export function ContractEditForm({ contract, onCancel, onSaved }: Props) {
     Object.fromEntries(f.courses.map((c) => [c.enrollmentId, courseDraftFromFields(c)])),
   );
   const [saving, setSaving] = useState(false);
-  const problem = formProblem({ customer, minor: f.student.isMinor });
+  const [profileUpdates, setProfileUpdates] = useState<ProfileField[]>([]);
+  const conflicts = profileConflicts(customer, profile);
+  const problem = formProblem({
+    customer,
+    minor: f.student.isMinor,
+    unsettledProfile: unsettled(conflicts, profileUpdates).length,
+  });
 
   // Switching the kind starts the block over; SELF takes the student's own name.
   const onKind = (kind: CustomerKind) =>
@@ -52,7 +67,7 @@ export function ContractEditForm({ contract, onCancel, onSaved }: Props) {
     try {
       const { data } = await api.patch<ContractView>(
         `/contract-documents/${contract.id}`,
-        updateBody(customer, courses),
+        updateBody(customer, courses, profileUpdatesBody(conflicts, profileUpdates)),
       );
       toast.success(`Shartnoma ${data.number} yangilandi`);
       onSaved(data);
@@ -75,6 +90,9 @@ export function ContractEditForm({ contract, onCancel, onSaved }: Props) {
           onChange={setCustomer}
           onKindChange={onKind}
           minor={f.student.isMinor}
+          profile={profile}
+          profileUpdates={profileUpdates}
+          onProfileUpdatesChange={setProfileUpdates}
         />
         {f.courses.map((c) => (
           <ContractCourseExtras

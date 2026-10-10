@@ -273,7 +273,9 @@ export const oquvchilar: QollanmaSahifa[] = [
       "shartnoma raqami",
       "shartnomani bekor qilish",
       "filial vakili",
+      "profil",
+      "profildagi ma'lumot",
     ],
-    yangilangan: "2026-10-10",
+    yangilangan: "2026-10-11",
   },
 ];

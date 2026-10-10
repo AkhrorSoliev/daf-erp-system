@@ -91,6 +91,17 @@ function makePrisma() {
     },
     enrollment: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     user: { findFirst: jest.fn().mockResolvedValue(null) },
+    student: {
+      findFirst: jest.fn().mockResolvedValue({
+        passportSeries: null,
+        address: null,
+        telegram: null,
+        parentName: null,
+        parentPhone: null,
+        phone: '901234567',
+      }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
@@ -101,16 +112,61 @@ function makePrisma() {
 
 describe('ContractLifecycleService', () => {
   let prisma: ReturnType<typeof makePrisma>;
-  let hist: { recordCreate: jest.Mock };
+  let hist: { recordCreate: jest.Mock; recordUpdate: jest.Mock };
   let service: ContractLifecycleService;
 
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(NOW);
     prisma = makePrisma();
-    hist = { recordCreate: jest.fn() };
+    hist = { recordCreate: jest.fn(), recordUpdate: jest.fn() };
     service = new ContractLifecycleService(prisma as never, hist as never);
   });
   afterEach(() => jest.useRealTimers());
+
+  describe('student profile', () => {
+    const editPassport = (profileUpdates?: string[]) =>
+      service.update(
+        'doc-1',
+        {
+          customer: { kind: 'SELF', fullName: 'x', passport: 'AC7654321' },
+          profileUpdates,
+        } as never,
+        1,
+        99,
+      );
+
+    it('fills an empty profile field and records it', async () => {
+      await editPassport();
+      expect(prisma.student.updateMany).toHaveBeenCalledWith({
+        where: { id: 10001 },
+        data: { passportSeries: 'AC7654321' },
+      });
+      expect(hist.recordUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          oldValues: { passportSeries: null },
+          newValues: { passportSeries: 'AC7654321' },
+        }),
+      );
+    });
+
+    it('refuses an unsettled difference and saves nothing', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        passportSeries: 'AB1234567',
+        address: null,
+        telegram: null,
+        parentName: null,
+        parentPhone: null,
+        phone: '901234567',
+      });
+      await expect(editPassport()).rejects.toThrow(/farq qiladi: pasport/);
+      expect(prisma.contractDocument.updateMany).not.toHaveBeenCalled();
+      await editPassport(['passportSeries']);
+      expect(prisma.student.updateMany).toHaveBeenCalledWith({
+        where: { id: 10001 },
+        data: { passportSeries: 'AC7654321' },
+      });
+    });
+  });
 
   it('updates the customer and course extras of an unsigned contract', async () => {
     await service.update(

@@ -273,7 +273,7 @@ describe('SalaryCenterTopUpService', () => {
       employeeSalaryConfigVersion: {
         findMany: jest.fn().mockResolvedValue([]),
       },
-      expense: { groupBy: jest.fn().mockResolvedValue([]) },
+      expense: { findMany: jest.fn().mockResolvedValue([]) },
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const monthlyModule: TestingModule = await Test.createTestingModule({

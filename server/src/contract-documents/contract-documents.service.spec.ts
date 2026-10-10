@@ -152,6 +152,32 @@ describe('ContractDocumentsService — create', () => {
   });
   afterEach(() => jest.useRealTimers());
 
+  it('writes the passport the profile lacked', async () => {
+    await service.create(dto(), 1, 99);
+    expect(prisma.student.updateMany).toHaveBeenCalledWith({
+      where: { id: 10001 },
+      data: { passportSeries: 'AB1234567' },
+    });
+  });
+
+  it('refuses an address that differs from the profile until the admin chooses', async () => {
+    const withAddress = (profileUpdates?: string[]) =>
+      dto({
+        customer: { kind: 'SELF', fullName: 'x', address: 'Toshkent' },
+        profileUpdates,
+      });
+    await expect(service.create(withAddress(), 1, 99)).rejects.toThrow(
+      /farq qiladi: manzil/,
+    );
+    expect(prisma.contractDocument.create).not.toHaveBeenCalled();
+
+    await service.create(withAddress(['address']), 1, 99);
+    expect(prisma.student.updateMany).toHaveBeenCalledWith({
+      where: { id: 10001 },
+      data: { address: 'Toshkent' },
+    });
+  });
+
   it('seals the fields, numbers the contract and links the courses', async () => {
     const view = await service.create(dto(), 1, 99);
 

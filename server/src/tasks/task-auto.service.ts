@@ -40,7 +40,7 @@ export class TaskAutoService {
 
   /**
    * One task per student whose promise the 09:00 cron broke, for the branch's
-   * administrators (ADR-0082: they no longer get the list). Only students who
+   * administrators (ADR-0083: they no longer get the list). Only students who
    * still owe `MIN_ALERT_DEBT` — the same people the list names — and not
    * those who already have an open «Buzilgan va'da» task.
    */

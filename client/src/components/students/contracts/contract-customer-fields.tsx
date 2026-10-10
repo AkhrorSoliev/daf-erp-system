@@ -19,18 +19,52 @@ import {
   type CustomerDraft,
 } from "./contract-rules";
 import type { CustomerKind } from "./contract-types";
+import { conflictFor, type ProfileField, type StudentProfile } from "./contract-profile";
+import { ProfileConflictNote } from "./profile-conflict-note";
 
 interface Props {
   value: CustomerDraft;
   onChange: (next: CustomerDraft) => void;
   onKindChange: (kind: CustomerKind) => void;
   minor: boolean | null;
+  /** The student's profile, to show where the dialog disagrees with it. */
+  profile?: StudentProfile | null;
+  profileUpdates?: ProfileField[];
+  onProfileUpdatesChange?: (next: ProfileField[]) => void;
 }
 
-export function ContractCustomerFields({ value, onChange, onKindChange, minor }: Props) {
+type NoteKey = "fullName" | "passport" | "address" | "phone" | "telegram";
+
+export function ContractCustomerFields({
+  value,
+  onChange,
+  onKindChange,
+  minor,
+  profile,
+  profileUpdates = [],
+  onProfileUpdatesChange,
+}: Props) {
   const self = value.kind === "SELF";
   const set = <K extends keyof CustomerDraft>(key: K, v: CustomerDraft[K]) =>
     onChange({ ...value, [key]: v });
+
+  const note = (key: NoteKey) => {
+    const conflict = conflictFor(key, value, profile);
+    if (!conflict) return null;
+    const without = profileUpdates.filter((f) => f !== conflict.field);
+    return (
+      <ProfileConflictNote
+        conflict={conflict}
+        chosenNew={conflict.writable && profileUpdates.includes(conflict.field)}
+        onKeepProfile={() => {
+          set(key, conflict.profileValue);
+          onProfileUpdatesChange?.(without);
+        }}
+        onUseNew={() => onProfileUpdatesChange?.([...without, conflict.field])}
+        onUndo={() => onProfileUpdatesChange?.(without)}
+      />
+    );
+  };
 
   return (
     <section className="space-y-3">
@@ -78,6 +112,7 @@ export function ContractCustomerFields({ value, onChange, onKindChange, minor }:
             disabled={self}
             maxLength={150}
           />
+          {note("fullName")}
         </div>
 
         {!self && (
@@ -100,6 +135,7 @@ export function ContractCustomerFields({ value, onChange, onKindChange, minor }:
             maxLength={30}
             placeholder="AB 1234567"
           />
+          {note("passport")}
         </div>
 
         <div className="space-y-1.5 sm:col-span-2">
@@ -110,11 +146,13 @@ export function ContractCustomerFields({ value, onChange, onKindChange, minor }:
             onChange={(e) => set("address", e.target.value)}
             maxLength={300}
           />
+          {note("address")}
         </div>
 
         <div className="space-y-1.5">
           <Label>Telefon</Label>
           <PhoneInput value={value.phone} onChange={(e) => set("phone", e.target.value)} />
+          {note("phone")}
         </div>
 
         <div className="space-y-1.5">
@@ -126,6 +164,7 @@ export function ContractCustomerFields({ value, onChange, onKindChange, minor }:
             maxLength={64}
             placeholder="@ism"
           />
+          {note("telegram")}
         </div>
 
         <div className="space-y-1.5 sm:col-span-2">

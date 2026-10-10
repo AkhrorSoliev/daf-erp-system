@@ -3,9 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, HandCoins, Info, TrendingUp, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MonthPicker } from "@/components/ui/month-picker";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
@@ -16,6 +14,8 @@ import type { EditableAdvance } from "./advance-row-actions";
 import { SalaryAdvanceCalendar } from "./salary-advance-calendar";
 import { SalaryAdvanceDayPanel } from "./salary-advance-day-panel";
 import { currentMonthKey } from "./salary-utils";
+import { SalaryAdvancesTable } from "./salary/salary-advances-table";
+import { useInvalidateSalary } from "./salary/salary-queries";
 
 export interface AdvanceDay {
   date: string;
@@ -35,6 +35,8 @@ export interface AdvanceRow {
   settled: boolean;
   settledPeriodStart: string | null;
   settledPeriodEnd: string | null;
+  /** «YYYY-MM»: the month of the payment that took it, or its own month while it waits. */
+  deductMonth: string;
   user: {
     id: number;
     firstName: string;
@@ -59,8 +61,6 @@ interface CalendarResponse {
   advances: AdvanceRow[];
 }
 
-const FALLBACK_FLOOR = "2026-05";
-
 /**
  * Modul darajasida — komponent ichida yozilsa har renderda yangi obyekt bo'lib,
  * `useUrlFilters` ichidagi `useMemo` va `setFilters` identifikatori bekorga
@@ -78,11 +78,17 @@ function shortDay(iso: string): string {
 }
 
 /**
- * «Avanslar» tabi — oy davomida qaysi kuni qancha avans berilgani.
- * Butun oy bitta so'rovda keladi, shuning uchun kunni tanlash mahalliy holat.
+ * «Avanslar» tab: how much advance was given on which day, then the month's
+ * advances as a table. The month picker and «Avans berish» live in the page
+ * header; the tab reads the month from `?month=`. The whole month arrives in
+ * one request, so picking a day is local state. The caller mounts the tab with
+ * `key={month}`, so a new month starts with no day picked and on page one of
+ * the table.
  */
 export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
-  const { filters, setFilters } = useUrlFilters(filtersSchema);
+  const { filters } = useUrlFilters(filtersSchema);
+  // An advance write moves the «Oyliklar» figures and the tab label too, not just this calendar.
+  const invalidateSalary = useInvalidateSalary();
   const [addOpen, setAddOpen] = useState(false);
   // Tanlangan kun URL'ga yozilmaydi — u vaqtinchalik UI holati.
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -98,7 +104,7 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
   const maxMonth = currentMonthKey();
   const month = filters.month || maxMonth;
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["salary-advance-calendar", month],
     queryFn: () =>
       api
@@ -110,32 +116,11 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
   });
 
   const totals = data?.totals;
-  const floorMonth = data?.floorMonth ?? FALLBACK_FLOOR;
-  // Server oyni floor'gacha ko'taradi — tanlagichda ham shuni ko'rsatamiz.
+  // The server lifts the month to the floor; the calendar shows that month.
   const shownMonth = data?.month ?? month;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <MonthPicker
-          value={shownMonth}
-          minMonth={floorMonth}
-          maxMonth={maxMonth}
-          onChange={(m) => {
-            setSelectedDate(null);
-            setFilters({ month: m });
-          }}
-          className="sm:w-52"
-        />
-        <div className="flex-1" />
-        {canPay && (
-          <Button className="shrink-0" onClick={() => setAddOpen(true)}>
-            <HandCoins className="size-4" />
-            Avans qo&apos;shish
-          </Button>
-        )}
-      </div>
-
       {isLoading ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -190,18 +175,10 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
       ) : data && data.days.length === 0 ? (
         <div className="rounded-lg border border-dashed p-10 text-center">
           <p className="text-sm text-muted-foreground">
-            Bu oyda avans berilmagan.
+            {canPay
+              ? "Bu oyda avans berilmagan — «Avans berish» tugmasi bilan qo'shing."
+              : "Bu oyda avans berilmagan."}
           </p>
-          {canPay && (
-            <Button
-              variant="outline"
-              className="mt-3"
-              onClick={() => setAddOpen(true)}
-            >
-              <HandCoins className="size-4" />
-              Avans qo&apos;shish
-            </Button>
-          )}
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
@@ -225,16 +202,23 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         </div>
       )}
 
-      {/* Kalendar barcha avanslarni ko'rsatadi, «Oyliklar» JAMI'si esa faqat
-          oylik ro'yxatidagi xodimlarnikini — farq yashirin qolmasin. */}
+      {isLoading ? (
+        <Skeleton className="h-40 w-full" />
+      ) : (
+        data &&
+        data.advances.length > 0 && <SalaryAdvancesTable advances={data.advances} />
+      )}
+
+      {/* An advance to someone with no salary is netted by no payout, so it
+          never shows in «Oyliklar»; say so, it is money nobody will take back. */}
       {totals && totals.outsideRoster.count > 0 && (
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
           <Info className="mt-0.5 size-4 shrink-0" />
           <p>
             {formatNumber(totals.outsideRoster.count)} ta avans (
-            {formatBalance(totals.outsideRoster.total)}) oylik ro&apos;yxatidan
-            tashqari xodimga berilgan — «Oyliklar» tabidagi Avans JAMI&apos;sida
-            ko&apos;rinmaydi.
+            {formatBalance(totals.outsideRoster.total)}) oyligi belgilanmagan
+            xodimga berilgan — oylik belgilanmaguncha hech qaysi oylikdan
+            ushlanmaydi va «Oyliklar» tabida ko&apos;rinmaydi.
           </p>
         </div>
       )}
@@ -245,7 +229,7 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
           setAddOpen(v);
           if (!v) setAddDate(null);
         }}
-        onSaved={() => refetch()}
+        onSaved={invalidateSalary}
         defaultDate={addDate}
       />
 
@@ -255,7 +239,7 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         onOpenChange={(v) => {
           if (!v) setEditAdvance(null);
         }}
-        onSaved={() => refetch()}
+        onSaved={invalidateSalary}
         advance={editAdvance}
       />
 
@@ -264,7 +248,7 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         onOpenChange={(v) => {
           if (!v) setDeleteAdvance(null);
         }}
-        onDeleted={() => refetch()}
+        onDeleted={invalidateSalary}
       />
     </div>
   );

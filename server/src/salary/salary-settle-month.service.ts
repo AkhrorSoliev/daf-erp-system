@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SettleMonthDto } from './dto/settle-month.dto';
@@ -10,6 +11,7 @@ import {
   SettleRow,
   writeSettledRows,
 } from './salary-settle-core';
+import { SALARY_PAID_EVENT, SalaryPaidPayload } from './salary-events';
 
 // Kept importable from here: callers and specs predate the core split.
 export { buildSettleNote } from './salary-settle-core';
@@ -56,6 +58,7 @@ export class SalarySettleMonthService {
   constructor(
     private prisma: PrismaService,
     private transactions: TransactionsService,
+    private events: EventEmitter2,
   ) {}
 
   async preview(
@@ -224,6 +227,15 @@ export class SalarySettleMonthService {
         companyId,
       },
     );
+
+    // After every write has committed, never inside one: each paid payee is
+    // told. A row another request paid first is not in `paymentIds`.
+    for (const salaryPaymentId of paymentIds) {
+      this.events.emit(SALARY_PAID_EVENT, {
+        salaryPaymentId,
+        companyId,
+      } satisfies SalaryPaidPayload);
+    }
 
     return {
       month: scope.month,

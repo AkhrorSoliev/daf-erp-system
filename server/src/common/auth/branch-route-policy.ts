@@ -596,8 +596,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'Administrator see every branch.',
     routes: [
       'GET /salary/accruals/:userId',
-      'GET /salary/advance-calendar',
-      'GET /salary/advances/:userId',
       'GET /salary/config-history/:userId',
       'GET /salary/config/:userId',
       'GET /salary/configs/by-users',

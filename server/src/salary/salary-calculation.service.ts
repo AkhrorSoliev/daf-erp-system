@@ -15,6 +15,7 @@ import {
   pickActiveVersion,
   RateVersion,
 } from './shared/deserved-math';
+import { planAdvanceNetting } from './shared/advance-netting';
 import { prorateFixedMonthly } from './shared/prorate-fixed-monthly';
 import {
   awaitsStudentPayment,
@@ -243,6 +244,7 @@ export class SalaryCalculationService {
             { id: paymentId, amount: gross - alreadySettledTotal },
             userId,
             companyId,
+            periodEndDateExclusive,
           );
 
           const finalNet = gross - alreadySettledTotal - newlyDeducted;
@@ -346,6 +348,7 @@ export class SalaryCalculationService {
             { id: salaryPayment.id, amount },
             config.userId,
             companyId,
+            periodEndDateExclusive,
           );
           return {
             finalNet: amount - advanceDeducted,
@@ -386,10 +389,11 @@ export class SalaryCalculationService {
 
   /**
    * Net outstanding TEACHER_ADVANCE expenses out of a freshly-created salary
-   * payment. Walks the advances in createdAt order and settles as many as
-   * fit inside the available amount — remaining advances stay unsettled and
-   * roll to the next cycle. Returns the total amount deducted so the caller
-   * can update the SalaryPayment.amount accordingly.
+   * payment. Only advances dated before the period end count (`planAdvanceNetting`
+   * walks them in createdAt order and settles as many as fit inside the
+   * available amount) — later ones and the remainder stay unsettled and roll to
+   * the next cycle. Returns the total amount deducted so the caller can update
+   * the SalaryPayment.amount accordingly.
    *
    * Must be called inside the same transaction that created the SalaryPayment
    * so settlement and the updated amount stay consistent.
@@ -399,6 +403,7 @@ export class SalaryCalculationService {
     salaryPayment: { id: string; amount: number },
     userId: number,
     companyId: number,
+    periodEndDateExclusive: Date,
   ): Promise<number> {
     const pending = await tx.expense.findMany({
       where: {
@@ -408,18 +413,15 @@ export class SalaryCalculationService {
         settledBySalaryPaymentId: null,
         deletedAt: null,
       },
-      select: { id: true, amount: true },
-      orderBy: { createdAt: 'asc' },
+      select: { id: true, amount: true, date: true, createdAt: true },
     });
     if (pending.length === 0) return 0;
 
-    const toSettle: string[] = [];
-    let deducted = 0;
-    for (const exp of pending) {
-      if (deducted + exp.amount > salaryPayment.amount) break;
-      toSettle.push(exp.id);
-      deducted += exp.amount;
-    }
+    const { settle: toSettle, total: deducted } = planAdvanceNetting(
+      pending,
+      salaryPayment.amount,
+      periodEndDateExclusive,
+    );
     if (toSettle.length === 0) return 0;
 
     await tx.expense.updateMany({
