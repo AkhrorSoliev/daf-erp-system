@@ -264,7 +264,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       '`companyId` and stopping. Cancelling was the worst of them: it flips ' +
       'attendance to EXCUSED, reverses the LESSON_CONSUMPTION, restores prepaid ' +
       "lessons and reverses the teacher's SalaryAccrual — real money in a " +
-      'branch the caller cannot even view.',
+      'branch the caller cannot even view. ' +
+      '`GET /lesson-reschedules/available-rooms` runs the same check on its ' +
+      "`groupId` before it lists the free rooms of that group's branch.",
     routes: [
       'GET /attendance/:groupId/calendar',
       'GET /attendance/:groupId/date/:date',
@@ -284,6 +286,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /lesson-reschedules',
       'PATCH /lesson-reschedules/:id',
       'DELETE /lesson-reschedules/:id',
+      'GET /lesson-reschedules/available-rooms',
       'POST /planned-absences/:groupId/date/:date',
       'DELETE /planned-absences/:id',
       'GET /lesson-teacher-overrides',
@@ -1150,14 +1153,8 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /archive/:entityType/:id',
   'GET /archive/counts',
   'GET /gateways/events',
-  'GET /groups/available-rooms',
-  'GET /groups/available-slots',
-  'GET /groups/available-teachers',
-  'GET /groups/next-name',
-  'GET /groups/schedule-conflicts',
   'GET /leads/:id/hover-summary',
   'GET /leads/by-student/:studentId',
-  'GET /lesson-reschedules/available-rooms',
   'GET /reports/financial-excel',
   'GET /reports/lead-analytics',
   'PATCH /leads/reorder',
@@ -1176,4 +1173,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 19;
+export const UNREVIEWED_BUDGET = 13;

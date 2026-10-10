@@ -53,6 +53,26 @@ describe('LessonReschedulesController (e2e validation)', () => {
     expect(res.status).toBe(200);
   });
 
+  it("hands the caller's id and roles to the service for the group check", async () => {
+    findAvailableRooms.mockClear();
+
+    await request(app.getHttpServer())
+      .get('/lesson-reschedules/available-rooms')
+      .query({
+        groupId: 'group-1',
+        date: '2026-05-12',
+        startTime: '10:00',
+        endTime: '11:30',
+      })
+      .expect(200);
+
+    expect(findAvailableRooms).toHaveBeenCalledWith(
+      expect.objectContaining({ groupId: 'group-1' }),
+      1,
+      { userId: 99, roles: ['CEO'] },
+    );
+  });
+
   it.each([
     {
       name: 'CUID-style group id with underscore',

@@ -48,8 +48,13 @@ export class LessonReschedulesController {
   availableRooms(
     @Query() query: AvailableRoomsQueryDto,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
   ) {
-    return this.service.findAvailableRooms(query, companyId);
+    return this.service.findAvailableRooms(query, companyId, {
+      userId,
+      roles,
+    });
   }
 
   @Post()
