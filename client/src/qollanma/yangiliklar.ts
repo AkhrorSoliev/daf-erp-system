@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-11",
+    sarlavha: "Avtomatik topshiriqlar",
+    matn: "Tizim endi uch topshiriqni o'zi beradi. «Buzilgan va'da» — ertalab 09:00 da va'dasi buzilgan, qarzi 1 000 so'mdan kam bo'lmagan har o'quvchiga bittadan, filial administratorlariga; administratorlarga ertalabki ro'yxat endi kelmaydi (CEO avvalgidek oladi). «Qayta qo'ng'iroq» — qo'ng'iroq natijasida «Keyingi bog'lanish sanasi» qo'yilsa, o'sha kunga qo'ng'iroqni yozgan xodimga; Telegram'ga o'sha kuni 08:00 da keladi. «Qo'ng'iroqsiz lid» — yangi lidga 24 soat ichida qo'ng'iroq qilinmasa, filial administratorlariga (bugundan keyin kelgan lidlar uchun). Muddati — 18:00. Topshiriq varag'ida o'quvchi yoki lid haqida karta va bitta tugma bor: «Qo'ng'iroqni yozish» yoki «Lidni ochish». Ish bajarilganda — qarz to'lansa, qo'ng'iroq yozilsa, lidga qo'ng'iroq belgisi qo'yilsa — topshiriq o'zi yopiladi. Kechki 21:00 hisobotida muddati o'tgan topshiriqlar soni chiqadi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
     sana: "2026-10-10",
     sarlavha: "Filial chegarasi mustahkamlandi",
     matn: "Filial direktori va administrator endi faqat o'z filialining ma'lumotini ko'radi va o'zgartiradi: o'quvchi balansini tuzatish, guruh jadvali, lidlar, oylik ro'yxati va ustoz stavkalari boshqa filial bo'yicha ochilmaydi. Yangi filialni faqat CEO ochadi. O'z oyligini «to'landi» deb belgilash va o'ziga avans yozishni endi boshqa rahbar qiladi. Ustoz stavkalari taymlaynda faqat oylikni ko'radiganlarga ko'rinadi. Bir nechta filialga biriktirilgan (CEO bo'lmagan) xodim Excel hisobotini endi bitta filial bo'yicha oladi.",
