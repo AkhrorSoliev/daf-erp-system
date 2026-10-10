@@ -422,8 +422,10 @@ export class ReportsService {
   getGroupAnalytics(companyId: number, query: ReportsQueryDto) {
     return this.overview.getGroupAnalytics(companyId, query);
   }
-  getLeadAnalytics(query: ReportsQueryDto) {
-    return this.overview.getLeadAnalytics(query);
+  // The workbook's «Lidlar» leg — its only caller since the unused
+  // `GET /reports/lead-analytics` route was deleted.
+  getLeadAnalytics(companyId: number, query: ReportScopeQuery) {
+    return this.overview.getLeadAnalytics(companyId, query);
   }
 
   // Attendance analytics

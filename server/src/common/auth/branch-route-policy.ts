@@ -1125,10 +1125,20 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "through each branch's own snapshot rows. The overview's salary card is " +
       'confined by payroll scope from `performedById`, after `resolveScope` has ' +
       "already refused a branch outside the ceiling. The history's holiday " +
-      'markers are not branch-filtered: holidays are company-wide.',
+      'markers are not branch-filtered: they mark every holiday created in the ' +
+      "company, other branches' included. " +
+      '`GET /reports/financial-excel` resolves the same way and hands that one ' +
+      'list to every leg of the workbook. Payroll and the operational sheets ' +
+      '(rooms, attendance, teacher performance and changes) take ONE branch, ' +
+      'so `ReportsExcelService.generate` refuses a list of several with 400 ' +
+      '«filialni tanlang» before reading anything, as `scoped()` does on the ' +
+      'operational report routes; the «Lidlar» sheet counts leads with ' +
+      '`companyId` and `leadAttributionWhere`, so a branch funnel leaves the ' +
+      'unassigned pool out.',
     routes: [
       'GET /reports/debt-write-offs-summary',
       'GET /reports/expectation-history',
+      'GET /reports/financial-excel',
       'GET /reports/financial-overview',
       'GET /reports/financial-trend',
       'GET /reports/income-month-attribution',
@@ -1177,8 +1187,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /archive/:entityType/:id',
   'GET /archive/counts',
   'GET /gateways/events',
-  'GET /reports/financial-excel',
-  'GET /reports/lead-analytics',
   'POST /archive/:entityType/:id/restore',
 ];
 
@@ -1193,4 +1201,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 9;
+export const UNREVIEWED_BUDGET = 7;

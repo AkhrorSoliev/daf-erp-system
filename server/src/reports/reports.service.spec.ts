@@ -514,7 +514,7 @@ describe('ReportsService', () => {
           { createdAt: tenDaysAgo, statusEnum: 'NEW' },
         ]);
 
-      const result = await service.getLeadAnalytics({});
+      const result = await service.getLeadAnalytics(1, { branchIds: null });
 
       expect(result.funnel).toHaveLength(4);
       expect(result.averageDaysToConversion).toBe(10);
@@ -526,7 +526,7 @@ describe('ReportsService', () => {
       ]);
       prisma.lead.findMany.mockResolvedValue([]);
 
-      const result = await service.getLeadAnalytics({});
+      const result = await service.getLeadAnalytics(1, { branchIds: null });
 
       expect(result.averageDaysToConversion).toBeNull();
     });
@@ -539,7 +539,7 @@ describe('ReportsService', () => {
       prisma.lead.groupBy.mockResolvedValue([]);
       prisma.lead.findMany.mockResolvedValue([]);
 
-      await service.getLeadAnalytics({});
+      await service.getLeadAnalytics(1, { branchIds: null });
 
       const groupByWhere = prisma.lead.groupBy.mock.calls[0][0].where;
       expect(groupByWhere.sectionId).toEqual({ not: null });

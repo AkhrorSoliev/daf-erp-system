@@ -63,6 +63,12 @@ export function ExportOptionsPopover({
 
   const [open, setOpen] = useState(false);
   const [branchId, setBranchId] = useState<string>("all"); // "all" | branchId
+  // A non-CEO holding several branches must pick one: the workbook's payroll
+  // and operational sheets are built for ONE branch, and the server refuses a
+  // several-branch scope with 400 «filialni tanlang».
+  const mustPickBranch = !isCeo && branches.length > 1;
+  const selectedBranchId =
+    mustPickBranch && branchId === "all" ? String(branches[0].id) : branchId;
   // Default: none ticked — an untouched download yields the short ten-sheet
   // report. Everything else is opt-in via the checkboxes below.
   const [extras, setExtras] = useState<Record<ExtraKey, boolean>>({
@@ -83,7 +89,7 @@ export function ExportOptionsPopover({
         endDate: endStr,
         include: active.join(","),
       };
-      if (branchId !== "all") params.branchId = Number(branchId);
+      if (selectedBranchId !== "all") params.branchId = Number(selectedBranchId);
       const res = await api.get("/reports/financial-excel", {
         params,
         responseType: "blob",
@@ -116,14 +122,16 @@ export function ExportOptionsPopover({
           <Label className="text-xs font-medium text-muted-foreground">
             Filial
           </Label>
-          <Select value={branchId} onValueChange={setBranchId}>
+          <Select value={selectedBranchId} onValueChange={setBranchId}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">
-                {isCeo ? "Barcha filiallar" : "Barcha filiallarim"}
-              </SelectItem>
+              {!mustPickBranch && (
+                <SelectItem value="all">
+                  {isCeo ? "Barcha filiallar" : "Barcha filiallarim"}
+                </SelectItem>
+              )}
               {branches.map((b) => (
                 <SelectItem key={b.id} value={String(b.id)}>
                   {b.name}
