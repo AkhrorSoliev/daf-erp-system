@@ -39,3 +39,18 @@ describe('CompanyService.update — DaF normasi tekshiruvi', () => {
     expect(prisma.company.update).toHaveBeenCalled();
   });
 });
+
+describe('CompanyService.findOne — the company row alone', () => {
+  it('does not include every branch and every course', async () => {
+    const prisma = {
+      company: { findUnique: jest.fn().mockResolvedValue({ id: 1001 }) },
+    };
+    const service = new CompanyService(prisma as never);
+
+    await service.findOne(1001);
+
+    expect(prisma.company.findUnique).toHaveBeenCalledWith({
+      where: { id: 1001 },
+    });
+  });
+});

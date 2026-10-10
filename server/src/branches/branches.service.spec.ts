@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { BranchesService } from './branches.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -391,6 +391,37 @@ describe('BranchesService — branch onboarding', () => {
         data: expect.not.objectContaining({ id: expect.anything() }),
       }),
     );
+  });
+
+  it('refuses a Branch Director with 403 and writes nothing — only the CEO opens a branch', async () => {
+    prisma.user.findFirst.mockResolvedValue({
+      mainBranch: 1,
+      branches: [{ branchId: 1 }],
+      roles: [{ role: { name: 'Branch Director' } }],
+    });
+
+    const attempt = service.create(dto, 1001, 42);
+    await expect(attempt).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(attempt).rejects.toThrow(
+      'Yangi filialni faqat CEO ocha oladi',
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(tx.branch.create).not.toHaveBeenCalled();
+    expect(tx.cashAccount.createMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses a caller who cannot be identified (fail closed)', async () => {
+    await expect(service.create(dto, 1001, undefined)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('lets the CEO open a branch', async () => {
+    await expect(service.create(dto, 1001, 42)).resolves.toMatchObject({
+      id: 5,
+      name: 'Namangan',
+    });
   });
 
   describe('readiness', () => {

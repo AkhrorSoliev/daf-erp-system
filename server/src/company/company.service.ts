@@ -33,9 +33,13 @@ export class CompanyService {
   }
 
   async findOne(id: number) {
+    // The company row only. This used to include every branch (address, phone,
+    // representative) and every course (price, payment model) — handed to any
+    // signed-in account (`@AnyUser`, students included), past the ceiling on
+    // `GET /branches` and the scope on `GET /courses`. Both settings pages that
+    // read this route use company fields alone.
     const company = await this.prisma.company.findUnique({
       where: { id },
-      include: { branches: true, courses: true },
     });
 
     if (!company) {

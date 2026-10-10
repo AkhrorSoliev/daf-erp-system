@@ -968,12 +968,14 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     policy: 'COMPANY_WIDE',
     reason:
       'The company row itself: name, phone, logo, lead-form text, the DaF ' +
-      "activity norms. `GET /company` returns only the caller's own company " +
-      '(`where: { id: companyId }`) with no relations; `PATCH /company/:id` ' +
-      "refuses another company's id and needs `settings.company`, which no role " +
-      'but the CEO holds by default. `GET /company/:id` is NOT here: it ' +
-      'includes every branch and every course.',
-    routes: ['GET /company', 'PATCH /company/:id'],
+      "activity norms. `GET /company` reads only the caller's own company " +
+      '(`where: { id: companyId }`); `GET /company/:id` and `PATCH /company/:id` ' +
+      "refuse another company's id with 403. None of them returns a relation: " +
+      '`findOne` used to include every branch and every course (addresses, ' +
+      'prices), which handed them to any signed-in account past the ceiling ' +
+      'on `GET /branches`. The write needs `settings.company`, which no role ' +
+      'but the CEO holds by default.',
+    routes: ['GET /company', 'GET /company/:id', 'PATCH /company/:id'],
   },
   {
     policy: 'COMPANY_WIDE',
@@ -981,10 +983,11 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'Opening a branch. There is no existing branch to check against: the row ' +
       "is new, and its transaction writes only that branch's own two cash " +
       'accounts and its NEW lead column. It is company structure, not branch ' +
-      'data. `settings.branches` is held by Branch Director by default, so a ' +
-      'director can open a branch they are not attached to — no `UserBranch` ' +
-      'row is written, so they cannot see it afterwards; widening the ' +
-      'capability further needs a decision first (spec §6).',
+      "data, and by the CEO's decision of 10.10.2026 only the CEO opens one: " +
+      '`BranchesService.create` refuses every other caller with 403 before its ' +
+      'transaction, although `settings.branches` (Branch Director by default) ' +
+      'still admits them to the route — a director keeps editing their own ' +
+      'branch through the id-addressed `/branches/:id` routes.',
     routes: ['POST /branches'],
   },
   {
@@ -1035,6 +1038,31 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'all. The ceiling rather than `@BranchScope()` is deliberate: narrowing ' +
       'by the selected branch would leave the user unable to switch away.',
     routes: ['GET /branches'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      "The rooms page's branch tabs: each branch with its name, address, " +
+      'status and room count. The route is open to every signed-in account ' +
+      '(`@AnyUser`), so it takes `@BranchCeiling()` and filters ' +
+      '`id: { in: ceiling }`, the shape of `GET /branches`: a confined caller ' +
+      'lists only their own branches, a caller with no branch lists none, the ' +
+      'CEO (`null`) lists all. The ceiling rather than the selection, because ' +
+      'the page picks among these tabs itself and then reads ' +
+      '`GET /rooms?branch_id=`, which is header-scoped.',
+    routes: ['GET /rooms/count-by-branch'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      'The approved groups on the «Telegram guruhlar» settings page. It takes ' +
+      '`@BranchCeiling()` (every group the caller may administer, whichever ' +
+      'branch the switcher shows) and keeps `branchId in ceiling` OR ' +
+      "`branchId null`: a confined caller sees their own branches' groups plus " +
+      'the branch-less ones, i.e. an unassigned group they may point at their ' +
+      'own branch through `PATCH /telegram-groups/:id`, and an org-wide one. ' +
+      'The CEO (`null`) sees every approved group of the company.',
+    routes: ['GET /telegram-groups'],
   },
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
@@ -1121,7 +1149,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /archive/:entityType',
   'GET /archive/:entityType/:id',
   'GET /archive/counts',
-  'GET /company/:id',
   'GET /gateways/events',
   'GET /groups/available-rooms',
   'GET /groups/available-slots',
@@ -1133,8 +1160,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /lesson-reschedules/available-rooms',
   'GET /reports/financial-excel',
   'GET /reports/lead-analytics',
-  'GET /rooms/count-by-branch',
-  'GET /telegram-groups',
   'PATCH /leads/reorder',
   'POST /archive/:entityType/:id/restore',
   'POST /leads',
@@ -1151,4 +1176,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 22;
+export const UNREVIEWED_BUDGET = 19;

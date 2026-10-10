@@ -224,6 +224,33 @@ describe('TelegramGroupsService', () => {
     });
   });
 
+  describe('listForCompany', () => {
+    beforeEach(() => {
+      mockPrisma.telegramGroup.findMany.mockResolvedValue([]);
+    });
+
+    it("shows a confined caller their own branches' groups and the branch-less ones", async () => {
+      await service.listForCompany(1001, [1]);
+
+      expect(mockPrisma.telegramGroup.findMany.mock.calls[0][0].where).toEqual({
+        companyId: 1001,
+        status: TelegramGroupStatus.APPROVED,
+        deletedAt: null,
+        OR: [{ branchId: { in: [1] } }, { branchId: null }],
+      });
+    });
+
+    it('shows the CEO every approved group of the company', async () => {
+      await service.listForCompany(1001, null);
+
+      expect(mockPrisma.telegramGroup.findMany.mock.calls[0][0].where).toEqual({
+        companyId: 1001,
+        status: TelegramGroupStatus.APPROVED,
+        deletedAt: null,
+      });
+    });
+  });
+
   describe('onBotAddedToGroup', () => {
     it('upserts as PENDING with addedByTelegramUserId', async () => {
       mockPrisma.telegramGroup.upsert.mockResolvedValue({ id: 'new' });
