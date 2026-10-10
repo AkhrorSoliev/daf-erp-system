@@ -180,13 +180,16 @@ function planFor(event: string, payload: unknown, names: Names): Notice[] {
     case TASK_EVENTS.UNASSIGNED: {
       const p = payload as TaskUnassignedPayload;
       const by = who(names, p.actorId);
+      // The bell tells every removed person; Telegram only a removed assignee
+      // (a watcher hears «Bajarildi» and «Bekor qilindi» and nothing else).
+      const wasAssignee = new Set(p.removedAssigneeIds);
       return mk(
         notActor(p.userIds, p.actorId),
         'TASK_UPDATED',
         'Topshiriqdan olib tashlandingiz',
         `${by}: «${clip(p.task.title)}»`,
         false,
-        () => ({ kind: 'REMOVED', by }),
+        (u) => (wasAssignee.has(u) ? { kind: 'REMOVED', by } : null),
       );
     }
     case TASK_EVENTS.REVIEW_REQUESTED: {

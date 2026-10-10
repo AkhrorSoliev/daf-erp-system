@@ -389,6 +389,7 @@ export class TasksService {
         task,
         actorId: actor.userId,
         userIds: r.removed,
+        removedAssigneeIds: r.removedAssignees,
       });
     }
     return toTaskDetail(r.updated);

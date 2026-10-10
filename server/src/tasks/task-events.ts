@@ -60,7 +60,14 @@ export interface TaskAssignedPayload {
 export interface TaskUnassignedPayload {
   task: TaskEventTask;
   actorId: number;
+  /** Everyone removed, assignees and watchers alike (the bell tells them all). */
   userIds: number[];
+  /**
+   * The part of `userIds` that were ASSIGNEES. The task in the payload is the
+   * row after the removal, so the roles are gone from it; Telegram tells only
+   * these (spec §6.1: a watcher hears «Bajarildi» and «Bekor qilindi» only).
+   */
+  removedAssigneeIds: number[];
 }
 export interface TaskStatusChangedPayload {
   task: TaskEventTask;

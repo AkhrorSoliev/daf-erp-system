@@ -127,7 +127,7 @@ describe('planNotices (spec §6.1 table, bell leg)', () => {
     expect(
       planNotices(
         TASK_EVENTS.UNASSIGNED,
-        { task, actorId: 30, userIds: [41] },
+        { task, actorId: 30, userIds: [41], removedAssigneeIds: [41] },
         names,
       )[0],
     ).toMatchObject({ userId: 41, type: 'TASK_UPDATED' });
@@ -192,7 +192,7 @@ describe('planNotices: the actor never hears about their own action', () => {
     expect(
       planNotices(
         TASK_EVENTS.UNASSIGNED,
-        { task, actorId: 41, userIds: [41] },
+        { task, actorId: 41, userIds: [41], removedAssigneeIds: [41] },
         names,
       ),
     ).toEqual([]);
@@ -383,6 +383,37 @@ describe('planNotices: the Telegram leg (spec §6.1)', () => {
     ).toEqual([[41, { kind: 'ADDED', by: 'Soliyev A.' }]]);
   });
 
+  it('a watcher added later hears nothing on Telegram', () => {
+    expect(
+      tgOf(
+        planNotices(
+          TASK_EVENTS.ASSIGNED,
+          { task, actorId: 30, userIds: [41, 50] },
+          names,
+        ),
+      ),
+    ).toEqual([
+      [41, { kind: 'ADDED', by: 'Soliyev A.' }],
+      [50, null],
+    ]);
+  });
+
+  it('a removed watcher is told on the bell only, a removed assignee on both', () => {
+    const n = planNotices(
+      TASK_EVENTS.UNASSIGNED,
+      { task, actorId: 30, userIds: [41, 50], removedAssigneeIds: [41] },
+      names,
+    );
+    expect(n.map((x) => [x.userId, x.title])).toEqual([
+      [41, 'Topshiriqdan olib tashlandingiz'],
+      [50, 'Topshiriqdan olib tashlandingiz'],
+    ]);
+    expect(tgOf(n)).toEqual([
+      [41, { kind: 'REMOVED', by: 'Soliyev A.' }],
+      [50, null],
+    ]);
+  });
+
   it('moved, removed, review', () => {
     expect(
       tgOf(
@@ -397,7 +428,7 @@ describe('planNotices: the Telegram leg (spec §6.1)', () => {
       tgOf(
         planNotices(
           TASK_EVENTS.UNASSIGNED,
-          { task, actorId: 30, userIds: [41] },
+          { task, actorId: 30, userIds: [41], removedAssigneeIds: [41] },
           names,
         ),
       ),
@@ -504,33 +535,48 @@ describe('planNotices: the Telegram leg (spec §6.1)', () => {
   });
 
   it('nobody is ever told about what they did themselves', () => {
-    const cases: [string, unknown][] = [
+    // [event, payload, who is told]: the others are named too, so a plan that
+    // told nobody at all would fail as well.
+    const twoWatchers: TaskEventTask = {
+      ...task,
+      participants: [...task.participants, { userId: 51, role: 'WATCHER' }],
+    };
+    const cases: [string, unknown, number[]][] = [
       [
         TASK_EVENTS.ASSIGNED,
         { task, actorId: 40, userIds: [40, 41], created: true },
+        [41],
       ],
-      [TASK_EVENTS.UNASSIGNED, { task, actorId: 41, userIds: [41] }],
+      [
+        TASK_EVENTS.UNASSIGNED,
+        { task, actorId: 41, userIds: [41, 40], removedAssigneeIds: [41, 40] },
+        [40],
+      ],
+      // The author is the only one this event tells, and the author did it.
       [
         TASK_EVENTS.REVIEW_REQUESTED,
         { task: { ...task, authorId: 40 }, actorId: 40 },
+        [],
       ],
       [
         TASK_EVENTS.REVIEWED,
         { task, actorId: 40, accepted: true, reason: null },
+        [41, 50],
       ],
       [
         TASK_EVENTS.STATUS_CHANGED,
-        { task, actorId: 50, from: 'IN_PROGRESS', to: 'DONE' },
+        { task: twoWatchers, actorId: 50, from: 'IN_PROGRESS', to: 'DONE' },
+        [51],
       ],
-      [TASK_EVENTS.COMMENTED, { task, actorId: 50, text: 'x' }],
-      [TASK_EVENTS.CANCELLED, { task, actorId: 50, reason: null }],
-      [TASK_EVENTS.DUE_CHANGED, { task, actorId: 40 }],
+      [TASK_EVENTS.COMMENTED, { task, actorId: 50, text: 'x' }, [30, 40, 41]],
+      [TASK_EVENTS.CANCELLED, { task, actorId: 50, reason: null }, [40, 41]],
+      [TASK_EVENTS.DUE_CHANGED, { task, actorId: 40 }, [41]],
     ];
-    for (const [event, payload] of cases) {
+    for (const [event, payload, told] of cases) {
       const actor = (payload as { actorId: number }).actorId;
-      expect(
-        planNotices(event, payload, names).map((n) => n.userId),
-      ).not.toContain(actor);
+      const ids = planNotices(event, payload, names).map((n) => n.userId);
+      expect(ids).not.toContain(actor);
+      expect([...ids].sort()).toEqual(told);
     }
   });
 

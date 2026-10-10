@@ -588,7 +588,35 @@ describe('TasksService writes', () => {
     );
     expect(emitter.emit).toHaveBeenCalledWith(
       TASK_EVENTS.UNASSIGNED,
-      expect.objectContaining({ userIds: [40] }),
+      expect.objectContaining({ userIds: [40], removedAssigneeIds: [40] }),
+    );
+  });
+
+  it('setParticipants names which of the removed were assignees (a removed watcher is not)', async () => {
+    prisma.task.findFirst.mockResolvedValue(
+      makeRow({
+        participants: [
+          {
+            userId: 40,
+            role: 'ASSIGNEE',
+            seenAt: null,
+            user: { id: 40, firstName: 'T', lastName: 'U', photo: null },
+          },
+          {
+            userId: 41,
+            role: 'WATCHER',
+            seenAt: null,
+            user: { id: 41, firstName: 'V', lastName: 'W', photo: null },
+          },
+        ],
+      }),
+    );
+    prisma.user.findMany.mockResolvedValue([{ ...TEACHER, id: 42 }]);
+    // 40 (assignee) and 41 (watcher) both leave; 42 takes over.
+    await service.setParticipants('t1', [42], [], authorActor());
+    expect(emitter.emit).toHaveBeenCalledWith(
+      TASK_EVENTS.UNASSIGNED,
+      expect.objectContaining({ userIds: [40, 41], removedAssigneeIds: [40] }),
     );
   });
 
