@@ -47,6 +47,8 @@
  */
 import 'dotenv/config';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { mkdtemp, rm } from 'fs/promises';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { S3Client } from '@aws-sdk/client-s3';
 import { R2Uploader } from '../src/daf-content/media/r2-uploader';
@@ -63,6 +65,22 @@ import {
   type DialogAudioManifest,
 } from '../src/daf/inhalt/dialog-audio';
 import type { Dialog, DialogeFile } from '../src/daf/inhalt/unit-inhalt.types';
+import {
+  pruefeHoerspiel,
+  type HoerspielRegie,
+} from '../src/daf/media/hoerspiel';
+import {
+  benoetigteGeraeusche,
+  entscheideDialoge,
+  GERAEUSCH_PREIS_SEK,
+  GERAEUSCH_SEK_CHEGARASI,
+} from '../src/daf/media/hoerspiel-auftrag';
+import {
+  erzeugeGeraeusche,
+  ladeGeraeuschManifest,
+  mischeUndLade,
+  r2Laden,
+} from './lib/hoerspiel-lauf';
 
 const A1 = join(__dirname, '..', 'content', 'daf', 'a1');
 const MANIFEST_PATH = join(A1, 'dialog-audio.json');
@@ -98,10 +116,14 @@ const REQUIRED_ENV = [
 
 export type Stimmen = Record<string, string>;
 
-/** `dialog-regie.json`: per dialog a German scene and one tone per line. */
+/**
+ * `dialog-regie.json`: per dialog a German scene and one tone per line;
+ * `hoerspiel` (optional) makes the realistic version — room tone, sound
+ * effects between the lines, lines from another room (`hoerspiel.ts`).
+ */
 export type DialogRegie = Record<
   string,
-  { szene: string; toene: Array<string | null> }
+  { szene: string; toene: Array<string | null>; hoerspiel?: HoerspielRegie }
 >;
 
 // A tone becomes "[tone]" in the prompt: plain lowercase English words, so
@@ -169,6 +191,13 @@ export function geminiDialog(
       throw new Error(
         `${dialog.id}: «${ton}» ohang (ton) bo'la olmaydi — faqat kichik harfli inglizcha so'zlar.`,
       );
+    }
+  }
+
+  if (r.hoerspiel) {
+    const probleme = pruefeHoerspiel(r.hoerspiel, dialog.zeilen.length);
+    if (probleme.length > 0) {
+      throw new Error(`${dialog.id}: ${probleme.join('; ')}`);
     }
   }
 
@@ -284,10 +313,17 @@ function ladeDialoge(): Dialog[] {
   return einzeln.length > 0 ? alle.filter((d) => einzeln.includes(d.id)) : alle;
 }
 
+export interface DialogErgebnis {
+  key: string;
+  polster?: string;
+  rohKey?: string;
+  hoerspiel?: string;
+}
+
 export type DialogGenerierFn = (
   dialog: Dialog,
   anfrage: GeminiDialog,
-) => Promise<{ key: string; polster?: string }>;
+) => Promise<DialogErgebnis>;
 
 /**
  * Dialoglarni BIRIN-KETIN ishlaydi (2026-09-12 ko'rik, F2): har biri
@@ -308,7 +344,7 @@ export async function generiereDialogeNacheinander(
   speichereManifest: (manifest: DialogAudioManifest) => void,
 ): Promise<void> {
   for (const d of dialoge) {
-    let result: { key: string; polster?: string };
+    let result: DialogErgebnis;
     try {
       result = await generiere(d, anfrageById.get(d.id)!);
     } catch (err) {
@@ -321,6 +357,8 @@ export async function generiereDialogeNacheinander(
       textHash: dialogTextHash(d.zeilen),
       ...(result.polster ? { polster: result.polster } : {}),
       modell: DIALOG_AUDIO_MODELL,
+      ...(result.rohKey ? { rohKey: result.rohKey } : {}),
+      ...(result.hoerspiel ? { hoerspiel: result.hoerspiel } : {}),
     };
     speichereManifest(manifest);
     console.log(
@@ -344,6 +382,9 @@ export function erstelleGeneriere(
   uploader: Pick<R2Uploader, 'uploadBytes'>,
   fetchFn: typeof fetch,
   polster: (bytes: Buffer) => Promise<Buffer>,
+  // A dialog with `hoerspiel` directions is mixed instead of padded (the
+  // mix pads it the same way); null for every other dialog.
+  mische?: (d: Dialog, roh: Buffer) => Promise<DialogErgebnis | null>,
 ): DialogGenerierFn {
   return async (d, anfrage) => {
     let sourceUrl: string | undefined;
@@ -373,6 +414,8 @@ export function erstelleGeneriere(
       throw new Error(`fal.ai audiosi yuklab olinmadi — HTTP ${res.status}`);
     }
     const roh = Buffer.from(await res.arrayBuffer());
+    const gemischt = mische ? await mische(d, roh) : null;
+    if (gemischt) return gemischt;
     const gepolstert = await polster(roh);
     const key = neuerAudioSchluessel();
     await uploader.uploadBytes(key, gepolstert);
@@ -386,25 +429,54 @@ async function main(): Promise<void> {
   const manifest: DialogAudioManifest = existsSync(MANIFEST_PATH)
     ? (JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')) as DialogAudioManifest)
     : {};
+  const speichere = (m: DialogAudioManifest) =>
+    writeFileSync(MANIFEST_PATH, JSON.stringify(m, null, 2) + '\n');
 
-  const qoldi = zuGenerierenDialoge(ladeDialoge(), manifest);
-  console.log(`${qoldi.length} ta dialogga ovoz kerak.`);
-  if (qoldi.length === 0) {
+  // `sprechen`: new or edited text, paid to Gemini. `mischen`: only the
+  // realistic mix changed and the raw recording is kept — free.
+  const { sprechen, mischen } = entscheideDialoge(
+    ladeDialoge(),
+    regie,
+    manifest,
+  );
+  console.log(
+    `${sprechen.length} ta dialogga ovoz kerak, ${mischen.length} tasi faqat qayta aralashtiriladi.`,
+  );
+  if (sprechen.length === 0 && mischen.length === 0) {
     console.log("Qilinadigan ish yo'q.");
     return;
   }
   // Every request is built and checked BEFORE the network — a missing
-  // voice, scene or tone stops the run while nothing has been paid.
+  // voice, scene, tone or effect stops the run while nothing has been paid.
   const anfrageById = new Map(
-    qoldi.map((d) => [d.id, geminiDialog(d, stimmen, regie)]),
+    sprechen.map((d) => [d.id, geminiDialog(d, stimmen, regie)]),
   );
+  for (const d of mischen) geminiDialog(d, stimmen, regie);
 
   const zeichen = gesamtZeichenDialoge([...anfrageById.values()]);
   console.log(
     `Jami belgi: ${zeichen} (≈ $${((zeichen / 1000) * NARX_1000_BELGI).toFixed(3)}).`,
   );
   pruefeDialogBudget(zeichen);
+
+  const geraeuschManifest = ladeGeraeuschManifest();
+  const neueGeraeusche = benoetigteGeraeusche(
+    [...sprechen, ...mischen],
+    regie,
+    geraeuschManifest,
+  );
+  const sek = neueGeraeusche.reduce((n, g) => n + g.sek, 0);
+  console.log(
+    `Yangi effektlar: ${neueGeraeusche.length} ta, ${sek} s (≈ $${(sek * GERAEUSCH_PREIS_SEK).toFixed(3)}).`,
+  );
+  if (sek > GERAEUSCH_SEK_CHEGARASI) {
+    throw new Error(
+      `Effektlar chegarasi oshib ketdi: ${sek} s (chegara ${GERAEUSCH_SEK_CHEGARASI}). Chaqiruv TO'XTATILDI.`,
+    );
+  }
   if (process.argv.includes('--dry-run')) {
+    for (const g of neueGeraeusche)
+      console.log(`  effekt: «${g.sfx}» ${g.sek} s${g.loop ? ' (fon)' : ''}`);
     console.log('--dry-run: hech narsa yuborilmadi.');
     return;
   }
@@ -426,17 +498,47 @@ async function main(): Promise<void> {
     },
   });
   const uploader = new R2Uploader(s3, process.env.R2_BUCKET_NAME!);
+  const laden = r2Laden(s3, process.env.R2_BUCKET_NAME!);
+  const dir = await mkdtemp(join(tmpdir(), 'daf-hoerspiel-sfx-'));
+  const mischDeps = { manifest: geraeuschManifest, laden, uploader, dir };
 
-  await generiereDialogeNacheinander(
-    qoldi,
-    anfrageById,
-    manifest,
-    erstelleGeneriere(fal, uploader, fetch, polstereMp3),
-    (m) => writeFileSync(MANIFEST_PATH, JSON.stringify(m, null, 2) + '\n'),
-  );
-  console.log(
-    `Manifest yangilandi: ${MANIFEST_PATH} (${qoldi.length} ta dialog).`,
-  );
+  try {
+    await erzeugeGeraeusche(neueGeraeusche, {
+      fal,
+      uploader,
+      fetchFn: fetch,
+      manifest: geraeuschManifest,
+      dir,
+    });
+
+    await generiereDialogeNacheinander(
+      sprechen,
+      anfrageById,
+      manifest,
+      erstelleGeneriere(fal, uploader, fetch, polstereMp3, async (d, roh) => {
+        const h = regie[d.id]?.hoerspiel;
+        if (!h) return null;
+        // The raw recording is kept first: a later change of the mix then
+        // costs nothing.
+        const rohKey = neuerAudioSchluessel();
+        await uploader.uploadBytes(rohKey, roh);
+        return { ...(await mischeUndLade(d, roh, h, mischDeps)), rohKey };
+      }),
+      speichere,
+    );
+
+    for (const d of mischen) {
+      const eintrag = manifest[d.id];
+      const roh = await laden(eintrag.rohKey!);
+      const m = await mischeUndLade(d, roh, regie[d.id].hoerspiel!, mischDeps);
+      manifest[d.id] = { ...eintrag, ...m };
+      speichere(manifest);
+      console.log(`  ${d.id}: ${d.titelDe} → qayta aralashtirildi, yuklandi`);
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+  console.log(`Manifest yangilandi: ${MANIFEST_PATH}.`);
 }
 
 if (require.main === module) {

@@ -2,6 +2,7 @@ const IMAGE_MODEL = 'fal-ai/flux/schnell';
 const TTS_MODEL = 'fal-ai/chatterbox/text-to-speech/multilingual';
 const TTS_ELEVEN_MODEL = 'fal-ai/elevenlabs/tts/turbo-v2.5';
 const TTS_INWORLD_MODEL = 'fal-ai/inworld-tts';
+const SFX_MODEL = 'fal-ai/elevenlabs/sound-effects/v2';
 /**
  * The course dialog model since 2026-09-26 (`dialog-audio.ts` pins it). It
  * replaced ElevenLabs text-to-dialogue, whose method was removed with it.
@@ -192,6 +193,24 @@ export class FalClient {
     });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai suhbat qaytarmadi');
+    return url;
+  }
+
+  /**
+   * One sound effect for a realistic dialog (a door, a fridge, a room tone).
+   * `loop` makes a room tone that repeats without a seam. A prompt influence
+   * of 0.5 keeps the sound close to what was asked for.
+   */
+  async geraeusch(text: string, sek: number, loop: boolean): Promise<string> {
+    const out = await this.run(SFX_MODEL, {
+      text,
+      duration_seconds: sek,
+      loop,
+      prompt_influence: 0.5,
+      output_format: 'mp3_44100_128',
+    });
+    const url = out?.audio?.url;
+    if (typeof url !== 'string') throw new Error('fal.ai effekt qaytarmadi');
     return url;
   }
 }

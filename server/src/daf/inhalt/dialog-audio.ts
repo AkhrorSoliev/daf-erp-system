@@ -30,7 +30,16 @@ export const DIALOG_AUDIO_MODELL = TTS_GEMINI_MODEL;
  */
 export type DialogAudioManifest = Record<
   string,
-  { key: string; textHash: string; polster?: string; modell?: string }
+  {
+    key: string;
+    textHash: string;
+    polster?: string;
+    modell?: string;
+    /** Realistic dialogs: the raw Gemini recording, kept so a new mix is free. */
+    rohKey?: string;
+    /** `hoerspielHash` of the mix the `key` file was made with. */
+    hoerspiel?: string;
+  }
 >;
 
 /**

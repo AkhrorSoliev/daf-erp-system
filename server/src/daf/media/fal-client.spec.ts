@@ -261,3 +261,39 @@ describe('FalClient content-checker refusal', () => {
     ).rejects.not.toBeInstanceOf(FalAblehnungError);
   });
 });
+
+describe('FalClient.geraeusch', () => {
+  it('asks ElevenLabs sound effects for one sound of a set length', async () => {
+    const calls: Array<{ url: string; body: any }> = [];
+    const fetchFn = (async (url: string, init: any) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ audio: { url: 'https://x/s.mp3' } }),
+        text: async () => '',
+      };
+    }) as unknown as typeof fetch;
+    const url = await new FalClient('k', fetchFn).geraeusch(
+      'a fridge door opening',
+      2.5,
+      false,
+    );
+    expect(url).toBe('https://x/s.mp3');
+    expect(calls[0].url).toBe(
+      'https://fal.run/fal-ai/elevenlabs/sound-effects/v2',
+    );
+    expect(calls[0].body).toEqual({
+      text: 'a fridge door opening',
+      duration_seconds: 2.5,
+      loop: false,
+      prompt_influence: 0.5,
+      output_format: 'mp3_44100_128',
+    });
+  });
+
+  it('fails when no audio comes back', async () => {
+    const c = new FalClient('k', fetchStub({}));
+    await expect(c.geraeusch('door', 2, false)).rejects.toThrow(/effekt/i);
+  });
+});
