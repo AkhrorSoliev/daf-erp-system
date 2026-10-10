@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { NotificationEmpty, NotificationRowView } from "./notification-row";
+import { NotificationEmpty, NotificationFailed, NotificationRowView } from "./notification-row";
 import { groupNotifications, type AppNotification } from "./notification-view";
 
 // 10.10.2026, 12:00 in Tashkent.
@@ -108,5 +108,15 @@ describe("NotificationEmpty", () => {
     expect(render(createElement(NotificationEmpty, { text: "Sizdan hech narsa kutilmayapti" }))).toContain(
       "Sizdan hech narsa kutilmayapti",
     );
+  });
+});
+
+describe("NotificationFailed", () => {
+  it("says the list did not load and offers a retry, never the empty text", () => {
+    const html = render(createElement(NotificationFailed, { onRetry: () => {} }));
+    expect(html).toContain("Ma'lumotni yuklab bo'lmadi");
+    expect(html).toContain("Qayta urinish");
+    expect(html).toContain('role="alert"');
+    expect(html).not.toContain("kutilmayapti");
   });
 });

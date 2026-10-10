@@ -29,6 +29,9 @@ export function useSSE() {
         if (!response.ok || !response.body) return;
 
         retryCount.current = 0;
+        // Whatever was missed while the stream was down (a closing, a new row)
+        // is in the server's number, not in an event we never got.
+        void useNotifications.getState().fetchBadge();
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";

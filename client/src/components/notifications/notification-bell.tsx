@@ -9,7 +9,12 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { useSSE } from "@/hooks/use-sse";
 import { cn } from "@/lib/utils";
 import { useNotificationActions } from "./notification-actions";
-import { NotificationEmpty, NotificationRowView, NotificationSkeleton } from "./notification-row";
+import {
+  NotificationEmpty,
+  NotificationFailed,
+  NotificationRowView,
+  NotificationSkeleton,
+} from "./notification-row";
 import {
   GROUP_LABEL,
   groupByDay,
@@ -51,6 +56,7 @@ export function NotificationBell() {
           <PopoverTrigger asChild>
             <button
               type="button"
+              aria-label={badge > 0 ? `Bildirishnomalar, ${badge > 99 ? "99+" : badge} ta` : "Bildirishnomalar"}
               className="relative inline-flex size-9 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <Bell className="size-4" />
@@ -74,7 +80,7 @@ export function NotificationBell() {
 
 /** Mounts when the popover opens, so its clock («5 daqiqa oldin») is read fresh each time. */
 function NotificationPanel({ tab, onTab, onClose }: { tab: Tab; onTab: (t: Tab) => void; onClose: () => void }) {
-  const { pending, recent, counts, chip, loading, loadPanel, markAllRead } = useNotifications();
+  const { pending, recent, counts, chip, loaded, failed, loadPanel, markAllRead } = useNotifications();
   const { hrefOf, onOpen } = useNotificationActions(onClose);
   const [now] = useState(() => new Date());
 
@@ -101,6 +107,7 @@ function NotificationPanel({ tab, onTab, onClose }: { tab: Tab; onTab: (t: Tab) 
               key={t}
               type="button"
               onClick={() => onTab(t)}
+              aria-pressed={tab === t}
               className={cn(
                 "rounded-md px-2.5 py-1 text-xs font-medium",
                 tab === t ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
@@ -119,6 +126,7 @@ function NotificationPanel({ tab, onTab, onClose }: { tab: Tab; onTab: (t: Tab) 
               key={c ?? "hammasi"}
               type="button"
               onClick={() => void loadPanel(c)}
+              aria-pressed={chip === c}
               className={cn(
                 "rounded-full border px-2.5 py-0.5 text-xs",
                 chip === c
@@ -133,8 +141,13 @@ function NotificationPanel({ tab, onTab, onClose }: { tab: Tab; onTab: (t: Tab) 
       </div>
 
       <div className="max-h-[420px] overflow-y-auto">
-        {loading && recent.length === 0 ? (
-          <NotificationSkeleton />
+        {!loaded ? (
+          // The chip's first answer decides: no rows are drawn before it, and a failure is not «nothing».
+          failed ? (
+            <NotificationFailed onRetry={() => void loadPanel(chip)} />
+          ) : (
+            <NotificationSkeleton />
+          )
         ) : tab === "pending" ? (
           <>
             <Section title="Sizdan kutilmoqda" />

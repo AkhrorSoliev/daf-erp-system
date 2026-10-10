@@ -56,6 +56,10 @@ interface NotificationsState {
   /** The panel's type chip; null = every type. */
   chip: NotificationGroup | null;
   loading: boolean;
+  /** The current chip's first answer has arrived; the lists mean something only then. */
+  loaded: boolean;
+  /** The last load of the panel failed (the lists, if any, are from an earlier answer). */
+  failed: boolean;
   /** Bumps on every change (SSE, read); open lists refetch when it moves. */
   version: number;
   fetchBadge: () => Promise<void>;
@@ -65,6 +69,15 @@ interface NotificationsState {
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
 }
+
+/** An SSE row from a server older than this client may lack the newer fields. */
+const fromSse = (n: AppNotification): AppNotification => ({
+  ...n,
+  group: n.group ?? "system",
+  actionRequired: n.actionRequired ?? false,
+  resolvedAt: n.resolvedAt ?? null,
+  groupKey: n.groupKey ?? null,
+});
 
 const withResolved = (list: AppNotification[], ids: Set<string>, resolvedAt: string) =>
   list.map((n) => (ids.has(n.id) && n.resolvedAt === null ? { ...n, resolvedAt } : n));
@@ -87,6 +100,8 @@ export const useNotifications = create<NotificationsState>((set, get) => {
     counts: null,
     chip: null,
     loading: false,
+    loaded: false,
+    failed: false,
     version: 0,
 
     fetchBadge: async () => {
@@ -100,7 +115,13 @@ export const useNotifications = create<NotificationsState>((set, get) => {
 
     loadPanel: async (chip) => {
       const reqId = ++lastPanelReq;
-      set({ chip, loading: true });
+      // A chip change empties the lists (the old chip's rows are not this one's);
+      // the same chip, already loaded, keeps its rows while it refreshes.
+      set((s) =>
+        s.chip === chip && s.loaded
+          ? { loading: true, failed: false }
+          : { chip, loading: true, failed: false, loaded: false, pending: [], recent: [] },
+      );
       try {
         const type = chip ?? undefined;
         const [pending, recent, counts] = await Promise.all([
@@ -109,13 +130,14 @@ export const useNotifications = create<NotificationsState>((set, get) => {
           fetchNotificationCounts(),
         ]);
         if (reqId !== lastPanelReq) return;
-        set({ pending: pending.data, recent: recent.data, counts, loading: false });
+        set({ pending: pending.data, recent: recent.data, counts, loading: false, failed: false, loaded: true });
       } catch {
-        if (reqId === lastPanelReq) set({ loading: false });
+        if (reqId === lastPanelReq) set({ loading: false, failed: true });
       }
     },
 
-    add: (n) => {
+    add: (raw) => {
+      const n = fromSse(raw);
       set((s) => {
         if (s.recent.some((r) => r.id === n.id)) return { version: s.version + 1 };
         const shown = s.chip === null || s.chip === n.group;
@@ -134,9 +156,11 @@ export const useNotifications = create<NotificationsState>((set, get) => {
 
     resolve: (ids, resolvedAt) => {
       const closed = new Set(ids);
+      // A payload without the time (older server) closes the rows as of now.
+      const at = typeof resolvedAt === "string" ? resolvedAt : new Date().toISOString();
       set((s) => ({
-        pending: withResolved(s.pending, closed, resolvedAt),
-        recent: withResolved(s.recent, closed, resolvedAt),
+        pending: withResolved(s.pending, closed, at),
+        recent: withResolved(s.recent, closed, at),
         version: s.version + 1,
       }));
       void get().fetchBadge();

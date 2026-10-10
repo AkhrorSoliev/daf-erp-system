@@ -79,6 +79,20 @@ export function NotificationEmpty({ text }: { text: string }) {
   );
 }
 
+/** The bell's and the page's list whose request failed: never the empty state, a retry instead. */
+export function NotificationFailed({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="space-y-2 px-4 py-5 text-center">
+      <p role="alert" className="text-sm text-muted-foreground">
+        {"Ma'lumotni yuklab bo'lmadi"}
+      </p>
+      <Button variant="outline" size="sm" onClick={onRetry}>
+        Qayta urinish
+      </Button>
+    </div>
+  );
+}
+
 /** The bell's and the page's list while the first answer is on its way. */
 export function NotificationSkeleton() {
   return (
@@ -146,10 +160,14 @@ function SingleRow({
       onClick={() => onOpen(n)}
       onKeyDown={(e) => {
         // A key pressed on the row's own button belongs to that button.
-        if (e.target === e.currentTarget && e.key === "Enter") onOpen(n);
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(n);
+        }
       }}
       className={cn(
-        "flex w-full cursor-pointer items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/50",
+        "flex w-full cursor-pointer items-start gap-3 px-4 py-2.5 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring",
         !n.isRead && !done && "bg-blue-50/50 dark:bg-blue-950/20",
         done && "opacity-60",
       )}

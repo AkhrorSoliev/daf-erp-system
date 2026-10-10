@@ -96,6 +96,23 @@ describe("add", () => {
     expect(state().version).toBe(1);
   });
 
+  it("does not make the list count as loaded when a row arrives before the panel was ever opened", () => {
+    state().add(row("early"));
+
+    expect(ids(state().recent)).toEqual(["early"]);
+    expect(state().loaded).toBe(false);
+    expect(state().failed).toBe(false);
+  });
+
+  it("fills in what a server older than the client leaves out of a pushed row", () => {
+    const legacy = { ...row("legacy"), group: undefined, actionRequired: undefined, resolvedAt: undefined, groupKey: undefined };
+
+    state().add(legacy as unknown as AppNotification);
+
+    expect(state().recent[0]).toMatchObject({ group: "system", actionRequired: false, resolvedAt: null, groupKey: null });
+    expect(state().pending).toEqual([]);
+  });
+
   it("keeps a row of another type out of a filtered list", () => {
     useNotifications.setState({ chip: "attendance", recent: [], pending: [] });
 
@@ -151,6 +168,18 @@ describe("resolve", () => {
     // The server's number, not a local subtraction.
     await vi.waitFor(() => expect(state().badge).toBe(1));
     expect(urlsAsked()).toContain("/notifications/unread-count");
+  });
+});
+
+describe("resolve without a time", () => {
+  it("closes the rows as of now when the payload carries no resolvedAt", () => {
+    useNotifications.setState({ recent: [waiting("a")], pending: [waiting("a")] });
+    get.mockResolvedValue(ok({ count: 0 }));
+
+    state().resolve(["a"], undefined as unknown as string);
+
+    expect(typeof state().recent[0].resolvedAt).toBe("string");
+    expect(typeof state().pending[0].resolvedAt).toBe("string");
   });
 });
 
@@ -211,14 +240,80 @@ describe("loadPanel", () => {
     expect(state().loading).toBe(false);
   });
 
-  it("keeps what it showed when the request fails", async () => {
-    useNotifications.setState({ recent: [row("kept")] });
+  it("keeps what it showed when a refresh of a loaded chip fails", async () => {
+    useNotifications.setState({ chip: null, loaded: true, recent: [row("kept")] });
     get.mockRejectedValue(new Error("network"));
 
     await state().loadPanel(null);
 
     expect(ids(state().recent)).toEqual(["kept"]);
+    expect(state().loaded).toBe(true);
+    expect(state().failed).toBe(true);
     expect(state().loading).toBe(false);
+  });
+
+  it("marks a failed load, with no rows of the chip it came from, and a retry clears the mark", async () => {
+    useNotifications.setState({ chip: null, loaded: true, pending: [waiting("old")], recent: [row("old")] });
+    get.mockRejectedValue(new Error("network"));
+
+    await state().loadPanel("payment");
+
+    expect(state().chip).toBe("payment");
+    expect(state().failed).toBe(true);
+    expect(state().loaded).toBe(false);
+    expect(state().recent).toEqual([]);
+    expect(state().pending).toEqual([]);
+    expect(state().loading).toBe(false);
+
+    get.mockReset();
+    get.mockResolvedValueOnce(page([])).mockResolvedValueOnce(page([row("p", { group: "payment" })])).mockResolvedValueOnce(ok(COUNTS));
+    await state().loadPanel("payment");
+
+    expect(state().failed).toBe(false);
+    expect(state().loaded).toBe(true);
+    expect(ids(state().recent)).toEqual(["p"]);
+  });
+
+  it("empties the lists at once on a chip change, and marks the list as not yet arrived", async () => {
+    useNotifications.setState({ chip: null, loaded: true, pending: [waiting("old")], recent: [row("old")], counts: COUNTS });
+    const never = deferred<unknown>();
+    get.mockReturnValue(never.promise);
+
+    void state().loadPanel("attendance");
+
+    expect(state().chip).toBe("attendance");
+    expect(state().loaded).toBe(false);
+    expect(state().recent).toEqual([]);
+    expect(state().counts).toEqual(COUNTS);
+  });
+
+  it("keeps the rows on screen while the same chip refreshes", () => {
+    useNotifications.setState({ chip: "task", loaded: true, recent: [row("shown")] });
+    get.mockReturnValue(deferred<unknown>().promise);
+
+    void state().loadPanel("task");
+
+    expect(state().loaded).toBe(true);
+    expect(ids(state().recent)).toEqual(["shown"]);
+    expect(state().loading).toBe(true);
+  });
+
+  it("drops the slower answer of an older chip", async () => {
+    const slow = [deferred<unknown>(), deferred<unknown>(), deferred<unknown>()];
+    get.mockReturnValueOnce(slow[0].promise).mockReturnValueOnce(slow[1].promise).mockReturnValueOnce(slow[2].promise);
+    const quick = panelAnswer([], [row("lesson", { group: "attendance" })]);
+    get.mockResolvedValueOnce(quick[0]).mockResolvedValueOnce(quick[1]).mockResolvedValueOnce(quick[2]);
+
+    const first = state().loadPanel("task");
+    const second = state().loadPanel("attendance");
+    await second;
+    const late = panelAnswer([], [row("task-row")]);
+    slow.forEach((d, i) => d.resolve(late[i]));
+    await first;
+
+    expect(state().chip).toBe("attendance");
+    expect(ids(state().recent)).toEqual(["lesson"]);
+    expect(state().loaded).toBe(true);
   });
 });
 
