@@ -475,7 +475,11 @@ export class SalaryController {
    *
    * `SalaryMonthlyQueryDto` qayta ishlatiladi (month regex allaqachon shu
    * yerda); undagi `search` bu endpoint uchun ma'nosiz, shuning uchun servisga
-   * faqat `month` uzatiladi.
+   * faqat `month` va filial uzatiladi.
+   *
+   * Filial sarlavhadagi tanlovdan keladi, `/salary/monthly` kabi: «Avanslar»
+   * tabi «Oyliklar» jadvali bilan bir filialni ko'rsatishi shart. `BranchScope`
+   * bilan marshrut o'zi `BRANCH_SCOPED_BY_HEADER` deb tasniflanadi.
    */
   @Get('advance-calendar')
   @Can('salary.view')
@@ -483,9 +487,12 @@ export class SalaryController {
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') performedById: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
+    // `singleBranchId`, not the raw header: the resolver takes one branch and
+    // re-confines the caller itself, so this can only narrow.
     return this.advanceCalendarService.getCalendar(
-      { month: query.month },
+      { month: query.month, branchId: singleBranchId(scope) },
       companyId,
       performedById,
     );

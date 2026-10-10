@@ -36,14 +36,24 @@ export class SalaryPeriodSettingsService {
 
   /**
    * Append a new period setting. Closes the previous open setting (sets
-   * its `effectiveTo` to the new `effectiveFrom`). New cycleStartDay must
-   * be in [1,28] and `effectiveFrom` must be ≥ the current open setting's.
+   * its `effectiveTo` to the new `effectiveFrom`). `effectiveFrom` must be
+   * after the current open setting's.
+   *
+   * The period is the calendar month (B3 §2.8): the monthly payment system
+   * needs it and production already runs on day 1, so any other day is refused
+   * before anything is read or written. The DTO's 1..28 range stays — it is the
+   * shape check; this is the rule.
    */
   async create(
     dto: CreateSalaryPeriodSettingDto,
     companyId: number,
     changedById: number,
   ) {
+    if (dto.cycleStartDay !== 1) {
+      throw new BadRequestException(
+        "Hisoblash davri — kalendar oyi (1-sanadan); o'zgartirilmaydi",
+      );
+    }
     const requestedFrom = this.parseEffectiveFrom(dto.effectiveFrom);
 
     return this.prisma.$transaction(

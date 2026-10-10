@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { tashkentMonthKey } from '../common/date/tashkent';
 import { resolveMonthlyScope } from './shared/resolve-monthly-scope';
 
 /** Avans berilgan bitta kun. */
@@ -24,6 +25,11 @@ export interface AdvanceCalendarRow {
   /** Qaysi oylik davriga hisoblangani — hisoblanmagan bo'lsa `null`. */
   settledPeriodStart: Date | null;
   settledPeriodEnd: Date | null;
+  /**
+   * Qaysi oyning oyligidan ushlanadi (`YYYY-MM`): hisoblangan avansda — uni
+   * ushlagan to'lovning oyi, hisoblanmaganida — avansning o'z oyi (B3 §3).
+   */
+  deductMonth: string;
   user: {
     id: number;
     firstName: string;
@@ -73,7 +79,7 @@ export class SalaryAdvanceCalendarService {
   constructor(private prisma: PrismaService) {}
 
   async getCalendar(
-    query: { month?: string },
+    query: { month?: string; branchId?: number },
     companyId: number,
     performedById: number,
   ) {
@@ -155,6 +161,11 @@ export class SalaryAdvanceCalendarService {
               settled: e.settledBySalaryPaymentId !== null,
               settledPeriodStart: e.settledBySalaryPayment?.periodStart ?? null,
               settledPeriodEnd: e.settledBySalaryPayment?.periodEnd ?? null,
+              // `periodStart` is a Tashkent-midnight instant; `Expense.date` is
+              // a date-only column, so its UTC slice is already the day.
+              deductMonth: e.settledBySalaryPayment
+                ? tashkentMonthKey(e.settledBySalaryPayment.periodStart)
+                : dayKey(e.date).slice(0, 7),
               user: {
                 id: e.relatedUser.id,
                 firstName: e.relatedUser.firstName,

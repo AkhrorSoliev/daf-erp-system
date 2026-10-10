@@ -544,7 +544,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'to "no filter", which let them `batchPay` every branch.',
     routes: [
       'GET /salary/accruals/:userId',
-      'GET /salary/advance-calendar',
       'GET /salary/matrix',
       'GET /salary/monthly/user/:userId',
       'GET /salary/payments',

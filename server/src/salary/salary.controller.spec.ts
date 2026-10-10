@@ -268,6 +268,49 @@ describe('SalaryController — the row drawer routes', () => {
   });
 });
 
+describe('SalaryController — the advance calendar follows the header', () => {
+  const advanceCalendarService = { getCalendar: jest.fn() };
+  const controller = new SalaryController(
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    advanceCalendarService as never,
+    {} as never,
+    {} as never,
+    {} as never,
+  );
+
+  beforeEach(() => jest.resetAllMocks());
+
+  it('hands the month and the single scoped branch down, nothing else of the query', async () => {
+    advanceCalendarService.getCalendar.mockResolvedValue({ days: [] });
+
+    await controller.getAdvanceCalendar(
+      { month: '2026-09', search: 'ignored' },
+      10009,
+      1,
+      [3],
+    );
+
+    expect(advanceCalendarService.getCalendar).toHaveBeenCalledWith(
+      { month: '2026-09', branchId: 3 },
+      1,
+      10009,
+    );
+  });
+
+  it('several branches in scope (no pick) narrow nothing', async () => {
+    await controller.getAdvanceCalendar({ month: '2026-09' }, 10009, 1, null);
+
+    expect(advanceCalendarService.getCalendar).toHaveBeenCalledWith(
+      { month: '2026-09', branchId: undefined },
+      1,
+      10009,
+    );
+  });
+});
+
 describe('SalaryController — «Berildi» (pay route)', () => {
   const salaryService = { payPayment: jest.fn() };
   const controller = new SalaryController(
