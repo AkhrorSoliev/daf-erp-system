@@ -10,6 +10,7 @@ import {
   Prisma,
   RefundStatus,
 } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { TransactionsService } from '../transactions/transactions.service';
@@ -17,6 +18,11 @@ import { CashMovementsService } from '../cash-accounts/cash-movements.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { REFUND_TRANSITIONS } from '../common/finance/status-transitions';
 import { rethrowAsConflict } from '../common/transaction-conflict';
+import {
+  REFUND_CANCELLED_EVENT,
+  REFUND_HANDED_OVER_EVENT,
+  type RefundEventPayload,
+} from './refund-events';
 import { refundView } from './refund-view';
 
 /** A hand-over or cancel that finds the request already handed over or cancelled. */
@@ -35,6 +41,7 @@ export class RefundsProcessService {
     private transactionsService: TransactionsService,
     private cashMovements: CashMovementsService,
     private entityHistoryService: EntityHistoryService,
+    private events: EventEmitter2,
   ) {}
 
   /**
@@ -134,6 +141,13 @@ export class RefundsProcessService {
         return updated;
       }, TX)
       .catch(rethrowAsConflict);
+    this.announce(
+      REFUND_HANDED_OVER_EVENT,
+      id,
+      refund.studentId,
+      userId,
+      companyId,
+    );
     return refundView(saved);
   }
 
@@ -184,6 +198,13 @@ export class RefundsProcessService {
         return updated;
       }, TX)
       .catch(rethrowAsConflict);
+    this.announce(
+      REFUND_CANCELLED_EVENT,
+      id,
+      refund.studentId,
+      userId,
+      companyId,
+    );
     return refundView(saved);
   }
 
@@ -241,6 +262,23 @@ export class RefundsProcessService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+  }
+
+  /** After the commit: the student's message waits for it (never emitted inside the transaction). */
+  private announce(
+    event: string,
+    refundId: string,
+    studentId: number,
+    performedById: number,
+    companyId: number,
+  ) {
+    const payload: RefundEventPayload = {
+      refundId,
+      studentId,
+      companyId,
+      performedById,
+    };
+    this.events.emit(event, payload);
   }
 
   /** The refund, company-confined, and the caller's right to move its student's money. */

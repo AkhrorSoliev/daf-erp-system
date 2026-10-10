@@ -69,7 +69,20 @@ describe('BalanceNoticesService (ADR-0076)', () => {
 
     expect(sms.sendToStudent).toHaveBeenCalledWith(
       10001,
-      "Assalomu alaykum, Ali! DaF Sprachzentrum hisobingizda 350 000 so'm qolgan. Uni qaytarib olish uchun 22-noyabrgacha filial raqamiga qo'ng'iroq qiling: +998 90 123 45 67. Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul markaz hisobiga o'tadi. Rahmat!",
+      [
+        '<b>💰 Hisobingizda pul qolgan</b>',
+        '',
+        'Hurmatli Ali!',
+        '',
+        // formatSum prints a no-break space between the thousands.
+        "DaF Sprachzentrum hisobingizda <b>350\u00A0000 so'm</b> qolgan.",
+        "Uni qaytarib olish uchun <b>22-noyabrgacha</b> filial raqamiga qo'ng'iroq qiling:",
+        '📞 +998 90 123 45 67',
+        '',
+        "⚠️ Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul <b>markaz hisobiga o'tadi</b>.",
+        '',
+        'Rahmat!',
+      ].join('\n'),
       'AUTO',
       7,
       1001,

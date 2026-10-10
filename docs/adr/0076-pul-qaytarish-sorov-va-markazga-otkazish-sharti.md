@@ -2,7 +2,7 @@
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-10
-**Bog'liq:** ADR-0025, ADR-0055, ADR-0058, ADR-0063, ADR-0066, ADR-0067, ADR-0072, `server/src/refunds/`, `server/src/refundable/`, `server/src/balance-notices/`, `server/src/withdrawals/`, `server/src/common/date/bank-days.ts`, `server/prisma/migrations/20261010180000_b2b_refund_request_balance_notice`, `docs/superpowers/specs/2026-10-10-b2b-qaytariladigan-pul-design.md`, `docs/superpowers/plans/2026-10-10-b2b-qaytariladigan-pul.md`
+**Bog'liq:** ADR-0025, ADR-0055, ADR-0058, ADR-0063, ADR-0066, ADR-0067, ADR-0072, `server/src/refunds/`, `server/src/refundable/`, `server/src/balance-notices/`, `server/src/refunds/refund-student-messages.listener.ts`, `server/src/withdrawals/`, `server/src/common/date/bank-days.ts`, `server/prisma/migrations/20261010180000_b2b_refund_request_balance_notice`, `docs/superpowers/specs/2026-10-10-b2b-qaytariladigan-pul-design.md`, `docs/superpowers/plans/2026-10-10-b2b-qaytariladigan-pul.md`
 
 ## Kontekst
 
@@ -48,7 +48,9 @@ shartsiz ochiq edi.
    hisobotida qator «pul qaytarish» deb yoziladi (avval «naqd qaytarib berildi»).
 7. **Xabar** (`BalanceNotice`, `POST /students/:id/balance-notices`, kassirdan
    tashqari): bot orqali (`BOT`) yoki «Qo'ng'iroq qilib aytildi» (`CALL`). Bot matni —
-   CEO tasdiqlagan 1-variant, `balance-notice-text.ts` da, test bilan mahkamlangan.
+   CEO tasdiqlagan 2-variant (birinchi, bir abzatsli matn o'sha kuni quruq topildi): Telegram
+   HTML, muhim joylar qalin, qatorlar bo'lingan; `balance-notice-text.ts` da, test bilan
+   mahkamlangan. «Qaytariladigan pul» panelida shu matn oddiy matn holida ko'rinadi.
    Bot xabari darhol ketadi (`SmsService` orqali, qo'lda SMS kabi) — bu ADR-0025
    ro'yxatiga qo'shimcha. Faqat yetkazilgan xabar yoziladi: bot yuborishi bajarilmasa,
    hech narsa yozilmaydi va xodimga qat'iy matn qaytadi — «Botga xabar yetmadi —
@@ -65,6 +67,27 @@ shartsiz ochiq edi.
    qo'shiladi (bu markazda turgan pul, qarz emas — ADR-0059 bunga tegmaydi).
    `GET /payments/frozen-balances` o'chirildi. Qaytarishlar tarixi — sahifalangan
    `GET /refunds` (`?status=` ro'yxati, kassir ham o'qiydi).
+
+## O'quvchiga xabarlar (CEO, 10.10.2026)
+
+O'quvchi to'rtta xabar oladi: balans haqidagi xabar (7-band) va qaytarishning uch bosqichi —
+so'rov ochildi, pul berildi, so'rov bekor qilindi. Hammasi Telegram HTML: muhim joylar qalin,
+qatorlar bo'lingan, «Hurmatli {Ism}!» (ism bo'sh bo'lsa «Assalomu alaykum!»), summa
+`formatSum`, sana «{kun}-{oy}gacha», telefon «+998 XX XXX XX XX». Matnlar spec §5.3–§5.4 da va
+testlar bilan mahkamlangan (`balance-notice-text.ts`, `refund-student-text.ts`): so'zma-so'z
+o'zgartirilmaydi.
+
+- **Darhol ketadi.** `SmsService.sendToStudent` orqali (turi `AUTO`), 20:00 kunlik navbatga
+  tushmaydi — ADR-0025 darhol-ro'yxatiga qo'shimcha, to'lov kvitansiyasi kabi (to'rttasi ham).
+- **Qachon.** So'rov ochilganda (`refund.requested`), «Berildi»da (`refund.handed-over`,
+  ochiq kvitansiya PDF havolasi bilan), bekor qilinganda (`refund.cancelled`, sababi bilan).
+  Hodisa faqat tranzaksiya commit bo'lgandan keyin chiqadi, yuki faqat id'lar; tinglovchi
+  (`refund-student-messages.listener.ts`) kerakli ma'lumotni qayta o'qiydi.
+- **Kimga.** Telegram bog'langan o'quvchiga; bog'lanmaganga hech narsa ketmaydi. Yuborish
+  bajarilmasa, qaytarishga ta'sir qilmaydi — xato logga yoziladi.
+- **Telefon.** O'quvchi filialiniki, bo'lmasa kompaniyaniki (balans xabari ham shuni o'qiydi).
+  Ikkalasi ham yo'q bo'lsa, qaytarish xabarlarida «📞» qatori tushiriladi: ular axborot;
+  balans xabarida esa telefon shart, shuning uchun u telefonsiz yuborilmaydi.
 
 ## Ko'rib chiqilgan muqobillar
 

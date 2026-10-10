@@ -12,6 +12,31 @@ import {
 export type TransferDb = Pick<PrismaClient, 'balanceNotice' | 'holiday'>;
 
 /**
+ * The phone a student is told to call: the student's branch's, else the
+ * company's. One lookup for the balance notice and for the refund messages
+ * (spec §5.3, §5.4). Null when neither has one.
+ */
+export async function loadContactPhone(
+  db: Pick<PrismaClient, 'branch' | 'company'>,
+  branchId: number | null,
+  companyId: number,
+): Promise<string | null> {
+  const [branch, company] = await Promise.all([
+    branchId === null
+      ? null
+      : db.branch.findUnique({
+          where: { id: branchId },
+          select: { phone: true },
+        }),
+    db.company.findUnique({
+      where: { id: companyId },
+      select: { phone: true },
+    }),
+  ]);
+  return branch?.phone || company?.phone || null;
+}
+
+/**
  * The bot text a notice given now would carry — what «Botga xabar yuborish»
  * sends and what the drawer previews. Null when neither the branch nor the
  * company has a phone (the send is then refused).
@@ -26,19 +51,7 @@ export async function loadNoticeText(
   },
   now: Date,
 ): Promise<string | null> {
-  const [branch, company] = await Promise.all([
-    p.branchId === null
-      ? null
-      : db.branch.findUnique({
-          where: { id: p.branchId },
-          select: { phone: true },
-        }),
-    db.company.findUnique({
-      where: { id: p.companyId },
-      select: { phone: true },
-    }),
-  ]);
-  const phone = branch?.phone || company?.phone;
+  const phone = await loadContactPhone(db, p.branchId, p.companyId);
   if (!phone) return null;
   const today = tashkentDateStr(now);
   const { allowedFrom } = transferTerm(

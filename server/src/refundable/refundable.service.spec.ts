@@ -309,10 +309,22 @@ describe('RefundableService (ADR-0076)', () => {
           "Markazga o'tkazish 15.10 dan ochiladi (xabar 01.09 da berilgan, qaytarish muddati 15.09 gacha).",
       });
       // A notice given today (Wed 14.10): term to 28.10, transfer from 27.11.
-      expect(d.noticePreview).toContain('Assalomu alaykum, Bobur!');
-      expect(d.noticePreview).toContain("200\u00A0000 so'm qolgan");
-      expect(d.noticePreview).toContain('27-noyabrgacha');
-      expect(d.noticePreview).toContain('+998 90 123 45 67');
+      // The drawer prints the second notice version as plain text: no tags.
+      expect(d.noticePreview).toBe(
+        [
+          '💰 Hisobingizda pul qolgan',
+          '',
+          'Hurmatli Bobur!',
+          '',
+          "DaF Sprachzentrum hisobingizda 200\u00A0000 so'm qolgan.",
+          "Uni qaytarib olish uchun 27-noyabrgacha filial raqamiga qo'ng'iroq qiling:",
+          '📞 +998 90 123 45 67',
+          '',
+          "⚠️ Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul markaz hisobiga o'tadi.",
+          '',
+          'Rahmat!',
+        ].join('\n'),
+      );
     });
 
     it('a studying student has no kind; a blocked chat is not linked', async () => {

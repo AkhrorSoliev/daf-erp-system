@@ -4,6 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RefundStatus } from '@prisma/client';
 import { RefundsProcessService } from './refunds-process.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -25,6 +26,7 @@ describe('RefundsProcessService — hand-over and cancel', () => {
   let transactionsService: any;
   let cash: any;
   let history: any;
+  let events: { emit: jest.Mock };
 
   const requested = {
     id: 'refund-1',
@@ -66,6 +68,7 @@ describe('RefundsProcessService — hand-over and cancel', () => {
     };
     cash = { recordOutflow: jest.fn().mockResolvedValue({}) };
     history = { recordStatusChange: jest.fn() };
+    events = { emit: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -74,6 +77,7 @@ describe('RefundsProcessService — hand-over and cancel', () => {
         { provide: TransactionsService, useValue: transactionsService },
         { provide: CashMovementsService, useValue: cash },
         { provide: EntityHistoryService, useValue: history },
+        { provide: EventEmitter2, useValue: events },
       ],
     }).compile();
     service = module.get(RefundsProcessService);
@@ -175,6 +179,48 @@ describe('RefundsProcessService — hand-over and cancel', () => {
         service.handOver('refund-1', 'acc-1', 7, 1001),
       ).rejects.toThrow(ForbiddenException);
     });
+
+    it('tells the student once, after the commit, with ids only', async () => {
+      const order: string[] = [];
+      tx.refund.update.mockImplementation(({ data }: any) => {
+        order.push('write');
+        return Promise.resolve({ ...requested, dueDate: null, ...data });
+      });
+      events.emit.mockImplementation(() => order.push('emit'));
+
+      await service.handOver('refund-1', 'acc-1', 7, 1001);
+
+      expect(events.emit).toHaveBeenCalledTimes(1);
+      expect(events.emit).toHaveBeenCalledWith('refund.handed-over', {
+        refundId: 'refund-1',
+        studentId: 10001,
+        companyId: 1001,
+        performedById: 7,
+      });
+      expect(order).toEqual(['write', 'emit']);
+    });
+
+    it('a refused or failed hand-over emits nothing', async () => {
+      prisma.cashAccount.findFirst.mockResolvedValueOnce(null);
+      await expect(
+        service.handOver('refund-1', 'acc-9', 7, 1001),
+      ).rejects.toThrow(BadRequestException);
+
+      tx.refund.findFirst.mockResolvedValueOnce({
+        ...requested,
+        status: RefundStatus.COMPLETED,
+      });
+      await expect(
+        service.handOver('refund-1', 'acc-1', 7, 1001),
+      ).rejects.toThrow(ConflictException);
+
+      cash.recordOutflow.mockRejectedValueOnce(new Error('boom'));
+      await expect(
+        service.handOver('refund-1', 'acc-1', 7, 1001),
+      ).rejects.toThrow('boom');
+
+      expect(events.emit).not.toHaveBeenCalled();
+    });
   });
 
   describe('cancel', () => {
@@ -230,6 +276,49 @@ describe('RefundsProcessService — hand-over and cancel', () => {
         ConflictException,
       );
       expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+    });
+
+    it('tells the student once, after the commit, with ids only', async () => {
+      tx.transaction.findFirst
+        .mockResolvedValueOnce({ id: 'tx-refund' })
+        .mockResolvedValueOnce(null);
+      const order: string[] = [];
+      tx.refund.update.mockImplementation(({ data }: any) => {
+        order.push('write');
+        return Promise.resolve({ ...requested, dueDate: null, ...data });
+      });
+      events.emit.mockImplementation(() => order.push('emit'));
+
+      await service.cancel('refund-1', 'Fikridan qaytdi', 7, 1001);
+
+      expect(events.emit).toHaveBeenCalledTimes(1);
+      expect(events.emit).toHaveBeenCalledWith('refund.cancelled', {
+        refundId: 'refund-1',
+        studentId: 10001,
+        companyId: 1001,
+        performedById: 7,
+      });
+      expect(order).toEqual(['write', 'emit']);
+    });
+
+    it('a refused or failed cancel emits nothing', async () => {
+      tx.refund.findFirst.mockResolvedValueOnce({
+        ...requested,
+        status: RefundStatus.REJECTED,
+      });
+      await expect(service.cancel('refund-1', 'x', 7, 1001)).rejects.toThrow(
+        ConflictException,
+      );
+
+      tx.transaction.findFirst.mockResolvedValueOnce({ id: 'tx-refund' });
+      transactionsService.reverseTransaction.mockRejectedValueOnce(
+        new Error('boom'),
+      );
+      await expect(service.cancel('refund-1', 'x', 7, 1001)).rejects.toThrow(
+        'boom',
+      );
+
+      expect(events.emit).not.toHaveBeenCalled();
     });
   });
 });
@@ -288,6 +377,7 @@ describe('RefundsProcessService.reverse — cancelled lessons', () => {
           provide: EntityHistoryService,
           useValue: { recordStatusChange: jest.fn() },
         },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
     service = module.get(RefundsProcessService);

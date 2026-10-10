@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { TransactionsService } from '../transactions/transactions.service';
@@ -18,6 +19,10 @@ import { tashkentDayStartUtc } from '../common/date/tashkent';
 import { dmy } from '../statements/statement-text';
 import { QuickRefundDto } from './dto/quick-refund.dto';
 import { refundDueDate } from './refund-due-date';
+import {
+  REFUND_REQUESTED_EVENT,
+  type RefundEventPayload,
+} from './refund-events';
 import { refundView } from './refund-view';
 
 @Injectable()
@@ -27,6 +32,7 @@ export class RefundsCreateService {
     private transactionsService: TransactionsService,
     private entityHistoryService: EntityHistoryService,
     private enrollmentBilling: EnrollmentBillingService,
+    private events: EventEmitter2,
   ) {}
 
   /**
@@ -215,6 +221,7 @@ export class RefundsCreateService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    this.announce(refund.refundRow.id, dto.studentId, userId, companyId);
 
     const balanceAfter = student.balance + refund.releasedAmount - dto.amount;
     await this.entityHistoryService.recordStatusChange({
@@ -339,6 +346,7 @@ export class RefundsCreateService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    this.announce(refundRow.id, dto.studentId, userId, companyId);
 
     const balanceAfter = student.balance - dto.amount;
     await this.entityHistoryService.recordStatusChange({
@@ -359,6 +367,22 @@ export class RefundsCreateService {
     });
 
     return refundView(refundRow);
+  }
+
+  /** After the commit: the student's message waits for it (never emitted inside the transaction). */
+  private announce(
+    refundId: string,
+    studentId: number,
+    performedById: number,
+    companyId: number,
+  ) {
+    const payload: RefundEventPayload = {
+      refundId,
+      studentId,
+      companyId,
+      performedById,
+    };
+    this.events.emit(REFUND_REQUESTED_EVENT, payload);
   }
 
   // -- helpers ---------------------------------------------------------------

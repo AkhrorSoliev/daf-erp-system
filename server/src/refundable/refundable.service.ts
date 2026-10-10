@@ -21,6 +21,7 @@ import {
   loadTransferState,
 } from '../balance-notices/load-transfer-state';
 import type { TransferState } from '../balance-notices/transfer-condition';
+import { htmlToPlainText } from '../refunds/refund-student-text';
 import { refundableWorkbook } from './refundable.excel';
 import {
   chipCounts,
@@ -216,11 +217,12 @@ export class RefundableService {
           select: { createdAt: true, amount: true },
         }),
         loadTransferState(this.prisma, s, branchId, now),
+        // The bot sends the HTML; the page shows it as plain text (spec §5.3).
         loadNoticeText(
           this.prisma,
           { firstName: s.firstName, balance: s.balance, branchId, companyId },
           now,
-        ),
+        ).then((html) => (html === null ? null : htmlToPlainText(html))),
       ]);
     const row =
       studying > 0

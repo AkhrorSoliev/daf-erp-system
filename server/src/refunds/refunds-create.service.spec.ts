@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RefundsCreateService } from './refunds-create.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
@@ -30,6 +31,7 @@ describe('RefundsCreateService.quickRefund', () => {
   let enrollment: any;
   let tx: any;
   let history: any;
+  let events: { emit: jest.Mock };
 
   const dto = (amount: number) => ({
     studentId: 10001,
@@ -71,6 +73,7 @@ describe('RefundsCreateService.quickRefund', () => {
       $transaction: jest.fn((cb: any) => cb(tx)),
     };
     history = { recordStatusChange: jest.fn() };
+    events = { emit: jest.fn() };
     transactionsService = {
       recordRefund: jest.fn().mockResolvedValue({ id: 'tx-1' }),
       createAdjustment: jest.fn(),
@@ -91,6 +94,7 @@ describe('RefundsCreateService.quickRefund', () => {
         { provide: TransactionsService, useValue: transactionsService },
         { provide: EnrollmentBillingService, useValue: enrollmentBilling },
         { provide: EntityHistoryService, useValue: history },
+        { provide: EventEmitter2, useValue: events },
       ],
     }).compile();
 
@@ -331,6 +335,54 @@ describe('RefundsCreateService.quickRefund', () => {
           }),
         }),
       );
+    });
+
+    describe('the student is told after the commit', () => {
+      const payload = {
+        refundId: 'ref-1',
+        studentId: 10001,
+        companyId: 1,
+        performedById: 99,
+      };
+
+      it('emits refund.requested once, after the transaction, with ids only', async () => {
+        const order: string[] = [];
+        tx.refund.create.mockImplementation(({ data }: any) => {
+          order.push('write');
+          return Promise.resolve({ id: 'ref-1', ...data });
+        });
+        events.emit.mockImplementation(() => order.push('emit'));
+
+        await service.quickRefund(dto(100_000), 99, 1);
+
+        expect(events.emit).toHaveBeenCalledTimes(1);
+        expect(events.emit).toHaveBeenCalledWith('refund.requested', payload);
+        expect(order).toEqual(['write', 'emit']);
+      });
+
+      it('the balance-only path emits it too', async () => {
+        await service.quickRefund({ studentId: 10001, amount: 200_000 }, 99, 1);
+        expect(events.emit).toHaveBeenCalledTimes(1);
+        expect(events.emit).toHaveBeenCalledWith('refund.requested', payload);
+      });
+
+      it('a refused request emits nothing', async () => {
+        await expect(service.quickRefund(dto(600_000), 99, 1)).rejects.toThrow(
+          BadRequestException,
+        );
+        expect(events.emit).not.toHaveBeenCalled();
+      });
+
+      it('a failed write emits nothing (both paths)', async () => {
+        transactionsService.recordRefund.mockRejectedValue(new Error('boom'));
+        await expect(service.quickRefund(dto(100_000), 99, 1)).rejects.toThrow(
+          'boom',
+        );
+        await expect(
+          service.quickRefund({ studentId: 10001, amount: 200_000 }, 99, 1),
+        ).rejects.toThrow('boom');
+        expect(events.emit).not.toHaveBeenCalled();
+      });
     });
 
     it('the balance-only path opens the same kind of request', async () => {

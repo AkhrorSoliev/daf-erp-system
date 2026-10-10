@@ -11,6 +11,7 @@ import {
   type RefundReceiptInput,
 } from './pdf/refund-template';
 import { renderPdf } from './pdf/render';
+import { apiBaseUrl, refundReceiptPdfUrl } from './receipt-urls';
 import type { ReceiptVerificationDto } from './dto/verification.dto';
 
 /**
@@ -72,7 +73,7 @@ export class ReceiptsService {
       branchName: input.branch?.name ?? null,
       companyName: input.company.name,
       receivedByName: input.receivedByName,
-      pdfUrl: `${this.apiBaseUrl()}/api/receipts/payment/${paymentId}.pdf`,
+      pdfUrl: `${apiBaseUrl()}/api/receipts/payment/${paymentId}.pdf`,
     };
   }
 
@@ -97,7 +98,7 @@ export class ReceiptsService {
       branchName: null,
       companyName: input.company.name,
       receivedByName: input.processedByName,
-      pdfUrl: `${this.apiBaseUrl()}/api/receipts/refund/${refundId}.pdf`,
+      pdfUrl: refundReceiptPdfUrl(refundId),
     };
   }
 
@@ -408,21 +409,6 @@ export class ReceiptsService {
       this.config.get<string>('APP_URL') ??
       'https://admin.dafzentrum.uz'
     );
-  }
-
-  /**
-   * Where the backend API itself is reachable. Used in `pdfUrl` so the
-   * verification page's "PDF yuklab olish" button hits the API host
-   * (`api.dafzentrum.uz`) directly rather than the frontend portal.
-   * Falls back to the canonical production API host.
-   */
-  private apiBaseUrl(): string {
-    const explicit = this.config.get<string>('API_BASE_URL');
-    if (explicit) return explicit;
-    // Railway auto-injects `RAILWAY_PUBLIC_DOMAIN` (e.g. `api.dafzentrum.uz`).
-    const railwayDomain = this.config.get<string>('RAILWAY_PUBLIC_DOMAIN');
-    if (railwayDomain) return `https://${railwayDomain}`;
-    return 'https://api.dafzentrum.uz';
   }
 
   /**
