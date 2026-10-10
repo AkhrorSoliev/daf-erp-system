@@ -814,7 +814,6 @@ export class LessonBillingService {
           where: {
             id: params.studentId,
             companyId: params.companyId,
-            deletedAt: null,
           },
           select: { id: true },
         });

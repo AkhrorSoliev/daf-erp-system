@@ -1273,7 +1273,7 @@ describe('LessonBillingService', () => {
         }),
       ).rejects.toThrow(NotFoundException);
       expect(tx.student.findFirst).toHaveBeenCalledWith({
-        where: { id: studentId, companyId, deletedAt: null },
+        where: { id: studentId, companyId },
         select: { id: true },
       });
       expect(tx.studentBranch.findFirst).not.toHaveBeenCalled();
