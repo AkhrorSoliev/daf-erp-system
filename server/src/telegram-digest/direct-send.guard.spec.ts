@@ -15,6 +15,7 @@ const ALLOWED: string[] = [
   // Instant by design — the spec's "O'zgarmaydi" table.
   'src/absence-pause/', // auto-pause reminders and pause notices
   'src/telegram/', // bot flows, registration, OTP, mock exams
+  'src/tasks/telegram/', // task notices: instant, night quiet 22–08 (ADR-0077)
   'src/sms/sms.service.ts', // admin free text, lesson cancel/reschedule, payment receipts (ADR-0065)
   'src/lesson-cancellations/lesson-cancellation-events.listener.ts',
   'src/lesson-reschedules/lesson-reschedule-events.listener.ts',
@@ -69,5 +70,26 @@ describe('direct Telegram sends — ADR-0025', () => {
       (entry) => !entry.endsWith('/') && !callers.includes(entry),
     );
     expect(stale).toEqual([]);
+  });
+});
+
+/**
+ * ADR-0077: task notices left the 20:00 digest — the bot sends them itself
+ * (`src/tasks/telegram/`). The digest still renders `TASK_*` rows already in
+ * its queue, so `src/telegram-digest/` may name them; nothing else may.
+ */
+describe('task notices are not queued for the digest — ADR-0077', () => {
+  it('nothing outside the digest names a TASK_* digest category', () => {
+    const offenders = walk(join(ROOT, 'src'))
+      .map((file) => ({
+        path: relative(ROOT, file).split('\\').join('/'),
+        source: readFileSync(file, 'utf8'),
+      }))
+      .filter(({ path }) => !path.startsWith('src/telegram-digest/'))
+      .filter(({ source }) =>
+        /TelegramDigestCategory\.TASK_|category:\s*['"`]TASK_/.test(source),
+      )
+      .map(({ path }) => path);
+    expect(offenders).toEqual([]);
   });
 });

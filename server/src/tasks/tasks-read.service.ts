@@ -29,6 +29,7 @@ import {
   canWatch,
   highestRoleId,
 } from './task-policy';
+import { usersWithTelegram } from './telegram/task-telegram-view';
 import { TasksService, toPolicyPerson, type TaskActor } from './tasks.service';
 import type { ListTasksDto } from './dto/list-tasks.dto';
 import type { WorkloadQueryDto } from './dto/workload-query.dto';
@@ -415,6 +416,9 @@ export class TasksReadService {
         },
       },
     });
+    // The same rule as the Telegram notice itself (`staffChatOf`): an inactive
+    // employee, or a chat two live staff accounts share, gets nothing.
+    const linked = await usersWithTelegram(this.prisma, users);
     const shape = (u: (typeof users)[number]) => ({
       id: u.id,
       firstName: u.firstName,
@@ -422,7 +426,7 @@ export class TasksReadService {
       photo: u.photo,
       roleNames: u.roles.map((r) => r.role.name),
       branchNames: u.branches.map((b) => b.branch.name),
-      telegramLinked: u.telegramChatId !== null,
+      telegramLinked: linked.has(u.id),
     });
     const assignees = users
       .filter((u) => canAssignTo(caller, toPolicyPerson(u)))
