@@ -19,6 +19,12 @@ const CLOSE_REASON: Record<string, string> = {
   JOIN_REJECTED: "so'rov rad etildi",
   JOIN_EXPIRED: "so'rov muddati o'tdi",
   JOIN_REPLACED: "yangi so'rov bilan almashtirildi",
+  PAYMENT_RECEIVED: "to'lov qilindi",
+  CALL_LOGGED: "qo'ng'iroq yozildi",
+  LEAD_CALLED: "lidga qo'ng'iroq qilindi",
+  LEAD_STATUS_CHANGED: "lid holati o'zgardi",
+  LEAD_GONE: "lid endi qo'ng'iroq kutmaydi",
+  STUDENT_GONE: "o'quvchi arxivlandi",
 };
 
 function stepLine(meta: TaskEvent["meta"]): string {

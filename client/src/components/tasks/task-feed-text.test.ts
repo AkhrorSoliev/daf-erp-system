@@ -54,6 +54,16 @@ describe("describeEvent", () => {
     expect(line({ type: "AUTO_CLOSED", actorId: null, actor: null, meta: { reason: "JOIN_REPLACED" } })).toBe("Tizim yopdi (yangi so'rov bilan almashtirildi)");
   });
 
+  it("names why the system closed an automatic task", () => {
+    const sys = { actorId: null, actor: null };
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "PAYMENT_RECEIVED" } })).toBe("Tizim yopdi (to'lov qilindi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "CALL_LOGGED" } })).toBe("Tizim yopdi (qo'ng'iroq yozildi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "LEAD_CALLED" } })).toBe("Tizim yopdi (lidga qo'ng'iroq qilindi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "LEAD_STATUS_CHANGED" } })).toBe("Tizim yopdi (lid holati o'zgardi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "LEAD_GONE" } })).toBe("Tizim yopdi (lid endi qo'ng'iroq kutmaydi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "STUDENT_GONE" } })).toBe("Tizim yopdi (o'quvchi arxivlandi)");
+  });
+
   it("covers the remaining server types", () => {
     expect(line({ type: "ASSIGNEE", meta: { added: [1], removed: [] } })).toBe("Aziz Karimov ijrochilarni o'zgartirdi");
     expect(line({ type: "REASSIGNED", actorId: null, actor: null, meta: { from: 1, to: [2] } })).toBe("Tizim ishdan ketgani uchun topshiriq o'tkazildi");
