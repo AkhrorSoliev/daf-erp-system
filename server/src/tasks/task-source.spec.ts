@@ -137,6 +137,44 @@ describe('loadTaskSource', () => {
     });
   });
 
+  it('an archived student is a source that is gone: the read skips deletedAt rows, scoped to the company, and the card falls back to null', async () => {
+    const d = db();
+    d.student.findFirst.mockResolvedValue(null);
+    expect(
+      await loadTaskSource(d as any, {
+        kind: 'CALLBACK',
+        sourceKey: 'calllog:c1',
+        companyId: 1,
+      }),
+    ).toBeNull();
+    expect(d.student.findFirst.mock.calls[0][0].where).toEqual({
+      id: 10001,
+      companyId: 1,
+      deletedAt: null,
+    });
+    expect(d.callLog.findFirst.mock.calls[1][0].where).toEqual({
+      studentId: 10001,
+      companyId: 1,
+    });
+  });
+
+  it('an archived lead is a source that is gone: the read skips deletedAt rows, scoped to the company, and the card falls back to null', async () => {
+    const d = db();
+    d.lead.findFirst.mockResolvedValue(null);
+    expect(
+      await loadTaskSource(d as any, {
+        kind: 'UNCALLED_LEAD',
+        sourceKey: 'lead:l1',
+        companyId: 1,
+      }),
+    ).toBeNull();
+    expect(d.lead.findFirst.mock.calls[0][0].where).toEqual({
+      id: 'l1',
+      companyId: 1,
+      deletedAt: null,
+    });
+  });
+
   it('a cleared debt reads 0', async () => {
     const d = db();
     d.student.findFirst.mockResolvedValue({ ...STUDENT, balance: 15_000 });

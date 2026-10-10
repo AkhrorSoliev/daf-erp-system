@@ -64,22 +64,25 @@ async function studentFacts(
   companyId: number,
   sameCallId?: string,
 ) {
-  const s = await db.student.findFirst({
-    where: { id: studentId, companyId },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      phone: true,
-      balance: true,
-    },
-  });
+  // An archived student is a source that is gone (CLAUDE.md, soft delete).
+  const [s, last] = await Promise.all([
+    db.student.findFirst({
+      where: { id: studentId, companyId, deletedAt: null },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        balance: true,
+      },
+    }),
+    db.callLog.findFirst({
+      where: { studentId, companyId },
+      orderBy: { createdAt: 'desc' },
+      select: CALL_SELECT,
+    }),
+  ]);
   if (!s) return null;
-  const last = await db.callLog.findFirst({
-    where: { studentId, companyId },
-    orderBy: { createdAt: 'desc' },
-    select: CALL_SELECT,
-  });
   return {
     id: s.id,
     name: studentName(s),
@@ -131,7 +134,7 @@ export async function loadTaskSource(
     }
     case 'UNCALLED_LEAD': {
       const l = await db.lead.findFirst({
-        where: { id, companyId: t.companyId },
+        where: { id, companyId: t.companyId, deletedAt: null },
         select: {
           id: true,
           firstName: true,
