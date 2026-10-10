@@ -243,7 +243,41 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
     expect(events.emitAsync).not.toHaveBeenCalled();
   });
 
-  it('signals the commit before the history rows and the charge event', async () => {
+  it('writes the four history rows in the card transaction, before the commit', async () => {
+    const onCommit = jest.fn();
+
+    await registerStudentFromTelegram(
+      prisma,
+      history,
+      leadOrigin as never,
+      data,
+      '555000',
+      events,
+      { onCommit },
+    );
+
+    expect(
+      history.recordCreate.mock.calls.map(
+        ([row]: [{ entityType: string; newValues: { action?: string } }]) => [
+          row.entityType,
+          row.newValues.action,
+        ],
+      ),
+    ).toEqual([
+      ['Student', 'TELEGRAM_ROYXATDAN_OTDI'],
+      ['Student', 'GURUHGA_QOSHILDI'],
+      ['Enrollment', undefined],
+      ['Group', 'OQUVCHI_QOSHILDI'],
+    ]);
+    for (const [row] of history.recordCreate.mock.calls) {
+      expect(row.tx).toBe(tx);
+      expect(row.companyId).toBe(DEFAULT_COMPANY_ID);
+    }
+    const lastRow = Math.max(...history.recordCreate.mock.invocationCallOrder);
+    expect(lastRow).toBeLessThan(onCommit.mock.invocationCallOrder[0]);
+  });
+
+  it('signals the commit before the charge event', async () => {
     const onCommit = jest.fn();
 
     await registerStudentFromTelegram(
@@ -260,9 +294,27 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
     expect(onCommit.mock.invocationCallOrder[0]).toBeLessThan(
       events.emitAsync.mock.invocationCallOrder[0],
     );
-    expect(onCommit.mock.invocationCallOrder[0]).toBeLessThan(
-      history.recordCreate.mock.invocationCallOrder[0],
-    );
+  });
+
+  it('a failing history row rolls the card back: no commit signal, no charge', async () => {
+    // It used to fail after the commit, and the approving administrator got a
+    // 500 for a card that existed while the person never got the password.
+    history.recordCreate.mockRejectedValueOnce(new Error('tarix yozilmadi'));
+    const onCommit = jest.fn();
+
+    await expect(
+      registerStudentFromTelegram(
+        prisma,
+        history,
+        leadOrigin as never,
+        data,
+        '555000',
+        events,
+        { actorId: 10002, inTx: jest.fn(), onCommit },
+      ),
+    ).rejects.toThrow('tarix yozilmadi');
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(events.emitAsync).not.toHaveBeenCalled();
   });
 
   it('records the approving administrator on the lead and on every history row', async () => {

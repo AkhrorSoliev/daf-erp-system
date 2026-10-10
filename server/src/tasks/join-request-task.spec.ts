@@ -102,6 +102,19 @@ describe('createJoinRequestTask', () => {
     );
   });
 
+  it('cuts a long title to 200 characters, in the row and in the event alike', async () => {
+    const t = tx([3]);
+    const made = await createJoinRequestTask(t, {
+      ...args,
+      title: `Yangi o'quvchi so'rovi: ${'x'.repeat(300)}`,
+    });
+
+    const title = t.task.create.mock.calls[0][0].data.title;
+    expect(title).toHaveLength(200);
+    expect(title.startsWith("Yangi o'quvchi so'rovi: x")).toBe(true);
+    expect(made?.eventTask.title).toBe(title);
+  });
+
   it('writes nothing when nobody can take it', async () => {
     const t = tx([]);
     t.user.findMany.mockResolvedValue([]);
@@ -170,6 +183,23 @@ describe('closeJoinRequestTask', () => {
       closedAt: expect.any(Date),
     });
   });
+
+  it.each(['JOIN_EXPIRED', 'JOIN_REPLACED'] as const)(
+    'records the system close %s with no actor',
+    async (reason) => {
+      const t = tx([3]);
+      await closeJoinRequestTask(t, 't1', null, reason);
+      expect(t.taskEvent.create).toHaveBeenCalledWith({
+        data: {
+          taskId: 't1',
+          type: 'AUTO_CLOSED',
+          actorId: null,
+          meta: { reason },
+          via: 'SYSTEM',
+        },
+      });
+    },
+  );
 
   it('writes no closing event for a task already closed', async () => {
     const t = tx([3]);

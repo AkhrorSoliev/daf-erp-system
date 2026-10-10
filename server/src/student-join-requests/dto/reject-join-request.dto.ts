@@ -7,8 +7,8 @@ export class RejectJoinRequestDto {
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
-  @IsString()
+  @IsString({ message: "Sabab matn bo'lishi kerak" })
   @IsNotEmpty({ message: 'Sababini yozing' })
-  @MaxLength(500)
+  @MaxLength(500, { message: 'Sabab 500 belgidan oshmasin' })
   reason: string;
 }

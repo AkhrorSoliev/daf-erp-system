@@ -72,6 +72,60 @@ describe('JoinRequestNotifier', () => {
     expect(await notifier(telegram).send(MESSAGE)).toBe(false);
   });
 
+  describe('a chat that cannot be reached', () => {
+    // How Telegraf raises a Bot API refusal.
+    const blocked = Object.assign(new Error('403: Forbidden'), {
+      response: {
+        error_code: 403,
+        description: 'Forbidden: bot was blocked by the user',
+      },
+    });
+
+    it('does not retry the photo as text, and only warns', async () => {
+      const telegram = {
+        sendPhoto: jest.fn().mockRejectedValue(blocked),
+        sendMessage: jest.fn(),
+      };
+      const n = notifier(telegram);
+      const logger = (n as any).logger as { warn: jest.Mock; error: jest.Mock };
+
+      expect(await n.send(MESSAGE)).toBe(false);
+      expect(telegram.sendMessage).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("So'rov xabari yetkazilmadi (chat 555444)"),
+      );
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('only warns when the text alone is refused', async () => {
+      const telegram = {
+        sendPhoto: jest.fn(),
+        sendMessage: jest.fn().mockRejectedValue(blocked),
+      };
+      const n = notifier(telegram);
+      const logger = (n as any).logger as { warn: jest.Mock; error: jest.Mock };
+
+      expect(await n.send({ ...MESSAGE, photo: null })).toBe(false);
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+  });
+
+  it('logs an error when a failure is not the chat (network, server)', async () => {
+    const telegram = {
+      sendPhoto: jest.fn(),
+      sendMessage: jest.fn().mockRejectedValue(new Error('ETIMEDOUT')),
+    };
+    const n = notifier(telegram);
+    const logger = (n as any).logger as { warn: jest.Mock; error: jest.Mock };
+
+    expect(await n.send({ ...MESSAGE, photo: null })).toBe(false);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('ETIMEDOUT'),
+    );
+  });
+
   it('never writes the message text to the log — the approval carries the password', async () => {
     const password = 'Zx9-fake-Pq';
     const telegram = {

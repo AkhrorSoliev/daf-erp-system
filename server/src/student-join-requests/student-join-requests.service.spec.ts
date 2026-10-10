@@ -2,6 +2,7 @@ import { StudentJoinRequestsService } from './student-join-requests.service';
 import * as joinTask from '../tasks/join-request-task';
 import { TASK_EVENTS } from '../tasks/task-events';
 import { JOIN_REQUEST_CLOSED } from './join-request-events';
+import { buildHolidayDateSet } from '../holidays/holiday-date-set';
 
 jest.mock('../holidays/holiday-date-set', () => ({
   buildHolidayDateSet: jest.fn().mockResolvedValue(new Set<string>()),
@@ -156,6 +157,35 @@ describe('StudentJoinRequestsService.create', () => {
       kind: 'refused',
       message: "Siz allaqachon ro'yxatdan o'tgansiz!",
     });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("dates the task 10:00 on the next working day, past Sunday and the branch's holidays", async () => {
+    const { prisma, service } = setup();
+    jest
+      .mocked(buildHolidayDateSet)
+      .mockResolvedValueOnce(new Set(['2026-10-10']));
+    // Friday 09.10.2026, 20:00 Tashkent; Saturday is a holiday, Sunday is off.
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-09T15:00:00.000Z'));
+    try {
+      await service.create(INPUT);
+    } finally {
+      jest.useRealTimers();
+    }
+
+    // From the Tashkent day on, 90 days ahead, for the request's branch.
+    expect(buildHolidayDateSet).toHaveBeenCalledWith(
+      prisma,
+      new Date('2026-10-08T19:00:00.000Z'),
+      new Date('2027-01-06T19:00:00.000Z'),
+      7,
+    );
+    expect(createTask).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        dueAt: new Date('2026-10-12T05:00:00.000Z'),
+      }),
+    );
   });
 
   it.each([

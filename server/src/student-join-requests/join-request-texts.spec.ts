@@ -134,6 +134,45 @@ describe('join request texts', () => {
     ).toContain('Hurmatli <b>&lt;i&gt;x&lt;/i&gt;</b>!');
   });
 
+  describe('escapes every value it prints, not only the name', () => {
+    const NASTY = {
+      firstName: 'A&B',
+      groupName: '<b>A1</b>',
+      teacherName: 'Ali <Vali>',
+      schedule: 'Du & Pa',
+    };
+
+    it('the request received message', () => {
+      const text = joinRequestReceivedText(NASTY);
+      expect(text).toContain('Hurmatli <b>A&amp;B</b>!');
+      expect(text).toContain('Siz <b>&lt;b&gt;A1&lt;/b&gt;</b> guruhiga');
+      expect(text).toContain("O'qituvchi: Ali &lt;Vali&gt;");
+      expect(text).toContain('Dars vaqti: Du &amp; Pa');
+    });
+
+    it('the approval message, the login and the password included', () => {
+      const text = joinRequestApprovedText({
+        ...NASTY,
+        phone: '+49<1>',
+        password: 'a<b>&c',
+      });
+      expect(text).toContain('📚 Guruh: <b>&lt;b&gt;A1&lt;/b&gt;</b>');
+      expect(text).toContain("O'qituvchi: Ali &lt;Vali&gt;");
+      expect(text).toContain('Dars vaqti: Du &amp; Pa');
+      expect(text).toContain('📱 Login: <b>+49&lt;1&gt;</b>');
+      expect(text).toContain('🔑 Parol: <b>a&lt;b&gt;&amp;c</b>');
+    });
+
+    it.each([
+      ['rejection', joinRequestRejectedText],
+      ['expiry', joinRequestExpiredText],
+    ])('the %s message', (_name, build) => {
+      const text = build({ ...NASTY, phone: null });
+      expect(text).toContain('Hurmatli <b>A&amp;B</b>!');
+      expect(text).toContain('<b>&lt;b&gt;A1&lt;/b&gt;</b> guruhiga');
+    });
+  });
+
   it('the notice for a chat that already waits', () => {
     expect(pendingRequestNotice('A1-07')).toBe(
       "Sizda ko'rib chiqilayotgan so'rov bor: A1-07. Yangisini yuborsangiz, avvalgisi bekor bo'ladi.",
