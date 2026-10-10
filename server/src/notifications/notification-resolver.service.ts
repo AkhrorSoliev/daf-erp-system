@@ -12,6 +12,10 @@ import {
 import { GROUP_DELETED } from '../groups/group-events';
 import { MIN_ALERT_DEBT } from '../payment-promises/overdue-digest';
 import type { PaymentPromiseOverduePayload } from '../payment-promises/payment-promise-cron.service';
+import {
+  JOIN_REQUEST_CLOSED,
+  type JoinRequestClosedEvent,
+} from '../student-join-requests/join-request-events';
 import { TASK_EVENTS, type TaskEventTask } from '../tasks/task-events';
 import {
   UNMARKED_LESSON_CLOSED,
@@ -169,6 +173,12 @@ export class NotificationResolverService {
       taskId: p.task.id,
       userId: { in: p.userIds },
     });
+  }
+
+  /** A join request decided, expired or replaced: its task's notices close (ADR-0080). */
+  @OnEvent(JOIN_REQUEST_CLOSED)
+  async onJoinRequestClosed(p: JoinRequestClosedEvent): Promise<void> {
+    await this.resolve({ companyId: p.companyId, taskId: p.taskId });
   }
 
   // ---------- payments ----------

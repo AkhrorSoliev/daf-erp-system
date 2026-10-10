@@ -194,6 +194,7 @@ export class TelegramGroupDailyReportService {
       todayFlags,
       yesterdaySnapshot,
       staleUnmarked,
+      staleJoinRequests,
     ] = await Promise.all([
       this.prisma.company.findUnique({
         where: { id: companyId },
@@ -376,6 +377,16 @@ export class TelegramGroupDailyReportService {
           ...branchIdWhere(branchIds),
         },
       }),
+      // Bot sign-ups no administrator answered for more than a day
+      // (ADR-0080 / spec D10), scoped like the rest of the report.
+      this.prisma.studentJoinRequest.count({
+        where: {
+          companyId,
+          status: 'PENDING',
+          createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          ...branchIdWhere(branchIds),
+        },
+      }),
     ]);
 
     // Prognoz + salary top-up are computed separately (heavier, and each is
@@ -424,7 +435,12 @@ export class TelegramGroupDailyReportService {
     // Cash-only figure, kept for the «kassa harakati» reading below.
     const mtdCashNet = mtdIncome - mtdExpense - mtdAdvance;
 
-    const flags = this.buildFlagLines(todayFlags, attendancePct, staleUnmarked);
+    const flags = this.buildFlagLines(
+      todayFlags,
+      attendancePct,
+      staleUnmarked,
+      staleJoinRequests,
+    );
 
     const debtGrowth = yesterdaySnapshot
       ? totalDebt - yesterdaySnapshot.totalDebt
@@ -695,6 +711,7 @@ export class TelegramGroupDailyReportService {
     }>,
     attendancePct: number,
     staleUnmarked: number,
+    staleJoinRequests: number,
   ): string[] {
     const lines: string[] = [];
     const flagFor = (type: string) => todayFlags.find((f) => f.type === type);
@@ -735,6 +752,12 @@ export class TelegramGroupDailyReportService {
     if (staleUnmarked > 0) {
       lines.push(
         `• Javobsiz darslar (1 kundan ortiq): <b>${staleUnmarked}</b> ta — «Topshiriqlar»da javob bering`,
+      );
+    }
+
+    if (staleJoinRequests > 0) {
+      lines.push(
+        `• Javobsiz o'quvchi so'rovlari (1 kundan ortiq): <b>${staleJoinRequests}</b> ta — «Topshiriqlar»da javob bering`,
       );
     }
 

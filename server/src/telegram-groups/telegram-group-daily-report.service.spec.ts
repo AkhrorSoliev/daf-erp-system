@@ -43,6 +43,8 @@ interface State {
   } | null;
   /** «Dars bo'ldimi?» questions unanswered for more than a day. */
   staleUnmarked?: number;
+  /** Bot sign-up join requests unanswered for more than a day. */
+  staleJoinRequests?: number;
 }
 
 function defaultState(): State {
@@ -163,6 +165,9 @@ function makePrisma(state: State) {
     },
     user: { findFirst: jest.fn(async () => state.ceo) },
     unmarkedLesson: { count: jest.fn(async () => state.staleUnmarked ?? 0) },
+    studentJoinRequest: {
+      count: jest.fn(async () => state.staleJoinRequests ?? 0),
+    },
     // Only a branch-scoped run names its scope in the header.
     branch: {
       findMany: jest.fn(async () => [{ id: 2, name: 'Namangan filiali' }]),
@@ -822,6 +827,30 @@ describe('TelegramGroupDailyReportService', () => {
     const service = await buildService(makePrisma(state), makeSalary(state));
     const { message } = await service.build(1001, null);
     expect(message).not.toContain('Javobsiz darslar');
+  });
+
+  it('flags join requests waiting more than a day (ADR-0080)', async () => {
+    const state = { ...defaultState(), staleJoinRequests: 2 };
+    const prisma = makePrisma(state);
+    const service = await buildService(prisma, makeSalary(state));
+    const { message } = await service.build(1001, null);
+    expect(message).toContain(
+      "• Javobsiz o'quvchi so'rovlari (1 kundan ortiq): <b>2</b> ta",
+    );
+    expect(prisma.studentJoinRequest.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        companyId: 1001,
+        status: 'PENDING',
+        createdAt: { lt: expect.any(Date) },
+      }),
+    });
+  });
+
+  it('prints no join request line when nothing waits', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state));
+    const { message } = await service.build(1001, null);
+    expect(message).not.toContain("o'quvchi so'rovlari");
   });
 
   it('does NOT write the snapshot itself any more', async () => {

@@ -1,13 +1,12 @@
 import { Logger } from '@nestjs/common';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { UserStatus } from '@prisma/client';
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { BotContext } from '../types/context';
 import { SCENES } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
-import { EntityHistoryService } from '../../common/entity-history';
-import { StudentLeadOriginService } from '../../common/student-origin';
+import { ENROLLABLE_GROUP_STATUSES } from '../../groups/shared/enrollable-statuses';
 import { ALLOWED_IMAGE_MIMES } from '../../upload/upload.constraints';
 import {
   ASK_FIRST_NAME,
@@ -32,13 +31,11 @@ import {
   loadTeachersForBranch,
   TEACHER_ROLE_ID,
 } from './student-registration-helpers';
-import {
-  registerStudentFromTelegram,
-  uploadStudentPhoto,
-} from './student-registration-flow';
-import { finishRegistration } from './finish-registration';
+import { uploadStudentPhoto } from './student-registration-flow';
 import { withProcessingLock } from '../utils/processing-lock';
 import { describeError } from '../../telegram-digest/telegram-send';
+import type { JoinRequestGateway } from '../../student-join-requests/student-join-requests.service';
+import { pendingRequestNotice } from '../../student-join-requests/join-request-texts';
 
 /**
  * Student registration flow:
@@ -48,15 +45,13 @@ import { describeError } from '../../telegram-digest/telegram-send';
  * Step 4: Familiya kiritish
  * Step 5: Telefon raqam yuborish
  * Step 6: Rasm yuborish
- * Step 7: Tasdiqlash
+ * Step 7: Tasdiqlash — so'rov yuboriladi (ADR-0080)
  */
 export function createStudentRegistrationScene(
   prisma: PrismaService,
   uploadService: UploadService,
   _bot: Telegraf<BotContext>,
-  entityHistoryService: EntityHistoryService,
-  leadOrigin: StudentLeadOriginService,
-  events: Pick<EventEmitter2, 'emitAsync'>,
+  joinRequests: JoinRequestGateway,
 ): Scenes.BaseScene<BotContext> {
   const logger = new Logger('StudentRegistrationScene');
   const scene = new Scenes.BaseScene<BotContext>(SCENES.STUDENT_REGISTRATION);
@@ -84,6 +79,10 @@ export function createStudentRegistrationScene(
       await ctx.scene.leave();
       return;
     }
+
+    // A request already waits: say so — a new one replaces it (spec D9).
+    const pending = await joinRequests.pendingForChat(chatId);
+    if (pending) await ctx.reply(pendingRequestNotice(pending.groupName));
 
     // QR kod orqali guruh bilan kelgan bo'lsa — to'g'ridan-to'g'ri ism kiritishga o'tish
     if (ctx.session.data.groupId) {
@@ -131,6 +130,8 @@ export function createStudentRegistrationScene(
         where: {
           id: teacherId,
           deletedAt: null,
+          isActive: true,
+          status: UserStatus.ACTIVE,
           roles: { some: { roleId: TEACHER_ROLE_ID } },
         },
         select: { id: true, firstName: true, lastName: true },
@@ -147,6 +148,7 @@ export function createStudentRegistrationScene(
         where: {
           deletedAt: null,
           branchId,
+          statusEnum: { in: ENROLLABLE_GROUP_STATUSES },
           teachers: { some: { teacherId } },
         },
         select: {
@@ -218,7 +220,12 @@ export function createStudentRegistrationScene(
     const groupId = ctx.match[1];
 
     const group = await prisma.group.findFirst({
-      where: { id: groupId, deletedAt: null },
+      where: {
+        id: groupId,
+        branchId: ctx.session.data.branchId,
+        deletedAt: null,
+        statusEnum: { in: ENROLLABLE_GROUP_STATUSES },
+      },
       select: { id: true, name: true },
     });
     if (!group) {
@@ -423,7 +430,8 @@ export function createStudentRegistrationScene(
     }
   });
 
-  // Tasdiqlash
+  // Tasdiqlash — so'rov yuboriladi (ADR-0080): karta, guruh, parol va pul
+  // administrator tasdiqlagandan keyin yoziladi.
   scene.action('confirm_student', async (ctx) => {
     if (ctx.session.step !== 7) return;
     if (ctx.session.processing) return;
@@ -443,32 +451,23 @@ export function createStudentRegistrationScene(
       await ctx.sendChatAction('typing');
 
       const data = ctx.session.data;
-      const chatId = String(ctx.chat!.id);
-
-      let plainPassword: string;
+      let outcome: Awaited<ReturnType<JoinRequestGateway['create']>>;
       try {
-        ({ plainPassword } = await registerStudentFromTelegram(
-          prisma,
-          entityHistoryService,
-          leadOrigin,
-          data,
-          chatId,
-          events,
-        ));
+        outcome = await joinRequests.create({
+          branchId: data.branchId,
+          groupId: data.groupId,
+          chatId: String(ctx.chat!.id),
+          telegramUsername: ctx.from?.username ?? null,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          photo: data.photo,
+        });
       } catch (error) {
-        logger.error("Ro'yxatdan o'tishda xatolik", error as Error);
-
-        if (error?.code === 'P2002') {
-          await ctx.reply(
-            "Bu ma'lumotlar allaqachon tizimda mavjud. Administrator bilan bog'laning.",
-          );
-          await ctx.scene.leave();
-          return;
-        }
-
+        logger.error("So'rov yozilmadi", error as Error);
         ctx.session.step = 7;
         await ctx.reply(
-          "Ro'yxatdan o'tishda xatolik yuz berdi. Qayta tasdiqlang yoki administrator bilan bog'laning.",
+          "So'rovni yuborishda xatolik yuz berdi. Qayta tasdiqlang yoki administrator bilan bog'laning.",
           Markup.inlineKeyboard([
             [
               Markup.button.callback('✅ Qayta tasdiqlash', 'confirm_student'),
@@ -479,20 +478,33 @@ export function createStudentRegistrationScene(
         return;
       }
 
-      // The student, their enrollment and their sign-in account exist now.
-      await finishRegistration(
-        ctx,
-        logger,
-        data.photo,
-        "✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
-          `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
-          `📚 Guruh: ${data.groupName}\n\n` +
-          `🔐 Shaxsiy kabinetingiz:\n` +
-          `🌐 student.dafzentrum.uz\n` +
-          `📱 Login: ${data.phone}\n` +
-          `🔑 Parol: ${plainPassword}\n\n` +
-          'Tez orada sizga darslar haqida xabar beramiz!',
-      );
+      // Either way the registration ends here. A refusal keeps nothing, so
+      // the photo goes; a request owns it now, so the session forgets it and
+      // the next /start does not delete it.
+      if (outcome.kind === 'refused') {
+        await uploadService.deleteFile(data.photo);
+      }
+      ctx.session.data = {};
+      await ctx.scene.leave();
+      try {
+        await ctx.editMessageCaption(
+          outcome.kind === 'created' ? "⏳ So'rov yuborildi" : '❌ Yuborilmadi',
+        );
+      } catch {
+        // Only the preview's label.
+      }
+
+      try {
+        if (outcome.kind === 'created') {
+          await ctx.reply(outcome.text, { parse_mode: 'HTML' });
+        } else {
+          await ctx.reply(outcome.message, Markup.removeKeyboard());
+        }
+      } catch (err) {
+        logger.warn(
+          `So'rov javobi yuborilmadi (chat ${ctx.chat?.id}): ${describeError(err)}`,
+        );
+      }
     });
   });
 

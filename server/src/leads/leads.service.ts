@@ -25,6 +25,7 @@ import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RemoveLeadDto } from './dto/remove-lead.dto';
 import { equalsOrIn } from '../common/dto/to-array';
 import { tashkentRangeFilter } from '../common/date/tashkent';
+import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
 
 // Sentinel stored in Lead.statusChangeReason when a lead is CONVERTED by being
 // linked to an already-existing student (no new account minted) rather than by
@@ -946,8 +947,7 @@ export class LeadsService {
         if (!group) {
           throw new NotFoundException('Guruh topilmadi');
         }
-        const ENROLLABLE_STATUSES = ['ACTIVE', 'FORMING', 'PAUSED'];
-        if (!ENROLLABLE_STATUSES.includes(group.statusEnum)) {
+        if (!isEnrollableGroupStatus(group.statusEnum)) {
           throw new BadRequestException(
             "Tugallangan yoki bekor qilingan guruhga o'quvchi qo'shib bo'lmaydi",
           );

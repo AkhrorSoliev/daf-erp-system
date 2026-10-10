@@ -41,7 +41,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     qisqacha:
       "Yangi o'quvchi «O'quvchilar» sahifasida qo'lda yoki Telegram havolasi orqali qo'shiladi. Filial majburiy va bitta; telefon raqam o'quvchining kirish raqami, kartada o'zgarsa kirish ham o'zgaradi; zaxira raqam bilan ham kiradi. Bot xabarlari yetib bormasa, kartada «Telegram uzilgan» belgisi chiqadi.",
     rollar: [1, 2, 3],
-    adr: ["0032", "0039", "0066", "0070"],
+    adr: ["0032", "0039", "0066", "0070", "0080"],
     yollar: ["/students"],
     kalitSozlar: [
       "yangi o'quvchi",

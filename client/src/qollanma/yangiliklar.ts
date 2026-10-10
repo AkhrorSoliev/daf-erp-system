@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "Botdan guruhga yozilish endi administrator tasdig'i bilan",
+    matn: "Guruhning QR kodi yoki havolasi orqali botda ro'yxatdan o'tgan odam endi darhol o'quvchi bo'lmaydi: u so'rov yuboradi. Filial administratorlariga «Yangi o'quvchi so'rovi» topshirig'i chiqadi (qo'ng'iroqchada va Telegram botda ham). Topshiriq varag'ida o'quvchining rasmi, telefoni, Telegram nomi va tizim topgan belgilar (avvalgi lid, arxivdagi karta, guruhda shu ismli o'quvchi) turadi. «Tasdiqlash» bosilganda karta ochiladi, o'quvchi guruhga qo'shiladi, oylik pul shu kundan hisoblanadi va login-parol botga boradi; kerak bo'lsa boshqa guruhni tanlash mumkin. «Rad etish» da sabab yoziladi — uni faqat xodimlar ko'radi, o'quvchiga sababsiz xabar boradi. Bir kundan ortiq javobsiz so'rovlar 21:00 hisobotida sanaladi, 7 kun ichida javob berilmagan so'rov o'zi yopiladi. Bot endi yopilgan guruhga va ishlamayotgan ustozga yozmaydi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "yangi-oquvchi" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Bosh sahifada ham lid voronkasi",
     matn: "Bosh sahifadagi «Lid voronkasi · shu oy» qatori endi «Lidlar hisoboti»dagi voronkaning kichik nusxasi: o'sha ranglar, blok kengligi odam soniga teng, bloklar orasida necha foiz o'tgani. Chapda «Liddan to'lovgacha» va «To'lamagan faol o'quvchi» qoladi. Bosqichni bosganda «Lidlar hisoboti» ochiladi.",
     rollar: [1, 2, 3],

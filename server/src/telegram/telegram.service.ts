@@ -8,7 +8,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { OnEvent } from '@nestjs/event-emitter';
 import { createHash, timingSafeEqual } from 'crypto';
 import {
   STAFF_CABINET_REQUESTED,
@@ -33,7 +33,7 @@ import {
   VALID_ROLE_IDS,
   grantableRoleIdsFor,
 } from './constants';
-import { StudentLeadOriginService } from '../common/student-origin';
+import { StudentJoinRequestsService } from '../student-join-requests/student-join-requests.service';
 import { StatementService } from '../statements/statement.service';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
@@ -71,6 +71,8 @@ import { UsersService } from '../users/users.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { PaymentLinkService } from '../payment-gateways/payment-link.service';
 import { describeError } from '../telegram-digest/telegram-send';
+import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
+import { GROUP_CLOSED_REPLY } from '../student-join-requests/join-request-texts';
 
 /**
  * Telegram'dan qabul qilinadigan yangilanish turlari.
@@ -157,9 +159,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private entityHistoryService: EntityHistoryService,
     private paymentLinkService: PaymentLinkService,
     private gateStats: TelegramChannelGateStatsService,
-    private leadOrigin: StudentLeadOriginService,
+    private joinRequests: StudentJoinRequestsService,
     private statements: StatementService,
-    private events: EventEmitter2,
   ) {}
 
   async onModuleInit() {
@@ -298,9 +299,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.prisma,
       this.uploadService,
       this.bot,
-      this.entityHistoryService,
-      this.leadOrigin,
-      this.events,
+      this.joinRequests,
     );
 
     const employeeScene = createEmployeeRegistrationScene(
@@ -1313,6 +1312,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         select: {
           id: true,
           name: true,
+          statusEnum: true,
           lessonStartTime: true,
           lessonEndTime: true,
           days: true,
@@ -1330,6 +1330,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       });
       if (!group) {
         await ctx.reply("Guruh topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+      // A completed, cancelled or archived group takes nobody (ADR-0080).
+      if (!isEnrollableGroupStatus(group.statusEnum)) {
+        await ctx.reply(GROUP_CLOSED_REPLY);
         return true;
       }
 
