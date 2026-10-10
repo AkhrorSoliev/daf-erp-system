@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { tashkentDayAsLocalDate, tashkentDdMm, tashkentHhmm } from "@/lib/tashkent-time";
 
 /** `GET /student-join-requests/by-task/:taskId` (server `join-request-view.ts`). */
 export type JoinRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" | "REPLACED";
@@ -15,7 +16,13 @@ export interface JoinRequestView {
 }
 export interface JoinNote { tone: "info" | "warning" | "error"; text: string }
 
-const day = (iso: string) => format(new Date(iso), "dd.MM.yyyy");
+// Every date on the Tashkent clock, never the browser's zone.
+const day = (iso: string) => format(tashkentDayAsLocalDate(iso), "dd.MM.yyyy");
+
+/** "dd.MM.yyyy, HH:mm" in Tashkent — when the request came in. */
+export function requestedAtText(iso: string): string {
+  return `${day(iso)}, ${tashkentHhmm(iso)}`;
+}
 
 /** The requested group while it still takes students; otherwise the administrator picks one. */
 export function initialGroupId(v: JoinRequestView): string | null {
@@ -41,26 +48,36 @@ export function joinRequestNotes(v: JoinRequestView, groupId: string | null, lea
   if (groupId !== null && v.sameNameGroupIds.includes(groupId)) {
     notes.push({ tone: "warning", text: "Guruhda shu ismli o'quvchi bor" });
   }
-  if (v.status === "PENDING" && initialGroupId(v) === null) {
-    notes.push({ tone: "error", text: `«${v.requestedGroup?.name ?? "So'ralgan guruh"}» guruhiga yozilib bo'lmaydi — boshqa guruhni tanlang` });
+  // The group in the picker, not the requested one: a valid other pick clears it.
+  if (v.status === "PENDING" && !v.groups.some((g) => g.id === groupId)) {
+    const requested = groupId === null || groupId === v.requestedGroup?.id;
+    const subject = !requested ? "Tanlangan guruhga" : v.requestedGroup ? `«${v.requestedGroup.name}» guruhiga` : "So'ralgan guruhga";
+    notes.push({ tone: "error", text: `${subject} yozilib bo'lmaydi — boshqa guruhni tanlang` });
   }
   return notes;
 }
 
-/** A decided request reads as one line; a pending one has none. */
-export function decidedLine(v: JoinRequestView): string | null {
+/**
+ * A decided request reads as one line (spec §5.3): `text`, then — once
+ * approved — the card's `#id` (a link to it) and `tail`. A pending one has none.
+ */
+export interface DecidedLine { text: string; studentId: number | null; tail: string }
+
+export function decidedLine(v: JoinRequestView): DecidedLine | null {
+  const line = (text: string): DecidedLine => ({ text, studentId: null, tail: "" });
   switch (v.status) {
     case "PENDING":
       return null;
     case "APPROVED": {
       const who = v.decidedBy ? `${v.decidedBy.firstName} ${v.decidedBy.lastName.slice(0, 1)}.` : "Tizim";
-      return `Tasdiqlandi — #${v.studentId} (${who}, ${v.decidedAt ? day(v.decidedAt) : "—"})`;
+      const when = v.decidedAt ? `${tashkentDdMm(v.decidedAt)} ${tashkentHhmm(v.decidedAt)}` : "—";
+      return { text: "Tasdiqlandi — ", studentId: v.studentId, tail: ` (${who}, ${when})` };
     }
     case "REJECTED":
-      return `Rad etildi: ${v.rejectReason ?? ""}`.trim();
+      return line(`Rad etildi: ${v.rejectReason ?? ""}`.trim());
     case "EXPIRED":
-      return "Muddati o'tdi — 7 kun ichida javob berilmadi";
+      return line("Muddati o'tdi — 7 kun ichida javob berilmadi");
     case "REPLACED":
-      return "Yangi so'rov bilan almashtirildi";
+      return line("Yangi so'rov bilan almashtirildi");
   }
 }

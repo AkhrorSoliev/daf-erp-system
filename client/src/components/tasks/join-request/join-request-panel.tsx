@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { format } from "date-fns";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -14,7 +14,8 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { LEAD_STATUS_LABELS, type LeadStatus } from "@/hooks/use-leads-board";
-import { canApprove, decidedLine, initialGroupId, joinRequestNotes, type JoinNote, type JoinRequestView } from "./join-request-rules";
+import { useCan, usePermissionsReady } from "@/hooks/use-permissions";
+import { canApprove, decidedLine, initialGroupId, joinRequestNotes, requestedAtText, type JoinNote, type JoinRequestView } from "./join-request-rules";
 
 // Blue and yellow, not sky and amber: outside the student portal those two
 // resolve to Lumio variables and render transparent.
@@ -26,9 +27,14 @@ const TONE: Record<JoinNote["tone"], string> = {
 
 /** «Yangi o'quvchi so'rovi» (ADR-0080): the request, what the server found, and the decision. */
 export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDecided: () => void }) {
+  // Every route behind the panel is `students.enroll`: without it the read
+  // would only come back 403, so it is not sent.
+  const ready = usePermissionsReady();
+  const allowed = useCan("students.enroll");
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["join-request", taskId],
     queryFn: async () => (await api.get<JoinRequestView>(`/student-join-requests/by-task/${taskId}`)).data,
+    enabled: allowed,
     retry: false,
     staleTime: 0,
   });
@@ -37,7 +43,8 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
 
-  if (isLoading) return <Skeleton className="h-44 w-full" />;
+  if (!ready || (allowed && isLoading)) return <Skeleton className="h-44 w-full" />;
+  if (!allowed) return <p className="rounded-md bg-muted px-3 py-2 text-sm">Javob berish uchun ruxsat yo&apos;q</p>;
   if (isError || !data) {
     return (
       <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
@@ -48,7 +55,17 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
   }
 
   const decided = decidedLine(data);
-  if (decided) return <p className="rounded-md bg-muted px-3 py-2 text-sm">{decided}</p>;
+  if (decided) {
+    return (
+      <p className="rounded-md bg-muted px-3 py-2 text-sm">
+        {decided.text}
+        {decided.studentId !== null && (
+          <Link href={`/students/profile/${decided.studentId}`} className="font-medium text-primary hover:underline">#{decided.studentId}</Link>
+        )}
+        {decided.tail}
+      </p>
+    );
+  }
 
   const groupId = picked ?? initialGroupId(data);
   const leadLabel = data.lead ? (LEAD_STATUS_LABELS[data.lead.status as LeadStatus] ?? null) : null;
@@ -98,7 +115,7 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
           {data.telegramUsername && (
             <a href={`https://t.me/${data.telegramUsername}`} target="_blank" rel="noreferrer" className="text-primary hover:underline">@{data.telegramUsername}</a>
           )}
-          <p className="text-xs text-muted-foreground">So&apos;rov: {format(new Date(data.createdAt), "dd.MM.yyyy, HH:mm")}</p>
+          <p className="text-xs text-muted-foreground">So&apos;rov: {requestedAtText(data.createdAt)}</p>
         </div>
       </div>
 
