@@ -1,5 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { makeCan, parseStoredPermissions } from "./permission-check";
+import {
+  isPermissionsMeUrl,
+  makeCan,
+  parseStoredPermissions,
+} from "./permission-check";
+
+describe("isPermissionsMeUrl", () => {
+  it("recognises the list's own request, with or without a query", () => {
+    expect(isPermissionsMeUrl("/permissions/me")).toBe(true);
+    expect(isPermissionsMeUrl("/permissions/me?x=1")).toBe(true);
+  });
+
+  it("leaves every other route alone", () => {
+    expect(isPermissionsMeUrl("/students")).toBe(false);
+    expect(isPermissionsMeUrl("/permissions/roles")).toBe(false);
+    expect(isPermissionsMeUrl("/permissions/me/extra")).toBe(false);
+    expect(isPermissionsMeUrl(undefined)).toBe(false);
+    expect(isPermissionsMeUrl("")).toBe(false);
+  });
+});
 
 describe("makeCan", () => {
   const can = makeCan(new Set(["groups.view", "attendance.mark"]));

@@ -13,6 +13,17 @@ export function makeCan(keys: ReadonlySet<PermissionKey> | null): Can {
   };
 }
 
+/** The request that reads the signed-in user's capability list. */
+export const PERMISSIONS_ME_PATH = "/permissions/me";
+
+/**
+ * Is this the list's own request? A 403 on it (a blocked account gets one on
+ * every route) must not start another read, or the reads loop without end.
+ */
+export function isPermissionsMeUrl(url: string | undefined): boolean {
+  return !!url && url.split("?")[0].endsWith(PERMISSIONS_ME_PATH);
+}
+
 const KNOWN: readonly string[] = PERMISSION_KEYS;
 
 /** Keeps only the keys this client knows (an older client meets newer keys). */

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import api from "@/lib/api";
 import {
+  PERMISSIONS_ME_PATH,
   knownKeys,
   makeCan,
   parseStoredPermissions,
@@ -9,6 +10,11 @@ import {
 import type { PermissionKey } from "@/lib/permission-keys";
 
 const STORAGE_KEY = "daf.permissions";
+
+// Every start, clear and read takes the next number; an answer is used only
+// while its number is still the latest, so a slow older read (another user's,
+// or one sent before a newer one) can never overwrite a newer list.
+let seq = 0;
 
 interface PermissionsState {
   userId: number | null;
@@ -37,6 +43,7 @@ export const usePermissions = create<PermissionsState>((set, get) => ({
 
   start: (userId) => {
     if (get().userId === userId && get().keys) return;
+    seq++;
     let stored: ReadonlySet<PermissionKey> | null = null;
     try {
       stored = parseStoredPermissions(localStorage.getItem(STORAGE_KEY), userId);
@@ -50,9 +57,11 @@ export const usePermissions = create<PermissionsState>((set, get) => ({
   refresh: async () => {
     const userId = get().userId;
     if (userId == null) return;
+    const mine = ++seq;
     try {
-      const { data } = await api.get<{ keys: string[] }>("/permissions/me");
-      if (get().userId !== userId) return; // signed out or switched meanwhile
+      const { data } = await api.get<{ keys: string[] }>(PERMISSIONS_ME_PATH);
+      // Signed out, switched, or a newer read was sent meanwhile.
+      if (get().userId !== userId || mine !== seq) return;
       const keys = knownKeys(data.keys);
       set({ keys, can: makeCan(keys), loadedAt: Date.now() });
       try {
@@ -68,8 +77,10 @@ export const usePermissions = create<PermissionsState>((set, get) => ({
     }
   },
 
-  clear: () =>
-    set({ userId: null, keys: null, can: makeCan(null), loadedAt: 0 }),
+  clear: () => {
+    seq++;
+    set({ userId: null, keys: null, can: makeCan(null), loadedAt: 0 });
+  },
 }));
 
 /** Does the signed-in user hold ANY of these capabilities? */
