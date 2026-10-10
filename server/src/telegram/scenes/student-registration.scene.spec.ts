@@ -605,3 +605,76 @@ describe('student-registration.scene — rasm yuklanmasa', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('HTTP 404'));
   });
 });
+
+/**
+ * The branch link lets the person pick a teacher and a group (ADR-0080): only
+ * a live teacher and a group that takes students may be offered.
+ */
+describe('student-registration.scene — what the branch link offers', () => {
+  it('lists only groups that take students when a teacher is picked', async () => {
+    const prisma = {
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 10010,
+          firstName: 'Aziz',
+          lastName: 'Qodirov',
+        }),
+        // No groups: the scene lists the teachers again.
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      group: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const ctx = buildButtonCtx('select_teacher_10010', 1, { branchId: 7 });
+    const scene = createStudentRegistrationScene(
+      prisma as any,
+      { deleteFile: jest.fn() } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(prisma.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ isActive: true, status: 'ACTIVE' }),
+      }),
+    );
+    expect(prisma.group.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          statusEnum: { in: ['ACTIVE', 'FORMING', 'PAUSED'] },
+        }),
+      }),
+    );
+  });
+
+  it('refuses a picked group that no longer takes students', async () => {
+    const prisma = { group: { findFirst: jest.fn().mockResolvedValue(null) } };
+    const ctx = buildButtonCtx('select_group_g1', 2, { branchId: 7 });
+    const scene = createStudentRegistrationScene(
+      prisma as any,
+      { deleteFile: jest.fn() } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(prisma.group.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'g1',
+          branchId: 7,
+          deletedAt: null,
+          statusEnum: { in: ['ACTIVE', 'FORMING', 'PAUSED'] },
+        },
+      }),
+    );
+    expect(ctx.reply).toHaveBeenCalledWith('Guruh topilmadi. Qayta tanlang.');
+    expect(ctx.session.step).toBe(2);
+  });
+});

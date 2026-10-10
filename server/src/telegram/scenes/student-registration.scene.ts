@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { UserStatus } from '@prisma/client';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
@@ -8,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { EntityHistoryService } from '../../common/entity-history';
 import { StudentLeadOriginService } from '../../common/student-origin';
+import { ENROLLABLE_GROUP_STATUSES } from '../../groups/shared/enrollable-statuses';
 import { ALLOWED_IMAGE_MIMES } from '../../upload/upload.constraints';
 import {
   ASK_FIRST_NAME,
@@ -131,6 +133,8 @@ export function createStudentRegistrationScene(
         where: {
           id: teacherId,
           deletedAt: null,
+          isActive: true,
+          status: UserStatus.ACTIVE,
           roles: { some: { roleId: TEACHER_ROLE_ID } },
         },
         select: { id: true, firstName: true, lastName: true },
@@ -147,6 +151,7 @@ export function createStudentRegistrationScene(
         where: {
           deletedAt: null,
           branchId,
+          statusEnum: { in: ENROLLABLE_GROUP_STATUSES },
           teachers: { some: { teacherId } },
         },
         select: {
@@ -218,7 +223,12 @@ export function createStudentRegistrationScene(
     const groupId = ctx.match[1];
 
     const group = await prisma.group.findFirst({
-      where: { id: groupId, deletedAt: null },
+      where: {
+        id: groupId,
+        branchId: ctx.session.data.branchId,
+        deletedAt: null,
+        statusEnum: { in: ENROLLABLE_GROUP_STATUSES },
+      },
       select: { id: true, name: true },
     });
     if (!group) {

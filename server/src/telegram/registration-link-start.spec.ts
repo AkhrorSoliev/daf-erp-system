@@ -19,6 +19,7 @@ describe('TelegramService — /start registration links always release their loc
   const GROUP = {
     id: '3f6c2a8e-5b1d-4c7e-9a0f-2d8b4e6c1a93',
     name: 'A1-07',
+    statusEnum: 'ACTIVE',
     lessonStartTime: '14:00',
     lessonEndTime: '15:30',
     days: 'odd',
@@ -152,6 +153,24 @@ describe('TelegramService — /start registration links always release their loc
       expect(handled).toBe(true);
       expect(ctx.reply).toHaveBeenCalledWith(
         "Guruh topilmadi. Administrator bilan bog'laning.",
+      );
+      expect(ctx.scene.enter).not.toHaveBeenCalled();
+      expect(ctx.session.processing).toBe(false);
+    });
+
+    it('answers a group that takes no students (completed, cancelled, archived)', async () => {
+      const service = makeService();
+      const ctx = makeCtx();
+      service.prisma.group.findFirst.mockResolvedValueOnce({
+        ...GROUP,
+        statusEnum: 'COMPLETED',
+      });
+
+      const handled = await service.startStudentGroupRegistration(ctx, LINK);
+
+      expect(handled).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(
+        "Bu guruhga hozir yozilib bo'lmaydi. Administrator bilan bog'laning.",
       );
       expect(ctx.scene.enter).not.toHaveBeenCalled();
       expect(ctx.session.processing).toBe(false);

@@ -46,6 +46,7 @@ import {
   DeparturePolicy,
 } from '../billing/departure-policy';
 import { assertMayChooseDeparturePolicy } from './shared/departure-policy-access';
+import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
 import { departureMoneyNote } from '../billing/departure-money-note';
 import {
   EXIT_REASON_COMMENT_ERROR,
@@ -121,8 +122,7 @@ export class StudentEnrollmentService {
       throw new NotFoundException(`Guruh topilmadi`);
     }
 
-    const ENROLLABLE_STATUSES = ['ACTIVE', 'FORMING', 'PAUSED'];
-    if (!ENROLLABLE_STATUSES.includes(group.statusEnum)) {
+    if (!isEnrollableGroupStatus(group.statusEnum)) {
       throw new BadRequestException(
         "Tugallangan yoki bekor qilingan guruhga o'quvchi qo'shib bo'lmaydi",
       );

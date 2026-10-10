@@ -71,6 +71,8 @@ import { UsersService } from '../users/users.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { PaymentLinkService } from '../payment-gateways/payment-link.service';
 import { describeError } from '../telegram-digest/telegram-send';
+import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
+import { GROUP_CLOSED_REPLY } from '../student-join-requests/join-request-texts';
 
 /**
  * Telegram'dan qabul qilinadigan yangilanish turlari.
@@ -1313,6 +1315,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         select: {
           id: true,
           name: true,
+          statusEnum: true,
           lessonStartTime: true,
           lessonEndTime: true,
           days: true,
@@ -1330,6 +1333,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       });
       if (!group) {
         await ctx.reply("Guruh topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+      // A completed, cancelled or archived group takes nobody (ADR-0080).
+      if (!isEnrollableGroupStatus(group.statusEnum)) {
+        await ctx.reply(GROUP_CLOSED_REPLY);
         return true;
       }
 
