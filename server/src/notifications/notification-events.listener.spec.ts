@@ -36,6 +36,9 @@ describe('NotificationEventsListener', () => {
           .fn()
           .mockResolvedValue({ firstName: 'Ali', lastName: 'Valiyev' }),
       },
+      salaryPayment: { findFirst: jest.fn() },
+      transaction: { findMany: jest.fn() },
+      cashMovement: { findMany: jest.fn() },
     };
     notificationsService = {
       create: jest.fn().mockResolvedValue({ id: 'notif-1' }),
@@ -299,6 +302,152 @@ describe('NotificationEventsListener', () => {
         promiseIds: ['pp-2'],
       });
       expect(notificationsService.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleSalaryPaid', () => {
+    const payload = { salaryPaymentId: 'p1', companyId: 1 };
+    let sendMessage: jest.Mock;
+
+    // 2026-09-01 and 2026-10-05, 00:00 Tashkent (UTC+5).
+    const paidPayment = (over: Record<string, unknown> = {}) => ({
+      id: 'p1',
+      amount: 7_840_000,
+      status: 'PAID',
+      periodStart: new Date('2026-08-31T19:00:00.000Z'),
+      paidAt: new Date('2026-10-04T19:00:00.000Z'),
+      userId: 10001,
+      user: { firstName: 'Madina' },
+      settledExpenses: [{ amount: 2_000_000 }],
+      ...over,
+    });
+
+    const textWithAdvances = [
+      '<b>✅ Sentabr oyligingiz berildi</b>',
+      '',
+      'Hurmatli Madina!',
+      '',
+      "Sentabr 2026 uchun hisoblandi: <b>9 840 000 so'm</b>",
+      "Avans ushlandi: <b>2 000 000 so'm</b>",
+      "Berildi: <b>7 840 000 so'm</b> — naqd 5 000 000, kartaga 2 840 000",
+      'Sana: <b>05.10.2026</b>',
+      '',
+      "Batafsil — tizimdagi «Ish haqi» bo'limida.",
+      '',
+      'Rahmat!',
+    ].join('\n');
+
+    beforeEach(() => {
+      sendMessage = jest.fn().mockResolvedValue(undefined);
+      telegramService.getBot.mockReturnValue({ telegram: { sendMessage } });
+      prisma.user.findUnique.mockResolvedValue({ telegramChatId: '123' });
+      prisma.salaryPayment.findFirst.mockResolvedValue(paidPayment());
+      prisma.transaction.findMany.mockResolvedValue([{ id: 't1' }]);
+      prisma.cashMovement.findMany.mockResolvedValue([
+        { amount: -5_000_000, cashAccount: { type: 'CASH' } },
+        { amount: -2_840_000, cashAccount: { type: 'CARD' } },
+      ]);
+    });
+
+    it('tells the payee what was handed over, with the cash/card split', async () => {
+      await listener.handleSalaryPaid(payload);
+
+      expect(sendMessage).toHaveBeenCalledTimes(1);
+      expect(sendMessage).toHaveBeenCalledWith('123', textWithAdvances, {
+        parse_mode: 'HTML',
+      });
+    });
+
+    it('reads only the live payout row, never a reversal counter-row', async () => {
+      await listener.handleSalaryPaid(payload);
+
+      expect(prisma.transaction.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            salaryPaymentId: 'p1',
+            type: 'SALARY_PAYMENT',
+            reversedAt: null,
+            reversedTransactionId: null,
+          },
+        }),
+      );
+      expect(prisma.cashMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { transactionId: { in: ['t1'] } },
+        }),
+      );
+    });
+
+    it('counts a bank account on the card side', async () => {
+      prisma.cashMovement.findMany.mockResolvedValue([
+        { amount: -7_840_000, cashAccount: { type: 'BANK' } },
+      ]);
+
+      await listener.handleSalaryPaid(payload);
+
+      expect(sendMessage.mock.calls[0][1]).toContain(
+        "Berildi: <b>7 840 000 so'm</b> — kartaga\n",
+      );
+    });
+
+    it('a payment with no advances and no ledger row reads without a method', async () => {
+      prisma.salaryPayment.findFirst.mockResolvedValue(
+        paidPayment({ amount: 3_000_000, settledExpenses: [] }),
+      );
+      prisma.transaction.findMany.mockResolvedValue([]);
+
+      await listener.handleSalaryPaid(payload);
+
+      expect(prisma.cashMovement.findMany).not.toHaveBeenCalled();
+      expect(sendMessage.mock.calls[0][1]).toContain(
+        "Sentabr 2026 uchun: <b>3 000 000 so'm</b>\n",
+      );
+    });
+
+    it("a 0 so'm payment (advances took everything) still reads «Berildi: 0»", async () => {
+      prisma.salaryPayment.findFirst.mockResolvedValue(
+        paidPayment({ amount: 0, settledExpenses: [{ amount: 500_000 }] }),
+      );
+      prisma.transaction.findMany.mockResolvedValue([]);
+
+      await listener.handleSalaryPaid(payload);
+
+      expect(sendMessage.mock.calls[0][1]).toContain(
+        "Berildi: <b>0 so'm</b>\n",
+      );
+    });
+
+    it('sends nothing to a payee without a Telegram chat', async () => {
+      prisma.user.findUnique.mockResolvedValue({ telegramChatId: null });
+
+      await listener.handleSalaryPaid(payload);
+
+      expect(sendMessage).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['not PAID', paidPayment({ status: 'CANCELLED' })],
+      ['missing', null],
+    ])('sends nothing for a payment that is %s', async (_label, row) => {
+      prisma.salaryPayment.findFirst.mockResolvedValue(row);
+
+      await listener.handleSalaryPaid(payload);
+
+      expect(prisma.transaction.findMany).not.toHaveBeenCalled();
+      expect(sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('logs a Telegram failure and does not throw', async () => {
+      sendMessage.mockRejectedValue(new Error('403 bot was blocked'));
+
+      await expect(listener.handleSalaryPaid(payload)).resolves.toBeUndefined();
+    });
+
+    it('does not throw when the payout cannot be read', async () => {
+      prisma.salaryPayment.findFirst.mockRejectedValue(new Error('db down'));
+
+      await expect(listener.handleSalaryPaid(payload)).resolves.toBeUndefined();
+      expect(sendMessage).not.toHaveBeenCalled();
     });
   });
 });
