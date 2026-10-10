@@ -61,10 +61,12 @@ import { SettingsModule } from './settings/settings.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
 import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
+import { PermissionsModule } from './common/permissions/permissions.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
   imports: [
+    PermissionsModule,
     // `validate` runs BEFORE any module is constructed, so a missing key kills
     // the boot instead of surfacing as a 500 on the first request that needs
     // it. See `config/env.validation.ts` for why that trade is worth it here.

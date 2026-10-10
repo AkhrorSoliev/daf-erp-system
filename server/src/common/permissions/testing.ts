@@ -1,7 +1,10 @@
 import 'reflect-metadata';
 import type { Type } from '@nestjs/common';
+import { ROLE_NAME_BY_ID } from '../auth/role-ids';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { ACCESS_KEY, RouteAccessMeta } from './access.decorators';
+import { PermissionKey, defaultKeysForRoles } from './permission-catalog';
+import type { CallerAccess, PermissionsService } from './permissions.service';
 import { AccessLike, AccessSummary, accessSummary } from './route-access';
 
 /**
@@ -34,4 +37,23 @@ export function defaultRolesOf(
   method: string,
 ): AccessSummary {
   return accessSummary(routeAccess(controller, method));
+}
+
+/**
+ * A `PermissionsService` stand-in for unit specs: every caller holds
+ * `roleIds`, with the catalog's default capabilities. Plain functions, no
+ * `jest.fn`: this file is compiled with the application, where Jest's
+ * globals do not exist.
+ */
+export function fakePermissions(roleIds: number[]): PermissionsService {
+  const access: CallerAccess = {
+    roleIds,
+    roleNames: roleIds.map((id) => ROLE_NAME_BY_ID[id]),
+    keys: defaultKeysForRoles(roleIds),
+  };
+  return {
+    forUser: () => Promise.resolve(access),
+    has: (_userId: number, key: PermissionKey) =>
+      Promise.resolve(access.keys.has(key)),
+  } as unknown as PermissionsService;
 }
