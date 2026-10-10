@@ -4425,14 +4425,14 @@ Use two staff accounts linked to the bot (an author and an assignee) in daytime.
 1. Give a task with a due date, two steps and a link to a group → the assignee gets «Yangi topshiriq · <muhimlik>» with Bergan / Muddat / Bog'liq / Kichik qadamlar 0/2 and «Boshladim · Bajardim / Qadamlar / Ochish».
 2. «Boshladim» → the SAME message changes: «Holat: Jarayonda», «Boshladim» gone. The website's history shows the status row (via Telegram).
 3. «Qadamlar» → the step list; tick one → «✓ 1. …», the website shows it ticked; «Orqaga» → the card.
-4. «Bajardim» → the author gets «Tekshiruvga keldi» with «Qabul qilish · Qaytarish». «Qaytarish» → the bot asks for the reason; reply «Doska artilmagan» → «Topshiriq qaytarildi. … ga xabar ketdi.»; the assignee gets «Topshiriq qaytarildi» with the reason and «Bajardim».
-5. Reply to any task message with text → «Topshiriqqa qo'shildi.» and the comment is on the website; reply with a photo → «Hozircha faqat matnli javob…», nothing on the website.
+4. «Bajardim» → the author gets «Tekshiruvga keldi» with «Qabul qilish · Qaytarish». «Qaytarish» → the bot sends a NEW message naming the task and asking for the reason (the card is not edited); reply to it «Doska artilmagan» → «Topshiriq qaytarildi. … ga xabar ketdi.»; the assignee gets «Topshiriq qaytarildi» with the reason and «Bajardim».
+5. Reply with text to a task notice or card (not to the «Qaytarish» prompt, whose reply is the return reason) → «Topshiriqqa qo'shildi.» and the comment is on the website; reply with a photo → «Hozircha faqat matnli javob…», nothing on the website.
 6. Cancel the task on the website, then press an old button → an alert with the reason and the message redrawn without action buttons.
 7. Remove the assignee on the website → they get «Topshiriqdan olib tashlandingiz»; their old buttons answer «Bu topshiriq sizda emas» and disappear.
-8. `/start` → the staff menu has «📋 Topshiriqlarim»; it lists open tasks by group; a number sends the card with its buttons.
-9. A task with «Rasm bilan tasdiqlansin» → no «Bajardim», the line «Rasm bilan tasdiqlanadi…».
-10. «Ochish» opens `/tasks?task=<id>` on admin. (or lehrer. for a teacher).
+8. `/start` → the staff menu has «📋 Topshiriqlarim»; it lists open tasks under «Muddati o'tgan / Bugun / Keyinroq» (by due date, not by class group); a number sends the card with its buttons as a NEW message and the list stays.
+9. A task with «Rasm bilan tasdiqlansin» → no «Bajardim», the line «Rasm bilan tasdiqlanadi.» (shown to the assignee only; no upload exists anywhere until phase 3).
+10. «Ochish» opens `/tasks?task=<id>` on admin. (or lehrer. for a teacher). With `TELEGRAM_MINI_APP_URL` unset (or on a non-`student.` host) there is no «Ochish» button at all.
 11. After 22:00 give a «O'rta» task → nothing at night, the message comes at 08:00; give a «Shoshilinch» one → it comes at once.
 12. «Dars bo'ldimi?» never appears in the bot or in «Topshiriqlarim».
-13. While in the `/xodim` linking flow, reply to a task message → the linking flow answers, no comment is written.
-14. An account with no Telegram gets nothing in the bot and shows «Telegram ulanmagan» in the assignee picker.
+13. While in the `/xodim` linking flow (or any other bot flow), reply to a task message → «Topshiriqqa qo'shildi.», the comment is on the website: the task slot runs before the scenes (A5), so a reply to a task message becomes a comment even inside a flow. An ordinary message (not a reply to a task message) during the flow still goes to the flow.
+14. An account with no Telegram gets nothing in the bot and shows «Telegram ulanmagan» in the assignee picker. The same for two staff accounts linked to ONE chat (an inactive one counts too): neither gets a notice, and a button press from that chat answers «Bu Telegram bir nechta xodim hisobiga bog'langan…».

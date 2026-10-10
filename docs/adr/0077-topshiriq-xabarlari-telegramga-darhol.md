@@ -18,7 +18,8 @@ tutmaydi, Telegram esa doim yonida.
    Kimga nima borishini qo'ng'iroqcha bilan bitta ro'yxat hal qiladi
    (`task-notify-plan.ts`, spec §6.1 jadvali). Qabul qiluvchi — Telegram'i
    bog'langan faol xodim hisobi (`status = ACTIVE`, `isActive`, tizimga kira
-   oladigan holat), va shu chatga boshqa faol xodim hisobi bog'lanmagan
+   oladigan holat), va shu chatga o'chirilmagan, tizimga kira oladigan boshqa
+   xodim hisobi bog'lanmagan — u faol bo'lsa ham, nofaol bo'lsa ham
    (`staffChatOf`); bu yuborish paytida tekshiriladi, ikki hisob bitta chatda —
    ikkalasiga ham yuborilmaydi. Ijrochi tanlashdagi «Telegram ulanmagan» belgisi
    shu qoida bilan chiqadi. Kuzatuvchiga Telegram'ga faqat «Bajarildi» va
@@ -34,13 +35,15 @@ tutmaydi, Telegram esa doim yonida.
    yozilmaydi: «Muddati o'tdi» xabarining o'zi yetadi. Qayta urinish ham tungi
    tinchlikka tushmaydi («Shoshilinch» bundan mustasno).
 3. **Tugmalar:** «Boshladim», «Bajardim», «Qabul qilish», «Qaytarish»,
-   «Qadamlar», «Ochish». Bosilganda yangi xabar emas, o'sha xabar
-   tahrirlanadi. Har amal `TasksService` orqali, saytdagi ruxsat va o'tish
+   «Qadamlar», «Ochish». Holat tugmalari bosilganda yangi xabar emas, o'sha
+   xabar tahrirlanadi; ikki istisno bor: «Qaytarish» yangi xabar yuboradi,
+   «📋 Topshiriqlarim» ro'yxatidagi raqam esa topshiriqni alohida xabar qilib
+   yuboradi (ro'yxat joyida qoladi). Har amal `TasksService` orqali, saytdagi ruxsat va o'tish
    qoidalari bilan; tarixda «Telegram orqali» belgisi (`via TELEGRAM`).
    Topshiriqni endi ko'ra olmaydigan odamga — «Bu topshiriq sizda emas».
    Rasm bilan tasdiqlanadigan topshiriqda «Bajardim» yo'q: rasm yuklash fayllar
-   bilan birga keladi (3-bosqich). «Qaytarish» bosilsa, bot topshiriq nomini aytib, sababni
-   so'raydi va bosilgan xabarga javob qilib yuboradi.
+   bilan birga keladi (3-bosqich). «Qaytarish» bosilsa, bot topshiriq nomini aytib,
+   sababni so'raydigan yangi xabarni bosilgan xabarga javob qilib yuboradi.
 4. **Botdagi o'rni.** Tugma va javob ishlovchisi `TelegramService.useBeforeScenes`
    orqali ulanadi: sessiya, `/start` tiklash va kanal darvozasidan keyin,
    sahnalardan darhol oldin. Shu sababli ochiq qolgan eski bot oqimi
@@ -60,13 +63,15 @@ tutmaydi, Telegram esa doim yonida.
 8. **Navbat va xatolar.** Har qator yuborishdan oldin "olinadi": deploy paytida
    eski va yangi nusxa birga ishlasa ham, bir xabar ikki marta ketmaydi (run
    o'lsa, qator 5 daqiqadan keyin qaytadi). 429 — `retry_after` kutiladi, urinish
-   sanalmaydi; 403 / chat yo'q / bot o'chiq (token yo'q) / xabar noto'g'ri
-   (bizning xato) — qator o'ladi, qayta urinilmaydi; vaqtinchalik xato — kutish
-   60 soniyadan boshlanib har safar ikki baravar oshadi (60 s, 2 daqiqa,
-   4 daqiqa), uch muvaffaqiyatsizlikdan keyin qator o'ladi. Hech qachon
-   yuborib bo'lmaydigan qator (topshiriq yopilgan yoki o'chirilgan, odam endi
-   unda emas, Telegram'i yo'q) yuborilmay yopiladi. Yuborilgan va o'lgan qatorlar
-   30 kundan keyin har kecha 03:00 da o'chiriladi.
+   sanalmaydi; 403 / Telegram chatni topolmasa / bot o'chiq (token yo'q) /
+   xabar noto'g'ri (bizning xato) — qator o'ladi, qayta urinilmaydi;
+   vaqtinchalik xato — urinish sanaladi va kutish 60 soniyadan boshlanib ikki
+   baravar oshadi: birinchi xatodan keyin 60 s, ikkinchisidan keyin 2 daqiqa;
+   uchinchi xatoda qator o'ladi (darhol yuborishdagi xato ham shu uchtaga
+   kiradi, 4 daqiqalik kutish bo'lmaydi). Hech qachon yuborib bo'lmaydigan qator
+   (topshiriq yopilgan yoki o'chirilgan, odam endi unda emas, odamning
+   yuborsa bo'ladigan chati yo'q) yuborilmay yopiladi; bunday qator o'lgan hisoblanmaydi.
+   Yuborilgan va o'lgan qatorlar 30 kundan keyin har kecha 03:00 da o'chiriladi.
 
 ## Ko'rib chiqilgan muqobillar
 
