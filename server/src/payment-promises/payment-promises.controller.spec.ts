@@ -1,15 +1,45 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { PaymentPromisesController } from './payment-promises.controller';
 import { PaymentPromisesService } from './payment-promises.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('PaymentPromisesController — role guards', () => {
+describe('PaymentPromisesController — route access', () => {
+  // The debt page, the outreach list and the promise dialog all read promises.
+  const READS = ['findByStudent', 'monthState'] as const;
+  const WRITES = ['create', 'cancel'] as const;
+
+  it.each(READS)(
+    '%s is open to the debt view, promise and outreach capabilities',
+    (name) => {
+      expect(routeAccess(PaymentPromisesController, name)).toEqual({
+        kind: 'can',
+        keys: ['debt.view', 'debt.promise', 'outreach.view'],
+      });
+    },
+  );
+
+  it.each(WRITES)('%s is gated by the promise capability', (name) => {
+    expect(routeAccess(PaymentPromisesController, name)).toEqual({
+      kind: 'can',
+      keys: ['debt.promise'],
+    });
+  });
+
+  it.each([...READS, ...WRITES])(
+    '%s admits the three admin roles and the Cashier by default, not the Teacher',
+    (name) => {
+      expect(defaultRolesOf(PaymentPromisesController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+        'Cashier',
+      ]);
+    },
+  );
+});
+
+describe('PaymentPromisesController — delegation', () => {
   let controller: PaymentPromisesController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockService = {
     create: jest.fn().mockResolvedValue({}),
@@ -25,39 +55,6 @@ describe('PaymentPromisesController — role guards', () => {
     }).compile();
 
     controller = module.get(PaymentPromisesController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
-  });
-
-  function ctx(roles: string[]) {
-    return {
-      getHandler: () => controller.create,
-      getClass: () => PaymentPromisesController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    } as any;
-  }
-
-  it('class is guarded for CEO / BD / Administrator / Cashier', () => {
-    const roles = reflector.get<string[]>(ROLES_KEY, PaymentPromisesController);
-    expect(roles).toEqual([
-      'CEO',
-      'Branch Director',
-      'Administrator',
-      'Cashier',
-    ]);
-  });
-
-  it.each(['CEO', 'Branch Director', 'Administrator', 'Cashier'])(
-    'allows %s',
-    (role) => {
-      expect(guard.canActivate(ctx([role]))).toBe(true);
-    },
-  );
-
-  it('denies Teacher', () => {
-    expect(() => guard.canActivate(ctx(['Teacher']))).toThrow(
-      ForbiddenException,
-    );
   });
 
   it('delegates create to the service with userId + companyId + branch scope', () => {
@@ -77,8 +74,7 @@ describe('PaymentPromisesController — role guards', () => {
     expect(mockService.cancel).toHaveBeenCalledWith('p1', 99, 1001, [2]);
   });
 
-  it('GET /payment-promises/month keeps the class roles and passes the resolved scope', async () => {
-    expect(reflector.get(ROLES_KEY, controller.monthState)).toBeUndefined();
+  it('GET /payment-promises/month passes the resolved scope', async () => {
     await controller.monthState(10264, 1001, [4]);
     expect(mockService.monthState).toHaveBeenCalledWith(10264, 1001, [4]);
   });

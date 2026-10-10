@@ -1,54 +1,70 @@
 import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { AttendanceController } from './attendance.controller';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { ROLES_KEY } from '../common/decorators';
 import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
 jest.mock('../common/auth/group-branch-scope', () => ({
   assertCallerMayTouchGroup: jest.fn().mockResolvedValue(undefined),
 }));
 
-describe("AttendanceController — «Dars bo'ldimi?» routes", () => {
-  const reflector = new Reflector();
-  const guard = new RolesGuard(reflector);
-  const context = (handler: unknown, roles: string[]) =>
-    ({
-      getHandler: () => handler,
-      getClass: () => AttendanceController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    }) as any;
+const ADMIN_ROLES = ['Administrator', 'Branch Director', 'CEO'];
 
-  it.each(['saveLate', 'notHeld'] as const)(
-    '%s is limited to CEO, Branch Director, Administrator',
-    (name) => {
-      expect(
-        reflector.get<string[]>(
-          ROLES_KEY,
-          AttendanceController.prototype[name],
-        ),
-      ).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    },
-  );
+describe('AttendanceController — route access', () => {
+  // Reading a group's attendance is part of looking at the group.
+  const READS = [
+    'getLessonDates',
+    'getLessonCalendar',
+    'getByDate',
+    'getStats',
+    'getLessonSequence',
+  ] as const;
+  // Taking the register, by hand or with a QR session — the Teacher's job too.
+  const MARKS = [
+    'save',
+    'startQrSession',
+    'rotateQrToken',
+    'stopQrSession',
+  ] as const;
+  // «Bo'ldi» and «Bo'lmadi» (ADR-0054) answer a lesson nobody marked.
+  const FIXES = ['saveLate', 'notHeld'] as const;
 
-  it.each(['CEO', 'Branch Director', 'Administrator'])(
-    'lets %s answer',
-    (role) => {
-      expect(
-        guard.canActivate(
-          context(AttendanceController.prototype.saveLate, [role]),
-        ),
-      ).toBe(true);
-    },
-  );
-
-  it.each(['Teacher', 'Cashier'])('stops %s', (role) => {
-    expect(() =>
-      guard.canActivate(
-        context(AttendanceController.prototype.notHeld, [role]),
-      ),
-    ).toThrow(ForbiddenException);
+  it.each(READS)('%s is gated by the group view capability', (name) => {
+    expect(routeAccess(AttendanceController, name)).toEqual({
+      kind: 'can',
+      keys: ['groups.view'],
+    });
   });
+
+  it.each(MARKS)('%s is gated by the attendance mark capability', (name) => {
+    expect(routeAccess(AttendanceController, name)).toEqual({
+      kind: 'can',
+      keys: ['attendance.mark'],
+    });
+  });
+
+  it.each(FIXES)('%s is gated by the attendance fix capability', (name) => {
+    expect(routeAccess(AttendanceController, name)).toEqual({
+      kind: 'can',
+      keys: ['attendance.fix'],
+    });
+  });
+
+  it.each([...READS, ...MARKS])(
+    '%s admits the three admin roles and the Teacher by default, not the Cashier',
+    (name) => {
+      expect(defaultRolesOf(AttendanceController, name)).toEqual([
+        ...ADMIN_ROLES,
+        'Teacher',
+      ]);
+    },
+  );
+
+  it.each(FIXES)(
+    '%s admits the three admin roles by default, not the Teacher or the Cashier',
+    (name) => {
+      expect(defaultRolesOf(AttendanceController, name)).toEqual(ADMIN_ROLES);
+    },
+  );
 });
 
 describe('AttendanceController — the answers reach the services only past the branch check', () => {

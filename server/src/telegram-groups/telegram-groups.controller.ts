@@ -7,10 +7,9 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { CurrentUser, Roles } from '../common/decorators';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { TelegramGroupsService } from './telegram-groups.service';
 import { TelegramAdminBotService } from './telegram-admin-bot.service';
 import { TelegramGroupAnnouncementService } from './telegram-group-announcement.service';
@@ -20,7 +19,6 @@ import { UpdateTelegramGroupDto } from './dto/update-telegram-group.dto';
 import { AnnounceFeatureDto } from './dto/announce-feature.dto';
 
 @Controller('telegram-groups')
-@UseGuards(RolesGuard)
 export class TelegramGroupsController {
   private readonly logger = new Logger(TelegramGroupsController.name);
 
@@ -31,13 +29,14 @@ export class TelegramGroupsController {
   ) {}
 
   /**
-   * List pending groups so CEO/BD can pick the one that belongs to them.
+   * List pending groups so a holder of `settings.telegram-groups` can pick
+   * the one that belongs to them.
    * Pending list is intentionally cross-company — the bot does not know
    * which company a fresh group belongs to until someone claims it.
    * First approver wins.
    */
   @Get('pending')
-  @Roles('CEO', 'Branch Director')
+  @Can('settings.telegram-groups')
   async listPending() {
     const groups = await this.groupsService.listPending();
     return groups.map((g) => ({
@@ -50,7 +49,7 @@ export class TelegramGroupsController {
   }
 
   @Get()
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.telegram-groups')
   async list(@CurrentUser() user: { companyId: number }) {
     const groups = await this.groupsService.listForCompany(user.companyId);
     return groups.map((g) => ({
@@ -69,7 +68,7 @@ export class TelegramGroupsController {
   }
 
   @Post(':id/approve')
-  @Roles('CEO', 'Branch Director')
+  @Can('settings.telegram-groups')
   async approve(
     @Param('id') id: string,
     @Body() dto: ApproveGroupDto,
@@ -121,7 +120,7 @@ export class TelegramGroupsController {
    * exactly that state and would otherwise need a database script.
    */
   @Patch(':id')
-  @Roles('CEO', 'Branch Director')
+  @Can('settings.telegram-groups')
   async updateScope(
     @Param('id') id: string,
     @Body() dto: UpdateTelegramGroupDto,
@@ -131,7 +130,7 @@ export class TelegramGroupsController {
   }
 
   @Post(':id/reject')
-  @Roles('CEO', 'Branch Director')
+  @Can('settings.telegram-groups')
   async reject(
     @Param('id') id: string,
     @CurrentUser() user: { id: number; companyId: number; roles: string[] },
@@ -141,21 +140,21 @@ export class TelegramGroupsController {
   }
 
   @Delete(':id')
-  @Roles('CEO')
+  @Can('telegram.announce')
   async unlink(
     @Param('id') id: string,
-    @CurrentUser() user: { companyId: number; roles: string[] },
+    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
   ) {
     await this.groupsService.unlinkApproved(id, user);
     return { message: 'Guruh tizimdan uzildi' };
   }
 
   /**
-   * Send a feature announcement to all approved Telegram groups. CEO-only —
-   * these are global product comms.
+   * Send a feature announcement to all approved Telegram groups. Needs
+   * `telegram.announce` — these are global product comms.
    */
   @Post('announce')
-  @Roles('CEO')
+  @Can('telegram.announce')
   async announce(
     @Body() dto: AnnounceFeatureDto,
     @CurrentUser() user: { id: number; companyId: number },

@@ -8,24 +8,22 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ExitType } from '@prisma/client';
 import { StudentExitReasonsService } from './student-exit-reasons.service';
 import { CreateStudentExitReasonDto } from './dto/create-student-exit-reason.dto';
 import { UpdateStudentExitReasonDto } from './dto/update-student-exit-reason.dto';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('student-exit-reasons')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class StudentExitReasonsController {
   constructor(
     private readonly studentExitReasonsService: StudentExitReasonsService,
   ) {}
 
   @Get()
+  @Can('settings.reference', 'students.enroll', 'groups.manage')
   findAll(
     @CurrentUser('companyId') companyId: number,
     @Query('appliesTo', new ParseEnumPipe(ExitType, { optional: true }))
@@ -35,6 +33,7 @@ export class StudentExitReasonsController {
   }
 
   @Post()
+  @Can('settings.reference')
   create(
     @Body() dto: CreateStudentExitReasonDto,
     @CurrentUser('companyId') companyId: number,
@@ -44,6 +43,7 @@ export class StudentExitReasonsController {
   }
 
   @Patch(':id')
+  @Can('settings.reference')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateStudentExitReasonDto,
@@ -54,6 +54,7 @@ export class StudentExitReasonsController {
   }
 
   @Delete(':id')
+  @Can('settings.reference')
   remove(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,

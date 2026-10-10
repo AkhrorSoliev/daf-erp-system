@@ -2,7 +2,7 @@
 
 import { format, formatDistanceToNow } from "date-fns";
 import { uz } from "date-fns/locale";
-import { CheckCircle2, Clock, Eye } from "lucide-react";
+import { Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -17,25 +17,14 @@ export interface CommentAuthor {
   photo: string | null;
 }
 
-export interface CommentAssignee {
-  id: string;
-  userId: number;
-  user: { id: number; firstName: string; lastName: string };
-  status: "PENDING" | "SEEN" | "DONE";
-  seenAt: string | null;
-  doneAt: string | null;
-}
-
 export interface CommentData {
   id: string;
   entityType: string;
   entityId: string;
   content: string;
-  isTask: boolean;
   isSystem?: boolean;
   /** Null for a system task (shown as «Tizim»). */
   author: CommentAuthor | null;
-  assignees: CommentAssignee[];
   createdAt: string;
   _pending?: boolean;
   _failed?: boolean;
@@ -83,53 +72,6 @@ export function RelativeTime({ date }: { date: string }) {
     <span className="text-[11px] text-muted-foreground/70">
       {format(d, "dd.MM.yyyy, HH:mm")}
     </span>
-  );
-}
-
-export function AssigneeChip({ assignee }: { assignee: CommentAssignee }) {
-  const statusConfig = {
-    PENDING: {
-      icon: Clock,
-      color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800",
-      label: "Kutilmoqda",
-    },
-    SEEN: {
-      icon: Eye,
-      color: "text-blue-600 dark:text-blue-400",
-      bg: "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800",
-      label: "Ko'rdi",
-    },
-    DONE: {
-      icon: CheckCircle2,
-      color: "text-emerald-600 dark:text-emerald-400",
-      bg: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800",
-      label: "Bajardi",
-    },
-  };
-
-  const config = statusConfig[assignee.status];
-  const Icon = config.icon;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div
-          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${config.bg} ${config.color}`}
-        >
-          <Icon className="size-3" />
-          {assignee.user.firstName} {assignee.user.lastName}
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="text-xs">
-        {config.label}
-        {assignee.doneAt &&
-          ` — ${format(new Date(assignee.doneAt), "dd.MM.yyyy, HH:mm")}`}
-        {!assignee.doneAt &&
-          assignee.seenAt &&
-          ` — ${format(new Date(assignee.seenAt), "dd.MM.yyyy, HH:mm")}`}
-      </TooltipContent>
-    </Tooltip>
   );
 }
 

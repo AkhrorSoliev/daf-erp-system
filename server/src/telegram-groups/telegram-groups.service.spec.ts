@@ -8,6 +8,9 @@ import { TelegramGroupStatus } from '@prisma/client';
 import { TelegramGroupsService } from './telegram-groups.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { ROLE_ID } from '../common/auth/role-ids';
+import { fakePermissions } from '../common/permissions/testing';
 
 describe('TelegramGroupsService', () => {
   let service: TelegramGroupsService;
@@ -35,16 +38,23 @@ describe('TelegramGroupsService', () => {
     recordCreate: jest.fn().mockResolvedValue(undefined),
   };
 
-  beforeEach(async () => {
-    jest.clearAllMocks();
+  // `roleIds` are the roles the caller holds in the database; the
+  // capabilities they carry come from the catalog defaults.
+  async function serviceHeldBy(roleIds: number[]) {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TelegramGroupsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: EntityHistoryService, useValue: mockHistory },
+        { provide: PermissionsService, useValue: fakePermissions(roleIds) },
       ],
     }).compile();
-    service = module.get(TelegramGroupsService);
+    return module.get(TelegramGroupsService);
+  }
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    service = await serviceHeldBy([ROLE_ID.CEO]);
   });
 
   describe('approve', () => {
@@ -59,14 +69,29 @@ describe('TelegramGroupsService', () => {
       deletedAt: null,
     };
 
-    it('rejects callers without CEO/BD role', async () => {
+    it('rejects callers without the Telegram groups capability', async () => {
+      const administrator = await serviceHeldBy([ROLE_ID.ADMINISTRATOR]);
       await expect(
-        service.approve('g1', {
+        administrator.approve('g1', {
           id: 1,
           companyId: 1001,
           roles: ['Administrator'],
         }),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('a Branch Director passes the capability check but still cannot make a group watch every branch (CEO identity)', async () => {
+      const director = await serviceHeldBy([ROLE_ID.BRANCH_DIRECTOR]);
+      mockPrisma.telegramGroup.findUnique.mockResolvedValue(baseGroup);
+      await expect(
+        director.approve(
+          'g1',
+          { id: 2, companyId: 1001, roles: ['Branch Director'] },
+          null,
+          true,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockPrisma.telegramGroup.update).not.toHaveBeenCalled();
     });
 
     it('404s when group does not exist', async () => {
@@ -121,6 +146,18 @@ describe('TelegramGroupsService', () => {
   });
 
   describe('reject', () => {
+    it('rejects callers without the Telegram groups capability', async () => {
+      const administrator = await serviceHeldBy([ROLE_ID.ADMINISTRATOR]);
+      await expect(
+        administrator.reject('g1', {
+          id: 1,
+          companyId: 1,
+          roles: ['Administrator'],
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockPrisma.telegramGroup.findUnique).not.toHaveBeenCalled();
+    });
+
     it('forbids rejecting an already-approved group', async () => {
       mockPrisma.telegramGroup.findUnique.mockResolvedValue({
         id: 'g1',
@@ -134,18 +171,41 @@ describe('TelegramGroupsService', () => {
   });
 
   describe('unlinkApproved', () => {
-    it('only CEO can unlink from admin panel', async () => {
+    it('only a caller holding the announce capability can unlink from admin panel', async () => {
       mockPrisma.telegramGroup.findUnique.mockResolvedValue({
         id: 'g1',
         companyId: 1001,
         deletedAt: null,
       });
+      const director = await serviceHeldBy([ROLE_ID.BRANCH_DIRECTOR]);
       await expect(
-        service.unlinkApproved('g1', {
+        director.unlinkApproved('g1', {
+          id: 2,
           companyId: 1001,
           roles: ['Branch Director'],
         }),
       ).rejects.toThrow(ForbiddenException);
+      expect(mockPrisma.telegramGroup.update).not.toHaveBeenCalled();
+    });
+
+    it('CEO unlinks a group of their own company', async () => {
+      mockPrisma.telegramGroup.findUnique.mockResolvedValue({
+        id: 'g1',
+        companyId: 1001,
+        deletedAt: null,
+      });
+      mockPrisma.telegramGroup.update.mockResolvedValue({ id: 'g1' });
+      await service.unlinkApproved('g1', {
+        id: 1,
+        companyId: 1001,
+        roles: ['CEO'],
+      });
+      expect(mockPrisma.telegramGroup.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'g1' },
+          data: expect.objectContaining({ isActive: false }),
+        }),
+      );
     });
 
     it('CEO cannot unlink other companies groups', async () => {
@@ -155,7 +215,11 @@ describe('TelegramGroupsService', () => {
         deletedAt: null,
       });
       await expect(
-        service.unlinkApproved('g1', { companyId: 1001, roles: ['CEO'] }),
+        service.unlinkApproved('g1', {
+          id: 1,
+          companyId: 1001,
+          roles: ['CEO'],
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
   });

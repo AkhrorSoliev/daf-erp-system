@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { resolveHomeSections } from "./dashboard-home-visibility";
 import type { DashboardCharts } from "./dashboard-charts-types";
@@ -23,11 +23,10 @@ import { HomeErrorNote } from "./home-error-note";
  * esa o'z o'rnida skeleton ko'rsatib turadi.
  */
 export function HomeCharts({ ready }: { ready: boolean }) {
-  const user = useAuth((s) => s.user);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
-  const roleIds = user?.roles.map((r) => r.id) ?? [];
-  const sections = resolveHomeSections(roleIds);
+  const can = usePermissions((s) => s.can);
+  const sections = resolveHomeSections(can);
 
   // Kassirga diagramma yo'q — manbalar `/reports/*` servislari, ular unga
   // ochiq emas. `attention` bor, lekin `attentionOutreachRows` yo'q — aynan

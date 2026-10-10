@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { TransactionsService } from '../transactions/transactions.service';
@@ -14,15 +15,15 @@ import {
   Prisma,
   RefundStatus,
 } from '@prisma/client';
+import { tashkentDayStartUtc } from '../common/date/tashkent';
+import { dmy } from '../statements/statement-text';
 import { QuickRefundDto } from './dto/quick-refund.dto';
-
-const REFUND_METHOD_LABEL: Record<string, string> = {
-  CASH: 'Naqd',
-  PAYME: 'Payme',
-  CLICK: 'Click',
-  UZUM: 'Uzum',
-  TRANSFER: "Bank o'tkazmasi",
-};
+import { refundDueDate } from './refund-due-date';
+import {
+  REFUND_REQUESTED_EVENT,
+  type RefundEventPayload,
+} from './refund-events';
+import { refundView } from './refund-view';
 
 @Injectable()
 export class RefundsCreateService {
@@ -31,10 +32,14 @@ export class RefundsCreateService {
     private transactionsService: TransactionsService,
     private entityHistoryService: EntityHistoryService,
     private enrollmentBilling: EnrollmentBillingService,
+    private events: EventEmitter2,
   ) {}
 
   /**
-   * Single-shot refund where the admin types the refund amount manually.
+   * Opens a refund request (ADR-0077). The admin types the amount; the money
+   * comes off the balance now (ledger REFUND row), leaves the branch drawer
+   * only at «Berildi» (`RefundsProcessService.handOver`), and is due on the
+   * 10th bank day.
    *
    * A payout is funded from the free balance first. When that is not enough,
    * the shortfall is covered by CANCELLING prepaid lessons — the fewest that
@@ -53,7 +58,7 @@ export class RefundsCreateService {
    * All ledger writes happen inside one Serializable transaction.
    */
   async quickRefund(dto: QuickRefundDto, userId: number, companyId: number) {
-    await assertCallerMayWriteForStudent(
+    const branchId = await assertCallerMayWriteForStudent(
       this.prisma,
       userId,
       dto.studentId,
@@ -66,11 +71,20 @@ export class RefundsCreateService {
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
 
+    // The contract's 10 bank days, with the student's branch holidays.
+    const dueStr = await refundDueDate(this.prisma, branchId);
+
     // No enrollmentId => the student has no ACTIVE enrollment to fund the
     // refund from (a frozen student's are all FROZEN). Balance is the only
     // source left — see `quickRefundBalanceOnly`.
     if (!dto.enrollmentId) {
-      return this.quickRefundBalanceOnly(dto, userId, companyId, student);
+      return this.quickRefundBalanceOnly(
+        dto,
+        userId,
+        companyId,
+        student,
+        dueStr,
+      );
     }
 
     const enrollment = await this.loadEnrollment(
@@ -87,7 +101,8 @@ export class RefundsCreateService {
         studentId: dto.studentId,
         enrollmentId: enrollment.id,
         approvedAmount: dto.amount,
-        status: RefundStatus.COMPLETED,
+        // An open request is as much a duplicate as a payout (ADR-0077).
+        status: { in: [RefundStatus.REQUESTED, RefundStatus.COMPLETED] },
         createdAt: { gte: new Date(Date.now() - 60_000) },
       },
       select: { id: true },
@@ -156,9 +171,6 @@ export class RefundsCreateService {
       bankFee: 0,
     };
 
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 21);
-
     const refund = await this.prisma.$transaction(
       async (tx) => {
         const refundRow = await tx.refund.create({
@@ -170,12 +182,12 @@ export class RefundsCreateService {
             lessonsCompleted: lessonsAttended,
             totalLessons,
             deductions,
-            status: RefundStatus.COMPLETED,
-            refundMethod: dto.refundMethod,
+            // ADR-0077: a request. The money leaves the drawer and the method
+            // is known only at hand-over (`RefundsProcessService.handOver`).
+            status: RefundStatus.REQUESTED,
             reason: dto.reason,
-            processedById: userId,
-            processedAt: new Date(),
-            dueDate,
+            requestedById: userId,
+            dueDate: tashkentDayStartUtc(dueStr),
             companyId,
           },
         });
@@ -209,6 +221,13 @@ export class RefundsCreateService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    // After the commit, never inside the transaction: the student is told.
+    this.events.emit(REFUND_REQUESTED_EVENT, {
+      refundId: refund.refundRow.id,
+      studentId: dto.studentId,
+      companyId,
+      performedById: userId,
+    } satisfies RefundEventPayload);
 
     const balanceAfter = student.balance + refund.releasedAmount - dto.amount;
     await this.entityHistoryService.recordStatusChange({
@@ -217,18 +236,18 @@ export class RefundsCreateService {
       oldValues: { balans: student.balance },
       newValues: {
         balans: balanceAfter,
-        qaytarilgan_summa: dto.amount,
+        summa: dto.amount,
+        muddat: dmy(dueStr),
         bekor_qilingan_darslar: lessonsToRelease,
-        usul: REFUND_METHOD_LABEL[dto.refundMethod] ?? dto.refundMethod,
         guruh: enrollment.group.name,
         sabab: dto.reason ?? null,
-        status: 'PUL_QAYTARILDI',
+        status: 'PUL_QAYTARISH_SOROVI',
       },
       changedById: userId,
       companyId,
     });
 
-    return refund.refundRow;
+    return refundView(refund.refundRow);
   }
 
   /**
@@ -244,6 +263,7 @@ export class RefundsCreateService {
     userId: number,
     companyId: number,
     student: { id: number; balance: number },
+    dueStr: string,
   ) {
     const maxRefundable = Math.max(0, student.balance);
     if (dto.amount > maxRefundable) {
@@ -259,7 +279,8 @@ export class RefundsCreateService {
         studentId: dto.studentId,
         enrollmentId: null,
         approvedAmount: dto.amount,
-        status: RefundStatus.COMPLETED,
+        // An open request is as much a duplicate as a payout (ADR-0077).
+        status: { in: [RefundStatus.REQUESTED, RefundStatus.COMPLETED] },
         createdAt: { gte: new Date(Date.now() - 60_000) },
       },
       select: { id: true },
@@ -275,6 +296,7 @@ export class RefundsCreateService {
         studentId: dto.studentId,
         status: {
           in: [
+            RefundStatus.REQUESTED,
             RefundStatus.APPROVED,
             RefundStatus.PROCESSING,
             RefundStatus.COMPLETED,
@@ -296,9 +318,6 @@ export class RefundsCreateService {
       bankFee: 0,
     };
 
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 21);
-
     const refundRow = await this.prisma.$transaction(
       async (tx) => {
         const row = await tx.refund.create({
@@ -310,12 +329,10 @@ export class RefundsCreateService {
             lessonsCompleted: 0,
             totalLessons: 0,
             deductions,
-            status: RefundStatus.COMPLETED,
-            refundMethod: dto.refundMethod,
+            status: RefundStatus.REQUESTED,
             reason: dto.reason,
-            processedById: userId,
-            processedAt: new Date(),
-            dueDate,
+            requestedById: userId,
+            dueDate: tashkentDayStartUtc(dueStr),
             companyId,
           },
         });
@@ -335,6 +352,12 @@ export class RefundsCreateService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    this.events.emit(REFUND_REQUESTED_EVENT, {
+      refundId: refundRow.id,
+      studentId: dto.studentId,
+      companyId,
+      performedById: userId,
+    } satisfies RefundEventPayload);
 
     const balanceAfter = student.balance - dto.amount;
     await this.entityHistoryService.recordStatusChange({
@@ -343,18 +366,18 @@ export class RefundsCreateService {
       oldValues: { balans: student.balance },
       newValues: {
         balans: balanceAfter,
-        qaytarilgan_summa: dto.amount,
+        summa: dto.amount,
+        muddat: dmy(dueStr),
         bekor_qilingan_darslar: 0,
-        usul: REFUND_METHOD_LABEL[dto.refundMethod] ?? dto.refundMethod,
         guruh: 'Balans (faol guruhsiz)',
         sabab: dto.reason ?? null,
-        status: 'PUL_QAYTARILDI',
+        status: 'PUL_QAYTARISH_SOROVI',
       },
       changedById: userId,
       companyId,
     });
 
-    return refundRow;
+    return refundView(refundRow);
   }
 
   // -- helpers ---------------------------------------------------------------
@@ -416,6 +439,7 @@ export class RefundsCreateService {
         enrollmentId,
         status: {
           in: [
+            RefundStatus.REQUESTED,
             RefundStatus.APPROVED,
             RefundStatus.PROCESSING,
             RefundStatus.COMPLETED,

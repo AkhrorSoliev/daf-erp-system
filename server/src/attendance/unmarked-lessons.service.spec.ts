@@ -45,7 +45,8 @@ describe('UnmarkedLessonsService', () => {
         create: jest.fn(),
       },
       user: { findMany: jest.fn().mockResolvedValue([{ id: 3 }]) },
-      comment: { create: jest.fn().mockResolvedValue({ id: 'c1' }) },
+      task: { create: jest.fn().mockResolvedValue({ id: 'c1' }) },
+      taskOutbox: { deleteMany: jest.fn(), createMany: jest.fn() },
     };
     prisma = {
       group: {
@@ -110,12 +111,12 @@ describe('UnmarkedLessonsService', () => {
           date: today,
           lessonStartTime: '16:00',
           lessonEndTime: '17:30',
-          taskCommentId: 'c1',
+          taskId: 'c1',
         },
       });
-      expect(
-        tx.comment.create.mock.calls[0][0].data.dueDate.toISOString(),
-      ).toBe('2026-10-01T05:00:00.000Z');
+      expect(tx.task.create.mock.calls[0][0].data.dueAt.toISOString()).toBe(
+        '2026-10-01T05:00:00.000Z',
+      );
     });
 
     it('opens nothing for a lesson already marked', async () => {
@@ -194,9 +195,9 @@ describe('UnmarkedLessonsService', () => {
       await service.openForEndedLessons(NOW);
 
       const dueOf = (groupId: string) =>
-        tx.comment.create.mock.calls
+        tx.task.create.mock.calls
           .find((c: any) => c[0].data.entityId === groupId)[0]
-          .data.dueDate.toISOString();
+          .data.dueAt.toISOString();
       expect(dueOf('g1')).toBe('2026-10-02T05:00:00.000Z');
       expect(dueOf('g2')).toBe('2026-10-01T05:00:00.000Z');
       // One lookup per branch, 90 days ahead (a holiday lasts at most 60).

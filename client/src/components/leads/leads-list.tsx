@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,
+  X,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -53,6 +54,13 @@ import {
   leadHolatiParams,
 } from "./lead-filter-schema";
 import { aylanganSana } from "./aylangan-sana";
+import {
+  LEAD_STATS_PERIODS,
+  LEAD_STATS_SCHEMA,
+  STAT_CARD_LABELS,
+  parseStatsPeriod,
+  type StatCard,
+} from "./lead-stats";
 
 interface LeadListRow {
   id: string;
@@ -63,6 +71,8 @@ interface LeadListRow {
   statusEnum: LeadStatus;
   createdAt: string;
   statusChangedAt: string | null;
+  // Set on an archived lead, which only a stats card's list shows.
+  deletedAt: string | null;
   convertedStudent: {
     id: number;
     firstName: string;
@@ -80,6 +90,8 @@ const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
 export function LeadsList() {
   const { filters, setFilter, setFilters } = useUrlFilters(LEAD_FILTER_SCHEMA);
+  const { filters: statsFilters } = useUrlFilters(LEAD_STATS_SCHEMA);
+  const period = parseStatsPeriod(statsFilters.period);
   const revision = useLeadsBoard((s) => s.revision);
   const openLeadDetail = useLeadsUi((s) => s.openLeadDetail);
   const openEditLead = useLeadsUi((s) => s.openEditLead);
@@ -107,6 +119,11 @@ export function LeadsList() {
       if (leadDateFieldIsConversion(filters.holati)) {
         params.dateField = "statusChangedAt";
       }
+      // A stats card: the server lists exactly the leads the card counts.
+      if (filters.karta) {
+        params.card = filters.karta;
+        params.period = period;
+      }
 
       const { data } = await api.get("/leads", { params });
       setRows(data.data);
@@ -125,6 +142,8 @@ export function LeadsList() {
     filters.columnId,
     filters.startDate,
     filters.endDate,
+    filters.karta,
+    period,
   ]);
 
   // `revision` re-runs the fetch after a lead is created / edited / moved.
@@ -134,8 +153,27 @@ export function LeadsList() {
 
   const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
+  const cardLabel = STAT_CARD_LABELS[filters.karta as StatCard];
+  const periodLabel = LEAD_STATS_PERIODS.find((p) => p.value === period)?.label;
+
   return (
     <div className="space-y-3">
+      {filters.karta && cardLabel && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="font-medium">
+            «{cardLabel}» · {periodLabel}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            onClick={() => setFilters({ karta: "", page: 1 })}
+          >
+            <X className="size-4" />
+            Yopish
+          </Button>
+        </div>
+      )}
       <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
@@ -176,8 +214,8 @@ export function LeadsList() {
               rows.map((lead, index) => (
                 <TableRow
                   key={lead.id}
-                  className="cursor-pointer"
-                  onClick={() => openLeadDetail(lead.id)}
+                  className={lead.deletedAt ? "" : "cursor-pointer"}
+                  onClick={() => !lead.deletedAt && openLeadDetail(lead.id)}
                 >
                   <TableCell className="border-r text-muted-foreground">
                     {(filters.page - 1) * filters.pageSize + index + 1}
@@ -187,8 +225,10 @@ export function LeadsList() {
                   </TableCell>
                   <TableCell>{formatPhone(lead.phone)}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
-                      {LEAD_STATUS_LABELS[lead.statusEnum]}
+                    <Badge variant={lead.deletedAt ? "outline" : "secondary"}>
+                      {lead.deletedAt && lead.statusEnum !== "LOST"
+                        ? "Arxivda"
+                        : LEAD_STATUS_LABELS[lead.statusEnum]}
                     </Badge>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
@@ -218,58 +258,61 @@ export function LeadsList() {
                     className="text-right"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="size-4" />
-                          <span className="sr-only">Amallar</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            openEditLead({
-                              id: lead.id,
-                              sectionId: lead.section?.id ?? "",
-                              firstName: lead.firstName,
-                              lastName: lead.lastName,
-                              phone: lead.phone,
-                              extraPhone: lead.extraPhone ?? "",
-                              sourceId: lead.source?.id ?? "",
-                            })
-                          }
-                        >
-                          <Pencil className="mr-2 size-4" />
-                          Tahrirlash
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            openMoveLead({
-                              id: lead.id,
-                              sectionId: lead.section?.id ?? "",
-                            })
-                          }
-                        >
-                          <ArrowRightLeft className="mr-2 size-4" />
-                          Ko&apos;chirish
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() =>
-                            openDelete({
-                              kind: "lead",
-                              id: lead.id,
-                              name: `${lead.firstName} ${lead.lastName}`,
-                              sectionId: lead.section?.id ?? "",
-                            })
-                          }
-                        >
-                          <Trash2 className="mr-2 size-4" />
-                          O&apos;chirish
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* An archived lead is restored from the archive page. */}
+                    {!lead.deletedAt && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="size-4" />
+                            <span className="sr-only">Amallar</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              openEditLead({
+                                id: lead.id,
+                                sectionId: lead.section?.id ?? "",
+                                firstName: lead.firstName,
+                                lastName: lead.lastName,
+                                phone: lead.phone,
+                                extraPhone: lead.extraPhone ?? "",
+                                sourceId: lead.source?.id ?? "",
+                              })
+                            }
+                          >
+                            <Pencil className="mr-2 size-4" />
+                            Tahrirlash
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              openMoveLead({
+                                id: lead.id,
+                                sectionId: lead.section?.id ?? "",
+                              })
+                            }
+                          >
+                            <ArrowRightLeft className="mr-2 size-4" />
+                            Ko&apos;chirish
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() =>
+                              openDelete({
+                                kind: "lead",
+                                id: lead.id,
+                                name: `${lead.firstName} ${lead.lastName}`,
+                                sectionId: lead.section?.id ?? "",
+                              })
+                            }
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            O&apos;chirish
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

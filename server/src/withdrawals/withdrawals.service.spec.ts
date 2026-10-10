@@ -19,6 +19,7 @@ describe('WithdrawalsService', () => {
     lastName: 'Valiyev',
     balance: 500_000,
     branchId: 1,
+    statusChangedAt: new Date('2026-01-01T07:00:00Z'),
   };
 
   beforeEach(async () => {
@@ -69,6 +70,14 @@ describe('WithdrawalsService', () => {
           .mockResolvedValue({ id: 'tx-1', createdAt: new Date() }),
       },
       salaryAccrual: { create: jest.fn().mockResolvedValue({ id: 'acc-1' }) },
+      // A notice long past its term, so the existing cases may withdraw.
+      balanceNotice: {
+        findFirst: jest.fn().mockResolvedValue({
+          createdAt: new Date('2026-01-05T07:00:00Z'),
+          channel: 'CALL',
+        }),
+      },
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
       $queryRaw: jest.fn().mockResolvedValue([{ id: 10001, balance: 500_000 }]),
       $transaction: jest.fn().mockImplementation(async (cb: any) => cb(prisma)),
     };
@@ -357,6 +366,103 @@ describe('WithdrawalsService', () => {
         data: expect.objectContaining({
           lessonDate: new Date('2026-10-01T00:00:00.000Z'),
         }),
+      });
+    });
+  });
+
+  describe('the transfer condition (ADR-0077)', () => {
+    const create = () =>
+      service.create(
+        { studentId: 10001, amount: 100_000, creditTeacher: false },
+        7,
+        1,
+      );
+    beforeEach(() => {
+      jest.useFakeTimers({
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      });
+      prisma.student.findFirst.mockResolvedValue({
+        ...studentRow,
+        statusChangedAt: new Date('2026-10-01T07:00:00Z'),
+      });
+      prisma.balanceNotice.findFirst.mockResolvedValue({
+        createdAt: new Date('2026-10-10T07:00:00Z'),
+        channel: 'BOT',
+      });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('refuses without a notice, writing nothing', async () => {
+      jest.setSystemTime(new Date('2026-12-01T07:00:00Z'));
+      prisma.balanceNotice.findFirst.mockResolvedValue(null);
+      await expect(create()).rejects.toThrow(
+        "Avval o'quvchiga xabar bering. Markazga o'tkazish xabardan 10 bank kuni va yana 30 kun o'tgach ochiladi.",
+      );
+      expect(prisma.transaction.create).not.toHaveBeenCalled();
+    });
+
+    it('a notice from before the current status does not count', async () => {
+      jest.setSystemTime(new Date('2026-12-01T07:00:00Z'));
+      prisma.student.findFirst.mockResolvedValue({
+        ...studentRow,
+        statusChangedAt: new Date('2026-10-15T07:00:00Z'),
+      });
+      await expect(create()).rejects.toThrow("Avval o'quvchiga xabar bering.");
+    });
+
+    it('refuses too early, naming the dates', async () => {
+      jest.setSystemTime(new Date('2026-11-21T07:00:00Z'));
+      await expect(create()).rejects.toThrow(
+        "Markazga o'tkazish 22.11 dan ochiladi (xabar 10.10 da berilgan, qaytarish muddati 23.10 gacha).",
+      );
+      expect(prisma.transaction.create).not.toHaveBeenCalled();
+    });
+
+    it('opens on the allowed day itself', async () => {
+      jest.setSystemTime(new Date('2026-11-22T07:00:00Z'));
+      await create();
+      expect(prisma.transaction.create).toHaveBeenCalled();
+    });
+
+    it("the student's branch holidays move the dates, not the caller's", async () => {
+      // The student sits in branch 2; the caller is a CEO (no branch of their
+      // own). A holiday on Mon 12.10 pushes the 10th bank day from 23.10 to
+      // 26.10 and the opening from 22.11 to 25.11.
+      prisma.studentBranch.findFirst.mockResolvedValue({ branchId: 2 });
+      prisma.holiday.findMany.mockResolvedValue([
+        {
+          date: new Date('2026-10-11T19:00:00Z'),
+          endDate: new Date('2026-10-11T19:00:00Z'),
+        },
+      ]);
+      jest.setSystemTime(new Date('2026-11-24T07:00:00Z'));
+      await expect(create()).rejects.toThrow(
+        "Markazga o'tkazish 25.11 dan ochiladi (xabar 10.10 da berilgan, qaytarish muddati 26.10 gacha).",
+      );
+      expect(prisma.holiday.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [{ branchId: null }, { branchId: 2 }],
+          }),
+        }),
+      );
+      expect(prisma.transaction.create).not.toHaveBeenCalled();
+
+      jest.setSystemTime(new Date('2026-11-25T07:00:00Z'));
+      await create();
+      expect(prisma.transaction.create).toHaveBeenCalled();
+    });
+
+    it('the preview shows the lock before the dialog is filled', async () => {
+      jest.setSystemTime(new Date('2026-11-21T07:00:00Z'));
+      const out = await service.preview(10001, 1);
+      expect(out.transfer).toEqual({
+        notice: { date: '2026-10-10', channel: 'BOT' },
+        termEnds: '2026-10-23',
+        allowedFrom: '2026-11-22',
+        allowed: false,
+        refusal:
+          "Markazga o'tkazish 22.11 dan ochiladi (xabar 10.10 da berilgan, qaytarish muddati 23.10 gacha).",
       });
     });
   });

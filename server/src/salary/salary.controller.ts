@@ -7,7 +7,6 @@ import {
   Param,
   Query,
   ParseIntPipe,
-  UseGuards,
 } from '@nestjs/common';
 import { SalaryService } from './salary.service';
 import { TeacherTimelineService } from './teacher-timeline.service';
@@ -31,14 +30,12 @@ import { BatchPayDto } from './dto/batch-pay.dto';
 import { SettleMonthDto } from './dto/settle-month.dto';
 import { CalculateSalaryDto } from './dto/calculate-salary.dto';
 import { parseTashkentDateStart } from './shared/resolve-current-period';
-import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import { CurrentUser, BranchScope } from '../common/decorators';
 import { singleBranchId } from '../common/finance/report-branch-scope';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { AnyStaff, Can } from '../common/permissions/access.decorators';
 
 @Controller('salary')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
 export class SalaryController {
   constructor(
     private salaryService: SalaryService,
@@ -51,12 +48,13 @@ export class SalaryController {
   ) {}
 
   // =========================================================================
-  // ME — endpoints any authenticated user can hit to see their own data.
+  // ME — endpoints any staff account can hit to see their own data.
   // The service is scoped by @CurrentUser('id') so a teacher cannot view
   // another teacher's data via these routes.
   // =========================================================================
 
   @Get('me/summary')
+  @AnyStaff()
   getMySummary(
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
@@ -65,6 +63,7 @@ export class SalaryController {
   }
 
   @Get('me/accruals')
+  @AnyStaff()
   getMyAccruals(
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
@@ -73,6 +72,7 @@ export class SalaryController {
   }
 
   @Get('me/current-cycle/breakdown')
+  @AnyStaff()
   getMyCurrentCycleBreakdown(
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
@@ -86,6 +86,7 @@ export class SalaryController {
    * is literally the same pass narrowed to one user.
    */
   @Get('me/monthly')
+  @AnyStaff()
   getMyMonthly(
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') userId: number,
@@ -100,6 +101,7 @@ export class SalaryController {
   }
 
   @Get('me/payments/:id/breakdown')
+  @AnyStaff()
   getMyPaymentBreakdown(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
@@ -110,17 +112,19 @@ export class SalaryController {
   }
 
   // =========================================================================
-  // CONFIG — write = CEO; `POST /salary/config` also allows an own-branch
-  // Branch Director (ADR-0034, gated in SalaryService). `PATCH` stays
-  // CEO-only. Read = CEO/BD.
+  // CONFIG — reading rates takes `salary.view`; saving one (`POST
+  // /salary/config` and its preview) takes `salary.rate`, and which teacher a
+  // Branch Director may touch is decided in SalaryService (ADR-0034). `PATCH`
+  // and the company-wide bulk rate take `salary.rate-edit`.
   //
-  // «Ish haqi» sahifasi o'qiydigan hamma narsa CEO + BD ga: Administrator
-  // oylikni ko'rmaydi (docs/role-access.md). Istisno bitta: `timeline/:userId`
-  // (o'qituvchi profilining «Taymlayn» tabi) — admin ko'radigan sahifadan.
+  // Everything the «Ish haqi» page reads takes `salary.view`: an Administrator
+  // does not hold it by default (docs/role-access.md). One exception:
+  // `timeline/:userId` (the teacher profile's «Taymlayn» tab) takes
+  // `teachers.view`, because the profile page calls it.
   // =========================================================================
 
   @Get('config/:userId')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getConfig(
     @Param('userId', ParseIntPipe) userId: number,
     @CurrentUser('companyId') companyId: number,
@@ -133,7 +137,7 @@ export class SalaryController {
    * (current rate per row) without firing N requests from the frontend.
    */
   @Get('configs/by-users')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getConfigsForUsers(
     @Query('userIds') userIdsParam: string | undefined,
     @CurrentUser('companyId') companyId: number,
@@ -146,7 +150,7 @@ export class SalaryController {
   }
 
   @Get('config-history/:userId')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getConfigHistory(
     @Param('userId', ParseIntPipe) userId: number,
     @CurrentUser('companyId') companyId: number,
@@ -155,7 +159,7 @@ export class SalaryController {
   }
 
   @Post('config')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.rate')
   createConfig(
     @Body() dto: CreateSalaryConfigDto,
     @CurrentUser('id') userId: number,
@@ -167,10 +171,10 @@ export class SalaryController {
   /**
    * What `POST /salary/config` would do to the lessons already written from
    * the rate's start date (ADR-0050) — the save runs and is rolled back.
-   * Same body, same roles and same caller gate as the save.
+   * Same body, same capability (`salary.rate`) and same caller gate as the save.
    */
   @Post('config/preview')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.rate')
   previewConfig(
     @Body() dto: CreateSalaryConfigDto,
     @CurrentUser('id') userId: number,
@@ -180,7 +184,7 @@ export class SalaryController {
   }
 
   @Post('config/global')
-  @Roles('CEO')
+  @Can('salary.rate-edit')
   applyGlobalConfig(
     @Body() dto: GlobalSalaryConfigDto,
     @CurrentUser('id') userId: number,
@@ -190,7 +194,7 @@ export class SalaryController {
   }
 
   @Patch('config/:id')
-  @Roles('CEO')
+  @Can('salary.rate-edit')
   updateConfig(
     @Param('id') id: string,
     @Body() dto: UpdateSalaryConfigDto,
@@ -205,7 +209,7 @@ export class SalaryController {
   // =========================================================================
 
   @Get('timeline/:userId')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('teachers.view')
   getTimeline(
     @Param('userId', ParseIntPipe) userId: number,
     @CurrentUser('companyId') companyId: number,
@@ -214,17 +218,17 @@ export class SalaryController {
   }
 
   // =========================================================================
-  // PERIOD SETTINGS — list = CEO/BD; write = CEO only.
+  // PERIOD SETTINGS — listing takes `salary.view`; saving takes `salary.close`.
   // =========================================================================
 
   @Get('period-settings')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   listPeriodSettings(@CurrentUser('companyId') companyId: number) {
     return this.periodSettingsService.list(companyId);
   }
 
   @Post('period-settings')
-  @Roles('CEO')
+  @Can('salary.close')
   createPeriodSetting(
     @Body() dto: CreateSalaryPeriodSettingDto,
     @CurrentUser('id') userId: number,
@@ -238,7 +242,7 @@ export class SalaryController {
   // =========================================================================
 
   @Get('accruals/:userId')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getAccruals(
     @Param('userId', ParseIntPipe) userId: number,
     @CurrentUser('companyId') companyId: number,
@@ -251,7 +255,7 @@ export class SalaryController {
   // =========================================================================
 
   @Get('payments')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   findPayments(
     @Query() query: SalaryPaymentQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -260,7 +264,7 @@ export class SalaryController {
   }
 
   @Get('matrix')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getMatrix(
     @Query() query: SalaryMatrixQueryDto,
     @CurrentUser('id') userId: number,
@@ -275,7 +279,7 @@ export class SalaryController {
    * cheklangan.
    */
   @Get('overview')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getOverview(
     @Query() query: SalaryOverviewQueryDto,
     @CurrentUser('id') userId: number,
@@ -305,13 +309,13 @@ export class SalaryController {
    * `/salary/overview` dan alohida: u ustozning darslari/accruallariga
    * qurilgan, FIXED_MONTHLY xodim uchun esa bu ustunlar ma'nosiz nol beradi.
    *
-   * Administrator ataylab KIRITILMAGAN (`/salary/overview` dan farqli): bu
-   * ro'yxat xodimlarning — jumladan filial direktorining — o'z maoshini
-   * ko'rsatadi, va `docs/role-access.md` bo'yicha "Salary config" faqat
-   * CEO + Branch Director huquqi.
+   * Takes `salary.view`, like the teacher rate list beside it: this list shows
+   * the staff's own pay — the Branch Director's included — so an
+   * Administrator, who does not hold `salary.view` by default, never sees it
+   * (`docs/role-access.md`, "Salary config").
    */
   @Get('staff-config')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getStaffConfig(
     @Query() query: SalaryStaffConfigQueryDto,
     @CurrentUser('id') userId: number,
@@ -334,7 +338,7 @@ export class SalaryController {
    * bilan cheklangan.
    */
   @Get('monthly')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getMonthly(
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') userId: number,
@@ -360,12 +364,12 @@ export class SalaryController {
   /**
    * "Qolgan (markaz)" drill-down — markaz qaysi o'quvchilar uchun ustozlarga
    * pul to'lab bergani va o'sha pul kimdan undirilishi kerakligi. Uni Ish haqi
-   * sahifasining «Markaz qoplagani» tabi o'qiydi, shuning uchun gate — sahifa
-   * bilan bir xil: CEO va filial direktori (ADR-0072). Filial chegarasi
+   * sahifasining «Markaz qoplagani» tabi o'qiydi, shuning uchun u sahifaning
+   * o'z huquqini oladi — `salary.view` (ADR-0072). Filial chegarasi
    * `resolveMonthlyScope` da.
    */
   @Get('monthly/center-topup')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getCenterTopUpStudents(
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') userId: number,
@@ -389,11 +393,12 @@ export class SalaryController {
    * One named teacher's row from the monthly report — backs the profile
    * "Ish haqi" tab and the profile card's "To'lanishi kerak".
    *
-   * Same gate as `/teachers/:id/salary-summary`, the endpoint it replaces:
-   * Administrator is deliberately excluded, since this is one person's pay.
+   * Takes `salary.view`: this is one person's pay, so an Administrator does
+   * not read it by default (the endpoint it replaces,
+   * `/teachers/:id/salary-summary`, was closed to them too).
    */
   @Get('monthly/user/:userId')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getMonthlyForUser(
     @Param('userId', ParseIntPipe) targetUserId: number,
     @Query() query: SalaryMonthlyQueryDto,
@@ -413,7 +418,7 @@ export class SalaryController {
    * page — each TEACHER_ADVANCE given to the teacher in the selected month.
    */
   @Get('advances/:userId')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getAdvances(
     @Param('userId', ParseIntPipe) userId: number,
     @Query('month') month: string | undefined,
@@ -440,7 +445,7 @@ export class SalaryController {
    * faqat `month` uzatiladi.
    */
   @Get('advance-calendar')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getAdvanceCalendar(
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') performedById: number,
@@ -454,7 +459,7 @@ export class SalaryController {
   }
 
   @Get('payments/:id/breakdown')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   getPaymentBreakdown(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -464,11 +469,11 @@ export class SalaryController {
 
   /**
    * Preview which period a picked date settles — drives the calculate dialog so
-   * the CEO sees the exact [start, end] window before triggering. CEO-only to
-   * mirror the calculate action it precedes.
+   * the CEO sees the exact [start, end] window before triggering. Takes
+   * `salary.close` to mirror the calculate action it precedes.
    */
   @Get('period-preview')
-  @Roles('CEO')
+  @Can('salary.close')
   previewPeriod(
     @Query('asOfDate') asOfDate: string | undefined,
     @CurrentUser('companyId') companyId: number,
@@ -478,7 +483,7 @@ export class SalaryController {
   }
 
   @Post('calculate')
-  @Roles('CEO')
+  @Can('salary.close')
   calculateSalaries(
     @Body() dto: CalculateSalaryDto,
     @CurrentUser('companyId') companyId: number,
@@ -502,7 +507,7 @@ export class SalaryController {
    * literal segment has to come first if a parameterised sibling is ever added.
    */
   @Get('payments/settle-month/preview')
-  @Roles('CEO')
+  @Can('salary.close')
   previewSettleMonth(
     @Query('month') month: string | undefined,
     @CurrentUser('companyId') companyId: number,
@@ -513,12 +518,12 @@ export class SalaryController {
 
   /**
    * Mark a whole month's payroll PAID — for salaries handed over OUTSIDE the
-   * system at the amounts the system had already calculated. CEO-only:
-   * irreversible and month-wide. A Branch Director still settles a single
-   * employee through `POST /salary/payments/:id/pay`.
+   * system at the amounts the system had already calculated. Takes
+   * `salary.close`: irreversible and month-wide. Settling a single employee
+   * stays under `salary.pay` (`POST /salary/payments/:id/pay`).
    */
   @Post('payments/settle-month')
-  @Roles('CEO')
+  @Can('salary.close')
   settleMonth(
     @Body() dto: SettleMonthDto,
     @CurrentUser('companyId') companyId: number,
@@ -528,7 +533,7 @@ export class SalaryController {
   }
 
   @Patch('payments/:id/approve')
-  @Roles('CEO')
+  @Can('salary.close')
   approvePayment(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -537,7 +542,7 @@ export class SalaryController {
   }
 
   @Post('payments/:id/pay')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.pay')
   payPayment(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
@@ -547,7 +552,7 @@ export class SalaryController {
   }
 
   @Post('payments/batch-pay')
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.pay')
   batchPay(
     @Body() dto: BatchPayDto,
     @CurrentUser('id') userId: number,

@@ -171,109 +171,6 @@ describe('NotificationEventsListener', () => {
     });
   });
 
-  describe('task events', () => {
-    const comment = {
-      id: 'c1',
-      content: 'Hisobotni tayyorlang',
-      companyId: 1,
-      entityType: 'Student',
-      entityId: '10001',
-      authorId: 7,
-      author: { firstName: 'Ali', lastName: 'Karimov' },
-    };
-
-    beforeEach(() => {
-      // filterActiveRecipientIds(): only 20001 is still an active user.
-      prisma.user.findMany.mockResolvedValue([{ id: 20001 }]);
-    });
-
-    it.each([
-      ['handleTaskAssigned', TelegramDigestCategory.TASK_ASSIGNED],
-      ['handleTaskUpdated', TelegramDigestCategory.TASK_UPDATED],
-      ['handleTaskDeleted', TelegramDigestCategory.TASK_DELETED],
-    ] as const)(
-      '%s keeps DB/SSE/push instant and queues the Telegram leg',
-      async (handler, category) => {
-        await listener[handler]({ comment, assigneeIds: [20001, 20002] });
-
-        expect(notificationsService.create).toHaveBeenCalledTimes(1);
-        expect(gateway.sendToUser).toHaveBeenCalledWith(
-          20001,
-          expect.any(Object),
-        );
-        expect(pushService.sendToUser).toHaveBeenCalledWith(
-          20001,
-          expect.objectContaining({ url: '/tasks' }),
-        );
-        expect(enqueue).toHaveBeenCalledTimes(1);
-        expect(enqueue).toHaveBeenCalledWith({
-          recipientKind: TelegramDigestRecipientKind.USER,
-          recipientId: 20001,
-          companyId: 1,
-          category,
-          relatedEntityId: 'c1',
-          payload: {
-            authorName: 'Ali Karimov',
-            content: 'Hisobotni tayyorlang',
-          },
-        });
-      },
-    );
-
-    it('clips long task text to 80 characters', async () => {
-      await listener.handleTaskAssigned({
-        comment: { ...comment, content: 'x'.repeat(100) },
-        assigneeIds: [20001],
-      });
-      expect(enqueue.mock.calls[0][0].payload.content).toBe(
-        `${'x'.repeat(80)}...`,
-      );
-    });
-
-    it('queues a status change for the author, keyed per assignee', async () => {
-      await listener.handleTaskStatusChanged({
-        comment,
-        assignee: {
-          userId: 20002,
-          user: { firstName: 'Vali', lastName: 'Aliyev' },
-        },
-        newStatus: 'DONE',
-      });
-
-      expect(notificationsService.create).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: 7 }),
-      );
-      expect(enqueue).toHaveBeenCalledWith({
-        recipientKind: TelegramDigestRecipientKind.USER,
-        recipientId: 7,
-        companyId: 1,
-        category: TelegramDigestCategory.TASK_STATUS_CHANGED,
-        relatedEntityId: 'c1:20002',
-        payload: {
-          assigneeName: 'Vali Aliyev',
-          status: 'DONE',
-          content: 'Hisobotni tayyorlang',
-        },
-      });
-    });
-
-    it('tells nobody about a system task changing status (no author)', async () => {
-      await listener.handleTaskStatusChanged({
-        comment: { ...comment, authorId: null, author: null },
-        assignee: {
-          userId: 20002,
-          user: { firstName: 'Vali', lastName: 'Aliyev' },
-        },
-        newStatus: 'SEEN',
-      });
-
-      expect(notificationsService.create).not.toHaveBeenCalled();
-      expect(gateway.sendToUser).not.toHaveBeenCalled();
-      expect(pushService.sendToUser).not.toHaveBeenCalled();
-      expect(enqueue).not.toHaveBeenCalled();
-    });
-  });
-
   describe('handleSalaryCarriedOver', () => {
     const item = (teacherId: number, amount: number) => ({
       teacherId,
@@ -307,26 +204,101 @@ describe('NotificationEventsListener', () => {
   });
 
   describe('handlePaymentPromiseOverdue', () => {
-    it('still sends Telegram instantly and queues nothing', async () => {
+    const promiseRow = (
+      studentId: number,
+      lastName: string,
+      balance: number,
+    ) => ({
+      studentId,
+      promiseDate: new Date('2026-10-09T18:59:59.999Z'),
+      comment: "Qisman to'lov 250 000 so'm",
+      balanceAtPromise: balance,
+      createdBy: { firstName: 'Malika', lastName: 'Jamoliddinova' },
+      student: {
+        firstName: 'Xayrulloxon',
+        lastName,
+        balance,
+        phone: '931234540',
+        parentPhone: null,
+        enrollments: [
+          {
+            status: 'ACTIVE',
+            group: {
+              name: '#006',
+              teachers: [
+                { teacher: { firstName: 'Gulnora', lastName: 'Karimova' } },
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    beforeEach(() => {
+      prisma.paymentPromise = {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            promiseRow(10001, 'Rahimxonov', -115_385),
+            promiseRow(10002, 'Mayda', -238),
+          ]),
+        groupBy: jest
+          .fn()
+          .mockResolvedValue([{ studentId: 10001, _count: { _all: 2 } }]),
+      };
+      prisma.branch = {
+        findFirst: jest.fn().mockResolvedValue({ name: 'Namangan filiali' }),
+      };
+    });
+
+    it('sends the branch one list instantly and queues nothing', async () => {
       const sendMessage = jest.fn().mockResolvedValue({});
       telegramService.getBot.mockReturnValue({ telegram: { sendMessage } });
       prisma.user.findMany.mockResolvedValue([{ id: 3 }]);
       prisma.user.findUnique.mockResolvedValue({ telegramChatId: 'chat-3' });
 
       await listener.handlePaymentPromiseOverdue({
-        promiseId: 'pp-1',
-        studentId: 10001,
         companyId: 1,
-        branchId: null,
-        promiseDate: '2026-09-20T00:00:00.000Z',
+        branchId: 2,
+        promiseIds: ['pp-1', 'pp-2'],
       });
 
-      expect(sendMessage).toHaveBeenCalledWith(
-        'chat-3',
-        expect.stringContaining("To'lov sanasi o'tib ketdi"),
-        { parse_mode: 'HTML' },
+      expect(sendMessage).toHaveBeenCalledTimes(1);
+      const text = sendMessage.mock.calls[0][1] as string;
+      expect(text).toContain("Bugun 1 ta to'lov va'dasi bajarilmadi");
+      expect(text).toContain('Namangan filiali');
+      expect(text).toContain(
+        "1. <b>Rahimxonov Xayrulloxon</b> — qarz 115 385 so'm",
+      );
+      expect(text).toContain('#006, ustoz Karimova G. · 📞 +998 93 123 45 40');
+      expect(text).toContain("Va'dadan beri to'lov yo'q · 2-marta buzildi");
+      // A debt under 1 000 so'm paid down meanwhile is left out.
+      expect(text).not.toContain('Mayda');
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Bugun 1 ta to'lov va'dasi bajarilmadi",
+          message: "Rahimxonov Xayrulloxon — qo'ng'iroq qiling",
+          relatedEntityType: 'BrokenPromises',
+          relatedEntityId: '2',
+        }),
+      );
+      expect(pushService.sendToUser).toHaveBeenCalledWith(
+        3,
+        expect.objectContaining({ url: '/payments/debt?promise=broken' }),
       );
       expect(enqueue).not.toHaveBeenCalled();
+    });
+
+    it('sends nothing when every row dropped below the threshold', async () => {
+      prisma.paymentPromise.findMany.mockResolvedValue([
+        promiseRow(10002, 'Mayda', -238),
+      ]);
+      await listener.handlePaymentPromiseOverdue({
+        companyId: 1,
+        branchId: 2,
+        promiseIds: ['pp-2'],
+      });
+      expect(notificationsService.create).not.toHaveBeenCalled();
     });
   });
 });

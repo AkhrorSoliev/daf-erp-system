@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { GroupScheduleService } from './group-schedule.service';
@@ -16,13 +15,8 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
 import { DeleteGroupDto } from './dto/delete-group.dto';
-import {
-  CurrentUser,
-  Roles,
-  BranchScope,
-  BranchCeiling,
-} from '../common/decorators';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { CurrentUser, BranchScope, BranchCeiling } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Controller('groups')
@@ -33,8 +27,7 @@ export class GroupsController {
   ) {}
 
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('groups.view')
   findAll(
     @Query() query: GroupQueryDto,
     @CurrentUser() currentUser: any,
@@ -61,8 +54,7 @@ export class GroupsController {
   }
 
   @Get('schedule-conflicts')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage', 'lessons.change')
   getScheduleConflicts(
     @Query('branchId') branchId: string,
     @Query('exactDays') exactDays: string,
@@ -87,8 +79,7 @@ export class GroupsController {
   }
 
   @Get('available-rooms')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage', 'lessons.change')
   getAvailableRooms(
     @Query('branchId') branchId: string,
     @Query('exactDays') exactDays: string,
@@ -109,8 +100,7 @@ export class GroupsController {
   }
 
   @Get('available-teachers')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage', 'lessons.change')
   getAvailableTeachers(
     @Query('branchId') branchId: string,
     @Query('exactDays') exactDays: string,
@@ -131,8 +121,7 @@ export class GroupsController {
   }
 
   @Get('available-slots')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage', 'lessons.change')
   getAvailableSlots(
     @Query('branchId') branchId: string,
     @Query('roomId') roomId: string,
@@ -151,8 +140,7 @@ export class GroupsController {
   }
 
   @Get('next-name')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage')
   getNextName(
     @Query('branchId') branchId: string,
     @CurrentUser('companyId') companyId: number,
@@ -161,8 +149,7 @@ export class GroupsController {
   }
 
   @Get(':id/students')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('groups.view')
   findStudentsByGroupId(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -178,8 +165,7 @@ export class GroupsController {
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('groups.view')
   findOne(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -190,8 +176,7 @@ export class GroupsController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage')
   create(
     @Body() dto: CreateGroupDto,
     @CurrentUser('companyId') companyId: number,
@@ -201,8 +186,7 @@ export class GroupsController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateGroupDto,
@@ -213,8 +197,7 @@ export class GroupsController {
   }
 
   @Patch(':id/status')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage')
   changeStatus(
     @Param('id') id: string,
     @Body() dto: ChangeGroupStatusDto,
@@ -225,8 +208,7 @@ export class GroupsController {
   }
 
   @Get(':id/status-history')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage')
   getStatusHistory(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -237,8 +219,7 @@ export class GroupsController {
   }
 
   @Get(':id/delete-preview')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage')
   getDeletePreview(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -249,8 +230,7 @@ export class GroupsController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('groups.manage')
   delete(
     @Param('id') id: string,
     // Optional. A request with no body still validates: the global

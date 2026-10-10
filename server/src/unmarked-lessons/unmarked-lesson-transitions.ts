@@ -82,7 +82,7 @@ export async function markUnmarkedLessonCancelled(
     },
   });
   if (row.status === 'PENDING') {
-    await closeLessonTask(tx, row.taskCommentId, args.actorId);
+    await closeLessonTask(tx, row.taskId, args.actorId);
   }
   return decisionOf(tx, row);
 }
@@ -140,7 +140,7 @@ export async function markUnmarkedLessonRescheduled(
       decidedAt: args.now,
     },
   });
-  await closeLessonTask(tx, row.taskCommentId, args.actorId);
+  await closeLessonTask(tx, row.taskId, args.actorId);
   return decisionOf(tx, row);
 }
 
@@ -215,7 +215,7 @@ async function reopen(
     select: { name: true, deletedAt: true },
   });
   if (!group || group.deletedAt) return;
-  const taskCommentId = await createReopenTask(
+  const taskId = await createReopenTask(
     tx,
     row.companyId,
     row.branchId,
@@ -236,7 +236,7 @@ async function reopen(
       decidedById: null,
       decidedAt: null,
       claimedById: null,
-      taskCommentId,
+      taskId,
     },
   });
 }
@@ -303,7 +303,7 @@ async function openFirstTimeQuestion(
   });
   const startTime = times.startTime ?? DAY_START_TIME;
   const endTime = times.endTime ?? DAY_END_TIME;
-  const taskCommentId = await createReopenTask(
+  const taskId = await createReopenTask(
     tx,
     group.companyId,
     group.branchId,
@@ -325,7 +325,7 @@ async function openFirstTimeQuestion(
       lessonEndTime: endTime,
       teacherPayExempt: exempt,
       exemptReason: exempt ? args.reason : null,
-      taskCommentId,
+      taskId,
     },
   });
 }
@@ -505,14 +505,20 @@ export async function reopenAfterRescheduleRemoved(
   });
 }
 
-/** A deleted group's open questions stop asking; their rows stay (no pay). */
+/**
+ * A deleted group's open questions stop asking; their rows stay (no pay).
+ * Answers the lesson days it closed, 'YYYY-MM-DD': the caller emits
+ * `UNMARKED_LESSON_CLOSED` for each after its commit, so the notices those
+ * questions waited on close too.
+ */
 export async function closeTasksOfDeletedGroup(
   tx: Tx,
   groupId: string,
-): Promise<void> {
+): Promise<string[]> {
   const rows = await tx.unmarkedLesson.findMany({
     where: { groupId, status: 'PENDING' },
-    select: { taskCommentId: true },
+    select: { taskId: true, date: true },
   });
-  for (const r of rows) await closeLessonTask(tx, r.taskCommentId, null);
+  for (const r of rows) await closeLessonTask(tx, r.taskId, null);
+  return rows.map((r) => dayOf(r.date));
 }

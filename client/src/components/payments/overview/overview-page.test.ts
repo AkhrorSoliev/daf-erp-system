@@ -25,7 +25,19 @@ vi.mock("@/hooks/use-auth", () => {
   return { useAuth };
 });
 
+// The capability list has no server to ask here, so it is the server's default
+// list for the signed-in roles — the same mapping the page showed by role id.
+vi.mock("@/hooks/use-permissions", async () => {
+  const { canForRoles } = await import("@/test-support/server-catalog");
+  return {
+    useCan: (wanted: PermissionKey | readonly PermissionKey[]) =>
+      canForRoles(env.roleIds)(wanted),
+    usePermissionsReady: () => true,
+  };
+});
+
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { PermissionKey } from "@/lib/permission-keys";
 import { OverviewPage } from "./overview-page";
 import type { DebtSplit, FinancialOverview, MonthCharges } from "./types";
 

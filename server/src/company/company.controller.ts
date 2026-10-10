@@ -6,21 +6,20 @@ import {
   Body,
   Query,
   ParseIntPipe,
-  UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
 import { CompanyService } from './company.service';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
-import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { RolesGuard } from '../common/guards';
+import { AnyUser, Can } from '../common/permissions/access.decorators';
 
 @Controller('company')
 export class CompanyController {
   constructor(private companyService: CompanyService) {}
 
   @Get()
+  @AnyUser()
   findAll(
     @Query() paginationDto: PaginationDto,
     @CurrentUser('companyId') companyId: number,
@@ -30,6 +29,7 @@ export class CompanyController {
   }
 
   @Get(':id')
+  @AnyUser()
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -43,16 +43,16 @@ export class CompanyController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO')
+  @Can('settings.company')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCompanyDto,
     @CurrentUser('companyId') companyId: number,
   ) {
-    // Multi-tenant: a CEO may only edit their OWN company — mirror the read
-    // guard on findOne. Without this a CEO could PATCH another tenant's company
-    // row (the @Roles('CEO') guard alone doesn't bind the id to the caller).
+    // Multi-tenant: a caller may only edit their OWN company — mirror the read
+    // guard on findOne. Without this a holder of `settings.company` could PATCH
+    // another tenant's company row (the capability alone doesn't bind the id to
+    // the caller).
     if (id !== companyId) {
       throw new ForbiddenException(
         "Boshqa kompaniya ma'lumotini o'zgartirish mumkin emas",

@@ -7,6 +7,7 @@ import { PushService } from '../notifications/push.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { tashkentDateStr } from '../common/date/tashkent';
 import { formatTashkentDate } from './absence-pause.constants';
+import { formatUzPhone } from '../common/utils/phone.util';
 
 /** Xabar yuborish uchun kerak bo'lgan hamma narsa, bitta joyda. */
 export interface PauseTarget {
@@ -296,10 +297,7 @@ export class AbsencePauseNotifyService {
  * to'g'irroq.
  */
 function formatBranchPhone(phone: string | null): string | null {
-  if (!phone) return null;
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length !== 9) return `+998 ${digits}`;
-  return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
+  return phone ? formatUzPhone(phone) : null;
 }
 
 /** Filial raqami bo'lmasa xabar shunchaki qisqaroq bo'ladi — bo'sh qator qolmaydi. */

@@ -224,12 +224,13 @@ export function NotRegisteredNotice({
       title="Telegram akkauntingiz ro'yxatdan o'tmagan"
       description="Bu Telegram akkaunt hech bir DaF o'quvchisiga bog'lanmagan."
     >
-      {/* «To'lovlar» bog'lashni boshqa hech narsaga tegmasdan qiladi (parol
-          tiklash esa parolni ham almashtiradi). */}
+      {/* The /start button links without touching anything else (a password
+          reset would replace the password too). */}
       <Steps otherwise="Raqamingiz tizimda topilmasa, administrator bilan bog'laning.">
-        DaF o'quvchisi bo'lsangiz: botga qayting, «💳 To'lovlar» tugmasini
-        bosing va «📱 Telefon raqamni yuborish» orqali raqamingizni
-        yuboring. Akkauntingiz bog'lanadi — so'ng kabinetni qayta oching.
+        DaF o'quvchisi bo'lsangiz: botga qayting, /start yuboring va «📱
+        Hisobimni bog'lash» tugmasini bosing, so'ng «📱 Telefon raqamni
+        yuborish» orqali raqamingizni yuboring. Akkauntingiz bog'lanadi —
+        so'ng kabinetni qayta oching.
       </Steps>
       <BackToBotButton />
     </Notice>

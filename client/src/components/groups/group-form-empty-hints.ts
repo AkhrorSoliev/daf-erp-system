@@ -1,6 +1,8 @@
+import type { Can } from "@/lib/permission-check";
+
 /**
  * When the group form's course, room or teacher list is empty — why, and
- * where to go. The link is shown only to a role that can actually add that
+ * where to go. The link is shown only to a viewer who can actually add that
  * thing: a course or a teacher is added by CEO/director, a room also by an
  * administrator.
  */
@@ -10,10 +12,10 @@ export interface EmptyHint {
 }
 
 export function groupFormEmptyHints(
-  roleIds: number[],
+  can: Can,
   branchId: number | null,
 ): { course: EmptyHint; room: EmptyHint; teacher: EmptyHint } {
-  const managesStructure = roleIds.includes(1) || roleIds.includes(2);
+  const managesStructure = can("courses.create");
   return {
     course: managesStructure
       ? {

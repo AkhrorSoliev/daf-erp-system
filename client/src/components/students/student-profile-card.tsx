@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useEditStudent } from "@/hooks/use-edit-student";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import type { Student } from "@/data/student-model";
 import { cn } from "@/lib/utils";
 import { formatPhone } from "@/lib/format-utils";
@@ -74,9 +74,9 @@ interface StudentProfileCardProps {
 export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick, onWithdrawalClick, onInitialBalanceClick, onStatusChanged }: StudentProfileCardProps) {
   const { openDrawer } = useEditStudent();
   const router = useRouter();
-  const authUser = useAuth((s) => s.user);
-  const canManage = authUser?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
-  const isCeo = authUser?.roles.some((r) => r.id === 1) ?? false;
+  const canSeeDetails = useCan("students.details");
+  const canManageStudent = useCan("students.manage");
+  const canSetInitialBalance = useCan("students.initial-balance");
   const [showDelete, setShowDelete] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -115,19 +115,18 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
 
   const [latestComment, setLatestComment] = useState<{
     content: string;
-    isTask?: boolean;
     author: { firstName: string; lastName: string } | null;
     createdAt: string;
   } | null>(null);
 
   useEffect(() => {
-    if (!canManage) return;
+    if (!canSeeDetails) return;
     api.get("/comments/latest", {
       params: { entityType: "Student", entityId: String(student.id) },
     })
       .then(({ data }) => setLatestComment(data || null))
       .catch(() => {});
-  }, [student.id, commentKey, canManage]);
+  }, [student.id, commentKey, canSeeDetails]);
 
   return (
     <div className="rounded-lg border bg-card flex flex-col gap-5 p-6">
@@ -241,7 +240,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
         </div>
       </div>
 
-      {canManage && (
+      {canManageStudent && (
         <>
           <Separator />
 
@@ -267,7 +266,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                 {onWithdrawalClick && (
                   <DropdownMenuItem onClick={onWithdrawalClick}>Yechib olish</DropdownMenuItem>
                 )}
-                {isCeo && onInitialBalanceClick && (
+                {canSetInitialBalance && onInitialBalanceClick && (
                   <DropdownMenuItem onClick={onInitialBalanceClick}>
                     Boshlang&apos;ich balans
                   </DropdownMenuItem>
@@ -418,7 +417,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
       />
 
 
-      {canManage && (
+      {canSeeDetails && (
         <>
           <Separator />
 
@@ -435,12 +434,6 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                   <span className="font-medium">{latestComment.author ? `${latestComment.author.firstName} ${latestComment.author.lastName}` : "Tizim"}</span>
                   <span>&middot;</span>
                   <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
-                  {latestComment.isTask && (
-                    <>
-                      <span>&middot;</span>
-                      <span className="text-amber-600 dark:text-amber-400 font-medium">Topshiriq</span>
-                    </>
-                  )}
                 </div>
               </div>
             ) : (

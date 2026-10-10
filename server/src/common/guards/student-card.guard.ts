@@ -9,13 +9,14 @@ import {
  * Refuses a request whose token carries no `studentId` (404, like the inline
  * checks in `StudentPortalController`).
  *
- * `@Roles('Student')` proves the caller holds the Student role, not that a
+ * `@StudentOnly()` proves the caller holds the Student role, not that a
  * student card stands behind the account. Without this guard such a token
  * reaches the handler with `studentId` undefined, and Prisma reads
  * `{ studentId: undefined }` as "no filter": a query meant for one student
  * runs over all of them.
  *
- * Put it AFTER `RolesGuard` in `@UseGuards`, so a staff token still gets 403.
+ * The global `PermissionGuard` runs before every controller guard, so a staff
+ * token still gets 403 before this guard runs.
  * On a controller it covers every route, including ones added later — which
  * a per-handler `if (!studentId)` cannot promise.
  */

@@ -6,28 +6,27 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { GroupTeacherChangeReasonsService } from './group-teacher-change-reasons.service';
 import { CreateGroupTeacherChangeReasonDto } from './dto/create-group-teacher-change-reason.dto';
 import { UpdateGroupTeacherChangeReasonDto } from './dto/update-group-teacher-change-reason.dto';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('group-teacher-change-reasons')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class GroupTeacherChangeReasonsController {
   constructor(
     private readonly reasonsService: GroupTeacherChangeReasonsService,
   ) {}
 
   @Get()
+  @Can('settings.reference', 'students.enroll', 'groups.manage')
   findAll(@CurrentUser('companyId') companyId: number) {
     return this.reasonsService.findAll(companyId);
   }
 
   @Post()
+  @Can('settings.reference')
   create(
     @Body() dto: CreateGroupTeacherChangeReasonDto,
     @CurrentUser('companyId') companyId: number,
@@ -37,6 +36,7 @@ export class GroupTeacherChangeReasonsController {
   }
 
   @Patch(':id')
+  @Can('settings.reference')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateGroupTeacherChangeReasonDto,
@@ -47,6 +47,7 @@ export class GroupTeacherChangeReasonsController {
   }
 
   @Delete(':id')
+  @Can('settings.reference')
   remove(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,

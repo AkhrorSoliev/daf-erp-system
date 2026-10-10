@@ -10,6 +10,7 @@ import {
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
 import { leadBranchWhere } from './shared/lead-scope';
+import { leadStatsRange, statCardWhere } from './leads-stats.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
 import { StudentEnrollmentService } from '../students/student-enrollment.service';
@@ -24,6 +25,7 @@ import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RemoveLeadDto } from './dto/remove-lead.dto';
 import { equalsOrIn } from '../common/dto/to-array';
 import { tashkentRangeFilter } from '../common/date/tashkent';
+import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
 
 // Sentinel stored in Lead.statusChangeReason when a lead is CONVERTED by being
 // linked to an already-existing student (no new account minted) rather than by
@@ -64,7 +66,7 @@ export class LeadsService {
     if (leadIds.length === 0) return new Map();
     const grouped = await this.prisma.comment.groupBy({
       by: ['entityId'],
-      where: { entityType: 'Lead', entityId: { in: leadIds } },
+      where: { entityType: 'Lead', entityId: { in: leadIds }, isTask: false },
       _count: { _all: true },
     });
     return new Map(grouped.map((g) => [g.entityId, g._count._all]));
@@ -91,11 +93,14 @@ export class LeadsService {
     // database, names and phone numbers included. The branch predicate goes
     // under AND because `leadBranchWhere` produces an `OR` and so does the
     // search filter below; spreading both would let the search erase it.
-    const where: Prisma.LeadWhereInput = {
-      deletedAt: null,
-      companyId,
-      AND: [leadBranchWhere(scope)],
-    };
+    const where: Prisma.LeadWhereInput = query.card
+      ? statCardWhere(
+          query.card,
+          companyId,
+          scope,
+          leadStatsRange(query.period ?? 'month', new Date()),
+        )
+      : { deletedAt: null, companyId, AND: [leadBranchWhere(scope)] };
 
     const search = query.search?.trim();
     if (search) {
@@ -122,7 +127,7 @@ export class LeadsService {
     // exactly what we want when no lead has a comment yet.
     if (query.hasComments !== undefined) {
       const commented = await this.prisma.comment.findMany({
-        where: { entityType: 'Lead' },
+        where: { entityType: 'Lead', isTask: false },
         distinct: ['entityId'],
         select: { entityId: true },
       });
@@ -155,6 +160,7 @@ export class LeadsService {
           statusEnum: true,
           createdAt: true,
           statusChangedAt: true,
+          deletedAt: true,
           convertedStudentId: true,
           source: { select: { id: true, name: true } },
           section: {
@@ -391,12 +397,12 @@ export class LeadsService {
     }
 
     const latest = await this.prisma.comment.findFirst({
-      where: { entityType: 'Lead', entityId: id },
+      // A migrated task (`isTask`) stays hidden, like in the comment list.
+      where: { entityType: 'Lead', entityId: id, isTask: false },
       orderBy: { createdAt: 'desc' },
       select: {
         content: true,
         createdAt: true,
-        isTask: true,
         author: { select: { firstName: true, lastName: true } },
       },
     });
@@ -415,7 +421,6 @@ export class LeadsService {
             authorName: latest.author ? fullName(latest.author) : 'Tizim',
             content: latest.content,
             createdAt: latest.createdAt,
-            isTask: latest.isTask,
           }
         : null,
     };
@@ -942,8 +947,7 @@ export class LeadsService {
         if (!group) {
           throw new NotFoundException('Guruh topilmadi');
         }
-        const ENROLLABLE_STATUSES = ['ACTIVE', 'FORMING', 'PAUSED'];
-        if (!ENROLLABLE_STATUSES.includes(group.statusEnum)) {
+        if (!isEnrollableGroupStatus(group.statusEnum)) {
           throw new BadRequestException(
             "Tugallangan yoki bekor qilingan guruhga o'quvchi qo'shib bo'lmaydi",
           );

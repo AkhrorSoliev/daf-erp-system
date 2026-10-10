@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SettingsPageHeader } from "./settings-page-header";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan, usePermissionsReady } from "@/hooks/use-permissions";
 import { getErrorMessage } from "@/lib/get-error-message";
 import api from "@/lib/api";
 
@@ -66,10 +66,11 @@ function NumberField({
 
 export function AbsencePauseSettingsClient() {
   const queryClient = useQueryClient();
-  const user = useAuth((s) => s.user);
-  // Yozish serverda ham faqat CEO — bu yerdagi qulf shunchaki tugmani
-  // bosib, keyin 403 olishning oldini oladi.
-  const canEdit = !!user?.roles?.some((r) => r.name === "CEO");
+  // The server writes this with `settings.company` too; the lock keeps the
+  // button from ending in a 403. The note below waits for the list, so it
+  // never flashes at someone who can edit.
+  const canEdit = useCan("settings.company");
+  const permissionsReady = usePermissionsReady();
 
   // Qoralama faqat foydalanuvchi tahrirlagandan keyin paydo bo'ladi; shu
   // paytgacha serverdagi qiymat ko'rsatiladi. `useEffect` bilan holatni
@@ -125,7 +126,7 @@ export function AbsencePauseSettingsClient() {
         description="Ketma-ket dars qoldirgan o'quvchini tizim o'zi pauzaga o'tkazadi"
       />
 
-      {!canEdit && (
+      {permissionsReady && !canEdit && (
         <p className="mb-4 rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
           Bu sozlamani faqat rahbar o&apos;zgartira oladi. Sozlama ikkala
           filialga birdek qo&apos;llanadi.

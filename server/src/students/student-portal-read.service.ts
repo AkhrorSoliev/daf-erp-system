@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { REVERSAL_SELECT, withReversal } from '../transactions/reversal-view';
 
 @Injectable()
 export class StudentPortalReadService {
@@ -292,7 +293,10 @@ export class StudentPortalReadService {
         take: 20,
       }),
       this.prisma.transaction.findMany({
-        where: { studentId },
+        // Only rows that move the balance. A lesson's consumption marker is
+        // written at 0 so'm, and with about two dozen per student it filled
+        // the 20-row window with "+0 so'm" lines.
+        where: { studentId, amount: { not: 0 } },
         select: {
           id: true,
           type: true,
@@ -301,12 +305,13 @@ export class StudentPortalReadService {
           balanceAfter: true,
           description: true,
           createdAt: true,
+          ...REVERSAL_SELECT,
         },
         orderBy: { createdAt: 'desc' },
         take: 20,
       }),
     ]);
 
-    return { payments, transactions };
+    return { payments, transactions: transactions.map(withReversal) };
   }
 }

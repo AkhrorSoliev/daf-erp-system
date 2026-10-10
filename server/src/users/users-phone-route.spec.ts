@@ -1,15 +1,11 @@
 import 'reflect-metadata';
-import { Test } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { UsersController } from './users.controller';
-import { UsersService } from './users.service';
-import { AuthService } from '../auth/auth.service';
-import { RedisService } from '../redis/redis.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
+import { ROLE_ID } from '../common/auth/role-ids';
+import type { RouteAccessMeta } from '../common/permissions/access.decorators';
+import { allows } from '../common/permissions/permission.guard';
+import { fakePermissions, routeAccess } from '../common/permissions/testing';
 import { ChangePhoneDto } from './dto/change-phone.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -26,44 +22,29 @@ async function invalidProperties(cls: new () => object, body: object) {
 }
 
 describe('PATCH /users/phone — your own phone behind your password (ADR-0031)', () => {
-  let controller: UsersController;
-  const reflector = new Reflector();
-  const guard = new RolesGuard(reflector);
+  const marker = routeAccess(
+    UsersController,
+    'changePhone',
+  ) as unknown as RouteAccessMeta;
 
-  beforeEach(async () => {
-    const module = await Test.createTestingModule({
-      controllers: [UsersController],
-      providers: [
-        { provide: UsersService, useValue: {} },
-        { provide: RedisService, useValue: {} },
-        // The controller issues fresh sessions (ADR-0030); unused here.
-        { provide: AuthService, useValue: {} },
-      ],
-    }).compile();
-    controller = module.get(UsersController);
-  });
+  const admits = async (roleId: number) =>
+    allows(marker, await fakePermissions([roleId]).forUser(1));
 
-  function contextFor(roles: string[]) {
-    return {
-      getHandler: () => controller.changePhone,
-      getClass: () => UsersController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    } as any;
-  }
-
-  it('carries @Roles(...STAFF_ROLES) and lets every staff role through', () => {
-    expect(reflector.get<string[]>(ROLES_KEY, controller.changePhone)).toEqual([
-      ...STAFF_ROLES,
-    ]);
-    for (const role of STAFF_ROLES) {
-      expect(guard.canActivate(contextFor([role]))).toBe(true);
+  it('carries the any-staff marker and lets every staff role through', async () => {
+    expect(marker).toEqual({ kind: 'anyStaff' });
+    for (const roleId of [
+      ROLE_ID.CEO,
+      ROLE_ID.BRANCH_DIRECTOR,
+      ROLE_ID.ADMINISTRATOR,
+      ROLE_ID.TEACHER,
+      ROLE_ID.CASHIER,
+    ]) {
+      expect(await admits(roleId)).toBe(true);
     }
   });
 
-  it('refuses a student token: a student does not change their own sign-in number', () => {
-    expect(() => guard.canActivate(contextFor(['Student']))).toThrow(
-      ForbiddenException,
-    );
+  it('refuses a student token: a student does not change their own sign-in number', async () => {
+    expect(await admits(ROLE_ID.STUDENT)).toBe(false);
   });
 
   it('is declared before PATCH /users/:id, which would otherwise swallow "phone"', () => {

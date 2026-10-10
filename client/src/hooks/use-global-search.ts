@@ -5,7 +5,7 @@ import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { filterPages, type SearchablePage } from "@/data/searchable-pages";
 import api from "@/lib/api";
 import { canOpenEmployeeSettings } from "@/lib/settings-nav";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useBranchChange } from "@/hooks/use-branch-change";
 
 const RECENT_SEARCHES_KEY = "daf-recent-searches";
@@ -67,7 +67,7 @@ export function useGlobalSearch() {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const user = useAuth((s) => s.user);
+  const can = usePermissions((s) => s.can);
 
   useEffect(() => {
     setRecentSearches(loadRecentSearches());
@@ -169,7 +169,7 @@ export function useGlobalSearch() {
 
   // "users" are staff without the teacher role. Their only page is employee
   // settings, which sends an Administrator back to /settings.
-  const visibleResults = canOpenEmployeeSettings(user?.roles.map((r) => r.id) ?? [])
+  const visibleResults = canOpenEmployeeSettings(can)
     ? results
     : { ...results, users: emptyResult.users };
 

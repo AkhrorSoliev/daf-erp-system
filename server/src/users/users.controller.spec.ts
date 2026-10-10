@@ -1,17 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { RedisService } from '../redis/redis.service';
 import { AuthService } from '../auth/auth.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('UsersController — role guards', () => {
+describe('UsersController — route access', () => {
   let controller: UsersController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockService = {
     findAll: jest.fn().mockResolvedValue({ data: [], total: 0 }),
@@ -52,90 +47,67 @@ describe('UsersController — role guards', () => {
     }).compile();
 
     controller = module.get(UsersController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
-
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => UsersController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
 
   describe('findAll()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.findAll);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    it('is gated by the employee, teacher and group capabilities', () => {
+      expect(routeAccess(UsersController, 'findAll')).toEqual({
+        kind: 'can',
+        keys: ['employees.view', 'teachers.view', 'groups.manage'],
+      });
     });
 
-    it('should allow CEO to list users', () => {
-      const ctx = mockExecutionContext(controller.findAll, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should allow Branch Director to list users', () => {
-      const ctx = mockExecutionContext(controller.findAll, ['Branch Director']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should allow Administrator to list users', () => {
-      const ctx = mockExecutionContext(controller.findAll, ['Administrator']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Teacher from listing users', () => {
-      const ctx = mockExecutionContext(controller.findAll, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Cashier from listing users', () => {
-      const ctx = mockExecutionContext(controller.findAll, ['Cashier']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    it('admits the CEO, Branch Director and Administrator by default, not the Teacher or the Cashier', () => {
+      expect(defaultRolesOf(UsersController, 'findAll')).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
     });
   });
 
-  // Administrators do not manage employees (docs/role-access.md). The page is
-  // hidden from them; the two writes behind it refuse them too, because the
-  // backend is the boundary. They onboard teachers and cashiers through the
-  // Telegram link, and edit their own profile through PATCH /users/profile.
+  describe('findOne()', () => {
+    it('is gated by the employee and teacher view capabilities', () => {
+      expect(routeAccess(UsersController, 'findOne')).toEqual({
+        kind: 'can',
+        keys: ['employees.view', 'teachers.view'],
+      });
+    });
+
+    it('admits the CEO, Branch Director and Administrator by default', () => {
+      expect(defaultRolesOf(UsersController, 'findOne')).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
+    });
+  });
+
+  // Administrators do not hold `employees.manage` (docs/role-access.md). The
+  // page is hidden from them; the three writes behind it refuse them too,
+  // because the backend is the boundary. They onboard teachers and cashiers
+  // through the Telegram link, and edit their own profile through
+  // PATCH /users/profile.
+  describe.each(['create', 'update', 'remove'] as const)(
+    '%s() access',
+    (name) => {
+      it('is gated by the employee manage capability', () => {
+        expect(routeAccess(UsersController, name)).toEqual({
+          kind: 'can',
+          keys: ['employees.manage'],
+        });
+      });
+
+      it('admits the CEO and the Branch Director by default, nobody else', () => {
+        expect(defaultRolesOf(UsersController, name)).toEqual([
+          'Branch Director',
+          'CEO',
+        ]);
+      });
+    },
+  );
+
   describe('create()', () => {
-    it('should have @Roles(CEO, Branch Director) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.create);
-      expect(roles).toEqual(['CEO', 'Branch Director']);
-    });
-
-    it('should allow CEO to create', () => {
-      const ctx = mockExecutionContext(controller.create, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should allow Branch Director to create', () => {
-      const ctx = mockExecutionContext(controller.create, ['Branch Director']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Administrator from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Administrator']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Teacher from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Cashier from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Cashier']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
     it('passes companyId and callerId from JWT to the service', async () => {
       await controller.create(
         {
@@ -155,26 +127,6 @@ describe('UsersController — role guards', () => {
   });
 
   describe('update()', () => {
-    it('should have @Roles(CEO, Branch Director) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.update);
-      expect(roles).toEqual(['CEO', 'Branch Director']);
-    });
-
-    it('should allow Branch Director to update', () => {
-      const ctx = mockExecutionContext(controller.update, ['Branch Director']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Administrator from updating', () => {
-      const ctx = mockExecutionContext(controller.update, ['Administrator']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Teacher from updating', () => {
-      const ctx = mockExecutionContext(controller.update, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
     it('passes id, dto, userId, companyId to the service', async () => {
       await controller.update(7, { firstName: 'X' } as any, 42, 1001);
       expect(mockService.updateUser).toHaveBeenCalledWith(
@@ -187,21 +139,6 @@ describe('UsersController — role guards', () => {
   });
 
   describe('remove()', () => {
-    it('should have @Roles(CEO, Branch Director) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.remove);
-      expect(roles).toEqual(['CEO', 'Branch Director']);
-    });
-
-    it('should deny Administrator from deleting', () => {
-      const ctx = mockExecutionContext(controller.remove, ['Administrator']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Teacher from deleting', () => {
-      const ctx = mockExecutionContext(controller.remove, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
     it('passes id, userId, companyId to the service', async () => {
       await controller.remove(7, 42, 1001);
       expect(mockService.softDelete).toHaveBeenCalledWith(7, 42, 1001);
@@ -209,6 +146,12 @@ describe('UsersController — role guards', () => {
   });
 
   describe('changePassword()', () => {
+    it('is open to every signed-in account', () => {
+      expect(routeAccess(UsersController, 'changePassword')).toEqual({
+        kind: 'anyUser',
+      });
+    });
+
     it('hands the caller a fresh session AFTER the change', async () => {
       mockService.changePassword.mockResolvedValue({
         message: "Parol muvaffaqiyatli o'zgartirildi",
@@ -236,11 +179,19 @@ describe('UsersController — role guards', () => {
     });
   });
 
+  describe('updateProfile()', () => {
+    it('is open to every signed-in account', () => {
+      expect(routeAccess(UsersController, 'updateProfile')).toEqual({
+        kind: 'anyUser',
+      });
+    });
+  });
+
   describe('logoutOthers()', () => {
-    it('is open to every signed-in account (no @Roles)', () => {
-      expect(
-        reflector.get<string[]>(ROLES_KEY, controller.logoutOthers),
-      ).toBeUndefined();
+    it('is open to every signed-in account', () => {
+      expect(routeAccess(UsersController, 'logoutOthers')).toEqual({
+        kind: 'anyUser',
+      });
     });
 
     it("acts on the caller only, from the caller's own session version", async () => {

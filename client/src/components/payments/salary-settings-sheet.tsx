@@ -18,6 +18,7 @@ import {
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { SalaryPeriodControl } from "./salary-period-control";
 import { SalaryConfigRowSheet } from "./salary-config-row-sheet";
 import { SalaryConfigBulkDialog } from "./salary-config-bulk-dialog";
@@ -111,6 +112,7 @@ export function SalarySettingsSheet({
   access,
 }: Props) {
   const selfId = useAuth((s) => s.user?.id) ?? -1;
+  const canClose = useCan("salary.close");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [editing, setEditing] = useState<EditTarget | null>(null);
@@ -164,7 +166,7 @@ export function SalarySettingsSheet({
               <h3 className="text-sm font-semibold">Hisoblash davri</h3>
               <SalaryPeriodControl
                 period={period}
-                isCeo
+                canClose={canClose}
                 onChanged={onChanged}
               />
             </section>

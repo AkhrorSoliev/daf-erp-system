@@ -21,6 +21,8 @@ describe("toBranch", () => {
     status: "CLOSED",
     startOfWorkingDay: "08:00",
     endOfWorkingDay: null,
+    city: "Namangan",
+    representativeName: null,
   };
 
   it("takes the state from status, not from isActive", () => {
@@ -36,6 +38,9 @@ describe("toBranch", () => {
       status: "CLOSED",
       startOfWorkingDay: "08:00",
       endOfWorkingDay: "",
+      city: "Namangan",
+      representativeName: "",
+      representativePosition: "",
     });
   });
 });
@@ -47,6 +52,9 @@ describe("branchUpdateBody", () => {
     phone: "901234567",
     startOfWorkingDay: "08:00",
     endOfWorkingDay: "",
+    city: " Namangan ",
+    representativeName: "",
+    representativePosition: "Direktor",
   };
 
   it("never carries isActive or status", () => {
@@ -62,6 +70,9 @@ describe("branchUpdateBody", () => {
       phone: "901234567",
       startOfWorkingDay: "08:00",
       endOfWorkingDay: undefined,
+      city: "Namangan",
+      representativeName: undefined,
+      representativePosition: "Direktor",
     });
   });
 });

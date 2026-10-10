@@ -119,7 +119,7 @@ const filtersSchema = {
 };
 
 interface Props {
-  isCeo: boolean;
+  canClose: boolean;
   /** CEO/BD — may add advances (backed by the CEO/BD expense-create endpoint). */
   canPay: boolean;
   /** ⚙ Sozlamalar: CEO sees everything, a director only teacher rates (ADR-0034). */
@@ -194,7 +194,7 @@ function DrillDownAmount({
 }
 
 export function SalaryMonthlyView({
-  isCeo,
+  canClose,
   canPay,
   settingsAccess,
   onOpenBreakdown,
@@ -248,7 +248,7 @@ export function SalaryMonthlyView({
           { params: { month: shownMonth } },
         )
         .then((r) => r.data),
-    enabled: isCeo,
+    enabled: canClose,
     staleTime: 0,
   });
   const unpaidCount = settlePreview?.rows.length ?? 0;
@@ -298,7 +298,7 @@ export function SalaryMonthlyView({
             Avans qo&apos;shish
           </Button>
         )}
-        {isCeo && unpaidCount > 0 && (
+        {canClose && unpaidCount > 0 && (
           <Button
             variant="outline"
             className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-950/30"
@@ -633,7 +633,7 @@ export function SalaryMonthlyView({
             <span>
               Xodimlarga (administrator, kassir, direktor) hali oylik
               belgilanmagan.
-              {isCeo
+              {canClose
                 ? " Belgilash uchun ⚙ Sozlamalar → Xodimlar stavkalari."
                 : " CEO ⚙ Sozlamalar → Xodimlar stavkalari bo'limida belgilaydi."}
             </span>
@@ -654,7 +654,7 @@ export function SalaryMonthlyView({
       )}
 
       {/* Confirm a month paid outside the system — CEO */}
-      {isCeo && (
+      {canClose && (
         <SettleMonthDialog
           open={settleOpen}
           month={shownMonth}

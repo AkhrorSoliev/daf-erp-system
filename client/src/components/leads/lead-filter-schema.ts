@@ -11,6 +11,8 @@ export const LEAD_FILTER_SCHEMA = {
   columnId: { type: "array" as const, defaultValue: [] as string[] },
   startDate: { type: "string" as const, defaultValue: "" },
   endDate: { type: "string" as const, defaultValue: "" },
+  // A stats card whose leads the list shows (`created` | `converted` | `lost`).
+  karta: { type: "string" as const, defaultValue: "" },
   page: { type: "number" as const, defaultValue: 1 },
   pageSize: { type: "number" as const, defaultValue: 10 },
 };
@@ -22,6 +24,7 @@ export interface LeadFilterValues {
   columnId: string[];
   startDate: string;
   endDate: string;
+  karta: string;
   page: number;
   pageSize: number;
 }
@@ -91,7 +94,8 @@ export function leadFiltersActive(f: LeadFilterValues): boolean {
     f.sourceId.length > 0 ||
     f.columnId.length > 0 ||
     f.startDate !== "" ||
-    f.endDate !== ""
+    f.endDate !== "" ||
+    f.karta !== ""
   );
 }
 

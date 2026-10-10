@@ -7,16 +7,13 @@ import {
   Param,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { LessonCancellationsService } from './lesson-cancellations.service';
 import { CreateLessonCancellationDto } from './dto/create-lesson-cancellation.dto';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('lesson-cancellations')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
 export class LessonCancellationsController {
   constructor(private service: LessonCancellationsService) {}
 
@@ -27,6 +24,7 @@ export class LessonCancellationsController {
   // role, the service additionally enforces "this group is yours" so a
   // teacher can't enumerate other groups' cancellations.
   @Get()
+  @Can('groups.view')
   list(
     @Query('groupId') groupId: string,
     @Query('from') from: string | undefined,
@@ -54,7 +52,7 @@ export class LessonCancellationsController {
   }
 
   @Post()
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('lessons.change')
   create(
     @Body() dto: CreateLessonCancellationDto,
     @CurrentUser('id') userId: number,
@@ -65,7 +63,7 @@ export class LessonCancellationsController {
   }
 
   @Delete(':id')
-  @Roles('CEO', 'Branch Director')
+  @Can('lessons.change-delete')
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,

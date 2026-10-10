@@ -1,15 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { PlannedAbsencesController } from './planned-absences.controller';
 import { PlannedAbsencesService } from './planned-absences.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { ACCESS_KEY } from '../common/permissions/access.decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('PlannedAbsencesController — role guards', () => {
+describe('PlannedAbsencesController — route access', () => {
   let controller: PlannedAbsencesController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockService = {
     upsert: jest.fn().mockResolvedValue({}),
@@ -23,34 +19,36 @@ describe('PlannedAbsencesController — role guards', () => {
     }).compile();
 
     controller = module.get(PlannedAbsencesController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(roles: string[]) {
-    return {
-      getHandler: () => () => null,
-      getClass: () => PlannedAbsencesController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
-
-  it('restricts the controller to CEO, Branch Director, Administrator', () => {
-    const roles = reflector.get<string[]>(ROLES_KEY, PlannedAbsencesController);
-    expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+  // The marker sits on the class, so both routes inherit it.
+  it('gates the pre-mark routes by the attendance fix capability at class level', () => {
+    expect(Reflect.getMetadata(ACCESS_KEY, PlannedAbsencesController)).toEqual({
+      kind: 'can',
+      keys: ['attendance.fix'],
+    });
   });
 
-  it.each(['CEO', 'Branch Director', 'Administrator'])('allows %s', (role) => {
-    expect(guard.canActivate(mockExecutionContext([role]))).toBe(true);
-  });
+  it.each(['upsert', 'remove'])(
+    '%s is gated by the attendance fix capability',
+    (name) => {
+      expect(routeAccess(PlannedAbsencesController, name)).toEqual({
+        kind: 'can',
+        keys: ['attendance.fix'],
+      });
+    },
+  );
 
-  it.each(['Teacher', 'Cashier'])('denies %s', (role) => {
-    expect(() => guard.canActivate(mockExecutionContext([role]))).toThrow(
-      ForbiddenException,
-    );
-  });
+  it.each(['upsert', 'remove'])(
+    '%s admits the three admin roles by default, not the Teacher or the Cashier',
+    (name) => {
+      expect(defaultRolesOf(PlannedAbsencesController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
+    },
+  );
 
   describe('handler wiring', () => {
     it('upsert delegates to the service with params + user context', async () => {

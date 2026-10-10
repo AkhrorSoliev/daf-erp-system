@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useEditCourse } from "@/hooks/use-edit-course";
 import type { Course } from "@/hooks/use-edit-course";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -107,11 +107,9 @@ export function EditCourseForm({
   // birdan boshqa hisob-kitob qoidasiga o'tkazadigan pul qarori). Shu
   // sabab bu boshqaruv Administrator uchun butunlay YASHIRILADI — nafaqat
   // o'chirilgan, chunki ko'rinib turgan-lekin-bosilmaydigan tugma "nega
-  // ishlamayapti" degan savol tug'diradi (backend guardiga mos: `server/
-  // src/courses/courses.controller.ts`, PAYMENT_MODEL_ROLES).
-  const authUser = useAuth((s) => s.user);
-  const canEditPaymentModel =
-    authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  // ishlamayapti" degan savol tug'diradi (server `courses.create` imkoniyatini
+  // talab qiladi).
+  const canEditPaymentModel = useCan("courses.create");
 
   // Guruhlar soni — to'lov modelini almashtirish tasdig'ida "bu N ta
   // guruhga ta'sir qiladi" deb aniq aytish uchun. Ro'yxat sahifasida bu son

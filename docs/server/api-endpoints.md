@@ -340,29 +340,29 @@ Get group status change history.
 
 ---
 
-## Comments & Tasks
+## Comments
+
+A comment is plain text on an entity. Tasks are not comments any more: see **Tasks** below (ADR-0074).
 
 ### POST /comments `Roles: CEO, BD, Administrator`
 
-Create a comment or task.
+Create a comment.
 
 **Body:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `entityType` | string | Yes | e.g. "Student", "Group" |
+| `entityType` | string | Yes | One of `COMMENTABLE_ENTITY_TYPES`, e.g. "Student", "Group" |
 | `entityId` | string | Yes | Entity ID |
 | `content` | string | Yes | Comment text |
-| `isTask` | boolean | No | If true, creates a task (CEO/BD only) |
-| `assigneeIds` | number[] | No | User IDs to assign (tasks only) |
-| `dueDate` | string (ISO) | No | Task due date |
-| `priority` | string | No | LOW, MEDIUM, HIGH, or URGENT |
+
+Any other field (`isTask`, `assigneeIds`, `dueDate`, `priority`) is rejected with 400.
 
 ---
 
 ### GET /comments `Roles: CEO, BD, Administrator`
 
-List comments for an entity.
+List comments for an entity (rows that were once tasks, `isTask = true`, are not returned).
 
 **Query Parameters:** `entityType`, `entityId`, `page`, `pageSize`
 
@@ -376,25 +376,9 @@ Get the latest comment for an entity.
 
 ---
 
-### GET /comments/my-tasks
-
-Get tasks assigned to the current user.
-
-**Query Parameters:** `page`, `pageSize`, `status?` (PENDING, SEEN, DONE)
-
----
-
-### GET /comments/created-tasks `Roles: CEO, BD`
-
-Get tasks created by the current user.
-
-**Query Parameters:** `page`, `pageSize`
-
----
-
 ### PATCH /comments/:id `Roles: CEO, BD, Administrator`
 
-Update a comment/task (content, dueDate, priority).
+Edit a comment's `content`; the author or the CEO only.
 
 ---
 
@@ -404,31 +388,130 @@ Delete a comment.
 
 ---
 
-### PATCH /comments/:id/assignee-status
+## Tasks
 
-Update assignee status on a task.
+All routes are `@AnyStaff()` (class level); `TaskPolicy` (`server/src/tasks/task-policy.ts`) narrows who may see or do what. Ids are UUIDs.
+
+### GET /tasks
+
+List tasks, newest first, cursor-paged (`{ data, nextCursor }`).
+
+**Query Parameters:** `view` (`my` assigned to me, `created` written by me, `all` everything the caller may see), `status[]`, `assigneeId[]`, `authorId[]`, `branchId[]`, `priority[]`, `due` (`overdue`, `today`, `week`), `q`, `entityType` + `entityId`, `closedDays` (window for DONE / CANCELLED, default 14), `cursor`, `limit` (1–100, default 50)
+
+---
+
+### GET /tasks/counts
+
+Counts for the sidebar and tab badges (`my`, `myOverdue`, `created`, `review`).
+
+### GET /tasks/workload
+
+Per-person workload for a month; managers only (CEO, BD — others get 403). **Query Parameters:** `month` (`YYYY-MM`), `branchId`
+
+### GET /tasks/assignable
+
+People the caller may assign or add as watchers. **Query Parameters:** `entityType`, `entityId`
+
+---
+
+### POST /tasks
+
+Create a task (one `Task` per assignee when `separateCopies` is true, all sharing a `batchId`).
 
 **Body:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `status` | string | Yes | SEEN or DONE |
+| `title` | string | Yes | 1–200 characters |
+| `assigneeIds` | number[] | Yes | At least one; must be on the caller's ladder |
+| `watcherIds` | number[] | No | Watchers |
+| `description` | string | No | Up to 5000 characters |
+| `dueAt` | string | No | ISO instant, or `YYYY-MM-DD` (18:00 Tashkent); 08:00–22:00, never Sunday or a holiday |
+| `priority` | string | No | LOW, MEDIUM (default), HIGH, URGENT |
+| `entityType`, `entityId` | string | No | Both or neither |
+| `separateCopies` | boolean | No | A separate task for each assignee |
+| `steps` | `{ title }[]` | No | Checklist |
+
+---
+
+### GET /tasks/:id
+
+The drawer payload: the task, its events (discussion and history), the caller's access and the batch.
+
+### PATCH /tasks/:id
+
+Edit `title`, `description`, `priority` or `dueAt` (`null` clears it); the author or a manager, manual open tasks only.
+
+### POST /tasks/:id/status
+
+Move the caller's own task: `{ status: NEW | IN_PROGRESS | IN_REVIEW | DONE }`. Managers who are not assignees use review or cancel instead.
+
+### POST /tasks/:id/review
+
+Author or manager: `{ action: ACCEPT | RETURN, reason? }`. RETURN needs a reason.
+
+### POST /tasks/:id/cancel
+
+Author or manager: `{ reason? }`.
+
+### POST /tasks/:id/duplicate
+
+Copy a task (the way to reopen a closed one).
+
+### PUT /tasks/:id/participants
+
+Replace the assignees and watchers: `{ assigneeIds, watcherIds? }`.
+
+### POST /tasks/:id/seen
+
+Mark the caller as having opened the task.
+
+### POST /tasks/:id/steps · PATCH /tasks/:id/steps/:stepId · DELETE /tasks/:id/steps/:stepId
+
+Add a step (`{ title }`), tick or rename it (`{ done?, title? }`), remove it.
+
+### POST /tasks/:id/events
+
+Add a comment to the discussion: `{ text }`.
 
 ---
 
 ## Notifications
 
+Every route here except `vapid-public-key` (public) is keyed on the caller (own rows and own devices only, no branch question). A row waits for the user when `actionRequired` is true and `resolvedAt` is null; it closes itself when its job is done (ADR-0076).
+
 ### GET /notifications
 
-List current user's notifications with pagination.
+List current user's notifications, newest first, with keyset paging.
 
-**Query Parameters:** `page`, `pageSize`
+**Query Parameters:**
+
+| Name | Values | Notes |
+|------|--------|-------|
+| `filter` | `pending` \| `all` | `pending` = rows that wait (`actionRequired` and not resolved), read or not. Default `all`. |
+| `type` | `task` \| `attendance` \| `payment` \| `system` | The bell's four groups. |
+| `q` | text, up to 100 chars | Case-insensitive search in the title and the message. |
+| `cursor` | string | The previous response's `nextCursor`; an invalid one is 400. |
+| `pageSize` | 1–50 | Default 20. |
+| `page` | integer | Deprecated and ignored (the bell before phase 5 still sends it). |
+
+**Response:** `{ data: Notification[], nextCursor: string | null }`. Each row carries the Notification fields plus `group` (`task` \| `attendance` \| `payment` \| `system`), `actionRequired`, `resolvedAt` and `groupKey`.
 
 ---
 
 ### GET /notifications/unread-count
 
-Get unread notification count for the current user.
+The bell's badge: the number of rows that wait for the user and are unread (`actionRequired` and `resolvedAt` null and not read). Reading a row removes it from the badge; only the job being done closes it.
+
+**Response:** `{ count: number }`
+
+---
+
+### GET /notifications/counts
+
+The «Barcha bildirishnomalar» page's left list.
+
+**Response:** `{ pending: number, all: number, groups: { task, attendance, payment, system } }` — `pending` is the number of rows that wait (read or not), `all` and `groups` count every row.
 
 ---
 
@@ -446,7 +529,7 @@ Mark all notifications as read.
 
 ### GET /notifications/stream
 
-SSE (Server-Sent Events) stream for real-time notifications. Requires JWT via Authorization header.
+SSE (Server-Sent Events) stream for real-time notifications. Requires JWT via Authorization header. Messages (`data: {json}`): `{ type: 'notification', notification }` (a new row, with `group`), `{ type: 'notification.resolved', ids, resolvedAt }` (the rows whose job got done), `{ type: 'task.updated', taskId }`.
 
 ---
 
@@ -454,7 +537,7 @@ SSE (Server-Sent Events) stream for real-time notifications. Requires JWT via Au
 
 Subscribe to web push notifications.
 
-**Body:** `{ endpoint, keys: { p256dh, auth } }`
+**Body:** `{ endpoint, p256dh, auth }`
 
 ---
 
@@ -464,9 +547,27 @@ Unsubscribe from web push.
 
 ---
 
+### POST /notifications/devices
+
+Native app: register the caller's Expo push token (an existing token moves to the caller).
+
+**Body:** `{ token, platform?, appVersion? }` — `token` 8–255 chars, `platform` `ios` \| `android`, `appVersion` up to 32 chars.
+
+---
+
+### DELETE /notifications/devices
+
+Native app: unregister the caller's Expo push token.
+
+**Body:** `{ token }`
+
+---
+
 ### GET /notifications/vapid-public-key
 
-Get the VAPID public key for push subscription.
+Get the VAPID public key for push subscription. Public: no JWT, not keyed on the caller.
+
+**Response:** `{ key: string }`
 
 ---
 

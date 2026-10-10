@@ -1,15 +1,8 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  Res,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import { presentStatement } from './present-statement';
 import { StatementService, statementFilename } from './statement.service';
@@ -31,8 +24,7 @@ export function sendPdfAttachment(
  * every other profile read (`assertCallerMayTouchStudent`).
  */
 @Controller('students')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Can('students.details')
 export class StatementsController {
   constructor(
     private readonly statements: StatementService,

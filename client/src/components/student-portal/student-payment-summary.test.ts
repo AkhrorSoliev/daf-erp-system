@@ -47,7 +47,9 @@ const history: PaymentHistory = {
 };
 
 /** The page's markup once its balance and history have loaded. */
-async function renderPage(): Promise<string> {
+async function renderPage(
+  payments: PaymentHistory = history,
+): Promise<string> {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
@@ -57,7 +59,7 @@ async function renderPage(): Promise<string> {
   });
   await client.prefetchQuery({
     queryKey: ["student-portal", "payments"],
-    queryFn: () => history,
+    queryFn: () => payments,
   });
   return renderToStaticMarkup(
     createElement(
@@ -102,5 +104,59 @@ describe("To'lovlar for a screen reader", () => {
     // While a payment starts the logo becomes a spinner; the name stays.
     expect(html).toContain('aria-label="Payme orqali to\'lash"');
     expect(html).toContain('aria-label="Click orqali to\'lash"');
+  });
+});
+
+// A lesson charge undone by the monthly switch used to sit in Balans tarixi
+// looking like a charge still standing, next to its own undo.
+describe("Balans tarixi with a cancelled charge", () => {
+  const pair: PaymentHistory = {
+    payments: [],
+    transactions: [
+      {
+        id: 2,
+        type: "LESSON_DEDUCTION",
+        amount: 37_500,
+        balanceBefore: 50_000,
+        balanceAfter: 87_500,
+        description: "Bekor qilindi: Oylik to'lovga o'tish migratsiyasi",
+        createdAt: "2026-09-25T17:41:00.000Z",
+        reversal: {
+          kind: "undo",
+          originalAt: "2026-09-18T07:47:00.000Z",
+          originalAmount: -37_500,
+          reason: "Oylik to'lovga o'tish migratsiyasi",
+        },
+      },
+      {
+        id: 1,
+        type: "LESSON_DEDUCTION",
+        amount: -37_500,
+        balanceBefore: -100_000,
+        balanceAfter: -137_500,
+        description: "Dars uchun yechildi",
+        createdAt: "2026-09-18T07:47:00.000Z",
+        reversal: {
+          kind: "reversed",
+          at: "2026-09-25T17:41:00.000Z",
+          reason: "Oylik to'lovga o'tish migratsiyasi",
+        },
+      },
+    ],
+  };
+
+  it("strikes the cancelled charge through and dates its cancellation", async () => {
+    const html = (await renderPage(pair)).replace(/\u00a0/g, " ");
+    expect(html).toContain("25.09.2026 da bekor qilingan");
+    const struck = classLists(html).filter((list) =>
+      list.includes("line-through"),
+    );
+    expect(struck).toHaveLength(1);
+  });
+
+  it("names the row the cancellation undid, without the staff's reason", async () => {
+    const html = (await renderPage(pair)).replace(/\u00a0/g, " ");
+    expect(html).toContain("18.09.2026 dagi -37 500 so'm bekor qilindi");
+    expect(html).not.toContain("migratsiyasi");
   });
 });

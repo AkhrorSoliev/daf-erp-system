@@ -1,16 +1,81 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { TransactionsController } from './transactions.controller';
 import { TransactionsService } from './transactions.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('TransactionsController — debt write-off audit guards', () => {
+describe('TransactionsController — route access', () => {
+  // Appendix C: no screen reads the company-wide ledger or a teacher's ledger,
+  // so the Administrator no longer reaches them.
+  it('findAll is gated by the finance report capability', () => {
+    expect(routeAccess(TransactionsController, 'findAll')).toEqual({
+      kind: 'can',
+      keys: ['reports.finance'],
+    });
+    expect(defaultRolesOf(TransactionsController, 'findAll')).toEqual([
+      'Branch Director',
+      'CEO',
+    ]);
+  });
+
+  it('findByTeacher is gated by the salary view capability', () => {
+    expect(routeAccess(TransactionsController, 'findByTeacher')).toEqual({
+      kind: 'can',
+      keys: ['salary.view'],
+    });
+    expect(defaultRolesOf(TransactionsController, 'findByTeacher')).toEqual([
+      'Branch Director',
+      'CEO',
+    ]);
+  });
+
+  // Appendix C: only «Barcha yozuvlar» in the student's «To'lovlar» tab calls
+  // the ledger, and a cashier does not see that tab.
+  it.each(['findByStudent', 'getLessonTrail'])(
+    '%s is gated by the student details capability, not open to the Cashier',
+    (name) => {
+      expect(routeAccess(TransactionsController, name)).toEqual({
+        kind: 'can',
+        keys: ['students.details'],
+      });
+      expect(defaultRolesOf(TransactionsController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
+    },
+  );
+
+  it('createAdjustment is gated by the balance adjustment capability', () => {
+    expect(routeAccess(TransactionsController, 'createAdjustment')).toEqual({
+      kind: 'can',
+      keys: ['balance.adjust'],
+    });
+    expect(defaultRolesOf(TransactionsController, 'createAdjustment')).toEqual([
+      'Branch Director',
+      'CEO',
+    ]);
+  });
+
+  // Widened 2026-08-12 for the single debt page (/payments/debt), which
+  // shows write-offs as a tab. The CEO's call: the page must not hide parts
+  // of itself per role, because a screen whose shape changes by viewer is a
+  // screen nobody can be told how to use. Reversing a write-off — the one
+  // action that moves money back — stays behind the undo capability.
+  it('findDebtWriteOffs is gated by the debt view capability and readable by every staff role of the debt page', () => {
+    expect(routeAccess(TransactionsController, 'findDebtWriteOffs')).toEqual({
+      kind: 'can',
+      keys: ['debt.view'],
+    });
+    expect(defaultRolesOf(TransactionsController, 'findDebtWriteOffs')).toEqual(
+      ['Administrator', 'Branch Director', 'CEO', 'Cashier'],
+    );
+  });
+});
+
+describe('TransactionsController — debt write-off audit scope', () => {
   let controller: TransactionsController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockTransactionsService = {
     findDebtWriteOffs: jest.fn().mockResolvedValue({ data: [] }),
@@ -43,72 +108,6 @@ describe('TransactionsController — debt write-off audit guards', () => {
     }).compile();
 
     controller = module.get(TransactionsController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
-  });
-
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => TransactionsController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
-
-  describe('findDebtWriteOffs() guard', () => {
-    it('allows CEO', () => {
-      const ctx = mockExecutionContext(controller.findDebtWriteOffs, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('allows Branch Director', () => {
-      const ctx = mockExecutionContext(controller.findDebtWriteOffs, [
-        'Branch Director',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    // Widened 2026-08-12 for the single debt page (/payments/debt), which
-    // shows write-offs as a tab. The CEO's call: the page must not hide parts
-    // of itself per role, because a screen whose shape changes by viewer is a
-    // screen nobody can be told how to use. Reversing a write-off — the one
-    // action that moves money back — stays CEO-only.
-    it('allows Administrator (debt page tab)', () => {
-      const ctx = mockExecutionContext(controller.findDebtWriteOffs, [
-        'Administrator',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('allows Cashier (debt page tab)', () => {
-      const ctx = mockExecutionContext(controller.findDebtWriteOffs, [
-        'Cashier',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('denies Teacher', () => {
-      const ctx = mockExecutionContext(controller.findDebtWriteOffs, [
-        'Teacher',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
-  describe('endpoint metadata sanity', () => {
-    it('findDebtWriteOffs is readable by every staff role on the debt page', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.findDebtWriteOffs,
-      );
-      expect(roles).toEqual([
-        'CEO',
-        'Branch Director',
-        'Administrator',
-        'Cashier',
-      ]);
-    });
   });
 
   // The scope resolution used to be a private helper reading `UserBranch`

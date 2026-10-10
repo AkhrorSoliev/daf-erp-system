@@ -7,8 +7,9 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { CurrentUser, Roles } from '../../common/decorators';
-import { RolesGuard, StudentCardGuard } from '../../common/guards';
+import { CurrentUser } from '../../common/decorators';
+import { StudentCardGuard } from '../../common/guards';
+import { StudentOnly } from '../../common/permissions/access.decorators';
 import { OwnPasswordAttemptGuard } from '../../common/guards/own-password-attempt.guard';
 import { StudentOnboardingService } from './student-onboarding.service';
 import { UpdateOnboardingProfileDto } from './dto/update-onboarding-profile.dto';
@@ -24,8 +25,8 @@ import { ChangePhoneCodeDto } from './dto/change-phone-code.dto';
  * from the request. `StudentCardGuard` refuses a token without one (404).
  */
 @Controller('student-portal/onboarding')
-@UseGuards(RolesGuard, StudentCardGuard)
-@Roles('Student')
+@UseGuards(StudentCardGuard)
+@StudentOnly()
 export class StudentOnboardingController {
   constructor(private readonly onboarding: StudentOnboardingService) {}
 

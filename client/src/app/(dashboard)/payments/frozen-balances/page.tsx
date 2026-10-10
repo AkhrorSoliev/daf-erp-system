@@ -1,17 +1,8 @@
-import { Suspense } from "react";
-import { DebtFiltersProvider } from "@/components/payments/debt/debt-filters-provider";
-import { DebtSubpage } from "@/components/payments/debt/debt-subpage";
-import { FrozenBalanceView } from "@/components/payments/debt/frozen-balance-view";
+import { redirect } from "next/navigation";
 
-// Temporary (spec B2a §2.6): until part 2b replaces it with «Qaytariladigan pul».
+// «Muzlatilganlarning puli» became the first tab of «Qaytariladigan pul» (spec
+// B2b §3.8). Kept as a redirect rather than deleted: the path is in bookmarks
+// and Telegram messages, and a 404 would read as the money being gone.
 export default function FrozenBalancesPage() {
-  return (
-    <Suspense>
-      <DebtFiltersProvider>
-        <DebtSubpage title="Muzlatilganlarning puli">
-          <FrozenBalanceView />
-        </DebtSubpage>
-      </DebtFiltersProvider>
-    </Suspense>
-  );
+  redirect("/payments/refunds?tab=muzlatilgan");
 }

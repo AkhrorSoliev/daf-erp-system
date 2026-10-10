@@ -1,6 +1,7 @@
 import {
   capitalizeUz,
   formatDigestDate,
+  fullWeekdaysLabel,
   previousMonth,
   shortWeekdaysLabel,
   uzMonthName,
@@ -62,5 +63,14 @@ describe('uzbek-calendar', () => {
   it('gives an empty label for no or unknown days', () => {
     expect(shortWeekdaysLabel([])).toBe('');
     expect(shortWeekdaysLabel(['someday'])).toBe('');
+  });
+
+  it('writes exactDays as full day names for documents, Monday first', () => {
+    expect(fullWeekdaysLabel(['friday', 'Monday', ' wednesday '])).toBe(
+      'Dushanba, Chorshanba, Juma',
+    );
+    expect(fullWeekdaysLabel(['sunday', 'saturday'])).toBe('Shanba, Yakshanba');
+    expect(fullWeekdaysLabel([])).toBe('');
+    expect(fullWeekdaysLabel(['someday'])).toBe('');
   });
 });

@@ -40,17 +40,18 @@ const BRANCH_INDEPENDENT: Record<string, string> = {
   "hooks/use-notifications.ts":
     "Notifications are addressed to a person: the server filters by userId " +
     "alone (notifications.service.ts), with no branch in the query.",
+  "hooks/use-permissions.ts":
+    "Reads the signed-in person's own capability list (GET /permissions/me). " +
+    "Capabilities follow the person's roles: the server answers by user id " +
+    "and ignores the branch (route policy SELF in branch-route-policy.ts). " +
+    "Clearing the list on a branch switch would blank every menu.",
   "hooks/use-push-notifications.ts":
     "Registers this DEVICE for push. Device tokens belong to the browser, " +
     "not to a branch.",
-  "hooks/use-pending-task-count.ts":
-    "Counts my tasks in «Kutilmoqda» for the sidebar's «Topshiriqlar» row. " +
-    "GET /comments/my-tasks filters by the assignee alone " +
-    "(comments.service.ts getMyTasks), so the count covers every branch.",
-  "hooks/use-tasks-board.ts":
-    "Reached only because the sidebar subscribes to it to recount. Its " +
-    "requests are keyed on the person (assignee or author), every branch, " +
-    "and the store is still reset on a switch (registerBranchScopedStore).",
+  "hooks/use-task-counts.ts":
+    "Counts the viewer's own open tasks for the sidebar; GET /tasks/counts is keyed on the person, not the branch.",
+  "hooks/use-tasks.ts":
+    "Reached only through the sidebar recount; the store is reset on a branch switch (registerBranchScopedStore).",
 };
 
 function resolveImport(spec: string): string | null {

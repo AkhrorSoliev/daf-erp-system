@@ -1,88 +1,29 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { SettingsController } from './settings.controller';
 import { SettingsService } from './settings.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('SettingsController — role guard', () => {
-  let controller: SettingsController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
+describe('SettingsController — route access', () => {
+  it.each(['getPayment', 'updatePayment'] as const)(
+    '%s is gated by the payment settings capability',
+    (name) => {
+      expect(routeAccess(SettingsController, name)).toEqual({
+        kind: 'can',
+        keys: ['settings.payment'],
+      });
+    },
+  );
 
-  const mockSettingsService = {
-    getMany: jest.fn().mockResolvedValue({
-      'payment.defaultModel': 'LESSON_PACK',
-      'payment.excusedCreditEnabled': true,
-      'payment.excusedCreditMonthlyCap': null,
-      'payment.chargeDayOfMonth': 1,
-      'payment.debtWriteOffEnabled': false,
-    }),
-    set: jest.fn(),
-  };
-  const mockPrisma = {
-    user: { findFirst: jest.fn() },
-    branch: { findFirst: jest.fn() },
-  };
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [SettingsController],
-      providers: [
-        { provide: SettingsService, useValue: mockSettingsService },
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
-    }).compile();
-
-    controller = module.get(SettingsController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
-  });
-
-  function mockExecutionContext(roles: string[]) {
-    return {
-      getHandler: () => controller.getPayment,
-      getClass: () => SettingsController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
-
-  it('is annotated with exactly CEO and Branch Director', () => {
-    const roles = reflector.get<string[]>(ROLES_KEY, SettingsController);
-    expect(roles).toEqual(['CEO', 'Branch Director']);
-  });
-
-  it('allows CEO', () => {
-    expect(guard.canActivate(mockExecutionContext(['CEO']))).toBe(true);
-  });
-
-  it('allows Branch Director', () => {
-    expect(guard.canActivate(mockExecutionContext(['Branch Director']))).toBe(
-      true,
-    );
-  });
-
-  it('denies Administrator', () => {
-    expect(() =>
-      guard.canActivate(mockExecutionContext(['Administrator'])),
-    ).toThrow(ForbiddenException);
-  });
-
-  it('denies Cashier', () => {
-    expect(() => guard.canActivate(mockExecutionContext(['Cashier']))).toThrow(
-      ForbiddenException,
-    );
-  });
-
-  it('denies Teacher', () => {
-    expect(() => guard.canActivate(mockExecutionContext(['Teacher']))).toThrow(
-      ForbiddenException,
-    );
-  });
+  it.each(['getPayment', 'updatePayment'] as const)(
+    '%s admits the CEO and the Branch Director by default, nobody else',
+    (name) => {
+      expect(defaultRolesOf(SettingsController, name)).toEqual([
+        'Branch Director',
+        'CEO',
+      ]);
+    },
+  );
 });
 
 describe('SettingsController — branch scope', () => {

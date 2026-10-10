@@ -52,6 +52,9 @@ describe('AttendanceReminderService', () => {
       attendance: { findFirst: jest.fn().mockResolvedValue(null) },
       notification: { findFirst: jest.fn().mockResolvedValue(null) },
       user: { findMany: jest.fn().mockResolvedValue([]) },
+      // The day's live moves and cancellations, read once per tick.
+      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     notificationsService = {
@@ -123,8 +126,24 @@ describe('AttendanceReminderService', () => {
       expect(telegramBody).toContain('Vaqt: 09:00–10:30');
       expect(telegramBody).toContain('Xona: 201-xona');
       expect(telegramBody).toContain("O'qituvchi: Ali Valiev");
-      // No attendance check when firing lesson-started
-      expect(prisma.attendance.findFirst).not.toHaveBeenCalled();
+      // The register is checked first: one taken in the lead needs no reminder.
+      expect(prisma.attendance.findFirst).toHaveBeenCalledWith({
+        where: {
+          groupId: 'group-1',
+          date: new Date('2026-04-22T00:00:00.000Z'),
+        },
+        select: { id: true },
+      });
+    });
+
+    it('skips LESSON_STARTED when the register was taken before the start', async () => {
+      prisma.attendance.findFirst.mockResolvedValue({ id: 'att-1' });
+      const group = makeGroup();
+
+      await (service as any).handleGroup(group, 540, '2026-04-22');
+
+      expect(notificationsService.create).not.toHaveBeenCalled();
+      expect(bot.telegram.sendMessage).not.toHaveBeenCalled();
     });
 
     it('skips LESSON_STARTED when already sent today (idempotency)', async () => {
@@ -358,6 +377,8 @@ describe('AttendanceReminderService', () => {
         attendance: { findFirst: jest.fn().mockResolvedValue(null) },
         notification: { findFirst: jest.fn().mockResolvedValue(null) },
         user: { findMany: jest.fn().mockResolvedValue([]) },
+        lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+        lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
       };
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -429,6 +450,8 @@ describe('AttendanceReminderService', () => {
         attendance: { findFirst: jest.fn().mockResolvedValue(null) },
         notification: { findFirst: jest.fn().mockResolvedValue(null) },
         user: { findMany: jest.fn().mockResolvedValue([]) },
+        lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+        lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
       };
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -465,6 +488,148 @@ describe('AttendanceReminderService', () => {
       } finally {
         jest.useRealTimers();
       }
+    });
+  });
+
+  // No alert is born for a lesson day that was taken away: it could never be
+  // acted on, and would wait in the bell for ever (spec 2026-10-07 §8).
+  describe('tick — a lesson cancelled or moved away from today', () => {
+    // Wednesday 22.04.2026. Tashkent is UTC+5: the group starts at 09:00
+    // (04:00Z) and its warning goes out at 10:00 (05:00Z).
+    const wednesday = new Date('2026-04-22T00:00:00.000Z');
+    const START = '2026-04-22T04:00:00.000Z';
+    const WARNING = '2026-04-22T05:00:00.000Z';
+    const move = (over: object) => ({
+      groupId: 'group-1',
+      originalDate: wednesday,
+      newDate: new Date('2026-04-24T00:00:00.000Z'),
+      newLessonStartTime: null,
+      newLessonEndTime: null,
+      ...over,
+    });
+    const tickAt = async (iso: string) => {
+      jest.setSystemTime(new Date(iso));
+      // The schedule window is cached for an hour; START → WARNING is one.
+      (service as any).windowCachedAt = Date.now();
+      await service.tick();
+    };
+    const types = () =>
+      notificationsService.create.mock.calls.map((c: any[]) => c[0].type);
+
+    beforeEach(() => {
+      jest.useFakeTimers({ now: new Date(START) });
+      (service as any).scheduleWindow = { startMin: 0, endMin: 1440 };
+      (service as any).windowCachedAt = Date.now();
+      prisma.group.findMany.mockResolvedValue([makeGroup()]);
+      prisma.user.findMany.mockResolvedValue([
+        {
+          id: 30001,
+          firstName: 'Umid',
+          lastName: 'Adminov',
+          telegramChatId: null,
+        },
+      ]);
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('still reminds a lesson nothing was done to', async () => {
+      await tickAt(START);
+      await tickAt(WARNING);
+
+      expect(types()).toEqual([
+        NotificationType.LESSON_STARTED,
+        NotificationType.ATTENDANCE_TEACHER_WARNING,
+        NotificationType.ATTENDANCE_ADMIN_ALERT,
+      ]);
+    });
+
+    it('sends nothing for a cancelled lesson — not the start, not the warning, not the administrator alert', async () => {
+      prisma.lessonCancellation.findMany.mockResolvedValue([
+        { groupId: 'group-1' },
+      ]);
+
+      await tickAt(START);
+      await tickAt(WARNING);
+
+      expect(notificationsService.create).not.toHaveBeenCalled();
+      expect(bot.telegram.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('sends nothing for a lesson moved to another day', async () => {
+      prisma.lessonReschedule.findMany.mockResolvedValue([move({})]);
+
+      await tickAt(START);
+      await tickAt(WARNING);
+
+      expect(notificationsService.create).not.toHaveBeenCalled();
+    });
+
+    // The sweep's rule (`lessonsOn`): a day another live move lands on is
+    // still a lesson day.
+    it('still reminds a day that another live move lands on', async () => {
+      prisma.lessonReschedule.findMany.mockResolvedValue([
+        move({}),
+        move({
+          originalDate: new Date('2026-04-20T00:00:00.000Z'),
+          newDate: wednesday,
+        }),
+      ]);
+
+      await tickAt(START);
+
+      expect(types()).toEqual([NotificationType.LESSON_STARTED]);
+    });
+
+    it("reads the day's moves and cancellations once for all the groups, and spares the other group", async () => {
+      prisma.group.findMany.mockResolvedValue([
+        makeGroup({ id: 'group-1' }),
+        makeGroup({ id: 'group-2' }),
+      ]);
+      prisma.lessonCancellation.findMany.mockResolvedValue([
+        { groupId: 'group-1' },
+      ]);
+
+      await tickAt(START);
+
+      expect(prisma.lessonCancellation.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.lessonCancellation.findMany).toHaveBeenCalledWith({
+        where: {
+          groupId: { in: ['group-1', 'group-2'] },
+          deletedAt: null,
+          date: wednesday,
+        },
+        select: { groupId: true },
+      });
+      expect(prisma.lessonReschedule.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.lessonReschedule.findMany).toHaveBeenCalledWith({
+        where: {
+          groupId: { in: ['group-1', 'group-2'] },
+          deletedAt: null,
+          OR: [{ originalDate: wednesday }, { newDate: wednesday }],
+        },
+        select: {
+          groupId: true,
+          originalDate: true,
+          newDate: true,
+          newLessonStartTime: true,
+          newLessonEndTime: true,
+        },
+      });
+      expect(notificationsService.create).toHaveBeenCalledTimes(1);
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ relatedEntityId: 'group-2' }),
+      );
+    });
+
+    it('reads nothing when no group meets today', async () => {
+      prisma.group.findMany.mockResolvedValue([
+        makeGroup({ exactDays: ['tuesday'] }),
+      ]);
+
+      await tickAt(START);
+
+      expect(prisma.lessonCancellation.findMany).not.toHaveBeenCalled();
+      expect(prisma.lessonReschedule.findMany).not.toHaveBeenCalled();
     });
   });
 

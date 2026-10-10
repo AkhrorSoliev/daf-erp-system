@@ -1,8 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { ReportsLeadFunnelController } from './reports-lead-funnel.controller';
-import { RolesGuard } from '../../common/guards';
-import { ROLES_KEY } from '../../common/decorators';
+import { defaultRolesOf, routeAccess } from '../../common/permissions/testing';
 
 describe('ReportsLeadFunnelController', () => {
   const service = {
@@ -10,37 +8,24 @@ describe('ReportsLeadFunnelController', () => {
     getPeople: jest.fn().mockResolvedValue({}),
   };
   const controller = new ReportsLeadFunnelController(service as never);
-  const reflector = new Reflector();
-  const guard = new RolesGuard(reflector);
-
-  const ctx = (handler: (...a: unknown[]) => unknown, roles: string[]) =>
-    ({
-      getHandler: () => handler,
-      getClass: () => ReportsLeadFunnelController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    }) as never;
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('sinf darajasida CEO, Filial direktori va Administrator', () => {
-    expect(
-      reflector.get<string[]>(ROLES_KEY, ReportsLeadFunnelController),
-    ).toEqual(['CEO', 'Branch Director', 'Administrator']);
-  });
-
   for (const method of ['getFunnel', 'getPeople'] as const) {
     describe(`${method}()`, () => {
-      it.each(['CEO', 'Branch Director', 'Administrator'])(
-        '%s ga ruxsat',
-        (role) => {
-          expect(guard.canActivate(ctx(controller[method], [role]))).toBe(true);
-        },
-      );
+      it('is gated by the lead reports capability', () => {
+        expect(routeAccess(ReportsLeadFunnelController, method)).toEqual({
+          kind: 'can',
+          keys: ['reports.leads'],
+        });
+      });
 
-      it.each(['Teacher', 'Cashier', 'Student'])('%s ga rad', (role) => {
-        expect(() =>
-          guard.canActivate(ctx(controller[method], [role])),
-        ).toThrow(ForbiddenException);
+      it('admits the CEO, the Branch Director and the Administrator by default, nobody else', () => {
+        expect(defaultRolesOf(ReportsLeadFunnelController, method)).toEqual([
+          'Administrator',
+          'Branch Director',
+          'CEO',
+        ]);
       });
     });
   }

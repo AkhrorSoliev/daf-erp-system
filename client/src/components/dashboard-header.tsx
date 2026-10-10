@@ -13,8 +13,9 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { PushPermissionPrompt } from "@/components/notifications/push-permission-prompt";
 import { QollanmaYordamTugmasi } from "@/components/qollanma/qollanma-yordam-tugmasi";
 import { TashkentClock } from "@/components/tashkent-clock";
+import { HeaderTaskButton } from "@/components/tasks/header-task-button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { routeLabels } from "@/lib/breadcrumb-routes";
 
 function getParentRoute(pathname: string): { path: string; label: string } | null {
@@ -49,8 +50,7 @@ function getParentRoute(pathname: string): { path: string; label: string } | nul
 export function DashboardHeader() {
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const user = useAuth((s) => s.user);
-  const canSearch = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canSearch = useCan(["students.list", "leads.view", "teachers.view"]);
   const parentRoute = isMobile ? getParentRoute(pathname) : null;
 
   return (
@@ -70,6 +70,7 @@ export function DashboardHeader() {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* key: sarlavha marshrutlar orasida saqlanadi; key bo'lmasa ochiq qolgan panel «orqaga»dan keyin o'zi qayta ochiladi */}
           <QollanmaYordamTugmasi key={pathname} />
+          <HeaderTaskButton />
           <TashkentClock />
           <NotificationBell />
           <div className="hidden sm:block">

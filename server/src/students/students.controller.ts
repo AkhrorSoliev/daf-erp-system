@@ -26,14 +26,8 @@ import { EnrollPreviewQueryDto } from './dto/enroll-preview-query.dto';
 import { SendSmsDto } from '../sms/dto/send-sms.dto';
 import { InitialBalanceDto } from './dto/initial-balance.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
-import {
-  Roles,
-  CurrentUser,
-  STAFF_ROLES,
-  BranchScope,
-  BranchCeiling,
-} from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser, BranchScope, BranchCeiling } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { TransactionsService } from '../transactions/transactions.service';
 import { DebtAgeService } from '../common/finance/debt-age.service';
@@ -58,8 +52,7 @@ export class StudentsController {
   // address, passport series and balance. Teachers and cashiers legitimately
   // reach this (group screens, payment dialog); the teacher narrowing below
   // still confines a teacher to their own students.
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @Can('students.list', 'payments.create', 'groups.view')
   @Get()
   findAll(
     @Query() query: StudentQueryDto,
@@ -83,8 +76,7 @@ export class StudentsController {
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('students.profile')
   findById(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -95,8 +87,7 @@ export class StudentsController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.manage')
   create(
     @Body() dto: CreateStudentDirectDto,
     @CurrentUser('companyId') companyId: number,
@@ -109,8 +100,8 @@ export class StudentsController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard, DiscountRoleGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.manage')
+  @UseGuards(DiscountRoleGuard)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateStudentDto,
@@ -121,8 +112,7 @@ export class StudentsController {
   }
 
   @Patch(':id/status')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.manage')
   changeStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ChangeStudentStatusDto,
@@ -133,8 +123,7 @@ export class StudentsController {
   }
 
   @Get(':id/status-history')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.details')
   getStatusHistory(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -144,8 +133,7 @@ export class StudentsController {
   }
 
   @Get(':id/active-enrollments-prepaid')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.details')
   getActiveEnrollmentsWithPrepaid(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -164,8 +152,7 @@ export class StudentsController {
    * cashiers see the same tab.
    */
   @Get(':id/balance-summary')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('students.profile')
   getBalanceSummary(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -175,8 +162,7 @@ export class StudentsController {
   }
 
   @Post(':id/enroll')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.enroll')
   enrollToGroup(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: EnrollToGroupDto,
@@ -196,8 +182,7 @@ export class StudentsController {
   }
 
   @Delete(':id/enroll/:enrollmentId')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.enroll')
   removeFromGroup(
     @Param('id', ParseIntPipe) id: number,
     @Param('enrollmentId') enrollmentId: string,
@@ -219,8 +204,7 @@ export class StudentsController {
   // debt on already-closed enrollments. The list is metadata only; per-
   // enrollment eligibility is fetched on-demand when the modal opens.
   @Get(':id/closed-enrollments')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.details')
   getClosedEnrollments(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -234,8 +218,7 @@ export class StudentsController {
   // oraliqlari. Operatsion monitoring bo'lgani uchun Cashier KIRITILMAYDI
   // (bu balance-summary/lesson-trail'dan ataylab farq qiladi).
   @Get(':id/lessons-overview')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.details')
   getLessonsOverview(
     @Param('id', ParseIntPipe) id: number,
     @Query('includeClosed') includeClosed: string | undefined,
@@ -259,8 +242,7 @@ export class StudentsController {
    * page. Read-only, and gated like the profile that shows it.
    */
   @Get(':id/debt-origin')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('students.profile')
   getDebtOrigin(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -274,8 +256,7 @@ export class StudentsController {
   // ADR-0043). Read-only; the same three roles as the operations it
   // previews. The caller's own right to choose a policy comes back with it.
   @Get(':id/departure-preview')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.enroll')
   getDeparturePreview(
     @Param('id', ParseIntPipe) id: number,
     @Query() query: DeparturePreviewQueryDto,
@@ -294,8 +275,7 @@ export class StudentsController {
   // first month, or the pack price, against the balance (A3.4). Read-only;
   // the same three roles as `POST /:id/enroll`, the call it previews.
   @Get(':id/enroll-preview')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.enroll')
   getEnrollPreview(
     @Param('id', ParseIntPipe) id: number,
     @Query() query: EnrollPreviewQueryDto,
@@ -318,8 +298,7 @@ export class StudentsController {
   // remove-from-group dialog (ACTIVE) or as a button on the profile page
   // (DROPPED/FROZEN).
   @Get(':id/enrollments/:enrollmentId/debt-write-off-eligibility')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('debt.write-off')
   getDebtWriteOffEligibility(
     @Param('id', ParseIntPipe) id: number,
     @Param('enrollmentId') enrollmentId: string,
@@ -339,8 +318,7 @@ export class StudentsController {
   // ACTIVE enrollments must use removeFromGroup with writeOffCycleDebt=true
   // so the audit trail captures one combined operation.
   @Post(':id/enrollments/:enrollmentId/write-off-cycle-debt')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('debt.write-off')
   writeOffCycleDebt(
     @Param('id', ParseIntPipe) id: number,
     @Param('enrollmentId') enrollmentId: string,
@@ -358,8 +336,7 @@ export class StudentsController {
   }
 
   @Get(':id/sms')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.sms')
   getSmsHistory(
     @Param('id', ParseIntPipe) id: number,
     @Query() query: PaginationDto,
@@ -376,8 +353,7 @@ export class StudentsController {
   }
 
   @Post(':id/sms')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.sms')
   sendSms(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: SendSmsDto,
@@ -395,8 +371,7 @@ export class StudentsController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.manage')
   delete(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: DeleteStudentDto,
@@ -421,8 +396,7 @@ export class StudentsController {
   // index — only one INITIAL_BALANCE row per student.
   // ===========================================================================
   @Post(':id/initial-balance')
-  @UseGuards(RolesGuard)
-  @Roles('CEO')
+  @Can('students.initial-balance')
   setInitialBalance(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: InitialBalanceDto,

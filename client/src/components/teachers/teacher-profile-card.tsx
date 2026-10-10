@@ -27,7 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { formatPhone } from "@/lib/format-utils";
 import { SalaryDueCard } from "@/components/shared/salary-due-card";
 
@@ -38,8 +38,8 @@ interface TeacherProfileCardProps {
 export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
   const { openDrawer } = useEditTeacher();
   const router = useRouter();
-  const authUser = useAuth((s) => s.user);
-  const canManageTeachers = authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const canManageTeachers = useCan("teachers.manage");
+  const canSeeSalary = useCan("salary.view");
   const handleDelete = () => {
     router.push("/teachers");
     toast.success("O'qituvchi muvaffaqiyatli o'chirildi");
@@ -132,66 +132,68 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
 
       <Separator />
 
-      {/* Salary due — CEO and Branch Director only */}
-      {canManageTeachers && (
+      {/* Salary due: needs the salary capability */}
+      {canSeeSalary && (
         <>
           <SalaryDueCard userId={teacher.id} />
 
           <Separator />
+        </>
+      )}
 
-          {/* Actions */}
-          <div className="flex items-center justify-center gap-1">
+      {/* Actions */}
+      {canManageTeachers && (
+        <div className="flex items-center justify-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-8 p-0"
+                onClick={() => openDrawer(teacher)}
+              >
+                <Pencil className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Tahrirlash</TooltipContent>
+          </Tooltip>
+
+          <AlertDialog>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="size-8 p-0"
-                  onClick={() => openDrawer(teacher)}
-                >
-                  <Pencil className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Tahrirlash</TooltipContent>
-            </Tooltip>
-
-            <AlertDialog>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="size-8 p-0 text-destructive hover:text-destructive"
-                      disabled={false}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                </TooltipTrigger>
-                <TooltipContent>O&apos;chirish</TooltipContent>
-              </Tooltip>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>O&apos;qituvchini o&apos;chirish</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    &quot;{fullName}&quot; arxivga o&apos;tkaziladi. Keyinchalik
-                    arxivdan tiklash mumkin.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    variant="destructive"
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="size-8 p-0 text-destructive hover:text-destructive"
+                    disabled={false}
                   >
-                    O&apos;chirish
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </>
+                    <Trash2 className="size-4" />
+                  </Button>
+                </AlertDialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>O&apos;chirish</TooltipContent>
+            </Tooltip>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>O&apos;qituvchini o&apos;chirish</AlertDialogTitle>
+                <AlertDialogDescription>
+                  &quot;{fullName}&quot; arxivga o&apos;tkaziladi. Keyinchalik
+                  arxivdan tiklash mumkin.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  variant="destructive"
+                >
+                  O&apos;chirish
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       )}
     </div>
   );

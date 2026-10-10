@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import type { GroupData } from "@/hooks/use-edit-group";
 
 interface AttendanceNote {
@@ -91,9 +91,7 @@ export function AttendanceStats({ group }: AttendanceStatsProps) {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  const user = useAuth((s) => s.user);
-  const isAdmin =
-    user?.roles.some((r: { id: number }) => [1, 2, 3].includes(r.id)) ?? false;
+  const isAdmin = useCan("attendance.fix");
 
   const fetchStats = useCallback(async () => {
     setLoading(true);

@@ -1,12 +1,6 @@
-import {
-  Controller,
-  ForbiddenException,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { Roles, CurrentUser } from '../../common/decorators';
-import { RolesGuard } from '../../common/guards';
+import { Controller, ForbiddenException, Get, Query } from '@nestjs/common';
+import { CurrentUser } from '../../common/decorators';
+import { Can } from '../../common/permissions/access.decorators';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   isEmptyScope,
@@ -17,13 +11,12 @@ import { ReportsMarketingService } from './reports-marketing.service';
 
 /**
  * «Marketing» (spec B1 §3): spend, new students and what they paid, by the
- * ADR-0067 definitions. A money report — CEO and Branch Director only, on its
- * own controller so the reports controller's class default (which admits
- * Administrator) never reaches it.
+ * ADR-0067 definitions. A money report: it needs the finance report
+ * capability (`reports.finance`), which only the CEO and the Branch Director
+ * hold by default.
  */
 @Controller('reports/marketing')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director')
+@Can('reports.finance')
 export class ReportsMarketingController {
   constructor(
     private readonly marketing: ReportsMarketingService,

@@ -9,6 +9,10 @@ export interface Branch {
   status: string;
   startOfWorkingDay: string;
   endOfWorkingDay: string;
+  /** Printed on the student contract (ADR-0075). */
+  city: string;
+  representativeName: string;
+  representativePosition: string;
 }
 
 type DrawerMode = "add" | "edit";

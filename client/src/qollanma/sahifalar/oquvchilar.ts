@@ -39,9 +39,9 @@ export const oquvchilar: QollanmaSahifa[] = [
     sahifa: "yangi-oquvchi",
     sarlavha: "Yangi o'quvchi",
     qisqacha:
-      "Yangi o'quvchi «O'quvchilar» sahifasida qo'lda yoki Telegram havolasi orqali qo'shiladi. Filial majburiy va bitta; telefon raqam o'quvchining kirish raqami, kartada o'zgarsa kirish ham o'zgaradi; zaxira raqam bilan ham kiradi. Bot xabarlari yetib bormasa, kartada «Telegram uzilgan» belgisi chiqadi.",
+      "Yangi o'quvchi «O'quvchilar» sahifasida qo'lda yoki Telegram havolasi orqali qo'shiladi; botdan kelgan so'rovni administrator «Topshiriqlar»da tasdiqlaydi yoki rad etadi. Filial majburiy va bitta; telefon raqam o'quvchining kirish raqami, kartada o'zgarsa kirish ham o'zgaradi; zaxira raqam bilan ham kiradi. Bot xabarlari yetib bormasa, kartada «Telegram uzilgan» belgisi chiqadi.",
     rollar: [1, 2, 3],
-    adr: ["0032", "0039", "0066", "0070"],
+    adr: ["0032", "0039", "0066", "0070", "0080"],
     yollar: ["/students"],
     kalitSozlar: [
       "yangi o'quvchi",
@@ -58,6 +58,11 @@ export const oquvchilar: QollanmaSahifa[] = [
       "havola olish",
       "telegram havola",
       "telegram orqali ro'yxatdan o'tish",
+      "so'rov",
+      "qo'shilish so'rovi",
+      "so'rovni tasdiqlash",
+      "tasdiqlash",
+      "rad etish",
       "telefon tasdiqlangan",
       "telefon tasdiqlanmagan",
       "telegram uzilgan",
@@ -68,16 +73,16 @@ export const oquvchilar: QollanmaSahifa[] = [
       "birinchi kirish",
       "filial",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "oquvchilar",
     sahifa: "oquvchi-kartasi",
     sarlavha: "O'quvchi kartasi",
     qisqacha:
-      "Karta chapda o'quvchi ma'lumotlari, balans va amallarni, o'ngda 10 ta tabni ko'rsatadi. «To'lovlar» tabi o'quvchi qancha to'lagani, har oyning narxi, to'langani va qarzi hamda balans nimadan chiqqanini tushuntiradi.",
+      "Karta chapda o'quvchi ma'lumotlari, balans va amallarni, o'ngda 11 ta tabni ko'rsatadi. «To'lovlar» tabi o'quvchi qancha to'lagani, har oyning narxi, to'langani va qarzi hamda balans nimadan chiqqanini tushuntiradi.",
     rollar: [1, 2, 3],
-    adr: ["0004", "0037", "0047", "0062", "0064", "0066", "0070", "0073"],
+    adr: ["0004", "0037", "0047", "0062", "0064", "0066", "0070", "0073", "0077"],
     yollar: ["/students/profile/*"],
     kalitSozlar: [
       "o'quvchi kartasi",
@@ -117,8 +122,11 @@ export const oquvchilar: QollanmaSahifa[] = [
       "telegram uzilgan",
       "id",
       "o'quvchi raqami",
+      "barcha yozuvlar",
+      "bekor qilingan yozuv",
+      "balans tarixi",
     ],
-    yangilangan: "2026-10-05",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "oquvchilar",
@@ -159,7 +167,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     qisqacha:
       "Muzlatilgan o'quvchi davomatdan chiqadi, undan dars puli yechilmaydi va oyning o'tilmagan darslar puli balansga qaytadi. Qaytganda oylik kursda faqat qaytgan kundan keyingi darslar hisoblanadi.",
     rollar: [1, 2, 3],
-    adr: ["0023", "0043", "0048", "0053", "0064"],
+    adr: ["0023", "0043", "0048", "0053", "0064", "0077"],
     yollar: ["/students/profile/*"],
     kalitSozlar: [
       "muzlatish",
@@ -173,7 +181,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "muzlatilgan puli",
       "qaytgan kun",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "oquvchilar",
@@ -182,7 +190,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     qisqacha:
       "Guruhdan chiqarishda pulni qaytarish tartibi tanlanadi. 01.10.2026 dan beri o'quvchi o'zi to'xtatsa va oyning 40% idan ko'pi o'tgan bo'lsa, oylik puli qaytmaydi; hamma guruhda ko'pi bilan 1 ta darsga kelgan o'quvchiga esa oyning to'liq puli qaytadi (sinov darsi). Qaytgan pul balansga tushadi, naqd berilmaydi.",
     rollar: [1, 2, 3],
-    adr: ["0043", "0044", "0048", "0060", "0062", "0064"],
+    adr: ["0043", "0044", "0048", "0060", "0062", "0064", "0077"],
     yollar: ["/students/profile/*"],
     kalitSozlar: [
       "guruhdan chiqarish",
@@ -209,7 +217,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "guruhga qaytarilgan",
       "pul qaytarilmaydigan chegara",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "oquvchilar",
@@ -240,5 +248,32 @@ export const oquvchilar: QollanmaSahifa[] = [
       "sinov darsi",
     ],
     yangilangan: "2026-10-02",
+  },
+  {
+    bolim: "oquvchilar",
+    sahifa: "shartnoma",
+    sarlavha: "Shartnoma",
+    qisqacha:
+      "O'quvchi profilidagi «Shartnomalar» tabida shartnoma tuziladi, PDF qilib chop etiladi va qog'ozda imzolangani belgilanadi. Kurs, narx va Buyurtmachi ma'lumotlari tuzilgan kuni muhrlanadi.",
+    rollar: [1, 2, 3],
+    adr: ["0075"],
+    yollar: ["/students/profile/*"],
+    kalitSozlar: [
+      "shartnoma",
+      "shartnoma tuzish",
+      "pdf",
+      "chop etish",
+      "imzolash",
+      "qog'ozda imzolandi",
+      "buyurtmachi",
+      "ota-ona",
+      "vasiy",
+      "pasport",
+      "dastlabki to'lov",
+      "shartnoma raqami",
+      "shartnomani bekor qilish",
+      "filial vakili",
+    ],
+    yangilangan: "2026-10-10",
   },
 ];

@@ -8,7 +8,6 @@ import {
   Query,
   Body,
   ParseIntPipe,
-  UseGuards,
 } from '@nestjs/common';
 import { TeachersService } from './teachers.service';
 import { SalaryService } from '../salary/salary.service';
@@ -16,8 +15,8 @@ import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
 import { ChangeTeacherStatusDto } from './dto/change-teacher-status.dto';
-import { Roles, CurrentUser, BranchScope } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser, BranchScope } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Controller('teachers')
@@ -28,8 +27,7 @@ export class TeachersController {
   ) {}
 
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('teachers.view', 'students.list')
   findAll(
     @Query() query: TeacherQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -39,8 +37,7 @@ export class TeachersController {
   }
 
   @Get(':id/groups')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('teachers.view', 'employees.view')
   findGroupsByTeacherId(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -50,8 +47,7 @@ export class TeachersController {
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('teachers.view')
   findById(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -61,8 +57,7 @@ export class TeachersController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('teachers.manage')
   create(
     @Body() dto: CreateTeacherDto,
     @CurrentUser('companyId') companyId: number,
@@ -72,8 +67,7 @@ export class TeachersController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('teachers.manage')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateTeacherDto,
@@ -84,8 +78,7 @@ export class TeachersController {
   }
 
   @Patch(':id/status')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('teachers.manage')
   changeStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ChangeTeacherStatusDto,
@@ -96,8 +89,7 @@ export class TeachersController {
   }
 
   @Get(':id/salary-summary')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('salary.view')
   async getSalarySummary(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -112,8 +104,7 @@ export class TeachersController {
   }
 
   @Get(':id/status-history')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('teachers.manage')
   getStatusHistory(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('companyId') companyId: number,
@@ -123,8 +114,7 @@ export class TeachersController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('teachers.manage')
   delete(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('id') userId: number,

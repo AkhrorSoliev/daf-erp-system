@@ -1,3 +1,5 @@
+import type { LedgerReversal } from "@/lib/ledger-reversal";
+
 type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
 
 export const STATUS_MAP: Record<number, { label: string; variant: BadgeVariant }> =
@@ -53,6 +55,9 @@ export interface StudentTransaction {
   balanceBefore: number;
   balanceAfter: number;
   description: string | null;
+  // A cancelled row, or the row that cancelled one. Optional only while an
+  // older API may still answer.
+  reversal?: LedgerReversal | null;
   // Present on LESSON_DEDUCTION rows — drives the "Tafsilot" label.
   metadata: {
     mode?: string;

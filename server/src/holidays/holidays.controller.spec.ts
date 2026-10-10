@@ -1,15 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { HolidaysController } from './holidays.controller';
 import { HolidaysService } from './holidays.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('HolidaysController — role guards', () => {
+describe('HolidaysController — route access', () => {
   let controller: HolidaysController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockService = {
     findAll: jest
@@ -30,114 +25,51 @@ describe('HolidaysController — role guards', () => {
     }).compile();
 
     controller = module.get(HolidaysController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => HolidaysController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
-
-  describe('create()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.create);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+  describe.each([
+    'create',
+    'update',
+    'remove',
+    'changeStatus',
+    'getStatusHistory',
+  ])('%s()', (name) => {
+    it('is gated by the reference lists capability', () => {
+      expect(routeAccess(HolidaysController, name)).toEqual({
+        kind: 'can',
+        keys: ['settings.reference'],
+      });
     });
 
-    it('should allow CEO to create', () => {
-      const ctx = mockExecutionContext(controller.create, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should allow Administrator to create', () => {
-      const ctx = mockExecutionContext(controller.create, ['Administrator']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Teacher from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Cashier from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Cashier']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
-  describe('update()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.update);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-
-    it('should allow Branch Director to update', () => {
-      const ctx = mockExecutionContext(controller.update, ['Branch Director']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Teacher from updating', () => {
-      const ctx = mockExecutionContext(controller.update, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
-  describe('remove()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.remove);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-
-    it('should allow Administrator to delete', () => {
-      const ctx = mockExecutionContext(controller.remove, ['Administrator']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Teacher from deleting', () => {
-      const ctx = mockExecutionContext(controller.remove, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Cashier from deleting', () => {
-      const ctx = mockExecutionContext(controller.remove, ['Cashier']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
-  describe('changeStatus()', () => {
-    it('should deny Teacher from changing status', () => {
-      const ctx = mockExecutionContext(controller.changeStatus, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    it('admits the CEO, Branch Director and Administrator by default, not the Teacher or the Cashier', () => {
+      expect(defaultRolesOf(HolidaysController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
     });
   });
 
   // These two used to assert the guard was ABSENT, which encoded the hole as if
   // it were the contract — the same shape four other controller specs carried
-  // before Batch 7. Flipped so the test fails if the guard is ever removed.
-  describe('findAll() — staff only', () => {
-    it('has @Roles metadata excluding Student', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.findAll);
-      expect(roles).toBeDefined();
-      expect(roles).not.toContain('Student');
+  // before Batch 7. They assert a marker that excludes the student portal, so
+  // the test fails if the route is ever opened to it again.
+  describe.each(['findAll', 'findOne'])('%s() — staff only', (name) => {
+    it('carries the any-staff marker, which excludes Student', () => {
+      expect(routeAccess(HolidaysController, name)).toEqual({
+        kind: 'anyStaff',
+      });
+      expect(defaultRolesOf(HolidaysController, name)).not.toContain('Student');
     });
 
-    it('denies a Student-portal token', () => {
-      const ctx = mockExecutionContext(controller.findAll, ['Student']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('allows staff', () => {
-      const ctx = mockExecutionContext(controller.findAll, ['Administrator']);
-      expect(guard.canActivate(ctx)).toBe(true);
+    it('admits every staff role', () => {
+      expect(defaultRolesOf(HolidaysController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+        'Cashier',
+        'Teacher',
+      ]);
     });
   });
 
@@ -145,23 +77,7 @@ describe('HolidaysController — role guards', () => {
   // neither, so any valid token — a student-portal one included — could read
   // any holiday in the database by id. The comment above `findAll` said both
   // had been fixed.
-  describe('findOne() — staff only', () => {
-    it('has @Roles metadata excluding Student', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.findOne);
-      expect(roles).toBeDefined();
-      expect(roles).not.toContain('Student');
-    });
-
-    it('denies a Student-portal token', () => {
-      const ctx = mockExecutionContext(controller.findOne, ['Student']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('allows staff', () => {
-      const ctx = mockExecutionContext(controller.findOne, ['Teacher']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
+  describe('findOne()', () => {
     it('passes the caller company through to the service', () => {
       controller.findOne('h-1', 1001);
       expect(mockService.findOne).toHaveBeenCalledWith('h-1', 1001);

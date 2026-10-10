@@ -23,6 +23,7 @@ import { RenameDialog } from "./rename-dialog";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { LeadDetailDrawer } from "./lead-detail-drawer";
 import { ManageSourcesDialog } from "./manage-sources-dialog";
+import { LeadsStatsStrip } from "./leads-stats-strip";
 
 export function LeadsBoardClient() {
   const fetchBoard = useLeadsBoard((s) => s.fetchBoard);
@@ -91,6 +92,10 @@ export function LeadsBoardClient() {
             Yangi lid
           </Button>
         </div>
+      </div>
+
+      <div className="shrink-0">
+        <LeadsStatsStrip />
       </div>
 
       <div className="shrink-0">

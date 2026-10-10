@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { canForRoles } from "@/test-support/server-catalog";
 import {
-  isTeacherOnly,
   pickNextLessons,
   resolveHomeSections,
   visibleAttentionRows,
@@ -10,27 +10,9 @@ import type {
   DashboardNextLesson,
 } from "./dashboard-summary-types";
 
-describe("isTeacherOnly", () => {
-  it("faqat o'qituvchi roli bo'lsa true", () => {
-    expect(isTeacherOnly([4])).toBe(true);
-  });
-
-  it("o'qituvchi ayni paytda administrator bo'lsa false", () => {
-    expect(isTeacherOnly([3, 4])).toBe(false);
-  });
-
-  it("CEO ham o'qituvchi bo'lsa false", () => {
-    expect(isTeacherOnly([1, 4])).toBe(false);
-  });
-
-  it("rol ro'yxati bo'sh bo'lsa false", () => {
-    expect(isTeacherOnly([])).toBe(false);
-  });
-});
-
 describe("resolveHomeSections", () => {
   it("CEO hamma blokni ko'radi", () => {
-    expect(resolveHomeSections([1])).toEqual({
+    expect(resolveHomeSections(canForRoles([1]))).toEqual({
       money: true,
       people: true,
       attention: true,
@@ -42,11 +24,11 @@ describe("resolveHomeSections", () => {
   });
 
   it("filial direktori ham hamma blokni ko'radi", () => {
-    expect(resolveHomeSections([2]).money).toBe(true);
+    expect(resolveHomeSections(canForRoles([2])).money).toBe(true);
   });
 
   it("administrator pul bloklarini ko'rmaydi", () => {
-    const s = resolveHomeSections([3]);
+    const s = resolveHomeSections(canForRoles([3]));
     expect(s.money).toBe(false);
     expect(s.people).toBe(true);
     expect(s.attentionOutreachRows).toBe(true);
@@ -56,12 +38,19 @@ describe("resolveHomeSections", () => {
   });
 
   it("kassir pulni ham outreach qatorlarini ham ko'rmaydi", () => {
-    const s = resolveHomeSections([5]);
+    const s = resolveHomeSections(canForRoles([5]));
     expect(s.money).toBe(false);
     expect(s.attentionOutreachRows).toBe(false);
     expect(s.attention).toBe(true);
     expect(s.people).toBe(true);
     expect(s.leadFunnel).toBe(false);
+  });
+
+  it("shows the dashboard to every role that has the home panel, and the schedule to a teacher", () => {
+    expect(canForRoles([3])("dashboard.view")).toBe(true);
+    expect(canForRoles([5])("dashboard.view")).toBe(true);
+    expect(canForRoles([4])("dashboard.view")).toBe(false);
+    expect(canForRoles([4, 5])("dashboard.view")).toBe(true);
   });
 });
 

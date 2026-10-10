@@ -10,9 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { SettingsPageHeader } from "./settings-page-header";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import api from "@/lib/api";
-import { COMPANY_EDIT_ROLES, hasAnyRole } from "@/lib/role-access";
 
 interface CompanyData {
   id: number;
@@ -31,9 +30,8 @@ export function GeneralSettingsClient() {
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  // `PATCH /company/:id` faqat CEO ga: filial direktori va administrator
-  // ma'lumotni faqat o'qiydi.
-  const canEdit = useAuth((s) => hasAnyRole(s.user?.roles, COMPANY_EDIT_ROLES));
+  // `PATCH /company/:id` needs `settings.company`; everyone else only reads.
+  const canEdit = useCan("settings.company");
 
   const form = useForm<FormValues>();
 

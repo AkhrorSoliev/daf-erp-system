@@ -10,7 +10,8 @@ import { CommentList, type CommentData } from "@/components/shared/comment-list"
 import { CommentForm } from "@/components/shared/comment-form";
 import type { TeacherData } from "@/hooks/use-edit-teacher";
 import type { GroupData } from "@/hooks/use-edit-group";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
+import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import api from "@/lib/api";
 import {
   TeacherGroupsRateList,
@@ -38,11 +39,8 @@ export function TeacherProfileTabs({
   activeTab,
   onTabChange,
 }: TeacherProfileTabsProps) {
-  const user = useAuth((s) => s.user);
-  const canSeeSalary =
-    user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
-  const canSeeTimeline =
-    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canSeeSalary = useCan("salary.view");
+  const canSeeTimeline = useCan("teachers.view");
 
   const [groups, setGroups] = useState<GroupData[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
@@ -149,6 +147,12 @@ export function TeacherProfileTabs({
 
       {/* Guruhlar */}
       <TabsContent value="guruhlar">
+        <EntityTasksPanel
+          className="mb-4"
+          entityType="User"
+          entityId={String(teacher.id)}
+          entityLabel={`${teacher.firstName} ${teacher.lastName}`}
+        />
         {groupsLoading ? (
           <div className="flex h-24 items-center justify-center rounded-md border">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />

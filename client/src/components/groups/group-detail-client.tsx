@@ -9,6 +9,7 @@ import { EditGroupDrawer } from "./edit-group-drawer";
 import { InOtherBranch } from "@/components/shared/in-other-branch";
 import { otherBranchOf, type OtherBranch } from "@/lib/other-branch";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
+import { usePublishEntity } from "@/components/tasks/entity-context";
 import type { GroupData } from "@/hooks/use-edit-group";
 import api from "@/lib/api";
 
@@ -70,6 +71,8 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
   useEffect(() => {
     fetchGroup();
   }, [fetchGroup]);
+
+  usePublishEntity("Group", group?.id ?? null, group?.name ?? "");
 
   if (loading) {
     return (

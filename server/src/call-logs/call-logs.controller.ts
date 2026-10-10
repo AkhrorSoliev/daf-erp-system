@@ -1,18 +1,17 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { CallLogsService } from './call-logs.service';
 import { CreateCallLogDto } from './dto/create-call-log.dto';
 import { ListCallLogsQueryDto } from './dto/list-call-logs-query.dto';
-import { CurrentUser, Roles, BranchScope } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('call-logs')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class CallLogsController {
   constructor(private readonly callLogs: CallLogsService) {}
 
   @Post()
+  @Can('calls.log')
   create(
     @Body() dto: CreateCallLogDto,
     @CurrentUser('id') userId: number,
@@ -22,6 +21,7 @@ export class CallLogsController {
   }
 
   @Get()
+  @Can('outreach.view', 'students.details')
   list(
     @Query() query: ListCallLogsQueryDto,
     @CurrentUser('id') userId: number,

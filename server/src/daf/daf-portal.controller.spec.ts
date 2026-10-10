@@ -1,6 +1,7 @@
 import { RequestMethod } from '@nestjs/common';
 import { DafPortalController } from './daf-portal.controller';
-import { RolesGuard, StudentCardGuard } from '../common/guards';
+import { StudentCardGuard } from '../common/guards';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { CheckAntwortDto } from './dto/uebung.dto';
 import { UebungService } from './uebung/uebung.service';
 
@@ -84,45 +85,50 @@ function fakeUebungPrisma() {
  * tegadi, ya'ni kelajakdagi reytingga.
  */
 describe('DafPortalController — ruxsat', () => {
-  it('Student rolini talab qiladi', () => {
-    expect(Reflect.getMetadata('roles', DafPortalController)).toEqual([
-      'Student',
-    ]);
+  // The 16 routes of the learning section, found the way Nest finds them: a
+  // method that carries route metadata.
+  const routes = Object.getOwnPropertyNames(DafPortalController.prototype)
+    .filter((name) => name !== 'constructor')
+    .filter((name) =>
+      Reflect.hasMetadata(
+        'path',
+        (DafPortalController.prototype as any)[name] as object,
+      ),
+    );
+
+  it('has the 16 learning routes', () => {
+    expect(routes).toHaveLength(16);
   });
 
-  it('RolesGuard bilan qo`riqlanadi', () => {
-    const guards = Reflect.getMetadata('__guards__', DafPortalController) as
-      | unknown[]
-      | undefined;
-    expect(guards).toContain(RolesGuard);
-  });
-
-  // A token without studentId is refused before any handler runs. It must
-  // come after RolesGuard so a staff token still gets 403, not 404. The
-  // HTTP-level proof is in daf-portal.student-card.e2e.spec.ts.
-  it('StudentCardGuard runs after RolesGuard', () => {
-    const guards = Reflect.getMetadata(
-      '__guards__',
-      DafPortalController,
-    ) as unknown[];
-    expect(guards).toEqual([RolesGuard, StudentCardGuard]);
+  it('every route is student-only, set once at class level', () => {
+    for (const name of routes) {
+      expect(routeAccess(DafPortalController, name)).toEqual({
+        kind: 'student',
+      });
+    }
   });
 
   // Xodim rollari bu yerga tushmaydi: o'quv bo'limi o'quvchiniki, va
   // xodim nomidan urinish yozish natijani buzardi.
-  it('xodim rollarini kiritmaydi', () => {
-    const roles = Reflect.getMetadata('roles', DafPortalController) as string[];
-    for (const staff of [
-      'CEO',
-      'Branch Director',
-      'Administrator',
-      'Teacher',
-    ]) {
-      expect(roles).not.toContain(staff);
+  it('admits no staff role by default', () => {
+    for (const name of routes) {
+      expect(defaultRolesOf(DafPortalController, name)).toEqual(['Student']);
     }
   });
 
-  it('wiederholung/abschluss route POST mavjud va sinf darajasidagi Student roliga qaraydi', () => {
+  // A token without studentId is refused before any handler runs. The global
+  // PermissionGuard runs before this class-level guard, so a staff token still
+  // gets 403, not 404. The HTTP-level proof is in
+  // daf-portal.student-card.e2e.spec.ts.
+  it('carries StudentCardGuard on the class', () => {
+    const guards = Reflect.getMetadata(
+      '__guards__',
+      DafPortalController,
+    ) as unknown[];
+    expect(guards).toEqual([StudentCardGuard]);
+  });
+
+  it('wiederholung/abschluss route POST exists and takes the class-level student marker', () => {
     const proto = DafPortalController.prototype as any;
     expect(typeof proto.postWiederholungAbschluss).toBe('function');
     expect(Reflect.getMetadata('path', proto.postWiederholungAbschluss)).toBe(
@@ -131,14 +137,11 @@ describe('DafPortalController — ruxsat', () => {
     expect(Reflect.getMetadata('method', proto.postWiederholungAbschluss)).toBe(
       RequestMethod.POST,
     );
-    // Metodning o'zida `@Roles` yo'q — sinf darajasidagi dekoratorga
-    // tayanadi. Shu sababli bu yerda ANIQ o'sha metadatani (yuqoridagi
-    // 'Student rolini talab qiladi' testidagi bilan bir xil) qayta
-    // tekshiramiz — "mavjud" degan da'vo faqat yo'l borligini emas,
-    // Student qamrovi haqiqatda ishlashini isbotlaydi.
-    expect(Reflect.getMetadata('roles', DafPortalController)).toEqual([
-      'Student',
-    ]);
+    // The handler carries no marker of its own; it relies on the class-level
+    // one, so check the access the route resolves to.
+    expect(
+      routeAccess(DafPortalController, 'postWiederholungAbschluss'),
+    ).toEqual({ kind: 'student' });
   });
 });
 

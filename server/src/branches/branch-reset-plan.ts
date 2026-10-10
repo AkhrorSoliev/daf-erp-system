@@ -546,6 +546,20 @@ export async function assertNoBlockingDependents(
         ),
     ],
     [
+      'Task.authorId',
+      () =>
+        countIf(userClause('authorId'), (where) =>
+          prisma.task.count({ where }),
+        ),
+    ],
+    [
+      'TaskParticipant.userId',
+      () =>
+        countIf(userClause('userId'), (where) =>
+          prisma.taskParticipant.count({ where }),
+        ),
+    ],
+    [
       'EmployeeSalaryConfig.userId',
       () =>
         countIf(userClause('userId'), (where) =>

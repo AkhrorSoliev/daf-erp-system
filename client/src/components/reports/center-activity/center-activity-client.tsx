@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parse } from "date-fns";
 import api from "@/lib/api";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import {
   CenterActivityFilterBar,
@@ -100,7 +100,6 @@ export function CenterActivityClient() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
-  const user = useAuth((s) => s.user);
   const fetchBranches = useBranchSwitcher((s) => s.fetchBranches);
   const branchesLoaded = useBranchSwitcher((s) => s.loaded);
 
@@ -145,8 +144,7 @@ export function CenterActivityClient() {
   const [editRoom, setEditRoom] = useState<CenterActivityRoom | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const canEdit =
-    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canEdit = useCan("settings.reference");
 
   const handleRoomCapacitySaved = (
     updates: Array<{ id: string; capacity: number }>,

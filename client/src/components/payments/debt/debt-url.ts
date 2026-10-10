@@ -95,7 +95,7 @@ export function legacyDebtRedirect(sp: Record<string, string | string[] | undefi
     return `/payments/debt-history${holat ? `?holat=${encodeURIComponent(holat)}` : ""}`;
   }
   if (tab === "kechirilgan") return "/payments/debt-write-offs";
-  if (tab === "muzlatilgan") return "/payments/frozen-balances";
+  if (tab === "muzlatilgan") return "/payments/refunds?tab=muzlatilgan";
   if (tab === "markaz") {
     const month = one("month");
     return `/payments/salary?tab=markaz${month ? `&month=${encodeURIComponent(month)}` : ""}`;

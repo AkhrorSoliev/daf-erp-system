@@ -4,20 +4,14 @@ import {
   ForbiddenException,
   Get,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { DashboardSummaryService } from './dashboard-summary.service';
 import { DashboardChartsService } from './dashboard-charts.service';
 import { TodayScheduleQueryDto } from './dto/today-schedule-query.dto';
 import { DashboardSummaryQueryDto } from './dto/dashboard-summary-query.dto';
-import {
-  CurrentUser,
-  Roles,
-  STAFF_ROLES,
-  BranchScope,
-} from '../common/decorators';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { CurrentUser, BranchScope } from '../common/decorators';
+import { AnyStaff, Can } from '../common/permissions/access.decorators';
 import {
   isEmptyScope,
   singleBranchId,
@@ -35,8 +29,7 @@ export class DashboardController {
   // Staff only. The home dashboard is visible to every staff role including
   // teachers, but a student-portal token could read the whole centre's daily
   // timetable here.
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @AnyStaff()
   @Get('today-schedule')
   getTodaySchedule(
     @Query() query: TodayScheduleQueryDto,
@@ -74,15 +67,15 @@ export class DashboardController {
   /**
    * Bosh sahifaning boshqaruv paneli.
    *
-   * `STAFF_ROLES` bu yerda YETARLI EMAS: u o'qituvchini ham kiritadi, bu
+   * `AnyStaff()` bu yerda YETARLI EMAS: u o'qituvchini ham kiritadi, bu
    * endpoint esa markazning pul ko'rsatkichlarini olib keladi. O'qituvchi `/`
    * da jadvalni ko'radi — unga bu ma'lumot kerak emas ham, ruxsat ham yo'q.
    *
-   * Rol filtri ikki qatlamda: guard kimni KIRITISHNI, servis esa kim NIMANI
-   * ko'rishini hal qiladi (administratorga `money: null` qaytadi).
+   * Imkoniyat ikki qatlamda: marker (`dashboard.view`) kimni KIRITISHNI,
+   * servis esa (`reports.finance`, `outreach.view`) kim NIMANI ko'rishini hal
+   * qiladi (pul imkoniyati yo'q chaqiruvchiga `money: null` qaytadi).
    */
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('dashboard.view')
   @Get('summary')
   getSummary(
     // `branchId` ni `@BranchScope()` o'qiydi; DTO uni faqat validatsiya qiladi,
@@ -106,11 +99,11 @@ export class DashboardController {
    * sekinlashtirardi. Mijoz avval sanagichlarni chizadi, keyin bu so'rovni
    * yuboradi.
    *
-   * Guard `summary` bilan bir xil, lekin servis kassirga hech narsa bermaydi:
+   * Marker `summary` bilan bir xil, lekin servis hisobot va aloqa
+   * imkoniyati yo'q chaqiruvchiga (odatda kassirga) hech narsa bermaydi:
    * diagrammalarning manbasi `/reports/*` servislari, ular unga ochiq emas.
    */
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('dashboard.view')
   @Get('charts')
   getCharts(
     @Query() _query: DashboardSummaryQueryDto,

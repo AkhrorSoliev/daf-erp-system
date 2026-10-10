@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchReadiness } from "@/hooks/use-branch-readiness";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useSpotlight } from "@/hooks/use-spotlight";
 import type { LaunchStation } from "./launch-stations";
 import { launchFlags, NO_LAUNCH_FLAGS } from "./launch-storage";
@@ -28,7 +29,7 @@ export function BranchLaunchCard() {
   const startSpotlight = useSpotlight((s) => s.start);
   const router = useRouter();
 
-  const roleIds = user?.roles.map((r) => r.id) ?? [];
+  const can = usePermissions((s) => s.can);
   const userId = user?.id;
   const branchId = selectedBranch?.id ?? null;
 
@@ -51,11 +52,11 @@ export function BranchLaunchCard() {
   // map for a branch that already launched.
   const { data } = useBranchReadiness(
     branchId,
-    branchLoaded && canSeeLaunchJourney(roleIds) && !flags.launched,
+    branchLoaded && canSeeLaunchJourney(can) && !flags.launched,
   );
 
   const visibility = resolveLaunchVisibility({
-    roleIds,
+    can,
     selectedBranchId: branchId,
     readiness: data,
     flags,

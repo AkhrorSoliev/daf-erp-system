@@ -16,7 +16,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { Student } from "@/data/student-model";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
+import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
+import { StudentContractsTab } from "./contracts/student-contracts-tab";
 import { StudentAppActivityTab } from "./student-app-activity-tab";
 import { StudentGroupCard } from "./student-group-card";
 import { PaymentStatement } from "./statement/payment-statement";
@@ -51,8 +53,12 @@ export function StudentProfileTabs({
   activeTab,
   onTabChange,
 }: StudentProfileTabsProps) {
-  const user = useAuth((s) => s.user);
-  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  // One flag per thing the profile offers; each is the capability the server
+  // asks for on the matching route.
+  const canSeeDetails = useCan("students.details");
+  const canSeeComments = useCan(["comments.write", "students.details"]);
+  const canSendSms = useCan("students.sms");
+  const canEnroll = useCan("students.enroll");
   const [localGroups, setLocalGroups] = useState(student.groups);
   const isUngrouped = student.isActive && localGroups.length === 0;
   const [historyVisible, setHistoryVisible] = useState(false);
@@ -66,6 +72,8 @@ export function StudentProfileTabs({
   const darslarShown = useRef(false);
   const [ilovaVisible, setIlovaVisible] = useState(false);
   const ilovaShown = useRef(false);
+  const [contractsVisible, setContractsVisible] = useState(false);
+  const contractsShown = useRef(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
   );
@@ -76,18 +84,22 @@ export function StudentProfileTabs({
   const smsShown = useRef(false);
 
   useEffect(() => {
-    if (!canManage) return;
+    if (!canSendSms) return;
     api
       .get(`/students/${student.id}/sms`, { params: { page: 1, pageSize: 1 } })
       .then((res) => setSmsCount(res.data.total))
       .catch(() => {});
+  }, [student.id, canSendSms]);
+
+  useEffect(() => {
+    if (!canSeeDetails) return;
     api
       .get(`/entity-history/Student/${student.id}`, {
         params: { page: 1, pageSize: 1 },
       })
       .then((res) => setHistoryCount(res.data.total))
       .catch(() => {});
-  }, [student.id, canManage]);
+  }, [student.id, canSeeDetails]);
 
   // Sync local groups when student prop changes (after background refresh)
   useEffect(() => {
@@ -150,6 +162,10 @@ export function StudentProfileTabs({
         ilovaShown.current = true;
         setIlovaVisible(true);
       }
+      if (value === "shartnomalar" && !contractsShown.current) {
+        contractsShown.current = true;
+        setContractsVisible(true);
+      }
     },
     [],
   );
@@ -191,7 +207,7 @@ export function StudentProfileTabs({
             `/students/${student.id}/enrollments/${removeEnrollmentId}/debt-write-off-eligibility`,
           )
           .then((r) => r.data),
-      enabled: removeDialogOpen && !!removeEnrollmentId && canManage,
+      enabled: removeDialogOpen && !!removeEnrollmentId && canEnroll,
       staleTime: 0,
     });
 
@@ -270,18 +286,21 @@ export function StudentProfileTabs({
       >
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
-          {canManage && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
-          {canManage && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
-          {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
-          {canManage && (
+          {canSeeDetails && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
+          {canSeeDetails && (
+            <TabsTrigger value="shartnomalar">Shartnomalar</TabsTrigger>
+          )}
+          {canSeeDetails && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
+          {canSeeComments && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
+          {canSeeDetails && (
             <TabsTrigger value="qongiroq">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
           )}
-          {canManage && (
+          {canSendSms && (
             <TabsTrigger value="sms">
               SMS{smsCount ? ` (${smsCount > 99 ? "99+" : smsCount})` : ""}
             </TabsTrigger>
           )}
-          {canManage && (
+          {canSeeDetails && (
             <TabsTrigger value="tarix">
               Tarix
               {historyCount
@@ -289,15 +308,22 @@ export function StudentProfileTabs({
                 : ""}
             </TabsTrigger>
           )}
-          {canManage && <TabsTrigger value="lid">Lid tarixi</TabsTrigger>}
-          {canManage && (
+          {canSeeDetails && <TabsTrigger value="lid">Lid tarixi</TabsTrigger>}
+          {canSeeDetails && (
             <TabsTrigger value="mock-imtihonlar">Mock imtihonlar</TabsTrigger>
           )}
-          {canManage && <TabsTrigger value="ilova">Ilova</TabsTrigger>}
+          {canSeeDetails && <TabsTrigger value="ilova">Ilova</TabsTrigger>}
         </TabsList>
 
         {/* Guruhlar */}
         <TabsContent value="guruhlar">
+          <EntityTasksPanel
+            className="mb-4"
+            entityType="Student"
+            entityId={String(student.id)}
+            entityLabel={`${student.firstName} ${student.lastName}`}
+          />
+
           {isUngrouped && (
             <div className="mb-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
               <AlertTriangle className="size-4 shrink-0" />
@@ -320,7 +346,7 @@ export function StudentProfileTabs({
                   key={g.id}
                   group={g}
                   // `DELETE /students/:id/enroll/:enrollmentId` kassirni rad etadi.
-                  onRemove={canManage ? openRemoveDialog : undefined}
+                  onRemove={canEnroll ? openRemoveDialog : undefined}
                 />
               ))}
             </div>
@@ -330,7 +356,7 @@ export function StudentProfileTabs({
             </div>
           )}
 
-          {canManage && (
+          {canSeeDetails && (
             <StudentClosedEnrollmentsSection
               studentId={student.id}
               visible={student.balance < 0}
@@ -350,6 +376,18 @@ export function StudentProfileTabs({
             <EmptyState message="To'lov ma'lumotlari mavjud emas" />
           )}
         </TabsContent>
+
+        {/* Shartnomalar (ADR-0075) */}
+        {canSeeDetails && (
+          <TabsContent value="shartnomalar">
+            {contractsVisible && (
+              <StudentContractsTab
+                studentId={student.id}
+                onStudentChanged={onEnrollmentChange}
+              />
+            )}
+          </TabsContent>
+        )}
 
         {/* Darslar — davomat + sikl/to'lov monitoringi */}
         <TabsContent value="darslar">
@@ -425,7 +463,7 @@ export function StudentProfileTabs({
         </TabsContent>
 
         {/* Ilova — ilovadagi faollik */}
-        {canManage && (
+        {canSeeDetails && (
           <TabsContent value="ilova">
             {ilovaVisible && <StudentAppActivityTab studentId={student.id} />}
           </TabsContent>

@@ -1,5 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { DashboardChartsService } from './dashboard-charts.service';
+import { ROLE_ID } from '../common/auth/role-ids';
+import { fakePermissions } from '../common/permissions/testing';
 
 const trendRows = [
   { month: 'Apr', monthKey: '2026-04', income: 100, expenses: 60, profit: 40 },
@@ -25,7 +27,12 @@ const flow = {
   groupless: 154,
 };
 
-function makeService(overrides: Record<string, any> = {}) {
+// `roleIds` are the roles the caller holds in the database; the capabilities
+// they carry come from the catalog defaults (`fakePermissions`).
+function makeService(
+  overrides: Record<string, any> = {},
+  roleIds: number[] = [ROLE_ID.CEO],
+) {
   const reports = {
     getFinancialTrendCanonical: jest.fn().mockResolvedValue(trendRows),
     getMonthlyNetProfit: jest.fn().mockResolvedValue(netProfit),
@@ -43,7 +50,11 @@ function makeService(overrides: Record<string, any> = {}) {
     setex: jest.fn().mockResolvedValue('OK'),
   };
   return {
-    service: new DashboardChartsService(reports as never, redis as never),
+    service: new DashboardChartsService(
+      reports as never,
+      redis as never,
+      fakePermissions(roleIds),
+    ),
     reports,
     redis,
   };
@@ -55,6 +66,8 @@ const CEO = {
   roles: ['CEO'],
   branchScope: [1],
 };
+const ADMINISTRATOR = { ...CEO, roles: ['Administrator'] };
+const CASHIER = { ...CEO, roles: ['Cashier'] };
 
 describe('DashboardChartsService.getCharts', () => {
   it("CEO uchun uchala diagramma ham to'ladi", async () => {
@@ -90,8 +103,8 @@ describe('DashboardChartsService.getCharts', () => {
   });
 
   it('administratorga pul diagrammalari null, moliya servisi chaqirilmaydi', async () => {
-    const { service, reports } = makeService();
-    const res = await service.getCharts({ ...CEO, roles: ['Administrator'] });
+    const { service, reports } = makeService({}, [ROLE_ID.ADMINISTRATOR]);
+    const res = await service.getCharts(ADMINISTRATOR);
 
     expect(res.money).toBeNull();
     expect(reports.getFinancialTrendCanonical).not.toHaveBeenCalled();
@@ -101,8 +114,8 @@ describe('DashboardChartsService.getCharts', () => {
   });
 
   it("kassirga diagramma umuman yo'q — manbalar ham chaqirilmaydi", async () => {
-    const { service, reports } = makeService();
-    const res = await service.getCharts({ ...CEO, roles: ['Cashier'] });
+    const { service, reports } = makeService({}, [ROLE_ID.CASHIER]);
+    const res = await service.getCharts(CASHIER);
 
     expect(res.money).toBeNull();
     expect(res.students).toBeNull();
@@ -158,13 +171,25 @@ describe('DashboardChartsService.getCharts', () => {
   });
 
   it("kesh kaliti rol darajasini o'z ichiga oladi", async () => {
-    const { service, redis } = makeService();
-    await service.getCharts(CEO);
-    await service.getCharts({ ...CEO, roles: ['Administrator'] });
+    const ceo = makeService();
+    await ceo.service.getCharts(CEO);
+    const administrator = makeService({}, [ROLE_ID.ADMINISTRATOR]);
+    await administrator.service.getCharts(ADMINISTRATOR);
 
-    const keys = redis.setex.mock.calls.map((c: any[]) => c[0]);
-    expect(keys[0]).toContain(':money');
-    expect(keys[1]).toContain(':ops');
+    expect(ceo.redis.setex.mock.calls[0][0]).toContain(':money');
+    expect(administrator.redis.setex.mock.calls[0][0]).toContain(':ops');
+  });
+
+  it("reads the caller's capabilities from the database, not the roles in the token", async () => {
+    // A token issued while the account was a Cashier; the database now says
+    // Administrator: the operational charts follow the database.
+    const { service, redis } = makeService({}, [ROLE_ID.ADMINISTRATOR]);
+    const res = await service.getCharts(CASHIER);
+
+    expect(res.money).toBeNull();
+    expect(res.students).not.toBeNull();
+    expect(res.attendance).not.toBeNull();
+    expect(redis.setex.mock.calls[0][0]).toContain(':ops');
   });
 
   it("o'quvchilar oqimi 6 oyni oladi va guruhdagilar sonini olmaydi", async () => {

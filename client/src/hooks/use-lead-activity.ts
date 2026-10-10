@@ -16,7 +16,6 @@ export interface LeadActivitySummary {
     authorName: string;
     content: string;
     createdAt: string;
-    isTask: boolean;
   } | null;
 }
 

@@ -1,50 +1,44 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import { ACCESS_KEY } from '../common/permissions/access.decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { CashAccountsController } from './cash-accounts.controller';
-import { CashAccountsService } from './cash-accounts.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
 
-describe('CashAccountsController — RBAC', () => {
-  let controller: CashAccountsController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
+describe('CashAccountsController — route access', () => {
+  const HANDLERS = [
+    'findAll',
+    'create',
+    'transfer',
+    'getMovements',
+    'reconcile',
+    'update',
+    'remove',
+  ] as const;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [CashAccountsController],
-      providers: [{ provide: CashAccountsService, useValue: {} }],
-    }).compile();
-
-    controller = module.get(CashAccountsController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
+  it('the class level carries the cash capability and no handler overrides it', () => {
+    expect(Reflect.getMetadata(ACCESS_KEY, CashAccountsController)).toEqual({
+      kind: 'can',
+      keys: ['cash.manage'],
+    });
+    for (const name of HANDLERS) {
+      expect(
+        Reflect.getMetadata(ACCESS_KEY, CashAccountsController.prototype[name]),
+      ).toBeUndefined();
+    }
   });
 
-  function ctxFor(roles: string[]) {
-    return {
-      getHandler: () => controller.findAll,
-      getClass: () => CashAccountsController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    } as any;
-  }
-
-  it('is restricted to CEO + Branch Director at the class level', () => {
-    const roles = reflector.get<string[]>(ROLES_KEY, CashAccountsController);
-    expect(roles).toEqual(['CEO', 'Branch Director']);
+  it.each(HANDLERS)('%s is gated by the cash capability', (name) => {
+    expect(routeAccess(CashAccountsController, name)).toEqual({
+      kind: 'can',
+      keys: ['cash.manage'],
+    });
   });
 
-  it.each([['CEO'], ['Branch Director']])('allows %s', (role) => {
-    expect(guard.canActivate(ctxFor([role]))).toBe(true);
-  });
-
-  it.each([['Administrator'], ['Cashier'], ['Teacher']])(
-    'denies %s',
-    (role) => {
-      expect(() => guard.canActivate(ctxFor([role]))).toThrow(
-        ForbiddenException,
-      );
+  it.each(HANDLERS)(
+    '%s admits the Branch Director and the CEO by default, not the Administrator, Cashier or Teacher',
+    (name) => {
+      expect(defaultRolesOf(CashAccountsController, name)).toEqual([
+        'Branch Director',
+        'CEO',
+      ]);
     },
   );
 });

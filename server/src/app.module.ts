@@ -27,6 +27,7 @@ import { StatusHistoryModule } from './common/status';
 import { EntityHistoryModule } from './common/entity-history';
 import { StudentOriginModule } from './common/student-origin';
 import { CommentsModule } from './comments/comments.module';
+import { TasksModule } from './tasks/tasks.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SmsModule } from './sms/sms.module';
 import { AttendanceModule } from './attendance/attendance.module';
@@ -44,6 +45,8 @@ import { PaymentsModule } from './payments/payments.module';
 import { SalaryModule } from './salary/salary.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { WithdrawalsModule } from './withdrawals/withdrawals.module';
+import { BalanceNoticesModule } from './balance-notices/balance-notices.module';
+import { RefundableModule } from './refundable/refundable.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { CashAccountsModule } from './cash-accounts/cash-accounts.module';
 import { PaymentGatewaysModule } from './payment-gateways/payment-gateways.module';
@@ -59,11 +62,15 @@ import { PaymentPromisesModule } from './payment-promises/payment-promises.modul
 import { SettingsModule } from './settings/settings.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
+import { ContractDocumentsModule } from './contract-documents/contract-documents.module';
 import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
+import { PermissionGuard } from './common/permissions/permission.guard';
+import { PermissionsModule } from './common/permissions/permissions.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
   imports: [
+    PermissionsModule,
     // `validate` runs BEFORE any module is constructed, so a missing key kills
     // the boot instead of surfacing as a 500 on the first request that needs
     // it. See `config/env.validation.ts` for why that trade is worth it here.
@@ -104,6 +111,7 @@ import { validateEnv } from './config/env.validation';
     EntityHistoryModule,
     StudentOriginModule,
     CommentsModule,
+    TasksModule,
     NotificationsModule,
     SmsModule,
     AttendanceModule,
@@ -121,6 +129,8 @@ import { validateEnv } from './config/env.validation';
     SalaryModule,
     RefundsModule,
     WithdrawalsModule,
+    BalanceNoticesModule,
+    RefundableModule,
     ExpensesModule,
     CashAccountsModule,
     PaymentGatewaysModule,
@@ -136,11 +146,19 @@ import { validateEnv } from './config/env.validation';
     PaymentPromisesModule,
     CallLogsModule,
     StatementsModule,
+    ContractDocumentsModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // Runs after JwtAuthGuard (`request.user` exists) and before
+    // BranchScopeGuard: it refreshes `request.user.roles` from the database
+    // and checks the route's capability marker (spec 2026-10-05 §7.4).
+    {
+      provide: APP_GUARD,
+      useClass: PermissionGuard,
     },
     // Runs after JwtAuthGuard (APP_GUARD order is registration order), so
     // `request.user` is populated by the time it resolves the scope. It only

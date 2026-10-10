@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
@@ -15,32 +14,21 @@ import { CourseQueryDto } from './dto/course-query.dto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { ChangeCourseStatusDto } from './dto/change-course-status.dto';
-import {
-  CurrentUser,
-  Roles,
-  STAFF_ROLES,
-  BranchScope,
-} from '../common/decorators';
+import { CurrentUser, BranchScope } from '../common/decorators';
+import { AnyStaff, Can } from '../common/permissions/access.decorators';
+import { PermissionsService } from '../common/permissions/permissions.service';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
-
-// `PATCH /courses/:id` is open to Administrator too (ordinary field edits —
-// name, price, description), but `paymentModel` is a money decision: it
-// moves every group on the course onto different billing rules at once
-// (the settings panel and course CREATE already gate it to these two).
-// The `@Roles()` guard above can't express "allowed for this endpoint,
-// except this one field, for this one role" — so it's checked by hand
-// inside `update()` below.
-const PAYMENT_MODEL_ROLES = ['CEO', 'Branch Director'];
 
 @Controller('courses')
 export class CoursesController {
-  constructor(private coursesService: CoursesService) {}
+  constructor(
+    private coursesService: CoursesService,
+    private permissions: PermissionsService,
+  ) {}
 
   // Staff only — a student-portal token used to read this too.
   // (course list feeds group forms and price lookups.)
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @AnyStaff()
   @Get()
   findAll(
     @Query() query: CourseQueryDto,
@@ -51,8 +39,7 @@ export class CoursesController {
   }
 
   // Staff only, same reason as the list above.
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @AnyStaff()
   @Get(':id')
   findOne(
     @Param('id') id: string,
@@ -63,8 +50,7 @@ export class CoursesController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director')
+  @Can('courses.create')
   create(
     @Body() dto: CreateCourseDto,
     @CurrentUser('id') userId: number,
@@ -73,19 +59,23 @@ export class CoursesController {
     return this.coursesService.create(dto, companyId, userId);
   }
 
+  // `PATCH /courses/:id` takes `settings.reference` (ordinary field edits —
+  // name, price, description), but `paymentModel` is a money decision: it
+  // moves every group on the course onto different billing rules at once, and
+  // course CREATE already gates it with `courses.create`. The route marker
+  // can't express "allowed for this endpoint, except this one field" — so
+  // that field is checked by hand below.
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
-  update(
+  @Can('settings.reference')
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateCourseDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
-    @CurrentUser('roles') callerRoles: string[],
   ) {
     if (
       dto.paymentModel !== undefined &&
-      !PAYMENT_MODEL_ROLES.some((r) => callerRoles?.includes(r))
+      !(await this.permissions.has(userId, 'courses.create'))
     ) {
       throw new ForbiddenException(
         "Kursning to'lov modelini faqat CEO yoki Filial direktori o'zgartira oladi",
@@ -95,8 +85,7 @@ export class CoursesController {
   }
 
   @Patch(':id/status')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   changeStatus(
     @Param('id') id: string,
     @Body() dto: ChangeCourseStatusDto,
@@ -107,8 +96,7 @@ export class CoursesController {
   }
 
   @Get(':id/status-history')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   getStatusHistory(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -118,8 +106,7 @@ export class CoursesController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   delete(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,

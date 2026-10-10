@@ -16,6 +16,9 @@ import {
 } from '../auth/session-version';
 import { IS_PUBLIC_KEY } from '../decorators';
 
+/** What a blocked, archived or deleted account is told; `PermissionGuard` says the same. */
+export const BLOCKED_ACCOUNT_MESSAGE = 'Hisobingiz bloklangan';
+
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
   private readonly logger = new Logger(JwtAuthGuard.name);
@@ -113,7 +116,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return;
     }
 
-    throw new ForbiddenException('Hisobingiz bloklangan');
+    throw new ForbiddenException(BLOCKED_ACCOUNT_MESSAGE);
   }
 
   /**

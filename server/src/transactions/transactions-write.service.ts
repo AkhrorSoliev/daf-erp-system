@@ -25,6 +25,8 @@ import {
 // must mirror onto a cash account. Everything else (lesson deduction /
 // consumption / adjustment / initial balance / discount / write-off /
 // withdrawal / mock fee) is an internal balance allocation — no cash moves.
+// REFUND's movement is written at hand-over against the REFUND row, so
+// reversing that row still unwinds it.
 const CASH_FLOW_TYPES: ReadonlySet<TransactionType> = new Set([
   TransactionType.PAYMENT,
   TransactionType.EXPENSE,
@@ -611,7 +613,8 @@ export class TransactionsWriteService {
   }
 
   /**
-   * Record a refund (money out to student).
+   * Record a refund: the REFUND ledger row and the balance, nothing else
+   * (ADR-0077 — the drawer is touched at hand-over).
    */
   async recordRefund(
     params: {
@@ -648,7 +651,7 @@ export class TransactionsWriteService {
           branchId,
           companyId: params.companyId,
           performedById: params.performedById,
-          description: 'Pul qaytarildi',
+          description: 'Pul qaytarish',
         },
       });
 
@@ -657,19 +660,8 @@ export class TransactionsWriteService {
         data: { balance: balanceAfter },
       });
 
-      // Cash out of the center to the student — from THAT student's branch
-      // kassa, never the company-wide one (D2/D4: no cross-branch money).
-      await this.cashMovements.recordOutflow(
-        {
-          companyId: params.companyId,
-          branchId,
-          amount: params.amount,
-          transactionId: transaction.id,
-          description: 'Pul qaytarildi',
-          performedById: params.performedById,
-        },
-        client,
-      );
+      // No cash moves here (ADR-0077): a refund is a request until «Berildi»,
+      // and the hand-over writes the drawer's movement against this row.
 
       return transaction;
     }, tx);

@@ -3,23 +3,26 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions, usePermissionsReady } from "@/hooks/use-permissions";
 import { canOpenDafPath } from "@/lib/daf-nav";
 
 /**
- * Bo'lim sahifalari uchun rol qorovuli (`reports-layout-shell.tsx` naqshi).
- * Backend ham rad etadi (`@Roles`), bu faqat sahifa ochilib keyin 403
- * ko'rmaslik uchun. Mobil menyu yo'q — `/daf` ildizi o'zi sahifa.
+ * Page guard for the section (the pattern of `reports-layout-shell.tsx`). The
+ * server refuses too (`daf.activity`); this only spares the user a page that
+ * opens and then answers 403. No mobile menu — the `/daf` root is a page itself.
  */
 export function DafLayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuth((s) => s.user);
-  const ruxsat = canOpenDafPath(user?.roles.map((r) => r.id) ?? [], pathname);
+  const can = usePermissions((s) => s.can);
+  const ready = usePermissionsReady();
+  const ruxsat = canOpenDafPath(can, pathname, user?.roles.map((r) => r.id) ?? []);
 
   useEffect(() => {
-    if (user && !ruxsat) router.replace("/");
-  }, [user, ruxsat, router]);
+    if (user && ready && !ruxsat) router.replace("/");
+  }, [user, ready, ruxsat, router]);
 
-  if (user && !ruxsat) return null;
+  if (user && (!ready || !ruxsat)) return null;
   return <div className="space-y-4">{children}</div>;
 }

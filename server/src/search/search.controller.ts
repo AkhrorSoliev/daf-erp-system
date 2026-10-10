@@ -1,17 +1,16 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { SearchService } from './search.service';
 import { SearchQueryDto } from './dto/search-query.dto';
-import { Roles, CurrentUser, BranchScope } from '../common/decorators';
+import { CurrentUser, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('search')
 export class SearchController {
   constructor(private searchService: SearchService) {}
 
   @Get('quick')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.list', 'leads.view', 'teachers.view')
   quickSearch(
     @Query() query: SearchQueryDto,
     @CurrentUser() user: { id: number; roles: string[]; companyId: number },
@@ -26,8 +25,7 @@ export class SearchController {
   }
 
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.list', 'leads.view', 'teachers.view')
   fullSearch(
     @Query() query: SearchQueryDto,
     @CurrentUser() user: { id: number; roles: string[]; companyId: number },

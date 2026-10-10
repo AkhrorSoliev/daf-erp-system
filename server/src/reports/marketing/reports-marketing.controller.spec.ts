@@ -1,8 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { ReportsMarketingController } from './reports-marketing.controller';
-import { RolesGuard } from '../../common/guards';
-import { ROLES_KEY } from '../../common/decorators';
+import { defaultRolesOf, routeAccess } from '../../common/permissions/testing';
 
 describe('ReportsMarketingController', () => {
   const service = { getMarketing: jest.fn().mockResolvedValue({}) };
@@ -11,34 +9,22 @@ describe('ReportsMarketingController', () => {
     service as never,
     prisma as never,
   );
-  const reflector = new Reflector();
-  const guard = new RolesGuard(reflector);
-
-  const ctx = (roles: string[]) =>
-    ({
-      getHandler: () => controller.getMarketing,
-      getClass: () => ReportsMarketingController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    }) as never;
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('is CEO and Branch Director only — a money report', () => {
-    expect(
-      reflector.get<string[]>(ROLES_KEY, ReportsMarketingController),
-    ).toEqual(['CEO', 'Branch Director']);
+  it('is gated by the finance report capability — a money report', () => {
+    expect(routeAccess(ReportsMarketingController, 'getMarketing')).toEqual({
+      kind: 'can',
+      keys: ['reports.finance'],
+    });
   });
 
-  it.each(['CEO', 'Branch Director'])('lets %s in', (role) => {
-    expect(guard.canActivate(ctx([role]))).toBe(true);
+  it('admits the CEO and the Branch Director by default, nobody else', () => {
+    expect(defaultRolesOf(ReportsMarketingController, 'getMarketing')).toEqual([
+      'Branch Director',
+      'CEO',
+    ]);
   });
-
-  it.each(['Administrator', 'Cashier', 'Teacher', 'Student'])(
-    'refuses %s',
-    (role) => {
-      expect(() => guard.canActivate(ctx([role]))).toThrow(ForbiddenException);
-    },
-  );
 
   it('hands the service the resolved scope and the month', async () => {
     prisma.user.findFirst.mockResolvedValue({

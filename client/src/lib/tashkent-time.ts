@@ -43,6 +43,39 @@ export function tashkentNow(now: Date = new Date()): TashkentNow {
   };
 }
 
+// Tashkent has no daylight saving: UTC+5 all year. The cheap, synchronous
+// primitives below (no `Intl`) are for code that formats many instants, such as
+// a list grouped by day.
+const OFFSET_MS = 5 * 3_600_000;
+const DAY_MS = 86_400_000;
+const pad2 = (v: number) => String(v).padStart(2, "0");
+
+/**
+ * An instant moved onto the Tashkent wall clock: read it with the `getUTC*`
+ * getters (`getUTCHours()` is the hour in Tashkent). Never with `get*`, which
+ * would add the browser's own zone back.
+ */
+export function tashkentWallClock(instant: string | Date): Date {
+  return new Date(new Date(instant).getTime() + OFFSET_MS);
+}
+
+/** Whole Tashkent days since the epoch: two instants on one Tashkent day share it. */
+export function tashkentDayNumber(instant: string | Date): number {
+  return Math.floor(tashkentWallClock(instant).getTime() / DAY_MS);
+}
+
+/** "HH:mm" on the Tashkent clock. */
+export function tashkentHhmm(instant: string | Date): string {
+  const t = tashkentWallClock(instant);
+  return `${pad2(t.getUTCHours())}:${pad2(t.getUTCMinutes())}`;
+}
+
+/** "dd.MM" of the Tashkent day. */
+export function tashkentDdMm(instant: string | Date): string {
+  const t = tashkentWallClock(instant);
+  return `${pad2(t.getUTCDate())}.${pad2(t.getUTCMonth() + 1)}`;
+}
+
 /**
  * Local midnight of the TASHKENT calendar day an instant falls on — the value
  * to hand a `<DatePicker>`, or `format(…, "dd.MM.yyyy")`, for a column the

@@ -1,10 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
 /**
  * `POST /upload` carried no `@Roles` at all, so the global `JwtAuthGuard` was
@@ -16,10 +13,8 @@ import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
  * `POST /student-portal/photo`, and the three screens calling this one all
  * live in the dashboard.
  */
-describe('UploadController — role guard', () => {
+describe('UploadController — route access', () => {
   let controller: UploadController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockService = {
     uploadFile: jest.fn().mockResolvedValue('https://cdn.example/photos/x.jpg'),
@@ -32,35 +27,26 @@ describe('UploadController — role guard', () => {
     }).compile();
 
     controller = module.get(UploadController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
 
-  function contextFor(roles: string[]) {
-    return {
-      getHandler: () => controller.upload,
-      getClass: () => UploadController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    } as never;
-  }
-
-  it('declares the staff roles', () => {
-    const roles = reflector.get<string[]>(ROLES_KEY, controller.upload);
-    expect(roles).toEqual([...STAFF_ROLES]);
+  it('carries the any-staff marker', () => {
+    expect(routeAccess(UploadController, 'upload')).toEqual({
+      kind: 'anyStaff',
+    });
   });
 
-  it.each([...STAFF_ROLES])('allows %s', (role) => {
-    expect(guard.canActivate(contextFor([role]))).toBe(true);
+  it('admits every staff role by default', () => {
+    expect(defaultRolesOf(UploadController, 'upload')).toEqual([
+      'Administrator',
+      'Branch Director',
+      'CEO',
+      'Cashier',
+      'Teacher',
+    ]);
   });
 
-  it('denies a student-portal token', () => {
-    expect(() => guard.canActivate(contextFor(['Student']))).toThrow(
-      ForbiddenException,
-    );
-  });
-
-  it('denies a token carrying no roles', () => {
-    expect(() => guard.canActivate(contextFor([]))).toThrow(ForbiddenException);
+  it('keeps a student-portal token out', () => {
+    expect(defaultRolesOf(UploadController, 'upload')).not.toContain('Student');
   });
 
   it('rejects a request with no file before reaching the service', async () => {

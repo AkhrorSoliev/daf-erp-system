@@ -1,19 +1,43 @@
-import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { MockExamsController } from './mock-exams.controller';
 
-describe('MockExamsController — guards', () => {
-  const reflector = new Reflector();
+const ADMIN_ROLES = ['Administrator', 'Branch Director', 'CEO'];
 
-  it('restricts the entire controller to CEO / Branch Director / Administrator', () => {
-    const roles = reflector.get<string[]>(ROLES_KEY, MockExamsController);
-    expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+describe('MockExamsController — route access', () => {
+  const READS = [
+    'list',
+    'findOne',
+    'stats',
+    'board',
+    'revenueSummary',
+  ] as const;
+  const WRITES = [
+    'create',
+    'update',
+    'changeStatus',
+    'remove',
+    'rebroadcastResults',
+    'regeneratePdf',
+  ] as const;
+
+  it.each(READS)('%s is gated by the mock exam view capability', (name) => {
+    expect(routeAccess(MockExamsController, name)).toEqual({
+      kind: 'can',
+      keys: ['mock.view'],
+    });
   });
 
-  it('lets the statistics route inherit those roles', () => {
-    expect(typeof MockExamsController.prototype.stats).toBe('function');
-    expect(
-      reflector.get<string[]>(ROLES_KEY, MockExamsController.prototype.stats),
-    ).toBeUndefined();
+  it.each(WRITES)('%s is gated by the mock exam manage capability', (name) => {
+    expect(routeAccess(MockExamsController, name)).toEqual({
+      kind: 'can',
+      keys: ['mock.manage'],
+    });
   });
+
+  it.each([...READS, ...WRITES])(
+    '%s admits the three admin roles by default, not the Teacher or the Cashier',
+    (name) => {
+      expect(defaultRolesOf(MockExamsController, name)).toEqual(ADMIN_ROLES);
+    },
+  );
 });

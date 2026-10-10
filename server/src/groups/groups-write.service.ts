@@ -21,6 +21,10 @@ const NO_TEACHER_PATH: string[] = [];
 import { EntityHistoryService } from '../common/entity-history';
 import { StatusCascadeService } from '../common/status';
 import { closeTasksOfDeletedGroup } from '../unmarked-lessons/unmarked-lesson-transitions';
+import {
+  UNMARKED_LESSON_CLOSED,
+  type UnmarkedLessonClosedPayload,
+} from '../unmarked-lessons/unmarked-lesson-events';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupStatus, Prisma } from '@prisma/client';
@@ -30,6 +34,7 @@ import {
   formatGroup,
   INT_TO_GROUP_STATUS,
 } from './shared/group-include';
+import { GROUP_DELETED, type GroupDeletedPayload } from './group-events';
 import { GroupHolidayCascadeService } from './group-holiday-cascade.service';
 import { computeNextGroupNumber } from './shared/next-group-number';
 import {
@@ -555,7 +560,7 @@ export class GroupsWriteService {
     // One instant for the group's deletion and its students' departure, so
     // the enrolment state log closes exactly at `group.deletedAt`.
     const deletedAt = new Date();
-    const removed = await this.prisma.$transaction(
+    const { removed, closedDays } = await this.prisma.$transaction(
       async (tx) => {
         const { count } = await this.statusCascadeService.cascadeGroupDeletion(
           tx,
@@ -563,7 +568,7 @@ export class GroupsWriteService {
         );
 
         // Its «Dars bo'ldimi?» tasks stop asking; the rows stay, unpaid.
-        await closeTasksOfDeletedGroup(tx, id);
+        const closedDays = await closeTasksOfDeletedGroup(tx, id);
 
         // Archive bypasses normal status transition validation
         await tx.statusHistory.create({
@@ -601,7 +606,7 @@ export class GroupsWriteService {
           },
         });
 
-        return count;
+        return { removed: count, closedDays };
       },
       {
         // Same budget as saving a full roster's attendance: per student a
@@ -611,6 +616,21 @@ export class GroupsWriteService {
         timeout: 60_000,
       },
     );
+
+    // After the commit: no lesson alert of this group can be acted on any
+    // more, whichever day it was sent...
+    this.eventEmitter.emit(GROUP_DELETED, {
+      companyId,
+      groupId: id,
+    } satisfies GroupDeletedPayload);
+    // ...and the notices those closed questions waited on close too.
+    for (const date of closedDays) {
+      this.eventEmitter.emit(UNMARKED_LESSON_CLOSED, {
+        companyId,
+        groupId: id,
+        date,
+      } satisfies UnmarkedLessonClosedPayload);
+    }
 
     return {
       message:

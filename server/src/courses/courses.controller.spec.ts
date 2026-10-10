@@ -1,16 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { CoursesController } from './courses.controller';
 import { CoursesService } from './courses.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
+import { ROLE_ID } from '../common/auth/role-ids';
+import {
+  defaultRolesOf,
+  fakePermissions,
+  routeAccess,
+} from '../common/permissions/testing';
 
-describe('CoursesController — role guards', () => {
-  let controller: CoursesController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
-
+describe('CoursesController — route access', () => {
   const mockService = {
     findAll: jest.fn().mockResolvedValue([]),
     findOne: jest.fn().mockResolvedValue({}),
@@ -21,103 +19,79 @@ describe('CoursesController — role guards', () => {
     getStatusHistory: jest.fn().mockResolvedValue([]),
   };
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [CoursesController],
-      providers: [{ provide: CoursesService, useValue: mockService }],
-    }).compile();
+  // `roleIds` are the roles the caller holds in the database; the
+  // capabilities they carry come from the catalog defaults.
+  const controllerFor = (roleIds: number[]) =>
+    new CoursesController(
+      mockService as unknown as CoursesService,
+      fakePermissions(roleIds),
+    );
 
-    controller = module.get(CoursesController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
-  });
-
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => CoursesController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
+  beforeEach(() => jest.clearAllMocks());
 
   describe('create()', () => {
-    it('should have @Roles(CEO, Branch Director) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.create);
-      expect(roles).toEqual(['CEO', 'Branch Director']);
+    it('is gated by the course creation capability', () => {
+      expect(routeAccess(CoursesController, 'create')).toEqual({
+        kind: 'can',
+        keys: ['courses.create'],
+      });
     });
 
-    it('should allow CEO to create', () => {
-      const ctx = mockExecutionContext(controller.create, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Administrator from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Administrator']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Teacher from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Cashier from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Cashier']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    it('admits the CEO and the Branch Director by default, nobody else', () => {
+      expect(defaultRolesOf(CoursesController, 'create')).toEqual([
+        'Branch Director',
+        'CEO',
+      ]);
     });
   });
 
+  describe.each(['update', 'changeStatus', 'getStatusHistory', 'delete'])(
+    '%s()',
+    (name) => {
+      it('is gated by the reference lists capability', () => {
+        expect(routeAccess(CoursesController, name)).toEqual({
+          kind: 'can',
+          keys: ['settings.reference'],
+        });
+      });
+
+      it('admits the CEO, Branch Director and Administrator by default, not the Teacher or the Cashier', () => {
+        expect(defaultRolesOf(CoursesController, name)).toEqual([
+          'Administrator',
+          'Branch Director',
+          'CEO',
+        ]);
+      });
+    },
+  );
+
   describe('update()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.update);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-
-    it('should allow Administrator to update', () => {
-      const ctx = mockExecutionContext(controller.update, ['Administrator']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Teacher from updating', () => {
-      const ctx = mockExecutionContext(controller.update, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    // The @Roles() guard above lets Administrator through the endpoint for
+    // The route marker lets the Administrator through the endpoint for
     // ordinary field edits (name, price...) — but paymentModel is a money
     // decision (it moves every group on the course onto different billing
-    // rules), and the settings panel + course CREATE already gate that to
-    // CEO/BD. The guard can't express "this endpoint, except this one
-    // field, for this one role", so `update()` checks it by hand — these
-    // tests call the controller METHOD directly, not just the guard.
+    // rules), and course CREATE already gates that with `courses.create`. The
+    // marker can't express "this endpoint, except this one field", so
+    // `update()` checks it by hand — these tests call the controller METHOD
+    // directly, not just read the marker.
     describe('paymentModel field-level restriction', () => {
-      it('rejects an Administrator changing paymentModel, even though the guard admits them', () => {
-        // The check throws SYNCHRONOUSLY (update() is not async) — assert
-        // on the call itself, not a rejected promise.
-        expect(() =>
-          controller.update(
+      it('rejects an Administrator changing paymentModel, even though the marker admits them', async () => {
+        await expect(
+          controllerFor([ROLE_ID.ADMINISTRATOR]).update(
             'course-1',
             { paymentModel: 'MONTHLY' } as any,
             10,
             1,
-            ['Administrator'],
           ),
-        ).toThrow(ForbiddenException);
+        ).rejects.toThrow(ForbiddenException);
         expect(mockService.update).not.toHaveBeenCalled();
       });
 
       it('allows CEO to change paymentModel', async () => {
-        await controller.update(
+        await controllerFor([ROLE_ID.CEO]).update(
           'course-1',
           { paymentModel: 'MONTHLY' } as any,
           10,
           1,
-          ['CEO'],
         );
         expect(mockService.update).toHaveBeenCalledWith(
           'course-1',
@@ -128,23 +102,21 @@ describe('CoursesController — role guards', () => {
       });
 
       it('allows Branch Director to change paymentModel', async () => {
-        await controller.update(
+        await controllerFor([ROLE_ID.BRANCH_DIRECTOR]).update(
           'course-1',
           { paymentModel: 'LESSON_PACK' } as any,
           10,
           1,
-          ['Branch Director'],
         );
         expect(mockService.update).toHaveBeenCalled();
       });
 
       it('allows Administrator to update other fields (no paymentModel in the body)', async () => {
-        await controller.update(
+        await controllerFor([ROLE_ID.ADMINISTRATOR]).update(
           'course-1',
           { name: 'Yangi nom' } as any,
           10,
           1,
-          ['Administrator'],
         );
         expect(mockService.update).toHaveBeenCalledWith(
           'course-1',
@@ -156,35 +128,15 @@ describe('CoursesController — role guards', () => {
     });
   });
 
-  describe('delete()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.delete);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-
-    it('should allow Branch Director to delete', () => {
-      const ctx = mockExecutionContext(controller.delete, ['Branch Director']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Teacher from deleting', () => {
-      const ctx = mockExecutionContext(controller.delete, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
-  describe('changeStatus()', () => {
-    it('should deny Teacher from changing status', () => {
-      const ctx = mockExecutionContext(controller.changeStatus, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
   describe('getStatusHistory()', () => {
     // The service checks the course's branch against this caller and refuses
     // one it cannot identify, so a dropped id would 403 every request.
     it("passes the caller's id through for the branch check", async () => {
-      await controller.getStatusHistory('course-1', 1001, 10011);
+      await controllerFor([ROLE_ID.CEO]).getStatusHistory(
+        'course-1',
+        1001,
+        10011,
+      );
       expect(mockService.getStatusHistory).toHaveBeenCalledWith(
         'course-1',
         1001,
@@ -193,11 +145,13 @@ describe('CoursesController — role guards', () => {
     });
   });
 
-  describe('findAll() — no guard', () => {
+  // The course list feeds group forms and price lookups.
+  describe.each(['findAll', 'findOne'])('%s()', (name) => {
     it('is staff-only — a student-portal token must not read it', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.findAll);
-      expect(roles).toEqual(expect.arrayContaining([...STAFF_ROLES]));
-      expect(roles).not.toContain('Student');
+      expect(routeAccess(CoursesController, name)).toEqual({
+        kind: 'anyStaff',
+      });
+      expect(defaultRolesOf(CoursesController, name)).not.toContain('Student');
     });
   });
 });

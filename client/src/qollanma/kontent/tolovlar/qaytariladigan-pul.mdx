@@ -1,0 +1,106 @@
+## Sahifa nima uchun
+
+«Qaytariladigan pul» — hozir o'qimayotgan, lekin balansida puli qolgan o'quvchilar va ochiq pulni qaytarish so'rovlari. Bu yerda pul o'quvchiga qaytariladi, unga «pulingizni olib keting» deb xabar beriladi yoki shartnomaga ko'ra markaz hisobiga o'tkaziladi. Sahifa avvalgi «Muzlatilganlarning puli» o'rnini oldi: eski havola shu sahifaning «Muzlatilganlar» bo'limini ochadi.
+
+Tepada «Bugungi holat · kun.oy» va «Excel» tugmasi. Raqamlar yuqori paneldagi filial tanlagichi bo'yicha.
+
+## Markazda turgan pul
+
+Birinchi karta — «O'qimayotganlarning markazda turgan puli»: pastdagi uch bo'lim balanslarining yig'indisi va necha kishi ekani («N kishi — muzlatilgan, guruhsiz yoki ketgan»). O'qiyotganlarning oldindan to'lagan puli bu yerga kirmaydi: u keyingi oy hisobiga o'tadi.
+
+## Kutilayotgan qaytarishlar
+
+Ochiq, hali berilmagan pulni qaytarish so'rovlari, muddati eng yaqini birinchi. Tepada jami summa va so'rovlar soni, o'ngda «Tarix · N ta» havolasi. So'rov qanday ochilishi — [Pulni qaytarish va yechib olish](/qollanma/tolovlar/pul-qaytarish).
+
+Ustunlar: «O'quvchi», «Summa», «So'ralgan», «Muddat» («kun.oy gacha») va «Holat»:
+
+- «N bank kuni qoldi» — kulrang; 2 va undan kam qolganda sariq. Muddatning oxirgi kuni — «bugun oxirgi kun».
+- «muddati o'tdi · N bank kuni» — qizil. Muddat juma kuni tugab, bugun dam olish kuni bo'lsa, faqat «muddati o'tdi».
+
+Har qatorda:
+
+- **«Berildi»** — pul o'quvchiga berilgach bosiladi. Oynada «Berilgan summa» va «Qaysi kassadan» (o'quvchi filialining kassalari, masalan «Naqd — Asosiy kassa»). Kassa qoldig'idan shu summa ayiriladi va kvitansiya chiqadi, sana — bugun.
+- **«Bekor qilish»** — faqat pul hali berilmagan bo'lsa. Sabab majburiy; summa o'quvchi balansiga, bekor qilingan darslar joyiga qaytadi.
+
+So'rov bo'lmasa: «Hozir kutilayotgan pul qaytarish yo'q.» va oxirgi marta qachon pul berilgani.
+
+### Qaytarishlar tarixi
+
+«Tarix» havolasi berilgan va bekor qilingan so'rovlarni ochadi, eng yangisi tepada. Ustunlar: «O'quvchi», «Summa», «So'ralgan», «Berildi» (kun va naqd yoki karta; bekor qilinganida «bekor qilindi», sababi sichqonchani ustiga olib borganda chiqadi) va «Kim berdi / Kim bekor qildi». 10.10.2026 dan oldin bir bosishda yozilgan qaytarishlar ham shu yerda, yozilgan kuni berilgan deb.
+
+## Uch bo'lim
+
+Hozir o'qimayotgan, balansi musbat o'quvchilar uch bo'limga bo'linadi. Har bo'lim tugmasida summa, necha kishi va qisqa izoh bor.
+
+| Bo'lim | Kimlar |
+|---|---|
+| «Muzlatilganlar» | Holati «Muzlatilgan» |
+| «Guruhsiz» | Holati «Faol», lekin hech qaysi guruhda o'qimaydi |
+| «Ketganlar» | Boshqa holatdagilar: chetlatilgan, bitirgan va hokazo |
+
+- «Muzlatilganlar» da qo'shimcha tugmalar bor: «Hammasi», «30 kungacha», «31–60 kun», «60 kundan ko'p» — muzlatilganiga necha kun bo'lgani bo'yicha. Ustunlar: «O'quvchi», «Muzlatilgan» (sana va necha kun), «Holat» (30 kungacha — «kutilmoqda», 31–60 kun — «muddati o'tgan», 60 kundan ko'p — «ketgan hisoblanadi»), «Puli», «Xabar».
+- «Guruhsiz» va «Ketganlar»: «O'quvchi», «Guruhsiz» yoki «Ketgan» (sana va necha kun), «Oxirgi guruh», «Puli», «Xabar».
+- «Xabar» — o'quvchiga oxirgi marta qachon va qanday aytilgani: «kun.oy · bot orqali», «kun.oy · qo'ng'iroq qilib aytildi» yoki «berilmagan». O'quvchi holati o'zgargandan oldingi xabar sanalmaydi.
+
+Qidiruv (ism, telefon yoki ID) faqat ochiq bo'limning jadvalini toraytiradi; tugmalardagi summalar o'zgarmaydi. Eng katta balans tepada.
+
+## O'quvchi oynasi
+
+Qatorni bossangiz, o'ng tomonda oyna ochiladi: «Markazdagi puli», «Holat», «Oxirgi guruh», «Oxirgi to'lov», «Telegram bot» (ulangan yoki ulanmagan) va «Xabar». Pastda «Nima qilish mumkin»:
+
+1. Muzlatilgan o'quvchida **«Qaytdi — guruhga qaytarish»**: holatni o'zgartirish oynasi «Faol» tanlangan holda ochiladi. Guruhsizda **«Guruhga qo'shish»**: guruhga qo'shish oynasi, faqat o'quvchi filialining guruhlari bilan.
+2. **«Pulni o'quvchiga qaytarish»** — «Pulni qaytarish — so'rov» oynasi.
+3. **«Xabar berish»** — Telegram botga ulangan o'quvchiga yuboriladigan matn oldindan ko'rinadi, ostida «Botga xabar yuborish». «Qo'ng'iroq qilib aytildi» har doim bor, izoh ixtiyoriy. Bot xabari yetib bormasa, xabar yozilmaydi. Filialning ham, kompaniyaning ham telefon raqami kiritilmagan bo'lsa, botga yuborib bo'lmaydi.
+4. **«Markaz hisobiga o'tkazish»** — «Yechib olish» oynasi. Xabardan 10 bank kuni va yana 30 kun o'tmaguncha qulflangan, sababi sariq rangda yoziladi. Ochilgach yashil satr turadi: «Shart bajarilgan: xabar kun.oy, muddat kun.oy da tugagan, 30 kun o'tdi.».
+
+Amal tugmasi bosilganda o'quvchi oynasi yopiladi va kerakli oyna ochiladi.
+
+Botga yuboriladigan xabar (Telegram'da sarlavha, summa, sana va «markaz hisobiga o'tadi» qalin chiqadi):
+
+```
+💰 Hisobingizda pul qolgan
+
+Hurmatli Ali!
+
+DaF Sprachzentrum hisobingizda 350 000 so'm qolgan.
+Uni qaytarib olish uchun 22-noyabrgacha filial raqamiga qo'ng'iroq qiling:
+📞 +998 XX XXX XX XX
+
+⚠️ Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul markaz hisobiga o'tadi.
+
+Rahmat!
+```
+
+Ism, summa va telefon o'quvchiniki va uning filialiniki bo'ladi (filial raqami bo'lmasa, kompaniya raqami); sana — markazga o'tkazish ochiladigan kun.
+
+Pul qaytarishning o'zi haqida ham o'quvchiga bot orqali darhol xabar boradi (botga ulangan bo'lsa): so'rov ochilganda (summa, «… gacha qaytarib beriladi», joriy balans), pul berilganda (summa, naqd yoki kartaga, sana, kvitansiya havolasi) va so'rov bekor qilinganda (summa, sabab, pul hisobga qaytgani, joriy balans).
+
+## Excel
+
+«Excel» to'rt varaqli fayl beradi: «Kutilayotgan», «Muzlatilganlar», «Guruhsiz», «Ketganlar», har birida «Jami» qatori bilan. Qidiruv yozilgan bo'lsa, o'quvchi varaqlariga u ham qo'llanadi.
+
+## Misol
+
+Ismlar va raqamlar soxta.
+
+1. Shanba 10.10.2026. «Ketganlar» bo'limida Lola: balansi 120 000 so'm, «Xabar» — «berilmagan», bot ulangan.
+2. Administrator Lolaning oynasini ochib, «Botga xabar yuborish» ni bosdi. «Xabar» ustunida «10.10 · bot orqali» paydo bo'ldi; «Markaz hisobiga o'tkazish» ostida: «Markazga o'tkazish 22.11 dan ochiladi (xabar 10.10 da berilgan, qaytarish muddati 23.10 gacha).».
+3. Lola 14.10 da keldi. Administrator «Pulni o'quvchiga qaytarish» → «So'rovni ochish» ni bosdi: balans 0 bo'ldi, «Kutilayotgan qaytarishlar» da «28.10 gacha» va «10 bank kuni qoldi».
+4. Kassir 16.10 da pulni naqd berib, «Berildi» → «Naqd — Asosiy kassa» ni tanladi. So'rov «Qaytarishlar tarixi» ga o'tdi: «16.10 · naqd».
+
+## Kim qila oladi
+
+«Ha» — ekranda tugma bor va tizim amalni qabul qiladi. «—» — ekranda yo'q yoki tizim rad etadi. Filial direktori, administrator va kassir faqat o'z filialidagi o'quvchilarni ko'radi; CEO — filial tanlagichida tanlanganini.
+
+| Amal | CEO | Filial direktori | Administrator | Kassir |
+|---|---|---|---|---|
+| Sahifani, o'quvchi oynasini va tarixni ko'rish, Excel | Ha | Ha | Ha | Ha |
+| «Berildi» | Ha | Ha | Ha | Ha |
+| «Bekor qilish» | Ha | Ha | — (tugma yo'q) | — (tugma yo'q) |
+| «Nima qilish mumkin»: qaytarish so'rovi, xabar berish, markaz hisobiga o'tkazish, guruhga qaytarish yoki qo'shish | Ha | Ha | Ha | — (bo'lim yo'q) |
+
+## Tizimda qayerda
+
+- Moliya → [Qaytariladigan pul](/payments/refunds): Moliya menyusida «Ish haqi» dan keyin. Sahifa hamma xodimga (CEO, filial direktori, administrator, kassir) ko'rinadi.
+- «Tarix · N ta» → [Qaytarishlar tarixi](/payments/refunds/history).
+- Moliya → «Qarzdorlik» pastida: «Muzlatilganlarning markazda turgan puli — «Qaytariladigan pul» sahifasida.».

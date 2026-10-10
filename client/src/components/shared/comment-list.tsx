@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import {
   CommentSkeleton,
   type CommentData,
@@ -41,7 +42,8 @@ export function CommentList({
   const [editContent, setEditContent] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
-  const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
+  // Editing or deleting someone else's comment is the `comments.delete` capability.
+  const canModerate = useCan("comments.delete");
 
   const fetchComments = useCallback(
     async (p: number) => {
@@ -132,44 +134,6 @@ export function CommentList({
     }
   };
 
-  const handleAssigneeStatus = async (
-    commentId: string,
-    status: "SEEN" | "DONE",
-  ) => {
-    try {
-      const { data } = await api.patch(
-        `/comments/${commentId}/assignee-status`,
-        { status },
-      );
-      setComments((prev) =>
-        prev.map((c) =>
-          c.id === commentId
-            ? {
-                ...c,
-                assignees: c.assignees.map((a) =>
-                  a.userId === user?.id
-                    ? {
-                        ...a,
-                        status: data.status,
-                        seenAt: data.seenAt,
-                        doneAt: data.doneAt,
-                      }
-                    : a,
-                ),
-              }
-            : c,
-        ),
-      );
-      toast.success(
-        status === "SEEN"
-          ? "Ko'rildi deb belgilandi"
-          : "Bajarildi deb belgilandi",
-      );
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Xatolik yuz berdi"));
-    }
-  };
-
   const totalPages = Math.ceil(total / pageSize);
 
   if (loading && comments.length === 0 && !optimisticComments?.length) {
@@ -216,7 +180,7 @@ export function CommentList({
             <CommentItem
               comment={comment}
               currentUserId={user?.id}
-              isCeo={isCeo}
+              canModerate={canModerate}
               isEditing={editingId === comment.id}
               editContent={editContent}
               editSaving={editSaving}
@@ -225,7 +189,6 @@ export function CommentList({
               onCancelEdit={cancelEdit}
               onSaveEdit={saveEdit}
               onDelete={handleDelete}
-              onAssigneeStatus={handleAssigneeStatus}
             />
           </div>
         ))}

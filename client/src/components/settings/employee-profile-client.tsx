@@ -20,8 +20,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
+import { usePublishEntity } from "@/components/tasks/entity-context";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import api from "@/lib/api";
 
@@ -36,10 +38,10 @@ const ROLE_LABELS: Record<string, string> = {
 export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   const setName = useBreadcrumbName((s) => s.setName);
   const authUser = useAuth((s) => s.user);
-  const canSeeBalance =
-    authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
-  const canSeeTimeline =
-    authUser?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canSeeBalance = useCan("salary.view");
+  const canSeeTimeline = useCan("teachers.view");
+  // DELETE /users/:id needs `employees.manage`, not the salary capability.
+  const canManageEmployees = useCan("employees.manage");
   const isMobile = useIsMobile();
   const router = useRouter();
   const pathname = usePathname();
@@ -53,7 +55,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   // O'qituvchilar uchun "Guruhlar", boshqa xodimlar uchun "Izohlar" —
   // o'qituvchi profili bilan bir xil bo'lishi uchun.
   const isTeacher = employee?.roles.some((r) => r.id === 4) ?? false;
-  const canDelete = canSeeBalance && employee != null && employee.id !== authUser?.id;
+  const canDelete = canManageEmployees && employee != null && employee.id !== authUser?.id;
   const defaultTab = isTeacher ? "guruhlar" : "izohlar";
 
   // Faqat shu xodim + ko'ruvchi roli uchun mavjud tablar. Eski/qo'lda URL
@@ -109,6 +111,12 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
     fetchEmployee();
   }, [fetchEmployee]);
 
+  usePublishEntity(
+    "User",
+    employee ? String(employee.id) : null,
+    employee ? `${employee.firstName} ${employee.lastName}` : "",
+  );
+
   const [commentKey, setCommentKey] = useState(0);
   const handleCommentChange = useCallback(() => {
     setCommentKey((k) => k + 1);
@@ -117,7 +125,6 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   // Fetch latest comment for mobile header
   const [latestComment, setLatestComment] = useState<{
     content: string;
-    isTask?: boolean;
     author: { firstName: string; lastName: string } | null;
     createdAt: string;
   } | null>(null);
@@ -168,7 +175,6 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
           ? `${latestComment.author.firstName} ${latestComment.author.lastName}`
           : "Tizim",
         date: format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm"),
-        isTask: latestComment.isTask,
       }
     : null;
 

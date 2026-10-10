@@ -8,15 +8,14 @@ import {
   Param,
   Query,
   Res,
-  UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   isEmptyScope,
@@ -25,8 +24,6 @@ import {
 } from '../common/finance/report-branch-scope';
 
 @Controller('expenses')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director')
 export class ExpensesController {
   constructor(
     private expensesService: ExpensesService,
@@ -58,6 +55,7 @@ export class ExpensesController {
   }
 
   @Post()
+  @Can('expenses.manage')
   create(
     @Body() dto: CreateExpenseDto,
     @CurrentUser('id') userId: number,
@@ -67,6 +65,7 @@ export class ExpensesController {
   }
 
   @Get()
+  @Can('expenses.view')
   async findAll(
     @Query() query: ExpenseQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -80,10 +79,11 @@ export class ExpensesController {
   }
 
   // Filtered expenses as a downloadable PDF (same filters as the list, no
-  // pagination). Auth-gated by the class-level @Roles; the frontend fetches it
-  // as a blob (an <a href> can't carry the JWT). No dynamic ':id' GET exists,
-  // so the literal 'pdf' path never collides.
+  // pagination). Gated by `expenses.view`; the frontend fetches it as a blob
+  // (an <a href> can't carry the JWT). No dynamic ':id' GET exists, so the
+  // literal 'pdf' path never collides.
   @Get('pdf')
+  @Can('expenses.view')
   async exportPdf(
     @Query() query: ExpenseQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -103,7 +103,7 @@ export class ExpensesController {
   }
 
   @Patch(':id')
-  @Roles('CEO', 'Branch Director')
+  @Can('expenses.manage')
   update(
     @Param('id') id: string,
     @Body() dto: Partial<CreateExpenseDto>,
@@ -114,7 +114,7 @@ export class ExpensesController {
   }
 
   @Delete(':id')
-  @Roles('CEO', 'Branch Director')
+  @Can('expenses.manage')
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,

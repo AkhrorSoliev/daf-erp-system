@@ -127,9 +127,13 @@ export function DebtPage() {
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium">
           <FooterLink href="/payments/debt-history">Oylar bo&apos;yicha qarz tarixi</FooterLink>
           <FooterLink href="/payments/debt-write-offs">Kechirilgan qarzlar arxivi{data ? ` · ${formatNumber(data.writeOffCount)} ta` : ""}</FooterLink>
-          <FooterLink href="/payments/frozen-balances">Muzlatilganlarning puli</FooterLink>
         </div>
         <p className="text-xs text-muted-foreground">Markaz qoplagani — Ish haqi sahifasida.</p>
+        {/* Spec B2b §3.8: the frozen balances live on «Qaytariladigan pul» now. */}
+        <p className="text-xs text-muted-foreground">
+          Muzlatilganlarning markazda turgan puli —{" "}
+          <Link href="/payments/refunds?tab=muzlatilgan" className="text-primary hover:underline">«Qaytariladigan pul»</Link> sahifasida.
+        </p>
       </div>
 
       <RecordPaymentDialog open={payTarget !== null} onOpenChange={(open) => !open && setPayTarget(null)}

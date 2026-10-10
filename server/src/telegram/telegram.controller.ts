@@ -1,7 +1,7 @@
-import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req, Res } from '@nestjs/common';
 import { TelegramService } from './telegram.service';
-import { CurrentUser, Public, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { CurrentUser, Public } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { GenerateEmployeeLinkDto } from './dto/generate-employee-link.dto';
 
 @Controller('telegram')
@@ -17,8 +17,7 @@ export class TelegramController {
     }
   }
 
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('employees.invite')
   @Post('employee-link')
   async generateEmployeeLink(
     @Body() dto: GenerateEmployeeLinkDto,

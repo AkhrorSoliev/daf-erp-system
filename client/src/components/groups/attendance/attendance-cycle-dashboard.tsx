@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { tashkentNow } from "@/lib/tashkent-time";
 import type { UnmarkedLessonInfo } from "@/lib/unmarked-lesson";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import type { GroupData } from "@/hooks/use-edit-group";
 import {
   AttendanceMonthCalendar,
@@ -56,8 +56,7 @@ export function AttendanceCycleDashboard({
   group,
   onSelectDate,
 }: AttendanceCycleDashboardProps) {
-  const user = useAuth((s) => s.user);
-  const isAdmin = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const isAdmin = useCan("attendance.fix");
 
   // "Today" is the Tashkent calendar date (not the browser's local date) —
   // backend lesson queries are scoped to Tashkent days, so a Berlin user

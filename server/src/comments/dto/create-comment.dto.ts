@@ -1,13 +1,4 @@
-import {
-  IsString,
-  IsOptional,
-  IsBoolean,
-  IsArray,
-  IsInt,
-  IsIn,
-  IsDateString,
-  MinLength,
-} from 'class-validator';
+import { IsString, IsIn, MinLength } from 'class-validator';
 import { COMMENTABLE_ENTITY_TYPES } from '../../common/auth/comment-entity-scope';
 import type { CommentableEntityType } from '../../common/auth/comment-entity-scope';
 
@@ -26,21 +17,4 @@ export class CreateCommentDto {
   @IsString()
   @MinLength(1)
   content: string;
-
-  @IsOptional()
-  @IsBoolean()
-  isTask?: boolean;
-
-  @IsOptional()
-  @IsArray()
-  @IsInt({ each: true })
-  assigneeIds?: number[];
-
-  @IsOptional()
-  @IsDateString()
-  dueDate?: string;
-
-  @IsOptional()
-  @IsIn(['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 }

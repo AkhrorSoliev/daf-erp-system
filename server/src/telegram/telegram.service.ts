@@ -8,13 +8,14 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { OnEvent } from '@nestjs/event-emitter';
 import { createHash, timingSafeEqual } from 'crypto';
 import {
   STAFF_CABINET_REQUESTED,
   type StaffCabinetRequestedEvent,
 } from '../common/auth/staff-telegram';
-import { Telegraf, Scenes, session, Markup } from 'telegraf';
+import { Composer, Telegraf, Scenes, session, Markup } from 'telegraf';
+import type { Middleware } from 'telegraf';
 import { RedisService } from '../redis/redis.service';
 import { BotContext, SessionData } from './types/context';
 import {
@@ -32,13 +33,19 @@ import {
   VALID_ROLE_IDS,
   grantableRoleIdsFor,
 } from './constants';
-import { StudentLeadOriginService } from '../common/student-origin';
+import { StudentJoinRequestsService } from '../student-join-requests/student-join-requests.service';
 import { StatementService } from '../statements/statement.service';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
 import { createMockExamRegistrationScene } from './scenes/mock-exam-registration.scene';
 import { createPasswordResetScene } from './scenes/password-reset.scene';
 import { createStatementScene } from './scenes/statement.scene';
+import {
+  ACCOUNT_LINK_ACTION,
+  ACCOUNT_LINK_BUTTON,
+  chatHasAccount,
+  createAccountLinkScene,
+} from './scenes/account-link.scene';
 import { StaffCabinet } from './staff/staff-cabinet';
 import {
   STAFF_LINK_PAYLOAD,
@@ -64,6 +71,8 @@ import { UsersService } from '../users/users.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { PaymentLinkService } from '../payment-gateways/payment-link.service';
 import { describeError } from '../telegram-digest/telegram-send';
+import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
+import { GROUP_CLOSED_REPLY } from '../student-join-requests/join-request-texts';
 
 /**
  * Telegram'dan qabul qilinadigan yangilanish turlari.
@@ -138,6 +147,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
    * oqimni server tomonda o'zimiz chaqiramiz.
    */
   private startFlow?: (ctx: BotContext, payload: string) => Promise<void>;
+  /** Other modules' middleware that runs before the scenes (`useBeforeScenes`). */
+  private readonly beforeScenes: Middleware<BotContext>[] = [];
 
   constructor(
     private configService: ConfigService,
@@ -148,9 +159,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private entityHistoryService: EntityHistoryService,
     private paymentLinkService: PaymentLinkService,
     private gateStats: TelegramChannelGateStatsService,
-    private leadOrigin: StudentLeadOriginService,
+    private joinRequests: StudentJoinRequestsService,
     private statements: StatementService,
-    private events: EventEmitter2,
   ) {}
 
   async onModuleInit() {
@@ -289,9 +299,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.prisma,
       this.uploadService,
       this.bot,
-      this.entityHistoryService,
-      this.leadOrigin,
-      this.events,
+      this.joinRequests,
     );
 
     const employeeScene = createEmployeeRegistrationScene(
@@ -324,6 +332,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.staffCabinet,
     );
 
+    const accountLinkScene = createAccountLinkScene(
+      this.prisma,
+      this.entityHistoryService,
+      this.staffCabinet,
+      (ctx) => this.startFlow!(ctx, ''),
+    );
+
     const stage = new Scenes.Stage<BotContext>([
       studentScene,
       employeeScene,
@@ -331,7 +346,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       passwordResetScene,
       statementScene,
       staffLinkScene,
+      accountLinkScene,
     ]);
+    // `useBeforeScenes`: composed per update, so a registration made after
+    // boot (another module's onApplicationBootstrap) takes effect.
+    this.bot.use((ctx, next) => Composer.compose(this.beforeScenes)(ctx, next));
     this.bot.use(stage.middleware());
 
     // /start handler
@@ -403,6 +422,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       // Xodim chati — o'quvchi menyusi o'rniga xodim menyusi (ADR-0045).
       if (await this.staffCabinet.greet(ctx)) return;
 
+      // A chat linked to nobody (a student or staff member an administrator
+      // added) is offered the link by its own number first.
+      const linkRow =
+        ctx.chat?.type === 'private' &&
+        !(await chatHasAccount(
+          this.prisma,
+          this.staffCabinet,
+          String(ctx.chat.id),
+        ))
+          ? [[Markup.button.callback(ACCOUNT_LINK_BUTTON, ACCOUNT_LINK_ACTION)]]
+          : [];
+
       // Salomlashish xabari reply-klaviaturani TOZALAYDI. Bu ataylab alohida
       // xabar: bitta xabarda ham inline tugmalar, ham `remove_keyboard`
       // bo'lolmaydi. Tozalashsiz, yarim yo'lda tashlab ketilgan ro'yxatdan
@@ -415,6 +446,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await ctx.reply(
         'Quyidagi imkoniyatlardan birini tanlang:',
         Markup.inlineKeyboard([
+          ...linkRow,
           [
             Markup.button.callback("📝 Ro'yxatdan o'tish", 'menu_registration'),
             Markup.button.callback('📊 Darajani aniqlash', 'menu_level'),
@@ -558,6 +590,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await ctx.scene.enter(SCENES.PASSWORD_RESET);
     });
 
+    // «📱 Hisobimni bog'lash» — the chat is linked by the sender's own number
+    this.bot.action(ACCOUNT_LINK_ACTION, async (ctx) => {
+      await ctx.answerCbQuery();
+      await ctx.scene.enter(SCENES.ACCOUNT_LINK);
+    });
+
     // To'lovlar hisoboti — javob matni va PDF (ADR-0037)
     this.bot.action('menu_payments', async (ctx) => {
       await ctx.answerCbQuery();
@@ -670,6 +708,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
   getBot(): Telegraf<BotContext> {
     return this.bot;
+  }
+
+  /**
+   * Runs `mw` on every update after the session, the `/start` reset and the
+   * channel gate, but before the scenes and the bot's own handlers: an open
+   * scene (registration, password reset …) answers every update itself and is
+   * never closed if the person walks away. `mw` calls `next()` for what it does
+   * not handle. Without a bot it is kept and never runs.
+   */
+  useBeforeScenes(mw: Middleware<BotContext>): void {
+    this.beforeScenes.push(mw);
   }
 
   /** Xodim o'quvchi Mini App'ini ochdi — chatga xodim kabinetining tugmasi. */
@@ -1263,6 +1312,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         select: {
           id: true,
           name: true,
+          statusEnum: true,
           lessonStartTime: true,
           lessonEndTime: true,
           days: true,
@@ -1280,6 +1330,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       });
       if (!group) {
         await ctx.reply("Guruh topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+      // A completed, cancelled or archived group takes nobody (ADR-0080).
+      if (!isEnrollableGroupStatus(group.statusEnum)) {
+        await ctx.reply(GROUP_CLOSED_REPLY);
         return true;
       }
 

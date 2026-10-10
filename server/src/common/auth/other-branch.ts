@@ -1,5 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
-import type { ReportBranchIds } from '../finance/report-branch-scope';
+import type { PrismaClient } from '@prisma/client';
+import {
+  studentBranchWhere,
+  type ReportBranchIds,
+} from '../finance/report-branch-scope';
 
 /**
  * True when the caller may open branches the selected scope leaves out — only
@@ -31,4 +35,34 @@ export function inOtherBranch(
     message: `Bu ${what} «${branch.name}» filialiga tegishli. Ko'rish uchun shu filialni tanlang.`,
     branch,
   });
+}
+
+/**
+ * ADR-0063 for a student card: named when it sits in another branch the
+ * caller may open, a plain 404 otherwise. Shared by the debt and the
+ * refundable drawers.
+ */
+export async function studentNotFound(
+  db: { student: Pick<PrismaClient['student'], 'findFirst'> },
+  companyId: number,
+  id: number,
+  scope: ReportBranchIds,
+  ceiling: ReportBranchIds,
+): Promise<NotFoundException> {
+  if (ceilingIsWider(scope, ceiling)) {
+    const elsewhere = await db.student.findFirst({
+      where: { id, companyId, deletedAt: null, ...studentBranchWhere(ceiling) },
+      select: {
+        branches: {
+          where: ceiling === null ? {} : { branchId: { in: ceiling } },
+          select: { branch: { select: { id: true, name: true } } },
+          orderBy: { branchId: 'asc' },
+          take: 1,
+        },
+      },
+    });
+    const branch = elsewhere?.branches[0]?.branch;
+    if (branch) return inOtherBranch("o'quvchi", branch);
+  }
+  return new NotFoundException("O'quvchi topilmadi");
 }

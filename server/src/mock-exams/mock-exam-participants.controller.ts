@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { MockExamParticipantsService } from './mock-exam-participants.service';
 import { AddManualParticipantDto } from './dto/add-manual-participant.dto';
@@ -17,19 +16,18 @@ import { MarkMockPaidDto } from './dto/mark-mock-paid.dto';
 import { UpdateMockPaymentDto } from './dto/update-mock-payment.dto';
 import { CancelMockPaymentDto } from './dto/cancel-mock-payment.dto';
 import { RemoveMockParticipantQueryDto } from './dto/remove-mock-participant-query.dto';
-import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import { CurrentUser, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller()
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class MockExamParticipantsController {
   constructor(
     private readonly participantsService: MockExamParticipantsService,
   ) {}
 
   @Get('mock-exams/:examId/participants')
+  @Can('mock.view')
   list(
     @Param('examId') examId: string,
     @Query() query: ParticipantsQueryDto,
@@ -41,6 +39,7 @@ export class MockExamParticipantsController {
 
   /** Mock exams a student has participated in — for /students/profile/[id] */
   @Get('students/:studentId/mock-exams')
+  @Can('students.details', 'mock.view')
   listForStudent(
     @Param('studentId') studentId: string,
     @CurrentUser('companyId') companyId: number,
@@ -54,6 +53,7 @@ export class MockExamParticipantsController {
   }
 
   @Post('mock-exams/:examId/participants/manual')
+  @Can('mock.manage')
   addManual(
     @Param('examId') examId: string,
     @Body() dto: AddManualParticipantDto,
@@ -71,6 +71,7 @@ export class MockExamParticipantsController {
   }
 
   @Post('mock-exam-participants/:id/mark-paid')
+  @Can('mock.payments')
   markPaid(
     @Param('id') id: string,
     @Body() dto: MarkMockPaidDto,
@@ -89,6 +90,7 @@ export class MockExamParticipantsController {
 
   /** Fix the method or note of a payment an admin accepted by hand. */
   @Patch('mock-exam-participants/:id/payment')
+  @Can('mock.payments')
   updatePayment(
     @Param('id') id: string,
     @Body() dto: UpdateMockPaymentDto,
@@ -107,6 +109,7 @@ export class MockExamParticipantsController {
 
   /** Undo a payment an admin accepted by hand; `reason` is mandatory. */
   @Post('mock-exam-participants/:id/cancel-payment')
+  @Can('mock.payments')
   cancelPayment(
     @Param('id') id: string,
     @Body() dto: CancelMockPaymentDto,
@@ -124,6 +127,7 @@ export class MockExamParticipantsController {
   }
 
   @Post('mock-exam-participants/:id/convert')
+  @Can('mock.manage')
   convertToStudent(
     @Param('id') id: string,
     @Body() dto: ConvertMockParticipantDto,
@@ -141,6 +145,7 @@ export class MockExamParticipantsController {
   }
 
   @Delete('mock-exam-participants/:id')
+  @Can('mock.manage')
   remove(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,

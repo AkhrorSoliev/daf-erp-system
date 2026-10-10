@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 
 interface EmployeeRowActionsProps {
   employee: EmployeeUser;
@@ -24,7 +25,7 @@ interface EmployeeRowActionsProps {
 export function EmployeeRowActions({ employee, onDeleteRequest }: EmployeeRowActionsProps) {
   const { openDrawer } = useEditEmployee();
   const user = useAuth((s) => s.user);
-  const canDelete = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const canDelete = useCan("employees.manage");
 
   return (
     <DropdownMenu>

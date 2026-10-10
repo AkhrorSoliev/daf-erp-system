@@ -8,6 +8,7 @@ import { PushService } from '../notifications/push.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { UnmarkedLessonsService } from './unmarked-lessons.service';
+import { lessonsOn, type SweepGroup } from './shared/ended-lessons';
 
 const DAY_NAME_TO_JS: Record<string, number> = {
   sunday: 0,
@@ -57,7 +58,7 @@ type GroupWithTeachers = {
  * whatever its end time (ADR-0054).
  *
  * Trigger points per lesson:
- *   - start            → LESSON_STARTED (teacher)
+ *   - start            → LESSON_STARTED (teacher), unless the register is already taken
  *   - end - 30 minutes → TEACHER_WARNING (teacher) + ADMIN_ALERT (admin)
  *   - end              → handled by the sweep (sweepEndedLessons): MISSING_TEACHER + MISSING_ADMIN, once, when the question is opened
  *
@@ -68,7 +69,10 @@ type GroupWithTeachers = {
  * window derived from active groups (refreshed hourly). When inside the
  * window, the group query is narrowed to rows whose lessonStartTime or
  * lessonEndTime matches the current trigger minute, so the reminder part
- * performs a single indexed lookup returning 0–3 rows.
+ * performs a single indexed lookup returning 0–3 rows. For the groups that
+ * meet today it then reads the day's live cancellations and moves once (two
+ * queries for all of them): a lesson cancelled or moved away gets no
+ * reminder at all, so no alert is born for a day that was taken away.
  */
 @Injectable()
 export class AttendanceReminderService {
@@ -169,14 +173,22 @@ export class AttendanceReminderService {
       },
     });
 
-    if (groups.length === 0) return;
+    const scheduled = groups.filter((group) =>
+      this.groupHasLessonToday(group, parsedDate, weekdayIdx),
+    );
+    if (scheduled.length === 0) return;
+
+    // Read once for the whole tick, not per group.
+    const stillMeeting = await this.groupsStillMeeting(scheduled, today);
 
     // Cache holidays per branch so each branch is looked up once per tick
     const holidaysByBranch = new Map<number, boolean>();
 
-    for (const group of groups) {
+    for (const group of scheduled) {
       try {
-        if (!this.groupHasLessonToday(group, parsedDate, weekdayIdx)) continue;
+        // A lesson cancelled or moved away from today: nothing to remind of,
+        // and an alert for it could never be acted on.
+        if (!stillMeeting.has(group.id)) continue;
 
         // Check if this branch has a holiday today
         if (!holidaysByBranch.has(group.branchId)) {
@@ -331,6 +343,49 @@ export class AttendanceReminderService {
     return this.scheduleWindow;
   }
 
+  /**
+   * Which of `groups` still have their lesson on `today`: the lesson-end
+   * sweep's own rule (`lessonsOn`) over the day's live cancellations and
+   * moves, which the reminder part of `tick` used to ignore. Holidays are
+   * judged per branch by the caller.
+   */
+  private async groupsStillMeeting(
+    groups: SweepGroup[],
+    today: string,
+  ): Promise<Set<string>> {
+    const date = new Date(`${today}T00:00:00.000Z`);
+    const groupId = { in: groups.map((g) => g.id) };
+    const [reschedules, cancellations] = await Promise.all([
+      this.prisma.lessonReschedule.findMany({
+        where: {
+          groupId,
+          deletedAt: null,
+          OR: [{ originalDate: date }, { newDate: date }],
+        },
+        select: {
+          groupId: true,
+          originalDate: true,
+          newDate: true,
+          newLessonStartTime: true,
+          newLessonEndTime: true,
+        },
+      }),
+      this.prisma.lessonCancellation.findMany({
+        where: { groupId, deletedAt: null, date },
+        select: { groupId: true },
+      }),
+    ]);
+    return new Set(
+      lessonsOn({
+        dayStr: today,
+        groups,
+        reschedules,
+        cancelledGroupIds: new Set(cancellations.map((c) => c.groupId)),
+        isHoliday: () => false,
+      }).map((lesson) => lesson.groupId),
+    );
+  }
+
   private groupHasLessonToday(
     group: {
       startDate: Date | null;
@@ -374,16 +429,12 @@ export class AttendanceReminderService {
   ) {
     const startMin = this.parseTime(group.lessonStartTime);
     const endMin = this.parseTime(group.lessonEndTime);
+    const isStart = currentMinutes === startMin;
+    if (!isStart && currentMinutes !== endMin - 30) return;
 
-    if (currentMinutes === startMin) {
-      for (const t of group.teachers) {
-        await this.sendLessonStarted(t.teacher, group);
-      }
-      return;
-    }
-
-    if (currentMinutes !== endMin - 30) return;
-
+    // A register already taken (the lead opens it before the start) leaves
+    // nothing to remind of — and a reminder nobody can act on would wait in
+    // the bell for ever (spec 2026-10-07 §8).
     const parsedDate = new Date(today + 'T00:00:00.000Z');
     const hasAttendance = await this.prisma.attendance.findFirst({
       where: { groupId: group.id, date: parsedDate },
@@ -391,6 +442,12 @@ export class AttendanceReminderService {
     });
     if (hasAttendance) return;
 
+    if (isStart) {
+      for (const t of group.teachers) {
+        await this.sendLessonStarted(t.teacher, group);
+      }
+      return;
+    }
     for (const t of group.teachers) {
       await this.sendTeacherWarning(t.teacher, group);
     }

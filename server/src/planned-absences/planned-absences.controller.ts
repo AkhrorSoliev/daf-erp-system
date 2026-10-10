@@ -1,20 +1,11 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Param,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Param, Post } from '@nestjs/common';
 import { PlannedAbsencesService } from './planned-absences.service';
-import { Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Can } from '../common/permissions/access.decorators';
 import { UpsertPlannedAbsenceDto } from './dto/upsert-planned-absence.dto';
 
 @Controller('planned-absences')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Can('attendance.fix')
 export class PlannedAbsencesController {
   constructor(private readonly plannedAbsences: PlannedAbsencesService) {}
 

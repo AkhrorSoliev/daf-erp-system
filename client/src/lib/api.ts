@@ -8,6 +8,7 @@ import {
   BRANCH_STORAGE_KEY,
   branchHeaderValue,
 } from "@/lib/branch-header";
+import { isPermissionsMeUrl } from "@/lib/permission-check";
 
 export { ALL_BRANCHES, BRANCH_STORAGE_KEY };
 
@@ -77,6 +78,15 @@ api.interceptors.response.use(
 
     // 403 — ruxsat yo'q
     if (error.response?.status === 403) {
+      // The list on screen may be older than the server's: re-read it so a
+      // button the server now refuses disappears (spec §8). Not when the
+      // refused request IS the re-read: a blocked account gets a 403 on every
+      // route, and answering the list's own 403 with another read never ends.
+      if (!isPermissionsMeUrl(originalRequest.url)) {
+        void import("@/hooks/use-permissions").then(({ usePermissions }) =>
+          usePermissions.getState().refresh(),
+        );
+      }
       const { default: toast } = await import("react-hot-toast");
       const msg = error.response?.data?.message;
       const message = Array.isArray(msg) ? msg[0] : msg;

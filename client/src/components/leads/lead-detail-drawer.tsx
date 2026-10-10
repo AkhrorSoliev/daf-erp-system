@@ -30,6 +30,8 @@ import {
   type CommentData,
 } from "@/components/shared/comment-list";
 import { EntityHistoryTable } from "@/components/shared/entity-history-table";
+import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
+import { usePublishEntity } from "@/components/tasks/entity-context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
@@ -310,6 +312,14 @@ export function LeadDetailDrawer() {
   const [linking, setLinking] = useState(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
+  );
+
+  // The lead is the "page" while its drawer is open; `lead` lags a lead id change by a render.
+  const shownLead = leadId && lead?.id === leadId ? lead : null;
+  usePublishEntity(
+    "Lead",
+    shownLead?.id ?? null,
+    shownLead ? `${shownLead.firstName} ${shownLead.lastName}` : "",
   );
 
   const setTab = useCallback(
@@ -657,6 +667,11 @@ export function LeadDetailDrawer() {
               </TabsContent>
 
               <TabsContent value="izohlar" className="mt-0 space-y-4">
+                <EntityTasksPanel
+                  entityType="Lead"
+                  entityId={lead.id}
+                  entityLabel={`${lead.firstName} ${lead.lastName}`}
+                />
                 <CommentForm
                   entityType="Lead"
                   entityId={lead.id}

@@ -5,12 +5,13 @@ import {
   getVisibleSettingsSections,
   settingsNavSections,
 } from "./settings-nav";
+import { canForRoles } from "@/test-support/server-catalog";
 
 /**
- * The /settings page renders this list. `visibleForRoles` must match the
- * backend's @Roles(): a link that leads to a 403 is worse than no link. That is
- * why each role's expected list is spelled out here — when you add an item, you
- * decide consciously, in this file too, who gets to see it.
+ * The /settings page renders this list. `permission` must match the capability
+ * the page's endpoints check: a link that leads to a 403 is worse than no link.
+ * That is why each role's expected list is spelled out here — when you add an
+ * item, you decide consciously, in this file too, who gets to see it.
  */
 
 const CEO = 1;
@@ -22,7 +23,7 @@ const CASHIER = 5;
 /** Section title → titles of the items visible in that section. */
 function visibleTitles(roleIds: number[]): Record<string, string[]> {
   return Object.fromEntries(
-    getVisibleSettingsSections(roleIds).map((section) => [
+    getVisibleSettingsSections(canForRoles(roleIds)).map((section) => [
       section.title,
       section.items.map((item) => item.title),
     ]),
@@ -31,7 +32,7 @@ function visibleTitles(roleIds: number[]): Record<string, string[]> {
 
 describe("getVisibleSettingsSections — /settings da kim nimani ko'radi", () => {
   it("CEO hamma 12 ta punktni ikki bo'limda ko'radi", () => {
-    const sections = getVisibleSettingsSections([CEO]);
+    const sections = getVisibleSettingsSections(canForRoles([CEO]));
     expect(sections.map((section) => section.title)).toEqual(["Administratsiya", "CEO"]);
     expect(sections.flatMap((section) => section.items)).toHaveLength(12);
   });
@@ -67,41 +68,41 @@ describe("getVisibleSettingsSections — /settings da kim nimani ko'radi", () =>
 
 describe("canOpenEmployeeSettings", () => {
   it("opens an employee's page to the CEO and a Branch Director", () => {
-    expect(canOpenEmployeeSettings([CEO])).toBe(true);
-    expect(canOpenEmployeeSettings([BRANCH_DIRECTOR])).toBe(true);
-    expect(canOpenEmployeeSettings([ADMINISTRATOR, BRANCH_DIRECTOR])).toBe(true);
+    expect(canOpenEmployeeSettings(canForRoles([CEO]))).toBe(true);
+    expect(canOpenEmployeeSettings(canForRoles([BRANCH_DIRECTOR]))).toBe(true);
+    expect(canOpenEmployeeSettings(canForRoles([ADMINISTRATOR, BRANCH_DIRECTOR]))).toBe(true);
   });
 
   it("keeps it closed to anyone else: SettingsLayoutShell or the API sends them back", () => {
-    expect(canOpenEmployeeSettings([ADMINISTRATOR])).toBe(false);
-    expect(canOpenEmployeeSettings([TEACHER])).toBe(false);
-    expect(canOpenEmployeeSettings([ADMINISTRATOR, TEACHER])).toBe(false);
-    expect(canOpenEmployeeSettings([CASHIER])).toBe(false);
-    expect(canOpenEmployeeSettings([])).toBe(false);
+    expect(canOpenEmployeeSettings(canForRoles([ADMINISTRATOR]))).toBe(false);
+    expect(canOpenEmployeeSettings(canForRoles([TEACHER]))).toBe(false);
+    expect(canOpenEmployeeSettings(canForRoles([ADMINISTRATOR, TEACHER]))).toBe(false);
+    expect(canOpenEmployeeSettings(canForRoles([CASHIER]))).toBe(false);
+    expect(canOpenEmployeeSettings(canForRoles([]))).toBe(false);
   });
 });
 
 describe("canOpenSettingsPath — SettingsLayoutShell shu qoida bilan qaytaradi", () => {
   it("ro'yxatda ko'rinmagan sahifa URL bilan ham ochilmaydi", () => {
-    expect(canOpenSettingsPath("/settings/holidays", [CASHIER])).toBe(false);
-    expect(canOpenSettingsPath("/settings/courses/42", [CASHIER])).toBe(false);
-    expect(canOpenSettingsPath("/settings/rooms", [TEACHER])).toBe(false);
-    expect(canOpenSettingsPath("/settings/employees/10042", [ADMINISTRATOR])).toBe(false);
-    expect(canOpenSettingsPath("/settings/payment", [ADMINISTRATOR])).toBe(false);
-    expect(canOpenSettingsPath("/settings/archive", [BRANCH_DIRECTOR])).toBe(false);
+    expect(canOpenSettingsPath("/settings/holidays", canForRoles([CASHIER]))).toBe(false);
+    expect(canOpenSettingsPath("/settings/courses/42", canForRoles([CASHIER]))).toBe(false);
+    expect(canOpenSettingsPath("/settings/rooms", canForRoles([TEACHER]))).toBe(false);
+    expect(canOpenSettingsPath("/settings/employees/10042", canForRoles([ADMINISTRATOR]))).toBe(false);
+    expect(canOpenSettingsPath("/settings/payment", canForRoles([ADMINISTRATOR]))).toBe(false);
+    expect(canOpenSettingsPath("/settings/archive", canForRoles([BRANCH_DIRECTOR]))).toBe(false);
   });
 
   it("ko'rinadigan sahifa va uning ichki sahifalari ochiladi", () => {
-    expect(canOpenSettingsPath("/settings/holidays", [ADMINISTRATOR])).toBe(true);
-    expect(canOpenSettingsPath("/settings/courses/42", [CASHIER, ADMINISTRATOR])).toBe(true);
-    expect(canOpenSettingsPath("/settings/employees/10042", [BRANCH_DIRECTOR])).toBe(true);
-    expect(canOpenSettingsPath("/settings/archive", [CEO])).toBe(true);
+    expect(canOpenSettingsPath("/settings/holidays", canForRoles([ADMINISTRATOR]))).toBe(true);
+    expect(canOpenSettingsPath("/settings/courses/42", canForRoles([CASHIER, ADMINISTRATOR]))).toBe(true);
+    expect(canOpenSettingsPath("/settings/employees/10042", canForRoles([BRANCH_DIRECTOR]))).toBe(true);
+    expect(canOpenSettingsPath("/settings/archive", canForRoles([CEO]))).toBe(true);
   });
 
   it("faqat butun yo'l bo'lagi mos keladi", () => {
     // "/settings/generalx" is not under "/settings/general".
-    expect(canOpenSettingsPath("/settings/generalx", [CASHIER])).toBe(true);
-    expect(canOpenSettingsPath("/settings", [CASHIER])).toBe(true);
+    expect(canOpenSettingsPath("/settings/generalx", canForRoles([CASHIER]))).toBe(true);
+    expect(canOpenSettingsPath("/settings", canForRoles([CASHIER]))).toBe(true);
   });
 });
 

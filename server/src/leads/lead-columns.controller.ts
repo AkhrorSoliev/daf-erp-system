@@ -1,23 +1,14 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Param, Patch, Post } from '@nestjs/common';
 import { LeadColumnsService } from './lead-columns.service';
 import { CreateLeadColumnDto } from './dto/create-lead-column.dto';
 import { UpdateLeadColumnDto } from './dto/update-lead-column.dto';
 import { ReorderLeadColumnsDto } from './dto/reorder-lead-columns.dto';
-import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('lead-columns')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Can('leads.setup')
 export class LeadColumnsController {
   constructor(private readonly leadColumnsService: LeadColumnsService) {}
 

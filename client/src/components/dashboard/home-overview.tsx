@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { resolveHomeSections } from "./dashboard-home-visibility";
 import type { DashboardSummary } from "./dashboard-summary-types";
@@ -28,11 +28,10 @@ import { HomeSkeleton } from "./home-skeleton";
  * yetarli emas — API'ni to'g'ridan-to'g'ri chaqirish mumkin.
  */
 export function HomeOverview() {
-  const user = useAuth((s) => s.user);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
-  const roleIds = user?.roles.map((r) => r.id) ?? [];
-  const sections = resolveHomeSections(roleIds);
+  const can = usePermissions((s) => s.can);
+  const sections = resolveHomeSections(can);
 
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["dashboard", "summary", selectedBranch?.id ?? "all"],

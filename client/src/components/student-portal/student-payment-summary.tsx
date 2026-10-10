@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
+import { reversalNote } from "@/lib/ledger-reversal";
 import {
   onMiniAppActivated,
   openOutsideMiniApp,
@@ -390,6 +391,14 @@ function PaymentHistory() {
       ) : (
         transactions.map((t) => {
           const positive = t.amount >= 0;
+          const reversal = t.reversal ?? null;
+          // A cancelled row stays (the balance under it is a running total)
+          // but is struck through; the row that cancelled it says so.
+          const cancelled = reversal?.kind === "reversed";
+          const title =
+            reversal?.kind === "undo"
+              ? reversalNote(reversal, { withReason: false })
+              : t.description || TYPE_LABELS[t.type] || t.type;
           return (
             <Card
               key={t.id}
@@ -398,16 +407,33 @@ function PaymentHistory() {
               <div className="min-w-0 flex-1">
                 {/* Two lines, not one: on a narrow phone a single line cut
                     "A1-12 guruhi: 12 dars uchun" down to its first words. */}
-                <p className="line-clamp-2 break-words font-display text-sm font-bold text-ink-900">
-                  {t.description || TYPE_LABELS[t.type] || t.type}
+                <p
+                  className={cn(
+                    "line-clamp-2 break-words font-display text-sm font-bold",
+                    cancelled ? "text-ink-500" : "text-ink-900",
+                  )}
+                >
+                  {title}
                 </p>
-                <p className="text-xs font-semibold text-ink-500">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-ink-500">
                   {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
+                  {cancelled && (
+                    <Badge tone="neutral" size="sm">
+                      {reversalNote(reversal, { withReason: false })}
+                    </Badge>
+                  )}
                 </p>
               </div>
               <div className="shrink-0 text-right">
                 <p
-                  className={`font-display text-sm font-extrabold tabular-nums ${positive ? "text-success" : "text-danger"}`}
+                  className={cn(
+                    "font-display text-sm font-extrabold tabular-nums",
+                    cancelled
+                      ? "text-ink-500 line-through"
+                      : positive
+                        ? "text-success"
+                        : "text-danger",
+                  )}
                 >
                   {positive ? "+" : ""}
                   {formatNumber(t.amount)} so&apos;m

@@ -7,21 +7,19 @@ import {
   Post,
   Query,
   ParseIntPipe,
-  UseGuards,
 } from '@nestjs/common';
 import { PaymentPromisesService } from './payment-promises.service';
 import { CreatePaymentPromiseDto } from './dto/create-payment-promise.dto';
-import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('payment-promises')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
 export class PaymentPromisesController {
   constructor(private readonly promises: PaymentPromisesService) {}
 
   @Post()
+  @Can('debt.promise')
   create(
     @Body() dto: CreatePaymentPromiseDto,
     @CurrentUser('id') userId: number,
@@ -32,6 +30,7 @@ export class PaymentPromisesController {
   }
 
   @Patch(':id/cancel')
+  @Can('debt.promise')
   cancel(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
@@ -43,6 +42,7 @@ export class PaymentPromisesController {
 
   /** This month's promise and the days a promise may name (ADR-0072). */
   @Get('month')
+  @Can('debt.view', 'debt.promise', 'outreach.view')
   monthState(
     @Query('studentId', ParseIntPipe) studentId: number,
     @CurrentUser('companyId') companyId: number,
@@ -52,6 +52,7 @@ export class PaymentPromisesController {
   }
 
   @Get()
+  @Can('debt.view', 'debt.promise', 'outreach.view')
   findByStudent(
     @Query('studentId', ParseIntPipe) studentId: number,
     @CurrentUser('companyId') companyId: number,

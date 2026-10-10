@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Param, Patch, Post } from '@nestjs/common';
 import { LeadSectionsService } from './lead-sections.service';
 import { LeadsArchiveService } from './leads-archive.service';
 import { CreateLeadSectionDto } from './dto/create-lead-section.dto';
@@ -14,13 +6,12 @@ import { UpdateLeadSectionDto } from './dto/update-lead-section.dto';
 import { MoveLeadSectionDto } from './dto/move-lead-section.dto';
 import { ReorderLeadSectionsDto } from './dto/reorder-lead-sections.dto';
 import { RestoreLeadSectionDto } from './dto/restore-lead-section.dto';
-import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('lead-sections')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
+@Can('leads.setup')
 export class LeadSectionsController {
   constructor(
     private readonly leadSectionsService: LeadSectionsService,

@@ -14,13 +14,12 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { CALL_OUTCOME_INFO } from "@/components/outreach/outreach-types";
 import type { LogCallPrefill } from "@/components/outreach/log-call-dialog";
-import { RoleLink } from "@/components/shared/role-link";
-import { useAuth } from "@/hooks/use-auth";
+import { CanLink } from "@/components/shared/can-link";
+import { useCan } from "@/hooks/use-permissions";
 import api from "@/lib/api";
 import { downloadAuthedFile } from "@/lib/download-file";
 import { formatBalance, formatPhone, formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { CALL_LOG_ROLES, GROUP_PAGE_ROLES, hasAnyRole, STATEMENT_ROLES } from "@/lib/role-access";
 import { tashkentInstantOn } from "@/lib/tashkent-time";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHOD_LABELS } from "../overview/overview-math";
@@ -36,7 +35,8 @@ export function DebtDrawer({ studentId, onClose, onPay, onLogCall }: {
 }) {
   const { data, isPending, isError } = useDebtStudent(studentId);
   const promise = usePromiseMonth(studentId);
-  const roles = useAuth((s) => s.user?.roles);
+  const canLogCalls = useCan("calls.log");
+  const canPdf = useCan("students.details");
   const name = data ? `${data.student.firstName} ${data.student.lastName}` : "";
   return (
     <Sheet open={studentId !== null} onOpenChange={(open) => !open && onClose()}>
@@ -63,8 +63,8 @@ export function DebtDrawer({ studentId, onClose, onPay, onLogCall }: {
             drawer={data}
             promiseState={promise.data ?? null}
             promiseFailed={promise.isError}
-            canLogCalls={hasAnyRole(roles, CALL_LOG_ROLES)}
-            canPdf={hasAnyRole(roles, STATEMENT_ROLES)}
+            canLogCalls={canLogCalls}
+            canPdf={canPdf}
             onPay={() => onPay({ id: data.student.id, firstName: data.student.firstName, lastName: data.student.lastName, balance: -data.debt, suggested: data.debt })}
             onLogCall={() => onLogCall({ studentId: data.student.id, studentLabel: `#${data.student.id} ${name}`, studentPhone: data.student.phone, reason: "DEBT" })}
           />
@@ -176,9 +176,9 @@ export function DebtDrawerBody({ drawer: d, promiseState, promiseFailed = false,
               </a>
             )}
             {d.groups.map((g) => (
-              <RoleLink key={g.id} href={`/groups/${g.id}`} roles={GROUP_PAGE_ROLES} linkClassName="rounded-full hover:opacity-80">
+              <CanLink key={g.id} href={`/groups/${g.id}`} perm="groups.view" linkClassName="rounded-full hover:opacity-80">
                 <Chip><Users className="size-3" />{g.name}{g.teachers.length > 0 && ` · ${g.teachers.map((t) => t.name).join(", ")}`}</Chip>
-              </RoleLink>
+              </CanLink>
             ))}
           </div>
         )}

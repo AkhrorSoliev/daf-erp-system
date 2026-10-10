@@ -143,28 +143,71 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'SELF',
+    reason:
+      "The caller's own capability list, read through " +
+      "`PermissionsService.forUser(@CurrentUser('id'))`. No branch question.",
+    routes: ['GET /permissions/me'],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
       'Id-addressed money paths. The branch is resolved from the record and the ' +
-      'caller is verified against it — before the transaction for a cheap refusal ' +
-      'and again INSIDE it with the transaction client, because a student can ' +
-      'change branch between the two. Taking the header instead would let the ' +
-      'branch a user happens to be viewing decide where money is booked.',
+      'caller is verified against it before the write. `POST /payments` checks ' +
+      'again INSIDE its transaction with the transaction client, because a ' +
+      'student can change branch between the two; the other routes here (the ' +
+      'refund routes and `POST /students/:id/balance-notices` among them) check ' +
+      "the student's branch once, before the write. Taking the header instead " +
+      'would let the branch a user happens to be viewing decide where money ' +
+      'is booked.',
     routes: [
       'POST /payments',
       'POST /payments/:id/correct',
       'POST /payments/:id/reverse',
       'POST /payments/attach-external',
       'POST /refunds/:id/reverse',
+      'POST /refunds/:id/hand-over',
+      'POST /refunds/:id/cancel',
       'POST /refunds/quick',
-      'PATCH /refunds/:id/process',
       'GET /refunds/preview/:studentId',
       'POST /transactions/adjustment',
       'POST /withdrawals',
       'GET /withdrawals/preview/:studentId',
+      'POST /students/:id/balance-notices',
       'POST /billing/debt-write-offs/:id/reverse',
       'POST /billing/lesson-deduction/:id/reverse',
       'POST /billing/retroactive/:studentId',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Student contracts (ADR-0075). Every route resolves the student — from ' +
+      'the query for the list and the prefill, from the contract row for the ' +
+      'id-addressed ones — and checks the caller against that student branch ' +
+      'with `assertCallerMayTouchStudent`. The header branch is never read: a ' +
+      'contract belongs to the branch of the student it was made for.',
+    routes: [
+      'GET /contract-documents',
+      'GET /contract-documents/prefill',
+      'POST /contract-documents',
+      'PATCH /contract-documents/:id',
+      'POST /contract-documents/:id/sign',
+      'POST /contract-documents/:id/cancel',
+      'GET /contract-documents/:id/pdf',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Join requests (ADR-0080). Every route loads the request — by its task ' +
+      'for the read, by id for the decisions — and checks the caller against ' +
+      "the request's branch with `assertCallerInBranch`. The header branch is " +
+      'never read: a request belongs to the branch whose link the person used.',
+    routes: [
+      'GET /student-join-requests/by-task/:taskId',
+      'POST /student-join-requests/:id/approve',
+      'POST /student-join-requests/:id/reject',
     ],
   },
   {
@@ -218,7 +261,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /expenses/pdf',
       'GET /payments/debtors',
       'GET /payments/debtors/summary',
-      'GET /payments/frozen-balances',
       'GET /transactions/debt-write-offs',
     ],
   },
@@ -427,19 +469,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
-      'Own tasks, own authorship. `my-tasks` and `assignee-status` are keyed ' +
-      "on the caller's own `CommentAssignee` row; `created-tasks` on " +
-      '`authorId`. `PATCH` and `DELETE /comments/:id` are author-or-CEO, ' +
+      'Own authorship. `PATCH` and `DELETE /comments/:id` are author-or-CEO, ' +
       "which is STRICTER than branch — a director cannot edit a colleague's " +
       'note even inside their own branch — so a branch check would add ' +
-      'nothing.',
-    routes: [
-      'GET /comments/my-tasks',
-      'GET /comments/created-tasks',
-      'PATCH /comments/:id',
-      'PATCH /comments/:id/assignee-status',
-      'DELETE /comments/:id',
-    ],
+      'nothing. (Tasks left comments for `/tasks`; the `my-tasks`, ' +
+      '`created-tasks` and `assignee-status` routes are gone.)',
+    routes: ['PATCH /comments/:id', 'DELETE /comments/:id'],
   },
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
@@ -785,6 +820,74 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'cohort through their own services with the same list.',
     routes: ['GET /reports/marketing'],
   },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      'The task module does not take `@BranchScope()`: `TasksService.loadActor` ' +
+      "builds the caller's `TaskActor` from the DATABASE (roles, and " +
+      '`resolveCallerBranchScope` for `scope`), never from the token, and every ' +
+      'list-shaped read applies that scope itself — `TasksReadService.' +
+      'visibilityWhere` (own tasks, plus the branch for a Branch Director), the ' +
+      'workload branch filter and the assignable-people filter. A create takes ' +
+      "the task's branch from `resolveTaskBranchId` (the linked entity's " +
+      'branch, else the `X-Branch-Id` pick), which refuses a branch outside ' +
+      "the caller's scope instead of widening it.",
+    routes: [
+      'GET /tasks',
+      'GET /tasks/assignable',
+      'GET /tasks/counts',
+      'GET /tasks/workload',
+      'POST /tasks',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Every id-addressed task route loads the task through `TasksService.' +
+      'loadForAccess`, which finds it by id AND company and runs `resolveAccess` ' +
+      "on the RECORD: the caller must be the task's author, an assignee, a " +
+      'watcher, or its manager (the CEO, or a Branch Director whose branches ' +
+      "include the task's own `branchId`). Anyone else gets the same 404 as for " +
+      "a missing id, so another branch's task id leaks nothing. The write " +
+      'routes then check `canManage` / `canWork` from that same access result; a ' +
+      'duplicate creates the copy through the same branch resolution as a new ' +
+      'task.',
+    routes: [
+      'DELETE /tasks/:id/steps/:stepId',
+      'GET /tasks/:id',
+      'PATCH /tasks/:id',
+      'PATCH /tasks/:id/steps/:stepId',
+      'POST /tasks/:id/cancel',
+      'POST /tasks/:id/duplicate',
+      'POST /tasks/:id/events',
+      'POST /tasks/:id/review',
+      'POST /tasks/:id/seen',
+      'POST /tasks/:id/status',
+      'POST /tasks/:id/steps',
+      'PUT /tasks/:id/participants',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      "The bell. Every route reads or writes rows keyed on `@CurrentUser('id')` " +
+      '(`NotificationsService` filters by `userId` alone), and a notification is ' +
+      'addressed to a person, not a branch: an attendance alert of a Namangan group ' +
+      'went to that branch’s administrators when it was written, so there is ' +
+      'nothing left to narrow at read time.',
+    routes: [
+      'DELETE /notifications/devices',
+      'DELETE /notifications/push/unsubscribe',
+      'GET /notifications',
+      'GET /notifications/counts',
+      'GET /notifications/stream',
+      'GET /notifications/unread-count',
+      'PATCH /notifications/:id/read',
+      'PATCH /notifications/read-all',
+      'POST /notifications/devices',
+      'POST /notifications/push/subscribe',
+    ],
+  },
 ];
 
 /**
@@ -802,8 +905,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /holidays/:id',
   'DELETE /lead-sources/:id',
   'DELETE /mock-exam-sections/:id',
-  'DELETE /notifications/devices',
-  'DELETE /notifications/push/unsubscribe',
   'DELETE /student-exit-reasons/:id',
   'DELETE /student-portal/photo',
   'DELETE /telegram-groups/:id',
@@ -831,9 +932,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /leads/by-student/:studentId',
   'GET /lesson-reschedules/available-rooms',
   'GET /mock-exam-sections',
-  'GET /notifications',
-  'GET /notifications/stream',
-  'GET /notifications/unread-count',
   'GET /reports/debt-write-offs-summary',
   'GET /reports/expectation-history',
   'GET /reports/financial-excel',
@@ -861,8 +959,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /leads/reorder',
   'PATCH /mock-exam-sections/:id',
   'PATCH /mock-exam-sections/reorder',
-  'PATCH /notifications/:id/read',
-  'PATCH /notifications/read-all',
   'PATCH /student-exit-reasons/:id',
   'PATCH /student-portal/name',
   'PATCH /student-portal/password',
@@ -874,8 +970,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /lead-sources',
   'POST /leads',
   'POST /mock-exam-sections',
-  'POST /notifications/devices',
-  'POST /notifications/push/subscribe',
   'POST /student-exit-reasons',
   'POST /student-portal/attendance/scan',
   'POST /student-portal/payments/init',
@@ -897,4 +991,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 88;
+export const UNREVIEWED_BUDGET = 79;

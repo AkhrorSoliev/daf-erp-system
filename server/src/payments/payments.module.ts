@@ -4,7 +4,6 @@ import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
 import { PaymentsPreviewService } from './payments-preview.service';
-import { PaymentsFrozenBalanceService } from './payments-frozen-balance.service';
 import { PaymentsController } from './payments.controller';
 import { PaymentEventsListener } from './payment-events.listener';
 import { DebtListController } from './debt/debt-list.controller';
@@ -32,7 +31,6 @@ import { StatementsModule } from '../statements/statements.module';
     PaymentsReadService,
     PaymentsDebtorsService,
     PaymentsPreviewService,
-    PaymentsFrozenBalanceService,
     PaymentEventsListener,
     DebtListService,
   ],

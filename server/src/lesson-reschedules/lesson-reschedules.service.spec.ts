@@ -54,7 +54,17 @@ describe('LessonReschedulesService', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn(),
       },
-      comment: { create: jest.fn().mockResolvedValue({ id: 'c1' }) },
+      task: {
+        create: jest.fn().mockResolvedValue({ id: 'c1' }),
+        update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      taskParticipant: {
+        findMany: jest.fn().mockResolvedValue([]),
+        deleteMany: jest.fn(),
+      },
+      taskEvent: { create: jest.fn() },
+      taskOutbox: { deleteMany: jest.fn(), createMany: jest.fn() },
       // A reschedule rewrites a group's timetable, so the caller is now checked
       // against that group's branch (`assertCallerMayTouchGroup`). A CEO spans
       // every branch — the shape these cases assume.
@@ -591,7 +601,7 @@ describe('LessonReschedulesService', () => {
       lessonStartTime: '16:00',
       lessonEndTime: '17:30',
       status: 'PENDING',
-      taskCommentId: null,
+      taskId: null,
     };
 
     beforeEach(() => {
@@ -757,7 +767,7 @@ describe('LessonReschedulesService', () => {
       tx.unmarkedLesson.findFirst.mockResolvedValue(answered);
       tx.group.findUnique.mockResolvedValue({ name: '#014', deletedAt: null });
       tx.user.findMany.mockResolvedValue([{ id: 3 }]);
-      tx.comment.create.mockResolvedValue({ id: 'c2' });
+      tx.task.create.mockResolvedValue({ id: 'c2' });
     });
     afterEach(() => jest.useRealTimers());
 
@@ -769,7 +779,7 @@ describe('LessonReschedulesService', () => {
           data: expect.objectContaining({
             status: 'PENDING',
             rescheduleId: null,
-            taskCommentId: 'c2',
+            taskId: 'c2',
           }),
         }),
       );
@@ -799,10 +809,10 @@ describe('LessonReschedulesService', () => {
       expect(prisma.holiday.findMany.mock.invocationCallOrder[0]).toBeLessThan(
         prisma.$transaction.mock.invocationCallOrder[0],
       );
-      expect(tx.comment.create).toHaveBeenCalledWith(
+      expect(tx.task.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            dueDate: new Date('2026-10-02T05:00:00.000Z'),
+            dueAt: new Date('2026-10-02T05:00:00.000Z'),
           }),
         }),
       );
@@ -865,7 +875,7 @@ describe('LessonReschedulesService', () => {
       status: 'PENDING',
       teacherPayExempt: false,
       claimedById: null,
-      taskCommentId: day === D ? 'c-D' : 'c-D1',
+      taskId: day === D ? 'c-D' : 'c-D1',
       ...over,
     });
     const closesD1 = {
@@ -924,14 +934,8 @@ describe('LessonReschedulesService', () => {
       );
       tx.unmarkedLesson.updateMany = jest.fn();
       tx.holiday = { findMany: jest.fn().mockResolvedValue([]) };
-      tx.commentAssignee = {
-        findUnique: jest.fn().mockResolvedValue(null),
-        deleteMany: jest.fn(),
-        update: jest.fn(),
-        updateMany: jest.fn(),
-      };
       tx.user.findMany.mockResolvedValue([{ id: 3 }]);
-      tx.comment.create.mockResolvedValue({ id: 'c-new' });
+      tx.task.create.mockResolvedValue({ id: 'c-new' });
     });
     afterEach(() => jest.useRealTimers());
 
@@ -941,9 +945,12 @@ describe('LessonReschedulesService', () => {
       expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(closesD1);
       closerReadAfterMoveWrite();
       // The CEO holds no copy of the task, so every copy goes DONE.
-      expect(tx.commentAssignee.updateMany).toHaveBeenCalledWith(
+      expect(tx.task.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { commentId: 'c-D1', status: { not: 'DONE' } },
+          where: {
+            id: 'c-D1',
+            status: { in: ['NEW', 'IN_PROGRESS', 'IN_REVIEW'] },
+          },
         }),
       );
       // D is re-asked by the existing rule: back to PENDING, a new task.
@@ -953,7 +960,7 @@ describe('LessonReschedulesService', () => {
           data: expect.objectContaining({
             status: 'PENDING',
             rescheduleId: null,
-            taskCommentId: 'c-new',
+            taskId: 'c-new',
           }),
         }),
       );
@@ -967,7 +974,7 @@ describe('LessonReschedulesService', () => {
       await service.remove('rs-1', 1, 99, ['CEO']);
 
       expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
-      expect(tx.comment.create).not.toHaveBeenCalled();
+      expect(tx.task.create).not.toHaveBeenCalled();
     });
 
     it("closes the make-up day's question when the move gets a new date", async () => {
@@ -979,9 +986,12 @@ describe('LessonReschedulesService', () => {
 
       expect(tx.lessonReschedule.update).toHaveBeenCalled();
       expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(closesD1);
-      expect(tx.commentAssignee.updateMany).toHaveBeenCalledWith(
+      expect(tx.task.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { commentId: 'c-D1', status: { not: 'DONE' } },
+          where: {
+            id: 'c-D1',
+            status: { in: ['NEW', 'IN_PROGRESS', 'IN_REVIEW'] },
+          },
         }),
       );
       // No room here, so the only read of D''s moves is the closer's.
@@ -1117,7 +1127,85 @@ describe('LessonReschedulesService', () => {
       expect(tx.unmarkedLesson.update).not.toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 'u-D1' } }),
       );
-      expect(tx.commentAssignee.updateMany).not.toHaveBeenCalled();
+      expect(tx.task.updateMany).not.toHaveBeenCalled();
+    });
+
+    // The task it closed is DONE, with nobody told: the notification resolver
+    // closes its notices, and that day's alerts, from this event.
+    describe('the notification resolver is told, after the commit', () => {
+      const closed = (date: string) =>
+        expect(emitter.emit).toHaveBeenCalledWith('unmarked-lesson.closed', {
+          companyId: 1,
+          groupId: 'group-1',
+          date,
+        });
+      const closedEvents = () =>
+        emitter.emit.mock.calls.filter(
+          ([name]) => name === 'unmarked-lesson.closed',
+        );
+
+      it('when removing the move closes the make-up day question', async () => {
+        prisma.$transaction.mockImplementationOnce(async (cb: any) => {
+          const result = await cb(tx);
+          expect(closedEvents()).toHaveLength(0); // the commit comes first
+          return result;
+        });
+
+        await service.remove('rs-1', 1, 99, ['CEO']);
+
+        closed('2026-09-29');
+        expect(closedEvents()).toHaveLength(1);
+      });
+
+      it('when a new date closes the question on the old make-up day', async () => {
+        tx.lessonReschedule.findFirst
+          .mockResolvedValueOnce(move)
+          .mockResolvedValue(null);
+
+        await service.update('rs-1', { newDate: '2026-10-06' }, 1, 99, ['CEO']);
+
+        closed('2026-09-29');
+        expect(closedEvents()).toHaveLength(1);
+      });
+
+      it('not when the make-up day keeps its lesson', async () => {
+        tx.group.findUnique.mockResolvedValue({
+          ...group,
+          exactDays: ['monday', 'tuesday'],
+        });
+
+        await service.remove('rs-1', 1, 99, ['CEO']);
+
+        expect(closedEvents()).toHaveLength(0);
+      });
+
+      it("not when the make-up day was answered «Bo'ldi»", async () => {
+        onD1 = question(D1, { status: 'HELD' });
+
+        await service.remove('rs-1', 1, 99, ['CEO']);
+
+        expect(closedEvents()).toHaveLength(0);
+      });
+
+      it('not when an edit leaves the date alone', async () => {
+        tx.lessonReschedule.findFirst.mockResolvedValueOnce(move);
+
+        await service.update('rs-1', { reason: 'Izoh tuzatildi' }, 1, 99, [
+          'CEO',
+        ]);
+
+        expect(closedEvents()).toHaveLength(0);
+      });
+
+      it('not when the transaction fails', async () => {
+        tx.lessonReschedule.update.mockRejectedValue(new Error('db down'));
+
+        await expect(service.remove('rs-1', 1, 99, ['CEO'])).rejects.toThrow(
+          'db down',
+        );
+
+        expect(closedEvents()).toHaveLength(0);
+      });
     });
   });
 });

@@ -9,7 +9,6 @@ import { DebtAgeService } from './../common/finance/debt-age.service';
 import { PaymentsPreviewService } from './payments-preview.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import { PaymentPromisesService } from '../payment-promises/payment-promises.service';
-import { PaymentsFrozenBalanceService } from './payments-frozen-balance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
@@ -165,7 +164,6 @@ describe('PaymentsService', () => {
           useValue: { getDebtAges: jest.fn().mockResolvedValue(new Map()) },
         },
         PaymentsPreviewService,
-        PaymentsFrozenBalanceService,
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactionsService },
         { provide: LessonBillingService, useValue: lessonBillingService },

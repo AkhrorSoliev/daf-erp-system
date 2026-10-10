@@ -1,17 +1,16 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { MockExamResultsService } from './mock-exam-results.service';
 import { BulkEnterScoresDto } from './dto/bulk-enter-scores.dto';
-import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller()
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class MockExamResultsController {
   constructor(private readonly resultsService: MockExamResultsService) {}
 
   @Get('mock-exams/:examId/results-matrix')
+  @Can('mock.view')
   matrix(
     @Param('examId') examId: string,
     @CurrentUser('companyId') companyId: number,
@@ -21,6 +20,7 @@ export class MockExamResultsController {
   }
 
   @Post('mock-exams/:examId/scores/bulk')
+  @Can('mock.manage')
   bulkSave(
     @Param('examId') examId: string,
     @Body() dto: BulkEnterScoresDto,
@@ -38,6 +38,7 @@ export class MockExamResultsController {
   }
 
   @Post('mock-exams/:examId/recalculate-ranks')
+  @Can('mock.manage')
   recalculateRanks(
     @Param('examId') examId: string,
     @CurrentUser('companyId') companyId: number,

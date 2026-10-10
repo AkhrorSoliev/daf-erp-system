@@ -7,23 +7,21 @@ import {
   Param,
   Query,
   ParseIntPipe,
-  UseGuards,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from './transactions.service';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { CreateAdjustmentDto } from './dto/create-adjustment.dto';
 import { DebtWriteOffQueryDto } from './dto/debt-write-off-query.dto';
-import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import { CurrentUser, BranchScope } from '../common/decorators';
 import {
   isEmptyScope,
   resolveCallerReportBranchIds,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('transactions')
-@UseGuards(RolesGuard)
 export class TransactionsController {
   constructor(
     private transactionsService: TransactionsService,
@@ -31,7 +29,7 @@ export class TransactionsController {
   ) {}
 
   @Get()
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('reports.finance')
   findAll(
     @Query() query: TransactionQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -41,7 +39,7 @@ export class TransactionsController {
   }
 
   @Get('student/:studentId')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('students.details')
   findByStudent(
     @Param('studentId', ParseIntPipe) studentId: number,
     @Query() query: TransactionQueryDto,
@@ -57,10 +55,10 @@ export class TransactionsController {
   }
 
   // FAZA 6.2 — Lesson trail (per-student "where did each so'm go?" report).
-  // Cashier reads it too because they need to explain ledger gaps to
-  // confused students at the front desk.
+  // Gated by `students.details`, like the rest of the student's ledger. No
+  // screen calls it now.
   @Get('student/:studentId/lesson-trail')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('students.details')
   getLessonTrail(
     @Param('studentId', ParseIntPipe) studentId: number,
     @Query('contractId') contractId: string | undefined,
@@ -86,7 +84,7 @@ export class TransactionsController {
   }
 
   @Get('teacher/:teacherId')
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('salary.view')
   findByTeacher(
     @Param('teacherId', ParseIntPipe) teacherId: number,
     @Query() query: TransactionQueryDto,
@@ -102,7 +100,7 @@ export class TransactionsController {
   }
 
   @Post('adjustment')
-  @Roles('CEO', 'Branch Director')
+  @Can('balance.adjust')
   createAdjustment(
     @Body() dto: CreateAdjustmentDto,
     @CurrentUser('id') userId: number,
@@ -118,12 +116,11 @@ export class TransactionsController {
     });
   }
 
-  // Audit log for the "yo'qolgan o'quvchi" write-off flow. CEO sees the
-  // whole company; Branch Director is auto-scoped to their UserBranch
-  // rows. Cashier/Teacher have no business reading financial corrections,
-  // hence the explicit role list.
+  // Audit log for the "yo'qolgan o'quvchi" write-off flow, a tab of the debt
+  // page (`debt.view`). A caller with the company-wide scope sees the whole
+  // company; a branch-confined one is auto-scoped to their own branches.
   @Get('debt-write-offs')
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Can('debt.view')
   async findDebtWriteOffs(
     @Query() query: DebtWriteOffQueryDto,
     @CurrentUser()

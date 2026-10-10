@@ -1,105 +1,104 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { CommentsController } from './comments.controller';
-import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { UpdateCommentDto } from './dto/update-comment.dto';
 
-describe('CommentsController.create — task permission gate', () => {
-  let controller: CommentsController;
-  const service = { create: jest.fn().mockResolvedValue({ id: 'c1' }) };
+describe('CommentsController — route access', () => {
+  const proto = CommentsController.prototype;
+  const READS = ['findByEntity', 'getLatestComment'] as const;
 
-  beforeEach(async () => {
-    service.create.mockClear();
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [CommentsController],
-      providers: [{ provide: CommentsService, useValue: service }],
-    }).compile();
-    controller = module.get(CommentsController);
+  // The old in-handler check ("only CEO/BD/Administrator may make a task")
+  // went with task comments; now the route itself is the gate.
+  it.each(['create', 'update'] as const)(
+    '%s is gated by the comment writing capability',
+    (name) => {
+      expect(routeAccess(CommentsController, name)).toEqual({
+        kind: 'can',
+        keys: ['comments.write'],
+      });
+    },
+  );
+
+  // Reading a thread is part of looking at the record it hangs off, so every
+  // screen that shows such a thread keeps it open.
+  it.each(READS)('%s is open to every screen that shows a thread', (name) => {
+    expect(routeAccess(CommentsController, name)).toEqual({
+      kind: 'can',
+      keys: [
+        'comments.write',
+        'students.details',
+        'groups.manage',
+        'teachers.view',
+        'employees.view',
+      ],
+    });
   });
 
-  function taskDto(
-    overrides: Partial<CreateCommentDto> = {},
-  ): CreateCommentDto {
-    return {
-      entityType: 'Student',
-      entityId: '10100',
-      content: 'call back',
-      isTask: true,
-      dueDate: new Date().toISOString(),
-      priority: 'MEDIUM' as any,
-      assigneeIds: [10001],
-      ...overrides,
-    } as CreateCommentDto;
-  }
+  it.each(['create', 'update', ...READS] as const)(
+    '%s admits the CEO, Branch Director and Administrator by default',
+    (name) => {
+      expect(defaultRolesOf(CommentsController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
+    },
+  );
 
-  it('CEO keeps task fields when creating a task comment', async () => {
-    const dto = taskDto();
-    await controller.create(dto, 1, 1, ['CEO']);
-    // roles are forwarded now — the entity guard needs them to route a pure
-    // teacher to the group-assignment check instead of the branch one.
-    const FORWARDED_ROLES = ['CEO'];
-    expect(service.create).toHaveBeenCalledWith(
-      expect.objectContaining({ isTask: true, assigneeIds: [10001] }),
-      1,
-      1,
-      FORWARDED_ROLES,
-    );
+  it('delete is gated by the comment moderation capability, which only the CEO holds by default', () => {
+    expect(routeAccess(CommentsController, 'delete')).toEqual({
+      kind: 'can',
+      keys: ['comments.delete'],
+    });
+    expect(defaultRolesOf(CommentsController, 'delete')).toEqual(['CEO']);
   });
 
-  it('Branch Director keeps task fields when creating a task comment', async () => {
-    const dto = taskDto();
-    await controller.create(dto, 1, 1, ['Branch Director']);
-    // roles are forwarded now — the entity guard needs them to route a pure
-    // teacher to the group-assignment check instead of the branch one.
-    const FORWARDED_ROLES = ['Branch Director'];
-    expect(service.create).toHaveBeenCalledWith(
-      expect.objectContaining({ isTask: true, assigneeIds: [10001] }),
-      1,
-      1,
-      FORWARDED_ROLES,
-    );
+  // Tasks live under /tasks now; the comment routes for them are gone.
+  it('has no task routes any more', () => {
+    for (const name of [
+      'getMyTasks',
+      'getCreatedTasks',
+      'updateAssigneeStatus',
+    ]) {
+      expect(name in proto).toBe(false);
+    }
+  });
+});
+
+// A stale client that still sends task fields gets a 400 from the global
+// ValidationPipe (`whitelist` + `forbidNonWhitelisted`), not a silent plain
+// comment.
+describe('CreateCommentDto — task fields are gone', () => {
+  const check = (body: object) =>
+    validate(plainToInstance(CreateCommentDto, body), {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+  const base = { entityType: 'Student', entityId: '10001', content: 'x' };
+
+  it('accepts a plain comment', async () => {
+    expect(await check(base)).toHaveLength(0);
   });
 
-  // The Outreach Center (/outreach) is operated mainly by Administrators —
-  // they MUST be able to schedule callback tasks. Previously CEO+BD only.
-  it('Administrator keeps task fields when creating a task comment', async () => {
-    const dto = taskDto();
-    await controller.create(dto, 1, 1, ['Administrator']);
-    // roles are forwarded now — the entity guard needs them to route a pure
-    // teacher to the group-assignment check instead of the branch one.
-    const FORWARDED_ROLES = ['Administrator'];
-    expect(service.create).toHaveBeenCalledWith(
-      expect.objectContaining({ isTask: true, assigneeIds: [10001] }),
-      1,
-      1,
-      FORWARDED_ROLES,
-    );
+  it.each([
+    ['isTask', true],
+    ['assigneeIds', [10001]],
+    ['dueDate', '2026-10-08T05:00:00.000Z'],
+    ['priority', 'HIGH'],
+  ])('refuses %s', async (field, value) => {
+    expect(await check({ ...base, [field]: value })).not.toHaveLength(0);
   });
 
-  it('Cashier cannot create task — falls back to plain comment', async () => {
-    const dto = taskDto();
-    await controller.create(dto, 1, 1, ['Cashier']);
-    // roles are forwarded now — the entity guard needs them to route a pure
-    // teacher to the group-assignment check instead of the branch one.
-    const FORWARDED_ROLES = ['Cashier'];
-    expect(service.create).toHaveBeenCalledWith(
-      expect.objectContaining({ isTask: false, assigneeIds: undefined }),
-      1,
-      1,
-      FORWARDED_ROLES,
+  it('UpdateCommentDto refuses dueDate and priority too', async () => {
+    const errors = await validate(
+      plainToInstance(UpdateCommentDto, {
+        dueDate: '2026-10-08',
+        priority: 'LOW',
+      }),
+      { whitelist: true, forbidNonWhitelisted: true },
     );
-  });
-
-  it('Teacher cannot create task — falls back to plain comment', async () => {
-    const dto = taskDto();
-    await controller.create(dto, 1, 1, ['Teacher']);
-    // roles are forwarded now — the entity guard needs them to route a pure
-    // teacher to the group-assignment check instead of the branch one.
-    const FORWARDED_ROLES = ['Teacher'];
-    expect(service.create).toHaveBeenCalledWith(
-      expect.objectContaining({ isTask: false, assigneeIds: undefined }),
-      1,
-      1,
-      FORWARDED_ROLES,
-    );
+    expect(errors).not.toHaveLength(0);
   });
 });

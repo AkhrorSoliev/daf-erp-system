@@ -10,13 +10,15 @@ import {
   Megaphone,
   type LucideIcon,
 } from "lucide-react";
+import type { Can } from "./permission-check";
+import type { PermissionKey } from "./permission-keys";
 
 export interface ReportsNavItem {
   title: string;
   url: string;
   icon: LucideIcon;
-  /** When set, only users with at least one matching role ID see the item. Omit to show to all. */
-  visibleForRoles?: number[];
+  /** Shown to users who hold this capability. Omit to show to all. */
+  permission?: PermissionKey;
 }
 
 interface ReportsNavSection {
@@ -24,65 +26,60 @@ interface ReportsNavSection {
   items: ReportsNavItem[];
 }
 
-/** Hisobotlar bo'limining asosiy egalari. */
-const CEO_BD = [1, 2];
-
 /**
- * Administrator hisobotlar bo'limida Lidlar va To'lov hisobotlarini ko'radi
- * (CEO qarori: Lidlar 13.09.2026, To'lov hisobotlari 05.10.2026). Qolganlari —
- * pul va markaz ko'rsatkichlari — CEO/BD. Backend ham shunday:
- * `reports/lead-funnel` va `reports/payment-reports*` Administrator'ga ochiq,
- * qolgan pul hisobotlari `@Roles('CEO', 'Branch Director')`.
+ * An Administrator sees the Lidlar and To'lov hisobotlari reports (CEO
+ * decisions: Lidlar 13.09.2026, To'lov hisobotlari 05.10.2026). The rest — the
+ * money and centre figures — belong to the holders of `reports.finance` and
+ * `reports.students`. The server agrees: `reports/lead-funnel` and
+ * `reports/payment-reports*` check `reports.leads` and `reports.payments`.
  */
 export const reportsNavSections: ReportsNavSection[] = [
   {
     title: "Moliyaviy hisobotlar",
     items: [
-      { title: "To'lov hisobotlari", url: "/reports/payment-reports", icon: Receipt, visibleForRoles: [1, 2, 3] },
-      { title: "O'quvchi to'lovi", url: "/reports/student-payments", icon: Wallet, visibleForRoles: CEO_BD },
+      { title: "To'lov hisobotlari", url: "/reports/payment-reports", icon: Receipt, permission: "reports.payments" },
+      { title: "O'quvchi to'lovi", url: "/reports/student-payments", icon: Wallet, permission: "reports.finance" },
     ],
   },
   {
     title: "O'quvchilar hisoboti",
     items: [
-      { title: "Ketgan o'quvchilar hisoboti", url: "/reports/departed-students", icon: UserMinus, visibleForRoles: CEO_BD },
-      { title: "Bitiruvchilar", url: "/reports/graduates", icon: GraduationCap, visibleForRoles: CEO_BD },
+      { title: "Ketgan o'quvchilar hisoboti", url: "/reports/departed-students", icon: UserMinus, permission: "reports.students" },
+      { title: "Bitiruvchilar", url: "/reports/graduates", icon: GraduationCap, permission: "reports.students" },
     ],
   },
   {
     title: "Marketing va faoliyat",
     items: [
-      { title: "Lidlar hisoboti", url: "/reports/leads", icon: UserPlus, visibleForRoles: [1, 2, 3] },
-      // Pul hisoboti — CEO/BD (server: `GET /reports/marketing`, ADR-0067).
-      { title: "Marketing", url: "/reports/marketing", icon: Megaphone, visibleForRoles: CEO_BD },
-      { title: "Markaz faoliyat statistikasi", url: "/reports/activity", icon: Activity, visibleForRoles: CEO_BD },
-      { title: "Davomat statistikasi", url: "/reports/attendance", icon: CalendarCheck, visibleForRoles: CEO_BD },
-      { title: "Bot hisoboti", url: "/reports/bot", icon: Send, visibleForRoles: CEO_BD },
+      { title: "Lidlar hisoboti", url: "/reports/leads", icon: UserPlus, permission: "reports.leads" },
+      // A money report (server: `GET /reports/marketing`, ADR-0067).
+      { title: "Marketing", url: "/reports/marketing", icon: Megaphone, permission: "reports.finance" },
+      { title: "Markaz faoliyat statistikasi", url: "/reports/activity", icon: Activity, permission: "reports.students" },
+      { title: "Davomat statistikasi", url: "/reports/attendance", icon: CalendarCheck, permission: "reports.students" },
+      { title: "Bot hisoboti", url: "/reports/bot", icon: Send, permission: "reports.students" },
     ],
   },
 ];
 
-const hasAny = (roleIds: number[], allowed: number[]) =>
-  allowed.some((id) => roleIds.includes(id));
-
-/** Hisobotlar bo'limiga umuman kira oladimi — kamida bitta hisobot ko'rinsa. */
-export function canEnterReports(roleIds: number[]): boolean {
+/** May the user enter the reports section at all — at least one report shows. */
+export function canEnterReports(can: Can): boolean {
   return reportsNavSections.some((s) =>
-    s.items.some((i) => !i.visibleForRoles || hasAny(roleIds, i.visibleForRoles)),
+    s.items.some((i) => !i.permission || can(i.permission)),
   );
 }
 
 /**
- * Bu hisobot sahifasini ocha oladimi. `/reports` ildizi — bo'limga kira
- * olsa bas. Menyuda yo'q sahifa (masalan kelajak ichki yo'l) CEO/BD ga
- * qoladi: yangi hisobot o'z-o'zidan adminga ochilib ketmasin.
+ * May the user open this report page. `/reports` itself needs one visible
+ * report. A page the menu does not list (a future inner path) stays with the
+ * money-report holders, so a new report never opens to an administrator by
+ * itself.
  */
-export function canOpenReportPath(roleIds: number[], pathname: string): boolean {
+export function canOpenReportPath(can: Can, pathname: string): boolean {
   const path = pathname.replace(/\/+$/, "") || "/";
-  if (path === "/reports") return canEnterReports(roleIds);
+  if (path === "/reports") return canEnterReports(can);
   const item = reportsNavSections
     .flatMap((s) => s.items)
     .find((i) => path === i.url || path.startsWith(`${i.url}/`));
-  if (!item) return hasAny(roleIds, CEO_BD);
-  return !item.visibleForRoles || hasAny(roleIds, item.visibleForRoles);
+  if (!item) return can("reports.finance");
+  return !item.permission || can(item.permission);
 }

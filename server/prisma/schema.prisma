@@ -132,6 +132,8 @@ enum NotificationType {
   TASK_DELETED
   TASK_UPDATED
   TASK_REMINDER
+  TASK_REVIEW
+  TASK_OVERDUE
   SYSTEM
   LESSON_STARTED
   ATTENDANCE_ADMIN_ALERT
@@ -151,6 +153,66 @@ enum TaskPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum TaskStatus {
+  NEW
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum TaskKind {
+  MANUAL
+  LESSON_QUESTION
+  CALLBACK
+  BROKEN_PROMISE
+  UNCALLED_LEAD
+  JOIN_REQUEST
+}
+
+enum TaskParticipantRole {
+  ASSIGNEE
+  WATCHER
+}
+
+enum TaskEventType {
+  CREATED
+  COMMENT
+  VOICE
+  FILE
+  STATUS
+  RETURN
+  STEP
+  ASSIGNEE
+  CANCELLED
+  AUTO_CLOSED
+  REASSIGNED
+}
+
+enum TaskEventVia {
+  WEB
+  TELEGRAM
+  SYSTEM
+}
+
+enum TaskOutboxChannel {
+  INAPP
+  TELEGRAM
+}
+
+enum TaskOutboxKind {
+  REMINDER
+  OVERDUE
+  NOTICE
+}
+
+enum TaskTelegramPurpose {
+  NOTICE
+  RETURN_PROMPT
+  /// Not used before phase 3 (photo upload).
+  PHOTO_PROMPT
 }
 
 // ===== FINANCIAL SYSTEM ENUMS =====
@@ -211,6 +273,13 @@ enum ContractStatus {
   COMPLETED
   CANCELLED
   REFUNDED
+}
+
+/// How a contract document was signed (ADR-0075). Stage 1 writes PAPER only;
+/// BOT arrives with the Telegram «Roziman» stage.
+enum ContractSignMethod {
+  PAPER
+  BOT
 }
 
 enum SalaryType {
@@ -341,6 +410,9 @@ model User {
   statusChanges                    StatusHistory[]            @relation("StatusChangedBy")
   entityChanges                    EntityHistory[]            @relation("EntityHistoryChangedBy")
   comments                         Comment[]                  @relation("CommentAuthor")
+  tasksAuthored                    Task[]                     @relation("TaskAuthor")
+  taskParticipations               TaskParticipant[]          @relation("TaskParticipantUser")
+  taskEvents                       TaskEvent[]                @relation("TaskEventActor")
   commentAssignees                 CommentAssignee[]          @relation("CommentAssignees")
   notifications                    Notification[]             @relation("UserNotifications")
   pushSubscriptions                PushSubscription[]         @relation("UserPushSubscriptions")
@@ -360,11 +432,19 @@ model User {
   performedTransactions Transaction[]   @relation("TransactionPerformedBy")
   reversedTransactions  Transaction[]   @relation("TransactionReversedBy")
   processedRefunds      Refund[]        @relation("RefundProcessedBy")
+  requestedRefunds      Refund[]        @relation("RefundRequestedBy")
+  handedOverRefunds     Refund[]        @relation("RefundHandedOverBy")
+  cancelledRefunds      Refund[]        @relation("RefundCancelledBy")
+  balanceNotices        BalanceNotice[] @relation("BalanceNoticeCreatedBy")
   paidSalaries          SalaryPayment[] @relation("SalaryPaidBy")
   createdExpenses       Expense[]       @relation("ExpenseCreatedBy")
   deletedExpenses       Expense[]       @relation("ExpenseDeletedBy")
   relatedExpenses       Expense[]       @relation("ExpenseRelatedUser")
   deletedContracts      Contract[]      @relation("ContractDeletedBy")
+
+  contractDocumentsCreated   ContractDocument[] @relation("ContractDocumentCreatedBy")
+  contractDocumentsSigned    ContractDocument[] @relation("ContractDocumentSignedBy")
+  contractDocumentsCancelled ContractDocument[] @relation("ContractDocumentCancelledBy")
 
   teacherHistoryChanges GroupTeacherHistory[] @relation("GroupTeacherHistoryChangedBy")
 
@@ -416,16 +496,20 @@ model UserBranch {
 }
 
 model Branch {
-  id                Int          @id @default(autoincrement())
-  name              String
-  address           String?
-  phone             String?
-  isActive          Boolean      @default(true)
-  status            BranchStatus @default(ACTIVE)
-  startOfWorkingDay String?
-  endOfWorkingDay   String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  id                     Int          @id @default(autoincrement())
+  name                   String
+  address                String?
+  phone                  String?
+  // Shartnoma uchun (ADR-0075): sarlavhadagi shahar va Ijrochi vakili.
+  city                   String?
+  representativeName     String?
+  representativePosition String?
+  isActive               Boolean      @default(true)
+  status                 BranchStatus @default(ACTIVE)
+  startOfWorkingDay      String?
+  endOfWorkingDay        String?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
 
   statusChangedAt    DateTime?
   statusChangedById  Int?
@@ -439,18 +523,19 @@ model Branch {
   deletedBy       User?     @relation("BranchDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  users           UserBranch[]
-  studentBranches StudentBranch[]
-  rooms           Room[]
-  groups          Group[]
-  courses         Course[]
-  telegramGroups  TelegramGroup[]
-  leads           Lead[]
-  leadColumns     LeadColumn[]
-  mockExams       MockExam[]
-  holidays        Holiday[]
-  monthlyCharges  EnrollmentMonthlyCharge[]
-  settings        Setting[]
+  users             UserBranch[]
+  studentBranches   StudentBranch[]
+  rooms             Room[]
+  groups            Group[]
+  courses           Course[]
+  telegramGroups    TelegramGroup[]
+  leads             Lead[]
+  leadColumns       LeadColumn[]
+  mockExams         MockExam[]
+  holidays          Holiday[]
+  monthlyCharges    EnrollmentMonthlyCharge[]
+  settings          Setting[]
+  contractDocuments ContractDocument[]
 
   @@index([deletedAt])
   @@index([status])
@@ -623,6 +708,7 @@ model Student {
   payments          Payment[]
   transactions      Transaction[]             @relation("StudentTransactions")
   contracts         Contract[]
+  contractDocuments ContractDocument[]
   refunds           Refund[]
   salaryAccruals    SalaryAccrual[]           @relation("StudentSalaryAccruals")
   paymentPromises   PaymentPromise[]
@@ -634,6 +720,7 @@ model Student {
   discounts         Discount[]
   scholarships      Scholarship[]
   monthlyCharges    EnrollmentMonthlyCharge[]
+  balanceNotices    BalanceNotice[]
 
   @@index([deletedAt])
   @@index([status])
@@ -1351,6 +1438,11 @@ model Enrollment {
   startDate               DateTime?
   createdAt               DateTime         @default(now())
 
+  // The contract document this enrollment is under (ADR-0075). Carried to the
+  // new enrollment on a group transfer, cleared when the contract is cancelled.
+  contractDocumentId String?
+  contractDocument   ContractDocument? @relation(fields: [contractDocumentId], references: [id], onDelete: SetNull)
+
   statusChangedAt    DateTime?
   statusChangedById  Int?
   statusChangeReason String?
@@ -1375,6 +1467,7 @@ model Enrollment {
   @@index([status])
   @@index([departureReasonId])
   @@index([transferReasonId])
+  @@index([contractDocumentId])
 }
 
 /// Oylik to'lov modelining yagona haqiqat manbasi: har yozilish, har oy
@@ -1656,6 +1749,7 @@ model Company {
   rooms                       Room[]
   groups                      Group[]
   comments                    Comment[]
+  tasks                       Task[]
   attendances                 Attendance[]
   plannedAbsences             PlannedAbsence[]
   paymentPromises             PaymentPromise[]
@@ -1840,26 +1934,28 @@ model EnrollmentTransferReason {
 }
 
 model Comment {
-  id         String        @id @default(uuid())
-  entityType String
-  entityId   String
-  content    String
-  isTask     Boolean       @default(false)
-  isSystem   Boolean       @default(false)
-  dueDate    DateTime?
-  priority   TaskPriority?
+  id             String        @id @default(uuid())
+  entityType     String
+  entityId       String
+  content        String
+  isTask         Boolean       @default(false)
+  isSystem       Boolean       @default(false)
+  dueDate        DateTime?
+  priority       TaskPriority?
+  /// Set by scripts/migrate-comment-tasks.ts; such rows are hidden from comment lists.
+  migratedTaskId String?
   /// NULL = a task the system gave (ADR-0054); the UI shows «Tizim».
-  authorId   Int?
-  author     User?         @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
-  companyId  Int
-  company    Company       @relation(fields: [companyId], references: [id])
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  authorId       Int?
+  author         User?         @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  companyId      Int
+  company        Company       @relation(fields: [companyId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  assignees     CommentAssignee[]
-  notifications Notification[]
+  assignees      CommentAssignee[]
+  notifications  Notification[]
   /// The unmarked lesson this system task asks about (ADR-0054).
-  unmarkedLesson UnmarkedLesson? @relation("UnmarkedLessonTask")
+  unmarkedLesson UnmarkedLesson?   @relation("UnmarkedLessonTask")
 
   @@index([entityType, entityId])
   @@index([authorId])
@@ -1884,6 +1980,151 @@ model CommentAssignee {
   @@index([userId, status])
 }
 
+/// Spec 2026-10-07 §3. The only writers are `tasks/tasks.service.ts`,
+/// `tasks/lesson-task.ts` and `scripts/migrate-comment-tasks.ts`
+/// (`task-write.single-source.spec.ts`).
+model Task {
+  id                String       @id @default(uuid())
+  companyId         Int
+  company           Company      @relation(fields: [companyId], references: [id])
+  /// The entity's branch, else the author's header pick; null for a branch-less
+  /// CEO task or an unassigned lead.
+  branchId          Int?
+  kind              TaskKind     @default(MANUAL)
+  title             String
+  description       String?
+  status            TaskStatus   @default(NEW)
+  priority          TaskPriority @default(MEDIUM)
+  dueAt             DateTime?
+  /// NULL = Tizim.
+  authorId          Int?
+  author            User?        @relation("TaskAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  entityType        String?
+  entityId          String?
+  requiresPhoto     Boolean      @default(false)
+  /// «Har biriga alohida» copies share one batch.
+  batchId           String?
+  /// `unmarked:<groupId>:<YYYY-MM-DD>`, `calllog:<id>`, `promise:<id>`, `lead:<id>`.
+  /// Unique while the task is open (partial index in the migration).
+  sourceKey         String?
+  /// System task: the first assignee to act.
+  claimedById       Int?
+  returnedCount     Int          @default(0)
+  lastReturnedAt    DateTime?
+  startedAt         DateTime?
+  reviewRequestedAt DateTime?
+  closedAt          DateTime?
+  cancelledAt       DateTime?
+  cancelReason      String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  participants     TaskParticipant[]
+  steps            TaskStep[]
+  events           TaskEvent[]
+  outbox           TaskOutbox[]
+  telegramMessages TaskTelegramMessage[]
+  notifications    Notification[]
+  unmarkedLesson   UnmarkedLesson?       @relation("UnmarkedLessonTaskRow")
+
+  @@index([companyId, status, dueAt])
+  @@index([branchId, status])
+  @@index([authorId, status])
+  @@index([batchId])
+  @@index([entityType, entityId])
+  @@index([sourceKey])
+}
+
+model TaskParticipant {
+  id        String              @id @default(uuid())
+  taskId    String
+  task      Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User                @relation("TaskParticipantUser", fields: [userId], references: [id])
+  role      TaskParticipantRole @default(ASSIGNEE)
+  /// First time this person opened the task sheet.
+  seenAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@unique([taskId, userId])
+  @@index([userId, role])
+}
+
+model TaskStep {
+  id        String    @id @default(uuid())
+  taskId    String
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title     String
+  position  Int
+  doneAt    DateTime?
+  doneById  Int?
+  createdAt DateTime  @default(now())
+
+  @@index([taskId, position])
+}
+
+/// Discussion and history in one stream (spec §3.4).
+model TaskEvent {
+  id        String        @id @default(uuid())
+  taskId    String
+  task      Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  type      TaskEventType
+  /// NULL = Tizim.
+  actorId   Int?
+  actor     User?         @relation("TaskEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  text      String?
+  meta      Json?
+  via       TaskEventVia  @default(WEB)
+  createdAt DateTime      @default(now())
+
+  @@index([taskId, createdAt])
+}
+
+/// Notices waiting for their time (spec §9.3): REMINDER / OVERDUE on both
+/// channels, and Telegram notices held for the night quiet or a retry (NOTICE).
+model TaskOutbox {
+  id        String            @id @default(uuid())
+  taskId    String
+  task      Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    Int
+  channel   TaskOutboxChannel
+  kind      TaskOutboxKind
+  sendAfter DateTime
+  attempts  Int               @default(0)
+  sentAt    DateTime?
+  lastError String?
+  /// NOTICE only: the planned `TgNotice` (task-notify-plan.ts).
+  payload   Json?
+  createdAt DateTime          @default(now())
+
+  /// Several notices of one task may wait for one person overnight, so the
+  /// key is a plain index. Prisma cannot express a partial index: the
+  /// migration also creates the UNIQUE "TaskOutbox_time_row_key" on
+  /// (taskId, userId, channel, kind) WHERE kind IN ('REMINDER','OVERDUE'),
+  /// which keeps the time rows one per person and lets `skipDuplicates` work.
+  /// A future `prisma migrate diff` will emit DROP INDEX "TaskOutbox_time_row_key":
+  /// delete that line from the generated SQL by hand.
+  @@index([taskId, userId])
+  @@index([sendAfter, sentAt])
+}
+
+/// A bot message about a task (spec §6.2): a reply to it is routed to the task.
+model TaskTelegramMessage {
+  id        String              @id @default(uuid())
+  chatId    String
+  messageId Int
+  taskId    String
+  task      Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  /// Whom it was sent to (a bare id, like TaskOutbox.userId).
+  userId    Int
+  purpose   TaskTelegramPurpose
+  companyId Int
+  createdAt DateTime            @default(now())
+
+  @@unique([chatId, messageId])
+  @@index([taskId])
+}
+
 model Notification {
   id                String           @id @default(uuid())
   userId            Int
@@ -1895,13 +2136,23 @@ model Notification {
   relatedEntityId   String?
   commentId         String?
   comment           Comment?         @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  taskId            String?
+  task              Task?            @relation(fields: [taskId], references: [id], onDelete: SetNull)
   isRead            Boolean          @default(false)
+  /// Waits for the recipient's own action (spec 2026-10-07 §8). Set once by `notificationKind`.
+  actionRequired    Boolean          @default(false)
+  /// When the job it asked for got done (`NotificationResolverService`); null = still open.
+  resolvedAt        DateTime?
+  /// One day's rows of one lesson alert type, folded into one line: `ATTENDANCE_ADMIN_ALERT:2026-10-10`.
+  groupKey          String?
   companyId         Int
   createdAt         DateTime         @default(now())
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@index([companyId])
+  @@index([relatedEntityId])
+  @@index([taskId])
 }
 
 model PushSubscription {
@@ -2253,6 +2504,40 @@ model Contract {
   @@index([deletedAt])
 }
 
+/// Ta'lim xizmati shartnomasining hujjati (ADR-0075). Eski `Contract` dan
+/// alohida: uni pul kodi o'qiydi (`per-lesson-price.ts`, to'lov, qaytarish).
+/// `fields` — PDF'ga tushadigan hamma qiymat, shartnoma tuzilganda muhrlanadi.
+model ContractDocument {
+  id              String              @id @default(uuid())
+  companyId       Int
+  number          String
+  studentId       Int
+  student         Student             @relation(fields: [studentId], references: [id])
+  branchId        Int
+  branch          Branch              @relation(fields: [branchId], references: [id])
+  templateVersion Int
+  contractDate    DateTime            @db.Date
+  fields          Json
+  createdById     Int?
+  createdBy       User?               @relation("ContractDocumentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  signedAt        DateTime?
+  signedById      Int?
+  signedBy        User?               @relation("ContractDocumentSignedBy", fields: [signedById], references: [id], onDelete: SetNull)
+  signMethod      ContractSignMethod?
+  cancelledAt     DateTime?
+  cancelledById   Int?
+  cancelledBy     User?               @relation("ContractDocumentCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  cancelReason    String?
+
+  enrollments Enrollment[]
+
+  @@unique([companyId, number])
+  @@index([studentId])
+  @@index([branchId])
+}
+
 model EmployeeSalaryConfig {
   id         String     @id @default(uuid())
   userId     Int
@@ -2458,6 +2743,9 @@ model UnmarkedLesson {
   rescheduleId     String?
   taskCommentId    String?              @unique
   taskComment      Comment?             @relation("UnmarkedLessonTask", fields: [taskCommentId], references: [id], onDelete: SetNull)
+  /// The «Dars bo'ldimi?» task row (spec 2026-10-07). `taskCommentId` stays until the cleanup PR.
+  taskId           String?              @unique
+  task             Task?                @relation("UnmarkedLessonTaskRow", fields: [taskId], references: [id], onDelete: SetNull)
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
 
@@ -2595,6 +2883,19 @@ model Refund {
   processedBy      User?          @relation("RefundProcessedBy", fields: [processedById], references: [id])
   processedAt      DateTime?
   dueDate          DateTime?
+  // B2b (ADR-0077): a refund is a request until the money is handed over.
+  // `dueDate` above is the 10th bank day after the request, 00:00 Tashkent.
+  requestedById    Int?
+  requestedBy      User?          @relation("RefundRequestedBy", fields: [requestedById], references: [id])
+  handedOverAt     DateTime?
+  handedOverById   Int?
+  handedOverBy     User?          @relation("RefundHandedOverBy", fields: [handedOverById], references: [id])
+  cashAccountId    String?
+  cashAccount      CashAccount?   @relation(fields: [cashAccountId], references: [id])
+  cancelledAt      DateTime?
+  cancelledById    Int?
+  cancelledBy      User?          @relation("RefundCancelledBy", fields: [cancelledById], references: [id])
+  cancelReason     String?
   companyId        Int
   receiptCode      String?        @unique
   createdAt        DateTime       @default(now())
@@ -2607,6 +2908,34 @@ model Refund {
   @@index([enrollmentId])
   @@index([companyId])
   @@index([status])
+}
+
+enum BalanceNoticeChannel {
+  BOT
+  CALL
+}
+
+/// «Pulingizni olib keting» — told to a student who is not studying and has
+/// money on the balance. The latest one given in the student's current state
+/// (`createdAt ≥ Student.statusChangedAt`) starts the clock that unlocks the
+/// transfer to the centre: 10 bank days, then 30 days (ADR-0077).
+model BalanceNotice {
+  id           String               @id @default(uuid())
+  studentId    Int
+  student      Student              @relation(fields: [studentId], references: [id])
+  companyId    Int
+  channel      BalanceNoticeChannel
+  /// The balance at the moment of the notice.
+  amount       Int
+  note         String?
+  /// The SmsMessage row of a BOT notice.
+  smsMessageId String?
+  createdById  Int
+  createdBy    User                 @relation("BalanceNoticeCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime             @default(now())
+
+  @@index([studentId, createdAt])
+  @@index([companyId])
 }
 
 model Expense {
@@ -2797,6 +3126,7 @@ model CashAccount {
   deletedAt DateTime?
 
   movements CashMovement[]
+  refunds   Refund[]
 
   @@index([companyId])
   @@index([branchId])
@@ -3813,4 +4143,45 @@ model AbsenceWarningLog {
   @@unique([enrollmentId, absenceDate])
   @@index([companyId, createdAt])
   @@index([studentId])
+}
+
+/// A bot sign-up waiting for an administrator (ADR-0080). Nothing else is
+/// written until it is approved: no card, no enrollment, no charge, no lead.
+enum StudentJoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  REPLACED
+}
+
+model StudentJoinRequest {
+  id               String                   @id @default(uuid())
+  companyId        Int
+  branchId         Int
+  /// The group the person asked for.
+  groupId          String
+  /// The Telegram chat that asked. One PENDING row per chat: a partial unique
+  /// index written by hand in the migration.
+  chatId           String
+  telegramUsername String?
+  firstName        String
+  lastName         String
+  /// 9 digits, the sender's own contact.
+  phone            String
+  /// R2 URL; null once deleted (rejected, expired, replaced).
+  photo            String?
+  status           StudentJoinRequestStatus @default(PENDING)
+  taskId           String?                  @unique
+  decidedById      Int?
+  decidedAt        DateTime?
+  rejectReason     String?
+  /// Differs from `groupId` when the administrator chose another group.
+  approvedGroupId  String?
+  /// The card the approval wrote.
+  studentId        Int?
+  createdAt        DateTime                 @default(now())
+
+  @@index([status, createdAt])
+  @@index([branchId, status])
 }

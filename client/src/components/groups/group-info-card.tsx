@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { useBranchStatus } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 
@@ -77,17 +77,15 @@ export function GroupInfoCard({
   onStatusChanged,
 }: GroupInfoCardProps) {
   const { openDrawer } = useEditGroup();
-  const user = useAuth((s) => s.user);
   const [showStatus, setShowStatus] = useState(false);
 
   const [latestComment, setLatestComment] = useState<{
     content: string;
-    isTask?: boolean;
     author: { firstName: string; lastName: string } | null;
     createdAt: string;
   } | null>(null);
 
-  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canManage = useCan("groups.manage");
   // The group's own branch, not the header selection: a CEO on "Barcha
   // filiallar" opens groups of every branch.
   const branchClosed = branchClosedToRegistration(
@@ -245,14 +243,6 @@ export function GroupInfoCard({
                       "dd.MM.yyyy, HH:mm",
                     )}
                   </span>
-                  {latestComment.isTask && (
-                    <>
-                      <span>&middot;</span>
-                      <span className="text-amber-600 dark:text-amber-400 font-medium">
-                        Topshiriq
-                      </span>
-                    </>
-                  )}
                 </div>
               </div>
             ) : (

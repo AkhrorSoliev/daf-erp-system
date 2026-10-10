@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import api from "@/lib/api";
 import { downloadAuthedFile } from "@/lib/download-file";
 import {
@@ -31,8 +32,10 @@ export function PaymentStatement({
   onCorrected?: (newBalance: number | null) => void;
 }) {
   const user = useAuth((s) => s.user);
+  // The CEO's 72-hour bypass is identity; whether a correction is offered at all
+  // is the capability.
   const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
-  const canCorrect = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canCorrect = useCan("payments.correct");
 
   const [data, setData] = useState<StatementResponse | null>(null);
   const [failed, setFailed] = useState(false);

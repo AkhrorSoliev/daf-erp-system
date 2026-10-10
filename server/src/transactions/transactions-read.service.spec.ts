@@ -506,6 +506,7 @@ describe('TransactionsReadService', () => {
           id: 't1',
           type: 'PAYMENT',
           enrollmentId: null,
+          reversal: null,
           coverage: null,
           destination: null,
         },
@@ -513,6 +514,64 @@ describe('TransactionsReadService', () => {
       expect(res.total).toBe(1);
       expect(res.page).toBe(2);
       expect(res.pageSize).toBe(5);
+    });
+
+    it('marks both rows of a cancelled pair', async () => {
+      // A lesson charge undone by the monthly switch: the original and its
+      // counter-row are both on the list, and without a mark the original
+      // read as a charge still standing.
+      const ts = (s: string) => new Date(`${s}T10:00:00Z`);
+      const reason = "Bekor qilindi: Oylik to'lovga o'tish migratsiyasi";
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        {
+          id: 'undo',
+          type: 'LESSON_DEDUCTION',
+          amount: 37500,
+          description: reason,
+          enrollmentId: null,
+          reversedAt: null,
+          reversedTransaction: { createdAt: ts('2026-09-18'), amount: -37500 },
+          reversalEntries: [],
+        },
+        {
+          id: 'charge',
+          type: 'LESSON_DEDUCTION',
+          amount: -37500,
+          description: 'Dars uchun yechildi',
+          enrollmentId: null,
+          reversedAt: ts('2026-09-25'),
+          reversedTransaction: null,
+          reversalEntries: [
+            { createdAt: ts('2026-09-25'), description: reason },
+          ],
+        },
+      ]);
+
+      const res = await service.findByStudent(
+        10329,
+        {} as TransactionQueryDto,
+        1001,
+        null,
+      );
+
+      const select = prisma.transaction.findMany.mock.calls[0][0].select;
+      expect(select.reversedAt).toBe(true);
+      expect(select.reversedTransaction).toBeDefined();
+      expect(select.reversalEntries).toBeDefined();
+      expect(res.data.map((r) => r.reversal)).toEqual([
+        {
+          kind: 'undo',
+          originalAt: ts('2026-09-18'),
+          originalAmount: -37500,
+          reason: "Oylik to'lovga o'tish migratsiyasi",
+        },
+        {
+          kind: 'reversed',
+          at: ts('2026-09-25'),
+          reason: "Oylik to'lovga o'tish migratsiyasi",
+        },
+      ]);
+      expect(res.data[1]).not.toHaveProperty('reversalEntries');
     });
   });
 

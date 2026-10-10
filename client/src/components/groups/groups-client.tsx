@@ -23,6 +23,7 @@ import { EditGroupDrawer } from "./edit-group-drawer";
 import { LevelBadge } from "./level-badge";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
 import {
@@ -98,9 +99,13 @@ export function GroupsClient() {
   const [loading, setLoading] = useState(true);
   const { openAddDrawer } = useEditGroup();
   const user = useAuth((s) => s.user);
-  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canManage = useCan("groups.manage");
+  // Identity, not a capability: a teacher who holds none of the management roles
+  // sees only their own groups.
   const isTeacherOnly =
-    (user?.roles.some((r) => r.id === 4) && !canManage) ?? false;
+    (user?.roles.some((r) => r.id === 4) &&
+      !user?.roles.some((r) => [1, 2, 3].includes(r.id))) ??
+    false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const [rooms, setRooms] = useState<RoomOption[]>([]);

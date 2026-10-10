@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { LeadsService } from './leads.service';
+import { leadStatsRange } from './leads-stats.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
@@ -120,7 +121,12 @@ describe('LeadsService', () => {
       expect(prisma.comment.groupBy).toHaveBeenCalledWith(
         expect.objectContaining({
           by: ['entityId'],
-          where: { entityType: 'Lead', entityId: { in: ['lead-1', 'lead-2'] } },
+          where: {
+            entityType: 'Lead',
+            entityId: { in: ['lead-1', 'lead-2'] },
+            // A migrated task is not a comment.
+            isTask: false,
+          },
         }),
       );
       expect(result).toEqual([
@@ -131,6 +137,27 @@ describe('LeadsService', () => {
   });
 
   describe('findAll', () => {
+    it('a stats card lists exactly what the card counts, archived leads included', async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll(
+        { card: 'created', period: 'week', search: 'Ali' },
+        1001,
+        [3],
+      );
+
+      const where = prisma.lead.findMany.mock.calls[0][0].where;
+      expect(where).not.toHaveProperty('deletedAt');
+      expect(where.sectionId).toEqual({ not: null });
+      expect(where.createdAt).toEqual(leadStatsRange('week', new Date()));
+      // The search OR must not replace the branch predicate.
+      expect(where.AND).toEqual([
+        { OR: [{ branchId: { in: [3] } }, { branchId: null }] },
+      ]);
+      expect(where.OR).toBeDefined();
+    });
+
     it('bir nechta bosqich tanlansa `in` bilan filtrlaydi', async () => {
       prisma.lead.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
@@ -287,7 +314,7 @@ describe('LeadsService', () => {
 
       expect(prisma.comment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Lead' },
+          where: { entityType: 'Lead', isTask: false },
           distinct: ['entityId'],
         }),
       );
@@ -1174,7 +1201,6 @@ describe('LeadsService', () => {
       prisma.comment.findFirst.mockResolvedValue({
         content: 'Ertaga qayta qo‘ng‘iroq',
         createdAt: new Date('2026-06-16T11:00:00Z'),
-        isTask: false,
         author: { firstName: 'Dilnoza', lastName: 'Karimova' },
       });
 
@@ -1182,7 +1208,7 @@ describe('LeadsService', () => {
 
       expect(prisma.comment.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Lead', entityId: 'lead-1' },
+          where: { entityType: 'Lead', entityId: 'lead-1', isTask: false },
           orderBy: { createdAt: 'desc' },
         }),
       );
@@ -1191,7 +1217,6 @@ describe('LeadsService', () => {
         expect.objectContaining({
           authorName: 'Dilnoza Karimova',
           content: 'Ertaga qayta qo‘ng‘iroq',
-          isTask: false,
         }),
       );
     });

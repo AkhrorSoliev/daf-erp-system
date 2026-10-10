@@ -20,15 +20,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
-import { useAuth } from "@/hooks/use-auth";
+import { usePublishEntity } from "@/components/tasks/entity-context";
+import { useCan } from "@/hooks/use-permissions";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import { useIsMobile } from "@/hooks/use-mobile";
 import api from "@/lib/api";
 
 export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   const setName = useBreadcrumbName((s) => s.setName);
-  const authUser = useAuth((s) => s.user);
-  const canManageTeachers = authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const canManageTeachers = useCan("teachers.manage");
+  const canSeeSalary = useCan("salary.view");
   const isMobile = useIsMobile();
   const router = useRouter();
   const pathname = usePathname();
@@ -69,6 +70,12 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   useEffect(() => {
     fetchTeacher();
   }, [fetchTeacher]);
+
+  usePublishEntity(
+    "User",
+    teacher ? String(teacher.id) : null,
+    teacher ? `${teacher.firstName} ${teacher.lastName}` : "",
+  );
 
   const handleDelete = () => {
     if (!teacher) return;
@@ -133,7 +140,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
             roles={teacher.roles}
             roleVariant="green"
             isActive={teacher.isActive}
-            salaryDueUserId={canManageTeachers ? teacher.id : undefined}
+            salaryDueUserId={canSeeSalary ? teacher.id : undefined}
             phone={teacher.phone}
             branches={teacher.branches}
             infoItems={mobileInfoItems}

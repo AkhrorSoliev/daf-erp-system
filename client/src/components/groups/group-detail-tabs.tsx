@@ -17,7 +17,8 @@ import { LessonChangesTab } from "./lesson-changes-tab";
 import { GroupAppActivityTab } from "./app-activity/group-app-activity-tab";
 import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
+import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import api from "@/lib/api";
 
 function EmptyState({ message }: { message: string }) {
@@ -37,9 +38,9 @@ interface GroupDetailTabsProps {
 }
 
 export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange, commentFocusKey }: GroupDetailTabsProps) {
-  const user = useAuth((s) => s.user);
-  const canManage =
-    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canChangeLessons = useCan("lessons.change");
+  const canSeeHistory = useCan("groups.manage");
+  const canSeeComments = useCan(["comments.write", "groups.manage"]);
 
   const [students, setStudents] = useState<GroupStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
@@ -171,16 +172,22 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         <TabsTrigger value="ilova">Ilova faolligi</TabsTrigger>
         <TabsTrigger value="materiallar">Materiallar</TabsTrigger>
         <TabsTrigger value="imtihonlar">Imtihonlar</TabsTrigger>
-        {canManage && (
+        {canChangeLessons && (
           <TabsTrigger value="bekor-qilingan">Dars o&apos;zgarishlari</TabsTrigger>
         )}
-        {canManage && <TabsTrigger value="tarix">Tarix</TabsTrigger>}
-        {canManage && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
+        {canSeeHistory && <TabsTrigger value="tarix">Tarix</TabsTrigger>}
+        {canSeeComments && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
         <TabsTrigger value="statistika">Statistika</TabsTrigger>
       </TabsList>
 
       {/* Davomat */}
       <TabsContent value="davomat">
+        <EntityTasksPanel
+          className="mb-4"
+          entityType="Group"
+          entityId={group.id}
+          entityLabel={group.name}
+        />
         {attendanceVisible ? (
           <AttendanceTab group={group} />
         ) : (
@@ -227,7 +234,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       </TabsContent>
 
       {/* Dars o'zgarishlari — bekor qilish + o'rinbosar ustoz (CEO/BD/Admin) */}
-      {canManage && (
+      {canChangeLessons && (
         <TabsContent value="bekor-qilingan">
           {cancellationsVisible ? (
             <LessonChangesTab group={group} />
@@ -238,7 +245,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       )}
 
       {/* Tarix (faqat CEO, BD, Admin) */}
-      {canManage && (
+      {canSeeHistory && (
         <TabsContent value="tarix">
           {historyVisible ? (
             <div className="space-y-6">
@@ -258,7 +265,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       )}
 
       {/* Izohlar (faqat CEO, BD, Admin) */}
-      {canManage && (
+      {canSeeComments && (
         <TabsContent value="izohlar">
           {commentsVisible ? (
             <div className="space-y-4">

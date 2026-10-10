@@ -27,6 +27,7 @@ import { StudentsTable } from "./students-table";
 import { EditStudentDrawer } from "./edit-student-drawer";
 import { AddStudentDialog } from "./add-student-dialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { useBranchStatus, useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
@@ -63,7 +64,7 @@ export function StudentsClient() {
   const [copied, setCopied] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const user = useAuth((s) => s.user);
-  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canManage = useCan("students.manage");
   const isTeacher = user?.roles.every((r) => r.id === 4) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchClosed = branchClosedToRegistration(

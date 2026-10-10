@@ -6,23 +6,21 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { MockExamSubjectsService } from './mock-exam-subjects.service';
 import { CreateMockExamSubjectDto } from './dto/create-mock-exam-subject.dto';
 import { UpdateMockExamSubjectDto } from './dto/update-mock-exam-subject.dto';
 import { ReorderMockExamSubjectsDto } from './dto/reorder-mock-exam-subjects.dto';
-import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller()
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class MockExamSubjectsController {
   constructor(private readonly subjectsService: MockExamSubjectsService) {}
 
   @Get('mock-exams/:examId/subjects')
+  @Can('mock.view')
   list(
     @Param('examId') examId: string,
     @CurrentUser('companyId') companyId: number,
@@ -32,6 +30,7 @@ export class MockExamSubjectsController {
   }
 
   @Post('mock-exams/:examId/subjects')
+  @Can('mock.manage')
   create(
     @Param('examId') examId: string,
     @Body() dto: CreateMockExamSubjectDto,
@@ -49,6 +48,7 @@ export class MockExamSubjectsController {
   }
 
   @Patch('mock-exams/:examId/subjects/reorder')
+  @Can('mock.manage')
   reorder(
     @Param('examId') examId: string,
     @Body() dto: ReorderMockExamSubjectsDto,
@@ -59,6 +59,7 @@ export class MockExamSubjectsController {
   }
 
   @Patch('mock-exam-subjects/:id')
+  @Can('mock.manage')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateMockExamSubjectDto,
@@ -70,6 +71,7 @@ export class MockExamSubjectsController {
   }
 
   @Delete('mock-exam-subjects/:id')
+  @Can('mock.manage')
   remove(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,

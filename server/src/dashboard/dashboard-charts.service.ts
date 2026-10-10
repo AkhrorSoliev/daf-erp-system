@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { ReportsService } from '../reports/reports.service';
 import { RedisService } from '../redis/redis.service';
+import { PermissionsService } from '../common/permissions/permissions.service';
 import {
   addDaysToDateStr,
   addMonthsToMonthKey,
@@ -75,6 +76,7 @@ export class DashboardChartsService {
   constructor(
     private readonly reports: ReportsService,
     private readonly redis: RedisService,
+    private readonly permissions: PermissionsService,
   ) {}
 
   async getCharts(ctx: ChartsContext): Promise<DashboardChartsResponse> {
@@ -82,12 +84,12 @@ export class DashboardChartsService {
       throw new ForbiddenException('Bu filial sizning ruxsatingizda emas');
     }
 
-    const canSeeMoney =
-      ctx.roles.includes('CEO') || ctx.roles.includes('Branch Director');
+    const caller = await this.permissions.forUser(ctx.userId);
+    const canSeeMoney = caller.keys.has('reports.finance');
     // Diagrammalarning manbasi `/reports/*` servislari — ular kassirga ochiq
-    // emas, shuning uchun unga diagramma umuman chizilmaydi.
-    const canSeeOperational =
-      canSeeMoney || ctx.roles.includes('Administrator');
+    // emas, shuning uchun unga diagramma umuman chizilmaydi. Bosh sahifaning
+    // aloqa qatorlari bilan bir xil operatsion daraja.
+    const canSeeOperational = caller.keys.has('outreach.view');
 
     const tier = canSeeMoney ? 'money' : canSeeOperational ? 'ops' : 'none';
     const cacheKey = `dashboard:charts:${ctx.companyId}:${this.branchKey(

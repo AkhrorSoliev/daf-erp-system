@@ -5,7 +5,7 @@ describe("legacyDebtRedirect — old links keep working (spec §2.6)", () => {
   it("sends the old tabs to their new homes", () => {
     expect(legacyDebtRedirect({ tab: "oylik" })).toBe("/payments/debt-history");
     expect(legacyDebtRedirect({ tab: "kechirilgan" })).toBe("/payments/debt-write-offs");
-    expect(legacyDebtRedirect({ tab: "muzlatilgan" })).toBe("/payments/frozen-balances");
+    expect(legacyDebtRedirect({ tab: "muzlatilgan" })).toBe("/payments/refunds?tab=muzlatilgan");
     expect(legacyDebtRedirect({ tab: "markaz" })).toBe("/payments/salary?tab=markaz");
     expect(legacyDebtRedirect({ tab: "markaz", month: "2026-08" })).toBe("/payments/salary?tab=markaz&month=2026-08");
   });

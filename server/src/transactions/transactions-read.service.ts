@@ -23,6 +23,7 @@ import { buildScheduleDayResolver } from '../attendance/shared/schedule-resolver
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { buildHolidayDateSet } from '../holidays/holiday-date-set';
 import { tashkentRangeFilter, tashkentRangeUtc } from '../common/date/tashkent';
+import { REVERSAL_SELECT, withReversal } from './reversal-view';
 
 /**
  * What the "To'lovlar" tab renders under a payment. `reconciled: false` means
@@ -264,6 +265,7 @@ export class TransactionsReadService {
             select: { id: true, firstName: true, lastName: true },
           },
           createdAt: true,
+          ...REVERSAL_SELECT,
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
@@ -284,8 +286,10 @@ export class TransactionsReadService {
       rows,
     );
 
+    // `reversal` tells the list which rows a later cancellation undid and
+    // which rows ARE that cancellation — see `reversal-view.ts`.
     const data = rows.map((r) => ({
-      ...r,
+      ...withReversal(r),
       coverage: coverageMap.get(r.id) ?? null,
       destination: destinationMap.get(r.id) ?? null,
     }));
