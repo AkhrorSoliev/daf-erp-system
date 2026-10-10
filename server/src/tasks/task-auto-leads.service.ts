@@ -38,7 +38,7 @@ const PROMISE_CRON_HOUR = 9;
  * The hourly run of the automatic tasks (spec §7, §9.6), 08:00–18:00
  * Monday–Saturday (Tashkent):
  *  - «Qo'ng'iroqsiz lid»: a task for each NEW lead nobody called for 24 hours,
- *    only for leads created since `Company.uncalledLeadTasksFrom` (ADR-0080);
+ *    only for leads created since `Company.uncalledLeadTasksFrom` (ADR-0083);
  *  - a sweep that closes what events do not: a lead's task once the lead is
  *    called, no longer NEW, archived or converted (a section archived with its
  *    leads sends no event), and the lead/callback/promise tasks of an archived

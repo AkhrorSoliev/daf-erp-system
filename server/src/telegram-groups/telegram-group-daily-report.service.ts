@@ -382,7 +382,7 @@ export class TelegramGroupDailyReportService {
         },
       }),
       // Bot sign-ups no administrator answered for more than a day
-      // (ADR-0080 / spec D10), scoped like the rest of the report.
+      // (ADR-0083 / spec D10), scoped like the rest of the report.
       this.prisma.studentJoinRequest.count({
         where: {
           companyId,
