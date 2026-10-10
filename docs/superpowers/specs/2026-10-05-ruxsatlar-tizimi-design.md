@@ -274,9 +274,9 @@ Har bir tekshiruv qaysi turga kirishi 1-bosqich rejasida jadval qilib yoziladi.
   - menyu elementlari;
   - sahifa qo'riqchilari: `canOpenSettingsPath`, `canOpenReportPath`, `canOpenDafPath`, layout'lar;
   - bosh sahifa bo'limlari (masalan, pul kartalari `payments.view` ga bog'lanadi);
-  - qo'llanma sahifalarining filtri;
   - topshiriq va xabar havolalari (`task-entity-href.ts`, `notification-href.ts`);
   - umumiy qidiruv (o'quvchi, lid yoki o'qituvchi imkoniyatlaridan birortasi bo'lsa ochiladi).
+- Qo'llanma sahifalarining rol filtri o'zgarmaydi: u sahifa kimga yozilganini (auditoriya) bildiradi, ruxsat emas.
 - **Kalit nomlari turi** `client/src/lib/permission-keys.ts` faylida turadi. Bu server katalogining nusxasi, test ikkalasini solishtiradi (`role-grant-ceiling` dagi usul).
 - **Chiqarish tartibi:** avval server, keyin sayt.
 - **«Ruxsatlar» sahifasi** — `/settings/permissions`, `settings-nav.ts` ning CEO bo'limida. Maket suhbatda ma'qullangan. Tarkibi:
@@ -554,3 +554,4 @@ Har bir bosqich uchun alohida ish rejasi yoziladi. Birinchi reja 1-bosqich uchun
   - **Bosqichlar chegarasi:** jadvallar, CEO API'si, `allowedRoles` ko'rigi va `UNREVIEWED` ko'rigi 2-bosqichga o'tdi. 1-bosqichda CEO hech narsani o'zgartira olmaydi, ular faqat 2-bosqichda kerak bo'ladi.
   - **Yo'l nomi:** `GET /auth/permissions` o'rniga `GET /permissions/me` (7.7).
   - **Ataylab o'zgarishlar** ro'yxati tuzildi: 33 ta route (11-bo'lim).
+- 2026-10-10 (reja) — qo'llanmaning rol filtri imkoniyatga o'tmaydi: u auditoriya, ruxsat emas (8-bo'lim).

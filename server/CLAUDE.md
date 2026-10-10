@@ -109,10 +109,10 @@ before it existed).
 - Public routes use `@Public()` decorator to bypass auth
 - Route access is a capability marker (`@Can`, `@AnyStaff`, `@AnyUser`, `@StudentOnly`), never a role list — see «Capabilities, not role lists» under Role-Based Access Control
 - JWT uses **access token (1h)** + **refresh token (24h)** pair
-- **A token keeps the roles it was issued with for its hour.** `JwtStrategy.validate` never re-reads the account, so `@Roles()` and `@CurrentUser()` see the account as it was at sign-in or the last refresh. Two consequences (ADR-0028):
+- **A token's `roles` claim is the account as of sign-in or the last refresh, and is good for its hour.** `JwtStrategy.validate` never re-reads the account, but `PermissionGuard` overwrites `request.user.roles` from the database on every request, so `@CurrentUser()` sees today's roles. Two consequences (ADR-0028):
   - **Code that grants access must read the caller from the database, never trust the token's roles.** Both doors that hand out roles do: the employee form's ceiling and `POST /telegram/employee-link` read the caller through `whereUserMayAct()` (`common/auth/blocked-user.ts`: `deletedAt: null` and not SUSPENDED/TERMINATED/ARCHIVED), so an archived, blocked or demoted caller grants only what the database says, even while Redis is down. The link matters most: a signed link works for three days (ADR-0029), so whatever authority it is minted with lasts that long.
   - **Blocking must cut off the tokens already issued.** `JwtAuthGuard` refuses a token whose account has `user:blocked:<id>` in Redis. Every path that blocks or unblocks an account — a status change or an archive — calls `recordUserBlocked(redis, id, blocked)` after its database write; `UsersService` (employee page) and `TeachersService` (teacher page) do. A new path that skips it leaves the token live for its remaining hour, which is exactly how the employee page went uncovered while only `TeachersService` wrote the key. The key is a cache: the guard lets requests through when Redis is unreachable and confirms every hit against the database, and `recordUserBlocked` logs a Redis failure instead of failing the write.
-  - **A role change takes effect on the next request**: `PermissionGuard` reads the roles from the database (ADR-00NN); the token's own `roles` claim is no longer read by any check.
+  - **A role change takes effect on the next request**: `PermissionGuard` reads the roles from the database (ADR-0077); the token's own `roles` claim is no longer read by any check.
 - `POST /api/auth/login` returns both tokens + user data
 - `POST /api/auth/refresh` refreshes the token pair
 - **Every token carries the account's session version (`sv`, ADR-0030).** `User.sessionVersion` starts at 0. Any write of `User.password` bumps it in the same `update` through `passwordWrite()` (`src/common/auth/session-version.ts`), and `POST /users/logout-others` bumps it without a password. `refresh` refuses a token whose `sv` differs from the database; `JwtAuthGuard` stops an older access token on its next request through the Redis mirror `user:session-version:<id>` (fail-open, confirmed against the database before the 401). A token without `sv` counts as version 0. `password-write.single-source.spec.ts` fails on a raw `password` write anywhere but account creation.
@@ -214,7 +214,7 @@ The system uses **subdomain-based portals** — each subdomain restricts login t
 
 **CRITICAL: The backend is the real security boundary.** Frontend UI restrictions (hidden pages, disabled buttons) can be bypassed by calling the API directly. Every feature that is restricted to specific roles **must** be refused by its backend endpoint through a capability marker (below) — this is non-negotiable. The frontend hides the matching page, link, button or tab, and **both layers must always be in sync**: a page hidden on the frontend must be refused by the backend, and vice versa. This applies to **all roles** — not just teachers.
 
-#### Capabilities, not role lists (ADR-00NN)
+#### Capabilities, not role lists (ADR-0077)
 
 - **Every route declares who may call it with exactly one marker** from `common/permissions/access.decorators.ts`: `@Can('key', …)` (any of the listed capabilities), `@AnyStaff()` (roles 1–5: reference lists, own data, tasks), `@AnyUser()` (any signed-in account, own data) or `@StudentOnly()` (the student portal) — or `@Public()`. `PermissionGuard` (global, after `JwtAuthGuard`, before `BranchScopeGuard`) refuses a route with none, and the manifest in `permission-routes.spec.ts` fails the build on it. There is no `@Roles` any more.
 - **The capability catalog is `common/permissions/permission-catalog.ts`** — 64 capabilities with their Uzbek labels and the roles that hold them by default. The CEO holds every capability. A new screen action either reuses a capability or adds one there (label, section, default roles, `requires`).
@@ -238,7 +238,7 @@ The system uses **subdomain-based portals** — each subdomain restricts login t
 do. A cleaner or a guard has a position and **no role at all**, which is the
 only way to put them on payroll without handing them a permission to describe
 their job. Do not add permission-less rows to the `Role` table to solve this:
-role ids and names are read by `@Roles()` guards, `portal-roles.config.ts`,
+role ids and names are read by the capability catalog's default roles, `portal-roles.config.ts`,
 `GRANTABLE_ROLE_IDS` and payroll filters, and any one of them forgetting to
 exclude the new row would silently grant access.
 
