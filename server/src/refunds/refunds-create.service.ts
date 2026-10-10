@@ -221,7 +221,13 @@ export class RefundsCreateService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
-    this.announce(refund.refundRow.id, dto.studentId, userId, companyId);
+    // After the commit, never inside the transaction: the student is told.
+    this.events.emit(REFUND_REQUESTED_EVENT, {
+      refundId: refund.refundRow.id,
+      studentId: dto.studentId,
+      companyId,
+      performedById: userId,
+    } satisfies RefundEventPayload);
 
     const balanceAfter = student.balance + refund.releasedAmount - dto.amount;
     await this.entityHistoryService.recordStatusChange({
@@ -346,7 +352,12 @@ export class RefundsCreateService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
-    this.announce(refundRow.id, dto.studentId, userId, companyId);
+    this.events.emit(REFUND_REQUESTED_EVENT, {
+      refundId: refundRow.id,
+      studentId: dto.studentId,
+      companyId,
+      performedById: userId,
+    } satisfies RefundEventPayload);
 
     const balanceAfter = student.balance - dto.amount;
     await this.entityHistoryService.recordStatusChange({
@@ -367,22 +378,6 @@ export class RefundsCreateService {
     });
 
     return refundView(refundRow);
-  }
-
-  /** After the commit: the student's message waits for it (never emitted inside the transaction). */
-  private announce(
-    refundId: string,
-    studentId: number,
-    performedById: number,
-    companyId: number,
-  ) {
-    const payload: RefundEventPayload = {
-      refundId,
-      studentId,
-      companyId,
-      performedById,
-    };
-    this.events.emit(REFUND_REQUESTED_EVENT, payload);
   }
 
   // -- helpers ---------------------------------------------------------------

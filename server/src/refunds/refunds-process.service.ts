@@ -141,13 +141,13 @@ export class RefundsProcessService {
         return updated;
       }, TX)
       .catch(rethrowAsConflict);
-    this.announce(
-      REFUND_HANDED_OVER_EVENT,
-      id,
-      refund.studentId,
-      userId,
+    // After the commit, never inside the transaction: the student is told.
+    this.events.emit(REFUND_HANDED_OVER_EVENT, {
+      refundId: id,
+      studentId: refund.studentId,
       companyId,
-    );
+      performedById: userId,
+    } satisfies RefundEventPayload);
     return refundView(saved);
   }
 
@@ -198,13 +198,13 @@ export class RefundsProcessService {
         return updated;
       }, TX)
       .catch(rethrowAsConflict);
-    this.announce(
-      REFUND_CANCELLED_EVENT,
-      id,
-      refund.studentId,
-      userId,
+    // After the commit, never inside the transaction: the student is told.
+    this.events.emit(REFUND_CANCELLED_EVENT, {
+      refundId: id,
+      studentId: refund.studentId,
       companyId,
-    );
+      performedById: userId,
+    } satisfies RefundEventPayload);
     return refundView(saved);
   }
 
@@ -262,23 +262,6 @@ export class RefundsProcessService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
-  }
-
-  /** After the commit: the student's message waits for it (never emitted inside the transaction). */
-  private announce(
-    event: string,
-    refundId: string,
-    studentId: number,
-    performedById: number,
-    companyId: number,
-  ) {
-    const payload: RefundEventPayload = {
-      refundId,
-      studentId,
-      companyId,
-      performedById,
-    };
-    this.events.emit(event, payload);
   }
 
   /** The refund, company-confined, and the caller's right to move its student's money. */
