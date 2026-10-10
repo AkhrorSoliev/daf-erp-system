@@ -5,6 +5,7 @@ import {
   type MaterialDialog,
   type MaterialDialogZeile,
 } from './frage.types';
+import type { MediaUrlResolver } from './wort-fragen';
 
 /** Savol qurish uchun dialogda kamida shuncha satr bo'lishi shart. */
 const MIN_ZEILEN = 4;
@@ -100,6 +101,8 @@ export function dialogLuecke(
   dialog: MaterialDialog,
   andere: MaterialDialogZeile[],
   rnd: () => number,
+  // Optional: the media admin preview builds this question without one.
+  mediaUrl: MediaUrlResolver = () => null,
 ): Frage | null {
   if (dialog.zeilen.length < MIN_ZEILEN) return null;
 
@@ -171,5 +174,7 @@ export function dialogLuecke(
     // qisqa nomni ko'rsatadi — qarang `frage.types.ts`dagi `titel` izohi.
     titel: dialog.titelDe,
     audioUrl: null,
+    // The dialog's picture, shown above it; never the raw key.
+    bildUrl: dialog.imageKey ? mediaUrl(dialog.imageKey) : null,
   };
 }

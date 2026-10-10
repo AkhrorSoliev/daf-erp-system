@@ -45,7 +45,7 @@ import { harakat, koersatma } from "./koersatma";
 import { OvozTugmasi } from "./ovoz-tugmasi";
 import { PastkiPanel } from "./pastki-panel";
 import { Tanlash } from "./tanlash";
-import { RasmTanlash, SavolRasmi } from "./rasm-tanlash";
+import { RasmTanlash, SavolRasmi, SuhbatRasmi } from "./rasm-tanlash";
 import { rasmlarniOldindanYukla } from "./rasm-oldindan";
 import { JavobPaneli } from "./javob-paneli";
 import { DeWort } from "./de-wort";
@@ -914,13 +914,17 @@ export function SeansEkrani(props: SeansEkraniProps) {
         ) : frage.audioUrl ? (
           <OvozTugmasi url={frage.audioUrl} autoPlay />
         ) : null}
-        {/* `BILD_TIPPEN`: the picture is the question (`prompt` is empty). */}
-        {frage.bildUrl ? <SavolRasmi url={frage.bildUrl} /> : null}
+        {/* `BILD_TIPPEN`: the picture is the question (`prompt` is empty).
+            `DIALOG_LUECKE` draws its story picture above the dialog below. */}
+        {frage.bildUrl && frage.format !== "DIALOG_LUECKE" ? <SavolRasmi url={frage.bildUrl} /> : null}
         {frage.format === "DIALOG_LUECKE" ? (
           // Butun suhbat ekranda — savol matni o'rniga (dizayn D7 / brief §5):
           // server `prompt`ni tayyor satr qilib yuboradi, mijoz uni faqat
           // chiroyli chizadi.
-          <DialogBlok matn={frage.prompt} />
+          <>
+            {frage.bildUrl ? <SuhbatRasmi url={frage.bildUrl} alt={frage.titel ?? "Suhbat rasmi"} /> : null}
+            <DialogBlok matn={frage.prompt} />
+          </>
         ) : frage.prompt ? (
           <p className="text-2xl font-bold text-ink-900 sm:text-3xl">
             <DeWort text={frage.prompt} />
@@ -992,7 +996,12 @@ export function SeansEkrani(props: SeansEkraniProps) {
           />
         )}
         {natija?.transkript ? (
-          <TranskriptBlok zeilen={natija.transkript} sahna={natija.transkriptSahna} />
+          <TranskriptBlok
+            zeilen={natija.transkript}
+            sahna={natija.transkriptSahna}
+            bild={natija.transkriptBild}
+            titel={natija.transkriptTitel}
+          />
         ) : null}
       </main>
 

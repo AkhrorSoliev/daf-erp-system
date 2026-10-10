@@ -96,6 +96,12 @@ export interface MaterialDialog {
   sectionCode: string;
   /** Butun suhbatning R2 kaliti; `null` — ovoz yo'q, eshitish savoli qurilmaydi. */
   audioKey: string | null;
+  /**
+   * R2 key of the one picture that shows the whole story; absent or `null`
+   * — no picture. Sent with `DIALOG_LUECKE` (`bildUrl`), and with a
+   * `HOEREN_WAHL` only after the answer (`transkriptBild`).
+   */
+  imageKey?: string | null;
   fragen: MaterialHoerFrage[];
 }
 
@@ -150,8 +156,10 @@ export interface Frage {
    */
   audioUrl: string | null;
   /**
-   * `BILD_TIPPEN` only: the picture shown as the question. Choice formats
-   * (`BILD_WORT`, `AUDIO_BILD`) carry their pictures in `options` instead.
+   * The picture shown with the question: the question itself in
+   * `BILD_TIPPEN`, the dialog's picture above a `DIALOG_LUECKE`. Choice
+   * formats (`BILD_WORT`, `AUDIO_BILD`) carry their pictures in `options`
+   * instead. Never set on `HOEREN_WAHL`: the picture would show answers.
    */
   bildUrl?: string | null;
 }
@@ -174,7 +182,7 @@ export interface PublicFrage {
   titel?: string | null;
   /** `Frage.audioUrl` bilan bir xil — qarang yuqorida. */
   audioUrl: string | null;
-  /** `Frage.bildUrl` — the picture of a `BILD_TIPPEN` question. */
+  /** `Frage.bildUrl` — the picture shown with the question. */
   bildUrl?: string | null;
 }
 

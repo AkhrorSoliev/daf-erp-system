@@ -41,6 +41,11 @@ export interface InhaltFiles {
   bilder?: BildManifest;
   /** `content/daf/a1/bild-plan.json` — the `tippen` flag per word. */
   bildPlan?: BildPlan;
+  /**
+   * `content/daf/a1/dialog-bilder.json` — one picture per dialog; optional
+   * like `audio`. A dialog missing from it gets `imageKey: null`.
+   */
+  dialogBilder?: BildManifest;
 }
 
 export interface InhaltSeedReport {
@@ -272,6 +277,7 @@ export class InhaltSeedService {
         titelUz: d.titelUz,
         sahnaUz: d.sahnaUz ?? null,
         audioKey: files.dialogAudio?.[d.id]?.key ?? null,
+        imageKey: bildSchluesselFuer(files.dialogBilder ?? {}, d.id),
       };
       const row = await this.prisma.dafDialog.upsert({
         where: { code: d.id },

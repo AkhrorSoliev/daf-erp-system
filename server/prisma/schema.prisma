@@ -3415,6 +3415,10 @@ model DafDialog {
   /// satrma-satr emas. `null` — ovoz hali yasalmagan, eshitish savoli
   /// qurilmaydi. Manba — `content/daf/a1/dialog-audio.json`.
   audioKey  String?
+  /// Butun hikoyani ko'rsatadigan bitta rasm — tasodifiy R2 kaliti
+  /// (`daf/bild/<hex>.jpg`). `null` — rasm yo'q. Manba —
+  /// `content/daf/a1/dialog-bilder.json`.
+  imageKey  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

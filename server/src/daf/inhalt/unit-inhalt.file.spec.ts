@@ -34,6 +34,7 @@ import { validateDialogAudio, type DialogAudioManifest } from './dialog-audio';
 import { validateSatzAudio, type SatzAudioManifest } from './satz-audio';
 import { bildPlanFuerUnit, validateBildPlan, type BildPlan } from './bild-plan';
 import type { BildManifest } from '../media/bild-keys';
+import { validateDialogBilder } from './dialog-bilder';
 
 const A1 = join(__dirname, '..', '..', '..', 'content', 'daf', 'a1');
 const read = <T>(...p: string[]): T =>
@@ -263,6 +264,22 @@ describe.each(UNITS)('%s — so`zlar', (unit) => {
     expect(
       validateBildPlan(bildPlanFuerUnit(plan, unit), woerter.woerter, bilder),
     ).toEqual([]);
+  });
+});
+
+describe('dialog rasmlari', () => {
+  it('manifest kalitlari — mavjud dialoglar, qiymati daf/bild/<hex>.jpg', () => {
+    const dialogIds = new Set(
+      UNITS.flatMap((unit) =>
+        readOrEmpty<DialogeFile>(
+          { unit, dialoge: [] },
+          unit,
+          'dialoge.json',
+        ).dialoge.map((d) => d.id),
+      ),
+    );
+    const manifest = readOrEmpty<BildManifest>({}, 'dialog-bilder.json');
+    expect(validateDialogBilder(manifest, dialogIds)).toEqual([]);
   });
 });
 

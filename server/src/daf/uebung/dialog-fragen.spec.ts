@@ -288,3 +288,23 @@ describe('dialogLuecke — stage notes (u04)', () => {
     expect(f.prompt.split('\n')[0]).toBe('Jonas: Hallo! Bist du Mia?');
   });
 });
+
+describe('dialogLuecke — dialog picture', () => {
+  const mediaUrl = (key: string) => `https://r2.example/${key}`;
+  const mitBild: MaterialDialog = { ...dialog, imageKey: 'daf/bild/abc.jpg' };
+
+  it('carries the picture URL, shown above the dialog', () => {
+    const f = dialogLuecke(mitBild, andere, rndId, mediaUrl)!;
+    expect(f.bildUrl).toBe('https://r2.example/daf/bild/abc.jpg');
+  });
+
+  it('no key — no picture', () => {
+    expect(dialogLuecke(dialog, andere, rndId, mediaUrl)!.bildUrl).toBeNull();
+  });
+
+  it('no R2 base — no picture, never the raw key', () => {
+    const f = dialogLuecke(mitBild, andere, rndId, () => null)!;
+    expect(f.bildUrl).toBeNull();
+    expect(JSON.stringify(f)).not.toContain('daf/bild/abc.jpg');
+  });
+});

@@ -71,6 +71,7 @@ async function main(): Promise<void> {
   const bilder = readOptional<BildManifest>('bilder.json');
   const satzAudio = readOptional<SatzAudioManifest>('satz-audio.json');
   const bildPlan = readOptional<BildPlan>('bild-plan.json');
+  const dialogBilder = readOptional<BildManifest>('dialog-bilder.json');
 
   const files = {
     woerter: read<WoerterFile>('woerter.json'),
@@ -83,6 +84,7 @@ async function main(): Promise<void> {
     satzAudio,
     bilder,
     bildPlan,
+    dialogBilder,
   };
 
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });

@@ -28,6 +28,7 @@ import {
   type BildPlan,
 } from '../src/daf/inhalt/bild-plan';
 import type { BildManifest } from '../src/daf/media/bild-keys';
+import { validateDialogBilder } from '../src/daf/inhalt/dialog-bilder';
 import {
   sectionsInCourseOrder,
   knownWordsBySection,
@@ -154,6 +155,25 @@ function main(): void {
       ? read<DialogAudioManifest>('dialog-audio.json')
       : {};
     problems.push(...validateDialogAudio(dialoge.dialoge, manifest));
+
+    // The picture manifest is shared by all units: check it against the
+    // dialogs of every written unit.
+    if (existsSync(join(A1, 'dialog-bilder.json'))) {
+      const dialogIds = new Set(
+        kurs.units
+          .map((u) => u.code)
+          .filter((c) => existsSync(join(A1, c, 'dialoge.json')))
+          .flatMap((c) =>
+            read<DialogeFile>(c, 'dialoge.json').dialoge.map((d) => d.id),
+          ),
+      );
+      problems.push(
+        ...validateDialogBilder(
+          read<BildManifest>('dialog-bilder.json'),
+          dialogIds,
+        ),
+      );
+    }
   }
 
   const saetzePath = join(A1, code, 'saetze.json');

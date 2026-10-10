@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { SuhbatRasmi } from "./rasm-tanlash";
 
 /**
  * Javobdan KEYIN ochiladigan suhbat matni — o'quvchi nimani
@@ -22,9 +23,15 @@ import * as React from "react";
 export function TranskriptBlok({
   zeilen,
   sahna,
+  bild,
+  titel,
 }: {
   zeilen: Array<{ sprecher: string; de: string; uz: string; izohUz?: string | null }>;
   sahna?: string | null;
+  /** The dialog's story picture — sent only with the answer, never the question. */
+  bild?: string | null;
+  /** The dialog's title: the picture's `alt`. */
+  titel?: string;
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null);
 
@@ -45,6 +52,7 @@ export function TranskriptBlok({
       ref={ref}
       className="scroll-mb-48 space-y-2 rounded-2xl border border-line bg-surface p-4"
     >
+      {bild ? <SuhbatRasmi url={bild} alt={titel || "Suhbat rasmi"} /> : null}
       <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
         Suhbat matni
       </p>

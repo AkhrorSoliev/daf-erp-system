@@ -51,8 +51,9 @@ export interface PublicFrage {
    */
   audioUrl: string | null;
   /**
-   * `BILD_TIPPEN` only: the picture asked about. The picture choices
-   * (`BILD_WORT`, `AUDIO_BILD`) carry their pictures in `options`.
+   * The picture shown with the question: the one asked about in
+   * `BILD_TIPPEN`, the dialog's story picture above a `DIALOG_LUECKE`. The
+   * picture choices (`BILD_WORT`, `AUDIO_BILD`) carry theirs in `options`.
    */
   bildUrl?: string | null;
 }
@@ -69,6 +70,13 @@ export interface PruefErgebnis {
   transkript?: Array<{ sprecher: string; de: string; uz: string; izohUz?: string | null }>;
   /** `transkript` bilan birga: suhbat sahnasi (o'zbekcha). */
   transkriptSahna?: string | null;
+  /**
+   * With `transkript`: the dialog's story picture. Only after the answer —
+   * with the question it would show answers like «Was kauft Mia?».
+   */
+  transkriptBild?: string | null;
+  /** With `transkript`: the dialog's title, the picture's `alt`. */
+  transkriptTitel?: string;
   /**
    * Picture formats only: the word itself ("der Bahnhof"), sent after the
    * answer. For a picture choice `richtig` is a picture URL, so this is

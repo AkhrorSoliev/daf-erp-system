@@ -228,6 +228,14 @@ export interface PruefenErgebnis {
   /** `transkript` bilan birga: suhbat sahnasi (o'zbekcha), yo'q bo'lsa `null`. */
   transkriptSahna?: string | null;
   /**
+   * With `transkript`: the dialog's picture URL, `null` when there is none.
+   * Only after the answer — with the question it would show answers like
+   * «Was kauft Mia?».
+   */
+  transkriptBild?: string | null;
+  /** With `transkript`: the dialog's title (the picture's `alt`). */
+  transkriptTitel?: string;
+  /**
    * Picture formats only: the word itself ("der Bahnhof"), sent after the
    * answer so the student learns what was heard or shown.
    */
@@ -937,6 +945,7 @@ export class UebungService {
         izohUz?: string | null;
       }>;
       audioKey: string | null;
+      imageKey?: string | null;
       fragen: Array<{
         id: number;
         frageDe: string;
@@ -977,6 +986,7 @@ export class UebungService {
         izohUz: z.izohUz ?? null,
       })),
       audioKey: d.audioKey,
+      imageKey: d.imageKey ?? null,
       fragen: d.fragen.map((f) => ({
         id: f.id,
         frageDe: f.frageDe,
@@ -1115,7 +1125,9 @@ export class UebungService {
       const andereZeilen = dialoge
         .filter((o) => o.id !== d.id)
         .flatMap((o) => o.zeilen);
-      const dl = dialogLuecke(d, andereZeilen, rnd);
+      const dl = dialogLuecke(d, andereZeilen, rnd, (key) =>
+        this.mediaUrl(key),
+      );
       if (dl) rohKandidaten.push(dl);
     }
 
@@ -1530,14 +1542,18 @@ export class UebungService {
       const d = (await this.prisma.dafDialog.findUnique({
         where: { id: material.dialogId },
         select: {
+          titelDe: true,
           sahnaUz: true,
+          imageKey: true,
           zeilen: {
             orderBy: { order: 'asc' },
             select: { sprecher: true, de: true, uz: true, izohUz: true },
           },
         },
       } as any)) as {
+        titelDe: string;
         sahnaUz: string | null;
+        imageKey: string | null;
         zeilen: TranskriptZeile[];
       } | null;
       return {
@@ -1545,6 +1561,8 @@ export class UebungService {
         richtig,
         transkript: d?.zeilen ?? [],
         transkriptSahna: d?.sahnaUz ?? null,
+        transkriptBild: d?.imageKey ? this.mediaUrl(d.imageKey) : null,
+        transkriptTitel: d?.titelDe ?? '',
       };
     }
     return {
