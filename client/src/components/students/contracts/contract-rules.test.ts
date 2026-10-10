@@ -85,7 +85,7 @@ describe("customer drafts", () => {
     });
   });
 
-  it("reuses what the last contract had for the same kind", () => {
+  it("takes the profile first and fills the rest from the last contract", () => {
     const p = prefill({
       lastCustomer: {
         kind: "PARENT",
@@ -102,9 +102,14 @@ describe("customer drafts", () => {
     expect(initialKind(p)).toBe("PARENT");
     expect(customerDraft("PARENT", p)).toMatchObject({
       passport: "AB1234567",
-      address: "Namangan, Uychi 5",
+      address: "Namangan",
       birthDate: "1980-03-04",
     });
+    const noAddress = prefill({
+      student: { ...prefill().student, address: null },
+      lastCustomer: p.lastCustomer,
+    });
+    expect(customerDraft("PARENT", noAddress).address).toBe("Namangan, Uychi 5");
   });
 });
 

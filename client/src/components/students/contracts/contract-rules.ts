@@ -118,15 +118,21 @@ export function customerDraft(kind: CustomerKind, prefill: ContractPrefill): Cus
         };
   const last = prefill.lastCustomer;
   if (!last || last.kind !== kind) return base;
+  // The profile is the source for what it holds (CEO, 10.10.2026): the last
+  // contract fills only what the profile lacks. A guardian or another
+  // customer has no profile fields of their own.
+  const profileFirst = kind === "SELF" || kind === "PARENT";
+  const pick = (fromProfile: string, fromLast: string | null) =>
+    profileFirst ? fromProfile || text(fromLast) : text(fromLast) || fromProfile;
   return {
     kind,
     kindOther: text(last.kindOther),
-    fullName: kind === "SELF" ? base.fullName : last.fullName || base.fullName,
+    fullName: kind === "SELF" ? base.fullName : pick(base.fullName, last.fullName),
     birthDate: kind === "SELF" ? base.birthDate : text(last.birthDate),
-    passport: text(last.passport) || base.passport,
-    address: text(last.address) || base.address,
-    phone: text(last.phone) || base.phone,
-    telegram: text(last.telegram) || base.telegram,
+    passport: pick(base.passport, last.passport),
+    address: pick(base.address, last.address),
+    phone: pick(base.phone, last.phone),
+    telegram: pick(base.telegram, last.telegram),
     email: text(last.email),
   };
 }
@@ -200,6 +206,8 @@ export function createBody(input: {
   birthDate: string;
   customer: CustomerDraft;
   courses: Record<string, CourseDraft>;
+  /** Profile fields the admin chose to update (`profileUpdatesBody`). */
+  profileUpdates?: string[];
 }) {
   return {
     studentId: input.studentId,
@@ -207,14 +215,20 @@ export function createBody(input: {
     studentBirthDate: opt(input.birthDate),
     customer: customerBody(input.customer),
     courses: input.enrollmentIds.map((id) => courseBody(id, input.courses[id])),
+    profileUpdates: input.profileUpdates?.length ? input.profileUpdates : undefined,
   };
 }
 
 /** Body of `PATCH /contract-documents/:id` — the whole customer and every course. */
-export function updateBody(customer: CustomerDraft, courses: Record<string, CourseDraft>) {
+export function updateBody(
+  customer: CustomerDraft,
+  courses: Record<string, CourseDraft>,
+  profileUpdates: string[] = [],
+) {
   return {
     customer: customerBody(customer),
     courses: Object.entries(courses).map(([id, d]) => courseBody(id, d)),
+    profileUpdates: profileUpdates.length ? profileUpdates : undefined,
   };
 }
 
@@ -226,6 +240,8 @@ export function formProblem(input: {
   customer: CustomerDraft;
   minor: boolean | null;
   branchMissing?: string[];
+  /** Differences with the profile not settled yet (`contract-profile.ts`). */
+  unsettledProfile?: number;
 }): string | null {
   if (input.branchMissing && input.branchMissing.length > 0) {
     return `Filial sozlamasida ${input.branchMissing.join(", ")} kiritilmagan`;
@@ -238,6 +254,9 @@ export function formProblem(input: {
   if (!input.customer.fullName.trim()) return "Buyurtmachining F.I.O. sini kiriting";
   if (input.customer.kind === "OTHER" && !input.customer.kindOther.trim()) {
     return "Vakillik asosini yozing";
+  }
+  if (input.unsettledProfile && input.unsettledProfile > 0) {
+    return "Profildagi ma'lumot bilan farqni hal qiling";
   }
   return null;
 }
