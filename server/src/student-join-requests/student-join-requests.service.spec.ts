@@ -202,6 +202,24 @@ describe('StudentJoinRequestsService.create', () => {
     });
   });
 
+  it('keeps a photo the new request reuses (a confirmation sent again)', async () => {
+    const { tx, upload, events, service } = setup();
+    tx.studentJoinRequest.findFirst.mockResolvedValue({
+      id: 'r0',
+      companyId: 1001,
+      taskId: 't0',
+      photo: INPUT.photo,
+    });
+
+    await service.create(INPUT);
+
+    expect(upload.deleteFile).not.toHaveBeenCalled();
+    expect(events.emit).toHaveBeenCalledWith(JOIN_REQUEST_CLOSED, {
+      companyId: 1001,
+      taskId: 't0',
+    });
+  });
+
   it('still writes the request when nobody can take the task', async () => {
     const { tx, events, service } = setup();
     createTask.mockResolvedValue(null);

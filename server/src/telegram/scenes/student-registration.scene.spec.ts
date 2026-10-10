@@ -478,6 +478,12 @@ describe('student-registration.scene — what the branch link offers', () => {
         }),
       }),
     );
+    // Spec §10: an inactive teacher is not listed.
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ isActive: true, status: 'ACTIVE' }),
+      }),
+    );
   });
 
   it('refuses a picked group that no longer takes students', async () => {

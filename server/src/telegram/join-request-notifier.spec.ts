@@ -71,4 +71,25 @@ describe('JoinRequestNotifier', () => {
     };
     expect(await notifier(telegram).send(MESSAGE)).toBe(false);
   });
+
+  it('never writes the message text to the log — the approval carries the password', async () => {
+    const password = 'Zx9-fake-Pq';
+    const telegram = {
+      sendPhoto: jest.fn().mockRejectedValue(new Error('photo failed')),
+      sendMessage: jest.fn().mockRejectedValue(new Error('403: Forbidden')),
+    };
+    const n = notifier(telegram);
+    const logger = (n as any).logger as { warn: jest.Mock; error: jest.Mock };
+
+    await n.send({ ...MESSAGE, text: `🔑 Parol: <b>${password}</b>` });
+
+    expect(logger.warn).toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalledWith(
+      expect.stringContaining(password),
+    );
+    expect(logger.error).not.toHaveBeenCalledWith(
+      expect.stringContaining(password),
+    );
+  });
 });

@@ -168,7 +168,14 @@ export class StudentJoinRequestsService {
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
 
-    if (replaced) await closeAfterCommit(this.upload, this.events, replaced);
+    // A re-sent confirmation can carry the same photo the new row now holds:
+    // only the bell rows close then.
+    if (replaced) {
+      await closeAfterCommit(this.upload, this.events, {
+        ...replaced,
+        photo: replaced.photo === input.photo ? null : replaced.photo,
+      });
+    }
     if (task) {
       this.events.emit(TASK_EVENTS.ASSIGNED, {
         task: task.eventTask,
