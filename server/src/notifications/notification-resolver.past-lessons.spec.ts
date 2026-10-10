@@ -85,7 +85,11 @@ describe('NotificationResolverService (past lesson alerts)', () => {
       expect(flat).toContain('n."type"::text IN (?,?,?,?,?)');
       // strictly before today (Tashkent), so today's alerts stay
       expect(flat).toContain(
-        `split_part(n."groupKey", ':', 2)::date < ?::date`,
+        `split_part(n."groupKey", ':', 2)::date END) < ?::date`,
+      );
+      // a key of another shape reads as NULL instead of failing the cast
+      expect(flat).toContain(
+        `CASE WHEN n."groupKey" ~ '^[A-Z_]+:[0-9]{4}-[0-9]{2}-[0-9]{2}$'`,
       );
       // that group-day's question, still PENDING, keeps them while the group lives
       expect(flat).toContain('NOT EXISTS');
@@ -93,7 +97,7 @@ describe('NotificationResolverService (past lesson alerts)', () => {
         'FROM "UnmarkedLesson" u JOIN "Group" g ON g."id" = u."groupId"',
       );
       expect(flat).toContain(
-        `u."groupId" = n."relatedEntityId" AND u."date" = split_part(n."groupKey", ':', 2)::date`,
+        `u."groupId" = n."relatedEntityId" AND u."date" = (CASE WHEN n."groupKey"`,
       );
       expect(flat).toContain(
         `u."status" = 'PENDING' AND g."deletedAt" IS NULL`,

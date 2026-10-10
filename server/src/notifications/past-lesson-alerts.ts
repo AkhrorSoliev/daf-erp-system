@@ -1,8 +1,13 @@
 import { Prisma } from '@prisma/client';
 import { LESSON_ALERT_TYPES } from './notification-kind';
 
-/** The lesson's day rides in the key: `<TYPE>:<YYYY-MM-DD>` (notification-kind.ts). */
-export const lessonDay = Prisma.sql`split_part(n."groupKey", ':', 2)::date`;
+/**
+ * The lesson's day rides in the key: `<TYPE>:<YYYY-MM-DD>` (notification-kind.ts).
+ * A key of any other shape reads as NULL (matches nothing) instead of failing
+ * the cast and with it the whole 03:00 sweep; CASE fixes the evaluation order.
+ */
+export const lessonDay = Prisma.sql`(CASE WHEN n."groupKey" ~ '^[A-Z_]+:[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  THEN split_part(n."groupKey", ':', 2)::date END)`;
 
 /**
  * SQL over `"Notification" n`, the ONE definition of a lesson alert nothing
