@@ -4,8 +4,6 @@ import { meetsOn } from '../attendance/shared/ended-lessons';
 import { buildScheduleDayResolver } from '../attendance/shared/schedule-resolver';
 import { dayOfWeekForDateStr } from '../common/date/tashkent';
 
-type Db = Pick<Prisma.TransactionClient, 'unmarkedLesson' | 'user'>;
-
 /** The lesson still waiting for «Dars bo'ldimi?», or 404. */
 export async function findPendingUnmarkedLesson(
   db: Pick<Prisma.TransactionClient, 'unmarkedLesson'>,
@@ -92,17 +90,25 @@ export async function noLessonScheduled(
   return movedHere === null;
 }
 
+/** «Bu darsga X javob bermoqda» — the lesson's wording of the 409. */
+const lessonTaken = (holder: string | null) =>
+  holder
+    ? `Bu darsga ${holder} javob bermoqda`
+    : 'Bu darsga boshqa administrator javob bermoqda';
+
 /**
  * Once an administrator has taken the lesson's task, the other
  * administrators leave it to them; directors and the CEO can always answer
  * (spec §3.3). The roles come from the caller's token — this only ever
- * narrows who may act, it grants nothing.
+ * narrows who may act, it grants nothing. A join request (ADR-0080) shares
+ * the rule with its own `taken` wording.
  */
 export async function assertMayAnswer(
-  db: Db,
+  db: Pick<Prisma.TransactionClient, 'user'>,
   row: { claimedById: number | null },
   userId: number,
   roles: string[],
+  taken: (holder: string | null) => string = lessonTaken,
 ): Promise<void> {
   if (row.claimedById === null || row.claimedById === userId) return;
   if (roles.includes('CEO') || roles.includes('Branch Director')) return;
@@ -111,8 +117,6 @@ export async function assertMayAnswer(
     select: { firstName: true, lastName: true },
   });
   throw new ConflictException(
-    holder
-      ? `Bu darsga ${holder.firstName} ${holder.lastName} javob bermoqda`
-      : 'Bu darsga boshqa administrator javob bermoqda',
+    taken(holder ? `${holder.firstName} ${holder.lastName}` : null),
   );
 }

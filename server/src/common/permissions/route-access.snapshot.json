@@ -1065,6 +1065,11 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /student-join-requests/by-task/:taskId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /student-portal/attendance/history": [
     "Student"
   ],
@@ -1900,6 +1905,16 @@
     "CEO"
   ],
   "POST /student-exit-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /student-join-requests/:id/approve": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /student-join-requests/:id/reject": [
     "Administrator",
     "Branch Director",
     "CEO"

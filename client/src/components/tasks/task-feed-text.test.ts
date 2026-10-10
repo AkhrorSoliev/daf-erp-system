@@ -47,6 +47,13 @@ describe("describeEvent", () => {
     expect(line({ type: "AUTO_CLOSED", actorId: null, actor: null, meta: { reason: "GROUP_DELETED" } })).toBe("Tizim yopdi (guruh o'chirildi)");
   });
 
+  it("names a join request's outcome, never a lesson answer", () => {
+    expect(line({ type: "AUTO_CLOSED", meta: { reason: "JOIN_APPROVED" } })).toBe("Tizim yopdi (so'rov tasdiqlandi)");
+    expect(line({ type: "AUTO_CLOSED", meta: { reason: "JOIN_REJECTED" } })).toBe("Tizim yopdi (so'rov rad etildi)");
+    expect(line({ type: "AUTO_CLOSED", actorId: null, actor: null, meta: { reason: "JOIN_EXPIRED" } })).toBe("Tizim yopdi (so'rov muddati o'tdi)");
+    expect(line({ type: "AUTO_CLOSED", actorId: null, actor: null, meta: { reason: "JOIN_REPLACED" } })).toBe("Tizim yopdi (yangi so'rov bilan almashtirildi)");
+  });
+
   it("covers the remaining server types", () => {
     expect(line({ type: "ASSIGNEE", meta: { added: [1], removed: [] } })).toBe("Aziz Karimov ijrochilarni o'zgartirdi");
     expect(line({ type: "REASSIGNED", actorId: null, actor: null, meta: { from: 1, to: [2] } })).toBe("Tizim ishdan ketgani uchun topshiriq o'tkazildi");

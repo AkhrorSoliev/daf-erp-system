@@ -200,6 +200,19 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
+      'Join requests (ADR-0080). Every route loads the request — by its task ' +
+      'for the read, by id for the decisions — and checks the caller against ' +
+      "the request's branch with `assertCallerInBranch`. The header branch is " +
+      'never read: a request belongs to the branch whose link the person used.',
+    routes: [
+      'GET /student-join-requests/by-task/:taskId',
+      'POST /student-join-requests/:id/approve',
+      'POST /student-join-requests/:id/reject',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
       'Telegram group administration. The group row carries the branch whose ' +
       'operational events it receives, so `assertCallerInBranch` is checked ' +
       'against that record — in BOTH directions on a change, because pointing a ' +

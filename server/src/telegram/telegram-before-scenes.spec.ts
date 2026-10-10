@@ -62,7 +62,6 @@ describe('TelegramService — useBeforeScenes', () => {
       none,
       none,
       none,
-      { emit: jest.fn() } as any,
     );
     await service.onModuleInit();
     bot = service.getBot();
