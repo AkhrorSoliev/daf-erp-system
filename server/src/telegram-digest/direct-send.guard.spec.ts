@@ -15,7 +15,7 @@ const ALLOWED: string[] = [
   // Instant by design — the spec's "O'zgarmaydi" table.
   'src/absence-pause/', // auto-pause reminders and pause notices
   'src/telegram/', // bot flows, registration, OTP, mock exams
-  'src/tasks/telegram/', // task notices: instant, night quiet 22–08 (ADR-0077)
+  'src/tasks/telegram/', // task notices: instant, night quiet 22–08 (ADR-0078)
   'src/sms/sms.service.ts', // admin free text, lesson cancel/reschedule, payment receipts (ADR-0065)
   'src/lesson-cancellations/lesson-cancellation-events.listener.ts',
   'src/lesson-reschedules/lesson-reschedule-events.listener.ts',
@@ -74,11 +74,11 @@ describe('direct Telegram sends — ADR-0025', () => {
 });
 
 /**
- * ADR-0077: task notices left the 20:00 digest — the bot sends them itself
+ * ADR-0078: task notices left the 20:00 digest — the bot sends them itself
  * (`src/tasks/telegram/`). The digest still renders `TASK_*` rows already in
  * its queue, so `src/telegram-digest/` may name them; nothing else may.
  */
-describe('task notices are not queued for the digest — ADR-0077', () => {
+describe('task notices are not queued for the digest — ADR-0078', () => {
   it('nothing outside the digest names a TASK_* digest category', () => {
     const offenders = walk(join(ROOT, 'src'))
       .map((file) => ({

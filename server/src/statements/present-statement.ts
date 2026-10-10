@@ -107,10 +107,9 @@ const WORDS = {
 };
 
 const ITEM: Record<ItemKind, { student: string; admin: string }> = {
-  refund: {
-    student: 'sizga naqd qaytarib berildi',
-    admin: 'naqd qaytarib berildi',
-  },
+  // ADR-0077: at the request the money has not been handed over yet, and it
+  // may leave by card — so neither «naqd» nor «berildi».
+  refund: { student: 'pul qaytarish', admin: 'pul qaytarish' },
   'mock-fee': { student: 'mock imtihon', admin: 'mock imtihon' },
   'debt-write-off': { student: 'qarz kechirildi', admin: 'qarz kechirildi' },
   'balance-withdrawal': {

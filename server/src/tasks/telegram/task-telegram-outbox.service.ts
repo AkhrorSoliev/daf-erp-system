@@ -69,7 +69,7 @@ export function skipReason(
 }
 
 /**
- * Sends the `TELEGRAM` rows of `TaskOutbox` when their time comes (ADR-0077).
+ * Sends the `TELEGRAM` rows of `TaskOutbox` when their time comes (ADR-0078).
  * A row ends in one of three ways: sent or closed (`sentAt` set), dead
  * (`attempts = 3`), or moved to a later `sendAfter`. Closed and dead rows are
  * removed by the 03:00 purge of `TaskOutboxService`.

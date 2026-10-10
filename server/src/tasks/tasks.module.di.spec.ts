@@ -18,7 +18,7 @@ import { TasksModule } from './tasks.module';
 import { TasksService } from './tasks.service';
 
 // No unit spec boots the Nest graph; `TasksModule` imports `TelegramModule`
-// (ADR-0077), so a missing provider would only show at deploy. This compiles
+// (ADR-0078), so a missing provider would only show at deploy. This compiles
 // the real module graph (no `init()`: no bot, no database, no Redis).
 describe('TasksModule — DI graph', () => {
   it('resolves every provider of TasksModule and its imports', async () => {

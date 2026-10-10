@@ -35,7 +35,7 @@ export const STAFF_PAGES = {
 
 /**
  * «📋 Topshiriqlarim»: a callback the tasks module answers
- * (`src/tasks/telegram/`, ADR-0077). Only this string lives here, so
+ * (`src/tasks/telegram/`, ADR-0078). Only this string lives here, so
  * src/telegram never imports src/tasks.
  */
 export const STAFF_TASKS_ACTION = 'tk:list';

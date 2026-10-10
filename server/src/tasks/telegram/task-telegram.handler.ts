@@ -75,7 +75,7 @@ function startsWithCommand(msg: Message): boolean {
 }
 
 /**
- * Task buttons and replies in the main bot (spec §6.1–6.5, ADR-0077). Every
+ * Task buttons and replies in the main bot (spec §6.1–6.5, ADR-0078). Every
  * change goes through `TasksService` as the chat's staff account with
  * `via: 'TELEGRAM'`: the website's policy and transitions, nothing extra here.
  * The pressed message is edited in place.

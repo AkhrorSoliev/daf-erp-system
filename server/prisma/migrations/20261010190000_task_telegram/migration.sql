@@ -1,4 +1,4 @@
--- Topshiriqlar 2-bosqich, Telegram (ADR-0077; spec 2026-10-07 §6, §9.3).
+-- Topshiriqlar 2-bosqich, Telegram (ADR-0078; spec 2026-10-07 §6, §9.3).
 -- TaskOutbox also holds Telegram notices waiting for 08:00 or a retry (NOTICE +
 -- payload); one person may have several of one task, so the unique key becomes
 -- a plain index. TaskTelegramMessage maps a bot message to its task for replies.

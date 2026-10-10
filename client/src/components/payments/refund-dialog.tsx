@@ -16,16 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PriceInput } from "@/components/ui/price-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { requestDueLine, requestOpenedText } from "./refunds/refunds-format";
+import { invalidateRefunds } from "./refunds/refunds-queries";
+import type { RefundRowView } from "./refunds/refunds-types";
 
 interface LastPayment {
   amount: number;
@@ -34,7 +30,8 @@ interface LastPayment {
 }
 
 interface RefundPreview {
-  enrollmentId: string;
+  /** null on the balance-only quote (no active group). */
+  enrollmentId: string | null;
   groupId: string;
   groupName: string;
   courseName: string;
@@ -49,6 +46,8 @@ interface RefundPreview {
   maxRefundable: number;
   suggestedAmount: number;
   warning: string | null;
+  /** The 10th bank day after today (spec B2b §4). */
+  dueDate: string;
 }
 
 interface Props {
@@ -82,13 +81,11 @@ export function RefundDialog({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
-  const [refundMethod, setRefundMethod] = useState("CASH");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const resetForm = useCallback(() => {
     setAmount("");
-    setRefundMethod("CASH");
     setReason("");
     setPreview(null);
     setLoadError(null);
@@ -102,9 +99,6 @@ export function RefundDialog({
       .get<RefundPreview>(`/refunds/preview/${studentId}`)
       .then(({ data }) => {
         setPreview(data);
-        // Money goes back the way it came in — default the method to whatever
-        // the last payment used. The operator can still change it.
-        if (data.lastPayment) setRefundMethod(data.lastPayment.method);
       })
       .catch((err) => {
         setPreview(null);
@@ -120,24 +114,23 @@ export function RefundDialog({
     if (!preview || rawAmount <= 0 || overMax) return;
     setSubmitting(true);
     try {
-      const { data } = await api.post("/refunds/quick", {
+      const { data } = await api.post<RefundRowView>("/refunds/quick", {
         studentId,
         enrollmentId: preview.enrollmentId,
         amount: rawAmount,
-        refundMethod,
         reason: reason.trim() || undefined,
       });
-      toast.success(
-        `${formatPrice(data.approvedAmount ?? data.requestedAmount)} so'm qaytarildi`,
-      );
+      toast.success(requestOpenedText(data.dueDate));
       onOpenChange(false);
       resetForm();
       onSuccess?.();
-      queryClient.invalidateQueries({ queryKey: ["financial-overview"] });
-      queryClient.invalidateQueries({ queryKey: ["student-payments"] });
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, "Pulni qaytarishda xatolik"));
     } finally {
+      // Financial data is never trusted after a write attempt: refetch on
+      // success and on refusal alike (the server may have answered 409/400
+      // because the balance moved).
+      invalidateRefunds(queryClient);
       setSubmitting(false);
     }
   };
@@ -151,12 +144,12 @@ export function RefundDialog({
         if (!v) resetForm();
       }}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Pulni qaytarish</DialogTitle>
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="border-b px-6 py-4">
+          <DialogTitle>Pulni qaytarish — so&apos;rov</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="rounded-md border p-3">
             <p className="text-sm font-medium">
               #{studentId} {studentName}
@@ -272,6 +265,10 @@ export function RefundDialog({
                 </div>
               )}
 
+              <p className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+                {requestDueLine(preview.dueDate)}
+              </p>
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Qaytarish summasi</Label>
@@ -310,22 +307,6 @@ export function RefundDialog({
               </div>
 
               <div className="space-y-2">
-                <Label>Qaytarish usuli</Label>
-                <Select value={refundMethod} onValueChange={setRefundMethod}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {refundMethods.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
                 <Label>Sabab (ixtiyoriy)</Label>
                 <Textarea
                   placeholder="Qaytarish sababi..."
@@ -338,7 +319,7 @@ export function RefundDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-t px-6 py-4">
           <Button
             variant="outline"
             onClick={() => {
@@ -356,7 +337,7 @@ export function RefundDialog({
             }
           >
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            Qaytarish
+            So&apos;rovni ochish
           </Button>
         </DialogFooter>
       </DialogContent>

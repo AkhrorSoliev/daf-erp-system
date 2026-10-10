@@ -52,8 +52,11 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | Pay salary | Yes | Own branch | No | No | No |
 | Batch pay salary | Yes | Own branch | No | No | No |
 | Manage salary period (cycle start day) | Yes | No | No | No | No |
-| Create refund (one step, `POST /refunds/quick`) | Yes | Yes | Yes | No | No |
-| Process a legacy refund request (`PATCH /refunds/:id/process`, no screen) | Yes | Yes | Yes | No | No |
+| Open refund request (`POST /refunds/quick`, ADR-0077) | Yes | Yes | Yes | No | No |
+| Hand refund over («Berildi», `POST /refunds/:id/hand-over`) | Yes | Yes | Yes | No | Yes |
+| Cancel refund request (`POST /refunds/:id/cancel`) | Yes | Yes | No | No | No |
+| Give balance notice (`POST /students/:id/balance-notices`) | Yes | Yes | Yes | No | No |
+| «Qaytariladigan pul» page and refund history (`GET /refundable/*`, `GET /refunds`) | Yes | Own branch | Own branch | No | Own branch |
 | Reverse refund | Yes | No | No | No | No |
 | Create expense | Yes | Yes | No | No | No |
 | Update/delete expense | Yes | Yes | No | No | No |
@@ -62,6 +65,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | Manual adjustment | Yes | Yes | No | No | No |
 
 - **Frontend**: Check `user.roles.some(r => [1, 2].includes(r.id))` before rendering salary/balance UI
+- **Frontend («Qaytariladigan pul»)**: `REFUND_REQUEST_ROLES`, `REFUND_HAND_OVER_ROLES` and `REFUND_CANCEL_ROLES` in `client/src/lib/role-access.ts` gate the request, «Berildi» and «Bekor qilish» actions
 - **Backend**: `@Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')` on payment endpoints; `@Roles('CEO', 'Branch Director')` on expenses and money reports (`financial-overview` and `marketing` included — since ADR-0067 the overview no longer admits Administrator and Cashier; their «Umumiy ma'lumotlar» is payment recording and the recent payments); salary writes are CEO/BD or CEO-only, while salary reads also admit Administrator — the decorators in `salary.controller.ts` are the list of record
 - **No tax setting.** The salary tax-rate config and its endpoints were removed: the system computes and withholds no tax, and the salary page shows possible deductions as an informational note only
 - **CEO-only actions**: reverse payment, reverse refund, calculate salary, approve salary — these use `@Roles('CEO')` specifically
@@ -71,7 +75,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 ### Debt page (Qarzdorlik, `/payments/debt`)
 
-Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qarz / O'qimayotganlar), the student drawer and the Excel (`/payments/debt/*`, ADR-0072), and the three linked pages (debt history, write-off archive, frozen balances). «Markaz qoplagani» moved to the salary page and is CEO/BD (`GET /salary/monthly/center-topup`). Everyone below the CEO sees their own branch. The actions differ by role:
+Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qarz / O'qimayotganlar), the student drawer and the Excel (`/payments/debt/*`, ADR-0072), and the two linked pages (debt history, write-off archive); frozen balances moved to «Qaytariladigan pul» (ADR-0077). «Markaz qoplagani» moved to the salary page and is CEO/BD (`GET /salary/monthly/center-topup`). Everyone below the CEO sees their own branch. The actions differ by role:
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
@@ -80,10 +84,9 @@ Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qa
 | Log a call result («Qo'ng'iroq natijasi», `POST /call-logs`) | Yes | Yes | Yes | No | No |
 | Write a payment promise («Va'da yozish», ≤ 7 days, once a month) | Yes | Yes | Yes | No | Yes |
 | Payment statement PDF (drawer) | Yes | Yes | Yes | No | No |
-| Move a frozen balance (to the center / back to the student) | Yes | Yes | Yes | No | No |
 | Undo a debt write-off | Yes | No | No | No | No |
 
-- **Frontend**: `CALL_LOG_ROLES`, `STATEMENT_ROLES` and `FROZEN_BALANCE_ACTION_ROLES` in `client/src/lib/role-access.ts` hide the actions a cashier may not take
+- **Frontend**: `CALL_LOG_ROLES` and `STATEMENT_ROLES` in `client/src/lib/role-access.ts` hide the actions a cashier may not take
 
 ### Student contracts
 

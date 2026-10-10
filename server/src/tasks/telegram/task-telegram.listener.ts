@@ -11,7 +11,7 @@ import { loadTaskView, staffChatOf } from './task-telegram-view';
 import { TRANSIENT_RETRY_S, TaskTelegramSender } from './task-telegram.sender';
 
 /**
- * Task notices to Telegram, right after the commit (ADR-0077). Who hears what
+ * Task notices to Telegram, right after the commit (ADR-0078). Who hears what
  * comes from the same plan as the bell (`task-notify-plan.ts`). Inside the
  * night quiet, or after a transient failure, the notice is written to
  * `TaskOutbox` (`TELEGRAM`, `NOTICE`) and `TaskTelegramOutbox` sends it later.

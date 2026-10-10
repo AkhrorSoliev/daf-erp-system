@@ -11,10 +11,6 @@ import {
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
 import { PaymentsPreviewService } from './payments-preview.service';
-import {
-  PaymentsFrozenBalanceService,
-  FrozenBalancesQuery,
-} from './payments-frozen-balance.service';
 import { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Injectable()
@@ -24,7 +20,6 @@ export class PaymentsService {
     private read: PaymentsReadService,
     private debtors: PaymentsDebtorsService,
     private preview: PaymentsPreviewService,
-    private frozenBalance: PaymentsFrozenBalanceService,
   ) {}
 
   // Writes
@@ -134,11 +129,6 @@ export class PaymentsService {
     branchIds: ReportBranchIds,
   ) {
     return this.debtors.getDebtorsForGroup(groupId, companyId, branchIds);
-  }
-
-  // Frozen balances — «Muzlatilgan puli» tabi
-  getFrozenBalances(companyId: number, query: FrozenBalancesQuery) {
-    return this.frozenBalance.getFrozenBalances(companyId, query);
   }
 
   // Preview

@@ -93,7 +93,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0022](0022-bir-odam-har-rolga-alohida-hisob.md) | Bir odam — har rolga alohida hisob; kimlik telefon emas, bog'lanish | Qabul qilindi | 2026-09-19 |
 | [0023](0023-avtomatik-pauza-chiqarmaydi.md) | Avtomatik pauza o'quvchini guruhdan chiqarmaydi | Qabul qilindi | 2026-09-19 |
 | [0024](0024-daf-faollik-normasi-yigindi-sql-qaror-ts.md) | DaF faollik normasi sozlamada; yig'indi SQL da, qaror TypeScript da | Qabul qilindi | 2026-09-20 |
-| [0025](0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md) | Ko'pchilik Telegram xabari kunlik yagona navbatga jamlanadi, darhol yubormaydi | Qisman almashtirildi — ADR-0077 | 2026-09-23 |
+| [0025](0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md) | Ko'pchilik Telegram xabari kunlik yagona navbatga jamlanadi, darhol yubormaydi | Qisman almashtirildi — ADR-0078 | 2026-09-23 |
 | [0026](0026-rol-berish-shipi-ikkala-eshikda.md) | Rol faqat chaqiruvchining shipi ichida beriladi va olinadi | Qabul qilindi | 2026-09-24 |
 | [0027](0027-xodim-hisobini-faqat-yuqoridagi-rahbar-ozgartiradi.md) | Xodim hisobini faqat undan yuqoridagi rahbar o'zgartiradi | Qabul qilindi | 2026-09-24 |
 | [0028](0028-bloklangan-xodim-hech-narsa-bermaydi.md) | Bloklangan xodim hech narsa bera olmaydi, uning tokeni keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
@@ -143,7 +143,8 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0074](0074-topshiriq-alohida-bolim.md) | Topshiriq izohning turi emas, alohida bo'lim: bitta holat, tekshiruv bosqichi (Yangi → Jarayonda → Tekshiruvda → Bajarildi), yuqoridan pastga berish zinasi, tizim topshirig'ini faqat manbasi yopadi, `Task*` ga yozish faqat `src/tasks/` da | Qabul qilindi | 2026-10-07 |
 | [0075](0075-shartnoma-hujjati-alohida-jadval.md) | Shartnoma hujjati alohida `ContractDocument` jadvalida: qiymatlar tuzilganda muhrlanadi, matn versiyalanadi, guruh almashganda bog'lanish o'tadi, eski `Contract` ishlatilmaydi | Qabul qilindi | 2026-10-10 |
 | [0076](0076-qongiroqcha-kutilayotgan-xabar-ozi-yopiladi.md) | Qo'ng'iroqcha: son faqat sizdan ish kutayotgan o'qilmagan xabarlarni sanaydi, ish bajarilganda xabar o'zi yopiladi, bir xil dars xabarlari bitta qatorga yig'iladi; bir martalik tozalash hech narsani o'chirmaydi | Qabul qilindi | 2026-10-10 |
-| [0077](0077-topshiriq-xabarlari-telegramga-darhol.md) | Topshiriq xabarlari Telegram'ga darhol, tugmalar bilan ketadi (holat tugmalari xabarni tahrirlaydi, javob — izoh yoki qaytarish sababi); 22:00–08:00 tungi tinchlik, «Shoshilinch» bundan mustasno; 20:00 yig'madan chiqdi | Qabul qilindi | 2026-10-10 |
+| [0077](0077-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md) | Pul qaytarish so'rov bilan: balans so'rov kuni so'ralgan summaga kamayadi, pul kassadan «Berildi»da chiqadi, muddat 10 bank kuni; markazga o'tkazish xabardan 10 bank kuni va 30 kun keyin ochiladi | Qabul qilindi | 2026-10-10 |
+| [0078](0078-topshiriq-xabarlari-telegramga-darhol.md) | Topshiriq xabarlari Telegram'ga darhol, tugmalar bilan ketadi (holat tugmalari xabarni tahrirlaydi, javob — izoh yoki qaytarish sababi); 22:00–08:00 tungi tinchlik, «Shoshilinch» bundan mustasno; 20:00 yig'madan chiqdi | Qabul qilindi | 2026-10-10 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

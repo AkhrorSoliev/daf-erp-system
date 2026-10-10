@@ -1,8 +1,8 @@
-# ADR-0077 — Topshiriq xabarlari Telegram'ga darhol, tugmalar bilan ketadi; kechasi ertalabgacha kutadi
+# ADR-0078 — Topshiriq xabarlari Telegram'ga darhol, tugmalar bilan ketadi; kechasi ertalabgacha kutadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-10
-**Bog'liq:** ADR-0025 (20:00 yig'ma xabar — shu qaror uni topshiriqlar uchun qisman almashtiradi), ADR-0074 (topshiriq alohida bo'lim, `TasksService` yagona eshik), ADR-0045 (xodim botda: `User.telegramChatId`, `staffLinkedToChatWhere`, `staffPortalFor`), ADR-0076 (qo'ng'iroqcha — Telegram'ga tegmaydi), dizayn `docs/superpowers/specs/2026-10-07-topshiriqlar-design.md` §6, §9.3, `server/src/tasks/telegram/`, `server/src/tasks/task-quiet-hours.ts`, migratsiya `20261010160000_task_telegram`
+**Bog'liq:** ADR-0025 (20:00 yig'ma xabar — shu qaror uni topshiriqlar uchun qisman almashtiradi), ADR-0074 (topshiriq alohida bo'lim, `TasksService` yagona eshik), ADR-0045 (xodim botda: `User.telegramChatId`, `staffLinkedToChatWhere`, `staffPortalFor`), ADR-0076 (qo'ng'iroqcha — Telegram'ga tegmaydi), dizayn `docs/superpowers/specs/2026-10-07-topshiriqlar-design.md` §6, §9.3, `server/src/tasks/telegram/`, `server/src/tasks/task-quiet-hours.ts`, migratsiya `20261010190000_task_telegram`
 
 ## Kontekst
 

@@ -23,7 +23,7 @@ Spec: `docs/superpowers/specs/2026-10-07-topshiriqlar-design.md` §6.1–6.5, §
 - `src/telegram-digest/direct-send.guard.spec.ts` must stay green: `src/tasks/telegram/` joins its ALLOWED list in Task 5.
 - Commits: English message; second `-m` is the trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Use `git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup add <repo-relative paths>` then `git -C … commit`.
 - Server gate per task (from `server/`): `npx prettier --write <files>` → `npx eslint <dirs> --quiet` → `npx jest <specs>` → `npm run typecheck`. Never run `npm run build` and `npm test` at the same time.
-- ADR number: 0077 is the next free number on `origin/main` today — **recheck `docs/adr/README.md` at PR time** and renumber with `git mv` if `main` took it.
+- ADR number: 0078 is the next free number (0077 went to refunds) on `origin/main` today — **recheck `docs/adr/README.md` at PR time** and renumber with `git mv` if `main` took it.
 
 ---
 
@@ -38,21 +38,21 @@ Spec: `docs/superpowers/specs/2026-10-07-topshiriqlar-design.md` §6.1–6.5, §
 7. **A transient failure of an immediate send** becomes a `NOTICE` row with `attempts = 1`, `sendAfter` = now + `retry_after` (or 60 s), night-shifted like any other row.
 8. **«Topshiriqlarim»** lists open tasks the person is an ASSIGNEE of, except «Dars bo'ldimi?»; the menu button is «📋 Topshiriqlarim» (emoji like its siblings «📅 Jadval», «💰 Oyligim»).
 9. **`TaskTelegramMessage` rows are not purged** (one tiny row per message, cascade-deleted with the task). Add a purge if the table ever matters.
-10. **ADR-0025** gets only its status line changed (accepted ADRs are not edited); the new instant-list entry is recorded in ADR-0077, in `server/CLAUDE.md` and in the guard spec.
-11. Migration timestamp `20261010160000` (later than `20261010130000`, the newest on `origin/main`).
+10. **ADR-0025** gets only its status line changed (accepted ADRs are not edited); the new instant-list entry is recorded in ADR-0078, in `server/CLAUDE.md` and in the guard spec.
+11. Migration timestamp `20261010190000` (later than `20261010130000`, the newest on `origin/main`).
 
 ## File Structure
 
 **Server — new**
 - `server/src/tasks/task-quiet-hours.ts` (+ `.spec.ts`) — pure: `afterQuietHours`, `telegramSendAfter`.
-- `server/prisma/migrations/20261010160000_task_telegram/migration.sql` — enum value, `payload`, index swap, `TaskTelegramMessage`.
+- `server/prisma/migrations/20261010190000_task_telegram/migration.sql` — enum value, `payload`, index swap, `TaskTelegramMessage`.
 - `server/src/tasks/telegram/task-telegram-text.ts` (+ `.spec.ts`) — pure: view type, bot texts, message/keyboard rendering, callback codec.
 - `server/src/tasks/telegram/task-telegram-view.ts` (+ `.spec.ts`) — `loadTaskView`, `staffOfChat`, `staffChatOf`, `taskOpenUrl`.
 - `server/src/tasks/telegram/task-telegram.sender.ts` (+ `.spec.ts`) — `TaskTelegramSender`: one send + its `TaskTelegramMessage`.
 - `server/src/tasks/telegram/task-telegram.listener.ts` (+ `.spec.ts`) — `TaskTelegramListener`: events → send now / queue.
 - `server/src/tasks/telegram/task-telegram-outbox.service.ts` (+ `.spec.ts`) — `TaskTelegramOutbox`: per-minute drain of `TELEGRAM` rows.
 - `server/src/tasks/telegram/task-telegram.handler.ts` (+ `.spec.ts`) — `TaskTelegramHandler`: buttons, replies, «Topshiriqlarim».
-- `docs/adr/0077-topshiriq-xabarlari-telegramga-darhol.md`.
+- `docs/adr/0078-topshiriq-xabarlari-telegramga-darhol.md`.
 
 **Server — modified**
 - `server/prisma/schema.prisma` — `TaskOutboxKind.NOTICE`, `TaskTelegramPurpose`, `TaskOutbox.payload` + index, `TaskTelegramMessage`, `Task.telegramMessages`.
@@ -75,7 +75,7 @@ Spec: `docs/superpowers/specs/2026-10-07-topshiriqlar-design.md` §6.1–6.5, §
 
 **Files:**
 - Modify: `server/prisma/schema.prisma` (enum `TaskOutboxKind` ~line 204, model `Task` ~1972, model `TaskOutbox` ~2069)
-- Create: `server/prisma/migrations/20261010160000_task_telegram/migration.sql`
+- Create: `server/prisma/migrations/20261010190000_task_telegram/migration.sql`
 - Create: `server/src/tasks/task-quiet-hours.ts`, `server/src/tasks/task-quiet-hours.spec.ts`
 - Modify: `server/src/tasks/task-outbox.service.ts`, `server/src/tasks/task-outbox.service.spec.ts`
 - Modify: `server/src/tasks/lesson-task.ts:138-146`, `server/src/tasks/task-user-lifecycle.listener.ts:115-120`, `server/src/tasks/task-user-lifecycle.listener.spec.ts:~330`
@@ -245,10 +245,10 @@ Expected: «Generated Prisma Client».
 ```bash
 cd /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup/server
 git show HEAD:server/prisma/schema.prisma > prisma/.schema-before.prisma
-mkdir -p prisma/migrations/20261010160000_task_telegram
-npx prisma migrate diff --from-schema prisma/.schema-before.prisma --to-schema prisma/schema.prisma --script > prisma/migrations/20261010160000_task_telegram/migration.sql
+mkdir -p prisma/migrations/20261010190000_task_telegram
+npx prisma migrate diff --from-schema prisma/.schema-before.prisma --to-schema prisma/schema.prisma --script > prisma/migrations/20261010190000_task_telegram/migration.sql
 rm prisma/.schema-before.prisma
-cat prisma/migrations/20261010160000_task_telegram/migration.sql
+cat prisma/migrations/20261010190000_task_telegram/migration.sql
 ```
 
 If the first line of the file is `Loaded Prisma config from prisma.config.ts.`, delete that line. Expected statements (order may differ), and nothing else — otherwise stop and report:
@@ -296,7 +296,7 @@ ALTER TABLE "TaskTelegramMessage" ADD CONSTRAINT "TaskTelegramMessage_taskId_fke
 Then put this header at the top of the file (keep the generated statements as generated):
 
 ```sql
--- Topshiriqlar 2-bosqich, Telegram (ADR-0077; spec 2026-10-07 §6, §9.3).
+-- Topshiriqlar 2-bosqich, Telegram (ADR-0078; spec 2026-10-07 §6, §9.3).
 -- TaskOutbox also holds Telegram notices waiting for 08:00 or a retry (NOTICE +
 -- payload); one person may have several of one task, so the unique key becomes
 -- a plain index. TaskTelegramMessage maps a bot message to its task for replies.
@@ -543,7 +543,7 @@ Expected: all PASS; `lesson-task.spec.ts` still sees exactly 4 INAPP rows.
 - [ ] **Step 12: Commit**
 
 ```bash
-git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup add server/prisma/schema.prisma server/prisma/migrations/20261010160000_task_telegram/migration.sql server/src/tasks/task-quiet-hours.ts server/src/tasks/task-quiet-hours.spec.ts server/src/tasks/task-outbox.service.ts server/src/tasks/task-outbox.service.spec.ts server/src/tasks/lesson-task.ts server/src/tasks/task-user-lifecycle.listener.ts server/src/tasks/task-user-lifecycle.listener.spec.ts server/src/tasks/task-write.single-source.spec.ts
+git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup add server/prisma/schema.prisma server/prisma/migrations/20261010190000_task_telegram/migration.sql server/src/tasks/task-quiet-hours.ts server/src/tasks/task-quiet-hours.spec.ts server/src/tasks/task-outbox.service.ts server/src/tasks/task-outbox.service.spec.ts server/src/tasks/lesson-task.ts server/src/tasks/task-user-lifecycle.listener.ts server/src/tasks/task-user-lifecycle.listener.spec.ts server/src/tasks/task-write.single-source.spec.ts
 git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup commit -m "feat(tasks): Telegram outbox rows with night quiet, task message table" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
@@ -2506,7 +2506,7 @@ export type TgSendResult =
     };
 
 /**
- * The one place a task notice is sent (ADR-0077): the main bot, HTML, the
+ * The one place a task notice is sent (ADR-0078): the main bot, HTML, the
  * task's buttons, and a `TaskTelegramMessage` row so a reply finds its task.
  * It does not decide WHEN (listener, outbox) and never retries itself.
  */
@@ -2599,17 +2599,17 @@ In `server/src/telegram-digest/direct-send.guard.spec.ts`:
 
 1. Add to `ALLOWED` (after `'src/telegram/', …`):
    ```ts
-  'src/tasks/telegram/', // task notices: instant, night quiet 22–08 (ADR-0077)
+  'src/tasks/telegram/', // task notices: instant, night quiet 22–08 (ADR-0078)
    ```
 2. Append at the end of the file:
 
 ```ts
 /**
- * ADR-0077: task notices left the 20:00 digest — the bot sends them itself
+ * ADR-0078: task notices left the 20:00 digest — the bot sends them itself
  * (`src/tasks/telegram/`). The digest still renders `TASK_*` rows already in
  * its queue, so `src/telegram-digest/` may name them; nothing else may.
  */
-describe('task notices are not queued for the digest — ADR-0077', () => {
+describe('task notices are not queued for the digest — ADR-0078', () => {
   it('nothing outside the digest names a TASK_* digest category', () => {
     const offenders = walk(join(ROOT, 'src'))
       .map((file) => ({
@@ -2828,7 +2828,7 @@ import { loadTaskView } from './task-telegram-view';
 import { TRANSIENT_RETRY_S, TaskTelegramSender } from './task-telegram.sender';
 
 /**
- * Task notices to Telegram, right after the commit (ADR-0077). Who hears what
+ * Task notices to Telegram, right after the commit (ADR-0078). Who hears what
  * comes from the same plan as the bell (`task-notify-plan.ts`). Inside the
  * night quiet, or after a transient failure, the notice is written to
  * `TaskOutbox` (`TELEGRAM`, `NOTICE`) and `TaskTelegramOutbox` sends it later.
@@ -2987,7 +2987,7 @@ import { TaskTelegramListener } from './telegram/task-telegram.listener';
 
 @Module({
   // TelegramModule gives the main bot (`TelegramService.getBot()`). One way
-  // only: nothing under src/telegram imports src/tasks (ADR-0077).
+  // only: nothing under src/telegram imports src/tasks (ADR-0078).
   imports: [NotificationsModule, HolidaysModule, TelegramModule],
   controllers: [TasksController],
   providers: [
@@ -3232,7 +3232,7 @@ export function skipReason(
   return assignee || view.authorId === row.userId ? null : 'not on task';
 }
 
-/** Sends the `TELEGRAM` rows of `TaskOutbox` when their time comes (ADR-0077). */
+/** Sends the `TELEGRAM` rows of `TaskOutbox` when their time comes (ADR-0078). */
 @Injectable()
 export class TaskTelegramOutbox {
   private readonly logger = new Logger(TaskTelegramOutbox.name);
@@ -3686,7 +3686,7 @@ function pressedText(ctx: BotContext): string | undefined {
 }
 
 /**
- * Task buttons and replies in the main bot (spec §6.1–6.5, ADR-0077). Every
+ * Task buttons and replies in the main bot (spec §6.1–6.5, ADR-0078). Every
  * change goes through `TasksService` as the chat's staff account with
  * `via: 'TELEGRAM'`: the website's policy and transitions, nothing extra here.
  */
@@ -4074,7 +4074,7 @@ In `server/src/telegram/staff/staff-cabinet.ts`:
   ```ts
   /**
    * «📋 Topshiriqlarim»: a callback the tasks module answers
-   * (`src/tasks/telegram/`, ADR-0077). Only this string lives here, so
+   * (`src/tasks/telegram/`, ADR-0078). Only this string lives here, so
    * src/telegram never imports src/tasks.
    */
   export const STAFF_TASKS_ACTION = 'tk:list';
@@ -4175,10 +4175,10 @@ git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clicku
 
 ---
 
-### Task 10: ADR-0077, server docs, user guide and news
+### Task 10: ADR-0078, server docs, user guide and news
 
 **Files:**
-- Create: `docs/adr/0077-topshiriq-xabarlari-telegramga-darhol.md`
+- Create: `docs/adr/0078-topshiriq-xabarlari-telegramga-darhol.md`
 - Modify: `docs/adr/0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md` (status line only), `docs/adr/README.md`
 - Modify: `server/CLAUDE.md` (sections «Staff in the bot and the staff Mini App (ADR-0045)», «Tasks (`src/tasks/`)», «Notifications (4 channels)» item 4, «Telegram digest» instant list)
 - Modify: `client/src/qollanma/kontent/boshlash/topshiriqlar.mdx`, `client/src/qollanma/kontent/boshlash/tizimga-kirish.mdx`, `client/src/qollanma/sahifalar/boshlash.ts`, `client/src/qollanma/yangiliklar.ts`
@@ -4190,16 +4190,16 @@ git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clicku
 
 Run: `git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup fetch origin main` then `git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup show origin/main:docs/adr/README.md | tail -5`. If `0077` is taken, use the next free number everywhere below (file name, README row, ADR-0025 status, server/CLAUDE.md, guide `adr` list, guard spec comment, `tasks.module.ts` / sender comments).
 
-- [ ] **Step 2: Write ADR-0077**
+- [ ] **Step 2: Write ADR-0078**
 
-Create `docs/adr/0077-topshiriq-xabarlari-telegramga-darhol.md`:
+Create `docs/adr/0078-topshiriq-xabarlari-telegramga-darhol.md`:
 
 ```markdown
-# ADR-0077 — Topshiriq xabarlari Telegram'ga darhol, tugmalar bilan ketadi; kechasi ertalabgacha kutadi
+# ADR-0078 — Topshiriq xabarlari Telegram'ga darhol, tugmalar bilan ketadi; kechasi ertalabgacha kutadi
 
 **Holati:** Qabul qilindi
 **Sana:** <BUGUN>
-**Bog'liq:** ADR-0025 (20:00 yig'ma xabar — shu qaror uni topshiriqlar uchun qisman almashtiradi), ADR-0074 (topshiriq alohida bo'lim, `TasksService` yagona eshik), ADR-0045 (xodim botda: `User.telegramChatId`, `staffLinkedToChatWhere`, `staffPortalFor`), ADR-0076 (qo'ng'iroqcha — Telegram'ga tegmaydi), dizayn `docs/superpowers/specs/2026-10-07-topshiriqlar-design.md` §6, §9.3, `server/src/tasks/telegram/`, migratsiya `20261010160000_task_telegram`
+**Bog'liq:** ADR-0025 (20:00 yig'ma xabar — shu qaror uni topshiriqlar uchun qisman almashtiradi), ADR-0074 (topshiriq alohida bo'lim, `TasksService` yagona eshik), ADR-0045 (xodim botda: `User.telegramChatId`, `staffLinkedToChatWhere`, `staffPortalFor`), ADR-0076 (qo'ng'iroqcha — Telegram'ga tegmaydi), dizayn `docs/superpowers/specs/2026-10-07-topshiriqlar-design.md` §6, §9.3, `server/src/tasks/telegram/`, migratsiya `20261010190000_task_telegram`
 
 ## Kontekst
 
@@ -4264,12 +4264,12 @@ tutmaydi, Telegram esa doim yonida.
 
 - [ ] **Step 3: ADR-0025 status line and the index**
 
-In `docs/adr/0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md` change only the line `**Holati:** Qabul qilindi` to `**Holati:** Qisman almashtirildi — ADR-0077`.
+In `docs/adr/0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md` change only the line `**Holati:** Qabul qilindi` to `**Holati:** Qisman almashtirildi — ADR-0078`.
 
-In `docs/adr/README.md`: in the 0025 row change the status cell `Qabul qilindi` to `Qisman almashtirildi — ADR-0077`; after the 0076 row add:
+In `docs/adr/README.md`: in the 0025 row change the status cell `Qabul qilindi` to `Qisman almashtirildi — ADR-0078`; after the 0076 row add:
 
 ```markdown
-| [0077](0077-topshiriq-xabarlari-telegramga-darhol.md) | Topshiriq xabarlari Telegram'ga darhol, tugmalar bilan ketadi (xabar tahrirlanadi, javob — izoh yoki qaytarish sababi); 22:00–08:00 tungi tinchlik, «Shoshilinch» bundan mustasno; 20:00 yig'madan chiqdi | Qabul qilindi | <BUGUN> |
+| [0078](0078-topshiriq-xabarlari-telegramga-darhol.md) | Topshiriq xabarlari Telegram'ga darhol, tugmalar bilan ketadi (xabar tahrirlanadi, javob — izoh yoki qaytarish sababi); 22:00–08:00 tungi tinchlik, «Shoshilinch» bundan mustasno; 20:00 yig'madan chiqdi | Qabul qilindi | <BUGUN> |
 ```
 
 - [ ] **Step 4: server/CLAUDE.md**
@@ -4283,7 +4283,7 @@ In `docs/adr/README.md`: in the 0025 row change the status cell `Qabul qilindi` 
    New text:
 
 ```md
-(`staffMenuKeyboard`: Kabinet → profile, Jadval, Guruhlar, «📋 Topshiriqlarim» — a `tk:list` callback the tasks module answers, ADR-0077 — Oyligim for teachers, the student cabinet when the chat also holds a card)
+(`staffMenuKeyboard`: Kabinet → profile, Jadval, Guruhlar, «📋 Topshiriqlarim» — a `tk:list` callback the tasks module answers, ADR-0078 — Oyligim for teachers, the student cabinet when the chat also holds a card)
 ```
 
 2. «Tasks (`src/tasks/`)» section: replace the whole **Outbox** bullet with:
@@ -4295,7 +4295,7 @@ In `docs/adr/README.md`: in the 0025 row change the status cell `Qabul qilindi` 
    and add right after it:
 
 ```md
-- **Telegram** (`src/tasks/telegram/`, ADR-0077; spec §6): task notices go from the main bot when they happen, not in the 20:00 digest. `TasksModule` imports `TelegramModule` (one way: `src/telegram` imports nothing from tasks; the staff menu owns only the `'tk:list'` string).
+- **Telegram** (`src/tasks/telegram/`, ADR-0078; spec §6): task notices go from the main bot when they happen, not in the 20:00 digest. `TasksModule` imports `TelegramModule` (one way: `src/telegram` imports nothing from tasks; the staff menu owns only the `'tk:list'` string).
   - **Who:** `Notice.telegram` — assignees on assign / add / move / return / accept, the author on review, the removed person, author + assignees (not watchers) on a comment, watchers only on «Bajarildi» / «Bekor qilindi»; never the actor; never «Dars bo'ldimi?» (`LESSON_QUESTION`). The recipient must be a sign-in staff account whose `telegramChatId` no other live staff account shares (`staffChatOf`, `task-telegram-view.ts`), checked at send time.
   - **When:** `TaskTelegramListener` right after the commit; inside 22:00–08:00 a non-`URGENT` notice becomes a `TaskOutbox` `TELEGRAM`/`NOTICE` row for 08:00, and a transient failure a retry row (`attempts = 1`, `retry_after` or 60 s). `TaskTelegramOutbox` drains every minute at second 30, 50 rows: `REMINDER`/`OVERDUE` only while the task is open and the person still on it (`skipReason`); a 429 waits `retry_after` and ends the run; permanent/content errors kill the row (`attempts = 3`); transient ones count up to 3.
   - **Message** (`task-telegram-text.ts`, pure): headline + title + the notice's line + Bergan / Muddat / Bog'liq / Kichik qadamlar / Holat, HTML-escaped. Buttons come from the task's state and the reader: assignee «Boshladim» (NEW) and «Bajardim» (never on a `requiresPhoto` task until phase 3), author «Qabul qilish» / «Qaytarish» in review, «Qadamlar», and «Ochish» — a URL to `/tasks?task=<id>` on the reader's portal (`staffPortalFor`), host from `TELEGRAM_MINI_APP_URL` via `staffMiniAppUrl`; unset → no «Ochish». A system task gets «Ochish» only. Every notice and prompt sent is a `TaskTelegramMessage` row (`chatId`, `messageId` → `taskId`, `purpose` `NOTICE` | `RETURN_PROMPT`); the one sender is `TaskTelegramSender`.
@@ -4307,13 +4307,13 @@ In `docs/adr/README.md`: in the 0025 row change the status cell `Qabul qilindi` 
 3. «Notifications (4 channels)», item 4. In the line starting `4. **Telegram** — queued for the 20:00 digest`, replace the sentence `Closing a bell row does not touch Telegram.` with:
 
 ```md
-Task notices are not here: `src/tasks/telegram/` sends them itself (Tasks → Telegram, ADR-0077). Closing a bell row does not touch Telegram.
+Task notices are not here: `src/tasks/telegram/` sends them itself (Tasks → Telegram, ADR-0078). Closing a bell row does not touch Telegram.
 ```
 
 4. «Telegram digest» section, the **Instant by design** bullet. Old text: `the 21:00 report, product news and auto-pause messages.` New text:
 
 ```md
-the 21:00 report, product news, auto-pause messages, and task notices (`src/tasks/telegram/`, ADR-0077 — night quiet 22:00–08:00, `URGENT` exempt).
+the 21:00 report, product news, auto-pause messages, and task notices (`src/tasks/telegram/`, ADR-0078 — night quiet 22:00–08:00, `URGENT` exempt).
 ```
 
 - [ ] **Step 5: The user guide**
@@ -4335,7 +4335,7 @@ Telegram'ingiz botga bog'langan bo'lsa, topshiriq xabarlari botga darhol keladi.
 
 `client/src/qollanma/kontent/boshlash/tizimga-kirish.mdx`, the line starting `1. Botga /start yuboring. Bot xodim menyusini chiqaradi:` — replace `«💼 Kabinet», «📅 Jadval», «👥 Guruhlar» va o'qituvchida «💰 Oyligim».` with `«💼 Kabinet», «📅 Jadval», «👥 Guruhlar», «📋 Topshiriqlarim» va o'qituvchida «💰 Oyligim».`
 
-`client/src/qollanma/sahifalar/boshlash.ts`, the entry `sahifa: "topshiriqlar"`: add `"0077"` to its `adr` array (→ `["0054", "0063", "0074", "0077"]`), add `"telegram"` and `"topshiriqlarim"` to `kalitSozlar`, and append to `qisqacha` the sentence ` Topshiriq xabarlari Telegram botga ham darhol keladi (kechasi — ertalab 08:00 da), tugmalar va javob bilan.`
+`client/src/qollanma/sahifalar/boshlash.ts`, the entry `sahifa: "topshiriqlar"`: add `"0078"` to its `adr` array (→ `["0054", "0063", "0074", "0078"]`), add `"telegram"` and `"topshiriqlarim"` to `kalitSozlar`, and append to `qisqacha` the sentence ` Topshiriq xabarlari Telegram botga ham darhol keladi (kechasi — ertalab 08:00 da), tugmalar va javob bilan.`
 
 `client/src/qollanma/yangiliklar.ts` — new first entry of the array:
 
@@ -4357,13 +4357,13 @@ npx tsc --noEmit
 npx vitest run src/qollanma
 ```
 
-Expected: PASS (`reyestr.test.ts` accepts `"0077"`). If `npx vitest run` fails with `configLoader: 'native'`, use `npx vitest --config vitest.config.ts run src/qollanma`.
+Expected: PASS (`reyestr.test.ts` accepts `"0078"`). If `npx vitest run` fails with `configLoader: 'native'`, use `npx vitest --config vitest.config.ts run src/qollanma`.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup add docs/adr/0077-topshiriq-xabarlari-telegramga-darhol.md docs/adr/0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md docs/adr/README.md server/CLAUDE.md client/src/qollanma/kontent/boshlash/topshiriqlar.mdx client/src/qollanma/kontent/boshlash/tizimga-kirish.mdx client/src/qollanma/sahifalar/boshlash.ts client/src/qollanma/yangiliklar.ts
-git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup commit -m "docs(tasks): ADR-0077 Telegram task notices, guide and news" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup add docs/adr/0078-topshiriq-xabarlari-telegramga-darhol.md docs/adr/0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md docs/adr/README.md server/CLAUDE.md client/src/qollanma/kontent/boshlash/topshiriqlar.mdx client/src/qollanma/kontent/boshlash/tizimga-kirish.mdx client/src/qollanma/sahifalar/boshlash.ts client/src/qollanma/yangiliklar.ts
+git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup commit -m "docs(tasks): ADR-0078 Telegram task notices, guide and news" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -4414,7 +4414,7 @@ It cannot be automated (a real bot and real chats). Paste it into the PR descrip
 
 ## Deploy order
 
-1. **Server** (Railway `caring-courage`, production) — the deploy applies `20261010160000_task_telegram` (enum value, `TaskOutbox.payload`, unique key → index, `TaskTelegramMessage`). No data script: existing `INAPP` rows are untouched; Telegram rows appear for tasks whose due date is set or changed from now on (a task created before the deploy gets its Telegram reminder only if its due date is changed — acceptable, said in the PR).
+1. **Server** (Railway `caring-courage`, production) — the deploy applies `20261010190000_task_telegram` (enum value, `TaskOutbox.payload`, unique key → index, `TaskTelegramMessage`). No data script: existing `INAPP` rows are untouched; Telegram rows appear for tasks whose due date is set or changed from now on (a task created before the deploy gets its Telegram reminder only if its due date is changed — acceptable, said in the PR).
 2. **Vercel** — only the guide and the news changed; deploy after the server.
 3. Rollback: the previous server build works on the new schema (it ignores `NOTICE` rows and `TaskTelegramMessage`; its `createMany(skipDuplicates)` does not need the dropped unique key).
 

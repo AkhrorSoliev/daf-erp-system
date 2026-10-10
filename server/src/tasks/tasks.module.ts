@@ -15,7 +15,7 @@ import { TaskTelegramHandler } from './telegram/task-telegram.handler';
 
 @Module({
   // TelegramModule gives the main bot (`TelegramService.getBot()`). One way
-  // only: nothing under src/telegram imports src/tasks (ADR-0077).
+  // only: nothing under src/telegram imports src/tasks (ADR-0078).
   imports: [NotificationsModule, HolidaysModule, TelegramModule],
   controllers: [TasksController],
   providers: [

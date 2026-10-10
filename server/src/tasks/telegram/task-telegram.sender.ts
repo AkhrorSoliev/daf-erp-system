@@ -33,7 +33,7 @@ export type TgSendResult =
     };
 
 /**
- * The one place a task notice is sent (ADR-0077): the main bot, HTML, the
+ * The one place a task notice is sent (ADR-0078): the main bot, HTML, the
  * task's buttons, and a `TaskTelegramMessage` row so a reply finds its task.
  * It does not decide WHEN (listener, outbox) and never retries itself.
  */

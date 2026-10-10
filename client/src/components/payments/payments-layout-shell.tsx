@@ -6,7 +6,13 @@ import { PaymentsMobileMenu } from "./payments-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const CEO_BD_ONLY_PATHS = ["/payments/expenses", "/payments/salary"];
+// Path prefix -> the role ids that may open it (the backend's @Roles of its endpoints).
+const ROLE_GATED_PATHS: { prefix: string; roles: number[] }[] = [
+  { prefix: "/payments/expenses", roles: [1, 2] },
+  { prefix: "/payments/salary", roles: [1, 2] },
+  // «Qaytariladigan pul» and its history: CEO, Branch Director, Administrator, Cashier.
+  { prefix: "/payments/refunds", roles: [1, 2, 3, 5] },
+];
 
 export function PaymentsLayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -17,12 +23,13 @@ export function PaymentsLayoutShell({ children }: { children: React.ReactNode })
   // Xarajatlar va Ish haqi sahifalari faqat CEO (1) va Filial direktori (2)
   // uchun — backend'da ham @Roles('CEO', 'Branch Director'). Admin/Kassir
   // linkni ko'rmaydi va bu yerga to'g'ridan-to'g'ri (yoki eski
-  // «?tab=markaz» havolasi orqali) kirsa /payments ga qaytariladi.
-  const isCeoOrDirector = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  // «?tab=markaz» havolasi orqali) kirsa /payments ga qaytariladi. Qaytariladigan
+  // pul sahifasi o'qituvchiga yopiq: u yerda har bir so'rov 403 qaytaradi.
   const blocked =
     !!user &&
-    !isCeoOrDirector &&
-    CEO_BD_ONLY_PATHS.some((p) => pathname.startsWith(p));
+    ROLE_GATED_PATHS.some(
+      (p) => pathname.startsWith(p.prefix) && !user.roles.some((r) => p.roles.includes(r.id)),
+    );
 
   useEffect(() => {
     if (blocked) {

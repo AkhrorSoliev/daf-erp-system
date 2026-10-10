@@ -1,6 +1,6 @@
 # ADR-0025 — Ko'pchilik Telegram xabari kunlik yagona navbatga jamlanadi, darhol yubormaydi
 
-**Holati:** Qisman almashtirildi — ADR-0077
+**Holati:** Qisman almashtirildi — ADR-0078
 **Sana:** 2026-09-23
 **Aniqlashtirildi:** 2026-09-23, asosiy kodga qo'shilishidan oldin — reja ko'rigi
 va CEO ning uchta qarori (o'quvchi filtri, avtomatik pauza, guruh xabarini qayta

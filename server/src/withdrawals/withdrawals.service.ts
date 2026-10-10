@@ -8,7 +8,11 @@ import { EnrollmentStatus, Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { EntityHistoryService } from '../common/entity-history';
-import { resolveStudentBranchId } from '../common/finance/resolve-branch';
+import {
+  resolveStudentBranchId,
+  tryResolveStudentBranchId,
+} from '../common/finance/resolve-branch';
+import { loadTransferState } from '../balance-notices/load-transfer-state';
 import {
   tashkentDateStr,
   tashkentMonthKey,
@@ -31,7 +35,13 @@ export class WithdrawalsService {
   async preview(studentId: number, companyId: number) {
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, companyId, deletedAt: null },
-      select: { id: true, firstName: true, lastName: true, balance: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        balance: true,
+        statusChangedAt: true,
+      },
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
 
@@ -89,12 +99,21 @@ export class WithdrawalsService {
       }
     }
 
+    // The lock every withdrawal dialog shows before anything is typed (ADR-0077).
+    const transfer = await loadTransferState(
+      this.prisma,
+      student,
+      await tryResolveStudentBranchId(this.prisma, studentId, companyId),
+      new Date(),
+    );
+
     return {
       studentId: student.id,
       studentName: `${student.firstName} ${student.lastName}`.trim(),
       currentBalance: student.balance,
       maxWithdrawable: student.balance > 0 ? student.balance : 0,
       teacherSuggestions,
+      transfer,
     };
   }
 
@@ -109,12 +128,14 @@ export class WithdrawalsService {
    * underlying lesson), dated the day of the withdrawal so it lands in the
    * open payroll period.
    *
+   * Refused until the transfer condition holds (ADR-0077).
+   *
    * All writes happen in one Serializable transaction.
    */
   async create(dto: CreateWithdrawalDto, userId: number, companyId: number) {
     // Draining a student's positive balance into recognised revenue is a
     // financial write like any other — the caller must own their branch.
-    await assertCallerMayWriteForStudent(
+    const studentBranchId = await assertCallerMayWriteForStudent(
       this.prisma,
       userId,
       dto.studentId,
@@ -123,7 +144,7 @@ export class WithdrawalsService {
 
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, companyId, deletedAt: null },
-      select: { id: true, balance: true },
+      select: { id: true, balance: true, statusChangedAt: true },
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
 
@@ -132,6 +153,18 @@ export class WithdrawalsService {
         `Balansda yetarli pul yo'q (mavjud: ${student.balance} so'm)`,
       );
     }
+
+    // The money goes to the centre only after the student was told and the
+    // term passed: notice + 10 bank days + 30 days (ADR-0077). Every
+    // withdrawal, the profile's «Yechib olish» included. The student's branch
+    // decides the holidays, not the caller's.
+    const transfer = await loadTransferState(
+      this.prisma,
+      student,
+      studentBranchId,
+      new Date(),
+    );
+    if (!transfer.allowed) throw new BadRequestException(transfer.refusal);
 
     // Validate teacher selection up-front so we don't open a tx just to roll back.
     let teacherGroupId: string | null = null;
