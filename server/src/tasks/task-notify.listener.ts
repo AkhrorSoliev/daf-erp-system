@@ -106,6 +106,7 @@ export class TaskNotifyListener {
             relatedEntityId: task.id,
             taskId: task.id,
             companyId: task.companyId,
+            actionRequired: n.actionRequired,
           });
           this.gateway.sendToUser(n.userId, {
             type: 'notification',

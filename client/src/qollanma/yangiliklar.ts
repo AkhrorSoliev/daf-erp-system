@@ -14,6 +14,13 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-10",
+    sarlavha: "Qo'ng'iroqcha qayta qurildi",
+    matn: "Qo'ng'iroq belgisidagi raqam endi faqat sizdan ish kutayotgan xabarlarni sanaydi: davomat eslatmasi, sizga berilgan yoki tekshiruvga kelgan topshiriq, buzilgan to'lov va'dasi. Ish bajarilishi bilan xabar o'zi yopiladi: davomat olinsa, dars bekor qilinsa yoki ko'chirilsa — davomat eslatmalari, topshiriq yopilsa — uning xabarlari, qarz to'lansa — va'da xabari. Ertalabki «Bugun N ta to'lov va'dasi bajarilmadi» ro'yxati undagi hamma o'quvchi qarzini to'lagach yopiladi (1 000 so'mdan kam qolsa ham bo'ladi), shu filialning keyingi yangi ro'yxati kelsa — eskisi ham. Panelda «Kutilmoqda» va «Hammasi» bo'limlari va «Topshiriqlar», «Davomat», «To'lovlar» bo'yicha saralash bor; bir kundagi bir xil davomat eslatmalari bitta qatorga yig'iladi («Davomat olinmagan · 3 guruh»). Yangi «Barcha bildirishnomalar» sahifasida hamma xabar kunlar bo'yicha turadi va ulardan qidirsa bo'ladi. Yangi tizim yoqilgan kuni 7 kundan eski xabarlar bir marta tozalandi: kutilayotganlari (ochiq topshiriqlarnikidan tashqari) yopildi, o'qilmaganlari «o'qilgan» deb belgilandi, xabarlarning o'zi o'chirilmadi. Davomat dars boshlanishidan oldin olingan bo'lsa, o'qituvchiga «Dars boshlandi» eslatmasi endi bormaydi; bekor qilingan yoki ko'chirilgan darsga davomat eslatmalari yuborilmaydi. Kuni o'tib ketgan va «Dars bo'ldimi?» savoli kutilmayotgan davomat eslatmasi har kecha soat 03:00 da o'zi yopiladi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Bajarilmagan va'dalar ertalab bitta ro'yxatda",
     matn: "Soat 09:00 da muddati o'tgan to'lov va'dalari endi har o'quvchiga alohida emas, har filial bo'yicha bitta xabarda keladi: «Bugun N ta to'lov va'dasi bajarilmadi». Ro'yxatda har o'quvchining qarzi, guruhi va ustozi, telefoni, va'da sanasi va izohi, kim yozgani, va'dadan beri to'lov bo'lgan-bo'lmagani va va'dani necha marta buzgani yoziladi. Xabardagi havola «Qarzdorlik» sahifasini va'dasini buzganlar bilan ochadi. Qarzi 1 000 so'mdan kam o'quvchi ro'yxatga kirmaydi.",
     rollar: [1, 3],

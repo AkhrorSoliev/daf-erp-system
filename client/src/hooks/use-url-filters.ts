@@ -55,14 +55,16 @@ export function useUrlFilters<T extends FilterSchema>(schema: T) {
 
   const setFilter = useCallback(
     (key: keyof T & string, value: FilterValue) => {
-      router.replace(buildUrl({ [key]: value } as Partial<FilterValues<T>>));
+      router.replace(buildUrl({ [key]: value } as Partial<FilterValues<T>>), {
+        scroll: false,
+      });
     },
     [router, buildUrl],
   );
 
   const setFilters = useCallback(
     (updates: Partial<FilterValues<T>>) => {
-      router.replace(buildUrl(updates));
+      router.replace(buildUrl(updates), { scroll: false });
     },
     [router, buildUrl],
   );

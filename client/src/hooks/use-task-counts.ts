@@ -13,11 +13,11 @@ export function useTaskCounts(): TaskCounts & { refetch: () => void } {
     queryFn: async () => (await api.get<TaskCounts>("/tasks/counts")).data,
     staleTime: 0, refetchInterval: 60_000, refetchOnWindowFocus: true,
   });
-  const lastNotificationId = useNotifications((s) => s.notifications[0]?.id);
+  const notificationVersion = useNotifications((s) => s.version);
   // A number the store bumps when a card changes, not the `columns` object: that
   // gets a new identity on every loading flag and would refetch for nothing.
   const version = useTasks((s) => s.version);
-  useEffect(() => { void refetch({ cancelRefetch: false }); }, [lastNotificationId, version, refetch]);
+  useEffect(() => { void refetch({ cancelRefetch: false }); }, [notificationVersion, version, refetch]);
   // The page streams in after the sidebar, whose query may already hold the
   // counts, so the page's hydration render would print «1» over the server's
   // «0». Zeros until hydration is over keep both renders equal.

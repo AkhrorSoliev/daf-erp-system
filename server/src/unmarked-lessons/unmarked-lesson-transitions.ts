@@ -505,14 +505,20 @@ export async function reopenAfterRescheduleRemoved(
   });
 }
 
-/** A deleted group's open questions stop asking; their rows stay (no pay). */
+/**
+ * A deleted group's open questions stop asking; their rows stay (no pay).
+ * Answers the lesson days it closed, 'YYYY-MM-DD': the caller emits
+ * `UNMARKED_LESSON_CLOSED` for each after its commit, so the notices those
+ * questions waited on close too.
+ */
 export async function closeTasksOfDeletedGroup(
   tx: Tx,
   groupId: string,
-): Promise<void> {
+): Promise<string[]> {
   const rows = await tx.unmarkedLesson.findMany({
     where: { groupId, status: 'PENDING' },
-    select: { taskId: true },
+    select: { taskId: true, date: true },
   });
   for (const r of rows) await closeLessonTask(tx, r.taskId, null);
+  return rows.map((r) => dayOf(r.date));
 }
