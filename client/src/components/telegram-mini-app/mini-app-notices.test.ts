@@ -11,15 +11,16 @@ import {
 } from "./mini-app-notices";
 
 // Each cabinet points to the bot step that links ITS kind of account: a
-// student's Telegram is linked by «💳 To'lovlar», a staff member's by /xodim
-// (ADR-0045). Sending a teacher to «To'lovlar» would link nothing.
+// student's Telegram is linked by /start «📱 Hisobimni bog'lash», a staff
+// member's by /xodim (ADR-0045). Sending a teacher to «To'lovlar» would link
+// nothing.
 describe("Mini App notices", () => {
-  it("tells an unlinked student to share their number through «To'lovlar»", () => {
+  it("tells an unlinked student to share their number through «Hisobimni bog'lash»", () => {
     const html = renderToStaticMarkup(
       createElement(NotRegisteredNotice, { audience: "student" }),
     );
 
-    expect(html).toContain("To&#x27;lovlar");
+    expect(html).toContain("Hisobimni bog&#x27;lash");
     expect(html).not.toContain("/xodim");
   });
 
