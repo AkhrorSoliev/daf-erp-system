@@ -35,6 +35,8 @@ export const PERMISSION_KEYS = [
   "debt.promise",
   "balance.withdraw",
   "refunds.create",
+  "refunds.hand-over",
+  "refunds.cancel",
   "debt.write-off",
   "balance.adjust",
   "money.undo",

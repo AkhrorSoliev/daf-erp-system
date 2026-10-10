@@ -96,7 +96,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0025](0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md) | Ko'pchilik Telegram xabari kunlik yagona navbatga jamlanadi, darhol yubormaydi | Qisman almashtirildi — ADR-0078 | 2026-09-23 |
 | [0026](0026-rol-berish-shipi-ikkala-eshikda.md) | Rol faqat chaqiruvchining shipi ichida beriladi va olinadi | Qabul qilindi | 2026-09-24 |
 | [0027](0027-xodim-hisobini-faqat-yuqoridagi-rahbar-ozgartiradi.md) | Xodim hisobini faqat undan yuqoridagi rahbar o'zgartiradi | Qabul qilindi | 2026-09-24 |
-| [0028](0028-bloklangan-xodim-hech-narsa-bermaydi.md) | Bloklangan xodim hech narsa bera olmaydi, uning tokeni keyingi so'rovda to'xtaydi | Qabul qilindi; «rol o'zgarishi tokenni to'xtatmaydi» qismi — ADR-0077 bilan almashtirildi | 2026-09-24 |
+| [0028](0028-bloklangan-xodim-hech-narsa-bermaydi.md) | Bloklangan xodim hech narsa bera olmaydi, uning tokeni keyingi so'rovda to'xtaydi | Qabul qilindi; «rol o'zgarishi tokenni to'xtatmaydi» qismi — ADR-0079 bilan almashtirildi | 2026-09-24 |
 | [0029](0029-xodim-havolasi-uch-kun-ishlaydi.md) | Xodim havolasi uch kun ishlaydi, berilgan vaqti imzo ichida | Qabul qilindi | 2026-09-24 |
 | [0030](0030-parol-ozgarsa-boshqa-kirishlar-toxtaydi.md) | Parol o'zgarsa, hisobning boshqa kirishlari keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
 | [0031](0031-oz-kirish-kalitingiz-joriy-parol-bilan-ozgaradi.md) | O'z kirish kalitingiz faqat joriy parol bilan o'zgaradi | Qabul qilindi; o'quvchi qismi — ADR-0039 | 2026-09-24 |

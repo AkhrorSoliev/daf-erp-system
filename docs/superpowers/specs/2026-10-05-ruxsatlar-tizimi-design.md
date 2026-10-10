@@ -366,6 +366,8 @@ Ro'yxat 10.10 dagi kod bilan route'ma-route' solishtirib tuzildi: har bir route 
 | `debt.promise` | To'lov va'dasini yozish | D A K | `debt.view` | |
 | `balance.withdraw` | Balansdagi pulni markaz hisobiga o'tkazish | D A | `students.profile` | pul |
 | `refunds.create` | O'quvchiga pul qaytarish | D A | `students.profile` | pul |
+| `refunds.hand-over` | Qaytariladigan pulni o'quvchiga topshirish | D A K | `debt.view` | pul |
+| `refunds.cancel` | Pul qaytarish so'rovini bekor qilish | D | `refunds.create` | pul |
 | `debt.write-off` | Qarzni kechirish | D A | `students.details` | pul |
 | `balance.adjust` | Balansni qo'lda tuzatish va yechilgan dars pulini qaytarish | D | `students.details` | pul |
 | `money.undo` | To'lov, pul qaytarish va qarz kechirishni bekor qilish | — | `students.details` | pul |
@@ -438,7 +440,7 @@ Bosh sahifaning bo'limlari mos imkoniyatga ergashadi: pul kartalari — `reports
 | `daf.activity` | DaF ilovasi: markaz bo'yicha faollik | D A | — | |
 | `media.view` | Media | D A | — | |
 
-**Jami: 14 bo'lim, 64 ta imkoniyat.**
+**Jami: 14 bo'lim, 66 ta imkoniyat.**
 
 ## 11. Bosqichlar
 
@@ -555,3 +557,4 @@ Har bir bosqich uchun alohida ish rejasi yoziladi. Birinchi reja 1-bosqich uchun
   - **Yo'l nomi:** `GET /auth/permissions` o'rniga `GET /permissions/me` (7.7).
   - **Ataylab o'zgarishlar** ro'yxati tuzildi: 33 ta route (11-bo'lim).
 - 2026-10-10 (reja) — qo'llanmaning rol filtri imkoniyatga o'tmaydi: u auditoriya, ruxsat emas (8-bo'lim).
+- 2026-10-10 — main'dagi pul qaytarish so'rovlari uchun 2 imkoniyat qo'shildi: refunds.hand-over, refunds.cancel (66)

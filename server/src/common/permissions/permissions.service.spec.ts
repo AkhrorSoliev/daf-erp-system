@@ -39,7 +39,7 @@ describe('PermissionsService', () => {
     const service = new PermissionsService(
       prismaReturning([{ id: 1, name: 'CEO' }]) as never,
     );
-    expect((await service.forUser(10001)).keys.size).toBe(64);
+    expect((await service.forUser(10001)).keys.size).toBe(66);
   });
 
   it('gives a blocked, archived or unknown account nothing', async () => {

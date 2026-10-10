@@ -243,6 +243,20 @@ export const PERMISSIONS = {
     requires: ['students.profile'],
     danger: 'money',
   },
+  'refunds.hand-over': {
+    section: 'payments',
+    label: "Qaytariladigan pulni o'quvchiga topshirish",
+    defaultRoles: [D, A, K],
+    requires: ['debt.view'],
+    danger: 'money',
+  },
+  'refunds.cancel': {
+    section: 'payments',
+    label: "Pul qaytarish so'rovini bekor qilish",
+    defaultRoles: [D],
+    requires: ['refunds.create'],
+    danger: 'money',
+  },
   'debt.write-off': {
     section: 'payments',
     label: 'Qarzni kechirish',

@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { formatBalance, formatPhone, formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import type { Can } from "@/lib/permission-check";
+import type { PermissionKey } from "@/lib/permission-keys";
 import { cn } from "@/lib/utils";
 import { instantDayMonth } from "../debt/debt-format";
 import { drawerKindLine, noticeText } from "./refunds-format";
@@ -21,9 +23,18 @@ import type { DrawerStudent, RefundableDrawer as DrawerData } from "./refunds-ty
 /** What a drawer option opens (spec §3.5). The page closes the drawer first, then opens the dialog. */
 export type DrawerAction = "return" | "enroll" | "refund" | "transfer";
 
-/** Row click on «Qaytariladigan pul» (spec §3.5). `canAct` = REFUND_REQUEST_ROLES: a cashier reads the facts only. */
-export function RefundableDrawer({ studentId, canAct, onClose, onAction }: {
-  studentId: number | null; canAct: boolean; onClose: () => void; onAction: (kind: DrawerAction, student: DrawerStudent) => void;
+/** The capability each option needs: the one its server route checks. */
+const OPTION_KEYS: Record<DrawerAction | "notice", PermissionKey> = {
+  return: "students.manage", // PATCH /students/:id/status
+  enroll: "students.enroll", // POST /students/:id/enroll
+  refund: "refunds.create", // POST /refunds/quick
+  notice: "balance.withdraw", // POST /students/:id/balance-notices
+  transfer: "balance.withdraw", // POST /withdrawals
+};
+
+/** Row click on «Qaytariladigan pul» (spec §3.5). Each option needs its own capability: a cashier reads the facts only. */
+export function RefundableDrawer({ studentId, can, onClose, onAction }: {
+  studentId: number | null; can: Can; onClose: () => void; onAction: (kind: DrawerAction, student: DrawerStudent) => void;
 }) {
   const { data, isPending, isError, error } = useRefundableStudent(studentId);
   return (
@@ -42,7 +53,7 @@ export function RefundableDrawer({ studentId, canAct, onClose, onAction }: {
         ) : isPending || !data ? (
           <div className="space-y-3 p-6">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : (
-          <RefundableDrawerBody key={data.student.id} drawer={data} canAct={canAct} onAction={(kind) => onAction(kind, data.student)} />
+          <RefundableDrawerBody key={data.student.id} drawer={data} can={can} onAction={(kind) => onAction(kind, data.student)} />
         )}
       </SheetContent>
     </Sheet>
@@ -64,9 +75,10 @@ const Option = ({ title, hint, locked = false, children }: { title: string; hint
   </div>
 );
 
-export function RefundableDrawerBody({ drawer: d, canAct, onAction }: {
-  drawer: DrawerData; canAct: boolean; onAction: (kind: DrawerAction) => void;
+export function RefundableDrawerBody({ drawer: d, can, onAction }: {
+  drawer: DrawerData; can: Can; onAction: (kind: DrawerAction) => void;
 }) {
+  const may = (option: DrawerAction | "notice") => can(OPTION_KEYS[option]);
   return (
     <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4 text-sm">
       <div className="rounded-lg bg-muted/50 px-4 py-3">
@@ -80,27 +92,31 @@ export function RefundableDrawerBody({ drawer: d, canAct, onAction }: {
         <Fact label="Telegram bot">{d.telegramLinked ? "ulangan" : "ulanmagan"}</Fact>
         <Fact label="Xabar">{noticeText(d.transfer.notice)}</Fact>
       </div>
-      {canAct && (
+      {can(Object.values(OPTION_KEYS)) && (
         <section className="space-y-2">
           <h3 className="text-xs font-medium text-muted-foreground">Nima qilish mumkin</h3>
-          {d.kind === "muzlatilgan" && (
+          {d.kind === "muzlatilgan" && may("return") && (
             <Option title="Qaytdi — guruhga qaytarish" hint="Pul oyning qolgan darslari hisobiga o'tadi.">
               <Button size="sm" variant="outline" onClick={() => onAction("return")}>Qaytarish</Button>
             </Option>
           )}
-          {d.kind === "guruhsiz" && (
+          {d.kind === "guruhsiz" && may("enroll") && (
             <Option title="Guruhga qo'shish" hint="Pul shu oyning qolgan darslari hisobiga o'tadi.">
               <Button size="sm" variant="outline" onClick={() => onAction("enroll")}>Guruh tanlash</Button>
             </Option>
           )}
-          <Option title="Pulni o'quvchiga qaytarish" hint="So'rov ochiladi: balans 0 bo'ladi, pul 10 bank kuni ichida beriladi.">
-            <Button size="sm" variant="outline" onClick={() => onAction("refund")}>Qaytarishni boshlash</Button>
-          </Option>
-          <NoticeOption drawer={d} />
-          <Option title="Markaz hisobiga o'tkazish" hint="Pul markaz daromadiga o'tadi. Sabab yoziladi." locked={!d.transfer.allowed}>
-            <TransferNote transfer={d.transfer} />
-            <Button size="sm" variant="destructive" disabled={!d.transfer.allowed} onClick={() => onAction("transfer")}>O'tkazish</Button>
-          </Option>
+          {may("refund") && (
+            <Option title="Pulni o'quvchiga qaytarish" hint="So'rov ochiladi: balans 0 bo'ladi, pul 10 bank kuni ichida beriladi.">
+              <Button size="sm" variant="outline" onClick={() => onAction("refund")}>Qaytarishni boshlash</Button>
+            </Option>
+          )}
+          {may("notice") && <NoticeOption drawer={d} />}
+          {may("transfer") && (
+            <Option title="Markaz hisobiga o'tkazish" hint="Pul markaz daromadiga o'tadi. Sabab yoziladi." locked={!d.transfer.allowed}>
+              <TransferNote transfer={d.transfer} />
+              <Button size="sm" variant="destructive" disabled={!d.transfer.allowed} onClick={() => onAction("transfer")}>O'tkazish</Button>
+            </Option>
+          )}
         </section>
       )}
     </div>

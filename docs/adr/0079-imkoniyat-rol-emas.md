@@ -1,4 +1,4 @@
-# ADR-0077 — Ruxsat imkoniyat bilan tekshiriladi, rol faqat kimlikni bildiradi
+# ADR-0079 — Ruxsat imkoniyat bilan tekshiriladi, rol faqat kimlikni bildiradi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-10
@@ -11,7 +11,7 @@ Kim nima qila olishi kodga qattiq yozilgan edi: serverda 250 ta `@Roles(...)`, s
 ## Qaror
 
 1. **Rol — kimlik, imkoniyat — ruxsat.** Rol qaysi portalga kirish, filial qamrovi, kimning hisobini o'zgartirish (ADR-0026/0027) va o'qituvchining o'z guruhlarini belgilaydi. «Nima qila oladi?» degan savolga imkoniyat javob beradi.
-2. **Katalog bitta:** `server/src/common/permissions/permission-catalog.ts` — 14 bo'lim, 64 imkoniyat, har birining o'zbekcha nomi va boshlang'ich rollari. Boshlang'ich holat 10.10.2026 dagi route'larning aniq nusxasi.
+2. **Katalog bitta:** `server/src/common/permissions/permission-catalog.ts` — 14 bo'lim, 66 imkoniyat, har birining o'zbekcha nomi va boshlang'ich rollari. Boshlang'ich holat 10.10.2026 dagi route'larning aniq nusxasi.
 3. **Har route aniq bitta belgi oladi:** `@Can`, `@AnyStaff`, `@AnyUser`, `@StudentOnly` yoki `@Public`. Belgisiz route rad etiladi. `@Roles` va `RolesGuard` olib tashlandi.
 4. **Rollar har so'rovda bazadan o'qiladi** (`whereUserMayAct()`, 10 soniyalik kesh). Roldan chiqarish 10 soniya ichida ishlaydi. Bloklangan hisob Redis ishlamasa ham hech narsa qila olmaydi.
 5. **CEO hamma imkoniyatga ega**, bu o'chmaydi.

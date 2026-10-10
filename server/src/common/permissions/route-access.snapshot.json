@@ -663,12 +663,6 @@
     "CEO",
     "Cashier"
   ],
-  "GET /payments/frozen-balances": [
-    "Administrator",
-    "Branch Director",
-    "CEO",
-    "Cashier"
-  ],
   "GET /payments/pending-students": [
     "Administrator",
     "Branch Director",
@@ -694,10 +688,29 @@
   "GET /receipts/payment/:id/verify": "PUBLIC",
   "GET /receipts/refund/:id.pdf": "PUBLIC",
   "GET /receipts/refund/:id/verify": "PUBLIC",
+  "GET /refundable/excel": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /refundable/list": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /refundable/students/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
   "GET /refunds": [
     "Administrator",
     "Branch Director",
-    "CEO"
+    "CEO",
+    "Cashier"
   ],
   "GET /refunds/preview/:studentId": [
     "Administrator",
@@ -1480,11 +1493,6 @@
     "CEO",
     "Cashier"
   ],
-  "PATCH /refunds/:id/process": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
   "PATCH /rooms/:id": [
     "Administrator",
     "Branch Director",
@@ -1836,6 +1844,16 @@
     "CEO"
   ],
   "POST /public/forms/:slug/submit": "PUBLIC",
+  "POST /refunds/:id/cancel": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /refunds/:id/hand-over": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
   "POST /refunds/:id/reverse": [
     "CEO"
   ],
@@ -1934,6 +1952,11 @@
     "Student"
   ],
   "POST /students": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /students/:id/balance-notices": [
     "Administrator",
     "Branch Director",
     "CEO"

@@ -75,7 +75,9 @@ describe("navItems — Moliya → «Qaytariladigan pul» (spec B2b §3)", () => 
     const i = children.findIndex((child) => child.url === "/payments/refunds");
     expect(children[i - 1]?.url).toBe("/payments/salary");
     expect(refunds?.title).toBe("Qaytariladigan pul");
-    expect(refunds?.visibleForRoles).toEqual([1, 2, 3, 5]);
+    expect(refunds?.permission).toBe("debt.view");
+    const seenBy = [1, 2, 3, 4, 5].filter((role) => refunds && isNavGateOpen(refunds, canForRoles([role]), [role]));
+    expect(seenBy).toEqual([1, 2, 3, 5]);
   });
 
   it("stays lit on its history page", () => {

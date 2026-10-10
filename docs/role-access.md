@@ -2,7 +2,7 @@
 
 This document defines the permission model for the DaF ERP system. **Every restriction listed here must be enforced on both the backend (API) and frontend (UI).**
 
-> **Since ADR-0077 the source of truth is the capability catalog** (`server/src/common/permissions/permission-catalog.ts`). Every route checks a capability (`@Can`), and every screen asks `useCan(...)`. The tables below describe the **default** state — what each role holds until the CEO changes it (stage 2). When a table and the catalog disagree, the catalog wins and the table is corrected.
+> **Since ADR-0079 the source of truth is the capability catalog** (`server/src/common/permissions/permission-catalog.ts`). Every route checks a capability (`@Can`), and every screen asks `useCan(...)`. The tables below describe the **default** state — what each role holds until the CEO changes it (stage 2). When a table and the catalog disagree, the catalog wins and the table is corrected.
 
 ## Roles
 
@@ -173,7 +173,7 @@ The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-00
 |--------|-----|-----------------|---------------|---------|---------|
 | View reports | Yes | Yes | No | No | No |
 
-Ketgan o'quvchilar, davomat, markaz faoliyati va o'quvchi to'lovlari hisobotlari serverda ham faqat CEO va filial direktoriga (ADR-0077; ilgari menyuda yashirin, serverda adminga ochiq edi).
+Ketgan o'quvchilar, davomat, markaz faoliyati va o'quvchi to'lovlari hisobotlari serverda ham faqat CEO va filial direktoriga (ADR-0079; ilgari menyuda yashirin, serverda adminga ochiq edi).
 
 ### Settings — General (Company Info)
 
@@ -240,7 +240,7 @@ A registration link (`POST /telegram/employee-link`) creates a working staff acc
 
 #### A blocked or demoted employee's token stops within seconds
 
-An access token lives an hour, but `PermissionGuard` reads the account's roles and status from the database on every request ([ADR-0077](adr/0077-imkoniyat-rol-emas.md)), so neither a block nor a role change waits for the token to expire. The blocking half: [ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md).
+An access token lives an hour, but `PermissionGuard` reads the account's roles and status from the database on every request ([ADR-0079](adr/0079-imkoniyat-rol-emas.md)), so neither a block nor a role change waits for the token to expire. The blocking half: [ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md).
 
 - **Blocking cuts off the tokens already issued.** Setting an employee to SUSPENDED, TERMINATED or ARCHIVED, or archiving them, on either the employee page (`UsersService`) or the teacher page (`TeachersService`) writes `user:blocked:<id>`, and `JwtAuthGuard` refuses that token on its next request ("Hisobingiz bloklangan"). Setting the employee back to ACTIVE or INACTIVE lifts it. Sign-in and token refresh already refused blocked accounts; the key is what stops the token issued before the block.
 - **Redis is a cache, not the authority.** If Redis is unreachable `JwtAuthGuard` lets the request through rather than failing everyone, but `PermissionGuard` still reads the database: a blocked account holds no role and no capability, and `@AnyUser()` needs a role too, so it is refused on every route that is not `@Public()` (within the 10-second cache of `PermissionsService`). The two doors that grant access (above) do not depend on Redis either: they refuse a blocked caller from their own database read.

@@ -17,8 +17,8 @@ describe('permission catalog', () => {
     }
   });
 
-  it('has 64 capabilities in 14 sections, none of them empty', () => {
-    expect(PERMISSION_KEYS).toHaveLength(64);
+  it('has 66 capabilities in 14 sections, none of them empty', () => {
+    expect(PERMISSION_KEYS).toHaveLength(66);
     expect(PERMISSION_SECTIONS).toHaveLength(14);
     for (const section of PERMISSION_SECTIONS) {
       expect(
@@ -73,8 +73,8 @@ describe('permission catalog', () => {
   });
 
   it('gives the CEO every capability, whatever else they hold', () => {
-    expect(defaultKeysForRoles([ROLE_ID.CEO]).size).toBe(64);
-    expect(defaultKeysForRoles([ROLE_ID.TEACHER, ROLE_ID.CEO]).size).toBe(64);
+    expect(defaultKeysForRoles([ROLE_ID.CEO]).size).toBe(66);
+    expect(defaultKeysForRoles([ROLE_ID.TEACHER, ROLE_ID.CEO]).size).toBe(66);
   });
 
   it('gives a teacher only their groups and attendance', () => {
@@ -91,6 +91,7 @@ describe('permission catalog', () => {
       'debt.view',
       'payments.create',
       'payments.view',
+      'refunds.hand-over',
       'students.profile',
     ]);
   });

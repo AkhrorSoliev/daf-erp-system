@@ -18,7 +18,18 @@ vi.mock("@/hooks/use-auth", () => {
   });
   return { useAuth };
 });
+// No server to ask for the capability list here: the server's default list for the signed-in roles.
+vi.mock("@/hooks/use-permissions", async () => {
+  const { canForRoles } = await import("@/test-support/server-catalog");
+  const can = () => canForRoles(auth.roles.map((r) => r.id));
+  return {
+    useCan: (wanted: PermissionKey | readonly PermissionKey[]) => can()(wanted),
+    usePermissions: (select: (s: { can: ReturnType<typeof can> }) => unknown) => select({ can: can() }),
+    usePermissionsReady: () => true,
+  };
+});
 
+import type { PermissionKey } from "@/lib/permission-keys";
 import { keepWithinRefundTab, refundableListKey } from "./refunds-queries";
 import { readRefundsFilters, refundableListParams } from "./refunds-url";
 import { ActionDialog, RefundsPage } from "./refunds-page";
