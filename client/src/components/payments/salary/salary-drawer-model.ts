@@ -1,6 +1,6 @@
 import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { instantDate } from "../debt/debt-format";
-import { FULL_TEACHER_PAY_MONTH, isMonthlyBillingMonth } from "../overview/overview-math";
+import { isMonthlyBillingMonth } from "../overview/overview-math";
 import { addMonths, monthShort, SALARY_TYPE_LABELS } from "../salary-utils";
 import type {
   BreakdownLine,
@@ -68,6 +68,9 @@ export function drawerHint(state: MonthStateKind, payment: RowPayment | null, mo
   }
 }
 
+/** «Ishladi»: a teacher's `fullDeserved` (null without lesson data), a staff member's `monthly`. */
+const workedOf = (row: SalaryDetail["row"]) => ("fullDeserved" in row ? row.fullDeserved : row.monthly);
+
 export interface CalcLine {
   label: string;
   value: number;
@@ -76,21 +79,53 @@ export interface CalcLine {
 
 /**
  * «Hisob»: Ishladi − Avans = Beriladi. When the frozen payment no longer
- * equals the live legs, one more line closes the equation on it. Before full
- * teacher pay (2026-07) a teacher's payment was based on `covered`, so the
- * difference there is the base, not a change, and is not shown.
+ * equals the live legs (data changed after the cron), one more line closes
+ * the equation on it. Before 2026-07 the server sets `fullDeserved` to the pay
+ * base, so the difference there is a real change too.
  */
 export function calcLines(detail: SalaryDetail): CalcLine[] {
   const { row } = detail;
-  const worked = "fullDeserved" in row ? row.fullDeserved : row.monthly;
-  const preFullPay = detail.kind === "teacher" && detail.month < FULL_TEACHER_PAY_MONTH;
-  const diff = preFullPay ? null : detail.afterCalcDiff;
+  const worked = workedOf(row);
+  const diff = detail.afterCalcDiff;
   const lines: CalcLine[] = [];
   if (worked != null) lines.push({ label: "Ishladi", value: worked, sign: "+" });
   lines.push({ label: "Avans (ushlanadi)", value: row.advances, sign: "-" });
   if (diff) lines.push({ label: "Hisoblangandan keyin o'zgardi", value: diff, sign: "±" });
   lines.push({ label: "Beriladi", value: live(row.payment)?.amount ?? row.netToPay, sign: "=" });
   return lines;
+}
+
+/**
+ * Under the advance line while nothing is calculated yet and the advances
+ * outrun the earnings so far: the server shows «Beriladi» as 0 (it clamps),
+ * so the equation does not close, and this says why.
+ */
+export function advanceAheadNote(detail: SalaryDetail): string | null {
+  const worked = workedOf(detail.row);
+  if (live(detail.row.payment) || worked == null || worked - detail.row.advances >= 0) return null;
+  return "Avans hozircha ishlanganidan ko'p — qolgani oy oxirigacha ishlanganidan ushlanadi.";
+}
+
+type ButtonState = "enabled" | "disabled" | null;
+
+/**
+ * Which workflow buttons the footer draws (null = not drawn). Each is drawn
+ * only for a viewer with its capability, and only while the row's payment has
+ * not passed that step: shut in the open month and before its turn, open when
+ * the payment waits for it.
+ */
+export function drawerButtons(
+  state: MonthStateKind,
+  payment: RowPayment | null,
+  canClose: boolean,
+  canPay: boolean,
+): { approve: ButtonState; pay: ButtonState } {
+  const status = live(payment)?.status;
+  const open = state === "OPEN";
+  const approve: ButtonState = !canClose ? null : open ? "disabled" : status === "CALCULATED" ? "enabled" : null;
+  const pay: ButtonState =
+    !canPay ? null : open || status === "CALCULATED" ? "disabled" : status === "APPROVED" ? "enabled" : null;
+  return { approve, pay };
 }
 
 /** Under «Guruhlar bo'yicha»: how much of the pay the students covered and how much the center put in. */

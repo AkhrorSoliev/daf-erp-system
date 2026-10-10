@@ -1,8 +1,10 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { dayMonth } from "../overview/overview-math";
+import { PossibleDeductionsInfo } from "../possible-deductions-info";
 import {
+  advanceAheadNote,
   calcLines,
   drawerTotalLabel,
   payoutLines,
@@ -90,19 +92,22 @@ function signed({ value, sign }: CalcLine): string {
 }
 
 function CalcBlock({ detail }: { detail: SalaryDetail }) {
+  const note = advanceAheadNote(detail);
   return (
     <Block title="Hisob">
       {calcLines(detail).map((l) => (
-        <div
-          key={l.label}
-          className={cn(
-            "flex items-baseline justify-between gap-3 text-sm",
-            l.sign === "=" && "border-t pt-2 font-semibold",
-          )}
-        >
-          <span>{l.label}</span>
-          <span className="tabular-nums">{signed(l)}</span>
-        </div>
+        <Fragment key={l.label}>
+          <div
+            className={cn(
+              "flex items-baseline justify-between gap-3 text-sm",
+              l.sign === "=" && "border-t pt-2 font-semibold",
+            )}
+          >
+            <span>{l.label}</span>
+            <span className="tabular-nums">{signed(l)}</span>
+          </div>
+          {l.sign === "-" && note && <p className="text-xs text-muted-foreground">{note}</p>}
+        </Fragment>
       ))}
     </Block>
   );
@@ -141,6 +146,8 @@ export function SalaryDrawerBody({ detail, state }: { detail: SalaryDetail; stat
       <AdvancesBlock items={row.advanceItems ?? []} />
       <CalcBlock detail={detail} />
       {detail.payout && <PayoutBlock payout={detail.payout} />}
+      {/* The company-wide deductions note the old breakdown drawer carried. */}
+      <PossibleDeductionsInfo />
     </div>
   );
 }

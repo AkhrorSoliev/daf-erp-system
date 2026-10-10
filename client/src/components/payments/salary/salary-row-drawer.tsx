@@ -10,7 +10,7 @@ import { CanLink } from "@/components/shared/can-link";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { currentMonthKey, monthLabel } from "../salary-utils";
-import { csvFromLessons, drawerHint } from "./salary-drawer-model";
+import { csvFromLessons, drawerButtons, drawerHint } from "./salary-drawer-model";
 import { SalaryDrawerBody } from "./salary-drawer-sections";
 import { useInvalidateSalary, useSalaryDetail } from "./salary-queries";
 import type { BreakdownLine, MonthStateKind, SalaryDetail } from "./salary-types";
@@ -107,7 +107,7 @@ function DrawerActions({
   const invalidate = useInvalidateSalary();
   const [busy, setBusy] = useState<"csv" | "approve" | null>(null);
   const payment = detail.row.payment?.status === "CANCELLED" ? null : detail.row.payment;
-  const open = state === "OPEN";
+  const buttons = drawerButtons(state, payment, canClose, canPay);
 
   const downloadCsv = async () => {
     setBusy("csv");
@@ -153,9 +153,8 @@ function DrawerActions({
           {busy === "csv" ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Download data-icon="inline-start" />}
           Darslar bo&apos;yicha (CSV)
         </Button>
-        {/* In the open month the buttons are shown shut; later only the one the payment is waiting for. */}
-        {canClose && (open || payment?.status === "CALCULATED") && (
-          <Button onClick={approve} disabled={open || busy !== null}>
+        {buttons.approve && (
+          <Button onClick={approve} disabled={buttons.approve === "disabled" || busy !== null}>
             {busy === "approve" ? (
               <Loader2 className="animate-spin" data-icon="inline-start" />
             ) : (
@@ -164,8 +163,8 @@ function DrawerActions({
             Tasdiqlash
           </Button>
         )}
-        {canPay && (open || payment?.status === "APPROVED") && (
-          <Button onClick={onPay} disabled={open || busy !== null}>
+        {buttons.pay && (
+          <Button onClick={onPay} disabled={buttons.pay === "disabled" || busy !== null}>
             <HandCoins data-icon="inline-start" />
             Berildi
           </Button>

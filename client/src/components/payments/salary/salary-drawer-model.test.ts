@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  advanceAheadNote,
   calcLines,
   csvFromLessons,
+  drawerButtons,
   drawerHint,
   drawerTotalLabel,
   payoutLines,
@@ -131,11 +133,20 @@ describe("calcLines", () => {
     ]);
   });
 
-  it("shows no change for a teacher's month before full pay (the payment base was then «covered»)", () => {
-    const row = madina({ netToPay: 6_120_000, payment: pay("PAID", 6_120_000) });
-    const lines = calcLines(detail(row, { month: "2026-06", afterCalcDiff: -1_720_000 }));
-    expect(lines.map((l) => l.label)).toEqual(["Ishladi", "Avans (ushlanadi)", "Beriladi"]);
-    expect(lines.at(-1)?.value).toBe(6_120_000);
+  it("shows the change in a month before full pay too (the server's «Ishladi» is the pay base there)", () => {
+    const row = madina({ fullDeserved: 8_120_000, centerFunded: 0, netToPay: 6_070_000, payment: pay("PAID", 6_070_000) });
+    const lines = calcLines(detail(row, { month: "2026-06", afterCalcDiff: -50_000 }));
+    expect(lines).toEqual([
+      { label: "Ishladi", value: 8_120_000, sign: "+" },
+      { label: "Avans (ushlanadi)", value: 2_000_000, sign: "-" },
+      { label: "Hisoblangandan keyin o'zgardi", value: -50_000, sign: "±" },
+      { label: "Beriladi", value: 6_070_000, sign: "=" },
+    ]); // 8 120 000 − 2 000 000 − 50 000 = 6 070 000: the equation closes.
+  });
+
+  it("shows a staff member's change too", () => {
+    const row: StaffRow = { ...staffRow, netToPay: 3_100_000, payment: pay("CALCULATED", 3_100_000) };
+    expect(calcLines(detail(row, { afterCalcDiff: 100_000 })).map((l) => l.sign)).toEqual(["+", "-", "±", "="]);
   });
 
   it("shows no change line for a zero difference", () => {
@@ -155,6 +166,53 @@ describe("calcLines", () => {
   it("leaves «Ishladi» out for a month without lesson data", () => {
     const row = madina({ hasLessonData: false, fullDeserved: null, covered: null, centerFunded: null });
     expect(calcLines(detail(row)).map((l) => l.label)).toEqual(["Avans (ushlanadi)", "Beriladi"]);
+  });
+});
+
+describe("advanceAheadNote", () => {
+  const note = "Avans hozircha ishlanganidan ko'p — qolgani oy oxirigacha ishlanganidan ushlanadi.";
+
+  it("explains a 0 «Beriladi» when the advances outrun the earnings so far", () => {
+    const row = madina({ fullDeserved: 1_500_000, advances: 2_000_000, netToPay: 0 });
+    expect(advanceAheadNote(detail(row))).toBe(note);
+  });
+
+  it("says nothing when the earnings cover the advances, or once a payment exists", () => {
+    expect(advanceAheadNote(detail(madina()))).toBeNull();
+    expect(advanceAheadNote(detail(madina({ fullDeserved: 2_000_000, netToPay: 0 })))).toBeNull();
+    const calculated = madina({ fullDeserved: 1_500_000, netToPay: 0, payment: pay("CALCULATED", 0) });
+    expect(advanceAheadNote(detail(calculated))).toBeNull();
+  });
+
+  it("says nothing without lesson data", () => {
+    const row = madina({ hasLessonData: false, fullDeserved: null, covered: null, centerFunded: null });
+    expect(advanceAheadNote(detail(row))).toBeNull();
+  });
+});
+
+describe("drawerButtons", () => {
+  it("draws both shut in the open month", () => {
+    expect(drawerButtons("OPEN", null, true, true)).toEqual({ approve: "disabled", pay: "disabled" });
+  });
+
+  it("opens «Tasdiqlash» for a calculated payment, «Berildi» still shut", () => {
+    expect(drawerButtons("CALCULATED", pay("CALCULATED"), true, true)).toEqual({ approve: "enabled", pay: "disabled" });
+  });
+
+  it("opens «Berildi» for an approved payment; «Tasdiqlash» is behind it", () => {
+    expect(drawerButtons("APPROVED", pay("APPROVED"), true, true)).toEqual({ approve: null, pay: "enabled" });
+  });
+
+  it("draws neither for a paid month, a month with no payment, or a cancelled one", () => {
+    expect(drawerButtons("PAID", pay("PAID"), true, true)).toEqual({ approve: null, pay: null });
+    expect(drawerButtons("NOT_CALCULATED", null, true, true)).toEqual({ approve: null, pay: null });
+    expect(drawerButtons("CALCULATED", pay("CANCELLED"), true, true)).toEqual({ approve: null, pay: null });
+  });
+
+  it("never draws a button the viewer has no capability for", () => {
+    expect(drawerButtons("OPEN", null, false, false)).toEqual({ approve: null, pay: null });
+    expect(drawerButtons("CALCULATED", pay("CALCULATED"), false, true)).toEqual({ approve: null, pay: "disabled" });
+    expect(drawerButtons("APPROVED", pay("APPROVED"), true, false)).toEqual({ approve: null, pay: null });
   });
 });
 
