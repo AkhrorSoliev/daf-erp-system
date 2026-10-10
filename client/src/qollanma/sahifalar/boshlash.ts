@@ -141,7 +141,7 @@ export const boshlash: QollanmaSahifa[] = [
     qisqacha:
       "Tizimda uchraydigan atamalar alifbo tartibida: rollar, o'quvchi va guruh holatlari, davomat, qarz, to'lov va oylik so'zlari bir-ikki gapda tushuntirilgan.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0015", "0047", "0048", "0054", "0055", "0058", "0059", "0060", "0062", "0064", "0065", "0066"],
+    adr: ["0015", "0047", "0048", "0054", "0055", "0058", "0059", "0060", "0062", "0064", "0065", "0066", "0077"],
     yollar: [],
     kalitSozlar: [
       "atama",

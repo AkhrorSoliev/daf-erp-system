@@ -65,6 +65,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | Manual adjustment | Yes | Yes | No | No | No |
 
 - **Frontend**: Check `user.roles.some(r => [1, 2].includes(r.id))` before rendering salary/balance UI
+- **Frontend («Qaytariladigan pul»)**: `REFUND_REQUEST_ROLES`, `REFUND_HAND_OVER_ROLES` and `REFUND_CANCEL_ROLES` in `client/src/lib/role-access.ts` gate the request, «Berildi» and «Bekor qilish» actions
 - **Backend**: `@Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')` on payment endpoints; `@Roles('CEO', 'Branch Director')` on expenses and money reports (`financial-overview` and `marketing` included — since ADR-0067 the overview no longer admits Administrator and Cashier; their «Umumiy ma'lumotlar» is payment recording and the recent payments); salary writes are CEO/BD or CEO-only, while salary reads also admit Administrator — the decorators in `salary.controller.ts` are the list of record
 - **No tax setting.** The salary tax-rate config and its endpoints were removed: the system computes and withholds no tax, and the salary page shows possible deductions as an informational note only
 - **CEO-only actions**: reverse payment, reverse refund, calculate salary, approve salary — these use `@Roles('CEO')` specifically
@@ -85,7 +86,7 @@ Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qa
 | Payment statement PDF (drawer) | Yes | Yes | Yes | No | No |
 | Undo a debt write-off | Yes | No | No | No | No |
 
-- **Frontend**: `CALL_LOG_ROLES`, `STATEMENT_ROLES` and the refund constants `REFUND_REQUEST_ROLES` / `REFUND_HAND_OVER_ROLES` / `REFUND_CANCEL_ROLES` in `client/src/lib/role-access.ts` hide the actions a cashier may not take
+- **Frontend**: `CALL_LOG_ROLES` and `STATEMENT_ROLES` in `client/src/lib/role-access.ts` hide the actions a cashier may not take
 
 ### Student contracts
 
