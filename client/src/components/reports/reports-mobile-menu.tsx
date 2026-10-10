@@ -3,10 +3,15 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { reportsNavSections } from "@/lib/reports-nav";
-import { usePermissions } from "@/hooks/use-permissions";
+import { usePermissions, usePermissionsReady } from "@/hooks/use-permissions";
 
 export function ReportsMobileMenu() {
   const can = usePermissions((s) => s.can);
+  const ready = usePermissionsReady();
+
+  // Until the capability list is known every item is hidden; render nothing
+  // rather than an empty menu.
+  if (!ready) return null;
 
   return (
     <div className="space-y-5">

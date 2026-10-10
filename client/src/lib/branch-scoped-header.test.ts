@@ -42,8 +42,9 @@ const BRANCH_INDEPENDENT: Record<string, string> = {
     "alone (notifications.service.ts), with no branch in the query.",
   "hooks/use-permissions.ts":
     "Reads the signed-in person's own capability list (GET /permissions/me). " +
-    "Capabilities follow the person's roles, which the server reads from the " +
-    "database by user id; the request carries no branch.",
+    "Capabilities follow the person's roles: the server answers by user id " +
+    "and ignores the branch (route policy SELF in branch-route-policy.ts). " +
+    "Clearing the list on a branch switch would blank every menu.",
   "hooks/use-push-notifications.ts":
     "Registers this DEVICE for push. Device tokens belong to the browser, " +
     "not to a branch.",

@@ -16,6 +16,30 @@ const STORAGE_KEY = "daf.permissions";
 // or one sent before a newer one) can never overwrite a newer list.
 let seq = 0;
 
+// A first read that fails leaves the app stripped down with nothing to show for
+// it, so it is tried again a few times. Only while no list is known: once there
+// is one, a failed read keeps it. One budget per start; start, clear and a
+// successful read reset it, and cancel the timer.
+const RETRY_DELAYS_MS = [1000, 3000, 8000];
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retriesUsed = 0;
+
+function resetRetries() {
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+  retriesUsed = 0;
+}
+
+function scheduleRetry(userId: number) {
+  if (retryTimer || retriesUsed >= RETRY_DELAYS_MS.length) return;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    // The user may have changed or a list arrived since this was scheduled.
+    const now = usePermissions.getState();
+    if (now.userId === userId && now.keys === null) void now.refresh();
+  }, RETRY_DELAYS_MS[retriesUsed++]);
+}
+
 interface PermissionsState {
   userId: number | null;
   /** `null` until a list is known, from this browser's storage or the server. */
@@ -44,6 +68,7 @@ export const usePermissions = create<PermissionsState>((set, get) => ({
   start: (userId) => {
     if (get().userId === userId && get().keys) return;
     seq++;
+    resetRetries();
     let stored: ReadonlySet<PermissionKey> | null = null;
     try {
       stored = parseStoredPermissions(localStorage.getItem(STORAGE_KEY), userId);
@@ -62,6 +87,7 @@ export const usePermissions = create<PermissionsState>((set, get) => ({
       const { data } = await api.get<{ keys: string[] }>(PERMISSIONS_ME_PATH);
       // Signed out, switched, or a newer read was sent meanwhile.
       if (get().userId !== userId || mine !== seq) return;
+      resetRetries();
       const keys = knownKeys(data.keys);
       set({ keys, can: makeCan(keys), loadedAt: Date.now() });
       try {
@@ -73,12 +99,17 @@ export const usePermissions = create<PermissionsState>((set, get) => ({
         // Storage unavailable: the list stays in memory for this tab.
       }
     } catch {
-      // Keep what we have; the server still refuses what it must.
+      // Keep what we have; the server still refuses what it must. With
+      // nothing yet, read again (only the latest read decides).
+      if (get().userId === userId && mine === seq && get().keys === null) {
+        scheduleRetry(userId);
+      }
     }
   },
 
   clear: () => {
     seq++;
+    resetRetries();
     set({ userId: null, keys: null, can: makeCan(null), loadedAt: 0 });
   },
 }));
