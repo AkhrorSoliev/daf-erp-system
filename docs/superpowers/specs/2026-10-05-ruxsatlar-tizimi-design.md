@@ -1,6 +1,6 @@
 # Ruxsatlar tizimi — CEO xodimlarga imkoniyat ochadi va yopadi
 
-**Sana:** 2026-10-05 · **Holati:** CEO bilan suhbatda kelishildi, hujjat ko'rib chiqilishi kutilmoqda · **ADR:** 1-bosqich PR'ida yoziladi (keyingi bo'sh raqam; hozir 0074, chunki 0073 ni PR #667 band qilgan)
+**Sana:** 2026-10-05 (yangilandi 2026-10-10) · **Holati:** CEO bilan suhbatda kelishildi; 10.10 da CEO davom etishni aytdi · **ADR:** 1-bosqich PR'ida yoziladi (keyingi bo'sh raqam; hozir 0076, chunki 0074 — topshiriqlar, 0075 — «Qaytariladigan pul» ishi)
 
 ## 0. Qisqacha
 
@@ -28,18 +28,18 @@
 ## 2. Hozirgi holat (kod va prod bazasi o'qildi, 05.10.2026)
 
 - **Ruxsat kod ichiga qattiq yozilgan.** Serverda `@Roles(...)` 250 joyda (74 fayl) uchraydi. Har bir route rol nomlari ro'yxatini `RolesGuard` orqali tekshiradi. Rollar `Role` jadvalida (6 qator), xodim bilan bog'lanishi `UserRole` jadvalida.
-- **Route'lar** `scripts/route-inventory.ts` bilan sanaldi, jami 434 ta:
-  - xodimlar ishlatadigan route — 354 ta;
-  - har qanday kirgan foydalanuvchiga ochiq — 17 ta;
+- **Route'lar** `scripts/route-inventory.ts` bilan sanaldi (10.10 dagi `main`), jami 453 ta:
+  - xodimlar ishlatadigan route — 375 ta;
+  - har qanday kirgan foydalanuvchiga ochiq — 15 ta;
   - o'quvchi route'lari — 39 ta;
   - ochiq route — 24 ta.
 - **Xodim route'larining rol to'plamlari:**
   - faqat CEO — 23;
-  - CEO + direktor — 71;
-  - CEO + direktor + admin — 196;
+  - CEO + direktor — 68;
+  - CEO + direktor + admin — 200;
   - CEO + direktor + admin + o'qituvchi — 22;
-  - CEO + direktor + admin + kassir — 30;
-  - barcha xodim — 12.
+  - CEO + direktor + admin + kassir — 33;
+  - barcha xodim — 29 (17 tasi yangi topshiriqlar bo'limi, ADR-0074).
 - **Server ichida route'dan tashqari 40 ta rol tekshiruvi bor** (19 fayl). Ularning bir qismi «xodim kim?» degan savolga javob beradi: CEO barcha filialni ko'radi, o'qituvchi faqat o'z guruhini, ADR-0026/0027 shiplari. Boshqa qismi «xodim nima qila oladi?» degan savolga javob beradi: masalan, to'lov sozlamasining kompaniya qismini faqat CEO o'zgartiradi.
 - **Saytda 65 faylda rol tekshiruvi bor:** `roles.some(...)`, `hasAnyRole`, `isCeo`. Menyu ro'yxatlari `visibleForRoles` bilan berilgan: `nav-items.ts`, `payments-nav.ts`, `reports-nav.ts`, `daf-nav.ts`, `settings-nav.ts`. Sahifa havolalari `role-access.ts` va `RoleLink` orqali.
 - **Menyu va server ro'yxatlari ba'zi joylarda farq qiladi.** Masalan, bir nechta hisobot menyuda faqat CEO va direktorga ko'rinadi, server esa uning ma'lumotini adminga ham beradi. 30.09 dagi tuzatish (#638) bunday 5 ta farqni yopgan edi. Qolganlari 1-bosqichda ro'yxatga olinadi (7.6).
@@ -142,9 +142,11 @@ export const PERMISSIONS = {
 export type PermissionKey = keyof typeof PERMISSIONS;
 ```
 
-Bo'limlar tartibi va nomi `PERMISSION_SECTIONS` da yoziladi. `label` ekranda ko'rinadi, shuning uchun unda inglizcha so'z bo'lmaydi. Qulflangan rolning sababi `lockReasons` maydonida turadi.
+Bo'limlar tartibi va nomi `PERMISSION_SECTIONS` da yoziladi. `label` ekranda ko'rinadi, shuning uchun unda inglizcha so'z bo'lmaydi. Qulflangan rolning sababi `lockReasons` maydonida turadi. `allowedRoles` va `lockReasons` 2-bosqichda qo'shiladi: 1-bosqichda hech kim boshlang'ich holatni o'zgartira olmaydi.
 
-### 7.2 Baza
+### 7.2 Baza (2-bosqich)
+
+Bu jadvallar 2-bosqichda, «Ruxsatlar» sahifasi bilan birga qo'shiladi. 1-bosqichda CEO hech narsani o'zgartira olmaydi, shuning uchun imkoniyatlar faqat katalogdagi boshlang'ich holatdan hisoblanadi va bazada saqlanadigan narsa yo'q.
 
 Ikkita yangi jadval qo'shiladi. Mavjud jadvallarga tegilmaydi.
 
@@ -176,7 +178,7 @@ model UserPermission {
 - `Company`, `Role` va `User` bilan bog'lanishlar `onDelete: Cascade` bilan qo'yiladi.
 - `key` katalogdagi nom. Bazada unga cheklov yo'q, lekin yozishda katalog bo'yicha tekshiriladi.
 - O'qishda noma'lum `key` e'tiborsiz qoldiriladi va jurnalga yoziladi. Agar katalogda nom o'zgarsa, eski yozuvlarni migratsiya qayta nomlaydi.
-- 1-bosqichda ikkala jadval bo'sh bo'ladi. Demak hamma narsa boshlang'ich holatda ishlaydi.
+- Jadvallar bo'sh holda qo'shiladi. Demak 2-bosqich chiqqan kuni ham hamma narsa boshlang'ich holatda ishlaydi.
 
 ### 7.3 Amaldagi imkoniyatlarni hisoblash
 
@@ -184,7 +186,8 @@ model UserPermission {
 
 - **Rollar bazadan o'qiladi** (`UserRole`), token'dan emas. Shuning uchun roldan chiqarish darhol ishlaydi (Q5). Bloklangan hisobni `JwtAuthGuard` allaqachon to'xtatadi.
 - **Guard `request.user.roles` ni bazadagi rollar bilan almashtiradi.** Shunda «kim?» degan tekshiruvlar ham yangi rolni ko'radi: filial qamrovi, ADR-0026/0027. Masalan, CEO rolidan chiqarilgan xodim keyingi so'rovdayoq barcha filialni ko'rishdan to'xtaydi. Bu ADR-0028 da ochiq qoldirilgan bo'shliqni yopadi.
-- **Natija kesh qilinadi.** U jarayon ichida har bir xodim uchun 10 soniya saqlanadi. Shu jarayonda ruxsatlar yoki xodim rollari yozilsa, kesh darhol tozalanadi.
+- **Natija kesh qilinadi.** U jarayon ichida har bir xodim uchun 10 soniya saqlanadi. 1-bosqichda faqat shu muddat ishlaydi. 2-bosqichdan boshlab ruxsat yozilganda kesh shu jarayonda darhol tozalanadi.
+- **Bloklangan yoki arxivlangan hisob rol olmaydi.** Rollar `whereUserMayAct()` sharti bilan o'qiladi. Redis ishlamay qolgan paytda ham bloklangan xodim hech bir imkoniyatni ishlata olmaydi.
   - Kodda `// ponytail:` izohi qoldiriladi. Server bir nechta nusxada ishlasa, boshqa nusxada kechikish 10 soniyagacha bo'ladi. Bu yetmasa, ADR-0030 dagi kabi Redis versiya kaliti qo'shiladi.
 - Natija shakli: `{ roleIds, keys: Set<PermissionKey> }`.
 
@@ -196,9 +199,9 @@ Har bir route'da aniq bitta belgi bo'ladi:
 |---|---|---|
 | `@Public()` | ochiq | o'zgarmaydi (24) |
 | `@StudentOnly()` | o'quvchi portali | `@Roles('Student')` o'rniga (39) |
-| `@AnyUser()` | har qanday kirgan hisob, faqat o'z ma'lumoti | bugun `@Roles` siz route'lar (17) |
-| `@AnyStaff()` | har qanday xodim: ma'lumotnomalar va o'z ma'lumoti | ma'lumotnoma ro'yxatlari, fayl yuklash, o'z telefoni, `/salary/me/*` (~16) |
-| `@Can(...keys)` | sanab o'tilgan imkoniyatlardan **birortasi** bo'lsa | qolgan xodim route'lari (~338) |
+| `@AnyUser()` | har qanday kirgan hisob, faqat o'z ma'lumoti | bugun `@Roles` siz route'lar (15) |
+| `@AnyStaff()` | har qanday xodim: ma'lumotnomalar, o'z ma'lumoti, topshiriqlar | ma'lumotnoma ro'yxatlari, fayl yuklash, o'z telefoni, `/salary/me/*`, `/tasks/*` (33) |
+| `@Can(...keys)` | sanab o'tilgan imkoniyatlardan **birortasi** bo'lsa | qolgan xodim route'lari (342) |
 
 - `PermissionGuard` `APP_GUARD` sifatida `JwtAuthGuard` dan keyin ro'yxatdan o'tkaziladi. Belgisiz route 403 qaytaradi, ya'ni xato bo'lsa eshik yopiq qoladi.
 - `RolesGuard` va `@Roles` 1-bosqich oxirida o'chiriladi.
@@ -233,8 +236,8 @@ Har bir tekshiruv qaysi turga kirishi 1-bosqich rejasida jadval qilib yoziladi.
 
 ### 7.7 API
 
-- `GET /auth/permissions` → `{ keys: PermissionKey[] }`. Xodimlar uchun; o'quvchiga bo'sh ro'yxat qaytadi. Kirish javobidagi `user` ham `permissions` maydonini oladi.
-- CEO uchun API (`@CeoOnly()`, 4-bo'limning 2-bandi):
+- `GET /permissions/me` → `{ keys: PermissionKey[] }` (1-bosqich). Xodimlar uchun; o'quvchiga bo'sh ro'yxat qaytadi. Yo'l ataylab `/auth/` ostida emas: saytning so'rov tutuvchisi `/auth/` so'rovlarida tokenni yangilamaydi, eskirgan token bilan ro'yxat yuklanmay qolardi.
+- CEO uchun API (2-bosqich, `@CeoOnly()`, 4-bo'limning 2-bandi):
   - `GET /permissions` qaytaradi:
     - katalogni: bo'lim, nom, bog'liqlik, `allowedRoles`, qulf sababi, pul belgisi;
     - har bir rolning holatini;
@@ -262,7 +265,7 @@ Har bir tekshiruv qaysi turga kirishi 1-bosqich rejasida jadval qilib yoziladi.
 
 ## 8. Sayt tomoni
 
-- **`usePermissions()`** (TanStack Query) `/auth/permissions` ni o'qiydi:
+- **`usePermissions`** (zustand) `/permissions/me` ni o'qiydi:
   - `staleTime` 30 soniya;
   - oynaga qaytilganda yangilanadi;
   - serverdan 403 kelsa, axios interceptor ro'yxatni darhol qayta so'raydi. Shu tufayli yopilgan narsa xodim ekranidan tez yo'qoladi.
@@ -301,24 +304,23 @@ Har bir tekshiruv qaysi turga kirishi 1-bosqich rejasida jadval qilib yoziladi.
 - **Rolga biriktirilgan vazifa** saqlanadi. Masalan, davomat eslatmasi administratorga boradi: rol shartligicha qoladi, imkoniyat esa qo'shimcha filtr bo'ladi.
 - **Telegram guruhlariga ketadigan hisobotlar** (`telegram-groups`) o'zgarmaydi.
 
-## 10. Imkoniyatlar katalogi — birinchi qoralama
+## 10. Imkoniyatlar katalogi (1-bosqich uchun yakuniy)
 
 Belgilar:
 
 - D — filial direktori, A — administrator, K — kassir, O — o'qituvchi.
 - «—» — boshlang'ich holatda hech kimda yo'q, faqat CEO'da.
 - «pul» — pulni o'zgartiradigan amal. «qaytmaydi» — qaytarib bo'lmaydigan amal. Ikkalasi ham sahifada qizil belgi bilan ko'rsatiladi.
-- «qulf» — texnik qulf va uning sababi.
 
-Bu ro'yxat 1-bosqichda route'lar bilan bog'langanda aniqlashtiriladi. Ekranning bugungi holatini aniq saqlash uchun ba'zi imkoniyatlar bo'linishi yoki birlashishi mumkin. Har bir bunday o'zgarish 15-bo'limga yoziladi. `allowedRoles` ham 1-bosqichdagi ko'rikdan keyin to'ldiriladi (6-bo'lim). Ekrandagi nomlar 2-bosqichda haqiqiy sahifa ko'rinishi bilan CEO'ga ko'rsatiladi.
+Ro'yxat 10.10 dagi kod bilan route'ma-route' solishtirib tuzildi: har bir route qaysi imkoniyatga tegishli ekani 1-bosqich ish rejasining B ilovasida yozilgan. «Bog'liq» ustuni 5-bo'limdagi bog'liqlik qoidasi uchun. Texnik qulf (6-bo'lim) 2-bosqich boshida ko'rib chiqiladi. Ekrandagi nomlar 2-bosqichda haqiqiy sahifa ko'rinishi bilan CEO'ga ko'rsatiladi.
 
 ### O'quvchilar
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
 |---|---|---|---|---|
 | `students.list` | O'quvchilar ro'yxati | D A | — | |
 | `students.profile` | O'quvchi profilini ochish | D A K | — | |
-| `students.details` | Profil tablari: to'lovlar, darslar, izohlar, lid tarixi, ilova | D A | `students.profile` | |
-| `students.manage` | O'quvchi qo'shish, tahrirlash, holatini o'zgartirish | D A | `students.profile` | |
+| `students.details` | O'quvchi profilidagi tablar: to'lovlar, darslar, izohlar, lid tarixi, ilova | D A | `students.profile` | |
+| `students.manage` | O'quvchi qo'shish, tahrirlash va holatini o'zgartirish | D A | `students.profile` | |
 | `students.enroll` | Guruhga qo'shish va guruhdan chiqarish | D A | `students.profile`, `groups.view` | |
 | `students.sms` | O'quvchiga SMS yuborish | D A | `students.details` | |
 | `students.initial-balance` | Boshlang'ich balans kiritish | — | `students.profile` | pul |
@@ -327,17 +329,17 @@ Bu ro'yxat 1-bosqichda route'lar bilan bog'langanda aniqlashtiriladi. Ekranning 
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
 |---|---|---|---|---|
 | `groups.view` | Guruhlarni ko'rish (o'qituvchi faqat o'z guruhlarini) | D A O | — | |
-| `groups.manage` | Guruh ochish, tahrirlash, yopish | D A | `groups.view` | |
-| `lessons.change` | Darsni bekor qilish, ko'chirish, o'rinbosar ustoz qo'yish | D A | `groups.view` | |
-| `lessons.change-delete` | Bekor qilish va ko'chirishni o'chirish | D | `lessons.change` | pul |
+| `groups.manage` | Guruh ochish, tahrirlash va yopish | D A | `groups.view` | |
+| `lessons.change` | Darsni bekor qilish, ko'chirish va o'rinbosar ustoz qo'yish | D A | `groups.view` | |
+| `lessons.change-delete` | Bekor qilish, ko'chirish va o'rinbosarni o'chirish | D | `lessons.change` | pul |
 | `attendance.mark` | Davomat olish | D A O | `groups.view` | |
-| `attendance.fix` | Kech davomat, «Dars bo'ldimi?» javobi, oldindan aytilgan qoldirish | D A | `attendance.mark` | |
+| `attendance.fix` | Kech davomat, «Dars bo'ldimi?» javobi va oldindan aytilgan qoldirish | D A | `attendance.mark` | |
 
 ### Lidlar
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
 |---|---|---|---|---|
 | `leads.view` | Lidlar doskasi | D A | — | |
-| `leads.manage` | Lid qo'shish, tahrirlash, o'quvchiga aylantirish | D A | `leads.view` | |
+| `leads.manage` | Lid qo'shish, tahrirlash va o'quvchiga aylantirish | D A | `leads.view` | |
 | `leads.setup` | Doska ustunlari, bo'limlari va manbalari | D A | `leads.view` | |
 | `leads.forms` | Anketalar va ularning javoblari | D A | — | |
 
@@ -351,29 +353,29 @@ Bu ro'yxat 1-bosqichda route'lar bilan bog'langanda aniqlashtiriladi. Ekranning 
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
 |---|---|---|---|---|
 | `mock.view` | Mock imtihonlarni ko'rish | D A | — | |
-| `mock.manage` | Imtihon yaratish, natija kiritish, e'lon qilish | D A | `mock.view` | |
+| `mock.manage` | Imtihon yaratish, natija kiritish va e'lon qilish | D A | `mock.view` | |
 | `mock.payments` | Mock to'lovini qabul qilish va bekor qilish | D A | `mock.view` | pul |
 
 ### To'lovlar va qarzdorlik
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
 |---|---|---|---|---|
 | `payments.view` | Moliya bo'limi: to'lovlar va kutilayotgan to'lovlar | D A K | — | |
-| `payments.create` | To'lov qayd qilish | D A K | `payments.view` | |
-| `payments.correct` | To'lovni tuzatish | D A | `payments.view` | pul |
+| `payments.create` | To'lov qayd qilish | D A K | — | |
+| `payments.correct` | To'lovni tuzatish | D A | `students.details` | pul |
 | `debt.view` | Qarzdorlik sahifasi | D A K | — | |
 | `debt.promise` | To'lov va'dasini yozish | D A K | `debt.view` | |
-| `debt.frozen` | Muzlatilgan pulni markazga o'tkazish yoki o'quvchiga qaytarish | D A | `debt.view` | pul |
+| `balance.withdraw` | Balansdagi pulni markaz hisobiga o'tkazish | D A | `students.profile` | pul |
 | `refunds.create` | O'quvchiga pul qaytarish | D A | `students.profile` | pul |
 | `debt.write-off` | Qarzni kechirish | D A | `students.details` | pul |
-| `balance.adjust` | Balansni qo'lda tuzatish, yechilgan dars pulini qaytarish | D | `students.details` | pul |
-| `money.undo` | To'lov, pul qaytarish va qarz kechirishni bekor qilish | — | `payments.view` | pul |
+| `balance.adjust` | Balansni qo'lda tuzatish va yechilgan dars pulini qaytarish | D | `students.details` | pul |
+| `money.undo` | To'lov, pul qaytarish va qarz kechirishni bekor qilish | — | `students.details` | pul |
 | `payments.gateway-log` | To'lov tizimlari jurnali (Payme, Click) | — | `payments.view` | |
 
 ### Xarajatlar va kassa
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
 |---|---|---|---|---|
 | `expenses.view` | Xarajatlarni ko'rish | D | — | |
-| `expenses.manage` | Xarajat kiritish, tahrirlash, o'chirish | D | `expenses.view` | pul |
+| `expenses.manage` | Xarajat kiritish, tahrirlash va o'chirish | D | `expenses.view` | pul |
 | `cash.manage` | Kassa hisoblari va ular orasida o'tkazma | D | — | pul |
 
 ### Ish haqi
@@ -382,44 +384,53 @@ Bu ro'yxat 1-bosqichda route'lar bilan bog'langanda aniqlashtiriladi. Ekranning 
 | `salary.view` | Xodimlar oyligini ko'rish | D | — | |
 | `salary.rate` | O'qituvchiga stavka qo'yish (ADR-0034 qoidalari bilan) | D | `salary.view` | pul |
 | `salary.pay` | Oylik va avans to'lash | D | `salary.view` | pul |
-| `salary.rate-edit` | Stavkani o'zgartirish va umumiy stavka | — | `salary.view` | pul; qulf: butun kompaniyaga ta'sir qiladi |
-| `salary.close` | Oylikni hisoblash, tasdiqlash, oyni yopish, oylik davri | — | `salary.view` | pul; qulf: butun kompaniyaga ta'sir qiladi |
+| `salary.rate-edit` | Stavkani o'zgartirish va umumiy stavka | — | `salary.view` | pul |
+| `salary.close` | Oylikni hisoblash, tasdiqlash, oyni yopish va oylik davri | — | `salary.view` | pul |
 
 ### Hisobotlar
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
 |---|---|---|---|---|
-| `reports.finance` | Moliya va marketing hisobotlari: umumiy ko'rinish, to'lovlar, foyda, Excel | D | — | |
-| `reports.students` | O'quvchilar, davomat va faoliyat hisobotlari: ketganlar, bitiruvchilar, bot | D | — | |
+| `reports.finance` | Moliya va marketing hisobotlari | D | — | |
+| `reports.payments` | To'lov hisobotlari | D A | — | |
+| `reports.students` | O'quvchilar, davomat va faoliyat hisobotlari | D | — | |
 | `reports.leads` | Lidlar hisoboti | D A | — | |
 
 ### Xodimlar
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
 |---|---|---|---|---|
 | `teachers.view` | O'qituvchilar ro'yxati va profili | D A | — | |
-| `teachers.manage` | O'qituvchi qo'shish, tahrirlash, holatini o'zgartirish | D | `teachers.view` | |
+| `teachers.manage` | O'qituvchi qo'shish, tahrirlash va holatini o'zgartirish | D | `teachers.view` | |
 | `employees.view` | Xodimlar ro'yxati va kartasi | D | — | |
-| `employees.manage` | Xodim qo'shish, tahrirlash, bloklash (ADR-0026/0027 bilan) | D | `employees.view` | |
+| `employees.manage` | Xodim qo'shish, tahrirlash va bloklash (ADR-0026/0027 bilan) | D | `employees.view` | |
 | `employees.invite` | Telegram orqali xodim taklif qilish | D A | — | |
 
-### Topshiriqlar va izohlar
+### Izohlar
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
 |---|---|---|---|---|
 | `comments.write` | Izoh yozish | D A | — | |
-| `tasks.assign` | Topshiriq berish va bergan topshiriqlarni ko'rish | D | `comments.write` | |
-| `comments.delete` | Izoh va topshiriqni o'chirish | — | — | |
+| `comments.delete` | Boshqalarning izohini tahrirlash va o'chirish | — | `comments.write` | |
+
+Topshiriqlar bu katalogga kirmaydi: ADR-0074 bo'yicha har bir xodim topshiriq bilan ishlaydi, kim kimga topshiriq bera olishini esa o'zgarmas zinapoya qoidasi hal qiladi.
 
 ### Sozlamalar
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
 |---|---|---|---|---|
-| `settings.reference` | Kurslar, xonalar, dam olish kunlari, sabablar ro'yxatlarini tahrirlash | D A | — | |
+| `settings.reference` | Kurslar, xonalar, dam olish kunlari va sabablar ro'yxatlari | D A | — | |
 | `courses.create` | Kurs ochish va to'lov turini tanlash | D | `settings.reference` | |
 | `settings.branches` | Filiallar | D | — | |
 | `settings.payment` | To'lov sozlamalari (filial qismi) | D | — | |
 | `settings.telegram-groups` | Telegram guruhlarini tasdiqlash va sozlash | D | — | |
 | `settings.absence-pause` | Avtomatik pauza sozlamasini ko'rish | D | — | |
-| `telegram.announce` | Telegram guruhlariga e'lon yuborish va guruhni o'chirish | — | `settings.telegram-groups` | qulf: butun kompaniyaga ta'sir qiladi |
-| `settings.company` | Kompaniya darajasidagi sozlamalar: ma'lumotlar, avtomatik pauza, DaF normasi, to'lovning umumiy qismi | — | — | qulf: butun kompaniyaga ta'sir qiladi |
+| `telegram.announce` | Telegram guruhlariga e'lon yuborish va botni guruhdan uzish | — | `settings.telegram-groups` | |
+| `settings.company` | Kompaniya darajasidagi sozlamalar (kompaniya ma'lumotlari, avtomatik pauza, DaF normasi) | — | — | |
 | `settings.archive` | Arxiv: tiklash va butunlay o'chirish | — | — | qaytmaydi |
+
+### Bosh sahifa
+| Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
+|---|---|---|---|---|
+| `dashboard.view` | Bosh sahifa paneli | D A K | — | |
+
+Bosh sahifaning bo'limlari mos imkoniyatga ergashadi: pul kartalari — `reports.finance`, aloqa markazi qatorlari — `outreach.view`, lid voronkasi — `reports.leads`. `dashboard.view` yo'q xodim bosh sahifada jadvalni ko'radi (bugun o'qituvchi ko'rgandek).
 
 ### DaF ilovasi va media
 | Kalit | Ekrandagi nomi | Boshlang'ich | Bog'liq | Belgi |
@@ -427,26 +438,28 @@ Bu ro'yxat 1-bosqichda route'lar bilan bog'langanda aniqlashtiriladi. Ekranning 
 | `daf.activity` | DaF ilovasi: markaz bo'yicha faollik | D A | — | |
 | `media.view` | Media | D A | — | |
 
-**Jami: 13 bo'lim, 63 ta imkoniyat.** Suhbatda 12 ta bo'lim aytilgan edi. «Topshiriqlar va izohlar» bo'limi katalog tuzilayotganda alohida ajratildi.
+**Jami: 14 bo'lim, 64 ta imkoniyat.**
 
 ## 11. Bosqichlar
 
-Har bir bosqich uchun alohida ish rejasi yoziladi. Birinchi reja 1-bosqich uchun tuziladi.
+Har bir bosqich uchun alohida ish rejasi yoziladi. Birinchi reja 1-bosqich uchun: `docs/superpowers/plans/2026-10-10-ruxsatlar-1-poydevor.md`.
 
 ### 1-bosqich — poydevor (foydalanuvchiga ko'rinmaydi)
 
 **Tarkibi:**
-- katalog;
-- ikkita bo'sh jadval;
-- `PermissionsService`;
-- route belgilari va global guard;
-- 354 ta route va 40 ta ichki tekshiruvning hammasi;
-- saytdagi 65 fayl va menyu ro'yxatlari;
-- manifest va tenglik testlari;
-- ~68 ta `UNREVIEWED` route'ning ko'rigi;
-- har bir imkoniyat uchun `allowedRoles` ko'rigi;
+- katalog (10-bo'lim) va uning testlari;
+- `PermissionsService`: rollar bazadan, imkoniyatlar katalogning boshlang'ich holatidan;
+- route belgilari va global guard; `RolesGuard` va `@Roles` o'chiriladi;
+- 375 ta xodim route'i va xizmat ichidagi «nima qila oladi» tekshiruvlari;
+- `GET /permissions/me`;
+- saytdagi rol tekshiruvlari va menyu ro'yxatlari imkoniyatlarga o'tadi;
+- manifest va tenglik testlari (serverda route'lar, saytda menyu);
 - ADR;
 - `docs/role-access.md` ni qayta yozish: undagi jadval endi «boshlang'ich holat» deb ataladi, manbasi katalog bo'ladi.
+
+**Ataylab qilinadigan o'zgarishlar.** Ekranda hech narsa o'zgarmaydi. Serverda esa 33 ta route uchun farq bor, ularning har biri reja ilovasida dalili bilan yozilgan:
+- 28 ta route'da ekranda yashirilgan ma'lumot server orqali ham yopiladi. Masalan, ketgan o'quvchilar hisoboti menyuda adminga ko'rinmaydi, endi server ham bermaydi. Bu route'larni o'sha rolning birorta ekrani chaqirmaydi.
+- 5 ta route — `/salary/me/*` — kassirga ham ochiladi. Bu xodimning faqat o'z oyligi.
 
 **Chiqarish:** avval server, keyin sayt.
 
@@ -459,7 +472,10 @@ Har bir bosqich uchun alohida ish rejasi yoziladi. Birinchi reja 1-bosqich uchun
 
 ### 2-bosqich — «Ruxsatlar» sahifasi
 
-- API'ning rol qismi (7.7), sahifa va tarix.
+- Avval ikki ko'rik:
+  - har bir imkoniyat uchun `allowedRoles` (6-bo'lim);
+  - xodimlarga tegishli ~68 ta `UNREVIEWED` route'ning filial chegarasi.
+- Ikki jadval (7.2), API'ning rol qismi (7.7), sahifa va tarix.
 - Saytga chiqarishdan oldin CEO'ga sahifaning haqiqiy ko'rinishi (skrinshot) ko'rsatiladi.
 
 ### 3-bosqich — istisnolar, bot va xabarlar
@@ -527,3 +543,14 @@ Har bir bosqich uchun alohida ish rejasi yoziladi. Birinchi reja 1-bosqich uchun
 ## 15. O'zgarishlar
 
 - 2026-10-05 — birinchi yozilishi.
+- 2026-10-10 — 1-bosqich rejasidan oldin kod bilan qayta solishtirildi:
+  - **Route'lar soni** 453 ga yetdi. Topshiriqlar alohida bo'limga chiqdi (ADR-0074), ularning 17 ta route'i hamma xodimga ochiq.
+  - **Katalog yakunlandi:** 14 ta bo'lim, 64 ta imkoniyat.
+    - `tasks.assign` olib tashlandi: kim kimga topshiriq berishini ADR-0074 zinapoyasi hal qiladi.
+    - `debt.frozen` o'rniga `balance.withdraw` qo'shildi: o'tkazish oynasi o'quvchi profilida ham bor.
+    - `reports.payments` ajratildi: 05.10 da CEO to'lov hisobotlarini adminga ochgan.
+    - `dashboard.view` qo'shildi.
+    - «Topshiriqlar va izohlar» bo'limi «Izohlar» bo'ldi.
+  - **Bosqichlar chegarasi:** jadvallar, CEO API'si, `allowedRoles` ko'rigi va `UNREVIEWED` ko'rigi 2-bosqichga o'tdi. 1-bosqichda CEO hech narsani o'zgartira olmaydi, ular faqat 2-bosqichda kerak bo'ladi.
+  - **Yo'l nomi:** `GET /auth/permissions` o'rniga `GET /permissions/me` (7.7).
+  - **Ataylab o'zgarishlar** ro'yxati tuzildi: 33 ta route (11-bo'lim).
