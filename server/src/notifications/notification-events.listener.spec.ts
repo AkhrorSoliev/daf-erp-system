@@ -443,6 +443,38 @@ describe('NotificationEventsListener', () => {
       await expect(listener.handleSalaryPaid(payload)).resolves.toBeUndefined();
     });
 
+    it("waits out Telegram's 429 once and sends again (a month settle is a burst)", async () => {
+      sendMessage
+        .mockRejectedValueOnce({
+          response: {
+            error_code: 429,
+            description: 'Too Many Requests: retry after 0',
+            parameters: { retry_after: 0 },
+          },
+        })
+        .mockResolvedValueOnce({ message_id: 7 });
+
+      await listener.handleSalaryPaid(payload);
+
+      expect(sendMessage).toHaveBeenCalledTimes(2);
+      expect(sendMessage.mock.calls[1]).toEqual(sendMessage.mock.calls[0]);
+    });
+
+    it('sums only the advances that are not deleted', async () => {
+      await listener.handleSalaryPaid(payload);
+
+      expect(prisma.salaryPayment.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            settledExpenses: {
+              where: { deletedAt: null },
+              select: { amount: true },
+            },
+          }),
+        }),
+      );
+    });
+
     it('does not throw when the payout cannot be read', async () => {
       prisma.salaryPayment.findFirst.mockRejectedValue(new Error('db down'));
 

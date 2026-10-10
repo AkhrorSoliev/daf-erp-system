@@ -10,7 +10,9 @@ import { join, relative } from 'path';
  * the instant list in the spec and ADR-0025 first, then here.
  */
 const ALLOWED: string[] = [
-  // The digest crons' own single sender.
+  // The digest crons' own single sender; the instant senders that wait out a
+  // 429 use it too (notification-events.listener: payment-promise.overdue,
+  // salary.paid — ADR-0081).
   'src/telegram-digest/telegram-send.ts',
   // Instant by design — the spec's "O'zgarmaydi" table.
   'src/absence-pause/', // auto-pause reminders and pause notices
@@ -21,7 +23,6 @@ const ALLOWED: string[] = [
   'src/lesson-reschedules/lesson-reschedule-events.listener.ts',
   'src/attendance/attendance-reminder.service.ts', // lesson start/end reminders
   'src/attendance/student-attendance-notification.listener.ts', // flag-gated, off
-  'src/notifications/notification-events.listener.ts', // payment-promise.overdue (09:00), salary.paid (ADR-0081)
   'src/telegram-groups/telegram-admin-bot-registrar.ts', // group bot commands
   'src/telegram-groups/telegram-group-announcement.service.ts', // product news
   'src/telegram-groups/telegram-group-daily-cron.service.ts', // 21:00 report

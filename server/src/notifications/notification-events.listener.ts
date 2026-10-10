@@ -27,6 +27,7 @@ import type { PaymentPromiseOverduePayload } from '../payment-promises/payment-p
 import { overdueDigest } from '../payment-promises/overdue-digest';
 import { loadOverdueDigestItems } from '../payment-promises/overdue-digest-load';
 import { TelegramDigestQueueService } from '../telegram-digest/telegram-digest-queue.service';
+import { sendTelegramText } from '../telegram-digest/telegram-send';
 
 /** The bell opens the debt page filtered to broken promises (client `notification-href.ts`). */
 export const BROKEN_PROMISES_ENTITY = 'BrokenPromises';
@@ -335,7 +336,10 @@ export class NotificationEventsListener {
           paidAt: true,
           userId: true,
           user: { select: { firstName: true } },
-          settledExpenses: { select: { amount: true } },
+          settledExpenses: {
+            where: { deletedAt: null },
+            select: { amount: true },
+          },
         },
       });
       if (!payment || payment.status !== SalaryPaymentStatus.PAID) return;
@@ -388,7 +392,11 @@ export class NotificationEventsListener {
     }
   }
 
-  /** Sends ready HTML parts, in order; a part that fails stops the rest. */
+  /**
+   * Sends ready HTML parts, in order; a part that fails stops the rest. Goes
+   * through `sendTelegramText`, which waits out a 429 once: a month settle
+   * emits one `salary.paid` per payee in the same tick.
+   */
   private async sendTelegram(userId: number, parts: string[]) {
     try {
       const bot = this.telegramService.getBot();
@@ -402,9 +410,15 @@ export class NotificationEventsListener {
       if (!user?.telegramChatId) return;
 
       for (const text of parts) {
-        await bot.telegram.sendMessage(user.telegramChatId, text, {
+        const sent = await sendTelegramText(bot, user.telegramChatId, text, {
           parse_mode: 'HTML',
         });
+        if (!sent.ok) {
+          this.logger.warn(
+            `Telegram send failed for user ${userId}: ${sent.description}`,
+          );
+          return;
+        }
       }
     } catch (error) {
       this.logger.warn(
