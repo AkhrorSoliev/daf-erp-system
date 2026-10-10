@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { SalaryPaymentStatus } from '@prisma/client';
 import {
   CreateSalaryConfigDto,
   GlobalSalaryConfigDto,
@@ -167,17 +166,6 @@ export class SalaryService {
     companyId: number,
   ) {
     return this.payment.payPayment(id, dto, performedById, companyId);
-  }
-  batchPay(
-    params: {
-      companyId: number;
-      branchId?: number;
-      userIds?: number[];
-      statuses?: SalaryPaymentStatus[];
-    },
-    performedById: number,
-  ) {
-    return this.payment.batchPay(params, performedById);
   }
 
   // Month-wide settle for payroll handed over outside the system.

@@ -122,8 +122,6 @@ sahifada beshta muammo bor edi:
 
 - **Oy bo'yicha tasdiqlash qisman muvaffaqiyatsiz bo'lsa**, o'sha chaqiruvda allaqachon PAID bo'lgan
   qatorlar uchun `salary.paid` chiqmaydi (hodisa hamma yozuv tugagach yuboriladi).
-- **`batchPay`** (klientda chaqiruvchisi yo'q) o'zgarmagan: sana va hisob so'ramaydi, eski usulda
-  filialning eng eski naqd kassasidan to'laydi va `salary.paid` chiqarmaydi.
 - Nofaol qilingan, shu oyda darsi yo'q FIXED_MONTHLY ustoz «ishlay olmaydi» deb hisoblanadi, cron
   esa unga proratsiyalangan oylik yozadi (ustoz jadvali FIXED_MONTHLY to'lovni hech qachon
   modellamagan — eski holat).

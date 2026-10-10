@@ -56,15 +56,19 @@ describe('SalaryController — route access', () => {
   });
 
   describe('Payouts', () => {
-    it.each(['payPayment', 'batchPay'] as const)(
-      '%s is gated by the pay capability, CEO and Branch Director by default',
-      (method) => {
-        expectCan(method, 'salary.pay');
-        expect(defaultRolesOf(SalaryController, method)).toEqual(
-          CEO_AND_BRANCH_DIRECTOR,
-        );
-      },
-    );
+    it('payPayment is gated by the pay capability, CEO and Branch Director by default', () => {
+      expectCan('payPayment', 'salary.pay');
+      expect(defaultRolesOf(SalaryController, 'payPayment')).toEqual(
+        CEO_AND_BRANCH_DIRECTOR,
+      );
+    });
+
+    // `POST /salary/payments/batch-pay` paid from the branch's oldest CASH
+    // account, outside any single transaction: a direct call could pay a
+    // salary twice. No screen called it, so it was removed.
+    it('has no batch payout route', () => {
+      expect(SalaryController.prototype).not.toHaveProperty('batchPay');
+    });
   });
 
   describe('Teacher rate writes — CEO + own-branch Branch Director (ADR-0034)', () => {

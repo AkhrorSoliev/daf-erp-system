@@ -40,15 +40,15 @@ export interface SettleMonthResult {
  * amounts, but the rows stayed CALCULATED — so teacher balances carried
  * payouts that had already happened and the kassa read that much too high.
  *
- * Two things make this different from `batchPay`:
+ * Two things are load-bearing:
  *
  * 1. **The kassa account is named by the caller.** `resolveAccountId` picks the
  *    branch's oldest CASH account, which in production is an empty
  *    «Asosiy kassa» — 130 mln booked there would be a fiction.
- * 2. **Validate everything, then write.** `batchPay` wraps each payment in its
- *    own try/catch and reports failures; that is right for a routine run. Here
- *    the money is irreversible and the operator has just retyped the total, so
- *    a half-settled month is the one outcome nobody can act on.
+ * 2. **Validate everything, then write.** A per-payment try/catch that reports
+ *    failures would leave a half-settled month: the money is irreversible and
+ *    the operator has just retyped the total, so that is the one outcome
+ *    nobody can act on.
  *
  * Candidate loading, the date rules and the writer live in
  * `salary-settle-core.ts`, shared with `SalarySettleAllocatedService`.

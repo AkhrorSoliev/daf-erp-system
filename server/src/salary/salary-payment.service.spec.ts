@@ -248,10 +248,9 @@ describe('SalaryPaymentService.getMatrix', () => {
   });
 
   /**
-   * Paying a single salary had NO branch check, while batchPay confined the
-   * caller — so the same director could settle another branch's teacher just
-   * by passing its id. Both paths must also fail CLOSED when the caller's own
-   * branch is unknown.
+   * Paying a single salary once had NO branch check, so a director could
+   * settle another branch's teacher just by passing its id. It must also fail
+   * CLOSED when the caller's own branch is unknown.
    */
   describe('branch confinement on payout', () => {
     const CALCULATED = {
@@ -294,8 +293,7 @@ describe('SalaryPaymentService.getMatrix', () => {
 
     /**
      * A2.8 lets a director attached to two branches SEE the second branch's
-     * payroll. Paying is a separate decision and stays on the home branch, the
-     * same as `batchPay` and the payments list.
+     * payroll. Paying is a separate decision and stays on the home branch.
      */
     describe('a director attached to two branches (A2.8)', () => {
       const TWO_BRANCHES = [{ branchId: 1 }, { branchId: 2 }];
@@ -354,18 +352,6 @@ describe('SalaryPaymentService.getMatrix', () => {
         expect(transactions.recordSalaryPayment).not.toHaveBeenCalled();
       });
     });
-
-    it('blocks batchPay for a branch-less non-CEO caller', async () => {
-      prisma.user.findUnique.mockResolvedValueOnce({
-        mainBranch: null,
-        roles: [{ role: { name: 'Branch Director' } }],
-      });
-
-      await expect(
-        service.batchPay({ companyId: 1 } as any, 10012),
-      ).rejects.toThrow(/asosiy filialingiz belgilanmagan/);
-      expect(prisma.salaryPayment.findMany).not.toHaveBeenCalled();
-    });
   });
 
   // CEO decision (10.10.2026): nobody but the CEO pays their own salary.
@@ -407,35 +393,6 @@ describe('SalaryPaymentService.getMatrix', () => {
       expect(transactions.recordSalaryPayment).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 999 }),
         expect.anything(),
-      );
-    });
-
-    it("batchPay reports the director's own row as failed and pays the rest", async () => {
-      prisma.user.findUnique.mockImplementation(({ where }: any) =>
-        Promise.resolve(
-          where.id === DIRECTOR_ID ? director : { mainBranch: 1 },
-        ),
-      );
-      prisma.salaryPayment.findMany.mockResolvedValue([
-        { id: 'sp-own', userId: DIRECTOR_ID, amount: 1_000_000 },
-        { id: 'sp-555', userId: 555, amount: 1_000_000 },
-      ]);
-      prisma.salaryPayment.findFirst.mockImplementation(({ where }: any) =>
-        Promise.resolve(
-          approved(where.id, where.id === 'sp-own' ? DIRECTOR_ID : 555),
-        ),
-      );
-
-      const out = await service.batchPay({ companyId: 1 } as any, DIRECTOR_ID);
-
-      expect(out).toMatchObject({ total: 2, paid: 1, failed: 1 });
-      expect(out.results.find((r) => r.id === 'sp-own')).toMatchObject({
-        status: 'FAILED',
-        error: expect.stringMatching(/boshqa rahbar to'laydi/),
-      });
-      expect(transactions.recordSalaryPayment).toHaveBeenCalledTimes(1);
-      expect(transactions.recordSalaryPayment).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: 555 }),
       );
     });
   });
@@ -835,33 +792,6 @@ describe('SalaryPaymentService.payPayment («Berildi»)', () => {
       await expect(pay()).rejects.toThrow('Kassa taqsimoti');
       expect(prisma.salaryPayment.update).not.toHaveBeenCalled();
       expect(events.emit).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('batchPay keeps its own way (no client calls it)', () => {
-    it('still pays an APPROVED payment with the branch’s default account and today as the day', async () => {
-      prisma.user.findUnique
-        .mockReset()
-        .mockResolvedValueOnce(CEO) // batchPay's caller read
-        .mockResolvedValueOnce(CEO) // payPayment scope
-        .mockResolvedValueOnce(payee());
-      prisma.salaryPayment.findMany.mockResolvedValue([
-        { id: 'sp-1', userId: 10001, amount: 7_840_000 },
-      ]);
-
-      const res = await service.batchPay({ companyId: 1 }, 10012);
-
-      expect(res).toMatchObject({ total: 1, paid: 1, failed: 0 });
-      const args = transactions.recordSalaryPayment.mock.calls[0][0];
-      expect(args).not.toHaveProperty('cashSlices');
-      expect(prisma.salaryPayment.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            status: 'PAID',
-            paidAt: expect.any(Date),
-          }),
-        }),
-      );
     });
   });
 });

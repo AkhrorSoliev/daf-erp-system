@@ -269,15 +269,14 @@ export class SalaryPaymentService {
   }
 
   /**
-   * What both ways of paying one salary check first: the payment is the
+   * What paying one salary checks first: the payment is the
    * company's (404), is not PAID yet (409), the caller is not the payee unless
    * they are the CEO (403), may pay that payee's branch (403) and the
    * status may move to PAID (400). Returns the payee's home branch and bot
-   * chat, read once for the callers.
+   * chat, read once for the caller.
    *
-   * `batchPay` confines a non-CEO caller to their own branch; paying a single
-   * payment had NO branch check at all, so the same director could settle
-   * another branch's teacher just by passing its id.
+   * Paying a single payment once had NO branch check at all, so a director
+   * could settle another branch's teacher just by passing its id.
    */
   private async loadPayable(
     id: string,
@@ -294,8 +293,7 @@ export class SalaryPaymentService {
 
     const scope = await resolvePayrollBranchScope(this.prisma, performedById);
     // CEO decision (10.10.2026): nobody but the CEO pays their own salary;
-    // another manager does. `batchPay` comes through here too, so a
-    // caller's own row in a batch is reported FAILED with this reason.
+    // another manager does.
     if (scope.kind !== 'all' && payment.userId === performedById) {
       throw new ForbiddenException(
         "Bu sizning oyligingiz — uni o'zingiz to'lay olmaysiz. Oylikni boshqa rahbar to'laydi.",
@@ -305,9 +303,9 @@ export class SalaryPaymentService {
       where: { id: payment.userId },
       select: { mainBranch: true, telegramChatId: true },
     });
-    // Paying stays on the caller's HOME branch, like `batchPay` and the
-    // payments list: the other attached branches widen what a director may
-    // see (A2.8), not what they may pay. No `mainBranch` pays nothing.
+    // Paying stays on the caller's HOME branch: the other attached branches
+    // widen what a director may see (A2.8), not what they may pay. No
+    // `mainBranch` pays nothing.
     if (
       scope.kind !== 'all' &&
       (scope.kind === 'none' ||
@@ -443,129 +441,5 @@ export class SalaryPaymentService {
       companyId,
     } satisfies SalaryPaidPayload);
     return { ...updated, notified: payee?.telegramChatId != null };
-  }
-
-  /**
-   * The pre-«Berildi» way: the branch's default account, `paidAt` = now, no
-   * split asked for. Only `batchPay` still comes here (no client calls it).
-   */
-  private async payWithDefaultAccount(
-    id: string,
-    performedById: number,
-    companyId: number,
-  ) {
-    const { payment } = await this.loadPayable(id, performedById, companyId);
-
-    await this.transactionsService.recordSalaryPayment({
-      userId: payment.userId,
-      amount: payment.amount,
-      salaryPaymentId: payment.id,
-      companyId: payment.companyId,
-      performedById,
-    });
-
-    return this.prisma.salaryPayment.update({
-      where: { id },
-      data: {
-        status: SalaryPaymentStatus.PAID,
-        paidAt: new Date(),
-        paidById: performedById,
-      },
-    });
-  }
-
-  /**
-   * Pay out a batch of salary payments in one click — intended for the 10th of
-   * the month, after cron has calculated and CEO has approved the current
-   * period. Accepts an optional filter so a branch director or cashier can
-   * pay only their scope.
-   *
-   * Only APPROVED payments are processed; CALCULATED ones are skipped (they
-   * need to be approved first). Each payment is wrapped in its own transaction
-   * so a failure on one doesn't roll back the others — the caller sees per-
-   * payment success/error. A non-CEO caller's own payment is one such
-   * failure: `payPayment` refuses it (CEO decision, 10.10.2026).
-   */
-  async batchPay(
-    params: {
-      companyId: number;
-      branchId?: number;
-      userIds?: number[];
-      statuses?: SalaryPaymentStatus[];
-    },
-    performedById: number,
-  ) {
-    const statuses = params.statuses ?? [SalaryPaymentStatus.APPROVED];
-
-    // Enforce branch scope server-side: non-CEO operators (e.g. Branch
-    // Directors) are restricted to their own mainBranch regardless of the
-    // branchId they passed. JWT does not carry mainBranch, so fetch it.
-    const caller = await this.prisma.user.findUnique({
-      where: { id: performedById },
-      select: {
-        mainBranch: true,
-        roles: { select: { role: { select: { name: true } } } },
-      },
-    });
-    const isCeo = caller?.roles.some((r) => r.role.name === 'CEO') ?? false;
-    const effectiveBranchId = isCeo ? params.branchId : caller?.mainBranch;
-    // Fail CLOSED: a non-CEO caller whose mainBranch is unknown used to fall
-    // through to "no filter" and could batch-pay EVERY branch's salaries.
-    if (!isCeo && effectiveBranchId == null) {
-      throw new ForbiddenException(
-        "Sizning asosiy filialingiz belgilanmagan — oylik to'lay olmaysiz. Administrator bilan bog'laning.",
-      );
-    }
-
-    const eligible = await this.prisma.salaryPayment.findMany({
-      where: {
-        companyId: params.companyId,
-        status: { in: statuses },
-        ...(params.userIds &&
-          params.userIds.length > 0 && { userId: { in: params.userIds } }),
-        // Branch scope: SalaryPayment has no branchId directly, so scope via
-        // the employee's own branch (D6: one employee, one branch).
-        ...(effectiveBranchId != null && {
-          user: { mainBranch: effectiveBranchId },
-        }),
-      },
-      select: { id: true, userId: true, amount: true },
-    });
-
-    const results: {
-      id: string;
-      userId: number;
-      status: 'PAID' | 'FAILED';
-      error?: string;
-    }[] = [];
-
-    for (const payment of eligible) {
-      try {
-        await this.payWithDefaultAccount(
-          payment.id,
-          performedById,
-          params.companyId,
-        );
-        results.push({
-          id: payment.id,
-          userId: payment.userId,
-          status: 'PAID',
-        });
-      } catch (err) {
-        results.push({
-          id: payment.id,
-          userId: payment.userId,
-          status: 'FAILED',
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-    }
-
-    return {
-      total: eligible.length,
-      paid: results.filter((r) => r.status === 'PAID').length,
-      failed: results.filter((r) => r.status === 'FAILED').length,
-      results,
-    };
   }
 }
