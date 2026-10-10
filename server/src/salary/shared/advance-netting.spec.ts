@@ -1,4 +1,8 @@
-import { planAdvanceNetting, PendingAdvance } from './advance-netting';
+import {
+  planAdvanceNetting,
+  planShownAdvances,
+  PendingAdvance,
+} from './advance-netting';
 
 const d = (s: string) => new Date(`${s}T00:00:00.000Z`);
 const adv = (
@@ -76,5 +80,30 @@ describe('planAdvanceNetting', () => {
         OCT_1,
       ),
     ).toEqual({ settle: [], total: 0 });
+  });
+});
+
+describe('planShownAdvances', () => {
+  const pending = [
+    adv('a', 1_000_000, '2026-09-10', '2026-09-10T10:00:00Z'),
+    adv('oct', 300_000, '2026-10-01', '2026-10-01T10:00:00Z'),
+  ];
+
+  it('the open month shows every advance dated in it, even above the partial base', () => {
+    expect(planShownAdvances(pending, 600_000, OCT_1, true)).toEqual({
+      settle: ['a'],
+      total: 1_000_000,
+    });
+  });
+
+  it('a past month without a payment shows only what the cron will net', () => {
+    expect(planShownAdvances(pending, 600_000, OCT_1, false)).toEqual({
+      settle: [],
+      total: 0,
+    });
+    expect(planShownAdvances(pending, 1_000_000, OCT_1, false)).toEqual({
+      settle: ['a'],
+      total: 1_000_000,
+    });
   });
 });

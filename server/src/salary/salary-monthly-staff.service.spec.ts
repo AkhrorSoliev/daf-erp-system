@@ -99,6 +99,15 @@ describe('SalaryStaffMonthlyService', () => {
     }).compile();
 
     service = module.get(SalaryStaffMonthlyService);
+
+    // A fixed clock decides which month is the OPEN one (its advances are not
+    // capped, spec §3): 10 Oct 2026, so June is a past month unless a case
+    // moves the clock back into it.
+    jest.useFakeTimers({ now: new Date('2026-10-10T07:00:00Z') });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('returns empty when there are no fixed-monthly staff configs', async () => {
@@ -271,6 +280,8 @@ describe('SalaryStaffMonthlyService', () => {
     };
 
     beforeEach(() => {
+      // 15 Jun 2026: June is the OPEN month unless a case says otherwise.
+      jest.setSystemTime(new Date('2026-06-15T07:00:00Z'));
       prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
       prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
         FULL_MONTH_3M,
@@ -293,6 +304,43 @@ describe('SalaryStaffMonthlyService', () => {
         netToPay: 2_500_000,
         advanceCount: 1,
       });
+    });
+
+    // Mid-month the prorated figure is what is known today: an advance above it
+    // is shown whole, because the month-end payout will take it.
+    it('open month: an advance above the prorated monthly is shown whole, net is 0', async () => {
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        { ...FULL_MONTH_3M, effectiveFrom: tsh(2026, 6, 16) }, // 15/30 → 1 500 000
+      ]);
+      prisma.expense.findMany.mockResolvedValue([
+        advance('big', 2_000_000, '2026-06-12', '2026-06-12T06:00:00Z'),
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff).toHaveLength(1);
+      expect(res.staff[0].monthly).toBe(1_500_000);
+      expect(res.staff[0].advances).toBe(2_000_000);
+      expect(res.staff[0].netToPay).toBe(0);
+      expect(res.staffTotals).toEqual({
+        monthly: 1_500_000,
+        advances: 2_000_000,
+        netToPay: 0,
+        advanceCount: 1,
+      });
+    });
+
+    it('past month without a payment: an advance above the monthly does not fit — advances 0', async () => {
+      jest.setSystemTime(new Date('2026-07-01T00:30:00Z'));
+      prisma.expense.findMany.mockResolvedValue([
+        advance('big', 3_500_000, '2026-06-12', '2026-06-12T06:00:00Z'),
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].advances).toBe(0);
+      expect(res.staff[0].netToPay).toBe(3_000_000);
+      expect(res.staffTotals.advanceCount).toBe(0);
     });
 
     it('open month: asks only for unsettled advances dated before the end of the month', async () => {

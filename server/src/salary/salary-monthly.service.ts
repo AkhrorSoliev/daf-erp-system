@@ -12,7 +12,8 @@ import {
   SalaryStaffMonthlyService,
   toAdvanceItem,
 } from './salary-monthly-staff.service';
-import { byWalkOrder, planAdvanceNetting } from './shared/advance-netting';
+import { byWalkOrder, planShownAdvances } from './shared/advance-netting';
+import { tashkentMonthKey } from '../common/date/tashkent';
 import { SalaryMissedLessonsService } from './salary-missed-lessons.service';
 import { buildTeacherRosterWhere } from './shared/teacher-roster-where';
 import { packPriceCandidates, sweepGapLessons } from './shared/gap-sweep';
@@ -267,8 +268,7 @@ export class SalaryMonthlyService {
         },
       }),
       // Unsettled advances the payout would net (ADR-0080): everything dated
-      // before the month's end that no payment has taken yet. The cron's own
-      // walk (`planAdvanceNetting`) picks which of them fit.
+      // before the month's end that no payment has taken yet.
       this.prisma.expense.findMany({
         where: {
           relatedUserId: { in: ids },
@@ -576,6 +576,7 @@ export class SalaryMonthlyService {
     );
 
     // ─── Step 5+6: build rows ────────────────────────────────────────────
+    const isOpenMonth = month === tashkentMonthKey(new Date());
     const allRows = teachers.map((t) => {
       const a = agg.get(t.id)!;
       // Keyed off the accrual TOTAL, not the student leg: a month the center
@@ -605,7 +606,9 @@ export class SalaryMonthlyService {
 
       // Net-to-pay: a settled payment's `amount` is ALREADY net of settled
       // advances (CLAUDE.md invariant) — never subtract avans again. For an
-      // unsettled month, net = base − the advances the cron will net.
+      // unsettled month, net = base − the advances shown: the open month shows
+      // every pending advance, uncapped (its earnings are still growing); a
+      // past month without a payment shows what the cron will net.
       // Top-up months front the gap (full deserved); earlier months pay only
       // what students covered. Keeps the shown netToPay equal to what the cron
       // will actually pay for this month.
@@ -614,13 +617,13 @@ export class SalaryMonthlyService {
       const pending = pendingByUser.get(t.id) ?? [];
       const plan = payment
         ? null
-        : planAdvanceNetting(pending, Math.max(0, base), nextMonthStart);
+        : planShownAdvances(pending, base, nextMonthStart, isOpenMonth);
       // A calculated month shows what its payment settled; an unsettled
       // advance never counts there — it is the next month's.
       const advances = payment
         ? payment.grossAmount - payment.amount
         : plan!.total;
-      const netToPay = payment ? payment.amount : Math.max(0, base) - advances;
+      const netToPay = payment ? payment.amount : Math.max(0, base - advances);
       const advanceList = payment
         ? [...payment.settled].sort(byWalkOrder)
         : plan!.settle.map((id) => pending.find((p) => p.id === id)!);

@@ -6,7 +6,8 @@ import {
   FixedMonthlyVersion,
   prorateFixedMonthly,
 } from './shared/prorate-fixed-monthly';
-import { byWalkOrder, planAdvanceNetting } from './shared/advance-netting';
+import { byWalkOrder, planShownAdvances } from './shared/advance-netting';
+import { tashkentMonthKey } from '../common/date/tashkent';
 
 /** One advance the payout nets (or netted), as the row's drawer lists it. */
 export interface AdvanceItem {
@@ -107,6 +108,7 @@ export class SalaryStaffMonthlyService {
   ): Promise<{ staff: StaffRow[]; staffTotals: StaffTotals }> {
     const {
       companyId,
+      month,
       periodStart,
       periodEnd,
       nextMonthStart,
@@ -232,8 +234,7 @@ export class SalaryStaffMonthlyService {
     }
 
     // 3. Unsettled advances the payout would net (ADR-0080): everything dated
-    // before the month's end that no payment has taken yet — the cron's own
-    // walk, `planAdvanceNetting`, picks which of them fit.
+    // before the month's end that no payment has taken yet.
     const pendingRows = await this.prisma.expense.findMany({
       where: {
         relatedUserId: { in: userIds },
@@ -292,6 +293,7 @@ export class SalaryStaffMonthlyService {
     }
 
     // 5. Build rows.
+    const isOpenMonth = month === tashkentMonthKey(new Date());
     const staff: StaffRow[] = [];
     let advanceCount = 0;
     for (const c of inScope) {
@@ -305,20 +307,23 @@ export class SalaryStaffMonthlyService {
       // this month; drop it (mirrors the cron's `if (!activeVersion) continue`).
       if (monthly === 0 && !payment) continue;
 
-      // A calculated month shows what its payment settled; an open one the
-      // walk the cron will make. A pending advance never counts once the
-      // payment exists — it is the next month's.
+      // A calculated month shows what its payment settled (a pending advance
+      // never counts there — it is the next month's). The open month shows
+      // every pending advance, uncapped; a past month without a payment what
+      // the cron will net (`planShownAdvances`).
       const pending = pendingByUser.get(c.userId) ?? [];
       const plan = payment
         ? null
-        : planAdvanceNetting(pending, monthly, nextMonthStart);
+        : planShownAdvances(pending, monthly, nextMonthStart, isOpenMonth);
       const advanceList = payment
         ? [...payment.settled].sort(byWalkOrder)
         : plan!.settle.map((id) => pending.find((p) => p.id === id)!);
       const advances = payment
         ? advanceList.reduce((sum, a) => sum + a.amount, 0)
         : plan!.total;
-      const netToPay = payment ? payment.amount : monthly - advances;
+      const netToPay = payment
+        ? payment.amount
+        : Math.max(0, monthly - advances);
 
       staff.push({
         user: {

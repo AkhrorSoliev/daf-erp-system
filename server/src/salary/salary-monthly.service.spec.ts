@@ -84,6 +84,15 @@ describe('SalaryMonthlyService', () => {
     }).compile();
 
     service = module.get<SalaryMonthlyService>(SalaryMonthlyService);
+
+    // A fixed clock decides which month is the OPEN one (its advances are not
+    // capped, spec §3): 10 Oct 2026, so every month the cases below ask for is
+    // a past month unless a case moves the clock back into it.
+    jest.useFakeTimers({ now: new Date('2026-10-10T07:00:00Z') });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   const teacher = (id: number, first = 'T', last = 'X') => ({
@@ -937,6 +946,8 @@ describe('SalaryMonthlyService', () => {
     });
 
     beforeEach(() => {
+      // 15 Sep 2026: September is the OPEN month unless a case says otherwise.
+      jest.setSystemTime(new Date('2026-09-15T07:00:00Z'));
       prisma.user.findMany.mockResolvedValue([teacher(10001, 'Madina')]);
       // The month's base: 9 840 000 so'm of written accruals, no gap.
       prisma.salaryAccrual.findMany.mockResolvedValue([
@@ -994,16 +1005,93 @@ describe('SalaryMonthlyService', () => {
       expect(where.date).toEqual({ lt: new Date('2026-10-01T00:00:00Z') });
     });
 
-    it('open month: an advance bigger than what is left stays pending', async () => {
+    // Mid-month the earnings are still growing: an advance bigger than today's
+    // partial base is shown whole (the month-end payout will take it), not 0.
+    it('open month: an advance above the partial base is shown whole, net is 0, the row stays', async () => {
+      prisma.salaryAccrual.findMany.mockResolvedValue([
+        {
+          userId: 10001,
+          attendanceId: 'a1',
+          amount: 600_000,
+          creditPeriodDate: null,
+          isCenterTopUp: false,
+          wasCenterTopUp: false,
+        },
+      ]);
       prisma.expense.findMany.mockResolvedValue([
-        advance('big', 10_000_000, '2026-09-10', '2026-09-10T06:00:00Z'),
+        advance('big', 1_000_000, '2026-09-10', '2026-09-10T06:00:00Z'),
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+      expect(res.data).toHaveLength(1);
+      expect(res.data[0].advances).toBe(1_000_000);
+      expect(res.data[0].netToPay).toBe(0);
+      expect(res.totals.advanceCount).toBe(1);
+      expect(res.totals.advances).toBe(1_000_000);
+    });
+
+    it('open month: every unsettled advance is listed in walk order, even when they exceed the base', async () => {
+      prisma.salaryAccrual.findMany.mockResolvedValue([]);
+      prisma.expense.findMany.mockResolvedValue([
+        advance('b', 400_000, '2026-09-12', '2026-09-12T06:00:00Z'),
+        advance('a', 300_000, '2026-09-03', '2026-09-03T06:00:00Z'),
+      ]);
+
+      const res = await service.getMonthlyForUser(
+        10001,
+        { month: '2026-09' },
+        1,
+        999,
+      );
+
+      const row = res.row as {
+        advances: number;
+        advanceItems: { id: string }[];
+      };
+      expect(row.advances).toBe(700_000);
+      expect(row.advanceItems.map((i) => i.id)).toEqual(['a', 'b']);
+    });
+
+    // A past month with no payment yet (the hours before the cron): exactly
+    // what the cron will net, so the advance that does not fit stays pending.
+    it('past month without a payment: an advance above the base does not fit — advances 0, net is the base', async () => {
+      jest.setSystemTime(new Date('2026-10-01T00:30:00Z'));
+      prisma.salaryAccrual.findMany.mockResolvedValue([
+        {
+          userId: 10001,
+          attendanceId: 'a1',
+          amount: 600_000,
+          creditPeriodDate: null,
+          isCenterTopUp: false,
+          wasCenterTopUp: false,
+        },
+      ]);
+      prisma.expense.findMany.mockResolvedValue([
+        advance('big', 1_000_000, '2026-09-10', '2026-09-10T06:00:00Z'),
       ]);
 
       const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
 
       expect(res.data[0].advances).toBe(0);
-      expect(res.data[0].netToPay).toBe(9_840_000);
+      expect(res.data[0].netToPay).toBe(600_000);
       expect(res.totals.advanceCount).toBe(0);
+    });
+
+    it('past month without a payment: nets what fits, in walk order', async () => {
+      jest.setSystemTime(new Date('2026-10-01T00:30:00Z'));
+      prisma.expense.findMany.mockResolvedValue([
+        advance('a', 1_000_000, '2026-09-05', '2026-09-05T06:00:00Z'),
+        advance('b', 9_000_000, '2026-09-10', '2026-09-10T06:00:00Z'),
+        advance('c', 100_000, '2026-09-12', '2026-09-12T06:00:00Z'),
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+      // 9 840 000 base: a fits, b does not (10 000 000 > 9 840 000), the walk stops.
+      expect(res.data[0].advances).toBe(1_000_000);
+      expect(res.data[0].netToPay).toBe(8_840_000);
+      expect(res.totals.advanceCount).toBe(1);
     });
 
     it('calculated month: shows what the payment settled; an unsettled advance is NOT counted', async () => {
@@ -1316,7 +1404,27 @@ describe('SalaryMonthlyService', () => {
       expect(res.data[0].netToPay).toBe(13_333);
     });
 
-    it("faol emas ustozning ushlanadigan avansi bo'lsa ro'yxatda qoladi", async () => {
+    it("faol emas ustozning joriy oydagi avansi (daromadisiz ham) uni ro'yxatda ushlab turadi", async () => {
+      jest.setSystemTime(new Date('2026-06-15T07:00:00Z')); // June is the open month
+      prisma.user.findMany.mockResolvedValue([inactive(10009)]);
+      prisma.expense.findMany.mockResolvedValue([
+        {
+          id: 'e9',
+          relatedUserId: 10009,
+          amount: 200_000,
+          date: new Date('2026-06-05'),
+          createdAt: new Date('2026-06-05T06:00:00Z'),
+        },
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+
+      expect(res.data.map((r) => r.user.id)).toEqual([10009]);
+      expect(res.data[0].advances).toBe(200_000);
+      expect(res.data[0].netToPay).toBe(0);
+    });
+
+    it("faol emas ustozning o'tgan oydagi, sig'adigan avansi bo'lsa ro'yxatda qoladi", async () => {
       prisma.user.findMany.mockResolvedValue([inactive(10009)]);
       prisma.salaryAccrual.findMany.mockResolvedValue([
         { userId: 10009, attendanceId: 'a1', amount: 300_000 },
@@ -1338,10 +1446,10 @@ describe('SalaryMonthlyService', () => {
       expect(res.data[0].netToPay).toBe(100_000);
     });
 
-    // ADR-0080: the column is what the payout nets. An advance nothing can net
-    // yet (no earnings this month) is not on this page — it waits in the
-    // advance calendar for the month that can take it.
-    it("faol emas ustozning hech narsadan ushlanmaydigan avansi uni ro'yxatda ushlab turmaydi", async () => {
+    // ADR-0080: a PAST month without a payment shows what the cron will net.
+    // An advance nothing can net (no earnings that month) is not on this page —
+    // it waits in the advance calendar for the month that can take it.
+    it("faol emas ustozning o'tgan oydagi hech narsadan ushlanmaydigan avansi uni ro'yxatda ushlab turmaydi", async () => {
       prisma.user.findMany.mockResolvedValue([inactive(10009)]);
       prisma.expense.findMany.mockResolvedValue([
         {
