@@ -14,15 +14,42 @@ import {
   type TaskUnassignedPayload,
 } from './task-events';
 
+/**
+ * The Telegram message one person gets about an event (spec 2026-10-07 §6.1):
+ * the kind picks the first line, `by` / `from` / `text` / `reason` the line
+ * under the title. Names are resolved when the event happens, so a notice
+ * held for the morning still says who did it. REMINDER, OVERDUE and CARD are
+ * not planned from events: the outbox and the bot's «Topshiriqlarim» use them.
+ */
+export type TgNotice =
+  | { kind: 'ASSIGNED' }
+  | { kind: 'ADDED'; by: string }
+  | { kind: 'MOVED'; from: string }
+  | { kind: 'REMOVED'; by: string }
+  | { kind: 'REVIEW'; by: string }
+  | { kind: 'ACCEPTED'; by: string }
+  | { kind: 'RETURNED'; by: string; reason: string }
+  | { kind: 'COMMENT'; by: string; text: string }
+  | { kind: 'DONE'; by: string }
+  | { kind: 'CANCELLED'; by: string }
+  | { kind: 'REMINDER' }
+  | { kind: 'OVERDUE' }
+  | { kind: 'CARD'; headline?: string };
+
 export interface Notice {
   userId: number;
   type: NotificationType;
   title: string;
   message: string;
   actionRequired: boolean;
+  /** This person's Telegram message; null = the bell only. */
+  telegram: TgNotice | null;
 }
 
 type Names = ReadonlyMap<number, string>;
+type TgFor = (userId: number) => TgNotice | null;
+const bellOnly: TgFor = () => null;
+
 const clip = (s: string, n = 80) => (s.length > n ? s.slice(0, n) + '…' : s);
 const who = (names: Names, id: number | null) =>
   id === null ? 'Tizim' : (names.get(id) ?? "Noma'lum");
@@ -54,18 +81,53 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: 'Bekor qilindi',
 };
 
-/** One place decides who hears what; the bell listener and (phase 2) Telegram read it. */
+/**
+ * One place decides who hears what, on both channels (spec §9.3): the bell
+ * listener reads `title` / `message`, the Telegram listener reads `telegram`.
+ */
 export function planNotices(
   event: string,
   payload: unknown,
   names: Names,
 ): Notice[] {
+  const notices = planFor(event, payload, names);
+  // «Dars bo'ldimi?» never goes to Telegram: the lesson-end message covers it.
+  const kind = (payload as { task?: TaskEventTask }).task?.kind;
+  return kind === 'LESSON_QUESTION'
+    ? notices.map((n) => ({ ...n, telegram: null }))
+    : notices;
+}
+
+/** Author, participants, the actor and the people the payload moves — once each. */
+export function noticeUserIds(payload: { task: TaskEventTask }): number[] {
+  const x = payload as {
+    task: TaskEventTask;
+    actorId?: number | null;
+    userIds?: number[];
+    toUserIds?: number[];
+    fromUserId?: number;
+  };
+  return [
+    ...new Set([
+      ...(x.task.authorId !== null ? [x.task.authorId] : []),
+      ...x.task.participants.map((p) => p.userId),
+      // The actor may be neither author nor participant (a CEO cancelling).
+      ...(typeof x.actorId === 'number' ? [x.actorId] : []),
+      ...(x.userIds ?? []),
+      ...(x.toUserIds ?? []),
+      ...(x.fromUserId !== undefined ? [x.fromUserId] : []),
+    ]),
+  ];
+}
+
+function planFor(event: string, payload: unknown, names: Names): Notice[] {
   const mk = (
     userIds: number[],
     type: NotificationType,
     title: string,
     message: string,
     actionRequired: boolean,
+    telegram: TgFor = bellOnly,
   ): Notice[] =>
     [...new Set(userIds)].map((userId) => ({
       userId,
@@ -73,6 +135,7 @@ export function planNotices(
       title,
       message,
       actionRequired,
+      telegram: telegram(userId),
     }));
 
   switch (event) {
@@ -80,6 +143,9 @@ export function planNotices(
       const p = payload as TaskAssignedPayload;
       const added = notActor(p.userIds, p.actorId);
       const watching = new Set(watchers(p.task));
+      const tg: TgNotice = p.created
+        ? { kind: 'ASSIGNED' }
+        : { kind: 'ADDED', by: who(names, p.actorId) };
       return [
         ...mk(
           added.filter((u) => !watching.has(u)),
@@ -87,7 +153,9 @@ export function planNotices(
           'Yangi topshiriq',
           `${who(names, p.actorId)} sizga topshiriq berdi: «${clip(p.task.title)}»`,
           true,
+          () => tg,
         ),
+        // Watchers hear only «Bajarildi» and «Bekor qilindi» on Telegram.
         ...mk(
           added.filter((u) => watching.has(u)),
           'TASK_ASSIGNED',
@@ -99,60 +167,83 @@ export function planNotices(
     }
     case TASK_EVENTS.REASSIGNED: {
       const p = payload as TaskReassignedPayload;
+      const from = who(names, p.fromUserId);
       return mk(
         p.toUserIds,
         'TASK_ASSIGNED',
         "Topshiriq sizga o'tdi",
-        `${who(names, p.fromUserId)} ishdan ketgani uchun topshiriq sizga o'tdi: «${clip(p.task.title)}»`,
+        `${from} ishdan ketgani uchun topshiriq sizga o'tdi: «${clip(p.task.title)}»`,
         true,
+        () => ({ kind: 'MOVED', from }),
       );
     }
     case TASK_EVENTS.UNASSIGNED: {
       const p = payload as TaskUnassignedPayload;
+      const by = who(names, p.actorId);
       return mk(
         notActor(p.userIds, p.actorId),
         'TASK_UPDATED',
         'Topshiriqdan olib tashlandingiz',
-        `${who(names, p.actorId)}: «${clip(p.task.title)}»`,
+        `${by}: «${clip(p.task.title)}»`,
         false,
+        () => ({ kind: 'REMOVED', by }),
       );
     }
     case TASK_EVENTS.REVIEW_REQUESTED: {
       const p = payload as TaskReviewRequestedPayload;
       if (p.task.authorId === null || p.task.authorId === p.actorId) return [];
+      const by = who(names, p.actorId);
       return mk(
         [p.task.authorId],
         'TASK_REVIEW',
         'Tekshiruvga keldi',
-        `${who(names, p.actorId)} bajardi: «${clip(p.task.title)}»`,
+        `${by} bajardi: «${clip(p.task.title)}»`,
         true,
+        () => ({ kind: 'REVIEW', by }),
       );
     }
     case TASK_EVENTS.REVIEWED: {
       const p = payload as TaskReviewedPayload;
+      const by = who(names, p.actorId);
+      const watching = new Set(watchers(p.task));
       return p.accepted
         ? mk(
             notActor([...assignees(p.task), ...watchers(p.task)], p.actorId),
             'TASK_STATUS_CHANGED',
             'Qabul qilindi',
-            `${who(names, p.actorId)} qabul qildi: «${clip(p.task.title)}»`,
+            `${by} qabul qildi: «${clip(p.task.title)}»`,
             false,
+            (u) =>
+              watching.has(u) ? { kind: 'DONE', by } : { kind: 'ACCEPTED', by },
           )
         : mk(
             notActor(assignees(p.task), p.actorId),
             'TASK_STATUS_CHANGED',
             'Topshiriq qaytarildi',
-            `${who(names, p.actorId)}: «${clip(p.reason ?? '', 80)}» — ${clip(p.task.title, 60)}`,
+            `${by}: «${clip(p.reason ?? '', 80)}» — ${clip(p.task.title, 60)}`,
             true,
+            () => ({ kind: 'RETURNED', by, reason: clip(p.reason ?? '', 300) }),
           );
     }
     case TASK_EVENTS.STATUS_CHANGED: {
       const p = payload as TaskStatusChangedPayload;
+      // Only a self-task reaches DONE this way (its author is its only
+      // assignee), so the watchers are the ones left to tell.
+      if (p.to === 'DONE') {
+        const by = who(names, p.actorId);
+        return mk(
+          notActor(watchers(p.task), p.actorId),
+          'TASK_STATUS_CHANGED',
+          'Bajarildi',
+          `${by} bajardi: «${clip(p.task.title)}»`,
+          false,
+          () => ({ kind: 'DONE', by }),
+        );
+      }
       if (
         p.task.authorId === null ||
         p.task.authorId === p.actorId ||
-        p.to === 'IN_REVIEW' ||
-        p.to === 'DONE'
+        p.to === 'IN_REVIEW'
       )
         return [];
       return mk(
@@ -165,24 +256,33 @@ export function planNotices(
     }
     case TASK_EVENTS.COMMENTED: {
       const p = payload as TaskCommentedPayload;
+      const by = who(names, p.actorId);
+      const watching = new Set(watchers(p.task));
       return mk(
         everyone(p.task).filter((u) => u !== p.actorId),
         'TASK_UPDATED',
         'Yangi izoh',
-        `${who(names, p.actorId)}: «${clip(p.text, 80)}» — ${clip(p.task.title, 50)}`,
+        `${by}: «${clip(p.text, 80)}» — ${clip(p.task.title, 50)}`,
         false,
+        (u) =>
+          watching.has(u)
+            ? null
+            : { kind: 'COMMENT', by, text: clip(p.text, 300) },
       );
     }
     case TASK_EVENTS.CANCELLED: {
       const p = payload as TaskCancelledPayload;
+      const by = who(names, p.actorId);
+      const watching = new Set(watchers(p.task));
       return mk(
         [...assignees(p.task), ...watchers(p.task)].filter(
           (u) => u !== p.actorId,
         ),
         'TASK_DELETED',
         'Bekor qilindi',
-        `${who(names, p.actorId)} bekor qildi: «${clip(p.task.title)}»`,
+        `${by} bekor qildi: «${clip(p.task.title)}»`,
         false,
+        (u) => (watching.has(u) ? { kind: 'CANCELLED', by } : null),
       );
     }
     case TASK_EVENTS.DUE_CHANGED: {
