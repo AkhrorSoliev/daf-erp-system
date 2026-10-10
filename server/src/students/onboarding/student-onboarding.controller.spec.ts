@@ -1,20 +1,30 @@
 import { GUARDS_METADATA } from '@nestjs/common/constants';
-import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../../common/decorators';
-import { RolesGuard, StudentCardGuard } from '../../common/guards';
+import { StudentCardGuard } from '../../common/guards';
 import { OwnPasswordAttemptGuard } from '../../common/guards/own-password-attempt.guard';
+import { defaultRolesOf, routeAccess } from '../../common/permissions/testing';
 import { StudentOnboardingController } from './student-onboarding.controller';
 
 describe('StudentOnboardingController', () => {
   it('is Student-only, and refuses a token with no student card', () => {
-    const reflector = new Reflector();
-    expect(reflector.get(ROLES_KEY, StudentOnboardingController)).toEqual([
-      'Student',
-    ]);
-    // RolesGuard first, so a staff token gets 403 before the card check.
+    for (const method of [
+      'status',
+      'updateProfile',
+      'sendPhoneCode',
+      'sendChangeCode',
+      'verifyPhoneCode',
+    ]) {
+      expect(routeAccess(StudentOnboardingController, method)).toEqual({
+        kind: 'student',
+      });
+      expect(defaultRolesOf(StudentOnboardingController, method)).toEqual([
+        'Student',
+      ]);
+    }
+    // The global PermissionGuard runs before this one, so a staff token gets
+    // 403 before the card check.
     expect(
       Reflect.getMetadata(GUARDS_METADATA, StudentOnboardingController),
-    ).toEqual([RolesGuard, StudentCardGuard]);
+    ).toEqual([StudentCardGuard]);
   });
 
   it('caps password attempts on the one route that asks for it (ADR-0031)', () => {

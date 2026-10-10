@@ -6,8 +6,9 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { CurrentUser, Roles } from '../../common/decorators';
-import { RolesGuard, StudentCardGuard } from '../../common/guards';
+import { CurrentUser } from '../../common/decorators';
+import { StudentCardGuard } from '../../common/guards';
+import { StudentOnly } from '../../common/permissions/access.decorators';
 import { OwnPasswordAttemptGuard } from '../../common/guards/own-password-attempt.guard';
 import { StudentExtraPhoneService } from './student-extra-phone.service';
 import { ExtraPhoneSendCodeDto } from './dto/extra-phone-send-code.dto';
@@ -19,8 +20,8 @@ import { ExtraPhoneRemoveDto } from './dto/extra-phone-remove.dto';
  * card: the id comes from the token, never from the request.
  */
 @Controller('student-portal/extra-phone')
-@UseGuards(RolesGuard, StudentCardGuard)
-@Roles('Student')
+@UseGuards(StudentCardGuard)
+@StudentOnly()
 export class StudentExtraPhoneController {
   constructor(private readonly extraPhone: StudentExtraPhoneService) {}
 

@@ -1,14 +1,7 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppActivityStatsService } from './app-activity-stats.service';
 import { AppActivityQueryDto } from './dto/app-activity-query.dto';
@@ -23,8 +16,7 @@ export class StudentAppActivityController {
   ) {}
 
   @Get(':id/app-activity')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('students.details')
   async oquvchi(
     @Param('id', ParseIntPipe) id: number,
     @Query() query: AppActivityQueryDto,

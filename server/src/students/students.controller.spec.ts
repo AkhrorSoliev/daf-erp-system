@@ -1,6 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { StudentsController } from './students.controller';
 import { StudentsService } from './students.service';
 import { StudentEnrollmentService } from './student-enrollment.service';
@@ -9,13 +7,12 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { DebtAgeService } from '../common/finance/debt-age.service';
 import { StudentDeparturePreviewService } from './student-departure-preview.service';
 import { StudentEnrollPreviewService } from './student-enroll-preview.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('StudentsController — debt write-off role guards', () => {
+const ADMIN_ROLES = ['Administrator', 'Branch Director', 'CEO'];
+
+describe('StudentsController — route access', () => {
   let controller: StudentsController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockStudentsService = {} as any;
   const mockEnrollmentService = {
@@ -48,205 +45,97 @@ describe('StudentsController — debt write-off role guards', () => {
     }).compile();
 
     controller = module.get(StudentsController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => StudentsController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
-
-  describe('removeFromGroup() guard (DELETE /:id/enroll/:enrollmentId)', () => {
-    it('allows CEO', () => {
-      const ctx = mockExecutionContext(controller.removeFromGroup, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
+  describe('removeFromGroup() (DELETE /:id/enroll/:enrollmentId)', () => {
+    it('is gated by the enrollment capability', () => {
+      expect(routeAccess(StudentsController, 'removeFromGroup')).toEqual({
+        kind: 'can',
+        keys: ['students.enroll'],
+      });
     });
-    it('allows Branch Director', () => {
-      const ctx = mockExecutionContext(controller.removeFromGroup, [
-        'Branch Director',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('allows Administrator', () => {
-      const ctx = mockExecutionContext(controller.removeFromGroup, [
-        'Administrator',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('denies Cashier', () => {
-      const ctx = mockExecutionContext(controller.removeFromGroup, ['Cashier']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-    it('denies Teacher', () => {
-      const ctx = mockExecutionContext(controller.removeFromGroup, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    it('admits the three admin roles by default, nobody else', () => {
+      expect(defaultRolesOf(StudentsController, 'removeFromGroup')).toEqual(
+        ADMIN_ROLES,
+      );
     });
   });
 
-  describe('getDebtWriteOffEligibility() guard', () => {
-    it('allows CEO', () => {
-      const ctx = mockExecutionContext(controller.getDebtWriteOffEligibility, [
-        'CEO',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('allows Branch Director', () => {
-      const ctx = mockExecutionContext(controller.getDebtWriteOffEligibility, [
-        'Branch Director',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('allows Administrator', () => {
-      const ctx = mockExecutionContext(controller.getDebtWriteOffEligibility, [
-        'Administrator',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('denies Cashier', () => {
-      const ctx = mockExecutionContext(controller.getDebtWriteOffEligibility, [
-        'Cashier',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-    it('denies Teacher', () => {
-      const ctx = mockExecutionContext(controller.getDebtWriteOffEligibility, [
-        'Teacher',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
+  describe('getDebtWriteOffEligibility() and writeOffCycleDebt()', () => {
+    it.each(['getDebtWriteOffEligibility', 'writeOffCycleDebt'])(
+      '%s is gated by the debt write-off capability',
+      (method) => {
+        expect(routeAccess(StudentsController, method)).toEqual({
+          kind: 'can',
+          keys: ['debt.write-off'],
+        });
+      },
+    );
+    it.each(['getDebtWriteOffEligibility', 'writeOffCycleDebt'])(
+      '%s admits the three admin roles by default, nobody else',
+      (method) => {
+        expect(defaultRolesOf(StudentsController, method)).toEqual(ADMIN_ROLES);
+      },
+    );
   });
 
-  describe('writeOffCycleDebt() guard', () => {
-    it('allows CEO', () => {
-      const ctx = mockExecutionContext(controller.writeOffCycleDebt, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('allows Branch Director', () => {
-      const ctx = mockExecutionContext(controller.writeOffCycleDebt, [
-        'Branch Director',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('allows Administrator', () => {
-      const ctx = mockExecutionContext(controller.writeOffCycleDebt, [
-        'Administrator',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('denies Cashier', () => {
-      const ctx = mockExecutionContext(controller.writeOffCycleDebt, [
-        'Cashier',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-    it('denies Teacher', () => {
-      const ctx = mockExecutionContext(controller.writeOffCycleDebt, [
-        'Teacher',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
-  describe('getLessonsOverview() guard (GET /:id/lessons-overview)', () => {
-    it('allows CEO', () => {
-      const ctx = mockExecutionContext(controller.getLessonsOverview, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('allows Branch Director', () => {
-      const ctx = mockExecutionContext(controller.getLessonsOverview, [
-        'Branch Director',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-    it('allows Administrator', () => {
-      const ctx = mockExecutionContext(controller.getLessonsOverview, [
-        'Administrator',
-      ]);
-      expect(guard.canActivate(ctx)).toBe(true);
+  describe('getLessonsOverview() (GET /:id/lessons-overview)', () => {
+    it('is gated by the student details capability', () => {
+      expect(routeAccess(StudentsController, 'getLessonsOverview')).toEqual({
+        kind: 'can',
+        keys: ['students.details'],
+      });
     });
     // Monitoring ko'rinishi — Cashier ataylab KIRITILMAGAN.
-    it('denies Cashier', () => {
-      const ctx = mockExecutionContext(controller.getLessonsOverview, [
-        'Cashier',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-    it('denies Teacher', () => {
-      const ctx = mockExecutionContext(controller.getLessonsOverview, [
-        'Teacher',
-      ]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    it('admits the three admin roles by default, not the Cashier or the Teacher', () => {
+      expect(defaultRolesOf(StudentsController, 'getLessonsOverview')).toEqual(
+        ADMIN_ROLES,
+      );
     });
   });
 
   // O'quvchi profili. Kassir to'lov qabul qilishda ochadi; o'qituvchi yo'q —
   // shuning uchun guruh sahifasida o'qituvchiga o'quvchi ismi havolasiz
   // chiziladi (client/src/lib/role-access.ts, STUDENT_PROFILE_ROLES).
-  describe('findById() guard (GET /:id)', () => {
-    it.each([['CEO'], ['Branch Director'], ['Administrator'], ['Cashier']])(
-      'allows %s',
-      (role) => {
-        const ctx = mockExecutionContext(controller.findById, [role]);
-        expect(guard.canActivate(ctx)).toBe(true);
-      },
-    );
-    it('denies Teacher', () => {
-      const ctx = mockExecutionContext(controller.findById, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+  describe('findById() (GET /:id)', () => {
+    it('is gated by the student profile capability', () => {
+      expect(routeAccess(StudentsController, 'findById')).toEqual({
+        kind: 'can',
+        keys: ['students.profile'],
+      });
+    });
+    it('admits the three admin roles and the Cashier by default, not the Teacher', () => {
+      expect(defaultRolesOf(StudentsController, 'findById')).toEqual([
+        ...ADMIN_ROLES,
+        'Cashier',
+      ]);
     });
   });
 
-  describe('getDeparturePreview() guard (GET /:id/departure-preview)', () => {
-    it.each([['CEO'], ['Branch Director'], ['Administrator']])(
-      'allows %s',
-      (role) => {
-        const ctx = mockExecutionContext(controller.getDeparturePreview, [
-          role,
-        ]);
-        expect(guard.canActivate(ctx)).toBe(true);
-      },
-    );
-    it.each([['Cashier'], ['Teacher'], ['Student']])('denies %s', (role) => {
-      const ctx = mockExecutionContext(controller.getDeparturePreview, [role]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+  describe('getDeparturePreview() (GET /:id/departure-preview)', () => {
+    it('is gated by the enrollment capability', () => {
+      expect(routeAccess(StudentsController, 'getDeparturePreview')).toEqual({
+        kind: 'can',
+        keys: ['students.enroll'],
+      });
     });
-    it('is annotated with the three admin roles', () => {
-      expect(
-        reflector.get<string[]>(ROLES_KEY, controller.getDeparturePreview),
-      ).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    it('admits the three admin roles by default, not the Cashier, Teacher or Student', () => {
+      expect(defaultRolesOf(StudentsController, 'getDeparturePreview')).toEqual(
+        ADMIN_ROLES,
+      );
     });
   });
 
-  describe('getEnrollPreview() guard (GET /:id/enroll-preview)', () => {
-    it.each([['CEO'], ['Branch Director'], ['Administrator']])(
-      'allows %s',
-      (role) => {
-        const ctx = mockExecutionContext(controller.getEnrollPreview, [role]);
-        expect(guard.canActivate(ctx)).toBe(true);
-      },
-    );
-    it.each([['Cashier'], ['Teacher'], ['Student']])('denies %s', (role) => {
-      const ctx = mockExecutionContext(controller.getEnrollPreview, [role]);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+  describe('getEnrollPreview() (GET /:id/enroll-preview)', () => {
+    it('admits the three admin roles by default, not the Cashier, Teacher or Student', () => {
+      expect(defaultRolesOf(StudentsController, 'getEnrollPreview')).toEqual(
+        ADMIN_ROLES,
+      );
     });
-    it('carries the roles of POST /:id/enroll, the call it previews', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.getEnrollPreview,
-      );
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-      expect(roles).toEqual(
-        reflector.get<string[]>(ROLES_KEY, controller.enrollToGroup),
-      );
+    it('carries the capability of POST /:id/enroll, the call it previews', () => {
+      const access = routeAccess(StudentsController, 'getEnrollPreview');
+      expect(access).toEqual({ kind: 'can', keys: ['students.enroll'] });
+      expect(access).toEqual(routeAccess(StudentsController, 'enrollToGroup'));
     });
     it('passes the student, company, caller, group and start day in that order', async () => {
       await controller.getEnrollPreview(
@@ -262,37 +151,6 @@ describe('StudentsController — debt write-off role guards', () => {
         'grp-1',
         '2026-10-17',
       );
-    });
-  });
-
-  describe('endpoint metadata sanity', () => {
-    it('getLessonsOverview is annotated with the three admin roles', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.getLessonsOverview,
-      );
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-    it('removeFromGroup is annotated with the three admin roles', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.removeFromGroup,
-      );
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-    it('getDebtWriteOffEligibility is annotated with the three admin roles', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.getDebtWriteOffEligibility,
-      );
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-    it('writeOffCycleDebt is annotated with the three admin roles', () => {
-      const roles = reflector.get<string[]>(
-        ROLES_KEY,
-        controller.writeOffCycleDebt,
-      );
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
     });
   });
 

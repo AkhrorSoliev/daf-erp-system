@@ -1,12 +1,6 @@
-import {
-  Body,
-  Controller,
-  NotFoundException,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { Body, Controller, NotFoundException, Post } from '@nestjs/common';
+import { CurrentUser } from '../common/decorators';
+import { StudentOnly } from '../common/permissions/access.decorators';
 import { ActivityHeartbeatDto } from './dto/activity-heartbeat.dto';
 import { AppActivityWriteService } from './app-activity-write.service';
 
@@ -15,8 +9,7 @@ import { AppActivityWriteService } from './app-activity-write.service';
  * DTO'da bunday maydon yo'q, begona seans servisda 403 bilan rad etiladi.
  */
 @Controller('student-portal')
-@UseGuards(RolesGuard)
-@Roles('Student')
+@StudentOnly()
 export class StudentActivityController {
   constructor(private readonly faollik: AppActivityWriteService) {}
 
