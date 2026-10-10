@@ -4,7 +4,10 @@ import type {
   StudentJoinRequest,
   StudentJoinRequestStatus,
 } from '@prisma/client';
-import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
+import {
+  ENROLLABLE_GROUP_STATUSES,
+  isEnrollableGroupStatus,
+} from '../groups/shared/enrollable-statuses';
 
 type Db = Pick<
   PrismaClient,
@@ -50,7 +53,16 @@ export async function loadJoinRequestView(
   const [groups, sameName, lead, archived, decidedBy] = await Promise.all([
     db.group.findMany({
       where: {
-        OR: [{ id: { in: named } }, { branchId: r.branchId, deletedAt: null }],
+        // The two named groups whatever they are now; of the rest of the
+        // branch only the ones «Guruh» may offer.
+        OR: [
+          { id: { in: named } },
+          {
+            branchId: r.branchId,
+            deletedAt: null,
+            statusEnum: { in: ENROLLABLE_GROUP_STATUSES },
+          },
+        ],
       },
       select: {
         id: true,
@@ -58,8 +70,10 @@ export async function loadJoinRequestView(
         branchId: true,
         deletedAt: true,
         statusEnum: true,
+        // The same teacher the bot's messages name (`GROUP_SELECT`).
         teachers: {
           select: { teacher: { select: { firstName: true, lastName: true } } },
+          orderBy: { teacherId: 'asc' },
           take: 1,
         },
       },

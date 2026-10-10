@@ -550,6 +550,8 @@ describe('student-registration.scene — confirming sends a join request', () =>
     return { ctx, scene, joinRequests, uploadService };
   }
 
+  afterEach(() => jest.restoreAllMocks());
+
   it('writes the request and tells the person it waits for an administrator', async () => {
     const { ctx, scene, joinRequests, uploadService } = confirm({
       kind: 'created',
@@ -574,6 +576,10 @@ describe('student-registration.scene — confirming sends a join request', () =>
       { parse_mode: 'HTML' },
     );
     expect(ctx.scene.leave).toHaveBeenCalled();
+    // The preview's buttons go; its caption says the request went.
+    expect(ctx.editMessageCaption).toHaveBeenLastCalledWith(
+      "⏳ So'rov yuborildi",
+    );
     // The request owns the photo now: neither deleted nor left for /start.
     expect(uploadService.deleteFile).not.toHaveBeenCalled();
     expect(ctx.session.data).toEqual({});
@@ -589,6 +595,7 @@ describe('student-registration.scene — confirming sends a join request', () =>
     await scene.middleware()(ctx, async () => {});
 
     expect(uploadService.deleteFile).toHaveBeenCalledWith(PHOTO);
+    expect(ctx.editMessageCaption).toHaveBeenLastCalledWith('❌ Yuborilmadi');
     expect(ctx.reply).toHaveBeenCalledWith(
       "Siz allaqachon ro'yxatdan o'tgansiz!",
       expect.anything(),
@@ -609,6 +616,74 @@ describe('student-registration.scene — confirming sends a join request', () =>
       expect.anything(),
     );
     expect(ctx.scene.leave).not.toHaveBeenCalled();
-    jest.restoreAllMocks();
+  });
+});
+
+/**
+ * Entering the scene with a request already waiting (spec D9): the person is
+ * told before anything else that a new one replaces it.
+ */
+describe('student-registration.scene — a request already waits', () => {
+  function enter(pending: { groupName: string } | null) {
+    const update = {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        chat: { id: 555444, type: 'private' },
+        from: { id: 999, is_bot: false, first_name: 'O' },
+        text: '/start',
+      },
+    };
+    const ctx = new Context(update as any, {} as any, BOT_INFO) as any;
+    // Arrived by the group's own link: straight to the first name.
+    ctx.session = {
+      data: {
+        branchId: 7,
+        groupId: 'g1',
+        groupName: 'A1-07',
+        teacherName: 'Aziz Qodirov',
+      },
+      processing: false,
+    };
+    ctx.scene = { leave: jest.fn().mockResolvedValue(undefined) };
+    ctx.reply = jest.fn().mockResolvedValue(undefined);
+    const prisma = {
+      student: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+    const joinRequests = {
+      create: jest.fn(),
+      pendingForChat: jest.fn().mockResolvedValue(pending),
+    };
+    const scene = createStudentRegistrationScene(
+      prisma as any,
+      { deleteFile: jest.fn() } as any,
+      {} as any,
+      joinRequests as any,
+    );
+    return { ctx, scene, joinRequests };
+  }
+
+  it('says so first, then goes on with the sign-up', async () => {
+    const { ctx, scene, joinRequests } = enter({ groupName: 'A1-05' });
+
+    await scene.enterMiddleware()(ctx, async () => {});
+
+    expect(joinRequests.pendingForChat).toHaveBeenCalledWith('555444');
+    expect(ctx.reply.mock.calls[0][0]).toBe(
+      "Sizda ko'rib chiqilayotgan so'rov bor: A1-05. Yangisini yuborsangiz, avvalgisi bekor bo'ladi.",
+    );
+    expect(ctx.reply.mock.calls[1][0]).toContain('A1-07');
+    expect(ctx.session.step).toBe(3);
+  });
+
+  it('says nothing about a request when none waits', async () => {
+    const { ctx, scene } = enter(null);
+
+    await scene.enterMiddleware()(ctx, async () => {});
+
+    expect(ctx.reply).toHaveBeenCalledTimes(1);
+    expect(ctx.reply.mock.calls[0][0]).not.toContain("so'rov bor");
+    expect(ctx.session.step).toBe(3);
   });
 });

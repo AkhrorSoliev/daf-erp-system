@@ -181,8 +181,10 @@ describe('JoinRequestDecisionsService', () => {
     });
 
     it('a failure after the commit is logged with the request and the card, closes the bell rows and surfaces as itself', async () => {
+      // Only the charge event runs after the commit now; the history rows
+      // are written in the card's transaction.
       const { service, events, upload } = decide();
-      const failure = Object.assign(new Error('history row failed'), {
+      const failure = Object.assign(new Error('charge event failed'), {
         code: 'P2002',
       });
       register.mockImplementation(async (...args: unknown[]) => {
@@ -207,6 +209,22 @@ describe('JoinRequestDecisionsService', () => {
         taskId: 't1',
       });
       expect(upload.deleteFile).not.toHaveBeenCalled();
+      expect(events.emitAsync).not.toHaveBeenCalled();
+    });
+
+    it('a history row that fails rolls the approval back: nothing to close, the error surfaces', async () => {
+      const { service, events } = decide();
+      const failure = new Error('history row failed');
+      register.mockImplementation(async (...args: unknown[]) => {
+        const options = args[6] as flow.RegistrationOptions;
+        await options.inTx?.(txFromRegister, 11345);
+        throw failure;
+      });
+
+      await expect(service.approve('r1', undefined, ADMIN)).rejects.toBe(
+        failure,
+      );
+      expect(events.emit).not.toHaveBeenCalled();
       expect(events.emitAsync).not.toHaveBeenCalled();
     });
 
@@ -304,7 +322,7 @@ describe('JoinRequestDecisionsService', () => {
       });
 
       await expect(service.approve('r1', undefined, ADMIN)).rejects.toThrow(
-        "Bu so'rovni Kamola Rahimova ko'rib chiqmoqda",
+        "Bu so'rovni Kamola Rahimova oldi",
       );
       await expect(
         service.approve('r1', undefined, {
@@ -313,6 +331,16 @@ describe('JoinRequestDecisionsService', () => {
           roles: ['Branch Director'],
         }),
       ).resolves.toEqual(expect.objectContaining({ status: 'APPROVED' }));
+    });
+
+    it('names nobody when the holder can no longer be read', async () => {
+      const { service, prisma } = decide();
+      prisma.task.findUnique.mockResolvedValue({ claimedById: 10003 });
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.reject('r1', 'x', ADMIN)).rejects.toThrow(
+        "Bu so'rovni boshqa administrator oldi",
+      );
     });
   });
 

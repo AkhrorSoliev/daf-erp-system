@@ -21,8 +21,10 @@ export const GROUP_SELECT = {
   lessonStartTime: true,
   lessonEndTime: true,
   branch: { select: { status: true, deletedAt: true } },
+  // Ordered, so a group with two teachers names the same one every time.
   teachers: {
     select: { teacher: { select: { firstName: true, lastName: true } } },
+    orderBy: { teacherId: 'asc' },
     take: 1,
   },
 } satisfies Prisma.GroupSelect;

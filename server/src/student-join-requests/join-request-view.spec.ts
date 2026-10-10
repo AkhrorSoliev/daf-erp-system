@@ -58,6 +58,31 @@ describe('loadJoinRequestView', () => {
     expect(view.sameNameGroupIds).toEqual([]);
   });
 
+  it("reads the branch's enrollable groups and the named ones, teachers in a fixed order", async () => {
+    const d = db();
+    await loadJoinRequestView(
+      d as any,
+      { ...REQUEST, approvedGroupId: 'g9' } as any,
+    );
+
+    const query = d.group.findMany.mock.calls[0][0];
+    expect(query.where).toEqual({
+      OR: [
+        { id: { in: ['g1', 'g9'] } },
+        {
+          branchId: 7,
+          deletedAt: null,
+          statusEnum: { in: ['ACTIVE', 'FORMING', 'PAUSED'] },
+        },
+      ],
+    });
+    expect(query.select.teachers).toEqual({
+      select: { teacher: { select: { firstName: true, lastName: true } } },
+      orderBy: { teacherId: 'asc' },
+      take: 1,
+    });
+  });
+
   it('keeps a closed requested group out of the list but still names it', async () => {
     const d = db();
     d.group.findMany.mockResolvedValue([

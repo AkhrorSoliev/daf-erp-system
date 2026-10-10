@@ -93,8 +93,8 @@ export interface RegistrationOptions {
 
 /**
  * Telegram bot orqali yangi o'quvchini ro'yxatdan o'tkazish:
- * Student → Enrollment → User (login/parol) bitta tranzaksiyada yaratiladi,
- * keyin har bir bosqich uchun audit yozuvi qo'shiladi.
+ * Student → Enrollment → User (login/parol) va har bosqichning audit yozuvi
+ * bitta tranzaksiyada yaratiladi.
  * Returns: yaratilgan login parolni — caller foydalanuvchiga jo'natadi.
  */
 export async function registerStudentFromTelegram(
@@ -112,7 +112,7 @@ export async function registerStudentFromTelegram(
   // o'quvchi ham yozilmaydi, aks holda voronkada yana teshik qolardi.
   // The group and the sign-in account join them: a card is never left
   // without its group or its account (ADR-0033).
-  const { student, enrollment, plainPassword } = await prisma.$transaction(
+  const { enrollment, plainPassword } = await prisma.$transaction(
     async (tx) => {
       const created = await tx.student.create({
         data: {
@@ -175,11 +175,57 @@ export async function registerStudentFromTelegram(
         companyId: DEFAULT_COMPANY_ID,
       });
 
-      return {
-        student: created,
-        enrollment: enrolled,
-        plainPassword: account.plainPassword,
+      // The history rows commit with what they describe: a failed row rolls
+      // the card back instead of failing after it, when the approval could
+      // no longer send the password.
+      const history = {
+        companyId: DEFAULT_COMPANY_ID,
+        changedById: options.actorId,
+        tx,
       };
+      await entityHistoryService.recordCreate({
+        ...history,
+        entityType: 'Student',
+        entityId: created.id,
+        newValues: {
+          ism: data.firstName,
+          familiya: data.lastName,
+          telefon: data.phone,
+          action: 'TELEGRAM_ROYXATDAN_OTDI',
+        },
+      });
+      await entityHistoryService.recordCreate({
+        ...history,
+        entityType: 'Student',
+        entityId: created.id,
+        newValues: {
+          guruh: data.groupName,
+          guruhId: data.groupId,
+          action: 'GURUHGA_QOSHILDI',
+        },
+      });
+      await entityHistoryService.recordCreate({
+        ...history,
+        entityType: 'Enrollment',
+        entityId: enrolled.id,
+        newValues: {
+          studentId: created.id,
+          groupId: data.groupId,
+          status: 'ACTIVE',
+        },
+      });
+      await entityHistoryService.recordCreate({
+        ...history,
+        entityType: 'Group',
+        entityId: data.groupId,
+        newValues: {
+          action: 'OQUVCHI_QOSHILDI',
+          oquvchi: `${data.firstName} ${data.lastName}`,
+          oquvchiId: created.id,
+        },
+      });
+
+      return { enrollment: enrolled, plainPassword: account.plainPassword };
     },
   );
   options.onCommit?.();
@@ -187,61 +233,11 @@ export async function registerStudentFromTelegram(
   // Billing charges the join month now, as the admin door does. Left to the
   // 04:00 daily run, a sign-up on a month's last lesson day was never billed
   // for it (30.09.2026: five students). After the commit, because the
-  // listener reads the enrollment; before the history rows, so a failed row
-  // cannot skip the charge.
+  // listener reads the enrollment.
   await events.emitAsync(STUDENT_SELF_ENROLLED, {
     enrollmentId: enrollment.id,
     companyId: DEFAULT_COMPANY_ID,
   } satisfies StudentSelfEnrolledEvent);
-
-  await entityHistoryService.recordCreate({
-    entityType: 'Student',
-    entityId: student.id,
-    newValues: {
-      ism: data.firstName,
-      familiya: data.lastName,
-      telefon: data.phone,
-      action: 'TELEGRAM_ROYXATDAN_OTDI',
-    },
-    companyId: DEFAULT_COMPANY_ID,
-    changedById: options.actorId,
-  });
-
-  await entityHistoryService.recordCreate({
-    entityType: 'Student',
-    entityId: student.id,
-    newValues: {
-      guruh: data.groupName,
-      guruhId: data.groupId,
-      action: 'GURUHGA_QOSHILDI',
-    },
-    companyId: DEFAULT_COMPANY_ID,
-    changedById: options.actorId,
-  });
-
-  await entityHistoryService.recordCreate({
-    entityType: 'Enrollment',
-    entityId: enrollment.id,
-    newValues: {
-      studentId: student.id,
-      groupId: data.groupId,
-      status: 'ACTIVE',
-    },
-    companyId: DEFAULT_COMPANY_ID,
-    changedById: options.actorId,
-  });
-
-  await entityHistoryService.recordCreate({
-    entityType: 'Group',
-    entityId: data.groupId,
-    newValues: {
-      action: 'OQUVCHI_QOSHILDI',
-      oquvchi: `${data.firstName} ${data.lastName}`,
-      oquvchiId: student.id,
-    },
-    companyId: DEFAULT_COMPANY_ID,
-    changedById: options.actorId,
-  });
 
   return { plainPassword };
 }

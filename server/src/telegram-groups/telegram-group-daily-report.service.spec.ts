@@ -846,6 +846,27 @@ describe('TelegramGroupDailyReportService', () => {
     });
   });
 
+  it("counts only the join requests of the group's own branches", async () => {
+    const state = { ...defaultState(), staleJoinRequests: 1 };
+    const prisma = makePrisma(state);
+    const service = await buildService(prisma, makeSalary(state));
+
+    await service.build(1001, [2]);
+    expect(prisma.studentJoinRequest.count).toHaveBeenLastCalledWith({
+      where: expect.objectContaining({
+        companyId: 1001,
+        status: 'PENDING',
+        branchId: { in: [2] },
+      }),
+    });
+
+    // A company-wide run has no branch filter at all.
+    await service.build(1001, null);
+    const [{ where }] = prisma.studentJoinRequest.count.mock
+      .lastCall as unknown as [{ where: object }];
+    expect(where).not.toHaveProperty('branchId');
+  });
+
   it('prints no join request line when nothing waits', async () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state));

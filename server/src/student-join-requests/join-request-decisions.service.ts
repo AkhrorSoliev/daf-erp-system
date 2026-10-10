@@ -16,6 +16,7 @@ import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { loadContactPhone } from '../balance-notices/load-transfer-state';
 import { registerStudentFromTelegram } from '../telegram/scenes/student-registration-flow';
 import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
+import { assertMayAnswer } from '../unmarked-lessons/answer-rules';
 import {
   closeJoinRequestTask,
   type JoinTaskCloseReason,
@@ -53,28 +54,11 @@ export interface JoinRequestCaller {
   roles: string[];
 }
 
-/**
- * The «Dars bo'ldimi?» rule (ADR-0054): the administrator who took the task
- * decides; the CEO and a Branch Director always may.
- */
-export async function assertMayDecide(
-  db: Pick<PrismaService, 'user'>,
-  claimedById: number | null,
-  caller: JoinRequestCaller,
-): Promise<void> {
-  if (claimedById === null || claimedById === caller.id) return;
-  if (caller.roles.includes('CEO') || caller.roles.includes('Branch Director'))
-    return;
-  const holder = await db.user.findUnique({
-    where: { id: claimedById },
-    select: { firstName: true, lastName: true },
-  });
-  throw new ConflictException(
-    holder
-      ? `Bu so'rovni ${holder.firstName} ${holder.lastName} ko'rib chiqmoqda`
-      : "Bu so'rovni boshqa administrator ko'rib chiqmoqda",
-  );
-}
+/** «Bu so'rovni <ism> oldi» (spec §5.4). */
+const requestTaken = (holder: string | null) =>
+  holder
+    ? `Bu so'rovni ${holder} oldi`
+    : "Bu so'rovni boshqa administrator oldi";
 
 /**
  * Deciding a join request (ADR-0080): approve, reject, the day-7 expiry and
@@ -205,8 +189,8 @@ export class JoinRequestDecisionsService {
         }
         throw error;
       }
-      // The card, its group and its account are in and the request is
-      // decided; a history row or the charge event after the commit failed.
+      // The card, its group, its account and their history are in and the
+      // request is decided; the charge event after the commit failed.
       // The bell rows still close; the error surfaces as what it is.
       this.logger.error(
         `So'rov ${request.id} tasdiqlandi (o'quvchi #${studentId}), keyingi qadam bajarilmadi: ${(error as Error).message}`,
@@ -295,7 +279,15 @@ export class JoinRequestDecisionsService {
         where: { id: request.taskId },
         select: { claimedById: true },
       });
-      await assertMayDecide(this.prisma, task?.claimedById ?? null, caller);
+      // The «Dars bo'ldimi?» rule (ADR-0054): the administrator who took the
+      // task decides; the CEO and a Branch Director always may.
+      await assertMayAnswer(
+        this.prisma,
+        { claimedById: task?.claimedById ?? null },
+        caller.id,
+        caller.roles,
+        requestTaken,
+      );
     }
     return request;
   }
