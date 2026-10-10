@@ -55,6 +55,11 @@ import { R2Uploader } from '../src/daf-content/media/r2-uploader';
 import { FalClient, type GeminiDialog } from '../src/daf/media/fal-client';
 import { polstereMp3 } from '../src/daf/media/audio-polster';
 import {
+  ABLEHNUNG_VERSUCHE,
+  erstelleGeneriere,
+  generiereDialogeNacheinander,
+} from './lib/dialog-generieren';
+import {
   DIALOG_AUDIO_MODELL,
   dialogTextHash,
   type DialogAudioManifest,
