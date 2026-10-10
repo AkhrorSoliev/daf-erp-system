@@ -32,6 +32,7 @@ import {
 } from './contract-fields';
 import { assertCourseExtras, assertDay, extrasOf } from './contract-input';
 import { nextContractNumber } from './contract-number';
+import { syncStudentProfile } from './profile-sync-apply';
 import {
   CONTRACT_VIEW_INCLUDE,
   loadContractView,
@@ -353,6 +354,14 @@ export class ContractDocumentsService {
             ),
           ),
         };
+        await syncStudentProfile(tx, this.history, {
+          studentId: student.id,
+          profile: student,
+          customer: fields.customer,
+          updates: dto.profileUpdates,
+          companyId,
+          userId,
+        });
 
         const number = await nextContractNumber(
           tx,
