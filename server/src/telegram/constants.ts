@@ -5,6 +5,7 @@ export const SCENES = {
   PASSWORD_RESET: 'password-reset',
   STATEMENT: 'statement',
   STAFF_LINK: 'staff-link',
+  ACCOUNT_LINK: 'account-link',
 } as const;
 
 export const TEACHER_DEEP_LINK_PREFIX = 'teacher_';
