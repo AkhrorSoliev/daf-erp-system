@@ -1,7 +1,6 @@
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { StudentLeadOriginService } from '../common/student-origin';
+import { StudentJoinRequestsService } from '../student-join-requests/student-join-requests.service';
 import { StatementService } from '../statements/statement.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { PaymentLinkService } from '../payment-gateways/payment-link.service';
@@ -121,9 +120,8 @@ describe('TelegramService.broadcastMockResults — one message per participant',
         { provide: EntityHistoryService, useValue: {} },
         { provide: PaymentLinkService, useValue: {} },
         { provide: TelegramChannelGateStatsService, useValue: {} },
-        { provide: StudentLeadOriginService, useValue: {} },
+        { provide: StudentJoinRequestsService, useValue: {} },
         { provide: StatementService, useValue: {} },
-        { provide: EventEmitter2, useValue: { emitAsync: jest.fn() } },
       ],
     }).compile();
     service = module.get(TelegramService);

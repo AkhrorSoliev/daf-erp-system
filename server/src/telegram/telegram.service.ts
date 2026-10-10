@@ -8,7 +8,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { OnEvent } from '@nestjs/event-emitter';
 import { createHash, timingSafeEqual } from 'crypto';
 import {
   STAFF_CABINET_REQUESTED,
@@ -33,7 +33,7 @@ import {
   VALID_ROLE_IDS,
   grantableRoleIdsFor,
 } from './constants';
-import { StudentLeadOriginService } from '../common/student-origin';
+import { StudentJoinRequestsService } from '../student-join-requests/student-join-requests.service';
 import { StatementService } from '../statements/statement.service';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
@@ -159,9 +159,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private entityHistoryService: EntityHistoryService,
     private paymentLinkService: PaymentLinkService,
     private gateStats: TelegramChannelGateStatsService,
-    private leadOrigin: StudentLeadOriginService,
+    private joinRequests: StudentJoinRequestsService,
     private statements: StatementService,
-    private events: EventEmitter2,
   ) {}
 
   async onModuleInit() {
@@ -300,9 +299,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.prisma,
       this.uploadService,
       this.bot,
-      this.entityHistoryService,
-      this.leadOrigin,
-      this.events,
+      this.joinRequests,
     );
 
     const employeeScene = createEmployeeRegistrationScene(
