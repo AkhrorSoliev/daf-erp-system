@@ -8,7 +8,6 @@ import { MonthPicker } from "@/components/ui/month-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCan, usePermissions } from "@/hooks/use-permissions";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { SalaryBreakdownDrawer } from "./salary-breakdown-drawer";
 import { SalaryMonthlyView } from "./salary-monthly-view";
 import { SalaryAdvancesTab } from "./salary-advances-tab";
 import { SalaryAdvanceDialog } from "./salary-advance-dialog";
@@ -17,6 +16,8 @@ import { CenterTopUpView } from "./debt/center-topup-view";
 import { resolveSalarySettingsAccess } from "./salary-settings-access";
 import { currentMonthKey } from "./salary-utils";
 import { mln } from "./salary/salary-page-model";
+import { SalaryRowDrawer } from "./salary/salary-row-drawer";
+import type { SalaryDetail } from "./salary/salary-types";
 import { useInvalidateSalary, useSalaryMonthly, useSalaryTabTotals } from "./salary/salary-queries";
 
 /** URL'ga yozilmaydigan standart tab. */
@@ -27,10 +28,13 @@ const FALLBACK_FLOOR = "2026-05";
 /**
  * `month` is shared by all three tabs; `search` is the Oyliklar filter, read
  * here so the header's monthly query is the view's own (one request).
+ * `xodim` is the user whose row drawer is open (0 = none), so a reload or a
+ * shared link lands on the same person.
  */
 const HEADER_SCHEMA = {
   month: { type: "string" as const, defaultValue: "" },
   search: { type: "string" as const, defaultValue: "" },
+  xodim: { type: "number" as const, defaultValue: 0 },
 };
 
 /** «Avanslar · 4,5 mln»; the amount is left out while loading and at 0 (Decision 12). */
@@ -67,14 +71,9 @@ export function SalaryClient() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
-  const [breakdownPaymentId, setBreakdownPaymentId] = useState<string | null>(null);
-
-  // Until the row drawer (Task 10): a row with a payment opens the payment's
-  // breakdown, as before; a row without one opens nothing yet.
-  const openRow = (userId: number) => {
-    const row = [...(monthly?.data ?? []), ...(monthly?.staff ?? [])].find((r) => r.user.id === userId);
-    if (row?.payment) setBreakdownPaymentId(row.payment.id);
-  };
+  // Held for the «Berildi» dialog (spec §5.1), which opens after the drawer closes.
+  const [, setPayTarget] = useState<SalaryDetail | null>(null);
+  const closeDrawer = () => setFilters({ xodim: 0 });
 
   return (
     <div className="flex flex-col gap-6">
@@ -116,7 +115,7 @@ export function SalaryClient() {
         <TabsContent value="oyliklar">
           <SalaryMonthlyView
             month={month}
-            onOpenRow={openRow}
+            onOpenRow={(userId) => setFilters({ xodim: userId })}
             canClose={canClose}
             settingsAccess={settingsAccess}
             onOpenSettings={() => setSettingsOpen(true)}
@@ -145,12 +144,14 @@ export function SalaryClient() {
 
       {canPay && <SalaryAdvanceDialog open={advanceOpen} onOpenChange={setAdvanceOpen} onSaved={invalidateSalary} />}
 
-      <SalaryBreakdownDrawer
-        salaryPaymentId={breakdownPaymentId}
-        onClose={() => setBreakdownPaymentId(null)}
+      <SalaryRowDrawer
+        userId={filters.xodim || null}
+        month={month}
+        state={monthly?.monthState.kind}
+        onClose={closeDrawer}
+        onPay={setPayTarget}
         canClose={canClose}
         canPay={canPay}
-        onChanged={invalidateSalary}
       />
     </div>
   );

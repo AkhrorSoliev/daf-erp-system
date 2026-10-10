@@ -119,6 +119,22 @@ export interface MonthlyResponse {
   };
 }
 
+/**
+ * One accrual of `GET /salary/payments/:id/breakdown` and
+ * `GET /salary/monthly/user/:userId/lessons` — the fields the drawer's CSV
+ * writes (the server sends more). `lessonDate` is a `@db.Date`.
+ */
+export interface BreakdownLine {
+  lessonDate: string;
+  student: { firstName: string; lastName: string };
+  group: { name: string; course: { name: string } };
+  perLessonCost: number;
+  amount: number;
+  configVersion: { salaryType: string; value: number; scope: "GROUP" | "GLOBAL" } | null;
+  reversedAt: string | null;
+  reversalReason: string | null;
+}
+
 export interface SalaryDetail {
   month: string;
   period: MonthlyResponse["period"];
