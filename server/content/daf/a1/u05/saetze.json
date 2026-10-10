@@ -56,9 +56,9 @@
   {
    "sourceId": "u05-s1-06",
    "section": "u05-s1",
-   "de": "Wie viel Uhr ist es jetzt?",
-   "uz": "Hozir soat necha?",
-   "wordCount": 6,
+   "de": "Wie viel Uhr ist es in Deutschland?",
+   "uz": "Germaniyada soat necha?",
+   "wordCount": 7,
    "origin": "GENERATED"
   },
   {
@@ -69,7 +69,8 @@
    "wordCount": 5,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Jetzt habe ich keine Zeit."
+    "Jetzt habe ich keine Zeit.",
+    "Keine Zeit habe ich jetzt."
    ]
   },
   {
@@ -121,12 +122,12 @@
   {
    "sourceId": "u05-s1-13",
    "section": "u05-s1",
-   "de": "Lena lernt die Uhrzeit.",
-   "uz": "Lena soatni bilishni o'rganyapti.",
-   "wordCount": 4,
+   "de": "Die Uhrzeit ist jetzt halb neun.",
+   "uz": "Hozir soat sakkiz yarim.",
+   "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Die Uhrzeit lernt Lena."
+    "Jetzt ist die Uhrzeit halb neun."
    ]
   },
   {
@@ -137,7 +138,8 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Es ist offiziell zwanzig Uhr dreißig."
+    "Es ist offiziell zwanzig Uhr dreißig.",
+    "Zwanzig Uhr dreißig ist es offiziell."
    ]
   },
   {
@@ -148,7 +150,8 @@
    "wordCount": 5,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Es ist inoffiziell halb neun."
+    "Es ist inoffiziell halb neun.",
+    "Halb neun ist es inoffiziell."
    ]
   },
   {
@@ -159,7 +162,9 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Zu jeder Tageszeit trinke ich Tee."
+    "Zu jeder Tageszeit trinke ich Tee.",
+    "Ich trinke Tee zu jeder Tageszeit.",
+    "Tee trinke ich zu jeder Tageszeit."
    ]
   },
   {
@@ -170,7 +175,8 @@
    "wordCount": 4,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Ich trinke morgens Kaffee."
+    "Ich trinke morgens Kaffee.",
+    "Kaffee trinke ich morgens."
    ]
   },
   {
@@ -192,7 +198,8 @@
    "wordCount": 4,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Wir essen mittags Suppe."
+    "Wir essen mittags Suppe.",
+    "Suppe essen wir mittags."
    ]
   },
   {
@@ -223,7 +230,10 @@
    "de": "Gute Nacht, Lena!",
    "uz": "Xayrli tun, Lena!",
    "wordCount": 3,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Lena, gute Nacht!"
+   ]
   },
   {
    "sourceId": "u05-s2-01",
@@ -244,7 +254,8 @@
    "wordCount": 5,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Ich habe am Dienstag Training."
+    "Ich habe am Dienstag Training.",
+    "Training habe ich am Dienstag."
    ]
   },
   {
@@ -255,7 +266,8 @@
    "wordCount": 5,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Lena hat am Mittwoch Geigenunterricht."
+    "Lena hat am Mittwoch Geigenunterricht.",
+    "Geigenunterricht hat Lena am Mittwoch."
    ]
   },
   {
@@ -266,7 +278,8 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Ich habe am Donnerstag einen Englisch-Test."
+    "Ich habe am Donnerstag einen Englisch-Test.",
+    "Einen Englisch-Test habe ich am Donnerstag."
    ]
   },
   {
@@ -277,7 +290,8 @@
    "wordCount": 5,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Ich arbeite am Freitag nicht."
+    "Ich arbeite am Freitag nicht.",
+    "Ich arbeite nicht am Freitag."
    ]
   },
   {
@@ -296,12 +310,12 @@
   {
    "sourceId": "u05-s2-07",
    "section": "u05-s2",
-   "de": "Der Sonnabend ist der Samstag.",
-   "uz": "Sonnabend — shanbaning boshqa nomi.",
-   "wordCount": 5,
+   "de": "Der Sonnabend und der Samstag sind gleich.",
+   "uz": "Sonnabend va Samstag – bir xil kun.",
+   "wordCount": 7,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Der Samstag ist der Sonnabend."
+    "Der Samstag und der Sonnabend sind gleich."
    ]
   },
   {
@@ -312,7 +326,8 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Wir essen am Sonntag bei Oma."
+    "Wir essen am Sonntag bei Oma.",
+    "Bei Oma essen wir am Sonntag."
    ]
   },
   {
@@ -350,7 +365,8 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Ich gehe samstags in die Musikschule."
+    "Ich gehe samstags in die Musikschule.",
+    "In die Musikschule gehe ich samstags."
    ]
   },
   {
@@ -361,7 +377,8 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Wir essen am Samstagabend im Restaurant."
+    "Wir essen am Samstagabend im Restaurant.",
+    "Im Restaurant essen wir am Samstagabend."
    ]
   },
   {
@@ -383,7 +400,8 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Ich habe nächste Woche einen Mathe-Test."
+    "Ich habe nächste Woche einen Mathe-Test.",
+    "Einen Mathe-Test habe ich nächste Woche."
    ]
   },
   {
@@ -402,7 +420,8 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Einmal pro Woche hat Lena Geigenunterricht."
+    "Einmal pro Woche hat Lena Geigenunterricht.",
+    "Geigenunterricht hat Lena einmal pro Woche."
    ]
   },
   {
@@ -413,7 +432,8 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Dreimal pro Woche hat Thomas Training."
+    "Dreimal pro Woche hat Thomas Training.",
+    "Training hat Thomas dreimal pro Woche."
    ]
   },
   {
@@ -424,7 +444,8 @@
    "wordCount": 5,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Am Freitag hat Jonas Trompetenunterricht."
+    "Am Freitag hat Jonas Trompetenunterricht.",
+    "Trompetenunterricht hat Jonas am Freitag."
    ]
   },
   {
@@ -454,7 +475,8 @@
    "wordCount": 4,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Ich trinke normalerweise Tee."
+    "Ich trinke normalerweise Tee.",
+    "Tee trinke ich normalerweise."
    ]
   },
   {
@@ -515,7 +537,8 @@
    "origin": "GENERATED",
    "akzeptiert": [
     "Ich möchte heute Lena abholen.",
-    "Lena möchte ich heute abholen."
+    "Lena möchte ich heute abholen.",
+    "Ich möchte Lena heute abholen."
    ]
   },
   {
@@ -578,7 +601,10 @@
    "de": "Ich möchte mir eine Serie ansehen.",
    "uz": "Bitta serial tomosha qilmoqchiman.",
    "wordCount": 6,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Eine Serie möchte ich mir ansehen."
+   ]
   },
   {
    "sourceId": "u05-s3-15",
@@ -662,7 +688,8 @@
    "wordCount": 5,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Morgen habe ich einen Termin."
+    "Morgen habe ich einen Termin.",
+    "Einen Termin habe ich morgen."
    ]
   },
   {
@@ -687,7 +714,7 @@
   {
    "sourceId": "u05-s4-04",
    "section": "u05-s4",
-   "de": "Ist es am Freitag möglich?",
+   "de": "Ist das am Freitag möglich?",
    "uz": "Juma kuni mumkinmi?",
    "wordCount": 5,
    "origin": "GENERATED"
@@ -748,7 +775,7 @@
    "sourceId": "u05-s4-10",
    "section": "u05-s4",
    "de": "Die Termine enden um sechzehn Uhr.",
-   "uz": "Qabul soat o'n oltida tugaydi.",
+   "uz": "Uchrashuvlar soat o'n oltida tugaydi.",
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
@@ -766,12 +793,13 @@
   {
    "sourceId": "u05-s4-12",
    "section": "u05-s4",
-   "de": "Ich komme zehn Minuten vorher.",
-   "uz": "O'n daqiqa oldinroq kelaman.",
+   "de": "Vorher trinke ich einen Kaffee.",
+   "uz": "Oldinroq bir qahva ichib olaman.",
    "wordCount": 5,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Zehn Minuten vorher komme ich."
+    "Ich trinke vorher einen Kaffee.",
+    "Einen Kaffee trinke ich vorher."
    ]
   },
   {
@@ -782,7 +810,8 @@
    "wordCount": 4,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Pünktlich bin ich immer."
+    "Pünktlich bin ich immer.",
+    "Immer bin ich pünktlich."
    ]
   },
   {
@@ -802,7 +831,10 @@
    "de": "Entschuldigen Sie, der Bus kommt nicht.",
    "uz": "Kechirasiz, avtobus kelmayapti.",
    "wordCount": 6,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Der Bus kommt nicht, entschuldigen Sie."
+   ]
   },
   {
    "sourceId": "u05-s4-16",
@@ -812,7 +844,8 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Heute habe ich viel zu tun."
+    "Heute habe ich viel zu tun.",
+    "Viel zu tun habe ich heute."
    ]
   },
   {
@@ -896,7 +929,8 @@
    "origin": "GENERATED",
    "akzeptiert": [
     "Den Haushalt machen wir zusammen.",
-    "Wir machen zusammen den Haushalt."
+    "Wir machen zusammen den Haushalt.",
+    "Zusammen machen wir den Haushalt."
    ]
   },
   {
@@ -973,7 +1007,8 @@
    "wordCount": 5,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Heute habe ich viel Stress."
+    "Heute habe ich viel Stress.",
+    "Viel Stress habe ich heute."
    ]
   },
   {
@@ -982,7 +1017,10 @@
    "de": "Das muss dir nicht leidtun.",
    "uz": "Afsuslanishing shart emas.",
    "wordCount": 5,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Dir muss das nicht leidtun."
+   ]
   },
   {
    "sourceId": "u05-s5-13",
@@ -1050,7 +1088,10 @@
    "de": "Wer wäscht heute das Geschirr?",
    "uz": "Bugun idish-tovoqni kim yuvadi?",
    "wordCount": 5,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wer wäscht das Geschirr heute?"
+   ]
   },
   {
    "sourceId": "u05-s5-20",

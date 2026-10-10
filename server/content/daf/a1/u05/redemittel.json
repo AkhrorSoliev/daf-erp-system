@@ -4,7 +4,7 @@
     {
       "section": "u05-s1",
       "funktion": "nach der Uhrzeit fragen",
-      "funktionUz": "soat necha ekanini so'rash",
+      "funktionUz": "do'stingizdan soat necha ekanini so'rash",
       "de": "Wie spät ist es?",
       "uz": "Soat necha?"
     },
@@ -32,7 +32,7 @@
     {
       "section": "u05-s2",
       "funktion": "fragen, ob jemand Zeit hat",
-      "funktionUz": "qaysi kuni bo'shligini so'rash",
+      "funktionUz": "do'stingizdan bo'sh vaqti bor-yo'qligini so'rash",
       "de": "Hast du am Samstag Zeit?",
       "uz": "Shanba kuni vaqting bormi?"
     },
@@ -48,7 +48,7 @@
       "funktion": "sich bis zum Treffen verabschieden",
       "funktionUz": "kelishilgan kungacha xayrlashish",
       "de": "Bis Samstag!",
-      "uz": "Shanbagacha!"
+      "uz": "Shanba kuni ko'rishguncha!"
     },
     {
       "section": "u05-s3",
@@ -88,7 +88,7 @@
     {
       "section": "u05-s4",
       "funktion": "nach einem freien Termin fragen",
-      "funktionUz": "bo'sh vaqt bor-yo'qligini so'rash",
+      "funktionUz": "qabulxonadan bo'sh qabul vaqti bor-yo'qligini so'rash",
       "de": "Haben Sie am Donnerstag einen Termin frei?",
       "uz": "Payshanba kuni bo'sh vaqtingiz bormi?"
     },
@@ -96,7 +96,7 @@
       "section": "u05-s4",
       "funktion": "sich für die Verspätung entschuldigen",
       "funktionUz": "kechikkani uchun uzr so'rash",
-      "de": "Entschuldigen Sie, ich bin zu spät.",
+      "de": "Entschuldigen Sie, ich komme zu spät.",
       "uz": "Kechirasiz, kechikib qoldim."
     },
     {
@@ -132,7 +132,7 @@
       "funktion": "sagen, dass man Stress hat",
       "funktionUz": "zo'riqib qolganini aytish",
       "de": "Ich habe so viel Stress!",
-      "uz": "Ishim juda ko'p, zo'riqib ketdim!"
+      "uz": "Juda zo'riqib ketdim!"
     }
   ]
 }

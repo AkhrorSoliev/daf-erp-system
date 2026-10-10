@@ -537,7 +537,7 @@
       "practical",
       "grateful",
       "satisfied",
-      "warm"
+      "sheepish but determined"
     ],
     "hoerspiel": {
       "atmo": {
@@ -547,8 +547,8 @@
       "geraeusche": [
         {
           "vor": 1,
-          "sfx": "an alarm clock ringing on a bedside table",
-          "sek": 2
+          "sfx": "a knock on a bedroom door",
+          "sek": 1.5
         },
         {
           "vor": 5,
@@ -634,7 +634,7 @@
     ],
     "hoerspiel": {
       "atmo": {
-        "sfx": "a city street at midday, light traffic and footsteps on the pavement, no voices",
+        "sfx": "a city street in the morning, light traffic and footsteps on the pavement, no voices",
         "sek": 15
       },
       "geraeusche": [

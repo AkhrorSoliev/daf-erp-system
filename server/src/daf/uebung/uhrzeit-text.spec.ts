@@ -177,6 +177,31 @@ describe('uhrAntworten — what a typed answer may be', () => {
     );
   });
 
+  it.each([
+    [5, 50, 'zehn Minuten vor sechs'],
+    [1, 5, 'fünf Minuten nach eins'],
+    [4, 20, 'zwanzig Minuten nach vier'],
+    [3, 35, 'fünfundzwanzig Minuten vor vier'],
+    [3, 25, 'fünfundzwanzig Minuten nach drei'],
+    [3, 40, 'zwanzig Minuten vor vier'],
+    [3, 55, 'fünf Minuten vor vier'],
+    [3, 10, 'zehn Minuten nach drei'],
+  ])('%i:%i — accepts «%s»', (h, m, text) => {
+    const { akzeptiert } = uhrAntworten(h, m);
+    expect(akzeptiert).toContain(text);
+    expect(akzeptiert).toContain(`Es ist ${text}`);
+  });
+
+  it('no «Minuten» form with «halb» or «Viertel»', () => {
+    for (let m = 0; m < 60; m += 5) {
+      const { akzeptiert } = uhrAntworten(3, m);
+      const falsch = akzeptiert.filter(
+        (f) => f.includes('Minuten') && /halb|viertel/i.test(f),
+      );
+      expect(falsch).toEqual([]);
+    }
+  });
+
   it('has no duplicate', () => {
     const { richtig, akzeptiert } = uhrAntworten(12, 0);
     const alle = [richtig, ...akzeptiert].map(normalisieren);
@@ -198,6 +223,13 @@ describe('no answer fits two times', () => {
     const { richtig, akzeptiert } = uhrAntworten(h, m);
     return [richtig, ...akzeptiert];
   };
+
+  it('includes the «Minuten» forms in the check', () => {
+    const alle = zeiten.flatMap(([h, m]) => formen(h, m));
+    expect(alle.filter((f) => /^\S+ Minuten (nach|vor) /.test(f))).toHaveLength(
+      12 * 8,
+    );
+  });
 
   it('every accepted form names exactly one time', () => {
     const besitzer = new Map<string, string>();

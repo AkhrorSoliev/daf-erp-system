@@ -128,8 +128,8 @@
     },
     {
      "sprecher": "Mia",
-     "de": "Aber heute ist Dienstag! Am Dienstag arbeitest du schon um acht.",
-     "uz": "Lekin bugun seshanba! Seshanba kuni soat sakkizdayoq ishdasan."
+     "de": "Schlafen? Aber heute ist Dienstag! Am Dienstag arbeitest du schon um acht.",
+     "uz": "Uxlashmi? Lekin bugun seshanba! Seshanba kuni soat sakkizdayoq ishdasan."
     },
     {
      "sprecher": "Jonas",
@@ -138,30 +138,30 @@
     },
     {
      "sprecher": "Mia",
-     "de": "Für Frühstück haben wir keine Zeit. Hier ist dein Kaffee. Und ich fahre dich mit dem Auto.",
-     "uz": "Nonushtaga vaqtimiz yo'q. Mana qahvang. Men seni mashinada olib boraman.",
+     "de": "Für das Frühstück haben wir keine Zeit. Hier ist dein Kaffee. Ich fahre dich zur Arbeit.",
+     "uz": "Nonushtaga vaqtimiz yo'q. Mana qahvang. Seni ishga olib boraman.",
      "izohUz": "Jonas dushdan chiqqach"
     },
     {
      "sprecher": "Jonas",
-     "de": "Danke, Mia! Dann bin ich um acht Uhr bei der Arbeit.",
-     "uz": "Rahmat, Mia! Unda soat sakkizda ishda bo'laman."
+     "de": "Mit dem Auto? Danke, Mia! Dann bin ich um acht Uhr bei der Arbeit.",
+     "uz": "Mashinadami? Rahmat, Mia! Unda soat sakkizda ishda bo'laman."
     },
     {
      "sprecher": "Mia",
-     "de": "So, es ist zehn vor acht. Wir sind da!",
-     "uz": "Mana, sakkizga o'n daqiqa bor. Yetib keldik!",
+     "de": "So, wir sind schon da! Es ist noch früh.",
+     "uz": "Mana, yetib ham keldik! Hali erta.",
      "izohUz": "mashinada, ish joyi oldida"
     },
     {
      "sprecher": "Jonas",
-     "de": "Danke! Und heute Nachmittag hole ich Lena ab.",
-     "uz": "Rahmat! Bugun tushdan keyin Lenani men olib kelaman."
+     "de": "Mia, morgen stehe ich um sieben Uhr auf!",
+     "uz": "Mia, ertaga soat yettida turaman!"
     }
    ],
    "fragen": [
     { "frageDe": "Wann steht Jonas normalerweise auf?", "frageUz": "Jonas odatda soat nechada turadi?", "richtig": "um halb acht", "falsch": ["um sieben Uhr", "um zehn vor acht"] },
-    { "frageDe": "Wie fährt Jonas heute zur Arbeit?", "frageUz": "Jonas bugun ishga nimada boradi?", "richtig": "mit dem Auto", "falsch": ["mit dem Bus", "mit dem Fahrrad"] }
+    { "frageDe": "Wie kommt Jonas heute zur Arbeit?", "frageUz": "Jonas bugun ishga nimada boradi?", "richtig": "mit dem Auto", "falsch": ["mit dem Bus", "mit dem Fahrrad"] }
    ]
   },
   {
@@ -233,8 +233,8 @@
     },
     {
      "sprecher": "Helga",
-     "de": "Guten Morgen! Hier ist Helga. Ich möchte einen Termin vereinbaren.",
-     "uz": "Xayrli tong! Men Helga. Qabulga yozilmoqchi edim."
+     "de": "Guten Morgen! Hier ist Helga. Ich möchte bei der Ärztin einen Termin vereinbaren.",
+     "uz": "Xayrli tong! Men Helga. Shifokorning qabuliga yozilmoqchi edim."
     },
     {
      "sprecher": "Sabine",
@@ -243,13 +243,13 @@
     },
     {
      "sprecher": "Helga",
-     "de": "Am Montag? Nein, am Montag bin ich leider nicht da.",
-     "uz": "Dushanba kunimi? Yo'q, afsuski, dushanba kuni men bu yerda bo'lmayman."
+     "de": "Um neun Uhr? Nein, am Montag bin ich leider nicht da.",
+     "uz": "Soat to'qqizdami? Yo'q, afsuski, dushanba kuni kela olmayman."
     },
     {
      "sprecher": "Sabine",
-     "de": "Hm... Am Dienstag und am Mittwoch ist nichts frei. Aber am Donnerstag um elf Uhr.",
-     "uz": "Hm... Seshanba va chorshanba kunlari bo'sh vaqt yo'q. Lekin payshanba kuni soat o'n birda bor."
+     "de": "Hm... Am Donnerstag um elf Uhr ist noch ein Termin für Sie frei.",
+     "uz": "Hm... Payshanba kuni soat o'n birda siz uchun bo'sh vaqt bor."
     },
     {
      "sprecher": "Helga",
@@ -277,18 +277,18 @@
    "section": "u05-s4",
    "titelDe": "Zu spät!",
    "titelUz": "Kechikdim!",
-   "sahnaUz": "Thomas bankda soat o'nga uchrashuv belgilagan. Bank xodimi Anna uni kutyapti.",
+   "sahnaUz": "Thomas bankda soat o'nga uchrashuv belgilagan. Bank xodimi Anna Weber uni kutyapti.",
    "zeilen": [
     {
      "sprecher": "Thomas",
-     "de": "Frau Weber? Hier ist Thomas Neumann. Unser Termin ist um zehn, oder?",
-     "uz": "Weber xonim? Men Thomas Neumann. Uchrashuvimiz soat o'nda, shundaymi?",
+     "de": "Frau Weber? Hier ist Thomas Neumann. Wir haben um zehn einen Termin.",
+     "uz": "Weber xonim? Men Thomas Neumann. Soat o'nda uchrashuvimiz bor.",
      "izohUz": "telefonda, ko'chadan"
     },
     {
      "sprecher": "Anna",
      "de": "Ja, Herr Neumann. Es ist schon Viertel nach zehn. Wo sind Sie?",
-     "uz": "Ha, Neumann janoblari. Soat o'ndan chorak o'tdi. Qayerdasiz?"
+     "uz": "Ha, janob Neumann. Soat o'ndan chorak o'tdi. Qayerdasiz?"
     },
     {
      "sprecher": "Thomas",
@@ -302,8 +302,8 @@
     },
     {
      "sprecher": "Thomas",
-     "de": "In zehn Minuten. Ist das noch möglich?",
-     "uz": "O'n daqiqada. Hali mumkinmi?"
+     "de": "In zehn Minuten, Frau Weber. Ist das noch möglich?",
+     "uz": "O'n daqiqada, Weber xonim. Hali mumkinmi?"
     },
     {
      "sprecher": "Anna",
@@ -319,12 +319,12 @@
     {
      "sprecher": "Anna",
      "de": "Schon gut, Herr Neumann. Wir beginnen gleich.",
-     "uz": "Hechqisi yo'q, Neumann janoblari. Hozir boshlaymiz."
+     "uz": "Hechqisi yo'q, janob Neumann. Hozir boshlaymiz."
     }
    ],
    "fragen": [
     { "frageDe": "Wann ist der Termin?", "frageUz": "Uchrashuv soat nechada?", "richtig": "um zehn Uhr", "falsch": ["um elf Uhr", "um halb zehn"] },
-    { "frageDe": "Wie kommt Thomas zur Bank?", "frageUz": "Thomas bankka nimada keladi?", "richtig": "mit dem Taxi", "falsch": ["mit dem Bus", "mit dem Auto"] }
+    { "frageDe": "Wie kommt Thomas zur Bank?", "frageUz": "Thomas bankka nimada keladi?", "richtig": "mit dem Taxi", "falsch": ["mit dem Bus", "zu Fuß"] }
    ]
   },
   {
@@ -366,8 +366,8 @@
     },
     {
      "sprecher": "Mia",
-     "de": "Abwechselnd. Heute kümmere ich mich um Lena, morgen du.",
-     "uz": "Navbatma-navbat. Bugun Lenaga men qarayman, ertaga sen."
+     "de": "Wir machen das abwechselnd. Heute kümmere ich mich um Lena, morgen du.",
+     "uz": "Buni navbatma-navbat qilamiz. Bugun Lenaga men qarayman, ertaga sen."
     },
     {
      "sprecher": "Jonas",

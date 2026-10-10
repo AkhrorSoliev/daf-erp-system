@@ -147,9 +147,23 @@ export function sprechtext(h: number, m: number): string {
 }
 
 /**
+ * «zehn vor sechs» may also be said «zehn Minuten vor sechs». Only the
+ * plain «X nach/vor H» forms get it: «halb» and «Viertel» never take
+ * «Minuten».
+ */
+function mitMinuten(formen: string[]): string[] {
+  return formen.flatMap((f) => {
+    const t = /^(\S+) (nach|vor) (\S+)$/.exec(f);
+    if (!t || /^(halb|viertel)$/i.test(t[1]) || t[3] === 'halb') return [];
+    return [`${t[1]} Minuten ${t[2]} ${t[3]}`];
+  });
+}
+
+/**
  * Every correct answer for a clock face showing `h:m`. `richtig` is the
  * taught informal form (shown after a wrong answer); `akzeptiert` holds
- * the other informal forms, the official form for both halves of the day
+ * the other informal forms and their «Minuten» variants, the official form
+ * for both halves of the day
  * (3:30 and 15:30 look the same) and each of them after «Es ist».
  * Case, ß/ss and umlauts are handled by `normalisieren` when comparing.
  */
@@ -162,6 +176,7 @@ export function uhrAntworten(
   const formen = [
     richtig,
     ...andere,
+    ...mitMinuten([richtig, ...andere]),
     offiziell(vormittag === 0 ? 12 : vormittag, m),
     offiziell(vormittag === 0 ? 0 : vormittag + 12, m),
   ];

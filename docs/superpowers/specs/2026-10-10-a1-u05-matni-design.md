@@ -38,9 +38,9 @@ Bitta dialogda bir xil ovozli ikki kishi yo'q, har dialogda ikki kishi
 |---|---|---|---|
 | d1 Meine Uhr steht! | s1 | Jonas, Mia | Jonas «yetti yarim, vaqtim ko'p» deydi → aslida sakkizga o'n daqiqa, soati to'xtagan → avtobus soat sakkizda, bekat yaqin → Jonas bekatga yetib boradi |
 | d2 Wann hast du Zeit? | s2 | Thomas, Julia | Keyingi hafta qahva ichmoqchi → dushanba–juma hammasi band (mashg'ulot, truba darsi, test, ish) → shanba ikkalasi bo'sh → shanba soat uchda kafeda |
-| d3 Aufstehen, Jonas! | s3 | Mia, Jonas | Soat yetti, Jonas uxlayapti → odatda yetti yarimda turadi, lekin seshanba ish sakkizda → Mia mashinada olib boradi → sakkizga o'n daqiqada yetib kelishadi, Jonas Lenani o'zi olib kelishini aytadi |
+| d3 Aufstehen, Jonas! | s3 | Mia, Jonas | Soat yetti, Jonas uxlayapti → odatda yetti yarimda turadi, lekin seshanba ish sakkizda → Mia mashinada ishga olib boradi → erta yetib kelishadi, Jonas «ertaga yettida turaman» deydi |
 | d4 Serie oder Nachrichten? | s3 | Mia, Helga | Soat sakkizda serial ham, yangiliklar ham → yangiliklar soat o'nda yana bor → avval serial → soat o'nda Helga uxlab qolgan, «Gute Nacht» |
-| d5 Ist ein Termin frei? | s4 | Sabine, Helga | Helga qabulga yoziladi → dushanba soat to'qqiz — u yo'q, seshanba–chorshanba band → payshanba soat o'n bir, yarim soat, o'n daqiqa oldin kelish → «Ich bin pünktlich da!» |
+| d5 Ist ein Termin frei? | s4 | Sabine, Helga | Helga qabulga yoziladi → dushanba soat to'qqiz — u yo'q → payshanba soat o'n bir, yarim soat, o'n daqiqa oldin kelish → «Ich bin pünktlich da!» |
 | d6 Zu spät! | s4 | Thomas, Anna | Bankda soat o'nda uchrashuv, soat o'ndan chorak o'tgan → avtobus kelmayapti → taksi, lekin soat o'n birda keyingi mijoz → Thomas uzr so'raydi, «Wir beginnen gleich» |
 | d7 Wer macht was? | s5 | Mia, Jonas | Shanba, uy ishlari → Jonas faqat televizor ko'rmoqchi, Mia hammasini yolg'iz qiladi → idish-tovoq Jonasga, xarid Miaga, Lena navbatma-navbat → Jonas idish yuvadi, «ertaga men Hausmann» |
 
@@ -57,7 +57,7 @@ bor, bepul): oshxona foni (d1, d7), ertalabki xonadon (d3), ko'cha (d6),
 qahva mashinasi, eshik yopilishi. Yangi effektlar (ovoz yasalganda bir marta
 to'lanadi): kechki xonadon foni, mehmonxona foni (televizor), shifokor
 qabulxonasi foni, avtobus kelishi, telefon jiringlashi (d2, d5, d6 — bitta
-effekt), budilnik, dush, mashina eshigi va motor, xurrak, kalendar varag'i,
+effekt), eshik taqillashi, dush, mashina eshigi va motor, xurrak, kalendar varag'i,
 shisha eshik va qadamlar, idish yuvish. «Boshqa xonadan» (`fern`) satr yo'q.
 
 ## 3. Qoidalar
@@ -77,8 +77,8 @@ shisha eshik va qadamlar, idish yuvish. «Boshqa xonadan» (`fern`) satr yo'q.
   Shuning uchun ikkinchi to'g'ri so'z sig'adigan gap qayta yozildi:
   «Am Samstag haben wir Zeit» (Sonnabend ham to'g'ri bo'lardi) → «Am Montag
   und am Dienstag arbeite ich»; «Was tun wir jetzt?» (machen ham to'g'ri) →
-  «Ich habe heute viel zu tun». Sonnabend faqat «Der Sonnabend ist der
-  Samstag» gapida.
+  «Ich habe heute viel zu tun». Sonnabend faqat «Der Sonnabend und der Samstag
+  sind gleich» gapida.
 - **Dialog bo'sh joyi:** javob satri o'z mavzusini aytadi, yakka «Danke!»
   yoki «Tschüss!» satri yo'q, dialog ichida satr takrorlanmaydi.
 - **Eshitish savoli:** bitta to'g'ri javob, to'g'ri javobning mazmunli so'zi
