@@ -824,7 +824,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 ### Join requests (ADR-0080)
 
-- A `JOIN_REQUEST` task's sheet shows `components/tasks/join-request/join-request-panel.tsx` (`GET /student-join-requests/by-task/:taskId`): photo, name, phone, Telegram, the «Guruh» select (the branch's groups that take students, the requested one first) and the server's notes (lead, archived card, same name in the chosen group, closed requested group). «Tasdiqlash» / «Rad etish» (reason required, staff-only) call the two POST routes; a decided request reads as one line. The rules are pure, in `join-request-rules.ts` (unit-tested); the panel computes nothing the server decides.
+- A `JOIN_REQUEST` task's sheet shows `components/tasks/join-request/join-request-panel.tsx` (`GET /student-join-requests/by-task/:taskId`): photo, name, phone, Telegram, the «Guruh» select (the branch's groups that take students, the requested one preselected) and notes the client words from the server's facts (lead, archived card, same-name groups, a picked group that no longer takes students); the server stays the boundary on approve. «Tasdiqlash» / «Rad etish» (reason required, staff-only) call the two POST routes; a decided request reads as one line, its `#id` linking to the card. Without `students.enroll` the panel says «Javob berish uchun ruxsat yo'q» and sends no read. Dates go through `@/lib/tashkent-time`. The rules are pure, in `join-request-rules.ts` (unit-tested); the panel computes nothing the server decides.
 - Note colours are blue / yellow / red — `sky-*` and `amber-*` render transparent outside the student portal.
 
 ### Teacher Timeline Tab
