@@ -102,6 +102,7 @@ describe('JoinRequestDecisionsService', () => {
     register.mockImplementation(async (...args: unknown[]) => {
       const options = args[6] as flow.RegistrationOptions | undefined;
       await options?.inTx?.(txFromRegister, 11345);
+      options?.onCommit?.();
       return { plainPassword: 'k7Pq2xZa' };
     });
   });
@@ -116,7 +117,7 @@ describe('JoinRequestDecisionsService', () => {
 
   describe('approve', () => {
     it('writes the card through registration, takes the request and the task in its transaction', async () => {
-      const { service, tx, events } = decide();
+      const { service, tx, events, upload } = decide();
 
       const out = await service.approve('r1', undefined, ADMIN);
 
@@ -162,6 +163,51 @@ describe('JoinRequestDecisionsService', () => {
       expect(message.chatId).toBe('555444');
       expect(message.photo).toBe('https://r2/p.jpg');
       expect(message.text).toContain('🔑 Parol: <b>k7Pq2xZa</b>');
+      // The card owns the photo now: approving never deletes it.
+      expect(upload.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('a duplicate the checks could not see yet, before the commit, is a conflict', async () => {
+      const { service, events } = decide();
+      register.mockRejectedValue(
+        Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }),
+      );
+
+      await expect(service.approve('r1', undefined, ADMIN)).rejects.toThrow(
+        "Bu ma'lumotlar allaqachon tizimda bor",
+      );
+      expect(events.emit).not.toHaveBeenCalled();
+      expect(events.emitAsync).not.toHaveBeenCalled();
+    });
+
+    it('a failure after the commit is logged with the request and the card, closes the bell rows and surfaces as itself', async () => {
+      const { service, events, upload } = decide();
+      const failure = Object.assign(new Error('history row failed'), {
+        code: 'P2002',
+      });
+      register.mockImplementation(async (...args: unknown[]) => {
+        const options = args[6] as flow.RegistrationOptions;
+        await options.inTx?.(txFromRegister, 11345);
+        options.onCommit?.();
+        throw failure;
+      });
+      const logError = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation(() => undefined);
+
+      // Not mapped to «allaqachon tizimda bor»: the request IS decided.
+      await expect(service.approve('r1', undefined, ADMIN)).rejects.toBe(
+        failure,
+      );
+      expect(logError).toHaveBeenCalledWith(
+        expect.stringMatching(/r1.*#11345/),
+      );
+      expect(events.emit).toHaveBeenCalledWith(JOIN_REQUEST_CLOSED, {
+        companyId: 1001,
+        taskId: 't1',
+      });
+      expect(upload.deleteFile).not.toHaveBeenCalled();
+      expect(events.emitAsync).not.toHaveBeenCalled();
     });
 
     it('enrols into the group the administrator chose', async () => {

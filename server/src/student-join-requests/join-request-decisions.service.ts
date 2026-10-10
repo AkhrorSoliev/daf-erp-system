@@ -146,7 +146,11 @@ export class JoinRequestDecisionsService {
 
     const now = new Date();
     let studentId = 0;
+    let committed = false;
     let plainPassword: string;
+    // The card keeps the photo; only the bell rows close.
+    const closeBells = () =>
+      closeAfterCommit(this.upload, this.events, { ...request, photo: null });
     try {
       ({ plainPassword } = await registerStudentFromTelegram(
         this.prisma,
@@ -187,20 +191,31 @@ export class JoinRequestDecisionsService {
               'JOIN_APPROVED',
             );
           },
+          onCommit: () => {
+            committed = true;
+          },
         },
       ));
     } catch (error) {
-      if ((error as { code?: string }).code === 'P2002') {
-        throw new ConflictException("Bu ma'lumotlar allaqachon tizimda bor");
+      if (!committed) {
+        // Nothing was written. A unique clash here is a write the checks
+        // above could not see yet (a racing card on the same phone or chat).
+        if ((error as { code?: string }).code === 'P2002') {
+          throw new ConflictException("Bu ma'lumotlar allaqachon tizimda bor");
+        }
+        throw error;
       }
+      // The card, its group and its account are in and the request is
+      // decided; a history row or the charge event after the commit failed.
+      // The bell rows still close; the error surfaces as what it is.
+      this.logger.error(
+        `So'rov ${request.id} tasdiqlandi (o'quvchi #${studentId}), keyingi qadam bajarilmadi: ${(error as Error).message}`,
+      );
+      await closeBells();
       throw error;
     }
 
-    // The card keeps the photo; only the bell rows close.
-    await closeAfterCommit(this.upload, this.events, {
-      ...request,
-      photo: null,
-    });
+    await closeBells();
     const delivered = await this.sendToPerson({
       chatId: request.chatId,
       photo: request.photo,
