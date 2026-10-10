@@ -95,6 +95,17 @@ describe('SalaryMonthlyService', () => {
     jest.useRealTimers();
   });
 
+  /**
+   * Where and when an accrual's lesson was held. Every real accrual has them
+   * (the report buckets each one by group), so a fixture spreads this in and
+   * names only what the case is about.
+   */
+  const LESSON = {
+    groupId: 'g1',
+    studentId: 20001,
+    lessonDate: new Date('2026-07-10'),
+  };
+
   const teacher = (id: number, first = 'T', last = 'X') => ({
     id,
     firstName: first,
@@ -180,7 +191,7 @@ describe('SalaryMonthlyService', () => {
     ]);
     // One covered lesson (a1) already has an accrual; one uncovered (a2) → gap.
     prisma.salaryAccrual.findMany.mockResolvedValue([
-      { userId: 10001, attendanceId: 'a1', amount: 6_000 },
+      { ...LESSON, userId: 10001, attendanceId: 'a1', amount: 6_000 },
     ]);
     prisma.attendance.findMany.mockResolvedValue([
       {
@@ -246,6 +257,7 @@ describe('SalaryMonthlyService', () => {
     // a1 the student paid for; a2 the center fronted at settlement.
     prisma.salaryAccrual.findMany.mockResolvedValue([
       {
+        ...LESSON,
         userId: 10001,
         attendanceId: 'a1',
         amount: 6_000,
@@ -254,6 +266,7 @@ describe('SalaryMonthlyService', () => {
         wasCenterTopUp: false,
       },
       {
+        ...LESSON,
         userId: 10001,
         attendanceId: 'a2',
         amount: 6_000,
@@ -314,6 +327,7 @@ describe('SalaryMonthlyService', () => {
     ]);
     prisma.salaryAccrual.findMany.mockResolvedValue([
       {
+        ...LESSON,
         userId: 10001,
         studentId: 20001,
         attendanceId: 'a1',
@@ -324,6 +338,7 @@ describe('SalaryMonthlyService', () => {
         deductionTransactionId: 'charge-sep',
       },
       {
+        ...LESSON,
         userId: 10001,
         studentId: 20001,
         attendanceId: 'a2',
@@ -384,6 +399,7 @@ describe('SalaryMonthlyService', () => {
     ]);
     prisma.salaryAccrual.findMany.mockResolvedValue([
       {
+        ...LESSON,
         userId: 10001,
         attendanceId: 'a1',
         amount: 6_000,
@@ -420,12 +436,14 @@ describe('SalaryMonthlyService', () => {
     // from a prior month (creditPeriodDate set → counts as "oldingi oydan").
     prisma.salaryAccrual.findMany.mockResolvedValue([
       {
+        ...LESSON,
         userId: 10001,
         attendanceId: 'a1',
         amount: 6_000,
         creditPeriodDate: null,
       },
       {
+        ...LESSON,
         userId: 10001,
         attendanceId: 'a2',
         amount: 4_000,
@@ -465,7 +483,7 @@ describe('SalaryMonthlyService', () => {
       },
     ]);
     prisma.salaryAccrual.findMany.mockResolvedValue([
-      { userId: 10001, attendanceId: 'a1', amount: 6_000 },
+      { ...LESSON, userId: 10001, attendanceId: 'a1', amount: 6_000 },
     ]);
     prisma.attendance.findMany.mockResolvedValue([
       { id: 'a1', groupId: 'g1', date: new Date('2026-06-10') },
@@ -502,7 +520,7 @@ describe('SalaryMonthlyService', () => {
     ]);
     // covered 6_000 + gap 6_000 = fullDeserved 12_000; 2_000 avans given, no payment yet.
     prisma.salaryAccrual.findMany.mockResolvedValue([
-      { userId: 10001, attendanceId: 'a1', amount: 6_000 },
+      { ...LESSON, userId: 10001, attendanceId: 'a1', amount: 6_000 },
     ]);
     prisma.attendance.findMany.mockResolvedValue([
       {
@@ -751,6 +769,7 @@ describe('SalaryMonthlyService', () => {
     //  - a3: center fronted then recovered (was, not is)       → advanced only
     prisma.salaryAccrual.findMany.mockResolvedValue([
       {
+        ...LESSON,
         userId: 10001,
         attendanceId: 'a1',
         amount: 6_000,
@@ -759,6 +778,7 @@ describe('SalaryMonthlyService', () => {
         wasCenterTopUp: false,
       },
       {
+        ...LESSON,
         userId: 10001,
         attendanceId: 'a2',
         amount: 6_000,
@@ -767,6 +787,7 @@ describe('SalaryMonthlyService', () => {
         wasCenterTopUp: true,
       },
       {
+        ...LESSON,
         userId: 10001,
         attendanceId: 'a3',
         amount: 6_000,
@@ -952,6 +973,7 @@ describe('SalaryMonthlyService', () => {
       // The month's base: 9 840 000 so'm of written accruals, no gap.
       prisma.salaryAccrual.findMany.mockResolvedValue([
         {
+          ...LESSON,
           userId: 10001,
           attendanceId: 'a1',
           amount: 9_840_000,
@@ -1010,6 +1032,7 @@ describe('SalaryMonthlyService', () => {
     it('open month: an advance above the partial base is shown whole, net is 0, the row stays', async () => {
       prisma.salaryAccrual.findMany.mockResolvedValue([
         {
+          ...LESSON,
           userId: 10001,
           attendanceId: 'a1',
           amount: 600_000,
@@ -1059,6 +1082,7 @@ describe('SalaryMonthlyService', () => {
       jest.setSystemTime(new Date('2026-10-01T00:30:00Z'));
       prisma.salaryAccrual.findMany.mockResolvedValue([
         {
+          ...LESSON,
           userId: 10001,
           attendanceId: 'a1',
           amount: 600_000,
@@ -1375,7 +1399,7 @@ describe('SalaryMonthlyService', () => {
     it("faol emas ustoz dars ma'lumoti bo'lsa ro'yxatda qoladi", async () => {
       prisma.user.findMany.mockResolvedValue([inactive(10009)]);
       prisma.salaryAccrual.findMany.mockResolvedValue([
-        { userId: 10009, attendanceId: 'a1', amount: 79_998 },
+        { ...LESSON, userId: 10009, attendanceId: 'a1', amount: 79_998 },
       ]);
 
       const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
@@ -1462,7 +1486,7 @@ describe('SalaryMonthlyService', () => {
       it("faol emas, lekin shu oyda darsi bor ustozning avansi bazadan katta bo'lsa ham to'liq ko'rsatiladi", async () => {
         prisma.user.findMany.mockResolvedValue([inactive(10009)]);
         prisma.salaryAccrual.findMany.mockResolvedValue([
-          { userId: 10009, attendanceId: 'a1', amount: 300_000 },
+          { ...LESSON, userId: 10009, attendanceId: 'a1', amount: 300_000 },
         ]);
         prisma.expense.findMany.mockResolvedValue([unsettled(10009)]);
 
@@ -1476,7 +1500,7 @@ describe('SalaryMonthlyService', () => {
     it("faol emas ustozning o'tgan oydagi, sig'adigan avansi bo'lsa ro'yxatda qoladi", async () => {
       prisma.user.findMany.mockResolvedValue([inactive(10009)]);
       prisma.salaryAccrual.findMany.mockResolvedValue([
-        { userId: 10009, attendanceId: 'a1', amount: 300_000 },
+        { ...LESSON, userId: 10009, attendanceId: 'a1', amount: 300_000 },
       ]);
       prisma.expense.findMany.mockResolvedValue([
         {
@@ -1527,6 +1551,458 @@ describe('SalaryMonthlyService', () => {
 
       expect(res.row).not.toBeNull();
       expect(res.row?.user.id).toBe(10009);
+    });
+  });
+
+  /**
+   * B3 «Ish haqi»: what the page's summary pill, its «Nimadan» column, the
+   * row drawer and the «E'tibor talab qiladi» card read from the same pass.
+   */
+  describe('B3 — month state, group buckets, attention', () => {
+    const paidPayment = (userId: number, status: string) => ({
+      id: `p${userId}`,
+      userId,
+      amount: 500_000,
+      status,
+      paidAt: status === 'PAID' ? new Date('2026-07-10T05:00:00Z') : null,
+      settledExpenses: [],
+    });
+    const staffRow = (id: number, status: string | null) => ({
+      user: { id, firstName: 'Dilnoza', lastName: 'Q', position: 'Kassir' },
+      monthly: 3_000_000,
+      advances: 0,
+      netToPay: 3_000_000,
+      payment: status
+        ? { id: `s${id}`, amount: 3_000_000, status, paidAt: null }
+        : null,
+    });
+    const staffOnly = (rows: unknown[]) =>
+      staff.computeStaff.mockResolvedValue({
+        staff: rows,
+        staffTotals: { monthly: 0, advances: 0, netToPay: 0, advanceCount: 0 },
+      });
+
+    describe('monthState', () => {
+      it('is OPEN for the current Tashkent month', async () => {
+        prisma.user.findMany.mockResolvedValue([teacher(10001, 'Madina')]);
+
+        const res = await service.getMonthly({ month: '2026-10' }, 1, 999);
+
+        expect(res.monthState).toEqual({
+          kind: 'OPEN',
+          paidCount: 0,
+          payableCount: 0,
+        });
+      });
+
+      it('counts teacher and staff payments together: PAID + CALCULATED is PARTLY_PAID 1/2', async () => {
+        prisma.user.findMany.mockResolvedValue([teacher(10001, 'Madina')]);
+        prisma.salaryPayment.findMany.mockResolvedValue([
+          paidPayment(10001, 'PAID'),
+        ]);
+        staffOnly([staffRow(10030, 'CALCULATED')]);
+
+        const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+        expect(res.monthState).toEqual({
+          kind: 'PARTLY_PAID',
+          paidCount: 1,
+          payableCount: 2,
+        });
+      });
+
+      it('is NOT_CALCULATED for a past month nobody has a payment in', async () => {
+        prisma.user.findMany.mockResolvedValue([teacher(10001, 'Madina')]);
+        staffOnly([staffRow(10030, null)]);
+
+        const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+        expect(res.monthState.kind).toBe('NOT_CALCULATED');
+      });
+
+      it('leaves out a teacher the list drops (an inactive one with nothing left)', async () => {
+        prisma.user.findMany.mockResolvedValue([
+          { ...teacher(10009, 'Eski'), isActive: false },
+          teacher(10001, 'Madina'),
+        ]);
+        prisma.salaryPayment.findMany.mockResolvedValue([
+          paidPayment(10001, 'PAID'),
+        ]);
+
+        const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+        expect(res.data.map((r) => r.user.id)).toEqual([10001]);
+        expect(res.monthState).toEqual({
+          kind: 'PAID',
+          paidCount: 1,
+          payableCount: 1,
+        });
+      });
+
+      it('is also answered on the zero-teacher early return, from the staff alone', async () => {
+        staffOnly([staffRow(10030, 'PAID')]);
+
+        const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+        expect(res.data).toEqual([]);
+        expect(res.monthState).toEqual({
+          kind: 'PAID',
+          paidCount: 1,
+          payableCount: 1,
+        });
+      });
+    });
+
+    describe('group buckets', () => {
+      const groups = [
+        {
+          id: 'g1',
+          name: 'A1-12',
+          course: { price: 240_000, lessonPaymentCount: 12 }, // 20 000 a lesson
+        },
+        {
+          id: 'g2',
+          name: 'B1-3',
+          course: { price: 240_000, lessonPaymentCount: 12 },
+        },
+      ];
+      const versions = [
+        {
+          salaryType: 'PERCENTAGE',
+          value: 30, // 6 000 a lesson
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: { userId: 10001, groupId: null, salaryType: 'PERCENTAGE' },
+        },
+        {
+          salaryType: 'FIXED_PER_STUDENT',
+          value: 150_000,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: {
+            userId: 10001,
+            groupId: 'g2',
+            salaryType: 'FIXED_PER_STUDENT',
+          },
+        },
+      ];
+      const accrual = (
+        attendanceId: string,
+        groupId: string,
+        studentId: number,
+        lessonDate: string,
+        amount: number,
+      ) => ({
+        userId: 10001,
+        groupId,
+        studentId,
+        attendanceId,
+        lessonDate: new Date(lessonDate),
+        amount,
+        creditPeriodDate: null,
+        isCenterTopUp: false,
+        wasCenterTopUp: false,
+      });
+
+      beforeEach(() => {
+        prisma.user.findMany.mockResolvedValue([teacher(10001, 'Madina')]);
+        prisma.group.findMany.mockResolvedValue(groups);
+        prisma.groupTeacher.findMany.mockResolvedValue([
+          { groupId: 'g1', teacherId: 10001 },
+          { groupId: 'g2', teacherId: 10001 },
+        ]);
+        prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue(versions);
+        prisma.salaryAccrual.findMany.mockResolvedValue([
+          accrual('a1', 'g1', 20001, '2026-07-05', 6_000),
+          accrual('a2', 'g1', 20002, '2026-07-05', 6_000),
+          accrual('a3', 'g1', 20002, '2026-07-12', 6_000),
+          accrual('a4', 'g2', 20003, '2026-07-06', 4_000),
+          // Carried IN from June: part of fullDeserved, in no group's bucket.
+          {
+            ...accrual('a5', 'g1', 20001, '2026-06-28', 3_000),
+            creditPeriodDate: new Date('2026-06-30T19:00:00Z'),
+          },
+        ]);
+        // A held lesson nobody paid for yet: the centre's gap, in g1.
+        prisma.attendance.findMany.mockResolvedValue([
+          {
+            id: 'a9',
+            studentId: 20002,
+            groupId: 'g1',
+            date: new Date('2026-07-19'),
+            status: 'PRESENT',
+          },
+        ]);
+        prisma.attendance.groupBy.mockResolvedValue([
+          { studentId: 20002, groupId: 'g1', _count: { _all: 8 } },
+        ]);
+      });
+
+      it('counts distinct groups and students on every teacher row', async () => {
+        const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+        const row = res.data[0];
+        expect(row.groupCount).toBe(2); // g1, g2
+        expect(row.studentCount).toBe(3); // 20001, 20002, 20003
+        // The list call stays small: buckets and the rate ride single-user calls.
+        expect(row).not.toHaveProperty('groups');
+        expect(row).not.toHaveProperty('rate');
+      });
+
+      it('a single-user call lists the groups, biggest first, with their rate', async () => {
+        const res = await service.getMonthly(
+          { month: '2026-07', userId: 10001 },
+          1,
+          999,
+        );
+
+        const row = res.data[0];
+        expect(row.groups).toEqual([
+          {
+            groupId: 'g1',
+            name: 'A1-12',
+            students: 2, // 20001, 20002 (20002 twice: still one student)
+            lessons: 3, // 05.07, 12.07 and the gap lesson of 19.07
+            amount: 24_000, // 3 × 6 000 written + 6 000 gap
+            rate: { salaryType: 'PERCENTAGE', value: 30 },
+          },
+          {
+            groupId: 'g2',
+            name: 'B1-3',
+            students: 1,
+            lessons: 1,
+            amount: 4_000,
+            // The group's own rate wins over the global one.
+            rate: { salaryType: 'FIXED_PER_STUDENT', value: 150_000 },
+          },
+        ]);
+        expect(row.rate).toEqual({ salaryType: 'PERCENTAGE', value: 30 });
+      });
+
+      it('Σ group amounts + carriedIn = fullDeserved (the carried-in accrual is in no bucket)', async () => {
+        const res = await service.getMonthly(
+          { month: '2026-07', userId: 10001 },
+          1,
+          999,
+        );
+
+        const row = res.data[0];
+        const sum = row.groups!.reduce((s, g) => s + g.amount, 0);
+        expect(row.carriedIn).toBe(3_000);
+        expect(row.fullDeserved).toBe(31_000);
+        expect(sum + row.carriedIn).toBe(row.fullDeserved);
+      });
+
+      it('a pre-top-up month keeps the gap out of both fullDeserved and the buckets', async () => {
+        const res = await service.getMonthly(
+          { month: '2026-06', userId: 10001 },
+          1,
+          999,
+        );
+
+        const row = res.data[0];
+        const sum = row.groups!.reduce((s, g) => s + g.amount, 0);
+        expect(row.fullDeserved).toBe(25_000); // written accruals only
+        expect(row.groups!.find((g) => g.groupId === 'g1')?.lessons).toBe(2);
+        expect(sum + row.carriedIn).toBe(row.fullDeserved);
+      });
+
+      it('a teacher on a flat monthly salary has no group buckets and a null group rate', async () => {
+        prisma.salaryAccrual.findMany.mockResolvedValue([]);
+        prisma.attendance.findMany.mockResolvedValue([]);
+        prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+          {
+            salaryType: 'FIXED_MONTHLY',
+            value: 4_000_000,
+            effectiveFrom: new Date('2026-05-01'),
+            effectiveTo: null,
+            config: {
+              userId: 10001,
+              groupId: null,
+              salaryType: 'FIXED_MONTHLY',
+            },
+          },
+        ]);
+
+        const res = await service.getMonthly(
+          { month: '2026-07', userId: 10001 },
+          1,
+          999,
+        );
+
+        const row = res.data[0];
+        expect(row.groups).toEqual([]);
+        expect(row.groupCount).toBe(0);
+        expect(row.studentCount).toBe(0);
+        expect(row.rate).toEqual({
+          salaryType: 'FIXED_MONTHLY',
+          value: 4_000_000,
+        });
+      });
+
+      it('a teacher with no global rate has a null rate', async () => {
+        prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+          versions[1],
+        ]);
+
+        const res = await service.getMonthly(
+          { month: '2026-07', userId: 10001 },
+          1,
+          999,
+        );
+
+        expect(res.data[0].rate).toBeNull();
+      });
+    });
+
+    describe('attention', () => {
+      it('lists a teacher with lessons that have no rate, with the lesson count', async () => {
+        prisma.user.findMany.mockResolvedValue([teacher(10001, 'Madina', 'K')]);
+        prisma.group.findMany.mockResolvedValue([
+          { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+        ]);
+        prisma.groupTeacher.findMany.mockResolvedValue([
+          { groupId: 'g1', teacherId: 10001 },
+        ]);
+        // The rate only starts in August: July's lessons have none.
+        prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+          {
+            salaryType: 'PERCENTAGE',
+            value: 30,
+            effectiveFrom: new Date('2026-08-01'),
+            effectiveTo: null,
+            config: { userId: 10001, groupId: null, salaryType: 'PERCENTAGE' },
+          },
+        ]);
+        prisma.attendance.findMany.mockResolvedValue(
+          ['2026-07-10', '2026-07-12'].map((d, i) => ({
+            id: `a${i}`,
+            studentId: 20001,
+            groupId: 'g1',
+            date: new Date(d),
+            status: 'PRESENT',
+          })),
+        );
+        prisma.attendance.groupBy.mockResolvedValue([
+          { studentId: 20001, groupId: 'g1', _count: { _all: 8 } },
+        ]);
+
+        const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+        expect(res.attention.lessonsWithoutRate).toEqual([
+          { userId: 10001, firstName: 'Madina', lastName: 'K', units: 2 },
+        ]);
+      });
+
+      it('lists nobody when every lesson has a rate', async () => {
+        prisma.user.findMany.mockResolvedValue([teacher(10001, 'Madina')]);
+
+        const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+        expect(res.attention.lessonsWithoutRate).toEqual([]);
+      });
+
+      describe('staffWithoutRate', () => {
+        const withoutRate = [
+          { id: 10050, firstName: 'Dilnoza', lastName: 'Q' },
+        ];
+        // `user.findMany` serves two queries: the teacher roster and this one.
+        const staffQuery = () =>
+          prisma.user.findMany.mock.calls
+            .map((c: any[]) => c[0])
+            .find((a: any) => a.where.salaryConfigs);
+        beforeEach(() => {
+          prisma.user.findMany.mockImplementation(({ where }: any) =>
+            Promise.resolve(where.salaryConfigs ? withoutRate : []),
+          );
+        });
+
+        it('lists an active role-less employee with no fixed salary in the month', async () => {
+          const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+          expect(res.attention.staffWithoutRate).toEqual([
+            { userId: 10050, firstName: 'Dilnoza', lastName: 'Q' },
+          ]);
+        });
+
+        it('asks for live, active staff — no Teacher, Student or CEO — with no FIXED_MONTHLY version over the month', async () => {
+          const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+          const q = staffQuery();
+          expect(q.where).toEqual({
+            companyId: 1,
+            deletedAt: null,
+            status: 'ACTIVE',
+            isActive: true,
+            roles: {
+              none: {
+                role: { name: { in: ['Teacher', 'Student', 'CEO'] } },
+              },
+            },
+            salaryConfigs: {
+              none: {
+                groupId: null,
+                salaryType: 'FIXED_MONTHLY',
+                versions: {
+                  some: {
+                    effectiveFrom: { lte: res.period.periodEnd },
+                    OR: [
+                      { effectiveTo: null },
+                      { effectiveTo: { gt: res.period.periodStart } },
+                    ],
+                  },
+                },
+              },
+            },
+          });
+          expect(q.select).toEqual({
+            id: true,
+            firstName: true,
+            lastName: true,
+          });
+          expect(q.orderBy).toEqual({ firstName: 'asc' });
+        });
+
+        it('applies the branch of a Branch Director', async () => {
+          prisma.user.findUnique.mockResolvedValue({
+            mainBranch: 7,
+            branches: [],
+            roles: [{ role: { name: 'Branch Director' } }],
+          });
+
+          await service.getMonthly({ month: '2026-09' }, 1, 555);
+
+          expect(staffQuery().where.branches).toEqual({
+            some: { branchId: 7 },
+          });
+        });
+
+        it('is skipped for a search, a single user and a caller with no branch', async () => {
+          await service.getMonthly({ month: '2026-09', search: 'Dil' }, 1, 999);
+          await service.getMonthly({ month: '2026-09', userId: 10050 }, 1, 999);
+          prisma.user.findUnique.mockResolvedValue({
+            mainBranch: null,
+            branches: [],
+            roles: [{ role: { name: 'Branch Director' } }],
+          });
+          const res = await service.getMonthly({ month: '2026-09' }, 1, 555);
+
+          expect(staffQuery()).toBeUndefined();
+          expect(res.attention.staffWithoutRate).toEqual([]);
+        });
+
+        it('is answered on the zero-teacher early return too', async () => {
+          const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+          expect(res.data).toEqual([]);
+          expect(res.attention).toEqual({
+            lessonsWithoutRate: [],
+            staffWithoutRate: [
+              { userId: 10050, firstName: 'Dilnoza', lastName: 'Q' },
+            ],
+          });
+        });
+      });
     });
   });
 });

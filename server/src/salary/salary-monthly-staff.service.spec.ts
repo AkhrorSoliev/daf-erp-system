@@ -488,6 +488,107 @@ describe('SalaryStaffMonthlyService', () => {
     expect(where.user.id).toBe(10030);
   });
 
+  describe("rate and coverage (the page's «Nimadan» column and drawer)", () => {
+    it('a member who started on the 8th is on 23 of the 30 days, on the rate of that version', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          configId: 'cfg1',
+          value: 5_000_000,
+          effectiveFrom: tsh(2026, 6, 8), // Jun 8..30 = 23 of 30 days
+          effectiveTo: null,
+        },
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].coverage).toEqual({ activeDays: 23, cycleDays: 30 });
+      expect(res.staff[0].rate).toEqual({
+        salaryType: 'FIXED_MONTHLY',
+        value: 5_000_000,
+      });
+    });
+
+    it('a full month is 30 of 30 days', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          configId: 'cfg1',
+          value: 5_000_000,
+          effectiveFrom: tsh(2026, 5, 1),
+          effectiveTo: null,
+        },
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].coverage).toEqual({ activeDays: 30, cycleDays: 30 });
+    });
+
+    it('a rate change mid-month shows the rate in force on the last day', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          configId: 'cfg1',
+          value: 3_000_000,
+          effectiveFrom: tsh(2026, 5, 1),
+          effectiveTo: tsh(2026, 6, 16),
+        },
+        {
+          configId: 'cfg1',
+          value: 6_000_000,
+          effectiveFrom: tsh(2026, 6, 16),
+          effectiveTo: null,
+        },
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].rate?.value).toBe(6_000_000);
+      expect(res.staff[0].coverage).toEqual({ activeDays: 30, cycleDays: 30 });
+    });
+
+    it('a rate that ended inside the month shows the latest version of it', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          configId: 'cfg1',
+          value: 4_000_000,
+          effectiveFrom: tsh(2026, 5, 1),
+          effectiveTo: tsh(2026, 6, 11), // left on the 11th: 10 of 30 days
+        },
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].rate).toEqual({
+        salaryType: 'FIXED_MONTHLY',
+        value: 4_000_000,
+      });
+      expect(res.staff[0].coverage).toEqual({ activeDays: 10, cycleDays: 30 });
+    });
+
+    it('a settled month with no version in it has no rate and no active days', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([]);
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          userId: 10030,
+          amount: 1_000_000,
+          status: 'PAID',
+          paidAt: null,
+          settledExpenses: [],
+        },
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].rate).toBeNull();
+      expect(res.staff[0].coverage).toEqual({ activeDays: 0, cycleDays: 30 });
+    });
+  });
+
   it('drops a config with no active version and no settled payment', async () => {
     prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
     prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([]); // none overlap

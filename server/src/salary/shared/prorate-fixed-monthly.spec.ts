@@ -1,4 +1,7 @@
-import { prorateFixedMonthly } from './prorate-fixed-monthly';
+import {
+  fixedMonthlyCoverage,
+  prorateFixedMonthly,
+} from './prorate-fixed-monthly';
 
 /** Tashkent-midnight instant of a calendar date (UTC+5, no DST). */
 const tsh = (y: number, m: number, d: number) =>
@@ -93,5 +96,97 @@ describe('prorateFixedMonthly', () => {
 
   it('returns 0 for no versions', () => {
     expect(prorateFixedMonthly([], periodStart, periodEnd)).toBe(0);
+  });
+});
+
+describe('fixedMonthlyCoverage', () => {
+  // September 2026: 30 days.
+  const sepStart = tsh(2026, 9, 1);
+  const sepEnd = new Date(tsh(2026, 10, 1).getTime() - 1);
+
+  it('counts the days a version started mid-month is active (open-ended)', () => {
+    expect(
+      fixedMonthlyCoverage(
+        [
+          {
+            value: 3_000_000,
+            effectiveFrom: new Date('2026-09-07T19:00:00Z'), // 8 Sep, Tashkent midnight
+            effectiveTo: null,
+          },
+        ],
+        sepStart,
+        sepEnd,
+      ),
+    ).toEqual({ activeDays: 23, cycleDays: 30 });
+  });
+
+  it('is the whole month for a full-month version', () => {
+    expect(
+      fixedMonthlyCoverage(
+        [
+          {
+            value: 3_000_000,
+            effectiveFrom: tsh(2026, 5, 1),
+            effectiveTo: null,
+          },
+        ],
+        sepStart,
+        sepEnd,
+      ),
+    ).toEqual({ activeDays: 30, cycleDays: 30 });
+  });
+
+  it('adds two back-to-back versions without counting the boundary day twice', () => {
+    expect(
+      fixedMonthlyCoverage(
+        [
+          {
+            value: 3_000_000,
+            effectiveFrom: tsh(2026, 5, 1),
+            effectiveTo: tsh(2026, 9, 16),
+          },
+          {
+            value: 6_000_000,
+            effectiveFrom: tsh(2026, 9, 16),
+            effectiveTo: null,
+          },
+        ],
+        sepStart,
+        sepEnd,
+      ),
+    ).toEqual({ activeDays: 30, cycleDays: 30 });
+  });
+
+  it('is 0 active days for no versions or a version outside the month', () => {
+    expect(fixedMonthlyCoverage([], sepStart, sepEnd)).toEqual({
+      activeDays: 0,
+      cycleDays: 30,
+    });
+    expect(
+      fixedMonthlyCoverage(
+        [
+          {
+            value: 3_000_000,
+            effectiveFrom: tsh(2026, 10, 1),
+            effectiveTo: null,
+          },
+        ],
+        sepStart,
+        sepEnd,
+      ),
+    ).toEqual({ activeDays: 0, cycleDays: 30 });
+  });
+
+  it('caps overlapping versions at the month length', () => {
+    expect(
+      fixedMonthlyCoverage(
+        [
+          { value: 1, effectiveFrom: tsh(2026, 5, 1), effectiveTo: null },
+          { value: 2, effectiveFrom: tsh(2026, 5, 1), effectiveTo: null },
+        ],
+        sepStart,
+        sepEnd,
+      ),
+    ).toEqual({ activeDays: 30, cycleDays: 30 });
   });
 });

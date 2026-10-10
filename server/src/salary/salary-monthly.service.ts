@@ -1,18 +1,26 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, SalaryPaymentStatus, SalaryType } from '@prisma/client';
+import {
+  Prisma,
+  SalaryPaymentStatus,
+  SalaryType,
+  UserStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { pickActiveVersion, RateVersion } from './shared/deserved-math';
 import { isTopUpMonth } from './shared/topup';
 import {
   resolveMonthlyScope,
+  type MonthlyScope,
   type SalaryMonthlyQuery,
 } from './shared/resolve-monthly-scope';
 import {
   ADVANCE_SELECT,
   SalaryStaffMonthlyService,
   toAdvanceItem,
+  type RateRef,
 } from './salary-monthly-staff.service';
 import { byWalkOrder, planShownAdvances } from './shared/advance-netting';
+import { monthStateOf } from './shared/month-state';
 import { tashkentMonthKey } from '../common/date/tashkent';
 import { SalaryMissedLessonsService } from './salary-missed-lessons.service';
 import { buildTeacherRosterWhere } from './shared/teacher-roster-where';
@@ -41,6 +49,30 @@ export type { SalaryMonthlyQuery } from './shared/resolve-monthly-scope';
 /** "YYYY-MM-DD" of a `@db.Date` value (UTC midnight), for override keys. */
 function dateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+/** One group's share of a teacher's month (the row drawer's «Guruhlar bo'yicha»). */
+export interface GroupBucket {
+  groupId: string;
+  name: string;
+  /** Distinct students whose lessons the group's amount is for. */
+  students: number;
+  /** Distinct lesson days. */
+  lessons: number;
+  amount: number;
+  /** The rate in force at the period's end: the group's own, else the global one. */
+  rate: RateRef | null;
+}
+
+function toRateRef(v: RateVersion | null): RateRef | null {
+  return v ? { salaryType: v.salaryType as SalaryType, value: v.value } : null;
+}
+
+/** The payment statuses of the rows that have one — what `monthStateOf` counts. */
+function paymentStatuses(
+  rows: { payment: { status: SalaryPaymentStatus } | null }[],
+): SalaryPaymentStatus[] {
+  return rows.flatMap((r) => (r.payment ? [r.payment.status] : []));
 }
 
 /**
@@ -114,6 +146,10 @@ export class SalaryMonthlyService {
       userId,
     } = scope;
 
+    // The open month is decided ONCE, on the Tashkent clock: the advances rule
+    // (ADR-0080) and the month-state pill both read it.
+    const isOpenMonth = month === tashkentMonthKey(new Date());
+
     // Non-teaching FIXED_MONTHLY staff (admins/cashiers/directors). Computed up
     // front so it is returned even on the zero-teacher early-return below.
     const { staff, staffTotals } = await this.staff.computeStaff(scope);
@@ -141,6 +177,7 @@ export class SalaryMonthlyService {
       },
     });
     const ids = teachers.map((t) => t.id);
+    const staffWithoutRate = await this.loadStaffWithoutRate(scope);
 
     const zeroTotals = {
       fullDeserved: 0,
@@ -171,6 +208,8 @@ export class SalaryMonthlyService {
         totals: zeroTotals,
         staff,
         staffTotals,
+        monthState: monthStateOf(isOpenMonth, paymentStatuses(staff)),
+        attention: { lessonsWithoutRate: [], staffWithoutRate },
       };
     }
     // ─── Step 3: bulk fetches (one query each, no per-lesson DB) ──────────
@@ -206,6 +245,9 @@ export class SalaryMonthlyService {
         select: {
           userId: true,
           attendanceId: true,
+          // The group and day of the lesson: the row's per-group buckets.
+          groupId: true,
+          lessonDate: true,
           amount: true,
           creditPeriodDate: true,
           isCenterTopUp: true,
@@ -238,6 +280,7 @@ export class SalaryMonthlyService {
         where: { companyId },
         select: {
           id: true,
+          name: true,
           course: {
             select: {
               price: true,
@@ -471,7 +514,36 @@ export class SalaryMonthlyService {
       isFixedMonthly: boolean;
       centerAdvanced: number;
       centerStillFronted: number;
+      /**
+       * The month's lessons by group — every lesson that adds to `fullDeserved`
+       * except a carried-IN accrual (its lesson is a prior month's). Filled in
+       * the SAME passes that build `fullDeserved`, so Σ `amount` + `carriedIn`
+       * is `fullDeserved` and the drawer's groups cannot disagree with its total.
+       */
+      buckets: Map<
+        string,
+        { students: Set<number>; dates: Set<string>; amount: number }
+      >;
     }
+    const addToBucket = (
+      a: Agg,
+      groupId: string,
+      studentId: number,
+      date: string,
+      amount: number,
+    ) => {
+      const b = a.buckets.get(groupId) ?? {
+        students: new Set<number>(),
+        dates: new Set<string>(),
+        amount: 0,
+      };
+      b.students.add(studentId);
+      b.dates.add(date);
+      b.amount += amount;
+      a.buckets.set(groupId, b);
+    };
+    // The centre's forecast leg is part of the month only from the top-up month.
+    const showGap = isTopUpMonth(month);
     /** Students the center is still fronting lessons for, this period. */
     const frontedStudentIds = new Set<number>();
     const agg = new Map<number, Agg>();
@@ -488,6 +560,7 @@ export class SalaryMonthlyService {
         isFixedMonthly: fixedMonthlyTeachers.has(id),
         centerAdvanced: 0,
         centerStillFronted: 0,
+        buckets: new Map(),
       });
     }
     for (const ac of accruals) {
@@ -508,6 +581,15 @@ export class SalaryMonthlyService {
       else a.studentFunded += ac.amount;
       // A carried-IN accrual (creditPeriodDate set → lessonDate was a prior month).
       if (ac.creditPeriodDate) a.carriedIn += ac.amount;
+      else {
+        addToBucket(
+          a,
+          ac.groupId,
+          ac.studentId,
+          dateStr(ac.lessonDate),
+          ac.amount,
+        );
+      }
       if (ac.attendanceId) a.coveredAtt.add(ac.attendanceId);
       if (ac.isCenterTopUp) {
         a.centerStillFronted += ac.amount;
@@ -557,6 +639,9 @@ export class SalaryMonthlyService {
       if (!a) continue;
       a.gap += l.amount;
       a.gapUnits += 1;
+      if (showGap) {
+        addToBucket(a, l.groupId, l.studentId, dateStr(l.lessonDate), l.amount);
+      }
     }
     for (const [tid, n] of sweep.noConfigUnits) {
       const a = agg.get(tid);
@@ -576,7 +661,6 @@ export class SalaryMonthlyService {
     );
 
     // ─── Step 5+6: build rows ────────────────────────────────────────────
-    const isOpenMonth = month === tashkentMonthKey(new Date());
     const allRows = teachers.map((t) => {
       const a = agg.get(t.id)!;
       // Keyed off the accrual TOTAL, not the student leg: a month the center
@@ -586,7 +670,6 @@ export class SalaryMonthlyService {
       // The forecast leg is a real figure ONLY from TOPUP_EFFECTIVE_MONTH on.
       // Before that the center tops up nothing, so a "qo'shilishi kerak" number
       // only confuses — drop it and let deserved = what students covered.
-      const showGap = isTopUpMonth(month);
       const rawGap = showGap ? a.gap : 0;
       // The center's leg, whatever phase the month is in: what it has ALREADY
       // paid (written top-up accruals) plus what it still owes for lessons that
@@ -613,8 +696,7 @@ export class SalaryMonthlyService {
       // Top-up months front the gap (full deserved); earlier months pay only
       // what students covered. Keeps the shown netToPay equal to what the cron
       // will actually pay for this month.
-      const base =
-        isTopUpMonth(month) && hasLessonData ? a.accrued + a.gap : a.accrued;
+      const base = showGap && hasLessonData ? a.accrued + a.gap : a.accrued;
       const pending = pendingByUser.get(t.id) ?? [];
       const plan = payment
         ? null
@@ -672,6 +754,11 @@ export class SalaryMonthlyService {
         // aylantirardi, shuning uchun ikkovi ham yuzaga chiqarildi.
         noConfigUnits: a.noConfigUnits,
         noChargeUnits: a.noChargeUnits,
+        // «N guruh · M o'quvchi» — distinct groups / students of the month's lessons.
+        groupCount: a.buckets.size,
+        studentCount: new Set(
+          [...a.buckets.values()].flatMap((b) => [...b.students]),
+        ).size,
         payment: payment
           ? {
               id: payment.id,
@@ -684,6 +771,21 @@ export class SalaryMonthlyService {
         // list call stays small.
         ...(userId !== undefined && {
           advanceItems: advanceList.map(toAdvanceItem),
+          groups: [...a.buckets]
+            .map(
+              ([groupId, b]): GroupBucket => ({
+                groupId,
+                name: groupMap.get(groupId)?.name ?? '',
+                students: b.students.size,
+                lessons: b.dates.size,
+                amount: b.amount,
+                rate: toRateRef(resolveRate(t.id, groupId, periodEnd)),
+              }),
+            )
+            .sort((x, y) => y.amount - x.amount),
+          rate: toRateRef(
+            pickActiveVersion(versByKey.get(`${t.id}::GLOBAL`), periodEnd),
+          ),
         }),
       };
     });
@@ -775,7 +877,81 @@ export class SalaryMonthlyService {
       totals,
       staff,
       staffTotals,
+      monthState: monthStateOf(
+        isOpenMonth,
+        paymentStatuses([...rows, ...staff]),
+      ),
+      attention: {
+        lessonsWithoutRate: rows
+          .filter((r) => r.noConfigUnits > 0)
+          .map((r) => ({
+            userId: r.user.id,
+            firstName: r.user.firstName,
+            lastName: r.user.lastName,
+            units: r.noConfigUnits,
+          })),
+        staffWithoutRate,
+      },
     };
+  }
+
+  /**
+   * «E'tibor talab qiladi»: active employees the payroll cannot pay this month
+   * because no FIXED_MONTHLY version covers any of it (spec §7.2). A person who
+   * is deleted, not ACTIVE, or a Teacher / Student / CEO is never listed —
+   * those are paid another way or not at all. The config's own `isActive` is
+   * not asked: a rate closed mid-month still pays its days
+   * (`SalaryStaffMonthlyService`), so the person has a salary that month.
+   *
+   * Only the full list call asks: a search or a single user narrows the table
+   * to people the card is not about, and a caller with no branch sees nothing.
+   */
+  private async loadStaffWithoutRate(scope: MonthlyScope) {
+    const {
+      companyId,
+      branchId,
+      blocked,
+      search,
+      userId,
+      periodStart,
+      periodEnd,
+    } = scope;
+    if (search || userId !== undefined || blocked) return [];
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: UserStatus.ACTIVE,
+        isActive: true,
+        roles: {
+          none: { role: { name: { in: ['Teacher', 'Student', 'CEO'] } } },
+        },
+        ...(branchId !== undefined && { branches: { some: { branchId } } }),
+        salaryConfigs: {
+          none: {
+            groupId: null,
+            salaryType: SalaryType.FIXED_MONTHLY,
+            versions: {
+              some: {
+                effectiveFrom: { lte: periodEnd },
+                OR: [
+                  { effectiveTo: null },
+                  { effectiveTo: { gt: periodStart } },
+                ],
+              },
+            },
+          },
+        },
+      },
+      select: { id: true, firstName: true, lastName: true },
+      orderBy: { firstName: 'asc' },
+    });
+    return users.map((u) => ({
+      userId: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+    }));
   }
 
   /**

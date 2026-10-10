@@ -4,8 +4,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MonthlyScope } from './shared/resolve-monthly-scope';
 import {
   FixedMonthlyVersion,
+  fixedMonthlyCoverage,
   prorateFixedMonthly,
 } from './shared/prorate-fixed-monthly';
+import { pickActiveVersion } from './shared/deserved-math';
 import { byWalkOrder, planShownAdvances } from './shared/advance-netting';
 import { tashkentMonthKey } from '../common/date/tashkent';
 
@@ -36,6 +38,34 @@ export function toAdvanceItem(e: AdvanceItem): AdvanceItem {
   return { id, date, amount, paymentMethod, createdBy };
 }
 
+/** A salary rate as the page labels it: the type and its value. */
+export interface RateRef {
+  salaryType: SalaryType;
+  value: number;
+}
+
+/**
+ * The fixed monthly rate a staff row is paid on: the version in force on the
+ * period's last day, else the latest one that overlaps the period (a member who
+ * left mid-month), else none.
+ */
+function staffRateOf(
+  versions: FixedMonthlyVersion[],
+  periodEnd: Date,
+): RateRef | null {
+  const typed = versions.map((v) => ({
+    ...v,
+    salaryType: SalaryType.FIXED_MONTHLY as string,
+  }));
+  const v =
+    pickActiveVersion(typed, periodEnd) ??
+    typed.reduce<(typeof typed)[number] | null>(
+      (a, b) => (a && a.effectiveFrom >= b.effectiveFrom ? a : b),
+      null,
+    );
+  return v ? { salaryType: SalaryType.FIXED_MONTHLY, value: v.value } : null;
+}
+
 export interface StaffRow {
   user: {
     id: number;
@@ -58,6 +88,10 @@ export interface StaffRow {
   };
   /** Prorated fixed-monthly salary for the period (full month = the flat value). */
   monthly: number;
+  /** The rate behind `monthly`; null when no version overlaps the month. */
+  rate: RateRef | null;
+  /** Days the salary is on, of the period's days («d/D kun» when prorated). */
+  coverage: { activeDays: number; cycleDays: number };
   /** What this month's payout nets (ADR-0080): the planned walk, or what the payment settled. */
   advances: number;
   /** payment ? payment.amount (already net of advances) : max(0, monthly − advances). */
@@ -297,11 +331,8 @@ export class SalaryStaffMonthlyService {
     const staff: StaffRow[] = [];
     let advanceCount = 0;
     for (const c of inScope) {
-      const monthly = prorateFixedMonthly(
-        versByConfig.get(c.id) ?? [],
-        periodStart,
-        periodEnd,
-      );
+      const versions = versByConfig.get(c.id) ?? [];
+      const monthly = prorateFixedMonthly(versions, periodStart, periodEnd);
       const payment = paymentByUser.get(c.userId) ?? null;
       // No active version this cycle AND nothing settled → not on fixed-monthly
       // this month; drop it (mirrors the cron's `if (!activeVersion) continue`).
@@ -339,6 +370,8 @@ export class SalaryStaffMonthlyService {
           branch: c.user.branches[0]?.branch ?? null,
         },
         monthly,
+        rate: staffRateOf(versions, periodEnd),
+        coverage: fixedMonthlyCoverage(versions, periodStart, periodEnd),
         advances,
         netToPay,
         payment: payment
