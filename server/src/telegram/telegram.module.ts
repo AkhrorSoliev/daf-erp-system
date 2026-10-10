@@ -7,6 +7,7 @@ import { TelegramStatementController } from './telegram-statement.controller';
 import { TelegramStatementService } from './telegram-statement.service';
 import { MockExamAnnounceListener } from './mock-exam-announce.listener';
 import { MockExamPaidListener } from './mock-exam-paid.listener';
+import { JoinRequestNotifier } from './join-request-notifier';
 import { UploadModule } from '../upload/upload.module';
 import { UsersModule } from '../users/users.module';
 import { MockExamsModule } from '../mock-exams/mock-exams.module';
@@ -38,6 +39,7 @@ import { StudentJoinRequestsModule } from '../student-join-requests/student-join
     TelegramChannelGateStatsService,
     MockExamAnnounceListener,
     MockExamPaidListener,
+    JoinRequestNotifier,
   ],
   exports: [TelegramService, TelegramChannelGateStatsService],
 })
