@@ -260,6 +260,14 @@ describe('TasksService.create', () => {
     expect(order).toEqual(['commit', 'emit']);
   });
 
+  it('marks task.assigned as a new task (Telegram says «Yangi topshiriq»)', async () => {
+    await service.create({ title: 'X', assigneeIds: [40] }, actor());
+    expect(emitter.emit).toHaveBeenCalledWith(
+      TASK_EVENTS.ASSIGNED,
+      expect.objectContaining({ created: true, userIds: [40] }),
+    );
+  });
+
   describe('a linked employee', () => {
     const link = { title: 'X', assigneeIds: [40], entityType: 'User' };
 
@@ -914,6 +922,59 @@ describe('TasksService writes', () => {
     expect(data.participants.create).toEqual([
       { userId: 40, role: 'ASSIGNEE' },
     ]);
+  });
+
+  describe('an action from Telegram is logged as such', () => {
+    const tg = () => ({ ...assigneeActor(), via: 'TELEGRAM' as const });
+
+    it('status change', async () => {
+      await service.changeStatus('t1', 'IN_PROGRESS', tg());
+      expect(prisma.taskEvent.create.mock.calls[0][0].data.via).toBe(
+        'TELEGRAM',
+      );
+    });
+
+    it('comment', async () => {
+      await service.addComment('t1', 'hi', tg());
+      expect(prisma.taskEvent.create.mock.calls[0][0].data.via).toBe(
+        'TELEGRAM',
+      );
+    });
+
+    it('step tick', async () => {
+      await service.updateStep('t1', 's1', { done: true }, tg());
+      expect(prisma.taskEvent.create.mock.calls[0][0].data.via).toBe(
+        'TELEGRAM',
+      );
+    });
+
+    it('return with a reason', async () => {
+      prisma.task.findFirst.mockResolvedValue(makeRow({ status: 'IN_REVIEW' }));
+      await service.review('t1', 'RETURN', 'Doska artilmagan', {
+        ...authorActor(),
+        via: 'TELEGRAM',
+      });
+      expect(prisma.taskEvent.create.mock.calls[0][0].data).toMatchObject({
+        type: 'RETURN',
+        via: 'TELEGRAM',
+      });
+    });
+
+    it('the website stays WEB', async () => {
+      await service.changeStatus('t1', 'IN_PROGRESS', assigneeActor());
+      expect(prisma.taskEvent.create.mock.calls[0][0].data.via).toBe('WEB');
+    });
+  });
+
+  it('setParticipants: an added assignee is not a new task', async () => {
+    // The same setup as «setParticipants emits assigned for added and unassigned for removed».
+    prisma.user.findMany.mockResolvedValue([{ ...TEACHER, id: 41 }]);
+    await service.setParticipants('t1', [41], [], authorActor());
+    const assigned = emitter.emit.mock.calls.find(
+      ([name]) => name === TASK_EVENTS.ASSIGNED,
+    );
+    expect(assigned?.[1]).toMatchObject({ userIds: [41] });
+    expect(assigned?.[1].created).toBeUndefined();
   });
 });
 

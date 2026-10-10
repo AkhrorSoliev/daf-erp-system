@@ -56,6 +56,8 @@ export interface TaskActor {
   roleNames: string[];
   scope: CallerBranchScope;
   headerBranchId: number | null;
+  /** Where the action came from; the task's history records it. Unset = WEB. */
+  via?: 'WEB' | 'TELEGRAM';
 }
 
 /** The one door to tasks: owns the transaction and the events (emitted after the commit). */
@@ -181,12 +183,14 @@ export class TasksService {
         task: this.eventTask(row),
         actorId: actor.userId,
         userIds: ids,
+        created: true,
       });
       if (watcherIds.length) {
         this.emitter.emit(TASK_EVENTS.ASSIGNED, {
           task: this.eventTask(row),
           actorId: actor.userId,
           userIds: watcherIds,
+          created: true,
         });
       }
     }
@@ -261,7 +265,7 @@ export class TasksService {
     actor: TaskActor,
   ): Promise<TaskDetail> {
     const { from, updated } = await this.inTask(id, actor, (tx, ctx) =>
-      changeStatusTx(tx, ctx, to, actor.userId),
+      changeStatusTx(tx, ctx, to, actor.userId, actor.via),
     );
     const task = this.eventTask(updated);
     this.emitter.emit(TASK_EVENTS.STATUS_CHANGED, {
@@ -290,7 +294,7 @@ export class TasksService {
       throw new BadRequestException('Qaytarish sababini yozing');
     }
     const updated = await this.inTask(id, actor, (tx, ctx) =>
-      reviewTx(tx, ctx, action, trimmed, actor.userId),
+      reviewTx(tx, ctx, action, trimmed, actor.userId, actor.via),
     );
     this.emitter.emit(TASK_EVENTS.REVIEWED, {
       task: this.eventTask(updated),
@@ -423,7 +427,14 @@ export class TasksService {
         ? undefined
         : requireText(patch.title, 'Qadam nomini yozing');
     await this.inTask(id, actor, (tx, ctx) =>
-      updateStepTx(tx, ctx, stepId, { title, done: patch.done }, actor.userId),
+      updateStepTx(
+        tx,
+        ctx,
+        stepId,
+        { title, done: patch.done },
+        actor.userId,
+        actor.via,
+      ),
     );
     return this.reload(id, actor);
   }
@@ -455,7 +466,7 @@ export class TasksService {
         type: 'COMMENT',
         actorId: actor.userId,
         text: body,
-        via: 'WEB',
+        via: actor.via ?? 'WEB',
       },
       select: TASK_EVENT_SELECT,
     });

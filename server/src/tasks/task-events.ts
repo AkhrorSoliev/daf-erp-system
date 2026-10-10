@@ -54,6 +54,8 @@ export interface TaskAssignedPayload {
   task: TaskEventTask;
   actorId: number | null;
   userIds: number[];
+  /** A brand-new task, not someone added to an existing one (Telegram wording). */
+  created?: boolean;
 }
 export interface TaskUnassignedPayload {
   task: TaskEventTask;
