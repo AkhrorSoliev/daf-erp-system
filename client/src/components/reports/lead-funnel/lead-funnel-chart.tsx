@@ -11,8 +11,24 @@ import { formatNumber, formatPercent } from "@/lib/format-utils";
 import type { FunnelRow } from "./lead-funnel-math";
 import type { FunnelStage } from "./lead-funnel-types";
 
-/** Bundan tor blokda raqam ichkariga sig'maydi va blok yonida yoziladi. */
-const NUMBER_INSIDE_MIN = 0.2;
+/**
+ * Raqam blok ichida turadi, blok uni sig'dira olsa (kengligi raqam + chetlar).
+ * Juda tor blokda (masalan 38 dan 2 kishi) raqam blok yonida yoziladi.
+ * Klasslar to'liq yozilgan — Tailwind faqat matnda ko'rganini yaratadi.
+ */
+function insideAt(count: number): string {
+  if (count < 10) return "@min-[1.5rem]:flex";
+  if (count < 100) return "@min-[2.25rem]:flex";
+  if (count < 1000) return "@min-[3rem]:flex";
+  return "@min-[4.5rem]:flex";
+}
+
+function outsideUntil(count: number): string {
+  if (count < 10) return "@min-[1.5rem]:hidden";
+  if (count < 100) return "@min-[2.25rem]:hidden";
+  if (count < 1000) return "@min-[3rem]:hidden";
+  return "@min-[4.5rem]:hidden";
+}
 
 /**
  * Bosqichlar bir ko'k tusda pastga qarab to'qlashadi, to'lov — maqsad —
@@ -62,7 +78,6 @@ export function LeadFunnelChart({
       {rows.map((row, i) => {
         const next = rows[i + 1];
         const w = row.widthRatio;
-        const half = (w * 50).toFixed(2);
 
         return (
           <Fragment key={row.stage}>
@@ -95,25 +110,26 @@ export function LeadFunnelChart({
                     </span>
 
                     <span className={`relative block ${BAR_HEIGHT}`}>
+                      {/* Blok o'zi container: raqam ichiga sig'adimi — uning
+                          haqiqiy pikseldagi kengligi hal qiladi, foiz emas. */}
                       <span
-                        className="absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-md transition-opacity group-hover/funnel:opacity-40 group-hover/row:opacity-100!"
+                        className="@container absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-md transition-opacity group-hover/funnel:opacity-40 group-hover/row:opacity-100!"
                         style={{
                           width: `max(${(w * 100).toFixed(2)}%, 3px)`,
                           backgroundColor: fill[row.stage],
                         }}
-                      />
-                      {w >= NUMBER_INSIDE_MIN ? (
-                        <span className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-white tabular-nums sm:text-xl">
-                          {formatNumber(row.count)}
-                        </span>
-                      ) : (
+                      >
                         <span
-                          className="absolute inset-y-0 flex items-center pl-2 text-lg font-semibold tabular-nums sm:text-xl"
-                          style={{ left: `calc(50% + ${half}%)` }}
+                          className={`absolute inset-0 hidden items-center justify-center text-lg font-semibold text-white tabular-nums sm:text-xl ${insideAt(row.count)}`}
                         >
                           {formatNumber(row.count)}
                         </span>
-                      )}
+                        <span
+                          className={`absolute inset-y-0 left-full flex items-center pl-2 text-lg font-semibold text-foreground tabular-nums sm:text-xl ${outsideUntil(row.count)}`}
+                        >
+                          {formatNumber(row.count)}
+                        </span>
+                      </span>
                     </span>
                   </button>
                 </TooltipTrigger>
