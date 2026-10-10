@@ -16,6 +16,8 @@ import { PAYMENT_METHOD_LABEL } from '../payments/shared/method-label';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import type { PaymentCorrectedPayload } from '../payments/payments-write.service';
 import type { SalaryCarriedOverPayload } from '../salary/salary-accrual.service';
+import { SALARY_PAID_EVENT } from '../salary/salary-events';
+import type { SalaryPaidPayload } from '../salary/salary-events';
 import type { PaymentPromiseOverduePayload } from '../payment-promises/payment-promise-cron.service';
 import { overdueDigest } from '../payment-promises/overdue-digest';
 import { loadOverdueDigestItems } from '../payment-promises/overdue-digest-load';
@@ -308,6 +310,15 @@ export class NotificationEventsListener {
     } catch (error) {
       this.logger.error(`salary.carried-over handler failed: ${error.message}`);
     }
+  }
+
+  /**
+   * A salary payment turned PAID («Berildi» or the month settle). Placeholder
+   * so the event has a listener; the staff bot message replaces the body.
+   */
+  @OnEvent(SALARY_PAID_EVENT)
+  handleSalaryPaid(payload: SalaryPaidPayload) {
+    this.logger.debug(`salary.paid ${payload.salaryPaymentId}`);
   }
 
   /** Sends ready HTML parts, in order; a part that fails stops the rest. */

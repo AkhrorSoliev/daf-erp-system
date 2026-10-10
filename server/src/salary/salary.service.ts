@@ -21,6 +21,7 @@ import { SalaryCalculationService } from './salary-calculation.service';
 import { SalaryPaymentService } from './salary-payment.service';
 import { SalarySettleMonthService } from './salary-settle-month.service';
 import { SettleMonthDto } from './dto/settle-month.dto';
+import { PayPaymentDto } from './dto/pay-payment.dto';
 
 @Injectable()
 export class SalaryService {
@@ -151,8 +152,13 @@ export class SalaryService {
   approvePayment(id: string, companyId: number) {
     return this.payment.approvePayment(id, companyId);
   }
-  payPayment(id: string, performedById: number, companyId: number) {
-    return this.payment.payPayment(id, performedById, companyId);
+  payPayment(
+    id: string,
+    dto: PayPaymentDto,
+    performedById: number,
+    companyId: number,
+  ) {
+    return this.payment.payPayment(id, dto, performedById, companyId);
   }
   batchPay(
     params: {

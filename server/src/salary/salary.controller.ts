@@ -28,6 +28,7 @@ import { SalaryMonthlyQueryDto } from './dto/salary-monthly-query.dto';
 import { SalaryCenterTopUpService } from './salary-center-topup.service';
 import { SalaryStaffConfigService } from './salary-staff-config.service';
 import { BatchPayDto } from './dto/batch-pay.dto';
+import { PayPaymentDto } from './dto/pay-payment.dto';
 import { SettleMonthDto } from './dto/settle-month.dto';
 import { CalculateSalaryDto } from './dto/calculate-salary.dto';
 import { parseTashkentDateStart } from './shared/resolve-current-period';
@@ -573,14 +574,16 @@ export class SalaryController {
     return this.salaryService.approvePayment(id, companyId);
   }
 
+  /** «Berildi»: the day and the cash/card split are required (spec §5.2). */
   @Post('payments/:id/pay')
   @Can('salary.pay')
   payPayment(
     @Param('id') id: string,
+    @Body() dto: PayPaymentDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.salaryService.payPayment(id, userId, companyId);
+    return this.salaryService.payPayment(id, dto, userId, companyId);
   }
 
   @Post('payments/batch-pay')
