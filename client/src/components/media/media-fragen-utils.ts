@@ -36,6 +36,8 @@ const VORSCHAU_SHAKLI: Record<FrageFormat, VorschauShakli> = {
   // Matn o'rniga karnay ko'rsatilmasa, savol bo'sh qator bo'lib qolardi.
   AUDIO_WORT: "OVOZ",
   WORT_TIPPEN: "OVOZ",
+  // Gap audiosi; javob — gapning o'zi (bo'laklar `options`da).
+  SATZ_HOEREN: "OVOZ",
   // Audio + savol matni birga: suhbat karnagi, ostida savolning o'zi.
   HOEREN_WAHL: "HOEREN",
   // Picture formats: the options (or the question) are pictures, so they are

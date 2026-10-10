@@ -31,6 +31,7 @@ import type { KursFile } from '../kurs/kurs.types';
 import type { GoetheFile } from './goethe-parse';
 import { validateHoerFragen } from './hoer-fragen.validate';
 import { validateDialogAudio, type DialogAudioManifest } from './dialog-audio';
+import { validateSatzAudio, type SatzAudioManifest } from './satz-audio';
 import { bildPlanFuerUnit, validateBildPlan, type BildPlan } from './bild-plan';
 import type { BildManifest } from '../media/bild-keys';
 
@@ -505,6 +506,13 @@ describe.each(UNITS)('%s — gaplar', (unit) => {
 
   it('muqobil so`z tartiblari aynan gapning so`zlaridan tuzilgan', () => {
     expect(validateSatzAlternativen(saetze.saetze)).toEqual([]);
+  });
+
+  it('audio manifesti gap matni bilan mos', () => {
+    // A sentence edited after its audio was made would be silently dropped
+    // from SATZ_HOEREN by the seed; this names it before the commit.
+    const manifest = readOrEmpty<SatzAudioManifest>({}, 'satz-audio.json');
+    expect(validateSatzAudio(saetze.saetze, manifest)).toEqual([]);
   });
 
   it('gaplarda shu bo`lim yoki oldingisidan tashqari notanish so`z yo`q', () => {

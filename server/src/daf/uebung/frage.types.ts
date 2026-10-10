@@ -5,6 +5,7 @@ export type FrageFormat =
   | 'ARTIKEL'
   | 'LUECKE'
   | 'SATZ_BAUEN'
+  | 'SATZ_HOEREN'
   | 'SATZ_UEBERSETZEN'
   | 'REAKTION'
   | 'ZUORDNEN'
@@ -46,6 +47,8 @@ export interface MaterialSatz {
   sectionCode: string;
   /** Boshqa to'g'ri so'z tartiblari — `SATZ_BAUEN` ularni ham qabul qiladi. */
   akzeptiert: string[];
+  /** R2 kaliti; `null` — ovoz yo'q, `SATZ_HOEREN` qurilmaydi. */
+  audioKey: string | null;
 }
 
 export interface MaterialPhrase {

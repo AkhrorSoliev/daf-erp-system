@@ -118,7 +118,7 @@ export const BELGI_CHEGARASI = 2000;
  * o'zgaruvchilari — `daf-gen-images.ts` dagi bilan bir xil naqsh: hammasi
  * bir joyda tekshiriladi, yarim ishlab keyin yiqilish yo'q.
  */
-const REQUIRED_ENV = [
+export const REQUIRED_ENV = [
   'FAL_KEY',
   'R2_ENDPOINT',
   'R2_ACCESS_KEY_ID',
@@ -249,7 +249,7 @@ export function schluesselFuerWort(wort: SprachEintrag): string {
 export const RUXSAT_ETILGAN_STIMMELAR: readonly string[] = ['Johanna'];
 
 /** The Inworld voice id behind each allowed `--stimme` value. */
-const INWORLD_STIMMEN: Readonly<Record<string, string>> = {
+export const INWORLD_STIMMEN: Readonly<Record<string, string>> = {
   Johanna: 'Johanna (de)',
 };
 

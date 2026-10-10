@@ -19,6 +19,10 @@ import {
   type DialogAudioManifest,
 } from '../src/daf/inhalt/dialog-audio';
 import {
+  validateSatzAudio,
+  type SatzAudioManifest,
+} from '../src/daf/inhalt/satz-audio';
+import {
   bildPlanFuerUnit,
   validateBildPlan,
   type BildPlan,
@@ -37,6 +41,7 @@ import type {
   RedemittelFile,
   DialogeFile,
   HilfswoerterFile,
+  SaetzeFile,
   Wort,
 } from '../src/daf/inhalt/unit-inhalt.types';
 import type { KursFile } from '../src/daf/kurs/kurs.types';
@@ -149,6 +154,19 @@ function main(): void {
       ? read<DialogAudioManifest>('dialog-audio.json')
       : {};
     problems.push(...validateDialogAudio(dialoge.dialoge, manifest));
+  }
+
+  const saetzePath = join(A1, code, 'saetze.json');
+  if (existsSync(saetzePath)) {
+    const satzAudio: SatzAudioManifest = existsSync(join(A1, 'satz-audio.json'))
+      ? read<SatzAudioManifest>('satz-audio.json')
+      : {};
+    problems.push(
+      ...validateSatzAudio(
+        read<SaetzeFile>(code, 'saetze.json').saetze,
+        satzAudio,
+      ),
+    );
   }
 
   if (problems.length > 0) {

@@ -7,6 +7,7 @@ import {
   type MaterialSatz,
   type MaterialWort,
 } from './frage.types';
+import type { MediaUrlResolver } from './wort-fragen';
 
 function mischen<T>(items: T[], rnd: () => number): T[] {
   const out = [...items];
@@ -138,6 +139,28 @@ export function satzBauen(satz: MaterialSatz, rnd: () => number): Frage | null {
     belegteItems: [materialSchluessel('SATZ', satz.id)],
     audioUrl: null,
   };
+}
+
+/**
+ * `SATZ_HOEREN` — gapni eshitib, o'sha bo'laklardan tuzish (CEO, 10.10.2026).
+ *
+ * `SATZ_BAUEN`ning eshitish egizagi: bo'laklar, javob, `akzeptiert` va
+ * `belegteItems` AYNAN o'sha (bitta gap seansda ikki xil so'ralmaydi).
+ * Farqi — o'zbekcha YO'Q: tarjima javobni aytib qo'yardi, savol esa
+ * eshitishni tekshiradi. Audiosiz yoki `R2_PUBLIC_URL`siz qurilmaydi
+ * (`audioWort` qoidasi — xom kalit mijozga ketmaydi).
+ */
+export function satzHoeren(
+  satz: MaterialSatz,
+  rnd: () => number,
+  mediaUrl: MediaUrlResolver,
+): Frage | null {
+  if (!satz.audioKey) return null;
+  const audioUrl = mediaUrl(satz.audioKey);
+  if (!audioUrl) return null;
+  const bauen = satzBauen(satz, rnd);
+  if (!bauen) return null;
+  return { ...bauen, format: 'SATZ_HOEREN', prompt: '', audioUrl };
 }
 
 export function satzUebersetzen(

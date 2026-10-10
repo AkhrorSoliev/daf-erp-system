@@ -227,7 +227,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
       ? (tanlangan ?? "")
       : rejim === "YOZISH"
         ? yozilgan.trim()
-        : yigilgan.join(" "); // SATZ_BAUEN
+        : yigilgan.join(" "); // SATZ_BAUEN, SATZ_HOEREN
 
   const tayyor =
     tanlashRejimi
@@ -902,9 +902,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
         <p className="text-sm font-semibold uppercase tracking-wide text-ink-400">
           {koersatma(frage.format)}
         </p>
-        {/* `AUDIO_WORT`/`WORT_TIPPEN`da `prompt` ATAYLAB bo'sh (server
-            Task 3) — so'zning o'zi javob, tugma savol matnining o'rnini
-            egallaydi. `autoPlay` ANIQ beriladi (standart endi `false`) —
+        {/* `AUDIO_WORT`/`WORT_TIPPEN`/`SATZ_HOEREN`da `prompt` ATAYLAB bo'sh
+            (server Task 3) — so'z yoki gapning o'zi javob, tugma savol
+            matnining o'rnini egallaydi. `autoPlay` ANIQ beriladi (standart endi `false`) —
             savol chiqishi bilan ovoz o'zi yangrashi FAQAT shu ekranda
             to'g'ri, standartga suyanib qolmaslik kerak. */}
         {frage.format === "HOEREN_WAHL" && frage.audioUrl ? (
@@ -980,6 +980,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
             onJuft={onJuft}
           />
         ) : (
+          // `SATZ_HOEREN` uses the same tiles: only its question differs
+          // (the audio button above instead of the Uzbek prompt).
           <Yigish
             format="SATZ_BAUEN"
             options={frage.options}

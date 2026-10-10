@@ -24,6 +24,10 @@ import {
  * ta'minlagan.
  */
 describe('FRAGE_FORMATLAR', () => {
+  it('SATZ_HOEREN is accepted by @IsIn', () => {
+    expect(FRAGE_FORMATLAR).toContain('SATZ_HOEREN');
+  });
+
   it("AUDIO_WORT va WORT_TIPPEN ro'yxatda bor — @IsIn simi ikkalasini ham qamraydi", () => {
     expect(FRAGE_FORMATLAR).toEqual(
       expect.arrayContaining(['AUDIO_WORT', 'WORT_TIPPEN']),

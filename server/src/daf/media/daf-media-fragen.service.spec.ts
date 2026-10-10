@@ -131,6 +131,23 @@ describe('DafMediaFragenService', () => {
     expect(r.some((f) => f.format === 'AUDIO_WORT')).toBe(false);
   });
 
+  it('SATZ_HOEREN is listed for a sentence with audio only, with its public URL', async () => {
+    const satz = (id: number, audioKey: string | null) => ({
+      id,
+      de: 'Ich bin Anna.',
+      uz: 'Men Annaman.',
+      akzeptiert: [],
+      audioKey,
+    });
+    const r = await yasa({
+      saetze: [satz(1, 'daf/audio/s1.mp3'), satz(2, null)],
+    }).fragen(7);
+    const hoeren = r.filter((f) => f.format === 'SATZ_HOEREN');
+    expect(hoeren.map((f) => f.itemId)).toEqual([1]);
+    expect(hoeren[0].audioUrl).toBe('https://r2.example/daf/audio/s1.mp3');
+    expect(hoeren[0].richtig).toBe('Ich bin Anna.');
+  });
+
   it('BARQAROR: ikki chaqiruv bir xil natija beradi', async () => {
     // Quruvchilar variantlarni aralashtiradi. Urug' barqaror bo'lmasa
     // sahifa har yangilanganda boshqa savol ko'rsatardi va CEO ko'rgan

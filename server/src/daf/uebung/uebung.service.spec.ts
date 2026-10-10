@@ -3520,3 +3520,71 @@ describe('seans — yakuniy sinov (UNIT_TEST)', () => {
     expect(prisma.dafSection.findMany).not.toHaveBeenCalled();
   });
 });
+
+describe('SATZ_HOEREN', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+  const config = {
+    get: (k: string) =>
+      k === 'R2_PUBLIC_URL' ? 'https://r2.example' : undefined,
+  };
+  /** One sentence with audio — SATZ_UEBERSETZEN needs three others, so the
+   * only sentence questions are SATZ_BAUEN and SATZ_HOEREN. */
+  const mitSatzAudio = () => {
+    const prisma = fakePrisma();
+    prisma.dafSentence.findMany = jest.fn(async () => [
+      {
+        id: 11,
+        de: 'Ich bin Anna.',
+        uz: 'Men Annaman.',
+        sectionId: 7,
+        akzeptiert: [],
+        audioKey: 'daf/audio/s11.mp3',
+      },
+    ]) as any;
+    return prisma;
+  };
+
+  it('the replacement of a SATZ_BAUEN is the listening question, with a full URL', async () => {
+    const f = await new UebungService(
+      mitSatzAudio() as any,
+      config as any,
+    ).ersatz(100, 55, 'SATZ', 11, 'SATZ_BAUEN');
+    expect(f).not.toBeNull();
+    expect(f!.format).toBe('SATZ_HOEREN');
+    expect(f!.audioUrl).toBe('https://r2.example/daf/audio/s11.mp3');
+    expect(f!.prompt).toBe('');
+    expect(f!.hilfe).toBeNull();
+    expect(Object.keys(f!)).not.toContain('richtig');
+  });
+
+  it('without R2_PUBLIC_URL there is no listening question', async () => {
+    const f = await new UebungService(mitSatzAudio() as any).ersatz(
+      100,
+      55,
+      'SATZ',
+      11,
+      'SATZ_BAUEN',
+    );
+    expect(f).toBeNull();
+  });
+
+  it('an accepted other word order is correct', async () => {
+    const prisma = fakePrisma();
+    prisma.dafSentence.findUnique = jest.fn(async () => ({
+      de: 'Ich wohne in Deutschland.',
+      uz: 'Men Germaniyada yashayman.',
+      akzeptiert: ['In Deutschland wohne ich.'],
+    })) as any;
+    const r = await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'SATZ',
+        itemId: 15,
+        format: 'SATZ_HOEREN',
+        given: 'In Deutschland wohne Ich',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe('Ich wohne in Deutschland.');
+  });
+});

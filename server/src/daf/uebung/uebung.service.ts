@@ -33,6 +33,7 @@ import {
   luecke,
   reaktion,
   satzBauen,
+  satzHoeren,
   satzUebersetzen,
   zuordnen,
   ZUORDNEN_JUFT,
@@ -914,6 +915,7 @@ export class UebungService {
       uz: string;
       sectionId: number | null;
       akzeptiert: string[];
+      audioKey?: string | null;
     }
     interface PhraseRow {
       id: number;
@@ -953,6 +955,7 @@ export class UebungService {
       uz: s.uz,
       sectionCode: kodVon(s.sectionId),
       akzeptiert: s.akzeptiert,
+      audioKey: s.audioKey ?? null,
     });
     const toPhrase = (p: PhraseRow): MaterialPhrase => ({
       id: p.id,
@@ -1086,6 +1089,9 @@ export class UebungService {
       if (lu) rohKandidaten.push(lu);
       const sb = satzBauen(s, rnd);
       if (sb) rohKandidaten.push(sb);
+      // `null` until the sentence has audio — the format turns itself on.
+      const sh = satzHoeren(s, rnd, (key) => this.mediaUrl(key));
+      if (sh) rohKandidaten.push(sh);
       const su = satzUebersetzen(s, sentences, rnd);
       if (su) rohKandidaten.push(su);
     }

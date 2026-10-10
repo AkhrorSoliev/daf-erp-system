@@ -10,6 +10,7 @@ import type {
 import type { AudioManifest } from '../media/audio-keys';
 import { audioSchluesselFuer } from '../media/audio-keys';
 import type { DialogAudioManifest } from './dialog-audio';
+import { satzAudioSchluessel, type SatzAudioManifest } from './satz-audio';
 import type { BildManifest } from '../media/bild-keys';
 import { bildSchluesselFuer } from '../media/bild-keys';
 import type { BildPlan } from './bild-plan';
@@ -34,6 +35,8 @@ export interface InhaltFiles {
    * yozuv yo'q bo'lsa `null` (eski kalit qolib ketmaydi).
    */
   dialogAudio?: DialogAudioManifest;
+  /** `content/daf/a1/satz-audio.json` — sentence audio; optional like `audio`. */
+  satzAudio?: SatzAudioManifest;
   /** `content/daf/a1/bilder.json` — picture keys; optional like `audio`. */
   bilder?: BildManifest;
   /** `content/daf/a1/bild-plan.json` — the `tippen` flag per word. */
@@ -219,6 +222,9 @@ export class InhaltSeedService {
         wordCount: s.wordCount,
         origin: s.origin,
         akzeptiert: s.akzeptiert ?? [],
+        // Manifest is the source, and only an entry made from THIS text
+        // counts: an edited sentence keeps no recording of its old words.
+        audioKey: satzAudioSchluessel(files.satzAudio ?? {}, s),
         // Ko'rsatish tartibi — hech kim bu qatorga ISHORA qilmaydi,
         // shuning uchun bu faqat displey uchun, identifikatsiya emas.
         order: i + 1,
