@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import {
@@ -25,6 +26,7 @@ export interface SystemTaskInput {
 }
 
 const OPEN = [...OPEN_STATUSES];
+const logger = new Logger('TaskAutoWrite');
 
 /**
  * The partial unique index `task_open_source_unique` (one OPEN task per
@@ -47,14 +49,17 @@ export async function createSystemTask(
   prisma: PrismaService,
   input: SystemTaskInput,
 ): Promise<TaskEventTask | null> {
-  if (input.assigneeIds.length === 0) return null;
+  // A repeated id would break @@unique([taskId, userId]) and be mistaken for
+  // "already open" below.
+  const assigneeIds = [...new Set(input.assigneeIds)];
+  if (assigneeIds.length === 0) return null;
   const existing = await prisma.task.findFirst({
     where: { sourceKey: input.sourceKey, status: { in: OPEN } },
     select: { id: true },
   });
   if (existing) return null;
   const rule = AUTO_RULES[input.kind];
-  const participants = input.assigneeIds.map((userId) => ({
+  const participants = assigneeIds.map((userId) => ({
     userId,
     role: 'ASSIGNEE' as const,
   }));
@@ -103,8 +108,10 @@ export async function createSystemTask(
  * Closes the OPEN automatic tasks matching `where` (never a manual task,
  * «Dars bo'ldimi?» or a join request): DONE, an `AUTO_CLOSED` row with the
  * reason, the unsent rows gone. One short transaction per task; a task another
- * writer closed meanwhile is skipped. Returns the closed tasks for
- * `task.auto-closed`.
+ * writer closed meanwhile is skipped, and so is one whose transaction fails
+ * (logged; it stays OPEN). Returns every task that closed, for
+ * `task.auto-closed`, with the participants it had BEFORE the claim removed
+ * the losing assignees.
  *
  * `actorId` is the person whose action closed it (the one who took the
  * payment, logged the call): they are recorded as the holder, like
@@ -126,39 +133,67 @@ export async function autoCloseTasks(
   });
   const closed: TaskEventTask[] = [];
   for (const { id } of open) {
-    const row = await prisma.$transaction(async (tx) => {
-      const { count } = await tx.task.updateMany({
-        where: { id, status: { in: OPEN } },
-        data: { status: 'DONE', closedAt: now },
-      });
-      if (count === 0) return null;
-      if (actorId !== null) {
-        // An assignee takes it (the others' copies go); anyone else
-        // (director, CEO) is just recorded as the holder.
-        const claimed = await claimSystemTask(tx, id, actorId);
-        if (!claimed) {
-          await tx.task.update({
-            where: { id },
-            data: { claimedById: actorId },
-          });
-        }
-      }
-      await tx.taskEvent.create({
-        data: {
-          taskId: id,
-          type: 'AUTO_CLOSED',
-          actorId,
-          meta: { reason },
-          via: 'SYSTEM',
-        },
-      });
-      // This is what stops a Telegram notice held for 08:00: the outbox drain
-      // does not look at the task state of NOTICE rows, so they must go with
-      // the task.
-      await tx.taskOutbox.deleteMany({ where: { taskId: id, sentAt: null } });
-      return tx.task.findUnique({ where: { id }, select: TASK_CARD_SELECT });
-    });
-    if (row) closed.push(toEventTask(row));
+    // One task failing (deadlock, a conflict with an assignee's claim) must not
+    // cost the already committed ones their `task.auto-closed`: the failed one
+    // is still OPEN and the next event closes it.
+    try {
+      const row = await closeOne(prisma, id, reason, now, actorId);
+      if (row) closed.push(toEventTask(row));
+    } catch (err) {
+      logger.error(
+        `auto close of task ${id} failed (${reason}): ${(err as Error).message}`,
+      );
+    }
   }
   return closed;
+}
+
+function closeOne(
+  prisma: PrismaService,
+  id: string,
+  reason: AutoCloseReason,
+  now: Date,
+  actorId: number | null,
+) {
+  return prisma.$transaction(async (tx) => {
+    // Default isolation is enough: the conditional update serialises two
+    // closers on the row lock, the second one gets count 0.
+    const { count } = await tx.task.updateMany({
+      where: { id, status: { in: OPEN } },
+      data: { status: 'DONE', closedAt: now },
+    });
+    if (count === 0) return null;
+    // Read BEFORE the claim: the card (and so the event payload) keeps every
+    // assignee, including those whose copies the claim removes, so the SSE
+    // refresh of `task.auto-closed` reaches them all.
+    const card = await tx.task.findUnique({
+      where: { id },
+      select: TASK_CARD_SELECT,
+    });
+    if (actorId !== null) {
+      // An assignee takes it (the others' copies go); anyone else (director,
+      // CEO) is recorded as the holder only when nobody holds it yet.
+      const claimed = await claimSystemTask(tx, id, actorId);
+      if (!claimed) {
+        await tx.task.updateMany({
+          where: { id, claimedById: null },
+          data: { claimedById: actorId },
+        });
+      }
+    }
+    await tx.taskEvent.create({
+      data: {
+        taskId: id,
+        type: 'AUTO_CLOSED',
+        actorId,
+        meta: { reason },
+        via: 'SYSTEM',
+      },
+    });
+    // This is what stops a Telegram notice held for 08:00: the outbox drain
+    // does not look at the task state of NOTICE rows, so they must go with
+    // the task.
+    await tx.taskOutbox.deleteMany({ where: { taskId: id, sentAt: null } });
+    return card;
+  });
 }

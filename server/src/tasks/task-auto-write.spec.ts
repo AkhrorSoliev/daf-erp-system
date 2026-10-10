@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { autoCloseTasks, createSystemTask } from './task-auto-write';
 
 const OPEN = ['NEW', 'IN_PROGRESS', 'IN_REVIEW'];
@@ -91,7 +92,22 @@ describe('createSystemTask', () => {
       }),
     );
     // REMINDER at 17:00 and OVERDUE at 18:00, in-app and Telegram.
-    expect(tx.taskOutbox.createMany).toHaveBeenCalled();
+    const rows = (
+      tx.taskOutbox.createMany.mock.calls[0][0] as {
+        data: { channel: string; kind: string; userId: number }[];
+      }
+    ).data;
+    for (const channel of ['INAPP', 'TELEGRAM']) {
+      for (const kind of ['REMINDER', 'OVERDUE']) {
+        expect(
+          rows
+            .filter((r) => r.channel === channel && r.kind === kind)
+            .map((r) => r.userId)
+            .sort(),
+        ).toEqual([3, 4]);
+      }
+    }
+    expect(rows).toHaveLength(8);
     expect(t).toMatchObject({
       id: 't1',
       kind: 'BROKEN_PROMISE',
@@ -108,6 +124,27 @@ describe('createSystemTask', () => {
       select: { id: true },
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('a repeated assignee id is written once, not swallowed as "already open"', async () => {
+    const { prisma, tx } = fake();
+    const t = await createSystemTask(prisma as any, {
+      ...input,
+      assigneeIds: [3, 4, 3],
+    });
+    expect(t).not.toBeNull();
+    expect(tx.task.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          participants: {
+            create: [
+              { userId: 3, role: 'ASSIGNEE' },
+              { userId: 4, role: 'ASSIGNEE' },
+            ],
+          },
+        }),
+      }),
+    );
   });
 
   it('writes nothing when nobody can take it', async () => {
@@ -208,16 +245,62 @@ describe('autoCloseTasks', () => {
     });
   });
 
-  it('someone who is not an assignee is recorded as the holder', async () => {
+  it('the payload keeps the assignees the claim removed (card read before it)', async () => {
+    const { prisma, tx } = fake();
+    const closed = await autoCloseTasks(
+      prisma as any,
+      {},
+      'CALL_LOGGED',
+      NOW,
+      3,
+    );
+    expect(closed[0].participants.map((p) => p.userId)).toEqual([3, 4]);
+    expect(tx.task.findUnique.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.taskParticipant.deleteMany.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('someone who is not an assignee is recorded as the holder, only if nobody holds it', async () => {
     const { prisma, tx } = fake();
     await autoCloseTasks(prisma as any, {}, 'PAYMENT_RECEIVED', NOW, 9);
-    expect(tx.task.update).toHaveBeenCalledWith({
-      where: { id: 't1' },
+    expect(tx.task.updateMany).toHaveBeenLastCalledWith({
+      where: { id: 't1', claimedById: null },
       data: { claimedById: 9 },
     });
+    expect(tx.task.update).not.toHaveBeenCalled();
     expect(tx.taskParticipant.deleteMany).not.toHaveBeenCalled();
     expect(tx.taskEvent.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ actorId: 9 }),
     });
+  });
+
+  it('one task failing does not lose the others that closed', async () => {
+    const { prisma, tx } = fake();
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    prisma.task.findMany.mockResolvedValue([
+      { id: 't1' },
+      { id: 't2' },
+      { id: 't3' },
+    ]);
+    const run = async (fn: (t: typeof tx) => unknown): Promise<unknown> =>
+      fn(tx);
+    prisma.$transaction
+      .mockImplementationOnce(run)
+      .mockRejectedValueOnce(new Error('deadlock'))
+      .mockImplementationOnce(run);
+    tx.task.findUnique
+      .mockResolvedValueOnce(row({ id: 't1', status: 'DONE' }))
+      .mockResolvedValueOnce(row({ id: 't3', status: 'DONE' }));
+    const closed = await autoCloseTasks(
+      prisma as any,
+      {},
+      'PAYMENT_RECEIVED',
+      NOW,
+    );
+    expect(closed.map((t) => t.id)).toEqual(['t1', 't3']);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('t2'));
+    error.mockRestore();
   });
 });
