@@ -4944,7 +4944,7 @@ All routes under `/api`. Dates: `'YYYY-MM-DD'` = a Tashkent day; ISO strings = i
     lastGroup: { id: string; name: string } | null;
     lastPayment: { createdAt: string; amount: number } | null;
     telegramLinked: boolean;        // «ulangan» / «ulanmagan»
-    noticePreview: string | null;   // the exact bot text «Botga xabar yuborish» would send now (spec §5.3); null = no branch/company phone
+    noticePreview: string | null;   // PLAIN TEXT of the bot notice «Botga xabar yuborish» would send now (spec §5.3, tags stripped, line breaks kept — Task 17); null = no branch/company phone
     transfer: TransferState;        // allowed → green line «Shart bajarilgan: xabar dd.MM, muddat dd.MM da tugagan, 30 kun o'tdi.»
   };
   ```
@@ -8055,11 +8055,25 @@ Qatorni bossangiz, o'ng tomonda oyna ochiladi: «Markazdagi puli», «Holat», �
 
 Amal tugmasi bosilganda o'quvchi oynasi yopiladi va kerakli oyna ochiladi.
 
-Botga yuboriladigan matn (CEO tasdiqlagan, so'zma-so'z):
+Botga yuboriladigan xabar (CEO 10.10 tasdiqlagan ko'rinish; Telegram'da qalin joylar qalin chiqadi):
 
-> Assalomu alaykum, Ali! DaF Sprachzentrum hisobingizda 350 000 so'm qolgan. Uni qaytarib olish uchun 22-noyabrgacha filial raqamiga qo'ng'iroq qiling: +998 XX XXX XX XX. Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul markaz hisobiga o'tadi. Rahmat!
+```
+💰 Hisobingizda pul qolgan
+
+Hurmatli Ali!
+
+DaF Sprachzentrum hisobingizda 350 000 so'm qolgan.
+Uni qaytarib olish uchun 22-noyabrgacha filial raqamiga qo'ng'iroq qiling:
+📞 +998 XX XXX XX XX
+
+⚠️ Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul markaz hisobiga o'tadi.
+
+Rahmat!
+```
 
 Ism, summa va telefon o'quvchiniki va uning filialiniki bo'ladi (filial raqami bo'lmasa, kompaniya raqami); sana — markazga o'tkazish ochiladigan kun.
+
+Pul qaytarishning o'zi haqida ham o'quvchiga bot orqali darhol xabar boradi (botga ulangan bo'lsa): so'rov ochilganda (summa, «… gacha qaytarib beriladi», joriy balans), pul berilganda (summa, naqd yoki kartaga, sana, kvitansiya havolasi) va so'rov bekor qilinganda (summa, sabab, pul hisobga qaytgani, joriy balans).
 
 ## Excel
 

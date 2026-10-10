@@ -20,7 +20,7 @@ CEO decisions (10.10.2026):
 2. **Roles:** CEO, Branch Director and Administrator open a request; the Cashier may also press «Berildi».
 3. **«Markaz hisobiga o'tkazish» is blocked by the system** until a notice was given and the term passed (§5).
 4. **Notice:** a bot message for students linked to the bot, a «Qo'ng'iroq qilib aytildi» mark for the others.
-5. **Bot text:** variant 1 (§5.3), word for word.
+5. **Bot texts:** the formatted second version of the notice and three messages about the refund itself (§5.3–§5.4), word for word — the first, one-paragraph notice was replaced the same day ("quruq xabar").
 
 ## 2. The refund request flow
 
