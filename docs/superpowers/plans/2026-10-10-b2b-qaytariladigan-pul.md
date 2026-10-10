@@ -20,7 +20,7 @@
 - **Bank-day rule (spec §2.6):** `addBankDays(fromDateStr, n, holidays)` walks forward from the day AFTER `fromDateStr`, counts Monday–Friday days not in `holidays`, returns the n-th one (`YYYY-MM-DD`). Holidays = `buildHolidayDateSet` (active `Holiday` rows, company-wide or the student's branch). Known approximation (written in the ADR): the centre's holiday table stands in for the bank calendar; transferred working Saturdays are not modelled. Example (in tests): request Mon 28.09.2026 with 01.10 a holiday → due Tue 13.10.
 - **Transfer formula (spec §5.2):** `transferAllowedFrom(noticeDateStr) = addBankDays(noticeDateStr, 10) + 30 calendar days`. Example: notice Sat 10.10.2026 → term to 23.10 → transfer from 22.11. A notice is **valid** only if `createdAt ≥ student.statusChangedAt`; the condition reads the student's latest valid notice; `WithdrawalsService.create` refuses unless today (Tashkent) ≥ `transferAllowedFrom`. It applies to every withdrawal, the profile's «Yechib olish» included.
 - **Bot text (spec §5.3, variant 1, CEO 10.10 — do not reword):** «Assalomu alaykum, {Ism}! DaF Sprachzentrum hisobingizda {summa} so'm qolgan. Uni qaytarib olish uchun {kun}-{oy}gacha filial raqamiga qo'ng'iroq qiling: {telefon}. Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul markaz hisobiga o'tadi. Rahmat!» — {Ism} = `Student.firstName`; {summa} = balance, `uz-UZ` with spaces; {kun}-{oy}gacha = `transferAllowedFrom` of today's notice, e.g. «22-noyabrgacha» (month names lowercase: yanvar … dekabr); {telefon} = the student's branch `phone`, else the company's, as «+998 XX XXX XX XX».
-- **Refusal texts, verbatim:** 409 «So'rov allaqachon yopilgan»; 400 «Telegram bog'lanmagan — qo'ng'iroq qiling»; 400 «Filial telefon raqami kiritilmagan»; 400 «Avval o'quvchiga xabar bering. Markazga o'tkazish xabardan 10 bank kuni va yana 30 kun o'tgach ochiladi.»; 400 «Markazga o'tkazish dd.MM dan ochiladi (xabar dd.MM da berilgan, qaytarish muddati dd.MM gacha).»
+- **Refusal texts, verbatim:** 409 «So'rov allaqachon yopilgan»; 400 «Telegram bog'lanmagan — qo'ng'iroq qiling»; 400 «Filial telefon raqami kiritilmagan»; 400 «Botga xabar yetmadi — qo'ng'iroq qiling» (every FAILED bot send); 400 «Avval o'quvchiga xabar bering. Markazga o'tkazish xabardan 10 bank kuni va yana 30 kun o'tgach ochiladi.»; 400 «Markazga o'tkazish dd.MM dan ochiladi (xabar dd.MM da berilgan, qaytarish muddati dd.MM gacha).»
 - **Statement label (spec §2.7):** the student statement's refund line reads «pul qaytarish» in both voices.
 - **Student history keys (spec §2, §5.1):** `PUL_QAYTARISH_SOROVI`, `PUL_QAYTARIB_BERILDI`, `PUL_QAYTARISH_BEKOR_QILINDI`, `PUL_HAQIDA_XABAR_BERILDI` — written as `newValues.status` of `recordStatusChange` with NO `status` key in `oldValues` (so the `entity.status.changed` listeners stay silent, as for today's `PUL_QAYTARILDI`).
 - **Language:** every user-visible string (errors, Excel, bot text, history values) in Latin-script Uzbek; commit messages, code comments and `server/CLAUDE.md` in English; ADR text in Uzbek.
@@ -2303,7 +2303,6 @@ describe('balanceNoticeText — variant 1, CEO 10.10.2026 (do not reword)', () =
 
 ```ts
 import { Test } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
 import { BalanceNoticesService } from './balance-notices.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SmsService } from '../sms/sms.service';
@@ -2395,16 +2394,17 @@ describe('BalanceNoticesService (ADR-0075)', () => {
     );
   });
 
-  it('BOT: a failed send is a 400 with its reason, and no notice', async () => {
-    sms.sendToStudent.mockResolvedValue({
-      id: 'sms-2',
-      status: 'FAILED',
-      errorMessage: 'Forbidden: bot was blocked by the user',
+  it.each([
+    ["Telegram's English reason", "403: Forbidden: bot was blocked by the user"],
+    ["no reason at all", null],
+  ])("BOT: a failed send (%s) is the fixed Uzbek 400, and no notice", async (_label, errorMessage) => {
+    sms.sendToStudent.mockResolvedValue({ id: "sms-2", status: "FAILED", errorMessage });
+    await expect(service.create(10001, { channel: "BOT" }, 7, 1001)).rejects.toMatchObject({
+      status: 400,
+      message: "Botga xabar yetmadi — qo'ng'iroq qiling",
     });
-    await expect(service.create(10001, { channel: 'BOT' }, 7, 1001)).rejects.toThrow(
-      new BadRequestException('Forbidden: bot was blocked by the user'),
-    );
     expect(prisma.balanceNotice.create).not.toHaveBeenCalled();
+    expect(history.recordStatusChange).not.toHaveBeenCalled();
   });
 
   it('BOT: no linked chat → call instead, nothing sent', async () => {
@@ -2755,6 +2755,8 @@ import type { CreateBalanceNoticeDto } from './dto/create-balance-notice.dto';
 export const NO_TELEGRAM_MESSAGE = "Telegram bog'lanmagan — qo'ng'iroq qiling";
 export const NO_BRANCH_PHONE_MESSAGE = 'Filial telefon raqami kiritilmagan';
 export const NO_BALANCE_MESSAGE = "O'quvchi hisobida pul yo'q";
+/** Any FAILED bot result: Telegram's own reason is English; it stays in the SMS log. */
+export const BOT_NOT_DELIVERED_MESSAGE = "Botga xabar yetmadi — qo'ng'iroq qiling";
 
 @Injectable()
 export class BalanceNoticesService {
@@ -2809,7 +2811,7 @@ export class BalanceNoticesService {
         { assertCallerBranch: true },
       );
       if (sent.status !== SmsMessageStatus.SENT) {
-        throw new BadRequestException(sent.errorMessage ?? 'Xabar yuborilmadi');
+        throw new BadRequestException(BOT_NOT_DELIVERED_MESSAGE);
       }
       smsMessageId = sent.id;
     }
@@ -4955,7 +4957,7 @@ All routes under `/api`. Dates: `'YYYY-MM-DD'` = a Tashkent day; ISO strings = i
 - Body: `{ channel: 'BOT' | 'CALL'; note?: string /* trimmed, ≤ 500 */ }`.
 - 201 response: `{ id: string; studentId: number; companyId: number; channel: 'BOT' | 'CALL'; amount: number; note: string | null; smsMessageId: string | null; createdById: number; createdAt: string }`.
 - The preview the drawer shows before «Botga xabar yuborish» is `GET /refundable/students/:id` → `noticePreview` (built by the same `loadNoticeText` the send uses); the client never composes the text.
-- Errors: 404 «O'quvchi topilmadi»; 403; 400 «O'quvchi hisobida pul yo'q»; 400 «Telegram bog'lanmagan — qo'ng'iroq qiling»; 400 «Filial telefon raqami kiritilmagan»; 400 `<Telegram's reason>` (fallback «Xabar yuborilmadi») when the bot send failed — nothing written.
+- Errors: 404 «O'quvchi topilmadi»; 403; 400 «O'quvchi hisobida pul yo'q»; 400 «Telegram bog'lanmagan — qo'ng'iroq qiling»; 400 «Filial telefon raqami kiritilmagan»; 400 «Botga xabar yetmadi — qo'ng'iroq qiling» when the bot send failed (every FAILED result; Telegram's own reason stays in the SMS log, never on screen) — nothing written.
 
 ### 12. `GET /withdrawals/preview/:studentId` (changed)
 - Roles: CEO, Branch Director, Administrator.

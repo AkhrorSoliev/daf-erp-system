@@ -1,5 +1,4 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
 import { BalanceNoticesService } from './balance-notices.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SmsService } from '../sms/sms.service';
@@ -101,19 +100,30 @@ describe('BalanceNoticesService (ADR-0075)', () => {
     );
   });
 
-  it('BOT: a failed send is a 400 with its reason, and no notice', async () => {
-    sms.sendToStudent.mockResolvedValue({
-      id: 'sms-2',
-      status: 'FAILED',
-      errorMessage: 'Forbidden: bot was blocked by the user',
-    });
-    await expect(
-      service.create(10001, { channel: 'BOT' }, 7, 1001),
-    ).rejects.toThrow(
-      new BadRequestException('Forbidden: bot was blocked by the user'),
-    );
-    expect(prisma.balanceNotice.create).not.toHaveBeenCalled();
-  });
+  it.each([
+    [
+      "Telegram's English reason",
+      '403: Forbidden: bot was blocked by the user',
+    ],
+    ['no reason at all', null],
+  ])(
+    'BOT: a failed send (%s) is the fixed Uzbek 400, and no notice',
+    async (_label, errorMessage) => {
+      sms.sendToStudent.mockResolvedValue({
+        id: 'sms-2',
+        status: 'FAILED',
+        errorMessage,
+      });
+      await expect(
+        service.create(10001, { channel: 'BOT' }, 7, 1001),
+      ).rejects.toMatchObject({
+        status: 400,
+        message: "Botga xabar yetmadi — qo'ng'iroq qiling",
+      });
+      expect(prisma.balanceNotice.create).not.toHaveBeenCalled();
+      expect(history.recordStatusChange).not.toHaveBeenCalled();
+    },
+  );
 
   it('BOT: no linked chat → call instead, nothing sent', async () => {
     prisma.student.findFirst.mockResolvedValue({

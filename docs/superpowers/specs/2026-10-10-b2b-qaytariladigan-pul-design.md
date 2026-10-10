@@ -152,7 +152,7 @@ Same preview and amount field. Changes: title «Pulni qaytarish — so'rov»; a 
 `{ id, studentId, companyId, channel BOT|CALL, amount (balance at the moment), note?, smsMessageId?, createdById, createdAt }`.
 
 `POST /students/:id/balance-notices` `{ channel, note? }` (CEO, BD, Admin; branch check on the student):
-- `BOT`: render the text (§5.3), send through `SmsService.sendToStudent(... type AUTO, assertCallerBranch)`. Only a `SENT` result writes the notice (with `smsMessageId`); `FAILED` → 400 with the reason, nothing written. A student with no linked chat → 400 «Telegram bog'lanmagan — qo'ng'iroq qiling». A branch with no phone and a company with no phone → 400 «Filial telefon raqami kiritilmagan».
+- `BOT`: render the text (§5.3), send through `SmsService.sendToStudent(... type AUTO, assertCallerBranch)`. Only a `SENT` result writes the notice (with `smsMessageId`); `FAILED` → 400 «Botga xabar yetmadi — qo'ng'iroq qiling», nothing written; the raw reason stays in the SMS log (Telegram's own message is English, and no English word is shown on screen). A student with no linked chat → 400 «Telegram bog'lanmagan — qo'ng'iroq qiling». A branch with no phone and a company with no phone → 400 «Filial telefon raqami kiritilmagan».
 - `CALL`: writes the notice; the note is optional.
 - Student history `PUL_HAQIDA_XABAR_BERILDI` (kanal, summa).
 

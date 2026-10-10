@@ -18,6 +18,9 @@ import type { CreateBalanceNoticeDto } from './dto/create-balance-notice.dto';
 export const NO_TELEGRAM_MESSAGE = "Telegram bog'lanmagan — qo'ng'iroq qiling";
 export const NO_BRANCH_PHONE_MESSAGE = 'Filial telefon raqami kiritilmagan';
 export const NO_BALANCE_MESSAGE = "O'quvchi hisobida pul yo'q";
+/** Any FAILED bot result: Telegram's own reason is English; it stays in the SMS log. */
+export const BOT_NOT_DELIVERED_MESSAGE =
+  "Botga xabar yetmadi — qo'ng'iroq qiling";
 
 @Injectable()
 export class BalanceNoticesService {
@@ -77,7 +80,7 @@ export class BalanceNoticesService {
         { assertCallerBranch: true },
       );
       if (sent.status !== SmsMessageStatus.SENT) {
-        throw new BadRequestException(sent.errorMessage ?? 'Xabar yuborilmadi');
+        throw new BadRequestException(BOT_NOT_DELIVERED_MESSAGE);
       }
       smsMessageId = sent.id;
     }
