@@ -184,14 +184,22 @@ export function lessonParts(message: string): { group?: string; time?: string; t
   return { group: pick("Guruh"), time: pick("Vaqt"), teacher: pick("O'qituvchi") };
 }
 
+/** The first line of a message that has words in it — the portal link line («🔗 https://…») is not one. */
+function firstTextLine(message: string): string | undefined {
+  return message
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => l && !/https?:\/\//i.test(l));
+}
+
 /**
  * «A1-3 · 09:00–10:30 · Tursunova Sardora». A message without the details block
- * (another shape, or a later wording) is shown whole instead of dropping it; the
- * title is the last resort for an empty message.
+ * (another shape, or a later wording) shows its first line of text instead of
+ * dropping it (not the portal link under it); the title is the last resort.
  */
 export function lessonLine(n: Pick<AppNotification, "title" | "message">): string {
   const { group, time, teacher } = lessonParts(n.message);
-  return [group, time, teacher].filter(Boolean).join(" · ") || n.message.trim() || n.title;
+  return [group, time, teacher].filter(Boolean).join(" · ") || firstTextLine(n.message) || n.title;
 }
 
 export function resolvedLine(resolvedAt: string): string {

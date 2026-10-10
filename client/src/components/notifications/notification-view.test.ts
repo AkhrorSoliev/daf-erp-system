@@ -172,7 +172,7 @@ describe("row text", () => {
     expect(lessonLine(alert("a1"))).toBe("A1-3 · 09:00–10:30 · Tursunova Sardora");
   });
 
-  it("shows the whole message when it is not in the details shape", () => {
+  it("shows the first text line when the message is not in the details shape", () => {
     const message = "Dars tugadi, davomat olinmadi (A1-3, 09:00)";
     expect(lessonParts(message)).toEqual({
       group: undefined,
@@ -180,6 +180,11 @@ describe("row text", () => {
       teacher: undefined,
     });
     expect(lessonLine(n({ title: "Sarlavha", message }))).toBe(message);
+    // The portal link line under the text is not part of it.
+    expect(
+      lessonLine(n({ title: "Sarlavha", message: `📋 ${message}\n\nBatafsil.\n🔗 https://admin.dafzentrum.uz/tasks` })),
+    ).toBe(`📋 ${message}`);
+    expect(lessonLine(n({ title: "Sarlavha", message: "\n🔗 https://admin.dafzentrum.uz" }))).toBe("Sarlavha");
     // A label with nothing after it is not a part, and does not borrow the next line.
     expect(lessonParts("👥 Guruh:\n🕐 Vaqt: 09:00–10:30")).toEqual({
       group: undefined,
@@ -188,7 +193,7 @@ describe("row text", () => {
     });
   });
 
-  it("falls back to the title only when there is no message at all", () => {
+  it("falls back to the title when the message has no text", () => {
     expect(lessonLine(n({ title: "Faqat sarlavha", message: "  " }))).toBe("Faqat sarlavha");
   });
 

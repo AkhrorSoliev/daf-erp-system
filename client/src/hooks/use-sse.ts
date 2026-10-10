@@ -6,7 +6,6 @@ import { useTasks } from "./use-tasks";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
 export function useSSE() {
-  const addNotification = useNotifications((s) => s.addNotification);
   const abortRef = useRef<AbortController | null>(null);
   const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
   const retryCount = useRef(0);
@@ -43,19 +42,22 @@ export function useSSE() {
           buffer = lines.pop() || "";
 
           for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const payload = JSON.parse(line.slice(6));
-                if (payload.type === "notification" && payload.notification) {
-                  addNotification(payload.notification);
-                }
-                if (payload.type === "task.updated" && typeof payload.taskId === "string") {
-                  void useTasks.getState().refreshTask(payload.taskId);
-                  if (useTasks.getState().openTaskId === payload.taskId) void useTasks.getState().loadDetail(payload.taskId);
-                }
-              } catch {
-                // ignore parse errors
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const payload = JSON.parse(line.slice(6));
+              const store = useNotifications.getState();
+              if (payload.type === "notification" && payload.notification) {
+                store.add(payload.notification);
               }
+              if (payload.type === "notification.resolved" && Array.isArray(payload.ids)) {
+                store.resolve(payload.ids, payload.resolvedAt);
+              }
+              if (payload.type === "task.updated" && typeof payload.taskId === "string") {
+                void useTasks.getState().refreshTask(payload.taskId);
+                if (useTasks.getState().openTaskId === payload.taskId) void useTasks.getState().loadDetail(payload.taskId);
+              }
+            } catch {
+              // ignore parse errors
             }
           }
         }
@@ -80,5 +82,5 @@ export function useSSE() {
         clearTimeout(reconnectTimeout.current);
       }
     };
-  }, [addNotification]);
+  }, []);
 }
