@@ -19,7 +19,7 @@
 - **Roles per route (spec §1, §2, §3, §5):** open a request `POST /refunds/quick` — CEO, Branch Director, Administrator; «Berildi» `POST /refunds/:id/hand-over` — CEO, Branch Director, Administrator, Cashier; cancel `POST /refunds/:id/cancel` — CEO, Branch Director; reverse a COMPLETED refund `POST /refunds/:id/reverse` — CEO (unchanged); the page reads (`GET /refundable/*`, `GET /refunds`) — CEO, Branch Director, Administrator, Cashier; notice `POST /students/:id/balance-notices` — CEO, Branch Director, Administrator; withdrawals — CEO, Branch Director, Administrator (unchanged).
 - **Bank-day rule (spec §2.6):** `addBankDays(fromDateStr, n, holidays)` walks forward from the day AFTER `fromDateStr`, counts Monday–Friday days not in `holidays`, returns the n-th one (`YYYY-MM-DD`). Holidays = `buildHolidayDateSet` (active `Holiday` rows, company-wide or the student's branch). Known approximation (written in the ADR): the centre's holiday table stands in for the bank calendar; transferred working Saturdays are not modelled. Example (in tests): request Mon 28.09.2026 with 01.10 a holiday → due Tue 13.10.
 - **Transfer formula (spec §5.2):** `transferAllowedFrom(noticeDateStr) = addBankDays(noticeDateStr, 10) + 30 calendar days`. Example: notice Sat 10.10.2026 → term to 23.10 → transfer from 22.11. A notice is **valid** only if `createdAt ≥ student.statusChangedAt`; the condition reads the student's latest valid notice; `WithdrawalsService.create` refuses unless today (Tashkent) ≥ `transferAllowedFrom`. It applies to every withdrawal, the profile's «Yechib olish» included.
-- **Bot text (spec §5.3, variant 1, CEO 10.10 — do not reword):** «Assalomu alaykum, {Ism}! DaF Sprachzentrum hisobingizda {summa} so'm qolgan. Uni qaytarib olish uchun {kun}-{oy}gacha filial raqamiga qo'ng'iroq qiling: {telefon}. Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul markaz hisobiga o'tadi. Rahmat!» — {Ism} = `Student.firstName`; {summa} = balance, `uz-UZ` with spaces; {kun}-{oy}gacha = `transferAllowedFrom` of today's notice, e.g. «22-noyabrgacha» (month names lowercase: yanvar … dekabr); {telefon} = the student's branch `phone`, else the company's, as «+998 XX XXX XX XX».
+- **Bot texts (spec §5.3 notice, second version, and §5.4 refund messages — CEO 10.10, do not reword):** Telegram HTML with bold key parts and line breaks, greeting «Hurmatli {Ism}!» (empty name → «Assalomu alaykum!»), money via `formatSum`, dates «{kun}-{oy}gacha», phone «+998 XX XXX XX XX». The exact lines are pinned in Task 17 Step 1 (the first, one-paragraph notice text is superseded). The drawer preview is the same text as plain text.
 - **Refusal texts, verbatim:** 409 «So'rov allaqachon yopilgan»; 400 «Telegram bog'lanmagan — qo'ng'iroq qiling»; 400 «Filial telefon raqami kiritilmagan»; 400 «Botga xabar yetmadi — qo'ng'iroq qiling» (every FAILED bot send); 400 «Avval o'quvchiga xabar bering. Markazga o'tkazish xabardan 10 bank kuni va yana 30 kun o'tgach ochiladi.»; 400 «Markazga o'tkazish dd.MM dan ochiladi (xabar dd.MM da berilgan, qaytarish muddati dd.MM gacha).»
 - **Statement label (spec §2.7):** the student statement's refund line reads «pul qaytarish» in both voices.
 - **Student history keys (spec §2, §5.1):** `PUL_QAYTARISH_SOROVI`, `PUL_QAYTARIB_BERILDI`, `PUL_QAYTARISH_BEKOR_QILINDI`, `PUL_HAQIDA_XABAR_BERILDI` — written as `newValues.status` of `recordStatusChange` with NO `status` key in `oldValues` (so the `entity.status.changed` listeners stay silent, as for today's `PUL_QAYTARILDI`).
@@ -8404,3 +8404,247 @@ None — every client need is in the API contract. Two notes for the reviewer:
 
 - **Closed by Task 12 Step 7b: a studying student can be given a notice.** The drawer opens only from the list of non-studying students and the profile has no «Xabar berish», but «Yechib olish» itself shows «Botga xabar yuborish» and «Qo'ng'iroq qilib aytildi» when `preview.transfer.notice === null`, so the transfer lock never has to stay shut for lack of a notice. Nothing to accept or to say in ADR-0076.
 - **The client relies on `chips` being the frozen tab's counts on every tab** (the «Muzlatilganlar» button's «N tasi 30 kundan oshgan» shows on all tabs). The server plan's `RefundableService.list` already computes them from every row, whatever `tab` is; keep it that way.
+
+---
+
+# Part 3 — added after the CEO's 10.10 review of the bot texts (server)
+
+### Task 17: The student's refund messages and the second version of the notice text
+
+The CEO found the first notice text dry (10.10.2026) and approved, word for word, a formatted second version plus three new messages to the student: request opened, money handed over, request cancelled. Spec §5.3 and §5.4 hold the texts; this task is the server half. Run it after Task 9 and before the client tasks; no client file changes (the drawer prints the server's `noticePreview`, which this task turns into plain text).
+
+**Files:**
+- Create: `server/src/refunds/refund-student-text.ts` (pure), `server/src/refunds/refund-student-text.spec.ts`
+- Create: `server/src/refunds/refund-student-messages.listener.ts`, `server/src/refunds/refund-student-messages.listener.spec.ts`
+- Create: `server/src/receipts/receipt-urls.ts` (`refundReceiptPdfUrl`), used by `ReceiptsService` too
+- Modify: `server/src/balance-notices/balance-notice-text.ts` (+ its spec, + `balance-notices.service.spec.ts` / `load-transfer-state` callers whose pinned text changes)
+- Modify: the drawer's `noticePreview` source (`server/src/refundable/refundable.service.ts` or `loadNoticeText` — wherever the preview is built) to return plain text
+- Modify: `server/src/refunds/refunds-create.service.ts` (emit after commit, both request paths), `server/src/refunds/refunds-process.service.ts` (emit after hand-over and after cancel commit), `server/src/refunds/refunds.module.ts` (register the listener; import what `SmsService` needs)
+- Modify: `docs/adr/0076-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md` (still in this PR, not accepted yet): a short Uzbek section on the four messages and the instant-list addition; `server/CLAUDE.md` Refunds Module: one paragraph on the messages
+
+**Interfaces:**
+- Produces (pure, `refund-student-text.ts`):
+  - `greetingLine(firstName: string): string`
+  - `refundRequestedText(p: { firstName: string; amount: number; dueDate: string /* YYYY-MM-DD */; balance: number; phone: string | null }): string`
+  - `refundHandedOverText(p: { firstName: string; amount: number; method: 'CASH' | 'TRANSFER'; handedOverDay: string /* YYYY-MM-DD, Tashkent */; receiptUrl: string }): string`
+  - `refundCancelledText(p: { firstName: string; amount: number; reason: string; balance: number; phone: string | null }): string`
+  - `htmlToPlainText(html: string): string` — removes tags, decodes `&amp; &lt; &gt; &quot; &#39;`, keeps line breaks
+- Produces (events, emitted only AFTER the transaction commits): `refund.requested` `{ refundId, studentId, companyId, performedById }`, `refund.handed-over` `{ refundId, studentId, companyId, performedById }`, `refund.cancelled` `{ refundId, studentId, companyId, performedById }`. The listener re-reads what it needs (refund amount / dueDate / method / handedOverAt / cancelReason, student firstName + telegramChatId + balance, branch/company phone) — payloads stay ids only.
+- Produces: `refundReceiptPdfUrl(refundId: string): string` — same base as `ReceiptsService.apiBaseUrl()` today (`API_BASE_URL`, else `https://${RAILWAY_PUBLIC_DOMAIN}`, else `https://api.dafzentrum.uz`) + `/api/receipts/refund/${refundId}.pdf`; `ReceiptsService` switches to it so there is one source.
+- Consumes: `formatSum` and `escapeHtml` (`telegram-groups/utils/format.util`), `monthName` (`statements/statement-text`), `formatUzPhone` (`common/utils/phone.util`), `SmsService.sendToStudent`, `SmsMessageType.AUTO`, `describeError` (`telegram-digest/telegram-send`), the branch-or-company phone lookup the notice already uses (`balance-notices` — reuse it, do not write a second one).
+
+- [ ] **Step 1: Write the failing text tests** (`refund-student-text.spec.ts`; ` ` is the non-breaking space `formatSum` prints)
+
+```ts
+import {
+  htmlToPlainText,
+  refundCancelledText,
+  refundHandedOverText,
+  refundRequestedText,
+} from './refund-student-text';
+
+const S = ' ';
+
+describe('refund student texts (spec §5.4, CEO 10.10)', () => {
+  it('request opened — pinned', () => {
+    expect(
+      refundRequestedText({ firstName: 'Mohira', amount: 350000, dueDate: '2026-10-23', balance: 0, phone: '901234567' }),
+    ).toBe(
+      [
+        "<b>🔄 Pulni qaytarish so'rovi qabul qilindi</b>",
+        '',
+        'Hurmatli Mohira!',
+        '',
+        `Qaytariladigan summa: <b>350${S}000 so'm</b>`,
+        'Pul <b>23-oktabrgacha</b> qaytarib beriladi.',
+        "Bu summa hisobingizdan ushlab turiladi — joriy balansingiz: <b>0 so'm</b>",
+        '',
+        "📞 Savol bo'lsa: +998 90 123 45 67",
+        '',
+        'Rahmat!',
+      ].join('\n'),
+    );
+  });
+
+  it('request opened — no phone leaves the 📞 line (and its blank line) out', () => {
+    const t = refundRequestedText({ firstName: 'Mohira', amount: 350000, dueDate: '2026-10-23', balance: 0, phone: null });
+    expect(t).not.toContain('📞');
+    expect(t).not.toContain('\n\n\n');
+  });
+
+  it('handed over — cash and card wording, pinned', () => {
+    const cash = refundHandedOverText({ firstName: 'Mohira', amount: 350000, method: 'CASH', handedOverDay: '2026-10-16', receiptUrl: 'https://api.example.uz/api/receipts/refund/r1.pdf' });
+    expect(cash).toBe(
+      [
+        '<b>✅ Pulingiz qaytarib berildi</b>',
+        '',
+        'Hurmatli Mohira!',
+        '',
+        `<b>350${S}000 so'm</b> qaytarib berildi — <b>naqd</b>.`,
+        'Sana: <b>16.10.2026</b>',
+        '',
+        '📄 Kvitansiya: https://api.example.uz/api/receipts/refund/r1.pdf',
+        '',
+        "DaF Sprachzentrum'ni tanlaganingiz uchun rahmat!",
+      ].join('\n'),
+    );
+    const card = refundHandedOverText({ firstName: 'Mohira', amount: 350000, method: 'TRANSFER', handedOverDay: '2026-10-16', receiptUrl: 'u' });
+    expect(card).toContain('— <b>kartaga</b>.');
+  });
+
+  it('cancelled — pinned, reason escaped', () => {
+    expect(
+      refundCancelledText({ firstName: 'Mohira', amount: 350000, reason: "o'qishni davom ettiradi", balance: 350000, phone: '901234567' }),
+    ).toBe(
+      [
+        "<b>↩️ Pulni qaytarish so'rovi bekor qilindi</b>",
+        '',
+        'Hurmatli Mohira!',
+        '',
+        `<b>350${S}000 so'm</b> qaytarish so'rovingiz bekor qilindi.`,
+        "Sabab: o'qishni davom ettiradi",
+        `Pul hisobingizga qaytdi — joriy balansingiz: <b>350${S}000 so'm</b>`,
+        '',
+        "📞 Savol bo'lsa: +998 90 123 45 67",
+      ].join('\n'),
+    );
+    expect(refundCancelledText({ firstName: 'A', amount: 1000, reason: '<x>', balance: 0, phone: null })).toContain('Sabab: &lt;x&gt;');
+  });
+
+  it('an empty first name greets with «Assalomu alaykum!»; a name is escaped', () => {
+    expect(refundRequestedText({ firstName: '', amount: 1000, dueDate: '2026-10-23', balance: 0, phone: null })).toContain('\nAssalomu alaykum!\n');
+    expect(refundRequestedText({ firstName: 'A&B', amount: 1000, dueDate: '2026-10-23', balance: 0, phone: null })).toContain('Hurmatli A&amp;B!');
+  });
+
+  it('htmlToPlainText strips tags, decodes entities, keeps lines', () => {
+    expect(htmlToPlainText('<b>💰 Hisob</b>\n\nHurmatli A&amp;B!')).toBe('💰 Hisob\n\nHurmatli A&B!');
+  });
+});
+```
+
+Also update `balance-notice-text.spec.ts` to pin the second notice version exactly (spec §5.3):
+
+```ts
+expect(balanceNoticeText({ firstName: 'Mohira', balance: 350000, allowedFrom: '2026-11-22', phone: '901234567' })).toBe(
+  [
+    '<b>💰 Hisobingizda pul qolgan</b>',
+    '',
+    'Hurmatli Mohira!',
+    '',
+    `DaF Sprachzentrum hisobingizda <b>350 000 so'm</b> qolgan.`,
+    "Uni qaytarib olish uchun <b>22-noyabrgacha</b> filial raqamiga qo'ng'iroq qiling:",
+    '📞 +998 90 123 45 67',
+    '',
+    "⚠️ Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul <b>markaz hisobiga o'tadi</b>.",
+    '',
+    'Rahmat!',
+  ].join('\n'),
+);
+```
+
+(If `formatUzPhone('901234567')` prints differently from `+998 90 123 45 67`, keep the helper's real output in all pinned texts and say so in the report — the format is «+998 XX XXX XX XX».)
+
+- [ ] **Step 2: Run, expect FAIL** — `cd server && npx jest src/refunds/refund-student-text.spec.ts src/balance-notices` → module missing / old text.
+
+- [ ] **Step 3: Implement `refund-student-text.ts`**
+
+```ts
+import { formatUzPhone } from '../common/utils/phone.util';
+import { monthName } from '../statements/statement-text';
+import { escapeHtml, formatSum } from '../telegram-groups/utils/format.util';
+
+/**
+ * The student's refund messages (spec §5.4) and the shared pieces of the
+ * notice (§5.3), approved by the CEO on 10.10.2026 — do not reword; the spec
+ * pins every line. Telegram HTML: names and reasons are escaped.
+ */
+export const greetingLine = (firstName: string) =>
+  firstName ? `Hurmatli ${escapeHtml(firstName)}!` : 'Assalomu alaykum!';
+
+/** «23-oktabrgacha» from 'YYYY-MM-DD'. */
+export const untilDay = (day: string) => `${Number(day.slice(8, 10))}-${monthName(day)}gacha`;
+
+const ddMMyyyy = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}.${day.slice(0, 4)}`;
+
+const phoneBlock = (phone: string | null) =>
+  phone ? ['', `📞 Savol bo'lsa: ${formatUzPhone(phone)}`] : [];
+
+export function refundRequestedText(p: {
+  firstName: string; amount: number; dueDate: string; balance: number; phone: string | null;
+}): string {
+  return [
+    "<b>🔄 Pulni qaytarish so'rovi qabul qilindi</b>",
+    '',
+    greetingLine(p.firstName),
+    '',
+    `Qaytariladigan summa: <b>${formatSum(p.amount)}</b>`,
+    `Pul <b>${untilDay(p.dueDate)}</b> qaytarib beriladi.`,
+    `Bu summa hisobingizdan ushlab turiladi — joriy balansingiz: <b>${formatSum(p.balance)}</b>`,
+    ...phoneBlock(p.phone),
+    '',
+    'Rahmat!',
+  ].join('\n');
+}
+
+export function refundHandedOverText(p: {
+  firstName: string; amount: number; method: 'CASH' | 'TRANSFER'; handedOverDay: string; receiptUrl: string;
+}): string {
+  return [
+    '<b>✅ Pulingiz qaytarib berildi</b>',
+    '',
+    greetingLine(p.firstName),
+    '',
+    `<b>${formatSum(p.amount)}</b> qaytarib berildi — <b>${p.method === 'CASH' ? 'naqd' : 'kartaga'}</b>.`,
+    `Sana: <b>${ddMMyyyy(p.handedOverDay)}</b>`,
+    '',
+    `📄 Kvitansiya: ${escapeHtml(p.receiptUrl)}`,
+    '',
+    "DaF Sprachzentrum'ni tanlaganingiz uchun rahmat!",
+  ].join('\n');
+}
+
+export function refundCancelledText(p: {
+  firstName: string; amount: number; reason: string; balance: number; phone: string | null;
+}): string {
+  return [
+    "<b>↩️ Pulni qaytarish so'rovi bekor qilindi</b>",
+    '',
+    greetingLine(p.firstName),
+    '',
+    `<b>${formatSum(p.amount)}</b> qaytarish so'rovingiz bekor qilindi.`,
+    `Sabab: ${escapeHtml(p.reason)}`,
+    `Pul hisobingizga qaytdi — joriy balansingiz: <b>${formatSum(p.balance)}</b>`,
+    ...phoneBlock(p.phone),
+  ].join('\n');
+}
+
+const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+
+/** The drawer's preview of a Telegram HTML text: no tags, entities decoded, lines kept. */
+export function htmlToPlainText(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/&(amp|lt|gt|quot|#39);/g, (m) => ENTITIES[m]);
+}
+```
+
+Rewrite `balanceNoticeText` (same signature) to the §5.3 layout, using `greetingLine`, `untilDay`, `formatSum`, `formatUzPhone` from above (import them; delete the old paragraph). Its `phone` stays required (the notice refuses without a phone, unchanged).
+
+- [ ] **Step 4: Plain-text preview.** Wherever the drawer's `noticePreview` is produced (find it: `loadNoticeText` / `refundable.service.ts`), return `htmlToPlainText(text)`; the bot send keeps the HTML. Update the drawer spec's expected preview to the plain second version.
+
+- [ ] **Step 5: `refundReceiptPdfUrl`** in `server/src/receipts/receipt-urls.ts` (reads `process.env.API_BASE_URL`, then `RAILWAY_PUBLIC_DOMAIN`, then the default — the same order as `ReceiptsService.apiBaseUrl()`), make `ReceiptsService` build its `pdfUrl` through it (keep its ConfigService reads or switch to the helper — one source either way), one small spec.
+
+- [ ] **Step 6: Emit after commit.** In `refunds-create.service.ts` (both `quickRefund` and the balance-only path), `refunds-process.service.ts` `handOver` and `cancel`: after the transaction resolves (never inside it), `this.events.emit('refund.requested' | 'refund.handed-over' | 'refund.cancelled', { refundId, studentId, companyId, performedById })`. Inject `EventEmitter2`. Specs: each path emits exactly once after success; a refused/failed write emits nothing.
+
+- [ ] **Step 7: The listener** (`refund-student-messages.listener.ts`, pattern of `payments/payment-events.listener.ts`): `@OnEvent` per event → read the student (`deletedAt: null`, `firstName`, `telegramChatId`, `balance`) and return silently when there is no chat; read the refund fields the text needs; phone = the same branch-or-company lookup the notice uses (null allowed here); build the text with the Task 17 functions (`handedOverDay` = `tashkentDateStr(handedOverAt)`, `method` = refund `refundMethod === 'CASH' ? 'CASH' : 'TRANSFER'`, `receiptUrl` = `refundReceiptPdfUrl(refundId)`); `smsService.sendToStudent(studentId, text, SmsMessageType.AUTO, performedById, companyId)`; wrap everything in try/catch → `logger.warn` with `describeError` (never throw). Specs: no chat → no send; each event sends its text; a send that throws is logged and swallowed.
+
+- [ ] **Step 8: ADR-0076 + server/CLAUDE.md.** ADR (Uzbek, this PR): a short section «O'quvchiga xabarlar» — four messages (notice + three), instant through SmsService (ADR-0025 instant list addition), texts in spec §5.3–§5.4, formatted on the CEO's 10.10 request; replace any line that quotes the old one-paragraph notice. server/CLAUDE.md Refunds Module: one paragraph naming the events and the listener. The direct-send guard spec needs no change (no new `.sendMessage(` caller) — run it to prove it.
+
+- [ ] **Step 9: Run and commit**
+
+Run: `cd server && npx jest src/refunds src/balance-notices src/refundable src/receipts src/telegram-digest/direct-send.guard.spec.ts && npm run typecheck`, then `npx prettier --write` and `npx eslint` on the touched files.
+
+```bash
+git add server/src/refunds server/src/balance-notices server/src/refundable server/src/receipts docs/adr/0076-pul-qaytarish-sorov-va-markazga-otkazish-sharti.md server/CLAUDE.md
+git commit -m "feat(refunds): tell the student when a refund is requested, handed over or cancelled; formatted notice text
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```

@@ -168,12 +168,76 @@ A notice is **valid** only if `createdAt ≥ student.statusChangedAt` (it was gi
 
 `GET /withdrawals/preview/:studentId` adds `{ notice: { date, channel } | null, termEnds, allowedFrom, allowed }` so every dialog shows the lock before the user types. The condition applies to every withdrawal, the profile's «Yechib olish» included: a withdrawal is the money going to the centre (ADR-0055).
 
-### 5.3 Bot text (variant 1, CEO 10.10 — do not reword)
+### 5.3 Bot text (CEO 10.10, second version — do not reword)
 
-> Assalomu alaykum, {Ism}! DaF Sprachzentrum hisobingizda {summa} so'm qolgan. Uni qaytarib olish uchun {kun}-{oy}gacha filial raqamiga qo'ng'iroq qiling: {telefon}. Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul markaz hisobiga o'tadi. Rahmat!
+The first version (one plain paragraph) was replaced the same day: the CEO found it dry and asked for the key parts to stand out. Telegram HTML (`<b>`), line breaks as shown:
 
-- {Ism} = `Student.firstName`; {summa} = balance, `uz-UZ` with spaces; {kun}-{oy}gacha = `transferAllowedFrom` of today's notice, e.g. «22-noyabrgacha» (month names lowercase: yanvar … dekabr); {telefon} = the student's branch `phone`, else the company's, as «+998 XX XXX XX XX».
-- The text lives in one pure function (`balance-notice-text.ts`) with a test that pins the example above.
+```
+<b>💰 Hisobingizda pul qolgan</b>
+
+Hurmatli {Ism}!
+
+DaF Sprachzentrum hisobingizda <b>{summa}</b> qolgan.
+Uni qaytarib olish uchun <b>{kun}-{oy}gacha</b> filial raqamiga qo'ng'iroq qiling:
+📞 {telefon}
+
+⚠️ Shu kungacha murojaat bo'lmasa, shartnomaga ko'ra pul <b>markaz hisobiga o'tadi</b>.
+
+Rahmat!
+```
+
+- {Ism} = `Student.firstName` (escaped); an empty first name makes the greeting line «Assalomu alaykum!» (the payment receipt's rule). {summa} = `formatSum(balance)` («350 000 so'm»); {kun}-{oy}gacha = `transferAllowedFrom` of today's notice, e.g. «22-noyabrgacha» (month names lowercase: yanvar … dekabr); {telefon} = the student's branch `phone`, else the company's, as «+998 XX XXX XX XX».
+- The text lives in one pure function (`balance-notice-text.ts`) with a test that pins the example above (Mohira, 350 000, 22.11).
+- The drawer's `noticePreview` is the same text as plain text (tags removed, entities decoded, line breaks kept), so the page never shows raw `<b>`.
+
+### 5.4 Messages to the student about their refund (CEO 10.10)
+
+Sent at once (an addition to ADR-0025's instant list, like the payment receipt), after the write commits, only to a student whose card has a `telegramChatId`, through `SmsService.sendToStudent` (type AUTO). A failed send is logged and never fails the write. Same formatting rules as §5.3; {telefon} = branch phone, else company phone; when neither exists the «📞» line is left out (these are informational, unlike the notice).
+
+On «So'rovni ochish» (§2.2):
+```
+<b>🔄 Pulni qaytarish so'rovi qabul qilindi</b>
+
+Hurmatli {Ism}!
+
+Qaytariladigan summa: <b>{summa}</b>
+Pul <b>{kun}-{oy}gacha</b> qaytarib beriladi.
+Bu summa hisobingizdan ushlab turiladi — joriy balansingiz: <b>{balans}</b>
+
+📞 Savol bo'lsa: {telefon}
+
+Rahmat!
+```
+{kun}-{oy}gacha = the request's `dueDate`; {balans} = the balance after the request.
+
+On «Berildi» (§2.3):
+```
+<b>✅ Pulingiz qaytarib berildi</b>
+
+Hurmatli {Ism}!
+
+<b>{summa}</b> qaytarib berildi — <b>{usul}</b>.
+Sana: <b>{dd.MM.yyyy}</b>
+
+📄 Kvitansiya: {havola}
+
+DaF Sprachzentrum'ni tanlaganingiz uchun rahmat!
+```
+{usul} = «naqd» for a CASH drawer, «kartaga» for BANK/CARD; {havola} = the public refund receipt PDF (`GET /receipts/refund/:id.pdf`, `@Public()`).
+
+On «Bekor qilish» (§2.4):
+```
+<b>↩️ Pulni qaytarish so'rovi bekor qilindi</b>
+
+Hurmatli {Ism}!
+
+<b>{summa}</b> qaytarish so'rovingiz bekor qilindi.
+Sabab: {sabab}
+Pul hisobingizga qaytdi — joriy balansingiz: <b>{balans}</b>
+
+📞 Savol bo'lsa: {telefon}
+```
+{sabab} = the cancel reason (escaped); {balans} = the balance after the unwind.
 
 ## 6. Data model (one migration)
 
@@ -210,7 +274,6 @@ A notice is **valid** only if `createdAt ≥ student.statusChangedAt` (it was gi
 
 ## 10. Out of scope
 
-- Telling the student by bot that their request was opened or the money handed over.
 - A Telegram «Diqqat» flag for overdue refunds.
 - Partial hand-over of a request.
 - A bank calendar separate from the centre's holidays.
