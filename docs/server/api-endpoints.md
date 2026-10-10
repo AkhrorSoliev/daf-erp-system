@@ -478,7 +478,7 @@ Add a comment to the discussion: `{ text }`.
 
 ## Notifications
 
-Every route here is keyed on the caller (own rows only, no branch question). A row waits for the user when `actionRequired` is true and `resolvedAt` is null; it closes itself when its job is done (ADR-0076).
+Every route here except `vapid-public-key` (public) is keyed on the caller (own rows and own devices only, no branch question). A row waits for the user when `actionRequired` is true and `resolvedAt` is null; it closes itself when its job is done (ADR-0076).
 
 ### GET /notifications
 
@@ -547,9 +547,27 @@ Unsubscribe from web push.
 
 ---
 
+### POST /notifications/devices
+
+Native app: register the caller's Expo push token (an existing token moves to the caller).
+
+**Body:** `{ token, platform?, appVersion? }` — `token` 8–255 chars, `platform` `ios` \| `android`, `appVersion` up to 32 chars.
+
+---
+
+### DELETE /notifications/devices
+
+Native app: unregister the caller's Expo push token.
+
+**Body:** `{ token }`
+
+---
+
 ### GET /notifications/vapid-public-key
 
-Get the VAPID public key for push subscription.
+Get the VAPID public key for push subscription. Public: no JWT, not keyed on the caller.
+
+**Response:** `{ key: string }`
 
 ---
 

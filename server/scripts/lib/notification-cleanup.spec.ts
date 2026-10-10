@@ -1,3 +1,5 @@
+import { LESSON_ALERT_TYPES } from '../../src/notifications/notification-kind';
+import { pastLessonAlerts } from '../../src/notifications/past-lesson-alerts';
 import { MIN_ALERT_DEBT } from '../../src/payment-promises/overdue-digest';
 import { OLD_UNREAD_DAYS, cleanupSteps } from './notification-cleanup';
 
@@ -5,11 +7,14 @@ describe('cleanupSteps', () => {
   const now = new Date('2026-10-11T03:00:00.000Z');
   const cutoff = new Date(now.getTime() - OLD_UNREAD_DAYS * 86_400_000);
   const steps = cleanupSteps(now);
+  // 08:00 in Tashkent on 11.10
+  const today = '2026-10-11';
+  const pastRule = pastLessonAlerts(today).sql;
 
   it('closes what was already done before it marks anything read', () => {
     expect(steps.map((s) => s.name)).toEqual([
       'Yopilgan topshiriqlar',
-      "Hal bo'lgan darslar",
+      "Hal bo'lgan va o'tib ketgan darslar",
       "Qarzi yopilgan va'dalar",
       '7 kundan eski kutilayotganlar',
       "7 kundan eski o'qilmaganlar",
@@ -63,8 +68,44 @@ describe('cleanupSteps', () => {
     expect(stale.apply.sql).toContain('SET "resolvedAt"');
     expect(stale.apply.sql).toContain('starts_with(n."type"::text, \'TASK_\')');
     expect(stale.apply.sql).toContain("'NEW', 'IN_PROGRESS', 'IN_REVIEW'");
-    expect(stale.apply.values).toEqual([now, cutoff, -MIN_ALERT_DEBT]);
-    expect(stale.count.values).toEqual([cutoff, -MIN_ALERT_DEBT]);
+    expect(stale.apply.values).toEqual([
+      now,
+      cutoff,
+      -MIN_ALERT_DEBT,
+      ...LESSON_ALERT_TYPES,
+      today,
+    ]);
+    expect(stale.count.values).toEqual([
+      cutoff,
+      -MIN_ALERT_DEBT,
+      ...LESSON_ALERT_TYPES,
+      today,
+    ]);
+  });
+
+  it('step 2 also closes lesson alerts of past days that no question waits on, at the run time', () => {
+    const lessons = steps[1];
+    // the nightly sweep's own fragment, not a copy: both pick the same rows
+    for (const sql of [lessons.count.sql, lessons.apply.sql]) {
+      expect(sql).toContain(pastRule);
+      expect(sql).toContain('IS NOT NULL) OR (');
+    }
+    expect(lessons.apply.sql).toContain('GREATEST(n."createdAt", COALESCE(');
+    expect(lessons.apply.values).toEqual([now, ...LESSON_ALERT_TYPES, today]);
+    expect(lessons.count.values).toEqual([...LESSON_ALERT_TYPES, today]);
+  });
+
+  it('draws the day line at Tashkent midnight, not UTC', () => {
+    // 01:00 on 11.10 in Tashkent, still 10.10 in UTC
+    const late = cleanupSteps(new Date('2026-10-10T20:00:00.000Z'));
+    expect(late[1].count.values.at(-1)).toBe('2026-10-11');
+  });
+
+  it('step 4 leaves the rows of step 2 to it, so a dry run counts what apply writes', () => {
+    expect(steps[3].count.sql).toContain(pastRule);
+    expect(steps[3].apply.sql).toMatch(
+      /AND NOT COALESCE\(\s+\(n\."actionRequired"/,
+    );
   });
 
   it('leaves to step 3 the lists it closes with their own time, and takes the old ones', () => {

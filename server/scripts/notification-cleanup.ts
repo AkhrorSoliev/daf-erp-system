@@ -7,7 +7,9 @@
  *     npx ts-node --transpile-only scripts/notification-cleanup.ts [--apply]
  *
  * It closes (`resolvedAt`) the action rows whose job was already done — closed
- * tasks, lessons with a register / an answer / a cancellation / a move, overdue
+ * tasks, lessons with a register / an answer / a cancellation / a move (and
+ * lesson alerts of past days with no «Dars bo'ldimi?» question waiting, the rule
+ * of the resolver's nightly 03:00 sweep), overdue
  * promises whose debt is cleared (the 09:00 lists: nobody on them still owes)
  * — then resolves every other action row older
  * than 7 days (only a `TASK_*` row whose task is still open keeps waiting) and

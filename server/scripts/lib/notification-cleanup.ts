@@ -1,4 +1,9 @@
 import { Prisma } from '@prisma/client';
+import { tashkentDateStr } from '../../src/common/date/tashkent';
+import {
+  lessonDay,
+  pastLessonAlerts,
+} from '../../src/notifications/past-lesson-alerts';
 import { MIN_ALERT_DEBT } from '../../src/payment-promises/overdue-digest';
 
 /** Unread rows older than this are marked read once (spec 2026-10-07 §8). */
@@ -16,9 +21,6 @@ const closedTask = Prisma.sql`t."id" = n."taskId"
   AND n."actionRequired" AND n."resolvedAt" IS NULL
   AND t."status" IN ('DONE', 'CANCELLED')`;
 
-// The lesson day rides in the key: `<TYPE>:<YYYY-MM-DD>` (notification-kind.ts).
-const lessonDay = Prisma.sql`split_part(n."groupKey", ':', 2)::date`;
-
 /** When the lesson's job got done: a register, an answer, a cancellation or a move. */
 const lessonDoneAt = Prisma.sql`LEAST(
   (SELECT min(a."createdAt") FROM "Attendance" a
@@ -33,6 +35,18 @@ const lessonDoneAt = Prisma.sql`LEAST(
 
 const openLessonAlert = Prisma.sql`n."actionRequired" AND n."resolvedAt" IS NULL
   AND n."relatedEntityType" = 'Group' AND n."groupKey" IS NOT NULL`;
+
+/**
+ * A lesson alert whose job is done: its lesson got a register, an answer, a
+ * cancellation or a move, or its day is past and no «Dars bo'ldimi?» question
+ * is left to answer (`pastLessonAlerts`, the rule of the 03:00 sweep too).
+ * Never NULL, like `promiseDone`, so `NOT` of it cannot drop a row from step 4.
+ */
+function lessonAlertDone(today: string): Prisma.Sql {
+  return Prisma.sql`COALESCE(
+    (${openLessonAlert} AND ${lessonDoneAt} IS NOT NULL) OR (${pastLessonAlerts(today)}),
+    false)`;
+}
 
 const paidPromise = Prisma.sql`s."id"::text = n."relatedEntityId"
   AND n."type" = 'PAYMENT_PROMISE_OVERDUE' AND n."relatedEntityType" = 'Student'
@@ -73,7 +87,7 @@ const promiseDone = Prisma.sql`COALESCE(
  * steps 1-3 close with their own, more exact time, so a dry run counts the
  * same rows apply writes.
  */
-function staleAction(cutoff: Date): Prisma.Sql {
+function staleAction(cutoff: Date, today: string): Prisma.Sql {
   return Prisma.sql`n."actionRequired" AND n."resolvedAt" IS NULL
     AND n."createdAt" < ${cutoff}
     AND NOT (starts_with(n."type"::text, 'TASK_') AND EXISTS (
@@ -81,19 +95,22 @@ function staleAction(cutoff: Date): Prisma.Sql {
       WHERE t."id" = n."taskId" AND t."status" IN ('NEW', 'IN_PROGRESS', 'IN_REVIEW')))
     AND NOT EXISTS (SELECT 1 FROM "Task" t WHERE ${closedTask})
     AND NOT ${promiseDone}
-    AND NOT (${openLessonAlert} AND ${lessonDoneAt} IS NOT NULL)`;
+    AND NOT ${lessonAlertDone(today)}`;
 }
 
 /**
  * Before the phase-5 bell nothing ever closed. The first three steps close
  * the action rows whose job was already done, stamped with the time it was
- * done (never before the row itself); the fourth resolves what is left of
- * the old history, so «Kutilmoqda» (which shows read rows too) is not
- * inflated for ever; the last marks old unread rows read. Nothing is deleted,
- * and a repeat run finds nothing left.
+ * done (never before the row itself; the run time where none is recorded);
+ * step 2 also takes the lesson alerts of past days that no question is waiting
+ * on, the rule the resolver's 03:00 sweep keeps applying. The fourth resolves
+ * what is left of the old history, so «Kutilmoqda» (which shows read rows too)
+ * is not inflated for ever; the last marks old unread rows read. Nothing is
+ * deleted, and a repeat run finds nothing left.
  */
 export function cleanupSteps(now: Date): CleanupStep[] {
   const cutoff = new Date(now.getTime() - OLD_UNREAD_DAYS * 86_400_000);
+  const today = tashkentDateStr(now);
   return [
     {
       name: 'Yopilgan topshiriqlar',
@@ -104,12 +121,14 @@ export function cleanupSteps(now: Date): CleanupStep[] {
         FROM "Task" t WHERE ${closedTask}`,
     },
     {
-      name: "Hal bo'lgan darslar",
+      // A past day nothing will ever answer records no done-time; the run time
+      // stands in for it.
+      name: "Hal bo'lgan va o'tib ketgan darslar",
       count: Prisma.sql`SELECT count(*)::int AS n FROM "Notification" n
-        WHERE ${openLessonAlert} AND ${lessonDoneAt} IS NOT NULL`,
+        WHERE ${lessonAlertDone(today)}`,
       apply: Prisma.sql`UPDATE "Notification" n
-        SET "resolvedAt" = GREATEST(n."createdAt", ${lessonDoneAt})
-        WHERE ${openLessonAlert} AND ${lessonDoneAt} IS NOT NULL`,
+        SET "resolvedAt" = GREATEST(n."createdAt", COALESCE(${lessonDoneAt}, ${now}))
+        WHERE ${lessonAlertDone(today)}`,
     },
     {
       // The day the debt was cleared is not recorded; the run time stands in.
@@ -123,9 +142,9 @@ export function cleanupSteps(now: Date): CleanupStep[] {
       // Nothing records when these stopped mattering; the run time stands in.
       name: '7 kundan eski kutilayotganlar',
       count: Prisma.sql`SELECT count(*)::int AS n FROM "Notification" n
-        WHERE ${staleAction(cutoff)}`,
+        WHERE ${staleAction(cutoff, today)}`,
       apply: Prisma.sql`UPDATE "Notification" n SET "resolvedAt" = ${now}
-        WHERE ${staleAction(cutoff)}`,
+        WHERE ${staleAction(cutoff, today)}`,
     },
     {
       name: "7 kundan eski o'qilmaganlar",

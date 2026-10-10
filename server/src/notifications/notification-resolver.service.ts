@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import type { Prisma, TaskStatus } from '@prisma/client';
+import { Cron } from '@nestjs/schedule';
+import { Prisma, type TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   tashkentDateStr,
@@ -20,6 +21,10 @@ import {
 import { BROKEN_PROMISES_ENTITY } from './notification-events.listener';
 import { LESSON_ALERT_TYPES, lessonGroupKey } from './notification-kind';
 import { NotificationsGateway } from './notifications.gateway';
+import { pastLessonAlerts } from './past-lesson-alerts';
+
+/** Ids per `resolve` call: a long list never becomes one huge `IN (…)`. */
+const SWEEP_CHUNK = 500;
 
 /** A lesson event: the group and its lesson day ('YYYY-MM-DD', Tashkent). */
 interface LessonDayEvent {
@@ -204,6 +209,53 @@ export class NotificationResolverService {
       ...brokenPromiseList(p.companyId, p.branchId),
       createdAt: { lt: tashkentDayStartUtc(tashkentDateStr(new Date())) },
     });
+  }
+
+  // ---------- nightly ----------
+
+  /**
+   * The backstop for every lesson alert whose closing event never came (a group
+   * that left ACTIVE after the alerts went out, a holiday entered on the day,
+   * the check-then-act race at the lesson's start). Once a lesson's day is past
+   * and no «Dars bo'ldimi?» question is waiting for it, nothing can close its
+   * alerts any more (`pastLessonAlerts`). All companies; each write carries the
+   * row's own `companyId`, and `resolve` tells the owners' bells.
+   *
+   * ponytail: one scan of the open rows, nightly — a partial index on
+   * `resolvedAt IS NULL` if the table ever makes that slow.
+   */
+  @Cron('0 0 3 * * *', { timeZone: 'Asia/Tashkent' })
+  async closePastLessonAlerts(): Promise<number> {
+    try {
+      const rows = await this.prisma.$queryRaw<
+        { id: string; companyId: number }[]
+      >(
+        Prisma.sql`SELECT n."id", n."companyId" FROM "Notification" n
+          WHERE ${pastLessonAlerts(tashkentDateStr(new Date()))}`,
+      );
+      const byCompany = new Map<number, string[]>();
+      for (const r of rows) {
+        const ids = byCompany.get(r.companyId) ?? [];
+        ids.push(r.id);
+        byCompany.set(r.companyId, ids);
+      }
+      let closed = 0;
+      for (const [companyId, ids] of byCompany) {
+        for (let i = 0; i < ids.length; i += SWEEP_CHUNK) {
+          closed += await this.resolve({
+            companyId,
+            id: { in: ids.slice(i, i + SWEEP_CHUNK) },
+          });
+        }
+      }
+      if (closed > 0) this.logger.log(`closed ${closed} past lesson alerts`);
+      return closed;
+    } catch (error) {
+      this.logger.error(
+        `past lesson alerts sweep failed: ${(error as Error).message}`,
+      );
+      return 0;
+    }
   }
 
   // ---------- core ----------

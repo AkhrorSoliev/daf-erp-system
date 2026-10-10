@@ -191,6 +191,15 @@ describe('NotificationsService', () => {
       expect(res).toEqual({ data: [], nextCursor: null });
     });
 
+    it("ignores the old bell's page: it pages by size and cursor only", async () => {
+      await service.findByUser(10001, { page: 3, pageSize: 20 });
+
+      const arg = prisma.notification.findMany.mock.calls[0][0];
+      expect(arg.take).toBe(21);
+      expect(arg).not.toHaveProperty('skip');
+      expect(arg.where).toEqual({ AND: [{ userId: 10001 }] });
+    });
+
     it('refuses a cursor it did not issue', async () => {
       await expect(
         service.findByUser(10001, { cursor: 'bm90LWEtY3Vyc29y' }),

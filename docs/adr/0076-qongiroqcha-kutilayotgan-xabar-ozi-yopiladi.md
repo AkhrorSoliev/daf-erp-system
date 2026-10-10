@@ -73,7 +73,22 @@ oynada saqlangan bo'lsa ham xabar o'sha-o'sha turardi.
    - `payment-promise.overdue` (cron'ning filial bo'yicha hodisasi) — shu filialning
      bugundan (Toshkent kuni) oldingi ochiq ro'yxatlari: yangi ro'yxat eskisini
      almashtiradi. Shu ertalabki xabarlarga tegmaydi, shuning uchun xabarlarni yozuvchi
-     tinglovchi bilan tartib farq qilmaydi.
+     tinglovchi bilan tartib farq qilmaydi;
+   - **har kecha 03:00 da (Toshkent), hamma kompaniya uchun** — dars xabarlari uchun
+     ehtiyot yo'li (`closePastLessonAlerts`). Dars kuni (`groupKey` dagi sana) bugundan
+     oldin bo'lgan ochiq dars xabarini, agar o'sha guruh va kun uchun kutilayotgan
+     (`PENDING`) «Dars bo'ldimi?» savoli bo'lmasa, yopadi: tekshiruv va 23:00
+     yig'ishtirish faqat bugunga qaraydi, shuning uchun bunday kun endi javob
+     hodisasini chiqara olmaydi. Bugungi kunga tegmaydi (savoli kechqurun ochilishi
+     mumkin). Kutilayotgan savol xabarni ushlab turadi: administrator hali javob
+     berishi kerak, javob esa xabarni yuqoridagi hodisalar orqali yopadi. O'chirilgan
+     guruhning savollari hisobga olinmaydi (o'chirish ularni `PENDING` qoldiradi, ularga
+     javob berib bo'lmaydi). Shu yo'l hodisasi kelmagan hamma dars xabarini yopadi: dars
+     kuni guruh ACTIVE dan chiqqan bo'lsa (COMPLETED, CANCELLED, PAUSED, filial
+     yopildi), kunga bayram kiritilgan bo'lsa, eslatma va davomat saqlash bir vaqtga
+     to'g'ri kelgan bo'lsa. Qoida bitta SQL parchasi (`past-lesson-alerts.ts`); tozalash
+     skriptining 2-qadami ham aynan shuni ishlatadi. Yopilgan qatorlar yuqoridagi
+     `resolve` yo'lidan o'tadi, shuning uchun egalarining qo'ng'iroqchasi xabar oladi.
 5. **Bir xil dars xabarlari bitta qatorga.** `groupKey = <TURI>:<KUN>` (Toshkent kuni)
    faqat besh dars xabari uchun: `LESSON_STARTED`, `ATTENDANCE_ADMIN_ALERT`,
    `ATTENDANCE_TEACHER_WARNING`, `ATTENDANCE_MISSING_TEACHER`, `ATTENDANCE_MISSING_ADMIN`.
@@ -92,7 +107,10 @@ oynada saqlangan bo'lsa ham xabar o'sha-o'sha turardi.
 7. **Bir martalik tozalash** (`server/scripts/notification-cleanup.ts`, sinov
    rejimida o'qish-faqat ulanishda; `--apply` bilan hamma qadam bitta tranzaksiyada):
    (1) topshirig'i yopilgan xabarlarni, (2) jurnali, javobi, bekor qilinishi yoki
-   ko'chirilishi bo'lgan dars xabarlarini, (3) qarzi yopilgan va'da xabarlarini
+   ko'chirilishi bo'lgan dars xabarlarini va kuni o'tib ketgan, kutilayotgan savoli
+   qolmagan dars xabarlarini (4-banddagi 03:00 qoidasi bilan bir xil SQL; bunda ish
+   bajarilgan vaqt yozilmagani uchun ishga tushirilgan vaqt qo'yiladi), (3) qarzi
+   yopilgan va'da xabarlarini
    (eski, o'quvchi bo'yicha xabarlarni va hech kim qarzdor qolmagan 09:00
    ro'yxatlarini, yuqoridagi ta'rif bilan)
    `resolvedAt` bilan yopadi (ish bajarilgan vaqt bilan); (4) boshqa hamma 7 kundan
@@ -124,18 +142,25 @@ oynada saqlangan bo'lsa ham xabar o'sha-o'sha turardi.
   chiqadi. Migratsiyadagi `UPDATE` lar `ALTER TABLE` qulfi ostida ishlaydi — deploy
   oldidan `Notification` qatorlari sonini tekshirish kerak.
 - **Yangi sizdan ish kutadigan tur qo'shilsa**, uni yopuvchi hodisa
-  `NotificationResolverService` ga ham qo'shiladi, aks holda u faqat tozalash
-  skriptigacha kutadi. Yangi `NotificationType` `NOTIFICATION_GROUP` ga qo'yilmaguncha
+  `NotificationResolverService` ga ham qo'shiladi. Kechki 03:00 qoidasi faqat dars
+  xabarlarini ushlaydi; boshqa tur o'z yopuvchi hodisasisiz «Kutilmoqda» da abadiy
+  qoladi (bir martalik tozalash deploy kunida bir marta ishlagan va keyin qaytib
+  ishlamaydi). Yangi `NotificationType` `NOTIFICATION_GROUP` ga qo'yilmaguncha
   kompilyatsiya bo'lmaydi.
-- **Hozircha yopilmaydigan xabarlar (ma'lum chegaralar).** Qarz to'lovsiz yopilsa
-  (hisobdan chiqarish, markaz qoplashi) — to'lov hodisasi yo'q, buzilgan va'da hech
-  qachon «bajarildi» bo'lmaydi (`settleKeptPromises` bilan bir xil), xabar ochiq
-  qoladi: ertalabki ro'yxat shu filialning keyingi ro'yxati kelguncha turadi, eski
-  o'quvchi xabari — tozalash skriptigacha; «Topshiriq qaytarildi»
-  ijrochi qayta tekshiruvga yuborgandan keyin ham topshiriq yopilguncha kutadi;
-  eslatma yuborilayotgan sekundlarda davomat saqlansa, oxirgi xabar ochiq qolishi
-  mumkin. Tozalash skripti faqat bir marta ishlaydi; bunday qoldiqlar ko'paysa, kechki
-  yig'ishtirish qo'shilishi mumkin (hozir yo'q).
+- **Hozircha yopilmaydigan xabarlar (ma'lum chegaralar).** Dars xabarlari uchun
+  yopuvchi hodisa kelmagan holatlar (dars kuni guruh ACTIVE dan chiqdi, kunga bayram
+  kiritildi, eslatma yuborilayotgan sekundlarda davomat saqlandi) endi chegara emas:
+  xabar keyingi kuni 03:00 gacha turadi va o'sha paytda yopiladi. Kutilayotgan savoli
+  bor kunning xabarlari esa javob berilguncha turadi. Qolganlari:
+  - qarz to'lovsiz yopilsa (hisobdan chiqarish, markaz qoplashi) — to'lov hodisasi yo'q,
+    buzilgan va'da hech qachon «bajarildi» bo'lmaydi (`settleKeptPromises` bilan bir
+    xil), xabar ochiq qoladi: ertalabki ro'yxat shu filialning keyingi ro'yxati
+    kelguncha turadi, filialda boshqa buzilgan va'da bo'lmasa — abadiy;
+  - deploy paytida eski server yozgan, o'quvchi bo'yicha alohida eski xabar — o'quvchi
+    qarzini to'lamaguncha;
+  - «Topshiriq qaytarildi» ijrochi qayta tekshiruvga yuborgandan keyin ham, deploydan
+    oldingi olib tashlangan ijrochi va tizim topshirig'ini yo'qotgan administrator
+    xabarlari — topshiriq yopilguncha.
 - Hech qaysi xabar o'chirilmaydi: faqat `resolvedAt` va `isRead` yoziladi; yopilgan
   xabar kulrang bo'lib tarixda turadi.
 
