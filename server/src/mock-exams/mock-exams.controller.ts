@@ -6,20 +6,17 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { MockExamsService } from './mock-exams.service';
 import { MockExamStatsService } from './mock-exam-stats.service';
 import { CreateMockExamDto } from './dto/create-mock-exam.dto';
 import { UpdateMockExamDto } from './dto/update-mock-exam.dto';
 import { ChangeMockExamStatusDto } from './dto/change-mock-exam-status.dto';
-import { CurrentUser, Roles, BranchScope } from '../common/decorators';
+import { CurrentUser, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { RolesGuard } from '../common/guards';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('mock-exams')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class MockExamsController {
   constructor(
     private readonly mockExamsService: MockExamsService,
@@ -27,6 +24,7 @@ export class MockExamsController {
   ) {}
 
   @Get()
+  @Can('mock.view')
   list(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
@@ -35,6 +33,7 @@ export class MockExamsController {
   }
 
   @Get('revenue-summary')
+  @Can('mock.view')
   revenueSummary(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
@@ -43,6 +42,7 @@ export class MockExamsController {
   }
 
   @Get('board')
+  @Can('mock.view')
   board(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
@@ -51,6 +51,7 @@ export class MockExamsController {
   }
 
   @Get(':id')
+  @Can('mock.view')
   findOne(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -60,6 +61,7 @@ export class MockExamsController {
   }
 
   @Get(':id/stats')
+  @Can('mock.view')
   stats(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -69,6 +71,7 @@ export class MockExamsController {
   }
 
   @Post()
+  @Can('mock.manage')
   create(
     @Body() dto: CreateMockExamDto,
     @CurrentUser('companyId') companyId: number,
@@ -79,6 +82,7 @@ export class MockExamsController {
   }
 
   @Patch(':id')
+  @Can('mock.manage')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateMockExamDto,
@@ -90,6 +94,7 @@ export class MockExamsController {
   }
 
   @Patch(':id/status')
+  @Can('mock.manage')
   changeStatus(
     @Param('id') id: string,
     @Body() dto: ChangeMockExamStatusDto,
@@ -107,6 +112,7 @@ export class MockExamsController {
   }
 
   @Post(':id/regenerate-pdf')
+  @Can('mock.manage')
   regeneratePdf(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -116,6 +122,7 @@ export class MockExamsController {
   }
 
   @Post(':id/rebroadcast-results')
+  @Can('mock.manage')
   rebroadcastResults(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -125,6 +132,7 @@ export class MockExamsController {
   }
 
   @Delete(':id')
+  @Can('mock.manage')
   remove(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
