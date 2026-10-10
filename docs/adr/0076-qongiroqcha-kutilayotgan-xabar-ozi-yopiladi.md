@@ -58,8 +58,22 @@ oynada saqlangan bo'lsa ham xabar o'sha-o'sha turardi.
      olib tashlanganlarning shu topshiriq qatorlari; tizim topshirig'ini birinchi
      ijrochi olsa (`task.status.changed`, topshiriq ochiq va qo'lda berilmagan) —
      uni yo'qotgan administratorlarning xabarlari;
-   - `payment.received`, qarz yopilgan bo'lsa (`studentBalance >= 0`, `settleKeptPromises`
-     dagi «bajarildi» sinovi) — o'quvchining `PAYMENT_PROMISE_OVERDUE` xabari.
+   - `payment.received`: qarzi yopilgan bo'lsa (`studentBalance >= 0`, `settleKeptPromises`
+     dagi «bajarildi» sinovi) o'quvchining eski, o'quvchi bo'yicha alohida
+     `PAYMENT_PROMISE_OVERDUE` xabari; to'lov qanday bo'lishidan qat'i nazar esa
+     o'quvchi kirgan ertalabki 09:00 ro'yxati, agar unda hech kim qarzdor
+     qolmagan bo'lsa. 09:00 cron'i har filial uchun bitta ro'yxat yozadi
+     (`relatedEntityType 'BrokenPromises'`, `relatedEntityId` — filial raqami yoki
+     filialsiz va'dalar uchun `all`). Ro'yxat — bitta filial va bitta Toshkent kunining
+     ochiq xabarlari (hamma qabul qiluvchida); undagi o'quvchilar — shu filialning
+     shu kuni cron «buzildi» qilgan va'dalari (`reminderFiredAt`). O'quvchi balansi
+     `-MIN_ALERT_DEBT` (1 000 so'm) va undan past bo'lsa qarzdor hisoblanadi: kichik
+     qarz ro'yxatga hech qachon kirmagan. Balans to'lov commit bo'lgandan keyin
+     bazadan o'qiladi, hodisadan emas;
+   - `payment-promise.overdue` (cron'ning filial bo'yicha hodisasi) — shu filialning
+     bugundan (Toshkent kuni) oldingi ochiq ro'yxatlari: yangi ro'yxat eskisini
+     almashtiradi. Shu ertalabki xabarlarga tegmaydi, shuning uchun xabarlarni yozuvchi
+     tinglovchi bilan tartib farq qilmaydi.
 5. **Bir xil dars xabarlari bitta qatorga.** `groupKey = <TURI>:<KUN>` (Toshkent kuni)
    faqat besh dars xabari uchun: `LESSON_STARTED`, `ATTENDANCE_ADMIN_ALERT`,
    `ATTENDANCE_TEACHER_WARNING`, `ATTENDANCE_MISSING_TEACHER`, `ATTENDANCE_MISSING_ADMIN`.
@@ -79,6 +93,8 @@ oynada saqlangan bo'lsa ham xabar o'sha-o'sha turardi.
    rejimida o'qish-faqat ulanishda; `--apply` bilan hamma qadam bitta tranzaksiyada):
    (1) topshirig'i yopilgan xabarlarni, (2) jurnali, javobi, bekor qilinishi yoki
    ko'chirilishi bo'lgan dars xabarlarini, (3) qarzi yopilgan va'da xabarlarini
+   (eski, o'quvchi bo'yicha xabarlarni va hech kim qarzdor qolmagan 09:00
+   ro'yxatlarini, yuqoridagi ta'rif bilan)
    `resolvedAt` bilan yopadi (ish bajarilgan vaqt bilan); (4) boshqa hamma 7 kundan
    eski ochiq `actionRequired` qatorni yopadi, faqat topshirig'i hali ochiq (NEW,
    IN_PROGRESS, IN_REVIEW) `TASK_*` qatorlar qoladi; (5) 7 kundan eski o'qilmagan
@@ -112,8 +128,10 @@ oynada saqlangan bo'lsa ham xabar o'sha-o'sha turardi.
   skriptigacha kutadi. Yangi `NotificationType` `NOTIFICATION_GROUP` ga qo'yilmaguncha
   kompilyatsiya bo'lmaydi.
 - **Hozircha yopilmaydigan xabarlar (ma'lum chegaralar).** Qarz to'lovsiz yopilsa
-  (hisobdan chiqarish, markaz qoplashi) — buzilgan va'da hech qachon «bajarildi» bo'lmaydi
-  (`settleKeptPromises` bilan bir xil), xabar ochiq qoladi; «Topshiriq qaytarildi»
+  (hisobdan chiqarish, markaz qoplashi) — to'lov hodisasi yo'q, buzilgan va'da hech
+  qachon «bajarildi» bo'lmaydi (`settleKeptPromises` bilan bir xil), xabar ochiq
+  qoladi: ertalabki ro'yxat shu filialning keyingi ro'yxati kelguncha turadi, eski
+  o'quvchi xabari — tozalash skriptigacha; «Topshiriq qaytarildi»
   ijrochi qayta tekshiruvga yuborgandan keyin ham topshiriq yopilguncha kutadi;
   eslatma yuborilayotgan sekundlarda davomat saqlansa, oxirgi xabar ochiq qolishi
   mumkin. Tozalash skripti faqat bir marta ishlaydi; bunday qoldiqlar ko'paysa, kechki

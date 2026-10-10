@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { MIN_ALERT_DEBT } from '../../src/payment-promises/overdue-digest';
 
 /** Unread rows older than this are marked read once (spec 2026-10-07 §8). */
 export const OLD_UNREAD_DAYS = 7;
@@ -38,10 +39,39 @@ const paidPromise = Prisma.sql`s."id"::text = n."relatedEntityId"
   AND n."actionRequired" AND n."resolvedAt" IS NULL AND s."balance" >= 0`;
 
 /**
+ * The 09:00 list (one row per recipient, `relatedEntityType 'BrokenPromises'`,
+ * `relatedEntityId` = the branch id or 'all') whose job is done: none of its
+ * students still owes. Its students are the branch's BROKEN promises that the
+ * cron flipped on the list's own Tashkent day (`reminderFiredAt`); a debt
+ * under MIN_ALERT_DEBT was never listed, so it does not count. Same rule as
+ * `NotificationResolverService.closePaidLists`.
+ */
+const paidList = Prisma.sql`n."type" = 'PAYMENT_PROMISE_OVERDUE'
+  AND n."relatedEntityType" = 'BrokenPromises'
+  AND n."actionRequired" AND n."resolvedAt" IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM "PaymentPromise" p JOIN "Student" s ON s."id" = p."studentId"
+    WHERE p."companyId" = n."companyId" AND p."status" = 'BROKEN'
+      AND COALESCE(p."branchId"::text, 'all') = n."relatedEntityId"
+      AND ((p."reminderFiredAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Tashkent')::date
+        = ((n."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Tashkent')::date
+      AND s."balance" <= ${-MIN_ALERT_DEBT})`;
+
+/**
+ * An overdue-promise row, old (one per student) or list, whose debt is gone.
+ * Never NULL (a row with no entity type would turn `NOT` of it into NULL and
+ * drop out of step 4).
+ */
+const promiseDone = Prisma.sql`COALESCE(
+  EXISTS (SELECT 1 FROM "Student" s WHERE ${paidPromise}) OR (${paidList}),
+  false)`;
+
+/**
  * Old action rows whose job is not open any more. Only a `TASK_*` row whose
  * task is still open keeps waiting; everything else older than the cutoff
- * resolves. The three NOT EXISTS clauses leave out what steps 1-3 close with
- * their own, more exact time, so a dry run counts the same rows apply writes.
+ * resolves, the 09:00 promise lists included. The NOT clauses leave out what
+ * steps 1-3 close with their own, more exact time, so a dry run counts the
+ * same rows apply writes.
  */
 function staleAction(cutoff: Date): Prisma.Sql {
   return Prisma.sql`n."actionRequired" AND n."resolvedAt" IS NULL
@@ -50,7 +80,7 @@ function staleAction(cutoff: Date): Prisma.Sql {
       SELECT 1 FROM "Task" t
       WHERE t."id" = n."taskId" AND t."status" IN ('NEW', 'IN_PROGRESS', 'IN_REVIEW')))
     AND NOT EXISTS (SELECT 1 FROM "Task" t WHERE ${closedTask})
-    AND NOT EXISTS (SELECT 1 FROM "Student" s WHERE ${paidPromise})
+    AND NOT ${promiseDone}
     AND NOT (${openLessonAlert} AND ${lessonDoneAt} IS NOT NULL)`;
 }
 
@@ -85,9 +115,9 @@ export function cleanupSteps(now: Date): CleanupStep[] {
       // The day the debt was cleared is not recorded; the run time stands in.
       name: "Qarzi yopilgan va'dalar",
       count: Prisma.sql`SELECT count(*)::int AS n FROM "Notification" n
-        JOIN "Student" s ON ${paidPromise}`,
+        WHERE ${promiseDone}`,
       apply: Prisma.sql`UPDATE "Notification" n SET "resolvedAt" = ${now}
-        FROM "Student" s WHERE ${paidPromise}`,
+        WHERE ${promiseDone}`,
     },
     {
       // Nothing records when these stopped mattering; the run time stands in.

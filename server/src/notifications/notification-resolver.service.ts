@@ -2,14 +2,22 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import type { Prisma, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { utcMidnightFromDateStr } from '../common/date/tashkent';
+import {
+  tashkentDateStr,
+  tashkentDayRangeUtc,
+  tashkentDayStartUtc,
+  utcMidnightFromDateStr,
+} from '../common/date/tashkent';
 import { GROUP_DELETED } from '../groups/group-events';
+import { MIN_ALERT_DEBT } from '../payment-promises/overdue-digest';
+import type { PaymentPromiseOverduePayload } from '../payment-promises/payment-promise-cron.service';
 import { TASK_EVENTS, type TaskEventTask } from '../tasks/task-events';
 import {
   UNMARKED_LESSON_CLOSED,
   UNMARKED_LESSON_HELD,
   UNMARKED_LESSON_NOT_HELD,
 } from '../unmarked-lessons/unmarked-lesson-events';
+import { BROKEN_PROMISES_ENTITY } from './notification-events.listener';
 import { LESSON_ALERT_TYPES, lessonGroupKey } from './notification-kind';
 import { NotificationsGateway } from './notifications.gateway';
 
@@ -24,6 +32,19 @@ interface ClosableTask {
   id: string;
   companyId: number;
   status: TaskStatus;
+}
+
+/** The 09:00 list rows of one branch (`null` = promises with no branch → 'all'). */
+function brokenPromiseList(
+  companyId: number,
+  branchId: number | null,
+): Prisma.NotificationWhereInput {
+  return {
+    companyId,
+    type: 'PAYMENT_PROMISE_OVERDUE',
+    relatedEntityType: BROKEN_PROMISES_ENTITY,
+    relatedEntityId: String(branchId ?? 'all'),
+  };
 }
 
 /**
@@ -148,9 +169,11 @@ export class NotificationResolverService {
   // ---------- payments ----------
 
   /**
-   * The overdue alert is written when a promise turns BROKEN, and a BROKEN
-   * promise never turns KEPT; the debt cleared is the same test
-   * `settleKeptPromises` uses for "kept".
+   * Two shapes of the overdue alert. The old one is one row per student
+   * (`relatedEntityType 'Student'`): it closes when the debt is cleared, the
+   * same test `settleKeptPromises` uses for "kept" (a BROKEN promise never
+   * turns KEPT). The 09:00 list is one row per branch and day
+   * (`BROKEN_PROMISES_ENTITY`): it closes when nobody on it still owes.
    */
   @OnEvent('payment.received')
   async onPaymentReceived(p: {
@@ -158,16 +181,87 @@ export class NotificationResolverService {
     studentId: number;
     studentBalance: number | null;
   }): Promise<void> {
-    if (p.studentBalance === null || p.studentBalance < 0) return;
+    if (p.studentBalance !== null && p.studentBalance >= 0) {
+      await this.resolve({
+        companyId: p.companyId,
+        type: 'PAYMENT_PROMISE_OVERDUE',
+        relatedEntityType: 'Student',
+        relatedEntityId: String(p.studentId),
+      });
+    }
+    await this.closePaidLists(p.companyId, p.studentId);
+  }
+
+  /**
+   * A newer 09:00 list of a branch replaces the older ones of that branch.
+   * Heard together with the listener that creates the new rows, so the bound
+   * is the start of today: the rows of this very run are never touched,
+   * whichever handler runs first.
+   */
+  @OnEvent('payment-promise.overdue')
+  async onPromiseListSent(p: PaymentPromiseOverduePayload): Promise<void> {
     await this.resolve({
-      companyId: p.companyId,
-      type: 'PAYMENT_PROMISE_OVERDUE',
-      relatedEntityType: 'Student',
-      relatedEntityId: String(p.studentId),
+      ...brokenPromiseList(p.companyId, p.branchId),
+      createdAt: { lt: tashkentDayStartUtc(tashkentDateStr(new Date())) },
     });
   }
 
   // ---------- core ----------
+
+  /**
+   * A list is the BROKEN promises of one branch that the cron flipped on one
+   * Tashkent day (`reminderFiredAt`): the rows it wrote that morning name
+   * exactly them. It closes, for every recipient, once none of those students
+   * owes `MIN_ALERT_DEBT` any more (a smaller debt was never listed). The
+   * balances are read now, after the payment's commit, not from the event.
+   */
+  private async closePaidLists(
+    companyId: number,
+    studentId: number,
+  ): Promise<void> {
+    try {
+      const mine = await this.prisma.paymentPromise.findMany({
+        where: {
+          companyId,
+          studentId,
+          status: 'BROKEN',
+          reminderFiredAt: { not: null },
+        },
+        select: { branchId: true, reminderFiredAt: true },
+      });
+      const lists = new Map<string, { branchId: number | null; day: string }>();
+      for (const m of mine) {
+        if (!m.reminderFiredAt) continue;
+        const day = tashkentDateStr(m.reminderFiredAt);
+        lists.set(`${m.branchId ?? 'all'}:${day}`, {
+          branchId: m.branchId,
+          day,
+        });
+      }
+      for (const { branchId, day } of lists.values()) {
+        const inDay = tashkentDayRangeUtc(day);
+        const stillOwes = await this.prisma.paymentPromise.findFirst({
+          where: {
+            companyId,
+            branchId,
+            status: 'BROKEN',
+            reminderFiredAt: inDay,
+            student: { balance: { lte: -MIN_ALERT_DEBT } },
+          },
+          select: { id: true },
+        });
+        if (stillOwes) continue;
+        await this.resolve({
+          ...brokenPromiseList(companyId, branchId),
+          createdAt: inDay,
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `broken-promise list lookup failed (student ${studentId}): ${(error as Error).message}`,
+      );
+    }
+  }
 
   private resolveLesson(p: LessonDayEvent): Promise<number> {
     return this.resolve({

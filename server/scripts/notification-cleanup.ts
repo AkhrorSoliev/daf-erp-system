@@ -8,7 +8,8 @@
  *
  * It closes (`resolvedAt`) the action rows whose job was already done — closed
  * tasks, lessons with a register / an answer / a cancellation / a move, overdue
- * promises whose debt is cleared — then resolves every other action row older
+ * promises whose debt is cleared (the 09:00 lists: nobody on them still owes)
+ * — then resolves every other action row older
  * than 7 days (only a `TASK_*` row whose task is still open keeps waiting) and
  * marks unread rows older than 7 days read. Nothing is deleted. Without
  * `--apply` it is a dry run on a read-only connection (checked, else it stops)
