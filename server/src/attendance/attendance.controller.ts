@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 import { AttendanceService } from './attendance.service';
 import { QrAttendanceService } from './qr-attendance.service';
@@ -23,8 +15,8 @@ import {
   RotateQrTokenDto,
   StopQrSessionDto,
 } from './dto/qr-session.dto';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('attendance')
@@ -63,8 +55,7 @@ export class AttendanceController {
   }
 
   @Get(':groupId/dates')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('groups.view')
   async getLessonDates(
     @Param('groupId') groupId: string,
     @Query() query: AttendanceDatesQueryDto,
@@ -82,8 +73,7 @@ export class AttendanceController {
   }
 
   @Get(':groupId/calendar')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('groups.view')
   async getLessonCalendar(
     @Param('groupId') groupId: string,
     @Query() query: AttendanceDatesQueryDto,
@@ -101,8 +91,7 @@ export class AttendanceController {
   }
 
   @Get(':groupId/date/:date')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('groups.view')
   async getByDate(
     @Param('groupId') groupId: string,
     @Param('date') date: string,
@@ -124,8 +113,7 @@ export class AttendanceController {
   }
 
   @Post(':groupId/date/:date')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('attendance.mark')
   async save(
     @Param('groupId') groupId: string,
     @Param('date') date: string,
@@ -147,8 +135,7 @@ export class AttendanceController {
 
   /** «Bo'ldi» — the late register of a lesson nobody marked (ADR-0054). */
   @Post(':groupId/date/:date/late')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('attendance.fix')
   async saveLate(
     @Param('groupId') groupId: string,
     @Param('date') date: string,
@@ -170,8 +157,7 @@ export class AttendanceController {
 
   /** «Bo'lmadi» — cancel with a refund, or move (spec 2026-09-29 §3.5). */
   @Post(':groupId/date/:date/not-held')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('attendance.fix')
   async notHeld(
     @Param('groupId') groupId: string,
     @Param('date') date: string,
@@ -192,8 +178,7 @@ export class AttendanceController {
   }
 
   @Get(':groupId/stats')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('groups.view')
   async getStats(
     @Param('groupId') groupId: string,
     @Query() query: AttendanceStatsQueryDto,
@@ -211,8 +196,7 @@ export class AttendanceController {
   }
 
   @Get(':groupId/lesson-sequence')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('groups.view')
   async getLessonSequence(
     @Param('groupId') groupId: string,
     @CurrentUser('id') userId: number,
@@ -226,8 +210,7 @@ export class AttendanceController {
   // ── QR Davomat ──
 
   @Post(':groupId/qr-session/start')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('attendance.mark')
   async startQrSession(
     @Param('groupId') groupId: string,
     @Body() dto: StartQrSessionDto,
@@ -246,8 +229,7 @@ export class AttendanceController {
   }
 
   @Post(':groupId/qr-session/rotate')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('attendance.mark')
   async rotateQrToken(
     @Param('groupId') groupId: string,
     @Body() dto: RotateQrTokenDto,
@@ -264,8 +246,7 @@ export class AttendanceController {
   }
 
   @Post(':groupId/qr-session/stop')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator', 'Teacher')
+  @Can('attendance.mark')
   async stopQrSession(
     @Param('groupId') groupId: string,
     @Body() dto: StopQrSessionDto,
