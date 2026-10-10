@@ -124,10 +124,13 @@ export function RefundDialog({
       onOpenChange(false);
       resetForm();
       onSuccess?.();
-      invalidateRefunds(queryClient);
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, "Pulni qaytarishda xatolik"));
     } finally {
+      // Financial data is never trusted after a write attempt: refetch on
+      // success and on refusal alike (the server may have answered 409/400
+      // because the balance moved).
+      invalidateRefunds(queryClient);
       setSubmitting(false);
     }
   };
