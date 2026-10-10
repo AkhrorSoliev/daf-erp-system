@@ -77,7 +77,7 @@
 |---|---|---|
 | `server/src/common/date/bank-days.ts` (+spec) | new, pure | 1 |
 | `server/src/holidays/holiday-date-set.ts` (+new spec) | `termHolidays` | 1 |
-| `server/prisma/schema.prisma`, `server/prisma/migrations/20261010120000_b2b_refund_request_balance_notice/migration.sql` | Refund columns, `BalanceNotice` | 2 |
+| `server/prisma/schema.prisma`, `server/prisma/migrations/20261010180000_b2b_refund_request_balance_notice/migration.sql` | Refund columns, `BalanceNotice` | 2 |
 | `server/src/refunds/refund-due-date.ts`, `refund-view.ts` | new | 3 (view grows in 4) |
 | `server/src/refunds/refunds-create.service.ts` (+spec), `dto/quick-refund.dto.ts` | request flow | 3 |
 | `server/src/refunds/refunds-eligibility.service.ts` (+spec) | preview `dueDate`, prior sums; `findAll` | 3, 4 |
@@ -333,7 +333,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `server/prisma/schema.prisma` (models `Refund`, `User`, `Student`, `CashAccount`; new enum + model)
-- Create: `server/prisma/migrations/20261010120000_b2b_refund_request_balance_notice/migration.sql`
+- Create: `server/prisma/migrations/20261010180000_b2b_refund_request_balance_notice/migration.sql`
 
 **Interfaces:**
 - Consumes: nothing.
@@ -415,7 +415,7 @@ model BalanceNotice {
 }
 ```
 
-- [ ] **Step 4: Write the migration** — `server/prisma/migrations/20261010120000_b2b_refund_request_balance_notice/migration.sql`:
+- [ ] **Step 4: Write the migration** — `server/prisma/migrations/20261010180000_b2b_refund_request_balance_notice/migration.sql`:
 
 ```sql
 -- B2b (ADR-0075): a refund is a request until the money is handed over, and a
@@ -484,7 +484,7 @@ Expected: «The schema at prisma/schema.prisma is valid», client generated, typ
 - [ ] **Step 7: Commit**
 
 ```bash
-git add server/prisma/schema.prisma server/prisma/migrations/20261010120000_b2b_refund_request_balance_notice/migration.sql
+git add server/prisma/schema.prisma server/prisma/migrations/20261010180000_b2b_refund_request_balance_notice/migration.sql
 git commit -m "feat(refunds): schema for refund requests and balance notices
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
