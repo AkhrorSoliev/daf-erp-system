@@ -19,6 +19,9 @@ import { staffChatOf, taskOpenUrl } from './task-telegram-view';
 /** A transient failure with no `retry_after` is tried again after this long. */
 export const TRANSIENT_RETRY_S = 60;
 
+/** The `skipped` reason of a bot that never started; the outbox kills such rows. */
+export const BOT_OFF = 'bot off';
+
 export type TgSendResult =
   | { status: 'sent'; messageId: number }
   | { status: 'skipped'; reason: string }
@@ -59,7 +62,7 @@ export class TaskTelegramSender {
   ): Promise<TgSendResult> {
     // No TELEGRAM_BOT_TOKEN: the bot never started.
     const client = this.telegram.getBot()?.telegram;
-    if (!client) return { status: 'skipped', reason: 'bot off' };
+    if (!client) return { status: 'skipped', reason: BOT_OFF };
     const chat = await staffChatOf(this.prisma, userId);
     if (!chat) return { status: 'skipped', reason: 'no chat' };
     const msg = renderTaskMessage(view, notice, userId, {
