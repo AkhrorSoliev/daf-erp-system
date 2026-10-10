@@ -51,25 +51,27 @@ const TIPPFEHLER_MIN_LAENGE = 5;
  * and one swap of neighbours ("deustch") each cost one.
  */
 export function editAbstand(a: string, b: string): number {
-  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) =>
-    Array.from({ length: b.length + 1 }, (_, j) =>
-      i === 0 ? j : j === 0 ? i : 0,
-    ),
-  );
+  // One flat table: distractor ranking calls this tens of thousands of
+  // times per session, and a nested array per call was most of its cost.
+  const breite = b.length + 1;
+  const d = new Int32Array((a.length + 1) * breite);
+  for (let i = 0; i <= a.length; i += 1) d[i * breite] = i;
+  for (let j = 0; j <= b.length; j += 1) d[j] = j;
   for (let i = 1; i <= a.length; i += 1) {
     for (let j = 1; j <= b.length; j += 1) {
       const kosten = a[i - 1] === b[j - 1] ? 0 : 1;
-      d[i][j] = Math.min(
-        d[i - 1][j] + 1,
-        d[i][j - 1] + 1,
-        d[i - 1][j - 1] + kosten,
+      let wert = Math.min(
+        d[(i - 1) * breite + j] + 1,
+        d[i * breite + j - 1] + 1,
+        d[(i - 1) * breite + j - 1] + kosten,
       );
       if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
-        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+        wert = Math.min(wert, d[(i - 2) * breite + j - 2] + 1);
       }
+      d[i * breite + j] = wert;
     }
   }
-  return d[a.length][b.length];
+  return d[a.length * breite + b.length];
 }
 
 /**

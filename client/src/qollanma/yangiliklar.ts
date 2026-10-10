@@ -7,6 +7,33 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "Filial chegarasi mustahkamlandi",
+    matn: "Filial direktori va administrator endi faqat o'z filialining ma'lumotini ko'radi va o'zgartiradi: o'quvchi balansini tuzatish, guruh jadvali, lidlar, oylik ro'yxati va ustoz stavkalari boshqa filial bo'yicha ochilmaydi. Yangi filialni faqat CEO ochadi. O'z oyligini «to'landi» deb belgilash va o'ziga avans yozishni endi boshqa rahbar qiladi. Ustoz stavkalari taymlaynda faqat oylikni ko'radiganlarga ko'rinadi. Bir nechta filialga biriktirilgan (CEO bo'lmagan) xodim Excel hisobotini endi bitta filial bo'yicha oladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "boshlash", sahifa: "rollar-va-huquqlar" },
+  },
+  {
+    sana: "2026-10-10",
+    sarlavha: "Bayram endi filialniki ham bo'ladi",
+    matn: "Sozlamalar → «Dam olish kunlari» da bayram butun markaz uchun yoki bitta filial uchun kiritiladi. Butun markaz bayramini faqat CEO qo'shadi, tahrirlaydi va o'chiradi. Filial direktori va administrator faqat o'z filiali bayramini qo'shadi va boshqaradi: bunday bayram faqat shu filialda davomatni yopadi va shu filial guruhlarining tugash sanasini suradi. Ro'yxatda har bayram yonida «Butun markaz» yoki filial nomi turadi; direktor va administrator boshqa filial bayramlarini ko'rmaydi. Bayram kimniki ekanini keyin o'zgartirib bo'lmaydi: kerak bo'lsa, o'chirib, qaytadan qo'shing.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "guruhlar", sahifa: "bayramlar" },
+  },
+  {
+    sana: "2026-10-10",
+    sarlavha: "DaF ilovasida A1 4-unit «Essen und Trinken» va yangi «Eshitib gap tuzish» mashqi",
+    matn: "O'quvchi ilovasida A1 kursining 4-uniti ochildi: ovqat, ichimlik, do'kon va restoran mavzusidagi 188 so'z, 149 gap va 9 ta dialog. Dialoglar hayotdagidek: fonda bozor, oshxona yoki restoran shovqini, eshik va muzlatkich ovozi eshitiladi, boshqa xonadan gapirgan odamning ovozi uzoqdan keladi. Har dialogning yozma matnida sahna izohi bor («Ertalab. Jonas oshxonada», «boshqa xonadan»), har dialogga butun hikoyani ko'rsatadigan bitta rasm chizilgan. Ovqat va idish so'zlarining 74 tasiga rasm bor. Yangi mashq — «Eshitib gap tuzish»: o'quvchi nemischa gapni eshitadi va uni so'zlardan yig'adi.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
+    sana: "2026-10-10",
+    sarlavha: "Botdan guruhga yozilish endi administrator tasdig'i bilan",
+    matn: "Guruhning QR kodi yoki havolasi orqali botda ro'yxatdan o'tgan odam endi darhol o'quvchi bo'lmaydi: u so'rov yuboradi. Filial administratorlariga «Yangi o'quvchi so'rovi» topshirig'i chiqadi (qo'ng'iroqchada va Telegram botda ham). Topshiriq varag'ida o'quvchining rasmi, telefoni, Telegram nomi va tizim topgan belgilar (avvalgi lid, arxivdagi karta, guruhda shu ismli o'quvchi) turadi. «Tasdiqlash» bosilganda karta ochiladi, o'quvchi guruhga qo'shiladi, oylik pul shu kundan hisoblanadi va login-parol botga boradi; kerak bo'lsa boshqa guruhni tanlash mumkin. «Rad etish» da sabab yoziladi — uni faqat xodimlar ko'radi, o'quvchiga sababsiz xabar boradi. Bir kundan ortiq javobsiz so'rovlar 21:00 hisobotida sanaladi, 7 kun ichida javob berilmagan so'rov o'zi yopiladi. Bot endi yopilgan guruhga va ishlamayotgan ustozga yozmaydi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "yangi-oquvchi" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Bosh sahifada ham lid voronkasi",
     matn: "Bosh sahifadagi «Lid voronkasi · shu oy» qatori endi «Lidlar hisoboti»dagi voronkaning kichik nusxasi: o'sha ranglar, blok kengligi odam soniga teng, bloklar orasida necha foiz o'tgani. Chapda «Liddan to'lovgacha» va «To'lamagan faol o'quvchi» qoladi. Bosqichni bosganda «Lidlar hisoboti» ochiladi.",
     rollar: [1, 2, 3],

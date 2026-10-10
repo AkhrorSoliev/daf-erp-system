@@ -23,6 +23,7 @@ import { SettingsPageHeader } from "./settings-page-header";
 import { BranchRowActions } from "./branch-row-actions";
 import { EditBranchDrawer } from "./edit-branch-drawer";
 import { useEditBranch } from "@/hooks/use-edit-branch";
+import { useAuth } from "@/hooks/use-auth";
 import type { Branch } from "@/hooks/use-edit-branch";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
@@ -47,6 +48,11 @@ export function BranchesSettingsClient() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const openAddDrawer = useEditBranch((s) => s.openAddDrawer);
+  // Only the CEO opens a branch (CEO decision, 10.10.2026; the server refuses
+  // everyone else). Identity, not a capability: `settings.branches` also lets
+  // a Branch Director edit their own branch on this page.
+  const user = useAuth((s) => s.user);
+  const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setFilter("search", value);
@@ -80,15 +86,17 @@ export function BranchesSettingsClient() {
         title="Filiallar"
         description="Filiallarni boshqarish va yangi filiallar qo'shish"
         action={
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="sm" onClick={openAddDrawer}>
-                <Plus className="mr-1.5 h-4 w-4" />
-                Yangi filial
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Yangi filial qo&apos;shish</TooltipContent>
-          </Tooltip>
+          isCeo ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" onClick={openAddDrawer}>
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Yangi filial
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Yangi filial qo&apos;shish</TooltipContent>
+            </Tooltip>
+          ) : undefined
         }
       />
 

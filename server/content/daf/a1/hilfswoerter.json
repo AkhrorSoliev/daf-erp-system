@@ -910,6 +910,206 @@
       "wort": "Fall",
       "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
       "abSection": "u11-s4"
+    },
+    {
+      "wort": "keine",
+      "grund": "'kein' ning ayol jinsi va ko'plik shakli — 'Wir haben keine Butter.' (u04-s1)",
+      "abSection": "u04-s1"
+    },
+    {
+      "wort": "kaufe",
+      "grund": "'kaufen' fe'lining shakli — 'Ich kaufe die Melone.' (u04-s2)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "kaufst",
+      "grund": "'kaufen' fe'lining shakli (du) (u04-s2)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "kauft",
+      "grund": "'kaufen' fe'lining shakli — 'Mia kauft zwei Dosen Tomaten.' (u04-s2)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "kostet",
+      "grund": "'kosten' fe'lining shakli — 'Was kostet das?' (u04-s2)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "stimmt",
+      "grund": "'stimmen' fe'lining shakli — 'Stimmt so!' (u04-s2)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "esse",
+      "grund": "'essen' fe'lining shakli — 'Ich esse gern Pizza.' (u04-s3)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "isst",
+      "grund": "'essen' fe'lining shakli — 'Du isst gern Fisch.' (u04-s3)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "esst",
+      "grund": "'essen' fe'lining shakli (ihr) (u04-s3)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "trinke",
+      "grund": "'trinken' fe'lining shakli — 'Ich trinke lieber Wasser.' (u04-s3)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "trinkst",
+      "grund": "'trinken' fe'lining shakli — 'Trinkst du gern Saft?' (u04-s3)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "trinkt",
+      "grund": "'trinken' fe'lining shakli — 'Was trinkt Mia gern?' (u04-s3)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "mag",
+      "grund": "'mögen' fe'lining shakli — 'Cola mag ich nicht.' (u04-s3)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "magst",
+      "grund": "'mögen' fe'lining shakli — 'Magst du Sushi?' (u04-s3)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "schmeckt",
+      "grund": "'schmecken' fe'lining shakli — 'Das schmeckt gut!' (u04-s3)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "probiere",
+      "grund": "'probieren' fe'lining shakli — 'Ich probiere das Sushi.' (u04-s3)",
+      "abSection": "u04-s3"
+    },
+    {
+      "wort": "frühstückst",
+      "grund": "'frühstücken' fe'lining shakli — 'Um wie viel Uhr frühstückst du?' (u04-s4)",
+      "abSection": "u04-s4"
+    },
+    {
+      "wort": "frühstückt",
+      "grund": "'frühstücken' fe'lining shakli (ihr) (u04-s4)",
+      "abSection": "u04-s4"
+    },
+    {
+      "wort": "möchte",
+      "grund": "'möchten' shakli — 'Ich möchte die Tomatensuppe.' (u04-s5)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "möchtest",
+      "grund": "'möchten' shakli — 'Was möchtest du trinken?' (u04-s5)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "hätte",
+      "grund": "'Ich hätte gern …' buyurtma qolipi (u04-s5)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "bestellt",
+      "grund": "'bestellen' fe'lining shakli — 'Was bestellt Julia?' (u04-s5)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "bringt",
+      "grund": "'bringen' fe'lining shakli — 'Der Kellner bringt die Suppe.' (u04-s5)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "zahle",
+      "grund": "'zahlen' fe'lining shakli — 'Ich zahle bar.' (u04-s5)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "zahlt",
+      "grund": "'zahlen' fe'lining shakli — 'Wer zahlt?' (u04-s5)",
+      "abSection": "u04-s5"
+    },
+    {
+      "wort": "einen",
+      "grund": "noaniq artiklning tushum kelishigi (erkak jinsi) — 'Ich brauche einen Topf.' (u04-s6)",
+      "abSection": "u04-s6"
+    },
+    {
+      "wort": "keinen",
+      "grund": "'kein' ning tushum kelishigi (erkak jinsi) — 'Ich trinke keinen Alkohol.' (u04-s6)",
+      "abSection": "u04-s6"
+    },
+    {
+      "wort": "brauche",
+      "grund": "'brauchen' fe'lining shakli — 'Ich brauche einen Topf.' (u04-s6)",
+      "abSection": "u04-s6"
+    },
+    {
+      "wort": "brauchst",
+      "grund": "'brauchen' fe'lining shakli — 'Brauchst du mehr Salz?' (u04-s6)",
+      "abSection": "u04-s6"
+    },
+    {
+      "wort": "kochst",
+      "grund": "'kochen' fe'lining shakli — 'Was kochst du heute?' (u04-s6)",
+      "abSection": "u04-s6"
+    },
+    {
+      "wort": "schneide",
+      "grund": "'schneiden' fe'lining shakli — 'Ich schneide die Zwiebeln.' (u04-s6)",
+      "abSection": "u04-s6"
+    },
+    {
+      "wort": "schneidet",
+      "grund": "'schneiden' fe'lining shakli — 'Was schneidet Helga?' (u04-s6)",
+      "abSection": "u04-s6"
+    },
+    {
+      "wort": "schäle",
+      "grund": "'schälen' fe'lining shakli — 'Ich schäle die Karotten.' (u04-s6)",
+      "abSection": "u04-s6"
+    },
+    {
+      "wort": "grillst",
+      "grund": "'grillen' fe'lining shakli — 'Was grillst du noch?' (u04-s6)",
+      "abSection": "u04-s6"
+    },
+    {
+      "wort": "grillt",
+      "grund": "'grillen' fe'lining shakli — 'Was grillt Thomas auch?' (u04-s6)",
+      "abSection": "u04-s6"
+    },
+    {
+      "wort": "hm",
+      "grund": "undov so'z — o'ylanish: 'Hm... Pizza?' (u04-s1)",
+      "abSection": "u04-s1"
+    },
+    {
+      "wort": "oh",
+      "grund": "undov so'z — hayrat: 'Oh, Melonen aus Usbekistan!' (u04-s1)",
+      "abSection": "u04-s1"
+    },
+    {
+      "wort": "mama",
+      "grund": "murojaat — Mia onasi Helgaga: 'Mama!' (u04-s1)",
+      "abSection": "u04-s1"
+    },
+    {
+      "wort": "dran",
+      "grund": "'drankommen' fe'lining ajraladigan qismi: 'Wer kommt dran?' (u04-s2)",
+      "abSection": "u04-s2"
+    },
+    {
+      "wort": "koche",
+      "grund": "'kochen' fe'lining shakli — 'Heute koche ich ein Gericht aus Usbekistan!' (u04-s6)",
+      "abSection": "u04-s6"
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { richtigeAntwort } from './richtige-antwort';
+import { richtigeAntwort, textAntwort } from './richtige-antwort';
 
 describe('richtigeAntwort — a word`s other spellings', () => {
   const tschuess = { de: 'tschüss', uz: 'xayr', akzeptiert: ['tschüs'] };
@@ -41,5 +41,30 @@ describe('richtigeAntwort — a word`s other spellings', () => {
       richtig: 'ich',
       akzeptiert: [],
     });
+  });
+});
+
+describe('SATZ_HOEREN — checked exactly like SATZ_BAUEN', () => {
+  const satz = {
+    de: 'Ich wohne in Deutschland.',
+    uz: 'Men Germaniyada yashayman.',
+    akzeptiert: ['In Deutschland wohne ich.'],
+  };
+
+  it('has the same answer and accepted orders', () => {
+    expect(richtigeAntwort('SATZ_HOEREN', satz)).toEqual(
+      richtigeAntwort('SATZ_BAUEN', satz),
+    );
+  });
+
+  it('an accepted other word order counts as correct', () => {
+    // Never punish a correct answer: the student heard one order and built
+    // another correct German sentence from the same tiles.
+    expect(
+      textAntwort('SATZ_HOEREN', satz, 'In Deutschland wohne Ich').isCorrect,
+    ).toBe(true);
+    expect(
+      textAntwort('SATZ_HOEREN', satz, 'Wohne ich in Deutschland').isCorrect,
+    ).toBe(false);
   });
 });

@@ -26,7 +26,6 @@ import { SalaryStaffConfigQueryDto } from './dto/salary-staff-config-query.dto';
 import { SalaryMonthlyQueryDto } from './dto/salary-monthly-query.dto';
 import { SalaryCenterTopUpService } from './salary-center-topup.service';
 import { SalaryStaffConfigService } from './salary-staff-config.service';
-import { BatchPayDto } from './dto/batch-pay.dto';
 import { SettleMonthDto } from './dto/settle-month.dto';
 import { CalculateSalaryDto } from './dto/calculate-salary.dto';
 import { parseTashkentDateStart } from './shared/resolve-current-period';
@@ -68,7 +67,7 @@ export class SalaryController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.salaryService.getAccruals(userId, companyId);
+    return this.salaryService.getAccruals(userId, companyId, userId);
   }
 
   @Get('me/current-cycle/breakdown')
@@ -107,8 +106,10 @@ export class SalaryController {
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    // asUserId enforces ownership — teacher only sees their own.
-    return this.breakdownService.getPaymentBreakdown(id, companyId, userId);
+    // `ownerId` enforces ownership: the payee sees only their own payslip.
+    return this.breakdownService.getPaymentBreakdown(id, companyId, {
+      ownerId: userId,
+    });
   }
 
   // =========================================================================
@@ -127,9 +128,10 @@ export class SalaryController {
   @Can('salary.view')
   getConfig(
     @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser('id') performedById: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.salaryService.getConfig(userId, companyId);
+    return this.salaryService.getConfig(userId, companyId, performedById);
   }
 
   /**
@@ -140,22 +142,32 @@ export class SalaryController {
   @Can('salary.view')
   getConfigsForUsers(
     @Query('userIds') userIdsParam: string | undefined,
+    @CurrentUser('id') performedById: number,
     @CurrentUser('companyId') companyId: number,
   ) {
     const userIds = (userIdsParam ?? '')
       .split(',')
       .map((s) => parseInt(s.trim(), 10))
       .filter((n) => Number.isFinite(n) && n > 0);
-    return this.salaryService.getConfigsForUsers(userIds, companyId);
+    return this.salaryService.getConfigsForUsers(
+      userIds,
+      companyId,
+      performedById,
+    );
   }
 
   @Get('config-history/:userId')
   @Can('salary.view')
   getConfigHistory(
     @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser('id') performedById: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.salaryService.getConfigHistory(userId, companyId);
+    return this.salaryService.getConfigHistory(
+      userId,
+      companyId,
+      performedById,
+    );
   }
 
   @Post('config')
@@ -212,9 +224,10 @@ export class SalaryController {
   @Can('teachers.view')
   getTimeline(
     @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser('id') performedById: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.timelineService.getTimeline(userId, companyId);
+    return this.timelineService.getTimeline(userId, companyId, performedById);
   }
 
   // =========================================================================
@@ -238,16 +251,17 @@ export class SalaryController {
   }
 
   // =========================================================================
-  // ACCRUALS — admin view of any teacher's accruals.
+  // ACCRUALS — a teacher's accruals, inside the caller's payroll scope.
   // =========================================================================
 
   @Get('accruals/:userId')
   @Can('salary.view')
   getAccruals(
     @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser('id') performedById: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.salaryService.getAccruals(userId, companyId);
+    return this.salaryService.getAccruals(userId, companyId, performedById);
   }
 
   // =========================================================================
@@ -258,9 +272,10 @@ export class SalaryController {
   @Can('salary.view')
   findPayments(
     @Query() query: SalaryPaymentQueryDto,
+    @CurrentUser('id') performedById: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.salaryService.findPayments(query, companyId);
+    return this.salaryService.findPayments(query, companyId, performedById);
   }
 
   @Get('matrix')
@@ -462,9 +477,12 @@ export class SalaryController {
   @Can('salary.view')
   getPaymentBreakdown(
     @Param('id') id: string,
+    @CurrentUser('id') performedById: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.breakdownService.getPaymentBreakdown(id, companyId);
+    return this.breakdownService.getPaymentBreakdown(id, companyId, {
+      performedById,
+    });
   }
 
   /**
@@ -549,23 +567,5 @@ export class SalaryController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.salaryService.payPayment(id, userId, companyId);
-  }
-
-  @Post('payments/batch-pay')
-  @Can('salary.pay')
-  batchPay(
-    @Body() dto: BatchPayDto,
-    @CurrentUser('id') userId: number,
-    @CurrentUser('companyId') companyId: number,
-  ) {
-    return this.salaryService.batchPay(
-      {
-        companyId,
-        branchId: dto.branchId,
-        userIds: dto.userIds,
-        statuses: dto.statuses,
-      },
-      userId,
-    );
   }
 }

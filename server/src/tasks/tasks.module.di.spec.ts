@@ -5,6 +5,7 @@ import { DebtAgeModule } from '../common/finance/debt-age.module';
 import { EntityHistoryModule } from '../common/entity-history';
 import { StatusHistoryModule } from '../common/status';
 import { StudentOriginModule } from '../common/student-origin';
+import { PermissionsModule } from '../common/permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisModule } from '../redis/redis.module';
@@ -36,6 +37,9 @@ describe('TasksModule — DI graph', () => {
         EntityHistoryModule,
         StatusHistoryModule,
         StudentOriginModule,
+        // Global in `AppModule`: `TeacherTimelineService` (SalaryModule) asks
+        // `PermissionsService.has('salary.view')`.
+        PermissionsModule,
         TasksModule,
       ],
     })

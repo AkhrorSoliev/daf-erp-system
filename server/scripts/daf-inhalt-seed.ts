@@ -22,6 +22,7 @@ import type {
   WoerterFile,
 } from '../src/daf/inhalt/unit-inhalt.types';
 import type { DialogAudioManifest } from '../src/daf/inhalt/dialog-audio';
+import type { SatzAudioManifest } from '../src/daf/inhalt/satz-audio';
 import type { BildManifest } from '../src/daf/media/bild-keys';
 import type { BildPlan } from '../src/daf/inhalt/bild-plan';
 
@@ -68,7 +69,9 @@ async function main(): Promise<void> {
       ? (JSON.parse(readFileSync(join(a1, name), 'utf8')) as T)
       : {};
   const bilder = readOptional<BildManifest>('bilder.json');
+  const satzAudio = readOptional<SatzAudioManifest>('satz-audio.json');
   const bildPlan = readOptional<BildPlan>('bild-plan.json');
+  const dialogBilder = readOptional<BildManifest>('dialog-bilder.json');
 
   const files = {
     woerter: read<WoerterFile>('woerter.json'),
@@ -78,8 +81,10 @@ async function main(): Promise<void> {
     redemittel: read<RedemittelFile>('redemittel.json'),
     audio,
     dialogAudio,
+    satzAudio,
     bilder,
     bildPlan,
+    dialogBilder,
   };
 
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });

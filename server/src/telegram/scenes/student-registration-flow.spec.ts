@@ -32,6 +32,8 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
   let events: { emitAsync: jest.Mock };
 
   beforeEach(() => {
+    // Every write goes through the transaction: `prisma` has nothing else,
+    // so a write outside it would throw here.
     tx = {
       student: {
         create: jest.fn().mockResolvedValue({
@@ -40,10 +42,8 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
           lastName: 'Kamolov',
           phone: '901112233',
         }),
+        update: jest.fn().mockResolvedValue({}),
       },
-    };
-    prisma = {
-      $transaction: jest.fn(async (cb: (t: unknown) => unknown) => cb(tx)),
       enrollment: {
         create: jest
           .fn()
@@ -54,7 +54,9 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ id: 20001 }),
       },
-      student: { update: jest.fn().mockResolvedValue({}) },
+    };
+    prisma = {
+      $transaction: jest.fn(async (cb: (t: unknown) => unknown) => cb(tx)),
     };
     leadOrigin = {
       recordSelfSignupOrigin: jest
@@ -85,7 +87,7 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
       jest.useRealTimers();
     }
 
-    expect(prisma.enrollment.create).toHaveBeenCalledWith({
+    expect(tx.enrollment.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         groupId: 'group-1',
         // 20:30 UTC on 24.09 is already 25.09 in Tashkent.
@@ -138,28 +140,199 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
     );
 
     await expect(run()).rejects.toThrow('lid yozilmadi');
-    // Tranzaksiyadan keyingi hech narsa ishlamaydi — guruhga yozish ham,
-    // login yaratish ham. Real Prisma o'quvchi qatorini ham orqaga qaytaradi.
-    expect(prisma.enrollment.create).not.toHaveBeenCalled();
-    expect(prisma.user.create).not.toHaveBeenCalled();
+    // Keyingi hech narsa ishlamaydi — guruhga yozish ham, login yaratish ham.
+    // Real Prisma o'quvchi qatorini ham orqaga qaytaradi.
+    expect(tx.enrollment.create).not.toHaveBeenCalled();
+    expect(tx.user.create).not.toHaveBeenCalled();
   });
 
   it("kirish nomi bo'sh bo'lsa telefon yoziladi", async () => {
     await run();
-    expect(prisma.user.create.mock.calls[0][0].data.login).toBe('901112233');
+    expect(tx.user.create.mock.calls[0][0].data.login).toBe('901112233');
   });
 
   it("kirish nomi band bo'lsa ham o'quvchi hisobi ochiladi — nomsiz", async () => {
     // Prodda 4 o'quvchi aynan shu sabab kirish hisobisiz qolgan edi.
-    prisma.user.findFirst.mockResolvedValue({ id: 10018 });
+    tx.user.findFirst.mockResolvedValue({ id: 10018 });
 
     await run();
 
-    expect(prisma.user.create).toHaveBeenCalledTimes(1);
-    expect(prisma.user.create.mock.calls[0][0].data.login).toBeNull();
-    expect(prisma.student.update).toHaveBeenCalledWith({
+    expect(tx.user.create).toHaveBeenCalledTimes(1);
+    expect(tx.user.create.mock.calls[0][0].data.login).toBeNull();
+    expect(tx.student.update).toHaveBeenCalledWith({
       where: { id: 11094 },
       data: { userId: 20001 },
     });
+  });
+
+  it('runs the caller step inside the card transaction, with the new id', async () => {
+    const inTx = jest.fn().mockResolvedValue(undefined);
+
+    await registerStudentFromTelegram(
+      prisma,
+      history,
+      leadOrigin as never,
+      data,
+      '555000',
+      events,
+      { actorId: 10002, inTx },
+    );
+
+    expect(inTx).toHaveBeenCalledWith(tx, 11094);
+  });
+
+  it('writes nothing after the transaction when the caller step refuses', async () => {
+    const inTx = jest.fn().mockRejectedValue(new Error('allaqachon'));
+
+    await expect(
+      registerStudentFromTelegram(
+        prisma,
+        history,
+        leadOrigin as never,
+        data,
+        '555000',
+        events,
+        { actorId: 10002, inTx },
+      ),
+    ).rejects.toThrow('allaqachon');
+    expect(tx.enrollment.create).not.toHaveBeenCalled();
+    expect(tx.user.create).not.toHaveBeenCalled();
+    expect(history.recordCreate).not.toHaveBeenCalled();
+    expect(events.emitAsync).not.toHaveBeenCalled();
+  });
+
+  it('writes the group, its state log and the account in the card transaction', async () => {
+    await run();
+
+    expect(tx.enrollment.create).toHaveBeenCalledTimes(1);
+    expect(tx.enrollmentStateLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        enrollmentId: 'enr-1',
+        status: 'ACTIVE',
+      }),
+    });
+    expect(tx.user.create).toHaveBeenCalledTimes(1);
+    expect(tx.student.update).toHaveBeenCalledWith({
+      where: { id: 11094 },
+      data: { userId: 20001 },
+    });
+  });
+
+  it('a failing account leaves nothing after the card: no history, no charge, no commit signal', async () => {
+    // A login collision or a dropped connection while the account is opened:
+    // the card, its group and its state log were written on `tx`, so the
+    // rollback takes them too, and nothing after the commit runs.
+    tx.user.create.mockRejectedValue(new Error('hisob ochilmadi'));
+    const onCommit = jest.fn();
+
+    await expect(
+      registerStudentFromTelegram(
+        prisma,
+        history,
+        leadOrigin as never,
+        data,
+        '555000',
+        events,
+        { actorId: 10002, inTx: jest.fn(), onCommit },
+      ),
+    ).rejects.toThrow('hisob ochilmadi');
+    expect(tx.enrollment.create).toHaveBeenCalledTimes(1);
+    expect(tx.enrollmentStateLog.create).toHaveBeenCalledTimes(1);
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(history.recordCreate).not.toHaveBeenCalled();
+    expect(events.emitAsync).not.toHaveBeenCalled();
+  });
+
+  it('writes the four history rows in the card transaction, before the commit', async () => {
+    const onCommit = jest.fn();
+
+    await registerStudentFromTelegram(
+      prisma,
+      history,
+      leadOrigin as never,
+      data,
+      '555000',
+      events,
+      { onCommit },
+    );
+
+    expect(
+      history.recordCreate.mock.calls.map(
+        ([row]: [{ entityType: string; newValues: { action?: string } }]) => [
+          row.entityType,
+          row.newValues.action,
+        ],
+      ),
+    ).toEqual([
+      ['Student', 'TELEGRAM_ROYXATDAN_OTDI'],
+      ['Student', 'GURUHGA_QOSHILDI'],
+      ['Enrollment', undefined],
+      ['Group', 'OQUVCHI_QOSHILDI'],
+    ]);
+    for (const [row] of history.recordCreate.mock.calls) {
+      expect(row.tx).toBe(tx);
+      expect(row.companyId).toBe(DEFAULT_COMPANY_ID);
+    }
+    const lastRow = Math.max(...history.recordCreate.mock.invocationCallOrder);
+    expect(lastRow).toBeLessThan(onCommit.mock.invocationCallOrder[0]);
+  });
+
+  it('signals the commit before the charge event', async () => {
+    const onCommit = jest.fn();
+
+    await registerStudentFromTelegram(
+      prisma,
+      history,
+      leadOrigin as never,
+      data,
+      '555000',
+      events,
+      { onCommit },
+    );
+
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit.mock.invocationCallOrder[0]).toBeLessThan(
+      events.emitAsync.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('a failing history row rolls the card back: no commit signal, no charge', async () => {
+    // It used to fail after the commit, and the approving administrator got a
+    // 500 for a card that existed while the person never got the password.
+    history.recordCreate.mockRejectedValueOnce(new Error('tarix yozilmadi'));
+    const onCommit = jest.fn();
+
+    await expect(
+      registerStudentFromTelegram(
+        prisma,
+        history,
+        leadOrigin as never,
+        data,
+        '555000',
+        events,
+        { actorId: 10002, inTx: jest.fn(), onCommit },
+      ),
+    ).rejects.toThrow('tarix yozilmadi');
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(events.emitAsync).not.toHaveBeenCalled();
+  });
+
+  it('records the approving administrator on the lead and on every history row', async () => {
+    await registerStudentFromTelegram(
+      prisma,
+      history,
+      leadOrigin as never,
+      data,
+      '555000',
+      events,
+      { actorId: 10002 },
+    );
+
+    expect(leadOrigin.recordSelfSignupOrigin.mock.calls[0][1].userId).toBe(
+      10002,
+    );
+    for (const [row] of history.recordCreate.mock.calls) {
+      expect(row.changedById).toBe(10002);
+    }
   });
 });

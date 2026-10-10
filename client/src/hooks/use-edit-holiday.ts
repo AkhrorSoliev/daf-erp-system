@@ -5,6 +5,9 @@ export interface Holiday {
   name: string;
   date: string;
   endDate: string;
+  /** null = the whole centre's holiday (CEO only); a number = one branch's. */
+  branchId: number | null;
+  branchName: string | null;
 }
 
 type DrawerMode = "add" | "edit";

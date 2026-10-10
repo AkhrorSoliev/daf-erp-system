@@ -16,6 +16,7 @@ import { PrismaModule } from '../src/prisma/prisma.module';
 import { EntityHistoryModule } from '../src/common/entity-history/entity-history.module';
 import { StatusHistoryModule } from '../src/common/status/status-history.module';
 import { RedisModule } from '../src/redis/redis.module';
+import { PermissionsModule } from '../src/common/permissions/permissions.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ReportsModule } from '../src/reports/reports.module';
 import { SalaryModule } from '../src/salary/salary.module';
@@ -29,10 +30,12 @@ import { reportBranchIdsForGroup } from '../src/telegram-groups/group-report-sco
     PrismaModule,
     // @Global() still has to be imported ONCE to be registered. AppModule
     // does that; this context has to repeat it for every global the report's
-    // dependency tree reaches (cash accounts, holidays, the expectation cache).
+    // dependency tree reaches (cash accounts, holidays, the expectation cache,
+    // `PermissionsService` for the teacher timeline inside `SalaryModule`).
     EntityHistoryModule,
     StatusHistoryModule,
     RedisModule,
+    PermissionsModule,
     ReportsModule,
     SalaryModule,
   ],
@@ -69,7 +72,9 @@ class PreviewModule {}
     if (!g.companyId) continue;
     const branchIds = reportBranchIdsForGroup(g);
     const built = await svc.build(g.companyId, branchIds);
-    const scope = branchIds ? `filial ${branchIds.join(',')}` : 'barcha filiallar';
+    const scope = branchIds
+      ? `filial ${branchIds.join(',')}`
+      : 'barcha filiallar';
     console.log(
       `\n${'='.repeat(64)}\n${g.title ?? g.id} (companyId=${g.companyId}, ${scope})\n${'='.repeat(64)}\n`,
     );
@@ -88,4 +93,7 @@ class PreviewModule {}
   }
   await app.close();
   process.exit(0);
-})().catch((e) => { console.error(e); process.exit(1); });
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

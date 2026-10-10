@@ -5,6 +5,7 @@ import {
   type MaterialDialog,
   type MaterialDialogZeile,
 } from './frage.types';
+import type { MediaUrlResolver } from './wort-fragen';
 
 /** Savol qurish uchun dialogda kamida shuncha satr bo'lishi shart. */
 const MIN_ZEILEN = 4;
@@ -100,6 +101,8 @@ export function dialogLuecke(
   dialog: MaterialDialog,
   andere: MaterialDialogZeile[],
   rnd: () => number,
+  // Optional: the media admin preview builds this question without one.
+  mediaUrl: MediaUrlResolver = () => null,
 ): Frage | null {
   if (dialog.zeilen.length < MIN_ZEILEN) return null;
 
@@ -147,11 +150,15 @@ export function dialogLuecke(
   // Butun suhbat — bo'shatilgan satr o'rnida `___`. To'g'ri javob (ziel.de)
   // boshqa hech qanday qatorda chiqmasligi kerak, aks holda savol o'zi
   // javob berib qo'yardi.
-  const prompt = dialog.zeilen
-    .map((z) =>
-      z.id === ziel.id ? `${z.sprecher}: ___` : `${z.sprecher}: ${z.de}`,
-    )
-    .join('\n');
+  // Sahna izohi bo'lsa birinchi qatorda qavs ichida (ikki nuqtasiz — mijoz
+  // uni oddiy matn qilib chiqaradi), satr izohi gapiruvchi nomi yonida.
+  const satrlar = dialog.zeilen.map((z) => {
+    const kim = z.izohUz ? `${z.sprecher} (${z.izohUz})` : z.sprecher;
+    return `${kim}: ${z.id === ziel.id ? '___' : z.de}`;
+  });
+  const prompt = (
+    dialog.sahnaUz ? [`(${dialog.sahnaUz})`, ...satrlar] : satrlar
+  ).join('\n');
 
   return {
     format: 'DIALOG_LUECKE',
@@ -167,5 +174,7 @@ export function dialogLuecke(
     // qisqa nomni ko'rsatadi — qarang `frage.types.ts`dagi `titel` izohi.
     titel: dialog.titelDe,
     audioUrl: null,
+    // The dialog's picture, shown above it; never the raw key.
+    bildUrl: dialog.imageKey ? mediaUrl(dialog.imageKey) : null,
   };
 }

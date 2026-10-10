@@ -1,5 +1,7 @@
+import { ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { userBranchWhere } from '../../common/finance/report-branch-scope';
 
 type PrismaLike = PrismaService | Prisma.TransactionClient;
 
@@ -16,12 +18,12 @@ type PrismaLike = PrismaService | Prisma.TransactionClient;
  *
  * `none` is the whole point. Both payroll scopes used to collapse a missing
  * `mainBranch` into "no filter", which is fail-OPEN: a Branch Director whose
- * `mainBranch` was NULL could see — and `batchPay` — every branch's salaries.
+ * `mainBranch` was NULL could see — and pay — every branch's salaries.
  * Two Administrators were in exactly that state in production. Money paths
  * must fail closed: an unknown scope means nothing, not everything.
  *
  * The set widens what a caller may SEE, not what they may pay: `payPayment`
- * and `batchPay` stay on `mainBranch`.
+ * stays on `mainBranch`.
  */
 export type PayrollBranchScope =
   | { kind: 'all' }
@@ -135,4 +137,51 @@ export function narrowPayrollScope(
   // `all` — the CEO. The header is the only narrowing available, and `undefined`
   // (no pick) genuinely means every branch.
   return { branchId: requestedBranchId ?? undefined, blocked: false };
+}
+
+/**
+ * `where` fragment on an employee (`User`) for "their payroll is inside this
+ * scope": no filter for the CEO; for anyone else the employees attached to one
+ * of the caller's branches, through `mainBranch` or a `UserBranch` row (the two
+ * sources the scope itself merges); nobody for `none`.
+ *
+ * The whole set, not `narrowPayrollScope`'s one branch: the reads that use
+ * this take no header, and a director attached to two branches opens rows of
+ * either from the monthly report.
+ */
+export function payrollUserWhere(
+  scope: PayrollBranchScope,
+): Prisma.UserWhereInput | undefined {
+  if (scope.kind === 'all') return undefined;
+  return userBranchWhere(scope.kind === 'branches' ? scope.branchIds : []);
+}
+
+/**
+ * Refuses (403) unless `targetUserId`'s payroll is inside the caller's scope.
+ * For the salary reads addressed by one employee or one payment, which took no
+ * caller until 10.10.2026 and served any employee in the company.
+ *
+ * Yourself always (the self rule `resolveMonthlyScope` uses), the CEO always, a
+ * caller with no branch never. 403 rather than 404, like `payPayment` and the
+ * teacher reads: the payroll exists, this caller may not see it.
+ */
+export async function assertPayrollCoversUser(
+  prisma: PrismaLike,
+  performedById: number,
+  targetUserId: number,
+): Promise<void> {
+  const scope = await resolvePayrollBranchScope(prisma, performedById, {
+    selfView: performedById === targetUserId,
+  });
+  if (scope.kind === 'all') return;
+  const covered =
+    scope.kind === 'branches' &&
+    (await prisma.user.count({
+      where: { id: targetUserId, ...payrollUserWhere(scope) },
+    })) > 0;
+  if (!covered) {
+    throw new ForbiddenException(
+      "Bu xodim sizning filialingizga tegishli emas — oyligini ko'ra olmaysiz",
+    );
+  }
 }

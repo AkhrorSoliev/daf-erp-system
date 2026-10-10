@@ -36,6 +36,7 @@ describe('QrAttendanceService', () => {
   let attendanceService: any;
   let admission: { forLesson: jest.Mock };
   let validation: { validateLessonDate: jest.Mock };
+  let holidaysService: any;
 
   beforeEach(async () => {
     prisma = {
@@ -139,7 +140,7 @@ describe('QrAttendanceService', () => {
     // Contract 3.2 admission: nobody blocked unless a test says so.
     admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
 
-    const holidaysService = {
+    holidaysService = {
       findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
       buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
       getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
@@ -242,6 +243,24 @@ describe('QrAttendanceService', () => {
       expect(result.expiresIn).toBe(45);
       expect(result.totalStudents).toBe(10);
       expect(redis.set).toHaveBeenCalledTimes(2); // session + token
+    });
+
+    it("numbers the lesson against its own branch's and the centre's holidays only", async () => {
+      prisma.group.findFirst.mockResolvedValue({
+        id: 'group-1',
+        name: 'A1-1',
+        exactDays: ['monday', 'wednesday', 'friday'],
+        startDate: new Date('2026-03-01'),
+        branchId: 2,
+      });
+
+      await service.startSession('group-1', '2026-04-03', 1, 1);
+
+      expect(holidaysService.buildHolidayDateSet).toHaveBeenCalledWith(
+        expect.any(Date),
+        expect.any(Date),
+        2,
+      );
     });
 
     it('should store lessonNumber in Redis session data', async () => {

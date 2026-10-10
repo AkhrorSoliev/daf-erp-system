@@ -33,6 +33,12 @@ describe("savolRasmlari", () => {
     ]);
   });
 
+  it("a gap-fill dialog preloads its story picture", () => {
+    expect(savolRasmlari(savol("DIALOG_LUECKE", { bildUrl: "https://m/d.jpg" }))).toEqual([
+      "https://m/d.jpg",
+    ]);
+  });
+
   it("other questions, and no question, have no pictures", () => {
     expect(savolRasmlari(savol("WORT_UZ", { options: ["a", "b", "c", "d"] }))).toEqual([]);
     expect(savolRasmlari(undefined)).toEqual([]);

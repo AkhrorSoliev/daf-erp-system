@@ -462,6 +462,7 @@ export class LessonReschedulesService {
       endTime: string;
     },
     companyId: number,
+    caller: { userId: number; roles: string[] },
   ): Promise<{ id: string; name: string }[]> {
     const dateObj = this.parseDate(params.date);
     if (params.endTime <= params.startTime) {
@@ -475,6 +476,15 @@ export class LessonReschedulesService {
       select: { id: true, branchId: true },
     });
     if (!group) throw new NotFoundException('Guruh topilmadi');
+    // The list is the free rooms of the GROUP's branch, so the caller must be
+    // allowed on that group — the check create, update and remove already
+    // make. Without it a director read another branch's rooms by group id.
+    await assertCallerMayTouchGroup(
+      this.prisma,
+      caller.userId,
+      caller.roles,
+      group.id,
+    );
 
     const busy = await this.collectBusyRoomIds(this.prisma, {
       companyId,

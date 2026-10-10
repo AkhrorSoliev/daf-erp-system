@@ -211,6 +211,79 @@ describe('GroupHolidayCascadeService', () => {
     });
   });
 
+  // A branch's holiday is that branch's alone (CEO decision 10.10.2026).
+  // `HolidaysService` offers it only that branch's groups, but a NEW group is
+  // offered every holiday in range, so the refusal lives in the cascade itself.
+  describe('branch', () => {
+    it("does not move another branch's group", async () => {
+      prisma.group.findUnique.mockResolvedValue({ ...group, branchId: 1 });
+      prisma.holiday.findUnique.mockResolvedValue({ ...holiday, branchId: 2 });
+
+      const result = await service.extendGroupEndDateForHoliday(
+        'g-1',
+        'h-1',
+        99,
+      );
+
+      expect(result.extended).toBe(false);
+      expect(prisma.group.update).not.toHaveBeenCalled();
+      expect(prisma.groupHolidayExtension.create).not.toHaveBeenCalled();
+    });
+
+    it('a centre-wide holiday still moves a group of any branch', async () => {
+      prisma.group.findUnique.mockResolvedValue({ ...group, branchId: 1 });
+      prisma.holiday.findUnique.mockResolvedValue({
+        ...holiday,
+        branchId: null,
+      });
+
+      const result = await service.extendGroupEndDateForHoliday(
+        'g-1',
+        'h-1',
+        99,
+      );
+
+      expect(result.extended).toBe(true);
+    });
+
+    it("moves its own branch's group, reading only that branch's holidays", async () => {
+      prisma.group.findUnique.mockResolvedValue({ ...group, branchId: 2 });
+      prisma.holiday.findUnique.mockResolvedValue({ ...holiday, branchId: 2 });
+
+      const result = await service.extendGroupEndDateForHoliday(
+        'g-1',
+        'h-1',
+        99,
+      );
+
+      expect(result.extended).toBe(true);
+      expect(holidaysService.getActiveHolidaysInRange).toHaveBeenCalledWith(
+        expect.any(Date),
+        expect.any(Date),
+        2,
+      );
+      expect(holidaysService.buildHolidayDateSet).toHaveBeenCalledWith(
+        expect.any(Date),
+        expect.any(Date),
+        2,
+      );
+    });
+
+    it("offers a new group only the centre's and its own branch's holidays", async () => {
+      prisma.group.findUnique.mockResolvedValue({ ...group, branchId: 2 });
+      holidaysService.getActiveHolidaysInRange.mockResolvedValue([]);
+
+      await service.applyHolidayImpactOnNewGroup('g-1', 99);
+
+      expect(holidaysService.getActiveHolidaysInRange).toHaveBeenCalledWith(
+        group.startDate,
+        group.endDate,
+        2,
+      );
+      expect(prisma.group.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('revertGroupEndDateForHoliday', () => {
     it('restores oldEndDate and deletes the extension row', async () => {
       const extension: any = {

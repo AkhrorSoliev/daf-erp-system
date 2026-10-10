@@ -1,5 +1,9 @@
+import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TransactionsWriteService } from './transactions-write.service';
+import {
+  AdjustmentActor,
+  TransactionsWriteService,
+} from './transactions-write.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CashMovementsService } from '../cash-accounts/cash-movements.service';
 
@@ -381,6 +385,7 @@ describe('TransactionsWriteService.createAdjustment', () => {
       amount: 50_000,
       description: 'test',
       companyId: COMPANY,
+      actor: { kind: 'system' },
       metadata: { refundId: 'ref-1', lessonsReleased: 2 },
     });
 
@@ -400,10 +405,77 @@ describe('TransactionsWriteService.createAdjustment', () => {
       amount: 50_000,
       description: 'test',
       companyId: COMPANY,
+      actor: { kind: 'system' },
     });
 
     const data = prisma.transaction.create.mock.calls[0][0].data;
     expect('metadata' in data).toBe(false);
+  });
+
+  // `POST /transactions/adjustment` checked the company only: a director could
+  // adjust a student of another branch. The route now names its caller.
+  describe('a manual adjustment checks the caller against the student branch', () => {
+    // The student sits in branch 2 (`studentBranch` mock above).
+    const caller = (roleName: string, mainBranch: number | null) => ({
+      mainBranch,
+      branches: [],
+      roles: [{ role: { name: roleName } }],
+    });
+    const adjust = (actor: AdjustmentActor) =>
+      service.createAdjustment({
+        studentId: STUDENT,
+        amount: 50_000,
+        description: 'test',
+        companyId: COMPANY,
+        performedById: actor.kind === 'user' ? actor.id : undefined,
+        actor,
+      });
+
+    it("refuses a caller outside the student's branch and writes nothing", async () => {
+      prisma.user = {
+        findFirst: jest.fn().mockResolvedValue(caller('Branch Director', 1)),
+      };
+
+      await expect(adjust({ kind: 'user', id: 42 })).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      expect(prisma.transaction.create).not.toHaveBeenCalled();
+      expect(prisma.student.update).not.toHaveBeenCalled();
+    });
+
+    it("books a caller of the student's branch to that branch", async () => {
+      prisma.user = {
+        findFirst: jest.fn().mockResolvedValue(caller('Branch Director', 2)),
+      };
+
+      await adjust({ kind: 'user', id: 42 });
+
+      expect(prisma.transaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ branchId: 2 }),
+        }),
+      );
+    });
+
+    it('lets the CEO adjust a student of any branch', async () => {
+      prisma.user = {
+        findFirst: jest.fn().mockResolvedValue(caller('CEO', null)),
+      };
+
+      await adjust({ kind: 'user', id: 1 });
+
+      expect(prisma.transaction.create).toHaveBeenCalled();
+    });
+
+    it('leaves internal callers, which say they are the system, unchecked', async () => {
+      prisma.user = { findFirst: jest.fn() };
+
+      await adjust({ kind: 'system' });
+
+      expect(prisma.user.findFirst).not.toHaveBeenCalled();
+      expect(prisma.transaction.create).toHaveBeenCalled();
+    });
   });
 });
 

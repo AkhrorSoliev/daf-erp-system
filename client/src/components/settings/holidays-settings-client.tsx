@@ -26,6 +26,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { SettingsPageHeader } from "./settings-page-header";
 import { HolidayRowActions } from "./holiday-row-actions";
 import { EditHolidayDrawer } from "./edit-holiday-drawer";
@@ -33,23 +34,17 @@ import { useEditHoliday, type Holiday } from "@/hooks/use-edit-holiday";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+import {
+  holidayScopeLabel,
+  toHoliday,
+  type ApiHoliday,
+} from "@/lib/holiday-scope";
 
 const holidaysSchema = {
   search: { type: "string" as const, defaultValue: "" },
   page: { type: "number" as const, defaultValue: 1 },
   pageSize: { type: "number" as const, defaultValue: 10 },
 };
-
-interface ApiHoliday {
-  id: string;
-  name: string;
-  date: string;
-  endDate: string;
-}
-
-function mapHoliday(h: ApiHoliday): Holiday {
-  return { id: h.id, name: h.name, date: h.date, endDate: h.endDate };
-}
 
 function formatHolidayRange(holiday: Holiday): string {
   const startStr = format(new Date(holiday.date), "dd.MM.yyyy");
@@ -94,7 +89,7 @@ export function HolidaysSettingsClient() {
           ...(filters.search ? { search: filters.search } : {}),
         },
       });
-      setHolidays(data.data.map(mapHoliday));
+      setHolidays(data.data.map(toHoliday));
       setTotal(data.total);
     } catch {
       setHolidays([]);
@@ -162,6 +157,7 @@ export function HolidaysSettingsClient() {
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Bayram nomi</TableHead>
               <TableHead>Sana</TableHead>
+              <TableHead>Filial</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -179,6 +175,9 @@ export function HolidaysSettingsClient() {
                     <Skeleton className="h-4 w-24" />
                   </TableCell>
                   <TableCell>
+                    <Skeleton className="h-5 w-20" />
+                  </TableCell>
+                  <TableCell>
                     <Skeleton className="h-4 w-6" />
                   </TableCell>
                 </TableRow>
@@ -186,7 +185,7 @@ export function HolidaysSettingsClient() {
             ) : holidays.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -205,6 +204,15 @@ export function HolidaysSettingsClient() {
                   </TableCell>
                   <TableCell className="font-medium">{holiday.name}</TableCell>
                   <TableCell>{formatHolidayRange(holiday)}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        holiday.branchId == null ? "secondary" : "outline"
+                      }
+                    >
+                      {holidayScopeLabel(holiday)}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <HolidayRowActions
                       holiday={holiday}

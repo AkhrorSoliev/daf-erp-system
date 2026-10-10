@@ -20,6 +20,12 @@ describe('bildFfmpegArgs', () => {
       '/tmp/out.jpg',
     ]);
   });
+
+  it('a height of -2 keeps the picture`s own proportions (dialog pictures)', () => {
+    expect(bildFfmpegArgs('/tmp/in.jpg', '/tmp/out.jpg', 800, -2)[3]).toBe(
+      'scale=800:-2',
+    );
+  });
 });
 
 describe('verkleinereBild size guard', () => {

@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { HolidaysService } from './holidays.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
@@ -10,6 +14,15 @@ describe('HolidaysService', () => {
   // Every id-addressed method is company-scoped; the fixtures below belong
   // to this company.
   const COMPANY_ID = 1001;
+  // Every write checks the caller against the holiday's branch. The tests
+  // outside «branch rule» are about other things, so their caller is a CEO.
+  const CEO_CALLER = {
+    mainBranch: null,
+    branches: [],
+    roles: [{ role: { name: 'CEO' } }],
+  };
+  const CENTRE_WIDE = 'Butun markaz bayrami bilan faqat CEO ishlay oladi';
+  const BRANCH_REFUSAL = 'Bu filial sizning ruxsatingizda emas';
   let service: HolidaysService;
   let prisma: any;
   let entityHistoryService: any;
@@ -50,6 +63,8 @@ describe('HolidaysService', () => {
         count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      user: { findFirst: jest.fn().mockResolvedValue(CEO_CALLER) },
+      branch: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
     };
 
     entityHistoryService = {
@@ -91,10 +106,10 @@ describe('HolidaysService', () => {
 
   describe('findAll', () => {
     it('returns paginated holidays with defaults page=1, pageSize=10', async () => {
-      const result = await service.findAll({});
+      const result = await service.findAll({}, COMPANY_ID, null);
       expect(prisma.holiday.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { deletedAt: null },
+          where: { deletedAt: null, companyId: COMPANY_ID },
           skip: 0,
           take: 10,
           orderBy: { date: 'asc' },
@@ -109,11 +124,12 @@ describe('HolidaysService', () => {
     });
 
     it('applies search filter (case-insensitive contains)', async () => {
-      await service.findAll({ search: 'navro' });
+      await service.findAll({ search: 'navro' }, COMPANY_ID, null);
       expect(prisma.holiday.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             deletedAt: null,
+            companyId: COMPANY_ID,
             name: { contains: 'navro', mode: 'insensitive' },
           },
         }),
@@ -121,7 +137,7 @@ describe('HolidaysService', () => {
     });
 
     it('honours page and pageSize', async () => {
-      await service.findAll({ page: 3, pageSize: 20 });
+      await service.findAll({ page: 3, pageSize: 20 }, COMPANY_ID, null);
       expect(prisma.holiday.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 40, take: 20 }),
       );
@@ -130,13 +146,13 @@ describe('HolidaysService', () => {
 
   describe('findOne', () => {
     it('returns the holiday when found', async () => {
-      const result = await service.findOne('h-1', COMPANY_ID);
+      const result = await service.findOne('h-1', COMPANY_ID, 7);
       expect(result).toEqual(mockHoliday);
     });
 
     it('throws NotFoundException when missing', async () => {
       prisma.holiday.findFirst.mockResolvedValue(null);
-      await expect(service.findOne('missing', COMPANY_ID)).rejects.toThrow(
+      await expect(service.findOne('missing', COMPANY_ID, 7)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -411,7 +427,7 @@ describe('HolidaysService', () => {
     it("looks a holiday up within the caller's company", async () => {
       prisma.holiday.findFirst.mockResolvedValue(mockHoliday);
 
-      await service.findOne('h-1', COMPANY_ID);
+      await service.findOne('h-1', COMPANY_ID, 7);
 
       expect(prisma.holiday.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -425,9 +441,183 @@ describe('HolidaysService', () => {
       // into 404 rather than leaking that the row exists elsewhere.
       prisma.holiday.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne('h-1', 2002)).rejects.toThrow(
+      await expect(service.findOne('h-1', 2002, 7)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  // CEO decision 10.10.2026: a holiday of the whole centre (`branchId` null)
+  // is the CEO's alone; a director or administrator manages only their own
+  // branch's. The caller here is a Fargona administrator.
+  describe('branch rule', () => {
+    const FARGONA_ADMIN = {
+      mainBranch: 1,
+      branches: [{ branchId: 1 }],
+      roles: [{ role: { name: 'Administrator' } }],
+    };
+    const fargona = { ...mockHoliday, branchId: 1 };
+    const namangan = { ...mockHoliday, branchId: 2 };
+
+    beforeEach(() => {
+      prisma.user.findFirst.mockResolvedValue(FARGONA_ADMIN);
+    });
+
+    describe('create', () => {
+      it('refuses an Administrator a centre-wide holiday and moves nothing', async () => {
+        const done = service.create(
+          { name: "Navro'z", date: '2026-03-21' },
+          5,
+          COMPANY_ID,
+        );
+        await expect(done).rejects.toThrow(ForbiddenException);
+        await expect(done).rejects.toThrow(CENTRE_WIDE);
+        expect(prisma.holiday.create).not.toHaveBeenCalled();
+        expect(prisma.group.findMany).not.toHaveBeenCalled();
+        expect(entityHistoryService.recordCreate).not.toHaveBeenCalled();
+      });
+
+      it("writes an Administrator's holiday to their branch and moves only that branch's groups", async () => {
+        prisma.holiday.create.mockResolvedValue(fargona);
+
+        await service.create(
+          { name: 'Filial yopiq', date: '2026-09-01', branchId: 1 },
+          5,
+          COMPANY_ID,
+        );
+
+        expect(prisma.branch.findFirst).toHaveBeenCalledWith({
+          where: { id: 1, companyId: COMPANY_ID, deletedAt: null },
+          select: { id: true },
+        });
+        expect(prisma.holiday.create).toHaveBeenCalledWith({
+          data: expect.objectContaining({ branchId: 1, companyId: COMPANY_ID }),
+        });
+        expect(prisma.group.findMany.mock.calls[0][0].where.branchId).toBe(1);
+      });
+
+      it("refuses an Administrator another branch's holiday", async () => {
+        prisma.branch.findFirst.mockResolvedValue({ id: 2 });
+        const done = service.create(
+          { name: 'Namangan yopiq', date: '2026-09-01', branchId: 2 },
+          5,
+          COMPANY_ID,
+        );
+        await expect(done).rejects.toThrow(ForbiddenException);
+        await expect(done).rejects.toThrow(BRANCH_REFUSAL);
+        expect(prisma.holiday.create).not.toHaveBeenCalled();
+      });
+
+      it('answers 404 for a branch outside the company, before reading the caller', async () => {
+        prisma.branch.findFirst.mockResolvedValue(null);
+        await expect(
+          service.create(
+            { name: 'X', date: '2026-09-01', branchId: 9 },
+            5,
+            COMPANY_ID,
+          ),
+        ).rejects.toThrow(NotFoundException);
+        expect(prisma.user.findFirst).not.toHaveBeenCalled();
+        expect(prisma.holiday.create).not.toHaveBeenCalled();
+      });
+
+      it('lets the CEO declare one for the whole centre or for any branch', async () => {
+        prisma.user.findFirst.mockResolvedValue(CEO_CALLER);
+
+        await service.create(
+          { name: "Navro'z", date: '2026-03-21' },
+          7,
+          COMPANY_ID,
+        );
+        expect(prisma.holiday.create.mock.calls[0][0].data.branchId).toBeNull();
+
+        prisma.branch.findFirst.mockResolvedValue({ id: 2 });
+        await service.create(
+          { name: 'Namangan yopiq', date: '2026-03-25', branchId: 2 },
+          7,
+          COMPANY_ID,
+        );
+        expect(prisma.holiday.create.mock.calls[1][0].data.branchId).toBe(2);
+      });
+    });
+
+    describe.each([
+      [
+        'update',
+        (s: HolidaysService) =>
+          s.update('h-1', { name: 'Yangi nom' }, 5, COMPANY_ID),
+      ],
+      [
+        'changeStatus',
+        (s: HolidaysService) =>
+          s.changeStatus('h-1', { status: 'CANCELLED' as any }, 5, COMPANY_ID),
+      ],
+      ['remove', (s: HolidaysService) => s.remove('h-1', 5, COMPANY_ID)],
+    ])('%s', (_name, call) => {
+      it('refuses an Administrator a centre-wide holiday before anything moves', async () => {
+        prisma.holiday.findFirst.mockResolvedValue(mockHoliday);
+        const done = call(service);
+        await expect(done).rejects.toThrow(ForbiddenException);
+        await expect(done).rejects.toThrow(CENTRE_WIDE);
+        expect(prisma.holiday.update).not.toHaveBeenCalled();
+        expect(statusHistoryService.changeStatus).not.toHaveBeenCalled();
+        expect(prisma.groupHolidayExtension.findMany).not.toHaveBeenCalled();
+      });
+
+      it("refuses an Administrator another branch's holiday", async () => {
+        prisma.holiday.findFirst.mockResolvedValue(namangan);
+        const done = call(service);
+        await expect(done).rejects.toThrow(BRANCH_REFUSAL);
+        expect(prisma.holiday.update).not.toHaveBeenCalled();
+        expect(prisma.groupHolidayExtension.findMany).not.toHaveBeenCalled();
+      });
+
+      it("lets an Administrator manage their own branch's holiday", async () => {
+        prisma.holiday.findFirst.mockResolvedValue(fargona);
+        await call(service);
+        expect(prisma.holiday.update).toHaveBeenCalled();
+      });
+    });
+
+    describe('reads', () => {
+      it("shows a centre-wide holiday and the caller's own branch's, refuses another branch's", async () => {
+        prisma.holiday.findFirst.mockResolvedValue(mockHoliday);
+        await expect(service.findOne('h-1', COMPANY_ID, 5)).resolves.toEqual(
+          mockHoliday,
+        );
+
+        prisma.holiday.findFirst.mockResolvedValue(fargona);
+        await expect(service.findOne('h-1', COMPANY_ID, 5)).resolves.toEqual(
+          fargona,
+        );
+
+        prisma.holiday.findFirst.mockResolvedValue(namangan);
+        await expect(service.findOne('h-1', COMPANY_ID, 5)).rejects.toThrow(
+          BRANCH_REFUSAL,
+        );
+      });
+
+      it("refuses another branch's status trail without reading it", async () => {
+        prisma.holiday.findFirst.mockResolvedValue({ id: 'h-1', branchId: 2 });
+        await expect(
+          service.getStatusHistory('h-1', COMPANY_ID, 5),
+        ).rejects.toThrow(BRANCH_REFUSAL);
+        expect(statusHistoryService.getHistory).not.toHaveBeenCalled();
+      });
+
+      it("lists the centre-wide holidays and the scope's branches, with the branch name", async () => {
+        await service.findAll({}, COMPANY_ID, [1]);
+        expect(prisma.holiday.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              deletedAt: null,
+              companyId: COMPANY_ID,
+              OR: [{ branchId: null }, { branchId: { in: [1] } }],
+            },
+            include: { branch: { select: { name: true } } },
+          }),
+        );
+      });
     });
   });
 
@@ -444,6 +634,28 @@ describe('HolidaysService', () => {
         },
         select: { id: true, name: true, date: true, endDate: true },
       });
+    });
+  });
+
+  describe('findActiveHolidayCovering: which branch', () => {
+    const probe = new Date('2026-05-28');
+
+    it("a branch reads the centre's holidays and its own", async () => {
+      await service.findActiveHolidayCovering(probe, 2);
+      expect(prisma.holiday.findFirst.mock.calls[0][0].where).toEqual(
+        expect.objectContaining({
+          OR: [{ branchId: null }, { branchId: 2 }],
+        }),
+      );
+    });
+
+    // A run that serves every branch at once must not stop for one branch
+    // closing (CEO decision 10.10.2026 lets a branch declare its own).
+    it("null reads the centre's holidays only", async () => {
+      await service.findActiveHolidayCovering(probe, null);
+      const where = prisma.holiday.findFirst.mock.calls[0][0].where;
+      expect(where.branchId).toBeNull();
+      expect(where.OR).toBeUndefined();
     });
   });
 

@@ -34,7 +34,7 @@ export function richtigeAntwort(
   // A word's other correct spellings (`DafLexeme.akzeptiert`) — every typed
   // word format accepts them, with the article wherever the word itself is
   // accepted with it. For a sentence the same field holds word orders; only
-  // `SATZ_BAUEN` reads it for that.
+  // the tile formats (`SATZ_BAUEN`, `SATZ_HOEREN`) read it for that.
   const varianten = material.akzeptiert ?? [];
   const mitArtikel = (formen: string[]): string[] =>
     material.artikel ? formen.map((f) => `${material.artikel} ${f}`) : [];
@@ -55,6 +55,10 @@ export function richtigeAntwort(
       }
       return { richtig: material.artikel, akzeptiert: [] };
     case 'SATZ_BAUEN':
+    case 'SATZ_HOEREN':
+      // `SATZ_HOEREN` builds the same sentence from the same tiles, so it
+      // accepts the same orders.
+      //
       // Gapning boshqa to'g'ri so'z tartiblari ham qabul qilinadi
       // («In Deutschland wohne ich.» ↔ «Ich wohne in Deutschland.») —
       // o'quvchi aynan shu so'zlardan to'g'ri nemischa gap tuzgan bo'lsa,

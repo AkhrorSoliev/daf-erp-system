@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { tryResolveStudentBranchId } from '../common/finance/resolve-branch';
+import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import { refundDueDate } from './refund-due-date';
 import { REFUND_HISTORY_SELECT, toRefundHistoryRow } from './refund-view';
 import { RefundListQueryDto } from './dto/refund-list-query.dto';
@@ -48,6 +49,7 @@ export class RefundsEligibilityService {
    */
   async previewRefund(
     studentId: number,
+    userId: number,
     companyId: number,
     enrollmentId?: string,
   ) {
@@ -58,6 +60,14 @@ export class RefundsEligibilityService {
     if (!student) {
       throw new NotFoundException("O'quvchi topilmadi");
     }
+    // The quote reads the student's balance, groups and payments: only for a
+    // caller who holds the student's branch.
+    await assertCallerMayTouchStudent(
+      this.prisma,
+      userId,
+      studentId,
+      companyId,
+    );
 
     // A frozen student's enrollments are all FROZEN (freezing cascades every
     // enrollment) — there is no ACTIVE one to scope the refund to. Detect that

@@ -97,7 +97,7 @@ describe('WithdrawalsService', () => {
 
   describe('preview', () => {
     it('returns student data, max withdrawable, and teacher suggestions', async () => {
-      const out = await service.preview(10001, 1);
+      const out = await service.preview(10001, 7, 1);
       expect(out.studentId).toBe(10001);
       expect(out.currentBalance).toBe(500_000);
       expect(out.maxWithdrawable).toBe(500_000);
@@ -110,13 +110,13 @@ describe('WithdrawalsService', () => {
         ...studentRow,
         balance: -50_000,
       });
-      const out = await service.preview(10001, 1);
+      const out = await service.preview(10001, 7, 1);
       expect(out.maxWithdrawable).toBe(0);
     });
 
     it('throws if student not found', async () => {
       prisma.student.findFirst.mockResolvedValueOnce(null);
-      await expect(service.preview(99999, 1)).rejects.toThrow(
+      await expect(service.preview(99999, 7, 1)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -151,8 +151,25 @@ describe('WithdrawalsService', () => {
           },
         },
       ]);
-      const out = await service.preview(10001, 1);
+      const out = await service.preview(10001, 7, 1);
       expect(out.teacherSuggestions).toHaveLength(0);
+    });
+
+    // The dialog shows the student's name, balance, groups and teachers, and
+    // it answered for any student of the company.
+    it("refuses a caller outside the student's branch, showing nothing", async () => {
+      // The student is in branch 1; this director holds branch 2.
+      prisma.user.findFirst.mockResolvedValueOnce({
+        mainBranch: 2,
+        branches: [],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+
+      await expect(service.preview(10001, 7, 1)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.enrollment.findMany).not.toHaveBeenCalled();
+      expect(prisma.balanceNotice.findFirst).not.toHaveBeenCalled();
     });
   });
 
@@ -455,7 +472,7 @@ describe('WithdrawalsService', () => {
 
     it('the preview shows the lock before the dialog is filled', async () => {
       jest.setSystemTime(new Date('2026-11-21T07:00:00Z'));
-      const out = await service.preview(10001, 1);
+      const out = await service.preview(10001, 7, 1);
       expect(out.transfer).toEqual({
         notice: { date: '2026-10-10', channel: 'BOT' },
         termEnds: '2026-10-23',

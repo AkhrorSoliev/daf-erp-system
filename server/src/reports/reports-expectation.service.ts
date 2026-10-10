@@ -123,12 +123,13 @@ export class ReportsExpectationService {
       ...(branchIds && { branchId: { in: branchIds } }),
     };
 
-    const [groups, holidayDates, cancellations, reschedules] =
-      await Promise.all([
+    const [groups, holidaysFor, cancellations, reschedules] = await Promise.all(
+      [
         this.prisma.group.findMany({
           where: groupWhere,
           select: {
             id: true,
+            branchId: true,
             statusEnum: true,
             deletedAt: true,
             exactDays: true,
@@ -157,7 +158,9 @@ export class ReportsExpectationService {
             },
           },
         }),
-        this.holidays.buildHolidayDateSet(
+        // Every branch's holidays in one read. Each group is walked against
+        // its own branch's (`holidayDates` below), never one set for all.
+        this.holidays.buildHolidayDateSetsByBranch(
           startDate,
           new Date(endDateExcl.getTime() - DAY_MS),
         ),
@@ -190,7 +193,8 @@ export class ReportsExpectationService {
           },
           select: { groupId: true, originalDate: true, newDate: true },
         }),
-      ]);
+      ],
+    );
     if (groups.length === 0) return empty;
 
     const groupIds = groups.map((g) => g.id);
@@ -382,6 +386,9 @@ export class ReportsExpectationService {
           : [],
         datesWithAttendance,
         cancelledDates: cancelledByGroup.get(g.id) ?? new Set<string>(),
+        // The company-wide holidays plus this group's own branch's: another
+        // branch closing never drops this group's lessons.
+        holidayDates: holidaysFor(g.branchId),
         // FAQAT oylik guruhlar uchun. 12 talik (LESSON_PACK) yo'lda hech
         // qanday `plannedLessons` muzlatilmaydi — moslashtiradigan narsa
         // yo'q, shuning uchun u yerdagi xulq ataylab tegilmay qoladi.
@@ -401,7 +408,6 @@ export class ReportsExpectationService {
     const split = splitMonthLessons(inputs, {
       monthStartStr,
       monthEndStr,
-      holidayDates,
       todayStr,
     });
 

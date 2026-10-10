@@ -32,7 +32,10 @@ describe('ReportsCenterActivityService', () => {
 
     holidaysService = {
       findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
-      buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+      // No holiday in any branch unless a test says otherwise.
+      buildHolidayDateSetsByBranch: jest
+        .fn()
+        .mockResolvedValue(() => new Set<string>()),
       getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
     };
 
@@ -64,8 +67,8 @@ describe('ReportsCenterActivityService', () => {
     // The previous implementation filtered `date: { gte, lte }` on Holiday
     // (single-day match), and built the Set from `h.date` only — so multi-day
     // holidays were truncated to their start. The fix delegates to
-    // HolidaysService.buildHolidayDateSet which expands [date, endDate] into
-    // the full set of covered Tashkent calendar days.
+    // HolidaysService.buildHolidayDateSetsByBranch, which expands
+    // [date, endDate] into the covered Tashkent calendar days of each branch.
     prisma.room.findMany.mockResolvedValue([]);
     prisma.group.findMany.mockResolvedValue([]);
     await service.getCenterActivity(1, {
@@ -73,7 +76,7 @@ describe('ReportsCenterActivityService', () => {
       endDate: '2026-04-30',
       bucket: 'daily' as const,
     });
-    expect(holidaysService.buildHolidayDateSet).toHaveBeenCalled();
+    expect(holidaysService.buildHolidayDateSetsByBranch).toHaveBeenCalled();
   });
 
   it('returns cached payload when present', async () => {
@@ -432,6 +435,74 @@ describe('ReportsCenterActivityService', () => {
       300,
       expect.any(String),
     );
+  });
+
+  // CEO decision 10.10.2026: a branch's own holiday closes that branch alone.
+  describe('a branch-2 holiday', () => {
+    const EVERY_DAY = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ];
+
+    beforeEach(() => {
+      prisma.room.findMany.mockResolvedValue([
+        { id: 'r1', name: "Farg'ona", capacity: 20, branchId: 1, branch },
+        { id: 'r2', name: 'Namangan', capacity: 20, branchId: 2, branch },
+      ]);
+      // A 2-hour lesson every day in each 12-hour room.
+      prisma.group.findMany.mockResolvedValue([
+        makeGroup('g1', 'r1', 10, EVERY_DAY, '09:00', '11:00', 500_000),
+        {
+          ...makeGroup('g2', 'r2', 10, EVERY_DAY, '09:00', '11:00', 500_000),
+          branchId: 2,
+        },
+      ]);
+      holidaysService.buildHolidayDateSetsByBranch.mockResolvedValue(
+        (branchId: number) =>
+          branchId === 2 ? new Set(['2026-04-13']) : new Set<string>(),
+      );
+    });
+
+    it("takes the day off the branch-2 room's period, not the branch-1 room's", async () => {
+      const result = (await service.getCenterActivity(1, makeQuery())) as {
+        rooms: Array<{ id: string; totals: { idleHoursPeriod: number } }>;
+        kpis: { emptyHours: number };
+      };
+
+      // (84 − 14) idle hours a week: Farg'ona over 30 April days, Namangan
+      // over 29.
+      expect(
+        Object.fromEntries(
+          result.rooms.map((r) => [r.id, r.totals.idleHoursPeriod]),
+        ),
+      ).toEqual({ r1: 300, r2: 290 });
+      expect(result.kpis.emptyHours).toBe(590);
+    });
+
+    it("drops the branch-2 group's lesson on the day and keeps the branch-1 group's", async () => {
+      const { trend } = (await service.getCenterActivity(1, makeQuery())) as {
+        trend: Array<{
+          bucketStart: string;
+          utilizationPct: number;
+          emptyHours: number;
+        }>;
+      };
+      const day = (iso: string) => trend.find((p) => p.bucketStart === iso);
+
+      // Only Farg'ona's 2 hours out of 24 room-hours.
+      expect(day('2026-04-13')).toEqual(
+        expect.objectContaining({ utilizationPct: 8.3, emptyHours: 22 }),
+      );
+      // Any other day both rooms teach: 4 out of 24.
+      expect(day('2026-04-14')).toEqual(
+        expect.objectContaining({ utilizationPct: 16.7, emptyHours: 20 }),
+      );
+    });
   });
 
   // ----- Snapshot-based historical accuracy tests --------------------------

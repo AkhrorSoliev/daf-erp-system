@@ -96,8 +96,12 @@ export class LeadsController {
   // extra path segment isn't swallowed by the generic detail route.
   @Get(':id/hover-summary')
   @Can('leads.view')
-  getHoverSummary(@Param('id') id: string) {
-    return this.leadsService.getHoverSummary(id);
+  getHoverSummary(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.leadsService.getHoverSummary(id, companyId, scope);
   }
 
   // Leads converted into a given student — powers the student profile "Lid
@@ -105,8 +109,12 @@ export class LeadsController {
   // id. studentId is a numeric student id, not a lead uuid.
   @Get('by-student/:studentId')
   @Can('leads.view', 'students.details')
-  findByStudentId(@Param('studentId', ParseIntPipe) studentId: number) {
-    return this.leadsService.findByStudentId(studentId);
+  findByStudentId(
+    @Param('studentId', ParseIntPipe) studentId: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.leadsService.findByStudentId(studentId, companyId, userId);
   }
 
   @Get(':id')
@@ -127,16 +135,23 @@ export class LeadsController {
     @CurrentUser('id') userId: number,
   ) {
     // No `@BranchScope()`: the branch comes from the chosen section's column,
-    // and `getBoard` already only offered sections this caller can reach.
-    return this.leadsService.create(dto, companyId, userId);
+    // and the service checks the caller holds it (`assertCallerInBranch`).
+    return this.leadsService.create(dto, companyId, {
+      kind: 'user',
+      id: userId,
+    });
   }
 
   // Declared before ':id/move' and ':id' so "/leads/reorder" is not captured
   // as an id. Reorders the leads within one section (pure ordering).
   @Patch('reorder')
   @Can('leads.manage')
-  reorder(@Body() dto: ReorderLeadsDto) {
-    return this.leadsService.reorder(dto);
+  reorder(
+    @Body() dto: ReorderLeadsDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.leadsService.reorder(dto, companyId, userId);
   }
 
   // Declared before ':id' so "/leads/:id/move" resolves to the move handler.

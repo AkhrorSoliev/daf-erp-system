@@ -64,7 +64,13 @@ export class QrAttendanceSessionService {
 
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null },
-      select: { id: true, name: true, exactDays: true, startDate: true },
+      select: {
+        id: true,
+        name: true,
+        exactDays: true,
+        startDate: true,
+        branchId: true,
+      },
     });
 
     const sessionKey = `qr-session:${groupId}:${date}`;
@@ -96,6 +102,7 @@ export class QrAttendanceSessionService {
       group?.startDate ?? null,
       group?.exactDays ?? null,
       parsedDate,
+      group?.branchId,
     );
 
     // Session TTL: until the lesson ends on the Tashkent clock (the window
@@ -218,15 +225,18 @@ export class QrAttendanceSessionService {
     startDate: Date | null,
     exactDays: string[] | null,
     parsedDate: Date,
+    branchId: number | undefined,
   ): Promise<number | null> {
     if (!startDate || !exactDays?.length) return null;
 
     const allowedDays = new Set(
       exactDays.map((d) => DAY_NAME_TO_JS[d.toLowerCase()]),
     );
+    // Only the centre's holidays and the group's own branch's skip a lesson.
     const holidaySet = await this.holidaysService.buildHolidayDateSet(
       startDate,
       parsedDate,
+      branchId,
     );
 
     let count = 0;

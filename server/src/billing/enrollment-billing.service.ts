@@ -248,6 +248,7 @@ export class EnrollmentBillingService {
           branchId: enrollment.group.branchId,
           companyId: enrollment.group.companyId,
           performedById: params.performedById,
+          actor: { kind: 'system' },
           // The payment statement folds a tagged release into the lessons
           // instead of guessing from the description. Caller keys (a
           // refund's `refundId`) stay alongside.
@@ -453,6 +454,7 @@ export class EnrollmentBillingService {
           branchId: enrollment.group.branchId,
           companyId: enrollment.group.companyId,
           performedById: params.performedById,
+          actor: { kind: 'system' },
           metadata: {
             kind: 'prepaid-release',
             enrollmentId: params.enrollmentId,

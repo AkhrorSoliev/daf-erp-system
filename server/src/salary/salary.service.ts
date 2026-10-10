@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { SalaryPaymentStatus } from '@prisma/client';
 import {
   CreateSalaryConfigDto,
   GlobalSalaryConfigDto,
@@ -35,15 +34,19 @@ export class SalaryService {
     private settleMonthService: SalarySettleMonthService,
   ) {}
 
-  // Config
-  getConfig(userId: number, companyId: number) {
-    return this.config.getConfig(userId, companyId);
+  // Config — rate reads stay inside the caller's payroll scope.
+  getConfig(userId: number, companyId: number, performedById: number) {
+    return this.config.getConfig(userId, companyId, performedById);
   }
-  getConfigsForUsers(userIds: number[], companyId: number) {
-    return this.config.getConfigsForUsers(userIds, companyId);
+  getConfigsForUsers(
+    userIds: number[],
+    companyId: number,
+    performedById: number,
+  ) {
+    return this.config.getConfigsForUsers(userIds, companyId, performedById);
   }
-  getConfigHistory(userId: number, companyId: number) {
-    return this.config.getHistory(userId, companyId);
+  getConfigHistory(userId: number, companyId: number, performedById: number) {
+    return this.config.getHistory(userId, companyId, performedById);
   }
   async createConfig(
     dto: CreateSalaryConfigDto,
@@ -84,8 +87,8 @@ export class SalaryService {
 
   // Accrual reads (writes go through SalaryAccrualService directly from
   // LessonBillingService — keeping the facade thin to one responsibility).
-  getAccruals(userId: number, companyId: number) {
-    return this.accrual.getAccruals(userId, companyId);
+  getAccruals(userId: number, companyId: number, performedById: number) {
+    return this.accrual.getAccruals(userId, companyId, performedById);
   }
 
   // Summary
@@ -153,8 +156,12 @@ export class SalaryService {
   }
 
   // Payment
-  findPayments(query: SalaryPaymentQueryDto, companyId: number) {
-    return this.payment.findPayments(query, companyId);
+  findPayments(
+    query: SalaryPaymentQueryDto,
+    companyId: number,
+    performedById: number,
+  ) {
+    return this.payment.findPayments(query, companyId, performedById);
   }
   getMatrix(
     query: { from: string; to: string },
@@ -168,17 +175,6 @@ export class SalaryService {
   }
   payPayment(id: string, performedById: number, companyId: number) {
     return this.payment.payPayment(id, performedById, companyId);
-  }
-  batchPay(
-    params: {
-      companyId: number;
-      branchId?: number;
-      userIds?: number[];
-      statuses?: SalaryPaymentStatus[];
-    },
-    performedById: number,
-  ) {
-    return this.payment.batchPay(params, performedById);
   }
 
   // Month-wide settle for payroll handed over outside the system.

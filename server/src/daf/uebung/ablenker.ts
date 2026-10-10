@@ -56,14 +56,56 @@ function woerterVon(uz: string): Set<string> {
 }
 
 /**
+ * A word's normalised spelling, meaning and kind, worked out once. Every
+ * question of a session ranks the same pool again (183 words in u04), and
+ * recomputing these in each call was most of a session's cost. Keyed by the
+ * object: material is built fresh for each session and never changed, so
+ * the entries go with it.
+ */
+interface Merkmale {
+  de: string;
+  bedeutung: Set<string>;
+  art: WortArt;
+  texte: Map<string, string>;
+}
+const MERKMALE = new WeakMap<object, Merkmale>();
+
+function merkmale(w: MaterialWort): Merkmale {
+  let m = MERKMALE.get(w);
+  if (!m) {
+    m = {
+      de: normalisieren(w.de),
+      bedeutung: woerterVon(w.uz),
+      art: wortArt(w),
+      texte: new Map(),
+    };
+    MERKMALE.set(w, m);
+  }
+  return m;
+}
+
+/** `normalisieren` of a text shown for `w` (its de, its uz, its picture). */
+function textVon(w: MaterialWort, text: string): string {
+  const m = merkmale(w);
+  let t = m.texte.get(text);
+  if (t === undefined) {
+    t = normalisieren(text);
+    m.texte.set(text, t);
+  }
+  return t;
+}
+
+/**
  * One meaning contains the other ("o'qituvchi" / "o'qituvchi ayol",
  * "-da" / "-da, oldida", "xayr" / "xayr"): offering one beside the other
  * would make a second answer right. The note in brackets does not count —
  * it is what tells such words apart for a reader, not for a learner.
  */
 export function bedeutungUeberlappt(a: string, b: string): boolean {
-  const wa = woerterVon(a);
-  const wb = woerterVon(b);
+  return ueberlappt(woerterVon(a), woerterVon(b));
+}
+
+function ueberlappt(wa: Set<string>, wb: Set<string>): boolean {
   if (wa.size === 0 || wb.size === 0) return false;
   const teil = (x: Set<string>, y: Set<string>) =>
     [...x].every((t) => y.has(t));
@@ -92,9 +134,8 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
   return out;
 }
 
-function abstand(a: string, b: string): number {
-  const x = normalisieren(a);
-  const y = normalisieren(b);
+/** Both already normalised. */
+function abstand(x: string, y: string): number {
   return editAbstand(x, y) / Math.max(x.length, y.length, 1);
 }
 
@@ -109,37 +150,47 @@ export function waehleAblenker<T extends MaterialWort>(
 ): T[] | null {
   const anzahl = opt.anzahl ?? 3;
   const fenster = opt.fenster ?? 6;
-  const zielText = normalisieren(opt.feld(ziel));
-  const art = wortArt(ziel);
+  const zielText = textVon(ziel, opt.feld(ziel));
+  const art = merkmale(ziel).art;
 
   const zielZahl = zahlVon(ziel);
+  // Taken once per call, not once per candidate.
+  const zielBedeutung = opt.bedeutung ? merkmale(ziel).bedeutung : null;
+  const zielDe = merkmale(ziel).de;
   const gesehen = new Set<string>([zielText]);
   const kandidaten: T[] = [];
   for (const w of mischen(andere, opt.rnd)) {
     if (w.id === ziel.id) continue;
-    const text = normalisieren(opt.feld(w));
+    const text = textVon(w, opt.feld(w));
     if (gesehen.has(text)) continue;
-    // Two numbers mean the same only when they are the same number:
-    // "o'n yetti" contains "yetti" but is no answer to "sieben".
-    const wZahl = zahlVon(w);
-    const gleicheBedeutung =
-      zielZahl !== null && wZahl !== null
-        ? zielZahl === wZahl
-        : bedeutungUeberlappt(ziel.uz, w.uz);
-    if (opt.bedeutung && gleicheBedeutung) continue;
+    if (zielBedeutung) {
+      // Two numbers mean the same only when they are the same number:
+      // "o'n yetti" contains "yetti" but is no answer to "sieben".
+      const wZahl = zahlVon(w);
+      const gleicheBedeutung =
+        zielZahl !== null && wZahl !== null
+          ? zielZahl === wZahl
+          : ueberlappt(zielBedeutung, merkmale(w).bedeutung);
+      if (gleicheBedeutung) continue;
+    }
     gesehen.add(text);
     kandidaten.push(w);
   }
   if (kandidaten.length < anzahl) return null;
 
-  const gleicheArt = (w: T) => wortArt(w) === art;
-  // Stable sort over the shuffled list: equal keys keep a random order.
-  const sortiert = [...kandidaten].sort((a, b) => {
-    const artA = gleicheArt(a) ? 0 : 1;
-    const artB = gleicheArt(b) ? 0 : 1;
-    if (artA !== artB) return artA - artB;
-    return opt.aehnlich ? abstand(ziel.de, a.de) - abstand(ziel.de, b.de) : 0;
-  });
+  const gleicheArt = (w: T) => merkmale(w).art === art;
+  // Keys are computed once per candidate: inside the comparison the edit
+  // distance ran n·log n times, and a 183-word unit (u04) took 3 s of CPU
+  // per session. Stable sort over the shuffled list: equal keys keep a
+  // random order.
+  const sortiert = kandidaten
+    .map((w) => ({
+      w,
+      art: gleicheArt(w) ? 0 : 1,
+      abstand: opt.aehnlich ? abstand(zielDe, merkmale(w).de) : 0,
+    }))
+    .sort((a, b) => a.art - b.art || a.abstand - b.abstand)
+    .map((k) => k.w);
 
   if (zielZahl !== null) {
     const reihe = [

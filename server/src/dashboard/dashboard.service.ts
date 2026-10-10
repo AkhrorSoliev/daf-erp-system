@@ -42,8 +42,11 @@ export class DashboardService {
     // range), there are no lessons. Short-circuit so the schedule renders
     // empty exactly like Sunday — the holiday banner from `isHoliday` /
     // `holidayName` is the only thing the UI shows for that day.
-    const holiday =
-      await this.holidaysService.findActiveHolidayCovering(dateOnly);
+    // Only the centre's holidays and this branch's own close its schedule.
+    const holiday = await this.holidaysService.findActiveHolidayCovering(
+      dateOnly,
+      branchId,
+    );
     if (holiday) {
       const [branch, rooms] = await Promise.all([
         this.prisma.branch.findFirst({

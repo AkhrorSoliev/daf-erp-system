@@ -845,4 +845,60 @@ describe('SalaryAccrualService', () => {
       expect(await service.createAccrual(baseParams)).toEqual({ id: 'acc-1' });
     });
   });
+
+  /** `GET /salary/accruals/:userId` took no caller: any teacher's accruals. */
+  describe('getAccruals — payroll scope', () => {
+    const director = {
+      mainBranch: 1,
+      branches: [],
+      roles: [{ role: { name: 'Branch Director' } }],
+    };
+
+    beforeEach(() => {
+      prisma.salaryAccrual.findMany = jest.fn().mockResolvedValue([]);
+      prisma.user.findUnique = jest.fn();
+      prisma.user.count = jest.fn().mockResolvedValue(0);
+    });
+
+    it('lets anyone read their own accruals without a branch lookup', async () => {
+      await service.getAccruals(10001, 1, 10001);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      expect(prisma.salaryAccrual.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ userId: 10001, companyId: 1 }),
+        }),
+      );
+    });
+
+    it("refuses a director another branch's teacher and reads nothing", async () => {
+      prisma.user.findUnique.mockResolvedValue(director);
+
+      await expect(service.getAccruals(10060, 1, 10012)).rejects.toThrow(
+        /filialingizga tegishli emas/,
+      );
+      expect(prisma.salaryAccrual.findMany).not.toHaveBeenCalled();
+    });
+
+    it('serves a director a teacher of their own branch', async () => {
+      prisma.user.findUnique.mockResolvedValue(director);
+      prisma.user.count.mockResolvedValue(1);
+
+      await service.getAccruals(10050, 1, 10012);
+
+      expect(prisma.salaryAccrual.findMany).toHaveBeenCalled();
+    });
+
+    it('lets the CEO read any teacher', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'CEO' } }],
+      });
+
+      await service.getAccruals(10060, 1, 10000);
+
+      expect(prisma.user.count).not.toHaveBeenCalled();
+      expect(prisma.salaryAccrual.findMany).toHaveBeenCalled();
+    });
+  });
 });

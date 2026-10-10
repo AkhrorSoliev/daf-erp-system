@@ -13,6 +13,7 @@ const MATN: Record<FrageFormat, string> = {
   ARTIKEL: "Artiklni tanlang",
   LUECKE: "Bo'sh joyni to'ldiring",
   SATZ_BAUEN: "So'zlardan gap tuzing",
+  SATZ_HOEREN: "Eshitgan gapingizni so'zlardan tuzing",
   SATZ_UEBERSETZEN: "Gapning tarjimasini tanlang",
   REAKTION: "Nima deb javob berasiz?",
   ZUORDNEN: "Vaziyatni mos ibora bilan juftlang",
@@ -33,6 +34,11 @@ export function koersatma(format: FrageFormat): string {
 export function harakat(format: FrageFormat): "TANLASH" | "YOZISH" | "YIGISH" | "RASM" {
   if (format === "BILD_WORT" || format === "AUDIO_BILD") return "RASM";
   if (format === "LUECKE" || format === "WORT_TIPPEN" || format === "BILD_TIPPEN") return "YOZISH";
-  if (format === "SATZ_BAUEN" || format === "PAAR" || format === "ZUORDNEN") return "YIGISH";
+  if (
+    format === "SATZ_BAUEN" ||
+    format === "SATZ_HOEREN" ||
+    format === "PAAR" ||
+    format === "ZUORDNEN"
+  ) return "YIGISH";
   return "TANLASH";
 }

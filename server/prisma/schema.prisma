@@ -169,6 +169,7 @@ enum TaskKind {
   CALLBACK
   BROKEN_PROMISE
   UNCALLED_LEAD
+  JOIN_REQUEST
 }
 
 enum TaskParticipantRole {
@@ -3737,10 +3738,17 @@ model DafDialog {
   sectionId Int
   titelDe   String
   titelUz   String
+  /// Sahna izohi (o'zbekcha): suhbat qayerda, kim bilan boshlanadi. Mashq
+  /// matnida va eshitishdan keyingi matnda birinchi qator bo'lib chiqadi.
+  sahnaUz   String?
   /// Butun suhbatning R2 kaliti — `text-to-dialogue` bitta fayl beradi,
   /// satrma-satr emas. `null` — ovoz hali yasalmagan, eshitish savoli
   /// qurilmaydi. Manba — `content/daf/a1/dialog-audio.json`.
   audioKey  String?
+  /// Butun hikoyani ko'rsatadigan bitta rasm — tasodifiy R2 kaliti
+  /// (`daf/bild/<hex>.jpg`). `null` — rasm yo'q. Manba —
+  /// `content/daf/a1/dialog-bilder.json`.
+  imageKey  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3764,6 +3772,8 @@ model DafDialogLine {
   de       String
   tts      String?
   uz       String
+  /// Satr yonidagi sahna izohi (o'zbekcha), masalan «boshqa xonadan».
+  izohUz   String?
   audioKey String?
 
   dialog DafDialog @relation(fields: [dialogId], references: [id])
@@ -4133,4 +4143,45 @@ model AbsenceWarningLog {
   @@unique([enrollmentId, absenceDate])
   @@index([companyId, createdAt])
   @@index([studentId])
+}
+
+/// A bot sign-up waiting for an administrator (ADR-0080). Nothing else is
+/// written until it is approved: no card, no enrollment, no charge, no lead.
+enum StudentJoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  REPLACED
+}
+
+model StudentJoinRequest {
+  id               String                   @id @default(uuid())
+  companyId        Int
+  branchId         Int
+  /// The group the person asked for.
+  groupId          String
+  /// The Telegram chat that asked. One PENDING row per chat: a partial unique
+  /// index written by hand in the migration.
+  chatId           String
+  telegramUsername String?
+  firstName        String
+  lastName         String
+  /// 9 digits, the sender's own contact.
+  phone            String
+  /// R2 URL; null once deleted (rejected, expired, replaced).
+  photo            String?
+  status           StudentJoinRequestStatus @default(PENDING)
+  taskId           String?                  @unique
+  decidedById      Int?
+  decidedAt        DateTime?
+  rejectReason     String?
+  /// Differs from `groupId` when the administrator chose another group.
+  approvedGroupId  String?
+  /// The card the approval wrote.
+  studentId        Int?
+  createdAt        DateTime                 @default(now())
+
+  @@index([status, createdAt])
+  @@index([branchId, status])
 }

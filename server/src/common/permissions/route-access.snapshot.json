@@ -833,11 +833,6 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/lead-analytics": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
   "GET /reports/lead-funnel": [
     "Administrator",
     "Branch Director",
@@ -1057,6 +1052,11 @@
     "CEO"
   ],
   "GET /student-exit-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /student-join-requests/by-task/:taskId": [
     "Administrator",
     "Branch Director",
     "CEO"
@@ -1885,10 +1885,6 @@
     "Branch Director",
     "CEO"
   ],
-  "POST /salary/payments/batch-pay": [
-    "Branch Director",
-    "CEO"
-  ],
   "POST /salary/payments/settle-month": [
     "CEO"
   ],
@@ -1896,6 +1892,16 @@
     "CEO"
   ],
   "POST /student-exit-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /student-join-requests/:id/approve": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /student-join-requests/:id/reject": [
     "Administrator",
     "Branch Director",
     "CEO"

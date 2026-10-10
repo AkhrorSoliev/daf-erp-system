@@ -13,6 +13,7 @@ export const FORMAT_NOMLARI: Record<FrageFormat, string> = {
   ARTIKEL: "Artikl tanlash",
   LUECKE: "Gapdagi bo'shliqni to'ldirish",
   SATZ_BAUEN: "So'zlardan gap qurish",
+  SATZ_HOEREN: "Eshitilgan gapni so'zlardan qurish",
   SATZ_UEBERSETZEN: "Gap tarjimasini topish",
   REAKTION: "Vaziyatga mos iborani topish",
   ZUORDNEN: "Juftlash — vaziyat va ibora",

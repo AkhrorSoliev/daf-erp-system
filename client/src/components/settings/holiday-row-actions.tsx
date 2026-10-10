@@ -27,8 +27,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useEditHoliday, type Holiday } from "@/hooks/use-edit-holiday";
+import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { mayManageHoliday } from "@/lib/holiday-scope";
 
 interface HolidayRowActionsProps {
   holiday: Holiday;
@@ -42,6 +44,8 @@ export function HolidayRowActions({
   const { openDrawer } = useEditHoliday();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Identity, not a capability: a centre-wide holiday is the CEO's alone.
+  const isCeo = useAuth((s) => s.user?.roles.some((r) => r.id === 1) ?? false);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -66,6 +70,11 @@ export function HolidayRowActions({
     const endStr = format(new Date(holiday.endDate), "dd.MM.yyyy");
     return `${startStr} — ${endStr}`;
   })();
+
+  // CEO decision 10.10.2026: only the CEO edits or deletes a centre-wide
+  // holiday, and the server refuses everyone else. Hide the menu, don't
+  // offer a 403.
+  if (!mayManageHoliday(isCeo, holiday.branchId)) return null;
 
   return (
     <>

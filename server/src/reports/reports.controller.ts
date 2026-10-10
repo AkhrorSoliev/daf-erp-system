@@ -156,12 +156,6 @@ export class ReportsController {
     );
   }
 
-  @Get('lead-analytics')
-  @Can('reports.leads')
-  getLeadAnalytics(@Query() query: ReportsQueryDto) {
-    return this.reportsService.getLeadAnalytics(query);
-  }
-
   // The «Oylar bo'yicha» table of /payments/overview and the home chart: six
   // months of cash and canonical profit, ending at `?month=` (default: now).
   // CEO/BD only — money series.

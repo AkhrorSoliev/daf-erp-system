@@ -1,0 +1,84 @@
+{
+  "unit": "u04",
+  "regeln": [
+    {
+      "section": "u04-s1",
+      "titelDe": "Unbestimmter Artikel: ein, eine — kein, keine",
+      "titelUz": "Noaniq artikl: ein, eine — kein, keine",
+      "erklaerungUz": "Narsa birinchi marta tilga olinganda noaniq artikl ishlatiladi: erkak va o'rta jinsda «ein» (ein Apfel, ein Ei), ayol jinsida «eine» (eine Banane). «Bu … emas» yoki «… yo'q» deyish uchun oldiga «k» qo'shiladi: kein Apfel, keine Banane. Ko'plikda «ein» bo'lmaydi (Äpfel, Bananen), inkor shakli esa «keine»: keine Eier. Sanalmaydigan narsalar (Milch, Butter, Käse) oldida «ein» qo'yilmaydi: Wir haben Milch. Inkori — kein/keine: Wir haben keine Milch.",
+      "beispiele": [
+        { "de": "Das ist ein Apfel.", "uz": "Bu olma." },
+        { "de": "Das ist eine Banane.", "uz": "Bu banan." },
+        { "de": "Hier ist ein Ei.", "uz": "Mana bitta tuxum." },
+        { "de": "Das ist kein Apfel, das ist eine Birne.", "uz": "Bu olma emas, bu nok." },
+        { "de": "Wir haben keine Milch.", "uz": "Bizda sut yo'q." }
+      ]
+    },
+    {
+      "section": "u04-s2",
+      "titelDe": "Plural und Preise",
+      "titelUz": "Ko'plik va narxlar",
+      "erklaerungUz": "Nemis tilida ko'plik qo'shimchasi har xil: die Tomate → die Tomaten, das Ei → die Eier, der Apfel → die Äpfel, der Becher → die Becher (o'zgarmaydi). Shuning uchun otni ko'pligi bilan birga yodlang. Ko'plikda artikl doim «die». Narxni so'rash: bitta narsa uchun «Was kostet …?», ko'p narsa uchun «Was kosten …?». Narx shunday aytiladi: 2,50 € — «zwei Euro fünfzig». O'lchov so'zlari son bilan o'zgarmaydi: drei Euro, zwei Stück Käse.",
+      "beispiele": [
+        { "de": "Die Tomaten sind frisch.", "uz": "Pomidorlar yangi." },
+        { "de": "Was kostet die Melone?", "uz": "Qovun qancha turadi?" },
+        { "de": "Was kosten die Äpfel?", "uz": "Olmalar qancha turadi?" },
+        { "de": "Die Eier kosten drei Euro.", "uz": "Tuxumlar uch yevro turadi." },
+        { "de": "Das macht zwei Euro fünfzig.", "uz": "Hammasi ikki yevro ellik sent bo'ladi." }
+      ]
+    },
+    {
+      "section": "u04-s3",
+      "titelDe": "essen, trinken und gern",
+      "titelUz": "essen, trinken fe'llari va gern",
+      "erklaerungUz": "«essen» fe'li «du» va «er/sie/es» bilan o'zagini o'zgartiradi: ich esse, du isst, er isst. «trinken» odatdagicha tuslanadi: ich trinke, du trinkst, er trinkt. Biror narsani yaxshi ko'rishni aytish uchun fe'ldan keyin «gern» qo'yiladi: Ich esse gern Pizza. Ko'proq yoqtirganini aytish uchun — «lieber»: Ich trinke lieber Wasser. «mögen» ham «yoqtirmoq» degani: ich mag, du magst.",
+      "beispiele": [
+        { "de": "Ich esse gern Pizza.", "uz": "Men pitsani yaxshi ko'raman." },
+        { "de": "Du isst gern Fisch.", "uz": "Sen baliqni yaxshi ko'rasan." },
+        { "de": "Lena isst gern Eis.", "uz": "Lena muzqaymoqni yaxshi ko'radi." },
+        { "de": "Trinkst du gern Saft?", "uz": "Sharbat ichishni yaxshi ko'rasanmi?" },
+        { "de": "Ich trinke lieber Wasser.", "uz": "Men suvni afzal ko'raman." },
+        { "de": "Magst du Sushi?", "uz": "Sushini yoqtirasanmi?" }
+      ]
+    },
+    {
+      "section": "u04-s4",
+      "titelDe": "Zeitangaben: am und um",
+      "titelUz": "Vaqt: am va um",
+      "erklaerungUz": "Kun qismi «am» bilan aytiladi: am Morgen, am Vormittag, am Mittag, am Nachmittag, am Abend. Aniq soat esa «um» bilan: um sieben Uhr, um zwölf Uhr. Biror ish soat nechada bo'lishini so'rash: «Um wie viel Uhr …?» Vaqt gap boshida tursa ham fe'l ikkinchi o'rinda qoladi: Am Morgen trinke ich Kaffee.",
+      "beispiele": [
+        { "de": "Am Morgen trinke ich Kaffee.", "uz": "Ertalab men qahva ichaman." },
+        { "de": "Wir frühstücken um sieben Uhr.", "uz": "Biz soat yettida nonushta qilamiz." },
+        { "de": "Um zwölf Uhr essen wir zu Mittag.", "uz": "Soat o'n ikkida tushlik qilamiz." },
+        { "de": "Am Abend essen wir um acht Uhr.", "uz": "Kechqurun soat sakkizda ovqatlanamiz." },
+        { "de": "Um wie viel Uhr frühstückst du?", "uz": "Soat nechada nonushta qilasan?" }
+      ]
+    },
+    {
+      "section": "u04-s5",
+      "titelDe": "Bestellen: möchten und Ich hätte gern",
+      "titelUz": "Buyurtma: möchten va Ich hätte gern",
+      "erklaerungUz": "Restoranda muloyim so'rash uchun «möchten» ishlatiladi: ich möchte, du möchtest, er/sie möchte, wir möchten, Sie möchten. «Ich hätte gern …» ham «… bersangiz» ma'nosidagi muloyim ibora. Gapda ikkinchi fe'l bo'lsa, u oxiriga o'tadi: Ich möchte bestellen. Ich möchte etwas trinken.",
+      "beispiele": [
+        { "de": "Ich möchte die Tomatensuppe.", "uz": "Men pomidor sho'rvasini xohlayman." },
+        { "de": "Ich hätte gern ein Schnitzel.", "uz": "Menga bitta shnitsel bersangiz." },
+        { "de": "Was möchtest du trinken?", "uz": "Nima ichishni xohlaysan?" },
+        { "de": "Wir möchten bestellen.", "uz": "Biz buyurtma bermoqchimiz." },
+        { "de": "Möchten Sie ein Dessert?", "uz": "Desert xohlaysizmi?" }
+      ]
+    },
+    {
+      "section": "u04-s6",
+      "titelDe": "Akkusativ: einen, eine, ein",
+      "titelUz": "Tushum kelishigi: einen, eine, ein",
+      "erklaerungUz": "«brauchen», «kaufen», «nehmen», «haben» kabi fe'llardan keyin ot tushum kelishigida keladi. Faqat erkak jinsi o'zgaradi: ein → einen, kein → keinen (der → den). Ayol va o'rta jins o'zgarmaydi: eine Zwiebel, ein Ei. Masalan: Ich brauche einen Topf, eine Flasche Öl und ein Kilo Reis.",
+      "beispiele": [
+        { "de": "Ich brauche einen Topf.", "uz": "Menga qozon kerak." },
+        { "de": "Wir brauchen eine Zwiebel.", "uz": "Bizga bitta piyoz kerak." },
+        { "de": "Mia kauft ein Kilo Reis.", "uz": "Mia bir kilo guruch sotib oladi." },
+        { "de": "Lena trinkt keinen Kaffee.", "uz": "Lena qahva ichmaydi." },
+        { "de": "Hast du einen Deckel?", "uz": "Senda qopqoq bormi?" }
+      ]
+    }
+  ]
+}

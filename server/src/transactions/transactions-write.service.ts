@@ -20,6 +20,7 @@ import {
   resolveStudentBranchId,
   tryResolveUserBranchId,
 } from '../common/finance/resolve-branch';
+import { assertCallerMayWriteForStudentInTx } from '../common/auth/financial-write-scope';
 
 // Transaction types that represent REAL money in/out of the center and so
 // must mirror onto a cash account. Everything else (lesson deduction /
@@ -48,6 +49,16 @@ const MONTH_NAMES_UZ = [
   'Noyabr',
   'Dekabr',
 ] as const;
+
+/**
+ * Who posts a manual adjustment — stated, never inferred from a missing id
+ * (server CLAUDE.md «A write with no signed-in caller must SAY so», ADR-0008).
+ * `user` is a signed-in caller of `POST /transactions/adjustment`: they must
+ * hold the student's branch. `system` is an internal caller (refunds, status
+ * cascades, monthly charges) that authorised its own entry point and has no
+ * caller to confine.
+ */
+export type AdjustmentActor = { kind: 'user'; id: number } | { kind: 'system' };
 
 @Injectable()
 export class TransactionsWriteService {
@@ -993,6 +1004,12 @@ export class TransactionsWriteService {
       // acting user; the ledger column is nullable.
       performedById?: number;
       /**
+       * Required, so a caller cannot skip the branch check by leaving it out:
+       * a `user` must hold the student's branch, checked on this transaction's
+       * client; `system` skips it.
+       */
+      actor: AdjustmentActor;
+      /**
        * Optional audit trail. A refund that frees prepaid lessons posts an
        * ADJUSTMENT for the money it releases and has to find that same row
        * again to reverse it — Transaction carries no refund FK, so the link
@@ -1011,6 +1028,14 @@ export class TransactionsWriteService {
       });
       if (!studentCheck) {
         throw new NotFoundException("O'quvchi topilmadi");
+      }
+      if (params.actor.kind === 'user') {
+        await assertCallerMayWriteForStudentInTx(
+          client,
+          params.actor.id,
+          params.studentId,
+          params.companyId,
+        );
       }
 
       const student = await this.lockStudent(client, params.studentId);

@@ -2,6 +2,7 @@ import {
   luecke,
   reaktion,
   satzBauen,
+  satzHoeren,
   satzUebersetzen,
   zuordnen,
 } from './satz-fragen';
@@ -14,8 +15,9 @@ function s(
   de: string,
   uz: string,
   akzeptiert: string[] = [],
+  audioKey: string | null = null,
 ): MaterialSatz {
-  return { id, de, uz, sectionCode: 'u01-s1', akzeptiert };
+  return { id, de, uz, sectionCode: 'u01-s1', akzeptiert, audioKey };
 }
 function w(id: number, de: string, uz: string): MaterialWort {
   return {
@@ -213,6 +215,52 @@ describe('satzBauen', () => {
     const f = satzBauen(satz, identityRnd)!;
     const gegeben = f.options.join(' ');
     expect(istRichtig(gegeben, f.richtig)).toBe(true);
+  });
+});
+
+describe('satzHoeren', () => {
+  const url = (key: string): string | null => `https://r2.example/${key}`;
+  const SATZ = s(
+    2,
+    'Ich wohne in Deutschland.',
+    'Men Germaniyada yashayman.',
+    ['In Deutschland wohne ich.'],
+    'daf/audio/abc.mp3',
+  );
+
+  it('plays the sentence from its public URL, never the raw key', () => {
+    const f = satzHoeren(SATZ, rnd, url)!;
+    expect(f.format).toBe('SATZ_HOEREN');
+    expect(f.audioUrl).toBe('https://r2.example/daf/audio/abc.mp3');
+  });
+
+  it('has the same tiles, answer and accepted orders as SATZ_BAUEN', () => {
+    const f = satzHoeren(SATZ, rnd, url)!;
+    const bauen = satzBauen(SATZ, rnd)!;
+    expect(f.options).toEqual(bauen.options);
+    expect(f.richtig).toBe(bauen.richtig);
+    expect(f.akzeptiert).toEqual(['In Deutschland wohne ich.']);
+    expect(f.itemType).toBe('SATZ');
+    expect(f.itemId).toBe(2);
+    // Same material key: one sentence is never asked both ways in a session.
+    expect(f.belegteItems).toEqual(bauen.belegteItems);
+  });
+
+  it('sends no Uzbek: the translation would give the answer away', () => {
+    const f = satzHoeren(SATZ, rnd, url)!;
+    expect(f.prompt).toBe('');
+    expect(f.hilfe).toBeNull();
+    expect(JSON.stringify(f)).not.toContain('Germaniyada');
+  });
+
+  it('is not built without audio or without an R2 base', () => {
+    expect(satzHoeren({ ...SATZ, audioKey: null }, rnd, url)).toBeNull();
+    expect(satzHoeren(SATZ, rnd, () => null)).toBeNull();
+  });
+
+  it('is not built for a two-word sentence, like SATZ_BAUEN', () => {
+    const kurz = s(3, 'Guten Tag.', 'Xayrli kun.', [], 'daf/audio/x.mp3');
+    expect(satzHoeren(kurz, rnd, url)).toBeNull();
   });
 });
 

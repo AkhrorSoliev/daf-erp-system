@@ -8,7 +8,8 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { CurrentUser } from '../common/decorators';
+import { BranchCeiling, CurrentUser } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { Can } from '../common/permissions/access.decorators';
 import { TelegramGroupsService } from './telegram-groups.service';
 import { TelegramAdminBotService } from './telegram-admin-bot.service';
@@ -50,8 +51,16 @@ export class TelegramGroupsController {
 
   @Get()
   @Can('settings.telegram-groups')
-  async list(@CurrentUser() user: { companyId: number }) {
-    const groups = await this.groupsService.listForCompany(user.companyId);
+  async list(
+    @CurrentUser() user: { companyId: number },
+    // The CEILING, not the switcher's pick: the settings table lists every
+    // group the caller may administer, whichever branch is selected.
+    @BranchCeiling() ceiling: ReportBranchIds,
+  ) {
+    const groups = await this.groupsService.listForCompany(
+      user.companyId,
+      ceiling,
+    );
     return groups.map((g) => ({
       id: g.id,
       chatId: g.chatId.toString(),

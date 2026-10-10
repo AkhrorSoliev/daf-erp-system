@@ -21,6 +21,7 @@ const group = (over: Partial<ExpectationGroup> = {}): ExpectationGroup => ({
   ],
   datesWithAttendance: new Set<string>(),
   cancelledDates: new Set<string>(),
+  holidayDates: new Set<string>(),
   holidayMakeupDates: new Set<string>(),
   coveredAttendances: [],
   uncoveredAttendances: [],
@@ -30,10 +31,9 @@ const group = (over: Partial<ExpectationGroup> = {}): ExpectationGroup => ({
 // `todayStr` before the month starts = the whole month is still ahead, so
 // every scheduled slot projects. Individual tests override it to sit inside
 // the month and check that history is left alone.
-const opts = (holidays: string[] = [], todayStr = '2026-07-31') => ({
+const opts = (todayStr = '2026-07-31') => ({
   monthStartStr: '2026-08-01',
   monthEndStr: '2026-08-31',
-  holidayDates: new Set(holidays),
   todayStr,
 });
 
@@ -46,7 +46,10 @@ describe('splitMonthLessons', () => {
   });
 
   it('drops holidays', () => {
-    const r = splitMonthLessons([group()], opts(['2026-08-03', '2026-08-05']));
+    const r = splitMonthLessons(
+      [group({ holidayDates: new Set(['2026-08-03', '2026-08-05']) })],
+      opts(),
+    );
     expect(r.remainingLessons).toBe(22); // 11 sana × 2
   });
 
@@ -56,8 +59,13 @@ describe('splitMonthLessons', () => {
     // chiqarmaydi, ya'ni oy narxi 13 ga bo'linadi; prognoz 12 ni ko'rsa
     // bitta oy uchun ikki xil raqam chiqardi.
     const r = splitMonthLessons(
-      [group({ holidayMakeupDates: new Set(['2026-08-03']) })],
-      opts(['2026-08-03', '2026-08-05']),
+      [
+        group({
+          holidayDates: new Set(['2026-08-03', '2026-08-05']),
+          holidayMakeupDates: new Set(['2026-08-03']),
+        }),
+      ],
+      opts(),
     );
     expect(r.remainingLessons).toBe(24); // 12 sana × 2 (faqat 05.08 chiqdi)
   });
@@ -171,14 +179,14 @@ describe('splitMonthLessons', () => {
     // Bugun 15-avgust. 3,5,7,10,12,14 o'tib ketgan va davomatsiz — dars
     // bo'lganiga dalil yo'q, shuning uchun sanalmaydi.
     // Qolgani: 17,19,21,24,26,28,31 = 7 sana.
-    const r = splitMonthLessons([group()], opts([], '2026-08-15'));
+    const r = splitMonthLessons([group()], opts('2026-08-15'));
     expect(r.remainingLessons).toBe(14); // 7 sana × 2 o'quvchi
   });
 
   it('still projects TODAY — its lesson may yet be taught and marked', () => {
     // Bugun 17-avgust, dushanba — dars kuni. Davomat hali olinmagan bo'lishi
     // mumkin (soat 10:00), shuning uchun u hisobda qoladi.
-    const r = splitMonthLessons([group()], opts([], '2026-08-17'));
+    const r = splitMonthLessons([group()], opts('2026-08-17'));
     expect(r.remainingLessons).toBe(14); // 17,19,21,24,26,28,31 × 2
   });
 
@@ -191,7 +199,7 @@ describe('splitMonthLessons', () => {
           coveredAttendances: [{ perLesson: 100_000 }],
         }),
       ],
-      opts([], '2026-09-01'),
+      opts('2026-09-01'),
     );
     expect(r.remainingLessons).toBe(0);
     expect(r.remainingValue).toBe(0);

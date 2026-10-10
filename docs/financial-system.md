@@ -350,7 +350,6 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | `POST` | `/api/salary/calculate` | **CEO** | Oylik hisoblash (trigger) |
 | `PATCH` | `/api/salary/payments/:id/approve` | **CEO** | Tasdiqlash |
 | `POST` | `/api/salary/payments/:id/pay` | CEO, BD | To'lash |
-| `POST` | `/api/salary/payments/batch-pay` | CEO, BD | Ko'p oylikni bir martada to'lash |
 | `GET` | `/api/teachers/:id/salary-summary` | CEO, BD | Kutilayotgan vs haqiqiy oylik |
 
 ### 4.5 Refunds — Pul qaytarish
