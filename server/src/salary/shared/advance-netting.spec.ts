@@ -89,19 +89,34 @@ describe('planShownAdvances', () => {
     adv('oct', 300_000, '2026-10-01', '2026-10-01T10:00:00Z'),
   ];
 
+  const open = { isOpenMonth: true, canStillEarn: true };
+  const past = { isOpenMonth: false, canStillEarn: true };
+
   it('the open month shows every advance dated in it, even above the partial base', () => {
-    expect(planShownAdvances(pending, 600_000, OCT_1, true)).toEqual({
+    expect(planShownAdvances(pending, 600_000, OCT_1, open)).toEqual({
       settle: ['a'],
       total: 1_000_000,
     });
   });
 
   it('a past month without a payment shows only what the cron will net', () => {
-    expect(planShownAdvances(pending, 600_000, OCT_1, false)).toEqual({
+    expect(planShownAdvances(pending, 600_000, OCT_1, past)).toEqual({
       settle: [],
       total: 0,
     });
-    expect(planShownAdvances(pending, 1_000_000, OCT_1, false)).toEqual({
+    expect(planShownAdvances(pending, 1_000_000, OCT_1, past)).toEqual({
+      settle: ['a'],
+      total: 1_000_000,
+    });
+  });
+
+  it('the open month for someone who can no longer earn follows the past-month rule', () => {
+    const gone = { isOpenMonth: true, canStillEarn: false };
+    expect(planShownAdvances(pending, 0, OCT_1, gone)).toEqual({
+      settle: [],
+      total: 0,
+    });
+    expect(planShownAdvances(pending, 1_000_000, OCT_1, gone)).toEqual({
       settle: ['a'],
       total: 1_000_000,
     });

@@ -1404,24 +1404,73 @@ describe('SalaryMonthlyService', () => {
       expect(res.data[0].netToPay).toBe(13_333);
     });
 
-    it("faol emas ustozning joriy oydagi avansi (daromadisiz ham) uni ro'yxatda ushlab turadi", async () => {
-      jest.setSystemTime(new Date('2026-06-15T07:00:00Z')); // June is the open month
-      prisma.user.findMany.mockResolvedValue([inactive(10009)]);
-      prisma.expense.findMany.mockResolvedValue([
-        {
-          id: 'e9',
-          relatedUserId: 10009,
-          amount: 200_000,
-          date: new Date('2026-06-05'),
-          createdAt: new Date('2026-06-05T06:00:00Z'),
-        },
-      ]);
+    // The cron writes a payment only for someone with accruals, so an advance
+    // of a person who can no longer earn is never netted: the open month does
+    // not show it as one that will be deducted (it stays in «Avanslar»).
+    describe('joriy oyda, endi ishlay olmaydigan odamning avansi', () => {
+      const unsettled = (userId: number) => ({
+        id: 'e9',
+        relatedUserId: userId,
+        amount: 500_000,
+        date: new Date('2026-06-05'),
+        createdAt: new Date('2026-06-05T06:00:00Z'),
+      });
 
-      const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+      beforeEach(() => {
+        jest.setSystemTime(new Date('2026-06-15T07:00:00Z')); // June is the open month
+      });
 
-      expect(res.data.map((r) => r.user.id)).toEqual([10009]);
-      expect(res.data[0].advances).toBe(200_000);
-      expect(res.data[0].netToPay).toBe(0);
+      it("faol emas, darssiz ustozning avansi ushlanadigan deb ko'rsatilmaydi va qator ro'yxatdan tushadi", async () => {
+        prisma.user.findMany.mockResolvedValue([inactive(10009)]);
+        prisma.expense.findMany.mockResolvedValue([unsettled(10009)]);
+
+        const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+
+        expect(res.data).toEqual([]);
+        expect(res.totals.advances).toBe(0);
+        expect(res.totals.advanceCount).toBe(0);
+      });
+
+      it("o'sha ustoz bitta odam so'ralganda (filtrsiz) avans 0 bilan qaytadi", async () => {
+        prisma.user.findMany.mockResolvedValue([inactive(10009)]);
+        prisma.expense.findMany.mockResolvedValue([unsettled(10009)]);
+
+        const res = await service.getMonthlyForUser(
+          10009,
+          { month: '2026-06' },
+          1,
+          999,
+        );
+
+        expect(res.row).toMatchObject({ advances: 0, netToPay: 0 });
+        expect((res.row as { advanceItems: unknown[] }).advanceItems).toEqual(
+          [],
+        );
+      });
+
+      it("faol ustoz hali darssiz bo'lsa ham avansi to'liq ko'rsatiladi (o'zgarmagan)", async () => {
+        prisma.user.findMany.mockResolvedValue([teacher(10001, 'Ali')]);
+        prisma.expense.findMany.mockResolvedValue([unsettled(10001)]);
+
+        const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+
+        expect(res.data[0].advances).toBe(500_000);
+        expect(res.data[0].netToPay).toBe(0);
+        expect(res.totals.advanceCount).toBe(1);
+      });
+
+      it("faol emas, lekin shu oyda darsi bor ustozning avansi bazadan katta bo'lsa ham to'liq ko'rsatiladi", async () => {
+        prisma.user.findMany.mockResolvedValue([inactive(10009)]);
+        prisma.salaryAccrual.findMany.mockResolvedValue([
+          { userId: 10009, attendanceId: 'a1', amount: 300_000 },
+        ]);
+        prisma.expense.findMany.mockResolvedValue([unsettled(10009)]);
+
+        const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+
+        expect(res.data[0].advances).toBe(500_000);
+        expect(res.data[0].netToPay).toBe(0);
+      });
     });
 
     it("faol emas ustozning o'tgan oydagi, sig'adigan avansi bo'lsa ro'yxatda qoladi", async () => {

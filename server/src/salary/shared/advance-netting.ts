@@ -54,18 +54,22 @@ export function planAdvanceNetting(
  * The advances a salary REPORT row shows for a month without a payment (spec
  * §3). The open month is not capped: its earnings are still growing, and
  * capping by today's partial figure would show 0 for an advance the month-end
- * payout will take. A past month without a payment (the hours before the cron)
- * shows exactly what the cron will net.
+ * payout will take — but only for someone who can still earn this month
+ * (`canStillEarn`): the cron writes a payment only for a person with accruals,
+ * so an advance of a departed, lesson-less teacher is never netted and must
+ * not be shown as one that will be. Everyone else, and a past month without a
+ * payment (the hours before the cron), shows exactly what the cron will net.
  */
 export function planShownAdvances(
   pending: PendingAdvance[],
   base: number,
   nextMonthStart: Date,
-  isOpenMonth: boolean,
+  month: { isOpenMonth: boolean; canStillEarn: boolean },
 ): AdvanceNettingPlan {
+  const uncapped = month.isOpenMonth && month.canStillEarn;
   return planAdvanceNetting(
     pending,
-    isOpenMonth ? Number.POSITIVE_INFINITY : Math.max(0, base),
+    uncapped ? Number.POSITIVE_INFINITY : Math.max(0, base),
     nextMonthStart,
   );
 }

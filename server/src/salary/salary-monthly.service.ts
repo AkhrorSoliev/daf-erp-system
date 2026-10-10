@@ -607,8 +607,9 @@ export class SalaryMonthlyService {
       // Net-to-pay: a settled payment's `amount` is ALREADY net of settled
       // advances (CLAUDE.md invariant) — never subtract avans again. For an
       // unsettled month, net = base − the advances shown: the open month shows
-      // every pending advance, uncapped (its earnings are still growing); a
-      // past month without a payment shows what the cron will net.
+      // every pending advance of someone who can still earn, uncapped (the
+      // earnings are still growing); anyone else, and a past month without a
+      // payment, shows what the cron will net.
       // Top-up months front the gap (full deserved); earlier months pay only
       // what students covered. Keeps the shown netToPay equal to what the cron
       // will actually pay for this month.
@@ -617,7 +618,12 @@ export class SalaryMonthlyService {
       const pending = pendingByUser.get(t.id) ?? [];
       const plan = payment
         ? null
-        : planShownAdvances(pending, base, nextMonthStart, isOpenMonth);
+        : planShownAdvances(pending, base, nextMonthStart, {
+            isOpenMonth,
+            // An inactive teacher with no lessons this month earns nothing
+            // more, so the cron will never net an advance of theirs.
+            canStillEarn: t.isActive || hasLessonData,
+          });
       // A calculated month shows what its payment settled; an unsettled
       // advance never counts there — it is the next month's.
       const advances = payment

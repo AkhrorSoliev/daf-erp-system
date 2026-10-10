@@ -314,7 +314,11 @@ export class SalaryStaffMonthlyService {
       const pending = pendingByUser.get(c.userId) ?? [];
       const plan = payment
         ? null
-        : planShownAdvances(pending, monthly, nextMonthStart, isOpenMonth);
+        : planShownAdvances(pending, monthly, nextMonthStart, {
+            isOpenMonth,
+            // A staff row exists only with a salary this month.
+            canStillEarn: true,
+          });
       const advanceList = payment
         ? [...payment.settled].sort(byWalkOrder)
         : plan!.settle.map((id) => pending.find((p) => p.id === id)!);
