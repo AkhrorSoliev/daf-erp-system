@@ -24,7 +24,7 @@ export function BlockError({ title, onRetry }: { title: string; onRetry: () => v
   );
 }
 
-/** One labelled figure inside a card: «avans berilgan … so'm». */
+/** One labelled figure inside a card: «avans (ushlanadi) … so'm». */
 export function MoneyRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-2 text-sm">

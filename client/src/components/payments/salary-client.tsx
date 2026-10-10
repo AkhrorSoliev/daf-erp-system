@@ -124,7 +124,8 @@ export function SalaryClient() {
         </TabsContent>
 
         <TabsContent value="avanslar">
-          <SalaryAdvancesTab canPay={canPay} />
+          {/* The tab keeps a picked day and a table page; a new month starts them over. */}
+          <SalaryAdvancesTab key={month} canPay={canPay} />
         </TabsContent>
 
         <TabsContent value="markaz">
