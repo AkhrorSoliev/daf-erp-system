@@ -118,7 +118,8 @@ Cron: `applyPendingAdvances` (both the accrual and the FIXED_MONTHLY branch) cal
 
 Read side (`getMonthly`, `getMonthlyForUser`, the detail endpoint, Telegram, Excel, the B1 card — all through `getMonthly`):
 - Month with a payment: `advances` = Σ advances with `settledBySalaryPaymentId = payment.id`; `netToPay = payment.amount` (unchanged).
-- The current (open) month: `advances` = Σ of every unsettled advance dated before `nextMonthStart`, not capped — the month's earnings are still growing, and capping by today's partial figure would show 0 mid-month for an advance the month-end payout will take; `netToPay = max(0, base − advances)`.
+- The current (open) month, for a person who can still earn this month (an active teacher, a teacher with lessons this month, every staff row — a staff row exists only with a salary this month): `advances` = Σ of every unsettled advance dated before `nextMonthStart`, not capped — the month's earnings are still growing, and capping by today's partial figure would show 0 mid-month for an advance the month-end payout will take; `netToPay = max(0, base − advances)`.
+- The open month for anyone else (an inactive teacher with no lessons this month): the past-month rule below — an advance nobody will net is not shown as one that will be deducted; it stays visible in «Avanslar».
 - A past month without a payment (the hours before the cron): `advances = planAdvanceNetting(unsettled, base, nextMonthStart).total` — exactly what the cron will net; `netToPay = base − advances`.
 - `base` is the pre-advance figure (`accrued + gap` in top-up months, `accrued` before, staff `monthly`).
 
