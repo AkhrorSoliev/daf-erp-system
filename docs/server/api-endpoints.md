@@ -478,17 +478,40 @@ Add a comment to the discussion: `{ text }`.
 
 ## Notifications
 
+Every route here except `vapid-public-key` (public) is keyed on the caller (own rows and own devices only, no branch question). A row waits for the user when `actionRequired` is true and `resolvedAt` is null; it closes itself when its job is done (ADR-0076).
+
 ### GET /notifications
 
-List current user's notifications with pagination.
+List current user's notifications, newest first, with keyset paging.
 
-**Query Parameters:** `page`, `pageSize`
+**Query Parameters:**
+
+| Name | Values | Notes |
+|------|--------|-------|
+| `filter` | `pending` \| `all` | `pending` = rows that wait (`actionRequired` and not resolved), read or not. Default `all`. |
+| `type` | `task` \| `attendance` \| `payment` \| `system` | The bell's four groups. |
+| `q` | text, up to 100 chars | Case-insensitive search in the title and the message. |
+| `cursor` | string | The previous response's `nextCursor`; an invalid one is 400. |
+| `pageSize` | 1–50 | Default 20. |
+| `page` | integer | Deprecated and ignored (the bell before phase 5 still sends it). |
+
+**Response:** `{ data: Notification[], nextCursor: string | null }`. Each row carries the Notification fields plus `group` (`task` \| `attendance` \| `payment` \| `system`), `actionRequired`, `resolvedAt` and `groupKey`.
 
 ---
 
 ### GET /notifications/unread-count
 
-Get unread notification count for the current user.
+The bell's badge: the number of rows that wait for the user and are unread (`actionRequired` and `resolvedAt` null and not read). Reading a row removes it from the badge; only the job being done closes it.
+
+**Response:** `{ count: number }`
+
+---
+
+### GET /notifications/counts
+
+The «Barcha bildirishnomalar» page's left list.
+
+**Response:** `{ pending: number, all: number, groups: { task, attendance, payment, system } }` — `pending` is the number of rows that wait (read or not), `all` and `groups` count every row.
 
 ---
 
@@ -506,7 +529,7 @@ Mark all notifications as read.
 
 ### GET /notifications/stream
 
-SSE (Server-Sent Events) stream for real-time notifications. Requires JWT via Authorization header.
+SSE (Server-Sent Events) stream for real-time notifications. Requires JWT via Authorization header. Messages (`data: {json}`): `{ type: 'notification', notification }` (a new row, with `group`), `{ type: 'notification.resolved', ids, resolvedAt }` (the rows whose job got done), `{ type: 'task.updated', taskId }`.
 
 ---
 
@@ -514,7 +537,7 @@ SSE (Server-Sent Events) stream for real-time notifications. Requires JWT via Au
 
 Subscribe to web push notifications.
 
-**Body:** `{ endpoint, keys: { p256dh, auth } }`
+**Body:** `{ endpoint, p256dh, auth }`
 
 ---
 
@@ -524,9 +547,27 @@ Unsubscribe from web push.
 
 ---
 
+### POST /notifications/devices
+
+Native app: register the caller's Expo push token (an existing token moves to the caller).
+
+**Body:** `{ token, platform?, appVersion? }` — `token` 8–255 chars, `platform` `ios` \| `android`, `appVersion` up to 32 chars.
+
+---
+
+### DELETE /notifications/devices
+
+Native app: unregister the caller's Expo push token.
+
+**Body:** `{ token }`
+
+---
+
 ### GET /notifications/vapid-public-key
 
-Get the VAPID public key for push subscription.
+Get the VAPID public key for push subscription. Public: no JWT, not keyed on the caller.
+
+**Response:** `{ key: string }`
 
 ---
 

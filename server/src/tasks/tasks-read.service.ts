@@ -22,7 +22,7 @@ import {
   type TaskCard,
 } from './task-select';
 import { OPEN_STATUSES } from './task-transitions';
-import { decodeCursor, encodeCursor } from './task-cursor';
+import { cursorWhere, decodeCursor, encodeCursor } from './task-cursor';
 import {
   assignableRoleIds,
   canAssignTo,
@@ -131,14 +131,7 @@ export class TasksReadService {
     if (dto.cursor && !cursor) {
       throw new BadRequestException("Sahifa belgisi noto'g'ri");
     }
-    if (cursor) {
-      and.push({
-        OR: [
-          { createdAt: { lt: cursor.createdAt } },
-          { createdAt: cursor.createdAt, id: { lt: cursor.id } },
-        ],
-      });
-    }
+    if (cursor) and.push(cursorWhere(cursor));
 
     const rows = await this.prisma.task.findMany({
       where,

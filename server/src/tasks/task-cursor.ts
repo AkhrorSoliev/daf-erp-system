@@ -5,6 +5,19 @@ export function encodeCursor(row: { createdAt: Date; id: string }): string {
   );
 }
 
+/**
+ * The `where` fragment for "after this row" in (createdAt desc, id desc) order.
+ * Shaped to fit any Prisma model with `createdAt` and a string `id`.
+ */
+export function cursorWhere(cursor: { createdAt: Date; id: string }) {
+  return {
+    OR: [
+      { createdAt: { lt: cursor.createdAt } },
+      { createdAt: cursor.createdAt, id: { lt: cursor.id } },
+    ],
+  };
+}
+
 export function decodeCursor(
   s: string | undefined,
 ): { createdAt: Date; id: string } | null {

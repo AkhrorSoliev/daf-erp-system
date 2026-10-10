@@ -52,8 +52,10 @@ describe('closeQuestionOnFormerMakeUpDay', () => {
     const tx = makeTx();
     tx.holiday.findMany.mockResolvedValue([{ date: day, endDate: day }]);
 
-    await closeQuestionOnFormerMakeUpDay(tx, args);
+    const closed = await closeQuestionOnFormerMakeUpDay(tx, args);
 
+    // The caller emits `UNMARKED_LESSON_CLOSED` after its commit on a `true`.
+    expect(closed).toBe(true);
     expect(tx.holiday.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -86,8 +88,9 @@ describe('closeQuestionOnFormerMakeUpDay', () => {
       },
     ]);
 
-    await closeQuestionOnFormerMakeUpDay(tx, args);
+    const closed = await closeQuestionOnFormerMakeUpDay(tx, args);
 
+    expect(closed).toBe(false);
     expect(tx.lessonReschedule.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
@@ -98,5 +101,22 @@ describe('closeQuestionOnFormerMakeUpDay', () => {
       }),
     );
     expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+  });
+
+  it('closes nothing, and says so, when no question is waiting on the day', async () => {
+    const tx = makeTx();
+    tx.unmarkedLesson.findUnique.mockResolvedValue({
+      id: 'u2',
+      status: 'HELD',
+      taskId: 'c3',
+    });
+    tx.holiday.findMany.mockResolvedValue([{ date: day, endDate: day }]);
+
+    expect(await closeQuestionOnFormerMakeUpDay(tx, args)).toBe(false);
+    expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+    expect(tx.task.updateMany).not.toHaveBeenCalled();
+
+    tx.unmarkedLesson.findUnique.mockResolvedValue(null);
+    expect(await closeQuestionOnFormerMakeUpDay(tx, args)).toBe(false);
   });
 });

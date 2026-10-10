@@ -2097,12 +2097,20 @@ model Notification {
   taskId            String?
   task              Task?            @relation(fields: [taskId], references: [id], onDelete: SetNull)
   isRead            Boolean          @default(false)
+  /// Waits for the recipient's own action (spec 2026-10-07 §8). Set once by `notificationKind`.
+  actionRequired    Boolean          @default(false)
+  /// When the job it asked for got done (`NotificationResolverService`); null = still open.
+  resolvedAt        DateTime?
+  /// One day's rows of one lesson alert type, folded into one line: `ATTENDANCE_ADMIN_ALERT:2026-10-10`.
+  groupKey          String?
   companyId         Int
   createdAt         DateTime         @default(now())
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@index([companyId])
+  @@index([relatedEntityId])
+  @@index([taskId])
 }
 
 model PushSubscription {

@@ -169,7 +169,7 @@ export const davomat: QollanmaSahifa[] = [
     qisqacha:
       "Tizim o'qituvchiga dars boshlanganda eslatadi; davomat olinmasa, dars tugashiga 30 daqiqa qolganda o'qituvchi va filial administratorlariga xabar beradi. Dars tugab davomat olinmagan bo'lsa, ikkalasiga «Davomat olinmadi» boradi va administrator «Dars bo'ldimi?» topshirig'ini oladi; davomat birinchi marta saqlanganda o'qituvchiga statistika keladi.",
     rollar: [1, 2, 3, 4],
-    adr: ["0047", "0054"],
+    adr: ["0047", "0054", "0076"],
     yollar: [],
     kalitSozlar: [
       "davomat eslatmasi",
@@ -192,6 +192,6 @@ export const davomat: QollanmaSahifa[] = [
       "dars haqi yozilmadi",
       "ustozga haq yozilmaydi",
     ],
-    yangilangan: "2026-10-02",
+    yangilangan: "2026-10-10",
   },
 ];

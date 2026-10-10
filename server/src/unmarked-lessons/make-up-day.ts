@@ -74,17 +74,20 @@ async function isLessonDay(
  * that: no lesson was held that day, because there was none. Decided by
  * whoever changed the move. No Telegram group notice: nothing was cancelled,
  * and the lesson itself is still asked about.
+ *
+ * Answers whether it closed one: the caller then emits `UNMARKED_LESSON_CLOSED`
+ * after its commit, so the notices that question waited on close too.
  */
 export async function closeQuestionOnFormerMakeUpDay(
   tx: Tx,
   args: { groupId: string; day: Date; actorId: number; now: Date },
-): Promise<void> {
+): Promise<boolean> {
   const row = await tx.unmarkedLesson.findUnique({
     where: { groupId_date: { groupId: args.groupId, date: args.day } },
     select: { id: true, status: true, taskId: true },
   });
-  if (!row || row.status !== 'PENDING') return;
-  if (await isLessonDay(tx, args.groupId, args.day)) return;
+  if (!row || row.status !== 'PENDING') return false;
+  if (await isLessonDay(tx, args.groupId, args.day)) return false;
   await tx.unmarkedLesson.update({
     where: { id: row.id },
     data: {
@@ -94,4 +97,5 @@ export async function closeQuestionOnFormerMakeUpDay(
     },
   });
   await closeLessonTask(tx, row.taskId, args.actorId);
+  return true;
 }

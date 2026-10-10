@@ -5,6 +5,21 @@
 export const UNMARKED_LESSON_NOT_HELD = 'unmarked-lesson.not-held';
 export const UNMARKED_LESSON_HELD = 'unmarked-lesson.held';
 
+/**
+ * A question that closed with neither «Bo'ldi» nor «Bo'lmadi»: its day stopped
+ * being a lesson day (the move that made it one was deleted or re-dated), or
+ * its group was deleted. Nobody is told; `NotificationResolverService` closes
+ * the notices the question's task and that day's alerts were waiting on.
+ */
+export const UNMARKED_LESSON_CLOSED = 'unmarked-lesson.closed';
+
+export interface UnmarkedLessonClosedPayload {
+  companyId: number;
+  groupId: string;
+  /** 'YYYY-MM-DD' of the lesson day whose question closed. */
+  date: string;
+}
+
 /** «Bo'lmadi» — the Telegram group is told at once (ADR-0025 instant list). */
 export interface UnmarkedLessonNotHeldPayload {
   companyId: number;
