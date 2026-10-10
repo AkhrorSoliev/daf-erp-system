@@ -15,6 +15,7 @@ import { SalaryAdvanceCalendar } from "./salary-advance-calendar";
 import { SalaryAdvanceDayPanel } from "./salary-advance-day-panel";
 import { currentMonthKey } from "./salary-utils";
 import { SalaryAdvancesTable } from "./salary/salary-advances-table";
+import { useInvalidateSalary } from "./salary/salary-queries";
 
 export interface AdvanceDay {
   date: string;
@@ -86,6 +87,8 @@ function shortDay(iso: string): string {
  */
 export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
   const { filters } = useUrlFilters(filtersSchema);
+  // An advance write moves the «Oyliklar» figures and the tab label too, not just this calendar.
+  const invalidateSalary = useInvalidateSalary();
   const [addOpen, setAddOpen] = useState(false);
   // Tanlangan kun URL'ga yozilmaydi — u vaqtinchalik UI holati.
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -101,7 +104,7 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
   const maxMonth = currentMonthKey();
   const month = filters.month || maxMonth;
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["salary-advance-calendar", month],
     queryFn: () =>
       api
@@ -206,16 +209,16 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         data.advances.length > 0 && <SalaryAdvancesTable advances={data.advances} />
       )}
 
-      {/* Kalendar barcha avanslarni ko'rsatadi, «Oyliklar» JAMI'si esa faqat
-          oylik ro'yxatidagi xodimlarnikini — farq yashirin qolmasin. */}
+      {/* An advance to someone with no salary is netted by no payout, so it
+          never shows in «Oyliklar»; say so, it is money nobody will take back. */}
       {totals && totals.outsideRoster.count > 0 && (
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
           <Info className="mt-0.5 size-4 shrink-0" />
           <p>
             {formatNumber(totals.outsideRoster.count)} ta avans (
-            {formatBalance(totals.outsideRoster.total)}) oylik ro&apos;yxatidan
-            tashqari xodimga berilgan — «Oyliklar» tabidagi Avans JAMI&apos;sida
-            ko&apos;rinmaydi.
+            {formatBalance(totals.outsideRoster.total)}) oyligi belgilanmagan
+            xodimga berilgan — oylik belgilanmaguncha hech qaysi oylikdan
+            ushlanmaydi va «Oyliklar» tabida ko&apos;rinmaydi.
           </p>
         </div>
       )}
@@ -226,7 +229,7 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
           setAddOpen(v);
           if (!v) setAddDate(null);
         }}
-        onSaved={() => refetch()}
+        onSaved={invalidateSalary}
         defaultDate={addDate}
       />
 
@@ -236,7 +239,7 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         onOpenChange={(v) => {
           if (!v) setEditAdvance(null);
         }}
-        onSaved={() => refetch()}
+        onSaved={invalidateSalary}
         advance={editAdvance}
       />
 
@@ -245,7 +248,7 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         onOpenChange={(v) => {
           if (!v) setDeleteAdvance(null);
         }}
-        onDeleted={() => refetch()}
+        onDeleted={invalidateSalary}
       />
     </div>
   );

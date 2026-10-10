@@ -317,6 +317,14 @@ describe("csvFromLessons", () => {
     expect(cell("Bekor qilingan sabab")).toBe("Dars bekor");
   });
 
+  it("neutralises a cell Excel would read as a formula (names come from Telegram)", () => {
+    const [header, row] = rows(
+      csvFromLessons([line(null, { student: { firstName: "=HYPERLINK(1)", lastName: "Valiyev" } })]),
+    );
+    expect(row[header.indexOf("O'quvchi")]).toBe("'=HYPERLINK(1) Valiyev");
+    expect(row[header.indexOf("Summa")]).toBe("37500");
+  });
+
   it("quotes a cell that holds a comma", () => {
     const csv = csvFromLessons([line(null, { group: { name: "A1, kechki", course: { name: "Nemis tili" } } })]);
     expect(csv).toContain('"A1, kechki"');

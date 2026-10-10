@@ -44,6 +44,8 @@ const tabLabel = (name: string, amount: number | undefined) => (amount ? `${name
 export function SalaryClient() {
   const canClose = useCan("salary.close");
   const canPay = useCan("salary.pay");
+  // An advance is an expense: `POST/PATCH/DELETE /expenses` check `expenses.manage` (spec §2).
+  const canAdvance = useCan("expenses.manage");
   const can = usePermissions((s) => s.can);
   const settingsAccess = resolveSalarySettingsAccess(can);
   const invalidateSalary = useInvalidateSalary();
@@ -97,7 +99,7 @@ export function SalaryClient() {
               Stavkalar
             </Button>
           )}
-          {canPay && (
+          {canAdvance && (
             <Button onClick={() => setAdvanceOpen(true)}>
               <Plus data-icon="inline-start" />
               Avans berish
@@ -125,7 +127,7 @@ export function SalaryClient() {
 
         <TabsContent value="avanslar">
           {/* The tab keeps a picked day and a table page; a new month starts them over. */}
-          <SalaryAdvancesTab key={month} canPay={canPay} />
+          <SalaryAdvancesTab key={month} canPay={canAdvance} />
         </TabsContent>
 
         <TabsContent value="markaz">
@@ -144,7 +146,7 @@ export function SalaryClient() {
         />
       )}
 
-      {canPay && <SalaryAdvanceDialog open={advanceOpen} onOpenChange={setAdvanceOpen} onSaved={invalidateSalary} />}
+      {canAdvance && <SalaryAdvanceDialog open={advanceOpen} onOpenChange={setAdvanceOpen} onSaved={invalidateSalary} />}
 
       <SalaryRowDrawer
         userId={filters.xodim || null}

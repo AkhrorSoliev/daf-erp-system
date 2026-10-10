@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { formatPrice } from "@/lib/format-utils";
 import {
   centerLine,
   mln,
@@ -218,7 +219,12 @@ describe("mln", () => {
     expect(mln(9_700_000)).toBe("9,7 mln");
     expect(mln(3_000_000)).toBe("3 mln");
     expect(mln(1_234_567)).toBe("1,2 mln");
-    expect(mln(0)).toBe("0 mln");
+  });
+
+  it("prints a sum under 100 000 in so'm, never «0 mln»", () => {
+    expect(mln(45_000)).toBe(`${formatPrice(45_000)} so'm`);
+    expect(mln(0)).toBe("0 so'm");
+    expect(mln(100_000)).toBe("0,1 mln");
   });
 });
 

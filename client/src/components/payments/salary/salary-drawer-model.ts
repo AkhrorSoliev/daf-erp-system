@@ -1,4 +1,5 @@
 import { formatNumber, formatPrice } from "@/lib/format-utils";
+import { csvCell } from "@/components/forms/responses/submission-format";
 import { instantDate } from "../debt/debt-format";
 import { isMonthlyBillingMonth } from "../overview/overview-math";
 import { addMonths, monthShort, SALARY_TYPE_LABELS } from "../salary-utils";
@@ -155,10 +156,8 @@ export function payoutLines(payout: NonNullable<SalaryDetail["payout"]>): {
 // The CSV opens in Excel, so it carries Uzbek names, never «FIXED_PER_STUDENT».
 const RATE_SCOPE_NAMES = { GROUP: "Guruh", GLOBAL: "Umumiy" } as const;
 
-const csvCell = (cell: string | number) => {
-  const s = String(cell);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
+// Text goes through the lead export's `csvCell`, which neutralises `= + - @` (student names come from Telegram).
+const lessonCell = (cell: string | number) => (typeof cell === "number" ? String(cell) : csvCell(cell));
 
 /** «Darslar bo'yicha (CSV)»: the old breakdown drawer's columns, UTF-8 with a BOM for Excel. */
 export function csvFromLessons(lines: BreakdownLine[]): string {
@@ -191,5 +190,5 @@ export function csvFromLessons(lines: BreakdownLine[]): string {
       l.reversalReason ?? "",
     ]),
   ];
-  return `﻿${rows.map((r) => r.map(csvCell).join(",")).join("\n")}`;
+  return `﻿${rows.map((r) => r.map(lessonCell).join(",")).join("\n")}`;
 }

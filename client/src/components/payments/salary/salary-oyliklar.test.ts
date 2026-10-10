@@ -134,6 +134,18 @@ describe("SalaryPeopleTable", () => {
     expect(out).toContain(formatPrice(9_700_000));
   });
 
+  it("prints «—» under «Ishladi» in the footer when a shown row has no lesson data", () => {
+    const out = table(
+      response({
+        data: [teacher({ id: 10001, firstName: "Madina", hasLessonData: false, fullDeserved: null, groupCount: 0, studentCount: 0 })],
+      }),
+    );
+    const footer = out.slice(out.indexOf("<tfoot"));
+    expect(footer).toContain(">—<");
+    expect(out.slice(0, out.indexOf("<tfoot"))).toContain(">—<");
+    expect(table(response()).slice(table(response()).indexOf("<tfoot"))).not.toContain(">—<");
+  });
+
   it("shows skeleton rows while loading and the empty text when no one is found", () => {
     const loading = table(response(), true);
     expect(loading).toContain('data-slot="skeleton"');

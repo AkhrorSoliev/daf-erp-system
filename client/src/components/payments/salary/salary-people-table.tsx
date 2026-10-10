@@ -37,8 +37,8 @@ export function SalaryPeopleTable({ rows, state, loading, onOpenRow }: Props) {
     e.preventDefault();
     onOpenRow(userId);
   };
-  // A month without lesson data has no teacher figure; the footer adds what is there.
-  const worked = rows.reduce((t, r) => t + (r.worked ?? 0), 0);
+  // A row without lesson data has no «Ishladi» figure, so neither has the total (as in the summary).
+  const worked = rows.some((r) => r.worked == null) ? null : rows.reduce((t, r) => t + (r.worked ?? 0), 0);
   const advances = rows.reduce((t, r) => t + r.advances, 0);
   const net = rows.reduce((t, r) => t + r.net, 0);
 
@@ -111,7 +111,9 @@ export function SalaryPeopleTable({ rows, state, loading, onOpenRow }: Props) {
             <TableRow>
               <TableCell className="border-r" />
               <TableCell colSpan={2} className="font-semibold">{`Jami · ${rows.length} kishi`}</TableCell>
-              <TableCell className="text-right font-semibold tabular-nums">{formatPrice(worked)}</TableCell>
+              <TableCell className="text-right font-semibold tabular-nums">
+                {worked == null ? <Muted>—</Muted> : formatPrice(worked)}
+              </TableCell>
               <TableCell className="text-right font-semibold tabular-nums">{formatPrice(advances)}</TableCell>
               <TableCell className="text-right font-semibold tabular-nums">{formatPrice(net)}</TableCell>
               <TableCell />

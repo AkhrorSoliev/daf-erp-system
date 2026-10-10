@@ -1,4 +1,4 @@
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { tashkentDdMm } from "@/lib/tashkent-time";
 import { dayMonth, monthRange } from "../overview/overview-math";
 import { monthShort, staffRoleText } from "../salary-utils";
@@ -187,7 +187,11 @@ export function centerLine(data: MonthlyResponse): { amount: number; note: strin
   };
 }
 
-/** Short money for the summary and the tab labels: 10 500 000 → «10,5 mln». Tables use `formatPrice`. */
+/**
+ * Short money for the summary and the tab labels: 10 500 000 → «10,5 mln»; a
+ * sum under 100 000 would round to «0 mln», so it is written in full. Tables use `formatPrice`.
+ */
 export function mln(value: number): string {
+  if (value < 100_000) return `${formatPrice(value)} so'm`;
   return `${formatNumber(value / 1_000_000, { maximumFractionDigits: 1 })} mln`;
 }
