@@ -59,10 +59,12 @@ const updateOf = (prisma: any, i = 0) =>
   prisma.taskOutbox.update.mock.calls[i][0];
 
 describe('TaskTelegramOutbox.drain', () => {
+  let log: jest.SpyInstance;
   let warn: jest.SpyInstance;
   let error: jest.SpyInstance;
   beforeEach(() => {
     jest.clearAllMocks(); // the module mock keeps its calls between tests
+    log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
     warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
   });
@@ -142,8 +144,9 @@ describe('TaskTelegramOutbox.drain', () => {
       await outbox.drain(NOW);
       expect(sender.send).not.toHaveBeenCalled();
       expect(updateOf(prisma).data).toEqual({ sentAt: NOW, lastError: reason });
-      // A row that is never sent says so in the log.
-      expect(warn).toHaveBeenLastCalledWith(
+      // A row that is never sent says so in the log — routine, so not a warning.
+      expect(warn).not.toHaveBeenCalled();
+      expect(log).toHaveBeenLastCalledWith(
         expect.stringMatching(new RegExp(`o1.*dropped: ${reason}`)),
       );
     }

@@ -257,10 +257,14 @@ export class TaskTelegramOutbox {
     });
   }
 
-  /** A row the drain will never send (task closed, no chat, ...): closed for good, and said so. */
+  /**
+   * A row the drain will never send (task closed, no chat, ...): closed for
+   * good, and said so. Routine — time rows are written for unlinked assignees
+   * too — so `log`, not `warn`; a row that dies on an error goes through `kill`.
+   */
   private async drop(row: DueRow, now: Date, reason: string) {
     await this.close(row.id, now, reason);
-    this.logger.warn(
+    this.logger.log(
       `telegram outbox ${row.id}: notice to ${row.userId} dropped: ${note(reason)}`,
     );
   }
