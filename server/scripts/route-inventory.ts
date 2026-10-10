@@ -34,6 +34,34 @@ import * as ts from 'typescript';
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
+export type RouteAccess =
+  | { kind: 'public' }
+  | { kind: 'anyUser' }
+  | { kind: 'anyStaff' }
+  | { kind: 'student' }
+  | { kind: 'can'; keys: string[] }
+  /** Legacy `@Roles(...)`; gone after the conversion. */
+  | { kind: 'roles'; roles: string[] }
+  /** No marker at all: a legacy route open to any signed-in account. */
+  | { kind: 'none' };
+
+const ACCESS_DECORATORS = [
+  'AnyUser',
+  'AnyStaff',
+  'StudentOnly',
+  'Can',
+  'Roles',
+];
+
+/** What `...STAFF_ROLES` spreads to (`common/decorators/staff-roles.ts`). */
+const STAFF_ROLE_NAMES = [
+  'CEO',
+  'Branch Director',
+  'Administrator',
+  'Teacher',
+  'Cashier',
+];
+
 export interface DiscoveredRoute {
   /** `GET /payments/:id` — the manifest key. */
   key: string;
@@ -48,8 +76,10 @@ export interface DiscoveredRoute {
   hasBranchScope: boolean;
   /** `@Public()` on the handler or its controller. */
   isPublic: boolean;
-  /** Role names from `@Roles(...)` on the handler, else on the controller. */
-  roles: string[];
+  /** What admits a caller: handler marker first, then the controller's. */
+  access: RouteAccess;
+  /** Every access marker found, per level — the manifest allows one per route. */
+  accessMarkers: { handler: string[]; controller: string[] };
 }
 
 const METHOD_DECORATORS: Record<string, HttpMethod> = {
@@ -77,7 +107,9 @@ function decoratorsOf(node: ts.Node): readonly ts.Decorator[] {
 }
 
 function decoratorName(d: ts.Decorator): string | null {
-  const expr = ts.isCallExpression(d.expression) ? d.expression.expression : d.expression;
+  const expr = ts.isCallExpression(d.expression)
+    ? d.expression.expression
+    : d.expression;
   return ts.isIdentifier(expr) ? expr.text : null;
 }
 
@@ -98,8 +130,40 @@ function stringArgs(d: ts.Decorator): string[] {
   const out: string[] = [];
   for (const a of args) {
     if (ts.isStringLiteral(a)) out.push(a.text);
+    // `@Roles(...STAFF_ROLES)` is the only spread the code base uses.
+    else if (
+      ts.isSpreadElement(a) &&
+      ts.isIdentifier(a.expression) &&
+      a.expression.text === 'STAFF_ROLES'
+    ) {
+      out.push(...STAFF_ROLE_NAMES);
+    }
   }
   return out;
+}
+
+/** The access marker on one node (handler or class), if any. */
+function accessOf(decorators: readonly ts.Decorator[]): {
+  access: RouteAccess | null;
+  markers: string[];
+} {
+  const markers = decorators
+    .map(decoratorName)
+    .filter((n): n is string => n !== null && ACCESS_DECORATORS.includes(n));
+  const dec = decorators.find((d) => markers.includes(decoratorName(d) ?? ''));
+  if (!dec) return { access: null, markers };
+  switch (decoratorName(dec)) {
+    case 'AnyUser':
+      return { access: { kind: 'anyUser' }, markers };
+    case 'AnyStaff':
+      return { access: { kind: 'anyStaff' }, markers };
+    case 'StudentOnly':
+      return { access: { kind: 'student' }, markers };
+    case 'Can':
+      return { access: { kind: 'can', keys: stringArgs(dec) }, markers };
+    default:
+      return { access: { kind: 'roles', roles: stringArgs(dec) }, markers };
+  }
 }
 
 function joinPath(prefix: string, sub: string): string {
@@ -117,7 +181,10 @@ function joinPath(prefix: string, sub: string): string {
  * `/students/:studentId/mock-exams`, so treating a missing prefix as an error
  * would drop six endpoints, four of which write money.
  */
-export function discoverRoutes(srcDir: string, repoRoot: string): DiscoveredRoute[] {
+export function discoverRoutes(
+  srcDir: string,
+  repoRoot: string,
+): DiscoveredRoute[] {
   const routes: DiscoveredRoute[] = [];
 
   for (const file of listFiles(srcDir)) {
@@ -138,18 +205,20 @@ export function discoverRoutes(srcDir: string, repoRoot: string): DiscoveredRout
       if (!controllerDec) continue;
 
       const prefix = firstStringArg(controllerDec);
-      const classPublic = classDecorators.some((d) => decoratorName(d) === 'Public');
-      const classRolesDec = classDecorators.find((d) => decoratorName(d) === 'Roles');
-      const classRoles = classRolesDec ? stringArgs(classRolesDec) : [];
+      const classPublic = classDecorators.some(
+        (d) => decoratorName(d) === 'Public',
+      );
+      const classAccess = accessOf(classDecorators);
       const controllerName = stmt.name?.text ?? '(anonymous)';
 
       for (const member of stmt.members) {
         if (!ts.isMethodDeclaration(member)) continue;
 
         const memberDecorators = decoratorsOf(member);
-        const rolesDec = memberDecorators.find((d) => decoratorName(d) === 'Roles');
+        const memberAccess = accessOf(memberDecorators);
         const isPublic =
-          classPublic || memberDecorators.some((d) => decoratorName(d) === 'Public');
+          classPublic ||
+          memberDecorators.some((d) => decoratorName(d) === 'Public');
 
         // A handler's parameters carry `@BranchScope()`.
         const hasBranchScope = member.parameters.some((p) =>
@@ -167,11 +236,22 @@ export function discoverRoutes(srcDir: string, repoRoot: string): DiscoveredRout
             method,
             path,
             controller: controllerName,
-            handler: member.name && ts.isIdentifier(member.name) ? member.name.text : '?',
-            file: file.startsWith(repoRoot) ? file.slice(repoRoot.length + 1) : file,
+            handler:
+              member.name && ts.isIdentifier(member.name)
+                ? member.name.text
+                : '?',
+            file: file.startsWith(repoRoot)
+              ? file.slice(repoRoot.length + 1)
+              : file,
             hasBranchScope,
             isPublic,
-            roles: rolesDec ? stringArgs(rolesDec) : classRoles,
+            access: isPublic
+              ? { kind: 'public' }
+              : (memberAccess.access ?? classAccess.access ?? { kind: 'none' }),
+            accessMarkers: {
+              handler: memberAccess.markers,
+              controller: classAccess.markers,
+            },
           });
         }
       }

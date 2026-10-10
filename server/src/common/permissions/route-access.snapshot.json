@@ -1,0 +1,2032 @@
+{
+  "DELETE /archive/:entityType/:id": [
+    "CEO"
+  ],
+  "DELETE /cash-accounts/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /comments/:id": [
+    "CEO"
+  ],
+  "DELETE /courses/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /custom-forms/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /enrollment-transfer-reasons/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /expenses/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /group-teacher-change-reasons/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /groups/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /holidays/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /lead-columns/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /lead-sections/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /lead-sources/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /leads/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /lesson-cancellations/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /lesson-reschedules/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /lesson-teacher-overrides/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /mock-exam-participants/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /mock-exam-sections/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /mock-exam-subjects/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /mock-exams/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /notifications/devices": "ANY",
+  "DELETE /notifications/push/unsubscribe": "ANY",
+  "DELETE /planned-absences/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /rooms/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /student-exit-reasons/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /student-portal/photo": [
+    "Student"
+  ],
+  "DELETE /students/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /students/:id/enroll/:enrollmentId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /tasks/:id/steps/:stepId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "DELETE /teachers/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /telegram-groups/:id": [
+    "CEO"
+  ],
+  "DELETE /users/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /absence-pause/settings": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /app-activity/center/students": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /app-activity/center/students/phones": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /app-activity/center/summary": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /archive/:entityType": [
+    "CEO"
+  ],
+  "GET /archive/:entityType/:id": [
+    "CEO"
+  ],
+  "GET /archive/counts": [
+    "CEO"
+  ],
+  "GET /attendance/:groupId/calendar": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /attendance/:groupId/date/:date": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /attendance/:groupId/dates": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /attendance/:groupId/lesson-sequence": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /attendance/:groupId/stats": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /auth/otp/poll": "PUBLIC",
+  "GET /auth/telegram/callback": "PUBLIC",
+  "GET /auth/telegram/start": "PUBLIC",
+  "GET /auth/telegram/status": "PUBLIC",
+  "GET /branches": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /branches/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /branches/:id/readiness": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /branches/:id/status-history": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /call-logs": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /cash-accounts": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /cash-accounts/:id/movements": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /comments": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /comments/latest": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /company": "ANY",
+  "GET /company/:id": "ANY",
+  "GET /courses": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /courses/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /courses/:id/status-history": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /custom-forms": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /custom-forms/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /custom-forms/:id/submissions": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /custom-forms/:id/submissions/export": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /daf/media/coverage": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /daf/media/overview": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /daf/media/sections/:id/fragen": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /daf/media/sections/:id/inhalt": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /dashboard/charts": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /dashboard/summary": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /dashboard/today-schedule": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /enrollment-transfer-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /entity-history/:entityType/:entityId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /expenses": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /expenses/pdf": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /gateways/events": [
+    "CEO"
+  ],
+  "GET /group-teacher-change-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /groups": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /groups/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /groups/:id/app-activity": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /groups/:id/app-activity/students/:studentId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /groups/:id/delete-preview": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /groups/:id/status-history": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /groups/:id/students": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /groups/available-rooms": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /groups/available-slots": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /groups/available-teachers": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /groups/next-name": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /groups/schedule-conflicts": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /holidays": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /holidays/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /holidays/:id/status-history": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /lead-sources": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /lead-sources/filter": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/:id/hover-summary": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/archive": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/board": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/by-student/:studentId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/sections/:sectionId/leads": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/stats": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /lesson-cancellations": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /lesson-reschedules": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /lesson-reschedules/available-rooms": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /lesson-teacher-overrides": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /mock-exam-sections": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /mock-exams": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /mock-exams/:examId/participants": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /mock-exams/:examId/results-matrix": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /mock-exams/:examId/subjects": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /mock-exams/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /mock-exams/:id/stats": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /mock-exams/board": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /mock-exams/revenue-summary": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /notifications": "ANY",
+  "GET /notifications/stream": "ANY",
+  "GET /notifications/unread-count": "ANY",
+  "GET /notifications/vapid-public-key": "PUBLIC",
+  "GET /outreach/auto-paused": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /outreach/promises": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /outreach/removal-queue": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /outreach/stats": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /outreach/today-absentees": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /payment-promises": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payment-promises/month": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/debt/excel": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/debt/list": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/debt/students/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/debtors": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/debtors/group/:groupId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/debtors/summary": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/frozen-balances": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/pending-students": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/preview": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/student/:studentId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /public/forms/:slug": "PUBLIC",
+  "GET /receipts/:id/verify": "PUBLIC",
+  "GET /receipts/payment/:id.pdf": "PUBLIC",
+  "GET /receipts/payment/:id/verify": "PUBLIC",
+  "GET /receipts/refund/:id.pdf": "PUBLIC",
+  "GET /receipts/refund/:id/verify": "PUBLIC",
+  "GET /refunds": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /refunds/preview/:studentId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/attendance-analytics": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/attendance-by-course": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/attendance-by-group": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/center-activity": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/debt-write-offs-summary": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /reports/departed-students/by-reason": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/by-status": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/departed-after-change": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/dynamics": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/group-by": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/list": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/summary": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/teacher-change-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/teacher-changes-list": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/transfer-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/departed-students/transferred-list": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/expectation-history": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/financial-excel": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/financial-overview": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/financial-trend": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/group-analytics": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/income-month-attribution": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/kpis": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/lead-analytics": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/lead-funnel": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/lead-funnel/people": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/marketing": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/monthly-debt-recovery": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/monthly-debt-recovery/:monthKey/aging": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /reports/monthly-debt-recovery/:monthKey/detail": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /reports/monthly-debt-recovery/excel": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /reports/monthly-debt-recovery/history": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /reports/payment-reports": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/payment-reports/teachers": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/payment-reports/teachers/:teacherId/groups": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/profit-composition": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/room-utilization": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/student-payments": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /reports/student-payments/filter-options": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /reports/teacher-performance": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /rooms": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /rooms/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /rooms/:id/status-history": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /rooms/count-by-branch": "ANY",
+  "GET /salary/accruals/:userId": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/advance-calendar": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/advances/:userId": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/config-history/:userId": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/config/:userId": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/configs/by-users": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/matrix": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/me/accruals": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /salary/me/current-cycle/breakdown": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /salary/me/monthly": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /salary/me/payments/:id/breakdown": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /salary/me/summary": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "GET /salary/monthly": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/monthly/center-topup": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/monthly/user/:userId": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/overview": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/payments": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/payments/:id/breakdown": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/payments/settle-month/preview": [
+    "CEO"
+  ],
+  "GET /salary/period-preview": [
+    "CEO"
+  ],
+  "GET /salary/period-settings": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/staff-config": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/timeline/:userId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /search": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /search/quick": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /settings/payment": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /student-exit-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /student-portal/attendance/history": [
+    "Student"
+  ],
+  "GET /student-portal/attendance/stats": [
+    "Student"
+  ],
+  "GET /student-portal/extra-phone": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/fortschritt": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/grammar": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/lessons/:id": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/lessons/:id/drill": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/lessons/:id/uebung": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/lessons/:id/uebung/ersatz": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/levels": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/reyting": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/units/:id": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/wiederholung/uebung": [
+    "Student"
+  ],
+  "GET /student-portal/onboarding": [
+    "Student"
+  ],
+  "GET /student-portal/payments": [
+    "Student"
+  ],
+  "GET /student-portal/profile": [
+    "Student"
+  ],
+  "GET /student-portal/schedule": [
+    "Student"
+  ],
+  "GET /student-portal/statement.pdf": [
+    "Student"
+  ],
+  "GET /students": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /students/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /students/:id/active-enrollments-prepaid": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/app-activity": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/balance-summary": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /students/:id/closed-enrollments": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/debt-origin": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /students/:id/departure-preview": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/enroll-preview": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/enrollments/:enrollmentId/debt-write-off-eligibility": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/lessons-overview": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/sms": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/statement": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/statement.pdf": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/status-history": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:studentId/mock-exams": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /tasks": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /tasks/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /tasks/assignable": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /tasks/counts": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /tasks/workload": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /teachers": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /teachers/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /teachers/:id/groups": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /teachers/:id/salary-summary": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /teachers/:id/status-history": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /telegram-groups": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /telegram-groups/pending": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /telegram/channel-report/list": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /telegram/channel-report/summary": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /transactions": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /transactions/debt-write-offs": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /transactions/student/:studentId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /transactions/student/:studentId/lesson-trail": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /transactions/teacher/:teacherId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /users": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /users/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /withdrawals/preview/:studentId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /absence-pause/settings": [
+    "CEO"
+  ],
+  "PATCH /branches/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /branches/:id/status": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /cash-accounts/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /comments/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /company/:id": [
+    "CEO"
+  ],
+  "PATCH /courses/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /courses/:id/status": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /custom-forms/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /enrollment-transfer-reasons/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /expenses/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /group-teacher-change-reasons/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /groups/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /groups/:id/status": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /holidays/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /holidays/:id/status": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /lead-columns/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /lead-columns/reorder": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /lead-sections/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /lead-sections/:id/move": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /lead-sections/reorder": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /lead-sources/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /leads/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /leads/:id/called": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /leads/:id/move": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /leads/reorder": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /lesson-reschedules/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /mock-exam-participants/:id/payment": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /mock-exam-sections/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /mock-exam-sections/reorder": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /mock-exam-subjects/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /mock-exams/:examId/subjects/reorder": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /mock-exams/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /mock-exams/:id/status": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /notifications/:id/read": "ANY",
+  "PATCH /notifications/read-all": "ANY",
+  "PATCH /payment-promises/:id/cancel": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "PATCH /refunds/:id/process": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /rooms/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /rooms/:id/status": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /salary/config/:id": [
+    "CEO"
+  ],
+  "PATCH /salary/payments/:id/approve": [
+    "CEO"
+  ],
+  "PATCH /settings/payment": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /student-exit-reasons/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /student-portal/name": [
+    "Student"
+  ],
+  "PATCH /student-portal/onboarding/profile": [
+    "Student"
+  ],
+  "PATCH /student-portal/password": [
+    "Student"
+  ],
+  "PATCH /students/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /students/:id/status": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /tasks/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "PATCH /tasks/:id/steps/:stepId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "PATCH /teachers/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /teachers/:id/status": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /telegram-groups/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /users/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /users/password": "ANY",
+  "PATCH /users/phone": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "PATCH /users/profile": "ANY",
+  "POST /archive/:entityType/:id/restore": [
+    "CEO"
+  ],
+  "POST /attendance/:groupId/date/:date": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "POST /attendance/:groupId/date/:date/late": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /attendance/:groupId/date/:date/not-held": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /attendance/:groupId/qr-session/rotate": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "POST /attendance/:groupId/qr-session/start": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "POST /attendance/:groupId/qr-session/stop": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
+  "POST /auth/forgot-password/request": "PUBLIC",
+  "POST /auth/forgot-password/reset": "PUBLIC",
+  "POST /auth/forgot-password/verify": "PUBLIC",
+  "POST /auth/login": "PUBLIC",
+  "POST /auth/refresh": "PUBLIC",
+  "POST /auth/telegram/complete": "PUBLIC",
+  "POST /auth/telegram/webapp": "PUBLIC",
+  "POST /auth/telegram/webapp/staff": "PUBLIC",
+  "POST /billing/debt-write-offs/:id/reverse": [
+    "CEO"
+  ],
+  "POST /billing/lesson-deduction/:id/reverse": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /billing/retroactive/:studentId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /branches": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /call-logs": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /cash-accounts": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /cash-accounts/:id/reconcile": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /cash-accounts/transfer": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /comments": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /courses": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /custom-forms": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /enrollment-transfer-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /expenses": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /gateways/click/webhook": "PUBLIC",
+  "POST /gateways/payme/webhook": "PUBLIC",
+  "POST /gateways/uzum/webhook": "PUBLIC",
+  "POST /group-teacher-change-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /groups": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /holidays": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /lead-columns": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /lead-sections": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /lead-sections/:id/restore": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /lead-sources": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /leads": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /leads/:id/convert": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /leads/:id/restore": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /lesson-cancellations": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /lesson-reschedules": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exam-participants/:id/cancel-payment": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exam-participants/:id/convert": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exam-participants/:id/mark-paid": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exam-sections": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exams": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exams/:examId/participants/manual": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exams/:examId/recalculate-ranks": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exams/:examId/scores/bulk": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exams/:examId/subjects": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exams/:id/rebroadcast-results": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /mock-exams/:id/regenerate-pdf": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /notifications/devices": "ANY",
+  "POST /notifications/push/subscribe": "ANY",
+  "POST /payment-promises": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "POST /payments": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "POST /payments/:id/correct": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /payments/:id/reverse": [
+    "CEO"
+  ],
+  "POST /payments/attach-external": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "POST /planned-absences/:groupId/date/:date": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /public/forms/:slug/submit": "PUBLIC",
+  "POST /refunds/:id/reverse": [
+    "CEO"
+  ],
+  "POST /refunds/quick": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /rooms": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /salary/calculate": [
+    "CEO"
+  ],
+  "POST /salary/config": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /salary/config/global": [
+    "CEO"
+  ],
+  "POST /salary/config/preview": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /salary/payments/:id/pay": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /salary/payments/batch-pay": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /salary/payments/settle-month": [
+    "CEO"
+  ],
+  "POST /salary/period-settings": [
+    "CEO"
+  ],
+  "POST /student-exit-reasons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /student-portal/activity": [
+    "Student"
+  ],
+  "POST /student-portal/attendance/scan": [
+    "Student"
+  ],
+  "POST /student-portal/extra-phone/remove": [
+    "Student"
+  ],
+  "POST /student-portal/extra-phone/send-code": [
+    "Student"
+  ],
+  "POST /student-portal/extra-phone/verify": [
+    "Student"
+  ],
+  "POST /student-portal/lernen/attempts": [
+    "Student"
+  ],
+  "POST /student-portal/lernen/drill/check": [
+    "Student"
+  ],
+  "POST /student-portal/lernen/lessons/:id/abschluss": [
+    "Student"
+  ],
+  "POST /student-portal/lernen/uebung/check": [
+    "Student"
+  ],
+  "POST /student-portal/lernen/uebung/juft": [
+    "Student"
+  ],
+  "POST /student-portal/lernen/wiederholung/abschluss": [
+    "Student"
+  ],
+  "POST /student-portal/onboarding/phone/change-code": [
+    "Student"
+  ],
+  "POST /student-portal/onboarding/phone/send-code": [
+    "Student"
+  ],
+  "POST /student-portal/onboarding/phone/verify": [
+    "Student"
+  ],
+  "POST /student-portal/payments/init": [
+    "Student"
+  ],
+  "POST /student-portal/photo": [
+    "Student"
+  ],
+  "POST /student-portal/statement/telegram": [
+    "Student"
+  ],
+  "POST /students": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /students/:id/enroll": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /students/:id/enrollments/:enrollmentId/write-off-cycle-debt": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /students/:id/initial-balance": [
+    "CEO"
+  ],
+  "POST /students/:id/sms": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /tasks": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /tasks/:id/cancel": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /tasks/:id/duplicate": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /tasks/:id/events": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /tasks/:id/review": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /tasks/:id/seen": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /tasks/:id/status": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /tasks/:id/steps": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /teachers": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /telegram-groups/:id/approve": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /telegram-groups/:id/reject": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /telegram-groups/announce": [
+    "CEO"
+  ],
+  "POST /telegram/employee-link": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /telegram/webhook": "PUBLIC",
+  "POST /transactions/adjustment": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /upload": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /users": [
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /users/logout-others": "ANY",
+  "POST /withdrawals": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PUT /lesson-teacher-overrides/:groupId/:date": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PUT /tasks/:id/participants": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ]
+}
