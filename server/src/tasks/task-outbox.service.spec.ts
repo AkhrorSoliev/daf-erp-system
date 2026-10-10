@@ -114,6 +114,9 @@ describe('TaskOutboxService', () => {
   });
 
   it('schedule with a past due writes nothing (the overdue notice would be noise)', async () => {
+    // Midday in Tashkent: at night a notice is held for the morning, which is
+    // a different rule; without a fixed clock the test failed after ~23:00.
+    jest.useFakeTimers({ now: new Date('2026-10-10T07:00:00Z') });
     await svc.schedule(prisma, {
       id: 't1',
       kind: 'MANUAL' as const,
@@ -123,6 +126,7 @@ describe('TaskOutboxService', () => {
       participants: [{ userId: 40, role: 'ASSIGNEE' }],
     });
     expect(prisma.taskOutbox.createMany).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 
   const row = (id: string, status: string, over: object = {}) => ({
