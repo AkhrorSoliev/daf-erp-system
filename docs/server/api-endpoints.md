@@ -537,7 +537,7 @@ SSE (Server-Sent Events) stream for real-time notifications. Requires JWT via Au
 
 Subscribe to web push notifications.
 
-**Body:** `{ endpoint, keys: { p256dh, auth } }`
+**Body:** `{ endpoint, p256dh, auth }`
 
 ---
 
