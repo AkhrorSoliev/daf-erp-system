@@ -68,7 +68,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "birinchi kirish",
       "filial",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "oquvchilar",

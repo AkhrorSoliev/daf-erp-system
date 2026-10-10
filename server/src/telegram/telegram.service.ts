@@ -39,6 +39,12 @@ import { createEmployeeRegistrationScene } from './scenes/employee-registration.
 import { createMockExamRegistrationScene } from './scenes/mock-exam-registration.scene';
 import { createPasswordResetScene } from './scenes/password-reset.scene';
 import { createStatementScene } from './scenes/statement.scene';
+import {
+  ACCOUNT_LINK_ACTION,
+  ACCOUNT_LINK_BUTTON,
+  chatHasAccount,
+  createAccountLinkScene,
+} from './scenes/account-link.scene';
 import { StaffCabinet } from './staff/staff-cabinet';
 import {
   STAFF_LINK_PAYLOAD,
@@ -324,6 +330,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.staffCabinet,
     );
 
+    const accountLinkScene = createAccountLinkScene(
+      this.prisma,
+      this.entityHistoryService,
+      this.staffCabinet,
+      (ctx) => this.startFlow!(ctx, ''),
+    );
+
     const stage = new Scenes.Stage<BotContext>([
       studentScene,
       employeeScene,
@@ -331,6 +344,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       passwordResetScene,
       statementScene,
       staffLinkScene,
+      accountLinkScene,
     ]);
     this.bot.use(stage.middleware());
 
@@ -403,6 +417,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       // Xodim chati — o'quvchi menyusi o'rniga xodim menyusi (ADR-0045).
       if (await this.staffCabinet.greet(ctx)) return;
 
+      // A chat linked to nobody (a student or staff member an administrator
+      // added) is offered the link by its own number first.
+      const linkRow =
+        ctx.chat?.type === 'private' &&
+        !(await chatHasAccount(
+          this.prisma,
+          this.staffCabinet,
+          String(ctx.chat.id),
+        ))
+          ? [[Markup.button.callback(ACCOUNT_LINK_BUTTON, ACCOUNT_LINK_ACTION)]]
+          : [];
+
       // Salomlashish xabari reply-klaviaturani TOZALAYDI. Bu ataylab alohida
       // xabar: bitta xabarda ham inline tugmalar, ham `remove_keyboard`
       // bo'lolmaydi. Tozalashsiz, yarim yo'lda tashlab ketilgan ro'yxatdan
@@ -415,6 +441,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await ctx.reply(
         'Quyidagi imkoniyatlardan birini tanlang:',
         Markup.inlineKeyboard([
+          ...linkRow,
           [
             Markup.button.callback("📝 Ro'yxatdan o'tish", 'menu_registration'),
             Markup.button.callback('📊 Darajani aniqlash', 'menu_level'),
@@ -556,6 +583,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.action('menu_password', async (ctx) => {
       await ctx.answerCbQuery();
       await ctx.scene.enter(SCENES.PASSWORD_RESET);
+    });
+
+    // «📱 Hisobimni bog'lash» — the chat is linked by the sender's own number
+    this.bot.action(ACCOUNT_LINK_ACTION, async (ctx) => {
+      await ctx.answerCbQuery();
+      await ctx.scene.enter(SCENES.ACCOUNT_LINK);
     });
 
     // To'lovlar hisoboti — javob matni va PDF (ADR-0037)
