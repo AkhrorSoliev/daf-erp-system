@@ -37,6 +37,8 @@ describe('TaskOutboxService', () => {
     }).compile();
     svc = mod.get(TaskOutboxService);
   });
+  // Tests that pin the clock never leak it, even when an assertion fails.
+  afterEach(() => jest.useRealTimers());
 
   const written = () =>
     prisma.taskOutbox.createMany.mock.calls[0][0].data as any[];
@@ -126,7 +128,6 @@ describe('TaskOutboxService', () => {
       participants: [{ userId: 40, role: 'ASSIGNEE' }],
     });
     expect(prisma.taskOutbox.createMany).not.toHaveBeenCalled();
-    jest.useRealTimers();
   });
 
   const row = (id: string, status: string, over: object = {}) => ({
@@ -281,7 +282,6 @@ describe('TaskOutboxService', () => {
   });
 
   describe('Telegram time rows (spec §6.4, §9.3)', () => {
-    afterEach(() => jest.useRealTimers());
     const base = {
       id: 't1',
       kind: 'MANUAL' as const,
