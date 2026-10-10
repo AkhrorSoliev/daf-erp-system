@@ -1885,10 +1885,6 @@
     "Branch Director",
     "CEO"
   ],
-  "POST /salary/payments/batch-pay": [
-    "Branch Director",
-    "CEO"
-  ],
   "POST /salary/payments/settle-month": [
     "CEO"
   ],

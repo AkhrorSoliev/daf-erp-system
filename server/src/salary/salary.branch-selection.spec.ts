@@ -190,7 +190,7 @@ describe('narrowPayrollScope — ceiling ∩ selection', () => {
 
   it('fails CLOSED when the caller has no branch at all', () => {
     // Two production Administrators had a null `mainBranch`. Collapsing that to
-    // "no filter" is fail-OPEN: they could see, and `batchPay`, every branch's
+    // "no filter" is fail-OPEN: they could see, and pay, every branch's
     // salaries.
     expect(narrowPayrollScope(NO_BRANCH, undefined)).toEqual({
       branchId: undefined,

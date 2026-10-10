@@ -52,7 +52,6 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | Calculate salary | Yes | No | No | No | No |
 | Approve salary | Yes | No | No | No | No |
 | Pay salary | Yes | Own branch | No | No | No |
-| Batch pay salary | Yes | Own branch | No | No | No |
 | Pay one's own salary or write an advance to oneself | Yes | No — another manager does it (ADR-0081) | No | No | No |
 | Create a holiday for the whole centre | Yes | No (ADR-0081) | No | No | No |
 | Create a holiday for one branch | Yes | Own branch | Own branch | No | No |
