@@ -500,4 +500,22 @@ describe('helpers', () => {
     );
     expect(returnedReply([])).toBe('Topshiriq qaytarildi.');
   });
+
+  it("a system task's notice says «Tizim topshirig'i» and carries «Ochish» only", () => {
+    const m = renderTaskMessage(
+      {
+        ...view(),
+        kind: 'BROKEN_PROMISE',
+        priority: 'HIGH',
+        authorId: null,
+        authorName: null,
+      },
+      { kind: 'ASSIGNED' },
+      40,
+      { now: NOW, openUrl: OPEN },
+    );
+    expect(m.text.split('\n')[0]).toBe("<b>Tizim topshirig'i · Yuqori</b>");
+    expect(m.text).toContain('Bergan: Tizim');
+    expect(m.buttons).toEqual([[expect.objectContaining({ text: 'Ochish' })]]);
+  });
 });

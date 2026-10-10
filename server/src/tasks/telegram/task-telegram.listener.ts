@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { describeError } from '../../telegram-digest/telegram-send';
 import { TASK_EVENTS, type TaskEventTask } from '../task-events';
 import { noticeUserIds, planNotices, type TgNotice } from '../task-notify-plan';
+import { telegramNotBefore } from '../task-auto-rules';
 import { telegramSendAfter } from '../task-quiet-hours';
 import { shortName, type TgTaskView } from './task-telegram-text';
 import { loadTaskView, staffChatOf } from './task-telegram-view';
@@ -109,7 +110,11 @@ export class TaskTelegramListener {
     notice: TgNotice,
     now: Date,
   ): Promise<void> {
-    const at = telegramSendAfter(now, view.priority);
+    // The night quiet, and a callback's own day (spec §7): the later of the two.
+    const notBefore = telegramNotBefore(view.kind, view.dueAt);
+    const quiet = telegramSendAfter(now, view.priority);
+    const at =
+      notBefore && notBefore.getTime() > quiet.getTime() ? notBefore : quiet;
     if (at.getTime() > now.getTime()) {
       // Night: hold it for the morning, but only for somebody the message can
       // reach then (a linked, active chat of their own).
