@@ -428,6 +428,30 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
+      'Lead routes that check the record rather than the header. ' +
+      '`POST /leads` and `PATCH /leads/reorder` name a board section in the ' +
+      'body: the section is looked up by id and `companyId` (404 when it is ' +
+      "not the company's), its column's `branchId` (NOT NULL) is the branch, " +
+      'and `assertCallerInBranch` refuses a caller who does not hold it before ' +
+      "anything is written. The board's `@BranchScope()` only ever OFFERED the " +
+      "caller's own sections; a section id or lead id list sent by hand " +
+      "reached another branch's board. The public form reaches the same " +
+      '`LeadsService.create` (it is in the PUBLIC block) with the stated actor ' +
+      "`{ kind: 'public-form' }`, the one actor that skips the caller check: a " +
+      "stranger holds no branch, and the form's own section, set by staff, " +
+      "fixes the lead's. `GET /leads/by-student/:studentId` is a tab of the " +
+      'student profile and runs its guard, `assertCallerMayTouchStudent`, on ' +
+      "the path's student (404 unknown, 403 another branch's) before reading " +
+      'the leads with `companyId`.',
+    routes: [
+      'POST /leads',
+      'PATCH /leads/reorder',
+      'GET /leads/by-student/:studentId',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
       "Ilova faolligi statistikasi (dizayn 6.1, ADR-0020). Guruh route'lari " +
       "`assertCallerMayTouchGroup` — sof o'qituvchi uchun biriktirilganlik, " +
       "qolganlar uchun filial; yon oyna qo'shimcha ravishda o'quvchi shu " +
@@ -1153,13 +1177,9 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /archive/:entityType/:id',
   'GET /archive/counts',
   'GET /gateways/events',
-  'GET /leads/:id/hover-summary',
-  'GET /leads/by-student/:studentId',
   'GET /reports/financial-excel',
   'GET /reports/lead-analytics',
-  'PATCH /leads/reorder',
   'POST /archive/:entityType/:id/restore',
-  'POST /leads',
 ];
 
 /**
@@ -1173,4 +1193,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 13;
+export const UNREVIEWED_BUDGET = 9;
