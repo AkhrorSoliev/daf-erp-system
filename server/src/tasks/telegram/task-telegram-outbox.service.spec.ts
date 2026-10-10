@@ -10,6 +10,7 @@ jest.mock('./task-telegram-view', () => ({
 const NOW = new Date('2026-10-13T03:00:30.000Z'); // 08:00:30 Tashkent
 const LATE_EVENING = new Date('2026-10-13T16:59:30.000Z'); // 21:59:30 Tashkent
 const NEXT_MORNING = new Date('2026-10-14T03:00:00.000Z'); // 08:00 Tashkent
+const NIGHT = new Date('2026-10-13T17:30:00.000Z'); // 22:30 Tashkent
 const view = (over: Record<string, unknown> = {}) => ({
   id: 't1',
   companyId: 1,
@@ -58,10 +59,11 @@ const updateOf = (prisma: any, i = 0) =>
   prisma.taskOutbox.update.mock.calls[i][0];
 
 describe('TaskTelegramOutbox.drain', () => {
+  let warn: jest.SpyInstance;
   let error: jest.SpyInstance;
   beforeEach(() => {
     jest.clearAllMocks(); // the module mock keeps its calls between tests
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
   });
   afterEach(() => jest.restoreAllMocks());
@@ -77,7 +79,9 @@ describe('TaskTelegramOutbox.drain', () => {
           sentAt: null,
           attempts: { lt: 3 },
         },
-        orderBy: { sendAfter: 'asc' },
+        // Notices queued together share one sendAfter: queue order, then id.
+        orderBy: [{ sendAfter: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+        take: 50,
       }),
     );
   });
@@ -130,6 +134,7 @@ describe('TaskTelegramOutbox.drain', () => {
           'stale reminder',
         ],
         [{ kind: 'REMINDER' }, { dueAt: null }, 'stale reminder'],
+        [{}, { kind: 'LESSON_QUESTION' }, 'no telegram'],
       ];
     for (const [r, v, reason] of cases) {
       const { outbox, prisma, sender } = setup([row({ payload: null, ...r })]);
@@ -137,6 +142,10 @@ describe('TaskTelegramOutbox.drain', () => {
       await outbox.drain(NOW);
       expect(sender.send).not.toHaveBeenCalled();
       expect(updateOf(prisma).data).toEqual({ sentAt: NOW, lastError: reason });
+      // A row that is never sent says so in the log.
+      expect(warn).toHaveBeenLastCalledWith(
+        expect.stringMatching(new RegExp(`o1.*dropped: ${reason}`)),
+      );
     }
   });
 
@@ -308,6 +317,88 @@ describe('TaskTelegramOutbox.drain', () => {
       expect(lastError).toContain('bot***');
       expect(lastError).not.toContain('AAE-secret_Token');
     }
+  });
+
+  it('a message that went out is not a failed send when the row cannot be closed', async () => {
+    const { outbox, prisma, sender } = setup([row()]);
+    prisma.taskOutbox.update.mockRejectedValueOnce(new Error('db down'));
+    await expect(outbox.drain(NOW)).resolves.toBe(1);
+    // Only the closing write was tried: no attempt, no backoff, the claim holds.
+    expect(prisma.taskOutbox.update).toHaveBeenCalledTimes(1);
+    expect(updateOf(prisma).data).toEqual({ sentAt: NOW, lastError: null });
+    expect(sender.send).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringMatching(/o1.*sent but not closed: db down/),
+    );
+  });
+
+  it('a row that dies leaves one line in the log', async () => {
+    const failed = (kind: string, reason: string) => ({
+      status: 'failed',
+      kind,
+      retryAfter: null,
+      reason,
+    });
+    const cases: [
+      Record<string, unknown>,
+      unknown,
+      string,
+      'warn' | 'error',
+    ][] = [
+      [{}, failed('permanent', 'blocked'), 'dead: blocked', 'warn'],
+      [{}, { status: 'skipped', reason: 'bot off' }, 'dead: bot off', 'warn'],
+      [
+        { attempts: 2 },
+        failed('transient', 'ETIMEDOUT'),
+        'dead after 3 failures: ETIMEDOUT',
+        'warn',
+      ],
+      [{}, failed('content', 'bad html'), 'dead: bad html', 'error'],
+    ];
+    for (const [over, result, text, level] of cases) {
+      warn.mockClear();
+      error.mockClear();
+      const { outbox, sender } = setup([row(over)]);
+      sender.send.mockResolvedValue(result);
+      await outbox.drain(NOW);
+      const logged = level === 'warn' ? warn : error;
+      expect(logged).toHaveBeenCalledTimes(1);
+      expect(logged).toHaveBeenCalledWith(
+        expect.stringMatching(new RegExp(`o1.*${text}`)),
+      );
+      expect(level === 'warn' ? error : warn).not.toHaveBeenCalled();
+    }
+    // A first transient failure is not death: nothing but the retry.
+    warn.mockClear();
+    const first = setup([row()]);
+    first.sender.send.mockResolvedValue(failed('transient', 'ETIMEDOUT'));
+    await first.outbox.drain(NOW);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('a failure that cannot be written down is logged, not swallowed', async () => {
+    const { outbox, prisma, sender } = setup([row()]);
+    sender.send.mockRejectedValueOnce(new Error('boom'));
+    prisma.taskOutbox.update.mockRejectedValueOnce(new Error('db down'));
+    await expect(outbox.drain(NOW)).resolves.toBe(0);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringMatching(/o1.*could not record the failure: db down/),
+    );
+  });
+
+  it('a row reclaimed after 22:00 waits for 08:00 instead of going out at night', async () => {
+    const night = setup([row()]);
+    await expect(night.outbox.drain(NIGHT)).resolves.toBe(0);
+    expect(night.sender.send).not.toHaveBeenCalled();
+    expect(updateOf(night.prisma)).toEqual({
+      where: { id: 'o1' },
+      data: { sendAfter: NEXT_MORNING }, // not an attempt, not a failure
+    });
+
+    const urgent = setup([row()]);
+    (loadTaskView as jest.Mock).mockResolvedValue(view({ priority: 'URGENT' }));
+    await expect(urgent.outbox.drain(NIGHT)).resolves.toBe(1);
+    expect(urgent.sender.send).toHaveBeenCalledTimes(1);
   });
 
   it('a run still busy is not started twice', async () => {

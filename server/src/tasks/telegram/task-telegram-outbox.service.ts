@@ -108,7 +108,9 @@ export class TaskTelegramOutbox {
         sentAt: null,
         attempts: { lt: DEAD },
       },
-      orderBy: { sendAfter: 'asc' },
+      // Notices queued together share one sendAfter (08:00): createdAt keeps
+      // their queue order, id makes ties deterministic (ids are uuids).
+      orderBy: [{ sendAfter: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
       take: 50,
       select: {
         id: true,
@@ -134,6 +136,7 @@ export class TaskTelegramOutbox {
     now: Date,
   ): Promise<'sent' | 'done' | 'limited'> {
     let priority: TaskPriority = 'MEDIUM';
+    let delivered = false;
     try {
       // Claim the row first: an old and a new instance (a Railway deploy runs
       // both for a while) read the same rows, and only one may send each. If
@@ -147,34 +150,52 @@ export class TaskTelegramOutbox {
       const view = await loadTaskView(this.prisma, row.taskId);
       const skip = skipReason(row, view, now);
       if (skip !== null || !view) {
-        await this.close(row.id, now, skip ?? 'task gone');
+        await this.drop(row, now, skip ?? 'task gone');
         return 'done';
       }
       priority = view.priority;
+      // The claim window can run past 22:00 (a run that died, then came back):
+      // the night quiet holds at send time too.
+      const quietUntil = telegramSendAfter(now, priority);
+      if (quietUntil.getTime() > now.getTime()) {
+        await this.mark(row.id, { sendAfter: quietUntil });
+        return 'done';
+      }
       const notice: TgNotice =
         row.kind === 'NOTICE'
           ? (row.payload as unknown as TgNotice)
           : { kind: row.kind };
       const r = await this.sender.send(view, row.userId, notice);
       if (r.status === 'sent') {
+        delivered = true;
         await this.close(row.id, now, null);
         return 'sent';
       }
       if (r.status === 'skipped') {
         // No bot token will not heal by itself; no chat is closed like a send.
-        if (r.reason === BOT_OFF) await this.kill(row.id, r.reason);
-        else await this.close(row.id, now, r.reason);
+        if (r.reason === BOT_OFF) await this.kill(row, r.reason);
+        else await this.drop(row, now, r.reason);
         return 'done';
       }
       return await this.failed(row, priority, r, now);
     } catch (err) {
+      if (delivered) {
+        // The message is out, only the bookkeeping failed: not a failed send,
+        // so no attempt and no backoff. The claim holds the row for CLAIM_MS.
+        this.logger.error(
+          `telegram outbox ${row.id}: sent but not closed: ${note(err)}`,
+        );
+        return 'sent';
+      }
       const reason = note(err);
       this.logger.warn(`telegram outbox ${row.id} failed: ${reason}`);
-      await this.mark(row.id, {
-        attempts: { increment: 1 },
-        sendAfter: retryAt(now, backoffSeconds(row.attempts), priority),
-        lastError: reason,
-      }).catch(() => undefined);
+      try {
+        await this.retry(row, priority, now, reason);
+      } catch (writeErr) {
+        this.logger.error(
+          `telegram outbox ${row.id}: could not record the failure: ${note(writeErr)}`,
+        );
+      }
       return 'done';
     }
   }
@@ -187,14 +208,11 @@ export class TaskTelegramOutbox {
   ): Promise<'done' | 'limited'> {
     if (r.kind === 'content') {
       // Our own bug (bad HTML or URL): the same text fails again, so no retry.
-      this.logger.error(
-        `telegram outbox ${row.id}: notice to ${row.userId} is malformed: ${note(r.reason)}`,
-      );
-      await this.kill(row.id, r.reason);
+      await this.kill(row, r.reason, 'error');
       return 'done';
     }
     if (r.kind === 'permanent') {
-      await this.kill(row.id, r.reason);
+      await this.kill(row, r.reason);
       return 'done';
     }
     if (r.retryAfter !== null) {
@@ -205,12 +223,27 @@ export class TaskTelegramOutbox {
       });
       return 'limited';
     }
+    await this.retry(row, priority, now, note(r.reason));
+    return 'done';
+  }
+
+  /** A failure that may heal: counts an attempt and tries later; the third one kills the row. */
+  private async retry(
+    row: DueRow,
+    priority: TaskPriority,
+    now: Date,
+    reason: string,
+  ) {
     await this.mark(row.id, {
       attempts: { increment: 1 },
       sendAfter: retryAt(now, backoffSeconds(row.attempts), priority),
-      lastError: note(r.reason),
+      lastError: reason,
     });
-    return 'done';
+    if (row.attempts + 1 >= DEAD) {
+      this.logger.warn(
+        `telegram outbox ${row.id}: notice to ${row.userId} dead after ${DEAD} failures: ${reason}`,
+      );
+    }
   }
 
   private mark(id: string, data: Prisma.TaskOutboxUpdateInput) {
@@ -224,8 +257,26 @@ export class TaskTelegramOutbox {
     });
   }
 
-  /** Never sent, never retried: the 03:00 purge removes it after 30 days. */
-  private kill(id: string, reason: string) {
-    return this.mark(id, { attempts: DEAD, lastError: note(reason) });
+  /** A row the drain will never send (task closed, no chat, ...): closed for good, and said so. */
+  private async drop(row: DueRow, now: Date, reason: string) {
+    await this.close(row.id, now, reason);
+    this.logger.warn(
+      `telegram outbox ${row.id}: notice to ${row.userId} dropped: ${note(reason)}`,
+    );
+  }
+
+  /**
+   * Never sent, never retried: the 03:00 purge removes it after 30 days. The
+   * level is the caller's: `error` for our own bug (a malformed message).
+   */
+  private async kill(
+    row: DueRow,
+    reason: string,
+    level: 'warn' | 'error' = 'warn',
+  ) {
+    await this.mark(row.id, { attempts: DEAD, lastError: note(reason) });
+    this.logger[level](
+      `telegram outbox ${row.id}: notice to ${row.userId} dead: ${note(reason)}`,
+    );
   }
 }
