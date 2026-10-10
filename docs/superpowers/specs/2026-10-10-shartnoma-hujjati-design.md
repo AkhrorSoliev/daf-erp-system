@@ -95,7 +95,8 @@ o'quvchining ismi, tug'ilgan sanasi, pasporti, manzili, telefoni,
 Telegrami; voyaga yetmaganga — ota-onaning ismi va telefoni.
 
 **Filial maydonlari bo'sh bo'lsa, shartnoma tuzilmaydi:** «Filial
-sozlamasida shahar, vakil ismi va lavozimi kiritilmagan». Sabab:
+sozlamasida shahar, manzil, vakil ismi va lavozimi kiritilmagan» (faqat
+bo'shlari nomlanadi). Sabab:
 filial ma'lumoti shartnomaga muhrlanadi — bo'sh holda tuzilgan
 shartnoma bo'sh qoladi.
 
@@ -169,7 +170,9 @@ o'quvchi qismi tuzilgandan keyin o'zgarmaydi.
 
 **`Branch`ga uchta maydon:** `city`, `representativeName`,
 `representativePosition`. Filial sozlamasi formasida tahrirlanadi,
-tarixga odatdagidek yoziladi.
+tarixga odatdagidek yoziladi. Formada mavjud `address` (manzil) ham shu
+bo'limga chiqadi — hozir formada uni kiritadigan joy yo'q, shartnoma esa
+uni talab qiladi.
 
 ---
 
