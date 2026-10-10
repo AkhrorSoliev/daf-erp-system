@@ -34,11 +34,13 @@ export class RefundsController {
   @Can('refunds.create')
   previewRefund(
     @Param('studentId', ParseIntPipe) studentId: number,
+    @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @Query('enrollmentId') enrollmentId?: string,
   ) {
     return this.refundsService.previewRefund(
       studentId,
+      userId,
       companyId,
       enrollmentId,
     );

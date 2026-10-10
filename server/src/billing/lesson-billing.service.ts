@@ -14,6 +14,7 @@ import {
   lessonsAffordable,
 } from './lesson-price';
 import { TransactionsService } from '../transactions/transactions.service';
+import { assertCallerMayWriteForStudentInTx } from '../common/auth/financial-write-scope';
 import {
   SalaryAccrualService,
   CarriedOverAccrual,
@@ -803,10 +804,20 @@ export class LessonBillingService {
   async runRetroactiveBilling(params: {
     studentId: number;
     companyId: number;
-    performedById?: number;
+    performedById: number;
   }): Promise<{ billedAttendances: number }> {
     return this.prisma.$transaction(
-      (tx) => this.processRetroactiveBillingForStudent(tx, params),
+      async (tx) => {
+        // A manual catch-up moves the student's money: the caller must hold
+        // the student's branch, checked on this transaction's client.
+        await assertCallerMayWriteForStudentInTx(
+          tx,
+          params.performedById,
+          params.studentId,
+          params.companyId,
+        );
+        return this.processRetroactiveBillingForStudent(tx, params);
+      },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         maxWait: 15_000,
@@ -1264,14 +1275,23 @@ export class LessonBillingService {
           },
           select: {
             id: true,
+            studentId: true,
             enrollmentId: true,
             reversedAt: true,
             metadata: true,
           },
         });
-        if (!deduction) {
+        if (!deduction || deduction.studentId == null) {
           throw new Error('LESSON_DEDUCTION yozuvi topilmadi');
         }
+        // The batch is the student's money: the caller must hold the
+        // student's branch, checked on this transaction's client.
+        await assertCallerMayWriteForStudentInTx(
+          tx,
+          params.performedById,
+          deduction.studentId,
+          params.companyId,
+        );
         if (deduction.reversedAt) {
           throw new Error('Bu yozuv allaqachon bekor qilingan');
         }

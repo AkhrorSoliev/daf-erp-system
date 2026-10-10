@@ -4,6 +4,9 @@ import { TransactionsController } from './transactions.controller';
 import { TransactionsService } from './transactions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { CreateAdjustmentDto } from './dto/create-adjustment.dto';
 
 describe('TransactionsController — route access', () => {
   // Appendix C: no screen reads the company-wide ledger or a teacher's ledger,
@@ -188,6 +191,44 @@ describe('TransactionsController — debt write-off audit scope', () => {
         1001,
         expect.objectContaining({ branchIds: [2] }),
       );
+    });
+  });
+
+  // The body used to name a branch and win, so an adjustment could be booked
+  // to any branch's books. The branch now comes from the student alone, and
+  // the caller is named so the writer checks them against it.
+  describe('manual adjustment', () => {
+    it('names the caller and forwards no branch of its own', async () => {
+      await controller.createAdjustment(
+        { studentId: 10500, amount: -5_000, description: 'Tuzatish' } as never,
+        42,
+        1001,
+      );
+
+      const arg = mockTransactionsService.createAdjustment.mock.calls.at(-1)[0];
+      expect(arg).toMatchObject({
+        studentId: 10500,
+        amount: -5_000,
+        companyId: 1001,
+        performedById: 42,
+        callerId: 42,
+      });
+      expect('branchId' in arg).toBe(false);
+    });
+
+    it('refuses a body that names a branch', async () => {
+      // Same options as the global ValidationPipe in main.ts.
+      const dto = plainToInstance(CreateAdjustmentDto, {
+        studentId: 10500,
+        amount: -5_000,
+        description: 'Tuzatish',
+        branchId: 2,
+      });
+      const errors = await validate(dto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      });
+      expect(errors.map((e) => e.property)).toEqual(['branchId']);
     });
   });
 });

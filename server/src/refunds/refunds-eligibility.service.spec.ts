@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   MONTHLY_REFUND_WARNING,
   RefundsEligibilityService,
@@ -13,6 +17,7 @@ describe('RefundsEligibilityService', () => {
   let billing: any;
 
   const studentRow = { id: 10001, balance: 100_000 };
+  const CALLER = 7;
   const lastPaymentRow = {
     amount: 150_000,
     method: 'PAYME',
@@ -54,6 +59,15 @@ describe('RefundsEligibilityService', () => {
       studentBranch: {
         findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
       },
+      // The preview checks the caller against the student's branch (1). A CEO
+      // spans every branch, so the default caller passes.
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
@@ -72,14 +86,14 @@ describe('RefundsEligibilityService', () => {
 
   it('throws NotFoundException when student is missing', async () => {
     prisma.student.findFirst.mockResolvedValue(null);
-    await expect(service.previewRefund(10001, 1)).rejects.toThrow(
+    await expect(service.previewRefund(10001, CALLER, 1)).rejects.toThrow(
       NotFoundException,
     );
   });
 
   it('throws NotFoundException when student has no active enrollment', async () => {
     prisma.enrollment.findMany.mockResolvedValue([]);
-    await expect(service.previewRefund(10001, 1)).rejects.toThrow(
+    await expect(service.previewRefund(10001, CALLER, 1)).rejects.toThrow(
       NotFoundException,
     );
   });
@@ -89,13 +103,13 @@ describe('RefundsEligibilityService', () => {
       enrollmentRow,
       { ...enrollmentRow, id: 'enr-2' },
     ]);
-    await expect(service.previewRefund(10001, 1)).rejects.toThrow(
+    await expect(service.previewRefund(10001, CALLER, 1)).rejects.toThrow(
       BadRequestException,
     );
   });
 
   it('uses explicit enrollmentId when provided', async () => {
-    await service.previewRefund(10001, 1, 'enr-1');
+    await service.previewRefund(10001, CALLER, 1, 'enr-1');
     expect(prisma.enrollment.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -111,7 +125,7 @@ describe('RefundsEligibilityService', () => {
   it('throws NotFoundException when explicit enrollmentId does not match the student', async () => {
     prisma.enrollment.findFirst.mockResolvedValue(null);
     await expect(
-      service.previewRefund(10001, 1, 'enr-foreign'),
+      service.previewRefund(10001, CALLER, 1, 'enr-foreign'),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -124,14 +138,42 @@ describe('RefundsEligibilityService', () => {
       status: 'DROPPED',
     });
 
-    await expect(service.previewRefund(10001, 1, 'enr-1')).rejects.toThrow(
-      BadRequestException,
-    );
+    await expect(
+      service.previewRefund(10001, CALLER, 1, 'enr-1'),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  // The quote names the student's balance, groups and last payment, and it
+  // answered for any student of the company.
+  describe("the caller's branch", () => {
+    const director = (mainBranch: number) => ({
+      mainBranch,
+      branches: [],
+      roles: [{ role: { name: 'Branch Director' } }],
+    });
+
+    it("refuses a caller outside the student's branch, reading nothing more", async () => {
+      prisma.user.findFirst.mockResolvedValue(director(2));
+
+      await expect(service.previewRefund(10001, CALLER, 1)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.enrollment.findFirst).not.toHaveBeenCalled();
+      expect(prisma.payment.aggregate).not.toHaveBeenCalled();
+    });
+
+    it("quotes for a caller of the student's branch", async () => {
+      prisma.user.findFirst.mockResolvedValue(director(1));
+
+      await expect(service.previewRefund(10001, CALLER, 1)).resolves.toEqual(
+        expect.objectContaining({ maxRefundable: expect.any(Number) }),
+      );
+    });
   });
 
   describe('payments aggregation', () => {
     it('sums COMPLETED non-reversed payments at the student level', async () => {
-      await service.previewRefund(10001, 1);
+      await service.previewRefund(10001, CALLER, 1);
 
       expect(prisma.payment.aggregate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -148,7 +190,7 @@ describe('RefundsEligibilityService', () => {
       prisma.payment.aggregate.mockResolvedValue({
         _sum: { amount: 750_000 },
       });
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
       expect(result.paidAmount).toBe(750_000);
     });
   });
@@ -158,7 +200,7 @@ describe('RefundsEligibilityService', () => {
     // dialog has to show which payment that was. It reads the SAME set the
     // paidAmount total is summed from, or the two lines could disagree.
     it('reads the newest payment from the same filter paidAmount is summed over', async () => {
-      await service.previewRefund(10001, 1);
+      await service.previewRefund(10001, CALLER, 1);
 
       expect(prisma.payment.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -173,7 +215,7 @@ describe('RefundsEligibilityService', () => {
     });
 
     it('returns the last payment amount, method and date', async () => {
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.lastPayment).toEqual({
         amount: 150_000,
@@ -186,7 +228,7 @@ describe('RefundsEligibilityService', () => {
       prisma.payment.findFirst.mockResolvedValue(null);
       prisma.payment.aggregate.mockResolvedValue({ _sum: { amount: null } });
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.lastPayment).toBeNull();
       expect(result.paidAmount).toBe(0);
@@ -211,7 +253,7 @@ describe('RefundsEligibilityService', () => {
       ]);
       billing.prepaidRefundValue.mockResolvedValue(199_998);
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.prepaidLessons).toBe(6);
       expect(result.prepaidValue).toBe(199_998);
@@ -225,7 +267,7 @@ describe('RefundsEligibilityService', () => {
       ]);
       prisma.attendance.count.mockResolvedValue(5);
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.maxRefundable).toBe(0);
     });
@@ -240,7 +282,7 @@ describe('RefundsEligibilityService', () => {
       ]);
       billing.prepaidRefundValue.mockResolvedValue(99_999);
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.maxRefundable).toBe(49_999);
     });
@@ -254,7 +296,7 @@ describe('RefundsEligibilityService', () => {
         { ...enrollmentRow, prepaidLessonsRemaining: 0 },
       ]);
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.maxRefundable).toBe(0);
     });
@@ -264,7 +306,7 @@ describe('RefundsEligibilityService', () => {
         { ...enrollmentRow, prepaidLessonsRemaining: 4 },
       ]);
 
-      await service.previewRefund(10001, 1);
+      await service.previewRefund(10001, CALLER, 1);
 
       expect(billing.prepaidRefundValue).toHaveBeenCalledWith(
         prisma,
@@ -283,7 +325,7 @@ describe('RefundsEligibilityService', () => {
         { ...enrollmentRow, prepaidLessonsRemaining: 0 },
       ]);
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.warning).toMatch(/balansdagi/i);
     });
@@ -312,7 +354,7 @@ describe('RefundsEligibilityService', () => {
       });
       prisma.enrollment.findMany.mockResolvedValue([enrollmentOf('MONTHLY')]);
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.warning).toBe(MONTHLY_REFUND_WARNING);
     });
@@ -323,7 +365,7 @@ describe('RefundsEligibilityService', () => {
         prisma.student.findFirst.mockResolvedValue({ id: 10001, balance });
         prisma.enrollment.findMany.mockResolvedValue([enrollmentOf('MONTHLY')]);
 
-        const result = await service.previewRefund(10001, 1);
+        const result = await service.previewRefund(10001, CALLER, 1);
 
         expect(result.warning).toBeNull();
       },
@@ -338,7 +380,7 @@ describe('RefundsEligibilityService', () => {
         enrollmentOf('LESSON_PACK'),
       ]);
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.warning).toBe(
         "Oldindan to'langan darsi yo'q — faqat balansdagi puldan qaytariladi",
@@ -362,7 +404,7 @@ describe('RefundsEligibilityService', () => {
         ]);
         billing.prepaidRefundValue.mockResolvedValue(90_000);
 
-        const result = await service.previewRefund(10001, 1);
+        const result = await service.previewRefund(10001, CALLER, 1);
 
         expect(result.maxRefundable).toBe(240_000);
         expect(result.warning).toBeNull();
@@ -386,7 +428,7 @@ describe('RefundsEligibilityService', () => {
     });
 
     it('reads the payment model off the enrollment it picks on its own', async () => {
-      await service.previewRefund(10001, 1);
+      await service.previewRefund(10001, CALLER, 1);
 
       expect(prisma.enrollment.findMany).toHaveBeenCalledWith(
         selectsPaymentModel,
@@ -394,7 +436,7 @@ describe('RefundsEligibilityService', () => {
     });
 
     it('reads the payment model off an enrollment named by id', async () => {
-      await service.previewRefund(10001, 1, 'enr-1');
+      await service.previewRefund(10001, CALLER, 1, 'enr-1');
 
       expect(prisma.enrollment.findFirst).toHaveBeenCalledWith(
         selectsPaymentModel,
@@ -421,7 +463,7 @@ describe('RefundsEligibilityService', () => {
         balance: 250_000,
       });
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.maxRefundable).toBe(250_000);
       expect(result.suggestedAmount).toBe(250_000);
@@ -433,7 +475,7 @@ describe('RefundsEligibilityService', () => {
         balance: 250_000,
       });
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.prepaidLessons).toBe(0);
       expect(result.prepaidValue).toBe(0);
@@ -446,7 +488,7 @@ describe('RefundsEligibilityService', () => {
     it('quotes zero for a frozen student with zero balance', async () => {
       prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 0 });
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.maxRefundable).toBe(0);
     });
@@ -457,7 +499,7 @@ describe('RefundsEligibilityService', () => {
         balance: -40_000,
       });
 
-      const result = await service.previewRefund(10001, 1);
+      const result = await service.previewRefund(10001, CALLER, 1);
 
       expect(result.maxRefundable).toBe(0);
     });
@@ -473,7 +515,7 @@ describe('RefundsEligibilityService', () => {
     ]);
     billing.prepaidRefundValue.mockResolvedValue(166_665);
 
-    const result = await service.previewRefund(10001, 1);
+    const result = await service.previewRefund(10001, CALLER, 1);
 
     expect(result.groupName).toBe('TOS-101');
     expect(result.prepaidLessons).toBe(5);
@@ -497,7 +539,7 @@ describe('RefundsEligibilityService', () => {
     afterEach(() => jest.useRealTimers());
 
     it("quotes the 10th bank day after today, with the student branch's holidays", async () => {
-      const out = await service.previewRefund(10001, 1);
+      const out = await service.previewRefund(10001, CALLER, 1);
       expect(out.dueDate).toBe('2026-10-13');
       expect(prisma.holiday.findMany.mock.calls[0][0].where.OR).toEqual([
         { branchId: null },
@@ -507,14 +549,14 @@ describe('RefundsEligibilityService', () => {
 
     it('the balance-only quote carries it too', async () => {
       prisma.enrollment.findFirst.mockResolvedValueOnce(null);
-      const out = await service.previewRefund(10001, 1);
+      const out = await service.previewRefund(10001, CALLER, 1);
       expect(out.enrollmentId).toBeNull();
       expect(out.dueDate).toBe('2026-10-13');
     });
   });
 
   it('counts an open request among the earlier refunds — its money already left the balance', async () => {
-    await service.previewRefund(10001, 1);
+    await service.previewRefund(10001, CALLER, 1);
     expect(prisma.refund.aggregate.mock.calls[0][0].where.status.in).toContain(
       'REQUESTED',
     );

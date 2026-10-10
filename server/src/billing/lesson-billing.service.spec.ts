@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ForbiddenException } from '@nestjs/common';
 import {
   AttendanceStatus,
   LessonDeductionMode,
@@ -1230,11 +1231,23 @@ describe('LessonBillingService', () => {
     it('opens a Serializable tx in runRetroactiveBilling', async () => {
       // Arrange a no-enrollments fast path so the tx body returns 0.
       tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+      // The caller check: the student's branch (1), then the caller (a CEO).
+      tx.studentBranch = {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      };
+      tx.user = {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      };
       prisma.$transaction = jest.fn().mockImplementation((cb) => cb(prisma));
 
       const result = await service.runRetroactiveBilling({
         studentId,
         companyId,
+        performedById: 99,
       });
 
       expect(result.billedAttendances).toBe(0);
@@ -1242,6 +1255,30 @@ describe('LessonBillingService', () => {
         expect.any(Function),
         expect.objectContaining({ isolationLevel: 'Serializable' }),
       );
+    });
+
+    it("refuses a caller outside the student's branch before billing anything", async () => {
+      tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+      tx.studentBranch = {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      };
+      tx.user = {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: 2,
+          branches: [],
+          roles: [{ role: { name: 'Branch Director' } }],
+        }),
+      };
+      prisma.$transaction = jest.fn().mockImplementation((cb) => cb(prisma));
+
+      await expect(
+        service.runRetroactiveBilling({
+          studentId,
+          companyId,
+          performedById: 99,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(tx.enrollment.findMany).not.toHaveBeenCalled();
     });
   });
 
@@ -1958,6 +1995,18 @@ describe('LessonBillingService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         update: jest.fn().mockResolvedValue({}),
       };
+      // The caller check: the student's branch (1), then the caller (its
+      // director).
+      tx.studentBranch = {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      };
+      tx.user = {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: 1,
+          branches: [],
+          roles: [{ role: { name: 'Branch Director' } }],
+        }),
+      };
       monthlyChargeService.reverseMonthlyCharge = jest
         .fn()
         .mockResolvedValue({ chargeId: 'chg-1' });
@@ -1966,6 +2015,7 @@ describe('LessonBillingService', () => {
     it('MONTHLY_PERIOD qatorini reverseMonthlyCharge orqali bekor qiladi', async () => {
       tx.transaction.findFirst.mockResolvedValueOnce({
         id: 'mon-1',
+        studentId: 10001,
         enrollmentId: 'enroll-1',
         reversedAt: null,
         metadata: { mode: 'MONTHLY_PERIOD', period: '2026-09' },
@@ -1995,6 +2045,7 @@ describe('LessonBillingService', () => {
     it('LESSON_PACK qatorida eski yo`l o`zgarmaydi', async () => {
       tx.transaction.findFirst.mockResolvedValueOnce({
         id: 'ded-9',
+        studentId: 10001,
         enrollmentId: 'enroll-1',
         reversedAt: null,
         metadata: { mode: LessonDeductionMode.FULL_CYCLE },
@@ -2024,6 +2075,7 @@ describe('LessonBillingService', () => {
     it('paketdagi dars qatorlarini o`zbekcha sabab bilan bekor qiladi', async () => {
       tx.transaction.findFirst.mockResolvedValueOnce({
         id: 'ded-9',
+        studentId: 10001,
         enrollmentId: 'enroll-1',
         reversedAt: null,
         metadata: { mode: LessonDeductionMode.FULL_CYCLE },
@@ -2045,6 +2097,32 @@ describe('LessonBillingService', () => {
           tx,
         );
       }
+    });
+
+    it("refuses a caller outside the student's branch and reverses nothing", async () => {
+      // The student is in branch 1; this director holds branch 2.
+      tx.user.findFirst.mockResolvedValueOnce({
+        mainBranch: 2,
+        branches: [],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+      tx.transaction.findFirst.mockResolvedValueOnce({
+        id: 'ded-9',
+        studentId: 10001,
+        enrollmentId: 'enroll-1',
+        reversedAt: null,
+        metadata: { mode: LessonDeductionMode.FULL_CYCLE },
+      });
+
+      await expect(
+        service.reverseLessonDeduction('ded-9', {
+          performedById: 7,
+          companyId: 1,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+      expect(monthlyChargeService.reverseMonthlyCharge).not.toHaveBeenCalled();
+      expect(tx.salaryAccrual.findMany).not.toHaveBeenCalled();
     });
   });
 });

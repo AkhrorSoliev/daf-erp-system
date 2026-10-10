@@ -152,14 +152,19 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
-      'Id-addressed money paths. The branch is resolved from the record and the ' +
-      'caller is verified against it before the write. `POST /payments` checks ' +
-      'again INSIDE its transaction with the transaction client, because a ' +
-      'student can change branch between the two; the other routes here (the ' +
-      'refund routes and `POST /students/:id/balance-notices` among them) check ' +
-      "the student's branch once, before the write. Taking the header instead " +
-      'would let the branch a user happens to be viewing decide where money ' +
-      'is booked.',
+      'Id-addressed money paths. The branch is resolved from the record (or ' +
+      'from the student the path names) and the caller is verified against ' +
+      'it before anything is written or shown. `POST /payments` checks again ' +
+      'INSIDE its transaction with the transaction client, because a student ' +
+      'can change branch between the two; `POST /transactions/adjustment` and ' +
+      'the three `/billing/*` routes check once, inside their own ' +
+      'transaction, with its client; the other writes here (the refund routes ' +
+      "and `POST /students/:id/balance-notices` among them) check the student's " +
+      'branch once, before the write; the two previews refuse a student of ' +
+      'another branch before answering with anything. The adjustment takes no ' +
+      "branch from the body: its ledger row carries the student's branch. " +
+      'Taking the header instead would let the branch a user happens to be ' +
+      'viewing decide where money is booked.',
     routes: [
       'POST /payments',
       'POST /payments/:id/correct',

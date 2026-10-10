@@ -48,8 +48,18 @@ export class RefundsService {
   }
 
   // Eligibility / list
-  previewRefund(studentId: number, companyId: number, enrollmentId?: string) {
-    return this.eligibility.previewRefund(studentId, companyId, enrollmentId);
+  previewRefund(
+    studentId: number,
+    userId: number,
+    companyId: number,
+    enrollmentId?: string,
+  ) {
+    return this.eligibility.previewRefund(
+      studentId,
+      userId,
+      companyId,
+      enrollmentId,
+    );
   }
   findAll(
     companyId: number,

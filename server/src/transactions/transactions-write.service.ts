@@ -20,6 +20,7 @@ import {
   resolveStudentBranchId,
   tryResolveUserBranchId,
 } from '../common/finance/resolve-branch';
+import { assertCallerMayWriteForStudentInTx } from '../common/auth/financial-write-scope';
 
 // Transaction types that represent REAL money in/out of the center and so
 // must mirror onto a cash account. Everything else (lesson deduction /
@@ -993,6 +994,13 @@ export class TransactionsWriteService {
       // acting user; the ledger column is nullable.
       performedById?: number;
       /**
+       * The signed-in caller of `POST /transactions/adjustment`. When set, they
+       * must hold the student's branch, checked on this transaction's client.
+       * Internal callers (refunds, cascades, monthly charges) authorised their
+       * own entry point and leave it out.
+       */
+      callerId?: number;
+      /**
        * Optional audit trail. A refund that frees prepaid lessons posts an
        * ADJUSTMENT for the money it releases and has to find that same row
        * again to reverse it — Transaction carries no refund FK, so the link
@@ -1011,6 +1019,14 @@ export class TransactionsWriteService {
       });
       if (!studentCheck) {
         throw new NotFoundException("O'quvchi topilmadi");
+      }
+      if (params.callerId !== undefined) {
+        await assertCallerMayWriteForStudentInTx(
+          client,
+          params.callerId,
+          params.studentId,
+          params.companyId,
+        );
       }
 
       const student = await this.lockStudent(client, params.studentId);

@@ -7,11 +7,9 @@ import {
 import { EnrollmentStatus, Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
+import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
-import {
-  resolveStudentBranchId,
-  tryResolveStudentBranchId,
-} from '../common/finance/resolve-branch';
+import { resolveStudentBranchId } from '../common/finance/resolve-branch';
 import { loadTransferState } from '../balance-notices/load-transfer-state';
 import {
   tashkentDateStr,
@@ -32,7 +30,7 @@ export class WithdrawalsService {
    * student balance, max withdrawable, and the list of teachers active
    * on the student's enrollments (used when crediting a teacher).
    */
-  async preview(studentId: number, companyId: number) {
+  async preview(studentId: number, userId: number, companyId: number) {
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, companyId, deletedAt: null },
       select: {
@@ -44,6 +42,15 @@ export class WithdrawalsService {
       },
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
+
+    // The dialog shows the student's name, balance, groups and teachers: only
+    // to a caller who holds the student's branch.
+    const branchId = await assertCallerMayTouchStudent(
+      this.prisma,
+      userId,
+      studentId,
+      companyId,
+    );
 
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
@@ -103,7 +110,7 @@ export class WithdrawalsService {
     const transfer = await loadTransferState(
       this.prisma,
       student,
-      await tryResolveStudentBranchId(this.prisma, studentId, companyId),
+      branchId,
       new Date(),
     );
 

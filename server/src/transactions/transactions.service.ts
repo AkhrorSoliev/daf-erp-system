@@ -152,6 +152,8 @@ export class TransactionsService {
       // Optional: system-triggered adjustments (status cascades) may have no
       // acting user; the ledger column is nullable.
       performedById?: number;
+      /** The signed-in caller of `POST /transactions/adjustment`; see the writer. */
+      callerId?: number;
       /** Passed through to the writer, e.g. a lesson refund's `kind` tag. */
       metadata?: Prisma.InputJsonValue;
     },
