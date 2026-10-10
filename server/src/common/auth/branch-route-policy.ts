@@ -172,6 +172,24 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
+      'Student contracts (ADR-0075). Every route resolves the student — from ' +
+      'the query for the list and the prefill, from the contract row for the ' +
+      'id-addressed ones — and checks the caller against that student branch ' +
+      'with `assertCallerMayTouchStudent`. The header branch is never read: a ' +
+      'contract belongs to the branch of the student it was made for.',
+    routes: [
+      'GET /contract-documents',
+      'GET /contract-documents/prefill',
+      'POST /contract-documents',
+      'PATCH /contract-documents/:id',
+      'POST /contract-documents/:id/sign',
+      'POST /contract-documents/:id/cancel',
+      'GET /contract-documents/:id/pdf',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
       'Telegram group administration. The group row carries the branch whose ' +
       'operational events it receives, so `assertCallerInBranch` is checked ' +
       'against that record — in BOTH directions on a change, because pointing a ' +

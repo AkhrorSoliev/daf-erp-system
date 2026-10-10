@@ -308,8 +308,15 @@ export class StudentEnrollmentService {
             },
           });
 
+          // A group change keeps the student's contract (ADR-0075); the
+          // addendum for the new group comes with stage 3 of the contract work.
           const fresh = await tx.enrollment.create({
-            data: { studentId, groupId, startDate: resolvedStartDate },
+            data: {
+              studentId,
+              groupId,
+              startDate: resolvedStartDate,
+              contractDocumentId: currentEnrollment.contractDocumentId,
+            },
           });
           await tx.enrollmentStateLog.create({
             data: {

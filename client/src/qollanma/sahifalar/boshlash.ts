@@ -37,7 +37,7 @@ export const boshlash: QollanmaSahifa[] = [
       "admin panel",
       "o'qituvchi portali",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "boshlash",

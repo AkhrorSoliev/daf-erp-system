@@ -175,6 +175,13 @@ to'plami. `endDate` **avtomatik yopilmaydi** — CEO qarori bilan cron o'chirilg
 shu darajada yuritiladi, o'quvchi darajasida emas.
 `prisma/schema.prisma`
 
+**Shartnoma hujjati (ContractDocument)** — o'quvchi bilan tuzilgan ta'lim
+xizmati shartnomasi: raqami (`DAF-YYYY-NNNNN`), Buyurtmachi, kurslari va o'sha
+kundagi narxlari (`fields`, tuzilganda muhrlanadi). Eski `Contract` emas — u pul
+kodiga bog'langan (ADR-0075). Yozilish `contractDocumentId` orqali bog'lanadi;
+guruh almashganda bog'lanish yangi yozilishga o'tadi.
+`contract-documents/contract-documents.service.ts`
+
 **Faol kun (DaF)** — o'quvchi o'sha Toshkent kunida ilovaning o'quv (`LERNEN`)
 bo'limida normadagi daqiqadan kam bo'lmagan vaqt o'tkazgan **yoki** tugatilgan
 seanslarda normadagi sondan kam bo'lmagan savolga javob bergan kun. Norma
