@@ -184,7 +184,7 @@ function PayForm({
 
           <div className="space-y-1.5">
             <Label htmlFor="pay-note">Izoh</Label>
-            <Input id="pay-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} disabled={submitting} />
+            <Input id="pay-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} disabled={submitting} />
           </div>
 
           <p
