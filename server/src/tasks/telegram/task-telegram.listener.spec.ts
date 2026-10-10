@@ -333,6 +333,12 @@ describe('TaskTelegramListener', () => {
       )
       .map((m) => m.event)
       .sort();
-    expect(listened).toEqual(Object.values(TASK_EVENTS).sort());
+    // An automatic close sends no Telegram notice (spec §7): the task just
+    // stops (its unsent rows are deleted with it).
+    expect(listened).toEqual(
+      Object.values(TASK_EVENTS)
+        .filter((e) => e !== TASK_EVENTS.AUTO_CLOSED)
+        .sort(),
+    );
   });
 });
