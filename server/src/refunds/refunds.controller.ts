@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Patch,
   Body,
   Param,
   ParseIntPipe,
@@ -10,7 +9,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RefundsService } from './refunds.service';
-import { ProcessRefundDto } from './dto/process-refund.dto';
 import { QuickRefundDto } from './dto/quick-refund.dto';
 import { BranchScope, CurrentUser, Roles } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
@@ -54,16 +52,6 @@ export class RefundsController {
     // Was company-wide: a Namangan director read every Fargona refund, with the
     // student's name and the amount on each row.
     return this.refundsService.findAll(companyId, scope);
-  }
-
-  @Patch(':id/process')
-  process(
-    @Param('id') id: string,
-    @Body() dto: ProcessRefundDto,
-    @CurrentUser('id') userId: number,
-    @CurrentUser('companyId') companyId: number,
-  ) {
-    return this.refundsService.process(id, dto, userId, companyId);
   }
 
   /**

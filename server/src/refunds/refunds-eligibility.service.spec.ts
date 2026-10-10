@@ -51,6 +51,10 @@ describe('RefundsEligibilityService', () => {
       refund: {
         aggregate: jest.fn().mockResolvedValue({ _sum: { approvedAmount: 0 } }),
       },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     billing = { prepaidRefundValue: jest.fn().mockResolvedValue(0) };
@@ -475,5 +479,44 @@ describe('RefundsEligibilityService', () => {
     expect(result.prepaidLessons).toBe(5);
     expect(result.prepaidValue).toBe(166_665);
     expect(billing.prepaidRefundValue).toHaveBeenCalled();
+  });
+
+  describe('the due date (ADR-0075)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers({
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      });
+      jest.setSystemTime(new Date('2026-09-28T06:00:00Z'));
+      prisma.holiday.findMany.mockResolvedValue([
+        {
+          date: new Date('2026-10-01T00:00:00Z'),
+          endDate: new Date('2026-10-01T00:00:00Z'),
+        },
+      ]);
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it("quotes the 10th bank day after today, with the student branch's holidays", async () => {
+      const out = await service.previewRefund(10001, 1);
+      expect(out.dueDate).toBe('2026-10-13');
+      expect(prisma.holiday.findMany.mock.calls[0][0].where.OR).toEqual([
+        { branchId: null },
+        { branchId: 1 },
+      ]);
+    });
+
+    it('the balance-only quote carries it too', async () => {
+      prisma.enrollment.findFirst.mockResolvedValueOnce(null);
+      const out = await service.previewRefund(10001, 1);
+      expect(out.enrollmentId).toBeNull();
+      expect(out.dueDate).toBe('2026-10-13');
+    });
+  });
+
+  it('counts an open request among the earlier refunds — its money already left the balance', async () => {
+    await service.previewRefund(10001, 1);
+    expect(prisma.refund.aggregate.mock.calls[0][0].where.status.in).toContain(
+      'REQUESTED',
+    );
   });
 });

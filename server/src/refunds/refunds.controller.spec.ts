@@ -50,6 +50,12 @@ describe('RefundsController — role guards', () => {
     ).toThrow(ForbiddenException);
   });
 
+  // ADR-0075: «Berildi» and «Bekor qilish» replace the old approve/complete
+  // route, so nothing may pay out through it any more.
+  it('has no PATCH :id/process handler', () => {
+    expect('process' in controller).toBe(false);
+  });
+
   it('reverse is CEO-only', () => {
     expect(() =>
       guard.canActivate(ctx(controller.reverse, ['Branch Director'])),

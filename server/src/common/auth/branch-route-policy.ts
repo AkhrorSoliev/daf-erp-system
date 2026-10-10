@@ -157,7 +157,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /payments/attach-external',
       'POST /refunds/:id/reverse',
       'POST /refunds/quick',
-      'PATCH /refunds/:id/process',
       'GET /refunds/preview/:studentId',
       'POST /transactions/adjustment',
       'POST /withdrawals',

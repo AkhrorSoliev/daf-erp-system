@@ -1,6 +1,5 @@
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { Injectable } from '@nestjs/common';
-import { ProcessRefundDto } from './dto/process-refund.dto';
 import { QuickRefundDto } from './dto/quick-refund.dto';
 import { RefundsCreateService } from './refunds-create.service';
 import { RefundsProcessService } from './refunds-process.service';
@@ -19,15 +18,7 @@ export class RefundsService {
     return this.createService.quickRefund(dto, userId, companyId);
   }
 
-  // Process / reverse
-  process(
-    id: string,
-    dto: ProcessRefundDto,
-    userId: number,
-    companyId: number,
-  ) {
-    return this.processService.process(id, dto, userId, companyId);
-  }
+  // Reverse
   reverse(
     id: string,
     params: { reason?: string; performedById: number; companyId: number },

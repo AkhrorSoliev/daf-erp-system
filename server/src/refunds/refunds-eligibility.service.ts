@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
+import { tryResolveStudentBranchId } from '../common/finance/resolve-branch';
+import { refundDueDate } from './refund-due-date';
 import {
   ReportBranchIds,
   studentBranchWhere,
@@ -135,6 +137,7 @@ export class RefundsEligibilityService {
         enrollmentId: enrollment.id,
         status: {
           in: [
+            RefundStatus.REQUESTED,
             RefundStatus.APPROVED,
             RefundStatus.PROCESSING,
             RefundStatus.COMPLETED,
@@ -209,7 +212,16 @@ export class RefundsEligibilityService {
       maxRefundable,
       suggestedAmount,
       warning,
+      dueDate: await this.dueDateFor(studentId, companyId),
     };
+  }
+
+  /** The due date a request opened now would get (ADR-0075). */
+  private async dueDateFor(studentId: number, companyId: number) {
+    return refundDueDate(
+      this.prisma,
+      await tryResolveStudentBranchId(this.prisma, studentId, companyId),
+    );
   }
 
   /**
@@ -262,6 +274,7 @@ export class RefundsEligibilityService {
         studentId,
         status: {
           in: [
+            RefundStatus.REQUESTED,
             RefundStatus.APPROVED,
             RefundStatus.PROCESSING,
             RefundStatus.COMPLETED,
@@ -290,6 +303,7 @@ export class RefundsEligibilityService {
       maxRefundable,
       suggestedAmount: maxRefundable,
       warning: "Faol guruhi yo'q — pul faqat hisobidagi balansdan qaytariladi",
+      dueDate: await this.dueDateFor(studentId, companyId),
     };
   }
 
