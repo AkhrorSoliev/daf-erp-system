@@ -25,7 +25,7 @@ import {
 interface CommentItemProps {
   comment: CommentData;
   currentUserId: number | undefined;
-  isCeo: boolean;
+  canModerate: boolean;
   isEditing: boolean;
   editContent: string;
   editSaving: boolean;
@@ -39,7 +39,7 @@ interface CommentItemProps {
 export function CommentItem({
   comment,
   currentUserId,
-  isCeo,
+  canModerate,
   isEditing,
   editContent,
   editSaving,
@@ -51,7 +51,7 @@ export function CommentItem({
 }: CommentItemProps) {
   const isAuthor = comment.author?.id === currentUserId;
   const isSystemComment = comment.isSystem;
-  const canEdit = (isAuthor || isCeo) && !comment._pending && !isSystemComment;
+  const canEdit = (isAuthor || canModerate) && !comment._pending && !isSystemComment;
 
   return (
     <div
@@ -101,7 +101,7 @@ export function CommentItem({
                       <Pencil className="mr-2 size-3.5" />
                       Tahrirlash
                     </DropdownMenuItem>
-                    {isCeo && (
+                    {canModerate && (
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onClick={() => onDelete(comment.id)}

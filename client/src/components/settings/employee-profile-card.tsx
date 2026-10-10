@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { SalaryDueCard } from "@/components/shared/salary-due-card";
@@ -49,10 +50,10 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
   const { openDrawer } = useEditEmployee();
   const router = useRouter();
   const authUser = useAuth((s) => s.user);
-  const canSeeBalance =
-    authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
-  // CEO/BD xodimni arxivga o'tkaza oladi — o'zini o'chira olmaydi.
-  const canDelete = canSeeBalance && employee.id !== authUser?.id;
+  const canSeeBalance = useCan("salary.view");
+  // Archiving an employee needs `employees.manage`; nobody archives themselves.
+  const canManageEmployees = useCan("employees.manage");
+  const canDelete = canManageEmployees && employee.id !== authUser?.id;
 
   const handleDelete = () => {
     router.push("/settings/employees");

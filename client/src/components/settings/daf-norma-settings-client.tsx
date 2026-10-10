@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SettingsPageHeader } from "./settings-page-header";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { getErrorMessage } from "@/lib/get-error-message";
 import api from "@/lib/api";
 
@@ -90,9 +91,9 @@ function NumberField({
 export function DafNormaSettingsClient() {
   const queryClient = useQueryClient();
   const user = useAuth((s) => s.user);
-  // Yozish serverda ham faqat CEO (`PATCH /company/:id`) — bu qulf tugmani
-  // bosib, keyin 403 olishning oldini oladi.
-  const canEdit = !!user?.roles?.some((r) => r.id === 1);
+  // The server writes this with `settings.company` too (`PATCH /company/:id`);
+  // the lock keeps the button from ending in a 403.
+  const canEdit = useCan("settings.company");
   const companyId = user?.companyId;
 
   // Qoralama faqat foydalanuvchi tahrirlagandan keyin paydo bo'ladi; shu

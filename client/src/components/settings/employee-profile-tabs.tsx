@@ -16,7 +16,7 @@ import { SalaryMonthlyPanel } from "@/components/shared/salary-monthly-panel";
 import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
 import type { EmployeeUser } from "@/hooks/use-edit-employee";
 import type { GroupData } from "@/hooks/use-edit-group";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import api from "@/lib/api";
 
@@ -43,10 +43,8 @@ export function EmployeeProfileTabs({
   activeTab,
   onTabChange,
 }: EmployeeProfileTabsProps) {
-  const user = useAuth((s) => s.user);
-  const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
-  const canSeeTimeline =
-    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canSeeSalary = useCan("salary.view");
+  const canSeeTimeline = useCan("teachers.view");
   const isTeacher = employee.roles.some((r) => r.id === TEACHER_ROLE_ID);
   const tasksPanel = (
     <EntityTasksPanel

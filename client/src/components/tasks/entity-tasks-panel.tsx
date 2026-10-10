@@ -8,7 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { cn } from "@/lib/utils";
-import { hasAnyRole } from "@/lib/role-access";
 import { useAuth } from "@/hooks/use-auth";
 import { useTasks, type TaskCard } from "@/hooks/use-tasks";
 import { useTaskCreate } from "./task-create-dialog";
@@ -40,7 +39,7 @@ function TaskRow({ task, onOpen }: { task: TaskCard; onOpen: (id: string) => voi
 /** «Topshiriqlar» on a Student, Group, Lead or User page: the open tasks tied to it, the closed ones behind a link. */
 export function EntityTasksPanel(props: Props) {
   const roles = useAuth((s) => s.user?.roles);
-  if (!hasAnyRole(roles, ENTITY_PANEL_ROLES)) return null;
+  if (!(roles?.some((r) => ENTITY_PANEL_ROLES.includes(r.id)) ?? false)) return null;
   // Another entity is another list: start from a clean state.
   return <Panel key={`${props.entityType}:${props.entityId}`} {...props} />;
 }

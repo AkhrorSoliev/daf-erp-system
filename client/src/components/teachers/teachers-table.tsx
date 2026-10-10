@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import type { TeacherData } from "@/hooks/use-edit-teacher";
 import { TeacherRowActions } from "./teacher-row-actions";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { formatPhone } from "@/lib/format-utils";
 
 interface TeachersTableProps {
@@ -23,8 +23,7 @@ interface TeachersTableProps {
 }
 
 export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
-  const user = useAuth((s) => s.user);
-  const canManageTeachers = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const canManageTeachers = useCan("teachers.manage");
 
   if (teachers.length === 0) {
     return (

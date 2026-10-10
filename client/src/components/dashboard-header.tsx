@@ -15,7 +15,7 @@ import { QollanmaYordamTugmasi } from "@/components/qollanma/qollanma-yordam-tug
 import { TashkentClock } from "@/components/tashkent-clock";
 import { HeaderTaskButton } from "@/components/tasks/header-task-button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { routeLabels } from "@/lib/breadcrumb-routes";
 
 function getParentRoute(pathname: string): { path: string; label: string } | null {
@@ -50,8 +50,7 @@ function getParentRoute(pathname: string): { path: string; label: string } | nul
 export function DashboardHeader() {
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const user = useAuth((s) => s.user);
-  const canSearch = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canSearch = useCan(["students.list", "leads.view", "teachers.view"]);
   const parentRoute = isMobile ? getParentRoute(pathname) : null;
 
   return (

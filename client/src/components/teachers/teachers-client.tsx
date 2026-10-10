@@ -34,7 +34,7 @@ import {
 import { TeachersTable } from "./teachers-table";
 import { EditTeacherDrawer } from "./edit-teacher-drawer";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
-import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useTeacherRegistrationLink } from "@/hooks/use-teacher-registration-link";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -58,8 +58,7 @@ export function TeachersClient() {
   const [copied, setCopied] = useState(false);
   const [copying, setCopying] = useState(false);
   const { openAddDrawer } = useEditTeacher();
-  const user = useAuth((s) => s.user);
-  const canManageTeachers = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const canManageTeachers = useCan("teachers.manage");
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   // Signed, server-minted link — the old client-built `teacher_<id>` payload

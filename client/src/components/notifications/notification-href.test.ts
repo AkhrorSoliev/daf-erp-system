@@ -63,7 +63,7 @@ describe("notificationHref", () => {
   });
 
   // Server bu sahifalarni shu rollarga bermaydi: GET /students/:id da
-  // o'qituvchi, GET /groups/:id da kassir yo'q (src/lib/role-access.ts).
+  // o'qituvchi, GET /groups/:id da kassir yo'q (capabilities students.profile, groups.view).
   it("gives a teacher-only viewer no student link and a cashier-only viewer no group link", () => {
     expect(notificationHref(task("Student", "10001"), TEACHER)).toBeNull();
     expect(notificationHref(task("Group", "g1"), canForRoles([5]))).toBeNull();
