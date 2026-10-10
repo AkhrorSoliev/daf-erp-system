@@ -29,7 +29,12 @@ it("counts open and overdue tasks of the report's branches and names the most be
   });
   expect(db.taskParticipant.groupBy).toHaveBeenCalledWith(
     expect.objectContaining({
-      where: { role: 'ASSIGNEE', task: { ...scope, dueAt: { lt: NOW } } },
+      where: {
+        role: 'ASSIGNEE',
+        task: { ...scope, dueAt: { lt: NOW } },
+        user: { deletedAt: null, isActive: true, status: 'ACTIVE' },
+      },
+      orderBy: [{ _count: { userId: 'desc' } }, { userId: 'asc' }],
     }),
   );
 });

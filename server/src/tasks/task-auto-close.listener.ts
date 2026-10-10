@@ -98,7 +98,7 @@ export class TaskAutoCloseListener {
         sourceKey: sourceKeyOf('UNCALLED_LEAD', p.entityId),
       },
       'LEAD_STATUS_CHANGED',
-      null,
+      p.changedById ?? null,
     );
   }
 

@@ -25,6 +25,7 @@ const CLOSE_REASON: Record<string, string> = {
   LEAD_STATUS_CHANGED: "lid holati o'zgardi",
   LEAD_GONE: "lid endi qo'ng'iroq kutmaydi",
   STUDENT_GONE: "o'quvchi arxivlandi",
+  DEBT_CLEARED: "qarz yopildi",
 };
 
 function stepLine(meta: TaskEvent["meta"]): string {

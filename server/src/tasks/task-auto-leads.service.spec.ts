@@ -38,6 +38,7 @@ interface Opts {
   live?: string[]; // of those, the leads that still wait for a call
   openStudentTasks?: string[]; // students with an open BROKEN_PROMISE / CALLBACK
   archived?: number[];
+  balances?: Record<number, number>; // of those students; default: owes 50 000
   promises?: { id: string; branchId: number | null; studentId: number }[];
   promiseTasks?: PromiseTask[]; // BROKEN_PROMISE tasks of those students
 }
@@ -66,6 +67,7 @@ function setup(opts: Opts = {}) {
         if (where.kind?.in) {
           return (opts.openStudentTasks ?? []).map((entityId) => ({
             entityId,
+            kind: 'BROKEN_PROMISE',
           }));
         }
         // The retry: a BROKEN_PROMISE task of the student that is open, made
@@ -98,7 +100,13 @@ function setup(opts: Opts = {}) {
     },
     student: {
       findMany: jest.fn(async () =>
-        (opts.archived ?? []).map((id) => ({ id })),
+        [...new Set(opts.openStudentTasks ?? [])].map((id) => ({
+          id: Number(id),
+          deletedAt: (opts.archived ?? []).includes(Number(id))
+            ? new Date()
+            : null,
+          balance: opts.balances?.[Number(id)] ?? -50_000,
+        })),
       ),
     },
     paymentPromise: {
@@ -253,6 +261,41 @@ describe('TaskAutoLeadsService', () => {
       task: made('t5'),
       reason: 'STUDENT_GONE',
     });
+  });
+
+  it('keeps the promise task of a student who still owes; closes it once the debt is gone without a payment', async () => {
+    const { service, emitter } = setup({
+      openStudentTasks: ['10001', '10002', '10003'],
+      balances: { 10001: -50_000, 10002: -999, 10003: 120_000 },
+    });
+    (autoCloseTasks as jest.Mock).mockResolvedValue([made('t6')]);
+    expect(await service.run(MON_1000)).toEqual({ created: 0, closed: 1 });
+    expect(autoCloseTasks).toHaveBeenCalledTimes(1);
+    expect(autoCloseTasks).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        companyId: 1,
+        kind: 'BROKEN_PROMISE',
+        entityType: 'Student',
+        entityId: { in: ['10002', '10003'] },
+      },
+      'DEBT_CLEARED',
+    );
+    expect(emitter.emit).toHaveBeenCalledWith(TASK_EVENTS.AUTO_CLOSED, {
+      task: made('t6'),
+      reason: 'DEBT_CLEARED',
+    });
+  });
+
+  it('an archived student is STUDENT_GONE, never DEBT_CLEARED, even with no debt', async () => {
+    const { service } = setup({
+      openStudentTasks: ['10002'],
+      archived: [10002],
+      balances: { 10002: 0 },
+    });
+    await service.run(MON_1000);
+    expect(autoCloseTasks).toHaveBeenCalledTimes(1);
+    expect((autoCloseTasks as jest.Mock).mock.calls[0][2]).toBe('STUDENT_GONE');
   });
 
   it('no archived student, nothing to close', async () => {

@@ -33,9 +33,14 @@ export async function loadTaskReportFigures(
     db.task.count({ where: late }),
     db.taskParticipant.groupBy({
       by: ['userId'],
-      where: { role: 'ASSIGNEE', task: late },
+      // A departed assignee (deleted or inactive) is never named; ties go to the lower id.
+      where: {
+        role: 'ASSIGNEE',
+        task: late,
+        user: { deletedAt: null, isActive: true, status: 'ACTIVE' },
+      },
       _count: { userId: true },
-      orderBy: { _count: { userId: 'desc' } },
+      orderBy: [{ _count: { userId: 'desc' } }, { userId: 'asc' }],
       take: 1,
     }),
   ]);

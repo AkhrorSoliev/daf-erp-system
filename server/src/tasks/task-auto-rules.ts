@@ -91,7 +91,8 @@ export type AutoCloseReason =
   | 'LEAD_CALLED'
   | 'LEAD_STATUS_CHANGED'
   | 'LEAD_GONE'
-  | 'STUDENT_GONE';
+  | 'STUDENT_GONE'
+  | 'DEBT_CLEARED';
 
 // ---------- when ----------
 

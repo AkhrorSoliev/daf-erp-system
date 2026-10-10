@@ -14,6 +14,7 @@ import {
   UNCALLED_LEAD_AGE_MS,
   UNCALLED_LEAD_WHERE,
   autoTaskAssigneeIds,
+  paymentClosesBrokenPromise,
   sourceKeyOf,
   systemDueAt,
   uncalledLeadText,
@@ -33,6 +34,8 @@ import { OPEN_STATUSES } from './task-transitions';
 const LEAD_BATCH = 200;
 const OPEN = [...OPEN_STATUSES];
 const PROMISE_CRON_HOUR = 9;
+// A holiday lasts up to 60 days: look that far ahead when counting the due day.
+const HOLIDAY_LOOKAHEAD_MS = 60 * 864e5;
 
 /**
  * The hourly run of the automatic tasks (spec §7, §9.6), 08:00–18:00
@@ -41,8 +44,9 @@ const PROMISE_CRON_HOUR = 9;
  *    only for leads created since `Company.uncalledLeadTasksFrom` (ADR-0083);
  *  - a sweep that closes what events do not: a lead's task once the lead is
  *    called, no longer NEW, archived or converted (a section archived with its
- *    leads sends no event), and the lead/callback/promise tasks of an archived
- *    student;
+ *    leads sends no event), the callback/promise tasks of an archived student,
+ *    and a «Buzilgan va'da» whose student no longer owes (the debt cleared
+ *    without a payment: a refund, a write-off, a centre top-up);
  *  - a retry of today's «Buzilgan va'da» tasks the 09:00 event failed to make,
  *    so a transient failure never loses one (admins no longer get the list).
  * Each step of each company fails alone.
@@ -83,9 +87,9 @@ export class TaskAutoLeadsService {
       total.created += leads.created;
       total.closed += leads.closed;
       total.closed += (
-        await this.guard(c.id, 'archived students', async () => ({
+        await this.guard(c.id, 'student tasks', async () => ({
           created: 0,
-          closed: await this.closeArchivedStudents(c.id),
+          closed: await this.closeStudentTasks(c.id),
         }))
       ).closed;
       await this.guard(c.id, 'broken promises', async () => {
@@ -155,8 +159,13 @@ export class TaskAutoLeadsService {
     );
   }
 
-  /** The tasks of an archived student (events never reach a card archived with no payment or call). */
-  private async closeArchivedStudents(companyId: number): Promise<number> {
+  /**
+   * The student tasks events never reach: an archived student's
+   * (`STUDENT_GONE`), and a «Buzilgan va'da» whose student no longer owes
+   * (`DEBT_CLEARED`: a cancelled-lesson refund, a write-off or a centre top-up
+   * clear a debt with no `payment.received`).
+   */
+  private async closeStudentTasks(companyId: number): Promise<number> {
     const open = await this.prisma.task.findMany({
       where: {
         companyId,
@@ -164,17 +173,27 @@ export class TaskAutoLeadsService {
         status: { in: OPEN },
         entityType: 'Student',
       },
-      select: { entityId: true },
+      select: { entityId: true, kind: true },
     });
     const ids = [...new Set(open.map((t) => Number(t.entityId ?? NaN)))].filter(
       Number.isInteger,
     );
     if (ids.length === 0) return 0;
-    const archived = await this.prisma.student.findMany({
-      where: { id: { in: ids }, companyId, deletedAt: { not: null } },
-      select: { id: true },
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: ids }, companyId },
+      select: { id: true, deletedAt: true, balance: true },
     });
-    return this.closeAndTell(
+    const archived = students.filter((s) => s.deletedAt !== null);
+    const hasPromise = new Set(
+      open.filter((t) => t.kind === 'BROKEN_PROMISE').map((t) => t.entityId),
+    );
+    const cleared = students.filter(
+      (s) =>
+        s.deletedAt === null &&
+        hasPromise.has(String(s.id)) &&
+        paymentClosesBrokenPromise(s.balance),
+    );
+    const gone = await this.closeAndTell(
       companyId,
       {
         kind: { in: ['BROKEN_PROMISE', 'CALLBACK'] },
@@ -184,6 +203,17 @@ export class TaskAutoLeadsService {
       'STUDENT_GONE',
       archived.length,
     );
+    const paid = await this.closeAndTell(
+      companyId,
+      {
+        kind: 'BROKEN_PROMISE',
+        entityType: 'Student',
+        entityId: { in: cleared.map((s) => String(s.id)) },
+      },
+      'DEBT_CLEARED',
+      cleared.length,
+    );
+    return gone + paid;
   }
 
   private async closeAndTell(
@@ -263,7 +293,7 @@ export class TaskAutoLeadsService {
       const holidays = await buildHolidayDateSet(
         this.prisma,
         now,
-        new Date(now.getTime() + 14 * 864e5),
+        new Date(now.getTime() + HOLIDAY_LOOKAHEAD_MS),
         lead.branchId,
       );
       branch = {

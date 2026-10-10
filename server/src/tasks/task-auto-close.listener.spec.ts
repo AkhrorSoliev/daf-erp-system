@@ -124,13 +124,14 @@ describe('TaskAutoCloseListener', () => {
       entityType: 'Lead',
       entityId: 'l1',
       companyId: 1,
+      changedById: 7,
     });
     expect(autoCloseTasks).toHaveBeenCalledWith(
       prisma,
       { companyId: 1, sourceKey: 'lead:l1', kind: { in: ['UNCALLED_LEAD'] } },
       'LEAD_STATUS_CHANGED',
       undefined,
-      null,
+      7,
     );
   });
 

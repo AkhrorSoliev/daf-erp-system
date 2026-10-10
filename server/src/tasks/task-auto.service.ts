@@ -22,7 +22,8 @@ import { createSystemTask, type SystemTaskInput } from './task-auto-write';
 import { TASK_EVENTS, type TaskAssignedPayload } from './task-events';
 import { OPEN_STATUSES } from './task-transitions';
 
-const HOLIDAY_LOOKAHEAD_MS = 14 * 864e5;
+// A holiday lasts up to 60 days: look that far ahead when counting the due day.
+const HOLIDAY_LOOKAHEAD_MS = 60 * 864e5;
 
 /**
  * «Buzilgan va'da» and «Qayta qo'ng'iroq» (spec §7): created from the events
