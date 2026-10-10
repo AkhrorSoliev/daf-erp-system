@@ -8,6 +8,7 @@ const HAMMASI: FrageFormat[] = [
   "ZUORDNEN", "DIALOG_LUECKE",
   "AUDIO_WORT", "WORT_TIPPEN", "HOEREN_WAHL",
   "BILD_WORT", "AUDIO_BILD", "BILD_TIPPEN",
+  "UHR_LESEN", "UHR_HOEREN", "UHR_TIPPEN",
 ];
 
 describe("koersatma", () => {
@@ -26,7 +27,7 @@ describe("koersatma", () => {
 describe("harakat", () => {
   it("har bir format to'rttadan biriga tushadi", () => {
     for (const f of HAMMASI) {
-      expect(["TANLASH", "YOZISH", "YIGISH", "RASM"]).toContain(harakat(f));
+      expect(["TANLASH", "YOZISH", "YIGISH", "RASM", "UHR"]).toContain(harakat(f));
     }
   });
 
@@ -90,6 +91,20 @@ describe("audio formatlar", () => {
 
   it("HOEREN_WAHL — TANLASH", () => {
     expect(harakat("HOEREN_WAHL")).toBe("TANLASH");
+  });
+});
+
+describe("soat formatlari", () => {
+  it("har birining o'z ko'rsatmasi bor", () => {
+    expect(koersatma("UHR_LESEN")).toBe("Soat nechani ko'rsatyapti?");
+    expect(koersatma("UHR_HOEREN")).toBe("Eshitgan vaqtingizga mos soatni tanlang");
+    expect(koersatma("UHR_TIPPEN")).toBe("Soatga qarab vaqtni nemischa yozing");
+  });
+
+  it("matn tanlash — TANLASH, soat tanlash — UHR, yozish — YOZISH", () => {
+    expect(harakat("UHR_LESEN")).toBe("TANLASH");
+    expect(harakat("UHR_HOEREN")).toBe("UHR");
+    expect(harakat("UHR_TIPPEN")).toBe("YOZISH");
   });
 });
 

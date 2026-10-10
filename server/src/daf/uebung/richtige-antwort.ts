@@ -107,6 +107,12 @@ export function richtigeAntwort(
           ...mitArtikel(varianten),
         ],
       };
+    case 'UHR_LESEN':
+    case 'UHR_TIPPEN':
+      // `ladeMaterial` builds this from the stored time (`uhrMaterial`):
+      // `de` is the taught informal form, `akzeptiert` every other correct
+      // way to say the same clock face (official 12h/24h, «Es ist …»).
+      return { richtig: material.de, akzeptiert: varianten };
     case 'BILD_TIPPEN':
       // Typed from the picture alone, so the article is part of the answer:
       // the instruction asks for it and the colour of the answer shows it.
@@ -133,6 +139,9 @@ const TIPPFEHLER_FORMATE = new Set<FrageFormat>([
   'WORT_TIPPEN',
   'BILD_TIPPEN',
   'LUECKE',
+  // Safe for times: no form of one time is a slip from a form of another
+  // (`uhrzeit-text.spec.ts` checks every pair of clock faces).
+  'UHR_TIPPEN',
 ]);
 
 /**

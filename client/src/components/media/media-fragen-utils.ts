@@ -7,7 +7,7 @@ import type { FrageFormat, VorschauFrage } from "./media-fragen-types";
  * o'zini (fetch, audio) render qilmasdan sinash mumkin
  * (`client/CLAUDE.md`: vitest, komponent render yo'q).
  */
-export type VorschauShakli = "OVOZ" | "JUFT" | "DIALOG" | "MATN" | "HOEREN" | "RASM";
+export type VorschauShakli = "OVOZ" | "JUFT" | "DIALOG" | "MATN" | "HOEREN" | "RASM" | "UHR";
 
 /**
  * `Record<FrageFormat, ...>` ATAYLAB, `switch`+`default` EMAS — server
@@ -45,6 +45,10 @@ const VORSCHAU_SHAKLI: Record<FrageFormat, VorschauShakli> = {
   BILD_WORT: "RASM",
   AUDIO_BILD: "RASM",
   BILD_TIPPEN: "RASM",
+  // Clock formats: the clock (or, in `UHR_HOEREN`, the four clocks) drawn.
+  UHR_LESEN: "UHR",
+  UHR_HOEREN: "UHR",
+  UHR_TIPPEN: "UHR",
 };
 
 export function vorschauShakli(format: FrageFormat): VorschauShakli {

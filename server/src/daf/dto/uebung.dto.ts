@@ -42,6 +42,9 @@ const ALLE_FRAGE_FORMATLAR: Record<FrageFormat, true> = {
   BILD_WORT: true,
   AUDIO_BILD: true,
   BILD_TIPPEN: true,
+  UHR_LESEN: true,
+  UHR_HOEREN: true,
+  UHR_TIPPEN: true,
 };
 
 /**
@@ -64,6 +67,7 @@ const ALLE_ITEM_TYPEN: Record<ItemType, true> = {
   PHRASE: true,
   DIALOGZEILE: true,
   HOERFRAGE: true,
+  UHRZEIT: true,
 };
 
 export const ITEM_TYPEN = Object.keys(ALLE_ITEM_TYPEN) as ItemType[];

@@ -23,6 +23,14 @@ describe('bevorzugteFormate', () => {
     );
   });
 
+  it('Tanishuv reads and hears the clock, Ishlatish types it', () => {
+    expect(bevorzugteFormate('SECTION_A')).toEqual(
+      expect.arrayContaining(['UHR_LESEN', 'UHR_HOEREN']),
+    );
+    expect(bevorzugteFormate('SECTION_A')).not.toContain('UHR_TIPPEN');
+    expect(bevorzugteFormate('SECTION_B')).toContain('UHR_TIPPEN');
+  });
+
   it('the listening sentence follows SATZ_BAUEN in Ishlatish and is in the unit test', () => {
     const b = bevorzugteFormate('SECTION_B');
     expect(b.indexOf('SATZ_HOEREN')).toBe(b.indexOf('SATZ_BAUEN') + 1);
@@ -66,6 +74,9 @@ describe('bevorzugteFormate', () => {
       'BILD_WORT',
       'AUDIO_BILD',
       'BILD_TIPPEN',
+      'UHR_LESEN',
+      'UHR_HOEREN',
+      'UHR_TIPPEN',
     ];
     for (const kind of ['SECTION_A', 'SECTION_B', 'BRIDGE', 'UNIT_TEST']) {
       for (const f of bevorzugteFormate(kind)) {

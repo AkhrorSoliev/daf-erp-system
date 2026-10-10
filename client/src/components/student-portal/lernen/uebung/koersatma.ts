@@ -24,6 +24,9 @@ const MATN: Record<FrageFormat, string> = {
   BILD_WORT: "Mos rasmni tanlang",
   AUDIO_BILD: "Eshiting va mos rasmni tanlang",
   BILD_TIPPEN: "Rasmda nima? Artikli bilan yozing",
+  UHR_LESEN: "Soat nechani ko'rsatyapti?",
+  UHR_HOEREN: "Eshitgan vaqtingizga mos soatni tanlang",
+  UHR_TIPPEN: "Soatga qarab vaqtni nemischa yozing",
 };
 
 export function koersatma(format: FrageFormat): string {
@@ -31,9 +34,16 @@ export function koersatma(format: FrageFormat): string {
 }
 
 /** Format qaysi komponent bilan ko'rsatiladi (dizayn §4.1). */
-export function harakat(format: FrageFormat): "TANLASH" | "YOZISH" | "YIGISH" | "RASM" {
+export function harakat(format: FrageFormat): "TANLASH" | "YOZISH" | "YIGISH" | "RASM" | "UHR" {
   if (format === "BILD_WORT" || format === "AUDIO_BILD") return "RASM";
-  if (format === "LUECKE" || format === "WORT_TIPPEN" || format === "BILD_TIPPEN") return "YOZISH";
+  // Four clock faces to pick from; `UHR_LESEN` picks German texts (TANLASH).
+  if (format === "UHR_HOEREN") return "UHR";
+  if (
+    format === "LUECKE" ||
+    format === "WORT_TIPPEN" ||
+    format === "BILD_TIPPEN" ||
+    format === "UHR_TIPPEN"
+  ) return "YOZISH";
   if (
     format === "SATZ_BAUEN" ||
     format === "SATZ_HOEREN" ||

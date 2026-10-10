@@ -24,6 +24,9 @@ export const FORMAT_NOMLARI: Record<FrageFormat, string> = {
   BILD_WORT: "So'zga mos rasmni topish",
   AUDIO_BILD: "Eshitilgan so'zning rasmini topish",
   BILD_TIPPEN: "Rasmga qarab so'zni yozish",
+  UHR_LESEN: "Soatdan vaqtni topish",
+  UHR_HOEREN: "Eshitilgan vaqtning soatini topish",
+  UHR_TIPPEN: "Soatga qarab vaqtni yozish",
 };
 
 export function formatNomi(format: string | null): string {

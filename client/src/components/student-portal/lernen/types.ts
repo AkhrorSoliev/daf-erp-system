@@ -19,10 +19,13 @@ export type FrageFormat =
   | "HOEREN_WAHL"
   | "BILD_WORT"
   | "AUDIO_BILD"
-  | "BILD_TIPPEN";
+  | "BILD_TIPPEN"
+  | "UHR_LESEN"
+  | "UHR_HOEREN"
+  | "UHR_TIPPEN";
 
 export type MaterialTyp =
-  "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE" | "HOERFRAGE";
+  "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE" | "HOERFRAGE" | "UHRZEIT";
 
 /** Serverdan kelgan savol. To'g'ri javob bu yerda YO'Q. */
 export interface PublicFrage {
@@ -56,6 +59,11 @@ export interface PublicFrage {
    * picture choices (`BILD_WORT`, `AUDIO_BILD`) carry theirs in `options`.
    */
   bildUrl?: string | null;
+  /**
+   * The clock to draw (`HH:MM`) in `UHR_LESEN` / `UHR_TIPPEN`. `UHR_HOEREN`
+   * has none: its four clocks are the `options`.
+   */
+  uhrzeit?: string | null;
 }
 
 /** Javob tekshirilgandan KEYIN keladi — faqat shunda to'g'ri javob ma'lum. */

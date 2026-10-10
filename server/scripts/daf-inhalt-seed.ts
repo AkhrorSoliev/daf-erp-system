@@ -25,6 +25,10 @@ import type { DialogAudioManifest } from '../src/daf/inhalt/dialog-audio';
 import type { SatzAudioManifest } from '../src/daf/inhalt/satz-audio';
 import type { BildManifest } from '../src/daf/media/bild-keys';
 import type { BildPlan } from '../src/daf/inhalt/bild-plan';
+import type {
+  UhrAudioManifest,
+  UhrzeitenFile,
+} from '../src/daf/inhalt/uhrzeiten';
 
 function readUnitCode(): string {
   const i = process.argv.indexOf('--unit');
@@ -72,6 +76,14 @@ async function main(): Promise<void> {
   const satzAudio = readOptional<SatzAudioManifest>('satz-audio.json');
   const bildPlan = readOptional<BildPlan>('bild-plan.json');
   const dialogBilder = readOptional<BildManifest>('dialog-bilder.json');
+  // Clock times: no file → `undefined`, and the seed leaves the clock table
+  // alone (an empty object would read as "this unit teaches no time").
+  const uhrzeiten = existsSync(join(a1, 'uhrzeiten.json'))
+    ? (JSON.parse(
+        readFileSync(join(a1, 'uhrzeiten.json'), 'utf8'),
+      ) as UhrzeitenFile)
+    : undefined;
+  const uhrAudio = readOptional<UhrAudioManifest>('uhr-audio.json');
 
   const files = {
     woerter: read<WoerterFile>('woerter.json'),
@@ -85,6 +97,8 @@ async function main(): Promise<void> {
     bilder,
     bildPlan,
     dialogBilder,
+    uhrzeiten,
+    uhrAudio,
   };
 
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });

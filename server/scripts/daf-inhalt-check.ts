@@ -30,6 +30,10 @@ import {
 import type { BildManifest } from '../src/daf/media/bild-keys';
 import { validateDialogBilder } from '../src/daf/inhalt/dialog-bilder';
 import {
+  validateUhrzeiten,
+  type UhrzeitenFile,
+} from '../src/daf/inhalt/uhrzeiten';
+import {
   sectionsInCourseOrder,
   knownWordsBySection,
   hilfsSetFor,
@@ -187,6 +191,10 @@ function main(): void {
         satzAudio,
       ),
     );
+  }
+
+  if (existsSync(join(A1, 'uhrzeiten.json'))) {
+    problems.push(...validateUhrzeiten(read<UhrzeitenFile>('uhrzeiten.json')));
   }
 
   if (problems.length > 0) {

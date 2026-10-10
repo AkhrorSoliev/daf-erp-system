@@ -107,3 +107,20 @@ describe("xatoYorligi — rasmli formatlar", () => {
     expect(xatoYorligi("BILD_WORT", "der Bahnhof")).toBe("der Bahnhof");
   });
 });
+
+describe("xatoYorligi — soat formatlari", () => {
+  it("vaqtni eshitib soat tanlash — eshitish savoli", () => {
+    expect(xatoYorligi("UHR_HOEREN", "")).toBe("Eshitish savoli");
+  });
+
+  it("soatni o'qish va yozish — soat savoli", () => {
+    expect(xatoYorligi("UHR_LESEN", "")).toBe("Soat savoli");
+    expect(xatoYorligi("UHR_TIPPEN", "")).toBe("Soat savoli");
+  });
+
+  it("an answered clock question shows the German words, not the HH:MM", () => {
+    expect(
+      javobPaneliMatni({ isCorrect: false, richtig: "03:30", loesungWort: "halb vier" }).soz,
+    ).toBe("halb vier");
+  });
+});

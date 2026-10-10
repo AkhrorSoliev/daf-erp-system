@@ -20,6 +20,7 @@ import type {
   MaterialDialog,
   MaterialPhrase,
   MaterialSatz,
+  MaterialUhrzeit,
   MaterialWort,
   PublicFrage,
 } from './frage.types';
@@ -40,6 +41,14 @@ import {
 } from './satz-fragen';
 import { baueSeans, neuheit } from './seans';
 import { seansYigindisi } from './seans-natija';
+import {
+  istUhrFormat,
+  uhrHoeren,
+  uhrHoerenAntwort,
+  uhrLesen,
+  uhrMaterial,
+  uhrTippen,
+} from './uhr-fragen';
 import { ohneWiederholteFormate } from './wiederholte-formate';
 import {
   otishUchunKerak,
@@ -883,7 +892,7 @@ export class UebungService {
       ]),
     );
 
-    const [lexemeRows, sentenceRows, phraseRows, dialogRows] =
+    const [lexemeRows, sentenceRows, phraseRows, dialogRows, uhrRows] =
       await Promise.all([
         this.prisma.dafLexeme.findMany({
           where: { sectionId: { in: sectionIds } },
@@ -900,6 +909,9 @@ export class UebungService {
             zeilen: { orderBy: { order: 'asc' } },
             fragen: { orderBy: { order: 'asc' } },
           },
+        } as any),
+        this.prisma.dafUhrzeit.findMany({
+          where: { sectionId: { in: sectionIds } },
         } as any),
       ]);
 
@@ -1020,6 +1032,21 @@ export class UebungService {
     const dialoge: MaterialDialog[] = (dialogRows as any as DialogRow[]).map(
       toDialog,
     );
+    // Clock times (`DafUhrzeit`) — only sections that teach the time have
+    // any; they alone do not make a unit ready (the check below).
+    const uhrzeiten: MaterialUhrzeit[] = (
+      uhrRows as Array<{
+        id: number;
+        sectionId: number;
+        zeit: string;
+        audioKey: string | null;
+      }>
+    ).map((u) => ({
+      id: u.id,
+      zeit: u.zeit,
+      sectionCode: kodVon(u.sectionId),
+      audioKey: u.audioKey,
+    }));
 
     // A unit whose content is not written yet (its sections were seeded with
     // the course map) is not a lesson: it would ask only the student's due
@@ -1139,6 +1166,16 @@ export class UebungService {
       if (hw) rohKandidaten.push(hw);
     }
 
+    // Clock: `UHR_HOEREN` turns itself on once the time has audio.
+    for (const u of uhrzeiten) {
+      const ul = uhrLesen(u, rnd);
+      if (ul) rohKandidaten.push(ul);
+      const uh = uhrHoeren(u, rnd, (key) => this.mediaUrl(key));
+      if (uh) rohKandidaten.push(uh);
+      const ut = uhrTippen(u);
+      if (ut) rohKandidaten.push(ut);
+    }
+
     // Qoida 5 (dizayn 4.3): ketma-ket ikki SEANSDA bir xil (so'z+format)
     // juftligi takrorlanmaydi. Nomzodning O'ZIDAN (`itemType`/`format`
     // + `belegteItems`dan) kelib chiqadi — qarang `wiederholte-formate.ts`
@@ -1154,7 +1191,7 @@ export class UebungService {
       kind,
       eigene: eigeneSchluessel(
         section ? sectionCodeById.get(section.id) : undefined,
-        { coreWords, sentences, phrases, dialoge },
+        { coreWords, sentences, phrases, dialoge, uhrzeiten },
       ),
       // A word is seen once it has a state row: `aktualisiereZustand` writes
       // it on the first answer. The same query fed `letzterFormatByWort`.
@@ -1395,6 +1432,11 @@ export class UebungService {
         'HOEREN_WAHL savoli faqat eshitish savoliga tegishli',
       );
     }
+    // Same reason: a clock format checks a clock time, and a clock time is
+    // asked in a clock format only.
+    if (istUhrFormat(format) !== (itemType === 'UHRZEIT')) {
+      throw new BadRequestException('Soat savoli faqat soat vaqtiga tegishli');
+    }
 
     let isCorrect: boolean;
     let richtig: string;
@@ -1461,6 +1503,11 @@ export class UebungService {
       const natija = await this.pruefeZuordnen(given, material.unitId);
       isCorrect = natija.isCorrect;
       richtig = natija.richtig;
+    } else if (format === 'UHR_HOEREN') {
+      ({ isCorrect, richtig, loesungWort } = uhrHoerenAntwort(
+        material.zeit ?? '',
+        given,
+      ));
     } else if (format === 'BILD_WORT' || format === 'AUDIO_BILD') {
       ({ isCorrect, richtig, loesungWort } = bildAntwort(
         itemType,
@@ -2017,7 +2064,17 @@ export class UebungService {
     akzeptiert?: string[];
     /** `WORT` only — the picture a picture choice is checked against. */
     imageKey?: string | null;
+    /** `UHRZEIT` only — the stored clock time (`HH:MM`). */
+    zeit?: string;
   } | null> {
+    if (itemType === 'UHRZEIT') {
+      // The German forms are made from the time here, never stored: the
+      // answer is re-derived on every check (design D7).
+      const row = (await this.prisma.dafUhrzeit.findUnique({
+        where: { id: itemId },
+      } as any)) as { zeit: string } | null;
+      return row ? { ...uhrMaterial(row.zeit), zeit: row.zeit } : null;
+    }
     if (itemType === 'WORT') {
       const row = (await this.prisma.dafLexeme.findUnique({
         where: { id: itemId },
