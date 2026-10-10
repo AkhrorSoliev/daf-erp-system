@@ -62,6 +62,8 @@ export interface MaterialDialogZeile {
   sprecher: string;
   de: string;
   uz: string;
+  /** Sahna izohi satr yonida (masalan «boshqa xonadan»); o'zbekcha, ixtiyoriy. */
+  izohUz?: string | null;
 }
 
 /**
@@ -86,6 +88,8 @@ export interface MaterialDialog {
   id: number;
   titelDe: string;
   zeilen: MaterialDialogZeile[];
+  /** Suhbat qayerda, kim bilan boshlanishi — o'zbekcha, ixtiyoriy. */
+  sahnaUz?: string | null;
   sectionCode: string;
   /** Butun suhbatning R2 kaliti; `null` — ovoz yo'q, eshitish savoli qurilmaydi. */
   audioKey: string | null;

@@ -402,6 +402,22 @@ describe.each(UNITS)('%s — dialoglar', (unit) => {
     expect(shubhali).toEqual([]);
   });
 
+  it('sahna va satr izohlari lotincha, bo`sh emas, ikki nuqtasiz', () => {
+    // Mashq matnida izoh `Mia (izoh): ...` bo'lib chiqadi va mijoz satrni
+    // birinchi ikki nuqtada bo'ladi — izoh ichidagi «:» gapiruvchini buzadi.
+    const notLotin = /[Ѐ-ԯ؀-ۿ]/;
+    const yomon = (s: string | undefined) =>
+      s !== undefined &&
+      (s.trim() === '' || s.includes(':') || notLotin.test(s));
+    const shubhali = dialoge.dialoge.flatMap((d) => [
+      ...(yomon(d.sahnaUz) ? [`${d.id}: ${d.sahnaUz}`] : []),
+      ...d.zeilen
+        .filter((z) => yomon(z.izohUz))
+        .map((z) => `${d.id}: ${z.izohUz}`),
+    ]);
+    expect(shubhali).toEqual([]);
+  });
+
   it('dialoglarda shu bo`lim yoki oldingisidan tashqari notanish so`z yo`q', () => {
     const unbekannt = new Set<string>();
     for (const d of dialoge.dialoge) {

@@ -21,8 +21,10 @@ import * as React from "react";
  */
 export function TranskriptBlok({
   zeilen,
+  sahna,
 }: {
-  zeilen: Array<{ sprecher: string; de: string; uz: string }>;
+  zeilen: Array<{ sprecher: string; de: string; uz: string; izohUz?: string | null }>;
+  sahna?: string | null;
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null);
 
@@ -46,9 +48,14 @@ export function TranskriptBlok({
       <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
         Suhbat matni
       </p>
+      {sahna ? <p className="text-sm italic text-ink-500">{sahna}</p> : null}
       {zeilen.map((z, i) => (
         <div key={i} className="text-base leading-relaxed">
-          <span className="font-semibold text-ink-500">{z.sprecher}: </span>
+          <span className="font-semibold text-ink-500">
+            {z.sprecher}
+            {z.izohUz ? <span className="font-normal italic text-ink-400"> ({z.izohUz})</span> : null}
+            {": "}
+          </span>
           <span className="text-ink-900">{z.de}</span>
           <span className="block text-sm text-ink-500">{z.uz}</span>
         </div>

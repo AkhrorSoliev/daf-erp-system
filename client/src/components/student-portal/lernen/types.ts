@@ -65,7 +65,9 @@ export interface PruefErgebnis {
    * birga hech qachon kelmaydi: kelsa, eshitish mashqi o'qish mashqiga
    * aylanardi.
    */
-  transkript?: Array<{ sprecher: string; de: string; uz: string }>;
+  transkript?: Array<{ sprecher: string; de: string; uz: string; izohUz?: string | null }>;
+  /** `transkript` bilan birga: suhbat sahnasi (o'zbekcha). */
+  transkriptSahna?: string | null;
   /**
    * Picture formats only: the word itself ("der Bahnhof"), sent after the
    * answer. For a picture choice `richtig` is a picture URL, so this is

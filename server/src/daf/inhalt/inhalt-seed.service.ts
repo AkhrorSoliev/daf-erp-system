@@ -264,6 +264,7 @@ export class InhaltSeedService {
         sectionId: sectionId.get(d.section) as number,
         titelDe: d.titelDe,
         titelUz: d.titelUz,
+        sahnaUz: d.sahnaUz ?? null,
         audioKey: files.dialogAudio?.[d.id]?.key ?? null,
       };
       const row = await this.prisma.dafDialog.upsert({
@@ -280,6 +281,7 @@ export class InhaltSeedService {
           de: z.de,
           tts: z.tts ?? null,
           uz: z.uz,
+          izohUz: z.izohUz ?? null,
         };
         await this.prisma.dafDialogLine.upsert({
           where: { dialogId_order: { dialogId: row.id, order } },

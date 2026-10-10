@@ -100,6 +100,8 @@ export interface RedemittelFile {
  */
 export interface DialogZeile extends Sprechbar {
   sprecher: string;
+  /** Satr yonidagi sahna izohi (o'zbekcha, ikki nuqtasiz), masalan «boshqa xonadan». */
+  izohUz?: string;
 }
 
 /**
@@ -123,6 +125,8 @@ export interface Dialog {
   section: string;
   titelDe: string;
   titelUz: string;
+  /** Sahna izohi (o'zbekcha, ikki nuqtasiz): qayerda, kim bilan boshlanadi. */
+  sahnaUz?: string;
   zeilen: DialogZeile[];
   /**
    * Ixtiyoriy TIPDA, MAJBURIY QO'RIQCHIDA: matni yozilgan unitda har

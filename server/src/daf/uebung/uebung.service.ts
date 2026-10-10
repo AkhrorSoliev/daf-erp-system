@@ -207,6 +207,14 @@ export interface AbschlussNatija {
   sinov?: YakuniySinovNatijasi;
 }
 
+/** Eshitishdan keyin ochiladigan suhbat satri; `izohUz` — sahna izohi yoki `null`. */
+export interface TranskriptZeile {
+  sprecher: string;
+  de: string;
+  uz: string;
+  izohUz: string | null;
+}
+
 export interface PruefenErgebnis {
   isCorrect: boolean;
   richtig: string;
@@ -215,7 +223,9 @@ export interface PruefenErgebnis {
    * (o'quvchi nimani eshitmaganini ko'radi). Boshqa formatda `undefined`,
    * savol bilan birga hech qachon yuborilmaydi (D6/D7).
    */
-  transkript?: Array<{ sprecher: string; de: string; uz: string }>;
+  transkript?: TranskriptZeile[];
+  /** `transkript` bilan birga: suhbat sahnasi (o'zbekcha), yo'q bo'lsa `null`. */
+  transkriptSahna?: string | null;
   /**
    * Picture formats only: the word itself ("der Bahnhof"), sent after the
    * answer so the student learns what was heard or shown.
@@ -915,8 +925,15 @@ export class UebungService {
     interface DialogRow {
       id: number;
       titelDe: string;
+      sahnaUz?: string | null;
       sectionId: number;
-      zeilen: Array<{ id: number; sprecher: string; de: string; uz: string }>;
+      zeilen: Array<{
+        id: number;
+        sprecher: string;
+        de: string;
+        uz: string;
+        izohUz?: string | null;
+      }>;
       audioKey: string | null;
       fragen: Array<{
         id: number;
@@ -948,11 +965,13 @@ export class UebungService {
       id: d.id,
       titelDe: d.titelDe,
       sectionCode: kodVon(d.sectionId),
+      sahnaUz: d.sahnaUz ?? null,
       zeilen: d.zeilen.map((z) => ({
         id: z.id,
         sprecher: z.sprecher,
         de: z.de,
         uz: z.uz,
+        izohUz: z.izohUz ?? null,
       })),
       audioKey: d.audioKey,
       fragen: d.fragen.map((f) => ({
@@ -1502,12 +1521,25 @@ export class UebungService {
     }
 
     if (format === 'HOEREN_WAHL' && material.dialogId != null) {
-      const zeilen = (await this.prisma.dafDialogLine.findMany({
-        where: { dialogId: material.dialogId },
-        orderBy: { order: 'asc' },
-        select: { sprecher: true, de: true, uz: true },
-      } as any)) as Array<{ sprecher: string; de: string; uz: string }>;
-      return { isCorrect, richtig, transkript: zeilen };
+      const d = (await this.prisma.dafDialog.findUnique({
+        where: { id: material.dialogId },
+        select: {
+          sahnaUz: true,
+          zeilen: {
+            orderBy: { order: 'asc' },
+            select: { sprecher: true, de: true, uz: true, izohUz: true },
+          },
+        },
+      } as any)) as {
+        sahnaUz: string | null;
+        zeilen: TranskriptZeile[];
+      } | null;
+      return {
+        isCorrect,
+        richtig,
+        transkript: d?.zeilen ?? [],
+        transkriptSahna: d?.sahnaUz ?? null,
+      };
     }
     return {
       isCorrect,

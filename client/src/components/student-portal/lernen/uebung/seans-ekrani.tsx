@@ -990,7 +990,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
           />
         )}
         {natija?.transkript ? (
-          <TranskriptBlok zeilen={natija.transkript} />
+          <TranskriptBlok zeilen={natija.transkript} sahna={natija.transkriptSahna} />
         ) : null}
       </main>
 

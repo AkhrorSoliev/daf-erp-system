@@ -147,11 +147,15 @@ export function dialogLuecke(
   // Butun suhbat — bo'shatilgan satr o'rnida `___`. To'g'ri javob (ziel.de)
   // boshqa hech qanday qatorda chiqmasligi kerak, aks holda savol o'zi
   // javob berib qo'yardi.
-  const prompt = dialog.zeilen
-    .map((z) =>
-      z.id === ziel.id ? `${z.sprecher}: ___` : `${z.sprecher}: ${z.de}`,
-    )
-    .join('\n');
+  // Sahna izohi bo'lsa birinchi qatorda qavs ichida (ikki nuqtasiz — mijoz
+  // uni oddiy matn qilib chiqaradi), satr izohi gapiruvchi nomi yonida.
+  const satrlar = dialog.zeilen.map((z) => {
+    const kim = z.izohUz ? `${z.sprecher} (${z.izohUz})` : z.sprecher;
+    return `${kim}: ${z.id === ziel.id ? '___' : z.de}`;
+  });
+  const prompt = (
+    dialog.sahnaUz ? [`(${dialog.sahnaUz})`, ...satrlar] : satrlar
+  ).join('\n');
 
   return {
     format: 'DIALOG_LUECKE',

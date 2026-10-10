@@ -268,3 +268,23 @@ describe('dialogLuecke', () => {
     ]);
   });
 });
+
+describe('dialogLuecke — stage notes (u04)', () => {
+  it('shows the scene first and a line note beside its speaker', () => {
+    const mitSahna: MaterialDialog = {
+      ...dialog,
+      sahnaUz: 'Ertalab. Jonas oshxonada.',
+      zeilen: dialog.zeilen.map((x, i) =>
+        i === 1 ? { ...x, izohUz: 'boshqa xonadan' } : x,
+      ),
+    };
+    const f = dialogLuecke(mitSahna, andere, rndId)!;
+    expect(f.prompt.split('\n')[0]).toBe('(Ertalab. Jonas oshxonada.)');
+    expect(f.prompt).toContain('Mia (boshqa xonadan): ');
+  });
+
+  it('a dialog without notes reads as before', () => {
+    const f = dialogLuecke(dialog, andere, rndId)!;
+    expect(f.prompt.split('\n')[0]).toBe('Jonas: Hallo! Bist du Mia?');
+  });
+});

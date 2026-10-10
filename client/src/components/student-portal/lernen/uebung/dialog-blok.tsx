@@ -9,6 +9,10 @@ export interface DialogQatori {
   matn: string;
   /** `matn` bo'sh joy belgisini (`___`) o'z ichiga oladimi. */
   boshMi: boolean;
+  /** Gapiruvchi yonidagi sahna izohi: `Mia (boshqa xonadan): ...` dagi qavs. */
+  izoh?: string;
+  /** Butun qator qavsdagi sahna izohi: `(Ertalab. Jonas oshxonada.)`. */
+  sahna?: true;
 }
 
 /**
@@ -21,16 +25,23 @@ export interface DialogQatori {
  *
  * Ikki nuqta topilmasa butun satr matn sifatida qaytadi (`sprecher: null`)
  * — server bu shaklni o'zgartirsa ham ekran buzilmasin (brief §5).
+ * Qavsdagi qator — sahna izohi (`sahna`), nom yonidagi qavs — satr izohi (`izoh`).
  */
 export function ajratDialogQatorlari(matn: string): DialogQatori[] {
   return matn.split("\n").map((qator): DialogQatori => {
     const nuqtaIndex = qator.indexOf(":");
     if (nuqtaIndex === -1) {
+      const sahna = /^\((.+)\)$/.exec(qator.trim());
+      if (sahna) return { sprecher: null, matn: sahna[1], boshMi: false, sahna: true };
       return { sprecher: null, matn: qator, boshMi: qator.includes("___") };
     }
-    const sprecher = qator.slice(0, nuqtaIndex).trim();
+    const kim = qator.slice(0, nuqtaIndex).trim();
     const matnQismi = qator.slice(nuqtaIndex + 1).trim();
-    return { sprecher, matn: matnQismi, boshMi: matnQismi.includes("___") };
+    const boshMi = matnQismi.includes("___");
+    const izohli = /^(.+?)\s*\(([^)]+)\)$/.exec(kim);
+    return izohli
+      ? { sprecher: izohli[1], izoh: izohli[2], matn: matnQismi, boshMi }
+      : { sprecher: kim, matn: matnQismi, boshMi };
   });
 }
 
@@ -61,9 +72,19 @@ export function DialogBlok({ matn }: DialogBlokProps) {
           )}
         >
           {qator.sprecher != null ? (
-            <span className="font-semibold text-ink-500">{qator.sprecher}: </span>
+            <span className="font-semibold text-ink-500">
+              {qator.sprecher}
+              {qator.izoh ? <span className="font-normal italic text-ink-400"> ({qator.izoh})</span> : null}
+              {": "}
+            </span>
           ) : null}
-          <span className={cn("text-ink-900", qator.boshMi && "font-semibold text-coral-500")}>
+          <span
+            className={cn(
+              "text-ink-900",
+              qator.sahna && "text-sm italic text-ink-500",
+              qator.boshMi && "font-semibold text-coral-500",
+            )}
+          >
             {qator.matn}
           </span>
         </p>

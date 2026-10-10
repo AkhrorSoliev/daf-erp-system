@@ -712,6 +712,25 @@ describe('InhaltSeedService', () => {
     expect(prisma.dafDialog.upsert.mock.calls[1][0].update.audioKey).toBeNull();
   });
 
+  it('sahna va satr izohini yozadi; fayldan olib tashlansa null ga qaytaradi', async () => {
+    const prisma = fakePrisma();
+    const f = files();
+    f.dialoge.dialoge[0].sahnaUz = 'Ertalab. Anna oshxonada.';
+    f.dialoge.dialoge[0].zeilen[1].izohUz = 'boshqa xonadan';
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    expect(prisma.dafDialog.upsert.mock.calls[0][0].create.sahnaUz).toBe(
+      'Ertalab. Anna oshxonada.',
+    );
+    const lines = prisma.dafDialogLine.upsert.mock.calls.map((c) => c[0]);
+    expect(lines[0].create.izohUz).toBeNull();
+    expect(lines[1].create.izohUz).toBe('boshqa xonadan');
+
+    await new InhaltSeedService(prisma as any).seed('u01', files());
+    expect(prisma.dafDialog.upsert.mock.calls[1][0].update.sahnaUz).toBeNull();
+    const again = prisma.dafDialogLine.upsert.mock.calls.map((c) => c[0]);
+    expect(again[3].update.izohUz).toBeNull();
+  });
+
   it('fayldan yo`qolgan dialogning savollari satrlaridan OLDIN o`chiriladi', async () => {
     const prisma = fakePrisma();
     await new InhaltSeedService(prisma as any).seed('u01', files());

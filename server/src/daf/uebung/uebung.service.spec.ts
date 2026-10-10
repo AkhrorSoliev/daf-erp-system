@@ -321,6 +321,21 @@ function fakePrisma() {
     },
     dafDialog: {
       findMany: jest.fn(async () => dialog),
+      // HOEREN_WAHL javobidan keyingi transkript: sahna + satrlar bitta so'rovda.
+      findUnique: jest.fn(async ({ where }: any) => {
+        const d = dialog.find((x) => x.id === where.id);
+        return d
+          ? {
+              sahnaUz: null,
+              zeilen: d.zeilen.map((z) => ({
+                sprecher: z.sprecher,
+                de: z.de,
+                uz: z.uz,
+                izohUz: null,
+              })),
+            }
+          : null;
+      }),
     },
     dafDialogLine: {
       findUnique: jest.fn(async ({ where }: any) => {
@@ -330,16 +345,6 @@ function fakePrisma() {
         }
         return null;
       }),
-      findMany: jest.fn(
-        async ({ where }: any) =>
-          dialog
-            .find((d) => d.id === where.dialogId)
-            ?.zeilen.map((z) => ({
-              sprecher: z.sprecher,
-              de: z.de,
-              uz: z.uz,
-            })) ?? [],
-      ),
     },
     dafHoerFrage: {
       findUnique: jest.fn(async ({ where }: any) => {
@@ -3168,15 +3173,47 @@ describe('HOEREN_WAHL', () => {
     expect(r.isCorrect).toBe(true);
     expect(r.richtig).toBe('gut');
     expect(r.transkript).toEqual([
-      { sprecher: 'A', de: 'Hallo!', uz: 'Salom!' },
+      { sprecher: 'A', de: 'Hallo!', uz: 'Salom!', izohUz: null },
       {
         sprecher: 'B',
         de: 'Hallo, wie geht es dir?',
         uz: 'Salom, ahvoling qalay?',
+        izohUz: null,
       },
-      { sprecher: 'A', de: 'Gut, danke.', uz: 'Yaxshi, rahmat.' },
-      { sprecher: 'B', de: 'Bis bald!', uz: "Ko'rishguncha!" },
+      { sprecher: 'A', de: 'Gut, danke.', uz: 'Yaxshi, rahmat.', izohUz: null },
+      { sprecher: 'B', de: 'Bis bald!', uz: "Ko'rishguncha!", izohUz: null },
     ]);
+    expect(r.transkriptSahna).toBeNull();
+  });
+
+  it('pruefen: transkript sahna va satr izohini olib keladi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafDialog.findUnique = jest.fn(async () => ({
+      sahnaUz: 'Ertalab. A oshxonada.',
+      zeilen: [
+        { sprecher: 'A', de: 'Hallo!', uz: 'Salom!', izohUz: null },
+        {
+          sprecher: 'B',
+          de: 'Hallo, wie geht es dir?',
+          uz: 'Salom, ahvoling qalay?',
+          izohUz: 'boshqa xonadan',
+        },
+      ],
+    })) as any;
+    const r = await new UebungService(prisma as any, config as any).pruefen(
+      {
+        itemType: 'HOERFRAGE',
+        itemId: 401,
+        format: 'HOEREN_WAHL',
+        given: 'gut',
+      },
+      ctx,
+    );
+    expect(r.transkriptSahna).toBe('Ertalab. A oshxonada.');
+    expect(r.transkript?.[1].izohUz).toBe('boshqa xonadan');
+    expect(prisma.dafDialog.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 201 } }),
+    );
   });
 
   it('pruefen: xato javob ham transkriptni ochadi, ball yo`q, Leitner yo`q', async () => {
