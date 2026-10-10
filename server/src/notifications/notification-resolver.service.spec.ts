@@ -195,6 +195,100 @@ describe('NotificationResolverService', () => {
     expect(whereOf(1)).toEqual({ companyId: 1, taskId: 't1', ...OPEN });
   });
 
+  describe('a system task that was just claimed', () => {
+    // The first administrator to act takes the task and the others' copies go
+    // (`claimSystemTask`); the event carries the participants after the claim.
+    const claimed = (over: Partial<TaskEventTask> = {}): TaskEventTask => ({
+      ...task('IN_PROGRESS'),
+      kind: 'LESSON_QUESTION',
+      authorId: null,
+      participants: [
+        { userId: 40, role: 'ASSIGNEE' },
+        { userId: 41, role: 'WATCHER' },
+      ],
+      ...over,
+    });
+
+    it("closes the notices of everyone who is no longer on it, and keeps the claimer's and the watchers'", async () => {
+      await resolver.onTaskStatus({ task: claimed() });
+
+      expect(prisma.notification.findMany).toHaveBeenCalledTimes(1);
+      expect(whereOf()).toEqual({
+        companyId: 1,
+        taskId: 't1',
+        userId: { notIn: [40, 41] },
+        ...OPEN,
+      });
+      expect(gateway.sendToUser).toHaveBeenCalledWith(7, {
+        type: 'notification.resolved',
+        ids: ['n1', 'n2'],
+        resolvedAt: expect.any(String),
+      });
+    });
+
+    it('keeps the notices of an author the task has', async () => {
+      await resolver.onTaskStatus({ task: claimed({ authorId: 30 }) });
+
+      expect(whereOf().userId).toEqual({ notIn: [40, 41, 30] });
+    });
+
+    it('reads nothing for a manual task, whose assignees are changed through UNASSIGNED', async () => {
+      await resolver.onTaskStatus({ task: task('IN_PROGRESS') });
+
+      expect(prisma.notification.findMany).not.toHaveBeenCalled();
+    });
+
+    it('never turns an empty participant list into "everyone"', async () => {
+      await resolver.onTaskStatus({ task: claimed({ participants: [] }) });
+
+      expect(prisma.notification.findMany).not.toHaveBeenCalled();
+    });
+
+    it("closes all the notices, not just the losers', once the task is done", async () => {
+      await resolver.onTaskStatus({ task: claimed({ status: 'DONE' }) });
+
+      expect(prisma.notification.findMany).toHaveBeenCalledTimes(1);
+      expect(whereOf()).toEqual({ companyId: 1, taskId: 't1', ...OPEN });
+    });
+  });
+
+  it("a deleted group closes all its lesson alerts, whatever the day, and tells each recipient's bells", async () => {
+    await resolver.onGroupDeleted({ companyId: 1, groupId: 'g1' });
+
+    expect(prisma.notification.findMany).toHaveBeenCalledWith({
+      where: {
+        companyId: 1,
+        relatedEntityType: 'Group',
+        relatedEntityId: 'g1',
+        type: {
+          in: [
+            'LESSON_STARTED',
+            'ATTENDANCE_ADMIN_ALERT',
+            'ATTENDANCE_TEACHER_WARNING',
+            'ATTENDANCE_MISSING_TEACHER',
+            'ATTENDANCE_MISSING_ADMIN',
+          ],
+        },
+        ...OPEN,
+      },
+      select: { id: true, userId: true },
+    });
+    expect(gateway.sendToUser).toHaveBeenCalledTimes(2);
+    expect(gateway.sendToUser).toHaveBeenCalledWith(8, {
+      type: 'notification.resolved',
+      ids: ['n3'],
+      resolvedAt: expect.any(String),
+    });
+  });
+
+  it('a deleted group with nothing open, or nothing changed, tells nobody', async () => {
+    prisma.notification.updateMany.mockResolvedValue({ count: 0 });
+
+    await resolver.onGroupDeleted({ companyId: 1, groupId: 'g1' });
+
+    expect(gateway.sendToUser).not.toHaveBeenCalled();
+  });
+
   it('a review answer ends the review request; accepting closes the rest too', async () => {
     await resolver.onTaskReviewed({ task: task('IN_PROGRESS') });
     expect(whereOf(0)).toEqual({

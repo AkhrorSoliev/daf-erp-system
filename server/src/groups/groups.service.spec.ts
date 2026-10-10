@@ -643,7 +643,11 @@ describe('GroupsService — status methods', () => {
 
       await service.delete('group-1', 1, 1001);
 
-      expect(emitter.emit).toHaveBeenCalledTimes(2);
+      expect(emitter.emit.mock.calls.map(([name]) => name)).toEqual([
+        'group.deleted',
+        'unmarked-lesson.closed',
+        'unmarked-lesson.closed',
+      ]);
       expect(emitter.emit).toHaveBeenCalledWith('unmarked-lesson.closed', {
         companyId: 1001,
         groupId: 'group-1',
@@ -656,17 +660,34 @@ describe('GroupsService — status methods', () => {
       });
     });
 
-    it('emits nothing when no question was waiting, or when the deletion fails', async () => {
-      await service.delete('group-1', 1, 1001);
-      expect(emitter.emit).not.toHaveBeenCalled();
+    // Every lesson alert of the group, whichever day it was sent — a day with
+    // no open question has no `unmarked-lesson.closed`.
+    it('tells the notification resolver the group is gone, after the commit', async () => {
+      prisma.$transaction.mockImplementation(async (arg: any) => {
+        const result = await arg(tx);
+        expect(emitter.emit).not.toHaveBeenCalled();
+        return result;
+      });
 
+      await service.delete('group-1', 1, 1001);
+
+      expect(emitter.emit).toHaveBeenCalledTimes(1);
+      expect(emitter.emit).toHaveBeenCalledWith('group.deleted', {
+        companyId: 1001,
+        groupId: 'group-1',
+      });
+    });
+
+    it('emits nothing when the deletion fails', async () => {
       tx.unmarkedLesson.findMany.mockResolvedValue([
         { taskId: 'c1', date: new Date('2026-10-09T00:00:00.000Z') },
       ]);
       tx.group.update.mockRejectedValue(new Error('lock timeout'));
+
       await expect(service.delete('group-1', 1, 1001)).rejects.toThrow(
         'lock timeout',
       );
+
       expect(emitter.emit).not.toHaveBeenCalled();
     });
 

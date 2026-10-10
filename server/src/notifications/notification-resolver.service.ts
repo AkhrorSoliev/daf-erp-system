@@ -3,6 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import type { Prisma, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { utcMidnightFromDateStr } from '../common/date/tashkent';
+import { GROUP_DELETED } from '../groups/group-events';
 import { TASK_EVENTS, type TaskEventTask } from '../tasks/task-events';
 import {
   UNMARKED_LESSON_CLOSED,
@@ -83,11 +84,37 @@ export class NotificationResolverService {
     await this.resolveAnswered(p);
   }
 
+  /**
+   * A deleted group is never taught again, so none of its lesson alerts can be
+   * acted on, whichever day they were sent (a day with no open question gets
+   * no `UNMARKED_LESSON_CLOSED`).
+   */
+  @OnEvent(GROUP_DELETED)
+  async onGroupDeleted(p: {
+    companyId: number;
+    groupId: string;
+  }): Promise<void> {
+    await this.resolve({
+      companyId: p.companyId,
+      relatedEntityType: 'Group',
+      relatedEntityId: p.groupId,
+      type: { in: [...LESSON_ALERT_TYPES] },
+    });
+  }
+
   // ---------- tasks ----------
 
+  /**
+   * A closed task closes all its notices. A system task that is still open may
+   * have just been claimed (the first assignee to act takes it, the other
+   * assignees' copies go): the administrators who lost it have nothing left to
+   * do. They get no `TASK_EVENTS.UNASSIGNED`, which would tell them they were
+   * removed.
+   */
   @OnEvent(TASK_EVENTS.STATUS_CHANGED)
   async onTaskStatus(p: { task: TaskEventTask }): Promise<void> {
-    await this.resolveIfClosed(p.task);
+    if (await this.resolveIfClosed(p.task)) return;
+    await this.resolveClaimLosers(p.task);
   }
 
   @OnEvent(TASK_EVENTS.CANCELLED)
@@ -176,9 +203,23 @@ export class NotificationResolverService {
     }
   }
 
-  private async resolveIfClosed(task: ClosableTask): Promise<void> {
-    if (task.status !== 'DONE' && task.status !== 'CANCELLED') return;
+  /** Whether the task is closed (and so all its notices with it). */
+  private async resolveIfClosed(task: ClosableTask): Promise<boolean> {
+    if (task.status !== 'DONE' && task.status !== 'CANCELLED') return false;
     await this.resolve({ companyId: task.companyId, taskId: task.id });
+    return true;
+  }
+
+  /** The participants left after the claim, and the author, keep their notices. */
+  private async resolveClaimLosers(task: TaskEventTask): Promise<void> {
+    if (task.kind === 'MANUAL' || task.participants.length === 0) return;
+    const keep = task.participants.map((x) => x.userId);
+    if (task.authorId !== null) keep.push(task.authorId);
+    await this.resolve({
+      companyId: task.companyId,
+      taskId: task.id,
+      userId: { notIn: keep },
+    });
   }
 
   /**

@@ -34,6 +34,7 @@ import {
   formatGroup,
   INT_TO_GROUP_STATUS,
 } from './shared/group-include';
+import { GROUP_DELETED, type GroupDeletedPayload } from './group-events';
 import { GroupHolidayCascadeService } from './group-holiday-cascade.service';
 import { computeNextGroupNumber } from './shared/next-group-number';
 import {
@@ -616,7 +617,13 @@ export class GroupsWriteService {
       },
     );
 
-    // After the commit: the notices those closed questions waited on close.
+    // After the commit: no lesson alert of this group can be acted on any
+    // more, whichever day it was sent...
+    this.eventEmitter.emit(GROUP_DELETED, {
+      companyId,
+      groupId: id,
+    } satisfies GroupDeletedPayload);
+    // ...and the notices those closed questions waited on close too.
     for (const date of closedDays) {
       this.eventEmitter.emit(UNMARKED_LESSON_CLOSED, {
         companyId,
