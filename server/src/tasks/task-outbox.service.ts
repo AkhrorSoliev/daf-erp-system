@@ -59,27 +59,45 @@ export async function scheduleTaskOutbox(
       kind: 'OVERDUE' as const,
       at: dueAt,
     })),
-  ].filter((r) => r.at.getTime() > now);
+  ];
   // «Dars bo'ldimi?» never goes to Telegram (spec §6.1): the lesson-end
   // message already covers it.
   const toTelegram = task.kind !== 'LESSON_QUESTION';
   const rows = [
-    ...due.map((r) => ({
-      taskId: task.id,
-      userId: r.userId,
-      channel: 'INAPP' as const,
-      kind: r.kind,
-      sendAfter: r.at,
-    })),
+    // In-app rows are judged by their own time: a past one was already sent
+    // by the minute drain.
+    ...due
+      .filter((r) => r.at.getTime() > now)
+      .map((r) => ({
+        taskId: task.id,
+        userId: r.userId,
+        channel: 'INAPP' as const,
+        kind: r.kind,
+        sendAfter: r.at,
+      })),
+    // Telegram rows are judged by the SHIFTED time. A notice whose own time
+    // fell in the night is held for 08:00; this rewrite deleted that row, so
+    // it is rebuilt until 08:00 has passed. The night shift is decided now;
+    // the drain only looks at sendAfter.
     ...(toTelegram
-      ? due.map((r) => ({
-          taskId: task.id,
-          userId: r.userId,
-          channel: 'TELEGRAM' as const,
-          kind: r.kind,
-          // The night shift is decided now; the drain only looks at sendAfter.
-          sendAfter: telegramSendAfter(r.at, task.priority),
-        }))
+      ? due.flatMap((r) => {
+          const sendAfter = telegramSendAfter(r.at, task.priority);
+          if (sendAfter.getTime() <= now) return [];
+          // A reminder that would go out together with, or after, the overdue
+          // notice (due 08:00, reminder 07:00 held to 08:00) says nothing new.
+          if (r.kind === 'REMINDER' && sendAfter.getTime() >= dueAt.getTime()) {
+            return [];
+          }
+          return [
+            {
+              taskId: task.id,
+              userId: r.userId,
+              channel: 'TELEGRAM' as const,
+              kind: r.kind,
+              sendAfter,
+            },
+          ];
+        })
       : []),
   ];
   // skipDuplicates leans on the partial unique index TaskOutbox_time_row_key

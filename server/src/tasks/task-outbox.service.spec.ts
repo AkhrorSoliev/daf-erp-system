@@ -330,6 +330,95 @@ describe('TaskOutboxService', () => {
       expect(inapp()).toHaveLength(2);
     });
 
+    it('a reschedule rebuilds a Telegram notice held for the morning, while its in-app row (already sent) is not written again', async () => {
+      // 23:00 Tashkent; due 22:00 the same day: the OVERDUE time has passed,
+      // but its Telegram row is held for 08:00 and the rewrite deleted it.
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-12T18:00:00.000Z'));
+      await svc.schedule(prisma, {
+        ...base,
+        priority: 'MEDIUM',
+        dueAt: new Date('2026-10-12T17:00:00.000Z'),
+      });
+      expect(inapp()).toEqual([]);
+      expect(telegram()).toEqual([
+        [40, 'OVERDUE', '2026-10-13T03:00:00.000Z'],
+        [30, 'OVERDUE', '2026-10-13T03:00:00.000Z'],
+      ]);
+    });
+
+    it('a reschedule rebuilds a held Telegram REMINDER whose own time has passed', async () => {
+      // 07:50 Tashkent; due 08:40: the reminder (07:40) is held for 08:00.
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-13T02:50:00.000Z'));
+      await svc.schedule(prisma, {
+        ...base,
+        priority: 'MEDIUM',
+        dueAt: new Date('2026-10-13T03:40:00.000Z'),
+      });
+      expect(inapp().map((r) => [r.userId, r.kind])).toEqual([
+        [40, 'OVERDUE'],
+        [30, 'OVERDUE'],
+      ]);
+      expect(telegram()).toEqual([
+        [40, 'REMINDER', '2026-10-13T03:00:00.000Z'],
+        [40, 'OVERDUE', '2026-10-13T03:40:00.000Z'],
+        [30, 'OVERDUE', '2026-10-13T03:40:00.000Z'],
+      ]);
+    });
+
+    it('a Telegram row whose shifted time has passed is not written again', async () => {
+      // 08:10 Tashkent; due 08:30 -> reminder 07:30 was held to 08:00 and sent.
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-13T03:10:00.000Z'));
+      await svc.schedule(prisma, {
+        ...base,
+        priority: 'MEDIUM',
+        dueAt: new Date('2026-10-13T03:30:00.000Z'),
+      });
+      expect(telegram().map(([u, k]) => [u, k])).toEqual([
+        [40, 'OVERDUE'],
+        [30, 'OVERDUE'],
+      ]);
+    });
+
+    it.each<[string, string, (string | number)[][]]>([
+      // Reminder 07:00 would be held to 08:00, the very minute of the deadline.
+      [
+        'due 08:00 has no Telegram reminder',
+        '2026-10-13T03:00:00.000Z',
+        [
+          [40, 'OVERDUE', '2026-10-13T03:00:00.000Z'],
+          [30, 'OVERDUE', '2026-10-13T03:00:00.000Z'],
+        ],
+      ],
+      // Reminder 07:40 held to 08:00 still comes 40 minutes before the deadline.
+      [
+        'due 08:40 keeps the Telegram reminder at 08:00',
+        '2026-10-13T03:40:00.000Z',
+        [
+          [40, 'REMINDER', '2026-10-13T03:00:00.000Z'],
+          [40, 'OVERDUE', '2026-10-13T03:40:00.000Z'],
+          [30, 'OVERDUE', '2026-10-13T03:40:00.000Z'],
+        ],
+      ],
+      // Reminder 23:20 would be held to 08:00, eight hours after the deadline.
+      [
+        'due 00:20 has no Telegram reminder (it would trail the overdue notice)',
+        '2026-10-12T19:20:00.000Z',
+        [
+          [40, 'OVERDUE', '2026-10-13T03:00:00.000Z'],
+          [30, 'OVERDUE', '2026-10-13T03:00:00.000Z'],
+        ],
+      ],
+    ])('%s', async (_label, dueAt, expected) => {
+      // 10:00 Tashkent on 12.10, so every reminder time is still ahead.
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-12T05:00:00.000Z'));
+      await svc.schedule(prisma, {
+        ...base,
+        priority: 'MEDIUM',
+        dueAt: new Date(dueAt),
+      });
+      expect(telegram()).toEqual(expected);
+    });
+
     it('skips a duplicate time row instead of failing (partial unique index)', async () => {
       await svc.schedule(prisma, {
         ...base,
