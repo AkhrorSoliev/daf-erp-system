@@ -242,8 +242,10 @@ describe('DashboardService', () => {
           where: expect.objectContaining({ date: expectedUtcMidnight }),
         }),
       );
+      // Only the centre's holidays and branch 1's own close branch 1's day.
       expect(holidaysService.findActiveHolidayCovering).toHaveBeenCalledWith(
         expectedUtcMidnight,
+        1,
       );
     });
 
@@ -264,7 +266,21 @@ describe('DashboardService', () => {
       expect(result.holidayName).toBe("Navro'z");
       expect(holidaysService.findActiveHolidayCovering).toHaveBeenCalledWith(
         new Date('2026-03-22T00:00:00.000Z'),
+        1,
       );
+    });
+
+    it("a holiday of another branch does not empty this branch's schedule", async () => {
+      holidaysService.findActiveHolidayCovering.mockImplementation(
+        (_date: Date, branchId?: number) =>
+          Promise.resolve(
+            branchId === 1 ? null : { id: 'h-2', name: 'Namangan yopiq' },
+          ),
+      );
+
+      const result = await service.getTodaySchedule(1, 1001, '2026-05-01');
+
+      expect(result.isHoliday).toBe(false);
     });
 
     it("marks a lesson that waits for «Dars bo'ldimi?»", async () => {

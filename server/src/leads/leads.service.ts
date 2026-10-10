@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { LeadStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
+import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import {
   ReportBranchIds,
   branchIdWhere,
@@ -44,6 +46,20 @@ const LEAD_CARD_SELECT = {
   calledAt: true,
   source: { select: { id: true, name: true } },
 } satisfies Prisma.LeadSelect;
+
+/**
+ * Who creates a lead — stated, never inferred from a missing id (server
+ * CLAUDE.md «A write with no signed-in caller must SAY so», ADR-0008).
+ *
+ * `user` — a signed-in employee on the board: the section's branch must be one
+ * they hold (`assertCallerInBranch`).
+ * `public-form` — a stranger submitting a public form
+ * (`CustomFormsService.submit`). There is no caller to confine; the form's own
+ * section, chosen by staff when the form was set up, fixes the branch.
+ */
+export type LeadCreateActor =
+  | { kind: 'user'; id: number }
+  | { kind: 'public-form' };
 
 @Injectable()
 export class LeadsService {
@@ -351,9 +367,18 @@ export class LeadsService {
    * want here (the board's `not CONVERTED` filter must NOT be copied). Archived
    * leads are included too — the origin is still part of the student's history.
    */
-  async findByStudentId(studentId: number) {
+  async findByStudentId(studentId: number, companyId: number, userId: number) {
+    // A tab of the student profile, so it answers to the profile's own guard:
+    // 404 for an unknown or other-company student, 403 for another branch's.
+    // The query used to name neither company nor branch.
+    await assertCallerMayTouchStudent(
+      this.prisma,
+      userId,
+      studentId,
+      companyId,
+    );
     return this.prisma.lead.findMany({
-      where: { convertedStudentId: studentId },
+      where: { convertedStudentId: studentId, companyId },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
@@ -383,9 +408,12 @@ export class LeadsService {
    * cached client-side, so it never runs on the initial board/section load and
    * never re-runs while the card stays mounted. Three small indexed reads.
    */
-  async getHoverSummary(id: string) {
+  async getHoverSummary(id: string, companyId: number, scope: ReportBranchIds) {
     const lead = await this.prisma.lead.findFirst({
-      where: { id, deletedAt: null },
+      // The shape `findOne` uses: the company, the caller's branch and the
+      // unassigned pool. A lead id alone used to return another branch's
+      // latest comment and who called them.
+      where: { id, deletedAt: null, companyId, ...leadBranchWhere(scope) },
       select: {
         id: true,
         calledAt: true,
@@ -426,8 +454,6 @@ export class LeadsService {
     };
   }
 
-  // `userId` is nullable because public-form submissions create leads with no
-  // authenticated user — the audit row records `changedBy = NULL` (system).
   /**
    * `sourceId` bu yerda ixtiyoriy: HTTP yo'li uni `CreateLeadDto` da majburiy
    * qiladi, ochiq forma esa manbasiz havoladan kelishi mumkin.
@@ -435,7 +461,7 @@ export class LeadsService {
   async create(
     dto: Omit<CreateLeadDto, 'sourceId'> & { sourceId?: string | null },
     companyId: number,
-    userId: number | null,
+    actor: LeadCreateActor,
   ) {
     const firstName = dto.firstName.trim();
     const lastName = dto.lastName.trim();
@@ -469,6 +495,13 @@ export class LeadsService {
       throw new BadRequestException(
         "Tanlangan bo'lim boshqa filialga tegishli — lidning filiali bo'lim bilan mos kelishi shart",
       );
+    }
+
+    // The board only OFFERS the caller's own sections; the API must refuse the
+    // rest, before anything is written. A public-form submission has no caller
+    // to confine (see `LeadCreateActor`).
+    if (actor.kind === 'user') {
+      await assertCallerInBranch(this.prisma, actor.id, branchId);
     }
 
     if (dto.sourceId) {
@@ -519,7 +552,7 @@ export class LeadsService {
         extraPhone: dto.extraPhone || null,
         statusEnum: created.statusEnum,
       },
-      changedById: userId ?? undefined,
+      changedById: actor.kind === 'user' ? actor.id : undefined,
       companyId,
     });
 
@@ -713,7 +746,19 @@ export class LeadsService {
    * history is recorded (matches the section reorder; cross-section moves still
    * go through move(), which does record history).
    */
-  async reorder(dto: ReorderLeadsDto) {
+  async reorder(dto: ReorderLeadsDto, companyId: number, userId: number) {
+    // The section names the board and its column the branch (NOT NULL). The
+    // lookup used to take neither company nor caller, so a section id and its
+    // lead ids were enough to rewrite another branch's board.
+    const section = await this.prisma.leadSection.findFirst({
+      where: { id: dto.sectionId, deletedAt: null, companyId },
+      select: { column: { select: { branchId: true } } },
+    });
+    if (!section) {
+      throw new NotFoundException("Bo'lim topilmadi");
+    }
+    await assertCallerInBranch(this.prisma, userId, section.column.branchId);
+
     const leads = await this.prisma.lead.findMany({
       where: { sectionId: dto.sectionId, deletedAt: null },
       select: { id: true },

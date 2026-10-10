@@ -47,8 +47,11 @@ export class TelegramGroupDailyCronService {
 
     // Skip on holidays — no business activity, the report would be all
     // zeros and would spam groups with empty stats on Navro'z / Mustaqillik.
+    // Company-wide holidays only (`null`): one branch closing does not stop
+    // the other branches' messages (CEO decision 10.10.2026).
     const holiday = await this.holidaysService.findActiveHolidayCovering(
       new Date(),
+      null,
     );
     if (holiday) {
       this.logger.log(

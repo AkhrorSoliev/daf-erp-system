@@ -58,7 +58,7 @@ export const boshlash: QollanmaSahifa[] = [
     qisqacha:
       "Tizimda beshta rol bor va har biri o'z ishini qiladi; filial direktori va administrator faqat o'z filialida ishlaydi. Rol berish, xodim hisobini o'zgartirish va bloklash qoidalari, kim nima qila olishi shu yerda.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0001", "0002", "0007", "0026", "0027", "0028", "0054", "0063"],
+    adr: ["0001", "0002", "0007", "0026", "0027", "0028", "0054", "0063", "0081"],
     yollar: [],
     kalitSozlar: [
       "rol",
@@ -83,6 +83,8 @@ export const boshlash: QollanmaSahifa[] = [
       "ustoz aybdor emas",
       "guruhlar kassirga ko'rinmaydi",
       "davomat ochilish vaqti",
+      "yangi filial",
+      "o'z oyligi",
     ],
     yangilangan: "2026-10-10",
   },

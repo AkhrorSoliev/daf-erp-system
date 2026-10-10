@@ -392,6 +392,9 @@ export class CustomFormsService {
       form.companyId,
     );
 
+    // A stranger, not a signed-in caller — stated, so the service skips the
+    // caller's branch check on purpose rather than on a missing id. The form's
+    // own section fixes the lead's branch.
     const lead = await this.leadsService.create(
       {
         firstName: mapped.firstName,
@@ -401,7 +404,7 @@ export class CustomFormsService {
         sourceId,
       },
       form.companyId,
-      null,
+      { kind: 'public-form' },
     );
 
     await this.prisma.customFormSubmission.create({

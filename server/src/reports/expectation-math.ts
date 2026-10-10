@@ -27,6 +27,12 @@ export interface ExpectationGroup {
   /** Tashkent dates with an active LessonCancellation. */
   cancelledDates: Set<string>;
   /**
+   * Holiday dates of THIS group's branch: the company-wide ones plus its own
+   * branch's (CEO decision 10.10.2026). Per group, never one set for the
+   * month: another branch's holiday must not drop this group's lessons.
+   */
+  holidayDates: Set<string>;
+  /**
    * Bayram kunlari, lekin dars SHU OY ichida boshqa kunga ko'chirilgan —
    * ya'ni dars yo'qolmagan.
    *
@@ -57,7 +63,6 @@ export interface ExpectationGroup {
 export interface SplitOptions {
   monthStartStr: string;
   monthEndStr: string;
-  holidayDates: Set<string>;
   /**
    * Tashkent `YYYY-MM-DD`. Dates BEFORE this are history: a scheduled slot with
    * no attendance row there is not evidence that a lesson happened, so nothing
@@ -110,7 +115,7 @@ export interface LessonSplit {
  */
 export function splitMonthLessons(
   groups: ExpectationGroup[],
-  { monthStartStr, monthEndStr, holidayDates, todayStr }: SplitOptions,
+  { monthStartStr, monthEndStr, todayStr }: SplitOptions,
 ): LessonSplit {
   let heldValue = 0;
   let heldLessons = 0;
@@ -146,7 +151,7 @@ export function splitMonthLessons(
       // `resolveMonthPlan` niki bilan bir xil bo'lishi kerak: reja va
       // prognoz bitta oyga ikki xil dars sonini ko'rsa, muzlatilgan narxga
       // ko'paytirilgan jami hisoblangan puldan farq qiladi.
-      if (holidayDates.has(d) && !g.holidayMakeupDates.has(d)) continue;
+      if (g.holidayDates.has(d) && !g.holidayMakeupDates.has(d)) continue;
       if (g.cancelledDates.has(d)) continue;
       if (g.datesWithAttendance.has(d)) continue;
       // History with no attendance row: no evidence, no projection.

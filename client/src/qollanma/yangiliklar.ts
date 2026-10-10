@@ -14,6 +14,20 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-10",
+    sarlavha: "Filial chegarasi mustahkamlandi",
+    matn: "Filial direktori va administrator endi faqat o'z filialining ma'lumotini ko'radi va o'zgartiradi: o'quvchi balansini tuzatish, guruh jadvali, lidlar, oylik ro'yxati va ustoz stavkalari boshqa filial bo'yicha ochilmaydi. Yangi filialni faqat CEO ochadi. O'z oyligini «to'landi» deb belgilash va o'ziga avans yozishni endi boshqa rahbar qiladi. Ustoz stavkalari taymlaynda faqat oylikni ko'radiganlarga ko'rinadi. Bir nechta filialga biriktirilgan (CEO bo'lmagan) xodim Excel hisobotini endi bitta filial bo'yicha oladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "boshlash", sahifa: "rollar-va-huquqlar" },
+  },
+  {
+    sana: "2026-10-10",
+    sarlavha: "Bayram endi filialniki ham bo'ladi",
+    matn: "Sozlamalar → «Dam olish kunlari» da bayram butun markaz uchun yoki bitta filial uchun kiritiladi. Butun markaz bayramini faqat CEO qo'shadi, tahrirlaydi va o'chiradi. Filial direktori va administrator faqat o'z filiali bayramini qo'shadi va boshqaradi: bunday bayram faqat shu filialda davomatni yopadi va shu filial guruhlarining tugash sanasini suradi. Ro'yxatda har bayram yonida «Butun markaz» yoki filial nomi turadi; direktor va administrator boshqa filial bayramlarini ko'rmaydi. Bayram kimniki ekanini keyin o'zgartirib bo'lmaydi: kerak bo'lsa, o'chirib, qaytadan qo'shing.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "guruhlar", sahifa: "bayramlar" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "DaF ilovasida A1 4-unit «Essen und Trinken» va yangi «Eshitib gap tuzish» mashqi",
     matn: "O'quvchi ilovasida A1 kursining 4-uniti ochildi: ovqat, ichimlik, do'kon va restoran mavzusidagi 188 so'z, 149 gap va 9 ta dialog. Dialoglar hayotdagidek: fonda bozor, oshxona yoki restoran shovqini, eshik va muzlatkich ovozi eshitiladi, boshqa xonadan gapirgan odamning ovozi uzoqdan keladi. Har dialogning yozma matnida sahna izohi bor («Ertalab. Jonas oshxonada», «boshqa xonadan»), har dialogga butun hikoyani ko'rsatadigan bitta rasm chizilgan. Ovqat va idish so'zlarining 74 tasiga rasm bor. Yangi mashq — «Eshitib gap tuzish»: o'quvchi nemischa gapni eshitadi va uni so'zlardan yig'adi.",
     rollar: [1, 2, 3, 4],

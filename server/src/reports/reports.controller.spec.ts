@@ -26,7 +26,6 @@ describe('ReportsController', () => {
     getTeacherPerformance: jest.fn().mockResolvedValue({}),
     getAttendanceAnalytics: jest.fn().mockResolvedValue({}),
     getGroupAnalytics: jest.fn().mockResolvedValue({}),
-    getLeadAnalytics: jest.fn().mockResolvedValue({}),
     getFinancialTrendCanonical: jest.fn().mockResolvedValue([]),
     getIncomeMonthAttribution: jest.fn().mockResolvedValue({}),
     getFinancialOverview: jest.fn().mockResolvedValue({}),
@@ -175,12 +174,6 @@ describe('ReportsController', () => {
         'getTeacherPaymentReports',
         'getTeacherGroupsReport',
       ],
-    },
-    {
-      capability: 'lead reports',
-      keys: ['reports.leads'],
-      roles: ['Administrator', 'Branch Director', 'CEO'],
-      handlers: ['getLeadAnalytics'],
     },
     {
       // Attendance, activity and departed-students reports: their menu entries

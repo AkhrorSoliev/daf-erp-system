@@ -1,4 +1,4 @@
-import { termHolidays } from './holiday-date-set';
+import { buildHolidayDateSetsByBranch, termHolidays } from './holiday-date-set';
 
 describe('termHolidays', () => {
   it("reads the branch's and the company-wide holidays from the term's first day, 120 days on", async () => {
@@ -25,5 +25,48 @@ describe('termHolidays', () => {
     expect(where.date.lte.getTime()).toBeGreaterThanOrEqual(
       new Date('2027-01-25T19:00:00Z').getTime(),
     );
+  });
+});
+
+// CEO decision 10.10.2026: a branch's own holiday closes that branch alone.
+describe('buildHolidayDateSetsByBranch', () => {
+  it('gives each branch the company-wide days and its own, from one read', async () => {
+    const db = {
+      holiday: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            date: new Date('2026-03-21T00:00:00Z'),
+            endDate: new Date('2026-03-21T00:00:00Z'),
+            branchId: null,
+          },
+          {
+            date: new Date('2026-03-25T00:00:00Z'),
+            endDate: new Date('2026-03-26T00:00:00Z'),
+            branchId: 2,
+          },
+        ]),
+      },
+    };
+
+    const forBranch = await buildHolidayDateSetsByBranch(
+      db as never,
+      new Date('2026-03-01T00:00:00Z'),
+      new Date('2026-03-31T00:00:00Z'),
+    );
+
+    expect([...forBranch(1)]).toEqual(['2026-03-21']);
+    expect([...forBranch(2)].sort()).toEqual([
+      '2026-03-21',
+      '2026-03-25',
+      '2026-03-26',
+    ]);
+    // One query for every branch; the split happens in memory.
+    expect(db.holiday.findMany).toHaveBeenCalledTimes(1);
+    const where = db.holiday.findMany.mock.calls[0][0].where;
+    expect(where).toEqual(
+      expect.objectContaining({ status: 'ACTIVE', deletedAt: null }),
+    );
+    expect(where.OR).toBeUndefined();
+    expect(where.branchId).toBeUndefined();
   });
 });

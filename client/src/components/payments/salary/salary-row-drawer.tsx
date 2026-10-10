@@ -8,7 +8,9 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Skeleton } from "@/components/ui/skeleton";
 import { CanLink } from "@/components/shared/can-link";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { isOwnPayrollLocked } from "../own-payroll";
 import { currentMonthKey, monthLabel, staffRoleText } from "../salary-utils";
 import { csvFromLessons, drawerButtons, drawerHint } from "./salary-drawer-model";
 import { SalaryDrawerBody } from "./salary-drawer-sections";
@@ -107,7 +109,14 @@ function DrawerActions({
   const invalidate = useInvalidateSalary();
   const [busy, setBusy] = useState<"csv" | "approve" | null>(null);
   const payment = detail.row.payment?.status === "CANCELLED" ? null : detail.row.payment;
-  const buttons = drawerButtons(state, payment, canClose, canPay);
+  const me = useAuth((s) => s.user);
+  // Your own salary is paid by another manager (CEO, 10.10.2026; ADR-0081).
+  const ownLocked = isOwnPayrollLocked(detail.row.user.id, me);
+  const buttons = drawerButtons(state, payment, canClose, canPay && !ownLocked);
+  const hint =
+    ownLocked && payment?.status === "APPROVED"
+      ? "Bu sizning oyligingiz — uni boshqa rahbar beradi."
+      : drawerHint(state, payment, detail.month);
 
   const downloadCsv = async () => {
     setBusy("csv");
@@ -170,7 +179,7 @@ function DrawerActions({
           </Button>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">{drawerHint(state, payment, detail.month)}</p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
     </SheetFooter>
   );
 }

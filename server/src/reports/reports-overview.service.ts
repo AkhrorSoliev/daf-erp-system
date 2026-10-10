@@ -13,6 +13,8 @@ import {
   pendingInRange,
 } from '../students/shared/departure-episodes';
 import { loadDepartures } from './shared/departures.loader';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
+import { leadAttributionWhere } from '../leads/shared/lead-scope';
 
 @Injectable()
 export class ReportsOverviewService {
@@ -352,10 +354,19 @@ export class ReportsOverviewService {
     };
   }
 
-  async getLeadAnalytics(query: ReportsQueryDto) {
+  async getLeadAnalytics(
+    companyId: number,
+    query: { branchIds: ReportBranchIds; startDate?: string; endDate?: string },
+  ) {
     // Lead.createdAt is a TIMESTAMP — bound it by Tashkent day, not UTC day.
     const dateFilter = tashkentRangeFilter(query.startDate, query.endDate);
     const createdAtFilter = dateFilter ? { createdAt: dateFilter } : {};
+
+    // These are COUNTS, so the attribution predicate (`lead-scope.ts`): a
+    // branch's funnel leaves the unassigned pool out, a company-wide caller
+    // (`null`) counts every lead. The method named neither company nor branch,
+    // so a one-branch workbook carried the whole company's funnel.
+    const inScope = { companyId, ...leadAttributionWhere(query.branchIds) };
 
     // Voronka natijasini o'lchaydigan har bir so'rov to'g'ridan kirgan lidlarni
     // chetlab o'tadi: `sectionId: null` = voronkaga umuman kirmagan, /students
@@ -366,13 +377,19 @@ export class ReportsOverviewService {
     const [funnel, convertedLeads] = await Promise.all([
       this.prisma.lead.groupBy({
         by: ['statusEnum'],
-        where: { deletedAt: null, ...funnelOnly, ...createdAtFilter },
+        where: {
+          deletedAt: null,
+          ...inScope,
+          ...funnelOnly,
+          ...createdAtFilter,
+        },
         _count: { id: true },
       }),
 
       this.prisma.lead.findMany({
         where: {
           deletedAt: null,
+          ...inScope,
           ...funnelOnly,
           statusEnum: 'CONVERTED',
           statusChangedAt: { not: null },
@@ -394,6 +411,7 @@ export class ReportsOverviewService {
     const leadsCreatedByMonth = await this.prisma.lead.findMany({
       where: {
         deletedAt: null,
+        ...inScope,
         ...funnelOnly,
         createdAt: { gte: sixMonthsAgo },
       },

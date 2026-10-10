@@ -14,7 +14,7 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CountByBranchQueryDto } from './dto/count-by-branch-query.dto';
 import { ChangeRoomStatusDto } from './dto/change-room-status.dto';
-import { CurrentUser, BranchScope } from '../common/decorators';
+import { CurrentUser, BranchScope, BranchCeiling } from '../common/decorators';
 import {
   AnyStaff,
   AnyUser,
@@ -31,8 +31,11 @@ export class RoomsController {
   countByBranch(
     @Query() query: CountByBranchQueryDto,
     @CurrentUser('companyId') companyId: number,
+    // The CEILING, not the switcher's pick: the rooms page shows one tab per
+    // branch the caller may manage and picks among them itself.
+    @BranchCeiling() ceiling: ReportBranchIds,
   ) {
-    return this.roomsService.countByBranch(query, companyId);
+    return this.roomsService.countByBranch(query, companyId, ceiling);
   }
 
   // Staff only — a student-portal token used to read this too.

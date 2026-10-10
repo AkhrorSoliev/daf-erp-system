@@ -134,6 +134,7 @@ export class AttendanceReadService {
       select: {
         id: true,
         name: true,
+        branchId: true,
         exactDays: true,
         startDate: true,
         endDate: true,
@@ -192,9 +193,11 @@ export class AttendanceReadService {
     // Holiday query bounds: pad ±1 day so that holidays stored as either
     // HolidaysService internally pads ±1 day for UTC vs Tashkent midnight skew
     // and walks each holiday's [date, endDate] range to build the date set.
+    // Only the centre's holidays and the group's own branch's count.
     const holidaySet = await this.holidaysService.buildHolidayDateSet(
       utcMidnightFromDateStr(rangeStartStr),
       utcMidnightFromDateStr(rangeEndStr),
+      group.branchId,
     );
 
     const baseLessonDateStrs: string[] = [];
@@ -823,6 +826,7 @@ export class AttendanceReadService {
           select: { exactDays: true, validFrom: true, validTo: true },
         },
         course: { select: { lessonPaymentCount: true } },
+        branchId: true,
       },
     });
     if (!group) throw new NotFoundException('Guruh topilmadi');
@@ -847,6 +851,7 @@ export class AttendanceReadService {
     const holidaySet = await this.holidaysService.buildHolidayDateSet(
       utcMidnightFromDateStr(rangeStartStr),
       utcMidnightFromDateStr(rangeEndStr),
+      group.branchId,
     );
 
     const baseLessonDates: string[] = [];

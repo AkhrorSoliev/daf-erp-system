@@ -19,9 +19,10 @@ export class WithdrawalsController {
   @Get('preview/:studentId')
   preview(
     @Param('studentId', ParseIntPipe) studentId: number,
+    @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.withdrawalsService.preview(studentId, companyId);
+    return this.withdrawalsService.preview(studentId, userId, companyId);
   }
 
   @Post()

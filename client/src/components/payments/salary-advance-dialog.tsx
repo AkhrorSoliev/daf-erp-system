@@ -27,12 +27,14 @@ import {
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useAuth } from "@/hooks/use-auth";
 import {
   EmployeeAdvanceSelect,
   type EmployeeOption,
 } from "./employee-advance-select";
 import { EXPENSE_METHOD_LABELS } from "./expenses-filter-bar";
 import type { EditableAdvance } from "./advance-row-actions";
+import { isOwnPayrollLocked } from "./own-payroll";
 
 interface Props {
   open: boolean;
@@ -68,6 +70,7 @@ export function SalaryAdvanceDialog({
   advance,
 }: Props) {
   const { selectedBranch } = useBranchSwitcher();
+  const user = useAuth((s) => s.user);
   const isEdit = !!advance;
 
   const [relatedUserId, setRelatedUserId] = useState("");
@@ -191,7 +194,9 @@ export function SalaryAdvanceDialog({
                 <EmployeeAdvanceSelect
                   value={relatedUserId}
                   onChange={setRelatedUserId}
-                  employees={employees ?? []}
+                  employees={(employees ?? []).filter(
+                    (e) => !isOwnPayrollLocked(e.id, user),
+                  )}
                   loading={employeesLoading}
                 />
                 <p className="text-xs text-muted-foreground">

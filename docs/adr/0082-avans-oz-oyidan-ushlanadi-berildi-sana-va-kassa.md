@@ -1,4 +1,4 @@
-# ADR-0081 — Avans o'z oyining oyligidan ushlanadi; «Berildi» sana va kassa bilan yoziladi; hisoblash davri — kalendar oyi
+# ADR-0082 — Avans o'z oyining oyligidan ushlanadi; «Berildi» sana va kassa bilan yoziladi; hisoblash davri — kalendar oyi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-10

@@ -198,7 +198,7 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 | relatedUserId | Int? | TEACHER_ADVANCE uchun: avans oluvchi xodim |
 | settledBySalaryPaymentId | UUID? | Avans oylikdan ushlab qolinganida to'ldiriladi |
 
-**TEACHER_ADVANCE xususiyati:** Bu kategoriya avans sifatida beriladi va oylik hisoblashda xodimning oylik summasidan avtomatik ushlab qolinadi — faqat sanasi davr oxiridan oldingi avans o'sha oy oyligidan ushlanadi, oylikka sig'maganlari keyingi oyga o'tadi (`salary-calculation.service.ts → applyPendingAdvances()`, `planAdvanceNetting`, ADR-0081).
+**TEACHER_ADVANCE xususiyati:** Bu kategoriya avans sifatida beriladi va oylik hisoblashda xodimning oylik summasidan avtomatik ushlab qolinadi — faqat sanasi davr oxiridan oldingi avans o'sha oy oyligidan ushlanadi, oylikka sig'maganlari keyingi oyga o'tadi (`salary-calculation.service.ts → applyPendingAdvances()`, `planAdvanceNetting`, ADR-0082).
 
 #### Soliq — hisoblanmaydi
 
@@ -394,7 +394,7 @@ Oylik hisoblashda (calculateMonthlySalaries):
 |--------|------|--------|
 | Umumiy ma'lumotlar | `/payments/overview` | Oy tanlash, oy to'lovlari, qarz, kassa/oylik/foyda kartalari, oylar jadvali, oxirgi to'lovlar (ADR-0067) |
 | Marketing | `/reports/marketing` | Sarf, yangi o'quvchilar, jalb qilish narxi, o'quvchi qiymati, samara, manba bo'yicha |
-| Ish haqi | `/payments/salary` | ADR-0081: «Oyliklar» (xulosa, «Diqqat» kartasi, ustoz va xodimlar bitta jadvalda; qator bosilsa xodim oynasi — «Tasdiqlash» va «Berildi», sana va naqd/karta bilan), «Avanslar» (kalendar + qaysi oy oyligidan ushlanishi), «Markaz qoplagani»; sarlavhada «Stavkalar» oynasi va «+ Avans berish» |
+| Ish haqi | `/payments/salary` | ADR-0082: «Oyliklar» (xulosa, «Diqqat» kartasi, ustoz va xodimlar bitta jadvalda; qator bosilsa xodim oynasi — «Tasdiqlash» va «Berildi», sana va naqd/karta bilan), «Avanslar» (kalendar + qaysi oy oyligidan ushlanishi), «Markaz qoplagani»; sarlavhada «Stavkalar» oynasi va «+ Avans berish» |
 | Xarajatlar | `/payments/expenses` | Xarajatlar CRUD (branchId bilan) |
 | Qarzdorlik | `/payments/debt` | Shu oy · Eski qarz · O'qimayotganlar, o'quvchi tortmasi (ADR-0072) |
 | Student profil | "To'lovlar" tab | To'lov tarixi + balans tarixi |
@@ -432,7 +432,7 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | Oylik hisoblash | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Oylik tasdiqlash | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Oylik to'lash | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Hisoblash davrini o'zgartirish (ADR-0081: kalendar oyi, hech kim o'zgartirmaydi) | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Hisoblash davrini o'zgartirish (ADR-0082: kalendar oyi, hech kim o'zgartirmaydi) | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Pul qaytarish so'rovi | ✅ | ✅ | ✅ | ❌ | ❌ |
 | «Berildi» | ✅ | ✅ | ✅ | ✅ | ❌ |
 | So'rovni bekor qilish | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -804,7 +804,7 @@ Har salary config yozish yangi version qatori yaratadi (SCD2). Parent `EmployeeS
 
 ## 13. Salary Period (`SalaryPeriodSetting`)
 
-Davr boshlanish kuni. ADR-0081 dan beri **1** ga qulflangan — davr kalendar oyi: `POST /salary/period-settings` boshqa kunni 400 bilan rad etadi, «Stavkalar» oynasida «Hisoblash davri» bo'limi yo'q. Sozlama yo'q bo'lsa kod 8 ni oladi (fallback, prod'ga mos emas).
+Davr boshlanish kuni. ADR-0082 dan beri **1** ga qulflangan — davr kalendar oyi: `POST /salary/period-settings` boshqa kunni 400 bilan rad etadi, «Stavkalar» oynasida «Hisoblash davri» bo'limi yo'q. Sozlama yo'q bo'lsa kod 8 ni oladi (fallback, prod'ga mos emas).
 
 **Mid-cycle cutover policy (tarixiy — kun endi o'zgarmaydi, kod qoidani saqlaydi):** agar CEO joriy davr ichida `effectiveFrom` qo'ysa, service avtomatik ravishda eski jadval bo'yicha keyingi davr boshiga ko'chiradi.
 
@@ -875,8 +875,8 @@ Per-student "har so'm qayerga ketdi?" hisoboti.
 
 | Joy | Tafsilot |
 |---|---|
-| `/payments/salary` «Stavkalar» tugmasi | Ustoz va xodim stavkalari (Hisoblash davri bo'limi yo'q — ADR-0081) |
-| `/payments/salary` xodim oynasi | Har qatorga bosish (ADR-0081): guruhlar, avanslar, hisob, «Tasdiqlash» (CEO), «Berildi» (sana + naqd/karta), «Darslar bo'yicha (CSV)» |
+| `/payments/salary` «Stavkalar» tugmasi | Ustoz va xodim stavkalari (Hisoblash davri bo'limi yo'q — ADR-0082) |
+| `/payments/salary` xodim oynasi | Har qatorga bosish (ADR-0082): guruhlar, avanslar, hisob, «Tasdiqlash» (CEO), «Berildi» (sana + naqd/karta), «Darslar bo'yicha (CSV)» |
 | `/profile/salary` (lehrer) | Ustozning o'z oyligi |
 | Group "Bekor qilingan" tab | Cancel + reverse cascade |
 | Teacher "Taymlayn" tab | Salary + group + profile o'zgarishlari |

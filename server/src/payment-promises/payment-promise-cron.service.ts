@@ -24,7 +24,8 @@ export class PaymentPromiseCronService {
   ) {}
 
   // Daily at 09:00 Tashkent, Mon–Sat (Sundays excluded by the cron itself).
-  // Active holidays short-circuit below.
+  // Only a centre-wide holiday short-circuits below (a branch's own holiday
+  // does not stop the run).
   @Cron('0 0 9 * * 1-6', { timeZone: 'Asia/Tashkent' })
   async checkOverduePromises() {
     await this.run();
@@ -39,7 +40,12 @@ export class PaymentPromiseCronService {
    * from the @Cron method so it can be triggered in a test or manually.
    */
   async run() {
-    const holiday = await this.holidays.findActiveHolidayCovering(new Date());
+    // Company-wide holidays only: one branch closing does not hold up every
+    // branch's broken-promise list (CEO decision 10.10.2026).
+    const holiday = await this.holidays.findActiveHolidayCovering(
+      new Date(),
+      null,
+    );
     if (holiday) {
       this.logger.log(
         "Bayram kuni — to'lov va'dasi eslatmasi o'tkazib yuborildi",

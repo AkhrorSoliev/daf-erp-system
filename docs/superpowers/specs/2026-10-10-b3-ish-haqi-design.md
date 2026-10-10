@@ -7,7 +7,7 @@
 - https://claude.ai/artifact/D5FjBnDj9no1i33QWQBUhh — the new parts: summary with month status, «E'tibor talab qiladi», one table, row drawer, «Berildi» dialog, advance status, staff bot message (CEO-approved 10.10)
 
 **Builds on:** ADR-0006 (salary is read only from `getMonthly`), ADR-0050 (rates), ADR-0051 (uncharged monthly lesson priced at the pack price), ADR-0052 (unpaid share of a monthly charge shows as «Markaz qo'shdi»), ADR-0058 (payroll branch scope), ADR-0072 (B2a moved «Markaz qoplagani» here), the salary month-settle design (`2026-08-06-salary-month-settle-design.md`).
-**Decision record:** ADR-0081 (written in the same PR; renumbered from 0080, which `main` took first for join requests).
+**Decision record:** ADR-0082 (written in the same PR; renumbered from 0080, which `main` took first for join requests).
 
 ## 1. Why and where this fits
 

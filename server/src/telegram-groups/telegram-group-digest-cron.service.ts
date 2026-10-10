@@ -46,7 +46,8 @@ export function isVisibleToGroup(
 /**
  * Sends each approved Telegram group one consolidated message a day, at
  * 20:00 Asia/Tashkent, from the GROUP rows of the digest queue (ADR-0025).
- * Sundays and holidays are skipped — rows wait for the next working day.
+ * Sundays and centre-wide holidays are skipped (a single branch's holiday does
+ * not stop the run) — rows wait for the next working day.
  * Delivery is tracked per group (`deliveredGroupIds`): a chat that failed
  * gets the rows again next run, a chat that got them never does twice.
  */
@@ -74,8 +75,11 @@ export class TelegramGroupDigestCronService {
       this.logger.log('Skipped group digest — today is Sunday');
       return;
     }
+    // Company-wide holidays only (`null`): one branch closing does not stop
+    // the other branches' messages (CEO decision 10.10.2026).
     const holiday = await this.holidaysService.findActiveHolidayCovering(
       new Date(),
+      null,
     );
     if (holiday) {
       this.logger.log(

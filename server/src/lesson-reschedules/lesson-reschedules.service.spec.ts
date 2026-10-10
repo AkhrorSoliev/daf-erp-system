@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -137,10 +138,12 @@ describe('LessonReschedulesService', () => {
       startTime: '10:00',
       endTime: '11:30',
     };
+    // The default `user.findFirst` mock is a CEO, who spans every branch.
+    const ceo = { userId: 1, roles: ['CEO'] };
 
     it('rejects bad date format', async () => {
       await expect(
-        service.findAvailableRooms({ ...baseQuery, date: 'nope' }, 1),
+        service.findAvailableRooms({ ...baseQuery, date: 'nope' }, 1, ceo),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -149,15 +152,16 @@ describe('LessonReschedulesService', () => {
         service.findAvailableRooms(
           { ...baseQuery, startTime: '11:00', endTime: '10:00' },
           1,
+          ceo,
         ),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('throws NotFoundException when group is missing', async () => {
       prisma.group.findFirst.mockResolvedValue(null);
-      await expect(service.findAvailableRooms(baseQuery, 1)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findAvailableRooms(baseQuery, 1, ceo),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('returns all branch rooms when nothing in branch conflicts', async () => {
@@ -169,7 +173,7 @@ describe('LessonReschedulesService', () => {
         { id: 'room-b', name: 'B' },
       ]);
 
-      const result = await service.findAvailableRooms(baseQuery, 1);
+      const result = await service.findAvailableRooms(baseQuery, 1, ceo);
 
       expect(prisma.room.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -203,7 +207,7 @@ describe('LessonReschedulesService', () => {
         .mockResolvedValueOnce([]);
       prisma.room.findMany.mockResolvedValue([{ id: 'room-b', name: 'B' }]);
 
-      await service.findAvailableRooms(baseQuery, 1);
+      await service.findAvailableRooms(baseQuery, 1, ceo);
 
       expect(prisma.room.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -230,7 +234,7 @@ describe('LessonReschedulesService', () => {
         { id: 'room-b', name: 'B' },
       ]);
 
-      await service.findAvailableRooms(baseQuery, 1);
+      await service.findAvailableRooms(baseQuery, 1, ceo);
 
       // room-a is NOT in busy set because group-x's lesson was cancelled
       expect(prisma.room.findMany).toHaveBeenCalledWith(
@@ -251,7 +255,7 @@ describe('LessonReschedulesService', () => {
         .mockResolvedValueOnce([]);
       prisma.room.findMany.mockResolvedValue([{ id: 'room-a', name: 'A' }]);
 
-      await service.findAvailableRooms(baseQuery, 1);
+      await service.findAvailableRooms(baseQuery, 1, ceo);
 
       expect(prisma.room.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -277,7 +281,7 @@ describe('LessonReschedulesService', () => {
       ]);
       prisma.room.findMany.mockResolvedValue([{ id: 'room-b', name: 'B' }]);
 
-      await service.findAvailableRooms(baseQuery, 1);
+      await service.findAvailableRooms(baseQuery, 1, ceo);
 
       // overlaps 10:30–12:00 vs 10:00–11:30 → room-a busy
       expect(prisma.room.findMany).toHaveBeenCalledWith(
@@ -304,7 +308,7 @@ describe('LessonReschedulesService', () => {
       ]);
       prisma.room.findMany.mockResolvedValue([]);
 
-      await service.findAvailableRooms(baseQuery, 1);
+      await service.findAvailableRooms(baseQuery, 1, ceo);
 
       // 11:00–12:30 overlaps 10:00–11:30 → room-c busy
       expect(prisma.room.findMany).toHaveBeenCalledWith(
@@ -312,6 +316,44 @@ describe('LessonReschedulesService', () => {
           where: expect.objectContaining({ id: { notIn: ['room-c'] } }),
         }),
       );
+    });
+
+    it("refuses a director of another branch with 403 and never reads that branch's rooms", async () => {
+      prisma.group.findFirst.mockResolvedValue({ id: 'group-1', branchId: 7 });
+      prisma.group.findMany.mockResolvedValue([]);
+      prisma.room.findMany.mockResolvedValue([{ id: 'room-a', name: 'A' }]);
+      prisma.user.findFirst.mockResolvedValue({
+        mainBranch: 1,
+        branches: [{ branchId: 1 }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+
+      await expect(
+        service.findAvailableRooms(baseQuery, 1, {
+          userId: 42,
+          roles: ['Branch Director'],
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.group.findMany).not.toHaveBeenCalled();
+      expect(prisma.room.findMany).not.toHaveBeenCalled();
+    });
+
+    it("serves a director the free rooms of their own branch's group", async () => {
+      prisma.group.findFirst.mockResolvedValue({ id: 'group-1', branchId: 7 });
+      prisma.group.findMany.mockResolvedValue([]);
+      prisma.room.findMany.mockResolvedValue([{ id: 'room-a', name: 'A' }]);
+      prisma.user.findFirst.mockResolvedValue({
+        mainBranch: 7,
+        branches: [{ branchId: 7 }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+
+      await expect(
+        service.findAvailableRooms(baseQuery, 1, {
+          userId: 42,
+          roles: ['Branch Director'],
+        }),
+      ).resolves.toEqual([{ id: 'room-a', name: 'A' }]);
     });
   });
 

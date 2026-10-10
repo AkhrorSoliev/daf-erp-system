@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsFinancialService } from './reports-financial.service';
 import { ReportsExpectationService } from './reports-expectation.service';
 import { ReportsMarketingService } from './marketing/reports-marketing.service';
+import { ReportsOverviewService } from './reports-overview.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { RedisService } from '../redis/redis.service';
@@ -253,7 +254,9 @@ describe('branch scope coverage — expectation service', () => {
         {
           provide: HolidaysService,
           useValue: {
-            buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+            buildHolidayDateSetsByBranch: jest
+              .fn()
+              .mockResolvedValue(() => new Set<string>()),
           },
         },
         {
@@ -413,5 +416,60 @@ describe('branch scope coverage — marketing', () => {
     expect(
       hasBranchPredicate(prisma.expense.findMany.mock.calls[0][0].where),
     ).toBe(true);
+  });
+});
+
+/**
+ * The workbook's «Lidlar» sheet. These are COUNTS, so the attribution
+ * predicate: a branch's funnel leaves the unassigned pool out
+ * (`leads/shared/lead-scope.ts`). The method once named neither the company
+ * nor the branch, so a one-branch director's workbook carried every branch's
+ * lead funnel.
+ */
+describe('branch scope coverage — lead analytics', () => {
+  let prisma: any;
+  let service: ReportsOverviewService;
+
+  beforeEach(() => {
+    prisma = {
+      lead: {
+        groupBy: jest.fn().mockResolvedValue([]),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    service = new ReportsOverviewService(prisma as never, {} as never);
+  });
+
+  const leadWheres = () =>
+    [...prisma.lead.groupBy.mock.calls, ...prisma.lead.findMany.mock.calls].map(
+      (c: any[]) => c[0].where,
+    );
+
+  it('puts the branch and the company on every lead query', async () => {
+    await service.getLeadAnalytics(1, {
+      branchIds: [2],
+      startDate: '2026-05-01',
+      endDate: '2026-05-31',
+    });
+
+    const wheres = leadWheres();
+    expect(wheres).toHaveLength(3);
+    for (const where of wheres) {
+      expect(hasBranchPredicate(where)).toBe(true);
+      // Attribution, not visibility: no `branchId: null` OR-branch.
+      expect(where.branchId).toEqual({ in: [2] });
+      expect(where.companyId).toBe(1);
+    }
+  });
+
+  it('leaves a company-wide caller unfiltered by branch, still inside the company', async () => {
+    await service.getLeadAnalytics(1, { branchIds: null });
+
+    const wheres = leadWheres();
+    expect(wheres).toHaveLength(3);
+    for (const where of wheres) {
+      expect(where.branchId).toBeUndefined();
+      expect(where.companyId).toBe(1);
+    }
   });
 });

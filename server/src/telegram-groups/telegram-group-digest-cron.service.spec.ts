@@ -131,6 +131,15 @@ describe('TelegramGroupDigestCronService', () => {
     expect(findMany).not.toHaveBeenCalled();
   });
 
+  // A branch's own holiday must not hold back every other branch's digest.
+  it('asks for company-wide holidays only', async () => {
+    await service.flushDigests();
+    expect(findActiveHolidayCovering).toHaveBeenCalledWith(
+      expect.any(Date),
+      null,
+    );
+  });
+
   it('skips a holiday after purging', async () => {
     findActiveHolidayCovering.mockResolvedValue({ id: 'h1', name: "Navro'z" });
     await service.flushDigests();

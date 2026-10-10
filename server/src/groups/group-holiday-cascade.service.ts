@@ -65,6 +65,7 @@ export class GroupHolidayCascadeService {
         startDate: true,
         endDate: true,
         exactDays: true,
+        branchId: true,
       },
     });
     if (!group || !group.startDate || !group.endDate) {
@@ -78,9 +79,22 @@ export class GroupHolidayCascadeService {
 
     const holiday = await this.prisma.holiday.findUnique({
       where: { id: holidayId },
-      select: { id: true, date: true, endDate: true },
+      select: { id: true, date: true, endDate: true, branchId: true },
     });
     if (!holiday) {
+      return {
+        extended: false,
+        oldEndDate: group.endDate,
+        newEndDate: group.endDate,
+        daysExtended: 0,
+      };
+    }
+
+    // A branch's holiday never moves another branch's group (CEO decision
+    // 10.10.2026). `HolidaysService` already offers it only its own branch's
+    // groups, but `applyHolidayImpactOnNewGroup` offers a new group every
+    // holiday in range, so the rule lives here, where both arrive.
+    if (holiday.branchId != null && holiday.branchId !== group.branchId) {
       return {
         extended: false,
         oldEndDate: group.endDate,
@@ -134,6 +148,7 @@ export class GroupHolidayCascadeService {
       await this.holidaysService.getActiveHolidaysInRange(
         utcMidnightFromDateStr(eatenStartStr),
         utcMidnightFromDateStr(eatenEndStr),
+        group.branchId,
       );
     const earlierClaimedDates = new Set<string>();
     for (const other of overlappingHolidays) {
@@ -177,6 +192,7 @@ export class GroupHolidayCascadeService {
     const futureHolidaySet = await this.holidaysService.buildHolidayDateSet(
       walkStart,
       walkEnd,
+      group.branchId,
     );
 
     let counter = 0;
@@ -315,7 +331,7 @@ export class GroupHolidayCascadeService {
   ): Promise<void> {
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },
-      select: { startDate: true, endDate: true },
+      select: { startDate: true, endDate: true, branchId: true },
     });
     if (!group?.startDate || !group?.endDate) return;
 
@@ -326,6 +342,7 @@ export class GroupHolidayCascadeService {
       const holidays = await this.holidaysService.getActiveHolidaysInRange(
         group.startDate,
         lastEndDate,
+        group.branchId,
       );
       holidays.sort((a, b) => a.date.getTime() - b.date.getTime());
 

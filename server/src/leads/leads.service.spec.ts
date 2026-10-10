@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { LeadsService } from './leads.service';
 import { leadStatsRange } from './leads-stats.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -20,6 +24,20 @@ describe('LeadsService', () => {
     phone: '901234567',
     sectionId: 'sec-1',
   };
+
+  // Callers as `resolveCallerBranchScope` reads them (`prisma.user.findFirst`).
+  const CEO_ROW = {
+    mainBranch: null,
+    branches: [],
+    roles: [{ role: { name: 'CEO' } }],
+  };
+  const adminOf = (branchId: number) => ({
+    mainBranch: branchId,
+    branches: [{ branchId }],
+    roles: [{ role: { name: 'Administrator' } }],
+  });
+  // The signed-in employee behind `POST /leads`.
+  const CALLER = { kind: 'user', id: 1 } as const;
 
   beforeEach(async () => {
     prisma = {
@@ -457,15 +475,18 @@ describe('LeadsService', () => {
   });
 
   describe('create', () => {
+    // The cases below are about the lead itself; a CEO holds every branch.
+    beforeEach(() => prisma.user.findFirst.mockResolvedValue(CEO_ROW));
+
     it('rejects an empty name', async () => {
       await expect(
-        service.create({ ...validDto, firstName: '  ' }, 1001, 1),
+        service.create({ ...validDto, firstName: '  ' }, 1001, CALLER),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('throws NotFound when the section is missing', async () => {
       prisma.leadSection.findFirst.mockResolvedValue(null);
-      await expect(service.create(validDto, 1001, 1)).rejects.toThrow(
+      await expect(service.create(validDto, 1001, CALLER)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -477,7 +498,7 @@ describe('LeadsService', () => {
       });
       prisma.leadSource.findFirst.mockResolvedValue(null);
       await expect(
-        service.create({ ...validDto, sourceId: 'src-x' }, 1001, 1),
+        service.create({ ...validDto, sourceId: 'src-x' }, 1001, CALLER),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -495,7 +516,7 @@ describe('LeadsService', () => {
         statusEnum: 'NEW',
       });
 
-      await service.create(validDto, 1001, 1);
+      await service.create(validDto, 1001, CALLER);
 
       expect(prisma.lead.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -527,7 +548,7 @@ describe('LeadsService', () => {
         statusEnum: 'NEW',
       });
 
-      await service.create({ ...validDto, sectionId: 'sec-2' }, 1001, 1);
+      await service.create({ ...validDto, sectionId: 'sec-2' }, 1001, CALLER);
 
       expect(prisma.lead.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -554,7 +575,11 @@ describe('LeadsService', () => {
         statusEnum: 'NEW',
       });
 
-      await service.create({ ...validDto, extraPhone: '911112233' }, 1001, 1);
+      await service.create(
+        { ...validDto, extraPhone: '911112233' },
+        1001,
+        CALLER,
+      );
 
       expect(prisma.lead.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -578,12 +603,110 @@ describe('LeadsService', () => {
         statusEnum: 'NEW',
       });
 
-      await service.create(validDto, 1001, 1);
+      await service.create(validDto, 1001, CALLER);
 
       expect(prisma.lead.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ extraPhone: null }),
         }),
+      );
+    });
+
+    it("refuses a section on another branch's board and writes nothing", async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-2',
+        column: { systemKey: 'NEW', branchId: 2 },
+      });
+      prisma.user.findFirst.mockResolvedValue(adminOf(1));
+
+      await expect(
+        service.create({ ...validDto, sectionId: 'sec-2' }, 1001, CALLER),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(prisma.user.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 1, deletedAt: null } }),
+      );
+      expect(prisma.lead.aggregate).not.toHaveBeenCalled();
+      expect(prisma.lead.create).not.toHaveBeenCalled();
+      expect(history.recordCreate).not.toHaveBeenCalled();
+    });
+
+    it("creates the lead on the caller's own branch board", async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-2',
+        column: { systemKey: 'NEW', branchId: 2 },
+      });
+      prisma.user.findFirst.mockResolvedValue(adminOf(2));
+      prisma.lead.aggregate.mockResolvedValue({ _max: { order: null } });
+      prisma.lead.create.mockResolvedValue({
+        id: 'lead-3',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        statusEnum: 'NEW',
+      });
+
+      await service.create({ ...validDto, sectionId: 'sec-2' }, 1001, CALLER);
+
+      expect(prisma.lead.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ branchId: 2, companyId: 1001 }),
+        }),
+      );
+      expect(history.recordCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ changedById: 1 }),
+      );
+    });
+
+    it("lets a CEO create a lead on any branch's board", async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-2',
+        column: { systemKey: 'NEW', branchId: 2 },
+      });
+      prisma.lead.aggregate.mockResolvedValue({ _max: { order: null } });
+      prisma.lead.create.mockResolvedValue({
+        id: 'lead-4',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        statusEnum: 'NEW',
+      });
+
+      await service.create({ ...validDto, sectionId: 'sec-2' }, 1001, CALLER);
+
+      expect(prisma.lead.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ branchId: 2 }),
+        }),
+      );
+    });
+
+    it('a public-form submission creates the lead with no caller check and no actor in history', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-2',
+        column: { systemKey: 'NEW', branchId: 2 },
+      });
+      prisma.lead.aggregate.mockResolvedValue({ _max: { order: null } });
+      prisma.lead.create.mockResolvedValue({
+        id: 'lead-5',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        statusEnum: 'NEW',
+      });
+
+      await service.create({ ...validDto, sectionId: 'sec-2' }, 1001, {
+        kind: 'public-form',
+      });
+
+      expect(prisma.user.findFirst).not.toHaveBeenCalled();
+      expect(prisma.lead.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ branchId: 2 }),
+        }),
+      );
+      expect(history.recordCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ changedById: undefined }),
       );
     });
   });
@@ -806,10 +929,58 @@ describe('LeadsService', () => {
   });
 
   describe('reorder', () => {
+    beforeEach(() => {
+      // A section on branch 2's board; the caller holds branch 2.
+      prisma.leadSection.findFirst.mockResolvedValue({
+        column: { branchId: 2 },
+      });
+      prisma.user.findFirst.mockResolvedValue(adminOf(2));
+    });
+
+    it("throws NotFound when the section is not the company's", async () => {
+      prisma.leadSection.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.reorder({ sectionId: 'sec-x', leadIds: ['lead-1'] }, 1001, 1),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(prisma.leadSection.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'sec-x', deletedAt: null, companyId: 1001 },
+        }),
+      );
+      expect(prisma.lead.findMany).not.toHaveBeenCalled();
+    });
+
+    it("refuses a section on another branch's board and reorders nothing", async () => {
+      prisma.user.findFirst.mockResolvedValue(adminOf(1));
+
+      await expect(
+        service.reorder({ sectionId: 'sec-1', leadIds: ['lead-1'] }, 1001, 1),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(prisma.lead.findMany).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.lead.update).not.toHaveBeenCalled();
+    });
+
+    it("lets a CEO reorder any branch's section", async () => {
+      prisma.user.findFirst.mockResolvedValue(CEO_ROW);
+      prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1' }]);
+
+      await service.reorder(
+        { sectionId: 'sec-1', leadIds: ['lead-1'] },
+        1001,
+        1,
+      );
+
+      expect(prisma.$transaction).toHaveBeenCalled();
+    });
+
     it('rejects a lead that does not belong to the section', async () => {
       prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1' }]);
       await expect(
-        service.reorder({ sectionId: 'sec-1', leadIds: ['other'] }),
+        service.reorder({ sectionId: 'sec-1', leadIds: ['other'] }, 1001, 1),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -819,7 +990,7 @@ describe('LeadsService', () => {
         { id: 'lead-2' },
       ]);
       await expect(
-        service.reorder({ sectionId: 'sec-1', leadIds: ['lead-1'] }),
+        service.reorder({ sectionId: 'sec-1', leadIds: ['lead-1'] }, 1001, 1),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -828,10 +999,11 @@ describe('LeadsService', () => {
         { id: 'lead-1' },
         { id: 'lead-2' },
       ]);
-      await service.reorder({
-        sectionId: 'sec-1',
-        leadIds: ['lead-2', 'lead-1'],
-      });
+      await service.reorder(
+        { sectionId: 'sec-1', leadIds: ['lead-2', 'lead-1'] },
+        1001,
+        1,
+      );
       expect(prisma.$transaction).toHaveBeenCalled();
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1167,13 +1339,28 @@ describe('LeadsService', () => {
   });
 
   describe('findByStudentId', () => {
-    it('returns leads linked to the student with no board status filter', async () => {
+    beforeEach(() => {
+      // The student exists in company 1001 and studies in branch 2
+      // (`assertCallerMayTouchStudent` → `tryResolveStudentBranchId`).
+      prisma.student.findFirst.mockResolvedValue({ id: 10733 });
+      prisma.studentBranch = {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 2 }),
+      };
+      prisma.enrollment = { findFirst: jest.fn().mockResolvedValue(null) };
+      prisma.user.findFirst.mockResolvedValue(adminOf(2));
       prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1' }]);
+    });
 
-      const result = await service.findByStudentId(10733);
+    it('returns the leads linked to the student inside the company, with no board status filter', async () => {
+      const result = await service.findByStudentId(10733, 1001, 1);
 
+      expect(prisma.student.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 10733, companyId: 1001 } }),
+      );
       expect(prisma.lead.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { convertedStudentId: 10733 } }),
+        expect.objectContaining({
+          where: { convertedStudentId: 10733, companyId: 1001 },
+        }),
       );
       // Must NOT copy the board's `statusEnum: { not: CONVERTED }` filter — a
       // converted lead is exactly what the student profile tab wants to show.
@@ -1182,13 +1369,79 @@ describe('LeadsService', () => {
       expect(arg.where.deletedAt).toBeUndefined();
       expect(result).toEqual([{ id: 'lead-1' }]);
     });
+
+    it("refuses another branch's student and reads no lead", async () => {
+      prisma.user.findFirst.mockResolvedValue(adminOf(1));
+
+      await expect(service.findByStudentId(10733, 1001, 1)).rejects.toThrow(
+        ForbiddenException,
+      );
+
+      expect(prisma.lead.findMany).not.toHaveBeenCalled();
+    });
+
+    it('answers 404 for a student outside the company and reads no lead', async () => {
+      prisma.student.findFirst.mockResolvedValue(null);
+
+      await expect(service.findByStudentId(10733, 1001, 1)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(prisma.lead.findMany).not.toHaveBeenCalled();
+    });
+
+    it("lets a CEO read any branch's student", async () => {
+      prisma.user.findFirst.mockResolvedValue(CEO_ROW);
+
+      await expect(service.findByStudentId(10733, 1001, 1)).resolves.toEqual([
+        { id: 'lead-1' },
+      ]);
+    });
   });
 
   describe('getHoverSummary', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
-      await expect(service.getHoverSummary('missing')).rejects.toThrow(
-        NotFoundException,
+      await expect(
+        service.getHoverSummary('missing', 1001, [1]),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("looks the lead up inside the company and the caller's branch, unassigned pool included", async () => {
+      // Another branch's lead does not match this filter, so the database
+      // answers null — and its latest comment is never read.
+      prisma.lead.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getHoverSummary('lead-9', 1001, [1]),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(prisma.lead.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id: 'lead-9',
+            deletedAt: null,
+            companyId: 1001,
+            OR: [{ branchId: { in: [1] } }, { branchId: null }],
+          },
+        }),
+      );
+      expect(prisma.comment.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('gives a CEO every lead of the company and no other company', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-9',
+        calledAt: null,
+        calledBy: null,
+      });
+
+      await service.getHoverSummary('lead-9', 1001, null);
+
+      expect(prisma.lead.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'lead-9', deletedAt: null, companyId: 1001 },
+        }),
       );
     });
 
@@ -1204,7 +1457,7 @@ describe('LeadsService', () => {
         author: { firstName: 'Dilnoza', lastName: 'Karimova' },
       });
 
-      const result = await service.getHoverSummary('lead-1');
+      const result = await service.getHoverSummary('lead-1', 1001, [1]);
 
       expect(prisma.comment.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1229,7 +1482,7 @@ describe('LeadsService', () => {
       });
       prisma.comment.findFirst.mockResolvedValue(null);
 
-      const result = await service.getHoverSummary('lead-2');
+      const result = await service.getHoverSummary('lead-2', 1001, [1]);
 
       expect(result).toEqual({
         calledAt: null,

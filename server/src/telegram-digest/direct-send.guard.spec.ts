@@ -12,7 +12,7 @@ import { join, relative } from 'path';
 const ALLOWED: string[] = [
   // The digest crons' own single sender; the instant senders that wait out a
   // 429 use it too (notification-events.listener: payment-promise.overdue,
-  // salary.paid — ADR-0081).
+  // salary.paid — ADR-0082).
   'src/telegram-digest/telegram-send.ts',
   // Instant by design — the spec's "O'zgarmaydi" table.
   'src/absence-pause/', // auto-pause reminders and pause notices

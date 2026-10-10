@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,7 +13,10 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { equalsOrIn } from '../common/dto/to-array';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
 import { resolvePeriod } from '../common/finance/period-helpers';
-import { assertCallerInBranch } from '../common/auth/branch-scope';
+import {
+  assertCallerInBranch,
+  resolveCallerBranchScope,
+} from '../common/auth/branch-scope';
 import {
   branchIdWhere,
   type ReportBranchIds,
@@ -38,6 +42,16 @@ const METHOD_LABELS: Record<ExpensePaymentMethod, string> = {
   CASH: 'Naqt',
   CARD: 'Karta',
 };
+
+// CEO decision (10.10.2026): an advance to yourself is written, changed and
+// deleted by another manager; only the CEO handles their own.
+const OWN_ADVANCE_REFUSAL =
+  "O'zingizga yozilgan avansni o'zingiz yoza, o'zgartira yoki o'chira olmaysiz — buni boshqa rahbar qiladi.";
+
+// An advance is settled against its recipient's payroll, so it is booked in a
+// branch the recipient belongs to.
+const RECIPIENT_OTHER_BRANCH =
+  "Bu xodim tanlangan filialga biriktirilmagan — avansni xodimning o'z filialida yozing.";
 
 // Human label for the PDF "Davr" line. Handles one-sided ranges.
 function buildDateRangeLabel(start?: string, end?: string): string {
@@ -95,6 +109,8 @@ export class ExpensesService {
    */
   private async assertAdvanceRecipient(
     relatedUserId: number | null | undefined,
+    branchId: number,
+    userId: number,
     companyId: number,
   ): Promise<void> {
     if (!relatedUserId) {
@@ -107,6 +123,41 @@ export class ExpensesService {
     if (!user) {
       throw new BadRequestException('Xodim topilmadi');
     }
+    await this.assertNotOwnAdvance(relatedUserId, userId);
+    await this.assertRecipientInBranch(relatedUserId, branchId);
+  }
+
+  /**
+   * Your own advance is written, changed and deleted by another manager
+   * (CEO decision, 10.10.2026). The CEO is the one caller whose scope is
+   * `all`, and the only one who may handle their own.
+   */
+  private async assertNotOwnAdvance(
+    recipientId: number | null,
+    userId: number,
+  ): Promise<void> {
+    if (recipientId !== userId) return;
+    const scope = await resolveCallerBranchScope(this.prisma, userId);
+    if (scope.kind !== 'all') {
+      throw new ForbiddenException(OWN_ADVANCE_REFUSAL);
+    }
+  }
+
+  /**
+   * The advance is settled against the recipient's payroll, so their
+   * `mainBranch ∪ UserBranch` must include the expense's branch. Otherwise
+   * one branch's kassa and P&L carry it while another branch's payroll is
+   * cut. A rule about the record, so the CEO is held to it too; a CEO
+   * recipient spans every branch.
+   */
+  private async assertRecipientInBranch(
+    recipientId: number,
+    branchId: number,
+  ): Promise<void> {
+    const scope = await resolveCallerBranchScope(this.prisma, recipientId);
+    if (scope.kind === 'branches' && !scope.branchIds.includes(branchId)) {
+      throw new BadRequestException(RECIPIENT_OTHER_BRANCH);
+    }
   }
 
   /**
@@ -117,7 +168,7 @@ export class ExpensesService {
    * «grossTotal − avanslar = to'langan» tenglama buziladi. Tuzatishning
    * yagona to'g'ri yo'li: avval o'sha oylikni bekor qilish.
    *
-   * Only an advance dated before the period end is ever netted (ADR-0081): a
+   * Only an advance dated before the period end is ever netted (ADR-0082): a
    * later one stays unsettled, and editable, until its own month is settled —
    * or a later month, if it does not fit.
    */
@@ -135,7 +186,12 @@ export class ExpensesService {
     await this.assertBranchWritable(dto.branchId, companyId, userId);
 
     if (dto.category === ExpenseCategory.TEACHER_ADVANCE) {
-      await this.assertAdvanceRecipient(dto.relatedUserId, companyId);
+      await this.assertAdvanceRecipient(
+        dto.relatedUserId,
+        dto.branchId,
+        userId,
+        companyId,
+      );
     }
 
     // Atomic: expense row + ledger entry are all-or-nothing.
@@ -496,8 +552,25 @@ export class ExpensesService {
           "Avansning xodimini almashtirib bo'lmaydi — o'chirib, to'g'ri xodimga yangi avans yozing",
         );
       }
+      await this.assertNotOwnAdvance(existing.relatedUserId, userId);
+      // Moving the advance to another branch must keep it in its recipient's.
+      if (
+        existing.relatedUserId != null &&
+        dto.branchId != null &&
+        dto.branchId !== existing.branchId
+      ) {
+        await this.assertRecipientInBranch(
+          existing.relatedUserId,
+          dto.branchId,
+        );
+      }
     } else if (dto.category === ExpenseCategory.TEACHER_ADVANCE) {
-      await this.assertAdvanceRecipient(dto.relatedUserId, companyId);
+      await this.assertAdvanceRecipient(
+        dto.relatedUserId,
+        dto.branchId ?? existing.branchId,
+        userId,
+        companyId,
+      );
     }
 
     // Detect if the change touches financial fields. Description/date/branch/
@@ -603,6 +676,9 @@ export class ExpensesService {
 
     if (existing.category === ExpenseCategory.TEACHER_ADVANCE) {
       this.assertAdvanceUnsettled(existing);
+      // Deleting your own advance keeps the cash and spares your salary the
+      // cut: another manager's job too.
+      await this.assertNotOwnAdvance(existing.relatedUserId, userId);
     }
 
     // Find the associated EXPENSE ledger entry so we can reverse it.

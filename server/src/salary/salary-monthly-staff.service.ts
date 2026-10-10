@@ -92,7 +92,7 @@ export interface StaffRow {
   rate: RateRef | null;
   /** Days the salary is on, of the period's days («d/D kun» when prorated). */
   coverage: { activeDays: number; cycleDays: number };
-  /** What this month's payout nets (ADR-0081): the planned walk, or what the payment settled. */
+  /** What this month's payout nets (ADR-0082): the planned walk, or what the payment settled. */
   advances: number;
   /** payment ? payment.amount (already net of advances) : max(0, monthly − advances). */
   netToPay: number;
@@ -267,7 +267,7 @@ export class SalaryStaffMonthlyService {
       versByConfig.set(r.configId, arr);
     }
 
-    // 3. Unsettled advances the payout would net (ADR-0081): everything dated
+    // 3. Unsettled advances the payout would net (ADR-0082): everything dated
     // before the month's end that no payment has taken yet.
     const pendingRows = await this.prisma.expense.findMany({
       where: {

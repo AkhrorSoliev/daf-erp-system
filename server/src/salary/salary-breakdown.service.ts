@@ -8,6 +8,7 @@ import { tashkentMonthKey } from '../common/date/tashkent';
 import { PrismaService } from '../prisma/prisma.service';
 import { isMonthlyBillingMonth } from '../reports/month-charges';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
+import { assertPayrollCoversUser } from './shared/payroll-branch-scope';
 
 // The unit a FIXED_PER_STUDENT rate is paid in: «month» — per student per
 // MONTH, «cycle» — per CYCLE (the divisor: ADR-0050, `resolveLessonPricing`).
@@ -40,13 +41,15 @@ export class SalaryBreakdownService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Breakdown for a finalised SalaryPayment. The teacher can view their
-   * own; CEO/BD can view any.
+   * Breakdown for a finalised SalaryPayment. `{ ownerId }` is the payee
+   * reading their own payslip (`/salary/me/...`): theirs and nobody else's.
+   * `{ performedById }` is a payroll viewer, who reads it only when the payee
+   * is inside their payroll scope (every branch for the CEO).
    */
   async getPaymentBreakdown(
     salaryPaymentId: string,
     companyId: number,
-    asUserId?: number, // when set, restrict to this teacher's own payment
+    viewer: { ownerId: number } | { performedById: number },
   ) {
     const payment = await this.prisma.salaryPayment.findFirst({
       where: { id: salaryPaymentId, companyId },
@@ -60,9 +63,17 @@ export class SalaryBreakdownService {
       },
     });
     if (!payment) throw new NotFoundException('Oylik to`lovi topilmadi');
-    if (asUserId !== undefined && payment.userId !== asUserId) {
-      throw new ForbiddenException(
-        "Faqat o'z oylik to'lovingizni ko'rishingiz mumkin",
+    if ('ownerId' in viewer) {
+      if (payment.userId !== viewer.ownerId) {
+        throw new ForbiddenException(
+          "Faqat o'z oylik to'lovingizni ko'rishingiz mumkin",
+        );
+      }
+    } else {
+      await assertPayrollCoversUser(
+        this.prisma,
+        viewer.performedById,
+        payment.userId,
       );
     }
 

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { SalaryBreakdownService } from './salary-breakdown.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -12,8 +12,20 @@ describe('SalaryBreakdownService', () => {
   let service: SalaryBreakdownService;
   let prisma: any;
 
+  /** A CEO viewer: every payslip, no branch lookup. */
+  const CEO_VIEWER = { performedById: 10000 };
+
   beforeEach(async () => {
     prisma = {
+      // The payroll scope reads the viewer here; a CEO by default.
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+        count: jest.fn().mockResolvedValue(0),
+      },
       salaryPayment: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'sp1',
@@ -57,7 +69,7 @@ describe('SalaryBreakdownService', () => {
   });
 
   it('returns settled advances, their total, and the pre-advance gross', async () => {
-    const result = await service.getPaymentBreakdown('sp1', 1);
+    const result = await service.getPaymentBreakdown('sp1', 1, CEO_VIEWER);
 
     expect(result.settledAdvances).toHaveLength(2);
     expect(result.settledAdvancesTotal).toBe(300_000);
@@ -79,7 +91,7 @@ describe('SalaryBreakdownService', () => {
   it("o'chirilgan avansni varaqaga qo'shmaydi", async () => {
     // Avansni o'chirish endi saytdan mumkin. O'chirilgan avans varaqada
     // qolsa, «grossTotal − avanslar = to'langan» tenglamasi buziladi.
-    await service.getPaymentBreakdown('sp1', 1);
+    await service.getPaymentBreakdown('sp1', 1, CEO_VIEWER);
 
     const where = prisma.expense.findMany.mock.calls[0][0].where;
     expect(where.deletedAt).toBeNull();
@@ -88,7 +100,7 @@ describe('SalaryBreakdownService', () => {
   it('reports zero advances when none were settled against the payment', async () => {
     prisma.expense.findMany.mockResolvedValueOnce([]);
 
-    const result = await service.getPaymentBreakdown('sp1', 1);
+    const result = await service.getPaymentBreakdown('sp1', 1, CEO_VIEWER);
 
     expect(result.settledAdvances).toEqual([]);
     expect(result.settledAdvancesTotal).toBe(0);
@@ -97,8 +109,74 @@ describe('SalaryBreakdownService', () => {
 
   it('forbids a teacher from viewing another teacher payment', async () => {
     await expect(
-      service.getPaymentBreakdown('sp1', 1, 999),
+      service.getPaymentBreakdown('sp1', 1, { ownerId: 999 }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('serves the payee their own payslip without a branch lookup', async () => {
+    const result = await service.getPaymentBreakdown('sp1', 1, { ownerId: 7 });
+    expect(result.payment.id).toBe('sp1');
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  /**
+   * `GET /salary/payments/:id/breakdown` took no caller: any payslip in the
+   * company, accrual by accrual, to anyone holding `salary.view`.
+   */
+  describe('a payroll viewer reads only payslips inside their payroll scope', () => {
+    const director = (branches: number[]) => ({
+      mainBranch: branches[0] ?? null,
+      branches: branches.map((branchId) => ({ branchId })),
+      roles: [{ role: { name: 'Branch Director' } }],
+    });
+
+    it('lets the CEO read any payslip without looking the payee up', async () => {
+      await service.getPaymentBreakdown('sp1', 1, CEO_VIEWER);
+      expect(prisma.user.count).not.toHaveBeenCalled();
+    });
+
+    it("refuses another branch's payslip and reads none of it", async () => {
+      prisma.user.findUnique.mockResolvedValue(director([1]));
+      prisma.user.count.mockResolvedValue(0); // payee 7 is not in branch 1
+
+      await expect(
+        service.getPaymentBreakdown('sp1', 1, { performedById: 10012 }),
+      ).rejects.toThrow(/filialingizga tegishli emas/);
+      expect(prisma.salaryAccrual.findMany).not.toHaveBeenCalled();
+      expect(prisma.expense.findMany).not.toHaveBeenCalled();
+    });
+
+    it('serves a payslip of an employee in one of their branches', async () => {
+      prisma.user.findUnique.mockResolvedValue(director([1, 2]));
+      prisma.user.count.mockResolvedValue(1);
+
+      const result = await service.getPaymentBreakdown('sp1', 1, {
+        performedById: 10012,
+      });
+
+      expect(result.payment.id).toBe('sp1');
+      expect(prisma.user.count).toHaveBeenCalledWith({
+        where: expect.objectContaining({ id: 7 }),
+      });
+    });
+
+    it('serves nothing to a director with no branch (fail closed)', async () => {
+      prisma.user.findUnique.mockResolvedValue(director([]));
+
+      await expect(
+        service.getPaymentBreakdown('sp1', 1, { performedById: 10012 }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.salaryAccrual.findMany).not.toHaveBeenCalled();
+    });
+
+    it('answers 404 for a payslip that does not exist, before any scope question', async () => {
+      prisma.salaryPayment.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        service.getPaymentBreakdown('nope', 1, { performedById: 10012 }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
   });
 
   describe('stavka birligi har bir qatorda (A3.2)', () => {
@@ -145,7 +223,7 @@ describe('SalaryBreakdownService', () => {
     ][] = [
       [
         'admin oynasi (getPaymentBreakdown)',
-        (s) => s.getPaymentBreakdown('sp1', 1),
+        (s) => s.getPaymentBreakdown('sp1', 1, CEO_VIEWER),
       ],
       [
         'ustozning joriy davri (getCurrentCycleBreakdown)',
