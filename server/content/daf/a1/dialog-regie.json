@@ -464,5 +464,217 @@
         }
       ]
     }
+  },
+  "u05-d1": {
+    "szene": "Ein Werktag am Morgen in der Küche. Jonas trinkt ganz ruhig Kaffee, denn seine Uhr zeigt halb acht. Mia kommt herein und weiß die richtige Zeit. Am Ende schaut Mia aus dem Fenster zur Haltestelle.",
+    "toene": [
+      "relaxed",
+      "alarmed",
+      "shocked",
+      "practical",
+      "stressed",
+      "encouraging",
+      "hurried",
+      "relieved"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "quiet home kitchen room tone with a faint fridge hum, no voices",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "a coffee machine brewing and hissing",
+          "sek": 3
+        },
+        {
+          "vor": 8,
+          "sfx": "a front door closing",
+          "sek": 1.5
+        },
+        {
+          "vor": 8,
+          "sfx": "a city bus arriving outside with a hiss of air brakes, heard through a window",
+          "sek": 3
+        }
+      ]
+    }
+  },
+  "u05-d2": {
+    "szene": "Ein Telefongespräch am Abend. Thomas ruft seine gute Freundin Julia an; beide möchten Kaffee trinken, aber fast jeder Tag ist schon voll.",
+    "toene": [
+      "cheerful",
+      "friendly",
+      "hopeful",
+      "apologetic",
+      "thinking",
+      "helpful",
+      "pleased",
+      "happy"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a quiet flat in the evening, faint traffic far outside, no voices",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "a phone ringing twice and being picked up",
+          "sek": 2.5
+        }
+      ]
+    }
+  },
+  "u05-d3": {
+    "szene": "Dienstagmorgen im Schlafzimmer. Jonas schläft noch, Mia weckt ihn. Er hat verschlafen, duscht schnell, und Mia fährt ihn mit dem Auto zur Arbeit.",
+    "toene": [
+      "urgent",
+      "sleepy",
+      "insisting",
+      "panicked",
+      "practical",
+      "grateful",
+      "satisfied",
+      "warm"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a quiet flat in the morning, birds chirping faintly outside the window, no voices",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "an alarm clock ringing on a bedside table",
+          "sek": 2
+        },
+        {
+          "vor": 5,
+          "sfx": "a shower running in a small bathroom",
+          "sek": 3
+        },
+        {
+          "vor": 7,
+          "sfx": "a car door closing and a car engine starting",
+          "sek": 3
+        }
+      ]
+    }
+  },
+  "u05-d4": {
+    "szene": "Am Abend im Wohnzimmer. Helga besucht ihre Tochter Mia am Wochenende; um acht Uhr möchte Mia ihre Serie sehen, Helga die Nachrichten. Zwei Stunden später ist Helga auf dem Sofa eingeschlafen.",
+    "toene": [
+      "excited",
+      "objecting",
+      "disappointed",
+      "thinking",
+      "helpful",
+      "kind",
+      "softly",
+      "sleepy and amused"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a quiet living room in the evening, a TV playing softly in the background with indistinct music, no clear words",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 7,
+          "sfx": "a woman snoring softly on a sofa",
+          "sek": 2
+        }
+      ]
+    }
+  },
+  "u05-d5": {
+    "szene": "Ein Telefonanruf am Morgen. Helga ruft in einer Arztpraxis an; die Sprechstundenhilfe Sabine sucht im Kalender einen freien Termin.",
+    "toene": [
+      "polite",
+      "polite",
+      "helpful",
+      "apologetic",
+      "thinking",
+      "relieved",
+      "friendly",
+      "satisfied"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a quiet doctor office reception, soft keyboard typing, no voices",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "a phone ringing twice and being picked up",
+          "sek": 2.5
+        },
+        {
+          "vor": 5,
+          "sfx": "pages of a paper calendar being turned",
+          "sek": 2
+        }
+      ]
+    }
+  },
+  "u05-d6": {
+    "szene": "Ein Vormittag. Thomas hat um zehn Uhr einen Termin bei der Bankberaterin Anna, aber der Bus kommt nicht. Er ruft Anna von der Straße an und kommt dann mit dem Taxi außer Atem in die Bank.",
+    "toene": [
+      "nervous",
+      "polite but cool",
+      "apologetic",
+      "calm",
+      "hopeful",
+      "businesslike",
+      "out of breath",
+      "friendly"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a city street at midday, light traffic and footsteps on the pavement, no voices",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "a phone ringing twice and being picked up",
+          "sek": 2.5
+        },
+        {
+          "vor": 7,
+          "sfx": "a glass door opening and hurried footsteps coming in",
+          "sek": 2
+        }
+      ]
+    }
+  },
+  "u05-d7": {
+    "szene": "Samstagmorgen in der Küche. Jonas möchte nur fernsehen, Mia möchte die Hausarbeit gerecht teilen. Am Ende wäscht Jonas das Geschirr.",
+    "toene": [
+      "determined",
+      "groaning",
+      "frustrated",
+      "apologetic",
+      "organized",
+      "curious",
+      "fair",
+      "good humoured"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "quiet home kitchen room tone with a faint fridge hum, no voices",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 9,
+          "sfx": "dishes and cutlery clinking in a kitchen sink with running water",
+          "sek": 3
+        }
+      ]
+    }
   }
 }
