@@ -13,6 +13,7 @@ import {
 import type { Response } from 'express';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
 import { CurrentUser } from '../common/decorators';
 import { Can } from '../common/permissions/access.decorators';
@@ -106,7 +107,7 @@ export class ExpensesController {
   @Can('expenses.manage')
   update(
     @Param('id') id: string,
-    @Body() dto: Partial<CreateExpenseDto>,
+    @Body() dto: UpdateExpenseDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
