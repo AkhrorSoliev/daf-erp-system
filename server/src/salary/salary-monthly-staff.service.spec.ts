@@ -271,7 +271,7 @@ describe('SalaryStaffMonthlyService', () => {
     expect(res.staff[0].payment?.status).toBe('PAID');
   });
 
-  describe('«Avans» — what the payout nets (ADR-0080)', () => {
+  describe('«Avans» — what the payout nets (ADR-0081)', () => {
     const FULL_MONTH_3M = {
       configId: 'cfg1',
       value: 3_000_000,

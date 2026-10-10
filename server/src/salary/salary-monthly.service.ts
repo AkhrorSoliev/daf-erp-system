@@ -87,7 +87,7 @@ function paymentStatuses(
  *                      PLUS that unpaid monthly share (`centerUnpaidShare`,
  *                      ADR-0052 — live, shrinks as the students pay)
  *  - `fullDeserved`  = `covered` + `centerFunded` (all lessons held × rate)
- *  - `advances`      = what this month's payout nets (ADR-0080)
+ *  - `advances`      = what this month's payout nets (ADR-0081)
  *  - `netToPay`      = base (see NET_BASE) − advances, or the settled payment's net
  *
  * Settlement moves money from the second term of `centerFunded` to the first,
@@ -147,7 +147,7 @@ export class SalaryMonthlyService {
     } = scope;
 
     // The open month is decided ONCE, on the Tashkent clock: the advances rule
-    // (ADR-0080) and the month-state pill both read it.
+    // (ADR-0081) and the month-state pill both read it.
     const isOpenMonth = month === tashkentMonthKey(new Date());
 
     // Non-teaching FIXED_MONTHLY staff (admins/cashiers/directors). Computed up
@@ -310,7 +310,7 @@ export class SalaryMonthlyService {
           config: { select: { userId: true, groupId: true, salaryType: true } },
         },
       }),
-      // Unsettled advances the payout would net (ADR-0080): everything dated
+      // Unsettled advances the payout would net (ADR-0081): everything dated
       // before the month's end that no payment has taken yet.
       this.prisma.expense.findMany({
         where: {

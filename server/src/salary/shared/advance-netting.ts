@@ -1,5 +1,5 @@
 /**
- * The one walk over a person's unsettled TEACHER_ADVANCE expenses (ADR-0080).
+ * The one walk over a person's unsettled TEACHER_ADVANCE expenses (ADR-0081).
  * The payroll cron settles exactly `settle`; the salary report shows exactly
  * `total` as «Avans (oylikdan ushlanadi)», so the screen equals the deduction.
  *

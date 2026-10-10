@@ -64,7 +64,7 @@ describe('SalaryMonthlyService', () => {
       employeeSalaryConfigVersion: {
         findMany: jest.fn().mockResolvedValue([]),
       },
-      // Unsettled TEACHER_ADVANCE rows the payout would net (ADR-0080).
+      // Unsettled TEACHER_ADVANCE rows the payout would net (ADR-0081).
       expense: { findMany: jest.fn().mockResolvedValue([]) },
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
     };
@@ -943,12 +943,12 @@ describe('SalaryMonthlyService', () => {
   });
 
   /**
-   * ADR-0080: the «Avans» column is what THIS month's payout nets, not what was
+   * ADR-0081: the «Avans» column is what THIS month's payout nets, not what was
    * given in the calendar month. Open month: the walk over unsettled advances
    * (`planAdvanceNetting` — the cron's own function). Calculated month: what
    * the payment really settled.
    */
-  describe('«Avans» — what the payout nets (ADR-0080)', () => {
+  describe('«Avans» — what the payout nets (ADR-0081)', () => {
     const createdBy = { id: 2, firstName: 'Admin', lastName: 'A' };
     const advance = (
       id: string,
@@ -1519,7 +1519,7 @@ describe('SalaryMonthlyService', () => {
       expect(res.data[0].netToPay).toBe(100_000);
     });
 
-    // ADR-0080: a PAST month without a payment shows what the cron will net.
+    // ADR-0081: a PAST month without a payment shows what the cron will net.
     // An advance nothing can net (no earnings that month) is not on this page —
     // it waits in the advance calendar for the month that can take it.
     it("faol emas ustozning o'tgan oydagi hech narsadan ushlanmaydigan avansi uni ro'yxatda ushlab turmaydi", async () => {
