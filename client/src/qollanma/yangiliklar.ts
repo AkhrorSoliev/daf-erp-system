@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "«Qaytariladigan pul» sahifasi va pulni qaytarish so'rovi",
+    matn: "Moliya bo'limida yangi «Qaytariladigan pul» sahifasi bor: muzlatilgan, guruhsiz va ketgan o'quvchilarning balansida qolgan puli uch bo'limda, tepada esa ochiq pulni qaytarish so'rovlari. Pulni qaytarish endi so'rov orqali: «So'rovni ochish» bosilganda balans darhol kamayadi, pul esa 10 bank kuni ichida kassadan beriladi va «Berildi» bilan belgilanadi (kassir ham bosa oladi); hali berilmagan so'rovni CEO yoki filial direktori bekor qiladi. O'quvchiga «pulingizni olib keting» deb bot orqali xabar yuboriladi yoki qo'ng'iroq belgilanadi; o'quvchi pul qaytarish so'rovi ochilgani, pul berilgani va so'rov bekor qilingani haqida ham bot orqali xabar oladi. «Markaz hisobiga o'tkazish» va «Yechib olish» xabardan 10 bank kuni va yana 30 kun o'tgach ochiladi. «Muzlatilganlarning puli» sahifasi shu yerga ko'chdi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "tolovlar", sahifa: "qaytariladigan-pul" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Bajarilmagan va'dalar ertalab bitta ro'yxatda",
     matn: "Soat 09:00 da muddati o'tgan to'lov va'dalari endi har o'quvchiga alohida emas, har filial bo'yicha bitta xabarda keladi: «Bugun N ta to'lov va'dasi bajarilmadi». Ro'yxatda har o'quvchining qarzi, guruhi va ustozi, telefoni, va'da sanasi va izohi, kim yozgani, va'dadan beri to'lov bo'lgan-bo'lmagani va va'dani necha marta buzgani yoziladi. Xabardagi havola «Qarzdorlik» sahifasini va'dasini buzganlar bilan ochadi. Qarzi 1 000 so'mdan kam o'quvchi ro'yxatga kirmaydi.",
     rollar: [1, 3],

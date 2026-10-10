@@ -84,7 +84,7 @@ export const boshlash: QollanmaSahifa[] = [
       "guruhlar kassirga ko'rinmaydi",
       "davomat ochilish vaqti",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "boshlash",
@@ -181,6 +181,6 @@ export const boshlash: QollanmaSahifa[] = [
       "telegram kabinet",
       "bot bloklangan",
     ],
-    yangilangan: "2026-10-05",
+    yangilangan: "2026-10-10",
   },
 ];
