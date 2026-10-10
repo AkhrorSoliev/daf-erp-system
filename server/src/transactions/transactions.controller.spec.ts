@@ -211,7 +211,7 @@ describe('TransactionsController — debt write-off audit scope', () => {
         amount: -5_000,
         companyId: 1001,
         performedById: 42,
-        callerId: 42,
+        actor: { kind: 'user', id: 42 },
       });
       expect('branchId' in arg).toBe(false);
     });

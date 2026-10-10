@@ -112,7 +112,7 @@ export class TransactionsController {
       description: dto.description,
       companyId,
       performedById: userId,
-      callerId: userId,
+      actor: { kind: 'user', id: userId },
     });
   }
 

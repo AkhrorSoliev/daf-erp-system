@@ -1,6 +1,9 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TransactionsWriteService } from './transactions-write.service';
+import {
+  AdjustmentActor,
+  TransactionsWriteService,
+} from './transactions-write.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CashMovementsService } from '../cash-accounts/cash-movements.service';
 
@@ -382,6 +385,7 @@ describe('TransactionsWriteService.createAdjustment', () => {
       amount: 50_000,
       description: 'test',
       companyId: COMPANY,
+      actor: { kind: 'system' },
       metadata: { refundId: 'ref-1', lessonsReleased: 2 },
     });
 
@@ -401,6 +405,7 @@ describe('TransactionsWriteService.createAdjustment', () => {
       amount: 50_000,
       description: 'test',
       companyId: COMPANY,
+      actor: { kind: 'system' },
     });
 
     const data = prisma.transaction.create.mock.calls[0][0].data;
@@ -416,14 +421,14 @@ describe('TransactionsWriteService.createAdjustment', () => {
       branches: [],
       roles: [{ role: { name: roleName } }],
     });
-    const adjust = (callerId?: number) =>
+    const adjust = (actor: AdjustmentActor) =>
       service.createAdjustment({
         studentId: STUDENT,
         amount: 50_000,
         description: 'test',
         companyId: COMPANY,
-        performedById: callerId,
-        callerId,
+        performedById: actor.kind === 'user' ? actor.id : undefined,
+        actor,
       });
 
     it("refuses a caller outside the student's branch and writes nothing", async () => {
@@ -431,7 +436,9 @@ describe('TransactionsWriteService.createAdjustment', () => {
         findFirst: jest.fn().mockResolvedValue(caller('Branch Director', 1)),
       };
 
-      await expect(adjust(42)).rejects.toThrow(ForbiddenException);
+      await expect(adjust({ kind: 'user', id: 42 })).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(prisma.$queryRaw).not.toHaveBeenCalled();
       expect(prisma.transaction.create).not.toHaveBeenCalled();
       expect(prisma.student.update).not.toHaveBeenCalled();
@@ -442,7 +449,7 @@ describe('TransactionsWriteService.createAdjustment', () => {
         findFirst: jest.fn().mockResolvedValue(caller('Branch Director', 2)),
       };
 
-      await adjust(42);
+      await adjust({ kind: 'user', id: 42 });
 
       expect(prisma.transaction.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -456,15 +463,15 @@ describe('TransactionsWriteService.createAdjustment', () => {
         findFirst: jest.fn().mockResolvedValue(caller('CEO', null)),
       };
 
-      await adjust(1);
+      await adjust({ kind: 'user', id: 1 });
 
       expect(prisma.transaction.create).toHaveBeenCalled();
     });
 
-    it('leaves internal callers, which name no caller, unchecked', async () => {
+    it('leaves internal callers, which say they are the system, unchecked', async () => {
       prisma.user = { findFirst: jest.fn() };
 
-      await adjust(undefined);
+      await adjust({ kind: 'system' });
 
       expect(prisma.user.findFirst).not.toHaveBeenCalled();
       expect(prisma.transaction.create).toHaveBeenCalled();

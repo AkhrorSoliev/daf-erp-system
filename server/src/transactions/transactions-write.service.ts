@@ -50,6 +50,16 @@ const MONTH_NAMES_UZ = [
   'Dekabr',
 ] as const;
 
+/**
+ * Who posts a manual adjustment — stated, never inferred from a missing id
+ * (server CLAUDE.md «A write with no signed-in caller must SAY so», ADR-0008).
+ * `user` is a signed-in caller of `POST /transactions/adjustment`: they must
+ * hold the student's branch. `system` is an internal caller (refunds, status
+ * cascades, monthly charges) that authorised its own entry point and has no
+ * caller to confine.
+ */
+export type AdjustmentActor = { kind: 'user'; id: number } | { kind: 'system' };
+
 @Injectable()
 export class TransactionsWriteService {
   constructor(
@@ -994,12 +1004,11 @@ export class TransactionsWriteService {
       // acting user; the ledger column is nullable.
       performedById?: number;
       /**
-       * The signed-in caller of `POST /transactions/adjustment`. When set, they
-       * must hold the student's branch, checked on this transaction's client.
-       * Internal callers (refunds, cascades, monthly charges) authorised their
-       * own entry point and leave it out.
+       * Required, so a caller cannot skip the branch check by leaving it out:
+       * a `user` must hold the student's branch, checked on this transaction's
+       * client; `system` skips it.
        */
-      callerId?: number;
+      actor: AdjustmentActor;
       /**
        * Optional audit trail. A refund that frees prepaid lessons posts an
        * ADJUSTMENT for the money it releases and has to find that same row
@@ -1020,10 +1029,10 @@ export class TransactionsWriteService {
       if (!studentCheck) {
         throw new NotFoundException("O'quvchi topilmadi");
       }
-      if (params.callerId !== undefined) {
+      if (params.actor.kind === 'user') {
         await assertCallerMayWriteForStudentInTx(
           client,
-          params.callerId,
+          params.actor.id,
           params.studentId,
           params.companyId,
         );

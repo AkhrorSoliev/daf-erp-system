@@ -46,7 +46,8 @@ export function isVisibleToGroup(
 /**
  * Sends each approved Telegram group one consolidated message a day, at
  * 20:00 Asia/Tashkent, from the GROUP rows of the digest queue (ADR-0025).
- * Sundays and holidays are skipped — rows wait for the next working day.
+ * Sundays and centre-wide holidays are skipped (a single branch's holiday does
+ * not stop the run) — rows wait for the next working day.
  * Delivery is tracked per group (`deliveredGroupIds`): a chat that failed
  * gets the rows again next run, a chat that got them never does twice.
  */

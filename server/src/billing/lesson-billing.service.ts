@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   AttendanceStatus,
   LessonDeductionMode,
@@ -808,6 +808,19 @@ export class LessonBillingService {
   }): Promise<{ billedAttendances: number }> {
     return this.prisma.$transaction(
       async (tx) => {
+        // An unknown or other-company id answers 404, as `createAdjustment`
+        // does; the branch check below can only throw a raw error for it.
+        const student = await tx.student.findFirst({
+          where: {
+            id: params.studentId,
+            companyId: params.companyId,
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+        if (!student) {
+          throw new NotFoundException("O'quvchi topilmadi");
+        }
         // A manual catch-up moves the student's money: the caller must hold
         // the student's branch, checked on this transaction's client.
         await assertCallerMayWriteForStudentInTx(

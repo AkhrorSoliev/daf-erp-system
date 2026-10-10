@@ -247,7 +247,7 @@ export function EditHolidayForm({
               )}
             />
           ) : (
-            <p className="text-sm font-medium">
+            <p id="scope" className="text-sm font-medium">
               {isAdd
                 ? (selectedBranch?.name ?? "Filial tanlanmagan")
                 : holiday

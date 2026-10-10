@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import {
   AttendanceStatus,
   LessonDeductionMode,
@@ -1231,6 +1231,7 @@ describe('LessonBillingService', () => {
     it('opens a Serializable tx in runRetroactiveBilling', async () => {
       // Arrange a no-enrollments fast path so the tx body returns 0.
       tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+      tx.student.findFirst = jest.fn().mockResolvedValue({ id: studentId });
       // The caller check: the student's branch (1), then the caller (a CEO).
       tx.studentBranch = {
         findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
@@ -1257,8 +1258,32 @@ describe('LessonBillingService', () => {
       );
     });
 
+    it('answers 404 for an unknown or other-company student, before any branch check', async () => {
+      tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+      tx.student.findFirst = jest.fn().mockResolvedValue(null);
+      tx.studentBranch = { findFirst: jest.fn() };
+      tx.user = { findFirst: jest.fn() };
+      prisma.$transaction = jest.fn().mockImplementation((cb) => cb(prisma));
+
+      await expect(
+        service.runRetroactiveBilling({
+          studentId,
+          companyId,
+          performedById: 99,
+        }),
+      ).rejects.toThrow(NotFoundException);
+      expect(tx.student.findFirst).toHaveBeenCalledWith({
+        where: { id: studentId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      expect(tx.studentBranch.findFirst).not.toHaveBeenCalled();
+      expect(tx.user.findFirst).not.toHaveBeenCalled();
+      expect(tx.enrollment.findMany).not.toHaveBeenCalled();
+    });
+
     it("refuses a caller outside the student's branch before billing anything", async () => {
       tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+      tx.student.findFirst = jest.fn().mockResolvedValue({ id: studentId });
       tx.studentBranch = {
         findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
       };
