@@ -45,6 +45,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { SalaryModule } from './salary/salary.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { WithdrawalsModule } from './withdrawals/withdrawals.module';
+import { BalanceNoticesModule } from './balance-notices/balance-notices.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { CashAccountsModule } from './cash-accounts/cash-accounts.module';
 import { PaymentGatewaysModule } from './payment-gateways/payment-gateways.module';
@@ -123,6 +124,7 @@ import { validateEnv } from './config/env.validation';
     SalaryModule,
     RefundsModule,
     WithdrawalsModule,
+    BalanceNoticesModule,
     ExpensesModule,
     CashAccountsModule,
     PaymentGatewaysModule,

@@ -163,6 +163,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /transactions/adjustment',
       'POST /withdrawals',
       'GET /withdrawals/preview/:studentId',
+      'POST /students/:id/balance-notices',
       'POST /billing/debt-write-offs/:id/reverse',
       'POST /billing/lesson-deduction/:id/reverse',
       'POST /billing/retroactive/:studentId',
