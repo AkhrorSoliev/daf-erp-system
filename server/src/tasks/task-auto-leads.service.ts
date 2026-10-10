@@ -302,7 +302,7 @@ export class TaskAutoLeadsService {
    * Promises the 09:00 cron broke TODAY (Tashkent) whose student still owes
    * the alert threshold. `onPromisesBroken` makes ONE task per student, so
    * "already handled" is judged per student: one with a BROKEN_PROMISE task
-   * open, created today or closed today (an old task that was open at 09:00
+   * open, created today, or closed or cancelled today (an old task that was open at 09:00
    * made the event skip them, and its closing since must not hand them a
    * fresh task) is left alone. `onPromisesBroken` is the writer, so the rules
    * (latest promise, ladder, due) stay in one place.
@@ -340,6 +340,7 @@ export class TaskAutoLeadsService {
               { status: { in: OPEN } },
               { createdAt: { gte: todayStart } },
               { closedAt: { gte: todayStart } },
+              { cancelledAt: { gte: todayStart } },
             ],
           },
           select: { entityId: true },

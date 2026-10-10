@@ -27,6 +27,7 @@ interface PromiseTask {
   status: string;
   createdAt: Date;
   closedAt: Date | null;
+  cancelledAt?: Date | null;
 }
 const OPEN_STATUS = ['NEW', 'IN_PROGRESS', 'IN_REVIEW'];
 
@@ -78,7 +79,9 @@ function setup(opts: Opts = {}) {
                   ? OPEN_STATUS.includes(t.status)
                   : c.createdAt
                     ? t.createdAt >= c.createdAt.gte
-                    : !!t.closedAt && t.closedAt >= c.closedAt.gte,
+                    : c.closedAt
+                      ? !!t.closedAt && t.closedAt >= c.closedAt.gte
+                      : !!t.cancelledAt && t.cancelledAt >= c.cancelledAt.gte,
               ),
           )
           .map((t) => ({ entityId: t.entityId }));
@@ -323,6 +326,23 @@ describe('TaskAutoLeadsService', () => {
         ],
       });
       await service.run(MON_1000);
+      expect(taskAuto.onPromisesBroken).not.toHaveBeenCalled();
+    });
+
+    it('an old task cancelled today also counts as handled', async () => {
+      const { service, taskAuto } = setup({
+        promises: [{ id: 'p_new', branchId: 2, studentId: 10001 }],
+        promiseTasks: [
+          {
+            entityId: '10001',
+            status: 'CANCELLED',
+            createdAt: OLD,
+            closedAt: null,
+            cancelledAt: MON_1100,
+          },
+        ],
+      });
+      await service.run(new Date('2026-10-12T07:00:00.000Z'));
       expect(taskAuto.onPromisesBroken).not.toHaveBeenCalled();
     });
 
