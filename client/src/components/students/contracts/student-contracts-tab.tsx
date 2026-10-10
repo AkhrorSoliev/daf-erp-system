@@ -17,10 +17,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import api from "@/lib/api";
 import { openAuthedFile } from "@/lib/download-file";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { SIGNED_CONTRACT_CANCEL_ROLES, hasAnyRole } from "@/lib/role-access";
 import { ContractCancelDialog } from "./contract-cancel-dialog";
 import { ContractCard } from "./contract-card";
 import { ContractFormDialog, type ContractDialogMode } from "./contract-form-dialog";
@@ -28,6 +28,9 @@ import { LINK_STATE_LABEL, upsertContract } from "./contract-rules";
 import type { ContractView, ContractsResponse } from "./contract-types";
 
 const contractsKey = (studentId: number) => ["contract-documents", studentId] as const;
+
+// Identity, not a capability: only the CEO cancels a signed contract (matches `ContractLifecycleService.cancel`).
+const SIGNED_CONTRACT_CANCEL_ROLE_IDS = [1];
 
 interface Props {
   studentId: number;
@@ -37,7 +40,9 @@ interface Props {
 
 export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
   const user = useAuth((s) => s.user);
-  const isCeo = hasAnyRole(user?.roles, SIGNED_CONTRACT_CANCEL_ROLES);
+  const isCeo =
+    user?.roles.some((r) => SIGNED_CONTRACT_CANCEL_ROLE_IDS.includes(r.id)) ?? false;
+  const canManage = useCan("students.manage");
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: contractsKey(studentId),
@@ -108,10 +113,12 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-semibold">Shartnomalar</h2>
-        <Button size="sm" onClick={() => setDialog({ kind: "create" })}>
-          <FilePlus2 className="mr-1.5 size-4" />
-          Shartnoma tuzish
-        </Button>
+        {canManage && (
+          <Button size="sm" onClick={() => setDialog({ kind: "create" })}>
+            <FilePlus2 className="mr-1.5 size-4" />
+            Shartnoma tuzish
+          </Button>
+        )}
       </div>
 
       {uncovered.length > 0 && (
@@ -130,7 +137,9 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
       {contracts.length === 0 ? (
         <div className="flex h-24 items-center justify-center rounded-md border">
           <p className="text-sm text-muted-foreground">
-            Hali shartnoma tuzilmagan — «Shartnoma tuzish» tugmasini bosing
+            {canManage
+              ? "Hali shartnoma tuzilmagan — «Shartnoma tuzish» tugmasini bosing"
+              : "Hali shartnoma tuzilmagan"}
           </p>
         </div>
       ) : (
@@ -139,6 +148,7 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
             key={c.id}
             contract={c}
             isCeo={isCeo}
+            canManage={canManage}
             busy={busyId === c.id}
             onPdf={() => openPdf(c)}
             onEdit={() => setDialog({ kind: "edit", contract: c })}

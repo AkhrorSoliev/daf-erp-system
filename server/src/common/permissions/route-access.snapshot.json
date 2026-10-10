@@ -252,6 +252,21 @@
   ],
   "GET /company": "ANY",
   "GET /company/:id": "ANY",
+  "GET /contract-documents": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /contract-documents/:id/pdf": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /contract-documents/prefill": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /courses": [
     "Administrator",
     "Branch Director",
@@ -559,6 +574,7 @@
     "CEO"
   ],
   "GET /notifications": "ANY",
+  "GET /notifications/counts": "ANY",
   "GET /notifications/stream": "ANY",
   "GET /notifications/unread-count": "ANY",
   "GET /notifications/vapid-public-key": "PUBLIC",
@@ -1312,6 +1328,11 @@
   "PATCH /company/:id": [
     "CEO"
   ],
+  "PATCH /contract-documents/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "PATCH /courses/:id": [
     "Administrator",
     "Branch Director",
@@ -1626,6 +1647,21 @@
     "CEO"
   ],
   "POST /comments": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /contract-documents": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /contract-documents/:id/cancel": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /contract-documents/:id/sign": [
     "Administrator",
     "Branch Director",
     "CEO"

@@ -1,12 +1,7 @@
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { ContractDocumentsController } from './contract-documents.controller';
 
 describe('ContractDocumentsController', () => {
-  const reflector = new Reflector();
-  const guard = new RolesGuard(reflector);
   const documents = {
     list: jest.fn().mockResolvedValue({ contracts: [], uncovered: [] }),
     prefill: jest.fn(),
@@ -26,34 +21,37 @@ describe('ContractDocumentsController', () => {
     lifecycle as never,
   );
 
-  const ctx = (handler: (...args: never[]) => unknown, roles: string[]) =>
-    ({
-      getHandler: () => handler,
-      getClass: () => ContractDocumentsController,
-      switchToHttp: () => ({ getRequest: () => ({ user: { roles } }) }),
-    }) as never;
+  // Open to CEO, Branch Director and Administrator only: no Teacher,
+  // Cashier or Student.
+  it.each(['list', 'prefill', 'pdf'] as const)(
+    '%s is a profile tab read (students.details)',
+    (name) => {
+      expect(routeAccess(ContractDocumentsController, name)).toEqual({
+        kind: 'can',
+        keys: ['students.details'],
+      });
+      expect(defaultRolesOf(ContractDocumentsController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
+    },
+  );
 
-  it('is open to CEO, Branch Director and Administrator only', () => {
-    expect(
-      reflector.get<string[]>(ROLES_KEY, ContractDocumentsController),
-    ).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    expect(guard.canActivate(ctx(controller.list, ['Administrator']))).toBe(
-      true,
-    );
-    expect(guard.canActivate(ctx(controller.pdf, ['Branch Director']))).toBe(
-      true,
-    );
-    // RolesGuard throws on a refusal (see lesson-reschedules.controller.spec.ts).
-    expect(() =>
-      guard.canActivate(ctx(controller.create, ['Teacher'])),
-    ).toThrow(ForbiddenException);
-    expect(() =>
-      guard.canActivate(ctx(controller.cancel, ['Cashier'])),
-    ).toThrow(ForbiddenException);
-    expect(() =>
-      guard.canActivate(ctx(controller.prefill, ['Student'])),
-    ).toThrow(ForbiddenException);
-  });
+  it.each(['create', 'update', 'sign', 'cancel'] as const)(
+    '%s is a write (students.manage)',
+    (name) => {
+      expect(routeAccess(ContractDocumentsController, name)).toEqual({
+        kind: 'can',
+        keys: ['students.manage'],
+      });
+      expect(defaultRolesOf(ContractDocumentsController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
+    },
+  );
 
   it('passes the caller to the services', async () => {
     await controller.list({ studentId: 10001 }, 1, 99);

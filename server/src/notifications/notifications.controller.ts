@@ -46,6 +46,7 @@ export class NotificationsController {
 
   /** The page's left list: what waits, everything, and each group. */
   @Get('counts')
+  @AnyUser()
   getCounts(@CurrentUser('id') userId: number) {
     return this.notificationsService.getCounts(userId);
   }
