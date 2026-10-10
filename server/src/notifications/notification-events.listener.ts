@@ -17,7 +17,12 @@ import { tashkentDateStr } from '../attendance/shared/date-utils';
 import type { PaymentCorrectedPayload } from '../payments/payments-write.service';
 import type { SalaryCarriedOverPayload } from '../salary/salary-accrual.service';
 import type { PaymentPromiseOverduePayload } from '../payment-promises/payment-promise-cron.service';
+import { overdueDigest } from '../payment-promises/overdue-digest';
+import { loadOverdueDigestItems } from '../payment-promises/overdue-digest-load';
 import { TelegramDigestQueueService } from '../telegram-digest/telegram-digest-queue.service';
+
+/** The bell opens the debt page filtered to broken promises (client `notification-href.ts`). */
+export const BROKEN_PROMISES_ENTITY = 'BrokenPromises';
 
 @Injectable()
 export class NotificationEventsListener {
@@ -140,20 +145,28 @@ export class NotificationEventsListener {
   }
 
   /**
-   * A debtor's payment promise passed its date while the student is still in
-   * debt (flipped to BROKEN by the daily cron). Notifies the branch's
-   * Administrators plus the company CEOs so any of them can follow up — the
-   * branch-wide visibility the /outreach "To'lov va'dalari" tab mirrors.
-   * Fans out to all four channels; recipient filter follows the standard rule.
+   * One branch's payment promises that passed their date while the students
+   * are still in debt (flipped to BROKEN by the 09:00 cron), as ONE list:
+   * debt, group, phones, the promise and its note, what changed since and how
+   * often the student broke one. Goes to the branch's Administrators plus the
+   * company CEOs. Fans out to all four channels; the bell and push get the
+   * names only, Telegram the whole list.
    */
   @OnEvent('payment-promise.overdue')
   async handlePaymentPromiseOverdue(payload: PaymentPromiseOverduePayload) {
     try {
-      const [student, recipients] = await Promise.all([
-        this.prisma.student.findUnique({
-          where: { id: payload.studentId },
-          select: { firstName: true, lastName: true },
-        }),
+      const [items, branch, recipients] = await Promise.all([
+        loadOverdueDigestItems(
+          this.prisma,
+          payload.companyId,
+          payload.promiseIds,
+        ),
+        payload.branchId
+          ? this.prisma.branch.findFirst({
+              where: { id: payload.branchId, companyId: payload.companyId },
+              select: { name: true },
+            })
+          : null,
         this.prisma.user.findMany({
           where: {
             deletedAt: null,
@@ -174,31 +187,23 @@ export class NotificationEventsListener {
         }),
       ]);
 
-      if (recipients.length === 0) return;
+      if (items.length === 0 || recipients.length === 0) return;
 
-      const studentName = student
-        ? `${student.firstName} ${student.lastName}`
-        : "o'quvchi";
-      const studentId = String(payload.studentId);
-      const [y, m, d] = tashkentDateStr(new Date(payload.promiseDate)).split(
-        '-',
+      const digest = overdueDigest(
+        items,
+        branch?.name ?? null,
+        tashkentDateStr(new Date()),
       );
-      const dateStr = `${d}.${m}.${y}`;
-
-      const title = "To'lov sanasi o'tib ketdi";
-      const message =
-        `${studentName} ${dateStr} sanasiga to'lov qilishni belgilagan edi, ` +
-        `lekin hali ham qarzdor. Iltimos, bog'laning.`;
 
       for (const r of recipients) {
         try {
           const notification = await this.notificationsService.create({
             userId: r.id,
             type: NotificationType.PAYMENT_PROMISE_OVERDUE,
-            title,
-            message,
-            relatedEntityType: 'Student',
-            relatedEntityId: studentId,
+            title: digest.title,
+            message: digest.summary,
+            relatedEntityType: BROKEN_PROMISES_ENTITY,
+            relatedEntityId: String(payload.branchId ?? 'all'),
             companyId: payload.companyId,
           });
 
@@ -208,12 +213,12 @@ export class NotificationEventsListener {
           });
 
           await this.pushService.sendToUser(r.id, {
-            title,
-            body: message,
-            url: `/students/profile/${studentId}`,
+            title: digest.title,
+            body: digest.summary,
+            url: '/payments/debt?promise=broken',
           });
 
-          await this.sendTelegram(r.id, title, message);
+          await this.sendTelegram(r.id, digest.telegram);
         } catch (error) {
           this.logger.error(
             `Failed to notify ${r.id} of overdue promise: ${error.message}`,
@@ -305,7 +310,8 @@ export class NotificationEventsListener {
     }
   }
 
-  private async sendTelegram(userId: number, title: string, message: string) {
+  /** Sends ready HTML parts, in order; a part that fails stops the rest. */
+  private async sendTelegram(userId: number, parts: string[]) {
     try {
       const bot = this.telegramService.getBot();
       if (!bot) return;
@@ -317,10 +323,11 @@ export class NotificationEventsListener {
 
       if (!user?.telegramChatId) return;
 
-      const text = `<b>${title}</b>\n${message}`;
-      await bot.telegram.sendMessage(user.telegramChatId, text, {
-        parse_mode: 'HTML',
-      });
+      for (const text of parts) {
+        await bot.telegram.sendMessage(user.telegramChatId, text, {
+          parse_mode: 'HTML',
+        });
+      }
     } catch (error) {
       this.logger.warn(
         `Telegram send failed for user ${userId}: ${error.message}`,

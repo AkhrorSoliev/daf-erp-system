@@ -204,26 +204,101 @@ describe('NotificationEventsListener', () => {
   });
 
   describe('handlePaymentPromiseOverdue', () => {
-    it('still sends Telegram instantly and queues nothing', async () => {
+    const promiseRow = (
+      studentId: number,
+      lastName: string,
+      balance: number,
+    ) => ({
+      studentId,
+      promiseDate: new Date('2026-10-09T18:59:59.999Z'),
+      comment: "Qisman to'lov 250 000 so'm",
+      balanceAtPromise: balance,
+      createdBy: { firstName: 'Malika', lastName: 'Jamoliddinova' },
+      student: {
+        firstName: 'Xayrulloxon',
+        lastName,
+        balance,
+        phone: '931234540',
+        parentPhone: null,
+        enrollments: [
+          {
+            status: 'ACTIVE',
+            group: {
+              name: '#006',
+              teachers: [
+                { teacher: { firstName: 'Gulnora', lastName: 'Karimova' } },
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    beforeEach(() => {
+      prisma.paymentPromise = {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            promiseRow(10001, 'Rahimxonov', -115_385),
+            promiseRow(10002, 'Mayda', -238),
+          ]),
+        groupBy: jest
+          .fn()
+          .mockResolvedValue([{ studentId: 10001, _count: { _all: 2 } }]),
+      };
+      prisma.branch = {
+        findFirst: jest.fn().mockResolvedValue({ name: 'Namangan filiali' }),
+      };
+    });
+
+    it('sends the branch one list instantly and queues nothing', async () => {
       const sendMessage = jest.fn().mockResolvedValue({});
       telegramService.getBot.mockReturnValue({ telegram: { sendMessage } });
       prisma.user.findMany.mockResolvedValue([{ id: 3 }]);
       prisma.user.findUnique.mockResolvedValue({ telegramChatId: 'chat-3' });
 
       await listener.handlePaymentPromiseOverdue({
-        promiseId: 'pp-1',
-        studentId: 10001,
         companyId: 1,
-        branchId: null,
-        promiseDate: '2026-09-20T00:00:00.000Z',
+        branchId: 2,
+        promiseIds: ['pp-1', 'pp-2'],
       });
 
-      expect(sendMessage).toHaveBeenCalledWith(
-        'chat-3',
-        expect.stringContaining("To'lov sanasi o'tib ketdi"),
-        { parse_mode: 'HTML' },
+      expect(sendMessage).toHaveBeenCalledTimes(1);
+      const text = sendMessage.mock.calls[0][1] as string;
+      expect(text).toContain("Bugun 1 ta to'lov va'dasi bajarilmadi");
+      expect(text).toContain('Namangan filiali');
+      expect(text).toContain(
+        "1. <b>Rahimxonov Xayrulloxon</b> — qarz 115 385 so'm",
+      );
+      expect(text).toContain('#006, ustoz Karimova G. · 📞 +998 93 123 45 40');
+      expect(text).toContain("Va'dadan beri to'lov yo'q · 2-marta buzildi");
+      // A debt under 1 000 so'm paid down meanwhile is left out.
+      expect(text).not.toContain('Mayda');
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Bugun 1 ta to'lov va'dasi bajarilmadi",
+          message: "Rahimxonov Xayrulloxon — qo'ng'iroq qiling",
+          relatedEntityType: 'BrokenPromises',
+          relatedEntityId: '2',
+        }),
+      );
+      expect(pushService.sendToUser).toHaveBeenCalledWith(
+        3,
+        expect.objectContaining({ url: '/payments/debt?promise=broken' }),
       );
       expect(enqueue).not.toHaveBeenCalled();
+    });
+
+    it('sends nothing when every row dropped below the threshold', async () => {
+      prisma.paymentPromise.findMany.mockResolvedValue([
+        promiseRow(10002, 'Mayda', -238),
+      ]);
+      await listener.handlePaymentPromiseOverdue({
+        companyId: 1,
+        branchId: 2,
+        promiseIds: ['pp-2'],
+      });
+      expect(notificationsService.create).not.toHaveBeenCalled();
     });
   });
 });

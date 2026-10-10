@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "Bajarilmagan va'dalar ertalab bitta ro'yxatda",
+    matn: "Soat 09:00 da muddati o'tgan to'lov va'dalari endi har o'quvchiga alohida emas, har filial bo'yicha bitta xabarda keladi: «Bugun N ta to'lov va'dasi bajarilmadi». Ro'yxatda har o'quvchining qarzi, guruhi va ustozi, telefoni, va'da sanasi va izohi, kim yozgani, va'dadan beri to'lov bo'lgan-bo'lmagani va va'dani necha marta buzgani yoziladi. Xabardagi havola «Qarzdorlik» sahifasini va'dasini buzganlar bilan ochadi. Qarzi 1 000 so'mdan kam o'quvchi ro'yxatga kirmaydi.",
+    rollar: [1, 3],
+    sahifa: { bolim: "tolovlar", sahifa: "qarzdorlik" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "O'quvchi shartnomasi tizimda tuziladi",
     matn: "O'quvchi profilida «Shartnomalar» tabi qo'shildi. «Shartnoma tuzish» kurs, guruh, ustoz, jadval, narx va chegirmani o'quvchining ma'lumotlaridan o'zi to'ldiradi; Buyurtmachining pasporti, manzili va kursga kiradigan narsalarni shu oynada kiritasiz. Bir nechta kurs bitta shartnomaga yoki har biri alohida shartnomaga kiradi. «PDF» chop etishga tayyor shartnomani ochadi, Buyurtmachi imzolagach «Qog'ozda imzolandi» bosiladi. Shartnoma tuzishdan oldin filial sozlamasiga shahar, manzil, vakil ismi va lavozimini kiriting.",
     rollar: [1, 2, 3],
