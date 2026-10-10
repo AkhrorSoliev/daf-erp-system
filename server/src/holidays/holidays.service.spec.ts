@@ -637,6 +637,28 @@ describe('HolidaysService', () => {
     });
   });
 
+  describe('findActiveHolidayCovering: which branch', () => {
+    const probe = new Date('2026-05-28');
+
+    it("a branch reads the centre's holidays and its own", async () => {
+      await service.findActiveHolidayCovering(probe, 2);
+      expect(prisma.holiday.findFirst.mock.calls[0][0].where).toEqual(
+        expect.objectContaining({
+          OR: [{ branchId: null }, { branchId: 2 }],
+        }),
+      );
+    });
+
+    // A run that serves every branch at once must not stop for one branch
+    // closing (CEO decision 10.10.2026 lets a branch declare its own).
+    it("null reads the centre's holidays only", async () => {
+      await service.findActiveHolidayCovering(probe, null);
+      const where = prisma.holiday.findFirst.mock.calls[0][0].where;
+      expect(where.branchId).toBeNull();
+      expect(where.OR).toBeUndefined();
+    });
+  });
+
   describe('buildHolidayDateSet', () => {
     it('expands each holiday range to one Set entry per day', async () => {
       prisma.holiday.findMany.mockResolvedValue([

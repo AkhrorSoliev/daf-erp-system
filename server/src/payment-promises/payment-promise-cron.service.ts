@@ -39,7 +39,12 @@ export class PaymentPromiseCronService {
    * from the @Cron method so it can be triggered in a test or manually.
    */
   async run() {
-    const holiday = await this.holidays.findActiveHolidayCovering(new Date());
+    // Company-wide holidays only: one branch closing does not hold up every
+    // branch's broken-promise list (CEO decision 10.10.2026).
+    const holiday = await this.holidays.findActiveHolidayCovering(
+      new Date(),
+      null,
+    );
     if (holiday) {
       this.logger.log(
         "Bayram kuni — to'lov va'dasi eslatmasi o'tkazib yuborildi",

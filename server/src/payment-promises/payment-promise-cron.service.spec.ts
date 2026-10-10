@@ -34,6 +34,15 @@ describe('PaymentPromiseCronService', () => {
     service = module.get(PaymentPromiseCronService);
   });
 
+  // One branch closing does not hold up every branch's broken-promise list.
+  it('asks for company-wide holidays only', async () => {
+    await service.run();
+    expect(holidays.findActiveHolidayCovering).toHaveBeenCalledWith(
+      expect.any(Date),
+      null,
+    );
+  });
+
   it('short-circuits on an active holiday (no queries, no events)', async () => {
     holidays.findActiveHolidayCovering.mockResolvedValueOnce({ id: 'h1' });
     const res = await service.run();

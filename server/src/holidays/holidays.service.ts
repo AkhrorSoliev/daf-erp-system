@@ -56,26 +56,27 @@ export class HolidaysService {
   /**
    * Which holidays apply to a branch.
    *
-   * `branchId IS NULL` is a COMPANY-WIDE holiday (Navro'z, Mustaqillik kuni) —
-   * nearly every row — and applies everywhere. A non-null one is a single branch
-   * closing, which the model could not express at all before.
+   * `branchId IS NULL` is a COMPANY-WIDE holiday (Navro'z, Mustaqillik kuni)
+   * and applies everywhere. A non-null one is a single branch closing, which a
+   * Branch Director or Administrator declares for their own branch (CEO
+   * decision 10.10.2026).
    *
-   * `branchId === undefined` means the caller does not know or does not care,
-   * and gets every holiday. That is deliberate: these helpers have ~15 call
-   * sites across attendance validation, billing, group cascades, crons and the
-   * dashboard, and quietly changing what all of them see would be a far larger
-   * behavioural change than adding the capability. Call sites opt in as they
-   * learn their branch.
+   * - a number: the company-wide holidays plus that branch's own;
+   * - `null`: the company-wide holidays only, for a run that serves every
+   *   branch at once (the 21:00 report, the 20:00 group digest, the 09:00
+   *   promise run), where one branch closing must not silence the others;
+   * - `undefined`: every holiday of every branch. Left for a caller with no
+   *   branch to ask about; a caller that has a group passes its branch.
    */
-  private branchWhere(branchId?: number) {
-    return branchId === undefined
-      ? {}
-      : { OR: [{ branchId: null }, { branchId }] };
+  private branchWhere(branchId?: number | null) {
+    if (branchId === undefined) return {};
+    if (branchId === null) return { branchId: null };
+    return { OR: [{ branchId: null }, { branchId }] };
   }
 
   async findActiveHolidayCovering(
     date: Date,
-    branchId?: number,
+    branchId?: number | null,
   ): Promise<HolidayCoverage | null> {
     return this.prisma.holiday.findFirst({
       where: {
