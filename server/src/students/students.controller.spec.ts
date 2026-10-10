@@ -96,7 +96,7 @@ describe('StudentsController — route access', () => {
 
   // O'quvchi profili. Kassir to'lov qabul qilishda ochadi; o'qituvchi yo'q —
   // shuning uchun guruh sahifasida o'qituvchiga o'quvchi ismi havolasiz
-  // chiziladi (client/src/lib/role-access.ts, STUDENT_PROFILE_ROLES).
+  // chiziladi (`CanLink perm="students.profile"`).
   describe('findById() (GET /:id)', () => {
     it('is gated by the student profile capability', () => {
       expect(routeAccess(StudentsController, 'findById')).toEqual({

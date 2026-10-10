@@ -390,7 +390,7 @@ Delete a comment.
 
 ## Tasks
 
-All routes are `@Roles(...STAFF_ROLES)`; `TaskPolicy` (`server/src/tasks/task-policy.ts`) narrows who may see or do what. Ids are UUIDs.
+All routes are `@AnyStaff()` (class level); `TaskPolicy` (`server/src/tasks/task-policy.ts`) narrows who may see or do what. Ids are UUIDs.
 
 ### GET /tasks
 
