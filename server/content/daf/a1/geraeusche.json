@@ -1,0 +1,128 @@
+{
+  "4728e095ea6ae516": {
+    "key": "daf/sfx/a343975ff86e2a7ab81370f0d4efe5bd.mp3",
+    "sfx": "a quiet flat in the morning, birds chirping faintly outside the window, no voices",
+    "sek": 15,
+    "loop": true
+  },
+  "edbfd7acb38b6b2a": {
+    "key": "daf/sfx/072c6a5f02774c561695d2d55e5bc452.mp3",
+    "sfx": "a fridge door opening with a soft suction sound",
+    "sek": 2.5,
+    "loop": false
+  },
+  "264c860671337f73": {
+    "key": "daf/sfx/4197b1cc4e51443459382aa7d5045197.mp3",
+    "sfx": "footsteps walking across a wooden floor",
+    "sek": 2,
+    "loop": false
+  },
+  "4bbeb56deb7eb286": {
+    "key": "daf/sfx/9a912bec87671b7a5c6e19c999455c9f.mp3",
+    "sfx": "a front door closing",
+    "sek": 1.5,
+    "loop": false
+  },
+  "96c152425a60762b": {
+    "key": "daf/sfx/61142aaf68d1e1e3c6bc922f13b73536.mp3",
+    "sfx": "a coffee machine brewing and hissing",
+    "sek": 3,
+    "loop": false
+  },
+  "23282e68875d817d": {
+    "key": "daf/sfx/cb477c7da23cf6d8b20d092682be44dd.mp3",
+    "sfx": "a front door of a flat opening and closing",
+    "sek": 1.5,
+    "loop": false
+  },
+  "67fca60e37aec459": {
+    "key": "daf/sfx/ae2e23cf8a6544a83bf618688f714875.mp3",
+    "sfx": "busy outdoor farmers market, indistinct crowd murmur and distant vendors, no clear words",
+    "sek": 15,
+    "loop": true
+  },
+  "c684a9f3650ba2e4": {
+    "key": "daf/sfx/38f426d7a2d367b57a09b0f1f957009c.mp3",
+    "sfx": "fruit being put into a paper bag, paper rustling",
+    "sek": 2,
+    "loop": false
+  },
+  "b93e5a8e7a7cdd62": {
+    "key": "daf/sfx/0e64d981faf30661d658644f59d1b2f7.mp3",
+    "sfx": "quiet home kitchen room tone with a faint fridge hum, no voices",
+    "sek": 15,
+    "loop": true
+  },
+  "ad6b9c2136893f21": {
+    "key": "daf/sfx/9281d1c3fef3c93a3ece3828bcbb709d.mp3",
+    "sfx": "a kitchen knife chopping vegetables on a wooden board",
+    "sek": 3,
+    "loop": false
+  },
+  "327431c97fece449": {
+    "key": "daf/sfx/b403499a8b4753ffe4030a9043ca1d83.mp3",
+    "sfx": "supermarket ambience with soft indistinct murmur and distant checkout beeps, no music, no clear words",
+    "sek": 15,
+    "loop": true
+  },
+  "eee80a617f1750cf": {
+    "key": "daf/sfx/6ec784f63de51858daaf9aed2c5ade45.mp3",
+    "sfx": "a supermarket barcode scanner beeping twice",
+    "sek": 1.5,
+    "loop": false
+  },
+  "bf491f5c5b1f1adc": {
+    "key": "daf/sfx/d1ac7d401538bc7b42a3123632372a42.mp3",
+    "sfx": "coins dropped onto a shop counter",
+    "sek": 2,
+    "loop": false
+  },
+  "1a397ada0213bba0": {
+    "key": "daf/sfx/e09c0d2b807de31f62eb9321629ef44f.mp3",
+    "sfx": "a city street at midday, light traffic and footsteps on the pavement, no voices",
+    "sek": 15,
+    "loop": true
+  },
+  "8662b571500862ff": {
+    "key": "daf/sfx/6a222ee362b0125c179120c19e30c06c.mp3",
+    "sfx": "a cosy restaurant in the evening, cutlery clinking and indistinct quiet conversations, no clear words",
+    "sek": 15,
+    "loop": true
+  },
+  "a99ac252a8c48b07": {
+    "key": "daf/sfx/3f7867c60d9eac45790554bb6ce1e051.mp3",
+    "sfx": "a cafe with an espresso machine in the background and soft indistinct chatter, no clear words",
+    "sek": 15,
+    "loop": true
+  },
+  "dd03b094f92a73aa": {
+    "key": "daf/sfx/513c0db5284186507a6d8ac6f0c666e6.mp3",
+    "sfx": "coins and a banknote placed on a cafe table",
+    "sek": 2,
+    "loop": false
+  },
+  "8598b39eae4d5ca6": {
+    "key": "daf/sfx/476290873d2bee142b8479e5e9301e80.mp3",
+    "sfx": "onions and meat sizzling in hot oil in a large pot",
+    "sek": 4,
+    "loop": false
+  },
+  "ad7d064fd307ee08": {
+    "key": "daf/sfx/547d230e7369d6d1abcc42ae65c966bc.mp3",
+    "sfx": "a garden barbecue party in the evening, distant laughter and crickets, no clear words",
+    "sek": 15,
+    "loop": true
+  },
+  "671562e81fc09e83": {
+    "key": "daf/sfx/6258206e2d5b2d66181fdcf1856a1f8b.mp3",
+    "sfx": "meat sizzling on a charcoal grill",
+    "sek": 3,
+    "loop": false
+  },
+  "adfe06d4eb8f39d1": {
+    "key": "daf/sfx/c8b390615a1f6e4b989a4baf4ec07138.mp3",
+    "sfx": "a glass bottle opened with a fizz and poured into a glass",
+    "sek": 2.5,
+    "loop": false
+  }
+}

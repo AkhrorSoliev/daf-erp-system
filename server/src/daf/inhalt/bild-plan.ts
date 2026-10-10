@@ -18,7 +18,7 @@ export type BildPlan = Record<
   { szene?: string; zahl?: number; flagge?: Land; tippen: boolean }
 >;
 
-const BILD_KEY = /^daf\/bild\/[0-9a-f]{32}\.jpg$/;
+export const BILD_KEY = /^daf\/bild\/[0-9a-f]{32}\.jpg$/;
 
 interface PlanWort {
   sourceId: string;

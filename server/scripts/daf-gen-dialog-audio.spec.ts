@@ -388,6 +388,40 @@ describe('budjet', () => {
     );
   });
 
+  it('a dialog of three speakers pays the scene once per request', () => {
+    const drei = {
+      prompt: 'A: Hallo!\nB: Hallo!\nC: Tschüss!',
+      speakers: [
+        { speakerId: 'A', voice: 'Erinome' },
+        { speakerId: 'B', voice: 'Iapetus' },
+        { speakerId: 'C', voice: 'Callirrhoe' },
+      ],
+      styleInstructions: 'Szene.',
+    };
+    expect(gesamtZeichenDialoge([drei])).toBe(
+      'A: Hallo!\nB: Hallo!'.length + 'Tschüss!'.length + 2 * 'Szene.'.length,
+    );
+  });
+
+  it('a dialog of three speakers needs the multi-voice step', async () => {
+    const generiere = erstelleGeneriere(
+      { dialogGemini: jest.fn() } as never,
+      { uploadBytes: jest.fn() } as never,
+      jest.fn() as never,
+      jest.fn(),
+    );
+    const drei = {
+      prompt: 'A: Hallo!\nB: Hallo!\nC: Tschüss!',
+      speakers: [
+        { speakerId: 'A', voice: 'Erinome' },
+        { speakerId: 'B', voice: 'Iapetus' },
+        { speakerId: 'C', voice: 'Callirrhoe' },
+      ],
+      styleInstructions: 'Szene.',
+    };
+    await expect(generiere(d('u04-d6'), drei)).rejects.toThrow(/3 ta/);
+  });
+
   it('chegaradan oshsa chaqiruvdan OLDIN to`xtaydi', () => {
     expect(() => pruefeDialogBudget(BELGI_CHEGARASI_DIALOG + 1)).toThrow(
       /TO'XTATILDI/,

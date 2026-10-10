@@ -14,8 +14,22 @@ describe('eigeneSchluessel', () => {
   const material = {
     coreWords: [wort(1, 'u01-s5'), wort(2, 'u01-s1')],
     sentences: [
-      { id: 11, de: 'a', uz: 'a', sectionCode: 'u01-s5', akzeptiert: [] },
-      { id: 12, de: 'b', uz: 'b', sectionCode: 'u01-s2', akzeptiert: [] },
+      {
+        id: 11,
+        de: 'a',
+        uz: 'a',
+        sectionCode: 'u01-s5',
+        akzeptiert: [],
+        audioKey: null,
+      },
+      {
+        id: 12,
+        de: 'b',
+        uz: 'b',
+        sectionCode: 'u01-s2',
+        akzeptiert: [],
+        audioKey: null,
+      },
     ],
     phrases: [
       { id: 21, funktionUz: 'x', de: 'x', uz: 'x', sectionCode: 'u01-s5' },

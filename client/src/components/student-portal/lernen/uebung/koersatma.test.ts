@@ -4,7 +4,7 @@ import type { FrageFormat } from "../types";
 
 const HAMMASI: FrageFormat[] = [
   "WORT_UZ", "UZ_WORT", "PAAR", "ARTIKEL",
-  "LUECKE", "SATZ_BAUEN", "SATZ_UEBERSETZEN", "REAKTION",
+  "LUECKE", "SATZ_BAUEN", "SATZ_HOEREN", "SATZ_UEBERSETZEN", "REAKTION",
   "ZUORDNEN", "DIALOG_LUECKE",
   "AUDIO_WORT", "WORT_TIPPEN", "HOEREN_WAHL",
   "BILD_WORT", "AUDIO_BILD", "BILD_TIPPEN",
@@ -36,6 +36,11 @@ describe("harakat", () => {
 
   it("SATZ_BAUEN — YIGISH", () => {
     expect(harakat("SATZ_BAUEN")).toBe("YIGISH");
+  });
+
+  it("SATZ_HOEREN — YIGISH, gap tuzish bo'laklari bilan", () => {
+    expect(harakat("SATZ_HOEREN")).toBe("YIGISH");
+    expect(koersatma("SATZ_HOEREN")).toBe("Eshitgan gapingizni so'zlardan tuzing");
   });
 
   it("LUECKE — YOZISH", () => {
