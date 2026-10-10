@@ -122,7 +122,11 @@ export class TaskTelegramOutbox {
       },
     });
     let sent = 0;
+    const started = Date.now();
     for (const row of rows) {
+      // Claims run from `now`; past half of CLAIM_MS a fresh claim would expire
+      // early and let the other instance send it too. The rest waits a minute.
+      if (Date.now() - started > CLAIM_MS / 2) break;
       const outcome = await this.handle(row, now);
       if (outcome === 'sent') sent++;
       // 429: the next rows would only hit the limit too.

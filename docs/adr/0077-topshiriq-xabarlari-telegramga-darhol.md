@@ -61,8 +61,10 @@ tutmaydi, Telegram esa doim yonida.
    qo'shiladi.** `direct-send.guard.spec.ts` ALLOWED ro'yxatida
    `src/tasks/telegram/`; yig'maga `TASK_*` yozilmasligini shu spec qulflaydi.
 8. **Navbat va xatolar.** Har qator yuborishdan oldin "olinadi": deploy paytida
-   eski va yangi nusxa birga ishlasa ham, bir xabar ikki marta ketmaydi (run
-   o'lsa, qator 5 daqiqadan keyin qaytadi). 429 — `retry_after` kutiladi, urinish
+   eski va yangi nusxa birga ishlasa ham, bir xabar odatda ikki marta ketmaydi
+   (bir yurish 2,5 daqiqadan oshsa to'xtaydi; 5 daqiqadan uzoq osilib qolgan
+   yuborish ikki marta ketishi mumkin; yurish o'lsa, qator 5 daqiqadan keyin
+   qaytadi). 429 — `retry_after` kutiladi, urinish
    sanalmaydi; 403 / Telegram chatni topolmasa / bot o'chiq (token yo'q) /
    xabar noto'g'ri (bizning xato) — qator o'ladi, qayta urinilmaydi;
    vaqtinchalik xato — urinish sanaladi va kutish 60 soniyadan boshlanib ikki

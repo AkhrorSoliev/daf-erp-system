@@ -109,6 +109,17 @@ describe('TaskTelegramOutbox.drain', () => {
     expect(updateOf(prisma).where).toEqual({ id: 'o2' });
   });
 
+  it('a run stops past half the claim, so a late claim cannot expire early', async () => {
+    const { outbox, sender } = setup([row(), row({ id: 'o2' })]);
+    jest
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(0) // run start
+      .mockReturnValueOnce(1_000) // before o1: goes
+      .mockReturnValue(151_000); // before o2: past 2.5 minutes
+    await expect(outbox.drain(NOW)).resolves.toBe(1);
+    expect(sender.send).toHaveBeenCalledTimes(1);
+  });
+
   it('sends a held notice with its planned text and marks it sent', async () => {
     const { outbox, prisma, sender } = setup([row()]);
     await expect(outbox.drain(NOW)).resolves.toBe(1);

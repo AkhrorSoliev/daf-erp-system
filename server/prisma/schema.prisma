@@ -2096,6 +2096,8 @@ model TaskOutbox {
   /// migration also creates the UNIQUE "TaskOutbox_time_row_key" on
   /// (taskId, userId, channel, kind) WHERE kind IN ('REMINDER','OVERDUE'),
   /// which keeps the time rows one per person and lets `skipDuplicates` work.
+  /// A future `prisma migrate diff` will emit DROP INDEX "TaskOutbox_time_row_key":
+  /// delete that line from the generated SQL by hand.
   @@index([taskId, userId])
   @@index([sendAfter, sentAt])
 }
