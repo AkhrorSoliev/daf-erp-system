@@ -156,8 +156,8 @@ oynada saqlangan bo'lsa ham xabar o'sha-o'sha turardi.
     buzilgan va'da hech qachon «bajarildi» bo'lmaydi (`settleKeptPromises` bilan bir
     xil), xabar ochiq qoladi: ertalabki ro'yxat shu filialning keyingi ro'yxati
     kelguncha turadi, filialda boshqa buzilgan va'da bo'lmasa — abadiy;
-  - deploy paytida eski server yozgan, o'quvchi bo'yicha alohida eski xabar — o'quvchi
-    qarzini to'lamaguncha;
+  - deploydan oldin yozilgan, o'quvchi bo'yicha alohida eski xabar — tozalash paytida
+    7 kundan yosh bo'lib, o'quvchi hali qarzdor bo'lsa — to'lov qarzini yopmaguncha;
   - «Topshiriq qaytarildi» ijrochi qayta tekshiruvga yuborgandan keyin ham, deploydan
     oldingi olib tashlangan ijrochi va tizim topshirig'ini yo'qotgan administrator
     xabarlari — topshiriq yopilguncha.

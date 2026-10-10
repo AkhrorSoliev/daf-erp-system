@@ -1426,7 +1426,7 @@ A task is not a comment (ADR-0074; spec `docs/superpowers/specs/2026-10-07-topsh
 
   Known gaps — what nothing closes (the one-time cleanup ran once, at the deploy; the 03:00 rule covers only lesson alerts):
   - A debt cleared without a payment (write-off, centre top-up) never turns a BROKEN promise KEPT and sends no `payment.received`, so its 09:00 list stays open until the branch's next list replaces it — and for ever when that branch breaks no promise again.
-  - An old per-student overdue row (`relatedEntityType 'Student'`) written by the old instance while the new one was starting stays until that student's debt is cleared by a payment.
+  - An old per-student overdue row (`relatedEntityType 'Student'`, written before the deploy) that was under 7 days old at the cleanup, for a student who still owed, stays until a payment clears that student's debt.
   - A task notice whose task never closes (a task nobody finishes) waits as long as the task does: a returned «Topshiriq qaytarildi» notice, an assignee removed before the deploy, a system task lost to a claim before the deploy. They all close with the task.
   - A lesson alert is closed by the 03:00 rule only on the day after its lesson. The paths that used to strand it — a group that left ACTIVE on its lesson day after the start or −30 alerts (COMPLETED on the final day, CANCELLED, PAUSED, a closed branch; the sweep asks ACTIVE groups only), a holiday entered on the day, the check-then-act race at the lesson's start — wait at most until the next 03:00. A day with a PENDING question waits for its answer.
 
