@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
 import { DebtWriteOffService } from './debt-write-off.service';
@@ -641,6 +645,42 @@ describe('DebtWriteOffService.reverseWriteOff', () => {
     );
     await expect(service.reverseWriteOff(params)).rejects.toThrow(
       'Bu hisobdan chiqarish allaqachon bekor qilingan',
+    );
+    expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+  });
+
+  // Restoring a forgiven debt writes to the student's books, like forgiving
+  // it: the caller must hold the student's branch (1 in `buildClient`).
+  const director = (mainBranch: number) => ({
+    mainBranch,
+    branches: [],
+    roles: [{ role: { name: 'Branch Director' } }],
+  });
+
+  it("refuses a caller outside the student's branch and restores nothing", async () => {
+    client.transaction.findFirst.mockResolvedValue(row());
+    client.user.findFirst.mockResolvedValueOnce(director(2));
+
+    await expect(service.reverseWriteOff(params)).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+  });
+
+  it("restores the debt for a caller of the student's branch", async () => {
+    client.transaction.findFirst.mockResolvedValue(row());
+    client.user.findFirst.mockResolvedValueOnce(director(1));
+
+    await service.reverseWriteOff(params);
+
+    expect(transactionsService.reverseTransaction).toHaveBeenCalled();
+  });
+
+  it('treats a write-off row with no student as not found', async () => {
+    client.transaction.findFirst.mockResolvedValue(row({ studentId: null }));
+
+    await expect(service.reverseWriteOff(params)).rejects.toThrow(
+      NotFoundException,
     );
     expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
   });

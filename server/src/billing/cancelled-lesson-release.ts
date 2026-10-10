@@ -117,6 +117,7 @@ export async function releaseCancelledLesson(
         branchId: charge.branchId,
         description: `${params.reason} — ${dayLabel} darsi bekor qilindi, 1 dars puli qaytarildi`,
         performedById: params.performedById,
+        actor: { kind: 'system' },
         // The payment statement folds it into the month like any release.
         metadata: {
           kind: 'monthly-release',

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Workbook, Worksheet } from 'exceljs';
+import { BadRequestException } from '@nestjs/common';
 import { ReportsExcelService } from './reports-excel.service';
 import { ReportsService } from './reports.service';
 import type { DebtSplit } from './debt-split';
@@ -998,6 +999,51 @@ describe('ReportsExcelService', () => {
       // administrator attached to two branches is subtracted from one.
       'home',
     );
+  });
+
+  it('scopes the «Lidlar» leg to the workbook scope', async () => {
+    await service.generate(1, {
+      branchIds: [2],
+      include: ['marketing'],
+    } as any);
+
+    expect(reports.getLeadAnalytics).toHaveBeenCalledWith(1, {
+      branchIds: [2],
+      startDate: expect.any(String),
+      endDate: expect.any(String),
+    });
+    // The operational legs take the same single branch.
+    expect(reports.getRoomUtilization).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ branchId: 2 }),
+    );
+  });
+
+  it('gives the «Lidlar» leg the whole company for a company-wide export', async () => {
+    await service.generate(1, {
+      branchIds: null,
+      include: ['marketing'],
+    } as any);
+
+    expect(reports.getLeadAnalytics).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ branchIds: null }),
+    );
+  });
+
+  it('refuses a several-branch scope before reading anything, like the other reports', async () => {
+    // Payroll and the operational sheets take ONE branch. Handed `undefined`
+    // they read the whole company — a third branch's rooms and attendance in
+    // a workbook labelled with two.
+    await expect(
+      service.generate(1, { branchIds: [1, 2] } as any),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(reports.getProfitLoss).not.toHaveBeenCalled();
+    expect(reports.getSalaryMonthly).not.toHaveBeenCalled();
+    expect(reports.getRoomUtilization).not.toHaveBeenCalled();
+    expect(reports.getAttendanceAnalytics).not.toHaveBeenCalled();
+    expect(reports.getLeadAnalytics).not.toHaveBeenCalled();
   });
 
   it('adds the center top-up undirish block to Oyliklar when the center fronted money', async () => {

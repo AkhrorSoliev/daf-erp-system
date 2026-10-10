@@ -156,9 +156,22 @@ export class RoomsService {
     return room;
   }
 
-  async countByBranch(query: CountByBranchQueryDto, companyId: number) {
+  async countByBranch(
+    query: CountByBranchQueryDto,
+    companyId: number,
+    ceiling: ReportBranchIds,
+  ) {
     // Caller company is authoritative; ignore ?company_id= query param.
-    const branchWhere: any = { deletedAt: null, companyId };
+    //
+    // And the caller's ceiling: this route is open to every signed-in account
+    // and names each branch (address, status, room count), so unfiltered it
+    // listed the very branches `GET /branches` hides. Same shape as
+    // `BranchesService.findAll` — the branch IS the row.
+    const branchWhere: any = {
+      deletedAt: null,
+      companyId,
+      ...(ceiling == null ? {} : { id: { in: ceiling } }),
+    };
 
     const branches = await this.prisma.branch.findMany({
       where: branchWhere,

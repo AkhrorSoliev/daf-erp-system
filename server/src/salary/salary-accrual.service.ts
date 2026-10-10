@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
 import { isLessonPayForfeited } from '../unmarked-lessons/forfeited-lessons';
+import { assertPayrollCoversUser } from './shared/payroll-branch-scope';
 
 /**
  * Emitted (collected, not sent) when an accrual is carried over into the
@@ -536,7 +537,9 @@ export class SalaryAccrualService {
     });
   }
 
-  async getAccruals(userId: number, companyId: number) {
+  /** Unpaid accruals of yourself, or of an employee inside your payroll scope. */
+  async getAccruals(userId: number, companyId: number, performedById: number) {
+    await assertPayrollCoversUser(this.prisma, performedById, userId);
     return this.prisma.salaryAccrual.findMany({
       where: {
         userId,

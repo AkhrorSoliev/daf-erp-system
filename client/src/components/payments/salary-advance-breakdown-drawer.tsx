@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { formatPrice } from "@/lib/format-utils";
 import { EXPENSE_METHOD_LABELS } from "./expenses-filter-bar";
 import { monthLabel } from "./salary-utils";
@@ -32,6 +33,7 @@ import {
 } from "./advance-row-actions";
 import { SalaryAdvanceDialog } from "./salary-advance-dialog";
 import { SalaryDeleteAdvanceDialog } from "./salary-delete-advance-dialog";
+import { isOwnPayrollLocked } from "./own-payroll";
 
 export interface AdvanceTarget {
   userId: number;
@@ -97,6 +99,9 @@ export function SalaryAdvanceBreakdownDrawer({
   });
 
   const advances = data?.advances ?? [];
+  const user = useAuth((s) => s.user);
+  // Your own advance is changed or deleted by another manager (CEO, 10.10.2026).
+  const canEditRows = canPay && !isOwnPayrollLocked(target?.userId, user);
 
   /**
    * Drawer o'z ro'yxatini o'zi yuklaydi, shuning uchun o'zgarishdan keyin
@@ -165,7 +170,7 @@ export function SalaryAdvanceBreakdownDrawer({
                       <TableHead className="text-right">Summa</TableHead>
                       <TableHead>Turi</TableHead>
                       <TableHead>Kim bergan</TableHead>
-                      {canPay && <TableHead className="w-20" />}
+                      {canEditRows && <TableHead className="w-20" />}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -202,7 +207,7 @@ export function SalaryAdvanceBreakdownDrawer({
                             {format(new Date(a.createdAt), "dd.MM.yyyy, HH:mm")}
                           </span>
                         </TableCell>
-                        {canPay && (
+                        {canEditRows && (
                           <TableCell className="text-right">
                             <AdvanceRowActions
                               advance={toEditable(a)}

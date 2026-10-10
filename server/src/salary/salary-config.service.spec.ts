@@ -817,3 +817,124 @@ describe('SalaryConfigService — re-pricing written lessons (ADR-0050)', () => 
     );
   });
 });
+
+/**
+ * Rate reads took no caller: `GET /salary/config/:userId`, `/configs/by-users`
+ * and `/config-history/:userId` returned any employee's rate in the company to
+ * anyone holding `salary.view`.
+ */
+describe('SalaryConfigService — rate reads stay inside the payroll scope', () => {
+  let service: SalaryConfigService;
+  let prisma: any;
+
+  const director = {
+    mainBranch: 1,
+    branches: [{ branchId: 1 }],
+    roles: [{ role: { name: 'Branch Director' } }],
+  };
+  const ceo = {
+    mainBranch: null,
+    branches: [],
+    roles: [{ role: { name: 'CEO' } }],
+  };
+
+  beforeEach(async () => {
+    prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue(director),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      employeeSalaryConfig: { findMany: jest.fn().mockResolvedValue([]) },
+      employeeSalaryConfigVersion: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SalaryConfigService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get(SalaryConfigService);
+  });
+
+  const oneEmployeeReads: [
+    string,
+    (s: SalaryConfigService) => Promise<unknown>,
+    string,
+  ][] = [
+    ['getConfig', (s) => s.getConfig(10060, 1, 10012), 'employeeSalaryConfig'],
+    [
+      'getHistory',
+      (s) => s.getHistory(10060, 1, 10012),
+      'employeeSalaryConfigVersion',
+    ],
+  ];
+
+  it.each(oneEmployeeReads)(
+    "%s refuses another branch's employee and reads no rate",
+    async (_name, call, model) => {
+      await expect(call(service)).rejects.toThrow(
+        /filialingizga tegishli emas/,
+      );
+      expect(prisma[model].findMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(oneEmployeeReads)(
+    "%s serves an employee of the director's branch",
+    async (_name, call, model) => {
+      prisma.user.count.mockResolvedValue(1);
+      await call(service);
+      expect(prisma[model].findMany).toHaveBeenCalled();
+    },
+  );
+
+  it('getConfig lets the CEO read anyone without a branch lookup', async () => {
+    prisma.user.findUnique.mockResolvedValue(ceo);
+    await service.getConfig(10060, 1, 10000);
+    expect(prisma.user.count).not.toHaveBeenCalled();
+    expect(prisma.employeeSalaryConfig.findMany).toHaveBeenCalled();
+  });
+
+  describe('getConfigsForUsers', () => {
+    it("filters the bulk read to the director's branches", async () => {
+      await service.getConfigsForUsers([10050, 10060], 1, 10012);
+      expect(prisma.employeeSalaryConfig.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: { in: [10050, 10060] },
+            companyId: 1,
+            isActive: true,
+            user: {
+              OR: [
+                { mainBranch: { in: [1] } },
+                { branches: { some: { branchId: { in: [1] } } } },
+              ],
+            },
+          },
+        }),
+      );
+    });
+
+    it('does not filter for the CEO', async () => {
+      prisma.user.findUnique.mockResolvedValue(ceo);
+      await service.getConfigsForUsers([10050], 1, 10000);
+      expect(
+        prisma.employeeSalaryConfig.findMany.mock.calls[0][0].where.user,
+      ).toBeUndefined();
+    });
+
+    it('returns nothing to a director with no branch and reads nothing (fail closed)', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+      await expect(
+        service.getConfigsForUsers([10050], 1, 10012),
+      ).resolves.toEqual({});
+      expect(prisma.employeeSalaryConfig.findMany).not.toHaveBeenCalled();
+    });
+  });
+});

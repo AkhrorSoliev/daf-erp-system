@@ -12,7 +12,10 @@ import {
   SALARY_PAYMENT_TRANSITIONS,
 } from '../common/finance/status-transitions';
 import { resolvePeriod } from '../common/finance/period-helpers';
-import { resolvePayrollBranchScope } from './shared/payroll-branch-scope';
+import {
+  payrollUserWhere,
+  resolvePayrollBranchScope,
+} from './shared/payroll-branch-scope';
 
 @Injectable()
 export class SalaryPaymentService {
@@ -26,7 +29,9 @@ export class SalaryPaymentService {
    * SalaryPayment summary. Months are keyed by the Tashkent calendar month of
    * `periodStart` (with cycleStartDay=1 that is the natural calendar month;
    * other start days still bucket by the month the period opens in). Excludes
-   * CANCELLED payments. Branch Directors are scoped to their own mainBranch.
+   * CANCELLED payments. Confined to the caller's payroll scope: the CEO sees
+   * every branch, anyone else the employees of their branches, a caller with
+   * no branch nothing.
    */
   async getMatrix(
     query: { from: string; to: string },
@@ -56,25 +61,21 @@ export class SalaryPaymentService {
       }
     }
 
-    // Branch scope: CEO/Administrator see all; Branch Director only their branch.
-    const caller = await this.prisma.user.findUnique({
-      where: { id: performedById },
-      select: {
-        mainBranch: true,
-        roles: { select: { role: { select: { name: true } } } },
-      },
-    });
-    const roleNames = caller?.roles.map((r) => r.role.name) ?? [];
-    const scoped =
-      !roleNames.includes('CEO') && !roleNames.includes('Administrator');
-    const branchId = scoped ? (caller?.mainBranch ?? undefined) : undefined;
+    // The payroll scope, failing closed. This was a hand-rolled
+    // `!CEO && !Administrator` check on `mainBranch`: an Administrator saw
+    // every branch, and so did a director whose `mainBranch` was null.
+    const scope = await resolvePayrollBranchScope(this.prisma, performedById);
+    if (scope.kind === 'none') {
+      return { months, rows: [], monthlyTotals: {}, grandTotal: 0 };
+    }
+    const userWhere = payrollUserWhere(scope);
 
     const payments = await this.prisma.salaryPayment.findMany({
       where: {
         companyId,
         status: { not: SalaryPaymentStatus.CANCELLED },
         periodStart: { gte: fromStart, lt: toEndExclusive },
-        ...(branchId !== undefined && { user: { mainBranch: branchId } }),
+        ...(userWhere && { user: userWhere }),
       },
       select: {
         id: true,
@@ -135,14 +136,28 @@ export class SalaryPaymentService {
     return { months, rows, monthlyTotals, grandTotal };
   }
 
-  async findPayments(query: SalaryPaymentQueryDto, companyId: number) {
+  /**
+   * Salary payments, newest first, of the employees inside the caller's
+   * payroll scope: every branch for the CEO, nothing for a caller with no
+   * branch.
+   */
+  async findPayments(
+    query: SalaryPaymentQueryDto,
+    companyId: number,
+    performedById: number,
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
+
+    const scope = await resolvePayrollBranchScope(this.prisma, performedById);
+    if (scope.kind === 'none') return { data: [], total: 0, page, pageSize };
+    const userWhere = payrollUserWhere(scope);
 
     const where: Prisma.SalaryPaymentWhereInput = {
       companyId,
       ...(query.userId && { userId: query.userId }),
       ...(query.status && { status: query.status }),
+      ...(userWhere && { user: userWhere }),
     };
 
     const [data, total] = await Promise.all([
@@ -254,6 +269,14 @@ export class SalaryPaymentService {
     // another branch's teacher just by passing its id.
     const scope = await resolvePayrollBranchScope(this.prisma, performedById);
     if (scope.kind !== 'all') {
+      // CEO decision (10.10.2026): nobody but the CEO pays their own salary;
+      // another manager does. `batchPay` comes through here too, so a
+      // caller's own row in a batch is reported FAILED with this reason.
+      if (payment.userId === performedById) {
+        throw new ForbiddenException(
+          "Bu sizning oyligingiz — uni o'zingiz to'lay olmaysiz. Oylikni boshqa rahbar to'laydi.",
+        );
+      }
       const payee = await this.prisma.user.findUnique({
         where: { id: payment.userId },
         select: { mainBranch: true },
@@ -305,7 +328,8 @@ export class SalaryPaymentService {
    * Only APPROVED payments are processed; CALCULATED ones are skipped (they
    * need to be approved first). Each payment is wrapped in its own transaction
    * so a failure on one doesn't roll back the others — the caller sees per-
-   * payment success/error.
+   * payment success/error. A non-CEO caller's own payment is one such
+   * failure: `payPayment` refuses it (CEO decision, 10.10.2026).
    */
   async batchPay(
     params: {

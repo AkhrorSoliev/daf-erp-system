@@ -78,9 +78,24 @@ describe('HolidaysController — route access', () => {
   // any holiday in the database by id. The comment above `findAll` said both
   // had been fixed.
   describe('findOne()', () => {
-    it('passes the caller company through to the service', () => {
-      controller.findOne('h-1', 1001);
-      expect(mockService.findOne).toHaveBeenCalledWith('h-1', 1001);
+    it('passes the caller company and the caller through to the service', () => {
+      controller.findOne('h-1', 1001, 7);
+      expect(mockService.findOne).toHaveBeenCalledWith('h-1', 1001, 7);
+    });
+  });
+
+  // A branch's holiday is read only in that branch (CEO decision 10.10.2026).
+  describe('findAll()', () => {
+    it("passes the header's branch scope through to the service", () => {
+      controller.findAll({}, 1001, [1]);
+      expect(mockService.findAll).toHaveBeenCalledWith({}, 1001, [1]);
+    });
+  });
+
+  describe('getStatusHistory()', () => {
+    it('passes the caller through to the service', () => {
+      controller.getStatusHistory('h-1', 1001, 7);
+      expect(mockService.getStatusHistory).toHaveBeenCalledWith('h-1', 1001, 7);
     });
   });
 });

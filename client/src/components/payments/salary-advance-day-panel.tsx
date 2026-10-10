@@ -4,6 +4,7 @@ import { HandCoins } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
+import { useAuth } from "@/hooks/use-auth";
 import { EXPENSE_METHOD_LABELS } from "./expenses-filter-bar";
 import { employeeRoleLabel } from "./employee-advance-select";
 import type { AdvanceRow } from "./salary-advances-tab";
@@ -12,6 +13,7 @@ import {
   settledLabel,
   type EditableAdvance,
 } from "./advance-row-actions";
+import { isOwnPayrollLocked } from "./own-payroll";
 
 /** "2026-07-15" → "15.07.2026". */
 function longDay(iso: string): string {
@@ -39,6 +41,7 @@ export function SalaryAdvanceDayPanel({
   onEdit: (a: EditableAdvance) => void;
   onDelete: (a: EditableAdvance) => void;
 }) {
+  const user = useAuth((s) => s.user);
   if (date === null) {
     return (
       <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed p-6">
@@ -98,7 +101,7 @@ export function SalaryAdvanceDayPanel({
                   <span className="font-semibold tabular-nums">
                     {formatPrice(a.amount)}
                   </span>
-                  {canPay && (
+                  {canPay && !isOwnPayrollLocked(a.user.id, user) && (
                     <AdvanceRowActions
                       advance={toEditable(a)}
                       onEdit={onEdit}

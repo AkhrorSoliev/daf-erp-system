@@ -130,7 +130,7 @@ describe('RoomsService — status methods', () => {
         },
       ]);
 
-      const rows = await service.countByBranch({} as any, 1001);
+      const rows = await service.countByBranch({} as any, 1001, null);
 
       expect(prisma.branch.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -146,6 +146,35 @@ describe('RoomsService — status methods', () => {
           roomCount: 3,
         },
       ]);
+    });
+
+    it("lists only the branches in a confined caller's ceiling", async () => {
+      await service.countByBranch({} as any, 1001, [1]);
+
+      expect(prisma.branch.findMany.mock.calls[0][0].where).toEqual({
+        deletedAt: null,
+        companyId: 1001,
+        id: { in: [1] },
+      });
+    });
+
+    it('lists no branch for a caller with no branch attached', async () => {
+      await service.countByBranch({} as any, 1001, []);
+
+      expect(prisma.branch.findMany.mock.calls[0][0].where).toEqual({
+        deletedAt: null,
+        companyId: 1001,
+        id: { in: [] },
+      });
+    });
+
+    it('lists every branch of the company for the CEO (no ceiling)', async () => {
+      await service.countByBranch({} as any, 1001, null);
+
+      expect(prisma.branch.findMany.mock.calls[0][0].where).toEqual({
+        deletedAt: null,
+        companyId: 1001,
+      });
     });
   });
 

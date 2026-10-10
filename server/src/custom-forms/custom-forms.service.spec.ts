@@ -393,7 +393,7 @@ describe('CustomFormsService', () => {
           sourceId: 'src-1',
         }),
         1,
-        null,
+        { kind: 'public-form' },
       );
     });
     it('persists the submission row linked to the new lead', async () => {
@@ -432,7 +432,7 @@ describe('CustomFormsService', () => {
       expect(leads.create).toHaveBeenCalledWith(
         expect.objectContaining({ sourceId: 'src-insta' }),
         1,
-        null,
+        { kind: 'public-form' },
       );
       expect(prisma.leadSource.create).not.toHaveBeenCalled();
     });
@@ -455,7 +455,7 @@ describe('CustomFormsService', () => {
       expect(leads.create).toHaveBeenCalledWith(
         expect.objectContaining({ sourceId: 'src-new' }),
         1,
-        null,
+        { kind: 'public-form' },
       );
     });
 
@@ -472,7 +472,7 @@ describe('CustomFormsService', () => {
         expect(leads.create).toHaveBeenCalledWith(
           expect.objectContaining({ sourceId: 'src-1' }),
           1,
-          null,
+          { kind: 'public-form' },
         );
       },
     );
@@ -487,7 +487,7 @@ describe('CustomFormsService', () => {
       expect(leads.create).toHaveBeenCalledWith(
         expect.objectContaining({ sourceId: 'src-1' }),
         1,
-        null,
+        { kind: 'public-form' },
       );
     });
 

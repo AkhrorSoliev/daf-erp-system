@@ -122,9 +122,9 @@ export const guruhlar: QollanmaSahifa[] = [
     sahifa: "bayramlar",
     sarlavha: "Bayramlar",
     qisqacha:
-      "Bayram Sozlamalar → «Dam olish kunlari» da butun markaz uchun kiritiladi: shu kunlarda davomat olinmaydi va dars eslatmalari ketmaydi. Tugash sanasi bor «Faol» va «Boshlanmagan» guruhlarning tugash sanasi bayramga tushgan dars kunlariga suriladi.",
+      "Bayram Sozlamalar → «Dam olish kunlari» da butun markaz yoki bitta filial uchun kiritiladi (butun markaz bayramini faqat CEO kiritadi): shu kunlarda davomat olinmaydi va dars eslatmalari ketmaydi. Tugash sanasi bor «Faol» va «Boshlanmagan» guruhlarning tugash sanasi bayramga tushgan dars kunlariga suriladi.",
     rollar: [1, 2, 3],
-    adr: [],
+    adr: ["0081"],
     yollar: ["/settings/holidays"],
     kalitSozlar: [
       "bayram",
@@ -143,8 +143,10 @@ export const guruhlar: QollanmaSahifa[] = [
       "60 kun",
       "yakshanba",
       "Telegram hisobot",
+      "filial bayrami",
+      "butun markaz bayrami",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "guruhlar",

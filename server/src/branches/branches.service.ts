@@ -17,6 +17,7 @@ import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
 import { ChangeBranchStatusDto } from './dto/change-branch-status.dto';
 import { ReportBranchIds } from '../common/finance/report-branch-scope';
+import { resolveCallerBranchScope } from '../common/auth/branch-scope';
 import { buildBranchReadiness, BranchReadiness } from './branch-readiness';
 import { gatherReadinessFacts } from './branch-readiness.facts';
 
@@ -147,6 +148,15 @@ export class BranchesService {
    * or it does not exist.
    */
   async create(dto: CreateBranchDto, companyId: number, userId?: number) {
+    // Only the CEO opens a branch (CEO decision, 10.10.2026). The route stays
+    // `@Can('settings.branches')` because that capability also lets a Branch
+    // Director edit their OWN branch, so the refusal lives here, before any
+    // write. A caller who cannot be identified is refused too (fail closed).
+    const scope = await resolveCallerBranchScope(this.prisma, userId);
+    if (scope.kind !== 'all') {
+      throw new ForbiddenException('Yangi filialni faqat CEO ocha oladi');
+    }
+
     const branch = await this.prisma.$transaction(async (tx) => {
       // No `id` — the database assigns it from `Branch_id_seq`.
       //

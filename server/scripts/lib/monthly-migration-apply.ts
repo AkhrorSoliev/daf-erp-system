@@ -104,6 +104,7 @@ import {
   TransactionType,
 } from '@prisma/client';
 import type { ChargeableEnrollment } from '../../src/billing/monthly-charge.service';
+import type { AdjustmentActor } from '../../src/transactions/transactions-write.service';
 import {
   addMonthsToMonthKey,
   utcMidnightFromDateStr,
@@ -204,6 +205,7 @@ export interface ApplyMigrationDeps {
       branchId?: number;
       companyId: number;
       performedById?: number;
+      actor: AdjustmentActor;
       metadata?: Prisma.InputJsonValue;
     },
     tx: Prisma.TransactionClient,
@@ -580,6 +582,7 @@ export async function applyMigrationForStudent(
           branchId: enr.group.branchId,
           companyId: params.companyId,
           performedById: params.performedById,
+          actor: { kind: 'system' },
           metadata: {
             marker: 'overcharge-monthly-carried-in',
             migration: 'monthly-carried-in',

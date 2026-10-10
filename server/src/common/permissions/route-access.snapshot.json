@@ -833,11 +833,6 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/lead-analytics": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
   "GET /reports/lead-funnel": [
     "Administrator",
     "Branch Director",

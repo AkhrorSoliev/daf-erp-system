@@ -420,7 +420,7 @@ export class DebtWriteOffService {
   }
 
   /**
-   * Reverse a previous DEBT_WRITE_OFF. CEO-only at the controller level.
+   * Reverse a previous DEBT_WRITE_OFF, for a caller of the student's branch.
    * Restores the original debt by writing the inverse transaction.
    */
   async reverseWriteOff(params: {
@@ -438,11 +438,20 @@ export class DebtWriteOffService {
             companyId: params.companyId,
           },
         });
-        if (!original) {
+        if (!original || original.studentId == null) {
           throw new NotFoundException(
             'Hisobdan chiqarish topilmadi yoki boshqa kompaniyaga tegishli',
           );
         }
+        // Restoring a forgiven debt writes to that student's books: the caller
+        // must hold the student's branch, checked on this transaction's
+        // client, as `executeWriteOff` checks when forgiving it.
+        await assertCallerMayWriteForStudent(
+          client,
+          params.performedById,
+          original.studentId,
+          params.companyId,
+        );
         // An undo row is itself a DEBT_WRITE_OFF. Undoing it would forgive the
         // debt again, and write-off may be switched off entirely. Refuse here
         // with a 400 rather than rely on reverseTransaction's plain Error (500).

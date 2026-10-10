@@ -7,7 +7,10 @@ import {
 } from '@prisma/client';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { ReportBranchIds } from '../common/finance/report-branch-scope';
-import { TransactionsWriteService } from './transactions-write.service';
+import {
+  AdjustmentActor,
+  TransactionsWriteService,
+} from './transactions-write.service';
 import { TransactionsReadService } from './transactions-read.service';
 
 @Injectable()
@@ -152,6 +155,8 @@ export class TransactionsService {
       // Optional: system-triggered adjustments (status cascades) may have no
       // acting user; the ledger column is nullable.
       performedById?: number;
+      /** Who posts it; a `user` is branch-checked, see the writer. */
+      actor: AdjustmentActor;
       /** Passed through to the writer, e.g. a lesson refund's `kind` tag. */
       metadata?: Prisma.InputJsonValue;
     },

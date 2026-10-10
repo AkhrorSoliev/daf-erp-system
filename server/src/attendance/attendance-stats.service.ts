@@ -34,6 +34,7 @@ export class AttendanceStatsService {
       where: { id: groupId, deletedAt: null, ...(companyId && { companyId }) },
       select: {
         id: true,
+        branchId: true,
         exactDays: true,
         startDate: true,
         endDate: true,
@@ -64,9 +65,11 @@ export class AttendanceStatsService {
       group.exactDays,
     );
 
+    // Only the centre's holidays and the group's own branch's close a lesson.
     const holidaySet = await this.holidaysService.buildHolidayDateSet(
       rangeStart,
       rangeEnd,
+      group.branchId,
     );
 
     // Ground truth: any date with attendance counts as a lesson, even outside

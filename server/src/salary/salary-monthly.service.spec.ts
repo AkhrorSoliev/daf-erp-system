@@ -999,6 +999,63 @@ describe('SalaryMonthlyService', () => {
       expect(res.advances[1]).toMatchObject({ id: 'a2', settled: true });
       expect(res.advances[1].settledPeriodEnd).toEqual(new Date('2026-06-30'));
     });
+
+    // The drawer's endpoint resolved the payroll scope and then never read it,
+    // so any employee's advances were one id away.
+    it("refuses another branch's employee and reads none of their advances", async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        mainBranch: 1,
+        branches: [],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+      prisma.user.count = jest.fn().mockResolvedValue(0);
+
+      await expect(
+        service.getAdvancesForUser(10060, { month: '2026-06' }, 1, 10012),
+      ).rejects.toThrow(/filialingizga tegishli emas/);
+      expect(prisma.expense.findMany).not.toHaveBeenCalled();
+    });
+
+    it('serves a director an employee of their second branch (the ceiling, not the home branch)', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        mainBranch: 1,
+        branches: [{ branchId: 1 }, { branchId: 2 }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+      prisma.user.count = jest.fn().mockResolvedValue(1);
+
+      const res = await service.getAdvancesForUser(
+        10060,
+        { month: '2026-06' },
+        1,
+        10012,
+      );
+
+      expect(res.userId).toBe(10060);
+      expect(prisma.user.count).toHaveBeenCalledWith({
+        where: {
+          id: 10060,
+          OR: [
+            { mainBranch: { in: [1, 2] } },
+            { branches: { some: { branchId: { in: [1, 2] } } } },
+          ],
+        },
+      });
+      expect(prisma.expense.findMany).toHaveBeenCalled();
+    });
+
+    it('serves nothing to a director with no branch (fail closed)', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+
+      await expect(
+        service.getAdvancesForUser(10060, { month: '2026-06' }, 1, 10012),
+      ).rejects.toThrow(/filialingizga tegishli emas/);
+      expect(prisma.expense.findMany).not.toHaveBeenCalled();
+    });
   });
 
   /**

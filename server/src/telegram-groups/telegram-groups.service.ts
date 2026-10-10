@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { TelegramGroupStatus } from '@prisma/client';
 import { EntityHistoryService } from '../common/entity-history';
 import { PermissionsService } from '../common/permissions/permissions.service';
@@ -87,12 +88,18 @@ export class TelegramGroupsService {
     });
   }
 
-  async listForCompany(companyId: number) {
+  async listForCompany(companyId: number, ceiling: ReportBranchIds) {
     return this.prisma.telegramGroup.findMany({
       where: {
         companyId,
         status: TelegramGroupStatus.APPROVED,
         deletedAt: null,
+        // A confined caller sees their own branches' groups plus the
+        // branch-less ones: unassigned groups (which `updateScope` lets them
+        // point at their own branch) and org-wide ones. The CEO sees all.
+        ...(ceiling == null
+          ? {}
+          : { OR: [{ branchId: { in: ceiling } }, { branchId: null }] }),
       },
       orderBy: { approvedAt: 'desc' },
       include: {

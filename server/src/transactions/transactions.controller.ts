@@ -110,9 +110,9 @@ export class TransactionsController {
       studentId: dto.studentId,
       amount: dto.amount,
       description: dto.description,
-      branchId: dto.branchId,
       companyId,
       performedById: userId,
+      actor: { kind: 'user', id: userId },
     });
   }
 

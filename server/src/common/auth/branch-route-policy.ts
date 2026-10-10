@@ -152,14 +152,19 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
-      'Id-addressed money paths. The branch is resolved from the record and the ' +
-      'caller is verified against it before the write. `POST /payments` checks ' +
-      'again INSIDE its transaction with the transaction client, because a ' +
-      'student can change branch between the two; the other routes here (the ' +
-      'refund routes and `POST /students/:id/balance-notices` among them) check ' +
-      "the student's branch once, before the write. Taking the header instead " +
-      'would let the branch a user happens to be viewing decide where money ' +
-      'is booked.',
+      'Id-addressed money paths. The branch is resolved from the record (or ' +
+      'from the student the path names) and the caller is verified against ' +
+      'it before anything is written or shown. `POST /payments` checks again ' +
+      'INSIDE its transaction with the transaction client, because a student ' +
+      'can change branch between the two; `POST /transactions/adjustment` and ' +
+      'the three `/billing/*` routes check once, inside their own ' +
+      'transaction, with its client; the other writes here (the refund routes ' +
+      "and `POST /students/:id/balance-notices` among them) check the student's " +
+      'branch once, before the write; the two previews refuse a student of ' +
+      'another branch before answering with anything. The adjustment takes no ' +
+      "branch from the body: its ledger row carries the student's branch. " +
+      'Taking the header instead would let the branch a user happens to be ' +
+      'viewing decide where money is booked.',
     routes: [
       'POST /payments',
       'POST /payments/:id/correct',
@@ -277,7 +282,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       '`companyId` and stopping. Cancelling was the worst of them: it flips ' +
       'attendance to EXCUSED, reverses the LESSON_CONSUMPTION, restores prepaid ' +
       "lessons and reverses the teacher's SalaryAccrual — real money in a " +
-      'branch the caller cannot even view.',
+      'branch the caller cannot even view. ' +
+      '`GET /lesson-reschedules/available-rooms` runs the same check on its ' +
+      "`groupId` before it lists the free rooms of that group's branch.",
     routes: [
       'GET /attendance/:groupId/calendar',
       'GET /attendance/:groupId/date/:date',
@@ -297,6 +304,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /lesson-reschedules',
       'PATCH /lesson-reschedules/:id',
       'DELETE /lesson-reschedules/:id',
+      'GET /lesson-reschedules/available-rooms',
       'POST /planned-absences/:groupId/date/:date',
       'DELETE /planned-absences/:id',
       'GET /lesson-teacher-overrides',
@@ -438,6 +446,30 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
+      'Lead routes that check the record rather than the header. ' +
+      '`POST /leads` and `PATCH /leads/reorder` name a board section in the ' +
+      'body: the section is looked up by id and `companyId` (404 when it is ' +
+      "not the company's), its column's `branchId` (NOT NULL) is the branch, " +
+      'and `assertCallerInBranch` refuses a caller who does not hold it before ' +
+      "anything is written. The board's `@BranchScope()` only ever OFFERED the " +
+      "caller's own sections; a section id or lead id list sent by hand " +
+      "reached another branch's board. The public form reaches the same " +
+      '`LeadsService.create` (it is in the PUBLIC block) with the stated actor ' +
+      "`{ kind: 'public-form' }`, the one actor that skips the caller check: a " +
+      "stranger holds no branch, and the form's own section, set by staff, " +
+      "fixes the lead's. `GET /leads/by-student/:studentId` is a tab of the " +
+      'student profile and runs its guard, `assertCallerMayTouchStudent`, on ' +
+      "the path's student (404 unknown, 403 another branch's) before reading " +
+      'the leads with `companyId`.',
+    routes: [
+      'POST /leads',
+      'PATCH /leads/reorder',
+      'GET /leads/by-student/:studentId',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
       "Ilova faolligi statistikasi (dizayn 6.1, ADR-0020). Guruh route'lari " +
       "`assertCallerMayTouchGroup` — sof o'qituvchi uchun biriktirilganlik, " +
       "qolganlar uchun filial; yon oyna qo'shimcha ravishda o'quvchi shu " +
@@ -551,25 +583,46 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
       "Confined by `resolvePayrollBranchScope(performedById)` — the payee's " +
-      "branch, not the viewer's selection. Fails CLOSED: a caller who is branch- " +
-      'confined but has no branch attached sees and pays NOTHING. Two production ' +
-      'Administrators were in exactly that state, and the old code collapsed it ' +
-      'to "no filter", which let them `batchPay` every branch.',
+      "branch, not the viewer's selection. A list keeps only the employees " +
+      "attached to the caller's branches; a read addressed by one employee or " +
+      "one payment never returns another branch's payroll (403, or an empty " +
+      'row from `/salary/monthly/user/:userId`), and yourself always; a ' +
+      "payout stays on the caller's `mainBranch`. Fails CLOSED: a caller who " +
+      'is branch-confined but has no branch attached sees and pays NOTHING. ' +
+      'Two production Administrators were in exactly that state, and the old ' +
+      'code collapsed it to "no filter", which let them `batchPay` every ' +
+      'branch. Until 10.10.2026 the rate, accrual, advance, payment-list and ' +
+      'payslip reads took no caller at all, and the matrix let an ' +
+      'Administrator see every branch.',
     routes: [
       'GET /salary/accruals/:userId',
       'GET /salary/advance-calendar',
       'GET /salary/advances/:userId',
+      'GET /salary/config-history/:userId',
+      'GET /salary/config/:userId',
+      'GET /salary/configs/by-users',
       'GET /salary/matrix',
       'GET /salary/monthly/user/:userId',
       'GET /salary/payments',
       'GET /salary/payments/:id/breakdown',
       'GET /salary/payments/settle-month/preview',
-      'GET /salary/timeline/:userId',
-      'PATCH /salary/payments/:id/approve',
       'POST /salary/payments/:id/pay',
       'POST /salary/payments/batch-pay',
       'POST /salary/payments/settle-month',
     ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      "The profile's «Taymlayn» tab. It takes `teachers.view`, which the " +
+      'Administrator holds, so it is confined by the RECORD rather than by ' +
+      'payroll: the employee must share a branch with the caller ' +
+      '(`assertCallerMayTouchUser`, the rule every other employee read uses, ' +
+      'CEO everywhere), and the salary-rate events are left out (not even ' +
+      'read) for a caller without `salary.view`, because an Administrator ' +
+      'sees no salary (30.09.2026). Until 10.10.2026 it took no caller and ' +
+      "returned any employee's rate history in the company.",
+    routes: ['GET /salary/timeline/:userId'],
   },
   {
     policy: 'COMPANY_WIDE',
@@ -603,20 +656,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'COMPANY_WIDE',
     reason:
-      'Company-level configuration, not branch data. Rate READS, editing an ' +
-      'existing rate (`PATCH`, CEO-only — see the BRANCH_SCOPED_BY_ENTITY ' +
-      'block above for the narrower `POST`), the company-wide bulk rate and ' +
-      'the payroll cycle apply to the whole company by design (a rate is ' +
-      'per employee, and the employee already carries a branch); `POST ' +
-      '/salary/calculate` is cron-internal and settles every branch in one ' +
-      'run, which is why it is CEO-only and has no UI trigger.',
+      'Company-level configuration and the CEO-only payroll run, not branch ' +
+      'data. Editing an existing rate (`PATCH`, CEO-only — see the ' +
+      'BRANCH_SCOPED_BY_ENTITY block above for the narrower `POST`), the ' +
+      'company-wide bulk rate and the payroll cycle apply to the whole ' +
+      'company by design. `POST /salary/calculate` is cron-internal and ' +
+      'settles every branch in one run, and `PATCH /salary/payments/:id/' +
+      'approve` approves one row of that run; both take `salary.close`, ' +
+      'which no role but the CEO holds by default. Rate READS left this ' +
+      'block on 10.10.2026: they are payroll-confined now ' +
+      '(BRANCH_SCOPED_BY_PAYROLL).',
     routes: [
-      'GET /salary/config-history/:userId',
-      'GET /salary/config/:userId',
-      'GET /salary/configs/by-users',
       'GET /salary/period-preview',
       'GET /salary/period-settings',
       'PATCH /salary/config/:id',
+      'PATCH /salary/payments/:id/approve',
       'POST /salary/calculate',
       'POST /salary/config/global',
       'POST /salary/period-settings',
@@ -888,6 +942,274 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /notifications/push/subscribe',
     ],
   },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'The three reason lists — student exit, enrollment transfer, group ' +
+      'teacher change. `StudentExitReason`, `EnrollmentTransferReason` and ' +
+      '`GroupTeacherChangeReason` carry `companyId` and no `branchId`, every ' +
+      'query filters by `companyId` alone, and both branches pick from the same ' +
+      'list, so there is no branch to confine to. The writes change that shared ' +
+      'list for every branch; they sit behind `settings.reference`, which Branch ' +
+      'Director and Administrator hold by default, so that capability must not ' +
+      'be widened past its defaults without a decision (spec §6). Deleting is a ' +
+      'soft delete: enrollments and history that already name a reason keep it.',
+    routes: [
+      'GET /student-exit-reasons',
+      'POST /student-exit-reasons',
+      'PATCH /student-exit-reasons/:id',
+      'DELETE /student-exit-reasons/:id',
+      'GET /enrollment-transfer-reasons',
+      'POST /enrollment-transfer-reasons',
+      'PATCH /enrollment-transfer-reasons/:id',
+      'DELETE /enrollment-transfer-reasons/:id',
+      'GET /group-teacher-change-reasons',
+      'POST /group-teacher-change-reasons',
+      'PATCH /group-teacher-change-reasons/:id',
+      'DELETE /group-teacher-change-reasons/:id',
+    ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Lead sources (Instagram, tavsiya, …) are one list for the whole centre: ' +
+      '`LeadSource` has no `branchId`, and both reads return source ids and ' +
+      'names only. `GET /lead-sources/filter` also reads `Lead.sourceId` across ' +
+      'every branch, but only to keep a deleted source in the filter while some ' +
+      'lead still uses it — it returns the source, never the lead. The writes ' +
+      '(`leads.setup`, Branch Director and Administrator by default) change the ' +
+      'list for every branch. None of these queries filters by `companyId` ' +
+      'either; that is a tenant gap, not a branch one, and matters only once a ' +
+      'second company exists.',
+    routes: [
+      'GET /lead-sources',
+      'GET /lead-sources/filter',
+      'POST /lead-sources',
+      'PATCH /lead-sources/:id',
+      'DELETE /lead-sources/:id',
+    ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Mock-exam sections ("IELTS Mock", "SAT Mock") are a company-level ' +
+      'grouping: `MockExamSection` has `companyId` and no `branchId`, and every ' +
+      'query is `companyId`-filtered. The exams inside DO carry a branch ' +
+      '(`MockExam.branchId`) and are confined by their own `@BranchScope()` ' +
+      'routes; only their COUNT crosses here — `examCount` and the delete guard ' +
+      "count every branch's exams, so a director may see 3 where their branch " +
+      'holds 1, and cannot delete a section another branch still uses. Writes ' +
+      '(`mock.manage`, Branch Director and Administrator by default) rename, ' +
+      'recolour or reorder the sections for every branch.',
+    routes: [
+      'GET /mock-exam-sections',
+      'POST /mock-exam-sections',
+      'PATCH /mock-exam-sections/:id',
+      'PATCH /mock-exam-sections/reorder',
+      'DELETE /mock-exam-sections/:id',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Holidays (CEO decision 10.10.2026). A holiday belongs to one branch or, ' +
+      'with `branchId` null, to the whole centre. Each id-addressed route loads ' +
+      "the row first and checks the caller against the row's branch " +
+      '(`assertCallerInBranch`). A centre-wide row is read by anyone the route ' +
+      'admits, but only the CEO edits, cancels or deletes it ' +
+      "(`resolveCallerBranchScope`), because its cascade moves every branch's " +
+      'groups. `POST /holidays` checks the branch named in the body the same ' +
+      'way, and no branch means a centre-wide holiday, so CEO only. The branch ' +
+      'is fixed at creation: `UpdateHolidayDto` has no `branchId`. The list is ' +
+      'not here: `GET /holidays` takes `@BranchScope()`.',
+    routes: [
+      'POST /holidays',
+      'PATCH /holidays/:id',
+      'PATCH /holidays/:id/status',
+      'DELETE /holidays/:id',
+      'GET /holidays/:id',
+      'GET /holidays/:id/status-history',
+    ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'The company row itself: name, phone, logo, lead-form text, the DaF ' +
+      "activity norms. `GET /company` reads only the caller's own company " +
+      '(`where: { id: companyId }`); `GET /company/:id` and `PATCH /company/:id` ' +
+      "refuse another company's id with 403. None of them returns a relation: " +
+      '`findOne` used to include every branch and every course (addresses, ' +
+      'prices), which handed them to any signed-in account past the ceiling ' +
+      'on `GET /branches`. The write needs `settings.company`, which no role ' +
+      'but the CEO holds by default.',
+    routes: ['GET /company', 'GET /company/:id', 'PATCH /company/:id'],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Opening a branch. There is no existing branch to check against: the row ' +
+      "is new, and its transaction writes only that branch's own two cash " +
+      'accounts and its NEW lead column. It is company structure, not branch ' +
+      "data, and by the CEO's decision of 10.10.2026 only the CEO opens one: " +
+      '`BranchesService.create` refuses every other caller with 403 before its ' +
+      'transaction, although `settings.branches` (Branch Director by default) ' +
+      'still admits them to the route — a director keeps editing their own ' +
+      'branch through the id-addressed `/branches/:id` routes.',
+    routes: ['POST /branches'],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Telegram groups that carry no branch. A PENDING group has none yet — the ' +
+      'bot cannot know which company or branch a new chat belongs to — so ' +
+      '`GET /telegram-groups/pending` lists every pending group across ' +
+      'companies (first approver wins), and `POST /telegram-groups/:id/reject` ' +
+      'refuses an APPROVED group with 400, so it only ever touches a ' +
+      'branch-less row. `POST /telegram-groups/announce` is product news sent to ' +
+      'every approved group of every company by design, behind ' +
+      '`telegram.announce`, which only the CEO holds by default.',
+    routes: [
+      'GET /telegram-groups/pending',
+      'POST /telegram-groups/:id/reject',
+      'POST /telegram-groups/announce',
+    ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      '«Bot hisoboti»: the channel gate counts Telegram users who were asked to ' +
+      "join the centre's channel before using the bot. " +
+      '`TelegramChannelGateEvent` has no branch and no link to a student or ' +
+      'employee — the gate meets people before anyone knows who they are — so ' +
+      'there is nothing to confine. Both routes read `DEFAULT_COMPANY_ID` only.',
+    routes: [
+      'GET /telegram/channel-report/list',
+      'GET /telegram/channel-report/summary',
+    ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      '`POST /upload` writes no row: it stores an image in the bucket and ' +
+      'returns its URL. Nothing is attached to a record until a separate, ' +
+      'scoped route saves that URL, so there is no branch question here.',
+    routes: ['POST /upload'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      "The branch switcher's option list. It takes `@BranchCeiling()` — the " +
+      "caller's whole ceiling from `resolveCallerBranchScope`, not the current " +
+      'selection — and filters `id: { in: ceiling }`, so a confined caller ' +
+      'cannot enumerate a branch that is not theirs and a CEO (`null`) sees ' +
+      'all. The ceiling rather than `@BranchScope()` is deliberate: narrowing ' +
+      'by the selected branch would leave the user unable to switch away.',
+    routes: ['GET /branches'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      "The rooms page's branch tabs: each branch with its name, address, " +
+      'status and room count. The route is open to every signed-in account ' +
+      '(`@AnyUser`), so it takes `@BranchCeiling()` and filters ' +
+      '`id: { in: ceiling }`, the shape of `GET /branches`: a confined caller ' +
+      'lists only their own branches, a caller with no branch lists none, the ' +
+      'CEO (`null`) lists all. The ceiling rather than the selection, because ' +
+      'the page picks among these tabs itself and then reads ' +
+      '`GET /rooms?branch_id=`, which is header-scoped.',
+    routes: ['GET /rooms/count-by-branch'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      'The approved groups on the «Telegram guruhlar» settings page. It takes ' +
+      '`@BranchCeiling()` (every group the caller may administer, whichever ' +
+      'branch the switcher shows) and keeps `branchId in ceiling` OR ' +
+      "`branchId null`: a confined caller sees their own branches' groups plus " +
+      'the branch-less ones, i.e. an unassigned group they may point at their ' +
+      'own branch through `PATCH /telegram-groups/:id`, and an org-wide one. ' +
+      'The CEO (`null`) sees every approved group of the company.',
+    routes: ['GET /telegram-groups'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'The branch record itself. The requested id is looked up under ' +
+      '`AND: [{ id: { in: ceiling } }]` (`@BranchCeiling()`), so a branch ' +
+      "outside the caller's ceiling answers the same 404 as a missing one, " +
+      'and the counts added to it are of that same branch.',
+    routes: ['GET /branches/:id'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'The signed Telegram invitation (ADR-0029). The branch is named in the ' +
+      'body and checked against the caller read from the DATABASE ' +
+      '(`whereUserMayAct()`): a non-CEO may mint a link only for a branch in ' +
+      'their `mainBranch` ∪ `UserBranch`, and only for roles inside ' +
+      '`grantableRoleIdsFor` (ADR-0026). The account it later creates skips the ' +
+      'caller checks precisely because the link already carries them.',
+    routes: ['POST /telegram/employee-link'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      "Money reports scoped by the controller's own `resolveScope` " +
+      '(`resolveCallerReportBranchIds(userId, query.branchId)`, ceiling ∩ ' +
+      'requested, 403 on an empty scope) — the plumbing of ' +
+      '`GET /reports/profit-composition`. The one list reaches every leg: the ' +
+      'overview (pinned by `reports-branch-scope-coverage.spec.ts`) and the ' +
+      "facade's expectation, month charges and debt split; the trend's " +
+      '`getFinancialTrend` (pinned) and per-month canonical profit; the income ' +
+      'attribution; write-offs through `branchIdWhere`; the expectation history ' +
+      "through each branch's own snapshot rows. The overview's salary card is " +
+      'confined by payroll scope from `performedById`, after `resolveScope` has ' +
+      "already refused a branch outside the ceiling. The history's holiday " +
+      'markers are not branch-filtered: they mark every holiday created in the ' +
+      "company, other branches' included. " +
+      '`GET /reports/financial-excel` resolves the same way and hands that one ' +
+      'list to every leg of the workbook. Payroll and the operational sheets ' +
+      '(rooms, attendance, teacher performance and changes) take ONE branch, ' +
+      'so `ReportsExcelService.generate` refuses a list of several with 400 ' +
+      '«filialni tanlang» before reading anything, as `scoped()` does on the ' +
+      'operational report routes; the «Lidlar» sheet counts leads with ' +
+      '`companyId` and `leadAttributionWhere`, so a branch funnel leaves the ' +
+      'unassigned pool out.',
+    routes: [
+      'GET /reports/debt-write-offs-summary',
+      'GET /reports/expectation-history',
+      'GET /reports/financial-excel',
+      'GET /reports/financial-overview',
+      'GET /reports/financial-trend',
+      'GET /reports/income-month-attribution',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      "The student portal's own-card routes (`@StudentOnly()`). Every handler " +
+      'but the password change refuses a token without `studentId` (404) before ' +
+      "any query and keys every read and write on `@CurrentUser('studentId')`: " +
+      'profile, schedule, attendance, payment history, name, photo, the payment ' +
+      "intent and checkout link. The QR scan writes only the caller's own " +
+      'attendance row and refuses a group the caller is not enrolled in. ' +
+      "`PATCH /student-portal/password` is keyed on `@CurrentUser('id')`, the " +
+      "caller's own account, behind `OwnPasswordAttemptGuard`. No student id " +
+      'comes from the request.',
+    routes: [
+      'GET /student-portal/profile',
+      'GET /student-portal/schedule',
+      'GET /student-portal/attendance/stats',
+      'GET /student-portal/attendance/history',
+      'GET /student-portal/payments',
+      'PATCH /student-portal/name',
+      'PATCH /student-portal/password',
+      'POST /student-portal/photo',
+      'DELETE /student-portal/photo',
+      'POST /student-portal/payments/init',
+      'POST /student-portal/attendance/scan',
+    ],
+  },
 ];
 
 /**
@@ -900,84 +1222,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
  */
 export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /archive/:entityType/:id',
-  'DELETE /enrollment-transfer-reasons/:id',
-  'DELETE /group-teacher-change-reasons/:id',
-  'DELETE /holidays/:id',
-  'DELETE /lead-sources/:id',
-  'DELETE /mock-exam-sections/:id',
-  'DELETE /student-exit-reasons/:id',
-  'DELETE /student-portal/photo',
   'DELETE /telegram-groups/:id',
   'GET /archive/:entityType',
   'GET /archive/:entityType/:id',
   'GET /archive/counts',
-  'GET /branches',
-  'GET /branches/:id',
-  'GET /company',
-  'GET /company/:id',
-  'GET /enrollment-transfer-reasons',
   'GET /gateways/events',
-  'GET /group-teacher-change-reasons',
-  'GET /groups/available-rooms',
-  'GET /groups/available-slots',
-  'GET /groups/available-teachers',
-  'GET /groups/next-name',
-  'GET /groups/schedule-conflicts',
-  'GET /holidays',
-  'GET /holidays/:id',
-  'GET /holidays/:id/status-history',
-  'GET /lead-sources',
-  'GET /lead-sources/filter',
-  'GET /leads/:id/hover-summary',
-  'GET /leads/by-student/:studentId',
-  'GET /lesson-reschedules/available-rooms',
-  'GET /mock-exam-sections',
-  'GET /reports/debt-write-offs-summary',
-  'GET /reports/expectation-history',
-  'GET /reports/financial-excel',
-  'GET /reports/financial-overview',
-  'GET /reports/financial-trend',
-  'GET /reports/income-month-attribution',
-  'GET /reports/lead-analytics',
-  'GET /rooms/count-by-branch',
-  'GET /student-exit-reasons',
-  'GET /student-portal/attendance/history',
-  'GET /student-portal/attendance/stats',
-  'GET /student-portal/payments',
-  'GET /student-portal/profile',
-  'GET /student-portal/schedule',
-  'GET /telegram-groups',
-  'GET /telegram-groups/pending',
-  'GET /telegram/channel-report/list',
-  'GET /telegram/channel-report/summary',
-  'PATCH /company/:id',
-  'PATCH /enrollment-transfer-reasons/:id',
-  'PATCH /group-teacher-change-reasons/:id',
-  'PATCH /holidays/:id',
-  'PATCH /holidays/:id/status',
-  'PATCH /lead-sources/:id',
-  'PATCH /leads/reorder',
-  'PATCH /mock-exam-sections/:id',
-  'PATCH /mock-exam-sections/reorder',
-  'PATCH /student-exit-reasons/:id',
-  'PATCH /student-portal/name',
-  'PATCH /student-portal/password',
   'POST /archive/:entityType/:id/restore',
-  'POST /branches',
-  'POST /enrollment-transfer-reasons',
-  'POST /group-teacher-change-reasons',
-  'POST /holidays',
-  'POST /lead-sources',
-  'POST /leads',
-  'POST /mock-exam-sections',
-  'POST /student-exit-reasons',
-  'POST /student-portal/attendance/scan',
-  'POST /student-portal/payments/init',
-  'POST /student-portal/photo',
-  'POST /telegram-groups/:id/reject',
-  'POST /telegram-groups/announce',
-  'POST /telegram/employee-link',
-  'POST /upload',
 ];
 
 /**
@@ -991,4 +1241,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 79;
+export const UNREVIEWED_BUDGET = 7;

@@ -923,6 +923,7 @@ export class MonthlyChargeService {
                 ? `${params.reason} — darajani tugatdi: o'tmagan ${remaining} dars qaytarildi`
                 : `${params.reason} — o'tmagan ${remaining} dars qaytarildi`,
           performedById: params.performedById,
+          actor: { kind: 'system' },
           // Lets the payment statement fold this refund into the month's
           // lessons without parsing the description.
           metadata: {
@@ -1501,6 +1502,7 @@ export class MonthlyChargeService {
           branchId: enr.group.branchId,
           description: `${params.reason} — qaytgandan keyingi ${missing} dars qayta hisoblandi`,
           performedById: params.performedById,
+          actor: { kind: 'system' },
         },
         tx,
       );

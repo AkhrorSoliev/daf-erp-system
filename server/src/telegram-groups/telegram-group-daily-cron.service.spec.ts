@@ -76,6 +76,16 @@ describe('TelegramGroupDailyCronService', () => {
     expect(sendMessage).not.toHaveBeenCalled();
   });
 
+  // A branch's own holiday must not silence every other branch's report.
+  it('asks for company-wide holidays only', async () => {
+    prisma.telegramGroup.findMany.mockResolvedValue([]);
+    await service.sendDailyReports();
+    expect(findActiveHolidayCovering).toHaveBeenCalledWith(
+      expect.any(Date),
+      null,
+    );
+  });
+
   it('runs normally on a non-holiday day', async () => {
     findActiveHolidayCovering.mockResolvedValue(null);
     prisma.telegramGroup.findMany.mockResolvedValue([

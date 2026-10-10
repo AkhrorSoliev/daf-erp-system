@@ -17,7 +17,25 @@ import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
 import { DeleteGroupDto } from './dto/delete-group.dto';
 import { CurrentUser, BranchScope, BranchCeiling } from '../common/decorators';
 import { Can } from '../common/permissions/access.decorators';
-import type { ReportBranchIds } from '../common/finance/report-branch-scope';
+import {
+  requireSingleBranchForWrite,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
+
+/**
+ * The ONE branch a schedule helper (free rooms, free teachers, free slots,
+ * conflicts, next group name) answers for: the scope `BranchScopeGuard`
+ * resolved, never the raw `?branchId=`. Passing the raw value let an
+ * Administrator of one branch read another's rooms, teachers, timetable and
+ * next group number. Checking the scope and then using the raw value would
+ * leak too: the guard reads `branch_id` FIRST, so
+ * `?branch_id=<own>&branchId=<other>` passes the check and names the other
+ * branch. `[]` → 403; no branch named (a CEO on «Barcha filiallar») or several
+ * → 400. The client always names one.
+ */
+function oneBranch(scope: ReportBranchIds): number {
+  return requireSingleBranchForWrite(scope, "Bu so'rov");
+}
 
 @Controller('groups')
 export class GroupsController {
@@ -56,18 +74,18 @@ export class GroupsController {
   @Get('schedule-conflicts')
   @Can('groups.manage', 'lessons.change')
   getScheduleConflicts(
-    @Query('branchId') branchId: string,
     @Query('exactDays') exactDays: string,
     @Query('startTime') startTime: string,
     @Query('endTime') endTime: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
     @Query('roomId') roomId?: string,
     @Query('teacherId') teacherId?: string,
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
     return this.groupScheduleService.getScheduleConflicts({
-      branchId: Number(branchId),
+      branchId: oneBranch(branchScope),
       exactDays: days,
       startTime,
       endTime,
@@ -81,16 +99,16 @@ export class GroupsController {
   @Get('available-rooms')
   @Can('groups.manage', 'lessons.change')
   getAvailableRooms(
-    @Query('branchId') branchId: string,
     @Query('exactDays') exactDays: string,
     @Query('startTime') startTime: string,
     @Query('endTime') endTime: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
     return this.groupScheduleService.getAvailableRooms({
-      branchId: Number(branchId),
+      branchId: oneBranch(branchScope),
       exactDays: days,
       startTime: startTime || '',
       endTime: endTime || '',
@@ -102,16 +120,16 @@ export class GroupsController {
   @Get('available-teachers')
   @Can('groups.manage', 'lessons.change')
   getAvailableTeachers(
-    @Query('branchId') branchId: string,
     @Query('exactDays') exactDays: string,
     @Query('startTime') startTime: string,
     @Query('endTime') endTime: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
     return this.groupScheduleService.getAvailableTeachers({
-      branchId: Number(branchId),
+      branchId: oneBranch(branchScope),
       exactDays: days,
       startTime: startTime || '',
       endTime: endTime || '',
@@ -123,15 +141,15 @@ export class GroupsController {
   @Get('available-slots')
   @Can('groups.manage', 'lessons.change')
   getAvailableSlots(
-    @Query('branchId') branchId: string,
     @Query('roomId') roomId: string,
     @Query('exactDays') exactDays: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
     @Query('excludeGroupId') excludeGroupId?: string,
   ) {
     const days = exactDays ? exactDays.split(',') : [];
     return this.groupScheduleService.getAvailableSlots({
-      branchId: Number(branchId),
+      branchId: oneBranch(branchScope),
       roomId,
       exactDays: days,
       excludeGroupId: excludeGroupId || undefined,
@@ -142,10 +160,10 @@ export class GroupsController {
   @Get('next-name')
   @Can('groups.manage')
   getNextName(
-    @Query('branchId') branchId: string,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.groupsService.getNextName(Number(branchId), companyId);
+    return this.groupsService.getNextName(oneBranch(branchScope), companyId);
   }
 
   @Get(':id/students')

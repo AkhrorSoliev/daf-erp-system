@@ -410,6 +410,20 @@ describe('AttendanceService', () => {
       expect(dates).not.toContain('2026-04-01');
     });
 
+    it("a holiday only another branch has does not drop this group's lesson day", async () => {
+      prisma.group.findFirst.mockResolvedValue({ ...mockGroup, branchId: 2 });
+      holidaysService.buildHolidayDateSet.mockImplementation(
+        (_start: Date, _end: Date, branchId?: number) =>
+          Promise.resolve(
+            branchId === 2 ? new Set<string>() : new Set(['2026-04-01']),
+          ),
+      );
+
+      const result = await service.getLessonDates('group-uuid-1', 4, 2026);
+
+      expect(result.map((r) => r.date)).toContain('2026-04-01');
+    });
+
     it('drops a date that has been rescheduled away (originalDate)', async () => {
       prisma.lessonReschedule.findMany.mockResolvedValue([
         {
@@ -2650,6 +2664,21 @@ describe('AttendanceService', () => {
       );
     });
 
+    it("counts lessons against its own branch's and the centre's holidays only", async () => {
+      prisma.group.findFirst.mockResolvedValue({ ...mockGroup, branchId: 2 });
+      prisma.attendance.groupBy.mockResolvedValue([]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.enrollment.findMany.mockResolvedValue([]);
+
+      await service.getStats('group-uuid-1');
+
+      expect(holidaysService.buildHolidayDateSet).toHaveBeenCalledWith(
+        expect.any(Date),
+        expect.any(Date),
+        2,
+      );
+    });
+
     it('should pass companyId to group query', async () => {
       prisma.attendance.groupBy.mockResolvedValue([]);
       prisma.attendance.findMany.mockResolvedValue([]);
@@ -2726,6 +2755,23 @@ describe('AttendanceService', () => {
         lateMinutes: null,
         enrolled: true,
       });
+    });
+
+    it("a holiday only another branch has does not drop this group's lesson", async () => {
+      prisma.group.findFirst.mockResolvedValue({
+        ...groupWithCourse(12),
+        branchId: 2,
+      });
+      holidaysService.buildHolidayDateSet.mockImplementation(
+        (_start: Date, _end: Date, branchId?: number) =>
+          Promise.resolve(
+            branchId === 2 ? new Set<string>() : new Set(['2024-01-03']),
+          ),
+      );
+
+      const result = await service.getLessonSequence('group-uuid-1');
+
+      expect(result.lessonDates).toContain('2024-01-03');
     });
 
     it('should respect custom lessonPaymentCount (e.g. 20)', async () => {

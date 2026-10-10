@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Workbook } from 'exceljs';
 import { ReportsService } from './reports.service';
 import { isMonthlyBillingMonth } from './month-charges';
@@ -40,7 +44,7 @@ import {
   teacherChangesSheet,
 } from './reports-excel.operational-sheets';
 import {
-  singleBranchId,
+  narrowToSingleBranch,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { tashkentMonthKey } from '../common/date/tashkent';
@@ -125,12 +129,28 @@ export class ReportsExcelService {
     // own (`getReconciliation`, the trends).
     const debtorBranchIds = branchIds ?? undefined;
     const companyWide = branchIds === null;
-    // Payroll and the operational sheets are still typed `branchId?: number`;
-    // they re-confine themselves from `performedById`, so a multi-branch scope
-    // degrading to `undefined` is safe. An EMPTY scope would NOT be — it would
-    // leave them unfiltered while every other leg returned 0 — but the
-    // controller refuses that caller before we get here.
-    const salaryBranchId = singleBranchId(branchIds);
+    // Payroll and the operational sheets (rooms, attendance, teacher
+    // performance and changes) take ONE `branchId?: number`, and `undefined`
+    // there means the whole company. A list of several used to degrade to that
+    // `undefined`: the operational sheets then read every branch, and payroll
+    // narrowed to the caller's `mainBranch` while revenue covered all of their
+    // branches. So a list of several is refused before anything is read, as
+    // `ReportsController.scoped()` refuses it on the operational report
+    // routes; an empty list too (the controller refuses it first). `null`
+    // (company-wide) stays `undefined`.
+    const salaryBranchId = narrowToSingleBranch(
+      branchIds,
+      () => {
+        throw new ForbiddenException(
+          "Bu filial ma'lumotlarini ko'rish huquqingiz yo'q",
+        );
+      },
+      () => {
+        throw new BadRequestException(
+          'Bir nechta filialga kirish huquqingiz bor — filialni tanlang',
+        );
+      },
+    );
     const performedById = query.performedById ?? 0;
     // The report is a per-calendar-month view — use the period's start month
     // (defaults to the current TASHKENT month, matching the frontend default:
@@ -210,7 +230,11 @@ export class ReportsExcelService {
     const [leads, rooms, attendance, teacherPerf, teacherChanges] =
       await Promise.all([
         safe(
-          this.reports.getLeadAnalytics({ startDate: opStart, endDate: opEnd }),
+          this.reports.getLeadAnalytics(companyId, {
+            branchIds,
+            startDate: opStart,
+            endDate: opEnd,
+          }),
         ),
         safe(this.reports.getRoomUtilization(companyId, opQ)),
         safe(this.reports.getAttendanceAnalytics(companyId, opQ)),

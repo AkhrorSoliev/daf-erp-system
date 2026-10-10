@@ -7,6 +7,7 @@ import {
   resolveMonthlyScope,
   type SalaryMonthlyQuery,
 } from './shared/resolve-monthly-scope';
+import { assertPayrollCoversUser } from './shared/payroll-branch-scope';
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
 import { SalaryMissedLessonsService } from './salary-missed-lessons.service';
 import { buildTeacherRosterWhere } from './shared/teacher-roster-where';
@@ -790,6 +791,11 @@ export class SalaryMonthlyService {
     companyId: number,
     performedById: number,
   ) {
+    // `resolveMonthlyScope` supplies only the month's bounds here; its branch
+    // was never read, so any employee's advances were one id away. Who may be
+    // read is the payroll ceiling, not the one branch the report narrows to:
+    // the drawer opens from a row of whichever branch the table showed.
+    await assertPayrollCoversUser(this.prisma, performedById, userId);
     const { month, monthStart, nextMonthStart } = await resolveMonthlyScope(
       this.prisma,
       query,
