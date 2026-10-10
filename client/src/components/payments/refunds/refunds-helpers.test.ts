@@ -79,7 +79,7 @@ describe("dialogs and drawer", () => {
 
   it("the refund dialog's line and toast read the due date", () => {
     expect(requestDueLine("2026-10-23")).toBe(
-      "So'rov ochilgach balans 0 bo'ladi. Pul 23.10 gacha berilishi kerak (10 bank kuni). Kassadan pul «Berildi» bosilganda chiqadi.",
+      "So'rov ochilgach bu summa balansdan darhol ayiriladi. Pul 23.10 gacha berilishi kerak (10 bank kuni). Kassadan pul «Berildi» bosilganda chiqadi.",
     );
     expect(requestOpenedText("2026-10-23")).toBe("So'rov ochildi — pul 23.10 gacha beriladi");
     expect(requestOpenedText(null)).toBe("So'rov ochildi");

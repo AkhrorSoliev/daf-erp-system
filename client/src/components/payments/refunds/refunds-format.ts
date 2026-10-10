@@ -85,7 +85,7 @@ export function drawerKindLine(d: Pick<RefundableDrawer, "kind" | "since" | "day
 
 /** The refund dialog's line (spec §4), from the preview's `dueDate`. */
 export const requestDueLine = (dueDate: string) =>
-  `So'rov ochilgach balans 0 bo'ladi. Pul ${dayMonth(dueDate)} gacha berilishi kerak (10 bank kuni). Kassadan pul «Berildi» bosilganda chiqadi.`;
+  `So'rov ochilgach bu summa balansdan darhol ayiriladi. Pul ${dayMonth(dueDate)} gacha berilishi kerak (10 bank kuni). Kassadan pul «Berildi» bosilganda chiqadi.`;
 
 /** The success toast (spec §4), from the answer's `dueDate`. */
 export const requestOpenedText = (dueDate: string | null) =>

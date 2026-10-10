@@ -1,4 +1,4 @@
--- B2b (ADR-0076): a refund is a request until the money is handed over, and a
+-- B2b (ADR-0077): a refund is a request until the money is handed over, and a
 -- balance notice starts the clock for moving unclaimed money to the centre.
 -- Every new column is nullable: the existing refunds stay as they are.
 
