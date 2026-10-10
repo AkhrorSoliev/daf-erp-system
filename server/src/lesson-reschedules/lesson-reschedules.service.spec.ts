@@ -1129,5 +1129,83 @@ describe('LessonReschedulesService', () => {
       );
       expect(tx.task.updateMany).not.toHaveBeenCalled();
     });
+
+    // The task it closed is DONE, with nobody told: the notification resolver
+    // closes its notices, and that day's alerts, from this event.
+    describe('the notification resolver is told, after the commit', () => {
+      const closed = (date: string) =>
+        expect(emitter.emit).toHaveBeenCalledWith('unmarked-lesson.closed', {
+          companyId: 1,
+          groupId: 'group-1',
+          date,
+        });
+      const closedEvents = () =>
+        emitter.emit.mock.calls.filter(
+          ([name]) => name === 'unmarked-lesson.closed',
+        );
+
+      it('when removing the move closes the make-up day question', async () => {
+        prisma.$transaction.mockImplementationOnce(async (cb: any) => {
+          const result = await cb(tx);
+          expect(closedEvents()).toHaveLength(0); // the commit comes first
+          return result;
+        });
+
+        await service.remove('rs-1', 1, 99, ['CEO']);
+
+        closed('2026-09-29');
+        expect(closedEvents()).toHaveLength(1);
+      });
+
+      it('when a new date closes the question on the old make-up day', async () => {
+        tx.lessonReschedule.findFirst
+          .mockResolvedValueOnce(move)
+          .mockResolvedValue(null);
+
+        await service.update('rs-1', { newDate: '2026-10-06' }, 1, 99, ['CEO']);
+
+        closed('2026-09-29');
+        expect(closedEvents()).toHaveLength(1);
+      });
+
+      it('not when the make-up day keeps its lesson', async () => {
+        tx.group.findUnique.mockResolvedValue({
+          ...group,
+          exactDays: ['monday', 'tuesday'],
+        });
+
+        await service.remove('rs-1', 1, 99, ['CEO']);
+
+        expect(closedEvents()).toHaveLength(0);
+      });
+
+      it("not when the make-up day was answered «Bo'ldi»", async () => {
+        onD1 = question(D1, { status: 'HELD' });
+
+        await service.remove('rs-1', 1, 99, ['CEO']);
+
+        expect(closedEvents()).toHaveLength(0);
+      });
+
+      it('not when an edit leaves the date alone', async () => {
+        tx.lessonReschedule.findFirst.mockResolvedValueOnce(move);
+
+        await service.update('rs-1', { reason: 'Izoh tuzatildi' }, 1, 99, [
+          'CEO',
+        ]);
+
+        expect(closedEvents()).toHaveLength(0);
+      });
+
+      it('not when the transaction fails', async () => {
+        tx.lessonReschedule.update.mockRejectedValue(new Error('db down'));
+
+        await expect(service.remove('rs-1', 1, 99, ['CEO'])).rejects.toThrow(
+          'db down',
+        );
+
+        expect(closedEvents()).toHaveLength(0);
+      });
+    });
   });
 });

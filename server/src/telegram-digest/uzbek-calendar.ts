@@ -66,3 +66,25 @@ export function shortWeekdaysLabel(exactDays: readonly string[]): string {
     .map(([, label]) => label)
     .join(', ');
 }
+
+const WEEK_FULL: Record<(typeof WEEK)[number][0], string> = {
+  monday: 'Dushanba',
+  tuesday: 'Seshanba',
+  wednesday: 'Chorshanba',
+  thursday: 'Payshanba',
+  friday: 'Juma',
+  saturday: 'Shanba',
+  sunday: 'Yakshanba',
+};
+
+/**
+ * `Group.exactDays` as full day names for documents (the contract's
+ * «Dars jadvali»): «Dushanba, Chorshanba, Juma», Monday first. Unknown names
+ * are skipped.
+ */
+export function fullWeekdaysLabel(exactDays: readonly string[]): string {
+  const wanted = new Set(exactDays.map((d) => d.trim().toLowerCase()));
+  return WEEK.filter(([day]) => wanted.has(day))
+    .map(([day]) => WEEK_FULL[day])
+    .join(', ');
+}

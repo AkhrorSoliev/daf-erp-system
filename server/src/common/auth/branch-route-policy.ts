@@ -177,6 +177,24 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
+      'Student contracts (ADR-0075). Every route resolves the student — from ' +
+      'the query for the list and the prefill, from the contract row for the ' +
+      'id-addressed ones — and checks the caller against that student branch ' +
+      'with `assertCallerMayTouchStudent`. The header branch is never read: a ' +
+      'contract belongs to the branch of the student it was made for.',
+    routes: [
+      'GET /contract-documents',
+      'GET /contract-documents/prefill',
+      'POST /contract-documents',
+      'PATCH /contract-documents/:id',
+      'POST /contract-documents/:id/sign',
+      'POST /contract-documents/:id/cancel',
+      'GET /contract-documents/:id/pdf',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
       'Telegram group administration. The group row carries the branch whose ' +
       'operational events it receives, so `assertCallerInBranch` is checked ' +
       'against that record — in BOTH directions on a change, because pointing a ' +
@@ -832,6 +850,27 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'PUT /tasks/:id/participants',
     ],
   },
+  {
+    policy: 'SELF',
+    reason:
+      "The bell. Every route reads or writes rows keyed on `@CurrentUser('id')` " +
+      '(`NotificationsService` filters by `userId` alone), and a notification is ' +
+      'addressed to a person, not a branch: an attendance alert of a Namangan group ' +
+      'went to that branch’s administrators when it was written, so there is ' +
+      'nothing left to narrow at read time.',
+    routes: [
+      'DELETE /notifications/devices',
+      'DELETE /notifications/push/unsubscribe',
+      'GET /notifications',
+      'GET /notifications/counts',
+      'GET /notifications/stream',
+      'GET /notifications/unread-count',
+      'PATCH /notifications/:id/read',
+      'PATCH /notifications/read-all',
+      'POST /notifications/devices',
+      'POST /notifications/push/subscribe',
+    ],
+  },
 ];
 
 /**
@@ -849,8 +888,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /holidays/:id',
   'DELETE /lead-sources/:id',
   'DELETE /mock-exam-sections/:id',
-  'DELETE /notifications/devices',
-  'DELETE /notifications/push/unsubscribe',
   'DELETE /student-exit-reasons/:id',
   'DELETE /student-portal/photo',
   'DELETE /telegram-groups/:id',
@@ -878,9 +915,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /leads/by-student/:studentId',
   'GET /lesson-reschedules/available-rooms',
   'GET /mock-exam-sections',
-  'GET /notifications',
-  'GET /notifications/stream',
-  'GET /notifications/unread-count',
   'GET /reports/debt-write-offs-summary',
   'GET /reports/expectation-history',
   'GET /reports/financial-excel',
@@ -908,8 +942,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /leads/reorder',
   'PATCH /mock-exam-sections/:id',
   'PATCH /mock-exam-sections/reorder',
-  'PATCH /notifications/:id/read',
-  'PATCH /notifications/read-all',
   'PATCH /student-exit-reasons/:id',
   'PATCH /student-portal/name',
   'PATCH /student-portal/password',
@@ -921,8 +953,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /lead-sources',
   'POST /leads',
   'POST /mock-exam-sections',
-  'POST /notifications/devices',
-  'POST /notifications/push/subscribe',
   'POST /student-exit-reasons',
   'POST /student-portal/attendance/scan',
   'POST /student-portal/payments/init',
@@ -944,4 +974,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 88;
+export const UNREVIEWED_BUDGET = 79;

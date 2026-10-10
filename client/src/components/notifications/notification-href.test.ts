@@ -62,6 +62,19 @@ describe("notificationHref", () => {
     ).toBe("/settings/absence-pause");
   });
 
+  it("opens the debt page on broken promises for the 09:00 list", () => {
+    expect(
+      notificationHref(
+        {
+          type: "PAYMENT_PROMISE_OVERDUE",
+          relatedEntityType: "BrokenPromises",
+          relatedEntityId: "2",
+        },
+        ADMINISTRATOR,
+      ),
+    ).toBe("/payments/debt?promise=broken");
+  });
+
   // Server bu sahifalarni shu rollarga bermaydi: GET /students/:id da
   // o'qituvchi, GET /groups/:id da kassir yo'q (capabilities students.profile, groups.view).
   it("gives a teacher-only viewer no student link and a cashier-only viewer no group link", () => {

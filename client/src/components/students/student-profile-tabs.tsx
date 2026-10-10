@@ -18,6 +18,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import type { Student } from "@/data/student-model";
 import { useCan } from "@/hooks/use-permissions";
 import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
+import { StudentContractsTab } from "./contracts/student-contracts-tab";
 import { StudentAppActivityTab } from "./student-app-activity-tab";
 import { StudentGroupCard } from "./student-group-card";
 import { PaymentStatement } from "./statement/payment-statement";
@@ -71,6 +72,8 @@ export function StudentProfileTabs({
   const darslarShown = useRef(false);
   const [ilovaVisible, setIlovaVisible] = useState(false);
   const ilovaShown = useRef(false);
+  const [contractsVisible, setContractsVisible] = useState(false);
+  const contractsShown = useRef(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
   );
@@ -158,6 +161,10 @@ export function StudentProfileTabs({
       if (value === "ilova" && !ilovaShown.current) {
         ilovaShown.current = true;
         setIlovaVisible(true);
+      }
+      if (value === "shartnomalar" && !contractsShown.current) {
+        contractsShown.current = true;
+        setContractsVisible(true);
       }
     },
     [],
@@ -280,6 +287,9 @@ export function StudentProfileTabs({
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
           {canSeeDetails && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
+          {canSeeDetails && (
+            <TabsTrigger value="shartnomalar">Shartnomalar</TabsTrigger>
+          )}
           {canSeeDetails && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
           {canSeeComments && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
           {canSeeDetails && (
@@ -366,6 +376,18 @@ export function StudentProfileTabs({
             <EmptyState message="To'lov ma'lumotlari mavjud emas" />
           )}
         </TabsContent>
+
+        {/* Shartnomalar (ADR-0075) */}
+        {canSeeDetails && (
+          <TabsContent value="shartnomalar">
+            {contractsVisible && (
+              <StudentContractsTab
+                studentId={student.id}
+                onStudentChanged={onEnrollmentChange}
+              />
+            )}
+          </TabsContent>
+        )}
 
         {/* Darslar — davomat + sikl/to'lov monitoringi */}
         <TabsContent value="darslar">

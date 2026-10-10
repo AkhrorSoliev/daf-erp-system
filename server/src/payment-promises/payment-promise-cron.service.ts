@@ -4,13 +4,13 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { tashkentDateStr, tashkentDayStartUtc } from '../common/date/tashkent';
+import { MIN_ALERT_DEBT } from './overdue-digest';
 
+/** One branch's promises broken this morning — one message for all of them. */
 export interface PaymentPromiseOverduePayload {
-  promiseId: string;
-  studentId: number;
   companyId: number;
   branchId: number | null;
-  promiseDate: string; // ISO
+  promiseIds: string[];
 }
 
 @Injectable()
@@ -32,11 +32,11 @@ export class PaymentPromiseCronService {
 
   /**
    * Flip OPEN promises whose date has passed while the student is still in
-   * debt to BROKEN, and fire one branch-wide admin reminder per promise
-   * (4-channel fan-out via NotificationEventsListener). `reminderFiredAt` +
-   * the OPEN→BROKEN status change together guarantee a promise is reminded at
-   * most once. Extracted from the @Cron method so it can be triggered in a
-   * test or manually.
+   * debt to BROKEN, then send each branch ONE list of them
+   * (NotificationEventsListener). A debt under MIN_ALERT_DEBT is still marked
+   * BROKEN but raises no alert. `reminderFiredAt` + the OPEN→BROKEN status
+   * change together guarantee a promise is reported at most once. Extracted
+   * from the @Cron method so it can be triggered in a test or manually.
    */
   async run() {
     const holiday = await this.holidays.findActiveHolidayCovering(new Date());
@@ -44,7 +44,7 @@ export class PaymentPromiseCronService {
       this.logger.log(
         "Bayram kuni — to'lov va'dasi eslatmasi o'tkazib yuborildi",
       );
-      return { processed: 0 };
+      return { processed: 0, alerted: 0 };
     }
 
     const now = new Date();
@@ -57,28 +57,33 @@ export class PaymentPromiseCronService {
         reminderFiredAt: null,
         student: { balance: { lt: 0 }, deletedAt: null },
       },
+      orderBy: { promiseDate: 'asc' },
       select: {
         id: true,
-        studentId: true,
         companyId: true,
         branchId: true,
-        promiseDate: true,
+        student: { select: { balance: true } },
       },
     });
 
+    const lists = new Map<string, PaymentPromiseOverduePayload>();
+    let processed = 0;
     for (const p of due) {
       try {
         await this.prisma.paymentPromise.update({
           where: { id: p.id },
           data: { status: 'BROKEN', reminderFiredAt: now },
         });
-        this.eventEmitter.emit('payment-promise.overdue', {
-          promiseId: p.id,
-          studentId: p.studentId,
+        processed += 1;
+        if (-p.student.balance < MIN_ALERT_DEBT) continue;
+        const key = `${p.companyId}:${p.branchId ?? '-'}`;
+        const list = lists.get(key) ?? {
           companyId: p.companyId,
           branchId: p.branchId,
-          promiseDate: p.promiseDate.toISOString(),
-        } satisfies PaymentPromiseOverduePayload);
+          promiseIds: [],
+        };
+        list.promiseIds.push(p.id);
+        lists.set(key, list);
       } catch (err) {
         this.logger.error(
           `Va'da #${p.id} ni qayta ishlashda xato: ${(err as Error).message}`,
@@ -86,11 +91,20 @@ export class PaymentPromiseCronService {
       }
     }
 
-    if (due.length > 0) {
+    let alerted = 0;
+    for (const list of lists.values()) {
+      this.eventEmitter.emit(
+        'payment-promise.overdue',
+        list satisfies PaymentPromiseOverduePayload,
+      );
+      alerted += list.promiseIds.length;
+    }
+
+    if (processed > 0) {
       this.logger.log(
-        `${due.length} ta muddati o'tgan to'lov va'dasi belgilandi`,
+        `${processed} ta muddati o'tgan to'lov va'dasi belgilandi, ${alerted} tasi xabarga kirdi`,
       );
     }
-    return { processed: due.length };
+    return { processed, alerted };
   }
 }

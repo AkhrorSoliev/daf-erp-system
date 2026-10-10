@@ -21,7 +21,9 @@ import {
 } from '../unmarked-lessons/unmarked-lesson-transitions';
 import { closeQuestionOnFormerMakeUpDay } from '../unmarked-lessons/make-up-day';
 import {
+  UNMARKED_LESSON_CLOSED,
   UNMARKED_LESSON_NOT_HELD,
+  type UnmarkedLessonClosedPayload,
   type UnmarkedLessonNotHeldPayload,
 } from '../unmarked-lessons/unmarked-lesson-events';
 import { loadReaskHolidays } from '../unmarked-lessons/reask-holidays';
@@ -712,13 +714,17 @@ export class LessonReschedulesService {
           data,
         });
         // The old make-up day may have no lesson left: its question closes.
-        if (newDateChanged) {
-          await closeQuestionOnFormerMakeUpDay(tx, {
+        let closedMakeUpDay: Date | null = null;
+        if (
+          newDateChanged &&
+          (await closeQuestionOnFormerMakeUpDay(tx, {
             groupId: existing.groupId,
             day: existing.newDate,
             actorId: userId,
             now,
-          });
+          }))
+        ) {
+          closedMakeUpDay = existing.newDate;
         }
 
         await this.entityHistoryService.recordUpdate({
@@ -745,6 +751,7 @@ export class LessonReschedulesService {
 
         return {
           row: updated,
+          closedMakeUpDay,
           groupId: existing.groupId,
           originalDateStr: existing.originalDate.toISOString().slice(0, 10),
           effectiveNewDateStr: effectiveNewDate.toISOString().slice(0, 10),
@@ -770,7 +777,26 @@ export class LessonReschedulesService {
         companyId,
       } satisfies LessonReschedulePayload);
     }
+    if (updated.closedMakeUpDay) {
+      this.emitQuestionClosed(
+        companyId,
+        updated.groupId,
+        updated.closedMakeUpDay,
+      );
+    }
     return updated.row;
+  }
+
+  /**
+   * After the commit: a question on the make-up day closed because the day
+   * lost its lesson. Nobody is told, but the notices it waited on close.
+   */
+  private emitQuestionClosed(companyId: number, groupId: string, day: Date) {
+    this.eventEmitter.emit(UNMARKED_LESSON_CLOSED, {
+      companyId,
+      groupId,
+      date: day.toISOString().slice(0, 10),
+    } satisfies UnmarkedLessonClosedPayload);
   }
 
   /**
@@ -808,7 +834,7 @@ export class LessonReschedulesService {
     );
     // Serializable, like create and update: the reopen reads, then writes a
     // row the lesson-end sweep also writes.
-    return this.prisma
+    const { row, closedMakeUpDay } = await this.prisma
       .$transaction(async (tx) => {
         const row = await tx.lessonReschedule.update({
           where: { id },
@@ -828,7 +854,7 @@ export class LessonReschedulesService {
         });
         // The make-up day — as this transaction's soft-delete returned it —
         // may have no lesson left: its question closes.
-        await closeQuestionOnFormerMakeUpDay(tx, {
+        const closedMakeUpDay = await closeQuestionOnFormerMakeUpDay(tx, {
           groupId: row.groupId,
           day: row.newDate,
           actorId: userId,
@@ -839,9 +865,13 @@ export class LessonReschedulesService {
           now,
           holidays,
         });
-        return row;
+        return { row, closedMakeUpDay };
       }, SERIALIZABLE_TX)
       .catch(asConflict);
+    if (closedMakeUpDay) {
+      this.emitQuestionClosed(companyId, row.groupId, row.newDate);
+    }
+    return row;
   }
 
   private parseDate(dateStr: string): Date {

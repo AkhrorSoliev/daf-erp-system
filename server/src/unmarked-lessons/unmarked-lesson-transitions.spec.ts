@@ -718,10 +718,12 @@ describe('closeTasksOfDeletedGroup', () => {
   it('closes the tasks of every pending lesson', async () => {
     const tx = makeTx();
     tx.unmarkedLesson.findMany.mockResolvedValue([
-      { taskId: 'c1' },
-      { taskId: 'c3' },
+      { taskId: 'c1', date: new Date('2026-09-28T00:00:00.000Z') },
+      { taskId: 'c3', date: new Date('2026-09-30T00:00:00.000Z') },
     ]);
-    await closeTasksOfDeletedGroup(tx, 'g1');
+    const days = await closeTasksOfDeletedGroup(tx, 'g1');
     expect(tx.task.updateMany).toHaveBeenCalledTimes(2);
+    // The caller tells the resolver about each day after its commit.
+    expect(days).toEqual(['2026-09-28', '2026-09-30']);
   });
 });

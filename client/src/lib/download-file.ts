@@ -28,3 +28,28 @@ export async function downloadAuthedFile(
   a.click();
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Opens an auth-gated PDF in a new tab for printing. The tab is opened
+ * before the request, while the click still counts as a user gesture, or the
+ * browser blocks it; a blocked tab falls back to a download.
+ */
+export async function openAuthedFile(
+  path: string,
+  fallbackName: string,
+): Promise<void> {
+  const tab = window.open("", "_blank");
+  if (!tab) {
+    await downloadAuthedFile(path, fallbackName);
+    return;
+  }
+  try {
+    const res = await api.get(path, { responseType: "blob" });
+    const url = URL.createObjectURL(res.data as Blob);
+    tab.location.href = url;
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (err) {
+    tab.close();
+    throw err;
+  }
+}

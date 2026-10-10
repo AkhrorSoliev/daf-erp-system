@@ -4,7 +4,7 @@ Eslatmalar guruhning dars vaqtiga bog'lab yuboriladi. Davomat olinmagan degani �
 
 | Qachon | Davomat olinmagan bo'lsa | Kimga | Xabar |
 |---|---|---|---|
-| Dars boshlanish vaqtida | Shart emas | Guruhning o'qituvchilariga | «Dars boshlandi»: darsingiz boshlandi, davomatni belgilashni unutmang. |
+| Dars boshlanish vaqtida | Ha | Guruhning o'qituvchilariga | «Dars boshlandi»: darsingiz boshlandi, davomatni belgilashni unutmang. Davomat dars boshlanishidan oldin olingan bo'lsa, bu xabar yuborilmaydi. |
 | Dars tugashiga 30 daqiqa qolganda | Ha | Guruhning o'qituvchilariga | «Davomat eslatmasi»: dars tugashiga 30 daqiqa qoldi; davomat dars tugaguncha olinmasa, bu dars uchun haq yozilmaydi. |
 | Dars tugashiga 30 daqiqa qolganda | Ha | Guruh filialidagi administratorlarga | «O'qituvchi hali davomat olmadi»: dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomat olmadi; dars tugaguncha olinmasa, ustozga haq yozilmaydi — iltimos, o'qituvchini ogohlantiring. |
 | Dars tugagach, «Dars bo'ldimi?» savoli ochilganda | Ha | Guruhning o'qituvchilariga | «Davomat olinmadi»: darsingiz tugadi, davomat olinmadi; bu dars uchun haq yozilmaydi; dars bo'lgan-bo'lmaganini administrator belgilaydi. |
@@ -20,6 +20,7 @@ Eslatmalar guruhning dars vaqtiga bog'lab yuboriladi. Davomat olinmagan degani �
 ## Xabar qanday yetadi
 
 - Tizim ichida: yuqori paneldagi qo'ng'iroq belgisida, «Bildirishnomalar» ro'yxatida.
+- Qo'ng'iroq belgisidagi eslatma ish bajarilganda o'zi yopiladi: davomat saqlansa (QR bilan ham), dars bekor qilinsa yoki ko'chirilsa, yoki «Dars bo'ldimi?» savoliga javob berilsa. Dars kuni o'tib ketgan va «Dars bo'ldimi?» savoli kutilmayotgan eslatma har kecha soat 03:00 da o'zi yopiladi. Yopilgan eslatma kulrang bo'ladi va qo'ng'iroq belgisidagi raqamdan tushadi. Bir kundagi bir xil eslatmalar bitta qatorga yig'iladi, masalan «Davomat olinmagan · 3 guruh».
 - Brauzer bildirishnomasi: brauzer ruxsat so'ragach ruxsat bergan bo'lsangiz.
 - Telegram: Telegram ulangan xodimga. Eslatmalar (dars boshlandi, 30 daqiqa, davomat olinmadi) yuborilgan zahoti boradi.
 - «Davomat qabul qilindi» va «Dars haqi yozilmadi» tizim ichida va brauzerda darhol keladi. Telegramda ular kunlik xabarning ichida boradi (soat 20:00). «Davomat qabul qilindi»: davomat 20:00 dan oldin saqlangan bo'lsa — shu kuni, keyin saqlangan bo'lsa — ertasi kuni; dars sanasi xabar kunidan boshqa bo'lsa, qatorda u qavs ichida turadi; qator — guruh nomi va sonlar (masalan, Keldi: 8 / Kelmadi: 2), nol sonlarsiz. «Dars haqi yozilmadi» — «Davomat vaqtida olinmagan darslar» bo'limida: guruh nomi va sana.
@@ -44,12 +45,12 @@ Tizim eslatmalarni har yarim soatda, soat va yarim soat boshlarida tekshiradi: 0
 | Dars vaqti kiritilmagan guruh | Yo'q | Yo'q | Boradi: 23:00 da |
 | Yakshanba | Yo'q | Yo'q | Yakshanbaga ko'chirilgan dars davomatsiz tugasa — 23:00 da |
 | Bayram | Yo'q | Yo'q | Yo'q: savol ham ochilmaydi |
-| Bekor qilingan kun | Boradi | Boradi | Yo'q |
-| Ko'chirilgan dars, eski kun | Boradi | Boradi | Yo'q |
+| Bekor qilingan kun | Yo'q | Yo'q | Yo'q |
+| Ko'chirilgan dars, eski kun | Yo'q | Yo'q | Yo'q |
 | Ko'chirilgan dars, yangi kun | Yo'q | Yo'q | Boradi: o'sha kunning o'z vaqti bilan |
-| Davomat yozuvi bor (qo'lda yoki QR bilan, hatto bitta o'quvchi uchun) | Boradi: davomatga qaramay | To'xtaydi | Chiqmaydi: dars davomat olingan hisoblanadi |
+| Davomat yozuvi bor (qo'lda yoki QR bilan, hatto bitta o'quvchi uchun) | Yo'q: dars boshlanishidan oldin olingan bo'lsa | To'xtaydi | Chiqmaydi: dars davomat olingan hisoblanadi |
 
-Bayramlar Sozlamalar → «Dam olish kunlari»da kiritiladi va butun markazga tegishli. «Dars boshlandi» va 30 daqiqa eslatmalari guruhning odatdagi jadvaliga qarab yuboriladi, shuning uchun bekor qilingan yoki ko'chirilgan darsni bilmaydi; «Davomat olinmadi» esa bekor qilish, ko'chirish va bayramni hisobga oladi.
+Bayramlar Sozlamalar → «Dam olish kunlari»da kiritiladi va butun markazga tegishli. «Dars boshlandi» va 30 daqiqa eslatmalari guruhning odatdagi jadvaliga qarab yuboriladi, lekin bugungi dars bekor qilingan yoki boshqa kunga ko'chirilgan bo'lsa, ular yuborilmaydi; «Davomat olinmadi» ham bekor qilish, ko'chirish va bayramni hisobga oladi.
 
 ## Boshqa davomat xabarlari
 

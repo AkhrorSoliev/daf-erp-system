@@ -115,7 +115,7 @@ export const guruhlar: QollanmaSahifa[] = [
       "o'rinbosar stavka",
       "bekor qilishni o'chirish",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "guruhlar",

@@ -14,6 +14,8 @@ const ENTITY_ROUTES: Record<string, (id: string) => string> = {
   User: (id) => `/settings/employees/${id}`,
   AbsencePauseSetting: () => "/settings/absence-pause",
   Task: (id) => `/tasks?task=${id}`,
+  // The 09:00 list of one branch's broken payment promises (id = branch).
+  BrokenPromises: () => "/payments/debt?promise=broken",
 };
 
 // A viewer who cannot open the page gets no link: the server refuses that page

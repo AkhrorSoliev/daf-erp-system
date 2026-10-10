@@ -44,6 +44,7 @@ export const routeLabels: Record<string, string> = {
   oquvchilar: "O'quvchilar",
   "absence-pause": "Avtomatik pauza",
   tasks: "Topshiriqlar",
+  notifications: "Bildirishnomalar",
   archive: "Arxiv",
   overview: "Umumiy ma'lumotlar",
   pending: "Kutilyotgan to'lovlar",

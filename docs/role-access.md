@@ -87,6 +87,20 @@ Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qa
 
 - **Frontend**: `useCan("calls.log")`, `useCan("students.details")` (the statement PDF) and `useCan("balance.withdraw")` / `useCan("refunds.create")` hide the actions a cashier may not take
 
+### Student contracts
+
+The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-0075). Everyone below the CEO acts only on students of their own branch.
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| See contracts, open the PDF | Yes | Yes | Yes | No | No |
+| Create, edit an unsigned contract, mark it signed on paper | Yes | Yes | Yes | No | No |
+| Cancel an unsigned contract | Yes | Yes | Yes | No | No |
+| Cancel a signed contract | Yes | No | No | No | No |
+
+- **Backend**: `@Can('students.details')` on the reads (list, prefill, PDF), `@Can('students.manage')` on the writes (create, edit, sign, cancel). Cancelling a signed contract is CEO identity, checked by `ContractLifecycleService.cancel` against the role read from the database
+- **Frontend**: the tab shows with `useCan("students.details")`; «Shartnoma tuzish» and the card actions with `useCan("students.manage")`; the CEO-only cancel of a signed contract is an identity check (`SIGNED_CONTRACT_CANCEL_ROLE_IDS` in `student-contracts-tab.tsx`)
+
 ### Groups
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |

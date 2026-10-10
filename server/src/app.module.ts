@@ -60,6 +60,7 @@ import { PaymentPromisesModule } from './payment-promises/payment-promises.modul
 import { SettingsModule } from './settings/settings.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
+import { ContractDocumentsModule } from './contract-documents/contract-documents.module';
 import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
 import { PermissionGuard } from './common/permissions/permission.guard';
 import { PermissionsModule } from './common/permissions/permissions.module';
@@ -141,6 +142,7 @@ import { validateEnv } from './config/env.validation';
     PaymentPromisesModule,
     CallLogsModule,
     StatementsModule,
+    ContractDocumentsModule,
   ],
   providers: [
     {
