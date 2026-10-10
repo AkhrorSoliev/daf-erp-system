@@ -76,7 +76,7 @@ describe('notification_action_state migration', () => {
   const sql = readFileSync(
     join(
       __dirname,
-      '../../prisma/migrations/20261010120000_notification_action_state/migration.sql',
+      '../../prisma/migrations/20261010130000_notification_action_state/migration.sql',
     ),
     'utf8',
   );

@@ -44,7 +44,7 @@ Spec: `docs/superpowers/specs/2026-10-07-topshiriqlar-design.md` §8 (lines 376�
 
 **Server**
 - `server/prisma/schema.prisma` — `Notification`: 3 columns, 2 indexes.
-- `server/prisma/migrations/20261010120000_notification_action_state/migration.sql` — DDL + backfill.
+- `server/prisma/migrations/20261010130000_notification_action_state/migration.sql` — DDL + backfill.
 - `server/src/notifications/notification-kind.ts` (+ `.spec.ts`) — pure: groups, action types, lesson keys, `notificationKind`.
 - `server/src/notifications/notifications.service.ts` (+ spec) — `create` stamps kind and returns a view; `findByUser` (filters + cursor), `getUnreadCount` (badge), `getCounts`.
 - `server/src/notifications/dto/notification-query.dto.ts` — `filter`, `type`, `q`, `cursor`, `pageSize`, deprecated `page`.
@@ -76,7 +76,7 @@ Spec: `docs/superpowers/specs/2026-10-07-topshiriqlar-design.md` §8 (lines 376�
 
 **Files:**
 - Modify: `server/prisma/schema.prisma` (model `Notification`, ~line 2063)
-- Create: `server/prisma/migrations/20261010120000_notification_action_state/migration.sql`
+- Create: `server/prisma/migrations/20261010130000_notification_action_state/migration.sql`
 - Create: `server/src/notifications/notification-kind.ts`, `server/src/notifications/notification-kind.spec.ts`
 - Modify: `server/src/notifications/notifications.service.ts` (`CreateNotificationParams`, `create`)
 - Modify: `server/src/notifications/notifications.service.spec.ts` (`describe('create')`)
@@ -318,10 +318,10 @@ model Notification {
 ```bash
 cd /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup/server
 git show HEAD:server/prisma/schema.prisma > prisma/.schema-before.prisma
-mkdir -p prisma/migrations/20261010120000_notification_action_state
-npx prisma migrate diff --from-schema prisma/.schema-before.prisma --to-schema prisma/schema.prisma --script 2>/dev/null > prisma/migrations/20261010120000_notification_action_state/migration.sql
+mkdir -p prisma/migrations/20261010130000_notification_action_state
+npx prisma migrate diff --from-schema prisma/.schema-before.prisma --to-schema prisma/schema.prisma --script 2>/dev/null > prisma/migrations/20261010130000_notification_action_state/migration.sql
 rm prisma/.schema-before.prisma
-cat prisma/migrations/20261010120000_notification_action_state/migration.sql
+cat prisma/migrations/20261010130000_notification_action_state/migration.sql
 ```
 
 Expected: exactly one `ALTER TABLE "Notification" ADD COLUMN …` (three columns) and two `CREATE INDEX` lines, nothing else. If anything else appears, stop and report.
@@ -533,7 +533,7 @@ Expected: all green.
 - [ ] **Step 13: Commit**
 
 ```bash
-git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup add server/prisma/schema.prisma server/prisma/migrations/20261010120000_notification_action_state server/src/notifications/notification-kind.ts server/src/notifications/notification-kind.spec.ts server/src/notifications/notifications.service.ts server/src/notifications/notifications.service.spec.ts server/src/tasks/task-notify.listener.ts server/src/tasks/task-notify.listener.spec.ts
+git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup add server/prisma/schema.prisma server/prisma/migrations/20261010130000_notification_action_state server/src/notifications/notification-kind.ts server/src/notifications/notification-kind.spec.ts server/src/notifications/notifications.service.ts server/src/notifications/notifications.service.spec.ts server/src/tasks/task-notify.listener.ts server/src/tasks/task-notify.listener.spec.ts
 git -C /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/topshiriqlar-clickup commit -m "feat(notifications): stamp what waits and the lesson-day key on every row
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -1642,7 +1642,7 @@ Create `server/scripts/notification-cleanup.ts`:
 /**
  * One-off (spec 2026-10-07 §8). Before the phase-5 bell no alert ever closed,
  * so some accounts held 450–780 unread rows. Run once, right after the deploy
- * that applies the migration `20261010120000_notification_action_state`:
+ * that applies the migration `20261010130000_notification_action_state`:
  *
  *   railway run --service caring-courage --environment production \
  *     npx ts-node --transpile-only scripts/notification-cleanup.ts [--apply]
@@ -3201,7 +3201,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ```md
 ## Deploy order
-1. Server (Railway `caring-courage`, production) — applies `20261010120000_notification_action_state` (3 columns, 2 indexes, backfill by type). The old bell keeps working: `GET /notifications` still accepts `page`/`pageSize` and returns `data`.
+1. Server (Railway `caring-courage`, production) — applies `20261010130000_notification_action_state` (3 columns, 2 indexes, backfill by type). The old bell keeps working: `GET /notifications` still accepts `page`/`pageSize` and returns `data`.
 2. Cleanup, right after: `railway run --service caring-courage --environment production npx ts-node --transpile-only scripts/notification-cleanup.ts` (dry run — read the counts and the ten largest badges), then the same with `--apply`. Until it runs, old unread attendance alerts count in the badge.
 3. Vercel — the new bell and `/notifications` read the new fields, so the server goes first.
 ```

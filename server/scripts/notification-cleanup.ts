@@ -1,7 +1,7 @@
 /**
  * One-off (spec 2026-10-07 §8). Before the phase-5 bell no alert ever closed,
  * so some accounts held 450–780 unread rows. Run once, right after the deploy
- * that applies the migration `20261010120000_notification_action_state`:
+ * that applies the migration `20261010130000_notification_action_state`:
  *
  *   railway run --service caring-courage --environment production \
  *     npx ts-node --transpile-only scripts/notification-cleanup.ts [--apply]
