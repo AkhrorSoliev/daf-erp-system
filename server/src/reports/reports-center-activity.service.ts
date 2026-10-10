@@ -6,6 +6,7 @@ import {
   CenterActivityQueryDto,
 } from './dto/center-activity-query.dto';
 import { HolidaysService } from '../holidays/holidays.service';
+import type { BranchHolidayDates } from '../holidays/holiday-date-set';
 import {
   endOfUtcDay,
   tashkentMonthKey,
@@ -134,7 +135,7 @@ export class ReportsCenterActivityService {
 
     const branchFilter = query.branchId ? { branchId: query.branchId } : {};
 
-    const [rooms, groups, holidayDates] = await Promise.all([
+    const [rooms, groups, holidaysFor] = await Promise.all([
       this.prisma.room.findMany({
         where: {
           companyId,
@@ -193,11 +194,10 @@ export class ReportsCenterActivityService {
 
       // Multi-day-aware: expands each active holiday's [date, endDate]
       // range into a Set of Tashkent calendar days that intersect [start, end].
-      this.holidaysService.buildHolidayDateSet(range.start, range.end),
+      // One read for every branch: `holidaysFor(branchId)` is the company-wide
+      // days plus that branch's own (CEO decision 10.10.2026).
+      this.holidaysService.buildHolidayDateSetsByBranch(range.start, range.end),
     ]);
-
-    const workingDaysInPeriod = this.countWorkingDays(range, holidayDates);
-    const periodScale = workingDaysInPeriod / 7;
 
     const groupsByRoom = new Map<string, GroupRecord[]>();
     for (const g of groups) {
@@ -217,6 +217,10 @@ export class ReportsCenterActivityService {
       const filteredGroups = (groupsByRoom.get(room.id) ?? []).filter(
         (g) => g.createdAt <= range.end,
       );
+      // A room works the days its own branch is open: another branch's
+      // holiday does not shorten its period.
+      const periodScale =
+        this.countWorkingDays(range, holidaysFor(room.branchId)) / 7;
       return this.buildRoomEntry(
         room,
         filteredGroups,
@@ -245,7 +249,7 @@ export class ReportsCenterActivityService {
       rooms,
       groups,
       range,
-      holidayDates,
+      holidaysFor,
       bucketUsed,
       snaps,
     );
@@ -524,7 +528,7 @@ export class ReportsCenterActivityService {
     rooms: RoomRecord[],
     groups: GroupRecord[],
     range: ResolvedRange,
-    holidayDates: Set<string>,
+    holidaysFor: BranchHolidayDates,
     bucket: CenterActivityBucket,
     snaps: SnapshotMaps,
   ) {
@@ -550,7 +554,6 @@ export class ReportsCenterActivityService {
     const cursor = new Date(range.start);
     while (cursor <= range.end) {
       const iso = this.toIsoDate(cursor);
-      const isHoliday = holidayDates.has(iso);
 
       // If no group existed in the system by this date, the system had no
       // operational data — emit zeros across all metrics rather than treating
@@ -592,23 +595,27 @@ export class ReportsCenterActivityService {
           room.capacity,
         );
 
-        // Day-dependent: only groups that meet today (using snapshot schedule)
-        const groupsTodayWithSchedule = !isHoliday
-          ? roomGroups
-              .filter((g) => this.groupActiveOn(g, cursor))
-              .map((g) => ({
-                group: g,
-                schedule: this.scheduleOn(g.id, cursor, snaps, {
-                  exactDays: g.exactDays,
-                  lessonStartTime: g.lessonStartTime,
-                  lessonEndTime: g.lessonEndTime,
-                  courseId: g.courseId,
-                  validFrom: g.createdAt,
-                  validTo: null,
-                }),
-              }))
-              .filter(({ schedule }) => schedule.exactDays.includes(dayCode))
-          : [];
+        // Day-dependent: only groups that meet today (using snapshot schedule).
+        // A holiday closes a group only when it is the company's or the
+        // group's own branch's (CEO decision 10.10.2026).
+        const groupsTodayWithSchedule = roomGroups
+          .filter(
+            (g) =>
+              this.groupActiveOn(g, cursor) &&
+              !holidaysFor(g.branchId).has(iso),
+          )
+          .map((g) => ({
+            group: g,
+            schedule: this.scheduleOn(g.id, cursor, snaps, {
+              exactDays: g.exactDays,
+              lessonStartTime: g.lessonStartTime,
+              lessonEndTime: g.lessonEndTime,
+              courseId: g.courseId,
+              validFrom: g.createdAt,
+              validTo: null,
+            }),
+          }))
+          .filter(({ schedule }) => schedule.exactDays.includes(dayCode));
 
         let scheduledHoursToday = 0;
         for (const { schedule } of groupsTodayWithSchedule) {

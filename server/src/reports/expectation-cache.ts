@@ -19,9 +19,10 @@ const logger = new Logger('ExpectationCache');
 /**
  * Bump when the figure's definition changes, so a deploy does not serve the
  * old formula from cache until midnight. v2: held lessons priced through
- * `resolveHeldLessonPrice` (ADR-0038).
+ * `resolveHeldLessonPrice` (ADR-0038). v3: each group skips only the
+ * company-wide holidays and its own branch's (CEO decision 10.10.2026).
  */
-const EXPECTATION_CACHE_VERSION = 'v2';
+const EXPECTATION_CACHE_VERSION = 'v3';
 
 export function expectationCacheKey(
   companyId: number,

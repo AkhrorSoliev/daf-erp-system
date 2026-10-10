@@ -253,7 +253,9 @@ describe('branch scope coverage — expectation service', () => {
         {
           provide: HolidaysService,
           useValue: {
-            buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+            buildHolidayDateSetsByBranch: jest
+              .fn()
+              .mockResolvedValue(() => new Set<string>()),
           },
         },
         {

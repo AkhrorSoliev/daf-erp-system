@@ -18,6 +18,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as dotenv from 'dotenv';
 import { ReportsExpectationService } from '../src/reports/reports-expectation.service';
+import { buildHolidayDateSetsByBranch } from '../src/holidays/holiday-date-set';
 
 dotenv.config();
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
@@ -27,33 +28,13 @@ const fmt = (n: number) => n.toLocaleString('ru-RU').replace(/,/g, ' ');
 
 /**
  * `HolidaysService` drags in the status/history/cascade graph, none of which
- * `buildHolidayDateSet` touches. A script has no Nest container, so the one
- * method the expectation service calls is reimplemented here against the same
- * table with the same ±1 day padding.
+ * the holiday read touches. A script has no Nest container, so the one method
+ * the expectation service calls goes straight to `holiday-date-set.ts`, the
+ * function the service itself delegates to.
  */
 const holidayStub = {
-  async buildHolidayDateSet(rangeStart: Date, rangeEnd: Date) {
-    const paddedStart = new Date(rangeStart.getTime() - 86_400_000);
-    const paddedEnd = new Date(rangeEnd.getTime() + 86_400_000);
-    const rows = await prisma.holiday.findMany({
-      where: {
-        deletedAt: null,
-        status: 'ACTIVE',
-        date: { lte: paddedEnd },
-        endDate: { gte: paddedStart },
-      },
-      select: { date: true, endDate: true },
-    });
-    const set = new Set<string>();
-    for (const h of rows) {
-      const s = new Date(h.date);
-      const e = new Date(h.endDate ?? h.date);
-      for (let d = new Date(s); d <= e; d.setUTCDate(d.getUTCDate() + 1)) {
-        set.add(d.toISOString().slice(0, 10));
-      }
-    }
-    return set;
-  },
+  buildHolidayDateSetsByBranch: (rangeStart: Date, rangeEnd: Date) =>
+    buildHolidayDateSetsByBranch(prisma, rangeStart, rangeEnd),
 };
 
 async function main() {

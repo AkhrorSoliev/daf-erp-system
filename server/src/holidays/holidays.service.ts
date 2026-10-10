@@ -12,7 +12,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 import { ChangeHolidayStatusDto } from './dto/change-holiday-status.dto';
-import { buildHolidayDateSet } from './holiday-date-set';
+import {
+  buildHolidayDateSet,
+  buildHolidayDateSetsByBranch,
+  type BranchHolidayDates,
+} from './holiday-date-set';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidayQueryDto } from './dto/holiday-query.dto';
@@ -123,6 +127,19 @@ export class HolidaysService {
     // yopmaslik uchun to'lov kartasi o'sha faylni to'g'ridan-to'g'ri
     // chaqiradi; bu yerda nusxa emas, delegatsiya turadi.
     return buildHolidayDateSet(this.prisma, rangeStart, rangeEnd, branchId);
+  }
+
+  /**
+   * Every branch's holiday days in one read: `forBranch(id)` is the
+   * company-wide days plus that branch's own. For a report that walks groups
+   * of several branches at once, where one set for all of them would let one
+   * branch's holiday close every branch.
+   */
+  async buildHolidayDateSetsByBranch(
+    rangeStart: Date,
+    rangeEnd: Date,
+  ): Promise<BranchHolidayDates> {
+    return buildHolidayDateSetsByBranch(this.prisma, rangeStart, rangeEnd);
   }
 
   // ---------------------------------------------------------------------------

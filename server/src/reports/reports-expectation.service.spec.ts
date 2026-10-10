@@ -35,7 +35,10 @@ describe('ReportsExpectationService', () => {
         {
           provide: HolidaysService,
           useValue: (holidays = {
-            buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
+            // No holiday in any branch unless a test says otherwise.
+            buildHolidayDateSetsByBranch: jest
+              .fn()
+              .mockResolvedValue(() => new Set<string>()),
           }),
         },
         {
@@ -184,6 +187,47 @@ describe('ReportsExpectationService', () => {
     expect(r.remainingValue).toBe(500_000);
     expect(r.heldValue).toBe(0);
     expect(r.expectedValue).toBe(500_000);
+  });
+
+  // CEO decision 10.10.2026: a branch's own holiday closes that branch alone.
+  // With one holiday set for the whole month, Namangan's closing dropped
+  // every branch's projected lesson, and the 23:40 snapshot kept that figure.
+  it('drops a branch-2 holiday from the branch-2 group only', async () => {
+    const mondays = (id: string, branchId: number, studentId: number) => ({
+      id,
+      branchId,
+      statusEnum: 'ACTIVE',
+      deletedAt: null,
+      exactDays: ['monday'], // avgust 2026: 3, 10, 17, 24, 31
+      startDate: null,
+      endDate: null,
+      scheduleSnapshots: [],
+      course: { price: 1_200_000, lessonPaymentCount: 12 },
+      contracts: [],
+      enrollments: [{ studentId, student: { discountPercent: 0 } }],
+    });
+    prisma.group.findMany.mockResolvedValueOnce([
+      mondays('fargona', 1, 10001),
+      mondays('namangan', 2, 10002),
+    ]);
+    holidays.buildHolidayDateSetsByBranch.mockResolvedValueOnce(
+      (branchId: number) =>
+        branchId === 2 ? new Set(['2026-08-10']) : new Set<string>(),
+    );
+
+    const r = await service.getMonthlyExpectation(1, {
+      month: '2026-08',
+      branchIds: null,
+    });
+
+    expect(prisma.group.findMany.mock.calls[0][0].select.branchId).toBe(true);
+    expect(holidays.buildHolidayDateSetsByBranch).toHaveBeenCalledWith(
+      new Date(Date.UTC(2026, 7, 1)),
+      new Date(Date.UTC(2026, 7, 31)),
+    );
+    // Farg'ona keeps all 5 Mondays, Namangan loses 10.08: 5 + 4 lessons.
+    expect(r.remainingLessons).toBe(9);
+    expect(r.remainingValue).toBe(900_000);
   });
 
   // I1 — oylik yozilishda `LESSON_CONSUMPTION` UMUMAN yozilmaydi. Busiz
@@ -382,8 +426,8 @@ describe('ReportsExpectationService', () => {
       prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce(
         frozen(112_500),
       );
-      holidays.buildHolidayDateSet.mockResolvedValueOnce(
-        new Set(['2026-08-03']),
+      holidays.buildHolidayDateSetsByBranch.mockResolvedValueOnce(
+        () => new Set(['2026-08-03']),
       );
 
       const r = await service.getMonthlyExpectation(1, {
@@ -403,8 +447,8 @@ describe('ReportsExpectationService', () => {
       prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce(
         frozen(90_000),
       );
-      holidays.buildHolidayDateSet.mockResolvedValueOnce(
-        new Set(['2026-08-03']),
+      holidays.buildHolidayDateSetsByBranch.mockResolvedValueOnce(
+        () => new Set(['2026-08-03']),
       );
       prisma.lessonReschedule.findMany.mockResolvedValueOnce([
         {
@@ -434,8 +478,8 @@ describe('ReportsExpectationService', () => {
       prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce(
         frozen(112_500),
       );
-      holidays.buildHolidayDateSet.mockResolvedValueOnce(
-        new Set(['2026-08-03']),
+      holidays.buildHolidayDateSetsByBranch.mockResolvedValueOnce(
+        () => new Set(['2026-08-03']),
       );
       prisma.lessonReschedule.findMany.mockResolvedValueOnce([
         {
@@ -460,8 +504,8 @@ describe('ReportsExpectationService', () => {
       const pack = monthlyGroup();
       pack.course.paymentModel = 'LESSON_PACK';
       prisma.group.findMany.mockResolvedValueOnce([pack]);
-      holidays.buildHolidayDateSet.mockResolvedValueOnce(
-        new Set(['2026-08-03']),
+      holidays.buildHolidayDateSetsByBranch.mockResolvedValueOnce(
+        () => new Set(['2026-08-03']),
       );
       prisma.lessonReschedule.findMany.mockResolvedValueOnce([
         {
