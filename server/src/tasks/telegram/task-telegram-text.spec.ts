@@ -102,9 +102,7 @@ describe('renderTaskMessage (mockup s14)', () => {
       { now: NOW, openUrl: OPEN },
     );
     expect(labels(m)).toEqual([['Boshladim'], ['Ochish']]);
-    expect(m.text).toContain(
-      "Rasm bilan tasdiqlanadi: rasm saytda qo'shiladi.",
-    );
+    expect(m.text).toContain('Rasm bilan tasdiqlanadi.');
     const started = renderTaskMessage(
       view({ requiresPhoto: true, steps: [], status: 'IN_PROGRESS' }),
       { kind: 'CARD' },

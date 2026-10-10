@@ -91,12 +91,8 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     private sender: TaskTelegramSender,
   ) {}
 
-  /**
-   * Runs after every module's onModuleInit, so the bot exists. One composer,
-   * registered ahead of the scenes: a registration scene left open would
-   * otherwise swallow a press or a reply. It calls `next()` for everything
-   * that is not a task button or a reply to a task message.
-   */
+  /** After every onModuleInit (the bot exists). One composer ahead of the scenes, so an
+   *  open scene never swallows a task press or reply; everything else goes `next()`. */
   onApplicationBootstrap(): void {
     if (!this.telegram.getBot()) return; // no TELEGRAM_BOT_TOKEN — the bot is off
     const tk = new Composer<BotContext>();
@@ -157,8 +153,12 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
       if (cmd.action === 'step') {
         const done = view.steps.find((s) => s.id === cmd.id)?.done ?? false;
         await this.tasks.updateStep(taskId, cmd.id, { done: !done }, me.actor);
-        await this.answer(ctx);
-        return this.drawSteps(ctx, await loadTaskView(this.prisma, taskId));
+        await this.answer(ctx); // saved: a failed redraw is logged, never «try again»
+        const fresh = await loadTaskView(this.prisma, taskId).catch((e) =>
+          this.logger.error(`step redraw failed: ${describeError(e)}`),
+        );
+        if (fresh) await this.drawSteps(ctx, fresh);
+        return;
       }
       if (cmd.action === 'start') {
         await this.tasks.changeStatus(taskId, 'IN_PROGRESS', me.actor);

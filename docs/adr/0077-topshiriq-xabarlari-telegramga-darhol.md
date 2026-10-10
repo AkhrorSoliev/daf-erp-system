@@ -38,8 +38,8 @@ tutmaydi, Telegram esa doim yonida.
    tahrirlanadi. Har amal `TasksService` orqali, saytdagi ruxsat va o'tish
    qoidalari bilan; tarixda «Telegram orqali» belgisi (`via TELEGRAM`).
    Topshiriqni endi ko'ra olmaydigan odamga — «Bu topshiriq sizda emas».
-   Rasm bilan tasdiqlanadigan topshiriqda «Bajardim» yo'q: rasm hozircha
-   saytda qo'shiladi. «Qaytarish» bosilsa, bot topshiriq nomini aytib, sababni
+   Rasm bilan tasdiqlanadigan topshiriqda «Bajardim» yo'q: rasm yuklash fayllar
+   bilan birga keladi (3-bosqich). «Qaytarish» bosilsa, bot topshiriq nomini aytib, sababni
    so'raydi va bosilgan xabarga javob qilib yuboradi.
 4. **Botdagi o'rni.** Tugma va javob ishlovchisi `TelegramService.useBeforeScenes`
    orqali ulanadi: sessiya, `/start` tiklash va kanal darvozasidan keyin,

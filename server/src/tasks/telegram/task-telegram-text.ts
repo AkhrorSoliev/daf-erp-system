@@ -58,7 +58,8 @@ export const RETURN_PLACEHOLDER = 'Qaytarish sababi';
 export const NOT_IN_REVIEW = 'Topshiriq tekshiruvda emas';
 export const STEP_GONE = 'Qadam topilmadi';
 export const TRY_LATER = "Xatolik yuz berdi. Keyinroq urinib ko'ring.";
-const PHOTO_LINE = "Rasm bilan tasdiqlanadi: rasm saytda qo'shiladi.";
+// No upload anywhere until files arrive (phase 3), so the line promises none.
+const PHOTO_LINE = 'Rasm bilan tasdiqlanadi.';
 const EMPTY_LIST = "Sizda ochiq topshiriq yo'q.";
 const STEPS_HINT = 'Bosib belgilang yoki belgini olib tashlang';
 
