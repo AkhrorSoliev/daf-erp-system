@@ -78,6 +78,26 @@ export function roleLabel(roles: { id: number }[] | undefined): string {
   return ROLE_LABELS[ids[0]] ?? "—";
 }
 
+const ROLE_IDS_BY_NAME: Record<string, number> = {
+  CEO: 1,
+  "Branch Director": 2,
+  Administrator: 3,
+  Teacher: 4,
+  Cashier: 5,
+};
+
+/**
+ * A staff row's `position` as the salary page prints it. The server falls back
+ * to the role NAME («Cashier») for an employee with no job title, so a role name
+ * is said in Uzbek; any other text is a real job title and passes through.
+ */
+export function staffRoleText(position: string | null | undefined): string {
+  const p = position?.trim();
+  if (!p) return "Xodim";
+  const id = ROLE_IDS_BY_NAME[p];
+  return id ? ROLE_LABELS[id] : p;
+}
+
 /** Same, for the nested `{ role: { id } }` shape the user endpoints return. */
 export function primaryRoleLabel(
   roles: { role: { id: number } }[] | undefined,

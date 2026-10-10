@@ -59,6 +59,14 @@ describe("mergePeople", () => {
     );
     expect(noPosition.role).toBe("Xodim");
   });
+
+  it("says a role name the server falls back to in Uzbek, keeps a real position", () => {
+    const staffWith = (position: string) =>
+      mergePeople(response({ data: [], staff: [{ ...staffRow, user: { ...staffRow.user, position } }] }))[0].role;
+    expect(staffWith("Cashier")).toBe("Kassir");
+    expect(staffWith("Branch Director")).toBe("Filial direktori");
+    expect(staffWith("Farrosh")).toBe("Farrosh");
+  });
 });
 
 describe("staffFrom", () => {

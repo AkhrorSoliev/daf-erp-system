@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CanLink } from "@/components/shared/can-link";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { currentMonthKey, monthLabel } from "../salary-utils";
+import { currentMonthKey, monthLabel, staffRoleText } from "../salary-utils";
 import { csvFromLessons, drawerButtons, drawerHint } from "./salary-drawer-model";
 import { SalaryDrawerBody } from "./salary-drawer-sections";
 import { useInvalidateSalary, useSalaryDetail } from "./salary-queries";
@@ -34,7 +34,7 @@ export function SalaryRowDrawer({ userId, month, state, onClose, onPay, canClose
   const kind = state ?? (month === currentMonthKey() ? "OPEN" : "NOT_CALCULATED");
   const user = data?.row.user;
   // The table's own words: «Ustoz», or the staff member's position.
-  const role = user && "position" in user ? user.position?.trim() || "Xodim" : "Ustoz";
+  const role = user && "position" in user ? staffRoleText(user.position) : "Ustoz";
   const name = user ? `${user.firstName} ${user.lastName}` : "Xodim";
 
   return (

@@ -1,7 +1,7 @@
 import { formatNumber } from "@/lib/format-utils";
 import { tashkentDdMm } from "@/lib/tashkent-time";
 import { dayMonth, monthRange } from "../overview/overview-math";
-import { monthShort } from "../salary-utils";
+import { monthShort, staffRoleText } from "../salary-utils";
 import type {
   MonthlyResponse,
   MonthState,
@@ -65,7 +65,7 @@ export function mergePeople(data: MonthlyResponse): PersonRow[] {
         kind: "staff",
         userId: s.user.id,
         name: fullName(s.user),
-        role: s.user.position?.trim() || "Xodim",
+        role: staffRoleText(s.user.position),
         isActive: s.user.isActive,
         from: staffFrom(s),
         worked: s.monthly,
