@@ -332,6 +332,28 @@ describe('StudentEnrollmentService', () => {
         });
       });
 
+      it('moves the contract link to the new enrollment (ADR-0075)', async () => {
+        prisma.enrollment.findFirst
+          .mockResolvedValueOnce(null) // sameGroup check
+          .mockResolvedValueOnce({
+            id: 'enroll-old',
+            studentId: 1,
+            groupId: 'old-group',
+            contractDocumentId: 'doc-1',
+            group: { teachers: [{ teacherId: 5001 }] },
+          });
+
+        await service.enrollToGroup(1, 'group-1', 2, 1001);
+
+        expect(prisma.enrollment.create).toHaveBeenCalledWith({
+          data: expect.objectContaining({
+            studentId: 1,
+            groupId: 'group-1',
+            contractDocumentId: 'doc-1',
+          }),
+        });
+      });
+
       it('rejects transfer with different teachers and no reason', async () => {
         prisma.enrollment.findFirst
           .mockResolvedValueOnce(null)
