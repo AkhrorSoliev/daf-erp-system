@@ -336,4 +336,74 @@ describe('SalaryPaymentService.getMatrix', () => {
       expect(prisma.salaryPayment.findMany).not.toHaveBeenCalled();
     });
   });
+
+  // CEO decision (10.10.2026): nobody but the CEO pays their own salary.
+  describe('your own salary', () => {
+    const DIRECTOR_ID = 10012;
+    const director = {
+      mainBranch: 1,
+      branches: [],
+      roles: [{ role: { name: 'Branch Director' } }],
+    };
+    const approved = (id: string, userId: number) => ({
+      id,
+      userId,
+      amount: 1_000_000,
+      status: 'APPROVED',
+      companyId: 1,
+    });
+
+    it('refuses a director paying their own salary, writing nothing', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(director);
+      prisma.salaryPayment.findFirst.mockResolvedValue(
+        approved('sp-own', DIRECTOR_ID),
+      );
+
+      await expect(
+        service.payPayment('sp-own', DIRECTOR_ID, 1),
+      ).rejects.toThrow(/boshqa rahbar to'laydi/);
+      expect(transactions.recordSalaryPayment).not.toHaveBeenCalled();
+      expect(prisma.salaryPayment.update).not.toHaveBeenCalled();
+    });
+
+    it('lets the CEO pay their own salary', async () => {
+      // The default caller of this file is a CEO.
+      prisma.salaryPayment.findFirst.mockResolvedValue(approved('sp-ceo', 999));
+
+      await service.payPayment('sp-ceo', 999, 1);
+
+      expect(transactions.recordSalaryPayment).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 999 }),
+      );
+    });
+
+    it("batchPay reports the director's own row as failed and pays the rest", async () => {
+      prisma.user.findUnique.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          where.id === DIRECTOR_ID ? director : { mainBranch: 1 },
+        ),
+      );
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        { id: 'sp-own', userId: DIRECTOR_ID, amount: 1_000_000 },
+        { id: 'sp-555', userId: 555, amount: 1_000_000 },
+      ]);
+      prisma.salaryPayment.findFirst.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          approved(where.id, where.id === 'sp-own' ? DIRECTOR_ID : 555),
+        ),
+      );
+
+      const out = await service.batchPay({ companyId: 1 } as any, DIRECTOR_ID);
+
+      expect(out).toMatchObject({ total: 2, paid: 1, failed: 1 });
+      expect(out.results.find((r) => r.id === 'sp-own')).toMatchObject({
+        status: 'FAILED',
+        error: expect.stringMatching(/boshqa rahbar to'laydi/),
+      });
+      expect(transactions.recordSalaryPayment).toHaveBeenCalledTimes(1);
+      expect(transactions.recordSalaryPayment).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 555 }),
+      );
+    });
+  });
 });

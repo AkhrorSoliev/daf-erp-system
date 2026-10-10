@@ -35,12 +35,14 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { PossibleDeductionsInfo } from "./possible-deductions-info";
+import { isOwnPayrollLocked } from "./own-payroll";
 import {
   breakdownRateLabel,
   SALARY_TYPE_LABELS,
   type RateBasis,
 } from "./salary-utils";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 
 interface BreakdownLine {
   id: string;
@@ -186,6 +188,9 @@ export function SalaryBreakdownDrawer({
         .then((r) => r.data),
     enabled: !!salaryPaymentId,
   });
+  const user = useAuth((s) => s.user);
+  // Your own salary is paid by another manager (CEO, 10.10.2026).
+  const mayPay = canPay && !isOwnPayrollLocked(data?.payment.userId, user);
 
   const runAction = async (
     kind: "approve" | "pay",
@@ -450,7 +455,7 @@ export function SalaryBreakdownDrawer({
         {/* === Workflow footer === */}
         {data &&
           ((data.payment.status === "CALCULATED" && canClose) ||
-            (data.payment.status === "APPROVED" && canPay) ||
+            (data.payment.status === "APPROVED" && mayPay) ||
             data.payment.status === "PAID") && (
             <SheetFooter className="border-t px-6 py-4 shrink-0">
               {data.payment.status === "CALCULATED" && canClose && (
@@ -468,7 +473,7 @@ export function SalaryBreakdownDrawer({
                   </Button>
                 </div>
               )}
-              {data.payment.status === "APPROVED" && canPay && (
+              {data.payment.status === "APPROVED" && mayPay && (
                 <div className="flex w-full items-center justify-between gap-3">
                   <p className="text-xs text-muted-foreground">
                     To&apos;lash — ustoz balansidan ayiriladi.

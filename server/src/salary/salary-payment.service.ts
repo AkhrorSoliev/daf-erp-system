@@ -269,6 +269,14 @@ export class SalaryPaymentService {
     // another branch's teacher just by passing its id.
     const scope = await resolvePayrollBranchScope(this.prisma, performedById);
     if (scope.kind !== 'all') {
+      // CEO decision (10.10.2026): nobody but the CEO pays their own salary;
+      // another manager does. `batchPay` comes through here too, so a
+      // caller's own row in a batch is reported FAILED with this reason.
+      if (payment.userId === performedById) {
+        throw new ForbiddenException(
+          "Bu sizning oyligingiz — uni o'zingiz to'lay olmaysiz. Oylikni boshqa rahbar to'laydi.",
+        );
+      }
       const payee = await this.prisma.user.findUnique({
         where: { id: payment.userId },
         select: { mainBranch: true },
@@ -320,7 +328,8 @@ export class SalaryPaymentService {
    * Only APPROVED payments are processed; CALCULATED ones are skipped (they
    * need to be approved first). Each payment is wrapped in its own transaction
    * so a failure on one doesn't roll back the others — the caller sees per-
-   * payment success/error.
+   * payment success/error. A non-CEO caller's own payment is one such
+   * failure: `payPayment` refuses it (CEO decision, 10.10.2026).
    */
   async batchPay(
     params: {

@@ -620,4 +620,150 @@ describe('ExpensesService — findAll filters + summary', () => {
       ).resolves.toBeDefined();
     });
   });
+
+  /**
+   * CEO decision (10.10.2026): an advance to yourself is written, changed and
+   * deleted by another manager; only the CEO handles their own. The advance is
+   * also booked in a branch its recipient belongs to, because it is settled
+   * against that person's payroll.
+   */
+  describe('own advances and the recipient branch', () => {
+    const CEO_ROW = {
+      mainBranch: null,
+      branches: [],
+      roles: [{ role: { name: 'CEO' } }],
+    };
+    // Keyed by user id. One mock answers both the existence lookup and the
+    // branch-scope lookup (Prisma's `select` is not applied by a mock).
+    const people: Record<number, object> = {
+      1: { id: 1, ...CEO_ROW },
+      42: {
+        id: 42,
+        mainBranch: 1,
+        branches: [{ branchId: 1 }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      },
+      10005: {
+        id: 10005,
+        mainBranch: 1,
+        branches: [],
+        roles: [{ role: { name: 'Teacher' } }],
+      },
+      10007: {
+        id: 10007,
+        mainBranch: 2,
+        branches: [],
+        roles: [{ role: { name: 'Teacher' } }],
+      },
+    };
+    const advanceDto = (relatedUserId: number) =>
+      ({
+        category: ExpenseCategory.TEACHER_ADVANCE,
+        paymentMethod: ExpensePaymentMethod.CASH,
+        amount: 500_000,
+        description: 'Avans',
+        date: '2026-10-10',
+        branchId: 1,
+        relatedUserId,
+      }) as any;
+    const advanceRow = (relatedUserId: number) => ({
+      id: 'adv-1',
+      category: ExpenseCategory.TEACHER_ADVANCE,
+      amount: 500_000,
+      branchId: 1,
+      companyId: COMPANY_ID,
+      deletedAt: null,
+      relatedUserId,
+      settledBySalaryPaymentId: null,
+    });
+
+    beforeEach(() => {
+      prisma.user.findFirst.mockImplementation(({ where }: any) =>
+        Promise.resolve(people[where.id] ?? null),
+      );
+    });
+    afterEach(() => {
+      // `clearAllMocks` keeps implementations: put the file's default back.
+      prisma.user.findFirst.mockResolvedValue(CEO_ROW);
+    });
+
+    it('refuses a director writing an advance to themselves', async () => {
+      await expect(
+        service.create(advanceDto(42), 42, COMPANY_ID),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('lets the CEO write an advance to themselves', async () => {
+      prisma.$transaction.mockResolvedValueOnce({ id: 'adv-new' });
+
+      await service.create(advanceDto(1), 1, COMPANY_ID);
+
+      expect(prisma.$transaction).toHaveBeenCalled();
+    });
+
+    it("refuses a recipient who is not in the expense's branch", async () => {
+      await expect(
+        service.create(advanceDto(10007), 42, COMPANY_ID),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('lets a director write an advance to a teacher of their branch', async () => {
+      prisma.$transaction.mockResolvedValueOnce({ id: 'adv-new' });
+
+      await service.create(advanceDto(10005), 42, COMPANY_ID);
+
+      expect(prisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('refuses a director changing their own advance', async () => {
+      prisma.expense.findFirst.mockResolvedValue(advanceRow(42));
+
+      await expect(
+        service.update('adv-1', { amount: 600_000 } as any, 42, COMPANY_ID),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses a director deleting their own advance', async () => {
+      prisma.expense.findFirst.mockResolvedValue(advanceRow(42));
+
+      await expect(service.remove('adv-1', 42, COMPANY_ID)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.transaction.findFirst).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses moving an advance to a branch its recipient is not in, even for the CEO', async () => {
+      prisma.expense.findFirst.mockResolvedValue(advanceRow(10005));
+
+      await expect(
+        service.update('adv-1', { branchId: 2 } as any, 1, COMPANY_ID),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses turning a plain expense into an advance to yourself', async () => {
+      prisma.expense.findFirst.mockResolvedValue({
+        ...advanceRow(0),
+        category: ExpenseCategory.RENT,
+        relatedUserId: null,
+      });
+
+      await expect(
+        service.update(
+          'adv-1',
+          {
+            category: ExpenseCategory.TEACHER_ADVANCE,
+            relatedUserId: 42,
+          } as any,
+          42,
+          COMPANY_ID,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+  });
 });
