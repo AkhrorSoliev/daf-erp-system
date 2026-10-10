@@ -80,9 +80,16 @@ export function LeadFunnelChart({
                         {row.label}
                       </span>
                       {i === 0 && hasSplit && (
-                        <span className="block truncate text-xs text-muted-foreground tabular-nums">
-                          doskadan {formatNumber(leadSplit.board)} ·
-                          to&apos;g&apos;ridan {formatNumber(leadSplit.direct)}
+                        // Tor ustunda (telefon) ikki qatorga bo'linadi —
+                        // kesilib «to'g'…» bo'lib qolmasin.
+                        <span className="block text-xs text-muted-foreground tabular-nums">
+                          <span className="block whitespace-nowrap sm:inline">
+                            doskadan {formatNumber(leadSplit.board)}
+                          </span>
+                          <span className="hidden sm:inline"> · </span>
+                          <span className="block whitespace-nowrap sm:inline">
+                            to&apos;g&apos;ridan {formatNumber(leadSplit.direct)}
+                          </span>
                         </span>
                       )}
                     </span>
