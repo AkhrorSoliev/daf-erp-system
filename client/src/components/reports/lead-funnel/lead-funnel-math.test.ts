@@ -33,14 +33,14 @@ describe("buildFunnelRows", () => {
       lostFromPrev: null,
       pctOfPrev: null,
     });
-    expect(rows[3].pctOfFirst).toBe(11.7);
+    expect(rows[3].pctOfFirst).toBe(12);
     expect(rows[3].widthRatio).toBeCloseTo(25 / 213);
   });
 
   it("oldingi bosqichdan yo'qotish", () => {
     expect(rows[1].lostFromPrev).toBe(169);
     expect(rows[3].lostFromPrev).toBe(12);
-    expect(rows[3].pctOfPrev).toBe(67.6);
+    expect(rows[3].pctOfPrev).toBe(68);
   });
 
   it("lid 0 bo'lsa foiz null, kenglik 0 — nolga bo'linmaydi", () => {

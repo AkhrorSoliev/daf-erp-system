@@ -42,8 +42,12 @@ export interface FunnelRow {
   widthRatio: number;
 }
 
+/**
+ * Butun foiz: bir necha yuz kishilik voronkada o'ndan bir foiz aniqlik emas,
+ * shovqin. Bosh sahifa qatori ham shu funksiyadan oladi — ikkala joyda bir xil.
+ */
 const pct = (part: number, whole: number) =>
-  whole > 0 ? Math.round((part / whole) * 1000) / 10 : null;
+  whole > 0 ? Math.round((part / whole) * 100) : null;
 
 export function buildFunnelRows(
   stages: Record<FunnelStage, number>,
