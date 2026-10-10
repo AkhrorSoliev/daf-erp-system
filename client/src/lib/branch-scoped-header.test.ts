@@ -40,6 +40,10 @@ const BRANCH_INDEPENDENT: Record<string, string> = {
   "hooks/use-notifications.ts":
     "Notifications are addressed to a person: the server filters by userId " +
     "alone (notifications.service.ts), with no branch in the query.",
+  "hooks/use-permissions.ts":
+    "Reads the signed-in person's own capability list (GET /permissions/me). " +
+    "Capabilities follow the person's roles, which the server reads from the " +
+    "database by user id; the request carries no branch.",
   "hooks/use-push-notifications.ts":
     "Registers this DEVICE for push. Device tokens belong to the browser, " +
     "not to a branch.",

@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { ReportsMobileMenu } from "./reports-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePermissions, usePermissionsReady } from "@/hooks/use-permissions";
 import { canOpenReportPath } from "@/lib/reports-nav";
 
 export function ReportsLayoutShell({ children }: { children: React.ReactNode }) {
@@ -12,22 +13,18 @@ export function ReportsLayoutShell({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const isMobile = useIsMobile();
   const user = useAuth((s) => s.user);
-  // Sahifa bo'yicha: administrator faqat Lidlar hisobotini ochadi
-  // (`reports-nav.ts`). Backend ham qolgan hisobotlarni rad etadi.
-  const canViewReports = canOpenReportPath(
-    user?.roles.map((r) => r.id) ?? [],
-    pathname,
-  );
+  const can = usePermissions((s) => s.can);
+  const ready = usePermissionsReady();
+  // Page by page: an administrator opens only Lidlar and To'lov hisobotlari
+  // (`reports-nav.ts`). The server refuses the other reports too. Wait for the
+  // capability list before redirecting, so a fresh sign-in is not bounced.
+  const canViewReports = canOpenReportPath(can, pathname);
 
   useEffect(() => {
-    if (user && !canViewReports) {
-      router.replace("/");
-    }
-  }, [user, canViewReports, router]);
+    if (user && ready && !canViewReports) router.replace("/");
+  }, [user, ready, canViewReports, router]);
 
-  if (user && !canViewReports) {
-    return null;
-  }
+  if (user && (!ready || !canViewReports)) return null;
 
   const isReportsRoot = pathname === "/reports" || pathname === "/reports/";
 

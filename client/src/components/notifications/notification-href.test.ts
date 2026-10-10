@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { canForRoles } from "@/test-support/server-catalog";
 import { notificationHref } from "./notification-href";
 
-const CEO = [1];
-const BRANCH_DIRECTOR = [2];
-const ADMINISTRATOR = [3];
-const TEACHER = [4];
+const CEO = canForRoles([1]);
+const BRANCH_DIRECTOR = canForRoles([2]);
+const ADMINISTRATOR = canForRoles([3]);
+const TEACHER = canForRoles([4]);
 
 const task = (relatedEntityType: string, relatedEntityId: string) => ({
   type: "TASK_ASSIGNED" as const,
@@ -65,8 +66,8 @@ describe("notificationHref", () => {
   // o'qituvchi, GET /groups/:id da kassir yo'q (src/lib/role-access.ts).
   it("gives a teacher-only viewer no student link and a cashier-only viewer no group link", () => {
     expect(notificationHref(task("Student", "10001"), TEACHER)).toBeNull();
-    expect(notificationHref(task("Group", "g1"), [5])).toBeNull();
-    expect(notificationHref(task("Group", "g1"), [5, 4])).toBe("/groups/g1");
+    expect(notificationHref(task("Group", "g1"), canForRoles([5]))).toBeNull();
+    expect(notificationHref(task("Group", "g1"), canForRoles([5, 4]))).toBe("/groups/g1");
   });
 
   it("goes nowhere without an entity or for an unknown one", () => {
@@ -80,7 +81,7 @@ describe("notificationHref", () => {
   });
 
   it("a task notification opens the task drawer", () => {
-    expect(notificationHref({ type: "TASK_ASSIGNED", relatedEntityType: "Task", relatedEntityId: "t1" }, [4])).toBe("/tasks?task=t1");
-    expect(notificationHref({ type: "TASK_REVIEW", relatedEntityType: "Task", relatedEntityId: "t1" }, [3])).toBe("/tasks?task=t1");
+    expect(notificationHref({ type: "TASK_ASSIGNED", relatedEntityType: "Task", relatedEntityId: "t1" }, canForRoles([4]))).toBe("/tasks?task=t1");
+    expect(notificationHref({ type: "TASK_REVIEW", relatedEntityType: "Task", relatedEntityId: "t1" }, canForRoles([3]))).toBe("/tasks?task=t1");
   });
 });

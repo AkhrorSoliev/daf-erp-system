@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { paymentsNavItems } from "@/lib/payments-nav";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export function PaymentsMobileMenu() {
-  const user = useAuth((s) => s.user);
-  const userRoleIds = user?.roles.map((r) => r.id) ?? [];
+  const can = usePermissions((s) => s.can);
 
   const visibleItems = paymentsNavItems.filter((item) => {
-    if (!item.visibleForRoles) return true;
-    return item.visibleForRoles.some((id) => userRoleIds.includes(id));
+    return !item.permission || can(item.permission);
   });
 
   return (

@@ -19,7 +19,7 @@ import {
   useNotifications,
   type AppNotification,
 } from "@/hooks/use-notifications";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useSSE } from "@/hooks/use-sse";
 import { notificationHref } from "./notification-href";
 
@@ -80,7 +80,7 @@ function NotificationItem({
 
 export function NotificationBell() {
   const router = useRouter();
-  const user = useAuth((s) => s.user);
+  const can = usePermissions((s) => s.can);
   const {
     notifications,
     unreadCount,
@@ -111,7 +111,7 @@ export function NotificationBell() {
   };
 
   const handleNavigate = (n: AppNotification) => {
-    const url = notificationHref(n, user?.roles.map((r) => r.id) ?? []);
+    const url = notificationHref(n, can);
     if (url) router.push(url);
   };
 

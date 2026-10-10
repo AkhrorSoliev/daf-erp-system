@@ -3,18 +3,16 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { reportsNavSections } from "@/lib/reports-nav";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export function ReportsMobileMenu() {
-  const user = useAuth((s) => s.user);
-  const userRoleIds = user?.roles.map((r) => r.id) ?? [];
+  const can = usePermissions((s) => s.can);
 
   return (
     <div className="space-y-5">
       {reportsNavSections.map((section) => {
         const visibleItems = section.items.filter((item) => {
-          if (!item.visibleForRoles) return true;
-          return item.visibleForRoles.some((id) => userRoleIds.includes(id));
+          return !item.permission || can(item.permission);
         });
 
         if (visibleItems.length === 0) return null;

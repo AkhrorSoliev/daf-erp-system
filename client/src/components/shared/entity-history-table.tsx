@@ -19,7 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import api from "@/lib/api";
 import { canOpenEmployeeSettings } from "@/lib/settings-nav";
 import { getActionInfo, type HistoryRecord } from "./entity-history-utils";
@@ -43,10 +43,8 @@ export function EntityHistoryTable({
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const fetched = useRef(false);
-  const user = useAuth((s) => s.user);
-  const canOpenEmployees = canOpenEmployeeSettings(
-    user?.roles.map((r) => r.id) ?? [],
-  );
+  const can = usePermissions((s) => s.can);
+  const canOpenEmployees = canOpenEmployeeSettings(can);
 
   const fetchHistory = useCallback(
     async (p: number) => {
