@@ -16,6 +16,7 @@ import { CenterTopUpView } from "./debt/center-topup-view";
 import { resolveSalarySettingsAccess } from "./salary-settings-access";
 import { currentMonthKey } from "./salary-utils";
 import { mln } from "./salary/salary-page-model";
+import { SalaryPayDialog } from "./salary/salary-pay-dialog";
 import { SalaryRowDrawer } from "./salary/salary-row-drawer";
 import type { SalaryDetail } from "./salary/salary-types";
 import { useInvalidateSalary, useSalaryMonthly, useSalaryTabTotals } from "./salary/salary-queries";
@@ -71,8 +72,8 @@ export function SalaryClient() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
-  // Held for the «Berildi» dialog (spec §5.1), which opens after the drawer closes.
-  const [, setPayTarget] = useState<SalaryDetail | null>(null);
+  // The person the «Berildi» dialog (spec §5.1) is open for; it opens after the drawer closes.
+  const [payTarget, setPayTarget] = useState<SalaryDetail | null>(null);
   const closeDrawer = () => setFilters({ xodim: 0 });
 
   return (
@@ -152,6 +153,16 @@ export function SalaryClient() {
         onPay={setPayTarget}
         canClose={canClose}
         canPay={canPay}
+      />
+
+      <SalaryPayDialog
+        detail={payTarget}
+        onClose={() => setPayTarget(null)}
+        onPaid={() => {
+          // Back to the same person's drawer, now showing the payout.
+          if (payTarget) setFilters({ xodim: payTarget.row.user.id });
+          setPayTarget(null);
+        }}
       />
     </div>
   );
