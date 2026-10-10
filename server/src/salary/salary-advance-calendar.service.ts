@@ -27,7 +27,7 @@ export interface AdvanceCalendarRow {
   settledPeriodEnd: Date | null;
   /**
    * Qaysi oyning oyligidan ushlanadi (`YYYY-MM`): hisoblangan avansda — uni
-   * ushlagan to'lovning oyi, hisoblanmaganida — avansning o'z oyi (B3 §3).
+   * ushlagan to'lovning oyi, hisoblanmaganida — avansning o'z oyi (B3 §2.6).
    */
   deductMonth: string;
   user: {

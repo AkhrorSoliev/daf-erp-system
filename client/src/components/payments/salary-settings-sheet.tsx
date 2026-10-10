@@ -145,7 +145,7 @@ export function SalarySettingsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle>Oylik sozlamalari</SheetTitle>
+          <SheetTitle>Stavkalar</SheetTitle>
           <SheetDescription>
             {access.canManageCompanyPayroll
               ? "Ustoz va xodim stavkalari. Jadval shu sozlamalar asosida hisoblanadi."

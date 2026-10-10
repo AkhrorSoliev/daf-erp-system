@@ -116,6 +116,9 @@ export class ExpensesService {
    * to'lovni eski raqam bo'yicha qoldiradi — oylik varaqasidagi
    * «grossTotal − avanslar = to'langan» tenglama buziladi. Tuzatishning
    * yagona to'g'ri yo'li: avval o'sha oylikni bekor qilish.
+   *
+   * Only an advance dated before the period end is ever netted (ADR-0081): a
+   * later one stays unsettled, and editable, until its own month is settled.
    */
   private assertAdvanceUnsettled(expense: {
     settledBySalaryPaymentId: string | null;

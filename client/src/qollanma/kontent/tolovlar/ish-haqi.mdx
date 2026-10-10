@@ -1,0 +1,163 @@
+## Sahifa nima uchun
+
+«Ish haqi» — ustozlar va xodimlarning tanlangan oydagi oyligi: kim qancha ishladi, qancha avans ushlanadi, qancha beriladi va oylik qaysi bosqichda. Shu yerda oylik tasdiqlanadi, berilgani belgilanadi va avans beriladi. Sahifani CEO va filial direktori ko'radi; raqamlar yuqori paneldagi filial tanlagichi bo'yicha.
+
+Tepada: «Ish haqi», oy tanlagich, «Stavkalar» (ustoz va xodim stavkalari oynasi) va «+ Avans berish». Ostida uchta tab: «Oyliklar», «Avanslar · X mln» va «Markaz qoplagani · X mln». Tabdagi summa yuklanayotganda va 0 bo'lsa ko'rinmaydi.
+
+Hisoblash davri doim kalendar oyi (1-sanadan oyning oxirigacha) va o'zgartirilmaydi.
+
+## Oy holati va xulosa
+
+«Oyliklar» tabining tepasida «{Oy} oyliklari» kartasi va oy holati:
+
+| Holat | Nimani bildiradi |
+|---|---|
+| «Oy davom etmoqda · kun.oy dan keyin hisoblanadi» | Joriy oy. Raqamlar oy oxirigacha o'zgarib boradi |
+| «Hisoblanmagan» | O'tgan oy, lekin tizim hali hisoblamagan (masalan, 1-sana tongida bir necha soat) |
+| «Hisoblandi · tasdiqlash kutilmoqda» | Tizim oylikni hisobladi, CEO tasdiqlashi kerak |
+| «Tasdiqlandi · berish kutilmoqda» | Tasdiqlandi, pul hali berilmagan |
+| «Qisman berildi · N / M» | M kishidan N tasiga berildi |
+| «Berildi» | Hammaga berildi |
+
+Tizim o'tgan oyni keyingi oyning 1-sanasida soat 02:00 da o'zi hisoblaydi; qo'lda hisoblash tugmasi yo'q.
+
+Kartadagi uchta raqam:
+
+- **«Ishladi»** — ustozlar va xodimlar shu oyda ishlab topgani, ostida «ustozlar X · xodimlar Y».
+- **«Avans (oylikdan ushlanadi)»** — shu oy oyligidan ushlanadigan avanslar jami va soni.
+- **«Oy oxirida beriladi»** (joriy oyda) yoki **«Beriladi»** — ishlagani minus avans. Qisman berilgan oyda ostida «N kishiga berildi · M kishi qoldi».
+
+Agar oyning bir qismini o'quvchilar hali to'lamagan bo'lsa, ostida «shundan markaz qo'shdi — X»: ustoz bu pulni oladi, o'quvchilar to'lagan sari bu summa kamayadi. Har bir dars bo'yicha ma'lumoti yo'q oylarda (masalan, may) ustozlar qismi «—» bilan ko'rsatiladi va sariq izoh chiqadi.
+
+Hisoblangan oyda pul hali hammaga berilmagan bo'lsa, CEO uchun «Oylik berilganini tasdiqlash (N ta)» tugmasi bor: hammaga bir kunda berilgan bo'lsa, bir yo'la belgilanadi (sana va har filial kassa/karta summalari so'raladi).
+
+Kartaning pastki satri eslatadi: «Umumiy ma'lumotlar» dagi «Oyliklar» kartasi va ustozning «Mening oyligim» sahifasi aynan shu raqamlarni ko'rsatadi.
+
+## E'tibor talab qiladi
+
+Sariq karta, faqat biror muammo bo'lsa chiqadi:
+
+- «**N ta darsga ustoz haqi yozilmagan** — {Ism} uchun stavka qo'yilmagan.» — ustozning shu oydagi ba'zi darslariga stavka topilmadi.
+- «**N xodimning oyligi hisoblanmaydi** — {Ism}, {Ism} uchun oylik summa kiritilmagan.» — faol xodimning shu oyga oylik summasi yo'q. Bu qatorni faqat xodimlar oyligini belgilay oladigan CEO ko'radi.
+
+«Stavka qo'yish» tugmasi «Stavkalar» oynasini ochadi.
+
+## Jadval
+
+Qidiruv («Ism yoki ID») va «Hammasi · N» / «Ustozlar · N» / «Xodimlar · N» tugmalari. Jadvalda avval ustozlar, keyin xodimlar:
+
+| Ustun | Nima |
+|---|---|
+| «Xodim» | Ism; ostida «Ustoz» yoki xodimning lavozimi. Ishdan bo'shagan, lekin shu oyda puli qolgan odamda «Nofaol» belgisi |
+| «Nimadan» | Ustozda «N guruh · M o'quvchi»; xodimda «qat'iy oylik», oyning bir qismi ishlagan bo'lsa «· d/D kun» |
+| «Ishladi» | Shu oyda ishlab topgani |
+| «Avans» | Shu oylikdan ushlanadigan avans |
+| «Beriladi» | Qo'lga beriladigan summa |
+| «Holat» | «oy davom etmoqda», «hisoblanmagan», «hisoblandi», «tasdiqlandi» yoki «berildi kun.oy» |
+
+Pastda «Jami · N kishi» va uch ustun jami. «O'quvchilar to'lagan» va «Markaz qo'shdi» jadvalda yo'q — ular xodim oynasida.
+
+## Xodim oynasi
+
+Istalgan qatorni bossangiz (oy hisoblanganmi-yo'qmi, farqi yo'q), o'ng tomonda oyna ochiladi:
+
+- **Jami** — «Oy oxirida beriladi», «Beriladi» yoki «Berildi» va summa.
+- **«Stavka»** — shu oydagi stavka, masalan «Har o'quvchi uchun oyiga … so'm», «Foiz: o'quvchi to'lovining …%» yoki xodimda «Oyiga … so'm».
+- **«Guruhlar bo'yicha»** (ustozda) — har guruh: o'quvchilar va darslar soni, summa. Ostida «shundan o'quvchilar to'lagan X · markaz qo'shdi Y» yoki «hammasini o'quvchilar to'lagan». Oldingi oydan o'tgan summa — alohida «Oldingi oydan» satri.
+- **«Avanslar — shu oylikdan ushlanadi»** — sana, naqd yoki karta, summa; avans bo'lmasa «Avans olinmagan».
+- **«Hisob»** — «Ishladi», «Avans (ushlanadi)», «Beriladi». Hisoblangandan keyin ma'lumot o'zgargan bo'lsa (masalan, kech kiritilgan davomat), «Hisoblangandan keyin o'zgardi» satri qo'shiladi va hisob baribir berilgan summaga yopiladi.
+- **Berilgan oylikda** yashil blok: «Berildi kun.oy.yil», qaysi kassadan qancha naqd va qaysi hisobdan qancha karta, kim belgilagani.
+
+Pastda tugmalar:
+
+- «Darslar bo'yicha (CSV)» — har dars bo'yicha jadval fayli, har doim bor.
+- «Tasdiqlash» — CEO, oylik hisoblangandan keyin.
+- «Berildi» — CEO va filial direktori, oylik tasdiqlangandan keyin.
+
+Joriy oyda «Tasdiqlash» va «Berildi» o'chiq turadi: «Tasdiqlash va «Berildi» — oy hisoblangach (1-…) ochiladi.».
+
+## «Avans» nimani bildiradi
+
+Avans — oylikdan oldin berilgan pul. U **berilgan oyining oyligidan** ushlanadi: 31-oktabrda berilgan avans oktabr oyligidan, 1-noyabrda berilgani noyabr oyligidan. Sahifadagi «Avans» doim aynan shu oy oyligidan ushlanadigan summa.
+
+- Joriy oyda (ishlayotgan ustoz va xodimda) shu oy berilgan hamma avans to'liq ko'rinadi, hatto ustoz hozircha uncha ishlamagan bo'lsa ham: oy oxirigacha ishlagani o'sib boradi. Avans ishlaganidan ko'p bo'lsa, «Beriladi» 0 ko'rinadi va oynada «Avans hozircha ishlanganidan ko'p — qolgani oy oxirigacha ishlanganidan ushlanadi.» deb yoziladi.
+- Oy hisoblanganda oylikka sig'magan avans keyingi oyga o'tadi (avans bo'linmaydi).
+- Oylikdan ushlangan avansni o'zgartirib yoki o'chirib bo'lmaydi.
+- 1-sana tongida (tizim hisoblaguncha, soat 02:00 gacha) o'tgan oyning ushlanmagan avansi yangi oyda ham ko'rinib turishi mumkin — bir necha soatdan keyin o'tgan oy oyligidan ushlanadi.
+
+## «Berildi»
+
+Pulni xodimga bergach, xodim oynasida «Berildi» ni bosasiz. Oyna yopilib, «{Ism} — {oy} oyligi berildi» oynasi ochiladi:
+
+1. **Summa** — beriladigan summa, o'zgartirilmaydi.
+2. **Sana** — pul berilgan kun. Odatda bugun; kelajakdagi kun yoki oy boshlanishidan oldingi kun tanlanmaydi.
+3. **Naqd** — xodim filialining naqd kassasi va summasi. Boshida butun summa naqdga yozilgan.
+4. **Karta** — filialning bank yoki karta hisobi va summasi. Filialda bunday hisob bo'lmasa, qator ko'rinmaydi.
+5. **Izoh** — ixtiyoriy.
+
+Naqd va karta yig'indisi summaga teng bo'lishi kerak: teng bo'lsa yashil «✓ Naqd + karta = … so'm», bo'lmasa qizil «Naqd + karta … so'm bo'lishi kerak, hozir … so'm» va «Berildi» bosilmaydi. Pul tanlangan kassa va hisobdan chiqadi. Avans butun oylikni olgan bo'lsa (summa 0), kassa so'ralmaydi va pul ko'chmaydi.
+
+Saqlangach «Berildi — xodimga xabar yuborildi» chiqadi (xodim botga ulanmagan bo'lsa, faqat «Berildi») va xodim oynasi yashil «Berildi» bloki bilan qayta ochiladi. Bir oylikni ikki marta belgilab bo'lmaydi.
+
+Kassa qoldig'ida bu chiqim tugma bosilgan kunda ko'rinadi; tanlangan sana oylikning o'zida saqlanadi.
+
+## Xodimga boradigan xabar
+
+«Berildi» bosilganda (yoki oy bo'yicha «Oylik berilganini tasdiqlash» da har xodimga) Telegram botga ulangan xodimga darhol xabar boradi. Avans ushlangan bo'lsa (Telegram'da summalar qalin chiqadi):
+
+```
+✅ Sentabr oyligingiz berildi
+
+Hurmatli Madina!
+
+Sentabr 2026 uchun hisoblandi: 4 200 000 so'm
+Avans ushlandi: 1 000 000 so'm
+Berildi: 3 200 000 so'm — naqd 2 000 000, kartaga 1 200 000
+Sana: 05.10.2026
+
+Batafsil — tizimdagi «Ish haqi» bo'limida.
+
+Rahmat!
+```
+
+Avans bo'lmasa, uchta summa o'rniga bitta satr: «Sentabr 2026 uchun: … so'm». Faqat naqd berilgan bo'lsa satr oxirida « — naqd», faqat karta — « — kartaga». Xodim botga ulanmagan bo'lsa, xabar bormaydi, oylik baribir belgilanadi.
+
+## Avanslar tabi
+
+Kalendar, kun paneli va avans qo'shish, tahrirlash, o'chirish avvalgidek. Oy — sahifa tepasidagi tanlagichdan, avans esa tepadagi «+ Avans berish» bilan qo'shiladi. Kalendar ostida oyning hamma avanslari jadvali, eng yangisi tepada: «Sana», «Kimga», «Summa», «Naqd / karta», «Kim berdi», «Holat». Holat:
+
+- «{oy} oyligidan ushlangan» (yashil) — avans o'sha oy oyligidan ushlab bo'lingan;
+- «{oy} oyligidan ushlanadi» (sariq) — hali ushlanmagan, berilgan oyining oyligidan ushlanadi.
+
+## Markaz qoplagani
+
+O'quvchilar hali to'lamagan darslar uchun markaz ustozga to'lagan pul va uni kimlardan undirish kerakligi. Oy tanlansa va o'sha oyda markaz pul qo'shgan bo'lsa, tepada «Markaz qo'shimchasi — undirish holati» kartasi turadi (avval «Oyliklar» tabida edi): jami qo'shdi, undirildi, qolgan markaz.
+
+## Misol
+
+Ismlar va raqamlar soxta.
+
+1. 10.10.2026 direktor Madinaga «+ Avans berish» bilan 1 000 000 so'm naqd avans berdi. «Oyliklar» tabida Madina qatorida «Avans» 1 000 000, «Beriladi» = ishlagani − 1 000 000; «Avanslar» jadvalida «oktabr oyligidan ushlanadi».
+2. 01.11.2026 kuni avans berilgan bo'lsa, u noyabr oyligidan ushlanadi — oktabr oyligiga tegmaydi.
+3. 01.11 soat 02:00 da tizim oktabrni hisobladi: oy holati «Hisoblandi · tasdiqlash kutilmoqda», Madinaning holati «hisoblandi», avans «oktabr oyligidan ushlangan».
+4. CEO Madinaning oynasida «Tasdiqlash» ni bosdi.
+5. 05.11 direktor pulni berib, «Berildi» → sana 05.11, naqd 2 000 000, karta 1 200 000 ni kiritdi. Madinaga bot xabari bordi, holat «berildi 05.11».
+
+## Kim qila oladi
+
+«Ha» — ekranda tugma bor va tizim amalni qabul qiladi. «—» — ekranda yo'q yoki tizim rad etadi. Filial direktori faqat o'z filialini ko'radi; CEO — filial tanlagichida tanlanganini. Administrator, kassir va ustozga sahifa ko'rinmaydi.
+
+| Amal | CEO | Filial direktori |
+|---|---|---|
+| Sahifani, xodim oynasini ko'rish, CSV | Ha | Ha |
+| «Stavkalar»: ustozlarning darsbay stavkasi | Ha | Ha (o'z filiali ustozlariga) |
+| «Stavkalar»: xodimlar oyligi | Ha | — |
+| «+ Avans berish» | Ha | Ha |
+| «Tasdiqlash» | Ha | — |
+| «Berildi» | Ha | Ha (o'z filiali xodimiga) |
+| «Oylik berilganini tasdiqlash» (oy bo'yicha) | Ha | — |
+
+## Tizimda qayerda
+
+- Moliya → [Ish haqi](/payments/salary).
+- Ustozning o'z oyligi — lehrer portalidagi «Mening oyligim»; ustoz va xodim profilidagi «Ish haqi» tabi xuddi shu raqamlarni ko'rsatadi.

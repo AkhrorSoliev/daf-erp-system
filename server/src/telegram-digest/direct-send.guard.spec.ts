@@ -21,7 +21,7 @@ const ALLOWED: string[] = [
   'src/lesson-reschedules/lesson-reschedule-events.listener.ts',
   'src/attendance/attendance-reminder.service.ts', // lesson start/end reminders
   'src/attendance/student-attendance-notification.listener.ts', // flag-gated, off
-  'src/notifications/notification-events.listener.ts', // payment-promise.overdue (09:00) only
+  'src/notifications/notification-events.listener.ts', // payment-promise.overdue (09:00), salary.paid (ADR-0081)
   'src/telegram-groups/telegram-admin-bot-registrar.ts', // group bot commands
   'src/telegram-groups/telegram-group-announcement.service.ts', // product news
   'src/telegram-groups/telegram-group-daily-cron.service.ts', // 21:00 report

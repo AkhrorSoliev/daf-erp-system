@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "Ish haqi sahifasi yangilandi",
+    matn: "«Ish haqi» sahifasida endi bitta jadval va oy holati bor: oy davom etyaptimi, hisoblanganmi, tasdiqlanganmi yoki berilganmi — bir qarashda ko'rinadi. «Berildi» pul berilgan kun va naqd/karta summalarini so'raydi, pul tanlangan kassa va hisobdan chiqadi, xodimga bot orqali xabar boradi. Avans berilgan oyining oyligidan ushlanadi; «Avans» ustuni aynan shu oylikdan ushlanadigan summani ko'rsatadi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "tolovlar", sahifa: "ish-haqi" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Topshiriqlar Telegram'da",
     matn: "Topshiriq xabarlari endi Telegram botga darhol keladi, kechqurungi umumiy xabarni kutmaydi: sizga berilganda, tekshiruvga kelganda, qabul qilinganda yoki qaytarilganda, yangi izoh yozilganda, muddatga 1 soat qolganda va muddat o'tganda (muddat eslatmasi bugundan keyin berilgan yoki muddati o'zgartirilgan topshiriqlarga keladi). Xabar ostida tugmalar bor: «Boshladim», «Bajardim», «Qabul qilish», «Qaytarish», «Qadamlar», «Ochish». Holat tugmalari bosilganda o'sha xabarning o'zi yangilanadi; «Qaytarish» sabab so'raydigan yangi xabar yuboradi, «📋 Topshiriqlarim» dagi raqam esa topshiriqni alohida xabar qilib yuboradi. Xabarga javob qilib yozilgan matn topshiriqqa izoh bo'lib tushadi; «Qaytarish» dan keyingi javob — qaytarish sababi. Bot menyusida yangi «📋 Topshiriqlarim» tugmasi ochiq topshiriqlaringizni ko'rsatadi. Tugmani ko'rish uchun botga /start yuboring. Soat 22:00 dan 08:00 gacha tayyor bo'lgan xabar ertalab 08:00 da keladi, «Shoshilinch» topshiriq xabari esa darhol. Kuzatuvchiga botda faqat «Bajarildi» va «Bekor qilindi» keladi. Rasm, fayl va ovozli javob hozircha qabul qilinmaydi.",
     rollar: [1, 2, 3, 4, 5],
