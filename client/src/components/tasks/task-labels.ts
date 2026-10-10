@@ -20,6 +20,7 @@ export const PRIORITY_CLASS: Record<TaskPriority, string> = {
 };
 export const KIND_LABEL: Record<TaskKind, string> = {
   MANUAL: "", LESSON_QUESTION: "Dars bo'ldimi?", CALLBACK: "Qayta qo'ng'iroq", BROKEN_PROMISE: "Buzilgan va'da", UNCALLED_LEAD: "Qo'ng'iroqsiz lid",
+  JOIN_REQUEST: "O'quvchi so'rovi",
 };
 export const ENTITY_LABEL: Record<string, string> = { Student: "O'quvchi", User: "Xodim", Group: "Guruh", Lead: "Lid" };
 /** Role names as the server sends them, highest first, and how they read on screen. */
