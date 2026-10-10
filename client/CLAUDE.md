@@ -831,12 +831,13 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 ### Student Profile Tabs
 
-The student profile (`/students/profile/[id]`) has **10 tabs** (URL `?tab=<value>`):
+The student profile (`/students/profile/[id]`) has **11 tabs** (URL `?tab=<value>`):
 
 | Tab | URL value | Purpose |
 |-----|-----------|---------|
 | Guruhlar | `guruhlar` (default) | Enrollments list |
 | To'lovlar | `tolovlar` | Money-flow transactions — see deep-dive below |
+| Shartnomalar | `shartnomalar` | Student contracts (ADR-0075): create, edit while unsigned, «Qog'ozda imzolandi», cancel (signed — CEO only), PDF in a new tab. `components/students/contracts/`; pure rules in `contract-rules.ts` (tested). Visible to `CONTRACT_ROLES` |
 | Darslar | `darslar` | Lesson trail (LESSON_DEDUCTION + LESSON_CONSUMPTION) — see deep-dive below |
 | Izohlar | `izohlar` | Comments (shared `CommentList` / `CommentForm`; tasks live on `/tasks`) |
 | Qo'ng'iroq | `qongiroq` | Call history |

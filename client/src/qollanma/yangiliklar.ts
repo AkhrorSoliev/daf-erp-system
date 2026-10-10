@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-10",
+    sarlavha: "O'quvchi shartnomasi tizimda tuziladi",
+    matn: "O'quvchi profilida «Shartnomalar» tabi qo'shildi. «Shartnoma tuzish» kurs, guruh, ustoz, jadval, narx va chegirmani o'quvchining ma'lumotlaridan o'zi to'ldiradi; Buyurtmachining pasporti, manzili va kursga kiradigan narsalarni shu oynada kiritasiz. Bir nechta kurs bitta shartnomaga yoki har biri alohida shartnomaga kiradi. «PDF» chop etishga tayyor shartnomani ochadi, Buyurtmachi imzolagach «Qog'ozda imzolandi» bosiladi. Shartnoma tuzishdan oldin filial sozlamasiga shahar, manzil, vakil ismi va lavozimini kiriting.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "shartnoma" },
+  },
+  {
     sana: "2026-10-08",
     sarlavha: "Lidlar sahifasi tepasida asosiy raqamlar",
     matn: "«Lidlar» sahifasida doska ustida beshta karta turadi. «Hozir» qismida: doskada nechta lid kutyapti va ulardan nechtasiga hali qo'ng'iroq qilinmagan (shundan nechtasi 7 kundan beri kutyapti). «Davr bo'yicha» qismida «Bu hafta», «Shu oy» yoki «O'tgan oy» uchun: nechta yangi lid kelgani (eng ko'p kelgan ikki manba bilan), nechtasi o'quvchi bo'lgani va nechtasi yo'qotilgani. Har kartani bossangiz, aynan o'sha lidlar ro'yxati ochiladi (yo'qotilganlar ham, «Yo'qotilgan» belgisi bilan); «Doskada» doskaga qaytaradi. Faqat doskadagi lidlar sanaladi: o'quvchilar sahifasidan yoki Telegram bot orqali to'g'ridan qo'shilgan o'quvchilar bu raqamlarga kirmaydi. Raqamlar tepada tanlangan filial bo'yicha chiqadi.",
