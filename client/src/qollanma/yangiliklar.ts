@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "Topshiriqlar Telegram'da",
+    matn: "Topshiriq xabarlari endi Telegram botga darhol keladi, kechqurungi umumiy xabarni kutmaydi: sizga berilganda, tekshiruvga kelganda, qabul qilinganda yoki qaytarilganda, yangi izoh yozilganda, muddatga 1 soat qolganda va muddat o'tganda (muddat eslatmasi bugundan keyin berilgan yoki muddati o'zgartirilgan topshiriqlarga keladi). Xabar ostida tugmalar bor: «Boshladim», «Bajardim», «Qabul qilish», «Qaytarish», «Qadamlar», «Ochish». Holat tugmalari bosilganda o'sha xabarning o'zi yangilanadi; «Qaytarish» sabab so'raydigan yangi xabar yuboradi, «📋 Topshiriqlarim» dagi raqam esa topshiriqni alohida xabar qilib yuboradi. Xabarga javob qilib yozilgan matn topshiriqqa izoh bo'lib tushadi; «Qaytarish» dan keyingi javob — qaytarish sababi. Bot menyusida yangi «📋 Topshiriqlarim» tugmasi ochiq topshiriqlaringizni ko'rsatadi. Tugmani ko'rish uchun botga /start yuboring. Soat 22:00 dan 08:00 gacha tayyor bo'lgan xabar ertalab 08:00 da keladi, «Shoshilinch» topshiriq xabari esa darhol. Kuzatuvchiga botda faqat «Bajarildi» va «Bekor qilindi» keladi. Rasm, fayl va ovozli javob hozircha qabul qilinmaydi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Lid voronkasi yangi ko'rinishda",
     matn: "«Lidlar hisoboti»dagi voronka qayta chizildi: har bosqich blokining kengligi endi aynan odam soniga teng (44 kishi 157 ning 28 foizi bo'lsa, blok ham 28 foiz), kichik bosqich kattalashtirib ko'rsatilmaydi. Bloklar orasida keyingi bosqichga necha foiz o'tgani, o'ng chetda esa necha kishi o'tmagani yoziladi. Foizlar butun son (13,4% emas, 13%), bosh sahifadagi voronka qatorida ham. Bosqich ustiga sichqonchani olib borsangiz, lidlarning necha foizi ekani chiqadi; bosqichni bosganda ro'yxat avvalgidek ochiladi.",
     rollar: [1, 2, 3],

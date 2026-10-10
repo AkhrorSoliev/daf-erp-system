@@ -91,9 +91,9 @@ export const boshlash: QollanmaSahifa[] = [
     sahifa: "topshiriqlar",
     sarlavha: "Topshiriqlar",
     qisqacha:
-      "Topshiriq izohdan alohida: u «Topshiriqlar» sahifasida doska (Yangi → Jarayonda → Tekshiruvda → Bajarildi) va ro'yxat ko'rinishida turadi, uni yuqori paneldagi «+ Topshiriq» tugmasi bilan berasiz. CEO hammaga, filial direktori o'z filialiga, administrator o'z filialidagi administrator, kassir va ustozga topshiriq beradi, ustoz va kassir faqat o'ziga; ijrochi «Boshladim» va «Bajardim» ni bosadi, beruvchi «Qabul qilish» yoki «Qaytarish» ni. Davomat olinmagan darsda administratorga «Dars bo'ldimi?» topshirig'ini tizim beradi; CEO va filial direktori «Barchasi» va «Yuklama» tablarini ham ko'radi.",
+      "Topshiriq izohdan alohida: u «Topshiriqlar» sahifasida doska (Yangi → Jarayonda → Tekshiruvda → Bajarildi) va ro'yxat ko'rinishida turadi, uni yuqori paneldagi «+ Topshiriq» tugmasi bilan berasiz. CEO hammaga, filial direktori o'z filialiga, administrator o'z filialidagi administrator, kassir va ustozga topshiriq beradi, ustoz va kassir faqat o'ziga; ijrochi «Boshladim» va «Bajardim» ni bosadi, beruvchi «Qabul qilish» yoki «Qaytarish» ni. Davomat olinmagan darsda administratorga «Dars bo'ldimi?» topshirig'ini tizim beradi; CEO va filial direktori «Barchasi» va «Yuklama» tablarini ham ko'radi. Topshiriq xabarlari Telegram botga ham darhol keladi (kechasi — ertalab 08:00 da), tugmalar va javob bilan.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0054", "0063", "0074"],
+    adr: ["0054", "0063", "0074", "0078"],
     yollar: ["/tasks"],
     kalitSozlar: [
       "topshiriq",
@@ -131,8 +131,10 @@ export const boshlash: QollanmaSahifa[] = [
       "bo'ldi",
       "bo'lmadi",
       "davomat olinmadi",
+      "telegram",
+      "topshiriqlarim",
     ],
-    yangilangan: "2026-10-07",
+    yangilangan: "2026-10-10",
   },
   {
     bolim: "boshlash",

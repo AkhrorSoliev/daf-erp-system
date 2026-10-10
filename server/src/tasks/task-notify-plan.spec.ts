@@ -1,4 +1,4 @@
-import { planNotices } from './task-notify-plan';
+import { noticeUserIds, planNotices } from './task-notify-plan';
 import { TASK_EVENTS, type TaskEventTask } from './task-events';
 
 const task: TaskEventTask = {
@@ -127,7 +127,7 @@ describe('planNotices (spec §6.1 table, bell leg)', () => {
     expect(
       planNotices(
         TASK_EVENTS.UNASSIGNED,
-        { task, actorId: 30, userIds: [41] },
+        { task, actorId: 30, userIds: [41], removedAssigneeIds: [41] },
         names,
       )[0],
     ).toMatchObject({ userId: 41, type: 'TASK_UPDATED' });
@@ -192,7 +192,7 @@ describe('planNotices: the actor never hears about their own action', () => {
     expect(
       planNotices(
         TASK_EVENTS.UNASSIGNED,
-        { task, actorId: 41, userIds: [41] },
+        { task, actorId: 41, userIds: [41], removedAssigneeIds: [41] },
         names,
       ),
     ).toEqual([]);
@@ -261,18 +261,38 @@ describe('planNotices: the actor never hears about their own action', () => {
 });
 
 describe('planNotices: status changes and due dates', () => {
-  it.each(['IN_REVIEW', 'DONE'] as const)(
-    'status changed to %s is left to the review notices',
-    (to) => {
-      expect(
-        planNotices(
-          TASK_EVENTS.STATUS_CHANGED,
-          { task, actorId: 40, from: 'IN_PROGRESS', to },
-          names,
-        ),
-      ).toEqual([]);
-    },
-  );
+  it('status changed to IN_REVIEW is left to the review notice', () => {
+    expect(
+      planNotices(
+        TASK_EVENTS.STATUS_CHANGED,
+        { task, actorId: 40, from: 'IN_PROGRESS', to: 'IN_REVIEW' },
+        names,
+      ),
+    ).toEqual([]);
+  });
+
+  it('a self-task closed by its author → its watchers hear «Bajarildi»', () => {
+    const self: TaskEventTask = {
+      ...task,
+      participants: [
+        { userId: 30, role: 'ASSIGNEE' },
+        { userId: 50, role: 'WATCHER' },
+      ],
+    };
+    const n = planNotices(
+      TASK_EVENTS.STATUS_CHANGED,
+      { task: self, actorId: 30, from: 'IN_PROGRESS', to: 'DONE' },
+      names,
+    );
+    expect(n).toEqual([
+      expect.objectContaining({
+        userId: 50,
+        title: 'Bajarildi',
+        actionRequired: false,
+        telegram: { kind: 'DONE', by: 'Soliyev A.' },
+      }),
+    ]);
+  });
 
   it('status changed by the author themselves tells nobody', () => {
     expect(
@@ -328,5 +348,247 @@ describe('planNotices: status changes and due dates', () => {
 
   it('an event nobody plans for yields nothing', () => {
     expect(planNotices('task.unknown', { task }, names)).toEqual([]);
+  });
+});
+
+describe('planNotices: the Telegram leg (spec §6.1)', () => {
+  const tgOf = (n: ReturnType<typeof planNotices>) =>
+    n.map((x) => [x.userId, x.telegram]);
+
+  it('a new task → assignees «Yangi topshiriq», watchers nothing', () => {
+    expect(
+      tgOf(
+        planNotices(
+          TASK_EVENTS.ASSIGNED,
+          { task, actorId: 30, userIds: [40, 41, 50], created: true },
+          names,
+        ),
+      ),
+    ).toEqual([
+      [40, { kind: 'ASSIGNED' }],
+      [41, { kind: 'ASSIGNED' }],
+      [50, null],
+    ]);
+  });
+
+  it("someone added later → «Siz topshiriqqa qo'shildingiz» with who added", () => {
+    expect(
+      tgOf(
+        planNotices(
+          TASK_EVENTS.ASSIGNED,
+          { task, actorId: 30, userIds: [41] },
+          names,
+        ),
+      ),
+    ).toEqual([[41, { kind: 'ADDED', by: 'Soliyev A.' }]]);
+  });
+
+  it('a watcher added later hears nothing on Telegram', () => {
+    expect(
+      tgOf(
+        planNotices(
+          TASK_EVENTS.ASSIGNED,
+          { task, actorId: 30, userIds: [41, 50] },
+          names,
+        ),
+      ),
+    ).toEqual([
+      [41, { kind: 'ADDED', by: 'Soliyev A.' }],
+      [50, null],
+    ]);
+  });
+
+  it('a removed watcher is told on the bell only, a removed assignee on both', () => {
+    const n = planNotices(
+      TASK_EVENTS.UNASSIGNED,
+      { task, actorId: 30, userIds: [41, 50], removedAssigneeIds: [41] },
+      names,
+    );
+    expect(n.map((x) => [x.userId, x.title])).toEqual([
+      [41, 'Topshiriqdan olib tashlandingiz'],
+      [50, 'Topshiriqdan olib tashlandingiz'],
+    ]);
+    expect(tgOf(n)).toEqual([
+      [41, { kind: 'REMOVED', by: 'Soliyev A.' }],
+      [50, null],
+    ]);
+  });
+
+  it('moved, removed, review', () => {
+    expect(
+      tgOf(
+        planNotices(
+          TASK_EVENTS.REASSIGNED,
+          { task, fromUserId: 41, toUserIds: [40] },
+          names,
+        ),
+      ),
+    ).toEqual([[40, { kind: 'MOVED', from: 'Azizova M.' }]]);
+    expect(
+      tgOf(
+        planNotices(
+          TASK_EVENTS.UNASSIGNED,
+          { task, actorId: 30, userIds: [41], removedAssigneeIds: [41] },
+          names,
+        ),
+      ),
+    ).toEqual([[41, { kind: 'REMOVED', by: 'Soliyev A.' }]]);
+    expect(
+      tgOf(
+        planNotices(TASK_EVENTS.REVIEW_REQUESTED, { task, actorId: 40 }, names),
+      ),
+    ).toEqual([[30, { kind: 'REVIEW', by: 'Rahimov A.' }]]);
+  });
+
+  it('accepted → assignees «Qabul qilindi», watchers «Bajarildi»; returned → the reason', () => {
+    expect(
+      tgOf(
+        planNotices(
+          TASK_EVENTS.REVIEWED,
+          { task, actorId: 30, accepted: true, reason: null },
+          names,
+        ),
+      ),
+    ).toEqual([
+      [40, { kind: 'ACCEPTED', by: 'Soliyev A.' }],
+      [41, { kind: 'ACCEPTED', by: 'Soliyev A.' }],
+      [50, { kind: 'DONE', by: 'Soliyev A.' }],
+    ]);
+    expect(
+      tgOf(
+        planNotices(
+          TASK_EVENTS.REVIEWED,
+          { task, actorId: 30, accepted: false, reason: 'Doska artilmagan' },
+          names,
+        ),
+      ),
+    ).toEqual([
+      [40, { kind: 'RETURNED', by: 'Soliyev A.', reason: 'Doska artilmagan' }],
+      [41, { kind: 'RETURNED', by: 'Soliyev A.', reason: 'Doska artilmagan' }],
+    ]);
+  });
+
+  it('a comment reaches author and assignees but not watchers', () => {
+    expect(
+      tgOf(
+        planNotices(
+          TASK_EVENTS.COMMENTED,
+          { task, actorId: 40, text: 'Narx 450 000 qoldimi?' },
+          names,
+        ),
+      ),
+    ).toEqual([
+      [
+        30,
+        { kind: 'COMMENT', by: 'Rahimov A.', text: 'Narx 450 000 qoldimi?' },
+      ],
+      [
+        41,
+        { kind: 'COMMENT', by: 'Rahimov A.', text: 'Narx 450 000 qoldimi?' },
+      ],
+      [50, null],
+    ]);
+  });
+
+  it('cancelled → only watchers on Telegram (the bell still tells assignees)', () => {
+    expect(
+      tgOf(
+        planNotices(
+          TASK_EVENTS.CANCELLED,
+          { task, actorId: 30, reason: null },
+          names,
+        ),
+      ),
+    ).toEqual([
+      [40, null],
+      [41, null],
+      [50, { kind: 'CANCELLED', by: 'Soliyev A.' }],
+    ]);
+  });
+
+  it('status to IN_PROGRESS and due changes stay on the bell', () => {
+    for (const n of [
+      ...planNotices(
+        TASK_EVENTS.STATUS_CHANGED,
+        { task, actorId: 40, from: 'NEW', to: 'IN_PROGRESS' },
+        names,
+      ),
+      ...planNotices(TASK_EVENTS.DUE_CHANGED, { task, actorId: 30 }, names),
+    ]) {
+      expect(n.telegram).toBeNull();
+    }
+  });
+
+  it("«Dars bo'ldimi?» never goes to Telegram, the bell is kept", () => {
+    const lesson: TaskEventTask = {
+      ...task,
+      kind: 'LESSON_QUESTION',
+      authorId: null,
+    };
+    const n = planNotices(
+      TASK_EVENTS.REASSIGNED,
+      { task: lesson, fromUserId: 41, toUserIds: [40] },
+      names,
+    );
+    expect(n).toHaveLength(1);
+    expect(n[0].telegram).toBeNull();
+  });
+
+  it('nobody is ever told about what they did themselves', () => {
+    // [event, payload, who is told]: the others are named too, so a plan that
+    // told nobody at all would fail as well.
+    const twoWatchers: TaskEventTask = {
+      ...task,
+      participants: [...task.participants, { userId: 51, role: 'WATCHER' }],
+    };
+    const cases: [string, unknown, number[]][] = [
+      [
+        TASK_EVENTS.ASSIGNED,
+        { task, actorId: 40, userIds: [40, 41], created: true },
+        [41],
+      ],
+      [
+        TASK_EVENTS.UNASSIGNED,
+        { task, actorId: 41, userIds: [41, 40], removedAssigneeIds: [41, 40] },
+        [40],
+      ],
+      // The author is the only one this event tells, and the author did it.
+      [
+        TASK_EVENTS.REVIEW_REQUESTED,
+        { task: { ...task, authorId: 40 }, actorId: 40 },
+        [],
+      ],
+      [
+        TASK_EVENTS.REVIEWED,
+        { task, actorId: 40, accepted: true, reason: null },
+        [41, 50],
+      ],
+      [
+        TASK_EVENTS.STATUS_CHANGED,
+        { task: twoWatchers, actorId: 50, from: 'IN_PROGRESS', to: 'DONE' },
+        [51],
+      ],
+      [TASK_EVENTS.COMMENTED, { task, actorId: 50, text: 'x' }, [30, 40, 41]],
+      [TASK_EVENTS.CANCELLED, { task, actorId: 50, reason: null }, [40, 41]],
+      [TASK_EVENTS.DUE_CHANGED, { task, actorId: 40 }, [41]],
+    ];
+    for (const [event, payload, told] of cases) {
+      const actor = (payload as { actorId: number }).actorId;
+      const ids = planNotices(event, payload, names).map((n) => n.userId);
+      expect(ids).not.toContain(actor);
+      expect([...ids].sort()).toEqual(told);
+    }
+  });
+
+  it('noticeUserIds names author, participants, actor and moved people once', () => {
+    expect(
+      noticeUserIds({
+        task,
+        actorId: 99,
+        userIds: [41],
+        toUserIds: [60],
+        fromUserId: 61,
+      } as unknown as { task: TaskEventTask }).sort(),
+    ).toEqual([30, 40, 41, 50, 60, 61, 99]);
   });
 });

@@ -24,6 +24,14 @@ export function parseDueInput(raw: unknown): Date | null {
   return d;
 }
 
+/**
+ * The longest review reason (a «Qaytarish» reason). The website's DTO and
+ * `TasksService.review` read the same two values, so Telegram, which skips the
+ * DTO, is held to the same limit.
+ */
+export const REVIEW_REASON_MAX = 1000;
+export const REVIEW_REASON_TOO_LONG = `Sabab ${REVIEW_REASON_MAX} belgidan oshmasin`;
+
 /** Trimmed text, or a 400: the DTOs trim too, but Telegram and other callers skip them. */
 export function requireText(raw: string, message: string): string {
   const text = raw.trim();

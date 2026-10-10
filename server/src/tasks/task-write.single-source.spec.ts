@@ -27,7 +27,7 @@ const SRC = join(__dirname, '..');
 const OWNER_DIR = 'src/tasks/';
 
 const WRITE =
-  /\b(tx|prisma|db|this\.prisma)\.task(?:Participant|Step|Event|Outbox)?\.(create|createMany|update|updateMany|upsert|delete|deleteMany)\(/g;
+  /\b(tx|prisma|db|this\.prisma)\.task(?:Participant|Step|Event|Outbox|TelegramMessage)?\.(create|createMany|update|updateMany|upsert|delete|deleteMany)\(/g;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -62,7 +62,7 @@ describe('task rows are written only inside src/tasks', () => {
     expect(files.has('src/tasks/task-user-lifecycle.listener.ts')).toBe(true);
   });
 
-  it('no other module writes a Task, TaskParticipant, TaskStep, TaskEvent or TaskOutbox row', () => {
+  it('no other module writes a Task, TaskParticipant, TaskStep, TaskEvent, TaskOutbox or TaskTelegramMessage row', () => {
     const offenders = writes
       .filter((w) => !w.path.startsWith(OWNER_DIR))
       .map((w) => `${w.path}: ${w.call}`);

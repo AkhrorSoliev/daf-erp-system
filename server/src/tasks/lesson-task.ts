@@ -137,6 +137,8 @@ export async function createLessonTask(
   // (ADR-0054 rule 6), written like any other task's.
   await scheduleTaskOutbox(tx, {
     id: task.id,
+    kind: 'LESSON_QUESTION',
+    priority: 'HIGH',
     dueAt: args.dueAt,
     authorId: null,
     participants: assigneeIds.map((userId) => ({

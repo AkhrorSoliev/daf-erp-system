@@ -1,8 +1,8 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import type { Prisma, TaskStatus } from '@prisma/client';
+import type { Prisma, TaskEventVia, TaskStatus } from '@prisma/client';
 import { claimSystemTask } from './task-claim';
 import { TASK_DETAIL_SELECT, type TaskCtx, type TaskRow } from './task-select';
-import { checkTransition } from './task-transitions';
+import { ONLY_GIVER_REVIEWS, checkTransition } from './task-transitions';
 
 type Tx = Prisma.TransactionClient;
 
@@ -12,6 +12,7 @@ export async function changeStatusTx(
   { row, access }: TaskCtx,
   to: Exclude<TaskStatus, 'CANCELLED'>,
   userId: number,
+  via: TaskEventVia = 'WEB',
 ): Promise<{ from: TaskStatus; updated: TaskRow }> {
   const id = row.id;
   if (!access.canWork) {
@@ -64,7 +65,7 @@ export async function changeStatusTx(
       type: 'STATUS',
       actorId: userId,
       meta: { from: row.status, to },
-      via: 'WEB',
+      via,
     },
   });
   await tx.taskParticipant.updateMany({
@@ -84,10 +85,11 @@ export async function reviewTx(
   action: 'ACCEPT' | 'RETURN',
   reason: string,
   userId: number,
+  via: TaskEventVia = 'WEB',
 ): Promise<TaskRow> {
   const id = row.id;
   if (!access.canManage) {
-    throw new ForbiddenException('Faqat beruvchi tekshira oladi');
+    throw new ForbiddenException(ONLY_GIVER_REVIEWS);
   }
   const to: TaskStatus = action === 'ACCEPT' ? 'DONE' : 'IN_PROGRESS';
   const verdict = checkTransition({
@@ -121,7 +123,7 @@ export async function reviewTx(
       actorId: userId,
       text: action === 'RETURN' ? reason : null,
       meta: { from: row.status, to },
-      via: 'WEB',
+      via,
     },
   });
   if (action === 'ACCEPT') {

@@ -114,6 +114,8 @@ export class TaskUserLifecycleListener {
           if (toUserIds.length) {
             await scheduleTaskOutbox(tx, {
               id: t.id,
+              kind: t.kind,
+              priority: t.priority,
               dueAt: t.dueAt,
               authorId: t.authorId,
               participants,

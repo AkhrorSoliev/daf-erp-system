@@ -518,12 +518,53 @@ describe('TasksReadService', () => {
       branches: [{ branchId, branch: { name: `B${branchId}` } }],
     });
 
-    it('offers the ladder to assign and the wider set to watch', async () => {
-      prisma.user.findMany.mockResolvedValue([
-        staff(30, 3), // the caller
-        staff(40, 4), // teacher
-        staff(20, 2), // branch director: above an administrator
+    const owner = (
+      id: number,
+      chat: string,
+      over: { status?: string; isActive?: boolean } = {},
+    ) => ({
+      id,
+      telegramChatId: chat,
+      status: 'ACTIVE',
+      isActive: true,
+      ...over,
+    });
+
+    it('reads «Telegram ulanmagan» by the notice rule, in one query for the list', async () => {
+      prisma.user.findMany
+        .mockResolvedValueOnce([
+          { ...staff(40, 4), telegramChatId: 'ok' },
+          { ...staff(41, 4), telegramChatId: 'off' },
+          { ...staff(42, 4), telegramChatId: 'shared' },
+          { ...staff(43, 4), telegramChatId: 'shared' },
+          staff(44, 4), // no chat
+        ])
+        .mockResolvedValueOnce([
+          owner(40, 'ok'),
+          owner(41, 'off', { isActive: false }),
+          owner(42, 'shared'),
+          owner(43, 'shared'),
+        ]);
+      const out = await service.assignable(admin());
+      expect(out.assignees.map((u) => [u.id, u.telegramLinked])).toEqual([
+        [40, true],
+        [41, false],
+        [42, false],
+        [43, false],
+        [44, false],
       ]);
+      // The picker's own query plus ONE for every chat in the list.
+      expect(prisma.user.findMany).toHaveBeenCalledTimes(2);
+    });
+
+    it('offers the ladder to assign and the wider set to watch', async () => {
+      prisma.user.findMany
+        .mockResolvedValueOnce([
+          staff(30, 3), // the caller
+          staff(40, 4), // teacher
+          staff(20, 2), // branch director: above an administrator
+        ])
+        .mockResolvedValueOnce([owner(40, 'chat')]);
       const out = await service.assignable(admin());
       expect(out.assignees.map((u) => u.id)).toEqual([30, 40]);
       expect(out.watchers.map((u) => u.id)).toEqual([30, 40, 20]);

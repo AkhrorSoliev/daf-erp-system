@@ -3,7 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, TaskEventVia } from '@prisma/client';
 import type { TaskCtx } from './task-select';
 import { OPEN_STATUSES } from './task-transitions';
 
@@ -61,6 +61,7 @@ export async function updateStepTx(
   stepId: string,
   patch: { title?: string; done?: boolean },
   userId: number,
+  via: TaskEventVia = 'WEB',
 ): Promise<void> {
   const { title } = patch;
   if (title !== undefined && !access.canManage) {
@@ -96,7 +97,7 @@ export async function updateStepTx(
         type: 'STEP',
         actorId: userId,
         meta: { action: 'renamed', from: step.title, to: newTitle },
-        via: 'WEB',
+        via,
       },
     });
   }
@@ -110,7 +111,7 @@ export async function updateStepTx(
           action: patch.done ? 'done' : 'undone',
           title: newTitle ?? step.title,
         },
-        via: 'WEB',
+        via,
       },
     });
   }

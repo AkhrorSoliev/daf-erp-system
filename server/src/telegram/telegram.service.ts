@@ -14,7 +14,8 @@ import {
   STAFF_CABINET_REQUESTED,
   type StaffCabinetRequestedEvent,
 } from '../common/auth/staff-telegram';
-import { Telegraf, Scenes, session, Markup } from 'telegraf';
+import { Composer, Telegraf, Scenes, session, Markup } from 'telegraf';
+import type { Middleware } from 'telegraf';
 import { RedisService } from '../redis/redis.service';
 import { BotContext, SessionData } from './types/context';
 import {
@@ -144,6 +145,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
    * oqimni server tomonda o'zimiz chaqiramiz.
    */
   private startFlow?: (ctx: BotContext, payload: string) => Promise<void>;
+  /** Other modules' middleware that runs before the scenes (`useBeforeScenes`). */
+  private readonly beforeScenes: Middleware<BotContext>[] = [];
 
   constructor(
     private configService: ConfigService,
@@ -346,6 +349,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       staffLinkScene,
       accountLinkScene,
     ]);
+    // `useBeforeScenes`: composed per update, so a registration made after
+    // boot (another module's onApplicationBootstrap) takes effect.
+    this.bot.use((ctx, next) => Composer.compose(this.beforeScenes)(ctx, next));
     this.bot.use(stage.middleware());
 
     // /start handler
@@ -703,6 +709,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
   getBot(): Telegraf<BotContext> {
     return this.bot;
+  }
+
+  /**
+   * Runs `mw` on every update after the session, the `/start` reset and the
+   * channel gate, but before the scenes and the bot's own handlers: an open
+   * scene (registration, password reset …) answers every update itself and is
+   * never closed if the person walks away. `mw` calls `next()` for what it does
+   * not handle. Without a bot it is kept and never runs.
+   */
+  useBeforeScenes(mw: Middleware<BotContext>): void {
+    this.beforeScenes.push(mw);
   }
 
   /** Xodim o'quvchi Mini App'ini ochdi — chatga xodim kabinetining tugmasi. */
