@@ -36,11 +36,14 @@ describe("«Muzlatilganlarning puli» moved to «Qaytariladigan pul» (spec B2b 
 });
 
 describe("«Markaz qoplagani» lives on Ish haqi (ADR-0072)", () => {
-  it("the salary page has the tab, and its card links there, never to the debt page", () => {
+  it("the salary page has the tab, and the undirish card on it links nowhere", () => {
     expect(src("salary-client.tsx")).toContain('value="markaz"');
-    // The undirish card moved onto the tab itself (B3 spec §2.4).
-    expect(src("salary/salary-center-recovery-card.tsx")).not.toContain("/payments/debt?tab=markaz");
-    expect(src("salary/salary-center-recovery-card.tsx")).toContain("/payments/salary?tab=markaz&month=");
+    // The undirish card moved onto the tab itself (B3 spec §2.4): it sits above
+    // the list, so it links nowhere — neither to the debt page nor back to itself.
+    const card = src("salary/salary-center-recovery-card.tsx");
+    expect(card).not.toContain("/payments/debt");
+    expect(card).not.toContain("/payments/salary?tab=markaz");
+    expect(card).not.toContain("href=");
   });
 
   it("the month lives in its own URL state, not the debt page's", () => {

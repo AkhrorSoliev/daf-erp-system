@@ -14,7 +14,7 @@ import { monthLabel } from "./salary-utils";
 import type { SalarySettingsAccess } from "./salary-settings-access";
 import { SettleMonthDialog } from "./salary-settle-month-dialog";
 import { SalaryAttentionCard } from "./salary/salary-attention-card";
-import { filterPeople, mergePeople } from "./salary/salary-page-model";
+import { filterPeople, mergePeople, segmentLabels } from "./salary/salary-page-model";
 import { SalaryPeopleTable } from "./salary/salary-people-table";
 import { useInvalidateSalary, useSalaryMonthly } from "./salary/salary-queries";
 import { SalarySummaryCard } from "./salary/salary-summary-card";
@@ -49,7 +49,7 @@ export function SalaryMonthlyView({ month, onOpenRow, canClose, settingsAccess, 
   const invalidateSalary = useInvalidateSalary();
   const debouncedSetSearch = useDebouncedCallback((value: string) => setFilters({ search: value }), 300);
 
-  const { data, isLoading, isError, refetch } = useSalaryMonthly(month, filters.search);
+  const { data, isError, refetch } = useSalaryMonthly(month, filters.search);
   const shownMonth = data?.month ?? month;
 
   // Unpaid payroll rows, from the settle preview rather than the table: a
@@ -67,6 +67,7 @@ export function SalaryMonthlyView({ month, onOpenRow, canClose, settingsAccess, 
 
   const people = useMemo(() => (data ? mergePeople(data) : []), [data]);
   const kim = asKim(filters.kim);
+  const segment = segmentLabels(data);
   const monthHasNoData = !!data && data.data.length > 0 && data.data.every((t) => !t.hasLessonData);
 
   // A failed request is not "nobody this month" — never fall into the empty state.
@@ -124,9 +125,9 @@ export function SalaryMonthlyView({ month, onOpenRow, canClose, settingsAccess, 
           onValueChange={(v) => v && setFilters({ kim: v })}
           className="w-full sm:w-auto"
         >
-          <ToggleGroupItem value="all" className="flex-1">{`Hammasi · ${people.length}`}</ToggleGroupItem>
-          <ToggleGroupItem value="teachers" className="flex-1">{`Ustozlar · ${data?.data.length ?? 0}`}</ToggleGroupItem>
-          <ToggleGroupItem value="staff" className="flex-1">{`Xodimlar · ${data?.staff.length ?? 0}`}</ToggleGroupItem>
+          <ToggleGroupItem value="all" className="flex-1">{segment.all}</ToggleGroupItem>
+          <ToggleGroupItem value="teachers" className="flex-1">{segment.teachers}</ToggleGroupItem>
+          <ToggleGroupItem value="staff" className="flex-1">{segment.staff}</ToggleGroupItem>
         </ToggleGroup>
       </div>
 
@@ -144,7 +145,8 @@ export function SalaryMonthlyView({ month, onOpenRow, canClose, settingsAccess, 
       <SalaryPeopleTable
         rows={filterPeople(people, kim)}
         state={data?.monthState.kind ?? "OPEN"}
-        loading={isLoading}
+        // Not `isLoading`: a paused (offline) query has no data and is not loading.
+        loading={!data}
         onOpenRow={onOpenRow}
       />
 

@@ -83,6 +83,16 @@ export function filterPeople(rows: PersonRow[], kim: "all" | "teachers" | "staff
   return rows.filter((r) => r.kind === kind);
 }
 
+/** The segment above the table; the counts wait for an answer, so a waiting request never reads «· 0». */
+export function segmentLabels(data: MonthlyResponse | undefined): Record<"all" | "teachers" | "staff", string> {
+  if (!data) return { all: "Hammasi", teachers: "Ustozlar", staff: "Xodimlar" };
+  return {
+    all: `Hammasi · ${data.data.length + data.staff.length}`,
+    teachers: `Ustozlar · ${data.data.length}`,
+    staff: `Xodimlar · ${data.staff.length}`,
+  };
+}
+
 /** The pill beside «{Oy} oyliklari». */
 export function monthStatePill(state: MonthState, month: string): { text: string; tone: Tone } {
   switch (state.kind) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   centerLine,
   mln,
+  segmentLabels,
   filterPeople,
   mergePeople,
   monthStatePill,
@@ -210,5 +211,19 @@ describe("mln", () => {
     expect(mln(3_000_000)).toBe("3 mln");
     expect(mln(1_234_567)).toBe("1,2 mln");
     expect(mln(0)).toBe("0 mln");
+  });
+});
+
+describe("segmentLabels", () => {
+  it("counts everyone, the teachers and the staff", () => {
+    expect(segmentLabels(response())).toEqual({
+      all: "Hammasi · 3",
+      teachers: "Ustozlar · 2",
+      staff: "Xodimlar · 1",
+    });
+  });
+
+  it("leaves the counts out until there is an answer — no «· 0» for a request still waiting", () => {
+    expect(segmentLabels(undefined)).toEqual({ all: "Hammasi", teachers: "Ustozlar", staff: "Xodimlar" });
   });
 });
