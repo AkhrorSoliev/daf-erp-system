@@ -943,18 +943,23 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
-    policy: 'COMPANY_WIDE',
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
-      'Holiday READS. Every holiday row today is company-wide: ' +
-      '`HolidaysService.create` never writes `branchId`, no other path sets it, ' +
-      'and the 2026-08-05 migration left it null on purpose (null = a national ' +
-      'holiday). The list, the detail and the status trail are the company ' +
-      'calendar every staff screen needs (spec §4.6). If a branch-only holiday is ' +
-      'ever written, the list will show it to the other branch as well and must ' +
-      'be revisited. The holiday WRITES are not here: they move every ' +
-      "branch's groups and are still UNREVIEWED.",
+      'Holidays (CEO decision 10.10.2026). A holiday belongs to one branch or, ' +
+      'with `branchId` null, to the whole centre. Each id-addressed route loads ' +
+      "the row first and checks the caller against the row's branch " +
+      '(`assertCallerInBranch`). A centre-wide row is read by anyone the route ' +
+      'admits, but only the CEO edits, cancels or deletes it ' +
+      "(`resolveCallerBranchScope`), because its cascade moves every branch's " +
+      'groups. `POST /holidays` checks the branch named in the body the same ' +
+      'way, and no branch means a centre-wide holiday, so CEO only. The branch ' +
+      'is fixed at creation: `UpdateHolidayDto` has no `branchId`. The list is ' +
+      'not here: `GET /holidays` takes `@BranchScope()`.',
     routes: [
-      'GET /holidays',
+      'POST /holidays',
+      'PATCH /holidays/:id',
+      'PATCH /holidays/:id/status',
+      'DELETE /holidays/:id',
       'GET /holidays/:id',
       'GET /holidays/:id/status-history',
     ],
@@ -1112,7 +1117,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
  */
 export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /archive/:entityType/:id',
-  'DELETE /holidays/:id',
   'DELETE /telegram-groups/:id',
   'GET /archive/:entityType',
   'GET /archive/:entityType/:id',
@@ -1131,11 +1135,8 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /reports/lead-analytics',
   'GET /rooms/count-by-branch',
   'GET /telegram-groups',
-  'PATCH /holidays/:id',
-  'PATCH /holidays/:id/status',
   'PATCH /leads/reorder',
   'POST /archive/:entityType/:id/restore',
-  'POST /holidays',
   'POST /leads',
 ];
 
@@ -1150,4 +1151,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 26;
+export const UNREVIEWED_BUDGET = 22;

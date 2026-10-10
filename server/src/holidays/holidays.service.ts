@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -17,11 +18,21 @@ import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidayQueryDto } from './dto/holiday-query.dto';
 import { GroupHolidayCascadeService } from '../groups/group-holiday-cascade.service';
 import {
+  assertCallerInBranch,
+  resolveCallerBranchScope,
+} from '../common/auth/branch-scope';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
+import {
   tashkentDateStr,
   utcMidnightFromDateStr,
 } from '../attendance/shared/date-utils';
 
 const MAX_HOLIDAY_DAYS = 60;
+
+/** The same refusal the dashboard gives for a branch outside the caller's. */
+const BRANCH_REFUSAL = 'Bu filial sizning ruxsatingizda emas';
+/** CEO decision 10.10.2026: a holiday of the whole centre is the CEO's alone. */
+const CENTRE_WIDE_REFUSAL = 'Butun markaz bayrami bilan faqat CEO ishlay oladi';
 
 type HolidayCoverage = Pick<Holiday, 'id' | 'name' | 'date' | 'endDate'>;
 
@@ -117,15 +128,28 @@ export class HolidaysService {
   // CRUD
   // ---------------------------------------------------------------------------
 
-  async findAll(query: HolidayQueryDto, companyId?: number) {
+  async findAll(
+    query: HolidayQueryDto,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
 
     // `GET /holidays` had no company filter and no `@Roles` guard, so any
     // authenticated token could read every holiday in the database.
+    //
+    // The header's branch scope (CEO decision 10.10.2026): a centre-wide
+    // holiday is every branch's, and a branch's holiday shows only in its own
+    // branch. `null` (a CEO on «Barcha filiallar») reads every row. `[]`
+    // (nothing in scope) still reads the centre-wide calendar, which no
+    // branch owns.
     const where: Prisma.HolidayWhereInput = {
       deletedAt: null,
-      ...(companyId != null ? { companyId } : {}),
+      companyId,
+      ...(branchIds != null
+        ? { OR: [{ branchId: null }, { branchId: { in: branchIds } }] }
+        : {}),
       ...(query.search
         ? { name: { contains: query.search, mode: 'insensitive' } }
         : {}),
@@ -134,6 +158,8 @@ export class HolidaysService {
     const [data, total] = await Promise.all([
       this.prisma.holiday.findMany({
         where,
+        // The settings list shows whose each holiday is.
+        include: { branch: { select: { name: true } } },
         orderBy: { date: 'asc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -144,12 +170,23 @@ export class HolidaysService {
     return { data, total, page, pageSize };
   }
 
-  async findOne(id: string, companyId: number) {
+  async findOne(id: string, companyId: number, userId: number) {
     const holiday = await this.prisma.holiday.findFirst({
       where: { id, companyId, deletedAt: null },
     });
     if (!holiday) {
       throw new NotFoundException(`Bayram #${id} topilmadi`);
+    }
+    // A centre-wide holiday is every branch's calendar. A branch's own is read
+    // only in that branch, the rule `GET /entity-history/Holiday/:id` already
+    // applies (`common/auth/entity-history-scope.ts`).
+    if (holiday.branchId != null) {
+      await assertCallerInBranch(
+        this.prisma,
+        userId,
+        holiday.branchId,
+        BRANCH_REFUSAL,
+      );
     }
     return holiday;
   }
@@ -162,14 +199,28 @@ export class HolidaysService {
 
     this.validateRange(start, end);
 
+    // Whose holiday it is (CEO decision 10.10.2026): no branch = the whole
+    // centre, which only the CEO declares; otherwise a branch the caller
+    // works in. Checked before the write, so a refused holiday moves no group.
+    const branchId = dto.branchId ?? null;
+    if (branchId != null) {
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: branchId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!branch) {
+        throw new NotFoundException(`Filial #${branchId} topilmadi`);
+      }
+    }
+    await this.assertCallerMayWriteHoliday(userId, branchId);
+
     const holiday = await this.prisma.holiday.create({
       // Written explicitly, not left to the column default. The `@default(1001)`
       // that `20260805120000` added was a migration convenience; relying on it
       // at runtime would hardcode one company into a multi-company schema — and
-      // the following migration drops it. `branchId` stays null: a holiday with
-      // no branch is a COMPANY-WIDE one (Navro'z, Mustaqillik kuni), which is
-      // what nearly every row is.
-      data: { name: dto.name, date: start, endDate: end, companyId },
+      // the following migration drops it. `branchId` null is a COMPANY-WIDE
+      // holiday (Navro'z, Mustaqillik kuni); a number is one branch closing.
+      data: { name: dto.name, date: start, endDate: end, companyId, branchId },
     });
 
     await this.entityHistoryService.recordCreate({
@@ -196,6 +247,7 @@ export class HolidaysService {
     if (!holiday) {
       throw new NotFoundException(`Bayram #${id} topilmadi`);
     }
+    await this.assertCallerMayWriteHoliday(userId, holiday.branchId);
 
     // Compare Tashkent calendar strings — the frontend sends "YYYY-MM-DD",
     // but the DB row could be UTC midnight or Tashkent midnight depending on
@@ -267,6 +319,7 @@ export class HolidaysService {
     if (!holiday) {
       throw new NotFoundException(`Bayram #${id} topilmadi`);
     }
+    await this.assertCallerMayWriteHoliday(userId, holiday.branchId);
 
     await this.reverseHolidayImpactOnGroups(id, userId);
 
@@ -298,6 +351,7 @@ export class HolidaysService {
     if (!holiday) {
       throw new NotFoundException(`Bayram #${id} topilmadi`);
     }
+    await this.assertCallerMayWriteHoliday(userId, holiday.branchId);
 
     const auditData = await this.statusHistoryService.changeStatus({
       entityType: 'Holiday',
@@ -336,14 +390,23 @@ export class HolidaysService {
     return updated;
   }
 
-  async getStatusHistory(id: string, companyId: number) {
+  async getStatusHistory(id: string, companyId: number, userId: number) {
     const holiday = await this.prisma.holiday.findFirst({
       where: { id, companyId },
-      select: { id: true },
+      select: { id: true, branchId: true },
     });
 
     if (!holiday) {
       throw new NotFoundException(`Bayram #${id} topilmadi`);
+    }
+    // Same read rule as `findOne`.
+    if (holiday.branchId != null) {
+      await assertCallerInBranch(
+        this.prisma,
+        userId,
+        holiday.branchId,
+        BRANCH_REFUSAL,
+      );
     }
 
     return this.statusHistoryService.getHistory('Holiday', id);
@@ -352,6 +415,27 @@ export class HolidaysService {
   // ---------------------------------------------------------------------------
   // Cascade — public so the cascade service can call back for the date set.
   // ---------------------------------------------------------------------------
+
+  /**
+   * Who may create, edit, cancel or delete a holiday (CEO decision
+   * 10.10.2026). A branch's holiday: whoever works in that branch. A
+   * centre-wide one (`branchId` null) moves every branch's groups, registers
+   * and month plans, so only the CEO. The same shape as
+   * `CoursesService.assertCallerMayTouchCourse`.
+   */
+  private async assertCallerMayWriteHoliday(
+    userId: number,
+    branchId: number | null,
+  ): Promise<void> {
+    if (branchId != null) {
+      await assertCallerInBranch(this.prisma, userId, branchId, BRANCH_REFUSAL);
+      return;
+    }
+    const scope = await resolveCallerBranchScope(this.prisma, userId);
+    if (scope.kind !== 'all') {
+      throw new ForbiddenException(CENTRE_WIDE_REFUSAL);
+    }
+  }
 
   private validateRange(start: Date, end: Date) {
     if (end < start) {
