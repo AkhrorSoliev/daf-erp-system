@@ -6,28 +6,27 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { EnrollmentTransferReasonsService } from './enrollment-transfer-reasons.service';
 import { CreateEnrollmentTransferReasonDto } from './dto/create-enrollment-transfer-reason.dto';
 import { UpdateEnrollmentTransferReasonDto } from './dto/update-enrollment-transfer-reason.dto';
-import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { Can } from '../common/permissions/access.decorators';
 
 @Controller('enrollment-transfer-reasons')
-@UseGuards(RolesGuard)
-@Roles('CEO', 'Branch Director', 'Administrator')
 export class EnrollmentTransferReasonsController {
   constructor(
     private readonly reasonsService: EnrollmentTransferReasonsService,
   ) {}
 
   @Get()
+  @Can('settings.reference', 'students.enroll', 'groups.manage')
   findAll(@CurrentUser('companyId') companyId: number) {
     return this.reasonsService.findAll(companyId);
   }
 
   @Post()
+  @Can('settings.reference')
   create(
     @Body() dto: CreateEnrollmentTransferReasonDto,
     @CurrentUser('companyId') companyId: number,
@@ -37,6 +36,7 @@ export class EnrollmentTransferReasonsController {
   }
 
   @Patch(':id')
+  @Can('settings.reference')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateEnrollmentTransferReasonDto,
@@ -47,6 +47,7 @@ export class EnrollmentTransferReasonsController {
   }
 
   @Delete(':id')
+  @Can('settings.reference')
   remove(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,

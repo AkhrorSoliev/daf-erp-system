@@ -1,15 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { RoomsController } from './rooms.controller';
 import { RoomsService } from './rooms.service';
-import { RolesGuard } from '../common/guards';
-import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
+import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
-describe('RoomsController — role guards', () => {
+describe('RoomsController — route access', () => {
   let controller: RoomsController;
-  let reflector: Reflector;
-  let guard: RolesGuard;
 
   const mockService = {
     findAll: jest.fn().mockResolvedValue([]),
@@ -29,83 +24,28 @@ describe('RoomsController — role guards', () => {
     }).compile();
 
     controller = module.get(RoomsController);
-    reflector = new Reflector();
-    guard = new RolesGuard(reflector);
   });
 
-  function mockExecutionContext(
-    handler: (...args: unknown[]) => unknown,
-    roles: string[],
-  ) {
-    return {
-      getHandler: () => handler,
-      getClass: () => RoomsController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: { roles } }),
-      }),
-    } as any;
-  }
-
-  describe('create()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.create);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+  describe.each([
+    'create',
+    'update',
+    'changeStatus',
+    'getStatusHistory',
+    'delete',
+  ])('%s()', (name) => {
+    it('is gated by the reference lists capability', () => {
+      expect(routeAccess(RoomsController, name)).toEqual({
+        kind: 'can',
+        keys: ['settings.reference'],
+      });
     });
 
-    it('should allow CEO to create', () => {
-      const ctx = mockExecutionContext(controller.create, ['CEO']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Teacher from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-
-    it('should deny Cashier from creating', () => {
-      const ctx = mockExecutionContext(controller.create, ['Cashier']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
-  describe('update()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.update);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-
-    it('should allow Administrator to update', () => {
-      const ctx = mockExecutionContext(controller.update, ['Administrator']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Teacher from updating', () => {
-      const ctx = mockExecutionContext(controller.update, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
-  describe('delete()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.delete);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
-    });
-
-    it('should allow Branch Director to delete', () => {
-      const ctx = mockExecutionContext(controller.delete, ['Branch Director']);
-      expect(guard.canActivate(ctx)).toBe(true);
-    });
-
-    it('should deny Teacher from deleting', () => {
-      const ctx = mockExecutionContext(controller.delete, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
-    });
-  });
-
-  describe('changeStatus()', () => {
-    it('should deny Teacher from changing status', () => {
-      const ctx = mockExecutionContext(controller.changeStatus, ['Teacher']);
-      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    it('admits the CEO, Branch Director and Administrator by default, not the Teacher or the Cashier', () => {
+      expect(defaultRolesOf(RoomsController, name)).toEqual([
+        'Administrator',
+        'Branch Director',
+        'CEO',
+      ]);
     });
   });
 
@@ -122,11 +62,19 @@ describe('RoomsController — role guards', () => {
     });
   });
 
-  describe('findAll() — no guard', () => {
+  // The room list feeds group forms and the occupancy view.
+  describe.each(['findAll', 'findOne'])('%s()', (name) => {
     it('is staff-only — a student-portal token must not read it', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.findAll);
-      expect(roles).toEqual(expect.arrayContaining([...STAFF_ROLES]));
-      expect(roles).not.toContain('Student');
+      expect(routeAccess(RoomsController, name)).toEqual({ kind: 'anyStaff' });
+      expect(defaultRolesOf(RoomsController, name)).not.toContain('Student');
+    });
+  });
+
+  describe('countByBranch()', () => {
+    it('is open to every signed-in account', () => {
+      expect(routeAccess(RoomsController, 'countByBranch')).toEqual({
+        kind: 'anyUser',
+      });
     });
   });
 });

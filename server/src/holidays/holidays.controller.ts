@@ -7,15 +7,14 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { HolidaysService } from './holidays.service';
 import { ChangeHolidayStatusDto } from './dto/change-holiday-status.dto';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidayQueryDto } from './dto/holiday-query.dto';
-import { CurrentUser, Roles, STAFF_ROLES } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { CurrentUser } from '../common/decorators';
+import { AnyStaff, Can } from '../common/permissions/access.decorators';
 
 @Controller('holidays')
 export class HolidaysController {
@@ -24,8 +23,7 @@ export class HolidaysController {
   // Staff only + company-scoped. Both were missing: any authenticated token,
   // including a student-portal one, could read every holiday in the database.
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @AnyStaff()
   findAll(
     @Query() query: HolidayQueryDto,
     @CurrentUser('companyId') companyId: number,
@@ -38,8 +36,7 @@ export class HolidaysController {
   // front of it, any valid token including a student-portal one could read any
   // holiday in the database by id.
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @AnyStaff()
   findOne(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
@@ -48,8 +45,7 @@ export class HolidaysController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   create(
     @Body() dto: CreateHolidayDto,
     @CurrentUser('id') userId: number,
@@ -59,8 +55,7 @@ export class HolidaysController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateHolidayDto,
@@ -71,8 +66,7 @@ export class HolidaysController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,
@@ -82,8 +76,7 @@ export class HolidaysController {
   }
 
   @Patch(':id/status')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   changeStatus(
     @Param('id') id: string,
     @Body() dto: ChangeHolidayStatusDto,
@@ -94,8 +87,7 @@ export class HolidaysController {
   }
 
   @Get(':id/status-history')
-  @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Can('settings.reference')
   getStatusHistory(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,

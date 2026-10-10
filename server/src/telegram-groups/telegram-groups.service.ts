@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { TelegramGroupStatus } from '@prisma/client';
 import { EntityHistoryService } from '../common/entity-history';
+import { PermissionsService } from '../common/permissions/permissions.service';
 
 @Injectable()
 export class TelegramGroupsService {
@@ -17,6 +18,7 @@ export class TelegramGroupsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly entityHistory: EntityHistoryService,
+    private readonly permissions: PermissionsService,
   ) {}
 
   /**
@@ -110,8 +112,10 @@ export class TelegramGroupsService {
     branchId?: number | null,
     receivesAllBranches = false,
   ) {
-    const isAllowed =
-      caller.roles.includes('CEO') || caller.roles.includes('Branch Director');
+    const isAllowed = await this.permissions.has(
+      caller.id,
+      'settings.telegram-groups',
+    );
     if (!isAllowed) {
       throw new ForbiddenException(
         'Faqat CEO yoki Filial Direktori guruhni tasdiqlay oladi',
@@ -304,10 +308,12 @@ export class TelegramGroupsService {
 
   async reject(
     id: string,
-    caller: { id?: number; companyId?: number; roles: string[] },
+    caller: { id: number; companyId?: number; roles: string[] },
   ) {
-    const isAllowed =
-      caller.roles.includes('CEO') || caller.roles.includes('Branch Director');
+    const isAllowed = await this.permissions.has(
+      caller.id,
+      'settings.telegram-groups',
+    );
     if (!isAllowed) {
       throw new ForbiddenException("Sizga ruxsat yo'q");
     }
@@ -328,36 +334,33 @@ export class TelegramGroupsService {
       },
     });
 
-    if (caller.id) {
-      await this.entityHistory
-        .recordCreate({
-          entityType: 'TelegramGroup',
-          entityId: updated.id,
-          newValues: {
-            action: 'REJECTED',
-            chatId: updated.chatId.toString(),
-            title: updated.title,
-          },
-          changedById: caller.id,
-          companyId: caller.companyId,
-        })
-        .catch((err) =>
-          this.logger.warn(`reject audit failed: ${err?.message}`),
-        );
-    }
+    await this.entityHistory
+      .recordCreate({
+        entityType: 'TelegramGroup',
+        entityId: updated.id,
+        newValues: {
+          action: 'REJECTED',
+          chatId: updated.chatId.toString(),
+          title: updated.title,
+        },
+        changedById: caller.id,
+        companyId: caller.companyId,
+      })
+      .catch((err) => this.logger.warn(`reject audit failed: ${err?.message}`));
 
     return updated;
   }
 
   /**
    * Soft-delete an approved group. Caller scope:
-   *   - From the admin panel (HTTP): requires CEO of the same company.
+   *   - From the admin panel (HTTP): requires the `telegram.announce`
+   *     capability (the CEO's) in the same company.
    *   - From inside the group via /unlink: caller is a Telegram group admin —
-   *     no ERP role check (the chat itself is the ACL).
+   *     no ERP check (the chat itself is the ACL).
    */
   async unlinkApproved(
     id: string,
-    caller: { companyId: number; roles: string[] },
+    caller: { id: number; companyId: number; roles: string[] },
   ) {
     const group = await this.prisma.telegramGroup.findUnique({ where: { id } });
     if (!group || group.deletedAt)
@@ -367,7 +370,7 @@ export class TelegramGroupsService {
         'Bu guruh sizning kompaniyangizga tegishli emas',
       );
     }
-    if (!caller.roles.includes('CEO')) {
+    if (!(await this.permissions.has(caller.id, 'telegram.announce'))) {
       throw new ForbiddenException('Faqat CEO botni guruhdan uzishi mumkin');
     }
     return this.prisma.telegramGroup.update({

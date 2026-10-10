@@ -2,13 +2,11 @@ import {
   Controller,
   Post,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Roles, STAFF_ROLES } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { AnyStaff } from '../common/permissions/access.decorators';
 import { UploadService } from './upload.service';
 import {
   ALLOWED_IMAGE_MIMES,
@@ -32,8 +30,7 @@ export class UploadController {
    * goes through.
    */
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles(...STAFF_ROLES)
+  @AnyStaff()
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: MAX_UPLOAD_BYTES },
