@@ -45,6 +45,15 @@ interface State {
   staleUnmarked?: number;
   /** Bot sign-up join requests unanswered for more than a day. */
   staleJoinRequests?: number;
+  /** Task line figures; leave `tasksOpen` unset and the client has no task model. */
+  tasksOpen?: number;
+  tasksOverdue?: number;
+  taskLeader?: {
+    userId: number;
+    count: number;
+    firstName: string;
+    lastName: string;
+  } | null;
 }
 
 function defaultState(): State {
@@ -163,7 +172,44 @@ function makePrisma(state: State) {
       findFirst: jest.fn(async () => state.yesterdaySnapshot),
       upsert: jest.fn(async () => ({})),
     },
-    user: { findFirst: jest.fn(async () => state.ceo) },
+    user: {
+      findFirst: jest.fn(async () => state.ceo),
+      ...(state.tasksOpen !== undefined
+        ? {
+            findUnique: jest.fn(async () =>
+              state.taskLeader
+                ? {
+                    firstName: state.taskLeader.firstName,
+                    lastName: state.taskLeader.lastName,
+                  }
+                : null,
+            ),
+          }
+        : {}),
+    },
+    // Present only when a test sets `tasksOpen`: older tests keep a client
+    // without a task model, which is the «task query fails» case.
+    ...(state.tasksOpen !== undefined
+      ? {
+          task: {
+            count: jest.fn(async ({ where }: any) =>
+              where.dueAt ? state.tasksOverdue : state.tasksOpen,
+            ),
+          },
+          taskParticipant: {
+            groupBy: jest.fn(async () =>
+              state.taskLeader
+                ? [
+                    {
+                      userId: state.taskLeader.userId,
+                      _count: { userId: state.taskLeader.count },
+                    },
+                  ]
+                : [],
+            ),
+          },
+        }
+      : {}),
     unmarkedLesson: { count: jest.fn(async () => state.staleUnmarked ?? 0) },
     studentJoinRequest: {
       count: jest.fn(async () => state.staleJoinRequests ?? 0),
@@ -321,6 +367,48 @@ describe('TelegramGroupDailyReportService', () => {
     // 🚩 Diqqat flags.
     expect(message).toContain("Qaytarilgan to'lov: <b>350 000 so'm</b> (1 ta)");
     expect(message).toContain("Qarz kechirildi: <b>900 000 so'm</b> (1 ta");
+  });
+
+  it('prints the task line above «Diqqat» when tasks are overdue', async () => {
+    const state = {
+      ...defaultState(),
+      tasksOpen: 12,
+      tasksOverdue: 4,
+      taskLeader: {
+        userId: 40,
+        count: 3,
+        firstName: 'Aziz',
+        lastName: 'Rahimov',
+      },
+    };
+    const service = await buildService(makePrisma(state), makeSalary(state));
+    const { message } = await service.build(1, null);
+    const line =
+      "📋 Topshiriqlar: ochiq <b>12</b>, muddati o'tgan <b>4</b>. Eng ko'p kechikkan: Aziz Rahimov — <b>3</b>";
+    expect(message).toContain(line);
+    expect(message.indexOf(line)).toBeLessThan(message.indexOf('🚩'));
+  });
+
+  it('no task line when nothing is overdue', async () => {
+    const state = {
+      ...defaultState(),
+      tasksOpen: 12,
+      tasksOverdue: 0,
+      taskLeader: null,
+    };
+    const { message } = await (
+      await buildService(makePrisma(state), makeSalary(state))
+    ).build(1, null);
+    expect(message).not.toContain('Topshiriqlar:');
+  });
+
+  it('a failing task query drops only the line', async () => {
+    const state = defaultState(); // no task model on the client: the query throws
+    const { message } = await (
+      await buildService(makePrisma(state), makeSalary(state))
+    ).build(1, null);
+    expect(message).not.toContain('Topshiriqlar:');
+    expect(message).toContain('🚩');
   });
 
   it('prints the shared collection ratio and the month-end expectation', async () => {
