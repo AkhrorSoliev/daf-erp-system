@@ -80,7 +80,7 @@ Replaces `SalaryBreakdownDrawer` and `SalaryAdvanceBreakdownDrawer` on this page
 
 - Header: name, «{role} · {Oy} {yil}».
 - Total box: «Oy oxirida beriladi» / «Beriladi» / «Berildi» + `netToPay`.
-- «Stavka»: the person's rate label for the month (teacher: the global config version's label, e.g. «Har o'quvchi uchun oyiga 200 000 so'm» or «Foiz: o'quvchi to'lovining 45%»; staff: «Oyiga X so'm», plus «; dd.MM dan ishlagan — D kundan d tasi» when prorated). A teacher with no global version but group rates: «Guruhlar bo'yicha — pastda».
+- «Stavka»: the person's rate label for the month (teacher: the global config version's label, e.g. «Har o'quvchi uchun oyiga 200 000 so'm» or «Foiz: o'quvchi to'lovining 45%»; staff: «Oyiga X so'm», plus «; oyning D kunidan d tasi» when prorated — the server sends the days, not the start day). A teacher with no global version but group rates: «Guruhlar bo'yicha — pastda».
 - «Guruhlar bo'yicha» (teachers): one line per group — name, «N o'quvchi · M dars», amount, and the group's rate label when it differs from the global one. Below: «shundan o'quvchilar to'lagan **X** · markaz qo'shdi **Y** (o'quvchilar hali to'lamagan)», or «hammasini o'quvchilar to'lagan» when Y is 0. A carried-in amount shows as one more line «Oldingi oydan — X».
 - «Avanslar — shu oylikdan ushlanadi»: date, method («naqd»/«karta»), amount — exactly the advances §3 nets; «Avans olinmagan» when none.
 - «Hisob»: «Ishladi» / «Avans (ushlanadi) − X» / «**Beriladi**». For a calculated month whose payment no longer equals «Ishladi − Avans» (data changed after the cron), one more line «Hisoblangandan keyin o'zgardi: ±X» so the equation always closes on the frozen `payment.amount`.

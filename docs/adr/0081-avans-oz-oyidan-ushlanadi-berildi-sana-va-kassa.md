@@ -31,8 +31,14 @@ sahifada beshta muammo bor edi:
    (bugungi xatti-harakat). Cron (`applyPendingAdvances`, darsbay va FIXED_MONTHLY tarmog'i)
    aynan `settle` ni ushlaydi, hisobot aynan `total` ni ko'rsatadi. Pul bo'yicha yagona
    o'zgarish shu: davr tugagandan keyingi sanadagi avans endi o'sha davr oyligidan ushlanmaydi.
-2. **«Avans» har ekranda — shu oy oyligi ushlaydigan summa** (`getMonthly`, `getMonthlyForUser`,
-   batafsil oyna, Telegram, Excel, B1 kartasi — hammasi `getMonthly` orqali, ADR-0006):
+2. **«Avans» `getMonthly` o'qiydigan har ekranda — shu oy oyligi ushlaydigan summa** (ADR-0006):
+   «Ish haqi» sahifasi va batafsil oyna, profil va lehrer panelidagi «Ish haqi»
+   (`getMonthlyForUser`), B1 «Oyliklar» kartasi, Excel «Oyliklar» varag'i va 21:00 Telegram
+   hisobotidagi «Xodimlar oyligi · To'lanadi» (ushlangandan keyingi summa). Shu oyda **berilgan**
+   avansni ko'rsatadigan joylar o'zgarmaydi — ular `getMonthly` ni o'qimaydi: 21:00 hisobotidagi
+   «Avans (ustozlarga)» qatori (`Expense.date` oynasi), Excel «Sof foyda» va «Foyda va
+   zarar» varaqlaridagi «Ustoz avanslari» (`teacherAdvances`), `rm:cfin` kartasidagi «Ustoz
+   oyligi (to'langan)».
    - To'lovi bor oy: to'lov ushlagan avanslar (`settledBySalaryPaymentId = payment.id`),
      `netToPay = payment.amount`.
    - Ochiq (joriy) oy, shu oyda hali ishlay oladigan odam uchun — faol ustoz, shu oyda darsi bor
@@ -108,6 +114,9 @@ sahifada beshta muammo bor edi:
   oyna javobida (`GET /salary/monthly/user/:userId/detail`, `advanceItems`) keladi.
 - `GET /salary/advance-calendar` sarlavhadagi filial tanlagichiga bo'ysunadi (`@BranchScope()`)
   va har avansga u qaysi oy oyligidan ushlangan yoki ushlanishini (`deductMonth`) qo'shadi.
+  Hisoblanmagan avansda bu — o'z oyidan boshlab shu xodimga hali oylik hisoblanmagan birinchi
+  oy: cron ishlagandan keyin kiritilgan yoki sig'may keyingi oyga o'tgan avans o'zini ushlaydigan
+  keyingi oylikni ko'rsatadi.
 
 ### Ma'lum cheklovlar
 
