@@ -17,6 +17,11 @@ import {
   UpdateSalaryConfigDto,
 } from './dto/salary-config.dto';
 import { assertCallerMaySetTeacherRate } from './shared/teacher-rate-permission';
+import {
+  assertPayrollCoversUser,
+  payrollUserWhere,
+  resolvePayrollBranchScope,
+} from './shared/payroll-branch-scope';
 import { assertPercentageWithinCap } from './shared/percentage-cap';
 import {
   reapplyRateToOpenAccruals,
@@ -52,7 +57,8 @@ type ConfigWithLatestVersion = EmployeeSalaryConfig & {
 export class SalaryConfigService {
   constructor(private prisma: PrismaService) {}
 
-  async getConfig(userId: number, companyId: number) {
+  async getConfig(userId: number, companyId: number, performedById: number) {
+    await assertPayrollCoversUser(this.prisma, performedById, userId);
     return this.prisma.employeeSalaryConfig.findMany({
       where: { userId, companyId, isActive: true },
       select: {
@@ -73,10 +79,24 @@ export class SalaryConfigService {
    * "Joriy oylik" column on the /payments/salary/config page where the
    * UI needs a summary for every visible row without N parallel calls.
    */
-  async getConfigsForUsers(userIds: number[], companyId: number) {
+  async getConfigsForUsers(
+    userIds: number[],
+    companyId: number,
+    performedById: number,
+  ) {
     if (userIds.length === 0) return {};
+    // Only employees inside the caller's payroll scope. An id outside it is
+    // left out of the answer, like a list row the caller cannot see.
+    const scope = await resolvePayrollBranchScope(this.prisma, performedById);
+    if (scope.kind === 'none') return {};
+    const userWhere = payrollUserWhere(scope);
     const configs = await this.prisma.employeeSalaryConfig.findMany({
-      where: { userId: { in: userIds }, companyId, isActive: true },
+      where: {
+        userId: { in: userIds },
+        companyId,
+        isActive: true,
+        ...(userWhere && { user: userWhere }),
+      },
       select: {
         id: true,
         userId: true,
@@ -442,7 +462,8 @@ export class SalaryConfigService {
    * Versioned history for one user's configs (per-group + global).
    * Used by the teacher profile timeline tab.
    */
-  async getHistory(userId: number, companyId: number) {
+  async getHistory(userId: number, companyId: number, performedById: number) {
+    await assertPayrollCoversUser(this.prisma, performedById, userId);
     return this.prisma.employeeSalaryConfigVersion.findMany({
       where: {
         config: { userId, companyId },

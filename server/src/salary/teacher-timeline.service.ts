@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { assertCallerMayTouchUser } from '../common/auth/user-branch-scope';
 
 export type TimelineEventKind =
   | 'SalaryChanged'
@@ -24,38 +26,58 @@ export interface TimelineEvent {
  *      this teacher appears in the before-or-after set
  *   3. EntityHistory (entityType=User) — profile updates
  *
- * Ordered by event time, descending. Powers the teacher profile
- * "Tarix" tab visible to CEO/BD/Administrator.
+ * Ordered by event time, descending. Powers the profile «Taymlayn» tab
+ * (`teachers.view`: CEO, Branch Director and Administrator by default).
+ *
+ * Two limits, both on the caller. The employee must share a branch with them
+ * (`assertCallerMayTouchUser`, the rule every other employee read uses). The
+ * rate stream is read only for a caller holding `salary.view`: an
+ * Administrator sees no salary (30.09.2026), so their timeline carries the
+ * group and profile events alone.
  */
 @Injectable()
 export class TeacherTimelineService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private permissions: PermissionsService,
+  ) {}
 
   async getTimeline(
     teacherId: number,
     companyId: number,
+    performedById: number,
   ): Promise<TimelineEvent[]> {
+    await assertCallerMayTouchUser(
+      this.prisma,
+      performedById,
+      teacherId,
+      "Bu yozuv boshqa filialga tegishli — tarixini ko'rish huquqingiz yo'q",
+    );
+    const showSalary = await this.permissions.has(performedById, 'salary.view');
+
     const [salaryVersions, groupHistory, entityHistory] = await Promise.all([
-      this.prisma.employeeSalaryConfigVersion.findMany({
-        where: { config: { userId: teacherId, companyId } },
-        select: {
-          id: true,
-          salaryType: true,
-          value: true,
-          effectiveFrom: true,
-          createdAt: true,
-          config: {
+      showSalary
+        ? this.prisma.employeeSalaryConfigVersion.findMany({
+            where: { config: { userId: teacherId, companyId } },
             select: {
-              groupId: true,
-              group: { select: { name: true } },
+              id: true,
+              salaryType: true,
+              value: true,
+              effectiveFrom: true,
+              createdAt: true,
+              config: {
+                select: {
+                  groupId: true,
+                  group: { select: { name: true } },
+                },
+              },
+              changedBy: {
+                select: { id: true, firstName: true, lastName: true },
+              },
             },
-          },
-          changedBy: {
-            select: { id: true, firstName: true, lastName: true },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
+            orderBy: { createdAt: 'desc' },
+          })
+        : Promise.resolve([]),
       this.prisma.groupTeacherHistory.findMany({
         where: {
           OR: [

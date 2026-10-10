@@ -570,25 +570,46 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     policy: 'BRANCH_SCOPED_BY_PAYROLL',
     reason:
       "Confined by `resolvePayrollBranchScope(performedById)` — the payee's " +
-      "branch, not the viewer's selection. Fails CLOSED: a caller who is branch- " +
-      'confined but has no branch attached sees and pays NOTHING. Two production ' +
-      'Administrators were in exactly that state, and the old code collapsed it ' +
-      'to "no filter", which let them `batchPay` every branch.',
+      "branch, not the viewer's selection. A list keeps only the employees " +
+      "attached to the caller's branches; a read addressed by one employee or " +
+      "one payment never returns another branch's payroll (403, or an empty " +
+      'row from `/salary/monthly/user/:userId`), and yourself always; a ' +
+      "payout stays on the caller's `mainBranch`. Fails CLOSED: a caller who " +
+      'is branch-confined but has no branch attached sees and pays NOTHING. ' +
+      'Two production Administrators were in exactly that state, and the old ' +
+      'code collapsed it to "no filter", which let them `batchPay` every ' +
+      'branch. Until 10.10.2026 the rate, accrual, advance, payment-list and ' +
+      'payslip reads took no caller at all, and the matrix let an ' +
+      'Administrator see every branch.',
     routes: [
       'GET /salary/accruals/:userId',
       'GET /salary/advance-calendar',
       'GET /salary/advances/:userId',
+      'GET /salary/config-history/:userId',
+      'GET /salary/config/:userId',
+      'GET /salary/configs/by-users',
       'GET /salary/matrix',
       'GET /salary/monthly/user/:userId',
       'GET /salary/payments',
       'GET /salary/payments/:id/breakdown',
       'GET /salary/payments/settle-month/preview',
-      'GET /salary/timeline/:userId',
-      'PATCH /salary/payments/:id/approve',
       'POST /salary/payments/:id/pay',
       'POST /salary/payments/batch-pay',
       'POST /salary/payments/settle-month',
     ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      "The profile's «Taymlayn» tab. It takes `teachers.view`, which the " +
+      'Administrator holds, so it is confined by the RECORD rather than by ' +
+      'payroll: the employee must share a branch with the caller ' +
+      '(`assertCallerMayTouchUser`, the rule every other employee read uses, ' +
+      'CEO everywhere), and the salary-rate events are left out (not even ' +
+      'read) for a caller without `salary.view`, because an Administrator ' +
+      'sees no salary (30.09.2026). Until 10.10.2026 it took no caller and ' +
+      "returned any employee's rate history in the company.",
+    routes: ['GET /salary/timeline/:userId'],
   },
   {
     policy: 'COMPANY_WIDE',
@@ -622,20 +643,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'COMPANY_WIDE',
     reason:
-      'Company-level configuration, not branch data. Rate READS, editing an ' +
-      'existing rate (`PATCH`, CEO-only — see the BRANCH_SCOPED_BY_ENTITY ' +
-      'block above for the narrower `POST`), the company-wide bulk rate and ' +
-      'the payroll cycle apply to the whole company by design (a rate is ' +
-      'per employee, and the employee already carries a branch); `POST ' +
-      '/salary/calculate` is cron-internal and settles every branch in one ' +
-      'run, which is why it is CEO-only and has no UI trigger.',
+      'Company-level configuration and the CEO-only payroll run, not branch ' +
+      'data. Editing an existing rate (`PATCH`, CEO-only — see the ' +
+      'BRANCH_SCOPED_BY_ENTITY block above for the narrower `POST`), the ' +
+      'company-wide bulk rate and the payroll cycle apply to the whole ' +
+      'company by design. `POST /salary/calculate` is cron-internal and ' +
+      'settles every branch in one run, and `PATCH /salary/payments/:id/' +
+      'approve` approves one row of that run; both take `salary.close`, ' +
+      'which no role but the CEO holds by default. Rate READS left this ' +
+      'block on 10.10.2026: they are payroll-confined now ' +
+      '(BRANCH_SCOPED_BY_PAYROLL).',
     routes: [
-      'GET /salary/config-history/:userId',
-      'GET /salary/config/:userId',
-      'GET /salary/configs/by-users',
       'GET /salary/period-preview',
       'GET /salary/period-settings',
       'PATCH /salary/config/:id',
+      'PATCH /salary/payments/:id/approve',
       'POST /salary/calculate',
       'POST /salary/config/global',
       'POST /salary/period-settings',

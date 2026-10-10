@@ -1,4 +1,9 @@
-import { resolvePayrollBranchScope } from './payroll-branch-scope';
+import { ForbiddenException } from '@nestjs/common';
+import {
+  assertPayrollCoversUser,
+  payrollUserWhere,
+  resolvePayrollBranchScope,
+} from './payroll-branch-scope';
 
 function prismaWith(
   user: {
@@ -119,5 +124,110 @@ describe('resolvePayrollBranchScope', () => {
       { selfView: true },
     );
     expect(scope).toEqual({ kind: 'all' });
+  });
+});
+
+describe('payrollUserWhere', () => {
+  it('adds no filter for the CEO', () => {
+    expect(payrollUserWhere({ kind: 'all' })).toBeUndefined();
+  });
+
+  it('matches an employee attached to any of the branches, through mainBranch or UserBranch', () => {
+    expect(
+      payrollUserWhere({ kind: 'branches', branchIds: [1, 2], mainBranch: 1 }),
+    ).toEqual({
+      OR: [
+        { mainBranch: { in: [1, 2] } },
+        { branches: { some: { branchId: { in: [1, 2] } } } },
+      ],
+    });
+  });
+
+  it('matches nobody for an empty scope (fail closed)', () => {
+    expect(payrollUserWhere({ kind: 'none' })).toEqual({
+      OR: [
+        { mainBranch: { in: [] } },
+        { branches: { some: { branchId: { in: [] } } } },
+      ],
+    });
+  });
+});
+
+/**
+ * Seven salary reads took no caller and returned any employee's payroll in
+ * the company. An id-addressed read now asks this first.
+ */
+describe('assertPayrollCoversUser', () => {
+  function prismaFor(
+    caller: Parameters<typeof prismaWith>[0],
+    targetInScope: boolean,
+  ) {
+    const prisma = prismaWith(caller);
+    prisma.user.count = jest.fn().mockResolvedValue(targetInScope ? 1 : 0);
+    return prisma;
+  }
+
+  it('lets the CEO read anyone without looking the employee up', async () => {
+    const prisma = prismaFor({ mainBranch: null, roles: ['CEO'] }, false);
+    await expect(
+      assertPayrollCoversUser(prisma, 10000, 10050),
+    ).resolves.toBeUndefined();
+    expect(prisma.user.count).not.toHaveBeenCalled();
+  });
+
+  it('lets anyone read their own payroll without any lookup', async () => {
+    const prisma = prismaFor({ mainBranch: null, roles: ['Teacher'] }, false);
+    await expect(
+      assertPayrollCoversUser(prisma, 10001, 10001),
+    ).resolves.toBeUndefined();
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('lets a director read an employee of any branch attached to them', async () => {
+    const prisma = prismaFor(
+      { mainBranch: 1, branches: [1, 2], roles: ['Branch Director'] },
+      true,
+    );
+    await assertPayrollCoversUser(prisma, 10012, 10050);
+    expect(prisma.user.count).toHaveBeenCalledWith({
+      where: {
+        id: 10050,
+        OR: [
+          { mainBranch: { in: [1, 2] } },
+          { branches: { some: { branchId: { in: [1, 2] } } } },
+        ],
+      },
+    });
+  });
+
+  it("refuses a director another branch's employee", async () => {
+    const prisma = prismaFor(
+      { mainBranch: 1, roles: ['Branch Director'] },
+      false,
+    );
+    await expect(assertPayrollCoversUser(prisma, 10012, 10060)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('confines an Administrator too: only the CEO spans branches', async () => {
+    const prisma = prismaFor(
+      { mainBranch: 1, roles: ['Administrator'] },
+      false,
+    );
+    await expect(assertPayrollCoversUser(prisma, 10030, 10060)).rejects.toThrow(
+      /oyligini ko'ra olmaysiz/,
+    );
+  });
+
+  it('refuses a caller with no branch without looking the employee up (fail closed)', async () => {
+    const prisma = prismaFor(
+      { mainBranch: null, roles: ['Branch Director'] },
+      true,
+    );
+    await expect(assertPayrollCoversUser(prisma, 10012, 10050)).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(prisma.user.count).not.toHaveBeenCalled();
   });
 });
