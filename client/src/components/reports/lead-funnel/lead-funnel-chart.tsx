@@ -15,15 +15,28 @@ import type { FunnelStage } from "./lead-funnel-types";
  * Raqam blok ichida turadi, blok uni sig'dira olsa (kengligi raqam + chetlar).
  * Juda tor blokda (masalan 38 dan 2 kishi) raqam blok yonida yoziladi.
  * Klasslar to'liq yozilgan — Tailwind faqat matnda ko'rganini yaratadi.
+ * Ixcham ko'rinishda raqam kichikroq, shuning uchun chegaralar ham kichik.
  */
-function insideAt(count: number): string {
+function insideAt(count: number, compact: boolean): string {
+  if (compact) {
+    if (count < 10) return "@min-[1rem]:flex";
+    if (count < 100) return "@min-[1.5rem]:flex";
+    if (count < 1000) return "@min-[2.25rem]:flex";
+    return "@min-[3.25rem]:flex";
+  }
   if (count < 10) return "@min-[1.5rem]:flex";
   if (count < 100) return "@min-[2.25rem]:flex";
   if (count < 1000) return "@min-[3rem]:flex";
   return "@min-[4.5rem]:flex";
 }
 
-function outsideUntil(count: number): string {
+function outsideUntil(count: number, compact: boolean): string {
+  if (compact) {
+    if (count < 10) return "@min-[1rem]:hidden";
+    if (count < 100) return "@min-[1.5rem]:hidden";
+    if (count < 1000) return "@min-[2.25rem]:hidden";
+    return "@min-[3.25rem]:hidden";
+  }
   if (count < 10) return "@min-[1.5rem]:hidden";
   if (count < 100) return "@min-[2.25rem]:hidden";
   if (count < 1000) return "@min-[3rem]:hidden";
@@ -50,13 +63,34 @@ const STAGE_FILL: Record<"light" | "dark", Record<FunnelStage, string>> = {
   },
 };
 
-const BAR_HEIGHT = "h-12 sm:h-[52px]";
-const LABEL_COLS = "grid-cols-[minmax(0,7rem)_1fr] sm:grid-cols-[10rem_1fr]";
+/** To'liq (hisobot sahifasi) va ixcham (bosh sahifa) o'lchamlari. */
+const SIZE = {
+  full: {
+    cols: "grid-cols-[minmax(0,7rem)_1fr] sm:grid-cols-[10rem_1fr]",
+    bar: "h-12 sm:h-[52px]",
+    gap: "h-7 sm:h-[30px]",
+    label: "text-sm font-medium",
+    number: "text-lg font-semibold sm:text-xl",
+    step: "text-xs font-medium sm:text-sm",
+  },
+  compact: {
+    cols: "grid-cols-[minmax(0,7rem)_1fr]",
+    bar: "h-7",
+    gap: "h-4",
+    label: "text-xs text-muted-foreground",
+    number: "text-sm font-semibold",
+    step: "text-[11px] font-medium",
+  },
+} as const;
 
 interface LeadFunnelChartProps {
   rows: FunnelRow[];
-  leadSplit: { board: number; direct: number };
-  onStageClick: (stage: FunnelStage) => void;
+  /** Ixcham ko'rinishda ko'rsatilmaydi. */
+  leadSplit?: { board: number; direct: number };
+  /** Berilmasa bosqichlar bosilmaydi. */
+  onStageClick?: (stage: FunnelStage) => void;
+  /** Bosh sahifa uchun: past bloklar, manba va «o'tmadi» yozuvlarisiz. */
+  compact?: boolean;
 }
 
 /**
@@ -68,10 +102,15 @@ export function LeadFunnelChart({
   rows,
   leadSplit,
   onStageClick,
+  compact = false,
 }: LeadFunnelChartProps) {
   const { isDark } = useChartTheme();
   const fill = STAGE_FILL[isDark ? "dark" : "light"];
-  const hasSplit = leadSplit.board > 0 || leadSplit.direct > 0;
+  const size = SIZE[compact ? "compact" : "full"];
+  const hasSplit =
+    !compact &&
+    leadSplit !== undefined &&
+    (leadSplit.board > 0 || leadSplit.direct > 0);
 
   return (
     <ol className="group/funnel flex flex-col">
@@ -86,15 +125,19 @@ export function LeadFunnelChart({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => onStageClick(row.stage)}
-                    aria-label={`${row.label}: ${row.count} kishi — ro'yxatni ochish`}
-                    className={`group/row grid w-full ${LABEL_COLS} items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+                    onClick={onStageClick && (() => onStageClick(row.stage))}
+                    aria-label={
+                      onStageClick
+                        ? `${row.label}: ${row.count} kishi — ro'yxatni ochish`
+                        : `${row.label}: ${row.count} kishi`
+                    }
+                    className={`group/row grid w-full ${size.cols} items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${onStageClick ? "" : "cursor-default"}`}
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium">
+                      <span className={`block truncate ${size.label}`}>
                         {row.label}
                       </span>
-                      {i === 0 && hasSplit && (
+                      {i === 0 && hasSplit && leadSplit && (
                         // Tor ustunda (telefon) ikki qatorga bo'linadi —
                         // kesilib «to'g'…» bo'lib qolmasin.
                         <span className="block text-xs text-muted-foreground tabular-nums">
@@ -109,23 +152,23 @@ export function LeadFunnelChart({
                       )}
                     </span>
 
-                    <span className={`relative block ${BAR_HEIGHT}`}>
+                    <span className={`relative block ${size.bar}`}>
                       {/* Blok o'zi container: raqam ichiga sig'adimi — uning
                           haqiqiy pikseldagi kengligi hal qiladi, foiz emas. */}
                       <span
-                        className="@container absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-md transition-opacity group-hover/funnel:opacity-40 group-hover/row:opacity-100!"
+                        className={`@container absolute inset-y-0 left-1/2 -translate-x-1/2 transition-opacity group-hover/funnel:opacity-40 group-hover/row:opacity-100! ${compact ? "rounded" : "rounded-md"}`}
                         style={{
                           width: `max(${(w * 100).toFixed(2)}%, 3px)`,
                           backgroundColor: fill[row.stage],
                         }}
                       >
                         <span
-                          className={`absolute inset-0 hidden items-center justify-center text-lg font-semibold text-white tabular-nums sm:text-xl ${insideAt(row.count)}`}
+                          className={`absolute inset-0 hidden items-center justify-center text-white tabular-nums ${size.number} ${insideAt(row.count, compact)}`}
                         >
                           {formatNumber(row.count)}
                         </span>
                         <span
-                          className={`absolute inset-y-0 left-full flex items-center pl-2 text-lg font-semibold text-foreground tabular-nums sm:text-xl ${outsideUntil(row.count)}`}
+                          className={`absolute inset-y-0 left-full flex items-center pl-2 text-foreground tabular-nums ${size.number} ${outsideUntil(row.count, compact)}`}
                         >
                           {formatNumber(row.count)}
                         </span>
@@ -145,9 +188,9 @@ export function LeadFunnelChart({
             </li>
 
             {next && (
-              <li aria-hidden="true" className={`grid ${LABEL_COLS} gap-2`}>
+              <li aria-hidden="true" className={`grid ${size.cols} gap-2`}>
                 <span />
-                <span className="relative block h-7 sm:h-[30px]">
+                <span className={`relative block ${size.gap}`}>
                   <svg
                     viewBox="0 0 1 1"
                     preserveAspectRatio="none"
@@ -159,14 +202,18 @@ export function LeadFunnelChart({
                       opacity={0.16}
                     />
                   </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-xs font-medium tabular-nums sm:text-sm">
+                  <span
+                    className={`absolute inset-0 flex items-center justify-center tabular-nums ${size.step}`}
+                  >
                     {formatPercent(next.pctOfPrev)} o&apos;tdi
                   </span>
-                  {next.lostFromPrev !== null && next.lostFromPrev > 0 && (
-                    <span className="absolute inset-y-0 right-0 hidden items-center text-xs text-muted-foreground tabular-nums sm:flex">
-                      {formatNumber(next.lostFromPrev)} kishi o&apos;tmadi
-                    </span>
-                  )}
+                  {!compact &&
+                    next.lostFromPrev !== null &&
+                    next.lostFromPrev > 0 && (
+                      <span className="absolute inset-y-0 right-0 hidden items-center text-xs text-muted-foreground tabular-nums sm:flex">
+                        {formatNumber(next.lostFromPrev)} kishi o&apos;tmadi
+                      </span>
+                    )}
                 </span>
               </li>
             )}
