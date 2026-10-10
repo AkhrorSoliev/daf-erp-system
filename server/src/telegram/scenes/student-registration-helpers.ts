@@ -1,4 +1,5 @@
 import { Markup } from 'telegraf';
+import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export const TEACHER_ROLE_ID = 4;
@@ -24,6 +25,9 @@ export async function loadTeachersForBranch(
   return prisma.user.findMany({
     where: {
       deletedAt: null,
+      // A suspended or terminated teacher is not offered, nor their groups.
+      isActive: true,
+      status: UserStatus.ACTIVE,
       roles: { some: { roleId: TEACHER_ROLE_ID } },
       branches: { some: { branchId } },
     },

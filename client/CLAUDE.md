@@ -822,6 +822,11 @@ The financial section lives under `/payments/*` with these sub-pages:
 - The delete confirmations in the lesson-changes tab tell the truth: deleting a cancellation takes the released monthly money back but restores no attendance (ADR-0063), deleting a move restores nothing, and once the lesson's time has passed it goes back to «Dars bo'ldimi?».
 - **The task card names the lesson's branch** (`unmarkedLesson.branchName`, from `group.branch` in `GET /tasks?view=my`): the board lists the caller's tasks of every branch, and group numbers repeat across branches. **A group or student of another branch the caller works in is not "missing"**: `GET /groups/:id` and `GET /students/:id` answer 404 with `{ message, branch }`, `otherBranchOf` (`lib/other-branch.ts`) reads it, and both pages render `InOtherBranch` (`shared/in-other-branch.tsx`, «Guruh / O'quvchi boshqa filialda») with a button that switches to that branch. A new detail page filtered by the switcher does the same. The old «guruh mavjud emas» is what led a CEO in Farg'ona to cancel eight Namangan lessons on 01.10.2026 (ADR-0063).
 
+### Join requests (ADR-0080)
+
+- A `JOIN_REQUEST` task's sheet shows `components/tasks/join-request/join-request-panel.tsx` (`GET /student-join-requests/by-task/:taskId`): photo, name, phone, Telegram, the «Guruh» select (the branch's groups that take students, the requested one preselected) and notes the client words from the server's facts (lead, archived card, same-name groups, a picked group that no longer takes students); the server stays the boundary on approve. «Tasdiqlash» / «Rad etish» (reason required, staff-only) call the two POST routes; a decided request reads as one line, its `#id` linking to the card. Without `students.enroll` the panel says «Javob berish uchun ruxsat yo'q» and sends no read. Dates go through `@/lib/tashkent-time`. The rules are pure, in `join-request-rules.ts` (unit-tested); the panel computes nothing the server decides.
+- Note colours are blue / yellow / red — `sky-*` and `amber-*` render transparent outside the student portal.
+
 ### Teacher Timeline Tab
 
 - **Tab "Taymlayn"** on `/teachers/profile/[id]` → `teacher-timeline-tab.tsx`. Visible to CEO / BD / Administrator.

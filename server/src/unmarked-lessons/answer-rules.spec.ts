@@ -65,4 +65,16 @@ describe('assertMayAnswer', () => {
       new ConflictException('Bu darsga Ali Valiyev javob bermoqda'),
     );
   });
+
+  it("speaks the caller's wording, and names nobody when the holder is gone", async () => {
+    const taken = (holder: string | null) => `oldi: ${holder ?? '—'}`;
+    await expect(
+      assertMayAnswer(db, { claimedById: 3 }, 4, ['Administrator'], taken),
+    ).rejects.toThrow(new ConflictException('oldi: Ali Valiyev'));
+
+    db.user.findUnique.mockResolvedValueOnce(null);
+    await expect(
+      assertMayAnswer(db, { claimedById: 3 }, 4, ['Administrator'], taken),
+    ).rejects.toThrow(new ConflictException('oldi: —'));
+  });
 });

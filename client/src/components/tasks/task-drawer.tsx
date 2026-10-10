@@ -14,6 +14,7 @@ import { TaskDrawerFooter } from "./task-drawer-footer";
 import { TaskDrawerMenu } from "./task-drawer-menu";
 import { TaskDrawerProperties } from "./task-drawer-properties";
 import { TaskDrawerSteps } from "./task-drawer-steps";
+import { JoinRequestPanel } from "./join-request/join-request-panel";
 import { isOpenStatus, KIND_LABEL } from "./task-labels";
 import { TaskStatusPill } from "./task-status-pill";
 import { useTaskWrite } from "./use-task-write";
@@ -99,6 +100,9 @@ function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: (
             onAnswered={() => void useTasks.getState().reloadDetail(task.id)}
             className="w-full"
           />
+        )}
+        {task.kind === "JOIN_REQUEST" && (
+          <JoinRequestPanel taskId={task.id} onDecided={() => void useTasks.getState().reloadDetail(task.id)} />
         )}
         <TaskDrawerProperties task={task} access={access} />
         {(task.description || canEdit) && (
