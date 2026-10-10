@@ -18,12 +18,12 @@ type PrismaLike = PrismaService | Prisma.TransactionClient;
  *
  * `none` is the whole point. Both payroll scopes used to collapse a missing
  * `mainBranch` into "no filter", which is fail-OPEN: a Branch Director whose
- * `mainBranch` was NULL could see — and `batchPay` — every branch's salaries.
+ * `mainBranch` was NULL could see — and pay — every branch's salaries.
  * Two Administrators were in exactly that state in production. Money paths
  * must fail closed: an unknown scope means nothing, not everything.
  *
  * The set widens what a caller may SEE, not what they may pay: `payPayment`
- * and `batchPay` stay on `mainBranch`.
+ * stays on `mainBranch`.
  */
 export type PayrollBranchScope =
   | { kind: 'all' }

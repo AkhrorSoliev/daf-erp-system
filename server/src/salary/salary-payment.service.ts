@@ -264,14 +264,12 @@ export class SalaryPaymentService {
     });
     if (!payment) throw new NotFoundException('Oylik topilmadi');
 
-    // `batchPay` confines a non-CEO caller to their own branch; paying a single
-    // payment had NO branch check at all, so the same director could settle
-    // another branch's teacher just by passing its id.
+    // Paying a single payment once had NO branch check at all, so a director
+    // could settle another branch's teacher just by passing its id.
     const scope = await resolvePayrollBranchScope(this.prisma, performedById);
     if (scope.kind !== 'all') {
       // CEO decision (10.10.2026): nobody but the CEO pays their own salary;
-      // another manager does. `batchPay` comes through here too, so a
-      // caller's own row in a batch is reported FAILED with this reason.
+      // another manager does.
       if (payment.userId === performedById) {
         throw new ForbiddenException(
           "Bu sizning oyligingiz — uni o'zingiz to'lay olmaysiz. Oylikni boshqa rahbar to'laydi.",
@@ -281,9 +279,9 @@ export class SalaryPaymentService {
         where: { id: payment.userId },
         select: { mainBranch: true },
       });
-      // Paying stays on the caller's HOME branch, like `batchPay` and the
-      // payments list: the other attached branches widen what a director may
-      // see (A2.8), not what they may pay. No `mainBranch` pays nothing.
+      // Paying stays on the caller's HOME branch: the other attached branches
+      // widen what a director may see (A2.8), not what they may pay. No
+      // `mainBranch` pays nothing.
       if (
         scope.kind === 'none' ||
         scope.mainBranch == null ||
@@ -317,96 +315,5 @@ export class SalaryPaymentService {
         paidById: performedById,
       },
     });
-  }
-
-  /**
-   * Pay out a batch of salary payments in one click — intended for the 10th of
-   * the month, after cron has calculated and CEO has approved the current
-   * period. Accepts an optional filter so a branch director or cashier can
-   * pay only their scope.
-   *
-   * Only APPROVED payments are processed; CALCULATED ones are skipped (they
-   * need to be approved first). Each payment is wrapped in its own transaction
-   * so a failure on one doesn't roll back the others — the caller sees per-
-   * payment success/error. A non-CEO caller's own payment is one such
-   * failure: `payPayment` refuses it (CEO decision, 10.10.2026).
-   */
-  async batchPay(
-    params: {
-      companyId: number;
-      branchId?: number;
-      userIds?: number[];
-      statuses?: SalaryPaymentStatus[];
-    },
-    performedById: number,
-  ) {
-    const statuses = params.statuses ?? [SalaryPaymentStatus.APPROVED];
-
-    // Enforce branch scope server-side: non-CEO operators (e.g. Branch
-    // Directors) are restricted to their own mainBranch regardless of the
-    // branchId they passed. JWT does not carry mainBranch, so fetch it.
-    const caller = await this.prisma.user.findUnique({
-      where: { id: performedById },
-      select: {
-        mainBranch: true,
-        roles: { select: { role: { select: { name: true } } } },
-      },
-    });
-    const isCeo = caller?.roles.some((r) => r.role.name === 'CEO') ?? false;
-    const effectiveBranchId = isCeo ? params.branchId : caller?.mainBranch;
-    // Fail CLOSED: a non-CEO caller whose mainBranch is unknown used to fall
-    // through to "no filter" and could batch-pay EVERY branch's salaries.
-    if (!isCeo && effectiveBranchId == null) {
-      throw new ForbiddenException(
-        "Sizning asosiy filialingiz belgilanmagan — oylik to'lay olmaysiz. Administrator bilan bog'laning.",
-      );
-    }
-
-    const eligible = await this.prisma.salaryPayment.findMany({
-      where: {
-        companyId: params.companyId,
-        status: { in: statuses },
-        ...(params.userIds &&
-          params.userIds.length > 0 && { userId: { in: params.userIds } }),
-        // Branch scope: SalaryPayment has no branchId directly, so scope via
-        // the employee's own branch (D6: one employee, one branch).
-        ...(effectiveBranchId != null && {
-          user: { mainBranch: effectiveBranchId },
-        }),
-      },
-      select: { id: true, userId: true, amount: true },
-    });
-
-    const results: {
-      id: string;
-      userId: number;
-      status: 'PAID' | 'FAILED';
-      error?: string;
-    }[] = [];
-
-    for (const payment of eligible) {
-      try {
-        await this.payPayment(payment.id, performedById, params.companyId);
-        results.push({
-          id: payment.id,
-          userId: payment.userId,
-          status: 'PAID',
-        });
-      } catch (err) {
-        results.push({
-          id: payment.id,
-          userId: payment.userId,
-          status: 'FAILED',
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-    }
-
-    return {
-      total: eligible.length,
-      paid: results.filter((r) => r.status === 'PAID').length,
-      failed: results.filter((r) => r.status === 'FAILED').length,
-      results,
-    };
   }
 }

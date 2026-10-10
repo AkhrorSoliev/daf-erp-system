@@ -26,7 +26,6 @@ import { SalaryStaffConfigQueryDto } from './dto/salary-staff-config-query.dto';
 import { SalaryMonthlyQueryDto } from './dto/salary-monthly-query.dto';
 import { SalaryCenterTopUpService } from './salary-center-topup.service';
 import { SalaryStaffConfigService } from './salary-staff-config.service';
-import { BatchPayDto } from './dto/batch-pay.dto';
 import { SettleMonthDto } from './dto/settle-month.dto';
 import { CalculateSalaryDto } from './dto/calculate-salary.dto';
 import { parseTashkentDateStart } from './shared/resolve-current-period';
@@ -568,23 +567,5 @@ export class SalaryController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.salaryService.payPayment(id, userId, companyId);
-  }
-
-  @Post('payments/batch-pay')
-  @Can('salary.pay')
-  batchPay(
-    @Body() dto: BatchPayDto,
-    @CurrentUser('id') userId: number,
-    @CurrentUser('companyId') companyId: number,
-  ) {
-    return this.salaryService.batchPay(
-      {
-        companyId,
-        branchId: dto.branchId,
-        userIds: dto.userIds,
-        statuses: dto.statuses,
-      },
-      userId,
-    );
   }
 }

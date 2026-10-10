@@ -29,8 +29,8 @@ function prismaWith(
 }
 
 /**
- * Payroll scope must fail CLOSED. Both the monthly report and `batchPay` used
- * to turn a missing `mainBranch` into "no filter", so a branch-confined caller
+ * Payroll scope must fail CLOSED. Both the monthly report and the batch payout
+ * used to turn a missing `mainBranch` into "no filter", so a branch-confined caller
  * saw — and could pay — every branch's salaries. Two Administrators were in
  * exactly that state in production.
  */

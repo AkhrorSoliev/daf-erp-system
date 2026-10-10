@@ -590,8 +590,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "payout stays on the caller's `mainBranch`. Fails CLOSED: a caller who " +
       'is branch-confined but has no branch attached sees and pays NOTHING. ' +
       'Two production Administrators were in exactly that state, and the old ' +
-      'code collapsed it to "no filter", which let them `batchPay` every ' +
-      'branch. Until 10.10.2026 the rate, accrual, advance, payment-list and ' +
+      'code collapsed it to "no filter", which let them pay salaries in ' +
+      'every branch. Until 10.10.2026 the rate, accrual, advance, payment-list and ' +
       'payslip reads took no caller at all, and the matrix let an ' +
       'Administrator see every branch.',
     routes: [
@@ -607,7 +607,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /salary/payments/:id/breakdown',
       'GET /salary/payments/settle-month/preview',
       'POST /salary/payments/:id/pay',
-      'POST /salary/payments/batch-pay',
       'POST /salary/payments/settle-month',
     ],
   },
