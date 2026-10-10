@@ -77,6 +77,11 @@ api.interceptors.response.use(
 
     // 403 — ruxsat yo'q
     if (error.response?.status === 403) {
+      // The list on screen may be older than the server's: re-read it so a
+      // button the server now refuses disappears (spec §8).
+      void import("@/hooks/use-permissions").then(({ usePermissions }) =>
+        usePermissions.getState().refresh(),
+      );
       const { default: toast } = await import("react-hot-toast");
       const msg = error.response?.data?.message;
       const message = Array.isArray(msg) ? msg[0] : msg;
