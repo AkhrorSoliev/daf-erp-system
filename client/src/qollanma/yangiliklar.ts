@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "Bajarilmagan va'dalar ertalab bitta ro'yxatda",
+    matn: "Soat 09:00 da muddati o'tgan to'lov va'dalari endi har o'quvchiga alohida emas, har filial bo'yicha bitta xabarda keladi: «Bugun N ta to'lov va'dasi bajarilmadi». Ro'yxatda har o'quvchining qarzi, guruhi va ustozi, telefoni, va'da sanasi va izohi, kim yozgani, va'dadan beri to'lov bo'lgan-bo'lmagani va va'dani necha marta buzgani yoziladi. Xabardagi havola «Qarzdorlik» sahifasini va'dasini buzganlar bilan ochadi. Qarzi 1 000 so'mdan kam o'quvchi ro'yxatga kirmaydi.",
+    rollar: [1, 3],
+    sahifa: { bolim: "tolovlar", sahifa: "qarzdorlik" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Telegramni botda raqam bilan bog'lash",
     matn: "Administrator qo'lda qo'shgan o'quvchi yoki xodim endi Telegramini botning o'zida bog'laydi: /start yuboradi, «📱 Hisobimni bog'lash» tugmasini bosadi va «📱 Telefon raqamni yuborish» bilan o'z raqamini yuboradi. Raqam o'quvchi kartasida bo'lsa, karta bog'lanadi (bitta raqamdagi aka-ukalar birga), xodim hisobida bo'lsa, xodim hisobi bog'lanadi va xodim menyusi chiqadi. Raqam topilmasa, bot «Bu raqam tizimda topilmadi.» deydi va hech narsa o'zgarmaydi. Tugma faqat Telegram hali hech kimga bog'lanmagan bo'lsa chiqadi. Bog'lash telefonni tasdiqlamaydi, login va parol o'zgarmaydi.",
     rollar: [1, 2, 3, 4, 5],

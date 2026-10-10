@@ -279,6 +279,6 @@ export const tolovlar: QollanmaSahifa[] = [
       "va'da yozish",
       "qo'ng'iroq natijasi",
     ],
-    yangilangan: "2026-10-06",
+    yangilangan: "2026-10-10",
   },
 ];
