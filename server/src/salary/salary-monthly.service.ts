@@ -7,7 +7,12 @@ import {
   resolveMonthlyScope,
   type SalaryMonthlyQuery,
 } from './shared/resolve-monthly-scope';
-import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
+import {
+  ADVANCE_SELECT,
+  SalaryStaffMonthlyService,
+  toAdvanceItem,
+} from './salary-monthly-staff.service';
+import { byWalkOrder, planAdvanceNetting } from './shared/advance-netting';
 import { SalaryMissedLessonsService } from './salary-missed-lessons.service';
 import { buildTeacherRosterWhere } from './shared/teacher-roster-where';
 import { packPriceCandidates, sweepGapLessons } from './shared/gap-sweep';
@@ -49,7 +54,7 @@ function dateStr(d: Date): string {
  *                      PLUS that unpaid monthly share (`centerUnpaidShare`,
  *                      ADR-0052 — live, shrinks as the students pay)
  *  - `fullDeserved`  = `covered` + `centerFunded` (all lessons held × rate)
- *  - `advances`      = TEACHER_ADVANCE given during the calendar month
+ *  - `advances`      = what this month's payout nets (ADR-0080)
  *  - `netToPay`      = base (see NET_BASE) − advances, or the settled payment's net
  *
  * Settlement moves money from the second term of `centerFunded` to the first,
@@ -98,7 +103,6 @@ export class SalaryMonthlyService {
       periodEnd,
       periodStartDate,
       periodEndDateExclusive,
-      monthStart,
       nextMonthStart,
       periodStartLow,
       periodStartHigh,
@@ -145,6 +149,7 @@ export class SalaryMonthlyService {
       centerFunded: 0,
       centerUnpaidShare: 0,
       advances: 0,
+      advanceCount: 0,
       netToPay: 0,
       // Center top-up lifecycle (company-level summary card):
       //   advanced (X) = Σ wasCenterTopUp, stillFronted (Z) = Σ isCenterTopUp,
@@ -175,7 +180,7 @@ export class SalaryMonthlyService {
       groupTeachers,
       overrides,
       versionRows,
-      advancesAgg,
+      pendingRows,
       payments,
       carriedOutAgg,
       heldCounts,
@@ -261,19 +266,22 @@ export class SalaryMonthlyService {
           config: { select: { userId: true, groupId: true, salaryType: true } },
         },
       }),
-      // Advances GIVEN during the calendar month (by accounting date).
-      this.prisma.expense.groupBy({
-        by: ['relatedUserId'],
+      // Unsettled advances the payout would net (ADR-0080): everything dated
+      // before the month's end that no payment has taken yet. The cron's own
+      // walk (`planAdvanceNetting`) picks which of them fit.
+      this.prisma.expense.findMany({
         where: {
           relatedUserId: { in: ids },
           category: 'TEACHER_ADVANCE',
           companyId,
           deletedAt: null,
-          date: { gte: monthStart, lt: nextMonthStart },
+          settledBySalaryPaymentId: null,
+          date: { lt: nextMonthStart },
         },
-        _sum: { amount: true },
+        select: { ...ADVANCE_SELECT, relatedUserId: true },
       }),
-      // Settled SalaryPayment for the month (net + gross + status).
+      // Settled SalaryPayment for the month (net + gross + status + the
+      // advances it settled).
       this.prisma.salaryPayment.findMany({
         where: {
           companyId,
@@ -286,7 +294,8 @@ export class SalaryMonthlyService {
           userId: true,
           amount: true,
           status: true,
-          settledExpenses: { select: { amount: true } },
+          paidAt: true,
+          settledExpenses: { select: ADVANCE_SELECT },
         },
         orderBy: { createdAt: 'asc' },
       }),
@@ -396,9 +405,14 @@ export class SalaryMonthlyService {
       pickActiveVersion(versByKey.get(`${tid}::${groupId}`), at) ??
       pickActiveVersion(versByKey.get(`${tid}::GLOBAL`), at);
 
-    const advancesByUser = new Map(
-      advancesAgg.map((a) => [a.relatedUserId as number, a._sum.amount ?? 0]),
-    );
+    const pendingByUser = new Map<number, typeof pendingRows>();
+    for (const e of pendingRows) {
+      const arr = pendingByUser.get(e.relatedUserId as number) ?? [];
+      arr.push(e);
+      pendingByUser.set(e.relatedUserId as number, arr);
+    }
+    // Advances each row nets, for the JAMI count (rows can be filtered out below).
+    const advanceCountByUser = new Map<number, number>();
 
     // Settled payment per teacher (sum if duplicated; latest status wins — asc order).
     const paymentByUser = new Map<
@@ -408,6 +422,10 @@ export class SalaryMonthlyService {
         amount: number;
         grossAmount: number;
         status: SalaryPaymentStatus;
+        /** Latest payment wins, like `status`. */
+        paidAt: string | null;
+        /** The advances the payments settled, every payment of the month. */
+        settled: (typeof payments)[number]['settledExpenses'];
       }
     >();
     for (const p of payments) {
@@ -418,6 +436,8 @@ export class SalaryMonthlyService {
         amount: (prev?.amount ?? 0) + p.amount,
         grossAmount: (prev?.grossAmount ?? 0) + p.amount + adv,
         status: p.status,
+        paidAt: p.paidAt?.toISOString() ?? null,
+        settled: [...(prev?.settled ?? []), ...p.settledExpenses],
       });
     }
 
@@ -581,23 +601,30 @@ export class SalaryMonthlyService {
         : null;
       const covered = hasLessonData ? a.studentFunded - unpaid : null;
       const centerFunded = hasLessonData ? rawCenterFunded : null;
-      const advances = advancesByUser.get(t.id) ?? 0;
       const payment = paymentByUser.get(t.id) ?? null;
 
       // Net-to-pay: a settled payment's `amount` is ALREADY net of settled
       // advances (CLAUDE.md invariant) — never subtract avans again. For an
-      // unsettled month, net = base − advances.
-      let netToPay: number;
-      if (payment) {
-        netToPay = payment.amount;
-      } else {
-        // Top-up months front the gap (full deserved); earlier months pay only
-        // what students covered. Keeps the shown netToPay equal to what the cron
-        // will actually pay for this month.
-        const base =
-          isTopUpMonth(month) && hasLessonData ? a.accrued + a.gap : a.accrued;
-        netToPay = Math.max(0, base - advances);
-      }
+      // unsettled month, net = base − the advances the cron will net.
+      // Top-up months front the gap (full deserved); earlier months pay only
+      // what students covered. Keeps the shown netToPay equal to what the cron
+      // will actually pay for this month.
+      const base =
+        isTopUpMonth(month) && hasLessonData ? a.accrued + a.gap : a.accrued;
+      const pending = pendingByUser.get(t.id) ?? [];
+      const plan = payment
+        ? null
+        : planAdvanceNetting(pending, Math.max(0, base), nextMonthStart);
+      // A calculated month shows what its payment settled; an unsettled
+      // advance never counts there — it is the next month's.
+      const advances = payment
+        ? payment.grossAmount - payment.amount
+        : plan!.total;
+      const netToPay = payment ? payment.amount : Math.max(0, base) - advances;
+      const advanceList = payment
+        ? [...payment.settled].sort(byWalkOrder)
+        : plan!.settle.map((id) => pending.find((p) => p.id === id)!);
+      advanceCountByUser.set(t.id, advanceList.length);
 
       return {
         user: {
@@ -637,8 +664,18 @@ export class SalaryMonthlyService {
         noConfigUnits: a.noConfigUnits,
         noChargeUnits: a.noChargeUnits,
         payment: payment
-          ? { id: payment.id, amount: payment.amount, status: payment.status }
+          ? {
+              id: payment.id,
+              amount: payment.amount,
+              status: payment.status,
+              paidAt: payment.paidAt,
+            }
           : null,
+        // The advances `advances` sums — single-user calls only; the page's
+        // list call stays small.
+        ...(userId !== undefined && {
+          advanceItems: advanceList.map(toAdvanceItem),
+        }),
       };
     });
 
@@ -687,6 +724,7 @@ export class SalaryMonthlyService {
         centerFunded: s.centerFunded + (r.centerFunded ?? 0),
         centerUnpaidShare: s.centerUnpaidShare + (r.centerUnpaidShare ?? 0),
         advances: s.advances + r.advances,
+        advanceCount: s.advanceCount + (advanceCountByUser.get(r.user.id) ?? 0),
         netToPay: s.netToPay + r.netToPay,
         centerAdvanced: s.centerAdvanced + r.centerAdvanced,
         centerStillFronted: s.centerStillFronted + r.centerStillFronted,
@@ -732,13 +770,6 @@ export class SalaryMonthlyService {
   }
 
   /**
-   * Per-teacher advance breakdown for the "Avans" cell drawer on the salary
-   * page. Lists each TEACHER_ADVANCE expense given to `userId` during the
-   * selected calendar month (same window as the monthly report's `advances`
-   * total) — date, amount, method, note and who recorded it. When an advance
-   * was taken "3 ga bo'lib" (in several parts), each part is its own row.
-   */
-  /**
    * The monthly report narrowed to ONE user — the single source behind the
    * teacher profile "Ish haqi" tab, the profile card's "To'lanishi kerak" and
    * the lehrer portal.
@@ -782,62 +813,5 @@ export class SalaryMonthlyService {
       row: res.data[0] ?? res.staff[0] ?? null,
       missedLessons,
     };
-  }
-
-  async getAdvancesForUser(
-    userId: number,
-    query: SalaryMonthlyQuery,
-    companyId: number,
-    performedById: number,
-  ) {
-    const { month, monthStart, nextMonthStart } = await resolveMonthlyScope(
-      this.prisma,
-      query,
-      companyId,
-      performedById,
-    );
-
-    const advances = await this.prisma.expense.findMany({
-      where: {
-        relatedUserId: userId,
-        category: 'TEACHER_ADVANCE',
-        companyId,
-        deletedAt: null,
-        date: { gte: monthStart, lt: nextMonthStart },
-      },
-      select: {
-        id: true,
-        amount: true,
-        date: true,
-        paymentMethod: true,
-        description: true,
-        createdAt: true,
-        createdBy: { select: { id: true, firstName: true, lastName: true } },
-        settledBySalaryPaymentId: true,
-        settledBySalaryPayment: {
-          select: { periodStart: true, periodEnd: true },
-        },
-      },
-      orderBy: { date: 'asc' },
-    });
-
-    // Qulflangan avansni UI o'chiq tugma bilan ko'rsatadi, shuning uchun
-    // «hisoblangan» belgisi ro'yxat bilan birga keladi — alohida so'rov
-    // qilinmaydi.
-    const rows = advances.map((a) => ({
-      id: a.id,
-      amount: a.amount,
-      date: a.date,
-      paymentMethod: a.paymentMethod,
-      description: a.description,
-      createdAt: a.createdAt,
-      createdBy: a.createdBy,
-      settled: a.settledBySalaryPaymentId !== null,
-      settledPeriodStart: a.settledBySalaryPayment?.periodStart ?? null,
-      settledPeriodEnd: a.settledBySalaryPayment?.periodEnd ?? null,
-    }));
-
-    const total = rows.reduce((s, a) => s + a.amount, 0);
-    return { month, userId, count: rows.length, total, advances: rows };
   }
 }

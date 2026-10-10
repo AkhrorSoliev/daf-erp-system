@@ -106,7 +106,6 @@ describe('SalaryController — route access', () => {
       'getCenterTopUpStudents',
       // Money for ONE named teacher — the profile salary tab and card.
       'getMonthlyForUser',
-      'getAdvances',
       'getAdvanceCalendar',
       'getPaymentBreakdown',
     ] as const;

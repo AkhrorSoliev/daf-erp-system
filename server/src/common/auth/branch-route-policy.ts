@@ -545,7 +545,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: [
       'GET /salary/accruals/:userId',
       'GET /salary/advance-calendar',
-      'GET /salary/advances/:userId',
       'GET /salary/matrix',
       'GET /salary/monthly/user/:userId',
       'GET /salary/payments',

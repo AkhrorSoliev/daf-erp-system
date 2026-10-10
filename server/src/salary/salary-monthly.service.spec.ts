@@ -22,7 +22,7 @@ describe('SalaryMonthlyService', () => {
   const ceoCaller = { mainBranch: 1, roles: [{ role: { name: 'CEO' } }] };
   const emptyStaff = {
     staff: [],
-    staffTotals: { monthly: 0, advances: 0, netToPay: 0 },
+    staffTotals: { monthly: 0, advances: 0, netToPay: 0, advanceCount: 0 },
   };
 
   beforeEach(async () => {
@@ -64,10 +64,8 @@ describe('SalaryMonthlyService', () => {
       employeeSalaryConfigVersion: {
         findMany: jest.fn().mockResolvedValue([]),
       },
-      expense: {
-        groupBy: jest.fn().mockResolvedValue([]),
-        findMany: jest.fn().mockResolvedValue([]),
-      },
+      // Unsettled TEACHER_ADVANCE rows the payout would net (ADR-0080).
+      expense: { findMany: jest.fn().mockResolvedValue([]) },
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
@@ -108,6 +106,7 @@ describe('SalaryMonthlyService', () => {
       carriedOut: 0,
       centerFunded: 0,
       advances: 0,
+      advanceCount: 0,
       netToPay: 0,
       centerAdvanced: 0,
       centerStillFronted: 0,
@@ -118,7 +117,12 @@ describe('SalaryMonthlyService', () => {
     // Staff is computed even on the zero-teacher early return.
     expect(staff.computeStaff).toHaveBeenCalled();
     expect(res.staff).toEqual([]);
-    expect(res.staffTotals).toEqual({ monthly: 0, advances: 0, netToPay: 0 });
+    expect(res.staffTotals).toEqual({
+      monthly: 0,
+      advances: 0,
+      netToPay: 0,
+      advanceCount: 0,
+    });
   });
 
   it('surfaces the non-teaching staff pass in the response', async () => {
@@ -508,8 +512,14 @@ describe('SalaryMonthlyService', () => {
     prisma.attendance.groupBy.mockResolvedValue([
       { studentId: 20001, groupId: 'g1', _count: { _all: 8 } },
     ]);
-    prisma.expense.groupBy.mockResolvedValue([
-      { relatedUserId: 10001, _sum: { amount: 2_000 } },
+    prisma.expense.findMany.mockResolvedValue([
+      {
+        id: 'e1',
+        relatedUserId: 10001,
+        amount: 2_000,
+        date: new Date('2026-07-05'),
+        createdAt: new Date('2026-07-05T06:00:00Z'),
+      },
     ]);
 
     const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
@@ -681,14 +691,11 @@ describe('SalaryMonthlyService', () => {
         settledExpenses: [{ amount: 100_000 }],
       },
     ]);
-    prisma.expense.groupBy.mockResolvedValue([
-      { relatedUserId: 10001, _sum: { amount: 100_000 } },
-    ]);
 
     const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
 
     const row = res.data[0];
-    expect(row.advances).toBe(100_000);
+    expect(row.advances).toBe(100_000); // the settled advance, from the payment
     expect(row.netToPay).toBe(500_000); // NOT 400_000
   });
 
@@ -905,99 +912,257 @@ describe('SalaryMonthlyService', () => {
     expect(res.month).toBe('2026-05');
   });
 
-  describe('getAdvancesForUser', () => {
-    it('lists the teacher TEACHER_ADVANCE expenses for the month with a total', async () => {
-      prisma.expense.findMany.mockResolvedValue([
+  /**
+   * ADR-0080: the «Avans» column is what THIS month's payout nets, not what was
+   * given in the calendar month. Open month: the walk over unsettled advances
+   * (`planAdvanceNetting` — the cron's own function). Calculated month: what
+   * the payment really settled.
+   */
+  describe('«Avans» — what the payout nets (ADR-0080)', () => {
+    const createdBy = { id: 2, firstName: 'Admin', lastName: 'A' };
+    const advance = (
+      id: string,
+      amount: number,
+      date: string,
+      createdAt: string,
+      paymentMethod: 'CASH' | 'CARD' = 'CASH',
+    ) => ({
+      id,
+      amount,
+      date: new Date(date),
+      createdAt: new Date(createdAt),
+      relatedUserId: 10001,
+      paymentMethod,
+      createdBy,
+    });
+
+    beforeEach(() => {
+      prisma.user.findMany.mockResolvedValue([teacher(10001, 'Madina')]);
+      // The month's base: 9 840 000 so'm of written accruals, no gap.
+      prisma.salaryAccrual.findMany.mockResolvedValue([
         {
-          id: 'a1',
-          amount: 300_000,
-          date: new Date('2026-06-05'),
-          paymentMethod: 'CASH',
-          description: '1-qism',
-          createdAt: new Date('2026-06-05'),
-          createdBy: { id: 2, firstName: 'Admin', lastName: 'A' },
-          settledBySalaryPaymentId: null,
-          settledBySalaryPayment: null,
-        },
-        {
-          id: 'a2',
-          amount: 200_000,
-          date: new Date('2026-06-20'),
-          paymentMethod: 'CARD',
-          description: '2-qism',
-          createdAt: new Date('2026-06-20'),
-          createdBy: { id: 2, firstName: 'Admin', lastName: 'A' },
-          settledBySalaryPaymentId: null,
-          settledBySalaryPayment: null,
+          userId: 10001,
+          attendanceId: 'a1',
+          amount: 9_840_000,
+          creditPeriodDate: null,
+          isCenterTopUp: false,
+          wasCenterTopUp: false,
         },
       ]);
+    });
 
-      const res = await service.getAdvancesForUser(
-        10001,
-        { month: '2026-06' },
-        1,
-        999,
-      );
+    it('open month: nets the advance dated in the month, not the one dated on the 1st of the next', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance('e1', 1_000_000, '2026-09-10', '2026-09-10T06:00:00Z'),
+        advance('e2', 300_000, '2026-10-01', '2026-10-01T06:00:00Z'),
+      ]);
 
-      expect(res.month).toBe('2026-06');
-      expect(res.count).toBe(2);
-      expect(res.total).toBe(500_000);
+      const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+      const row = res.data[0];
+      expect(row.advances).toBe(1_000_000);
+      expect(row.netToPay).toBe(8_840_000);
+      expect(res.totals.advanceCount).toBe(1);
+      expect(res.totals.advances).toBe(1_000_000);
+    });
+
+    it('open month: an older unsettled advance (never netted) is counted too', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance('e0', 800_000, '2026-08-28', '2026-08-28T06:00:00Z'),
+        advance('e1', 1_000_000, '2026-09-10', '2026-09-10T06:00:00Z'),
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+      const row = res.data[0];
+      expect(row.advances).toBe(1_800_000);
+      expect(row.netToPay).toBe(8_040_000);
+      expect(res.totals.advanceCount).toBe(2);
+    });
+
+    it('open month: asks only for unsettled advances dated before the end of the month', async () => {
+      await service.getMonthly({ month: '2026-09' }, 1, 999);
+
       const where = prisma.expense.findMany.mock.calls[0][0].where;
       expect(where).toMatchObject({
-        relatedUserId: 10001,
+        relatedUserId: { in: [10001] },
         category: 'TEACHER_ADVANCE',
         companyId: 1,
         deletedAt: null,
+        settledBySalaryPaymentId: null,
       });
-      expect(where.date.gte).toBeInstanceOf(Date);
-      expect(where.date.lt).toBeInstanceOf(Date);
+      expect(where.date).toEqual({ lt: new Date('2026-10-01T00:00:00Z') });
     });
 
-    it('har bir avansda hisoblangan-hisoblanmaganini qaytaradi', async () => {
+    it('open month: an advance bigger than what is left stays pending', async () => {
       prisma.expense.findMany.mockResolvedValue([
-        {
-          id: 'a1',
-          amount: 300_000,
-          date: new Date('2026-06-05'),
-          paymentMethod: 'CASH',
-          description: '1-qism',
-          createdAt: new Date('2026-06-05'),
-          createdBy: { id: 2, firstName: 'Admin', lastName: 'A' },
-          settledBySalaryPaymentId: null,
-          settledBySalaryPayment: null,
-        },
-        {
-          id: 'a2',
-          amount: 200_000,
-          date: new Date('2026-06-20'),
-          paymentMethod: 'CARD',
-          description: '2-qism',
-          createdAt: new Date('2026-06-20'),
-          createdBy: { id: 2, firstName: 'Admin', lastName: 'A' },
-          settledBySalaryPaymentId: 'sp-9',
-          settledBySalaryPayment: {
-            periodStart: new Date('2026-06-01'),
-            periodEnd: new Date('2026-06-30'),
-          },
-        },
+        advance('big', 10_000_000, '2026-09-10', '2026-09-10T06:00:00Z'),
       ]);
 
-      const res = await service.getAdvancesForUser(
+      const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+      expect(res.data[0].advances).toBe(0);
+      expect(res.data[0].netToPay).toBe(9_840_000);
+      expect(res.totals.advanceCount).toBe(0);
+    });
+
+    it('calculated month: shows what the payment settled; an unsettled advance is NOT counted', async () => {
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          userId: 10001,
+          amount: 7_840_000,
+          status: 'CALCULATED',
+          paidAt: null,
+          settledExpenses: [{ id: 's1', amount: 2_000_000 }],
+        },
+      ]);
+      // Given inside the month, but the payment is already there — it is the
+      // NEXT month's to net.
+      prisma.expense.findMany.mockResolvedValue([
+        advance('e1', 300_000, '2026-09-20', '2026-09-20T06:00:00Z'),
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+      const row = res.data[0];
+      expect(row.advances).toBe(2_000_000);
+      expect(row.netToPay).toBe(7_840_000);
+      expect(res.totals.advanceCount).toBe(1);
+      expect(res.totals.advances).toBe(2_000_000);
+    });
+
+    it('passes the payment day through as an ISO string, null while unpaid', async () => {
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          userId: 10001,
+          amount: 9_840_000,
+          status: 'PAID',
+          paidAt: new Date('2026-10-02T05:00:00Z'),
+          settledExpenses: [],
+        },
+      ]);
+      const paid = await service.getMonthly({ month: '2026-09' }, 1, 999);
+      expect(paid.data[0].payment).toEqual({
+        id: 'p1',
+        amount: 9_840_000,
+        status: 'PAID',
+        paidAt: '2026-10-02T05:00:00.000Z',
+      });
+
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        {
+          id: 'p2',
+          userId: 10001,
+          amount: 9_840_000,
+          status: 'CALCULATED',
+          paidAt: null,
+          settledExpenses: [],
+        },
+      ]);
+      const open = await service.getMonthly({ month: '2026-09' }, 1, 999);
+      expect(open.data[0].payment?.paidAt).toBeNull();
+    });
+
+    it('selects the settled advances with their detail and the payment day', async () => {
+      await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+      const select = prisma.salaryPayment.findMany.mock.calls[0][0].select;
+      expect(select.paidAt).toBe(true);
+      expect(select.settledExpenses.select).toMatchObject({
+        id: true,
+        amount: true,
+        date: true,
+        paymentMethod: true,
+        createdBy: { select: { id: true, firstName: true, lastName: true } },
+      });
+    });
+
+    it('a single-user call lists the netted advances in netting order, without the bookkeeping fields', async () => {
+      // Handed over out of order: the plan walks createdAt, then id.
+      prisma.expense.findMany.mockResolvedValue([
+        advance(
+          'e-late',
+          200_000,
+          '2026-09-12',
+          '2026-09-12T06:00:00Z',
+          'CARD',
+        ),
+        advance('e-early', 100_000, '2026-09-03', '2026-09-03T06:00:00Z'),
+      ]);
+
+      const res = await service.getMonthlyForUser(
         10001,
-        { month: '2026-06' },
+        { month: '2026-09' },
         1,
         999,
       );
 
-      expect(res.total).toBe(500_000);
-      expect(res.advances[0]).toMatchObject({
-        id: 'a1',
-        settled: false,
-        settledPeriodStart: null,
-        settledPeriodEnd: null,
+      expect(res.row).toMatchObject({ advances: 300_000 });
+      expect((res.row as { advanceItems?: unknown[] }).advanceItems).toEqual([
+        {
+          id: 'e-early',
+          date: new Date('2026-09-03'),
+          amount: 100_000,
+          paymentMethod: 'CASH',
+          createdBy,
+        },
+        {
+          id: 'e-late',
+          date: new Date('2026-09-12'),
+          amount: 200_000,
+          paymentMethod: 'CARD',
+          createdBy,
+        },
+      ]);
+    });
+
+    it('a single-user call on a calculated month lists the settled advances in createdAt order', async () => {
+      const settled = (id: string, createdAt: string, amount: number) => ({
+        id,
+        amount,
+        date: new Date('2026-09-05'),
+        createdAt: new Date(createdAt),
+        paymentMethod: 'CASH',
+        createdBy,
       });
-      expect(res.advances[1]).toMatchObject({ id: 'a2', settled: true });
-      expect(res.advances[1].settledPeriodEnd).toEqual(new Date('2026-06-30'));
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          userId: 10001,
+          amount: 9_540_000,
+          status: 'PAID',
+          paidAt: null,
+          settledExpenses: [
+            settled('s-b', '2026-09-08T06:00:00Z', 200_000),
+            settled('s-a', '2026-09-05T06:00:00Z', 100_000),
+          ],
+        },
+      ]);
+
+      const res = await service.getMonthlyForUser(
+        10001,
+        { month: '2026-09' },
+        1,
+        999,
+      );
+
+      const items = (res.row as { advanceItems?: { id: string }[] })
+        .advanceItems;
+      expect(items?.map((i) => i.id)).toEqual(['s-a', 's-b']);
+      expect(res.row).toMatchObject({ advances: 300_000 });
+      expect(items?.[0]).not.toHaveProperty('createdAt');
+    });
+
+    it('the list call (no userId) carries no advanceItems', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance('e1', 1_000_000, '2026-09-10', '2026-09-10T06:00:00Z'),
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+      expect(res.data[0]).not.toHaveProperty('advanceItems');
     });
   });
 
@@ -1151,16 +1316,46 @@ describe('SalaryMonthlyService', () => {
       expect(res.data[0].netToPay).toBe(13_333);
     });
 
-    it("faol emas ustoz avansi bo'lsa ro'yxatda qoladi", async () => {
+    it("faol emas ustozning ushlanadigan avansi bo'lsa ro'yxatda qoladi", async () => {
       prisma.user.findMany.mockResolvedValue([inactive(10009)]);
-      prisma.expense.groupBy.mockResolvedValue([
-        { relatedUserId: 10009, _sum: { amount: 200_000 } },
+      prisma.salaryAccrual.findMany.mockResolvedValue([
+        { userId: 10009, attendanceId: 'a1', amount: 300_000 },
+      ]);
+      prisma.expense.findMany.mockResolvedValue([
+        {
+          id: 'e9',
+          relatedUserId: 10009,
+          amount: 200_000,
+          date: new Date('2026-06-05'),
+          createdAt: new Date('2026-06-05T06:00:00Z'),
+        },
       ]);
 
       const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
 
       expect(res.data.map((r) => r.user.id)).toEqual([10009]);
       expect(res.data[0].advances).toBe(200_000);
+      expect(res.data[0].netToPay).toBe(100_000);
+    });
+
+    // ADR-0080: the column is what the payout nets. An advance nothing can net
+    // yet (no earnings this month) is not on this page — it waits in the
+    // advance calendar for the month that can take it.
+    it("faol emas ustozning hech narsadan ushlanmaydigan avansi uni ro'yxatda ushlab turmaydi", async () => {
+      prisma.user.findMany.mockResolvedValue([inactive(10009)]);
+      prisma.expense.findMany.mockResolvedValue([
+        {
+          id: 'e9',
+          relatedUserId: 10009,
+          amount: 200_000,
+          date: new Date('2026-06-05'),
+          createdAt: new Date('2026-06-05T06:00:00Z'),
+        },
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+
+      expect(res.data).toEqual([]);
     });
 
     it("bitta odam so'ralganda (profil/portal) filtr ishlamaydi", async () => {

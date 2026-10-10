@@ -949,10 +949,6 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /salary/advances/:userId": [
-    "Branch Director",
-    "CEO"
-  ],
   "GET /salary/config-history/:userId": [
     "Branch Director",
     "CEO"

@@ -1,11 +1,39 @@
 import { Injectable } from '@nestjs/common';
-import { SalaryPaymentStatus, SalaryType } from '@prisma/client';
+import { Prisma, SalaryPaymentStatus, SalaryType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MonthlyScope } from './shared/resolve-monthly-scope';
 import {
   FixedMonthlyVersion,
   prorateFixedMonthly,
 } from './shared/prorate-fixed-monthly';
+import { byWalkOrder, planAdvanceNetting } from './shared/advance-netting';
+
+/** One advance the payout nets (or netted), as the row's drawer lists it. */
+export interface AdvanceItem {
+  id: string;
+  date: Date;
+  amount: number;
+  paymentMethod: 'CASH' | 'CARD';
+  createdBy: { id: number; firstName: string; lastName: string } | null;
+}
+
+/**
+ * What both monthly passes read of an advance. `createdAt` orders them like the
+ * cron's walk does; `toAdvanceItem` drops it again.
+ */
+export const ADVANCE_SELECT = {
+  id: true,
+  amount: true,
+  date: true,
+  createdAt: true,
+  paymentMethod: true,
+  createdBy: { select: { id: true, firstName: true, lastName: true } },
+} satisfies Prisma.ExpenseSelect;
+
+export function toAdvanceItem(e: AdvanceItem): AdvanceItem {
+  const { id, date, amount, paymentMethod, createdBy } = e;
+  return { id, date, amount, paymentMethod, createdBy };
+}
 
 export interface StaffRow {
   user: {
@@ -29,20 +57,34 @@ export interface StaffRow {
   };
   /** Prorated fixed-monthly salary for the period (full month = the flat value). */
   monthly: number;
-  /** TEACHER_ADVANCE given during the calendar month. */
+  /** What this month's payout nets (ADR-0080): the planned walk, or what the payment settled. */
   advances: number;
   /** payment ? payment.amount (already net of advances) : max(0, monthly − advances). */
   netToPay: number;
-  payment: { id: string; amount: number; status: SalaryPaymentStatus } | null;
+  payment: {
+    id: string;
+    amount: number;
+    status: SalaryPaymentStatus;
+    paidAt: string | null;
+  } | null;
+  /** The advances `advances` sums — single-user calls only. */
+  advanceItems?: AdvanceItem[];
 }
 
 export interface StaffTotals {
   monthly: number;
   advances: number;
   netToPay: number;
+  /** How many advances `advances` nets. */
+  advanceCount: number;
 }
 
-const ZERO_TOTALS: StaffTotals = { monthly: 0, advances: 0, netToPay: 0 };
+const ZERO_TOTALS: StaffTotals = {
+  monthly: 0,
+  advances: 0,
+  netToPay: 0,
+  advanceCount: 0,
+};
 
 /**
  * Non-teaching FIXED_MONTHLY staff (administrators, cashiers, branch directors)
@@ -67,7 +109,6 @@ export class SalaryStaffMonthlyService {
       companyId,
       periodStart,
       periodEnd,
-      monthStart,
       nextMonthStart,
       periodStartLow,
       periodStartHigh,
@@ -190,21 +231,26 @@ export class SalaryStaffMonthlyService {
       versByConfig.set(r.configId, arr);
     }
 
-    // 3. Advances GIVEN during the calendar month (same logic as the teacher pass).
-    const advancesAgg = await this.prisma.expense.groupBy({
-      by: ['relatedUserId'],
+    // 3. Unsettled advances the payout would net (ADR-0080): everything dated
+    // before the month's end that no payment has taken yet — the cron's own
+    // walk, `planAdvanceNetting`, picks which of them fit.
+    const pendingRows = await this.prisma.expense.findMany({
       where: {
         relatedUserId: { in: userIds },
         category: 'TEACHER_ADVANCE',
         companyId,
         deletedAt: null,
-        date: { gte: monthStart, lt: nextMonthStart },
+        settledBySalaryPaymentId: null,
+        date: { lt: nextMonthStart },
       },
-      _sum: { amount: true },
+      select: { ...ADVANCE_SELECT, relatedUserId: true },
     });
-    const advancesByUser = new Map(
-      advancesAgg.map((a) => [a.relatedUserId as number, a._sum.amount ?? 0]),
-    );
+    const pendingByUser = new Map<number, typeof pendingRows>();
+    for (const e of pendingRows) {
+      const arr = pendingByUser.get(e.relatedUserId as number) ?? [];
+      arr.push(e);
+      pendingByUser.set(e.relatedUserId as number, arr);
+    }
 
     // 4. Settled SalaryPayment bucketed into this month.
     const payments = await this.prisma.salaryPayment.findMany({
@@ -214,12 +260,25 @@ export class SalaryStaffMonthlyService {
         status: { not: SalaryPaymentStatus.CANCELLED },
         periodStart: { gte: periodStartLow, lt: periodStartHigh },
       },
-      select: { id: true, userId: true, amount: true, status: true },
+      select: {
+        id: true,
+        userId: true,
+        amount: true,
+        status: true,
+        paidAt: true,
+        settledExpenses: { select: ADVANCE_SELECT },
+      },
       orderBy: { createdAt: 'asc' },
     });
     const paymentByUser = new Map<
       number,
-      { id: string; amount: number; status: SalaryPaymentStatus }
+      {
+        id: string;
+        amount: number;
+        status: SalaryPaymentStatus;
+        paidAt: string | null;
+        settled: (typeof payments)[number]['settledExpenses'];
+      }
     >();
     for (const p of payments) {
       const prev = paymentByUser.get(p.userId);
@@ -227,11 +286,14 @@ export class SalaryStaffMonthlyService {
         id: p.id,
         amount: (prev?.amount ?? 0) + p.amount,
         status: p.status,
+        paidAt: p.paidAt?.toISOString() ?? null,
+        settled: [...(prev?.settled ?? []), ...p.settledExpenses],
       });
     }
 
     // 5. Build rows.
     const staff: StaffRow[] = [];
+    let advanceCount = 0;
     for (const c of inScope) {
       const monthly = prorateFixedMonthly(
         versByConfig.get(c.id) ?? [],
@@ -243,10 +305,20 @@ export class SalaryStaffMonthlyService {
       // this month; drop it (mirrors the cron's `if (!activeVersion) continue`).
       if (monthly === 0 && !payment) continue;
 
-      const advances = advancesByUser.get(c.userId) ?? 0;
-      const netToPay = payment
-        ? payment.amount
-        : Math.max(0, monthly - advances);
+      // A calculated month shows what its payment settled; an open one the
+      // walk the cron will make. A pending advance never counts once the
+      // payment exists — it is the next month's.
+      const pending = pendingByUser.get(c.userId) ?? [];
+      const plan = payment
+        ? null
+        : planAdvanceNetting(pending, monthly, nextMonthStart);
+      const advanceList = payment
+        ? [...payment.settled].sort(byWalkOrder)
+        : plan!.settle.map((id) => pending.find((p) => p.id === id)!);
+      const advances = payment
+        ? advanceList.reduce((sum, a) => sum + a.amount, 0)
+        : plan!.total;
+      const netToPay = payment ? payment.amount : monthly - advances;
 
       staff.push({
         user: {
@@ -260,8 +332,19 @@ export class SalaryStaffMonthlyService {
         monthly,
         advances,
         netToPay,
-        payment,
+        payment: payment
+          ? {
+              id: payment.id,
+              amount: payment.amount,
+              status: payment.status,
+              paidAt: payment.paidAt,
+            }
+          : null,
+        ...(userId !== undefined && {
+          advanceItems: advanceList.map(toAdvanceItem),
+        }),
       });
+      advanceCount += advanceList.length;
     }
 
     // Sort by monthly magnitude desc, then name.
@@ -276,8 +359,9 @@ export class SalaryStaffMonthlyService {
         monthly: s.monthly + r.monthly,
         advances: s.advances + r.advances,
         netToPay: s.netToPay + r.netToPay,
+        advanceCount: s.advanceCount,
       }),
-      { ...ZERO_TOTALS },
+      { ...ZERO_TOTALS, advanceCount },
     );
 
     return { staff, staffTotals };

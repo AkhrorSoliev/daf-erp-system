@@ -60,6 +60,23 @@ const adminConfig = {
   },
 };
 
+const createdBy = { id: 2, firstName: 'Admin', lastName: 'A' };
+const advance = (
+  id: string,
+  amount: number,
+  date: string,
+  createdAt: string,
+  relatedUserId = 10030,
+) => ({
+  id,
+  amount,
+  date: new Date(date),
+  createdAt: new Date(createdAt),
+  relatedUserId,
+  paymentMethod: 'CASH' as const,
+  createdBy,
+});
+
 describe('SalaryStaffMonthlyService', () => {
   let service: SalaryStaffMonthlyService;
   let prisma: any;
@@ -70,7 +87,7 @@ describe('SalaryStaffMonthlyService', () => {
       employeeSalaryConfigVersion: {
         findMany: jest.fn().mockResolvedValue([]),
       },
-      expense: { groupBy: jest.fn().mockResolvedValue([]) },
+      expense: { findMany: jest.fn().mockResolvedValue([]) },
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
@@ -87,7 +104,12 @@ describe('SalaryStaffMonthlyService', () => {
   it('returns empty when there are no fixed-monthly staff configs', async () => {
     const res = await service.computeStaff(juneScope());
     expect(res.staff).toEqual([]);
-    expect(res.staffTotals).toEqual({ monthly: 0, advances: 0, netToPay: 0 });
+    expect(res.staffTotals).toEqual({
+      monthly: 0,
+      advances: 0,
+      netToPay: 0,
+      advanceCount: 0,
+    });
   });
 
   it('excludes teachers and archived users via the config query filter', async () => {
@@ -128,6 +150,7 @@ describe('SalaryStaffMonthlyService', () => {
       monthly: 5_000_000,
       advances: 0,
       netToPay: 5_000_000,
+      advanceCount: 0,
     });
   });
 
@@ -201,8 +224,8 @@ describe('SalaryStaffMonthlyService', () => {
         effectiveTo: null,
       },
     ]);
-    prisma.expense.groupBy.mockResolvedValue([
-      { relatedUserId: 10030, _sum: { amount: 500_000 } },
+    prisma.expense.findMany.mockResolvedValue([
+      advance('e1', 500_000, '2026-06-20', '2026-06-20T06:00:00Z'),
     ]);
 
     const res = await service.computeStaff(juneScope());
@@ -222,17 +245,192 @@ describe('SalaryStaffMonthlyService', () => {
         effectiveTo: null,
       },
     ]);
-    prisma.expense.groupBy.mockResolvedValue([
-      { relatedUserId: 10030, _sum: { amount: 500_000 } },
-    ]);
     prisma.salaryPayment.findMany.mockResolvedValue([
-      { id: 'p1', userId: 10030, amount: 4_500_000, status: 'PAID' },
+      {
+        id: 'p1',
+        userId: 10030,
+        amount: 4_500_000,
+        status: 'PAID',
+        paidAt: null,
+        settledExpenses: [{ id: 's1', amount: 500_000 }],
+      },
     ]);
 
     const res = await service.computeStaff(juneScope());
 
     expect(res.staff[0].netToPay).toBe(4_500_000); // payment.amount, not 4M
     expect(res.staff[0].payment?.status).toBe('PAID');
+  });
+
+  describe('«Avans» — what the payout nets (ADR-0080)', () => {
+    const FULL_MONTH_3M = {
+      configId: 'cfg1',
+      value: 3_000_000,
+      effectiveFrom: tsh(2026, 5, 1),
+      effectiveTo: null,
+    };
+
+    beforeEach(() => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        FULL_MONTH_3M,
+      ]);
+    });
+
+    it('open month: nets the unsettled advance dated in the month', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance('e1', 500_000, '2026-06-12', '2026-06-12T06:00:00Z'),
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].monthly).toBe(3_000_000);
+      expect(res.staff[0].advances).toBe(500_000);
+      expect(res.staff[0].netToPay).toBe(2_500_000);
+      expect(res.staffTotals).toEqual({
+        monthly: 3_000_000,
+        advances: 500_000,
+        netToPay: 2_500_000,
+        advanceCount: 1,
+      });
+    });
+
+    it('open month: asks only for unsettled advances dated before the end of the month', async () => {
+      await service.computeStaff(juneScope());
+
+      const where = prisma.expense.findMany.mock.calls[0][0].where;
+      expect(where).toMatchObject({
+        relatedUserId: { in: [10030] },
+        category: 'TEACHER_ADVANCE',
+        companyId: 1,
+        deletedAt: null,
+        settledBySalaryPaymentId: null,
+      });
+      expect(where.date).toEqual({ lt: new Date(Date.UTC(2026, 6, 1)) });
+    });
+
+    it('open month: an advance dated on the 1st of the next month is left for that month', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance('e1', 500_000, '2026-07-01', '2026-07-01T06:00:00Z'),
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].advances).toBe(0);
+      expect(res.staff[0].netToPay).toBe(3_000_000);
+      expect(res.staffTotals.advanceCount).toBe(0);
+    });
+
+    it('calculated month: shows what the payment settled, an unsettled advance is not counted', async () => {
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          userId: 10030,
+          amount: 2_500_000,
+          status: 'CALCULATED',
+          paidAt: null,
+          settledExpenses: [{ id: 's1', amount: 500_000 }],
+        },
+      ]);
+      prisma.expense.findMany.mockResolvedValue([
+        advance('e2', 100_000, '2026-06-25', '2026-06-25T06:00:00Z'),
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].advances).toBe(500_000);
+      expect(res.staff[0].netToPay).toBe(2_500_000);
+      expect(res.staffTotals.advanceCount).toBe(1);
+      expect(res.staffTotals.advances).toBe(500_000);
+    });
+
+    it('passes the payment day through as an ISO string', async () => {
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          userId: 10030,
+          amount: 3_000_000,
+          status: 'PAID',
+          paidAt: new Date('2026-07-02T05:00:00Z'),
+          settledExpenses: [],
+        },
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].payment).toEqual({
+        id: 'p1',
+        amount: 3_000_000,
+        status: 'PAID',
+        paidAt: '2026-07-02T05:00:00.000Z',
+      });
+    });
+
+    it('a single-user call lists the netted advances in netting order; the list call has none', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance('e-late', 200_000, '2026-06-12', '2026-06-12T06:00:00Z'),
+        advance('e-early', 100_000, '2026-06-03', '2026-06-03T06:00:00Z'),
+      ]);
+
+      const one = await service.computeStaff(juneScope({ userId: 10030 }));
+      expect(one.staff[0].advanceItems).toEqual([
+        {
+          id: 'e-early',
+          date: new Date('2026-06-03'),
+          amount: 100_000,
+          paymentMethod: 'CASH',
+          createdBy,
+        },
+        {
+          id: 'e-late',
+          date: new Date('2026-06-12'),
+          amount: 200_000,
+          paymentMethod: 'CASH',
+          createdBy,
+        },
+      ]);
+
+      const list = await service.computeStaff(juneScope());
+      expect(list.staff[0]).not.toHaveProperty('advanceItems');
+    });
+
+    it('a single-user call on a calculated month lists the settled advances', async () => {
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          userId: 10030,
+          amount: 2_500_000,
+          status: 'PAID',
+          paidAt: null,
+          settledExpenses: [
+            {
+              id: 's-b',
+              amount: 200_000,
+              date: new Date('2026-06-08'),
+              createdAt: new Date('2026-06-08T06:00:00Z'),
+              paymentMethod: 'CARD',
+              createdBy,
+            },
+            {
+              id: 's-a',
+              amount: 300_000,
+              date: new Date('2026-06-02'),
+              createdAt: new Date('2026-06-02T06:00:00Z'),
+              paymentMethod: 'CASH',
+              createdBy,
+            },
+          ],
+        },
+      ]);
+
+      const res = await service.computeStaff(juneScope({ userId: 10030 }));
+
+      expect(res.staff[0].advances).toBe(500_000);
+      expect(res.staff[0].advanceItems?.map((i) => i.id)).toEqual([
+        's-a',
+        's-b',
+      ]);
+    });
   });
 
   it('narrows the staff roster to one user when the scope carries a userId', async () => {
@@ -292,7 +490,7 @@ describe('SalaryStaffMonthlyService — home-branch basis', () => {
           .fn()
           .mockResolvedValue([version('two'), version('solo'), version('x')]),
       },
-      expense: { groupBy: jest.fn().mockResolvedValue([]) },
+      expense: { findMany: jest.fn().mockResolvedValue([]) },
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const module: TestingModule = await Test.createTestingModule({

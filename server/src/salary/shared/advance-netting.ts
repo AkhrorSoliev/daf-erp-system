@@ -21,6 +21,16 @@ export interface AdvanceNettingPlan {
   total: number;
 }
 
+/** The walk's order: `createdAt`, then `id`. Rows that list the netted advances sort by it too. */
+export function byWalkOrder(
+  a: { id: string; createdAt: Date },
+  b: { id: string; createdAt: Date },
+): number {
+  return (
+    a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id)
+  );
+}
+
 export function planAdvanceNetting(
   pending: PendingAdvance[],
   grossAmount: number,
@@ -29,11 +39,7 @@ export function planAdvanceNetting(
   const end = periodEndDateExclusive.getTime();
   const ordered = pending
     .filter((a) => a.date.getTime() < end)
-    .sort(
-      (a, b) =>
-        a.createdAt.getTime() - b.createdAt.getTime() ||
-        a.id.localeCompare(b.id),
-    );
+    .sort(byWalkOrder);
   const settle: string[] = [];
   let total = 0;
   for (const a of ordered) {
