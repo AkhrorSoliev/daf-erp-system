@@ -56,6 +56,8 @@ export const RETURN_PROMPT =
   'Qaytarish sababini shu xabarga javob qilib yozing.';
 export const RETURN_PLACEHOLDER = 'Qaytarish sababi';
 export const NOT_IN_REVIEW = 'Topshiriq tekshiruvda emas';
+/** The service's own refusal to anybody but the giver (or a manager). */
+export const ONLY_GIVER_REVIEWS = 'Faqat beruvchi tekshira oladi';
 export const STEP_GONE = 'Qadam topilmadi';
 export const TRY_LATER = "Xatolik yuz berdi. Keyinroq urinib ko'ring.";
 const PHOTO_LINE = "Rasm bilan tasdiqlanadi: rasm saytda qo'shiladi.";
@@ -93,10 +95,19 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
  */
 export const esc = escapeHtml;
 /** Cuts by code points, so an emoji at the cut is never split in half. */
-const clip = (s: string, n: number) => {
+export const clip = (s: string, n: number) => {
   const a = Array.from(s);
   return a.length > n ? a.slice(0, n).join('') + '…' : s;
 };
+
+/**
+ * The «Qaytarish» prompt, sent with HTML. It names the task: with two prompts
+ * open, Telegram's reply box points at the newest, and a reason typed for the
+ * wrong task would return it silently.
+ */
+export function returnPromptText(title: string): string {
+  return `${RETURN_PROMPT}\n<b>${esc(clip(title, 80))}</b>`;
+}
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 /** «Soliyev A.» */

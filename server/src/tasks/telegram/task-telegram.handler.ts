@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { Composer } from 'telegraf';
+import type { Message } from 'telegraf/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramService } from '../../telegram/telegram.service';
 import type { BotContext } from '../../telegram/types/context';
@@ -15,13 +16,16 @@ import { describeError } from '../../telegram-digest/telegram-send';
 import { TasksService, type TaskActor } from '../tasks.service';
 import { OPEN_STATUSES } from '../task-transitions';
 import {
+  ADDED_TO_TASK,
   NOT_IN_REVIEW,
   NOT_YOURS,
+  ONLY_GIVER_REVIEWS,
   RETURN_PLACEHOLDER,
-  RETURN_PROMPT,
   SEVERAL_ACCOUNTS,
   STEP_GONE,
+  TEXT_ONLY,
   TRY_LATER,
+  clip,
   editExtra,
   isSelfTask,
   keptHeadline,
@@ -30,6 +34,9 @@ import {
   renderMyTasks,
   renderStepsMessage,
   renderTaskMessage,
+  returnPromptText,
+  returnedReply,
+  shortName,
   type TgMessage,
   type TgTaskView,
 } from './task-telegram-text';
@@ -42,8 +49,17 @@ interface Me {
   chatId: string;
 }
 
+/** A task the person may act on, and whether they may also review it. */
+interface Seen {
+  view: TgTaskView;
+  canManage: boolean;
+}
+
 /** «Topshiriqlarim» shows this many; the count says how many more are on the website. */
 const LIST_SIZE = 10;
+
+/** `answerCbQuery` takes at most 200 characters; `clip` adds one more for «…». */
+const ALERT_CLIP = 199;
 
 /** The text of the message whose button was pressed (plain, as Telegram returns it). */
 function pressedText(ctx: BotContext): string | undefined {
@@ -51,11 +67,19 @@ function pressedText(ctx: BotContext): string | undefined {
   return m && 'text' in m ? m.text : undefined;
 }
 
+/** `/cancel` typed as a reply is still the bot's command, not a comment. */
+function startsWithCommand(msg: Message): boolean {
+  return (
+    'entities' in msg &&
+    !!msg.entities?.some((e) => e.type === 'bot_command' && e.offset === 0)
+  );
+}
+
 /**
- * Task buttons in the main bot (spec §6.1–6.5, ADR-0077). Every change goes
- * through `TasksService` as the chat's staff account with `via: 'TELEGRAM'`:
- * the website's policy and transitions, nothing extra here. The pressed
- * message is edited in place.
+ * Task buttons and replies in the main bot (spec §6.1–6.5, ADR-0077). Every
+ * change goes through `TasksService` as the chat's staff account with
+ * `via: 'TELEGRAM'`: the website's policy and transitions, nothing extra here.
+ * The pressed message is edited in place.
  */
 @Injectable()
 export class TaskTelegramHandler implements OnApplicationBootstrap {
@@ -69,14 +93,16 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
   ) {}
 
   /**
-   * Runs after every module's onModuleInit, so the bot exists. Registered
-   * ahead of the scenes: a registration scene left open would otherwise
-   * swallow the press.
+   * Runs after every module's onModuleInit, so the bot exists. One composer,
+   * registered ahead of the scenes: a registration scene left open would
+   * otherwise swallow a press or a reply. It calls `next()` for everything
+   * that is not a task button or a reply to a task message.
    */
   onApplicationBootstrap(): void {
     if (!this.telegram.getBot()) return; // no TELEGRAM_BOT_TOKEN — the bot is off
     const tk = new Composer<BotContext>();
     tk.action(/^tk:/, (ctx) => this.onAction(ctx));
+    tk.on('message', (ctx, next) => this.onMessage(ctx, next));
     this.telegram.useBeforeScenes(tk);
   }
 
@@ -94,7 +120,7 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     const q = ctx.callbackQuery;
     const cmd = parseTk(q && 'data' in q ? q.data : '');
     if (!cmd || ctx.chat?.type !== 'private') return this.answer(ctx);
-    const me = await this.me(ctx, String(ctx.chat.id));
+    const me = await this.me(String(ctx.chat.id), (t) => this.answer(ctx, t));
     if (!me) return;
     if (cmd.action === 'list') return this.showList(ctx, me);
 
@@ -109,8 +135,9 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
       taskId = step.taskId;
     }
     // A number in the list: the list's other numbers still work.
-    const view = await this.access(ctx, me, taskId, cmd.action !== 'show');
-    if (!view) return;
+    const seen = await this.access(ctx, me, taskId, cmd.action !== 'show');
+    if (!seen) return;
+    const { view } = seen;
     const headline = keptHeadline(pressedText(ctx), view.title);
 
     switch (cmd.action) {
@@ -124,7 +151,7 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
         await this.answer(ctx);
         return this.drawCard(ctx, me, view, undefined);
       case 'return':
-        return this.askReason(ctx, me, view, headline);
+        return this.askReason(ctx, me, seen, headline);
     }
 
     try {
@@ -145,8 +172,11 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
       await this.answer(ctx);
     } catch (err) {
       if (!(err instanceof HttpException)) throw err;
-      // A stale message: say why, then show the task as it is now.
       await this.answer(ctx, err.message);
+      // The service no longer lets this person see the task: the card, which
+      // is not scoped to them, must not be redrawn for them.
+      if (err instanceof NotFoundException) return this.dropButtons(ctx);
+      // A stale message: say why, then show the task as it is now.
     }
     await this.drawCard(
       ctx,
@@ -156,14 +186,17 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     );
   }
 
-  /** The chat's one live staff account, or null after saying why not (spec §6.5). */
-  private async me(ctx: BotContext, chatId: string): Promise<Me | null> {
+  /**
+   * The chat's one live staff account, or null after `say`ing why not (spec
+   * §6.5): a press answers with an alert, a reply with a message.
+   */
+  private async me(
+    chatId: string,
+    say: (text: string) => Promise<unknown>,
+  ): Promise<Me | null> {
     const who = await staffOfChat(this.prisma, chatId);
     if (who.kind !== 'one') {
-      await this.answer(
-        ctx,
-        who.kind === 'several' ? SEVERAL_ACCOUNTS : NOT_YOURS,
-      );
+      await say(who.kind === 'several' ? SEVERAL_ACCOUNTS : NOT_YOURS);
       return null;
     }
     try {
@@ -172,36 +205,46 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     } catch (err) {
       if (!(err instanceof ForbiddenException)) throw err;
       // Blocked or archived since the chat was linked.
-      await this.answer(ctx, NOT_YOURS);
+      await say(NOT_YOURS);
       return null;
     }
   }
 
   /**
-   * The task as it is now, or null after saying it is not the presser's: they
-   * cannot see it any more, or they are neither its author nor on it.
+   * The task as it is now, or null when it is not this person's: they cannot
+   * see it any more, or they are neither its author nor on it.
    */
+  private async lookup(me: Me, taskId: string): Promise<Seen | null> {
+    try {
+      const { access } = await this.tasks.loadForAccess(
+        this.prisma,
+        taskId,
+        me.actor,
+      );
+      const view = await loadTaskView(this.prisma, taskId);
+      const userId = me.actor.userId;
+      if (
+        view &&
+        (view.authorId === userId ||
+          view.participants.some((p) => p.userId === userId))
+      ) {
+        return { view, canManage: access.canManage };
+      }
+    } catch (err) {
+      if (!(err instanceof NotFoundException)) throw err;
+    }
+    return null;
+  }
+
+  /** `lookup` for a press: when it is not the presser's, say so (and drop the buttons). */
   private async access(
     ctx: BotContext,
     me: Me,
     taskId: string,
     dropButtons: boolean,
-  ): Promise<TgTaskView | null> {
-    let view: TgTaskView | null = null;
-    try {
-      await this.tasks.loadForAccess(this.prisma, taskId, me.actor);
-      view = await loadTaskView(this.prisma, taskId);
-    } catch (err) {
-      if (!(err instanceof NotFoundException)) throw err;
-    }
-    const userId = me.actor.userId;
-    if (
-      view &&
-      (view.authorId === userId ||
-        view.participants.some((p) => p.userId === userId))
-    ) {
-      return view;
-    }
+  ): Promise<Seen | null> {
+    const seen = await this.lookup(me, taskId);
+    if (seen) return seen;
     await this.answer(ctx, NOT_YOURS);
     if (dropButtons) await this.dropButtons(ctx);
     return null;
@@ -212,7 +255,7 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     try {
       await (alert === undefined
         ? ctx.answerCbQuery()
-        : ctx.answerCbQuery(alert, { show_alert: true }));
+        : ctx.answerCbQuery(clip(alert, ALERT_CLIP), { show_alert: true }));
     } catch (err) {
       this.logger.warn(`task button not answered: ${describeError(err)}`);
     }
@@ -281,19 +324,35 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     );
   }
 
-  /** «Qaytarish»: the reason comes as a reply to this prompt (Task 9). */
+  /**
+   * «Qaytarish»: the reason comes as a reply to this prompt (`handleReply`).
+   * The prompt quotes the pressed card and names the task, so with two prompts
+   * open a reason can never silently go to the wrong task.
+   */
   private async askReason(
     ctx: BotContext,
     me: Me,
-    view: TgTaskView,
+    { view, canManage }: Seen,
     headline: string | undefined,
   ): Promise<void> {
     if (view.status !== 'IN_REVIEW') {
       await this.answer(ctx, NOT_IN_REVIEW);
       return this.drawCard(ctx, me, view, headline);
     }
+    if (!canManage) {
+      await this.answer(ctx, ONLY_GIVER_REVIEWS);
+      return this.drawCard(ctx, me, view, headline);
+    }
     await this.answer(ctx);
-    const prompt = await ctx.reply(RETURN_PROMPT, {
+    const cardId = ctx.callbackQuery?.message?.message_id;
+    const prompt = await ctx.reply(returnPromptText(view.title), {
+      parse_mode: 'HTML',
+      ...(cardId !== undefined && {
+        reply_parameters: {
+          message_id: cardId,
+          allow_sending_without_reply: true,
+        },
+      }),
       reply_markup: {
         force_reply: true,
         input_field_placeholder: RETURN_PLACEHOLDER,
@@ -334,5 +393,83 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     await this.answer(ctx);
     const msg = renderMyTasks(items, total, new Date());
     await ctx.reply(msg.text, messageExtra(msg.buttons));
+  }
+
+  /**
+   * A message in a private chat (spec §6.2). Only a reply to a task message of
+   * THIS chat is ours; anything else — an ordinary message, a reply to some
+   * other message, a command — goes on to the scenes and the bot's own flows.
+   * `next()` is called outside the `try`: a failure further down the chain is
+   * not a failed reply.
+   */
+  async onMessage(ctx: BotContext, next: () => Promise<void>): Promise<void> {
+    let ours: boolean;
+    try {
+      ours = await this.handleReply(ctx);
+    } catch (err) {
+      this.logger.error(`task reply failed: ${describeError(err)}`);
+      await ctx.reply(TRY_LATER).catch(() => undefined);
+      return;
+    }
+    if (!ours) return next();
+  }
+
+  /** True when the message was a reply to a task message and has been answered. */
+  private async handleReply(ctx: BotContext): Promise<boolean> {
+    const msg = ctx.message;
+    const replyTo =
+      msg && 'reply_to_message' in msg ? msg.reply_to_message : undefined;
+    if (
+      !msg ||
+      !replyTo ||
+      ctx.chat?.type !== 'private' ||
+      startsWithCommand(msg)
+    ) {
+      return false;
+    }
+    const chatId = String(ctx.chat.id);
+    const link = await this.prisma.taskTelegramMessage.findUnique({
+      where: { chatId_messageId: { chatId, messageId: replyTo.message_id } },
+      select: { taskId: true, purpose: true },
+    });
+    if (!link) return false;
+    // Photos, files and voice come with phase 3; nothing is stored now.
+    const text = 'text' in msg ? msg.text.trim() : '';
+    if (!text) {
+      await ctx.reply(TEXT_ONLY);
+      return true;
+    }
+    const me = await this.me(chatId, (t) => ctx.reply(t));
+    if (!me) return true;
+    // The same rule as for a button: the replier must be the author or on it.
+    const seen = await this.lookup(me, link.taskId);
+    if (!seen) {
+      await ctx.reply(NOT_YOURS);
+      return true;
+    }
+    try {
+      if (link.purpose === 'RETURN_PROMPT') {
+        const task = await this.tasks.review(
+          link.taskId,
+          'RETURN',
+          text,
+          me.actor,
+        );
+        await ctx.reply(
+          returnedReply(
+            task.assignees.map((a) => shortName(a.firstName, a.lastName)),
+          ),
+        );
+      } else {
+        await this.tasks.addComment(link.taskId, text, me.actor);
+        await ctx.reply(ADDED_TO_TASK);
+      }
+    } catch (err) {
+      if (!(err instanceof HttpException)) throw err;
+      await ctx.reply(
+        err instanceof NotFoundException ? NOT_YOURS : err.message,
+      );
+    }
+    return true;
   }
 }
