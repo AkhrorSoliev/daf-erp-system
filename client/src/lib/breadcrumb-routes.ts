@@ -48,13 +48,14 @@ export const routeLabels: Record<string, string> = {
   overview: "Umumiy ma'lumotlar",
   pending: "Kutilyotgan to'lovlar",
   // /payments/debt — qarzdorlik sahifasi (uch bo'lim). Uning eski tablari endi
-  // alohida sahifalar: qarz tarixi, kechirilganlar, muzlatilganlar puli.
+  // alohida sahifalar: qarz tarixi va kechirilganlar. Muzlatilganlar puli
+  // «Qaytariladigan pul» ga ko'chdi (/payments/frozen-balances u yerga yo'naltiradi).
   debt: "Qarzdorlik",
   "debt-history": "Qarz tarixi",
   "debt-write-offs": "Kechirilgan qarzlar",
-  "frozen-balances": "Muzlatilganlarning puli",
-  // /payments/refunds — «Qaytariladigan pul» (spec B2b).
+  // /payments/refunds — «Qaytariladigan pul» (spec B2b); /payments/refunds/history — uning tarixi.
   refunds: "Qaytariladigan pul",
+  history: "Tarix",
   expenses: "Xarajatlar",
   // "Oyliklar" — the monthly payroll list (teachers + fixed-salary staff).
   // "Ish haqi" stays the term for ONE person's salary (profile tabs), so the

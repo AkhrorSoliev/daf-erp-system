@@ -3,7 +3,6 @@ import {
   CALL_LOG_ROLES,
   COMPANY_EDIT_ROLES,
   FINANCIAL_OVERVIEW_ROLES,
-  FROZEN_BALANCE_ACTION_ROLES,
   GROUP_PAGE_ROLES,
   REFUND_CANCEL_ROLES,
   REFUND_HAND_OVER_ROLES,
@@ -84,15 +83,6 @@ describe("qarzdorlik sahifasining amallari (/payments/debt)", () => {
   it("«Natijani kiritish» — POST /call-logs: kassirga yo'q", () => {
     expect(hasAnyRole(roles(CASHIER), CALL_LOG_ROLES)).toBe(false);
     expect(hasAnyRole(roles(ADMINISTRATOR), CALL_LOG_ROLES)).toBe(true);
-  });
-
-  it("«Muzlatilgan puli» amallari — POST /withdrawals, POST /refunds/quick: kassirga yo'q", () => {
-    expect(hasAnyRole(roles(CASHIER), FROZEN_BALANCE_ACTION_ROLES)).toBe(
-      false,
-    );
-    expect(hasAnyRole(roles(ADMINISTRATOR), FROZEN_BALANCE_ACTION_ROLES)).toBe(
-      true,
-    );
   });
 });
 

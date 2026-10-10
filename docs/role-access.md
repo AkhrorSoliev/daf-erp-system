@@ -85,7 +85,7 @@ Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qa
 | Payment statement PDF (drawer) | Yes | Yes | Yes | No | No |
 | Undo a debt write-off | Yes | No | No | No | No |
 
-- **Frontend**: `CALL_LOG_ROLES`, `STATEMENT_ROLES` and `FROZEN_BALANCE_ACTION_ROLES` in `client/src/lib/role-access.ts` hide the actions a cashier may not take
+- **Frontend**: `CALL_LOG_ROLES`, `STATEMENT_ROLES` and the refund constants `REFUND_REQUEST_ROLES` / `REFUND_HAND_OVER_ROLES` / `REFUND_CANCEL_ROLES` in `client/src/lib/role-access.ts` hide the actions a cashier may not take
 
 ### Student contracts
 

@@ -51,7 +51,7 @@ describe("navItems — Moliya → «Qarzdorlik» stays lit on its sub-pages (spe
     .find((item) => item.url === "/payments")
     ?.children?.find((child) => child.url === "/payments/debt");
 
-  it.each(["/payments/debt", "/payments/debt-history", "/payments/debt-write-offs", "/payments/frozen-balances"])(
+  it.each(["/payments/debt", "/payments/debt-history", "/payments/debt-write-offs"])(
     "%s highlights «Qarzdorlik»",
     (path) => {
       expect(debt && isNavChildActive(path, debt)).toBe(true);
@@ -60,6 +60,8 @@ describe("navItems — Moliya → «Qarzdorlik» stays lit on its sub-pages (spe
 
   it("another Moliya page does not", () => {
     expect(debt && isNavChildActive("/payments/salary", debt)).toBe(false);
+    // The frozen balances moved to «Qaytariladigan pul» (spec B2b §3.8).
+    expect(debt && isNavChildActive("/payments/frozen-balances", debt)).toBe(false);
   });
 });
 

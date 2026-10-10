@@ -28,13 +28,7 @@ export const paymentsNavItems: PaymentsNavItem[] = [
   // requests. Every role that sees Moliya; /payments/refunds/history shares the prefix.
   { title: "Qaytariladigan pul", url: "/payments/refunds", icon: HandCoins, visibleForRoles: [1, 2, 3, 5] },
   // One entry for everything owed to the center. Its sub-pages (spec B2a §2.6)
-  // stay under it in the sidebar: /payments/debt-history and /debt-write-offs
-  // share the url's prefix, /payments/frozen-balances needs activePrefixes.
-  {
-    title: "Qarzdorlik",
-    url: "/payments/debt",
-    icon: UserMinus,
-    activePrefixes: ["/payments/frozen-balances"],
-  },
+  // /payments/debt-history and /debt-write-offs share the url's prefix.
+  { title: "Qarzdorlik", url: "/payments/debt", icon: UserMinus },
   { title: "To'lov tizimlari jurnali", url: "/payments/gateway-events", icon: Activity, visibleForRoles: [1] },
 ];
