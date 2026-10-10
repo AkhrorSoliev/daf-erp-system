@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-10",
+    sarlavha: "Botdan guruhga yozilish endi administrator tasdig'i bilan",
+    matn: "Guruhning QR kodi yoki havolasi orqali botda ro'yxatdan o'tgan odam endi darhol o'quvchi bo'lmaydi: u so'rov yuboradi. Filial administratorlariga «Yangi o'quvchi so'rovi» topshirig'i chiqadi (qo'ng'iroqchada va Telegram botda ham). Topshiriq varag'ida o'quvchining rasmi, telefoni, Telegram nomi va tizim topgan belgilar (avvalgi lid, arxivdagi karta, guruhda shu ismli o'quvchi) turadi. «Tasdiqlash» bosilganda karta ochiladi, o'quvchi guruhga qo'shiladi, oylik pul shu kundan hisoblanadi va login-parol botga boradi; kerak bo'lsa boshqa guruhni tanlash mumkin. «Rad etish» da sabab yoziladi — uni faqat xodimlar ko'radi, o'quvchiga sababsiz xabar boradi. Bir kundan ortiq javobsiz so'rovlar 21:00 hisobotida sanaladi, 7 kun ichida javob berilmagan so'rov o'zi yopiladi. Bot endi yopilgan guruhga va ishlamayotgan ustozga yozmaydi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "yangi-oquvchi" },
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Topshiriqlar Telegram'da",
     matn: "Topshiriq xabarlari endi Telegram botga darhol keladi, kechqurungi umumiy xabarni kutmaydi: sizga berilganda, tekshiruvga kelganda, qabul qilinganda yoki qaytarilganda, yangi izoh yozilganda, muddatga 1 soat qolganda va muddat o'tganda (muddat eslatmasi bugundan keyin berilgan yoki muddati o'zgartirilgan topshiriqlarga keladi). Xabar ostida tugmalar bor: «Boshladim», «Bajardim», «Qabul qilish», «Qaytarish», «Qadamlar», «Ochish». Holat tugmalari bosilganda o'sha xabarning o'zi yangilanadi; «Qaytarish» sabab so'raydigan yangi xabar yuboradi, «📋 Topshiriqlarim» dagi raqam esa topshiriqni alohida xabar qilib yuboradi. Xabarga javob qilib yozilgan matn topshiriqqa izoh bo'lib tushadi; «Qaytarish» dan keyingi javob — qaytarish sababi. Bot menyusida yangi «📋 Topshiriqlarim» tugmasi ochiq topshiriqlaringizni ko'rsatadi. Tugmani ko'rish uchun botga /start yuboring. Soat 22:00 dan 08:00 gacha tayyor bo'lgan xabar ertalab 08:00 da keladi, «Shoshilinch» topshiriq xabari esa darhol. Kuzatuvchiga botda faqat «Bajarildi» va «Bekor qilindi» keladi. Rasm, fayl va ovozli javob hozircha qabul qilinmaydi.",
     rollar: [1, 2, 3, 4, 5],
