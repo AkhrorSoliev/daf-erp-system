@@ -80,6 +80,7 @@ describe('TaskNotifyListener', () => {
         relatedEntityType: 'Task',
         relatedEntityId: 't1',
         companyId: 1,
+        actionRequired: true,
       }),
     );
     expect(gateway.sendToUser).toHaveBeenCalledWith(41, {
@@ -96,6 +97,28 @@ describe('TaskNotifyListener', () => {
         taskId: 't1',
       });
     }
+  });
+
+  it("passes the plan's actionRequired: a watcher is told, not asked", async () => {
+    await listener.onAssigned({
+      task: {
+        ...task,
+        participants: [
+          { userId: 40, role: 'ASSIGNEE' },
+          { userId: 41, role: 'WATCHER' },
+        ],
+      },
+      actorId: 30,
+      userIds: [41],
+    } as any);
+
+    expect(notif.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 41,
+        title: 'Kuzatuvchi qilindingiz',
+        actionRequired: false,
+      }),
+    );
   });
 
   it('reassigned: the leaver is named even though he is no longer active', async () => {

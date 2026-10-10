@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
+import type { Notification, NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationQueryDto } from './dto/notification-query.dto';
+import {
+  NOTIFICATION_GROUP,
+  notificationKind,
+  type NotificationGroup,
+} from './notification-kind';
 
 export interface CreateNotificationParams {
   userId: number;
@@ -13,14 +18,32 @@ export interface CreateNotificationParams {
   commentId?: string;
   taskId?: string;
   companyId: number;
+  /**
+   * Overrides the type's default (`ACTION_TYPES`). Only the task plan passes
+   * it: a watcher's TASK_ASSIGNED is information, a returned task waits.
+   */
+  actionRequired?: boolean;
+}
+
+/** A row as the API and SSE serve it: with the bell's group. */
+export type NotificationView = Notification & { group: NotificationGroup };
+
+export function toNotificationView(row: Notification): NotificationView {
+  return { ...row, group: NOTIFICATION_GROUP[row.type] };
 }
 
 @Injectable()
 export class NotificationsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(params: CreateNotificationParams) {
-    return this.prisma.notification.create({
+  /** The one writer of Notification rows: every sender comes through here. */
+  async create(params: CreateNotificationParams): Promise<NotificationView> {
+    const kind = notificationKind(
+      params.type,
+      new Date(),
+      params.actionRequired,
+    );
+    const row = await this.prisma.notification.create({
       data: {
         userId: params.userId,
         type: params.type,
@@ -31,8 +54,11 @@ export class NotificationsService {
         commentId: params.commentId,
         taskId: params.taskId,
         companyId: params.companyId,
+        actionRequired: kind.actionRequired,
+        groupKey: kind.groupKey,
       },
     });
+    return toNotificationView(row);
   }
 
   async findByUser(userId: number, query: NotificationQueryDto) {

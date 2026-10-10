@@ -70,7 +70,50 @@ describe('NotificationsService', () => {
           companyId: 1001,
         }),
       });
-      expect(result).toEqual(mockNotification);
+      expect(result).toEqual({ ...mockNotification, group: 'task' });
+    });
+
+    it('stamps whether it waits and the lesson-day key', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-10T04:30:00.000Z'));
+      prisma.notification.create.mockResolvedValue({
+        ...mockNotification,
+        type: NotificationType.ATTENDANCE_ADMIN_ALERT,
+      });
+      const result = await service.create({
+        userId: 10001,
+        type: NotificationType.ATTENDANCE_ADMIN_ALERT,
+        title: "O'qituvchi hali davomat olmadi",
+        message: 'm',
+        relatedEntityType: 'Group',
+        relatedEntityId: 'g1',
+        companyId: 1001,
+      });
+      jest.useRealTimers();
+
+      expect(prisma.notification.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          actionRequired: true,
+          groupKey: 'ATTENDANCE_ADMIN_ALERT:2026-10-10',
+        }),
+      });
+      expect(result.group).toBe('attendance');
+    });
+
+    it("keeps the caller's actionRequired over the type's default", async () => {
+      await service.create({
+        userId: 10001,
+        type: NotificationType.TASK_ASSIGNED,
+        title: 'Kuzatuvchi qilindingiz',
+        message: 'm',
+        companyId: 1001,
+        actionRequired: false,
+      });
+      expect(prisma.notification.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          actionRequired: false,
+          groupKey: null,
+        }),
+      });
     });
 
     it('stores the task a notification belongs to', async () => {
