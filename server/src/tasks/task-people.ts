@@ -85,3 +85,42 @@ export async function loadAndCheckPeople(
   }
   return { assignees, watchers };
 }
+
+/**
+ * The 07:00 run of a recurring task: of the rule's people, those still live
+ * (active staff) and still on the author's ladder. Never throws: whoever no
+ * longer fits is left out (ADR-0084).
+ */
+export async function reachablePeople(
+  prisma: PrismaService,
+  caller: PolicyPerson,
+  companyId: number,
+  assigneeIds: number[],
+  watcherIds: number[],
+): Promise<{ assigneeIds: number[]; watcherIds: number[] }> {
+  const ids = [...new Set([...assigneeIds, ...watcherIds])];
+  const rows = ids.length
+    ? await prisma.user.findMany({
+        where: {
+          id: { in: ids },
+          companyId,
+          deletedAt: null,
+          isActive: true,
+          status: 'ACTIVE',
+          roles: { some: { role: { id: { in: [1, 2, 3, 4, 5] } } } },
+        },
+        select: PERSON_SELECT,
+      })
+    : [];
+  const live = new Map(rows.map((u) => [u.id, toPolicyPerson(u)]));
+  const assignees = assigneeIds.filter((id) => {
+    const p = live.get(id);
+    return p !== undefined && canAssignTo(caller, p);
+  });
+  const taken = new Set(assignees);
+  const watchers = watcherIds.filter((id) => {
+    const p = live.get(id);
+    return !taken.has(id) && p !== undefined && canWatch(caller, p);
+  });
+  return { assigneeIds: assignees, watcherIds: watchers };
+}

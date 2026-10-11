@@ -13,6 +13,13 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-11",
+    sarlavha: "Takrorlanuvchi topshiriqlar",
+    matn: "Endi topshiriqni takrorlanadigan qilib berish mumkin: berish oynasida «Batafsil» → «Takrorlash» da «Har kuni», «Har hafta» (kunlarini belgilab) yoki «Har oy» (1–28-sana) va vaqtni tanlang. Birinchi topshiriq darhol beriladi, keyingilarini tizim har kuni ertalab 07:00 da beradi; yakshanba va bayramga tushsa — keyingi ish kuniga. Oldingisi bajarilmagan bo'lsa, yangisi berilmaydi. Kartada «Har dushanba» kabi belgi turadi; varaqda takrorlanishni o'zgartirish va to'xtatish mumkin, «Topshiriqlar» sahifasidagi «Takrorlanuvchi» tugmasi hammasini bitta ro'yxatda ko'rsatadi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-10-11",
     sarlavha: "Ustoz profilida diagrammalar",
     matn: "Ustoz profilida yangi «Ko'rsatkichlar» bo'limi bor va u birinchi ochiladi. Unda oxirgi 6 oy bo'yicha to'rtta diagramma bor: oylik (faqat CEO va filial direktoriga ko'rinadi), faol o'quvchilar soni, kelgan va ketgan o'quvchilar, davomat foizi. Oylik «Ish haqi» bo'limidagi raqamning o'zi. «Ketdi» — «Ketganlar» hisobotidagi qoida bo'yicha; och qizil — to'xtagan, lekin hali qaytishi mumkin bo'lganlar. Guruh boshqa ustozga o'tgan bo'lsa, o'sha kundan boshlab yangi ustozga sanaladi. Ustozning o'zi ham shu diagrammalarni «Profil» sahifasida ko'radi — faqat o'zinikini.",
     rollar: [1, 2, 3, 4],

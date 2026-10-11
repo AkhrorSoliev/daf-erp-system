@@ -14,7 +14,9 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AnyStaff } from '../common/permissions/access.decorators';
 import { TasksService, type TaskActor } from './tasks.service';
 import { TasksReadService } from './tasks-read.service';
+import { TaskRecurrencesService } from './task-recurrences.service';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskRecurrenceDto } from './dto/task-recurrence.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ListTasksDto } from './dto/list-tasks.dto';
 import { TaskStatusDto } from './dto/task-status.dto';
@@ -32,6 +34,7 @@ export class TasksController {
   constructor(
     private tasks: TasksService,
     private read: TasksReadService,
+    private recurrences: TaskRecurrencesService,
   ) {}
 
   pickBranch(header: string | undefined): number | null {
@@ -74,13 +77,39 @@ export class TasksController {
   ) {
     return this.read.assignable(await this.actor(uid, cid));
   }
+  // The static `recurrences` paths stay above `:id`, or the word is read as an id.
+  @Get('recurrences') async recurrenceList(
+    @CurrentUser('id') uid: number,
+    @CurrentUser('companyId') cid: number,
+  ) {
+    return this.recurrences.list(await this.actor(uid, cid));
+  }
+  @Patch('recurrences/:id') async updateRecurrence(
+    @Param('id') id: string,
+    @Body() dto: UpdateTaskRecurrenceDto,
+    @CurrentUser('id') uid: number,
+    @CurrentUser('companyId') cid: number,
+  ) {
+    return this.recurrences.update(id, dto, await this.actor(uid, cid));
+  }
+  @Delete('recurrences/:id') async removeRecurrence(
+    @Param('id') id: string,
+    @CurrentUser('id') uid: number,
+    @CurrentUser('companyId') cid: number,
+  ) {
+    return this.recurrences.remove(id, await this.actor(uid, cid));
+  }
   @Post() async create(
     @Body() dto: CreateTaskDto,
     @CurrentUser('id') uid: number,
     @CurrentUser('companyId') cid: number,
     @Headers('x-branch-id') branch?: string,
   ) {
-    return this.tasks.create(dto, await this.actor(uid, cid, branch));
+    const actor = await this.actor(uid, cid, branch);
+    // A recurring task is a rule plus its first task (spec §3.6).
+    return dto.recurrence
+      ? this.recurrences.create(dto, actor)
+      : this.tasks.create(dto, actor);
   }
   @Get(':id') async detail(
     @Param('id') id: string,
