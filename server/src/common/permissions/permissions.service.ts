@@ -29,7 +29,7 @@ const NO_ACCESS: CallerAccess = {
  * account (`whereUserMayAct()`) holds nothing, even while Redis is down.
  *
  * Capabilities are the catalog defaults of the roles held plus the CEO's
- * changes stored in `RolePermission` (ADR-0086), through `effectiveForRoles`.
+ * changes stored in `RolePermission` (ADR-0087), through `effectiveForRoles`.
  */
 @Injectable()
 export class PermissionsService {

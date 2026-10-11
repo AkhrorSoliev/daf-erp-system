@@ -74,6 +74,13 @@ describe("describeEvent", () => {
     expect(line({ type: "SOMETHING_NEW", actorId: null, actor: null, via: "SYSTEM" })).toBe("Tizim yangilanish kiritdi");
   });
 
+  it("reads a file, a voice message and a deleted file", () => {
+    expect(line({ type: "FILE", text: "chek.jpg" })).toBe("Aziz Karimov chek.jpg");
+    expect(line({ type: "VOICE", text: "ovozli-xabar.webm" })).toBe("Aziz Karimov ovozli xabar");
+    expect(line({ type: "FILE_DELETED", text: "chek.jpg" })).toBe("Aziz Karimov faylni o'chirdi: «chek.jpg»");
+    expect(line({ type: "FILE_DELETED" })).toBe("Aziz Karimov faylni o'chirdi");
+  });
+
   it("returns a comment's text untouched", () => {
     expect(describeEvent(ev({ text: "Tayyor" }))).toEqual({ actor: "Aziz Karimov", text: "Tayyor" });
   });

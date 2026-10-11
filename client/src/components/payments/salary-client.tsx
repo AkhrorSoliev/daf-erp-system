@@ -44,7 +44,7 @@ const tabLabel = (name: string, amount: number | undefined) => (amount ? `${name
 export function SalaryClient() {
   const canClose = useCan("salary.close");
   const canPay = useCan("salary.pay");
-  // An advance is written only with `salary.pay` (CEO 11.10, ADR-0086): `POST/PATCH/DELETE
+  // An advance is written only with `salary.pay` (CEO 11.10, ADR-0087): `POST/PATCH/DELETE
   // /expenses` let a TEACHER_ADVANCE through for it and refuse `expenses.manage` alone.
   const canAdvance = useCan("salary.pay");
   const can = usePermissions((s) => s.can);

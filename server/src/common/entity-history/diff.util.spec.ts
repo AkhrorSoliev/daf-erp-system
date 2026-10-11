@@ -27,7 +27,7 @@ describe('computeChangedFields', () => {
   });
 });
 
-describe('an employee balance in history (ADR-0086)', () => {
+describe('an employee balance in history (ADR-0087)', () => {
   it('drops User.balance from a diff and keeps the rest', () => {
     expect(
       computeChangedFields(

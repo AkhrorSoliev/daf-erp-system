@@ -125,7 +125,7 @@ function changesOf(
 }
 
 /**
- * The «Ruxsatlar» page (spec §7.7, ADR-0086). Only the CEO's DIFFERENCES from
+ * The «Ruxsatlar» page (spec §7.7, ADR-0087). Only the CEO's DIFFERENCES from
  * the catalog default are stored: a row equal to the default is deleted, so
  * a later change of `defaultRoles` reaches every company that never touched
  * that key. Each save runs in one Serializable transaction with one

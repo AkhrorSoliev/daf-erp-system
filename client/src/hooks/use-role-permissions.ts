@@ -10,7 +10,7 @@ import type {
   RolePermissionChange,
 } from "@/components/settings/permissions/permissions-types";
 
-/** The «Ruxsatlar» page's data (ADR-0086). Every route is CEO-only on the server. */
+/** The «Ruxsatlar» page's data (ADR-0087). Every route is CEO-only on the server. */
 export const ROLE_PERMISSIONS_KEY = ["permissions", "overview"] as const;
 export const ROLE_PERMISSIONS_HISTORY_KEY = ["permissions", "history"] as const;
 export const HISTORY_PAGE_SIZE = 20;

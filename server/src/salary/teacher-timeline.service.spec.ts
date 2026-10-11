@@ -137,7 +137,7 @@ describe('TeacherTimelineService.getTimeline', () => {
     expect(events.map((e) => e.kind)).toContain('SalaryChanged');
   });
 
-  it('never shows an employee balance stored in an old profile row (ADR-0086)', async () => {
+  it('never shows an employee balance stored in an old profile row (ADR-0087)', async () => {
     prisma.entityHistory.findMany.mockResolvedValue([
       {
         id: 'e2',

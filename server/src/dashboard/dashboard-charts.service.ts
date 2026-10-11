@@ -92,7 +92,7 @@ export class DashboardChartsService {
     const canSeeOperational = caller.keys.has('outreach.view');
 
     // Both flags, not a ladder: money and the operational charts are
-    // independent keys since ADR-0086.
+    // independent keys since ADR-0087.
     const tier = `${canSeeMoney ? 'm' : '-'}${canSeeOperational ? 'o' : '-'}`;
     const cacheKey = `dashboard:charts:${ctx.companyId}:${this.branchKey(
       ctx.branchScope,

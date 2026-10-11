@@ -65,7 +65,7 @@ export class DashboardSummaryService {
     const canSeeOutreach = caller.keys.has('outreach.view');
     // The cache key carries every flag the body depends on. One «tier»
     // assumed reports.finance ⇒ outreach.view, which stops holding once the
-    // CEO sets each key per role (ADR-0086): a caller with money and no
+    // CEO sets each key per role (ADR-0087): a caller with money and no
     // outreach would have been served a body with outreach numbers.
     const tier = `${canSeeMoney ? 'm' : '-'}${canSeeOutreach ? 'o' : '-'}`;
     const cacheKey = `dashboard:summary:${ctx.companyId}:${this.branchKey(

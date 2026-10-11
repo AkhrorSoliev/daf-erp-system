@@ -45,7 +45,7 @@ export const Can = (first: PermissionKey, ...rest: PermissionKey[]) =>
  * The CEO alone, read from the caller's DATABASE roles (spec §4.2). Never a
  * capability and never in the catalog: whoever could be granted the page
  * that edits capabilities could grant themselves every other one. Only the
- * «Ruxsatlar» API uses it (ADR-0086).
+ * «Ruxsatlar» API uses it (ADR-0087).
  */
 export const CeoOnly = () =>
   SetMetadata<string, RouteAccessMeta>(ACCESS_KEY, { kind: 'ceo' });

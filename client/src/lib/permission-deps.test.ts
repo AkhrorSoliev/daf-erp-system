@@ -6,7 +6,7 @@ import { planToggle, stabilize, type DepGraph } from "./permission-deps";
 
 /**
  * `permission-deps.ts` here is a byte-for-byte copy of the server's
- * `server/src/common/permissions/permission-deps.ts` (ADR-0086): the page
+ * `server/src/common/permissions/permission-deps.ts` (ADR-0087): the page
  * plans a toggle with the code the server validates it with. This test fails
  * when the two drift, and runs the server's own vectors against this copy.
  */

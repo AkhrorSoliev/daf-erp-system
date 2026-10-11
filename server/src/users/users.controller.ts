@@ -41,7 +41,7 @@ export class UsersController {
   ) {}
 
   @Get()
-  // `salary.pay`: the advance dialog's recipient list loads from here (ADR-0086).
+  // `salary.pay`: the advance dialog's recipient list loads from here (ADR-0087).
   @Can('employees.view', 'teachers.view', 'groups.manage', 'salary.pay')
   async findAll(
     @Query() query: UserQueryDto,

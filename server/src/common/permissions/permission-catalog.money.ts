@@ -9,7 +9,7 @@ import {
 
 /**
  * Capabilities of the sections To'lovlar va qarzdorlik, Xarajatlar va kassa,
- * Ish haqi and Hisobotlar. `allowedRoles` and `lockReasons` follow ADR-0086's
+ * Ish haqi and Hisobotlar. `allowedRoles` and `lockReasons` follow ADR-0087's
  * table; a lock other than OWN_GROUPS names its cause. Every cashier widening
  * here rests on a branch check PR #696 (ADR-0081) added.
  */

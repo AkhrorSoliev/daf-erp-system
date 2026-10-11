@@ -12,7 +12,7 @@ import {
 } from './permission-catalog';
 
 /*
- * The allowedRoles table of the plan «Ruxsatlar 2-bosqich» (ADR-0086), copied
+ * The allowedRoles table of the plan «Ruxsatlar 2-bosqich» (ADR-0087), copied
  * as data. Columns: key, default roles, allowed roles, lock reason per role
  * outside the allowed ones. D = Branch Director, A = Administrator,
  * K = Cashier, T = Teacher. The rows are in the client's key order

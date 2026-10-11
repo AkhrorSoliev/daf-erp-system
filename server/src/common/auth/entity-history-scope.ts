@@ -47,7 +47,7 @@ type PrismaLike = PrismaService | Prisma.TransactionClient;
  */
 
 // Do NOT add `RolePermission` here: its history is read only through
-// `GET /permissions/history` (CEO only, ADR-0086), never the generic route.
+// `GET /permissions/history` (CEO only, ADR-0087), never the generic route.
 /** Types whose history is readable by any staff member of the company. */
 const COMPANY_WIDE_TYPES = new Set([
   'CustomForm',

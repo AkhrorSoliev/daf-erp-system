@@ -774,7 +774,7 @@ describe('ExpensesService — findAll filters + summary', () => {
     });
 
     /**
-     * ADR-0086 (CEO, 10.10 and 11.10.2026): an advance is cut from its
+     * ADR-0087 (CEO, 10.10 and 11.10.2026): an advance is cut from its
      * recipient's salary, so it requires `salary.pay` (`expenses.manage` alone
      * is refused); every other category requires `expenses.manage` (`salary.pay`
      * alone is refused). The routes let both holders in only to reach this check.

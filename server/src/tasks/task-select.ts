@@ -45,7 +45,13 @@ export const TASK_CARD_SELECT = {
     },
     orderBy: { createdAt: 'asc' as const },
   },
-  _count: { select: { steps: true, events: true } },
+  _count: {
+    select: {
+      steps: true,
+      events: true,
+      files: { where: { deletedAt: null } },
+    },
+  },
   steps: { select: { doneAt: true } },
   unmarkedLesson: {
     select: {
@@ -87,6 +93,7 @@ export const TASK_EVENT_SELECT = {
   actorId: true,
   text: true,
   meta: true,
+  fileId: true,
   via: true,
   createdAt: true,
   actor: { select: PERSON },
@@ -157,6 +164,7 @@ export function toTaskCard(r: CardRow) {
     stepsTotal: r._count.steps,
     stepsDone: r.steps.filter((s) => s.doneAt !== null).length,
     eventsCount: r._count.events,
+    filesCount: r._count.files,
     unmarkedLesson: lesson(r.unmarkedLesson),
     // The badge («Har dushanba», spec screen 1) while the rule runs.
     recurrence: r.recurrence?.active

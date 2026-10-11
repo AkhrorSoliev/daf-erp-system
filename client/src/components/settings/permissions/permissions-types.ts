@@ -1,7 +1,7 @@
 import type { PermissionKey } from "@/lib/permission-keys";
 
 /**
- * The CEO's «Ruxsatlar» API (`@CeoOnly()`, ADR-0086). Mirrors
+ * The CEO's «Ruxsatlar» API (`@CeoOnly()`, ADR-0087). Mirrors
  * `server/src/common/permissions/role-permissions.types.ts`. Role ids are
  * plain numbers here (2 Filial direktori, 3 Administrator, 5 Kassir,
  * 4 O'qituvchi): JSON object keys arrive as strings anyway.

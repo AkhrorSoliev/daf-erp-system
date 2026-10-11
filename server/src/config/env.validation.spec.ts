@@ -125,6 +125,18 @@ describe('validateEnv', () => {
       expect(() => validateEnv(config)).toThrow('R2_PUBLIC_URL');
     });
 
+    it('rejects R2_TASKS_BUCKET_NAME set without any R2 key', () => {
+      expect(() =>
+        validateEnv({ ...minimal, R2_TASKS_BUCKET_NAME: 'daf-tasks' }),
+      ).toThrow(/R2_TASKS_BUCKET_NAME/);
+    });
+
+    it('accepts R2_TASKS_BUCKET_NAME together with the full R2 group', () => {
+      expect(() =>
+        validateEnv({ ...minimal, ...r2, R2_TASKS_BUCKET_NAME: 'daf-tasks' }),
+      ).not.toThrow();
+    });
+
     it('rejects a group where one key was blanked out rather than removed', () => {
       expect(() =>
         validateEnv({ ...minimal, ...r2, R2_BUCKET_NAME: '' }),

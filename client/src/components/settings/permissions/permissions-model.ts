@@ -9,7 +9,7 @@ import type {
 
 /**
  * Everything the «Ruxsatlar» page decides, as pure functions over
- * `GET /permissions` (spec §8, ADR-0086). The components only draw these,
+ * `GET /permissions` (spec §8, ADR-0087). The components only draw these,
  * so the tests here cover what the CEO reads: locks, dots, counts and the
  * confirm text.
  */

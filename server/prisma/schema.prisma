@@ -189,6 +189,7 @@ enum TaskEventType {
   CANCELLED
   AUTO_CLOSED
   REASSIGNED
+  FILE_DELETED
 }
 
 enum TaskEventVia {
@@ -211,7 +212,7 @@ enum TaskOutboxKind {
 enum TaskTelegramPurpose {
   NOTICE
   RETURN_PROMPT
-  /// Not used before phase 3 (photo upload).
+  /// «Rasmni shu xabarga javob qilib yuboring» (phase 3): a photo reply sends the task to review.
   PHOTO_PROMPT
 }
 
@@ -220,6 +221,13 @@ enum TaskRecurrenceFreq {
   DAILY
   WEEKLY
   MONTHLY
+}
+
+/// Spec 2026-10-07 §3.5 (ADR-0086): image → IMAGE, ogg/webm audio → VOICE, the rest → DOCUMENT.
+enum TaskFileKind {
+  IMAGE
+  DOCUMENT
+  VOICE
 }
 
 // ===== FINANCIAL SYSTEM ENUMS =====
@@ -422,6 +430,7 @@ model User {
   taskRecurrencesAuthored          TaskRecurrence[]           @relation("TaskRecurrenceAuthor")
   taskParticipations               TaskParticipant[]          @relation("TaskParticipantUser")
   taskEvents                       TaskEvent[]                @relation("TaskEventActor")
+  taskFilesUploaded                TaskFile[]                 @relation("TaskFileUploader")
   commentAssignees                 CommentAssignee[]          @relation("CommentAssignees")
   notifications                    Notification[]             @relation("UserNotifications")
   pushSubscriptions                PushSubscription[]         @relation("UserPushSubscriptions")
@@ -2062,6 +2071,7 @@ model Task {
   events           TaskEvent[]
   outbox           TaskOutbox[]
   telegramMessages TaskTelegramMessage[]
+  files            TaskFile[]
   notifications    Notification[]
   unmarkedLesson   UnmarkedLesson?       @relation("UnmarkedLessonTaskRow")
 
@@ -2113,6 +2123,9 @@ model TaskEvent {
   actor     User?         @relation("TaskEventActor", fields: [actorId], references: [id], onDelete: SetNull)
   text      String?
   meta      Json?
+  /// FILE / VOICE / FILE_DELETED: the file the row is about (ADR-0086).
+  fileId    String?
+  file      TaskFile?     @relation(fields: [fileId], references: [id], onDelete: SetNull)
   via       TaskEventVia  @default(WEB)
   createdAt DateTime      @default(now())
 
@@ -2203,6 +2216,39 @@ model TaskRecurrence {
 
   @@index([active, nextRunDate])
   @@index([companyId, authorId])
+}
+
+/// A file on a task (spec 2026-10-07 §3.5, ADR-0086). The object lives in the
+/// PRIVATE bucket R2_TASKS_BUCKET_NAME under `key`; it is read only through a
+/// presigned GET minted after an access check. A delete is soft (`deletedAt`);
+/// the 03:00 run removes the object 30 days later and stamps `purgedAt`, the row
+/// stays for the history. Written only by tasks/task-files.service.ts.
+model TaskFile {
+  id           String       @id @default(uuid())
+  taskId       String
+  task         Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  /// `tasks/<companyId>/<taskId>/<uuid><ext>`; the extension comes from the sniffed type.
+  key          String       @unique
+  /// The person's base name with the sniffed extension (`safeFileName`).
+  name         String
+  size         Int
+  mime         String
+  kind         TaskFileKind
+  /// VOICE: seconds, from the recorder or Telegram; null when unknown.
+  durationSec  Int?
+  uploadedById Int?
+  uploadedBy   User?        @relation("TaskFileUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  via          TaskEventVia @default(WEB)
+  createdAt    DateTime     @default(now())
+  deletedAt    DateTime?
+  /// A bare id, like TaskOutbox.userId.
+  deletedById  Int?
+  purgedAt     DateTime?
+
+  events TaskEvent[]
+
+  @@index([taskId, createdAt])
+  @@index([deletedAt, purgedAt])
 }
 
 model Notification {

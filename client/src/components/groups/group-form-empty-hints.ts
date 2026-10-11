@@ -4,7 +4,7 @@ import type { Can } from "@/lib/permission-check";
  * When the group form's course, room or teacher list is empty — why, and
  * where to go. The link is shown only to a viewer who can actually add that
  * thing: a course needs `courses.create`, a teacher `teachers.manage`
- * (separate capabilities, ADR-0086); a room is added by an administrator too.
+ * (separate capabilities, ADR-0087); a room is added by an administrator too.
  */
 export interface EmptyHint {
   text: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
-import { Bot, CalendarClock, Camera, CheckSquare, Eye, EyeOff, Link2, MessageSquare, Repeat } from "lucide-react";
+import { Bot, CalendarClock, Camera, CheckSquare, Eye, EyeOff, Link2, MessageSquare, Paperclip, Repeat } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
@@ -98,6 +98,7 @@ export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props)
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
         {task.stepsTotal > 0 && <span className="inline-flex items-center gap-1"><CheckSquare className="size-3" />{task.stepsDone}/{task.stepsTotal}</span>}
         {task.eventsCount > 1 && <span className="inline-flex items-center gap-1"><MessageSquare className="size-3" />{task.eventsCount - 1}</span>}
+        {(task.filesCount ?? 0) > 0 && <span className="inline-flex items-center gap-1"><Paperclip className="size-3" />{task.filesCount}</span>}
         {task.entityType && <span className="inline-flex items-center gap-1"><Link2 className="size-3" />{ENTITY_LABEL[task.entityType] ?? task.entityType}</span>}
         <DueBadge dueAt={task.dueAt} closedAt={task.closedAt} />
       </div>

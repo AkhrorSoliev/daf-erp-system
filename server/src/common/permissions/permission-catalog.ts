@@ -25,7 +25,7 @@ export {
  * are in `permission-catalog.types.ts`. Import from this file only.
  *
  * `defaultRoles` is today's behaviour. The CEO changes a role's capabilities
- * on the «Ruxsatlar» page within `allowedRoles` (ADR-0086); the CEO holds
+ * on the «Ruxsatlar» page within `allowedRoles` (ADR-0087); the CEO holds
  * every capability, always. A new capability needs `allowedRoles` and
  * `lockReasons` too: `permission-catalog.spec.ts` and
  * `permission-allowed-roles.spec.ts` check them.

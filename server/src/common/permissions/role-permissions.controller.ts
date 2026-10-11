@@ -15,7 +15,7 @@ import { UpdateRolePermissionsDto } from './dto/update-role-permissions.dto';
 import { RolePermissionsService } from './role-permissions.service';
 
 /**
- * The «Ruxsatlar» page (spec §7.7, ADR-0086). CEO-only by database role
+ * The «Ruxsatlar» page (spec §7.7, ADR-0087). CEO-only by database role
  * (`@CeoOnly()`), never a capability: whoever could open it could grant
  * themselves everything. `GET /permissions/me` stays in `PermissionsController`.
  * The marker sits on every handler, not the class: a handler-level marker

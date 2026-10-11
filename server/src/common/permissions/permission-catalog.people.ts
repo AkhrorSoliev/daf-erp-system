@@ -10,7 +10,7 @@ import {
 /**
  * Capabilities of the sections O'quvchilar, Guruhlar va davomat, Lidlar,
  * Aloqa markazi and Mock imtihonlar. `allowedRoles` and `lockReasons` follow
- * ADR-0086's table; a lock other than OWN_GROUPS names its cause.
+ * ADR-0087's table; a lock other than OWN_GROUPS names its cause.
  */
 export const PEOPLE_PERMISSIONS = {
   // O'quvchilar

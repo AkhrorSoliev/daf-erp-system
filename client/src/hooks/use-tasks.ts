@@ -27,12 +27,15 @@ export interface TaskCard {
   branchId: number | null; entityType: string | null; entityId: string | null; requiresPhoto: boolean;
   batchId: string | null; claimedById: number | null; returnedCount: number; closedAt: string | null; createdAt: string;
   author: TaskPerson | null; assignees: TaskPerson[]; watchers: TaskPerson[];
-  stepsTotal: number; stepsDone: number; eventsCount: number; unmarkedLesson: TaskLesson | null;
+  stepsTotal: number; stepsDone: number; eventsCount: number; filesCount?: number; unmarkedLesson: TaskLesson | null;
   batch?: { total: number; done: number; statuses: TaskStatus[] };
   recurrence?: TaskRecurrenceBadge | null;
 }
 export interface TaskStep { id: string; title: string; position: number; doneAt: string | null; doneById: number | null }
-export interface TaskEvent { id: string; type: string; actorId: number | null; text: string | null; meta: Record<string, unknown> | null; via: "WEB" | "TELEGRAM" | "SYSTEM"; createdAt: string; actor: TaskPerson | null }
+export type TaskFileKind = "IMAGE" | "DOCUMENT" | "VOICE";
+/** `GET /tasks/:id/files` rows; `url` / `downloadUrl` are presigned for 10 minutes. */
+export interface TaskFileView { id: string; name: string; size: number; mime: string; kind: TaskFileKind; durationSec: number | null; via: "WEB" | "TELEGRAM" | "SYSTEM"; createdAt: string; uploadedBy: TaskPerson | null; canDelete: boolean; url: string; downloadUrl: string }
+export interface TaskEvent { id: string; type: string; actorId: number | null; text: string | null; meta: Record<string, unknown> | null; via: "WEB" | "TELEGRAM" | "SYSTEM"; createdAt: string; actor: TaskPerson | null; fileId?: string | null }
 export interface TaskDetail extends TaskCard { description: string | null; lastReturnedAt: string | null; cancelReason: string | null; steps: TaskStep[] }
 export interface TaskAccess { isAuthor: boolean; isAssignee: boolean; isWatcher: boolean; isManager: boolean; canView: boolean; canManage: boolean; canWork: boolean }
 export interface TaskSourceCall { at: string; outcome: CallOutcome; note: string | null; by: string }

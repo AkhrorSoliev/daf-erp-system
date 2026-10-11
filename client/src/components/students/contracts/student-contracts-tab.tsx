@@ -42,7 +42,7 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
   const user = useAuth((s) => s.user);
   const isCeo =
     user?.roles.some((r) => SIGNED_CONTRACT_CANCEL_ROLE_IDS.includes(r.id)) ?? false;
-  // `contracts.manage` is what the four contract writes check (ADR-0086); reads stay on `students.details`.
+  // `contracts.manage` is what the four contract writes check (ADR-0087); reads stay on `students.details`.
   const canManage = useCan("contracts.manage");
   const qc = useQueryClient();
   const query = useQuery({

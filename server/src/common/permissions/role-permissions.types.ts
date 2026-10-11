@@ -6,7 +6,7 @@ import type {
 } from './permission-catalog';
 
 /**
- * The shapes of the «Ruxsatlar» page API (spec §7.7, ADR-0086). The client
+ * The shapes of the «Ruxsatlar» page API (spec §7.7, ADR-0087). The client
  * mirrors them in `client/src/components/settings/permissions/permissions-types.ts`.
  */
 export interface CatalogEntry {

@@ -296,7 +296,7 @@ describe('DashboardSummaryService.getSummary', () => {
 
   it('keys the cache on both flags: money without outreach never shares a key', async () => {
     // The old single tier assumed reports.finance => outreach.view. Once the
-    // CEO can switch outreach off for a role (ADR-0086) that caller must not
+    // CEO can switch outreach off for a role (ADR-0087) that caller must not
     // be served a cached body that carries outreach numbers.
     const both = makeService({}, [ROLE_ID.BRANCH_DIRECTOR]);
     await both.service.getSummary(CEO);

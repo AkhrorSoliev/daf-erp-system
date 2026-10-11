@@ -229,7 +229,7 @@ describe('EntityHistoryService', () => {
   /**
    * `User.balance` is the employee's salary balance. `teachers.view` and
    * `employees.view` open an employee's history; neither means «may see
-   * pay» (ADR-0086). `users.service.ts` hands `userSelect`, balance
+   * pay» (ADR-0087). `users.service.ts` hands `userSelect`, balance
    * included, to recordCreate and recordDelete.
    */
   describe('employee balance', () => {

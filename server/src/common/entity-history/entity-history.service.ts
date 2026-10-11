@@ -223,7 +223,7 @@ export class EntityHistoryService {
       this.prisma.entityHistory.count({ where }),
     ]);
 
-    // Rows stored before a field was excluded (`User.balance`, ADR-0086)
+    // Rows stored before a field was excluded (`User.balance`, ADR-0087)
     // still carry it; strip it on the way out.
     return {
       data: data.map((row) => ({

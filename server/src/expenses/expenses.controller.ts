@@ -55,7 +55,7 @@ export class ExpensesController {
     return ids;
   }
 
-  // ADR-0086: an advance (TEACHER_ADVANCE) requires `salary.pay` and any other
+  // ADR-0087: an advance (TEACHER_ADVANCE) requires `salary.pay` and any other
   // category requires `expenses.manage`; neither key alone writes the other's
   // categories. Both keys are listed here only so their holders reach
   // `ExpensesService.assertMayWrite`, which enforces that rule.

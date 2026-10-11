@@ -58,7 +58,7 @@ export const boshlash: QollanmaSahifa[] = [
     qisqacha:
       "Tizimda beshta rol bor va har biri o'z ishini qiladi; filial direktori va administrator faqat o'z filialida ishlaydi. Rol berish, xodim hisobini o'zgartirish va bloklash qoidalari, kim nima qila olishi shu yerda. Har bir rolning imkoniyatlarini CEO «Ruxsatlar» sahifasida o'zgartiradi.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0001", "0002", "0007", "0026", "0027", "0028", "0054", "0063", "0081", "0086"],
+    adr: ["0001", "0002", "0007", "0026", "0027", "0028", "0054", "0063", "0081", "0087"],
     yollar: ["/settings/permissions"],
     kalitSozlar: [
       "rol",
@@ -99,9 +99,9 @@ export const boshlash: QollanmaSahifa[] = [
     sahifa: "topshiriqlar",
     sarlavha: "Topshiriqlar",
     qisqacha:
-      "Topshiriq izohdan alohida: u «Topshiriqlar» sahifasida doska (Yangi → Jarayonda → Tekshiruvda → Bajarildi) va ro'yxat ko'rinishida turadi, uni yuqori paneldagi «+ Topshiriq» tugmasi bilan berasiz. CEO hammaga, filial direktori o'z filialiga, administrator o'z filialidagi administrator, kassir va ustozga topshiriq beradi, ustoz va kassir faqat o'ziga; ijrochi «Boshladim» va «Bajardim» ni bosadi, beruvchi «Qabul qilish» yoki «Qaytarish» ni. Davomat olinmagan darsda administratorga «Dars bo'ldimi?» topshirig'ini tizim beradi; CEO va filial direktori «Barchasi» va «Yuklama» tablarini ham ko'radi. Topshiriq xabarlari Telegram botga ham darhol keladi (kechasi — ertalab 08:00 da), tugmalar va javob bilan. Tizim yana uch topshiriqni o'zi beradi: buzilgan to'lov va'dasi, qo'ng'iroqdagi «Keyingi bog'lanish sanasi» va 24 soat qo'ng'iroqsiz turgan yangi lid; ular ish bajarilganda o'zi yopiladi. Takrorlanadigan ishni «Batafsil» → «Takrorlash» bilan bir marta berasiz: har kuni, har hafta yoki har oy tizim yangi topshiriq beradi.",
+      "Topshiriq izohdan alohida: u «Topshiriqlar» sahifasida doska (Yangi → Jarayonda → Tekshiruvda → Bajarildi) va ro'yxat ko'rinishida turadi, uni yuqori paneldagi «+ Topshiriq» tugmasi bilan berasiz. CEO hammaga, filial direktori o'z filialiga, administrator o'z filialidagi administrator, kassir va ustozga topshiriq beradi, ustoz va kassir faqat o'ziga; ijrochi «Boshladim» va «Bajardim» ni bosadi, beruvchi «Qabul qilish» yoki «Qaytarish» ni. Davomat olinmagan darsda administratorga «Dars bo'ldimi?» topshirig'ini tizim beradi; CEO va filial direktori «Barchasi» va «Yuklama» tablarini ham ko'radi. Topshiriq xabarlari Telegram botga ham darhol keladi (kechasi — ertalab 08:00 da), tugmalar va javob bilan. Tizim yana uch topshiriqni o'zi beradi: buzilgan to'lov va'dasi, qo'ng'iroqdagi «Keyingi bog'lanish sanasi» va 24 soat qo'ng'iroqsiz turgan yangi lid; ular ish bajarilganda o'zi yopiladi. Takrorlanadigan ishni «Batafsil» → «Takrorlash» bilan bir marta berasiz: har kuni, har hafta yoki har oy tizim yangi topshiriq beradi. Topshiriqqa rasm, hujjat va ovozli xabar qo'shasiz (Telegram'dan javob qilib ham); «Rasm bilan tasdiqlansin» belgilangan topshiriq faqat rasm bilan tekshiruvga yuboriladi.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0054", "0063", "0074", "0078", "0080", "0083", "0084"],
+    adr: ["0054", "0063", "0074", "0078", "0080", "0083", "0084", "0086"],
     yollar: ["/tasks"],
     kalitSozlar: [
       "topshiriq",
@@ -150,6 +150,13 @@ export const boshlash: QollanmaSahifa[] = [
       "har kuni",
       "har hafta",
       "har oy",
+      "fayl",
+      "rasm",
+      "ovozli xabar",
+      "ovoz",
+      "rasm bilan tasdiqlansin",
+      "hujjat",
+      "yuklab olish",
     ],
     yangilangan: "2026-10-11",
   },

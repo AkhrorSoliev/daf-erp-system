@@ -125,6 +125,13 @@
     "Branch Director",
     "CEO"
   ],
+  "DELETE /tasks/:id/files/:fileId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "DELETE /tasks/:id/steps/:stepId": [
     "Administrator",
     "Branch Director",
@@ -1231,7 +1238,21 @@
     "Cashier",
     "Teacher"
   ],
+  "GET /tasks/:id/files": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "GET /tasks/assignable": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /tasks/config": [
     "Administrator",
     "Branch Director",
     "CEO",
@@ -2053,6 +2074,13 @@
     "Teacher"
   ],
   "POST /tasks/:id/events": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /tasks/:id/files": [
     "Administrator",
     "Branch Director",
     "CEO",

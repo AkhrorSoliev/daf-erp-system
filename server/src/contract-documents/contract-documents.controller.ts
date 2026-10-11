@@ -23,7 +23,7 @@ import {
 
 /**
  * Student contracts (ADR-0075). Reads are a profile tab (`students.details`),
- * writes are «Shartnoma tuzish va imzolash» (`contracts.manage`, ADR-0086);
+ * writes are «Shartnoma tuzish va imzolash» (`contracts.manage`, ADR-0087);
  * every route checks the student's branch in the service
  * (`assertCallerMayTouchStudent`). Cancelling a SIGNED contract stays
  * CEO-only inside `ContractLifecycleService.cancel` (ADR-0075).

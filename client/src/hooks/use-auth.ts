@@ -39,7 +39,7 @@ export interface AuthUser {
 
 /**
  * Is this the CEO? An identity, never a capability: only the CEO opens the
- * «Ruxsatlar» page and its API (`@CeoOnly()`, ADR-0086).
+ * «Ruxsatlar» page and its API (`@CeoOnly()`, ADR-0087).
  */
 export function isCeoUser(user: AuthUser | null): boolean {
   return user?.roles.some((r) => r.id === 1) ?? false;

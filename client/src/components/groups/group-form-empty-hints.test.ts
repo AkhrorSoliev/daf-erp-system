@@ -30,7 +30,7 @@ describe("groupFormEmptyHints", () => {
     expect(groupFormEmptyHints(canForRoles([1]), null).room).toEqual({ text: "Hozircha xona yo'q." });
   });
 
-  it("the teacher link follows `teachers.manage` alone (ADR-0086)", () => {
+  it("the teacher link follows `teachers.manage` alone (ADR-0087)", () => {
     const h = groupFormEmptyHints(canOnly("teachers.view", "teachers.manage"), 7);
     expect(h.teacher.action).toEqual({ href: "/teachers", label: "Ustoz qo'shish" });
     expect(h.course).toEqual({
@@ -38,7 +38,7 @@ describe("groupFormEmptyHints", () => {
     });
   });
 
-  it("the course link follows `courses.create` alone (ADR-0086)", () => {
+  it("the course link follows `courses.create` alone (ADR-0087)", () => {
     const h = groupFormEmptyHints(canOnly("settings.reference", "courses.create"), 7);
     expect(h.course.action).toEqual({ href: "/settings/courses", label: "Kurs qo'shish" });
     expect(h.teacher).toEqual({

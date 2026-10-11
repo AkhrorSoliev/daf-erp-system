@@ -11,7 +11,7 @@ const A = ROLE_ID.ADMINISTRATOR;
 const K = ROLE_ID.CASHIER;
 const T = ROLE_ID.TEACHER;
 
-describe('effective capabilities (spec §3, ADR-0086)', () => {
+describe('effective capabilities (spec §3, ADR-0087)', () => {
   it('gives the CEO every capability, whatever is stored', () => {
     const revoke: RoleOverride[] = [
       { roleId: ROLE_ID.CEO, key: 'students.list', granted: false },

@@ -17,7 +17,7 @@ const EXCLUDED_KEYS = new Set([
 
 /**
  * Fields left out of ONE entity type's history, on top of `EXCLUDED_KEYS`.
- * `User.balance` is the employee's salary balance (ADR-0086): an employee's
+ * `User.balance` is the employee's salary balance (ADR-0087): an employee's
  * history and timeline open with `teachers.view` / `employees.view`, and
  * neither means «may see pay». `Student.balance` stays: the student's
  * history is a money view behind its own capabilities.

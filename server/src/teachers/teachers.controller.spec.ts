@@ -87,7 +87,7 @@ describe('TeachersController — route access', () => {
   });
 });
 
-// ADR-0086: an employee's salary balance goes only to a caller with salary.view.
+// ADR-0087: an employee's salary balance goes only to a caller with salary.view.
 describe.each([
   ['Administrator', ROLE_ID.ADMINISTRATOR, false],
   ['Branch Director', ROLE_ID.BRANCH_DIRECTOR, true],

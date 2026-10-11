@@ -9,7 +9,7 @@ import {
 
 /*
  * The CEO may give a role a capability beyond its defaults only where the
- * code already confines that role (spec §6, ADR-0086). The catalog spec checks
+ * code already confines that role (spec §6, ADR-0087). The catalog spec checks
  * the data; this one checks the routes. A capability whose `allowedRoles` is
  * wider than its `defaultRoles` must not open:
  *   - an UNREVIEWED route (its branch boundary was never reasoned about), or

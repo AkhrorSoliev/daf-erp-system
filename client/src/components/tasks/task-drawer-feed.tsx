@@ -1,16 +1,23 @@
 "use client";
 import { useRef, useState } from "react";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { FileText, Loader2, Paperclip } from "lucide-react";
 import toast from "react-hot-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { useTasks, type TaskEvent } from "@/hooks/use-tasks";
+import { useTasks, type TaskEvent, type TaskFileView } from "@/hooks/use-tasks";
 import { tashkentDayAndTime } from "./task-due";
+import { TaskFileViewer, openFresh } from "./task-drawer-files";
 import { describeEvent, viaLabel } from "./task-feed-text";
+import { FILE_ACCEPT, fileOfEvent, formatSize } from "./task-file-rules";
+import { TaskVoicePlayer } from "./task-voice-player";
+import { TaskVoiceRecorder } from "./task-voice-recorder";
+import { useTaskFiles } from "./use-task-files";
+
+const NONE: TaskFileView[] = [];
 
 // The Tashkent day and time, not the browser's zone (every other time on the page is Tashkent).
 const when = (iso: string) => {
@@ -18,8 +25,9 @@ const when = (iso: string) => {
   return `${format(day, "dd.MM")}, ${time}`;
 };
 
-function Comment({ ev }: { ev: TaskEvent }) {
-  const { actor, text } = describeEvent(ev);
+/** The avatar, name, channel and time above a bubble. */
+function Message({ ev, children }: { ev: TaskEvent; children: React.ReactNode }) {
+  const { actor } = describeEvent(ev);
   const via = viaLabel(ev);
   return (
     <li className="flex gap-2">
@@ -32,10 +40,43 @@ function Comment({ ev }: { ev: TaskEvent }) {
           <span className="font-medium">{actor}</span>
           <span className="text-muted-foreground">{via ? ` · ${via}` : ""} · {when(ev.createdAt)}</span>
         </p>
-        <p className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-muted px-3 py-2 text-sm">{text}</p>
+        {children}
       </div>
     </li>
   );
+}
+
+function Comment({ ev }: { ev: TaskEvent }) {
+  return (
+    <Message ev={ev}>
+      <p className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-muted px-3 py-2 text-sm">{describeEvent(ev).text}</p>
+    </Message>
+  );
+}
+
+/** A picture, a document or a voice message; a muted bubble once the file is gone. */
+function Attachment({ taskId, ev, file, onImage }: { taskId: string; ev: TaskEvent; file: TaskFileView | undefined; onImage: (f: TaskFileView) => void }) {
+  let body: React.ReactNode;
+  if (file?.kind === "IMAGE") {
+    body = (
+      <button type="button" aria-label={file.name} className="mt-1 block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/40" onClick={() => onImage(file)}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- a presigned URL: Next image optimisation would break it */}
+        <img src={file.url} alt={file.name} loading="lazy" className="max-h-48 rounded-lg" />
+      </button>
+    );
+  } else if (file?.kind === "DOCUMENT") {
+    body = (
+      <a href={file.url} target="_blank" rel="noopener noreferrer" onClick={(e) => void openFresh(e, taskId, file)} className="mt-1 inline-flex max-w-full items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm hover:underline">
+        <FileText className="size-4 shrink-0" /><span className="truncate">{file.name}</span><span className="shrink-0 text-xs text-muted-foreground">{formatSize(file.size)}</span>
+      </a>
+    );
+  } else if (file?.kind === "VOICE") {
+    body = <div className="mt-1"><TaskVoicePlayer taskId={taskId} fileId={file.id} src={file.url} durationSec={file.durationSec} /></div>;
+  } else {
+    const gone = ev.type === "VOICE" ? "Ovozli xabar" : (ev.text ?? "fayl");
+    body = <p className="mt-1 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">{gone} {"(o'chirilgan)"}</p>;
+  }
+  return <Message ev={ev}>{body}</Message>;
 }
 
 function Line({ ev }: { ev: TaskEvent }) {
@@ -48,11 +89,20 @@ function Line({ ev }: { ev: TaskEvent }) {
   );
 }
 
-function Composer({ taskId }: { taskId: string }) {
+function Composer({ taskId, canAttach }: { taskId: string; canAttach: boolean }) {
   const appendEvent = useTasks((s) => s.appendEvent);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const filesEnabled = useTaskFiles((s) => s.enabled === true);
+  const upload = useTaskFiles((s) => s.upload);
+  const uploading = useTaskFiles((s) => s.uploading > 0);
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    e.target.value = ""; // the same file can be picked again
+    for (const f of picked) await upload(taskId, f, f.name);
+  };
   const canSend = text.trim() !== "" && !sending;
 
   const send = async () => {
@@ -82,7 +132,18 @@ function Composer({ taskId }: { taskId: string }) {
         onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void send(); } }}
       />
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] text-muted-foreground">Ctrl+Enter — yuborish</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {filesEnabled && canAttach && (
+            <>
+              <TaskVoiceRecorder taskId={taskId} />
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={"Fayl qo'shish"} disabled={uploading} onClick={() => fileRef.current?.click()}>
+                {uploading ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />}
+              </Button>
+              <input ref={fileRef} type="file" multiple accept={FILE_ACCEPT} className="hidden" onChange={(e) => void onPick(e)} />
+            </>
+          )}
+          <span className="text-[11px] text-muted-foreground">Ctrl+Enter — yuborish</span>
+        </div>
         <Button size="sm" onClick={() => void send()} disabled={!canSend}>
           {sending && <Loader2 className="mr-1 size-4 animate-spin" />}Yuborish
         </Button>
@@ -92,15 +153,36 @@ function Composer({ taskId }: { taskId: string }) {
   );
 }
 
-/** The discussion: comments as bubbles, everything else as one grey line, the composer below. */
-export function TaskDrawerFeed({ taskId, events }: { taskId: string; events: TaskEvent[] }) {
+/** The discussion: comments as bubbles, files and voice messages as attachments, everything else as one grey line, the composer below. */
+export function TaskDrawerFeed({ taskId, events, canAttach }: { taskId: string; events: TaskEvent[]; canAttach: boolean }) {
+  const files = useTaskFiles((s) => (s.taskId === taskId ? s.files : NONE));
+  const ensureFresh = useTaskFiles((s) => s.ensureFresh);
+  const [viewer, setViewer] = useState<number | null>(null);
+  const images = files.filter((f) => f.kind === "IMAGE");
+  // Every picture gone while the viewer is open: close it, or it would come back with the next upload.
+  if (viewer !== null && images.length === 0) setViewer(null);
+
+  // The links may have expired: renew them, then open at the picture's place in the fresh list.
+  const openImage = (f: TaskFileView) => {
+    void ensureFresh(taskId).then((ok) => {
+      if (!ok) return;
+      const at = useTaskFiles.getState().files.filter((x) => x.kind === "IMAGE").findIndex((x) => x.id === f.id);
+      if (at >= 0) setViewer(at);
+    });
+  };
+
   return (
     <section className="space-y-3">
       <h4 className="text-sm font-semibold">Muhokama</h4>
       <ul className="space-y-2.5">
-        {events.map((ev) => (ev.type === "COMMENT" ? <Comment key={ev.id} ev={ev} /> : <Line key={ev.id} ev={ev} />))}
+        {events.map((ev) =>
+          ev.type === "COMMENT" ? <Comment key={ev.id} ev={ev} />
+          : ev.type === "FILE" || ev.type === "VOICE" ? <Attachment key={ev.id} taskId={taskId} ev={ev} file={fileOfEvent(files, ev)} onImage={openImage} />
+          : <Line key={ev.id} ev={ev} />,
+        )}
       </ul>
-      <Composer taskId={taskId} />
+      <Composer taskId={taskId} canAttach={canAttach} />
+      {viewer !== null && <TaskFileViewer images={images} index={viewer} onIndex={setViewer} onClose={() => setViewer(null)} />}
     </section>
   );
 }

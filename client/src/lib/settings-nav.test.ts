@@ -108,7 +108,7 @@ describe("canOpenSettingsPath — SettingsLayoutShell shu qoida bilan qaytaradi"
   });
 });
 
-describe("«Ruxsatlar» — the CEO's page, never a capability (ADR-0086)", () => {
+describe("«Ruxsatlar» — the CEO's page, never a capability (ADR-0087)", () => {
   const PATH = "/settings/permissions";
   const everyKey = makeCan(new Set(PERMISSION_KEYS));
   const urls = (sections: ReturnType<typeof getVisibleSettingsSections>) =>

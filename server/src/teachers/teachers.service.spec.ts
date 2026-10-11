@@ -241,7 +241,7 @@ describe('TeachersService — status methods', () => {
     });
   });
 
-  // ADR-0086: the employee's salary balance goes only to a caller who may
+  // ADR-0087: the employee's salary balance goes only to a caller who may
   // see pay; the controller passes `salary.view` as `includeBalance`.
   describe('employee balance', () => {
     beforeEach(() => {

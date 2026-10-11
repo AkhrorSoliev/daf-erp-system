@@ -32,7 +32,7 @@ export interface SettingsNavItem {
   permission?: PermissionKey;
   /**
    * Only the CEO sees and opens it — an identity, never a capability (the
-   * API is `@CeoOnly()`, ADR-0086). Such an item has no `permission`.
+   * API is `@CeoOnly()`, ADR-0087). Such an item has no `permission`.
    */
   ceoOnly?: true;
 }

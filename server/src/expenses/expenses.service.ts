@@ -56,7 +56,7 @@ const OWN_ADVANCE_REFUSAL =
 const RECIPIENT_OTHER_BRANCH =
   "Bu xodim tanlangan filialga biriktirilmagan — avansni xodimning o'z filialida yozing.";
 
-// ADR-0086 (CEO, 10.10 and 11.10.2026): an advance is cut from its
+// ADR-0087 (CEO, 10.10 and 11.10.2026): an advance is cut from its
 // recipient's salary, so it is written with «Oylik va avans to'lash»
 // (`salary.pay`) alone; every other category with «Xarajat kiritish»
 // (`expenses.manage`).
@@ -81,7 +81,7 @@ export class ExpensesService {
   ) {}
 
   /**
-   * The one place the category rule lives (ADR-0086): TEACHER_ADVANCE
+   * The one place the category rule lives (ADR-0087): TEACHER_ADVANCE
    * requires `salary.pay`, every other category `expenses.manage`. Runs before
    * any other check, so a caller who may not write the category learns
    * nothing about branches or recipients.

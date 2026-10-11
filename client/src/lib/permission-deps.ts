@@ -5,7 +5,7 @@
  *
  * Pure and import-free on purpose: `client/src/lib/permission-deps.ts` is a
  * byte-for-byte copy, so the «Ruxsatlar» page plans a toggle with the same
- * code the server checks it with (ADR-0086). Edit this file, run Prettier on
+ * code the server checks it with (ADR-0087). Edit this file, run Prettier on
  * it, then copy it to the client; the client's `permission-deps.test.ts`
  * fails until the two are equal.
  */

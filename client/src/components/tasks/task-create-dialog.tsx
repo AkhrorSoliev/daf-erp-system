@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import { ChevronDown, ChevronUp, Loader2, Plus, X } from "lucide-react";
@@ -17,6 +17,7 @@ import { useTasks, type TaskPriority } from "@/hooks/use-tasks";
 import { TaskAssigneePicker } from "./task-assignee-picker";
 import { PRIORITY_LABEL } from "./task-labels";
 import { TaskRecurrenceFields } from "./task-recurrence-fields";
+import { useTaskFiles } from "./use-task-files";
 import { EMPTY_RECURRENCE, recurrenceFormReady, recurrencePayload, type RecurrenceForm } from "@/lib/task-recurrence-rules";
 
 export interface TaskCreateContext { entityType?: string; entityId?: string; entityLabel?: string }
@@ -54,11 +55,15 @@ export function TaskCreateDialog() {
   const [saving, setSaving] = useState(false);
   const [recurrence, setRecurrence] = useState<RecurrenceForm>(EMPTY_RECURRENCE);
   const recurring = recurrence.freq !== "NONE";
+  const [requiresPhoto, setRequiresPhoto] = useState(false);
+  const filesOn = useTaskFiles((s) => s.enabled === true);
+  // The photo option shows only when files are on, so the config is asked for when the dialog opens.
+  useEffect(() => { if (isOpen) void useTaskFiles.getState().loadConfig(); }, [isOpen]);
 
   const canSubmit = title.trim() !== "" && assigneeIds.length > 0 && recurrenceFormReady(recurrence) && !saving;
   const reset = () => {
     setTitle(""); setDescription(""); setAssigneeIds([]); setWatcherIds([]); setDay(undefined); setTime(DEFAULT_TIME);
-    setPriority("MEDIUM"); setSeparate(false); setSteps([]); setMore(false);
+    setPriority("MEDIUM"); setSeparate(false); setSteps([]); setMore(false); setRequiresPhoto(false);
     setRecurrence(EMPTY_RECURRENCE);
   };
   // A request in flight cannot be walked away from: the dialog stays until it answers.
@@ -77,6 +82,7 @@ export function TaskCreateDialog() {
         priority,
         entityType: context.entityType,
         entityId: context.entityId,
+        requiresPhoto: requiresPhoto && !recurring ? true : undefined,
         separateCopies: separate && assigneeIds.length > 1 ? true : undefined,
         steps: steps.filter((s) => s.trim()).map((s) => ({ title: s.trim() })),
       });
@@ -174,6 +180,15 @@ export function TaskCreateDialog() {
                 <Label>Kuzatuvchi</Label>
                 <TaskAssigneePicker value={watcherIds} onChange={setWatcherIds} mode="watchers" placeholder="Ixtiyoriy" />
               </div>
+              {filesOn && !recurring && (
+                <label className="flex items-start gap-2 text-sm">
+                  <Checkbox checked={requiresPhoto} onCheckedChange={(v) => setRequiresPhoto(v === true)} className="mt-0.5" />
+                  <span>
+                    Rasm bilan tasdiqlansin
+                    <span className="block text-xs text-muted-foreground">{"Ijrochi tekshiruvga yuborishdan oldin ish rasmini qo'shadi"}</span>
+                  </span>
+                </label>
+              )}
               <div className="space-y-1.5">
                 <Label>Takrorlash</Label>
                 <TaskRecurrenceFields value={recurrence} onChange={setRecurrence} />

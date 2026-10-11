@@ -1,4 +1,4 @@
-# ADR-0086 — «Ruxsatlar» sahifasi: CEO rol imkoniyatlarini o'zgartiradi, bazada faqat farq saqlanadi, texnik qulf server va ekranda bir xil
+# ADR-0087 — «Ruxsatlar» sahifasi: CEO rol imkoniyatlarini o'zgartiradi, bazada faqat farq saqlanadi, texnik qulf server va ekranda bir xil
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-11

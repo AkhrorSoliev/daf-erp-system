@@ -36,7 +36,7 @@ export const PERMISSION_SECTIONS = [
 export type PermissionSection = (typeof PERMISSION_SECTIONS)[number]['key'];
 
 /**
- * Why the CEO cannot give a role a capability (spec §6, ADR-0086). The page
+ * Why the CEO cannot give a role a capability (spec §6, ADR-0087). The page
  * shows the text beside the lock: Uzbek, no English words.
  *   OWN_GROUPS   — a teacher is narrowed to their own groups only in
  *                  `common/auth/group-branch-scope.ts` and the dashboard

@@ -9,7 +9,7 @@ import {
 
 /**
  * Capabilities of the sections Xodimlar, Izohlar, Sozlamalar, Bosh sahifa and
- * DaF ilovasi va media. `allowedRoles` and `lockReasons` follow ADR-0086's
+ * DaF ilovasi va media. `allowedRoles` and `lockReasons` follow ADR-0087's
  * table; a lock other than OWN_GROUPS names its cause.
  */
 export const ADMIN_PERMISSIONS = {

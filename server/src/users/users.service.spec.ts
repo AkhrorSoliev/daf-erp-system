@@ -611,7 +611,7 @@ describe('UsersService — findAll companyId scoping', () => {
     );
   });
 
-  // ADR-0086: the employee's salary balance goes only to a caller who may
+  // ADR-0087: the employee's salary balance goes only to a caller who may
   // see pay; the controller passes `salary.view` as `includeBalance`.
   describe('employee balance', () => {
     const selectOf = () => prisma.user.findMany.mock.calls[0][0].select;

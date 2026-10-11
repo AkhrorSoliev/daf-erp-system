@@ -46,7 +46,7 @@ function resetDialogCopy(overview: PermissionsOverview, roleId: number): Confirm
 }
 
 /**
- * «Ruxsatlar» (spec §8, ADR-0086): the CEO turns each capability on or off per
+ * «Ruxsatlar» (spec §8, ADR-0087): the CEO turns each capability on or off per
  * staff role. CEO-only by identity: the settings entry is `ceoOnly` and the API
  * is `@CeoOnly()`. A toggle or a reset only opens the confirmation; the
  * switches move when the server's answer comes back.
