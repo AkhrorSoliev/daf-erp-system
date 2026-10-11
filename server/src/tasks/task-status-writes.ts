@@ -34,6 +34,13 @@ export async function changeStatusTx(
     assignees.length === 1 &&
     assignees[0].userId === row.authorId &&
     row.authorId === userId;
+  // Asked only when it matters: a photo task heading for review (spec §3.2).
+  // Read with the status transaction's own client, so a photo deleted
+  // meanwhile cannot slip through.
+  const fresh =
+    row.requiresPhoto && to === 'IN_REVIEW' && !selfTask
+      ? await hasFreshPhoto(tx, row)
+      : true;
   const verdict = checkTransition({
     from: row.status,
     to,
@@ -41,8 +48,7 @@ export async function changeStatusTx(
     selfTask,
     kind: row.kind,
     requiresPhoto: row.requiresPhoto,
-    // No photo upload in this phase: a task that requires one cannot go to review.
-    hasFreshPhoto: false,
+    hasFreshPhoto: fresh,
   });
   if (!verdict.ok) throw new BadRequestException(verdict.message);
 

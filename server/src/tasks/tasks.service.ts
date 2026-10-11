@@ -347,6 +347,7 @@ export class TasksService {
         entityType: row.entityType ?? undefined,
         entityId: row.entityId ?? undefined,
         steps: row.steps.map((s) => ({ title: s.title })),
+        requiresPhoto: row.requiresPhoto,
       },
       actor,
     );
