@@ -7,6 +7,12 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-11",
+    sarlavha: "DaF ilovasi: 4-unit dialoglari yangi ovozlarda",
+    matn: "A1 kursining 4-unitidagi 9 ta dialog qayta yozildi: har obrazning o'z ovozi bor (Helga va Mia endi aniq farqlanadi), nemischa talaffuz tabiiyroq, tezlik A1 uchun biroz sekinroq. 5 va 8-dialog bitta joyda bo'ladigan qilib qayta yozildi — oradan vaqt o'tmaydi; ularning rasmlari ham yangilandi.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
+    sana: "2026-10-11",
     sarlavha: "Ustoz profilida diagrammalar",
     matn: "Ustoz profilida yangi «Ko'rsatkichlar» bo'limi bor va u birinchi ochiladi. Unda oxirgi 6 oy bo'yicha to'rtta diagramma bor: oylik (faqat CEO va filial direktoriga ko'rinadi), faol o'quvchilar soni, kelgan va ketgan o'quvchilar, davomat foizi. Oylik «Ish haqi» bo'limidagi raqamning o'zi. «Ketdi» — «Ketganlar» hisobotidagi qoida bo'yicha; och qizil — to'xtagan, lekin hali qaytishi mumkin bo'lganlar. Guruh boshqa ustozga o'tgan bo'lsa, o'sha kundan boshlab yangi ustozga sanaladi. Ustozning o'zi ham shu diagrammalarni «Profil» sahifasida ko'radi — faqat o'zinikini.",
     rollar: [1, 2, 3, 4],
