@@ -1,0 +1,934 @@
+{
+ "unit": "u05",
+ "woerter": [
+  {
+   "sourceId": "u05-s1-uhrzeit",
+   "section": "u05-s1",
+   "de": "Uhrzeit",
+   "artikel": "die",
+   "plural": "Uhrzeiten",
+   "uz": "soat vaqti",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u05-s1-zeit",
+   "section": "u05-s1",
+   "de": "Zeit",
+   "artikel": "die",
+   "plural": "Zeiten",
+   "uz": "vaqt",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u05-s1-jetzt",
+   "section": "u05-s1",
+   "de": "jetzt",
+   "uz": "hozir",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u05-s1-wann",
+   "section": "u05-s1",
+   "de": "wann",
+   "uz": "qachon",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u05-s1-stunde",
+   "section": "u05-s1",
+   "de": "Stunde",
+   "artikel": "die",
+   "plural": "Stunden",
+   "uz": "soat (60 daqiqa)",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u05-s1-halbe-stunde",
+   "section": "u05-s1",
+   "de": "halbe Stunde",
+   "artikel": "die",
+   "uz": "yarim soat",
+   "core": false,
+   "order": 6
+  },
+  {
+   "sourceId": "u05-s1-halb",
+   "section": "u05-s1",
+   "de": "halb",
+   "uz": "yarim",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u05-s1-viertel",
+   "section": "u05-s1",
+   "de": "Viertel",
+   "artikel": "das",
+   "plural": "Viertel",
+   "uz": "chorak",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u05-s1-sekunde",
+   "section": "u05-s1",
+   "de": "Sekunde",
+   "artikel": "die",
+   "plural": "Sekunden",
+   "uz": "soniya",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u05-s1-frueh",
+   "section": "u05-s1",
+   "de": "früh",
+   "uz": "erta",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u05-s1-spaet",
+   "section": "u05-s1",
+   "de": "spät",
+   "uz": "kech",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u05-s1-offiziell",
+   "section": "u05-s1",
+   "de": "offiziell",
+   "uz": "rasmiy",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u05-s1-inoffiziell",
+   "section": "u05-s1",
+   "de": "inoffiziell",
+   "uz": "norasmiy",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u05-s1-tageszeit",
+   "section": "u05-s1",
+   "de": "Tageszeit",
+   "artikel": "die",
+   "plural": "Tageszeiten",
+   "uz": "kun qismi",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u05-s1-morgens",
+   "section": "u05-s1",
+   "de": "morgens",
+   "uz": "ertalablari",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u05-s1-vormittags",
+   "section": "u05-s1",
+   "de": "vormittags",
+   "uz": "tushdan oldin",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u05-s1-mittags",
+   "section": "u05-s1",
+   "de": "mittags",
+   "uz": "tush paytida",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u05-s1-nachmittags",
+   "section": "u05-s1",
+   "de": "nachmittags",
+   "uz": "tushdan keyin",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u05-s1-abends",
+   "section": "u05-s1",
+   "de": "abends",
+   "uz": "kechqurunlari",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u05-s1-nacht",
+   "section": "u05-s1",
+   "de": "Nacht",
+   "artikel": "die",
+   "plural": "Nächte",
+   "uz": "tun",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u05-s2-tag",
+   "section": "u05-s2",
+   "de": "Tag",
+   "artikel": "der",
+   "plural": "Tage",
+   "uz": "kun",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u05-s2-woche",
+   "section": "u05-s2",
+   "de": "Woche",
+   "artikel": "die",
+   "plural": "Wochen",
+   "uz": "hafta",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u05-s2-wochentag",
+   "section": "u05-s2",
+   "de": "Wochentag",
+   "artikel": "der",
+   "plural": "Wochentage",
+   "uz": "hafta kuni",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u05-s2-montag",
+   "section": "u05-s2",
+   "de": "Montag",
+   "artikel": "der",
+   "plural": "Montage",
+   "uz": "dushanba",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u05-s2-dienstag",
+   "section": "u05-s2",
+   "de": "Dienstag",
+   "artikel": "der",
+   "plural": "Dienstage",
+   "uz": "seshanba",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u05-s2-mittwoch",
+   "section": "u05-s2",
+   "de": "Mittwoch",
+   "artikel": "der",
+   "plural": "Mittwoche",
+   "uz": "chorshanba",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u05-s2-donnerstag",
+   "section": "u05-s2",
+   "de": "Donnerstag",
+   "artikel": "der",
+   "plural": "Donnerstage",
+   "uz": "payshanba",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u05-s2-freitag",
+   "section": "u05-s2",
+   "de": "Freitag",
+   "artikel": "der",
+   "plural": "Freitage",
+   "uz": "juma",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u05-s2-samstag",
+   "section": "u05-s2",
+   "de": "Samstag",
+   "artikel": "der",
+   "plural": "Samstage",
+   "uz": "shanba",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u05-s2-sonnabend",
+   "section": "u05-s2",
+   "de": "Sonnabend",
+   "artikel": "der",
+   "plural": "Sonnabende",
+   "uz": "shanba (Germaniya shimolida)",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u05-s2-sonntag",
+   "section": "u05-s2",
+   "de": "Sonntag",
+   "artikel": "der",
+   "plural": "Sonntage",
+   "uz": "yakshanba",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u05-s2-wochenende",
+   "section": "u05-s2",
+   "de": "Wochenende",
+   "artikel": "das",
+   "plural": "Wochenenden",
+   "uz": "dam olish kunlari",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u05-s2-samstags",
+   "section": "u05-s2",
+   "de": "samstags",
+   "uz": "har shanba",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u05-s2-samstagabend",
+   "section": "u05-s2",
+   "de": "Samstagabend",
+   "artikel": "der",
+   "plural": "Samstagabende",
+   "uz": "shanba oqshomi",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u05-s2-sonntagnachmittag",
+   "section": "u05-s2",
+   "de": "Sonntagnachmittag",
+   "artikel": "der",
+   "plural": "Sonntagnachmittage",
+   "uz": "yakshanba tushdan keyin",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u05-s2-naechste",
+   "section": "u05-s2",
+   "de": "nächste",
+   "uz": "keyingi",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u05-s2-mal",
+   "section": "u05-s2",
+   "de": "Mal",
+   "artikel": "das",
+   "plural": "Male",
+   "uz": "marta (safar)",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u05-s2-einmal",
+   "section": "u05-s2",
+   "de": "einmal",
+   "uz": "bir marta",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u05-s2-dreimal",
+   "section": "u05-s2",
+   "de": "dreimal",
+   "uz": "uch marta",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u05-s2-training",
+   "section": "u05-s2",
+   "de": "Training",
+   "artikel": "das",
+   "plural": "Trainings",
+   "uz": "sport mashg'uloti",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u05-s2-musikschule",
+   "section": "u05-s2",
+   "de": "Musikschule",
+   "artikel": "die",
+   "plural": "Musikschulen",
+   "uz": "musiqa maktabi",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u05-s2-geigenunterricht",
+   "section": "u05-s2",
+   "de": "Geigenunterricht",
+   "artikel": "der",
+   "uz": "skripka darsi",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u05-s2-trompetenunterricht",
+   "section": "u05-s2",
+   "de": "Trompetenunterricht",
+   "artikel": "der",
+   "uz": "truba darsi",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u05-s2-englisch-test",
+   "section": "u05-s2",
+   "de": "Englisch-Test",
+   "artikel": "der",
+   "plural": "Englisch-Tests",
+   "uz": "ingliz tili testi",
+   "akzeptiert": [
+    "Englischtest"
+   ],
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u05-s2-mathe-test",
+   "section": "u05-s2",
+   "de": "Mathe-Test",
+   "artikel": "der",
+   "plural": "Mathe-Tests",
+   "uz": "matematika testi",
+   "akzeptiert": [
+    "Mathetest"
+   ],
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u05-s3-alltag",
+   "section": "u05-s3",
+   "de": "Alltag",
+   "artikel": "der",
+   "uz": "kundalik hayot",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u05-s3-aufstehen",
+   "section": "u05-s3",
+   "de": "aufstehen",
+   "uz": "o'rnidan turmoq",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u05-s3-duschen",
+   "section": "u05-s3",
+   "de": "duschen",
+   "uz": "dush qabul qilmoq",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u05-s3-wach",
+   "section": "u05-s3",
+   "de": "wach",
+   "uz": "uyg'oq",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u05-s3-schlafen",
+   "section": "u05-s3",
+   "de": "schlafen",
+   "uz": "uxlamoq",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u05-s3-normalerweise",
+   "section": "u05-s3",
+   "de": "normalerweise",
+   "uz": "odatda",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u05-s3-abholen",
+   "section": "u05-s3",
+   "de": "abholen",
+   "uz": "borib olib kelmoq",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u05-s3-uni",
+   "section": "u05-s3",
+   "de": "Uni",
+   "artikel": "die",
+   "plural": "Unis",
+   "uz": "universitet",
+   "core": false,
+   "order": 8
+  },
+  {
+   "sourceId": "u05-s3-mensa",
+   "section": "u05-s3",
+   "de": "Mensa",
+   "artikel": "die",
+   "plural": "Mensen",
+   "uz": "talabalar oshxonasi",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u05-s3-bibliothek",
+   "section": "u05-s3",
+   "de": "Bibliothek",
+   "artikel": "die",
+   "plural": "Bibliotheken",
+   "uz": "kutubxona",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u05-s3-spaziergang",
+   "section": "u05-s3",
+   "de": "Spaziergang",
+   "artikel": "der",
+   "plural": "Spaziergänge",
+   "uz": "sayr",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u05-s3-ausgehen",
+   "section": "u05-s3",
+   "de": "ausgehen",
+   "uz": "dam olgani chiqmoq",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u05-s3-fernsehen",
+   "section": "u05-s3",
+   "de": "fernsehen",
+   "uz": "televizor ko'rmoq",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u05-s3-ansehen",
+   "section": "u05-s3",
+   "de": "ansehen",
+   "uz": "tomosha qilmoq",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u05-s3-serie",
+   "section": "u05-s3",
+   "de": "Serie",
+   "artikel": "die",
+   "plural": "Serien",
+   "uz": "serial",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u05-s3-nachrichten",
+   "section": "u05-s3",
+   "de": "Nachrichten",
+   "uz": "yangiliklar",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u05-s3-radiosendung",
+   "section": "u05-s3",
+   "de": "Radiosendung",
+   "artikel": "die",
+   "plural": "Radiosendungen",
+   "uz": "radio eshittirishi",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u05-s3-zeitung",
+   "section": "u05-s3",
+   "de": "Zeitung",
+   "artikel": "die",
+   "plural": "Zeitungen",
+   "uz": "gazeta",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u05-s3-zeitschrift",
+   "section": "u05-s3",
+   "de": "Zeitschrift",
+   "artikel": "die",
+   "plural": "Zeitschriften",
+   "uz": "jurnal",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u05-s3-nachts",
+   "section": "u05-s3",
+   "de": "nachts",
+   "uz": "tunda",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u05-s4-termin",
+   "section": "u05-s4",
+   "de": "Termin",
+   "artikel": "der",
+   "plural": "Termine",
+   "uz": "belgilangan uchrashuv",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u05-s4-kalender",
+   "section": "u05-s4",
+   "de": "Kalender",
+   "artikel": "der",
+   "plural": "Kalender",
+   "uz": "kalendar",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u05-s4-vereinbaren",
+   "section": "u05-s4",
+   "de": "vereinbaren",
+   "uz": "kelishib olmoq",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u05-s4-moeglich",
+   "section": "u05-s4",
+   "de": "möglich",
+   "uz": "mumkin",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u05-s4-frei",
+   "section": "u05-s4",
+   "de": "frei",
+   "uz": "bo'sh",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u05-s4-offen",
+   "section": "u05-s4",
+   "de": "offen",
+   "uz": "ochiq",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u05-s4-beginnen",
+   "section": "u05-s4",
+   "de": "beginnen",
+   "uz": "boshlanmoq",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u05-s4-beginn",
+   "section": "u05-s4",
+   "de": "Beginn",
+   "artikel": "der",
+   "uz": "boshlanish",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u05-s4-konzertbeginn",
+   "section": "u05-s4",
+   "de": "Konzertbeginn",
+   "artikel": "der",
+   "uz": "konsert boshlanishi",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u05-s4-enden",
+   "section": "u05-s4",
+   "de": "enden",
+   "uz": "tugamoq",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u05-s4-wie-lange",
+   "section": "u05-s4",
+   "de": "wie lange",
+   "uz": "qancha vaqt",
+   "core": false,
+   "order": 11
+  },
+  {
+   "sourceId": "u05-s4-morgen",
+   "section": "u05-s4",
+   "de": "morgen",
+   "uz": "ertaga",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u05-s4-vorher",
+   "section": "u05-s4",
+   "de": "vorher",
+   "uz": "oldinroq",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u05-s4-puenktlich",
+   "section": "u05-s4",
+   "de": "pünktlich",
+   "uz": "o'z vaqtida",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u05-s4-da-sein",
+   "section": "u05-s4",
+   "de": "da sein",
+   "uz": "yetib kelmoq, shu yerda bo'lmoq",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u05-s4-entschuldigen",
+   "section": "u05-s4",
+   "de": "entschuldigen",
+   "uz": "kechirmoq, uzr so'ramoq",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u05-s4-tun",
+   "section": "u05-s4",
+   "de": "tun",
+   "uz": "qilmoq (ish tutmoq)",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u05-s4-kunde",
+   "section": "u05-s4",
+   "de": "Kunde",
+   "artikel": "der",
+   "plural": "Kunden",
+   "uz": "mijoz (erkak)",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u05-s4-kundin",
+   "section": "u05-s4",
+   "de": "Kundin",
+   "artikel": "die",
+   "plural": "Kundinnen",
+   "uz": "mijoz (ayol)",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u05-s4-puenktlichkeit",
+   "section": "u05-s4",
+   "de": "Pünktlichkeit",
+   "artikel": "die",
+   "uz": "vaqtga rioya qilish",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u05-s5-zu-hause",
+   "section": "u05-s5",
+   "de": "zu Hause",
+   "uz": "uyda",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u05-s5-muessen",
+   "section": "u05-s5",
+   "de": "müssen",
+   "uz": "majbur bo'lmoq",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u05-s5-haushalt",
+   "section": "u05-s5",
+   "de": "Haushalt",
+   "artikel": "der",
+   "plural": "Haushalte",
+   "uz": "uy xo'jaligi, uy ishlari",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u05-s5-hausmann",
+   "section": "u05-s5",
+   "de": "Hausmann",
+   "artikel": "der",
+   "plural": "Hausmänner",
+   "uz": "uy ishlarini qiladigan erkak",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u05-s5-abwechselnd",
+   "section": "u05-s5",
+   "de": "abwechselnd",
+   "uz": "navbatma-navbat",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u05-s5-sauber-machen",
+   "section": "u05-s5",
+   "de": "sauber machen",
+   "uz": "tozalamoq",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u05-s5-waschen",
+   "section": "u05-s5",
+   "de": "waschen",
+   "uz": "yuvmoq",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u05-s5-geschirr",
+   "section": "u05-s5",
+   "de": "Geschirr",
+   "artikel": "das",
+   "uz": "idish-tovoq",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u05-s5-wegraeumen",
+   "section": "u05-s5",
+   "de": "wegräumen",
+   "uz": "yig'ishtirmoq",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u05-s5-einkaufen-gehen",
+   "section": "u05-s5",
+   "de": "einkaufen gehen",
+   "uz": "xarid qilgani bormoq",
+   "core": false,
+   "order": 10
+  },
+  {
+   "sourceId": "u05-s5-hausaufgabe",
+   "section": "u05-s5",
+   "de": "Hausaufgabe",
+   "artikel": "die",
+   "plural": "Hausaufgaben",
+   "uz": "uy vazifasi",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u05-s5-kuemmern",
+   "section": "u05-s5",
+   "de": "kümmern",
+   "uz": "qaramoq, g'amxo'rlik qilmoq",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u05-s5-bleiben",
+   "section": "u05-s5",
+   "de": "bleiben",
+   "uz": "qolmoq",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u05-s5-allein",
+   "section": "u05-s5",
+   "de": "allein",
+   "uz": "yolg'iz",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u05-s5-an-sein",
+   "section": "u05-s5",
+   "de": "an sein",
+   "uz": "yoniq bo'lmoq",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u05-s5-aus-sein",
+   "section": "u05-s5",
+   "de": "aus sein",
+   "uz": "o'chiq bo'lmoq; tugamoq",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u05-s5-stress",
+   "section": "u05-s5",
+   "de": "Stress",
+   "artikel": "der",
+   "uz": "zo'riqish (stress)",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u05-s5-leidtun",
+   "section": "u05-s5",
+   "de": "leidtun",
+   "uz": "afsuslanmoq",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u05-s5-genug",
+   "section": "u05-s5",
+   "de": "genug",
+   "uz": "yetarli",
+   "core": true,
+   "order": 19
+  }
+ ]
+}

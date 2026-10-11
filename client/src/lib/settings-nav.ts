@@ -11,6 +11,7 @@ import {
   Send,
   Wallet,
   Smartphone,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import type { Can } from "./permission-check";
@@ -29,6 +30,11 @@ export interface SettingsNavItem {
   description: string;
   /** Shown to users who hold this capability. Omit to show to all. */
   permission?: PermissionKey;
+  /**
+   * Only the CEO sees and opens it — an identity, never a capability (the
+   * API is `@CeoOnly()`, ADR-0087). Such an item has no `permission`.
+   */
+  ceoOnly?: true;
 }
 
 export interface SettingsNavSection {
@@ -143,16 +149,29 @@ export const settingsNavSections: SettingsNavSection[] = [
         description: "Kurs to'lov modeli va hisob-kitob qoidalari",
         permission: "settings.payment",
       },
+      {
+        title: "Ruxsatlar",
+        url: "/settings/permissions",
+        icon: ShieldCheck,
+        description: "Har bir rol uchun imkoniyatlarni yoqish va o'chirish",
+        ceoOnly: true,
+      },
     ],
   },
 ];
 
+/** One rule for the list and the URL: a CEO-only item for the CEO, else its capability. */
+function isVisible(item: SettingsNavItem, can: Can, isCeo: boolean): boolean {
+  if (item.ceoOnly) return isCeo;
+  return !item.permission || can(item.permission);
+}
+
 /** Sections of /settings this user sees; a section with nothing visible is dropped. */
-export function getVisibleSettingsSections(can: Can): SettingsNavSection[] {
+export function getVisibleSettingsSections(can: Can, isCeo = false): SettingsNavSection[] {
   return settingsNavSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => !item.permission || can(item.permission)),
+      items: section.items.filter((item) => isVisible(item, can, isCeo)),
     }))
     .filter((section) => section.items.length > 0);
 }
@@ -161,11 +180,11 @@ export function getVisibleSettingsSections(can: Can): SettingsNavSection[] {
  * May the user open a /settings page or a page under it: the entry's gate.
  * SettingsLayoutShell sends anyone else back. A path no entry owns is open.
  */
-export function canOpenSettingsPath(pathname: string, can: Can): boolean {
+export function canOpenSettingsPath(pathname: string, can: Can, isCeo = false): boolean {
   const item = settingsNavSections
     .flatMap((section) => section.items)
     .find((entry) => pathname === entry.url || pathname.startsWith(`${entry.url}/`));
-  return !item?.permission || can(item.permission);
+  return !item || isVisible(item, can, isCeo);
 }
 
 /** May the user open an employee's page, /settings/employees/<id>. */

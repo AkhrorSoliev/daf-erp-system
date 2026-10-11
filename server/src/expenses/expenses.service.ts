@@ -8,6 +8,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import type { PermissionKey } from '../common/permissions/permission-catalog';
 import { ExpenseCategory, ExpensePaymentMethod, Prisma } from '@prisma/client';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
@@ -54,6 +56,12 @@ const OWN_ADVANCE_REFUSAL =
 const RECIPIENT_OTHER_BRANCH =
   "Bu xodim tanlangan filialga biriktirilmagan — avansni xodimning o'z filialida yozing.";
 
+// ADR-0087 (CEO, 10.10 and 11.10.2026): an advance is cut from its
+// recipient's salary, so it is written with «Oylik va avans to'lash»
+// (`salary.pay`) alone; every other category with «Xarajat kiritish»
+// (`expenses.manage`).
+const EXPENSE_WRITE_REFUSAL = "Bu xarajatni kiritish huquqingiz yo'q";
+
 // Human label for the PDF "Davr" line. Handles one-sided ranges.
 function buildDateRangeLabel(start?: string, end?: string): string {
   if (start && end)
@@ -69,7 +77,27 @@ export class ExpensesService {
     private prisma: PrismaService,
     private transactionsService: TransactionsService,
     private entityHistoryService: EntityHistoryService,
+    private permissions: PermissionsService,
   ) {}
+
+  /**
+   * The one place the category rule lives (ADR-0087): TEACHER_ADVANCE
+   * requires `salary.pay`, every other category `expenses.manage`. Runs before
+   * any other check, so a caller who may not write the category learns
+   * nothing about branches or recipients.
+   */
+  private async assertMayWrite(
+    userId: number,
+    category: ExpenseCategory,
+  ): Promise<void> {
+    const key: PermissionKey =
+      category === ExpenseCategory.TEACHER_ADVANCE
+        ? 'salary.pay'
+        : 'expenses.manage';
+    if (!(await this.permissions.has(userId, key))) {
+      throw new ForbiddenException(EXPENSE_WRITE_REFUSAL);
+    }
+  }
 
   /**
    * The named branch must exist, belong to this company, and be one the caller
@@ -184,6 +212,7 @@ export class ExpensesService {
   }
 
   async create(dto: CreateExpenseDto, userId: number, companyId: number) {
+    await this.assertMayWrite(userId, dto.category);
     await this.assertBranchWritable(dto.branchId, companyId, userId);
 
     if (dto.category === ExpenseCategory.TEACHER_ADVANCE) {
@@ -523,6 +552,13 @@ export class ExpensesService {
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
 
+    // The category it is now, and the one it becomes: rent turned into an
+    // advance needs both keys.
+    await this.assertMayWrite(userId, existing.category);
+    if (dto.category !== undefined && dto.category !== existing.category) {
+      await this.assertMayWrite(userId, dto.category);
+    }
+
     // Both sides: the caller must own the branch the row is IN, and the branch
     // they are moving it TO. Checking only the target would let someone reach
     // into the other branch's books to move a cost out of them.
@@ -670,6 +706,7 @@ export class ExpensesService {
       where: { id, deletedAt: null, companyId },
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
+    await this.assertMayWrite(userId, existing.category);
 
     // Delete REVERSES a ledger entry and moves cash back into the branch's
     // kassa, so it needs the same branch check as create/update.

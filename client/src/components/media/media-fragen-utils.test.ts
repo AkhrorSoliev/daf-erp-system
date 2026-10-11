@@ -32,6 +32,11 @@ describe("vorschauShakli", () => {
     // oddiy audio (faqat karnay) bilan bir xil emas.
     expect(vorschauShakli("HOEREN_WAHL")).toBe("HOEREN");
   });
+  it("soat formatlarida soat chiziladi", () => {
+    expect(vorschauShakli("UHR_LESEN")).toBe("UHR");
+    expect(vorschauShakli("UHR_HOEREN")).toBe("UHR");
+    expect(vorschauShakli("UHR_TIPPEN")).toBe("UHR");
+  });
 });
 
 describe("juftlarniAjrat", () => {

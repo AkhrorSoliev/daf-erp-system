@@ -27,6 +27,12 @@ describe('format-skill reyestri', () => {
     expect(FORMAT_SKILL.SATZ_HOEREN).toBe('HOEREN');
   });
 
+  it('clock: reading it is vocabulary, hearing it listening, typing it writing', () => {
+    expect(FORMAT_SKILL.UHR_LESEN).toBe('WORTSCHATZ');
+    expect(FORMAT_SKILL.UHR_HOEREN).toBe('HOEREN');
+    expect(FORMAT_SKILL.UHR_TIPPEN).toBe('SCHREIBEN');
+  });
+
   it('nafaqadagi format ham ko`nikma beradi, noma`lum format null', () => {
     for (const [format, skill] of Object.entries(NAFAQADAGI_FORMAT_SKILL)) {
       expect(skillFuer(format)).toBe(skill);

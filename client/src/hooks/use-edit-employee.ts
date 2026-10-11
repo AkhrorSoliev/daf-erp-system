@@ -11,7 +11,8 @@ export interface EmployeeUser {
   position: string | null;
   telegramChatId: string | null;
   mainBranch: number | null;
-  balance: number;
+  /** Only for a caller with salary.view (ADR-0087); no screen reads it. */
+  balance?: number;
   status: string;
   roles: { id: number; name: string }[];
   branches: { id: number; name: string }[];

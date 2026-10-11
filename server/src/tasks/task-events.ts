@@ -92,6 +92,8 @@ export interface TaskCommentedPayload {
   task: TaskEventTask;
   actorId: number;
   text: string;
+  /** A file or a voice message (ADR-0086): the same notice, its own headline. */
+  attachment?: 'FILE' | 'VOICE';
 }
 export interface TaskCancelledPayload {
   task: TaskEventTask;

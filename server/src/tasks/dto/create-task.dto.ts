@@ -14,6 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { COMMENTABLE_ENTITY_TYPES } from '../../common/auth/comment-entity-scope';
+import { TaskRecurrenceDto } from './task-recurrence.dto';
 
 export class CreateTaskStepDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -55,9 +56,16 @@ export class CreateTaskDto {
   @MaxLength(64)
   entityId?: string;
   @IsOptional() @IsBoolean() separateCopies?: boolean;
+  /** «Rasm bilan tasdiqlansin» (spec §3.2): review needs a fresh photo. */
+  @IsOptional() @IsBoolean() requiresPhoto?: boolean;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateTaskStepDto)
   steps?: CreateTaskStepDto[];
+  /** A recurring task (spec §3.6): the rule and its first task. No `dueAt` then. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => TaskRecurrenceDto)
+  recurrence?: TaskRecurrenceDto;
 }

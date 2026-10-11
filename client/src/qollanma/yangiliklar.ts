@@ -7,6 +7,39 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-11",
+    sarlavha: "Ruxsatlar sahifasi",
+    matn: "CEO endi Sozlamalar → «Ruxsatlar» sahifasida har bir rol nima qila olishini o'zi belgilaydi. Bu filial direktori, administrator, kassir va o'qituvchiga tegishli: imkoniyat kalit bilan yoqiladi yoki o'chiriladi. Kalit bosilganda tasdiq oynasi chiqadi. Unda birga yoqiladigan yoki birga o'chadigan imkoniyatlar oldindan ko'rsatiladi, pulga ta'sir qiladigan imkoniyatni yoqishda esa qo'shimcha ogohlantirish bor. Qulf belgisi bu imkoniyatni shu rolga berib bo'lmasligini bildiradi; uni bossangiz, sababi chiqadi. Sariq nuqta boshlang'ich holatdan farqni ko'rsatadi. Har bir rolda «Boshlang'ich holatga qaytarish» tugmasi bor, pastda esa kim, qachon, nimani o'zgartirgani yoziladi. O'zgarish xodimning keyingi bosishida kuchga kiradi. Sahifani faqat CEO ko'radi. Hozircha hamma rol avvalgidek ishlaydi.",
+    rollar: [1],
+    sahifa: { bolim: "boshlash", sahifa: "rollar-va-huquqlar" },
+  },
+  {
+    sana: "2026-10-11",
+    sarlavha: "Topshiriqlarda fayl, rasm va ovozli xabar",
+    matn: "Topshiriq varag'ida endi fayl qo'shish mumkin: izoh maydonidagi qisqich belgisi bilan rasm, PDF, Word, Excel yoki qisqa video (20 MB gacha), mikrofon belgisi bilan 3 daqiqagacha ovozli xabar. Qisqich va mikrofon belgilari ijrochi va beruvchida chiqadi; kuzatuvchi ko'radi va yuklab oladi. Fayllar varaqdagi «Fayllar» bo'limida turadi: rasmni katta ko'rish, hujjatni yuklab olish, o'zingiz qo'shganini o'chirish mumkin. Topshiriq berishda «Batafsil» → «Rasm bilan tasdiqlansin» ni belgilasangiz, ijrochi tekshiruvga faqat ish rasmini qo'shib yuboradi. Telegram'da topshiriq xabariga javob qilib rasm, hujjat, video yoki ovozli xabar yuborsangiz, u topshiriqqa qo'shiladi; rasm talab qilinadigan topshiriqda «Bajardim» bot rasm so'raydi va rasm kelgach topshiriq tekshiruvga o'tadi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-10-11",
+    sarlavha: "DaF ilovasi: 4-unit dialoglari yangi ovozlarda",
+    matn: "A1 kursining 4-unitidagi 9 ta dialog qayta yozildi: har obrazning o'z ovozi bor (Helga va Mia endi aniq farqlanadi), nemischa talaffuz tabiiyroq, tezlik A1 uchun biroz sekinroq. 5 va 8-dialog bitta joyda bo'ladigan qilib qayta yozildi — oradan vaqt o'tmaydi; ularning rasmlari ham yangilandi.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
+    sana: "2026-10-11",
+    sarlavha: "Takrorlanuvchi topshiriqlar",
+    matn: "Endi topshiriqni takrorlanadigan qilib berish mumkin: berish oynasida «Batafsil» → «Takrorlash» da «Har kuni», «Har hafta» (kunlarini belgilab) yoki «Har oy» (1–28-sana) va vaqtni tanlang. Birinchi topshiriq darhol beriladi, keyingilarini tizim har kuni ertalab 07:00 da beradi; yakshanba va bayramga tushsa — keyingi ish kuniga. Oldingisi bajarilmagan bo'lsa, yangisi berilmaydi. Kartada «Har dushanba» kabi belgi turadi; varaqda takrorlanishni o'zgartirish va to'xtatish mumkin, «Topshiriqlar» sahifasidagi «Takrorlanuvchi» tugmasi hammasini bitta ro'yxatda ko'rsatadi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-10-11",
+    sarlavha: "Ustoz profilida diagrammalar",
+    matn: "Ustoz profilida yangi «Ko'rsatkichlar» bo'limi bor va u birinchi ochiladi. Unda oxirgi 6 oy bo'yicha to'rtta diagramma bor: oylik (faqat CEO va filial direktoriga ko'rinadi), faol o'quvchilar soni, kelgan va ketgan o'quvchilar, davomat foizi. Oylik «Ish haqi» bo'limidagi raqamning o'zi. «Ketdi» — «Ketganlar» hisobotidagi qoida bo'yicha; och qizil — to'xtagan, lekin hali qaytishi mumkin bo'lganlar. Guruh boshqa ustozga o'tgan bo'lsa, o'sha kundan boshlab yangi ustozga sanaladi. Ustozning o'zi ham shu diagrammalarni «Profil» sahifasida ko'radi — faqat o'zinikini.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
+    sana: "2026-10-11",
     sarlavha: "Avtomatik topshiriqlar",
     matn: "Tizim endi uch topshiriqni o'zi beradi. «Buzilgan va'da» — ertalab 09:00 da va'dasi buzilgan, qarzi 1 000 so'mdan kam bo'lmagan har o'quvchiga bittadan, filial administratorlariga; administratorlarga ertalabki ro'yxat endi kelmaydi (CEO avvalgidek oladi). «Qayta qo'ng'iroq» — qo'ng'iroq natijasida «Keyingi bog'lanish sanasi» qo'yilsa, o'sha kunga qo'ng'iroqni yozgan xodimga; Telegram'ga o'sha kuni 08:00 dan oldin yuborilmaydi: ertaroq bo'ladigan bo'lsa, 08:00 ni kutadi. «Qo'ng'iroqsiz lid» — yangi lidga 24 soat ichida qo'ng'iroq qilinmasa, filial administratorlariga, ular bo'lmasa direktorlarga, ular ham bo'lmasa CEO ga (faqat qoida yoqilgan paytdan keyin kelgan lidlar uchun). Muddati — 18:00. Topshiriq varag'ida o'quvchi yoki lid haqida karta va bitta tugma bor: «Qo'ng'iroqni yozish» yoki «Lidni ochish». Ish bajarilganda — qarz to'lansa yoki boshqacha yopilsa (masalan, dars puli qaytsa), qo'ng'iroq yozilsa, lidga qo'ng'iroq belgisi qo'yilsa — topshiriq o'zi yopiladi. Kechki 21:00 hisobotida muddati o'tgan topshiriqlar soni chiqadi; eng ko'p kechikkan xodim ishdan ketgan bo'lsa, uning ismi yozilmaydi.",
     rollar: [1, 2, 3],
@@ -25,6 +58,12 @@ export const yangiliklar: Yangilik[] = [
     matn: "«Ish haqi» sahifasida endi bitta jadval va oy holati bor: oy davom etyaptimi, hisoblanganmi, tasdiqlanganmi yoki berilganmi — bir qarashda ko'rinadi. «Berildi» pul berilgan kun va naqd/karta summalarini so'raydi, pul tanlangan kassa va hisobdan chiqadi, xodimga bot orqali xabar boradi. Avans berilgan oyining oyligidan ushlanadi; «Avans» ustuni aynan shu oylikdan ushlanadigan summani ko'rsatadi.",
     rollar: [1, 2],
     sahifa: { bolim: "tolovlar", sahifa: "ish-haqi" },
+  },
+  {
+    sana: "2026-10-10",
+    sarlavha: "DaF ilovasida A1 5-unit «Mein Tag» va yangi soat mashqi",
+    matn: "O'quvchi ilovasida A1 kursining 5-uniti ochildi: vaqt, hafta kunlari, kundalik ishlar, uchrashuv belgilash va uy ishlari mavzusidagi 104 so'z, 103 gap va 7 ta dialog. Dialoglar 4-unitdagidek hayotiy ovoz bilan (fonda shovqin, eshik, telefon, avtobus), har biriga butun hikoyani ko'rsatadigan bitta rasm chizilgan; 15 ta so'zga rasm bor. Yangi mashq — soat: o'quvchi soatga qarab vaqtni tanlaydi, vaqtni eshitib to'g'ri soatni tanlaydi yoki soatga qarab vaqtni yozadi. Kundalik shakl («Viertel nach sieben») ham, rasmiy shakl («sieben Uhr fünfzehn») ham to'g'ri javob hisoblanadi.",
+    rollar: [1, 2, 3, 4],
   },
   {
     sana: "2026-10-10",

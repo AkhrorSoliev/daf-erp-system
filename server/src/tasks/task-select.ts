@@ -31,6 +31,10 @@ export const TASK_CARD_SELECT = {
   cancelledAt: true,
   createdAt: true,
   updatedAt: true,
+  recurrenceId: true,
+  recurrence: {
+    select: { freq: true, weekdays: true, dayOfMonth: true, active: true },
+  },
   author: { select: PERSON },
   participants: {
     select: {
@@ -41,7 +45,13 @@ export const TASK_CARD_SELECT = {
     },
     orderBy: { createdAt: 'asc' as const },
   },
-  _count: { select: { steps: true, events: true } },
+  _count: {
+    select: {
+      steps: true,
+      events: true,
+      files: { where: { deletedAt: null } },
+    },
+  },
   steps: { select: { doneAt: true } },
   unmarkedLesson: {
     select: {
@@ -83,6 +93,7 @@ export const TASK_EVENT_SELECT = {
   actorId: true,
   text: true,
   meta: true,
+  fileId: true,
   via: true,
   createdAt: true,
   actor: { select: PERSON },
@@ -153,7 +164,16 @@ export function toTaskCard(r: CardRow) {
     stepsTotal: r._count.steps,
     stepsDone: r.steps.filter((s) => s.doneAt !== null).length,
     eventsCount: r._count.events,
+    filesCount: r._count.files,
     unmarkedLesson: lesson(r.unmarkedLesson),
+    // The badge («Har dushanba», spec screen 1) while the rule runs.
+    recurrence: r.recurrence?.active
+      ? {
+          freq: r.recurrence.freq,
+          weekdays: r.recurrence.weekdays,
+          dayOfMonth: r.recurrence.dayOfMonth,
+        }
+      : null,
   };
 }
 export type TaskCard = ReturnType<typeof toTaskCard>;

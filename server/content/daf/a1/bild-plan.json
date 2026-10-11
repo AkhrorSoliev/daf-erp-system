@@ -514,5 +514,65 @@
   "u04-s6-deckel": {
     "szene": "a single round steel lid of a cooking pot lying on its own, seen from above at an angle, with a small black knob in its centre, no pot",
     "tippen": true
+  },
+  "u05-s1-nacht": {
+    "szene": "a quiet town street at night under a dark blue sky with a full moon and stars, all windows dark, no people",
+    "tippen": true
+  },
+  "u05-s2-training": {
+    "szene": "a group of teenagers in sports clothes running warm-up laps on a green sports field, a coach with a whistle watching",
+    "tippen": false
+  },
+  "u05-s2-musikschule": {
+    "szene": "a small music school building seen from outside, a big golden treble clef and floating musical notes above the door, through the window a child playing the piano, a girl with a violin case walking in, completely blank walls with no sign and no lettering",
+    "tippen": true
+  },
+  "u05-s3-aufstehen": {
+    "szene": "a young man in pyjamas getting out of bed in the morning, stretching his arms, sunlight coming through the window, an alarm clock on the bedside table",
+    "tippen": false
+  },
+  "u05-s3-duschen": {
+    "szene": "a woman with a shower cap standing under a running shower behind a frosted glass door, only her head and shoulders visible, steam in the bathroom",
+    "tippen": false
+  },
+  "u05-s3-schlafen": {
+    "szene": "a man sleeping peacefully in bed with his eyes closed, the blanket pulled up, a dark night window behind him",
+    "tippen": false
+  },
+  "u05-s3-mensa": {
+    "szene": "a busy university canteen with long tables, students carrying trays of food along a self-service counter",
+    "tippen": true
+  },
+  "u05-s3-bibliothek": {
+    "szene": "a quiet library with tall wooden bookshelves full of books and a student reading at a table",
+    "tippen": true
+  },
+  "u05-s3-spaziergang": {
+    "szene": "an elderly couple walking slowly side by side along a path in a green park on a sunny afternoon",
+    "tippen": true
+  },
+  "u05-s3-fernsehen": {
+    "szene": "a family sitting on a sofa in a living room, all looking at a flat television screen on the wall, seen from behind the sofa",
+    "tippen": false
+  },
+  "u05-s3-zeitung": {
+    "szene": "a man sitting on a park bench holding open a big folded broadsheet paper with both hands, the pages covered in tiny grey lines and small grey photos, seen from the side",
+    "tippen": true
+  },
+  "u05-s3-zeitschrift": {
+    "szene": "a stack of three glossy colourful magazines on a coffee table, the top cover shows a large photo of a smiling woman, the cover has no title, no letters and no words",
+    "tippen": true
+  },
+  "u05-s4-kalender": {
+    "szene": "a paper wall calendar hanging on a nail above a desk, the page is a plain grid of empty white squares with thin grey borders, three of the squares marked with red circles, a red pen on the desk",
+    "tippen": true
+  },
+  "u05-s5-geschirr": {
+    "szene": "dirty plates, bowls, cups and cutlery piled in a kitchen sink next to a drying rack with clean plates, a sponge and dish soap on the edge, no logo, no text",
+    "tippen": true
+  },
+  "u05-s5-hausaufgabe": {
+    "szene": "a school exercise book open on a desk with handwritten maths sums, a pencil and an eraser beside it, a child's hand writing",
+    "tippen": true
   }
 }

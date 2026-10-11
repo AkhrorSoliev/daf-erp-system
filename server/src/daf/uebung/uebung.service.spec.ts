@@ -319,6 +319,7 @@ function fakePrisma() {
         async ({ where }: any) => phrase.find((p) => p.id === where.id) ?? null,
       ),
     },
+    dafUhrzeit: { findMany: jest.fn(async () => []) },
     dafDialog: {
       findMany: jest.fn(async () => dialog),
       // HOEREN_WAHL javobidan keyingi transkript: sahna + satrlar bitta so'rovda.

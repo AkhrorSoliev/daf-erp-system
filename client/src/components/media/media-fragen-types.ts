@@ -23,7 +23,10 @@ export type FrageFormat =
   | "HOEREN_WAHL"
   | "BILD_WORT"
   | "AUDIO_BILD"
-  | "BILD_TIPPEN";
+  | "BILD_TIPPEN"
+  | "UHR_LESEN"
+  | "UHR_HOEREN"
+  | "UHR_TIPPEN";
 
 /**
  * Bu — mijozga (CEO ko'rigi) ketadigan savol, TO'G'RI JAVOB BILAN.
@@ -33,7 +36,7 @@ export type FrageFormat =
  */
 export interface VorschauFrage {
   format: FrageFormat;
-  itemType: "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE" | "HOERFRAGE";
+  itemType: "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE" | "HOERFRAGE" | "UHRZEIT";
   itemId: number;
   prompt: string;
   hilfe: string | null;
@@ -46,4 +49,6 @@ export interface VorschauFrage {
    * `AUDIO_BILD` the pictures are the `options` (URLs) instead.
    */
   bildUrl?: string | null;
+  /** `UHR_LESEN` / `UHR_TIPPEN`: the clock shown (`HH:MM`). */
+  uhrzeit?: string | null;
 }

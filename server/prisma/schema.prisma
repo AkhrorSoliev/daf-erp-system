@@ -189,6 +189,7 @@ enum TaskEventType {
   CANCELLED
   AUTO_CLOSED
   REASSIGNED
+  FILE_DELETED
 }
 
 enum TaskEventVia {
@@ -211,8 +212,22 @@ enum TaskOutboxKind {
 enum TaskTelegramPurpose {
   NOTICE
   RETURN_PROMPT
-  /// Not used before phase 3 (photo upload).
+  /// «Rasmni shu xabarga javob qilib yuboring» (phase 3): a photo reply sends the task to review.
   PHOTO_PROMPT
+}
+
+/// Spec 2026-10-07 §3.6.
+enum TaskRecurrenceFreq {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+/// Spec 2026-10-07 §3.5 (ADR-0086): image → IMAGE, ogg/webm audio → VOICE, the rest → DOCUMENT.
+enum TaskFileKind {
+  IMAGE
+  DOCUMENT
+  VOICE
 }
 
 // ===== FINANCIAL SYSTEM ENUMS =====
@@ -342,7 +357,8 @@ model Role {
   id   Int    @id
   name String @unique
 
-  users UserRole[]
+  users       UserRole[]
+  permissions RolePermission[]
 }
 
 model User {
@@ -411,8 +427,10 @@ model User {
   entityChanges                    EntityHistory[]            @relation("EntityHistoryChangedBy")
   comments                         Comment[]                  @relation("CommentAuthor")
   tasksAuthored                    Task[]                     @relation("TaskAuthor")
+  taskRecurrencesAuthored          TaskRecurrence[]           @relation("TaskRecurrenceAuthor")
   taskParticipations               TaskParticipant[]          @relation("TaskParticipantUser")
   taskEvents                       TaskEvent[]                @relation("TaskEventActor")
+  taskFilesUploaded                TaskFile[]                 @relation("TaskFileUploader")
   commentAssignees                 CommentAssignee[]          @relation("CommentAssignees")
   notifications                    Notification[]             @relation("UserNotifications")
   pushSubscriptions                PushSubscription[]         @relation("UserPushSubscriptions")
@@ -472,6 +490,8 @@ model User {
   approvedTelegramGroups TelegramGroup[] @relation("TelegramGroupApprovedBy")
 
   updatedSettings Setting[] @relation("SettingUpdatedBy")
+
+  rolePermissionUpdates RolePermission[] @relation("RolePermissionUpdatedBy")
 
   @@index([deletedAt])
   @@index([status])
@@ -1755,6 +1775,7 @@ model Company {
   groups                      Group[]
   comments                    Comment[]
   tasks                       Task[]
+  taskRecurrences             TaskRecurrence[]
   attendances                 Attendance[]
   plannedAbsences             PlannedAbsence[]
   paymentPromises             PaymentPromise[]
@@ -1775,6 +1796,23 @@ model Company {
   holidays                    Holiday[]
   monthlyCharges              EnrollmentMonthlyCharge[]
   settings                    Setting[]
+  rolePermissions             RolePermission[]
+}
+
+/// The CEO's change to a role's capabilities. Only differences from the
+/// catalog default are stored (ADR-0086).
+model RolePermission {
+  companyId   Int
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  roleId      Int
+  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  key         String
+  granted     Boolean
+  updatedById Int?
+  updatedBy   User?    @relation("RolePermissionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt   DateTime @updatedAt
+
+  @@id([companyId, roleId, key])
 }
 
 enum TelegramGroupStatus {
@@ -1986,8 +2024,9 @@ model CommentAssignee {
 }
 
 /// Spec 2026-10-07 §3. The only writers are `tasks/tasks.service.ts`,
-/// `tasks/lesson-task.ts` and `scripts/migrate-comment-tasks.ts`
-/// (`task-write.single-source.spec.ts`).
+/// `tasks/lesson-task.ts`, `scripts/migrate-comment-tasks.ts`,
+/// `tasks/task-recurrences.service.ts` and `tasks/task-recurrence-run.service.ts`
+/// (through `task-create.ts`) (`task-write.single-source.spec.ts`).
 model Task {
   id                String       @id @default(uuid())
   companyId         Int
@@ -2009,6 +2048,9 @@ model Task {
   requiresPhoto     Boolean      @default(false)
   /// «Har biriga alohida» copies share one batch.
   batchId           String?
+  /// The rule that made it (§3.6); null for any other task and after the rule is deleted.
+  recurrenceId      String?
+  recurrence        TaskRecurrence? @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
   /// `unmarked:<groupId>:<YYYY-MM-DD>`, `calllog:<id>`, `promise:<id>`, `lead:<id>`.
   /// Unique while the task is open (partial index in the migration).
   sourceKey         String?
@@ -2029,6 +2071,7 @@ model Task {
   events           TaskEvent[]
   outbox           TaskOutbox[]
   telegramMessages TaskTelegramMessage[]
+  files            TaskFile[]
   notifications    Notification[]
   unmarkedLesson   UnmarkedLesson?       @relation("UnmarkedLessonTaskRow")
 
@@ -2036,6 +2079,7 @@ model Task {
   @@index([branchId, status])
   @@index([authorId, status])
   @@index([batchId])
+  @@index([recurrenceId, status])
   @@index([entityType, entityId])
   @@index([sourceKey])
 }
@@ -2079,6 +2123,9 @@ model TaskEvent {
   actor     User?         @relation("TaskEventActor", fields: [actorId], references: [id], onDelete: SetNull)
   text      String?
   meta      Json?
+  /// FILE / VOICE / FILE_DELETED: the file the row is about (ADR-0086).
+  fileId    String?
+  file      TaskFile?     @relation(fields: [fileId], references: [id], onDelete: SetNull)
   via       TaskEventVia  @default(WEB)
   createdAt DateTime      @default(now())
 
@@ -2128,6 +2175,80 @@ model TaskTelegramMessage {
 
   @@unique([chatId, messageId])
   @@index([taskId])
+}
+
+/// A rule that gives a MANUAL task on its days (spec 2026-10-07 §3.6,
+/// ADR-0084). The 07:00 Tashkent run (`TaskRecurrenceRunner`) makes the task
+/// through the normal create writer and moves `nextRunDate` with a
+/// conditional update (the idempotency key). Written only inside src/tasks/.
+model TaskRecurrence {
+  id             String             @id @default(uuid())
+  companyId      Int
+  company        Company            @relation(fields: [companyId], references: [id])
+  /// The branch its first task got (`resolveTaskBranchId`); null = branch-less.
+  branchId       Int?
+  authorId       Int
+  author         User               @relation("TaskRecurrenceAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  freq           TaskRecurrenceFreq
+  /// WEEKLY: 1 = Monday … 6 = Saturday (never Sunday). Empty otherwise.
+  weekdays       Int[]              @default([])
+  /// MONTHLY: 1–28. Null otherwise.
+  dayOfMonth     Int?
+  /// "HH:mm", Tashkent, 08:00–22:00.
+  dueTime        String
+  title          String
+  description    String?
+  priority       TaskPriority       @default(MEDIUM)
+  assigneeIds    Int[]
+  watcherIds     Int[]              @default([])
+  /// Step titles, in order.
+  steps          String[]           @default([])
+  entityType     String?
+  entityId       String?
+  separateCopies Boolean            @default(false)
+  active         Boolean            @default(true)
+  /// The Tashkent day of the next run.
+  nextRunDate    DateTime           @db.Date
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  tasks Task[]
+
+  @@index([active, nextRunDate])
+  @@index([companyId, authorId])
+}
+
+/// A file on a task (spec 2026-10-07 §3.5, ADR-0086). The object lives in the
+/// PRIVATE bucket R2_TASKS_BUCKET_NAME under `key`; it is read only through a
+/// presigned GET minted after an access check. A delete is soft (`deletedAt`);
+/// the 03:00 run removes the object 30 days later and stamps `purgedAt`, the row
+/// stays for the history. Written only by tasks/task-files.service.ts.
+model TaskFile {
+  id           String       @id @default(uuid())
+  taskId       String
+  task         Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  /// `tasks/<companyId>/<taskId>/<uuid><ext>`; the extension comes from the sniffed type.
+  key          String       @unique
+  /// The person's base name with the sniffed extension (`safeFileName`).
+  name         String
+  size         Int
+  mime         String
+  kind         TaskFileKind
+  /// VOICE: seconds, from the recorder or Telegram; null when unknown.
+  durationSec  Int?
+  uploadedById Int?
+  uploadedBy   User?        @relation("TaskFileUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  via          TaskEventVia @default(WEB)
+  createdAt    DateTime     @default(now())
+  deletedAt    DateTime?
+  /// A bare id, like TaskOutbox.userId.
+  deletedById  Int?
+  purgedAt     DateTime?
+
+  events TaskEvent[]
+
+  @@index([taskId, createdAt])
+  @@index([deletedAt, purgedAt])
 }
 
 model Notification {
@@ -3603,6 +3724,7 @@ model DafSection {
   grammarRegeln DafGrammar[]
   dialoge       DafDialog[]
   phrasen       DafPhrase[]
+  uhrzeiten     DafUhrzeit[]
 
   @@unique([unitId, order])
   @@index([unitId])
@@ -3807,6 +3929,25 @@ model DafHoerFrage {
 
   @@unique([dialogId, order])
   @@index([dialogId])
+}
+
+/// Soat mashqi materiali: bo'lim o'rgatadigan bitta vaqt (`03:30`, soat
+/// 1–12). Nemischa matn bazada SAQLANMAYDI — `uhrzeit-text.ts` uni vaqtdan
+/// hisoblaydi, `pruefen` javobni ham shundan qayta tekshiradi. Manba —
+/// `content/daf/a1/uhrzeiten.json`, ovoz kaliti — `uhr-audio.json`.
+model DafUhrzeit {
+  id        Int      @id @default(autoincrement())
+  sectionId Int
+  /// `HH:MM`, soat 1–12, daqiqa 5 ga karrali.
+  zeit      String
+  /// R2 kaliti; `null` — ovoz yo'q, `UHR_HOEREN` qurilmaydi.
+  audioKey  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  section DafSection @relation(fields: [sectionId], references: [id])
+
+  @@unique([sectionId, zeit])
 }
 
 /// Vaziyat → tayyor ibora (Redemittel).

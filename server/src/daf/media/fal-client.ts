@@ -4,10 +4,20 @@ const TTS_ELEVEN_MODEL = 'fal-ai/elevenlabs/tts/turbo-v2.5';
 const TTS_INWORLD_MODEL = 'fal-ai/inworld-tts';
 const SFX_MODEL = 'fal-ai/elevenlabs/sound-effects/v2';
 /**
- * The course dialog model since 2026-09-26 (`dialog-audio.ts` pins it). It
- * replaced ElevenLabs text-to-dialogue, whose method was removed with it.
+ * The course dialog model (`dialog-audio.ts` pins it). Gemini 3.8 since
+ * 2026-10-11 (ADR-0085): the CEO compared it with 3.1 on u05-d1 and chose
+ * it, with one voice per character. It answers with WAV (`audio-format.ts`).
  */
-export const TTS_GEMINI_MODEL = 'fal-ai/gemini-3.1-flash-tts';
+export const TTS_GEMINI_MODEL = 'google/gemini-3.8-flash-tts';
+
+/**
+ * The dialog model from 2026-09-26 to 2026-10-11. Units are re-voiced on
+ * 3.8 one at a time; until then their 3.1 recordings stay valid.
+ */
+export const FRUEHERES_GEMINI_MODEL = 'fal-ai/gemini-3.1-flash-tts';
+
+/** "[tone] text" — the tone tag `geminiDialog` puts before a line. */
+const TON_TAG = /^\[([^\]]+)\]\s*/;
 
 /**
  * One whole dialog for Gemini's dialogue mode. `prompt` has one line per
@@ -176,20 +186,35 @@ export class FalClient {
   /**
    * A course dialog in Gemini's dialogue mode, the model the CEO chose for
    * every dialog on 2026-09-26: all speakers in one request, so each turn
-   * answers the one before it. The language is pinned to German; single
-   * words go to Inworld instead (`speechInworld`), because a lone word gives
-   * a multilingual model no language to go by, while a dialog does.
+   * answers the one before it. German comes from the text and the scene (3.8
+   * has no language field); single words go to Inworld instead
+   * (`speechInworld`), because a lone word gives a multilingual model no
+   * language to go by, while a dialog does.
+   *
+   * 3.8 takes ordered turns instead of one prompt: each "Speaker: [tone]
+   * text" line of `prompt` becomes a turn, its tone that turn's style.
    */
   async dialogGemini(dialog: GeminiDialog): Promise<string> {
+    const turns = dialog.prompt.split('\n').map((zeile) => {
+      const i = zeile.indexOf(': ');
+      if (i <= 0) {
+        throw new Error(`gapiruvchi va matnga ajratib bo'lmadi: «${zeile}»`);
+      }
+      const rest = zeile.slice(i + 2);
+      const ton = TON_TAG.exec(rest);
+      return {
+        speaker_id: zeile.slice(0, i),
+        text: ton ? rest.slice(ton[0].length) : rest,
+        ...(ton ? { style_instructions: ton[1] } : {}),
+      };
+    });
     const out = await this.run(TTS_GEMINI_MODEL, {
-      prompt: dialog.prompt,
       speakers: dialog.speakers.map((s) => ({
         speaker_id: s.speakerId,
         voice: s.voice,
       })),
+      turns,
       style_instructions: dialog.styleInstructions,
-      language_code: 'German (Germany)',
-      output_format: 'mp3',
     });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai suhbat qaytarmadi');
@@ -206,12 +231,13 @@ export class FalClient {
     voice: string,
     styleInstructions: string,
   ): Promise<string> {
+    const ton = TON_TAG.exec(prompt);
     const out = await this.run(TTS_GEMINI_MODEL, {
-      prompt,
+      prompt: ton ? prompt.slice(ton[0].length) : prompt,
       voice,
-      style_instructions: styleInstructions,
-      language_code: 'German (Germany)',
-      output_format: 'mp3',
+      style_instructions: ton
+        ? `${styleInstructions} Tone of this line: ${ton[1]}.`
+        : styleInstructions,
     });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');

@@ -253,6 +253,7 @@ describe('InhaltSeedService', () => {
       regeln: 1,
       phrasen: 1,
       hoerFragen: 2,
+      uhrzeiten: 0,
       staleWoerter: 0,
     });
   });

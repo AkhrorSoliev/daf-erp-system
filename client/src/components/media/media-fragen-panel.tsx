@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OvozTugmasi } from "@/components/student-portal/lernen/uebung/ovoz-tugmasi";
+import { Uhr } from "@/components/student-portal/lernen/uebung/uhr";
 import { cn } from "@/lib/utils";
 import {
   formatlarBoyichaGuruhla,
@@ -37,6 +38,25 @@ function RasmVariantlar({ options, richtig }: { options: string[]; richtig: stri
             url === richtig ? "border-emerald-500" : "border-transparent opacity-80",
           )}
         />
+      ))}
+    </div>
+  );
+}
+
+/** `UHR_HOEREN`: the four clocks, the right one framed green. */
+function UhrVariantlar({ options, richtig }: { options: string[]; richtig: string }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((zeit) => (
+        <div
+          key={zeit}
+          className={cn(
+            "rounded-md border-2 p-1 text-foreground",
+            zeit === richtig ? "border-emerald-500" : "border-transparent opacity-80",
+          )}
+        >
+          <Uhr zeit={zeit} className="size-16" />
+        </div>
       ))}
     </div>
   );
@@ -187,8 +207,17 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
         </div>
       )}
 
+      {shakl === "UHR" && (
+        <div className="space-y-1.5">
+          {f.audioUrl && <OvozTugmasi url={f.audioUrl} autoPlay={false} compact />}
+          {f.uhrzeit && <Uhr zeit={f.uhrzeit} className="size-24 text-foreground" />}
+        </div>
+      )}
+
       {shakl === "RASM" && f.options.length > 0 ? (
         <RasmVariantlar options={f.options} richtig={f.richtig} />
+      ) : f.format === "UHR_HOEREN" ? (
+        <UhrVariantlar options={f.options} richtig={f.richtig} />
       ) : shakl === "JUFT" ? (
         // Juftlar `richtig`dan TO'G'RIDAN-TO'G'RI o'qiladi
         // (`juftlarniAjrat`) — bu ham `VariantlarRoyxati`dagi kabi
@@ -213,7 +242,7 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
       {/* `JUFT`da variantlar ro'yxati qo'shimcha hech narsa aytmaydi —
           yuqoridagi juftlar allaqachon TO'LIQ javob; qolgan uch shaklda
           esa chalg'ituvchilarni ko'rish uchun qoladi. */}
-      {shakl !== "JUFT" && shakl !== "RASM" && (
+      {shakl !== "JUFT" && shakl !== "RASM" && f.format !== "UHR_HOEREN" && (
         <VariantlarRoyxati options={f.options} richtig={f.richtig} />
       )}
 

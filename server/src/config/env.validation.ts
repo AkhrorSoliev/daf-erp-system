@@ -168,6 +168,18 @@ export function validateEnv(
     if (problem) errors.push(`TELEGRAM_MINI_APP_URL — ${problem}`);
   }
 
+  // Task files (ADR-0086): the private bucket rides on the R2 group's keys.
+  // Absent = the feature is off (logged); set without R2 = a mistake.
+  if (isSet(config, 'R2_TASKS_BUCKET_NAME')) {
+    if (!isSet(config, 'R2_ENDPOINT')) {
+      errors.push(
+        "R2_TASKS_BUCKET_NAME — R2_* kalitlarisiz ishlamaydi (Fayl yuklash guruhi o'rnatilmagan)",
+      );
+    }
+  } else {
+    disabled.push('Topshiriq fayllari (R2_TASKS_BUCKET_NAME)');
+  }
+
   for (const { feature, keys } of GROUPS) {
     const missing = keys.filter((key) => !isSet(config, key));
     if (missing.length === 0) continue;

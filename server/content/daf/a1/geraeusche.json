@@ -124,5 +124,101 @@
     "sfx": "a glass bottle opened with a fizz and poured into a glass",
     "sek": 2.5,
     "loop": false
+  },
+  "53516194978c0883": {
+    "key": "daf/sfx/9549c053ef28c44f0092491a2f759f01.mp3",
+    "sfx": "a city bus arriving outside with a hiss of air brakes, heard through a window",
+    "sek": 3,
+    "loop": false
+  },
+  "dc01c5ce41fe6311": {
+    "key": "daf/sfx/db4333e7d970206d32f9e3490ae054e6.mp3",
+    "sfx": "a quiet flat in the evening, faint traffic far outside, no voices",
+    "sek": 15,
+    "loop": true
+  },
+  "98d552a28bd93d93": {
+    "key": "daf/sfx/f9a553273d7dd04a8bcfe92dd1a977d6.mp3",
+    "sfx": "a phone ringing twice and being picked up",
+    "sek": 2.5,
+    "loop": false
+  },
+  "0bd61c5507218805": {
+    "key": "daf/sfx/7f58c86955294c7fd97aad7574c15e81.mp3",
+    "sfx": "a knock on a bedroom door",
+    "sek": 1.5,
+    "loop": false
+  },
+  "fa73fc5f4b3b3576": {
+    "key": "daf/sfx/474a509dd7d04203e8476ba0221a2e3b.mp3",
+    "sfx": "a shower running in a small bathroom",
+    "sek": 3,
+    "loop": false
+  },
+  "79684f8e709c481a": {
+    "key": "daf/sfx/43095e6ffeeca823570e0b7ff17dd96a.mp3",
+    "sfx": "a car door closing and a car engine starting",
+    "sek": 3,
+    "loop": false
+  },
+  "7d17ac9ac33deb1f": {
+    "key": "daf/sfx/55e5d0c4f260c643bdafa567fb28b0fa.mp3",
+    "sfx": "a quiet living room in the evening, a TV playing softly in the background with indistinct music, no clear words",
+    "sek": 15,
+    "loop": true
+  },
+  "96ef7aba9cadad51": {
+    "key": "daf/sfx/1980943b6d7fcb2e28eef36c3a93055f.mp3",
+    "sfx": "a woman snoring softly on a sofa",
+    "sek": 2,
+    "loop": false
+  },
+  "3454a393225ffd9e": {
+    "key": "daf/sfx/227904e4c8577eb2cd5d481c3472824f.mp3",
+    "sfx": "a quiet doctor office reception, soft keyboard typing, no voices",
+    "sek": 15,
+    "loop": true
+  },
+  "8b7b91156468cdd4": {
+    "key": "daf/sfx/8fd6cc8f38572b6de46fc831fcac4520.mp3",
+    "sfx": "pages of a paper calendar being turned",
+    "sek": 2,
+    "loop": false
+  },
+  "781d83e3d9d52110": {
+    "key": "daf/sfx/92a5f96e1e6e8b214fe59ddb3d9df0cc.mp3",
+    "sfx": "a city street in the morning, light traffic and footsteps on the pavement, no voices",
+    "sek": 15,
+    "loop": true
+  },
+  "1fb2da305f378eb2": {
+    "key": "daf/sfx/cacfe618eb9f19ac890965443c476e83.mp3",
+    "sfx": "a glass door opening and hurried footsteps coming in",
+    "sek": 2,
+    "loop": false
+  },
+  "e4d092bd1f683a97": {
+    "key": "daf/sfx/0c7176ff16df2f2f1a8b189fadd63896.mp3",
+    "sfx": "dishes and cutlery clinking in a kitchen sink with running water",
+    "sek": 3,
+    "loop": false
+  },
+  "c958d30865247d90": {
+    "key": "daf/sfx/7504c524d1bcd525400ccaf47c53b6a3.mp3",
+    "sfx": "a teaspoon stirring coffee in a ceramic cup, gentle clinking of the spoon against the cup",
+    "sek": 3,
+    "loop": false
+  },
+  "bfcf81a3aec5b274": {
+    "key": "daf/sfx/81698f655b2673f634fbf0b3078b313f.mp3",
+    "sfx": "a busy university canteen at lunchtime, cutlery and trays clinking, many indistinct voices far away",
+    "sek": 15,
+    "loop": true
+  },
+  "dcc9288d9940e7c1": {
+    "key": "daf/sfx/bfc80219c30432da445ce6f212219aa2.mp3",
+    "sfx": "a plastic shopping bag rustling",
+    "sek": 1.5,
+    "loop": false
   }
 }

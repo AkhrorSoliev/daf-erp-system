@@ -91,9 +91,12 @@ export class DashboardChartsService {
     // aloqa qatorlari bilan bir xil operatsion daraja.
     const canSeeOperational = caller.keys.has('outreach.view');
 
-    const tier = canSeeMoney ? 'money' : canSeeOperational ? 'ops' : 'none';
+    // Both flags, not a ladder: money and the operational charts are
+    // independent keys since ADR-0087.
+    const tier = `${canSeeMoney ? 'm' : '-'}${canSeeOperational ? 'o' : '-'}`;
     const cacheKey = `dashboard:charts:${ctx.companyId}:${this.branchKey(
       ctx.branchScope,
+      canSeeMoney ? ctx.userId : undefined,
     )}:${tier}`;
 
     const cached = await this.redis.get(cacheKey).catch(() => null);
@@ -135,9 +138,13 @@ export class DashboardChartsService {
     return result;
   }
 
-  private branchKey(scope: ReportBranchIds): string {
+  // `userId` only when the body carries money: the profit leg uses the
+  // caller's own payroll scope, which differs between callers who share a
+  // multi-branch scope (see DashboardSummaryService.branchKey).
+  private branchKey(scope: ReportBranchIds, userId?: number): string {
     if (scope == null) return 'all';
-    return [...scope].sort((a, b) => a - b).join('-');
+    const ids = [...scope].sort((a, b) => a - b).join('-');
+    return userId !== undefined && scope.length > 1 ? `${ids}:u${userId}` : ids;
   }
 
   private async safe<T>(

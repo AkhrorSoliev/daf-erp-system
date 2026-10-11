@@ -26,6 +26,7 @@ function fakePrisma(rows: {
   saetze?: unknown[];
   phrasen?: unknown[];
   dialoge?: unknown[];
+  uhrzeiten?: unknown[];
 }) {
   const section = { id: 7, unitId: 1, order: 1 };
   return {
@@ -36,6 +37,7 @@ function fakePrisma(rows: {
     dafLexeme: { findMany: jest.fn(async () => rows.woerter ?? []) },
     dafSentence: { findMany: jest.fn(async () => rows.saetze ?? []) },
     dafPhrase: { findMany: jest.fn(async () => rows.phrasen ?? []) },
+    dafUhrzeit: { findMany: jest.fn(async () => rows.uhrzeiten ?? []) },
     dafDialog: { findMany: jest.fn(async () => rows.dialoge ?? []) },
   };
 }
@@ -45,6 +47,7 @@ function yasa(rows: {
   saetze?: unknown[];
   phrasen?: unknown[];
   dialoge?: unknown[];
+  uhrzeiten?: unknown[];
 }) {
   return new DafMediaFragenService(fakePrisma(rows) as any, config as any);
 }
@@ -129,6 +132,26 @@ describe('DafMediaFragenService', () => {
     });
     const r = await svc.fragen(7);
     expect(r.some((f) => f.format === 'AUDIO_WORT')).toBe(false);
+  });
+
+  it('clock questions are listed with the clock to draw and the answer', async () => {
+    const r = await yasa({
+      uhrzeiten: [
+        { id: 1, zeit: '03:30', audioKey: 'daf/audio/z1.mp3' },
+        { id: 2, zeit: '09:45', audioKey: null },
+      ],
+    }).fragen(7);
+    const lesen = r.filter((f) => f.format === 'UHR_LESEN');
+    expect(lesen.map((f) => [f.itemId, f.uhrzeit, f.richtig])).toEqual([
+      [1, '03:30', 'halb vier'],
+      [2, '09:45', 'Viertel vor zehn'],
+    ]);
+    const hoeren = r.filter((f) => f.format === 'UHR_HOEREN');
+    expect(hoeren.map((f) => f.itemId)).toEqual([1]);
+    expect(hoeren[0].audioUrl).toBe('https://r2.example/daf/audio/z1.mp3');
+    expect(hoeren[0].uhrzeit).toBeNull();
+    expect(hoeren[0].richtig).toBe('03:30');
+    expect(r.filter((f) => f.format === 'UHR_TIPPEN')).toHaveLength(2);
   });
 
   it('SATZ_HOEREN is listed for a sentence with audio only, with its public URL', async () => {
@@ -220,6 +243,7 @@ describe('DafMediaFragenService', () => {
       dafLexeme: { findMany: jest.fn(async () => []) },
       dafSentence: { findMany: jest.fn(async () => []) },
       dafPhrase: { findMany: bySectionIdFilter(phrasenBySection) },
+      dafUhrzeit: { findMany: jest.fn(async () => []) },
       dafDialog: { findMany: jest.fn(async () => []) },
     };
     const svc = new DafMediaFragenService(prisma as any, config as any);

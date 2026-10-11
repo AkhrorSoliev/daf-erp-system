@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,12 +10,19 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AnyStaff } from '../common/permissions/access.decorators';
 import { TasksService, type TaskActor } from './tasks.service';
 import { TasksReadService } from './tasks-read.service';
+import { TaskRecurrencesService } from './task-recurrences.service';
+import { TaskFilesService } from './task-files.service';
+import { TaskFileUploadInterceptor } from './task-file-upload.interceptor';
+import { UploadTaskFileDto } from './dto/upload-task-file.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskRecurrenceDto } from './dto/task-recurrence.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ListTasksDto } from './dto/list-tasks.dto';
 import { TaskStatusDto } from './dto/task-status.dto';
@@ -32,6 +40,8 @@ export class TasksController {
   constructor(
     private tasks: TasksService,
     private read: TasksReadService,
+    private recurrences: TaskRecurrencesService,
+    private files: TaskFilesService,
   ) {}
 
   pickBranch(header: string | undefined): number | null {
@@ -74,13 +84,43 @@ export class TasksController {
   ) {
     return this.read.assignable(await this.actor(uid, cid));
   }
+  // Static, so above `:id`. Off (no R2_TASKS_BUCKET_NAME) → the client hides every file control.
+  @Get('config') config() {
+    return this.files.config();
+  }
+  // The static `recurrences` paths stay above `:id`, or the word is read as an id.
+  @Get('recurrences') async recurrenceList(
+    @CurrentUser('id') uid: number,
+    @CurrentUser('companyId') cid: number,
+  ) {
+    return this.recurrences.list(await this.actor(uid, cid));
+  }
+  @Patch('recurrences/:id') async updateRecurrence(
+    @Param('id') id: string,
+    @Body() dto: UpdateTaskRecurrenceDto,
+    @CurrentUser('id') uid: number,
+    @CurrentUser('companyId') cid: number,
+  ) {
+    return this.recurrences.update(id, dto, await this.actor(uid, cid));
+  }
+  @Delete('recurrences/:id') async removeRecurrence(
+    @Param('id') id: string,
+    @CurrentUser('id') uid: number,
+    @CurrentUser('companyId') cid: number,
+  ) {
+    return this.recurrences.remove(id, await this.actor(uid, cid));
+  }
   @Post() async create(
     @Body() dto: CreateTaskDto,
     @CurrentUser('id') uid: number,
     @CurrentUser('companyId') cid: number,
     @Headers('x-branch-id') branch?: string,
   ) {
-    return this.tasks.create(dto, await this.actor(uid, cid, branch));
+    const actor = await this.actor(uid, cid, branch);
+    // A recurring task is a rule plus its first task (spec §3.6).
+    return dto.recurrence
+      ? this.recurrences.create(dto, actor)
+      : this.tasks.create(dto, actor);
   }
   @Get(':id') async detail(
     @Param('id') id: string,
@@ -188,5 +228,42 @@ export class TasksController {
     @CurrentUser('companyId') cid: number,
   ) {
     return this.tasks.addComment(id, dto.text, await this.actor(uid, cid));
+  }
+  @Get(':id/files') async fileList(
+    @Param('id') id: string,
+    @CurrentUser('id') uid: number,
+    @CurrentUser('companyId') cid: number,
+  ) {
+    return this.files.list(id, await this.actor(uid, cid));
+  }
+  // Through the server, not a presigned PUT (ADR-0086): the type is read from the bytes.
+  // The interceptor holds one file in memory and turns multer's own errors into Uzbek 400s.
+  @Post(':id/files')
+  @UseInterceptors(TaskFileUploadInterceptor)
+  async uploadFile(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() dto: UploadTaskFileDto,
+    @CurrentUser('id') uid: number,
+    @CurrentUser('companyId') cid: number,
+  ) {
+    if (!file) throw new BadRequestException('Fayl yuklanmadi');
+    return this.files.upload(
+      id,
+      {
+        buffer: file.buffer,
+        name: dto.name ?? file.originalname,
+        durationSec: dto.durationSec,
+      },
+      await this.actor(uid, cid),
+    );
+  }
+  @Delete(':id/files/:fileId') async removeFile(
+    @Param('id') id: string,
+    @Param('fileId') fileId: string,
+    @CurrentUser('id') uid: number,
+    @CurrentUser('companyId') cid: number,
+  ) {
+    return this.files.remove(id, fileId, await this.actor(uid, cid));
   }
 }

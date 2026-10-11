@@ -140,6 +140,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /salary/me/monthly',
       'GET /salary/me/payments/:id/breakdown',
       'GET /salary/me/summary',
+      'GET /teachers/me/stats',
     ],
   },
   {
@@ -148,6 +149,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "The caller's own capability list, read through " +
       "`PermissionsService.forUser(@CurrentUser('id'))`. No branch question.",
     routes: ['GET /permissions/me'],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      "The «Ruxsatlar» page (ADR-0087): a role's capability settings belong to " +
+      'the whole company — `RolePermission` has no branch, and one row turns a ' +
+      'key on or off for every holder of that role in every branch — and so ' +
+      'does their change history. CEO-only through `@CeoOnly()`, a database ' +
+      'role check that is never a capability (spec §4.2).',
+    routes: [
+      'GET /permissions',
+      'GET /permissions/history',
+      'POST /permissions/roles/:roleId/reset',
+      'PUT /permissions/roles/:roleId',
+    ],
   },
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
@@ -533,6 +549,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /teachers/:id/groups',
       'GET /teachers/:id/salary-summary',
       'GET /teachers/:id/status-history',
+      'GET /teachers/:id/stats',
       'POST /call-logs',
     ],
   },
@@ -882,11 +899,15 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'workload branch filter and the assignable-people filter. A create takes ' +
       "the task's branch from `resolveTaskBranchId` (the linked entity's " +
       'branch, else the `X-Branch-Id` pick), which refuses a branch outside ' +
-      "the caller's scope instead of widening it.",
+      "the caller's scope instead of widening it. The recurrence list (`" +
+      'TaskRecurrencesService.list`) applies the same scope: the CEO the ' +
+      "company, a Branch Director their own rules plus their branches', " +
+      'anyone else their own.',
     routes: [
       'GET /tasks',
       'GET /tasks/assignable',
       'GET /tasks/counts',
+      'GET /tasks/recurrences',
       'GET /tasks/workload',
       'POST /tasks',
     ],
@@ -902,21 +923,38 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "a missing id, so another branch's task id leaks nothing. The write " +
       'routes then check `canManage` / `canWork` from that same access result; a ' +
       'duplicate creates the copy through the same branch resolution as a new ' +
-      'task.',
+      'task. A recurrence rule is loaded by id AND company and checked with ' +
+      'the same `resolveAccess` on the RULE (author, the CEO, a Branch ' +
+      'Director of its `branchId`); anyone else gets 404. A task file route ' +
+      '(list, upload, delete) loads the task through the same `loadForAccess` ' +
+      'first; a delete then also needs the uploader or `canManage`.',
     routes: [
+      'DELETE /tasks/:id/files/:fileId',
       'DELETE /tasks/:id/steps/:stepId',
+      'DELETE /tasks/recurrences/:id',
       'GET /tasks/:id',
+      'GET /tasks/:id/files',
       'PATCH /tasks/:id',
       'PATCH /tasks/:id/steps/:stepId',
+      'PATCH /tasks/recurrences/:id',
       'POST /tasks/:id/cancel',
       'POST /tasks/:id/duplicate',
       'POST /tasks/:id/events',
+      'POST /tasks/:id/files',
       'POST /tasks/:id/review',
       'POST /tasks/:id/seen',
       'POST /tasks/:id/status',
       'POST /tasks/:id/steps',
       'PUT /tasks/:id/participants',
     ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'A server switch, not data: whether the private task-file bucket is ' +
+      'configured (`R2_TASKS_BUCKET_NAME`, ADR-0086). The same answer for ' +
+      'every caller and branch.',
+    routes: ['GET /tasks/config'],
   },
   {
     policy: 'SELF',

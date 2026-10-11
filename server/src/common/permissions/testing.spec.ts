@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { Public } from '../decorators/public.decorator';
 import { AnyStaff, Can, StudentOnly } from './access.decorators';
-import { defaultRolesOf, routeAccess } from './testing';
+import { defaultRolesOf, fakePermissions, routeAccess } from './testing';
 
 @Controller('demo')
 @Can('expenses.view')
@@ -57,5 +57,34 @@ describe('access markers', () => {
     expect(() => routeAccess(DemoController, 'missing')).toThrow(
       'DemoController.missing is not a method',
     );
+  });
+});
+
+describe('fakePermissions', () => {
+  it('gives every caller the roles when no user is named', async () => {
+    const permissions = fakePermissions([3]);
+    expect(await permissions.has(8, 'students.list')).toBe(true);
+  });
+
+  it('gives only the named user the roles', async () => {
+    const permissions = fakePermissions([3], { userId: 7 });
+    expect(await permissions.has(7, 'students.list')).toBe(true);
+    expect(await permissions.has(8, 'students.list')).toBe(false);
+    expect((await permissions.forUser(8)).roleIds).toEqual([]);
+  });
+
+  it("applies the CEO's changes it is given", async () => {
+    const permissions = fakePermissions([5], {
+      overrides: [
+        { roleId: 5, key: 'students.list', granted: true },
+        { roleId: 5, key: 'payments.create', granted: false },
+      ],
+    });
+    expect(await permissions.has(1, 'students.list')).toBe(true);
+    expect(await permissions.has(1, 'payments.create')).toBe(false);
+  });
+
+  it('has an invalidateAll that does nothing', () => {
+    expect(() => fakePermissions([2]).invalidateAll()).not.toThrow();
   });
 });

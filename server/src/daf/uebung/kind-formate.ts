@@ -7,10 +7,10 @@ import type { FrageFormat } from './frage.types';
  * in when they run out (`seans.ts` keeps its own variety rules: cap per
  * format, no two in a row, at least `MIN_FORMATE` formats). When this was
  * written only 10 formats existed and a strict split would have left a
- * session with three, contradicting `MIN_FORMATE`. With the picture formats
- * and `SATZ_HOEREN` the engine has 17 (not quite the course design's list:
- * `WAHL` and `HOEREN_TABELLE` are still missing) and SECTION_A / SECTION_B
- * prefer six and seven, so with enough material the ordering already behaves like a split —
+ * session with three, contradicting `MIN_FORMATE`. With the picture, clock
+ * and `SATZ_HOEREN` formats the engine has 20 (not quite the course
+ * design's list: `WAHL` and `HOEREN_TABELLE` are still missing) and
+ * SECTION_A / SECTION_B prefer eight each, so with enough material the ordering already behaves like a split —
  * and it still falls back when material is missing (a unit whose pictures
  * are not made yet simply asks other formats).
  *
@@ -25,6 +25,9 @@ const XARITA: Record<string, FrageFormat[]> = {
     'AUDIO_WORT',
     'BILD_WORT',
     'AUDIO_BILD',
+    // Only sections that teach clock times (`DafUhrzeit`) build these.
+    'UHR_LESEN',
+    'UHR_HOEREN',
   ],
   SECTION_B: [
     'UZ_WORT',
@@ -34,6 +37,7 @@ const XARITA: Record<string, FrageFormat[]> = {
     'SATZ_HOEREN',
     'WORT_TIPPEN',
     'BILD_TIPPEN',
+    'UHR_TIPPEN',
   ],
   BRIDGE: [],
   // Yakuniy sinov (2026-09-14 dan dvigatelda): vaziyatga suyangan formatlar

@@ -24,6 +24,7 @@ import {
 import { OPEN_STATUSES } from './task-transitions';
 import { cursorWhere, decodeCursor, encodeCursor } from './task-cursor';
 import { loadTaskSource } from './task-source';
+import { loadRecurrenceView } from './task-recurrence-view';
 import {
   assignableRoleIds,
   canAssignTo,
@@ -231,6 +232,17 @@ export class TasksReadService {
       // Only the first page carries it: the client keeps that one while it
       // pages back through older events.
       source: before ? null : await loadTaskSource(this.prisma, row),
+      // The rule of a recurring task (§3.6); first page only, like `source`.
+      // Its people are named for the author and managers alone, like `batch`.
+      recurrence:
+        before || !row.recurrenceId
+          ? null
+          : await loadRecurrenceView(
+              this.prisma,
+              row.recurrenceId,
+              this.tasks.actorPerson(actor),
+              access.isAuthor || access.isManager,
+            ),
     };
   }
 

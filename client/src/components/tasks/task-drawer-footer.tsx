@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Check, Loader2, Play, Undo2 } from "lucide-react";
+import { Camera, Check, Loader2, Play, Undo2 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -12,6 +12,9 @@ import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import type { TaskAccess, TaskDetail } from "@/hooks/use-tasks";
 import { footerActions } from "./task-drawer-footer-rules";
+import { photoFirst } from "./task-file-rules";
+import { TaskPhotoDialog } from "./task-photo-dialog";
+import { useTaskFiles } from "./use-task-files";
 import { useTaskWrite } from "./use-task-write";
 
 type Move = "IN_PROGRESS" | "IN_REVIEW" | "DONE";
@@ -24,9 +27,14 @@ export function TaskDrawerFooter({ task, access }: { task: TaskDetail; access: T
   const [warn, setWarn] = useState<Move | null>(null);
   const [returning, setReturning] = useState(false);
   const [reason, setReason] = useState("");
+  const hasFreshPhoto = useTaskFiles((s) => (s.taskId === task.id ? s.hasFreshPhoto : false));
+  const filesOn = useTaskFiles((s) => s.enabled === true);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
   const actions = footerActions(task, access, me);
   const finish = actions.done?.target;
+  // With files off the plain «Bajardim» stays; the server's 400 then asks for the photo.
+  const needPhoto = finish !== undefined && filesOn && photoFirst(task, finish, hasFreshPhoto);
   const unchecked = task.stepsTotal - task.stepsDone;
   if (!actions.start && !actions.done && !actions.accept && !actions.return && !actions.label) return null;
 
@@ -56,7 +64,10 @@ export function TaskDrawerFooter({ task, access }: { task: TaskDetail; access: T
       {actions.start && (
         <Button variant="outline" disabled={busy} onClick={() => move("IN_PROGRESS")}><Play className="mr-1 size-4" />Boshladim</Button>
       )}
-      {finish && (
+      {finish && needPhoto && (
+        <Button disabled={busy} onClick={() => setPhotoOpen(true)}><Camera className="mr-1 size-4" />{"Rasm qo'shib, tekshiruvga yuborish"}</Button>
+      )}
+      {finish && !needPhoto && (
         <Button disabled={busy} onClick={() => move(finish)}>
           {busy ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Check className="mr-1 size-4" />}Bajardim
         </Button>
@@ -69,6 +80,8 @@ export function TaskDrawerFooter({ task, access }: { task: TaskDetail; access: T
           {busy ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Check className="mr-1 size-4" />}Qabul qilish
         </Button>
       )}
+
+      <TaskPhotoDialog task={task} open={photoOpen} onOpenChange={setPhotoOpen} onSend={() => move("IN_REVIEW")} />
 
       <AlertDialog open={warn !== null} onOpenChange={(o) => { if (!o) setWarn(null); }}>
         <AlertDialogContent>

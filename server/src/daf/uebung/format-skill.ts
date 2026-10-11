@@ -51,6 +51,11 @@ export const FORMAT_SKILL: Record<FrageFormat, DafSkill> = {
   BILD_WORT: 'WORTSCHATZ',
   AUDIO_BILD: 'HOEREN',
   BILD_TIPPEN: 'SCHREIBEN',
+  // Clock: reading the time off a clock is vocabulary, hearing it is
+  // listening, typing it is writing.
+  UHR_LESEN: 'WORTSCHATZ',
+  UHR_HOEREN: 'HOEREN',
+  UHR_TIPPEN: 'SCHREIBEN',
 };
 
 /**

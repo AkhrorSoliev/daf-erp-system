@@ -1,0 +1,138 @@
+{
+  "unit": "u05",
+  "phrasen": [
+    {
+      "section": "u05-s1",
+      "funktion": "nach der Uhrzeit fragen",
+      "funktionUz": "do'stingizdan soat necha ekanini so'rash",
+      "de": "Wie spät ist es?",
+      "uz": "Soat necha?"
+    },
+    {
+      "section": "u05-s1",
+      "funktion": "höflich nach der Uhrzeit fragen",
+      "funktionUz": "notanish odamdan soatni muloyim so'rash",
+      "de": "Entschuldigung, wie viel Uhr ist es?",
+      "uz": "Kechirasiz, soat necha bo'ldi?"
+    },
+    {
+      "section": "u05-s1",
+      "funktion": "sagen, dass es spät ist",
+      "funktionUz": "kech bo'lib qolganini aytish",
+      "de": "Oh, es ist schon spät!",
+      "uz": "Voy, kech bo'lib qolibdi!"
+    },
+    {
+      "section": "u05-s1",
+      "funktion": "sagen, dass man keine Zeit hat",
+      "funktionUz": "vaqti yo'qligini aytish",
+      "de": "Ich habe keine Zeit.",
+      "uz": "Vaqtim yo'q."
+    },
+    {
+      "section": "u05-s2",
+      "funktion": "fragen, ob jemand Zeit hat",
+      "funktionUz": "do'stingizdan bo'sh vaqti bor-yo'qligini so'rash",
+      "de": "Hast du am Samstag Zeit?",
+      "uz": "Shanba kuni vaqting bormi?"
+    },
+    {
+      "section": "u05-s2",
+      "funktion": "einen Tag vorschlagen",
+      "funktionUz": "uchrashuvga kun taklif qilish",
+      "de": "Geht es am Freitag?",
+      "uz": "Juma kuni bo'ladimi?"
+    },
+    {
+      "section": "u05-s2",
+      "funktion": "sich bis zum Treffen verabschieden",
+      "funktionUz": "kelishilgan kungacha xayrlashish",
+      "de": "Bis Samstag!",
+      "uz": "Shanba kuni ko'rishguncha!"
+    },
+    {
+      "section": "u05-s3",
+      "funktion": "nach dem Tagesablauf fragen",
+      "funktionUz": "soat nechada turishini so'rash",
+      "de": "Wann stehst du auf?",
+      "uz": "Soat nechada turasan?"
+    },
+    {
+      "section": "u05-s3",
+      "funktion": "über den Alltag sprechen",
+      "funktionUz": "odatdagi kun tartibini aytish",
+      "de": "Normalerweise stehe ich um sieben Uhr auf.",
+      "uz": "Odatda soat yettida turaman."
+    },
+    {
+      "section": "u05-s3",
+      "funktion": "jemanden wecken",
+      "funktionUz": "kimnidir uyg'otish",
+      "de": "Aufstehen! Es ist schon sieben Uhr.",
+      "uz": "Tur! Soat yetti bo'ldi."
+    },
+    {
+      "section": "u05-s3",
+      "funktion": "gute Nacht wünschen",
+      "funktionUz": "uxlashdan oldin xayrli tun tilash",
+      "de": "Gute Nacht!",
+      "uz": "Xayrli tun!"
+    },
+    {
+      "section": "u05-s4",
+      "funktion": "einen Termin vereinbaren",
+      "funktionUz": "uchrashuv vaqtini belgilash",
+      "de": "Ich möchte einen Termin vereinbaren.",
+      "uz": "Uchrashuv vaqtini belgilamoqchi edim."
+    },
+    {
+      "section": "u05-s4",
+      "funktion": "nach einem freien Termin fragen",
+      "funktionUz": "qabulxonadan bo'sh qabul vaqti bor-yo'qligini so'rash",
+      "de": "Haben Sie am Donnerstag einen Termin frei?",
+      "uz": "Payshanba kuni bo'sh vaqtingiz bormi?"
+    },
+    {
+      "section": "u05-s4",
+      "funktion": "sich für die Verspätung entschuldigen",
+      "funktionUz": "kechikkani uchun uzr so'rash",
+      "de": "Entschuldigen Sie, ich komme zu spät.",
+      "uz": "Kechirasiz, kechikib qoldim."
+    },
+    {
+      "section": "u05-s4",
+      "funktion": "Pünktlichkeit versprechen",
+      "funktionUz": "o'z vaqtida kelishini va'da qilish",
+      "de": "Ich bin pünktlich da!",
+      "uz": "O'z vaqtida yetib kelaman!"
+    },
+    {
+      "section": "u05-s5",
+      "funktion": "fragen, was man tun muss",
+      "funktionUz": "nima qilish kerakligini so'rash",
+      "de": "Was muss ich machen?",
+      "uz": "Men nima qilishim kerak?"
+    },
+    {
+      "section": "u05-s5",
+      "funktion": "Bedauern ausdrücken",
+      "funktionUz": "afsuslanishini bildirish",
+      "de": "Das tut mir leid.",
+      "uz": "Afsusdaman."
+    },
+    {
+      "section": "u05-s5",
+      "funktion": "die Arbeit teilen",
+      "funktionUz": "ishni navbat bilan qilishni taklif qilish",
+      "de": "Wir machen das abwechselnd.",
+      "uz": "Buni navbatma-navbat qilamiz."
+    },
+    {
+      "section": "u05-s5",
+      "funktion": "sagen, dass man Stress hat",
+      "funktionUz": "zo'riqib qolganini aytish",
+      "de": "Ich habe so viel Stress!",
+      "uz": "Juda zo'riqib ketdim!"
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import {
   type MaterialDialog,
   type MaterialPhrase,
   type MaterialSatz,
+  type MaterialUhrzeit,
   type MaterialWort,
 } from './frage.types';
 
@@ -20,6 +21,7 @@ export function eigeneSchluessel(
     sentences: MaterialSatz[];
     phrases: MaterialPhrase[];
     dialoge: MaterialDialog[];
+    uhrzeiten?: MaterialUhrzeit[];
   },
 ): Set<string> {
   const out = new Set<string>();
@@ -37,6 +39,9 @@ export function eigeneSchluessel(
   for (const d of material.dialoge.filter(eigen)) {
     for (const z of d.zeilen) out.add(materialSchluessel('DIALOGZEILE', z.id));
     for (const f of d.fragen) out.add(materialSchluessel('HOERFRAGE', f.id));
+  }
+  for (const u of (material.uhrzeiten ?? []).filter(eigen)) {
+    out.add(materialSchluessel('UHRZEIT', u.id));
   }
   return out;
 }

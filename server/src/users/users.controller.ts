@@ -22,6 +22,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangePhoneDto } from './dto/change-phone.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { BranchScope } from '../common/decorators';
+import { PermissionsService } from '../common/permissions/permissions.service';
 import {
   AnyStaff,
   AnyUser,
@@ -36,26 +37,41 @@ export class UsersController {
   constructor(
     private usersService: UsersService,
     private authService: AuthService,
+    private permissions: PermissionsService,
   ) {}
 
   @Get()
-  @Can('employees.view', 'teachers.view', 'groups.manage')
-  findAll(
+  // `salary.pay`: the advance dialog's recipient list loads from here (ADR-0087).
+  @Can('employees.view', 'teachers.view', 'groups.manage', 'salary.pay')
+  async findAll(
     @Query() query: UserQueryDto,
+    @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.usersService.findAll(query, companyId, branchScope);
+    // The employee's salary balance goes only to a caller who may see pay.
+    return this.usersService.findAll(
+      query,
+      companyId,
+      branchScope,
+      await this.permissions.has(userId, 'salary.view'),
+    );
   }
 
   @Get(':id')
   @Can('employees.view', 'teachers.view')
-  findOne(
+  async findOne(
     @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.usersService.findById(id, companyId, branchScope);
+    return this.usersService.findById(
+      id,
+      companyId,
+      branchScope,
+      await this.permissions.has(userId, 'salary.view'),
+    );
   }
 
   // Administrators do not hold `employees.manage` (docs/role-access.md,

@@ -136,4 +136,25 @@ describe('TeacherTimelineService.getTimeline', () => {
 
     expect(events.map((e) => e.kind)).toContain('SalaryChanged');
   });
+
+  it('never shows an employee balance stored in an old profile row (ADR-0087)', async () => {
+    prisma.entityHistory.findMany.mockResolvedValue([
+      {
+        id: 'e2',
+        action: 'CREATE',
+        oldValues: null,
+        newValues: { firstName: 'Ali', balance: 1 },
+        createdAt: new Date('2026-08-01'),
+        changedBy: null,
+      },
+    ]);
+    const service = await build([ROLE_ID.ADMINISTRATOR]);
+    people({ roles: ['Administrator'], branches: [1] }, [1]);
+
+    const events = await service.getTimeline(TEACHER, 1, CALLER);
+
+    const profile = events.find((e) => e.kind === 'ProfileUpdated');
+    expect(profile?.payload.newValues).toEqual({ firstName: 'Ali' });
+    expect(profile?.payload.oldValues).toBeNull();
+  });
 });

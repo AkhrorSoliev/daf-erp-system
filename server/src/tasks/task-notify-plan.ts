@@ -29,7 +29,7 @@ export type TgNotice =
   | { kind: 'REVIEW'; by: string }
   | { kind: 'ACCEPTED'; by: string }
   | { kind: 'RETURNED'; by: string; reason: string }
-  | { kind: 'COMMENT'; by: string; text: string }
+  | { kind: 'COMMENT'; by: string; text: string; attachment?: 'FILE' | 'VOICE' }
   | { kind: 'DONE'; by: string }
   | { kind: 'CANCELLED'; by: string }
   | { kind: 'REMINDER' }
@@ -270,16 +270,27 @@ function planFor(event: string, payload: unknown, names: Names): Notice[] {
       const p = payload as TaskCommentedPayload;
       const by = who(names, p.actorId);
       const watching = new Set(watchers(p.task));
+      const title =
+        p.attachment === 'VOICE'
+          ? 'Ovozli xabar'
+          : p.attachment === 'FILE'
+            ? 'Yangi fayl'
+            : 'Yangi izoh';
       return mk(
         everyone(p.task).filter((u) => u !== p.actorId),
         'TASK_UPDATED',
-        'Yangi izoh',
+        title,
         `${by}: «${clip(p.text, 80)}» — ${clip(p.task.title, 50)}`,
         false,
         (u) =>
           watching.has(u)
             ? null
-            : { kind: 'COMMENT', by, text: clip(p.text, 300) },
+            : {
+                kind: 'COMMENT',
+                by,
+                text: clip(p.text, 300),
+                ...(p.attachment && { attachment: p.attachment }),
+              },
       );
     }
     case TASK_EVENTS.CANCELLED: {

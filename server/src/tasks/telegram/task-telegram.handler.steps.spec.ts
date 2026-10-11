@@ -78,6 +78,7 @@ beforeEach(() => {
     tasks,
     { getBot: () => ({}), useBeforeScenes: jest.fn() } as any,
     { openUrl: jest.fn(), record: jest.fn() } as any,
+    { onMessage: jest.fn() } as never,
   );
   error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
 });

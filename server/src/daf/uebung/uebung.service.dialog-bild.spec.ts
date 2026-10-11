@@ -76,6 +76,7 @@ function fakePrisma(dialog: { imageKey: string | null } = DIALOGE[0]) {
     dafLexeme: { findMany: jest.fn(async () => []) },
     dafSentence: { findMany: jest.fn(async () => []) },
     dafPhrase: { findMany: jest.fn(async () => []) },
+    dafUhrzeit: { findMany: jest.fn(async () => []) },
     dafDialog: {
       findMany: jest.fn(async () => DIALOGE),
       findUnique: jest.fn(async () => ({

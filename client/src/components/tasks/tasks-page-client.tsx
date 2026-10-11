@@ -15,6 +15,7 @@ import { TaskFilters } from "./task-filters";
 import { useTaskCreate } from "./task-create-dialog";
 import { TaskDrawer } from "./task-drawer";
 import { TaskAllTable } from "./task-all-table";
+import { TaskRecurrencesButton } from "./task-recurrences-dialog";
 import { TaskWorkload } from "./task-workload";
 
 const TABS: TaskView[] = ["my", "created", "all", "workload"];
@@ -90,7 +91,10 @@ export function TasksPageClient() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Topshiriqlar</h1>
-        <Button onClick={() => openCreate({})}><Plus className="mr-1 size-4" />Yangi topshiriq</Button>
+        <div className="flex gap-2">
+          <TaskRecurrencesButton />
+          <Button onClick={() => openCreate({})}><Plus className="mr-1 size-4" />Yangi topshiriq</Button>
+        </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Tabs value={tab} onValueChange={setTab} className="max-w-full overflow-x-auto">

@@ -4,6 +4,7 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { ACCESS_KEY, RouteAccessMeta } from './access.decorators';
 import { PermissionGuard, allows } from './permission.guard';
 import type { CallerAccess } from './permissions.service';
+import { PERMISSION_KEYS } from './permission-catalog';
 import { fakePermissions } from './testing';
 
 function contextFor(
@@ -120,5 +121,32 @@ describe('PermissionGuard', () => {
     await expect(guardFor([1]).canActivate(context)).rejects.toThrow(
       ForbiddenException,
     );
+  });
+
+  it('admits @CeoOnly() for the CEO alone, never through capabilities', async () => {
+    const access: RouteAccessMeta = { kind: 'ceo' };
+    const ceo = contextFor({ access }, { id: 9 });
+    await expect(guardFor([1]).canActivate(ceo.context)).resolves.toBe(true);
+
+    const director = contextFor({ access }, { id: 10 });
+    await expect(guardFor([2]).canActivate(director.context)).rejects.toThrow(
+      new ForbiddenException("Sizga bu amalni bajarishga ruxsat yo'q"),
+    );
+
+    // Spec §4.2: the page that edits capabilities cannot itself be one, so
+    // a Branch Director holding every capability is still refused.
+    const everyKey: CallerAccess = {
+      roleIds: [2],
+      roleNames: ['Branch Director'],
+      keys: new Set(PERMISSION_KEYS),
+    };
+    expect(allows(access, everyKey)).toBe(false);
+    expect(
+      allows(access, {
+        ...everyKey,
+        roleIds: [2, 1],
+        roleNames: ['Branch Director', 'CEO'],
+      }),
+    ).toBe(true);
   });
 });

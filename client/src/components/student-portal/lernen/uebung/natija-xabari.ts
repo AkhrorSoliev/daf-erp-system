@@ -69,10 +69,13 @@ export function xatoYorligi(format: FrageFormat, prompt: string): string {
     format === "AUDIO_WORT" ||
     format === "WORT_TIPPEN" ||
     format === "AUDIO_BILD" ||
-    format === "SATZ_HOEREN"
+    format === "SATZ_HOEREN" ||
+    format === "UHR_HOEREN"
   ) {
     return "Eshitish savoli";
   }
   if (format === "BILD_TIPPEN") return "Rasm savoli";
+  // The clock is the question; its `prompt` is empty.
+  if (format === "UHR_LESEN" || format === "UHR_TIPPEN") return "Soat savoli";
   return prompt;
 }

@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { DashboardSummaryService } from './dashboard-summary.service';
 import { ROLE_ID } from '../common/auth/role-ids';
 import { fakePermissions } from '../common/permissions/testing';
+import type { RoleOverride } from '../common/permissions/effective-permissions';
 
 // «Qarz — ikki raqam» (ADR-0059). `ReportsService.getFinancialOverview` uni
 // `debtSplit` sifatida o'zi qaytaradi — bosh sahifa qarzni shundan oladi.
@@ -73,6 +74,7 @@ const todaySchedule = {
 function makeService(
   overrides: Record<string, any> = {},
   roleIds: number[] = [ROLE_ID.CEO],
+  roleOverrides: RoleOverride[] = [],
 ) {
   const reports = {
     getFinancialOverview: jest.fn().mockResolvedValue(financialOverview),
@@ -114,7 +116,7 @@ function makeService(
     outreach,
     dashboard,
     redis as any,
-    fakePermissions(roleIds),
+    fakePermissions(roleIds, { overrides: roleOverrides }),
   );
   return { service, reports, payments, outreach, dashboard, redis };
 }
@@ -287,9 +289,67 @@ describe('DashboardSummaryService.getSummary', () => {
 
     const ceoKey = ceo.redis.setex.mock.calls[0][0];
     const administratorKey = administrator.redis.setex.mock.calls[0][0];
-    expect(ceoKey).toContain(':money');
-    expect(administratorKey).toContain(':outreach');
+    expect(ceoKey).toMatch(/:mo$/);
+    expect(administratorKey).toMatch(/:-o$/);
     expect(ceoKey).not.toBe(administratorKey);
+  });
+
+  it('keys the cache on both flags: money without outreach never shares a key', async () => {
+    // The old single tier assumed reports.finance => outreach.view. Once the
+    // CEO can switch outreach off for a role (ADR-0087) that caller must not
+    // be served a cached body that carries outreach numbers.
+    const both = makeService({}, [ROLE_ID.BRANCH_DIRECTOR]);
+    await both.service.getSummary(CEO);
+    const moneyOnly = makeService(
+      {},
+      [ROLE_ID.BRANCH_DIRECTOR],
+      [
+        {
+          roleId: ROLE_ID.BRANCH_DIRECTOR,
+          key: 'outreach.view',
+          granted: false,
+        },
+      ],
+    );
+    const res = await moneyOnly.service.getSummary(CEO);
+
+    expect(both.redis.setex.mock.calls[0][0]).toMatch(/:mo$/);
+    expect(moneyOnly.redis.setex.mock.calls[0][0]).toMatch(/:m-$/);
+    expect(res.money).not.toBeNull();
+    expect(moneyOnly.outreach.getStats).not.toHaveBeenCalled();
+    expect(moneyOnly.payments.getDebtorSummary).not.toHaveBeenCalled();
+  });
+
+  it('gives two money callers who share a several-branch scope their own entries', async () => {
+    // The net profit leg subtracts the payroll of the CALLER's payroll scope;
+    // with several branches that falls back to the caller's home branch, so
+    // the same flags and the same branch set can still mean different bodies.
+    const scope = [1, 2];
+    const a = makeService({}, [ROLE_ID.BRANCH_DIRECTOR]);
+    await a.service.getSummary({ ...CEO, userId: 11, branchScope: scope });
+    const b = makeService({}, [ROLE_ID.BRANCH_DIRECTOR]);
+    await b.service.getSummary({ ...CEO, userId: 12, branchScope: scope });
+
+    expect(a.redis.setex.mock.calls[0][0]).toContain(':1-2:u11:mo');
+    expect(b.redis.setex.mock.calls[0][0]).toContain(':1-2:u12:mo');
+  });
+
+  it('keeps callers of one branch, or without money, on a shared entry', async () => {
+    const one = makeService({}, [ROLE_ID.BRANCH_DIRECTOR]);
+    await one.service.getSummary({ ...CEO, userId: 11, branchScope: [1] });
+    const other = makeService({}, [ROLE_ID.BRANCH_DIRECTOR]);
+    await other.service.getSummary({ ...CEO, userId: 12, branchScope: [1] });
+    const noMoney = makeService({}, [ROLE_ID.ADMINISTRATOR]);
+    await noMoney.service.getSummary({
+      ...ADMINISTRATOR,
+      userId: 13,
+      branchScope: [1, 2],
+    });
+
+    expect(one.redis.setex.mock.calls[0][0]).toBe(
+      other.redis.setex.mock.calls[0][0],
+    );
+    expect(noMoney.redis.setex.mock.calls[0][0]).not.toContain(':u13');
   });
 
   it("reads the caller's capabilities from the database, not the roles in the token", async () => {
@@ -302,7 +362,7 @@ describe('DashboardSummaryService.getSummary', () => {
 
     expect(res.money).toBeNull();
     expect(outreach.getStats).toHaveBeenCalled();
-    expect(redis.setex.mock.calls[0][0]).toContain(':outreach');
+    expect(redis.setex.mock.calls[0][0]).toMatch(/:-o$/);
   });
 
   it('filial tanlanmasa jadval null, todayLessons ham null', async () => {

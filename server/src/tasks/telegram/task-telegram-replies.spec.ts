@@ -6,24 +6,22 @@ import {
 } from '@nestjs/common';
 import { Composer, Context } from 'telegraf';
 import { STAFF_TASKS_ACTION } from '../../telegram/staff/staff-cabinet';
-import { ONLY_GIVER_REVIEWS } from '../task-transitions';
 import { loadTaskView, staffOfChat } from './task-telegram-view';
 import { TaskTelegramHandler } from './task-telegram.handler';
+import { TaskTelegramReplies } from './task-telegram-replies';
 import {
   ADDED_TO_TASK,
-  NOT_IN_REVIEW,
   NOT_YOURS,
-  RETURN_PROMPT,
+  PHOTO_PROMPT,
   SEVERAL_ACCOUNTS,
-  TEXT_ONLY,
   TRY_LATER,
   parseTk,
   type TgTaskView,
 } from './task-telegram-text';
 
-// The «Qaytarish» prompt and the replies (spec §6.2); the buttons are in
-// `task-telegram.handler.spec.ts`. The fixtures repeat there: a shared helper
-// would be built into dist.
+// Replies to task messages (spec §6.2); the buttons and the «Qaytarish» prompt
+// are in `task-telegram.handler.spec.ts` and `task-telegram.handler.return.spec.ts`.
+// The fixtures repeat there: a shared helper would be built into dist.
 
 jest.mock('./task-telegram-view', () => ({
   ...jest.requireActual('./task-telegram-view'),
@@ -57,23 +55,11 @@ const view = (over: Partial<TgTaskView> = {}): TgTaskView => ({
   ...over,
 });
 
-function press(data: string) {
-  return {
-    chat: { id: 700, type: 'private' },
-    callbackQuery: {
-      data,
-      message: { message_id: 5, text: 'Tekshiruvga keldi\nOktabr banneri' },
-    },
-    answerCbQuery: jest.fn().mockResolvedValue(true),
-    editMessageText: jest.fn().mockResolvedValue(true),
-    editMessageReplyMarkup: jest.fn().mockResolvedValue(true),
-    reply: jest.fn().mockResolvedValue({ message_id: 9 }),
-  } as any;
-}
-
+let replies: TaskTelegramReplies;
 let handler: TaskTelegramHandler;
 let prisma: any;
 let tasks: any;
+let files: any;
 let sender: any;
 let telegram: any;
 
@@ -102,6 +88,7 @@ beforeEach(() => {
     review: jest.fn().mockResolvedValue({ assignees: [] }),
     addComment: jest.fn().mockResolvedValue({}),
   };
+  files = { upload: jest.fn() };
   sender = {
     openUrl: jest
       .fn()
@@ -109,89 +96,15 @@ beforeEach(() => {
     record: jest.fn(),
   };
   telegram = { getBot: () => ({}), useBeforeScenes: jest.fn() };
-  handler = new TaskTelegramHandler(prisma, tasks, telegram, sender);
+  replies = new TaskTelegramReplies(prisma, tasks, files);
+  handler = new TaskTelegramHandler(prisma, tasks, telegram, sender, replies);
   as(40);
   (loadTaskView as jest.Mock).mockResolvedValue(view());
 });
 
 afterEach(() => jest.restoreAllMocks());
 
-describe('TaskTelegramHandler — the «Qaytarish» prompt', () => {
-  it('«Qaytarish»: asks for the reason as a reply to the pressed card, names the task, remembers the prompt', async () => {
-    as(30);
-    (loadTaskView as jest.Mock).mockResolvedValue(
-      view({ status: 'IN_REVIEW' }),
-    );
-    const ctx = press(`tk:return:${TASK}`);
-    await handler.onAction(ctx);
-    expect(ctx.reply).toHaveBeenCalledWith(
-      `${RETURN_PROMPT}\n<b>Oktabr banneri</b>`,
-      {
-        parse_mode: 'HTML',
-        reply_parameters: { message_id: 5, allow_sending_without_reply: true },
-        reply_markup: {
-          force_reply: true,
-          input_field_placeholder: 'Qaytarish sababi',
-        },
-      },
-    );
-    expect(sender.record).toHaveBeenCalledWith(
-      '700',
-      9,
-      expect.objectContaining({ id: TASK }),
-      30,
-      'RETURN_PROMPT',
-    );
-    expect(ctx.answerCbQuery).toHaveBeenCalledWith();
-    expect(tasks.review).not.toHaveBeenCalled();
-  });
-
-  it('«Qaytarish» prompt: the title is escaped and clipped (it goes out as HTML)', async () => {
-    as(30);
-    (loadTaskView as jest.Mock).mockResolvedValue(
-      view({
-        status: 'IN_REVIEW',
-        title: `<i>A & B</i> ${'x'.repeat(200)}`,
-      }),
-    );
-    const ctx = press(`tk:return:${TASK}`);
-    await handler.onAction(ctx);
-    const [text] = ctx.reply.mock.calls[0];
-    expect(
-      text.startsWith(`${RETURN_PROMPT}\n<b>&lt;i&gt;A &amp; B&lt;/i&gt; x`),
-    ).toBe(true);
-    expect(text.endsWith('…</b>')).toBe(true);
-    expect(text.length).toBeLessThan(RETURN_PROMPT.length + 120);
-  });
-
-  it('«Qaytarish» by somebody who may not review: told so, no prompt, the card is redrawn', async () => {
-    (loadTaskView as jest.Mock).mockResolvedValue(
-      view({ status: 'IN_REVIEW' }),
-    );
-    tasks.loadForAccess.mockResolvedValue({ access: { canManage: false } });
-    const ctx = press(`tk:return:${TASK}`);
-    await handler.onAction(ctx);
-    expect(ctx.answerCbQuery).toHaveBeenCalledWith(ONLY_GIVER_REVIEWS, {
-      show_alert: true,
-    });
-    expect(ctx.reply).not.toHaveBeenCalled();
-    expect(sender.record).not.toHaveBeenCalled();
-    expect(ctx.editMessageText).toHaveBeenCalledTimes(1);
-  });
-
-  it('«Qaytarish» on a task no longer in review: says so, asks nothing', async () => {
-    as(30);
-    (loadTaskView as jest.Mock).mockResolvedValue(view({ status: 'DONE' }));
-    const ctx = press(`tk:return:${TASK}`);
-    await handler.onAction(ctx);
-    expect(ctx.answerCbQuery).toHaveBeenCalledWith(NOT_IN_REVIEW, {
-      show_alert: true,
-    });
-    expect(ctx.reply).not.toHaveBeenCalled();
-  });
-});
-
-describe('TaskTelegramHandler — replies (spec §6.2)', () => {
+describe('TaskTelegramReplies — replies (spec §6.2)', () => {
   const message = (msg: any) =>
     ({
       chat: { id: 700, type: 'private' },
@@ -216,7 +129,7 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
 
   it("a reply to a task message becomes a comment by the chat's staff", async () => {
     const ctx = message(replyTo());
-    await handler.onMessage(ctx, next);
+    await replies.onMessage(ctx, next);
     expect(prisma.taskTelegramMessage.findUnique).toHaveBeenCalledWith({
       where: { chatId_messageId: { chatId: '700', messageId: 5 } },
       select: { taskId: true, purpose: true },
@@ -244,7 +157,7 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
         reply_to_message: { message_id: 9 },
       }),
     );
-    await handler.onMessage(ctx, next);
+    await replies.onMessage(ctx, next);
     expect(tasks.review).toHaveBeenCalledWith(
       TASK,
       'RETURN',
@@ -257,34 +170,13 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
     );
   });
 
-  it('a photo, file, voice or caption reply: text only for now, nothing stored', async () => {
-    for (const media of [
-      { photo: [{ file_id: 'x' }] },
-      { photo: [{ file_id: 'x' }], caption: 'mana' },
-      { voice: { file_id: 'v' } },
-      { document: { file_id: 'd' } },
-    ]) {
-      // Telegram sends no `text` key at all for these.
-      const { text: _text, ...bare } = replyTo();
-      const ctx = message({ ...bare, ...media });
-      await handler.onMessage(ctx, next);
-      expect(ctx.reply).toHaveBeenCalledWith(TEXT_ONLY);
-    }
-    expect(tasks.addComment).not.toHaveBeenCalled();
-    expect(tasks.review).not.toHaveBeenCalled();
-    expect(staffOfChat).not.toHaveBeenCalled();
-    expect(next).not.toHaveBeenCalled();
-    // The website takes no upload before phase 3: the text must not point to it.
-    expect(TEXT_ONLY).toBe('Hozircha faqat matnli javob qabul qilinadi.');
-  });
-
   it("not a reply, a reply to another message, a command, a group: the bot's own flows", async () => {
-    await handler.onMessage(message({ message_id: 11, text: 'salom' }), next);
+    await replies.onMessage(message({ message_id: 11, text: 'salom' }), next);
     expect(next).toHaveBeenCalledTimes(1);
     expect(prisma.taskTelegramMessage.findUnique).not.toHaveBeenCalled();
 
     // «/cancel» typed as a reply is still the command, not a comment.
-    await handler.onMessage(
+    await replies.onMessage(
       message(
         replyTo({
           text: '/cancel',
@@ -298,12 +190,12 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
 
     const group = message(replyTo());
     group.chat.type = 'group';
-    await handler.onMessage(group, next);
+    await replies.onMessage(group, next);
     expect(next).toHaveBeenCalledTimes(3);
     expect(prisma.taskTelegramMessage.findUnique).not.toHaveBeenCalled();
 
     prisma.taskTelegramMessage.findUnique.mockResolvedValue(null);
-    await handler.onMessage(
+    await replies.onMessage(
       message(replyTo({ reply_to_message: { message_id: 6 } })),
       next,
     );
@@ -317,20 +209,20 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
       new BadRequestException('Izoh matnini yozing'),
     );
     const a = message(replyTo());
-    await handler.onMessage(a, next);
+    await replies.onMessage(a, next);
     expect(a.reply).toHaveBeenCalledWith('Izoh matnini yozing');
     tasks.addComment.mockRejectedValueOnce(
       new NotFoundException('Topshiriq topilmadi'),
     );
     const b = message(replyTo());
-    await handler.onMessage(b, next);
+    await replies.onMessage(b, next);
     expect(b.reply).toHaveBeenCalledWith(NOT_YOURS);
   });
 
   it('a replier who is not on the task, or left it, is told so before anything is written', async () => {
     as(50); // visible (a manager), neither the author nor a participant
     const a = message(replyTo());
-    await handler.onMessage(a, next);
+    await replies.onMessage(a, next);
     expect(a.reply).toHaveBeenCalledWith(NOT_YOURS);
 
     as(40);
@@ -338,12 +230,12 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
       new NotFoundException('Topshiriq topilmadi'),
     );
     const b = message(replyTo());
-    await handler.onMessage(b, next);
+    await replies.onMessage(b, next);
     expect(b.reply).toHaveBeenCalledWith(NOT_YOURS);
 
     (loadTaskView as jest.Mock).mockResolvedValueOnce(null);
     const c = message(replyTo());
-    await handler.onMessage(c, next);
+    await replies.onMessage(c, next);
     expect(c.reply).toHaveBeenCalledWith(NOT_YOURS);
 
     expect(tasks.addComment).not.toHaveBeenCalled();
@@ -353,12 +245,12 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
   it('identity: no staff on the chat, two, or an account blocked since — refused', async () => {
     (staffOfChat as jest.Mock).mockResolvedValue({ kind: 'none' });
     const a = message(replyTo());
-    await handler.onMessage(a, next);
+    await replies.onMessage(a, next);
     expect(a.reply).toHaveBeenCalledWith(NOT_YOURS);
 
     (staffOfChat as jest.Mock).mockResolvedValue({ kind: 'several' });
     const b = message(replyTo());
-    await handler.onMessage(b, next);
+    await replies.onMessage(b, next);
     expect(b.reply).toHaveBeenCalledWith(SEVERAL_ACCOUNTS);
 
     as(40);
@@ -366,7 +258,7 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
       new ForbiddenException('Foydalanuvchi aniqlanmadi'),
     );
     const c = message(replyTo());
-    await handler.onMessage(c, next);
+    await replies.onMessage(c, next);
     expect(c.reply).toHaveBeenCalledWith(NOT_YOURS);
 
     expect(tasks.addComment).not.toHaveBeenCalled();
@@ -377,7 +269,7 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
     const error = mute('error');
     tasks.addComment.mockRejectedValue(new Error('db down'));
     const ctx = message(replyTo());
-    await expect(handler.onMessage(ctx, next)).resolves.toBeUndefined();
+    await expect(replies.onMessage(ctx, next)).resolves.toBeUndefined();
     expect(ctx.reply).toHaveBeenCalledWith(TRY_LATER);
     expect(error).toHaveBeenCalledWith('task reply failed: db down');
   });
@@ -387,7 +279,7 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
     const warn = mute('warn');
     const comment = message(replyTo());
     comment.reply.mockRejectedValue(new Error('403: bot was blocked'));
-    await expect(handler.onMessage(comment, next)).resolves.toBeUndefined();
+    await expect(replies.onMessage(comment, next)).resolves.toBeUndefined();
     expect(tasks.addComment).toHaveBeenCalledTimes(1);
     expect(comment.reply).toHaveBeenCalledTimes(1);
     expect(comment.reply).toHaveBeenCalledWith(ADDED_TO_TASK);
@@ -399,7 +291,7 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
     });
     const returned = message(replyTo({ text: 'Qayta qiling' }));
     returned.reply.mockRejectedValue(new Error('403: bot was blocked'));
-    await expect(handler.onMessage(returned, next)).resolves.toBeUndefined();
+    await expect(replies.onMessage(returned, next)).resolves.toBeUndefined();
     expect(tasks.review).toHaveBeenCalledTimes(1);
     expect(returned.reply).toHaveBeenCalledTimes(1);
 
@@ -410,27 +302,24 @@ describe('TaskTelegramHandler — replies (spec §6.2)', () => {
     );
   });
 
-  it('a reply to a message of any other purpose (PHOTO_PROMPT, phase 3) is never a comment', async () => {
-    const warn = mute('warn');
+  it('a text reply to the photo prompt asks for the photo again; nothing stored', async () => {
     prisma.taskTelegramMessage.findUnique.mockResolvedValue({
       taskId: TASK,
       purpose: 'PHOTO_PROMPT',
     });
     const ctx = message(replyTo());
-    await handler.onMessage(ctx, next);
-    expect(ctx.reply).toHaveBeenCalledWith(TEXT_ONLY);
+    await replies.onMessage(ctx, next);
+    expect(ctx.reply).toHaveBeenCalledWith(PHOTO_PROMPT);
     expect(tasks.addComment).not.toHaveBeenCalled();
     expect(tasks.review).not.toHaveBeenCalled();
+    expect(files.upload).not.toHaveBeenCalled();
     expect(next).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith(
-      `task ${TASK}: a reply to a PHOTO_PROMPT message was not stored`,
-    );
   });
 
   it("a failure further down the chain is not swallowed as the reply's", async () => {
     next.mockRejectedValue(new Error('scene broke'));
     const ctx = message({ message_id: 11, text: 'salom' });
-    await expect(handler.onMessage(ctx, next)).rejects.toThrow('scene broke');
+    await expect(replies.onMessage(ctx, next)).rejects.toThrow('scene broke');
     expect(ctx.reply).not.toHaveBeenCalled();
   });
 

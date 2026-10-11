@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import { ChevronDown, ChevronUp, Loader2, Plus, X } from "lucide-react";
@@ -16,6 +16,9 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { useTasks, type TaskPriority } from "@/hooks/use-tasks";
 import { TaskAssigneePicker } from "./task-assignee-picker";
 import { PRIORITY_LABEL } from "./task-labels";
+import { TaskRecurrenceFields } from "./task-recurrence-fields";
+import { useTaskFiles } from "./use-task-files";
+import { EMPTY_RECURRENCE, recurrenceFormReady, recurrencePayload, type RecurrenceForm } from "@/lib/task-recurrence-rules";
 
 export interface TaskCreateContext { entityType?: string; entityId?: string; entityLabel?: string }
 interface CreateState { isOpen: boolean; context: TaskCreateContext; open: (ctx: TaskCreateContext) => void; close: () => void }
@@ -50,11 +53,18 @@ export function TaskCreateDialog() {
   const [steps, setSteps] = useState<string[]>([]);
   const [more, setMore] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [recurrence, setRecurrence] = useState<RecurrenceForm>(EMPTY_RECURRENCE);
+  const recurring = recurrence.freq !== "NONE";
+  const [requiresPhoto, setRequiresPhoto] = useState(false);
+  const filesOn = useTaskFiles((s) => s.enabled === true);
+  // The photo option shows only when files are on, so the config is asked for when the dialog opens.
+  useEffect(() => { if (isOpen) void useTaskFiles.getState().loadConfig(); }, [isOpen]);
 
-  const canSubmit = title.trim() !== "" && assigneeIds.length > 0 && !saving;
+  const canSubmit = title.trim() !== "" && assigneeIds.length > 0 && recurrenceFormReady(recurrence) && !saving;
   const reset = () => {
     setTitle(""); setDescription(""); setAssigneeIds([]); setWatcherIds([]); setDay(undefined); setTime(DEFAULT_TIME);
-    setPriority("MEDIUM"); setSeparate(false); setSteps([]); setMore(false);
+    setPriority("MEDIUM"); setSeparate(false); setSteps([]); setMore(false); setRequiresPhoto(false);
+    setRecurrence(EMPTY_RECURRENCE);
   };
   // A request in flight cannot be walked away from: the dialog stays until it answers.
   const dismiss = () => { if (!saving) { reset(); close(); } };
@@ -67,14 +77,16 @@ export function TaskCreateDialog() {
         description: description.trim() || undefined,
         assigneeIds,
         watcherIds: watcherIds.length ? watcherIds : undefined,
-        dueAt: day ? tashkentDateTime(day, time) : undefined,
+        dueAt: !recurring && day ? tashkentDateTime(day, time) : undefined,
+        recurrence: recurrencePayload(recurrence),
         priority,
         entityType: context.entityType,
         entityId: context.entityId,
+        requiresPhoto: requiresPhoto && !recurring ? true : undefined,
         separateCopies: separate && assigneeIds.length > 1 ? true : undefined,
         steps: steps.filter((s) => s.trim()).map((s) => ({ title: s.trim() })),
       });
-      toast.success("Topshiriq berildi");
+      toast.success(recurring ? "Takrorlanuvchi topshiriq berildi" : "Topshiriq berildi");
       reset();
       close();
       // Refetching the board also bumps the store's `version`, which the sidebar counts follow.
@@ -107,10 +119,14 @@ export function TaskCreateDialog() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Muddat</Label>
-              <div className="flex gap-2">
-                <DatePicker value={day} onChange={setDay} disabledDaysOfWeek={[0]} placeholder="Sana" className="flex-1" />
-                <TimePicker value={time} onChange={setTime} minTime="08:00" maxTime="22:00" className="w-28" />
-              </div>
+              {recurring ? (
+                <p className="py-2 text-sm text-muted-foreground">{"Muddat «Takrorlash» bo'yicha qo'yiladi"}</p>
+              ) : (
+                <div className="flex gap-2">
+                  <DatePicker value={day} onChange={setDay} disabledDaysOfWeek={[0]} placeholder="Sana" className="flex-1" />
+                  <TimePicker value={time} onChange={setTime} minTime="08:00" maxTime="22:00" className="w-28" />
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Muhimlik</Label>
@@ -163,6 +179,19 @@ export function TaskCreateDialog() {
               <div className="space-y-1.5">
                 <Label>Kuzatuvchi</Label>
                 <TaskAssigneePicker value={watcherIds} onChange={setWatcherIds} mode="watchers" placeholder="Ixtiyoriy" />
+              </div>
+              {filesOn && !recurring && (
+                <label className="flex items-start gap-2 text-sm">
+                  <Checkbox checked={requiresPhoto} onCheckedChange={(v) => setRequiresPhoto(v === true)} className="mt-0.5" />
+                  <span>
+                    Rasm bilan tasdiqlansin
+                    <span className="block text-xs text-muted-foreground">{"Ijrochi tekshiruvga yuborishdan oldin ish rasmini qo'shadi"}</span>
+                  </span>
+                </label>
+              )}
+              <div className="space-y-1.5">
+                <Label>Takrorlash</Label>
+                <TaskRecurrenceFields value={recurrence} onChange={setRecurrence} />
               </div>
             </div>
           )}

@@ -125,7 +125,21 @@
     "Branch Director",
     "CEO"
   ],
+  "DELETE /tasks/:id/files/:fileId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "DELETE /tasks/:id/steps/:stepId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "DELETE /tasks/recurrences/:id": [
     "Administrator",
     "Branch Director",
     "CEO",
@@ -681,6 +695,12 @@
     "CEO",
     "Cashier"
   ],
+  "GET /permissions": [
+    "CEO"
+  ],
+  "GET /permissions/history": [
+    "CEO"
+  ],
   "GET /permissions/me": "ANY",
   "GET /public/forms/:slug": "PUBLIC",
   "GET /receipts/:id/verify": "PUBLIC",
@@ -1218,6 +1238,13 @@
     "Cashier",
     "Teacher"
   ],
+  "GET /tasks/:id/files": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "GET /tasks/assignable": [
     "Administrator",
     "Branch Director",
@@ -1225,7 +1252,21 @@
     "Cashier",
     "Teacher"
   ],
+  "GET /tasks/config": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "GET /tasks/counts": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /tasks/recurrences": [
     "Administrator",
     "Branch Director",
     "CEO",
@@ -1258,9 +1299,21 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /teachers/:id/stats": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /teachers/:id/status-history": [
     "Branch Director",
     "CEO"
+  ],
+  "GET /teachers/me/stats": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
   ],
   "GET /telegram-groups": [
     "Administrator",
@@ -1555,6 +1608,13 @@
     "Cashier",
     "Teacher"
   ],
+  "PATCH /tasks/recurrences/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "PATCH /teachers/:id": [
     "Branch Director",
     "CEO"
@@ -1842,6 +1902,9 @@
     "CEO",
     "Cashier"
   ],
+  "POST /permissions/roles/:roleId/reset": [
+    "CEO"
+  ],
   "POST /planned-absences/:groupId/date/:date": [
     "Administrator",
     "Branch Director",
@@ -2017,6 +2080,13 @@
     "Cashier",
     "Teacher"
   ],
+  "POST /tasks/:id/files": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "POST /tasks/:id/review": [
     "Administrator",
     "Branch Director",
@@ -2090,6 +2160,9 @@
   "PUT /lesson-teacher-overrides/:groupId/:date": [
     "Administrator",
     "Branch Director",
+    "CEO"
+  ],
+  "PUT /permissions/roles/:roleId": [
     "CEO"
   ],
   "PUT /tasks/:id/participants": [
