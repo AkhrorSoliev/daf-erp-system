@@ -145,6 +145,8 @@ export class PaymentsListService {
       );
     }
     const [row] = await this.buildRows(companyId, scope, period!, {}, { id });
+    // The payment left the scope (or was removed) between the two reads.
+    if (!row) throw new NotFoundException("To'lov topilmadi");
     return { period: periodView(period!), row };
   }
 

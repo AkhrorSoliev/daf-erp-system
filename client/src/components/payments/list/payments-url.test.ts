@@ -94,6 +94,12 @@ describe("listParams", () => {
     expect(p?.status).toBe("COMPLETED");
     expect(p?.search).toBe("a".repeat(100));
   });
+  it("a prototype member name in the URL picks nothing", () => {
+    const p = listParams({ ...base, holat: "constructor", nimaga: "toString", manba: "__proto__" }, "2026-10-11");
+    expect(p?.status).toBe("COMPLETED");
+    expect(p).not.toHaveProperty("part");
+    expect(p).not.toHaveProperty("source");
+  });
   it("is null for an invalid Oraliq", () => expect(listParams({ ...base, davr: "oraliq", dan: "2026-09-30", gacha: "2026-09-01" }, "2026-10-11")).toBeNull());
 });
 

@@ -85,6 +85,8 @@ export function periodParams(f: PaymentFilters, todayStr: string): Range | null 
 const PARTS: Record<string, string> = { joriy: "CURRENT", oldindan: "ADVANCE", qarz: "LATE" };
 const SOURCES: Record<string, string> = { admin: "ADMIN", onlayn: "ONLINE" };
 const STATUSES: Record<string, string> = { otgan: "COMPLETED", bekor: "REVERSED", hammasi: "ALL" };
+/** Only the table's own keys: `?holat=constructor` must not pick a prototype member. */
+const own = (table: Record<string, string>, key: string): string | undefined => (Object.hasOwn(table, key) ? table[key] : undefined);
 const METHODS = ["CASH", "CLICK", "PAYME", "TRANSFER", "UZUM"];
 
 const tokens = (s: string) => s.split(",").map((t) => t.trim()).filter(Boolean);
@@ -100,14 +102,14 @@ export function listParams(f: PaymentFilters, todayStr: string): Record<string, 
   };
   put("search", f.q.trim().slice(0, 100));
   put("method", tokens(f.usul).filter((m) => METHODS.includes(m)).join(","));
-  put("part", PARTS[f.nimaga]);
+  put("part", own(PARTS, f.nimaga));
   put("groupId", tokens(f.guruh).join(","));
   put("teacherId", digits(f.ustoz).join(","));
   put("courseId", tokens(f.kurs).join(","));
   if (tokens(f.qabul).includes("onlayn")) out.online = "true";
   put("receivedById", digits(f.qabul).join(","));
-  put("source", SOURCES[f.manba]);
-  out.status = STATUSES[f.holat] ?? "COMPLETED";
+  put("source", own(SOURCES, f.manba));
+  out.status = own(STATUSES, f.holat) ?? "COMPLETED";
   out.page = Number.isInteger(f.sahifa) && f.sahifa >= 1 ? f.sahifa : 1;
   out.pageSize = f.soni === 100 ? 100 : 50;
   return out;

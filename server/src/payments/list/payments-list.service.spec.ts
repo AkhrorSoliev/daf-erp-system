@@ -433,6 +433,13 @@ describe('PaymentsListService', () => {
       });
     });
 
+    it('is 404 when the payment leaves the scope between the two reads', async () => {
+      prisma.payment.findMany.mockResolvedValueOnce([]);
+      await expect(service.row(1001, [4], 'p1', {})).rejects.toEqual(
+        new NotFoundException("To'lov topilmadi"),
+      );
+    });
+
     it('an unknown id or one outside the scope is 404', async () => {
       await expect(service.row(1001, [4], 'nope', {})).rejects.toEqual(
         new NotFoundException("To'lov topilmadi"),

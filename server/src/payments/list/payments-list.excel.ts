@@ -90,10 +90,6 @@ const COLUMNS: Column[] = [
   },
 ];
 
-/** A text that starts with = + - @ (or a tab / CR) would run as a formula in some viewers. */
-const safe = (v: Cell): Cell =>
-  typeof v === 'string' && /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
-
 /** The filtered list, every page: two header lines, the table, a «Jami» row (spec B4 §5.6). */
 export async function paymentsWorkbook(
   rows: readonly PaymentRow[],
@@ -106,9 +102,7 @@ export async function paymentsWorkbook(
   ws.addRow([`Davr: ${header.period}`]);
   ws.addRow([`Filtrlar: ${header.filters}`]);
   ws.addRow(['#', ...COLUMNS.map((c) => c.header)]).font = { bold: true };
-  rows.forEach((r, i) =>
-    ws.addRow([i + 1, ...COLUMNS.map((c) => safe(c.value(r)))]),
-  );
+  rows.forEach((r, i) => ws.addRow([i + 1, ...COLUMNS.map((c) => c.value(r))]));
   const amountCol = 2 + COLUMNS.findIndex((c) => c.isAmount);
   ws.getColumn(amountCol).numFmt = '#,##0';
   const total = new Array<Cell>(COLUMNS.length + 1).fill('');

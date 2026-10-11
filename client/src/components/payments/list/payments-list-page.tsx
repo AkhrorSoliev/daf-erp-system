@@ -55,7 +55,7 @@ export function PaymentsListPage() {
 
   const options = usePaymentsFilterOptions();
   const summary = usePaymentsSummary(period, canSeeMoney);
-  const { data, isPending, isPlaceholderData, isError, refetch } = usePaymentsRows(params);
+  const { data, isPending, isPlaceholderData, isFetching, isError, refetch } = usePaymentsRows(params);
 
   // A page past the last one (a filter narrowed the list, an old link) goes to the last page that has rows.
   const lastPage =
@@ -65,9 +65,9 @@ export function PaymentsListPage() {
   }, [lastPage, setFilters]);
   // A kept answer is not the new one: skeleton, not «to'lov yo'q», until it lands.
   const tableLoading = isPending || lastPage !== null || (isPlaceholderData && !data?.data.length);
-  // The clicked row is used as it is when it is on this page and the page is not showing a kept answer.
+  // The clicked row is used as it is when it is on this page and the list is neither showing a kept answer nor refetching (after a cancel or a correction the row is stale until the answer lands; the drawer then reads rows/:id).
   const openId = filters.tolov || null;
-  const openRow = !isPlaceholderData ? data?.data.find((r) => r.id === openId) : undefined;
+  const openRow = !isPlaceholderData && !isFetching ? data?.data.find((r) => r.id === openId) : undefined;
 
   // Any filter or period change puts the list back on page 1; the period keeps the filters.
   const onChange = useCallback((u: Partial<PaymentFilters>) => setFilters({ sahifa: 1, ...u }), [setFilters]);

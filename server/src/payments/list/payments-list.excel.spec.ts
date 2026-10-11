@@ -155,12 +155,12 @@ describe('paymentsWorkbook', () => {
     expect(total[6]).toBe(150_000);
   });
 
-  it('a text starting with = + - @ is kept as text, not a formula', async () => {
+  it('a text starting with = + - @ is written as a plain string, without a prefix', async () => {
     const { ws } = await load([
       row({ note: '=1+1', student: { ...row({}).student, firstName: '@x' } }),
     ]);
-    expect(ws.getRow(4).getCell(13).value).toBe("'=1+1");
-    expect(ws.getRow(4).getCell(4).value).toBe("'@x Familiya");
+    expect(ws.getRow(4).getCell(13).value).toBe('=1+1');
+    expect(ws.getRow(4).getCell(4).value).toBe('@x Familiya');
   });
 
   it('the cap is 20 000', () => {
