@@ -651,5 +651,191 @@
       ],
       "tempo": 0.9
     }
+  },
+  "u06-d1": {
+    "szene": "Mittags in der Mensa einer Universität. Julia und Lukas sprechen über Hobbys. Julia hat kein Hobby, Lukas lädt sie zu einer Fahrradtour seines Vereins ein.",
+    "toene": [
+      "curious",
+      "enthusiastic",
+      "a little embarrassed",
+      "surprised",
+      "shy",
+      "inviting",
+      "delighted",
+      "happy"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a busy university canteen at lunchtime, cutlery and trays clinking, many indistinct voices far away",
+        "sek": 15
+      },
+      "geraeusche": [],
+      "tempo": 0.9
+    }
+  },
+  "u06-d2": {
+    "szene": "Samstagabend im Wohnzimmer. Mia möchte mit Jonas und der kleinen Lena Pantomime spielen. Jonas will zuerst nicht, dann macht es ihm Spaß.",
+    "toene": [
+      "cheerful",
+      "relaxed",
+      "playful",
+      "reluctant",
+      "encouraging",
+      "giving in",
+      "guessing",
+      "laughing"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a quiet living room in the evening, faint traffic far outside, no voices",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 2,
+          "sfx": "a dice rolling on a wooden table",
+          "sek": 1.5
+        }
+      ],
+      "tempo": 0.9
+    }
+  },
+  "u06-d3": {
+    "szene": "An der Rezeption eines Sportclubs. Thomas möchte Sport machen. Sabine erklärt das Angebot; Schwimmen gibt es nicht, also wählt er Yoga.",
+    "toene": [
+      "friendly",
+      "polite",
+      "helpful",
+      "honest",
+      "apologetic",
+      "hopeful",
+      "friendly",
+      "satisfied"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a sports club reception, a basketball bouncing far away in a gym, no voices",
+        "sek": 15
+      },
+      "geraeusche": [],
+      "tempo": 0.9
+    }
+  },
+  "u06-d4": {
+    "szene": "In einem Probenraum vor der Chorprobe. Helga lernt Anna kennen, die neu im Chor ist und Geige spielt.",
+    "toene": [
+      "warm",
+      "shy",
+      "interested",
+      "proud",
+      "excited",
+      "frightened",
+      "encouraging",
+      "giving in with a laugh"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a quiet rehearsal room, a few people chatting softly far away, a piano tuning note",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 9,
+          "sfx": "a short violin melody being played softly",
+          "sek": 3
+        }
+      ],
+      "tempo": 0.9
+    }
+  },
+  "u06-d5": {
+    "szene": "Mittagspause im Büro. Thomas und Mia planen den Freitagabend: Kino, Konzert oder Theater.",
+    "toene": [
+      "inviting",
+      "pleased",
+      "reading",
+      "unconvinced",
+      "disappointed",
+      "hopeful",
+      "pleased",
+      "happy"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a quiet office during lunch break, soft keyboard typing far away, no voices",
+        "sek": 15
+      },
+      "geraeusche": [],
+      "tempo": 0.9
+    }
+  },
+  "u06-d6": {
+    "szene": "Abends an der Theaterkasse. Thomas kauft zwei Tickets für das Theater-Festival bei der Kassiererin Claudia.",
+    "toene": [
+      "friendly",
+      "polite",
+      "informative",
+      "surprised",
+      "enthusiastic",
+      "hopeful",
+      "friendly",
+      "decided"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a theatre foyer in the evening, people talking softly in the distance, no clear words",
+        "sek": 15
+      },
+      "geraeusche": [],
+      "tempo": 0.9
+    }
+  },
+  "u06-d7": {
+    "szene": "Samstagmorgen in der Wohnung am Fenster. Es regnet stark. Jonas und Mia wollten eine Fahrradtour machen und verschieben sie auf morgen.",
+    "toene": [
+      "disappointed",
+      "annoyed",
+      "sad",
+      "firm",
+      "hopeful",
+      "pleased",
+      "relieved",
+      "cheerful"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "heavy rain pouring against a window, inside a quiet flat, no voices",
+        "sek": 15
+      },
+      "geraeusche": [],
+      "tempo": 0.9
+    }
+  },
+  "u06-d8": {
+    "szene": "Am Telefon. Julia lädt Lukas zu ihrem Geburtstags-Picknick im Stadtpark ein.",
+    "toene": [
+      "cheerful",
+      "pleased",
+      "inviting",
+      "delighted",
+      "helpful",
+      "polite",
+      "friendly",
+      "happy"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "a quiet flat in the afternoon, faint birds outside the window, no voices",
+        "sek": 15
+      },
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "a phone ringing twice and being picked up",
+          "sek": 2.5
+        }
+      ],
+      "tempo": 0.9
+    }
   }
 }

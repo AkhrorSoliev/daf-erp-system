@@ -1,0 +1,1876 @@
+{
+ "unit": "u06",
+ "saetze": [
+  {
+   "sourceId": "u06-s1-01",
+   "section": "u06-s1",
+   "de": "Was machst du in der Freizeit?",
+   "uz": "Bo'sh vaqtingda nima qilasan?",
+   "wordCount": 6,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-02",
+   "section": "u06-s1",
+   "de": "Mein Hobby ist Fotografieren.",
+   "uz": "Mening hobbim suratga olish.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Fotografieren ist mein Hobby."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-03",
+   "section": "u06-s1",
+   "de": "Lesen ist eine gute Freizeitaktivität.",
+   "uz": "O'qish yaxshi bo'sh vaqt mashg'uloti.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Eine gute Freizeitaktivität ist Lesen."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-04",
+   "section": "u06-s1",
+   "de": "Tanzen macht viel Spaß.",
+   "uz": "Raqs juda qiziqarli.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Viel Spaß macht Tanzen."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-05",
+   "section": "u06-s1",
+   "de": "Das Buch ist sehr interessant.",
+   "uz": "Kitob juda qiziqarli.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-06",
+   "section": "u06-s1",
+   "de": "Interessiert dich das Buch?",
+   "uz": "Kitob seni qiziqtiradimi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-07",
+   "section": "u06-s1",
+   "de": "Comics sind in Deutschland beliebt.",
+   "uz": "Germaniyada komikslar mashhur.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "In Deutschland sind Comics beliebt."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-08",
+   "section": "u06-s1",
+   "de": "Dein Fahrrad ist cool!",
+   "uz": "Velosipeding zo'r!",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-09",
+   "section": "u06-s1",
+   "de": "Ich lese besonders gern Comics.",
+   "uz": "Ayniqsa komiks o'qishni yaxshi ko'raman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Besonders gern lese ich Comics.",
+    "Comics lese ich besonders gern."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-10",
+   "section": "u06-s1",
+   "de": "Jonas liest abends ein Buch.",
+   "uz": "Jonas kechqurunlari kitob o'qiydi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Abends liest Jonas ein Buch.",
+    "Jonas liest ein Buch abends."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-11",
+   "section": "u06-s1",
+   "de": "Lena liest gern Comics.",
+   "uz": "Lena komiks o'qishni yaxshi ko'radi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Comics liest Lena gern."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-12",
+   "section": "u06-s1",
+   "de": "Lukas fotografiert gern Autos.",
+   "uz": "Lukas mashinalarni suratga olishni yaxshi ko'radi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Autos fotografiert Lukas gern."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-13",
+   "section": "u06-s1",
+   "de": "Wo ist meine Kamera?",
+   "uz": "Fotoapparatim qayerda?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-14",
+   "section": "u06-s1",
+   "de": "Julia malt am Wochenende.",
+   "uz": "Julia dam olish kunlari rasm chizadi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Wochenende malt Julia."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-15",
+   "section": "u06-s1",
+   "de": "Ich zeichne gern mit Lena.",
+   "uz": "Lena bilan chizishni yaxshi ko'raman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Mit Lena zeichne ich gern."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-16",
+   "section": "u06-s1",
+   "de": "Die Zeichnung ist von Lena.",
+   "uz": "Bu chizma Lenaniki.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-17",
+   "section": "u06-s1",
+   "de": "Lena hat viel Fantasie.",
+   "uz": "Lenaning tasavvuri boy.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Viel Fantasie hat Lena."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-18",
+   "section": "u06-s1",
+   "de": "Thomas sammelt Comics.",
+   "uz": "Thomas komiks to'playdi.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Comics sammelt Thomas."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-19",
+   "section": "u06-s1",
+   "de": "Wir tanzen am Samstag.",
+   "uz": "Shanba kuni raqsga tushamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Samstag tanzen wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-20",
+   "section": "u06-s1",
+   "de": "Am Sonntag wandern wir.",
+   "uz": "Yakshanba kuni piyoda sayr qilamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wir wandern am Sonntag."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-21",
+   "section": "u06-s1",
+   "de": "Die Fahrradtour ist am Samstag.",
+   "uz": "Velosiped sayohati shanba kuni.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Samstag ist die Fahrradtour."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-22",
+   "section": "u06-s1",
+   "de": "Wir machen einen Ausflug.",
+   "uz": "Biz sayohatga chiqamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Einen Ausflug machen wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-23",
+   "section": "u06-s1",
+   "de": "Am Sonntag besuchen wir Oma.",
+   "uz": "Yakshanba kuni buvimiznikiga boramiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wir besuchen am Sonntag Oma.",
+    "Oma besuchen wir am Sonntag."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-24",
+   "section": "u06-s1",
+   "de": "Das Spiel macht Spaß.",
+   "uz": "O'yin qiziqarli.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-25",
+   "section": "u06-s1",
+   "de": "Lena würfelt eine Sechs.",
+   "uz": "Lena zarda olti tashlaydi.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-26",
+   "section": "u06-s1",
+   "de": "Jetzt ziehst du, Lena!",
+   "uz": "Endi sen yurasan, Lena!",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Du ziehst jetzt, Lena!"
+   ]
+  },
+  {
+   "sourceId": "u06-s1-27",
+   "section": "u06-s1",
+   "de": "Rate mal, Jonas!",
+   "uz": "Topchi, Jonas!",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-28",
+   "section": "u06-s1",
+   "de": "Pantomime ist ein Spiel.",
+   "uz": "Pantomima — bu o'yin.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-29",
+   "section": "u06-s1",
+   "de": "Der Verein macht oft Ausflüge.",
+   "uz": "Klub tez-tez sayohat qiladi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Oft macht der Verein Ausflüge."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-30",
+   "section": "u06-s1",
+   "de": "Mia ist Mitglied im Verein.",
+   "uz": "Mia klub a'zosi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Im Verein ist Mia Mitglied."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-31",
+   "section": "u06-s1",
+   "de": "Ich sehe nie fern.",
+   "uz": "Men hech qachon televizor ko'rmayman.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s1-32",
+   "section": "u06-s1",
+   "de": "Wir wandern nur selten.",
+   "uz": "Biz kamdan-kam piyoda sayr qilamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Nur selten wandern wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-33",
+   "section": "u06-s1",
+   "de": "Meistens lese ich abends.",
+   "uz": "Ko'pincha kechqurun o'qiyman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich lese meistens abends.",
+    "Abends lese ich meistens."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-34",
+   "section": "u06-s1",
+   "de": "Im Fernsehen kommen die Nachrichten.",
+   "uz": "Televizorda yangiliklar boshlanyapti.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Nachrichten kommen im Fernsehen."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-35",
+   "section": "u06-s1",
+   "de": "Bücher interessieren Lena.",
+   "uz": "Kitoblar Lenani qiziqtiradi.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Lena interessieren Bücher."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-36",
+   "section": "u06-s1",
+   "de": "Lena möchte heute malen.",
+   "uz": "Lena bugun rasm chizmoqchi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute möchte Lena malen."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-37",
+   "section": "u06-s1",
+   "de": "Ich möchte gern zeichnen.",
+   "uz": "Men chizishni xohlayman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gern möchte ich zeichnen."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-38",
+   "section": "u06-s1",
+   "de": "Wir sammeln Comics.",
+   "uz": "Biz komiks to'playmiz.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Comics sammeln wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-39",
+   "section": "u06-s1",
+   "de": "Wir würfeln zusammen.",
+   "uz": "Biz birga zar tashlaymiz.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zusammen würfeln wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s1-40",
+   "section": "u06-s1",
+   "de": "Jetzt ziehen wir, Lena!",
+   "uz": "Endi biz yuramiz, Lena!",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wir ziehen jetzt, Lena!"
+   ]
+  },
+  {
+   "sourceId": "u06-s1-41",
+   "section": "u06-s1",
+   "de": "Wir raten zusammen.",
+   "uz": "Biz birga topamiz.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zusammen raten wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-01",
+   "section": "u06-s2",
+   "de": "Thomas macht gern Sport.",
+   "uz": "Thomas sport bilan shug'ullanishni yaxshi ko'radi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gern macht Thomas Sport.",
+    "Sport macht Thomas gern."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-02",
+   "section": "u06-s2",
+   "de": "Kannst du gut schwimmen?",
+   "uz": "Yaxshi suza olasanmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s2-03",
+   "section": "u06-s2",
+   "de": "Ich kann nicht singen.",
+   "uz": "Men qo'shiq ayta olmayman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Singen kann ich nicht."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-04",
+   "section": "u06-s2",
+   "de": "Lena spielt mit dem Ball.",
+   "uz": "Lena to'p bilan o'ynaydi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Mit dem Ball spielt Lena."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-05",
+   "section": "u06-s2",
+   "de": "Jonas spielt gern Fußball.",
+   "uz": "Jonas futbol o'ynashni yaxshi ko'radi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Fußball spielt Jonas gern."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-06",
+   "section": "u06-s2",
+   "de": "Das Fußballspiel beginnt um acht.",
+   "uz": "Futbol o'yini soat sakkizda boshlanadi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Um acht beginnt das Fußballspiel."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-07",
+   "section": "u06-s2",
+   "de": "Lukas spielt Basketball.",
+   "uz": "Lukas basketbol o'ynaydi.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Basketball spielt Lukas."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-08",
+   "section": "u06-s2",
+   "de": "Spielst du gern Tennis?",
+   "uz": "Tennis o'ynashni yoqtirasanmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s2-09",
+   "section": "u06-s2",
+   "de": "Am Montag mache ich Yoga.",
+   "uz": "Dushanba kuni yoga qilaman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich mache am Montag Yoga.",
+    "Yoga mache ich am Montag."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-10",
+   "section": "u06-s2",
+   "de": "Lukas macht Karate.",
+   "uz": "Lukas karate bilan shug'ullanadi.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Karate macht Lukas."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-11",
+   "section": "u06-s2",
+   "de": "Thomas schwimmt oft.",
+   "uz": "Thomas tez-tez suzadi.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Oft schwimmt Thomas."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-12",
+   "section": "u06-s2",
+   "de": "Ich laufe morgens im Park.",
+   "uz": "Ertalablari bog'da yuguraman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Morgens laufe ich im Park.",
+    "Im Park laufe ich morgens."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-13",
+   "section": "u06-s2",
+   "de": "Joggen ist gut.",
+   "uz": "Yugurish foydali.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s2-14",
+   "section": "u06-s2",
+   "de": "Thomas läuft einen Marathon.",
+   "uz": "Thomas marafon yuguradi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Einen Marathon läuft Thomas."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-15",
+   "section": "u06-s2",
+   "de": "Der Halbmarathon ist am Sonntag.",
+   "uz": "Yarim marafon yakshanba kuni.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Sonntag ist der Halbmarathon."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-16",
+   "section": "u06-s2",
+   "de": "Der Start ist um neun Uhr.",
+   "uz": "Start soat to'qqizda.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Um neun Uhr ist der Start."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-17",
+   "section": "u06-s2",
+   "de": "Wir klettern am Wochenende.",
+   "uz": "Dam olish kunlari tirmashib chiqamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Wochenende klettern wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-18",
+   "section": "u06-s2",
+   "de": "Mia kann gut Rad fahren.",
+   "uz": "Mia velosipedni yaxshi hayday oladi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Rad fahren kann Mia gut."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-19",
+   "section": "u06-s2",
+   "de": "Wir fahren gern Ski.",
+   "uz": "Biz chang'i uchishni yaxshi ko'ramiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gern fahren wir Ski."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-20",
+   "section": "u06-s2",
+   "de": "Wer gewinnt das Spiel?",
+   "uz": "O'yinda kim yutadi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s2-21",
+   "section": "u06-s2",
+   "de": "Ich mache auch mit.",
+   "uz": "Men ham qatnashaman.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s2-22",
+   "section": "u06-s2",
+   "de": "Der Club ist neu.",
+   "uz": "Klub yangi.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s2-23",
+   "section": "u06-s2",
+   "de": "Ich bin im Sportclub.",
+   "uz": "Men sport klubidaman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Im Sportclub bin ich."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-24",
+   "section": "u06-s2",
+   "de": "Ich höre gern Musik.",
+   "uz": "Men musiqa tinglashni yaxshi ko'raman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Musik höre ich gern.",
+    "Gern höre ich Musik."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-25",
+   "section": "u06-s2",
+   "de": "Anna singt im Chor.",
+   "uz": "Anna xorda kuylaydi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Im Chor singt Anna."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-26",
+   "section": "u06-s2",
+   "de": "Das Lied ist sehr gut.",
+   "uz": "Qo'shiq juda yaxshi.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s2-27",
+   "section": "u06-s2",
+   "de": "Der Chor singt zwei Lieder.",
+   "uz": "Xor ikkita qo'shiq aytadi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zwei Lieder singt der Chor."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-28",
+   "section": "u06-s2",
+   "de": "Hast du eine Musikgruppe?",
+   "uz": "Musiqa guruhing bormi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s2-29",
+   "section": "u06-s2",
+   "de": "Die Musikgruppe steht auf der Bühne.",
+   "uz": "Musiqa guruhi sahnada turibdi.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Auf der Bühne steht die Musikgruppe."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-30",
+   "section": "u06-s2",
+   "de": "Ich kaufe eine CD.",
+   "uz": "Men bitta CD sotib olaman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Eine CD kaufe ich."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-31",
+   "section": "u06-s2",
+   "de": "Anna spielt Geige.",
+   "uz": "Anna skripka chaladi.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Geige spielt Anna."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-32",
+   "section": "u06-s2",
+   "de": "Peter spielt Trompete.",
+   "uz": "Peter truba chaladi.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Trompete spielt Peter."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-33",
+   "section": "u06-s2",
+   "de": "Markus spielt Saxofon.",
+   "uz": "Markus saksofon chaladi.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Saxofon spielt Markus."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-34",
+   "section": "u06-s2",
+   "de": "Wir können gut singen.",
+   "uz": "Biz yaxshi kuylay olamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gut singen können wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-35",
+   "section": "u06-s2",
+   "de": "Wir laufen am Sonntag.",
+   "uz": "Biz yakshanba kuni yuguramiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Sonntag laufen wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-36",
+   "section": "u06-s2",
+   "de": "Wir möchten das Spiel gewinnen.",
+   "uz": "Biz o'yinda yutmoqchimiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Das Spiel möchten wir gewinnen."
+   ]
+  },
+  {
+   "sourceId": "u06-s2-37",
+   "section": "u06-s2",
+   "de": "Möchtest du mitmachen?",
+   "uz": "Qatnashishni xohlaysanmi?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s2-38",
+   "section": "u06-s2",
+   "de": "Wir hören Lieder.",
+   "uz": "Biz qo'shiqlar tinglaymiz.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Lieder hören wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-01",
+   "section": "u06-s3",
+   "de": "Wollen wir ins Kino gehen?",
+   "uz": "Kinoga boramizmi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-02",
+   "section": "u06-s3",
+   "de": "Ich will heute tanzen.",
+   "uz": "Men bugun raqsga tushmoqchiman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute will ich tanzen.",
+    "Tanzen will ich heute."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-03",
+   "section": "u06-s3",
+   "de": "Wohin gehst du heute?",
+   "uz": "Bugun qayerga borasan?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-04",
+   "section": "u06-s3",
+   "de": "Kommst du mit ins Kino?",
+   "uz": "Kinoga birga borasanmi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-05",
+   "section": "u06-s3",
+   "de": "Wir gehen ins Theater.",
+   "uz": "Biz teatrga boramiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ins Theater gehen wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-06",
+   "section": "u06-s3",
+   "de": "Die Oper beginnt um acht.",
+   "uz": "Opera soat sakkizda boshlanadi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Um acht beginnt die Oper."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-07",
+   "section": "u06-s3",
+   "de": "Das Konzert ist am Freitag.",
+   "uz": "Konsert juma kuni.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Freitag ist das Konzert."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-08",
+   "section": "u06-s3",
+   "de": "Der Film ist neu.",
+   "uz": "Film yangi.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-09",
+   "section": "u06-s3",
+   "de": "Am Samstag gehen wir in die Disco.",
+   "uz": "Shanba kuni diskotekaga boramiz.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wir gehen am Samstag in die Disco.",
+    "In die Disco gehen wir am Samstag."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-10",
+   "section": "u06-s3",
+   "de": "Das Schwimmbad ist heute offen.",
+   "uz": "Basseyn bugun ochiq.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute ist das Schwimmbad offen."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-11",
+   "section": "u06-s3",
+   "de": "Ich habe zwei Tickets.",
+   "uz": "Menda ikkita chipta bor.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zwei Tickets habe ich."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-12",
+   "section": "u06-s3",
+   "de": "Die Konzertkarte kostet dreißig Euro.",
+   "uz": "Konsert chiptasi o'ttiz yevro turadi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Dreißig Euro kostet die Konzertkarte."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-13",
+   "section": "u06-s3",
+   "de": "Der Eintritt ist frei.",
+   "uz": "Kirish bepul.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-14",
+   "section": "u06-s3",
+   "de": "Hier ist das Programm.",
+   "uz": "Mana dastur.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Das Programm ist hier."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-15",
+   "section": "u06-s3",
+   "de": "Das Plakat ist sehr groß.",
+   "uz": "Afisha juda katta.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-16",
+   "section": "u06-s3",
+   "de": "Die Veranstaltung beginnt um sieben.",
+   "uz": "Tadbir soat yettida boshlanadi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Um sieben beginnt die Veranstaltung."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-17",
+   "section": "u06-s3",
+   "de": "Das Event ist am Wochenende.",
+   "uz": "Tadbir dam olish kunlari.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Wochenende ist das Event."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-18",
+   "section": "u06-s3",
+   "de": "Das ist eine gute Aktivität.",
+   "uz": "Bu yaxshi mashg'ulot.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Eine gute Aktivität ist das."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-19",
+   "section": "u06-s3",
+   "de": "Das Festival ist im Park.",
+   "uz": "Festival bog'da.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Im Park ist das Festival."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-20",
+   "section": "u06-s3",
+   "de": "Das Theater-Festival ist sehr beliebt.",
+   "uz": "Teatr festivali juda mashhur.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-21",
+   "section": "u06-s3",
+   "de": "Das Orchester spielt heute.",
+   "uz": "Orkestr bugun chaladi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute spielt das Orchester."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-22",
+   "section": "u06-s3",
+   "de": "Das Publikum singt mit.",
+   "uz": "Tomoshabinlar ham birga kuylaydi.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-23",
+   "section": "u06-s3",
+   "de": "Der Zuschauer hat ein Ticket.",
+   "uz": "Tomoshabinda chipta bor.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ein Ticket hat der Zuschauer."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-24",
+   "section": "u06-s3",
+   "de": "Die Zuschauerin kommt zu spät.",
+   "uz": "Tomoshabin ayol kechikib keladi.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-25",
+   "section": "u06-s3",
+   "de": "Lukas ist ein Filmfan.",
+   "uz": "Lukas kino ishqibozi.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-26",
+   "section": "u06-s3",
+   "de": "Die Atmosphäre ist sehr gut.",
+   "uz": "Muhit juda yaxshi.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-27",
+   "section": "u06-s3",
+   "de": "Das ist ein besonderes Konzert.",
+   "uz": "Bu alohida konsert.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-28",
+   "section": "u06-s3",
+   "de": "Der Film ist langweilig.",
+   "uz": "Film zerikarli.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-29",
+   "section": "u06-s3",
+   "de": "Das Kino ist heute voll.",
+   "uz": "Kino bugun to'la.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute ist das Kino voll."
+   ]
+  },
+  {
+   "sourceId": "u06-s3-30",
+   "section": "u06-s3",
+   "de": "Was ist heute los?",
+   "uz": "Bugun nima bo'lyapti?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-31",
+   "section": "u06-s3",
+   "de": "Möchtest du mitkommen?",
+   "uz": "Birga borishni xohlaysanmi?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-32",
+   "section": "u06-s3",
+   "de": "Das ist eine besondere Veranstaltung.",
+   "uz": "Bu alohida tadbir.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s3-33",
+   "section": "u06-s3",
+   "de": "Das ist sein Ticket.",
+   "uz": "Bu uning chiptasi.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-01",
+   "section": "u06-s4",
+   "de": "Wie ist das Wetter heute?",
+   "uz": "Bugun ob-havo qanday?",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wie ist heute das Wetter?"
+   ]
+  },
+  {
+   "sourceId": "u06-s4-02",
+   "section": "u06-s4",
+   "de": "Hörst du den Wetterbericht?",
+   "uz": "Ob-havo ma'lumotini eshityapsanmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-03",
+   "section": "u06-s4",
+   "de": "Die Sonne scheint.",
+   "uz": "Quyosh charaqlayapti.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-04",
+   "section": "u06-s4",
+   "de": "Heute ist es sonnig.",
+   "uz": "Bugun havo quyoshli.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es ist heute sonnig."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-05",
+   "section": "u06-s4",
+   "de": "Morgen scheint die Sonne.",
+   "uz": "Ertaga quyosh charaqlaydi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Sonne scheint morgen."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-06",
+   "section": "u06-s4",
+   "de": "Ich mag keinen Regen.",
+   "uz": "Men yomg'irni yoqtirmayman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Keinen Regen mag ich."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-07",
+   "section": "u06-s4",
+   "de": "Es regnet schon wieder.",
+   "uz": "Yana yomg'ir yog'yapti.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-08",
+   "section": "u06-s4",
+   "de": "Heute schüttet es.",
+   "uz": "Bugun jala quyyapti.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es schüttet heute."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-09",
+   "section": "u06-s4",
+   "de": "Im Winter gibt es Schnee.",
+   "uz": "Qishda qor bo'ladi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es gibt im Winter Schnee.",
+    "Schnee gibt es im Winter."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-10",
+   "section": "u06-s4",
+   "de": "Heute schneit es.",
+   "uz": "Bugun qor yog'yapti.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es schneit heute."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-11",
+   "section": "u06-s4",
+   "de": "Der Wind ist kalt.",
+   "uz": "Shamol sovuq.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-12",
+   "section": "u06-s4",
+   "de": "Heute ist es windig.",
+   "uz": "Bugun shamolli.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es ist heute windig."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-13",
+   "section": "u06-s4",
+   "de": "Da ist eine Wolke.",
+   "uz": "Ana, bitta bulut.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-14",
+   "section": "u06-s4",
+   "de": "Heute ist es bewölkt.",
+   "uz": "Bugun havo bulutli.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es ist heute bewölkt."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-15",
+   "section": "u06-s4",
+   "de": "Im Frühling ist es warm.",
+   "uz": "Bahorda havo iliq.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es ist im Frühling warm."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-16",
+   "section": "u06-s4",
+   "de": "Im Sommer ist es heiß.",
+   "uz": "Yozda havo issiq.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es ist im Sommer heiß."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-17",
+   "section": "u06-s4",
+   "de": "Die Hitze ist schrecklich.",
+   "uz": "Jazirama dahshatli.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-18",
+   "section": "u06-s4",
+   "de": "Im Winter ist es kalt.",
+   "uz": "Qishda havo sovuq.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es ist im Winter kalt."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-19",
+   "section": "u06-s4",
+   "de": "Es sind zwanzig Grad.",
+   "uz": "Harorat yigirma daraja.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-20",
+   "section": "u06-s4",
+   "de": "So ein Mistwetter!",
+   "uz": "Qanday yomon havo!",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-21",
+   "section": "u06-s4",
+   "de": "Das Wetter ist schrecklich.",
+   "uz": "Havo dahshatli.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-22",
+   "section": "u06-s4",
+   "de": "Der Herbst ist meine Jahreszeit.",
+   "uz": "Kuz — mening faslim.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Meine Jahreszeit ist der Herbst."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-23",
+   "section": "u06-s4",
+   "de": "Der Frühling kommt bald.",
+   "uz": "Bahor tez orada keladi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bald kommt der Frühling."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-24",
+   "section": "u06-s4",
+   "de": "Ich mag den Sommer.",
+   "uz": "Men yozni yoqtiraman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Den Sommer mag ich."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-25",
+   "section": "u06-s4",
+   "de": "Im Herbst regnet es oft.",
+   "uz": "Kuzda tez-tez yomg'ir yog'adi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es regnet im Herbst oft.",
+    "Oft regnet es im Herbst."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-26",
+   "section": "u06-s4",
+   "de": "Lena mag den Winter.",
+   "uz": "Lena qishni yoqtiradi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Den Winter mag Lena."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-27",
+   "section": "u06-s4",
+   "de": "Norden ist eine Himmelsrichtung.",
+   "uz": "Shimol — dunyo tomonlaridan biri.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-28",
+   "section": "u06-s4",
+   "de": "Wir fahren in den Norden.",
+   "uz": "Biz shimolga boramiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "In den Norden fahren wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-29",
+   "section": "u06-s4",
+   "de": "Oma wohnt im Süden.",
+   "uz": "Buvim janubda yashaydi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Im Süden wohnt Oma."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-30",
+   "section": "u06-s4",
+   "de": "Mein Bruder wohnt im Osten.",
+   "uz": "Akam sharqda yashaydi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Im Osten wohnt mein Bruder."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-31",
+   "section": "u06-s4",
+   "de": "Im Westen regnet es oft.",
+   "uz": "G'arbda tez-tez yomg'ir yog'adi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es regnet im Westen oft.",
+    "Oft regnet es im Westen."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-32",
+   "section": "u06-s4",
+   "de": "Die Kinder spielen draußen.",
+   "uz": "Bolalar tashqarida o'ynayapti.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Draußen spielen die Kinder."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-33",
+   "section": "u06-s4",
+   "de": "Ich bin gern in der Natur.",
+   "uz": "Tabiatda bo'lishni yaxshi ko'raman.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "In der Natur bin ich gern."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-34",
+   "section": "u06-s4",
+   "de": "Wir genießen die Sonne.",
+   "uz": "Biz quyoshdan rohatlanamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Sonne genießen wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-35",
+   "section": "u06-s4",
+   "de": "Ich glaube, es regnet.",
+   "uz": "Menimcha, yomg'ir yog'yapti.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s4-36",
+   "section": "u06-s4",
+   "de": "Im Frühjahr wandern wir.",
+   "uz": "Bahorda piyoda sayr qilamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wir wandern im Frühjahr."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-37",
+   "section": "u06-s4",
+   "de": "Im Sommer muss die Sonne scheinen!",
+   "uz": "Yozda quyosh charaqlashi kerak!",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Sonne muss im Sommer scheinen!"
+   ]
+  },
+  {
+   "sourceId": "u06-s4-38",
+   "section": "u06-s4",
+   "de": "Es kann heute regnen.",
+   "uz": "Bugun yomg'ir yog'ishi mumkin.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute kann es regnen."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-39",
+   "section": "u06-s4",
+   "de": "Morgen kann es schütten.",
+   "uz": "Ertaga jala quyishi mumkin.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es kann morgen schütten."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-40",
+   "section": "u06-s4",
+   "de": "Im Winter kann es schneien.",
+   "uz": "Qishda qor yog'ishi mumkin.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Es kann im Winter schneien."
+   ]
+  },
+  {
+   "sourceId": "u06-s4-41",
+   "section": "u06-s4",
+   "de": "Das kann ich nicht glauben!",
+   "uz": "Bunga ishonolmayman!",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-01",
+   "section": "u06-s5",
+   "de": "Ich habe heute eine Verabredung.",
+   "uz": "Bugun uchrashuvim bor.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute habe ich eine Verabredung."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-02",
+   "section": "u06-s5",
+   "de": "Wir verabreden uns für Samstag.",
+   "uz": "Shanbaga uchrashuvni kelishamiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Für Samstag verabreden wir uns."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-03",
+   "section": "u06-s5",
+   "de": "Wir treffen uns um vier.",
+   "uz": "Soat to'rtda uchrashamiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Um vier treffen wir uns."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-04",
+   "section": "u06-s5",
+   "de": "Der Treffpunkt ist am Café.",
+   "uz": "Uchrashuv joyi kafe oldida.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Café ist der Treffpunkt."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-05",
+   "section": "u06-s5",
+   "de": "Wir gehen in den Stadtpark.",
+   "uz": "Biz shahar bog'iga boramiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "In den Stadtpark gehen wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-06",
+   "section": "u06-s5",
+   "de": "Hast du einen Vorschlag?",
+   "uz": "Taklifing bormi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-07",
+   "section": "u06-s5",
+   "de": "Das ist eine gute Idee!",
+   "uz": "Bu yaxshi g'oya!",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-08",
+   "section": "u06-s5",
+   "de": "Das klingt gut!",
+   "uz": "Bu yaxshi eshitiladi!",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-09",
+   "section": "u06-s5",
+   "de": "Hast du Lust auf Kino?",
+   "uz": "Kinoga borishga xohishing bormi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-10",
+   "section": "u06-s5",
+   "de": "Vielleicht komme ich morgen.",
+   "uz": "Balki ertaga kelaman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich komme vielleicht morgen.",
+    "Morgen komme ich vielleicht."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-11",
+   "section": "u06-s5",
+   "de": "Hoffentlich scheint die Sonne.",
+   "uz": "Umid qilamanki, quyosh charaqlaydi.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-12",
+   "section": "u06-s5",
+   "de": "Schade, ich habe keine Zeit.",
+   "uz": "Afsus, vaqtim yo'q.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-13",
+   "section": "u06-s5",
+   "de": "Warum kommst du nicht?",
+   "uz": "Nega kelmaysan?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-14",
+   "section": "u06-s5",
+   "de": "Ich lade dich ein.",
+   "uz": "Seni taklif qilaman.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-15",
+   "section": "u06-s5",
+   "de": "Danke für die Einladung!",
+   "uz": "Taklif uchun rahmat!",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-16",
+   "section": "u06-s5",
+   "de": "Wie reagierst du auf die Einladung?",
+   "uz": "Taklifga qanday javob berasan?",
+   "wordCount": 6,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-17",
+   "section": "u06-s5",
+   "de": "Die Party ist am Samstag.",
+   "uz": "Ziyofat shanba kuni.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Samstag ist die Party."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-18",
+   "section": "u06-s5",
+   "de": "Wir feiern zusammen.",
+   "uz": "Biz birga nishonlaymiz.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zusammen feiern wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-19",
+   "section": "u06-s5",
+   "de": "Heute habe ich Geburtstag.",
+   "uz": "Bugun tug'ilgan kunim.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich habe heute Geburtstag."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-20",
+   "section": "u06-s5",
+   "de": "Das Geschenk ist für Lena.",
+   "uz": "Sovg'a Lena uchun.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Für Lena ist das Geschenk."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-21",
+   "section": "u06-s5",
+   "de": "Was schenkst du Mia?",
+   "uz": "Miaga nima sovg'a qilasan?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-22",
+   "section": "u06-s5",
+   "de": "Ich bringe Kuchen mit.",
+   "uz": "Men tort olib kelaman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Kuchen bringe ich mit."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-23",
+   "section": "u06-s5",
+   "de": "Wir haben heute einen Gast.",
+   "uz": "Bugun bizda bitta mehmon bor.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Heute haben wir einen Gast.",
+    "Einen Gast haben wir heute."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-24",
+   "section": "u06-s5",
+   "de": "Die Party ist eine Überraschung.",
+   "uz": "Ziyofat — kutilmagan sovg'a.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-25",
+   "section": "u06-s5",
+   "de": "Wir machen ein Picknick.",
+   "uz": "Biz piknik qilamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ein Picknick machen wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-26",
+   "section": "u06-s5",
+   "de": "Die Museumsnacht ist am Samstag.",
+   "uz": "Muzeylar kechasi shanba kuni.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Samstag ist die Museumsnacht."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-27",
+   "section": "u06-s5",
+   "de": "Die Kultur-Nacht ist sehr beliebt.",
+   "uz": "Madaniyat kechasi juda mashhur.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-28",
+   "section": "u06-s5",
+   "de": "Wir gehen ins Open-Air-Kino.",
+   "uz": "Ochiq osmon ostidagi kinoga boramiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ins Open-Air-Kino gehen wir."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-29",
+   "section": "u06-s5",
+   "de": "Was für ein Zufall!",
+   "uz": "Qanday tasodif!",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-30",
+   "section": "u06-s5",
+   "de": "Die Lieder klingen gut.",
+   "uz": "Qo'shiqlar yaxshi eshitiladi.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-31",
+   "section": "u06-s5",
+   "de": "Ich möchte dich einladen.",
+   "uz": "Seni taklif qilmoqchiman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Dich möchte ich einladen."
+   ]
+  },
+  {
+   "sourceId": "u06-s5-32",
+   "section": "u06-s5",
+   "de": "Wie reagieren deine Freunde?",
+   "uz": "Do'stlaring qanday javob beradi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-33",
+   "section": "u06-s5",
+   "de": "Was möchtest du Lena schenken?",
+   "uz": "Lenaga nima sovg'a qilmoqchisan?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u06-s5-34",
+   "section": "u06-s5",
+   "de": "Kannst du Kuchen mitbringen?",
+   "uz": "Tort olib kela olasanmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  }
+ ]
+}

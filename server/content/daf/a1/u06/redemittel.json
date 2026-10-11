@@ -1,0 +1,145 @@
+{
+ "unit": "u06",
+ "phrasen": [
+  {
+   "section": "u06-s1",
+   "funktion": "nach Hobbys fragen",
+   "funktionUz": "do'stingizdan hobbisini so'rash",
+   "de": "Was machst du gern in der Freizeit?",
+   "uz": "Bo'sh vaqtingda nima qilishni yoqtirasan?"
+  },
+  {
+   "section": "u06-s1",
+   "funktion": "sein Hobby nennen",
+   "funktionUz": "hobbingizni aytish",
+   "de": "Mein Hobby ist Fotografieren.",
+   "uz": "Mening hobbim suratga olish."
+  },
+  {
+   "section": "u06-s1",
+   "funktion": "sagen, was Spaß macht",
+   "funktionUz": "nima qiziqarli ekanini aytish",
+   "de": "Tanzen macht viel Spaß.",
+   "uz": "Raqs juda qiziqarli."
+  },
+  {
+   "section": "u06-s1",
+   "funktion": "sagen, wie oft",
+   "funktionUz": "qanchalik tez-tez qilishingizni aytish",
+   "de": "Das mache ich nie.",
+   "uz": "Buni hech qachon qilmayman."
+  },
+  {
+   "section": "u06-s2",
+   "funktion": "fragen, was jemand kann",
+   "funktionUz": "nimani qila olishini so'rash",
+   "de": "Kannst du gut schwimmen?",
+   "uz": "Yaxshi suza olasanmi?"
+  },
+  {
+   "section": "u06-s2",
+   "funktion": "sagen, was man nicht kann",
+   "funktionUz": "nimani qila olmasligingizni aytish",
+   "de": "Das kann ich nicht.",
+   "uz": "Buni qila olmayman."
+  },
+  {
+   "section": "u06-s2",
+   "funktion": "fragen, ob man mitmachen kann",
+   "funktionUz": "qatnashsa bo'ladimi, so'rash",
+   "de": "Kann ich da mitmachen?",
+   "uz": "Unda qatnasha olamanmi?"
+  },
+  {
+   "section": "u06-s2",
+   "funktion": "Mut machen",
+   "funktionUz": "dalda berish",
+   "de": "Du kannst das!",
+   "uz": "Sen buni uddalaysan!"
+  },
+  {
+   "section": "u06-s3",
+   "funktion": "etwas vorschlagen",
+   "funktionUz": "birga borishni taklif qilish",
+   "de": "Wollen wir ins Kino gehen?",
+   "uz": "Kinoga boramizmi?"
+  },
+  {
+   "section": "u06-s3",
+   "funktion": "nach Tickets fragen",
+   "funktionUz": "chipta so'rash",
+   "de": "Zwei Tickets für Freitag, bitte.",
+   "uz": "Juma uchun ikkita chipta, iltimos."
+  },
+  {
+   "section": "u06-s3",
+   "funktion": "nach dem Preis fragen",
+   "funktionUz": "kirish narxini so'rash",
+   "de": "Was kostet der Eintritt?",
+   "uz": "Kirish narxi qancha?"
+  },
+  {
+   "section": "u06-s3",
+   "funktion": "fragen, was los ist",
+   "funktionUz": "nima bo'layotganini so'rash",
+   "de": "Was ist am Freitag los?",
+   "uz": "Juma kuni nima bo'ladi?"
+  },
+  {
+   "section": "u06-s4",
+   "funktion": "nach dem Wetter fragen",
+   "funktionUz": "ob-havoni so'rash",
+   "de": "Wie ist das Wetter heute?",
+   "uz": "Bugun ob-havo qanday?"
+  },
+  {
+   "section": "u06-s4",
+   "funktion": "über schlechtes Wetter klagen",
+   "funktionUz": "yomon havodan shikoyat qilish",
+   "de": "So ein Mistwetter!",
+   "uz": "Qanday yomon havo!"
+  },
+  {
+   "section": "u06-s4",
+   "funktion": "die Temperatur sagen",
+   "funktionUz": "haroratni aytish",
+   "de": "Es sind zwanzig Grad.",
+   "uz": "Harorat yigirma daraja."
+  },
+  {
+   "section": "u06-s5",
+   "funktion": "jemanden einladen",
+   "funktionUz": "kimnidir taklif qilish",
+   "de": "Ich lade dich ein!",
+   "uz": "Seni taklif qilaman!"
+  },
+  {
+   "section": "u06-s5",
+   "funktion": "fragen, ob jemand Lust hat",
+   "funktionUz": "xohishi bor-yo'qligini so'rash",
+   "de": "Hast du Lust?",
+   "uz": "Xohishing bormi?"
+  },
+  {
+   "section": "u06-s5",
+   "funktion": "zustimmen",
+   "funktionUz": "rozilik bildirish",
+   "de": "Das klingt gut!",
+   "uz": "Bu yaxshi eshitiladi!"
+  },
+  {
+   "section": "u06-s5",
+   "funktion": "höflich absagen",
+   "funktionUz": "muloyim rad etish",
+   "de": "Schade, ich habe keine Zeit.",
+   "uz": "Afsus, vaqtim yo'q."
+  },
+  {
+   "section": "u06-s5",
+   "funktion": "sich bedanken",
+   "funktionUz": "taklif uchun rahmat aytish",
+   "de": "Danke für die Einladung!",
+   "uz": "Taklif uchun rahmat!"
+  }
+ ]
+}

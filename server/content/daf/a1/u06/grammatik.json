@@ -1,0 +1,125 @@
+{
+ "unit": "u06",
+ "regeln": [
+  {
+   "section": "u06-s1",
+   "titelDe": "Wie oft? nie, selten, manchmal, oft, meistens, immer",
+   "titelUz": "Qanchalik tez-tez? nie, selten, manchmal, oft, meistens, immer",
+   "erklaerungUz": "Ishni qanchalik tez-tez qilishni aytish uchun shu so'zlar ishlatiladi. Kamdan ko'pga: nie (hech qachon) — selten (kamdan-kam) — manchmal (ba'zan) — oft (tez-tez) — meistens (ko'pincha) — immer (doim). So'z fe'ldan keyin turadi: «Ich lese oft.» Gap shu so'z bilan boshlansa, fe'l ikkinchi o'rinda qoladi: «Meistens lese ich abends.» Nimani yoqtirishni aytish uchun «gern» qo'shiladi: «Ich male gern.»",
+   "beispiele": [
+    {
+     "de": "Ich sehe nie fern.",
+     "uz": "Men hech qachon televizor ko'rmayman."
+    },
+    {
+     "de": "Wir wandern nur selten.",
+     "uz": "Biz kamdan-kam piyoda sayr qilamiz."
+    },
+    {
+     "de": "Meistens lese ich abends.",
+     "uz": "Ko'pincha kechqurun o'qiyman."
+    },
+    {
+     "de": "Julia malt gern.",
+     "uz": "Julia rasm chizishni yaxshi ko'radi."
+    }
+   ]
+  },
+  {
+   "section": "u06-s2",
+   "titelDe": "Das Modalverb können",
+   "titelUz": "«können» — qila olmoq",
+   "erklaerungUz": "«können» qobiliyat yoki imkoniyatni bildiradi. Shakllari: ich kann, du kannst, er/sie kann, wir können, ihr könnt, sie/Sie können. «ich» va «er/sie» shakli bir xil — oxiriga hech narsa qo'shilmaydi. Asosiy fe'l gap oxiriga, o'zgarmagan holda boradi: «Ich kann gut schwimmen.» Savolda «können» birinchi turadi: «Kannst du Tennis spielen?» Inkor: «Ich kann nicht singen.»",
+   "beispiele": [
+    {
+     "de": "Ich kann gut schwimmen.",
+     "uz": "Men yaxshi suza olaman."
+    },
+    {
+     "de": "Kannst du Tennis spielen?",
+     "uz": "Tennis o'ynay olasanmi?"
+    },
+    {
+     "de": "Mia kann gut Rad fahren.",
+     "uz": "Mia velosipedni yaxshi hayday oladi."
+    },
+    {
+     "de": "Ich kann nicht singen.",
+     "uz": "Men qo'shiq ayta olmayman."
+    }
+   ]
+  },
+  {
+   "section": "u06-s3",
+   "titelDe": "Das Modalverb wollen — Wollen wir …?",
+   "titelUz": "«wollen» — xohlamoq; «Wollen wir …?» — taklif",
+   "erklaerungUz": "«wollen» qat'iy xohish yoki rejani bildiradi. Shakllari: ich will, du willst, er/sie will, wir wollen, ihr wollt, sie/Sie wollen. Asosiy fe'l gap oxirida: «Ich will heute tanzen.» «Wollen wir …?» — birga biror narsa qilishni taklif qilish: «Wollen wir ins Kino gehen?» Qayerga borishni «wohin» bilan so'raymiz, javobda «ins» (in das) yoki «in die»: «ins Kino», «ins Theater», «in die Disco».",
+   "beispiele": [
+    {
+     "de": "Ich will heute tanzen.",
+     "uz": "Men bugun raqsga tushmoqchiman."
+    },
+    {
+     "de": "Wollen wir ins Kino gehen?",
+     "uz": "Kinoga boramizmi?"
+    },
+    {
+     "de": "Wohin gehst du heute?",
+     "uz": "Bugun qayerga borasan?"
+    },
+    {
+     "de": "Am Samstag gehen wir in die Disco.",
+     "uz": "Shanba kuni diskotekaga boramiz."
+    }
+   ]
+  },
+  {
+   "section": "u06-s4",
+   "titelDe": "Das Wetter: es regnet, es ist kalt",
+   "titelUz": "Ob-havo: «es regnet», «es ist kalt»",
+   "erklaerungUz": "Ob-havo haqida gapirganda gap «es» bilan quriladi, bu «es» hech kimni bildirmaydi: «Es regnet.» (Yomg'ir yog'yapti), «Es schneit.» (Qor yog'yapti), «Es ist kalt.» (Sovuq). Haroratni aytish: «Es sind zwanzig Grad.» So'rash: «Wie ist das Wetter?» Quyosh uchun «es» emas, «die Sonne» ishlatiladi: «Die Sonne scheint.» Fasllar oldidan «im» qo'yiladi: im Sommer, im Winter.",
+   "beispiele": [
+    {
+     "de": "Wie ist das Wetter heute?",
+     "uz": "Bugun ob-havo qanday?"
+    },
+    {
+     "de": "Es regnet schon wieder.",
+     "uz": "Yana yomg'ir yog'yapti."
+    },
+    {
+     "de": "Es sind zwanzig Grad.",
+     "uz": "Harorat yigirma daraja."
+    },
+    {
+     "de": "Im Winter ist es kalt.",
+     "uz": "Qishda havo sovuq."
+    }
+   ]
+  },
+  {
+   "section": "u06-s5",
+   "titelDe": "Vorschläge machen und reagieren",
+   "titelUz": "Taklif qilish va javob berish",
+   "erklaerungUz": "Taklif qilish: «Hast du Lust auf …?», «Wollen wir …?», «Kommst du mit?». Rozilik: «Gute Idee!», «Das klingt gut!», «Ja, gern!». Rad etish — sababi bilan, muloyim: «Schade, ich habe keine Zeit.», «Leider kann ich nicht.» Ajraladigan fe'llar (einladen, mitbringen, mitkommen) gapda ikkiga bo'linadi: «Ich lade dich ein.», «Ich bringe Kuchen mit.» «können» bilan esa butun turadi va oxirga boradi: «Kann ich etwas mitbringen?»",
+   "beispiele": [
+    {
+     "de": "Hast du Lust auf Kino?",
+     "uz": "Kinoga borishga xohishing bormi?"
+    },
+    {
+     "de": "Das ist eine gute Idee!",
+     "uz": "Bu yaxshi g'oya!"
+    },
+    {
+     "de": "Schade, ich habe keine Zeit.",
+     "uz": "Afsus, vaqtim yo'q."
+    },
+    {
+     "de": "Ich bringe Kuchen mit.",
+     "uz": "Men tort olib kelaman."
+    }
+   ]
+  }
+ ]
+}

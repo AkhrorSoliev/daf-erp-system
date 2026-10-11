@@ -1,1215 +1,1435 @@
 {
-  "eintraege": [
-    {
-      "wort": "er",
-      "grund": "shaxs olmoshi — grammatik ko'makchi"
-    },
-    {
-      "wort": "es",
-      "grund": "shaxs olmoshi — grammatik ko'makchi"
-    },
-    {
-      "wort": "wir",
-      "grund": "shaxs olmoshi — grammatik ko'makchi"
-    },
-    {
-      "wort": "ihr",
-      "grund": "shaxs olmoshi — grammatik ko'makchi"
-    },
-    {
-      "wort": "bin",
-      "grund": "sein fe'lining ich shakli"
-    },
-    {
-      "wort": "bist",
-      "grund": "sein fe'lining du shakli"
-    },
-    {
-      "wort": "ist",
-      "grund": "sein fe'lining er/sie shakli"
-    },
-    {
-      "wort": "sind",
-      "grund": "sein fe'lining wir/sie shakli"
-    },
-    {
-      "wort": "seid",
-      "grund": "sein fe'lining ihr shakli"
-    },
-    {
-      "wort": "und",
-      "grund": "bog'lovchi"
-    },
-    {
-      "wort": "oder",
-      "grund": "bog'lovchi"
-    },
-    {
-      "wort": "nicht",
-      "grund": "inkor yuklamasi"
-    },
-    {
-      "wort": "ja",
-      "grund": "tasdiq yuklamasi"
-    },
-    {
-      "wort": "nein",
-      "grund": "inkor javobi"
-    },
-    {
-      "wort": "das",
-      "grund": "artikl / ko'rsatish olmoshi"
-    },
-    {
-      "wort": "der",
-      "grund": "artikl"
-    },
-    {
-      "wort": "die",
-      "grund": "artikl"
-    },
-    {
-      "wort": "ein",
-      "grund": "noaniq artikl"
-    },
-    {
-      "wort": "eine",
-      "grund": "noaniq artikl"
-    },
-    {
-      "wort": "mein",
-      "grund": "egalik artikli — u02-s1 uni QOIDA sifatida o'rgatadi, lug'at so'zi sifatida emas (u01 matnida allaqachon ishlatilgan)",
-      "abSection": "u01-s1"
-    },
-    {
-      "wort": "meine",
-      "grund": "egalik artiklining ayol/ko'plik shakli — u02-s1 qoidasi",
-      "abSection": "u01-s1"
-    },
-    {
-      "wort": "dein",
-      "grund": "egalik artikli — u02-s1 uni QOIDA sifatida o'rgatadi, lug'at so'zi sifatida emas (u01 matnida allaqachon ishlatilgan)",
-      "abSection": "u01-s1"
-    },
-    {
-      "wort": "deine",
-      "grund": "egalik artiklining ayol/ko'plik shakli — u02-s1 qoidasi",
-      "abSection": "u01-s1"
-    },
-    {
-      "wort": "sehr",
-      "grund": "daraja ravishi"
-    },
-    {
-      "wort": "auch",
-      "grund": "ravish — ko'makchi"
-    },
-    {
-      "wort": "bitte",
-      "grund": "muomala so'zi, iboraning bo'lagi"
-    },
-    {
-      "wort": "hier",
-      "grund": "o'rin ravishi"
-    },
-    {
-      "wort": "man",
-      "grund": "shaxssiz olmosh — «Wie schreibt man das?» iborasida"
-    },
-    {
-      "wort": "gut",
-      "grund": "«Gut, danke.» qotma javobining bo'lagi"
-    },
-    {
-      "wort": "geht",
-      "grund": "«Wie geht's?» qotma savolining bo'lagi"
-    },
-    {
-      "wort": "dir",
-      "grund": "«Wie geht es dir?» iborasidagi jo'nalish"
-    },
-    {
-      "wort": "ihnen",
-      "grund": "«Wie geht es Ihnen?» iborasidagi jo'nalish"
-    },
-    {
-      "wort": "mir",
-      "grund": "«Es geht mir gut.» iborasidagi jo'nalish"
-    },
-    {
-      "wort": "heisse",
-      "grund": "heißen fe'lining ich shakli (u01-s2)",
-      "abSection": "u01-s2"
-    },
-    {
-      "wort": "heisst",
-      "grund": "heißen fe'lining du/er shakli (u01-s2)",
-      "abSection": "u01-s2"
-    },
-    {
-      "wort": "heiße",
-      "grund": "heißen fe'lining ich shakli, ß bilan",
-      "abSection": "u01-s2"
-    },
-    {
-      "wort": "heißt",
-      "grund": "heißen fe'lining du/er shakli, ß bilan",
-      "abSection": "u01-s2"
-    },
-    {
-      "wort": "komme",
-      "grund": "kommen fe'lining ich shakli (u01-s3)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "kommst",
-      "grund": "kommen fe'lining du shakli (u01-s3)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "kommt",
-      "grund": "kommen fe'lining er/sie shakli (u01-s3)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "wohne",
-      "grund": "wohnen fe'lining ich shakli (u01-s3)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "wohnst",
-      "grund": "wohnen fe'lining du shakli (u01-s3)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "wohnt",
-      "grund": "wohnen fe'lining er/sie shakli (u01-s3)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "spreche",
-      "grund": "sprechen fe'lining ich shakli (u01-s3)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "sprichst",
-      "grund": "sprechen fe'lining du shakli (u01-s3)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "spricht",
-      "grund": "sprechen fe'lining er/sie shakli (u01-s3)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "anna",
-      "grund": "atoqli ot — dialog obrazining ismi"
-    },
-    {
-      "wort": "thomas",
-      "grund": "atoqli ot — dialog obrazining ismi"
-    },
-    {
-      "wort": "lena",
-      "grund": "atoqli ot — dialog obrazining ismi"
-    },
-    {
-      "wort": "julia",
-      "grund": "atoqli ot — dialog obrazining ismi"
-    },
-    {
-      "wort": "neumann",
-      "grund": "atoqli ot — familiya"
-    },
-    {
-      "wort": "mia",
-      "grund": "atoqli ot — dialog obrazining ismi"
-    },
-    {
-      "wort": "jonas",
-      "grund": "atoqli ot — dialog obrazining ismi"
-    },
-    {
-      "wort": "claudia",
-      "grund": "atoqli ot — dialog obrazining ismi"
-    },
-    {
-      "wort": "markus",
-      "grund": "atoqli ot — dialog obrazining ismi"
-    },
-    {
-      "wort": "weber",
-      "grund": "atoqli ot — familiya (u01-d6 harflab aytiladi)"
-    },
-    {
-      "wort": "walter",
-      "grund": "atoqli ot — dialog obrazining ismi (u01-d2)"
-    },
-    {
-      "wort": "lukas",
-      "grund": "atoqli ot — dialog obrazining ismi (u01-d4)"
-    },
-    {
-      "wort": "sabine",
-      "grund": "atoqli ot — dialog obrazining ismi (u01-d5)"
-    },
-    {
-      "wort": "peter",
-      "grund": "atoqli ot — dialog obrazining ismi (u01-d5)"
-    },
-    {
-      "wort": "helga",
-      "grund": "atoqli ot — dialog obrazining ismi (u01-d6)"
-    },
-    {
-      "wort": "habe",
-      "grund": "haben fe'lining ich shakli (u02-s2 qoidasi)",
-      "abSection": "u02-s2"
-    },
-    {
-      "wort": "hast",
-      "grund": "haben fe'lining du shakli (u02-s2 qoidasi)",
-      "abSection": "u02-s2"
-    },
-    {
-      "wort": "hat",
-      "grund": "haben fe'lining er/sie shakli (u02-s2 qoidasi)",
-      "abSection": "u02-s2"
-    },
-    {
-      "wort": "arbeite",
-      "grund": "arbeiten fe'lining ich shakli (u02-s3)",
-      "abSection": "u02-s3"
-    },
-    {
-      "wort": "arbeitest",
-      "grund": "arbeiten fe'lining du shakli (u02-s3)",
-      "abSection": "u02-s3"
-    },
-    {
-      "wort": "arbeitet",
-      "grund": "arbeiten fe'lining er/sie shakli (u02-s3)",
-      "abSection": "u02-s3"
-    },
-    {
-      "wort": "studiere",
-      "grund": "studieren fe'lining ich shakli (u02-s3)",
-      "abSection": "u02-s3"
-    },
-    {
-      "wort": "studierst",
-      "grund": "studieren fe'lining du shakli (u02-s3)",
-      "abSection": "u02-s3"
-    },
-    {
-      "wort": "studiert",
-      "grund": "studieren fe'lining er/sie shakli (u02-s3)",
-      "abSection": "u02-s3"
-    },
-    {
-      "wort": "lerne",
-      "grund": "lernen fe'lining ich shakli (u02-s5)",
-      "abSection": "u02-s5"
-    },
-    {
-      "wort": "lernst",
-      "grund": "lernen fe'lining du shakli (u02-s5)",
-      "abSection": "u02-s5"
-    },
-    {
-      "wort": "lernt",
-      "grund": "lernen fe'lining er/sie shakli (u02-s5)",
-      "abSection": "u02-s5"
-    },
-    {
-      "wort": "mache",
-      "grund": "machen fe'lining ich shakli (u02-s5)",
-      "abSection": "u02-s5"
-    },
-    {
-      "wort": "machst",
-      "grund": "machen fe'lining du shakli (u02-s5)",
-      "abSection": "u02-s5"
-    },
-    {
-      "wort": "macht",
-      "grund": "machen fe'lining er/sie shakli (u02-s5)",
-      "abSection": "u02-s5"
-    },
-    {
-      "wort": "b",
-      "grund": "harf — familiyani harflash uchun; lug'at so'zi emas (u01-s5 faqat 9 ta qiyin harfni o'rgatadi)",
-      "abSection": "u01-s5"
-    },
-    {
-      "wort": "r",
-      "grund": "harf — familiyani harflash uchun; lug'at so'zi emas (u01-s5 faqat 9 ta qiyin harfni o'rgatadi)",
-      "abSection": "u01-s5"
-    },
-    {
-      "wort": "gibt",
-      "grund": "'es gibt' qolipi — 'Gibt es hier ein Kino?' (u03-s1)",
-      "abSection": "u03-s1"
-    },
-    {
-      "wort": "dem",
-      "grund": "der/das ning qaratqich (Dativ) shakli — in/an/neben/mit dan keyin (u03-s2 qoidasi)",
-      "abSection": "u03-s2"
-    },
-    {
-      "wort": "im",
-      "grund": "in + dem qisqarishi (u03-s2 qoidasi)",
-      "abSection": "u03-s2"
-    },
-    {
-      "wort": "am",
-      "grund": "an + dem qisqarishi (u03-s2 qoidasi)",
-      "abSection": "u03-s2"
-    },
-    {
-      "wort": "zum",
-      "grund": "zu + dem qisqarishi (u03-s3 qoidasi)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "zur",
-      "grund": "zu + der qisqarishi (u03-s3 qoidasi)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "gehe",
-      "grund": "gehen fe'lining ich shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "gehst",
-      "grund": "gehen fe'lining du shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "nehme",
-      "grund": "nehmen fe'lining ich shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "nimmst",
-      "grund": "nehmen fe'lining du shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "nimmt",
-      "grund": "nehmen fe'lining er/sie shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "suche",
-      "grund": "suchen fe'lining ich shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "suchst",
-      "grund": "suchen fe'lining du shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "sucht",
-      "grund": "suchen fe'lining er/sie shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "finde",
-      "grund": "finden fe'lining ich shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "findest",
-      "grund": "finden fe'lining du shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "findet",
-      "grund": "finden fe'lining er/sie shakli (u03-s3)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "fahre",
-      "grund": "fahren fe'lining ich shakli (u03-s4)",
-      "abSection": "u03-s4"
-    },
-    {
-      "wort": "fährst",
-      "grund": "fahren fe'lining du shakli (u03-s4)",
-      "abSection": "u03-s4"
-    },
-    {
-      "wort": "fährt",
-      "grund": "fahren fe'lining er/sie shakli (u03-s4)",
-      "abSection": "u03-s4"
-    },
-    {
-      "wort": "dauert",
-      "grund": "dauern fe'lining er/sie/es shakli (u03-s5)",
-      "abSection": "u03-s5"
-    },
-    {
-      "wort": "warte",
-      "grund": "warten fe'lining ich shakli (u03-s5)",
-      "abSection": "u03-s5"
-    },
-    {
-      "wort": "wartest",
-      "grund": "warten fe'lining du shakli (u03-s5)",
-      "abSection": "u03-s5"
-    },
-    {
-      "wort": "wartet",
-      "grund": "warten fe'lining er/sie shakli (u03-s5)",
-      "abSection": "u03-s5"
-    },
-    {
-      "wort": "tschüs",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u01-s1"
-    },
-    {
-      "wort": "einhundert",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s2"
-    },
-    {
-      "wort": "eintausend",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s2"
-    },
-    {
-      "wort": "gerne",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "ab",
-      "grund": "'abholen' fe'lining ajraladigan qismi: 'Ich hole Lena ab.' (u05-s3)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "aber",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "auf",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u01-s5"
-    },
-    {
-      "wort": "bei",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s3"
-    },
-    {
-      "wort": "durch",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "für",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "kein",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s3"
-    },
-    {
-      "wort": "leider",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u05-s4"
-    },
-    {
-      "wort": "nach",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "noch",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u01-s5"
-    },
-    {
-      "wort": "so",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s4"
-    },
-    {
-      "wort": "über",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u09-s2"
-    },
-    {
-      "wort": "viel",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s3"
-    },
-    {
-      "wort": "von",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s1"
-    },
-    {
-      "wort": "zu",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "andere",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s5"
-    },
-    {
-      "wort": "ganz",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u01-s1"
-    },
-    {
-      "wort": "den",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "zuerst",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "darauf",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u09-s2"
-    },
-    {
-      "wort": "wirklich",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s4"
-    },
-    {
-      "wort": "jede",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "mehrere",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "weitere",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s4"
-    },
-    {
-      "wort": "pro",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "alle",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s5"
-    },
-    {
-      "wort": "gegenseitig",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u10-s2"
-    },
-    {
-      "wort": "bisschen",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u01-s3"
-    },
-    {
-      "wort": "also",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "bis",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u01-s1"
-    },
-    {
-      "wort": "da",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s2"
-    },
-    {
-      "wort": "euer",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s5"
-    },
-    {
-      "wort": "schon",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s5"
-    },
-    {
-      "wort": "vor",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s2"
-    },
-    {
-      "wort": "okay",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "genau",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s3"
-    },
-    {
-      "wort": "diese",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "unser",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s5"
-    },
-    {
-      "wort": "denn",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u06-s5"
-    },
-    {
-      "wort": "dich",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "gleich",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "ihn",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "nichts",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s4"
-    },
-    {
-      "wort": "nur",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s4"
-    },
-    {
-      "wort": "seit",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s1"
-    },
-    {
-      "wort": "um",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s4"
-    },
-    {
-      "wort": "uns",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "alles",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "etwas",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "sonst",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "als",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s1"
-    },
-    {
-      "wort": "wen",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u06-s5"
-    },
-    {
-      "wort": "euch",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "mich",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "wieder",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "selbst",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "beide",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u02-s1"
-    },
-    {
-      "wort": "doch",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u06-s3"
-    },
-    {
-      "wort": "anders",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s1"
-    },
-    {
-      "wort": "endlich",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s2"
-    },
-    {
-      "wort": "wem",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s3"
-    },
-    {
-      "wort": "dazu",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "gar",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "eigentlich",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s5"
-    },
-    {
-      "wort": "ebenso",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u05-s2"
-    },
-    {
-      "wort": "kaum",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u10-s3"
-    },
-    {
-      "wort": "her",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u10-s3"
-    },
-    {
-      "wort": "ihm",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u08-s2"
-    },
-    {
-      "wort": "gegen",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u08-s3"
-    },
-    {
-      "wort": "sich",
-      "grund": "qaytish olmoshi: 'Wer kümmert sich um Lena?' (u05-s5, 'sich kümmern')",
-      "abSection": "u05-s5"
-    },
-    {
-      "wort": "unter",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u09-s2"
-    },
-    {
-      "wort": "hurra",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u08-s5"
-    },
-    {
-      "wort": "total",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u08-s2"
-    },
-    {
-      "wort": "jemand",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u08-s4"
-    },
-    {
-      "wort": "hinter",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u09-s2"
-    },
-    {
-      "wort": "jeder",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u03-s5"
-    },
-    {
-      "wort": "daneben",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u09-s2"
-    },
-    {
-      "wort": "ohne",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "danach",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "außerhalb",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u09-s4"
-    },
-    {
-      "wort": "erst",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "tatsächlich",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u12-s5"
-    },
-    {
-      "wort": "meisten",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u07-s5"
-    },
-    {
-      "wort": "jeden",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u11-s4"
-    },
-    {
-      "wort": "Fall",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u11-s4"
-    },
-    {
-      "wort": "keine",
-      "grund": "'kein' ning ayol jinsi va ko'plik shakli — 'Wir haben keine Butter.' (u04-s1)",
-      "abSection": "u04-s1"
-    },
-    {
-      "wort": "kaufe",
-      "grund": "'kaufen' fe'lining shakli — 'Ich kaufe die Melone.' (u04-s2)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "kaufst",
-      "grund": "'kaufen' fe'lining shakli (du) (u04-s2)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "kauft",
-      "grund": "'kaufen' fe'lining shakli — 'Mia kauft zwei Dosen Tomaten.' (u04-s2)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "kostet",
-      "grund": "'kosten' fe'lining shakli — 'Was kostet das?' (u04-s2)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "stimmt",
-      "grund": "'stimmen' fe'lining shakli — 'Stimmt so!' (u04-s2)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "esse",
-      "grund": "'essen' fe'lining shakli — 'Ich esse gern Pizza.' (u04-s3)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "isst",
-      "grund": "'essen' fe'lining shakli — 'Du isst gern Fisch.' (u04-s3)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "esst",
-      "grund": "'essen' fe'lining shakli (ihr) (u04-s3)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "trinke",
-      "grund": "'trinken' fe'lining shakli — 'Ich trinke lieber Wasser.' (u04-s3)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "trinkst",
-      "grund": "'trinken' fe'lining shakli — 'Trinkst du gern Saft?' (u04-s3)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "trinkt",
-      "grund": "'trinken' fe'lining shakli — 'Was trinkt Mia gern?' (u04-s3)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "mag",
-      "grund": "'mögen' fe'lining shakli — 'Cola mag ich nicht.' (u04-s3)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "magst",
-      "grund": "'mögen' fe'lining shakli — 'Magst du Sushi?' (u04-s3)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "schmeckt",
-      "grund": "'schmecken' fe'lining shakli — 'Das schmeckt gut!' (u04-s3)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "probiere",
-      "grund": "'probieren' fe'lining shakli — 'Ich probiere das Sushi.' (u04-s3)",
-      "abSection": "u04-s3"
-    },
-    {
-      "wort": "frühstückst",
-      "grund": "'frühstücken' fe'lining shakli — 'Um wie viel Uhr frühstückst du?' (u04-s4)",
-      "abSection": "u04-s4"
-    },
-    {
-      "wort": "frühstückt",
-      "grund": "'frühstücken' fe'lining shakli (ihr) (u04-s4)",
-      "abSection": "u04-s4"
-    },
-    {
-      "wort": "möchte",
-      "grund": "'möchten' shakli — 'Ich möchte die Tomatensuppe.' (u04-s5)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "möchtest",
-      "grund": "'möchten' shakli — 'Was möchtest du trinken?' (u04-s5)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "hätte",
-      "grund": "'Ich hätte gern …' buyurtma qolipi (u04-s5)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "bestellt",
-      "grund": "'bestellen' fe'lining shakli — 'Was bestellt Julia?' (u04-s5)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "bringt",
-      "grund": "'bringen' fe'lining shakli — 'Der Kellner bringt die Suppe.' (u04-s5)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "zahle",
-      "grund": "'zahlen' fe'lining shakli — 'Ich zahle bar.' (u04-s5)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "zahlt",
-      "grund": "'zahlen' fe'lining shakli — 'Wer zahlt?' (u04-s5)",
-      "abSection": "u04-s5"
-    },
-    {
-      "wort": "einen",
-      "grund": "noaniq artiklning tushum kelishigi (erkak jinsi) — 'Ich brauche einen Topf.' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "keinen",
-      "grund": "'kein' ning tushum kelishigi (erkak jinsi) — 'Ich trinke keinen Alkohol.' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "brauche",
-      "grund": "'brauchen' fe'lining shakli — 'Ich brauche einen Topf.' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "brauchst",
-      "grund": "'brauchen' fe'lining shakli — 'Brauchst du mehr Salz?' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "kochst",
-      "grund": "'kochen' fe'lining shakli — 'Was kochst du heute?' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "schneide",
-      "grund": "'schneiden' fe'lining shakli — 'Ich schneide die Zwiebeln.' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "schneidet",
-      "grund": "'schneiden' fe'lining shakli — 'Was schneidet Helga?' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "schäle",
-      "grund": "'schälen' fe'lining shakli — 'Ich schäle die Karotten.' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "grillst",
-      "grund": "'grillen' fe'lining shakli — 'Was grillst du noch?' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "grillt",
-      "grund": "'grillen' fe'lining shakli — 'Was grillt Thomas auch?' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "hm",
-      "grund": "undov so'z — o'ylanish: 'Hm... Pizza?' (u04-s1)",
-      "abSection": "u04-s1"
-    },
-    {
-      "wort": "oh",
-      "grund": "undov so'z — hayrat: 'Oh, Melonen aus Usbekistan!' (u04-s1)",
-      "abSection": "u04-s1"
-    },
-    {
-      "wort": "mama",
-      "grund": "murojaat — Mia onasi Helgaga: 'Mama!' (u04-s1)",
-      "abSection": "u04-s1"
-    },
-    {
-      "wort": "dran",
-      "grund": "'drankommen' fe'lining ajraladigan qismi: 'Wer kommt dran?' (u04-s2)",
-      "abSection": "u04-s2"
-    },
-    {
-      "wort": "koche",
-      "grund": "'kochen' fe'lining shakli — 'Heute koche ich ein Gericht aus Usbekistan!' (u04-s6)",
-      "abSection": "u04-s6"
-    },
-    {
-      "wort": "steht",
-      "grund": "'stehen' fe'lining er shakli: 'Meine Uhr steht!' — soat to'xtagan (u05-s1); keyin 'steht auf'",
-      "abSection": "u05-s1"
-    },
-    {
-      "wort": "stehe",
-      "grund": "'aufstehen' fe'lining ich shakli: 'Ich stehe um sechs Uhr auf.' (u05-s3)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "stehst",
-      "grund": "'aufstehen' fe'lining du shakli: 'Wann stehst du auf?' (u05-s3)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "hole",
-      "grund": "'abholen' fe'lining ich shakli: 'Ich hole Lena ab.' (u05-s3)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "holst",
-      "grund": "'abholen' fe'lining du shakli: 'Wann holst du Lena ab?' (u05-s3)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "sehe",
-      "grund": "'fernsehen'/'ansehen' fe'lining ich shakli: 'Ich sehe die Serie so gern.' (u05-s3)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "sieht",
-      "grund": "'fernsehen' fe'lining er shakli: 'Jonas sieht abends fern.' (u05-s3)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "fern",
-      "grund": "'fernsehen' fe'lining ajraladigan qismi: 'Jonas sieht abends fern.' (u05-s3)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "schlafe",
-      "grund": "'schlafen' fe'lining ich shakli: 'Ich schlafe jetzt.' (u05-s3)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "schläft",
-      "grund": "'schlafen' fe'lining er shakli (a → ä): 'Nachts schläft Lena.' (u05-s3)",
-      "abSection": "u05-s3"
-    },
-    {
-      "wort": "beginnt",
-      "grund": "'beginnen' fe'lining er shakli: 'Die Schule beginnt um acht Uhr.' (u05-s4)",
-      "abSection": "u05-s4"
-    },
-    {
-      "wort": "muss",
-      "grund": "'müssen' fe'lining ich/er shakli: 'Ich muss das Geschirr waschen.' (u05-s5)",
-      "abSection": "u05-s5"
-    },
-    {
-      "wort": "musst",
-      "grund": "'müssen' fe'lining du shakli: 'Du musst die Hausaufgaben machen.' (u05-s5)",
-      "abSection": "u05-s5"
-    },
-    {
-      "wort": "tut",
-      "grund": "'tun' fe'lining er shakli — 'Das tut mir leid.' iborasida (u05-s5)",
-      "abSection": "u05-s5"
-    },
-    {
-      "wort": "leid",
-      "grund": "'leidtun' fe'lining ajralgan qismi: 'Das tut mir leid.' (u05-s5)",
-      "abSection": "u05-s5"
-    },
-    {
-      "wort": "kümmere",
-      "grund": "'sich kümmern' fe'lining ich shakli: 'Ich kümmere mich um Lena.' (u05-s5)",
-      "abSection": "u05-s5"
-    },
-    {
-      "wort": "kümmert",
-      "grund": "'sich kümmern' fe'lining er shakli: 'Wer kümmert sich um Lena?' (u05-s5)",
-      "abSection": "u05-s5"
-    },
-    {
-      "wort": "wasche",
-      "grund": "'waschen' fe'lining ich shakli: 'Jetzt wasche ich das Geschirr.' (u05-s5)",
-      "abSection": "u05-s5"
-    },
-    {
-      "wort": "wäscht",
-      "grund": "'waschen' fe'lining er shakli (a → ä): 'Wer wäscht das Geschirr?' (u05-s5)",
-      "abSection": "u05-s5"
-    },
-    {
-      "wort": "bleibt",
-      "grund": "'bleiben' fe'lining er shakli: 'Lena bleibt nicht allein.' (u05-s5)",
-      "abSection": "u05-s5"
-    }
-  ]
+ "eintraege": [
+  {
+   "wort": "er",
+   "grund": "shaxs olmoshi — grammatik ko'makchi"
+  },
+  {
+   "wort": "es",
+   "grund": "shaxs olmoshi — grammatik ko'makchi"
+  },
+  {
+   "wort": "wir",
+   "grund": "shaxs olmoshi — grammatik ko'makchi"
+  },
+  {
+   "wort": "ihr",
+   "grund": "shaxs olmoshi — grammatik ko'makchi"
+  },
+  {
+   "wort": "bin",
+   "grund": "sein fe'lining ich shakli"
+  },
+  {
+   "wort": "bist",
+   "grund": "sein fe'lining du shakli"
+  },
+  {
+   "wort": "ist",
+   "grund": "sein fe'lining er/sie shakli"
+  },
+  {
+   "wort": "sind",
+   "grund": "sein fe'lining wir/sie shakli"
+  },
+  {
+   "wort": "seid",
+   "grund": "sein fe'lining ihr shakli"
+  },
+  {
+   "wort": "und",
+   "grund": "bog'lovchi"
+  },
+  {
+   "wort": "oder",
+   "grund": "bog'lovchi"
+  },
+  {
+   "wort": "nicht",
+   "grund": "inkor yuklamasi"
+  },
+  {
+   "wort": "ja",
+   "grund": "tasdiq yuklamasi"
+  },
+  {
+   "wort": "nein",
+   "grund": "inkor javobi"
+  },
+  {
+   "wort": "das",
+   "grund": "artikl / ko'rsatish olmoshi"
+  },
+  {
+   "wort": "der",
+   "grund": "artikl"
+  },
+  {
+   "wort": "die",
+   "grund": "artikl"
+  },
+  {
+   "wort": "ein",
+   "grund": "noaniq artikl"
+  },
+  {
+   "wort": "eine",
+   "grund": "noaniq artikl"
+  },
+  {
+   "wort": "mein",
+   "grund": "egalik artikli — u02-s1 uni QOIDA sifatida o'rgatadi, lug'at so'zi sifatida emas (u01 matnida allaqachon ishlatilgan)",
+   "abSection": "u01-s1"
+  },
+  {
+   "wort": "meine",
+   "grund": "egalik artiklining ayol/ko'plik shakli — u02-s1 qoidasi",
+   "abSection": "u01-s1"
+  },
+  {
+   "wort": "dein",
+   "grund": "egalik artikli — u02-s1 uni QOIDA sifatida o'rgatadi, lug'at so'zi sifatida emas (u01 matnida allaqachon ishlatilgan)",
+   "abSection": "u01-s1"
+  },
+  {
+   "wort": "deine",
+   "grund": "egalik artiklining ayol/ko'plik shakli — u02-s1 qoidasi",
+   "abSection": "u01-s1"
+  },
+  {
+   "wort": "sehr",
+   "grund": "daraja ravishi"
+  },
+  {
+   "wort": "auch",
+   "grund": "ravish — ko'makchi"
+  },
+  {
+   "wort": "bitte",
+   "grund": "muomala so'zi, iboraning bo'lagi"
+  },
+  {
+   "wort": "hier",
+   "grund": "o'rin ravishi"
+  },
+  {
+   "wort": "man",
+   "grund": "shaxssiz olmosh — «Wie schreibt man das?» iborasida"
+  },
+  {
+   "wort": "gut",
+   "grund": "«Gut, danke.» qotma javobining bo'lagi"
+  },
+  {
+   "wort": "geht",
+   "grund": "«Wie geht's?» qotma savolining bo'lagi"
+  },
+  {
+   "wort": "dir",
+   "grund": "«Wie geht es dir?» iborasidagi jo'nalish"
+  },
+  {
+   "wort": "ihnen",
+   "grund": "«Wie geht es Ihnen?» iborasidagi jo'nalish"
+  },
+  {
+   "wort": "mir",
+   "grund": "«Es geht mir gut.» iborasidagi jo'nalish"
+  },
+  {
+   "wort": "heisse",
+   "grund": "heißen fe'lining ich shakli (u01-s2)",
+   "abSection": "u01-s2"
+  },
+  {
+   "wort": "heisst",
+   "grund": "heißen fe'lining du/er shakli (u01-s2)",
+   "abSection": "u01-s2"
+  },
+  {
+   "wort": "heiße",
+   "grund": "heißen fe'lining ich shakli, ß bilan",
+   "abSection": "u01-s2"
+  },
+  {
+   "wort": "heißt",
+   "grund": "heißen fe'lining du/er shakli, ß bilan",
+   "abSection": "u01-s2"
+  },
+  {
+   "wort": "komme",
+   "grund": "kommen fe'lining ich shakli (u01-s3)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "kommst",
+   "grund": "kommen fe'lining du shakli (u01-s3)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "kommt",
+   "grund": "kommen fe'lining er/sie shakli (u01-s3)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "wohne",
+   "grund": "wohnen fe'lining ich shakli (u01-s3)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "wohnst",
+   "grund": "wohnen fe'lining du shakli (u01-s3)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "wohnt",
+   "grund": "wohnen fe'lining er/sie shakli (u01-s3)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "spreche",
+   "grund": "sprechen fe'lining ich shakli (u01-s3)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "sprichst",
+   "grund": "sprechen fe'lining du shakli (u01-s3)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "spricht",
+   "grund": "sprechen fe'lining er/sie shakli (u01-s3)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "anna",
+   "grund": "atoqli ot — dialog obrazining ismi"
+  },
+  {
+   "wort": "thomas",
+   "grund": "atoqli ot — dialog obrazining ismi"
+  },
+  {
+   "wort": "lena",
+   "grund": "atoqli ot — dialog obrazining ismi"
+  },
+  {
+   "wort": "julia",
+   "grund": "atoqli ot — dialog obrazining ismi"
+  },
+  {
+   "wort": "neumann",
+   "grund": "atoqli ot — familiya"
+  },
+  {
+   "wort": "mia",
+   "grund": "atoqli ot — dialog obrazining ismi"
+  },
+  {
+   "wort": "jonas",
+   "grund": "atoqli ot — dialog obrazining ismi"
+  },
+  {
+   "wort": "claudia",
+   "grund": "atoqli ot — dialog obrazining ismi"
+  },
+  {
+   "wort": "markus",
+   "grund": "atoqli ot — dialog obrazining ismi"
+  },
+  {
+   "wort": "weber",
+   "grund": "atoqli ot — familiya (u01-d6 harflab aytiladi)"
+  },
+  {
+   "wort": "walter",
+   "grund": "atoqli ot — dialog obrazining ismi (u01-d2)"
+  },
+  {
+   "wort": "lukas",
+   "grund": "atoqli ot — dialog obrazining ismi (u01-d4)"
+  },
+  {
+   "wort": "sabine",
+   "grund": "atoqli ot — dialog obrazining ismi (u01-d5)"
+  },
+  {
+   "wort": "peter",
+   "grund": "atoqli ot — dialog obrazining ismi (u01-d5)"
+  },
+  {
+   "wort": "helga",
+   "grund": "atoqli ot — dialog obrazining ismi (u01-d6)"
+  },
+  {
+   "wort": "habe",
+   "grund": "haben fe'lining ich shakli (u02-s2 qoidasi)",
+   "abSection": "u02-s2"
+  },
+  {
+   "wort": "hast",
+   "grund": "haben fe'lining du shakli (u02-s2 qoidasi)",
+   "abSection": "u02-s2"
+  },
+  {
+   "wort": "hat",
+   "grund": "haben fe'lining er/sie shakli (u02-s2 qoidasi)",
+   "abSection": "u02-s2"
+  },
+  {
+   "wort": "arbeite",
+   "grund": "arbeiten fe'lining ich shakli (u02-s3)",
+   "abSection": "u02-s3"
+  },
+  {
+   "wort": "arbeitest",
+   "grund": "arbeiten fe'lining du shakli (u02-s3)",
+   "abSection": "u02-s3"
+  },
+  {
+   "wort": "arbeitet",
+   "grund": "arbeiten fe'lining er/sie shakli (u02-s3)",
+   "abSection": "u02-s3"
+  },
+  {
+   "wort": "studiere",
+   "grund": "studieren fe'lining ich shakli (u02-s3)",
+   "abSection": "u02-s3"
+  },
+  {
+   "wort": "studierst",
+   "grund": "studieren fe'lining du shakli (u02-s3)",
+   "abSection": "u02-s3"
+  },
+  {
+   "wort": "studiert",
+   "grund": "studieren fe'lining er/sie shakli (u02-s3)",
+   "abSection": "u02-s3"
+  },
+  {
+   "wort": "lerne",
+   "grund": "lernen fe'lining ich shakli (u02-s5)",
+   "abSection": "u02-s5"
+  },
+  {
+   "wort": "lernst",
+   "grund": "lernen fe'lining du shakli (u02-s5)",
+   "abSection": "u02-s5"
+  },
+  {
+   "wort": "lernt",
+   "grund": "lernen fe'lining er/sie shakli (u02-s5)",
+   "abSection": "u02-s5"
+  },
+  {
+   "wort": "mache",
+   "grund": "machen fe'lining ich shakli (u02-s5)",
+   "abSection": "u02-s5"
+  },
+  {
+   "wort": "machst",
+   "grund": "machen fe'lining du shakli (u02-s5)",
+   "abSection": "u02-s5"
+  },
+  {
+   "wort": "macht",
+   "grund": "machen fe'lining er/sie shakli (u02-s5)",
+   "abSection": "u02-s5"
+  },
+  {
+   "wort": "b",
+   "grund": "harf — familiyani harflash uchun; lug'at so'zi emas (u01-s5 faqat 9 ta qiyin harfni o'rgatadi)",
+   "abSection": "u01-s5"
+  },
+  {
+   "wort": "r",
+   "grund": "harf — familiyani harflash uchun; lug'at so'zi emas (u01-s5 faqat 9 ta qiyin harfni o'rgatadi)",
+   "abSection": "u01-s5"
+  },
+  {
+   "wort": "gibt",
+   "grund": "'es gibt' qolipi — 'Gibt es hier ein Kino?' (u03-s1)",
+   "abSection": "u03-s1"
+  },
+  {
+   "wort": "dem",
+   "grund": "der/das ning qaratqich (Dativ) shakli — in/an/neben/mit dan keyin (u03-s2 qoidasi)",
+   "abSection": "u03-s2"
+  },
+  {
+   "wort": "im",
+   "grund": "in + dem qisqarishi (u03-s2 qoidasi)",
+   "abSection": "u03-s2"
+  },
+  {
+   "wort": "am",
+   "grund": "an + dem qisqarishi (u03-s2 qoidasi)",
+   "abSection": "u03-s2"
+  },
+  {
+   "wort": "zum",
+   "grund": "zu + dem qisqarishi (u03-s3 qoidasi)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "zur",
+   "grund": "zu + der qisqarishi (u03-s3 qoidasi)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "gehe",
+   "grund": "gehen fe'lining ich shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "gehst",
+   "grund": "gehen fe'lining du shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "nehme",
+   "grund": "nehmen fe'lining ich shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "nimmst",
+   "grund": "nehmen fe'lining du shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "nimmt",
+   "grund": "nehmen fe'lining er/sie shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "suche",
+   "grund": "suchen fe'lining ich shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "suchst",
+   "grund": "suchen fe'lining du shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "sucht",
+   "grund": "suchen fe'lining er/sie shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "finde",
+   "grund": "finden fe'lining ich shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "findest",
+   "grund": "finden fe'lining du shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "findet",
+   "grund": "finden fe'lining er/sie shakli (u03-s3)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "fahre",
+   "grund": "fahren fe'lining ich shakli (u03-s4)",
+   "abSection": "u03-s4"
+  },
+  {
+   "wort": "fährst",
+   "grund": "fahren fe'lining du shakli (u03-s4)",
+   "abSection": "u03-s4"
+  },
+  {
+   "wort": "fährt",
+   "grund": "fahren fe'lining er/sie shakli (u03-s4)",
+   "abSection": "u03-s4"
+  },
+  {
+   "wort": "dauert",
+   "grund": "dauern fe'lining er/sie/es shakli (u03-s5)",
+   "abSection": "u03-s5"
+  },
+  {
+   "wort": "warte",
+   "grund": "warten fe'lining ich shakli (u03-s5)",
+   "abSection": "u03-s5"
+  },
+  {
+   "wort": "wartest",
+   "grund": "warten fe'lining du shakli (u03-s5)",
+   "abSection": "u03-s5"
+  },
+  {
+   "wort": "wartet",
+   "grund": "warten fe'lining er/sie shakli (u03-s5)",
+   "abSection": "u03-s5"
+  },
+  {
+   "wort": "tschüs",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u01-s1"
+  },
+  {
+   "wort": "einhundert",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s2"
+  },
+  {
+   "wort": "eintausend",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s2"
+  },
+  {
+   "wort": "gerne",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "ab",
+   "grund": "'abholen' fe'lining ajraladigan qismi: 'Ich hole Lena ab.' (u05-s3)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "aber",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "auf",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u01-s5"
+  },
+  {
+   "wort": "bei",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s3"
+  },
+  {
+   "wort": "durch",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "für",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "kein",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s3"
+  },
+  {
+   "wort": "leider",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u05-s4"
+  },
+  {
+   "wort": "nach",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "noch",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u01-s5"
+  },
+  {
+   "wort": "so",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s4"
+  },
+  {
+   "wort": "über",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u09-s2"
+  },
+  {
+   "wort": "viel",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s3"
+  },
+  {
+   "wort": "von",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s1"
+  },
+  {
+   "wort": "zu",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "andere",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s5"
+  },
+  {
+   "wort": "ganz",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u01-s1"
+  },
+  {
+   "wort": "den",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "zuerst",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "darauf",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u09-s2"
+  },
+  {
+   "wort": "wirklich",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s4"
+  },
+  {
+   "wort": "jede",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "mehrere",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "weitere",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u07-s4"
+  },
+  {
+   "wort": "pro",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "alle",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s5"
+  },
+  {
+   "wort": "gegenseitig",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u10-s2"
+  },
+  {
+   "wort": "bisschen",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u01-s3"
+  },
+  {
+   "wort": "also",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "bis",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u01-s1"
+  },
+  {
+   "wort": "da",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s2"
+  },
+  {
+   "wort": "euer",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u07-s5"
+  },
+  {
+   "wort": "schon",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s5"
+  },
+  {
+   "wort": "vor",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s2"
+  },
+  {
+   "wort": "okay",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "genau",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s3"
+  },
+  {
+   "wort": "diese",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "unser",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s5"
+  },
+  {
+   "wort": "denn",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u06-s5"
+  },
+  {
+   "wort": "dich",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "gleich",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "ihn",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "nichts",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s4"
+  },
+  {
+   "wort": "nur",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s4"
+  },
+  {
+   "wort": "seit",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u07-s1"
+  },
+  {
+   "wort": "um",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s4"
+  },
+  {
+   "wort": "uns",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "alles",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "etwas",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "sonst",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "als",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u07-s1"
+  },
+  {
+   "wort": "wen",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u06-s5"
+  },
+  {
+   "wort": "euch",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "mich",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "wieder",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "selbst",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "beide",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u02-s1"
+  },
+  {
+   "wort": "doch",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u06-s3"
+  },
+  {
+   "wort": "anders",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u07-s1"
+  },
+  {
+   "wort": "endlich",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u07-s2"
+  },
+  {
+   "wort": "wem",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u07-s3"
+  },
+  {
+   "wort": "dazu",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "gar",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "eigentlich",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u07-s5"
+  },
+  {
+   "wort": "ebenso",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u05-s2"
+  },
+  {
+   "wort": "kaum",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u10-s3"
+  },
+  {
+   "wort": "her",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u10-s3"
+  },
+  {
+   "wort": "ihm",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u08-s2"
+  },
+  {
+   "wort": "gegen",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u08-s3"
+  },
+  {
+   "wort": "sich",
+   "grund": "qaytish olmoshi: 'Wer kümmert sich um Lena?' (u05-s5, 'sich kümmern')",
+   "abSection": "u05-s5"
+  },
+  {
+   "wort": "unter",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u09-s2"
+  },
+  {
+   "wort": "hurra",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u08-s5"
+  },
+  {
+   "wort": "total",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u08-s2"
+  },
+  {
+   "wort": "jemand",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u08-s4"
+  },
+  {
+   "wort": "hinter",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u09-s2"
+  },
+  {
+   "wort": "jeder",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u03-s5"
+  },
+  {
+   "wort": "daneben",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u09-s2"
+  },
+  {
+   "wort": "ohne",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "danach",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "außerhalb",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u09-s4"
+  },
+  {
+   "wort": "erst",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "tatsächlich",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u12-s5"
+  },
+  {
+   "wort": "meisten",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u07-s5"
+  },
+  {
+   "wort": "jeden",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u11-s4"
+  },
+  {
+   "wort": "Fall",
+   "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
+   "abSection": "u11-s4"
+  },
+  {
+   "wort": "keine",
+   "grund": "'kein' ning ayol jinsi va ko'plik shakli — 'Wir haben keine Butter.' (u04-s1)",
+   "abSection": "u04-s1"
+  },
+  {
+   "wort": "kaufe",
+   "grund": "'kaufen' fe'lining shakli — 'Ich kaufe die Melone.' (u04-s2)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "kaufst",
+   "grund": "'kaufen' fe'lining shakli (du) (u04-s2)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "kauft",
+   "grund": "'kaufen' fe'lining shakli — 'Mia kauft zwei Dosen Tomaten.' (u04-s2)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "kostet",
+   "grund": "'kosten' fe'lining shakli — 'Was kostet das?' (u04-s2)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "stimmt",
+   "grund": "'stimmen' fe'lining shakli — 'Stimmt so!' (u04-s2)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "esse",
+   "grund": "'essen' fe'lining shakli — 'Ich esse gern Pizza.' (u04-s3)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "isst",
+   "grund": "'essen' fe'lining shakli — 'Du isst gern Fisch.' (u04-s3)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "esst",
+   "grund": "'essen' fe'lining shakli (ihr) (u04-s3)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "trinke",
+   "grund": "'trinken' fe'lining shakli — 'Ich trinke lieber Wasser.' (u04-s3)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "trinkst",
+   "grund": "'trinken' fe'lining shakli — 'Trinkst du gern Saft?' (u04-s3)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "trinkt",
+   "grund": "'trinken' fe'lining shakli — 'Was trinkt Mia gern?' (u04-s3)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "mag",
+   "grund": "'mögen' fe'lining shakli — 'Cola mag ich nicht.' (u04-s3)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "magst",
+   "grund": "'mögen' fe'lining shakli — 'Magst du Sushi?' (u04-s3)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "schmeckt",
+   "grund": "'schmecken' fe'lining shakli — 'Das schmeckt gut!' (u04-s3)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "probiere",
+   "grund": "'probieren' fe'lining shakli — 'Ich probiere das Sushi.' (u04-s3)",
+   "abSection": "u04-s3"
+  },
+  {
+   "wort": "frühstückst",
+   "grund": "'frühstücken' fe'lining shakli — 'Um wie viel Uhr frühstückst du?' (u04-s4)",
+   "abSection": "u04-s4"
+  },
+  {
+   "wort": "frühstückt",
+   "grund": "'frühstücken' fe'lining shakli (ihr) (u04-s4)",
+   "abSection": "u04-s4"
+  },
+  {
+   "wort": "möchte",
+   "grund": "'möchten' shakli — 'Ich möchte die Tomatensuppe.' (u04-s5)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "möchtest",
+   "grund": "'möchten' shakli — 'Was möchtest du trinken?' (u04-s5)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "hätte",
+   "grund": "'Ich hätte gern …' buyurtma qolipi (u04-s5)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "bestellt",
+   "grund": "'bestellen' fe'lining shakli — 'Was bestellt Julia?' (u04-s5)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "bringt",
+   "grund": "'bringen' fe'lining shakli — 'Der Kellner bringt die Suppe.' (u04-s5)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "zahle",
+   "grund": "'zahlen' fe'lining shakli — 'Ich zahle bar.' (u04-s5)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "zahlt",
+   "grund": "'zahlen' fe'lining shakli — 'Wer zahlt?' (u04-s5)",
+   "abSection": "u04-s5"
+  },
+  {
+   "wort": "einen",
+   "grund": "noaniq artiklning tushum kelishigi (erkak jinsi) — 'Ich brauche einen Topf.' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "keinen",
+   "grund": "'kein' ning tushum kelishigi (erkak jinsi) — 'Ich trinke keinen Alkohol.' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "brauche",
+   "grund": "'brauchen' fe'lining shakli — 'Ich brauche einen Topf.' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "brauchst",
+   "grund": "'brauchen' fe'lining shakli — 'Brauchst du mehr Salz?' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "kochst",
+   "grund": "'kochen' fe'lining shakli — 'Was kochst du heute?' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "schneide",
+   "grund": "'schneiden' fe'lining shakli — 'Ich schneide die Zwiebeln.' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "schneidet",
+   "grund": "'schneiden' fe'lining shakli — 'Was schneidet Helga?' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "schäle",
+   "grund": "'schälen' fe'lining shakli — 'Ich schäle die Karotten.' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "grillst",
+   "grund": "'grillen' fe'lining shakli — 'Was grillst du noch?' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "grillt",
+   "grund": "'grillen' fe'lining shakli — 'Was grillt Thomas auch?' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "hm",
+   "grund": "undov so'z — o'ylanish: 'Hm... Pizza?' (u04-s1)",
+   "abSection": "u04-s1"
+  },
+  {
+   "wort": "oh",
+   "grund": "undov so'z — hayrat: 'Oh, Melonen aus Usbekistan!' (u04-s1)",
+   "abSection": "u04-s1"
+  },
+  {
+   "wort": "mama",
+   "grund": "murojaat — Mia onasi Helgaga: 'Mama!' (u04-s1)",
+   "abSection": "u04-s1"
+  },
+  {
+   "wort": "dran",
+   "grund": "'drankommen' fe'lining ajraladigan qismi: 'Wer kommt dran?' (u04-s2)",
+   "abSection": "u04-s2"
+  },
+  {
+   "wort": "koche",
+   "grund": "'kochen' fe'lining shakli — 'Heute koche ich ein Gericht aus Usbekistan!' (u04-s6)",
+   "abSection": "u04-s6"
+  },
+  {
+   "wort": "steht",
+   "grund": "'stehen' fe'lining er shakli: 'Meine Uhr steht!' — soat to'xtagan (u05-s1); keyin 'steht auf'",
+   "abSection": "u05-s1"
+  },
+  {
+   "wort": "stehe",
+   "grund": "'aufstehen' fe'lining ich shakli: 'Ich stehe um sechs Uhr auf.' (u05-s3)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "stehst",
+   "grund": "'aufstehen' fe'lining du shakli: 'Wann stehst du auf?' (u05-s3)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "hole",
+   "grund": "'abholen' fe'lining ich shakli: 'Ich hole Lena ab.' (u05-s3)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "holst",
+   "grund": "'abholen' fe'lining du shakli: 'Wann holst du Lena ab?' (u05-s3)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "sehe",
+   "grund": "'fernsehen'/'ansehen' fe'lining ich shakli: 'Ich sehe die Serie so gern.' (u05-s3)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "sieht",
+   "grund": "'fernsehen' fe'lining er shakli: 'Jonas sieht abends fern.' (u05-s3)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "fern",
+   "grund": "'fernsehen' fe'lining ajraladigan qismi: 'Jonas sieht abends fern.' (u05-s3)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "schlafe",
+   "grund": "'schlafen' fe'lining ich shakli: 'Ich schlafe jetzt.' (u05-s3)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "schläft",
+   "grund": "'schlafen' fe'lining er shakli (a → ä): 'Nachts schläft Lena.' (u05-s3)",
+   "abSection": "u05-s3"
+  },
+  {
+   "wort": "beginnt",
+   "grund": "'beginnen' fe'lining er shakli: 'Die Schule beginnt um acht Uhr.' (u05-s4)",
+   "abSection": "u05-s4"
+  },
+  {
+   "wort": "muss",
+   "grund": "'müssen' fe'lining ich/er shakli: 'Ich muss das Geschirr waschen.' (u05-s5)",
+   "abSection": "u05-s5"
+  },
+  {
+   "wort": "musst",
+   "grund": "'müssen' fe'lining du shakli: 'Du musst die Hausaufgaben machen.' (u05-s5)",
+   "abSection": "u05-s5"
+  },
+  {
+   "wort": "tut",
+   "grund": "'tun' fe'lining er shakli — 'Das tut mir leid.' iborasida (u05-s5)",
+   "abSection": "u05-s5"
+  },
+  {
+   "wort": "leid",
+   "grund": "'leidtun' fe'lining ajralgan qismi: 'Das tut mir leid.' (u05-s5)",
+   "abSection": "u05-s5"
+  },
+  {
+   "wort": "kümmere",
+   "grund": "'sich kümmern' fe'lining ich shakli: 'Ich kümmere mich um Lena.' (u05-s5)",
+   "abSection": "u05-s5"
+  },
+  {
+   "wort": "kümmert",
+   "grund": "'sich kümmern' fe'lining er shakli: 'Wer kümmert sich um Lena?' (u05-s5)",
+   "abSection": "u05-s5"
+  },
+  {
+   "wort": "wasche",
+   "grund": "'waschen' fe'lining ich shakli: 'Jetzt wasche ich das Geschirr.' (u05-s5)",
+   "abSection": "u05-s5"
+  },
+  {
+   "wort": "wäscht",
+   "grund": "'waschen' fe'lining er shakli (a → ä): 'Wer wäscht das Geschirr?' (u05-s5)",
+   "abSection": "u05-s5"
+  },
+  {
+   "wort": "bleibt",
+   "grund": "'bleiben' fe'lining er shakli: 'Lena bleibt nicht allein.' (u05-s5)",
+   "abSection": "u05-s5"
+  },
+  {
+   "wort": "fotografiere",
+   "grund": "'fotografieren' fe'lining ich shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "fotografiert",
+   "grund": "'fotografieren' fe'lining er shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "malst",
+   "grund": "'malen' fe'lining du shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "malt",
+   "grund": "'malen' fe'lining er shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "lese",
+   "grund": "'lesen' fe'lining ich shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "liest",
+   "grund": "'lesen' fe'lining du/er shakli (e → ie) (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "zeichne",
+   "grund": "'zeichnen' fe'lining ich shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "zeichnest",
+   "grund": "'zeichnen' fe'lining du shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "sammelt",
+   "grund": "'sammeln' fe'lining er shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "würfelt",
+   "grund": "'würfeln' fe'lining er shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "rate",
+   "grund": "'raten' fe'lining buyruq shakli: 'Rate mal!' (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "ratet",
+   "grund": "'raten' fe'lining ihr buyruq shakli: 'Ratet mal!' (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "ziehst",
+   "grund": "'ziehen' fe'lining du shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "interessiert",
+   "grund": "'interessieren' fe'lining er shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "tanzt",
+   "grund": "'tanzen' fe'lining er shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "kann",
+   "grund": "'können' fe'lining ich/er shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "kannst",
+   "grund": "'können' fe'lining du shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "spielt",
+   "grund": "'spielen' fe'lining er shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "spielst",
+   "grund": "'spielen' fe'lining du shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "singe",
+   "grund": "'singen' fe'lining ich shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "singst",
+   "grund": "'singen' fe'lining du shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "singt",
+   "grund": "'singen' fe'lining er shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "höre",
+   "grund": "'hören' fe'lining ich shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "hörst",
+   "grund": "'hören' fe'lining du shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "laufe",
+   "grund": "'laufen' fe'lining ich shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "läuft",
+   "grund": "'laufen' fe'lining er shakli (a → äu) (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "schwimmt",
+   "grund": "'schwimmen' fe'lining er shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "gewinnt",
+   "grund": "'gewinnen' fe'lining er shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "will",
+   "grund": "'wollen' fe'lining ich/er shakli (u06-s3)",
+   "abSection": "u06-s3"
+  },
+  {
+   "wort": "ins",
+   "grund": "'in das' qisqargan shakli: 'ins Kino', 'ins Theater' (u06-s3)",
+   "abSection": "u06-s3"
+  },
+  {
+   "wort": "besonderes",
+   "grund": "'besondere' sifatining das shakli: 'ein besonderes Event' (u06-s3)",
+   "abSection": "u06-s3"
+  },
+  {
+   "wort": "regnet",
+   "grund": "'regnen' fe'lining es shakli: 'Es regnet.' (u06-s4)",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "schneit",
+   "grund": "'schneien' fe'lining es shakli: 'Es schneit.' (u06-s4)",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "scheint",
+   "grund": "'scheinen' fe'lining er shakli: 'Die Sonne scheint.' (u06-s4)",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "schüttet",
+   "grund": "'schütten' fe'lining es shakli: 'Es schüttet.' (u06-s4)",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "glaube",
+   "grund": "'glauben' fe'lining ich shakli (u06-s4)",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "sagt",
+   "grund": "'sagen' fe'lining er shakli: 'Was sagt der Wetterbericht?' (u06-s4)",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "lade",
+   "grund": "'einladen' fe'lining ich shakli: 'Ich lade dich ein.' (u06-s5)",
+   "abSection": "u06-s5"
+  },
+  {
+   "wort": "bringe",
+   "grund": "'mitbringen' fe'lining ich shakli: 'Ich bringe Kuchen mit.' (u06-s5)",
+   "abSection": "u06-s5"
+  },
+  {
+   "wort": "klingt",
+   "grund": "'klingen' fe'lining er shakli: 'Das klingt gut!' (u06-s5)",
+   "abSection": "u06-s5"
+  },
+  {
+   "wort": "feierst",
+   "grund": "'feiern' fe'lining du shakli (u06-s5)",
+   "abSection": "u06-s5"
+  },
+  {
+   "wort": "feiert",
+   "grund": "'feiern' fe'lining er shakli (u06-s5)",
+   "abSection": "u06-s5"
+  },
+  {
+   "wort": "schenkst",
+   "grund": "'schenken' fe'lining du shakli (u06-s5)",
+   "abSection": "u06-s5"
+  },
+  {
+   "wort": "reagierst",
+   "grund": "'reagieren' fe'lining du shakli (u06-s5)",
+   "abSection": "u06-s5"
+  }
+ ]
 }
