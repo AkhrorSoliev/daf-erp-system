@@ -313,7 +313,7 @@ Oylik hisoblashda (calculateMonthlySalaries):
 |--------|----------|-------|--------|
 | `POST` | `/api/payments` | CEO, BD, Admin, Cashier | Naqd to'lov qayd qilish |
 | `POST` | `/api/payments/attach-external` | CEO, BD, Admin, Cashier | Tashqi to'lov biriktirish |
-| `POST` | `/api/payments/:id/reverse` | **CEO** | To'lovni bekor qilish |
+| `POST` | `/api/payments/:id/reverse` | **CEO** | To'lovni bekor qilish (odam chaqirsa sabab majburiy, 1–500 belgi — ADR-0088) |
 | `GET` | `/api/payments` | CEO, BD, Admin, Cashier | To'lovlar ro'yxati (REVERSED default yashirilgan) |
 | `GET` | `/api/payments/:id` | CEO, BD, Admin, Cashier | Bitta to'lov detali |
 | `GET` | `/api/payments/student/:id` | CEO, BD, Admin, Cashier | O'quvchi to'lov tarixi |
