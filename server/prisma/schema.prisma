@@ -349,7 +349,8 @@ model Role {
   id   Int    @id
   name String @unique
 
-  users UserRole[]
+  users       UserRole[]
+  permissions RolePermission[]
 }
 
 model User {
@@ -480,6 +481,8 @@ model User {
   approvedTelegramGroups TelegramGroup[] @relation("TelegramGroupApprovedBy")
 
   updatedSettings Setting[] @relation("SettingUpdatedBy")
+
+  rolePermissionUpdates RolePermission[] @relation("RolePermissionUpdatedBy")
 
   @@index([deletedAt])
   @@index([status])
@@ -1784,6 +1787,23 @@ model Company {
   holidays                    Holiday[]
   monthlyCharges              EnrollmentMonthlyCharge[]
   settings                    Setting[]
+  rolePermissions             RolePermission[]
+}
+
+/// The CEO's change to a role's capabilities. Only differences from the
+/// catalog default are stored (ADR-0086).
+model RolePermission {
+  companyId   Int
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  roleId      Int
+  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  key         String
+  granted     Boolean
+  updatedById Int?
+  updatedBy   User?    @relation("RolePermissionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt   DateTime @updatedAt
+
+  @@id([companyId, roleId, key])
 }
 
 enum TelegramGroupStatus {
