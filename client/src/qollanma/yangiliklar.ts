@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-11",
+    sarlavha: "Takrorlanuvchi topshiriqlar",
+    matn: "Endi topshiriqni takrorlanadigan qilib berish mumkin: berish oynasida «Batafsil» → «Takrorlash» da «Har kuni», «Har hafta» (kunlarini belgilab) yoki «Har oy» (1–28-sana) va vaqtni tanlang. Birinchi topshiriq darhol beriladi, keyingilarini tizim har kuni ertalab 07:00 da beradi; yakshanba va bayramga tushsa — keyingi ish kuniga. Oldingisi bajarilmagan bo'lsa, yangisi berilmaydi. Kartada «Har dushanba» kabi belgi turadi; varaqda takrorlanishni o'zgartirish va to'xtatish mumkin, «Topshiriqlar» sahifasidagi «Takrorlanuvchi» tugmasi hammasini bitta ro'yxatda ko'rsatadi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-10-11",
     sarlavha: "Avtomatik topshiriqlar",
     matn: "Tizim endi uch topshiriqni o'zi beradi. «Buzilgan va'da» — ertalab 09:00 da va'dasi buzilgan, qarzi 1 000 so'mdan kam bo'lmagan har o'quvchiga bittadan, filial administratorlariga; administratorlarga ertalabki ro'yxat endi kelmaydi (CEO avvalgidek oladi). «Qayta qo'ng'iroq» — qo'ng'iroq natijasida «Keyingi bog'lanish sanasi» qo'yilsa, o'sha kunga qo'ng'iroqni yozgan xodimga; Telegram'ga o'sha kuni 08:00 dan oldin yuborilmaydi: ertaroq bo'ladigan bo'lsa, 08:00 ni kutadi. «Qo'ng'iroqsiz lid» — yangi lidga 24 soat ichida qo'ng'iroq qilinmasa, filial administratorlariga, ular bo'lmasa direktorlarga, ular ham bo'lmasa CEO ga (faqat qoida yoqilgan paytdan keyin kelgan lidlar uchun). Muddati — 18:00. Topshiriq varag'ida o'quvchi yoki lid haqida karta va bitta tugma bor: «Qo'ng'iroqni yozish» yoki «Lidni ochish». Ish bajarilganda — qarz to'lansa yoki boshqacha yopilsa (masalan, dars puli qaytsa), qo'ng'iroq yozilsa, lidga qo'ng'iroq belgisi qo'yilsa — topshiriq o'zi yopiladi. Kechki 21:00 hisobotida muddati o'tgan topshiriqlar soni chiqadi; eng ko'p kechikkan xodim ishdan ketgan bo'lsa, uning ismi yozilmaydi.",
     rollar: [1, 2, 3],

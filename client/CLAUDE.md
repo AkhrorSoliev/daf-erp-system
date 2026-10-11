@@ -709,6 +709,7 @@ Tasks are their own module (ADR-0074), not a kind of comment. The page is `/task
   <CommentList entityType="Student" entityId={id} refreshKey={key} />
   ```
 - **Pure rules live in `*-rules.ts`** (`task-drawer-footer-rules.ts`, `task-all-table-rules.ts`, `task-workload-rules.ts`, `entity-tasks-panel-rules.ts`) and in `task-drop.ts`, `task-due.ts`, `task-href.ts`, `task-feed-text.ts`, `task-row-button.ts`. Each has a vitest test next to it in the node environment (no DOM): put new logic in such a file and test it there (`npx vitest run <path>`).
+- **Recurring tasks** (ADR-0084): the create dialog's «Batafsil» has «Takrorlash» (`task-recurrence-fields.tsx`; Yo'q / Har kuni / Har hafta + days / Har oy + 1–28 + time). A chosen recurrence hides the date picker and sends `recurrence` instead of `dueAt`. The card shows `recurrenceBadge` («Har dushanba») while the rule runs; the drawer shows `TaskDrawerRecurrence` (from `detail.recurrence`: line, next day, «O'zgartirish» — schedule + assignees, «To'xtatish» / «Davom ettirish» for `canManage`); `/tasks` has a «Takrorlanuvchi» button opening the rule list (`task-recurrences-dialog.tsx`, stop/resume/delete with a confirm). Texts and payloads in `@/lib/task-recurrence-rules` (vitest).
 
 ### Financial UI (Moliya bo'limi)
 
