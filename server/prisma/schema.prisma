@@ -215,6 +215,13 @@ enum TaskTelegramPurpose {
   PHOTO_PROMPT
 }
 
+/// Spec 2026-10-07 §3.6.
+enum TaskRecurrenceFreq {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 // ===== FINANCIAL SYSTEM ENUMS =====
 
 enum PaymentMethod {
@@ -411,6 +418,7 @@ model User {
   entityChanges                    EntityHistory[]            @relation("EntityHistoryChangedBy")
   comments                         Comment[]                  @relation("CommentAuthor")
   tasksAuthored                    Task[]                     @relation("TaskAuthor")
+  taskRecurrencesAuthored          TaskRecurrence[]           @relation("TaskRecurrenceAuthor")
   taskParticipations               TaskParticipant[]          @relation("TaskParticipantUser")
   taskEvents                       TaskEvent[]                @relation("TaskEventActor")
   commentAssignees                 CommentAssignee[]          @relation("CommentAssignees")
@@ -1755,6 +1763,7 @@ model Company {
   groups                      Group[]
   comments                    Comment[]
   tasks                       Task[]
+  taskRecurrences             TaskRecurrence[]
   attendances                 Attendance[]
   plannedAbsences             PlannedAbsence[]
   paymentPromises             PaymentPromise[]
@@ -1986,8 +1995,9 @@ model CommentAssignee {
 }
 
 /// Spec 2026-10-07 §3. The only writers are `tasks/tasks.service.ts`,
-/// `tasks/lesson-task.ts` and `scripts/migrate-comment-tasks.ts`
-/// (`task-write.single-source.spec.ts`).
+/// `tasks/lesson-task.ts`, `scripts/migrate-comment-tasks.ts`,
+/// `tasks/task-recurrences.service.ts` and `tasks/task-recurrence-run.service.ts`
+/// (through `task-create.ts`) (`task-write.single-source.spec.ts`).
 model Task {
   id                String       @id @default(uuid())
   companyId         Int
@@ -2009,6 +2019,9 @@ model Task {
   requiresPhoto     Boolean      @default(false)
   /// «Har biriga alohida» copies share one batch.
   batchId           String?
+  /// The rule that made it (§3.6); null for any other task and after the rule is deleted.
+  recurrenceId      String?
+  recurrence        TaskRecurrence? @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
   /// `unmarked:<groupId>:<YYYY-MM-DD>`, `calllog:<id>`, `promise:<id>`, `lead:<id>`.
   /// Unique while the task is open (partial index in the migration).
   sourceKey         String?
@@ -2036,6 +2049,7 @@ model Task {
   @@index([branchId, status])
   @@index([authorId, status])
   @@index([batchId])
+  @@index([recurrenceId, status])
   @@index([entityType, entityId])
   @@index([sourceKey])
 }
@@ -2128,6 +2142,47 @@ model TaskTelegramMessage {
 
   @@unique([chatId, messageId])
   @@index([taskId])
+}
+
+/// A rule that gives a MANUAL task on its days (spec 2026-10-07 §3.6,
+/// ADR-0084). The 07:00 Tashkent run (`TaskRecurrenceRunner`) makes the task
+/// through the normal create writer and moves `nextRunDate` with a
+/// conditional update (the idempotency key). Written only inside src/tasks/.
+model TaskRecurrence {
+  id             String             @id @default(uuid())
+  companyId      Int
+  company        Company            @relation(fields: [companyId], references: [id])
+  /// The branch its first task got (`resolveTaskBranchId`); null = branch-less.
+  branchId       Int?
+  authorId       Int
+  author         User               @relation("TaskRecurrenceAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  freq           TaskRecurrenceFreq
+  /// WEEKLY: 1 = Monday … 6 = Saturday (never Sunday). Empty otherwise.
+  weekdays       Int[]              @default([])
+  /// MONTHLY: 1–28. Null otherwise.
+  dayOfMonth     Int?
+  /// "HH:mm", Tashkent, 08:00–22:00.
+  dueTime        String
+  title          String
+  description    String?
+  priority       TaskPriority       @default(MEDIUM)
+  assigneeIds    Int[]
+  watcherIds     Int[]              @default([])
+  /// Step titles, in order.
+  steps          String[]           @default([])
+  entityType     String?
+  entityId       String?
+  separateCopies Boolean            @default(false)
+  active         Boolean            @default(true)
+  /// The Tashkent day of the next run.
+  nextRunDate    DateTime           @db.Date
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  tasks Task[]
+
+  @@index([active, nextRunDate])
+  @@index([companyId, authorId])
 }
 
 model Notification {
