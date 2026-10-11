@@ -677,6 +677,12 @@
     "CEO",
     "Cashier"
   ],
+  "GET /payments/list/rows": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
   "GET /payments/pending-students": [
     "Administrator",
     "Branch Director",
