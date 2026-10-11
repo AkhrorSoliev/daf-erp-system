@@ -34,7 +34,7 @@ async function download(file: TaskFileView) {
 const isPlainClick = (e: React.MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 
 /** Opens the document in a new tab; when the list is stale the tab is opened first (a popup blocker allows only a synchronous open), then pointed at the renewed link. */
-async function openFresh(e: React.MouseEvent, taskId: string, file: TaskFileView) {
+export async function openFresh(e: React.MouseEvent, taskId: string, file: TaskFileView) {
   const { taskId: shown, loadedAt } = useTaskFiles.getState();
   if (!isPlainClick(e) || (shown === taskId && Date.now() - loadedAt < FILE_URL_REFRESH_MS)) return;
   e.preventDefault();
