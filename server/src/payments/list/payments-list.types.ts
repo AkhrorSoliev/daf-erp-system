@@ -56,3 +56,33 @@ export interface PaymentListResponse {
   pageSize: number;
   totals: { count: number; amount: number; partAmount: number | null };
 }
+
+/** `GET /payments/list/rows/:id` (spec B4 §5.3). */
+export interface PaymentRowResponse {
+  period: PeriodView;
+  row: PaymentRow;
+}
+
+/** `GET /payments/list/summary` (spec B4 §5.4). */
+export interface PaymentSummary {
+  period: PeriodView;
+  total: number;
+  paymentCount: number;
+  payerCount: number;
+  parts: {
+    currentMonth: number;
+    advance: number;
+    lateTotal: number;
+    late: { monthKey: string; label: string; amount: number }[];
+  };
+  byMethod: { method: PaymentMethod; amount: number; count: number }[];
+  online: { amount: number; count: number };
+}
+
+/** `GET /payments/list/filter-options` (spec B4 §5.5). */
+export interface PaymentFilterOptions {
+  groups: { id: string; name: string }[];
+  teachers: { id: number; firstName: string; lastName: string }[];
+  courses: { id: string; name: string }[];
+  receivers: { id: number; firstName: string; lastName: string }[];
+}

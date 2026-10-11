@@ -1,26 +1,48 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { equalsOrIn } from '../../common/dto/to-array';
-import { tashkentMonthKey, tashkentRangeUtc } from '../../common/date/tashkent';
+import {
+  addDaysToDateStr,
+  addMonthsToMonthKey,
+  tashkentMonthKey,
+  tashkentRangeUtc,
+} from '../../common/date/tashkent';
 import {
   attributeIncome,
   loadAttributionRows,
 } from '../../common/finance/income-attribution';
-import type { ResolvedPeriod } from '../../common/finance/period-helpers';
+import {
+  resolvePeriod,
+  type ResolvedPeriod,
+} from '../../common/finance/period-helpers';
 import {
   branchIdWhere,
   groupBranchWhere,
+  isEmptyScope,
   type ReportBranchIds,
 } from '../../common/finance/report-branch-scope';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { EnrollmentStatusEvent } from '../../students/shared/enrollment-status-on';
-import type { PaymentListQueryDto } from './dto/payment-list-query.dto';
-import { periodShape } from './part-labels';
+import type {
+  PaymentListQueryDto,
+  PaymentPeriodDto,
+} from './dto/payment-list-query.dto';
+import { monthWord, periodShape } from './part-labels';
 import { DayEnrollment, groupIdsOnDay } from './payment-day-groups';
 import { parsePaymentPeriod, periodView } from './payment-period';
 import { PAYMENT_ROW_SELECT, toPaymentRow } from './payment-row';
 import { paymentSearchWhere } from './payment-search';
-import type { PaymentListResponse, PaymentRow } from './payments-list.types';
+import type {
+  PaymentFilterOptions,
+  PaymentListResponse,
+  PaymentRow,
+  PaymentRowResponse,
+  PaymentSummary,
+} from './payments-list.types';
 
 type ListFilters = Partial<PaymentListQueryDto>;
 
@@ -72,6 +94,175 @@ export class PaymentsListService {
             )
           : null,
       },
+    };
+  }
+
+  /**
+   * The drawer (spec B4 §5.3): one payment, any status, any day. Reads no list
+   * filter — only the company and the branch scope limit it; outside them it
+   * is 404 (a 403 would reveal the id exists). The parts period is the given
+   * one when the payment is inside it, else the payment's own Tashkent month.
+   */
+  async row(
+    companyId: number,
+    scope: ReportBranchIds,
+    id: string,
+    q: PaymentPeriodDto,
+  ): Promise<PaymentRowResponse> {
+    const p = await this.prisma.payment.findFirst({
+      where: { id, companyId, ...branchIdWhere(scope) },
+      select: { createdAt: true },
+    });
+    if (!p) throw new NotFoundException("To'lov topilmadi");
+    const given =
+      q.startDate && q.endDate
+        ? parsePaymentPeriod(q.startDate, q.endDate)
+        : undefined;
+    const inside =
+      given && p.createdAt >= given.start && p.createdAt <= given.endTs;
+    let period = given;
+    if (!inside) {
+      const m = tashkentMonthKey(p.createdAt);
+      period = resolvePeriod(
+        `${m}-01`,
+        addDaysToDateStr(`${addMonthsToMonthKey(m, 1)}-01`, -1),
+      );
+    }
+    const [row] = await this.buildRows(companyId, scope, period!, {}, { id });
+    return { period: periodView(period!), row };
+  }
+
+  /**
+   * The summary card (spec B4 §5.4): the engine's figures for the period plus
+   * the method split. Reads no filter. An empty scope is refused, never zeros
+   * (same rule as `GET /reports/income-month-attribution`).
+   */
+  async summary(
+    companyId: number,
+    scope: ReportBranchIds,
+    q: PaymentPeriodDto,
+  ): Promise<PaymentSummary> {
+    if (isEmptyScope(scope)) {
+      throw new ForbiddenException(
+        "Bu filial ma'lumotlarini ko'rish huquqingiz yo'q",
+      );
+    }
+    const period = parsePaymentPeriod(q.startDate, q.endDate);
+    const where: Prisma.PaymentWhereInput = {
+      companyId,
+      status: 'COMPLETED',
+      createdAt: tashkentRangeUtc(period.startStr, period.endStr),
+      ...branchIdWhere(scope),
+    };
+    const [{ payerIds, rows }, byMethod, online] = await Promise.all([
+      loadAttributionRows(this.prisma, companyId, period, scope),
+      this.prisma.payment.groupBy({
+        by: ['method'],
+        where,
+        _sum: { amount: true },
+        _count: true,
+      }),
+      this.prisma.payment.aggregate({
+        where: { ...where, source: 'GATEWAY_WEBHOOK' },
+        _sum: { amount: true },
+        _count: true,
+      }),
+    ]);
+    const a = payerIds.length ? attributeIncome(rows, period, scope) : null;
+    const currentYear = tashkentMonthKey(new Date()).slice(0, 4);
+    const late = [...(a?.lateByMonth ?? [])]
+      .map(([monthKey, amount]) => ({
+        monthKey,
+        label: `${monthWord(monthKey, currentYear)} qarzi`,
+        amount,
+      }))
+      .sort((x, y) => (x.monthKey < y.monthKey ? 1 : -1));
+    const lateTotal = late.reduce((s, m) => s + m.amount, 0);
+    const currentMonth = a?.currentMonth ?? 0;
+    const advance = a?.advance ?? 0;
+    return {
+      period: periodView(period),
+      total: currentMonth + advance + lateTotal,
+      paymentCount: a?.paymentCount ?? 0,
+      payerCount: payerIds.length,
+      parts: { currentMonth, advance, lateTotal, late },
+      byMethod: byMethod
+        .map((m) => ({
+          method: m.method,
+          amount: m._sum.amount ?? 0,
+          count: m._count,
+        }))
+        .filter((m) => m.amount > 0)
+        .sort((x, y) => y.amount - x.amount),
+      online: { amount: online._sum.amount ?? 0, count: online._count },
+    };
+  }
+
+  /**
+   * The filter menus (spec B4 §5.5). Groups of every status except deleted —
+   * a closed group's old payments are on the page — and their current
+   * teachers and courses; receivers are whoever took a payment in the scope.
+   */
+  async filterOptions(
+    companyId: number,
+    scope: ReportBranchIds,
+  ): Promise<PaymentFilterOptions> {
+    const [groups, receivedBy] = await Promise.all([
+      this.prisma.group.findMany({
+        where: { companyId, deletedAt: null, ...branchIdWhere(scope) },
+        select: {
+          id: true,
+          name: true,
+          course: { select: { id: true, name: true } },
+          teachers: {
+            select: {
+              teacher: {
+                select: { id: true, firstName: true, lastName: true },
+              },
+            },
+          },
+        },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.payment.groupBy({
+        by: ['receivedById'],
+        where: {
+          companyId,
+          ...branchIdWhere(scope),
+          receivedById: { not: null },
+        },
+      }),
+    ]);
+    const receiverIds = receivedBy
+      .map((r) => r.receivedById)
+      .filter((id): id is number => id != null);
+    const receivers = receiverIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: receiverIds }, companyId },
+          select: { id: true, firstName: true, lastName: true },
+          orderBy: { firstName: 'asc' },
+        })
+      : [];
+    const teachers = new Map<
+      number,
+      PaymentFilterOptions['teachers'][number]
+    >();
+    const courses = new Map<string, PaymentFilterOptions['courses'][number]>();
+    for (const g of groups) {
+      courses.set(g.course.id, g.course);
+      for (const { teacher } of g.teachers) teachers.set(teacher.id, teacher);
+    }
+    return {
+      groups: groups.map(({ id, name }) => ({ id, name })),
+      teachers: [...teachers.values()].sort(
+        (a, b) =>
+          a.firstName.localeCompare(b.firstName) ||
+          a.lastName.localeCompare(b.lastName),
+      ),
+      courses: [...courses.values()].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      ),
+      receivers,
     };
   }
 

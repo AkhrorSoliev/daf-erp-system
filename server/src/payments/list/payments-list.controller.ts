@@ -1,8 +1,11 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { BranchScope, CurrentUser } from '../../common/decorators';
 import type { ReportBranchIds } from '../../common/finance/report-branch-scope';
 import { Can } from '../../common/permissions/access.decorators';
-import { PaymentListQueryDto } from './dto/payment-list-query.dto';
+import {
+  PaymentListQueryDto,
+  PaymentPeriodDto,
+} from './dto/payment-list-query.dto';
 import { PaymentsListService } from './payments-list.service';
 
 /**
@@ -22,5 +25,38 @@ export class PaymentsListController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.list.rows(companyId, scope, q);
+  }
+
+  /** The drawer: one payment, any status (spec B4 §5.3). Declared after `rows`. */
+  @Get('rows/:id')
+  @Can('payments.view')
+  row(
+    @Param('id') id: string,
+    @Query() q: PaymentPeriodDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.list.row(companyId, scope, id, q);
+  }
+
+  /** The summary card — money, so CEO and Branch Director only (spec B4 §5.4). */
+  @Get('summary')
+  @Can('reports.finance')
+  summary(
+    @Query() q: PaymentPeriodDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.list.summary(companyId, scope, q);
+  }
+
+  /** The filter menus (spec B4 §5.5). */
+  @Get('filter-options')
+  @Can('payments.view')
+  filterOptions(
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.list.filterOptions(companyId, scope);
   }
 }
