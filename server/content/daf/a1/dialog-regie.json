@@ -229,7 +229,8 @@
           "sfx": "fruit being put into a paper bag, paper rustling",
           "sek": 2
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u04-d2": {
@@ -255,7 +256,8 @@
           "sfx": "a kitchen knife chopping vegetables on a wooden board",
           "sek": 3
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u04-d3": {
@@ -286,7 +288,8 @@
           "sfx": "coins dropped onto a shop counter",
           "sek": 2
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u04-d4": {
@@ -305,20 +308,21 @@
       "atmo": {
         "sfx": "a city street at midday, light traffic and footsteps on the pavement, no voices",
         "sek": 15
-      }
+      },
+      "tempo": 0.9
     }
   },
   "u04-d5": {
-    "szene": "Morgens in einer Wohnung. Mia ist im Schlafzimmer und ruft von weitem; Jonas steht in der Küche am Kühlschrank. Dann kommt Mia in die Küche, geht zur Bäckerei und kommt nach einer Weile mit frischen Brötchen zurück.",
+    "szene": "Morgens in einer Wohnung. Mia ist im Schlafzimmer und ruft von weitem; Jonas steht in der Küche am Kühlschrank. Dann kommt Mia in die Küche und geht los zur Bäckerei. Alles passiert in der Wohnung.",
     "toene": [
       "calling from another room",
       "calling out loudly",
       "calling from another room surprised",
       "calling back loudly",
       "calm and practical",
-      "pleased",
       "cheerful",
-      "happy"
+      "hurried",
+      "grateful"
     ],
     "hoerspiel": {
       "atmo": {
@@ -341,21 +345,12 @@
           "sek": 2
         },
         {
-          "vor": 7,
+          "vor": 9,
           "sfx": "a front door closing",
           "sek": 1.5
-        },
-        {
-          "vor": 7,
-          "sfx": "a coffee machine brewing and hissing",
-          "sek": 3
-        },
-        {
-          "vor": 7,
-          "sfx": "a front door of a flat opening and closing",
-          "sek": 1.5
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u04-d6": {
@@ -374,7 +369,8 @@
       "atmo": {
         "sfx": "a cosy restaurant in the evening, cutlery clinking and indistinct quiet conversations, no clear words",
         "sek": 15
-      }
+      },
+      "tempo": 0.9
     }
   },
   "u04-d7": {
@@ -400,20 +396,21 @@
           "sfx": "coins and a banknote placed on a cafe table",
           "sek": 2
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u04-d8": {
-    "szene": "In Mias Küche am Nachmittag. Mia möchte für ihre Mutter Helga ein Gericht aus Usbekistan kochen.",
+    "szene": "Nachmittags in Mias Küche. Mia möchte für ihre Mutter Helga ein Gericht aus Usbekistan kochen. Die Karotten fehlen scheinbar, aber Helga findet sie in einer Tüte. Sie beginnen zusammen zu kochen. Alles passiert in der Küche.",
     "toene": [
       "excited",
       "curious",
       "explaining",
-      "worried",
+      "puzzled",
       "alarmed",
-      "helpful",
-      "proud",
-      "delighted"
+      "relieved and amused",
+      "happy",
+      "cheerful"
     ],
     "hoerspiel": {
       "atmo": {
@@ -422,16 +419,17 @@
       },
       "geraeusche": [
         {
-          "vor": 7,
-          "sfx": "a front door of a flat opening and closing",
+          "vor": 6,
+          "sfx": "a plastic shopping bag rustling",
           "sek": 1.5
         },
         {
-          "vor": 7,
-          "sfx": "onions and meat sizzling in hot oil in a large pot",
-          "sek": 4
+          "vor": 9,
+          "sfx": "a kitchen knife chopping vegetables on a wooden board",
+          "sek": 3
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u04-d9": {
@@ -462,7 +460,8 @@
           "sfx": "a glass bottle opened with a fizz and poured into a glass",
           "sek": 2.5
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u05-d1": {
