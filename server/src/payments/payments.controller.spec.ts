@@ -103,19 +103,31 @@ describe('PaymentsController — route access', () => {
 });
 
 describe('ReversePaymentDto — the reason is required', () => {
-  const messages = (errors: { constraints?: Record<string, string> }[]) =>
-    errors.flatMap((e) => Object.values(e.constraints ?? {}));
+  const REQUIRED = 'Bekor qilish sababini yozing';
+  const TOO_LONG = 'Sabab 500 belgidan oshmasin';
 
-  it('refuses a missing reason', async () => {
-    expect(messages(await reverseErrors({}))).toContain(
-      'Bekor qilish sababini yozing',
+  // Every message the 400 would carry, flattened.
+  const messagesOf = async (body: object) =>
+    (await reverseErrors(body)).flatMap((e) =>
+      Object.values(e.constraints ?? {}),
     );
+
+  it('refuses a missing reason with the Uzbek message only', async () => {
+    const msgs = await messagesOf({});
+    expect(msgs.length).toBeGreaterThan(0);
+    expect(new Set(msgs)).toEqual(new Set([REQUIRED]));
   });
 
-  it('refuses a blank reason, once trimmed', async () => {
-    expect(messages(await reverseErrors({ reason: '   ' }))).toContain(
-      'Bekor qilish sababini yozing',
-    );
+  it('refuses a blank reason, once trimmed, with the Uzbek message only', async () => {
+    const msgs = await messagesOf({ reason: '   ' });
+    expect(msgs.length).toBeGreaterThan(0);
+    expect(new Set(msgs)).toEqual(new Set([REQUIRED]));
+  });
+
+  it('refuses a non-string reason with the Uzbek message only', async () => {
+    const msgs = await messagesOf({ reason: 42 });
+    expect(msgs.length).toBeGreaterThan(0);
+    expect(new Set(msgs)).toEqual(new Set([REQUIRED]));
   });
 
   it('accepts a reason and trims it', async () => {
@@ -124,10 +136,14 @@ describe('ReversePaymentDto — the reason is required', () => {
     expect(dto.reason).toBe('xato');
   });
 
-  it('refuses a reason longer than 500 characters', async () => {
-    expect(
-      (await reverseErrors({ reason: 'x'.repeat(501) })).map((e) => e.property),
-    ).toEqual(['reason']);
+  it('accepts a reason of exactly 500 characters', async () => {
+    expect(await reverseErrors({ reason: 'x'.repeat(500) })).toEqual([]);
+  });
+
+  it('refuses a reason longer than 500 characters with the Uzbek message', async () => {
+    const errors = await reverseErrors({ reason: 'x'.repeat(501) });
+    expect(errors.map((e) => e.property)).toEqual(['reason']);
+    expect(await messagesOf({ reason: 'x'.repeat(501) })).toEqual([TOO_LONG]);
   });
 });
 
