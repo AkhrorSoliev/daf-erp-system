@@ -10,6 +10,7 @@ describe("formatSize / formatDuration", () => {
     expect(formatSize(1536)).toBe("1,5 KB");
     expect(formatSize(1258291)).toBe("1,2 MB");
     expect(formatSize(20 * 1024 * 1024)).toBe("20 MB");
+    expect(formatSize(1024 * 1024 - 1)).toBe("1 MB");
     expect(formatDuration(0)).toBe("0:00");
     expect(formatDuration(65)).toBe("1:05");
     expect(formatDuration(180)).toBe("3:00");

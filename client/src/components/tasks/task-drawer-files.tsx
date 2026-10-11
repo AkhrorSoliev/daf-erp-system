@@ -25,7 +25,7 @@ const when = (iso: string) => {
 /** The links die after 10 minutes: re-read the list first when they are old, then go to the fresh one. */
 async function download(file: TaskFileView) {
   const { taskId, ensureFresh } = useTaskFiles.getState();
-  if (taskId) await ensureFresh(taskId);
+  if (taskId && !(await ensureFresh(taskId))) return;
   const fresh = useTaskFiles.getState().files.find((f) => f.id === file.id) ?? file;
   window.location.assign(fresh.downloadUrl);
 }
@@ -173,7 +173,7 @@ export function TaskDrawerFiles({ taskId }: { taskId: string }) {
               type="button"
               aria-label={f.name}
               className="overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              onClick={() => { void ensureFresh(taskId); setViewer(i); }}
+              onClick={() => { void ensureFresh(taskId).then((ok) => { if (ok) setViewer(i); }); }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- a presigned URL: Next image optimisation would break it */}
               <img src={f.url} alt={f.name} loading="lazy" className="aspect-square w-full rounded-md object-cover" />

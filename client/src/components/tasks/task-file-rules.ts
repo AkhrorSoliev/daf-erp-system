@@ -3,6 +3,10 @@ import type { TaskEvent, TaskFileView } from "@/hooks/use-tasks";
 /** The server's limits (task-file-rules.ts, ADR-0086), checked here first to save a 20 MB round trip. */
 export const MAX_FILE_BYTES = 20 * 1024 * 1024;
 export const VOICE_LIMIT_SEC = 180;
+/** A voice note is capped by size too (server `MAX_VOICE_BYTES`). */
+export const MAX_VOICE_BYTES = 2 * 1024 * 1024;
+export const VOICE_TOO_BIG = "Ovozli xabar 2 MB dan oshmasligi kerak";
+export const URL_REFRESH_FAILED = "Fayl havolasini yangilab bo'lmadi. Qayta urinib ko'ring.";
 /** Links live 10 minutes; the open drawer re-reads the list sooner. */
 export const FILE_URL_REFRESH_MS = 8 * 60_000;
 export const FILE_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf,.docx,.xlsx,video/mp4,audio/ogg,audio/webm";
@@ -12,7 +16,9 @@ export const FILE_TOO_BIG = "Fayl hajmi 20 MB dan oshmasligi kerak";
 const one = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace(".", ","));
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${one(Math.round((bytes / 1024) * 10) / 10)} KB`;
+  const kb = Math.round((bytes / 1024) * 10) / 10;
+  // 1 048 575 B rounds to 1024 KB: that prints as 1 MB instead.
+  if (kb < 1024) return `${one(kb)} KB`;
   return `${one(Math.round((bytes / 1024 / 1024) * 10) / 10)} MB`;
 }
 

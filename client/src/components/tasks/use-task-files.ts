@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useTasks, type TaskEvent, type TaskFileView } from "@/hooks/use-tasks";
-import { FILE_TOO_BIG, FILE_URL_REFRESH_MS, MAX_FILE_BYTES } from "./task-file-rules";
+import { FILE_TOO_BIG, FILE_URL_REFRESH_MS, MAX_FILE_BYTES, MAX_VOICE_BYTES, URL_REFRESH_FAILED, VOICE_TOO_BIG } from "./task-file-rules";
 
 interface TaskFilesState {
   /** `GET /tasks/config` → `filesEnabled`; null until known (every file control stays hidden). */
@@ -18,8 +18,8 @@ interface TaskFilesState {
   loadedAt: number;
   loadConfig: () => Promise<void>;
   load: (taskId: string) => Promise<void>;
-  /** Re-reads the list when its links are about to expire (or belong to another task); call before opening or downloading a file. */
-  ensureFresh: (taskId: string) => Promise<void>;
+  /** Re-reads the list when its links are about to expire (or belong to another task); call before opening or downloading a file. false = the links could not be renewed (toast shown): do not open or download. */
+  ensureFresh: (taskId: string) => Promise<boolean>;
   upload: (taskId: string, file: Blob, name: string, durationSec?: number) => Promise<boolean>;
   remove: (taskId: string, fileId: string) => Promise<boolean>;
 }
@@ -58,13 +58,18 @@ export const useTaskFiles = create<TaskFilesState>((set, get) => ({
   },
 
   ensureFresh: async (taskId) => {
-    const { taskId: shown, loadedAt } = get();
-    if (shown === taskId && Date.now() - loadedAt < FILE_URL_REFRESH_MS) return;
+    const isFresh = () => get().taskId === taskId && Date.now() - get().loadedAt < FILE_URL_REFRESH_MS;
+    if (isFresh()) return true;
     await get().load(taskId);
+    if (isFresh()) return true;
+    toast.error(URL_REFRESH_FAILED);
+    return false;
   },
 
   upload: async (taskId, file, name, durationSec) => {
     if (file.size > MAX_FILE_BYTES) { toast.error(FILE_TOO_BIG); return false; }
+    // A voice note (it carries a length) is capped by size too.
+    if (durationSec !== undefined && file.size > MAX_VOICE_BYTES) { toast.error(VOICE_TOO_BIG); return false; }
     const form = new FormData();
     // Text parts first: the server reads them with the file. `name` carries the UTF-8
     // original name, because multer decodes the file part's own filename as latin1.
