@@ -163,6 +163,7 @@ describe("planCellToggle and confirmCopy", () => {
         { key: "refunds.create", granted: true },
       ],
       danger: true,
+      refusal: null,
     });
     expect(confirmCopy(o, plan)).toEqual({
       title: "Kassir: «Pul qaytarish so'rovini bekor qilish» yoqilsinmi?",
@@ -213,6 +214,73 @@ describe("planCellToggle and confirmCopy", () => {
     expect(plan.also).toEqual([]);
     expect(plan.changes).toEqual([{ key: "students.list", granted: true }]);
   });
+});
+
+describe("planCellToggle refusal", () => {
+  it("a locked cell is refused with the server's wording and carries no changes", () => {
+    const o = overview();
+    const reason = "o'qituvchi faqat o'z guruhlarini ko'radi";
+    const on = planCellToggle(o, T, "students.list", true);
+    expect(on.refusal).toBe(`${LABEL("students.list")}: O'qituvchi uchun yoqib bo'lmaydi — ${reason}`);
+    expect(on.changes).toEqual([]);
+    expect(on.also).toEqual([]);
+    expect(on.danger).toBe(false);
+    expect(planCellToggle(o, T, "students.list", false).refusal).toBe(
+      `${LABEL("students.list")}: O'qituvchi uchun o'zgartirib bo'lmaydi — ${reason}`,
+    );
+  });
+
+  it("a grant that pulls in a key locked for the role is refused for the pulled-in key", () => {
+    const o = overview();
+    // A catalog that broke closure: refunds.create is no longer open to the cashier.
+    o.catalog = o.catalog.map((e) =>
+      e.key === "refunds.create" ? { ...e, allowedRoles: [D], lockReasons: { [K]: "sinov sababi" } } : e,
+    );
+    const plan = planCellToggle(o, K, "refunds.cancel", true);
+    expect(plan.refusal).toBe(`${LABEL("refunds.create")}: Kassir uchun yoqib bo'lmaydi — sinov sababi`);
+    expect(plan.changes).toEqual([]);
+  });
+});
+
+describe("planCellToggle over the whole catalog", () => {
+  const catalog = overview().catalog;
+  for (const roleId of [D, A, T, K]) {
+    it(`role ${roleId}: every plan is acceptable to the server, every open cell has one`, () => {
+      const o = overview();
+      const held = new Set<string>(o.granted[roleId]);
+      for (const entry of catalog) {
+        for (const on of [true, false]) {
+          const plan = planCellToggle(o, roleId, entry.key, on);
+          const locked = !entry.allowedRoles.includes(roleId);
+          if (locked) {
+            // (d)
+            expect(plan.refusal, `${entry.key} locked`).not.toBeNull();
+            expect(plan.changes).toEqual([]);
+            continue;
+          }
+          const keys = plan.changes.map((c) => c.key);
+          expect(new Set(keys).size).toBe(keys.length);
+          const pulledLocked = keys.some((k) => !catalog.find((e) => e.key === k)!.allowedRoles.includes(roleId));
+          // (a)
+          if (plan.refusal === null) expect(pulledLocked, `${entry.key} ${on}`).toBe(false);
+          // (c) the real catalog is closed under requires, so no open cell is refused
+          expect(plan.refusal, `${entry.key} ${on}`).toBeNull();
+          expect(plan.changes.length).toBeGreaterThan(0);
+          // (b)
+          const after = new Set(held);
+          for (const c of plan.changes) {
+            if (c.granted) after.add(c.key);
+            else after.delete(c.key);
+          }
+          for (const k of after) {
+            for (const r of catalog.find((e) => e.key === k)!.requires) {
+              expect(after.has(r), `${entry.key} ${on}: ${k} needs ${r}`).toBe(true);
+            }
+          }
+        }
+      }
+    });
+  }
 });
 
 describe("resetCopy", () => {

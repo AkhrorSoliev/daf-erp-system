@@ -1,4 +1,4 @@
-import { planToggle, type DepGraph } from "@/lib/permission-deps";
+import { planToggle, withRequirements, type DepGraph } from "@/lib/permission-deps";
 import type { PermissionKey } from "@/lib/permission-keys";
 import type {
   CatalogEntry,
@@ -15,7 +15,7 @@ import type {
  */
 
 export const DANGER_WARNING =
-  "Bu amal pulni o'zgartiradi yoki uni qaytarib bo'lmaydi. Ishonchingiz komilmi?";
+  "Bu amal pulga ta'sir qiladi yoki qaytarib bo'lmaydi. Ishonchingiz komilmi?";
 
 export function depGraph(o: PermissionsOverview): DepGraph {
   return Object.fromEntries(o.catalog.map((e) => [e.key, { requires: e.requires }]));
@@ -83,7 +83,34 @@ export interface ConfirmPlan {
   also: PermissionKey[];
   /** The `PUT /permissions/roles/:roleId` body's `changes`. */
   changes: RolePermissionChange[];
+  /** Only when granting. Taking a money capability away moves no money. */
   danger: boolean;
+  /**
+   * Why the server would refuse this change (a locked cell, or a grant that
+   * pulls in a locked key), in the server's words; the page shows it instead
+   * of the confirm button. `changes` and `also` are empty then.
+   */
+  refusal: string | null;
+}
+
+/** The server's `lockedMessage` (role-permissions.service.ts), word for word. */
+function lockedMessage(o: PermissionsOverview, key: PermissionKey, roleId: number, verb: string): string {
+  const e = entryOf(o, key);
+  return `${e.label}: ${roleLabel(o, roleId)} uchun ${verb} bo'lmaydi — ${e.lockReasons[roleId] ?? ""}`;
+}
+
+/** Mirrors the server's `assertAllowed`: the key itself, and for a grant everything it requires. */
+function refusalOf(o: PermissionsOverview, roleId: number, key: PermissionKey, on: boolean): string | null {
+  if (!entryOf(o, key).allowedRoles.includes(roleId)) {
+    return lockedMessage(o, key, roleId, on ? "yoqib" : "o'zgartirib");
+  }
+  if (!on) return null;
+  for (const pulled of withRequirements([key], depGraph(o))) {
+    if (!entryOf(o, pulled as PermissionKey).allowedRoles.includes(roleId)) {
+      return lockedMessage(o, pulled as PermissionKey, roleId, "yoqib");
+    }
+  }
+  return null;
 }
 
 export function planCellToggle(
@@ -92,6 +119,8 @@ export function planCellToggle(
   key: PermissionKey,
   on: boolean,
 ): ConfirmPlan {
+  const refusal = refusalOf(o, roleId, key, on);
+  if (refusal) return { roleId, key, on, also: [], changes: [], danger: false, refusal };
   // The graph is the catalog, so every key planToggle returns is a PermissionKey.
   const also = planToggle(heldBy(o, roleId), key, on, depGraph(o)).also as PermissionKey[];
   const keys = [key, ...also];
@@ -103,6 +132,7 @@ export function planCellToggle(
     changes: keys.map((k) => ({ key: k, granted: on })),
     // Only granting is risky: taking a money capability away moves no money.
     danger: on && keys.some((k) => entryOf(o, k).danger !== null),
+    refusal: null,
   };
 }
 
