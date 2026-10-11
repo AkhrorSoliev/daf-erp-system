@@ -466,7 +466,7 @@
     }
   },
   "u05-d1": {
-    "szene": "Ein Werktag am Morgen in der Küche. Jonas trinkt ganz ruhig Kaffee, denn seine Uhr zeigt halb acht. Mia kommt herein und weiß die richtige Zeit. Am Ende schaut Mia aus dem Fenster zur Haltestelle.",
+    "szene": "Ein Werktag am Morgen in der Küche. Jonas trinkt ganz ruhig Kaffee, denn seine Uhr zeigt halb acht. Mia kommt herein und weiß die richtige Zeit. Jonas läuft los zum Bus; Mia ruft ihm lachend nach. Alles passiert in der Küche.",
     "toene": [
       "relaxed",
       "alarmed",
@@ -475,7 +475,7 @@
       "stressed",
       "encouraging",
       "hurried",
-      "relieved"
+      "laughing"
     ],
     "hoerspiel": {
       "atmo": {
@@ -486,16 +486,6 @@
         {
           "vor": 1,
           "sfx": "a coffee machine brewing and hissing",
-          "sek": 3
-        },
-        {
-          "vor": 8,
-          "sfx": "a front door closing",
-          "sek": 1.5
-        },
-        {
-          "vor": 8,
-          "sfx": "a city bus arriving outside with a hiss of air brakes, heard through a window",
           "sek": 3
         }
       ]
