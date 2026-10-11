@@ -25,6 +25,8 @@ export const FILES_OFF_MESSAGE = "Fayllar hozircha o'chiq";
 export const DELETE_REFUSED_MESSAGE =
   "Faylni faqat qo'shgan odam yoki beruvchi o'chiradi";
 export const FILE_NOT_FOUND_MESSAGE = 'Fayl topilmadi';
+export const UPLOAD_REFUSED_MESSAGE =
+  "Fayl qo'shish uchun ijrochi yoki beruvchi bo'lish kerak";
 
 const DOCX =
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document';

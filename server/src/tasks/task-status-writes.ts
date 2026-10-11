@@ -1,6 +1,8 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { Prisma, TaskEventVia, TaskStatus } from '@prisma/client';
+import type { PrismaService } from '../prisma/prisma.service';
 import { claimSystemTask } from './task-claim';
+import { freshPhotoSince } from './task-file-rules';
 import { TASK_DETAIL_SELECT, type TaskCtx, type TaskRow } from './task-select';
 import { ONLY_GIVER_REVIEWS, checkTransition } from './task-transitions';
 
@@ -172,4 +174,35 @@ export async function cancelTx(
   });
   await tx.taskOutbox.deleteMany({ where: { taskId: id, sentAt: null } });
   return updated;
+}
+
+/**
+ * Spec §3.2: a `requiresPhoto` task goes to review only with an image added by
+ * one of its assignees (a self-task's author is its assignee) after its last
+ * return (or its creation), still not deleted. The giver's reference photo and
+ * a watcher's picture do not count.
+ */
+export async function hasFreshPhoto(
+  db: Tx | PrismaService,
+  task: {
+    id: string;
+    createdAt: Date;
+    lastReturnedAt: Date | null;
+    participants: { userId: number; role: string }[];
+  },
+): Promise<boolean> {
+  const assigneeIds = task.participants
+    .filter((p) => p.role === 'ASSIGNEE')
+    .map((p) => p.userId);
+  if (assigneeIds.length === 0) return false;
+  const n = await db.taskFile.count({
+    where: {
+      taskId: task.id,
+      kind: 'IMAGE',
+      deletedAt: null,
+      uploadedById: { in: assigneeIds },
+      createdAt: { gt: freshPhotoSince(task) },
+    },
+  });
+  return n > 0;
 }
