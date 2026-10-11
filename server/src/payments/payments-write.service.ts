@@ -108,7 +108,16 @@ export class PaymentsWriteService {
     private paymentPromises: PaymentPromisesService,
   ) {}
 
-  async create(dto: CreatePaymentDto, userId: number, companyId: number) {
+  /**
+   * `options` is internal (never from a DTO): a correction's re-post links
+   * itself to the payment it corrects.
+   */
+  async create(
+    dto: CreatePaymentDto,
+    userId: number,
+    companyId: number,
+    options: { correctsPaymentId?: string } = {},
+  ) {
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, deletedAt: null, companyId },
       select: { id: true, firstName: true, lastName: true },
@@ -227,6 +236,9 @@ export class PaymentsWriteService {
               receivedById: userId,
               branchId: resolvedBranchId,
               companyId,
+              ...(options.correctsPaymentId && {
+                correctsPaymentId: options.correctsPaymentId,
+              }),
             },
           });
 
@@ -757,6 +769,7 @@ export class PaymentsWriteService {
         },
         userId,
         companyId,
+        { correctsPaymentId: id },
       );
     } catch (err) {
       // The reverse already committed. We don't have an atomic rollback

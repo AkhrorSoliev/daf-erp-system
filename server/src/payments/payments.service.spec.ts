@@ -1118,6 +1118,20 @@ describe('PaymentsService', () => {
       );
     });
 
+    it('links the re-posted payment to the payment it corrects', async () => {
+      await service.correctAmount('payment-uuid-1', dto, 99, 1001, [
+        'Administrator',
+      ]);
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            correctsPaymentId: 'payment-uuid-1',
+          }),
+        }),
+      );
+    });
+
     it('emits payment.corrected when a non-CEO performs the correction', async () => {
       await service.correctAmount('payment-uuid-1', dto, 99, 1001, [
         'Administrator',
