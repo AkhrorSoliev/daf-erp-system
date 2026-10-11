@@ -46,6 +46,8 @@ import { OvozTugmasi } from "./ovoz-tugmasi";
 import { PastkiPanel } from "./pastki-panel";
 import { Tanlash } from "./tanlash";
 import { RasmTanlash, SavolRasmi, SuhbatRasmi } from "./rasm-tanlash";
+import { Uhr } from "./uhr";
+import { UhrTanlash } from "./uhr-tanlash";
 import { rasmlarniOldindanYukla } from "./rasm-oldindan";
 import { JavobPaneli } from "./javob-paneli";
 import { DeWort } from "./de-wort";
@@ -220,8 +222,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // alohida tekshiriladi, pastda). Shu ikkisi uchun `tayyor` doim
   // `false`: bu "ikki bosqichli Tekshirish"ga tayyorlik degani, va
   // ular uchun bunday bosqich yo'q.
-  // A picture choice sends the picked picture URL, like a text choice.
-  const tanlashRejimi = rejim === "TANLASH" || rejim === "RASM";
+  // A picture choice sends the picked picture URL, a clock choice the
+  // picked `HH:MM`, like a text choice.
+  const tanlashRejimi = rejim === "TANLASH" || rejim === "RASM" || rejim === "UHR";
   const given =
     tanlashRejimi
       ? (tanlangan ?? "")
@@ -917,6 +920,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
         {/* `BILD_TIPPEN`: the picture is the question (`prompt` is empty).
             `DIALOG_LUECKE` draws its story picture above the dialog below. */}
         {frage.bildUrl && frage.format !== "DIALOG_LUECKE" ? <SavolRasmi url={frage.bildUrl} /> : null}
+        {/* `UHR_LESEN` / `UHR_TIPPEN`: the clock is the question. */}
+        {frage.uhrzeit ? (
+          <Uhr zeit={frage.uhrzeit} className="mx-auto w-full max-w-56 text-ink-900" />
+        ) : null}
         {frage.format === "DIALOG_LUECKE" ? (
           // Butun suhbat ekranda — savol matni o'rniga (dizayn D7 / brief §5):
           // server `prompt`ni tayyor satr qilib yuboradi, mijoz uni faqat
@@ -940,6 +947,14 @@ export function SeansEkrani(props: SeansEkraniProps) {
 
         {rejim === "RASM" ? (
           <RasmTanlash
+            options={frage.options}
+            tanlangan={tanlangan}
+            onTanla={setTanlangan}
+            natija={natija}
+            kutilmoqda={pruefen.isPending}
+          />
+        ) : rejim === "UHR" ? (
+          <UhrTanlash
             options={frage.options}
             tanlangan={tanlangan}
             onTanla={setTanlangan}

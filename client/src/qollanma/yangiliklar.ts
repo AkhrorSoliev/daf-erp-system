@@ -41,6 +41,12 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-10",
+    sarlavha: "DaF ilovasida A1 5-unit «Mein Tag» va yangi soat mashqi",
+    matn: "O'quvchi ilovasida A1 kursining 5-uniti ochildi: vaqt, hafta kunlari, kundalik ishlar, uchrashuv belgilash va uy ishlari mavzusidagi 104 so'z, 103 gap va 7 ta dialog. Dialoglar 4-unitdagidek hayotiy ovoz bilan (fonda shovqin, eshik, telefon, avtobus), har biriga butun hikoyani ko'rsatadigan bitta rasm chizilgan; 15 ta so'zga rasm bor. Yangi mashq — soat: o'quvchi soatga qarab vaqtni tanlaydi, vaqtni eshitib to'g'ri soatni tanlaydi yoki soatga qarab vaqtni yozadi. Kundalik shakl («Viertel nach sieben») ham, rasmiy shakl («sieben Uhr fünfzehn») ham to'g'ri javob hisoblanadi.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
+    sana: "2026-10-10",
     sarlavha: "Filial chegarasi mustahkamlandi",
     matn: "Filial direktori va administrator endi faqat o'z filialining ma'lumotini ko'radi va o'zgartiradi: o'quvchi balansini tuzatish, guruh jadvali, lidlar, oylik ro'yxati va ustoz stavkalari boshqa filial bo'yicha ochilmaydi. Yangi filialni faqat CEO ochadi. O'z oyligini «to'landi» deb belgilash va o'ziga avans yozishni endi boshqa rahbar qiladi. Ustoz stavkalari taymlaynda faqat oylikni ko'radiganlarga ko'rinadi. Bir nechta filialga biriktirilgan (CEO bo'lmagan) xodim Excel hisobotini endi bitta filial bo'yicha oladi.",
     rollar: [1, 2, 3],

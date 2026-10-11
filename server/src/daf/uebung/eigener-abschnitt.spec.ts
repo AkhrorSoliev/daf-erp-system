@@ -60,6 +60,17 @@ describe('eigeneSchluessel', () => {
     );
   });
 
+  it('collects the section`s clock times too', () => {
+    const mitUhr = {
+      ...material,
+      uhrzeiten: [
+        { id: 51, zeit: '03:30', sectionCode: 'u05-s1', audioKey: null },
+        { id: 52, zeit: '04:00', sectionCode: 'u05-s2', audioKey: null },
+      ],
+    };
+    expect([...eigeneSchluessel('u05-s1', mitUhr)]).toEqual(['UHRZEIT:51']);
+  });
+
   it('is empty without a section (the unit test)', () => {
     expect(eigeneSchluessel(undefined, material).size).toBe(0);
   });

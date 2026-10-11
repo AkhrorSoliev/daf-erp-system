@@ -3658,6 +3658,7 @@ model DafSection {
   grammarRegeln DafGrammar[]
   dialoge       DafDialog[]
   phrasen       DafPhrase[]
+  uhrzeiten     DafUhrzeit[]
 
   @@unique([unitId, order])
   @@index([unitId])
@@ -3862,6 +3863,25 @@ model DafHoerFrage {
 
   @@unique([dialogId, order])
   @@index([dialogId])
+}
+
+/// Soat mashqi materiali: bo'lim o'rgatadigan bitta vaqt (`03:30`, soat
+/// 1–12). Nemischa matn bazada SAQLANMAYDI — `uhrzeit-text.ts` uni vaqtdan
+/// hisoblaydi, `pruefen` javobni ham shundan qayta tekshiradi. Manba —
+/// `content/daf/a1/uhrzeiten.json`, ovoz kaliti — `uhr-audio.json`.
+model DafUhrzeit {
+  id        Int      @id @default(autoincrement())
+  sectionId Int
+  /// `HH:MM`, soat 1–12, daqiqa 5 ga karrali.
+  zeit      String
+  /// R2 kaliti; `null` — ovoz yo'q, `UHR_HOEREN` qurilmaydi.
+  audioKey  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  section DafSection @relation(fields: [sectionId], references: [id])
+
+  @@unique([sectionId, zeit])
 }
 
 /// Vaziyat → tayyor ibora (Redemittel).

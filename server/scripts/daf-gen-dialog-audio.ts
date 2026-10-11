@@ -55,6 +55,11 @@ import { R2Uploader } from '../src/daf-content/media/r2-uploader';
 import { FalClient, type GeminiDialog } from '../src/daf/media/fal-client';
 import { polstereMp3 } from '../src/daf/media/audio-polster';
 import {
+  ABLEHNUNG_VERSUCHE,
+  erstelleGeneriere,
+  generiereDialogeNacheinander,
+} from './lib/dialog-generieren';
+import {
   DIALOG_AUDIO_MODELL,
   dialogTextHash,
   type DialogAudioManifest,
@@ -88,8 +93,8 @@ const MANIFEST_PATH = join(A1, 'dialog-audio.json');
 const STIMMEN_PATH = join(A1, 'stimmen.json');
 const REGIE_PATH = join(A1, 'dialog-regie.json');
 
-/** Gemini 3.1 Flash TTS price on fal, 2026-09-26. */
-export const NARX_1000_BELGI = 0.05;
+/** Gemini 3.8 Flash TTS price on fal, 2026-10-11. */
+export const NARX_1000_BELGI = 0.045;
 
 /**
  * Bir yuritishdagi belgi chegarasi. Units 1–3 (18 dialogs) come to 6 400
@@ -98,8 +103,14 @@ export const NARX_1000_BELGI = 0.05;
  */
 export const BELGI_CHEGARASI_DIALOG = 7200;
 
-/** Appended to every scene: A1 learners need clear speech at a calm pace. */
-export const DIALOG_STIL_ZUSATZ = 'Deutlich, in ruhigem Tempo.';
+/**
+ * Appended to every scene: A1 learners need clear speech at a calm pace, in
+ * the pronunciation of Germany (the wording the CEO heard on u05-d1 C,
+ * 2026-10-11).
+ */
+export const DIALOG_STIL_ZUSATZ =
+  'Hochdeutsch mit natürlicher Aussprache aus Deutschland, wie Muttersprachler. ' +
+  'Langsam und sehr deutlich, wie in einer Hörübung für Anfänger (A1), mit einer kleinen Pause nach jedem Satz.';
 
 const REQUIRED_ENV = [
   'FAL_KEY',

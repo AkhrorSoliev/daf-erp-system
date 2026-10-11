@@ -1,0 +1,70 @@
+{
+  "unit": "u05",
+  "regeln": [
+    {
+      "section": "u05-s1",
+      "titelDe": "Die Uhrzeit: offiziell und inoffiziell",
+      "titelUz": "Soatni aytish: rasmiy va norasmiy",
+      "erklaerungUz": "Soatni so'rash: «Wie spät ist es?» yoki «Wie viel Uhr ist es?». Javob «Es ist …» bilan boshlanadi. Rasmiy (offiziell) usulda — radio, vokzal, ish joyida — 24 soatlik hisob ishlatiladi: avval soat, keyin daqiqa: 20.15 — «zwanzig Uhr fünfzehn». Kundalik (inoffiziell) nutqda 12 soatlik hisob: «zehn nach acht» (sakkizdan o'n daqiqa o'tdi), «Viertel nach acht» (sakkizdan chorak o'tdi), «Viertel vor neun» (to'qqizga chorak bor), «fünf vor neun» (to'qqizga besh daqiqa bor). Diqqat: «halb neun» — sakkiz yarim, ya'ni to'qqizga yarim soat qoldi. To'qqiz yarim emas!",
+      "beispiele": [
+        { "de": "Wie spät ist es?", "uz": "Soat necha?" },
+        { "de": "Es ist Viertel nach acht.", "uz": "Soat sakkizdan chorak o'tdi." },
+        { "de": "Es ist halb neun.", "uz": "Soat sakkiz yarim." },
+        { "de": "Es ist zehn vor neun.", "uz": "To'qqizga o'n daqiqa qoldi." },
+        { "de": "Der Zug kommt um zwanzig Uhr fünfzehn.", "uz": "Poyezd soat yigirma-yu o'n beshda keladi." }
+      ]
+    },
+    {
+      "section": "u05-s2",
+      "titelDe": "am Montag, am Wochenende — samstags",
+      "titelUz": "am Montag, am Wochenende — samstags",
+      "erklaerungUz": "Hafta kuni va kun qismi oldidan «am» qo'yiladi: am Montag (dushanba kuni), am Wochenende (dam olish kunlari), am Samstagabend (shanba oqshomi). Ish har hafta takrorlansa, kun nomiga «-s» qo'shiladi va kichik harf bilan yoziladi: samstags — har shanba. Necha marta ekanini aytish: einmal, zweimal, dreimal pro Woche (haftada bir, ikki, uch marta). Vaqt gap boshida tursa ham fe'l ikkinchi o'rinda qoladi: Am Montag habe ich Training.",
+      "beispiele": [
+        { "de": "Am Montag habe ich Training.", "uz": "Dushanba kuni sport mashg'ulotim bor." },
+        { "de": "Am Wochenende haben wir Zeit.", "uz": "Dam olish kunlari vaqtimiz bor." },
+        { "de": "Samstags arbeitet Jonas nicht.", "uz": "Shanba kunlari Jonas ishlamaydi." },
+        { "de": "Am Sonntagnachmittag trinken wir Kaffee.", "uz": "Yakshanba kuni tushdan keyin qahva ichamiz." },
+        { "de": "Ich habe dreimal pro Woche Training.", "uz": "Haftada uch marta sport mashg'ulotim bor." }
+      ]
+    },
+    {
+      "section": "u05-s3",
+      "titelDe": "Trennbare Verben",
+      "titelUz": "Ajraladigan fe'llar",
+      "erklaerungUz": "Ba'zi fe'llarning old qismi (auf-, ab-, aus-, an-, fern-) gapda ajralib, gap oxiriga o'tadi: aufstehen → Ich stehe um sechs Uhr auf. Tuslangan qism ikkinchi o'rinda, old qism esa oxirida turadi. Savolda ham shunday: Wann stehst du auf? Gapda boshqa fe'l (masalan, möchte) bo'lsa, ajraladigan fe'l butunligicha oxirga o'tadi: Ich möchte nicht aufstehen. Urg'u old qismga tushadi: AUFstehen, FERNsehen.",
+      "beispiele": [
+        { "de": "Ich stehe um sechs Uhr auf.", "uz": "Men soat oltida o'rnimdan turaman." },
+        { "de": "Wann holst du Lena ab?", "uz": "Lenani qachon olib kelasan?" },
+        { "de": "Abends sieht Jonas fern.", "uz": "Kechqurunlari Jonas televizor ko'radi." },
+        { "de": "Am Samstag gehen wir aus.", "uz": "Shanba kuni dam olgani chiqamiz." },
+        { "de": "Ich möchte noch nicht aufstehen.", "uz": "Hali turgim kelmayapti." }
+      ]
+    },
+    {
+      "section": "u05-s4",
+      "titelDe": "Zeitangaben: um, von … bis",
+      "titelUz": "Vaqt: um, von … bis",
+      "erklaerungUz": "Aniq vaqt «um» bilan aytiladi: um zehn Uhr. Vaqt oralig'i — «von … bis» bilan: von neun bis zwölf Uhr (to'qqizdan o'n ikkigacha). Faqat oxiri muhim bo'lsa — «bis»: bis zwanzig Uhr (yigirmagacha). Qancha davom etishini so'rash: «Wie lange dauert …?» — javob: eine Stunde, eine halbe Stunde. «vorher» — undan oldin: Bitte kommen Sie zehn Minuten vorher.",
+      "beispiele": [
+        { "de": "Der Termin ist um zehn Uhr.", "uz": "Uchrashuv soat o'nda." },
+        { "de": "Ich arbeite von acht bis sechzehn Uhr.", "uz": "Men soat sakkizdan o'n oltigacha ishlayman." },
+        { "de": "Die Bibliothek ist von neun bis zwanzig Uhr offen.", "uz": "Kutubxona soat to'qqizdan yigirmagacha ochiq." },
+        { "de": "Wie lange dauert der Termin?", "uz": "Uchrashuv qancha davom etadi?" },
+        { "de": "Die Schule beginnt um acht Uhr.", "uz": "Maktab soat sakkizda boshlanadi." }
+      ]
+    },
+    {
+      "section": "u05-s5",
+      "titelDe": "Modalverb müssen",
+      "titelUz": "müssen modal fe'li",
+      "erklaerungUz": "«müssen» majburiyatni bildiradi — «… kerak», «… shart»: ich muss, du musst, er/sie muss, wir müssen, ihr müsst, sie/Sie müssen. «ich» va «er/sie» shakli bir xil, oxirida -t yo'q: ich muss, er muss. Ikkinchi fe'l gap oxiriga o'tadi va o'zgarmaydi: Ich muss das Geschirr waschen. Savolda «müssen» birinchi o'rinda: Musst du morgen arbeiten?",
+      "beispiele": [
+        { "de": "Ich muss das Geschirr waschen.", "uz": "Men idish-tovoqni yuvishim kerak." },
+        { "de": "Du musst die Hausaufgaben machen.", "uz": "Sen uy vazifasini qilishing kerak." },
+        { "de": "Mia muss heute einkaufen gehen.", "uz": "Mia bugun xarid qilgani borishi kerak." },
+        { "de": "Wir müssen zu Hause bleiben.", "uz": "Biz uyda qolishimiz kerak." },
+        { "de": "Musst du morgen arbeiten?", "uz": "Ertaga ishlashing kerakmi?" }
+      ]
+    }
+  ]
+}

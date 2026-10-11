@@ -1,0 +1,490 @@
+{
+  "unit": "u05",
+  "dialoge": [
+    {
+      "id": "u05-d1",
+      "section": "u05-s1",
+      "titelDe": "Meine Uhr steht!",
+      "titelUz": "Soatim to'xtab qolibdi!",
+      "sahnaUz": "Ish kuni ertalab. Jonas oshxonada bemalol qahva ichyapti, Mia kiradi.",
+      "zeilen": [
+        {
+          "sprecher": "Jonas",
+          "de": "Guten Morgen, Mia! Es ist halb acht. Ich habe noch viel Zeit.",
+          "uz": "Xayrli tong, Mia! Soat yetti yarim. Hali vaqtim ko'p."
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Halb acht? Nein, Jonas! Es ist schon zehn vor acht!",
+          "uz": "Yetti yarim? Yo'q, Jonas! Soat sakkizga o'n daqiqa qoldi!"
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Zehn vor acht? Oh nein, meine Uhr steht!",
+          "uz": "Sakkizga o'n daqiqa qoldimi? Voy, soatim to'xtab qolibdi!"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Und wann kommt dein Bus?",
+          "uz": "Avtobusing qachon keladi?"
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Der Bus kommt um acht. Jetzt habe ich nur noch zehn Minuten!",
+          "uz": "Avtobus soat sakkizda keladi. Endi faqat o'n daqiqam qoldi!"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Die Haltestelle ist nicht weit. Zehn Minuten, das geht!",
+          "uz": "Bekat uzoq emas. O'n daqiqa, ulgurasan!"
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Okay, ich gehe jetzt zum Bus. Tschüss, Mia!",
+          "uz": "Xo'p, hozir avtobusga ketdim. Xayr, Mia!"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Tschüss, Jonas! Und heute Abend kaufen wir eine Uhr!",
+          "uz": "Xayr, Jonas! Bugun kechqurun esa soat sotib olamiz!"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wie spät ist es wirklich?",
+          "frageUz": "Aslida soat necha?",
+          "richtig": "zehn vor acht",
+          "falsch": [
+            "halb acht",
+            "Viertel nach acht"
+          ]
+        },
+        {
+          "frageDe": "Wann kommt der Bus?",
+          "frageUz": "Avtobus qachon keladi?",
+          "richtig": "um acht Uhr",
+          "falsch": [
+            "um halb acht",
+            "um zehn nach acht"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u05-d2",
+      "section": "u05-s2",
+      "titelDe": "Wann hast du Zeit?",
+      "titelUz": "Qachon vaqting bor?",
+      "sahnaUz": "Telefonda. Thomas do'sti Julia bilan qahva ichib, gaplashmoqchi.",
+      "zeilen": [
+        {
+          "sprecher": "Thomas",
+          "de": "Hallo Julia! Trinken wir nächste Woche zusammen Kaffee?",
+          "uz": "Salom, Julia! Keyingi hafta birga qahva ichamizmi?"
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Ja, gern! Aber wann? Am Montag habe ich Training.",
+          "uz": "Ha, bajonidil! Lekin qachon? Dushanba kuni sport mashg'ulotim bor."
+        },
+        {
+          "sprecher": "Thomas",
+          "de": "Und am Dienstag oder am Mittwoch?",
+          "uz": "Seshanba yoki chorshanba-chi?"
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Am Dienstag habe ich Trompetenunterricht. Und am Mittwoch habe ich einen Englisch-Test.",
+          "uz": "Seshanba kuni truba darsim bor. Chorshanba kuni esa ingliz tili testim bor."
+        },
+        {
+          "sprecher": "Thomas",
+          "de": "Hm... Und am Donnerstag und am Freitag arbeite ich abends.",
+          "uz": "Hm... Payshanba va juma kunlari esa men kechqurun ishlayman."
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Und am Wochenende? Am Samstag habe ich Zeit.",
+          "uz": "Dam olish kunlari-chi? Shanba kuni vaqtim bor."
+        },
+        {
+          "sprecher": "Thomas",
+          "de": "Samstag ist gut! Um drei Uhr im Café am Park?",
+          "uz": "Shanba yaxshi! Soat uchda, bog' yonidagi kafedami?"
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Ja, sehr gut! Dann bis Samstag um drei, Thomas!",
+          "uz": "Ha, juda yaxshi! Unda shanba kuni soat uchda ko'rishamiz, Thomas!"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Was hat Julia am Montag?",
+          "frageUz": "Dushanba kuni Juliada nima bor?",
+          "richtig": "Training",
+          "falsch": [
+            "Trompetenunterricht",
+            "einen Mathe-Test"
+          ]
+        },
+        {
+          "frageDe": "Wann trinken Thomas und Julia Kaffee?",
+          "frageUz": "Thomas bilan Julia qachon qahva ichishadi?",
+          "richtig": "am Samstag um drei Uhr",
+          "falsch": [
+            "am Montag um drei Uhr",
+            "am Sonntag um drei Uhr"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u05-d3",
+      "section": "u05-s3",
+      "titelDe": "Aufstehen, Jonas!",
+      "titelUz": "Tur, Jonas!",
+      "sahnaUz": "Seshanba ertalab. Jonas hali uxlayapti, Mia uni uyg'otadi.",
+      "zeilen": [
+        {
+          "sprecher": "Mia",
+          "de": "Jonas, bist du wach? Es ist schon sieben Uhr!",
+          "uz": "Jonas, uyg'ondingmi? Soat yetti bo'ldi!"
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Hm... Ich möchte noch schlafen. Normalerweise stehe ich um halb acht auf.",
+          "uz": "Hm... Yana uxlagim kelyapti. Odatda soat yetti yarimda turaman.",
+          "izohUz": "uyqu aralash"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Schlafen? Aber heute ist Dienstag! Am Dienstag arbeitest du schon um acht.",
+          "uz": "Uxlashmi? Lekin bugun seshanba! Seshanba kuni soat sakkizdayoq ishdasan."
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Dienstag? Oh nein! Okay, ich stehe jetzt auf!",
+          "uz": "Seshanbami? Voy! Xo'p, hozir turaman!"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Für das Frühstück haben wir keine Zeit. Hier ist dein Kaffee.",
+          "uz": "Nonushtaga vaqtimiz yo'q. Mana, qahvang."
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Danke! Aber mein Bus kommt um acht. Das ist zu spät!",
+          "uz": "Rahmat! Lekin avtobusim soat sakkizda keladi. Bu juda kech!"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Ich habe Zeit. Ich fahre dich mit dem Auto. Dann bist du um Viertel vor acht da.",
+          "uz": "Mening vaqtim bor. Seni mashinada olib boraman. Shunda sakkizga chorak qolganda yetib borasan."
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Danke, Mia! Und morgen stehe ich um sieben Uhr auf!",
+          "uz": "Rahmat, Mia! Ertaga esa soat yettida turaman!"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wann steht Jonas normalerweise auf?",
+          "frageUz": "Jonas odatda soat nechada turadi?",
+          "richtig": "um halb acht",
+          "falsch": [
+            "um sieben Uhr",
+            "um zehn vor acht"
+          ]
+        },
+        {
+          "frageDe": "Wie kommt Jonas heute zur Arbeit?",
+          "frageUz": "Jonas bugun ishga nimada boradi?",
+          "richtig": "mit dem Auto",
+          "falsch": [
+            "mit dem Bus",
+            "mit dem Fahrrad"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u05-d4",
+      "section": "u05-s3",
+      "titelDe": "Immer müde?",
+      "titelUz": "Doim charchoqmi?",
+      "sahnaUz": "Tushlik payti, universitet oshxonasi. Julia do'sti Lukasni uchratadi. Lukas juda charchagan.",
+      "zeilen": [
+        {
+          "sprecher": "Julia",
+          "de": "Hallo Lukas! Oh, du bist so müde!",
+          "uz": "Salom Lukas! Voy, juda charchagansan!"
+        },
+        {
+          "sprecher": "Lukas",
+          "de": "Ja, ich schlafe nur fünf Stunden. Nachts sehe ich immer Serien.",
+          "uz": "Ha, faqat besh soat uxlayman. Kechalari doim serial ko'raman."
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Fünf Stunden? Das ist nicht gut! Wann stehst du morgens auf?",
+          "uz": "Besh soat? Bu yaxshi emas! Ertalab soat nechada turasan?"
+        },
+        {
+          "sprecher": "Lukas",
+          "de": "Um sieben. Um acht bin ich schon an der Uni.",
+          "uz": "Yettida. Sakkizda allaqachon universitetda bo'laman."
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Und nachmittags? Lernst du dann in der Bibliothek?",
+          "uz": "Tushdan keyin-chi? Unda kutubxonada o'qiysanmi?"
+        },
+        {
+          "sprecher": "Lukas",
+          "de": "Nein, nachmittags schlafe ich.",
+          "uz": "Yo'q, tushdan keyin uxlayman."
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Hm. Dann heute keine Serie! Und morgen lernen wir zusammen in der Bibliothek.",
+          "uz": "Hm. Unda bugun serial yo'q! Ertaga esa kutubxonada birga o'qiymiz."
+        },
+        {
+          "sprecher": "Lukas",
+          "de": "Gut, morgen in der Bibliothek. Und heute schlafe ich früh!",
+          "uz": "Yaxshi, ertaga kutubxonada. Bugun esa erta uxlayman!"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wie lange schläft Lukas?",
+          "frageUz": "Lukas qancha uxlaydi?",
+          "richtig": "fünf Stunden",
+          "falsch": [
+            "sieben Stunden",
+            "acht Stunden"
+          ]
+        },
+        {
+          "frageDe": "Wo lernen Julia und Lukas morgen?",
+          "frageUz": "Julia va Lukas ertaga qayerda o'qiydi?",
+          "richtig": "in der Bibliothek",
+          "falsch": [
+            "in der Mensa",
+            "im Park"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u05-d5",
+      "section": "u05-s4",
+      "titelDe": "Ist ein Termin frei?",
+      "titelUz": "Bo'sh vaqt bormi?",
+      "sahnaUz": "Telefonda. Helga shifokor qabuliga yozilmoqchi, qabulxonada Sabine.",
+      "zeilen": [
+        {
+          "sprecher": "Sabine",
+          "de": "Guten Morgen, hier spricht Sabine.",
+          "uz": "Xayrli tong, Sabine eshitadi."
+        },
+        {
+          "sprecher": "Helga",
+          "de": "Guten Morgen! Hier ist Helga. Ich möchte bei der Ärztin einen Termin vereinbaren.",
+          "uz": "Xayrli tong! Men Helga. Shifokorning qabuliga yozilmoqchi edim."
+        },
+        {
+          "sprecher": "Sabine",
+          "de": "Gern. Am Montag um neun Uhr ist ein Termin frei. Ist das möglich?",
+          "uz": "Albatta. Dushanba kuni soat to'qqizda bo'sh vaqt bor. Sizga to'g'ri keladimi?"
+        },
+        {
+          "sprecher": "Helga",
+          "de": "Um neun Uhr? Nein, am Montag bin ich leider nicht da.",
+          "uz": "Soat to'qqizdami? Yo'q, afsuski, dushanba kuni kela olmayman."
+        },
+        {
+          "sprecher": "Sabine",
+          "de": "Hm... Am Donnerstag um elf Uhr ist noch ein Termin für Sie frei.",
+          "uz": "Hm... Payshanba kuni soat o'n birda siz uchun bo'sh vaqt bor."
+        },
+        {
+          "sprecher": "Helga",
+          "de": "Donnerstag um elf ist gut. Wie lange dauert der Termin?",
+          "uz": "Payshanba soat o'n bir menga to'g'ri keladi. Qabul qancha davom etadi?"
+        },
+        {
+          "sprecher": "Sabine",
+          "de": "Eine halbe Stunde. Bitte kommen Sie zehn Minuten vorher.",
+          "uz": "Yarim soat. Iltimos, o'n daqiqa oldinroq keling."
+        },
+        {
+          "sprecher": "Helga",
+          "de": "Gut, also Donnerstag um elf Uhr. Ich bin pünktlich da!",
+          "uz": "Yaxshi, demak, payshanba soat o'n birda. O'z vaqtida yetib kelaman!"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wann hat Helga den Termin?",
+          "frageUz": "Helganing qabuli qachon?",
+          "richtig": "am Donnerstag um elf Uhr",
+          "falsch": [
+            "am Montag um neun Uhr",
+            "am Mittwoch um elf Uhr"
+          ]
+        },
+        {
+          "frageDe": "Wie lange dauert der Termin?",
+          "frageUz": "Qabul qancha davom etadi?",
+          "richtig": "eine halbe Stunde",
+          "falsch": [
+            "eine Stunde",
+            "zwei Stunden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u05-d6",
+      "section": "u05-s4",
+      "titelDe": "Zu spät!",
+      "titelUz": "Kechikdim!",
+      "sahnaUz": "Telefonda. Thomasning bankda soat o'nda uchrashuvi bor, lekin avtobus kelmadi. U bekatdan bank xodimi Anna Weberga qo'ng'iroq qiladi.",
+      "zeilen": [
+        {
+          "sprecher": "Thomas",
+          "de": "Frau Weber? Hier ist Thomas Neumann. Wir haben um zehn einen Termin.",
+          "uz": "Weber xonim? Men Thomas Neumann. Soat o'nda uchrashuvimiz bor.",
+          "izohUz": "telefonda, bekatdan"
+        },
+        {
+          "sprecher": "Anna",
+          "de": "Ja, Herr Neumann. Es ist schon Viertel nach zehn. Wo sind Sie?",
+          "uz": "Ha, janob Neumann. Soat o'ndan chorak o'tdi. Qayerdasiz?"
+        },
+        {
+          "sprecher": "Thomas",
+          "de": "Entschuldigen Sie bitte! Der Bus kommt nicht. Ich bin noch an der Haltestelle.",
+          "uz": "Kechirasiz! Avtobus kelmayapti. Hali bekatdaman."
+        },
+        {
+          "sprecher": "Anna",
+          "de": "Oh! Um elf Uhr kommt die nächste Kundin. Heute ist das nicht möglich.",
+          "uz": "Voy! Soat o'n birda keyingi mijoz keladi. Bugun buning iloji yo'q."
+        },
+        {
+          "sprecher": "Thomas",
+          "de": "Oh nein! Ist morgen ein Termin frei?",
+          "uz": "Voy! Ertaga bo'sh vaqt bormi?"
+        },
+        {
+          "sprecher": "Anna",
+          "de": "Morgen um neun Uhr ist ein Termin frei. Geht das?",
+          "uz": "Ertaga soat to'qqizda bo'sh vaqt bor. Sizga to'g'ri keladimi?"
+        },
+        {
+          "sprecher": "Thomas",
+          "de": "Ja, das geht. Morgen um neun bin ich pünktlich da!",
+          "uz": "Ha, to'g'ri keladi. Ertaga to'qqizda o'z vaqtida kelaman!"
+        },
+        {
+          "sprecher": "Anna",
+          "de": "Gut, Herr Neumann. Dann bis morgen um neun.",
+          "uz": "Yaxshi, janob Neumann. Unda ertaga to'qqizda ko'rishguncha."
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wo ist Thomas?",
+          "frageUz": "Thomas qayerda?",
+          "richtig": "an der Haltestelle",
+          "falsch": [
+            "in der Bank",
+            "im Taxi"
+          ]
+        },
+        {
+          "frageDe": "Wann hat Thomas jetzt einen Termin?",
+          "frageUz": "Thomasning uchrashuvi endi qachon?",
+          "richtig": "morgen um neun Uhr",
+          "falsch": [
+            "heute um elf Uhr",
+            "morgen um zehn Uhr"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u05-d7",
+      "section": "u05-s5",
+      "titelDe": "Wer macht was?",
+      "titelUz": "Kim nima qiladi?",
+      "sahnaUz": "Shanba ertalab, oshxona. Jonas va Mia uy ishlarini bo'lishyapti.",
+      "zeilen": [
+        {
+          "sprecher": "Mia",
+          "de": "Jonas, heute ist Samstag. Wir müssen den Haushalt machen!",
+          "uz": "Jonas, bugun shanba. Uy ishlarini qilishimiz kerak!"
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Oh nein... Ich habe so viel Stress bei der Arbeit. Ich möchte heute nur fernsehen.",
+          "uz": "Voy... Ishda juda zo'riqib ketdim. Bugun faqat televizor ko'rmoqchiman."
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Ich habe auch Stress! Und zu Hause mache ich immer alles allein.",
+          "uz": "Men ham zo'riqib ketdim! Uyda esa doim hammasini yolg'iz o'zim qilaman."
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Das tut mir leid, Mia. Okay, was muss ich machen?",
+          "uz": "Kechir, Mia. Xo'p, men nima qilishim kerak?"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Du musst das Geschirr waschen und wegräumen. Ich gehe einkaufen.",
+          "uz": "Sen idish-tovoqni yuvib, yig'ishtirishing kerak. Men xarid qilgani boraman."
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Gut. Und wer kümmert sich um Lena?",
+          "uz": "Yaxshi. Lenaga kim qaraydi?"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Wir machen das abwechselnd. Heute kümmere ich mich um Lena, morgen du.",
+          "uz": "Buni navbatma-navbat qilamiz. Bugun Lenaga men qarayman, ertaga sen."
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Also gut! Dann bin ich morgen Hausmann. Jetzt wasche ich das Geschirr.",
+          "uz": "Mayli, kelishdik! Unda ertaga uy ishlari mendan. Hozir idish-tovoqni yuvaman."
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Was macht Mia heute?",
+          "frageUz": "Mia bugun nima qiladi?",
+          "richtig": "Sie geht einkaufen.",
+          "falsch": [
+            "Sie wäscht das Geschirr.",
+            "Sie sieht fern."
+          ]
+        },
+        {
+          "frageDe": "Wer kümmert sich morgen um Lena?",
+          "frageUz": "Ertaga Lenaga kim qaraydi?",
+          "richtig": "Jonas",
+          "falsch": [
+            "Mia",
+            "Helga"
+          ]
+        }
+      ]
+    }
+  ]
+}

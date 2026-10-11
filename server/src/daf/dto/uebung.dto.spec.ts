@@ -28,6 +28,12 @@ describe('FRAGE_FORMATLAR', () => {
     expect(FRAGE_FORMATLAR).toContain('SATZ_HOEREN');
   });
 
+  it('the clock formats are accepted by @IsIn', () => {
+    expect(FRAGE_FORMATLAR).toEqual(
+      expect.arrayContaining(['UHR_LESEN', 'UHR_HOEREN', 'UHR_TIPPEN']),
+    );
+  });
+
   it("AUDIO_WORT va WORT_TIPPEN ro'yxatda bor — @IsIn simi ikkalasini ham qamraydi", () => {
     expect(FRAGE_FORMATLAR).toEqual(
       expect.arrayContaining(['AUDIO_WORT', 'WORT_TIPPEN']),
@@ -47,6 +53,7 @@ describe('ITEM_TYPEN', () => {
         'PHRASE',
         'DIALOGZEILE',
         'HOERFRAGE',
+        'UHRZEIT',
       ]),
     );
   });

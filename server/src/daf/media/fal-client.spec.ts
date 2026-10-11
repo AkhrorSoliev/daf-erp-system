@@ -150,8 +150,11 @@ describe('FalClient.speechMitStimme', () => {
 // Course dialogs: Gemini's dialogue mode since 2026-09-26. The CEO heard an
 // emotional sample and an A2 interview made this way and chose it for every
 // dialog; both speakers are voiced in one request, so they answer each other.
+// Since 2026-10-11 (ADR-0085) Gemini 3.8: the CEO compared 3.1 and 3.8 on
+// u05-d1 and chose 3.8. It takes ordered turns, each with its own tone,
+// instead of one prompt with "[tone]" tags, and answers with WAV.
 describe('FalClient.dialogGemini', () => {
-  it('sends the whole dialog in one request: speakers, German, mp3, style apart from the text', async () => {
+  it('sends the whole dialog in one request: speakers, one turn per line, the tone as that turn style', async () => {
     const calls: Array<{ url: string; body: any }> = [];
     const fetchFn = (async (url: string, init: any) => {
       calls.push({ url, body: JSON.parse(init.body) });
@@ -171,17 +174,33 @@ describe('FalClient.dialogGemini', () => {
       styleInstructions: 'Zwei Freunde im Park.',
     });
     expect(url).toBe('https://x/g.mp3');
-    expect(calls[0].url).toBe('https://fal.run/fal-ai/gemini-3.1-flash-tts');
+    expect(calls[0].url).toBe('https://fal.run/google/gemini-3.8-flash-tts');
     expect(calls[0].body).toEqual({
-      prompt: 'Anna: [curious] Ist das deine Schwester?\nJonas: Nein.',
       speakers: [
         { speaker_id: 'Anna', voice: 'Erinome' },
         { speaker_id: 'Jonas', voice: 'Iapetus' },
       ],
+      turns: [
+        {
+          speaker_id: 'Anna',
+          text: 'Ist das deine Schwester?',
+          style_instructions: 'curious',
+        },
+        { speaker_id: 'Jonas', text: 'Nein.' },
+      ],
       style_instructions: 'Zwei Freunde im Park.',
-      language_code: 'German (Germany)',
-      output_format: 'mp3',
     });
+  });
+
+  it('refuses a line it cannot split into speaker and text', async () => {
+    const c = new FalClient('k', fetchStub({ audio: { url: 'u' } }));
+    await expect(
+      c.dialogGemini({
+        prompt: 'ohne Sprecher',
+        speakers: [],
+        styleInstructions: '',
+      }),
+    ).rejects.toThrow(/gapiruvchi/i);
   });
 
   it('fails when no audio comes back', async () => {
@@ -299,7 +318,7 @@ describe('FalClient.geraeusch', () => {
 });
 
 describe('FalClient.sprecheGemini', () => {
-  it('voices one line alone: one voice, German, scene apart, no speakers', async () => {
+  it('voices one line alone: one voice, the tone moved from the text into the style', async () => {
     const calls: Array<{ url: string; body: any }> = [];
     const fetchFn = (async (url: string, init: any) => {
       calls.push({ url, body: JSON.parse(init.body) });
@@ -316,13 +335,34 @@ describe('FalClient.sprecheGemini', () => {
       'Im Restaurant.',
     );
     expect(url).toBe('https://x/e.mp3');
-    expect(calls[0].url).toBe('https://fal.run/fal-ai/gemini-3.1-flash-tts');
+    expect(calls[0].url).toBe('https://fal.run/google/gemini-3.8-flash-tts');
     expect(calls[0].body).toEqual({
-      prompt: '[cheerful] Und ich möchte ein Schnitzel.',
+      prompt: 'Und ich möchte ein Schnitzel.',
       voice: 'Iapetus',
-      style_instructions: 'Im Restaurant.',
-      language_code: 'German (Germany)',
-      output_format: 'mp3',
+      style_instructions: 'Im Restaurant. Tone of this line: cheerful.',
+    });
+  });
+
+  it('keeps the style as it is when the line has no tone', async () => {
+    const calls: any[] = [];
+    const fetchFn = (async (_url: string, init: any) => {
+      calls.push(JSON.parse(init.body));
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ audio: { url: 'u' } }),
+        text: async () => '',
+      };
+    }) as unknown as typeof fetch;
+    await new FalClient('k', fetchFn).sprecheGemini(
+      'Danke.',
+      'Puck',
+      'Im Café.',
+    );
+    expect(calls[0]).toEqual({
+      prompt: 'Danke.',
+      voice: 'Puck',
+      style_instructions: 'Im Café.',
     });
   });
 });

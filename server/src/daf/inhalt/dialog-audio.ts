@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { TTS_GEMINI_MODEL } from '../media/fal-client';
+import { FRUEHERES_GEMINI_MODEL, TTS_GEMINI_MODEL } from '../media/fal-client';
 import type { Dialog, DialogZeile } from './unit-inhalt.types';
 
 /**
@@ -10,6 +10,16 @@ import type { Dialog, DialogZeile } from './unit-inhalt.types';
  * different from its neighbours.
  */
 export const DIALOG_AUDIO_MODELL = TTS_GEMINI_MODEL;
+
+/**
+ * ADR-0085: units move to 3.8 one at a time (CEO 2026-10-11: unit 5 first,
+ * then unit 4). A recording on the previous model is not a content error
+ * until its unit's turn; a run over that unit still re-voices it.
+ */
+const ZULAESSIGE_MODELLE = new Set([
+  DIALOG_AUDIO_MODELL,
+  FRUEHERES_GEMINI_MODEL,
+]);
 
 /**
  * Dialog audiosi manifesti — `content/daf/a1/dialog-audio.json`.
@@ -66,7 +76,7 @@ export function validateDialogAudio(
         `${d.id}: dialog matni o\`zgargan, audio eski matnni aytyapti — qayta yasang yoki manifestdan o\`chiring`,
       );
     }
-    if (eintrag.modell !== DIALOG_AUDIO_MODELL) {
+    if (!eintrag.modell || !ZULAESSIGE_MODELLE.has(eintrag.modell)) {
       problems.push(
         `${d.id}: audio boshqa modelda yasalgan (${eintrag.modell ?? 'eski model'}) — kurs dialoglari faqat ${DIALOG_AUDIO_MODELL} da, qayta yasang`,
       );

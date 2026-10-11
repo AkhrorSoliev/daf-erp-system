@@ -7,10 +7,12 @@ import type {
   MaterialDialog,
   MaterialPhrase,
   MaterialSatz,
+  MaterialUhrzeit,
   MaterialWort,
 } from '../uebung/frage.types';
 import { dialogLuecke } from '../uebung/dialog-fragen';
 import { hoerenWahl } from '../uebung/hoer-fragen';
+import { uhrHoeren, uhrLesen, uhrTippen } from '../uebung/uhr-fragen';
 import {
   luecke,
   reaktion,
@@ -52,6 +54,8 @@ export interface VorschauFrage {
   audioUrl: string | null;
   /** `BILD_TIPPEN`: the picture the student types from. */
   bildUrl: string | null;
+  /** `UHR_LESEN` / `UHR_TIPPEN`: the clock to draw (`HH:MM`). */
+  uhrzeit: string | null;
 }
 
 function toVorschau(f: Frage): VorschauFrage {
@@ -66,6 +70,7 @@ function toVorschau(f: Frage): VorschauFrage {
     titel: f.titel,
     audioUrl: f.audioUrl,
     bildUrl: f.bildUrl ?? null,
+    uhrzeit: f.uhrzeit ?? null,
   };
 }
 
@@ -79,6 +84,7 @@ interface Material {
   saetze: MaterialSatz[];
   phrasen: MaterialPhrase[];
   dialoge: MaterialDialog[];
+  uhrzeiten: MaterialUhrzeit[];
   /**
    * R2 kalitini to'liq manzilga aylantiradi — `audioWort`/`wortTippen`ga
    * TO'G'RIDAN-TO'G'RI shu ko'rinishda uzatiladi (`MediaUrlResolver`,
@@ -188,6 +194,10 @@ export const VORSCHAU_BAUER: Record<
       .filter(nichtNull),
   BILD_TIPPEN: (m, r) =>
     m.woerter.map((w) => bildTippen(w, r, m.mediaUrl)).filter(nichtNull),
+  UHR_LESEN: (m, r) => m.uhrzeiten.map((u) => uhrLesen(u, r)).filter(nichtNull),
+  UHR_HOEREN: (m, r) =>
+    m.uhrzeiten.map((u) => uhrHoeren(u, r, m.mediaUrl)).filter(nichtNull),
+  UHR_TIPPEN: (m) => m.uhrzeiten.map((u) => uhrTippen(u)).filter(nichtNull),
 };
 
 /**
@@ -252,7 +262,7 @@ export class DafMediaFragenService {
     } as any);
     const sectionIds = (sections as Array<{ id: number }>).map((s) => s.id);
 
-    const [woerterRows, saetzeRows, phrasenRows, dialogRows] =
+    const [woerterRows, saetzeRows, phrasenRows, dialogRows, uhrRows] =
       await Promise.all([
         this.prisma.dafLexeme.findMany({
           where: { sectionId: { in: sectionIds } },
@@ -295,6 +305,11 @@ export class DafMediaFragenService {
             zeilen: { orderBy: { order: 'asc' } },
             fragen: { orderBy: { order: 'asc' } },
           },
+        } as any),
+        this.prisma.dafUhrzeit.findMany({
+          where: { sectionId: { in: sectionIds } },
+          orderBy: { zeit: 'asc' },
+          select: { id: true, zeit: true, audioKey: true },
         } as any),
       ]);
 
@@ -396,11 +411,16 @@ export class DafMediaFragenService {
       }),
     );
 
+    const uhrzeiten: MaterialUhrzeit[] = (
+      uhrRows as Array<{ id: number; zeit: string; audioKey: string | null }>
+    ).map((u) => ({ ...u, sectionCode: '' }));
+
     const material: Material = {
       woerter,
       saetze,
       phrasen,
       dialoge,
+      uhrzeiten,
       mediaUrl: (key: string) => this.mediaUrl(key),
     };
     const rnd = mulberry32(sectionId);
