@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { EntityAction, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
-import { computeChangedFields, stripSensitiveFields } from './diff.util';
+import {
+  computeChangedFields,
+  redactHistoryValues,
+  stripSensitiveFields,
+} from './diff.util';
 import { assertCallerMayReadEntityHistory } from '../auth/entity-history-scope';
 
 interface BaseHistoryParams {
@@ -47,7 +51,7 @@ export class EntityHistoryService {
         entityId: String(params.entityId),
         action: EntityAction.CREATE,
         oldValues: undefined,
-        newValues: stripSensitiveFields(params.newValues),
+        newValues: stripSensitiveFields(params.newValues, params.entityType),
         changedById: params.changedById,
         companyId: params.companyId,
       },
@@ -60,7 +64,11 @@ export class EntityHistoryService {
       newValues: Record<string, any>;
     },
   ) {
-    const diff = computeChangedFields(params.oldValues, params.newValues);
+    const diff = computeChangedFields(
+      params.oldValues,
+      params.newValues,
+      params.entityType,
+    );
     if (!diff) return;
 
     await this.client(params.tx).entityHistory.create({
@@ -84,7 +92,7 @@ export class EntityHistoryService {
         entityType: params.entityType,
         entityId: String(params.entityId),
         action: EntityAction.DELETE,
-        oldValues: stripSensitiveFields(params.oldValues),
+        oldValues: stripSensitiveFields(params.oldValues, params.entityType),
         newValues: undefined,
         changedById: params.changedById,
         companyId: params.companyId,
@@ -148,7 +156,7 @@ export class EntityHistoryService {
         entityId: String(params.entityId),
         action: EntityAction.RESTORE,
         oldValues: undefined,
-        newValues: stripSensitiveFields(params.newValues),
+        newValues: stripSensitiveFields(params.newValues, params.entityType),
         changedById: params.changedById,
         companyId: params.companyId,
       },
@@ -215,6 +223,23 @@ export class EntityHistoryService {
       this.prisma.entityHistory.count({ where }),
     ]);
 
-    return { data, total, page, pageSize };
+    // Rows stored before a field was excluded (`User.balance`, ADR-0086)
+    // still carry it; strip it on the way out.
+    return {
+      data: data.map((row) => ({
+        ...row,
+        oldValues: redactHistoryValues(
+          entityType,
+          row.oldValues,
+        ) as typeof row.oldValues,
+        newValues: redactHistoryValues(
+          entityType,
+          row.newValues,
+        ) as typeof row.newValues,
+      })),
+      total,
+      page,
+      pageSize,
+    };
   }
 }

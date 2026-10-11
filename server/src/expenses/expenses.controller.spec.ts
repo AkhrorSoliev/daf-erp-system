@@ -16,12 +16,15 @@ describe('ExpensesController — route access', () => {
     });
   });
 
-  it.each(WRITES)('%s is gated by the expenses manage capability', (name) => {
-    expect(routeAccess(ExpensesController, name)).toEqual({
-      kind: 'can',
-      keys: ['expenses.manage'],
-    });
-  });
+  it.each(WRITES)(
+    '%s lets both key holders reach the per-category check in the service',
+    (name) => {
+      expect(routeAccess(ExpensesController, name)).toEqual({
+        kind: 'can',
+        keys: ['expenses.manage', 'salary.pay'],
+      });
+    },
+  );
 
   it.each([...READS, ...WRITES])(
     '%s admits the Branch Director and the CEO by default, not the Administrator, Cashier or Teacher',

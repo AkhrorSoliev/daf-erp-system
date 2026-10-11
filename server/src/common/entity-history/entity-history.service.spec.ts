@@ -6,13 +6,21 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 describe('EntityHistoryService', () => {
   let service: EntityHistoryService;
-  let prisma: { entityHistory: { create: jest.Mock } };
+  let prisma: {
+    entityHistory: {
+      create: jest.Mock;
+      findMany: jest.Mock;
+      count: jest.Mock;
+    };
+  };
   let eventEmitter: { emit: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
       entityHistory: {
         create: jest.fn().mockResolvedValue(undefined),
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
       },
     };
     eventEmitter = { emit: jest.fn() };
@@ -215,6 +223,87 @@ describe('EntityHistoryService', () => {
 
       const data = prisma.entityHistory.create.mock.calls[0][0].data;
       expect(data.newValues).toEqual({ soni: 42, bor: true, yoq: null });
+    });
+  });
+
+  /**
+   * `User.balance` is the employee's salary balance. `teachers.view` and
+   * `employees.view` open an employee's history; neither means «may see
+   * pay» (ADR-0086). `users.service.ts` hands `userSelect`, balance
+   * included, to recordCreate and recordDelete.
+   */
+  describe('employee balance', () => {
+    it('stores no User.balance on create, update or delete', async () => {
+      await service.recordCreate({
+        entityType: 'User',
+        entityId: 10050,
+        newValues: { firstName: 'Ali', balance: 1 },
+        companyId: 1,
+      });
+      await service.recordUpdate({
+        entityType: 'User',
+        entityId: 10050,
+        oldValues: { firstName: 'Ali', balance: 1 },
+        newValues: { firstName: 'Vali', balance: 2 },
+        companyId: 1,
+      });
+      await service.recordDelete({
+        entityType: 'User',
+        entityId: 10050,
+        oldValues: { firstName: 'Vali', balance: 2 },
+        companyId: 1,
+      });
+
+      const [created, updated, deleted] =
+        prisma.entityHistory.create.mock.calls.map((c) => c[0].data);
+      expect(created.newValues).toEqual({ firstName: 'Ali' });
+      expect(updated.oldValues).toEqual({ firstName: 'Ali' });
+      expect(updated.newValues).toEqual({ firstName: 'Vali' });
+      expect(deleted.oldValues).toEqual({ firstName: 'Vali' });
+    });
+
+    it('keeps a Student balance', async () => {
+      await service.recordCreate({
+        entityType: 'Student',
+        entityId: 10001,
+        newValues: { firstName: 'Ali', balance: 1 },
+        companyId: 1,
+      });
+      const data = prisma.entityHistory.create.mock.calls[0][0].data;
+      expect(data.newValues).toEqual({ firstName: 'Ali', balance: 1 });
+    });
+
+    it('strips a balance stored before the fix when it reads User history', async () => {
+      prisma.entityHistory.findMany.mockResolvedValue([
+        {
+          id: 'h1',
+          action: 'DELETE',
+          oldValues: { firstName: 'Ali', balance: 1 },
+          newValues: null,
+        },
+      ]);
+      prisma.entityHistory.count.mockResolvedValue(1);
+
+      const page = await service.getHistory('User', '10050', 1);
+
+      expect(page.data[0].oldValues).toEqual({ firstName: 'Ali' });
+      expect(page.data[0].newValues).toBeNull();
+      expect(page.total).toBe(1);
+    });
+
+    it('returns a stored Student balance unchanged', async () => {
+      prisma.entityHistory.findMany.mockResolvedValue([
+        {
+          id: 'h2',
+          action: 'CREATE',
+          oldValues: null,
+          newValues: { balance: 1 },
+        },
+      ]);
+
+      const page = await service.getHistory('Student', '10001', 1);
+
+      expect(page.data[0].newValues).toEqual({ balance: 1 });
     });
   });
 });

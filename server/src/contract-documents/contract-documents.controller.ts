@@ -23,8 +23,10 @@ import {
 
 /**
  * Student contracts (ADR-0075). Reads are a profile tab (`students.details`),
- * writes are `students.manage`; every route checks the student's branch in
- * the service (`assertCallerMayTouchStudent`).
+ * writes are «Shartnoma tuzish va imzolash» (`contracts.manage`, ADR-0086);
+ * every route checks the student's branch in the service
+ * (`assertCallerMayTouchStudent`). Cancelling a SIGNED contract stays
+ * CEO-only inside `ContractLifecycleService.cancel` (ADR-0075).
  */
 @Controller('contract-documents')
 export class ContractDocumentsController {
@@ -54,7 +56,7 @@ export class ContractDocumentsController {
   }
 
   @Post()
-  @Can('students.manage')
+  @Can('contracts.manage')
   create(
     @Body() dto: CreateContractDocumentDto,
     @CurrentUser('companyId') companyId: number,
@@ -64,7 +66,7 @@ export class ContractDocumentsController {
   }
 
   @Patch(':id')
-  @Can('students.manage')
+  @Can('contracts.manage')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateContractDocumentDto,
@@ -75,7 +77,7 @@ export class ContractDocumentsController {
   }
 
   @Post(':id/sign')
-  @Can('students.manage')
+  @Can('contracts.manage')
   sign(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('companyId') companyId: number,
@@ -85,7 +87,7 @@ export class ContractDocumentsController {
   }
 
   @Post(':id/cancel')
-  @Can('students.manage')
+  @Can('contracts.manage')
   cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CancelContractDocumentDto,

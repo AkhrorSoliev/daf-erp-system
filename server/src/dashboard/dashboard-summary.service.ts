@@ -63,11 +63,14 @@ export class DashboardSummaryService {
     const caller = await this.permissions.forUser(ctx.userId);
     const canSeeMoney = caller.keys.has('reports.finance');
     const canSeeOutreach = caller.keys.has('outreach.view');
-    // Kesh kaliti rol darajasini o'z ichiga oladi: bir rolning yozuvi
-    // boshqasiga hech qachon berilmaydi.
-    const tier = canSeeMoney ? 'money' : canSeeOutreach ? 'outreach' : 'basic';
+    // The cache key carries every flag the body depends on. One «tier»
+    // assumed reports.finance ⇒ outreach.view, which stops holding once the
+    // CEO sets each key per role (ADR-0086): a caller with money and no
+    // outreach would have been served a body with outreach numbers.
+    const tier = `${canSeeMoney ? 'm' : '-'}${canSeeOutreach ? 'o' : '-'}`;
     const cacheKey = `dashboard:summary:${ctx.companyId}:${this.branchKey(
       ctx.branchScope,
+      canSeeMoney ? ctx.userId : undefined,
     )}:${tier}`;
 
     const cached = await this.redis.get(cacheKey).catch(() => null);
@@ -116,10 +119,20 @@ export class DashboardSummaryService {
     return result;
   }
 
-  /** Kesh kaliti uchun barqaror satr. */
-  private branchKey(scope: ReportBranchIds): string {
+  /**
+   * Stable cache-key segment for the branch scope.
+   *
+   * `userId` is passed only when the body carries money. The net profit leg
+   * subtracts the payroll of the CALLER's own payroll scope
+   * (`resolveMonthlyScope(performedById)`): with one branch in the scope every
+   * caller resolves to that branch, but with several the payroll falls back to
+   * the caller's home branch, so two directors who share a branch set and every
+   * flag would otherwise read each other's net profit.
+   */
+  private branchKey(scope: ReportBranchIds, userId?: number): string {
     if (scope == null) return 'all';
-    return [...scope].sort((a, b) => a - b).join('-');
+    const ids = [...scope].sort((a, b) => a - b).join('-');
+    return userId !== undefined && scope.length > 1 ? `${ids}:u${userId}` : ids;
   }
 
   /**
