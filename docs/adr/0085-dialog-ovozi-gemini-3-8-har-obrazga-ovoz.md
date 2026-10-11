@@ -1,4 +1,4 @@
-# ADR-0084 — Dialog ovozi Gemini 3.8 da, har obrazning o'z ovozi; unitlar navbat bilan o'tkaziladi
+# ADR-0085 — Dialog ovozi Gemini 3.8 da, har obrazning o'z ovozi; unitlar navbat bilan o'tkaziladi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-11

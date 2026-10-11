@@ -93,7 +93,7 @@ describe('validateDialogAudio', () => {
     ]);
   });
 
-  // ADR-0084: units are re-voiced on 3.8 one at a time (CEO 2026-10-11:
+  // ADR-0085: units are re-voiced on 3.8 one at a time (CEO 2026-10-11:
   // unit 5 first, then unit 4). Until a unit's turn comes, its Gemini 3.1
   // recordings stay on the site and are not a content error.
   it('accepts a Gemini 3.1 recording until its unit is re-voiced', () => {

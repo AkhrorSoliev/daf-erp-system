@@ -148,7 +148,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0079](0079-imkoniyat-rol-emas.md) | Ruxsat imkoniyat bilan tekshiriladi, rol faqat kimlikni bildiradi | Qabul qilindi | 2026-10-10 |
 | [0080](0080-botdan-qoshilish-sorov-va-tasdiq.md) | Botdan ro'yxatdan o'tish so'rov: administrator tasdiqlamaguncha karta, guruh, hisob va pul yozilmaydi; 7 kunda o'zi yopiladi, hech qachon o'zi tasdiqlanmaydi; bot guruh va ustoz holatini tekshiradi | Qabul qilindi | 2026-10-10 |
 | [0081](0081-filial-chegarasi-qoidalari.md) | Filial chegarasi: bayram filialga tegishli, filialni faqat CEO ochadi, o'z oyligini o'zi to'lamaydi | Qabul qilindi | 2026-10-10 |
-| [0084](0084-dialog-ovozi-gemini-3-8-har-obrazga-ovoz.md) | Dialog ovozi Gemini 3.8 da, har obrazning CEO tanlagan o'z ovozi; unitlar navbat bilan o'tkaziladi, navbati kelmagan unitning 3.1 yozuvi qoladi | Qabul qilindi | 2026-10-11 |
+| [0085](0085-dialog-ovozi-gemini-3-8-har-obrazga-ovoz.md) | Dialog ovozi Gemini 3.8 da, har obrazning CEO tanlagan o'z ovozi; unitlar navbat bilan o'tkaziladi, navbati kelmagan unitning 3.1 yozuvi qoladi | Qabul qilindi | 2026-10-11 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

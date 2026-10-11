@@ -150,7 +150,7 @@ describe('FalClient.speechMitStimme', () => {
 // Course dialogs: Gemini's dialogue mode since 2026-09-26. The CEO heard an
 // emotional sample and an A2 interview made this way and chose it for every
 // dialog; both speakers are voiced in one request, so they answer each other.
-// Since 2026-10-11 (ADR-0084) Gemini 3.8: the CEO compared 3.1 and 3.8 on
+// Since 2026-10-11 (ADR-0085) Gemini 3.8: the CEO compared 3.1 and 3.8 on
 // u05-d1 and chose 3.8. It takes ordered turns, each with its own tone,
 // instead of one prompt with "[tone]" tags, and answers with WAV.
 describe('FalClient.dialogGemini', () => {

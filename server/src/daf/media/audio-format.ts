@@ -16,7 +16,7 @@ export function istWav(bytes: Buffer): boolean {
 }
 
 /**
- * Gemini 3.8 answers with WAV (ADR-0084); every dialog file on R2 and in
+ * Gemini 3.8 answers with WAV (ADR-0085); every dialog file on R2 and in
  * the players is mp3. A WAV is re-encoded at 128 kbit/s, anything else is
  * returned untouched. A failed encode throws: a WAV stored under an .mp3
  * key would play in some browsers and not in others.

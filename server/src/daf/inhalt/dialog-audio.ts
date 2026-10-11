@@ -12,7 +12,7 @@ import type { Dialog, DialogZeile } from './unit-inhalt.types';
 export const DIALOG_AUDIO_MODELL = TTS_GEMINI_MODEL;
 
 /**
- * ADR-0084: units move to 3.8 one at a time (CEO 2026-10-11: unit 5 first,
+ * ADR-0085: units move to 3.8 one at a time (CEO 2026-10-11: unit 5 first,
  * then unit 4). A recording on the previous model is not a content error
  * until its unit's turn; a run over that unit still re-voices it.
  */

@@ -5,7 +5,7 @@ const TTS_INWORLD_MODEL = 'fal-ai/inworld-tts';
 const SFX_MODEL = 'fal-ai/elevenlabs/sound-effects/v2';
 /**
  * The course dialog model (`dialog-audio.ts` pins it). Gemini 3.8 since
- * 2026-10-11 (ADR-0084): the CEO compared it with 3.1 on u05-d1 and chose
+ * 2026-10-11 (ADR-0085): the CEO compared it with 3.1 on u05-d1 and chose
  * it, with one voice per character. It answers with WAV (`audio-format.ts`).
  */
 export const TTS_GEMINI_MODEL = 'google/gemini-3.8-flash-tts';
