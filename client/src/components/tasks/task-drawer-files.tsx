@@ -41,7 +41,7 @@ async function openFresh(e: React.MouseEvent, taskId: string, file: TaskFileView
   const tab = window.open("", "_blank");
   const ok = await useTaskFiles.getState().ensureFresh(taskId);
   const fresh = ok ? useTaskFiles.getState().files.find((f) => f.id === file.id) : undefined;
-  if (!tab) return;
+  if (!tab) { if (fresh) window.open(fresh.url, "_blank", "noopener"); return; }
   if (!fresh) { tab.close(); return; }
   tab.opener = null;
   tab.location.href = fresh.url;
