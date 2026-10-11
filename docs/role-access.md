@@ -269,7 +269,7 @@ When a **Branch Director** accesses data, the backend must automatically filter 
 - **CEO only, and never a capability.** The page's settings entry is `ceoOnly`. Its API — `GET /permissions`, `PUT /permissions/roles/:roleId`, `POST /permissions/roles/:roleId/reset`, `GET /permissions/history` — carries `@CeoOnly()`, which reads the CEO role from the database. The CEO always holds every capability, and a student holds none.
 - **Takes effect on the next request.** In the process that saved the change, `PermissionsService.invalidateAll()` makes it immediate; any other process picks it up within 10 s. The client re-reads `/permissions/me` on window focus, after 30 s and after a 403.
 - **Dependencies move together.** Turning a capability on also turns on what it `requires`, and turning one off also turns off what relies on it. The page lists them before saving («Birga yoqiladi» / «Birga o'chadi»). The server refuses a set that breaks a dependency (400).
-- **Locks.** A capability can be given only to the roles in its `allowedRoles`. Every other role carries exactly one reason. The page shows it as a lock and refuses the change up front (`ConfirmPlan.refusal`, no confirm dialog), and the server refuses it too (400 on save; ignored on read):
+- **Locks.** A capability can be given only to the roles in its `allowedRoles`. Every other role carries exactly one reason. The page shows it as a lock and opens the confirm dialog with the reason and no confirm button (`ConfirmPlan.refusal`), and the server refuses it too (400 on save; ignored on read):
 
 | Reason on screen | Meaning |
 |---|---|

@@ -63,7 +63,12 @@ describe('UsersController — route access', () => {
     it('is gated by the employee, teacher and group capabilities', () => {
       expect(routeAccess(UsersController, 'findAll')).toEqual({
         kind: 'can',
-        keys: ['employees.view', 'teachers.view', 'groups.manage'],
+        keys: [
+          'employees.view',
+          'teachers.view',
+          'groups.manage',
+          'salary.pay',
+        ],
       });
     });
 

@@ -140,6 +140,14 @@ describe('assertCallerMayReadEntityHistory', () => {
     expect(unclassified).toEqual([]);
   });
 
+  it('refuses RolePermission history on the generic route, even for the CEO', async () => {
+    for (const roles of [['Branch Director'], ['CEO']]) {
+      await expect(
+        call(prismaFor(), 'RolePermission', '1', roles),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    }
+  });
+
   it('refuses an entity type it cannot scope', async () => {
     await expect(call(prismaFor(), 'Invoice')).rejects.toBeInstanceOf(
       BadRequestException,

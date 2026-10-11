@@ -564,4 +564,4 @@ Har bir bosqich uchun alohida ish rejasi yoziladi. Birinchi reja 1-bosqich uchun
   - **CEO API** `@CeoOnly()` bilan. Tarix `GET /permissions/history` orqali.
   - **CEO javoblari (11.10).** Avans faqat «Oylik va avans to'lash» bilan yoziladi. «Moliya va marketing hisobotlari» «Xodimlar oyligini ko'rish»ni talab qiladi.
   - **Xodimning oylik balansi** (`balance`) `salary.view` bor chaqiruvchiga qaytadi. **Xodim tarixi** uni saqlamaydi va ko'rsatmaydi.
-  - **Bosh sahifa keshi** javob tanasi bog'liq bo'lgan bayroqlardan tuziladi (pul, murojaatlar).
+  - **Bosh sahifa keshi** javob tanasi bog'liq bo'lgan bayroqlardan tuziladi (pul, aloqa markazi).
