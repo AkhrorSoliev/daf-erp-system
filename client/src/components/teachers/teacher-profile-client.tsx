@@ -34,7 +34,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") ?? "guruhlar";
+  const activeTab = searchParams.get("tab") ?? "korsatkichlar";
   const { openDrawer } = useEditTeacher();
   const [teacher, setTeacher] = useState<TeacherData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +44,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   const handleTabChange = useCallback(
     (tab: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (tab === "guruhlar") {
+      if (tab === "korsatkichlar") {
         params.delete("tab");
       } else {
         params.set("tab", tab);

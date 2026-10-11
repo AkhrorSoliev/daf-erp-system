@@ -66,4 +66,18 @@ describe('TeachersController — route access', () => {
       expect(defaultRolesOf(TeachersController, name)).toEqual(DIRECTOR_ROLES);
     },
   );
+
+  it("reads a teacher's profile charts with the teacher view capability", () => {
+    expect(routeAccess(TeachersController, 'getStats')).toEqual({
+      kind: 'can',
+      keys: ['teachers.view'],
+    });
+    expect(defaultRolesOf(TeachersController, 'getStats')).toEqual(ADMIN_ROLES);
+  });
+
+  it('lets every staff account read its own profile charts', () => {
+    expect(routeAccess(TeachersController, 'getMyStats')).toEqual({
+      kind: 'anyStaff',
+    });
+  });
 });

@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TeacherGroupsTable } from "./teacher-groups-table";
 import { TeacherTimelineTab } from "./teacher-timeline-tab";
+import { TeacherStatsCharts } from "./teacher-stats-charts";
 import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import { CommentList, type CommentData } from "@/components/shared/comment-list";
 import { CommentForm } from "@/components/shared/comment-form";
@@ -84,11 +85,6 @@ export function TeacherProfileTabs({
     }
   }, [teacher.id]);
 
-  // Guruhlar default tab — sahifa ochilganda fetch
-  useEffect(() => {
-    fetchGroups();
-  }, [fetchGroups]);
-
   // Lazy-load tab data — runs both on user click AND on direct URL load
   // (e.g. user reloads the page on ?tab=ish-haqi).
   const activateTab = useCallback(
@@ -129,11 +125,12 @@ export function TeacherProfileTabs({
 
   return (
     <Tabs
-      value={activeTab ?? "guruhlar"}
+      value={activeTab ?? "korsatkichlar"}
       className="w-full"
       onValueChange={handleTabChange}
     >
       <TabsList className="w-full justify-start overflow-x-auto sticky top-0 z-10 bg-background md:static">
+        <TabsTrigger value="korsatkichlar">Ko&apos;rsatkichlar</TabsTrigger>
         <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
         <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
         <TabsTrigger value="tarix">Tarix</TabsTrigger>
@@ -144,6 +141,11 @@ export function TeacherProfileTabs({
           <TabsTrigger value="ish-haqi">Ish haqi</TabsTrigger>
         )}
       </TabsList>
+
+      {/* Ko'rsatkichlar — Radix unmounts inactive content, so the query runs on open only. */}
+      <TabsContent value="korsatkichlar">
+        <TeacherStatsCharts endpoint={`/teachers/${teacher.id}/stats`} />
+      </TabsContent>
 
       {/* Guruhlar */}
       <TabsContent value="guruhlar">
