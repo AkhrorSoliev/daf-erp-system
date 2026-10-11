@@ -1,3 +1,4 @@
+import { PERMISSION_KEYS } from './permission-catalog';
 import { PermissionsService } from './permissions.service';
 
 function prismaReturning(rows: Array<{ id: number; name: string }> | null) {
@@ -39,7 +40,9 @@ describe('PermissionsService', () => {
     const service = new PermissionsService(
       prismaReturning([{ id: 1, name: 'CEO' }]) as never,
     );
-    expect((await service.forUser(10001)).keys.size).toBe(66);
+    expect((await service.forUser(10001)).keys.size).toBe(
+      PERMISSION_KEYS.length,
+    );
   });
 
   it('gives a blocked, archived or unknown account nothing', async () => {
