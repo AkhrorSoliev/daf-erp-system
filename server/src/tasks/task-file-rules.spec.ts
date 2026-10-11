@@ -127,6 +127,9 @@ describe('sniffMime', () => {
   });
   it('tells audio from video in ogg and webm by the codec', () => {
     expect(sniffMime(OGV)).toBeNull();
+    // a theora header wins even beside an audio codec in the first pages
+    expect(sniffMime(Buffer.concat([OGV, OGG.subarray(4)]))).toBeNull();
+    expect(sniffMime(Buffer.concat([OGG, OGV.subarray(4)]))).toBeNull();
     expect(sniffMime(WEBM_VIDEO)).toBeNull();
     expect(sniffMime(WEBM_NO_CODEC)).toBeNull();
   });
@@ -157,11 +160,18 @@ describe('sniffMime', () => {
       expect(sniffMime(ftyp('qt  ', ['qt  ']))).toBe('video/quicktime');
     });
     it.each(['M4A ', 'M4B '])(
-      'takes the audio brand "%s" for a voice note',
+      'takes the audio MAJOR brand "%s" for a voice note',
       (brand) => {
         expect(sniffMime(ftyp(brand))).toBe('audio/mp4');
         expect(sniffMime(ftyp(brand, ['isom', 'mp42']))).toBe('audio/mp4');
-        expect(sniffMime(ftyp('isom', ['isom', brand]))).toBe('audio/mp4');
+      },
+    );
+    it.each(['M4A ', 'M4B '])(
+      'keeps a video with the audio brand "%s" only among the compatible ones a video',
+      (brand) => {
+        expect(sniffMime(ftyp('isom', ['isom', brand]))).toBe('video/mp4');
+        expect(sniffMime(ftyp('mp42', [brand, 'mp42']))).toBe('video/mp4');
+        expect(sniffMime(ftyp('XXXX', [brand]))).toBeNull();
       },
     );
     it.each(['heic', 'heix', 'mif1', 'msf1', 'avif', 'avis'])(
@@ -267,6 +277,24 @@ describe('sniffMime', () => {
       const z = zip('[Content_Types].xml', 'word/document.xml');
       z.writeUInt32LE(0xfffffff0, z.length - 6);
       expect(sniffMime(z)).toBeNull();
+    });
+    it('walks at most 5000 directory entries', () => {
+      const filler = (n: number) =>
+        Array.from({ length: n }, (_, i) => `media/${i}.png`);
+      // the two parts are the 4999th and 5000th entries: read
+      const within = zip(
+        ...filler(4998),
+        '[Content_Types].xml',
+        'word/document.xml',
+      );
+      expect(sniffMime(within)).toBe(DOCX_MIME);
+      // the document part is the 5001st: never reached
+      const beyond = zip(
+        ...filler(4999),
+        '[Content_Types].xml',
+        'word/document.xml',
+      );
+      expect(sniffMime(beyond)).toBeNull();
     });
     it('reads a bounded region of a 20 MB file with huge sizes', () => {
       // 65535 claimed entries with 64 KB names, back to back: at most 5000 are walked.
@@ -379,6 +407,18 @@ describe('checkTaskFile', () => {
       VOICE_LIMIT_MESSAGE,
     );
     expect(checkTaskFile({ buffer: OGG, durationSec: 180 }).kind).toBe('VOICE');
+  });
+  it('refuses a voice duration that is NaN, infinite or negative', () => {
+    for (const durationSec of [NaN, Infinity, -Infinity, -1]) {
+      refused({ buffer: OGG, durationSec }, VOICE_LIMIT_MESSAGE);
+      refused({ buffer: M4A, durationSec }, VOICE_LIMIT_MESSAGE);
+    }
+    expect(checkTaskFile({ buffer: OGG, durationSec: 0 }).kind).toBe('VOICE');
+    // a duration means nothing for a file that is not a voice note
+    expect(checkTaskFile({ buffer: PNG, durationSec: NaN }).kind).toBe('IMAGE');
+  });
+  it('names MOV in the type message', () => {
+    expect(FILE_TYPE_MESSAGE).toContain('MP4, MOV');
   });
   it('accepts exactly 20 MB and exactly 2 MB of voice', () => {
     const exact20 = Buffer.concat([

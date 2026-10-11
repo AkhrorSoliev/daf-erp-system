@@ -17,7 +17,7 @@ export const PURGE_AFTER_DAYS = 30;
 export const PURGE_BATCH = 500;
 
 export const FILE_TYPE_MESSAGE =
-  'Faqat JPG, PNG, WebP, PDF, DOCX, XLSX, MP4 fayllar va ovozli xabar qabul qilinadi';
+  'Faqat JPG, PNG, WebP, PDF, DOCX, XLSX, MP4, MOV fayllar va ovozli xabar qabul qilinadi';
 export const FILE_SIZE_MESSAGE = 'Fayl hajmi 20 MB dan oshmasligi kerak';
 export const VOICE_LIMIT_MESSAGE = 'Ovozli xabar 3 daqiqadan oshmasligi kerak';
 export const EMPTY_FILE_MESSAGE = "Fayl bo'sh";
@@ -77,7 +77,7 @@ const CODEC_WINDOW = 4096;
 /**
  * ISO-BMFF: size(4) "ftyp"(4) major(4) minor(4) compatible brands(4 each) up
  * to the box size, at most MAX_FTYP_BRANDS of them. A photo brand anywhere
- * refuses the file; an audio brand makes it a voice note; `qt  ` as the major
+ * refuses the file; an audio MAJOR brand makes it a voice note; `qt  ` as the major
  * brand is a QuickTime movie; else a video brand (major, or compatible beside
  * an unknown major) makes it a video.
  */
@@ -96,7 +96,8 @@ function ftypMime(b: Buffer): string | null {
     brands.push(b.toString('latin1', i, i + 4));
   }
   if (brands.some((x) => PHOTO_BRANDS.has(x))) return null;
-  if (brands.some((x) => AUDIO_BRANDS.has(x))) return 'audio/mp4';
+  // ponytail: audio-only mp4 under video brands (isom/mp42) stays video/mp4; a moov handler parse would tell them apart.
+  if (AUDIO_BRANDS.has(major)) return 'audio/mp4';
   if (major === 'qt  ') return 'video/quicktime';
   return brands.some((x) => VIDEO_BRANDS.has(x)) ? 'video/mp4' : null;
 }
@@ -145,6 +146,8 @@ function zipOfficeMime(b: Buffer): string | null {
 
 /** Ogg carries audio when its first packet is a known audio codec; theora and the rest are refused. */
 function oggMime(b: Buffer): string | null {
+  // a theora header in the first pages makes it a video, whatever else is there
+  if (b.subarray(0, 512).includes('\x80theora')) return null;
   const head = b.subarray(0, 128);
   const audio = ['OpusHead', '\x01vorbis', 'Speex   ', '\x7fFLAC'];
   return audio.some((c) => head.includes(c)) ? 'audio/ogg' : null;
@@ -189,11 +192,18 @@ export function checkTaskFile(input: {
   const mime = sniffMime(buffer);
   const type = mime ? TASK_FILE_TYPES[mime] : undefined;
   if (!mime || !type) throw new BadRequestException(FILE_TYPE_MESSAGE);
-  if (
-    type.kind === 'VOICE' &&
-    (buffer.length > MAX_VOICE_BYTES || (durationSec ?? 0) > MAX_VOICE_SECONDS)
-  ) {
-    throw new BadRequestException(VOICE_LIMIT_MESSAGE);
+  if (type.kind === 'VOICE') {
+    // a duration that is not a real, non-negative number is refused, not trusted
+    const badDuration =
+      durationSec !== undefined &&
+      (!Number.isFinite(durationSec) || durationSec < 0);
+    if (
+      badDuration ||
+      buffer.length > MAX_VOICE_BYTES ||
+      (durationSec ?? 0) > MAX_VOICE_SECONDS
+    ) {
+      throw new BadRequestException(VOICE_LIMIT_MESSAGE);
+    }
   }
   return { mime, ext: type.ext, kind: type.kind };
 }
