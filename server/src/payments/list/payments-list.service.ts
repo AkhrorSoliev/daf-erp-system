@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -26,16 +27,19 @@ import {
   type ReportBranchIds,
 } from '../../common/finance/report-branch-scope';
 import { PrismaService } from '../../prisma/prisma.service';
+import { dmy, METHOD_LABEL } from '../../statements/statement-text';
 import type { EnrollmentStatusEvent } from '../../students/shared/enrollment-status-on';
 import type {
   PaymentListQueryDto,
   PaymentPeriodDto,
 } from './dto/payment-list-query.dto';
+import { formatSom } from '../shared/format-som';
 import { monthWord, periodShape } from './part-labels';
 import { DayEnrollment, groupIdsOnDay } from './payment-day-groups';
 import { parsePaymentPeriod, periodView } from './payment-period';
 import { PAYMENT_ROW_SELECT, toPaymentRow } from './payment-row';
 import { paymentSearchWhere } from './payment-search';
+import { EXCEL_ROW_LIMIT, paymentsWorkbook } from './payments-list.excel';
 import type {
   PaymentFilterOptions,
   PaymentListResponse,
@@ -45,6 +49,18 @@ import type {
 } from './payments-list.types';
 
 type ListFilters = Partial<PaymentListQueryDto>;
+
+const PART_FILTER_LABEL = {
+  CURRENT: "Shu oy to'lovi",
+  ADVANCE: 'Oldindan',
+  LATE: 'Eski qarz',
+} as const;
+const STATUS_FILTER_LABEL = {
+  REVERSED: 'Bekor qilinganlar',
+  ALL: 'Hammasi',
+} as const;
+const personName = (u: { firstName: string; lastName: string }) =>
+  `${u.firstName} ${u.lastName}`.trim();
 
 interface DayGroup {
   id: string;
@@ -130,6 +146,100 @@ export class PaymentsListService {
     }
     const [row] = await this.buildRows(companyId, scope, period!, {}, { id });
     return { period: periodView(period!), row };
+  }
+
+  /**
+   * The Excel (spec B4 §5.6): the same rows as `rows`, unpaged, refused above
+   * `EXCEL_ROW_LIMIT`. The header names the chosen filters, not their ids.
+   */
+  async excel(
+    companyId: number,
+    scope: ReportBranchIds,
+    q: PaymentListQueryDto,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const period = parsePaymentPeriod(q.startDate, q.endDate);
+    const rows = await this.buildRows(companyId, scope, period, q);
+    if (rows.length > EXCEL_ROW_LIMIT) {
+      throw new BadRequestException(
+        `Qatorlar juda ko'p (${formatSom(rows.length)}) — davrni qisqartiring`,
+      );
+    }
+    return {
+      buffer: await paymentsWorkbook(rows, {
+        period: `${dmy(period.startStr)} – ${dmy(period.endStr)}`,
+        filters: await this.filterText(companyId, scope, q),
+      }),
+      filename: `tolovlar-${period.startStr}-${period.endStr}.xlsx`,
+    };
+  }
+
+  /** «Qidiruv: …; Usul: …» in the page's order; the default status is not a filter. */
+  private async filterText(
+    companyId: number,
+    scope: ReportBranchIds,
+    q: PaymentListQueryDto,
+  ): Promise<string> {
+    const users = async (ids: number[] | undefined) =>
+      ids
+        ? (
+            await this.prisma.user.findMany({
+              where: { id: { in: ids }, companyId },
+              select: { id: true, firstName: true, lastName: true },
+              orderBy: { firstName: 'asc' },
+            })
+          ).map(personName)
+        : [];
+    const [groups, teachers, courses, receivers] = await Promise.all([
+      q.groupId
+        ? this.prisma.group.findMany({
+            where: {
+              id: { in: q.groupId },
+              companyId,
+              ...branchIdWhere(scope),
+            },
+            select: { name: true },
+            orderBy: { name: 'asc' },
+          })
+        : [],
+      users(q.teacherId),
+      q.courseId
+        ? this.prisma.course.findMany({
+            where: { id: { in: q.courseId }, companyId },
+            select: { name: true },
+            orderBy: { name: 'asc' },
+          })
+        : [],
+      users(q.receivedById),
+    ]);
+    const received = [...receivers, ...(q.online ? ['Onlayn'] : [])];
+    const parts: [string, string][] = [
+      ['Qidiruv', q.search?.trim() ?? ''],
+      ['Usul', (q.method ?? []).map((m) => METHOD_LABEL[m] ?? m).join(', ')],
+      ['Nimaga ketdi', q.part ? PART_FILTER_LABEL[q.part] : ''],
+      ['Guruh', groups.map((g) => g.name).join(', ')],
+      ['Ustoz', teachers.join(', ')],
+      ['Kurs', courses.map((c) => c.name).join(', ')],
+      ['Kim qabul qildi', received.join(', ')],
+      [
+        'Manba',
+        q.source
+          ? q.source === 'ONLINE'
+            ? 'Onlayn avtomatik'
+            : 'Admin kiritgan'
+          : '',
+      ],
+      [
+        'Holat',
+        q.status && q.status !== 'COMPLETED'
+          ? STATUS_FILTER_LABEL[q.status]
+          : '',
+      ],
+    ];
+    const text = parts
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('; ');
+    return text || "yo'q";
   }
 
   /**

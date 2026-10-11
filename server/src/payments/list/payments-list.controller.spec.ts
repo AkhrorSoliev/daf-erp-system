@@ -9,6 +9,10 @@ describe('PaymentsListController — route access', () => {
     row: jest.fn().mockResolvedValue({}),
     summary: jest.fn().mockResolvedValue({}),
     filterOptions: jest.fn().mockResolvedValue({}),
+    excel: jest.fn().mockResolvedValue({
+      buffer: Buffer.from('xlsx'),
+      filename: 'tolovlar-2026-10-01-2026-10-31.xlsx',
+    }),
   };
   let controller: PaymentsListController;
 
@@ -77,5 +81,35 @@ describe('PaymentsListController — route access', () => {
     expect(list.summary).toHaveBeenCalledWith(1001, [4], q);
     await controller.filterOptions(1001, [4]);
     expect(list.filterOptions).toHaveBeenCalledWith(1001, [4]);
+  });
+
+  it('excel is gated by payments.view, open to the four roles by default', () => {
+    expect(routeAccess(PaymentsListController, 'excel')).toEqual({
+      kind: 'can',
+      keys: ['payments.view'],
+    });
+    expect(defaultRolesOf(PaymentsListController, 'excel')).toEqual([
+      'Administrator',
+      'Branch Director',
+      'CEO',
+      'Cashier',
+    ]);
+  });
+
+  it('excel sends the workbook as an attachment with the three headers', async () => {
+    const q = { startDate: '2026-10-01', endDate: '2026-10-31' };
+    const res = { setHeader: jest.fn(), end: jest.fn() };
+    await controller.excel(q as never, 1001, [4], res as never);
+    expect(list.excel).toHaveBeenCalledWith(1001, [4], q);
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'Content-Disposition',
+      'attachment; filename="tolovlar-2026-10-01-2026-10-31.xlsx"',
+    );
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Length', 4);
+    expect(res.end).toHaveBeenCalledWith(Buffer.from('xlsx'));
   });
 });

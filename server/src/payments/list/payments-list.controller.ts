@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { BranchScope, CurrentUser } from '../../common/decorators';
 import type { ReportBranchIds } from '../../common/finance/report-branch-scope';
 import { Can } from '../../common/permissions/access.decorators';
@@ -48,6 +49,25 @@ export class PaymentsListController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.list.summary(companyId, scope, q);
+  }
+
+  /** The filtered list, every page, as xlsx (spec B4 §5.6). */
+  @Get('excel')
+  @Can('payments.view')
+  async excel(
+    @Query() q: PaymentListQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+    @Res() res: Response,
+  ) {
+    const { buffer, filename } = await this.list.excel(companyId, scope, q);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
   }
 
   /** The filter menus (spec B4 §5.5). */

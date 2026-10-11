@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { Workbook } from 'exceljs';
 import { tashkentRangeUtc } from '../../common/date/tashkent';
 import {
   attributeIncome,
@@ -162,6 +163,7 @@ describe('PaymentsListService', () => {
       },
       group: { findMany: jest.fn() },
       user: { findMany: jest.fn() },
+      course: { findMany: jest.fn() },
       enrollment: { findMany: jest.fn().mockResolvedValue(ENROLLMENTS) },
       enrollmentStateLog: { findMany: jest.fn().mockResolvedValue([]) },
     };
@@ -636,6 +638,115 @@ describe('PaymentsListService', () => {
         receivers: [],
       });
       expect(prisma.user.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('excel', () => {
+    const rowsOf = async (buffer: Buffer) => {
+      const wb = new Workbook();
+      await wb.xlsx.load(buffer as never);
+      const ws = wb.getWorksheet("To'lovlar")!;
+      return (n: number) => (ws.getRow(n).values as unknown[]).slice(1);
+    };
+
+    it("one workbook of the same rows, named by the period; no filters -> yo'q", async () => {
+      const { buffer, filename } = await service.excel(1001, [4], q());
+      expect(filename).toBe('tolovlar-2026-10-01-2026-10-31.xlsx');
+      const cells = await rowsOf(buffer);
+      expect(cells(1)[0]).toBe('Davr: 01.10.2026 – 31.10.2026');
+      expect(cells(2)[0]).toBe("Filtrlar: yo'q");
+      expect(cells(4)[2]).toBe(10001);
+      expect(cells(4)[8]).toBe("Sentabr qarzi 150 000; Oktabr to'lovi 385 714");
+      expect(prisma.group.findMany).not.toHaveBeenCalled();
+      expect(prisma.user.findMany).not.toHaveBeenCalled();
+      expect(prisma.course.findMany).not.toHaveBeenCalled();
+    });
+
+    it('refuses a bad period before reading anything', async () => {
+      await expect(
+        service.excel(1001, [4], q({ startDate: undefined })),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.payment.findMany).not.toHaveBeenCalled();
+    });
+
+    it('more than 20 000 rows is a 400 with the count', async () => {
+      jest
+        .spyOn(service, 'buildRows')
+        .mockResolvedValue(new Array(20_001).fill({}));
+      await expect(service.excel(1001, [4], q())).rejects.toThrow(
+        "Qatorlar juda ko'p (20 001) — davrni qisqartiring",
+      );
+    });
+
+    it('exactly 20 000 rows is allowed', async () => {
+      const [real] = await service.buildRows(
+        1001,
+        [4],
+        parsePaymentPeriod(OCT.startDate, OCT.endDate),
+        {},
+      );
+      jest
+        .spyOn(service, 'buildRows')
+        .mockResolvedValue(new Array(20_000).fill(real));
+      await expect(service.excel(1001, [4], q())).resolves.toBeDefined();
+    });
+
+    it('names every chosen filter, reading each name list once, in the company and scope', async () => {
+      prisma.group.findMany.mockResolvedValue([
+        { name: 'A1-01' },
+        { name: 'B1-02' },
+      ]);
+      prisma.user.findMany
+        .mockResolvedValueOnce([
+          { id: 10003, firstName: 'Ism', lastName: 'Bir' },
+        ])
+        .mockResolvedValueOnce([
+          { id: 10002, firstName: 'Ism', lastName: 'Uch' },
+        ]);
+      prisma.course.findMany.mockResolvedValue([{ name: 'Nemis tili A1' }]);
+      const { buffer } = await service.excel(
+        1001,
+        [4],
+        q({
+          search: 'Ism',
+          method: ['CLICK'],
+          part: 'LATE',
+          groupId: ['g1', 'g2'],
+          teacherId: [10003],
+          courseId: ['c1'],
+          receivedById: [10002],
+          online: true,
+          source: 'ONLINE',
+          status: 'REVERSED',
+        }),
+      );
+      const cells = await rowsOf(buffer);
+      expect(cells(2)[0]).toBe(
+        'Filtrlar: Qidiruv: Ism; Usul: Click; Nimaga ketdi: Eski qarz; Guruh: A1-01, B1-02; Ustoz: Ism Bir; Kurs: Nemis tili A1; Kim qabul qildi: Ism Uch, Onlayn; Manba: Onlayn avtomatik; Holat: Bekor qilinganlar',
+      );
+      expect(prisma.group.findMany.mock.calls[0][0]).toMatchObject({
+        where: {
+          id: { in: ['g1', 'g2'] },
+          companyId: 1001,
+          branchId: { in: [4] },
+        },
+      });
+      expect(prisma.user.findMany).toHaveBeenCalledTimes(2);
+      expect(prisma.course.findMany.mock.calls[0][0]).toMatchObject({
+        where: { id: { in: ['c1'] }, companyId: 1001 },
+      });
+    });
+
+    it('«Hammasi» and the admin source', async () => {
+      const { buffer } = await service.excel(
+        1001,
+        [4],
+        q({ status: 'ALL', source: 'ADMIN' }),
+      );
+      const cells = await rowsOf(buffer);
+      expect(cells(2)[0]).toBe(
+        'Filtrlar: Manba: Admin kiritgan; Holat: Hammasi',
+      );
     });
   });
 });

@@ -677,6 +677,12 @@
     "CEO",
     "Cashier"
   ],
+  "GET /payments/list/excel": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
   "GET /payments/list/filter-options": [
     "Administrator",
     "Branch Director",
