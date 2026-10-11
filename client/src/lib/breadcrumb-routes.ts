@@ -19,7 +19,6 @@ export const routeLabels: Record<string, string> = {
   payments: "Moliya",
   reports: "Hisobotlar",
   "payment-reports": "To'lov hisobotlari",
-  "student-payments": "O'quvchi to'lovi",
   "departed-students": "Ketgan o'quvchilar",
   graduates: "Bitiruvchilar",
   activity: "Markaz faoliyati",
@@ -50,6 +49,7 @@ export const routeLabels: Record<string, string> = {
   archive: "Arxiv",
   overview: "Umumiy ma'lumotlar",
   pending: "Kutilyotgan to'lovlar",
+  list: "To'lovlar",
   // /payments/debt — qarzdorlik sahifasi (uch bo'lim). Uning eski tablari endi
   // alohida sahifalar: qarz tarixi va kechirilganlar. Muzlatilganlar puli
   // «Qaytariladigan pul» ga ko'chdi (/payments/frozen-balances u yerga yo'naltiradi).

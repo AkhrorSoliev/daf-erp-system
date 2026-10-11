@@ -47,7 +47,7 @@ export function confinedTo(where: unknown, ids: number[]): boolean {
  * Fargona = branch 1 (all real data), Namangan = branch 2 (starts empty).
  */
 /**
- * `getPending` and `getDebtorsForGroup` never read debt ages; this keeps the
+ * `getDebtorsForGroup` never reads debt ages; this keeps the
  * constructor satisfied without dragging the replay into a branch-scope test.
  */
 const debtAgeStub = () =>
@@ -139,19 +139,6 @@ describe('money reads are branch-isolated', () => {
   });
 
   describe('PaymentsDebtorsService', () => {
-    it('pending-students is confined (it returns names, phones, balances)', async () => {
-      let captured: any;
-      const prisma: any = {
-        student: {
-          findMany: jest.fn((a) => ((captured = a.where), Promise.resolve([]))),
-          count: jest.fn().mockResolvedValue(0),
-        },
-      };
-      const service = new PaymentsDebtorsService(prisma, debtAgeStub());
-      await service.getPending(COMPANY, { branchIds: NAMANGAN });
-      expect(confinedTo(captured, NAMANGAN)).toBe(true);
-    });
-
     it('group debtor roster is confined by the GROUP branch', async () => {
       let captured: any;
       const prisma: any = {

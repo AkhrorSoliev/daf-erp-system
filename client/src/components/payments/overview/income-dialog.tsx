@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatNumber } from "@/lib/format-utils";
+import { tashkentNow } from "@/lib/tashkent-time";
+import { paymentsListHref } from "@/components/payments/list/payments-url";
 import { addMonths, monthShort } from "@/components/payments/salary-utils";
 import { PAYMENT_METHOD_LABELS, som } from "./overview-math";
 import type { IncomeAttribution } from "./types";
@@ -41,6 +44,7 @@ export function IncomeDialog({
           <IncomeBreakdown month={month} data={data} byMethod={byMethod} />
         </div>
         <DialogFooter className="border-t px-6 py-4">
+          <AllPaymentsButton month={month} />
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Yopish
           </Button>
@@ -59,6 +63,20 @@ export function incomeSummary(data: IncomeAttribution): string {
   ].join(" · ");
 }
 
+/** The three parts' colours (the dialog's bar and dots, the To'lovlar card's chips). */
+export const INCOME_PART_COLOUR = { current: "bg-green-500", advance: "bg-sky-500", late: "bg-amber-500" } as const;
+
+/** The three-colour bar; a part that is 0 is not drawn. */
+export function IncomeBar({ parts }: { parts: { key: string; amount: number; colour: string }[] }) {
+  return (
+    <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+      {parts.filter((p) => p.amount > 0).map((p) => (
+        <div key={p.key} className={p.colour} style={{ flexGrow: p.amount }} />
+      ))}
+    </div>
+  );
+}
+
 /**
  * The dialog's body: a bar in three colours, then the parts. A part that is 0
  * is not drawn. The parts are the server's and add up to `total` (ADR-0067).
@@ -69,21 +87,21 @@ export function IncomeBreakdown({ month, data, byMethod }: { month: string; data
       key: "current",
       label: `${monthShort(month)} oyi to'lovi`,
       amount: data.currentMonth,
-      colour: "bg-green-500",
+      colour: INCOME_PART_COLOUR.current,
       sub: null as string | null,
     },
     {
       key: "advance",
       label: `${monthShort(addMonths(month, 1))} uchun oldindan`,
       amount: data.advance ?? 0,
-      colour: "bg-sky-500",
+      colour: INCOME_PART_COLOUR.advance,
       sub: data.advanceStudents != null ? `${formatNumber(data.advanceStudents)} o'quvchining balansida turibdi` : null,
     },
     {
       key: "late",
       label: "Eski qarzlar uchun",
       amount: data.lateTotal,
-      colour: "bg-amber-500",
+      colour: INCOME_PART_COLOUR.late,
       sub:
         data.latePaymentCount != null && data.lateStudentCount != null
           ? `${formatNumber(data.latePaymentCount)} ta to'lov, ${formatNumber(data.lateStudentCount)} o'quvchi`
@@ -93,11 +111,7 @@ export function IncomeBreakdown({ month, data, byMethod }: { month: string; data
 
   return (
     <div className="space-y-4">
-      <div className="flex h-3 overflow-hidden rounded-full bg-muted">
-        {parts.map((p) => (
-          <div key={p.key} className={p.colour} style={{ flexGrow: p.amount }} />
-        ))}
-      </div>
+      <IncomeBar parts={parts} />
       <ul className="space-y-3">
         {parts.map((p) => (
           <li key={p.key} className="space-y-1">
@@ -135,5 +149,14 @@ export function IncomeBreakdown({ month, data, byMethod }: { month: string; data
         </div>
       )}
     </div>
+  );
+}
+
+/** The footer's «Barcha to'lovlar»: the month's payments list. */
+export function AllPaymentsButton({ month }: { month: string }) {
+  return (
+    <Button asChild variant="outline">
+      <Link href={paymentsListHref(month, tashkentNow().dateStr.slice(0, 7))}>Barcha to&apos;lovlar</Link>
+    </Button>
   );
 }

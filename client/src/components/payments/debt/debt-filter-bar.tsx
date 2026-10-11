@@ -30,7 +30,13 @@ const SORT_OPTIONS = [
  * to 1 — pass a stable callback. Only a URL change from outside (a redirect, the
  * back button) resets the box: its own write coming back keeps what was typed since.
  */
-export function UrlSearchBox({ value, onSearch, label }: { value: string; onSearch: (search: string) => void; label: string }) {
+export function UrlSearchBox({ value, onSearch, label, placeholder = "Ism, telefon yoki ID", className = "sm:w-72" }: {
+  value: string;
+  onSearch: (search: string) => void;
+  label: string;
+  placeholder?: string;
+  className?: string;
+}) {
   const [search, setSearch] = useState(value);
   const [urlSearch, setUrlSearch] = useState(value);
   const [written, setWritten] = useState(value);
@@ -49,9 +55,9 @@ export function UrlSearchBox({ value, onSearch, label }: { value: string; onSear
     return () => clearTimeout(t);
   }, [search, value, onSearch]);
   return (
-    <div className="relative w-full sm:w-72">
+    <div className={`relative w-full ${className}`}>
       <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ism, telefon yoki ID" spellCheck={false} aria-label={label} className="pl-8" />
+      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={placeholder} spellCheck={false} aria-label={label} className="pl-8" />
     </div>
   );
 }

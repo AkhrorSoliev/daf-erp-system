@@ -101,15 +101,9 @@ export const INTENTIONAL_ACCESS_CHANGES: Record<string, AccessChange> = {
     remove: ['Administrator'],
     reason: NO_SCREEN,
   },
-  'GET /reports/student-payments': {
-    remove: ['Administrator', 'Cashier'],
-    reason:
-      "Only the «O'quvchi to'lovi» report calls it; its menu entry is CEO/BD only.",
-  },
   'GET /reports/student-payments/filter-options': {
     remove: ['Administrator', 'Cashier'],
-    reason:
-      "Called by the «O'quvchi to'lovi» and «Ketgan o'quvchilar» reports only, both CEO/BD.",
+    reason: "Called by the «Ketgan o'quvchilar» report only, which is CEO/BD.",
   },
   'GET /transactions': { remove: ['Administrator'], reason: NO_SCREEN },
   'GET /transactions/teacher/:teacherId': {

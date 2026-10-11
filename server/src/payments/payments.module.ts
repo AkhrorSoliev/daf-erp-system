@@ -8,6 +8,8 @@ import { PaymentsController } from './payments.controller';
 import { PaymentEventsListener } from './payment-events.listener';
 import { DebtListController } from './debt/debt-list.controller';
 import { DebtListService } from './debt/debt-list.service';
+import { PaymentsListController } from './list/payments-list.controller';
+import { PaymentsListService } from './list/payments-list.service';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { BillingModule } from '../billing/billing.module';
 import { SmsModule } from '../sms/sms.module';
@@ -24,7 +26,7 @@ import { StatementsModule } from '../statements/statements.module';
     PaymentPromisesModule,
     StatementsModule,
   ],
-  controllers: [PaymentsController, DebtListController],
+  controllers: [PaymentsListController, PaymentsController, DebtListController],
   providers: [
     PaymentsService,
     PaymentsWriteService,
@@ -33,6 +35,7 @@ import { StatementsModule } from '../statements/statements.module';
     PaymentsPreviewService,
     PaymentEventsListener,
     DebtListService,
+    PaymentsListService,
   ],
   exports: [PaymentsService, PaymentsDebtorsService],
 })

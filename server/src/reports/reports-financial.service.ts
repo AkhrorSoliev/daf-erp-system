@@ -3,6 +3,10 @@ import { Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolvePeriod } from '../common/finance/period-helpers';
 import {
+  attributeIncome,
+  loadAttributionRows,
+} from '../common/finance/income-attribution';
+import {
   loadFrozenMonthlyCharges,
   monthlyPerLessonKeyForLesson,
   periodsInRange,
@@ -497,46 +501,10 @@ export class ReportsFinancialService {
   }
 
   /**
-   * Income composition for a period: how the cash received in [start, end]
-   * splits into money for the period's OWN month(s), money paid AHEAD for the
-   * next month, and LATE payments that settled debt carried in from earlier
-   * months — broken down by WHICH earlier month (ADR-0067). It is the
-   * «Qayerdan keldi» dialog on /payments/overview and the income lines of the
-   * 21:00 report and «💰 Moliyaviy xulosa».
-   *
-   * Definition (balance/debt-based FIFO, chosen by the CEO): a payment is
-   * "late" only to the extent it reduced a NEGATIVE student balance at the
-   * instant it landed. The debt it cleared is aged OLDEST-FIRST across the
-   * months in which those debit rows actually hit the balance (their
-   * `createdAt` Tashkent month). Whatever a tallied payment does beyond
-   * clearing a pre-period debt is the period's own money, in one of two parts:
-   *  - `currentMonth` — it settled a charge of the period: a debt of the
-   *    period's months, or, standing on the balance, a debit dated INSIDE the
-   *    period spent it (a mid-month join);
-   *  - `advance` — it still stands on the balance at the period end, or a
-   *    debit AFTER the period end spent it (the next month's charge on the
-   *    1st, when a closed month is viewed later).
-   *
-   * Reconstructed from the append-only ledger by replaying each payer's
-   * EFFECTIVE ledger: rows still in force (`reversedAt IS NULL AND
-   * reversedTransactionId IS NULL`). A reversed row and its reversal net to
-   * zero, so dropping both keeps the running balance exactly equal to
-   * `Student.balance` (same invariant `getReconciliation` relies on). Two FIFO
-   * queues per student: unsettled debit fragments, each tagged by its Tashkent
-   * month, and standing credit fragments, each marked in scope or not (in
-   * scope = the leftover of a COMPLETED PAYMENT inside the period and branch).
-   * A credit consumes the debt queue oldest first; a debit consumes the credit
-   * queue oldest first — so an older out-of-scope credit (an earlier payment,
-   * an adjustment, an initial balance) is spent before this period's advance.
-   * A tallied payment's FULL amount lands in exactly one of the three parts,
-   * and moving advance into `currentMonth` keeps the sum, so `total =
-   * currentMonth + advance + lateTotal` is exactly the period's tallied
-   * payments (the Tushumlar figure).
-   *
-   * Debt aging is company-wide (a student's balance isn't cleanly
-   * branch-scoped, same stance as `getMonthlyDebtRecovery`), but the TALLIED
-   * payments honor `branchId` so the total still reconciles with a
-   * branch-filtered card in the common (single-branch-per-student) case.
+   * Income composition for a period: the period's own month(s), paid ahead,
+   * and late payments by the month of the debt they settled (ADR-0067).
+   * The replay is `attributeIncome` (common/finance/income-attribution.ts);
+   * see its header.
    */
   async getIncomeMonthAttribution(
     companyId: number,
@@ -573,8 +541,6 @@ export class ReportsFinancialService {
     const branchIds = query.branchIds ?? null;
     const period = resolvePeriod(query.startDate, query.endDate);
     const boundaryKey = tashkentMonthKey(period.start);
-    const startMs = period.start.getTime();
-    const endMs = period.endTs.getTime();
 
     // The "current" bucket spans every month INSIDE the selected range (late is
     // strictly the months BEFORE it). Label single-month ranges "Iyun 2026" and
@@ -614,182 +580,39 @@ export class ReportsFinancialService {
       collectionPct: lessonsValue > 0 ? 0 : null,
     };
 
-    // Only students who received a COMPLETED payment in the period+branch need
-    // their ledger replayed — everyone else contributes nothing to this window.
-    const periodPayers = await this.prisma.payment.groupBy({
-      by: ['studentId'],
-      where: {
-        companyId,
-        status: 'COMPLETED',
-        createdAt: { gte: period.start, lte: period.endTs },
-        ...branchIdWhere(branchIds),
-      },
-    });
-    const payerIds = periodPayers
-      .map((p) => p.studentId)
-      .filter((id): id is number => id != null);
+    const { payerIds, rows } = await loadAttributionRows(
+      this.prisma,
+      companyId,
+      period,
+      branchIds,
+    );
     if (payerIds.length === 0) return empty;
+    const a = attributeIncome(rows, period, branchIds);
 
-    // Effective ledger for every payer, chronological. Reversed originals AND
-    // their reversal rows are both excluded so the replay balance stays equal
-    // to Student.balance. `id` is only a same-timestamp tiebreak.
-    const rows = await this.prisma.transaction.findMany({
-      where: {
-        companyId,
-        studentId: { in: payerIds },
-        reversedAt: null,
-        reversedTransactionId: null,
-      },
-      select: {
-        studentId: true,
-        type: true,
-        amount: true,
-        branchId: true,
-        createdAt: true,
-      },
-      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-    });
-
-    // Bucket per student, preserving the chronological order above.
-    const byStudent = new Map<number, typeof rows>();
-    for (const r of rows) {
-      if (r.studentId == null) continue;
-      const list = byStudent.get(r.studentId);
-      if (list) list.push(r);
-      else byStudent.set(r.studentId, [r]);
-    }
-
-    const lateByMonth = new Map<string, number>();
-    let currentMonth = 0;
-    let advance = 0;
-    let advanceStudents = 0;
-    let paymentCount = 0;
-    let latePaymentCount = 0;
-    const lateStudents = new Set<number>();
-
-    for (const [studentId, list] of byStudent) {
-      // Running ledger state per student:
-      //  • `debts` — FIFO fragments of OUTSTANDING debt (oldest at `debtHead`).
-      //  • `credits` — FIFO fragments of the standing POSITIVE balance (oldest
-      //    at `creditHead`); `inScope` marks a tallied payment's leftover.
-      // Invariant after each row: standing credit ⟹ no outstanding debt, and
-      // the debt fragments sum to max(0, -runningBalance). A debit the standing
-      // balance covers never becomes a phantom obligation, so an on-time
-      // prepaid payment (pay up front, the deduction follows) is never "late".
-      const debts: Array<{ monthKey: string; remaining: number }> = [];
-      let debtHead = 0;
-      const credits: Array<{ amount: number; inScope: boolean }> = [];
-      let creditHead = 0;
-      let studentAdvance = 0;
-
-      for (const r of list) {
-        if (r.amount === 0) continue; // LESSON_CONSUMPTION — no balance movement.
-        const ts = r.createdAt.getTime();
-        const inPeriod = ts >= startMs && ts <= endMs;
-
-        if (r.amount < 0) {
-          // A debit spends the standing balance oldest first; only the
-          // uncovered remainder becomes an obligation tagged by its month.
-          let debit = -r.amount;
-          while (debit > 0 && creditHead < credits.length) {
-            const frag = credits[creditHead];
-            const taken = Math.min(debit, frag.amount);
-            frag.amount -= taken;
-            debit -= taken;
-            // This period's advance spent on a debit of the period paid the
-            // period (a mid-month join). Spent after the period end it paid
-            // the next month, and it stays advance.
-            if (frag.inScope && inPeriod) {
-              studentAdvance -= taken;
-              currentMonth += taken;
-            }
-            if (frag.amount === 0) creditHead++;
-          }
-          if (debit > 0) {
-            debts.push({
-              monthKey: tashkentMonthKey(r.createdAt),
-              remaining: debit,
-            });
-          }
-          continue;
-        }
-
-        // A credit settles the oldest outstanding obligations first. Only an
-        // in-period, in-branch COMPLETED PAYMENT is tallied; every other credit
-        // (out-of-period payment, positive adjustment, initial balance) still
-        // consumes the queue so the debt aging stays correct.
-        let credit = r.amount;
-        const attribute =
-          r.type === 'PAYMENT' &&
-          inPeriod &&
-          // In-memory leg of the same scope: a credit from ANOTHER branch still
-          // ages this student's debt, but is not this branch's income.
-          (branchIds === null ||
-            (r.branchId != null && branchIds.includes(r.branchId)));
-        let settledOldDebt = false;
-
-        while (credit > 0 && debtHead < debts.length) {
-          const frag = debts[debtHead];
-          const taken = Math.min(credit, frag.remaining);
-          frag.remaining -= taken;
-          credit -= taken;
-          if (attribute) {
-            if (frag.monthKey < boundaryKey) {
-              lateByMonth.set(
-                frag.monthKey,
-                (lateByMonth.get(frag.monthKey) ?? 0) + taken,
-              );
-              settledOldDebt = true;
-            } else {
-              currentMonth += taken;
-            }
-          }
-          if (frag.remaining === 0) debtHead++;
-        }
-        if (attribute) {
-          paymentCount++;
-          if (settledOldDebt) {
-            latePaymentCount++;
-            lateStudents.add(studentId);
-          }
-        }
-        // Leftover credit beyond all outstanding debt stands on the balance and
-        // absorbs FUTURE debits (else next month's deduction would look like a
-        // phantom debt the following payment settles "late"). A tallied
-        // payment's leftover is advance until a debit of the period spends it.
-        if (credit > 0) {
-          if (attribute) studentAdvance += credit;
-          credits.push({ amount: credit, inScope: attribute });
-        }
-      }
-      advance += studentAdvance;
-      if (studentAdvance > 0) advanceStudents++;
-    }
-
-    const late = Array.from(lateByMonth.entries())
+    const late = [...a.lateByMonth.entries()]
       .map(([monthKey, amount]) => ({
         monthKey,
         label: monthLabel(monthKey),
         amount,
       }))
       // Most recent prior month first (e.g. May before April before March).
-      .sort((a, b) => (a.monthKey < b.monthKey ? 1 : -1));
+      .sort((x, y) => (x.monthKey < y.monthKey ? 1 : -1));
     const lateTotal = late.reduce((s, m) => s + m.amount, 0);
 
     return {
       period: { start: period.startStr, end: period.endStr },
       monthKey: boundaryKey,
       currentLabel,
-      total: currentMonth + advance + lateTotal,
-      currentMonth,
-      advance,
-      advanceStudents,
+      total: a.currentMonth + a.advance + lateTotal,
+      currentMonth: a.currentMonth,
+      advance: a.advance,
+      advanceStudents: a.advanceStudents,
       lateTotal,
       late,
       payerCount: payerIds.length,
-      paymentCount,
-      latePaymentCount,
-      lateStudentCount: lateStudents.size,
+      paymentCount: a.paymentCount,
+      latePaymentCount: a.latePaymentCount,
+      lateStudentCount: a.lateStudentCount,
       lessonsValue,
       // "N% yig'ildi" with a MEANING: of the lessons actually HELD in this
       // window, how much did the period's OWN cash cover? Both sides belong to
@@ -806,7 +629,7 @@ export class ReportsFinancialService {
       // was simply 11% too small every month.
       collectionPct:
         lessonsValue > 0
-          ? Math.round(((currentMonth + advance) / lessonsValue) * 100)
+          ? Math.round(((a.currentMonth + a.advance) / lessonsValue) * 100)
           : null,
     };
   }

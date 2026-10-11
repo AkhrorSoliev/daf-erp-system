@@ -154,6 +154,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0085](0085-dialog-ovozi-gemini-3-8-har-obrazga-ovoz.md) | Dialog ovozi Gemini 3.8 da, har obrazning CEO tanlagan o'z ovozi; unitlar navbat bilan o'tkaziladi, navbati kelmagan unitning 3.1 yozuvi qoladi | Qabul qilindi | 2026-10-11 |
 | [0086](0086-topshiriq-fayllari.md) | Topshiriq fayllari yopiq bucket'da, 10 daqiqalik havola; yuklash server orqali (tur baytlardan), CORS'siz; ovoz 3 daqiqa; «Rasm bilan tasdiqlansin» — tekshiruvga faqat ijrochining yangi rasmi bilan; Telegram javobidagi fayl va rasm | Qabul qilindi | 2026-10-11 |
 | [0087](0087-ruxsatlar-sahifasi.md) | «Ruxsatlar» sahifasi: CEO rol imkoniyatlarini o'zgartiradi (faqat CEO, `@CeoOnly()`, imkoniyat emas); bazada faqat farq saqlanadi; texnik qulf olti sabab bilan server va ekranda bir xil; bog'liqlik bitta umumiy faylda; har saqlash tarixda; avans faqat «Oylik va avans to'lash» bilan | Qabul qilindi | 2026-10-11 |
+| [0088](0088-tolovlar-sahifasi-tolov-boyicha-qismlar.md) | To'lovlar sahifasi: «Nimaga ketdi» kassa dvigatelining o'zidan har to'lov bo'yicha (`attributeIncome`, ikkinchi hisob yo'q); guruh — to'lov kunidagi; kvitansiya raqami to'lov yozilganda, pul tranzaksiyasidan tashqarida; bekor qilish sababi majburiy; tuzatish `correctsPaymentId` ustuni bilan bog'lanadi | Qabul qilindi | 2026-10-11 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

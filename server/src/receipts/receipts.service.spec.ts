@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { ReceiptsService } from './receipts.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { tashkentMonthKey } from '../common/date/tashkent';
 
 describe('ReceiptsService', () => {
   let service: ReceiptsService;
@@ -43,8 +44,16 @@ describe('ReceiptsService', () => {
 
   beforeEach(async () => {
     tx = {
-      payment: { findFirst: jest.fn(), update: jest.fn() },
-      refund: { findFirst: jest.fn(), update: jest.fn() },
+      payment: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
+      },
+      refund: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
+      },
     };
     prisma = {
       payment: { findFirst: jest.fn() },
@@ -94,6 +103,10 @@ describe('ReceiptsService', () => {
   describe('generatePaymentPdf', () => {
     it('returns a Buffer with valid PDF magic bytes', async () => {
       prisma.payment.findFirst.mockResolvedValue(basePayment);
+      tx.payment.findUnique.mockResolvedValue({
+        receiptCode: null,
+        createdAt: basePayment.createdAt,
+      });
       tx.payment.findFirst.mockResolvedValue(null); // no prior receiptCode → first allocation
       tx.payment.update.mockResolvedValue({});
 
@@ -105,13 +118,17 @@ describe('ReceiptsService', () => {
 
     it('lazy-allocates a receiptCode in R-YYYY-NNNNN format on first render', async () => {
       prisma.payment.findFirst.mockResolvedValue(basePayment);
+      tx.payment.findUnique.mockResolvedValue({
+        receiptCode: null,
+        createdAt: basePayment.createdAt,
+      });
       tx.payment.findFirst.mockResolvedValue(null);
       tx.payment.update.mockResolvedValue({});
 
       await service.generatePaymentPdf('pay-1');
 
       const updateCall = tx.payment.update.mock.calls[0][0];
-      const year = new Date().getFullYear();
+      const year = 2026; // Tashkent year of basePayment.createdAt
       expect(updateCall.where).toEqual({ id: 'pay-1' });
       expect(updateCall.data.receiptCode).toBe(`R-${year}-00001`);
     });
@@ -130,7 +147,11 @@ describe('ReceiptsService', () => {
 
     it('increments past the highest existing R-YYYY-NNNNN', async () => {
       prisma.payment.findFirst.mockResolvedValue(basePayment);
-      const year = new Date().getFullYear();
+      tx.payment.findUnique.mockResolvedValue({
+        receiptCode: null,
+        createdAt: basePayment.createdAt,
+      });
+      const year = 2026;
       tx.payment.findFirst.mockResolvedValue({
         receiptCode: `R-${year}-00099`,
       });
@@ -174,6 +195,7 @@ describe('ReceiptsService', () => {
 
     it('generates a PDF and allocates Q-YYYY-NNNNN code', async () => {
       prisma.refund.findFirst.mockResolvedValue(baseRefund);
+      tx.refund.findUnique.mockResolvedValue({ receiptCode: null });
       tx.refund.findFirst.mockResolvedValue(null);
       tx.refund.update.mockResolvedValue({});
 
@@ -181,7 +203,7 @@ describe('ReceiptsService', () => {
 
       expect(Buffer.isBuffer(buf)).toBe(true);
       expect(buf.slice(0, 4).toString()).toBe('%PDF');
-      const year = new Date().getFullYear();
+      const year = tashkentMonthKey(new Date()).slice(0, 4);
       expect(tx.refund.update.mock.calls[0][0].data.receiptCode).toBe(
         `Q-${year}-00001`,
       );

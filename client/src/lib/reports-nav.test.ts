@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canForRoles } from "@/test-support/server-catalog";
-import { canEnterReports, canOpenReportPath } from "./reports-nav";
+import { canEnterReports, canOpenReportPath, reportsNavSections } from "./reports-nav";
 
 describe("hisobotlar bo'limiga kirish", () => {
   it("CEO va filial direktori hamma hisobotni ochadi", () => {
@@ -17,6 +17,12 @@ describe("hisobotlar bo'limiga kirish", () => {
     expect(canOpenReportPath(canForRoles([3]), "/reports/payment-reports")).toBe(true);
     expect(canOpenReportPath(canForRoles([3]), "/reports/student-payments")).toBe(false);
     expect(canOpenReportPath(canForRoles([3]), "/reports/departed-students")).toBe(false);
+  });
+
+  it("«Moliyaviy hisobotlar»da faqat «To'lov hisobotlari» bor; «O'quvchi to'lovi» Moliya bo'limiga ko'chdi", () => {
+    const section = reportsNavSections.find((s) => s.title === "Moliyaviy hisobotlar");
+    expect(section?.items.map((i) => i.title)).toEqual(["To'lov hisobotlari"]);
+    expect(reportsNavSections.flatMap((s) => s.items).some((i) => i.url === "/reports/student-payments")).toBe(false);
   });
 
   it("menyuda yo'q yangi yo'l adminga o'z-o'zidan ochilmaydi", () => {

@@ -4,7 +4,6 @@ import {
   ReportBranchIds,
   branchIdWhere,
   resolveCallerReportBranchIds,
-  studentBranchWhere,
 } from '../common/finance/report-branch-scope';
 import {
   EnrollmentStatus,
@@ -422,57 +421,6 @@ export class PaymentsDebtorsService {
     ]);
 
     return { split, openPromises, overduePromises };
-  }
-
-  async getPending(
-    companyId: number,
-    query: { branchIds: ReportBranchIds; page?: number; pageSize?: number },
-  ) {
-    const page = query.page ?? 1;
-    const pageSize = query.pageSize ?? 10;
-
-    const where: Prisma.StudentWhereInput = {
-      companyId,
-      deletedAt: null,
-      status: StudentStatus.ACTIVE,
-      balance: { lt: 0 },
-      enrollments: {
-        some: { status: 'ACTIVE', deletedAt: null },
-      },
-      // Resolved scope, not a raw parameter — this list returns names, phones
-      // and balances of students who owe money.
-      ...studentBranchWhere(query.branchIds),
-    };
-
-    const [data, total] = await Promise.all([
-      this.prisma.student.findMany({
-        where,
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          balance: true,
-          enrollments: {
-            where: { status: 'ACTIVE', deletedAt: null },
-            select: {
-              group: {
-                select: {
-                  name: true,
-                  course: { select: { name: true, price: true } },
-                },
-              },
-            },
-          },
-        },
-        orderBy: { balance: 'asc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      this.prisma.student.count({ where }),
-    ]);
-
-    return { data, total, page, pageSize };
   }
 
   /**

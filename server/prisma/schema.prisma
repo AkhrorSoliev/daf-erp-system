@@ -2511,6 +2511,10 @@ model Payment {
   branchId           Int?
   companyId          Int
   receiptCode        String?       @unique
+  // The payment this one corrects (reverse + re-post, spec B4 §4.8). Set on the NEW payment.
+  correctsPaymentId  String?       @unique
+  correctsPayment    Payment?      @relation("PaymentCorrection", fields: [correctsPaymentId], references: [id], onDelete: SetNull)
+  correctedBy        Payment?      @relation("PaymentCorrection")
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -2584,6 +2588,7 @@ model Transaction {
   @@index([contractId])
   @@index([expenseId])
   @@index([reversedTransactionId])
+  @@index([paymentId])
 }
 
 model Contract {

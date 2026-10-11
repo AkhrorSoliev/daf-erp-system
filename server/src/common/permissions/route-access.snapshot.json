@@ -677,11 +677,33 @@
     "CEO",
     "Cashier"
   ],
-  "GET /payments/pending-students": [
+  "GET /payments/list/excel": [
     "Administrator",
     "Branch Director",
     "CEO",
     "Cashier"
+  ],
+  "GET /payments/list/filter-options": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/list/rows": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/list/rows/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/list/summary": [
+    "Branch Director",
+    "CEO"
   ],
   "GET /payments/preview": [
     "Administrator",
@@ -918,12 +940,6 @@
     "Administrator",
     "Branch Director",
     "CEO"
-  ],
-  "GET /reports/student-payments": [
-    "Administrator",
-    "Branch Director",
-    "CEO",
-    "Cashier"
   ],
   "GET /reports/student-payments/filter-options": [
     "Administrator",

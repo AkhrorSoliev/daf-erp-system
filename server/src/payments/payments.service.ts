@@ -117,12 +117,6 @@ export class PaymentsService {
   ) {
     return this.debtors.getDebtorSummary(companyId, query);
   }
-  getPending(
-    companyId: number,
-    query: { branchIds: ReportBranchIds; page?: number; pageSize?: number },
-  ) {
-    return this.debtors.getPending(companyId, query);
-  }
   getDebtorsForGroup(
     groupId: string,
     companyId: number,

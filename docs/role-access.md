@@ -83,6 +83,21 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 - **Branch boundary (ADR-0081):** every id-addressed read or write checks the record's branch against the caller (`mainBranch ∪ UserBranch`; the CEO spans all). `server/src/common/auth/branch-route-policy.ts` lists each route's confinement; its UNREVIEWED backlog is 7 routes, all behind CEO-only capabilities.
 - Full details: see `docs/financial-system.md`
 
+### Payments page (To'lovlar, `/payments/list`)
+
+Replaces the old «O'quvchi to'lovi» report and the «Kutilyotgan to'lovlar» page (ADR-0088; both addresses redirect). Everyone below the CEO sees only their own branch (`@BranchScope()`, the header switcher); an empty scope reads nothing.
+
+| Action | CEO | Branch Director | Administrator | Teacher | Cashier |
+|--------|-----|-----------------|---------------|---------|---------|
+| Open the page, filters, «Tanlangan» line, table, drawer, Excel (`payments.view`) | Yes | Yes | Yes | No | Yes |
+| Summary card — period total, three parts, methods (`reports.finance`, `GET /payments/list/summary`) | Yes | Yes | No (no card) | No | No (no card) |
+| Record payment («To'lov qayd qilish», `payments.create`) | Yes | Yes | Yes | No | Yes |
+| Correct a payment («Tuzatish», `payments.correct`; non-CEO within 72 hours) | Yes | Yes | Yes | No | No (button hidden) |
+| Cancel a payment («Bekor qilish», `money.undo`; a reason is required, also on the server) | Yes | No | No | No | No |
+
+- **Frontend**: `useCan("reports.finance")` decides whether the card is drawn and requested; `useCan("payments.correct")` and `useCan("money.undo")` show the drawer buttons. A role that may not act never sees the button.
+- Administrator and Cashier still see every row's «Nimaga ketdi» and its filter (CEO decision 11.10.2026); only the money card is withheld.
+
 ### Debt page (Qarzdorlik, `/payments/debt`)
 
 Every staff role except Teacher sees the same page: three tabs (Shu oy / Eski qarz / O'qimayotganlar), the student drawer and the Excel (`/payments/debt/*`, ADR-0072), and the two linked pages (debt history, write-off archive); frozen balances moved to «Qaytariladigan pul» (ADR-0077). «Markaz qoplagani» moved to the salary page and is CEO/BD (`GET /salary/monthly/center-topup`). Everyone below the CEO sees their own branch. The actions differ by role:
@@ -181,7 +196,7 @@ The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-00
 |--------|-----|-----------------|---------------|---------|---------|
 | View reports | Yes | Yes | No | No | No |
 
-Ketgan o'quvchilar, davomat, markaz faoliyati va o'quvchi to'lovlari hisobotlari serverda ham faqat CEO va filial direktoriga (ADR-0079; ilgari menyuda yashirin, serverda adminga ochiq edi).
+Ketgan o'quvchilar, davomat va markaz faoliyati hisobotlari serverda ham faqat CEO va filial direktoriga (ADR-0079; ilgari menyuda yashirin, serverda adminga ochiq edi). «O'quvchi to'lovi» hisoboti olib tashlandi: uning o'rniga Moliya → «To'lovlar» (yuqoridagi bo'lim, ADR-0088).
 
 ### Settings — General (Company Info)
 

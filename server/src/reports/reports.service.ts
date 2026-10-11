@@ -701,22 +701,6 @@ export class ReportsService {
   }
 
   // Student payments
-  getStudentPaymentsReport(
-    companyId: number,
-    params: {
-      branchId?: number;
-      groupIds?: string[];
-      teacherIds?: number[];
-      methods?: ('CASH' | 'PAYME' | 'CLICK' | 'UZUM' | 'TRANSFER')[];
-      courseId?: string[];
-      startDate?: string;
-      endDate?: string;
-      page?: number;
-      pageSize?: number;
-    },
-  ) {
-    return this.studentPayments.getStudentPaymentsReport(companyId, params);
-  }
   getStudentPaymentsFilterOptions(companyId: number, scope: ReportBranchIds) {
     return this.studentPayments.getStudentPaymentsFilterOptions(
       companyId,

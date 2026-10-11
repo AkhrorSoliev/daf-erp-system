@@ -1,10 +1,11 @@
-import { Suspense } from "react";
-import { StudentPaymentsClient } from "@/components/reports/student-payments/student-payments-client";
+import { redirect } from "next/navigation";
+import { legacyStudentPaymentsRedirect } from "@/components/payments/list/payments-url";
 
-export default function StudentPaymentsPage() {
-  return (
-    <Suspense fallback={null}>
-      <StudentPaymentsClient />
-    </Suspense>
-  );
+// «O'quvchi to'lovi» moved to Moliya → «To'lovlar» (spec B4 §6.2).
+export default async function StudentPaymentsRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  redirect(legacyStudentPaymentsRedirect(await searchParams));
 }

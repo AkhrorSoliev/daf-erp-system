@@ -1,15 +1,25 @@
+import 'reflect-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
+import { ReversePaymentDto } from './dto/reverse-payment.dto';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
+
+// Same options as the global ValidationPipe in main.ts.
+async function reverseErrors(body: object) {
+  const dto = plainToInstance(ReversePaymentDto, body);
+  return validate(dto, { whitelist: true, forbidNonWhitelisted: true });
+}
 
 const FOUR_ROLES = ['Administrator', 'Branch Director', 'CEO', 'Cashier'];
 
 describe('PaymentsController — route access', () => {
   // Recording a payment, and the live projection the record dialog shows.
   const CREATES = ['create', 'attachExternal', 'preview'] as const;
-  // The payments list, one payment, and the students nobody has paid yet.
-  const VIEWS = ['findAll', 'findOne', 'getPending'] as const;
+  // The payments list and one payment.
+  const VIEWS = ['findAll', 'findOne'] as const;
   // The debt lists: debtors and a group's debtors.
   const DEBTS = ['getDebtors', 'getDebtorsForGroup'] as const;
 
@@ -92,6 +102,76 @@ describe('PaymentsController — route access', () => {
   });
 });
 
+describe('ReversePaymentDto — the reason is required', () => {
+  const REQUIRED = 'Bekor qilish sababini yozing';
+  const TOO_LONG = 'Sabab 500 belgidan oshmasin';
+
+  // Every message the 400 would carry, flattened.
+  const messagesOf = async (body: object) =>
+    (await reverseErrors(body)).flatMap((e) =>
+      Object.values(e.constraints ?? {}),
+    );
+
+  it('refuses a missing reason with the Uzbek message only', async () => {
+    const msgs = await messagesOf({});
+    expect(msgs.length).toBeGreaterThan(0);
+    expect(new Set(msgs)).toEqual(new Set([REQUIRED]));
+  });
+
+  it('refuses a blank reason, once trimmed, with the Uzbek message only', async () => {
+    const msgs = await messagesOf({ reason: '   ' });
+    expect(msgs.length).toBeGreaterThan(0);
+    expect(new Set(msgs)).toEqual(new Set([REQUIRED]));
+  });
+
+  it('refuses a non-string reason with the Uzbek message only', async () => {
+    const msgs = await messagesOf({ reason: 42 });
+    expect(msgs.length).toBeGreaterThan(0);
+    expect(new Set(msgs)).toEqual(new Set([REQUIRED]));
+  });
+
+  it('accepts a reason and trims it', async () => {
+    const dto = plainToInstance(ReversePaymentDto, { reason: ' xato ' });
+    expect(await reverseErrors({ reason: ' xato ' })).toEqual([]);
+    expect(dto.reason).toBe('xato');
+  });
+
+  it('accepts a reason of exactly 500 characters', async () => {
+    expect(await reverseErrors({ reason: 'x'.repeat(500) })).toEqual([]);
+  });
+
+  it('refuses a reason longer than 500 characters with the Uzbek message', async () => {
+    const errors = await reverseErrors({ reason: 'x'.repeat(501) });
+    expect(errors.map((e) => e.property)).toEqual(['reason']);
+    expect(await messagesOf({ reason: 'x'.repeat(501) })).toEqual([TOO_LONG]);
+  });
+});
+
+describe('PaymentsController — reverse() delegation', () => {
+  it('passes the body reason, the caller and the company to the service', async () => {
+    const reverse = jest.fn().mockResolvedValue({});
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [PaymentsController],
+      providers: [{ provide: PaymentsService, useValue: { reverse } }],
+    }).compile();
+
+    await module
+      .get(PaymentsController)
+      .reverse(
+        'payment-1',
+        { reason: "Xato to'lov" } as ReversePaymentDto,
+        99,
+        1001,
+      );
+
+    expect(reverse).toHaveBeenCalledWith('payment-1', {
+      reason: "Xato to'lov",
+      performedById: 99,
+      companyId: 1001,
+    });
+  });
+});
+
 describe('PaymentsController — delegation', () => {
   let controller: PaymentsController;
 
@@ -105,7 +185,6 @@ describe('PaymentsController — delegation', () => {
     findByStudent: jest.fn().mockResolvedValue({}),
     getDebtors: jest.fn().mockResolvedValue({}),
     getDebtorSummary: jest.fn().mockResolvedValue({}),
-    getPending: jest.fn().mockResolvedValue({}),
     getDebtorsForGroup: jest.fn().mockResolvedValue({}),
   };
 

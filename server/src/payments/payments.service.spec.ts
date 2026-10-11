@@ -528,7 +528,7 @@ describe('PaymentsService', () => {
       prisma.transaction.count.mockResolvedValue(3); // 3 consumption rows
 
       await expect(service.reverse(paymentId, params)).rejects.toThrow(
-        /sarflangan/,
+        "To'lov allaqachon darslarga sarflangan — bekor qilib bo'lmaydi. Pulni o'quvchiga «Pul qaytarish» orqali qaytaring.",
       );
       expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
       expect(prisma.payment.update).not.toHaveBeenCalled();
@@ -592,6 +592,60 @@ describe('PaymentsService', () => {
 
       await expect(service.reverse(paymentId, params)).rejects.toThrow(
         BadRequestException,
+      );
+    });
+  });
+
+  describe('reverse() — the reason', () => {
+    const paymentId = 'payment-uuid-1';
+    const completed = {
+      id: paymentId,
+      studentId: 10001,
+      amount: 500000,
+      contractId: null,
+      status: PaymentStatus.COMPLETED,
+    };
+
+    beforeEach(() => {
+      prisma.payment.findFirst.mockResolvedValue(completed);
+    });
+
+    it('refuses a human reversal without a reason, before any write', async () => {
+      for (const reason of [undefined, '   ']) {
+        await expect(
+          service.reverse(paymentId, {
+            reason,
+            performedById: 10001,
+            companyId: 1,
+          }),
+        ).rejects.toThrow(
+          new BadRequestException('Bekor qilish sababini yozing'),
+        );
+      }
+      expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it('lets a system reversal (Payme cancel, no user) go ahead without a reason', async () => {
+      await service.reverse(paymentId, {
+        reason: 'Payme CancelTransaction',
+        companyId: 1,
+      });
+
+      expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+        'txn-uuid-1',
+        expect.objectContaining({ reason: 'Payme CancelTransaction' }),
+        prisma,
+      );
+    });
+
+    it('keeps the default reason for a system reversal that names none', async () => {
+      await service.reverse(paymentId, { companyId: 1 });
+
+      expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+        'txn-uuid-1',
+        expect.objectContaining({ reason: "To'lov bekor qilindi" }),
+        prisma,
       );
     });
   });
@@ -720,6 +774,7 @@ describe('PaymentsService', () => {
       await expect(
         service.reverse('payment-uuid-1', {
           performedById: 1,
+          reason: "Xato to'lov",
           companyId: 1001,
         }),
       ).rejects.toMatchObject(concurrent);
@@ -1055,26 +1110,6 @@ describe('PaymentsService', () => {
     });
   });
 
-  describe('getPending()', () => {
-    it('should query students with balance < 0 and active enrollments', async () => {
-      prisma.student.findMany.mockResolvedValue([]);
-      prisma.student.count.mockResolvedValue(0);
-
-      const result = await service.getPending(1001, { branchIds: null });
-
-      const findManyCall = prisma.student.findMany.mock.calls[0][0];
-      expect(findManyCall.where).toEqual(
-        expect.objectContaining({
-          companyId: 1001,
-          deletedAt: null,
-          balance: { lt: 0 },
-          enrollments: { some: { status: 'ACTIVE', deletedAt: null } },
-        }),
-      );
-      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 10 });
-    });
-  });
-
   describe('correctAmount()', () => {
     // A recent, admin-entered cash payment of 5 000 000 — the typo we want
     // to correct down to 400 000.
@@ -1115,6 +1150,20 @@ describe('PaymentsService', () => {
       );
       expect(result).toEqual(
         expect.objectContaining({ reversedPaymentId: 'payment-uuid-1' }),
+      );
+    });
+
+    it('links the re-posted payment to the payment it corrects', async () => {
+      await service.correctAmount('payment-uuid-1', dto, 99, 1001, [
+        'Administrator',
+      ]);
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            correctsPaymentId: 'payment-uuid-1',
+          }),
+        }),
       );
     });
 

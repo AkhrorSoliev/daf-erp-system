@@ -13,6 +13,7 @@ export const searchablePages: SearchablePage[] = [
   { label: "Topshiriqlar", url: "/tasks", keywords: ["task", "topshiriq", "vazifa"] },
   { label: "Dars jadvali", url: "/schedule", keywords: ["schedule", "jadval", "dars"] },
   { label: "Moliya", url: "/payments", keywords: ["payment", "moliya", "tolov", "pul"] },
+  { label: "To'lovlar", url: "/payments/list", keywords: ["to'lovlar", "tolovlar", "kvitansiya", "tushum", "bekor qilingan to'lov"] },
   { label: "Hisobotlar", url: "/reports", keywords: ["report", "hisobot", "statistika"] },
   { label: "Sozlamalar", url: "/settings", keywords: ["setting", "sozlama", "config"] },
   { label: "Umumiy sozlamalar", url: "/settings/general", keywords: ["general", "umumiy"] },

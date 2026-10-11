@@ -12,6 +12,7 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CorrectPaymentDto } from './dto/correct-payment.dto';
 import { PaymentQueryDto } from './dto/payment-query.dto';
 import { AttachExternalPaymentDto } from './dto/attach-external.dto';
+import { ReversePaymentDto } from './dto/reverse-payment.dto';
 import { CurrentUser, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { Can } from '../common/permissions/access.decorators';
@@ -41,17 +42,19 @@ export class PaymentsController {
    * Reverse a posted payment. Gated by `money.undo` because it unwinds cash
    * that has already been recorded. Follows the append-only ledger rule: a
    * reversal Transaction is written rather than editing the Payment row.
+   * The reason is required here (spec B4 §5.7); the Payme cancel path calls
+   * the service directly and is not bound by this DTO.
    */
   @Post(':id/reverse')
   @Can('money.undo')
   reverse(
     @Param('id') id: string,
-    @Body('reason') reason: string | undefined,
+    @Body() dto: ReversePaymentDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.paymentsService.reverse(id, {
-      reason,
+      reason: dto.reason,
       performedById: userId,
       companyId,
     });
@@ -179,20 +182,6 @@ export class PaymentsController {
       branchId: query.branchId,
       userId,
       roles,
-    });
-  }
-
-  @Get('pending-students')
-  @Can('payments.view')
-  getPending(
-    @Query() query: PaymentQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() branchIds: ReportBranchIds,
-  ) {
-    return this.paymentsService.getPending(companyId, {
-      branchIds,
-      page: query.page,
-      pageSize: query.pageSize,
     });
   }
 
