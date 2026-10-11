@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, TaskStatus } from '@prisma/client';
-import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import {
@@ -44,7 +43,14 @@ import { addStepTx, deleteStepTx, updateStepTx } from './task-step-writes';
 import { setParticipantsTx, updateFieldsTx } from './task-edit-writes';
 import { TaskOutboxService } from './task-outbox.service';
 import { TASK_EVENTS, toEventTask, type TaskEventTask } from './task-events';
-import { assertMayLinkEntity, createCopiesTx } from './task-create';
+import {
+  assertMayLinkEntity,
+  batchIdFor,
+  copyGroups,
+  createCopiesTx,
+  emitTaskCreated,
+  type PreparedCreate,
+} from './task-create';
 import type { CreateTaskDto } from './dto/create-task.dto';
 import type { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -53,6 +59,7 @@ export { claimSystemTask } from './task-claim';
 export { parseDueInput } from './task-input';
 export { toPolicyPerson } from './task-people';
 export type { TaskEventRow } from './task-select';
+export type { PreparedCreate } from './task-create';
 
 export interface TaskActor {
   userId: number;
@@ -134,7 +141,8 @@ export class TasksService {
     return this.holidays.buildHolidayDateSet(from, to, branchId ?? undefined);
   }
 
-  async create(dto: CreateTaskDto, actor: TaskActor): Promise<TaskDetail[]> {
+  /** The checks and the shape of a new task; a recurring one (`TaskRecurrencesService`) shares them. */
+  async prepareCreate(dto: CreateTaskDto, actor: TaskActor) {
     await assertMayLinkEntity(this.prisma, actor, dto);
     const branchId = await resolveTaskBranchId(this.prisma, {
       companyId: actor.companyId,
@@ -148,19 +156,25 @@ export class TasksService {
       dto.watcherIds ?? [],
       actor,
     );
-    const dueAt = parseDueInput(dto.dueAt);
-    if (dueAt) assertManualDueAt(dueAt, await this.holidaySet(branchId, dueAt));
-
-    const assigneeIdSet = new Set(assignees.map((a) => a.id));
+    const assigneeIds = assignees.map((a) => a.id);
     const watcherIds = watchers
       .map((w) => w.id)
-      .filter((id) => !assigneeIdSet.has(id));
-    const groups =
-      dto.separateCopies && assignees.length > 1
-        ? assignees.map((a) => [a.id])
-        : [assignees.map((a) => a.id)];
-    const batchId = groups.length > 1 ? randomUUID() : null;
+      .filter((id) => !assigneeIds.includes(id));
+    return {
+      branchId,
+      assigneeIds,
+      watcherIds,
+      groups: copyGroups(dto.separateCopies === true, assigneeIds),
+    } satisfies PreparedCreate;
+  }
 
+  async create(dto: CreateTaskDto, actor: TaskActor): Promise<TaskDetail[]> {
+    const { branchId, watcherIds, groups } = await this.prepareCreate(
+      dto,
+      actor,
+    );
+    const dueAt = parseDueInput(dto.dueAt);
+    if (dueAt) assertManualDueAt(dueAt, await this.holidaySet(branchId, dueAt));
     // All copies and their reminder rows commit together: a half-made batch
     // would leave the author with copies that were never assigned.
     const rows = await this.prisma.$transaction(
@@ -173,7 +187,7 @@ export class TasksService {
             authorId: actor.userId,
             dto,
             dueAt,
-            batchId,
+            batchId: batchIdFor(groups),
             watcherIds,
           },
           groups,
@@ -181,24 +195,8 @@ export class TasksService {
         ),
       { maxWait: 10_000, timeout: 15_000 },
     );
-
     // Notifications go out only once the rows are committed.
-    for (const { ids, row } of rows) {
-      this.emitter.emit(TASK_EVENTS.ASSIGNED, {
-        task: this.eventTask(row),
-        actorId: actor.userId,
-        userIds: ids,
-        created: true,
-      });
-      if (watcherIds.length) {
-        this.emitter.emit(TASK_EVENTS.ASSIGNED, {
-          task: this.eventTask(row),
-          actorId: actor.userId,
-          userIds: watcherIds,
-          created: true,
-        });
-      }
-    }
+    emitTaskCreated(this.emitter, rows, actor.userId, watcherIds);
     return rows.map(({ row }) => toTaskDetail(row));
   }
 

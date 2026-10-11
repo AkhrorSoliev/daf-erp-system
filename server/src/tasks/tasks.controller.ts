@@ -14,6 +14,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AnyStaff } from '../common/permissions/access.decorators';
 import { TasksService, type TaskActor } from './tasks.service';
 import { TasksReadService } from './tasks-read.service';
+import { TaskRecurrencesService } from './task-recurrences.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ListTasksDto } from './dto/list-tasks.dto';
@@ -32,6 +33,7 @@ export class TasksController {
   constructor(
     private tasks: TasksService,
     private read: TasksReadService,
+    private recurrences: TaskRecurrencesService,
   ) {}
 
   pickBranch(header: string | undefined): number | null {
@@ -80,7 +82,11 @@ export class TasksController {
     @CurrentUser('companyId') cid: number,
     @Headers('x-branch-id') branch?: string,
   ) {
-    return this.tasks.create(dto, await this.actor(uid, cid, branch));
+    const actor = await this.actor(uid, cid, branch);
+    // A recurring task is a rule plus its first task (spec §3.6).
+    return dto.recurrence
+      ? this.recurrences.create(dto, actor)
+      : this.tasks.create(dto, actor);
   }
   @Get(':id') async detail(
     @Param('id') id: string,
