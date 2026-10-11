@@ -17,6 +17,16 @@ const useVoiceMime = () =>
 
 const releaseMic = (stream: MediaStream | null) => stream?.getTracks().forEach((t) => t.stop());
 
+/** The microphone, or null (already toasted) when the browser or the user refuses. */
+async function openMic(): Promise<MediaStream | null> {
+  try {
+    return await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    toast.error("Mikrofonga ruxsat berilmadi");
+    return null;
+  }
+}
+
 /** Spec screen 15: oddiy → yozilmoqda (stops itself at 3:00) → yuborishga tayyor. */
 export function TaskVoiceRecorder({ taskId }: { taskId: string }) {
   const mime = useVoiceMime();
@@ -24,6 +34,8 @@ export function TaskVoiceRecorder({ taskId }: { taskId: string }) {
   const [state, dispatch] = useReducer(voiceReducer, { kind: "idle" });
   const [now, setNow] = useState(0);
   const [sending, setSending] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -46,14 +58,16 @@ export function TaskVoiceRecorder({ taskId }: { taskId: string }) {
   if (!mime) return null;
 
   const start = async () => {
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      toast.error("Mikrofonga ruxsat berilmadi");
-      return;
-    }
+    // A second tap while the permission prompt is open must not open a second microphone.
+    if (startingRef.current || recRef.current?.state === "recording") return;
+    startingRef.current = true;
+    setStarting(true);
+    const stream = await openMic();
+    startingRef.current = false;
+    // Left the drawer while the prompt was open: the microphone is released the moment it arrives.
     if (!aliveRef.current) { releaseMic(stream); return; }
+    setStarting(false);
+    if (!stream) return;
     let rec: MediaRecorder;
     try {
       rec = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 48_000 });
@@ -120,7 +134,7 @@ export function TaskVoiceRecorder({ taskId }: { taskId: string }) {
     );
   }
   return (
-    <Button type="button" size="icon-sm" variant="ghost" aria-label="Ovozli xabar yozish" onClick={() => void start()}>
+    <Button type="button" size="icon-sm" variant="ghost" aria-label="Ovozli xabar yozish" disabled={starting} onClick={() => void start()}>
       <Mic className="size-4" />
     </Button>
   );
