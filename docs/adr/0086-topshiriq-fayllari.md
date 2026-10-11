@@ -13,7 +13,7 @@ Spec fayllarni yopiq R2 bucket'da saqlashni va brauzer ularni to'g'ridan-to'g'ri
 1. Fayllar yopiq `R2_TASKS_BUCKET_NAME` (`daf-tasks`) bucket'da. Hech biri ochiq emas: fayl faqat 10 daqiqalik havola bilan ochiladi, havola har so'rovda topshiriqni ko'ra olish tekshiruvidan keyin beriladi (`GET /tasks/:id/files` hamma faylning havolasini birga qaytaradi).
 2. Yuklash server orqali (`POST /tasks/:id/files`, multipart, 20 MB gacha) — spec §9.4 dan farqli. Server faylning turini nomidan emas, ichidagi baytlardan aniqlaydi (JPG, PNG, WebP, PDF, DOCX, XLSX, MP4 va MOV video, ogg/webm/m4a ovoz); boshqa tur bucket'ga yetib bormaydi. Sayt va Telegram bitta yo'ldan yuklaydi. Brauzer R2 havolalarini faqat rasm, pleyer va havola sifatida ochadi, shuning uchun CORS qoidasi kerak emas.
 3. Fayl qo'shish huquqi — topshiriqning ijrochisi yoki beruvchisi (CEO, filial direktori ham): kuzatuvchi faylni ko'radi va yuklab oladi, lekin qo'sha olmaydi (403). Ko'rish va yuklab olish — topshiriqni ko'ra oladigan har kimga.
-4. Fayl muhokamada bitta qator (`FILE` / `VOICE`), xabari izohnikidek: beruvchi va ijrochilarga (qo'shgan odamdan tashqari, kuzatuvchiga emas); qo'ng'iroqchada «Yangi fayl» / «Ovozli xabar», Telegram'da «Yangi fayl» / «Yangi ovozli xabar». O'chirish — faylni qo'shgan odam yoki beruvchi (CEO, filial direktori); yumshoq, muhokamada «faylni o'chirdi» qatori qoladi, fayl 30 kundan keyin 03:00 da bucket'dan o'chadi.
+4. Fayl muhokamada bitta qator (`FILE` / `VOICE`), xabari izohnikidek: qo'ng'iroqchada beruvchi, ijrochilar va kuzatuvchilarga (qo'shgan odamdan tashqari) «Yangi fayl» / «Ovozli xabar»; Telegram'da faqat beruvchi va ijrochilarga (kuzatuvchiga emas) «Yangi fayl» / «Yangi ovozli xabar». O'chirish — faylni qo'shgan odam yoki beruvchi (CEO, filial direktori); yumshoq, muhokamada «faylni o'chirdi» qatori qoladi, fayl 30 kundan keyin 03:00 da bucket'dan o'chadi.
 5. Ovozli xabar 3 daqiqagacha va 2 MB gacha (saytda yozish 48 kbit/s). Bu yerda hajm asosiy cheklov, chunki brauzer aytgan uzunlikka ishonib bo'lmaydi.
 6. «Rasm bilan tasdiqlansin» topshiriq berishda qo'yiladi (keyin o'zgartirilmaydi; takrorlanuvchi topshiriqda yo'q, server 400 qaytaradi). Bunday topshiriq tekshiruvga faqat oxirgi qaytarishdan (yoki berilgandan) keyin ijrochi qo'shgan kamida bitta rasm bo'lsa o'tadi — beruvchining namuna rasmi va kuzatuvchining rasmi hisobga kirmaydi; o'ziga yozilgan topshiriq rasmsiz yopiladi.
 7. Telegram'da topshiriq xabariga javob qilib yuborilgan rasm, hujjat, video va ovoz topshiriqqa qo'shiladi (izoh — izoh bo'lib). Rasm bilan tasdiqlanadigan topshiriqda yangi rasmi yo'q ijrochi «Bajardim» ni bossa, bot «Rasmni shu xabarga javob qilib yuboring» deydi; rasm kelgach topshiriq tekshiruvga o'tadi.
@@ -33,8 +33,7 @@ Spec fayllarni yopiq R2 bucket'da saqlashni va brauzer ularni to'g'ridan-to'g'ri
 
 ## Ko'rib chiqilgan muqobillar
 
-- Presigned PUT (spec): CORS uchun CEO'ning qo'lda qadami, uch qadamli yuklash, tasdiqlanmagan qatorlarni tozalash va turni keyin tekshirish kerak bo'lardi. Serverdan o'tishning narxi — har yuklashda bir so'rov davomida 20 MB gacha xotira — bizning hajmda sezilmaydi.
-- `TaskFile.eventId` (spec): hodisa faylga ishora qiladi (`TaskEvent.fileId`), bitta yo'nalish yetadi.
+- Presigned PUT (spec): sabablari «Kontekst» da va farqlar ro'yxatida; serverdan o'tishning narxi — har yuklashda bir so'rov davomida 20 MB gacha xotira — bizning hajmda sezilmaydi.
 - Kuzatuvchiga ham fayl qo'shishni ochish: kuzatuvchi topshiriqni bajarmaydi, fayl esa «rasm bilan tasdiqlash» isboti bo'la oladi; ochiq qoldirish ish ko'rinishini bulg'ardi. Kuzatuvchi izoh yoza oladi.
 
 ## Oqibatlari
