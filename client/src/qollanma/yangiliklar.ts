@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-11",
+    sarlavha: "Ruxsatlar sahifasi",
+    matn: "CEO endi Sozlamalar → «Ruxsatlar» sahifasida har bir rol nima qila olishini o'zi belgilaydi. Bu filial direktori, administrator, kassir va o'qituvchiga tegishli: imkoniyat kalit bilan yoqiladi yoki o'chiriladi. Kalit bosilganda tasdiq oynasi chiqadi. Unda birga yoqiladigan yoki birga o'chadigan imkoniyatlar oldindan ko'rsatiladi, pulga ta'sir qiladigan amalda esa qo'shimcha ogohlantirish bor. Qulf belgisi bu imkoniyatni shu rolga berib bo'lmasligini bildiradi; uni bossangiz, sababi chiqadi. Sariq nuqta boshlang'ich holatdan farqni ko'rsatadi. Har bir rolda «Boshlang'ich holatga qaytarish» tugmasi bor, pastda esa kim, qachon, nimani o'zgartirgani yoziladi. O'zgarish xodimning keyingi bosishida kuchga kiradi. Sahifani faqat CEO ko'radi. Hozircha hamma rol avvalgidek ishlaydi.",
+    rollar: [1],
+    sahifa: { bolim: "boshlash", sahifa: "rollar-va-huquqlar" },
+  },
+  {
+    sana: "2026-10-11",
     sarlavha: "Takrorlanuvchi topshiriqlar",
     matn: "Endi topshiriqni takrorlanadigan qilib berish mumkin: berish oynasida «Batafsil» → «Takrorlash» da «Har kuni», «Har hafta» (kunlarini belgilab) yoki «Har oy» (1–28-sana) va vaqtni tanlang. Birinchi topshiriq darhol beriladi, keyingilarini tizim har kuni ertalab 07:00 da beradi; yakshanba va bayramga tushsa — keyingi ish kuniga. Oldingisi bajarilmagan bo'lsa, yangisi berilmaydi. Kartada «Har dushanba» kabi belgi turadi; varaqda takrorlanishni o'zgartirish va to'xtatish mumkin, «Topshiriqlar» sahifasidagi «Takrorlanuvchi» tugmasi hammasini bitta ro'yxatda ko'rsatadi.",
     rollar: [1, 2, 3, 4, 5],

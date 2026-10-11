@@ -558,3 +558,10 @@ Har bir bosqich uchun alohida ish rejasi yoziladi. Birinchi reja 1-bosqich uchun
   - **Ataylab o'zgarishlar** ro'yxati tuzildi: 33 ta route (11-bo'lim).
 - 2026-10-10 (reja) — qo'llanmaning rol filtri imkoniyatga o'tmaydi: u auditoriya, ruxsat emas (8-bo'lim).
 - 2026-10-10 — main'dagi pul qaytarish so'rovlari uchun 2 imkoniyat qo'shildi: refunds.hand-over, refunds.cancel (66)
+- 2026-10-11 — 2-bosqich (ADR-0086):
+  - **Katalog 67 ta.** «Shartnoma tuzish va imzolash» (`contracts.manage`, D A) qo'shildi. Har imkoniyatda `allowedRoles` va qulf sababi bor (oltita sabab). Yetti imkoniyat faqat CEO'da, ular orasida `salary.close` ham bor (CEO, 11.10). O'qituvchiga faqat o'z ikkitasi beriladi.
+  - **`UserPermission` jadvali 3-bosqichga o'tdi.** Bu bosqichda uni hech bir kod o'qimaydi (7.2 dan farq).
+  - **CEO API** `@CeoOnly()` bilan. Tarix `GET /permissions/history` orqali.
+  - **CEO javoblari (11.10).** Avans faqat «Oylik va avans to'lash» bilan yoziladi. «Moliya va marketing hisobotlari» «Xodimlar oyligini ko'rish»ni talab qiladi.
+  - **Xodimning oylik balansi** (`balance`) `salary.view` bor chaqiruvchiga qaytadi. **Xodim tarixi** uni saqlamaydi va ko'rsatmaydi.
+  - **Bosh sahifa keshi** javob tanasi bog'liq bo'lgan bayroqlardan tuziladi (pul, murojaatlar).
