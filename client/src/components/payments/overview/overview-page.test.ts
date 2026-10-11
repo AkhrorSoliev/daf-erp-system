@@ -164,6 +164,7 @@ describe("OverviewPage — the current month (CEO)", () => {
     const { text } = render({ seed: seedMonth("2026-10", overview(OCTOBER)) });
 
     expect(text).toContain("Oxirgi to'lovlar");
+    expect(text).toContain("Barcha to'lovlar →");
     expect(text).toContain("#10501 Ali Valiyev A1-07, B1-02");
     expect(text).toContain("#10502 Vali Aliyev —");
   });

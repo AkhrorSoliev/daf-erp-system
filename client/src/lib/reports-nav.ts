@@ -1,6 +1,5 @@
 import {
   Receipt,
-  Wallet,
   UserMinus,
   UserPlus,
   GraduationCap,
@@ -38,7 +37,6 @@ export const reportsNavSections: ReportsNavSection[] = [
     title: "Moliyaviy hisobotlar",
     items: [
       { title: "To'lov hisobotlari", url: "/reports/payment-reports", icon: Receipt, permission: "reports.payments" },
-      { title: "O'quvchi to'lovi", url: "/reports/student-payments", icon: Wallet, permission: "reports.finance" },
     ],
   },
   {

@@ -1,11 +1,11 @@
 import {
   BarChart3,
-  Clock,
   Receipt,
   Banknote,
   UserMinus,
   Activity,
   HandCoins,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { PermissionKey } from "./permission-keys";
@@ -22,7 +22,7 @@ export interface PaymentsNavItem {
 
 export const paymentsNavItems: PaymentsNavItem[] = [
   { title: "Umumiy ma'lumotlar", url: "/payments/overview", icon: BarChart3, permission: "payments.view" },
-  { title: "Kutilyotgan to'lovlar", url: "/payments/pending", icon: Clock, permission: "payments.view" },
+  { title: "To'lovlar", url: "/payments/list", icon: Wallet, permission: "payments.view" },
   { title: "Xarajatlar", url: "/payments/expenses", icon: Receipt, permission: "expenses.view" },
   { title: "Ish haqi", url: "/payments/salary", icon: Banknote, permission: "salary.view" },
   // Spec B2b §3: the money of students who are not studying and the open refund

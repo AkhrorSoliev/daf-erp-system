@@ -35,6 +35,7 @@ import {
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { invalidateDebt } from "./debt/debt-queries";
+import { PAYMENTS_LIST_KEYS } from "./list/payments-queries";
 import {
   capToRange,
   dateFromDay,
@@ -284,7 +285,7 @@ export function RecordPaymentDialog({
       // Every debt figure (the debt page's list and drawer, the overview) moves with a payment.
       invalidateDebt(queryClient);
       queryClient.invalidateQueries({ queryKey: ["recent-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["student-payments"] });
+      for (const key of PAYMENTS_LIST_KEYS) queryClient.invalidateQueries({ queryKey: [key] });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data

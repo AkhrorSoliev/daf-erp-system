@@ -185,20 +185,6 @@ export class PaymentsController {
     });
   }
 
-  @Get('pending-students')
-  @Can('payments.view')
-  getPending(
-    @Query() query: PaymentQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() branchIds: ReportBranchIds,
-  ) {
-    return this.paymentsService.getPending(companyId, {
-      branchIds,
-      page: query.page,
-      pageSize: query.pageSize,
-    });
-  }
-
   @Get('debtors/group/:groupId')
   @Can('debt.view')
   getDebtorsForGroup(

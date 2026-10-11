@@ -18,8 +18,8 @@ const FOUR_ROLES = ['Administrator', 'Branch Director', 'CEO', 'Cashier'];
 describe('PaymentsController — route access', () => {
   // Recording a payment, and the live projection the record dialog shows.
   const CREATES = ['create', 'attachExternal', 'preview'] as const;
-  // The payments list, one payment, and the students nobody has paid yet.
-  const VIEWS = ['findAll', 'findOne', 'getPending'] as const;
+  // The payments list and one payment.
+  const VIEWS = ['findAll', 'findOne'] as const;
   // The debt lists: debtors and a group's debtors.
   const DEBTS = ['getDebtors', 'getDebtorsForGroup'] as const;
 
@@ -185,7 +185,6 @@ describe('PaymentsController — delegation', () => {
     findByStudent: jest.fn().mockResolvedValue({}),
     getDebtors: jest.fn().mockResolvedValue({}),
     getDebtorSummary: jest.fn().mockResolvedValue({}),
-    getPending: jest.fn().mockResolvedValue({}),
     getDebtorsForGroup: jest.fn().mockResolvedValue({}),
   };
 

@@ -1110,26 +1110,6 @@ describe('PaymentsService', () => {
     });
   });
 
-  describe('getPending()', () => {
-    it('should query students with balance < 0 and active enrollments', async () => {
-      prisma.student.findMany.mockResolvedValue([]);
-      prisma.student.count.mockResolvedValue(0);
-
-      const result = await service.getPending(1001, { branchIds: null });
-
-      const findManyCall = prisma.student.findMany.mock.calls[0][0];
-      expect(findManyCall.where).toEqual(
-        expect.objectContaining({
-          companyId: 1001,
-          deletedAt: null,
-          balance: { lt: 0 },
-          enrollments: { some: { status: 'ACTIVE', deletedAt: null } },
-        }),
-      );
-      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 10 });
-    });
-  });
-
   describe('correctAmount()', () => {
     // A recent, admin-entered cash payment of 5 000 000 — the typo we want
     // to correct down to 400 000.

@@ -4,6 +4,7 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { retryDrawer } from "../debt/debt-queries";
+import { PAYMENTS_LIST_KEYS } from "../list/payments-queries";
 import { refundableListParams, type RefundsFilters } from "./refunds-url";
 import type { RefundableDrawer, RefundableListResponse, RefundableTab, RefundHistoryResponse } from "./refunds-types";
 
@@ -64,7 +65,7 @@ export function useRefundHistory(page: number, pageSize: number) {
 
 /** Every key a request, a hand-over, a cancel, a notice or a transfer moves (financial data never updates optimistically). */
 export const REFUND_QUERY_KEYS = [
-  "refundable-list", "refundable-student", "refund-history", "financial-overview", "student-payments", "debt-list", "debt-student",
+  "refundable-list", "refundable-student", "refund-history", "financial-overview", ...PAYMENTS_LIST_KEYS, "debt-list", "debt-student",
 ] as const;
 
 export function invalidateRefunds(qc: QueryClient) {

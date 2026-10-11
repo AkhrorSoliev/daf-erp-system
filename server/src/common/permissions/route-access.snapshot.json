@@ -705,12 +705,6 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /payments/pending-students": [
-    "Administrator",
-    "Branch Director",
-    "CEO",
-    "Cashier"
-  ],
   "GET /payments/preview": [
     "Administrator",
     "Branch Director",
@@ -946,12 +940,6 @@
     "Administrator",
     "Branch Director",
     "CEO"
-  ],
-  "GET /reports/student-payments": [
-    "Administrator",
-    "Branch Director",
-    "CEO",
-    "Cashier"
   ],
   "GET /reports/student-payments/filter-options": [
     "Administrator",

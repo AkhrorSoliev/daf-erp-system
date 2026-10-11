@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MonthStepper } from "@/components/shared/month-stepper";
@@ -86,7 +87,12 @@ export function OverviewPage() {
 
       {(isCurrent || minimalLayout) && (
         <section className="space-y-3">
-          <h3 className="font-heading text-base font-semibold">Oxirgi to&apos;lovlar</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-heading text-base font-semibold">Oxirgi to&apos;lovlar</h3>
+            <Link href="/payments/list" className="text-sm font-medium text-primary hover:underline">
+              Barcha to&apos;lovlar →
+            </Link>
+          </div>
           <RecentPayments />
         </section>
       )}

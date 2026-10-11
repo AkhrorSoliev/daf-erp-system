@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { tashkentNow } from "@/lib/tashkent-time";
+import { paymentsListHref } from "@/components/payments/list/payments-url";
 import { BlockError, BlockSkeleton } from "./block-state";
 import { IncomeDialog } from "./income-dialog";
 import { dayMonth, som } from "./overview-math";
@@ -29,13 +32,7 @@ export function CashCard({ month, isCurrent }: { month: string; isCurrent: boole
           kecha ({dayMonth(yesterday.date)}) {som(yesterday.amount)}
         </p>
       )}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="text-sm font-medium text-primary hover:underline"
-      >
-        Qayerdan keldi →
-      </button>
+      <CashLinks month={month} current={tashkentNow().dateStr.slice(0, 7)} onOpen={() => setOpen(true)} />
       <IncomeDialog
         open={open}
         onOpenChange={setOpen}
@@ -43,6 +40,20 @@ export function CashCard({ month, isCurrent }: { month: string; isCurrent: boole
         data={a}
         byMethod={overview.data?.income.byMethod ?? []}
       />
+    </div>
+  );
+}
+
+/** «Qayerdan keldi →» (the parts dialog) and «To'lovlar →» (the month's payments list). */
+export function CashLinks({ month, current, onOpen }: { month: string; current: string; onOpen?: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+      <button type="button" onClick={onOpen} className="text-sm font-medium text-primary hover:underline">
+        Qayerdan keldi →
+      </button>
+      <Link href={paymentsListHref(month, current)} className="text-sm font-medium text-primary hover:underline">
+        To&apos;lovlar →
+      </Link>
     </div>
   );
 }

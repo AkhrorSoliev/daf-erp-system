@@ -21,7 +21,6 @@ import {
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
-import { StudentPaymentsReportQueryDto } from './dto/student-payments-report-query.dto';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-by-query.dto';
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
@@ -628,26 +627,6 @@ export class ReportsController {
       branchId: this.scoped(query, scope).branchId,
       startDate: query.startDate,
       endDate: query.endDate,
-    });
-  }
-
-  @Get('student-payments')
-  @Can('reports.finance')
-  getStudentPaymentsReport(
-    @Query() query: StudentPaymentsReportQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getStudentPaymentsReport(companyId, {
-      branchId: this.scoped(query, scope).branchId,
-      groupIds: query.groupIds,
-      teacherIds: query.teacherIds,
-      methods: query.methods,
-      courseId: query.courseId,
-      startDate: query.startDate,
-      endDate: query.endDate,
-      page: query.page,
-      pageSize: query.pageSize,
     });
   }
 

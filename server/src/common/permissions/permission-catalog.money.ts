@@ -17,7 +17,7 @@ export const MONEY_PERMISSIONS = {
   // To'lovlar va qarzdorlik
   'payments.view': {
     section: 'payments',
-    label: "Moliya bo'limi: to'lovlar va kutilayotgan to'lovlar",
+    label: "Moliya bo'limi: umumiy ma'lumotlar va to'lovlar ro'yxati",
     defaultRoles: [D, A, K],
     allowedRoles: [D, A, K],
     lockReasons: { [T]: LOCK.OWN_GROUPS },

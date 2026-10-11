@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatNumber } from "@/lib/format-utils";
+import { tashkentNow } from "@/lib/tashkent-time";
+import { paymentsListHref } from "@/components/payments/list/payments-url";
 import { addMonths, monthShort } from "@/components/payments/salary-utils";
 import { PAYMENT_METHOD_LABELS, som } from "./overview-math";
 import type { IncomeAttribution } from "./types";
@@ -41,6 +44,7 @@ export function IncomeDialog({
           <IncomeBreakdown month={month} data={data} byMethod={byMethod} />
         </div>
         <DialogFooter className="border-t px-6 py-4">
+          <AllPaymentsButton month={month} />
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Yopish
           </Button>
@@ -145,5 +149,14 @@ export function IncomeBreakdown({ month, data, byMethod }: { month: string; data
         </div>
       )}
     </div>
+  );
+}
+
+/** The footer's «Barcha to'lovlar»: the month's payments list. */
+export function AllPaymentsButton({ month }: { month: string }) {
+  return (
+    <Button asChild variant="outline">
+      <Link href={paymentsListHref(month, tashkentNow().dateStr.slice(0, 7))}>Barcha to&apos;lovlar</Link>
+    </Button>
   );
 }

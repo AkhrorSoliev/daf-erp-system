@@ -55,7 +55,6 @@ describe('ReportsController', () => {
     getPaymentReports: jest.fn().mockResolvedValue({}),
     getTeacherPaymentReports: jest.fn().mockResolvedValue({}),
     getTeacherGroupsReport: jest.fn().mockResolvedValue({}),
-    getStudentPaymentsReport: jest.fn().mockResolvedValue({}),
     getStudentPaymentsFilterOptions: jest.fn().mockResolvedValue({}),
     getDepartedStudentsSummary: jest.fn().mockResolvedValue({}),
     getDepartedStudentsDynamics: jest.fn().mockResolvedValue({}),
@@ -157,9 +156,6 @@ describe('ReportsController', () => {
         'getExpectationHistory',
         'getMonthlyDebtRecovery',
         'exportFinancialExcel',
-        // Only the «O'quvchi to'lovi» report calls it, and its menu entry is
-        // CEO/BD only: the Administrator and the Cashier left (Appendix C).
-        'getStudentPaymentsReport',
       ],
     },
     {
