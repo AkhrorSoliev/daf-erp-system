@@ -62,8 +62,9 @@ export type RunOutcome =
   | 'stopped'
   | 'off';
 
-// ponytail: 500 rules a morning, oldest first; the rest are caught up the next
-// morning (`nextRunDate <= today`). Raise it when a company has more.
+// ponytail: 500 rules a morning across all companies, oldest first; the rest
+// are caught up the next morning (`nextRunDate <= today`). Raise it when more
+// than 500 rules fall due on one morning.
 const RULE_BATCH = 500;
 const OPEN = [...OPEN_STATUSES];
 
@@ -156,6 +157,20 @@ export class TaskRecurrenceRunner {
     // The author's rights TODAY, not the day the rule was written.
     let actor: TaskActor;
     try {
+      // `loadActor` lets a deactivated (INACTIVE) author through; the rule
+      // stops with them, by the same filter that drops an assignee.
+      const authorLive = await this.prisma.user.count({
+        where: {
+          id: rule.authorId,
+          companyId: rule.companyId,
+          deletedAt: null,
+          isActive: true,
+          status: 'ACTIVE',
+        },
+      });
+      if (authorLive === 0) {
+        throw new ForbiddenException('Muallif faol xodim emas');
+      }
       actor = await this.tasks.loadActor(rule.authorId, rule.companyId, null);
       await assertMayLinkEntity(this.prisma, actor, {
         entityType: rule.entityType ?? undefined,

@@ -15,6 +15,7 @@ jest.mock('./task-recurrence-rules', () => ({
 import {
   BadRequestException,
   ForbiddenException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { assertMayLinkEntity, createCopiesTx } from './task-create';
@@ -67,6 +68,7 @@ function setup(
       findMany: jest.fn().mockResolvedValue(o.rules ?? [rule()]),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
+    user: { count: jest.fn().mockResolvedValue(1) },
     $transaction: jest.fn(async (fn: (t: unknown) => unknown) => fn(tx)),
   };
   const emitter = { emit: jest.fn() };
@@ -112,7 +114,12 @@ function setup(
 }
 
 describe('TaskRecurrenceRunner.run', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    jest.spyOn(Logger.prototype, 'error').mockImplementation();
+  });
+  afterEach(() => jest.restoreAllMocks());
 
   it('asks for active rules due today or earlier', async () => {
     const { runner, prisma } = setup({ rules: [] });
@@ -243,6 +250,29 @@ describe('TaskRecurrenceRunner.run', () => {
       data: { active: false },
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('a deactivated author (INACTIVE / isActive false) stops the rule, no task', async () => {
+    const { runner, prisma, tasks } = setup();
+    prisma.user.count.mockResolvedValueOnce(0);
+    const out = await runner.run(MON_0700);
+    expect(out.stopped).toBe(1);
+    expect(prisma.user.count).toHaveBeenCalledWith({
+      where: {
+        id: 10,
+        companyId: 1,
+        deletedAt: null,
+        isActive: true,
+        status: 'ACTIVE',
+      },
+    });
+    expect(tasks.loadActor).not.toHaveBeenCalled();
+    expect(prisma.taskRecurrence.updateMany).toHaveBeenCalledWith({
+      where: { id: 'r1', active: true, nextRunDate: day('2026-10-12') },
+      data: { active: false },
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(createCopiesTx).not.toHaveBeenCalled();
   });
 
   it('the author is gone but another instance already moved the rule: taken', async () => {
