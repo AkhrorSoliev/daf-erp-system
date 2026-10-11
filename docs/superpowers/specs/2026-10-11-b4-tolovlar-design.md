@@ -4,10 +4,10 @@
 **Holati:** CEO tomonidan tasdiqlangan (11.10.2026: 9 band, keyin yangi qismlar maketi va qolgan savollarga javob — §2)
 **Maketlar:**
 - https://claude.ai/artifact/YA4jhqf4NH8ZrqnBbjB9UL — `v-payments` bo'limi, `pdrawer` oynasi, «Qayerdan keldi» oynasi `dlg-income` (CEO 27.09 da tasdiqlagan)
-- `b4-yangi-qismlar.html` — maket ko'rsatmagan qismlar: Administrator/Kassir ko'rinishi (yig'ma kartasiz), bekor qilingan va tuzatilgan qator, oynadagi ikki kvitansiya raqami, «Bekor qilish» oynasi (CEO 11.10 da o'zgarishsiz tasdiqlagan)
+- https://claude.ai/artifact/EYKB7GyymcsDT18fnYBRF3 — maket ko'rsatmagan qismlar: Administrator/Kassir ko'rinishi (yig'ma kartasiz), bekor qilingan va tuzatilgan qator, oynadagi ikki kvitansiya raqami, «Bekor qilish» oynasi (CEO 11.10 da o'zgarishsiz tasdiqlagan)
 
 **Tayanadi:** ADR-0067 (kassa uch qismda, `getIncomeMonthAttribution`), ADR-0065 (chek va bekor qilish xabari darhol), ADR-0021 (bosma raqam va uning bo'linishi bitta chaqiruvdan), ADR-0072 (B2a: eski havolalar yo'naltiriladi), ADR-0079 (imkoniyatlar), ADR-0081 (filial chegarasi).
-**Qaror yozuvi:** ADR-0084 — shu PR'da yoziladi (§7.1).
+**Qaror yozuvi:** yangi ADR — shu PR'da yoziladi (§7.1). Raqami — PR paytidagi keyingi bo'sh raqam (yozilish paytida 0084; `origin/main` va lokal shoxlardagi `docs/adr/README.md` tekshiriladi). Quyida «yangi ADR» deb ataladi.
 
 ## 1. Nima uchun va qayerda
 
@@ -36,7 +36,7 @@ Bugun nima noto'g'ri:
 
 Ikkinchi javob (CEO, 11.10.2026, spec loyihasidan keyin):
 
-10. Yangi qismlar maketi (`b4-yangi-qismlar.html`) o'zgarishsiz tasdiqlandi.
+10. Yangi qismlar maketi (https://claude.ai/artifact/EYKB7GyymcsDT18fnYBRF3) o'zgarishsiz tasdiqlandi.
 11. Qator yorliqlari davrga moslashadi: davr oylar chegarasidan o'tsa «Shu davr to'lovi»; davr oyning oxirgi kunida tugamasa «Oldindan (balansda)», tugasa «{Keyingi oy} uchun oldindan» (§4.4).
 12. Administrator va kassir har qatordagi «Nimaga ketdi»ni, uning filtrini va oynadagi bo'limni ko'radi; yig'ma karta faqat CEO va filial direktoriga qoladi (§3.12).
 13. **O'zgarish (4-bandga):** `/payments/pending` («Kutilyotgan to'lovlar») «Qarzdorlik»ka (`/payments/debt`) yo'naltiriladi, «To'lovlar»ga emas; `/reports/student-payments` yangi sahifaga yo'naltirilishi o'zgarmaydi (§6.2).
@@ -75,7 +75,7 @@ Pastki chegara `2026-05-01` (tizimning hisobot chegarasi). URL'dagi noto'g'ri `d
 Ma'lumot: `GET /payments/list/summary` (§5.4). Mijoz bu so'rovni faqat `reports.finance` egasi uchun yuboradi; boshqalar uchun karta joyi umuman chizilmaydi (§3.12).
 
 - Sarlavha davrga qarab: «Bugun tushgan pul» / «Kecha tushgan pul» / «Shu hafta tushgan pul» / «{Oy}da tushgan pul» (Bu oy, O'tgan oy — masalan «Sentabrda tushgan pul») / «Tanlangan oraliqda tushgan pul».
-- Katta raqam — dvigatelning `total`i (§4.4) har bir davrda; mln ko'rinishida («182.7 mln»). Ostida «{paymentCount} ta to'lov · {payerCount} o'quvchi».
+- Katta raqam — dvigatelning `total`i (§4.4) har bir davrda; mln ko'rinishida («X.X mln»). Ostida «{paymentCount} ta to'lov · {payerCount} o'quvchi».
 - **Faqat «Bu oy»da:**
   - yashil belgi ««Kassaga tushdi» kartasidagi raqamning o'zi» (qurilishiga ko'ra rost: ikkalasi bitta funksiyaning bitta davrdagi natijasi);
   - uch rangli chiziq va uch chip (0 bo'lgani chiqmaydi): «{Oy} to'lovi **X**» (yashil, `currentMonth`), «{Keyingi oy} uchun oldindan **X**» (ko'k, `advance`), «Eski qarzlar **X**» (sariq, `lateTotal`). Chip bosilganda «Nimaga ketdi» filtri o'sha qismga o'rnatiladi; qayta bosilsa bo'shatiladi. Chiziq va chiplar — `income-dialog.tsx`dagi `IncomeBreakdown`ning qayta ishlatilgan bo'laklari.
@@ -97,7 +97,7 @@ Asosiy qator:
 - «Manba: hammasi» — «Admin kiritgan» / «Onlayn avtomatik» (`?manba=admin|onlayn`).
 - Holat: «Faqat o'tgan to'lovlar» (sukut) / «Bekor qilinganlar» / «Hammasi» (`?holat=otgan|bekor|hammasi`).
 
-Har filtr bitta qiymat tanlaydi (maketdagidek). Variantlar ro'yxati — `GET /payments/list/filter-options` (§5.5). Filtr o'zgarsa sahifa 1 ga qaytadi.
+Mijozda har filtr bitta qiymat tanlaydi (maketdagidek); server esa ro'yxat oladi (§5.2), shuning uchun keyin ko'p tanlovga o'tish faqat mijoz ishi (§11). Variantlar ro'yxati — `GET /payments/list/filter-options` (§5.5). Filtr o'zgarsa sahifa 1 ga qaytadi.
 
 ### 3.6 Jami qatori
 
@@ -112,47 +112,54 @@ Maket izohidagi «(namuna qatorlar; …)» qavsi yozilmaydi.
 Ustunlar: Sana | O'quvchi | Guruh | Summa (o'ngga tekislangan) | Usul | Nimaga ketdi | Qabul qildi. Tartib — `createdAt` kamayish bo'yicha.
 
 - **Sana:** «26.09 18:20» (Toshkent). Davr bir yildan oshib ketsa ham yil yozilmaydi (pastki chegara 2026-05; yil oynada bor).
-- **O'quvchi:** ism familiya (qalin); ostida kichik «ID 10734».
+- **O'quvchi:** ism familiya (qalin); ostida kichik «ID 1XXXX». Kartasi arxivlangan o'quvchi (§5.1) — ism oddiy matn, yonida kulrang «arxivda» pill.
 - **Guruh:** §4.5 bo'yicha birinchi guruh nomi; bir nechta bo'lsa yonida «+1» pill (title'da hammasi). Guruh yo'q — «—».
 - **Summa:** «450 000». Bekor qilingan qator — kulrang, ustidan chizilgan.
 - **Usul:** «Click» va onlayn bo'lsa (§4.3) yonida kulrang «onlayn» pill.
 - **Nimaga ketdi:** har qism bitta pill + summa (shu oy — yashil, oldindan — ko'k, eski qarz — sariq; yorliqlar §4.4). Bekor qilingan qator: qizil «bekor qilingan» pill. Tuzatilgan to'lovning eski qatori: qizil «bekor qilingan» o'rniga to'q sariq «tuzatildi → 400 000» pill (bosilsa yangi to'lov oynasi ochiladi, §3.8). Qismlari hisoblanmagan amaldagi to'lov (dvigatel uni topmagan — §10) — «—».
-- **Qabul qildi:** «Malika (admin)» — qabul qilgan xodimning ismi va eng yuqori rolining qisqa nomi (CEO → «CEO», Branch Director → «direktor», Administrator → «admin», Cashier → «kassir»); onlayn to'lov — «Onlayn»; qabul qiluvchisi yo'q eski qator — «—».
+- **Qabul qildi:** «Ism (admin)» — qabul qilgan xodimning ismi va eng yuqori rolining qisqa nomi (CEO → «CEO», Branch Director → «direktor», Administrator → «admin», Cashier → «kassir»); bu to'rt roldan birortasi yo'q akkaunt (masalan, faqat Teacher yoki rolsiz) — faqat ism, qavssiz; onlayn to'lov — «Onlayn»; qabul qiluvchisi yo'q eski qator — «—».
 - Qator bosilganda (Enter/Space ham) — oyna (§3.8).
-- Pastda sahifalash: «1–50 / 551», «50 ta / 100 ta» (`?soni=50|100`, sukut 50), ‹ ›; sahifa `?sahifa=`. Joriy sahifa oxirgisidan katta bo'lib qolsa (filtr toraydi) — oxirgi sahifaga o'tiladi (B2a'dagi `lastPageIfPast`).
+- Pastda sahifalash: «1–50 / N», «50 ta / 100 ta» (`?soni=50|100`, sukut 50), ‹ ›; sahifa `?sahifa=`. Joriy sahifa oxirgisidan katta bo'lib qolsa (filtr toraydi) — oxirgi sahifaga o'tiladi (B2a'dagi `lastPageIfPast`).
 
 ### 3.8 To'lov oynasi (o'ngdan)
 
-Ma'lumot — qatorning o'zi (ro'yxat javobi oyna uchun hamma narsani olib keladi, alohida so'rov yo'q). Faqat «tuzatildi → …» havolasi va URL'dagi `?tolov=<id>` (sahifa yangilanganda oyna ochiq qolishi uchun) `GET /payments/list/rows/:id` bilan o'qiydi (§5.3). Enter bilan ochiladi, Esc bilan yopiladi; oyna ochilganda `?tolov=` URL'ga yoziladi, yopilganda o'chiriladi.
+Ma'lumot — qatorning o'zi (ro'yxat javobi oyna uchun hamma narsani olib keladi, alohida so'rov yo'q). Faqat «tuzatildi → …» havolasi va URL'dagi `?tolov=<id>` (sahifa yangilanganda oyna ochiq qolishi uchun) `GET /payments/list/rows/:id` bilan o'qiydi (§5.3). Enter bilan ochiladi, Esc bilan yopiladi; oyna ochilganda `?tolov=` URL'ga yoziladi, yopilganda o'chiriladi. `rows/:id` ro'yxat filtrlarini o'qimaydi va holat «Hammasi» bilan ishlaydi — bekor qilingan va tuzatilgan to'lov ham ochiladi.
 
-- Sarlavha: o'quvchi ismi; ostida «ID 10734 · 90 123 45 67 · A1-07 · 26.09 18:20» (guruh bo'lmasa u qism tushib qoladi). X yopish.
+- **Topilmadi:** `rows/:id` 404 qaytarsa (masalan, tepadagi filial almashtirilgandan keyin `?tolov=` boshqa filial to'lovini ko'rsatib qolsa) oyna ichida: «To'lov bu filialda topilmadi» + kulrang «Tepadagi filial tanlovini tekshiring.» + «Yopish» (oynani yopadi va `?tolov=`ni o'chiradi). Boshqa xato — «Ma'lumotni yuklab bo'lmadi» + «Qayta urinish».
+- Sarlavha: o'quvchi ismi (arxivdagi o'quvchi — yonida «arxivda» pill); ostida «ID 1XXXX · 9X XXX XX XX · {guruh} · 26.09 18:20» (guruh bo'lmasa u qism tushib qoladi). X yopish.
 - Ramka: «Summa» (bekor qilingan bo'lsa «Summa · bekor qilingan», tuzatilgan bo'lsa «Summa · tuzatildi») va «450 000 so'm».
 - Qatorlar:
   - «Usul» — «Click» (+ «onlayn» pill).
   - «Manba» — «Onlayn, avtomatik tushgan» (GATEWAY_WEBHOOK) / «Admin kiritgan» (qolganlari).
   - «Qabul qildi» — §3.7 dagi kabi.
-  - «Kvitansiya» — «R-2026-00412 · qog'oz № 48213» (ikkalasi bo'lsa); faqat tizim raqami bo'lsa «R-2026-00412»; tizim raqami hali yo'q bo'lsa (§4.7) «— · qog'oz № 48213» yoki «—». Maketdagi «— (onlayn to'lovda kvitansiya to'lov tizimida)» matni olib tashlanadi: endi onlayn to'lovning ham tizim raqami bor.
+  - «Kvitansiya» — «R-2026-0NNNN · qog'oz № NNNNN» (ikkalasi bo'lsa); faqat tizim raqami bo'lsa «R-2026-0NNNN»; tizim raqami hali yo'q bo'lsa (§4.7) «— · qog'oz № NNNNN» yoki «—». Maketdagi «— (onlayn to'lovda kvitansiya to'lov tizimida)» matni olib tashlanadi: endi onlayn to'lovning ham tizim raqami bor.
   - «Izoh» — `note` yoki «—».
   - «Guruh» — §4.5 dagi hamma guruhlar (vergul bilan), bo'lmasa «—».
 - «BU PUL NIMAGA KETDI»: har qism pill + summa, ostida kichik kulrang izoh «Tanlangan davr ({dd.MM}–{dd.MM}) oxiriga ko'ra.» Bekor qilinganda: «To'lov bekor qilingan — pul hech narsaga ketmagan, balans o'zgarmagan.» Tuzatilganda: «To'lov tuzatilgan — o'rniga {yangi summa} so'mlik to'lov yozilgan.» + «Yangi to'lovni ochish →». Qismlari hisoblanmagan bo'lsa: «Bu to'lovni hisoblab bo'lmadi.»
 - «BALANS» (faqat amaldagi to'lovda): «−535 714 → **0 so'm**» — to'lovning o'z ledger yozuvidagi `balanceBefore` → `balanceAfter` (§4.9). Ostida kulrang «To'lov paytidagi balans».
 - Bekor qilingan to'lovda «BALANS» o'rniga «BEKOR QILINDI»: «{dd.MM.yyyy HH:mm} · {Kim} · Sabab: {sabab}» (bekor qilish yozuvidan; sabab yozilmagan eski qator — «Sabab: —»).
 - Yangi to'lov (boshqa to'lovni tuzatgan) oynasida «Izoh» ostida: «Bu to'lov {eski summa} so'mlik to'lovni tuzatgan» + «Eski to'lovni ochish →».
-- Amallar (pastda): «Kvitansiya» (yangi oynada `/receipts/payment/:id.pdf`, mavjud `ReceiptLink`), «O'quvchi profili» (`/students/profile/:id`), «Tuzatish» (§3.10), «Bekor qilish» (qizil, §3.9). Tugma egasiz rolga ko'rinmaydi (`payments.correct`, `money.undo`). Bekor qilingan to'lovda «Tuzatish» va «Bekor qilish» yo'q.
-- Pastki izoh (kulrang): «Tuzatish — CEO, direktor va admin. Bekor qilish — faqat CEO, sabab yozish majburiy.»
+- Amallar (pastda): «Kvitansiya» (yangi oynada `/receipts/payment/:id.pdf`, mavjud `ReceiptLink`), «O'quvchi profili» (`/students/profile/:id`; kartasi arxivlangan o'quvchida bu tugma yo'q — arxiv faqat CEO'ning `/archive` sahifasidan ochiladi, mavjud qoida), «Tuzatish» (§3.10), «Bekor qilish» (qizil, §3.9). Tugma imkoniyati yo'q foydalanuvchiga ko'rinmaydi (`payments.correct`, `money.undo`). Bekor qilingan to'lovda «Tuzatish» va «Bekor qilish» yo'q.
+- Pastki izoh (kulrang) foydalanuvchining imkoniyatlaridan yig'iladi, rol nomlari qattiq yozilmaydi: `payments.correct` bor — «Tuzatish: summa o'zgarsa sabab yozish majburiy.»; `money.undo` bor — «Bekor qilish: sabab yozish majburiy.»; ikkalasi ham yo'q — izoh yo'q. (Tasdiqlangan maketdagi «Tuzatish — CEO, direktor va admin…» matni imkoniyatlar sozlamasi o'zgarganda yolg'on bo'lib qolardi.)
 - Oyna dialog ochishdan oldin yopiladi va amal muvaffaqiyatli bo'lgach o'sha to'lovda qayta ochiladi (B2a qoidasi); tuzatishdan keyin — YANGI to'lovda.
 
 ### 3.9 «Bekor qilish» oynasi
 
 - Sarlavha «To'lovni bekor qilish».
-- Matn: «**Dilnoza Karimova** — 450 000 so'm, 26.09.2026 18:20.» va «Pul o'quvchi balansidan olinadi, o'quvchiga Telegram'da xabar boradi. Bekor qilingan to'lov ro'yxatda «Bekor qilinganlar» filtrida qoladi.»
+- Matn: «**{Ism Familiya}** — 450 000 so'm, 26.09.2026 18:20.» va «Pul o'quvchi balansidan olinadi, o'quvchiga Telegram'da xabar boradi. Bekor qilingan to'lov ro'yxatda «Bekor qilinganlar» filtrida qoladi.»
 - «Sabab» — textarea, majburiy, placeholder «Masalan: to'lov xato o'quvchiga yozilgan», 500 belgigacha.
 - Tugmalar: «Yopish» / «Bekor qilish» (qizil). Sabab bo'sh (yoki faqat bo'shliq) turganda «Bekor qilish» o'chiq.
 - Server rad etsa (§5.7), xabar oynaning o'zida qizil matn bilan chiqadi va oyna ochiq qoladi. Muvaffaqiyat: toast «To'lov bekor qilindi», ro'yxat, karta va «Umumiy ma'lumotlar» so'rovlari yangilanadi.
 
 ### 3.10 «Tuzatish»
 
-O'quvchi profilidagi `CorrectPaymentDialog` (`components/students/correct-payment-dialog.tsx`) aynan o'zi; matni va qoidalari o'zgarmaydi. Tugma faqat amaldagi (COMPLETED), qo'lda kiritilgan (`source = ADMIN_MANUAL`) to'lovda ko'rinadi — server boshqasini baribir rad etadi. CEO bo'lmagan foydalanuvchi uchun to'lovga 72 soatdan ko'p bo'lsa tugma o'chiq va ostida «72 soatdan oldingi to'lovni faqat CEO tuzatadi» (serverdagi `ADMIN_CORRECTION_WINDOW_HOURS` qoidasining aksi; server qaroriga tayaniladi). Summa o'zgarsa javobdagi `newPayment.id` bo'yicha oyna yangi to'lovda ochiladi.
+O'quvchi profilidagi `CorrectPaymentDialog` (`components/students/correct-payment-dialog.tsx`) aynan o'zi; matni va qoidalari o'zgarmaydi. Tugma faqat amaldagi (COMPLETED), qo'lda kiritilgan (`source = ADMIN_MANUAL`) to'lovda ko'rinadi — server boshqasini baribir rad etadi. CEO bo'lmagan foydalanuvchi uchun to'lovga 72 soatdan ko'p bo'lsa tugma o'chiq va ostida «72 soatdan oldingi to'lovni faqat CEO tuzatadi» (serverdagi `ADMIN_CORRECTION_WINDOW_HOURS` qoidasining aksi; server qaroriga tayaniladi).
+
+Dialogga ikki kichik o'zgarish (matni va qoidalari o'zgarmaydi):
+- `onCorrected` chaqiruvi javobni ham uzatadi: `onCorrected(newBalance, { newPaymentId })` — `newPaymentId` = javobdagi `newPayment?.id ?? null` (faqat usul o'zgarganda `null`: to'lov o'z joyida yangilanadi). Profildagi yagona chaqiruvchi (`payment-statement.tsx:149`) ikkinchi argumentni o'qimaydi — unga ta'sir yo'q.
+- Muvaffaqiyatda dialogning o'zi «To'lovlar» so'rov kalitlarini ham yangilaydi (`payments-list-rows`, `payments-list-row`, `payments-list-summary`), shuning uchun profildan qilingan tuzatish ham ochiq «To'lovlar» sahifasida darhol ko'rinadi.
+
+«To'lovlar» sahifasida: `newPaymentId` bo'lsa oyna o'sha yangi to'lovda (`?tolov=<newPaymentId>`), bo'lmasa o'sha to'lovda qayta ochiladi.
 
 ### 3.11 Bo'sh holat, yuklanish, xato
 
@@ -162,7 +169,7 @@ O'quvchi profilidagi `CorrectPaymentDialog` (`components/students/correct-paymen
 
 ### 3.12 Administrator va Kassir
 
-Kartasiz: sarlavha, davr, filtrlar, jami qatori, jadval, oyna. Davr segmenti karta o'rnida turadi (bo'sh joy qolmaydi). «Nimaga ketdi» ustuni, filtri va oynadagi bo'lim ular uchun ham bor (CEO qarori 1: ro'yxat va oyna to'liq). «Bekor qilish» ko'rinmaydi; kassirga «Tuzatish» ham ko'rinmaydi. Ko'rinish — `b4-yangi-qismlar.html` (a).
+Kartasiz: sarlavha, davr, filtrlar, jami qatori, jadval, oyna. Davr segmenti karta o'rnida turadi (bo'sh joy qolmaydi). «Nimaga ketdi» ustuni, filtri va oynadagi bo'lim ular uchun ham bor (CEO qarori 1: ro'yxat va oyna to'liq). «Bekor qilish» ko'rinmaydi; kassirga «Tuzatish» ham ko'rinmaydi. Ko'rinish — https://claude.ai/artifact/EYKB7GyymcsDT18fnYBRF3, (a) bo'lim.
 
 ## 4. Ma'lumot qoidalari
 
@@ -196,6 +203,8 @@ Hafta dushanbadan boshlanadi; buni mijoz hal qiladi, server faqat sanalarni olad
 - `loadAttributionRows(db, companyId, period, branchIds)` — bugungi ikki so'rov (davr to'lovchilari `groupBy`, ularning amaldagi ledger qatorlari), `select`ga `paymentId` qo'shiladi;
 - `attributeIncome(rows, period, branchIds)` — toza; bugungi halqaning aynan o'zi, qo'shimcha ravishda har hisobga olingan PAYMENT qatorining `paymentId`si bo'yicha qismlarni yig'adi: `byPayment: Map<paymentId, { currentMonth, advance, late: { monthKey, amount }[] }>`. Kredit bo'laklari `inScope` bilan birga o'z `paymentId`sini ham olib yuradi, shuning uchun davr ichidagi debet bo'lakni yeganda summa aynan o'sha to'lovning `advance`idan `currentMonth`iga o'tadi.
 - `getIncomeMonthAttribution` bu ikkalasini chaqiradi va javobi bir so'm ham o'zgarmaydi (`lessonsValue`, `collectionPct` unda qoladi). Yangi sahifa o'sha ikkalasini chaqiradi (`lessonsValue`siz). Ikkinchi qayta o'ynash yozilmaydi; `ledger-replay.ts` (profildagi «To'lovlar qayerga ketdi», boshqa savol — server/CLAUDE.md) bilan birlashtirilmaydi.
+- **Arxivlangan o'quvchilar kiradi.** Dvigatelning to'lovchilar `groupBy`i `Student.deletedAt`ni o'qimaydi — kartasi keyin arxivlangan o'quvchining to'lovi ham kassaga tushgan pul va «Kassaga tushdi»da sanaladi. Shuning uchun ro'yxat ham ularni o'z ichiga oladi (`Payment` so'rovida `student.deletedAt` sharti yo'q), aks holda karta va qatorlar qo'shilmasdi. Qatorda `student.archived = deletedAt != null` (§3.7, §3.8).
+- **Bir so'rovda bir marta.** Har HTTP so'rov dvigatelni aynan bir marta chaqiradi (`rows`, `excel`, `summary` — bitta davr bo'yicha; `rows/:id` — §5.3 dagi bitta davr bo'yicha); natija so'rov ichida qayta ishlatiladi. Keshlanmaydi — sababi §10.
 
 **Tenglik (test bilan qotiriladi).** Bir chaqiruvda: Σ `byPayment` qismlari = `currentMonth`, `advance`, `late[]` (oyma-oy). Shuning uchun «Bu oy»da, filtrsiz, jadval qatorlari qismlarining yig'indisi karta chiplariga teng — ro'yxat va karta bir chaqiruvning ikki ko'rinishi. Jami qatoridagi X (`Payment` jadvalidan) va karta raqami (ledger'dan) G1 invarianti ushlab turganda teng (`scripts/audit-finance-reconciliation.ts`; `logIncomeBasisDrift` farqni logga yozadi) — B1 bilan bir xil holat.
 
@@ -213,11 +222,12 @@ Hafta dushanbadan boshlanadi; buni mijoz hal qiladi, server faqat sanalarni olad
 
 Qoida (bitta toza funksiya `groupsOnPaymentDay`, `payments/list/payment-day-groups.ts`):
 1. To'lovning Toshkent kuni D = `tashkentDateStr(payment.createdAt)`.
-2. Nomzodlar: o'quvchining `deletedAt` bo'sh yozilishlari, guruhi chaqiruvchining filial qamrovida (`branchIdWhere` guruh bo'yicha — bugungi `findAll` qoidasi).
-3. Yozilish D kuni guruhda hisoblanadi, agar o'sha Toshkent kunining biror lahzasida ACTIVE bo'lgan bo'lsa: kun boshidagi holati ACTIVE bo'lsa, yoki D kuni ichida ACTIVE ga o'tish yozuvi bo'lsa (shu kuni qo'shilgan — avval to'lab, keyin guruhga qo'shilgan o'quvchi ham tushadi). Holat `EnrollmentStateLog`dan `enrollmentStatusOn` + `supplyOpeningRow` bilan o'qiladi (`students/shared/enrollment-status-on.ts`, faollik hisoboti va ketganlar o'quvchisi bilan bir xil o'quvchi); logi bo'sh eski yozilish — o'z ustunlaridan (o'sha funksiyaning zaxirasi). `startDate` D dan keyin bo'lsa yozilish hisoblanmaydi.
+2. Nomzodlar: o'quvchining `deletedAt` bo'sh yozilishlari (kartasi bilan birga arxivlangan yozilish hisoblanmaydi — ketganlar o'quvchisidagidek), guruhi chaqiruvchining filial qamrovida (`branchIdWhere` guruh bo'yicha — bugungi `findAll` qoidasi). Guruhning o'zi o'chirilgan bo'lishi mumkin (3-band).
+3. Yozilish D kuni guruhda hisoblanadi, agar o'sha Toshkent kunining biror lahzasida ACTIVE bo'lgan bo'lsa: kun boshidagi holati ACTIVE bo'lsa, yoki D kuni ichida ACTIVE ga o'tish yozuvi bo'lsa (shu kuni qo'shilgan — avval to'lab, keyin guruhga qo'shilgan o'quvchi ham tushadi). Holat `EnrollmentStateLog`dan `enrollmentStatusOn` bilan o'qiladi (`students/shared/enrollment-status-on.ts`); logning ikki uchidagi bo'shliq ketganlar o'quvchisidagidek (`reports/shared/departures.loader.ts:134-139`) to'ldiriladi — `supplyOpeningRow(log, createdAt)` VA `supplyClosingRow(log, row)`; logi bo'sh eski yozilish — o'z ustunlaridan (`enrollmentStatusOn`ning zaxirasi). Guruh o'chirilgan bo'lsa yozilish `group.deletedAt` lahzasida yopilgan hisoblanadi (o'sha loader'ning `GROUP_DELETED` qoidasi, `:197-198`): o'chirilishdan oldingi kunlarda guruh ko'rinadi, keyin — yo'q. `startDate` D dan keyin bo'lsa yozilish hisoblanmaydi.
 4. Bir nechta guruh (masalan, o'sha kuni ko'chirilgan: eskisidan chiqdi, yangisiga kirdi) — hammasi, nom bo'yicha tartiblangan; ustunda birinchisi + «+N», oynada va Excel'da hammasi vergul bilan.
 5. Hech biri — «—».
 6. Filtrlar shu ro'yxat bo'yicha: «guruh» — ro'yxatda bor; «ustoz» — ro'yxatdagi biror guruhning (hozirgi) ustozi (`GroupTeacher`); «kurs» — ro'yxatdagi biror guruhning (hozirgi) kursi.
+7. **O'chirilgan guruhlar:** qatorda, oynada va Excel'da ko'rinadi (to'lov kuni o'quvchi haqiqatan o'sha guruhda edi), lekin `filter-options`ga kirmaydi (§5.5) — shuning uchun «guruh» filtri bilan ularni tanlab bo'lmaydi; «ustoz» va «kurs» filtrlari o'chirilgan guruh orqali ham mos keladi.
 
 Bir sahifa uchun emas, davrdagi barcha qatorlar uchun hisoblanadi (filtr va jami shunga tayanadi): bitta so'rov yozilishlar, bitta so'rov ularning logi.
 
@@ -226,15 +236,16 @@ Bir sahifa uchun emas, davrdagi barcha qatorlar uchun hisoblanadi (filtr va jami
 `q` (bo'shliqlari olib tashlanadi, 100 belgigacha) quyidagilardan birortasiga mos kelsa — YOKI:
 - har so'z (bo'shliq bilan bo'lingan) o'quvchining `firstName` yoki `lastName`ida (katta-kichik harf farqsiz) uchraydi;
 - faqat raqam bo'lsa: o'quvchi ID'siga teng (≤ 9 raqam bo'lsa); o'quvchi `phone`ida uchraydi (kamida 4 raqam; boshidagi `998` olib tashlanadi);
-- `receiptCode`da uchraydi (katta-kichik farqsiz: «r-2026-00412», «00412», «412»);
+- `receiptCode`da uchraydi (katta-kichik farqsiz: «r-2026-0nnnn», «0nnnn» yoki raqamning bir qismi);
 - `receiptNumber`da uchraydi.
 
 ### 4.7 Kvitansiyaning tizim raqami
 
-**Bugun:** `ReceiptsService.ensurePaymentReceiptCode` → `allocateCode` (`receipts.service.ts:329-404`) raqamni PDF birinchi ochilganda beradi: `R-{yil}-{5 xonali tartib}`, yil — `new Date().getFullYear()` (jarayon vaqt zonasi).
+**Bugun:** `ReceiptsService.ensurePaymentReceiptCode` → `allocateCode` (`receipts.service.ts:329-404`) raqamni PDF birinchi ochilganda beradi: `R-{yil}-{5 xonali tartib}`, yil — `new Date().getFullYear()` (`:360`, jarayon vaqt zonasi — Railway'da UTC, 31.12 soat 19:00 dan keyin Toshkentda yangi yil bo'lsa ham eski yil). Keyingi raqam `companyId` bo'yicha eng kattasidan olinadi, `receiptCode` esa butun jadval bo'yicha unique (`schema.prisma:2392`) — ikki kompaniya bir xil kodga urinib, biri yiqilishi mumkin.
 
 **O'zgarish:**
-- Ajratish `receipts/receipt-code.ts`ga ko'chadi: `allocatePaymentReceiptCode(db, paymentId)` — to'lovni o'zi o'qiydi; yil = to'lov `createdAt`ining TOSHKENT yili (`tashkentMonthKey(createdAt).slice(0, 4)`), o'sha yilning eng katta kodi + 1 (`nextSequence`, 5 xona), o'zining Serializable tranzaksiyasida, unique to'qnashuv yoki serializatsiya xatosida 3 martagacha qayta urinadi; kod allaqachon bo'lsa — o'shani qaytaradi. `ensurePaymentReceiptCode` (PDF yo'li) shu funksiyani chaqiradi va zaxira bo'lib qoladi. Qaytarish hujjati (`Q-…`) o'zgarmaydi.
+- Ajratish `receipts/receipt-code.ts`ga ko'chadi: `allocatePaymentReceiptCode(db, paymentId)` — to'lovni o'zi o'qiydi; yil = to'lov `createdAt`ining TOSHKENT yili (`tashkentMonthKey(createdAt).slice(0, 4)`); keyingi raqam = shu prefiksli (`R-{yil}-`) eng katta kod + 1 — **butun jadval bo'yicha, `companyId` filtrisiz** (unique ham global); `nextSequence`, 5 xona; o'zining Serializable tranzaksiyasida, unique to'qnashuv yoki serializatsiya xatosida 3 martagacha qayta urinadi; kod allaqachon bo'lsa — o'shani qaytaradi. `ensurePaymentReceiptCode` (PDF yo'li) shu funksiyani chaqiradi va zaxira bo'lib qoladi.
+- Qaytarish hujjati (`Q-…`) ham shu ikki tuzatishni oladi: keyingi raqam global eng kattasidan, yil — ajratish lahzasining Toshkent yili (`tashkentMonthKey(new Date()).slice(0, 4)`); `new Date().getFullYear()` kodda qolmaydi. Uning ajratilish vaqti (PDF ochilganda) o'zgarmaydi.
 - **To'lov yozilganda beriladi:** yangi `ReceiptCodeListener` (`receipts/receipt-code.listener.ts`) `payment.received` hodisasini eshitib, `allocatePaymentReceiptCode` ni chaqiradi. Bu hodisa har to'lov yo'lida commit'dan keyin chiqadi: `POST /payments` (`create`), tuzatishning qayta yozuvi (`create` orqali), `POST /payments/attach-external` va Payme/Click (`createFromExternal`; tashqi tranzaksiyali chaqiruvchilar `announceCommitted` orqali). Raqam pul tranzaksiyasining ICHIDA berilmaydi: bir vaqtdagi ikki to'lov raqam uchun to'qnashsa, to'lovning o'zi (yoki Payme/Click javobi) rad etilmasligi kerak. Tinglovchi xatosi logga yoziladi va yutiladi; raqamsiz qolgan to'lov PDF ochilganda yoki §5.10 skriptining keyingi ishga tushishida raqam oladi.
 - Ro'yxat javobi kodni o'qiydi; yo'q bo'lsa «—» (§3.8).
 
@@ -251,11 +262,13 @@ Bir sahifa uchun emas, davrdagi barcha qatorlar uchun hisoblanadi (filtr va jami
 
 ### 4.9 Balans oldin → keyin
 
-To'lovning o'z PAYMENT ledger yozuvi: `Transaction` where `paymentId = payment.id`, `type = PAYMENT`, `reversedTransactionId = null` (asl yozuv; bekor qilingan bo'lsa ham u o'z joyida). Uning `balanceBefore` → `balanceAfter` ko'rsatiladi — bugungi balans emas. Yozuv topilmasa (bo'lmasligi kerak) «BALANS» bloki chiqmaydi. Bekor qilish ma'lumoti (`at`, `reason`, `by`) o'sha yozuvni bekor qilgan qatordan (`reversedTransactionId = asl.id`): sabab — tavsif «Bekor qilindi: » prefiksisiz (`transactions/reversal-view.ts`dagi bilan bir xil o'qish), kim — `performedBy`, qachon — `createdAt`.
+To'lovning o'z PAYMENT ledger yozuvi: `Transaction` where `paymentId = payment.id`, `type = PAYMENT`, `reversedTransactionId = null` (asl yozuv; bekor qilingan bo'lsa ham u o'z joyida). Uning `balanceBefore` → `balanceAfter` ko'rsatiladi — bugungi balans emas. Yozuv topilmasa (bo'lmasligi kerak) «BALANS» bloki chiqmaydi. Bekor qilish ma'lumoti (`at`, `reason`, `by`) o'sha yozuvni bekor qilgan qatordan (`reversedTransactionId = asl.id`): sabab — `transactions/reversal-view.ts`dagi `reversalReason(description)` ning o'zi (prefiksni olib tashlaydi va eski inglizcha sabablarni o'zbekchalashtiradi), kim — `performedBy` (Payme bekor qilishida yo'q → «—»), qachon — `createdAt`.
+
+`reversalReason`ga bitta qoida qo'shiladi: «Payme CancelTransaction» (Payme bekor qilishi, `payme-methods.service.ts:477`) → «Payme to'lovni bekor qildi». Qatorlarning o'zi qayta yozilmaydi; profilning «To'lovlar» tabi ham shu funksiyani o'qigani uchun u yerda ham o'zbekcha chiqadi. Ekranda inglizcha sabab qolmaydi.
 
 ### 4.10 Qabul qildi
 
-`receivedBy` (ism, familiya) va eng yuqori roli (rol id'si eng kichigi) → qisqa nom (§3.7). Onlayn (§4.3) — «Onlayn», `receivedBy` qaysi bo'lishidan qat'i nazar.
+`receivedBy` (ism, familiya) va CEO / Branch Director / Administrator / Cashier rollaridan eng yuqorisi (rol id'si eng kichigi) → qisqa nom (§3.7); bu to'rttasidan birortasi yo'q akkaunt (faqat Teacher, rolsiz yoki keyin rolidan ayrilgan xodim) — `roleLabel: null`, faqat ism. Rollar bugungi holatdan o'qiladi (to'lov paytidagi rol saqlanmaydi). Onlayn (§4.3) — «Onlayn», `receivedBy` qaysi bo'lishidan qat'i nazar.
 
 ## 5. Server
 
@@ -263,14 +276,17 @@ Yangi controller `PaymentsListController` (`@Controller('payments/list')`, `src/
 
 ### 5.1 Umumiy
 
-- Har yo'l: `@BranchScope()` — qamrov tepadagi tanlovdan, qamrov bo'sh bo'lsa ro'yxat bo'sh (rad emas; `branchIdWhere([])` hech narsa qaytarmaydi). `companyId` har so'rovda.
-- Qatorlar bitta yo'l bilan yig'iladi (`buildRows`): SQL filtrlar (davr, qamrov, usul, holat, manba, qabul qildi, qidiruv) → hamma mos qatorlar xotiraga → dvigatel (§4.4) bitta chaqiruv → guruhlar (§4.5) → guruh/ustoz/kurs va «Nimaga ketdi» filtrlari xotirada → jamilar → sahifa. Ro'yxat, `rows/:id` va Excel shu bitta yo'ldan o'tadi.
+- Har yo'l: `@BranchScope()` — qamrov tepadagi tanlovdan. Qamrov bo'sh bo'lsa `rows`, `rows/:id`, `filter-options`, `excel` bo'sh javob beradi (rad emas; `branchIdWhere([])` hech narsa qaytarmaydi; `rows/:id` — 404); `summary` esa 403 (§5.4). `companyId` har so'rovda.
+- Arxivlangan o'quvchilarning to'lovlari kiradi (§4.4), qidiruvda ham.
+- Qatorlar bitta yo'l bilan yig'iladi (`buildRows`): SQL filtrlar (davr, qamrov, usul, holat, manba, qabul qildi, qidiruv) → hamma mos qatorlar xotiraga → dvigatel (§4.4) so'rov boshiga bitta chaqiruv → guruhlar (§4.5) → guruh/ustoz/kurs va «Nimaga ketdi» filtrlari xotirada → jamilar → sahifa. Ro'yxat, `rows/:id` va Excel shu bitta yo'ldan o'tadi.
 
 ### 5.2 `GET /payments/list/rows`
 
 `@Can('payments.view')`, `@BranchScope()`. DTO `PaymentListQueryDto`:
 - `startDate`, `endDate` — majburiy (§4.1).
-- `search?` (≤ 100), `method?` (vergul bilan ro'yxat, `toStringArray` + `@IsEnum(PaymentMethod, { each })`; mijoz bittasini yuboradi), `part?` (`CURRENT` | `ADVANCE` | `LATE`), `groupId?`, `teacherId?` (int), `courseId?`, `receivedById?` (int), `online?` (`true` — «Kim qabul qildi: Onlayn»), `source?` (`ADMIN` | `ONLINE`), `status?` (`COMPLETED` | `REVERSED` | `ALL`, sukut `COMPLETED`), `page?`, `pageSize?` (`PaginationDto`, ≤ 100).
+- `search?` (≤ 100), `part?` (`CURRENT` | `ADVANCE` | `LATE`), `source?` (`ADMIN` | `ONLINE`), `online?` (`true` — «Kim qabul qildi: Onlayn»; `receivedById` bilan birga berilsa — YOKI).
+- Ko'p qiymatli filtrlar — server/CLAUDE.md'ning «Multi-value filter parameters» qoidasi bo'yicha vergul bilan ro'yxat (`common/dto/to-array.ts`; bo'sh → `undefined`, hech qachon `[]`; `where` `equalsOrIn` bilan): `method?` (`toStringArray` + `@IsEnum(PaymentMethod, { each: true })`), `groupId?` va `courseId?` (uuid satrlar — `toStringArray` + `@IsUUID('4', { each: true })`), `teacherId?` va `receivedById?` (`toNumberArray` + `@IsInt({ each: true })`). Mijoz hozircha har biriga bitta qiymat yuboradi (§3.5).
+- `status?` (`COMPLETED` | `REVERSED` | `ALL`, sukut `COMPLETED`), `page?`, `pageSize?` (`PaginationDto`, ≤ 100).
 
 Javob:
 ```
@@ -282,9 +298,9 @@ Javob:
 PaymentRow = {
   id, createdAt, amount, method, source, online, status,
   receiptCode | null, receiptNumber | null, note | null,
-  student: { id, firstName, lastName, phone },
+  student: { id, firstName, lastName, phone, archived },
   groups: [{ id, name }],
-  receivedBy: { id, firstName, lastName, roleLabel } | null,
+  receivedBy: { id, firstName, lastName, roleLabel | null } | null,
   parts: [{ kind: 'CURRENT' | 'ADVANCE' | 'LATE', monthKey | null, label, amount }] | null,
   balanceBefore | null, balanceAfter | null,
   reversal: { at, reason | null, by: { id, firstName, lastName } | null } | null,
@@ -296,11 +312,11 @@ PaymentRow = {
 
 ### 5.3 `GET /payments/list/rows/:id`
 
-`@Can('payments.view')`, `@BranchScope()`, so'rov `startDate`, `endDate` (ixtiyoriy). Bitta `PaymentRow` (§5.2 bilan bir xil yig'uvchi). Qismlar davri: to'lov berilgan davr ichida bo'lsa — o'sha davr; tashqarida bo'lsa yoki davr berilmasa — to'lovning o'z Toshkent oyi (1-sanadan oxirigacha); javobdagi `period` qaysi biri ishlatilganini aytadi va oyna izohi shuni yozadi. Qamrovdan tashqari yoki yo'q to'lov — 404 «To'lov topilmadi» (bugungi `findOne` qoidasi: 403 id borligini fosh qilardi).
+`@Can('payments.view')`, `@BranchScope()`, so'rov `startDate`, `endDate` (ixtiyoriy). Bitta `PaymentRow` (§5.2 bilan bir xil yig'uvchi). Ro'yxat filtrlarini (qidiruv, usul, guruh, «Nimaga ketdi», holat va h.k.) o'qimaydi va holat «Hammasi» bilan ishlaydi — bekor qilingan, tuzatilgan va filtrdan tashqaridagi to'lov ham ochiladi; faqat qamrov va `companyId` cheklaydi. Qismlar davri: to'lov berilgan davr ichida bo'lsa — o'sha davr; tashqarida bo'lsa yoki davr berilmasa — to'lovning o'z Toshkent oyi (1-sanadan oxirigacha); javobdagi `period` qaysi biri ishlatilganini aytadi va oyna izohi shuni yozadi. Qamrovdan tashqari yoki yo'q to'lov — 404 «To'lov topilmadi» (bugungi `findOne` qoidasi: 403 id borligini fosh qilardi); mijoz uni «To'lov bu filialda topilmadi» holati bilan ko'rsatadi (§3.8).
 
 ### 5.4 `GET /payments/list/summary`
 
-`@Can('reports.finance')`, `@BranchScope()`, `startDate`, `endDate` (§4.1). Filtrlarni o'qimaydi — karta davr va filialni tasvirlaydi.
+`@Can('reports.finance')`, `@BranchScope()`, `startDate`, `endDate` (§4.1). Filtrlarni o'qimaydi — karta davr va filialni tasvirlaydi. Qamrov bo'sh bo'lsa (`isEmptyScope`) — 403 «Bu filial ma'lumotlarini ko'rish huquqingiz yo'q», `GET /reports/income-month-attribution` bilan bir xil (`reports.controller.ts:519-534`): pul hisoboti nollar bilan javob bermaydi. Ro'yxat yo'llari esa bo'sh qaytaradi (§5.1); mijoz 403 da kartani chizmaydi.
 ```
 { period, total, paymentCount, payerCount,
   parts: { currentMonth, advance, lateTotal, late: [{ monthKey, label, amount }] },
@@ -311,7 +327,7 @@ PaymentRow = {
 
 ### 5.5 `GET /payments/list/filter-options`
 
-`@Can('payments.view')`, `@BranchScope()`. Javob: `groups[{ id, name }]` (qamrovdagi `deletedAt` bo'sh guruhlar, hamma holatda — yopilgan guruhning o'tgan to'lovlari ham bor), `teachers[{ id, firstName, lastName }]` (shu guruhlarning ustozlari), `courses[{ id, name }]`, `receivers[{ id, firstName, lastName }]` (qamrovdagi to'lovlarning `receivedById`lari, `groupBy`). Nom bo'yicha tartib. (`GET /reports/student-payments/filter-options` `reports.finance`/`reports.students` talab qiladi — admin va kassirga yaramaydi; u «Ketgan o'quvchilar» sahifasi uchun qoladi.)
+`@Can('payments.view')`, `@BranchScope()`. Javob: `groups[{ id, name }]` (qamrovdagi `deletedAt` bo'sh guruhlar, hamma holatda — yopilgan guruhning o'tgan to'lovlari ham bor; o'chirilgan guruhlar kirmaydi — §4.5, 7-band), `teachers[{ id, firstName, lastName }]` (shu guruhlarning ustozlari), `courses[{ id, name }]`, `receivers[{ id, firstName, lastName }]` (qamrovdagi to'lovlarning `receivedById`lari, `groupBy`). Nom bo'yicha tartib. (`GET /reports/student-payments/filter-options` `reports.finance`/`reports.students` talab qiladi — admin va kassirga yaramaydi; u «Ketgan o'quvchilar» sahifasi uchun qoladi.)
 
 ### 5.6 `GET /payments/list/excel`
 
@@ -335,14 +351,18 @@ Tepasida ikki qator: «Davr: {dd.MM.yyyy} – {dd.MM.yyyy}» va «Filtrlar: …�
 
 ### 5.9 Migratsiya
 
-`…_payment_corrects_payment`: `ALTER TABLE "Payment" ADD COLUMN IF NOT EXISTS "correctsPaymentId" TEXT`, unique indeks, FK `REFERENCES "Payment"("id") ON DELETE SET NULL`. Faqat qo'shimcha; eski server uni o'qimaydi. Repo `prisma.config.ts` ishlatgani uchun: `prisma migrate diff --from-config-datasource --to-schema=prisma/schema.prisma --script` → `prisma db execute --file` → `prisma migrate resolve --applied <nom>` → `prisma generate`.
+`…_payment_corrects_payment`:
+- `ALTER TABLE "Payment" ADD COLUMN IF NOT EXISTS "correctsPaymentId" TEXT`, unique indeks, FK `REFERENCES "Payment"("id") ON DELETE SET NULL`.
+- `Transaction` ga `@@index([paymentId])` (`CREATE INDEX IF NOT EXISTS "Transaction_paymentId_idx"`). Hozir bunday indeks yo'q (`schema.prisma:2460-2466`), sahifa esa davrdagi har to'lov uchun uning PAYMENT yozuvi va uni bekor qilgan qatorni `paymentId` bo'yicha o'qiydi (§4.9); `reverse`/`correctAmount`dagi `findFirst({ paymentId })` ham undan foyda ko'radi.
+
+Faqat qo'shimcha; eski server ularni o'qimaydi. Repo `prisma.config.ts` ishlatgani uchun: `prisma migrate diff --from-config-datasource --to-schema=prisma/schema.prisma --script` → `prisma db execute --file` → `prisma migrate resolve --applied <nom>` → `prisma generate`.
 
 ### 5.10 Bir martalik skriptlar
 
 Ikkalasi `scripts/open-unmarked-lessons.ts` andozasida: sukut — quruq ishga tushirish, faqat o'qiydigan ulanishda (`default_transaction_read_only=on`, tekshiriladi, aks holda to'xtaydi), har yozuvni ro'yxatlaydi; `--apply` `--expect=<N>` talab qiladi (quruq ishga tushirish chiqargan son) va yozishdan oldin yangi skan farq qilsa to'xtaydi; noma'lum bayroqlar rad etiladi; bitta yozuv xatosi logga yoziladi, qolgani davom etadi, chiqish kodi noldan farqli; qayta ishga tushirish tayyorlarini o'tkazib yuboradi.
 
-1. `scripts/backfill-payment-receipt-codes.ts` — `receiptCode` bo'sh hamma to'lovlar (har qanday holat), `createdAt` o'sish tartibida; har biriga `allocatePaymentReceiptCode` (§4.7: o'z Toshkent yili, o'sha yilning eng kattasidan keyin). Quruq ishga tushirish yil bo'yicha sonni va birinchi/oxirgi beriladigan kodni chiqaradi.
-2. `scripts/link-payment-corrections.ts` — eski tuzatishlarni bog'laydi. Eski to'lov: REVERSED, uning PAYMENT yozuvini bekor qilgan qator tavsifi «Bekor qilindi: Summa to'g'rilandi:» bilan boshlanadi. Yangi to'lov nomzodi: o'sha o'quvchi, `createdAt` bekor qilish yozuvidan keyingi 10 daqiqa ichida, `note` «To'g'rilangan to'lov (avvalgi summa: {formatSom(eski.amount)} so'm)» bilan boshlanadi, `correctsPaymentId` bo'sh va boshqa eski to'lovga hali berilmagan. Aynan bitta nomzod bo'lsa bog'lanadi; nol yoki bir nechta bo'lsa — «bog'lanmadi» ro'yxatiga (sababi bilan), yozilmaydi.
+1. `scripts/backfill-payment-receipt-codes.ts` — `receiptCode` bo'sh hamma to'lovlar (har qanday holat), `createdAt` o'sish tartibida; har biriga `allocatePaymentReceiptCode` (§4.7: o'z Toshkent yili, o'sha yilning global eng kattasidan keyin). Quruq ishga tushirish yil bo'yicha sonni va birinchi/oxirgi beriladigan kodni chiqaradi.
+2. `scripts/link-payment-corrections.ts` — eski tuzatishlarni bog'laydi. Eski to'lov: REVERSED, uning PAYMENT yozuvini bekor qilgan qator tavsifi «Bekor qilindi: Summa to'g'rilandi:» YOKI «Bekor qilindi: To'lov usuli to'g'rilandi» bilan boshlanadi (ikkinchisi — faqat usul tuzatilganda ham bekor qilish + qayta yozuv qilingan davrdan, 2026-06-09 da shunday yozuv qilingan; o'shanda yangi to'lov `note`i ham «To'g'rilangan to'lov (avvalgi summa: …)» bilan boshlangan, summa teng). Yangi to'lov nomzodi: o'sha o'quvchi, `createdAt` bekor qilish yozuvidan keyingi 10 daqiqa ichida, `note` «To'g'rilangan to'lov (avvalgi summa: {formatSom(eski.amount)} so'm)» bilan boshlanadi, `correctsPaymentId` bo'sh va boshqa eski to'lovga hali berilmagan. Aynan bitta nomzod bo'lsa bog'lanadi; nol yoki bir nechta bo'lsa — «bog'lanmadi» ro'yxatiga (sababi bilan), yozilmaydi.
 
 ### 5.11 Olib tashlanadigan endpointlar
 
@@ -354,10 +374,11 @@ Grep (11.10.2026, `origin/main` 6a57c05e) bo'yicha boshqa chaqiruvchisi yo'q:
 
 ### 5.12 Ruxsatlar va manifest
 
-- Yangi to'rt yo'l `route-access.snapshot.json`ga (CEO, Branch Director, Administrator, Cashier — `payments.view`; summary — CEO, Branch Director) va `permission-routes.spec.ts` manifestiga; `@BranchScope()` bo'lgani uchun `branch-route-policy.ts`da `BRANCH_SCOPED_BY_HEADER`.
+- Yangi besh yo'l (`rows`, `rows/:id`, `summary`, `filter-options`, `excel`) `route-access.snapshot.json`ga (CEO, Branch Director, Administrator, Cashier — `payments.view`; `summary` — CEO, Branch Director) va `permission-routes.spec.ts` manifestiga.
+- `branch-route-policy.ts`ning `ROUTE_POLICIES`iga **hech narsa qo'shilmaydi**: `@BranchScope()` oladigan yo'l manbadan avtomatik header bo'yicha qamrovli deb tasniflanadi, ortiqcha yozuv esa `branch-route-policy.spec.ts:66-69` («does not re-declare a route the source already evidences») ni yiqitadi. Olib tashlangan ikki yo'l u yerda yozilmagan (tekshirildi) — «names no route that does not exist» testi ham buzilmaydi.
 - `POST /payments/:id/reverse` ruxsati o'zgarmaydi (`money.undo`).
 - `payments.view` yorlig'i yangilanadi (§3.1). Yangi imkoniyat qo'shilmaydi.
-- Controller spec'lari: `routeAccess()` + `defaultRolesOf()` bilan to'rt yo'l.
+- Controller spec'lari: `routeAccess()` + `defaultRolesOf()` bilan besh yo'l.
 
 ## 6. Mijoz
 
@@ -375,7 +396,7 @@ Grep (11.10.2026, `origin/main` 6a57c05e) bo'yicha boshqa chaqiruvchisi yo'q:
 ### 6.2 Yo'naltirishlar (server tomonda, `redirect()` — B2a `legacyDebtRedirect` kabi)
 
 - `/payments/pending` → `/payments/debt` («Qarzdorlik»; CEO, 11.10.2026 — u sahifa qarzdorlar ro'yxati edi, «To'lovlar» emas). Parametrlar tashlanadi; `/payments/debt` o'zining `legacyDebtRedirect`i bilan ochiladi.
-- `/reports/student-payments?…` → `/payments/list?…`: `startDate` + `endDate` → `davr=oraliq&dan=…&gacha=…` (boshi 2026-05-01 dan oldin bo'lsa 2026-05-01 qilinadi; sanalar yo'q bo'lsa — davr qo'yilmaydi, sukut «Bu oy»); `groupIds` → `guruh` (birinchisi), `teacherIds` → `ustoz` (birinchisi), `methods` → `usul` (birinchisi), `courseId` → `kurs`; `branchId`, `page`, `pageSize` tashlanadi.
+- `/reports/student-payments?…` → `/payments/list?…`: `startDate` + `endDate` → `davr=oraliq&dan=…&gacha=…`, quyidagicha: ikkalasi haqiqiy sana va `startDate ≤ endDate` bo'lsa — faqat boshi 2026-05-01 dan oldin bo'lsa 2026-05-01 qilinadi; ikkalasi ham 2026-05-01 dan oldin bo'lsa, oxiri boshidan oldin bo'lsa, biri yo'q yoki noto'g'ri bo'lsa — davr tashlanadi (sukut «Bu oy»); `groupIds` → `guruh` (birinchisi), `teacherIds` → `ustoz` (birinchisi), `methods` → `usul` (birinchisi), `courseId` → `kurs`; `branchId`, `page`, `pageSize` tashlanadi.
 - Qo'llanma: `qarzdorlik.mdx:124`dagi «Kutilyotgan to'lovlar» qatori olib tashlanadi; `tolov-qayd-qilish.mdx:105` va `sahifalar/tolovlar.ts:121`dagi `yollar` (`/payments/pending`) «To'lovlar» (`/payments/list`) ga almashtiriladi; «kutilyotgan to'lovlar» kalit so'zi «Qarzdorlik» sahifasi yozuviga ko'chadi.
 
 ### 6.3 «Umumiy ma'lumotlar» havolalari
@@ -391,12 +412,12 @@ Sahifa oyi `M` (`?month=`) bo'yicha davr: joriy oy → `davr=oy`; o'tgan oy → 
 
 ## 7. Hujjatlar
 
-### 7.1 ADR-0084
+### 7.1 Yangi ADR
 
-`docs/adr/0084-tolovlar-sahifasi-tolov-boyicha-qismlar.md` (o'zbekcha), indeks qatori `docs/adr/README.md`ga. Sarlavha: «To'lovlar sahifasi: «Nimaga ketdi» kassa dvigatelining o'zidan har to'lov bo'yicha; guruh — to'lov kunidagi; kvitansiya raqami to'lov yozilganda; bekor qilish sababi majburiy; tuzatish ustun bilan bog'lanadi». Mazmuni:
+`docs/adr/NNNN-tolovlar-sahifasi-tolov-boyicha-qismlar.md` (o'zbekcha), indeks qatori `docs/adr/README.md`ga. `NNNN` — PR paytidagi keyingi bo'sh raqam: yozilish paytida 0084, lekin raqam oldindan qotirilmaydi — PR ochishdan oldin `origin/main` va lokal shoxlardagi `docs/adr/README.md` (va `docs/adr/` fayllari) tekshiriladi; `main` boshqa ADR'ni oldinroq olsa `git mv` bilan qayta raqamlanadi, spec, qo'llanma (`adr: [...]`) va CLAUDE.md havolalari bilan birga. Sarlavha: «To'lovlar sahifasi: «Nimaga ketdi» kassa dvigatelining o'zidan har to'lov bo'yicha; guruh — to'lov kunidagi; kvitansiya raqami to'lov yozilganda; bekor qilish sababi majburiy; tuzatish ustun bilan bog'lanadi». Mazmuni:
 1. Har to'lovning qismlari `attributeIncome`dan (`common/finance/income-attribution.ts`) — `getIncomeMonthAttribution` bilan bitta funksiya; tenglik testi; qismlar davr oxiriga bog'liq, yorliq qoidasi (§4.4). Taqiq: qismlarni boshqa joyda (mijozda ham) hisoblash.
-2. Guruh — to'lovning Toshkent kunida biror lahzada ACTIVE bo'lgan yozilishlar (`EnrollmentStateLog`), bir nechtasi — hammasi; filtrlar shu qoida bilan; ustoz va kurs — guruhning hozirgisi (§4.5). «Oxirgi to'lovlar» hozirgi guruhda qoladi (B1).
-3. `receiptCode` har to'lovga `payment.received`dan keyin beriladi (pul tranzaksiyasidan tashqarida — sababi), yil Toshkent bo'yicha; PDF yo'li zaxira; eski to'lovlar skript bilan.
+2. Guruh — to'lovning Toshkent kunida biror lahzada ACTIVE bo'lgan yozilishlar (`EnrollmentStateLog`, ikki uchi `supplyOpeningRow` / `supplyClosingRow` bilan to'ldiriladi, o'chirilgan guruh `deletedAt` lahzasida yopiladi va qatorda ko'rinadi, filtr variantlarida emas), bir nechtasi — hammasi; filtrlar shu qoida bilan; ustoz va kurs — guruhning hozirgisi (§4.5). «Oxirgi to'lovlar» hozirgi guruhda qoladi (B1).
+3. `receiptCode` har to'lovga `payment.received`dan keyin beriladi (pul tranzaksiyasidan tashqarida — sababi), yil Toshkent bo'yicha, keyingi raqam global eng kattasidan (unique global); PDF yo'li zaxira; eski to'lovlar skript bilan. `Q-…` ham Toshkent yili va global raqamga o'tadi.
 4. Odam bekor qilganda sabab majburiy (DTO va xizmat); tizim chaqiruvlari istisno.
 5. `Payment.correctsPaymentId` — tuzatishning yagona bog'lanishi; eski tuzatishlar skript bilan; matndan taxmin qilish taqiqlanadi.
 6. `GET /reports/student-payments` va `GET /payments/pending-students` olib tashlandi; `/reports/student-payments` → `/payments/list`, `/payments/pending` → `/payments/debt`.
@@ -404,9 +425,9 @@ Ko'rib chiqilgan muqobillar: qismlarni to'lov KUNIDAGI holat bo'yicha (CEO rad e
 
 ### 7.2 Boshqalar
 
-- `server/CLAUDE.md`: Payment Module endpointlari (yangi to'rt yo'l, olib tashlangan ikki yo'l, `getPending` qatori), «Payment Reverse Block» (sabab majburiy, yangi matn), «Payment Amount Correction» (`correctsPaymentId`), «Cash in three parts» (bir qator: `byPayment` va To'lovlar sahifasi), receipts haqida qator (`receiptCode` to'lov yozilganda).
+- `server/CLAUDE.md`: Payment Module endpointlari (yangi besh yo'l, olib tashlangan ikki yo'l, `getPending` qatori), «Payment Reverse Block» (sabab majburiy, yangi matn), «Student transactions list»dagi `reversal` sabablari (Payme qoidasi), «Payment Amount Correction» (`correctsPaymentId`), «Cash in three parts» (bir qator: `byPayment` va To'lovlar sahifasi), receipts haqida qator (`receiptCode` to'lov yozilganda).
 - `docs/role-access.md`: «To'lovlar» qatori (CEO/BD/Admin/Kassir; karta CEO/BD; bekor qilish CEO; tuzatish CEO/BD/Admin), «O'quvchi to'lovi» va «Kutilyotgan to'lovlar» qatorlari olib tashlanadi.
-- Qo'llanma: yangi sahifa `client/src/qollanma/kontent/tolovlar/tolovlar-sahifasi.mdx` va `sahifalar/tolovlar.ts`ga yozuv (`sahifa: "tolovlar-sahifasi"`, sarlavha «To'lovlar», rollar `[1, 2, 3, 5]`, `adr: ["0084", "0067", "0065"]`, `yollar: ["/payments/list"]`, kalit so'zlar: to'lovlar, to'lovlar ro'yxati, kvitansiya raqami, bekor qilingan to'lov, tuzatilgan to'lov, nimaga ketdi, oldindan, eski qarz, o'quvchi to'lovi). Mazmuni: davr tugmalari va hafta dushanbadan; karta faqat CEO/direktorga; «Nimaga ketdi» tanlangan davr oxiriga ko'ra (misol bilan: bitta to'lov haftada «Oldindan», oyda «Oktabr to'lovi»); guruh — to'lov kunidagi; ikki kvitansiya raqami; bekor qilish (faqat CEO, sabab, «darslarga sarflangan» holati); tuzatish; Excel. `tolov-qayd-qilish.mdx` va `tolovni-togrilash.mdx` yangi sahifaga havola oladi.
+- Qo'llanma: yangi sahifa `client/src/qollanma/kontent/tolovlar/tolovlar-sahifasi.mdx` va `sahifalar/tolovlar.ts`ga yozuv (`sahifa: "tolovlar-sahifasi"`, sarlavha «To'lovlar», rollar `[1, 2, 3, 5]`, `adr: ["<yangi ADR raqami>", "0067", "0065"]`, `yollar: ["/payments/list"]`, kalit so'zlar: to'lovlar, to'lovlar ro'yxati, kvitansiya raqami, bekor qilingan to'lov, tuzatilgan to'lov, nimaga ketdi, oldindan, eski qarz, o'quvchi to'lovi). Mazmuni: davr tugmalari va hafta dushanbadan; karta faqat CEO/direktorga; «Nimaga ketdi» tanlangan davr oxiriga ko'ra (misol bilan: bitta to'lov haftada «Oldindan», oyda «Oktabr to'lovi»); guruh — to'lov kunidagi; ikki kvitansiya raqami; bekor qilish (faqat CEO, sabab, «darslarga sarflangan» holati); tuzatish; Excel. `tolov-qayd-qilish.mdx` va `tolovni-togrilash.mdx` yangi sahifaga havola oladi.
 - `yangiliklar.ts` (2026-10-1x, rollar `[1, 2, 3, 5]`, sahifa `{ bolim: "tolovlar", sahifa: "tolovlar-sahifasi" }`): «Moliya → «To'lovlar» — yangi sahifa: hamma to'lovlar bitta ro'yxatda, davr tugmalari (Bugun, Kecha, Bu hafta, Bu oy, O'tgan oy, Oraliq), qidiruv (ism, telefon, ID, kvitansiya raqami) va filtrlar. Har to'lov yonida pul nimaga ketgani (shu oy, oldindan, eski qarz) — «Kassaga tushdi» kartasi bilan bir xil hisob, tanlangan davr oxiriga ko'ra. Qator bosilsa to'lov oynasi: kvitansiya, to'lov paytidagi balans, tuzatish; CEO to'lovni sabab yozib bekor qila oladi. «O'quvchi to'lovi» hisoboti shu yerga ko'chdi; «Kutilyotgan to'lovlar» o'rniga «Qarzdorlik» sahifasi ochiladi. Har to'lovning endi tizim kvitansiya raqami bor.»
 
 ## 8. Testlar
@@ -414,19 +435,23 @@ Ko'rib chiqilgan muqobillar: qismlarni to'lov KUNIDAGI holat bo'yicha (CEO rad e
 Server:
 - `attributeIncome`: (a) bugungi `getIncomeMonthAttribution` spec'lari o'zgarmasdan o'tadi; (b) Σ `byPayment` = `currentMonth` / `advance` / `late[]` — aralash holatlar: oy o'rtasida qo'shilish (davr ichidagi debet oldindanni shu oyga o'tkazadi), qarzni yopib ortgani oldindan, ikki to'lov bir debetni bo'lishadi (FIFO bo'lak o'z to'loviga tegishli), boshqa filial krediti, bekor qilingan juft (qismsiz); (c) bitta to'lov hafta davrida `ADVANCE`, oy davrida `CURRENT`.
 - Yorliqlar: bitta oy / ko'p oy; oy oxirida tugaydigan / tugamaydigan davr; boshqa yil.
-- `groupsOnPaymentDay`: o'sha kuni qo'shilgan (to'lov qo'shilishdan oldin), o'sha kuni chiqqan, muzlatilgan davrda to'lov (guruh yo'q), ko'chirish kuni (ikki guruh), logsiz eski yozilish, `startDate` keyin, boshqa filial guruhi ko'rinmaydi.
-- `PaymentsListService`: har filtr; qidiruv (ism so'zlari, ID, telefon `998` bilan, `receiptCode` qismi, `receiptNumber`); `totals.amount` bekor qilinganlarsiz; `partAmount`; «Bekor qilinganlar»; sahifalash; qamrov (BD boshqa filialni ko'rmaydi, bo'sh qamrov — bo'sh); davr rad javoblari (to'rt matn); `rows/:id` 404 qamrovdan tashqarida va davr tashqarisidagi to'lovning o'z oyi; balans oldin→keyin asl yozuvdan; bekor qilish sababi va kim; `correctedBy` / `correctsPayment`.
-- Summary: «Bu oy» `total` va `parts` = `getIncomeMonthAttribution` bilan bir xil davrda; `byMethod`, `online` faqat COMPLETED va `GATEWAY_WEBHOOK`.
+- `groupsOnPaymentDay`: o'sha kuni qo'shilgan (to'lov qo'shilishdan oldin), o'sha kuni chiqqan, muzlatilgan davrda to'lov (guruh yo'q), ko'chirish kuni (ikki guruh), logsiz eski yozilish, ochilish qatori yo'q log (`supplyOpeningRow`), yopilishi yozilmagan log (`supplyClosingRow`), o'chirilgan guruh — o'chirilishdan oldingi kun ko'rinadi, keyingi kun yo'q, `startDate` keyin, boshqa filial guruhi ko'rinmaydi, arxivlangan yozilish sanalmaydi.
+- `PaymentsListService`: har filtr; qidiruv (ism so'zlari, ID, telefon `998` bilan, `receiptCode` qismi, `receiptNumber`); `totals.amount` bekor qilinganlarsiz; `partAmount`; «Bekor qilinganlar»; sahifalash; qamrov (BD boshqa filialni ko'rmaydi, bo'sh qamrov — bo'sh); davr rad javoblari (to'rt matn); DTO vergulli ro'yxatlar (`method`, `groupId`, `courseId`, `teacherId`, `receivedById`; bo'sh qiymat → filtr yo'q, `[]` emas); arxivlangan o'quvchi to'lovi ro'yxatda va qidiruvda bor (`archived: true`); `rows/:id` ro'yxat filtrlarini e'tiborsiz qoldiradi va REVERSED to'lovni ham qaytaradi, qamrovdan tashqarida 404, davr tashqarisidagi to'lov o'z oyi bilan; balans oldin→keyin asl yozuvdan; bekor qilish sababi (`reversalReason` orqali) va kim; `correctedBy` / `correctsPayment`; `roleLabel` faqat Teacher yoki rolsiz akkauntda `null`; dvigatel so'rov boshiga bir marta chaqiriladi.
+- Summary: «Bu oy» `total` va `parts` = `getIncomeMonthAttribution` bilan bir xil davrda; `byMethod`, `online` faqat COMPLETED va `GATEWAY_WEBHOOK`; bo'sh qamrov → 403.
+- `reversalReason`: «Bekor qilindi: Payme CancelTransaction» → «Payme to'lovni bekor qildi»; mavjud qoidalar o'zgarmaydi.
 - Excel: ustunlar, filtrlar qatori, «Jami» COMPLETED, 20 000 chegara.
 - Reverse: sabab yo'q / bo'shliq → 400 (DTO va xizmat); Payme yo'li sababsiz ishlaydi; yangi «darslarga sarflangan» matni.
 - Tuzatish: yangi to'lovda `correctsPaymentId`; qayta yozuv yiqilsa bog'lanish yo'q.
-- `allocatePaymentReceiptCode`: Toshkent yili (31.12 soat 20:00 UTC → keyingi yil), ketma-ketlik, mavjud kod qaytadi, to'qnashuvda qayta urinish; tinglovchi `payment.received`da chaqiradi, xatoni yutadi; `event-wiring.spec.ts` hodisani ko'radi.
-- Ikki skript: quruq ishga tushirish yozmaydi, `--expect` mos kelmasa to'xtaydi, tuzatish bog'lashda bir nechta nomzod — bog'lanmaydi.
-- Controller spec'lari (to'rt yo'l), `permission-routes.spec.ts`, `branch-route-policy.spec.ts`; olib tashlangan yo'llar snapshot'dan chiqqan.
+- `allocatePaymentReceiptCode`: Toshkent yili (31.12 soat 20:00 UTC → keyingi yil), ketma-ketlik, keyingi raqam boshqa kompaniyaning kodlarini ham hisobga oladi (global eng katta), mavjud kod qaytadi, to'qnashuvda qayta urinish; `Q-…` ham Toshkent yili va global eng katta; tinglovchi `payment.received`da chaqiradi, xatoni yutadi; `event-wiring.spec.ts` hodisani ko'radi.
+- Ikki skript: quruq ishga tushirish yozmaydi, `--expect` mos kelmasa to'xtaydi, tuzatish bog'lashda bir nechta nomzod — bog'lanmaydi, ikkala sabab prefiksi («Summa to'g'rilandi:» va «To'lov usuli to'g'rilandi») taniladi.
+- Migratsiya: `Transaction_paymentId_idx` yaratiladi.
+- Controller spec'lari (besh yo'l), `permission-routes.spec.ts`, `branch-route-policy.spec.ts`; olib tashlangan yo'llar snapshot'dan chiqqan.
 
 Mijoz (vitest):
 - `periodRange`: Bugun/Kecha, Bu hafta dushanbadan (yakshanba kuni ham), Bu oy oxirgi kungacha, O'tgan oy yanvarda, Oraliq chegarasi.
-- `legacyStudentPaymentsRedirect`, `/payments/pending` → `/payments/debt` yo'naltirish, `paymentsListHref`.
+- `legacyStudentPaymentsRedirect` (boshi chegaradan oldin → 2026-05-01; ikkalasi oldin, oxiri boshidan oldin yoki bitta sana → davrsiz), `/payments/pending` → `/payments/debt` yo'naltirish, `paymentsListHref`.
+- `CorrectPaymentDialog`: `onCorrected` ikkinchi argumentda `newPaymentId` (usul tuzatilganda `null`), «To'lovlar» kalitlari yangilanadi; profildagi chaqiruvchi o'zgarishsiz ishlaydi.
+- Oyna: 404 da «To'lov bu filialda topilmadi» + «Yopish» (`?tolov=` o'chadi); pastki izoh imkoniyatlarga qarab (ikkalasi / bittasi / yo'q); arxivlangan o'quvchida «O'quvchi profili» yo'q; «Qabul qildi» rolsiz akkauntda faqat ism.
 - Karta faqat `reports.finance` bilan; «Bu oy»dan boshqa davrda split va belgi yo'q; chip filtrni o'rnatadi/bo'shatadi.
 - Jami qatori matnlari (oddiy, «Bekor qilinganlar», «shundan …»).
 - Jadval: bekor qilingan va «tuzatildi → …» qatorlari, «+1» guruh, «onlayn» pill.
@@ -435,7 +460,7 @@ Mijoz (vitest):
 
 ## 9. Deploy tartibi
 
-1. Migratsiya (`correctsPaymentId`) — prod bazaga, server deployidan oldin (qo'shimcha, eski server bilan xavfsiz).
+1. Migratsiya (`correctsPaymentId` va `Transaction_paymentId_idx`) — prod bazaga, server deployidan oldin (qo'shimcha, eski server bilan xavfsiz).
 2. Server (Railway) va mijoz (Vercel) **birga**, ketma-ket: yangi mijoz yangi yo'llarni o'qiydi; yangi server esa eski mijozning «Kutilyotgan to'lovlar» va «O'quvchi to'lovi» sahifalari o'qiydigan ikki yo'lni olib tashlaydi. Oradagi bir necha daqiqada faqat shu ikki eski sahifa ishlamaydi. `POST /payments/:id/reverse` sababi majburiyligi eski mijozni buzmaydi (unda bekor qilish tugmasi yo'q).
 3. `scripts/backfill-payment-receipt-codes.ts` — quruq, keyin `--apply --expect=<N>` (`railway run …`, `server/` dan).
 4. `scripts/link-payment-corrections.ts` — quruq, «bog'lanmadi» ro'yxatini CEO ko'radi, keyin `--apply --expect=<N>`.
@@ -443,18 +468,20 @@ Mijoz (vitest):
 
 ## 10. Ma'lum cheklovlar
 
-- **Tezlik.** Har ro'yxat so'rovi (sahifa almashishi ham) davr to'lovchilarining ledgerini qayta o'ynaydi — «Kassaga tushdi» bugun qilayotgan ish. Oyiga ~550 to'lov uchun yetarli; uzun «Oraliq» sekinroq. `// ponytail:` izohi: kerak bo'lsa (kompaniya, qamrov, davr) bo'yicha qisqa Redis keshi (`net-profit-cache` andozasi).
+- **Tezlik va kesh yo'qligi.** Har so'rov (sahifa almashishi ham) dvigatelni bir marta chaqiradi (§4.4) — «Kassaga tushdi» bugun qilayotgan ish; oyiga bir necha yuz to'lov uchun yetarli, uzun «Oraliq» sekinroq. Birinchi chiqishda kesh qo'yilmaydi, chunki: (1) qismlarni nafaqat to'lov, balki har qanday ledger qatori (oy hisobi, tuzatish yozuvi, pul qaytarish, dars puli qaytishi) o'zgartiradi — `payment.received` / `payment.reversed` bo'yicha tozalanadigan kesh shu holatlarda eskirgan bo'linishni ko'rsatardi; (2) «Umumiy ma'lumotlar» kartasi keshlanmagan, kesh esa ««Kassaga tushdi» kartasidagi raqamning o'zi» belgisini bir muddat yolg'on qilardi. `// ponytail:` izohi: sekinlik o'lchansa — kalitga kompaniyaning eng oxirgi `Transaction` yozuvi (`max(createdAt), max(id)` — bitta arzon so'rov) qo'shilgan (kompaniya, qamrov, davr) Redis keshi; har ledger o'zgarishi kalitni o'zi almashtiradi, hodisa bo'yicha tozalash kerak bo'lmaydi.
 - **Qismsiz amaldagi to'lov.** Dvigatel ledger'dagi PAYMENT qatorini davr va filial bo'yicha sanaydi, ro'yxat esa `Payment` qatorini. Ikkisi farq qilsa (ledger yozuvi `paymentId`siz, `createdAt` lahzalari kun chegarasining ikki tomonida, ledger filiali to'lov filialidan boshqa) qator «—» ko'rsatadi va karta bilan qatorlar farqi o'sha summaga teng. G1 auditi buni ushlaydi.
 - **Ustoz va kurs filtri** guruhning HOZIRGI ustozi va kursi bo'yicha; to'lov kunidagi ustoz (`GroupTeacherHistory`) o'qilmaydi.
 - **Kvitansiya raqami** bir necha millisekund kechikib beriladi (tinglovchi); tinglovchi yiqilsa raqam PDF ochilganda yoki skript qayta ishga tushganda beriladi — shu orada qidiruv uni topmaydi.
 - **Kodlar tartibi** xronologik emas: eski PDF'lar bilan ochilish tartibida berilgan kodlar o'z joyida qoladi, skript qolganlarini ulardan keyin beradi.
 - **Bog'lanmagan eski tuzatishlar** oddiy «bekor qilingan» bo'lib ko'rinadi (sababi bilan).
-- «Bekor qilinganlar»dagi Payme bekor qilishlari sababi «Payme CancelTransaction» bo'lib ko'rinadi.
+- **Payme bekor qilishlari** sababi «Payme to'lovni bekor qildi» (§4.9 dagi `reversalReason` qoidasi), «Kim» — «—».
+- **Arxivlangan o'quvchi** qatorida guruh odatda «—» (kartasi bilan arxivlangan yozilishlar sanalmaydi, §4.5) va profilga havola yo'q.
+- **«Qabul qildi» roli** bugungi rol: keyin lavozimi o'zgargan xodim yangi roli bilan ko'rinadi.
 
 ## 11. Ochiq emas / keyinga
 
 - «To'lov hisobotlari»ning jami summasini bu sahifaga ko'chirish va hisobotni almashtirish — 5-qism.
-- Ko'p tanlovli filtrlar (guruh, ustoz, usul — server allaqachon ro'yxat oladi), saralash ustunlari.
+- Mijozda ko'p tanlovli filtrlar (usul, guruh, ustoz, kurs, qabul qildi) — server ularni allaqachon vergulli ro'yxat sifatida oladi (§5.2), faqat mijoz ishi; saralash ustunlari.
 - To'lov kunidagi ustoz bo'yicha filtr.
 - Oynada tahrirlash (izoh, qog'oz raqamini o'zgartirish) va to'lovni boshqa o'quvchiga ko'chirish.
 - «Bonus» ustuni (olib tashlandi, qaytmaydi).
