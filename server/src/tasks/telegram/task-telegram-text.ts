@@ -49,16 +49,20 @@ export interface TgListItem {
 export const NOT_YOURS = 'Bu topshiriq sizda emas';
 export const SEVERAL_ACCOUNTS =
   "Bu Telegram bir nechta xodim hisobiga bog'langan. Administrator bilan bog'laning.";
-// No upload on the website either before phase 3: nothing to point to.
-export const TEXT_ONLY = 'Hozircha faqat matnli javob qabul qilinadi.';
 export const ADDED_TO_TASK = "Topshiriqqa qo'shildi.";
+export const PHOTO_PROMPT = 'Rasmni shu xabarga javob qilib yuboring.';
+export const PHOTO_PLACEHOLDER = 'Rasm';
+export const PHOTO_SENT = "Rasm qo'shildi. Topshiriq tekshiruvga yuborildi.";
+export const PHOTO_STILL_NEEDED =
+  "Fayl qo'shildi. Tekshiruvga yuborish uchun rasm yuboring.";
+export const RETURN_TEXT_ONLY = 'Qaytarish sababini matn bilan yozing.';
 export const RETURN_PROMPT =
   'Qaytarish sababini shu xabarga javob qilib yozing.';
 export const RETURN_PLACEHOLDER = 'Qaytarish sababi';
 export const NOT_IN_REVIEW = 'Topshiriq tekshiruvda emas';
 export const STEP_GONE = 'Qadam topilmadi';
 export const TRY_LATER = "Xatolik yuz berdi. Keyinroq urinib ko'ring.";
-// No upload anywhere until files arrive (phase 3), so the line promises none.
+// The assignee's line on a photo task: «Bajardim» asks for the photo (PHOTO_PROMPT).
 const PHOTO_LINE = 'Rasm bilan tasdiqlanadi.';
 const EMPTY_LIST = "Sizda ochiq topshiriq yo'q.";
 const STEPS_HINT = 'Bosib belgilang yoki belgini olib tashlang';
@@ -106,6 +110,11 @@ export const clip = (s: string, n: number) => {
  */
 export function returnPromptText(title: string): string {
   return `${RETURN_PROMPT}\n<b>${esc(clip(title, 80))}</b>`;
+}
+
+/** The «Bajardim» prompt of a photo task, sent with HTML; it names the task (as the return prompt does). */
+export function photoPromptText(title: string): string {
+  return `${PHOTO_PROMPT}\n<b>${esc(clip(title, 80))}</b>`;
 }
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
@@ -256,7 +265,11 @@ function headline(view: TgTaskView, n: TgNotice, now: Date): string {
     case 'RETURNED':
       return 'Topshiriq qaytarildi';
     case 'COMMENT':
-      return 'Yangi izoh';
+      return n.attachment === 'VOICE'
+        ? 'Yangi ovozli xabar'
+        : n.attachment === 'FILE'
+          ? 'Yangi fayl'
+          : 'Yangi izoh';
     case 'DONE':
       return 'Bajarildi';
     case 'CANCELLED':
@@ -344,8 +357,8 @@ function stateButtons(view: TgTaskView, viewerId: number): TgButtons {
     if (view.status === 'NEW') {
       row.push(cb('Boshladim', tkData('start', view.id)));
     }
-    // No upload anywhere until phase 3 (the service refuses the review too): no «Bajardim».
-    if (!view.requiresPhoto) row.push(cb('Bajardim', tkData('done', view.id)));
+    // On a photo task the press asks for the photo (the service refuses review without one).
+    row.push(cb('Bajardim', tkData('done', view.id)));
     if (row.length) rows.push(row);
   }
   if (author && view.status === 'IN_REVIEW') {

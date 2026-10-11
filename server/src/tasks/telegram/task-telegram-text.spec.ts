@@ -94,14 +94,14 @@ describe('renderTaskMessage (mockup s14)', () => {
     expect(labels(m)).toEqual([['Bajardim'], ['Qadamlar'], ['Ochish']]);
   });
 
-  it('#2 a task confirmed with a photo: «Boshladim» only, and the photo line', () => {
+  it('#2 a task confirmed with a photo: «Bajardim» too (it asks for the photo), and the photo line', () => {
     const m = renderTaskMessage(
       view({ requiresPhoto: true, steps: [] }),
       { kind: 'ASSIGNED' },
       40,
       { now: NOW, openUrl: OPEN },
     );
-    expect(labels(m)).toEqual([['Boshladim'], ['Ochish']]);
+    expect(labels(m)).toEqual([['Boshladim', 'Bajardim'], ['Ochish']]);
     expect(m.text).toContain('Rasm bilan tasdiqlanadi.');
     const started = renderTaskMessage(
       view({ requiresPhoto: true, steps: [], status: 'IN_PROGRESS' }),
@@ -109,7 +109,7 @@ describe('renderTaskMessage (mockup s14)', () => {
       40,
       { now: NOW, openUrl: OPEN },
     );
-    expect(labels(started)).toEqual([['Ochish']]);
+    expect(labels(started)).toEqual([['Bajardim'], ['Ochish']]);
   });
 
   it('#3 review to the author: who did it, «Qabul qilish» · «Qaytarish»', () => {

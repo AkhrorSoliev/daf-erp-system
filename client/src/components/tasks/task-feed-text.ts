@@ -58,6 +58,9 @@ export function describeEvent(ev: TaskEvent): { actor: string; text: string } {
     case "STEP": return { actor, text: stepLine(ev.meta) };
     case "ASSIGNEE": return { actor, text: "ijrochilarni o'zgartirdi" };
     case "CANCELLED": return { actor, text: ev.text ? `bekor qildi: «${ev.text}»` : "bekor qildi" };
+    case "FILE": return { actor, text: ev.text ?? "fayl" };
+    case "VOICE": return { actor, text: "ovozli xabar" };
+    case "FILE_DELETED": return { actor, text: ev.text ? `faylni o'chirdi: «${ev.text}»` : "faylni o'chirdi" };
     // The system closes it, even when the row names the person whose answer did.
     case "AUTO_CLOSED":
       return { actor: SYSTEM_NAME, text: `yopdi (${CLOSE_REASON[str(ev.meta, "reason") ?? ""] ?? "darsga javob berildi"})` };

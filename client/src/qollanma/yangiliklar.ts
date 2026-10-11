@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-11",
+    sarlavha: "Topshiriqlarda fayl, rasm va ovozli xabar",
+    matn: "Topshiriq varag'ida endi fayl qo'shish mumkin: izoh maydonidagi qisqich belgisi bilan rasm, PDF, Word, Excel yoki qisqa video (20 MB gacha), mikrofon belgisi bilan 3 daqiqagacha ovozli xabar. Qisqich va mikrofon belgilari ijrochi va beruvchida chiqadi; kuzatuvchi ko'radi va yuklab oladi. Fayllar varaqdagi «Fayllar» bo'limida turadi: rasmni katta ko'rish, hujjatni yuklab olish, o'zingiz qo'shganini o'chirish mumkin. Topshiriq berishda «Batafsil» → «Rasm bilan tasdiqlansin» ni belgilasangiz, ijrochi tekshiruvga faqat ish rasmini qo'shib yuboradi. Telegram'da topshiriq xabariga javob qilib rasm, hujjat, video yoki ovozli xabar yuborsangiz, u topshiriqqa qo'shiladi; rasm talab qilinadigan topshiriqda «Bajardim» bot rasm so'raydi va rasm kelgach topshiriq tekshiruvga o'tadi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-10-11",
     sarlavha: "DaF ilovasi: 4-unit dialoglari yangi ovozlarda",
     matn: "A1 kursining 4-unitidagi 9 ta dialog qayta yozildi: har obrazning o'z ovozi bor (Helga va Mia endi aniq farqlanadi), nemischa talaffuz tabiiyroq, tezlik A1 uchun biroz sekinroq. 5 va 8-dialog bitta joyda bo'ladigan qilib qayta yozildi — oradan vaqt o'tmaydi; ularning rasmlari ham yangilandi.",
     rollar: [1, 2, 3, 4],

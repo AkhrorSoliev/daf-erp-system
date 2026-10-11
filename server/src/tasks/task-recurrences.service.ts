@@ -33,6 +33,10 @@ import { TasksService, type TaskActor } from './tasks.service';
 import type { CreateTaskDto } from './dto/create-task.dto';
 import type { UpdateTaskRecurrenceDto } from './dto/task-recurrence.dto';
 
+/** A rule does not carry «Rasm bilan tasdiqlansin» (ADR-0086). */
+export const RECURRING_PHOTO_MESSAGE =
+  "Takrorlanuvchi topshiriqda rasm bilan tasdiqlash yo'q";
+
 /**
  * Recurring tasks (spec 2026-10-07 §3.6, ADR-0084): the rule's HTTP side.
  * The 07:00 run is `TaskRecurrenceRunner`.
@@ -88,6 +92,8 @@ export class TaskRecurrencesService {
         "Takrorlanuvchi topshiriqqa sana qo'yilmaydi: vaqtini «Takrorlash» da tanlang",
       );
     }
+    if (dto.requiresPhoto)
+      throw new BadRequestException(RECURRING_PHOTO_MESSAGE);
     const schedule = normalizeSchedule(dto.recurrence);
     const p = await this.tasks.prepareCreate(dto, actor);
     await this.assertAssigneesActive(p.assigneeIds, actor.companyId);

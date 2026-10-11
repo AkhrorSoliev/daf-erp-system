@@ -9,6 +9,7 @@ import api from "@/lib/api";
 import { useTasks, type TaskDetailPayload } from "@/hooks/use-tasks";
 import { TaskDrawerBatch } from "./task-drawer-batch";
 import { EditableText } from "./task-drawer-editable";
+import { TaskDrawerFiles } from "./task-drawer-files";
 import { TaskDrawerFeed } from "./task-drawer-feed";
 import { TaskDrawerFooter } from "./task-drawer-footer";
 import { TaskDrawerMenu } from "./task-drawer-menu";
@@ -19,7 +20,9 @@ import { JoinRequestPanel } from "./join-request/join-request-panel";
 import { isOpenStatus, KIND_LABEL } from "./task-labels";
 import { TaskSourceCard } from "./task-source-card";
 import { TaskStatusPill } from "./task-status-pill";
+import { FILE_URL_REFRESH_MS } from "./task-file-rules";
 import { useTaskWrite } from "./use-task-write";
+import { useTaskFiles } from "./use-task-files";
 
 // One drawer shows the open task. The first instance to mount wins; a second
 // one (the entity panel mounts its own) renders nothing, so two sheets never
@@ -63,6 +66,16 @@ function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: (
   const canEdit = access.canManage && !system && isOpenStatus(task.status);
   const lesson = task.unmarkedLesson;
   const patch = (body: Record<string, unknown>) => void run(api.patch(`/tasks/${task.id}`, body));
+  const photoReview = task.requiresPhoto && task.status === "IN_REVIEW";
+  // The file list follows the task: on open, after every new feed row (a file
+  // from Telegram arrives as one over SSE), and before its links expire.
+  useEffect(() => {
+    const files = useTaskFiles.getState();
+    void files.loadConfig();
+    void files.load(task.id);
+    const t = window.setInterval(() => void useTaskFiles.getState().load(task.id), FILE_URL_REFRESH_MS);
+    return () => window.clearInterval(t);
+  }, [task.id, task.eventsCount]);
 
   return (
     <>
@@ -107,6 +120,7 @@ function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: (
         {task.kind === "JOIN_REQUEST" && (
           <JoinRequestPanel taskId={task.id} onDecided={() => void useTasks.getState().reloadDetail(task.id)} />
         )}
+        {photoReview && <TaskDrawerFiles taskId={task.id} />}
         <TaskDrawerProperties task={task} access={access} />
         {recurrence && <TaskDrawerRecurrence taskId={task.id} rule={recurrence} />}
         {(task.description || canEdit) && (
@@ -125,7 +139,8 @@ function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: (
         )}
         <TaskDrawerBatch copies={batch} currentId={task.id} />
         <TaskDrawerSteps task={task} access={access} />
-        <TaskDrawerFeed taskId={task.id} events={events} />
+        {!photoReview && <TaskDrawerFiles taskId={task.id} />}
+        <TaskDrawerFeed taskId={task.id} events={events} canAttach={access.canWork || access.canManage} />
       </div>
 
       <TaskDrawerFooter task={task} access={access} />
