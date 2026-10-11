@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { ChevronDown, Lock } from "lucide-react";
+import { ChevronDown, Lock, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -22,6 +23,8 @@ interface PermissionsTableProps {
   /** Columns to draw: every editable role on a wide screen, the picked one on a phone. */
   roleIds: number[];
   onToggle: Toggle;
+  /** «Boshlang'ich holatga qaytarish» for one role; shown only for a role that differs from the default. */
+  onReset: (roleId: number) => void;
   busy: boolean;
 }
 
@@ -39,9 +42,43 @@ const DANGER_TEXT = {
   irreversible: "Qaytarib bo'lmaydi",
 } as const;
 
+function ResetButton({
+  roleLabel,
+  disabled,
+  onClick,
+}: {
+  roleLabel: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="xs"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={`${roleLabel}: boshlang'ich holatga qaytarish`}
+      className="h-auto gap-1 px-1.5 py-0.5 text-xs font-normal whitespace-normal text-muted-foreground"
+    >
+      <RotateCcw className="size-3 shrink-0" />
+      Boshlang'ich holatga qaytarish
+    </Button>
+  );
+}
+
 /** Capabilities as rows in collapsible sections, roles as columns (spec §8). Every decision is the model's. */
-export function PermissionsTable({ overview, roleIds, onToggle, busy }: PermissionsTableProps) {
+export function PermissionsTable({
+  overview,
+  roleIds,
+  onToggle,
+  onReset,
+  busy,
+}: PermissionsTableProps) {
   const single = roleIds.length === 1;
+  // The reset button shows only when the role has something to reset (spec §8).
+  const changed = (roleId: number) =>
+    overview.catalog.some((e) => cellState(overview, e.key, roleId).differs);
   const ctx: RowContext = {
     overview,
     roleIds,
@@ -59,16 +96,33 @@ export function PermissionsTable({ overview, roleIds, onToggle, busy }: Permissi
   return (
     <div className={cn(!single && "overflow-x-auto")}>
       <div className={cn("space-y-2", !single && "min-w-[44rem]")}>
-        {!single && (
+        {single ? (
+          changed(roleIds[0]) && (
+            <div className="flex justify-end">
+              <ResetButton
+                roleLabel={ctx.roleLabels.get(roleIds[0]) ?? ""}
+                disabled={busy}
+                onClick={() => onReset(roleIds[0])}
+              />
+            </div>
+          )
+        ) : (
           <div
-            className="grid items-end gap-x-2 px-3 text-xs font-medium text-muted-foreground"
+            className="grid items-start gap-x-2 px-3 text-xs font-medium text-muted-foreground"
             style={ctx.cols}
           >
-            <span>Imkoniyat</span>
+            <span className="pt-1">Imkoniyat</span>
             {roleIds.map((roleId) => (
-              <span key={roleId} className="text-center">
-                {ctx.roleLabels.get(roleId)}
-              </span>
+              <div key={roleId} className="flex flex-col items-center gap-1 text-center">
+                <span className="pt-1">{ctx.roleLabels.get(roleId)}</span>
+                {changed(roleId) && (
+                  <ResetButton
+                    roleLabel={ctx.roleLabels.get(roleId) ?? ""}
+                    disabled={busy}
+                    onClick={() => onReset(roleId)}
+                  />
+                )}
+              </div>
             ))}
           </div>
         )}

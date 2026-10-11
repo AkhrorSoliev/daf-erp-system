@@ -15,26 +15,52 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useRolePermissions, useSaveRolePermissions } from "@/hooks/use-role-permissions";
+import {
+  useResetRolePermissions,
+  useRolePermissions,
+  useSaveRolePermissions,
+} from "@/hooks/use-role-permissions";
 import type { PermissionKey } from "@/lib/permission-keys";
 import { PermissionConfirmDialog } from "./permission-confirm-dialog";
-import { confirmCopy, planCellToggle, type ConfirmPlan } from "./permissions-model";
+import {
+  confirmCopy,
+  planCellToggle,
+  resetCopy,
+  type ConfirmCopy,
+  type ConfirmPlan,
+} from "./permissions-model";
+import { PermissionsHistory } from "./permissions-history";
+import type { PermissionsOverview } from "./permissions-types";
 import { PermissionsTable } from "./permissions-table";
+
+/** The reset confirmation in the toggle dialog's shape: the lines «X yoqiladi / o'chadi», no heading, no money warning. */
+function resetDialogCopy(overview: PermissionsOverview, roleId: number): ConfirmCopy {
+  const copy = resetCopy(overview, roleId);
+  return {
+    title: copy.title,
+    alsoTitle: null,
+    alsoLabels: copy.lines,
+    warning: null,
+    confirm: "Qaytarish",
+  };
+}
 
 /**
  * «Ruxsatlar» (spec §8, ADR-0086): the CEO turns each capability on or off per
  * staff role. CEO-only by identity: the settings entry is `ceoOnly` and the API
- * is `@CeoOnly()`. A toggle only opens the confirmation; the switch moves when
- * the server's answer comes back.
+ * is `@CeoOnly()`. A toggle or a reset only opens the confirmation; the
+ * switches move when the server's answer comes back.
  */
 export function PermissionsClient() {
   const { data: overview, isError, isFetching, refetch } = useRolePermissions();
   const save = useSaveRolePermissions();
+  const reset = useResetRolePermissions();
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const [plan, setPlan] = useState<ConfirmPlan | null>(null);
+  const [resetRoleId, setResetRoleId] = useState<number | null>(null);
 
   if (!overview) {
     return (
@@ -72,7 +98,13 @@ export function PermissionsClient() {
   const allRoleIds: number[] = overview.roles.map((r) => r.id);
   const picked = Number(searchParams.get("rol"));
   const phoneRole = allRoleIds.includes(picked) ? picked : allRoleIds[0];
-  const busy = save.isPending || isFetching;
+  const pending = save.isPending || reset.isPending;
+  const busy = pending || isFetching;
+  const copy = plan
+    ? confirmCopy(overview, plan)
+    : resetRoleId !== null
+      ? resetDialogCopy(overview, resetRoleId)
+      : null;
 
   // The phone's role picker is a view switch, so it lives in the URL (?rol=); the first role is the default and is omitted.
   const pickRole = (value: string) => {
@@ -83,18 +115,35 @@ export function PermissionsClient() {
     router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
   };
 
+  const close = () => {
+    setPlan(null);
+    setResetRoleId(null);
+  };
+
   const confirm = () => {
-    // A refused plan has no confirm button; this guard keeps it from ever being sent.
-    if (!plan || plan.refusal) return;
-    save.mutate(
-      { roleId: plan.roleId, changes: plan.changes },
-      {
-        onSuccess: () => {
-          toast.success("Ruxsat saqlandi");
-          setPlan(null);
+    if (plan) {
+      // A refused plan has no confirm button; this guard keeps it from ever being sent.
+      if (plan.refusal) return;
+      save.mutate(
+        { roleId: plan.roleId, changes: plan.changes },
+        {
+          onSuccess: () => {
+            toast.success("Ruxsat saqlandi");
+            close();
+          },
         },
-      },
-    );
+      );
+    } else if (resetRoleId !== null) {
+      reset.mutate(
+        { roleId: resetRoleId },
+        {
+          onSuccess: () => {
+            toast.success("Boshlang'ich holat tiklandi");
+            close();
+          },
+        },
+      );
+    }
   };
 
   return (
@@ -122,15 +171,17 @@ export function PermissionsClient() {
         onToggle={(roleId: number, key: PermissionKey, on: boolean) =>
           setPlan(planCellToggle(overview, roleId, key, on))
         }
+        onReset={(roleId: number) => setResetRoleId(roleId)}
       />
+      <PermissionsHistory overview={overview} />
       <PermissionConfirmDialog
-        copy={plan ? confirmCopy(overview, plan) : null}
+        copy={copy}
         refusal={plan?.refusal ?? null}
-        open={plan !== null}
-        pending={save.isPending}
+        open={copy !== null}
+        pending={pending}
         onConfirm={confirm}
         onOpenChange={(open) => {
-          if (!open) setPlan(null);
+          if (!open) close();
         }}
       />
     </div>
