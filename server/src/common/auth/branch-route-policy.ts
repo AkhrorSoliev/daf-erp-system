@@ -151,6 +151,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: ['GET /permissions/me'],
   },
   {
+    policy: 'COMPANY_WIDE',
+    reason:
+      "The «Ruxsatlar» page (ADR-0086): a role's capability settings belong to " +
+      'the whole company — `RolePermission` has no branch, and one row turns a ' +
+      'key on or off for every holder of that role in every branch — and so ' +
+      'does their change history. CEO-only through `@CeoOnly()`, a database ' +
+      'role check that is never a capability (spec §4.2).',
+    routes: [
+      'GET /permissions',
+      'GET /permissions/history',
+      'POST /permissions/roles/:roleId/reset',
+      'PUT /permissions/roles/:roleId',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
       'Id-addressed money paths. The branch is resolved from the record (or ' +
