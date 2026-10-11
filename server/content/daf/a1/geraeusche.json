@@ -214,5 +214,11 @@
     "sfx": "a busy university canteen at lunchtime, cutlery and trays clinking, many indistinct voices far away",
     "sek": 15,
     "loop": true
+  },
+  "dcc9288d9940e7c1": {
+    "key": "daf/sfx/bfc80219c30432da445ce6f212219aa2.mp3",
+    "sfx": "a plastic shopping bag rustling",
+    "sek": 1.5,
+    "loop": false
   }
 }
