@@ -31,7 +31,16 @@ export interface HoerspielRegie {
   geraeusche?: Geraeusch[];
   /** 1-based lines spoken from another room. */
   fern?: number[];
+  /**
+   * Playback speed of the voices, applied to the raw recording before the
+   * mix (ffmpeg atempo, pitch kept). CEO 2026-10-11: 0.9 for the Gemini 3.8
+   * dialogs — slowed locally, not by asking the model to speak slower.
+   */
+  tempo?: number;
 }
+
+export const TEMPO_MIN_DIALOG = 0.8;
+export const TEMPO_MAX_DIALOG = 1;
 
 export interface Spanne {
   start: number;
@@ -92,6 +101,12 @@ export function pruefeHoerspiel(h: HoerspielRegie, zeilen: number): string[] {
     if (!Number.isInteger(n) || n < 1 || n > zeilen) {
       probleme.push(`fern: ${n}-satr yo'q (1–${zeilen})`);
     }
+  }
+  if (
+    h.tempo !== undefined &&
+    !(h.tempo >= TEMPO_MIN_DIALOG && h.tempo <= TEMPO_MAX_DIALOG)
+  ) {
+    probleme.push(`tempo ${h.tempo} (${TEMPO_MIN_DIALOG}–${TEMPO_MAX_DIALOG})`);
   }
   return probleme;
 }

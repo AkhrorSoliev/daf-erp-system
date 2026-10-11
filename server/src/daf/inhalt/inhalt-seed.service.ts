@@ -14,6 +14,13 @@ import { satzAudioSchluessel, type SatzAudioManifest } from './satz-audio';
 import type { BildManifest } from '../media/bild-keys';
 import { bildSchluesselFuer } from '../media/bild-keys';
 import type { BildPlan } from './bild-plan';
+import {
+  uhrAudioSchluessel,
+  uhrzeitenDesUnits,
+  validateUhrzeiten,
+  type UhrAudioManifest,
+  type UhrzeitenFile,
+} from './uhrzeiten';
 
 export interface InhaltFiles {
   woerter: WoerterFile;
@@ -46,6 +53,14 @@ export interface InhaltFiles {
    * like `audio`. A dialog missing from it gets `imageKey: null`.
    */
   dialogBilder?: BildManifest;
+  /**
+   * `content/daf/a1/uhrzeiten.json` — the clock times per section. Absent:
+   * the clock table is not touched at all (an old caller, a unit run
+   * before the file existed).
+   */
+  uhrzeiten?: UhrzeitenFile;
+  /** `content/daf/a1/uhr-audio.json` — the spoken times, keyed by `zeit`. */
+  uhrAudio?: UhrAudioManifest;
 }
 
 export interface InhaltSeedReport {
@@ -56,6 +71,8 @@ export interface InhaltSeedReport {
   regeln: number;
   phrasen: number;
   hoerFragen: number;
+  /** Clock times written (`DafUhrzeit`); 0 when no file was given. */
+  uhrzeiten: number;
   /**
    * Faylda endi YO'Q, lekin bazada BOR so'z soni.
    *
@@ -132,6 +149,22 @@ export class InhaltSeedService {
     const sectionId = new Map(rows.map((r) => [r.code, r.id]));
 
     this.assertSectionsKnown(files, sectionId);
+    // Clock times are checked before any write, like the section keys.
+    const uhrPlan = files.uhrzeiten
+      ? this.uhrPlan(unitCode, files.uhrzeiten, sectionId)
+      : null;
+    if (uhrPlan) {
+      await this.assertNotEmptyFileWipe(
+        unitCode,
+        unit.id,
+        Object.keys(uhrPlan).length === 0,
+        'uhrzeiten',
+        () =>
+          this.prisma.dafUhrzeit.count({
+            where: { sectionId: { in: rows.map((r) => r.id) } },
+          }),
+      );
+    }
     await this.assertNotEmptyFileWipe(
       unitCode,
       unit.id,
@@ -423,6 +456,31 @@ export class InhaltSeedService {
       where: { unitId: unit.id, code: { notIn: phraseCodes } },
     });
 
+    // Clock times: every section of the unit is synced to the file (a time
+    // removed from it goes). Nothing points at a row — an attempt keeps
+    // `itemType`/`itemId` only — so deleting is safe, as for sentences.
+    let uhrzeiten = 0;
+    if (uhrPlan) {
+      for (const row of rows) {
+        const zeiten = uhrPlan[row.code] ?? [];
+        await this.prisma.dafUhrzeit.deleteMany({
+          where: { sectionId: row.id, zeit: { notIn: zeiten } },
+        });
+        for (const zeit of zeiten) {
+          // The manifest is the source: no current recording → `null`.
+          const data = {
+            audioKey: uhrAudioSchluessel(files.uhrAudio ?? {}, zeit),
+          };
+          await this.prisma.dafUhrzeit.upsert({
+            where: { sectionId_zeit: { sectionId: row.id, zeit } },
+            create: { sectionId: row.id, zeit, ...data },
+            update: data,
+          });
+          uhrzeiten += 1;
+        }
+      }
+    }
+
     const report = {
       woerter,
       saetze,
@@ -431,6 +489,7 @@ export class InhaltSeedService {
       regeln,
       phrasen,
       hoerFragen,
+      uhrzeiten,
       staleWoerter,
     };
     this.logger.log(`${unitCode} matni: ${JSON.stringify(report)}`);
@@ -464,6 +523,31 @@ export class InhaltSeedService {
         `${unitCode}: '${fileKey}' fayli bo'sh ko'rinadi, lekin bazada ${existing} ta qator bor (unitId=${unitId}) — buzuq yoki chala o'qilgan fayldan xato o'chirishning oldini olish uchun seed hech narsani o'chirmaydi. Faylni tekshiring.`,
       );
     }
+  }
+
+  /**
+   * This unit's clock times by section code; throws on a broken time or a
+   * section the unit does not have — before anything is written.
+   */
+  private uhrPlan(
+    unitCode: string,
+    file: UhrzeitenFile,
+    sectionId: Map<string, number>,
+  ): Record<string, string[]> {
+    const plan = uhrzeitenDesUnits(file, unitCode);
+    const fehler = validateUhrzeiten(
+      Object.fromEntries(
+        Object.entries(plan).map(([k, z]) => [k, z.map((zeit) => ({ zeit }))]),
+      ),
+    );
+    const noma = Object.keys(plan).filter((c) => !sectionId.has(c));
+    if (noma.length > 0) {
+      fehler.push(`Bazada yo'q bo'lim kaliti: ${noma.join(', ')}`);
+    }
+    if (fehler.length > 0) {
+      throw new Error(`uhrzeiten.json: ${fehler.join('; ')}`);
+    }
+    return plan;
   }
 
   /** Noma'lum bo'lim kaliti bo'lsa, BIRORTA yozuvdan oldin to'xtaydi. */

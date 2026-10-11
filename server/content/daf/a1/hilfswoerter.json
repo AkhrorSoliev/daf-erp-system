@@ -488,8 +488,8 @@
     },
     {
       "wort": "ab",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u05-s4"
+      "grund": "'abholen' fe'lining ajraladigan qismi: 'Ich hole Lena ab.' (u05-s3)",
+      "abSection": "u05-s3"
     },
     {
       "wort": "aber",
@@ -833,8 +833,8 @@
     },
     {
       "wort": "sich",
-      "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-      "abSection": "u08-s3"
+      "grund": "qaytish olmoshi: 'Wer kümmert sich um Lena?' (u05-s5, 'sich kümmern')",
+      "abSection": "u05-s5"
     },
     {
       "wort": "unter",
@@ -1110,6 +1110,106 @@
       "wort": "koche",
       "grund": "'kochen' fe'lining shakli — 'Heute koche ich ein Gericht aus Usbekistan!' (u04-s6)",
       "abSection": "u04-s6"
+    },
+    {
+      "wort": "steht",
+      "grund": "'stehen' fe'lining er shakli: 'Meine Uhr steht!' — soat to'xtagan (u05-s1); keyin 'steht auf'",
+      "abSection": "u05-s1"
+    },
+    {
+      "wort": "stehe",
+      "grund": "'aufstehen' fe'lining ich shakli: 'Ich stehe um sechs Uhr auf.' (u05-s3)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "stehst",
+      "grund": "'aufstehen' fe'lining du shakli: 'Wann stehst du auf?' (u05-s3)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "hole",
+      "grund": "'abholen' fe'lining ich shakli: 'Ich hole Lena ab.' (u05-s3)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "holst",
+      "grund": "'abholen' fe'lining du shakli: 'Wann holst du Lena ab?' (u05-s3)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "sehe",
+      "grund": "'fernsehen'/'ansehen' fe'lining ich shakli: 'Ich sehe die Serie so gern.' (u05-s3)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "sieht",
+      "grund": "'fernsehen' fe'lining er shakli: 'Jonas sieht abends fern.' (u05-s3)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "fern",
+      "grund": "'fernsehen' fe'lining ajraladigan qismi: 'Jonas sieht abends fern.' (u05-s3)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "schlafe",
+      "grund": "'schlafen' fe'lining ich shakli: 'Ich schlafe jetzt.' (u05-s3)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "schläft",
+      "grund": "'schlafen' fe'lining er shakli (a → ä): 'Nachts schläft Lena.' (u05-s3)",
+      "abSection": "u05-s3"
+    },
+    {
+      "wort": "beginnt",
+      "grund": "'beginnen' fe'lining er shakli: 'Die Schule beginnt um acht Uhr.' (u05-s4)",
+      "abSection": "u05-s4"
+    },
+    {
+      "wort": "muss",
+      "grund": "'müssen' fe'lining ich/er shakli: 'Ich muss das Geschirr waschen.' (u05-s5)",
+      "abSection": "u05-s5"
+    },
+    {
+      "wort": "musst",
+      "grund": "'müssen' fe'lining du shakli: 'Du musst die Hausaufgaben machen.' (u05-s5)",
+      "abSection": "u05-s5"
+    },
+    {
+      "wort": "tut",
+      "grund": "'tun' fe'lining er shakli — 'Das tut mir leid.' iborasida (u05-s5)",
+      "abSection": "u05-s5"
+    },
+    {
+      "wort": "leid",
+      "grund": "'leidtun' fe'lining ajralgan qismi: 'Das tut mir leid.' (u05-s5)",
+      "abSection": "u05-s5"
+    },
+    {
+      "wort": "kümmere",
+      "grund": "'sich kümmern' fe'lining ich shakli: 'Ich kümmere mich um Lena.' (u05-s5)",
+      "abSection": "u05-s5"
+    },
+    {
+      "wort": "kümmert",
+      "grund": "'sich kümmern' fe'lining er shakli: 'Wer kümmert sich um Lena?' (u05-s5)",
+      "abSection": "u05-s5"
+    },
+    {
+      "wort": "wasche",
+      "grund": "'waschen' fe'lining ich shakli: 'Jetzt wasche ich das Geschirr.' (u05-s5)",
+      "abSection": "u05-s5"
+    },
+    {
+      "wort": "wäscht",
+      "grund": "'waschen' fe'lining er shakli (a → ä): 'Wer wäscht das Geschirr?' (u05-s5)",
+      "abSection": "u05-s5"
+    },
+    {
+      "wort": "bleibt",
+      "grund": "'bleiben' fe'lining er shakli: 'Lena bleibt nicht allein.' (u05-s5)",
+      "abSection": "u05-s5"
     }
   ]
 }

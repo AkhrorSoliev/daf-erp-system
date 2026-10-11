@@ -15,7 +15,10 @@ export type FrageFormat =
   | 'HOEREN_WAHL'
   | 'BILD_WORT'
   | 'AUDIO_BILD'
-  | 'BILD_TIPPEN';
+  | 'BILD_TIPPEN'
+  | 'UHR_LESEN'
+  | 'UHR_HOEREN'
+  | 'UHR_TIPPEN';
 
 export interface MaterialWort {
   id: number;
@@ -75,7 +78,26 @@ export interface MaterialDialogZeile {
  * yuradi: yangi tur qo'shilib bittasida unutilsa kompilyator yiqitadi
  * (`uebung.dto.ts`dagi `Record<ItemType, true>`).
  */
-export type ItemType = 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE' | 'HOERFRAGE';
+export type ItemType =
+  | 'WORT'
+  | 'SATZ'
+  | 'PHRASE'
+  | 'DIALOGZEILE'
+  | 'HOERFRAGE'
+  | 'UHRZEIT';
+
+/**
+ * One clock time a section teaches (`DafUhrzeit`) — the material of the
+ * clock formats. `zeit` is the clock face time `HH:MM`, hours 1–12; the
+ * German words are made from it (`uhrzeit-text.ts`), never stored.
+ */
+export interface MaterialUhrzeit {
+  id: number;
+  zeit: string;
+  sectionCode: string;
+  /** R2 key of the spoken time; `null` — no audio, no `UHR_HOEREN`. */
+  audioKey: string | null;
+}
 
 /** Suhbatni eshitgandan keyingi tushunish savoli — `HOEREN_WAHL` materiali. */
 export interface MaterialHoerFrage {
@@ -162,6 +184,11 @@ export interface Frage {
    * instead. Never set on `HOEREN_WAHL`: the picture would show answers.
    */
   bildUrl?: string | null;
+  /**
+   * The clock to draw (`HH:MM`) in `UHR_LESEN` / `UHR_TIPPEN`. Never set on
+   * `UHR_HOEREN`: its clocks are the `options`, and this would be the answer.
+   */
+  uhrzeit?: string | null;
 }
 
 /** `belegteItems`/seans ichidagi band material kalitini quradi. */
@@ -184,6 +211,8 @@ export interface PublicFrage {
   audioUrl: string | null;
   /** `Frage.bildUrl` — the picture shown with the question. */
   bildUrl?: string | null;
+  /** `Frage.uhrzeit` — the clock shown with the question. */
+  uhrzeit?: string | null;
 }
 
 export function toPublic(f: Frage, index: number): PublicFrage {
@@ -198,5 +227,6 @@ export function toPublic(f: Frage, index: number): PublicFrage {
     titel: f.titel,
     audioUrl: f.audioUrl,
     bildUrl: f.bildUrl ?? null,
+    ...(f.uhrzeit ? { uhrzeit: f.uhrzeit } : {}),
   };
 }

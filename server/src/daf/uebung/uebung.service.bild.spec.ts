@@ -99,6 +99,7 @@ function fakePrisma(lexeme: Row[], states: State[] = []) {
     },
     dafSentence: { findMany: jest.fn(async () => []) },
     dafPhrase: { findMany: jest.fn(async () => []) },
+    dafUhrzeit: { findMany: jest.fn(async () => []) },
     dafDialog: { findMany: jest.fn(async () => []) },
     dafLexemeState: {
       findMany: jest.fn(async (args: any = {}) => {

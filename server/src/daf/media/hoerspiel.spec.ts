@@ -106,6 +106,24 @@ describe('teileZeilen', () => {
   });
 });
 
+// CEO 2026-10-11: the 3.8 voices are a little fast; slow the recording
+// locally (pitch kept) rather than asking the model to speak slower.
+describe('pruefeHoerspiel — tempo', () => {
+  it('accepts a tempo from 0.8 to 1', () => {
+    expect(pruefeHoerspiel({ tempo: 0.9 }, 4)).toEqual([]);
+    expect(pruefeHoerspiel({ tempo: 1 }, 4)).toEqual([]);
+  });
+
+  it('refuses a tempo outside 0.8–1', () => {
+    expect(pruefeHoerspiel({ tempo: 0.5 }, 4)).toEqual(['tempo 0.5 (0.8–1)']);
+    expect(pruefeHoerspiel({ tempo: 1.2 }, 4)).toEqual(['tempo 1.2 (0.8–1)']);
+  });
+
+  it('a new tempo changes the mix hash, so the dialog is remixed', () => {
+    expect(hoerspielHash({ tempo: 0.9 })).not.toBe(hoerspielHash({}));
+  });
+});
+
 describe('pruefeHoerspiel', () => {
   it('accepts a valid plan', () => {
     const h: HoerspielRegie = {
