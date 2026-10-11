@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-11",
+    sarlavha: "Topshiriqlarda fayl, rasm va ovozli xabar",
+    matn: "Topshiriq varag'ida endi fayl qo'shish mumkin: izoh maydonidagi 📎 tugmasi bilan rasm, PDF, Word, Excel yoki qisqa video (20 MB gacha), 🎤 tugmasi bilan 3 daqiqagacha ovozli xabar. Fayl va ovoz qo'shish tugmalari ijrochi va beruvchida chiqadi; kuzatuvchi ko'radi va yuklab oladi. Fayllar varaqdagi «Fayllar» bo'limida turadi: rasmni katta ko'rish, hujjatni yuklab olish, o'zingiz qo'shganini o'chirish mumkin. Topshiriq berishda «Batafsil» → «Rasm bilan tasdiqlansin» ni belgilasangiz, ijrochi tekshiruvga faqat ish rasmini qo'shib yuboradi. Telegram'da topshiriq xabariga javob qilib rasm, hujjat, video yoki ovozli xabar yuborsangiz, u topshiriqqa qo'shiladi; rasm talab qilinadigan topshiriqda «Bajardim» bot rasm so'raydi va rasm kelgach topshiriq tekshiruvga o'tadi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-10-11",
     sarlavha: "Takrorlanuvchi topshiriqlar",
     matn: "Endi topshiriqni takrorlanadigan qilib berish mumkin: berish oynasida «Batafsil» → «Takrorlash» da «Har kuni», «Har hafta» (kunlarini belgilab) yoki «Har oy» (1–28-sana) va vaqtni tanlang. Birinchi topshiriq darhol beriladi, keyingilarini tizim har kuni ertalab 07:00 da beradi; yakshanba va bayramga tushsa — keyingi ish kuniga. Oldingisi bajarilmagan bo'lsa, yangisi berilmaydi. Kartada «Har dushanba» kabi belgi turadi; varaqda takrorlanishni o'zgartirish va to'xtatish mumkin, «Topshiriqlar» sahifasidagi «Takrorlanuvchi» tugmasi hammasini bitta ro'yxatda ko'rsatadi.",
     rollar: [1, 2, 3, 4, 5],
