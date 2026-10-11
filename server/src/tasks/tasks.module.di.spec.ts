@@ -15,6 +15,7 @@ import { TaskAutoCloseListener } from './task-auto-close.listener';
 import { TaskAutoLeadsService } from './task-auto-leads.service';
 import { TaskAutoService } from './task-auto.service';
 import { TaskRecurrencesService } from './task-recurrences.service';
+import { TaskRecurrenceRunner } from './task-recurrence-run.service';
 import { TaskTelegramHandler } from './telegram/task-telegram.handler';
 import { TaskTelegramListener } from './telegram/task-telegram.listener';
 import { TaskTelegramOutbox } from './telegram/task-telegram-outbox.service';
@@ -56,6 +57,7 @@ describe('TasksModule — DI graph', () => {
     for (const token of [
       TasksService,
       TaskRecurrencesService,
+      TaskRecurrenceRunner,
       TaskTelegramSender,
       TaskTelegramListener,
       TaskTelegramOutbox,

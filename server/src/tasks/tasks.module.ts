@@ -6,6 +6,7 @@ import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { TasksReadService } from './tasks-read.service';
 import { TaskRecurrencesService } from './task-recurrences.service';
+import { TaskRecurrenceRunner } from './task-recurrence-run.service';
 import { TaskAutoCloseListener } from './task-auto-close.listener';
 import { TaskAutoLeadsService } from './task-auto-leads.service';
 import { TaskAutoService } from './task-auto.service';
@@ -26,6 +27,7 @@ import { TaskTelegramHandler } from './telegram/task-telegram.handler';
     TasksService,
     TasksReadService,
     TaskRecurrencesService,
+    TaskRecurrenceRunner,
     TaskNotifyListener,
     TaskAutoCloseListener,
     TaskAutoService,
