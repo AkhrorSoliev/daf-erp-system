@@ -202,5 +202,17 @@
     "sfx": "dishes and cutlery clinking in a kitchen sink with running water",
     "sek": 3,
     "loop": false
+  },
+  "c958d30865247d90": {
+    "key": "daf/sfx/7504c524d1bcd525400ccaf47c53b6a3.mp3",
+    "sfx": "a teaspoon stirring coffee in a ceramic cup, gentle clinking of the spoon against the cup",
+    "sek": 3,
+    "loop": false
+  },
+  "bfcf81a3aec5b274": {
+    "key": "daf/sfx/81698f655b2673f634fbf0b3078b313f.mp3",
+    "sfx": "a busy university canteen at lunchtime, cutlery and trays clinking, many indistinct voices far away",
+    "sek": 15,
+    "loop": true
   }
 }
