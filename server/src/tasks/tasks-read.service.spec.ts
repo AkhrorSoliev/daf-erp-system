@@ -45,6 +45,8 @@ function makeCard(over: Record<string, unknown> = {}) {
     _count: { steps: 0, events: 1 },
     steps: [],
     unmarkedLesson: null,
+    recurrenceId: null,
+    recurrence: null,
     ...over,
   };
 }
@@ -86,6 +88,7 @@ describe('TasksReadService', () => {
       taskEvent: { findMany: jest.fn().mockResolvedValue([]) },
       taskParticipant: { findMany: jest.fn().mockResolvedValue([]) },
       user: { findMany: jest.fn().mockResolvedValue([]) },
+      taskRecurrence: { findUnique: jest.fn() },
     };
     tasks = {
       loadForAccess: jest.fn(),
@@ -418,6 +421,105 @@ describe('TasksReadService', () => {
         );
         expect(out.source).toBeNull();
         expect(loadSource).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('recurrence', () => {
+      const RULE = {
+        id: 'r1',
+        branchId: 1,
+        authorId: 30,
+        freq: 'WEEKLY',
+        weekdays: [1],
+        dayOfMonth: null,
+        dueTime: '10:00',
+        title: 'Hisobot',
+        assigneeIds: [40],
+        separateCopies: false,
+        active: true,
+        nextRunDate: new Date('2026-10-19T00:00:00.000Z'),
+        author: person(30),
+      };
+      const recurring = () => ({
+        ...makeCard({ recurrenceId: 'r1' }),
+        description: null,
+        lastReturnedAt: null,
+        cancelReason: null,
+        steps: [],
+      });
+
+      beforeEach(() => {
+        prisma.taskRecurrence.findUnique.mockResolvedValue(RULE);
+        prisma.user.findMany.mockResolvedValue([person(40)]);
+      });
+
+      it('a task without a rule answers null and reads nothing', async () => {
+        tasks.loadForAccess.mockResolvedValue({
+          row: { ...recurring(), recurrenceId: null },
+          access: access(),
+        });
+        const out = await service.detail('t1', admin());
+        expect(out.recurrence).toBeNull();
+        expect(prisma.taskRecurrence.findUnique).not.toHaveBeenCalled();
+      });
+
+      it('the author sees the rule with its people and may manage it', async () => {
+        tasks.loadForAccess.mockResolvedValue({
+          row: recurring(),
+          access: access({ isAuthor: true, canManage: true }),
+        });
+        const out = await service.detail('t1', admin());
+        expect(out.recurrence).toEqual(
+          expect.objectContaining({
+            id: 'r1',
+            nextRunDate: '2026-10-19',
+            assignees: [person(40)],
+            canManage: true,
+          }),
+        );
+      });
+
+      it('an assignee sees the rule but not who else is on it, and cannot manage it', async () => {
+        tasks.loadForAccess.mockResolvedValue({
+          row: recurring(),
+          access: access(),
+        });
+        const out = await service.detail('t1', {
+          ...admin(),
+          userId: 40,
+          roleIds: [4],
+        });
+        expect(out.recurrence).toEqual(
+          expect.objectContaining({
+            id: 'r1',
+            assignees: [],
+            canManage: false,
+          }),
+        );
+        expect(prisma.user.findMany).not.toHaveBeenCalled();
+      });
+
+      it('a manager sees the people too', async () => {
+        tasks.loadForAccess.mockResolvedValue({
+          row: recurring(),
+          access: access({ isManager: true, canManage: true }),
+        });
+        const out = await service.detail('t1', director());
+        expect(out.recurrence?.assignees).toEqual([person(40)]);
+      });
+
+      it('only the first page carries it: paging back with «before» loads nothing', async () => {
+        tasks.loadForAccess.mockResolvedValue({
+          row: recurring(),
+          access: access(),
+        });
+        const out = await service.detail(
+          't1',
+          admin(),
+          '2026-10-08T00:00:00.000Z',
+        );
+        expect(out.recurrence).toBeNull();
+        expect(prisma.taskRecurrence.findUnique).not.toHaveBeenCalled();
       });
     });
   });

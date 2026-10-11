@@ -13,6 +13,7 @@ import { TaskDrawerFeed } from "./task-drawer-feed";
 import { TaskDrawerFooter } from "./task-drawer-footer";
 import { TaskDrawerMenu } from "./task-drawer-menu";
 import { TaskDrawerProperties } from "./task-drawer-properties";
+import { TaskDrawerRecurrence } from "./task-drawer-recurrence";
 import { TaskDrawerSteps } from "./task-drawer-steps";
 import { JoinRequestPanel } from "./join-request/join-request-panel";
 import { isOpenStatus, KIND_LABEL } from "./task-labels";
@@ -55,7 +56,7 @@ function useOwnsDrawer(): boolean {
 }
 
 function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: () => void }) {
-  const { task, events, access, batch, source } = detail;
+  const { task, events, access, batch, source, recurrence } = detail;
   const { run } = useTaskWrite();
   const system = task.kind !== "MANUAL";
   // The server edits manual, open tasks only, and only for the author or a manager.
@@ -107,6 +108,7 @@ function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: (
           <JoinRequestPanel taskId={task.id} onDecided={() => void useTasks.getState().reloadDetail(task.id)} />
         )}
         <TaskDrawerProperties task={task} access={access} />
+        {recurrence && <TaskDrawerRecurrence taskId={task.id} rule={recurrence} />}
         {(task.description || canEdit) && (
           <section className="space-y-1.5">
             <h4 className="text-sm font-semibold">Tavsif</h4>

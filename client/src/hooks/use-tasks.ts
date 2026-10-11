@@ -14,6 +14,14 @@ export type TaskKind = "MANUAL" | "LESSON_QUESTION" | "CALLBACK" | "BROKEN_PROMI
 export type TaskView = "my" | "created" | "all" | "workload";
 export interface TaskPerson { id: number; firstName: string; lastName: string; photo: string | null; seenAt?: string | null }
 export interface TaskLesson { id: string; groupId: string; groupName: string; branchName: string | null; date: string; status: "PENDING" | "HELD" | "NOT_HELD" | "RESCHEDULED"; teacherPayExempt: boolean; lessonStartTime: string; lessonEndTime: string; claimedById: number | null }
+export type RecurrenceFreq = "DAILY" | "WEEKLY" | "MONTHLY";
+/** The card's badge: only while the rule runs (null once it is stopped). Weekdays 1 = dushanba … 6 = shanba. */
+export interface TaskRecurrenceBadge { freq: RecurrenceFreq; weekdays: number[]; dayOfMonth: number | null }
+/** `GET /tasks/recurrences` rows and `GET /tasks/:id` → `recurrence`; `nextRunDate` is `YYYY-MM-DD`. */
+export interface TaskRecurrenceView extends TaskRecurrenceBadge {
+  id: string; dueTime: string; title: string; active: boolean; separateCopies: boolean; nextRunDate: string;
+  author: TaskPerson; assignees: TaskPerson[]; canManage: boolean;
+}
 export interface TaskCard {
   id: string; kind: TaskKind; title: string; status: TaskStatus; priority: TaskPriority; dueAt: string | null;
   branchId: number | null; entityType: string | null; entityId: string | null; requiresPhoto: boolean;
@@ -21,6 +29,7 @@ export interface TaskCard {
   author: TaskPerson | null; assignees: TaskPerson[]; watchers: TaskPerson[];
   stepsTotal: number; stepsDone: number; eventsCount: number; unmarkedLesson: TaskLesson | null;
   batch?: { total: number; done: number; statuses: TaskStatus[] };
+  recurrence?: TaskRecurrenceBadge | null;
 }
 export interface TaskStep { id: string; title: string; position: number; doneAt: string | null; doneById: number | null }
 export interface TaskEvent { id: string; type: string; actorId: number | null; text: string | null; meta: Record<string, unknown> | null; via: "WEB" | "TELEGRAM" | "SYSTEM"; createdAt: string; actor: TaskPerson | null }
@@ -39,7 +48,7 @@ export interface TaskSource {
  * The answer of `GET /tasks/:id`; `events` ascending (the last 50), `batch` only for an author's separate copies.
  * `source` is optional: an older server answers without it, and the server sends it with the first page only.
  */
-export interface TaskDetailPayload { task: TaskDetail; events: TaskEvent[]; access: TaskAccess; batch: TaskCard[]; source?: TaskSource | null }
+export interface TaskDetailPayload { task: TaskDetail; events: TaskEvent[]; access: TaskAccess; batch: TaskCard[]; source?: TaskSource | null; recurrence?: TaskRecurrenceView | null }
 export interface TaskFilters { due?: "overdue" | "today" | "week"; priority?: TaskPriority[]; authorId?: number[]; assigneeId?: number[]; branchId?: number[]; q?: string }
 
 // `reqId` names the request whose answer the column is waiting for; an answer
