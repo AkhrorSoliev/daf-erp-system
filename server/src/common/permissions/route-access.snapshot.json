@@ -132,6 +132,13 @@
     "Cashier",
     "Teacher"
   ],
+  "DELETE /tasks/recurrences/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "DELETE /teachers/:id": [
     "Branch Director",
     "CEO"
@@ -1232,6 +1239,13 @@
     "Cashier",
     "Teacher"
   ],
+  "GET /tasks/recurrences": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "GET /tasks/workload": [
     "Administrator",
     "Branch Director",
@@ -1549,6 +1563,13 @@
     "Teacher"
   ],
   "PATCH /tasks/:id/steps/:stepId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "PATCH /tasks/recurrences/:id": [
     "Administrator",
     "Branch Director",
     "CEO",

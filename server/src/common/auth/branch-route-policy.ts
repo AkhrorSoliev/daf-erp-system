@@ -882,11 +882,15 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'workload branch filter and the assignable-people filter. A create takes ' +
       "the task's branch from `resolveTaskBranchId` (the linked entity's " +
       'branch, else the `X-Branch-Id` pick), which refuses a branch outside ' +
-      "the caller's scope instead of widening it.",
+      "the caller's scope instead of widening it. The recurrence list (`" +
+      'TaskRecurrencesService.list`) applies the same scope: the CEO the ' +
+      "company, a Branch Director their own rules plus their branches', " +
+      'anyone else their own.',
     routes: [
       'GET /tasks',
       'GET /tasks/assignable',
       'GET /tasks/counts',
+      'GET /tasks/recurrences',
       'GET /tasks/workload',
       'POST /tasks',
     ],
@@ -902,12 +906,16 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "a missing id, so another branch's task id leaks nothing. The write " +
       'routes then check `canManage` / `canWork` from that same access result; a ' +
       'duplicate creates the copy through the same branch resolution as a new ' +
-      'task.',
+      'task. A recurrence rule is loaded by id AND company and checked with ' +
+      'the same `resolveAccess` on the RULE (author, the CEO, a Branch ' +
+      'Director of its `branchId`); anyone else gets 404.',
     routes: [
       'DELETE /tasks/:id/steps/:stepId',
+      'DELETE /tasks/recurrences/:id',
       'GET /tasks/:id',
       'PATCH /tasks/:id',
       'PATCH /tasks/:id/steps/:stepId',
+      'PATCH /tasks/recurrences/:id',
       'POST /tasks/:id/cancel',
       'POST /tasks/:id/duplicate',
       'POST /tasks/:id/events',

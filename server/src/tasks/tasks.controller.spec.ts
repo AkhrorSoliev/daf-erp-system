@@ -33,8 +33,14 @@ describe('TasksController guards', () => {
       kind: 'anyStaff',
     });
   });
-  it('gives all seventeen routes the any-staff marker: every staff role, never the student', () => {
-    expect(routeNames).toHaveLength(17);
+  it('declares GET recurrences before GET :id, so the word is never read as an id', () => {
+    const names = Object.getOwnPropertyNames(proto);
+    expect(names.indexOf('recurrenceList')).toBeLessThan(
+      names.indexOf('detail'),
+    );
+  });
+  it('gives all twenty routes the any-staff marker: every staff role, never the student', () => {
+    expect(routeNames).toHaveLength(20);
     for (const name of routeNames) {
       expect(routeAccess(TasksController, name)).toEqual({ kind: 'anyStaff' });
       expect(defaultRolesOf(TasksController, name)).toEqual([

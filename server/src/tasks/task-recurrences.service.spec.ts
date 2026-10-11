@@ -7,8 +7,18 @@ jest.mock('./task-create', () => ({
   createCopiesTx: jest.fn(),
 }));
 
-import { BadRequestException } from '@nestjs/common';
+jest.mock('./task-people', () => ({
+  ...jest.requireActual('./task-people'),
+  loadAndCheckPeople: jest.fn(),
+}));
+
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { createCopiesTx } from './task-create';
+import { loadAndCheckPeople } from './task-people';
 import { TASK_EVENTS } from './task-events';
 import { TaskRecurrencesService } from './task-recurrences.service';
 
@@ -54,10 +64,40 @@ function setup(
   };
   const prisma = {
     $transaction: jest.fn((fn: (t: unknown) => unknown) => fn(tx)),
-    user: { count: jest.fn().mockResolvedValue(activeCount) },
+    user: {
+      count: jest.fn().mockResolvedValue(activeCount),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    taskRecurrence: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
   };
   const emitter = { emit: jest.fn() };
-  const tasks = { prepareCreate: jest.fn().mockResolvedValue(prepared) };
+  const tasks = {
+    prepareCreate: jest.fn().mockResolvedValue(prepared),
+    actorPerson: jest.fn(
+      (a: {
+        userId: number;
+        roleIds: number[];
+        scope: { kind: string; branchIds?: number[] };
+      }) => ({
+        id: a.userId,
+        roleIds: a.roleIds,
+        branchIds: a.scope.kind === 'all' ? 'all' : a.scope.branchIds,
+      }),
+    ),
+    // The rule's author, read the way the 07:00 run reads them.
+    loadActor: jest.fn().mockResolvedValue({
+      userId: 99,
+      companyId: 1,
+      roleIds: [3],
+      scope: { kind: 'branches', branchIds: [7] },
+    }),
+  };
   (createCopiesTx as jest.Mock).mockImplementation(
     (_tx: unknown, _t: unknown, groups: number[][]) =>
       Promise.resolve(groups.map((ids) => ({ ids, row: row(ids) }))),
@@ -220,5 +260,232 @@ describe('TaskRecurrencesService.create', () => {
     );
     const t = (createCopiesTx as jest.Mock).mock.calls[0][1];
     expect(typeof t.batchId).toBe('string');
+  });
+});
+
+const stored = {
+  id: 'r1',
+  companyId: 1,
+  branchId: 7,
+  authorId: 10,
+  freq: 'DAILY',
+  weekdays: [],
+  dayOfMonth: null,
+  dueTime: '10:00',
+  title: 'X',
+  assigneeIds: [20],
+  watcherIds: [30],
+  separateCopies: false,
+  active: true,
+  nextRunDate: day('2026-10-13'),
+  author: { id: 10, firstName: 'A', lastName: 'B', photo: null },
+};
+
+describe('TaskRecurrencesService.list', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('CEO: the whole company', async () => {
+    const { svc, prisma } = setup();
+    prisma.taskRecurrence.findMany.mockResolvedValue([]);
+    await svc.list({ ...actor, roleIds: [1], scope: { kind: 'all' } } as never);
+    expect(prisma.taskRecurrence.findMany.mock.calls[0][0].where).toEqual({
+      companyId: 1,
+    });
+  });
+  it("Branch Director: own rules and the branches' rules", async () => {
+    const { svc, prisma } = setup();
+    prisma.taskRecurrence.findMany.mockResolvedValue([]);
+    await svc.list({ ...actor, roleIds: [2] } as never);
+    expect(prisma.taskRecurrence.findMany.mock.calls[0][0].where).toEqual({
+      companyId: 1,
+      OR: [{ authorId: 10 }, { branchId: { in: [7] } }],
+    });
+  });
+  it('anyone else: own rules', async () => {
+    const { svc, prisma } = setup();
+    prisma.taskRecurrence.findMany.mockResolvedValue([]);
+    await svc.list(actor as never);
+    expect(prisma.taskRecurrence.findMany.mock.calls[0][0].where).toEqual({
+      companyId: 1,
+      authorId: 10,
+    });
+  });
+});
+
+describe('TaskRecurrencesService.update / remove', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (loadAndCheckPeople as jest.Mock).mockReset();
+  });
+
+  it('404 for a rule the caller may not manage (and for an unknown id)', async () => {
+    const { svc, prisma } = setup();
+    prisma.taskRecurrence.findFirst.mockResolvedValue({
+      ...stored,
+      authorId: 99,
+    });
+    await expect(
+      svc.update('r1', { active: false }, actor as never),
+    ).rejects.toThrow(NotFoundException);
+    prisma.taskRecurrence.findFirst.mockResolvedValue(null);
+    await expect(svc.remove('r1', actor as never)).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(prisma.taskRecurrence.update).not.toHaveBeenCalled();
+    expect(prisma.taskRecurrence.delete).not.toHaveBeenCalled();
+  });
+  it('stop: only the flag', async () => {
+    const { svc, prisma } = setup();
+    prisma.taskRecurrence.findFirst.mockResolvedValue(stored);
+    prisma.taskRecurrence.findUnique.mockResolvedValue(stored);
+    await svc.update('r1', { active: false }, actor as never, MON_0900);
+    expect(prisma.taskRecurrence.update).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+      data: { active: false },
+    });
+  });
+  it('a new schedule on a resume starts from tomorrow', async () => {
+    const { svc, prisma } = setup();
+    prisma.taskRecurrence.findFirst.mockResolvedValue(stored);
+    prisma.taskRecurrence.findUnique.mockResolvedValue(stored);
+    await svc.update(
+      'r1',
+      {
+        active: true,
+        schedule: { freq: 'WEEKLY', weekdays: [3], dueTime: '09:00' },
+      },
+      actor as never,
+      MON_0900,
+    );
+    expect(prisma.taskRecurrence.update).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+      data: {
+        active: true,
+        freq: 'WEEKLY',
+        weekdays: [3],
+        dayOfMonth: null,
+        dueTime: '09:00',
+        nextRunDate: day('2026-10-14'),
+      },
+    });
+  });
+  it('resuming a stopped rule starts from tomorrow; "active" on a running rule moves nothing', async () => {
+    const { svc, prisma } = setup();
+    prisma.taskRecurrence.findFirst.mockResolvedValue({
+      ...stored,
+      active: false,
+    });
+    prisma.taskRecurrence.findUnique.mockResolvedValue(stored);
+    await svc.update('r1', { active: true }, actor as never, MON_0900);
+    expect(prisma.taskRecurrence.update).toHaveBeenLastCalledWith({
+      where: { id: 'r1' },
+      data: { active: true, nextRunDate: day('2026-10-13') },
+    });
+    prisma.taskRecurrence.findFirst.mockResolvedValue(stored);
+    await svc.update('r1', { active: true }, actor as never, MON_0900);
+    expect(prisma.taskRecurrence.update).toHaveBeenLastCalledWith({
+      where: { id: 'r1' },
+      data: { active: true },
+    });
+  });
+  it('delete removes the rule row only', async () => {
+    const { svc, prisma } = setup();
+    prisma.taskRecurrence.findFirst.mockResolvedValue(stored);
+    await expect(svc.remove('r1', actor as never)).resolves.toEqual({
+      ok: true,
+    });
+    expect(prisma.taskRecurrence.delete).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+    });
+  });
+
+  it('new assignees: the author edits, the checked ids are written, the date stays', async () => {
+    const { svc, prisma, tasks } = setup();
+    prisma.taskRecurrence.findFirst.mockResolvedValue(stored);
+    prisma.taskRecurrence.findUnique.mockResolvedValue(stored);
+    (loadAndCheckPeople as jest.Mock).mockResolvedValueOnce({
+      assignees: [{ id: 21 }],
+      watchers: [],
+    });
+    await svc.update('r1', { assigneeIds: [21] }, actor as never, MON_0900);
+    expect(prisma.taskRecurrence.update).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+      data: { assigneeIds: [21], watcherIds: [30] },
+    });
+    // The caller is the author: one check, no second actor to load.
+    expect(loadAndCheckPeople).toHaveBeenCalledTimes(1);
+    expect(tasks.loadActor).not.toHaveBeenCalled();
+  });
+  it('a new assignee who is also a watcher leaves the watchers', async () => {
+    const { svc, prisma } = setup();
+    prisma.taskRecurrence.findFirst.mockResolvedValue(stored);
+    prisma.taskRecurrence.findUnique.mockResolvedValue(stored);
+    (loadAndCheckPeople as jest.Mock).mockResolvedValueOnce({
+      assignees: [{ id: 30 }],
+      watchers: [],
+    });
+    await svc.update('r1', { assigneeIds: [30] }, actor as never, MON_0900);
+    expect(prisma.taskRecurrence.update).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+      data: { assigneeIds: [30], watcherIds: [] },
+    });
+  });
+  it('the caller may not reach the assignee: 403, nothing written', async () => {
+    const { svc, prisma } = setup();
+    prisma.taskRecurrence.findFirst.mockResolvedValue(stored);
+    (loadAndCheckPeople as jest.Mock).mockRejectedValueOnce(
+      new ForbiddenException('x'),
+    );
+    await expect(
+      svc.update('r1', { assigneeIds: [21] }, actor as never, MON_0900),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.taskRecurrence.update).not.toHaveBeenCalled();
+  });
+  it("a manager edits another author's rule: the author's reach is checked too", async () => {
+    const { svc, prisma, tasks } = setup();
+    // A Branch Director of branch 7 manages a rule written by user 99.
+    const bd = { ...actor, roleIds: [2] };
+    prisma.taskRecurrence.findFirst.mockResolvedValue({
+      ...stored,
+      authorId: 99,
+    });
+    prisma.taskRecurrence.findUnique.mockResolvedValue(stored);
+    (loadAndCheckPeople as jest.Mock)
+      .mockResolvedValueOnce({ assignees: [{ id: 21 }], watchers: [] })
+      .mockResolvedValueOnce({ assignees: [{ id: 21 }], watchers: [] });
+    await svc.update('r1', { assigneeIds: [21] }, bd as never, MON_0900);
+    expect(tasks.loadActor).toHaveBeenCalledWith(99, 1, null);
+    const calls = (loadAndCheckPeople as jest.Mock).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][1]).toMatchObject({ id: 10, roleIds: [2] });
+    expect(calls[1][1]).toMatchObject({ id: 99, roleIds: [3] });
+    expect(prisma.taskRecurrence.update).toHaveBeenCalledTimes(1);
+  });
+  it('an assignee the author cannot reach: 403, nothing written', async () => {
+    const { svc, prisma } = setup();
+    const bd = { ...actor, roleIds: [2] };
+    prisma.taskRecurrence.findFirst.mockResolvedValue({
+      ...stored,
+      authorId: 99,
+    });
+    (loadAndCheckPeople as jest.Mock)
+      .mockResolvedValueOnce({ assignees: [{ id: 21 }], watchers: [] })
+      .mockRejectedValueOnce(new ForbiddenException('x'));
+    await expect(
+      svc.update('r1', { assigneeIds: [21] }, bd as never, MON_0900),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.taskRecurrence.update).not.toHaveBeenCalled();
+  });
+  it('an assignee who is not active staff: 400, nothing written', async () => {
+    const { svc, prisma } = setup(undefined, 0);
+    prisma.taskRecurrence.findFirst.mockResolvedValue(stored);
+    (loadAndCheckPeople as jest.Mock).mockResolvedValueOnce({
+      assignees: [{ id: 21 }],
+      watchers: [],
+    });
+    await expect(
+      svc.update('r1', { assigneeIds: [21] }, actor as never, MON_0900),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.taskRecurrence.update).not.toHaveBeenCalled();
   });
 });
