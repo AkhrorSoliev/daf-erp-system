@@ -6,7 +6,7 @@ import {
   USER_DEACTIVATED_EVENT,
   type UserDeactivatedEvent,
 } from '../common/events/user-lifecycle.events';
-import { lessonTaskAssigneeIds } from './lesson-task';
+import { autoTaskAssigneeIds } from './task-auto-rules';
 import {
   TASK_EVENTS,
   toEventTask,
@@ -142,8 +142,9 @@ export class TaskUserLifecycleListener {
    * Who takes over. A manual task goes back to its author while the author is
    * still active; otherwise (the author is the leaver, or has left too, and
    * for every system task) it goes to whoever the branch's lesson questions go
-   * to. A task with no branch and no author to return it to is left without an
-   * assignee: there is nobody right to give it to.
+   * to (`autoTaskAssigneeIds`; a system task with no branch goes to the
+   * company-wide ladder). A manual task with no branch and no author to return
+   * it to is left without an assignee: there is nobody right to give it to.
    */
   private async successorsOf(
     t: {
@@ -162,12 +163,10 @@ export class TaskUserLifecycleListener {
     ) {
       return [t.authorId];
     }
-    if (t.branchId === null) return [];
-    const ids = await lessonTaskAssigneeIds(
-      this.prisma,
-      t.companyId,
-      t.branchId,
-    );
+    // A system task with no branch (a lead from before the per-branch board)
+    // goes to the company-wide ladder; a manual one has nobody right to take it.
+    if (t.kind === 'MANUAL' && t.branchId === null) return [];
+    const ids = await autoTaskAssigneeIds(this.prisma, t.companyId, t.branchId);
     return ids.filter((id) => id !== leaverId);
   }
 

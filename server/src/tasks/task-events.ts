@@ -1,4 +1,5 @@
 import type { TaskStatus } from '@prisma/client';
+import type { AutoCloseReason } from './task-auto-rules';
 
 export const TASK_EVENTS = {
   ASSIGNED: 'task.assigned',
@@ -10,6 +11,8 @@ export const TASK_EVENTS = {
   CANCELLED: 'task.cancelled',
   REASSIGNED: 'task.reassigned',
   DUE_CHANGED: 'task.due.changed',
+  /** An automatic task closed by its source (spec §7); no notice, the bell rows close. */
+  AUTO_CLOSED: 'task.auto-closed',
 } as const;
 
 /** The slice every listener needs; the service loads it once per write. */
@@ -103,4 +106,8 @@ export interface TaskReassignedPayload {
 export interface TaskDueChangedPayload {
   task: TaskEventTask;
   actorId: number;
+}
+export interface TaskAutoClosedPayload {
+  task: TaskEventTask;
+  reason: AutoCloseReason;
 }

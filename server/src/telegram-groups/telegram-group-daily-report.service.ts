@@ -28,6 +28,8 @@ import {
 import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
 import { buildMonthChargesLines } from './utils/month-charges-lines.util';
+import { buildTaskLine } from './utils/task-line.util';
+import { loadTaskReportFigures } from '../tasks/task-report-figures';
 
 /**
  * Builds the once-a-day 21:00 Telegram daily report — the center's end-of-day
@@ -51,6 +53,8 @@ import { buildMonthChargesLines } from './utils/month-charges-lines.util';
  *                             Qoldi» take the place of the lesson-based
  *                             collection % and the month-end lines
  *   💵 Ustozlar oyligi      — deserved / students-paid / center-funded, MTD
+ *   📋 Topshiriqlar         — open / overdue tasks + who is most behind
+ *                             (a line, not a flag; none while nothing is overdue)
  *   🚩 Diqqat               — self-suppressing flags (refund / write-off / …)
  *
  * The day-over-day debt delta reads the most recent PRIOR `DailyFinancialSnapshot`
@@ -378,7 +382,7 @@ export class TelegramGroupDailyReportService {
         },
       }),
       // Bot sign-ups no administrator answered for more than a day
-      // (ADR-0080 / spec D10), scoped like the rest of the report.
+      // (ADR-0083 / spec D10), scoped like the rest of the report.
       this.prisma.studentJoinRequest.count({
         where: {
           companyId,
@@ -393,14 +397,21 @@ export class TelegramGroupDailyReportService {
     // wrapped so a failure degrades gracefully rather than killing the report).
     // Tashkent calendar month of "today" — the window the MTD block reports on.
     const monthKey = tashkentTodayDate().toISOString().slice(0, 7);
-    const [expectedValue, salary, canonicalNet, attribution, monthCharges] =
-      await Promise.all([
-        this.computeExpectation(companyId, monthKey, branchIds),
-        this.computeSalaryTopUp(companyId, branchIds),
-        this.computeCanonicalNetProfit(companyId, monthKey, branchIds),
-        this.computeIncomeAttribution(companyId, branchIds),
-        this.computeMonthCharges(companyId, monthKey, branchIds),
-      ]);
+    const [
+      expectedValue,
+      salary,
+      canonicalNet,
+      attribution,
+      monthCharges,
+      taskLine,
+    ] = await Promise.all([
+      this.computeExpectation(companyId, monthKey, branchIds),
+      this.computeSalaryTopUp(companyId, branchIds),
+      this.computeCanonicalNetProfit(companyId, monthKey, branchIds),
+      this.computeIncomeAttribution(companyId, branchIds),
+      this.computeMonthCharges(companyId, monthKey, branchIds),
+      this.computeTaskLine(companyId, branchIds),
+    ]);
 
     // ── Derive figures ────────────────────────────────────────────────────
     const todayIncome = todayPayments._sum.amount ?? 0;
@@ -644,6 +655,12 @@ export class TelegramGroupDailyReportService {
       lines.push(`• To'lanadi: <b>${formatSum(salary.staffNet)}</b>`);
     }
 
+    // 📋 Topshiriqlar (its own line, not a flag)
+    if (taskLine) {
+      lines.push('');
+      lines.push(taskLine);
+    }
+
     // 🚩 Diqqat (self-suppressing)
     lines.push('');
     if (flags.length > 0) {
@@ -859,6 +876,24 @@ export class TelegramGroupDailyReportService {
       });
     } catch (err: any) {
       this.logger.warn(`Oy hisoblari olinmadi: ${err?.message ?? err}`);
+      return null;
+    }
+  }
+
+  /**
+   * The task line (spec §4 screen 5). Not a 🚩 flag: system tasks are overdue
+   * most evenings and would turn every day 🟡. A failure drops the line only.
+   */
+  private async computeTaskLine(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<string | null> {
+    try {
+      return buildTaskLine(
+        await loadTaskReportFigures(this.prisma, companyId, branchIds),
+      );
+    } catch (err) {
+      this.logger.warn(`task line failed: ${(err as Error).message}`);
       return null;
     }
   }

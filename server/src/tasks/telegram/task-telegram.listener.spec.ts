@@ -333,6 +333,53 @@ describe('TaskTelegramListener', () => {
       )
       .map((m) => m.event)
       .sort();
-    expect(listened).toEqual(Object.values(TASK_EVENTS).sort());
+    // An automatic close sends no Telegram notice (spec §7): the task just
+    // stops (its unsent rows are deleted with it).
+    expect(listened).toEqual(
+      Object.values(TASK_EVENTS)
+        .filter((e) => e !== TASK_EVENTS.AUTO_CLOSED)
+        .sort(),
+    );
+  });
+
+  describe('a callback waits for 08:00 of its day', () => {
+    const callbackView = (dueAt: string) => ({
+      ...view(),
+      kind: 'CALLBACK',
+      authorId: null,
+      authorName: null,
+      dueAt: new Date(dueAt),
+    });
+    const callback = {
+      ...assigned,
+      task: { ...task, kind: 'CALLBACK', authorId: null },
+      actorId: null,
+    };
+
+    it('due on Wednesday: held in the outbox for Wednesday 08:00', async () => {
+      const { listener, sender, prisma } = setup();
+      (loadTaskView as jest.Mock).mockResolvedValue(
+        callbackView('2026-10-14T13:00:00.000Z'),
+      );
+      await listener.handle(TASK_EVENTS.ASSIGNED, callback as any, DAY);
+      expect(sender.send).not.toHaveBeenCalled();
+      expect(prisma.taskOutbox.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 40,
+          channel: 'TELEGRAM',
+          kind: 'NOTICE',
+          sendAfter: new Date('2026-10-14T03:00:00.000Z'),
+        }),
+      });
+    });
+
+    it('due today: goes now', async () => {
+      const { listener, sender } = setup();
+      (loadTaskView as jest.Mock).mockResolvedValue(
+        callbackView('2026-10-12T13:00:00.000Z'),
+      );
+      await listener.handle(TASK_EVENTS.ASSIGNED, callback as any, DAY);
+      expect(sender.send).toHaveBeenCalledTimes(1);
+    });
   });
 });

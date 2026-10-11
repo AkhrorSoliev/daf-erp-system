@@ -6,6 +6,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
 // task-labels only `import type`s from this file, so there is no runtime cycle.
 import { STATUS_COLUMNS } from "@/components/tasks/task-labels";
+import type { CallOutcome, CallReason } from "@/components/outreach/outreach-types";
 
 export type TaskStatus = "NEW" | "IN_PROGRESS" | "IN_REVIEW" | "DONE" | "CANCELLED";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
@@ -25,8 +26,20 @@ export interface TaskStep { id: string; title: string; position: number; doneAt:
 export interface TaskEvent { id: string; type: string; actorId: number | null; text: string | null; meta: Record<string, unknown> | null; via: "WEB" | "TELEGRAM" | "SYSTEM"; createdAt: string; actor: TaskPerson | null }
 export interface TaskDetail extends TaskCard { description: string | null; lastReturnedAt: string | null; cancelReason: string | null; steps: TaskStep[] }
 export interface TaskAccess { isAuthor: boolean; isAssignee: boolean; isWatcher: boolean; isManager: boolean; canView: boolean; canManage: boolean; canWork: boolean }
-/** The answer of `GET /tasks/:id`; `events` ascending (the last 50), `batch` only for an author's separate copies. */
-export interface TaskDetailPayload { task: TaskDetail; events: TaskEvent[]; access: TaskAccess; batch: TaskCard[] }
+export interface TaskSourceCall { at: string; outcome: CallOutcome; note: string | null; by: string }
+/** A system task's source (`GET /tasks/:id` → `source`, spec screen 10); null for the rest. */
+export interface TaskSource {
+  student?: { id: number; name: string; phone: string | null; debt: number; lastCall: TaskSourceCall | null };
+  promise?: { date: string; amount: number | null; comment: string | null };
+  previousCall?: TaskSourceCall;
+  callReason?: CallReason;
+  lead?: { id: string; name: string; phone: string; source: string | null; createdAt: string };
+}
+/**
+ * The answer of `GET /tasks/:id`; `events` ascending (the last 50), `batch` only for an author's separate copies.
+ * `source` is optional: an older server answers without it, and the server sends it with the first page only.
+ */
+export interface TaskDetailPayload { task: TaskDetail; events: TaskEvent[]; access: TaskAccess; batch: TaskCard[]; source?: TaskSource | null }
 export interface TaskFilters { due?: "overdue" | "today" | "week"; priority?: TaskPriority[]; authorId?: number[]; assigneeId?: number[]; branchId?: number[]; q?: string }
 
 // `reqId` names the request whose answer the column is waiting for; an answer

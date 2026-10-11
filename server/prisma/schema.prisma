@@ -1739,6 +1739,11 @@ model Company {
   dafKunlikSavol  Int       @default(12)
   dafHaftalikKun  Int       @default(4)
   dafSariqKun     Int       @default(2)
+  /// Automatic «Qo'ng'iroqsiz lid» tasks (spec 2026-10-07 §7, ADR-0083) are
+  /// given only for leads created at or after this instant. The migration
+  /// fills existing companies with the moment it runs, so leads that were
+  /// already waiting never get one; a new company starts at its creation.
+  uncalledLeadTasksFrom DateTime @default(now())
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

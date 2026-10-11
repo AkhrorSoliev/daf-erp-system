@@ -5,6 +5,9 @@ import { TelegramModule } from '../telegram/telegram.module';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { TasksReadService } from './tasks-read.service';
+import { TaskAutoCloseListener } from './task-auto-close.listener';
+import { TaskAutoLeadsService } from './task-auto-leads.service';
+import { TaskAutoService } from './task-auto.service';
 import { TaskNotifyListener } from './task-notify.listener';
 import { TaskOutboxService } from './task-outbox.service';
 import { TaskUserLifecycleListener } from './task-user-lifecycle.listener';
@@ -22,6 +25,9 @@ import { TaskTelegramHandler } from './telegram/task-telegram.handler';
     TasksService,
     TasksReadService,
     TaskNotifyListener,
+    TaskAutoCloseListener,
+    TaskAutoService,
+    TaskAutoLeadsService,
     TaskOutboxService,
     TaskUserLifecycleListener,
     TaskTelegramSender,
