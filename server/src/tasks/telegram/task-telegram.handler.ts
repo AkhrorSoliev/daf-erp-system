@@ -18,10 +18,15 @@ import {
   type Me,
   type Seen,
 } from './task-telegram-actor';
-import { ONLY_GIVER_REVIEWS, OPEN_STATUSES } from '../task-transitions';
+import {
+  ONLY_GIVER_REVIEWS,
+  OPEN_STATUSES,
+  PHOTO_REQUIRED_MESSAGE,
+} from '../task-transitions';
 import {
   NOT_IN_REVIEW,
   NOT_YOURS,
+  PHOTO_PLACEHOLDER,
   RETURN_PLACEHOLDER,
   STEP_GONE,
   TRY_LATER,
@@ -31,6 +36,7 @@ import {
   keptHeadline,
   messageExtra,
   parseTk,
+  photoPromptText,
   renderMyTasks,
   renderStepsMessage,
   renderTaskMessage,
@@ -152,6 +158,11 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
       await this.answer(ctx);
     } catch (err) {
       if (!(err instanceof HttpException)) throw err;
+      // A photo task without a fresh photo (spec §6.1): ask for it as a reply.
+      if (cmd.action === 'done' && err.message === PHOTO_REQUIRED_MESSAGE) {
+        await this.answer(ctx);
+        return this.askPhoto(ctx, me, view);
+      }
       // The task itself is lost to this person (a vanished step is not): its
       // card, which is not scoped to them, is not redrawn for them.
       if (
@@ -308,6 +319,35 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
       view,
       me.actor.userId,
       'RETURN_PROMPT',
+    );
+  }
+
+  /** «Rasmni shu xabarga javob qilib yuboring»: a photo reply sends the task to review (`TaskTelegramReplies`). */
+  private async askPhoto(
+    ctx: BotContext,
+    me: Me,
+    view: TgTaskView,
+  ): Promise<void> {
+    const cardId = ctx.callbackQuery?.message?.message_id;
+    const prompt = await ctx.reply(photoPromptText(view.title), {
+      parse_mode: 'HTML',
+      ...(cardId !== undefined && {
+        reply_parameters: {
+          message_id: cardId,
+          allow_sending_without_reply: true,
+        },
+      }),
+      reply_markup: {
+        force_reply: true,
+        input_field_placeholder: PHOTO_PLACEHOLDER,
+      },
+    });
+    await this.sender.record(
+      me.chatId,
+      prompt.message_id,
+      view,
+      me.actor.userId,
+      'PHOTO_PROMPT',
     );
   }
 

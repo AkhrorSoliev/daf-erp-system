@@ -4,16 +4,28 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import type { TaskTelegramPurpose } from '@prisma/client';
 import type { Message } from 'telegraf/types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { downloadFile } from '../../telegram/utils/download.util';
 import type { BotContext } from '../../telegram/types/context';
 import { describeError } from '../../telegram-digest/telegram-send';
+import { FILE_SIZE_MESSAGE } from '../task-file-rules';
+import { TaskFilesService } from '../task-files.service';
 import { TasksService } from '../tasks.service';
-import { lookupSeen, resolveMe } from './task-telegram-actor';
+import { lookupSeen, resolveMe, type Me } from './task-telegram-actor';
+import {
+  pickAttachment,
+  UNSUPPORTED_MEDIA,
+  type TgAttachment,
+} from './task-telegram-media';
 import {
   ADDED_TO_TASK,
   NOT_YOURS,
-  TEXT_ONLY,
+  PHOTO_PROMPT,
+  PHOTO_SENT,
+  PHOTO_STILL_NEEDED,
+  RETURN_TEXT_ONLY,
   TRY_LATER,
   returnedReply,
   shortName,
@@ -39,6 +51,7 @@ export class TaskTelegramReplies {
   constructor(
     private prisma: PrismaService,
     private tasks: TasksService,
+    private files: TaskFilesService,
   ) {}
 
   /**
@@ -79,10 +92,14 @@ export class TaskTelegramReplies {
       select: { taskId: true, purpose: true },
     });
     if (!link) return false;
-    // Photos, files and voice come with phase 3; nothing is stored now.
+    const attachment = pickAttachment(msg);
+    if (attachment && 'refused' in attachment) {
+      await ctx.reply(attachment.refused);
+      return true;
+    }
     const text = 'text' in msg ? msg.text.trim() : '';
-    if (!text) {
-      await ctx.reply(TEXT_ONLY);
+    if (!attachment && !text) {
+      await ctx.reply(UNSUPPORTED_MEDIA);
       return true;
     }
     const me = await resolveMe(this.prisma, this.tasks, chatId, (t) =>
@@ -96,6 +113,10 @@ export class TaskTelegramReplies {
       return true;
     }
     try {
+      if (attachment) {
+        await this.storeAttachment(ctx, me, link, attachment);
+        return true;
+      }
       switch (link.purpose) {
         case 'RETURN_PROMPT': {
           const task = await this.tasks.review(
@@ -116,12 +137,10 @@ export class TaskTelegramReplies {
           await this.tasks.addComment(link.taskId, text, me.actor);
           await this.ack(ctx, ADDED_TO_TASK);
           break;
-        default:
-          // PHOTO_PROMPT (phase 3) or a later purpose: give it a case above.
-          this.logger.warn(
-            `task ${link.taskId}: a reply to a ${link.purpose} message was not stored`,
-          );
-          await ctx.reply(TEXT_ONLY);
+        case 'PHOTO_PROMPT':
+          // A text where a photo was asked for: ask again, store nothing.
+          await ctx.reply(PHOTO_PROMPT);
+          break;
       }
     } catch (err) {
       if (!(err instanceof HttpException)) throw err;
@@ -130,6 +149,54 @@ export class TaskTelegramReplies {
       );
     }
     return true;
+  }
+
+  /**
+   * A photo, document, video or voice reply (spec §6.2): downloaded from
+   * Telegram (≤ 20 MB, checked before), stored like a website upload. A photo
+   * answering «Rasmni … yuboring» then sends the task to review. The file link
+   * carries the bot token: it lives in memory only and is never logged.
+   */
+  private async storeAttachment(
+    ctx: BotContext,
+    me: Me,
+    link: { taskId: string; purpose: TaskTelegramPurpose },
+    a: TgAttachment,
+  ): Promise<void> {
+    if (link.purpose === 'RETURN_PROMPT') {
+      await ctx.reply(RETURN_TEXT_ONLY);
+      return;
+    }
+    let href: string;
+    try {
+      href = (await ctx.telegram.getFileLink(a.fileId)).href;
+    } catch (err) {
+      // `file_size` is optional in an update: Telegram itself refuses over 20 MB.
+      if (!/file is too big/i.test(describeError(err))) throw err;
+      await ctx.reply(FILE_SIZE_MESSAGE);
+      return;
+    }
+    const buffer = await downloadFile(href);
+    const { file } = await this.files.upload(
+      link.taskId,
+      { buffer, name: a.name, durationSec: a.durationSec },
+      me.actor,
+    );
+    const msg = ctx.message;
+    const caption = msg && 'caption' in msg ? (msg.caption?.trim() ?? '') : '';
+    if (caption) await this.tasks.addComment(link.taskId, caption, me.actor);
+    if (link.purpose !== 'PHOTO_PROMPT') {
+      return this.ack(ctx, ADDED_TO_TASK);
+    }
+    if (file.kind !== 'IMAGE') return this.ack(ctx, PHOTO_STILL_NEEDED);
+    try {
+      await this.tasks.changeStatus(link.taskId, 'IN_REVIEW', me.actor);
+      await this.ack(ctx, PHOTO_SENT);
+    } catch (err) {
+      if (!(err instanceof HttpException)) throw err;
+      // The photo is saved; the move was not (already in review, returned…).
+      await this.ack(ctx, `${ADDED_TO_TASK} ${err.message}`);
+    }
   }
 
   /** The write is committed: a lost «done» message is logged, never TRY_LATER (a resend would repeat it). */

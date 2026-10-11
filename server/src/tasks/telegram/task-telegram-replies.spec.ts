@@ -12,8 +12,8 @@ import { TaskTelegramReplies } from './task-telegram-replies';
 import {
   ADDED_TO_TASK,
   NOT_YOURS,
+  PHOTO_PROMPT,
   SEVERAL_ACCOUNTS,
-  TEXT_ONLY,
   TRY_LATER,
   parseTk,
   type TgTaskView,
@@ -59,6 +59,7 @@ let replies: TaskTelegramReplies;
 let handler: TaskTelegramHandler;
 let prisma: any;
 let tasks: any;
+let files: any;
 let sender: any;
 let telegram: any;
 
@@ -87,6 +88,7 @@ beforeEach(() => {
     review: jest.fn().mockResolvedValue({ assignees: [] }),
     addComment: jest.fn().mockResolvedValue({}),
   };
+  files = { upload: jest.fn() };
   sender = {
     openUrl: jest
       .fn()
@@ -94,7 +96,7 @@ beforeEach(() => {
     record: jest.fn(),
   };
   telegram = { getBot: () => ({}), useBeforeScenes: jest.fn() };
-  replies = new TaskTelegramReplies(prisma, tasks);
+  replies = new TaskTelegramReplies(prisma, tasks, files);
   handler = new TaskTelegramHandler(prisma, tasks, telegram, sender, replies);
   as(40);
   (loadTaskView as jest.Mock).mockResolvedValue(view());
@@ -166,27 +168,6 @@ describe('TaskTelegramReplies — replies (spec §6.2)', () => {
     expect(ctx.reply).toHaveBeenCalledWith(
       'Topshiriq qaytarildi. Rahimov A. ga xabar ketdi.',
     );
-  });
-
-  it('a photo, file, voice or caption reply: text only for now, nothing stored', async () => {
-    for (const media of [
-      { photo: [{ file_id: 'x' }] },
-      { photo: [{ file_id: 'x' }], caption: 'mana' },
-      { voice: { file_id: 'v' } },
-      { document: { file_id: 'd' } },
-    ]) {
-      // Telegram sends no `text` key at all for these.
-      const { text: _text, ...bare } = replyTo();
-      const ctx = message({ ...bare, ...media });
-      await replies.onMessage(ctx, next);
-      expect(ctx.reply).toHaveBeenCalledWith(TEXT_ONLY);
-    }
-    expect(tasks.addComment).not.toHaveBeenCalled();
-    expect(tasks.review).not.toHaveBeenCalled();
-    expect(staffOfChat).not.toHaveBeenCalled();
-    expect(next).not.toHaveBeenCalled();
-    // The website takes no upload before phase 3: the text must not point to it.
-    expect(TEXT_ONLY).toBe('Hozircha faqat matnli javob qabul qilinadi.');
   });
 
   it("not a reply, a reply to another message, a command, a group: the bot's own flows", async () => {
@@ -321,21 +302,18 @@ describe('TaskTelegramReplies — replies (spec §6.2)', () => {
     );
   });
 
-  it('a reply to a message of any other purpose (PHOTO_PROMPT, phase 3) is never a comment', async () => {
-    const warn = mute('warn');
+  it('a text reply to the photo prompt asks for the photo again; nothing stored', async () => {
     prisma.taskTelegramMessage.findUnique.mockResolvedValue({
       taskId: TASK,
       purpose: 'PHOTO_PROMPT',
     });
     const ctx = message(replyTo());
     await replies.onMessage(ctx, next);
-    expect(ctx.reply).toHaveBeenCalledWith(TEXT_ONLY);
+    expect(ctx.reply).toHaveBeenCalledWith(PHOTO_PROMPT);
     expect(tasks.addComment).not.toHaveBeenCalled();
     expect(tasks.review).not.toHaveBeenCalled();
+    expect(files.upload).not.toHaveBeenCalled();
     expect(next).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith(
-      `task ${TASK}: a reply to a PHOTO_PROMPT message was not stored`,
-    );
   });
 
   it("a failure further down the chain is not swallowed as the reply's", async () => {
