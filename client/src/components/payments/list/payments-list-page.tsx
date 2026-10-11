@@ -7,6 +7,7 @@ import { Download, Loader2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
+import { CorrectPaymentDialog } from "@/components/students/correct-payment-dialog";
 import { useCan } from "@/hooks/use-permissions";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { downloadAuthedFile } from "@/lib/download-file";
@@ -14,12 +15,15 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentNow } from "@/lib/tashkent-time";
 import { cn } from "@/lib/utils";
 import { lastPageIfPast } from "@/components/payments/debt/debt-url";
+import { PaymentDrawer } from "./payment-drawer";
 import { PaymentsFilterBar } from "./payments-filter-bar";
 import { PART_FILTER } from "./payments-format";
+import type { PaymentRow } from "./payments-list-types";
 import { PaymentsPeriodBar } from "./payments-period-bar";
 import { invalidatePaymentsList, usePaymentsFilterOptions, usePaymentsRows, usePaymentsSummary } from "./payments-queries";
 import { PaymentsSummaryCard, PaymentsSummaryCardSkeleton } from "./payments-summary-card";
 import { PaymentsPager, PaymentsTable, PaymentsTotalsLine } from "./payments-table";
+import { ReversePaymentDialog } from "./reverse-payment-dialog";
 import { cleanPeriodId, hasPaymentFilter, listParams, PAYMENTS_LIST_SCHEMA, periodParams, type PaymentFilters } from "./payments-url";
 
 const CLEARED: Partial<PaymentFilters> = {
@@ -38,6 +42,9 @@ export function PaymentsListPage() {
   const canSeeMoney = useCan("reports.finance");
   const [recording, setRecording] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // The drawer closes before either dialog opens (B2a rule); it reopens after a success.
+  const [correcting, setCorrecting] = useState<PaymentRow | null>(null);
+  const [reversing, setReversing] = useState<PaymentRow | null>(null);
 
   // Tashkent days, never the browser's.
   const todayStr = tashkentNow().dateStr;
@@ -58,6 +65,9 @@ export function PaymentsListPage() {
   }, [lastPage, setFilters]);
   // A kept answer is not the new one: skeleton, not «to'lov yo'q», until it lands.
   const tableLoading = isPending || lastPage !== null || (isPlaceholderData && !data?.data.length);
+  // The clicked row is used as it is when it is on this page and the page is not showing a kept answer.
+  const openId = filters.tolov || null;
+  const openRow = !isPlaceholderData ? data?.data.find((r) => r.id === openId) : undefined;
 
   // Any filter or period change puts the list back on page 1; the period keeps the filters.
   const onChange = useCallback((u: Partial<PaymentFilters>) => setFilters({ sahifa: 1, ...u }), [setFilters]);
@@ -160,6 +170,36 @@ export function PaymentsListPage() {
       )}
 
       <RecordPaymentDialog open={recording} onOpenChange={setRecording} onSuccess={() => invalidatePaymentsList(qc)} />
+
+      <PaymentDrawer
+        id={correcting || reversing ? null : openId}
+        period={period}
+        initialRow={openRow}
+        initialPeriod={data?.period}
+        onClose={() => setFilters({ tolov: "" })}
+        onOpen={(id) => setFilters({ tolov: id })}
+        onCorrect={(row) => { setFilters({ tolov: "" }); setCorrecting(row); }}
+        onReverse={(row) => { setFilters({ tolov: "" }); setReversing(row); }}
+      />
+      <CorrectPaymentDialog
+        open={correcting !== null}
+        onOpenChange={(o) => { if (!o) setCorrecting(null); }}
+        payment={correcting}
+        onCorrected={(_balance, { newPaymentId }) => {
+          const id = newPaymentId ?? correcting?.id;
+          setCorrecting(null);
+          if (id) setFilters({ tolov: id });
+        }}
+      />
+      <ReversePaymentDialog
+        row={reversing}
+        onClose={() => setReversing(null)}
+        onDone={() => {
+          const id = reversing?.id;
+          setReversing(null);
+          if (id) setFilters({ tolov: id });
+        }}
+      />
     </div>
   );
 }

@@ -22,9 +22,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { invalidatePaymentsList } from "@/components/payments/list/payments-queries";
 import { PAYMENT_METHOD_LABELS } from "./student-profile-tabs-utils";
 
 export interface CorrectablePayment {
@@ -37,8 +39,8 @@ interface CorrectPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   payment: CorrectablePayment | null;
-  /** Called after a successful correction with the student's fresh balance. */
-  onCorrected: (newBalance: number | null) => void;
+  /** Called after a successful correction with the student's fresh balance and the new payment's id (null when only the method changed: the payment is updated in place). */
+  onCorrected: (newBalance: number | null, result: { newPaymentId: string | null }) => void;
 }
 
 export function CorrectPaymentDialog({
@@ -51,6 +53,7 @@ export function CorrectPaymentDialog({
   const [method, setMethod] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
   // Reset the form whenever a new payment is targeted or the dialog reopens.
   // Amount and method are pre-filled with the current values so an admin can
@@ -98,8 +101,11 @@ export function CorrectPaymentDialog({
               rawAmount,
             )} so'm`,
       );
+      // The open «To'lovlar» page (if any) follows the change at once.
+      invalidatePaymentsList(queryClient);
       onCorrected(
         typeof data?.studentBalance === "number" ? data.studentBalance : null,
+        { newPaymentId: typeof data?.newPayment?.id === "string" ? data.newPayment.id : null },
       );
       onOpenChange(false);
     } catch (err) {

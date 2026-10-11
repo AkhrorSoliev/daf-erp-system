@@ -17,13 +17,13 @@ const HEADS = ["#", "Sana", "O'quvchi", "Guruh", "Summa", "Usul", "Nimaga ketdi"
 const AMOUNT_AT = 4;
 
 // Semantic tokens with a tint: the text stays `foreground`/`destructive`, so both themes read without `dark:` overrides.
-const PILL_BASE = "inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium";
+export const PILL_BASE = "inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium";
 const PILL = {
   muted: "bg-muted text-muted-foreground",
   red: "bg-destructive/15 text-destructive",
   orange: "bg-orange-500/20 text-foreground",
 } as const;
-const PART_PILL: Record<PartKind, string> = {
+export const PART_PILL: Record<PartKind, string> = {
   CURRENT: "bg-success/20 text-foreground",
   ADVANCE: "bg-blue-500/15 text-foreground",
   LATE: "bg-warning/25 text-foreground",
