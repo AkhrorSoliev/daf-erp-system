@@ -528,7 +528,7 @@ describe('PaymentsService', () => {
       prisma.transaction.count.mockResolvedValue(3); // 3 consumption rows
 
       await expect(service.reverse(paymentId, params)).rejects.toThrow(
-        /sarflangan/,
+        "To'lov allaqachon darslarga sarflangan — bekor qilib bo'lmaydi. Pulni o'quvchiga «Pul qaytarish» orqali qaytaring.",
       );
       expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
       expect(prisma.payment.update).not.toHaveBeenCalled();
@@ -592,6 +592,60 @@ describe('PaymentsService', () => {
 
       await expect(service.reverse(paymentId, params)).rejects.toThrow(
         BadRequestException,
+      );
+    });
+  });
+
+  describe('reverse() — the reason', () => {
+    const paymentId = 'payment-uuid-1';
+    const completed = {
+      id: paymentId,
+      studentId: 10001,
+      amount: 500000,
+      contractId: null,
+      status: PaymentStatus.COMPLETED,
+    };
+
+    beforeEach(() => {
+      prisma.payment.findFirst.mockResolvedValue(completed);
+    });
+
+    it('refuses a human reversal without a reason, before any write', async () => {
+      for (const reason of [undefined, '   ']) {
+        await expect(
+          service.reverse(paymentId, {
+            reason,
+            performedById: 10001,
+            companyId: 1,
+          }),
+        ).rejects.toThrow(
+          new BadRequestException('Bekor qilish sababini yozing'),
+        );
+      }
+      expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it('lets a system reversal (Payme cancel, no user) go ahead without a reason', async () => {
+      await service.reverse(paymentId, {
+        reason: 'Payme CancelTransaction',
+        companyId: 1,
+      });
+
+      expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+        'txn-uuid-1',
+        expect.objectContaining({ reason: 'Payme CancelTransaction' }),
+        prisma,
+      );
+    });
+
+    it('keeps the default reason for a system reversal that names none', async () => {
+      await service.reverse(paymentId, { companyId: 1 });
+
+      expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+        'txn-uuid-1',
+        expect.objectContaining({ reason: "To'lov bekor qilindi" }),
+        prisma,
       );
     });
   });
@@ -720,6 +774,7 @@ describe('PaymentsService', () => {
       await expect(
         service.reverse('payment-uuid-1', {
           performedById: 1,
+          reason: "Xato to'lov",
           companyId: 1001,
         }),
       ).rejects.toMatchObject(concurrent);

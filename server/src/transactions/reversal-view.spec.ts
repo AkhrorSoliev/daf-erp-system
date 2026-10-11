@@ -24,6 +24,12 @@ describe('reversalReason', () => {
     ).toBe("Oylik to'lovga o'tildi, bu dars puli oktabr oylik to'loviga kirdi");
   });
 
+  it("names Payme's cancellation in Uzbek", () => {
+    expect(reversalReason('Bekor qilindi: Payme CancelTransaction')).toBe(
+      "Payme to'lovni bekor qildi",
+    );
+  });
+
   it('has no reason when only the row id was written', () => {
     expect(
       reversalReason('Bekor qilindi (3f1c2a9e-1b2c-4d5e-8f90-123456789abc)'),

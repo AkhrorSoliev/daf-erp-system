@@ -1,7 +1,17 @@
+import 'reflect-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
+import { ReversePaymentDto } from './dto/reverse-payment.dto';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
+
+// Same options as the global ValidationPipe in main.ts.
+async function reverseErrors(body: object) {
+  const dto = plainToInstance(ReversePaymentDto, body);
+  return validate(dto, { whitelist: true, forbidNonWhitelisted: true });
+}
 
 const FOUR_ROLES = ['Administrator', 'Branch Director', 'CEO', 'Cashier'];
 
@@ -88,6 +98,60 @@ describe('PaymentsController — route access', () => {
 
     it('admits the CEO by default, nobody else', () => {
       expect(defaultRolesOf(PaymentsController, 'reverse')).toEqual(['CEO']);
+    });
+  });
+});
+
+describe('ReversePaymentDto — the reason is required', () => {
+  const messages = (errors: { constraints?: Record<string, string> }[]) =>
+    errors.flatMap((e) => Object.values(e.constraints ?? {}));
+
+  it('refuses a missing reason', async () => {
+    expect(messages(await reverseErrors({}))).toContain(
+      'Bekor qilish sababini yozing',
+    );
+  });
+
+  it('refuses a blank reason, once trimmed', async () => {
+    expect(messages(await reverseErrors({ reason: '   ' }))).toContain(
+      'Bekor qilish sababini yozing',
+    );
+  });
+
+  it('accepts a reason and trims it', async () => {
+    const dto = plainToInstance(ReversePaymentDto, { reason: ' xato ' });
+    expect(await reverseErrors({ reason: ' xato ' })).toEqual([]);
+    expect(dto.reason).toBe('xato');
+  });
+
+  it('refuses a reason longer than 500 characters', async () => {
+    expect(
+      (await reverseErrors({ reason: 'x'.repeat(501) })).map((e) => e.property),
+    ).toEqual(['reason']);
+  });
+});
+
+describe('PaymentsController — reverse() delegation', () => {
+  it('passes the body reason, the caller and the company to the service', async () => {
+    const reverse = jest.fn().mockResolvedValue({});
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [PaymentsController],
+      providers: [{ provide: PaymentsService, useValue: { reverse } }],
+    }).compile();
+
+    await module
+      .get(PaymentsController)
+      .reverse(
+        'payment-1',
+        { reason: "Xato to'lov" } as ReversePaymentDto,
+        99,
+        1001,
+      );
+
+    expect(reverse).toHaveBeenCalledWith('payment-1', {
+      reason: "Xato to'lov",
+      performedById: 99,
+      companyId: 1001,
     });
   });
 });
