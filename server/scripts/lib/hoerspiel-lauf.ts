@@ -19,6 +19,7 @@ import { polstereMp3 } from '../../src/daf/media/audio-polster';
 import { neuerAudioSchluessel } from '../../src/daf/media/audio-keys';
 import { POLSTER_KENNUNG } from '../../src/daf/media/audio-polster';
 import { zuMp3 } from '../../src/daf/media/audio-format';
+import { verlangsameMp3 } from '../../src/daf/media/audio-tempo';
 import {
   geraeuschId,
   hoerspielHash,
@@ -138,8 +139,10 @@ export async function mischeUndLade(
     deps.laden,
     deps.dir,
   );
+  // The raw recording stays at the model's speed (`rohKey`); only the mix is
+  // slowed, so a later change of tempo is a free remix.
   const { mp3, schnitte } = await mischeHoerspiel({
-    roh,
+    roh: h.tempo && h.tempo !== 1 ? await verlangsameMp3(roh, h.tempo) : roh,
     zeilen: d.zeilen.map((z) => z.tts ?? z.de),
     regie: h,
     geraeusche,

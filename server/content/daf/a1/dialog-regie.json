@@ -488,7 +488,8 @@
           "sfx": "a teaspoon stirring coffee in a ceramic cup, gentle clinking of the spoon against the cup",
           "sek": 3
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u05-d2": {
@@ -514,7 +515,8 @@
           "sfx": "a phone ringing twice and being picked up",
           "sek": 2.5
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u05-d3": {
@@ -540,7 +542,8 @@
           "sfx": "a knock on a bedroom door",
           "sek": 1.5
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u05-d4": {
@@ -560,7 +563,8 @@
         "sfx": "a busy university canteen at lunchtime, cutlery and trays clinking, many indistinct voices far away",
         "sek": 15
       },
-      "geraeusche": []
+      "geraeusche": [],
+      "tempo": 0.9
     }
   },
   "u05-d5": {
@@ -591,7 +595,8 @@
           "sfx": "pages of a paper calendar being turned",
           "sek": 2
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u05-d6": {
@@ -617,7 +622,8 @@
           "sfx": "a phone ringing twice and being picked up",
           "sek": 2.5
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   },
   "u05-d7": {
@@ -643,7 +649,8 @@
           "sfx": "dishes and cutlery clinking in a kitchen sink with running water",
           "sek": 3
         }
-      ]
+      ],
+      "tempo": 0.9
     }
   }
 }
