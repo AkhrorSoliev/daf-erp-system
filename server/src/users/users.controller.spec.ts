@@ -3,7 +3,13 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { RedisService } from '../redis/redis.service';
 import { AuthService } from '../auth/auth.service';
-import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
+import { ROLE_ID } from '../common/auth/role-ids';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import {
+  defaultRolesOf,
+  fakePermissions,
+  routeAccess,
+} from '../common/permissions/testing';
 
 describe('UsersController — route access', () => {
   let controller: UsersController;
@@ -43,6 +49,10 @@ describe('UsersController — route access', () => {
         // OwnPasswordAttemptGuard (ADR-0031) is built with the controller.
         { provide: RedisService, useValue: {} },
         { provide: AuthService, useValue: mockAuth },
+        {
+          provide: PermissionsService,
+          useValue: fakePermissions([ROLE_ID.CEO]),
+        },
       ],
     }).compile();
 
@@ -63,6 +73,32 @@ describe('UsersController — route access', () => {
         'Branch Director',
         'CEO',
       ]);
+    });
+  });
+
+  // ADR-0086: an employee's salary balance goes only to a caller with salary.view.
+  describe.each([
+    ['Administrator', ROLE_ID.ADMINISTRATOR, false],
+    ['Branch Director', ROLE_ID.BRANCH_DIRECTOR, true],
+    ['CEO', ROLE_ID.CEO, true],
+  ])('employee balance for the %s', (_name, roleId, sees) => {
+    const build = () =>
+      new UsersController(
+        mockService as never,
+        mockAuth as never,
+        fakePermissions([roleId]),
+      );
+
+    it(`findAll passes includeBalance=${sees}`, async () => {
+      mockService.findAll.mockClear();
+      await build().findAll({} as never, 7, 1001, null);
+      expect(mockService.findAll).toHaveBeenCalledWith({}, 1001, null, sees);
+    });
+
+    it(`findOne passes includeBalance=${sees}`, async () => {
+      mockService.findById.mockClear();
+      await build().findOne(5, 7, 1001, null);
+      expect(mockService.findById).toHaveBeenCalledWith(5, 1001, null, sees);
     });
   });
 

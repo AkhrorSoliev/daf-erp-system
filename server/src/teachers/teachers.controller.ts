@@ -45,12 +45,19 @@ export class TeachersController {
 
   @Get()
   @Can('teachers.view', 'students.list')
-  findAll(
+  async findAll(
     @Query() query: TeacherQueryDto,
+    @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.teachersService.findAll(query, companyId, branchScope);
+    // The employee's salary balance goes only to a caller who may see pay.
+    return this.teachersService.findAll(
+      query,
+      companyId,
+      branchScope,
+      await this.permissions.has(userId, 'salary.view'),
+    );
   }
 
   @Get(':id/groups')
@@ -81,12 +88,18 @@ export class TeachersController {
 
   @Get(':id')
   @Can('teachers.view')
-  findById(
+  async findById(
     @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.teachersService.findByIdScoped(id, companyId, branchScope);
+    return this.teachersService.findByIdScoped(
+      id,
+      companyId,
+      branchScope,
+      await this.permissions.has(userId, 'salary.view'),
+    );
   }
 
   @Post()

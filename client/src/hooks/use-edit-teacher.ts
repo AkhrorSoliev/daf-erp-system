@@ -8,7 +8,8 @@ export interface TeacherData {
   photo: string | null;
   gender: "MALE" | "FEMALE" | null;
   login: string | null;
-  balance: number;
+  /** Only for a caller with salary.view (ADR-0086); no screen reads it. */
+  balance?: number;
   isActive: boolean;
   status: string;
   companyId: number;

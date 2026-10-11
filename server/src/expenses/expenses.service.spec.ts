@@ -891,6 +891,65 @@ describe('ExpensesService — findAll filters + summary', () => {
         expect(prisma.$transaction).toHaveBeenCalledTimes(2);
       });
 
+      it('refuses changing and deleting an advance to a holder of expenses.manage without salary.pay', async () => {
+        holding('expenses.manage', 'expenses.view');
+        prisma.expense.findFirst.mockResolvedValue(
+          row(ExpenseCategory.TEACHER_ADVANCE),
+        );
+
+        await expect(
+          service.update(
+            'exp-1',
+            { date: '2026-10-11' } as any,
+            42,
+            COMPANY_ID,
+          ),
+        ).rejects.toThrow(new ForbiddenException(REFUSAL));
+        await expect(service.remove('exp-1', 42, COMPANY_ID)).rejects.toThrow(
+          new ForbiddenException(REFUSAL),
+        );
+        expect(prisma.transaction.findFirst).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
+      it('lets a caller holding both keys turn rent into an advance', async () => {
+        holding('expenses.manage', 'salary.pay');
+        prisma.expense.findFirst.mockResolvedValue(row(ExpenseCategory.RENT));
+        prisma.transaction.findFirst.mockResolvedValue(null);
+        prisma.$transaction.mockResolvedValueOnce({ id: 'exp-1' });
+
+        await service.update(
+          'exp-1',
+          {
+            category: ExpenseCategory.TEACHER_ADVANCE,
+            relatedUserId: 10005,
+          } as any,
+          42,
+          COMPANY_ID,
+        );
+
+        expect(permissions.has).toHaveBeenCalledWith(42, 'expenses.manage');
+        expect(permissions.has).toHaveBeenCalledWith(42, 'salary.pay');
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      });
+
+      it('refuses turning an advance into rent to a holder of salary.pay alone', async () => {
+        holding('salary.pay', 'salary.view');
+        prisma.expense.findFirst.mockResolvedValue(
+          row(ExpenseCategory.TEACHER_ADVANCE),
+        );
+
+        await expect(
+          service.update(
+            'exp-1',
+            { category: ExpenseCategory.RENT } as any,
+            42,
+            COMPANY_ID,
+          ),
+        ).rejects.toThrow(new ForbiddenException(REFUSAL));
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
       it('refuses deleting rent to a holder of salary.pay alone', async () => {
         holding('salary.pay', 'salary.view');
         prisma.expense.findFirst.mockResolvedValue(row(ExpenseCategory.RENT));

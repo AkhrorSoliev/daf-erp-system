@@ -240,6 +240,42 @@ describe('TeachersService — status methods', () => {
       );
     });
   });
+
+  // ADR-0086: the employee's salary balance goes only to a caller who may
+  // see pay; the controller passes `salary.view` as `includeBalance`.
+  describe('employee balance', () => {
+    beforeEach(() => {
+      prisma.student = { count: jest.fn().mockResolvedValue(0) };
+      prisma.user.findFirst.mockResolvedValue({
+        ...mockTeacher,
+        roles: [{ role: { id: 4, name: 'Teacher' } }],
+        branches: [],
+      });
+    });
+
+    const selects = () =>
+      prisma.user.findFirst.mock.calls.map((c: any[]) => c[0].select);
+
+    it('findById selects the balance only on request', async () => {
+      await service.findById(1, 1001);
+      await service.findById(1, 1001, true);
+
+      const [plain, withPay] = selects();
+      expect(plain).not.toHaveProperty('balance');
+      expect(withPay).toHaveProperty('balance', true);
+    });
+
+    it('findAll selects the balance only on request', async () => {
+      await service.findAll({} as any, 1001, null);
+      await service.findAll({} as any, 1001, null, true);
+
+      const [plain, withPay] = prisma.user.findMany.mock.calls.map(
+        (c: any[]) => c[0].select,
+      );
+      expect(plain).not.toHaveProperty('balance');
+      expect(withPay).toHaveProperty('balance', true);
+    });
+  });
 });
 
 describe('TeachersService.create — telefon va kirish nomi qoidasi', () => {

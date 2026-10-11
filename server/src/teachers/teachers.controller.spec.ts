@@ -1,4 +1,9 @@
-import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
+import { ROLE_ID } from '../common/auth/role-ids';
+import {
+  defaultRolesOf,
+  fakePermissions,
+  routeAccess,
+} from '../common/permissions/testing';
 import { TeachersController } from './teachers.controller';
 
 describe('TeachersController — route access', () => {
@@ -81,3 +86,34 @@ describe('TeachersController — route access', () => {
     });
   });
 });
+
+// ADR-0086: an employee's salary balance goes only to a caller with salary.view.
+describe.each([
+  ['Administrator', ROLE_ID.ADMINISTRATOR, false],
+  ['Branch Director', ROLE_ID.BRANCH_DIRECTOR, true],
+  ['CEO', ROLE_ID.CEO, true],
+])(
+  'TeachersController — employee balance for the %s',
+  (_name, roleId, sees) => {
+    const teachers = {
+      findAll: jest.fn().mockResolvedValue({ data: [] }),
+      findByIdScoped: jest.fn().mockResolvedValue({}),
+    };
+    const controller = new TeachersController(
+      teachers as never,
+      {} as never,
+      {} as never,
+      fakePermissions([roleId]),
+    );
+
+    it(`findAll passes includeBalance=${sees}`, async () => {
+      await controller.findAll({} as never, 7, 1001, null);
+      expect(teachers.findAll).toHaveBeenCalledWith({}, 1001, null, sees);
+    });
+
+    it(`findById passes includeBalance=${sees}`, async () => {
+      await controller.findById(5, 7, 1001, null);
+      expect(teachers.findByIdScoped).toHaveBeenCalledWith(5, 1001, null, sees);
+    });
+  },
+);

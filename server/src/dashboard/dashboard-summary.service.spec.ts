@@ -317,6 +317,7 @@ describe('DashboardSummaryService.getSummary', () => {
     expect(moneyOnly.redis.setex.mock.calls[0][0]).toMatch(/:m-$/);
     expect(res.money).not.toBeNull();
     expect(moneyOnly.outreach.getStats).not.toHaveBeenCalled();
+    expect(moneyOnly.payments.getDebtorSummary).not.toHaveBeenCalled();
   });
 
   it('gives two money callers who share a several-branch scope their own entries', async () => {

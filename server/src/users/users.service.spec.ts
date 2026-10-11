@@ -610,6 +610,39 @@ describe('UsersService — findAll companyId scoping', () => {
       }),
     );
   });
+
+  // ADR-0086: the employee's salary balance goes only to a caller who may
+  // see pay; the controller passes `salary.view` as `includeBalance`.
+  describe('employee balance', () => {
+    const selectOf = () => prisma.user.findMany.mock.calls[0][0].select;
+
+    it('does not select the balance by default', async () => {
+      await service.findAll({} as any, 1001, null);
+      expect(selectOf()).not.toHaveProperty('balance');
+    });
+
+    it('selects the balance for a caller who may see pay', async () => {
+      await service.findAll({} as any, 1001, null, true);
+      expect(selectOf()).toHaveProperty('balance', true);
+    });
+
+    it('findById follows the same rule', async () => {
+      prisma.user.findFirst = jest.fn().mockResolvedValue({
+        id: 7,
+        roles: [],
+        branches: [],
+      });
+
+      await service.findById(7, 1001, null);
+      await service.findById(7, 1001, null, true);
+
+      const [plain, withPay] = prisma.user.findFirst.mock.calls.map(
+        (c: any[]) => c[0].select,
+      );
+      expect(plain).not.toHaveProperty('balance');
+      expect(withPay).toHaveProperty('balance', true);
+    });
+  });
 });
 
 /**
