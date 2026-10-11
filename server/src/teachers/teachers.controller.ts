@@ -16,7 +16,9 @@ import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { TeacherQueryDto } from './dto/teacher-query.dto';
 import { ChangeTeacherStatusDto } from './dto/change-teacher-status.dto';
 import { CurrentUser, BranchScope } from '../common/decorators';
-import { Can } from '../common/permissions/access.decorators';
+import { AnyStaff, Can } from '../common/permissions/access.decorators';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { TeacherStatsService } from './teacher-stats.service';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Controller('teachers')
@@ -24,7 +26,22 @@ export class TeachersController {
   constructor(
     private teachersService: TeachersService,
     private salaryService: SalaryService,
+    private statsService: TeacherStatsService,
+    private permissions: PermissionsService,
   ) {}
+
+  /**
+   * The teacher's own profile charts. Declared before `:id/stats`, which
+   * would otherwise take "me" for an id.
+   */
+  @Get('me/stats')
+  @AnyStaff()
+  getMyStats(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.statsService.getStats(userId, companyId, userId, true);
+  }
 
   @Get()
   @Can('teachers.view', 'students.list')
@@ -44,6 +61,22 @@ export class TeachersController {
     @CurrentUser('id') callerId: number,
   ) {
     return this.teachersService.findGroupsByTeacherId(id, companyId, callerId);
+  }
+
+  /**
+   * The profile's «Ko'rsatkichlar» charts. Pay is left out (not even read)
+   * for a caller without `salary.view`, as on the «Taymlayn» tab.
+   */
+  @Get(':id/stats')
+  @Can('teachers.view')
+  async getStats(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') callerId: number,
+  ) {
+    await this.teachersService.assertCallerMayTouchTeacher(id, callerId);
+    const salaryVisible = await this.permissions.has(callerId, 'salary.view');
+    return this.statsService.getStats(id, companyId, callerId, salaryVisible);
   }
 
   @Get(':id')

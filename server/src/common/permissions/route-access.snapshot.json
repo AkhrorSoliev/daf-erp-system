@@ -1272,9 +1272,21 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /teachers/:id/stats": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /teachers/:id/status-history": [
     "Branch Director",
     "CEO"
+  ],
+  "GET /teachers/me/stats": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
   ],
   "GET /telegram-groups": [
     "Administrator",

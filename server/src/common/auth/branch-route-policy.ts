@@ -140,6 +140,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /salary/me/monthly',
       'GET /salary/me/payments/:id/breakdown',
       'GET /salary/me/summary',
+      'GET /teachers/me/stats',
     ],
   },
   {
@@ -533,6 +534,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /teachers/:id/groups',
       'GET /teachers/:id/salary-summary',
       'GET /teachers/:id/status-history',
+      'GET /teachers/:id/stats',
       'POST /call-logs',
     ],
   },
