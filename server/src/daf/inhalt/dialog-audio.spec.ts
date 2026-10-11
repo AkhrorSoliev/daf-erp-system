@@ -92,4 +92,20 @@ describe('validateDialogAudio', () => {
       `u02-d2: audio boshqa modelda yasalgan (boshqa/model) — kurs dialoglari faqat ${DIALOG_AUDIO_MODELL} da, qayta yasang`,
     ]);
   });
+
+  // ADR-0084: units are re-voiced on 3.8 one at a time (CEO 2026-10-11:
+  // unit 5 first, then unit 4). Until a unit's turn comes, its Gemini 3.1
+  // recordings stay on the site and are not a content error.
+  it('accepts a Gemini 3.1 recording until its unit is re-voiced', () => {
+    const d = dialog();
+    expect(
+      validateDialogAudio([d], {
+        'u02-d2': {
+          key: 'daf/audio/abc.mp3',
+          textHash: dialogTextHash(d.zeilen),
+          modell: 'fal-ai/gemini-3.1-flash-tts',
+        },
+      }),
+    ).toEqual([]);
+  });
 });

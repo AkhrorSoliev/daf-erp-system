@@ -10,6 +10,7 @@ import {
 } from '../../src/daf/media/fal-client';
 import { neuerAudioSchluessel } from '../../src/daf/media/audio-keys';
 import { POLSTER_KENNUNG } from '../../src/daf/media/audio-polster';
+import { zuMp3 } from '../../src/daf/media/audio-format';
 import {
   DIALOG_AUDIO_MODELL,
   dialogTextHash,
@@ -139,7 +140,7 @@ export function erstelleGeneriere(
     if (!res.ok) {
       throw new Error(`fal.ai audiosi yuklab olinmadi — HTTP ${res.status}`);
     }
-    const roh = Buffer.from(await res.arrayBuffer());
+    const roh = await zuMp3(Buffer.from(await res.arrayBuffer()));
     const gemischt = mische ? await mische(d, roh) : null;
     if (gemischt) return gemischt;
     const gepolstert = await polster(roh);

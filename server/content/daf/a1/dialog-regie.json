@@ -485,7 +485,7 @@
       "geraeusche": [
         {
           "vor": 1,
-          "sfx": "a coffee machine brewing and hissing",
+          "sfx": "a teaspoon stirring coffee in a ceramic cup, gentle clinking of the spoon against the cup",
           "sek": 3
         }
       ]
@@ -546,7 +546,7 @@
   "u05-d4": {
     "szene": "Mittags in der Mensa einer Universität. Julia trifft ihren Freund Lukas, der sehr müde ist, weil er nachts Serien sieht. Sie verabreden sich zum Lernen in der Bibliothek.",
     "toene": [
-      "cheerful, then concerned",
+      "cheerful then concerned",
       "tired",
       "surprised",
       "tired",

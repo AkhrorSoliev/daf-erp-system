@@ -18,6 +18,7 @@ import { teileMehrstimmig } from '../../src/daf/media/mehrstimmig';
 import { polstereMp3 } from '../../src/daf/media/audio-polster';
 import { neuerAudioSchluessel } from '../../src/daf/media/audio-keys';
 import { POLSTER_KENNUNG } from '../../src/daf/media/audio-polster';
+import { zuMp3 } from '../../src/daf/media/audio-format';
 import {
   geraeuschId,
   hoerspielHash,
@@ -211,7 +212,7 @@ export function erstelleMehrstimmig(
       console.log(`    ${d.id}: ${wofuer} — ${url}`);
       const res = await fetchFn(url);
       if (!res.ok) throw new Error(`yuklab olinmadi — HTTP ${res.status}`);
-      return Buffer.from(await res.arrayBuffer());
+      return zuMp3(Buffer.from(await res.arrayBuffer()));
     };
     const haupt = await holen(
       await mitAblehnung(() => fal.dialogGemini(t.haupt), d.id, versuche),
