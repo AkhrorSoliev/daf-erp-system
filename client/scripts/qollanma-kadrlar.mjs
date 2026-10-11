@@ -45,7 +45,7 @@ export const KADRLAR = [
   },
   {
     nom: "tolovlar/tolov-qayd-qilish",
-    url: "/payments/pending",
+    url: "/payments/overview",
     tayyorla: async (page) => {
       await page.getByRole("button", { name: "To'lov qayd qilish" }).first().click();
     },
