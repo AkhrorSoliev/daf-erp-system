@@ -18,6 +18,7 @@ import { TaskUserLifecycleListener } from './task-user-lifecycle.listener';
 import { TaskTelegramSender } from './telegram/task-telegram.sender';
 import { TaskTelegramListener } from './telegram/task-telegram.listener';
 import { TaskTelegramOutbox } from './telegram/task-telegram-outbox.service';
+import { TaskTelegramReplies } from './telegram/task-telegram-replies';
 import { TaskTelegramHandler } from './telegram/task-telegram.handler';
 
 @Module({
@@ -41,6 +42,7 @@ import { TaskTelegramHandler } from './telegram/task-telegram.handler';
     TaskTelegramSender,
     TaskTelegramListener,
     TaskTelegramOutbox,
+    TaskTelegramReplies,
     TaskTelegramHandler,
   ],
   exports: [TasksService],

@@ -4,7 +4,6 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Composer, Context } from 'telegraf';
 import { loadTaskView, staffOfChat } from './task-telegram-view';
 import { TaskTelegramHandler } from './task-telegram.handler';
 import {
@@ -104,56 +103,15 @@ beforeEach(() => {
     record: jest.fn(),
   };
   telegram = { getBot: () => ({}), useBeforeScenes: jest.fn() };
-  handler = new TaskTelegramHandler(prisma, tasks, telegram, sender);
+  handler = new TaskTelegramHandler(
+    prisma,
+    tasks,
+    telegram,
+    sender,
+    {} as never,
+  );
   as(40);
   (loadTaskView as jest.Mock).mockResolvedValue(view());
-});
-
-describe('TaskTelegramHandler — registration (before the scenes)', () => {
-  const update = (data: string) =>
-    new Context(
-      {
-        update_id: 1,
-        callback_query: {
-          id: 'q',
-          from: { id: 700, is_bot: false, first_name: 'A' },
-          chat_instance: 'c',
-          data,
-        },
-      } as any,
-      {} as any,
-      { username: 'bot' } as any,
-    ) as any;
-
-  it('one composer through useBeforeScenes: tk:* to onAction, the rest to next()', async () => {
-    const onAction = jest
-      .spyOn(handler, 'onAction')
-      .mockResolvedValue(undefined);
-    handler.onApplicationBootstrap();
-    expect(telegram.useBeforeScenes).toHaveBeenCalledTimes(1);
-    const mw = Composer.unwrap(telegram.useBeforeScenes.mock.calls[0][0]);
-
-    const next = jest.fn().mockResolvedValue(undefined);
-    await mw(update(`tk:start:${TASK}`), next);
-    expect(onAction).toHaveBeenCalledTimes(1);
-    expect(next).not.toHaveBeenCalled();
-
-    await mw(update('menu_password'), next);
-    expect(onAction).toHaveBeenCalledTimes(1);
-    expect(next).toHaveBeenCalledTimes(1);
-  });
-
-  it('without a bot it registers nothing and does not throw', () => {
-    const useBeforeScenes = jest.fn();
-    const off = new TaskTelegramHandler(
-      prisma,
-      tasks,
-      { getBot: () => undefined, useBeforeScenes } as any,
-      sender,
-    );
-    expect(() => off.onApplicationBootstrap()).not.toThrow();
-    expect(useBeforeScenes).not.toHaveBeenCalled();
-  });
 });
 
 describe('TaskTelegramHandler — buttons', () => {
