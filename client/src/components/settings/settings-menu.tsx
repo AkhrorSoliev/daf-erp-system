@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getVisibleSettingsSections } from "@/lib/settings-nav";
-import { useAuth } from "@/hooks/use-auth";
+import { isCeoUser, useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 
 export function SettingsMenu() {
@@ -15,7 +15,7 @@ export function SettingsMenu() {
   // items open to everyone and then jump as the rest appear.
   if (!user) return null;
 
-  const sections = getVisibleSettingsSections(can);
+  const sections = getVisibleSettingsSections(can, isCeoUser(user));
 
   return (
     <div className="max-w-3xl space-y-5">

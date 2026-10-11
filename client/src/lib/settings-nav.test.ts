@@ -5,6 +5,8 @@ import {
   getVisibleSettingsSections,
   settingsNavSections,
 } from "./settings-nav";
+import { makeCan } from "./permission-check";
+import { PERMISSION_KEYS } from "./permission-keys";
 import { canForRoles } from "@/test-support/server-catalog";
 
 /**
@@ -31,10 +33,10 @@ function visibleTitles(roleIds: number[]): Record<string, string[]> {
 }
 
 describe("getVisibleSettingsSections — /settings da kim nimani ko'radi", () => {
-  it("CEO hamma 12 ta punktni ikki bo'limda ko'radi", () => {
-    const sections = getVisibleSettingsSections(canForRoles([CEO]));
+  it("the CEO sees all 13 items in two sections", () => {
+    const sections = getVisibleSettingsSections(canForRoles([CEO]), true);
     expect(sections.map((section) => section.title)).toEqual(["Administratsiya", "CEO"]);
-    expect(sections.flatMap((section) => section.items)).toHaveLength(12);
+    expect(sections.flatMap((section) => section.items)).toHaveLength(13);
   });
 
   it("filial direktori 10 ta punktni ko'radi — Arxiv va DaF normasisiz", () => {
@@ -103,6 +105,31 @@ describe("canOpenSettingsPath — SettingsLayoutShell shu qoida bilan qaytaradi"
     // "/settings/generalx" is not under "/settings/general".
     expect(canOpenSettingsPath("/settings/generalx", canForRoles([CASHIER]))).toBe(true);
     expect(canOpenSettingsPath("/settings", canForRoles([CASHIER]))).toBe(true);
+  });
+});
+
+describe("«Ruxsatlar» — the CEO's page, never a capability (ADR-0086)", () => {
+  const PATH = "/settings/permissions";
+  const everyKey = makeCan(new Set(PERMISSION_KEYS));
+  const urls = (sections: ReturnType<typeof getVisibleSettingsSections>) =>
+    sections.flatMap((section) => section.items.map((item) => item.url));
+
+  it("the CEO sees it in the «CEO» section", () => {
+    const ceo = getVisibleSettingsSections(canForRoles([CEO]), true).find((s) => s.title === "CEO");
+    expect(ceo?.items.map((item) => item.url)).toContain(PATH);
+  });
+
+  it("no other role sees it, not even one holding every capability", () => {
+    for (const roleIds of [[BRANCH_DIRECTOR], [ADMINISTRATOR], [CASHIER], [TEACHER], []]) {
+      expect(urls(getVisibleSettingsSections(canForRoles(roleIds), false))).not.toContain(PATH);
+    }
+    expect(urls(getVisibleSettingsSections(everyKey))).not.toContain(PATH);
+  });
+
+  it("the URL opens only for the CEO; capabilities do not open it", () => {
+    expect(canOpenSettingsPath(PATH, everyKey, false)).toBe(false);
+    expect(canOpenSettingsPath(PATH, canForRoles([BRANCH_DIRECTOR]), false)).toBe(false);
+    expect(canOpenSettingsPath(PATH, canForRoles([CEO]), true)).toBe(true);
   });
 });
 

@@ -43,6 +43,8 @@ export const routeLabels: Record<string, string> = {
   // breadcrumb jadvali bitta fayl va uni ikki marta ochish keraksiz.
   oquvchilar: "O'quvchilar",
   "absence-pause": "Avtomatik pauza",
+  // /settings/permissions — «Ruxsatlar», CEO only (ADR-0086).
+  permissions: "Ruxsatlar",
   tasks: "Topshiriqlar",
   notifications: "Bildirishnomalar",
   archive: "Arxiv",
