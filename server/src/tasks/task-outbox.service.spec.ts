@@ -40,6 +40,9 @@ describe('TaskOutboxService', () => {
   // Tests that pin the clock never leak it, even when an assertion fails.
   afterEach(() => jest.useRealTimers());
 
+  // Tests that pin the clock must not leak it, even when an assertion fails.
+  afterEach(() => jest.useRealTimers());
+
   const written = () =>
     prisma.taskOutbox.createMany.mock.calls[0][0].data as any[];
   const inapp = () => written().filter((r) => r.channel === 'INAPP');
@@ -116,8 +119,9 @@ describe('TaskOutboxService', () => {
   });
 
   it('schedule with a past due writes nothing (the overdue notice would be noise)', async () => {
-    // Midday in Tashkent: at night a notice is held for the morning, which is
-    // a different rule; without a fixed clock the test failed after ~23:00.
+    // Noon in Tashkent. At night (22:00–08:00) the Telegram notice is held for
+    // 08:00 instead and IS written: see "a reschedule rebuilds a Telegram
+    // notice held for the morning" below.
     jest.useFakeTimers({ now: new Date('2026-10-10T07:00:00Z') });
     await svc.schedule(prisma, {
       id: 't1',
