@@ -1,12 +1,13 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
-import { Bot, CalendarClock, Camera, CheckSquare, Eye, EyeOff, Link2, MessageSquare } from "lucide-react";
+import { Bot, CalendarClock, Camera, CheckSquare, Eye, EyeOff, Link2, MessageSquare, Repeat } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
 import { useTasks, type TaskCard as TaskCardData, type TaskPerson } from "@/hooks/use-tasks";
 import { cn } from "@/lib/utils";
+import { recurrenceBadge } from "@/lib/task-recurrence-rules";
 import { ENTITY_LABEL, KIND_LABEL, PRIORITY_CLASS, PRIORITY_LABEL } from "./task-labels";
 import { dueState, formatDue } from "./task-due";
 
@@ -84,6 +85,7 @@ export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props)
         {task.priority !== "MEDIUM" && <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", PRIORITY_CLASS[task.priority])}>{PRIORITY_LABEL[task.priority]}</span>}
         {task.requiresPhoto && <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"><Camera className="size-3" />Rasm bilan</span>}
         {task.batch && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Har biriga alohida · {task.batch.total}</span>}
+        {task.recurrence && <span className="inline-flex items-center gap-1 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"><Repeat className="size-3" />{recurrenceBadge(task.recurrence)}</span>}
       </div>
       <p className={cn("text-sm leading-snug line-clamp-3", task.status === "DONE" && "text-muted-foreground")}>{task.title}</p>
       {task.unmarkedLesson?.branchName && <p className="text-[11px] text-muted-foreground">{task.unmarkedLesson.branchName}</p>}
