@@ -18,6 +18,7 @@ import { join } from 'path';
  *
  * A recurrence rule (TaskRecurrence) is part of the same door: its rows are
  * written only by task-recurrences.service.ts and task-recurrence-run.service.ts.
+ * A task file (TaskFile) is written only by task-files.service.ts.
  *
  * `branch-reset-plan.ts` only COUNTS task rows (`.count`, not matched here); it
  * must stay that way — a branch reset that deleted tasks would need the rest
@@ -30,7 +31,7 @@ const SRC = join(__dirname, '..');
 const OWNER_DIR = 'src/tasks/';
 
 const WRITE =
-  /\b(tx|prisma|db|this\.prisma)\.task(?:Participant|Step|Event|Outbox|TelegramMessage|Recurrence)?\.(create|createMany|update|updateMany|upsert|delete|deleteMany)\(/g;
+  /\b(tx|prisma|db|this\.prisma)\.task(?:Participant|Step|Event|Outbox|TelegramMessage|Recurrence|File)?\.(create|createMany|update|updateMany|upsert|delete|deleteMany)\(/g;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -65,7 +66,7 @@ describe('task rows are written only inside src/tasks', () => {
     expect(files.has('src/tasks/task-user-lifecycle.listener.ts')).toBe(true);
   });
 
-  it('no other module writes a Task, TaskParticipant, TaskStep, TaskEvent, TaskOutbox, TaskTelegramMessage or TaskRecurrence row', () => {
+  it('no other module writes a Task, TaskParticipant, TaskStep, TaskEvent, TaskOutbox, TaskTelegramMessage, TaskRecurrence or TaskFile row', () => {
     const offenders = writes
       .filter((w) => !w.path.startsWith(OWNER_DIR))
       .map((w) => `${w.path}: ${w.call}`);
