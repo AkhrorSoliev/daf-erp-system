@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, Loader2, Plus } from "lucide-react";
@@ -12,11 +12,15 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { downloadAuthedFile } from "@/lib/download-file";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentNow } from "@/lib/tashkent-time";
+import { cn } from "@/lib/utils";
+import { lastPageIfPast } from "@/components/payments/debt/debt-url";
 import { PaymentsFilterBar } from "./payments-filter-bar";
+import { PART_FILTER } from "./payments-format";
 import { PaymentsPeriodBar } from "./payments-period-bar";
-import { invalidatePaymentsList, usePaymentsFilterOptions, usePaymentsSummary } from "./payments-queries";
+import { invalidatePaymentsList, usePaymentsFilterOptions, usePaymentsRows, usePaymentsSummary } from "./payments-queries";
 import { PaymentsSummaryCard, PaymentsSummaryCardSkeleton } from "./payments-summary-card";
-import { cleanPeriodId, listParams, PAYMENTS_LIST_SCHEMA, periodParams, type PaymentFilters } from "./payments-url";
+import { PaymentsPager, PaymentsTable, PaymentsTotalsLine } from "./payments-table";
+import { cleanPeriodId, hasPaymentFilter, listParams, PAYMENTS_LIST_SCHEMA, periodParams, type PaymentFilters } from "./payments-url";
 
 const CLEARED: Partial<PaymentFilters> = {
   q: "", usul: "", nimaga: "", guruh: "", ustoz: "", kurs: "", qabul: "", manba: "", holat: "otgan", sahifa: 1,
@@ -24,7 +28,7 @@ const CLEARED: Partial<PaymentFilters> = {
 
 /**
  * «To'lovlar» (spec B4 §3): header, period, filters and — for `reports.finance`
- * holders only — the summary card. The totals line, table and pager are Task 11's.
+ * holders only — the summary card, then the totals line, the table and the pager.
  */
 export function PaymentsListPage() {
   const { filters: raw, setFilters } = useUrlFilters(PAYMENTS_LIST_SCHEMA);
@@ -44,6 +48,16 @@ export function PaymentsListPage() {
 
   const options = usePaymentsFilterOptions();
   const summary = usePaymentsSummary(period, canSeeMoney);
+  const { data, isPending, isPlaceholderData, isError, refetch } = usePaymentsRows(params);
+
+  // A page past the last one (a filter narrowed the list, an old link) goes to the last page that has rows.
+  const lastPage =
+    params && data && !isPlaceholderData ? lastPageIfPast(Number(params.page), Number(params.pageSize), data.total, data.data.length) : null;
+  useEffect(() => {
+    if (lastPage !== null) setFilters({ sahifa: lastPage });
+  }, [lastPage, setFilters]);
+  // A kept answer is not the new one: skeleton, not «to'lov yo'q», until it lands.
+  const tableLoading = isPending || lastPage !== null || (isPlaceholderData && !data?.data.length);
 
   // Any filter or period change puts the list back on page 1; the period keeps the filters.
   const onChange = useCallback((u: Partial<PaymentFilters>) => setFilters({ sahifa: 1, ...u }), [setFilters]);
@@ -106,7 +120,42 @@ export function PaymentsListPage() {
 
       {params === null ? (
         <p className="text-sm text-muted-foreground">Oraliqning boshi va oxirini tanlang</p>
-      ) : null /* Task 11: the totals line, the table and the pager go here. */}
+      ) : isError ? (
+        <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
+          <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
+            Qayta urinish
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {data && !tableLoading && (
+            <PaymentsTotalsLine
+              totals={data.totals}
+              holat={filters.holat}
+              partLabel={PART_FILTER[filters.nimaga as keyof typeof PART_FILTER]?.label ?? null}
+            />
+          )}
+          {/* The previous page stays dimmed and inert until the next one answers. */}
+          <div aria-busy={isPlaceholderData} className={cn(isPlaceholderData && "pointer-events-none opacity-60")}>
+            <PaymentsTable
+              rows={data?.data}
+              loading={tableLoading}
+              onOpen={(id) => setFilters({ tolov: id })}
+              onClear={hasPaymentFilter(filters) ? () => setFilters(CLEARED) : undefined}
+            />
+          </div>
+          {data && data.total > 0 && !tableLoading && (
+            <PaymentsPager
+              page={Number(params.page)}
+              pageSize={Number(params.pageSize)}
+              total={data.total}
+              onPage={(sahifa) => setFilters({ sahifa })}
+              onPageSize={(soni) => setFilters({ soni, sahifa: 1 })}
+            />
+          )}
+        </div>
+      )}
 
       <RecordPaymentDialog open={recording} onOpenChange={setRecording} onSuccess={() => invalidatePaymentsList(qc)} />
     </div>
