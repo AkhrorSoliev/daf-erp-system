@@ -34,6 +34,8 @@ export function allows(access: RouteAccessMeta, caller: CallerAccess): boolean {
       return caller.roleIds.includes(ROLE_ID.STUDENT);
     case 'can':
       return access.keys.some((key) => caller.keys.has(key));
+    case 'ceo':
+      return caller.roleIds.includes(ROLE_ID.CEO);
   }
 }
 
@@ -46,8 +48,8 @@ export function allows(access: RouteAccessMeta, caller: CallerAccess): boolean {
  *    sees the account as it is, not as it was when the token was signed.
  * 2. Refuse an account that holds no role (blocked, archived, deleted) with
  *    `JwtAuthGuard`'s blocked message, then check the route's marker (`@Can`,
- *    `@AnyStaff`, `@AnyUser`, `@StudentOnly`) against the caller's
- *    capabilities.
+ *    `@AnyStaff`, `@AnyUser`, `@StudentOnly`, `@CeoOnly`) against the
+ *    caller's capabilities and roles.
  */
 @Injectable()
 export class PermissionGuard implements CanActivate {

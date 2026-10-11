@@ -36,6 +36,8 @@ export function accessSummary(access: AccessLike): AccessSummary {
       return ['Student'];
     case 'anyStaff':
       return [...STAFF_ROLE_NAMES];
+    case 'ceo':
+      return ['CEO'];
     case 'can': {
       const names = new Set<string>(['CEO']);
       for (const key of access.keys ?? []) {
