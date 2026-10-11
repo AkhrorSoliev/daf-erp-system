@@ -14,6 +14,8 @@ import { TelegramService } from '../telegram/telegram.service';
 import { TaskAutoCloseListener } from './task-auto-close.listener';
 import { TaskAutoLeadsService } from './task-auto-leads.service';
 import { TaskAutoService } from './task-auto.service';
+import { TaskFileStorage } from './task-file-storage';
+import { TaskFilesService } from './task-files.service';
 import { TaskRecurrencesService } from './task-recurrences.service';
 import { TaskRecurrenceRunner } from './task-recurrence-run.service';
 import { TaskTelegramHandler } from './telegram/task-telegram.handler';
@@ -58,6 +60,8 @@ describe('TasksModule — DI graph', () => {
       TasksService,
       TaskRecurrencesService,
       TaskRecurrenceRunner,
+      TaskFileStorage,
+      TaskFilesService,
       TaskTelegramSender,
       TaskTelegramListener,
       TaskTelegramOutbox,

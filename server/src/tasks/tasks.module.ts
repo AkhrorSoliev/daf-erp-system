@@ -11,6 +11,8 @@ import { TaskAutoCloseListener } from './task-auto-close.listener';
 import { TaskAutoLeadsService } from './task-auto-leads.service';
 import { TaskAutoService } from './task-auto.service';
 import { TaskNotifyListener } from './task-notify.listener';
+import { TaskFileStorage } from './task-file-storage';
+import { TaskFilesService } from './task-files.service';
 import { TaskOutboxService } from './task-outbox.service';
 import { TaskUserLifecycleListener } from './task-user-lifecycle.listener';
 import { TaskTelegramSender } from './telegram/task-telegram.sender';
@@ -28,6 +30,8 @@ import { TaskTelegramHandler } from './telegram/task-telegram.handler';
     TasksReadService,
     TaskRecurrencesService,
     TaskRecurrenceRunner,
+    TaskFileStorage,
+    TaskFilesService,
     TaskNotifyListener,
     TaskAutoCloseListener,
     TaskAutoService,

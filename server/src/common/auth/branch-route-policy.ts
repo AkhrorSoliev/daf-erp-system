@@ -910,23 +910,36 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'duplicate creates the copy through the same branch resolution as a new ' +
       'task. A recurrence rule is loaded by id AND company and checked with ' +
       'the same `resolveAccess` on the RULE (author, the CEO, a Branch ' +
-      'Director of its `branchId`); anyone else gets 404.',
+      'Director of its `branchId`); anyone else gets 404. A task file route ' +
+      '(list, upload, delete) loads the task through the same `loadForAccess` ' +
+      'first; a delete then also needs the uploader or `canManage`.',
     routes: [
+      'DELETE /tasks/:id/files/:fileId',
       'DELETE /tasks/:id/steps/:stepId',
       'DELETE /tasks/recurrences/:id',
       'GET /tasks/:id',
+      'GET /tasks/:id/files',
       'PATCH /tasks/:id',
       'PATCH /tasks/:id/steps/:stepId',
       'PATCH /tasks/recurrences/:id',
       'POST /tasks/:id/cancel',
       'POST /tasks/:id/duplicate',
       'POST /tasks/:id/events',
+      'POST /tasks/:id/files',
       'POST /tasks/:id/review',
       'POST /tasks/:id/seen',
       'POST /tasks/:id/status',
       'POST /tasks/:id/steps',
       'PUT /tasks/:id/participants',
     ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'A server switch, not data: whether the private task-file bucket is ' +
+      'configured (`R2_TASKS_BUCKET_NAME`, ADR-0086). The same answer for ' +
+      'every caller and branch.',
+    routes: ['GET /tasks/config'],
   },
   {
     policy: 'SELF',
