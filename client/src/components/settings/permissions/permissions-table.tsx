@@ -198,7 +198,8 @@ function PermissionRow({ entry, ctx }: { entry: CatalogEntry; ctx: RowContext })
         )}
       </div>
       {ctx.roleIds.map((roleId) => (
-        <div key={roleId} className="flex justify-center">
+        // On a phone the switch sits at the card's edge, so the yellow dot goes on its left, in this padding.
+        <div key={roleId} className={cn("flex", single ? "justify-end pl-4" : "justify-center")}>
           <PermissionCell entry={entry} roleId={roleId} ctx={ctx} />
         </div>
       ))}
@@ -233,7 +234,10 @@ function PermissionCell({
             <span
               role="img"
               aria-label="Boshlang'ich holatdan farq qiladi"
-              className="absolute top-1/2 -right-3.5 size-2 -translate-y-1/2 rounded-full bg-yellow-500"
+              className={cn(
+                "absolute top-1/2 size-2 -translate-y-1/2 rounded-full bg-yellow-500",
+                ctx.roleIds.length === 1 ? "-left-3.5" : "-right-3.5",
+              )}
             />
           </TooltipTrigger>
           <TooltipContent>Boshlang'ich holatdan farq qiladi</TooltipContent>
