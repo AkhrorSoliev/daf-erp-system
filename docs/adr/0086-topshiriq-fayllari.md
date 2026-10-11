@@ -42,3 +42,4 @@ Spec fayllarni yopiq R2 bucket'da saqlashni va brauzer ularni to'g'ridan-to'g'ri
 - Server xotirasi va trafigi fayl hajmicha oshadi; ko'paysa — presigned PUT ga qaytish shu ADR'ni almashtiradi.
 - Saqlanmay qolgan (qatori yozilmagan va o'chirib bo'lmagan) obyekt jurnalga yoziladi, avtomatik tozalanmaydi.
 - Deploydan oldin CEO Cloudflare'da `daf-tasks` bucket'ini ochib, Railway'da `R2_TASKS_BUCKET_NAME` ni qo'yadi; shu paytgacha sayt va bot fayl imkoniyatlarisiz ishlaydi.
+- Orqaga qaytish (eski server) faqat birinchi fayl o'chirilishidan oldin xavfsiz: eski server `FILE_DELETED` qatorini o'qiy olmaydi va shunday qatori bor topshiriq ochilmay qoladi (500). Undan keyin — faqat oldinga tuzatish, yoki qaytishdan oldin `UPDATE "TaskEvent" SET type = 'FILE' WHERE type = 'FILE_DELETED'`.

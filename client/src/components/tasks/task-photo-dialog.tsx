@@ -18,7 +18,8 @@ export function TaskPhotoDialog({ task, open, onOpenChange, onSend }: { task: Ta
 
   // The same rule as the server; the send button trusts `hasFreshPhoto`, not this list.
   const since = Date.parse(task.lastReturnedAt ?? task.createdAt);
-  const added = listIsOurs ? files.filter((f) => f.kind === "IMAGE" && Date.parse(f.createdAt) > since) : [];
+  const byAssignee = (f: { uploadedBy: { id: number } | null }) => task.assignees.some((a) => a.id === f.uploadedBy?.id);
+  const added = listIsOurs ? files.filter((f) => f.kind === "IMAGE" && byAssignee(f) && Date.parse(f.createdAt) > since) : [];
 
   const pick = (list: FileList | null) => {
     const picked = list ? Array.from(list) : [];
