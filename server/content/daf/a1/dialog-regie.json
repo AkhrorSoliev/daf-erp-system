@@ -528,16 +528,16 @@
     }
   },
   "u05-d3": {
-    "szene": "Dienstagmorgen im Schlafzimmer. Jonas schläft noch, Mia weckt ihn. Er hat verschlafen, duscht schnell, und Mia fährt ihn mit dem Auto zur Arbeit.",
+    "szene": "Dienstagmorgen im Schlafzimmer. Jonas schläft noch, Mia weckt ihn. Er hat verschlafen; sein Bus ist zu spät für die Arbeit, also bietet Mia an, ihn mit dem Auto zu fahren. Alles passiert in der Wohnung.",
     "toene": [
       "urgent",
       "sleepy",
       "insisting",
       "panicked",
       "practical",
-      "grateful",
-      "satisfied",
-      "sheepish but determined"
+      "worried",
+      "calm and helpful",
+      "grateful and determined"
     ],
     "hoerspiel": {
       "atmo": {
@@ -549,44 +549,28 @@
           "vor": 1,
           "sfx": "a knock on a bedroom door",
           "sek": 1.5
-        },
-        {
-          "vor": 5,
-          "sfx": "a shower running in a small bathroom",
-          "sek": 3
-        },
-        {
-          "vor": 7,
-          "sfx": "a car door closing and a car engine starting",
-          "sek": 3
         }
       ]
     }
   },
   "u05-d4": {
-    "szene": "Am Abend im Wohnzimmer. Helga besucht ihre Tochter Mia am Wochenende; um acht Uhr möchte Mia ihre Serie sehen, Helga die Nachrichten. Zwei Stunden später ist Helga auf dem Sofa eingeschlafen.",
+    "szene": "Mittags in der Mensa einer Universität. Julia trifft ihren Freund Lukas, der sehr müde ist, weil er nachts Serien sieht. Sie verabreden sich zum Lernen in der Bibliothek.",
     "toene": [
-      "excited",
-      "objecting",
-      "disappointed",
-      "thinking",
-      "helpful",
-      "kind",
-      "softly",
-      "sleepy and amused"
+      "cheerful, then concerned",
+      "tired",
+      "surprised",
+      "tired",
+      "curious",
+      "a little embarrassed",
+      "friendly but firm",
+      "relieved and motivated"
     ],
     "hoerspiel": {
       "atmo": {
-        "sfx": "a quiet living room in the evening, a TV playing softly in the background with indistinct music, no clear words",
+        "sfx": "a busy university canteen at lunchtime, cutlery and trays clinking, many indistinct voices far away",
         "sek": 15
       },
-      "geraeusche": [
-        {
-          "vor": 7,
-          "sfx": "a woman snoring softly on a sofa",
-          "sek": 2
-        }
-      ]
+      "geraeusche": []
     }
   },
   "u05-d5": {
@@ -621,15 +605,15 @@
     }
   },
   "u05-d6": {
-    "szene": "Ein Vormittag. Thomas hat um zehn Uhr einen Termin bei der Bankberaterin Anna, aber der Bus kommt nicht. Er ruft Anna von der Straße an und kommt dann mit dem Taxi außer Atem in die Bank.",
+    "szene": "Ein Vormittag an einer Bushaltestelle. Thomas hat um zehn Uhr einen Termin bei der Bankberaterin Anna, aber der Bus kommt nicht. Er ruft Anna an; heute geht es nicht mehr, sie vereinbaren einen neuen Termin für morgen um neun.",
     "toene": [
       "nervous",
       "polite but cool",
       "apologetic",
-      "calm",
+      "regretful",
       "hopeful",
       "businesslike",
-      "out of breath",
+      "relieved",
       "friendly"
     ],
     "hoerspiel": {
@@ -642,11 +626,6 @@
           "vor": 1,
           "sfx": "a phone ringing twice and being picked up",
           "sek": 2.5
-        },
-        {
-          "vor": 7,
-          "sfx": "a glass door opening and hurried footsteps coming in",
-          "sek": 2
         }
       ]
     }

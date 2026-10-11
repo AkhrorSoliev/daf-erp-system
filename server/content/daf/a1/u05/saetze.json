@@ -1,1105 +1,1104 @@
 {
- "unit": "u05",
- "saetze": [
-  {
-   "sourceId": "u05-s1-01",
-   "section": "u05-s1",
-   "de": "Wie spät ist es?",
-   "uz": "Soat necha?",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s1-02",
-   "section": "u05-s1",
-   "de": "Es ist halb acht.",
-   "uz": "Soat yetti yarim.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Halb acht ist es."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-03",
-   "section": "u05-s1",
-   "de": "Es ist Viertel nach neun.",
-   "uz": "Soat to'qqizdan chorak o'tdi.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Viertel nach neun ist es."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-04",
-   "section": "u05-s1",
-   "de": "Es ist Viertel vor zwölf.",
-   "uz": "O'n ikkiga chorak qoldi.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Viertel vor zwölf ist es."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-05",
-   "section": "u05-s1",
-   "de": "Es ist zehn nach sieben.",
-   "uz": "Soat yettidan o'n daqiqa o'tdi.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Zehn nach sieben ist es."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-06",
-   "section": "u05-s1",
-   "de": "Wie viel Uhr ist es in Deutschland?",
-   "uz": "Germaniyada soat necha?",
-   "wordCount": 7,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s1-07",
-   "section": "u05-s1",
-   "de": "Ich habe jetzt keine Zeit.",
-   "uz": "Hozir vaqtim yo'q.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Jetzt habe ich keine Zeit.",
-    "Keine Zeit habe ich jetzt."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-08",
-   "section": "u05-s1",
-   "de": "Wann kommt der Bus?",
-   "uz": "Avtobus qachon keladi?",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s1-09",
-   "section": "u05-s1",
-   "de": "Eine Stunde hat sechzig Minuten.",
-   "uz": "Bir soatda oltmish daqiqa bor.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Sechzig Minuten hat eine Stunde."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-10",
-   "section": "u05-s1",
-   "de": "Eine Minute hat sechzig Sekunden.",
-   "uz": "Bir daqiqada oltmish soniya bor.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Sechzig Sekunden hat eine Minute."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-11",
-   "section": "u05-s1",
-   "de": "Es ist schon spät.",
-   "uz": "Allaqachon kech bo'ldi.",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s1-12",
-   "section": "u05-s1",
-   "de": "Es ist noch früh.",
-   "uz": "Hali erta.",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s1-13",
-   "section": "u05-s1",
-   "de": "Die Uhrzeit ist jetzt halb neun.",
-   "uz": "Hozir soat sakkiz yarim.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Jetzt ist die Uhrzeit halb neun."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-14",
-   "section": "u05-s1",
-   "de": "Offiziell ist es zwanzig Uhr dreißig.",
-   "uz": "Rasmiy aytganda, soat yigirma-yu o'ttiz daqiqa.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Es ist offiziell zwanzig Uhr dreißig.",
-    "Zwanzig Uhr dreißig ist es offiziell."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-15",
-   "section": "u05-s1",
-   "de": "Inoffiziell ist es halb neun.",
-   "uz": "Norasmiy aytganda, soat sakkiz yarim.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Es ist inoffiziell halb neun.",
-    "Halb neun ist es inoffiziell."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-16",
-   "section": "u05-s1",
-   "de": "Ich trinke zu jeder Tageszeit Tee.",
-   "uz": "Men kunning istalgan qismida choy ichaman.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Zu jeder Tageszeit trinke ich Tee.",
-    "Ich trinke Tee zu jeder Tageszeit.",
-    "Tee trinke ich zu jeder Tageszeit."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-17",
-   "section": "u05-s1",
-   "de": "Morgens trinke ich Kaffee.",
-   "uz": "Ertalablari qahva ichaman.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich trinke morgens Kaffee.",
-    "Kaffee trinke ich morgens."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-18",
-   "section": "u05-s1",
-   "de": "Vormittags arbeite ich.",
-   "uz": "Tushdan oldin ishlayman.",
-   "wordCount": 3,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich arbeite vormittags."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-19",
-   "section": "u05-s1",
-   "de": "Mittags essen wir Suppe.",
-   "uz": "Tush paytida sho'rva ichamiz.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Wir essen mittags Suppe.",
-    "Suppe essen wir mittags."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-20",
-   "section": "u05-s1",
-   "de": "Nachmittags bin ich müde.",
-   "uz": "Tushdan keyin charchagan bo'laman.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich bin nachmittags müde."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-21",
-   "section": "u05-s1",
-   "de": "Abends essen wir zusammen.",
-   "uz": "Kechqurunlari birga ovqatlanamiz.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Wir essen abends zusammen."
-   ]
-  },
-  {
-   "sourceId": "u05-s1-22",
-   "section": "u05-s1",
-   "de": "Gute Nacht, Lena!",
-   "uz": "Xayrli tun, Lena!",
-   "wordCount": 3,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Lena, gute Nacht!"
-   ]
-  },
-  {
-   "sourceId": "u05-s2-01",
-   "section": "u05-s2",
-   "de": "Heute ist Montag.",
-   "uz": "Bugun dushanba.",
-   "wordCount": 3,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Montag ist heute."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-02",
-   "section": "u05-s2",
-   "de": "Am Dienstag habe ich Training.",
-   "uz": "Seshanba kuni sport mashg'ulotim bor.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich habe am Dienstag Training.",
-    "Training habe ich am Dienstag."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-03",
-   "section": "u05-s2",
-   "de": "Am Mittwoch hat Lena Geigenunterricht.",
-   "uz": "Chorshanba kuni Lenaning skripka darsi bor.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Lena hat am Mittwoch Geigenunterricht.",
-    "Geigenunterricht hat Lena am Mittwoch."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-04",
-   "section": "u05-s2",
-   "de": "Am Donnerstag habe ich einen Englisch-Test.",
-   "uz": "Payshanba kuni ingliz tili testim bor.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich habe am Donnerstag einen Englisch-Test.",
-    "Einen Englisch-Test habe ich am Donnerstag."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-05",
-   "section": "u05-s2",
-   "de": "Am Freitag arbeite ich nicht.",
-   "uz": "Juma kuni ishlamayman.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich arbeite am Freitag nicht.",
-    "Ich arbeite nicht am Freitag."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-06",
-   "section": "u05-s2",
-   "de": "Am Montag und am Dienstag arbeite ich.",
-   "uz": "Dushanba va seshanba kunlari ishlayman.",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich arbeite am Montag und am Dienstag.",
-    "Am Dienstag und am Montag arbeite ich.",
-    "Ich arbeite am Dienstag und am Montag."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-07",
-   "section": "u05-s2",
-   "de": "Der Sonnabend und der Samstag sind gleich.",
-   "uz": "Sonnabend va Samstag – bir xil kun.",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Der Samstag und der Sonnabend sind gleich."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-08",
-   "section": "u05-s2",
-   "de": "Am Sonntag essen wir bei Oma.",
-   "uz": "Yakshanba kuni buvinikida ovqatlanamiz.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Wir essen am Sonntag bei Oma.",
-    "Bei Oma essen wir am Sonntag."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-09",
-   "section": "u05-s2",
-   "de": "Die Woche hat sieben Tage.",
-   "uz": "Haftada yetti kun bor.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Sieben Tage hat die Woche."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-10",
-   "section": "u05-s2",
-   "de": "Der Mittwoch ist ein Wochentag.",
-   "uz": "Chorshanba — hafta kunlaridan biri.",
-   "wordCount": 5,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s2-11",
-   "section": "u05-s2",
-   "de": "Was machst du am Wochenende?",
-   "uz": "Dam olish kunlari nima qilasan?",
-   "wordCount": 5,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s2-12",
-   "section": "u05-s2",
-   "de": "Samstags gehe ich in die Musikschule.",
-   "uz": "Har shanba musiqa maktabiga boraman.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich gehe samstags in die Musikschule.",
-    "In die Musikschule gehe ich samstags."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-13",
-   "section": "u05-s2",
-   "de": "Am Samstagabend essen wir im Restaurant.",
-   "uz": "Shanba oqshomi restoranda ovqatlanamiz.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Wir essen am Samstagabend im Restaurant.",
-    "Im Restaurant essen wir am Samstagabend."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-14",
-   "section": "u05-s2",
-   "de": "Am Sonntagnachmittag kommt Oma.",
-   "uz": "Yakshanba kuni tushdan keyin buvi keladi.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Oma kommt am Sonntagnachmittag."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-15",
-   "section": "u05-s2",
-   "de": "Nächste Woche habe ich einen Mathe-Test.",
-   "uz": "Keyingi hafta matematika testim bor.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich habe nächste Woche einen Mathe-Test.",
-    "Einen Mathe-Test habe ich nächste Woche."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-16",
-   "section": "u05-s2",
-   "de": "Das ist das erste Mal.",
-   "uz": "Bu birinchi marta.",
-   "wordCount": 5,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s2-17",
-   "section": "u05-s2",
-   "de": "Lena hat einmal pro Woche Geigenunterricht.",
-   "uz": "Lenaning haftada bir marta skripka darsi bor.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Einmal pro Woche hat Lena Geigenunterricht.",
-    "Geigenunterricht hat Lena einmal pro Woche."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-18",
-   "section": "u05-s2",
-   "de": "Thomas hat dreimal pro Woche Training.",
-   "uz": "Thomasning haftada uch marta sport mashg'uloti bor.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Dreimal pro Woche hat Thomas Training.",
-    "Training hat Thomas dreimal pro Woche."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-19",
-   "section": "u05-s2",
-   "de": "Jonas hat am Freitag Trompetenunterricht.",
-   "uz": "Jonasning juma kuni truba darsi bor.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Am Freitag hat Jonas Trompetenunterricht.",
-    "Trompetenunterricht hat Jonas am Freitag."
-   ]
-  },
-  {
-   "sourceId": "u05-s2-20",
-   "section": "u05-s2",
-   "de": "Bis nächste Woche!",
-   "uz": "Keyingi haftagacha!",
-   "wordCount": 3,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s3-01",
-   "section": "u05-s3",
-   "de": "Ich stehe um sechs Uhr auf.",
-   "uz": "Men soat oltida o'rnimdan turaman.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Um sechs Uhr stehe ich auf."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-02",
-   "section": "u05-s3",
-   "de": "Normalerweise trinke ich Tee.",
-   "uz": "Odatda choy ichaman.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich trinke normalerweise Tee.",
-    "Tee trinke ich normalerweise."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-03",
-   "section": "u05-s3",
-   "de": "Ich möchte nicht aufstehen.",
-   "uz": "O'rnimdan turgim kelmayapti.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Aufstehen möchte ich nicht."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-04",
-   "section": "u05-s3",
-   "de": "Ich möchte jetzt duschen.",
-   "uz": "Hozir dush qabul qilmoqchiman.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Jetzt möchte ich duschen."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-05",
-   "section": "u05-s3",
-   "de": "Bist du schon wach?",
-   "uz": "Uyg'onib bo'ldingmi?",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s3-06",
-   "section": "u05-s3",
-   "de": "Lena möchte nicht schlafen.",
-   "uz": "Lena uxlagisi kelmayapti.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Schlafen möchte Lena nicht."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-07",
-   "section": "u05-s3",
-   "de": "Wann holst du Lena ab?",
-   "uz": "Lenani qachon olib kelasan?",
-   "wordCount": 5,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s3-08",
-   "section": "u05-s3",
-   "de": "Heute möchte ich Lena abholen.",
-   "uz": "Bugun Lenani o'zim olib kelmoqchiman.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich möchte heute Lena abholen.",
-    "Lena möchte ich heute abholen.",
-    "Ich möchte Lena heute abholen."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-09",
-   "section": "u05-s3",
-   "de": "Mittags essen wir in der Mensa.",
-   "uz": "Tush paytida talabalar oshxonasida ovqatlanamiz.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Wir essen mittags in der Mensa.",
-    "In der Mensa essen wir mittags."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-10",
-   "section": "u05-s3",
-   "de": "Nachmittags lerne ich in der Bibliothek.",
-   "uz": "Tushdan keyin kutubxonada o'qiyman.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich lerne nachmittags in der Bibliothek.",
-    "In der Bibliothek lerne ich nachmittags."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-11",
-   "section": "u05-s3",
-   "de": "Wir machen einen Spaziergang.",
-   "uz": "Biz sayrga chiqamiz.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Einen Spaziergang machen wir."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-12",
-   "section": "u05-s3",
-   "de": "Möchtest du heute ausgehen?",
-   "uz": "Bugun dam olgani chiqishni xohlaysanmi?",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s3-13",
-   "section": "u05-s3",
-   "de": "Abends möchte ich fernsehen.",
-   "uz": "Kechqurun televizor ko'rmoqchiman.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich möchte abends fernsehen."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-14",
-   "section": "u05-s3",
-   "de": "Ich möchte mir eine Serie ansehen.",
-   "uz": "Bitta serial tomosha qilmoqchiman.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Eine Serie möchte ich mir ansehen."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-15",
-   "section": "u05-s3",
-   "de": "Jonas sieht abends fern.",
-   "uz": "Jonas kechqurunlari televizor ko'radi.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Abends sieht Jonas fern."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-16",
-   "section": "u05-s3",
-   "de": "Um acht Uhr kommen die Nachrichten.",
-   "uz": "Soat sakkizda yangiliklar beriladi.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Die Nachrichten kommen um acht Uhr."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-17",
-   "section": "u05-s3",
-   "de": "Mia mag die Radiosendung am Morgen.",
-   "uz": "Mia ertalabki radio eshittirishini yoqtiradi.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Die Radiosendung am Morgen mag Mia."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-18",
-   "section": "u05-s3",
-   "de": "Hier ist die Zeitung von heute.",
-   "uz": "Mana bugungi gazeta.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Die Zeitung von heute ist hier."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-19",
-   "section": "u05-s3",
-   "de": "Mia kauft eine Zeitschrift.",
-   "uz": "Mia jurnal sotib oladi.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Eine Zeitschrift kauft Mia."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-20",
-   "section": "u05-s3",
-   "de": "Nachts schläft Lena.",
-   "uz": "Tunda Lena uxlaydi.",
-   "wordCount": 3,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Lena schläft nachts."
-   ]
-  },
-  {
-   "sourceId": "u05-s3-21",
-   "section": "u05-s3",
-   "de": "Das ist mein Alltag.",
-   "uz": "Bu mening kundalik hayotim.",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s4-01",
-   "section": "u05-s4",
-   "de": "Ich habe morgen einen Termin.",
-   "uz": "Ertaga uchrashuvim bor.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Morgen habe ich einen Termin.",
-    "Einen Termin habe ich morgen."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-02",
-   "section": "u05-s4",
-   "de": "Wir vereinbaren einen Termin.",
-   "uz": "Uchrashuv vaqtini kelishib olamiz.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Einen Termin vereinbaren wir."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-03",
-   "section": "u05-s4",
-   "de": "Wo ist mein Kalender?",
-   "uz": "Kalendarim qayerda?",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s4-04",
-   "section": "u05-s4",
-   "de": "Ist das am Freitag möglich?",
-   "uz": "Juma kuni mumkinmi?",
-   "wordCount": 5,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s4-05",
-   "section": "u05-s4",
-   "de": "Ist am Montag ein Termin frei?",
-   "uz": "Dushanba kuni bo'sh vaqt bormi?",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ist ein Termin am Montag frei?"
-   ]
-  },
-  {
-   "sourceId": "u05-s4-06",
-   "section": "u05-s4",
-   "de": "Die Bibliothek ist bis zwanzig Uhr offen.",
-   "uz": "Kutubxona soat yigirmagacha ochiq.",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Bis zwanzig Uhr ist die Bibliothek offen."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-07",
-   "section": "u05-s4",
-   "de": "Wir beginnen um neun Uhr.",
-   "uz": "Biz soat to'qqizda boshlaymiz.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Um neun Uhr beginnen wir."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-08",
-   "section": "u05-s4",
-   "de": "Wann ist Beginn?",
-   "uz": "Boshlanishi qachon?",
-   "wordCount": 3,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s4-09",
-   "section": "u05-s4",
-   "de": "Konzertbeginn ist um zwanzig Uhr.",
-   "uz": "Konsert soat yigirmada boshlanadi.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Um zwanzig Uhr ist Konzertbeginn."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-10",
-   "section": "u05-s4",
-   "de": "Die Termine enden um sechzehn Uhr.",
-   "uz": "Uchrashuvlar soat o'n oltida tugaydi.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Um sechzehn Uhr enden die Termine."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-11",
-   "section": "u05-s4",
-   "de": "Hast du morgen Zeit?",
-   "uz": "Ertaga vaqting bormi?",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s4-12",
-   "section": "u05-s4",
-   "de": "Vorher trinke ich einen Kaffee.",
-   "uz": "Oldinroq bir qahva ichib olaman.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich trinke vorher einen Kaffee.",
-    "Einen Kaffee trinke ich vorher."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-13",
-   "section": "u05-s4",
-   "de": "Ich bin immer pünktlich.",
-   "uz": "Men doim o'z vaqtida kelaman.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Pünktlich bin ich immer.",
-    "Immer bin ich pünktlich."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-14",
-   "section": "u05-s4",
-   "de": "Ich bin um neun Uhr da.",
-   "uz": "Soat to'qqizda yetib kelaman.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Um neun Uhr bin ich da."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-15",
-   "section": "u05-s4",
-   "de": "Entschuldigen Sie, der Bus kommt nicht.",
-   "uz": "Kechirasiz, avtobus kelmayapti.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Der Bus kommt nicht, entschuldigen Sie."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-16",
-   "section": "u05-s4",
-   "de": "Ich habe heute viel zu tun.",
-   "uz": "Bugun ishim juda ko'p.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Heute habe ich viel zu tun.",
-    "Viel zu tun habe ich heute."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-17",
-   "section": "u05-s4",
-   "de": "Der Kunde wartet schon.",
-   "uz": "Mijoz allaqachon kutyapti.",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s4-18",
-   "section": "u05-s4",
-   "de": "Die Kundin kommt um zehn Uhr.",
-   "uz": "Mijoz ayol soat o'nda keladi.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Um zehn Uhr kommt die Kundin."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-19",
-   "section": "u05-s4",
-   "de": "Der Chef mag Pünktlichkeit.",
-   "uz": "Boshliq vaqtga rioya qilishni yoqtiradi.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Pünktlichkeit mag der Chef."
-   ]
-  },
-  {
-   "sourceId": "u05-s4-20",
-   "section": "u05-s4",
-   "de": "Wie lange dauert der Termin?",
-   "uz": "Uchrashuv qancha davom etadi?",
-   "wordCount": 5,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s5-01",
-   "section": "u05-s5",
-   "de": "Ich muss das Geschirr wegräumen.",
-   "uz": "Idish-tovoqni yig'ishtirishim kerak.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Das Geschirr muss ich wegräumen."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-02",
-   "section": "u05-s5",
-   "de": "Wir müssen das Auto waschen.",
-   "uz": "Mashinani yuvishimiz kerak.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Das Auto müssen wir waschen."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-03",
-   "section": "u05-s5",
-   "de": "Heute mache ich alles sauber.",
-   "uz": "Bugun hamma joyni tozalayman.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich mache heute alles sauber.",
-    "Alles mache ich heute sauber."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-04",
-   "section": "u05-s5",
-   "de": "Wir machen den Haushalt zusammen.",
-   "uz": "Uy ishlarini birga qilamiz.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Den Haushalt machen wir zusammen.",
-    "Wir machen zusammen den Haushalt.",
-    "Zusammen machen wir den Haushalt."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-05",
-   "section": "u05-s5",
-   "de": "Jonas ist heute Hausmann.",
-   "uz": "Bugun uy ishlari Jonasning zimmasida.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Heute ist Jonas Hausmann."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-06",
-   "section": "u05-s5",
-   "de": "Wir kochen abwechselnd.",
-   "uz": "Biz navbatma-navbat ovqat pishiramiz.",
-   "wordCount": 3,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Abwechselnd kochen wir."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-07",
-   "section": "u05-s5",
-   "de": "Ich muss noch Hausaufgaben machen.",
-   "uz": "Hali uy vazifasini qilishim kerak.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Hausaufgaben muss ich noch machen."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-08",
-   "section": "u05-s5",
-   "de": "Ich muss mich um Lena kümmern.",
-   "uz": "Men Lenaga qarashim kerak.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Um Lena muss ich mich kümmern."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-09",
-   "section": "u05-s5",
-   "de": "Wir bleiben heute zu Hause.",
-   "uz": "Bugun uyda qolamiz.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Heute bleiben wir zu Hause."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-10",
-   "section": "u05-s5",
-   "de": "Ich bin allein zu Hause.",
-   "uz": "Men uyda yolg'izman.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Ich bin zu Hause allein."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-11",
-   "section": "u05-s5",
-   "de": "Ich habe heute viel Stress.",
-   "uz": "Bugun juda zo'riqib ketdim.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Heute habe ich viel Stress.",
-    "Viel Stress habe ich heute."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-12",
-   "section": "u05-s5",
-   "de": "Das muss dir nicht leidtun.",
-   "uz": "Afsuslanishing shart emas.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Dir muss das nicht leidtun."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-13",
-   "section": "u05-s5",
-   "de": "Ich habe genug Zeit.",
-   "uz": "Vaqtim yetarli.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Genug Zeit habe ich."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-14",
-   "section": "u05-s5",
-   "de": "Die Schule ist um eins aus.",
-   "uz": "Maktab soat birda tugaydi.",
-   "wordCount": 6,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Um eins ist die Schule aus."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-15",
-   "section": "u05-s5",
-   "de": "Die Ampel ist wieder an.",
-   "uz": "Svetofor yana yondi.",
-   "wordCount": 5,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s5-16",
-   "section": "u05-s5",
-   "de": "Ich muss pünktlich da sein.",
-   "uz": "Men o'z vaqtida yetib kelishim kerak.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Pünktlich muss ich da sein."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-17",
-   "section": "u05-s5",
-   "de": "Musst du heute arbeiten?",
-   "uz": "Bugun ishlashing kerakmi?",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u05-s5-18",
-   "section": "u05-s5",
-   "de": "Mia geht heute einkaufen.",
-   "uz": "Mia bugun xarid qilgani boradi.",
-   "wordCount": 4,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Heute geht Mia einkaufen."
-   ]
-  },
-  {
-   "sourceId": "u05-s5-19",
-   "section": "u05-s5",
-   "de": "Wer wäscht heute das Geschirr?",
-   "uz": "Bugun idish-tovoqni kim yuvadi?",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "akzeptiert": [
-    "Wer wäscht das Geschirr heute?"
-   ]
-  },
-  {
-   "sourceId": "u05-s5-20",
-   "section": "u05-s5",
-   "de": "Lena bleibt nicht allein.",
-   "uz": "Lena yolg'iz qolmaydi.",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  }
- ]
+  "unit": "u05",
+  "saetze": [
+    {
+      "sourceId": "u05-s1-01",
+      "section": "u05-s1",
+      "de": "Wie spät ist es?",
+      "uz": "Soat necha?",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s1-02",
+      "section": "u05-s1",
+      "de": "Es ist halb acht.",
+      "uz": "Soat yetti yarim.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Halb acht ist es."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-03",
+      "section": "u05-s1",
+      "de": "Es ist Viertel nach neun.",
+      "uz": "Soat to'qqizdan chorak o'tdi.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Viertel nach neun ist es."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-04",
+      "section": "u05-s1",
+      "de": "Es ist Viertel vor zwölf.",
+      "uz": "O'n ikkiga chorak qoldi.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Viertel vor zwölf ist es."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-05",
+      "section": "u05-s1",
+      "de": "Es ist zehn nach sieben.",
+      "uz": "Soat yettidan o'n daqiqa o'tdi.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Zehn nach sieben ist es."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-06",
+      "section": "u05-s1",
+      "de": "Wie viel Uhr ist es in Deutschland?",
+      "uz": "Germaniyada soat necha?",
+      "wordCount": 7,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s1-07",
+      "section": "u05-s1",
+      "de": "Ich habe jetzt keine Zeit.",
+      "uz": "Hozir vaqtim yo'q.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Jetzt habe ich keine Zeit.",
+        "Keine Zeit habe ich jetzt."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-08",
+      "section": "u05-s1",
+      "de": "Wann kommt der Bus?",
+      "uz": "Avtobus qachon keladi?",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s1-09",
+      "section": "u05-s1",
+      "de": "Eine Stunde hat sechzig Minuten.",
+      "uz": "Bir soatda oltmish daqiqa bor.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Sechzig Minuten hat eine Stunde."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-10",
+      "section": "u05-s1",
+      "de": "Eine Minute hat sechzig Sekunden.",
+      "uz": "Bir daqiqada oltmish soniya bor.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Sechzig Sekunden hat eine Minute."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-11",
+      "section": "u05-s1",
+      "de": "Es ist schon spät.",
+      "uz": "Allaqachon kech bo'ldi.",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s1-12",
+      "section": "u05-s1",
+      "de": "Es ist noch früh.",
+      "uz": "Hali erta.",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s1-13",
+      "section": "u05-s1",
+      "de": "Die Uhrzeit ist jetzt halb neun.",
+      "uz": "Hozir soat sakkiz yarim.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Jetzt ist die Uhrzeit halb neun."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-14",
+      "section": "u05-s1",
+      "de": "Offiziell ist es zwanzig Uhr dreißig.",
+      "uz": "Rasmiy aytganda, soat yigirma-yu o'ttiz daqiqa.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Es ist offiziell zwanzig Uhr dreißig.",
+        "Zwanzig Uhr dreißig ist es offiziell."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-15",
+      "section": "u05-s1",
+      "de": "Inoffiziell ist es halb neun.",
+      "uz": "Norasmiy aytganda, soat sakkiz yarim.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Es ist inoffiziell halb neun.",
+        "Halb neun ist es inoffiziell."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-16",
+      "section": "u05-s1",
+      "de": "Der Abend ist eine Tageszeit.",
+      "uz": "Kechqurun — kunning bir qismi.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Eine Tageszeit ist der Abend."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-17",
+      "section": "u05-s1",
+      "de": "Morgens trinke ich Kaffee.",
+      "uz": "Ertalablari qahva ichaman.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich trinke morgens Kaffee.",
+        "Kaffee trinke ich morgens."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-18",
+      "section": "u05-s1",
+      "de": "Vormittags arbeite ich.",
+      "uz": "Tushdan oldin ishlayman.",
+      "wordCount": 3,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich arbeite vormittags."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-19",
+      "section": "u05-s1",
+      "de": "Mittags essen wir Suppe.",
+      "uz": "Tush paytida sho'rva ichamiz.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Wir essen mittags Suppe.",
+        "Suppe essen wir mittags."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-20",
+      "section": "u05-s1",
+      "de": "Nachmittags bin ich müde.",
+      "uz": "Tushdan keyin charchagan bo'laman.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich bin nachmittags müde."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-21",
+      "section": "u05-s1",
+      "de": "Abends essen wir zusammen.",
+      "uz": "Kechqurunlari birga ovqatlanamiz.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Wir essen abends zusammen."
+      ]
+    },
+    {
+      "sourceId": "u05-s1-22",
+      "section": "u05-s1",
+      "de": "Gute Nacht, Lena!",
+      "uz": "Xayrli tun, Lena!",
+      "wordCount": 3,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Lena, gute Nacht!"
+      ]
+    },
+    {
+      "sourceId": "u05-s2-01",
+      "section": "u05-s2",
+      "de": "Heute ist Montag.",
+      "uz": "Bugun dushanba.",
+      "wordCount": 3,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Montag ist heute."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-02",
+      "section": "u05-s2",
+      "de": "Am Dienstag habe ich Training.",
+      "uz": "Seshanba kuni sport mashg'ulotim bor.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich habe am Dienstag Training.",
+        "Training habe ich am Dienstag."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-03",
+      "section": "u05-s2",
+      "de": "Am Mittwoch hat Lena Geigenunterricht.",
+      "uz": "Chorshanba kuni Lenaning skripka darsi bor.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Lena hat am Mittwoch Geigenunterricht.",
+        "Geigenunterricht hat Lena am Mittwoch."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-04",
+      "section": "u05-s2",
+      "de": "Am Donnerstag habe ich einen Englisch-Test.",
+      "uz": "Payshanba kuni ingliz tili testim bor.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich habe am Donnerstag einen Englisch-Test.",
+        "Einen Englisch-Test habe ich am Donnerstag."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-05",
+      "section": "u05-s2",
+      "de": "Am Freitag arbeite ich nicht.",
+      "uz": "Juma kuni ishlamayman.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich arbeite am Freitag nicht.",
+        "Ich arbeite nicht am Freitag."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-06",
+      "section": "u05-s2",
+      "de": "Am Montag und am Dienstag arbeite ich.",
+      "uz": "Dushanba va seshanba kunlari ishlayman.",
+      "wordCount": 7,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich arbeite am Montag und am Dienstag.",
+        "Am Dienstag und am Montag arbeite ich.",
+        "Ich arbeite am Dienstag und am Montag."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-07",
+      "section": "u05-s2",
+      "de": "Der Sonnabend und der Samstag sind gleich.",
+      "uz": "Sonnabend va Samstag – bir xil kun.",
+      "wordCount": 7,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Der Samstag und der Sonnabend sind gleich."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-08",
+      "section": "u05-s2",
+      "de": "Am Sonntag essen wir bei Oma.",
+      "uz": "Yakshanba kuni buvinikida ovqatlanamiz.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Wir essen am Sonntag bei Oma.",
+        "Bei Oma essen wir am Sonntag."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-09",
+      "section": "u05-s2",
+      "de": "Die Woche hat sieben Tage.",
+      "uz": "Haftada yetti kun bor.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Sieben Tage hat die Woche."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-10",
+      "section": "u05-s2",
+      "de": "Der Mittwoch ist ein Wochentag.",
+      "uz": "Chorshanba — hafta kunlaridan biri.",
+      "wordCount": 5,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s2-11",
+      "section": "u05-s2",
+      "de": "Was machst du am Wochenende?",
+      "uz": "Dam olish kunlari nima qilasan?",
+      "wordCount": 5,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s2-12",
+      "section": "u05-s2",
+      "de": "Samstags gehe ich in die Musikschule.",
+      "uz": "Har shanba musiqa maktabiga boraman.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich gehe samstags in die Musikschule.",
+        "In die Musikschule gehe ich samstags."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-13",
+      "section": "u05-s2",
+      "de": "Am Samstagabend essen wir im Restaurant.",
+      "uz": "Shanba oqshomi restoranda ovqatlanamiz.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Wir essen am Samstagabend im Restaurant.",
+        "Im Restaurant essen wir am Samstagabend."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-14",
+      "section": "u05-s2",
+      "de": "Am Sonntagnachmittag kommt Oma.",
+      "uz": "Yakshanba kuni tushdan keyin buvi keladi.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Oma kommt am Sonntagnachmittag."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-15",
+      "section": "u05-s2",
+      "de": "Nächste Woche habe ich einen Mathe-Test.",
+      "uz": "Keyingi hafta matematika testim bor.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich habe nächste Woche einen Mathe-Test.",
+        "Einen Mathe-Test habe ich nächste Woche."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-16",
+      "section": "u05-s2",
+      "de": "Das ist das erste Mal.",
+      "uz": "Bu birinchi marta.",
+      "wordCount": 5,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s2-17",
+      "section": "u05-s2",
+      "de": "Lena hat einmal pro Woche Geigenunterricht.",
+      "uz": "Lenaning haftada bir marta skripka darsi bor.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Einmal pro Woche hat Lena Geigenunterricht.",
+        "Geigenunterricht hat Lena einmal pro Woche."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-18",
+      "section": "u05-s2",
+      "de": "Thomas hat dreimal pro Woche Training.",
+      "uz": "Thomasning haftada uch marta sport mashg'uloti bor.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Dreimal pro Woche hat Thomas Training.",
+        "Training hat Thomas dreimal pro Woche."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-19",
+      "section": "u05-s2",
+      "de": "Jonas hat am Freitag Trompetenunterricht.",
+      "uz": "Jonasning juma kuni truba darsi bor.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Am Freitag hat Jonas Trompetenunterricht.",
+        "Trompetenunterricht hat Jonas am Freitag."
+      ]
+    },
+    {
+      "sourceId": "u05-s2-20",
+      "section": "u05-s2",
+      "de": "Bis nächste Woche!",
+      "uz": "Keyingi haftagacha!",
+      "wordCount": 3,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s3-01",
+      "section": "u05-s3",
+      "de": "Ich stehe um sechs Uhr auf.",
+      "uz": "Men soat oltida o'rnimdan turaman.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Um sechs Uhr stehe ich auf."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-02",
+      "section": "u05-s3",
+      "de": "Normalerweise trinke ich Tee.",
+      "uz": "Odatda choy ichaman.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich trinke normalerweise Tee.",
+        "Tee trinke ich normalerweise."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-03",
+      "section": "u05-s3",
+      "de": "Ich möchte nicht aufstehen.",
+      "uz": "O'rnimdan turgim kelmayapti.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Aufstehen möchte ich nicht."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-04",
+      "section": "u05-s3",
+      "de": "Ich möchte jetzt duschen.",
+      "uz": "Hozir dush qabul qilmoqchiman.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Jetzt möchte ich duschen."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-05",
+      "section": "u05-s3",
+      "de": "Bist du schon wach?",
+      "uz": "Uyg'onib bo'ldingmi?",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s3-06",
+      "section": "u05-s3",
+      "de": "Lena möchte nicht schlafen.",
+      "uz": "Lena uxlagisi kelmayapti.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Schlafen möchte Lena nicht."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-07",
+      "section": "u05-s3",
+      "de": "Wann holst du Lena ab?",
+      "uz": "Lenani qachon olib kelasan?",
+      "wordCount": 5,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s3-08",
+      "section": "u05-s3",
+      "de": "Heute möchte ich Lena abholen.",
+      "uz": "Bugun Lenani o'zim olib kelmoqchiman.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich möchte heute Lena abholen.",
+        "Lena möchte ich heute abholen.",
+        "Ich möchte Lena heute abholen."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-09",
+      "section": "u05-s3",
+      "de": "Mittags essen wir in der Mensa.",
+      "uz": "Tush paytida talabalar oshxonasida ovqatlanamiz.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Wir essen mittags in der Mensa.",
+        "In der Mensa essen wir mittags."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-10",
+      "section": "u05-s3",
+      "de": "Nachmittags lerne ich in der Bibliothek.",
+      "uz": "Tushdan keyin kutubxonada o'qiyman.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich lerne nachmittags in der Bibliothek.",
+        "In der Bibliothek lerne ich nachmittags."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-11",
+      "section": "u05-s3",
+      "de": "Wir machen einen Spaziergang.",
+      "uz": "Biz sayrga chiqamiz.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Einen Spaziergang machen wir."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-12",
+      "section": "u05-s3",
+      "de": "Möchtest du heute ausgehen?",
+      "uz": "Bugun dam olgani chiqishni xohlaysanmi?",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s3-13",
+      "section": "u05-s3",
+      "de": "Abends möchte ich fernsehen.",
+      "uz": "Kechqurun televizor ko'rmoqchiman.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich möchte abends fernsehen."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-14",
+      "section": "u05-s3",
+      "de": "Ich möchte heute eine Serie ansehen.",
+      "uz": "Bugun bitta serial ko'rmoqchiman.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Heute möchte ich eine Serie ansehen.",
+        "Eine Serie möchte ich heute ansehen."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-15",
+      "section": "u05-s3",
+      "de": "Jonas sieht abends fern.",
+      "uz": "Jonas kechqurunlari televizor ko'radi.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Abends sieht Jonas fern."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-16",
+      "section": "u05-s3",
+      "de": "Um acht Uhr kommen die Nachrichten.",
+      "uz": "Soat sakkizda yangiliklar beriladi.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Die Nachrichten kommen um acht Uhr."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-17",
+      "section": "u05-s3",
+      "de": "Mia mag die Radiosendung am Morgen.",
+      "uz": "Mia ertalabki radio eshittirishini yoqtiradi.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Die Radiosendung am Morgen mag Mia."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-18",
+      "section": "u05-s3",
+      "de": "Hier ist die Zeitung von heute.",
+      "uz": "Mana bugungi gazeta.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Die Zeitung von heute ist hier."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-19",
+      "section": "u05-s3",
+      "de": "Mia kauft eine Zeitschrift.",
+      "uz": "Mia jurnal sotib oladi.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Eine Zeitschrift kauft Mia."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-20",
+      "section": "u05-s3",
+      "de": "Nachts schläft Lena.",
+      "uz": "Tunda Lena uxlaydi.",
+      "wordCount": 3,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Lena schläft nachts."
+      ]
+    },
+    {
+      "sourceId": "u05-s3-21",
+      "section": "u05-s3",
+      "de": "Das ist mein Alltag.",
+      "uz": "Bu mening kundalik hayotim.",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s4-01",
+      "section": "u05-s4",
+      "de": "Ich habe morgen einen Termin.",
+      "uz": "Ertaga uchrashuvim bor.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Morgen habe ich einen Termin.",
+        "Einen Termin habe ich morgen."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-02",
+      "section": "u05-s4",
+      "de": "Wir vereinbaren einen Termin.",
+      "uz": "Uchrashuv vaqtini kelishib olamiz.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Einen Termin vereinbaren wir."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-03",
+      "section": "u05-s4",
+      "de": "Wo ist mein Kalender?",
+      "uz": "Kalendarim qayerda?",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s4-04",
+      "section": "u05-s4",
+      "de": "Ist das am Freitag möglich?",
+      "uz": "Juma kuni mumkinmi?",
+      "wordCount": 5,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s4-05",
+      "section": "u05-s4",
+      "de": "Ist am Montag ein Termin frei?",
+      "uz": "Dushanba kuni bo'sh vaqt bormi?",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ist ein Termin am Montag frei?"
+      ]
+    },
+    {
+      "sourceId": "u05-s4-06",
+      "section": "u05-s4",
+      "de": "Die Bibliothek ist bis zwanzig Uhr offen.",
+      "uz": "Kutubxona soat yigirmagacha ochiq.",
+      "wordCount": 7,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Bis zwanzig Uhr ist die Bibliothek offen."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-07",
+      "section": "u05-s4",
+      "de": "Wir beginnen um neun Uhr.",
+      "uz": "Biz soat to'qqizda boshlaymiz.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Um neun Uhr beginnen wir."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-08",
+      "section": "u05-s4",
+      "de": "Wann ist Beginn?",
+      "uz": "Boshlanishi qachon?",
+      "wordCount": 3,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s4-09",
+      "section": "u05-s4",
+      "de": "Konzertbeginn ist um zwanzig Uhr.",
+      "uz": "Konsert soat yigirmada boshlanadi.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Um zwanzig Uhr ist Konzertbeginn."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-10",
+      "section": "u05-s4",
+      "de": "Die Termine enden um sechzehn Uhr.",
+      "uz": "Uchrashuvlar soat o'n oltida tugaydi.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Um sechzehn Uhr enden die Termine."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-11",
+      "section": "u05-s4",
+      "de": "Hast du morgen Zeit?",
+      "uz": "Ertaga vaqting bormi?",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s4-12",
+      "section": "u05-s4",
+      "de": "Vorher trinke ich einen Kaffee.",
+      "uz": "Oldinroq bir qahva ichib olaman.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich trinke vorher einen Kaffee.",
+        "Einen Kaffee trinke ich vorher."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-13",
+      "section": "u05-s4",
+      "de": "Ich bin immer pünktlich.",
+      "uz": "Men doim o'z vaqtida kelaman.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Pünktlich bin ich immer.",
+        "Immer bin ich pünktlich."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-14",
+      "section": "u05-s4",
+      "de": "Ich bin um neun Uhr da.",
+      "uz": "Soat to'qqizda yetib kelaman.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Um neun Uhr bin ich da."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-15",
+      "section": "u05-s4",
+      "de": "Entschuldigen Sie, der Bus kommt nicht.",
+      "uz": "Kechirasiz, avtobus kelmayapti.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Der Bus kommt nicht, entschuldigen Sie."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-16",
+      "section": "u05-s4",
+      "de": "Ich habe heute viel zu tun.",
+      "uz": "Bugun ishim juda ko'p.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Heute habe ich viel zu tun.",
+        "Viel zu tun habe ich heute."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-17",
+      "section": "u05-s4",
+      "de": "Der Kunde wartet schon.",
+      "uz": "Mijoz allaqachon kutyapti.",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s4-18",
+      "section": "u05-s4",
+      "de": "Die Kundin kommt um zehn Uhr.",
+      "uz": "Mijoz ayol soat o'nda keladi.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Um zehn Uhr kommt die Kundin."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-19",
+      "section": "u05-s4",
+      "de": "Der Chef mag Pünktlichkeit.",
+      "uz": "Boshliq vaqtga rioya qilishni yoqtiradi.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Pünktlichkeit mag der Chef."
+      ]
+    },
+    {
+      "sourceId": "u05-s4-20",
+      "section": "u05-s4",
+      "de": "Wie lange dauert der Termin?",
+      "uz": "Uchrashuv qancha davom etadi?",
+      "wordCount": 5,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s5-01",
+      "section": "u05-s5",
+      "de": "Ich muss das Geschirr wegräumen.",
+      "uz": "Idish-tovoqni yig'ishtirishim kerak.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Das Geschirr muss ich wegräumen."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-02",
+      "section": "u05-s5",
+      "de": "Wir müssen das Auto waschen.",
+      "uz": "Mashinani yuvishimiz kerak.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Das Auto müssen wir waschen."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-03",
+      "section": "u05-s5",
+      "de": "Heute mache ich alles sauber.",
+      "uz": "Bugun hamma joyni tozalayman.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich mache heute alles sauber.",
+        "Alles mache ich heute sauber."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-04",
+      "section": "u05-s5",
+      "de": "Wir machen den Haushalt zusammen.",
+      "uz": "Uy ishlarini birga qilamiz.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Den Haushalt machen wir zusammen.",
+        "Wir machen zusammen den Haushalt.",
+        "Zusammen machen wir den Haushalt."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-05",
+      "section": "u05-s5",
+      "de": "Jonas ist heute Hausmann.",
+      "uz": "Bugun uy ishlari Jonasning zimmasida.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Heute ist Jonas Hausmann."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-06",
+      "section": "u05-s5",
+      "de": "Wir kochen abwechselnd.",
+      "uz": "Biz navbatma-navbat ovqat pishiramiz.",
+      "wordCount": 3,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Abwechselnd kochen wir."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-07",
+      "section": "u05-s5",
+      "de": "Ich muss noch Hausaufgaben machen.",
+      "uz": "Hali uy vazifasini qilishim kerak.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Hausaufgaben muss ich noch machen."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-08",
+      "section": "u05-s5",
+      "de": "Ich muss mich um Lena kümmern.",
+      "uz": "Men Lenaga qarashim kerak.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Um Lena muss ich mich kümmern."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-09",
+      "section": "u05-s5",
+      "de": "Wir bleiben heute zu Hause.",
+      "uz": "Bugun uyda qolamiz.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Heute bleiben wir zu Hause."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-10",
+      "section": "u05-s5",
+      "de": "Ich bin allein zu Hause.",
+      "uz": "Men uyda yolg'izman.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Ich bin zu Hause allein."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-11",
+      "section": "u05-s5",
+      "de": "Ich habe heute viel Stress.",
+      "uz": "Bugun juda zo'riqib ketdim.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Heute habe ich viel Stress.",
+        "Viel Stress habe ich heute."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-12",
+      "section": "u05-s5",
+      "de": "Das tut mir leid.",
+      "uz": "Kechirasiz, afsusdaman.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Mir tut das leid."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-13",
+      "section": "u05-s5",
+      "de": "Ich habe genug Zeit.",
+      "uz": "Vaqtim yetarli.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Genug Zeit habe ich."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-14",
+      "section": "u05-s5",
+      "de": "Die Schule ist um eins aus.",
+      "uz": "Maktab soat birda tugaydi.",
+      "wordCount": 6,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Um eins ist die Schule aus."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-15",
+      "section": "u05-s5",
+      "de": "Die Ampel ist wieder an.",
+      "uz": "Svetofor yana yondi.",
+      "wordCount": 5,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s5-16",
+      "section": "u05-s5",
+      "de": "Ich muss pünktlich da sein.",
+      "uz": "Men o'z vaqtida yetib kelishim kerak.",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Pünktlich muss ich da sein."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-17",
+      "section": "u05-s5",
+      "de": "Musst du heute arbeiten?",
+      "uz": "Bugun ishlashing kerakmi?",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    },
+    {
+      "sourceId": "u05-s5-18",
+      "section": "u05-s5",
+      "de": "Mia geht heute einkaufen.",
+      "uz": "Mia bugun xarid qilgani boradi.",
+      "wordCount": 4,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Heute geht Mia einkaufen."
+      ]
+    },
+    {
+      "sourceId": "u05-s5-19",
+      "section": "u05-s5",
+      "de": "Wer wäscht heute das Geschirr?",
+      "uz": "Bugun idish-tovoqni kim yuvadi?",
+      "wordCount": 5,
+      "origin": "GENERATED",
+      "akzeptiert": [
+        "Wer wäscht das Geschirr heute?"
+      ]
+    },
+    {
+      "sourceId": "u05-s5-20",
+      "section": "u05-s5",
+      "de": "Lena bleibt nicht allein.",
+      "uz": "Lena yolg'iz qolmaydi.",
+      "wordCount": 4,
+      "origin": "GENERATED"
+    }
+  ]
 }
