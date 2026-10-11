@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, Paperclip } from "lucide-react";
 import toast from "react-hot-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { useTasks, type TaskEvent } from "@/hooks/use-tasks";
 import { tashkentDayAndTime } from "./task-due";
 import { describeEvent, viaLabel } from "./task-feed-text";
+import { FILE_ACCEPT } from "./task-file-rules";
+import { useTaskFiles } from "./use-task-files";
 
 // The Tashkent day and time, not the browser's zone (every other time on the page is Tashkent).
 const when = (iso: string) => {
@@ -48,11 +50,20 @@ function Line({ ev }: { ev: TaskEvent }) {
   );
 }
 
-function Composer({ taskId }: { taskId: string }) {
+function Composer({ taskId, canAttach }: { taskId: string; canAttach: boolean }) {
   const appendEvent = useTasks((s) => s.appendEvent);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const filesEnabled = useTaskFiles((s) => s.enabled === true);
+  const upload = useTaskFiles((s) => s.upload);
+  const uploading = useTaskFiles((s) => s.uploading > 0);
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    e.target.value = ""; // the same file can be picked again
+    for (const f of picked) await upload(taskId, f, f.name);
+  };
   const canSend = text.trim() !== "" && !sending;
 
   const send = async () => {
@@ -82,7 +93,17 @@ function Composer({ taskId }: { taskId: string }) {
         onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void send(); } }}
       />
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] text-muted-foreground">Ctrl+Enter — yuborish</span>
+        <div className="flex items-center gap-1.5">
+          {filesEnabled && canAttach && (
+            <>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={"Fayl qo'shish"} disabled={uploading} onClick={() => fileRef.current?.click()}>
+                {uploading ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />}
+              </Button>
+              <input ref={fileRef} type="file" multiple accept={FILE_ACCEPT} className="hidden" onChange={(e) => void onPick(e)} />
+            </>
+          )}
+          <span className="text-[11px] text-muted-foreground">Ctrl+Enter — yuborish</span>
+        </div>
         <Button size="sm" onClick={() => void send()} disabled={!canSend}>
           {sending && <Loader2 className="mr-1 size-4 animate-spin" />}Yuborish
         </Button>
@@ -93,14 +114,14 @@ function Composer({ taskId }: { taskId: string }) {
 }
 
 /** The discussion: comments as bubbles, everything else as one grey line, the composer below. */
-export function TaskDrawerFeed({ taskId, events }: { taskId: string; events: TaskEvent[] }) {
+export function TaskDrawerFeed({ taskId, events, canAttach }: { taskId: string; events: TaskEvent[]; canAttach: boolean }) {
   return (
     <section className="space-y-3">
       <h4 className="text-sm font-semibold">Muhokama</h4>
       <ul className="space-y-2.5">
         {events.map((ev) => (ev.type === "COMMENT" ? <Comment key={ev.id} ev={ev} /> : <Line key={ev.id} ev={ev} />))}
       </ul>
-      <Composer taskId={taskId} />
+      <Composer taskId={taskId} canAttach={canAttach} />
     </section>
   );
 }
