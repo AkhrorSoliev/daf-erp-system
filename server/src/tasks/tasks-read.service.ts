@@ -23,6 +23,7 @@ import {
 } from './task-select';
 import { OPEN_STATUSES } from './task-transitions';
 import { cursorWhere, decodeCursor, encodeCursor } from './task-cursor';
+import { loadTaskSource } from './task-source';
 import {
   assignableRoleIds,
   canAssignTo,
@@ -226,6 +227,10 @@ export class TasksReadService {
       events: events.reverse(),
       access,
       batch,
+      // A system task's card (spec screen 10), after the access check above.
+      // Only the first page carries it: the client keeps that one while it
+      // pages back through older events.
+      source: before ? null : await loadTaskSource(this.prisma, row),
     };
   }
 

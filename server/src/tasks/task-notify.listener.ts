@@ -57,6 +57,12 @@ export class TaskNotifyListener {
     return this.handle(TASK_EVENTS.DUE_CHANGED, p);
   }
 
+  /** No notice (the plan has none); open task pages refresh through `finally`. */
+  @OnEvent(TASK_EVENTS.AUTO_CLOSED)
+  onAutoClosed(p: { task: TaskEventTask }) {
+    return this.handle(TASK_EVENTS.AUTO_CLOSED, p);
+  }
+
   private async handle(event: string, payload: { task: TaskEventTask }) {
     const task = payload.task;
     const ids = noticeUserIds(payload);

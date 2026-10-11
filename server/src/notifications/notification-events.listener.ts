@@ -1,9 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import {
+  CashAccountType,
   NotificationType,
+  SalaryPaymentStatus,
   TelegramDigestCategory,
   TelegramDigestRecipientKind,
+  TransactionType,
   UserStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,12 +17,17 @@ import { TelegramService } from '../telegram/telegram.service';
 import { formatSom } from '../payments/shared/format-som';
 import { PAYMENT_METHOD_LABEL } from '../payments/shared/method-label';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+import { tashkentMonthKey } from '../common/date/tashkent';
 import type { PaymentCorrectedPayload } from '../payments/payments-write.service';
 import type { SalaryCarriedOverPayload } from '../salary/salary-accrual.service';
+import { SALARY_PAID_EVENT } from '../salary/salary-events';
+import type { SalaryPaidPayload } from '../salary/salary-events';
+import { salaryPaidText } from '../salary/salary-paid-text';
 import type { PaymentPromiseOverduePayload } from '../payment-promises/payment-promise-cron.service';
 import { overdueDigest } from '../payment-promises/overdue-digest';
 import { loadOverdueDigestItems } from '../payment-promises/overdue-digest-load';
 import { TelegramDigestQueueService } from '../telegram-digest/telegram-digest-queue.service';
+import { sendTelegramText } from '../telegram-digest/telegram-send';
 
 /** The bell opens the debt page filtered to broken promises (client `notification-href.ts`). */
 export const BROKEN_PROMISES_ENTITY = 'BrokenPromises';
@@ -148,9 +156,10 @@ export class NotificationEventsListener {
    * One branch's payment promises that passed their date while the students
    * are still in debt (flipped to BROKEN by the 09:00 cron), as ONE list:
    * debt, group, phones, the promise and its note, what changed since and how
-   * often the student broke one. Goes to the branch's Administrators plus the
-   * company CEOs. Fans out to all four channels; the bell and push get the
-   * names only, Telegram the whole list.
+   * often the student broke one. Goes to the company CEOs only: the branch's
+   * administrators get one «Buzilgan va'da» task per student instead
+   * (`TaskAutoService`, ADR-0083), never both. Fans out to all four
+   * channels; the bell and push get the names only, Telegram the whole list.
    */
   @OnEvent('payment-promise.overdue')
   async handlePaymentPromiseOverdue(payload: PaymentPromiseOverduePayload) {
@@ -173,15 +182,7 @@ export class NotificationEventsListener {
             isActive: true,
             status: UserStatus.ACTIVE,
             companyId: payload.companyId,
-            OR: [
-              { roles: { some: { role: { name: 'CEO' } } } },
-              {
-                roles: { some: { role: { name: 'Administrator' } } },
-                ...(payload.branchId
-                  ? { branches: { some: { branchId: payload.branchId } } }
-                  : {}),
-              },
-            ],
+            roles: { some: { role: { name: 'CEO' } } },
           },
           select: { id: true },
         }),
@@ -310,7 +311,85 @@ export class NotificationEventsListener {
     }
   }
 
-  /** Sends ready HTML parts, in order; a part that fails stops the rest. */
+  /**
+   * A salary payment turned PAID («Berildi» or the month settle): tells the
+   * payee what was handed over (spec §6). The cash/card split is read from the
+   * live ledger row's movements, signed (outflow < 0) — never `Math.abs`. A
+   * failure is logged and swallowed: the payout is already committed.
+   */
+  @OnEvent(SALARY_PAID_EVENT)
+  async handleSalaryPaid(payload: SalaryPaidPayload) {
+    try {
+      const payment = await this.prisma.salaryPayment.findFirst({
+        where: { id: payload.salaryPaymentId, companyId: payload.companyId },
+        select: {
+          amount: true,
+          status: true,
+          periodStart: true,
+          paidAt: true,
+          userId: true,
+          user: { select: { firstName: true } },
+          settledExpenses: {
+            where: { deletedAt: null },
+            select: { amount: true },
+          },
+        },
+      });
+      if (!payment || payment.status !== SalaryPaymentStatus.PAID) return;
+
+      // A 0 so'm payment moves no money, so it has no ledger row: cash = card = 0.
+      const ledger = await this.prisma.transaction.findMany({
+        where: {
+          salaryPaymentId: payload.salaryPaymentId,
+          type: TransactionType.SALARY_PAYMENT,
+          reversedAt: null,
+          reversedTransactionId: null,
+        },
+        select: { id: true },
+      });
+      const movements = ledger.length
+        ? await this.prisma.cashMovement.findMany({
+            where: { transactionId: { in: ledger.map((t) => t.id) } },
+            select: {
+              amount: true,
+              cashAccount: { select: { type: true } },
+            },
+          })
+        : [];
+      let cash = 0;
+      let card = 0;
+      for (const m of movements) {
+        if (m.cashAccount.type === CashAccountType.CASH) cash -= m.amount;
+        else card -= m.amount;
+      }
+
+      const advances = payment.settledExpenses.reduce(
+        (sum, e) => sum + e.amount,
+        0,
+      );
+      const text = salaryPaidText({
+        firstName: payment.user.firstName,
+        month: tashkentMonthKey(payment.periodStart),
+        gross: payment.amount + advances,
+        advances,
+        net: payment.amount,
+        cash,
+        card,
+        paidDay: tashkentDateStr(payment.paidAt ?? new Date()),
+      });
+      await this.sendTelegram(payment.userId, [text]);
+    } catch (error) {
+      this.logger.warn(
+        `salary.paid ${payload.salaryPaymentId} handler failed: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Sends ready HTML parts, in order; a part that fails stops the rest. Goes
+   * through `sendTelegramText`, which waits out a 429 once: a month settle
+   * emits one `salary.paid` per payee in the same tick.
+   */
   private async sendTelegram(userId: number, parts: string[]) {
     try {
       const bot = this.telegramService.getBot();
@@ -324,9 +403,15 @@ export class NotificationEventsListener {
       if (!user?.telegramChatId) return;
 
       for (const text of parts) {
-        await bot.telegram.sendMessage(user.telegramChatId, text, {
+        const sent = await sendTelegramText(bot, user.telegramChatId, text, {
           parse_mode: 'HTML',
         });
+        if (!sent.ok) {
+          this.logger.warn(
+            `Telegram send failed for user ${userId}: ${sent.description}`,
+          );
+          return;
+        }
       }
     } catch (error) {
       this.logger.warn(

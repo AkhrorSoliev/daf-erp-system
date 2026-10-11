@@ -12,6 +12,9 @@ import { EditProfileDrawer } from "./edit-profile-drawer";
 import { ChangePasswordDrawer } from "./change-password-drawer";
 import { LogoutOthersDialog } from "@/components/shared/logout-others-dialog";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
+import { TeacherStatsCharts } from "@/components/teachers/teacher-stats-charts";
+
+const TEACHER_ROLE_ID = 4;
 
 export function ProfileClient() {
   const { user } = useAuth();
@@ -21,6 +24,8 @@ export function ProfileClient() {
   const [logoutOthersOpen, setLogoutOthersOpen] = useState(false);
 
   const isCeo = user?.roles.some((r) => r.name === "CEO") ?? false;
+  // Identity, not a capability: the charts are a teacher's own figures.
+  const isTeacher = user?.roles.some((r) => r.id === TEACHER_ROLE_ID) ?? false;
   const { branches, fetchBranches } = useBranchSwitcher();
 
   useEffect(() => {
@@ -95,6 +100,13 @@ export function ProfileClient() {
               />
             </div>
           </div>
+        )}
+
+        {isTeacher && (
+          <section className="space-y-3">
+            <h2 className="font-heading text-lg font-semibold">Ko&apos;rsatkichlarim</h2>
+            <TeacherStatsCharts endpoint="/teachers/me/stats" />
+          </section>
         )}
       </div>
 

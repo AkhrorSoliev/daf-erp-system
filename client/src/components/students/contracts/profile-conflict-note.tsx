@@ -1,0 +1,54 @@
+"use client";
+
+import { AlertTriangle, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { formatPhone } from "@/lib/format-utils";
+import type { ProfileConflict } from "./contract-profile";
+
+interface Props {
+  conflict: ProfileConflict;
+  /** The admin chose «Yangisi to'g'ri» — the profile is updated on save. */
+  chosenNew: boolean;
+  onKeepProfile: () => void;
+  onUseNew: () => void;
+  onUndo: () => void;
+}
+
+const show = (c: ProfileConflict) =>
+  c.field === "phone" || c.field === "parentPhone" ? formatPhone(c.profileValue) : c.profileValue;
+
+/** Under a customer input that disagrees with the student's profile. */
+export function ProfileConflictNote({ conflict, chosenNew, onKeepProfile, onUseNew, onUndo }: Props) {
+  if (chosenNew) {
+    return (
+      <p className="flex flex-wrap items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
+        <Check className="size-3.5" />
+        Saqlashda profil yangilanadi (profilda: {show(conflict)}).
+        <button type="button" className="underline underline-offset-2" onClick={onUndo}>
+          Bekor qilish
+        </button>
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+      <p className="flex items-start gap-1.5">
+        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+        <span>
+          Profilda: <b>{show(conflict)}</b>. O&apos;quvchidan qayta so&apos;rang.
+          {!conflict.writable && " Raqam profilni tahrirlash orqali o'zgartiriladi."}
+        </span>
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={onKeepProfile}>
+          Profildagisi to&apos;g&apos;ri
+        </Button>
+        {conflict.writable && (
+          <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={onUseNew}>
+            Yangisi to&apos;g&apos;ri — profilni yangilash
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -7,6 +7,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { resolveMonthlyScope } from './shared/resolve-monthly-scope';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SALARY_PAID_EVENT } from './salary-events';
 
 jest.mock('./shared/resolve-monthly-scope');
 
@@ -18,6 +20,8 @@ describe('SalarySettleMonthService', () => {
   let service: SalarySettleMonthService;
   let prisma: any;
   let transactions: any;
+  let events: { emit: jest.Mock };
+  let order: string[];
 
   // 2026-07 payroll period, Tashkent-shifted instants.
   const periodStart = new Date('2026-06-30T19:00:00.000Z');
@@ -70,15 +74,21 @@ describe('SalarySettleMonthService', () => {
       },
       $transaction: jest.fn((cb: any) => cb(prisma)),
     };
+    order = [];
     transactions = {
-      recordSalaryPayment: jest.fn().mockResolvedValue({ id: 'tx-1' }),
+      recordSalaryPayment: jest.fn(() => {
+        order.push('write');
+        return Promise.resolve({ id: 'tx-1' });
+      }),
     };
+    events = { emit: jest.fn(() => order.push('emit')) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SalarySettleMonthService,
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactions },
+        { provide: EventEmitter2, useValue: events },
       ],
     }).compile();
     service = module.get(SalarySettleMonthService);
@@ -335,6 +345,61 @@ describe('SalarySettleMonthService', () => {
         }),
         expect.anything(),
       );
+    });
+  });
+
+  describe('settle — salary.paid goes out after the writes', () => {
+    const twoPayments = () => [
+      payment({ id: 'sp-1', amount: 700_000 }),
+      payment({ id: 'sp-2', userId: 10021, amount: 300_000 }),
+    ];
+
+    it('emits once per paid payment, only after every payment is written', async () => {
+      prisma.salaryPayment.findMany.mockResolvedValue(twoPayments());
+
+      await service.settle(dto() as any, 1, 42);
+
+      expect(events.emit).toHaveBeenCalledTimes(2);
+      expect(events.emit).toHaveBeenNthCalledWith(1, SALARY_PAID_EVENT, {
+        salaryPaymentId: 'sp-1',
+        companyId: 1,
+      });
+      expect(events.emit).toHaveBeenNthCalledWith(2, SALARY_PAID_EVENT, {
+        salaryPaymentId: 'sp-2',
+        companyId: 1,
+      });
+      expect(order).toEqual(['write', 'write', 'emit', 'emit']);
+    });
+
+    it('says nothing about a row another request paid first', async () => {
+      prisma.salaryPayment.findMany.mockResolvedValue(twoPayments());
+      prisma.salaryPayment.findUnique
+        .mockResolvedValueOnce({ status: 'PAID', note: null })
+        .mockResolvedValueOnce({ status: 'APPROVED', note: null });
+
+      await service.settle(dto() as any, 1, 42);
+
+      expect(events.emit).toHaveBeenCalledTimes(1);
+      expect(events.emit).toHaveBeenCalledWith(SALARY_PAID_EVENT, {
+        salaryPaymentId: 'sp-2',
+        companyId: 1,
+      });
+    });
+
+    it('says nothing when a refusal stopped the settle before any write', async () => {
+      await expect(
+        service.settle(dto({ confirmAmount: 1 }) as any, 1, 42),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(events.emit).not.toHaveBeenCalled();
+    });
+
+    it('says nothing when the write itself fails', async () => {
+      transactions.recordSalaryPayment.mockRejectedValue(new Error('boom'));
+
+      await expect(service.settle(dto() as any, 1, 42)).rejects.toThrow('boom');
+
+      expect(events.emit).not.toHaveBeenCalled();
     });
   });
 

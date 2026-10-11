@@ -11,6 +11,7 @@ import {
 import { SalaryService } from './salary.service';
 import { TeacherTimelineService } from './teacher-timeline.service';
 import { SalaryBreakdownService } from './salary-breakdown.service';
+import { SalaryMonthlyDetailService } from './salary-monthly-detail.service';
 import { SalaryAdvanceCalendarService } from './salary-advance-calendar.service';
 import { SalaryPeriodSettingsService } from './salary-period-settings.service';
 import {
@@ -26,7 +27,7 @@ import { SalaryStaffConfigQueryDto } from './dto/salary-staff-config-query.dto';
 import { SalaryMonthlyQueryDto } from './dto/salary-monthly-query.dto';
 import { SalaryCenterTopUpService } from './salary-center-topup.service';
 import { SalaryStaffConfigService } from './salary-staff-config.service';
-import { BatchPayDto } from './dto/batch-pay.dto';
+import { PayPaymentDto } from './dto/pay-payment.dto';
 import { SettleMonthDto } from './dto/settle-month.dto';
 import { CalculateSalaryDto } from './dto/calculate-salary.dto';
 import { parseTashkentDateStart } from './shared/resolve-current-period';
@@ -45,6 +46,7 @@ export class SalaryController {
     private advanceCalendarService: SalaryAdvanceCalendarService,
     private centerTopUpService: SalaryCenterTopUpService,
     private staffConfigService: SalaryStaffConfigService,
+    private monthlyDetailService: SalaryMonthlyDetailService,
   ) {}
 
   // =========================================================================
@@ -430,22 +432,55 @@ export class SalaryController {
   }
 
   /**
-   * Per-teacher advance breakdown for the "Avans" cell drawer on the salary
-   * page — each TEACHER_ADVANCE given to the teacher in the selected month.
+   * The row drawer of the «Ish haqi» page: one person's row for a month plus
+   * what the drawer reads off other tables (the payout of a PAID month, the
+   * payee's cash accounts, the difference since the cron calculated).
+   *
+   * Scoped by the header like `/salary/monthly`, because the drawer opens from
+   * that page; a person outside the scope is a named 404.
    */
-  @Get('advances/:userId')
+  @Get('monthly/user/:userId/detail')
   @Can('salary.view')
-  getAdvances(
-    @Param('userId', ParseIntPipe) userId: number,
-    @Query('month') month: string | undefined,
+  getMonthlyDetail(
+    @Param('userId', ParseIntPipe) targetUserId: number,
+    @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') performedById: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.salaryService.getAdvancesForUser(
-      userId,
-      { month },
+    return this.monthlyDetailService.getDetail(
+      targetUserId,
+      { month: query.month, branchId: singleBranchId(scope) },
       companyId,
       performedById,
+    );
+  }
+
+  /**
+   * The month's live (unpaid) accruals of one person — the CSV source for a
+   * month the cron has not calculated yet. A calculated month keeps
+   * `GET /salary/payments/:id/breakdown`.
+   */
+  @Get('monthly/user/:userId/lessons')
+  @Can('salary.view')
+  async getMonthlyLessons(
+    @Param('userId', ParseIntPipe) targetUserId: number,
+    @Query() query: SalaryMonthlyQueryDto,
+    @CurrentUser('id') performedById: number,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    // The detail service resolves the person first (404 outside the scope).
+    const period = await this.monthlyDetailService.getPeriod(
+      targetUserId,
+      { month: query.month, branchId: singleBranchId(scope) },
+      companyId,
+      performedById,
+    );
+    return this.breakdownService.getPeriodBreakdown(
+      targetUserId,
+      companyId,
+      period,
     );
   }
 
@@ -453,12 +488,13 @@ export class SalaryController {
    * Kunlik avans kalendari — «Avanslar» tabi. Tanlangan oydagi barcha
    * TEACHER_ADVANCE xarajatlari kun bo'yicha guruhlangan holda.
    *
-   * Yo'l `advance-calendar`, `advances/calendar` EMAS: ikkinchisi yuqoridagi
-   * `advances/:userId` marshrutiga tushib, ParseIntPipe'da 400 bo'lardi.
-   *
    * `SalaryMonthlyQueryDto` qayta ishlatiladi (month regex allaqachon shu
    * yerda); undagi `search` bu endpoint uchun ma'nosiz, shuning uchun servisga
-   * faqat `month` uzatiladi.
+   * faqat `month` va filial uzatiladi.
+   *
+   * Filial sarlavhadagi tanlovdan keladi, `/salary/monthly` kabi: «Avanslar»
+   * tabi «Oyliklar» jadvali bilan bir filialni ko'rsatishi shart. `BranchScope`
+   * bilan marshrut o'zi `BRANCH_SCOPED_BY_HEADER` deb tasniflanadi.
    */
   @Get('advance-calendar')
   @Can('salary.view')
@@ -466,9 +502,12 @@ export class SalaryController {
     @Query() query: SalaryMonthlyQueryDto,
     @CurrentUser('id') performedById: number,
     @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
   ) {
+    // `singleBranchId`, not the raw header: the resolver takes one branch and
+    // re-confines the caller itself, so this can only narrow.
     return this.advanceCalendarService.getCalendar(
-      { month: query.month },
+      { month: query.month, branchId: singleBranchId(scope) },
       companyId,
       performedById,
     );
@@ -560,31 +599,15 @@ export class SalaryController {
     return this.salaryService.approvePayment(id, companyId);
   }
 
+  /** «Berildi»: the day and the cash/card split are required (spec §5.2). */
   @Post('payments/:id/pay')
   @Can('salary.pay')
   payPayment(
     @Param('id') id: string,
+    @Body() dto: PayPaymentDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.salaryService.payPayment(id, userId, companyId);
-  }
-
-  @Post('payments/batch-pay')
-  @Can('salary.pay')
-  batchPay(
-    @Body() dto: BatchPayDto,
-    @CurrentUser('id') userId: number,
-    @CurrentUser('companyId') companyId: number,
-  ) {
-    return this.salaryService.batchPay(
-      {
-        companyId,
-        branchId: dto.branchId,
-        userIds: dto.userIds,
-        statuses: dto.statuses,
-      },
-      userId,
-    );
+    return this.salaryService.payPayment(id, dto, userId, companyId);
   }
 }

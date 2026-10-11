@@ -241,7 +241,8 @@ function reminderHeadline(dueAt: Date | null, now: Date): string {
 function headline(view: TgTaskView, n: TgNotice, now: Date): string {
   switch (n.kind) {
     case 'ASSIGNED':
-      return `Yangi topshiriq · ${PRIORITY_LABEL[view.priority]}`;
+      // A system task is done on the website (spec §6.1 «Tizim topshirig'i»).
+      return `${view.kind === 'MANUAL' ? 'Yangi topshiriq' : "Tizim topshirig'i"} · ${PRIORITY_LABEL[view.priority]}`;
     case 'ADDED':
       return "Siz topshiriqqa qo'shildingiz";
     case 'MOVED':

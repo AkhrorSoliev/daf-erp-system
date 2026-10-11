@@ -10,6 +10,7 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { ExpenseCategory, ExpensePaymentMethod, Prisma } from '@prisma/client';
 import { CreateExpenseDto } from './dto/create-expense.dto';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { equalsOrIn } from '../common/dto/to-array';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
 import { resolvePeriod } from '../common/finance/period-helpers';
@@ -167,6 +168,10 @@ export class ExpensesService {
    * to'lovni eski raqam bo'yicha qoldiradi — oylik varaqasidagi
    * «grossTotal − avanslar = to'langan» tenglama buziladi. Tuzatishning
    * yagona to'g'ri yo'li: avval o'sha oylikni bekor qilish.
+   *
+   * Only an advance dated before the period end is ever netted (ADR-0082): a
+   * later one stays unsettled, and editable, until its own month is settled —
+   * or a later month, if it does not fit.
    */
   private assertAdvanceUnsettled(expense: {
     settledBySalaryPaymentId: string | null;
@@ -509,7 +514,7 @@ export class ExpensesService {
 
   async update(
     id: string,
-    dto: Partial<CreateExpenseDto>,
+    dto: UpdateExpenseDto,
     userId: number,
     companyId: number,
   ) {

@@ -66,7 +66,7 @@ export const LAUNCH_STATIONS: LaunchStation[] = [
     action: "Stavka qo'yish",
     tourTitle: "Stavka qo'ying",
     tourBody:
-      "«Sozlamalar» → «Ustoz stavkalari». Stavkasiz ustozni guruhga biriktirib bo'lmaydi.",
+      "«Stavkalar» → «Ustoz stavkalari». Stavkasiz ustozni guruhga biriktirib bo'lmaydi.",
     route: () => "/payments/salary",
     targets: ["salary-settings"],
   },

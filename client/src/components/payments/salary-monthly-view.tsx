@@ -1,273 +1,113 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowUpRight,
-  BadgeCheck,
-  HandCoins,
-  Info,
-  Search,
-  Settings2,
-} from "lucide-react";
+import { Info, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MonthPicker } from "@/components/ui/month-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
-import { formatPrice } from "@/lib/format-utils";
-import { cn } from "@/lib/utils";
-import {
-  SALARY_STATUS_BADGE,
-  SALARY_STATUS_LABELS,
-  currentMonthKey,
-  monthLabel,
-} from "./salary-utils";
-import { SalaryInactiveBadge } from "./salary-inactive-badge";
-import { SalarySettingsSheet } from "./salary-settings-sheet";
+import { monthLabel } from "./salary-utils";
 import type { SalarySettingsAccess } from "./salary-settings-access";
 import { SettleMonthDialog } from "./salary-settle-month-dialog";
-import { SalaryAdvanceDialog } from "./salary-advance-dialog";
-import {
-  SalaryAdvanceBreakdownDrawer,
-  type AdvanceTarget,
-} from "./salary-advance-breakdown-drawer";
-import {
-  SalaryMonthlyStaffTable,
-  type StaffRow,
-  type StaffTotals,
-} from "./salary-monthly-staff-table";
-
-interface MonthlyRow {
-  user: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    isActive: boolean;
-    branch: { id: number; name: string } | null;
-  };
-  hasLessonData: boolean;
-  isFixedMonthly: boolean;
-  fullDeserved: number | null;
-  covered: number | null;
-  centerFunded: number | null;
-  advances: number;
-  netToPay: number;
-  centerAdvanced: number;
-  centerStillFronted: number;
-  payment: { id: string; amount: number; status: string } | null;
-}
-interface MonthlyResponse {
-  month: string;
-  floorMonth: string;
-  period: { periodStart: string; periodEnd: string; cycleStartDay: number };
-  data: MonthlyRow[];
-  totals: {
-    fullDeserved: number;
-    covered: number;
-    centerFunded: number;
-    advances: number;
-    netToPay: number;
-    // Center top-up lifecycle (company-level card): advanced (X) / recovered
-    // (Y) / still-fronted (Z), where Y = X − Z.
-    centerAdvanced: number;
-    centerRecovered: number;
-    centerStillFronted: number;
-    /** Debt of the students the center fronted for, as their profiles show it. */
-    centerOwedByStudents: number;
-  };
-  // Non-teaching FIXED_MONTHLY staff (admin/cashier/director) — flat salary.
-  staff: StaffRow[];
-  staffTotals: StaffTotals;
-}
-
-const FALLBACK_FLOOR = "2026-05";
+import { SalaryAttentionCard } from "./salary/salary-attention-card";
+import { filterPeople, mergePeople, segmentLabels } from "./salary/salary-page-model";
+import { SalaryPeopleTable } from "./salary/salary-people-table";
+import { useInvalidateSalary, useSalaryMonthly } from "./salary/salary-queries";
+import { SalarySummaryCard } from "./salary/salary-summary-card";
 
 const filtersSchema = {
-  month: { type: "string" as const, defaultValue: "" },
   search: { type: "string" as const, defaultValue: "" },
-  // The page holds two payrolls that are computed differently: teachers earn
-  // per lesson, staff earn a flat monthly rate. Filtering by which one you are
-  // looking at is the split the data itself already has.
+  // Teachers earn per lesson, staff a flat monthly rate: the split the data already has.
   kim: { type: "string" as const, defaultValue: "all" },
 };
 
-interface Props {
-  canClose: boolean;
-  /** CEO/BD — may add advances (backed by the CEO/BD expense-create endpoint). */
-  canPay: boolean;
-  /** ⚙ Sozlamalar: CEO sees everything, a director only teacher rates (ADR-0034). */
-  settingsAccess: SalarySettingsAccess;
-  onOpenBreakdown: (paymentId: string) => void;
-  refreshKey: number;
-  bumpRefresh: () => void;
-}
+type Kim = "all" | "teachers" | "staff";
+const asKim = (v: string): Kim => (v === "teachers" || v === "staff" ? v : "all");
 
-/** Renders a so'm value, or a muted "—" when the month has no per-lesson data. */
-function MoneyOrDash({
-  value,
-  className,
-}: {
-  value: number | null;
-  className?: string;
-}) {
-  if (value == null)
-    return <span className="text-muted-foreground">—</span>;
-  return <span className={cn("tabular-nums", className)}>{formatPrice(value)}</span>;
+interface Props {
+  /** `YYYY-MM` from the page header; the server may clamp it up to its floor. */
+  month: string;
+  onOpenRow: (userId: number) => void;
+  /** `salary.close` — the bulk settle. */
+  canClose: boolean;
+  settingsAccess: SalarySettingsAccess;
+  onOpenSettings: () => void;
 }
 
 /**
- * A card figure that links to where it is explained.
- *
- * A bare number carries no hint that it does anything, and the card holds four
- * of them — two inert, two not. The dotted underline says "link" and the arrow
- * says "this goes somewhere", so the two live figures read as different in kind
- * from "Jami qo'shdi" / "Undirildi" rather than merely differently coloured.
- *
- * It is a `<Link>`, not a button opening a dialog. The same list already lives
- * in this page's «Markaz qoplagani» tab, and a dialog holding a second copy meant two places to
- * keep in step — plus a list nobody could open in a new tab or send to a
- * colleague. Falls back to plain text at zero: an affordance leading to an
- * empty list is worse than none.
+ * «Oyliklar» (spec §2.2–§2.4): summary → attention → filters → one table.
+ * The month picker, «Stavkalar» and «+ Avans berish» live in the page header.
  */
-function DrillDownAmount({
-  value,
-  href,
-  label,
-  className,
-}: {
-  value: number;
-  /** Where the figure is explained. A real link, so Cmd-click opens a tab. */
-  href: string;
-  /** Read out by screen readers and shown on hover — the number alone is mute. */
-  label: string;
-  className?: string;
-}) {
-  if (value <= 0)
-    return (
-      <div className={cn("text-lg font-semibold tabular-nums", className)}>
-        {formatPrice(value)}
-      </div>
-    );
-  return (
-    <Link
-      href={href}
-      aria-label={label}
-      title={label}
-      className={cn(
-        "group inline-flex items-center gap-1.5 rounded-sm text-lg font-semibold tabular-nums",
-        "underline decoration-dotted underline-offset-4 transition hover:decoration-solid",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        className,
-      )}
-    >
-      {formatPrice(value)}
-      <ArrowUpRight className="size-4 shrink-0 opacity-50 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
-    </Link>
-  );
-}
-
-export function SalaryMonthlyView({
-  canClose,
-  canPay,
-  settingsAccess,
-  onOpenBreakdown,
-  refreshKey,
-  bumpRefresh,
-}: Props) {
+export function SalaryMonthlyView({ month, onOpenRow, canClose, settingsAccess, onOpenSettings }: Props) {
   const { filters, setFilters } = useUrlFilters(filtersSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
-  const [addAdvanceOpen, setAddAdvanceOpen] = useState(false);
-  const [advanceTarget, setAdvanceTarget] = useState<AdvanceTarget | null>(
-    null,
-  );
+  const invalidateSalary = useInvalidateSalary();
+  const debouncedSetSearch = useDebouncedCallback((value: string) => setFilters({ search: value }), 300);
 
-  const maxMonth = currentMonthKey();
-  const month = filters.month || maxMonth;
-
-  const debouncedSetSearch = useDebouncedCallback((value: string) => {
-    setFilters({ search: value });
-  }, 300);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["salary-monthly", month, filters.search, refreshKey],
-    queryFn: () =>
-      api
-        .get<MonthlyResponse>("/salary/monthly", {
-          params: { month, search: filters.search || undefined },
-        })
-        .then((r) => r.data),
-    staleTime: 0,
-  });
-
-  const rows = data?.data ?? [];
-  const totals = data?.totals;
-  const floorMonth = data?.floorMonth ?? FALLBACK_FLOOR;
-  // The server clamps the month up to the floor — reflect that in the picker.
+  const { data, isError, refetch } = useSalaryMonthly(month, filters.search);
   const shownMonth = data?.month ?? month;
-  const monthHasNoData =
-    rows.length > 0 && rows.every((r) => !r.hasLessonData);
 
-  // How many payroll rows this month still carries as unpaid. Read from the
-  // settle preview, not from the table: the table shows one payment per
-  // employee, and a re-calculated month can carry several per person.
+  // Unpaid payroll rows, from the settle preview rather than the table: a
+  // re-calculated month can carry several payments per person.
   const { data: settlePreview } = useQuery({
-    queryKey: ["settle-month-preview", shownMonth, refreshKey],
+    queryKey: ["settle-month-preview", shownMonth],
     queryFn: () =>
       api
-        .get<{ rows: unknown[]; total: number }>(
-          "/salary/payments/settle-month/preview",
-          { params: { month: shownMonth } },
-        )
+        .get<{ rows: unknown[] }>("/salary/payments/settle-month/preview", { params: { month: shownMonth } })
         .then((r) => r.data),
-    enabled: canClose,
+    enabled: canClose && !!data && data.monthState.kind !== "OPEN",
     staleTime: 0,
   });
   const unpaidCount = settlePreview?.rows.length ?? 0;
 
+  const people = useMemo(() => (data ? mergePeople(data) : []), [data]);
+  const kim = asKim(filters.kim);
+  const segment = segmentLabels(data);
+  const monthHasNoData = !!data && data.data.length > 0 && data.data.every((t) => !t.hasLessonData);
+
+  // A failed request is not "nobody this month" — never fall into the empty state.
+  if (isError && !data) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-10 text-sm text-muted-foreground">
+        Ma&apos;lumotni yuklab bo&apos;lmadi.
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Qayta urinish
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Filter bar */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <MonthPicker
-          value={shownMonth}
-          minMonth={floorMonth}
-          maxMonth={maxMonth}
-          onChange={(m) => setFilters({ month: m })}
-          className="sm:w-52"
+    <div className="flex flex-col gap-4">
+      {data ? (
+        <SalarySummaryCard
+          data={data}
+          canClose={canClose}
+          unpaidCount={unpaidCount}
+          onSettle={() => setSettleOpen(true)}
         />
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      ) : (
+        <Skeleton className="h-52 w-full rounded-xl" />
+      )}
+
+      {data && (
+        <SalaryAttentionCard
+          attention={data.attention}
+          canEditStaffRates={settingsAccess.canManageCompanyPayroll}
+          onOpenSettings={settingsAccess.canOpen ? onOpenSettings : undefined}
+        />
+      )}
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Ism, familiya yoki ID bo'yicha..."
+            placeholder="Ism yoki ID"
             className="pl-9"
             value={searchInput}
             onChange={(e) => {
@@ -276,420 +116,53 @@ export function SalaryMonthlyView({
             }}
           />
         </div>
-        <Select
-          value={filters.kim}
-          onValueChange={(v) => setFilters({ kim: v })}
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          spacing={0}
+          value={kim}
+          // Radix lets a single group be emptied by clicking the active item; keep one chosen.
+          onValueChange={(v) => v && setFilters({ kim: v })}
+          className="w-full sm:w-auto"
         >
-          <SelectTrigger className="shrink-0 sm:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Hamma xodimlar</SelectItem>
-            <SelectItem value="teachers">Faqat ustozlar</SelectItem>
-            <SelectItem value="staff">Faqat xodimlar</SelectItem>
-          </SelectContent>
-        </Select>
-        {canPay && (
-          <Button
-            className="shrink-0"
-            onClick={() => setAddAdvanceOpen(true)}
-          >
-            <HandCoins className="size-4" />
-            Avans qo&apos;shish
-          </Button>
-        )}
-        {canClose && unpaidCount > 0 && (
-          <Button
-            variant="outline"
-            className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-950/30"
-            onClick={() => setSettleOpen(true)}
-          >
-            <BadgeCheck className="size-4" />
-            Oylik berilganini tasdiqlash ({unpaidCount} ta)
-          </Button>
-        )}
-        {settingsAccess.canOpen && (
-          <Button
-            variant="outline"
-            className="shrink-0"
-            data-tour="salary-settings"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <Settings2 className="size-4" />
-            Sozlamalar
-          </Button>
-        )}
+          <ToggleGroupItem value="all" className="flex-1">{segment.all}</ToggleGroupItem>
+          <ToggleGroupItem value="teachers" className="flex-1">{segment.teachers}</ToggleGroupItem>
+          <ToggleGroupItem value="staff" className="flex-1">{segment.staff}</ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
-      {/* Manual-month note — about per-lesson data, i.e. the teacher table */}
-      {filters.kim !== "staff" && monthHasNoData && (
+      {/* Manual-month note — about per-lesson data, i.e. the teacher rows */}
+      {kim !== "staff" && monthHasNoData && (
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
           <Info className="mt-0.5 size-4 shrink-0" />
           <span>
-            {monthLabel(shownMonth)} — bu oy qo&apos;lda kiritilgan, har bir dars
-            bo&apos;yicha ma&apos;lumot yo&apos;q. Faqat kiritilgan summa va avans ko&apos;rsatilgan.
+            {monthLabel(shownMonth)} — bu oy qo&apos;lda kiritilgan, har bir dars bo&apos;yicha ma&apos;lumot yo&apos;q.
+            Faqat kiritilgan summa va avans ko&apos;rsatilgan.
           </span>
         </div>
       )}
 
-      {/* Teachers */}
-      {filters.kim !== "staff" && (
-      <div className="overflow-hidden rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>O&apos;qituvchi</TableHead>
-              <TableHead className="text-right">To&apos;liq ishlangan</TableHead>
-              <TableHead className="text-right">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger className="inline-flex items-center gap-1">
-                      O&apos;quvchilar to&apos;lagan
-                      <Info className="size-3.5 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-64">
-                      Faqat o&apos;quvchilar haqiqatan to&apos;lagan pul bilan
-                      qoplangan qism. Oylik hisobi yozilgan, lekin hali
-                      to&apos;lanmagan darslar bu yerga emas, «Markaz qo&apos;shdi»
-                      ga kiradi.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </TableHead>
-              <TableHead className="text-right">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger className="inline-flex items-center gap-1">
-                      Markaz qo&apos;shdi
-                      <Info className="size-3.5 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-64">
-                      Markazning o&apos;z hisobidan bergan qismi. Oy yopilmaguncha
-                      bu prognoz — o&apos;quvchi to&apos;lasa kamayadi; oy yopilgach
-                      markaz haqiqatan bergan summa bo&apos;lib qoladi. Keyin
-                      o&apos;quvchi to&apos;lasa, pul markazga qaytadi (pastdagi
-                      &laquo;undirildi&raquo;), ustozga qayta yozilmaydi. Oylik
-                      to&apos;lov kurslarida o&apos;quvchi hali to&apos;lamagan oylik
-                      hisobining ulushi ham shu yerda — u to&apos;lagan sari
-                      kamayadi.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </TableHead>
-              <TableHead className="text-right">Avans</TableHead>
-              <TableHead className="text-right">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger className="inline-flex items-center gap-1">
-                      To&apos;lanishi kerak
-                      <Info className="size-3.5 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-56">
-                      O&apos;qituvchiga to&apos;lanishi kerak bo&apos;lgan sof summa:
-                      to&apos;liq ishlangan (markaz qo&apos;shimchasi bilan) − avans.
-                      Hisoblab bo&apos;lingan oylar uchun haqiqiy to&apos;langan summa
-                      ko&apos;rsatiladi.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </TableHead>
-              <TableHead>Holat</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={8}>
-                    <Skeleton className="h-9 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : rows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="py-10 text-center text-sm text-muted-foreground"
-                >
-                  Bu oyda o&apos;qituvchi topilmadi — oyni yoki qidiruvni
-                  o&apos;zgartirib ko&apos;ring.
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row, idx) => {
-                const p = row.payment;
-                return (
-                  <TableRow
-                    key={row.user.id}
-                    className={cn(p && "cursor-pointer")}
-                    onClick={p ? () => onOpenBreakdown(p.id) : undefined}
-                  >
-                    <TableCell className="border-r text-muted-foreground tabular-nums">
-                      {idx + 1}
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Link
-                        href={`/teachers/profile/${row.user.id}?tab=ish-haqi`}
-                        className="font-medium hover:underline"
-                      >
-                        {row.user.firstName} {row.user.lastName}
-                      </Link>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        #{row.user.id}
-                        {row.user.branch ? ` · ${row.user.branch.name}` : ""}
-                        {row.isFixedMonthly && (
-                          <Badge
-                            variant="outline"
-                            className="h-4 px-1 text-[10px] font-normal"
-                          >
-                            Oylik
-                          </Badge>
-                        )}
-                        {/* Faol emas ustoz bu yerga faqat puli qolganda
-                            tushadi — belgi "nega hali ro'yxatda?" degan
-                            savolga javob beradi. */}
-                        {!row.user.isActive && <SalaryInactiveBadge />}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      <MoneyOrDash value={row.fullDeserved} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <MoneyOrDash value={row.covered} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <MoneyOrDash
-                        value={row.centerFunded}
-                        className={cn(
-                          row.centerFunded &&
-                            row.centerFunded > 0 &&
-                            "font-medium text-amber-700 dark:text-amber-400",
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell
-                      className="text-right tabular-nums"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {row.advances > 0 ? (
-                        <button
-                          type="button"
-                          className="font-medium text-amber-700 hover:underline dark:text-amber-400"
-                          onClick={() =>
-                            setAdvanceTarget({
-                              userId: row.user.id,
-                              name: `${row.user.firstName} ${row.user.lastName}`,
-                              month: shownMonth,
-                            })
-                          }
-                        >
-                          {formatPrice(row.advances)}
-                        </button>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">
-                      {formatPrice(row.netToPay)}
-                    </TableCell>
-                    <TableCell>
-                      {p ? (
-                        <Badge
-                          className={cn("font-normal", SALARY_STATUS_BADGE[p.status])}
-                        >
-                          {SALARY_STATUS_LABELS[p.status] ?? p.status}
-                        </Badge>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">
-                          Hisoblanmagan
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-          {!isLoading && rows.length > 0 && totals && (
-            <TableFooter>
-              <TableRow>
-                <TableCell className="border-r" />
-                <TableCell className="font-semibold">Jami</TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">
-                  {formatPrice(totals.fullDeserved)}
-                </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">
-                  {formatPrice(totals.covered)}
-                </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-                  {formatPrice(totals.centerFunded)}
-                </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">
-                  {formatPrice(totals.advances)}
-                </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">
-                  {formatPrice(totals.netToPay)}
-                </TableCell>
-                <TableCell />
-              </TableRow>
-            </TableFooter>
-          )}
-        </Table>
-      </div>
-      )}
+      <SalaryPeopleTable
+        rows={filterPeople(people, kim)}
+        state={data?.monthState.kind ?? "OPEN"}
+        // Not `isLoading`: a paused (offline) query has no data and is not loading.
+        loading={!data}
+        onOpenRow={onOpenRow}
+      />
 
-      {/* Markaz qo'shimchasi lifecycle (company-level) — shown only for months
-          where the center actually fronted money (past settled top-up months). */}
-      {!isLoading && totals && totals.centerAdvanced > 0 && (
-        <div className="rounded-md border bg-muted/20 p-4">
-          <div className="mb-3 flex items-center gap-1.5 text-sm font-medium">
-            Markaz qo&apos;shimchasi — undirish holati (bu oy)
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="size-3.5 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-64">
-                  Markaz o&apos;quvchilar to&apos;lamagan qismni ustozlarga
-                  qo&apos;shib bergan. O&apos;quvchilar keyin to&apos;lasa, u pul
-                  markazga qaytadi (undirildi) va ustozga qayta yozilmaydi.
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <div className="text-xs text-muted-foreground">
-                Jami qo&apos;shdi
-              </div>
-              <div className="text-lg font-semibold tabular-nums">
-                {formatPrice(totals.centerAdvanced)}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Undirildi</div>
-              <div className="text-lg font-semibold tabular-nums text-green-700 dark:text-green-400">
-                {formatPrice(totals.centerRecovered)}
-              </div>
-            </div>
-            {/* What can actually be collected from the people the center
-                fronted for — their debt TODAY. Deliberately NOT part of the
-                X = Y + Z arithmetic of the other three cells: it is a live
-                balance, not a share of this month's payroll. */}
-            <div>
-              <div className="text-xs text-muted-foreground">
-                O&apos;quvchilardan olinishi kerak
-              </div>
-              <DrillDownAmount
-                value={totals.centerOwedByStudents}
-                href={`/payments/salary?tab=markaz&month=${shownMonth}`}
-                label="O'quvchilardan olinishi kerak bo'lgan summa — kimdan undirish kerakligini ko'rish"
-              />
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                Shu o&apos;quvchilarning qarzi
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">
-                Qolgan (markaz)
-              </div>
-              {/* The only actionable figure of the three: X and Y are history,
-                  Z is money still to be collected. Clicking it opens the list
-                  of students it is owed by. */}
-              <DrillDownAmount
-                value={totals.centerStillFronted}
-                href={`/payments/salary?tab=markaz&month=${shownMonth}`}
-                label="Markaz qoplagan, hali qaytmagan summa — kimdan undirish kerakligini ko'rish"
-                className="text-amber-700 dark:text-amber-400"
-              />
-              {/* Symmetric with the cell to its left: each says what its number
-                  is priced on, and the underline + icon carry the "clickable". */}
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                Ustoz ulushi
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <p className="text-xs text-muted-foreground">
+        Jadvalda «O&apos;quvchilar to&apos;lagan / Markaz qo&apos;shdi» ustunlari yo&apos;q — ular xodim oynasida.
+        «Avans» — aynan shu oylikdan ushlanadigan summa. Hisoblash davri doim kalendar oyi (1-sanadan).
+      </p>
 
-      {/* Fixed-salary staff (admin / cashier / director) — a separate payroll:
-          flat monthly rate, no per-lesson accruals. */}
-      {filters.kim !== "teachers" &&
-        !isLoading &&
-        data &&
-        (data.staff.length > 0 ? (
-          <SalaryMonthlyStaffTable
-            staff={data.staff}
-            totals={data.staffTotals}
-            onOpenBreakdown={onOpenBreakdown}
-          />
-        ) : (
-          // Actionable empty state: staff pay is invisible here until a rate
-          // exists, and without one their lessons-free salary never reaches the
-          // profit figure either.
-          <div className="flex items-start gap-2 rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
-            <Info className="mt-0.5 size-4 shrink-0" />
-            <span>
-              Xodimlarga (administrator, kassir, direktor) hali oylik
-              belgilanmagan.
-              {canClose
-                ? " Belgilash uchun ⚙ Sozlamalar → Xodimlar stavkalari."
-                : " CEO ⚙ Sozlamalar → Xodimlar stavkalari bo'limida belgilaydi."}
-            </span>
-          </div>
-        ))}
-
-      {/* Row count + manual-month totals caveat — teacher table only */}
-      {filters.kim !== "staff" && !isLoading && rows.length > 0 && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Jami: {rows.length} ta o&apos;qituvchi</span>
-          {rows.some((r) => !r.hasLessonData && r.payment) && (
-            <span>
-              Qo&apos;lda kiritilgan oylar &quot;to&apos;liq / to&apos;lagan / qo&apos;shilishi&quot;
-              jamiga qo&apos;shilmagan
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Confirm a month paid outside the system — CEO */}
       {canClose && (
         <SettleMonthDialog
           open={settleOpen}
           month={shownMonth}
           onOpenChange={setSettleOpen}
-          onSettled={bumpRefresh}
+          onSettled={invalidateSalary}
         />
       )}
-
-      {/* Settings — CEO sees everything; a director only their own branch's teacher rates (ADR-0034) */}
-      {settingsAccess.canOpen && (
-        <SalarySettingsSheet
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          period={data?.period ?? null}
-          onChanged={bumpRefresh}
-          access={settingsAccess}
-        />
-      )}
-
-      {/* Avans qo'shish — CEO/BD */}
-      {canPay && (
-        <SalaryAdvanceDialog
-          open={addAdvanceOpen}
-          onOpenChange={setAddAdvanceOpen}
-          onSaved={bumpRefresh}
-        />
-      )}
-
-      {/* Avans breakdown drawer (opened from the Avans cell) */}
-      <SalaryAdvanceBreakdownDrawer
-        target={advanceTarget}
-        onClose={() => setAdvanceTarget(null)}
-        canPay={canPay}
-        onChanged={bumpRefresh}
-      />
     </div>
   );
 }

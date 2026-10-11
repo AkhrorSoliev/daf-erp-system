@@ -225,6 +225,16 @@ describe('TaskNotifyListener', () => {
     });
   });
 
+  it('an automatic close writes no notice and refreshes the open pages', async () => {
+    await listener.onAutoClosed({ task: { ...task, status: 'DONE' } });
+    expect(notif.create).not.toHaveBeenCalled();
+    expect(push.sendToUser).not.toHaveBeenCalled();
+    expect(gateway.sendToUser).toHaveBeenCalledWith(40, {
+      type: 'task.updated',
+      taskId: 't1',
+    });
+  });
+
   it('listens to every task event', () => {
     const listened = Object.getOwnPropertyNames(TaskNotifyListener.prototype)
       .flatMap(

@@ -6,6 +6,33 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-11",
+    sarlavha: "Ustoz profilida diagrammalar",
+    matn: "Ustoz profilida yangi «Ko'rsatkichlar» bo'limi bor va u birinchi ochiladi. Unda oxirgi 6 oy bo'yicha to'rtta diagramma bor: oylik (faqat CEO va filial direktoriga ko'rinadi), faol o'quvchilar soni, kelgan va ketgan o'quvchilar, davomat foizi. Oylik «Ish haqi» bo'limidagi raqamning o'zi. «Ketdi» — «Ketganlar» hisobotidagi qoida bo'yicha; och qizil — to'xtagan, lekin hali qaytishi mumkin bo'lganlar. Guruh boshqa ustozga o'tgan bo'lsa, o'sha kundan boshlab yangi ustozga sanaladi. Ustozning o'zi ham shu diagrammalarni «Profil» sahifasida ko'radi — faqat o'zinikini.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
+    sana: "2026-10-11",
+    sarlavha: "Avtomatik topshiriqlar",
+    matn: "Tizim endi uch topshiriqni o'zi beradi. «Buzilgan va'da» — ertalab 09:00 da va'dasi buzilgan, qarzi 1 000 so'mdan kam bo'lmagan har o'quvchiga bittadan, filial administratorlariga; administratorlarga ertalabki ro'yxat endi kelmaydi (CEO avvalgidek oladi). «Qayta qo'ng'iroq» — qo'ng'iroq natijasida «Keyingi bog'lanish sanasi» qo'yilsa, o'sha kunga qo'ng'iroqni yozgan xodimga; Telegram'ga o'sha kuni 08:00 dan oldin yuborilmaydi: ertaroq bo'ladigan bo'lsa, 08:00 ni kutadi. «Qo'ng'iroqsiz lid» — yangi lidga 24 soat ichida qo'ng'iroq qilinmasa, filial administratorlariga, ular bo'lmasa direktorlarga, ular ham bo'lmasa CEO ga (faqat qoida yoqilgan paytdan keyin kelgan lidlar uchun). Muddati — 18:00. Topshiriq varag'ida o'quvchi yoki lid haqida karta va bitta tugma bor: «Qo'ng'iroqni yozish» yoki «Lidni ochish». Ish bajarilganda — qarz to'lansa yoki boshqacha yopilsa (masalan, dars puli qaytsa), qo'ng'iroq yozilsa, lidga qo'ng'iroq belgisi qo'yilsa — topshiriq o'zi yopiladi. Kechki 21:00 hisobotida muddati o'tgan topshiriqlar soni chiqadi; eng ko'p kechikkan xodim ishdan ketgan bo'lsa, uning ismi yozilmaydi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
+  },
+  {
+    sana: "2026-10-11",
+    sarlavha: "Shartnomadagi ma'lumot o'quvchi profiliga yoziladi",
+    matn: "Shartnoma oynasida kiritilgan pasport, manzil, Telegram, ota-onaning ismi va telefoni endi o'quvchi profiliga ham yoziladi. Profilda bo'sh bo'lsa, saqlashda to'ldiriladi. Profildagidan farq qilsa, maydon ostida sariq ogohlantirish chiqadi: o'quvchidan qayta so'rab, «Profildagisi to'g'ri» yoki «Yangisi to'g'ri — profilni yangilash» ni tanlang. O'quvchining o'z telefon raqami bu yerdan o'zgarmaydi. Oyna endi profildagi ma'lumot bilan to'ldiriladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "shartnoma" },
+  },
+  {
+    sana: "2026-10-10",
+    sarlavha: "Ish haqi sahifasi yangilandi",
+    matn: "«Ish haqi» sahifasida endi bitta jadval va oy holati bor: oy davom etyaptimi, hisoblanganmi, tasdiqlanganmi yoki berilganmi — bir qarashda ko'rinadi. «Berildi» pul berilgan kun va naqd/karta summalarini so'raydi, pul tanlangan kassa va hisobdan chiqadi, xodimga bot orqali xabar boradi. Avans berilgan oyining oyligidan ushlanadi; «Avans» ustuni aynan shu oylikdan ushlanadigan summani ko'rsatadi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "tolovlar", sahifa: "ish-haqi" },
+  },
+  {
     sana: "2026-10-10",
     sarlavha: "DaF ilovasida A1 5-unit «Mein Tag» va yangi soat mashqi",
     matn: "O'quvchi ilovasida A1 kursining 5-uniti ochildi: vaqt, hafta kunlari, kundalik ishlar, uchrashuv belgilash va uy ishlari mavzusidagi 104 so'z, 103 gap va 7 ta dialog. Dialoglar 4-unitdagidek hayotiy ovoz bilan (fonda shovqin, eshik, telefon, avtobus), har biriga butun hikoyani ko'rsatadigan bitta rasm chizilgan; 15 ta so'zga rasm bor. Yangi mashq — soat: o'quvchi soatga qarab vaqtni tanlaydi, vaqtni eshitib to'g'ri soatni tanlaydi yoki soatga qarab vaqtni yozadi. Kundalik shakl («Viertel nach sieben») ham, rasmiy shakl («sieben Uhr fünfzehn») ham to'g'ri javob hisoblanadi.",

@@ -319,6 +319,30 @@ describe('TaskUserLifecycleListener', () => {
     expect(emitter.emit).not.toHaveBeenCalled();
   });
 
+  it('a branch-less system task goes to the company-wide ladder, not nobody', async () => {
+    const { listener, prisma, tx, emitter } = setup([
+      row({ kind: 'UNCALLED_LEAD', authorId: null, branchId: null }),
+    ]);
+    await listener.onDeactivated(event);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          companyId: 1,
+          roles: { some: { role: { name: 'Administrator' } } },
+        }),
+      }),
+    );
+    expect(tx.taskParticipant.createMany).toHaveBeenCalledWith({
+      data: [{ taskId: 't1', userId: 77, role: 'ASSIGNEE' }],
+      skipDuplicates: true,
+    });
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'task.reassigned',
+      expect.objectContaining({ toUserIds: [77] }),
+    );
+  });
+
   it('gives the new assignee the reminders the leaver had', async () => {
     const dueAt = new Date(Date.now() + 3 * 3_600_000);
     const { listener, tx } = setup([

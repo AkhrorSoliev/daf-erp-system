@@ -944,10 +944,6 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /salary/advances/:userId": [
-    "Branch Director",
-    "CEO"
-  ],
   "GET /salary/config-history/:userId": [
     "Branch Director",
     "CEO"
@@ -1003,6 +999,14 @@
     "CEO"
   ],
   "GET /salary/monthly/user/:userId": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/monthly/user/:userId/detail": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /salary/monthly/user/:userId/lessons": [
     "Branch Director",
     "CEO"
   ],
@@ -1254,9 +1258,21 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /teachers/:id/stats": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /teachers/:id/status-history": [
     "Branch Director",
     "CEO"
+  ],
+  "GET /teachers/me/stats": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
   ],
   "GET /telegram-groups": [
     "Administrator",
@@ -1882,10 +1898,6 @@
     "CEO"
   ],
   "POST /salary/payments/:id/pay": [
-    "Branch Director",
-    "CEO"
-  ],
-  "POST /salary/payments/batch-pay": [
     "Branch Director",
     "CEO"
   ],

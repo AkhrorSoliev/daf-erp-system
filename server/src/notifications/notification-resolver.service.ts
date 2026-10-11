@@ -175,6 +175,12 @@ export class NotificationResolverService {
     });
   }
 
+  /** An automatic task closed by its source (spec §7): every notice of it closes. */
+  @OnEvent(TASK_EVENTS.AUTO_CLOSED)
+  async onTaskAutoClosed(p: { task: TaskEventTask }): Promise<void> {
+    await this.resolveIfClosed(p.task);
+  }
+
   /** A join request decided, expired or replaced: its task's notices close (ADR-0080). */
   @OnEvent(JOIN_REQUEST_CLOSED)
   async onJoinRequestClosed(p: JoinRequestClosedEvent): Promise<void> {

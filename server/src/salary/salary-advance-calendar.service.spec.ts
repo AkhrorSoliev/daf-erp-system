@@ -61,6 +61,7 @@ describe('SalaryAdvanceCalendarService', () => {
       user: { findUnique: jest.fn().mockResolvedValue(ceoCaller) },
       expense: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfig: { findMany: jest.fn().mockResolvedValue([]) },
+      salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -289,5 +290,101 @@ describe('SalaryAdvanceCalendarService', () => {
     expect(settled?.settledPeriodEnd).toEqual(
       new Date('2026-07-31T00:00:00.000Z'),
     );
+  });
+
+  describe('deductMonth — which month’s salary the advance comes out of', () => {
+    it('an unsettled advance belongs to its own month', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance({
+          id: 'open',
+          date: new Date('2026-09-20T00:00:00.000Z'),
+        }),
+      ]);
+
+      const res = await service.getCalendar({ month: '2026-09' }, 1, 10001);
+
+      expect(res.advances[0].deductMonth).toBe('2026-09');
+    });
+
+    it('an unsettled advance whose own month is already calculated moves to the next month', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance({ id: 'late', date: new Date('2026-09-30T00:00:00.000Z') }),
+      ]);
+      // September's payroll ran before the advance was entered
+      // (periodStart = Tashkent midnight of 1 September).
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        { userId: 10005, periodStart: new Date('2026-08-31T19:00:00.000Z') },
+      ]);
+
+      const res = await service.getCalendar({ month: '2026-09' }, 1, 10001);
+
+      expect(res.advances[0].deductMonth).toBe('2026-10');
+      expect(prisma.salaryPayment.findMany.mock.calls[0][0].where).toEqual({
+        companyId: 1,
+        userId: { in: [10005] },
+        status: { not: 'CANCELLED' },
+        periodStart: { gte: new Date('2026-08-31T19:00:00.000Z') },
+      });
+    });
+
+    it('own and next month both calculated: the month after', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance({ id: 'rolled', date: new Date('2026-08-10T00:00:00.000Z') }),
+      ]);
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        { userId: 10005, periodStart: new Date('2026-07-31T19:00:00.000Z') },
+        { userId: 10005, periodStart: new Date('2026-08-31T19:00:00.000Z') },
+        // Another person's October payment does not move this advance.
+        { userId: 10099, periodStart: new Date('2026-09-30T19:00:00.000Z') },
+      ]);
+
+      const res = await service.getCalendar({ month: '2026-08' }, 1, 10001);
+
+      expect(res.advances[0].deductMonth).toBe('2026-10');
+    });
+
+    it('reads no payments when every advance is settled', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance({
+          id: 'settled',
+          settledBySalaryPaymentId: 'sp-1',
+          settledBySalaryPayment: {
+            periodStart: new Date('2026-06-30T19:00:00.000Z'),
+            periodEnd: new Date('2026-07-31T18:59:59.999Z'),
+          },
+        }),
+      ]);
+
+      const res = await service.getCalendar({ month: '2026-07' }, 1, 10001);
+
+      expect(res.advances[0].deductMonth).toBe('2026-07');
+      expect(prisma.salaryPayment.findMany).not.toHaveBeenCalled();
+    });
+
+    it('a settled advance follows the settling payment, not its own date', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        advance({
+          id: 'settled',
+          date: new Date('2026-08-31T00:00:00.000Z'),
+          settledBySalaryPaymentId: 'sp-9',
+          settledBySalaryPayment: {
+            // Tashkent midnight of 1 September.
+            periodStart: new Date('2026-08-31T19:00:00.000Z'),
+            periodEnd: new Date('2026-09-30T18:59:59.999Z'),
+          },
+        }),
+      ]);
+
+      const res = await service.getCalendar({ month: '2026-08' }, 1, 10001);
+
+      expect(res.advances[0].deductMonth).toBe('2026-09');
+    });
+  });
+
+  it('the header’s branch goes into the scope: the list narrows to that branch', async () => {
+    await service.getCalendar({ month: '2026-09', branchId: 2 }, 1, 10001);
+
+    const where = prisma.expense.findMany.mock.calls[0][0].where;
+    expect(where.relatedUser).toEqual({ branches: { some: { branchId: 2 } } });
   });
 });

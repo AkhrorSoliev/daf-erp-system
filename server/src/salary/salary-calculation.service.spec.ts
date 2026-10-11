@@ -33,6 +33,7 @@ describe('SalaryCalculationService', () => {
       expense: {
         // applyPendingAdvances: no pending advances by default.
         findMany: jest.fn().mockResolvedValue([]),
+        updateMany: jest.fn().mockResolvedValue({}),
         // already-settled advances against this payment.
         aggregate: jest.fn().mockResolvedValue({ _sum: { amount: null } }),
       },
@@ -796,6 +797,65 @@ describe('SalaryCalculationService', () => {
     expect(result.calculated).toBe(0);
     expect(result.skipped).toBe(1);
     expect(result.skippedUserIds).toEqual([7]);
+  });
+
+  describe('advance netting (only advances dated inside the period)', () => {
+    // The completed period is [May 8 → Jun 7]; its `@db.Date` exclusive end is
+    // 2026-06-08, so an advance dated 06.08 belongs to the NEXT month.
+    const advance = (id: string, amount: number, date: string) => ({
+      id,
+      amount,
+      date: new Date(`${date}T00:00:00.000Z`),
+      createdAt: new Date(`${date}T09:00:00.000Z`),
+    });
+
+    beforeEach(() => {
+      prisma.salaryAccrual.findMany.mockResolvedValueOnce([
+        { id: 'acc-1', userId: 7, amount: 5_000_000 },
+      ]);
+      tx.salaryAccrual.aggregate.mockResolvedValueOnce({
+        _sum: { amount: 5_000_000 },
+      });
+    });
+
+    it('leaves an advance dated on the period end for its own month', async () => {
+      tx.expense.findMany.mockResolvedValueOnce([
+        advance('adv-next', 300_000, '2026-06-08'),
+      ]);
+
+      const result = await service.calculateMonthlySalaries(1, { now });
+
+      expect(tx.expense.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: { id: true, amount: true, date: true, createdAt: true },
+        }),
+      );
+      expect(tx.expense.updateMany).not.toHaveBeenCalled();
+      expect(tx.salaryPayment.update).toHaveBeenLastCalledWith({
+        where: { id: 'sp-new' },
+        data: { amount: 5_000_000 },
+      });
+      expect(result.details[0].advanceDeducted).toBe(0);
+    });
+
+    it('settles an advance dated the last day of the period and nets it', async () => {
+      tx.expense.findMany.mockResolvedValueOnce([
+        advance('adv-in', 1_000_000, '2026-06-07'),
+        advance('adv-next', 300_000, '2026-06-08'),
+      ]);
+
+      const result = await service.calculateMonthlySalaries(1, { now });
+
+      expect(tx.expense.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['adv-in'] } },
+        data: { settledBySalaryPaymentId: 'sp-new' },
+      });
+      expect(tx.salaryPayment.update).toHaveBeenLastCalledWith({
+        where: { id: 'sp-new' },
+        data: { amount: 4_000_000 },
+      });
+      expect(result.details[0].advanceDeducted).toBe(1_000_000);
+    });
   });
 
   it('creates no payment when there are no accruals and no fixed-monthly staff', async () => {

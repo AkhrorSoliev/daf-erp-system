@@ -3,14 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { BreakdownTable } from "@/components/profile/teacher-salary-client";
 import { formatNumber } from "@/lib/format-utils";
-import { BreakdownRow } from "./salary-breakdown-drawer";
 import type { RateBasis } from "./salary-utils";
 
 // A3.2: oylik hisobdagi darsda FIXED_PER_STUDENT stavkasi o'quvchi boshiga
 // OYIGA, undan oldingi (sikl) darslarda SIKLiga. Qaysi dars qaysi birlikda
 // ekanini server hal qiladi (`rateBasis`), klient oy sanamaydi, faqat yozadi.
-// Admin oynasi ham, ustozning o'z sahifasi ham shu testdan o'tadi va hech biri
-// inglizcha «cycle» demaydi.
+// Ustozning o'z sahifasi shu testdan o'tadi va inglizcha «cycle» demaydi
+// (admin oynasida darslar jadvali yo'q — u CSV beradi).
 
 function line(salaryType: string, value: number, rateBasis: RateBasis) {
   return {
@@ -40,19 +39,6 @@ const totals = {
 type Line = ReturnType<typeof line>;
 
 const screens: [string, (l: Line) => ReactElement][] = [
-  [
-    "admin oynasi (BreakdownRow)",
-    (l) =>
-      createElement(
-        "table",
-        null,
-        createElement(
-          "tbody",
-          null,
-          createElement(BreakdownRow, { line: l, index: 1 }),
-        ),
-      ),
-  ],
   [
     "ustozning o'z sahifasi (BreakdownTable)",
     (l) => createElement(BreakdownTable, { lines: [l], totals }),

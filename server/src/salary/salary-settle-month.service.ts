@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SettleMonthDto } from './dto/settle-month.dto';
@@ -10,6 +11,7 @@ import {
   SettleRow,
   writeSettledRows,
 } from './salary-settle-core';
+import { SALARY_PAID_EVENT, SalaryPaidPayload } from './salary-events';
 
 // Kept importable from here: callers and specs predate the core split.
 export { buildSettleNote } from './salary-settle-core';
@@ -38,15 +40,15 @@ export interface SettleMonthResult {
  * amounts, but the rows stayed CALCULATED — so teacher balances carried
  * payouts that had already happened and the kassa read that much too high.
  *
- * Two things make this different from `batchPay`:
+ * Two things are load-bearing:
  *
  * 1. **The kassa account is named by the caller.** `resolveAccountId` picks the
  *    branch's oldest CASH account, which in production is an empty
  *    «Asosiy kassa» — 130 mln booked there would be a fiction.
- * 2. **Validate everything, then write.** `batchPay` wraps each payment in its
- *    own try/catch and reports failures; that is right for a routine run. Here
- *    the money is irreversible and the operator has just retyped the total, so
- *    a half-settled month is the one outcome nobody can act on.
+ * 2. **Validate everything, then write.** A per-payment try/catch that reports
+ *    failures would leave a half-settled month: the money is irreversible and
+ *    the operator has just retyped the total, so that is the one outcome
+ *    nobody can act on.
  *
  * Candidate loading, the date rules and the writer live in
  * `salary-settle-core.ts`, shared with `SalarySettleAllocatedService`.
@@ -56,6 +58,7 @@ export class SalarySettleMonthService {
   constructor(
     private prisma: PrismaService,
     private transactions: TransactionsService,
+    private events: EventEmitter2,
   ) {}
 
   async preview(
@@ -224,6 +227,15 @@ export class SalarySettleMonthService {
         companyId,
       },
     );
+
+    // After every write has committed, never inside one: each paid payee is
+    // told. A row another request paid first is not in `paymentIds`.
+    for (const salaryPaymentId of paymentIds) {
+      this.events.emit(SALARY_PAID_EVENT, {
+        salaryPaymentId,
+        companyId,
+      } satisfies SalaryPaidPayload);
+    }
 
     return {
       month: scope.month,

@@ -1,6 +1,12 @@
 import 'reflect-metadata';
 import { SalaryController } from './salary.controller';
+import {
+  BadRequestException,
+  NotFoundException,
+  ValidationPipe,
+} from '@nestjs/common';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
+import { PayPaymentDto } from './dto/pay-payment.dto';
 
 const CEO_ONLY = ['CEO'];
 const CEO_AND_BRANCH_DIRECTOR = ['Branch Director', 'CEO'];
@@ -50,15 +56,19 @@ describe('SalaryController — route access', () => {
   });
 
   describe('Payouts', () => {
-    it.each(['payPayment', 'batchPay'] as const)(
-      '%s is gated by the pay capability, CEO and Branch Director by default',
-      (method) => {
-        expectCan(method, 'salary.pay');
-        expect(defaultRolesOf(SalaryController, method)).toEqual(
-          CEO_AND_BRANCH_DIRECTOR,
-        );
-      },
-    );
+    it('payPayment is gated by the pay capability, CEO and Branch Director by default', () => {
+      expectCan('payPayment', 'salary.pay');
+      expect(defaultRolesOf(SalaryController, 'payPayment')).toEqual(
+        CEO_AND_BRANCH_DIRECTOR,
+      );
+    });
+
+    // `POST /salary/payments/batch-pay` paid from the branch's oldest CASH
+    // account, outside any single transaction: a direct call could pay a
+    // salary twice. No screen called it, so it was removed.
+    it('has no batch payout route', () => {
+      expect(SalaryController.prototype).not.toHaveProperty('batchPay');
+    });
   });
 
   describe('Teacher rate writes — CEO + own-branch Branch Director (ADR-0034)', () => {
@@ -106,7 +116,9 @@ describe('SalaryController — route access', () => {
       'getCenterTopUpStudents',
       // Money for ONE named teacher — the profile salary tab and card.
       'getMonthlyForUser',
-      'getAdvances',
+      // The row drawer: the same person's month, and its live accruals.
+      'getMonthlyDetail',
+      'getMonthlyLessons',
       'getAdvanceCalendar',
       'getPaymentBreakdown',
     ] as const;
@@ -179,5 +191,220 @@ describe('SalaryController — route access', () => {
         ]);
       },
     );
+  });
+});
+
+describe('SalaryController — the row drawer routes', () => {
+  const period = {
+    periodStart: new Date('2026-08-31T19:00:00Z'),
+    periodEnd: new Date('2026-09-30T18:59:59.999Z'),
+    periodStartDate: new Date('2026-09-01T00:00:00Z'),
+    periodEndDateExclusive: new Date('2026-10-01T00:00:00Z'),
+    cycleStartDay: 1,
+  };
+  const detailService = {
+    getDetail: jest.fn(),
+    getPeriod: jest.fn(),
+  };
+  const breakdownService = { getPeriodBreakdown: jest.fn() };
+  const controller = new SalaryController(
+    {} as never,
+    {} as never,
+    breakdownService as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    detailService as never,
+  );
+
+  beforeEach(() => jest.resetAllMocks());
+
+  it('detail follows the header: only the month and the single scoped branch go down', async () => {
+    detailService.getDetail.mockResolvedValue({ kind: 'teacher' });
+
+    await controller.getMonthlyDetail(
+      10001,
+      { month: '2026-09', search: 'ignored' },
+      10009,
+      1,
+      [3],
+    );
+
+    expect(detailService.getDetail).toHaveBeenCalledWith(
+      10001,
+      { month: '2026-09', branchId: 3 },
+      1,
+      10009,
+    );
+  });
+
+  it("lessons reads the month's period from the detail service, then its breakdown", async () => {
+    detailService.getPeriod.mockResolvedValue(period);
+    breakdownService.getPeriodBreakdown.mockResolvedValue({ lines: [] });
+
+    await expect(
+      controller.getMonthlyLessons(10001, { month: '2026-09' }, 10009, 1, [3]),
+    ).resolves.toEqual({ lines: [] });
+
+    expect(detailService.getPeriod).toHaveBeenCalledWith(
+      10001,
+      { month: '2026-09', branchId: 3 },
+      1,
+      10009,
+    );
+    expect(breakdownService.getPeriodBreakdown).toHaveBeenCalledWith(
+      10001,
+      1,
+      period,
+    );
+  });
+
+  it('lessons for a person outside the scope is a 404 and reads no accruals', async () => {
+    detailService.getPeriod.mockRejectedValue(
+      new NotFoundException('Bu oyda xodim topilmadi'),
+    );
+
+    await expect(
+      controller.getMonthlyLessons(10001, { month: '2026-09' }, 10009, 1, [3]),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(breakdownService.getPeriodBreakdown).not.toHaveBeenCalled();
+  });
+});
+
+describe('SalaryController — the advance calendar follows the header', () => {
+  const advanceCalendarService = { getCalendar: jest.fn() };
+  const controller = new SalaryController(
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    advanceCalendarService as never,
+    {} as never,
+    {} as never,
+    {} as never,
+  );
+
+  beforeEach(() => jest.resetAllMocks());
+
+  it('hands the month and the single scoped branch down, nothing else of the query', async () => {
+    advanceCalendarService.getCalendar.mockResolvedValue({ days: [] });
+
+    await controller.getAdvanceCalendar(
+      { month: '2026-09', search: 'ignored' },
+      10009,
+      1,
+      [3],
+    );
+
+    expect(advanceCalendarService.getCalendar).toHaveBeenCalledWith(
+      { month: '2026-09', branchId: 3 },
+      1,
+      10009,
+    );
+  });
+
+  it('several branches in scope (no pick) narrow nothing', async () => {
+    await controller.getAdvanceCalendar({ month: '2026-09' }, 10009, 1, null);
+
+    expect(advanceCalendarService.getCalendar).toHaveBeenCalledWith(
+      { month: '2026-09', branchId: undefined },
+      1,
+      10009,
+    );
+  });
+});
+
+describe('SalaryController — «Berildi» (pay route)', () => {
+  const salaryService = { payPayment: jest.fn() };
+  const controller = new SalaryController(
+    salaryService as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+  );
+  // The same pipe main.ts installs globally.
+  const pipe = new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  });
+  const parse = (body: unknown) =>
+    pipe.transform(body, { type: 'body', metatype: PayPaymentDto });
+  const ACC = '11111111-1111-4111-8111-111111111111';
+  const valid = {
+    paidAt: '2026-10-05',
+    cashSlices: [{ cashAccountId: ACC, amount: 7_840_000 }],
+  };
+
+  beforeEach(() => jest.resetAllMocks());
+
+  it('keeps the salary.pay marker', () => {
+    expect(routeAccess(SalaryController, 'payPayment')).toEqual({
+      kind: 'can',
+      keys: ['salary.pay'],
+    });
+  });
+
+  it('hands the body, the caller and the company to the service', async () => {
+    const dto = await parse({ ...valid, note: 'avgust' });
+    salaryService.payPayment.mockResolvedValue({ notified: true });
+
+    await expect(
+      controller.payPayment('sp-1', dto as PayPaymentDto, 10012, 1),
+    ).resolves.toEqual({ notified: true });
+
+    expect(salaryService.payPayment).toHaveBeenCalledWith(
+      'sp-1',
+      dto,
+      10012,
+      1,
+    );
+  });
+
+  it('accepts the 0 so’m body: a day and no slices', async () => {
+    await expect(
+      parse({ paidAt: '2026-10-05', cashSlices: [] }),
+    ).resolves.toMatchObject({ cashSlices: [] });
+  });
+
+  // The old client's «To'lash» sends no body at all and must get a 400.
+  it.each([undefined, {}])('a body-less call (%j) is a 400', async (body) => {
+    await expect(parse(body)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it.each([
+    ['a day that is not YYYY-MM-DD', { ...valid, paidAt: '05.10.2026' }],
+    ['no slices field', { paidAt: '2026-10-05' }],
+    [
+      'a slice of 0',
+      { ...valid, cashSlices: [{ cashAccountId: ACC, amount: 0 }] },
+    ],
+    [
+      'a fractional slice',
+      { ...valid, cashSlices: [{ cashAccountId: ACC, amount: 10.5 }] },
+    ],
+    [
+      'an account id that is not a uuid',
+      { ...valid, cashSlices: [{ cashAccountId: 'acc-1', amount: 1 }] },
+    ],
+    [
+      'more than five slices',
+      {
+        ...valid,
+        cashSlices: Array.from({ length: 6 }, () => ({
+          cashAccountId: ACC,
+          amount: 1,
+        })),
+      },
+    ],
+    ['a note over 300 characters', { ...valid, note: 'x'.repeat(301) }],
+    ['a field nobody asked for', { ...valid, status: 'PAID' }],
+  ])('refuses %s', async (_label, body) => {
+    await expect(parse(body)).rejects.toBeInstanceOf(BadRequestException);
   });
 });

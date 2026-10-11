@@ -16,6 +16,7 @@ import { TaskDrawerProperties } from "./task-drawer-properties";
 import { TaskDrawerSteps } from "./task-drawer-steps";
 import { JoinRequestPanel } from "./join-request/join-request-panel";
 import { isOpenStatus, KIND_LABEL } from "./task-labels";
+import { TaskSourceCard } from "./task-source-card";
 import { TaskStatusPill } from "./task-status-pill";
 import { useTaskWrite } from "./use-task-write";
 
@@ -54,7 +55,7 @@ function useOwnsDrawer(): boolean {
 }
 
 function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: () => void }) {
-  const { task, events, access, batch } = detail;
+  const { task, events, access, batch, source } = detail;
   const { run } = useTaskWrite();
   const system = task.kind !== "MANUAL";
   // The server edits manual, open tasks only, and only for the author or a manager.
@@ -87,6 +88,7 @@ function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: (
             Bu topshiriqni tizim berdi. Sababi hal bo&apos;lgach, u o&apos;zi yopiladi.
           </p>
         )}
+        {system && source && <TaskSourceCard task={task} source={source} />}
         {lesson?.status === "PENDING" && (
           <UnmarkedLessonPrompt
             lesson={{ groupId: lesson.groupId, groupName: lesson.groupName, date: lesson.date, startTime: lesson.lessonStartTime, endTime: lesson.lessonEndTime }}

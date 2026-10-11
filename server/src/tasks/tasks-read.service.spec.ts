@@ -1,7 +1,11 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { TasksReadService, collapseBatches } from './tasks-read.service';
 import { decodeCursor } from './task-cursor';
+import { loadTaskSource } from './task-source';
 import type { TaskActor } from './tasks.service';
+
+jest.mock('./task-source');
+const loadSource = loadTaskSource as jest.Mock;
 
 const person = (id: number) => ({
   id,
@@ -92,6 +96,7 @@ describe('TasksReadService', () => {
       })),
     };
     service = new TasksReadService(prisma, tasks as any);
+    loadSource.mockReset().mockResolvedValue(null);
   });
 
   describe('list', () => {
@@ -370,6 +375,49 @@ describe('TasksReadService', () => {
       expect(prisma.task.findMany.mock.calls[0][0].where).toEqual({
         batchId: 'B',
         companyId: 1,
+      });
+    });
+
+    describe('source', () => {
+      const callback = () => ({
+        ...makeCard({ kind: 'CALLBACK', sourceKey: 'calllog:c1' }),
+        description: null,
+        lastReturnedAt: null,
+        cancelReason: null,
+        steps: [],
+      });
+      const SOURCE = { previousCall: { note: 'Ertaga qayta' } };
+
+      it("a system task's source comes from loadTaskSource, after the access check", async () => {
+        const row = callback();
+        tasks.loadForAccess.mockResolvedValue({ row, access: access() });
+        loadSource.mockResolvedValue(SOURCE);
+        const out = await service.detail('t1', admin());
+        expect(out.source).toBe(SOURCE);
+        expect(loadSource).toHaveBeenCalledWith(prisma, row);
+      });
+
+      it('no source when the task is not visible: the access check throws first', async () => {
+        tasks.loadForAccess.mockRejectedValue(new ForbiddenException());
+        await expect(service.detail('t1', admin())).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(loadSource).not.toHaveBeenCalled();
+      });
+
+      it('only the first page carries it: paging back with «before» loads nothing', async () => {
+        tasks.loadForAccess.mockResolvedValue({
+          row: callback(),
+          access: access(),
+        });
+        loadSource.mockResolvedValue(SOURCE);
+        const out = await service.detail(
+          't1',
+          admin(),
+          '2026-10-08T00:00:00.000Z',
+        );
+        expect(out.source).toBeNull();
+        expect(loadSource).not.toHaveBeenCalled();
       });
     });
   });

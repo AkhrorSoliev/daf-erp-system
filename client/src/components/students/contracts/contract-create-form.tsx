@@ -13,6 +13,12 @@ import { ContractCourseExtras } from "./contract-course-extras";
 import { ContractCoursesPicker } from "./contract-courses-picker";
 import { ContractCustomerFields } from "./contract-customer-fields";
 import {
+  profileConflicts,
+  profileUpdatesBody,
+  unsettled,
+  type ProfileField,
+} from "./contract-profile";
+import {
   courseDraftFromPrefill,
   createBody,
   customerDraft,
@@ -46,9 +52,11 @@ export function ContractCreateForm({ studentId, prefill, onCancel, onSaved }: Pr
     Object.fromEntries(prefill.courses.map((c) => [c.enrollmentId, courseDraftFromPrefill(c)])),
   );
   const [saving, setSaving] = useState(false);
+  const [profileUpdates, setProfileUpdates] = useState<ProfileField[]>([]);
 
   const needsBirthDate = prefill.student.birthDate === null;
   const minor = prefill.student.isMinor ?? isMinor(birthDate || null, prefill.today);
+  const conflicts = profileConflicts(customer, prefill.student);
   const problem = formProblem({
     enrollmentIds,
     needsBirthDate,
@@ -56,6 +64,7 @@ export function ContractCreateForm({ studentId, prefill, onCancel, onSaved }: Pr
     customer,
     minor,
     branchMissing: prefill.branch.missing,
+    unsettledProfile: unsettled(conflicts, profileUpdates).length,
   });
 
   const onBirthDate = (value: string) => {
@@ -72,10 +81,18 @@ export function ContractCreateForm({ studentId, prefill, onCancel, onSaved }: Pr
     try {
       const { data } = await api.post<ContractView>(
         "/contract-documents",
-        createBody({ studentId, enrollmentIds, birthDate, customer, courses }),
+        createBody({
+          studentId,
+          enrollmentIds,
+          birthDate,
+          customer,
+          courses,
+          profileUpdates: profileUpdatesBody(conflicts, profileUpdates),
+        }),
       );
       toast.success(`Shartnoma ${data.number} tuzildi`);
-      onSaved(data, birthDate !== "");
+      // The contract may have filled the profile: the profile card reloads.
+      onSaved(data, true);
     } catch (err) {
       toast.error(getErrorMessage(err, "Shartnoma tuzishda xatolik yuz berdi"));
     } finally {
@@ -122,6 +139,9 @@ export function ContractCreateForm({ studentId, prefill, onCancel, onSaved }: Pr
           onChange={setCustomer}
           onKindChange={onKind}
           minor={minor}
+          profile={prefill.student}
+          profileUpdates={profileUpdates}
+          onProfileUpdatesChange={setProfileUpdates}
         />
 
         {enrollmentIds.map((id) => {

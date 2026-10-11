@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CallLogsService } from './call-logs.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -19,6 +20,7 @@ describe('CallLogsService', () => {
     upsertOpenPromise: jest.Mock;
     assertPromiseAllowed: jest.Mock;
   };
+  let events: { emit: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -49,12 +51,15 @@ describe('CallLogsService', () => {
       assertPromiseAllowed: jest.fn().mockResolvedValue(undefined),
     };
 
+    events = { emit: jest.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CallLogsService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: history },
         { provide: PaymentPromisesService, useValue: promises },
+        { provide: EventEmitter2, useValue: events },
       ],
     }).compile();
 
@@ -80,6 +85,7 @@ describe('CallLogsService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.callLog.create).not.toHaveBeenCalled();
       expect(promises.upsertOpenPromise).not.toHaveBeenCalled();
+      expect(events.emit).not.toHaveBeenCalled();
     });
 
     it('resolves branch from active enrollment, trims note, records history', async () => {
@@ -108,6 +114,10 @@ describe('CallLogsService', () => {
         expect.objectContaining({ entityType: 'Student', entityId: '10264' }),
       );
       expect(res.id).toBe('c1');
+      expect(events.emit).toHaveBeenCalledTimes(1);
+      expect(events.emit).toHaveBeenCalledWith('call-log.created', {
+        callLog: res,
+      });
     });
 
     it('stores null when note is empty/whitespace', async () => {
@@ -130,6 +140,7 @@ describe('CallLogsService', () => {
           1001,
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
+      expect(events.emit).not.toHaveBeenCalled();
     });
 
     it('upserts a payment promise when outcome is WILL_PAY with a date', async () => {
@@ -153,6 +164,22 @@ describe('CallLogsService', () => {
         99,
         1001,
       );
+    });
+
+    it('announces the call only after its promise is written', async () => {
+      await service.create(
+        {
+          studentId: 10264,
+          reason: 'DEBT',
+          outcome: 'WILL_PAY',
+          promiseDate: '2026-06-15T18:59:59.000Z',
+        },
+        99,
+        1001,
+      );
+      expect(
+        promises.upsertOpenPromise.mock.invocationCallOrder[0],
+      ).toBeLessThan(events.emit.mock.invocationCallOrder[0]);
     });
 
     it('falls back to a default promise comment when note is empty', async () => {

@@ -166,7 +166,7 @@ describe("SalaryCard", () => {
 
     expect(text).toContain(`Oyliklar ${money(85_770_000)}`);
     expect(text).toContain(`ustozlar ${money(72_360_000)} · xodimlar ${money(13_410_000)}`);
-    expect(text).toContain(`avans berilgan ${money(12_420_000)}`);
+    expect(text).toContain(`avans (ushlanadi) ${money(12_420_000)}`);
     expect(text).toContain(`oy oxirida beriladi ${money(73_350_000)}`);
     expect(text).not.toContain("o'tish oyi");
   });

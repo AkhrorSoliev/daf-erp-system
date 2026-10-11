@@ -18,8 +18,6 @@ import {
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { useAuth } from "@/hooks/use-auth";
-import { useCan } from "@/hooks/use-permissions";
-import { SalaryPeriodControl } from "./salary-period-control";
 import { SalaryConfigRowSheet } from "./salary-config-row-sheet";
 import { SalaryConfigBulkDialog } from "./salary-config-bulk-dialog";
 import { SalaryStaffConfigList } from "./salary-staff-config-list";
@@ -88,21 +86,18 @@ const toEditTarget = (
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  period: {
-    periodStart: string;
-    periodEnd: string;
-    cycleStartDay: number;
-  } | null;
+  /** Only its start is read: a director cannot date a rate before the current period. */
+  period: { periodStart: string } | null;
   onChanged: () => void;
   access: SalarySettingsAccess;
 }
 
 /**
- * ⚙ Sozlamalar — the salary *rules* surface: CEO sees rates, staff rates and
- * the cycle start day; a Branch Director sees only their branch's teacher
- * rates (ADR-0034), kept OUT of the monthly report which is display-only.
- * Reuses the existing config row sheet / bulk dialog / period control
- * verbatim.
+ * «Stavkalar» — the salary *rules* surface: CEO sees teacher and staff rates;
+ * a Branch Director sees only their branch's teacher rates (ADR-0034), kept
+ * OUT of the monthly report which is display-only. The payroll period is
+ * always a calendar month (B3 §2.8), so there is nothing to set for it.
+ * Reuses the existing config row sheet / bulk dialog verbatim.
  */
 export function SalarySettingsSheet({
   open,
@@ -112,7 +107,6 @@ export function SalarySettingsSheet({
   access,
 }: Props) {
   const selfId = useAuth((s) => s.user?.id) ?? -1;
-  const canClose = useCan("salary.close");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [editing, setEditing] = useState<EditTarget | null>(null);
@@ -151,27 +145,15 @@ export function SalarySettingsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle>Oylik sozlamalari</SheetTitle>
+          <SheetTitle>Stavkalar</SheetTitle>
           <SheetDescription>
             {access.canManageCompanyPayroll
-              ? "Ustoz va xodim stavkalari, hisoblash davri. Jadval shu sozlamalar asosida hisoblanadi."
-              : "Filialingiz ustozlarining stavkalari. Xodimlar oyligi va hisoblash davrini CEO belgilaydi."}
+              ? "Ustoz va xodim stavkalari. Jadval shu sozlamalar asosida hisoblanadi."
+              : "Filialingiz ustozlarining stavkalari. Xodimlar oyligini CEO belgilaydi."}
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
-          {/* Cycle day */}
-          {access.canManageCompanyPayroll && period && (
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold">Hisoblash davri</h3>
-              <SalaryPeriodControl
-                period={period}
-                canClose={canClose}
-                onChanged={onChanged}
-              />
-            </section>
-          )}
-
           {/* Rates — one search box over both payrolls, because "who is still
               missing a rate?" is a single question and answering it should not
               depend on which list the person happens to be in. */}

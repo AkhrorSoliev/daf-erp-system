@@ -38,15 +38,13 @@ export function ContractFormDialog({ studentId, mode, onClose, onSaved }: Props)
               : "Kurs, guruh, ustoz, jadval va narx o'quvchining ma'lumotlaridan o'zi to'ldiriladi."}
           </DialogDescription>
         </DialogHeader>
-        {mode?.kind === "edit" && (
-          <ContractEditForm
-            contract={mode.contract}
+        {mode && (
+          <PrefillLoader
+            studentId={studentId}
+            mode={mode}
             onCancel={onClose}
-            onSaved={(view) => onSaved(view, false)}
+            onSaved={onSaved}
           />
-        )}
-        {mode?.kind === "create" && (
-          <CreateLoader studentId={studentId} onCancel={onClose} onSaved={onSaved} />
         )}
       </DialogContent>
     </Dialog>
@@ -55,14 +53,17 @@ export function ContractFormDialog({ studentId, mode, onClose, onSaved }: Props)
 
 /**
  * Mounted only while the dialog is open, with `gcTime: 0`: every opening reads
- * fresh data and the form mounts once with it.
+ * fresh data (the edit form compares the customer with today's profile too)
+ * and the form mounts once with it.
  */
-function CreateLoader({
+function PrefillLoader({
   studentId,
+  mode,
   onCancel,
   onSaved,
 }: {
   studentId: number;
+  mode: ContractDialogMode;
   onCancel: () => void;
   onSaved: (view: ContractView, studentChanged: boolean) => void;
 }) {
@@ -78,6 +79,16 @@ function CreateLoader({
     refetchOnReconnect: false,
   });
 
+  if (prefill.data && mode.kind === "edit") {
+    return (
+      <ContractEditForm
+        contract={mode.contract}
+        profile={prefill.data.student}
+        onCancel={onCancel}
+        onSaved={(view) => onSaved(view, true)}
+      />
+    );
+  }
   if (prefill.data) {
     return (
       <ContractCreateForm

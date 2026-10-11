@@ -23,6 +23,7 @@ import {
   type ContractInclude,
   type CustomerKind,
 } from '../contract-fields';
+import { WRITABLE_PROFILE_FIELDS } from '../profile-sync';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MESSAGE = "Sana YYYY-MM-DD ko'rinishida bo'lishi kerak";
@@ -148,6 +149,13 @@ export class CreateContractDocumentDto {
   @ValidateNested({ each: true })
   @Type(() => ContractCourseExtrasDto)
   courses?: ContractCourseExtrasDto[];
+
+  /** Profile fields the admin chose «Yangisi to'g'ri — profilni yangilash» for. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(WRITABLE_PROFILE_FIELDS.length)
+  @IsIn(WRITABLE_PROFILE_FIELDS, { each: true })
+  profileUpdates?: string[];
 }
 
 /** Only the parts that stay editable until signing; a course's extras are replaced whole. */
@@ -162,6 +170,12 @@ export class UpdateContractDocumentDto {
   @ValidateNested({ each: true })
   @Type(() => ContractCourseExtrasDto)
   courses?: ContractCourseExtrasDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(WRITABLE_PROFILE_FIELDS.length)
+  @IsIn(WRITABLE_PROFILE_FIELDS, { each: true })
+  profileUpdates?: string[];
 }
 
 export class CancelContractDocumentDto {

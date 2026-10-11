@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LeadsService } from './leads.service';
 import { leadStatsRange } from './leads-stats.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,6 +18,7 @@ describe('LeadsService', () => {
   let history: any;
   let students: any;
   let enrollment: any;
+  let events: { emit: jest.Mock };
 
   const validDto = {
     firstName: 'Aziz',
@@ -84,6 +86,7 @@ describe('LeadsService', () => {
 
     students = { create: jest.fn() };
     enrollment = { enrollToGroup: jest.fn() };
+    events = { emit: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -92,6 +95,7 @@ describe('LeadsService', () => {
         { provide: EntityHistoryService, useValue: history },
         { provide: StudentsService, useValue: students },
         { provide: StudentEnrollmentService, useValue: enrollment },
+        { provide: EventEmitter2, useValue: events },
       ],
     }).compile();
 
@@ -1518,6 +1522,11 @@ describe('LeadsService', () => {
       const data = prisma.lead.update.mock.calls[0][0].data;
       expect(data.calledAt).toBeInstanceOf(Date);
       expect(history.recordUpdate).toHaveBeenCalled();
+      expect(events.emit).toHaveBeenCalledWith('lead.called', {
+        leadId: 'lead-1',
+        companyId: 1001,
+        userId: 7,
+      });
     });
 
     it('keeps the original caller and timestamp when re-marking an already-called lead', async () => {
@@ -1538,6 +1547,7 @@ describe('LeadsService', () => {
       const data = prisma.lead.update.mock.calls[0][0].data;
       expect(data.calledAt).toBeUndefined();
       expect(data.calledById).toBeUndefined();
+      expect(events.emit).not.toHaveBeenCalled();
     });
 
     it('clears the marker when called is false', async () => {
@@ -1554,6 +1564,7 @@ describe('LeadsService', () => {
           data: { calledAt: null, calledById: null },
         }),
       );
+      expect(events.emit).not.toHaveBeenCalled();
     });
   });
 });

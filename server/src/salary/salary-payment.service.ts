@@ -1,27 +1,37 @@
 import {
+  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SalaryPaymentStatus, Prisma } from '@prisma/client';
 import { SalaryPaymentQueryDto } from './dto/salary-query.dto';
+import { PayPaymentDto } from './dto/pay-payment.dto';
 import {
   assertValidTransition,
   SALARY_PAYMENT_TRANSITIONS,
 } from '../common/finance/status-transitions';
 import { resolvePeriod } from '../common/finance/period-helpers';
+import { rethrowAsConflict } from '../common/transaction-conflict';
 import {
   payrollUserWhere,
   resolvePayrollBranchScope,
 } from './shared/payroll-branch-scope';
+import { parseSettlePaidAt, SETTLE_TX } from './salary-settle-core';
+import { SALARY_PAID_EVENT, SalaryPaidPayload } from './salary-events';
+
+const ALREADY_PAID = 'Bu oylik allaqachon berilgan';
 
 @Injectable()
 export class SalaryPaymentService {
   constructor(
     private prisma: PrismaService,
     private transactionsService: TransactionsService,
+    private events: EventEmitter2,
   ) {}
 
   /**
@@ -258,41 +268,53 @@ export class SalaryPaymentService {
     });
   }
 
-  async payPayment(id: string, performedById: number, companyId: number) {
+  /**
+   * What paying one salary checks first: the payment is the
+   * company's (404), is not PAID yet (409), the caller is not the payee unless
+   * they are the CEO (403), may pay that payee's branch (403) and the
+   * status may move to PAID (400). Returns the payee's home branch and bot
+   * chat, read once for the caller.
+   *
+   * Paying a single payment once had NO branch check at all, so a director
+   * could settle another branch's teacher just by passing its id.
+   */
+  private async loadPayable(
+    id: string,
+    performedById: number,
+    companyId: number,
+  ) {
     const payment = await this.prisma.salaryPayment.findFirst({
       where: { id, companyId },
     });
     if (!payment) throw new NotFoundException('Oylik topilmadi');
+    if (payment.status === SalaryPaymentStatus.PAID) {
+      throw new ConflictException(ALREADY_PAID);
+    }
 
-    // `batchPay` confines a non-CEO caller to their own branch; paying a single
-    // payment had NO branch check at all, so the same director could settle
-    // another branch's teacher just by passing its id.
     const scope = await resolvePayrollBranchScope(this.prisma, performedById);
-    if (scope.kind !== 'all') {
-      // CEO decision (10.10.2026): nobody but the CEO pays their own salary;
-      // another manager does. `batchPay` comes through here too, so a
-      // caller's own row in a batch is reported FAILED with this reason.
-      if (payment.userId === performedById) {
-        throw new ForbiddenException(
-          "Bu sizning oyligingiz — uni o'zingiz to'lay olmaysiz. Oylikni boshqa rahbar to'laydi.",
-        );
-      }
-      const payee = await this.prisma.user.findUnique({
-        where: { id: payment.userId },
-        select: { mainBranch: true },
-      });
-      // Paying stays on the caller's HOME branch, like `batchPay` and the
-      // payments list: the other attached branches widen what a director may
-      // see (A2.8), not what they may pay. No `mainBranch` pays nothing.
-      if (
-        scope.kind === 'none' ||
+    // CEO decision (10.10.2026): nobody but the CEO pays their own salary;
+    // another manager does.
+    if (scope.kind !== 'all' && payment.userId === performedById) {
+      throw new ForbiddenException(
+        "Bu sizning oyligingiz — uni o'zingiz to'lay olmaysiz. Oylikni boshqa rahbar to'laydi.",
+      );
+    }
+    const payee = await this.prisma.user.findUnique({
+      where: { id: payment.userId },
+      select: { mainBranch: true, telegramChatId: true },
+    });
+    // Paying stays on the caller's HOME branch: the other attached branches
+    // widen what a director may see (A2.8), not what they may pay. No
+    // `mainBranch` pays nothing.
+    if (
+      scope.kind !== 'all' &&
+      (scope.kind === 'none' ||
         scope.mainBranch == null ||
-        payee?.mainBranch !== scope.mainBranch
-      ) {
-        throw new ForbiddenException(
-          "Bu xodim sizning filialingizga tegishli emas — oyligini to'lay olmaysiz",
-        );
-      }
+        payee?.mainBranch !== scope.mainBranch)
+    ) {
+      throw new ForbiddenException(
+        "Bu xodim sizning filialingizga tegishli emas — oyligini to'lay olmaysiz",
+      );
     }
     assertValidTransition(
       'SalaryPayment',
@@ -300,113 +322,124 @@ export class SalaryPaymentService {
       payment.status,
       SalaryPaymentStatus.PAID,
     );
-
-    await this.transactionsService.recordSalaryPayment({
-      userId: payment.userId,
-      amount: payment.amount,
-      salaryPaymentId: payment.id,
-      companyId: payment.companyId,
-      performedById,
-    });
-
-    return this.prisma.salaryPayment.update({
-      where: { id },
-      data: {
-        status: SalaryPaymentStatus.PAID,
-        paidAt: new Date(),
-        paidById: performedById,
-      },
-    });
+    return { payment, payee };
   }
 
   /**
-   * Pay out a batch of salary payments in one click — intended for the 10th of
-   * the month, after cron has calculated and CEO has approved the current
-   * period. Accepts an optional filter so a branch director or cashier can
-   * pay only their scope.
+   * «Berildi» (B3 spec §5.2): hand one APPROVED salary over on the day the
+   * caller names, from the accounts the caller names. Every refusal comes
+   * before any write; the write is one Serializable transaction (re-read →
+   * ledger row with the cash/card slices → PAID); `salary.paid` goes out only
+   * after it committed. Its own writer rather than `writeSettledRows`: the
+   * ledger keeps «Oylik to'landi» and no settle marker lands in `note`.
    *
-   * Only APPROVED payments are processed; CALCULATED ones are skipped (they
-   * need to be approved first). Each payment is wrapped in its own transaction
-   * so a failure on one doesn't roll back the others — the caller sees per-
-   * payment success/error. A non-CEO caller's own payment is one such
-   * failure: `payPayment` refuses it (CEO decision, 10.10.2026).
+   * A 0 so'm payment (advances took the whole salary) moves no money: no
+   * ledger row, no accounts — just PAID.
    */
-  async batchPay(
-    params: {
-      companyId: number;
-      branchId?: number;
-      userIds?: number[];
-      statuses?: SalaryPaymentStatus[];
-    },
+  async payPayment(
+    id: string,
+    dto: PayPaymentDto,
     performedById: number,
+    companyId: number,
   ) {
-    const statuses = params.statuses ?? [SalaryPaymentStatus.APPROVED];
+    const { payment, payee } = await this.loadPayable(
+      id,
+      performedById,
+      companyId,
+    );
 
-    // Enforce branch scope server-side: non-CEO operators (e.g. Branch
-    // Directors) are restricted to their own mainBranch regardless of the
-    // branchId they passed. JWT does not carry mainBranch, so fetch it.
-    const caller = await this.prisma.user.findUnique({
-      where: { id: performedById },
-      select: {
-        mainBranch: true,
-        roles: { select: { role: { select: { name: true } } } },
-      },
-    });
-    const isCeo = caller?.roles.some((r) => r.role.name === 'CEO') ?? false;
-    const effectiveBranchId = isCeo ? params.branchId : caller?.mainBranch;
-    // Fail CLOSED: a non-CEO caller whose mainBranch is unknown used to fall
-    // through to "no filter" and could batch-pay EVERY branch's salaries.
-    if (!isCeo && effectiveBranchId == null) {
-      throw new ForbiddenException(
-        "Sizning asosiy filialingiz belgilanmagan — oylik to'lay olmaysiz. Administrator bilan bog'laning.",
+    // `2026-02-31` rolls over to 3 March and `2026-13-01` is no date at all,
+    // yet both pass the DTO's shape check.
+    const day = new Date(`${dto.paidAt}T00:00:00.000Z`);
+    if (
+      Number.isNaN(day.getTime()) ||
+      day.toISOString().slice(0, 10) !== dto.paidAt
+    ) {
+      throw new BadRequestException(
+        "Sana noto'g'ri — kalendarda bunday kun yo'q",
+      );
+    }
+    const paidAt = parseSettlePaidAt(dto.paidAt, payment.periodStart);
+
+    const branchId = payee?.mainBranch;
+    if (branchId == null) {
+      throw new BadRequestException(
+        "Xodimning filiali aniqlanmagan — oylikni berib bo'lmaydi",
       );
     }
 
-    const eligible = await this.prisma.salaryPayment.findMany({
-      where: {
-        companyId: params.companyId,
-        status: { in: statuses },
-        ...(params.userIds &&
-          params.userIds.length > 0 && { userId: { in: params.userIds } }),
-        // Branch scope: SalaryPayment has no branchId directly, so scope via
-        // the employee's own branch (D6: one employee, one branch).
-        ...(effectiveBranchId != null && {
-          user: { mainBranch: effectiveBranchId },
-        }),
-      },
-      select: { id: true, userId: true, amount: true },
-    });
+    const sliced = dto.cashSlices.reduce((s, x) => s + x.amount, 0);
+    if (sliced !== payment.amount) {
+      throw new BadRequestException(
+        "Naqd va karta yig'indisi oylikka teng emas",
+      );
+    }
 
-    const results: {
-      id: string;
-      userId: number;
-      status: 'PAID' | 'FAILED';
-      error?: string;
-    }[] = [];
-
-    for (const payment of eligible) {
-      try {
-        await this.payPayment(payment.id, performedById, params.companyId);
-        results.push({
-          id: payment.id,
-          userId: payment.userId,
-          status: 'PAID',
-        });
-      } catch (err) {
-        results.push({
-          id: payment.id,
-          userId: payment.userId,
-          status: 'FAILED',
-          error: err instanceof Error ? err.message : String(err),
-        });
+    if (dto.cashSlices.length > 0) {
+      const wanted = [...new Set(dto.cashSlices.map((s) => s.cashAccountId))];
+      const accounts = await this.prisma.cashAccount.findMany({
+        where: {
+          id: { in: wanted },
+          companyId,
+          isActive: true,
+          deletedAt: null,
+        },
+        select: { id: true, branchId: true },
+      });
+      const branchOf = new Map(accounts.map((a) => [a.id, a.branchId]));
+      if (wanted.some((a) => branchOf.get(a) !== branchId)) {
+        throw new BadRequestException('Kassa xodim filialiga tegishli emas');
       }
     }
 
-    return {
-      total: eligible.length,
-      paid: results.filter((r) => r.status === 'PAID').length,
-      failed: results.filter((r) => r.status === 'FAILED').length,
-      results,
-    };
+    const note = dto.note?.trim();
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        // Another click, or the month settle, may have paid it since the
+        // checks above; the fresh status also catches a row cancelled meanwhile.
+        const fresh = await tx.salaryPayment.findUnique({
+          where: { id },
+          select: { status: true },
+        });
+        if (!fresh || fresh.status === SalaryPaymentStatus.PAID) return null;
+        assertValidTransition(
+          'SalaryPayment',
+          SALARY_PAYMENT_TRANSITIONS,
+          fresh.status,
+          SalaryPaymentStatus.PAID,
+        );
+
+        if (payment.amount > 0) {
+          await this.transactionsService.recordSalaryPayment(
+            {
+              userId: payment.userId,
+              amount: payment.amount,
+              salaryPaymentId: payment.id,
+              companyId: payment.companyId,
+              performedById,
+              cashSlices: dto.cashSlices,
+            },
+            tx,
+          );
+        }
+        return tx.salaryPayment.update({
+          where: { id },
+          data: {
+            status: SalaryPaymentStatus.PAID,
+            paidAt,
+            paidById: performedById,
+            ...(note && { note }),
+          },
+        });
+      }, SETTLE_TX)
+      .catch(rethrowAsConflict);
+    if (!updated) throw new ConflictException(ALREADY_PAID);
+
+    // After the commit, never inside it: the payee is told.
+    this.events.emit(SALARY_PAID_EVENT, {
+      salaryPaymentId: id,
+      companyId,
+    } satisfies SalaryPaidPayload);
+    return { ...updated, notified: payee?.telegramChatId != null };
   }
 }

@@ -4,6 +4,7 @@ import { MonthPicker } from "@/components/ui/month-picker";
 import { currentMonthKey } from "../salary-utils";
 import { ALL_MONTHS, CenterTopUpContent } from "./center-topup-content";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { SalaryCenterRecoveryCard } from "../salary/salary-center-recovery-card";
 
 /** Payroll top-up started here; earlier months have nothing to report. */
 const FLOOR_MONTH = "2026-07";
@@ -52,6 +53,9 @@ export function CenterTopUpView() {
           className="w-56 shrink-0"
         />
       </div>
+
+      {/* The month's recovery lifecycle, moved here from «Oyliklar» (spec §2.4). */}
+      {month && <SalaryCenterRecoveryCard month={month} />}
 
       <CenterTopUpContent month={month || ALL_MONTHS} />
     </div>

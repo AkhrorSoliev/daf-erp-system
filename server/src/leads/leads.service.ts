@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LeadStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
@@ -17,6 +18,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
 import { StudentEnrollmentService } from '../students/student-enrollment.service';
 import { findExtraPhoneHolder } from '../students/shared/extra-phone-rule';
+import { LEAD_CALLED, type LeadCalledPayload } from './lead-events';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { MoveLeadDto } from './dto/move-lead.dto';
@@ -68,6 +70,7 @@ export class LeadsService {
     private entityHistoryService: EntityHistoryService,
     private studentsService: StudentsService,
     private studentEnrollmentService: StudentEnrollmentService,
+    private events: EventEmitter2,
   ) {}
 
   /**
@@ -837,6 +840,15 @@ export class LeadsService {
       changedById: userId,
       companyId,
     });
+
+    // Only the first mark: re-marking keeps the old stamp, clearing is not a call.
+    if (dto.called && !existing.calledAt) {
+      this.events.emit(LEAD_CALLED, {
+        leadId: id,
+        companyId,
+        userId,
+      } satisfies LeadCalledPayload);
+    }
 
     return this.withCommentCount(updated);
   }
