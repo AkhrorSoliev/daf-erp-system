@@ -6,20 +6,9 @@ import { Label } from "@/components/ui/label";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useTasks, type TaskRecurrenceView } from "@/hooks/use-tasks";
-import { dayMonth, formFromRule, recurrenceFormReady, recurrenceLine, recurrencePayload, type RecurrenceForm } from "@/lib/task-recurrence-rules";
+import { changes, dayMonth, formFromRule, recurrenceFormReady, recurrenceLine, type RecurrenceForm } from "@/lib/task-recurrence-rules";
 import { TaskAssigneePicker } from "./task-assignee-picker";
 import { TaskRecurrenceFields } from "./task-recurrence-fields";
-
-const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((id) => b.includes(id));
-
-/** What «Saqlash» sends: only what changed, so a save that touches only the assignees never moves `nextRunDate`. */
-function changes(rule: TaskRecurrenceView, form: RecurrenceForm, assigneeIds: number[]) {
-  const body: Record<string, unknown> = {};
-  const schedule = recurrencePayload(form);
-  if (JSON.stringify(schedule) !== JSON.stringify(recurrencePayload(formFromRule(rule)))) body.schedule = schedule;
-  if (!sameIds(assigneeIds, rule.assignees.map((a) => a.id))) body.assigneeIds = assigneeIds;
-  return body;
-}
 
 /** A recurring task's rule (spec §3.6): the author, a director of its branch or the CEO edits, stops or resumes it. */
 export function TaskDrawerRecurrence({ taskId, rule }: { taskId: string; rule: TaskRecurrenceView }) {

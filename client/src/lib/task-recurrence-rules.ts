@@ -1,4 +1,4 @@
-import type { RecurrenceFreq, TaskRecurrenceBadge } from "@/hooks/use-tasks";
+import type { RecurrenceFreq, TaskRecurrenceBadge, TaskRecurrenceView } from "@/hooks/use-tasks";
 
 /** The server's numbering, 1 = dushanba … 6 = shanba; Sunday is never a run day. */
 export const WEEKDAYS: { id: number; short: string; name: string }[] = [
@@ -52,3 +52,14 @@ export function formFromRule(r: TaskRecurrenceBadge & { dueTime: string }): Recu
 
 /** `YYYY-MM-DD` (a Tashkent day from the server) → «19.10». */
 export const dayMonth = (dateStr: string) => `${dateStr.slice(8, 10)}.${dateStr.slice(5, 7)}`;
+
+const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((id) => b.includes(id));
+
+/** What «Saqlash» sends: only what changed, so a save that touches only the assignees never moves `nextRunDate`. */
+export function changes(rule: TaskRecurrenceView, form: RecurrenceForm, assigneeIds: number[]) {
+  const body: Record<string, unknown> = {};
+  const schedule = recurrencePayload(form);
+  if (JSON.stringify(schedule) !== JSON.stringify(recurrencePayload(formFromRule(rule)))) body.schedule = schedule;
+  if (!sameIds(assigneeIds, rule.assignees.map((a) => a.id))) body.assigneeIds = assigneeIds;
+  return body;
+}

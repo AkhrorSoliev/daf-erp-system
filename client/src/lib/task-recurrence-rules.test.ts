@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_RECURRENCE, dayMonth, formFromRule, recurrenceBadge, recurrenceFormReady, recurrenceLine, recurrencePayload } from "./task-recurrence-rules";
+import type { TaskRecurrenceView } from "@/hooks/use-tasks";
+import { EMPTY_RECURRENCE, changes, dayMonth, formFromRule, recurrenceBadge, recurrenceFormReady, recurrenceLine, recurrencePayload } from "./task-recurrence-rules";
 
 describe("recurrenceBadge", () => {
   it("reads like the mock-up", () => {
@@ -36,5 +37,24 @@ describe("formFromRule / dayMonth", () => {
   });
   it("shows a stored day as dd.mm", () => {
     expect(dayMonth("2026-10-19")).toBe("19.10");
+  });
+});
+
+describe("changes", () => {
+  const person = (id: number) => ({ id, name: `U${id}` });
+  const rule = {
+    id: "r1", freq: "WEEKLY", weekdays: [1, 3], dayOfMonth: null, dueTime: "10:00", title: "T", active: true,
+    separateCopies: false, nextRunDate: "2026-10-12", author: person(1), assignees: [person(20), person(21)], canManage: true,
+  } as unknown as TaskRecurrenceView;
+  const same = formFromRule(rule);
+
+  it("nothing changed sends nothing", () => {
+    expect(changes(rule, same, [21, 20])).toEqual({});
+  });
+  it("a schedule change sends only the schedule", () => {
+    expect(changes(rule, { ...same, time: "11:00" }, [20, 21])).toEqual({ schedule: { freq: "WEEKLY", weekdays: [1, 3], dueTime: "11:00" } });
+  });
+  it("an assignee change sends only the assignees", () => {
+    expect(changes(rule, same, [20])).toEqual({ assigneeIds: [20] });
   });
 });
