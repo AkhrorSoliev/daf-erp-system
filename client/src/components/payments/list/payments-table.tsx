@@ -13,8 +13,8 @@ import { METHOD_FILTER, receivedByText, selectedLine } from "./payments-format";
 import type { PartKind, PaymentListResponse, PaymentRow } from "./payments-list-types";
 
 const METHOD_LABEL = Object.fromEntries(METHOD_FILTER.map((m) => [m.value, m.label]));
-const HEADS = ["Sana", "O'quvchi", "Guruh", "Summa", "Usul", "Nimaga ketdi", "Qabul qildi"];
-const AMOUNT_AT = 3;
+const HEADS = ["#", "Sana", "O'quvchi", "Guruh", "Summa", "Usul", "Nimaga ketdi", "Qabul qildi"];
+const AMOUNT_AT = 4;
 
 // Semantic tokens with a tint: the text stays `foreground`/`destructive`, so both themes read without `dark:` overrides.
 const PILL_BASE = "inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium";
@@ -59,7 +59,7 @@ function PartsCell({ row, onOpen }: { row: PaymentRow; onOpen: (id: string) => v
   );
 }
 
-function PaymentRowView({ row, onOpen }: { row: PaymentRow; onOpen: (id: string) => void }) {
+function PaymentRowView({ row, index, onOpen }: { row: PaymentRow; index: number; onOpen: (id: string) => void }) {
   const reversed = row.status === "REVERSED";
   const name = `${row.student.firstName} ${row.student.lastName}`;
   const [first, ...rest] = row.groups;
@@ -72,6 +72,7 @@ function PaymentRowView({ row, onOpen }: { row: PaymentRow; onOpen: (id: string)
   };
   return (
     <TableRow tabIndex={0} className={cn("cursor-pointer", reversed && "text-muted-foreground")} onClick={() => onOpen(row.id)} onKeyDown={onKeyDown}>
+      <TableCell className="border-r text-muted-foreground tabular-nums">{index}</TableCell>
       <TableCell className="whitespace-nowrap tabular-nums">{tashkentDdMm(row.createdAt)} {tashkentHhmm(row.createdAt)}</TableCell>
       <TableCell>
         <div className={row.student.archived ? undefined : "font-semibold"}>
@@ -100,9 +101,11 @@ function PaymentRowView({ row, onOpen }: { row: PaymentRow; onOpen: (id: string)
 }
 
 /** The list (spec B4 §3.7). `rows: undefined` or `loading` = skeleton rows; a click on a row or its «tuzatildi» pill opens that payment. */
-export function PaymentsTable({ rows, loading, onOpen, onClear }: {
+export function PaymentsTable({ rows, loading, offset, onOpen, onClear }: {
   rows: PaymentRow[] | undefined;
   loading: boolean;
+  /** (page - 1) x pageSize, for the `#` column. */
+  offset: number;
   onOpen: (id: string) => void;
   /** Given when a filter is set: the empty state then offers to clear it. */
   onClear?: () => void;
@@ -120,17 +123,19 @@ export function PaymentsTable({ rows, loading, onOpen, onClear }: {
       <Table className="min-w-[860px]">
         <TableHeader>
           <TableRow>
-            {HEADS.map((h, i) => <TableHead key={h} className={i === AMOUNT_AT ? "text-right" : undefined}>{h}</TableHead>)}
+            {HEADS.map((h, i) => (
+              <TableHead key={h} className={i === 0 ? "w-12 border-r" : i === AMOUNT_AT ? "text-right" : undefined}>{h}</TableHead>
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading || !rows
             ? Array.from({ length: 8 }, (_, i) => (
                 <TableRow key={i}>
-                  {HEADS.map((h) => <TableCell key={h}><Skeleton className="h-5 w-full" /></TableCell>)}
+                  {HEADS.map((h) => <TableCell key={h} className={h === "#" ? "border-r" : undefined}><Skeleton className="h-5 w-full" /></TableCell>)}
                 </TableRow>
               ))
-            : rows.map((r) => <PaymentRowView key={r.id} row={r} onOpen={onOpen} />)}
+            : rows.map((r, i) => <PaymentRowView key={r.id} row={r} index={offset + i + 1} onOpen={onOpen} />)}
         </TableBody>
       </Table>
     </div>

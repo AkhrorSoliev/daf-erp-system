@@ -129,7 +129,8 @@ export function PaymentsListPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {data && !tableLoading && (
+          {/* Old totals never sit next to a new filter. */}
+          {data && !isPlaceholderData && !tableLoading && (
             <PaymentsTotalsLine
               totals={data.totals}
               holat={filters.holat}
@@ -141,6 +142,7 @@ export function PaymentsListPage() {
             <PaymentsTable
               rows={data?.data}
               loading={tableLoading}
+              offset={(Number(params.page) - 1) * Number(params.pageSize)}
               onOpen={(id) => setFilters({ tolov: id })}
               onClear={hasPaymentFilter(filters) ? () => setFilters(CLEARED) : undefined}
             />

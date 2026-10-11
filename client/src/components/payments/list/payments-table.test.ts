@@ -49,12 +49,21 @@ const ROWS: PaymentRow[] = [
   row("p6", { groups: [], parts: null, student: { id: 10007, firstName: "Oltinchi", lastName: "Ism", phone: "", archived: false } }),
 ];
 
-const table = (rows: PaymentRow[] | undefined = ROWS, loading = false) => createElement(PaymentsTable, { rows, loading, onOpen: noop });
+const table = (rows: PaymentRow[] | undefined = ROWS, loading = false, offset = 0) =>
+  createElement(PaymentsTable, { rows, loading, offset, onOpen: noop });
 
 describe("PaymentsTable", () => {
-  it("has the seven headers", () => {
+  it("has a # column first, then the seven headers", () => {
     const t = text(table());
+    expect(t.trimStart().startsWith("# Sana O'quvchi")).toBe(true);
     for (const h of ["Sana", "O'quvchi", "Guruh", "Summa", "Usul", "Nimaga ketdi", "Qabul qildi"]) expect(t).toContain(h);
+  });
+
+  it("numbers the rows from the page offset, in the first cell", () => {
+    const html = raw(table(ROWS, false, 50));
+    expect(html).toMatch(/<td[^>]*border-r[^>]*>51<\/td>/);
+    expect(html).toMatch(/<td[^>]*border-r[^>]*>56<\/td>/);
+    expect(raw(table(ROWS.slice(0, 1)))).toMatch(/<td[^>]*border-r[^>]*>1<\/td>/);
   });
 
   it("prints the Tashkent date and time, the bold name and the ID line", () => {
@@ -89,7 +98,7 @@ describe("PaymentsTable", () => {
 
   it("a reversed row is muted, its amount struck through, with a red «bekor qilingan» pill", () => {
     const html = raw(table([ROWS[2]]));
-    expect(html).toContain("text-muted-foreground");
+    expect(html.match(/<tr[^>]*tabindex="0"[^>]*>/)?.[0]).toContain("text-muted-foreground");
     expect(html).toContain("line-through");
     expect(text(table([ROWS[2]]))).toContain("bekor qilingan");
   });
@@ -112,7 +121,7 @@ describe("PaymentsTable", () => {
   it("empty: «Bu tanlovda to'lov yo'q», «Tozalash» only when a clear handler is given", () => {
     expect(text(table([]))).toContain("Bu tanlovda to'lov yo'q");
     expect(text(table([]))).not.toContain("Tozalash");
-    expect(text(createElement(PaymentsTable, { rows: [], loading: false, onOpen: noop, onClear: noop }))).toContain("Tozalash");
+    expect(text(createElement(PaymentsTable, { rows: [], loading: false, offset: 0, onOpen: noop, onClear: noop }))).toContain("Tozalash");
   });
 });
 
