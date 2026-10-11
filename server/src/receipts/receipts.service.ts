@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymentStatus, RefundStatus, Prisma } from '@prisma/client';
+import { PaymentStatus, RefundStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   buildPaymentReceiptDoc,
@@ -11,6 +11,10 @@ import {
   type RefundReceiptInput,
 } from './pdf/refund-template';
 import { renderPdf } from './pdf/render';
+import {
+  allocatePaymentReceiptCode,
+  allocateRefundReceiptCode,
+} from './receipt-code';
 import { apiBaseUrl, refundReceiptPdfUrl } from './receipt-urls';
 import type { ReceiptVerificationDto } from './dto/verification.dto';
 
@@ -322,9 +326,8 @@ export class ReceiptsService {
   }
 
   /**
-   * Lazy-allocate `R-YYYY-NNNNN`. If already allocated returns it as-is.
-   * Race-safe: lookup + write happen inside a Serializable tx so two
-   * concurrent first-renders end up with sequential codes.
+   * `R-YYYY-NNNNN` is normally given by `ReceiptCodeListener` right after the
+   * payment commits; this is the fallback for one that has none yet.
    */
   private async ensurePaymentReceiptCode(
     paymentId: string,
@@ -332,11 +335,9 @@ export class ReceiptsService {
     existing: string | null,
   ): Promise<string> {
     if (existing) return existing;
-    return this.allocateCode({
-      paymentId,
-      companyId,
-      prefix: 'R',
-    });
+    const code = await allocatePaymentReceiptCode(this.prisma, paymentId);
+    if (!code) throw new NotFoundException("To'lov topilmadi");
+    return code;
   }
 
   private async ensureRefundReceiptCode(
@@ -345,62 +346,9 @@ export class ReceiptsService {
     existing: string | null,
   ): Promise<string> {
     if (existing) return existing;
-    return this.allocateCode({
-      refundId,
-      companyId,
-      prefix: 'Q',
-    });
-  }
-
-  private async allocateCode(
-    params:
-      | { paymentId: string; companyId: number; prefix: 'R' }
-      | { refundId: string; companyId: number; prefix: 'Q' },
-  ): Promise<string> {
-    const year = new Date().getFullYear();
-    const prefix = `${params.prefix}-${year}-`;
-    return this.prisma.$transaction(
-      async (tx) => {
-        if (params.prefix === 'R') {
-          const last = await tx.payment.findFirst({
-            where: {
-              companyId: params.companyId,
-              receiptCode: { startsWith: prefix },
-            },
-            orderBy: { receiptCode: 'desc' },
-            select: { receiptCode: true },
-          });
-          const next = nextSequence(last?.receiptCode ?? null, prefix);
-          const code = `${prefix}${next}`;
-          await tx.payment.update({
-            where: { id: params.paymentId },
-            data: { receiptCode: code },
-          });
-          return code;
-        } else {
-          const last = await tx.refund.findFirst({
-            where: {
-              companyId: params.companyId,
-              receiptCode: { startsWith: prefix },
-            },
-            orderBy: { receiptCode: 'desc' },
-            select: { receiptCode: true },
-          });
-          const next = nextSequence(last?.receiptCode ?? null, prefix);
-          const code = `${prefix}${next}`;
-          await tx.refund.update({
-            where: { id: params.refundId },
-            data: { receiptCode: code },
-          });
-          return code;
-        }
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 5_000,
-        timeout: 10_000,
-      },
-    );
+    const code = await allocateRefundReceiptCode(this.prisma, refundId);
+    if (!code) throw new NotFoundException('Qaytarish topilmadi');
+    return code;
   }
 
   private publicBaseUrl(): string {
@@ -423,14 +371,6 @@ export class ReceiptsService {
     if (invoiceBase) return `${invoiceBase}/${receiptId}`;
     return `${this.publicBaseUrl()}/r/${receiptId}`;
   }
-}
-
-function nextSequence(lastCode: string | null, prefix: string): string {
-  if (!lastCode) return '00001';
-  const numStr = lastCode.replace(prefix, '');
-  const num = parseInt(numStr, 10);
-  if (Number.isNaN(num)) return '00001';
-  return String(num + 1).padStart(5, '0');
 }
 
 const DAY_FULL_UZ: Record<string, string> = {
