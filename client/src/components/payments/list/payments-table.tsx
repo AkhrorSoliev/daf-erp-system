@@ -24,9 +24,9 @@ const PILL = {
   orange: "bg-orange-500/20 text-foreground",
 } as const;
 export const PART_PILL: Record<PartKind, string> = {
-  CURRENT: "bg-success/20 text-foreground",
+  CURRENT: "bg-emerald-500/20 text-foreground",
   ADVANCE: "bg-blue-500/15 text-foreground",
-  LATE: "bg-warning/25 text-foreground",
+  LATE: "bg-amber-500/25 text-foreground",
 };
 
 const Pill = ({ tone, children }: { tone: keyof typeof PILL; children: ReactNode }) => (
