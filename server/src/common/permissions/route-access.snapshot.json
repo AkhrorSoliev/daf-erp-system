@@ -695,6 +695,12 @@
     "CEO",
     "Cashier"
   ],
+  "GET /permissions": [
+    "CEO"
+  ],
+  "GET /permissions/history": [
+    "CEO"
+  ],
   "GET /permissions/me": "ANY",
   "GET /public/forms/:slug": "PUBLIC",
   "GET /receipts/:id/verify": "PUBLIC",
@@ -1896,6 +1902,9 @@
     "CEO",
     "Cashier"
   ],
+  "POST /permissions/roles/:roleId/reset": [
+    "CEO"
+  ],
   "POST /planned-absences/:groupId/date/:date": [
     "Administrator",
     "Branch Director",
@@ -2151,6 +2160,9 @@
   "PUT /lesson-teacher-overrides/:groupId/:date": [
     "Administrator",
     "Branch Director",
+    "CEO"
+  ],
+  "PUT /permissions/roles/:roleId": [
     "CEO"
   ],
   "PUT /tasks/:id/participants": [

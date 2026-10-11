@@ -58,7 +58,6 @@ const userSelect = {
   phone: true,
   photo: true,
   gender: true,
-  balance: true,
   login: true,
   position: true,
   companyId: true,
@@ -363,6 +362,7 @@ export class UsersService {
     query: UserQueryDto,
     companyId: number,
     scope: ReportBranchIds,
+    includeBalance = false,
   ) {
     const { user_type, search, active_only, page = 1, pageSize = 10 } = query;
     const skip = (page - 1) * pageSize;
@@ -425,7 +425,7 @@ export class UsersService {
     // enough (hundreds, not thousands) that this stays fast.
     const allRows = await this.prisma.user.findMany({
       where,
-      select: userSelect,
+      select: includeBalance ? { ...userSelect, balance: true } : userSelect,
     });
 
     const teacherIds = allRows
@@ -478,7 +478,12 @@ export class UsersService {
     return { data, total, page, pageSize };
   }
 
-  async findById(id: number, companyId: number, scope: ReportBranchIds) {
+  async findById(
+    id: number,
+    companyId: number,
+    scope: ReportBranchIds,
+    includeBalance = false,
+  ) {
     // `updateUser` was already branch-confined (`assertCallerMayTouchUser`)
     // because it can rewrite a password; the READ beside it was not, so one
     // branch's admin could still open another branch's employee record.
@@ -489,7 +494,7 @@ export class UsersService {
         deletedAt: null,
         AND: [userBranchWhere(scope)],
       },
-      select: userSelect,
+      select: includeBalance ? { ...userSelect, balance: true } : userSelect,
     });
 
     if (!user) {

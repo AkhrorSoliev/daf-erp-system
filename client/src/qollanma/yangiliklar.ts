@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-11",
+    sarlavha: "Ruxsatlar sahifasi",
+    matn: "CEO endi Sozlamalar → «Ruxsatlar» sahifasida har bir rol nima qila olishini o'zi belgilaydi. Bu filial direktori, administrator, kassir va o'qituvchiga tegishli: imkoniyat kalit bilan yoqiladi yoki o'chiriladi. Kalit bosilganda tasdiq oynasi chiqadi. Unda birga yoqiladigan yoki birga o'chadigan imkoniyatlar oldindan ko'rsatiladi, pulga ta'sir qiladigan imkoniyatni yoqishda esa qo'shimcha ogohlantirish bor. Qulf belgisi bu imkoniyatni shu rolga berib bo'lmasligini bildiradi; uni bossangiz, sababi chiqadi. Sariq nuqta boshlang'ich holatdan farqni ko'rsatadi. Har bir rolda «Boshlang'ich holatga qaytarish» tugmasi bor, pastda esa kim, qachon, nimani o'zgartirgani yoziladi. O'zgarish xodimning keyingi bosishida kuchga kiradi. Sahifani faqat CEO ko'radi. Hozircha hamma rol avvalgidek ishlaydi.",
+    rollar: [1],
+    sahifa: { bolim: "boshlash", sahifa: "rollar-va-huquqlar" },
+  },
+  {
+    sana: "2026-10-11",
     sarlavha: "Topshiriqlarda fayl, rasm va ovozli xabar",
     matn: "Topshiriq varag'ida endi fayl qo'shish mumkin: izoh maydonidagi qisqich belgisi bilan rasm, PDF, Word, Excel yoki qisqa video (20 MB gacha), mikrofon belgisi bilan 3 daqiqagacha ovozli xabar. Qisqich va mikrofon belgilari ijrochi va beruvchida chiqadi; kuzatuvchi ko'radi va yuklab oladi. Fayllar varaqdagi «Fayllar» bo'limida turadi: rasmni katta ko'rish, hujjatni yuklab olish, o'zingiz qo'shganini o'chirish mumkin. Topshiriq berishda «Batafsil» → «Rasm bilan tasdiqlansin» ni belgilasangiz, ijrochi tekshiruvga faqat ish rasmini qo'shib yuboradi. Telegram'da topshiriq xabariga javob qilib rasm, hujjat, video yoki ovozli xabar yuborsangiz, u topshiriqqa qo'shiladi; rasm talab qilinadigan topshiriqda «Bajardim» bot rasm so'raydi va rasm kelgach topshiriq tekshiruvga o'tadi.",
     rollar: [1, 2, 3, 4, 5],

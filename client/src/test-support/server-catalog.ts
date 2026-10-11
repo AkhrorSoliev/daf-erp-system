@@ -8,13 +8,18 @@ import type { PermissionKey } from "@/lib/permission-keys";
 /**
  * Tests only: loads the SERVER's capability catalog so client tests build
  * `can` from the same defaults the server uses — the proof that a role sees
- * the same menus as before. The server is a separate package, so its two
+ * the same menus as before. The server is a separate package, so its
  * plain-data files are transpiled on the fly (`status-config.test.ts` reads
  * server code the same way, as text).
  */
 const SERVER_SRC = join(__dirname, "../../../server/src");
 
-function load(
+/**
+ * Transpiles one server file (path relative to `server/src`) and runs it.
+ * `deps` maps every import the file makes to its already-loaded exports; an
+ * import missing from it throws, so a new server import cannot slip in.
+ */
+export function loadServerFile(
   relativePath: string,
   deps: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -49,9 +54,21 @@ let cached: ServerCatalog | null = null;
 
 export function loadServerCatalog(): ServerCatalog {
   if (!cached) {
-    const roleIds = load("common/auth/role-ids.ts", {});
-    cached = load("common/permissions/permission-catalog.ts", {
+    const roleIds = loadServerFile("common/auth/role-ids.ts", {});
+    const types = loadServerFile(
+      "common/permissions/permission-catalog.types.ts",
+      { "../auth/role-ids": roleIds },
+    );
+    const data = (part: string) =>
+      loadServerFile(`common/permissions/permission-catalog.${part}.ts`, {
+        "./permission-catalog.types": types,
+      });
+    cached = loadServerFile("common/permissions/permission-catalog.ts", {
       "../auth/role-ids": roleIds,
+      "./permission-catalog.types": types,
+      "./permission-catalog.people": data("people"),
+      "./permission-catalog.money": data("money"),
+      "./permission-catalog.admin": data("admin"),
     }) as unknown as ServerCatalog;
   }
   return cached;

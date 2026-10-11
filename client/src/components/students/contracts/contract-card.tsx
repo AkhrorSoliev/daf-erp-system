@@ -25,7 +25,7 @@ import type { ContractStatus, ContractView } from "./contract-types";
 interface Props {
   contract: ContractView;
   isCeo: boolean;
-  /** `students.manage`: edit, sign and cancel. Without it the card only prints. */
+  /** `contracts.manage`: edit, sign and cancel. Without it the card only prints. */
   canManage: boolean;
   busy: boolean;
   onPdf: () => void;

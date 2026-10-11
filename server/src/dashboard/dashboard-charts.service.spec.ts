@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { DashboardChartsService } from './dashboard-charts.service';
 import { ROLE_ID } from '../common/auth/role-ids';
 import { fakePermissions } from '../common/permissions/testing';
+import type { RoleOverride } from '../common/permissions/effective-permissions';
 
 const trendRows = [
   { month: 'Apr', monthKey: '2026-04', income: 100, expenses: 60, profit: 40 },
@@ -32,6 +33,7 @@ const flow = {
 function makeService(
   overrides: Record<string, any> = {},
   roleIds: number[] = [ROLE_ID.CEO],
+  roleOverrides: RoleOverride[] = [],
 ) {
   const reports = {
     getFinancialTrendCanonical: jest.fn().mockResolvedValue(trendRows),
@@ -53,7 +55,7 @@ function makeService(
     service: new DashboardChartsService(
       reports as never,
       redis as never,
-      fakePermissions(roleIds),
+      fakePermissions(roleIds, { overrides: roleOverrides }),
     ),
     reports,
     redis,
@@ -176,8 +178,39 @@ describe('DashboardChartsService.getCharts', () => {
     const administrator = makeService({}, [ROLE_ID.ADMINISTRATOR]);
     await administrator.service.getCharts(ADMINISTRATOR);
 
-    expect(ceo.redis.setex.mock.calls[0][0]).toContain(':money');
-    expect(administrator.redis.setex.mock.calls[0][0]).toContain(':ops');
+    expect(ceo.redis.setex.mock.calls[0][0]).toMatch(/:mo$/);
+    expect(administrator.redis.setex.mock.calls[0][0]).toMatch(/:-o$/);
+  });
+
+  it('keys the cache on both flags: money without the operational charts is its own entry', async () => {
+    const moneyOnly = makeService(
+      {},
+      [ROLE_ID.BRANCH_DIRECTOR],
+      [
+        {
+          roleId: ROLE_ID.BRANCH_DIRECTOR,
+          key: 'outreach.view',
+          granted: false,
+        },
+      ],
+    );
+    const res = await moneyOnly.service.getCharts(CEO);
+
+    expect(moneyOnly.redis.setex.mock.calls[0][0]).toMatch(/:m-$/);
+    expect(res.money).not.toBeNull();
+    expect(res.students).toBeNull();
+    expect(res.attendance).toBeNull();
+  });
+
+  it('gives two money callers who share a several-branch scope their own entries', async () => {
+    const scope = [1, 2];
+    const a = makeService({}, [ROLE_ID.BRANCH_DIRECTOR]);
+    await a.service.getCharts({ ...CEO, userId: 11, branchScope: scope });
+    const b = makeService({}, [ROLE_ID.BRANCH_DIRECTOR]);
+    await b.service.getCharts({ ...CEO, userId: 12, branchScope: scope });
+
+    expect(a.redis.setex.mock.calls[0][0]).toContain(':1-2:u11:mo');
+    expect(b.redis.setex.mock.calls[0][0]).toContain(':1-2:u12:mo');
   });
 
   it("reads the caller's capabilities from the database, not the roles in the token", async () => {
@@ -189,7 +222,7 @@ describe('DashboardChartsService.getCharts', () => {
     expect(res.money).toBeNull();
     expect(res.students).not.toBeNull();
     expect(res.attendance).not.toBeNull();
-    expect(redis.setex.mock.calls[0][0]).toContain(':ops');
+    expect(redis.setex.mock.calls[0][0]).toMatch(/:-o$/);
   });
 
   it("o'quvchilar oqimi 6 oyni oladi va guruhdagilar sonini olmaydi", async () => {

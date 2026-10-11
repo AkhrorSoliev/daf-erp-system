@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { makeCan } from "@/lib/permission-check";
+import type { PermissionKey } from "@/lib/permission-keys";
 import { canForRoles } from "@/test-support/server-catalog";
 import {
   canDirectorRate,
@@ -28,6 +30,16 @@ describe("resolveSalarySettingsAccess", () => {
 
   it.each([[[3]], [[4]], [[5]], [[]]])('%j: no "Sozlamalar"', (roleIds) => {
     expect(resolveSalarySettingsAccess(canForRoles(roleIds)).canOpen).toBe(false);
+  });
+
+  // The «E'tibor talab qiladi» staff rows and «Xodimlar stavkalari» follow
+  // `salary.rate-edit` (CEO 10.10). `salary.close` is the bulk settle and must
+  // never open them.
+  it("staff rates follow `salary.rate-edit`, never `salary.close`", () => {
+    const closeOnly = makeCan(new Set<PermissionKey>(["salary.view", "salary.close"]));
+    expect(resolveSalarySettingsAccess(closeOnly).canManageCompanyPayroll).toBe(false);
+    const rateEdit = makeCan(new Set<PermissionKey>(["salary.view", "salary.rate-edit"]));
+    expect(resolveSalarySettingsAccess(rateEdit).canManageCompanyPayroll).toBe(true);
   });
 });
 

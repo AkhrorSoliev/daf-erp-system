@@ -153,6 +153,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0084](0084-takrorlanuvchi-topshiriq.md) | Takrorlanuvchi topshiriq: birinchisi qoida bilan darhol, keyingilari har kuni 07:00 da; yakshanba/bayram keyingi ish kuniga; oldingisi ochiq bo'lsa yangisi yo'q; ikki nusxa ikki marta bermaydi; muallif ketsa qoida to'xtaydi; to'xtatish/o'chirishda topshiriqlar qoladi | Qabul qilindi | 2026-10-11 |
 | [0085](0085-dialog-ovozi-gemini-3-8-har-obrazga-ovoz.md) | Dialog ovozi Gemini 3.8 da, har obrazning CEO tanlagan o'z ovozi; unitlar navbat bilan o'tkaziladi, navbati kelmagan unitning 3.1 yozuvi qoladi | Qabul qilindi | 2026-10-11 |
 | [0086](0086-topshiriq-fayllari.md) | Topshiriq fayllari yopiq bucket'da, 10 daqiqalik havola; yuklash server orqali (tur baytlardan), CORS'siz; ovoz 3 daqiqa; «Rasm bilan tasdiqlansin» — tekshiruvga faqat ijrochining yangi rasmi bilan; Telegram javobidagi fayl va rasm | Qabul qilindi | 2026-10-11 |
+| [0087](0087-ruxsatlar-sahifasi.md) | «Ruxsatlar» sahifasi: CEO rol imkoniyatlarini o'zgartiradi (faqat CEO, `@CeoOnly()`, imkoniyat emas); bazada faqat farq saqlanadi; texnik qulf olti sabab bilan server va ekranda bir xil; bog'liqlik bitta umumiy faylda; har saqlash tarixda; avans faqat «Oylik va avans to'lash» bilan | Qabul qilindi | 2026-10-11 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

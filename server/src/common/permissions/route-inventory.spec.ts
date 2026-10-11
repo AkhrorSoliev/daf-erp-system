@@ -49,7 +49,7 @@ describe('route inventory: access markers', () => {
   });
 
   it('refuses an argument handed to a marker that takes none', () => {
-    for (const marker of ['AnyStaff', 'AnyUser', 'StudentOnly']) {
+    for (const marker of ['AnyStaff', 'AnyUser', 'StudentOnly', 'CeoOnly']) {
       expect(() =>
         parse(`class XController { @Get() @${marker}(KEYS.A) list() {} }`),
       ).toThrow(`Unsupported @${marker} argument in ${FILE}: KEYS.A`);
@@ -70,5 +70,25 @@ describe('route inventory: access markers', () => {
       'student',
       'none',
     ]);
+  });
+
+  it('reads @CeoOnly() on a handler and on a class', () => {
+    const [onHandler] = parse(`
+      class XController {
+        @Get()
+        @CeoOnly()
+        list() {}
+      }`);
+    expect(onHandler.access).toEqual({ kind: 'ceo' });
+    expect(onHandler.accessMarkers.handler).toEqual(['CeoOnly']);
+
+    const [onClass] = parse(`
+      @CeoOnly()
+      class XController {
+        @Get()
+        list() {}
+      }`);
+    expect(onClass.access).toEqual({ kind: 'ceo' });
+    expect(onClass.accessMarkers.controller).toEqual(['CeoOnly']);
   });
 });

@@ -13,6 +13,7 @@ export const PERMISSION_KEYS = [
   "students.enroll",
   "students.sms",
   "students.initial-balance",
+  "contracts.manage",
   "groups.view",
   "groups.manage",
   "lessons.change",

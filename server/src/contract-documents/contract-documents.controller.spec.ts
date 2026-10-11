@@ -39,11 +39,11 @@ describe('ContractDocumentsController', () => {
   );
 
   it.each(['create', 'update', 'sign', 'cancel'] as const)(
-    '%s is a write (students.manage)',
+    '%s is a contract write (contracts.manage)',
     (name) => {
       expect(routeAccess(ContractDocumentsController, name)).toEqual({
         kind: 'can',
-        keys: ['students.manage'],
+        keys: ['contracts.manage'],
       });
       expect(defaultRolesOf(ContractDocumentsController, name)).toEqual([
         'Administrator',
