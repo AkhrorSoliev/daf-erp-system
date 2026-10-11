@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/u
 import type { TaskFileView } from "@/hooks/use-tasks";
 import { tashkentDayAndTime } from "./task-due";
 import { personName } from "./task-feed-text";
-import { formatSize } from "./task-file-rules";
+import { FILE_URL_REFRESH_MS, formatSize } from "./task-file-rules";
 import { useTaskFiles } from "./use-task-files";
 
 const NONE: TaskFileView[] = [];
@@ -30,13 +30,30 @@ async function download(file: TaskFileView) {
   window.location.assign(fresh.downloadUrl);
 }
 
+/** A plain left-click: anything else (ctrl, middle, new tab) keeps the browser's own behaviour. */
+const isPlainClick = (e: React.MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+
+/** Opens the document in a new tab; when the list is stale the tab is opened first (a popup blocker allows only a synchronous open), then pointed at the renewed link. */
+async function openFresh(e: React.MouseEvent, taskId: string, file: TaskFileView) {
+  const { taskId: shown, loadedAt } = useTaskFiles.getState();
+  if (!isPlainClick(e) || (shown === taskId && Date.now() - loadedAt < FILE_URL_REFRESH_MS)) return;
+  e.preventDefault();
+  const tab = window.open("", "_blank");
+  const ok = await useTaskFiles.getState().ensureFresh(taskId);
+  const fresh = ok ? useTaskFiles.getState().files.find((f) => f.id === file.id) : undefined;
+  if (!tab) return;
+  if (!fresh) { tab.close(); return; }
+  tab.opener = null;
+  tab.location.href = fresh.url;
+}
+
 function DownloadLink({ file, label }: { file: TaskFileView; label?: string }) {
   return (
     <a
       href={file.downloadUrl}
       aria-label="Yuklab olish"
       className={label ? buttonVariants({ variant: "outline", size: "sm" }) : buttonVariants({ variant: "ghost", size: "icon-sm" })}
-      onClick={(e) => { e.preventDefault(); void download(file); }}
+      onClick={(e) => { if (!isPlainClick(e)) return; e.preventDefault(); void download(file); }}
     >
       <Download className="size-4" />{label}
     </a>
@@ -130,12 +147,12 @@ export function TaskFileViewer({ images, index, onIndex, onClose }: {
   );
 }
 
-function DocumentRow({ file, onDelete }: { file: TaskFileView; onDelete: () => void }) {
+function DocumentRow({ taskId, file, onDelete }: { taskId: string; file: TaskFileView; onDelete: () => void }) {
   return (
     <li className="flex items-center gap-2 rounded-md border px-2.5 py-2">
       <FileText className="size-5 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
-        <a href={file.url} target="_blank" rel="noreferrer" className="block truncate text-sm font-medium hover:underline">{file.name}</a>
+        <a href={file.url} target="_blank" rel="noopener noreferrer" onClick={(e) => void openFresh(e, taskId, file)} className="block truncate text-sm font-medium hover:underline">{file.name}</a>
         <p className="truncate text-xs text-muted-foreground">
           {formatSize(file.size)} · {file.uploadedBy ? personName(file.uploadedBy) : "Tizim"} · {when(file.createdAt)}
         </p>
@@ -160,6 +177,8 @@ export function TaskDrawerFiles({ taskId }: { taskId: string }) {
 
   const images = files.filter((f) => f.kind === "IMAGE");
   const documents = files.filter((f) => f.kind === "DOCUMENT");
+  // Every picture gone while the viewer is open (deleted elsewhere): close it, or it would come back with the next upload.
+  if (viewer !== null && images.length === 0) setViewer(null);
   if (enabled !== true || (images.length === 0 && documents.length === 0)) return null;
 
   return (
@@ -183,7 +202,7 @@ export function TaskDrawerFiles({ taskId }: { taskId: string }) {
       )}
       {documents.length > 0 && (
         <ul className="space-y-1.5">
-          {documents.map((f) => <DocumentRow key={f.id} file={f} onDelete={() => setDeleting(f)} />)}
+          {documents.map((f) => <DocumentRow key={f.id} taskId={taskId} file={f} onDelete={() => setDeleting(f)} />)}
         </ul>
       )}
       {viewer !== null && (
