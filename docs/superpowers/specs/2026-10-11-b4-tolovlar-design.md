@@ -1,17 +1,17 @@
 # B4 — «To'lovlar» sahifasi — dizayn
 
 **Sana:** 2026-10-11
-**Holati:** CEO qarorlari 11.10.2026 da chatda berildi (9 band, §2); yangi qismlar maketi CEO ko'rigini kutadi
+**Holati:** CEO tomonidan tasdiqlangan (11.10.2026: 9 band, keyin yangi qismlar maketi va qolgan savollarga javob — §2)
 **Maketlar:**
 - https://claude.ai/artifact/YA4jhqf4NH8ZrqnBbjB9UL — `v-payments` bo'limi, `pdrawer` oynasi, «Qayerdan keldi» oynasi `dlg-income` (CEO 27.09 da tasdiqlagan)
-- `b4-yangi-qismlar.html` — maket ko'rsatmagan qismlar: Administrator/Kassir ko'rinishi (yig'ma kartasiz), bekor qilingan va tuzatilgan qator, oynadagi ikki kvitansiya raqami, «Bekor qilish» oynasi (CEO ko'rigi uchun)
+- `b4-yangi-qismlar.html` — maket ko'rsatmagan qismlar: Administrator/Kassir ko'rinishi (yig'ma kartasiz), bekor qilingan va tuzatilgan qator, oynadagi ikki kvitansiya raqami, «Bekor qilish» oynasi (CEO 11.10 da o'zgarishsiz tasdiqlagan)
 
 **Tayanadi:** ADR-0067 (kassa uch qismda, `getIncomeMonthAttribution`), ADR-0065 (chek va bekor qilish xabari darhol), ADR-0021 (bosma raqam va uning bo'linishi bitta chaqiruvdan), ADR-0072 (B2a: eski havolalar yo'naltiriladi), ADR-0079 (imkoniyatlar), ADR-0081 (filial chegarasi).
 **Qaror yozuvi:** ADR-0084 — shu PR'da yoziladi (§7.1).
 
 ## 1. Nima uchun va qayerda
 
-B to'plami Moliyani tasdiqlangan maket asosida qayta quradi. 1 (#658), 2a (#665) va 2b (#686) qismlar prodda; 3-qism (#699) merge kutmoqda. 4-qism — yangi «To'lovlar» sahifasi; u Hisobotlardagi «O'quvchi to'lovi»ni va Moliyadagi «Kutilyotgan to'lovlar»ni almashtiradi. B1 shu qismga uchta qarz qoldirgan: «To'lovlar →» va «Barcha to'lovlar →» havolalari hamda «Guruh» ustunining qoidasi (B1 spec §2.2, §2.4).
+B to'plami Moliyani tasdiqlangan maket asosida qayta quradi. 1 (#658), 2a (#665) va 2b (#686) qismlar prodda; 3-qism (#699) merge kutmoqda. 4-qism — yangi «To'lovlar» sahifasi; u Hisobotlardagi «O'quvchi to'lovi»ni almashtiradi; Moliyadagi «Kutilyotgan to'lovlar» (aslida qarzdorlar ro'yxati) menyudan chiqib «Qarzdorlik»ka yo'naltiriladi. B1 shu qismga uchta qarz qoldirgan: «To'lovlar →» va «Barcha to'lovlar →» havolalari hamda «Guruh» ustunining qoidasi (B1 spec §2.2, §2.4).
 
 Bugun nima noto'g'ri:
 - To'lovlar ro'yxati Hisobotlar ostida, «O'quvchi to'lovi» nomi bilan, faqat CEO va filial direktoriga ochiq. Administrator va kassir pulni har kuni qabul qiladi, lekin ro'yxatni ko'rmaydi.
@@ -27,12 +27,20 @@ Bugun nima noto'g'ri:
 1. «To'lovlar» — Moliya menyusida «Umumiy ma'lumotlar»dan keyin. CEO, filial direktori, administrator, kassir ko'radi. Yig'ma karta (davr jami, uch qism, usullar, onlayn avtomatik) — faqat CEO va filial direktoriga (`reports.finance`), «Umumiy ma'lumotlar»dagidek. Administrator va kassir ro'yxat, filtrlar, «Tanlangan: N ta · X so'm» va oynani ko'radi.
 2. Har qatordagi «Nimaga ketdi» = «Kassaga tushdi»ning AYNAN o'sha hisobi (`getIncomeMonthAttribution`, ADR-0067: shu oy / oldindan / eski qarz, tanlangan davr OXIRIGA nisbatan). O'sha bitta dvigatel har to'lovning qismlarini ham qaytaradi; ikkinchi dvigatel yo'q. «Bu oy»da qatorlar qismlarining yig'indisi kartaning uch raqamiga teng. Bitta to'lovning yorlig'i tanlangan davrga qarab o'zgarishi mumkin — spec va qo'llanma buni aytadi.
 3. «Guruh» — o'quvchining TO'LOV KUNIDAGI guruhi (§4.5); guruh, ustoz va kurs filtrlari ham shu qoida bilan.
-4. `/reports/student-payments` («O'quvchi to'lovi») va `/payments/pending` («Kutilyotgan to'lovlar») menyulardan chiqadi va yangi sahifaga server tomonda yo'naltiriladi; ishlatilmay qolgan endpointlar olib tashlanadi (§5.11).
+4. `/reports/student-payments` («O'quvchi to'lovi») va `/payments/pending` («Kutilyotgan to'lovlar») menyulardan chiqadi va server tomonda yo'naltiriladi: «O'quvchi to'lovi» — yangi «To'lovlar» sahifasiga, «Kutilyotgan to'lovlar» — «Qarzdorlik»ka (`/payments/debt`; 13-band bilan o'zgartirildi). Ishlatilmay qolgan endpointlar olib tashlanadi (§5.11).
 5. Kvitansiya: tizim raqami (`Payment.receiptCode`, `R-YYYY-NNNNN`) ham, qog'oz raqami (`Payment.receiptNumber`) ham ko'rsatiladi; qidiruv ikkalasini topadi. Tizim raqami to'lov yozilganda beriladi (§4.7), eski to'lovlarga bir martalik skript bilan (§5.10).
 6. «Bekor qilinganlar» — REVERSED to'lovlar; tuzatilgan to'lovning eski qatori «tuzatildi → <yangi summa>» belgisi va yangi to'lovga havola bilan (§4.8).
 7. Excel: jadval ustunlari + o'quvchi ID, telefon, kvitansiya (ikkalasi), izoh, manba, holat; joriy filtrlar; hamma sahifalar.
 8. Maketdan: davr tugmalari, filtrlar, oyna, sahifalash, bo'sh holat — §3 dagidek. «Tuzatish» — o'quvchi profilidagi dialogning o'zi (`payments.correct`); «Bekor qilish» — faqat CEO (`money.undo`), sabab MAJBURIY (serverda ham), «pul darslarga sarflangan» rad javobi saqlanadi va ko'rsatiladi. Filial — tepadagi tanlovdan (`@BranchScope()`), sahifada filial filtri yo'q.
 9. «Umumiy ma'lumotlar»dan havolalar: «Kassaga tushdi» kartasidagi «To'lovlar →», «Oxirgi to'lovlar»dagi «Barcha to'lovlar →», «Qayerdan keldi» oynasidagi «Barcha to'lovlar» — har biri yangi sahifani mos davr bilan ochadi (§6.3).
+
+Ikkinchi javob (CEO, 11.10.2026, spec loyihasidan keyin):
+
+10. Yangi qismlar maketi (`b4-yangi-qismlar.html`) o'zgarishsiz tasdiqlandi.
+11. Qator yorliqlari davrga moslashadi: davr oylar chegarasidan o'tsa «Shu davr to'lovi»; davr oyning oxirgi kunida tugamasa «Oldindan (balansda)», tugasa «{Keyingi oy} uchun oldindan» (§4.4).
+12. Administrator va kassir har qatordagi «Nimaga ketdi»ni, uning filtrini va oynadagi bo'limni ko'radi; yig'ma karta faqat CEO va filial direktoriga qoladi (§3.12).
+13. **O'zgarish (4-bandga):** `/payments/pending` («Kutilyotgan to'lovlar») «Qarzdorlik»ka (`/payments/debt`) yo'naltiriladi, «To'lovlar»ga emas; `/reports/student-payments` yangi sahifaga yo'naltirilishi o'zgarmaydi (§6.2).
+14. Tasdiqlandi: kvitansiyaning tizim raqami to'lov commit bo'lgandan keyin, pul tranzaksiyasidan tashqarida beriladi (§4.7); Excel 20 000 qator bilan cheklanadi (§5.6); «pul darslarga sarflangan» rad javobi yangi o'zbekcha matn bilan (§5.7).
 
 ## 3. Sahifa — `/payments/list`
 
@@ -366,9 +374,9 @@ Grep (11.10.2026, `origin/main` 6a57c05e) bo'yicha boshqa chaqiruvchisi yo'q:
 
 ### 6.2 Yo'naltirishlar (server tomonda, `redirect()` — B2a `legacyDebtRedirect` kabi)
 
-- `/payments/pending` → `/payments/list`.
+- `/payments/pending` → `/payments/debt` («Qarzdorlik»; CEO, 11.10.2026 — u sahifa qarzdorlar ro'yxati edi, «To'lovlar» emas). Parametrlar tashlanadi; `/payments/debt` o'zining `legacyDebtRedirect`i bilan ochiladi.
 - `/reports/student-payments?…` → `/payments/list?…`: `startDate` + `endDate` → `davr=oraliq&dan=…&gacha=…` (boshi 2026-05-01 dan oldin bo'lsa 2026-05-01 qilinadi; sanalar yo'q bo'lsa — davr qo'yilmaydi, sukut «Bu oy»); `groupIds` → `guruh` (birinchisi), `teacherIds` → `ustoz` (birinchisi), `methods` → `usul` (birinchisi), `courseId` → `kurs`; `branchId`, `page`, `pageSize` tashlanadi.
-- Qo'llanma havolalari (`qarzdorlik.mdx:124`, `tolov-qayd-qilish.mdx:105`) va `sahifalar/tolovlar.ts:121`dagi `yollar` yangi sahifaga yangilanadi.
+- Qo'llanma: `qarzdorlik.mdx:124`dagi «Kutilyotgan to'lovlar» qatori olib tashlanadi; `tolov-qayd-qilish.mdx:105` va `sahifalar/tolovlar.ts:121`dagi `yollar` (`/payments/pending`) «To'lovlar» (`/payments/list`) ga almashtiriladi; «kutilyotgan to'lovlar» kalit so'zi «Qarzdorlik» sahifasi yozuviga ko'chadi.
 
 ### 6.3 «Umumiy ma'lumotlar» havolalari
 
@@ -391,15 +399,15 @@ Sahifa oyi `M` (`?month=`) bo'yicha davr: joriy oy → `davr=oy`; o'tgan oy → 
 3. `receiptCode` har to'lovga `payment.received`dan keyin beriladi (pul tranzaksiyasidan tashqarida — sababi), yil Toshkent bo'yicha; PDF yo'li zaxira; eski to'lovlar skript bilan.
 4. Odam bekor qilganda sabab majburiy (DTO va xizmat); tizim chaqiruvlari istisno.
 5. `Payment.correctsPaymentId` — tuzatishning yagona bog'lanishi; eski tuzatishlar skript bilan; matndan taxmin qilish taqiqlanadi.
-6. `GET /reports/student-payments` va `GET /payments/pending-students` olib tashlandi; eski sahifalar yo'naltiriladi.
+6. `GET /reports/student-payments` va `GET /payments/pending-students` olib tashlandi; `/reports/student-payments` → `/payments/list`, `/payments/pending` → `/payments/debt`.
 Ko'rib chiqilgan muqobillar: qismlarni to'lov KUNIDAGI holat bo'yicha (CEO rad etdi — karta bilan qo'shilmaydi); kodni pul tranzaksiyasi ichida berish (to'qnashuv to'lovni rad ettiradi); Postgres sequence (yillik qayta boshlanish yo'qoladi); tuzatishni matndan o'qish (ishonchsiz).
 
 ### 7.2 Boshqalar
 
 - `server/CLAUDE.md`: Payment Module endpointlari (yangi to'rt yo'l, olib tashlangan ikki yo'l, `getPending` qatori), «Payment Reverse Block» (sabab majburiy, yangi matn), «Payment Amount Correction» (`correctsPaymentId`), «Cash in three parts» (bir qator: `byPayment` va To'lovlar sahifasi), receipts haqida qator (`receiptCode` to'lov yozilganda).
 - `docs/role-access.md`: «To'lovlar» qatori (CEO/BD/Admin/Kassir; karta CEO/BD; bekor qilish CEO; tuzatish CEO/BD/Admin), «O'quvchi to'lovi» va «Kutilyotgan to'lovlar» qatorlari olib tashlanadi.
-- Qo'llanma: yangi sahifa `client/src/qollanma/kontent/tolovlar/tolovlar-sahifasi.mdx` va `sahifalar/tolovlar.ts`ga yozuv (`sahifa: "tolovlar-sahifasi"`, sarlavha «To'lovlar», rollar `[1, 2, 3, 5]`, `adr: ["0084", "0067", "0065"]`, `yollar: ["/payments/list"]`, kalit so'zlar: to'lovlar, to'lovlar ro'yxati, kvitansiya raqami, bekor qilingan to'lov, tuzatilgan to'lov, nimaga ketdi, oldindan, eski qarz, o'quvchi to'lovi, kutilyotgan to'lovlar). Mazmuni: davr tugmalari va hafta dushanbadan; karta faqat CEO/direktorga; «Nimaga ketdi» tanlangan davr oxiriga ko'ra (misol bilan: bitta to'lov haftada «Oldindan», oyda «Oktabr to'lovi»); guruh — to'lov kunidagi; ikki kvitansiya raqami; bekor qilish (faqat CEO, sabab, «darslarga sarflangan» holati); tuzatish; Excel. `tolov-qayd-qilish.mdx` va `tolovni-togrilash.mdx` yangi sahifaga havola oladi.
-- `yangiliklar.ts` (2026-10-1x, rollar `[1, 2, 3, 5]`, sahifa `{ bolim: "tolovlar", sahifa: "tolovlar-sahifasi" }`): «Moliya → «To'lovlar» — yangi sahifa: hamma to'lovlar bitta ro'yxatda, davr tugmalari (Bugun, Kecha, Bu hafta, Bu oy, O'tgan oy, Oraliq), qidiruv (ism, telefon, ID, kvitansiya raqami) va filtrlar. Har to'lov yonida pul nimaga ketgani (shu oy, oldindan, eski qarz) — «Kassaga tushdi» kartasi bilan bir xil hisob, tanlangan davr oxiriga ko'ra. Qator bosilsa to'lov oynasi: kvitansiya, to'lov paytidagi balans, tuzatish; CEO to'lovni sabab yozib bekor qila oladi. «O'quvchi to'lovi» hisoboti va «Kutilyotgan to'lovlar» sahifasi shu yerga ko'chdi. Har to'lovning endi tizim kvitansiya raqami bor.»
+- Qo'llanma: yangi sahifa `client/src/qollanma/kontent/tolovlar/tolovlar-sahifasi.mdx` va `sahifalar/tolovlar.ts`ga yozuv (`sahifa: "tolovlar-sahifasi"`, sarlavha «To'lovlar», rollar `[1, 2, 3, 5]`, `adr: ["0084", "0067", "0065"]`, `yollar: ["/payments/list"]`, kalit so'zlar: to'lovlar, to'lovlar ro'yxati, kvitansiya raqami, bekor qilingan to'lov, tuzatilgan to'lov, nimaga ketdi, oldindan, eski qarz, o'quvchi to'lovi). Mazmuni: davr tugmalari va hafta dushanbadan; karta faqat CEO/direktorga; «Nimaga ketdi» tanlangan davr oxiriga ko'ra (misol bilan: bitta to'lov haftada «Oldindan», oyda «Oktabr to'lovi»); guruh — to'lov kunidagi; ikki kvitansiya raqami; bekor qilish (faqat CEO, sabab, «darslarga sarflangan» holati); tuzatish; Excel. `tolov-qayd-qilish.mdx` va `tolovni-togrilash.mdx` yangi sahifaga havola oladi.
+- `yangiliklar.ts` (2026-10-1x, rollar `[1, 2, 3, 5]`, sahifa `{ bolim: "tolovlar", sahifa: "tolovlar-sahifasi" }`): «Moliya → «To'lovlar» — yangi sahifa: hamma to'lovlar bitta ro'yxatda, davr tugmalari (Bugun, Kecha, Bu hafta, Bu oy, O'tgan oy, Oraliq), qidiruv (ism, telefon, ID, kvitansiya raqami) va filtrlar. Har to'lov yonida pul nimaga ketgani (shu oy, oldindan, eski qarz) — «Kassaga tushdi» kartasi bilan bir xil hisob, tanlangan davr oxiriga ko'ra. Qator bosilsa to'lov oynasi: kvitansiya, to'lov paytidagi balans, tuzatish; CEO to'lovni sabab yozib bekor qila oladi. «O'quvchi to'lovi» hisoboti shu yerga ko'chdi; «Kutilyotgan to'lovlar» o'rniga «Qarzdorlik» sahifasi ochiladi. Har to'lovning endi tizim kvitansiya raqami bor.»
 
 ## 8. Testlar
 
@@ -418,7 +426,7 @@ Server:
 
 Mijoz (vitest):
 - `periodRange`: Bugun/Kecha, Bu hafta dushanbadan (yakshanba kuni ham), Bu oy oxirgi kungacha, O'tgan oy yanvarda, Oraliq chegarasi.
-- `legacyStudentPaymentsRedirect`, `/payments/pending` yo'naltirish, `paymentsListHref`.
+- `legacyStudentPaymentsRedirect`, `/payments/pending` → `/payments/debt` yo'naltirish, `paymentsListHref`.
 - Karta faqat `reports.finance` bilan; «Bu oy»dan boshqa davrda split va belgi yo'q; chip filtrni o'rnatadi/bo'shatadi.
 - Jami qatori matnlari (oddiy, «Bekor qilinganlar», «shundan …»).
 - Jadval: bekor qilingan va «tuzatildi → …» qatorlari, «+1» guruh, «onlayn» pill.
