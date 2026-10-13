@@ -741,6 +741,7 @@ model Student {
   scholarships      Scholarship[]
   monthlyCharges    EnrollmentMonthlyCharge[]
   balanceNotices    BalanceNotice[]
+  lessonRatings     LessonRating[]
 
   @@index([deletedAt])
   @@index([status])
@@ -1390,6 +1391,7 @@ model Group {
   plannedAbsences        PlannedAbsence[]
   monthlyCharges         EnrollmentMonthlyCharge[]
   unmarkedLessons        UnmarkedLesson[]          @relation("UnmarkedLessonGroup")
+  lessonRatings          LessonRating[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -4335,4 +4337,44 @@ model StudentJoinRequest {
 
   @@index([status, createdAt])
   @@index([branchId, status])
+}
+
+enum LessonRatingStatus {
+  SENT // qator yozildi; messageId bo'lsa xabar yetgan
+  FAILED // Telegram rad etdi — qayta urinilmaydi
+}
+
+/// Darsdan keyin o'quvchidan so'ralgan baho (spec 2026-10-13, yangi ADR).
+/// Bitta dars, bitta o'quvchi — bitta qator; qator xabardan OLDIN yoziladi,
+/// shuning uchun ikki parallel cron bir o'quvchiga ikki marta yubora olmaydi.
+model LessonRating {
+  id              String             @id @default(uuid())
+  companyId       Int
+  /// Guruh filiali, yuborilgan paytda muzlatiladi (hisobot doirasi).
+  branchId        Int
+  groupId         String
+  group           Group              @relation(fields: [groupId], references: [id])
+  studentId       Int
+  student         Student            @relation(fields: [studentId], references: [id])
+  date            DateTime           @db.Date
+  /// Dars ustozlari (override hisobga olingan), yuborilgan paytda muzlatiladi.
+  teacherIds      Int[]
+  chatId          String
+  /// Yetkazilgan xabar; null — yetmagan.
+  messageId       Int?
+  /// «Nima yoqmadi?» so'rovi (force_reply).
+  promptMessageId Int?
+  status          LessonRatingStatus @default(SENT)
+  /// 1–5.
+  score           Int?
+  /// ≤ 500 belgi.
+  comment         String?
+  sentAt          DateTime           @default(now())
+  ratedAt         DateTime?
+  commentedAt     DateTime?
+  failReason      String?
+
+  @@unique([groupId, studentId, date])
+  @@index([companyId, date])
+  @@index([chatId, promptMessageId])
 }

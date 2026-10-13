@@ -33,7 +33,8 @@ export type SettingKey =
   | 'payment.trialLessonEnabled'
   | 'payment.attendanceOpensMinutesBefore'
   | 'payment.admissionMinPaidPercent'
-  | 'payment.paidThroughReminderDays';
+  | 'payment.paidThroughReminderDays'
+  | 'lessonRating.enabled';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -48,6 +49,7 @@ export interface SettingValueMap {
   'payment.attendanceOpensMinutesBefore': number;
   'payment.admissionMinPaidPercent': number;
   'payment.paidThroughReminderDays': number;
+  'lessonRating.enabled': boolean;
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -283,6 +285,15 @@ export const SETTING_DEFINITIONS: {
     // 0: no such reminder. Read by `MonthlyPaymentNoticeCronService`.
     defaultValue: 3,
     parse: parseReminderDays,
+    companyLevelOnly: true,
+  },
+  'lessonRating.enabled': {
+    key: 'lessonRating.enabled',
+    // Darsdan keyin o'quvchidan Telegram'da baho so'rash (spec 2026-10-13).
+    // O'chiq chiqadi — CEO «Dars baholari» sahifasida yoqadi.
+    // `LessonRatingSenderService` kompaniya bo'yicha o'qiydi.
+    defaultValue: false,
+    parse: (raw) => parseBoolean('lessonRating.enabled', raw),
     companyLevelOnly: true,
   },
 };

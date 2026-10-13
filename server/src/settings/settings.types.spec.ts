@@ -22,6 +22,7 @@ describe('SETTING_DEFINITIONS registry', () => {
         'payment.attendanceOpensMinutesBefore',
         'payment.admissionMinPaidPercent',
         'payment.paidThroughReminderDays',
+        'lessonRating.enabled',
       ].sort(),
     );
   });

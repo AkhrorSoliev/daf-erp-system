@@ -116,6 +116,7 @@ describe('SettingsService', () => {
         'payment.attendanceOpensMinutesBefore': 10,
         'payment.admissionMinPaidPercent': 50,
         'payment.paidThroughReminderDays': 3,
+        'lessonRating.enabled': false,
       });
     });
   });
@@ -144,6 +145,7 @@ describe('SettingsService', () => {
         'payment.attendanceOpensMinutesBefore': [],
         'payment.admissionMinPaidPercent': [],
         'payment.paidThroughReminderDays': [],
+        'lessonRating.enabled': [],
       });
     });
 
