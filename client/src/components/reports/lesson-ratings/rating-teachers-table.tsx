@@ -1,24 +1,31 @@
 "use client";
 
-import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/forms/table-pagination";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/format-utils";
 import type { RatingTeacherRow } from "./types";
 import { averageText, responseText, trend } from "./rating-format";
 
 export function RatingTeachersTable({
   rows,
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange,
   onOpen,
 }: {
+  /** Already the current page's slice. */
   rows: RatingTeacherRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
   onOpen: (teacherId: number) => void;
 }) {
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const slice = rows.slice((page - 1) * pageSize, page * pageSize);
-
-  if (rows.length === 0) {
+  if (total === 0) {
     return (
       <p className="rounded-md border p-6 text-center text-sm text-muted-foreground">
         Bu oyda baho yo&apos;q — tizim yoqilganini va darslar o&apos;tganini tekshiring
@@ -40,24 +47,30 @@ export function RatingTeachersTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {slice.map((r, i) => {
+          {rows.map((r, i) => {
             const t = trend(r.average, r.previousAverage);
             return (
               <TableRow
                 key={r.teacherId}
-                className="cursor-pointer"
                 tabIndex={0}
+                aria-label={`${r.name} — baholarni ochish`}
+                className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => onOpen(r.teacherId)}
-                onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen(r.teacherId)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onOpen(r.teacherId);
+                  }
+                }}
               >
                 <TableCell className="border-r text-muted-foreground">
                   {(page - 1) * pageSize + i + 1}
                 </TableCell>
                 <TableCell className="font-medium">{r.name}</TableCell>
                 <TableCell>{averageText(r.average)}</TableCell>
-                <TableCell>{r.rated}</TableCell>
+                <TableCell>{formatNumber(r.rated)}</TableCell>
                 <TableCell>{responseText(r.rated, r.delivered, r.responseRate)}</TableCell>
-                <TableCell className={cn(r.low > 0 && "text-destructive")}>{r.low}</TableCell>
+                <TableCell className={cn(r.low > 0 && "text-destructive")}>{formatNumber(r.low)}</TableCell>
                 <TableCell
                   className={cn(
                     t?.tone === "up" && "text-green-600",
@@ -74,12 +87,9 @@ export function RatingTeachersTable({
       <TablePagination
         page={page}
         pageSize={pageSize}
-        total={rows.length}
-        onPageChange={setPage}
-        onPageSizeChange={(s) => {
-          setPageSize(s);
-          setPage(1);
-        }}
+        total={total}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
       />
     </div>
   );

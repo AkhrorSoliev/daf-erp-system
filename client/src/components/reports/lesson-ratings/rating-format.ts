@@ -1,3 +1,5 @@
+import { formatNumber, formatPercent } from "@/lib/format-utils";
+
 /** Baholar shu oydan beri yig'iladi (spec 2026-10-13). */
 export const RATING_FLOOR_MONTH = "2026-10";
 
@@ -20,7 +22,7 @@ export function trend(
 }
 
 export function responseText(rated: number, delivered: number, rate: number | null): string {
-  return rate === null ? "—" : `${rated} / ${delivered} · ${rate}%`;
+  return rate === null ? "—" : `${formatNumber(rated)} / ${formatNumber(delivered)} · ${formatPercent(rate)}`;
 }
 
 /** "2026-10-05" → "05.10.2026". */

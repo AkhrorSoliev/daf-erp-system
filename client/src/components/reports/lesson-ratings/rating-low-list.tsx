@@ -1,22 +1,27 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { TablePagination } from "@/components/forms/table-pagination";
-import { BlockError } from "@/components/payments/overview/block-state";
-import { useLowRatings } from "./queries";
+import type { LowRating } from "./types";
 import { dayText } from "./rating-format";
 
-export function RatingLowList({ month }: { month: string }) {
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const q = useLowRatings(month, page, pageSize);
-
-  if (q.isPending) return <Skeleton className="h-40 w-full" />;
-  if (q.isError) return <BlockError title="Past baholar" onRetry={() => q.refetch()} />;
-  if (q.data.total === 0) {
+export function RatingLowList({
+  rows,
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  rows: LowRating[];
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}) {
+  if (total === 0) {
     return (
       <p className="rounded-md border p-6 text-center text-sm text-muted-foreground">
         Bu oyda 1–3 baho yo&apos;q
@@ -38,7 +43,7 @@ export function RatingLowList({ month }: { month: string }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {q.data.data.map((r, i) => (
+          {rows.map((r, i) => (
             <TableRow key={r.id}>
               <TableCell className="border-r text-muted-foreground">
                 {(page - 1) * pageSize + i + 1}
@@ -64,12 +69,9 @@ export function RatingLowList({ month }: { month: string }) {
       <TablePagination
         page={page}
         pageSize={pageSize}
-        total={q.data.total}
-        onPageChange={setPage}
-        onPageSizeChange={(s) => {
-          setPageSize(s);
-          setPage(1);
-        }}
+        total={total}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
       />
     </div>
   );

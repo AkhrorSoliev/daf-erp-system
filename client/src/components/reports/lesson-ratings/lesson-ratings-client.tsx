@@ -1,18 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { MonthStepper } from "@/components/shared/month-stepper";
 import { BlockError, BlockSkeleton } from "@/components/payments/overview/block-state";
 import { clampMonth } from "@/components/payments/overview/overview-math";
 import { currentMonthKey } from "@/components/payments/salary-utils";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { cn } from "@/lib/utils";
-import { useRatingSummary, useSetRatingEnabled } from "./queries";
+import { useLowRatings, useRatingSummary, useSetRatingEnabled } from "./queries";
 import { RATING_FLOOR_MONTH, averageText, responseText, trend } from "./rating-format";
 import { RatingTeachersTable } from "./rating-teachers-table";
 import { RatingLowList } from "./rating-low-list";
@@ -30,6 +39,8 @@ export function LessonRatingsClient() {
   const month = clampMonth(filters.month || current, RATING_FLOOR_MONTH, current);
   const summary = useRatingSummary(month);
   const toggle = useSetRatingEnabled();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const openTeacher = filters.ustoz || null;
   const openName = summary.data?.teachers.find((t) => t.teacherId === openTeacher)?.name;
 
@@ -62,7 +73,10 @@ export function LessonRatingsClient() {
             value={month}
             min={RATING_FLOOR_MONTH}
             max={current}
-            onChange={(m) => setFilter("month", m === current ? "" : m)}
+            onChange={(m) => {
+              setPage(1);
+              setFilter("month", m === current ? "" : m);
+            }}
           />
         </div>
       </div>
@@ -82,13 +96,21 @@ export function LessonRatingsClient() {
           <section className="space-y-3">
             <h3 className="font-medium">Ustozlar</h3>
             <RatingTeachersTable
-              rows={summary.data.teachers}
+              rows={summary.data.teachers.slice((page - 1) * pageSize, page * pageSize)}
+              page={page}
+              pageSize={pageSize}
+              total={summary.data.teachers.length}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPage(1);
+              }}
               onOpen={(id) => setFilter("ustoz", id)}
             />
           </section>
           <section className="space-y-3">
             <h3 className="font-medium">Past baholar (1–3)</h3>
-            <RatingLowList key={month} month={month} />
+            <RatingLowSection key={month} month={month} />
           </section>
         </>
       )}
@@ -97,6 +119,9 @@ export function LessonRatingsClient() {
         <SheetContent className="flex flex-col gap-0 p-0 sm:max-w-lg">
           <SheetHeader className="border-b px-6 py-4">
             <SheetTitle>{openName ?? "Ustoz baholari"}</SheetTitle>
+            <SheetDescription className="sr-only">
+              Ustozning oylar, guruhlar va izohlar bo&apos;yicha baholari
+            </SheetDescription>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {openTeacher !== null && <TeacherRatingsPanel teacherId={openTeacher} month={month} />}
@@ -104,6 +129,29 @@ export function LessonRatingsClient() {
         </SheetContent>
       </Sheet>
     </div>
+  );
+}
+
+/** Owns the low-ratings page; `key={month}` in the caller returns it to page 1. */
+function RatingLowSection({ month }: { month: string }) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const q = useLowRatings(month, page, pageSize);
+
+  if (q.isPending) return <Skeleton className="h-40 w-full" />;
+  if (q.isError) return <BlockError title="Past baholar" onRetry={() => q.refetch()} />;
+  return (
+    <RatingLowList
+      rows={q.data.data}
+      page={page}
+      pageSize={pageSize}
+      total={q.data.total}
+      onPageChange={setPage}
+      onPageSizeChange={(s) => {
+        setPageSize(s);
+        setPage(1);
+      }}
+    />
   );
 }
 
@@ -146,7 +194,7 @@ function SummaryCards({ data }: { data: NonNullable<ReturnType<typeof useRatingS
         </CardHeader>
         <CardContent>
           <p className={cn("text-2xl font-semibold", data.totals.low > 0 && "text-destructive")}>
-            {data.totals.low}
+            {formatNumber(data.totals.low)}
           </p>
         </CardContent>
       </Card>
