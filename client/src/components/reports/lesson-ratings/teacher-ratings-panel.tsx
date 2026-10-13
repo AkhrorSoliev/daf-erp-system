@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BlockError } from "@/components/payments/overview/block-state";
 import { monthShort } from "@/components/payments/salary-utils";
+import { formatNumber } from "@/lib/format-utils";
 import { useTeacherRatings } from "./queries";
 import { averageText, dayText } from "./rating-format";
 
@@ -23,7 +24,7 @@ export function TeacherRatingsPanel({ teacherId, month }: { teacherId: number; m
             <div key={m.month} className="rounded-md border p-2 text-center">
               <p className="text-xs text-muted-foreground">{monthShort(m.month)}</p>
               <p className="font-medium">{averageText(m.average)}</p>
-              <p className="text-xs text-muted-foreground">{m.rated} ta baho</p>
+              <p className="text-xs text-muted-foreground">{formatNumber(m.rated)} ta baho</p>
             </div>
           ))}
         </div>
@@ -41,7 +42,7 @@ export function TeacherRatingsPanel({ teacherId, month }: { teacherId: number; m
                   {g.name}
                 </Link>
                 <span>
-                  {averageText(g.average)} · {g.rated} ta
+                  {averageText(g.average)} · {formatNumber(g.rated)} ta
                 </span>
               </li>
             ))}
