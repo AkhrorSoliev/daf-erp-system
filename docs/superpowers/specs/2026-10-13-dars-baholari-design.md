@@ -129,7 +129,7 @@ Xuddi shu `Composer`dagi `message` ishlovchisi: matnli xabar `reply_to_message.m
 
 ### 5.4. Darhol yuborish (ADR-0025)
 
-Baho xabari 20:00 yig'masiga qo'shilmaydi: u dars tugagandan keyingi daqiqalarda ma'noga ega. `src/lesson-ratings/` `direct-send.guard.spec.ts`dagi ruxsat ro'yxatiga qo'shiladi; yangi ADR buni ADR-0025 ro'yxatiga qo'shimcha sifatida qayd etadi. Tungi tinchlik kerak emas: cron 22:50 da to'xtaydi.
+Baho xabari 20:00 yig'masiga qo'shilmaydi: u dars tugagandan keyingi daqiqalarda ma'noga ega. Yuborish umumiy `sendTelegramText` orqali bo'lgani uchun `direct-send.guard.spec.ts` ro'yxati o'zgarmaydi (u faqat `.sendMessage(`ni to'g'ridan chaqiradigan fayllarni sanaydi); yangi ADR buni ADR-0025 ro'yxatiga qo'shimcha sifatida qayd etadi. Tungi tinchlik kerak emas: cron 22:50 da to'xtaydi.
 
 ## 6. CEO sahifasi
 
@@ -137,7 +137,7 @@ Baho xabari 20:00 yig'masiga qo'shilmaydi: u dars tugagandan keyingi daqiqalarda
 
 - Barcha `/lesson-ratings/*` route'lari `@CeoOnly()` — imkoniyat emas, kimlik (ADR-0087). Katalogga kalit qo'shilmaydi, «Ruxsatlar» sahifasida ko'rinmaydi, hech kimga berilmaydi. Yangi route'lar `permission-routes.spec.ts` talab qiladigan joylarga yoziladi (`route-access.snapshot.json`, `intentional-access-changes.ts`, kerak bo'lsa `branch-route-policy.ts`).
 - Sozlama: `lessonRating.enabled` (`settings.types.ts` registri, `companyLevelOnly: true`, boshlang'ich qiymati `false`). Tizim o'chiq holda chiqadi; CEO yoqadi.
-- Klient: `isCeoUser(user)` (`@/hooks/use-auth`). `reports-nav.ts` elementiga `settings-nav.ts`dagidek `ceoOnly` bayrog'i qo'shiladi; `canEnterReports` / `canOpenReportPath` `isCeo`ni oladi.
+- Klient: `isCeoUser(user)` (`@/hooks/use-auth`). `reports-nav.ts` elementi `forRoles: [1]` oladi (`nav-items.ts`dagi kimlik darvozasi bilan bir xil); `canEnterReports` / `canOpenReportPath` foydalanuvchi rollarini oladi.
 
 ### 6.2. Endpointlar
 
@@ -200,6 +200,6 @@ Hisobotlar menyusida, «O'quvchilar hisoboti» bo'limida. Komponentlar: `compone
 - `load-ended-lessons` chiqarilgandan keyin `unmarked-lessons` spec'lari o'zgarishsiz o'tadi.
 - `direct-send.guard.spec.ts`, `permission-routes.spec.ts` yashil.
 
-**Klient:** `reports-nav.test.ts` (`ceoOnly`), sahifa modeli uchun vitest (o'rtacha formati, ↑↓), `npm run build`.
+**Klient:** `reports-nav.test.ts` (`forRoles: [1]`), sahifa modeli uchun vitest (o'rtacha formati, ↑↓), `npm run build`.
 
 **Qo'lda:** lokal botda bitta dars bilan oxirigacha: xabar keladi → 2 ⭐ → «Nima yoqmadi?» → javob → sahifada ko'rinadi.
