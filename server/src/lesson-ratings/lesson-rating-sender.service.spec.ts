@@ -106,7 +106,14 @@ describe('LessonRatingSenderService', () => {
       },
       select: { id: true },
     });
-    const [chatId, text, extra] = sendMessage.mock.calls[0];
+    const [chatId, text, extra] = sendMessage.mock.calls[0] as [
+      string,
+      string,
+      {
+        parse_mode: string;
+        reply_markup: { inline_keyboard: { callback_data: string }[][] };
+      },
+    ];
     expect(chatId).toBe('555');
     expect(text).toContain('<b>Ali</b>');
     expect(text).toContain('Ustoz: Anna T20001');
@@ -163,9 +170,10 @@ describe('LessonRatingSenderService', () => {
   it('takes the substitute teachers of an override', async () => {
     const { service, prisma } = setup({ override: [30001, 30002] });
     await service.run(at('10:20'));
-    expect(prisma.lessonRating.create.mock.calls[0][0].data.teacherIds).toEqual(
-      [30001, 30002],
-    );
+    const [createArg] = prisma.lessonRating.create.mock.calls[0] as [
+      { data: { teacherIds: number[] } },
+    ];
+    expect(createArg.data.teacherIds).toEqual([30001, 30002]);
     expect(prisma.groupTeacher.findMany).not.toHaveBeenCalled();
   });
 
@@ -195,8 +203,33 @@ describe('LessonRatingSenderService', () => {
       where: { id: 'r1' },
       data: {
         status: 'FAILED',
-        failReason: expect.stringContaining('blocked'),
+        failReason: expect.stringContaining('blocked') as string,
       },
     });
+  });
+
+  const two = [
+    { id: 10001, firstName: 'Ali', telegramChatId: '555' },
+    { id: 10002, firstName: 'Vali', telegramChatId: '666' },
+  ];
+
+  it('still counts and continues when saving the message id fails', async () => {
+    const { service, prisma, sendMessage } = setup({ attendees: two });
+    prisma.lessonRating.update.mockRejectedValueOnce(new Error('db down'));
+    await expect(service.run(at('10:20'))).resolves.toBe(2);
+    expect(prisma.lessonRating.create).toHaveBeenCalledTimes(2);
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+  });
+
+  it('continues with the next student when create fails unexpectedly', async () => {
+    const { service, prisma, sendMessage } = setup({ attendees: two });
+    prisma.lessonRating.create.mockRejectedValueOnce(new Error('db down'));
+    await expect(service.run(at('10:20'))).resolves.toBe(1);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith(
+      '666',
+      expect.any(String),
+      expect.any(Object),
+    );
   });
 });

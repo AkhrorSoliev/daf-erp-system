@@ -107,60 +107,89 @@ export class LessonRatingSenderService {
 
     let sent = 0;
     for (const { student } of attendees) {
-      const chatId = student.telegramChatId;
-      if (!chatId) continue;
-      let ratingId: string;
       try {
-        const row = await this.prisma.lessonRating.create({
-          data: {
-            companyId: lesson.companyId,
-            branchId: lesson.branchId,
-            groupId: lesson.groupId,
-            studentId: student.id,
-            date: today,
-            teacherIds,
-            chatId,
-          },
-          select: { id: true },
-        });
-        ratingId = row.id;
-      } catch (err) {
-        if (
-          err instanceof Prisma.PrismaClientKnownRequestError &&
-          err.code === 'P2002'
-        ) {
-          continue; // boshqa instans olgan
-        }
-        throw err;
-      }
-
-      const outcome = await sendTelegramText(
-        bot,
-        chatId,
-        ratingQuestion({
-          studentFirstName: student.firstName,
-          groupName: lesson.groupName,
+        sent += await this.askStudent(bot, lesson, today, student, {
+          teacherIds,
           teacherNames,
-        }),
-        { parse_mode: 'HTML', reply_markup: ratingKeyboard(ratingId) },
-      );
-      if (outcome.ok) {
-        await this.prisma.lessonRating.update({
-          where: { id: ratingId },
-          data: { messageId: outcome.messageId },
         });
-        sent += 1;
-      } else {
-        await this.prisma.lessonRating.update({
-          where: { id: ratingId },
-          data: {
-            status: LessonRatingStatus.FAILED,
-            failReason: `${outcome.kind}: ${outcome.description}`,
-          },
-        });
+      } catch (err) {
+        this.logger.error(
+          `lesson rating for student ${student.id} in ${lesson.groupId} failed: ${describeError(err)}`,
+        );
       }
     }
     return sent;
+  }
+
+  /** Bitta o'quvchiga so'rov; 1 — yetkazildi. Xatosi boshqa o'quvchilarni to'xtatmasin. */
+  private async askStudent(
+    bot: TelegramTextSender,
+    lesson: EndedLesson,
+    today: Date,
+    student: { id: number; firstName: string; telegramChatId: string | null },
+    teachers: { teacherIds: number[]; teacherNames: string[] },
+  ): Promise<number> {
+    const chatId = student.telegramChatId;
+    if (!chatId) return 0;
+    let ratingId: string;
+    try {
+      // messageId null = yetkazilmagan; jarayon yuborishdan oldin yiqilsa qator
+      // shunday qoladi, qayta yuborilmaydi — hisobotda 'yetkazilmagan' sanaladi.
+      const row = await this.prisma.lessonRating.create({
+        data: {
+          companyId: lesson.companyId,
+          branchId: lesson.branchId,
+          groupId: lesson.groupId,
+          studentId: student.id,
+          date: today,
+          teacherIds: teachers.teacherIds,
+          chatId,
+        },
+        select: { id: true },
+      });
+      ratingId = row.id;
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        return 0; // boshqa instans olgan
+      }
+      throw err;
+    }
+
+    const outcome = await sendTelegramText(
+      bot,
+      chatId,
+      ratingQuestion({
+        studentFirstName: student.firstName,
+        groupName: lesson.groupName,
+        teacherNames: teachers.teacherNames,
+      }),
+      { parse_mode: 'HTML', reply_markup: ratingKeyboard(ratingId) },
+    );
+    if (!outcome.ok) {
+      await this.prisma.lessonRating.update({
+        where: { id: ratingId },
+        data: {
+          status: LessonRatingStatus.FAILED,
+          failReason: `${outcome.kind}: ${outcome.description}`,
+        },
+      });
+      return 0;
+    }
+    try {
+      await this.prisma.lessonRating.update({
+        where: { id: ratingId },
+        data: { messageId: outcome.messageId },
+      });
+    } catch (err) {
+      // O'quvchi xabarni oldi — sanaymiz; messageId yo'q, xolos.
+      this.logger.warn(
+        `messageId not saved for rating ${ratingId}: ${describeError(err)}`,
+      );
+    }
+    return 1;
   }
 
   /** Shu kungi o'rinbosar bo'lsa — uning ustozlari, aks holda guruh ustozlari. */
