@@ -1,3 +1,4 @@
+import { CONFETTI_EFFECT_ID } from './rating-rules';
 import { LessonRatingTelegramHandler } from './lesson-rating-telegram.handler';
 
 const ID = '11111111-2222-3333-4444-555555555555';
@@ -54,16 +55,29 @@ describe('LessonRatingTelegramHandler — buttons', () => {
       where: { id: ID, score: null },
       data: { score: 5, ratedAt: NOW },
     });
-    expect(ctx.editMessageText).toHaveBeenCalledWith(
-      "Rahmat! Siz 5 ⭐ qo'ydingiz.",
-    );
-    expect(ctx.reply).not.toHaveBeenCalled();
+    expect(ctx.editMessageReplyMarkup).toHaveBeenCalledWith(undefined);
+    expect(ctx.reply).toHaveBeenCalledTimes(1);
+    expect(ctx.reply).toHaveBeenCalledWith("Rahmat! Siz 5 ⭐ qo'ydingiz.", {
+      message_effect_id: CONFETTI_EFFECT_ID,
+    });
+  });
+
+  it('still thanks without the effect when Telegram refuses it', async () => {
+    const { handler } = setup(row());
+    const ctx = actionCtx(`lr:${ID}:4`);
+    ctx.reply.mockRejectedValueOnce(new Error('EFFECT_ID_INVALID'));
+    await handler.onAction(ctx as never, NOW);
+    expect(ctx.reply).toHaveBeenCalledTimes(2);
+    expect(ctx.reply).toHaveBeenLastCalledWith("Rahmat! Siz 4 ⭐ qo'ydingiz.");
   });
 
   it('asks why after a 2 and remembers the prompt', async () => {
     const { handler, prisma } = setup(row());
     const ctx = actionCtx(`lr:${ID}:2`);
     await handler.onAction(ctx as never, NOW);
+    expect(ctx.reply).toHaveBeenCalledWith("Rahmat! Siz 2 ⭐ qo'ydingiz.", {
+      message_effect_id: CONFETTI_EFFECT_ID,
+    });
     expect(ctx.reply).toHaveBeenCalledWith(
       'Nima yoqmadi? Shu xabarga javob qilib yozing (ixtiyoriy).',
       { reply_markup: { force_reply: true } },

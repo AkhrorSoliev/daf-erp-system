@@ -17,6 +17,7 @@ import {
   isWithinWindow,
   parseRatingCallback,
   thanksText,
+  CONFETTI_EFFECT_ID,
 } from './rating-rules';
 
 /**
@@ -80,7 +81,9 @@ export class LessonRatingTelegramHandler implements OnApplicationBootstrap {
       return;
     }
     await ctx.answerCbQuery();
-    await ctx.editMessageText(thanksText(cmd.score)).catch(() => undefined);
+    // Savol xabari qoladi, tugmalari olinadi; minnatdorchilik — konfetti bilan YANGI xabar.
+    await ctx.editMessageReplyMarkup(undefined).catch(() => undefined);
+    await this.thank(ctx, cmd.score);
     if (cmd.score <= LOW_SCORE_MAX) {
       const prompt = await ctx.reply(ASK_COMMENT, {
         reply_markup: { force_reply: true },
@@ -89,6 +92,17 @@ export class LessonRatingTelegramHandler implements OnApplicationBootstrap {
         where: { id: row.id },
         data: { promptMessageId: prompt.message_id },
       });
+    }
+  }
+
+  /** Konfetti ishlamasa (eski mijoz, effekt rad etildi) — oddiy xabar yuboriladi. */
+  private async thank(ctx: BotContext, score: number): Promise<void> {
+    const text = thanksText(score);
+    try {
+      // @telegraf/types hali `message_effect_id`ni bilmaydi, Bot API esa qabul qiladi.
+      await ctx.reply(text, { message_effect_id: CONFETTI_EFFECT_ID } as never);
+    } catch {
+      await ctx.reply(text).catch(() => undefined);
     }
   }
 

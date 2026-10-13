@@ -59,6 +59,12 @@ export function parseRatingCallback(
   return m ? { ratingId: m[1], score: Number(m[2]) } : null;
 }
 
+/**
+ * Telegram «konfetti» xabar effekti (🎉, Bot API 7.4+). Faqat YANGI xabar bilan
+ * va faqat private chatda ishlaydi — mavjud xabarni tahrirlashda qo'shib bo'lmaydi.
+ */
+export const CONFETTI_EFFECT_ID = '5046509860389126442';
+
 export function thanksText(score: number): string {
   return `Rahmat! Siz ${score} ⭐ qo'ydingiz.`;
 }
