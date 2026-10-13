@@ -777,6 +777,11 @@ The financial section lives under `/payments/*` with these sub-pages:
 - `components/reports/marketing/` — `marketing-client.tsx` (month picker `?month=`, `GET /reports/marketing`), `marketing-view.tsx` (four cards, «Marketing samarasi», «Oylar bo'yicha», «Manba bo'yicha»), `marketing-format.ts` (pure: «13×», the sentence). CEO/BD only (`reports-nav.ts`, `CEO_BD`).
 - Every figure is the server's, «Manba bo'yicha»'s «Aylanish» included (the row's `rate`, printed with `formatPercent`); a null one prints «—». Transition months (May–June 2026) print the new-student count with «*» and «—» for the rest, with the footnote. No visible LTV, CAC or ROI — `lib/uzbek-only-texts.test.ts` scans both B1 folders for them.
 
+### Lesson ratings (`/reports/dars-baholari`, ADR-0089)
+
+- CEO only, by identity: the report item has `forRoles: [1]` (`reports-nav.ts`; `canEnterReports(can, roleIds)` / `canOpenReportPath(can, pathname, roleIds)` take the user's role ids), the teacher profile's «Baholar» tab is drawn for `isCeoUser(user)`. The server refuses everyone else (`@CeoOnly()`).
+- `components/reports/lesson-ratings/`: `lesson-ratings-client.tsx` (month `?month=`, open teacher `?ustoz=`, the «Baho so'rash» switch; the teachers table's `page`/`pageSize` live in `LessonRatingsClient`, the low list's own page state and query live in `RatingLowSection` in the same file), `rating-teachers-table.tsx`, `rating-low-list.tsx`, `teacher-ratings-panel.tsx` (shared by the drawer and the profile tab), `rating-format.ts` (pure, vitest). Every figure is the server's; the client only formats.
+
 ### Salary Row Drawer, «Berildi» dialog and the Avanslar table (spec B3, ADR-0082)
 
 - **`salary/salary-row-drawer.tsx`** — opens for EVERY row of the «Oyliklar» table (calculated or not), from `?xodim=<userId>` (`salary-client.tsx`'s `HEADER_SCHEMA`, 0 = closed, so a reload or a shared link lands on the same person). Data: `GET /salary/monthly/user/:userId/detail?month=` (`useSalaryDetail`, idle while no one is picked); the month state comes from the page's monthly answer. It replaced `salary-breakdown-drawer.tsx` and `salary-advance-breakdown-drawer.tsx` (both deleted; no client calls `GET /salary/advances/:userId`, which is gone). Standard drawer skeleton: `SheetContent p-0 flex flex-col` → `SheetHeader border-b` → scrollable body → `SheetFooter border-t`.
