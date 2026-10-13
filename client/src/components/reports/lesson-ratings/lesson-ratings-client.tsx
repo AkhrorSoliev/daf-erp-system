@@ -41,6 +41,8 @@ export function LessonRatingsClient() {
   const toggle = useSetRatingEnabled();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const lastPage = Math.max(1, Math.ceil((summary.data?.teachers.length ?? 0) / pageSize));
+  const safePage = Math.min(page, lastPage);
   const openTeacher = filters.ustoz || null;
   const openName = summary.data?.teachers.find((t) => t.teacherId === openTeacher)?.name;
 
@@ -96,8 +98,8 @@ export function LessonRatingsClient() {
           <section className="space-y-3">
             <h3 className="font-medium">Ustozlar</h3>
             <RatingTeachersTable
-              rows={summary.data.teachers.slice((page - 1) * pageSize, page * pageSize)}
-              page={page}
+              rows={summary.data.teachers.slice((safePage - 1) * pageSize, safePage * pageSize)}
+              page={safePage}
               pageSize={pageSize}
               total={summary.data.teachers.length}
               onPageChange={setPage}

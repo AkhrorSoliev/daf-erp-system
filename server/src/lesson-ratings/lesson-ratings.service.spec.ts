@@ -55,6 +55,16 @@ describe('LessonRatingsService.summary', () => {
     });
   });
 
+  it('counts a rated row as delivered even when its messageId was never saved', async () => {
+    const { service } = setup([{ score: 4, messageId: null, teacherIds: [1] }]);
+    const r = await service.summary(1, null, '2026-10');
+    expect(r.totals).toMatchObject({
+      delivered: 1,
+      rated: 1,
+      responseRate: 100,
+    });
+  });
+
   it('lists teachers lowest average first with their names', async () => {
     const { service } = setup([
       { score: 5, messageId: 1, teacherIds: [1] },

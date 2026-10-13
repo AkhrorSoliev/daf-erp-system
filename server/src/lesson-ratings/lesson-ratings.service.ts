@@ -104,7 +104,7 @@ export class LessonRatingsService {
     });
     const asRow = (r: (typeof rows)[number]): RatingRow => ({
       score: r.score,
-      delivered: r.messageId !== null,
+      delivered: r.messageId !== null || r.score !== null,
       teacherIds: r.teacherIds,
     });
 
@@ -234,7 +234,7 @@ export class LessonRatingsService {
     });
     return rows.map((r) => ({
       score: r.score,
-      delivered: r.messageId !== null,
+      delivered: r.messageId !== null || r.score !== null,
       teacherIds: r.teacherIds,
     }));
   }
