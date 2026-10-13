@@ -102,6 +102,13 @@ describe('LessonRatingsService.teacher', () => {
       },
     ]);
     const r = await service.teacher(1, null, 7, '2026-10');
+    expect(prisma.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 7, companyId: 1 } }),
+    );
+    await service.teacher(1, [7], 7, '2026-10');
+    expect(findManyArgs(prisma).at(-1)?.where).toMatchObject({
+      branchId: { in: [7] },
+    });
     expect(findManyArgs(prisma)[0].where).toMatchObject({
       companyId: 1,
       teacherIds: { has: 7 },
@@ -153,6 +160,10 @@ describe('LessonRatingsService.low', () => {
       companyId: 1,
       date: { gte: d('2026-10-01'), lt: d('2026-11-01') },
       score: { lte: 3 },
+    });
+    await service.low(1, [7], '2026-10', 1, 10);
+    expect(findManyArgs(prisma).at(-1)?.where).toMatchObject({
+      branchId: { in: [7] },
     });
     expect(args.skip).toBe(20);
     expect(args.take).toBe(20);

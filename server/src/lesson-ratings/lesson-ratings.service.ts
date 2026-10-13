@@ -77,7 +77,7 @@ export class LessonRatingsService {
     const m = month ?? tashkentMonthKey(new Date());
     const from = addMonthsToMonthKey(m, -5);
     const teacher = await this.prisma.user.findFirst({
-      where: { id: teacherId },
+      where: { id: teacherId, companyId },
       select: { id: true, firstName: true, lastName: true },
     });
     if (!teacher) throw new NotFoundException('Ustoz topilmadi');
@@ -171,7 +171,7 @@ export class LessonRatingsService {
       this.prisma.lessonRating.count({ where }),
       this.prisma.lessonRating.findMany({
         where,
-        orderBy: [{ date: 'desc' }, { ratedAt: 'desc' }],
+        orderBy: [{ date: 'desc' }, { ratedAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
         select: {
