@@ -3,10 +3,11 @@ import { TelegramModule } from '../telegram/telegram.module';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { SettingsModule } from '../settings/settings.module';
 import { LessonRatingSenderService } from './lesson-rating-sender.service';
+import { LessonRatingTelegramHandler } from './lesson-rating-telegram.handler';
 
 /** Dars baholari (spec 2026-10-13). TelegramModule'ga bir tomonlama bog'liq. */
 @Module({
   imports: [TelegramModule, HolidaysModule, SettingsModule],
-  providers: [LessonRatingSenderService],
+  providers: [LessonRatingSenderService, LessonRatingTelegramHandler],
 })
 export class LessonRatingsModule {}
