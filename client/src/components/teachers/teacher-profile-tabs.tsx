@@ -20,6 +20,11 @@ import {
 } from "@/components/shared/teacher-groups-rate-list";
 import { SalaryMonthlyPanel } from "@/components/shared/salary-monthly-panel";
 import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
+import { useAuth, isCeoUser } from "@/hooks/use-auth";
+import { MonthStepper } from "@/components/shared/month-stepper";
+import { currentMonthKey } from "@/components/payments/salary-utils";
+import { TeacherRatingsPanel } from "@/components/reports/lesson-ratings/teacher-ratings-panel";
+import { RATING_FLOOR_MONTH } from "@/components/reports/lesson-ratings/rating-format";
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -42,6 +47,8 @@ export function TeacherProfileTabs({
 }: TeacherProfileTabsProps) {
   const canSeeSalary = useCan("salary.view");
   const canSeeTimeline = useCan("teachers.view");
+  const isCeo = isCeoUser(useAuth((s) => s.user));
+  const [ratingMonth, setRatingMonth] = useState(currentMonthKey);
 
   const [groups, setGroups] = useState<GroupData[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
@@ -140,6 +147,7 @@ export function TeacherProfileTabs({
         {canSeeSalary && (
           <TabsTrigger value="ish-haqi">Ish haqi</TabsTrigger>
         )}
+        {isCeo && <TabsTrigger value="baholar">Baholar</TabsTrigger>}
       </TabsList>
 
       {/* Ko'rsatkichlar — Radix unmounts inactive content, so the query runs on open only. */}
@@ -222,6 +230,21 @@ export function TeacherProfileTabs({
               <PossibleDeductionsInfo variant="teacher" />
             </div>
           )}
+        </TabsContent>
+      )}
+
+      {/* Baholar — faqat CEO (spec 2026-10-13 §6.4) */}
+      {isCeo && (
+        <TabsContent value="baholar" className="space-y-4">
+          <div className="flex justify-end">
+            <MonthStepper
+              value={ratingMonth}
+              min={RATING_FLOOR_MONTH}
+              max={currentMonthKey()}
+              onChange={setRatingMonth}
+            />
+          </div>
+          <TeacherRatingsPanel teacherId={teacher.id} month={ratingMonth} />
         </TabsContent>
       )}
     </Tabs>
