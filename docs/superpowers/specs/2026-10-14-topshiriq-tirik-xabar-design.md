@@ -176,5 +176,5 @@ Quyidagilar hozirgidek qoladi:
   beruvchi qabul qiladi. Har bosqichda `CARD` qatorlari soni tekshiriladi
   (yangi xabar yo'q, faqat tahrir).
 - ADR-0089 «Topshiriq xabari tirik karta» (ADR-0078 ning xabar yuborish
-  qismini o'zgartiradi). Qo'llanmaning topshiriqlar sahifasi va
-  `yangiliklar.ts` yangilanadi.
+  qismini o'zgartiradi). Qo'llanmada topshiriqlar bo'limi hali yo'q, shuning
+  uchun qo'llanma o'zgarmaydi.
