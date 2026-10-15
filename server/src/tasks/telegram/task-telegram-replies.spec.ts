@@ -142,6 +142,21 @@ describe('TaskTelegramReplies — replies (spec §6.2)', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('a reply to the live card (CARD) is a comment too', async () => {
+    prisma.taskTelegramMessage.findUnique.mockResolvedValue({
+      taskId: TASK,
+      purpose: 'CARD',
+    });
+    const ctx = message(replyTo());
+    await replies.onMessage(ctx, next);
+    expect(tasks.addComment).toHaveBeenCalledWith(TASK, 'Ha, 450 000.', {
+      ...actorOf(40),
+      via: 'TELEGRAM',
+    });
+    expect(ctx.reply).toHaveBeenCalledWith(ADDED_TO_TASK);
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it('a reply to the «Qaytarish» prompt returns the task with that reason', async () => {
     as(30);
     prisma.taskTelegramMessage.findUnique.mockResolvedValue({

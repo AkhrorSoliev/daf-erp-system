@@ -138,6 +138,18 @@ describe('TaskTelegramReplies — files, photos, voice (spec §6.2)', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('a photo on the live card (CARD) is stored like one on a notice', async () => {
+    const ctx = reply('CARD', PHOTO);
+    await replies.onMessage(ctx, next);
+    expect(files.upload).toHaveBeenCalledWith(
+      TASK,
+      { buffer: Buffer.from('img'), name: 'rasm.jpg', durationSec: undefined },
+      expect.objectContaining({ via: 'TELEGRAM' }),
+    );
+    expect(ctx.reply).toHaveBeenCalledWith(ADDED_TO_TASK);
+    expect(tasks.changeStatus).not.toHaveBeenCalled();
+  });
+
   it('a voice message keeps its length and name', async () => {
     const ctx = reply('NOTICE', { voice: { file_id: 'o', duration: 42 } });
     await replies.onMessage(ctx, next);

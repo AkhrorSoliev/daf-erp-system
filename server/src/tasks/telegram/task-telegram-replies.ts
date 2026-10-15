@@ -134,6 +134,7 @@ export class TaskTelegramReplies {
           break;
         }
         case 'NOTICE':
+        case 'CARD':
           await this.tasks.addComment(link.taskId, text, me.actor);
           await this.ack(ctx, ADDED_TO_TASK);
           break;
