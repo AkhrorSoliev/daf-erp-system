@@ -101,7 +101,7 @@ funksiya: `renderLiveCard(view, viewerId, now)`
 | Tekshiruvda | **⏳ Tekshiruvda** · Siz yubordingiz | **⏳ Tekshiruvda** · Karimov B. bajardi | **Tekshiruvga keldi** · Karimov B. bajardi · Qabul qilish, Qaytarish | — |
 | Bajarildi | **✅ Bajarildi** · Siz bajardingiz, Soliyev A. qabul qildi | **✅ Bajarildi** · Karimov B. bajardi | **✅ Qabul qildingiz** · Ijrochi: Karimov B. | **✅ Bajarildi** · Karimov B. bajardi, Soliyev A. qabul qildi |
 | Bekor qilindi | **❌ Bekor qilindi** · Soliyev A.: «sabab» | xuddi shunday | **❌ Siz bekor qildingiz** | xuddi ijrochidek |
-| Olib tashlangan | **Topshiriqdan olib tashlandingiz** · Olib tashladi: Soliyev A. | | | |
+| Olib tashlangan | **Topshiriqdan olib tashlandingiz** · topshiriq nomi, tugmasiz | | | |
 
 - Sarlavhadan keyin topshiriq nomi yoziladi. Keyin kerakli qatorlar keladi:
   Bergan, Muddat, Bog'liq, Kichik qadamlar va «Rasm bilan tasdiqlanadi».
