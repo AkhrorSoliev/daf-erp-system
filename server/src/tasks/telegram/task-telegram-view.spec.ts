@@ -13,7 +13,7 @@ import {
 
 const STUDENT_URL = 'https://student.dafzentrum.uz/tg';
 
-describe('staffOfChat (spec Â§6.5)', () => {
+describe('staffOfChat (spec §6.5)', () => {
   const db = (rows: unknown[]) => ({
     user: { findMany: jest.fn().mockResolvedValue(rows) },
   });
@@ -34,7 +34,7 @@ describe('staffOfChat (spec Â§6.5)', () => {
     );
   });
 
-  it('none, or two â never pick one', async () => {
+  it('none, or two — never pick one', async () => {
     await expect(staffOfChat(db([]) as any, '700')).resolves.toEqual({
       kind: 'none',
     });
@@ -86,7 +86,7 @@ describe('staffChatOf', () => {
     });
   });
 
-  it('no chat, or a chat two live accounts share â null', async () => {
+  it('no chat, or a chat two live accounts share → null', async () => {
     await expect(staffChatOf(db(null, 0) as any, 40)).resolves.toBeNull();
     await expect(
       staffChatOf(db({ telegramChatId: '700', roles: [] }, 2) as any, 40),
@@ -151,7 +151,7 @@ describe('usersWithTelegram (the assignee picker, one query for the list)', () =
     expect(linked.size).toBe(0);
   });
 
-  it('nobody has a chat â no query', async () => {
+  it('nobody has a chat → no query', async () => {
     const d = db([]);
     await usersWithTelegram(d as any, [{ id: 1, telegramChatId: null }]);
     expect(d.user.findMany).not.toHaveBeenCalled();
@@ -168,7 +168,7 @@ describe('taskOpenUrl', () => {
     );
   });
 
-  it('no student Mini App address, or no staff role â no link', () => {
+  it('no student Mini App address, or no staff role → no link', () => {
     expect(taskOpenUrl(undefined, [3], 't1')).toBeUndefined();
     expect(taskOpenUrl('https://abc.ngrok.app/tg', [3], 't1')).toBeUndefined();
     expect(taskOpenUrl(STUDENT_URL, [6], 't1')).toBeUndefined();
@@ -307,7 +307,7 @@ describe('loadTaskView', () => {
     ['Lead', 'l1', 'Mirzayev Jamshid (lid)'],
     ['User', '7', 'Azizova Malika'],
     ['Student', 'abc', null],
-  ])('%s %s â %s', async (entityType, entityId, label) => {
+  ])('%s %s → %s', async (entityType, entityId, label) => {
     const v = await loadTaskView(
       db({ ...row, entityType, entityId }) as any,
       't1',
@@ -315,7 +315,7 @@ describe('loadTaskView', () => {
     expect(v?.entityLabel).toBe(label);
   });
 
-  it('a deleted task â null', async () => {
+  it('a deleted task → null', async () => {
     await expect(loadTaskView(db(null) as any, 't1')).resolves.toBeNull();
   });
 });
