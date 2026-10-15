@@ -85,7 +85,7 @@ describe('TaskTelegramSender', () => {
     expect(
       extra.reply_markup.inline_keyboard.flat().map((b: any) => b.text),
     ).toEqual(['Boshladim', 'Bajardim', 'Ochish']);
-    expect(extra.reply_markup.inline_keyboard.at(-1)[0].url).toBe(
+    expect(extra.reply_markup.inline_keyboard.at(-1)[0].web_app.url).toBe(
       'https://lehrer.dafzentrum.uz/tasks?task=t1',
     );
     expect(prisma.taskTelegramMessage.create).toHaveBeenCalledWith({

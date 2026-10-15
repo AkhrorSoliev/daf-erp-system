@@ -51,7 +51,11 @@ const data = (m: TgMessage) =>
   m.buttons
     .flat()
     .map((b) =>
-      'callback_data' in b ? b.callback_data : 'url' in b ? b.url : '',
+      'callback_data' in b
+        ? b.callback_data
+        : 'web_app' in b
+          ? b.web_app.url
+          : '',
     );
 
 describe('renderTaskMessage (mockup s14)', () => {

@@ -358,6 +358,8 @@ function bodyLines(
 }
 
 const cb = (text: string, data: string) => Markup.button.callback(text, data);
+/** «Ochish» opens the task inside Telegram (a Mini App button, ADR-0089). */
+const openButton = (url: string) => Markup.button.webApp('Ochish', url);
 
 /** What the reader can do to the task now; the service has the last word. */
 function stateButtons(view: TgTaskView, viewerId: number): TgButtons {
@@ -408,10 +410,191 @@ export function renderTaskMessage(
     if (ACTION_NOTICES.has(notice.kind)) {
       buttons.push(...stateButtons(view, viewerId));
     }
-    if (opts.openUrl) {
-      buttons.push([Markup.button.url('Ochish', opts.openUrl)]);
+    if (opts.openUrl) buttons.push([openButton(opts.openUrl)]);
+  }
+  return { text: lines.join('\n'), buttons };
+}
+
+// ---------- the live card (ADR-0089): one message per person per task ----------
+/** The notices the live card replaces: these redraw the card instead of sending a new message. */
+export const STATUS_NOTICES: ReadonlySet<TgNotice['kind']> = new Set([
+  'ASSIGNED',
+  'ADDED',
+  'MOVED',
+  'REVIEW',
+  'ACCEPTED',
+  'RETURNED',
+  'DONE',
+  'CANCELLED',
+]);
+
+const stamp = (d: Date) => `${ddmm(d)}, ${hhmm(d)}`;
+const who = (h: TgHistoryItem | undefined) => esc(h?.actorName ?? 'Tizim');
+const statusTo = (v: TgTaskView, to: TaskStatus) =>
+  v.history.find((h) => h.type === 'STATUS' && h.to === to);
+
+interface LiveHead {
+  head: string;
+  line?: string;
+  closed: boolean;
+}
+
+/** Headline + the «who» line, for the reader, from the task's state (spec §3.3). */
+function liveHead(v: TgTaskView, me: number): LiveHead {
+  const latest = v.history[0];
+  switch (v.status) {
+    case 'NEW':
+      return {
+        head: `${v.kind === 'MANUAL' ? 'Yangi topshiriq' : "Tizim topshirig'i"} · ${PRIORITY_LABEL[v.priority]}`,
+        closed: false,
+      };
+    case 'IN_PROGRESS': {
+      const back = v.history.find(
+        (h) =>
+          h.type === 'RETURN' ||
+          (h.type === 'STATUS' && h.to === 'IN_PROGRESS'),
+      );
+      if (back?.type === 'RETURN') {
+        const why = back.text ? `«${esc(back.text)}»` : '';
+        return back.actorId === me
+          ? {
+              head: '↩️ Siz qaytardingiz',
+              line: why || undefined,
+              closed: false,
+            }
+          : {
+              head: '↩️ Qaytarildi',
+              line: why ? `${who(back)}: ${why}` : who(back),
+              closed: false,
+            };
+      }
+      if (!back) return { head: '🔄 Jarayonda', closed: false };
+      return {
+        head: '🔄 Jarayonda',
+        line:
+          back.actorId === me ? 'Siz boshladingiz' : `${who(back)} boshladi`,
+        closed: false,
+      };
+    }
+    case 'IN_REVIEW': {
+      const rev = statusTo(v, 'IN_REVIEW');
+      if (v.authorId === me) {
+        return {
+          head: 'Tekshiruvga keldi',
+          line: rev ? `${who(rev)} bajardi` : undefined,
+          closed: false,
+        };
+      }
+      if (!rev) return { head: '⏳ Tekshiruvda', closed: false };
+      return {
+        head: '⏳ Tekshiruvda',
+        line: rev.actorId === me ? 'Siz yubordingiz' : `${who(rev)} bajardi`,
+        closed: false,
+      };
+    }
+    case 'DONE': {
+      if (latest?.type === 'AUTO_CLOSED') {
+        return {
+          head: '✅ Yopildi',
+          line: `Tizim · ${stamp(latest.at)}`,
+          closed: true,
+        };
+      }
+      const done = statusTo(v, 'DONE');
+      if (!done) return { head: '✅ Bajarildi', closed: true };
+      const at = ` · ${stamp(done.at)}`;
+      const rev = statusTo(v, 'IN_REVIEW');
+      if (!rev) {
+        // A self-task: closed without review.
+        return {
+          head: '✅ Bajarildi',
+          line:
+            (done.actorId === me ? 'Siz bajardingiz' : `${who(done)} bajardi`) +
+            at,
+          closed: true,
+        };
+      }
+      if (done.actorId === me) {
+        return {
+          head: '✅ Qabul qildingiz',
+          line: `Ijrochi: ${who(rev)}${at}`,
+          closed: true,
+        };
+      }
+      if (rev.actorId === me) {
+        return {
+          head: '✅ Bajarildi',
+          line: `Siz bajardingiz, ${who(done)} qabul qildi${at}`,
+          closed: true,
+        };
+      }
+      const watcher = v.participants.some(
+        (p) => p.userId === me && p.role === 'WATCHER',
+      );
+      return {
+        head: '✅ Bajarildi',
+        line:
+          (watcher
+            ? `${who(rev)} bajardi, ${who(done)} qabul qildi`
+            : `${who(rev)} bajardi`) + at,
+        closed: true,
+      };
+    }
+    case 'CANCELLED': {
+      const c = v.history.find((h) => h.type === 'CANCELLED');
+      if (!c) return { head: '❌ Bekor qilindi', closed: true };
+      const why = c.text ? `«${esc(c.text)}»` : '';
+      const at = ` · ${stamp(c.at)}`;
+      return c.actorId === me
+        ? { head: '❌ Siz bekor qildingiz', line: why + at, closed: true }
+        : {
+            head: '❌ Bekor qilindi',
+            line: (why ? `${who(c)}: ${why}` : who(c)) + at,
+            closed: true,
+          };
     }
   }
+}
+
+/** `bodyLines` for the live card: no «Holat» (the headline says it), «Bergan» always. */
+function liveBody(view: TgTaskView, viewerId: number, now: Date): string[] {
+  const out = [`Bergan: ${esc(view.authorName ?? 'Tizim')}`];
+  if (view.dueAt) out.push(`Muddat: ${dueLabel(view.dueAt, now)}`);
+  if (view.entityLabel) out.push(`Bog'liq: ${esc(view.entityLabel)}`);
+  if (view.steps.length) {
+    const done = view.steps.filter((s) => s.done).length;
+    out.push(`Kichik qadamlar: ${done}/${view.steps.length}`);
+  }
+  if (view.requiresPhoto && isOpen(view) && isAssignee(view, viewerId)) {
+    out.push(PHOTO_LINE);
+  }
+  return out;
+}
+
+/** The person's live card (ADR-0089): the task as it is now, written for them. */
+export function renderLiveCard(
+  view: TgTaskView,
+  viewerId: number,
+  opts: { now: Date; openUrl?: string },
+): TgMessage {
+  const onTask =
+    view.authorId === viewerId ||
+    view.participants.some((p) => p.userId === viewerId);
+  if (!onTask) {
+    return {
+      text: `<b>Topshiriqdan olib tashlandingiz</b>\n${esc(view.title)}`,
+      buttons: [],
+    };
+  }
+  const { head, line, closed } = liveHead(view, viewerId);
+  const lines = [`<b>${esc(head)}</b>`, esc(view.title)];
+  if (line) lines.push(line.replace(/^ · /, ''));
+  // The author's own card needs no «Bergan» / body: they wrote the task.
+  if (!closed && view.authorId !== viewerId) {
+    lines.push(...liveBody(view, viewerId, opts.now));
+  }
+  const buttons: TgButtons = closed ? [] : stateButtons(view, viewerId);
+  if (opts.openUrl) buttons.push([openButton(opts.openUrl)]);
   return { text: lines.join('\n'), buttons };
 }
 
