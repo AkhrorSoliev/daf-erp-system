@@ -40,6 +40,7 @@ const view = (over: Partial<TgTaskView> = {}): TgTaskView => ({
   entityLabel: null,
   participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
   steps: [],
+  history: [],
   ...over,
 });
 

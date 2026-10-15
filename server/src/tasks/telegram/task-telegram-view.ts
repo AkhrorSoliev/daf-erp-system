@@ -1,4 +1,4 @@
-import { UserStatus } from '@prisma/client';
+import { type TaskStatus, UserStatus } from '@prisma/client';
 import {
   signInStaffWhere,
   staffLinkedToChatWhere,
@@ -6,7 +6,11 @@ import {
 } from '../../common/auth/staff-telegram';
 import type { PrismaService } from '../../prisma/prisma.service';
 import { staffMiniAppUrl } from '../../telegram/staff/staff-cabinet';
-import { shortName, type TgTaskView } from './task-telegram-text';
+import {
+  shortName,
+  type TgHistoryItem,
+  type TgTaskView,
+} from './task-telegram-text';
 
 type ViewDb = Pick<
   PrismaService,
@@ -46,6 +50,21 @@ export async function loadTaskView(
         select: { id: true, title: true, doneAt: true },
         orderBy: { position: 'asc' },
       },
+      events: {
+        where: {
+          type: { in: ['STATUS', 'RETURN', 'CANCELLED', 'AUTO_CLOSED'] },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          type: true,
+          actorId: true,
+          text: true,
+          meta: true,
+          createdAt: true,
+          actor: { select: { firstName: true, lastName: true } },
+        },
+      },
     },
   });
   if (!t) return null;
@@ -72,6 +91,19 @@ export async function loadTaskView(
       id: s.id,
       title: s.title,
       done: s.doneAt !== null,
+    })),
+    history: t.events.map((e) => ({
+      type: e.type as TgHistoryItem['type'],
+      to:
+        e.type === 'STATUS'
+          ? ((e.meta as { to?: TaskStatus } | null)?.to ?? null)
+          : null,
+      actorId: e.actorId,
+      actorName: e.actor
+        ? shortName(e.actor.firstName, e.actor.lastName)
+        : null,
+      text: e.text,
+      at: e.createdAt,
     })),
   };
 }

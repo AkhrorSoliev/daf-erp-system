@@ -16,6 +16,7 @@ const VIEW: TgTaskView = {
   entityLabel: null,
   participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
   steps: [],
+  history: [],
 };
 
 function setup(

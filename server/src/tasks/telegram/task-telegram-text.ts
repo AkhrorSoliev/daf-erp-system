@@ -32,6 +32,20 @@ export interface TgTaskView {
     name: string;
   }[];
   steps: { id: string; title: string; done: boolean }[];
+  /** Newest first, at most 10. */
+  history: TgHistoryItem[];
+}
+
+export interface TgHistoryItem {
+  type: 'STATUS' | 'RETURN' | 'CANCELLED' | 'AUTO_CLOSED';
+  /** STATUS only: the status it moved to (`meta.to`). */
+  to: TaskStatus | null;
+  actorId: number | null;
+  /** «Soliyev A.»; null = Tizim. */
+  actorName: string | null;
+  /** RETURN / CANCELLED reason. */
+  text: string | null;
+  at: Date;
 }
 
 export type TgButtons = InlineKeyboardButton[][];

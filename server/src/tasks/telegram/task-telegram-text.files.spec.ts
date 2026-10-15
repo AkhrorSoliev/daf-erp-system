@@ -23,6 +23,7 @@ const view = (over: Partial<TgTaskView> = {}): TgTaskView => ({
   entityLabel: null,
   participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
   steps: [],
+  history: [],
   ...over,
 });
 const labels = (m: TgMessage) => m.buttons.map((r) => r.map((b) => b.text));

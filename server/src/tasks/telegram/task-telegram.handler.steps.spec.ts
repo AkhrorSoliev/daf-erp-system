@@ -37,6 +37,7 @@ const view = (): TgTaskView => ({
   entityLabel: null,
   participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
   steps: [{ id: STEP, title: 'Matn qoralamasi', done: false }],
+  history: [],
 });
 
 function tick() {
