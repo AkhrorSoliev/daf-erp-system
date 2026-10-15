@@ -58,12 +58,18 @@ function setup() {
   const sender = {
     send: jest.fn().mockResolvedValue({ status: 'sent', messageId: 1 }),
   };
+  const live = { refresh: jest.fn().mockResolvedValue(undefined) };
   (loadTaskView as jest.Mock).mockResolvedValue(view());
   (staffChatOf as jest.Mock).mockResolvedValue({ chatId: '700', roleIds: [4] });
   return {
-    listener: new TaskTelegramListener(prisma as any, sender as any),
+    listener: new TaskTelegramListener(
+      prisma as any,
+      sender as any,
+      live as any,
+    ),
     prisma,
     sender,
+    live,
   };
 }
 
@@ -333,13 +339,57 @@ describe('TaskTelegramListener', () => {
       )
       .map((m) => m.event)
       .sort();
-    // An automatic close sends no Telegram notice (spec §7): the task just
-    // stops (its unsent rows are deleted with it).
-    expect(listened).toEqual(
-      Object.values(TASK_EVENTS)
-        .filter((e) => e !== TASK_EVENTS.AUTO_CLOSED)
-        .sort(),
-    );
+    // AUTO_CLOSED included: it sends no notice but refreshes the live cards.
+    expect(listened).toEqual(Object.values(TASK_EVENTS).sort());
+  });
+
+  describe('live cards (ADR-0089)', () => {
+    it('a status change refreshes the live cards once, before the notices', async () => {
+      const { listener, live, sender } = setup();
+      await listener.handle(
+        TASK_EVENTS.STATUS_CHANGED,
+        { task, actorId: 40, from: 'NEW', to: 'IN_PROGRESS' } as any,
+        DAY,
+      );
+      expect(live.refresh).toHaveBeenCalledTimes(1);
+      expect(live.refresh).toHaveBeenCalledWith('t1');
+      expect(live.refresh.mock.invocationCallOrder[0]).toBeLessThan(
+        sender.send.mock.invocationCallOrder[0] ?? Infinity,
+      );
+    });
+
+    it('a comment does not touch the cards', async () => {
+      const { listener, live } = setup();
+      await listener.handle(
+        TASK_EVENTS.COMMENTED,
+        { task, actorId: 40, text: 'Narx?' } as any,
+        DAY,
+      );
+      expect(live.refresh).not.toHaveBeenCalled();
+    });
+
+    it('an automatic close refreshes the cards and sends nothing', async () => {
+      const { listener, live, sender, prisma } = setup();
+      await listener.onAutoClosed({ task, reason: 'DEBT_CLEARED' } as any);
+      expect(live.refresh).toHaveBeenCalledWith('t1');
+      expect(sender.send).not.toHaveBeenCalled();
+      expect(prisma.taskOutbox.create).not.toHaveBeenCalled();
+    });
+
+    it("«Dars bo'ldimi?» refreshes nothing either", async () => {
+      const { listener, live } = setup();
+      await listener.handle(
+        TASK_EVENTS.STATUS_CHANGED,
+        {
+          task: { ...task, kind: 'LESSON_QUESTION', authorId: null },
+          actorId: 40,
+          from: 'NEW',
+          to: 'IN_PROGRESS',
+        } as any,
+        DAY,
+      );
+      expect(live.refresh).not.toHaveBeenCalled();
+    });
   });
 
   describe('a callback waits for 08:00 of its day', () => {
