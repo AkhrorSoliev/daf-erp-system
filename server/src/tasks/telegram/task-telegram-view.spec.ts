@@ -159,12 +159,14 @@ describe('usersWithTelegram (the assignee picker, one query for the list)', () =
 });
 
 describe('taskOpenUrl', () => {
-  it('admin portal for roles 1, 2, 3, 5; teacher portal for a teacher only', () => {
-    expect(taskOpenUrl(STUDENT_URL, [3], 't1')).toBe(
-      'https://admin.dafzentrum.uz/tasks?task=t1',
+  const TASK = '0b6c2e1a-7d3f-4b8c-9e2a-5f1d3c7b9a4e';
+
+  it('the staff Mini App page for the task: admin portal for roles 1, 2, 3, 5; teacher portal for a teacher only', () => {
+    expect(taskOpenUrl(STUDENT_URL, [3], TASK)).toBe(
+      `https://admin.dafzentrum.uz/tg?next=%2Ftasks%3Ftask%3D${TASK}`,
     );
-    expect(taskOpenUrl(STUDENT_URL, [4], 't1')).toBe(
-      'https://lehrer.dafzentrum.uz/tasks?task=t1',
+    expect(taskOpenUrl(STUDENT_URL, [4], TASK)).toBe(
+      `https://lehrer.dafzentrum.uz/tg?next=%2Ftasks%3Ftask%3D${TASK}`,
     );
   });
 

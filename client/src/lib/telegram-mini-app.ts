@@ -200,8 +200,15 @@ const STAFF_CABINET_PAGES = new Set([
   "/groups",
 ]);
 
+/** One task from a bot message: `/tasks?task=<uuid>`, nothing else (ADR-0089). */
+const STAFF_TASK_PAGE =
+  /^\/tasks\?task=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function staffCabinetPath(next: string | null | undefined): string {
-  return next && STAFF_CABINET_PAGES.has(next) ? next : STAFF_CABINET_HOME;
+  if (!next) return STAFF_CABINET_HOME;
+  return STAFF_CABINET_PAGES.has(next) || STAFF_TASK_PAGE.test(next)
+    ? next
+    : STAFF_CABINET_HOME;
 }
 
 // ── `POST /auth/telegram/webapp` va `…/webapp/staff` javoblari ─────────────

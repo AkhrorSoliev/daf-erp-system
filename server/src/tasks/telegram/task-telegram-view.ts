@@ -5,7 +5,10 @@ import {
   staffPortalFor,
 } from '../../common/auth/staff-telegram';
 import type { PrismaService } from '../../prisma/prisma.service';
-import { staffMiniAppUrl } from '../../telegram/staff/staff-cabinet';
+import {
+  staffMiniAppUrl,
+  staffPageUrl,
+} from '../../telegram/staff/staff-cabinet';
 import {
   shortName,
   type TgHistoryItem,
@@ -256,8 +259,9 @@ export async function usersWithTelegram(
 }
 
 /**
- * «Ochish»: `/tasks?task=<id>` on the reader's portal (`staffPortalFor`), the
- * host taken from `TELEGRAM_MINI_APP_URL` the way the staff cabinet takes it.
+ * «Ochish»: the staff Mini App page of the task (ADR-0089) — the reader's
+ * portal (`staffPortalFor`) by `staffMiniAppUrl`, which signs in through
+ * `/tg` and then opens `/tasks?task=<id>` (`staffPageUrl`'s `next`).
  * No address (or a non-`student.` host, a local tunnel) → no button.
  */
 export function taskOpenUrl(
@@ -269,7 +273,5 @@ export function taskOpenUrl(
   const cabinet = portal
     ? staffMiniAppUrl(studentMiniAppUrl, portal)
     : undefined;
-  return cabinet
-    ? `${new URL(cabinet).origin}/tasks?task=${taskId}`
-    : undefined;
+  return cabinet ? staffPageUrl(cabinet, `/tasks?task=${taskId}`) : undefined;
 }
