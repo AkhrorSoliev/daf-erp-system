@@ -2,7 +2,6 @@ import {
   dueLabel,
   esc,
   isSelfTask,
-  keptHeadline,
   parseTk,
   renderMyTasks,
   renderStepsMessage,
@@ -87,18 +86,6 @@ describe('renderTaskMessage (mockup s14)', () => {
     ]);
   });
 
-  it('#1 after «Boshladim» the same headline, «Holat: Jarayonda», no «Boshladim»', () => {
-    const m = renderTaskMessage(
-      view({ status: 'IN_PROGRESS' }),
-      { kind: 'CARD', headline: 'Yangi topshiriq · Yuqori' },
-      40,
-      { now: NOW, openUrl: OPEN },
-    );
-    expect(m.text.split('\n')[0]).toBe('<b>Yangi topshiriq · Yuqori</b>');
-    expect(m.text).toContain('Holat: Jarayonda');
-    expect(labels(m)).toEqual([['Bajardim'], ['Qadamlar'], ['Ochish']]);
-  });
-
   it('#2 a task confirmed with a photo: «Bajardim» too (it asks for the photo), and the photo line', () => {
     const m = renderTaskMessage(
       view({ requiresPhoto: true, steps: [] }),
@@ -108,13 +95,6 @@ describe('renderTaskMessage (mockup s14)', () => {
     );
     expect(labels(m)).toEqual([['Boshladim', 'Bajardim'], ['Ochish']]);
     expect(m.text).toContain('Rasm bilan tasdiqlanadi.');
-    const started = renderTaskMessage(
-      view({ requiresPhoto: true, steps: [], status: 'IN_PROGRESS' }),
-      { kind: 'CARD' },
-      40,
-      { now: NOW, openUrl: OPEN },
-    );
-    expect(labels(started)).toEqual([['Bajardim'], ['Ochish']]);
   });
 
   it('#3 review to the author: who did it, «Qabul qilish» · «Qaytarish»', () => {
@@ -283,15 +263,6 @@ describe('renderTaskMessage (mockup s14)', () => {
     expect(labels(m)).toEqual([['Ochish']]);
   });
 
-  it('a «Topshiriqlarim» card has the title as its headline', () => {
-    const m = renderTaskMessage(view(), { kind: 'CARD' }, 40, { now: NOW });
-    expect(m.text.split('\n')[0]).toBe(
-      '<b>Oktabr reklama banneri uchun matn</b>',
-    );
-    expect(m.text.split('\n')[1]).toBe('Bergan: Soliyev A.');
-    expect(labels(m)).toEqual([['Boshladim', 'Bajardim'], ['Qadamlar']]); // no URL → no «Ochish»
-  });
-
   it('escapes HTML in every text that comes from people', () => {
     const m = renderTaskMessage(
       view({ title: 'A <b> & C' }),
@@ -319,13 +290,6 @@ describe('renderTaskMessage (mockup s14)', () => {
     );
     expect(done.text).toContain('Ijrochi: As &amp; B');
     expect(done.text).toContain('Qabul qildi: Q &lt;q&gt;');
-    const cardHeadline = renderTaskMessage(
-      view({ title: 'T & <U>' }),
-      { kind: 'CARD' },
-      40,
-      { now: NOW },
-    );
-    expect(cardHeadline.text.split('\n')[0]).toBe('<b>T &amp; &lt;U&gt;</b>');
     expect(esc('<a href="x">&</a>')).toBe('&lt;a href="x"&gt;&amp;&lt;/a&gt;');
   });
 
@@ -484,15 +448,6 @@ describe('helpers', () => {
     expect(dueLabel(new Date('2026-10-11T13:00:00.000Z'), now)).toBe(
       '11.10, 18:00',
     );
-  });
-
-  it('keptHeadline keeps a notice headline, not a title or the step list', () => {
-    expect(keptHeadline('Yangi topshiriq · Yuqori\nX', 'X')).toBe(
-      'Yangi topshiriq · Yuqori',
-    );
-    expect(keptHeadline('X\nMuddat: …', 'X')).toBeUndefined();
-    expect(keptHeadline('Kichik qadamlar · 2/5\n…', 'X')).toBeUndefined();
-    expect(keptHeadline(undefined, 'X')).toBeUndefined();
   });
 
   it('shortName, isSelfTask, returnedReply', () => {

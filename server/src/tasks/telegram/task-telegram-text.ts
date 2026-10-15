@@ -211,22 +211,6 @@ export function parseTk(data: string): { action: TkAction; id: string } | null {
   return id ? { action, id } : null;
 }
 
-/**
- * The pressed message's first line, kept when it is redrawn (mockup s14 #1:
- * «Yangi topshiriq · Yuqori» stays after «Boshladim»). A card (title first)
- * and the step list get the title instead.
- */
-export function keptHeadline(
-  messageText: string | undefined,
-  title: string,
-): string | undefined {
-  const first = messageText?.split('\n')[0]?.trim();
-  if (!first || first === title || first.startsWith('Kichik qadamlar')) {
-    return undefined;
-  }
-  return first;
-}
-
 // ---------- the task message ----------
 /** These carry the state buttons; the rest only «Ochish». */
 const ACTION_NOTICES: ReadonlySet<TgNotice['kind']> = new Set([
@@ -236,7 +220,6 @@ const ACTION_NOTICES: ReadonlySet<TgNotice['kind']> = new Set([
   'RETURNED',
   'REVIEW',
   'REMINDER',
-  'CARD',
 ]);
 /** Short messages: headline, title, one or two lines, nothing else. */
 const INFO_ONLY: ReadonlySet<TgNotice['kind']> = new Set([
@@ -292,8 +275,6 @@ function headline(view: TgTaskView, n: TgNotice, now: Date): string {
       return reminderHeadline(view.dueAt, now);
     case 'OVERDUE':
       return "Muddati o'tdi";
-    case 'CARD':
-      return n.headline ?? view.title;
   }
 }
 
@@ -399,9 +380,11 @@ export function renderTaskMessage(
   viewerId: number,
   opts: { now: Date; openUrl?: string },
 ): TgMessage {
-  const lines = [`<b>${esc(headline(view, notice, opts.now))}</b>`];
-  if (notice.kind !== 'CARD' || notice.headline) lines.push(esc(view.title));
-  lines.push(...noticeLines(view, notice, viewerId));
+  const lines = [
+    `<b>${esc(headline(view, notice, opts.now))}</b>`,
+    esc(view.title),
+    ...noticeLines(view, notice, viewerId),
+  ];
   if (!INFO_ONLY.has(notice.kind)) {
     lines.push(...bodyLines(view, notice, viewerId, opts.now));
   }
