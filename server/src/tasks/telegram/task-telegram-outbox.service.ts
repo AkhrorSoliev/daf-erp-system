@@ -42,17 +42,25 @@ const backoffSeconds = (attempts: number) => TRANSIENT_RETRY_S * 2 ** attempts;
 /**
  * Why a due Telegram row is closed without a send, or null to send it.
  * NOTICE rows go whatever the task's state (a «Bekor qilindi» is about a
- * closed task); REMINDER / OVERDUE only while the task is open and the person
- * is still on it (spec §9.3).
+ * closed task) — except an opening notice (ASSIGNED / ADDED / MOVED) held
+ * for a task that has since closed: its card would open a finished task.
+ * REMINDER / OVERDUE only while the task is open and the person is still on
+ * it (spec §9.3).
  */
 export function skipReason(
-  row: { kind: TaskOutboxKind; userId: number },
+  row: { kind: TaskOutboxKind; userId: number; payload?: Prisma.JsonValue },
   view: TgTaskView | null,
   now: Date,
 ): string | null {
   if (!view) return 'task gone';
   if (view.kind === 'LESSON_QUESTION') return 'no telegram';
-  if (row.kind === 'NOTICE') return null;
+  if (row.kind === 'NOTICE') {
+    const kind = (row.payload as { kind?: string } | null)?.kind;
+    const opening = kind === 'ASSIGNED' || kind === 'ADDED' || kind === 'MOVED';
+    return opening && !OPEN_STATUSES.includes(view.status)
+      ? 'task closed'
+      : null;
+  }
   if (!OPEN_STATUSES.includes(view.status)) return 'task closed';
   const assignee = view.participants.some(
     (p) => p.userId === row.userId && p.role === 'ASSIGNEE',
