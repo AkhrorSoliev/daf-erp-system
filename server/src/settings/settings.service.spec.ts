@@ -117,6 +117,9 @@ describe('SettingsService', () => {
         'payment.admissionMinPaidPercent': 50,
         'payment.paidThroughReminderDays': 3,
         'lessonRating.enabled': false,
+        'leads.maxUntouched': 10,
+        'leads.firstActionHours': 2,
+        'leads.followUpDays': 3,
       });
     });
   });
@@ -146,6 +149,9 @@ describe('SettingsService', () => {
         'payment.admissionMinPaidPercent': [],
         'payment.paidThroughReminderDays': [],
         'lessonRating.enabled': [],
+        'leads.maxUntouched': [],
+        'leads.firstActionHours': [],
+        'leads.followUpDays': [],
       });
     });
 

@@ -23,6 +23,9 @@ describe('SETTING_DEFINITIONS registry', () => {
         'payment.admissionMinPaidPercent',
         'payment.paidThroughReminderDays',
         'lessonRating.enabled',
+        'leads.maxUntouched',
+        'leads.firstActionHours',
+        'leads.followUpDays',
       ].sort(),
     );
   });
