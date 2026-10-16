@@ -20,10 +20,13 @@ yozilmagan. Har ishlaganga to'lash bitta natija uchun 2–3 marta pul chiqarardi
    bo'shatadi; `leads.assign` (standart Direktor; CEO har doim) bo'sh yoki band
    lidni boshqa xodimga beradi yoki egasini olib tashlaydi. Direktor — o'z
    filiali ichida. Band lidni boshqa xodim ololmaydi.
-3. Harakatsiz band lidlar bir vaqtda `leads.maxUntouched` (10) tadan oshmaydi:
-   chegaraga yetgan xodim yangisini band qila olmaydi; rahbarning berishi
-   chegaraga qaramaydi. Birinchi harakat `leads.firstActionHours` (2) ish
-   soatida, keyingisi `leads.followUpDays` (3) ish kunida. Ish vaqti du–sha
+3. Chegara xodimning O'ZI band qilishini to'xtatadi: harakatsiz band lidlari
+   soni `leads.maxUntouched` (standart 10 ta) chegarasiga yetgan xodim yangisini
+   o'zi band qila olmaydi; rahbarning berishi (`leads.assign`) bu chegaraga
+   qaramaydi.
+   Birinchi harakat `leads.firstActionHours` (standart 2) ish soatida,
+   keyingisi `leads.followUpDays` (standart 3) ish kunida. Uchala son
+   standart qiymat: CEO ularni sozlamalarda o'zgartiradi. Ish vaqti du–sha
    08:00–18:00, bayramlar hisoblanmaydi. Muddat saqlanmaydi, har safar
    hisoblanadi.
 4. Harakat — faqat egasining qo'ng'iroq belgisi, lidga izohi, lidga topshirig'i.
@@ -32,7 +35,12 @@ yozilmagan. Har ishlaganga to'lash bitta natija uchun 2–3 marta pul chiqarardi
    nomidan), sobiq egasiga xabar boradi.
 6. Qo'lda lid qo'shgan xodim (`leads.claim` bilan) uning egasi bo'ladi va
    qo'shish birinchi harakat sanaladi. O'quvchiga aylangan lidning egasi qotadi;
-   arxivdan tiklangan lid egasiz qaytadi.
+   arxivdan tiklangan lid egasiz qaytadi, faqat o'quvchiga aylangan (CONVERTED)
+   holda tiklangan lid egasini saqlaydi.
+7. Lid boshqa filialning doskasiga ko'chirilsa, egasi shu ko'chirish bilan
+   birga olinadi (RELEASE, sabab «Boshqa filialga o'tkazildi»): egasi lid
+   filialida ishlashi shart. O'quvchiga aylangan lidning egasi bu holda ham
+   o'zgarmaydi.
 
 ## Ko'rib chiqilgan muqobillar
 
