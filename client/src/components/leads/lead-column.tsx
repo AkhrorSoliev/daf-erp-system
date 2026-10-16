@@ -183,15 +183,16 @@ export function LeadColumn({
                   <Pencil className="mr-2 size-4" />
                   Tahrirlash
                 </DropdownMenuItem>
+                {/* Column order is per branch; a mixed board has none to change. */}
                 <DropdownMenuItem
-                  disabled={!canMoveLeft}
+                  disabled={!canMoveLeft || showBranch}
                   onClick={() => moveColumn(column.id, "left")}
                 >
                   <ArrowLeft className="mr-2 size-4" />
                   Chapga surish
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  disabled={!canMoveRight}
+                  disabled={!canMoveRight || showBranch}
                   onClick={() => moveColumn(column.id, "right")}
                 >
                   <ArrowRight className="mr-2 size-4" />

@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { Geist, Inter } from "next/font/google";
+import { IBM_Plex_Sans } from "next/font/google";
 
-const interHeading = Inter({ subsets: ["latin"], variable: "--font-heading" });
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600"],
+});
 
 export default function GlobalError({
   error,
@@ -20,7 +23,7 @@ export default function GlobalError({
   return (
     <html
       lang="uz"
-      className={`h-full antialiased ${geistSans.variable} ${interHeading.variable}`}
+      className={`h-full antialiased ${plexSans.variable}`}
     >
       <body className="flex min-h-full flex-col items-center justify-center bg-background px-4 text-center text-foreground">
         <div className="relative mb-6">

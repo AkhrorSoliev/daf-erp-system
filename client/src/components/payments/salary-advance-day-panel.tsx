@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
 import { useAuth } from "@/hooks/use-auth";
-import { EXPENSE_METHOD_LABELS } from "./expenses-filter-bar";
+import { EXPENSE_METHOD_LABELS } from "./expenses/expenses-labels";
 import { employeeRoleLabel } from "./employee-advance-select";
 import type { AdvanceRow } from "./salary-advances-tab";
 import {

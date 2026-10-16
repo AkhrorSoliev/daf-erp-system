@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -76,11 +77,25 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="px-4 py-3">
-        <Link href="/" className="flex items-center gap-1.5" onClick={handleNavClick}>
-          <span className="text-xs font-medium text-muted-foreground group-data-[collapsible=icon]:hidden">
-            DaF ERP System
-          </span>
+      <SidebarHeader className="px-4 py-4">
+        {/* The centre's own logo, not a product name: this is the one place
+            the brand is drawn in the cabinet. Navy on paper; on night paper the
+            same artwork is turned white. Hidden when the rail is icons only —
+            the wide mark has no legible icon-sized form. */}
+        <Link
+          href="/"
+          onClick={handleNavClick}
+          aria-label="Bosh sahifa"
+          className="flex items-center group-data-[collapsible=icon]:hidden"
+        >
+          <Image
+            src="/daf-logo.png"
+            alt="DaF Sprachzentrum"
+            width={1047}
+            height={494}
+            priority
+            className="h-10 w-auto dark:brightness-0 dark:invert"
+          />
         </Link>
         {isMobile && (
           <>

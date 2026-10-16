@@ -7,9 +7,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-sans);
-  --font-heading: var(--font-heading);
+  /* One family for the staff portals: IBM Plex Sans (layout.tsx). Headings
+     and figures use the same face at a heavier weight, not a second font. */
+  --font-sans: var(--font-plex);
+  --font-mono: var(--font-plex);
+  --font-heading: var(--font-plex);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -90,73 +92,93 @@
   --radius-pill: var(--r-pill);
 }
 
+/* ============================================================
+   Staff portals (admin, teacher) — the ledger theme
+   The ink of the logo (public/daf-logo.png, navy) is the one accent; every
+   neutral is tinted a little towards it, so the page reads as paper and ink
+   rather than as a grey template. The sign-in sheet (`.daftar` below) uses
+   the same family of colours. Status colours carry MEANING only: `--success`
+   paid / fine, `--warning` needs attention, `--info` neutral note,
+   `--destructive` debt / error. Use them (`text-success`, `bg-warning/10`)
+   instead of a raw Tailwind shade, so a status looks the same on every page.
+   The student portal (`.lumio`), the public form (`.form-theme`) and the
+   sign-in sheet (`.daftar`) re-point these variables inside their own scope.
+   ============================================================ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.488 0.243 264.376);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.833 0.145 321.434);
-  --chart-2: oklch(0.667 0.295 322.15);
-  --chart-3: oklch(0.591 0.293 322.896);
-  --chart-4: oklch(0.518 0.253 323.949);
-  --chart-5: oklch(0.452 0.211 324.591);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.546 0.245 262.881);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: oklch(0.977 0.004 250);
+  --foreground: oklch(0.23 0.03 262);
+  --card: oklch(0.996 0.002 250);
+  --card-foreground: oklch(0.23 0.03 262);
+  --popover: oklch(0.996 0.002 250);
+  --popover-foreground: oklch(0.23 0.03 262);
+  --primary: oklch(0.3 0.065 262);
+  --primary-foreground: oklch(0.985 0.004 250);
+  --secondary: oklch(0.95 0.008 255);
+  --secondary-foreground: oklch(0.28 0.04 262);
+  --muted: oklch(0.955 0.006 250);
+  --muted-foreground: oklch(0.5 0.025 258);
+  --accent: oklch(0.945 0.012 255);
+  --accent-foreground: oklch(0.23 0.03 262);
+  --destructive: oklch(0.52 0.19 27);
+  --success: oklch(0.5 0.12 152);
+  --warning: oklch(0.6 0.13 70);
+  --info: oklch(0.5 0.13 255);
+  --border: oklch(0.905 0.012 255);
+  --input: oklch(0.885 0.014 255);
+  --ring: oklch(0.3 0.065 262);
+  --chart-1: oklch(0.3 0.065 262);
+  --chart-2: oklch(0.62 0.12 250);
+  --chart-3: oklch(0.72 0.13 70);
+  --chart-4: oklch(0.58 0.12 152);
+  --chart-5: oklch(0.72 0.03 255);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.96 0.006 250);
+  --sidebar-foreground: oklch(0.3 0.03 262);
+  --sidebar-primary: oklch(0.3 0.065 262);
+  --sidebar-primary-foreground: oklch(0.985 0.004 250);
+  --sidebar-accent: oklch(0.92 0.012 255);
+  --sidebar-accent-foreground: oklch(0.23 0.03 262);
+  --sidebar-border: oklch(0.895 0.012 255);
+  --sidebar-ring: oklch(0.3 0.065 262);
 }
 
+/* Night paper: the same ink family, the primary becomes the light ink so a
+   filled button stays readable (as the dark sign-in sheet does). */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.424 0.199 265.638);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: oklch(0.165 0.018 262);
+  --foreground: oklch(0.93 0.008 250);
+  --card: oklch(0.205 0.02 262);
+  --card-foreground: oklch(0.93 0.008 250);
+  --popover: oklch(0.205 0.02 262);
+  --popover-foreground: oklch(0.93 0.008 250);
+  --primary: oklch(0.82 0.06 255);
+  --primary-foreground: oklch(0.165 0.018 262);
+  --secondary: oklch(0.26 0.02 262);
+  --secondary-foreground: oklch(0.93 0.008 250);
+  --muted: oklch(0.255 0.018 262);
+  --muted-foreground: oklch(0.7 0.02 255);
+  --accent: oklch(0.27 0.022 262);
+  --accent-foreground: oklch(0.93 0.008 250);
+  --destructive: oklch(0.72 0.16 22);
+  --success: oklch(0.74 0.12 152);
+  --warning: oklch(0.8 0.13 75);
+  --info: oklch(0.76 0.1 250);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.833 0.145 321.434);
-  --chart-2: oklch(0.667 0.295 322.15);
-  --chart-3: oklch(0.591 0.293 322.896);
-  --chart-4: oklch(0.518 0.253 323.949);
-  --chart-5: oklch(0.452 0.211 324.591);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.623 0.214 259.815);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.82 0.06 255);
+  --chart-1: oklch(0.82 0.06 255);
+  --chart-2: oklch(0.65 0.12 250);
+  --chart-3: oklch(0.78 0.13 75);
+  --chart-4: oklch(0.7 0.12 152);
+  --chart-5: oklch(0.6 0.03 255);
+  --sidebar: oklch(0.145 0.016 262);
+  --sidebar-foreground: oklch(0.9 0.01 250);
+  --sidebar-primary: oklch(0.82 0.06 255);
+  --sidebar-primary-foreground: oklch(0.165 0.018 262);
+  --sidebar-accent: oklch(0.235 0.02 262);
+  --sidebar-accent-foreground: oklch(0.93 0.008 250);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.82 0.06 255);
 }
 
 /* ============================================================
@@ -1064,6 +1086,9 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* A ledger: every digit the same width, so figures line up in a column
+       without each component asking for `tabular-nums` itself. */
+    font-variant-numeric: tabular-nums;
   }
   html {
     @apply font-sans;

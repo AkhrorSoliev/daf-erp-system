@@ -1107,6 +1107,28 @@ describe('LeadsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+    it('keeps the current source even when it was archived since', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        sourceId: 'src-old',
+      });
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
+
+      await service.update(
+        'lead-1',
+        { firstName: 'Aziz', sourceId: 'src-old' },
+        1001,
+        1,
+        null,
+      );
+
+      expect(prisma.leadSource.findFirst).not.toHaveBeenCalled();
+      expect(prisma.lead.update).toHaveBeenCalled();
+    });
+
     it('updates the lead and records history', async () => {
       prisma.lead.findFirst.mockResolvedValue({
         id: 'lead-1',
@@ -1449,12 +1471,15 @@ describe('LeadsService', () => {
         expect(ownership.emit).not.toHaveBeenCalled();
       });
 
-      it("keeps a converted lead's owner", async () => {
+      it('refuses to move a converted lead and keeps its owner', async () => {
         setupMove({ ...OWNED_LEAD, statusEnum: 'CONVERTED' }, 2);
 
-        await service.move('lead-1', { sectionId: 'sec-2' }, 1001, 5, null);
+        await expect(
+          service.move('lead-1', { sectionId: 'sec-2' }, 1001, 5, null),
+        ).rejects.toThrow("O'quvchiga aylangan lidni ko'chirib bo'lmaydi");
 
         expect(tx.lead.updateMany).not.toHaveBeenCalled();
+        expect(tx.lead.update).not.toHaveBeenCalled();
         expect(ownership.recordChange).not.toHaveBeenCalled();
       });
 
@@ -1591,6 +1616,21 @@ describe('LeadsService', () => {
       await expect(
         service.remove('missing', { reason: 'Javob bermadi' }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('refuses to delete a converted lead', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        sectionId: 'sec-1',
+        statusEnum: 'CONVERTED',
+      });
+
+      await expect(
+        service.remove('lead-1', { reason: 'Xato' }, 1001, 1, null),
+      ).rejects.toThrow("O'quvchiga aylangan lidni o'chirib bo'lmaydi");
+
+      expect(prisma.lead.update).not.toHaveBeenCalled();
+      expect(history.recordStatusChange).not.toHaveBeenCalled();
     });
 
     it('marks the lead LOST with a reason, archives it and records the status change', async () => {

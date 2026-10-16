@@ -183,6 +183,10 @@ export function LeadsBoard() {
       }
       if (!toColumnId || toColumnId === fromColumnId) return;
       const toCol = state.board.find((c) => c.id === toColumnId);
+      // A section is one branch's forming group; the server refuses a move
+      // into another branch's column, so the board does not offer it.
+      const fromCol = state.board.find((c) => c.id === fromColumnId);
+      if (toCol && fromCol && toCol.branchId !== fromCol.branchId) return;
       const toIndex = overIndex >= 0 ? overIndex : (toCol?.sections.length ?? 0);
       moveSectionLocal({ sectionId: activeId, fromColumnId, toColumnId, toIndex });
     }

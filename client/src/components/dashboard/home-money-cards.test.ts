@@ -134,7 +134,7 @@ describe("HomeMoneyCards — the debt card", () => {
   it("links to the debt page, red while someone studying owes and plain at zero", () => {
     const owing = renderHtml(money);
     expect(owing).toContain('href="/payments/debt"');
-    expect(owing).toContain("text-red-600");
+    expect(owing).toContain("text-destructive");
 
     const settled = renderHtml({
       ...money,
@@ -144,7 +144,7 @@ describe("HomeMoneyCards — the debt card", () => {
       },
     });
     // The other number being large does not redden the card: only the first does.
-    expect(settled).not.toContain("text-red-600");
+    expect(settled).not.toContain("text-destructive");
     expect(norm(settled)).toContain(
       `O'qiyotganlar qarzi ${fmt(0)} ${fmt(0)} ta · o'qimayotganlar ${fmt(36_540_000)}`,
     );

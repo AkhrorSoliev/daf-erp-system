@@ -373,6 +373,10 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /expenses/month-summary": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /expenses/pdf": [
     "Branch Director",
     "CEO"
