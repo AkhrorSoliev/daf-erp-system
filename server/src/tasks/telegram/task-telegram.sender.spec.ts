@@ -84,11 +84,11 @@ describe('TaskTelegramSender', () => {
     });
     const [chatId, text, extra] = sendMessage.mock.calls[0];
     expect(chatId).toBe('700');
-    expect(text.split('\n')[0]).toBe("<b>Yangi topshiriq · O'rta</b>");
+    expect(text.split('\n')[0]).toBe('<b>🆕 Yangi topshiriq</b>');
     expect(extra.parse_mode).toBe('HTML');
     expect(
       extra.reply_markup.inline_keyboard.flat().map((b: any) => b.text),
-    ).toEqual(['Boshladim', 'Bajardim', 'Ochish']);
+    ).toEqual(['▶️ Boshladim', '✅ Bajardim', '📂 Ochish']);
     expect(extra.reply_markup.inline_keyboard.at(-1)[0].web_app.url).toBe(
       'https://lehrer.dafzentrum.uz/tg?next=%2Ftasks%3Ftask%3Dt1',
     );
@@ -133,7 +133,7 @@ describe('TaskTelegramSender', () => {
       sender.send(VIEW, 40, { kind: 'COMMENT', by: 'Soliyev A.', text: 'ok' }),
     ).resolves.toEqual({ status: 'sent', messageId: 77 });
     expect(sendMessage.mock.calls[0][1].split('\n')[0]).toBe(
-      '<b>Yangi izoh</b>',
+      '<b>💬 Yangi izoh</b>',
     );
     expect(prisma.taskTelegramMessage.findFirst).not.toHaveBeenCalled();
     expect(prisma.taskTelegramMessage.create).toHaveBeenCalledWith({

@@ -77,7 +77,8 @@ export const NOT_IN_REVIEW = 'Topshiriq tekshiruvda emas';
 export const STEP_GONE = 'Qadam topilmadi';
 export const TRY_LATER = "Xatolik yuz berdi. Keyinroq urinib ko'ring.";
 // The assignee's line on a photo task: «Bajardim» asks for the photo (PHOTO_PROMPT).
-const PHOTO_LINE = 'Rasm bilan tasdiqlanadi.';
+const PHOTO_LINE = '📷 Rasm bilan tasdiqlanadi.';
+const REMOVED_HEAD = '🚫 Topshiriqdan olib tashlandingiz';
 const EMPTY_LIST = "Sizda ochiq topshiriq yo'q.";
 const STEPS_HINT = 'Bosib belgilang yoki belgini olib tashlang';
 
@@ -91,11 +92,10 @@ export function returnedReply(assigneeNames: string[]): string {
     : 'Topshiriq qaytarildi.';
 }
 
-const PRIORITY_LABEL: Record<TaskPriority, string> = {
-  LOW: 'Past',
-  MEDIUM: "O'rta",
-  HIGH: 'Yuqori',
-  URGENT: 'Shoshilinch',
+/** Only the two that need attention are shown; LOW / MEDIUM say nothing. */
+const PRIORITY_TAG: Partial<Record<TaskPriority, string>> = {
+  HIGH: '⚡ Yuqori',
+  URGENT: '🔥 Shoshilinch',
 };
 const STATUS_LABEL: Record<TaskStatus, string> = {
   NEW: 'Yangi',
@@ -244,37 +244,40 @@ function reminderHeadline(dueAt: Date | null, now: Date): string {
   return '1 soatdan keyin muddat tugaydi';
 }
 
+// A system task is done on the website (spec §6.1 «Tizim topshirig'i»).
+const newHead = (view: TgTaskView) =>
+  view.kind === 'MANUAL' ? '🆕 Yangi topshiriq' : "🤖 Tizim topshirig'i";
+
 function headline(view: TgTaskView, n: TgNotice, now: Date): string {
   switch (n.kind) {
     case 'ASSIGNED':
-      // A system task is done on the website (spec §6.1 «Tizim topshirig'i»).
-      return `${view.kind === 'MANUAL' ? 'Yangi topshiriq' : "Tizim topshirig'i"} · ${PRIORITY_LABEL[view.priority]}`;
+      return newHead(view);
     case 'ADDED':
-      return "Siz topshiriqqa qo'shildingiz";
+      return "➕ Siz topshiriqqa qo'shildingiz";
     case 'MOVED':
-      return "Topshiriq sizga o'tdi";
+      return "🔀 Topshiriq sizga o'tdi";
     case 'REMOVED':
-      return 'Topshiriqdan olib tashlandingiz';
+      return REMOVED_HEAD;
     case 'REVIEW':
-      return 'Tekshiruvga keldi';
+      return '📥 Tekshiruvga keldi';
     case 'ACCEPTED':
-      return 'Qabul qilindi';
+      return '✅ Qabul qilindi';
     case 'RETURNED':
-      return 'Topshiriq qaytarildi';
+      return '↩️ Topshiriq qaytarildi';
     case 'COMMENT':
       return n.attachment === 'VOICE'
-        ? 'Yangi ovozli xabar'
+        ? '🎤 Yangi ovozli xabar'
         : n.attachment === 'FILE'
-          ? 'Yangi fayl'
-          : 'Yangi izoh';
+          ? '📎 Yangi fayl'
+          : '💬 Yangi izoh';
     case 'DONE':
-      return 'Bajarildi';
+      return '✅ Bajarildi';
     case 'CANCELLED':
-      return 'Bekor qilindi';
+      return '❌ Bekor qilindi';
     case 'REMINDER':
-      return reminderHeadline(view.dueAt, now);
+      return `⏰ ${reminderHeadline(view.dueAt, now)}`;
     case 'OVERDUE':
-      return "Muddati o'tdi";
+      return "⚠️ Muddati o'tdi";
   }
 }
 
@@ -315,32 +318,53 @@ function noticeLines(
   }
 }
 
-function bodyLines(
+/**
+ * The lines under the card (style B): Bergan · when (due and priority on one
+ * line) · link · steps · Holat (notices only) · the photo line.
+ */
+function metaLines(
   view: TgTaskView,
-  n: TgNotice,
   viewerId: number,
   now: Date,
+  opts: { bergan: boolean; holat: boolean },
 ): string[] {
   const out: string[] = [];
-  if (view.authorId !== viewerId && n.kind !== 'REVIEW') {
-    out.push(`Bergan: ${esc(view.authorName ?? 'Tizim')}`);
-  }
-  if (view.dueAt) out.push(`Muddat: ${dueLabel(view.dueAt, now)}`);
-  if (view.entityLabel) out.push(`Bog'liq: ${esc(view.entityLabel)}`);
+  if (opts.bergan) out.push(`👤 Bergan: ${esc(view.authorName ?? 'Tizim')}`);
+  const when = [
+    view.dueAt ? `⏰ ${dueLabel(view.dueAt, now)}` : '',
+    PRIORITY_TAG[view.priority] ?? '',
+  ].filter(Boolean);
+  if (when.length) out.push(when.join(' · '));
+  if (view.entityLabel) out.push(`🔗 Bog'liq: ${esc(view.entityLabel)}`);
   if (view.steps.length) {
     const done = view.steps.filter((s) => s.done).length;
-    out.push(`Kichik qadamlar: ${done}/${view.steps.length}`);
+    out.push(`☑️ Kichik qadamlar: ${done}/${view.steps.length}`);
   }
-  if (view.status !== 'NEW') out.push(`Holat: ${STATUS_LABEL[view.status]}`);
+  if (opts.holat && view.status !== 'NEW') {
+    out.push(`Holat: ${STATUS_LABEL[view.status]}`);
+  }
   if (view.requiresPhoto && isOpen(view) && isAssignee(view, viewerId)) {
     out.push(PHOTO_LINE);
   }
   return out;
 }
 
+/** Style B: bold headline, then the bold title and its lines in a blockquote, then the meta lines. */
+function card(
+  head: string,
+  title: string,
+  quoted: string[],
+  after: string[],
+): string {
+  const quote = [`<b>${esc(title)}</b>`, ...quoted].join('\n');
+  return [`<b>${head}</b>`, `<blockquote>${quote}</blockquote>`, ...after].join(
+    '\n',
+  );
+}
+
 const cb = (text: string, data: string) => Markup.button.callback(text, data);
 /** «Ochish» opens the task inside Telegram (a Mini App button, ADR-0089). */
-const openButton = (url: string) => Markup.button.webApp('Ochish', url);
+const openButton = (url: string) => Markup.button.webApp('📂 Ochish', url);
 
 /** What the reader can do to the task now; the service has the last word. */
 function stateButtons(view: TgTaskView, viewerId: number): TgButtons {
@@ -352,16 +376,16 @@ function stateButtons(view: TgTaskView, viewerId: number): TgButtons {
   if (assignee && view.status !== 'IN_REVIEW') {
     const row: InlineKeyboardButton[] = [];
     if (view.status === 'NEW') {
-      row.push(cb('Boshladim', tkData('start', view.id)));
+      row.push(cb('▶️ Boshladim', tkData('start', view.id)));
     }
     // On a photo task the press asks for the photo (the service refuses review without one).
-    row.push(cb('Bajardim', tkData('done', view.id)));
+    row.push(cb('✅ Bajardim', tkData('done', view.id)));
     if (row.length) rows.push(row);
   }
   if (author && view.status === 'IN_REVIEW') {
     rows.push([
-      cb('Qabul qilish', tkData('accept', view.id)),
-      cb('Qaytarish', tkData('return', view.id)),
+      cb('✅ Qabul qilish', tkData('accept', view.id)),
+      cb('↩️ Qaytarish', tkData('return', view.id)),
     ]);
   }
   if (
@@ -369,7 +393,7 @@ function stateButtons(view: TgTaskView, viewerId: number): TgButtons {
     (assignee || author) &&
     view.status !== 'IN_REVIEW'
   ) {
-    rows.push([cb('Qadamlar', tkData('steps', view.id))]);
+    rows.push([cb('📋 Qadamlar', tkData('steps', view.id))]);
   }
   return rows;
 }
@@ -380,14 +404,17 @@ export function renderTaskMessage(
   viewerId: number,
   opts: { now: Date; openUrl?: string },
 ): TgMessage {
-  const lines = [
-    `<b>${esc(headline(view, notice, opts.now))}</b>`,
-    esc(view.title),
-    ...noticeLines(view, notice, viewerId),
-  ];
-  if (!INFO_ONLY.has(notice.kind)) {
-    lines.push(...bodyLines(view, notice, viewerId, opts.now));
-  }
+  const text = card(
+    headline(view, notice, opts.now),
+    view.title,
+    noticeLines(view, notice, viewerId),
+    INFO_ONLY.has(notice.kind)
+      ? []
+      : metaLines(view, viewerId, opts.now, {
+          bergan: view.authorId !== viewerId && notice.kind !== 'REVIEW',
+          holat: true,
+        }),
+  );
   const buttons: TgButtons = [];
   if (notice.kind !== 'REMOVED') {
     if (ACTION_NOTICES.has(notice.kind)) {
@@ -395,7 +422,7 @@ export function renderTaskMessage(
     }
     if (opts.openUrl) buttons.push([openButton(opts.openUrl)]);
   }
-  return { text: lines.join('\n'), buttons };
+  return { text, buttons };
 }
 
 // ---------- the live card (ADR-0089): one message per person per task ----------
@@ -427,10 +454,7 @@ function liveHead(v: TgTaskView, me: number): LiveHead {
   const latest = v.history[0];
   switch (v.status) {
     case 'NEW':
-      return {
-        head: `${v.kind === 'MANUAL' ? 'Yangi topshiriq' : "Tizim topshirig'i"} · ${PRIORITY_LABEL[v.priority]}`,
-        closed: false,
-      };
+      return { head: newHead(v), closed: false };
     case 'IN_PROGRESS': {
       const back = v.history.find(
         (h) =>
@@ -463,7 +487,7 @@ function liveHead(v: TgTaskView, me: number): LiveHead {
       const rev = statusTo(v, 'IN_REVIEW');
       if (v.authorId === me) {
         return {
-          head: 'Tekshiruvga keldi',
+          head: '📥 Tekshiruvga keldi',
           line: rev ? `${who(rev)} bajardi` : undefined,
           closed: false,
         };
@@ -539,21 +563,6 @@ function liveHead(v: TgTaskView, me: number): LiveHead {
   }
 }
 
-/** `bodyLines` for the live card: no «Holat» (the headline says it), «Bergan» always. */
-function liveBody(view: TgTaskView, viewerId: number, now: Date): string[] {
-  const out = [`Bergan: ${esc(view.authorName ?? 'Tizim')}`];
-  if (view.dueAt) out.push(`Muddat: ${dueLabel(view.dueAt, now)}`);
-  if (view.entityLabel) out.push(`Bog'liq: ${esc(view.entityLabel)}`);
-  if (view.steps.length) {
-    const done = view.steps.filter((s) => s.done).length;
-    out.push(`Kichik qadamlar: ${done}/${view.steps.length}`);
-  }
-  if (view.requiresPhoto && isOpen(view) && isAssignee(view, viewerId)) {
-    out.push(PHOTO_LINE);
-  }
-  return out;
-}
-
 /** The person's live card (ADR-0089): the task as it is now, written for them. */
 export function renderLiveCard(
   view: TgTaskView,
@@ -564,21 +573,18 @@ export function renderLiveCard(
     view.authorId === viewerId ||
     view.participants.some((p) => p.userId === viewerId);
   if (!onTask) {
-    return {
-      text: `<b>Topshiriqdan olib tashlandingiz</b>\n${esc(view.title)}`,
-      buttons: [],
-    };
+    return { text: card(REMOVED_HEAD, view.title, [], []), buttons: [] };
   }
   const { head, line, closed } = liveHead(view, viewerId);
-  const lines = [`<b>${esc(head)}</b>`, esc(view.title)];
-  if (line) lines.push(line.replace(/^ · /, ''));
-  // The author's own card needs no «Bergan» / body: they wrote the task.
-  if (!closed && view.authorId !== viewerId) {
-    lines.push(...liveBody(view, viewerId, opts.now));
-  }
+  const whoLine = line ? [line.replace(/^ · /, '')] : [];
+  // The author's own card needs no «Bergan» / meta: they wrote the task. No «Holat»: the headline says it.
+  const meta =
+    !closed && view.authorId !== viewerId
+      ? metaLines(view, viewerId, opts.now, { bergan: true, holat: false })
+      : [];
   const buttons: TgButtons = closed ? [] : stateButtons(view, viewerId);
   if (opts.openUrl) buttons.push([openButton(opts.openUrl)]);
-  return { text: lines.join('\n'), buttons };
+  return { text: card(head, view.title, whoLine, meta), buttons };
 }
 
 /** «Qadamlar» pressed: the message becomes the step list (mockup s17). */
@@ -593,7 +599,7 @@ export function renderStepsMessage(view: TgTaskView): TgMessage {
           tkData('step', s.id),
         ),
       ]),
-      [cb('Orqaga', tkData('back', view.id))],
+      [cb('⬅️ Orqaga', tkData('back', view.id))],
     ],
   };
 }

@@ -42,12 +42,16 @@ const ev = (
 ): TgHistoryItem => ({ type, to, actorId, actorName, text, at });
 
 const E = new Date('2026-10-13T06:00:00Z');
-const lines = (v: TgTaskView, me: number) =>
-  renderLiveCard(v, me, { now: NOW, openUrl: OPEN }).text.split('\n');
+const text = (v: TgTaskView, me: number) =>
+  renderLiveCard(v, me, { now: NOW, openUrl: OPEN }).text;
 const buttons = (v: TgTaskView, me: number) =>
   renderLiveCard(v, me, { now: NOW, openUrl: OPEN })
     .buttons.flat()
     .map((b) => b.text);
+/** Style B: the title (and the «who» line) sit in a blockquote under the headline. */
+const quote = (...inner: string[]) =>
+  `<blockquote>${['<b>Banner</b>', ...inner].join('\n')}</blockquote>`;
+const META = ['👤 Bergan: Soliyev A.', '⚡ Yuqori'];
 
 describe('renderLiveCard', () => {
   it('STATUS_NOTICES names the notices the live card replaces', () => {
@@ -67,18 +71,20 @@ describe('renderLiveCard', () => {
 
   it('NEW to the assignee', () => {
     const v = view();
-    expect(lines(v, 40)).toEqual([
-      '<b>Yangi topshiriq · Yuqori</b>',
-      'Banner',
-      'Bergan: Soliyev A.',
+    expect(text(v, 40)).toBe(
+      ['<b>🆕 Yangi topshiriq</b>', quote(), ...META].join('\n'),
+    );
+    expect(buttons(v, 40)).toEqual([
+      '▶️ Boshladim',
+      '✅ Bajardim',
+      '📂 Ochish',
     ]);
-    expect(buttons(v, 40)).toEqual(['Boshladim', 'Bajardim', 'Ochish']);
   });
 
   it('«Ochish» is a web_app button', () => {
     const m = renderLiveCard(view(), 40, { now: NOW, openUrl: OPEN });
     const open = m.buttons.at(-1)?.[0];
-    expect(open).toMatchObject({ text: 'Ochish', web_app: { url: OPEN } });
+    expect(open).toMatchObject({ text: '📂 Ochish', web_app: { url: OPEN } });
     expect(open).not.toHaveProperty('url');
     expect(open).not.toHaveProperty('callback_data');
   });
@@ -88,22 +94,16 @@ describe('renderLiveCard', () => {
     history: [ev('STATUS', 'IN_PROGRESS', 40, 'Karimov B.', E)],
   });
   it('IN_PROGRESS to the one who started', () => {
-    expect(lines(started, 40)).toEqual([
-      '<b>🔄 Jarayonda</b>',
-      'Banner',
-      'Siz boshladingiz',
-      'Bergan: Soliyev A.',
-    ]);
-    expect(buttons(started, 40)).toEqual(['Bajardim', 'Ochish']);
+    expect(text(started, 40)).toBe(
+      ['<b>🔄 Jarayonda</b>', quote('Siz boshladingiz'), ...META].join('\n'),
+    );
+    expect(buttons(started, 40)).toEqual(['✅ Bajardim', '📂 Ochish']);
   });
   it('IN_PROGRESS to the other assignee', () => {
-    expect(lines(started, 41)).toEqual([
-      '<b>🔄 Jarayonda</b>',
-      'Banner',
-      'Karimov B. boshladi',
-      'Bergan: Soliyev A.',
-    ]);
-    expect(buttons(started, 41)).toEqual(['Bajardim', 'Ochish']);
+    expect(text(started, 41)).toBe(
+      ['<b>🔄 Jarayonda</b>', quote('Karimov B. boshladi'), ...META].join('\n'),
+    );
+    expect(buttons(started, 41)).toEqual(['✅ Bajardim', '📂 Ochish']);
   });
 
   const returned = view({
@@ -114,21 +114,18 @@ describe('renderLiveCard', () => {
     ],
   });
   it('returned, to the assignee', () => {
-    expect(lines(returned, 40)).toEqual([
-      '<b>↩️ Qaytarildi</b>',
-      'Banner',
-      'Soliyev A.: «Rasm yo‘q»',
-      'Bergan: Soliyev A.',
-    ]);
-    expect(buttons(returned, 40)).toEqual(['Bajardim', 'Ochish']);
+    expect(text(returned, 40)).toBe(
+      ['<b>↩️ Qaytarildi</b>', quote('Soliyev A.: «Rasm yo‘q»'), ...META].join(
+        '\n',
+      ),
+    );
+    expect(buttons(returned, 40)).toEqual(['✅ Bajardim', '📂 Ochish']);
   });
   it('returned, to the author', () => {
-    expect(lines(returned, 30)).toEqual([
-      '<b>↩️ Siz qaytardingiz</b>',
-      'Banner',
-      '«Rasm yo‘q»',
-    ]);
-    expect(buttons(returned, 30)).toEqual(['Ochish']);
+    expect(text(returned, 30)).toBe(
+      ['<b>↩️ Siz qaytardingiz</b>', quote('«Rasm yo‘q»')].join('\n'),
+    );
+    expect(buttons(returned, 30)).toEqual(['📂 Ochish']);
   });
 
   const inReview = view({
@@ -136,33 +133,27 @@ describe('renderLiveCard', () => {
     history: [ev('STATUS', 'IN_REVIEW', 40, 'Karimov B.', E)],
   });
   it('IN_REVIEW to the one who sent it', () => {
-    expect(lines(inReview, 40)).toEqual([
-      '<b>⏳ Tekshiruvda</b>',
-      'Banner',
-      'Siz yubordingiz',
-      'Bergan: Soliyev A.',
-    ]);
-    expect(buttons(inReview, 40)).toEqual(['Ochish']);
+    expect(text(inReview, 40)).toBe(
+      ['<b>⏳ Tekshiruvda</b>', quote('Siz yubordingiz'), ...META].join('\n'),
+    );
+    expect(buttons(inReview, 40)).toEqual(['📂 Ochish']);
   });
   it('IN_REVIEW to the other assignee', () => {
-    expect(lines(inReview, 41)).toEqual([
-      '<b>⏳ Tekshiruvda</b>',
-      'Banner',
-      'Karimov B. bajardi',
-      'Bergan: Soliyev A.',
-    ]);
-    expect(buttons(inReview, 41)).toEqual(['Ochish']);
+    expect(text(inReview, 41)).toBe(
+      ['<b>⏳ Tekshiruvda</b>', quote('Karimov B. bajardi'), ...META].join(
+        '\n',
+      ),
+    );
+    expect(buttons(inReview, 41)).toEqual(['📂 Ochish']);
   });
   it('IN_REVIEW to the author', () => {
-    expect(lines(inReview, 30)).toEqual([
-      '<b>Tekshiruvga keldi</b>',
-      'Banner',
-      'Karimov B. bajardi',
-    ]);
+    expect(text(inReview, 30)).toBe(
+      ['<b>📥 Tekshiruvga keldi</b>', quote('Karimov B. bajardi')].join('\n'),
+    );
     expect(buttons(inReview, 30)).toEqual([
-      'Qabul qilish',
-      'Qaytarish',
-      'Ochish',
+      '✅ Qabul qilish',
+      '↩️ Qaytarish',
+      '📂 Ochish',
     ]);
   });
 
@@ -174,36 +165,39 @@ describe('renderLiveCard', () => {
     ],
   });
   it('DONE to the one who did it', () => {
-    expect(lines(done, 40)).toEqual([
-      '<b>✅ Bajarildi</b>',
-      'Banner',
-      'Siz bajardingiz, Soliyev A. qabul qildi · 14.10, 15:30',
-    ]);
-    expect(buttons(done, 40)).toEqual(['Ochish']);
+    expect(text(done, 40)).toBe(
+      [
+        '<b>✅ Bajarildi</b>',
+        quote('Siz bajardingiz, Soliyev A. qabul qildi · 14.10, 15:30'),
+      ].join('\n'),
+    );
+    expect(buttons(done, 40)).toEqual(['📂 Ochish']);
   });
   it('DONE to the other assignee', () => {
-    expect(lines(done, 41)).toEqual([
-      '<b>✅ Bajarildi</b>',
-      'Banner',
-      'Karimov B. bajardi · 14.10, 15:30',
-    ]);
-    expect(buttons(done, 41)).toEqual(['Ochish']);
+    expect(text(done, 41)).toBe(
+      ['<b>✅ Bajarildi</b>', quote('Karimov B. bajardi · 14.10, 15:30')].join(
+        '\n',
+      ),
+    );
+    expect(buttons(done, 41)).toEqual(['📂 Ochish']);
   });
   it('DONE to the author who accepted', () => {
-    expect(lines(done, 30)).toEqual([
-      '<b>✅ Qabul qildingiz</b>',
-      'Banner',
-      'Ijrochi: Karimov B. · 14.10, 15:30',
-    ]);
-    expect(buttons(done, 30)).toEqual(['Ochish']);
+    expect(text(done, 30)).toBe(
+      [
+        '<b>✅ Qabul qildingiz</b>',
+        quote('Ijrochi: Karimov B. · 14.10, 15:30'),
+      ].join('\n'),
+    );
+    expect(buttons(done, 30)).toEqual(['📂 Ochish']);
   });
   it('DONE to the watcher', () => {
-    expect(lines(done, 50)).toEqual([
-      '<b>✅ Bajarildi</b>',
-      'Banner',
-      'Karimov B. bajardi, Soliyev A. qabul qildi · 14.10, 15:30',
-    ]);
-    expect(buttons(done, 50)).toEqual(['Ochish']);
+    expect(text(done, 50)).toBe(
+      [
+        '<b>✅ Bajarildi</b>',
+        quote('Karimov B. bajardi, Soliyev A. qabul qildi · 14.10, 15:30'),
+      ].join('\n'),
+    );
+    expect(buttons(done, 50)).toEqual(['📂 Ochish']);
   });
   it('DONE self-task (no review)', () => {
     const v = view({
@@ -213,29 +207,27 @@ describe('renderLiveCard', () => {
       participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Karimov B.' }],
       history: [ev('STATUS', 'DONE', 40, 'Karimov B.', T)],
     });
-    expect(lines(v, 40)).toEqual([
-      '<b>✅ Bajarildi</b>',
-      'Banner',
-      'Siz bajardingiz · 14.10, 15:30',
-    ]);
-    expect(buttons(v, 40)).toEqual(['Ochish']);
+    expect(text(v, 40)).toBe(
+      ['<b>✅ Bajarildi</b>', quote('Siz bajardingiz · 14.10, 15:30')].join(
+        '\n',
+      ),
+    );
+    expect(buttons(v, 40)).toEqual(['📂 Ochish']);
   });
   it('DONE by the system (auto-closed)', () => {
     const v = view({
       status: 'DONE',
       history: [ev('AUTO_CLOSED', null, null, null, T)],
     });
-    expect(lines(v, 40)).toEqual([
-      '<b>✅ Yopildi</b>',
-      'Banner',
-      'Tizim · 14.10, 15:30',
-    ]);
-    expect(buttons(v, 40)).toEqual(['Ochish']);
+    expect(text(v, 40)).toBe(
+      ['<b>✅ Yopildi</b>', quote('Tizim · 14.10, 15:30')].join('\n'),
+    );
+    expect(buttons(v, 40)).toEqual(['📂 Ochish']);
   });
   it('DONE with no history (old task): bare headline', () => {
     const v = view({ status: 'DONE' });
-    expect(lines(v, 40)).toEqual(['<b>✅ Bajarildi</b>', 'Banner']);
-    expect(buttons(v, 40)).toEqual(['Ochish']);
+    expect(text(v, 40)).toBe(['<b>✅ Bajarildi</b>', quote()].join('\n'));
+    expect(buttons(v, 40)).toEqual(['📂 Ochish']);
   });
 
   const cancelled = view({
@@ -243,47 +235,52 @@ describe('renderLiveCard', () => {
     history: [ev('CANCELLED', null, 30, 'Soliyev A.', T, 'Kerak emas')],
   });
   it('CANCELLED to the assignee', () => {
-    expect(lines(cancelled, 40)).toEqual([
-      '<b>❌ Bekor qilindi</b>',
-      'Banner',
-      'Soliyev A.: «Kerak emas» · 14.10, 15:30',
-    ]);
-    expect(buttons(cancelled, 40)).toEqual(['Ochish']);
+    expect(text(cancelled, 40)).toBe(
+      [
+        '<b>❌ Bekor qilindi</b>',
+        quote('Soliyev A.: «Kerak emas» · 14.10, 15:30'),
+      ].join('\n'),
+    );
+    expect(buttons(cancelled, 40)).toEqual(['📂 Ochish']);
   });
   it('CANCELLED to the one who cancelled', () => {
-    expect(lines(cancelled, 30)).toEqual([
-      '<b>❌ Siz bekor qildingiz</b>',
-      'Banner',
-      '«Kerak emas» · 14.10, 15:30',
-    ]);
-    expect(buttons(cancelled, 30)).toEqual(['Ochish']);
+    expect(text(cancelled, 30)).toBe(
+      [
+        '<b>❌ Siz bekor qildingiz</b>',
+        quote('«Kerak emas» · 14.10, 15:30'),
+      ].join('\n'),
+    );
+    expect(buttons(cancelled, 30)).toEqual(['📂 Ochish']);
   });
   it('CANCELLED without a reason', () => {
     const v = view({
       status: 'CANCELLED',
       history: [ev('CANCELLED', null, 30, 'Soliyev A.', T)],
     });
-    expect(lines(v, 40)[2]).toBe('Soliyev A. · 14.10, 15:30');
-    expect(lines(v, 30)[2]).toBe('14.10, 15:30');
+    expect(text(v, 40)).toBe(
+      ['<b>❌ Bekor qilindi</b>', quote('Soliyev A. · 14.10, 15:30')].join(
+        '\n',
+      ),
+    );
+    expect(text(v, 30)).toBe(
+      ['<b>❌ Siz bekor qildingiz</b>', quote('14.10, 15:30')].join('\n'),
+    );
   });
 
   it('a viewer no longer on the task: no buttons at all', () => {
     const m = renderLiveCard(started, 99, { now: NOW, openUrl: OPEN });
-    expect(m.text.split('\n')).toEqual([
-      '<b>Topshiriqdan olib tashlandingiz</b>',
-      'Banner',
-    ]);
+    expect(m.text).toBe(
+      ['<b>🚫 Topshiriqdan olib tashlandingiz</b>', quote()].join('\n'),
+    );
     expect(m.buttons).toEqual([]);
   });
 
   it("a system task: «Tizim topshirig'i», «Ochish» only", () => {
     const v = view({ kind: 'BROKEN_PROMISE' });
-    expect(lines(v, 40)).toEqual([
-      "<b>Tizim topshirig'i · Yuqori</b>",
-      'Banner',
-      'Bergan: Soliyev A.',
-    ]);
-    expect(buttons(v, 40)).toEqual(['Ochish']);
+    expect(text(v, 40)).toBe(
+      ["<b>🤖 Tizim topshirig'i</b>", quote(), ...META].join('\n'),
+    );
+    expect(buttons(v, 40)).toEqual(['📂 Ochish']);
   });
 
   it('no openUrl: no «Ochish»', () => {
@@ -291,10 +288,10 @@ describe('renderLiveCard', () => {
       renderLiveCard(view(), 40, { now: NOW })
         .buttons.flat()
         .map((b) => b.text),
-    ).toEqual(['Boshladim', 'Bajardim']);
+    ).toEqual(['▶️ Boshladim', '✅ Bajardim']);
   });
 
-  it('body lines on an open task for a non-author: due, link, steps, photo', () => {
+  it('meta lines on an open task for a non-author: due · priority, link, steps, photo', () => {
     const v = view({
       dueAt: new Date('2026-10-14T13:00:00Z'), // today 18:00
       entityLabel: 'A1-3 guruh',
@@ -304,16 +301,70 @@ describe('renderLiveCard', () => {
       ],
       requiresPhoto: true,
     });
-    expect(lines(v, 40)).toEqual([
-      '<b>Yangi topshiriq · Yuqori</b>',
-      'Banner',
-      'Bergan: Soliyev A.',
-      'Muddat: bugun, 18:00',
-      "Bog'liq: A1-3 guruh",
-      'Kichik qadamlar: 1/2',
-      'Rasm bilan tasdiqlanadi.',
-    ]);
-    // The author gets no body: they wrote the task.
-    expect(lines(v, 30)).toEqual(['<b>Yangi topshiriq · Yuqori</b>', 'Banner']);
+    expect(text(v, 40)).toBe(
+      [
+        '<b>🆕 Yangi topshiriq</b>',
+        quote(),
+        '👤 Bergan: Soliyev A.',
+        '⏰ bugun, 18:00 · ⚡ Yuqori',
+        "🔗 Bog'liq: A1-3 guruh",
+        '☑️ Kichik qadamlar: 1/2',
+        '📷 Rasm bilan tasdiqlanadi.',
+      ].join('\n'),
+    );
+    // The author gets no meta: they wrote the task.
+    expect(text(v, 30)).toBe(['<b>🆕 Yangi topshiriq</b>', quote()].join('\n'));
+  });
+
+  it('priority: URGENT and HIGH are named, LOW / MEDIUM say nothing', () => {
+    const due = new Date('2026-10-14T13:00:00Z');
+    expect(text(view({ priority: 'URGENT', dueAt: due }), 40)).toBe(
+      [
+        '<b>🆕 Yangi topshiriq</b>',
+        quote(),
+        '👤 Bergan: Soliyev A.',
+        '⏰ bugun, 18:00 · 🔥 Shoshilinch',
+      ].join('\n'),
+    );
+    expect(text(view({ priority: 'URGENT' }), 40)).toBe(
+      [
+        '<b>🆕 Yangi topshiriq</b>',
+        quote(),
+        '👤 Bergan: Soliyev A.',
+        '🔥 Shoshilinch',
+      ].join('\n'),
+    );
+    expect(text(view({ priority: 'MEDIUM', dueAt: due }), 40)).toBe(
+      [
+        '<b>🆕 Yangi topshiriq</b>',
+        quote(),
+        '👤 Bergan: Soliyev A.',
+        '⏰ bugun, 18:00',
+      ].join('\n'),
+    );
+    expect(text(view({ priority: 'LOW' }), 40)).toBe(
+      ['<b>🆕 Yangi topshiriq</b>', quote(), '👤 Bergan: Soliyev A.'].join(
+        '\n',
+      ),
+    );
+  });
+
+  it('a title or a reason with <b> is escaped inside the blockquote', () => {
+    const v = view({
+      title: 'A <b>B</b> & C',
+      status: 'IN_PROGRESS',
+      history: [
+        ev('RETURN', null, 30, 'So <i>liyev</i>', T, '<b>Rasm</b> yo‘q'),
+        ev('STATUS', 'IN_REVIEW', 40, 'Karimov B.', E),
+      ],
+    });
+    expect(text(v, 40)).toBe(
+      [
+        '<b>↩️ Qaytarildi</b>',
+        '<blockquote><b>A &lt;b&gt;B&lt;/b&gt; &amp; C</b>',
+        'So &lt;i&gt;liyev&lt;/i&gt;: «&lt;b&gt;Rasm&lt;/b&gt; yo‘q»</blockquote>',
+        ...META,
+      ].join('\n'),
+    );
   });
 });

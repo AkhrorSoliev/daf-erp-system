@@ -145,12 +145,17 @@ describe('TaskTelegramHandler — buttons', () => {
     // The pressed message becomes the live card (ADR-0089), not the old headline.
     expect(text.split('\n')).toEqual([
       '<b>🔄 Jarayonda</b>',
-      'Oktabr banneri',
-      'Siz boshladingiz',
-      'Bergan: Soliyev A.',
-      'Kichik qadamlar: 0/1',
+      '<blockquote><b>Oktabr banneri</b>',
+      'Siz boshladingiz</blockquote>',
+      '👤 Bergan: Soliyev A.',
+      '⚡ Yuqori',
+      '☑️ Kichik qadamlar: 0/1',
     ]);
-    expect(labels(extra)).toEqual([['Bajardim'], ['Qadamlar'], ['Ochish']]);
+    expect(labels(extra)).toEqual([
+      ['✅ Bajardim'],
+      ['📋 Qadamlar'],
+      ['📂 Ochish'],
+    ]);
     expect(ctx.reply).not.toHaveBeenCalled();
   });
 
@@ -202,9 +207,9 @@ describe('TaskTelegramHandler — buttons', () => {
       show_alert: true,
     });
     expect(labels(ctx.editMessageText.mock.calls[0][1])).toEqual([
-      ['Bajardim'],
-      ['Qadamlar'],
-      ['Ochish'],
+      ['✅ Bajardim'],
+      ['📋 Qadamlar'],
+      ['📂 Ochish'],
     ]);
   });
 
@@ -311,7 +316,7 @@ describe('TaskTelegramHandler — buttons', () => {
     );
     expect(labels(steps.editMessageText.mock.calls[0][1])).toEqual([
       ['1. Matn qoralamasi'],
-      ['Orqaga'],
+      ['⬅️ Orqaga'],
     ]);
 
     (loadTaskView as jest.Mock)
@@ -343,7 +348,10 @@ describe('TaskTelegramHandler — buttons', () => {
     await handler.onAction(back);
     expect(
       back.editMessageText.mock.calls[0][0].split('\n').slice(0, 2),
-    ).toEqual(['<b>Yangi topshiriq · Yuqori</b>', 'Oktabr banneri']);
+    ).toEqual([
+      '<b>🆕 Yangi topshiriq</b>',
+      '<blockquote><b>Oktabr banneri</b></blockquote>',
+    ]);
   });
 
   it("a step of somebody else's task: refused before the toggle", async () => {
@@ -402,8 +410,8 @@ describe('TaskTelegramHandler — buttons', () => {
     await handler.onAction(ctx);
     const [text] = ctx.reply.mock.calls[0];
     expect(text.split('\n').slice(0, 2)).toEqual([
-      '<b>Yangi topshiriq · Yuqori</b>',
-      'Oktabr banneri',
+      '<b>🆕 Yangi topshiriq</b>',
+      '<blockquote><b>Oktabr banneri</b></blockquote>',
     ]);
     expect(sender.record).toHaveBeenCalledWith(
       '700',
