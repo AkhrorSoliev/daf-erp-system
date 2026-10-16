@@ -251,3 +251,46 @@ export async function planPromiseKept(
   }
   return drafts;
 }
+
+/**
+ * A corrected amount (spec §7.3): the old result on the re-post under its
+ * sealed rule. A percent LEAD_PAID is re-read from the new amount; a
+ * promise keeps its debt as the base.
+ */
+export function movedDraft(
+  old: Pick<
+    KpiDraft,
+    | 'companyId'
+    | 'branchId'
+    | 'userId'
+    | 'type'
+    | 'leadId'
+    | 'promiseId'
+    | 'studentId'
+    | 'baseAmount'
+    | 'ruleMode'
+    | 'ruleValue'
+  > & { id: string },
+  payment: Pick<PaymentFacts, 'id' | 'amount' | 'createdAt'>,
+): KpiDraft {
+  const base =
+    old.type === KpiResultType.LEAD_PAID ? payment.amount : old.baseAmount;
+  return {
+    companyId: old.companyId,
+    branchId: old.branchId,
+    userId: old.userId,
+    type: old.type,
+    leadId: old.leadId,
+    promiseId: old.promiseId,
+    studentId: old.studentId,
+    paymentId: payment.id,
+    paymentAmount: payment.amount,
+    baseAmount: base,
+    ruleMode: old.ruleMode,
+    ruleValue: old.ruleValue,
+    amount: kpiAmount({ mode: old.ruleMode, value: old.ruleValue }, base),
+    month: tashkentMonthKey(payment.createdAt),
+    occurredAt: payment.createdAt,
+    replacesResultId: old.id,
+  };
+}

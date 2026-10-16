@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PaymentStatus, Prisma } from '@prisma/client';
+import { KpiResultStatus, KpiResultType, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { KpiSettingsService } from './kpi-settings.service';
-import { recordingSince } from './kpi-rules';
+import { CANCEL_REASON, recordingSince } from './kpi-rules';
 import {
   PAYMENT_FACTS,
   eligibility,
+  movedDraft,
   planLeadPaid,
   planPromiseKept,
   type KpiDraft,
@@ -42,13 +43,135 @@ export class KpiResultsService {
     return payment ? this.planFor(payment, restore) : [];
   }
 
-  /** Writes what `planForPayment` finds; returns what was written. */
+  /**
+   * Writes what `planForPayment` finds; returns what was written. A
+   * correction's re-post first carries the old payment's results over.
+   */
   async recordForPayment(paymentId: string): Promise<KpiDraft[]> {
     const payment = await this.payment(paymentId);
     if (!payment) return [];
     const written: KpiDraft[] = [];
+    if (payment.correctsPaymentId) {
+      written.push(...(await this.moveCorrected(payment)));
+    }
     for (const draft of await this.planFor(payment)) {
       if (await this.insert(draft)) written.push(draft);
+    }
+    return written;
+  }
+
+  /**
+   * A payment that no longer stands (spec §7.3): its ACTIVE results are
+   * cancelled — also while the switch is off. After a plain reversal the
+   * lead takes its next earliest payment; a correction leaves that to the
+   * re-post, which carries the old result over (`moveCorrected`).
+   */
+  async cancelForPayment(
+    paymentId: string,
+    opts: { correction: boolean },
+    now: Date = new Date(),
+  ): Promise<number> {
+    const active = await this.prisma.kpiResult.findMany({
+      where: { paymentId, status: KpiResultStatus.ACTIVE },
+      select: { id: true, type: true, studentId: true, companyId: true },
+    });
+    if (active.length === 0) return 0;
+    const { count } = await this.prisma.kpiResult.updateMany({
+      where: {
+        id: { in: active.map((r) => r.id) },
+        status: KpiResultStatus.ACTIVE,
+      },
+      data: {
+        status: KpiResultStatus.CANCELLED,
+        cancelledAt: now,
+        cancelReason: opts.correction
+          ? CANCEL_REASON.CORRECTED
+          : CANCEL_REASON.REVERSED,
+      },
+    });
+    if (!opts.correction) {
+      const students = new Map(
+        active
+          .filter((r) => r.type === KpiResultType.LEAD_PAID)
+          .map((r) => [r.studentId, r.companyId] as const),
+      );
+      for (const [studentId, companyId] of students) {
+        await this.rechooseLeadPaid(studentId, companyId);
+      }
+    }
+    return count;
+  }
+
+  /** The lead's next earliest COMPLETED payment becomes its result — a new result, so the switch applies. */
+  private async rechooseLeadPaid(
+    studentId: number,
+    companyId: number,
+  ): Promise<void> {
+    const settings = await this.kpiSettings.read(companyId);
+    const since = recordingSince(settings);
+    if (!since) return;
+    const drafts = await planLeadPaid(
+      this.prisma,
+      studentId,
+      companyId,
+      settings,
+      since,
+      eligibility(this.prisma),
+    );
+    for (const draft of drafts) await this.insert(draft);
+  }
+
+  /**
+   * A corrected amount (spec §7.3): the old payment's results move to the
+   * re-post under their sealed rule (`movedDraft`). Written whatever the
+   * switch says (a result moved is not a new one). Safe to repeat, and safe
+   * in either order with the reversal's own handler.
+   *
+   * A moved PROMISE_KEPT also takes its promise along: the correction left
+   * `PaymentPromise.resolvedPaymentId` on the REVERSED payment, so it is
+   * re-pointed to the re-post. ponytail: this is a second write after the
+   * result's insert, not one transaction (the writer runs on plain
+   * `prisma`); it is guarded on the old id and runs for already-moved
+   * results too, so a repeat finishes a half-done move.
+   */
+  private async moveCorrected(
+    payment: PaymentFacts,
+    now: Date = new Date(),
+  ): Promise<KpiDraft[]> {
+    const oldPaymentId = payment.correctsPaymentId as string;
+    await this.prisma.kpiResult.updateMany({
+      where: { paymentId: oldPaymentId, status: KpiResultStatus.ACTIVE },
+      data: {
+        status: KpiResultStatus.CANCELLED,
+        cancelledAt: now,
+        cancelReason: CANCEL_REASON.CORRECTED,
+      },
+    });
+    const old = await this.prisma.kpiResult.findMany({
+      where: { paymentId: oldPaymentId, cancelReason: CANCEL_REASON.CORRECTED },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    if (old.length === 0) return [];
+    const moved = new Set(
+      (
+        await this.prisma.kpiResult.findMany({
+          where: { replacesResultId: { in: old.map((r) => r.id) } },
+          select: { replacesResultId: true },
+        })
+      ).map((r) => r.replacesResultId),
+    );
+    const written: KpiDraft[] = [];
+    for (const r of old) {
+      if (!moved.has(r.id)) {
+        const draft = movedDraft(r, payment);
+        if (await this.insert(draft)) written.push(draft);
+      }
+      if (r.type === KpiResultType.PROMISE_KEPT && r.promiseId) {
+        await this.prisma.paymentPromise.updateMany({
+          where: { id: r.promiseId, resolvedPaymentId: oldPaymentId },
+          data: { resolvedPaymentId: payment.id },
+        });
+      }
     }
     return written;
   }
@@ -90,19 +213,24 @@ export class KpiResultsService {
     ];
   }
 
-  /** The one insert. A writer that got there first (`P2002`) is not an error. */
+  /** The one insert. A writer that got there first is not an error. */
   private async insert(draft: KpiDraft): Promise<boolean> {
     try {
       await this.prisma.kpiResult.create({ data: draft });
       return true;
     } catch (e) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
-        return false;
-      }
+      if (isUniqueViolation(e)) return false;
       throw e;
     }
   }
+}
+
+/**
+ * The partial unique index refused a second ACTIVE result. The pg adapter
+ * reports it as Prisma's P2002 or, unmapped, as raw Postgres 23505 in
+ * `cause` (same reading as `isUniqueViolation` in tasks/task-auto-write.ts).
+ */
+function isUniqueViolation(err: unknown): boolean {
+  const e = err as { code?: string; cause?: { code?: string } } | null;
+  return e?.code === 'P2002' || e?.cause?.code === '23505';
 }
