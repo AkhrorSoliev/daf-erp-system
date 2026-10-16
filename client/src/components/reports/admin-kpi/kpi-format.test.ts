@@ -3,6 +3,7 @@ import { formatPrice } from "@/lib/format-utils";
 import {
   dayText,
   deltaLine,
+  compareText,
   deltaOrNull,
   deltaTone,
   kpiCompare,
@@ -52,6 +53,14 @@ describe("deltaLine / deltaTone", () => {
   });
 });
 
+describe("compareText", () => {
+  it("adds the unit to the compare figure", () => {
+    expect(compareText(5, "count")).toBe("5");
+    expect(compareText(20_000, "som")).toBe(`${formatPrice(20_000)} so'm`);
+    expect(compareText(55, "pct")).toBe("55%");
+  });
+});
+
 describe("texts", () => {
   it("prints a share with its parts, or a dash", () => {
     expect(ratioText(50, 1, 2)).toBe("50% (1 / 2)");
@@ -82,6 +91,7 @@ describe("settings form", () => {
     expect(ruleError({ mode: "PERCENT", value: 101 })).toBe("Foiz 0 dan 100 gacha bo'ladi");
     expect(ruleError({ mode: "FIXED", value: 10_000_001 })).toBe("Summa 10 000 000 so'mdan oshmasin");
     expect(ruleError({ mode: "FIXED", value: 1.5 })).toBe("Butun son kiriting");
+    expect(ruleError({ mode: "FIXED", value: -5 })).toBe("Manfiy bo'lishi mumkin emas");
     expect(ruleError({ mode: "PERCENT", value: 5 })).toBeNull();
   });
 

@@ -49,6 +49,12 @@ export function deltaOrNull(
   return deltaLine(value, compare, unit);
 }
 
+/** A compare figure with its unit: «5», «20 000 so'm», «55%». */
+export function compareText(compare: number, unit: DeltaUnit): string {
+  if (unit === "som") return `${formatPrice(compare)} so'm`;
+  return unit === "pct" ? `${formatNumber(compare)}%` : formatNumber(compare);
+}
+
 /** Green when better: more is better unless `higherIsBetter` is false (returned leads). */
 export function deltaTone(value: number, compare: number, higherIsBetter = true): "good" | "bad" | "flat" {
   if (value === compare) return "flat";
@@ -78,7 +84,8 @@ export function dayText(iso: string): string {
 
 /** The settings form's check; the server checks again. */
 export function ruleError(rule: KpiRule): string | null {
-  if (!Number.isInteger(rule.value) || rule.value < 0) return "Butun son kiriting";
+  if (!Number.isInteger(rule.value)) return "Butun son kiriting";
+  if (rule.value < 0) return "Manfiy bo'lishi mumkin emas";
   if (rule.mode === "PERCENT" && rule.value > 100) return "Foiz 0 dan 100 gacha bo'ladi";
   if (rule.mode === "FIXED" && rule.value > KPI_MAX_SOM) return "Summa 10 000 000 so'mdan oshmasin";
   return null;
