@@ -848,12 +848,9 @@ export class LeadsService {
     });
 
     // ADR-0093: an owner must work in the lead's branch, so a move to another
-    // branch takes the lead back from its owner. A converted lead's owner
-    // stays frozen (stage 2 credits it).
-    const releaseOwner =
-      lead.ownerId != null &&
-      lead.statusEnum !== LeadStatus.CONVERTED &&
-      lead.branchId !== branchId;
+    // branch takes the lead back from its owner. A converted lead never gets
+    // here (refused above), so its owner stays frozen (stage 2 credits it).
+    const releaseOwner = lead.ownerId != null && lead.branchId !== branchId;
 
     const { updated, change } = await this.prisma.$transaction(async (tx) => {
       let ownerChange: OwnershipChange | null = null;
