@@ -407,6 +407,7 @@ model User {
   deletedStudents                  Student[]                  @relation("StudentDeletedBy")
   deletedLeads                     Lead[]                     @relation("LeadDeletedBy")
   calledLeads                      Lead[]                     @relation("LeadCalledBy")
+  ownedLeads                       Lead[]                     @relation("LeadOwner")
   deletedLeadColumns               LeadColumn[]               @relation("LeadColumnDeletedBy")
   deletedLeadSections              LeadSection[]              @relation("LeadSectionDeletedBy")
   deletedLeadSources               LeadSource[]               @relation("LeadSourceDeletedBy")
@@ -809,6 +810,16 @@ model Lead {
   deletedBy       User?     @relation("LeadDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
+  // Lead owner (ADR-0092). `ownerId` is the current owner (null = the common
+  // pool); `ownedAt` is when the current ownership began; `ownerActedAt` is the
+  // owner's last action in it (null = none yet). The deadline is never stored:
+  // `ownershipDueAt` derives it from these two fields.
+  ownerId       Int?
+  owner         User?              @relation("LeadOwner", fields: [ownerId], references: [id])
+  ownedAt       DateTime?
+  ownerActedAt  DateTime?
+  ownershipLogs LeadOwnershipLog[]
+
   formSubmissions CustomFormSubmission[]
 
   // `Lead` carried NEITHER companyId NOR branchId — `getBoard()` was
@@ -831,6 +842,36 @@ model Lead {
   @@index([statusEnum])
   @@index([sectionId])
   @@index([sourceId])
+  @@index([ownerId])
+}
+
+enum LeadOwnershipKind {
+  CLAIM
+  ASSIGN
+  RELEASE
+  EXPIRE
+}
+
+// Every change of a lead's owner (ADR-0092), append-only. Reports and the
+// later KPI stages read it; the lead's «Tarix» tab gets an EntityHistory row
+// for the same change. User ids are plain columns, like `statusChangedById`.
+model LeadOwnershipLog {
+  id         String            @id @default(uuid())
+  leadId     String
+  lead       Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  kind       LeadOwnershipKind
+  fromUserId Int?
+  toUserId   Int?
+  // Null = the system (the deadline passed).
+  actorId    Int?
+  reason     String?
+  branchId   Int?
+  companyId  Int
+  createdAt  DateTime          @default(now())
+
+  @@index([leadId])
+  @@index([companyId, kind, createdAt])
+  @@index([fromUserId])
 }
 
 // Leads board column. Two rows are seeded as fixed/system columns
