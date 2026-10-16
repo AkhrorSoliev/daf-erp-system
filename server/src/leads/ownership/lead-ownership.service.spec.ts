@@ -329,6 +329,17 @@ describe('LeadOwnershipService.expireOverdue', () => {
     await expect(
       s.service.expireOverdue(at('2026-10-19', '12:15')),
     ).resolves.toBe(1);
+    expect(s.tx.lead.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'L1',
+        ownerId: 11,
+        ownedAt: OWNED.ownedAt,
+        ownerActedAt: null,
+        deletedAt: null,
+        statusEnum: { not: LeadStatus.CONVERTED },
+      },
+      data: { ownerId: null, ownedAt: null, ownerActedAt: null },
+    });
     expect(s.tx.leadOwnershipLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         kind: 'EXPIRE',

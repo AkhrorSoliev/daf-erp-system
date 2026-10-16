@@ -345,6 +345,9 @@ export class LeadOwnershipService {
             ownerId: lead.ownerId,
             ownedAt: lead.ownedAt,
             ownerActedAt: lead.ownerActedAt,
+            // Converted or archived since the read: its owner stays frozen.
+            deletedAt: null,
+            statusEnum: { not: LeadStatus.CONVERTED },
           },
           data: { ownerId: null, ownedAt: null, ownerActedAt: null },
         });
