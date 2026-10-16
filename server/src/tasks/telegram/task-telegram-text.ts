@@ -357,9 +357,11 @@ function card(
   after: string[],
 ): string {
   const quote = [`<b>${esc(title)}</b>`, ...quoted].join('\n');
-  return [`<b>${head}</b>`, `<blockquote>${quote}</blockquote>`, ...after].join(
-    '\n',
-  );
+  return [
+    `<b>${esc(head)}</b>`,
+    `<blockquote>${quote}</blockquote>`,
+    ...after,
+  ].join('\n');
 }
 
 const cb = (text: string, data: string) => Markup.button.callback(text, data);
