@@ -279,7 +279,7 @@ ulanmagan», «Filial tanlanmagan», «Botga xabar yetmadi»).
 
 ## 9. ADR
 
-**ADR-0094** «Kunlik hisobot shaxsiy chatga: CEO oluvchi, filial va bo'limni
+**ADR-0095** «Kunlik hisobot shaxsiy chatga: CEO oluvchi, filial va bo'limni
 belgilaydi». Ichida:
 
 - moliyaviy raqamlar endi guruhdan tashqari shaxsiy chatga ham boradi; kim

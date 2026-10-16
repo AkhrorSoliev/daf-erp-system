@@ -24,9 +24,9 @@
 - Default sections for a new recipient: `STUDENTS, LESSONS, ACTIVE_STUDENTS, ALERTS`; default layout `BY_SECTION`; branches = the user's own (`mainBranch` ∪ `UserBranch`), or «Barcha filiallar» when the user holds the CEO role (role id 1).
 - Allowed branches of a recipient = company branches with `deletedAt: null` and `status` in `ACTIVE`, `INACTIVE`, filtered by `branchIds` unless `allBranches`.
 
-**Deliberate refinements of the spec (recorded in ADR-0094, Task 10):**
+**Deliberate refinements of the spec (recorded in ADR-0095, Task 10):**
 
-1. No change to `direct-send.guard.spec.ts`: the cron sends through `sendTelegramText` (`telegram-digest/telegram-send.ts`, already allowed) and the handler answers through `ctx.reply` / `ctx.editMessageText`. ADR-0094 still adds the report to ADR-0025's instant list.
+1. No change to `direct-send.guard.spec.ts`: the cron sends through `sendTelegramText` (`telegram-digest/telegram-send.ts`, already allowed) and the handler answers through `ctx.reply` / `ctx.editMessageText`. ADR-0095 still adds the report to ADR-0025's instant list.
 2. The cron picks every active recipient whose `sendTime ≤ current slot` and who has not received today's report. A transient failure releases the claim, so the next half-hour retries; a server restart catches up.
 3. `collect()` takes no `now` argument; it reads the clock exactly as `build()` does today.
 4. Closed / archived branches are never offered (see «Allowed branches» above).
@@ -68,7 +68,7 @@
 - guide: `client/src/qollanma/kontent/hisobotlar/telegram-hisobot.mdx`, `client/src/qollanma/sahifalar/hisobotlar.ts`, `client/src/qollanma/yangiliklar.ts`
 
 **Docs**
-- `docs/adr/0094-shaxsiy-telegram-hisobot.md`, `docs/adr/README.md`, `server/CLAUDE.md`.
+- `docs/adr/0095-shaxsiy-telegram-hisobot.md`, `docs/adr/README.md`, `server/CLAUDE.md`.
 
 ---
 
@@ -291,7 +291,7 @@ git commit -m "refactor(telegram-groups): split the daily report into collect an
 - [ ] **Step 1: Schema**
 
 ```prisma
-/// Who gets the personal daily report in their own Telegram chat (ADR-0094).
+/// Who gets the personal daily report in their own Telegram chat (ADR-0095).
 /// Settings, not a ledger row: removing a recipient deletes the row.
 enum TelegramReportLayout {
   BY_SECTION
@@ -337,7 +337,7 @@ model TelegramReportRecipient {
 - [ ] **Step 2: Migration SQL**
 
 ```sql
--- Shaxsiy Telegram hisobot oluvchilari (ADR-0094).
+-- Shaxsiy Telegram hisobot oluvchilari (ADR-0095).
 DO $$
 BEGIN
   CREATE TYPE "TelegramReportLayout" AS ENUM ('BY_SECTION', 'TABLE', 'BY_BRANCH', 'TOTAL_ONLY');
@@ -602,7 +602,7 @@ export interface Metric {
 
 /**
  * The personal report's rows. Every value is a field of `DailyReportData` —
- * the 21:00 report's own figures (ADR-0094); nothing is computed here.
+ * the 21:00 report's own figures (ADR-0095); nothing is computed here.
  */
 export const METRICS: Metric[] = [
   { section: 'TODAY_MONEY', emoji: '💰', label: 'Tushum', money: true, value: (d) => d.todayIncome },
@@ -758,7 +758,7 @@ function alertLines(i: RenderInput): string[] {
   return ['', '🚩 <b>Diqqat</b>', ...d.flags];
 }
 
-/** A personal report (ADR-0094). Pure: same input, same text. */
+/** A personal report (ADR-0095). Pure: same input, same text. */
 export function renderPersonalReport(i: RenderInput): string {
   const metrics = METRICS.filter((m) => i.sections.includes(m.section));
   const wantsAlerts = i.sections.includes('ALERTS');
@@ -851,7 +851,7 @@ export const REPORT_OPEN_ACTION = 'tr:open';
 
 const ID = /^\d{1,9}$/;
 
-/** Buttons under a personal report (ADR-0094); ≤ 64-byte callback data. */
+/** Buttons under a personal report (ADR-0095); ≤ 64-byte callback data. */
 export function reportKeyboard(
   branches: Array<{ id: number; name: string }>,
   focus: ReportFocus,
@@ -1063,7 +1063,7 @@ export type DeliverResult =
   | { ok: false; reason: 'SEND_FAILED'; kind: TelegramFailureKind; description: string };
 
 /**
- * The personal daily report (ADR-0094). Figures come only from
+ * The personal daily report (ADR-0095). Figures come only from
  * `TelegramGroupDailyReportService.collect` — the 21:00 report's own source.
  */
 @Injectable()
@@ -1545,7 +1545,7 @@ import { CeoOnly } from '../common/permissions/access.decorators';
 import { CreateRecipientDto, UpdateRecipientDto } from './dto/telegram-report.dto';
 import { TelegramReportRecipientsService } from './telegram-report-recipients.service';
 
-/** Personal Telegram report recipients (ADR-0094). The CEO's alone, by identity. */
+/** Personal Telegram report recipients (ADR-0095). The CEO's alone, by identity. */
 @Controller('telegram-report')
 export class TelegramReportController {
   constructor(private readonly recipients: TelegramReportRecipientsService) {}
@@ -1614,7 +1614,7 @@ import { PersonalReportService } from './personal-report.service';
 import { TelegramReportRecipientsService } from './telegram-report-recipients.service';
 import { TelegramReportController } from './telegram-report.controller';
 
-/** Personal Telegram report (ADR-0094). Depends on TelegramModule one way. */
+/** Personal Telegram report (ADR-0095). Depends on TelegramModule one way. */
 @Module({
   imports: [TelegramModule, TelegramGroupsModule, HolidaysModule],
   controllers: [TelegramReportController],
@@ -1633,7 +1633,7 @@ export class TelegramReportModule {}
   {
     policy: 'COMPANY_WIDE',
     reason:
-      'Personal Telegram report recipients (ADR-0094): who receives the daily ' +
+      'Personal Telegram report recipients (ADR-0095): who receives the daily ' +
       'report in their own chat, with which branches. Company-level settings, ' +
       'CEO-only through `@CeoOnly()`; the CEO picks any branch for anyone.',
     routes: [
@@ -1773,7 +1773,7 @@ const retryable = (r: DeliverResult) =>
   !r.ok && (r.reason === 'NO_BOT' || (r.reason === 'SEND_FAILED' && r.kind === 'transient'));
 
 /**
- * Sends each personal report once a day at its own time (ADR-0094). Mon–Sat,
+ * Sends each personal report once a day at its own time (ADR-0095). Mon–Sat,
  * not on a company-wide holiday. A recipient whose time has passed and who has
  * not had today's report is sent at the next half-hour, so a restart or a
  * transient Telegram error only delays it.
@@ -2020,7 +2020,7 @@ const SAME = "O'zgarish yo'q";
 const FAILED = "Xatolik — birozdan keyin qayta urinib ko'ring";
 
 /**
- * `tr:*` buttons of the personal report (ADR-0094) on the main bot. The chat's
+ * `tr:*` buttons of the personal report (ADR-0095) on the main bot. The chat's
  * one live staff account must have an active recipient row, and a branch must
  * be one the CEO allowed it — checked on every tap, so a forwarded message
  * opens nothing.
@@ -2104,7 +2104,7 @@ Add `PersonalReportTelegramHandler` to the module's `providers`.
 In `server/src/telegram/staff/staff-cabinet.ts`:
 1. Next to `STAFF_TASKS_ACTION`, add:
    ```ts
-   /** The personal report (ADR-0094); answered by `src/telegram-report/`. */
+   /** The personal report (ADR-0095); answered by `src/telegram-report/`. */
    export const STAFF_REPORT_ACTION = 'tr:open';
    export const STAFF_REPORT_BUTTON_TEXT = '📊 Hisobot';
    ```
@@ -2433,7 +2433,7 @@ const CANDIDATES = ["telegram-report-candidates"];
 const TITLE = "Telegram hisobot";
 const DESCRIPTION = "Kunlik hisobot kimning shaxsiy chatiga, qaysi filiallar va bo'limlar bilan borishi";
 
-/** CEO-only (ADR-0094): recipients of the personal daily report. */
+/** CEO-only (ADR-0095): recipients of the personal daily report. */
 export function TelegramReportSettingsClient() {
   const qc = useQueryClient();
   const [pick, setPick] = useState<string>("");
@@ -2545,7 +2545,7 @@ export default function TelegramReportSettingsPage() {
 
 ```ts
       {
-        // Every route is `@CeoOnly()` (ADR-0094): identity, not a capability.
+        // Every route is `@CeoOnly()` (ADR-0095): identity, not a capability.
         title: "Telegram hisobot",
         url: "/settings/telegram-report",
         icon: BarChart3,
@@ -2557,14 +2557,14 @@ export default function TelegramReportSettingsPage() {
 `breadcrumb-routes.ts`, after the lead-ownership line:
 
 ```ts
-  // /settings/telegram-report — «Telegram hisobot», CEO only (ADR-0094).
+  // /settings/telegram-report — «Telegram hisobot», CEO only (ADR-0095).
   "telegram-report": "Telegram hisobot",
 ```
 
 `settings-nav.test.ts`: change the CEO count `toHaveLength(14)` to `toHaveLength(15)` and add, after the «Lidlar egaligi» block:
 
 ```ts
-describe("«Telegram hisobot» — CEO only (ADR-0094)", () => {
+describe("«Telegram hisobot» — CEO only (ADR-0095)", () => {
   const PATH = "/settings/telegram-report";
   it("only the CEO sees and opens it", () => {
     const ceo = getVisibleSettingsSections(canForRoles([CEO]), true).flatMap((s) => s.items);
@@ -2590,16 +2590,16 @@ git commit -m "feat(settings): Telegram report recipients page (CEO)"
 ### Task 10: ADR, user guide, CLAUDE.md, full verification
 
 **Files:**
-- Create: `docs/adr/0094-shaxsiy-telegram-hisobot.md`
+- Create: `docs/adr/0095-shaxsiy-telegram-hisobot.md`
 - Modify: `docs/adr/README.md` (one row after 0093)
 - Create: `client/src/qollanma/kontent/hisobotlar/telegram-hisobot.mdx`
 - Modify: `client/src/qollanma/sahifalar/hisobotlar.ts`, `client/src/qollanma/yangiliklar.ts`
 - Modify: `server/CLAUDE.md`
 
-- [ ] **Step 1: ADR-0094 (Uzbek, the 0093 header shape)**
+- [ ] **Step 1: ADR-0095 (Uzbek, the 0093 header shape)**
 
 ```markdown
-# ADR-0094 — Kunlik hisobot shaxsiy chatga: CEO oluvchi, filial va bo'limni belgilaydi
+# ADR-0095 — Kunlik hisobot shaxsiy chatga: CEO oluvchi, filial va bo'limni belgilaydi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-16
@@ -2649,7 +2649,7 @@ vaqti bilan yuborishni so'radi (16.10.2026).
 `docs/adr/README.md` — after the 0093 row:
 
 ```markdown
-| [0094](0094-shaxsiy-telegram-hisobot.md) | Kunlik hisobot shaxsiy chatga: CEO oluvchi, filial va bo'limni belgilaydi | Qabul qilindi | 2026-10-16 |
+| [0095](0095-shaxsiy-telegram-hisobot.md) | Kunlik hisobot shaxsiy chatga: CEO oluvchi, filial va bo'limni belgilaydi | Qabul qilindi | 2026-10-16 |
 ```
 
 - [ ] **Step 2: Guide page**
@@ -2697,7 +2697,7 @@ Oluvchining xodim menyusida «📊 Hisobot» tugmasi bor (yangi qo'shilgan oluvc
     qisqacha:
       "Kunlik hisobot CEO tanlagan xodimlarning shaxsiy Telegram chatiga, har biriga o'z vaqti, filiallari, bo'limlari va ko'rinishi bilan boradi.",
     rollar: [1],
-    adr: ["0094"],
+    adr: ["0095"],
     yollar: ["/settings/telegram-report"],
     kalitSozlar: ["telegram", "kunlik hisobot", "shaxsiy hisobot", "bot", "hisobot vaqti", "filial", "jadval"],
     yangilangan: "2026-10-16",
@@ -2718,11 +2718,11 @@ Oluvchining xodim menyusida «📊 Hisobot» tugmasi bor (yangi qo'shilgan oluvc
 
 - [ ] **Step 3: `server/CLAUDE.md`**
 
-1. In «Telegram digest — one message a day at 20:00», the «Instant by design» bullet: add `the personal daily report (src/telegram-report/, ADR-0094 — its own half-hourly cron, Mon–Sat, not on a company-wide holiday)` to the list.
+1. In «Telegram digest — one message a day at 20:00», the «Instant by design» bullet: add `the personal daily report (src/telegram-report/, ADR-0095 — its own half-hourly cron, Mon–Sat, not on a company-wide holiday)` to the list.
 2. New subsection right after «Telegram digest …» (English):
 
 ```markdown
-#### Personal Telegram report (`src/telegram-report/`, ADR-0094)
+#### Personal Telegram report (`src/telegram-report/`, ADR-0095)
 
 - **Recipients** are `TelegramReportRecipient` rows (one per user and company), edited only by the CEO on `/settings/telegram-report` (`@CeoOnly()` on all six routes, `COMPANY_WIDE`). Each row: `sendTime` ("HH:MM", :00/:30, 07:00–23:30), `layout` (`BY_SECTION` / `TABLE` / `BY_BRANCH` / `TOTAL_ONLY`), `allBranches` or `branchIds`, `sections` (8 keys), `isActive`, `lastSentDate`. The CEO may give anyone any branch; closed and archived branches are never offered.
 - **Figures** come only from `TelegramGroupDailyReportService.collect()` → `DailyReportData`; the 21:00 group text is `renderGroupMessage(data)`, pinned by `telegram-group-daily-report.snapshot.spec.ts` (never update that snapshot to make a refactor pass). The personal layouts (`personal-report-render.ts`) print fields of `DailyReportData` and compute nothing. «Barcha filiallar» totals with the company-wide scope (`null`), a chosen subset with that subset; the debt ▲/▼ shows only for one branch or the whole company.
@@ -2745,8 +2745,8 @@ Expected: PASS (the guide registry test finds `hisobotlar/telegram-hisobot.mdx`)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docs/adr/0094-shaxsiy-telegram-hisobot.md docs/adr/README.md client/src/qollanma server/CLAUDE.md
-git commit -m "docs: ADR-0094 personal Telegram report, guide and CLAUDE.md"
+git add docs/adr/0095-shaxsiy-telegram-hisobot.md docs/adr/README.md client/src/qollanma server/CLAUDE.md
+git commit -m "docs: ADR-0095 personal Telegram report, guide and CLAUDE.md"
 ```
 
 ---
