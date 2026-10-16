@@ -3,6 +3,7 @@ import { ReportsFinancialService } from './reports-financial.service';
 import { ReportsExpectationService } from './reports-expectation.service';
 import { ReportsMarketingService } from './marketing/reports-marketing.service';
 import { ReportsOverviewService } from './reports-overview.service';
+import { GroupPaymentsService } from './group-payments/group-payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { RedisService } from '../redis/redis.service';
@@ -471,5 +472,73 @@ describe('branch scope coverage — lead analytics', () => {
       expect(where.branchId).toBeUndefined();
       expect(where.companyId).toBe(1);
     }
+  });
+});
+
+/**
+ * «Guruhlar bo'yicha to'lov» (spec B5 §5.1): the same chain as the month
+ * charges — only the holders query carries the branch; the later charges,
+ * balances and groups are read for what it returned.
+ */
+describe('branch scope coverage — group payments', () => {
+  const setup = () => {
+    const prisma = {
+      enrollmentMonthlyCharge: {
+        findMany: jest
+          .fn()
+          .mockResolvedValueOnce([{ studentId: 10001 }])
+          .mockResolvedValueOnce([
+            {
+              id: 'c1',
+              studentId: 10001,
+              groupId: 'g1',
+              enrollmentId: 'e1',
+              periodYear: 2026,
+              periodMonth: 10,
+              branchId: 7,
+              chargedAmount: 450_000,
+              enrollment: { status: 'ACTIVE', createdAt: new Date(0) },
+            },
+          ]),
+      },
+      student: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 10001,
+            balance: 0,
+            firstName: 'Ism',
+            lastName: 'Familiya',
+            phone: '',
+            deletedAt: null,
+          },
+        ]),
+      },
+      group: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    return { prisma, service: new GroupPaymentsService(prisma as never) };
+  };
+
+  it('scopes the holders query and chains the rest to its students and their groups', async () => {
+    const { prisma, service } = setup();
+    await service.rows(1, [7], { oy: '2026-10' });
+    const [holders, later] = prisma.enrollmentMonthlyCharge.findMany.mock.calls;
+    expect(hasBranchPredicate(holders[0].where)).toBe(true);
+    expect(holders[0].where.branchId).toEqual({ in: [7] });
+    expect(later[0].where.studentId).toEqual({ in: [10001] });
+    expect(later[0].where.branchId).toBeUndefined();
+    expect(prisma.student.findMany.mock.calls[0][0].where.id).toEqual({
+      in: [10001],
+    });
+    expect(prisma.group.findMany.mock.calls[0][0].where.id).toEqual({
+      in: ['g1'],
+    });
+  });
+
+  it('leaves the holders query unfiltered for a company-wide caller', async () => {
+    const { prisma, service } = setup();
+    await service.rows(1, null, { oy: '2026-10' });
+    expect(
+      prisma.enrollmentMonthlyCharge.findMany.mock.calls[0][0].where.branchId,
+    ).toBeUndefined();
   });
 });
