@@ -106,11 +106,11 @@ export function ExpensesPage() {
 
   return (
     <div className="space-y-4">
-      <ExpensesHeader month={month} current={current} canManage={canManage} exporting={exporting} pdfDisabled={!data?.total}
+      <ExpensesHeader month={month} current={current} canManage={canManage} exporting={exporting} pdfDisabled={!data || list.isPlaceholderData || !data.total}
         onMonth={(m) => onChange({ oy: m === current ? "" : m })} onPdf={exportPdf} onAdd={() => setForm({ expense: null, preset: null })} />
 
       {/* One request feeds the warning and the card (spec §5.2): a failed request draws no warning, and the card shows the error. */}
-      {summary.data && (
+      {summary.data && !summary.isError && (
         <ExpensesMissingCard summary={summary.data} canManage={canManage}
           onWrite={(row) => setForm({ expense: null, preset: presetFor(row, month) })} />
       )}

@@ -205,7 +205,7 @@ Migratsiya yo'q, skript yo'q. Avval server: yangi parametrlar va route qo'shimch
 - May 2026 dan oldingi xarajatlar sahifada va PDF'da yo'q (oy tanlovi pastki chegarasi).
 - «Yozilmagan» o'tgan oyga qaraydi: o'tgan oy ham yozilmagan bo'lsa, ogohlantirish yo'q; boshqa turkumga yozilgan ijara (masalan «Boshqa») uni yopmaydi. Oyning 1-kunida hamma filial «bo'sh» qatori va hamma takrorlanadigan qatorlar chiqadi — to'g'ri, lekin shovqinli.
 - Ko'p filialli doirada «yozilmagan» qatorlari yig'indisi Foyda prognozidagi `missingExpenses` dan farq qilishi mumkin (u yig'indi bo'yicha, bu filial bo'yicha).
-- Avval «Boshqa»ga yozilgan soliq turkumlar jadvalida «Boshqa» qatorida qoladi («Soliqlar»da emas); ogohlantirish uni baribir soliq deb sanaydi.
+- Avval «Boshqa»ga yozilgan soliq turkumlar jadvalida «Boshqa» qatorida qoladi («Soliqlar»da emas); ogohlantirish uni baribir soliq deb sanaydi. Teskarisi: o'tgan oy soliq «Boshqa»ga tavsifida «soliq» bilan yozilgan bo'lsa, jadvalda «Soliqlar» belgisi chiqmaydi, ogohlantirishda esa «Soliq» qatori chiqadi.
 - Maslahat belgilari kalit so'zlarga qaraydi: noto'g'ri maslahat chiqishi ham, kerakli maslahat chiqmasligi ham mumkin; ruscha tavsiflar ro'yxatda yo'q.
 - «Kim kiritgan» variantlari — faqat shu oyda kiritganlar.
 - «Barcha filiallar»da ro'yxatda filial ustuni yo'q; «Xarajat qo'shish» filialsiz bosilsa bugungidek «Avval filialni tanlang».

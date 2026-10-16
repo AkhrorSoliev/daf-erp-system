@@ -49,7 +49,7 @@ export class ExpensesMonthService {
     );
     const creators = creatorIds.length
       ? await this.prisma.user.findMany({
-          where: { id: { in: creatorIds } },
+          where: { companyId, id: { in: creatorIds } },
           select: { id: true, firstName: true, lastName: true },
           orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
         })
@@ -58,6 +58,12 @@ export class ExpensesMonthService {
     const names = new Map(branches.map((b) => [b.id, b.name]));
     for (const r of lastMonth)
       if (!names.has(r.branchId)) names.set(r.branchId, `Filial ${r.branchId}`);
+    // A deleted or non-active branch is never nagged: «Yozish» would 400 or write to a dead branch.
+    const closed = new Set(
+      branches
+        .filter((b) => b.deletedAt !== null || b.status !== 'ACTIVE')
+        .map((b) => b.id),
+    );
     return {
       month,
       isCurrentMonth,
@@ -65,7 +71,9 @@ export class ExpensesMonthService {
       lastMonthTotal: summarize(lastMonth).total,
       byCategory: buildCategoryRows(thisMonth, lastMonth, isCurrentMonth),
       missing: isCurrentMonth
-        ? missingByBranch(lastMonth, thisMonth, names)
+        ? missingByBranch(lastMonth, thisMonth, names).filter(
+            (m) => !closed.has(m.branchId),
+          )
         : [],
       multiBranch: branches.filter((b) => b.deletedAt === null).length > 1,
       emptyBranches: isCurrentMonth ? emptyBranches(branches, thisMonth) : [],

@@ -131,7 +131,7 @@ describe('ExpensesMonthService.monthSummary (spec B6 §5.2)', () => {
     ]);
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: { in: [10001, 10002] } },
+        where: { companyId: 1, id: { in: [10001, 10002] } },
         orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
       }),
     );
@@ -233,6 +233,27 @@ describe('ExpensesMonthService.monthSummary (spec B6 §5.2)', () => {
     const s = await service.monthSummary(1, null, undefined, NOW);
     expect(s.emptyBranches).toEqual([]);
     expect(s.multiBranch).toBe(false);
+  });
+
+  it('a deleted or inactive branch gets no missing row, an active one still does', async () => {
+    prisma.branch.findMany.mockResolvedValue([
+      BRANCHES[0],
+      {
+        id: 2,
+        name: 'Shimol',
+        status: 'ACTIVE',
+        deletedAt: new Date('2026-10-01T00:00:00Z'),
+      },
+    ]);
+    const gone = await service.monthSummary(1, null, undefined, NOW);
+    expect(gone.missing.some((m) => m.branchId === 2)).toBe(false);
+    expect(gone.missing.some((m) => m.branchId === 1)).toBe(true);
+    prisma.branch.findMany.mockResolvedValue([
+      BRANCHES[0],
+      { id: 2, name: 'Shimol', status: 'INACTIVE', deletedAt: null },
+    ]);
+    const idle = await service.monthSummary(1, null, undefined, NOW);
+    expect(idle.missing.some((m) => m.branchId === 2)).toBe(false);
   });
 
   it('a branch id the branch list does not know still gets a name, never a blank', async () => {
