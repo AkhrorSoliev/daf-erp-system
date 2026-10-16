@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
+import type { LeadOwner } from "@/components/leads/ownership/ownership-format";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,6 +36,10 @@ export interface LeadCard {
   calledAt: string | null;
   /** Number of comments left on the lead — drives the comment icon. */
   commentCount: number;
+  /** The lead's owner (ADR-0092); null while it sits in the common pool. */
+  owner: LeadOwner | null;
+  /** When the lead returns to the pool unless its owner acts (server-computed). */
+  ownerDueAt: string | null;
 }
 
 export interface LeadBoardSection {
