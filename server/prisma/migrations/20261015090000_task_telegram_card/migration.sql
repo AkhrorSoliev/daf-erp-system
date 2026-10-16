@@ -1,0 +1,1 @@
+ALTER TYPE "TaskTelegramPurpose" ADD VALUE IF NOT EXISTS 'CARD';

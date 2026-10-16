@@ -214,6 +214,8 @@ enum TaskTelegramPurpose {
   RETURN_PROMPT
   /// «Rasmni shu xabarga javob qilib yuboring» (phase 3): a photo reply sends the task to review.
   PHOTO_PROMPT
+  /// The person's live card (ADR-0089): edited on every task change.
+  CARD
 }
 
 /// Spec 2026-10-07 §3.6.

@@ -246,4 +246,20 @@ describe("staffCabinetPath", () => {
   ])("never follows %s — the profile instead", (next) => {
     expect(staffCabinetPath(next)).toBe("/profile");
   });
+
+  // «Ochish» on a task's Telegram card (ADR-0089).
+  it("opens one task by its uuid", () => {
+    const p = "/tasks?task=3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c";
+    expect(staffCabinetPath(p)).toBe(p);
+  });
+
+  it.each([
+    "/tasks",
+    "/tasks?task=abc",
+    "/tasks?task=3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c&x=1",
+    "//evil.com/tasks?task=3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c",
+    "https://evil.com/tasks?task=3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c",
+  ])("refuses %s", (next) => {
+    expect(staffCabinetPath(next)).toBe("/profile");
+  });
 });

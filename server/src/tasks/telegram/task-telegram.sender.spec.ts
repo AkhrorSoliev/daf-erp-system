@@ -16,6 +16,7 @@ const VIEW: TgTaskView = {
   entityLabel: null,
   participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
   steps: [],
+  history: [],
 };
 
 function setup(
@@ -23,6 +24,7 @@ function setup(
     chat?: string | null;
     owners?: number;
     bot?: boolean;
+    card?: boolean;
     sendMessage?: jest.Mock;
   } = {},
 ) {
@@ -38,7 +40,10 @@ function setup(
       ),
       count: jest.fn().mockResolvedValue(opts.owners ?? 1),
     },
-    taskTelegramMessage: { create: jest.fn().mockResolvedValue({}) },
+    taskTelegramMessage: {
+      create: jest.fn().mockResolvedValue({}),
+      findFirst: jest.fn().mockResolvedValue(opts.card ? { id: 'm1' } : null),
+    },
   };
   const sendMessage =
     opts.sendMessage ?? jest.fn().mockResolvedValue({ message_id: 77 });
@@ -71,7 +76,7 @@ const tgError = (
   });
 
 describe('TaskTelegramSender', () => {
-  it('sends HTML with buttons and remembers the message for replies', async () => {
+  it('a status notice goes out as the live card and is recorded CARD', async () => {
     const { sender, prisma, sendMessage } = setup();
     await expect(sender.send(VIEW, 40, { kind: 'ASSIGNED' })).resolves.toEqual({
       status: 'sent',
@@ -79,13 +84,13 @@ describe('TaskTelegramSender', () => {
     });
     const [chatId, text, extra] = sendMessage.mock.calls[0];
     expect(chatId).toBe('700');
-    expect(text.split('\n')[0]).toBe("<b>Yangi topshiriq · O'rta</b>");
+    expect(text.split('\n')[0]).toBe('<b>🆕 Yangi topshiriq</b>');
     expect(extra.parse_mode).toBe('HTML');
     expect(
       extra.reply_markup.inline_keyboard.flat().map((b: any) => b.text),
-    ).toEqual(['Boshladim', 'Bajardim', 'Ochish']);
-    expect(extra.reply_markup.inline_keyboard.at(-1)[0].url).toBe(
-      'https://lehrer.dafzentrum.uz/tasks?task=t1',
+    ).toEqual(['▶️ Boshladim', '✅ Bajardim', '📂 Ochish']);
+    expect(extra.reply_markup.inline_keyboard.at(-1)[0].web_app.url).toBe(
+      'https://lehrer.dafzentrum.uz/tg?next=%2Ftasks%3Ftask%3Dt1',
     );
     expect(prisma.taskTelegramMessage.create).toHaveBeenCalledWith({
       data: {
@@ -93,9 +98,46 @@ describe('TaskTelegramSender', () => {
         messageId: 77,
         taskId: 't1',
         userId: 40,
-        purpose: 'NOTICE',
+        purpose: 'CARD',
         companyId: 1,
       },
+    });
+  });
+
+  it('a person who already has a card for the task gets no second message', async () => {
+    const { sender, prisma, sendMessage } = setup({ card: true });
+    await expect(sender.send(VIEW, 40, { kind: 'ASSIGNED' })).resolves.toEqual({
+      status: 'skipped',
+      reason: 'has card',
+    });
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(prisma.taskTelegramMessage.findFirst).toHaveBeenCalledWith({
+      where: { taskId: 't1', userId: 40, chatId: '700', purpose: 'CARD' },
+      select: { id: true },
+    });
+  });
+
+  it('REMOVED is never a new message: the live card says it, no DB read', async () => {
+    const { sender, prisma, sendMessage } = setup();
+    await expect(
+      sender.send(VIEW, 40, { kind: 'REMOVED', by: 'Soliyev A.' }),
+    ).resolves.toEqual({ status: 'skipped', reason: 'live card only' });
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(prisma.user.findFirst).not.toHaveBeenCalled();
+    expect(prisma.taskTelegramMessage.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('a comment is still its own message, recorded NOTICE, with no card lookup', async () => {
+    const { sender, prisma, sendMessage } = setup({ card: true });
+    await expect(
+      sender.send(VIEW, 40, { kind: 'COMMENT', by: 'Soliyev A.', text: 'ok' }),
+    ).resolves.toEqual({ status: 'sent', messageId: 77 });
+    expect(sendMessage.mock.calls[0][1].split('\n')[0]).toBe(
+      '<b>💬 Yangi izoh</b>',
+    );
+    expect(prisma.taskTelegramMessage.findFirst).not.toHaveBeenCalled();
+    expect(prisma.taskTelegramMessage.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ purpose: 'NOTICE' }),
     });
   });
 

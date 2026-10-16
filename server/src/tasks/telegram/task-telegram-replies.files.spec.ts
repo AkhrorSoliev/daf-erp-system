@@ -57,6 +57,7 @@ const view = (over: Partial<TgTaskView> = {}): TgTaskView => ({
   entityLabel: null,
   participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
   steps: [],
+  history: [],
   ...over,
 });
 
@@ -136,6 +137,18 @@ describe('TaskTelegramReplies — files, photos, voice (spec §6.2)', () => {
     expect(ctx.reply).toHaveBeenCalledWith(ADDED_TO_TASK);
     expect(tasks.changeStatus).not.toHaveBeenCalled();
     expect(next).not.toHaveBeenCalled();
+  });
+
+  it('a photo on the live card (CARD) is stored like one on a notice', async () => {
+    const ctx = reply('CARD', PHOTO);
+    await replies.onMessage(ctx, next);
+    expect(files.upload).toHaveBeenCalledWith(
+      TASK,
+      { buffer: Buffer.from('img'), name: 'rasm.jpg', durationSec: undefined },
+      expect.objectContaining({ via: 'TELEGRAM' }),
+    );
+    expect(ctx.reply).toHaveBeenCalledWith(ADDED_TO_TASK);
+    expect(tasks.changeStatus).not.toHaveBeenCalled();
   });
 
   it('a voice message keeps its length and name', async () => {

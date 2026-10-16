@@ -23,6 +23,7 @@ const view = (over: Partial<TgTaskView> = {}): TgTaskView => ({
   entityLabel: null,
   participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
   steps: [],
+  history: [],
   ...over,
 });
 const labels = (m: TgMessage) => m.buttons.map((r) => r.map((b) => b.text));
@@ -44,18 +45,18 @@ describe('file and voice comment notices (amendment A6)', () => {
   it('a file reads «Yangi fayl», the name stays the comment line', () => {
     const m = notice('FILE');
     expect(m.text.split('\n')).toEqual([
-      '<b>Yangi fayl</b>',
-      'Oktabr reklama banneri uchun matn',
-      'Rahimov A.: «chek.jpg»',
+      '<b>📎 Yangi fayl</b>',
+      '<blockquote><b>Oktabr reklama banneri uchun matn</b>',
+      'Rahimov A.: «chek.jpg»</blockquote>',
     ]);
-    expect(labels(m)).toEqual([['Ochish']]);
+    expect(labels(m)).toEqual([['📂 Ochish']]);
   });
 
   it('a voice reads «Yangi ovozli xabar»; a plain comment is still «Yangi izoh»', () => {
     expect(notice('VOICE').text.split('\n')[0]).toBe(
-      '<b>Yangi ovozli xabar</b>',
+      '<b>🎤 Yangi ovozli xabar</b>',
     );
-    expect(notice().text.split('\n')[0]).toBe('<b>Yangi izoh</b>');
+    expect(notice().text.split('\n')[0]).toBe('<b>💬 Yangi izoh</b>');
   });
 });
 
