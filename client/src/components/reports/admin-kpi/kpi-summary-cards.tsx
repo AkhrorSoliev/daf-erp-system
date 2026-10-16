@@ -21,15 +21,16 @@ function StatCard({ title, children }: { title: string; children: ReactNode }) {
 export function KpiSummaryCards({ data, isCurrent }: { data: KpiOverview; isCurrent: boolean }) {
   const c = data.cards;
   const available = data.compareAvailable;
+  const recorded = data.compareRecorded;
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard title="Natijalar">
         <p className="text-2xl font-semibold tabular-nums">{formatNumber(c.results.value)}</p>
-        <TrendLine value={c.results.value} compare={c.results.compare} unit="count" compareAvailable={available} />
+        <TrendLine value={c.results.value} compare={c.results.compare} unit="count" compareAvailable={available} compareRecorded={recorded} />
       </StatCard>
       <StatCard title="Berilganda bo'lardi">
         <p className="text-2xl font-semibold tabular-nums">{formatPrice(c.amount.value)} so&apos;m</p>
-        <TrendLine value={c.amount.value} compare={c.amount.compare} unit="som" compareAvailable={available} />
+        <TrendLine value={c.amount.value} compare={c.amount.compare} unit="som" compareAvailable={available} compareRecorded={recorded} />
       </StatCard>
       <StatCard title="Lid → to'lov">
         <p className="text-2xl font-semibold tabular-nums">{formatPercent(c.leadToPaid.value)}</p>
@@ -39,6 +40,7 @@ export function KpiSummaryCards({ data, isCurrent }: { data: KpiOverview; isCurr
             compare={c.leadToPaid.compare}
             unit="pct"
             compareAvailable={available}
+            compareRecorded={recorded}
           />
         ) : isCurrent ? (
           <p className="text-xs text-muted-foreground">joriy oyda hali to&apos;lamaganlar ham hisobda</p>

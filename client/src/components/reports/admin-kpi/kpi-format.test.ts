@@ -128,4 +128,10 @@ describe("showKpiTab", () => {
     expect(showKpiTab([{ id: 4 }], true)).toBe(false);
     expect(showKpiTab(undefined, true)).toBe(false);
   });
+
+  it("also opens for someone who is no administrator now but has a KPI result", () => {
+    expect(showKpiTab([{ id: 5 }], true, true)).toBe(true);
+    expect(showKpiTab(undefined, true, true)).toBe(true);
+    expect(showKpiTab([{ id: 5 }], false, true)).toBe(false);
+  });
 });

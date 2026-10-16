@@ -11,16 +11,24 @@ function CountCell({
   amount,
   compare,
   compareAvailable,
+  compareRecorded,
 }: {
   count: number;
   amount: number;
   compare: number;
   compareAvailable: boolean;
+  compareRecorded: boolean;
 }) {
   return (
     <span className="whitespace-nowrap tabular-nums">
       {formatNumber(count)} · {formatPrice(amount)} so&apos;m
-      <TrendMark value={count} compare={compare} unit="count" compareAvailable={compareAvailable} />
+      <TrendMark
+        value={count}
+        compare={compare}
+        unit="count"
+        compareAvailable={compareAvailable}
+        compareRecorded={compareRecorded}
+      />
     </span>
   );
 }
@@ -32,10 +40,13 @@ function CountCell({
 export function KpiAdminTable({
   rows,
   compareAvailable,
+  compareRecorded,
   onOpen,
 }: {
   rows: KpiAdminRow[];
   compareAvailable: boolean;
+  /** False while the compare month was recorded in part: no ▲/▼ in the cells. */
+  compareRecorded: boolean;
   onOpen: (userId: number) => void;
 }) {
   if (rows.length === 0) {
@@ -82,6 +93,7 @@ export function KpiAdminTable({
                 amount={r.leadPaid.amount}
                 compare={r.leadPaid.compare}
                 compareAvailable={compareAvailable}
+                compareRecorded={compareRecorded}
               />
             </TableCell>
             <TableCell>
@@ -90,6 +102,7 @@ export function KpiAdminTable({
                 amount={r.promiseKept.amount}
                 compare={r.promiseKept.compare}
                 compareAvailable={compareAvailable}
+                compareRecorded={compareRecorded}
               />
             </TableCell>
             <TableCell className="whitespace-nowrap">
@@ -106,6 +119,7 @@ export function KpiAdminTable({
                 unit="count"
                 higherIsBetter={false}
                 compareAvailable={compareAvailable}
+                compareRecorded={compareRecorded}
               />
             </TableCell>
             <TableCell className="text-right tabular-nums">{formatPrice(r.total)} so&apos;m</TableCell>

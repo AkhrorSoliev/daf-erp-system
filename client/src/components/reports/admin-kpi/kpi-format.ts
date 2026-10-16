@@ -9,6 +9,8 @@ export const KPI_FIRST_MONTH = "2026-10";
 /** The compare month may be the one before: October compares with an empty September. */
 export const COMPARE_FLOOR_MONTH = "2026-09";
 export const KPI_MAX_SOM = 10_000_000;
+/** Results are written from this day (server KPI_START); a month that began earlier was recorded only in part. */
+export const KPI_START_DAY = "17.10";
 
 /** `?oy=` inside [2026-10, the current month]; empty or unreadable = the current month. */
 export function kpiMonth(oy: string, current: string): string {
@@ -131,7 +133,14 @@ export function axisSom(v: number): string {
 
 const ADMINISTRATOR_ROLE_ID = 3;
 
-/** The employee page's «KPI» tab (spec §7.8): a current Administrator, for a viewer with `kpi.view`. */
-export function showKpiTab(roles: { id: number }[] | undefined, canView: boolean): boolean {
-  return canView && (roles?.some((r) => r.id === ADMINISTRATOR_ROLE_ID) ?? false);
+export function isKpiAdministrator(roles: { id: number }[] | undefined): boolean {
+  return roles?.some((r) => r.id === ADMINISTRATOR_ROLE_ID) ?? false;
+}
+
+/**
+ * The employee page's «KPI» tab (spec §7.8), for a viewer with `kpi.view`: a current Administrator,
+ * or anyone with a KPI result in the viewer's scope (`hasResults` = the server's `hasAny`).
+ */
+export function showKpiTab(roles: { id: number }[] | undefined, canView: boolean, hasResults = false): boolean {
+  return canView && (isKpiAdministrator(roles) || hasResults);
 }

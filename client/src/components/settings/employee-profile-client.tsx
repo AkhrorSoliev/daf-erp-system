@@ -7,7 +7,9 @@ import toast from "react-hot-toast";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { EmployeeProfileCard } from "./employee-profile-card";
 import { EmployeeProfileTabs } from "./employee-profile-tabs";
-import { showKpiTab } from "@/components/reports/admin-kpi/kpi-format";
+import { isKpiAdministrator, showKpiTab } from "@/components/reports/admin-kpi/kpi-format";
+import { useKpiUser } from "@/components/reports/admin-kpi/kpi-queries";
+import { currentMonthKey } from "@/components/payments/salary-utils";
 import { EditEmployeeDrawer } from "./edit-employee-drawer";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
 import {
@@ -57,10 +59,13 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   // O'qituvchilar uchun "Guruhlar", boshqa xodimlar uchun "Izohlar" —
   // o'qituvchi profili bilan bir xil bo'lishi uchun.
   const isTeacher = employee?.roles.some((r) => r.id === 4) ?? false;
-  // Spec §7.8: the «KPI» tab of a current Administrator, for `kpi.view`. No request
-  // on page load — the tab loads its month when opened. A former administrator's
-  // results stay on «Xodimlar KPI».
-  const hasKpiTab = showKpiTab(employee?.roles, canSeeKpi);
+  // Spec §7.8: the «KPI» tab, for `kpi.view`, of a current Administrator (no request
+  // until the tab opens) or of anyone with a KPI result — for a non-administrator
+  // one request on load asks (`hasAny`); it is the tab's own current-month query.
+  const kpiProbeId =
+    canSeeKpi && employee && !isKpiAdministrator(employee.roles) ? employee.id : null;
+  const kpiProbe = useKpiUser(kpiProbeId, currentMonthKey());
+  const hasKpiTab = showKpiTab(employee?.roles, canSeeKpi, kpiProbe.data?.hasAny === true);
   const canDelete = canManageEmployees && employee != null && employee.id !== authUser?.id;
   const defaultTab = isTeacher ? "guruhlar" : "izohlar";
 

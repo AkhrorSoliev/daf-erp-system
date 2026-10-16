@@ -63,7 +63,7 @@ export function KpiUserPanel({
       <div className="rounded-lg border bg-muted/40 p-4">
         <p className="text-sm text-muted-foreground">{monthLabel(d.month)} KPI</p>
         <p className="font-heading text-2xl font-semibold tabular-nums">{formatPrice(d.total)} so&apos;m</p>
-        <TrendLine value={d.total} compare={d.compareTotal} unit="som" suffix=" — o'tgan oyga nisbatan" compareAvailable={d.compareAvailable} />
+        <TrendLine value={d.total} compare={d.compareTotal} unit="som" suffix=" — o'tgan oyga nisbatan" compareAvailable={d.compareAvailable} compareRecorded={d.compareRecorded} />
         <p className="mt-1 text-xs text-muted-foreground">Oylikka qo&apos;shilmaydi — kuzatuv</p>
       </div>
 

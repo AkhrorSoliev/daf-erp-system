@@ -17,10 +17,11 @@ const row: KpiAdminRow = {
   total: 30000,
 };
 
-const data = (compareAvailable: boolean): KpiOverview => ({
+const data = (compareAvailable: boolean, compareRecorded = true): KpiOverview => ({
   month: "2026-10",
   compare: "2026-09",
   compareAvailable,
+  compareRecorded,
   status: { enabled: true, changedAt: null },
   cards: {
     results: { value: 5, compare: 0 },
@@ -39,7 +40,7 @@ const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticM
 describe("KPI overview — compareAvailable", () => {
   it("shows no ▲/▼ and no compare line when the compare month has no data", () => {
     const cards = html(createElement(KpiSummaryCards, { data: data(false), isCurrent: true }));
-    const table = html(createElement(KpiAdminTable, { rows: [row], compareAvailable: false, onOpen: () => {} }));
+    const table = html(createElement(KpiAdminTable, { rows: [row], compareAvailable: false, compareRecorded: true, onOpen: () => {} }));
     for (const out of [cards, table]) {
       expect(out).not.toMatch(/[▲▼]/);
       expect(out).not.toContain("taqqoslanayotgan oyga nisbatan");
@@ -48,7 +49,7 @@ describe("KPI overview — compareAvailable", () => {
 
   it("shows them when it has", () => {
     const cards = html(createElement(KpiSummaryCards, { data: data(true), isCurrent: true }));
-    const table = html(createElement(KpiAdminTable, { rows: [row], compareAvailable: true, onOpen: () => {} }));
+    const table = html(createElement(KpiAdminTable, { rows: [row], compareAvailable: true, compareRecorded: true, onOpen: () => {} }));
     expect(cards).toContain("▲ 5");
     expect(table).toContain("▲");
     expect(table).toContain("▼");
@@ -62,8 +63,17 @@ describe("KPI overview — compareAvailable", () => {
   });
 
   it("numbers the rows from 1 and hides the forecast outside the current month", () => {
-    const table = html(createElement(KpiAdminTable, { rows: [row], compareAvailable: true, onOpen: () => {} }));
+    const table = html(createElement(KpiAdminTable, { rows: [row], compareAvailable: true, compareRecorded: true, onOpen: () => {} }));
     expect(table).toContain("border-r text-muted-foreground\">1<");
     expect(html(createElement(KpiSummaryCards, { data: data(true), isCurrent: false }))).not.toContain("Oy oxiriga taxmin");
+  });
+
+  it("compares with a month recorded in part only by its figure, with a note — no ▲/▼", () => {
+    const cards = html(createElement(KpiSummaryCards, { data: data(true, false), isCurrent: true }));
+    const table = html(
+      createElement(KpiAdminTable, { rows: [row], compareAvailable: true, compareRecorded: false, onOpen: () => {} }),
+    );
+    for (const out of [cards, table]) expect(out).not.toMatch(/[▲▼]/);
+    expect(cards).toContain("taqqoslanayotgan oyda 0 — u oy 17.10 dan hisoblangan");
   });
 });

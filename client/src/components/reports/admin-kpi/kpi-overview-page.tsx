@@ -97,7 +97,12 @@ function KpiOverview() {
           </div>
           <section className="space-y-3">
             <h3 className="font-medium">Administratorlar</h3>
-            <KpiAdminTable rows={q.data.rows} compareAvailable={q.data.compareAvailable} onOpen={open} />
+            <KpiAdminTable
+              rows={q.data.rows}
+              compareAvailable={q.data.compareAvailable}
+              compareRecorded={q.data.compareRecorded}
+              onOpen={open}
+            />
             <dl className="space-y-1 text-xs text-muted-foreground">
               {KPI_DEFINITIONS.map((d) => (
                 <div key={d.term}>

@@ -55,6 +55,11 @@ export interface KpiOverview {
    * every `compare` figure is an empty 0/null. Hide ▲/▼, the compare line and the compare series.
    */
   compareAvailable: boolean;
+  /**
+   * False while the compare month began before 17.10.2026 (2026-10 and earlier): only part of it
+   * was recorded, so no ▲/▼ against it — the compare figure is printed with a note instead.
+   */
+  compareRecorded: boolean;
   status: { enabled: boolean; changedAt: string | null };
   cards: {
     results: KpiPair;
@@ -89,6 +94,8 @@ export interface KpiUserView {
   hasAny: boolean;
   /** False when the month before is before 2026-10: `compareTotal` is an empty 0. */
   compareAvailable: boolean;
+  /** False while the month before began before 17.10.2026: `compareTotal` covers only part of it. */
+  compareRecorded: boolean;
   total: number;
   compareTotal: number;
   months: { month: string; count: number; amount: number }[];
