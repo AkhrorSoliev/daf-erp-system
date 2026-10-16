@@ -15,6 +15,7 @@ import { PermissionsService } from '../common/permissions/permissions.service';
 import { fakePermissions } from '../common/permissions/testing';
 import { ROLE_ID } from '../common/auth/role-ids';
 import { LeadOwnershipService } from './ownership/lead-ownership.service';
+import { activeStudentWhere } from '../students/shared/active-student-where';
 
 describe('LeadsService', () => {
   let service: LeadsService;
@@ -71,6 +72,7 @@ describe('LeadsService', () => {
       student: {
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
       },
       // Backup-number rule (ADR-0070): another student account on the number.
       user: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -1897,6 +1899,66 @@ describe('LeadsService', () => {
         service.convert('lead-1', { existingStudentId: 99999 }, 1001, 1, null),
       ).rejects.toThrow(NotFoundException);
       expect(students.create).not.toHaveBeenCalled();
+    });
+
+    it('marks a lead that opened a new student NEW_STUDENT (ADR-0094)', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
+      students.create.mockResolvedValue({ id: 10007 });
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
+
+      await service.convert('lead-1', { branchId: 5 }, 1001, 1, null);
+
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ conversionKind: 'NEW_STUDENT' }),
+        }),
+      );
+      expect(prisma.student.count).not.toHaveBeenCalled();
+    });
+
+    it('a lead linked to a student not studying now brought them back: RETURNING', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
+      prisma.student.findFirst.mockResolvedValue({ id: 10050 });
+      prisma.student.count.mockResolvedValue(0);
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
+
+      await service.convert(
+        'lead-1',
+        { existingStudentId: 10050 },
+        1001,
+        1,
+        null,
+      );
+
+      expect(prisma.student.count).toHaveBeenCalledWith({
+        where: { id: 10050, ...activeStudentWhere() },
+      });
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ conversionKind: 'RETURNING' }),
+        }),
+      );
+    });
+
+    it('a lead linked to a student who is studying earns nothing: ALREADY_STUDYING', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
+      prisma.student.findFirst.mockResolvedValue({ id: 10050 });
+      prisma.student.count.mockResolvedValue(1);
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
+
+      await service.convert(
+        'lead-1',
+        { existingStudentId: 10050 },
+        1001,
+        1,
+        null,
+      );
+
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ conversionKind: 'ALREADY_STUDYING' }),
+        }),
+      );
     });
   });
 

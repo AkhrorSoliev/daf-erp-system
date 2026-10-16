@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { LeadStatus, Prisma } from '@prisma/client';
+import { LeadConversionKind, LeadStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
@@ -18,6 +18,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
 import { StudentEnrollmentService } from '../students/student-enrollment.service';
 import { findExtraPhoneHolder } from '../students/shared/extra-phone-rule';
+import { activeStudentWhere } from '../students/shared/active-student-where';
 import { LEAD_CALLED, type LeadCalledPayload } from './lead-events';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
@@ -1134,6 +1135,9 @@ export class LeadsService {
     }
 
     let studentId: number;
+    // ADR-0094: how the lead was converted decides its KPI. A new card is a
+    // new student; a link is a return unless the student is studying now.
+    let conversionKind: LeadConversionKind = LeadConversionKind.NEW_STUDENT;
 
     if (dto.existingStudentId) {
       // Link path: this person is already a student (the detail drawer surfaces
@@ -1147,6 +1151,13 @@ export class LeadsService {
         throw new NotFoundException("Bog'lanadigan o'quvchi topilmadi");
       }
       studentId = existing.id;
+      const studying = await this.prisma.student.count({
+        where: { id: existing.id, ...activeStudentWhere() },
+      });
+      conversionKind =
+        studying > 0
+          ? LeadConversionKind.ALREADY_STUDYING
+          : LeadConversionKind.RETURNING;
     } else {
       // Create path. Guard against a duplicate first: if a live student already
       // holds this phone, refuse to mint a second account and point at the
@@ -1251,6 +1262,7 @@ export class LeadsService {
         statusChangedAt: new Date(),
         statusChangedById: userId,
         statusChangeReason: isLink ? LEAD_LINKED_REASON : null,
+        conversionKind,
       },
       select: LEAD_CARD_SELECT,
     });

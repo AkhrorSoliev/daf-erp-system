@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { LeadStatus, Prisma } from '@prisma/client';
+import { LeadConversionKind, LeadStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
@@ -213,6 +213,8 @@ export class StudentLeadOriginService {
       // `LeadsService.convert` ham shu maydonni tozalaydi — ikkala aylantirish
       // yo'li bitta shakl yozadi.
       statusChangeReason: null,
+      // ADR-0094: every path here opens a new student card.
+      conversionKind: LeadConversionKind.NEW_STUDENT,
     };
 
     if (matchedIds.length > 0) {
