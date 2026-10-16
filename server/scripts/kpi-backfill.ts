@@ -18,10 +18,12 @@
  * non-zero; a repeat writes nothing new.
  */
 import {
+  GroupStatus,
   LeadConversionKind,
   LeadStatus,
   PaymentPromiseStatus,
   PaymentStatus,
+  StudentStatus,
 } from '@prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { SettingsService } from '../src/settings/settings.service';
@@ -71,12 +73,18 @@ async function missingKinds(
   });
   const out = new Map<string, LeadConversionKind>();
   for (const lead of leads) {
+    const studentId = lead.convertedStudentId as number;
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { status: true },
+    });
     const enrollments = await prisma.enrollment.findMany({
-      where: { studentId: lead.convertedStudentId as number, deletedAt: null },
+      where: { studentId, deletedAt: null },
       select: {
         createdAt: true,
         statusChangedAt: true,
         status: true,
+        group: { select: { statusEnum: true, deletedAt: true } },
         stateLog: {
           select: { status: true, transitionAt: true },
           orderBy: { transitionAt: 'asc' },
@@ -92,18 +100,30 @@ async function missingKinds(
           statusChangedAt: e.statusChangedAt,
           status: e.status,
           log: e.stateLog,
+          groupActive:
+            e.group.statusEnum === GroupStatus.ACTIVE &&
+            e.group.deletedAt == null,
         })),
         lead.statusChangedAt as Date,
+        student?.status === StudentStatus.ACTIVE,
       ),
     );
   }
   return out;
 }
 
+/** A KEPT promise since KPI_START that no payment could be matched to. */
+interface UnmatchedPromise {
+  id: string;
+  studentId: number;
+  resolvedAt: Date;
+}
+
 /** promise id → the payment that kept it, for KEPT promises since KPI_START without one. */
-async function missingResolvers(
-  prisma: PrismaService,
-): Promise<Map<string, string>> {
+async function missingResolvers(prisma: PrismaService): Promise<{
+  resolvers: Map<string, string>;
+  unmatched: UnmatchedPromise[];
+}> {
   const promises = await prisma.paymentPromise.findMany({
     where: {
       status: PaymentPromiseStatus.KEPT,
@@ -111,30 +131,38 @@ async function missingResolvers(
       resolvedAt: { gte: KPI_START },
     },
     select: { id: true, studentId: true, resolvedAt: true },
+    orderBy: [{ resolvedAt: 'asc' }, { id: 'asc' }],
   });
-  const out = new Map<string, string>();
-  let unmatched = 0;
+  const resolvers = new Map<string, string>();
+  const unmatched: UnmatchedPromise[] = [];
   for (const p of promises) {
     const resolvedAt = p.resolvedAt as Date;
+    // COMPLETED and REVERSED: a payment since amount-corrected is REVERSED and
+    // its re-post (`correctedBy`) carries the promise's result (spec §7.3).
     const payments = await prisma.payment.findMany({
       where: {
         studentId: p.studentId,
-        status: PaymentStatus.COMPLETED,
+        status: { in: [PaymentStatus.COMPLETED, PaymentStatus.REVERSED] },
         createdAt: {
           gte: new Date(resolvedAt.getTime() - RESOLVE_WINDOW_MS),
           lte: resolvedAt,
         },
       },
-      select: { id: true, createdAt: true },
+      select: {
+        id: true,
+        createdAt: true,
+        status: true,
+        correctedBy: { select: { id: true, status: true } },
+      },
     });
     const paymentId = resolvingPaymentId(resolvedAt, payments);
-    if (paymentId) out.set(p.id, paymentId);
-    else unmatched += 1;
+    if (paymentId) resolvers.set(p.id, paymentId);
+    else unmatched.push({ id: p.id, studentId: p.studentId, resolvedAt });
   }
   console.log(
-    `promises KEPT without a payment: ${promises.length}, linked: ${out.size}, unmatched: ${unmatched}`,
+    `promises KEPT without a payment: ${promises.length}, linked: ${resolvers.size}, unmatched: ${unmatched.length}`,
   );
-  return out;
+  return { resolvers, unmatched };
 }
 
 function paymentsSinceStart(prisma: PrismaService) {
@@ -192,10 +220,20 @@ async function main() {
       }
     }
 
+    const { resolvers, unmatched } = await missingResolvers(prisma);
     const restore: KpiRestore = {
       kinds: await missingKinds(prisma),
-      resolvers: await missingResolvers(prisma),
+      resolvers,
     };
+    // What the operator checks before `--apply`: every restored lead and every
+    // promise that found no payment.
+    for (const [id, kind] of restore.kinds)
+      console.log(`lead ${id} -> ${kind}`);
+    for (const u of unmatched) {
+      console.log(
+        `unmatched promise ${u.id} student ${u.studentId} resolvedAt ${u.resolvedAt.toISOString()}`,
+      );
+    }
     const drafts = await plan(prisma, results, restore);
     for (const kind of Object.values(LeadConversionKind)) {
       console.log(
@@ -221,17 +259,21 @@ async function main() {
       );
     }
     // The kinds and the links first: the results need them.
+    let kindsWritten = 0;
     for (const [id, kind] of restore.kinds) {
-      await prisma.lead.updateMany({
+      const { count } = await prisma.lead.updateMany({
         where: { id, conversionKind: null },
         data: { conversionKind: kind },
       });
+      kindsWritten += count;
     }
+    let linksWritten = 0;
     for (const [id, paymentId] of restore.resolvers) {
-      await prisma.paymentPromise.updateMany({
+      const { count } = await prisma.paymentPromise.updateMany({
         where: { id, resolvedPaymentId: null },
         data: { resolvedPaymentId: paymentId },
       });
+      linksWritten += count;
     }
     let written = 0;
     let failed = 0;
@@ -246,8 +288,18 @@ async function main() {
       }
     }
     console.log(
-      `kinds written: ${restore.kinds.size}, links written: ${restore.resolvers.size}, results written: ${written}`,
+      `kinds written: ${kindsWritten}, links written: ${linksWritten}, results written: ${written}`,
     );
+    // A row changed between the dry run and now, or a result lost a race.
+    if (
+      kindsWritten !== restore.kinds.size ||
+      linksWritten !== restore.resolvers.size ||
+      written !== drafts.length
+    ) {
+      console.warn(
+        `WARNING: written differs from planned (kinds ${kindsWritten}/${restore.kinds.size}, links ${linksWritten}/${restore.resolvers.size}, results ${written}/${drafts.length}). Run the dry run again to see what is left.`,
+      );
+    }
     if (failed > 0) {
       console.error(
         `${failed} payment(s) failed — repeat the same command to retry them.`,
@@ -259,7 +311,10 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err instanceof UsageError ? err.message : err);
-  process.exitCode = 1;
-});
+// Importing the file (a test, a type check) must not connect or write.
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err instanceof UsageError ? err.message : err);
+    process.exitCode = 1;
+  });
+}
