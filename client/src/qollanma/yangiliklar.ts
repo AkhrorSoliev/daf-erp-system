@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-16",
+    sarlavha: "Lid egasi",
+    matn: "Endi lidning egasi bor. Administrator lidni «Band qilish» tugmasi bilan oladi, band qilingan lidni boshqasi ololmaydi. Olingan lidga 2 ish soati ichida qo'ng'iroq, izoh yoki topshiriq bo'lishi kerak, keyin kamida har 3 ish kunida; bo'lmasa lid umumiy ro'yxatga o'zi qaytadi. Hali harakat qilinmagan 10 ta lidi bor xodim yangisini band qila olmaydi. Bu raqamlarni CEO Sozlamalarda o'zgartiradi. CEO va filial direktori lidni boshqa xodimga beradi. Lidlar sahifasida «Mas'ul» filtri va «Xodimlar bo'yicha» qatori qo'shildi, har o'zgarish lid tarixiga yoziladi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "oquvchilar", sahifa: "lid-egasi" },
+  },
+  {
     sana: "2026-10-13",
     sarlavha: "Dars baholari",
     matn: "O'quvchilar endi darsdan keyin Telegram botda darsga 1 dan 5 gacha baho qo'yadi; 1–3 qo'ysa, sababini yozishi mumkin. Hisobotlar → «Dars baholari» sahifasida ustozlarning o'rtacha bahosi, javob ulushi va past baholar ko'rinadi; ustoz profilida «Baholar» tab'i qo'shildi. Baholarni faqat CEO ko'radi. Tizim sahifadagi «Baho so'rash» kaliti bilan yoqiladi.",

@@ -278,4 +278,16 @@ export const oquvchilar: QollanmaSahifa[] = [
     ],
     yangilangan: "2026-10-11",
   },
+  {
+    bolim: "oquvchilar",
+    sahifa: "lid-egasi",
+    sarlavha: "Lid egasi",
+    qisqacha:
+      "Administrator lidni «Band qilish» bilan oladi va band qilingan lidni boshqasi ololmaydi. Muddatida qo'ng'iroq, izoh yoki topshiriq bo'lmasa, lid umumiy ro'yxatga o'zi qaytadi; CEO va filial direktori lidni boshqa xodimga beradi.",
+    rollar: [1, 2, 3, 5],
+    adr: ["0092"],
+    yollar: ["/leads", "/settings/lead-ownership"],
+    kalitSozlar: ["lid", "band qilish", "mas'ul", "lid egasi", "muddat", "KPI"],
+    yangilangan: "2026-10-16",
+  },
 ];
