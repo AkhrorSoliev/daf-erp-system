@@ -114,7 +114,8 @@ interface LeadsBoardState {
   /** Bumps on every lead create / edit / move so the filtered list refetches. */
   revision: number;
   fetchBoard: () => Promise<void>;
-  fetchSectionLeads: (sectionId: string) => Promise<void>;
+  /** `force` re-reads a section that is already loaded (the owner's deadline moved). */
+  fetchSectionLeads: (sectionId: string, force?: boolean) => Promise<void>;
   addSection: (section: LeadBoardSection & { columnId: string }) => void;
   addLead: (sectionId: string, lead: LeadCard) => void;
   addColumn: (column: LeadBoardColumn) => void;
@@ -224,9 +225,9 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
     }
   },
 
-  fetchSectionLeads: async (sectionId) => {
+  fetchSectionLeads: async (sectionId, force = false) => {
     const { loadedSections, loadingSections } = get();
-    if (loadedSections.has(sectionId) || loadingSections.has(sectionId)) return;
+    if ((!force && loadedSections.has(sectionId)) || loadingSections.has(sectionId)) return;
 
     set({ loadingSections: new Set(loadingSections).add(sectionId) });
     try {

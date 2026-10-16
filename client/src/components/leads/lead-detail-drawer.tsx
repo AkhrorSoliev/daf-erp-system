@@ -408,6 +408,29 @@ export function LeadDetailDrawer() {
     setOptimisticComments((prev) => [comment, ...prev]);
   }, []);
 
+  // ADR-0092: the owner's comment moves their deadline on the server. Re-read it so
+  // the card and the drawer follow. Cosmetic, so a failure here stays silent.
+  const refreshOwnerDue = useCallback(async () => {
+    if (!lead || !authUser || lead.owner?.id !== authUser.id) return;
+    const leadId = lead.id;
+    let fresh: { owner: LeadOwner | null; ownerDueAt: string | null } | undefined;
+    if (lead.section) {
+      await fetchSectionLeads(lead.section.id, true);
+      fresh = useLeadsBoard
+        .getState()
+        .leadsBySection[lead.section.id]?.find((l) => l.id === leadId);
+    }
+    if (!fresh) {
+      try {
+        fresh = (await api.get<LeadDetail>(`/leads/${leadId}`)).data;
+      } catch {
+        return;
+      }
+    }
+    const { owner, ownerDueAt } = fresh;
+    setLead((prev) => (prev && prev.id === leadId ? { ...prev, owner, ownerDueAt } : prev));
+  }, [lead, authUser, fetchSectionLeads]);
+
   const handleCommentConfirmed = useCallback(
     (tempId: string) => {
       setOptimisticComments((prev) => prev.filter((c) => c.id !== tempId));
@@ -416,12 +439,9 @@ export function LeadDetailDrawer() {
       if (lead.section) bumpLeadCommentCount(lead.section.id, lead.id, 1);
       // Drop the cached hover preview so the next hover shows this new comment.
       invalidateActivity(lead.id);
-      // ADR-0092: the owner's comment moved their deadline; refresh the section.
-      if (lead.section && lead.owner?.id === authUser?.id) {
-        void fetchSectionLeads(lead.section.id);
-      }
+      void refreshOwnerDue();
     },
-    [lead, bumpLeadCommentCount, invalidateActivity, authUser, fetchSectionLeads],
+    [lead, bumpLeadCommentCount, invalidateActivity, refreshOwnerDue],
   );
 
   const handleToggleCalled = useCallback(async () => {
