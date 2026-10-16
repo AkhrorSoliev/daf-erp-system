@@ -67,6 +67,7 @@ export function cardFilters(card: StatCard) {
     holati: card === "uncalled" ? UNCALLED_HOLATI : [],
     sourceId: [],
     columnId: [],
+    masul: [],
     startDate: "",
     endDate: "",
     karta: card === "created" || card === "converted" || card === "lost" ? card : "",

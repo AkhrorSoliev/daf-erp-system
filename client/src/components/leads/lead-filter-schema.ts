@@ -9,6 +9,8 @@ export const LEAD_FILTER_SCHEMA = {
   holati: { type: "array" as const, defaultValue: [] as string[] },
   sourceId: { type: "array" as const, defaultValue: [] as string[] },
   columnId: { type: "array" as const, defaultValue: [] as string[] },
+  // «Mas'ul» (ADR-0092): `me`, `none` and user ids; the server ORs them.
+  masul: { type: "array" as const, defaultValue: [] as string[] },
   startDate: { type: "string" as const, defaultValue: "" },
   endDate: { type: "string" as const, defaultValue: "" },
   // A stats card whose leads the list shows (`created` | `converted` | `lost`).
@@ -22,6 +24,7 @@ export interface LeadFilterValues {
   holati: string[];
   sourceId: string[];
   columnId: string[];
+  masul: string[];
   startDate: string;
   endDate: string;
   karta: string;
@@ -93,6 +96,7 @@ export function leadFiltersActive(f: LeadFilterValues): boolean {
     f.holati.length > 0 ||
     f.sourceId.length > 0 ||
     f.columnId.length > 0 ||
+    f.masul.length > 0 ||
     f.startDate !== "" ||
     f.endDate !== "" ||
     f.karta !== ""

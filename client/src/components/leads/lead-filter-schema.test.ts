@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leadHolatiParams } from "./lead-filter-schema";
+import { leadFiltersActive, leadHolatiParams } from "./lead-filter-schema";
 
 describe("leadHolatiParams", () => {
   it("hech narsa tanlanmasa parametr yo'q", () => {
@@ -54,5 +54,24 @@ describe("leadHolatiParams", () => {
 
   it("notanish tokenni e'tiborsiz qoldiradi", () => {
     expect(leadHolatiParams(["yolgon", "NEW"])).toEqual({ status: "NEW" });
+  });
+});
+
+describe("«Mas'ul» filtri", () => {
+  it("counts as an active filter", () => {
+    expect(
+      leadFiltersActive({
+        search: "",
+        holati: [],
+        sourceId: [],
+        columnId: [],
+        masul: ["me"],
+        startDate: "",
+        endDate: "",
+        karta: "",
+        page: 1,
+        pageSize: 10,
+      }),
+    ).toBe(true);
   });
 });

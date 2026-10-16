@@ -54,6 +54,7 @@ import {
   leadHolatiParams,
 } from "./lead-filter-schema";
 import { aylanganSana } from "./aylangan-sana";
+import { ownerName, type LeadOwner } from "./ownership/ownership-format";
 import {
   LEAD_STATS_PERIODS,
   LEAD_STATS_SCHEMA,
@@ -79,6 +80,7 @@ interface LeadListRow {
     lastName: string;
   } | null;
   source: { id: string; name: string } | null;
+  owner: LeadOwner | null;
   section: {
     id: string;
     name: string;
@@ -112,6 +114,7 @@ export function LeadsList() {
       if (filters.search.trim()) params.search = filters.search.trim();
       params.sourceId = listParam(filters.sourceId);
       params.columnId = listParam(filters.columnId);
+      params.owner = listParam(filters.masul);
       // Birlashgan «Holati» filtri: bir guruh ichi YOKI, guruhlar orasi VA.
       Object.assign(params, leadHolatiParams(filters.holati));
       if (filters.startDate) params.startDate = filters.startDate;
@@ -140,6 +143,7 @@ export function LeadsList() {
     filters.holati,
     filters.sourceId,
     filters.columnId,
+    filters.masul,
     filters.startDate,
     filters.endDate,
     filters.karta,
@@ -180,6 +184,7 @@ export function LeadsList() {
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Ism familiya</TableHead>
+              <TableHead>Mas&apos;ul</TableHead>
               <TableHead>Telefon</TableHead>
               <TableHead>Holati</TableHead>
               <TableHead>O&apos;quvchi</TableHead>
@@ -194,7 +199,7 @@ export function LeadsList() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 10 }).map((_, c) => (
+                  {Array.from({ length: 11 }).map((_, c) => (
                     <TableCell key={c}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -204,7 +209,7 @@ export function LeadsList() {
             ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={11}
                   className="h-24 text-center text-muted-foreground"
                 >
                   Filtrga mos lid topilmadi
@@ -222,6 +227,9 @@ export function LeadsList() {
                   </TableCell>
                   <TableCell className="font-medium">
                     {lead.firstName} {lead.lastName}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {lead.owner ? ownerName(lead.owner) : "—"}
                   </TableCell>
                   <TableCell>{formatPhone(lead.phone)}</TableCell>
                   <TableCell>

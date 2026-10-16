@@ -24,6 +24,7 @@ import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { LeadDetailDrawer } from "./lead-detail-drawer";
 import { ManageSourcesDialog } from "./manage-sources-dialog";
 import { LeadsStatsStrip } from "./leads-stats-strip";
+import { LeadOwnersStrip } from "./ownership/lead-owners-strip";
 
 export function LeadsBoardClient() {
   const fetchBoard = useLeadsBoard((s) => s.fetchBoard);
@@ -94,8 +95,9 @@ export function LeadsBoardClient() {
         </div>
       </div>
 
-      <div className="shrink-0">
+      <div className="shrink-0 space-y-3">
         <LeadsStatsStrip />
+        <LeadOwnersStrip />
       </div>
 
       <div className="shrink-0">
