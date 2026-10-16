@@ -780,7 +780,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 ### Lesson ratings (`/reports/dars-baholari`, ADR-0089)
 
 - CEO only, by identity: the report item has `forRoles: [1]` (`reports-nav.ts`; `canEnterReports(can, roleIds)` / `canOpenReportPath(can, pathname, roleIds)` take the user's role ids), the teacher profile's «Baholar» tab is drawn for `isCeoUser(user)`. The server refuses everyone else (`@CeoOnly()`).
-- `components/reports/lesson-ratings/`: `lesson-ratings-client.tsx` (month `?month=`, open teacher `?ustoz=`, the «Baho so'rash» switch; the teachers table's `page`/`pageSize` live in `LessonRatingsClient`, the low list's own page state and query live in `RatingLowSection` in the same file), `rating-teachers-table.tsx`, `rating-low-list.tsx`, `teacher-ratings-panel.tsx` (shared by the drawer and the profile tab), `rating-format.ts` (pure, vitest). Every figure is the server's; the client only formats.
+- `components/reports/lesson-ratings/`: `lesson-ratings-client.tsx` (month `?month=`, open teacher `?ustoz=`, the «Baho so'rash» switch; the teachers table's `page`/`pageSize` live in `LessonRatingsClient`, the low list's own page state and query live in `RatingLowSection` in the same file), `rating-summary-cards.tsx` (the six cards on top: average + trend, requests sent, responses, low ratings + how many have a comment, the 1–5 distribution bars, best / worst teacher as buttons opening the same teacher drawer), `rating-teachers-table.tsx`, `rating-low-list.tsx`, `teacher-ratings-panel.tsx` (shared by the drawer and the profile tab), `rating-format.ts` (pure, vitest). Every figure is the server's; the client only formats.
 
 ### Salary Row Drawer, «Berildi» dialog and the Avanslar table (spec B3, ADR-0082)
 

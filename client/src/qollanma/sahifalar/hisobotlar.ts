@@ -11,6 +11,6 @@ export const hisobotlar: QollanmaSahifa[] = [
     adr: ["0089"],
     yollar: ["/reports/dars-baholari"],
     kalitSozlar: ["baho", "dars bahosi", "yulduz", "o'quvchi fikri", "ustoz sifati", "past baho", "izoh"],
-    yangilangan: "2026-10-13",
+    yangilangan: "2026-10-16",
   },
 ];

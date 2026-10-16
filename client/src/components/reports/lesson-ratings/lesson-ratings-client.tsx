@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,11 +17,10 @@ import { BlockError, BlockSkeleton } from "@/components/payments/overview/block-
 import { clampMonth } from "@/components/payments/overview/overview-math";
 import { currentMonthKey } from "@/components/payments/salary-utils";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { cn } from "@/lib/utils";
 import { useLowRatings, useRatingSummary, useSetRatingEnabled } from "./queries";
-import { RATING_FLOOR_MONTH, averageText, responseText, trend } from "./rating-format";
+import { RATING_FLOOR_MONTH } from "./rating-format";
+import { RatingSummaryCards } from "./rating-summary-cards";
 import { RatingTeachersTable } from "./rating-teachers-table";
 import { RatingLowList } from "./rating-low-list";
 import { TeacherRatingsPanel } from "./teacher-ratings-panel";
@@ -94,7 +92,7 @@ export function LessonRatingsClient() {
               Hozir o&apos;quvchilardan baho so&apos;ralmayapti.
             </p>
           )}
-          <SummaryCards data={summary.data} />
+          <RatingSummaryCards data={summary.data} onOpenTeacher={(id) => setFilter("ustoz", id)} />
           <section className="space-y-3">
             <h3 className="font-medium">Ustozlar</h3>
             <RatingTeachersTable
@@ -154,52 +152,5 @@ function RatingLowSection({ month }: { month: string }) {
         setPage(1);
       }}
     />
-  );
-}
-
-function SummaryCards({ data }: { data: NonNullable<ReturnType<typeof useRatingSummary>["data"]> }) {
-  const t = trend(data.totals.average, data.previousAverage);
-  return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">O&apos;rtacha baho</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-semibold">{averageText(data.totals.average)}</p>
-          {t && (
-            <p
-              className={cn(
-                "text-xs",
-                t.tone === "up" && "text-green-600",
-                t.tone === "down" && "text-destructive",
-              )}
-            >
-              {t.text} — o&apos;tgan oyga nisbatan
-            </p>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Javob berganlar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-semibold">
-            {responseText(data.totals.rated, data.totals.delivered, data.totals.responseRate)}
-          </p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Past baholar (1–3)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className={cn("text-2xl font-semibold", data.totals.low > 0 && "text-destructive")}>
-            {formatNumber(data.totals.low)}
-          </p>
-        </CardContent>
-      </Card>
-    </div>
   );
 }

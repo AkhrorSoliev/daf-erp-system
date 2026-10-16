@@ -11,7 +11,9 @@ import {
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import {
+  bestAndWorst,
   byTeacher,
+  scoreDistribution,
   sortByAverage,
   totalsOf,
   type RatingRow,
@@ -29,6 +31,25 @@ function monthDates(month: string): { gte: Date; lt: Date } {
 const dayStr = (d: Date) => d.toISOString().slice(0, 10);
 const nameOf = (u: { firstName: string; lastName: string }) =>
   `${u.firstName} ${u.lastName}`;
+
+/** Eng yaxshi / eng past ustoz kartasi uchun qisqa ko'rinish. */
+function brief(
+  t: {
+    teacherId: number;
+    name: string;
+    average: number | null;
+    rated: number;
+  } | null,
+) {
+  return t && t.average !== null
+    ? {
+        teacherId: t.teacherId,
+        name: t.name,
+        average: t.average,
+        rated: t.rated,
+      }
+    : null;
+}
 
 /** CEO'ning «Dars baholari» o'qishlari (spec 2026-10-13 §6.2). */
 @Injectable()
@@ -59,12 +80,19 @@ export class LessonRatingsService {
         previousAverage: prevPer.get(u.id)?.average ?? null,
       })),
     );
+    const { best, worst } = bestAndWorst(teachers);
     return {
       enabled,
       month: m,
       totals: totalsOf(rows),
       previousAverage: totalsOf(prevRows).average,
       teachers,
+      distribution: scoreDistribution(rows),
+      lowCommented: rows.filter(
+        (r) => r.score !== null && r.score <= LOW_SCORE_MAX && r.commented,
+      ).length,
+      best: brief(best),
+      worst: brief(worst),
     };
   }
 
@@ -230,12 +258,18 @@ export class LessonRatingsService {
   ): Promise<RatingRow[]> {
     const rows = await this.prisma.lessonRating.findMany({
       where: { companyId, date: monthDates(month), ...branchIdWhere(scope) },
-      select: { score: true, messageId: true, teacherIds: true },
+      select: {
+        score: true,
+        messageId: true,
+        comment: true,
+        teacherIds: true,
+      },
     });
     return rows.map((r) => ({
       score: r.score,
       delivered: r.messageId !== null || r.score !== null,
       teacherIds: r.teacherIds,
+      commented: r.comment !== null,
     }));
   }
 }

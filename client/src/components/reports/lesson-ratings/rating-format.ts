@@ -25,6 +25,11 @@ export function responseText(rated: number, delivered: number, rate: number | nu
   return rate === null ? "—" : `${formatNumber(rated)} / ${formatNumber(delivered)} · ${formatPercent(rate)}`;
 }
 
+/** Gorizontal chiziq kengligi: eng uzun chiziq 100%. */
+export function barPercent(count: number, max: number): string {
+  return max <= 0 ? "0%" : `${Math.round((count / max) * 100)}%`;
+}
+
 /** "2026-10-05" → "05.10.2026". */
 export function dayText(date: string): string {
   const [y, m, d] = date.split("-");

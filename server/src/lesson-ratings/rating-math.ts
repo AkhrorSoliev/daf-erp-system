@@ -5,6 +5,8 @@ export interface RatingRow {
   /** Xabar o'quvchiga yetgan (`messageId` bor). */
   delivered: boolean;
   teacherIds: number[];
+  /** Past baho ostida izoh yozilgan. */
+  commented?: boolean;
 }
 
 export interface RatingTotals {
@@ -62,4 +64,35 @@ export function sortByAverage<T extends { average: number | null }>(
     if (b.average === null) return -1;
     return a.average - b.average;
   });
+}
+
+/** Index 0 = 1 baho soni … index 4 = 5 baho soni; bahosizlar sanalmaydi. */
+export function scoreDistribution(rows: { score: number | null }[]): number[] {
+  const counts = [0, 0, 0, 0, 0];
+  for (const r of rows) {
+    if (r.score !== null && r.score >= 1 && r.score <= 5)
+      counts[r.score - 1] += 1;
+  }
+  return counts;
+}
+
+/**
+ * Bahosi bor ustozlar ichida eng yuqori va eng past o'rtacha. Bitta ustoz
+ * bo'lsa yoki hammasining o'rtachasi teng bo'lsa `worst` null (bir ustoz ikkala
+ * qatorda turmasin); teng bo'lsa — birinchisi.
+ */
+export function bestAndWorst<T extends { average: number | null }>(
+  teachers: T[],
+): { best: T | null; worst: T | null } {
+  const rated = teachers.filter(
+    (t): t is T & { average: number } => t.average !== null,
+  );
+  if (!rated.length) return { best: null, worst: null };
+  let best = rated[0];
+  let worst = rated[0];
+  for (const t of rated) {
+    if (t.average > best.average) best = t;
+    if (t.average < worst.average) worst = t;
+  }
+  return { best, worst: worst === best ? null : worst };
 }

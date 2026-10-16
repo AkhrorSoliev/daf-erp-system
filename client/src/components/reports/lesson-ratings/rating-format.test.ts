@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatNumber } from "@/lib/format-utils";
-import { averageText, responseText, trend } from "./rating-format";
+import { averageText, barPercent, responseText, trend } from "./rating-format";
 
 describe("averageText", () => {
   it("shows one decimal with a star, or a dash", () => {
@@ -26,5 +26,23 @@ describe("responseText", () => {
     expect(responseText(0, 0, null)).toBe("—");
     expect(responseText(1, 4, 76.5)).toBe("1 / 4 · 76,5%");
     expect(responseText(1200, 1500, 80)).toBe(`${formatNumber(1200)} / ${formatNumber(1500)} · 80%`);
+  });
+});
+
+describe("barPercent", () => {
+  it("is empty without a maximum", () => {
+    expect(barPercent(0, 0)).toBe("0%");
+    expect(barPercent(3, 0)).toBe("0%");
+  });
+
+  it("makes the biggest bar full width", () => {
+    expect(barPercent(8, 8)).toBe("100%");
+    expect(barPercent(4, 8)).toBe("50%");
+    expect(barPercent(0, 8)).toBe("0%");
+  });
+
+  it("rounds to a whole percent", () => {
+    expect(barPercent(1, 3)).toBe("33%");
+    expect(barPercent(2, 3)).toBe("67%");
   });
 });

@@ -12,12 +12,25 @@ export interface RatingTeacherRow extends RatingTotals {
   previousAverage: number | null;
 }
 
+export interface RatingTeacherBrief {
+  teacherId: number;
+  name: string;
+  average: number;
+  rated: number;
+}
+
 export interface RatingSummary {
   enabled: boolean;
   month: string;
   totals: RatingTotals;
   previousAverage: number | null;
   teachers: RatingTeacherRow[];
+  /** Index 0 = 1 baho soni … index 4 = 5 baho soni. */
+  distribution: number[];
+  /** Past baholardan nechtasiga izoh yozilgan. */
+  lowCommented: number;
+  best: RatingTeacherBrief | null;
+  worst: RatingTeacherBrief | null;
 }
 
 export interface TeacherRatings {

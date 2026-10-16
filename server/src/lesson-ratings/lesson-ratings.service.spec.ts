@@ -56,7 +56,9 @@ describe('LessonRatingsService.summary', () => {
   });
 
   it('counts a rated row as delivered even when its messageId was never saved', async () => {
-    const { service } = setup([{ score: 4, messageId: null, teacherIds: [1] }]);
+    const { service } = setup([
+      { score: 4, messageId: null, comment: null, teacherIds: [1] },
+    ]);
     const r = await service.summary(1, null, '2026-10');
     expect(r.totals).toMatchObject({
       delivered: 1,
@@ -67,13 +69,60 @@ describe('LessonRatingsService.summary', () => {
 
   it('lists teachers lowest average first with their names', async () => {
     const { service } = setup([
-      { score: 5, messageId: 1, teacherIds: [1] },
-      { score: 2, messageId: 2, teacherIds: [2] },
+      { score: 5, messageId: 1, comment: null, teacherIds: [1] },
+      { score: 2, messageId: 2, comment: null, teacherIds: [2] },
     ]);
     const r = await service.summary(1, null, '2026-10');
     expect(r.enabled).toBe(true);
     expect(r.teachers.map((t) => t.teacherId)).toEqual([2, 1]);
     expect(r.teachers[0]).toMatchObject({ name: 'U 2', average: 2, low: 1 });
+  });
+
+  it('gives the distribution, commented low ratings and best/worst teacher', async () => {
+    const { service } = setup([
+      { score: 5, messageId: 1, comment: null, teacherIds: [1] },
+      { score: 5, messageId: 2, comment: 'yaxshi', teacherIds: [1] },
+      { score: 2, messageId: 3, comment: 'kech', teacherIds: [2] },
+      { score: 3, messageId: 4, comment: null, teacherIds: [2] },
+      { score: null, messageId: 5, comment: null, teacherIds: [2] },
+    ]);
+    const r = await service.summary(1, null, '2026-10');
+    expect(r.distribution).toEqual([0, 1, 1, 0, 2]);
+    expect(r.lowCommented).toBe(1);
+    expect(r.best).toEqual({ teacherId: 1, name: 'U 1', average: 5, rated: 2 });
+    expect(r.worst).toEqual({
+      teacherId: 2,
+      name: 'U 2',
+      average: 2.5,
+      rated: 2,
+    });
+  });
+
+  it('has no worst teacher when only one is rated, and none when nobody is', async () => {
+    const one = setup([
+      { score: 4, messageId: 1, comment: null, teacherIds: [1] },
+    ]);
+    const r1 = await one.service.summary(1, null, '2026-10');
+    expect(r1.best).toMatchObject({ teacherId: 1, average: 4 });
+    expect(r1.worst).toBeNull();
+
+    const none = setup([]);
+    const r0 = await none.service.summary(1, null, '2026-10');
+    expect(r0).toMatchObject({
+      distribution: [0, 0, 0, 0, 0],
+      lowCommented: 0,
+      best: null,
+      worst: null,
+    });
+  });
+
+  it('reads the comment column so lowCommented can be counted', async () => {
+    const { service, prisma } = setup();
+    await service.summary(1, null, '2026-10');
+    const selects = (
+      prisma.lessonRating.findMany.mock.calls as [{ select: object }][]
+    ).map((c) => c[0].select);
+    expect(selects[0]).toMatchObject({ comment: true, score: true });
   });
 });
 
