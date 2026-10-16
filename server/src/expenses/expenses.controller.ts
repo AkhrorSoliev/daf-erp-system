@@ -15,6 +15,8 @@ import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
+import { ExpenseMonthQueryDto } from './dto/expense-month-query.dto';
+import { ExpensesMonthService } from './expenses-month.service';
 import { CurrentUser } from '../common/decorators';
 import { Can } from '../common/permissions/access.decorators';
 import { PrismaService } from '../prisma/prisma.service';
@@ -28,6 +30,7 @@ import {
 export class ExpensesController {
   constructor(
     private expensesService: ExpensesService,
+    private monthService: ExpensesMonthService,
     private prisma: PrismaService,
   ) {}
 
@@ -80,6 +83,22 @@ export class ExpensesController {
       query,
       companyId,
       await this.scope(userId, query.branchId),
+    );
+  }
+
+  // The month card, «Bu oy hali yozilmagan» and the «Kim kiritgan» options
+  // (spec B6 §5.2). Same scope rule as the list: an empty scope is 403.
+  @Get('month-summary')
+  @Can('expenses.view')
+  async monthSummary(
+    @Query() query: ExpenseMonthQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.monthService.monthSummary(
+      companyId,
+      await this.scope(userId, query.branchId),
+      query.oy,
     );
   }
 
