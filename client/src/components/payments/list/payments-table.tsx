@@ -155,12 +155,15 @@ export function PaymentsTotalsLine({ totals, holat, partLabel }: {
 const PAGE_SIZES = [50, 100];
 
 /** «1–50 / N», the page size and ‹ ›. `onPageSize` must also put the page back on 1 (the caller sets both in one URL write). */
-export function PaymentsPager({ page, pageSize, total, onPage, onPageSize }: {
+export function PaymentsPager({ page, pageSize, total, onPage, onPageSize, sizes = PAGE_SIZES, sizeLabel = "Sahifadagi to'lovlar soni" }: {
   page: number;
   pageSize: number;
   total: number;
   onPage: (page: number) => void;
   onPageSize: (size: number) => void;
+  /** The sizes offered; «Guruhlar bo'yicha to'lov» passes 10–50. */
+  sizes?: number[];
+  sizeLabel?: string;
 }) {
   const last = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -170,11 +173,11 @@ export function PaymentsPager({ page, pageSize, total, onPage, onPageSize }: {
       <span className="tabular-nums">{from}–{to} / {formatNumber(total)}</span>
       <div className="flex items-center gap-2">
         <Select value={String(pageSize)} onValueChange={(v) => onPageSize(Number(v))}>
-          <SelectTrigger className="w-24" aria-label="Sahifadagi to'lovlar soni">
+          <SelectTrigger className="w-24" aria-label={sizeLabel}>
             <SelectValue>{pageSize} ta</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {PAGE_SIZES.map((n) => <SelectItem key={n} value={String(n)}>{n} ta</SelectItem>)}
+            {sizes.map((n) => <SelectItem key={n} value={String(n)}>{n} ta</SelectItem>)}
           </SelectContent>
         </Select>
         <Button variant="outline" size="icon" aria-label="Oldingi sahifa" disabled={page <= 1} onClick={() => onPage(page - 1)}>
