@@ -39,6 +39,16 @@ belgisini o'z ichiga olsa, Telegram 400 qaytarardi va xabar yo'qolardi.
    `CLOSED`; guruh o'chirildi → `GROUP_DELETED`; 03:00 tozalash → `EXPIRED`.
    Topshiriq va to'lov chaqiruvlari `outcome` bermaydi — ularning xabarlariga
    tegilmaydi.
+   **Birinchi yopgan hodisa yutadi**: xabar bir marta tahrirlanadi (`count > 0`
+   bo'lgan yozuvda), keyingi hodisa yopiq qatorni topmaydi va hech narsa
+   qilmaydi. Shuning uchun `HELD`, `NOT_HELD` va `CLOSED` amalda zaxira
+   sarlavhalar: «Bo'ldi» (`saveLate`) `UNMARKED_LESSON_HELD` dan oldin
+   `attendance.student.recorded` chiqaradi — administrator «✅ Davomat olindi»
+   ko'radi; «Bo'lmadi» avval bekor qilish yoki ko'chirish yozadi — «❌ Dars bekor
+   qilindi» yoki «🔀 Dars ko'chirildi»; guruh o'chirilganda `GROUP_DELETED`
+   savol yopilishidan oldin keladi — «🗑 Guruh o'chirildi». Uchta zaxira
+   sarlavha faqat o'sha oldingi hodisa qator yopmagan holda (masalan, ro'yxati
+   bo'sh kunda «Bo'ldi») ko'rinadi.
 3. **Yangi matn** (`resolvedLessonAlertText`, sof funksiya): qalin sarlavha —
    sabab va yopilgan payt Toshkent vaqtida (`✅ Davomat olindi · 10:47`,
    `❌ Dars bekor qilindi · HH:mm`, `🔀 Dars ko'chirildi · HH:mm`,

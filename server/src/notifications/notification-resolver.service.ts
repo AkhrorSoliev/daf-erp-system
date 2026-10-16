@@ -446,7 +446,13 @@ export class NotificationResolverService {
           resolvedAt: resolvedAt.toISOString(),
         });
       }
-      if (outcome) await this.editTelegramCopies(rows, outcome, resolvedAt);
+      if (outcome) {
+        // Every edit is wrapped inside; this is the belt for the braces: the
+        // Telegram leg can never turn a done write into a 0.
+        await this.editTelegramCopies(rows, outcome, resolvedAt).catch(
+          () => undefined,
+        );
+      }
       return count;
     } catch (error) {
       this.logger.error(`resolve failed: ${(error as Error).message}`);
