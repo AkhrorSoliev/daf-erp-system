@@ -28,6 +28,7 @@ import { EntityHistoryModule } from './common/entity-history';
 import { StudentOriginModule } from './common/student-origin';
 import { CommentsModule } from './comments/comments.module';
 import { TasksModule } from './tasks/tasks.module';
+import { LessonRatingsModule } from './lesson-ratings/lesson-ratings.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SmsModule } from './sms/sms.module';
 import { AttendanceModule } from './attendance/attendance.module';
@@ -112,6 +113,7 @@ import { validateEnv } from './config/env.validation';
     StudentOriginModule,
     CommentsModule,
     TasksModule,
+    LessonRatingsModule,
     NotificationsModule,
     SmsModule,
     AttendanceModule,

@@ -166,6 +166,14 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'COMPANY_WIDE',
+    reason:
+      '«Dars baholari» switch (spec 2026-10-13 §6.1): `lessonRating.enabled` is a ' +
+      'company-level setting (`companyLevelOnly`) — one value for every branch. ' +
+      'CEO-only through `@CeoOnly()`. The three reads take `@BranchScope()`.',
+    routes: ['PATCH /lesson-ratings/settings'],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
       'Id-addressed money paths. The branch is resolved from the record (or ' +

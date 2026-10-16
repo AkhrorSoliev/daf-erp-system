@@ -18,7 +18,8 @@ export function ReportsLayoutShell({ children }: { children: React.ReactNode }) 
   // Page by page: an administrator opens only Lidlar and To'lov hisobotlari
   // (`reports-nav.ts`). The server refuses the other reports too. Wait for the
   // capability list before redirecting, so a fresh sign-in is not bounced.
-  const canViewReports = canOpenReportPath(can, pathname);
+  const roleIds = user?.roles.map((r) => r.id) ?? [];
+  const canViewReports = canOpenReportPath(can, pathname, roleIds);
 
   useEffect(() => {
     if (user && ready && !canViewReports) router.replace("/");

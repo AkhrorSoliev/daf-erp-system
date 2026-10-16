@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   Send,
   Megaphone,
+  Star,
   type LucideIcon,
 } from "lucide-react";
 import type { Can } from "./permission-check";
@@ -18,6 +19,8 @@ export interface ReportsNavItem {
   icon: LucideIcon;
   /** Shown to users who hold this capability. Omit to show to all. */
   permission?: PermissionKey;
+  /** Identity gate (role ids), like `nav-items.ts`. «Dars baholari» is the CEO's alone (spec 2026-10-13). */
+  forRoles?: number[];
 }
 
 interface ReportsNavSection {
@@ -44,6 +47,7 @@ export const reportsNavSections: ReportsNavSection[] = [
     items: [
       { title: "Ketgan o'quvchilar hisoboti", url: "/reports/departed-students", icon: UserMinus, permission: "reports.students" },
       { title: "Bitiruvchilar", url: "/reports/graduates", icon: GraduationCap, permission: "reports.students" },
+      { title: "Dars baholari", url: "/reports/dars-baholari", icon: Star, forRoles: [1] },
     ],
   },
   {
@@ -59,11 +63,17 @@ export const reportsNavSections: ReportsNavSection[] = [
   },
 ];
 
+function itemVisible(item: ReportsNavItem, can: Can, roleIds: readonly number[]): boolean {
+  if (item.permission && !can(item.permission)) return false;
+  if (item.forRoles && !item.forRoles.some((id) => roleIds.includes(id))) return false;
+  return true;
+}
+
+export { itemVisible as reportItemVisible };
+
 /** May the user enter the reports section at all — at least one report shows. */
-export function canEnterReports(can: Can): boolean {
-  return reportsNavSections.some((s) =>
-    s.items.some((i) => !i.permission || can(i.permission)),
-  );
+export function canEnterReports(can: Can, roleIds: readonly number[]): boolean {
+  return reportsNavSections.some((s) => s.items.some((i) => itemVisible(i, can, roleIds)));
 }
 
 /**
@@ -72,12 +82,12 @@ export function canEnterReports(can: Can): boolean {
  * money-report holders, so a new report never opens to an administrator by
  * itself.
  */
-export function canOpenReportPath(can: Can, pathname: string): boolean {
+export function canOpenReportPath(can: Can, pathname: string, roleIds: readonly number[]): boolean {
   const path = pathname.replace(/\/+$/, "") || "/";
-  if (path === "/reports") return canEnterReports(can);
+  if (path === "/reports") return canEnterReports(can, roleIds);
   const item = reportsNavSections
     .flatMap((s) => s.items)
     .find((i) => path === i.url || path.startsWith(`${i.url}/`));
   if (!item) return can("reports.finance");
-  return !item.permission || can(item.permission);
+  return itemVisible(item, can, roleIds);
 }

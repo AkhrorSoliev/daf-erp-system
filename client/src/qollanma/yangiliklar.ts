@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-13",
+    sarlavha: "Dars baholari",
+    matn: "O'quvchilar endi darsdan keyin Telegram botda darsga 1 dan 5 gacha baho qo'yadi; 1–3 qo'ysa, sababini yozishi mumkin. Hisobotlar → «Dars baholari» sahifasida ustozlarning o'rtacha bahosi, javob ulushi va past baholar ko'rinadi; ustoz profilida «Baholar» tab'i qo'shildi. Baholarni faqat CEO ko'radi. Tizim sahifadagi «Baho so'rash» kaliti bilan yoqiladi.",
+    rollar: [1],
+    sahifa: { bolim: "hisobotlar", sahifa: "dars-baholari" },
+  },
+  {
     sana: "2026-10-11",
     sarlavha: "Yangi «To'lovlar» sahifasi",
     matn: "Moliya → «To'lovlar» — yangi sahifa: hamma to'lovlar bitta ro'yxatda, davr tugmalari (Bugun, Kecha, Bu hafta, Bu oy, O'tgan oy, Oraliq), qidiruv (ism, telefon, ID, kvitansiya raqami) va filtrlar. Har to'lov yonida pul nimaga ketgani (shu oy, oldindan, eski qarz) — «Kassaga tushdi» kartasi bilan bir xil hisob, tanlangan davr oxiriga ko'ra. Qator bosilsa to'lov oynasi: kvitansiya, to'lov paytidagi balans, tuzatish; CEO to'lovni sabab yozib bekor qila oladi. «O'quvchi to'lovi» hisoboti shu yerga ko'chdi; «Kutilyotgan to'lovlar» o'rniga «Qarzdorlik» sahifasi ochiladi. Har to'lovning endi tizim kvitansiya raqami bor.",

@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { reportsNavSections } from "@/lib/reports-nav";
+import { reportItemVisible, reportsNavSections } from "@/lib/reports-nav";
+import { useAuth } from "@/hooks/use-auth";
 import { usePermissions, usePermissionsReady } from "@/hooks/use-permissions";
 
 export function ReportsMobileMenu() {
   const can = usePermissions((s) => s.can);
   const ready = usePermissionsReady();
+  const user = useAuth((s) => s.user);
+  const roleIds = user?.roles.map((r) => r.id) ?? [];
 
   // Until the capability list is known every item is hidden; render nothing
   // rather than an empty menu.
@@ -16,9 +19,7 @@ export function ReportsMobileMenu() {
   return (
     <div className="space-y-5">
       {reportsNavSections.map((section) => {
-        const visibleItems = section.items.filter((item) => {
-          return !item.permission || can(item.permission);
-        });
+        const visibleItems = section.items.filter((item) => reportItemVisible(item, can, roleIds));
 
         if (visibleItems.length === 0) return null;
 

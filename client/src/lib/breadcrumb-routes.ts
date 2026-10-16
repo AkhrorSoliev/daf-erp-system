@@ -24,6 +24,7 @@ export const routeLabels: Record<string, string> = {
   activity: "Markaz faoliyati",
   attendance: "Davomat statistikasi",
   marketing: "Marketing",
+  "dars-baholari": "Dars baholari",
   profile: "Profil",
   settings: "Sozlamalar",
   general: "Umumiy sozlamalar",

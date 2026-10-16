@@ -525,6 +525,15 @@
     "CEO",
     "Teacher"
   ],
+  "GET /lesson-ratings/low": [
+    "CEO"
+  ],
+  "GET /lesson-ratings/summary": [
+    "CEO"
+  ],
+  "GET /lesson-ratings/teachers/:id": [
+    "CEO"
+  ],
   "GET /lesson-reschedules": [
     "Administrator",
     "Branch Director",
@@ -1516,6 +1525,9 @@
   "PATCH /leads/reorder": [
     "Administrator",
     "Branch Director",
+    "CEO"
+  ],
+  "PATCH /lesson-ratings/settings": [
     "CEO"
   ],
   "PATCH /lesson-reschedules/:id": [

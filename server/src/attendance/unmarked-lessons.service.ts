@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { GroupStatus, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -11,7 +11,8 @@ import {
   utcMidnightFromDateStr,
 } from '../common/date/tashkent';
 import { tashkentClock } from './shared/attendance-window';
-import { endedLessonsOn, type EndedLesson } from './shared/ended-lessons';
+import { type EndedLesson } from './shared/ended-lessons';
+import { loadEndedLessonsToday } from './shared/load-ended-lessons';
 import {
   createLessonTask,
   nextWorkingDay,
@@ -50,63 +51,18 @@ export class UnmarkedLessonsService {
   ) {}
 
   async openForEndedLessons(now: Date = new Date()): Promise<OpenedLesson[]> {
-    const { todayStr, nowMinutes } = tashkentClock(now);
+    const { todayStr } = tashkentClock(now);
     const today = utcMidnightFromDateStr(todayStr);
 
-    const [groups, reschedules, cancellations, existing] = await Promise.all([
-      this.prisma.group.findMany({
-        where: { deletedAt: null, statusEnum: GroupStatus.ACTIVE },
-        select: {
-          id: true,
-          name: true,
-          companyId: true,
-          branchId: true,
-          exactDays: true,
-          lessonStartTime: true,
-          lessonEndTime: true,
-          startDate: true,
-          endDate: true,
-        },
-      }),
-      this.prisma.lessonReschedule.findMany({
-        where: {
-          deletedAt: null,
-          OR: [{ originalDate: today }, { newDate: today }],
-        },
-        select: {
-          groupId: true,
-          originalDate: true,
-          newDate: true,
-          newLessonStartTime: true,
-          newLessonEndTime: true,
-        },
-      }),
-      this.prisma.lessonCancellation.findMany({
-        where: { deletedAt: null, date: today },
-        select: { groupId: true },
-      }),
+    const [loaded, existing] = await Promise.all([
+      loadEndedLessonsToday(this.prisma, this.holidays, now),
       this.prisma.unmarkedLesson.findMany({
         where: { date: today },
         select: { groupId: true },
       }),
     ]);
-    if (groups.length === 0) return [];
-
-    const holidayBranches = new Set<number>();
-    for (const branchId of new Set(groups.map((g) => g.branchId))) {
-      if (await this.holidays.findActiveHolidayCovering(today, branchId)) {
-        holidayBranches.add(branchId);
-      }
-    }
     const asked = new Set(existing.map((e) => e.groupId));
-    const ended = endedLessonsOn({
-      todayStr,
-      nowMinutes,
-      groups,
-      reschedules,
-      cancelledGroupIds: new Set(cancellations.map((c) => c.groupId)),
-      isHoliday: (branchId) => holidayBranches.has(branchId),
-    }).filter((lesson) => !asked.has(lesson.groupId));
+    const ended = loaded.lessons.filter((lesson) => !asked.has(lesson.groupId));
     if (ended.length === 0) return [];
 
     // The task is due on the next working day of the lesson's OWN branch.
