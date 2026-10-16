@@ -161,6 +161,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0092](0092-guruhlar-tolovi-hisob-ulushida.md) | Guruhlar bo'yicha to'lov: oy hisobi (`month-charges.ts`) guruhlarga hisob ulushida bo'linadi (largest remainder, `splitMonthChargesByCharge`), guruhlar yig'indisi «Qoldi» bilan so'mma-so'm teng; ustoz va kurs — hozirgi; eski uch `payment-reports` endpoint olib tashlandi | Qabul qilindi | 2026-10-16 |
 | [0093](0093-lid-egasi.md) | Lidning bitta egasi bor: xodim band qiladi, muddatda harakat qilmasa lid qaytadi | Qabul qilindi | 2026-10-16 |
 | [0094](0094-xarajatlar-oy-boyicha-foyda-bilan-bitta-toplam.md) | Xarajatlar sahifasi oy bo'yicha (`?oy=`, may 2026 dan): jami — kanonik sof foydaning `operatingExpenses` i bilan bitta to'plam (tenglik testi); «Bu oy hali yozilmagan» — `missingRecurringExpenses` har filialga alohida, «Yozish» qolganini yozadi; maslahat belgilari serverda, faqat «Boshqa» | Qabul qilindi | 2026-10-16 |
+| [0095](0095-kpi-natijasi.md) | KPI natijasi: administratorga, bir marta, summa muhrlanadi | Qabul qilindi | 2026-10-16 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

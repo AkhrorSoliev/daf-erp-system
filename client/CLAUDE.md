@@ -926,6 +926,12 @@ The card also shows "Jinsi" and the age next to "Tug'ilgan sana". The age comes 
 - The client computes no deadline: `ownerDueAt` comes from the server; `ownership-format.ts` only formats it on the Tashkent clock and `useMinuteClock` re-renders once a minute.
 - The «Mas'ul» filter is the URL's `masul` (`me`, `none`, user ids) sent as `owner`; its options come from `GET /leads/ownership/summary`, which also draws «Xodimlar bo'yicha» under the stats strip (`lead-owners-strip.tsx`, same period). Sozlamalar → «Lidlar egaligi» is `ceoOnly`.
 
+### Admin KPI (`/reports/xodimlar-kpi`, ADR-0095)
+
+- «Xodimlar KPI» in «Marketing va faoliyat» (`reports-nav.ts`, `permission: "kpi.view"`: CEO and Branch Director). Files in `components/reports/admin-kpi/`: `kpi-overview-page.tsx`, `kpi-summary-cards.tsx`, `kpi-attention.tsx`, `kpi-charts.tsx`, `kpi-admin-table.tsx`, `kpi-user-drawer.tsx`, `kpi-user-panel.tsx` (shared by the drawer and the employee tab), `employee-kpi-tab.tsx`, `kpi-trend.tsx`, `kpi-queries.ts`, `kpi-types.ts`, `kpi-format.ts` (pure, vitest).
+- URL: `oy` (empty = the current month, `MonthStepper` from 2026-10), `bilan` (empty = the month before), `xodim` (the open drawer); the employee tab's month is `kpi_oy`. Every figure, signal text and «Qanday hisoblandi» line is the server's; the client only formats and draws. The admin table is not paginated (the team at a glance); the results table of the drawer and the tab is (10–50).
+- The employee page shows «KPI» (`?tab=kpi`) to `useCan("kpi.view")` only while the employee holds Administrator; nothing is fetched until the tab opens. A former administrator's results stay visible on «Xodimlar KPI». «Hisobotlar» in `nav-items.ts` opens for `kpi.view` too. Sozlamalar → «KPI sozlamalari» (`/settings/kpi`) is `ceoOnly`; it sends only what changed (`settingsPatch`), so the switch's time stays the flip.
+
 ### Lead Forms and Their Responses (`/leads/forms`)
 
 Public sign-up forms (shared on Instagram/Telegram) turn every submission into a lead. Three routes:
