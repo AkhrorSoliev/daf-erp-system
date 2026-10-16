@@ -253,7 +253,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `server/prisma/schema.prisma` (yangi enum + model; `Student` va `Group`ga teskari relatsiya)
-- Create: `server/prisma/migrations/20261013100000_lesson_ratings/migration.sql`
+- Create: `server/prisma/migrations/20261016100000_lesson_ratings/migration.sql`
 - Modify: `server/src/settings/settings.types.ts` (kalit, tip, ta'rif)
 - Modify: `server/src/settings/settings.types.spec.ts:11-26` (kalitlar ro'yxati)
 
@@ -337,7 +337,7 @@ model LessonRating {
 `model Student { ... }` ichiga qo'shing: `lessonRatings LessonRating[]`
 `model Group { ... }` ichiga qo'shing: `lessonRatings LessonRating[]`
 
-- [ ] **Step 4: Migration SQL** — `server/prisma/migrations/20261013100000_lesson_ratings/migration.sql`
+- [ ] **Step 4: Migration SQL** — `server/prisma/migrations/20261016100000_lesson_ratings/migration.sql`
 
 ```sql
 -- Dars baholari (spec 2026-10-13): o'quvchi darsdan keyin Telegram'da 1–5 baho qo'yadi.
@@ -402,7 +402,7 @@ Agar bazaga faqat O'QISH huquqi bilan ulanish mumkin bo'lsa (ixtiyoriy tekshiruv
 
 ```bash
 cd server && npx prettier --write src/settings/settings.types.ts src/settings/settings.types.spec.ts
-git add prisma/schema.prisma prisma/migrations/20261013100000_lesson_ratings src/settings/settings.types.ts src/settings/settings.types.spec.ts
+git add prisma/schema.prisma prisma/migrations/20261016100000_lesson_ratings src/settings/settings.types.ts src/settings/settings.types.spec.ts
 git commit -m "feat(lesson-ratings): LessonRating jadvali va lessonRating.enabled sozlamasi
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -2825,7 +2825,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 9: Hujjatlar — ADR, CLAUDE.md, CONTEXT.md, qo'llanma
 
 **Files:**
-- Create: `docs/adr/0089-dars-bahosi-faqat-ceo-telegram-darhol.md` (raqamni `docs/adr/README.md` va `git log origin/main -- docs/adr` bo'yicha tekshiring; band bo'lsa keyingisi)
+- Create: `docs/adr/0091-dars-bahosi-faqat-ceo-telegram-darhol.md` (raqamni `docs/adr/README.md` va `git log origin/main -- docs/adr` bo'yicha tekshiring; band bo'lsa keyingisi)
 - Modify: `docs/adr/README.md` (indeks qatori)
 - Modify: `server/CLAUDE.md` («Tasks» bo'limidan oldin yangi bo'lim)
 - Modify: `client/CLAUDE.md` («Marketing report» bo'limidan keyin)
@@ -2838,7 +2838,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: ADR** — mavjud ADR shakliga qarang (`sed -n 1,40p docs/adr/0088-*.md`) va o'sha sarlavhalar bilan yozing:
 
 ```markdown
-# 0089. Dars bahosi: faqat CEO ko'radi, Telegram'da darhol so'raladi
+# 0091. Dars bahosi: faqat CEO ko'radi, Telegram'da darhol so'raladi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-13
@@ -2865,13 +2865,13 @@ Dars sifati faqat shikoyat yoki o'quvchi ketganda ma'lum bo'lardi.
 `docs/adr/README.md` jadvaliga (0088 qatoridan keyin):
 
 ```markdown
-| [0089](0089-dars-bahosi-faqat-ceo-telegram-darhol.md) | Dars bahosi: dars tugagach 10 daq – 3 soat ichida kelgan o'quvchiga Telegram'da 1–5 (darhol, ADR-0025 ro'yxatiga qo'shimcha); bitta qator, 48 soat, bitta baho va izoh; ustoz muzlatiladi; faqat CEO ko'radi (`@CeoOnly()`); `lessonRating.enabled` boshida o'chiq | Qabul qilindi | 2026-10-13 |
+| [0091](0091-dars-bahosi-faqat-ceo-telegram-darhol.md) | Dars bahosi: dars tugagach 10 daq – 3 soat ichida kelgan o'quvchiga Telegram'da 1–5 (darhol, ADR-0025 ro'yxatiga qo'shimcha); bitta qator, 48 soat, bitta baho va izoh; ustoz muzlatiladi; faqat CEO ko'radi (`@CeoOnly()`); `lessonRating.enabled` boshida o'chiq | Qabul qilindi | 2026-10-13 |
 ```
 
 - [ ] **Step 2: `server/CLAUDE.md`** — «### Tasks (`src/tasks/`)» sarlavhasidan oldin (inglizcha, fayl siyosati bo'yicha):
 
 ```markdown
-### Lesson ratings (`src/lesson-ratings/`, ADR-0089)
+### Lesson ratings (`src/lesson-ratings/`, ADR-0091)
 
 - **Who is asked:** `LessonRatingSenderService` (`@Cron('0 */10 7-22 * * 1-6')`, Tashkent) reads today's ended lessons through `loadEndedLessonsToday` (`attendance/shared/load-ended-lessons.ts`, shared with «Dars bo'ldimi?») and asks, 10–180 minutes after the lesson's end, every PRESENT/LATE student whose card is live and whose `telegramChatId` is set and not disconnected (ADR-0066). Off while `lessonRating.enabled` (company-level, default false) is off.
 - **One row per lesson and student** (`LessonRating`, unique `groupId + studentId + date`), written BEFORE the message, so two instances never send twice (`P2002` → skip). `messageId` set = delivered; a refused send is `FAILED` and never retried. `teacherIds` and `branchId` are frozen at send time (a `LessonTeacherOverride` wins over `GroupTeacher`).
@@ -2882,7 +2882,7 @@ Dars sifati faqat shikoyat yoki o'quvchi ketganda ma'lum bo'lardi.
 - [ ] **Step 3: `client/CLAUDE.md`** — «### Marketing report» bo'limidan keyin:
 
 ```markdown
-### Lesson ratings (`/reports/dars-baholari`, ADR-0089)
+### Lesson ratings (`/reports/dars-baholari`, ADR-0091)
 
 - CEO only, by identity: the report item has `forRoles: [1]` (`reports-nav.ts`; `canEnterReports` / `canOpenReportPath` take the user's role ids), the teacher profile's «Baholar» tab is drawn for `isCeoUser(user)`. The server refuses everyone else (`@CeoOnly()`).
 - `components/reports/lesson-ratings/`: `lesson-ratings-client.tsx` (month `?month=`, open teacher `?ustoz=`, the «Baho so'rash» switch), `rating-teachers-table.tsx`, `rating-low-list.tsx`, `teacher-ratings-panel.tsx` (shared by the drawer and the profile tab), `rating-format.ts` (pure, vitest). Every figure is the server's; the client only formats.
@@ -2891,7 +2891,7 @@ Dars sifati faqat shikoyat yoki o'quvchi ketganda ma'lum bo'lardi.
 - [ ] **Step 4: `CONTEXT.md`** — atamalar ro'yxatiga alifbo bo'yicha (mavjud shaklga moslab):
 
 ```markdown
-- **Dars bahosi** — o'quvchining darsdan keyin Telegram'da qo'ygan 1–5 bahosi (va 1–3 da ixtiyoriy izoh). Bitta dars, bitta o'quvchi — bitta qator; faqat CEO ko'radi. `server/src/lesson-ratings/`, ADR-0089.
+- **Dars bahosi** — o'quvchining darsdan keyin Telegram'da qo'ygan 1–5 bahosi (va 1–3 da ixtiyoriy izoh). Bitta dars, bitta o'quvchi — bitta qator; faqat CEO ko'radi. `server/src/lesson-ratings/`, ADR-0091.
 ```
 
 - [ ] **Step 5: Qo'llanma**
@@ -2909,7 +2909,7 @@ export const hisobotlar: QollanmaSahifa[] = [
     qisqacha:
       "O'quvchi darsdan keyin Telegram botda darsga 1 dan 5 gacha baho qo'yadi, past bahoda sababini yozadi. CEO ustozlarning o'rtacha bahosi, javob ulushi va past baholarni shu sahifada ko'radi.",
     rollar: [1],
-    adr: ["0089"],
+    adr: ["0091"],
     yollar: ["/reports/dars-baholari"],
     kalitSozlar: ["baho", "dars bahosi", "yulduz", "o'quvchi fikri", "ustoz sifati", "past baho", "izoh"],
     yangilangan: "2026-10-13",
@@ -2973,7 +2973,7 @@ Expected: PASS (`reyestr.test.ts` ADR fayli, `yollar` marshruti va h1 yo'qligini
 
 ```bash
 cd .. && git add docs/adr CONTEXT.md server/CLAUDE.md client/CLAUDE.md client/src/qollanma
-git commit -m "docs(lesson-ratings): ADR-0089, CLAUDE.md, CONTEXT.md va qo'llanma sahifasi
+git commit -m "docs(lesson-ratings): ADR-0091, CLAUDE.md, CONTEXT.md va qo'llanma sahifasi
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```

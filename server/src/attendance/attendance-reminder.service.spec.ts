@@ -677,6 +677,68 @@ describe('AttendanceReminderService', () => {
     });
   });
 
+  // ADR-0090: the Telegram copy is edited when the alert is resolved, so its
+  // chat and message id are kept on the row.
+  describe('deliver — the Telegram copy', () => {
+    const teacher = { id: 20001, telegramChatId: '555111222' };
+    const group = { id: 'group-1', companyId: 100 };
+    const send = () =>
+      (service as any).deliver(
+        teacher,
+        group,
+        NotificationType.LESSON_STARTED,
+        'Dars boshlandi',
+        'head\n\n👥 Guruh: Deutsch A1\n\ntail',
+      );
+
+    beforeEach(() => {
+      bot.telegram.sendMessage.mockResolvedValue({ message_id: 777 });
+      prisma.notification.update = jest.fn().mockResolvedValue({});
+    });
+
+    it('stores the chat and message id on the notification row', async () => {
+      await send();
+      expect(prisma.notification.update).toHaveBeenCalledWith({
+        where: { id: 'n-1' },
+        data: { telegramChatId: '555111222', telegramMessageId: 777 },
+      });
+    });
+
+    it('still delivers when the id write fails', async () => {
+      prisma.notification.update.mockRejectedValue(new Error('db down'));
+      await expect(send()).resolves.toBeUndefined();
+      expect(bot.telegram.sendMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('writes nothing when the send failed or the user has no chat', async () => {
+      bot.telegram.sendMessage.mockRejectedValue(new Error('400'));
+      await send();
+      await (service as any).deliver(
+        { id: 20001, telegramChatId: null },
+        group,
+        NotificationType.LESSON_STARTED,
+        't',
+        'm',
+      );
+      expect(prisma.notification.update).not.toHaveBeenCalled();
+    });
+
+    it('escapes < and & in the title and message so Telegram accepts the HTML', async () => {
+      await (service as any).deliver(
+        teacher,
+        group,
+        NotificationType.LESSON_STARTED,
+        'A & B',
+        '👥 Guruh: <A1>',
+      );
+      expect(bot.telegram.sendMessage).toHaveBeenCalledWith(
+        '555111222',
+        '<b>A &amp; B</b>\n👥 Guruh: &lt;A1&gt;',
+        { parse_mode: 'HTML' },
+      );
+    });
+  });
+
   describe('groupHasLessonToday', () => {
     it('returns false when today is not in exactDays', () => {
       const result = (service as any).groupHasLessonToday(

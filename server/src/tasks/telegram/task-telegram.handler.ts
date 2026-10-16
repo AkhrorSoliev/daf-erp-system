@@ -33,13 +33,12 @@ import {
   clip,
   editExtra,
   isSelfTask,
-  keptHeadline,
   messageExtra,
   parseTk,
   photoPromptText,
+  renderLiveCard,
   renderMyTasks,
   renderStepsMessage,
-  renderTaskMessage,
   returnPromptText,
   type TgMessage,
   type TgTaskView,
@@ -54,17 +53,11 @@ const LIST_SIZE = 10;
 /** `answerCbQuery` takes at most 200 characters; `clip` adds one more for «…». */
 const ALERT_CLIP = 199;
 
-/** The text of the message whose button was pressed (plain, as Telegram returns it). */
-function pressedText(ctx: BotContext): string | undefined {
-  const m = ctx.callbackQuery?.message;
-  return m && 'text' in m ? m.text : undefined;
-}
-
 /**
  * Task buttons and replies in the main bot (spec §6.1–6.5, ADR-0078). Every
  * change goes through `TasksService` as the chat's staff account with
  * `via: 'TELEGRAM'`: the website's policy and transitions, nothing extra here.
- * The pressed message is edited in place.
+ * The pressed message is redrawn in place as the person's live card (ADR-0089).
  */
 @Injectable()
 export class TaskTelegramHandler implements OnApplicationBootstrap {
@@ -120,7 +113,6 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     const seen = await this.access(ctx, me, taskId, cmd.action !== 'show');
     if (!seen) return;
     const { view } = seen;
-    const headline = keptHeadline(pressedText(ctx), view.title);
 
     switch (cmd.action) {
       case 'show':
@@ -131,9 +123,9 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
         return this.drawSteps(ctx, view);
       case 'back':
         await this.answer(ctx);
-        return this.drawCard(ctx, me, view, undefined);
+        return this.drawCard(ctx, me, view);
       case 'return':
-        return this.askReason(ctx, me, seen, headline);
+        return this.askReason(ctx, me, seen);
     }
 
     try {
@@ -175,12 +167,7 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
       // A stale message: say why, then show the task as it is now.
       await this.answer(ctx, err.message);
     }
-    await this.drawCard(
-      ctx,
-      me,
-      await loadTaskView(this.prisma, taskId),
-      headline,
-    );
+    await this.drawCard(ctx, me, await loadTaskView(this.prisma, taskId));
   }
 
   private me(chatId: string, say: (text: string) => Promise<unknown>) {
@@ -239,10 +226,9 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     ctx: BotContext,
     me: Me,
     view: TgTaskView | null,
-    headline: string | undefined,
   ): Promise<void> {
     if (!view) return this.dropButtons(ctx);
-    return this.edit(ctx, this.card(me, view, headline));
+    return this.edit(ctx, this.card(me, view));
   }
 
   private drawSteps(ctx: BotContext, view: TgTaskView | null): Promise<void> {
@@ -250,19 +236,15 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     return this.edit(ctx, renderStepsMessage(view));
   }
 
-  private card(me: Me, view: TgTaskView, headline?: string): TgMessage {
-    return renderTaskMessage(
-      view,
-      { kind: 'CARD', headline },
-      me.actor.userId,
-      {
-        now: new Date(),
-        openUrl: this.sender.openUrl(me.actor.roleIds, view.id),
-      },
-    );
+  /** The person's live card (ADR-0089): the task as it is now, written for them. */
+  private card(me: Me, view: TgTaskView): TgMessage {
+    return renderLiveCard(view, me.actor.userId, {
+      now: new Date(),
+      openUrl: this.sender.openUrl(me.actor.roleIds, view.id),
+    });
   }
 
-  /** A number from «Topshiriqlarim»: the card as a new message, so the list stays. */
+  /** A number from «Topshiriqlarim»: the live card as a new message, so the list stays. */
   private async sendCard(
     ctx: BotContext,
     me: Me,
@@ -275,7 +257,7 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
       sent.message_id,
       view,
       me.actor.userId,
-      'NOTICE',
+      'CARD',
     );
   }
 
@@ -288,15 +270,14 @@ export class TaskTelegramHandler implements OnApplicationBootstrap {
     ctx: BotContext,
     me: Me,
     { view, canManage }: Seen,
-    headline: string | undefined,
   ): Promise<void> {
     if (view.status !== 'IN_REVIEW') {
       await this.answer(ctx, NOT_IN_REVIEW);
-      return this.drawCard(ctx, me, view, headline);
+      return this.drawCard(ctx, me, view);
     }
     if (!canManage) {
       await this.answer(ctx, ONLY_GIVER_REVIEWS);
-      return this.drawCard(ctx, me, view, headline);
+      return this.drawCard(ctx, me, view);
     }
     await this.answer(ctx);
     const cardId = ctx.callbackQuery?.message?.message_id;

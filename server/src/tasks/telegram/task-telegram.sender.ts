@@ -11,7 +11,9 @@ import {
 import type { TgNotice } from '../task-notify-plan';
 import {
   messageExtra,
+  renderLiveCard,
   renderTaskMessage,
+  STATUS_NOTICES,
   type TgTaskView,
 } from './task-telegram-text';
 import { staffChatOf, taskOpenUrl } from './task-telegram-view';
@@ -63,12 +65,34 @@ export class TaskTelegramSender {
     // No TELEGRAM_BOT_TOKEN: the bot never started.
     const client = this.telegram.getBot()?.telegram;
     if (!client) return { status: 'skipped', reason: BOT_OFF };
+    // REMOVED edits the person's card (TaskTelegramLive); never a new message.
+    if (notice.kind === 'REMOVED') {
+      return { status: 'skipped', reason: 'live card only' };
+    }
     const chat = await staffChatOf(this.prisma, userId);
     if (!chat) return { status: 'skipped', reason: 'no chat' };
-    const msg = renderTaskMessage(view, notice, userId, {
+    // A status notice IS the person's live card (ADR-0089): one per person per task.
+    const live = STATUS_NOTICES.has(notice.kind);
+    if (live) {
+      const has = await this.prisma.taskTelegramMessage.findFirst({
+        where: {
+          taskId: view.id,
+          userId,
+          chatId: chat.chatId,
+          purpose: 'CARD',
+        },
+        select: { id: true },
+      });
+      // ponytail: two events in the same instant can both see no card and send two; the next refresh keeps both right.
+      if (has) return { status: 'skipped', reason: 'has card' };
+    }
+    const opts = {
       now: new Date(),
       openUrl: this.openUrl(chat.roleIds, view.id),
-    });
+    };
+    const msg = live
+      ? renderLiveCard(view, userId, opts)
+      : renderTaskMessage(view, notice, userId, opts);
     let messageId: number;
     try {
       const sent = await client.sendMessage(
@@ -86,7 +110,13 @@ export class TaskTelegramSender {
         reason: f.description.slice(0, 500),
       };
     }
-    await this.record(chat.chatId, messageId, view, userId, 'NOTICE');
+    await this.record(
+      chat.chatId,
+      messageId,
+      view,
+      userId,
+      live ? 'CARD' : 'NOTICE',
+    );
     return { status: 'sent', messageId };
   }
 

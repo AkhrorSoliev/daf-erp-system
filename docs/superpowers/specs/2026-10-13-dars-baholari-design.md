@@ -3,7 +3,7 @@
 **Sana:** 2026-10-13
 **Holati:** CEO bilan kelishilgan (13.10.2026, Claude Code suhbati: maqsad, kanal, kim ko'radi, chastota, shkala, ogohlantirish)
 **Tayanadi:** ADR-0025 (Telegram: darhol yuboriladiganlar ro'yxati), ADR-0054 (`ended-lessons`, «Dars bo'ldimi?»), ADR-0066 (o'quvchi chati botni rad etishi), ADR-0078 (bot tugmalari `useBeforeScenes` orqali), ADR-0087 (`@CeoOnly()` — imkoniyat emas, kimlik).
-**Qaror yozuvi:** yangi ADR — shu PR'da (§8). Raqami — PR paytidagi keyingi bo'sh raqam (yozilish paytida 0089).
+**Qaror yozuvi:** yangi ADR — shu PR'da (§8). Raqami — PR paytidagi keyingi bo'sh raqam (yozilish paytida 0089 edi, main'da band bo'lgani uchun 0091).
 
 ## 1. Nima uchun
 
@@ -184,7 +184,7 @@ Hisobotlar menyusida, «O'quvchilar hisoboti» bo'limida. Komponentlar: `compone
 
 ## 8. Hujjatlar
 
-- **Yangi ADR** (0089 yoki keyingi bo'sh raqam): «Dars bahosi — faqat CEO ko'radi (`@CeoOnly()`); Telegram orqali darhol, dars tugagach 10 daqiqa – 3 soat ichida, faqat kelgan o'quvchiga; 48 soat, bitta baho, bitta izoh; ustoz yuborilgan paytda muzlatiladi; ADR-0025 ro'yxatiga qo'shimcha».
+- **Yangi ADR** (0091): «Dars bahosi — faqat CEO ko'radi (`@CeoOnly()`); Telegram orqali darhol, dars tugagach 10 daqiqa – 3 soat ichida, faqat kelgan o'quvchiga; 48 soat, bitta baho, bitta izoh; ustoz yuborilgan paytda muzlatiladi; ADR-0025 ro'yxatiga qo'shimcha».
 - `server/CLAUDE.md` va `client/CLAUDE.md` — qisqa bo'lim.
 - `CONTEXT.md` — «Dars bahosi» atamasi.
 - Qo'llanma: Hisobotlar bo'limida «Dars baholari» sahifasi (`yollar: ['/reports/dars-baholari']`, rollar — faqat CEO) va `yangiliklar.ts`ga yozuv.

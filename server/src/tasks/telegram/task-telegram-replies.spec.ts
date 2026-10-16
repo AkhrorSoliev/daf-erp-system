@@ -52,6 +52,7 @@ const view = (over: Partial<TgTaskView> = {}): TgTaskView => ({
   entityLabel: null,
   participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
   steps: [],
+  history: [],
   ...over,
 });
 
@@ -134,6 +135,21 @@ describe('TaskTelegramReplies — replies (spec §6.2)', () => {
       where: { chatId_messageId: { chatId: '700', messageId: 5 } },
       select: { taskId: true, purpose: true },
     });
+    expect(tasks.addComment).toHaveBeenCalledWith(TASK, 'Ha, 450 000.', {
+      ...actorOf(40),
+      via: 'TELEGRAM',
+    });
+    expect(ctx.reply).toHaveBeenCalledWith(ADDED_TO_TASK);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('a reply to the live card (CARD) is a comment too', async () => {
+    prisma.taskTelegramMessage.findUnique.mockResolvedValue({
+      taskId: TASK,
+      purpose: 'CARD',
+    });
+    const ctx = message(replyTo());
+    await replies.onMessage(ctx, next);
     expect(tasks.addComment).toHaveBeenCalledWith(TASK, 'Ha, 450 000.', {
       ...actorOf(40),
       via: 'TELEGRAM',

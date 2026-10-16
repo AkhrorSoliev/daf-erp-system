@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Cron } from '@nestjs/schedule';
-import { Prisma, type TaskStatus } from '@prisma/client';
+import { Prisma, type NotificationType, type TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   tashkentDateStr,
@@ -22,10 +22,17 @@ import {
   UNMARKED_LESSON_HELD,
   UNMARKED_LESSON_NOT_HELD,
 } from '../unmarked-lessons/unmarked-lesson-events';
+import { TelegramService } from '../telegram/telegram.service';
+import {
+  resolvedLessonAlertText,
+  type LessonOutcome,
+} from './lesson-alert-telegram';
 import { BROKEN_PROMISES_ENTITY } from './notification-events.listener';
 import { LESSON_ALERT_TYPES, lessonGroupKey } from './notification-kind';
 import { NotificationsGateway } from './notifications.gateway';
 import { pastLessonAlerts } from './past-lesson-alerts';
+
+const NOT_MODIFIED = /message is not modified/i;
 
 /** Ids per `resolve` call: a long list never becomes one huge `IN (…)`. */
 const SWEEP_CHUNK = 500;
@@ -69,24 +76,25 @@ export class NotificationResolverService {
   constructor(
     private prisma: PrismaService,
     private gateway: NotificationsGateway,
+    private telegram: TelegramService,
   ) {}
 
   // ---------- lessons ----------
 
   @OnEvent('attendance.completed')
   async onAttendanceCompleted(p: LessonDayEvent): Promise<void> {
-    await this.resolveLesson(p);
+    await this.resolveLesson(p, 'TAKEN');
   }
 
   /** A register only QR scans took emits this and never `attendance.completed`. */
   @OnEvent('attendance.student.recorded')
   async onStudentRecorded(p: LessonDayEvent): Promise<void> {
-    await this.resolveLesson(p);
+    await this.resolveLesson(p, 'TAKEN');
   }
 
   @OnEvent('lesson-cancellation.created')
   async onLessonCancelled(p: LessonDayEvent): Promise<void> {
-    await this.resolveLesson(p);
+    await this.resolveLesson(p, 'CANCELLED');
   }
 
   @OnEvent('lesson-reschedule.created')
@@ -95,23 +103,23 @@ export class NotificationResolverService {
     groupId: string;
     originalDate: string;
   }): Promise<void> {
-    await this.resolveLesson({ ...p, date: p.originalDate });
+    await this.resolveLesson({ ...p, date: p.originalDate }, 'MOVED');
   }
 
   @OnEvent(UNMARKED_LESSON_HELD)
   async onLessonHeld(p: LessonDayEvent): Promise<void> {
-    await this.resolveAnswered(p);
+    await this.resolveAnswered(p, 'HELD');
   }
 
   @OnEvent(UNMARKED_LESSON_NOT_HELD)
   async onLessonNotHeld(p: LessonDayEvent): Promise<void> {
-    await this.resolveAnswered(p);
+    await this.resolveAnswered(p, 'NOT_HELD');
   }
 
   /** A question closed unanswered (its day lost its lesson, its group went). */
   @OnEvent(UNMARKED_LESSON_CLOSED)
   async onLessonClosed(p: LessonDayEvent): Promise<void> {
-    await this.resolveAnswered(p);
+    await this.resolveAnswered(p, 'CLOSED');
   }
 
   /**
@@ -124,12 +132,15 @@ export class NotificationResolverService {
     companyId: number;
     groupId: string;
   }): Promise<void> {
-    await this.resolve({
-      companyId: p.companyId,
-      relatedEntityType: 'Group',
-      relatedEntityId: p.groupId,
-      type: { in: [...LESSON_ALERT_TYPES] },
-    });
+    await this.resolve(
+      {
+        companyId: p.companyId,
+        relatedEntityType: 'Group',
+        relatedEntityId: p.groupId,
+        type: { in: [...LESSON_ALERT_TYPES] },
+      },
+      'GROUP_DELETED',
+    );
   }
 
   // ---------- tasks ----------
@@ -258,10 +269,10 @@ export class NotificationResolverService {
       let closed = 0;
       for (const [companyId, ids] of byCompany) {
         for (let i = 0; i < ids.length; i += SWEEP_CHUNK) {
-          closed += await this.resolve({
-            companyId,
-            id: { in: ids.slice(i, i + SWEEP_CHUNK) },
-          });
+          closed += await this.resolve(
+            { companyId, id: { in: ids.slice(i, i + SWEEP_CHUNK) } },
+            'EXPIRED',
+          );
         }
       }
       if (closed > 0) this.logger.log(`closed ${closed} past lesson alerts`);
@@ -331,20 +342,29 @@ export class NotificationResolverService {
     }
   }
 
-  private resolveLesson(p: LessonDayEvent): Promise<number> {
-    return this.resolve({
-      companyId: p.companyId,
-      relatedEntityType: 'Group',
-      relatedEntityId: p.groupId,
-      groupKey: {
-        in: LESSON_ALERT_TYPES.map((type) => lessonGroupKey(type, p.date)),
+  private resolveLesson(
+    p: LessonDayEvent,
+    outcome: LessonOutcome,
+  ): Promise<number> {
+    return this.resolve(
+      {
+        companyId: p.companyId,
+        relatedEntityType: 'Group',
+        relatedEntityId: p.groupId,
+        groupKey: {
+          in: LESSON_ALERT_TYPES.map((type) => lessonGroupKey(type, p.date)),
+        },
       },
-    });
+      outcome,
+    );
   }
 
   /** «Dars bo'ldimi?» answered: the day's alerts and its closed task's notices. */
-  private async resolveAnswered(p: LessonDayEvent): Promise<void> {
-    await this.resolveLesson(p);
+  private async resolveAnswered(
+    p: LessonDayEvent,
+    outcome: LessonOutcome,
+  ): Promise<void> {
+    await this.resolveLesson(p, outcome);
     try {
       const row = await this.prisma.unmarkedLesson.findUnique({
         where: {
@@ -388,13 +408,25 @@ export class NotificationResolverService {
    * Stamps the open action rows matching `where` and returns how many it
    * changed. Never throws. A recipient hears `notification.resolved` only for
    * a write that changed rows: a racing resolver that got there first has
-   * already told them.
+   * already told them. With an `outcome`, the Telegram copy of every lesson
+   * alert among them is edited to say so (ADR-0090).
    */
-  async resolve(where: Prisma.NotificationWhereInput): Promise<number> {
+  async resolve(
+    where: Prisma.NotificationWhereInput,
+    outcome?: LessonOutcome,
+  ): Promise<number> {
     try {
       const rows = await this.prisma.notification.findMany({
         where: { ...where, actionRequired: true, resolvedAt: null },
-        select: { id: true, userId: true },
+        select: {
+          id: true,
+          userId: true,
+          type: true,
+          title: true,
+          message: true,
+          telegramChatId: true,
+          telegramMessageId: true,
+        },
       });
       if (rows.length === 0) return 0;
       const resolvedAt = new Date();
@@ -414,10 +446,56 @@ export class NotificationResolverService {
           resolvedAt: resolvedAt.toISOString(),
         });
       }
+      if (outcome) {
+        // Every edit is wrapped inside; this is the belt for the braces: the
+        // Telegram leg can never turn a done write into a 0.
+        await this.editTelegramCopies(rows, outcome, resolvedAt).catch(
+          () => undefined,
+        );
+      }
       return count;
     } catch (error) {
       this.logger.error(`resolve failed: ${(error as Error).message}`);
       return 0;
+    }
+  }
+
+  /**
+   * One edit per stored lesson-alert message, in turn; each failure is its
+   * own. Silent for the reader (an edit makes no sound), silent in the log for
+   * «message is not modified». Copies sent before ADR-0090 have no id and stay.
+   */
+  private async editTelegramCopies(
+    rows: {
+      type: NotificationType;
+      title: string;
+      message: string;
+      telegramChatId: string | null;
+      telegramMessageId: number | null;
+    }[],
+    outcome: LessonOutcome,
+    at: Date,
+  ): Promise<void> {
+    const bot = this.telegram.getBot();
+    if (!bot) return;
+    for (const r of rows) {
+      if (!r.telegramChatId || r.telegramMessageId === null) continue;
+      if (!LESSON_ALERT_TYPES.includes(r.type)) continue;
+      try {
+        await bot.telegram.editMessageText(
+          r.telegramChatId,
+          r.telegramMessageId,
+          undefined,
+          resolvedLessonAlertText(r, outcome, at),
+          { parse_mode: 'HTML' },
+        );
+      } catch (error) {
+        const msg = (error as Error).message;
+        if (NOT_MODIFIED.test(msg)) continue;
+        this.logger.warn(
+          `lesson alert edit failed (chat ${r.telegramChatId}, message ${r.telegramMessageId}): ${msg}`,
+        );
+      }
     }
   }
 }

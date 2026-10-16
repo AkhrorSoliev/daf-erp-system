@@ -7,9 +7,23 @@ import { TASK_EVENTS, type TaskEventTask } from '../task-events';
 import { noticeUserIds, planNotices, type TgNotice } from '../task-notify-plan';
 import { telegramNotBefore } from '../task-auto-rules';
 import { telegramSendAfter } from '../task-quiet-hours';
+import { TaskTelegramLive } from './task-telegram-live';
 import { shortName, type TgTaskView } from './task-telegram-text';
 import { loadTaskView, staffChatOf } from './task-telegram-view';
 import { TRANSIENT_RETRY_S, TaskTelegramSender } from './task-telegram.sender';
+
+/** Events that change what a live card shows (ADR-0089); a comment does not. */
+const REFRESH_EVENTS = new Set<string>([
+  TASK_EVENTS.ASSIGNED,
+  TASK_EVENTS.UNASSIGNED,
+  TASK_EVENTS.STATUS_CHANGED,
+  TASK_EVENTS.REVIEW_REQUESTED,
+  TASK_EVENTS.REVIEWED,
+  TASK_EVENTS.CANCELLED,
+  TASK_EVENTS.REASSIGNED,
+  TASK_EVENTS.DUE_CHANGED,
+  TASK_EVENTS.AUTO_CLOSED,
+]);
 
 /**
  * Task notices to Telegram, right after the commit (ADR-0078). Who hears what
@@ -27,6 +41,7 @@ export class TaskTelegramListener {
   constructor(
     private prisma: PrismaService,
     private sender: TaskTelegramSender,
+    private live: TaskTelegramLive,
   ) {}
 
   @OnEvent(TASK_EVENTS.ASSIGNED)
@@ -65,6 +80,11 @@ export class TaskTelegramListener {
   onDue(p: { task: TaskEventTask }) {
     return this.handle(TASK_EVENTS.DUE_CHANGED, p);
   }
+  /** No notice (spec §7, `planNotices` returns []); only the live cards are redrawn. */
+  @OnEvent(TASK_EVENTS.AUTO_CLOSED)
+  onAutoClosed(p: { task: TaskEventTask }) {
+    return this.handle(TASK_EVENTS.AUTO_CLOSED, p);
+  }
 
   async handle(
     event: string,
@@ -74,6 +94,8 @@ export class TaskTelegramListener {
     try {
       // «Dars bo'ldimi?» never goes to Telegram (the plan says so too).
       if (payload.task.kind === 'LESSON_QUESTION') return;
+      // Every live card first (never throws), then the notices for whoever has none yet.
+      if (REFRESH_EVENTS.has(event)) await this.live.refresh(payload.task.id);
       const users = await this.prisma.user.findMany({
         where: { id: { in: noticeUserIds(payload) } },
         select: { id: true, firstName: true, lastName: true },

@@ -1,4 +1,4 @@
-# ADR-0089 — Dars bahosi: faqat CEO ko'radi, Telegram'da darhol so'raladi
+# ADR-0091 — Dars bahosi: faqat CEO ko'radi, Telegram'da darhol so'raladi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-13
