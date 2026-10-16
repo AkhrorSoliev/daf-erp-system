@@ -6,7 +6,7 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
-    sana: "2026-10-16",
+    sana: "2026-10-17",
     sarlavha: "Xodimlar KPI",
     matn: "Hisobotlarda «Xodimlar KPI» sahifasi qo'shildi. Administrator egasi bo'lgan lid birinchi to'lovni qilganda va u yozgan to'lov va'dasi bajarilganda natija yoziladi; summa o'sha paytdagi narx bilan muhrlanadi. Sahifada natijalar, berilganda bo'ladigan summa, «Lid → to'lov» ulushi, «Diqqat» bloki, kunlar va oylar bo'yicha diagrammalar va administratorlar jadvali bor; xodim sahifasida «KPI» yorlig'i chiqdi. Narxlar va hisoblash kaliti — Sozlamalar → «KPI sozlamalari» (faqat CEO). Hozir kuzatuv: pul berilmaydi.",
     rollar: [1, 2],

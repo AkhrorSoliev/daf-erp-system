@@ -35,6 +35,6 @@ export const hisobotlar: QollanmaSahifa[] = [
     adr: ["0095", "0093"],
     yollar: ["/reports/xodimlar-kpi", "/settings/kpi"],
     kalitSozlar: ["KPI", "xodim natijasi", "administrator", "lid to'lov qildi", "va'da bajarildi", "mukofot", "kuzatuv"],
-    yangilangan: "2026-10-16",
+    yangilangan: "2026-10-17",
   },
 ];
