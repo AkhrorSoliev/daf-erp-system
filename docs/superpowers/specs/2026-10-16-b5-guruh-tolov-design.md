@@ -78,7 +78,7 @@ Hamma raqam `reports/month-charges.ts` dan: oyning CHARGED `EnrollmentMonthlyCha
 
 ### 4.2 Qoldiqni hisob qatorlariga bo'lish (yangi)
 O'quvchining doiradagi ulushi uning shu oydagi doiradagi hisob qatorlariga `chargedAmount` ulushida bo'linadi; yaxlitlash qoldig'i eng katta kasr qismli qatorga beriladi (largest remainder), shuning uchun qatorlar yig'indisi o'quvchi ulushiga AYNAN teng. Shu bilan:
-- Guruhlar yig'indisi (filtrsiz) = `getMonthCharges` ning `unpaid` i, so'mma-so'm; `charged`, `paid`, `students`, `unpaidStudents` ham teng — test (§8).
+- Guruh qatorlari yig'indisi (filtrsiz) `charged`, `paid`, `unpaid` bo'yicha `getMonthCharges` bilan so'mma-so'm teng. `students` va `unpaidStudents` qatorlar yig'indisida teng emas (ikki guruhli o'quvchi ikkala qatorda); yig'ma kartada, har o'quvchi bir marta sanalganda, ular ham teng — test (§8).
 - To'landi = hisoblandi − qoldi (har qatorda, guruhda, jamida) — pul emas, balansdan (ADR-0058 dagidek).
 
 Bitta pure funksiya o'quvchi ulushini hisoblaydi va ikkalasi — `splitMonthCharges` (jamlar) va yangi `splitMonthChargesByCharge` (qator ulushlari) — undan foydalanadi.

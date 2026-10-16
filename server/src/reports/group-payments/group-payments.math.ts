@@ -303,8 +303,10 @@ function haystack(row: GpRow, kesim: Kesim, data: GpData): string {
   ].join(' ');
 }
 
+// The id ends every sort: two groups of one name (other branches) never swap between pages.
 const byName = (a: GpRow, b: GpRow) =>
-  a.name.localeCompare(b.name, 'uz', { numeric: true });
+  a.name.localeCompare(b.name, 'uz', { numeric: true }) ||
+  a.id.localeCompare(b.id);
 const SORTS: Record<Tartib, (a: GpRow, b: GpRow) => number> = {
   // A row with nothing charged has no percentage: it goes last.
   foiz: (a, b) =>
@@ -384,7 +386,8 @@ export function studentLines(data: GpData, groupId: string): GpStudentLine[] {
         `${a.firstName} ${a.lastName}`.localeCompare(
           `${b.firstName} ${b.lastName}`,
           'uz',
-        ),
+        ) ||
+        a.id - b.id,
     );
 }
 

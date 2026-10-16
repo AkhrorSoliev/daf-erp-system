@@ -23,10 +23,11 @@ export const SAME_AS_OVERVIEW = "Umumiy ma'lumotlardagi 1-qator bilan bir xil ra
 
 export type Tone = "green" | "amber" | "red" | "muted";
 
-/** The «Foiz» colour (spec B5 §3.5): ≥ 90 green, ≥ 50 amber, below red; no percentage muted. */
+/** The «Foiz» colour (spec B5 §3.5), from the same whole number that is printed (89.6 → «90%» green): ≥ 90 green, ≥ 50 amber, below red; no percentage muted. */
 export function pctTone(pct: number | null): Tone {
   if (pct === null) return "muted";
-  return pct >= 90 ? "green" : pct >= 50 ? "amber" : "red";
+  const shown = Math.round(pct);
+  return shown >= 90 ? "green" : shown >= 50 ? "amber" : "red";
 }
 export const PAY_STATUS_TONE: Record<PayStatus, Tone> = { toladi: "green", qisman: "amber", tolamagan: "red" };
 

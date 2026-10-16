@@ -36,6 +36,15 @@ export function pageMonth(oy: string, current: string): string {
 }
 
 /**
+ * Is this the answer for the page's month? A month the user picked (`oy` sent) must match; for the
+ * current month (`oy` not sent) the server's own Tashkent month answers, so a settled answer is
+ * accepted whatever its month (a device clock on another month never leaves skeletons).
+ */
+export function isFreshAnswer(answerMonth: string, month: string, oySent: boolean, isPlaceholder: boolean): boolean {
+  return answerMonth === month || (!oySent && !isPlaceholder);
+}
+
+/**
  * The filters as `GET /reports/group-payments/excel` reads them — the URL's own
  * names. The current month is not sent, so the server's own Tashkent month
  * answers and a request in the first seconds of a month is never «Kelajak oy».

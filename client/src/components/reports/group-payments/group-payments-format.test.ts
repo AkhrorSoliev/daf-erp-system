@@ -3,8 +3,8 @@ import { formatPrice } from "@/lib/format-utils";
 import { drawerSubtitle, PAY_STATUS_LABEL, pctText, pctTone, STUDENT_MARK_LABEL, studentAmountText, summaryTitle } from "./group-payments-format";
 
 describe("percent", () => {
-  it("colour: ≥ 90 green, ≥ 50 amber, below red, none muted", () => {
-    expect([90, 89.9, 50, 49.9, 0].map(pctTone)).toEqual(["green", "amber", "amber", "red", "red"]);
+  it("colour follows the printed whole number: ≥ 90 green, ≥ 50 amber, below red, none muted", () => {
+    expect([90, 89.6, 89.4, 50, 49.5, 49.4, 0].map(pctTone)).toEqual(["green", "green", "amber", "amber", "amber", "red", "red"]);
     expect(pctTone(null)).toBe("muted");
   });
   it("whole on screen; «—» when nothing was charged", () => {

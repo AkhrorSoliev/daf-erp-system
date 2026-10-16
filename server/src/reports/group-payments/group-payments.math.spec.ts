@@ -321,6 +321,38 @@ describe('search, sort, «Faqat qarzi borlar», paging (spec §3.4)', () => {
       'Aziza Rahimova',
     ]);
   });
+  it('equal name and figures: id order, whatever the input order', () => {
+    const g = [group('gb', { name: 'A1-01' }), group('ga', { name: 'A1-01' })];
+    const c = [
+      charge('c1', 10001, 'gb', 450_000, 0),
+      charge('c2', 10002, 'ga', 450_000, 0),
+    ];
+    for (const tartib of ['foiz', 'qoldi', 'nomi'] as const) {
+      for (const flip of [false, true]) {
+        const d = data(
+          flip ? [...c].reverse() : c,
+          flip ? [...g].reverse() : g,
+        );
+        expect(filteredRows(d, toGpQuery({ tartib })).map((r) => r.id)).toEqual(
+          ['ga', 'gb'],
+        );
+      }
+    }
+  });
+  it('the drawer orders equal students by id, whatever the input order', () => {
+    const c = [
+      charge('c1', 10002, 'g1', 450_000, 0),
+      charge('c2', 10001, 'g1', 450_000, 0),
+    ];
+    const s = [student(10002), student(10001)].map((x) => ({
+      ...x,
+      lastName: 'Bir',
+    }));
+    for (const flip of [false, true]) {
+      const d = data(flip ? [...c].reverse() : c, [group('g1')], s);
+      expect(studentLines(d, 'g1').map((x) => x.id)).toEqual([10001, 10002]);
+    }
+  });
   it('«Faqat qarzi borlar» drops rows with nothing left', () => {
     expect(names(rows({ qarzdor: '1' }))).toEqual(['B1-01', 'A1-01', 'A1-02']);
   });

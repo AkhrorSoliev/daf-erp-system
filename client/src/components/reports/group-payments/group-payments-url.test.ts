@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { excelFileName, excelParams, GROUP_PAYMENTS_SCHEMA, hasGpFilter, pageMonth, rowsParams, type GroupPaymentsFilters } from "./group-payments-url";
+import { excelFileName, excelParams, GROUP_PAYMENTS_SCHEMA, hasGpFilter, isFreshAnswer, pageMonth, rowsParams, type GroupPaymentsFilters } from "./group-payments-url";
 
 const DEFAULTS = Object.fromEntries(Object.entries(GROUP_PAYMENTS_SCHEMA).map(([k, v]) => [k, v.defaultValue])) as unknown as GroupPaymentsFilters;
 const f = (u: Partial<GroupPaymentsFilters> = {}): GroupPaymentsFilters => ({ ...DEFAULTS, ...u });
@@ -42,4 +42,16 @@ describe("hasGpFilter / excelFileName", () => {
     expect(hasGpFilter(f({ qarzdor: "1" }))).toBe(true);
   });
   it("names the file by the month", () => expect(excelFileName("2026-10")).toBe("guruhlar-tolovi-2026-10.xlsx"));
+});
+
+describe("isFreshAnswer", () => {
+  it("an explicitly picked month accepts only its own answer", () => {
+    expect(isFreshAnswer("2026-09", "2026-09", true, false)).toBe(true);
+    expect(isFreshAnswer("2026-10", "2026-09", true, false)).toBe(false);
+    expect(isFreshAnswer("2026-10", "2026-09", true, true)).toBe(false);
+  });
+  it("the current month (no oy sent) accepts a settled answer whatever its month, never a kept one", () => {
+    expect(isFreshAnswer("2026-11", "2026-10", false, false)).toBe(true);
+    expect(isFreshAnswer("2026-09", "2026-10", false, true)).toBe(false);
+  });
 });

@@ -19,7 +19,7 @@ import { useGroupPaymentsRows } from "./group-payments-queries";
 import { GroupPaymentsSummary, GroupPaymentsSummarySkeleton } from "./group-payments-summary";
 import { GroupPaymentsTable } from "./group-payments-table";
 import {
-  cleanKesim, excelFileName, excelParams, GP_CLEARED, GP_FIRST_MONTH, GP_PAGE_SIZES, GROUP_PAYMENTS_SCHEMA, hasGpFilter, pageMonth, rowsParams,
+  cleanKesim, excelFileName, excelParams, GP_CLEARED, GP_FIRST_MONTH, GP_PAGE_SIZES, GROUP_PAYMENTS_SCHEMA, hasGpFilter, isFreshAnswer, pageMonth, rowsParams,
   type GroupPaymentsFilters,
 } from "./group-payments-url";
 
@@ -33,8 +33,8 @@ export function GroupPaymentsPage() {
   const kesim = cleanKesim(filters.kesim);
   const params = rowsParams(filters, current);
   const { data, isPending, isPlaceholderData, isError, refetch } = useGroupPaymentsRows(params);
-  // An answer kept from another month is never drawn as this month's.
-  const fresh = data && data.month === month ? data : undefined;
+  // An answer kept from another month is never drawn as this month's (no `oy` sent: the server's own month answers).
+  const fresh = data && isFreshAnswer(data.month, month, Boolean(params.oy), isPlaceholderData) ? data : undefined;
 
   // A page past the last one (a filter narrowed the list, an old link) goes to the last page that has rows.
   const lastPage = fresh && !isPlaceholderData ? lastPageIfPast(Number(params.sahifa), Number(params.soni), fresh.total, fresh.rows.length) : null;
@@ -72,7 +72,7 @@ export function GroupPaymentsPage() {
         </div>
       </div>
 
-      {!isError && (fresh ? <GroupPaymentsSummary month={month} summary={fresh.summary} /> : <GroupPaymentsSummarySkeleton />)}
+      {!isError && (fresh ? <GroupPaymentsSummary month={fresh.month} summary={fresh.summary} /> : <GroupPaymentsSummarySkeleton />)}
 
       <GroupPaymentsFilterBar filters={filters} onChange={onChange} />
 
