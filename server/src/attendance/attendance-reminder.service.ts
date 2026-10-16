@@ -6,6 +6,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { escapeHtml } from '../telegram-groups/utils/format.util';
 import { HolidaysService } from '../holidays/holidays.service';
 import { UnmarkedLessonsService } from './unmarked-lessons.service';
 import { lessonsOn, type SweepGroup } from './shared/ended-lessons';
@@ -608,21 +609,36 @@ export class AttendanceReminderService {
       );
     }
 
-    if (user.telegramChatId) {
-      try {
-        const bot = this.telegramService.getBot();
-        if (bot) {
-          await bot.telegram.sendMessage(
-            user.telegramChatId,
-            `<b>${title}</b>\n${message}`,
-            { parse_mode: 'HTML' },
-          );
-        }
-      } catch (err) {
-        this.logger.warn(
-          `Telegram send failed for user ${user.id}: ${err instanceof Error ? err.message : err}`,
-        );
-      }
+    if (!user.telegramChatId) return;
+    let sent: { message_id: number } | undefined;
+    try {
+      const bot = this.telegramService.getBot();
+      if (!bot) return;
+      sent = await bot.telegram.sendMessage(
+        user.telegramChatId,
+        `<b>${escapeHtml(title)}</b>\n${escapeHtml(message)}`,
+        { parse_mode: 'HTML' },
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Telegram send failed for user ${user.id}: ${err instanceof Error ? err.message : err}`,
+      );
+      return;
+    }
+    // ADR-0090: the resolver edits this copy when the alert closes. A failed
+    // write only leaves the message as it is.
+    try {
+      await this.prisma.notification.update({
+        where: { id: notification.id },
+        data: {
+          telegramChatId: user.telegramChatId,
+          telegramMessageId: sent.message_id,
+        },
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Telegram message id not stored for notification ${notification.id}: ${err instanceof Error ? err.message : err}`,
+      );
     }
   }
 }

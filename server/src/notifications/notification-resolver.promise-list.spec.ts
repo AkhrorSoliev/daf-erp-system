@@ -4,6 +4,7 @@ import { NotificationResolverService } from './notification-resolver.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { MIN_ALERT_DEBT } from '../payment-promises/overdue-digest';
 import { PrismaService } from '../prisma/prisma.service';
+import { TelegramService } from '../telegram/telegram.service';
 
 const OPEN = { actionRequired: true, resolvedAt: null };
 
@@ -33,6 +34,7 @@ describe('NotificationResolverService (the 09:00 promise lists)', () => {
         NotificationResolverService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsGateway, useValue: gateway },
+        { provide: TelegramService, useValue: { getBot: () => undefined } },
       ],
     }).compile();
     resolver = mod.get(NotificationResolverService);
