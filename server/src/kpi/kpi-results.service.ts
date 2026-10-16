@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { KpiResultStatus, KpiResultType, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { describeError } from '../telegram-digest/telegram-send';
 import { KpiSettingsService } from './kpi-settings.service';
 import { CANCEL_REASON, recordingSince } from './kpi-rules';
 import {
@@ -16,6 +17,9 @@ import {
 
 export type { KpiDraft, KpiRestore } from './kpi-results.plan';
 
+/** The nightly repair walks this far back (spec §7.6). */
+const SELF_HEAL_WINDOW_MS = 2 * 86_400_000;
+
 /**
  * The one writer of `KpiResult` (ADR-0094; `kpi-write.single-source.spec.ts`).
  * Called after a payment commits (`KpiRecorderListener`), by the nightly
@@ -25,6 +29,8 @@ export type { KpiDraft, KpiRestore } from './kpi-results.plan';
  */
 @Injectable()
 export class KpiResultsService {
+  private readonly logger = new Logger(KpiResultsService.name);
+
   constructor(
     private prisma: PrismaService,
     private kpiSettings: KpiSettingsService,
@@ -100,6 +106,72 @@ export class KpiResultsService {
       }
     }
     return count;
+  }
+
+  /**
+   * The nightly repair (spec §7.6): results of payments that no longer stand
+   * are cancelled (a correction's are moved to its re-post), and the last two
+   * days' COMPLETED payments are recorded again. Idempotent; one failing
+   * payment is logged and the run goes on.
+   */
+  async selfHeal(now: Date): Promise<{ cancelled: number; written: number }> {
+    let cancelled = 0;
+    let written = 0;
+    // ponytail: scans every ACTIVE result's payment; narrow to recent months if the table grows past a few thousand rows.
+    const standing = await this.prisma.kpiResult.findMany({
+      where: { status: KpiResultStatus.ACTIVE },
+      select: { paymentId: true },
+      distinct: ['paymentId'],
+    });
+    const gone = standing.length
+      ? await this.prisma.payment.findMany({
+          where: {
+            id: { in: standing.map((r) => r.paymentId) },
+            status: { not: PaymentStatus.COMPLETED },
+          },
+          select: { id: true },
+        })
+      : [];
+    for (const p of gone) {
+      try {
+        // A corrected payment's rows are looked up by the CORRECTED reason
+        // (`moveCorrected`), so the cancel must say it was a correction.
+        const corrector = await this.prisma.payment.findFirst({
+          where: { correctsPaymentId: p.id },
+          select: { id: true },
+        });
+        cancelled += await this.cancelForPayment(
+          p.id,
+          { correction: corrector != null },
+          now,
+        );
+        if (corrector) {
+          written += (await this.recordForPayment(corrector.id)).length;
+        }
+      } catch (e) {
+        this.logger.warn(
+          `KPI repair of payment ${p.id} failed: ${describeError(e)}`,
+        );
+      }
+    }
+    const recent = await this.prisma.payment.findMany({
+      where: {
+        status: PaymentStatus.COMPLETED,
+        createdAt: { gte: new Date(now.getTime() - SELF_HEAL_WINDOW_MS) },
+      },
+      select: { id: true },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    for (const p of recent) {
+      try {
+        written += (await this.recordForPayment(p.id)).length;
+      } catch (e) {
+        this.logger.warn(
+          `KPI of payment ${p.id} not recorded: ${describeError(e)}`,
+        );
+      }
+    }
+    return { cancelled, written };
   }
 
   /** The lead's next earliest COMPLETED payment becomes its result — a new result, so the switch applies. */

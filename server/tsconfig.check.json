@@ -77,7 +77,8 @@
     "scripts/lib/payment-correction-links.spec.ts",
     "scripts/backfill-payment-receipt-codes.ts",
     "scripts/lib/receipt-code-plan.ts",
-    "scripts/lib/receipt-code-plan.spec.ts"
+    "scripts/lib/receipt-code-plan.spec.ts",
+    "scripts/kpi-backfill.ts"
   ],
   "exclude": ["node_modules", "dist", "src/generated"]
 }
