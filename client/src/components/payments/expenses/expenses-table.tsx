@@ -38,9 +38,11 @@ export function ExpensesTable({ rows, loading, offset, emptyMonth, canManage, on
   stale?: boolean;
 }) {
   const actions = rowActions(canManage);
+  // A kept previous answer is never drawn as current: an empty one is a skeleton too.
+  const skeleton = loading || !rows || (stale && rows.length === 0);
   return (
     <div className="space-y-2">
-      {!loading && rows && rows.length === 0 ? (
+      {!skeleton && rows.length === 0 ? (
         <div className="rounded-md border p-8 text-center text-sm text-muted-foreground">
           {emptyMonth ? (
             <p>Bu oyda xarajat yozilmagan</p>
@@ -52,22 +54,22 @@ export function ExpensesTable({ rows, loading, offset, emptyMonth, canManage, on
           )}
         </div>
       ) : (
-        <div aria-busy={stale} className={cn("rounded-md border", stale && "pointer-events-none opacity-60")}>
+        <div aria-busy={stale} inert={stale} className={cn("rounded-md border", stale && "pointer-events-none opacity-60")}>
           <Table className="min-w-[860px]">
             <TableHeader>
               <TableRow>
                 {HEADS.map((h, i) => (
                   <TableHead key={i} className={i === 0 ? "w-12 border-r" : h === "Summa" ? "text-right" : i === HEADS.length - 1 ? "w-12" : undefined}>
-                    {h}
+                    {h || <span className="sr-only">Amallar</span>}
                   </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading || !rows
+              {skeleton || !rows
                 ? Array.from({ length: 6 }, (_, i) => (
                     <TableRow key={i}>
-                      {HEADS.map((h, j) => <TableCell key={j} className={j === 0 ? "border-r" : undefined}><Skeleton className="h-5 w-full" /></TableCell>)}
+                      {HEADS.map((_, j) => <TableCell key={j} className={j === 0 ? "border-r" : undefined}><Skeleton className="h-5 w-full" /></TableCell>)}
                     </TableRow>
                   ))
                 : rows.map((e, i) => (

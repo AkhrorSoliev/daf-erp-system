@@ -3,9 +3,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { formatPrice } from "@/lib/format-utils";
 import { ADVANCE_NOTE } from "./expenses-format";
-import { ExpensesFilterBar } from "./expenses-filter-bar";
+import { ExpensesFilterBar, firstPage } from "./expenses-filter-bar";
 import { ExpensesTable, rowActions } from "./expenses-table";
-import { EXPENSES_SCHEMA, type ExpensesFilters } from "./expenses-url";
+import { EXPENSES_CLEARED, EXPENSES_SCHEMA, type ExpensesFilters } from "./expenses-url";
 import type { ExpenseRow } from "./expenses-types";
 
 const raw = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el);
@@ -73,5 +73,34 @@ describe("ExpensesFilterBar (spec B6 §3.5)", () => {
   });
   it("«Tanlangan: N ta · X so'm» from the list's answer", () => {
     expect(text(bar({}, { count: 7, amount: 1_250_000 }))).toContain(norm(`Tanlangan: 7 ta · ${formatPrice(1_250_000)} so'm`));
+  });
+});
+
+describe("stale rows (a kept previous answer)", () => {
+  it("an empty stale answer is a skeleton, no empty text and no «Tozalash»", () => {
+    const html = raw(table({ rows: [], stale: true, onClear: noop }));
+    expect(html).toContain('data-slot="skeleton"');
+    expect(norm(html)).not.toContain("xarajat yo'q");
+    expect(norm(html)).not.toContain("Tozalash");
+  });
+  it("stale rows are dimmed and inert; fresh rows are not", () => {
+    const stale = raw(table({ stale: true }));
+    expect(stale).toContain("inert");
+    expect(stale).toContain("opacity-60");
+    expect(raw(table())).not.toContain("inert");
+  });
+  it("the last header cell is named", () => {
+    expect(text(table()).trimStart().startsWith("# Sana Turkum Tavsif Summa To'lov turi Kim kiritgan Amallar")).toBe(true);
+  });
+});
+
+describe("every filter change returns to page 1", () => {
+  it("firstPage adds sahifa: 1 to a filter update and to «Tozalash»", () => {
+    const calls: unknown[] = [];
+    const change = firstPage((u) => calls.push(u));
+    change({ q: "ijara" });
+    change({ turkum: ["RENT"] });
+    change(EXPENSES_CLEARED);
+    expect(calls).toEqual([{ q: "ijara", sahifa: 1 }, { turkum: ["RENT"], sahifa: 1 }, { ...EXPENSES_CLEARED, sahifa: 1 }]);
   });
 });

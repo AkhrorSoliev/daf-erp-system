@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox, type MultiSelectOption } from "@/components/ui/multi-select-combobox";
@@ -19,6 +19,9 @@ const USUL_OPTIONS = [
   { value: "karta", label: "Karta" },
 ];
 
+/** Every filter change puts the table back on page 1 (the URL helper does not). */
+export const firstPage = (onChange: (u: Partial<ExpensesFilters>) => void) => (u: Partial<ExpensesFilters>) => onChange({ ...u, sahifa: 1 });
+
 /** Search, category, method, «Kim kiritgan», «Tozalash» and «Tanlangan» (spec B6 §3.5). */
 export function ExpensesFilterBar({ filters, creators, selection, onChange }: {
   filters: ExpensesFilters;
@@ -28,8 +31,7 @@ export function ExpensesFilterBar({ filters, creators, selection, onChange }: {
   selection: { count: number; amount: number } | null;
   onChange: (u: Partial<ExpensesFilters>) => void;
 }) {
-  // Every filter change puts the table back on page 1 (the URL helper does not).
-  const change = useCallback((u: Partial<ExpensesFilters>) => onChange({ ...u, sahifa: 1 }), [onChange]);
+  const change = useMemo(() => firstPage(onChange), [onChange]);
   const onSearch = useCallback((q: string) => change({ q }), [change]);
   const usul = cleanUsul(filters.usul) || "all";
   const creatorOptions: MultiSelectOption[] = creators.map((c) => ({
