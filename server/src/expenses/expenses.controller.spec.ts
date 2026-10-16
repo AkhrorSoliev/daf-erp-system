@@ -1,12 +1,15 @@
+import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExpensesController } from './expenses.controller';
 import { ExpensesService } from './expenses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
+import { ExpenseMonthQueryDto } from './dto/expense-month-query.dto';
+import { ExpensesMonthService } from './expenses-month.service';
 
 describe('ExpensesController — route access', () => {
-  const READS = ['findAll', 'exportPdf'] as const;
+  const READS = ['findAll', 'exportPdf', 'monthSummary'] as const;
   const WRITES = ['create', 'update', 'remove'] as const;
 
   it.each(READS)('%s is gated by the expenses view capability', (name) => {
@@ -55,9 +58,16 @@ describe('ExpensesController — export delegation', () => {
   const mockService = {
     create: jest.fn().mockResolvedValue({}),
     findAll: jest.fn().mockResolvedValue({ data: [] }),
-    generateExpensesPdf: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4')),
+    generateExpensesPdf: jest.fn().mockResolvedValue({
+      buffer: Buffer.from('%PDF-1.4'),
+      filename: 'xarajatlar-2026-10.pdf',
+    }),
     update: jest.fn().mockResolvedValue({}),
     remove: jest.fn().mockResolvedValue({ message: '' }),
+  };
+
+  const mockMonthService = {
+    monthSummary: jest.fn().mockResolvedValue({ month: '2026-10' }),
   };
 
   beforeEach(async () => {
@@ -66,6 +76,7 @@ describe('ExpensesController — export delegation', () => {
       controllers: [ExpensesController],
       providers: [
         { provide: ExpensesService, useValue: mockService },
+        { provide: ExpensesMonthService, useValue: mockMonthService },
         { provide: PrismaService, useValue: mockPrisma },
       ],
     }).compile();
@@ -98,8 +109,38 @@ describe('ExpensesController — export delegation', () => {
       );
       expect(headers['Content-Type']).toBe('application/pdf');
       expect(String(headers['Content-Disposition'])).toContain('attachment');
+      expect(String(headers['Content-Disposition'])).toContain(
+        'xarajatlar-2026-10.pdf',
+      );
       expect(body).toBeDefined();
       expect(body!.toString().startsWith('%PDF')).toBe(true);
+    });
+  });
+
+  describe('month summary endpoint', () => {
+    it('passes the resolved scope and the month to the service', async () => {
+      await controller.monthSummary(
+        { oy: '2026-10' } as ExpenseMonthQueryDto,
+        42,
+        7,
+      );
+      expect(mockMonthService.monthSummary).toHaveBeenCalledWith(
+        42,
+        null,
+        '2026-10',
+      );
+    });
+
+    it('refuses an empty scope with 403 before any read', async () => {
+      mockPrisma.user.findFirst.mockResolvedValueOnce({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'Branch Director' } }],
+      });
+      await expect(
+        controller.monthSummary({} as ExpenseMonthQueryDto, 42, 7),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockMonthService.monthSummary).not.toHaveBeenCalled();
     });
   });
 });

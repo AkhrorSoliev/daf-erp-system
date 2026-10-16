@@ -1,10 +1,11 @@
 import { Suspense } from "react";
-import { ExpensesClient } from "@/components/payments/expenses-client";
+import { ExpensesPage } from "@/components/payments/expenses/expenses-page";
 
-export default function ExpensesPage() {
+// «Xarajatlar» (spec B6). Old `?startDate=` / `?category=` links are ignored: the page opens the current month.
+export default function ExpensesRoutePage() {
   return (
-    <Suspense>
-      <ExpensesClient />
+    <Suspense fallback={null}>
+      <ExpensesPage />
     </Suspense>
   );
 }

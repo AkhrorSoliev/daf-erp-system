@@ -14,6 +14,7 @@ export const searchablePages: SearchablePage[] = [
   { label: "Dars jadvali", url: "/schedule", keywords: ["schedule", "jadval", "dars"] },
   { label: "Moliya", url: "/payments", keywords: ["payment", "moliya", "tolov", "pul"] },
   { label: "To'lovlar", url: "/payments/list", keywords: ["to'lovlar", "tolovlar", "kvitansiya", "tushum", "bekor qilingan to'lov"] },
+  { label: "Xarajatlar", url: "/payments/expenses", keywords: ["xarajat", "ijara", "kommunal", "soliq", "chiqim"] },
   { label: "Hisobotlar", url: "/reports", keywords: ["report", "hisobot", "statistika"] },
   { label: "Guruhlar bo'yicha to'lov", url: "/reports/payment-reports", keywords: ["guruh to'lovi", "qarzdor guruh", "ustoz bo'yicha to'lov", "to'lov hisoboti"] },
   { label: "Sozlamalar", url: "/settings", keywords: ["setting", "sozlama", "config"] },
