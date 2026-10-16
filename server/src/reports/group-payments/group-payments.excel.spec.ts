@@ -60,8 +60,18 @@ const STUDENTS: GpSheetStudent[] = [
   },
 ];
 
-async function load(kesim: 'guruh' | 'ustoz' | 'kurs', rows = ROWS) {
-  const buf = await groupPaymentsWorkbook({ kesim, rows, students: STUDENTS });
+async function load(
+  kesim: 'guruh' | 'ustoz' | 'kurs',
+  rows = ROWS,
+  multiTeacherNote = false,
+  students = STUDENTS,
+) {
+  const buf = await groupPaymentsWorkbook({
+    kesim,
+    rows,
+    students,
+    multiTeacherNote,
+  });
   const wb = new Workbook();
   await wb.xlsx.load(buf as never);
   return wb;
@@ -187,5 +197,69 @@ describe('groupPaymentsWorkbook (spec B5 §5.4)', () => {
     expect(wb.getWorksheet("O'quvchilar")!.getRow(3).getCell(10).value).toBe(
       'guruhdan chiqqan',
     );
+  });
+
+  const NOTE =
+    "Ikki ustozli guruh har ikkala ustozda sanaladi — ustozlar yig'indisi jamidan katta bo'lishi mumkin.";
+  const TEACHER: GpRow = {
+    id: '20001',
+    name: 'Olim Karimov',
+    sub: '1 guruh',
+    marks: [],
+    students: 1,
+    charged: 900_000,
+    paid: 540_000,
+    unpaid: 360_000,
+    paidPct: 60,
+    unpaidStudents: 1,
+  };
+
+  it('the Ustozlar sheet carries the two-teacher note under «Jami» only with the flag', async () => {
+    const ws = (await load('ustoz', [TEACHER], true)).getWorksheet('Ustozlar')!;
+    expect(ws.getRow(3).getCell(1).value).toBe('Jami');
+    expect(ws.getRow(4).getCell(1).value).toBe(NOTE);
+    expect(
+      (await load('ustoz', [TEACHER], false)).getWorksheet('Ustozlar')!
+        .rowCount,
+    ).toBe(3);
+  });
+
+  it('Guruhlar and Kurslar never carry the note', async () => {
+    for (const kesim of ['guruh', 'kurs'] as const) {
+      const ws = (await load(kesim, ROWS, true)).worksheets[0];
+      expect(ws.rowCount).toBe(4);
+    }
+  });
+
+  it('labels deleted groups, archived and fully paid students, a null percentage', async () => {
+    const row: GpRow = {
+      ...ROWS[0],
+      marks: ['ochirilgan', 'yopilgan'],
+      paidPct: null,
+    };
+    const students: GpSheetStudent[] = [
+      { ...STUDENTS[0], status: 'toladi', mark: 'arxivda' },
+    ];
+    const wb = await load('guruh', [row], false, students);
+    const ws = wb.getWorksheet('Guruhlar')!;
+    expect(ws.getRow(2).getCell(2).value).toBe("B1-02 (o'chirilgan, yopilgan)");
+    expect(ws.getRow(2).getCell(9).value).toBe('');
+    const st = wb.getWorksheet("O'quvchilar")!.getRow(2);
+    expect([st.getCell(9).value, st.getCell(10).value]).toEqual([
+      "to'ladi",
+      'arxivda',
+    ]);
+  });
+
+  it('an empty table still has the headers and a «Jami» of zeros with a blank percentage', async () => {
+    const ws = (await load('guruh', [])).getWorksheet('Guruhlar')!;
+    expect(ws.rowCount).toBe(2);
+    expect([1, 6, 7, 8, 9].map((c) => ws.getRow(2).getCell(c).value)).toEqual([
+      'Jami',
+      0,
+      0,
+      0,
+      '',
+    ]);
   });
 });

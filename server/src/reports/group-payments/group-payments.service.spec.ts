@@ -368,6 +368,21 @@ describe('GroupPaymentsService.excel', () => {
     expect(wb.getWorksheet("O'quvchilar")!.rowCount).toBe(4); // header + 3 student–group lines
   });
 
+  it('the Ustozlar cut with a two-teacher group adds the note row', async () => {
+    const { wb } = await sheets({ kesim: 'ustoz' });
+    const ws = wb.getWorksheet('Ustozlar')!;
+    expect(ws.getRow(ws.rowCount).getCell(1).value).toEqual(
+      expect.stringMatching(/^Ikki ustozli guruh/),
+    );
+    const { wb: guruh } = await sheets({});
+    expect(
+      guruh
+        .getWorksheet('Guruhlar')!
+        .getRow(guruh.getWorksheet('Guruhlar')!.rowCount)
+        .getCell(1).value,
+    ).toBe('Jami');
+  });
+
   it('«qarzdor» keeps only the students with something left on the second sheet', async () => {
     const { wb } = await sheets({ qarzdor: '1' });
     const ws = wb.getWorksheet("O'quvchilar")!;

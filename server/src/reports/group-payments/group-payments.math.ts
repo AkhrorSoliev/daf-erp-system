@@ -324,6 +324,14 @@ export function filteredRows(data: GpData, f: GpFilters): GpRow[] {
     .sort(SORTS[f.tartib]);
 }
 
+/** Ustozlar cut only: a group with two teachers is counted under both (spec B5 §3.5). */
+export function hasMultiTeacherNote(data: GpData, kesim: Kesim): boolean {
+  return (
+    kesim === 'ustoz' &&
+    [...data.groups.values()].some((g) => g.teachers.length > 1)
+  );
+}
+
 export function buildRowsResponse(data: GpData, q: GpQuery): GpRowsResponse {
   const rows = filteredRows(data, q);
   return {
@@ -331,9 +339,7 @@ export function buildRowsResponse(data: GpData, q: GpQuery): GpRowsResponse {
     summary: summarize(data),
     rows: rows.slice((q.sahifa - 1) * q.soni, q.sahifa * q.soni),
     total: rows.length,
-    multiTeacherNote:
-      q.kesim === 'ustoz' &&
-      [...data.groups.values()].some((g) => g.teachers.length > 1),
+    multiTeacherNote: hasMultiTeacherNote(data, q.kesim),
   };
 }
 

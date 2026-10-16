@@ -15,6 +15,7 @@ import { groupPaymentsWorkbook } from './group-payments.excel';
 import {
   buildRowsResponse,
   filteredRows,
+  hasMultiTeacherNote,
   groupDrawer,
   parseReportMonth,
   studentSheetLines,
@@ -57,6 +58,7 @@ export class GroupPaymentsService {
       kesim: f.kesim,
       rows: filteredRows(data, f),
       students: studentSheetLines(data, f.qarzdor),
+      multiTeacherNote: hasMultiTeacherNote(data, f.kesim),
     });
     return { buffer, filename: `guruhlar-tolovi-${month}.xlsx` };
   }

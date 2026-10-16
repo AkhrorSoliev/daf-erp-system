@@ -20,6 +20,9 @@ const SHEET: Record<Kesim, string> = {
   ustoz: 'Ustozlar',
   kurs: 'Kurslar',
 };
+/** The page's grey note under the Ustozlar table (spec B5 §3.5). */
+const MULTI_TEACHER_NOTE =
+  "Ikki ustozli guruh har ikkala ustozda sanaladi — ustozlar yig'indisi jamidan katta bo'lishi mumkin.";
 const MARK_LABEL = { ochirilgan: "o'chirilgan", yopilgan: 'yopilgan' } as const;
 const PAY_STATUS_LABEL: Record<PayStatus, string> = {
   toladi: "to'ladi",
@@ -83,6 +86,8 @@ export async function groupPaymentsWorkbook(input: {
   kesim: Kesim;
   rows: readonly GpRow[];
   students: readonly GpSheetStudent[];
+  /** Ustozlar cut with a two-teacher group: adds the note under «Jami». */
+  multiTeacherNote?: boolean;
 }): Promise<Buffer> {
   const wb = new Workbook();
   const lead = LEAD[input.kesim];
@@ -105,6 +110,7 @@ export async function groupPaymentsWorkbook(input: {
       r.unpaidStudents,
     ]),
   );
+  // «Jami» leaves «O'quvchi» and «To'lamagan» blank: students overlap across groups, so a sum would overcount.
   const sum = (k: 'charged' | 'paid' | 'unpaid') =>
     input.rows.reduce((s, r) => s + r[k], 0);
   ws.addRow([
@@ -117,6 +123,12 @@ export async function groupPaymentsWorkbook(input: {
     paidPctOf(sum('paid'), sum('charged')) ?? '',
     '',
   ]).font = { bold: true };
+  if (input.kesim === 'ustoz' && input.multiTeacherNote) {
+    ws.addRow([MULTI_TEACHER_NOTE]).font = {
+      italic: true,
+      color: { argb: 'FF808080' },
+    };
+  }
 
   const st = wb.addWorksheet("O'quvchilar");
   st.columns = STUDENT_COLUMNS;
