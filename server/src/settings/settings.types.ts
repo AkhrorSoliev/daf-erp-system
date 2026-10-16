@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { PaymentModel } from '@prisma/client';
+import { KpiRuleMode, PaymentModel } from '@prisma/client';
 
 /**
  * Sozlamalar registri — `/settings` panelining yagona manbasi.
@@ -37,7 +37,12 @@ export type SettingKey =
   | 'lessonRating.enabled'
   | 'leads.maxUntouched'
   | 'leads.firstActionHours'
-  | 'leads.followUpDays';
+  | 'leads.followUpDays'
+  | 'kpi.enabled'
+  | 'kpi.leadPaid.mode'
+  | 'kpi.leadPaid.value'
+  | 'kpi.promiseKept.mode'
+  | 'kpi.promiseKept.value';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -56,6 +61,11 @@ export interface SettingValueMap {
   'leads.maxUntouched': number;
   'leads.firstActionHours': number;
   'leads.followUpDays': number;
+  'kpi.enabled': boolean;
+  'kpi.leadPaid.mode': KpiRuleMode;
+  'kpi.leadPaid.value': number;
+  'kpi.promiseKept.mode': KpiRuleMode;
+  'kpi.promiseKept.value': number;
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -189,6 +199,16 @@ function parseIntInRange(
     `${key} ${min} dan ${max} gacha bo'lgan butun son bo'lishi kerak, kelgan qiymat: ${JSON.stringify(raw)}`,
   );
 }
+
+function parseKpiMode(key: SettingKey, raw: unknown): KpiRuleMode {
+  if (raw === KpiRuleMode.FIXED || raw === KpiRuleMode.PERCENT) return raw;
+  throw new BadRequestException(
+    `${key} faqat "FIXED" yoki "PERCENT" bo'lishi mumkin, kelgan qiymat: ${JSON.stringify(raw)}`,
+  );
+}
+
+/** A rule's value: whole so'm up to 10 000 000; a percent is held to 0–100 by `KpiSettingsService`. */
+const KPI_VALUE_MAX = 10_000_000;
 
 export const SETTING_DEFINITIONS: {
   [K in SettingKey]: SettingDefinition<K>;
@@ -340,6 +360,40 @@ export const SETTING_DEFINITIONS: {
     key: 'leads.followUpDays',
     defaultValue: 3,
     parse: (raw) => parseIntInRange('leads.followUpDays', raw, 1, 14),
+    companyLevelOnly: true,
+  },
+  // Admin KPI (ADR-0094): read by `KpiSettingsService` per company; the CEO
+  // changes them on Sozlamalar → «KPI sozlamalari» (`PATCH /kpi/settings`).
+  'kpi.enabled': {
+    key: 'kpi.enabled',
+    defaultValue: true,
+    parse: (raw) => parseBoolean('kpi.enabled', raw),
+    companyLevelOnly: true,
+  },
+  'kpi.leadPaid.mode': {
+    key: 'kpi.leadPaid.mode',
+    defaultValue: KpiRuleMode.FIXED,
+    parse: (raw) => parseKpiMode('kpi.leadPaid.mode', raw),
+    companyLevelOnly: true,
+  },
+  'kpi.leadPaid.value': {
+    key: 'kpi.leadPaid.value',
+    defaultValue: 50_000,
+    parse: (raw) =>
+      parseIntInRange('kpi.leadPaid.value', raw, 0, KPI_VALUE_MAX),
+    companyLevelOnly: true,
+  },
+  'kpi.promiseKept.mode': {
+    key: 'kpi.promiseKept.mode',
+    defaultValue: KpiRuleMode.FIXED,
+    parse: (raw) => parseKpiMode('kpi.promiseKept.mode', raw),
+    companyLevelOnly: true,
+  },
+  'kpi.promiseKept.value': {
+    key: 'kpi.promiseKept.value',
+    defaultValue: 20_000,
+    parse: (raw) =>
+      parseIntInRange('kpi.promiseKept.value', raw, 0, KPI_VALUE_MAX),
     companyLevelOnly: true,
   },
 };

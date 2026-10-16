@@ -26,6 +26,11 @@ describe('SETTING_DEFINITIONS registry', () => {
         'leads.maxUntouched',
         'leads.firstActionHours',
         'leads.followUpDays',
+        'kpi.enabled',
+        'kpi.leadPaid.mode',
+        'kpi.leadPaid.value',
+        'kpi.promiseKept.mode',
+        'kpi.promiseKept.value',
       ].sort(),
     );
   });
