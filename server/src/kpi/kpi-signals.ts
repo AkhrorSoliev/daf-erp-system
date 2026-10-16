@@ -82,7 +82,11 @@ export function kpiSignals(
         u.compareResults === 0
           ? null
           : share(u.results - u.compareResults, u.compareResults);
-      if (change === null || Math.abs(change) >= 30) {
+      // The threshold is tested on the integers; `change` is only for the text.
+      if (
+        u.compareResults === 0 ||
+        Math.abs(u.results - u.compareResults) * 100 >= 30 * u.compareResults
+      ) {
         const up = u.results > u.compareResults;
         const tail =
           change === null ? '' : ` (${up ? '+' : '-'}${Math.abs(change)}%)`;
@@ -115,7 +119,7 @@ export function kpiSignals(
     // 4. Promises: under 30% of at least 5 closed.
     if (u.promiseClosed >= 5) {
       const rate = share(u.promiseKept, u.promiseClosed);
-      if (rate < 30) {
+      if (u.promiseKept * 100 < 30 * u.promiseClosed) {
         push(
           'PROMISE_LOW',
           u,
@@ -173,5 +177,5 @@ export function monthEndForecast(
 ): number | null {
   const passed = workingDays.filter((d) => d <= today).length;
   if (passed < 3) return null;
-  return Math.round((results / passed) * workingDays.length);
+  return Math.round((results * workingDays.length) / passed);
 }

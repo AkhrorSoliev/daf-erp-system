@@ -60,6 +60,20 @@ describe('kpiSignals (spec §7.9)', () => {
     );
   });
 
+  it('1. the 30% line is tested on exact numbers, not on rounded ones', () => {
+    // 27 → 19 is -29.63%: shows as 30%, but is under the line.
+    expect(kpiSignals([u({ results: 19, compareResults: 27 })], past)).toEqual(
+      [],
+    );
+    // exactly +30% and exactly -30% fire.
+    expect(
+      kpiSignals([u({ results: 13, compareResults: 10 })], past)[0].kind,
+    ).toBe('SURGE');
+    expect(
+      kpiSignals([u({ results: 7, compareResults: 10 })], past)[0].kind,
+    ).toBe('DROP');
+  });
+
   it('2. silent: 3 held leads and no result in 7 days, current month only', () => {
     const silent = u({ held: 3 });
     expect(kpiSignals([silent], now)).toEqual([
@@ -97,6 +111,17 @@ describe('kpiSignals (spec §7.9)', () => {
     expect(kpiSignals([u({ promiseKept: 2, promiseClosed: 6 })], past)).toEqual(
       [],
     );
+  });
+
+  it('4. the 30% line is tested on exact numbers, not on rounded ones', () => {
+    // exactly 30% is not under the line.
+    expect(
+      kpiSignals([u({ promiseKept: 3, promiseClosed: 10 })], past),
+    ).toEqual([]);
+    // 8 / 27 is 29.63%: under the line, though it shows as 30%.
+    expect(
+      kpiSignals([u({ promiseKept: 8, promiseClosed: 27 })], past)[0].text,
+    ).toBe("Nodira R: va'da bajarilishi 30% (8 / 27)");
   });
 
   it('5. the best lead → payment share among those with 5 leads, as good news', () => {
@@ -156,6 +181,11 @@ describe('monthEndForecast', () => {
   it('waits for the third working day', () => {
     expect(monthEndForecast(4, days, '2026-10-02')).toBeNull();
     expect(monthEndForecast(4, days, '2026-10-03')).toBe(36);
+  });
+
+  it('rounds a half-way value up, with no float drift', () => {
+    // 6th working day of 2026-10 is 7.10; 13 × 27 / 6 = 58.5 (13 / 6 × 27 is 58.4999…).
+    expect(monthEndForecast(13, days, '2026-10-07')).toBe(59);
   });
 
   it('divides by the working days passed, today included', () => {
