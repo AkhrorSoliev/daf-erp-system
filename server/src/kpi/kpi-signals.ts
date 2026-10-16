@@ -118,7 +118,8 @@ export function kpiSignals(
     }
     // 4. Promises: under 30% of at least 5 closed.
     if (u.promiseClosed >= 5) {
-      const rate = share(u.promiseKept, u.promiseClosed);
+      // Floored so a rate under 30% never prints as "30%".
+      const rate = Math.floor((u.promiseKept * 100) / u.promiseClosed);
       if (u.promiseKept * 100 < 30 * u.promiseClosed) {
         push(
           'PROMISE_LOW',

@@ -121,7 +121,7 @@ describe('kpiSignals (spec §7.9)', () => {
     // 8 / 27 is 29.63%: under the line, though it shows as 30%.
     expect(
       kpiSignals([u({ promiseKept: 8, promiseClosed: 27 })], past)[0].text,
-    ).toBe("Nodira R: va'da bajarilishi 30% (8 / 27)");
+    ).toBe("Nodira R: va'da bajarilishi 29% (8 / 27)");
   });
 
   it('5. the best lead → payment share among those with 5 leads, as good news', () => {
