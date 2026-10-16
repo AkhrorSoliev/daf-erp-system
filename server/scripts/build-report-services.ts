@@ -82,7 +82,6 @@ export function buildExcelService(prisma: PrismaService): ReportsExcelService {
     financial,
     new ReportsDebtHistoryService(prisma as any),
     payments,
-    null as any, // teacherPayments
     null as any, // studentPayments
     null as any, // departedStudents
     null as any, // departedLists

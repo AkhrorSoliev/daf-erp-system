@@ -1,7 +1,7 @@
 import { LeadStatus } from '@prisma/client';
 import type { OwnershipChange } from './lead-ownership.service';
 
-/** What a lead restored from the archive is cleared of (ADR-0092). */
+/** What a lead restored from the archive is cleared of (ADR-0093). */
 export const RELEASED_OWNER = {
   ownerId: null,
   ownedAt: null,

@@ -889,6 +889,21 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /reports/group-payments": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/group-payments/excel": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/group-payments/groups/:groupId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /reports/income-month-attribution": [
     "Branch Director",
     "CEO"
@@ -939,21 +954,6 @@
     "Branch Director",
     "CEO",
     "Cashier"
-  ],
-  "GET /reports/payment-reports": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/payment-reports/teachers": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/payment-reports/teachers/:teacherId/groups": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
   ],
   "GET /reports/profit-composition": [
     "Branch Director",

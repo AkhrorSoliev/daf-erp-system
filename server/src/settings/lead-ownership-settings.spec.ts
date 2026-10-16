@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { getSettingDefinition } from './settings.types';
 
-describe('lead ownership settings (ADR-0092)', () => {
+describe('lead ownership settings (ADR-0093)', () => {
   it.each([
     ['leads.maxUntouched', 10, 1, 100],
     ['leads.firstActionHours', 2, 1, 24],

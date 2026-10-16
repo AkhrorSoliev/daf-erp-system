@@ -408,7 +408,7 @@ export function LeadDetailDrawer() {
     setOptimisticComments((prev) => [comment, ...prev]);
   }, []);
 
-  // ADR-0092: the owner's comment moves their deadline on the server. Re-read it so
+  // ADR-0093: the owner's comment moves their deadline on the server. Re-read it so
   // the card and the drawer follow. Cosmetic, so a failure here stays silent.
   const refreshOwnerDue = useCallback(async () => {
     if (!lead || !authUser || lead.owner?.id !== authUser.id) return;
@@ -487,7 +487,7 @@ export function LeadDetailDrawer() {
     }
   }, [lead, applyLeadUpdate, invalidateActivity, authUser]);
 
-  // ADR-0092: the owner changed in the drawer — keep the drawer and the card in step.
+  // ADR-0093: the owner changed in the drawer — keep the drawer and the card in step.
   const handleOwnerChanged = useCallback(
     (card: LeadCard) => {
       setLead((prev) =>

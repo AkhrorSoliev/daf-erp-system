@@ -9,7 +9,7 @@ import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { leadOwnerNotices } from './lead-owner-notices';
 
-/** The bell side of a lead's owner change (ADR-0092): information, no action. */
+/** The bell side of a lead's owner change (ADR-0093): information, no action. */
 @Injectable()
 export class LeadOwnerNotifyListener {
   private readonly logger = new Logger(LeadOwnerNotifyListener.name);

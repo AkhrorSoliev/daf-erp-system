@@ -44,6 +44,43 @@ export interface MonthChargeRow {
   chargedAmount: number;
 }
 
+/** A charge row the per-charge split names in its answer (spec B5 §4.2). */
+export interface MonthChargeLine extends MonthChargeRow {
+  id: string;
+  groupId: string;
+  enrollmentId: string;
+}
+
+/** One in-scope charge of the month and its part of the student's unpaid share. */
+export interface ChargeShare {
+  id: string;
+  studentId: number;
+  groupId: string;
+  enrollmentId: string;
+  charged: number;
+  unpaid: number;
+}
+
+interface SplitInput<R extends MonthChargeRow> {
+  month: string;
+  branchIds: ReportBranchIds;
+  rows: readonly R[];
+  balances: ReadonlyMap<number, number>;
+}
+
+/** paid ÷ charged, one decimal; null when nothing was charged. */
+export function paidPctOf(paid: number, charged: number): number | null {
+  return charged > 0 ? Math.round((paid / charged) * 1000) / 10 : null;
+}
+
+const monthIndex = (month: string): number => {
+  const [y, m] = month.split('-').map(Number);
+  return y * 12 + m;
+};
+
+const inScope = (branchIds: ReportBranchIds, branchId: number): boolean =>
+  branchIds === null || branchIds.includes(branchId);
+
 /**
  * Pure. A balance settles the OLDEST charge first, so today's debt sits on the
  * newest charges: for the month M a student owes
@@ -54,16 +91,15 @@ export interface MonthChargeRow {
  *
  * `rows` are the students' CHARGED charges of M and LATER months, all
  * branches; rows of earlier months are ignored. A student's charges of M in
- * several branches share his unpaid part by amount.
+ * several branches share his unpaid part by amount: `scope` is his in-scope
+ * charge, `unpaid` the in-scope share. The ONE formula — `splitMonthCharges`
+ * adds these up and `splitMonthChargesByCharge` spreads them; nothing else may
+ * compute a month's unpaid part.
  */
-export function splitMonthCharges(input: {
-  month: string;
-  branchIds: ReportBranchIds;
-  rows: readonly MonthChargeRow[];
-  balances: ReadonlyMap<number, number>;
-}): MonthCharges {
-  const [y, m] = input.month.split('-').map(Number);
-  const target = y * 12 + m;
+function studentShares(
+  input: SplitInput<MonthChargeRow>,
+): Map<number, { scope: number; unpaid: number }> {
+  const target = monthIndex(input.month);
   const per = new Map<number, { all: number; scope: number; later: number }>();
   for (const r of input.rows) {
     const key = r.periodYear * 12 + r.periodMonth;
@@ -73,26 +109,35 @@ export function splitMonthCharges(input: {
       s.later += r.chargedAmount;
     } else {
       s.all += r.chargedAmount;
-      if (input.branchIds === null || input.branchIds.includes(r.branchId)) {
-        s.scope += r.chargedAmount;
-      }
+      if (inScope(input.branchIds, r.branchId)) s.scope += r.chargedAmount;
     }
     per.set(r.studentId, s);
   }
-
-  let charged = 0;
-  let unpaid = 0;
-  let students = 0;
-  let unpaidStudents = 0;
+  const out = new Map<number, { scope: number; unpaid: number }>();
   for (const [studentId, s] of per) {
     if (s.scope <= 0) continue;
-    students += 1;
-    charged += s.scope;
     const debt = Math.max(0, -(input.balances.get(studentId) ?? 0));
     const unpaidAll = Math.min(Math.max(0, debt - s.later), s.all);
-    const share = Math.round((unpaidAll * s.scope) / s.all);
-    unpaid += share;
-    if (share > 0) unpaidStudents += 1;
+    out.set(studentId, {
+      scope: s.scope,
+      unpaid: Math.round((unpaidAll * s.scope) / s.all),
+    });
+  }
+  return out;
+}
+
+/** «Bu oy hisoblandi / To'landi / Qoldi» in scope (ADR-0058): the students' shares added up. */
+export function splitMonthCharges(
+  input: SplitInput<MonthChargeRow>,
+): MonthCharges {
+  let charged = 0;
+  let unpaid = 0;
+  let unpaidStudents = 0;
+  const shares = studentShares(input);
+  for (const s of shares.values()) {
+    charged += s.scope;
+    unpaid += s.unpaid;
+    if (s.unpaid > 0) unpaidStudents += 1;
   }
   const paid = charged - unpaid;
   return {
@@ -100,10 +145,64 @@ export function splitMonthCharges(input: {
     charged,
     paid,
     unpaid,
-    paidPct: charged > 0 ? Math.round((paid / charged) * 1000) / 10 : null,
-    students,
+    paidPct: paidPctOf(paid, charged),
+    students: shares.size,
     unpaidStudents,
   };
+}
+
+/**
+ * Pure. Each student's unpaid share (`studentShares`) spread over his in-scope
+ * charges of `month` by `chargedAmount`. The so'm left by rounding go to the
+ * largest remainders (ties by charge id), so a student's charges add up to his
+ * share EXACTLY and any grouping of the answer adds up to `splitMonthCharges`'
+ * `unpaid` (spec B5 §4.2). Rows of later months, of other branches and of
+ * students with nothing charged in scope get no entry. Integer arithmetic:
+ * `unpaid × chargedAmount` stays far below 2^53.
+ */
+export function splitMonthChargesByCharge(
+  input: SplitInput<MonthChargeLine>,
+): ChargeShare[] {
+  const shares = studentShares(input);
+  const target = monthIndex(input.month);
+  const mine = input.rows.filter(
+    (r) =>
+      r.periodYear * 12 + r.periodMonth === target &&
+      inScope(input.branchIds, r.branchId) &&
+      shares.has(r.studentId),
+  );
+  const byStudent = new Map<number, MonthChargeLine[]>();
+  for (const r of mine) {
+    const list = byStudent.get(r.studentId);
+    if (list) list.push(r);
+    else byStudent.set(r.studentId, [r]);
+  }
+  const unpaidById = new Map<string, number>();
+  for (const [studentId, lines] of byStudent) {
+    const { scope, unpaid } = shares.get(studentId)!;
+    const parts = lines.map((l) => ({
+      id: l.id,
+      base: Math.floor((unpaid * l.chargedAmount) / scope),
+      rem: (unpaid * l.chargedAmount) % scope,
+    }));
+    let left = unpaid - parts.reduce((s, p) => s + p.base, 0);
+    for (const p of [...parts].sort(
+      (a, b) => b.rem - a.rem || (a.id < b.id ? -1 : 1),
+    )) {
+      if (left <= 0) break;
+      p.base += 1;
+      left -= 1;
+    }
+    for (const p of parts) unpaidById.set(p.id, p.base);
+  }
+  return mine.map((r) => ({
+    id: r.id,
+    studentId: r.studentId,
+    groupId: r.groupId,
+    enrollmentId: r.enrollmentId,
+    charged: r.chargedAmount,
+    unpaid: unpaidById.get(r.id) ?? 0,
+  }));
 }
 
 type MonthChargesDb = {

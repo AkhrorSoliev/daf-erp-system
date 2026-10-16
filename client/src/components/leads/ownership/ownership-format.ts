@@ -1,6 +1,6 @@
 import { tashkentDayNumber, tashkentDdMm, tashkentHhmm } from "@/lib/tashkent-time";
 
-/** A lead's owner as the server sends it (ADR-0092). */
+/** A lead's owner as the server sends it (ADR-0093). */
 export interface LeadOwner {
   id: number;
   firstName: string;

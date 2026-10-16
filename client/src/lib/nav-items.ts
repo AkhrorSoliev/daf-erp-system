@@ -115,7 +115,7 @@ export const navItems: NavItem[] = [
     title: "Hisobotlar",
     url: "/reports",
     icon: BarChart3,
-    // An Administrator sees only the Lidlar and To'lov hisobotlari; the
+    // An Administrator sees only the Lidlar and «Guruhlar bo'yicha to'lov» reports; the
     // children list filters the rest.
     permission: ["reports.finance", "reports.payments", "reports.students", "reports.leads"],
     children: reportsChildren,

@@ -58,7 +58,7 @@ describe('LeadsService', () => {
         aggregate: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
-        // ADR-0092: the owner's action stamp (touchLeadOwnerAction).
+        // ADR-0093: the owner's action stamp (touchLeadOwnerAction).
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         count: jest.fn(),
       },
@@ -101,7 +101,7 @@ describe('LeadsService', () => {
     ownership = {
       recordChange: jest.fn(),
       emit: jest.fn(),
-      // ADR-0092: every card asks for its deadline; no lead has one here.
+      // ADR-0093: every card asks for its deadline; no lead has one here.
       dueResolver: jest.fn().mockResolvedValue(() => null),
     };
 
@@ -179,7 +179,7 @@ describe('LeadsService', () => {
       ]);
     });
 
-    it('selects the owner and gives each card its server-computed deadline (ADR-0092)', async () => {
+    it('selects the owner and gives each card its server-computed deadline (ADR-0093)', async () => {
       const due = new Date('2026-10-19T07:00:00Z');
       ownership.dueResolver.mockResolvedValue(
         (l: { ownerId: number | null }) => (l.ownerId === 11 ? due : null),
@@ -599,7 +599,7 @@ describe('LeadsService', () => {
       );
     });
 
-    it('returns the owner and the server-computed deadline (ADR-0092)', async () => {
+    it('returns the owner and the server-computed deadline (ADR-0093)', async () => {
       const due = new Date('2026-10-19T07:00:00Z');
       ownership.dueResolver.mockResolvedValue(() => due);
       prisma.lead.findFirst.mockResolvedValue({
@@ -882,7 +882,7 @@ describe('LeadsService', () => {
       );
     });
 
-    describe('owner (ADR-0092)', () => {
+    describe('owner (ADR-0093)', () => {
       beforeEach(() => {
         prisma.leadSection.findFirst.mockResolvedValue({
           id: 'sec-2',
@@ -1130,7 +1130,7 @@ describe('LeadsService', () => {
       expect(history.recordUpdate).toHaveBeenCalled();
     });
 
-    it('answers with the card, deadline included (ADR-0092)', async () => {
+    it('answers with the card, deadline included (ADR-0093)', async () => {
       const due = new Date('2026-10-19T07:00:00Z');
       ownership.dueResolver.mockResolvedValue(() => due);
       prisma.lead.findFirst.mockResolvedValue({
@@ -1321,7 +1321,7 @@ describe('LeadsService', () => {
       );
     });
 
-    describe('owner and branch (ADR-0092)', () => {
+    describe('owner and branch (ADR-0093)', () => {
       const OWNED_LEAD = {
         id: 'lead-1',
         firstName: 'Aziz',
@@ -2087,7 +2087,7 @@ describe('LeadsService', () => {
       });
     });
 
-    it("stamps the owner's action when marking called (ADR-0092)", async () => {
+    it("stamps the owner's action when marking called (ADR-0093)", async () => {
       prisma.lead.findFirst.mockResolvedValue({ id: 'lead-1', calledAt: null });
       prisma.lead.update.mockResolvedValue({
         id: 'lead-1',

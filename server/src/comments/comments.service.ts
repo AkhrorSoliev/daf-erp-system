@@ -81,7 +81,7 @@ export class CommentsService {
       companyId,
     });
 
-    // ADR-0092: the lead owner's comment is an action that keeps the lead.
+    // ADR-0093: the lead owner's comment is an action that keeps the lead.
     if (dto.entityType === 'Lead') {
       await touchLeadOwnerAction(this.prisma, String(dto.entityId), userId);
     }

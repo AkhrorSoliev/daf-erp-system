@@ -4,7 +4,7 @@ import { getActionInfo, getFieldLabel, type HistoryRecord } from "./entity-histo
 const row = (action: string) =>
   ({ action: "UPDATE", newValues: { action }, oldValues: { action: null } }) as unknown as HistoryRecord;
 
-describe("lead owner history rows (ADR-0092)", () => {
+describe("lead owner history rows (ADR-0093)", () => {
   it.each([
     ["LID_BAND_QILINDI", "Lid band qilindi"],
     ["LID_BERILDI", "Lid boshqaga berildi"],

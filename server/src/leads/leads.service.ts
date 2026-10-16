@@ -117,7 +117,7 @@ export class LeadsService {
   }
 
   /**
-   * Adds `ownerDueAt` (ADR-0092): one settings read and one holiday read, and
+   * Adds `ownerDueAt` (ADR-0093): one settings read and one holiday read, and
    * none when no lead has a running clock (no owner, or a converted lead).
    */
   private async withOwnerDue<T extends OwnedLeadFields>(
@@ -190,7 +190,7 @@ export class LeadsService {
       where.section = { columnId: equalsOrIn(query.columnId) };
     if (query.status?.length) where.statusEnum = equalsOrIn(query.status);
 
-    // «Mas'ul» (ADR-0092): the chosen values are ORed under AND, beside the
+    // «Mas'ul» (ADR-0093): the chosen values are ORed under AND, beside the
     // branch predicate (and the search, which owns `where.OR`).
     if (query.owner?.length) {
       const ids = query.owner.filter((v) => /^\d+$/.test(v)).map(Number);
@@ -596,7 +596,7 @@ export class LeadsService {
     // stage — a brand-new lead always starts as NEW regardless of its column.
     const statusEnum = LeadStatus.NEW;
 
-    // ADR-0092: whoever adds a lead by hand has already spoken to the person,
+    // ADR-0093: whoever adds a lead by hand has already spoken to the person,
     // so a staff member who may claim leads owns it, the creation being the
     // first action. Public-form leads arrive with no owner.
     const ownerId =
@@ -838,7 +838,7 @@ export class LeadsService {
       _max: { order: true },
     });
 
-    // ADR-0092: an owner must work in the lead's branch, so a move to another
+    // ADR-0093: an owner must work in the lead's branch, so a move to another
     // branch takes the lead back from its owner. A converted lead's owner
     // stays frozen (stage 2 credits it).
     const releaseOwner =
@@ -996,7 +996,7 @@ export class LeadsService {
       select: LEAD_CARD_SELECT,
     });
 
-    // ADR-0092: the owner's call mark keeps the lead with them — stamped only
+    // ADR-0093: the owner's call mark keeps the lead with them — stamped only
     // once the mark is really saved.
     if (dto.called) {
       await touchLeadOwnerAction(this.prisma, id, userId);

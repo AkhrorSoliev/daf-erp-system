@@ -9,7 +9,7 @@ export const LEAD_FILTER_SCHEMA = {
   holati: { type: "array" as const, defaultValue: [] as string[] },
   sourceId: { type: "array" as const, defaultValue: [] as string[] },
   columnId: { type: "array" as const, defaultValue: [] as string[] },
-  // «Mas'ul» (ADR-0092): `me`, `none` and user ids; the server ORs them.
+  // «Mas'ul» (ADR-0093): `me`, `none` and user ids; the server ORs them.
   masul: { type: "array" as const, defaultValue: [] as string[] },
   startDate: { type: "string" as const, defaultValue: "" },
   endDate: { type: "string" as const, defaultValue: "" },

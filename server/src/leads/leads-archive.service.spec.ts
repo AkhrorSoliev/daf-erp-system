@@ -191,7 +191,7 @@ describe('LeadsArchiveService', () => {
     });
   });
 
-  describe('restoreLead — owner (ADR-0092)', () => {
+  describe('restoreLead — owner (ADR-0093)', () => {
     const DTO = { columnId: 'col-1', sectionId: 'sec-1' };
 
     beforeEach(() => {
@@ -419,7 +419,7 @@ describe('LeadsArchiveService', () => {
       expect(ownership.recordChange).not.toHaveBeenCalled();
     });
 
-    describe('owners of the restored leads (ADR-0092)', () => {
+    describe('owners of the restored leads (ADR-0093)', () => {
       beforeEach(() => {
         prisma.leadSection.findFirst.mockResolvedValue({
           id: 'sec-1',

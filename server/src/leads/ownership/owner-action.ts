@@ -3,7 +3,7 @@ import { LeadStatus, Prisma, PrismaClient } from '@prisma/client';
 type LeadDb = Pick<PrismaClient, 'lead'> | Prisma.TransactionClient;
 
 /**
- * Stamps the owner's action on a lead (ADR-0092): a call mark, a comment, a
+ * Stamps the owner's action on a lead (ADR-0093): a call mark, a comment, a
  * task on the lead. Only the OWNER's write counts, so the where-clause carries
  * `ownerId` and anyone else's changes nothing. A converted or archived lead's
  * clock is stopped, so it is not touched either.

@@ -1,4 +1,4 @@
-# ADR-0092 — Lidning bitta egasi bor: xodim band qiladi, muddatda harakat qilmasa lid qaytadi
+# ADR-0093 — Lidning bitta egasi bor: xodim band qiladi, muddatda harakat qilmasa lid qaytadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-16

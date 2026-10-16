@@ -48,7 +48,7 @@ const FIELDS: {
 
 const QUERY_KEY = ["lead-ownership-settings"];
 
-/** CEO-only (ADR-0092): the three numbers of the lead owner's clock. */
+/** CEO-only (ADR-0093): the three numbers of the lead owner's clock. */
 export function LeadOwnershipSettingsClient() {
   const queryClient = useQueryClient();
   // A draft exists only after an edit; until then the server's values show.

@@ -121,7 +121,7 @@ type OwnershipLead = Prisma.LeadGetPayload<{
 }>;
 
 /**
- * The one door for a lead's owner (ADR-0092): claim, give, release, and the
+ * The one door for a lead's owner (ADR-0093): claim, give, release, and the
  * log + history row every change writes. A converted lead's owner is frozen
  * (the KPI of stage 2 is credited to it), so none of these touch one.
  */
@@ -336,7 +336,7 @@ export class LeadOwnershipService {
     this.emit(change);
   }
 
-  /** «Kimda nechta lid» (ADR-0092): live holdings plus the period's log. */
+  /** «Kimda nechta lid» (ADR-0093): live holdings plus the period's log. */
   async summary(
     companyId: number,
     scope: ReportBranchIds,

@@ -5,7 +5,6 @@ import {
   Get,
   Logger,
   Param,
-  ParseIntPipe,
   Query,
   Res,
 } from '@nestjs/common';
@@ -20,7 +19,6 @@ import {
   resolveCallerReportBranchIds,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
-import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-by-query.dto';
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
@@ -570,7 +568,7 @@ export class ReportsController {
   /**
    * Hand a report the resolved scope as a LIST, so a caller with several
    * branches gets all of them rather than a 400 from `scoped()`. Used by the
-   * departed-students reports (ADR-0035) and /payment-reports. An empty scope
+   * departed-students reports (ADR-0035). An empty scope
    * is refused, never served as zeros (ADR-0002).
    */
   private listScope(scope: ReportBranchIds): ReportBranchIds {
@@ -580,54 +578,6 @@ export class ReportsController {
       );
     }
     return scope;
-  }
-
-  // /reports/payment-reports sahifasi va uning «O'qituvchilar» jadvali
-  // Administrator'ga ham ochiq (CEO, 05.10.2026). Filial doirasi o'zgarmaydi:
-  // `@BranchScope()` Administrator'ni o'z filiali(lari) bilan cheklaydi.
-  @Get('payment-reports')
-  @Can('reports.payments')
-  getPaymentReports(
-    @Query() query: PaymentReportsQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getPaymentReports(companyId, {
-      // Every leg filters with `branchIdWhere`, so the list is exact.
-      branchIds: this.listScope(scope),
-      startDate: query.startDate,
-      endDate: query.endDate,
-      months: query.months,
-    });
-  }
-
-  @Get('payment-reports/teachers')
-  @Can('reports.payments')
-  getTeacherPaymentReports(
-    @Query() query: PaymentReportsQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getTeacherPaymentReports(companyId, {
-      branchId: this.scoped(query, scope).branchId,
-      startDate: query.startDate,
-      endDate: query.endDate,
-    });
-  }
-
-  @Get('payment-reports/teachers/:teacherId/groups')
-  @Can('reports.payments')
-  getTeacherGroupsReport(
-    @Param('teacherId', ParseIntPipe) teacherId: number,
-    @Query() query: PaymentReportsQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getTeacherGroupsReport(companyId, teacherId, {
-      branchId: this.scoped(query, scope).branchId,
-      startDate: query.startDate,
-      endDate: query.endDate,
-    });
   }
 
   @Get('departed-students/summary')

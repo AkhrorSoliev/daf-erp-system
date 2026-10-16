@@ -7,7 +7,7 @@ export interface LeadOwnerNotice {
 }
 
 /**
- * Who hears about a lead's owner change (ADR-0092). Nobody is told about
+ * Who hears about a lead's owner change (ADR-0093). Nobody is told about
  * their own action; the system's take-back goes to the former owner.
  */
 export function leadOwnerNotices(

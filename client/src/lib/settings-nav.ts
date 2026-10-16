@@ -158,7 +158,7 @@ export const settingsNavSections: SettingsNavSection[] = [
         ceoOnly: true,
       },
       {
-        // The write is `@CeoOnly()` (ADR-0092): identity, not a capability.
+        // The write is `@CeoOnly()` (ADR-0093): identity, not a capability.
         title: "Lidlar egaligi",
         url: "/settings/lead-ownership",
         icon: UserCheck,

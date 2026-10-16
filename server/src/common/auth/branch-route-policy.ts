@@ -176,7 +176,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'COMPANY_WIDE',
     reason:
-      'Lead ownership limits (ADR-0092): `leads.maxUntouched`, ' +
+      'Lead ownership limits (ADR-0093): `leads.maxUntouched`, ' +
       '`leads.firstActionHours` and `leads.followUpDays` are company-level ' +
       'settings (`companyLevelOnly`) — one value for every branch. The read ' +
       'carries numbers only; the write is CEO-only through `@CeoOnly()`. The ' +

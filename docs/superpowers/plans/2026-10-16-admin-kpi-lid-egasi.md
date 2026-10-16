@@ -84,7 +84,7 @@ Client (o'zgaradi): `lib/permission-keys.ts`, `hooks/use-leads-board.ts`,
 `lib/breadcrumb-routes.ts`, `components/shared/entity-history-utils.ts`,
 `qollanma/sahifalar/oquvchilar.ts`, `qollanma/yangiliklar.ts`.
 
-Hujjatlar: `docs/adr/0092-lid-egasi.md`, `docs/adr/README.md`,
+Hujjatlar: `docs/adr/0093-lid-egasi.md`, `docs/adr/README.md`,
 `server/CLAUDE.md`, `client/CLAUDE.md`.
 
 ---
@@ -121,7 +121,7 @@ EMAS — asosiy katalog boshqa shoxda, uning Prisma client'i eski sxemadan.
 `model Lead` ichida `deletionBatchId String?` qatoridan keyin, `formSubmissions` dan oldin:
 
 ```prisma
-  // Lead owner (ADR-0092). `ownerId` is the current owner (null = the common
+  // Lead owner (ADR-0093). `ownerId` is the current owner (null = the common
   // pool); `ownedAt` is when the current ownership began; `ownerActedAt` is the
   // owner's last action in it (null = none yet). The deadline is never stored:
   // `ownershipDueAt` derives it from these two fields.
@@ -148,7 +148,7 @@ enum LeadOwnershipKind {
   EXPIRE
 }
 
-// Every change of a lead's owner (ADR-0092), append-only. Reports and the
+// Every change of a lead's owner (ADR-0093), append-only. Reports and the
 // later KPI stages read it; the lead's «Tarix» tab gets an EntityHistory row
 // for the same change. User ids are plain columns, like `statusChangedById`.
 model LeadOwnershipLog {
@@ -176,7 +176,7 @@ model LeadOwnershipLog {
 `server/prisma/migrations/20261016120000_lead_ownership/migration.sql`:
 
 ```sql
--- Lead owner (ADR-0092): a staff member claims a lead; without an action in
+-- Lead owner (ADR-0093): a staff member claims a lead; without an action in
 -- time the lead returns to the common pool. Idempotent, like the other
 -- hand-written migrations here.
 DO $$
@@ -250,7 +250,7 @@ Expected: xatosiz.
 ```bash
 cd ..
 git add server/prisma/schema.prisma server/prisma/migrations/20261016120000_lead_ownership
-git commit -m "feat(leads): lead owner fields and ownership log (ADR-0092)
+git commit -m "feat(leads): lead owner fields and ownership log (ADR-0093)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -410,7 +410,7 @@ import {
 } from '../../common/date/tashkent';
 
 /**
- * The clock a lead's owner works against (ADR-0092): Monday–Saturday,
+ * The clock a lead's owner works against (ADR-0093): Monday–Saturday,
  * 08:00–18:00 Tashkent, holidays left out. The same window as manual task
  * due dates and the automatic lead tasks.
  */
@@ -528,7 +528,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 import { BadRequestException } from '@nestjs/common';
 import { getSettingDefinition } from './settings.types';
 
-describe('lead ownership settings (ADR-0092)', () => {
+describe('lead ownership settings (ADR-0093)', () => {
   it.each([
     ['leads.maxUntouched', 10, 1, 100],
     ['leads.firstActionHours', 2, 1, 24],
@@ -604,7 +604,7 @@ function parseIntInRange(
 4. `SETTING_DEFINITIONS` da `'lessonRating.enabled'` yozuvidan keyin:
 
 ```ts
-  // Lead owner (ADR-0092): read by `LeadOwnershipService` per company; the
+  // Lead owner (ADR-0093): read by `LeadOwnershipService` per company; the
   // CEO changes them on Sozlamalar → «Lidlar egaligi».
   'leads.maxUntouched': {
     key: 'leads.maxUntouched',
@@ -675,7 +675,7 @@ Expected: FAIL (kalitlar katalogda yo'q).
 `permission-catalog.people.ts` da `'leads.forms'` yozuvidan keyin:
 
 ```ts
-  // Lead owner (ADR-0092). Claiming is the administrator's daily work; a
+  // Lead owner (ADR-0093). Claiming is the administrator's daily work; a
   // director or a cashier who works leads can be given it on «Ruxsatlar».
   'leads.claim': {
     section: 'leads',
@@ -726,7 +726,7 @@ Expected: PASS. Boshqa spec katalog sonlarini sanasa (masalan
 ```bash
 cd ../server && npx prettier --write src/common/permissions/permission-catalog.people.ts src/common/permissions/permission-catalog.spec.ts
 cd .. && git add server/src/common/permissions client/src/lib/permission-keys.ts
-git commit -m "feat(permissions): leads.claim and leads.assign (ADR-0092)
+git commit -m "feat(permissions): leads.claim and leads.assign (ADR-0093)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -765,7 +765,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ```ts
 /**
- * A lead's owner changed (ADR-0092): claimed, given, released or expired.
+ * A lead's owner changed (ADR-0093): claimed, given, released or expired.
  * Emitted after the commit by `LeadOwnershipService.emit`.
  */
 export const LEAD_OWNER_CHANGED = 'lead.owner.changed';
@@ -1225,7 +1225,7 @@ const LEAD_FOR_OWNERSHIP = {
 type OwnershipLead = Prisma.LeadGetPayload<{ select: typeof LEAD_FOR_OWNERSHIP }>;
 
 /**
- * The one door for a lead's owner (ADR-0092): claim, give, release, and the
+ * The one door for a lead's owner (ADR-0093): claim, give, release, and the
  * log + history row every change writes. A converted lead's owner is frozen
  * (the KPI of stage 2 is credited to it), so none of these touch one.
  */
@@ -1579,7 +1579,7 @@ export interface LeadOwnerNotice {
 }
 
 /**
- * Who hears about a lead's owner change (ADR-0092). Nobody is told about
+ * Who hears about a lead's owner change (ADR-0093). Nobody is told about
  * their own action; the system's take-back goes to the former owner.
  */
 export function leadOwnerNotices(p: LeadOwnerChangedPayload): LeadOwnerNotice[] {
@@ -1627,7 +1627,7 @@ import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { leadOwnerNotices } from './lead-owner-notices';
 
-/** The bell side of a lead's owner change (ADR-0092): information, no action. */
+/** The bell side of a lead's owner change (ADR-0093): information, no action. */
 @Injectable()
 export class LeadOwnerNotifyListener {
   private readonly logger = new Logger(LeadOwnerNotifyListener.name);
@@ -1683,7 +1683,7 @@ Expected: PASS.
 ```bash
 npx prettier --write src/leads/lead-events.ts src/leads/leads.module.ts src/leads/ownership src/notifications/lead-owner-notices.ts src/notifications/lead-owner-notices.spec.ts src/notifications/lead-owner-notify.listener.ts src/notifications/notifications.module.ts
 npx eslint src/leads/ownership src/notifications/lead-owner-notices.ts src/notifications/lead-owner-notify.listener.ts --quiet
-cd .. && git add server/src && git commit -m "feat(leads): claim, give and release a lead (ADR-0092)
+cd .. && git add server/src && git commit -m "feat(leads): claim, give and release a lead (ADR-0093)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -1802,7 +1802,7 @@ import { LeadStatus, Prisma, PrismaClient } from '@prisma/client';
 type LeadDb = Pick<PrismaClient, 'lead'> | Prisma.TransactionClient;
 
 /**
- * Stamps the owner's action on a lead (ADR-0092): a call mark, a comment, a
+ * Stamps the owner's action on a lead (ADR-0093): a call mark, a comment, a
  * task on the lead. Only the OWNER's write counts, so the where-clause carries
  * `ownerId` and anyone else's changes nothing. A converted or archived lead's
  * clock is stopped, so it is not touched either.
@@ -1843,7 +1843,7 @@ import {
 import { touchLeadOwnerAction } from './owner-action';
 
 /**
- * A task on a lead is the owner's action too (ADR-0092): creating one (the
+ * A task on a lead is the owner's action too (ADR-0093): creating one (the
  * next call date), moving it, or writing in it. The task events carry no
  * entity, so the task is read once.
  */
@@ -1894,7 +1894,7 @@ Run: `npx jest src/leads/ownership` — PASS.
 `leads.service.ts` `markCalled` da, `const data` dan oldin:
 
 ```ts
-    // ADR-0092: the owner's call mark keeps the lead with them.
+    // ADR-0093: the owner's call mark keeps the lead with them.
     if (dto.called) {
       await touchLeadOwnerAction(this.prisma, id, userId);
     }
@@ -1903,7 +1903,7 @@ Run: `npx jest src/leads/ownership` — PASS.
 `comments.service.ts` `create` da, `recordCreate` dan keyin:
 
 ```ts
-    // ADR-0092: the lead owner's comment is an action that keeps the lead.
+    // ADR-0093: the lead owner's comment is an action that keeps the lead.
     if (dto.entityType === 'Lead') {
       await touchLeadOwnerAction(this.prisma, String(dto.entityId), userId);
     }
@@ -1928,7 +1928,7 @@ Run: `npx jest src/leads/ownership` — PASS.
 - `create` da `const maxOrder = ...` dan oldin:
 
 ```ts
-    // ADR-0092: whoever adds a lead by hand has already spoken to the person,
+    // ADR-0093: whoever adds a lead by hand has already spoken to the person,
     // so a staff member who may claim leads owns it, the creation being the
     // first action. Public-form leads arrive with no owner.
     const ownerId =
@@ -2019,7 +2019,7 @@ Mavjud `create` testlari `data` ni aniq (`toEqual`) tekshirsa, ularga `ownerId: 
 - `const status = ...` dan keyin:
 
 ```ts
-    // ADR-0092: a lead back from the archive returns to the common pool. A
+    // ADR-0093: a lead back from the archive returns to the common pool. A
     // converted lead keeps its owner — the KPI is credited to it.
     const released: OwnershipChange | null =
       status !== LeadStatus.CONVERTED && lead.ownerId !== null
@@ -2211,7 +2211,7 @@ Importlar: `touchLeadOwnerAction` (`./ownership/owner-action`), `type OwnedLeadF
 2. `withCommentCount` dan keyin:
 
 ```ts
-  /** Adds `ownerDueAt` (ADR-0092): one settings read and one holiday read. */
+  /** Adds `ownerDueAt` (ADR-0093): one settings read and one holiday read. */
   private async withOwnerDue<T extends OwnedLeadFields>(
     leads: T[],
     companyId: number,
@@ -2287,7 +2287,7 @@ Run — FAIL.
 
 ```ts
   /**
-   * «Mas'ul» (ADR-0092): `me`, `none` and user ids, comma-separated; the
+   * «Mas'ul» (ADR-0093): `me`, `none` and user ids, comma-separated; the
    * values are ORed.
    */
   @IsOptional()
@@ -2639,7 +2639,7 @@ const STAFF_ROLE_NAMES = ['CEO', 'Branch Director', 'Administrator', 'Cashier'];
 Klass ichida:
 
 ```ts
-  /** «Kimda nechta lid» (ADR-0092): live holdings plus the period's log. */
+  /** «Kimda nechta lid» (ADR-0093): live holdings plus the period's log. */
   async summary(
     companyId: number,
     scope: ReportBranchIds,
@@ -2872,7 +2872,7 @@ import {
 } from './dto/lead-ownership-query.dto';
 
 /**
- * A lead's owner (ADR-0092). Registered before `LeadsController`; the two-segment
+ * A lead's owner (ADR-0093). Registered before `LeadsController`; the two-segment
  * `ownership/*` reads never meet its `:id` routes anyway.
  */
 @Controller('leads')
@@ -2981,7 +2981,7 @@ export class LeadOwnershipController {
   {
     policy: 'COMPANY_WIDE',
     reason:
-      'Lead ownership limits (ADR-0092): `leads.maxUntouched`, ' +
+      'Lead ownership limits (ADR-0093): `leads.maxUntouched`, ' +
       '`leads.firstActionHours` and `leads.followUpDays` are company-level ' +
       'settings (`companyLevelOnly`) — one value for every branch. The read ' +
       'carries numbers only; the write is CEO-only through `@CeoOnly()`. The ' +
@@ -3004,7 +3004,7 @@ Expected: PASS (`permission-routes.spec.ts`, `branch-route-policy.spec.ts`, `per
 ```bash
 npx prettier --write src/leads src/common/auth/branch-route-policy.ts src/common/permissions/route-access.snapshot.json
 npx eslint src/leads src/common/auth/branch-route-policy.ts --quiet
-cd .. && git add server/src && git commit -m "feat(leads): ownership routes, summary and limits (ADR-0092)
+cd .. && git add server/src && git commit -m "feat(leads): ownership routes, summary and limits (ADR-0093)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -3079,7 +3079,7 @@ Run: `npm test -- src/components/leads/ownership/ownership-format.test.ts` — F
 ```ts
 import { tashkentDayNumber, tashkentDdMm, tashkentHhmm } from "@/lib/tashkent-time";
 
-/** A lead's owner as the server sends it (ADR-0092). */
+/** A lead's owner as the server sends it (ADR-0093). */
 export interface LeadOwner {
   id: number;
   firstName: string;
@@ -3124,7 +3124,7 @@ Run — PASS.
 import api from "@/lib/api";
 import type { LeadCard } from "@/hooks/use-leads-board";
 
-/** The routes of `LeadOwnershipController` (ADR-0092). */
+/** The routes of `LeadOwnershipController` (ADR-0093). */
 export async function claimLead(id: string): Promise<LeadCard> {
   return (await api.post<LeadCard>(`/leads/${id}/claim`)).data;
 }
@@ -3205,7 +3205,7 @@ export function useMinuteClock(): Date {
 `hooks/use-leads-board.ts` — `import type { LeadOwner } from "@/components/leads/ownership/ownership-format";` va `LeadCard` ga (`commentCount` dan keyin):
 
 ```ts
-  /** The lead's owner (ADR-0092); null while it sits in the common pool. */
+  /** The lead's owner (ADR-0093); null while it sits in the common pool. */
   owner: LeadOwner | null;
   /** When the lead returns to the pool unless its owner acts (server-computed). */
   ownerDueAt: string | null;
@@ -3263,7 +3263,7 @@ const TONE = {
 } as const;
 
 /**
- * The owner line of a board card (ADR-0092): the owner's initials and the
+ * The owner line of a board card (ADR-0093): the owner's initials and the
  * deadline, or «Band qilish» on a free lead for someone who may claim it.
  * `interactive={false}` is the drag overlay's copy.
  */
@@ -3414,7 +3414,7 @@ import { ownerInitials, ownerName } from "./ownership-format";
 /** More than this many people: a search box appears (searchable select rule). */
 const SEARCH_FROM = 7;
 
-/** «Boshqaga berish» (ADR-0092): the lead branch's staff who may claim leads. */
+/** «Boshqaga berish» (ADR-0093): the lead branch's staff who may claim leads. */
 export function LeadOwnerAssign({
   leadId,
   currentOwnerId,
@@ -3559,7 +3559,7 @@ export interface OwnerBlockLead {
 }
 
 /**
- * «Mas'ul» in the lead drawer (ADR-0092): who holds the lead and until when,
+ * «Mas'ul» in the lead drawer (ADR-0093): who holds the lead and until when,
  * with «Band qilish», «Bo'shatish» and, for a manager, «Boshqaga berish».
  * A converted lead's owner is frozen: no buttons.
  */
@@ -3667,7 +3667,7 @@ export function LeadOwnerBlock({
 - `handleToggleCalled` dan keyin:
 
 ```tsx
-  // ADR-0092: the owner changed in the drawer — keep the drawer and the card in step.
+  // ADR-0093: the owner changed in the drawer — keep the drawer and the card in step.
   const handleOwnerChanged = useCallback(
     (card: LeadCard) => {
       setLead((prev) =>
@@ -3688,7 +3688,7 @@ export function LeadOwnerBlock({
 - `handleCommentConfirmed` ichida, `invalidateActivity(lead.id);` dan keyin — egasining izohi muddatni surgani uchun kartochkani yangilash:
 
 ```tsx
-      // ADR-0092: the owner's comment moved their deadline; refresh the section.
+      // ADR-0093: the owner's comment moved their deadline; refresh the section.
       if (lead.section && lead.owner?.id === authUser?.id) {
         void fetchSectionLeads(lead.section.id);
       }
@@ -3753,7 +3753,7 @@ describe("«Mas'ul» filtri", () => {
 - `LEAD_FILTER_SCHEMA` ga `columnId` dan keyin:
 
 ```ts
-  // «Mas'ul» (ADR-0092): `me`, `none` and user ids; the server ORs them.
+  // «Mas'ul» (ADR-0093): `me`, `none` and user ids; the server ORs them.
   masul: { type: "array" as const, defaultValue: [] as string[] },
 ```
 
@@ -3819,7 +3819,7 @@ import { LEAD_STATS_SCHEMA, parseStatsPeriod } from "../lead-stats";
 import { fetchOwnerSummary } from "./ownership-api";
 
 /**
- * «Xodimlar bo'yicha» under the stats strip (ADR-0092): how many leads each
+ * «Xodimlar bo'yicha» under the stats strip (ADR-0093): how many leads each
  * person holds now (and how many untouched), how many they took and how many
  * went back in the strip's period. A click lists that person's leads. A failed
  * request or nobody holding leads hides it; the board works without it.
@@ -3910,7 +3910,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 `settings-nav.test.ts` da `"the CEO sees all 13 items in two sections"` → `"the CEO sees all 14 items in two sections"`, `toHaveLength(13)` → `toHaveLength(14)`. Va yangi blok:
 
 ```ts
-describe("«Lidlar egaligi» — CEO only (ADR-0092)", () => {
+describe("«Lidlar egaligi» — CEO only (ADR-0093)", () => {
   const PATH = "/settings/lead-ownership";
   it("only the CEO sees and opens it", () => {
     const ceo = getVisibleSettingsSections(canForRoles([CEO]), true).flatMap((s) => s.items);
@@ -3929,7 +3929,7 @@ Run: `npm test -- src/lib/settings-nav.test.ts` — FAIL.
 
 ```ts
       {
-        // The write is `@CeoOnly()` (ADR-0092): identity, not a capability.
+        // The write is `@CeoOnly()` (ADR-0093): identity, not a capability.
         title: "Lidlar egaligi",
         url: "/settings/lead-ownership",
         icon: UserCheck,
@@ -4012,7 +4012,7 @@ const FIELDS: {
 
 const QUERY_KEY = ["lead-ownership-settings"];
 
-/** CEO-only (ADR-0092): the three numbers of the lead owner's clock. */
+/** CEO-only (ADR-0093): the three numbers of the lead owner's clock. */
 export function LeadOwnershipSettingsClient() {
   const queryClient = useQueryClient();
   // A draft exists only after an edit; until then the server's values show.
@@ -4138,7 +4138,7 @@ import { getActionInfo, type HistoryRecord } from "./entity-history-utils";
 const row = (action: string) =>
   ({ action: "UPDATE", newValues: { action }, oldValues: { action: null } }) as unknown as HistoryRecord;
 
-describe("lead owner history rows (ADR-0092)", () => {
+describe("lead owner history rows (ADR-0093)", () => {
   it.each([
     ["LID_BAND_QILINDI", "Lid band qilindi"],
     ["LID_BERILDI", "Lid boshqaga berildi"],
@@ -4157,7 +4157,7 @@ describe("lead owner history rows (ADR-0092)", () => {
 `getActionInfo` `case "UPDATE":` boshiga:
 
 ```ts
-      // Lead owner (ADR-0092).
+      // Lead owner (ADR-0093).
       if (customAction === "LID_BAND_QILINDI")
         return { label: "Lid band qilindi", icon: UserCheck, variant: "default" };
       if (customAction === "LID_BERILDI")
@@ -4186,17 +4186,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 16: Hujjatlar — ADR, CLAUDE.md, qo'llanma
 
 **Files:**
-- Create: `docs/adr/0092-lid-egasi.md`; Modify: `docs/adr/README.md`
+- Create: `docs/adr/0093-lid-egasi.md`; Modify: `docs/adr/README.md`
 - Modify: `server/CLAUDE.md`, `client/CLAUDE.md`
 - Create: `client/src/qollanma/kontent/oquvchilar/lid-egasi.mdx`
 - Modify: `client/src/qollanma/sahifalar/oquvchilar.ts`, `client/src/qollanma/yangiliklar.ts`
 
-- [ ] **Step 1: ADR-0092**
+- [ ] **Step 1: ADR-0093**
 
-`docs/adr/0092-lid-egasi.md` (boshqa ADR'lar formatida — Holati / Kontekst / Qaror / Ko'rib chiqilgan muqobillar / Oqibatlari):
+`docs/adr/0093-lid-egasi.md` (boshqa ADR'lar formatida — Holati / Kontekst / Qaror / Ko'rib chiqilgan muqobillar / Oqibatlari):
 
 ```markdown
-# ADR-0092: Lidning bitta egasi bor — xodim band qiladi, muddatda harakat qilmasa lid qaytadi
+# ADR-0093: Lidning bitta egasi bor — xodim band qiladi, muddatda harakat qilmasa lid qaytadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-16
@@ -4248,7 +4248,7 @@ yozilmagan. Har ishlaganga to'lash bitta natija uchun 2–3 marta pul chiqarardi
 `docs/adr/README.md` jadvaliga (0091 qatoridan keyin):
 
 ```markdown
-| [0092](0092-lid-egasi.md) | Lidning bitta egasi bor: xodim band qiladi, muddatda harakat qilmasa lid qaytadi | Qabul qilindi | 2026-10-16 |
+| [0093](0093-lid-egasi.md) | Lidning bitta egasi bor: xodim band qiladi, muddatda harakat qilmasa lid qaytadi | Qabul qilindi | 2026-10-16 |
 ```
 
 - [ ] **Step 2: CLAUDE.md**
@@ -4258,7 +4258,7 @@ yozilmagan. Har ishlaganga to'lash bitta natija uchun 2–3 marta pul chiqarardi
 - «Custom Form Submissions» bo'limidan oldin yangi bo'lim:
 
 ```markdown
-### Lead owner (`src/leads/ownership/`, ADR-0092)
+### Lead owner (`src/leads/ownership/`, ADR-0093)
 
 - `Lead.ownerId` / `ownedAt` / `ownerActedAt` are written only by `LeadOwnershipService` (claim, release, assign, `expireOverdue`), `LeadsService.create` (a staff member holding `leads.claim` owns the lead they add, the creation counting as the first action), `LeadsArchiveService.restoreLead` (an unconverted lead comes back without an owner) and `touchLeadOwnerAction` (`owner-action.ts`). Every owner change writes a `LeadOwnershipLog` row and a Lead `EntityHistory` UPDATE (`action`: `LID_BAND_QILINDI` / `LID_BERILDI` / `LID_BOSHATILDI` / `LID_QAYTDI`, fields `masul`, `sabab`) through `recordChange`, and emits `lead.owner.changed` after the commit (`LeadOwnerNotifyListener`: the bell for the new and the former owner, never the actor).
 - **Only the owner's action counts**: `touchLeadOwnerAction` is an `updateMany` keyed on `ownerId`, called by `markCalled` (`called: true`), `CommentsService.create` (`entityType` Lead) and `LeadOwnerTaskListener` (a task on the lead created, moved or commented by its owner). Moving a card or editing a lead is not an action.
@@ -4270,7 +4270,7 @@ yozilmagan. Har ishlaganga to'lash bitta natija uchun 2–3 marta pul chiqarardi
 `client/CLAUDE.md` da «Lead Forms and Their Responses» bo'limidan oldin:
 
 ```markdown
-### Lead owner (`components/leads/ownership/`, ADR-0092)
+### Lead owner (`components/leads/ownership/`, ADR-0093)
 
 - The card shows the owner's initials and the server's `ownerDueAt` («14:30 gacha», orange under an hour, «Muddat o'tdi»), or «Band qilish» on a free lead for `useCan("leads.claim")` (`lead-owner-badge.tsx`). The drawer's «Mas'ul» block (`lead-owner-block.tsx`) has «Band qilish», «Bo'shatish» (the owner, or `leads.assign`) and «Boshqaga berish» (`lead-owner-assign.tsx`, `leads.assign`). A converted lead shows no buttons.
 - The client computes no deadline: `ownerDueAt` comes from the server; `ownership-format.ts` only formats it on the Tashkent clock and `useMinuteClock` re-renders once a minute.
@@ -4289,7 +4289,7 @@ yozilmagan. Har ishlaganga to'lash bitta natija uchun 2–3 marta pul chiqarardi
     qisqacha:
       "Administrator lidni «Band qilish» bilan oladi va band qilingan lidni boshqasi ololmaydi. Muddatida qo'ng'iroq, izoh yoki topshiriq bo'lmasa, lid umumiy ro'yxatga o'zi qaytadi; CEO va filial direktori lidni boshqa xodimga beradi.",
     rollar: [1, 2, 3, 5],
-    adr: ["0092"],
+    adr: ["0093"],
     yollar: ["/leads", "/settings/lead-ownership"],
     kalitSozlar: ["lid", "band qilish", "mas'ul", "lid egasi", "muddat", "KPI"],
     yangilangan: "2026-10-16",
@@ -4356,7 +4356,7 @@ Chegara va muddatlarni CEO Sozlamalar → «Lidlar egaligi» sahifasida o'zgarti
 ```bash
 cd client && npm test -- src/qollanma
 cd .. && git add docs client/src/qollanma server/CLAUDE.md client/CLAUDE.md
-git commit -m "docs: ADR-0092 lead owner, CLAUDE.md and the user guide
+git commit -m "docs: ADR-0093 lead owner, CLAUDE.md and the user guide
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```

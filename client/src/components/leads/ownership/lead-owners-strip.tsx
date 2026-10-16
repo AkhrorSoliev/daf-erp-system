@@ -12,7 +12,7 @@ import { LEAD_STATS_SCHEMA, parseStatsPeriod } from "../lead-stats";
 import { fetchOwnerSummary } from "./ownership-api";
 
 /**
- * «Xodimlar bo'yicha» under the stats strip (ADR-0092): how many leads each
+ * «Xodimlar bo'yicha» under the stats strip (ADR-0093): how many leads each
  * person holds now (and how many untouched), how many they took and how many
  * went back in the strip's period. A click lists that person's leads. A failed
  * request or nobody holding leads hides it; the board works without it.

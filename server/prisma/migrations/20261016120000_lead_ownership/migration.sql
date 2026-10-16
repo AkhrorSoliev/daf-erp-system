@@ -1,4 +1,4 @@
--- Lead owner (ADR-0092): a staff member claims a lead; without an action in
+-- Lead owner (ADR-0093): a staff member claims a lead; without an action in
 -- time the lead returns to the common pool. Idempotent, like the other
 -- hand-written migrations here.
 DO $$

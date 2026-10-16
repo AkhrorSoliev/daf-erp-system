@@ -9,7 +9,7 @@ import { LeadsModule } from '../leads/leads.module';
 
 @Module({
   // LeadsModule: a restored lead's owner is released through
-  // LeadOwnershipService (ADR-0092). Nothing in LeadsModule's imports imports
+  // LeadOwnershipService (ADR-0093). Nothing in LeadsModule's imports imports
   // ArchiveModule, so there is no cycle.
   imports: [UploadModule, LeadsModule],
   controllers: [ArchiveController],

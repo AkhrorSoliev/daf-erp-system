@@ -2,11 +2,11 @@ import { ArchiveRestoreService } from './archive-restore.service';
 import { ArchiveEntityType } from './dto/archive-query.dto';
 
 /**
- * ADR-0092 / spec 6.3 rule 9: a lead restored from the archive returns to the
+ * ADR-0093 / spec 6.3 rule 9: a lead restored from the archive returns to the
  * common pool, whichever door it comes back through. This is the generic
  * `/archive` door: one lead, or a whole deletion batch.
  */
-describe('ArchiveRestoreService: owner of a restored lead (ADR-0092)', () => {
+describe('ArchiveRestoreService: owner of a restored lead (ADR-0093)', () => {
   const OWNED = {
     id: 'lead-1',
     firstName: 'Ali',

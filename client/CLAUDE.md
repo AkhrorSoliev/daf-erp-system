@@ -433,7 +433,7 @@ so existing links keep working.
 
 - **Every `<Tabs>` set in the app must persist its active tab in the URL — never `defaultValue` + local `useState`.** Reload, share, and back/forward navigation must restore the same tab the user was on. This applies to detail/profile pages, list/report pages, dashboards, nested sub-tabs, and tabs inside drawers/sheets alike.
 - **Why:** users link colleagues to a specific tab (`/teachers/profile/10239?tab=ish-haqi`), and reloading the page must not drop them back to the default tab.
-- **Scope:** all tabbed UIs. Current coverage — `/groups/[id]`, `/students/profile/[id]`, `/teachers/profile/[id]`, `/settings/courses/[id]`, `/settings/employees/[id]`, `/mock-exams/[id]`, `/tasks`, `/outreach`, `/reports/attendance`, the home dashboard schedule view, the leads detail drawer, and the outreach callbacks sub-filter. The only exemption is a `<Tabs>` with a **single** trigger (no navigation choice — e.g. `/reports/payment-reports`); it may stay uncontrolled. Add the pattern to any new tab set you introduce.
+- **Scope:** all tabbed UIs. Current coverage — `/groups/[id]`, `/students/profile/[id]`, `/teachers/profile/[id]`, `/settings/courses/[id]`, `/settings/employees/[id]`, `/mock-exams/[id]`, `/tasks`, `/outreach`, `/reports/attendance`, the home dashboard schedule view, the leads detail drawer, and the outreach callbacks sub-filter. The only exemption is a `<Tabs>` with a **single** trigger (no navigation choice); it may stay uncontrolled. Add the pattern to any new tab set you introduce.
 - **Implementation:** the parent `*-client.tsx` owns the URL ↔ tab state and passes `activeTab` + `onTabChange` to the tabs component:
   - Read: `const activeTab = searchParams.get("tab") ?? "<default>"`.
   - Write: `useCallback((tab) => { ... router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false }) }, [...])`.
@@ -777,6 +777,12 @@ The financial section lives under `/payments/*` with these sub-pages:
 - `components/reports/marketing/` — `marketing-client.tsx` (month picker `?month=`, `GET /reports/marketing`), `marketing-view.tsx` (four cards, «Marketing samarasi», «Oylar bo'yicha», «Manba bo'yicha»), `marketing-format.ts` (pure: «13×», the sentence). CEO/BD only (`reports-nav.ts`, `CEO_BD`).
 - Every figure is the server's, «Manba bo'yicha»'s «Aylanish» included (the row's `rate`, printed with `formatPercent`); a null one prints «—». Transition months (May–June 2026) print the new-student count with «*» and «—» for the rest, with the footnote. No visible LTV, CAC or ROI — `lib/uzbek-only-texts.test.ts` scans both B1 folders for them.
 
+### Group payments report (`/reports/payment-reports`, ADR-0092)
+
+- «Guruhlar bo'yicha to'lov», the one item of «Moliyaviy hisobotlar» (`reports-nav.ts`, `permission: "reports.payments"`: CEO, Branch Director, Administrator). Files in `components/reports/group-payments/`: `group-payments-page.tsx`, `group-payments-summary.tsx`, `group-payments-filter-bar.tsx`, `group-payments-table.tsx`, `group-drawer.tsx`, `group-payments-url.ts`, `group-payments-queries.ts`, `group-payments-types.ts`, `group-payments-format.ts` (pure, vitest).
+- URL keys (`GROUP_PAYMENTS_SCHEMA`): `oy` (empty = the current Tashkent month; `MonthStepper` from 2026-09), `kesim` (`guruh|ustoz|kurs`), `q`, `tartib` (`foiz|qoldi|nomi`), `qarzdor` (`1`), `sahifa`, `soni` (10–50, `PaymentsPager` with `sizes`), `guruh` (the open drawer). The server's parameters have the same names; the current month is not sent.
+- One request (`GET /reports/group-payments`) answers the card and the table; the card never follows the filters. Filtering, sorting and paging are the server's; the client computes no figure (`pctText` only rounds the server's percentage). Only «Guruhlar» rows open the drawer (`GET /reports/group-payments/groups/:id`; a 404 prints «Bu guruh tanlangan oyda topilmadi»). Excel: `GET /reports/group-payments/excel` with the same filters, no page.
+
 ### Lesson ratings (`/reports/dars-baholari`, ADR-0091)
 
 - CEO only, by identity: the report item has `forRoles: [1]` (`reports-nav.ts`; `canEnterReports(can, roleIds)` / `canOpenReportPath(can, pathname, roleIds)` take the user's role ids), the teacher profile's «Baholar» tab is drawn for `isCeoUser(user)`. The server refuses everyone else (`@CeoOnly()`).
@@ -914,7 +920,7 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 
 The card also shows "Jinsi" and the age next to "Tug'ilgan sana". The age comes from `ageFromStoredDate` (`src/lib/age.ts`), which reads the day the card displays — the staff date picker stores local midnight (19:00Z the day before in Tashkent), the student's first-run form stores UTC midnight, so the ISO string's first ten characters are not the birthday.
 
-### Lead owner (`components/leads/ownership/`, ADR-0092)
+### Lead owner (`components/leads/ownership/`, ADR-0093)
 
 - The card shows the owner's initials and the server's `ownerDueAt` («14:30 gacha», orange under an hour, «Muddat o'tdi»), or «Band qilish» on a free lead for `useCan("leads.claim")` (`lead-owner-badge.tsx`). The drawer's «Mas'ul» block (`lead-owner-block.tsx`) has «Band qilish», «Bo'shatish» (the owner, or `leads.assign`) and «Boshqaga berish» (`lead-owner-assign.tsx`, `leads.assign`). A converted lead shows no buttons.
 - The client computes no deadline: `ownerDueAt` comes from the server; `ownership-format.ts` only formats it on the Tashkent clock and `useMinuteClock` re-renders once a minute.

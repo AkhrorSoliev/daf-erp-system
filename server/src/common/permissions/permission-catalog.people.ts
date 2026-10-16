@@ -181,7 +181,7 @@ export const PEOPLE_PERMISSIONS = {
     lockReasons: { [T]: LOCK.OWN_GROUPS },
     requires: [],
   },
-  // Lead owner (ADR-0092). Claiming is the administrator's daily work; a
+  // Lead owner (ADR-0093). Claiming is the administrator's daily work; a
   // director or a cashier who works leads can be given it on «Ruxsatlar».
   'leads.claim': {
     section: 'leads',

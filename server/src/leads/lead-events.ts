@@ -9,7 +9,7 @@ export interface LeadCalledPayload {
 }
 
 /**
- * A lead's owner changed (ADR-0092): claimed, given, released or expired.
+ * A lead's owner changed (ADR-0093): claimed, given, released or expired.
  * Emitted after the commit by `LeadOwnershipService.emit`.
  */
 export const LEAD_OWNER_CHANGED = 'lead.owner.changed';

@@ -133,7 +133,7 @@ describe("«Ruxsatlar» — the CEO's page, never a capability (ADR-0087)", () =
   });
 });
 
-describe("«Lidlar egaligi» — CEO only (ADR-0092)", () => {
+describe("«Lidlar egaligi» — CEO only (ADR-0093)", () => {
   const PATH = "/settings/lead-ownership";
   it("only the CEO sees and opens it", () => {
     const ceo = getVisibleSettingsSections(canForRoles([CEO]), true).flatMap((s) => s.items);

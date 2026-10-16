@@ -11,7 +11,6 @@ import {
   type DebtStatusFilter,
 } from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
-import { ReportsTeacherPaymentsService } from './reports-teacher-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
 import { ReportsDepartedStudentsService } from './reports-departed-students.service';
 import { ReportsDepartedListsService } from './reports-departed-lists.service';
@@ -78,7 +77,6 @@ export class ReportsService {
     private financial: ReportsFinancialService,
     private debtHistory: ReportsDebtHistoryService,
     private payments: ReportsPaymentsService,
-    private teacherPayments: ReportsTeacherPaymentsService,
     private studentPayments: ReportsStudentPaymentsService,
     private departedStudents: ReportsDepartedStudentsService,
     private departedLists: ReportsDepartedListsService,
@@ -666,38 +664,6 @@ export class ReportsService {
     options: Parameters<ReportsFinancialService['getDebtWriteOffsSummary']>[1],
   ) {
     return this.financial.getDebtWriteOffsSummary(companyId, options);
-  }
-
-  // Payments
-  getPaymentReports(
-    companyId: number,
-    options: {
-      branchIds: ReportBranchIds;
-      startDate?: string;
-      endDate?: string;
-      months?: 3 | 6;
-    },
-  ) {
-    return this.payments.getPaymentReports(companyId, options);
-  }
-
-  // Teacher payments
-  getTeacherPaymentReports(
-    companyId: number,
-    options: { branchId?: number; startDate?: string; endDate?: string },
-  ) {
-    return this.teacherPayments.getTeacherPaymentReports(companyId, options);
-  }
-  getTeacherGroupsReport(
-    companyId: number,
-    teacherId: number,
-    options: { branchId?: number; startDate?: string; endDate?: string },
-  ) {
-    return this.teacherPayments.getTeacherGroupsReport(
-      companyId,
-      teacherId,
-      options,
-    );
   }
 
   // Student payments

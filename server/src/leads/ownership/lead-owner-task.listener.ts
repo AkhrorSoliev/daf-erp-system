@@ -10,7 +10,7 @@ import {
 import { touchLeadOwnerAction } from './owner-action';
 
 /**
- * A task on a lead is the owner's action too (ADR-0092): creating one (the
+ * A task on a lead is the owner's action too (ADR-0093): creating one (the
  * next call date), moving it, or writing in it. The task events carry no
  * entity, so the task is read once.
  */

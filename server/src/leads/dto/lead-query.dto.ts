@@ -49,7 +49,7 @@ export class LeadQueryDto extends PaginationDto {
   status?: LeadStatus[];
 
   /**
-   * «Mas'ul» (ADR-0092): `me`, `none` and user ids, comma-separated; the
+   * «Mas'ul» (ADR-0093): `me`, `none` and user ids, comma-separated; the
    * values are ORed. A user id is at most 9 digits: the column is an int4, and
    * a longer number would reach Prisma and end as a 500.
    */

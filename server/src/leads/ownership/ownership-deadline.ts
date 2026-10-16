@@ -6,7 +6,7 @@ import {
 } from '../../common/date/tashkent';
 
 /**
- * The clock a lead's owner works against (ADR-0092): Monday–Saturday,
+ * The clock a lead's owner works against (ADR-0093): Monday–Saturday,
  * 08:00–18:00 Tashkent, holidays left out. The same window as manual task
  * due dates and the automatic lead tasks.
  */

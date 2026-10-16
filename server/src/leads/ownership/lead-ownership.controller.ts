@@ -20,7 +20,7 @@ import {
 } from './dto/lead-ownership-query.dto';
 
 /**
- * A lead's owner (ADR-0092). Registered before `LeadsController`; the two-segment
+ * A lead's owner (ADR-0093). Registered before `LeadsController`; the two-segment
  * `ownership/*` reads never meet its `:id` routes anyway.
  */
 @Controller('leads')

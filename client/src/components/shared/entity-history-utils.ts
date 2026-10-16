@@ -48,7 +48,7 @@ export const FIELD_LABELS: Record<string, string | null> = {
   mainBranch: "Asosiy filial",
   guruh: "Guruh",
   sabab: "Sabab",
-  // Lead owner (ADR-0092).
+  // Lead owner (ADR-0093).
   masul: "Mas'ul",
   // Oy to'lovi bilan nima bo'lgani (shartnoma 6.2, ADR-0043).
   pul: "Pul",
@@ -161,7 +161,7 @@ export function getActionInfo(record: HistoryRecord): ActionInfo {
       return { label: "Yaratildi", icon: Plus, variant: "default" };
 
     case "UPDATE":
-      // Lead owner (ADR-0092).
+      // Lead owner (ADR-0093).
       if (customAction === "LID_BAND_QILINDI")
         return { label: "Lid band qilindi", icon: UserCheck, variant: "default" };
       if (customAction === "LID_BERILDI")

@@ -50,7 +50,7 @@ describe('CommentsService', () => {
       groupTeacher: { findUnique: jest.fn().mockResolvedValue(null) },
       lead: {
         findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
-        // ADR-0092: a lead comment stamps the owner's action.
+        // ADR-0093: a lead comment stamps the owner's action.
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       user: {
@@ -127,7 +127,7 @@ describe('CommentsService', () => {
     });
   });
 
-  describe('create on a lead (ADR-0092)', () => {
+  describe('create on a lead (ADR-0093)', () => {
     it("stamps the commenter's action on the lead, owner-only", async () => {
       await service.create(
         { entityType: 'Lead' as const, entityId: 'lead-1', content: 'Aytdi' },

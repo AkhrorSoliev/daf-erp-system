@@ -1,7 +1,7 @@
 import api from "@/lib/api";
 import type { LeadCard } from "@/hooks/use-leads-board";
 
-/** The routes of `LeadOwnershipController` (ADR-0092). */
+/** The routes of `LeadOwnershipController` (ADR-0093). */
 export async function claimLead(id: string): Promise<LeadCard> {
   return (await api.post<LeadCard>(`/leads/${id}/claim`)).data;
 }

@@ -19,7 +19,7 @@ const TONE = {
 } as const;
 
 /**
- * The owner line of a board card (ADR-0092): the owner's initials and the
+ * The owner line of a board card (ADR-0093): the owner's initials and the
  * deadline, or «Band qilish» on a free lead for someone who may claim it.
  * `interactive={false}` is the drag overlay's copy.
  */

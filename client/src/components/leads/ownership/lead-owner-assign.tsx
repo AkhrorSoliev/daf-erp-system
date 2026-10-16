@@ -16,7 +16,7 @@ import { ownerInitials, ownerName } from "./ownership-format";
 /** More than this many people: a search box appears (searchable select rule). */
 const SEARCH_FROM = 7;
 
-/** «Boshqaga berish» (ADR-0092): the lead branch's staff who may claim leads. */
+/** «Boshqaga berish» (ADR-0093): the lead branch's staff who may claim leads. */
 export function LeadOwnerAssign({
   leadId,
   currentOwnerId,

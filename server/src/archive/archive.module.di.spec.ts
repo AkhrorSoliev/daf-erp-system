@@ -15,7 +15,7 @@ import { ArchiveRestoreService } from './archive-restore.service';
 import { ArchiveModule } from './archive.module';
 
 // No unit spec boots the Nest graph. `ArchiveModule` imports `LeadsModule` for
-// `LeadOwnershipService` (ADR-0092), so a module cycle or a missing provider
+// `LeadOwnershipService` (ADR-0093), so a module cycle or a missing provider
 // would only show at deploy. This compiles the real graph (no `init()`).
 describe('ArchiveModule: DI graph', () => {
   it('resolves ArchiveRestoreService with LeadOwnershipService', async () => {

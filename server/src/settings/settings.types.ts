@@ -322,7 +322,7 @@ export const SETTING_DEFINITIONS: {
     parse: (raw) => parseBoolean('lessonRating.enabled', raw),
     companyLevelOnly: true,
   },
-  // Lead owner (ADR-0092): read by `LeadOwnershipService` per company; the
+  // Lead owner (ADR-0093): read by `LeadOwnershipService` per company; the
   // CEO changes them on Sozlamalar → «Lidlar egaligi».
   'leads.maxUntouched': {
     key: 'leads.maxUntouched',

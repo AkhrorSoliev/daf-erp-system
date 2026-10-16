@@ -22,7 +22,7 @@ export interface OwnerBlockLead {
 }
 
 /**
- * «Mas'ul» in the lead drawer (ADR-0092): who holds the lead and until when,
+ * «Mas'ul» in the lead drawer (ADR-0093): who holds the lead and until when,
  * with «Band qilish», «Bo'shatish» and, for a manager, «Boshqaga berish».
  * A converted lead's owner is frozen: no buttons.
  */

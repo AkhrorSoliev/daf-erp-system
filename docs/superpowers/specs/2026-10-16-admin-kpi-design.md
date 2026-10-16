@@ -188,5 +188,5 @@ Hisobot va keyingi bosqichlar shu jadvaldan o'qiydi. Har yozuv lidning
 
 ### 6.6 ADR
 
-ADR-0092 «Lidning bitta egasi bor: xodim band qiladi, muddatda harakat
+ADR-0093 «Lidning bitta egasi bor: xodim band qiladi, muddatda harakat
 qilmasa lid qaytadi» — shu PR bilan.

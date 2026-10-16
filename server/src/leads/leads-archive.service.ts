@@ -246,7 +246,7 @@ export class LeadsArchiveService {
 
     const status = this.restoredStatus(lead, section.column?.systemKey ?? null);
 
-    // ADR-0092: a lead back from the archive returns to the common pool.
+    // ADR-0093: a lead back from the archive returns to the common pool.
     const released = restoreRelease(lead, status, {
       branchId,
       companyId,

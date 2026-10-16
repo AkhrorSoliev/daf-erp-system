@@ -91,7 +91,7 @@ export class ArchiveRestoreService {
     const defaultStatus = ENTITY_DEFAULT_STATUS[entityType];
     const historyEntityType = ENTITY_TYPE_MAP[entityType];
 
-    // ADR-0092: leads that come back owned are released to the common pool;
+    // ADR-0093: leads that come back owned are released to the common pool;
     // their listeners hear it after the commit.
     let released: OwnershipChange[] = [];
 
@@ -196,7 +196,7 @@ export class ArchiveRestoreService {
   }
 
   /**
-   * One archived lead (ADR-0092): it returns to the pool, so an owner is
+   * One archived lead (ADR-0093): it returns to the pool, so an owner is
    * cleared and the release is logged in the same transaction as the restore.
    * The generic restore always writes status NEW, so `restoreData.statusEnum`
    * is what the lead becomes. A lead with no owner is a plain update.
@@ -380,7 +380,7 @@ export class ArchiveRestoreService {
         data: { ...restoreBase, status: StudentStatus.ACTIVE, isActive: true },
       });
       // Every lead of the batch comes back as NEW, so every owned one is
-      // released to the pool (ADR-0092); the owners are read before the write.
+      // released to the pool (ADR-0093); the owners are read before the write.
       const ownedLeads = await tx.lead.findMany({
         where: { deletionBatchId: batchId, ownerId: { not: null } },
         select: {

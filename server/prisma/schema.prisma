@@ -810,7 +810,7 @@ model Lead {
   deletedBy       User?     @relation("LeadDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  // Lead owner (ADR-0092). `ownerId` is the current owner (null = the common
+  // Lead owner (ADR-0093). `ownerId` is the current owner (null = the common
   // pool); `ownedAt` is when the current ownership began; `ownerActedAt` is the
   // owner's last action in it (null = none yet). The deadline is never stored:
   // `ownershipDueAt` derives it from these two fields.
@@ -852,7 +852,7 @@ enum LeadOwnershipKind {
   EXPIRE
 }
 
-// Every change of a lead's owner (ADR-0092), append-only. Reports and the
+// Every change of a lead's owner (ADR-0093), append-only. Reports and the
 // later KPI stages read it; the lead's «Tarix» tab gets an EntityHistory row
 // for the same change. User ids are plain columns, like `statusChangedById`.
 model LeadOwnershipLog {
