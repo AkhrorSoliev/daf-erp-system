@@ -67,4 +67,11 @@ export const KADRLAR = [
     belgilar: [],
     kesish: null,
   },
+  {
+    nom: "xarajatlar/xarajatlar-sahifasi",
+    url: "/payments/expenses",
+    kutish: 'role=heading[name="Xarajatlar"]',
+    belgilar: [{ selector: 'role=button[name="Oldingi oy"]', raqam: 1 }],
+    kesish: null,
+  },
 ];
