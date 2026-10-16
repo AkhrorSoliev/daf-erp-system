@@ -2273,6 +2273,9 @@ model Notification {
   resolvedAt        DateTime?
   /// One day's rows of one lesson alert type, folded into one line: `ATTENDANCE_ADMIN_ALERT:2026-10-10`.
   groupKey          String?
+  /// The Telegram copy of a lesson alert (ADR-0090): edited when the row is resolved.
+  telegramChatId    String?
+  telegramMessageId Int?
   companyId         Int
   createdAt         DateTime         @default(now())
 
