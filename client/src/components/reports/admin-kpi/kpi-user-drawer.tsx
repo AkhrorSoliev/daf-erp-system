@@ -19,7 +19,7 @@ export function KpiUserDrawer({
 }) {
   return (
     <Sheet open={userId !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
+      <SheetContent className="flex w-full flex-col gap-0 p-0 data-[side=right]:sm:max-w-2xl">
         <SheetHeader className="border-b px-6 py-4">
           {/* pr-8 keeps the title clear of the sheet's own close button. */}
           <div className="min-w-0 pr-8">
