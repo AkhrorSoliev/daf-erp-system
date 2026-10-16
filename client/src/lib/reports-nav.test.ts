@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canForRoles } from "@/test-support/server-catalog";
 import { canEnterReports, canOpenReportPath, reportsNavSections } from "./reports-nav";
+import { routeLabels } from "./breadcrumb-routes";
 
 describe("hisobotlar bo'limiga kirish", () => {
   it("CEO va filial direktori hamma hisobotni ochadi", () => {
@@ -10,7 +11,7 @@ describe("hisobotlar bo'limiga kirish", () => {
     }
   });
 
-  it("administrator Lidlar va To'lov hisobotlarini ochadi, boshqa pul hisobotlarini ochmaydi", () => {
+  it("administrator Lidlar va «Guruhlar bo'yicha to'lov»ni ochadi, boshqa pul hisobotlarini ochmaydi", () => {
     expect(canEnterReports(canForRoles([3]), [3])).toBe(true);
     expect(canOpenReportPath(canForRoles([3]), "/reports", [3])).toBe(true);
     expect(canOpenReportPath(canForRoles([3]), "/reports/leads", [3])).toBe(true);
@@ -19,9 +20,12 @@ describe("hisobotlar bo'limiga kirish", () => {
     expect(canOpenReportPath(canForRoles([3]), "/reports/departed-students", [3])).toBe(false);
   });
 
-  it("«Moliyaviy hisobotlar»da faqat «To'lov hisobotlari» bor; «O'quvchi to'lovi» Moliya bo'limiga ko'chdi", () => {
+  it("«Moliyaviy hisobotlar»da faqat «Guruhlar bo'yicha to'lov» bor; havolasi va imkoniyati o'zgarmagan", () => {
     const section = reportsNavSections.find((s) => s.title === "Moliyaviy hisobotlar");
-    expect(section?.items.map((i) => i.title)).toEqual(["To'lov hisobotlari"]);
+    expect(section?.items.map((i) => [i.title, i.url, i.permission])).toEqual([
+      ["Guruhlar bo'yicha to'lov", "/reports/payment-reports", "reports.payments"],
+    ]);
+    expect(routeLabels["payment-reports"]).toBe("Guruhlar bo'yicha to'lov");
     expect(reportsNavSections.flatMap((s) => s.items).some((i) => i.url === "/reports/student-payments")).toBe(false);
   });
 

@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-16",
+    sarlavha: "Guruhlar bo'yicha to'lov",
+    matn: "Hisobotlarda «To'lov hisobotlari» o'rniga «Guruhlar bo'yicha to'lov»: oy tanlanadi, har guruh qancha to'lagani va qancha qolgani ko'rinadi, guruhni bosib kim to'lamaganini ko'rish mumkin. Raqamlar «Umumiy ma'lumotlar» bilan bir xil.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "hisobotlar", sahifa: "guruhlar-tolovi" },
+  },
+  {
     sana: "2026-10-13",
     sarlavha: "Dars baholari",
     matn: "O'quvchilar endi darsdan keyin Telegram botda darsga 1 dan 5 gacha baho qo'yadi; 1–3 qo'ysa, sababini yozishi mumkin. Hisobotlar → «Dars baholari» sahifasida ustozlarning o'rtacha bahosi, javob ulushi va past baholar ko'rinadi; ustoz profilida «Baholar» tab'i qo'shildi. Baholarni faqat CEO ko'radi. Tizim sahifadagi «Baho so'rash» kaliti bilan yoqiladi.",

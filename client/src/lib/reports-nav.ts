@@ -29,17 +29,18 @@ interface ReportsNavSection {
 }
 
 /**
- * An Administrator sees the Lidlar and To'lov hisobotlari reports (CEO
- * decisions: Lidlar 13.09.2026, To'lov hisobotlari 05.10.2026). The rest — the
- * money and centre figures — belong to the holders of `reports.finance` and
- * `reports.students`. The server agrees: `reports/lead-funnel` and
- * `reports/payment-reports*` check `reports.leads` and `reports.payments`.
+ * An Administrator sees the Lidlar and «Guruhlar bo'yicha to'lov» reports (CEO
+ * decisions: Lidlar 13.09.2026, the payments report 05.10.2026, kept by spec B5).
+ * The rest — the money and centre figures — belong to the holders of
+ * `reports.finance` and `reports.students`. The server agrees:
+ * `reports/lead-funnel` and `reports/group-payments*` check `reports.leads` and
+ * `reports.payments`.
  */
 export const reportsNavSections: ReportsNavSection[] = [
   {
     title: "Moliyaviy hisobotlar",
     items: [
-      { title: "To'lov hisobotlari", url: "/reports/payment-reports", icon: Receipt, permission: "reports.payments" },
+      { title: "Guruhlar bo'yicha to'lov", url: "/reports/payment-reports", icon: Receipt, permission: "reports.payments" },
     ],
   },
   {

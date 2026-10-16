@@ -2,8 +2,11 @@ import {
   isMonthlyBillingMonth,
   loadMonthCharges,
   splitMonthCharges,
+  splitMonthChargesByCharge,
+  type MonthChargeLine,
   type MonthChargeRow,
 } from './month-charges';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 const row = (
   studentId: number,
@@ -262,4 +265,220 @@ describe('loadMonthCharges', () => {
     expect(r.charged).toBe(0);
     expect(prisma.student.findMany).not.toHaveBeenCalled();
   });
+});
+
+const line = (
+  id: string,
+  studentId: number,
+  groupId: string,
+  month: string,
+  chargedAmount: number,
+  branchId = 1,
+): MonthChargeLine => {
+  const [periodYear, periodMonth] = month.split('-').map(Number);
+  return {
+    id,
+    studentId,
+    groupId,
+    enrollmentId: `e-${id}`,
+    periodYear,
+    periodMonth,
+    branchId,
+    chargedAmount,
+  };
+};
+
+/** A small seeded generator, so a failing case can be replayed by its seed. */
+function rng(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 2 ** 32;
+  };
+}
+
+function randomMonth(seed: number) {
+  const r = rng(seed);
+  const pick = (n: number) => Math.floor(r() * n);
+  const amounts = [0, 1, 137_500, 300_000, 450_000, 999_999];
+  const rows: MonthChargeLine[] = [];
+  const balances = new Map<number, number>();
+  let n = 0;
+  const students = 1 + pick(8);
+  for (let i = 0; i < students; i++) {
+    const studentId = 10001 + i;
+    const count = 1 + pick(3);
+    for (let k = 0; k < count; k++) {
+      n += 1;
+      rows.push(
+        line(
+          `c${n}`,
+          studentId,
+          `g${1 + pick(4)}`,
+          '2026-10',
+          amounts[pick(amounts.length)],
+          1 + pick(2),
+        ),
+      );
+    }
+    if (r() < 0.4) {
+      n += 1;
+      rows.push(
+        line(
+          `c${n}`,
+          studentId,
+          'g1',
+          r() < 0.5 ? '2026-11' : '2027-01',
+          450_000,
+        ),
+      );
+    }
+    if (r() < 0.2) {
+      n += 1;
+      rows.push(line(`c${n}`, studentId, 'g1', '2026-09', 450_000));
+    }
+    balances.set(studentId, pick(1_500_001) - 1_000_000);
+  }
+  return { rows, balances };
+}
+
+describe('splitMonthChargesByCharge', () => {
+  const base = { month: '2026-10', branchIds: null };
+
+  it('gives a single charge the whole unpaid part', () => {
+    const r = splitMonthChargesByCharge({
+      ...base,
+      rows: [line('c1', 1, 'g1', '2026-10', 450_000)],
+      balances: new Map([[1, -100_000]]),
+    });
+    expect(r).toEqual([
+      {
+        id: 'c1',
+        studentId: 1,
+        groupId: 'g1',
+        enrollmentId: 'e-c1',
+        charged: 450_000,
+        unpaid: 100_000,
+      },
+    ]);
+  });
+
+  it("splits by charge share; the largest remainder takes the so'm left by rounding", () => {
+    // 7 over 300 / 300 / 400 = 2.1 / 2.1 / 2.8 → 2 / 2 / 3.
+    const r = splitMonthChargesByCharge({
+      ...base,
+      rows: [
+        line('c1', 1, 'g1', '2026-10', 300),
+        line('c2', 1, 'g2', '2026-10', 300),
+        line('c3', 1, 'g3', '2026-10', 400),
+      ],
+      balances: new Map([[1, -7]]),
+    });
+    expect(r.map((s) => s.unpaid)).toEqual([2, 2, 3]);
+  });
+
+  it('breaks an equal remainder by charge id, so row order never changes the answer', () => {
+    // 5 over 100 / 200 / 700 = 0.5 / 1 / 3.5: c1 and c3 tie, c1 wins.
+    const rows = [
+      line('c3', 1, 'g3', '2026-10', 700),
+      line('c1', 1, 'g1', '2026-10', 100),
+      line('c2', 1, 'g2', '2026-10', 200),
+    ];
+    const r = splitMonthChargesByCharge({
+      ...base,
+      rows,
+      balances: new Map([[1, -5]]),
+    });
+    expect(Object.fromEntries(r.map((s) => [s.id, s.unpaid]))).toEqual({
+      c1: 1,
+      c2: 1,
+      c3: 3,
+    });
+  });
+
+  it('a student who owes nothing has 0 on every charge', () => {
+    const r = splitMonthChargesByCharge({
+      ...base,
+      rows: [
+        line('c1', 1, 'g1', '2026-10', 300_000),
+        line('c2', 1, 'g2', '2026-10', 150_000),
+      ],
+      balances: new Map([[1, 20_000]]),
+    });
+    expect(r.map((s) => s.unpaid)).toEqual([0, 0]);
+  });
+
+  it('later months and other branches get no entry but still shape the share', () => {
+    // Debt 650 000 − November 450 000 = 200 000 of October; branch 2 holds 100 of 400 → 50 000.
+    const r = splitMonthChargesByCharge({
+      month: '2026-10',
+      branchIds: [2],
+      rows: [
+        line('c1', 1, 'g1', '2026-10', 300_000, 1),
+        line('c2', 1, 'g2', '2026-10', 100_000, 2),
+        line('c3', 1, 'g1', '2026-11', 450_000, 1),
+      ],
+      balances: new Map([[1, -650_000]]),
+    });
+    expect(r).toEqual([
+      {
+        id: 'c2',
+        studentId: 1,
+        groupId: 'g2',
+        enrollmentId: 'e-c2',
+        charged: 100_000,
+        unpaid: 50_000,
+      },
+    ]);
+  });
+
+  it('an empty scope answers nothing (fail closed)', () => {
+    const r = splitMonthChargesByCharge({
+      month: '2026-10',
+      branchIds: [],
+      rows: [line('c1', 1, 'g1', '2026-10', 450_000)],
+      balances: new Map([[1, -450_000]]),
+    });
+    expect(r).toEqual([]);
+  });
+
+  it.each<[string, ReportBranchIds]>([
+    ['every branch', null],
+    ['branch 1', [1]],
+    ['branch 2', [2]],
+    ['no branch', []],
+  ])(
+    'random months (%s): the charges add up to splitMonthCharges exactly',
+    (_name, branchIds) => {
+      for (let seed = 1; seed <= 300; seed++) {
+        const input = { month: '2026-10', branchIds, ...randomMonth(seed) };
+        const total = splitMonthCharges(input);
+        const shares = splitMonthChargesByCharge(input);
+        const perStudent = new Map<number, number>();
+        for (const s of shares) {
+          expect(s.unpaid).toBeGreaterThanOrEqual(0);
+          expect(s.unpaid).toBeLessThanOrEqual(s.charged);
+          perStudent.set(
+            s.studentId,
+            (perStudent.get(s.studentId) ?? 0) + s.unpaid,
+          );
+        }
+        const sum = (k: 'charged' | 'unpaid') =>
+          shares.reduce((acc, s) => acc + s[k], 0);
+        expect({
+          seed,
+          charged: sum('charged'),
+          unpaid: sum('unpaid'),
+          students: perStudent.size,
+          unpaidStudents: [...perStudent.values()].filter((u) => u > 0).length,
+        }).toEqual({
+          seed,
+          charged: total.charged,
+          unpaid: total.unpaid,
+          students: total.students,
+          unpaidStudents: total.unpaidStudents,
+        });
+      }
+    },
+  );
 });

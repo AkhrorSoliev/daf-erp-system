@@ -15,7 +15,6 @@ import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import type { PermissionKey } from '../common/permissions/permission-catalog';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
-import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
 
 describe('ReportsController', () => {
   let controller: ReportsController;
@@ -52,9 +51,6 @@ describe('ReportsController', () => {
     // «Oyning o'z foydasi» left the overview; kept so the payload test can show
     // the controller no longer asks for it.
     getOwnMonthProfit: jest.fn().mockResolvedValue({ ownMonthProfit: null }),
-    getPaymentReports: jest.fn().mockResolvedValue({}),
-    getTeacherPaymentReports: jest.fn().mockResolvedValue({}),
-    getTeacherGroupsReport: jest.fn().mockResolvedValue({}),
     getStudentPaymentsFilterOptions: jest.fn().mockResolvedValue({}),
     getDepartedStudentsSummary: jest.fn().mockResolvedValue({}),
     getDepartedStudentsDynamics: jest.fn().mockResolvedValue({}),
@@ -156,19 +152,6 @@ describe('ReportsController', () => {
         'getExpectationHistory',
         'getMonthlyDebtRecovery',
         'exportFinancialExcel',
-      ],
-    },
-    {
-      // /reports/payment-reports page: open to the Administrator too (CEO,
-      // 05.10.2026). The branch scope still confines them to their own
-      // branch(es).
-      capability: 'payment reports',
-      keys: ['reports.payments'],
-      roles: ['Administrator', 'Branch Director', 'CEO'],
-      handlers: [
-        'getPaymentReports',
-        'getTeacherPaymentReports',
-        'getTeacherGroupsReport',
       ],
     },
     {
@@ -579,31 +562,6 @@ describe('ReportsController', () => {
           pageSize: 20,
         },
       );
-    });
-  });
-
-  describe('getPaymentReports() — branch scope', () => {
-    it('hands a multi-branch director their branch list instead of a 400', async () => {
-      await controller.getPaymentReports(
-        {
-          startDate: '2026-09-01',
-          endDate: '2026-09-30',
-        } as PaymentReportsQueryDto,
-        1001,
-        [3, 7],
-      );
-      expect(mockService.getPaymentReports).toHaveBeenLastCalledWith(1001, {
-        branchIds: [3, 7],
-        startDate: '2026-09-01',
-        endDate: '2026-09-30',
-        months: undefined,
-      });
-    });
-
-    it('refuses a scope that resolved to no branch', () => {
-      expect(() =>
-        controller.getPaymentReports({} as PaymentReportsQueryDto, 1001, []),
-      ).toThrow(ForbiddenException);
     });
   });
 

@@ -195,8 +195,9 @@ The «Shartnomalar» tab on the student profile (`/contract-documents/*`, ADR-00
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
 | View reports | Yes | Yes | No | No | No |
+| Guruhlar bo'yicha to'lov (`/reports/payment-reports`) | Yes | Yes | Own branch | No | No |
 
-Ketgan o'quvchilar, davomat va markaz faoliyati hisobotlari serverda ham faqat CEO va filial direktoriga (ADR-0079; ilgari menyuda yashirin, serverda adminga ochiq edi). «O'quvchi to'lovi» hisoboti olib tashlandi: uning o'rniga Moliya → «To'lovlar» (yuqoridagi bo'lim, ADR-0088).
+Ketgan o'quvchilar, davomat va markaz faoliyati hisobotlari serverda ham faqat CEO va filial direktoriga (ADR-0079; ilgari menyuda yashirin, serverda adminga ochiq edi). «O'quvchi to'lovi» hisoboti olib tashlandi: uning o'rniga Moliya → «To'lovlar» (yuqoridagi bo'lim, ADR-0088). «To'lov hisobotlari» o'rniga «Guruhlar bo'yicha to'lov» (ADR-0092): `reports.payments` — CEO, filial direktori va administrator; administrator faqat o'z filiali raqamlarini ko'radi.
 
 ### Settings — General (Company Info)
 

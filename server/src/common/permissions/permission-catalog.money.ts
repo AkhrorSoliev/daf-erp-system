@@ -252,7 +252,7 @@ export const MONEY_PERMISSIONS = {
   },
   'reports.payments': {
     section: 'reports',
-    label: "To'lov hisobotlari",
+    label: "Guruhlar bo'yicha to'lov hisoboti",
     defaultRoles: [D, A],
     allowedRoles: [D, A, K],
     lockReasons: { [T]: LOCK.OWN_GROUPS },
