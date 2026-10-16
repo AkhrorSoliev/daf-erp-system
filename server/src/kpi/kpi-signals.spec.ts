@@ -177,19 +177,26 @@ describe('workingDaysOfMonth', () => {
 
 describe('monthEndForecast', () => {
   const days = workingDaysOfMonth('2026-10', () => false);
+  const all = '2026-10-01';
 
   it('waits for the third working day', () => {
-    expect(monthEndForecast(4, days, '2026-10-02')).toBeNull();
-    expect(monthEndForecast(4, days, '2026-10-03')).toBe(36);
+    expect(monthEndForecast(4, days, '2026-10-02', all)).toBeNull();
+    expect(monthEndForecast(4, days, '2026-10-03', all)).toBe(36);
   });
 
   it('rounds a half-way value up, with no float drift', () => {
     // 6th working day of 2026-10 is 7.10; 13 × 27 / 6 = 58.5 (13 / 6 × 27 is 58.4999…).
-    expect(monthEndForecast(13, days, '2026-10-07')).toBe(59);
+    expect(monthEndForecast(13, days, '2026-10-07', all)).toBe(59);
   });
 
   it('divides by the working days passed, today included', () => {
     // 12 working days by 14.10 (Sundays 4 and 11 left out): round(10 / 12 × 27).
-    expect(monthEndForecast(10, days, '2026-10-14')).toBe(23);
+    expect(monthEndForecast(10, days, '2026-10-14', all)).toBe(23);
+  });
+
+  it('counts only the days results were written on', () => {
+    // Recording from 17.10: 17, 19, 20 passed by 20.10; 13 such days in the month.
+    expect(monthEndForecast(6, days, '2026-10-19', '2026-10-17')).toBeNull();
+    expect(monthEndForecast(6, days, '2026-10-20', '2026-10-17')).toBe(26);
   });
 });

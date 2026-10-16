@@ -375,7 +375,9 @@ bo'yicha tartiblangan.
 
 **Oy oxiri taxmini** (karta, signal emas): joriy oy natijalari ÷ o'tgan ish
 kunlari × oyning ish kunlari (du–sha, kompaniya bayramlarisiz), butun songa
-yaxlitlanadi.
+yaxlitlanadi. Ikkala ish kunlari soni ham natija yozila boshlagan kundan
+(`recordingSince`: 17.10.2026 yoki kalit qayta yoqilgan kun) sanaladi —
+undan oldingi kunlarda natija bo'lishi mumkin emas edi.
 
 ### 7.10 Ruxsatlar va yo'llar
 

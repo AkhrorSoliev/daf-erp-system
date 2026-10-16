@@ -168,15 +168,21 @@ export function workingDaysOfMonth(
 
 /**
  * «Oy oxiriga taxmin» (spec §7.9): the month's results so far ÷ the working
- * days passed (today included) × the month's working days, rounded. Shown
- * only from the month's 3rd working day.
+ * days passed (today included) × the month's working days, rounded, both
+ * counted from `since` (the Tashkent day results started being written).
+ * Shown only from the 3rd such working day.
  */
 export function monthEndForecast(
   results: number,
   workingDays: readonly string[],
   today: string,
+  since: string,
 ): number | null {
-  const passed = workingDays.filter((d) => d <= today).length;
+  // Only days on which results were being written count: before KPI_START or
+  // while the switch was off nothing could be earned, and dividing by those
+  // days would understate the month.
+  const counted = workingDays.filter((d) => d >= since);
+  const passed = counted.filter((d) => d <= today).length;
   if (passed < 3) return null;
-  return Math.round((results * workingDays.length) / passed);
+  return Math.round((results * counted.length) / passed);
 }

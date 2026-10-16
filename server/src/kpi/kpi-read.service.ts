@@ -32,7 +32,12 @@ import {
   ownershipLogBranchWhere,
 } from '../leads/ownership/lead-ownership.service';
 import { KpiSettingsService } from './kpi-settings.service';
-import { KPI_FIRST_MONTH, explainKpi, isKpiEligible } from './kpi-rules';
+import {
+  KPI_FIRST_MONTH,
+  explainKpi,
+  isKpiEligible,
+  recordingSince,
+} from './kpi-rules';
 import { workingDaysOfMonth } from './kpi-signals';
 import {
   assembleOverview,
@@ -253,6 +258,7 @@ export class KpiReadService {
       today ? this.workingDays(month, range) : Promise.resolve(null),
     ]);
 
+    const since = recordingSince(settings);
     const body = assembleOverview({
       month,
       compare,
@@ -292,6 +298,7 @@ export class KpiReadService {
           .map((u) => u.id),
       ),
       workingDays,
+      recordingSinceDay: since ? tashkentDateStr(since) : null,
     });
     return {
       month,

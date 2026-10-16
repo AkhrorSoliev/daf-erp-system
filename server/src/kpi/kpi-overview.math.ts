@@ -61,6 +61,8 @@ export interface OverviewFacts {
   eligibleHolders: ReadonlySet<number>;
   /** The month's working days (current month only), for the forecast. */
   workingDays: readonly string[] | null;
+  /** Tashkent day results are written from (`recordingSince`); null = the switch is off. */
+  recordingSinceDay: string | null;
 }
 
 export interface KpiPair {
@@ -275,8 +277,13 @@ export function assembleOverview(f: OverviewFacts): OverviewBody {
         compare: pct(paidOf(comparePairs), comparePairs.size),
       },
       forecast:
-        f.today && f.workingDays
-          ? monthEndForecast(active.length, f.workingDays, f.today)
+        f.today && f.workingDays && f.recordingSinceDay
+          ? monthEndForecast(
+              active.length,
+              f.workingDays,
+              f.today,
+              f.recordingSinceDay,
+            )
           : null,
     },
     signals,

@@ -88,7 +88,8 @@ describe('KpiReadService.overview', () => {
     expect(out.compare).toBe('2026-09');
     expect(out.status).toEqual({ enabled: true, changedAt: null });
     expect(out.rows).toEqual([]);
-    expect(out.cards.forecast).toBe(0);
+    // 14.10 is before KPI_START (17.10): no working day has been recorded yet.
+    expect(out.cards.forecast).toBeNull();
     expect(s.prisma.kpiResult.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { companyId: 1001, month: '2026-10', branchId: { in: [2] } },
