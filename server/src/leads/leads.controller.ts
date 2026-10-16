@@ -43,8 +43,9 @@ export class LeadsController {
     @Query() query: LeadQueryDto,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.leadsService.findAll(query, companyId, scope);
+    return this.leadsService.findAll(query, companyId, scope, userId);
   }
 
   // Full board: columns -> sections -> per-section lead counts.

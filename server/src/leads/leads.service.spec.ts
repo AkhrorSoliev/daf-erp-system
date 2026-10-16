@@ -23,7 +23,11 @@ describe('LeadsService', () => {
   let students: any;
   let enrollment: any;
   let events: { emit: jest.Mock };
-  let ownership: { recordChange: jest.Mock; emit: jest.Mock };
+  let ownership: {
+    recordChange: jest.Mock;
+    emit: jest.Mock;
+    dueResolver: jest.Mock;
+  };
 
   const validDto = {
     firstName: 'Aziz',
@@ -94,7 +98,12 @@ describe('LeadsService', () => {
     students = { create: jest.fn() };
     enrollment = { enrollToGroup: jest.fn() };
     events = { emit: jest.fn() };
-    ownership = { recordChange: jest.fn(), emit: jest.fn() };
+    ownership = {
+      recordChange: jest.fn(),
+      emit: jest.fn(),
+      // ADR-0092: every card asks for its deadline; no lead has one here.
+      dueResolver: jest.fn().mockResolvedValue(() => null),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -165,9 +174,76 @@ describe('LeadsService', () => {
         }),
       );
       expect(result).toEqual([
-        { id: 'lead-1', calledAt: null, commentCount: 3 },
-        { id: 'lead-2', calledAt: null, commentCount: 0 },
+        { id: 'lead-1', calledAt: null, commentCount: 3, ownerDueAt: null },
+        { id: 'lead-2', calledAt: null, commentCount: 0, ownerDueAt: null },
       ]);
+    });
+
+    it('selects the owner and gives each card its server-computed deadline (ADR-0092)', async () => {
+      const due = new Date('2026-10-19T07:00:00Z');
+      ownership.dueResolver.mockResolvedValue(
+        (l: { ownerId: number | null }) => (l.ownerId === 11 ? due : null),
+      );
+      prisma.leadSection.findFirst.mockResolvedValue({ id: 'sec-1' });
+      prisma.lead.findMany.mockResolvedValue([
+        { id: 'lead-1', ownerId: 11 },
+        { id: 'lead-2', ownerId: null },
+      ]);
+
+      const result = await service.getSectionLeads('sec-1', 1001, null);
+
+      const select = prisma.lead.findMany.mock.calls[0][0].select;
+      expect(select).toEqual(
+        expect.objectContaining({
+          branchId: true,
+          ownerId: true,
+          ownedAt: true,
+          ownerActedAt: true,
+          owner: { select: { id: true, firstName: true, lastName: true } },
+        }),
+      );
+      expect(ownership.dueResolver).toHaveBeenCalledTimes(1);
+      expect(ownership.dueResolver).toHaveBeenCalledWith(1001);
+      expect(result.map((l) => l.ownerDueAt)).toEqual([due, null]);
+    });
+
+    it('asks for no deadlines when the section is empty', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({ id: 'sec-1' });
+      prisma.lead.findMany.mockResolvedValue([]);
+
+      await service.getSectionLeads('sec-1', 1001, null);
+
+      expect(ownership.dueResolver).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('card', () => {
+    it('returns one card with its comment count and owner deadline', async () => {
+      const due = new Date('2026-10-19T07:00:00Z');
+      ownership.dueResolver.mockResolvedValue(() => due);
+      prisma.lead.findFirst.mockResolvedValue({ id: 'lead-1', ownerId: 11 });
+      prisma.comment.groupBy.mockResolvedValue([
+        { entityId: 'lead-1', _count: { _all: 2 } },
+      ]);
+
+      const card = await service.card('lead-1', 1001);
+
+      expect(prisma.lead.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'lead-1', companyId: 1001 } }),
+      );
+      expect(card).toEqual({
+        id: 'lead-1',
+        ownerId: 11,
+        commentCount: 2,
+        ownerDueAt: due,
+      });
+    });
+
+    it('throws NotFound when the lead is missing', async () => {
+      prisma.lead.findFirst.mockResolvedValue(null);
+      await expect(service.card('missing', 1001)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -337,6 +413,41 @@ describe('LeadsService', () => {
       );
     });
 
+    it("«Mas'ul» filtri: meniki, egasiz va tanlangan xodimlar YOKI bilan", async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll({ owner: ['me', 'none', '10500'] }, 1001, null, 7);
+
+      const where = prisma.lead.findMany.mock.calls[0][0].where;
+      expect(where.AND).toContainEqual({
+        OR: [{ ownerId: { in: [10500, 7] } }, { ownerId: null }],
+      });
+    });
+
+    it("«Mas'ul» filtri filial chegarasini o'chirmaydi", async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll({ owner: ['none'] }, 1001, [2], 7);
+
+      const where = prisma.lead.findMany.mock.calls[0][0].where;
+      expect(where.AND).toEqual([
+        { OR: [{ branchId: { in: [2] } }, { branchId: null }] },
+        { OR: [{ ownerId: null }] },
+      ]);
+    });
+
+    it("«Mas'ul» filtri: 'me' bo'lsa-yu foydalanuvchi noma'lum bo'lsa, faqat qolganlari", async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll({ owner: ['me'] }, 1001, null);
+
+      const where = prisma.lead.findMany.mock.calls[0][0].where;
+      expect(JSON.stringify(where)).not.toContain('ownerId');
+    });
+
     it('constrains by commented lead ids when hasComments=true', async () => {
       prisma.comment.findMany.mockResolvedValue([
         { entityId: 'lead-1' },
@@ -472,6 +583,36 @@ describe('LeadsService', () => {
           }),
         }),
       );
+    });
+
+    it('returns the owner and the server-computed deadline (ADR-0092)', async () => {
+      const due = new Date('2026-10-19T07:00:00Z');
+      ownership.dueResolver.mockResolvedValue(() => due);
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        phone: '901234567',
+        ownerId: 11,
+        owner: { id: 11, firstName: 'Nodira', lastName: 'R' },
+      });
+
+      const lead = await service.findOne('lead-1', 1001, null);
+
+      const select = prisma.lead.findFirst.mock.calls[0][0].select;
+      expect(select).toEqual(
+        expect.objectContaining({
+          branchId: true,
+          ownerId: true,
+          ownedAt: true,
+          ownerActedAt: true,
+          owner: { select: { id: true, firstName: true, lastName: true } },
+        }),
+      );
+      expect(lead.ownerDueAt).toEqual(due);
+      expect(lead.owner).toEqual({
+        id: 11,
+        firstName: 'Nodira',
+        lastName: 'R',
+      });
     });
 
     // Lid oynasi to'lov holatini ko'rsatadi — bepul (yoki DaF uchun bepul)
@@ -768,6 +909,20 @@ describe('LeadsService', () => {
         );
       });
 
+      it('answers with the new card and its deadline', async () => {
+        const due = new Date('2026-10-19T07:00:00Z');
+        ownership.dueResolver.mockResolvedValue(() => due);
+
+        const card = await service.create(
+          { ...validDto, sectionId: 'sec-2' },
+          1001,
+          CALLER,
+        );
+
+        expect(card.ownerDueAt).toEqual(due);
+        expect(card.commentCount).toBe(0);
+      });
+
       it('leaves a public-form lead without an owner', async () => {
         await service.create({ ...validDto, sectionId: 'sec-2' }, 1001, {
           kind: 'public-form',
@@ -865,6 +1020,36 @@ describe('LeadsService', () => {
         }),
       );
       expect(history.recordUpdate).toHaveBeenCalled();
+    });
+
+    it('answers with the card, deadline included (ADR-0092)', async () => {
+      const due = new Date('2026-10-19T07:00:00Z');
+      ownership.dueResolver.mockResolvedValue(() => due);
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+      });
+      prisma.lead.update.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Azizbek',
+      });
+
+      const card = await service.update(
+        'lead-1',
+        { firstName: 'Azizbek' },
+        1001,
+        1,
+        null,
+      );
+
+      expect(card).toEqual({
+        id: 'lead-1',
+        firstName: 'Azizbek',
+        commentCount: 0,
+        ownerDueAt: due,
+      });
     });
 
     it("qo'shimcha telefonni yangilaydi", async () => {

@@ -27,7 +27,8 @@ import {
   LEAD_OWNER_CHANGED,
   type LeadOwnerChangedPayload,
 } from '../lead-events';
-import type { OwnershipRules } from './ownership-deadline';
+import { buildHolidayDateSetsByBranch } from '../../holidays/holiday-date-set';
+import { ownershipDueAt, type OwnershipRules } from './ownership-deadline';
 import { ownerHistoryValues } from './ownership-history';
 
 const SERIALIZABLE = {
@@ -36,11 +37,23 @@ const SERIALIZABLE = {
   timeout: 15_000,
 };
 
+const DAY_MS = 86_400_000;
+// No branch has id 0, so a lead with no branch reads the company-wide holidays alone.
+const NO_BRANCH = 0;
+
 const RULE_KEYS = {
   maxUntouched: 'leads.maxUntouched',
   firstActionHours: 'leads.firstActionHours',
   followUpDays: 'leads.followUpDays',
 } as const;
+
+export type OwnedLeadFields = {
+  ownerId: number | null;
+  ownedAt: Date | null;
+  ownerActedAt: Date | null;
+  branchId: number | null;
+  statusEnum: LeadStatus;
+};
 
 /** One change of a lead's owner, logged and put in the lead's history together. */
 export interface OwnershipChange {
@@ -108,6 +121,39 @@ export class LeadOwnershipService {
       this.settings.get(companyId, RULE_KEYS.followUpDays),
     ]);
     return { maxUntouched, firstActionHours, followUpDays };
+  }
+
+  /**
+   * The deadline of each owned lead, for the board and the expiry run: one
+   * settings read and one holiday read per call. Holidays are read for 30
+   * days back and 70 ahead: an older deadline has passed anyway, and the
+   * longest wait (3 working days over a 60-day holiday) fits ahead.
+   */
+  async dueResolver(
+    companyId: number,
+    now: Date = new Date(),
+  ): Promise<(lead: OwnedLeadFields) => Date | null> {
+    const rules = await this.rules(companyId);
+    const holidays = await buildHolidayDateSetsByBranch(
+      this.prisma,
+      new Date(now.getTime() - 30 * DAY_MS),
+      new Date(now.getTime() + 70 * DAY_MS),
+    );
+    return (lead) => {
+      if (
+        lead.ownerId == null ||
+        lead.ownedAt == null ||
+        lead.statusEnum === LeadStatus.CONVERTED
+      ) {
+        return null;
+      }
+      const days = holidays(lead.branchId ?? NO_BRANCH);
+      return ownershipDueAt(
+        { ownedAt: lead.ownedAt, ownerActedAt: lead.ownerActedAt },
+        rules,
+        (day) => days.has(day),
+      );
+    };
   }
 
   async setRules(

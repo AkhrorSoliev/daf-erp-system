@@ -6,6 +6,7 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  Matches,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { LeadStatus } from '@prisma/client';
@@ -46,6 +47,16 @@ export class LeadQueryDto extends PaginationDto {
   @IsArray()
   @IsEnum(LeadStatus, { each: true })
   status?: LeadStatus[];
+
+  /**
+   * «Mas'ul» (ADR-0092): `me`, `none` and user ids, comma-separated; the
+   * values are ORed.
+   */
+  @IsOptional()
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @Matches(/^(me|none|\d+)$/, { each: true })
+  owner?: string[];
 
   // "true" → only leads already marked called (calledAt set); "false" → only
   // not-yet-called leads. Omitted → no contact filter.

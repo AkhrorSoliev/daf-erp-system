@@ -262,3 +262,40 @@ describe('LeadOwnershipService.setRules', () => {
     );
   });
 });
+
+describe('LeadOwnershipService.dueResolver', () => {
+  const at = (day: string, hhmm: string) => new Date(`${day}T${hhmm}:00+05:00`);
+  const s = () => {
+    const x = setup();
+    (x.prisma as Record<string, unknown>).holiday = {
+      findMany: jest.fn().mockResolvedValue([]),
+    };
+    return x;
+  };
+
+  it('gives an owned lead its deadline', async () => {
+    const due = await s().service.dueResolver(1, at('2026-10-19', '10:30'));
+    expect(
+      due({
+        ownerId: 11,
+        ownedAt: at('2026-10-19', '10:00'),
+        ownerActedAt: null,
+        branchId: 1,
+        statusEnum: LeadStatus.NEW,
+      }),
+    ).toEqual(at('2026-10-19', '12:00'));
+  });
+
+  it('gives no deadline to a free or a converted lead', async () => {
+    const due = await s().service.dueResolver(1, at('2026-10-19', '10:30'));
+    const owned = {
+      ownerId: 11,
+      ownedAt: at('2026-10-19', '10:00'),
+      ownerActedAt: null,
+      branchId: 1,
+      statusEnum: LeadStatus.NEW,
+    };
+    expect(due({ ...owned, ownerId: null, ownedAt: null })).toBeNull();
+    expect(due({ ...owned, statusEnum: LeadStatus.CONVERTED })).toBeNull();
+  });
+});
