@@ -90,15 +90,15 @@ Expected: PASS. If anything fails here, stop and report — it is not this plan'
 ### Task 1: Snapshot guard for the 21:00 message
 
 **Files:**
-- Create: `server/src/telegram-groups/telegram-group-daily-report.snapshot.spec.ts`
+- Modify: `server/src/telegram-groups/telegram-group-daily-report.service.spec.ts` (append one `describe` block at the end of the file)
 
 **Interfaces:**
-- Consumes: the existing spec's fake builders. They are NOT exported, so this file copies `State`, `defaultState`, `makePrisma`, `makeSalary`, `DEBT_SPLIT` and `buildService` verbatim from `telegram-group-daily-report.service.spec.ts` lines 17–304 (copy, do not import — the original spec stays untouched).
-- Produces: `__snapshots__/telegram-group-daily-report.snapshot.spec.ts.snap`, committed before Task 2.
+- Consumes: the spec file's own helpers `defaultState`, `makePrisma`, `makeSalary`, `buildService` (same file, no copy).
+- Produces: `__snapshots__/telegram-group-daily-report.service.spec.ts.snap`, committed before Task 2.
 
 - [ ] **Step 1: Write the test**
 
-Below the copied helpers:
+At the end of `telegram-group-daily-report.service.spec.ts`:
 
 ```ts
 describe('21:00 message — byte-for-byte guard (telegram-report plan Task 1)', () => {
@@ -143,14 +143,14 @@ describe('21:00 message — byte-for-byte guard (telegram-report plan Task 1)', 
 
 - [ ] **Step 2: Run it — it writes the snapshot**
 
-Run: `cd server && npx jest src/telegram-groups/telegram-group-daily-report.snapshot.spec.ts --ci=false`
+Run: `cd server && npx jest src/telegram-groups/telegram-group-daily-report.service.spec.ts --ci=false`
 Expected: PASS, `4 snapshots written`. Open the `.snap` file and check each message starts with `📊 <b>` and contains `Bugungi moliya`.
 
 - [ ] **Step 3: Commit (the guard lands before the refactor)**
 
 ```bash
-cd server && npx prettier --write src/telegram-groups/telegram-group-daily-report.snapshot.spec.ts
-git add src/telegram-groups/telegram-group-daily-report.snapshot.spec.ts src/telegram-groups/__snapshots__
+cd server && npx prettier --write src/telegram-groups/telegram-group-daily-report.service.spec.ts
+git add src/telegram-groups/telegram-group-daily-report.service.spec.ts src/telegram-groups/__snapshots__
 git commit -m "test(telegram-groups): snapshot the 21:00 message before the split"
 ```
 
@@ -2725,7 +2725,7 @@ Oluvchining xodim menyusida «📊 Hisobot» tugmasi bor (yangi qo'shilgan oluvc
 #### Personal Telegram report (`src/telegram-report/`, ADR-0095)
 
 - **Recipients** are `TelegramReportRecipient` rows (one per user and company), edited only by the CEO on `/settings/telegram-report` (`@CeoOnly()` on all six routes, `COMPANY_WIDE`). Each row: `sendTime` ("HH:MM", :00/:30, 07:00–23:30), `layout` (`BY_SECTION` / `TABLE` / `BY_BRANCH` / `TOTAL_ONLY`), `allBranches` or `branchIds`, `sections` (8 keys), `isActive`, `lastSentDate`. The CEO may give anyone any branch; closed and archived branches are never offered.
-- **Figures** come only from `TelegramGroupDailyReportService.collect()` → `DailyReportData`; the 21:00 group text is `renderGroupMessage(data)`, pinned by `telegram-group-daily-report.snapshot.spec.ts` (never update that snapshot to make a refactor pass). The personal layouts (`personal-report-render.ts`) print fields of `DailyReportData` and compute nothing. «Barcha filiallar» totals with the company-wide scope (`null`), a chosen subset with that subset; the debt ▲/▼ shows only for one branch or the whole company.
+- **Figures** come only from `TelegramGroupDailyReportService.collect()` → `DailyReportData`; the 21:00 group text is `renderGroupMessage(data)`, pinned by the snapshot cases in `telegram-group-daily-report.service.spec.ts` (never update that snapshot to make a refactor pass). The personal layouts (`personal-report-render.ts`) print fields of `DailyReportData` and compute nothing. «Barcha filiallar» totals with the company-wide scope (`null`), a chosen subset with that subset; the debt ▲/▼ shows only for one branch or the whole company.
 - **Sending:** `PersonalReportCron` (`0 0,30 7-23 * * 1-6`) skips Sundays and company-wide holidays, picks active rows with `sendTime ≤ now` and no report today, claims `lastSentDate` with a conditional `updateMany` before sending (`sendTelegramText`), and gives the claim back on a transient failure or a missing bot. «Hozir sinab ko'rish» (`POST …/:id/test`) never touches `lastSentDate`.
 - **Bot:** `PersonalReportTelegramHandler` answers `tr:open` (staff menu «📊 Hisobot», shown when `showMenu` finds an active row), `tr:b:<id>`, `tr:all`, `tr:r:<id|all>` through `useBeforeScenes`. Every tap re-reads the chat's one staff account (`staffOfChat`), its active row and the allowed branches; anything else gets «Bu hisobot sizga ochiq emas».
 ```
