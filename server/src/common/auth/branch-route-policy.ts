@@ -187,6 +187,16 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'KPI prices and switch (ADR-0094): `kpi.enabled`, `kpi.leadPaid.*` and ' +
+      '`kpi.promiseKept.*` are company-level settings (`companyLevelOnly`) — one ' +
+      'value for every branch. The read carries the rules only; the write is ' +
+      'CEO-only through `@CeoOnly()`. `GET /kpi/overview` and ' +
+      '`GET /kpi/users/:id` take `@BranchScope()`.',
+    routes: ['GET /kpi/settings', 'PATCH /kpi/settings'],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
       'Id-addressed money paths. The branch is resolved from the record (or ' +

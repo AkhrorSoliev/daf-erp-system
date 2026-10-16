@@ -469,6 +469,18 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /kpi/overview": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /kpi/settings": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /kpi/users/:id": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /lead-sources": [
     "Administrator",
     "Branch Director",
@@ -1489,6 +1501,9 @@
   "PATCH /holidays/:id/status": [
     "Administrator",
     "Branch Director",
+    "CEO"
+  ],
+  "PATCH /kpi/settings": [
     "CEO"
   ],
   "PATCH /lead-columns/:id": [

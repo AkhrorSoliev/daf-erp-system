@@ -100,6 +100,8 @@ export interface KpiUserView {
   user: { id: number; name: string };
   month: string;
   hasAny: boolean;
+  /** False when the month before is before 2026-10: `compareTotal` is then an empty 0, not a measured one. */
+  compareAvailable: boolean;
   total: number;
   compareTotal: number;
   months: { month: string; count: number; amount: number }[];
@@ -234,6 +236,7 @@ export class KpiReadService {
       leadIds.length
         ? this.prisma.kpiResult.findMany({
             where: {
+              companyId,
               type: KpiResultType.LEAD_PAID,
               status: active,
               leadId: { in: leadIds },
@@ -243,7 +246,7 @@ export class KpiReadService {
         : Promise.resolve<PaidLead[]>([]),
       userIds.length
         ? this.prisma.user.findMany({
-            where: { id: { in: userIds } },
+            where: { id: { in: userIds }, companyId },
             select: USER_FACT,
           })
         : Promise.resolve<UserFact[]>([]),
@@ -323,12 +326,17 @@ export class KpiReadService {
           }),
       this.prisma.kpiResult.count({ where: { companyId, userId, ...branch } }),
     ]);
-    // A director sees the staff of their branch and anyone with a result in it (spec §7.10).
+    // A director sees the staff of their branch, anyone with a result in it
+    // and whoever holds a live lead in it (spec §7.10): every overview row opens.
     if (inBranch === 0 && anyResults === 0) {
-      throw new NotFoundException(NOT_FOUND);
+      const holds = await this.prisma.lead.count({
+        where: { ...liveOwnedLeadWhere(companyId, scope), ownerId: userId },
+      });
+      if (holds === 0) throw new NotFoundException(NOT_FOUND);
     }
 
     const months = monthsFrom(month);
+    const compare = addMonthsToMonthKey(month, -1);
     const [rows, series] = await Promise.all([
       // Every status: the drawer shows the cancelled ones with their reason.
       this.prisma.kpiResult.findMany({
@@ -364,8 +372,9 @@ export class KpiReadService {
       user: { id: user.id, name: fullName(user) },
       month,
       hasAny: anyResults > 0,
+      compareAvailable: compare >= KPI_FIRST_MONTH,
       total: sumAmount(ofMonth(month)),
-      compareTotal: sumAmount(ofMonth(addMonthsToMonthKey(month, -1))),
+      compareTotal: sumAmount(ofMonth(compare)),
       months: months.map((m) => ({
         month: m,
         count: ofMonth(m).length,

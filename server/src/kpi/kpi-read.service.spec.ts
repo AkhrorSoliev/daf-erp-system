@@ -20,7 +20,10 @@ function setup() {
       findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
     },
-    lead: { groupBy: jest.fn().mockResolvedValue([]) },
+    lead: {
+      groupBy: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    },
     leadOwnershipLog: { findMany: jest.fn().mockResolvedValue([]) },
     paymentPromise: { findMany: jest.fn().mockResolvedValue([]) },
     user: {
@@ -157,6 +160,37 @@ describe('KpiReadService.overview', () => {
     const active = await s.service.overview(1001, null, {}, NOW);
     expect(active.signals.map((x) => x.kind)).not.toContain('SILENT');
   });
+
+  it('keeps the paid-lead and the name lookups inside the company', async () => {
+    const s = setup();
+    s.prisma.lead.groupBy.mockResolvedValue([
+      { ownerId: 11, _count: { _all: 1 } },
+    ]);
+    s.prisma.leadOwnershipLog.findMany.mockResolvedValue([
+      {
+        leadId: 'l1',
+        toUserId: 11,
+        fromUserId: null,
+        createdAt: new Date('2026-10-05T05:00:00Z'),
+      },
+    ]);
+    await s.service.overview(1001, null, {}, NOW);
+
+    expect(s.prisma.kpiResult.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          companyId: 1001,
+          type: 'LEAD_PAID',
+          leadId: { in: ['l1'] },
+        }),
+      }),
+    );
+    expect(s.prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: { in: [11] }, companyId: 1001 },
+      }),
+    );
+  });
 });
 
 describe('KpiReadService.user', () => {
@@ -229,5 +263,30 @@ describe('KpiReadService.user', () => {
       ['Ali Valiyev', "birinchi to'lov 600 000 × 5%", 'ACTIVE', null],
       ['Vali Aliyev', "qat'iy summa", 'CANCELLED', "To'lov bekor qilindi"],
     ]);
+  });
+
+  it('admits a person who now owns a live lead in the scope, so an overview row never opens a 404', async () => {
+    const s = setup();
+    s.prisma.user.count.mockResolvedValue(0);
+    s.prisma.kpiResult.count.mockResolvedValue(0);
+    s.prisma.lead.count.mockResolvedValue(3);
+
+    const out = await s.service.user(1001, [2], 11, {}, NOW);
+
+    expect(out.user.id).toBe(11);
+    expect(out.hasAny).toBe(false);
+    expect(s.prisma.lead.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({ companyId: 1001, ownerId: 11 }),
+    });
+  });
+
+  it('says whether the month before can be compared (it exists from October 2026)', async () => {
+    const s = setup();
+    expect(
+      (await s.service.user(1001, null, 11, {}, NOW)).compareAvailable,
+    ).toBe(false);
+    expect(
+      (await s.service.user(1001, null, 11, {}, NOVEMBER)).compareAvailable,
+    ).toBe(true);
   });
 });
