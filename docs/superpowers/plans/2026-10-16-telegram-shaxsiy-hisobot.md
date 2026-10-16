@@ -39,7 +39,7 @@
 **Server — modified**
 - `server/src/telegram-groups/telegram-group-daily-report.service.ts` — `build()` becomes `collect()` + render; exports `DailyReportData`, `IncomeAttribution`, `SalaryTopUp`.
 - `server/src/telegram-groups/daily-report-group-message.ts` (new) — `renderGroupMessage(data)` + the label constants and line helpers moved out of the service.
-- `server/src/telegram-groups/telegram-group-daily-report.snapshot.spec.ts` (new) + `__snapshots__/…snap` — the byte-for-byte guard.
+- `server/src/telegram-groups/telegram-group-daily-report.service.spec.ts` + `__snapshots__/…snap` — 4 snapshot cases, the byte-for-byte guard.
 - `server/src/telegram-groups/telegram-groups.module.ts` — export `TelegramGroupDailyReportService`.
 - `server/prisma/schema.prisma`, `server/prisma/migrations/20261016150000_telegram_report_recipient/migration.sql` (new).
 - `server/src/telegram/staff/staff-cabinet.ts` (+ spec) — «📊 Hisobot» row.
