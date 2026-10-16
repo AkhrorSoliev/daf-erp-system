@@ -49,7 +49,12 @@ describe('ArchiveRestoreService — a student card and its account (ADR-0033)', 
     };
     statusHistory = { changeStatus: jest.fn().mockResolvedValue({}) };
     history = { recordRestore: jest.fn(), recordUpdate: jest.fn() };
-    service = new ArchiveRestoreService(prisma, statusHistory, history);
+    service = new ArchiveRestoreService(
+      prisma,
+      statusHistory,
+      history,
+      {} as never,
+    );
   });
 
   const restore = () =>
