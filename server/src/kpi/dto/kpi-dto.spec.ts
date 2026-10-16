@@ -51,4 +51,20 @@ describe('KPI DTOs', () => {
       'enabled',
     ]);
   });
+
+  it('refuses a negative or fractional value and a key it does not know', async () => {
+    expect(
+      await props(KpiSettingsDto, { leadPaid: { mode: 'FIXED', value: -1 } }),
+    ).toEqual(['leadPaid']);
+    expect(
+      await props(KpiSettingsDto, {
+        promiseKept: { mode: 'PERCENT', value: 2.5 },
+      }),
+    ).toEqual(['promiseKept']);
+    expect(
+      await props(KpiSettingsDto, {
+        leadPaid: { mode: 'FIXED', value: 5, extra: 1 },
+      }),
+    ).toEqual(['leadPaid']);
+  });
 });
