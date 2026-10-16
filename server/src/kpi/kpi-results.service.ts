@@ -21,7 +21,7 @@ export type { KpiDraft, KpiRestore } from './kpi-results.plan';
 const SELF_HEAL_WINDOW_MS = 2 * 86_400_000;
 
 /**
- * The one writer of `KpiResult` (ADR-0094; `kpi-write.single-source.spec.ts`).
+ * The one writer of `KpiResult` (ADR-0095; `kpi-write.single-source.spec.ts`).
  * Called after a payment commits (`KpiRecorderListener`), by the nightly
  * repair and by the backfill. Every call is safe to repeat: the partial
  * unique indexes keep one ACTIVE result per lead, per LEAD_PAID payment and

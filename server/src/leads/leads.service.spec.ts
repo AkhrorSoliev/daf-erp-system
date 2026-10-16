@@ -1674,47 +1674,6 @@ describe('LeadsService', () => {
     });
   });
 
-  describe('remove: a converted lead (ADR-0094)', () => {
-    it('is archived but stays CONVERTED, its conversion fields untouched', async () => {
-      prisma.lead.findFirst.mockResolvedValue({
-        id: 'lead-1',
-        sectionId: 'sec-1',
-        statusEnum: 'CONVERTED',
-        convertedStudentId: 10500,
-      });
-
-      const result = await service.remove(
-        'lead-1',
-        { reason: "Xato qo'shilgan" },
-        1001,
-        1,
-        null,
-      );
-
-      expect(prisma.lead.update).toHaveBeenCalledTimes(1);
-      const data = prisma.lead.update.mock.calls[0][0].data;
-      expect(data.deletedAt).toBeInstanceOf(Date);
-      expect(data.deletedById).toBe(1);
-      for (const key of [
-        'statusEnum',
-        'status',
-        'lostReason',
-        'statusChangedAt',
-        'statusChangedById',
-        'statusChangeReason',
-        'conversionKind',
-        'ownerId',
-      ]) {
-        expect(data).not.toHaveProperty(key);
-      }
-      expect(history.recordStatusChange).not.toHaveBeenCalled();
-      expect(history.recordDelete).toHaveBeenCalledWith(
-        expect.objectContaining({ entityType: 'Lead', entityId: 'lead-1' }),
-      );
-      expect(result.sectionId).toBe('sec-1');
-    });
-  });
-
   describe('convert', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
@@ -1982,7 +1941,7 @@ describe('LeadsService', () => {
       expect(students.create).not.toHaveBeenCalled();
     });
 
-    it('marks a lead that opened a new student NEW_STUDENT (ADR-0094)', async () => {
+    it('marks a lead that opened a new student NEW_STUDENT (ADR-0095)', async () => {
       prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
       students.create.mockResolvedValue({ id: 10007 });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1' });

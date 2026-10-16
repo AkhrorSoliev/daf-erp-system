@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { getSettingDefinition } from './settings.types';
 
-describe('KPI settings (ADR-0094)', () => {
+describe('KPI settings (ADR-0095)', () => {
   it('the switch is on by default and company-level', () => {
     const def = getSettingDefinition('kpi.enabled');
     expect(def.defaultValue).toBe(true);

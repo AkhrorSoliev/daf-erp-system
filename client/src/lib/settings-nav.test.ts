@@ -143,7 +143,7 @@ describe("«Lidlar egaligi» — CEO only (ADR-0093)", () => {
   });
 });
 
-describe("«KPI sozlamalari» — CEO only (ADR-0094)", () => {
+describe("«KPI sozlamalari» — CEO only (ADR-0095)", () => {
   const PATH = "/settings/kpi";
   it("only the CEO sees and opens it", () => {
     const ceo = getVisibleSettingsSections(canForRoles([CEO]), true).flatMap((s) => s.items);

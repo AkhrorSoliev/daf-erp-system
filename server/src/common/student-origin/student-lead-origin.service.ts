@@ -213,7 +213,7 @@ export class StudentLeadOriginService {
       // `LeadsService.convert` ham shu maydonni tozalaydi — ikkala aylantirish
       // yo'li bitta shakl yozadi.
       statusChangeReason: null,
-      // ADR-0094: every path here opens a new student card.
+      // ADR-0095: every path here opens a new student card.
       conversionKind: LeadConversionKind.NEW_STUDENT,
     };
 

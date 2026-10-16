@@ -88,7 +88,7 @@ export class ArchiveRestoreService {
     }
 
     const statusField = getStatusField(entityType);
-    // ADR-0094: a converted lead comes back CONVERTED with its owner and its
+    // ADR-0095: a converted lead comes back CONVERTED with its owner and its
     // conversion time — its KPI is credited to that owner from that moment
     // (the same rule as `restoreRelease`).
     const keepsConversion =
@@ -214,7 +214,7 @@ export class ArchiveRestoreService {
    * One archived lead (ADR-0093): it returns to the pool, so an owner is
    * cleared and the release is logged in the same transaction as the restore.
    * `restoreData.statusEnum` is what the lead becomes: NEW, or CONVERTED for a
-   * converted lead (ADR-0094), which `restoreRelease` leaves owned. A lead
+   * converted lead (ADR-0095), which `restoreRelease` leaves owned. A lead
    * with no owner is a plain update.
    */
   private async restoreLead(
@@ -395,7 +395,7 @@ export class ArchiveRestoreService {
         where: { deletionBatchId: batchId },
         data: { ...restoreBase, status: StudentStatus.ACTIVE, isActive: true },
       });
-      // ADR-0094: the batch's converted leads keep CONVERTED, their owner and
+      // ADR-0095: the batch's converted leads keep CONVERTED, their owner and
       // their conversion time; only the others come back NEW and unowned.
       await tx.lead.updateMany({
         where: { deletionBatchId: batchId, convertedStudentId: { not: null } },

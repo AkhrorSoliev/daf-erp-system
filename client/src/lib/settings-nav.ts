@@ -167,7 +167,7 @@ export const settingsNavSections: SettingsNavSection[] = [
         ceoOnly: true,
       },
       {
-        // The write is `@CeoOnly()` (ADR-0094): identity, not a capability.
+        // The write is `@CeoOnly()` (ADR-0095): identity, not a capability.
         title: "KPI sozlamalari",
         url: "/settings/kpi",
         icon: Trophy,

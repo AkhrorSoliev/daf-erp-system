@@ -402,5 +402,5 @@ holicha, egasi bilan tiklanadi (`restore-release.ts` qoidasi bilan bir xil).
 
 ### 7.13 ADR
 
-ADR-0094 «KPI natijasi: administratorga, bir marta, summa muhrlanadi» — shu
+ADR-0095 «KPI natijasi: administratorga, bir marta, summa muhrlanadi» — shu
 PR bilan.

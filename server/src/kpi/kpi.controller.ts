@@ -8,7 +8,7 @@ import { KpiMonthQueryDto, KpiOverviewQueryDto } from './dto/kpi-query.dto';
 import { KpiSettingsDto } from './dto/kpi-settings.dto';
 import { KpiUserIdPipe } from './dto/kpi-user-id.pipe';
 
-/** «Xodimlar KPI» (ADR-0094, spec §7.10). No money: these routes only read and set prices. */
+/** «Xodimlar KPI» (ADR-0095, spec §7.10). No money: these routes only read and set prices. */
 @Controller('kpi')
 export class KpiController {
   constructor(

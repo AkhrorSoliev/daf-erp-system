@@ -56,7 +56,7 @@ export const reportsNavSections: ReportsNavSection[] = [
     title: "Marketing va faoliyat",
     items: [
       { title: "Lidlar hisoboti", url: "/reports/leads", icon: UserPlus, permission: "reports.leads" },
-      // «Xodimlar KPI» (ADR-0094): the managers' observation page.
+      // «Xodimlar KPI» (ADR-0095): the managers' observation page.
       { title: "Xodimlar KPI", url: "/reports/xodimlar-kpi", icon: Trophy, permission: "kpi.view" },
       // A money report (server: `GET /reports/marketing`, ADR-0067).
       { title: "Marketing", url: "/reports/marketing", icon: Megaphone, permission: "reports.finance" },

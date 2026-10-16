@@ -1062,7 +1062,6 @@ export class LeadsService {
         id: true,
         sectionId: true,
         statusEnum: true,
-        convertedStudentId: true,
       },
     });
     if (!existing) {
@@ -1073,27 +1072,6 @@ export class LeadsService {
       throw new BadRequestException(
         "O'quvchiga aylangan lidni o'chirib bo'lmaydi",
       );
-    }
-
-    // ADR-0094: a converted lead is only archived. It stays CONVERTED with its
-    // conversion time, marker, owner and lost-reason fields untouched — its KPI
-    // is read from them, and a later restore must bring the same lead back.
-    if (existing.convertedStudentId != null) {
-      await this.prisma.lead.update({
-        where: { id },
-        data: { deletedAt: new Date(), deletedById: userId },
-      });
-      await this.entityHistoryService.recordDelete({
-        entityType: 'Lead',
-        entityId: id,
-        oldValues: { status: existing.statusEnum, sabab: reason },
-        changedById: userId,
-        companyId,
-      });
-      return {
-        message: "Aylangan lid arxivga ko'chirildi",
-        sectionId: existing.sectionId,
-      };
     }
 
     await this.prisma.lead.update({
@@ -1169,7 +1147,7 @@ export class LeadsService {
     }
 
     let studentId: number;
-    // ADR-0094: how the lead was converted decides its KPI. A new card is a
+    // ADR-0095: how the lead was converted decides its KPI. A new card is a
     // new student; a link is a return unless the student is studying now.
     let conversionKind: LeadConversionKind = LeadConversionKind.NEW_STUDENT;
 

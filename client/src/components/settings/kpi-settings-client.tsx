@@ -26,7 +26,7 @@ const RULES = [
 const TITLE = "KPI sozlamalari";
 const DESCRIPTION = "KPI narxlari va hisoblash kaliti";
 
-/** CEO-only (ADR-0094): the switch and the two prices. A price changes only the results after it. */
+/** CEO-only (ADR-0095): the switch and the two prices. A price changes only the results after it. */
 export function KpiSettingsClient() {
   const queryClient = useQueryClient();
   const { data, isLoading, isError, isFetching, refetch } = useKpiSettings();

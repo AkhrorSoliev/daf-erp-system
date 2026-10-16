@@ -1,5 +1,5 @@
 /**
- * KPI results since KPI_START (ADR-0094, spec §7.6), written by the same
+ * KPI results since KPI_START (ADR-0095, spec §7.6), written by the same
  * `KpiResultsService` the payment events use. Run once after the deploy.
  *
  *   railway run --service caring-courage --environment production \

@@ -19,7 +19,7 @@ import {
 } from './kpi-rules';
 
 /**
- * What a payment earns (ADR-0094, spec §7.2), read without writing. Every
+ * What a payment earns (ADR-0095, spec §7.2), read without writing. Every
  * `KpiResult` write stays in `KpiResultsService`.
  */
 

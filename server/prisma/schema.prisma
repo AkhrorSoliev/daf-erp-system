@@ -819,7 +819,7 @@ model Lead {
   ownedAt       DateTime?
   ownerActedAt  DateTime?
   ownershipLogs LeadOwnershipLog[]
-  // How the lead was converted (ADR-0094): written by `LeadsService.convert`
+  // How the lead was converted (ADR-0095): written by `LeadsService.convert`
   // and `StudentLeadOriginService`. Null = not converted, or converted before
   // stage 2 (the backfill restores the ones since KPI_START).
   conversionKind LeadConversionKind?
@@ -899,7 +899,7 @@ enum KpiRuleMode {
   PERCENT
 }
 
-// One KPI result (ADR-0094), written only by `KpiResultsService`; the amount
+// One KPI result (ADR-0095), written only by `KpiResultsService`; the amount
 // is sealed at the rule of that moment and no money moves in stage 2. Ids are
 // plain columns (like `LeadOwnershipLog`), so archiving or deleting a lead, a
 // promise or a user never touches the record. One ACTIVE result per lead and
@@ -2538,7 +2538,7 @@ model PaymentPromise {
   resolvedAt       DateTime?
   resolvedById     Int?
   resolvedBy       User?                @relation("PaymentPromiseResolvedBy", fields: [resolvedById], references: [id])
-  // The payment that made the promise KEPT (ADR-0094), written by
+  // The payment that made the promise KEPT (ADR-0095), written by
   // `settleKeptPromises` in the payment's own transaction. A plain column.
   resolvedPaymentId String?
   createdById      Int

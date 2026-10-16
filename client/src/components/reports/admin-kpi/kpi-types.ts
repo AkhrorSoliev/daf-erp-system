@@ -1,4 +1,4 @@
-/** The JSON of `/kpi/*` (server `src/kpi/`, ADR-0094). Dates arrive as ISO strings. */
+/** The JSON of `/kpi/*` (server `src/kpi/`, ADR-0095). Dates arrive as ISO strings. */
 export type KpiResultType = "LEAD_PAID" | "PROMISE_KEPT";
 export type KpiResultStatus = "ACTIVE" | "CANCELLED";
 export type KpiRuleMode = "FIXED" | "PERCENT";

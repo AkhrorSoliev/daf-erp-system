@@ -187,7 +187,7 @@ describe('StudentLeadOriginService', () => {
     });
   });
 
-  // ADR-0094: both paths open a new student card, so the lead counts as one.
+  // ADR-0095: both paths open a new student card, so the lead counts as one.
   it("ikkala yo'l ham aylanish turini NEW_STUDENT deb yozadi", async () => {
     await service.recordDirectOrigin(tx, baseParams);
     expect(tx.lead.create.mock.calls[0][0].data).toMatchObject({

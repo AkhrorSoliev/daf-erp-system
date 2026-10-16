@@ -24,7 +24,7 @@
 - Kalit `kpi.enabled`: o'chiq — yangi natija yozilmaydi, o'chiq davr keyin to'ldirilmaydi; bekor qilish kalit o'chiq bo'lsa ham ishlaydi. Kalit o'zgargan vaqt saqlanadi.
 - Ko'radi: CEO (hamma filial) va filial direktori (o'z filiali, `@BranchScope()`); administrator ko'rmaydi. Ruxsat `kpi.view`; sozlamani yozish `@CeoOnly()`.
 - Har kecha 03:30 (Toshkent) oxirgi 2 kun to'lovlari qayta ko'riladi; hammasi idempotent.
-- ADR-0094 «KPI natijasi: administratorga, bir marta, summa muhrlanadi» — shu PR'da.
+- ADR-0095 «KPI natijasi: administratorga, bir marta, summa muhrlanadi» — shu PR'da.
 
 ## Fayllar xaritasi
 
@@ -48,7 +48,7 @@ Client (yangi), `client/src/components/reports/admin-kpi/`: `kpi-types.ts`, `kpi
 
 Client (o'zgaradi): `lib/permission-keys.ts`, `lib/reports-nav.ts` (+ test), `lib/nav-items.ts` (+ test), `lib/settings-nav.ts` (+ test), `lib/breadcrumb-routes.ts`, `components/settings/employee-profile-client.tsx`, `components/settings/employee-profile-tabs.tsx`, `qollanma/sahifalar/hisobotlar.ts`, `qollanma/yangiliklar.ts`.
 
-Hujjatlar: `docs/adr/0094-kpi-natijasi.md`, `docs/adr/README.md`, `server/CLAUDE.md`, `client/CLAUDE.md`.
+Hujjatlar: `docs/adr/0095-kpi-natijasi.md`, `docs/adr/README.md`, `server/CLAUDE.md`, `client/CLAUDE.md`.
 
 ---
 
@@ -66,7 +66,7 @@ Hujjatlar: `docs/adr/0094-kpi-natijasi.md`, `docs/adr/README.md`, `server/CLAUDE
 `model Lead` ichida `ownershipLogs LeadOwnershipLog[]` qatoridan keyin:
 
 ```prisma
-  // How the lead was converted (ADR-0094): written by `LeadsService.convert`
+  // How the lead was converted (ADR-0095): written by `LeadsService.convert`
   // and `StudentLeadOriginService`. Null = not converted, or converted before
   // stage 2 (the backfill restores the ones since KPI_START).
   conversionKind LeadConversionKind?
@@ -100,7 +100,7 @@ enum KpiRuleMode {
   PERCENT
 }
 
-// One KPI result (ADR-0094), written only by `KpiResultsService`; the amount
+// One KPI result (ADR-0095), written only by `KpiResultsService`; the amount
 // is sealed at the rule of that moment and no money moves in stage 2. Ids are
 // plain columns (like `LeadOwnershipLog`), so archiving or deleting a lead, a
 // promise or a user never touches the record. One ACTIVE result per lead and
@@ -140,7 +140,7 @@ model KpiResult {
 `model PaymentPromise` ichida `resolvedBy User? @relation("PaymentPromiseResolvedBy", …)` qatoridan keyin:
 
 ```prisma
-  // The payment that made the promise KEPT (ADR-0094), written by
+  // The payment that made the promise KEPT (ADR-0095), written by
   // `settleKeptPromises` in the payment's own transaction. A plain column.
   resolvedPaymentId String?
 ```
@@ -156,7 +156,7 @@ va uning indekslariga (`@@index([branchId])` dan keyin):
 `server/prisma/migrations/20261016150000_kpi_results/migration.sql`:
 
 ```sql
--- KPI results (ADR-0094): stage 2 of the admin KPI, no money. Idempotent,
+-- KPI results (ADR-0095): stage 2 of the admin KPI, no money. Idempotent,
 -- like the other hand-written migrations here.
 DO $$
 BEGIN
@@ -255,7 +255,7 @@ Expected: xatosiz.
 
 ```bash
 git add server/prisma/schema.prisma server/prisma/migrations/20261016150000_kpi_results
-git commit -m "feat(kpi): KpiResult table, lead conversion kind and the promise's resolving payment (ADR-0094)
+git commit -m "feat(kpi): KpiResult table, lead conversion kind and the promise's resolving payment (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -288,7 +288,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 import { BadRequestException } from '@nestjs/common';
 import { getSettingDefinition } from './settings.types';
 
-describe('KPI settings (ADR-0094)', () => {
+describe('KPI settings (ADR-0095)', () => {
   it('the switch is on by default and company-level', () => {
     const def = getSettingDefinition('kpi.enabled');
     expect(def.defaultValue).toBe(true);
@@ -336,7 +336,7 @@ import {
   recordingSince,
 } from './kpi-rules';
 
-describe('KPI rules (ADR-0094)', () => {
+describe('KPI rules (ADR-0095)', () => {
   it('counts from 17.10.2026 00:00 Tashkent', () => {
     expect(KPI_START.toISOString()).toBe('2026-10-16T19:00:00.000Z');
     expect(KPI_FIRST_MONTH).toBe('2026-10');
@@ -569,7 +569,7 @@ const KPI_VALUE_MAX = 10_000_000;
 5. `SETTING_DEFINITIONS` da `'leads.followUpDays'` yozuvidan keyin:
 
 ```ts
-  // Admin KPI (ADR-0094): read by `KpiSettingsService` per company; the CEO
+  // Admin KPI (ADR-0095): read by `KpiSettingsService` per company; the CEO
   // changes them on Sozlamalar → «KPI sozlamalari» (`PATCH /kpi/settings`).
   'kpi.enabled': {
     key: 'kpi.enabled',
@@ -611,7 +611,7 @@ const KPI_VALUE_MAX = 10_000_000;
   /**
    * When the company-level row of `key` was last written; null = never.
    * `KpiSettingsService` writes `kpi.enabled` only when the switch flips, so
-   * for that key this is the moment of the flip (ADR-0094).
+   * for that key this is the moment of the flip (ADR-0095).
    */
   async lastWrittenAt(companyId: number, key: SettingKey): Promise<Date | null> {
     const row = await this.prisma.setting.findFirst({
@@ -642,7 +642,7 @@ const KPI_VALUE_MAX = 10_000_000;
 ```ts
   /**
    * Several company-level keys in one transaction: all written or none
-   * (ADR-0094 — a KPI rule's mode and value never apart). Every value is
+   * (ADR-0095 — a KPI rule's mode and value never apart). Every value is
    * parsed before anything is written.
    */
   async setMany(
@@ -714,7 +714,7 @@ import { KpiResultType, KpiRuleMode } from '@prisma/client';
 import { formatSom } from '../payments/shared/format-som';
 
 /**
- * The rules of a KPI result (ADR-0094, spec §7). Pure: the writer, the read
+ * The rules of a KPI result (ADR-0095, spec §7). Pure: the writer, the read
  * side and the backfill share them.
  */
 
@@ -880,7 +880,7 @@ npx prettier --write src/settings/settings.types.ts src/settings/settings.servic
 npx eslint src/settings src/kpi --quiet
 cd ..
 git add server/src/settings server/src/kpi
-git commit -m "feat(kpi): KPI price and switch settings, the pure KPI rules (ADR-0094)
+git commit -m "feat(kpi): KPI price and switch settings, the pure KPI rules (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -922,14 +922,14 @@ Expected: FAIL (`kpi.view` va `LEADERS_ONLY` yo'q).
   LEADERS_ONLY: "kuzatuv bosqichida KPI'ni faqat rahbarlar ko'radi",
 ```
 
-Izoh ro'yxatiga: ` *   LEADERS_ONLY — the KPI observation month is for the managers (ADR-0094).`
+Izoh ro'yxatiga: ` *   LEADERS_ONLY — the KPI observation month is for the managers (ADR-0095).`
 
 - [ ] **Step 3: Katalogga qo'shish**
 
 `permission-catalog.money.ts` da `'reports.leads'` yozuvidan keyin (obyekt yopilishidan oldin):
 
 ```ts
-  // «Xodimlar KPI» (ADR-0094): in the observation month only the managers see
+  // «Xodimlar KPI» (ADR-0095): in the observation month only the managers see
   // it (CEO, 16.10.2026). `GET /kpi/overview` and `GET /kpi/users/:id` take
   // `@BranchScope()`; `PATCH /kpi/settings` is `@CeoOnly()`.
   'kpi.view': {
@@ -969,7 +969,7 @@ Expected: PASS. (`permission-routes.spec.ts` ham o'tadi — yangi yo'l hali yo'q
 cd server && npx prettier --write src/common/permissions/permission-catalog.types.ts src/common/permissions/permission-catalog.money.ts src/common/permissions/permission-catalog.spec.ts
 cd ..
 git add server/src/common/permissions client/src/lib/permission-keys.ts
-git commit -m "feat(permissions): kpi.view for the managers (ADR-0094)
+git commit -m "feat(permissions): kpi.view for the managers (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -996,7 +996,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 3. `describe('convert'` ichida, `'throws NotFound when existingStudentId does not resolve…'` testidan keyin:
 
 ```ts
-    it('marks a lead that opened a new student NEW_STUDENT (ADR-0094)', async () => {
+    it('marks a lead that opened a new student NEW_STUDENT (ADR-0095)', async () => {
       prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
       students.create.mockResolvedValue({ id: 10007 });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
@@ -1048,7 +1048,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 `student-lead-origin.service.spec.ts` da `"ikkala yo'l ham statusChangeReason ni tozalaydi"` testidan keyin:
 
 ```ts
-  // ADR-0094: both paths open a new student card, so the lead counts as one.
+  // ADR-0095: both paths open a new student card, so the lead counts as one.
   it("ikkala yo'l ham aylanish turini NEW_STUDENT deb yozadi", async () => {
     await service.recordDirectOrigin(tx, baseParams);
     expect(tx.lead.create.mock.calls[0][0].data).toMatchObject({
@@ -1073,7 +1073,7 @@ Expected: FAIL (`conversionKind` yozilmaydi).
 2. `convert()` da `let studentId: number;` dan keyin:
 
 ```ts
-    // ADR-0094: how the lead was converted decides its KPI. A new card is a
+    // ADR-0095: how the lead was converted decides its KPI. A new card is a
     // new student; a link is a return unless the student is studying now.
     let conversionKind: LeadConversionKind = LeadConversionKind.NEW_STUDENT;
 ```
@@ -1097,7 +1097,7 @@ Expected: FAIL (`conversionKind` yozilmaydi).
 `student-lead-origin.service.ts`: `@prisma/client` importiga `LeadConversionKind`; `conversionFields` obyektiga `statusChangeReason: null,` dan keyin:
 
 ```ts
-      // ADR-0094: every path here opens a new student card.
+      // ADR-0095: every path here opens a new student card.
       conversionKind: LeadConversionKind.NEW_STUDENT,
 ```
 
@@ -1114,7 +1114,7 @@ npx prettier --write src/leads/leads.service.ts src/leads/leads.service.spec.ts 
 npx eslint src/leads/leads.service.ts src/common/student-origin --quiet
 cd ..
 git add server/src/leads server/src/common/student-origin
-git commit -m "feat(leads): record how a lead was converted (ADR-0094)
+git commit -m "feat(leads): record how a lead was converted (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -1139,7 +1139,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 `payments.service.spec.ts` da `describe('createFromExternal()'` dan oldin:
 
 ```ts
-  describe('a payment that keeps a promise (ADR-0094)', () => {
+  describe('a payment that keeps a promise (ADR-0095)', () => {
     const plain = { studentId: 10001, amount: 500000, method: 'CASH' as any };
 
     it('create() writes itself on the promises it made KEPT', async () => {
@@ -1176,7 +1176,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     });
   });
 
-  describe('payment.reversed says whether it is a correction (ADR-0094)', () => {
+  describe('payment.reversed says whether it is a correction (ADR-0095)', () => {
     it('a plain reversal is not', async () => {
       prisma.payment.findFirst.mockResolvedValue({
         id: 'payment-uuid-1',
@@ -1234,7 +1234,7 @@ Expected: FAIL (`resolvedPaymentId` va `correction` yo'q).
 ```ts
   /**
    * The first leg of an amount correction (`correctAmount`): the KPI moves its
-   * results to the re-post instead of choosing again (ADR-0094).
+   * results to the re-post instead of choosing again (ADR-0095).
    */
   correction?: boolean;
 ```
@@ -1254,7 +1254,7 @@ Metod imzosi va yozuvi:
       studentId: number;
       balance: number | null | undefined;
       performedById: number | null | undefined;
-      /** The payment that cleared the debt — the promise's KPI hangs on it (ADR-0094). */
+      /** The payment that cleared the debt — the promise's KPI hangs on it (ADR-0095). */
       paymentId: string;
     },
   ) {
@@ -1286,7 +1286,7 @@ npx prettier --write src/payments/payments-write.service.ts src/payments/payment
 npx eslint src/payments/payments-write.service.ts --quiet
 cd ..
 git add server/src/payments
-git commit -m "feat(payments): name the payment that kept a promise and flag a correction's reversal (ADR-0094)
+git commit -m "feat(payments): name the payment that kept a promise and flag a correction's reversal (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -1605,7 +1605,7 @@ import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 
 /**
- * KPI results have one door: `KpiResultsService` (ADR-0094, spec §7.5). A
+ * KPI results have one door: `KpiResultsService` (ADR-0095, spec §7.5). A
  * result is sealed when written and cancelled only with a reason; a write
  * from another module would skip the eligibility rule, the switch and the
  * one-active-result guard. The backfill script calls the service too.
@@ -1678,7 +1678,7 @@ import { tashkentMonthKey } from '../common/date/tashkent';
 import { KPI_START, isKpiEligible, kpiAmount, type KpiSettings } from './kpi-rules';
 
 /**
- * What a payment earns (ADR-0094, spec §7.2), read without writing. Every
+ * What a payment earns (ADR-0095, spec §7.2), read without writing. Every
  * `KpiResult` write stays in `KpiResultsService`.
  */
 
@@ -1916,7 +1916,7 @@ import {
 export type { KpiDraft, KpiRestore } from './kpi-results.plan';
 
 /**
- * The one writer of `KpiResult` (ADR-0094; `kpi-write.single-source.spec.ts`).
+ * The one writer of `KpiResult` (ADR-0095; `kpi-write.single-source.spec.ts`).
  * Called after a payment commits (`KpiRecorderListener`), by the nightly
  * repair and by the backfill. Every call is safe to repeat: the partial
  * unique indexes keep one ACTIVE result per lead, per LEAD_PAID payment and
@@ -1994,7 +1994,7 @@ npx prettier --write src/kpi
 npx eslint src/kpi --quiet
 cd ..
 git add server/src/kpi
-git commit -m "feat(kpi): KpiResultsService records LEAD_PAID and PROMISE_KEPT (ADR-0094)
+git commit -m "feat(kpi): KpiResultsService records LEAD_PAID and PROMISE_KEPT (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -2312,7 +2312,7 @@ export function movedDraft(
   }
 ```
 
-**Tuzatishning qayta yozilishi muvaffaqiyatsiz bo'lsa** (`correctAmount` eski to'lovni bekor qildi, lekin yangi to'lov yozilmadi — `correctsPaymentId` bor to'lov yo'q): eski natijalar `CANCELLED` «To'lov tuzatildi» bo'lib qoladi, ko'chiradigan to'lov yo'q. O'quvchining keyingi `recordForPayment` i — tungi tuzatish (Task 12, o'quvchining oxirgi 2 kundagi biror to'lovi bo'lsa) yoki o'quvchining navbatdagi to'lovi hodisasi — lidni ko'radi va `LEAD_PAID` qolgan eng birinchi `COMPLETED` to'lovga qayta tanlanadi (admin to'g'ri summani qo'lda kiritsa — odatda o'sha to'lov). `PROMISE_KEPT` esa yo'qoladi: va'da `KEPT` holicha eski (bekor qilingan) to'lovga bog'langan, yangi to'lov uni qayta `KEPT` qilmaydi. Bu ma'lum chegara — ADR-0094 «Oqibatlari» da yozilgan (Task 19). Kod qo'shilmaydi.
+**Tuzatishning qayta yozilishi muvaffaqiyatsiz bo'lsa** (`correctAmount` eski to'lovni bekor qildi, lekin yangi to'lov yozilmadi — `correctsPaymentId` bor to'lov yo'q): eski natijalar `CANCELLED` «To'lov tuzatildi» bo'lib qoladi, ko'chiradigan to'lov yo'q. O'quvchining keyingi `recordForPayment` i — tungi tuzatish (Task 12, o'quvchining oxirgi 2 kundagi biror to'lovi bo'lsa) yoki o'quvchining navbatdagi to'lovi hodisasi — lidni ko'radi va `LEAD_PAID` qolgan eng birinchi `COMPLETED` to'lovga qayta tanlanadi (admin to'g'ri summani qo'lda kiritsa — odatda o'sha to'lov). `PROMISE_KEPT` esa yo'qoladi: va'da `KEPT` holicha eski (bekor qilingan) to'lovga bog'langan, yangi to'lov uni qayta `KEPT` qilmaydi. Bu ma'lum chegara — ADR-0095 «Oqibatlari» da yozilgan (Task 19). Kod qo'shilmaydi.
 
 - [ ] **Step 3: Listener**
 
@@ -2371,7 +2371,7 @@ import { KpiRecorderListener } from './kpi-recorder.listener';
 import { KpiResultsService } from './kpi-results.service';
 import { KpiSettingsService } from './kpi-settings.service';
 
-/** Admin KPI results (ADR-0094). Stage 2: recorded and shown, no money. */
+/** Admin KPI results (ADR-0095). Stage 2: recorded and shown, no money. */
 @Module({
   imports: [SettingsModule],
   providers: [KpiSettingsService, KpiResultsService, KpiRecorderListener],
@@ -2397,7 +2397,7 @@ npx prettier --write src/kpi src/app.module.ts
 npx eslint src/kpi src/app.module.ts --quiet
 cd ..
 git add server/src/kpi server/src/app.module.ts
-git commit -m "feat(kpi): cancel on reversal, move on correction, record on payment events (ADR-0094)
+git commit -m "feat(kpi): cancel on reversal, move on correction, record on payment events (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -2748,7 +2748,7 @@ npx prettier --write src/kpi/kpi-signals.ts src/kpi/kpi-signals.spec.ts
 npx eslint src/kpi/kpi-signals.ts --quiet
 cd ..
 git add server/src/kpi
-git commit -m "feat(kpi): the «Diqqat» rules and the month-end forecast (ADR-0094)
+git commit -m "feat(kpi): the «Diqqat» rules and the month-end forecast (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -3220,7 +3220,7 @@ npx prettier --write src/kpi/kpi-overview.math.ts src/kpi/kpi-overview.math.spec
 npx eslint src/kpi/kpi-overview.math.ts --quiet
 cd ..
 git add server/src/kpi
-git commit -m "feat(kpi): the overview's cards, rows and series as a pure assembly (ADR-0094)
+git commit -m "feat(kpi): the overview's cards, rows and series as a pure assembly (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -3254,7 +3254,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 `server/src/leads/ownership/lead-ownership.service.spec.ts`: importga `liveOwnedLeadWhere, ownershipLogBranchWhere` (`./lead-ownership.service` dan), fayl oxiriga:
 
 ```ts
-describe('ownership filters shared with the KPI page (ADR-0094)', () => {
+describe('ownership filters shared with the KPI page (ADR-0095)', () => {
   it('a live owned lead: not deleted, not converted, in the branch or branch-less', () => {
     expect(liveOwnedLeadWhere(1001, [2])).toEqual({
       companyId: 1001,
@@ -3415,7 +3415,7 @@ Expected: FAIL — `Cannot find module './kpi-read.service'`; `liveOwnedLeadWher
 /**
  * A lead held now: owned, not archived, not converted, in the scope or with
  * no branch (a branch-less lead is everyone's, as on the board). Shared by
- * `summary` and the KPI page (ADR-0094), so «band lid» means one thing.
+ * `summary` and the KPI page (ADR-0095), so «band lid» means one thing.
  */
 export function liveOwnedLeadWhere(
   companyId: number,
@@ -3828,7 +3828,7 @@ npx prettier --write src/kpi/kpi-read.service.ts src/kpi/kpi-read.service.spec.t
 npx eslint src/kpi/kpi-read.service.ts src/leads/ownership/lead-ownership.service.ts --quiet
 cd ..
 git add server/src/kpi server/src/leads/ownership
-git commit -m "feat(kpi): the overview and one person's month, branch-scoped (ADR-0094)
+git commit -m "feat(kpi): the overview and one person's month, branch-scoped (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -4006,7 +4006,7 @@ import { KpiSettingsService } from './kpi-settings.service';
 import { KpiMonthQueryDto, KpiOverviewQueryDto } from './dto/kpi-query.dto';
 import { KpiSettingsDto } from './dto/kpi-settings.dto';
 
-/** «Xodimlar KPI» (ADR-0094, spec §7.10). No money: these routes only read and set prices. */
+/** «Xodimlar KPI» (ADR-0095, spec §7.10). No money: these routes only read and set prices. */
 @Controller('kpi')
 export class KpiController {
   constructor(
@@ -4064,7 +4064,7 @@ import { KpiRecorderListener } from './kpi-recorder.listener';
 import { KpiResultsService } from './kpi-results.service';
 import { KpiSettingsService } from './kpi-settings.service';
 
-/** Admin KPI results (ADR-0094). Stage 2: recorded and shown, no money. */
+/** Admin KPI results (ADR-0095). Stage 2: recorded and shown, no money. */
 @Module({
   imports: [SettingsModule],
   controllers: [KpiController],
@@ -4107,7 +4107,7 @@ export class KpiModule {}
   {
     policy: 'COMPANY_WIDE',
     reason:
-      'KPI prices and switch (ADR-0094): `kpi.enabled`, `kpi.leadPaid.*` and ' +
+      'KPI prices and switch (ADR-0095): `kpi.enabled`, `kpi.leadPaid.*` and ' +
       '`kpi.promiseKept.*` are company-level settings (`companyLevelOnly`) — one ' +
       'value for every branch. The read carries the rules only; the write is ' +
       'CEO-only through `@CeoOnly()`. `GET /kpi/overview` and ' +
@@ -4135,7 +4135,7 @@ npx prettier --write src/kpi src/common/auth/branch-route-policy.ts
 npx eslint src/kpi src/common/auth/branch-route-policy.ts --quiet
 cd ..
 git add server/src
-git commit -m "feat(kpi): overview, person and settings routes (ADR-0094)
+git commit -m "feat(kpi): overview, person and settings routes (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -4486,7 +4486,7 @@ export function resolvingPaymentId(
 
 ```ts
 /**
- * KPI results since KPI_START (ADR-0094, spec §7.6), written by the same
+ * KPI results since KPI_START (ADR-0095, spec §7.6), written by the same
  * `KpiResultsService` the payment events use. Run once after the deploy.
  *
  *   railway run --service caring-courage --environment production \
@@ -4732,7 +4732,7 @@ npx prettier --write src/kpi scripts/kpi-backfill.ts
 npx eslint src/kpi scripts/kpi-backfill.ts --quiet
 cd ..
 git add server/src/kpi server/scripts/kpi-backfill.ts server/tsconfig.check.json
-git commit -m "feat(kpi): nightly 03:30 repair and the one-time backfill script (ADR-0094)
+git commit -m "feat(kpi): nightly 03:30 repair and the one-time backfill script (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -4753,7 +4753,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 `archive-restore.lead-owner.spec.ts` da `describe('one lead'` ichiga:
 
 ```ts
-    it('brings a converted lead back CONVERTED, with its owner and its conversion time (ADR-0094)', async () => {
+    it('brings a converted lead back CONVERTED, with its owner and its conversion time (ADR-0095)', async () => {
       prisma.lead.findFirst.mockResolvedValue({
         ...OWNED,
         statusEnum: 'CONVERTED',
@@ -4813,7 +4813,7 @@ Expected: FAIL (aylangan lid `NEW` bo'lib, egasiz qaytadi).
 `archive-restore.service.ts` `restore()` da `const defaultStatus = ENTITY_DEFAULT_STATUS[entityType];` qatorini almashtiring:
 
 ```ts
-    // ADR-0094: a converted lead comes back CONVERTED with its owner and its
+    // ADR-0095: a converted lead comes back CONVERTED with its owner and its
     // conversion time — its KPI is credited to that owner from that moment
     // (the same rule as `restoreRelease`).
     const keepsConversion =
@@ -4848,7 +4848,7 @@ va `restoreData` ni:
 `restoreBatch` da `const ownedLeads = await tx.lead.findMany({` dan OLDIN:
 
 ```ts
-      // ADR-0094: the batch's converted leads keep CONVERTED, their owner and
+      // ADR-0095: the batch's converted leads keep CONVERTED, their owner and
       // their conversion time; only the others come back NEW and unowned.
       await tx.lead.updateMany({
         where: { deletionBatchId: batchId, convertedStudentId: { not: null } },
@@ -4876,7 +4876,7 @@ npx prettier --write src/archive/archive-restore.service.ts src/archive/archive-
 npx eslint src/archive/archive-restore.service.ts --quiet
 cd ..
 git add server/src/archive
-git commit -m "fix(archive): a restored converted lead keeps CONVERTED, its owner and its conversion time (ADR-0094)
+git commit -m "fix(archive): a restored converted lead keeps CONVERTED, its owner and its conversion time (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -5000,7 +5000,7 @@ Expected: FAIL.
 `client/src/components/reports/admin-kpi/kpi-types.ts`:
 
 ```ts
-/** The JSON of `/kpi/*` (server `src/kpi/`, ADR-0094). Dates arrive as ISO strings. */
+/** The JSON of `/kpi/*` (server `src/kpi/`, ADR-0095). Dates arrive as ISO strings. */
 export type KpiResultType = "LEAD_PAID" | "PROMISE_KEPT";
 export type KpiResultStatus = "ACTIVE" | "CANCELLED";
 export type KpiRuleMode = "FIXED" | "PERCENT";
@@ -5313,7 +5313,7 @@ Expected: PASS, lint xatosiz.
 
 ```bash
 git add client/src/components/reports/admin-kpi
-git commit -m "feat(kpi): client types, formatting and queries (ADR-0094)
+git commit -m "feat(kpi): client types, formatting and queries (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -5335,7 +5335,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 `client/src/lib/settings-nav.test.ts`: `"the CEO sees all 14 items in two sections"` → `"the CEO sees all 15 items in two sections"`, `toHaveLength(14)` → `toHaveLength(15)`. Oxiriga:
 
 ```ts
-describe("«KPI sozlamalari» — CEO only (ADR-0094)", () => {
+describe("«KPI sozlamalari» — CEO only (ADR-0095)", () => {
   const PATH = "/settings/kpi";
   it("only the CEO sees and opens it", () => {
     const ceo = getVisibleSettingsSections(canForRoles([CEO]), true).flatMap((s) => s.items);
@@ -5352,7 +5352,7 @@ Run: `cd client && npx vitest run src/lib/settings-nav.test.ts` — FAIL.
 
 ```ts
       {
-        // The write is `@CeoOnly()` (ADR-0094): identity, not a capability.
+        // The write is `@CeoOnly()` (ADR-0095): identity, not a capability.
         title: "KPI sozlamalari",
         url: "/settings/kpi",
         icon: Trophy,
@@ -5364,7 +5364,7 @@ Run: `cd client && npx vitest run src/lib/settings-nav.test.ts` — FAIL.
 `client/src/lib/breadcrumb-routes.ts` ga `"lead-ownership"` dan keyin:
 
 ```ts
-  // /settings/kpi — «KPI sozlamalari», CEO only (ADR-0094).
+  // /settings/kpi — «KPI sozlamalari», CEO only (ADR-0095).
   kpi: "KPI sozlamalari",
 ```
 
@@ -5417,7 +5417,7 @@ const RULES = [
 const TITLE = "KPI sozlamalari";
 const DESCRIPTION = "KPI narxlari va hisoblash kaliti";
 
-/** CEO-only (ADR-0094): the switch and the two prices. A price changes only the results after it. */
+/** CEO-only (ADR-0095): the switch and the two prices. A price changes only the results after it. */
 export function KpiSettingsClient() {
   const queryClient = useQueryClient();
   const { data, isLoading, isError, refetch } = useKpiSettings();
@@ -5577,7 +5577,7 @@ npx eslint src/components/settings/kpi-settings-client.tsx "src/app/(dashboard)/
 npx tsc --noEmit -p .
 cd ..
 git add client/src
-git commit -m "feat(kpi): KPI settings page for the CEO (ADR-0094)
+git commit -m "feat(kpi): KPI settings page for the CEO (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -5602,7 +5602,7 @@ Expected: lint va tsc xatosiz.
 `client/src/lib/reports-nav.test.ts` oxiriga:
 
 ```ts
-describe("Xodimlar KPI — kpi.view (ADR-0094)", () => {
+describe("Xodimlar KPI — kpi.view (ADR-0095)", () => {
   it("CEO va filial direktori ochadi; administrator, o'qituvchi va kassir ochmaydi", () => {
     for (const role of [1, 2]) {
       expect(canOpenReportPath(canForRoles([role]), "/reports/xodimlar-kpi", [role])).toBe(true);
@@ -5619,7 +5619,7 @@ describe("Xodimlar KPI — kpi.view (ADR-0094)", () => {
 
 ```ts
 describe("navItems — «Hisobotlar»", () => {
-  it("opens for kpi.view too, so a role given only the KPI page still reaches it (ADR-0094)", () => {
+  it("opens for kpi.view too, so a role given only the KPI page still reaches it (ADR-0095)", () => {
     expect(navItems.find((item) => item.url === "/reports")?.permission).toEqual([
       "reports.finance",
       "reports.payments",
@@ -5636,7 +5636,7 @@ Run: `cd client && npx vitest run src/lib/reports-nav.test.ts src/lib/nav-items.
 `client/src/lib/reports-nav.ts`: `lucide-react` importiga `Trophy`; «Marketing va faoliyat» bo'limida «Lidlar hisoboti» dan keyin:
 
 ```ts
-      // «Xodimlar KPI» (ADR-0094): the managers' observation page.
+      // «Xodimlar KPI» (ADR-0095): the managers' observation page.
       { title: "Xodimlar KPI", url: "/reports/xodimlar-kpi", icon: Trophy, permission: "kpi.view" },
 ```
 
@@ -5961,7 +5961,7 @@ npx eslint src/components/reports/admin-kpi "src/app/(dashboard)/reports/xodimla
 npx tsc --noEmit -p .
 cd ..
 git add client/src
-git commit -m "feat(kpi): the «Xodimlar KPI» page — cards, «Diqqat» and the admin table (ADR-0094)
+git commit -m "feat(kpi): the «Xodimlar KPI» page — cards, «Diqqat» and the admin table (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -6374,7 +6374,7 @@ npx tsc --noEmit -p .
 npx vitest run src/components/reports/admin-kpi
 cd ..
 git add client/src/components/reports/admin-kpi
-git commit -m "feat(kpi): month and six-month charts, the person drawer (ADR-0094)
+git commit -m "feat(kpi): month and six-month charts, the person drawer (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -6484,7 +6484,7 @@ npx eslint src/components/settings/employee-profile-client.tsx src/components/se
 npx tsc --noEmit -p .
 cd ..
 git add client/src/components
-git commit -m "feat(kpi): the employee page's «KPI» tab (ADR-0094)
+git commit -m "feat(kpi): the employee page's «KPI» tab (ADR-0095)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -6493,20 +6493,20 @@ Expected: xatosiz.
 
 ---
 
-### Task 19: Hujjatlar — ADR-0094, CLAUDE.md, qo'llanma
+### Task 19: Hujjatlar — ADR-0095, CLAUDE.md, qo'llanma
 
 **Files:**
-- Create: `docs/adr/0094-kpi-natijasi.md`; Modify: `docs/adr/README.md`
+- Create: `docs/adr/0095-kpi-natijasi.md`; Modify: `docs/adr/README.md`
 - Modify: `server/CLAUDE.md`, `client/CLAUDE.md`
 - Create: `client/src/qollanma/kontent/hisobotlar/xodimlar-kpi.mdx`
 - Modify: `client/src/qollanma/sahifalar/hisobotlar.ts`, `client/src/qollanma/yangiliklar.ts`
 
-- [ ] **Step 1: ADR-0094**
+- [ ] **Step 1: ADR-0095**
 
-`docs/adr/0094-kpi-natijasi.md`:
+`docs/adr/0095-kpi-natijasi.md`:
 
 ```markdown
-# ADR-0094: KPI natijasi — administratorga, bir marta, summa muhrlanadi
+# ADR-0095: KPI natijasi — administratorga, bir marta, summa muhrlanadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-16
@@ -6546,7 +6546,7 @@ Expected: xatosiz.
 `docs/adr/README.md` jadvaliga 0093 qatoridan keyin:
 
 ```markdown
-| [0094](0094-kpi-natijasi.md) | KPI natijasi: administratorga, bir marta, summa muhrlanadi | Qabul qilindi | 2026-10-16 |
+| [0095](0095-kpi-natijasi.md) | KPI natijasi: administratorga, bir marta, summa muhrlanadi | Qabul qilindi | 2026-10-16 |
 ```
 
 (PR ochishdan oldin `main` ni tortib ADR raqami bandligini tekshiring; band bo'lsa `git mv` bilan qayta raqamlang.)
@@ -6558,7 +6558,7 @@ Expected: xatosiz.
 - «### Custom Form Submissions» bo'limidan oldin:
 
 ```markdown
-### Admin KPI results (`src/kpi/`, ADR-0094)
+### Admin KPI results (`src/kpi/`, ADR-0095)
 
 - Stage 2 of the admin KPI: results are recorded, no money moves — no `Transaction`, `Expense`, `CashMovement` or payroll row; the salary, cash and profit reports do not read `KpiResult`. Spec `docs/superpowers/specs/2026-10-16-admin-kpi-design.md` §7.
 - **One writer**: `KpiResult` rows are written only by `KpiResultsService` (`kpi-write.single-source.spec.ts`); the planning reads live in `kpi-results.plan.ts`, which writes nothing. `LEAD_PAID` — the converted lead's frozen owner (ADR-0093), on the student's first `COMPLETED` payment after `Lead.statusChangedAt` that no other lead holds, for `conversionKind` `NEW_STUDENT` or `RETURNING` (`ALREADY_STUDYING` earns nothing). `PROMISE_KEPT` — the promise's `createdById`, on the payment `settleKeptPromises` wrote into `PaymentPromise.resolvedPaymentId` in the same transaction; base `max(0, −balanceAtPromise)`.
@@ -6575,7 +6575,7 @@ Expected: xatosiz.
 `client/CLAUDE.md` da «### Lead Forms and Their Responses» bo'limidan oldin:
 
 ```markdown
-### Admin KPI (`/reports/xodimlar-kpi`, ADR-0094)
+### Admin KPI (`/reports/xodimlar-kpi`, ADR-0095)
 
 - «Xodimlar KPI» in «Marketing va faoliyat» (`reports-nav.ts`, `permission: "kpi.view"`: CEO and Branch Director). Files in `components/reports/admin-kpi/`: `kpi-overview-page.tsx`, `kpi-summary-cards.tsx`, `kpi-attention.tsx`, `kpi-charts.tsx`, `kpi-admin-table.tsx`, `kpi-user-drawer.tsx`, `kpi-user-panel.tsx` (shared by the drawer and the employee tab), `employee-kpi-tab.tsx`, `kpi-trend.tsx`, `kpi-queries.ts`, `kpi-types.ts`, `kpi-format.ts` (pure, vitest).
 - URL: `oy` (empty = the current month, `MonthStepper` from 2026-10), `bilan` (empty = the month before), `xodim` (the open drawer); the employee tab's month is `kpi_oy`. Every figure, signal text and «Qanday hisoblandi» line is the server's; the client only formats and draws. The admin table is not paginated (the team at a glance); the results table of the drawer and the tab is (10–50).
@@ -6594,7 +6594,7 @@ Expected: xatosiz.
     qisqacha:
       "Administrator egasi bo'lgan lid birinchi to'lovni qilganda va u yozgan to'lov va'dasi bajarilganda natija yoziladi. CEO va filial direktori kim qancha natija qilganini, o'sish va kamayishni shu sahifada ko'radi. Hozir kuzatuv: pul berilmaydi.",
     rollar: [1, 2],
-    adr: ["0094", "0093"],
+    adr: ["0095", "0093"],
     yollar: ["/reports/xodimlar-kpi", "/settings/kpi"],
     kalitSozlar: ["KPI", "xodim natijasi", "administrator", "lid to'lov qildi", "va'da bajarildi", "mukofot", "kuzatuv"],
     yangilangan: "2026-10-16",
@@ -6671,7 +6671,7 @@ Sozlamalar → «KPI sozlamalari» (faqat CEO): hisoblash kaliti va ikki narx. K
 cd client && npx vitest run src/qollanma
 cd ..
 git add docs client/src/qollanma server/CLAUDE.md client/CLAUDE.md
-git commit -m "docs: ADR-0094 KPI results, CLAUDE.md and the user guide
+git commit -m "docs: ADR-0095 KPI results, CLAUDE.md and the user guide
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -6753,4 +6753,4 @@ Hamma qadam o'tsa, shox tayyor. PR ochish va saytga chiqarish — foydalanuvchi 
 | §7.7 sahifa, kartalar, kalit qatori, diagrammalar, jadval (sahifalanmaydi), `?xodim=`, ta'riflar | 9, 10, 14, 16, 17 |
 | §7.11 arxivdan tiklash tuzatishi | 13 |
 | §7.12 bu bosqichga kirmaydi (pul yo'q, admin o'zini ko'rmaydi) | Global Constraints, 3, 14 |
-| §7.13 ADR-0094 + hujjatlar | 19 |
+| §7.13 ADR-0095 + hujjatlar | 19 |
