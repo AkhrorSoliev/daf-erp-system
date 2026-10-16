@@ -187,6 +187,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Personal Telegram report recipients (ADR-0095): who receives the daily ' +
+      'report in their own chat, with which branches. Company-level settings, ' +
+      'CEO-only through `@CeoOnly()`; the CEO picks any branch for anyone.',
+    routes: [
+      'GET /telegram-report/recipients',
+      'GET /telegram-report/candidates',
+      'POST /telegram-report/recipients',
+      'PATCH /telegram-report/recipients/:id',
+      'DELETE /telegram-report/recipients/:id',
+      'POST /telegram-report/recipients/:id/test',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
       'Id-addressed money paths. The branch is resolved from the record (or ' +
