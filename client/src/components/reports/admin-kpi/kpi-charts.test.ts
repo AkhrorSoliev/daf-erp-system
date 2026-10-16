@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { DailyTooltip, KpiDailyChart, MonthsTooltip } from "./kpi-charts";
+import { DailyTooltip, KpiDailyChart, KpiMonthsChart, MonthsTooltip, topRadius } from "./kpi-charts";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
 const day = { day: 5, current: 3, compare: 2 };
@@ -47,5 +47,35 @@ describe("MonthsTooltip", () => {
     expect(out).toContain("Lid to&#x27;lov qildi");
     expect(out).not.toContain("Va&#x27;da bajarildi");
     expect(out).toContain("Jami");
+  });
+});
+
+describe("chart legends", () => {
+  const data = [{ day: 1, current: 1, compare: 5 }];
+  it("names both months when the compare month has data", () => {
+    const out = html(createElement(KpiDailyChart, { data, month: "2026-11", compare: "2026-10", compareAvailable: true }));
+    expect(out).toContain("<li");
+    expect(out).toContain("dashed");
+    expect(out.match(/<li/g)).toHaveLength(2);
+  });
+
+  it("has no compare entry when the compare month has no data", () => {
+    const out = html(createElement(KpiDailyChart, { data, month: "2026-10", compare: "2026-09", compareAvailable: false }));
+    expect(out.match(/<li/g)).toHaveLength(1);
+    expect(out).not.toContain("dashed");
+  });
+
+  it("keys the stacked months", () => {
+    const out = html(createElement(KpiMonthsChart, { data: [{ month: "2026-10", leadPaid: 2, promiseKept: 1, amount: 3 }] }));
+    expect(out).toContain("Lid to&#x27;lov qildi");
+    expect(out).toContain("Va&#x27;da bajarildi");
+  });
+});
+
+describe("topRadius", () => {
+  it("rounds the lead bar only when no promise part is above it", () => {
+    expect(topRadius({ promiseKept: 0 }, "lead")).toEqual([4, 4, 0, 0]);
+    expect(topRadius({ promiseKept: 2 }, "lead")).toBe(0);
+    expect(topRadius({ promiseKept: 2 }, "promise")).toEqual([4, 4, 0, 0]);
   });
 });

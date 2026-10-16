@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { formatPrice } from "@/lib/format-utils";
+import { formatNumber, formatPrice } from "@/lib/format-utils";
 import {
   dayText,
+  axisSom,
   deltaLine,
   compareText,
   deltaOrNull,
@@ -107,5 +108,13 @@ describe("settings form", () => {
     expect(
       settingsPatch(SAVED, { ...SAVED, promiseKept: { mode: "PERCENT", value: 5 } }),
     ).toEqual({ promiseKept: { mode: "PERCENT", value: 5 } });
+  });
+});
+
+describe("axisSom", () => {
+  it("shortens millions and keeps smaller sums whole", () => {
+    expect(axisSom(1_200_000)).toBe(`${formatNumber(1.2, { maximumFractionDigits: 1 })} mln`);
+    expect(axisSom(10_000_000)).toContain("mln");
+    expect(axisSom(50_000)).toBe(formatPrice(50_000));
   });
 });

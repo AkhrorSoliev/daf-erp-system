@@ -56,7 +56,9 @@ export function KpiUserPanel({
   const d = q.data;
   const rows = d.results.slice((page - 1) * pageSize, page * pageSize);
   return (
-    <div className="space-y-6">
+    // Flex column: everything scrolls except the pagination, which keeps its own shrink-0 slot (client/CLAUDE.md).
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
       {stepper}
       <div className="rounded-lg border bg-muted/40 p-4">
         <p className="text-sm text-muted-foreground">{monthLabel(d.month)} KPI</p>
@@ -113,19 +115,24 @@ export function KpiUserPanel({
                 })}
               </TableBody>
             </Table>
-            <TablePagination
-              page={page}
-              pageSize={pageSize}
-              total={d.results.length}
-              onPageChange={setPage}
-              onPageSizeChange={(s) => {
-                setPageSize(s);
-                setPage(1);
-              }}
-            />
           </>
         )}
       </section>
+      </div>
+      {d.results.length > 0 && (
+        <div className="shrink-0 border-t pt-3">
+          <TablePagination
+            page={page}
+            pageSize={pageSize}
+            total={d.results.length}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setPage(1);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

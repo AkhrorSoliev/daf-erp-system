@@ -123,3 +123,8 @@ export const KPI_DEFINITIONS = [
     text: "joriy oy taqqoslanayotgan oyning shu kunigacha bo'lgan qismi bilan solishtiriladi.",
   },
 ] as const;
+
+/** Y-axis tick for sums: 1 200 000 → «1,2 mln», smaller ones in full. */
+export function axisSom(v: number): string {
+  return v >= 1_000_000 ? `${formatNumber(v / 1_000_000, { maximumFractionDigits: 1 })} mln` : formatPrice(v);
+}

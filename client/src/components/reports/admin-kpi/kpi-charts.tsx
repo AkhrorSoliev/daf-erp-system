@@ -7,6 +7,7 @@ import {
   LabelList,
   Line,
   LineChart,
+  Rectangle,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -15,6 +16,7 @@ import {
 import { ChartCard } from "@/components/shared/chart-card";
 import { monthLabel, monthShort } from "@/components/payments/salary-utils";
 import { formatNumber, formatPrice } from "@/lib/format-utils";
+import { axisSom } from "./kpi-format";
 import type { KpiOverview, KpiUserView } from "./kpi-types";
 
 // Literal colours: SVG attributes ignore CSS variables (client/CLAUDE.md, charts).
@@ -28,6 +30,56 @@ const TICK = { fontSize: 11, fill: "#64748b" };
 // Recharts injects its own loosely typed payload.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TooltipProps = { active?: boolean; payload?: ReadonlyArray<any> };
+
+type LegendItem = { label: string; color: string; dashed?: boolean };
+
+/** Colour key above a chart (HTML, so it follows the theme and renders in tests). */
+export function ChartLegend({ items }: { items: LegendItem[] }) {
+  return (
+    <ul className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      {items.map((i) => (
+        <li key={i.label} className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="inline-block h-0 w-4 shrink-0"
+            style={{ borderTop: `2px ${i.dashed ? "dashed" : "solid"} ${i.color}` }}
+          />
+          {i.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** The daily chart's key: the month, and the compare month only when it has data. */
+export function dailyLegend(month: string, compare: string, compareAvailable: boolean): LegendItem[] {
+  return [
+    { label: monthLabel(month), color: CURRENT },
+    ...(compareAvailable ? [{ label: monthLabel(compare), color: COMPARE, dashed: true }] : []),
+  ];
+}
+
+const MONTHS_LEGEND: LegendItem[] = [
+  { label: "Lid to'lov qildi", color: LEAD },
+  { label: "Va'da bajarildi", color: PROMISE },
+];
+
+const TOP_RADIUS: [number, number, number, number] = [4, 4, 0, 0];
+
+/** Rounded top corners for the segment that is on top of the stack: lead-only months end in the lead bar. */
+export function topRadius(row: { promiseKept: number }, part: "lead" | "promise"): [number, number, number, number] | 0 {
+  return part === "promise" || row.promiseKept === 0 ? TOP_RADIUS : 0;
+}
+
+// Recharts hands the shape its own loosely typed props.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ShapeProps = any;
+function LeadShape(p: ShapeProps) {
+  return <Rectangle {...p} radius={topRadius(p.payload ?? p, "lead")} />;
+}
+function PromiseShape(p: ShapeProps) {
+  return <Rectangle {...p} radius={topRadius(p.payload ?? p, "promise")} />;
+}
 
 /**
  * «Oy davomida»: cumulative results by day of month, the month and the compare month (spec §7.7).
@@ -62,6 +114,9 @@ export function KpiDailyChart({
       }
       bodyHeightClass="h-[260px]"
     >
+      <div className="flex h-full flex-col">
+        <ChartLegend items={dailyLegend(month, compare, compareAvailable)} />
+        <div className="min-h-0 flex-1">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
@@ -76,6 +131,8 @@ export function KpiDailyChart({
           <Line type="monotone" dataKey="current" stroke={CURRENT} strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
+        </div>
+      </div>
     </ChartCard>
   );
 }
@@ -119,14 +176,17 @@ export function KpiMonthsChart({ data }: { data: KpiOverview["months"] }) {
       emptyMessage="Hali natija yo'q — birinchi to'lovdan keyin chiqadi"
       bodyHeightClass="h-[260px]"
     >
+      <div className="flex h-full flex-col">
+        <ChartLegend items={MONTHS_LEGEND} />
+        <div className="min-h-0 flex-1">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={rows} margin={{ top: 16, right: 8, bottom: 0, left: -16 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
           <XAxis dataKey="label" tick={TICK} tickLine={false} axisLine={{ stroke: GRID }} />
           <YAxis allowDecimals={false} tick={TICK} tickLine={false} axisLine={false} width={32} />
           <Tooltip cursor={{ fill: "rgba(100, 116, 139, 0.12)" }} content={(p) => <MonthsTooltip {...p} />} />
-          <Bar dataKey="leadPaid" stackId="k" fill={LEAD} />
-          <Bar dataKey="promiseKept" stackId="k" fill={PROMISE} radius={[4, 4, 0, 0]}>
+          <Bar dataKey="leadPaid" stackId="k" fill={LEAD} shape={LeadShape} />
+          <Bar dataKey="promiseKept" stackId="k" fill={PROMISE} shape={PromiseShape}>
             <LabelList
               dataKey="_total"
               position="top"
@@ -136,6 +196,8 @@ export function KpiMonthsChart({ data }: { data: KpiOverview["months"] }) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+        </div>
+      </div>
     </ChartCard>
   );
 }
@@ -184,7 +246,7 @@ export function KpiUserMonthsChart({ data }: { data: KpiUserView["months"] }) {
         <LineChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
           <XAxis dataKey="label" tick={TICK} tickLine={false} axisLine={{ stroke: GRID }} />
-          <YAxis tick={TICK} tickLine={false} axisLine={false} width={56} tickFormatter={(v: number) => formatPrice(v)} />
+          <YAxis tick={TICK} tickLine={false} axisLine={false} width={64} tickFormatter={axisSom} />
           <Tooltip content={(p) => <UserMonthsTooltip {...p} />} />
           <Line type="monotone" dataKey="amount" stroke={CURRENT} strokeWidth={2} dot />
         </LineChart>
