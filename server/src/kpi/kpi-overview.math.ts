@@ -59,8 +59,11 @@ export interface OverviewFacts {
   /** Promises written in scope whose day falls in the month, KEPT or BROKEN. */
   promises: PromiseFact[];
   names: ReadonlyMap<number, string>;
-  /** Lead holders who are administrators now: only they join the table without a result. */
-  eligibleHolders: ReadonlySet<number>;
+  /**
+   * Of the people holding leads now or named in this month's logs, those who
+   * are administrators now: only they join the table without a result.
+   */
+  eligibleUsers: ReadonlySet<number>;
   /** The month's working days (current month only), for the forecast. */
   workingDays: readonly string[] | null;
   /** Tashkent day results are written from (`recordingSince`); null = the switch is off. */
@@ -148,6 +151,23 @@ export function monthsFrom(month: string): string[] {
   return out;
 }
 
+/**
+ * Results before `recordingSinceDay` (written before the switch went off) are
+ * counted as they are; only the rest is projected over the recorded days.
+ */
+function forecastOf(
+  active: readonly ResultFact[],
+  f: OverviewFacts,
+): number | null {
+  const since = f.recordingSinceDay;
+  if (!f.today || !f.workingDays || !since) return null;
+  const after = active.filter(
+    (r) => tashkentDateStr(r.occurredAt) >= since,
+  ).length;
+  const projected = monthEndForecast(after, f.workingDays, f.today, since);
+  return projected === null ? null : active.length - after + projected;
+}
+
 export function assembleOverview(f: OverviewFacts): OverviewBody {
   const todayDay = f.today === null ? null : Number(f.today.slice(8, 10));
   // In the current month every comparison stops at the same day of the
@@ -166,9 +186,15 @@ export function assembleOverview(f: OverviewFacts): OverviewBody {
   const paidOf = (pairs: Set<string>) =>
     [...pairs].filter((p) => paid.has(p)).length;
 
+  // With a result, or an administrator who holds leads now or took or lost
+  // one this month — whose leads all expired is exactly rule 3's case.
   const ids = new Set(f.monthResults.map((r) => r.userId));
-  for (const userId of f.held.keys()) {
-    if (f.eligibleHolders.has(userId)) ids.add(userId);
+  for (const userId of [
+    ...f.held.keys(),
+    ...f.received.map((l) => l.userId),
+    ...f.expired.map((l) => l.userId),
+  ]) {
+    if (f.eligibleUsers.has(userId)) ids.add(userId);
   }
 
   const rows = [...ids]
@@ -278,15 +304,7 @@ export function assembleOverview(f: OverviewFacts): OverviewBody {
         value: pct(paidOf(monthPairs), monthPairs.size),
         compare: pct(paidOf(comparePairs), comparePairs.size),
       },
-      forecast:
-        f.today && f.workingDays && f.recordingSinceDay
-          ? monthEndForecast(
-              active.length,
-              f.workingDays,
-              f.today,
-              f.recordingSinceDay,
-            )
-          : null,
+      forecast: forecastOf(active, f),
     },
     signals,
     daily,

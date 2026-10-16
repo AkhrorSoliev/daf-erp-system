@@ -83,7 +83,7 @@ function facts(over: Partial<OverviewFacts> = {}): OverviewFacts {
       [13, 'Bobur K'],
       [14, 'Dilnoza S'],
     ]),
-    eligibleHolders: new Set([11, 13]),
+    eligibleUsers: new Set([11, 13]),
     workingDays: workingDaysOfMonth('2026-10', () => false),
     compareRecorded: true,
     recordingSinceDay: '2026-10-01',
@@ -270,5 +270,64 @@ describe('assembleOverview — the compare month window of rule 3', () => {
     expect(expiredText({ today: null, workingDays: null })).toContain(
       'taqqoslanayotgan oyda 2 ta',
     );
+  });
+});
+
+describe('assembleOverview — an administrator whose leads all expired', () => {
+  // 13 holds nothing now and has no result; 15 lost leads too but is no administrator.
+  const out = assembleOverview(
+    facts({
+      held: new Map([[11, 4]]),
+      expired: [
+        log(13, 'E1', '2026-10-01'),
+        log(13, 'E2', '2026-10-02'),
+        log(13, 'E3', '2026-10-03'),
+        log(15, 'E4', '2026-10-03'),
+      ],
+      received: [
+        log(11, 'L1', '2026-10-01'),
+        log(13, 'E1', '2026-10-01'),
+        log(16, 'L5', '2026-10-02'),
+      ],
+      eligibleUsers: new Set([11, 13, 16]),
+    }),
+  );
+
+  it('still gets a row, and so does an administrator who only took a lead', () => {
+    expect(out.rows.map((r) => r.userId)).toEqual([11, 12, 16, 13]);
+    expect(out.rows.find((r) => r.userId === 13)).toEqual(
+      expect.objectContaining({
+        held: 0,
+        expired: { count: 3, compare: 1 },
+        leadToPaid: { paid: 0, received: 1, pct: 0 },
+      }),
+    );
+  });
+
+  it('and rule 3 fires for them', () => {
+    expect(
+      out.signals.filter((s) => s.kind === 'EXPIRED').map((s) => s.userId),
+    ).toEqual([13]);
+  });
+});
+
+describe('assembleOverview — forecast after the switch came back on', () => {
+  it('projects only the results written since, the earlier ones counted as they are', () => {
+    // 30 results on 1–10, off 11–19, on from 20; today 22.10.
+    const early = Array.from({ length: 30 }, (_, i) =>
+      r(11, 'LEAD_PAID', 1, `2026-10-${String((i % 10) + 1).padStart(2, '0')}`),
+    );
+    const late = ['2026-10-20', '2026-10-21', '2026-10-22'].map((d) =>
+      r(11, 'LEAD_PAID', 1, d),
+    );
+    const out = assembleOverview(
+      facts({
+        today: '2026-10-22',
+        monthResults: [...early, ...late],
+        recordingSinceDay: '2026-10-20',
+      }),
+    );
+    // Working days from 20.10: 20–24, 26–31 = 11; 3 of them passed; 30 + 3 × 11 / 3.
+    expect(out.cards.forecast).toBe(41);
   });
 });

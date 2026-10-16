@@ -320,7 +320,9 @@ replacesResultId?, createdAt`.
 - **Oy** (`?oy=YYYY-MM`, joriy oy sukut, eng kichigi 2026-10) va
   **taqqoslash** (`?bilan=` — sukut o'tgan oy).
 - **Kalit holati** qatori va «Kuzatuv: pul hali berilmaydi».
-- **Kartalar** (har biri ▲/▼ taqqoslash bilan): Natijalar (soni);
+- **Kartalar** (har biri ▲/▼ taqqoslash bilan; taqqoslanayotgan oy to'liq
+  hisoblanmagan bo'lsa — 17.10.2026 dan oldin boshlangan — ▲/▼ o'rniga u oy
+  soni izoh bilan, server `compareRecorded` bilan aytadi): Natijalar (soni);
   Berilganda bo'lardi (summa); Lid → to'lov (%); Oy oxiriga taxmin (faqat
   joriy oy, «≈», oyning 3-ish kunidan keyin).
 - **«Diqqat»** — 7.9.
@@ -328,7 +330,8 @@ replacesResultId?, createdAt`.
   taqqoslanayotgan oy (oy kuni bo'yicha tekislangan) — ikki chiziq.
 - **«Oylar bo'yicha»** — oxirgi 6 oy (2026-10 dan oldin yo'q), ustunda
   lid va va'da qismlari.
-- **Jadval** — har administrator (oyda natijasi yoki band lidi bor):
+- **Jadval** — har administrator (oyda natijasi bor, hozir band lidi bor yoki shu
+  oyda lid olgan / lidi muddat o'tib qaytgan — hozirgi administrator):
   Lid to'lov qildi (soni · summa · ▲▼), Va'da bajarildi (soni · summa · ▲▼),
   Lid → to'lov %, Va'da bajarilishi %, Qaytgan lidlar (▲▼), Jami summa.
   Sahifalanmaydi (jamoa bir qarashda — oylik jadvali kabi). Qator bosilsa —
@@ -370,7 +373,8 @@ bo'yicha tartiblangan.
 2. **Jim:** xodimda ≥ 3 band lid bor, oxirgi 7 kunda natija yo'q (faqat
    joriy oy).
 3. **Ko'p qaytish:** oyda qaytgan lidlar ≥ 3 va taqqoslanayotgan oydagidan
-   ko'p.
+   ko'p. Taqqoslanayotgan oy to'liq hisoblanmagan bo'lsa, faqat «≥ 3» qoladi
+   (matnda u oy soni yozilmaydi).
 4. **Va'da past:** va'da bajarilishi < 30%, kamida 5 ta yopilgan va'da.
 5. **Eng yaxshi ulush:** eng yuqori «Lid → to'lov» (kamida 5 ta kelgan lid
    bilan) — ijobiy signal.
@@ -379,7 +383,9 @@ bo'yicha tartiblangan.
 kunlari × oyning ish kunlari (du–sha, kompaniya bayramlarisiz), butun songa
 yaxlitlanadi. Ikkala ish kunlari soni ham natija yozila boshlagan kundan
 (`recordingSince`: 17.10.2026 yoki kalit qayta yoqilgan kun) sanaladi —
-undan oldingi kunlarda natija bo'lishi mumkin emas edi.
+undan oldingi kunlarda natija bo'lishi mumkin emas edi. Kalit oy o'rtasida
+o'chirilib qayta yoqilgan bo'lsa, `recordingSince` dan oldingi natijalar
+o'zicha qo'shiladi, faqat keyingilari shu tartibda cho'ziladi.
 
 ### 7.10 Ruxsatlar va yo'llar
 

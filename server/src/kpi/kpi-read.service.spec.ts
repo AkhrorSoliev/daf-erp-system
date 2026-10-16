@@ -24,7 +24,10 @@ function setup() {
       groupBy: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
     },
-    leadOwnershipLog: { findMany: jest.fn().mockResolvedValue([]) },
+    leadOwnershipLog: {
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    },
     paymentPromise: { findMany: jest.fn().mockResolvedValue([]) },
     user: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -125,6 +128,8 @@ describe('KpiReadService.overview', () => {
 
     expect(out.compare).toBe('2026-10');
     expect(out.compareAvailable).toBe(true);
+    // October was recorded only from 17.10: no ▲/▼ may be read against it.
+    expect(out.compareRecorded).toBe(false);
     const calls = s.prisma.kpiResult.findMany.mock.calls.map(
       (c: [{ where: Record<string, unknown> }]) => c[0].where,
     );
@@ -191,6 +196,38 @@ describe('KpiReadService.overview', () => {
         where: { id: { in: [11] }, companyId: 1001 },
       }),
     );
+  });
+});
+
+describe('KpiReadService.overview — logs bring in a row', () => {
+  it("looks up an administrator named only in the month's expired logs", async () => {
+    const s = setup();
+    s.prisma.leadOwnershipLog.findMany.mockImplementation(
+      (a: { where: { kind: { in: string[] } } }) =>
+        Promise.resolve(
+          a.where.kind.in.includes('EXPIRE')
+            ? ['e1', 'e2', 'e3'].map((leadId) => ({
+                leadId,
+                toUserId: null,
+                fromUserId: 11,
+                createdAt: new Date('2026-10-05T05:00:00Z'),
+              }))
+            : [],
+        ),
+    );
+    s.prisma.user.findMany.mockResolvedValue([ADMIN]);
+
+    const out = await s.service.overview(1001, null, {}, NOW);
+
+    expect(s.prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: [11] }, companyId: 1001 } }),
+    );
+    expect(out.rows.map((r) => r.userId)).toEqual([11]);
+    expect(out.compareRecorded).toBe(false);
+    expect(out.signals.map((x) => [x.kind, x.text])).toContainEqual([
+      'EXPIRED',
+      "Nodira R: 3 ta lid muddat o'tib qaytdi",
+    ]);
   });
 });
 
@@ -289,5 +326,39 @@ describe('KpiReadService.user', () => {
     expect(
       (await s.service.user(1001, null, 11, {}, NOVEMBER)).compareAvailable,
     ).toBe(true);
+  });
+
+  it('says whether the month before was recorded in full (from November 2026 on)', async () => {
+    const s = setup();
+    const DECEMBER = new Date('2026-12-14T12:00:00+05:00');
+    expect(
+      (await s.service.user(1001, null, 11, {}, NOVEMBER)).compareRecorded,
+    ).toBe(false);
+    expect(
+      (await s.service.user(1001, null, 11, {}, DECEMBER)).compareRecorded,
+    ).toBe(true);
+  });
+
+  it("admits a person whose lead of the month expired, so the overview's row for them opens", async () => {
+    const s = setup();
+    s.prisma.user.count.mockResolvedValue(0);
+    s.prisma.leadOwnershipLog.count.mockResolvedValue(1);
+
+    const out = await s.service.user(1001, [2], 11, {}, NOW);
+
+    expect(out.user.id).toBe(11);
+    expect(s.prisma.leadOwnershipLog.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        companyId: 1001,
+        AND: [
+          {
+            OR: [
+              { toUserId: 11, kind: { in: ['CLAIM', 'ASSIGN'] } },
+              { fromUserId: 11, kind: 'EXPIRE' },
+            ],
+          },
+        ],
+      }),
+    });
   });
 });

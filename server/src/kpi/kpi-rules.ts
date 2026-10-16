@@ -1,4 +1,5 @@
 import { KpiResultType, KpiRuleMode } from '@prisma/client';
+import { tashkentDateStr } from '../common/date/tashkent';
 import { formatSom } from '../payments/shared/format-som';
 
 /**
@@ -11,6 +12,15 @@ export const KPI_START = new Date('2026-10-17T00:00:00+05:00');
 
 /** The first month the KPI pages offer. */
 export const KPI_FIRST_MONTH = '2026-10';
+
+/**
+ * A month whose every day was recorded: it began on or after KPI_START. Until
+ * then (2026-10 and earlier) part of it was not, and no ▲/▼ or «more than
+ * the compare month» rule may be read against it (spec §7.7, §7.9).
+ */
+export function monthFullyRecorded(month: string): boolean {
+  return `${month}-01` >= tashkentDateStr(KPI_START);
+}
 
 /** Why a result was cancelled (spec §7.3). */
 export const CANCEL_REASON = {

@@ -56,7 +56,10 @@ export function kpiSignals(
   users: readonly KpiSignalInput[],
   opts: {
     isCurrentMonth: boolean;
-    /** False while the compare month was not fully recorded (before KPI_START): rule 1 is then silent. */
+    /**
+     * False while the compare month was not fully recorded (before KPI_START):
+     * rule 1 is then silent and rule 3 fires on its absolute 3 alone.
+     */
     compareRecorded: boolean;
   },
 ): KpiSignal[] {
@@ -112,12 +115,19 @@ export function kpiSignals(
         u.held,
       );
     }
-    // 3. Many returned: 3 or more, and more than in the compare month.
-    if (u.expired >= 3 && u.expired > u.compareExpired) {
+    // 3. Many returned: 3 or more, and more than in the compare month — that
+    // half only against a compare month that was recorded in full.
+    if (
+      u.expired >= 3 &&
+      (!opts.compareRecorded || u.expired > u.compareExpired)
+    ) {
+      const tail = opts.compareRecorded
+        ? ` (taqqoslanayotgan oyda ${u.compareExpired} ta)`
+        : '';
       push(
         'EXPIRED',
         u,
-        `${u.expired} ta lid muddat o'tib qaytdi (taqqoslanayotgan oyda ${u.compareExpired} ta)`,
+        `${u.expired} ta lid muddat o'tib qaytdi${tail}`,
         u.expired,
       );
     }

@@ -34,9 +34,9 @@ import {
 import { KpiSettingsService } from './kpi-settings.service';
 import {
   KPI_FIRST_MONTH,
-  KPI_START,
   explainKpi,
   isKpiEligible,
+  monthFullyRecorded,
   recordingSince,
 } from './kpi-rules';
 import { workingDaysOfMonth } from './kpi-signals';
@@ -52,6 +52,8 @@ import {
 /** No branch has id 0: the company-wide holidays alone (as `LeadOwnershipService` reads them). */
 const COMPANY_WIDE_HOLIDAYS = 0;
 const NOT_FOUND = 'Xodim topilmadi';
+/** A lead came to its `toUserId`. */
+const TAKEN = [LeadOwnershipKind.CLAIM, LeadOwnershipKind.ASSIGN];
 const FUTURE_MONTH = "Kelajak oyni tanlab bo'lmaydi";
 const RESULT_FACT = {
   userId: true,
@@ -85,6 +87,12 @@ export interface KpiOverview extends OverviewBody {
    * compare line and the compare series then.
    */
   compareAvailable: boolean;
+  /**
+   * False while `compare` began before KPI_START (2026-10 and earlier): part of
+   * it was never recorded, so the page prints no ▲/▼ against it and rule 3
+   * drops its «more than the compare month» half.
+   */
+  compareRecorded: boolean;
   status: { enabled: boolean; changedAt: Date | null };
 }
 
@@ -108,6 +116,8 @@ export interface KpiUserView {
   hasAny: boolean;
   /** False when the month before is before 2026-10: `compareTotal` is then an empty 0, not a measured one. */
   compareAvailable: boolean;
+  /** False while the month before began before KPI_START: `compareTotal` counts only part of it. */
+  compareRecorded: boolean;
   total: number;
   compareTotal: number;
   months: { month: string; count: number; amount: number }[];
@@ -161,12 +171,12 @@ export class KpiReadService {
     if (compare > current) throw new BadRequestException(FUTURE_MONTH);
     // A month before the first KPI month holds no data: read nothing for it.
     const compareAvailable = compare >= KPI_FIRST_MONTH;
+    const compareRecorded = monthFullyRecorded(compare);
     const today = month === current ? tashkentDateStr(now) : null;
     const branch = branchIdWhere(scope);
     const range = tashkentMonthRangeUtc(month);
     const compareRange = tashkentMonthRangeUtc(compare);
     const active = KpiResultStatus.ACTIVE;
-    const taken = [LeadOwnershipKind.CLAIM, LeadOwnershipKind.ASSIGN];
     const expire = [LeadOwnershipKind.EXPIRE];
 
     const [
@@ -207,9 +217,9 @@ export class KpiReadService {
         where: liveOwnedLeadWhere(companyId, scope),
         _count: { _all: true },
       }),
-      this.logs(companyId, taken, range, scope, 'to'),
+      this.logs(companyId, TAKEN, range, scope, 'to'),
       compareAvailable
-        ? this.logs(companyId, taken, compareRange, scope, 'to')
+        ? this.logs(companyId, TAKEN, compareRange, scope, 'to')
         : Promise.resolve<LogFact[]>([]),
       this.logs(companyId, expire, range, scope, 'from'),
       compareAvailable
@@ -235,8 +245,15 @@ export class KpiReadService {
     const leadIds = [
       ...new Set([...received, ...compareReceived].map((l) => l.leadId)),
     ];
+    // An administrator whose leads all expired holds none and has no result,
+    // yet is the one rule 3 is for: this month's logs bring them in too.
     const userIds = [
-      ...new Set([...monthResults.map((r) => r.userId), ...heldMap.keys()]),
+      ...new Set([
+        ...monthResults.map((r) => r.userId),
+        ...heldMap.keys(),
+        ...received.map((l) => l.userId),
+        ...expired.map((l) => l.userId),
+      ]),
     ];
     const [paidLeads, users, workingDays] = await Promise.all([
       leadIds.length
@@ -263,7 +280,7 @@ export class KpiReadService {
     const body = assembleOverview({
       month,
       compare,
-      compareRecorded: `${compare}-01` >= tashkentDateStr(KPI_START),
+      compareRecorded,
       today,
       monthResults,
       compareResults,
@@ -289,7 +306,7 @@ export class KpiReadService {
             : ('BROKEN' as const),
       })),
       names: new Map(users.map((u) => [u.id, fullName(u)] as const)),
-      eligibleHolders: new Set(
+      eligibleUsers: new Set(
         users
           .filter(
             (u) =>
@@ -306,6 +323,7 @@ export class KpiReadService {
       month,
       compare,
       compareAvailable,
+      compareRecorded,
       status: { enabled: settings.enabled, changedAt: settings.changedAt },
       ...body,
     };
@@ -335,13 +353,31 @@ export class KpiReadService {
           }),
       this.prisma.kpiResult.count({ where: { companyId, userId, ...branch } }),
     ]);
-    // A director sees the staff of their branch, anyone with a result in it
-    // and whoever holds a live lead in it (spec §7.10): every overview row opens.
+    // A director sees the staff of their branch, anyone with a result in it,
+    // whoever holds a live lead in it and whoever took or lost one of its leads
+    // this month (spec §7.10): every overview row opens.
     if (inBranch === 0 && anyResults === 0) {
-      const holds = await this.prisma.lead.count({
-        where: { ...liveOwnedLeadWhere(companyId, scope), ownerId: userId },
-      });
-      if (holds === 0) throw new NotFoundException(NOT_FOUND);
+      const [holds, logged] = await Promise.all([
+        this.prisma.lead.count({
+          where: { ...liveOwnedLeadWhere(companyId, scope), ownerId: userId },
+        }),
+        this.prisma.leadOwnershipLog.count({
+          where: {
+            companyId,
+            createdAt: tashkentMonthRangeUtc(month),
+            ...ownershipLogBranchWhere(scope),
+            AND: [
+              {
+                OR: [
+                  { toUserId: userId, kind: { in: TAKEN } },
+                  { fromUserId: userId, kind: LeadOwnershipKind.EXPIRE },
+                ],
+              },
+            ],
+          },
+        }),
+      ]);
+      if (holds === 0 && logged === 0) throw new NotFoundException(NOT_FOUND);
     }
 
     const months = monthsFrom(month);
@@ -382,6 +418,7 @@ export class KpiReadService {
       month,
       hasAny: anyResults > 0,
       compareAvailable: compare >= KPI_FIRST_MONTH,
+      compareRecorded: monthFullyRecorded(compare),
       total: sumAmount(ofMonth(month)),
       compareTotal: sumAmount(ofMonth(compare)),
       months: months.map((m) => ({

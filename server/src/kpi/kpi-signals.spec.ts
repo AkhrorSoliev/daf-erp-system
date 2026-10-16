@@ -108,6 +108,14 @@ describe('kpiSignals (spec §7.9)', () => {
     expect(kpiSignals([u({ expired: 2 })], past)).toEqual([]);
   });
 
+  it('3. against a compare month not recorded in full: the absolute 3 alone, no compare figure', () => {
+    const partial = { isCurrentMonth: true, compareRecorded: false };
+    expect(
+      kpiSignals([u({ expired: 3, compareExpired: 5 })], partial)[0].text,
+    ).toBe("Nodira R: 3 ta lid muddat o'tib qaytdi");
+    expect(kpiSignals([u({ expired: 2 })], partial)).toEqual([]);
+  });
+
   it('4. promises under 30% of at least 5 closed', () => {
     expect(
       kpiSignals([u({ promiseKept: 1, promiseClosed: 5 })], past)[0].text,
