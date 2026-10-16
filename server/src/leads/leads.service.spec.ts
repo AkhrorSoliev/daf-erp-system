@@ -11,6 +11,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { StudentsService } from '../students/students.service';
 import { StudentEnrollmentService } from '../students/student-enrollment.service';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
+import { ROLE_ID } from '../common/auth/role-ids';
+import { LeadOwnershipService } from './ownership/lead-ownership.service';
 
 describe('LeadsService', () => {
   let service: LeadsService;
@@ -19,6 +23,7 @@ describe('LeadsService', () => {
   let students: any;
   let enrollment: any;
   let events: { emit: jest.Mock };
+  let ownership: { recordChange: jest.Mock; emit: jest.Mock };
 
   const validDto = {
     firstName: 'Aziz',
@@ -49,6 +54,8 @@ describe('LeadsService', () => {
         aggregate: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        // ADR-0092: the owner's action stamp (touchLeadOwnerAction).
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         count: jest.fn(),
       },
       leadSection: { findFirst: jest.fn() },
@@ -87,6 +94,7 @@ describe('LeadsService', () => {
     students = { create: jest.fn() };
     enrollment = { enrollToGroup: jest.fn() };
     events = { emit: jest.fn() };
+    ownership = { recordChange: jest.fn(), emit: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -96,6 +104,11 @@ describe('LeadsService', () => {
         { provide: StudentsService, useValue: students },
         { provide: StudentEnrollmentService, useValue: enrollment },
         { provide: EventEmitter2, useValue: events },
+        {
+          provide: PermissionsService,
+          useValue: fakePermissions([ROLE_ID.ADMINISTRATOR]),
+        },
+        { provide: LeadOwnershipService, useValue: ownership },
       ],
     }).compile();
 
@@ -712,6 +725,87 @@ describe('LeadsService', () => {
       expect(history.recordCreate).toHaveBeenCalledWith(
         expect.objectContaining({ changedById: undefined }),
       );
+    });
+
+    describe('owner (ADR-0092)', () => {
+      beforeEach(() => {
+        prisma.leadSection.findFirst.mockResolvedValue({
+          id: 'sec-2',
+          column: { systemKey: 'NEW', branchId: 2 },
+        });
+        prisma.lead.aggregate.mockResolvedValue({ _max: { order: null } });
+        prisma.lead.create.mockResolvedValue({
+          id: 'lead-6',
+          firstName: 'Aziz',
+          lastName: 'Karimov',
+          phone: '901234567',
+          statusEnum: 'NEW',
+        });
+      });
+
+      it('makes the staff member who adds a lead its owner, the creation counting as the first action', async () => {
+        await service.create({ ...validDto, sectionId: 'sec-2' }, 1001, CALLER);
+
+        const data = prisma.lead.create.mock.calls[0][0].data;
+        expect(data.ownerId).toBe(1);
+        expect(data.ownedAt).toBeInstanceOf(Date);
+        expect(data.ownerActedAt).toBeInstanceOf(Date);
+        expect(ownership.recordChange).toHaveBeenCalledWith(
+          prisma,
+          expect.objectContaining({
+            leadId: 'lead-6',
+            kind: 'CLAIM',
+            fromUserId: null,
+            toUserId: 1,
+            actorId: 1,
+            branchId: 2,
+            companyId: 1001,
+            reason: "Lidni o'zi qo'shdi",
+          }),
+        );
+        expect(ownership.emit).toHaveBeenCalledWith(
+          expect.objectContaining({ kind: 'CLAIM', toUserId: 1 }),
+        );
+      });
+
+      it('leaves a public-form lead without an owner', async () => {
+        await service.create({ ...validDto, sectionId: 'sec-2' }, 1001, {
+          kind: 'public-form',
+        });
+
+        const data = prisma.lead.create.mock.calls[0][0].data;
+        expect(data.ownerId).toBeNull();
+        expect(data.ownedAt).toBeNull();
+        expect(data.ownerActedAt).toBeNull();
+        expect(ownership.recordChange).not.toHaveBeenCalled();
+        expect(ownership.emit).not.toHaveBeenCalled();
+      });
+
+      it('leaves a lead without an owner when the staff member may not claim leads', async () => {
+        // A teacher holds no leads.claim; the caller is still let in to add it.
+        const module = await Test.createTestingModule({
+          providers: [
+            LeadsService,
+            { provide: PrismaService, useValue: prisma },
+            { provide: EntityHistoryService, useValue: history },
+            { provide: StudentsService, useValue: students },
+            { provide: StudentEnrollmentService, useValue: enrollment },
+            { provide: EventEmitter2, useValue: events },
+            {
+              provide: PermissionsService,
+              useValue: fakePermissions([ROLE_ID.TEACHER]),
+            },
+            { provide: LeadOwnershipService, useValue: ownership },
+          ],
+        }).compile();
+
+        await module
+          .get(LeadsService)
+          .create({ ...validDto, sectionId: 'sec-2' }, 1001, CALLER);
+
+        expect(prisma.lead.create.mock.calls[0][0].data.ownerId).toBeNull();
+        expect(ownership.recordChange).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -1527,6 +1621,34 @@ describe('LeadsService', () => {
         companyId: 1001,
         userId: 7,
       });
+    });
+
+    it("stamps the owner's action when marking called (ADR-0092)", async () => {
+      prisma.lead.findFirst.mockResolvedValue({ id: 'lead-1', calledAt: null });
+      prisma.lead.update.mockResolvedValue({
+        id: 'lead-1',
+        calledAt: new Date(),
+      });
+
+      await service.markCalled('lead-1', { called: true }, 1001, 7, null);
+
+      expect(prisma.lead.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 'lead-1', ownerId: 7 }),
+        }),
+      );
+    });
+
+    it('does not stamp an action when the call mark is cleared', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        calledAt: new Date(),
+      });
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1', calledAt: null });
+
+      await service.markCalled('lead-1', { called: false }, 1001, 7, null);
+
+      expect(prisma.lead.updateMany).not.toHaveBeenCalled();
     });
 
     it('keeps the original caller and timestamp when re-marking an already-called lead', async () => {

@@ -9,6 +9,10 @@ import {
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
 import { leadBranchWhere } from './shared/lead-scope';
+import {
+  LeadOwnershipService,
+  type OwnershipChange,
+} from './ownership/lead-ownership.service';
 
 const DELETED_BY_SELECT = {
   select: { id: true, firstName: true, lastName: true },
@@ -26,6 +30,7 @@ export class LeadsArchiveService {
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
+    private ownership: LeadOwnershipService,
   ) {}
 
   /**
@@ -202,7 +207,14 @@ export class LeadsArchiveService {
         companyId,
         ...leadBranchWhere(scope),
       },
-      select: { id: true, statusEnum: true, convertedStudentId: true },
+      select: {
+        id: true,
+        statusEnum: true,
+        convertedStudentId: true,
+        firstName: true,
+        lastName: true,
+        ownerId: true,
+      },
     });
     if (!lead) {
       throw new NotFoundException('Arxivda lid topilmadi');
@@ -233,6 +245,23 @@ export class LeadsArchiveService {
 
     const status = this.restoredStatus(lead, section.column?.systemKey ?? null);
 
+    // ADR-0092: a lead back from the archive returns to the common pool. A
+    // converted lead keeps its owner — the KPI is credited to it.
+    const released: OwnershipChange | null =
+      status !== LeadStatus.CONVERTED && lead.ownerId !== null
+        ? {
+            leadId: id,
+            leadName: `${lead.firstName} ${lead.lastName}`.trim(),
+            branchId,
+            kind: 'RELEASE',
+            fromUserId: lead.ownerId,
+            toUserId: null,
+            actorId: userId,
+            reason: 'Arxivdan tiklandi',
+            companyId,
+          }
+        : null;
+
     const maxOrder = await this.prisma.lead.aggregate({
       where: { sectionId: dto.sectionId, deletedAt: null },
       _max: { order: true },
@@ -251,6 +280,9 @@ export class LeadsArchiveService {
           statusEnum: status,
           status: status.toLowerCase(),
           branchId,
+          ...(released
+            ? { ownerId: null, ownedAt: null, ownerActedAt: null }
+            : {}),
         },
         select: { id: true, sectionId: true },
       });
@@ -262,8 +294,10 @@ export class LeadsArchiveService {
         companyId,
         tx,
       });
+      if (released) await this.ownership.recordChange(tx, released);
       return r;
     });
+    if (released) this.ownership.emit(released);
 
     return {
       message: 'Lid tiklandi',

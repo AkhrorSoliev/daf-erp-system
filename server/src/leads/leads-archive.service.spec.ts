@@ -3,11 +3,13 @@ import { NotFoundException } from '@nestjs/common';
 import { LeadsArchiveService } from './leads-archive.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { LeadOwnershipService } from './ownership/lead-ownership.service';
 
 describe('LeadsArchiveService', () => {
   let service: LeadsArchiveService;
   let prisma: any;
   let history: any;
+  let ownership: { recordChange: jest.Mock; emit: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -40,12 +42,14 @@ describe('LeadsArchiveService', () => {
       recordStatusChange: jest.fn(),
       recordRestore: jest.fn(),
     };
+    ownership = { recordChange: jest.fn(), emit: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LeadsArchiveService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: history },
+        { provide: LeadOwnershipService, useValue: ownership },
       ],
     }).compile();
 
@@ -112,6 +116,9 @@ describe('LeadsArchiveService', () => {
         id: 'lead-1',
         statusEnum: 'NEW',
         convertedStudentId: null,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        ownerId: null,
       });
       prisma.leadSection.findFirst.mockResolvedValue({
         id: 'sec-1',
@@ -154,6 +161,9 @@ describe('LeadsArchiveService', () => {
         id: 'lead-9',
         statusEnum: 'CONVERTED',
         convertedStudentId: 10007,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        ownerId: null,
       });
       prisma.leadSection.findFirst.mockResolvedValue({
         id: 'sec-1',
@@ -178,6 +188,124 @@ describe('LeadsArchiveService', () => {
           data: expect.objectContaining({ statusEnum: 'CONVERTED' }),
         }),
       );
+    });
+  });
+
+  describe('restoreLead — owner (ADR-0092)', () => {
+    const DTO = { columnId: 'col-1', sectionId: 'sec-1' };
+
+    beforeEach(() => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-1',
+        column: { systemKey: 'NEW', branchId: 2 },
+      });
+      prisma.lead.update.mockResolvedValue({
+        id: 'lead-1',
+        sectionId: 'sec-1',
+      });
+    });
+
+    it('returns an owned lead to the common pool', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        statusEnum: 'LOST',
+        convertedStudentId: null,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        ownerId: 11,
+      });
+
+      await service.restoreLead('lead-1', DTO, 1001, 7, null);
+
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            ownerId: null,
+            ownedAt: null,
+            ownerActedAt: null,
+          }),
+        }),
+      );
+      expect(ownership.recordChange).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          leadId: 'lead-1',
+          leadName: 'Ali Valiyev',
+          branchId: 2,
+          kind: 'RELEASE',
+          fromUserId: 11,
+          toUserId: null,
+          actorId: 7,
+          reason: 'Arxivdan tiklandi',
+          companyId: 1001,
+        }),
+      );
+      expect(ownership.emit).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'RELEASE', fromUserId: 11 }),
+      );
+    });
+
+    it('writes the release in the restore transaction and tells listeners only after it', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        statusEnum: 'NEW',
+        convertedStudentId: null,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        ownerId: 11,
+      });
+      const order: string[] = [];
+      ownership.recordChange.mockImplementation(() => {
+        order.push('recordChange');
+      });
+      ownership.emit.mockImplementation(() => {
+        order.push('emit');
+      });
+      prisma.$transaction.mockImplementation(async (fn: any) => {
+        const r = await fn(prisma);
+        order.push('commit');
+        return r;
+      });
+
+      await service.restoreLead('lead-1', DTO, 1001, 7, null);
+
+      expect(order).toEqual(['recordChange', 'commit', 'emit']);
+    });
+
+    it('leaves a lead with no owner alone', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        statusEnum: 'NEW',
+        convertedStudentId: null,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        ownerId: null,
+      });
+
+      await service.restoreLead('lead-1', DTO, 1001, 7, null);
+
+      const data = prisma.lead.update.mock.calls[0][0].data;
+      expect(data).not.toHaveProperty('ownerId');
+      expect(ownership.recordChange).not.toHaveBeenCalled();
+      expect(ownership.emit).not.toHaveBeenCalled();
+    });
+
+    it('keeps the owner of a converted lead: the KPI is credited to it', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        statusEnum: 'CONVERTED',
+        convertedStudentId: 10007,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        ownerId: 11,
+      });
+
+      await service.restoreLead('lead-1', DTO, 1001, 7, null);
+
+      const data = prisma.lead.update.mock.calls[0][0].data;
+      expect(data).not.toHaveProperty('ownerId');
+      expect(ownership.recordChange).not.toHaveBeenCalled();
+      expect(ownership.emit).not.toHaveBeenCalled();
     });
   });
 

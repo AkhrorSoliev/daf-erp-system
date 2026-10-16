@@ -30,6 +30,9 @@ import { RemoveLeadDto } from './dto/remove-lead.dto';
 import { equalsOrIn } from '../common/dto/to-array';
 import { tashkentRangeFilter } from '../common/date/tashkent';
 import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { LeadOwnershipService } from './ownership/lead-ownership.service';
+import { touchLeadOwnerAction } from './ownership/owner-action';
 
 // Sentinel stored in Lead.statusChangeReason when a lead is CONVERTED by being
 // linked to an already-existing student (no new account minted) rather than by
@@ -71,6 +74,8 @@ export class LeadsService {
     private studentsService: StudentsService,
     private studentEnrollmentService: StudentEnrollmentService,
     private events: EventEmitter2,
+    private permissions: PermissionsService,
+    private ownership: LeadOwnershipService,
   ) {}
 
   /**
@@ -521,6 +526,16 @@ export class LeadsService {
     // stage — a brand-new lead always starts as NEW regardless of its column.
     const statusEnum = LeadStatus.NEW;
 
+    // ADR-0092: whoever adds a lead by hand has already spoken to the person,
+    // so a staff member who may claim leads owns it, the creation being the
+    // first action. Public-form leads arrive with no owner.
+    const ownerId =
+      actor.kind === 'user' &&
+      (await this.permissions.has(actor.id, 'leads.claim'))
+        ? actor.id
+        : null;
+    const now = new Date();
+
     const maxOrder = await this.prisma.lead.aggregate({
       where: { sectionId: dto.sectionId, deletedAt: null },
       _max: { order: true },
@@ -539,6 +554,9 @@ export class LeadsService {
         status: statusEnum.toLowerCase(),
         companyId,
         branchId,
+        ownerId,
+        ownedAt: ownerId ? now : null,
+        ownerActedAt: ownerId ? now : null,
       },
       select: LEAD_CARD_SELECT,
     });
@@ -558,6 +576,22 @@ export class LeadsService {
       changedById: actor.kind === 'user' ? actor.id : undefined,
       companyId,
     });
+
+    if (ownerId !== null) {
+      const change = {
+        leadId: created.id,
+        leadName: `${firstName} ${lastName}`,
+        branchId,
+        kind: 'CLAIM' as const,
+        fromUserId: null,
+        toUserId: ownerId,
+        actorId: ownerId,
+        reason: "Lidni o'zi qo'shdi",
+        companyId,
+      };
+      await this.ownership.recordChange(this.prisma, change);
+      this.ownership.emit(change);
+    }
 
     // A brand-new lead has no comments and has not been called yet.
     return { ...created, commentCount: 0 };
@@ -815,6 +849,11 @@ export class LeadsService {
     });
     if (!existing) {
       throw new NotFoundException('Lid topilmadi');
+    }
+
+    // ADR-0092: the owner's call mark keeps the lead with them.
+    if (dto.called) {
+      await touchLeadOwnerAction(this.prisma, id, userId);
     }
 
     // When already called, leave BOTH calledAt and calledById untouched so the

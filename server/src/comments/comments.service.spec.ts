@@ -48,7 +48,11 @@ describe('CommentsService', () => {
       enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
       group: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
       groupTeacher: { findUnique: jest.fn().mockResolvedValue(null) },
-      lead: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      lead: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+        // ADR-0092: a lead comment stamps the owner's action.
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
       user: {
         findFirst: jest.fn().mockResolvedValue({
           id: 1,
@@ -120,6 +124,32 @@ describe('CommentsService', () => {
       expect(data).not.toHaveProperty('isTask');
       expect(data).not.toHaveProperty('assignees');
       expect(data).not.toHaveProperty('dueDate');
+    });
+  });
+
+  describe('create on a lead (ADR-0092)', () => {
+    it("stamps the commenter's action on the lead, owner-only", async () => {
+      await service.create(
+        { entityType: 'Lead' as const, entityId: 'lead-1', content: 'Aytdi' },
+        7,
+        1001,
+      );
+
+      expect(prisma.lead.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 'lead-1', ownerId: 7 }),
+        }),
+      );
+    });
+
+    it('stamps nothing for a comment on another record', async () => {
+      await service.create(
+        { entityType: 'Student' as const, entityId: '10001', content: 'x' },
+        7,
+        1001,
+      );
+
+      expect(prisma.lead.updateMany).not.toHaveBeenCalled();
     });
   });
 

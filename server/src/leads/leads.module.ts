@@ -13,6 +13,7 @@ import { LeadColumnsService } from './lead-columns.service';
 import { LeadSectionsService } from './lead-sections.service';
 import { LeadSourcesService } from './lead-sources.service';
 import { LeadOwnershipService } from './ownership/lead-ownership.service';
+import { LeadOwnerTaskListener } from './ownership/lead-owner-task.listener';
 
 @Module({
   imports: [StudentsModule, SettingsModule],
@@ -31,6 +32,7 @@ import { LeadOwnershipService } from './ownership/lead-ownership.service';
     LeadSectionsService,
     LeadSourcesService,
     LeadOwnershipService,
+    LeadOwnerTaskListener,
   ],
   exports: [LeadsService, LeadOwnershipService],
 })
