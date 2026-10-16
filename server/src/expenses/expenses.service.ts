@@ -27,7 +27,16 @@ import {
 import { renderPdf } from '../receipts/pdf/render';
 import { buildExpensesDoc, type ExpensesPdfRow } from './pdf/expenses-template';
 import { formatDate } from './pdf/format.util';
-import { utcMidnightFromDateStr } from '../common/date/tashkent';
+import {
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+} from '../common/date/tashkent';
+import { expenseHint } from './expense-hints';
+import {
+  expenseMonthTitle,
+  expenseMonthWindow,
+  parseExpenseMonth,
+} from './expenses-month';
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   RENT: 'Ijara',
@@ -42,7 +51,7 @@ const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
 };
 
 const METHOD_LABELS: Record<ExpensePaymentMethod, string> = {
-  CASH: 'Naqt',
+  CASH: 'Naqd',
   CARD: 'Karta',
 };
 
@@ -324,16 +333,40 @@ export class ExpensesService {
       ...(query.search && {
         description: { contains: query.search, mode: 'insensitive' },
       }),
-      // Date is a date-only column, so a midnight `lte` correctly includes the
-      // whole `endDate`. Either bound works on its own (one-sided range).
-      ...((query.startDate || query.endDate) && {
-        date: {
-          ...(query.startDate && {
-            gte: utcMidnightFromDateStr(query.startDate),
-          }),
-          ...(query.endDate && { lte: utcMidnightFromDateStr(query.endDate) }),
-        },
+      ...(query.createdById?.length && {
+        createdById: equalsOrIn(query.createdById),
       }),
+      date: this.dateWhere(query),
+    };
+  }
+
+  /**
+   * The month a read covers (spec B6 §4.1): `oy`, or the current Tashkent month
+   * when neither `oy` nor the old range is sent. `null` = the old
+   * `startDate`/`endDate` range, kept for a client still on the old page.
+   */
+  private monthOf(query: ExpenseQueryDto): string | null {
+    const legacy = Boolean(query.startDate || query.endDate);
+    if (query.oy && legacy) {
+      throw new BadRequestException(
+        "Oy yoki sana oralig'i — ikkalasi birga emas",
+      );
+    }
+    return legacy ? null : parseExpenseMonth(query.oy, new Date());
+  }
+
+  // `Expense.date` is a date-only column: the month is [1st, next 1st); the old
+  // range keeps its midnight `lte` (either bound works on its own).
+  private dateWhere(query: ExpenseQueryDto): {
+    gte?: Date;
+    lt?: Date;
+    lte?: Date;
+  } {
+    const month = this.monthOf(query);
+    if (month) return expenseMonthWindow(month);
+    return {
+      ...(query.startDate && { gte: utcMidnightFromDateStr(query.startDate) }),
+      ...(query.endDate && { lte: utcMidnightFromDateStr(query.endDate) }),
     };
   }
 
@@ -350,6 +383,13 @@ export class ExpensesService {
     createdBy: { select: { id: true, firstName: true, lastName: true } },
   } satisfies Prisma.ExpenseSelect;
 
+  // Newest first; `createdAt` and `id` keep one day's rows from jumping between pages.
+  private readonly listOrder = [
+    { date: 'desc' },
+    { createdAt: 'desc' },
+    { id: 'desc' },
+  ] satisfies Prisma.ExpenseOrderByWithRelationInput[];
+
   async findAll(
     query: ExpenseQueryDto,
     companyId: number,
@@ -360,11 +400,11 @@ export class ExpensesService {
 
     const where = this.buildWhere(query, companyId, branchIds);
 
-    const [data, total, byCatMethod] = await Promise.all([
+    const [rows, total, byCatMethod] = await Promise.all([
       this.prisma.expense.findMany({
         where,
         select: this.listSelect,
-        orderBy: { date: 'desc' },
+        orderBy: this.listOrder,
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -379,7 +419,7 @@ export class ExpensesService {
     ]);
 
     // Advances are excluded from `where` (managed on the salary page), so the
-    // headline totals (Jami / Naqt / Karta) are the pure operational spend and
+    // headline totals (Jami / Naqd / Karta) are the pure operational spend and
     // `advancesTotal` here is always 0 (kept for response-shape stability).
     const sumWhere = (
       pred: (g: (typeof byCatMethod)[number]) => boolean,
@@ -389,7 +429,7 @@ export class ExpensesService {
       g.category === ExpenseCategory.TEACHER_ADVANCE;
 
     return {
-      data,
+      data: rows.map((r) => ({ ...r, hint: expenseHint(r) })),
       total,
       page,
       pageSize,
@@ -420,7 +460,7 @@ export class ExpensesService {
     return this.prisma.expense.findMany({
       where,
       select: this.listSelect,
-      orderBy: { date: 'desc' },
+      orderBy: this.listOrder,
     });
   }
 
@@ -484,8 +524,9 @@ export class ExpensesService {
     query: ExpenseQueryDto,
     companyId: number,
     branchIds: ReportBranchIds,
-  ): Promise<Buffer> {
-    const [rows, company, branch] = await Promise.all([
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const month = this.monthOf(query);
+    const [rows, company, branch, creators] = await Promise.all([
       this.exportAll(query, companyId, branchIds),
       this.prisma.company.findUnique({
         where: { id: companyId },
@@ -497,6 +538,14 @@ export class ExpensesService {
             select: { name: true },
           })
         : Promise.resolve(null),
+      // «Kim kiritgan: …» names the people the list was filtered by.
+      query.createdById?.length
+        ? this.prisma.user.findMany({
+            where: { id: { in: query.createdById } },
+            select: { firstName: true, lastName: true },
+            orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+          })
+        : Promise.resolve([]),
     ]);
 
     const pdfRows: ExpensesPdfRow[] = rows.map((r) => ({
@@ -508,7 +557,7 @@ export class ExpensesService {
       createdByName: `${r.createdBy.firstName} ${r.createdBy.lastName}`.trim(),
     }));
 
-    // Totals mirror the on-screen summary: the Jami / Naqt / Karta figures
+    // Totals mirror the on-screen summary: the Jami / Naqd / Karta figures
     // include every category (advance included), with the advance shown as a
     // separate "shundan Ustoz avansi" sub-line.
     const sumRows = (pred: (r: (typeof rows)[number]) => boolean): number =>
@@ -532,13 +581,21 @@ export class ExpensesService {
       categoryLabel: joinLabels(query.category, CATEGORY_LABELS),
       methodLabel: joinLabels(query.paymentMethod, METHOD_LABELS),
       search: query.search?.trim() || null,
-      dateRangeLabel: buildDateRangeLabel(query.startDate, query.endDate),
+      dateRangeLabel: month
+        ? expenseMonthTitle(month)
+        : buildDateRangeLabel(query.startDate, query.endDate),
+      creatorLabel: creators.length
+        ? creators.map((u) => `${u.firstName} ${u.lastName}`.trim()).join(', ')
+        : null,
       generatedAt: new Date(),
       rows: pdfRows,
       totals,
     });
 
-    return renderPdf(doc);
+    return {
+      buffer: await renderPdf(doc),
+      filename: `xarajatlar-${month ?? tashkentDateStr(new Date())}.pdf`,
+    };
   }
 
   async update(

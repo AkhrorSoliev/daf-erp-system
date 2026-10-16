@@ -95,12 +95,11 @@ export class ExpensesController {
     @CurrentUser('id') userId: number,
     @Res() res: Response,
   ) {
-    const buffer = await this.expensesService.generateExpensesPdf(
+    const { buffer, filename } = await this.expensesService.generateExpensesPdf(
       query,
       companyId,
       await this.scope(userId, query.branchId),
     );
-    const filename = `xarajatlar-${new Date().toISOString().slice(0, 10)}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', buffer.length);

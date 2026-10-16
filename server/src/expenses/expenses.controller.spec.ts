@@ -55,7 +55,10 @@ describe('ExpensesController — export delegation', () => {
   const mockService = {
     create: jest.fn().mockResolvedValue({}),
     findAll: jest.fn().mockResolvedValue({ data: [] }),
-    generateExpensesPdf: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4')),
+    generateExpensesPdf: jest.fn().mockResolvedValue({
+      buffer: Buffer.from('%PDF-1.4'),
+      filename: 'xarajatlar-2026-10.pdf',
+    }),
     update: jest.fn().mockResolvedValue({}),
     remove: jest.fn().mockResolvedValue({ message: '' }),
   };
@@ -98,6 +101,9 @@ describe('ExpensesController — export delegation', () => {
       );
       expect(headers['Content-Type']).toBe('application/pdf');
       expect(String(headers['Content-Disposition'])).toContain('attachment');
+      expect(String(headers['Content-Disposition'])).toContain(
+        'xarajatlar-2026-10.pdf',
+      );
       expect(body).toBeDefined();
       expect(body!.toString().startsWith('%PDF')).toBe(true);
     });
