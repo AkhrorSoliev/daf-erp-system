@@ -84,9 +84,9 @@ export function BranchLaunchCard() {
   if (visibility === "celebrate") {
     const close = () => launchFlags.write(user.id, branchId, "celebrated", true);
     return (
-      <section className="rounded-xl border bg-card">
+      <section className="rounded-lg border bg-card">
         <div className="flex items-center gap-3 px-4 py-3">
-          <PartyPopper className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <PartyPopper className="size-5 shrink-0 text-success" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">Filial ishga tushdi</p>
             <p className="text-sm text-muted-foreground">
@@ -125,7 +125,7 @@ export function BranchLaunchCard() {
     launchFlags.write(user.id, branchId, "collapsed", !flags.collapsed);
 
   return (
-    <section className="rounded-xl border bg-card" aria-labelledby="launch-title">
+    <section className="rounded-lg border bg-card" aria-labelledby="launch-title">
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
         <h2 id="launch-title" className="text-sm font-semibold">
           Filialni ishga tushirish
@@ -197,7 +197,7 @@ export function BranchLaunchCard() {
                 className="inline-flex items-center gap-1.5 hover:underline"
               >
                 {x.ok ? (
-                  <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <Check className="size-3.5 text-success" />
                 ) : (
                   <span className="size-1.5 rounded-full bg-muted-foreground/50" />
                 )}
@@ -242,7 +242,7 @@ function StationStop({
           className={cn(
             "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium",
             state === "done" &&
-              "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
+              "bg-success/10 text-success",
             state === "current" && "bg-primary/10 text-primary ring-2 ring-primary",
             state === "todo" && "border bg-background text-muted-foreground",
           )}

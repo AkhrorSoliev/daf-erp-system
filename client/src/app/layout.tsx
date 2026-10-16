@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Inter, Baloo_2, Nunito } from "next/font/google";
+import { IBM_Plex_Sans, Baloo_2, Nunito } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { RouteThemeProvider } from "@/components/providers/route-theme-lock";
@@ -8,11 +8,15 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "react-hot-toast";
 
-const interHeading = Inter({ subsets: ["latin"], variable: "--font-heading" });
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// The staff portals' one typeface: text, headings and figures alike
+// (`--font-sans`, `--font-heading` and `--font-mono` all point at it in
+// globals.css). Three weights are enough for a ledger; latin-ext carries the
+// Uzbek apostrophe letters.
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 // Lumio fonts (student portal + student-scoped login + public form). Defined
@@ -50,8 +54,7 @@ export default function RootLayout({
       className={cn(
         "h-full",
         "antialiased",
-        geistSans.variable,
-        interHeading.variable,
+        plexSans.variable,
         fontDisplay.variable,
         fontBody.variable,
       )}
