@@ -19,6 +19,7 @@ import type { GroupData } from "@/hooks/use-edit-group";
 import { useCan } from "@/hooks/use-permissions";
 import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import api from "@/lib/api";
+import { EmployeeKpiTab } from "@/components/reports/admin-kpi/employee-kpi-tab";
 
 const TEACHER_ROLE_ID = 4;
 
@@ -35,6 +36,8 @@ interface EmployeeProfileTabsProps {
   onCommentChange?: () => void;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  /** «KPI» (spec §7.8): decided by the parent, which also lists it in its available tabs. */
+  showKpi?: boolean;
 }
 
 export function EmployeeProfileTabs({
@@ -42,6 +45,7 @@ export function EmployeeProfileTabs({
   onCommentChange,
   activeTab,
   onTabChange,
+  showKpi = false,
 }: EmployeeProfileTabsProps) {
   const canSeeSalary = useCan("salary.view");
   const canSeeTimeline = useCan("teachers.view");
@@ -165,6 +169,7 @@ export function EmployeeProfileTabs({
         {canSeeSalary && isTeacher && (
           <TabsTrigger value="ish-haqi">Ish haqi</TabsTrigger>
         )}
+        {showKpi && <TabsTrigger value="kpi">KPI</TabsTrigger>}
       </TabsList>
 
       {/* Guruhlar — faqat o'qituvchilar uchun */}
@@ -241,6 +246,13 @@ export function EmployeeProfileTabs({
               <PossibleDeductionsInfo variant="teacher" />
             </div>
           )}
+        </TabsContent>
+      )}
+
+      {/* KPI — CEO va filial direktori (`kpi.view`), hozirgi administratorda */}
+      {showKpi && (
+        <TabsContent value="kpi">
+          <EmployeeKpiTab userId={employee.id} />
         </TabsContent>
       )}
     </Tabs>

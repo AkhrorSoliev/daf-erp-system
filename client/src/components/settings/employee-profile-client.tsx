@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { EmployeeProfileCard } from "./employee-profile-card";
 import { EmployeeProfileTabs } from "./employee-profile-tabs";
+import { showKpiTab } from "@/components/reports/admin-kpi/kpi-format";
 import { EditEmployeeDrawer } from "./edit-employee-drawer";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
 import {
@@ -42,6 +43,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   const canSeeTimeline = useCan("teachers.view");
   // DELETE /users/:id needs `employees.manage`, not the salary capability.
   const canManageEmployees = useCan("employees.manage");
+  const canSeeKpi = useCan("kpi.view");
   const isMobile = useIsMobile();
   const router = useRouter();
   const pathname = usePathname();
@@ -55,6 +57,10 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   // O'qituvchilar uchun "Guruhlar", boshqa xodimlar uchun "Izohlar" —
   // o'qituvchi profili bilan bir xil bo'lishi uchun.
   const isTeacher = employee?.roles.some((r) => r.id === 4) ?? false;
+  // Spec §7.8: the «KPI» tab of a current Administrator, for `kpi.view`. No request
+  // on page load — the tab loads its month when opened. A former administrator's
+  // results stay on «Xodimlar KPI».
+  const hasKpiTab = showKpiTab(employee?.roles, canSeeKpi);
   const canDelete = canManageEmployees && employee != null && employee.id !== authUser?.id;
   const defaultTab = isTeacher ? "guruhlar" : "izohlar";
 
@@ -66,6 +72,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
     "tarix",
     ...(canSeeTimeline ? ["taymlayn"] : []),
     ...(canSeeBalance && isTeacher ? ["ish-haqi"] : []),
+    ...(hasKpiTab ? ["kpi"] : []),
   ];
   const urlTab = searchParams.get("tab");
   const activeTab = urlTab && availableTabs.includes(urlTab) ? urlTab : defaultTab;
@@ -219,6 +226,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
             onCommentChange={handleCommentChange}
             activeTab={activeTab}
             onTabChange={handleTabChange}
+            showKpi={hasKpiTab}
           />
         </div>
       ) : (
@@ -232,6 +240,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
             onCommentChange={handleCommentChange}
             activeTab={activeTab}
             onTabChange={handleTabChange}
+            showKpi={hasKpiTab}
           />
           </div>
         </div>

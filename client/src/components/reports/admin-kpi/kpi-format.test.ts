@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatNumber, formatPrice } from "@/lib/format-utils";
 import {
+  showKpiTab,
   dayText,
   axisSom,
   deltaLine,
@@ -116,5 +117,15 @@ describe("axisSom", () => {
     expect(axisSom(1_200_000)).toBe(`${formatNumber(1.2, { maximumFractionDigits: 1 })} mln`);
     expect(axisSom(10_000_000)).toContain("mln");
     expect(axisSom(50_000)).toBe(formatPrice(50_000));
+  });
+});
+
+describe("showKpiTab", () => {
+  it("needs the Administrator role now and kpi.view", () => {
+    expect(showKpiTab([{ id: 3 }], true)).toBe(true);
+    expect(showKpiTab([{ id: 4 }, { id: 3 }], true)).toBe(true);
+    expect(showKpiTab([{ id: 3 }], false)).toBe(false);
+    expect(showKpiTab([{ id: 4 }], true)).toBe(false);
+    expect(showKpiTab(undefined, true)).toBe(false);
   });
 });

@@ -128,3 +128,10 @@ export const KPI_DEFINITIONS = [
 export function axisSom(v: number): string {
   return v >= 1_000_000 ? `${formatNumber(v / 1_000_000, { maximumFractionDigits: 1 })} mln` : formatPrice(v);
 }
+
+const ADMINISTRATOR_ROLE_ID = 3;
+
+/** The employee page's «KPI» tab (spec §7.8): a current Administrator, for a viewer with `kpi.view`. */
+export function showKpiTab(roles: { id: number }[] | undefined, canView: boolean): boolean {
+  return canView && (roles?.some((r) => r.id === ADMINISTRATOR_ROLE_ID) ?? false);
+}
