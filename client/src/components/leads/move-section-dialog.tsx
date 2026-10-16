@@ -54,8 +54,12 @@ export function MoveSectionDialog() {
     closeMoveSection();
   }
 
-  // Every column except the one the section is already in.
-  const columns = board.filter((c) => c.id !== moveTarget?.columnId);
+  // Every other column of the section's own branch — the server refuses a
+  // move across branches ("Barcha filiallar" lists several boards).
+  const fromBranchId = board.find((c) => c.id === moveTarget?.columnId)?.branchId;
+  const columns = board.filter(
+    (c) => c.id !== moveTarget?.columnId && c.branchId === fromBranchId,
+  );
 
   return (
     <Dialog

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { parseStatsPeriod, topSourcesLine } from "./lead-stats";
 import { leadHolatiParams } from "./lead-filter-schema";
-import { UNCALLED_HOLATI, cardFilters } from "./lead-stats";
+import {
+  UNCALLED_HOLATI,
+  cardFilters,
+  uncalledCardActive,
+} from "./lead-stats";
 
 describe("parseStatsPeriod", () => {
   it("keeps the three periods", () => {
@@ -59,5 +63,24 @@ describe("cardFilters", () => {
       holati: UNCALLED_HOLATI,
     });
     expect(cardFilters("lost").karta).toBe("lost");
+  });
+});
+
+describe("uncalledCardActive", () => {
+  const list = { ...cardFilters("uncalled"), pageSize: 10 };
+
+  it("is on for exactly the card's list, in either token order", () => {
+    expect(uncalledCardActive(list)).toBe(true);
+    expect(
+      uncalledCardActive({ ...list, holati: [...UNCALLED_HOLATI].reverse() }),
+    ).toBe(true);
+  });
+
+  it("is off once another filter narrows the list", () => {
+    expect(uncalledCardActive({ ...list, search: "Ali" })).toBe(false);
+    expect(uncalledCardActive({ ...list, holati: ["NEW"] })).toBe(false);
+    expect(uncalledCardActive({ ...cardFilters("onBoard"), pageSize: 10 })).toBe(
+      false,
+    );
   });
 });

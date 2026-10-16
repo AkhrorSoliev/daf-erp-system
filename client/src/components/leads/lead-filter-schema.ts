@@ -89,6 +89,22 @@ export const LEAD_HOLATI_OPTIONS: LeadHolatiOption[] = [
   },
 ];
 
+/**
+ * Every real filter empty, back on page 1. Written instead of wiping the URL so
+ * the strip's `?period=` and the page size survive «Tozalash» and card clicks.
+ */
+export const CLEARED_LEAD_FILTERS = {
+  search: "",
+  holati: [] as string[],
+  sourceId: [] as string[],
+  columnId: [] as string[],
+  masul: [] as string[],
+  startDate: "",
+  endDate: "",
+  karta: "",
+  page: 1,
+};
+
 /** True when at least one real filter (not just paging) is set. */
 export function leadFiltersActive(f: LeadFilterValues): boolean {
   return (
