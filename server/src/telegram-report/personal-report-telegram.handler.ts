@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { UserStatus } from '@prisma/client';
 import { Composer } from 'telegraf';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
@@ -43,18 +44,30 @@ export class PersonalReportTelegramHandler implements OnApplicationBootstrap {
     const action = q && 'data' in q ? parseReportAction(q.data) : null;
     const chatId = ctx.chat ? String(ctx.chat.id) : null;
     if (!action || !chatId) {
-      await ctx.answerCbQuery();
+      await ctx.answerCbQuery().catch(() => undefined);
       return;
     }
     if (this.inFlight.has(chatId)) {
-      await ctx.answerCbQuery(WAIT);
+      await ctx.answerCbQuery(WAIT).catch(() => undefined);
       return;
     }
     this.inFlight.add(chatId);
     try {
       const who = await staffOfChat(this.prisma, chatId);
-      const recipient =
+      // One rule with the cron: the staff member must be live (ACTIVE, isActive).
+      const live =
         who.kind === 'one'
+          ? await this.prisma.user.findFirst({
+              where: {
+                id: who.userId,
+                status: UserStatus.ACTIVE,
+                isActive: true,
+              },
+              select: { id: true },
+            })
+          : null;
+      const recipient =
+        who.kind === 'one' && live
           ? await this.prisma.telegramReportRecipient.findFirst({
               where: {
                 userId: who.userId,

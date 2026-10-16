@@ -20,6 +20,7 @@ function ctxFor(data: string) {
 
 function setup() {
   const prisma = {
+    user: { findFirst: jest.fn().mockResolvedValue({ id: 50 }) },
     telegramReportRecipient: { findFirst: jest.fn().mockResolvedValue(REC) },
   };
   const reports = {
@@ -128,5 +129,73 @@ describe('PersonalReportTelegramHandler', () => {
     expect(ctx2.answerCbQuery).toHaveBeenCalledWith('Kuting…');
     release();
     await first;
+  });
+
+  it('an inactive staff account is refused and compose never runs', async () => {
+    const { handler, prisma, reports } = setup();
+    prisma.user.findFirst.mockResolvedValue(null);
+    const ctx = ctxFor('tr:b:2');
+    await handler.onAction(ctx as never);
+    expect(prisma.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 50, status: 'ACTIVE', isActive: true },
+      }),
+    );
+    expect(reports.compose).not.toHaveBeenCalled();
+    expect(ctx.answerCbQuery).toHaveBeenCalledWith(
+      'Bu hisobot sizga ochiq emas',
+    );
+    expect(ctx.editMessageReplyMarkup).toHaveBeenCalled();
+  });
+
+  it('tr:open for an inactive account is refused and keeps the menu buttons', async () => {
+    const { handler, prisma } = setup();
+    prisma.user.findFirst.mockResolvedValue(null);
+    const ctx = ctxFor('tr:open');
+    await handler.onAction(ctx as never);
+    expect(ctx.answerCbQuery).toHaveBeenCalledWith(
+      'Bu hisobot sizga ochiq emas',
+    );
+    expect(ctx.editMessageReplyMarkup).not.toHaveBeenCalled();
+  });
+
+  it('a chat with no staff account is refused and compose never runs', async () => {
+    jest.mocked(staffOfChat).mockResolvedValue({ kind: 'none' });
+    const { handler, reports } = setup();
+    const ctx = ctxFor('tr:all');
+    await handler.onAction(ctx as never);
+    expect(reports.compose).not.toHaveBeenCalled();
+    expect(ctx.answerCbQuery).toHaveBeenCalledWith(
+      'Bu hisobot sizga ochiq emas',
+    );
+  });
+
+  it('a garbage tr: payload is answered and compose never runs', async () => {
+    const { handler, reports } = setup();
+    const ctx = ctxFor('tr:b:x');
+    await handler.onAction(ctx as never);
+    expect(reports.compose).not.toHaveBeenCalled();
+    expect(ctx.answerCbQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('the in-flight guard is released after a failure', async () => {
+    const { handler, reports } = setup();
+    reports.compose.mockRejectedValueOnce(new Error('db'));
+    const ctx1 = ctxFor('tr:all');
+    await handler.onAction(ctx1 as never);
+    expect(ctx1.answerCbQuery).toHaveBeenCalledWith(
+      "Xatolik — birozdan keyin qayta urinib ko'ring",
+    );
+    const ctx2 = ctxFor('tr:all');
+    await handler.onAction(ctx2 as never);
+    expect(ctx2.editMessageText).toHaveBeenCalled();
+    expect(ctx2.answerCbQuery).not.toHaveBeenCalledWith('Kuting…');
+  });
+
+  it('an expired callback query cannot escape the handler', async () => {
+    const { handler } = setup();
+    const ctx = ctxFor('tr:b:x');
+    ctx.answerCbQuery.mockRejectedValue(new Error('query is too old'));
+    await expect(handler.onAction(ctx as never)).resolves.toBeUndefined();
   });
 });
