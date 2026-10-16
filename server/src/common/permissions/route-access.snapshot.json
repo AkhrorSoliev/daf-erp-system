@@ -875,6 +875,16 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /reports/group-payments": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/group-payments/groups/:groupId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /reports/income-month-attribution": [
     "Branch Director",
     "CEO"

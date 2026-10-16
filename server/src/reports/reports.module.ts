@@ -24,6 +24,8 @@ import { ReportsExcelService } from './reports-excel.service';
 import { ReportsExpectationService } from './reports-expectation.service';
 import { ReportsExpectationHistoryService } from './reports-expectation-history.service';
 import { ReportsStudentFlowService } from './reports-student-flow.service';
+import { GroupPaymentsController } from './group-payments/group-payments.controller';
+import { GroupPaymentsService } from './group-payments/group-payments.service';
 import { ReportsProfitCompositionService } from './reports-profit-composition.service';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { ExpensesModule } from '../expenses/expenses.module';
@@ -36,6 +38,7 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsController,
     ReportsLeadFunnelController,
     ReportsMarketingController,
+    GroupPaymentsController,
   ],
   providers: [
     ReportsService,
@@ -61,6 +64,7 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsLeadFunnelService,
     ReportsProfitCompositionService,
     ReportsMarketingService,
+    GroupPaymentsService,
   ],
   // Exposed so the Telegram admin bot's report menu can generate the same
   // financial Excel workbook + in-chat summary the /payments panel uses.
