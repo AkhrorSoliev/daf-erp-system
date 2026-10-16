@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -106,6 +107,8 @@ type OwnershipLead = Prisma.LeadGetPayload<{
  */
 @Injectable()
 export class LeadOwnershipService {
+  private readonly logger = new Logger(LeadOwnershipService.name);
+
   constructor(
     private prisma: PrismaService,
     private history: EntityHistoryService,
@@ -291,6 +294,70 @@ export class LeadOwnershipService {
       return c;
     });
     this.emit(change);
+  }
+
+  /** Takes back every owned lead whose deadline has passed (the 15-minute run). */
+  async expireOverdue(now: Date): Promise<number> {
+    const companies = await this.prisma.company.findMany({
+      select: { id: true },
+    });
+    let expired = 0;
+    for (const { id } of companies) {
+      try {
+        expired += await this.expireCompany(id, now);
+      } catch (err) {
+        this.logger.error(
+          `lead ownership expiry of company ${id} failed: ${(err as Error).message}`,
+        );
+      }
+    }
+    return expired;
+  }
+
+  private async expireCompany(companyId: number, now: Date): Promise<number> {
+    const due = await this.dueResolver(companyId, now);
+    const owned = await this.prisma.lead.findMany({
+      where: {
+        companyId,
+        ownerId: { not: null },
+        deletedAt: null,
+        statusEnum: { not: LeadStatus.CONVERTED },
+      },
+      select: { ...LEAD_FOR_OWNERSHIP, ownedAt: true, ownerActedAt: true },
+    });
+    let expired = 0;
+    for (const lead of owned) {
+      const dueAt = due(lead);
+      if (!dueAt || dueAt > now) continue;
+      const change = this.changeOf(
+        lead,
+        'EXPIRE',
+        null,
+        null,
+        "Muddatida harakat bo'lmadi",
+        companyId,
+      );
+      const done = await this.prisma.$transaction(async (tx) => {
+        // Only if nothing moved since the read: an action or a new owner wins.
+        const { count } = await tx.lead.updateMany({
+          where: {
+            id: lead.id,
+            ownerId: lead.ownerId,
+            ownedAt: lead.ownedAt,
+            ownerActedAt: lead.ownerActedAt,
+          },
+          data: { ownerId: null, ownedAt: null, ownerActedAt: null },
+        });
+        if (count === 0) return false;
+        await this.recordChange(tx, change);
+        return true;
+      });
+      if (done) {
+        expired++;
+        this.emit(change);
+      }
+    }
+    return expired;
   }
 
   /** Writes the log row and the lead's «Tarix» row of one change. */

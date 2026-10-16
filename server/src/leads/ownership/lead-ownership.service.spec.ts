@@ -33,6 +33,7 @@ function setup(
       findFirst: jest.fn().mockResolvedValue(lead),
       count: jest.fn().mockResolvedValue(opts.untouched ?? 0),
       update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     leadOwnershipLog: { create: jest.fn().mockResolvedValue({}) },
     user: {
@@ -297,5 +298,65 @@ describe('LeadOwnershipService.dueResolver', () => {
     };
     expect(due({ ...owned, ownerId: null, ownedAt: null })).toBeNull();
     expect(due({ ...owned, statusEnum: LeadStatus.CONVERTED })).toBeNull();
+  });
+});
+
+describe('LeadOwnershipService.expireOverdue', () => {
+  const at = (day: string, hhmm: string) => new Date(`${day}T${hhmm}:00+05:00`);
+  const OWNED = {
+    ...FREE_LEAD,
+    ownerId: 11,
+    owner: { firstName: 'Nodira', lastName: 'R' },
+    ownedAt: at('2026-10-19', '10:00'),
+    ownerActedAt: null,
+  };
+
+  function expirySetup(updated = 1) {
+    const s = setup();
+    Object.assign(s.prisma, {
+      company: { findMany: jest.fn().mockResolvedValue([{ id: 1 }]) },
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
+      lead: { findMany: jest.fn().mockResolvedValue([OWNED]) },
+    });
+    Object.assign(s.tx.lead, {
+      updateMany: jest.fn().mockResolvedValue({ count: updated }),
+    });
+    return s;
+  }
+
+  it('takes back a lead whose first action is late, as the system', async () => {
+    const s = expirySetup();
+    await expect(
+      s.service.expireOverdue(at('2026-10-19', '12:15')),
+    ).resolves.toBe(1);
+    expect(s.tx.leadOwnershipLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        kind: 'EXPIRE',
+        fromUserId: 11,
+        actorId: null,
+        reason: "Muddatida harakat bo'lmadi",
+      }),
+    });
+    expect(s.events.emit).toHaveBeenCalledWith(
+      LEAD_OWNER_CHANGED,
+      expect.objectContaining({ kind: 'EXPIRE', fromUserId: 11 }),
+    );
+  });
+
+  it('leaves a lead that is still in time', async () => {
+    const s = expirySetup();
+    await expect(
+      s.service.expireOverdue(at('2026-10-19', '11:59')),
+    ).resolves.toBe(0);
+    expect(s.tx.lead.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('skips a lead whose owner acted or changed since the read', async () => {
+    const s = expirySetup(0);
+    await expect(
+      s.service.expireOverdue(at('2026-10-19', '12:15')),
+    ).resolves.toBe(0);
+    expect(s.tx.leadOwnershipLog.create).not.toHaveBeenCalled();
+    expect(s.events.emit).not.toHaveBeenCalled();
   });
 });
