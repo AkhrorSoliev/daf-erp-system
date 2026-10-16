@@ -25,4 +25,16 @@ export const hisobotlar: QollanmaSahifa[] = [
     kalitSozlar: ["baho", "dars bahosi", "yulduz", "o'quvchi fikri", "ustoz sifati", "past baho", "izoh"],
     yangilangan: "2026-10-16",
   },
+  {
+    bolim: "hisobotlar",
+    sahifa: "telegram-hisobot",
+    sarlavha: "Telegram hisobot",
+    qisqacha:
+      "Kunlik hisobot CEO tanlagan xodimlarning shaxsiy Telegram chatiga, har biriga o'z vaqti, filiallari, bo'limlari va ko'rinishi bilan boradi.",
+    rollar: [1],
+    adr: ["0095"],
+    yollar: ["/settings/telegram-report"],
+    kalitSozlar: ["telegram", "kunlik hisobot", "shaxsiy hisobot", "bot", "hisobot vaqti", "filial", "jadval"],
+    yangilangan: "2026-10-16",
+  },
 ];

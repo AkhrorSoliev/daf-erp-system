@@ -160,6 +160,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0091](0091-dars-bahosi-faqat-ceo-telegram-darhol.md) | Dars bahosi: dars tugagach 10 daq – 3 soat ichida kelgan o'quvchiga Telegram'da 1–5 (darhol, ADR-0025 ro'yxatiga qo'shimcha); bitta qator, 48 soat, bitta baho va izoh; ustoz muzlatiladi; faqat CEO ko'radi (`@CeoOnly()`); `lessonRating.enabled` boshida o'chiq | Qabul qilindi | 2026-10-13 |
 | [0092](0092-guruhlar-tolovi-hisob-ulushida.md) | Guruhlar bo'yicha to'lov: oy hisobi (`month-charges.ts`) guruhlarga hisob ulushida bo'linadi (largest remainder, `splitMonthChargesByCharge`), guruhlar yig'indisi «Qoldi» bilan so'mma-so'm teng; ustoz va kurs — hozirgi; eski uch `payment-reports` endpoint olib tashlandi | Qabul qilindi | 2026-10-16 |
 | [0093](0093-lid-egasi.md) | Lidning bitta egasi bor: xodim band qiladi, muddatda harakat qilmasa lid qaytadi | Qabul qilindi | 2026-10-16 |
+| [0095](0095-shaxsiy-telegram-hisobot.md) | Kunlik hisobot shaxsiy chatga: CEO oluvchi, filial va bo'limni belgilaydi | Qabul qilindi | 2026-10-16 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

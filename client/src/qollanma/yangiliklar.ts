@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-16",
+    sarlavha: "Telegram hisobot shaxsiy chatga",
+    matn: "CEO endi Sozlamalar → «Telegram hisobot» sahifasida kunlik hisobot kimning shaxsiy Telegram chatiga borishini belgilaydi: har oluvchi uchun vaqt, filiallar, bo'limlar va to'rt ko'rinishdan biri. Hisobot dushanba–shanba keladi, botdagi «📊 Hisobot» tugmasi bilan istalgan payt so'raladi, tagidagi tugmalar bilan filial tanlanadi.",
+    rollar: [1],
+    sahifa: { bolim: "hisobotlar", sahifa: "telegram-hisobot" },
+  },
+  {
+    sana: "2026-10-16",
     sarlavha: "Lid egasi",
     matn: "Endi lidning egasi bor. Administrator lidni «Band qilish» tugmasi bilan oladi, band qilingan lidni boshqasi ololmaydi. Olingan lidga 2 ish soati ichida qo'ng'iroq, izoh yoki topshiriq bo'lishi kerak, keyin kamida har 3 ish kunida; bo'lmasa lid umumiy ro'yxatga o'zi qaytadi. Hali harakat qilinmagan 10 ta lidi bor xodim yangisini band qila olmaydi. Bu raqamlarni CEO Sozlamalarda o'zgartiradi. CEO va filial direktori lidni boshqa xodimga beradi. Lidlar sahifasida «Mas'ul» filtri va «Xodimlar bo'yicha» qatori qo'shildi, har o'zgarish lid tarixiga yoziladi.",
     rollar: [1, 2, 3, 5],
