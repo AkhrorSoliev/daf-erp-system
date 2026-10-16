@@ -4,7 +4,11 @@ const FRI_1830 = new Date('2026-10-16T13:30:00Z'); // Friday 18:30 Tashkent
 const SUN = new Date('2026-10-18T13:30:00Z');
 const TODAY = new Date('2026-10-16T00:00:00.000Z');
 
-function setup(due = [{ id: 1, lastSentDate: null }]) {
+function setup(
+  due: { id: number; lastSentDate: Date | null }[] = [
+    { id: 1, lastSentDate: null },
+  ],
+) {
   const prisma = {
     telegramReportRecipient: {
       findMany: jest.fn().mockResolvedValue(due),
@@ -37,8 +41,9 @@ describe('PersonalReportCron', () => {
       name: 'Bayram',
     });
     expect(await cron.run(FRI_1830)).toBe(0);
+    // The date-only Tashkent day (UTC midnight), never the instant.
     expect(holidays.findActiveHolidayCovering).toHaveBeenCalledWith(
-      FRI_1830,
+      TODAY,
       null,
     );
     expect(prisma.telegramReportRecipient.findMany).not.toHaveBeenCalled();
@@ -115,5 +120,53 @@ describe('PersonalReportCron', () => {
       .mockRejectedValueOnce(new Error('db'))
       .mockResolvedValueOnce({ ok: true });
     expect(await cron.run(FRI_1830)).toBe(1);
+  });
+  it('a claim DB error for one recipient does not stop the next', async () => {
+    const { cron, prisma, reports } = setup([
+      { id: 1, lastSentDate: null },
+      { id: 2, lastSentDate: null },
+    ]);
+    prisma.telegramReportRecipient.updateMany.mockRejectedValueOnce(
+      new Error('db'),
+    );
+    expect(await cron.run(FRI_1830)).toBe(1);
+    expect(reports.deliver).toHaveBeenCalledTimes(1);
+    expect(reports.deliver.mock.calls[0][0].id).toBe(2);
+  });
+
+  it('a failed give-back for one recipient does not stop the next', async () => {
+    const { cron, prisma, reports } = setup([
+      { id: 1, lastSentDate: null },
+      { id: 2, lastSentDate: null },
+    ]);
+    reports.deliver
+      .mockResolvedValueOnce({ ok: false, reason: 'NO_BOT' })
+      .mockResolvedValueOnce({ ok: true });
+    prisma.telegramReportRecipient.updateMany
+      .mockResolvedValueOnce({ count: 1 }) // claim 1
+      .mockRejectedValueOnce(new Error('db')); // give-back 1
+    expect(await cron.run(FRI_1830)).toBe(1);
+    expect(reports.deliver).toHaveBeenCalledTimes(2);
+  });
+
+  it('NO_BOT restores the claim to the previous lastSentDate', async () => {
+    const prev = new Date('2026-10-15T00:00:00.000Z');
+    const { cron, prisma, reports } = setup([{ id: 1, lastSentDate: prev }]);
+    reports.deliver.mockResolvedValueOnce({ ok: false, reason: 'NO_BOT' });
+    expect(await cron.run(FRI_1830)).toBe(0);
+    expect(prisma.telegramReportRecipient.updateMany).toHaveBeenLastCalledWith({
+      where: { id: 1, lastSentDate: TODAY },
+      data: { lastSentDate: prev },
+    });
+  });
+
+  it('a thrown deliver restores the claim', async () => {
+    const { cron, prisma, reports } = setup([{ id: 1, lastSentDate: null }]);
+    reports.deliver.mockRejectedValueOnce(new Error('boom'));
+    expect(await cron.run(FRI_1830)).toBe(0);
+    expect(prisma.telegramReportRecipient.updateMany).toHaveBeenLastCalledWith({
+      where: { id: 1, lastSentDate: TODAY },
+      data: { lastSentDate: null },
+    });
   });
 });

@@ -28,14 +28,17 @@ export function TelegramReportSettingsClient() {
 
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: KEY, queryFn: fetchRecipients });
   const candidates = useQuery({ queryKey: CANDIDATES, queryFn: fetchCandidates });
-  const refresh = () => {
-    void qc.invalidateQueries({ queryKey: KEY });
-    void qc.invalidateQueries({ queryKey: CANDIDATES });
-  };
+  // Returned from onSuccess so isPending stays true until the refetch lands:
+  // the next PATCH is computed from the refetched sections/branchIds.
+  const refresh = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: KEY }),
+      qc.invalidateQueries({ queryKey: CANDIDATES }),
+    ]);
 
   const add = useMutation({
     mutationFn: (userId: number) => addRecipient(userId),
-    onSuccess: () => { setPick(""); refresh(); toast.success("Qo'shildi"); },
+    onSuccess: () => { setPick(""); toast.success("Qo'shildi"); return refresh(); },
     onError: (e) => toast.error(getErrorMessage(e, "Qo'shib bo'lmadi")),
   });
   const patch = useMutation({
@@ -45,7 +48,7 @@ export function TelegramReportSettingsClient() {
   });
   const remove = useMutation({
     mutationFn: removeRecipient,
-    onSuccess: () => { refresh(); toast.success("Olib tashlandi"); },
+    onSuccess: () => { toast.success("Olib tashlandi"); return refresh(); },
     onError: (e) => toast.error(getErrorMessage(e, "Olib tashlab bo'lmadi")),
   });
   const test = useMutation({
@@ -56,7 +59,7 @@ export function TelegramReportSettingsClient() {
     onError: (e) => toast.error(getErrorMessage(e, "Yuborib bo'lmadi")),
   });
 
-  if (isError) {
+  if (isError && !data) {
     return (
       <div className="space-y-3">
         <SettingsPageHeader title={TITLE} description={DESCRIPTION} />

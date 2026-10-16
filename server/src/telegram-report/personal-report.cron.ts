@@ -48,8 +48,11 @@ export class PersonalReportCron {
 
   async run(now = new Date()): Promise<number> {
     if (isTashkentSunday(now)) return 0;
-    if (await this.holidays.findActiveHolidayCovering(now, null)) return 0;
+    // Holidays are stored as UTC-midnight dates (date <= X <= endDate), so ask
+    // for the Tashkent day, not the instant: 07:00 Tashkent is 02:00Z, which
+    // would miss a holiday's last day.
     const today = utcMidnightFromDateStr(tashkentDateStr(now));
+    if (await this.holidays.findActiveHolidayCovering(today, null)) return 0;
     const notToday = [{ lastSentDate: null }, { lastSentDate: { lt: today } }];
     const due = await this.prisma.telegramReportRecipient.findMany({
       where: {
@@ -61,32 +64,42 @@ export class PersonalReportCron {
     const cache: ReportCache = new Map();
     let sent = 0;
     for (const r of due) {
-      const claim = await this.prisma.telegramReportRecipient.updateMany({
-        where: { id: r.id, OR: notToday },
-        data: { lastSentDate: today },
-      });
-      if (claim.count === 0) continue;
-      let result: DeliverResult;
+      // One recipient's failure (a DB error included) never stops the rest.
       try {
-        result = await this.reports.deliver(r, cache, now);
+        const claim = await this.prisma.telegramReportRecipient.updateMany({
+          where: { id: r.id, OR: notToday },
+          data: { lastSentDate: today },
+        });
+        if (claim.count === 0) continue;
+        let result: DeliverResult;
+        try {
+          result = await this.reports.deliver(r, cache, now);
+        } catch (err) {
+          await this.giveBack(r, today); // a throw stays retryable
+          throw err; // logged once below
+        }
+        if (result.ok) {
+          sent += 1;
+          continue;
+        }
+        if (retryable(result)) await this.giveBack(r, today);
+        this.logger.warn(`personal report ${r.id} not sent: ${result.reason}`);
       } catch (err) {
         this.logger.error(
           `personal report ${r.id} failed: ${describeError(err)}`,
         );
-        result = { ok: false, reason: 'NO_BOT' }; // treat as retryable
       }
-      if (result.ok) {
-        sent += 1;
-        continue;
-      }
-      if (retryable(result)) {
-        await this.prisma.telegramReportRecipient.updateMany({
-          where: { id: r.id, lastSentDate: today },
-          data: { lastSentDate: r.lastSentDate },
-        });
-      }
-      this.logger.warn(`personal report ${r.id} not sent: ${result.reason}`);
     }
     return sent;
+  }
+
+  private async giveBack(
+    r: { id: number; lastSentDate: Date | null },
+    today: Date,
+  ): Promise<void> {
+    await this.prisma.telegramReportRecipient.updateMany({
+      where: { id: r.id, lastSentDate: today },
+      data: { lastSentDate: r.lastSentDate },
+    });
   }
 }
