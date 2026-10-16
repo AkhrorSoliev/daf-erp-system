@@ -40,9 +40,9 @@ export function KpiSummaryCards({ data, isCurrent }: { data: KpiOverview; isCurr
             unit="pct"
             compareAvailable={available}
           />
-        ) : (
+        ) : isCurrent ? (
           <p className="text-xs text-muted-foreground">joriy oyda hali to&apos;lamaganlar ham hisobda</p>
-        )}
+        ) : null}
       </StatCard>
       {isCurrent && (
         <StatCard title="Oy oxiriga taxmin">

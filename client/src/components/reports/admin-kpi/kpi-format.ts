@@ -15,9 +15,10 @@ export function kpiMonth(oy: string, current: string): string {
   return clampMonth(oy || current, KPI_FIRST_MONTH, current);
 }
 
-/** `?bilan=`; empty = the month before the page's month. */
-export function kpiCompare(bilan: string, month: string, current: string): string {
-  return bilan ? clampMonth(bilan, COMPARE_FLOOR_MONTH, current) : addMonths(month, -1);
+/** `?bilan=` inside [2026-09, the month before the page's month]; empty or unreadable = that month before. */
+export function kpiCompare(bilan: string, month: string): string {
+  const before = addMonths(month, -1);
+  return bilan ? clampMonth(bilan, COMPARE_FLOOR_MONTH, before) : before;
 }
 
 export type DeltaUnit = "count" | "som" | "pct";

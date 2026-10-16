@@ -24,9 +24,15 @@ describe("kpiMonth / kpiCompare", () => {
   });
 
   it("compares with the month before unless one is picked", () => {
-    expect(kpiCompare("", "2026-10", "2026-11")).toBe("2026-09");
-    expect(kpiCompare("2026-08", "2026-11", "2026-11")).toBe("2026-09");
-    expect(kpiCompare("2026-10", "2026-11", "2026-11")).toBe("2026-10");
+    expect(kpiCompare("", "2026-10")).toBe("2026-09");
+    expect(kpiCompare("2026-08", "2026-11")).toBe("2026-09");
+    expect(kpiCompare("2026-10", "2026-11")).toBe("2026-10");
+  });
+
+  it("never compares a month with itself or a later one", () => {
+    expect(kpiCompare("2026-11", "2026-11")).toBe("2026-10");
+    expect(kpiCompare("2026-12", "2026-11")).toBe("2026-10");
+    expect(kpiCompare("2026-11", "2026-10")).toBe("2026-09");
   });
 });
 

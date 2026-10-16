@@ -54,6 +54,13 @@ describe("KPI overview — compareAvailable", () => {
     expect(table).toContain("▼");
   });
 
+  it("prints the unpaid-leads hint only in the current month", () => {
+    const hint = "ham hisobda";
+    const noPct = { ...data(true), cards: { ...data(true).cards, leadToPaid: { value: null, compare: null } } };
+    expect(html(createElement(KpiSummaryCards, { data: noPct, isCurrent: true }))).toContain(hint);
+    expect(html(createElement(KpiSummaryCards, { data: noPct, isCurrent: false }))).not.toContain(hint);
+  });
+
   it("numbers the rows from 1 and hides the forecast outside the current month", () => {
     const table = html(createElement(KpiAdminTable, { rows: [row], compareAvailable: true, onOpen: () => {} }));
     expect(table).toContain("border-r text-muted-foreground\">1<");

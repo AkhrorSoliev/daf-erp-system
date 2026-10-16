@@ -9,6 +9,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useCan } from "@/hooks/use-permissions";
 import { KpiAdminTable } from "./kpi-admin-table";
 import { KpiAttention } from "./kpi-attention";
+import { KpiDailyChart, KpiMonthsChart } from "./kpi-charts";
 import {
   COMPARE_FLOOR_MONTH,
   KPI_DEFINITIONS,
@@ -19,6 +20,7 @@ import {
 } from "./kpi-format";
 import { useKpiOverview } from "./kpi-queries";
 import { KpiSummaryCards } from "./kpi-summary-cards";
+import { KpiUserDrawer } from "./kpi-user-drawer";
 
 // Defaults are omitted from the URL: the current month, the month before it, nobody open.
 const FILTERS = {
@@ -39,9 +41,11 @@ function KpiOverview() {
   const { filters, setFilter, setFilters } = useUrlFilters(FILTERS);
   const current = currentMonthKey();
   const month = kpiMonth(filters.oy, current);
-  const compare = kpiCompare(filters.bilan, month, current);
+  const compare = kpiCompare(filters.bilan, month);
   const q = useKpiOverview(month, compare);
   const open = (userId: number) => setFilter("xodim", userId);
+  const openUser = filters.xodim || null;
+  const openName = q.data?.rows.find((r) => r.userId === openUser)?.name;
 
   return (
     <div className="space-y-6">
@@ -62,7 +66,7 @@ function KpiOverview() {
               id="kpi-compare"
               value={compare}
               minMonth={COMPARE_FLOOR_MONTH}
-              maxMonth={current}
+              maxMonth={addMonths(month, -1)}
               onChange={(m) => setFilter("bilan", m === addMonths(month, -1) ? "" : m)}
               className="w-44"
             />
@@ -82,6 +86,15 @@ function KpiOverview() {
           </div>
           <KpiSummaryCards data={q.data} isCurrent={month === current} />
           <KpiAttention signals={q.data.signals} onOpen={open} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <KpiDailyChart
+              data={q.data.daily}
+              month={q.data.month}
+              compare={q.data.compare}
+              compareAvailable={q.data.compareAvailable}
+            />
+            <KpiMonthsChart data={q.data.months} />
+          </div>
           <section className="space-y-3">
             <h3 className="font-medium">Administratorlar</h3>
             <KpiAdminTable rows={q.data.rows} compareAvailable={q.data.compareAvailable} onOpen={open} />
@@ -95,6 +108,7 @@ function KpiOverview() {
           </section>
         </>
       )}
+      <KpiUserDrawer userId={openUser} name={openName} month={month} onClose={() => setFilter("xodim", 0)} />
     </div>
   );
 }
