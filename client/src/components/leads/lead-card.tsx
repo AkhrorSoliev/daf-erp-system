@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import type { LeadCard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { useLeadActivity } from "@/hooks/use-lead-activity";
+import { LeadOwnerBadge } from "./ownership/lead-owner-badge";
 
 // Slight delay so a quick mouse pass over a card doesn't fire the hover request.
 const HOVER_DELAY = 250;
@@ -199,13 +200,16 @@ export function LeadCardItem({ lead, sectionId }: LeadCardItemProps) {
         <GripVertical className="size-4" />
         <span className="sr-only">Ko&apos;chirish uchun ushlang</span>
       </button>
-      <button
-        type="button"
-        onClick={() => openLeadDetail(lead.id)}
-        className="min-w-0 flex-1 text-left transition-colors hover:text-primary"
-      >
-        <CardBody lead={lead} />
-      </button>
+      <div className="min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={() => openLeadDetail(lead.id)}
+          className="w-full text-left transition-colors hover:text-primary"
+        >
+          <CardBody lead={lead} />
+        </button>
+        <LeadOwnerBadge lead={lead} sectionId={sectionId} />
+      </div>
       <LeadCardIndicators lead={lead} />
     </div>
   );
@@ -220,6 +224,7 @@ export function LeadCardOverlay({ lead }: { lead: LeadCard }) {
       </span>
       <div className="min-w-0 flex-1">
         <CardBody lead={lead} />
+        <LeadOwnerBadge lead={lead} interactive={false} />
       </div>
       <LeadCardIndicators lead={lead} />
     </div>
