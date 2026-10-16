@@ -1,57 +1,47 @@
 import Link from "next/link";
-import { CalendarCheck, CalendarDays, Users, UsersRound } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { formatNumber, formatPercent } from "@/lib/format-utils";
 import type { DashboardPeople } from "./dashboard-summary-types";
 
 interface PeopleStatProps {
-  icon: LucideIcon;
-  label: string;
   value: string;
+  label: string;
   hint?: string;
   hintTitle?: string;
   href: string;
 }
 
-function PeopleStat({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  hintTitle,
-  href,
-}: PeopleStatProps) {
+/** «351 aktiv o'quvchi +61 / −8» — one fact, read as a phrase. */
+function PeopleStat({ value, label, hint, hintTitle, href }: PeopleStatProps) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-2 rounded-lg border bg-card px-2.5 py-2 transition-colors hover:bg-accent/40 sm:gap-3 sm:p-3"
+      className="inline-flex items-baseline gap-1.5 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground"
     >
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0">
-        <p className="truncate text-xs text-muted-foreground">{label}</p>
-        <p className="text-base font-semibold tabular-nums sm:text-lg">
-          {value}
-          {hint && (
-            <span
-              className="ml-1.5 text-xs font-normal text-muted-foreground"
-              title={hintTitle}
-            >
-              {hint}
-            </span>
-          )}
-        </p>
-      </div>
+      <span className="text-base font-semibold text-foreground">{value}</span>
+      <span>{label}</span>
+      {hint && (
+        <span className="text-xs" title={hintTitle}>
+          {hint}
+        </span>
+      )}
     </Link>
   );
 }
 
+/**
+ * The people counters as one line of facts under the money strip, not a
+ * second row of cards: these are context for the figures above, and a row of
+ * equal tiles would give them the same weight.
+ */
 export function HomePeopleStats({ people }: { people: DashboardPeople }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+    <section
+      aria-label="O'quvchilar va darslar"
+      className="flex flex-wrap items-baseline gap-x-6 gap-y-1.5 px-1"
+    >
       <PeopleStat
-        icon={Users}
-        label="Aktiv o'quvchilar"
         value={formatNumber(people.activeStudents)}
+        label="aktiv o'quvchi"
         hint={`+${people.newThisMonth} / −${people.leftThisMonth}`}
         hintTitle={
           `Shu oy: +${people.newThisMonth} yangi, −${people.leftThisMonth} ketgan.` +
@@ -62,26 +52,23 @@ export function HomePeopleStats({ people }: { people: DashboardPeople }) {
         href="/students"
       />
       <PeopleStat
-        icon={UsersRound}
-        label="Aktiv guruhlar"
         value={formatNumber(people.activeGroups)}
+        label="aktiv guruh"
         href="/groups"
       />
       <PeopleStat
-        icon={CalendarCheck}
-        label="Bu oy davomat"
         value={formatPercent(people.attendancePct)}
+        label="davomat (bu oy)"
         href="/reports/attendance"
       />
       <PeopleStat
-        icon={CalendarDays}
-        label="Bugungi darslar"
         value={
           people.todayLessons === null ? "—" : formatNumber(people.todayLessons)
         }
+        label="dars bugun"
         hint={people.todayLessons === null ? "filial tanlanmagan" : undefined}
         href="/schedule"
       />
-    </div>
+    </section>
   );
 }

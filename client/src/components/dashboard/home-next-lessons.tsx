@@ -30,9 +30,9 @@ export function HomeNextLessons({
   const next = lessons ? pickNextLessons(lessons, now) : [];
 
   return (
-    <section className="rounded-xl border bg-card">
+    <section className="rounded-lg border bg-card">
       <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
-        <h2 className="flex items-center gap-2 font-heading text-sm font-semibold">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
           <CalendarDays className="size-4 text-muted-foreground" />
           Keyingi darslar
         </h2>
