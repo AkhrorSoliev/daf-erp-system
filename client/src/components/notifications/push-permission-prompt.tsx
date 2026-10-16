@@ -30,8 +30,8 @@ export function PushPermissionPrompt() {
 
   if (state === "denied") {
     return (
-      <div className="flex items-start gap-2 border-t border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 sm:px-4 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-        <Lock className="mt-0.5 size-4 shrink-0" />
+      <div className="flex items-start gap-2 border-t bg-warning/10 px-3 py-2 text-sm sm:px-4">
+        <Lock className="mt-0.5 size-4 shrink-0 text-warning" />
         <span>
           Bildirishnomalar bloklangan. Manzil satrining chap tomonidagi belgini bosing,
           «Bildirishnomalar»ni «Ruxsat berish»ga o&apos;zgartiring va sahifani yangilang.
@@ -44,8 +44,8 @@ export function PushPermissionPrompt() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 sm:px-4 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-        <BellOff className="size-4 shrink-0" />
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t bg-warning/10 px-3 py-2 text-sm sm:px-4">
+        <BellOff className="size-4 shrink-0 text-warning" />
         <span className="flex-1">
           Bildirishnomalar o&apos;chiq. Vazifa, dars va davomat haqidagi xabarlar sizga kelmaydi.
         </span>
@@ -57,7 +57,7 @@ export function PushPermissionPrompt() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader className="items-center text-center">
-            <div className="mb-1 flex size-11 items-center justify-center rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+            <div className="mb-1 flex size-11 items-center justify-center rounded-full bg-warning/10 text-warning">
               <BellRing className="size-5" />
             </div>
             <DialogTitle>Bildirishnomalarni yoqing</DialogTitle>

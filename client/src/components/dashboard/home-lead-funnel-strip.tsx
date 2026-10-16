@@ -44,14 +44,14 @@ export function HomeLeadFunnelStrip({ showDetails }: { showDetails: boolean }) {
 
   // Ikkinchi darajali blok: xato bo'lsa jim yashiriladi, panel buzilmaydi.
   if (isError) return null;
-  if (isPending || !data) return <Skeleton className="h-[310px] rounded-xl sm:h-[186px]" />;
+  if (isPending || !data) return <Skeleton className="h-[310px] rounded-lg sm:h-[186px]" />;
 
   const rows = buildFunnelRows(data.stages);
   const conversion = rows[rows.length - 1].pctOfFirst;
   const openReport = () => router.push("/reports/leads");
 
   return (
-    <section className="grid gap-x-6 gap-y-4 rounded-xl border bg-card px-4 py-3 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)] sm:items-center">
+    <section className="grid gap-x-6 gap-y-4 rounded-lg border bg-card px-4 py-3 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)] sm:items-center">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3 sm:flex-col sm:items-start sm:gap-y-2.5">
         <div className="flex basis-full items-center gap-2 text-sm text-muted-foreground">
           <Filter className="size-4" />

@@ -17,17 +17,15 @@ export function HomeAttentionList({ attention, includeOutreach }: Props) {
   const isEmpty = rows.length === 0 && debtors.length === 0;
 
   return (
-    <section className="rounded-xl border bg-card">
+    <section className="rounded-lg border bg-card">
       <header className="flex items-center gap-2 border-b px-4 py-3">
         <CircleAlert className="size-4 text-muted-foreground" />
-        <h2 className="font-heading text-sm font-semibold">
-          E&apos;tibor talab qiladi
-        </h2>
+        <h2 className="text-sm font-semibold">E&apos;tibor talab qiladi</h2>
       </header>
 
       {isEmpty ? (
         <div className="flex items-center gap-2 px-4 py-8 text-sm text-muted-foreground">
-          <CircleCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
+          <CircleCheck className="size-4 text-success" />
           Bugun e&apos;tibor talab qiladigan narsa yo&apos;q
         </div>
       ) : (
@@ -38,24 +36,20 @@ export function HomeAttentionList({ attention, includeOutreach }: Props) {
               href={row.href}
               className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/40"
             >
+              {/* The count leads the row as a tinted figure: what is wrong,
+                  how much of it, then where to go. */}
               <span
                 className={cn(
-                  "size-2 shrink-0 rounded-full",
-                  row.tone === "danger" ? "bg-red-500" : "bg-orange-500",
-                )}
-              />
-              <span className="min-w-0 flex-1 truncate text-sm">
-                {row.label}
-              </span>
-              <span
-                className={cn(
-                  "text-sm font-semibold tabular-nums",
+                  "min-w-10 rounded-md px-1.5 py-0.5 text-center text-sm font-semibold",
                   row.tone === "danger"
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-orange-600 dark:text-orange-400",
+                    ? "bg-destructive/10 text-destructive"
+                    : "bg-warning/15 text-warning",
                 )}
               >
                 {formatNumber(row.count)}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {row.label}
               </span>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
             </Link>
@@ -83,7 +77,7 @@ export function HomeAttentionList({ attention, includeOutreach }: Props) {
                   <span className="min-w-0 flex-1 truncate text-sm">
                     {d.name}
                   </span>
-                  <span className="text-sm font-medium tabular-nums text-red-600 dark:text-red-400">
+                  <span className="text-sm font-medium text-destructive">
                     {formatBalance(d.balance)}
                   </span>
                   <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
