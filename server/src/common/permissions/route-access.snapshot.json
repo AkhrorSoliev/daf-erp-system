@@ -880,6 +880,11 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /reports/group-payments/excel": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /reports/group-payments/groups/:groupId": [
     "Administrator",
     "Branch Director",

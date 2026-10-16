@@ -11,10 +11,13 @@ import {
 } from '../../common/finance/report-branch-scope';
 import { PrismaService } from '../../prisma/prisma.service';
 import { splitMonthChargesByCharge } from '../month-charges';
+import { groupPaymentsWorkbook } from './group-payments.excel';
 import {
   buildRowsResponse,
+  filteredRows,
   groupDrawer,
   parseReportMonth,
+  studentSheetLines,
   toGpQuery,
   type GpData,
   type GpGroupResponse,
@@ -39,6 +42,23 @@ export class GroupPaymentsService {
       parseReportMonth(q.oy, new Date()),
     );
     return buildRowsResponse(data, toGpQuery(q));
+  }
+
+  /** `GET /reports/group-payments/excel` (spec B5 §5.4): the table's filters without the page; sheet 2 honours `qarzdor` only. */
+  async excel(
+    companyId: number,
+    scope: ReportBranchIds,
+    q: GpRawQuery,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const month = parseReportMonth(q.oy, new Date());
+    const data = await this.load(companyId, scope, month);
+    const f = toGpQuery(q);
+    const buffer = await groupPaymentsWorkbook({
+      kesim: f.kesim,
+      rows: filteredRows(data, f),
+      students: studentSheetLines(data, f.qarzdor),
+    });
+    return { buffer, filename: `guruhlar-tolovi-${month}.xlsx` };
   }
 
   /** `GET /reports/group-payments/groups/:groupId` (spec B5 §5.3). */

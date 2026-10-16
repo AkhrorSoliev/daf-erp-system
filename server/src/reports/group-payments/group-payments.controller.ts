@@ -1,9 +1,11 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { BranchScope, CurrentUser } from '../../common/decorators';
 import type { ReportBranchIds } from '../../common/finance/report-branch-scope';
 import { Can } from '../../common/permissions/access.decorators';
 import {
   GroupDrawerQueryDto,
+  GroupPaymentsFilterDto,
   GroupPaymentsQueryDto,
 } from './dto/group-payments-query.dto';
 import { GroupPaymentsService } from './group-payments.service';
@@ -26,6 +28,25 @@ export class GroupPaymentsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.service.rows(companyId, scope, q);
+  }
+
+  /** The table of the open cut, every page, and every student line (spec B5 §5.4). */
+  @Get('excel')
+  @Can('reports.payments')
+  async excel(
+    @Query() q: GroupPaymentsFilterDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+    @Res() res: Response,
+  ) {
+    const { buffer, filename } = await this.service.excel(companyId, scope, q);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
   }
 
   /** The group drawer (spec B5 §5.3). A group without a charge this month is a 404. */

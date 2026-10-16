@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { Workbook } from 'exceljs';
 import {
   addMonthsToMonthKey,
   tashkentMonthKey,
@@ -343,5 +344,37 @@ describe('GroupPaymentsService.group', () => {
       '2026-10',
     );
     expect(drawer.group).toMatchObject({ deleted: true, closed: false });
+  });
+});
+
+describe('GroupPaymentsService.excel', () => {
+  async function sheets(q: object) {
+    const { service } = setup();
+    const { buffer, filename } = await service.excel(1001, [4], {
+      oy: '2026-10',
+      ...q,
+    });
+    const wb = new Workbook();
+    await wb.xlsx.load(buffer as never);
+    return { wb, filename };
+  }
+
+  it('names the file by the month; the first sheet follows the table, every page', async () => {
+    const { wb, filename } = await sheets({});
+    expect(filename).toBe('guruhlar-tolovi-2026-10.xlsx');
+    expect(wb.getWorksheet('Guruhlar')!.getRow(2).getCell(2).value).toBe(
+      'B1-02 (yopilgan)',
+    );
+    expect(wb.getWorksheet("O'quvchilar")!.rowCount).toBe(4); // header + 3 student–group lines
+  });
+
+  it('«qarzdor» keeps only the students with something left on the second sheet', async () => {
+    const { wb } = await sheets({ qarzdor: '1' });
+    const ws = wb.getWorksheet("O'quvchilar")!;
+    expect(ws.rowCount).toBe(3);
+    expect([
+      ws.getRow(2).getCell(4).value,
+      ws.getRow(3).getCell(4).value,
+    ]).toEqual([10002, 10002]);
   });
 });
