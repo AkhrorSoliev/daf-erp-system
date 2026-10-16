@@ -111,11 +111,19 @@ interface LeadsBoardState {
   loadedSections: Set<string>;
   /** Sections whose leads are being fetched right now. */
   loadingSections: Set<string>;
+  /** Sections whose last fetch failed — drawn as an error, not as "no leads". */
+  failedSections: Set<string>;
   /** Bumps on every lead create / edit / move so the filtered list refetches. */
   revision: number;
-  fetchBoard: () => Promise<void>;
+  /** `quiet` refetches without the board skeleton (open sections stay open). */
+  fetchBoard: (quiet?: boolean) => Promise<void>;
   /** `force` re-reads a section that is already loaded (the owner's deadline moved). */
   fetchSectionLeads: (sectionId: string, force?: boolean) => Promise<void>;
+  /**
+   * Re-reads the board and every loaded section, and bumps `revision` — for a
+   * change made elsewhere that shows on the cards (e.g. a lead source renamed).
+   */
+  refreshAll: () => Promise<void>;
   addSection: (section: LeadBoardSection & { columnId: string }) => void;
   addLead: (sectionId: string, lead: LeadCard) => void;
   addColumn: (column: LeadBoardColumn) => void;
@@ -211,11 +219,12 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
   loadingBoard: false,
   loadedSections: new Set(),
   loadingSections: new Set(),
+  failedSections: new Set(),
   revision: 0,
   dragSnapshot: null,
 
-  fetchBoard: async () => {
-    set({ loadingBoard: true });
+  fetchBoard: async (quiet = false) => {
+    if (!quiet) set({ loadingBoard: true });
     try {
       const { data } = await api.get<LeadBoardColumn[]>("/leads/board");
       set({ board: data, loadingBoard: false });
@@ -237,20 +246,40 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       set((s) => {
         const loading = new Set(s.loadingSections);
         loading.delete(sectionId);
+        const failed = new Set(s.failedSections);
+        failed.delete(sectionId);
         return {
           leadsBySection: { ...s.leadsBySection, [sectionId]: data },
           loadedSections: new Set(s.loadedSections).add(sectionId),
           loadingSections: loading,
+          failedSections: failed,
         };
       });
     } catch (error) {
       set((s) => {
         const loading = new Set(s.loadingSections);
         loading.delete(sectionId);
-        return { loadingSections: loading };
+        return {
+          loadingSections: loading,
+          failedSections: new Set(s.failedSections).add(sectionId),
+        };
       });
       toast.error(getErrorMessage(error, "Lidlarni yuklashda xatolik"));
     }
+  },
+
+  refreshAll: async () => {
+    set((s) => ({ revision: s.revision + 1 }));
+    await get().fetchBoard(true);
+    // Only sections still on the board: a removed one would answer 404.
+    const onBoard = new Set(
+      get().board.flatMap((c) => c.sections.map((sec) => sec.id)),
+    );
+    await Promise.all(
+      [...get().loadedSections]
+        .filter((id) => onBoard.has(id))
+        .map((id) => get().fetchSectionLeads(id, true)),
+    );
   },
 
   addSection: (section) => {
@@ -333,11 +362,17 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
             }
           : col,
       ),
+      // Deleting a section archives its leads: the stats, owners strip and
+      // filtered list key on `revision`.
+      revision: s.revision + 1,
     }));
   },
 
   moveColumn: async (id, direction) => {
     const { board } = get();
+    // Column order is per branch on the server; "Barcha filiallar" mixes
+    // branches, so there is no single order to write.
+    if (new Set(board.map((c) => c.branchId)).size > 1) return;
     const custom = board.filter((c) => !c.isSystem);
     const idx = custom.findIndex((c) => c.id === id);
     if (idx === -1) return;
@@ -529,14 +564,16 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
         { sectionId: toSectionId },
       );
       // Replace the optimistic card with the server copy (status may sync).
+      // A collapsed source never held the card, so a loaded target gets it now.
       set((s) => {
-        if (!s.leadsBySection[toSectionId]) return {};
+        const target = s.leadsBySection[toSectionId];
+        if (!target) return {};
         return {
           leadsBySection: {
             ...s.leadsBySection,
-            [toSectionId]: s.leadsBySection[toSectionId].map((l) =>
-              l.id === leadId ? data : l,
-            ),
+            [toSectionId]: target.some((l) => l.id === leadId)
+              ? target.map((l) => (l.id === leadId ? data : l))
+              : [...target, data],
           },
         };
       });
@@ -679,32 +716,49 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
   },
 
   persistLeadMove: async ({ leadId, toSectionId, toLeadIds }) => {
+    let data: LeadCard;
     try {
-      const { data } = await api.patch<LeadCard>(`/leads/${leadId}/move`, {
+      ({ data } = await api.patch<LeadCard>(`/leads/${leadId}/move`, {
         sectionId: toSectionId,
-      });
-      // Replace the optimistic card with the server copy (status may sync).
-      set((s) => {
-        if (!s.leadsBySection[toSectionId]) return {};
-        return {
-          leadsBySection: {
-            ...s.leadsBySection,
-            [toSectionId]: s.leadsBySection[toSectionId].map((l) =>
-              l.id === leadId ? data : l,
-            ),
-          },
-        };
-      });
-      // Persist the dropped position when the target list is loaded; a collapsed
-      // target keeps the server append (order is correct on next expand).
-      if (toLeadIds.length > 0) {
-        await api.patch("/leads/reorder", { sectionId: toSectionId, leadIds: toLeadIds });
-      }
-      get().clearDragSnapshot();
+      }));
     } catch (error) {
       get().rollbackDrag();
       toast.error(getErrorMessage(error, "Lidni ko'chirishda xatolik"));
+      return;
     }
+    // Replace the optimistic card with the server copy (status may sync).
+    set((s) => {
+      const target = s.leadsBySection[toSectionId];
+      return {
+        revision: s.revision + 1,
+        ...(target && {
+          leadsBySection: {
+            ...s.leadsBySection,
+            [toSectionId]: target.map((l) => (l.id === leadId ? data : l)),
+          },
+        }),
+      };
+    });
+    // Persist the dropped position when the target list is loaded; a collapsed
+    // target keeps the server append (order is correct on next expand).
+    if (toLeadIds.length > 0) {
+      try {
+        await api.patch("/leads/reorder", {
+          sectionId: toSectionId,
+          leadIds: toLeadIds,
+        });
+      } catch (error) {
+        // The move is already saved, so a rollback would put the card back in a
+        // section it has left. Re-read the target for the server's order.
+        get().clearDragSnapshot();
+        void get().fetchSectionLeads(toSectionId, true);
+        toast.error(
+          getErrorMessage(error, "Lid tartibini o'zgartirishda xatolik"),
+        );
+        return;
+      }
+    }
+    get().clearDragSnapshot();
   },
 
   persistSectionReorder: async (columnId, sectionIds) => {
@@ -724,17 +778,28 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       await api.patch(`/lead-sections/${sectionId}/move`, {
         targetColumnId: toColumnId,
       });
-      if (toSectionIds.length > 0) {
+    } catch (error) {
+      get().rollbackDrag();
+      toast.error(getErrorMessage(error, "Bo'limni ko'chirishda xatolik"));
+      return;
+    }
+    if (toSectionIds.length > 0) {
+      try {
         await api.patch("/lead-sections/reorder", {
           columnId: toColumnId,
           sectionIds: toSectionIds,
         });
+      } catch (error) {
+        // The move is already saved; re-read the board instead of rolling back.
+        get().clearDragSnapshot();
+        void get().fetchBoard(true);
+        toast.error(
+          getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
+        );
+        return;
       }
-      get().clearDragSnapshot();
-    } catch (error) {
-      get().rollbackDrag();
-      toast.error(getErrorMessage(error, "Bo'limni ko'chirishda xatolik"));
     }
+    get().clearDragSnapshot();
   },
 }));
 

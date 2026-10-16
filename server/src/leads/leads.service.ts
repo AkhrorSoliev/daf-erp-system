@@ -698,6 +698,7 @@ export class LeadsService {
         lastName: true,
         phone: true,
         extraPhone: true,
+        sourceId: true,
       },
     });
     if (!existing) {
@@ -728,7 +729,9 @@ export class LeadsService {
       data.extraPhone = dto.extraPhone || null;
     }
     if (dto.sourceId !== undefined) {
-      if (dto.sourceId) {
+      // A lead keeps its own source even after that source was archived, so
+      // re-sending the current one must not fail the save.
+      if (dto.sourceId && dto.sourceId !== existing.sourceId) {
         const source = await this.prisma.leadSource.findFirst({
           where: { id: dto.sourceId, deletedAt: null, companyId },
           select: { id: true },
@@ -801,6 +804,12 @@ export class LeadsService {
     });
     if (!lead) {
       throw new NotFoundException('Lid topilmadi');
+    }
+    // A converted lead is a student now; its card stays where it was converted.
+    if (lead.statusEnum === LeadStatus.CONVERTED) {
+      throw new BadRequestException(
+        "O'quvchiga aylangan lidni ko'chirib bo'lmaydi",
+      );
     }
 
     // The target section must be reachable by this caller. Without the scope
@@ -1059,6 +1068,12 @@ export class LeadsService {
     });
     if (!existing) {
       throw new NotFoundException('Lid topilmadi');
+    }
+    // Marking a converted lead LOST would erase the conversion from the funnel.
+    if (existing.statusEnum === LeadStatus.CONVERTED) {
+      throw new BadRequestException(
+        "O'quvchiga aylangan lidni o'chirib bo'lmaydi",
+      );
     }
 
     await this.prisma.lead.update({

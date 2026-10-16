@@ -22,6 +22,7 @@ import {
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
 import {
+  CLEARED_LEAD_FILTERS,
   LEAD_FILTER_SCHEMA,
   LEAD_HOLATI_GROUPS,
   LEAD_HOLATI_OPTIONS,
@@ -52,9 +53,11 @@ const HOLATI_OPTIONS: MultiSelectOption[] = LEAD_HOLATI_GROUPS.flatMap(
 );
 
 export function LeadsFilterBar() {
-  const { filters, setFilters, resetFilters } =
-    useUrlFilters(LEAD_FILTER_SCHEMA);
+  const { filters, setFilters } = useUrlFilters(LEAD_FILTER_SCHEMA);
   const columns = useLeadsBoard((s) => s.board);
+  // Bumped by lead and source changes; a renamed or deleted source must reach
+  // the «Manba» options too.
+  const revision = useLeadsBoard((s) => s.revision);
 
   const [sources, setSources] = useState<FilterSource[]>([]);
   const [searchInput, setSearchInput] = useState(filters.search);
@@ -83,9 +86,20 @@ export function LeadsFilterBar() {
       .get<FilterSource[]>("/lead-sources/filter")
       .then(({ data }) => setSources(data))
       .catch(() => {});
-  }, []);
+  }, [revision]);
+
+  // The last search this box wrote to the URL. Any other change of `search`
+  // came from outside (a stats card, «Tozalash», Back), and the box follows it;
+  // comparing with the typed text instead would drop keys typed while the
+  // debounced write was landing.
+  const [writtenSearch, setWrittenSearch] = useState(filters.search);
+  if (filters.search !== writtenSearch) {
+    setWrittenSearch(filters.search);
+    setSearchInput(filters.search);
+  }
 
   const debouncedSearch = useDebouncedCallback((value: string) => {
+    setWrittenSearch(value);
     setFilters({ search: value, page: 1 });
   }, 300);
 
@@ -178,10 +192,7 @@ export function LeadsFilterBar() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setSearchInput("");
-                resetFilters();
-              }}
+              onClick={() => setFilters(CLEARED_LEAD_FILTERS)}
             >
               <X className="mr-1 size-4" />
               Tozalash

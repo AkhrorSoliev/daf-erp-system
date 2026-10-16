@@ -22,8 +22,11 @@ export function LeadOwnersStrip() {
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const revision = useLeadsBoard((s) => s.revision);
   const { filters: statsFilters } = useUrlFilters(LEAD_STATS_SCHEMA);
-  const { setFilters } = useUrlFilters(LEAD_FILTER_SCHEMA);
+  const { filters, setFilters } = useUrlFilters(LEAD_FILTER_SCHEMA);
   const period = parseStatsPeriod(statsFilters.period);
+  // The list shows exactly this person's leads.
+  const active = (userId: number) =>
+    filters.masul.length === 1 && filters.masul[0] === String(userId);
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["leads", "owners", selectedBranch?.id ?? "all", period, revision],
@@ -47,7 +50,11 @@ export function LeadOwnersStrip() {
                 key={r.userId}
                 type="button"
                 onClick={() => setFilters({ masul: [String(r.userId)], page: 1 })}
-                className="rounded-md border bg-card px-3 py-2 text-left text-xs transition-colors hover:bg-muted/50"
+                aria-pressed={active(r.userId)}
+                className={cn(
+                  "rounded-md border bg-card px-3 py-2 text-left text-xs transition-colors hover:bg-muted/50",
+                  active(r.userId) && "ring-2 ring-primary",
+                )}
               >
                 <p className="text-sm font-medium">{r.name}</p>
                 <p className="text-muted-foreground">

@@ -78,7 +78,12 @@ export function EditLeadDrawer() {
         phone: values.phone,
         // Always sent: an empty string is how the panel clears a saved number.
         extraPhone: values.extraPhone,
-        sourceId: values.sourceId || undefined,
+        // Only a changed source is sent: the lead keeps its current one even
+        // after that source was archived, and re-sending it would fail.
+        sourceId:
+          values.sourceId && values.sourceId !== editLead.sourceId
+            ? values.sourceId
+            : undefined,
       });
       applyLeadUpdate(editLead.sectionId, data);
       toast.success("Lid yangilandi");
@@ -142,7 +147,7 @@ export function EditLeadDrawer() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Telefon raqami</Label>
+              <Label htmlFor="edit-lead-phone">Telefon raqami</Label>
               <Controller
                 name="phone"
                 control={control}
@@ -151,7 +156,11 @@ export function EditLeadDrawer() {
                     v.length === 9 || "Telefon raqamini to'liq kiriting",
                 }}
                 render={({ field }) => (
-                  <PhoneInput value={field.value} onChange={field.onChange} />
+                  <PhoneInput
+                    id="edit-lead-phone"
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
                 )}
               />
               {errors.phone && (

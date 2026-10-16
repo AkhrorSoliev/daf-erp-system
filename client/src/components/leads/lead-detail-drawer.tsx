@@ -313,6 +313,9 @@ export function LeadDetailDrawer() {
 
   const [lead, setLead] = useState<LeadDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Bumped by «Qayta urinish» to re-run the detail fetch.
+  const [reloadKey, setReloadKey] = useState(0);
   const [marking, setMarking] = useState(false);
   const [linking, setLinking] = useState(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
@@ -384,6 +387,7 @@ export function LeadDetailDrawer() {
     if (!leadId) return;
     let cancelled = false;
     setLoading(true);
+    setFailed(false);
     setLead(null);
     setOptimisticComments([]);
     api
@@ -393,6 +397,7 @@ export function LeadDetailDrawer() {
       })
       .catch((error) => {
         if (!cancelled) {
+          setFailed(true);
           toast.error(getErrorMessage(error, "Lidni yuklashda xatolik"));
         }
       })
@@ -402,7 +407,7 @@ export function LeadDetailDrawer() {
     return () => {
       cancelled = true;
     };
-  }, [leadId]);
+  }, [leadId, reloadKey]);
 
   const handleOptimisticAdd = useCallback((comment: CommentData) => {
     setOptimisticComments((prev) => [comment, ...prev]);
@@ -527,7 +532,20 @@ export function LeadDetailDrawer() {
           </SheetDescription>
         </SheetHeader>
 
-        {loading || !lead ? (
+        {failed && !loading ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-5 text-center">
+            <p className="text-sm text-muted-foreground">
+              Lidni yuklab bo&apos;lmadi
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReloadKey((k) => k + 1)}
+            >
+              Qayta urinish
+            </Button>
+          </div>
+        ) : loading || !lead ? (
           <div className="flex-1 space-y-4 px-6 py-5">
             <Skeleton className="h-7 w-48" />
             <Skeleton className="h-4 w-full" />
@@ -641,11 +659,14 @@ export function LeadDetailDrawer() {
                     <Button
                       variant="link"
                       className="h-auto p-0 text-sm"
-                      onClick={() =>
+                      onClick={() => {
+                        // The drawer lives in a module-level store; close it so
+                        // Back does not reopen it over the board.
+                        handleCloseDetail();
                         router.push(
                           `/students/profile/${lead.convertedStudentId}`,
-                        )
-                      }
+                        );
+                      }}
                     >
                       O&apos;quvchi sahifasini ochish →
                     </Button>
@@ -674,11 +695,12 @@ export function LeadDetailDrawer() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() =>
+                        onClick={() => {
+                          handleCloseDetail();
                           router.push(
                             `/students/profile/${lead.matchedStudent!.id}`,
-                          )
-                        }
+                          );
+                        }}
                       >
                         <GraduationCap className="size-4" />
                         Profilni ochish
@@ -744,38 +766,45 @@ export function LeadDetailDrawer() {
         {lead && (
           <SheetFooter className="border-t px-6 py-4">
             <div className="flex w-full items-center justify-between gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={() => {
-                  openDelete({
-                    kind: "lead",
-                    id: lead.id,
-                    name: `${lead.firstName} ${lead.lastName}`,
-                    sectionId: lead.section?.id ?? "",
-                  });
-                  handleCloseDetail();
-                }}
-              >
-                <Trash2 className="size-4" />
-                O&apos;chirish
-              </Button>
-              <div className="flex gap-2">
+              {/* A converted lead is a student now: no delete, no move. */}
+              {lead.statusEnum !== "CONVERTED" ? (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
+                  className="text-destructive hover:text-destructive"
                   onClick={() => {
-                    openMoveLead({
+                    openDelete({
+                      kind: "lead",
                       id: lead.id,
+                      name: `${lead.firstName} ${lead.lastName}`,
                       sectionId: lead.section?.id ?? "",
                     });
                     handleCloseDetail();
                   }}
                 >
-                  <ArrowRightLeft className="size-4" />
-                  Ko&apos;chirish
+                  <Trash2 className="size-4" />
+                  O&apos;chirish
                 </Button>
+              ) : (
+                <span />
+              )}
+              <div className="flex gap-2">
+                {lead.statusEnum !== "CONVERTED" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      openMoveLead({
+                        id: lead.id,
+                        sectionId: lead.section?.id ?? "",
+                      });
+                      handleCloseDetail();
+                    }}
+                  >
+                    <ArrowRightLeft className="size-4" />
+                    Ko&apos;chirish
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   onClick={() => {
