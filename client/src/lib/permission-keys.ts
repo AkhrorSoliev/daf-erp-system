@@ -24,6 +24,8 @@ export const PERMISSION_KEYS = [
   "leads.manage",
   "leads.setup",
   "leads.forms",
+  "leads.claim",
+  "leads.assign",
   "outreach.view",
   "calls.log",
   "mock.view",

@@ -181,6 +181,31 @@ export const PEOPLE_PERMISSIONS = {
     lockReasons: { [T]: LOCK.OWN_GROUPS },
     requires: [],
   },
+  // Lead owner (ADR-0092). Claiming is the administrator's daily work; a
+  // director or a cashier who works leads can be given it on «Ruxsatlar».
+  'leads.claim': {
+    section: 'leads',
+    label: "Lidni band qilish va o'z lidini bo'shatish",
+    defaultRoles: [A],
+    allowedRoles: [D, A, K],
+    lockReasons: { [T]: LOCK.OWN_GROUPS },
+    requires: ['leads.view'],
+  },
+  // Handing a lead to someone else is a manager's tool (CEO, 16.10.2026):
+  // `LeadOwnershipService.assign` trusts the caller's branch scope as a
+  // director's and was never tried for an administrator or a cashier.
+  'leads.assign': {
+    section: 'leads',
+    label: 'Lidni boshqa xodimga berish',
+    defaultRoles: [D],
+    allowedRoles: [D],
+    lockReasons: {
+      [A]: LOCK.UNTESTED,
+      [K]: LOCK.UNTESTED,
+      [T]: LOCK.OWN_GROUPS,
+    },
+    requires: ['leads.view'],
+  },
 
   // Aloqa markazi
   'outreach.view': {
