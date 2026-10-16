@@ -32,20 +32,21 @@ Server (yangi), hammasi `server/src/kpi/`:
 - `kpi-rules.ts` (+ spec) — `KPI_START`, narx, kalit oynasi, rol qoidasi, «Qanday hisoblandi».
 - `kpi-settings.service.ts` (+ spec) — sozlamalarni o'qish va yozish.
 - `kpi-results.service.ts` (+ spec) — yagona yozuvchi: yozish, bekor qilish, tuzatishni ko'chirish, tungi tuzatish.
+- `kpi-results.plan.ts` — natija rejasi (o'qiydi, `KpiResult` ga yozmaydi).
 - `kpi-write.single-source.spec.ts` — `KpiResult` ni boshqa fayl yozmaydi.
 - `kpi-recorder.listener.ts` (+ spec), `kpi-self-heal.cron.ts` (+ spec).
 - `kpi-signals.ts` (+ spec) — «Diqqat» va oy oxiri taxmini.
 - `kpi-overview.math.ts` (+ spec) — sahifa raqamlari (sof).
 - `kpi-read.service.ts` (+ spec), `kpi.controller.ts` (+ spec), `dto/kpi-query.dto.ts`, `dto/kpi-settings.dto.ts` (+ spec), `kpi.module.ts`.
-- `conversion-kind.ts` (+ spec) — backfill uchun aylanish turini tiklash.
+- `kpi-backfill-restore.ts` (+ spec) — backfill: aylanish turini va va'dani bajargan to'lovni tiklash.
 - `server/src/settings/kpi-settings.spec.ts`.
 - `server/prisma/migrations/20261016150000_kpi_results/migration.sql`, `server/scripts/kpi-backfill.ts`.
 
-Server (o'zgaradi): `prisma/schema.prisma`, `settings/settings.types.ts`, `settings/settings.service.ts` (+ 2 spec), `common/permissions/permission-catalog.money.ts`, `permission-catalog.types.ts`, `permission-catalog.spec.ts`, `route-access.snapshot.json`, `common/auth/branch-route-policy.ts`, `leads/leads.service.ts` (+ spec), `common/student-origin/student-lead-origin.service.ts` (+ spec), `payments/payments-write.service.ts`, `payments/payments.service.spec.ts`, `archive/archive-restore.service.ts`, `archive/archive-restore.lead-owner.spec.ts`, `app.module.ts`, `tsconfig.check.json`.
+Server (o'zgaradi): `prisma/schema.prisma`, `settings/settings.types.ts`, `settings/settings.service.ts` (+ 2 spec), `common/permissions/permission-catalog.money.ts`, `permission-catalog.types.ts`, `permission-catalog.spec.ts`, `route-access.snapshot.json`, `common/auth/branch-route-policy.ts`, `leads/leads.service.ts` (+ spec), `leads/ownership/lead-ownership.service.ts` (+ spec), `common/student-origin/student-lead-origin.service.ts` (+ spec), `payments/payments-write.service.ts`, `payments/payments.service.spec.ts`, `archive/archive-restore.service.ts`, `archive/archive-restore.lead-owner.spec.ts`, `app.module.ts`, `tsconfig.check.json`.
 
 Client (yangi), `client/src/components/reports/admin-kpi/`: `kpi-types.ts`, `kpi-queries.ts`, `kpi-format.ts` (+ `.test.ts`), `kpi-trend.tsx`, `kpi-summary-cards.tsx`, `kpi-attention.tsx`, `kpi-admin-table.tsx`, `kpi-charts.tsx`, `kpi-user-panel.tsx`, `kpi-user-drawer.tsx`, `kpi-overview-page.tsx`, `employee-kpi-tab.tsx`; `client/src/app/(dashboard)/reports/xodimlar-kpi/page.tsx`, `client/src/app/(dashboard)/settings/kpi/page.tsx`, `client/src/components/settings/kpi-settings-client.tsx`, `client/src/qollanma/kontent/hisobotlar/xodimlar-kpi.mdx`.
 
-Client (o'zgaradi): `lib/permission-keys.ts`, `lib/reports-nav.ts` (+ test), `lib/settings-nav.ts` (+ test), `lib/breadcrumb-routes.ts`, `components/settings/employee-profile-client.tsx`, `components/settings/employee-profile-tabs.tsx`, `qollanma/sahifalar/hisobotlar.ts`, `qollanma/yangiliklar.ts`.
+Client (o'zgaradi): `lib/permission-keys.ts`, `lib/reports-nav.ts` (+ test), `lib/nav-items.ts` (+ test), `lib/settings-nav.ts` (+ test), `lib/breadcrumb-routes.ts`, `components/settings/employee-profile-client.tsx`, `components/settings/employee-profile-tabs.tsx`, `qollanma/sahifalar/hisobotlar.ts`, `qollanma/yangiliklar.ts`.
 
 Hujjatlar: `docs/adr/0094-kpi-natijasi.md`, `docs/adr/README.md`, `server/CLAUDE.md`, `client/CLAUDE.md`.
 
@@ -275,6 +276,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces:
   - `SettingKey` ga `'kpi.enabled' | 'kpi.leadPaid.mode' | 'kpi.leadPaid.value' | 'kpi.promiseKept.mode' | 'kpi.promiseKept.value'` (hammasi `companyLevelOnly: true`).
   - `SettingsService.lastWrittenAt(companyId: number, key: SettingKey): Promise<Date | null>`.
+  - `SettingsService.setMany(companyId: number, entries: ReadonlyArray<readonly [SettingKey, unknown]>, updatedById: number | undefined): Promise<void>` — kompaniya darajasidagi bir nechta kalit bitta tranzaksiyada (hammasi yoziladi yoki hech biri); `set` o'zgarmaydi, ikkalasi bitta qator yozuvchisini (`writeRow`) ishlatadi.
   - `kpi-rules.ts`: `KPI_START: Date`, `KPI_FIRST_MONTH = '2026-10'`, `CANCEL_REASON = { REVERSED: "To'lov bekor qilindi", CORRECTED: "To'lov tuzatildi" }`, `interface KpiRule { mode: KpiRuleMode; value: number }`, `interface KpiSettings { enabled: boolean; changedAt: Date | null; leadPaid: KpiRule; promiseKept: KpiRule }`, `kpiAmount(rule: KpiRule, base: number): number`, `recordingSince(s: Pick<KpiSettings, 'enabled' | 'changedAt'>): Date | null`, `isKpiEligible(roleNames: readonly string[]): boolean`, `explainKpi(r: { type: KpiResultType; ruleMode: KpiRuleMode; ruleValue: number; baseAmount: number }): string`.
   - `KpiSettingsService` (`constructor(settings: SettingsService)`): `read(companyId: number): Promise<KpiSettings>`, `update(companyId: number, patch: KpiSettingsPatch, userId: number): Promise<KpiSettings>`; `interface KpiSettingsPatch { enabled?: boolean; leadPaid?: KpiRule; promiseKept?: KpiRule }`.
 
@@ -398,9 +400,8 @@ function setup(stored: Record<string, unknown> = {}, writtenAt: Date | null = nu
   const store: Record<string, unknown> = { ...DEFAULTS, ...stored };
   const settings = {
     get: jest.fn(async (_companyId: number, key: string) => store[key]),
-    set: jest.fn(async (_companyId: number, key: string, value: unknown) => {
-      store[key] = value;
-      return value;
+    setMany: jest.fn(async (_companyId: number, entries: [string, unknown][]) => {
+      for (const [key, value] of entries) store[key] = value;
     }),
     lastWrittenAt: jest.fn().mockResolvedValue(writtenAt),
   };
@@ -423,20 +424,28 @@ describe('KpiSettingsService', () => {
   it('writes the switch only when it flips, so its time is the flip', async () => {
     const s = setup();
     await s.service.update(1001, { enabled: true }, 7);
-    expect(s.settings.set).not.toHaveBeenCalled();
+    expect(s.settings.setMany).not.toHaveBeenCalled();
     await s.service.update(1001, { enabled: false }, 7);
-    expect(s.settings.set).toHaveBeenCalledWith(1001, 'kpi.enabled', false, 7);
+    expect(s.settings.setMany).toHaveBeenCalledWith(1001, [['kpi.enabled', false]], 7);
   });
 
-  it('writes a rule as its mode and its value', async () => {
+  it("writes a rule's mode and value in one call — never a FIXED sum read as a percent", async () => {
     const s = setup();
     const out = await s.service.update(
       1001,
-      { promiseKept: { mode: 'PERCENT', value: 10 } },
+      { enabled: false, promiseKept: { mode: 'PERCENT', value: 10 } },
       7,
     );
-    expect(s.settings.set).toHaveBeenCalledWith(1001, 'kpi.promiseKept.mode', 'PERCENT', 7);
-    expect(s.settings.set).toHaveBeenCalledWith(1001, 'kpi.promiseKept.value', 10, 7);
+    expect(s.settings.setMany).toHaveBeenCalledTimes(1);
+    expect(s.settings.setMany).toHaveBeenCalledWith(
+      1001,
+      [
+        ['kpi.enabled', false],
+        ['kpi.promiseKept.mode', 'PERCENT'],
+        ['kpi.promiseKept.value', 10],
+      ],
+      7,
+    );
     expect(out.promiseKept).toEqual({ mode: 'PERCENT', value: 10 });
   });
 
@@ -446,7 +455,7 @@ describe('KpiSettingsService', () => {
       s.service.update(1001, { leadPaid: { mode: 'PERCENT', value: 101 } }, 7),
     ).rejects.toThrow(BadRequestException);
     await expect(s.service.update(1001, {}, 7)).rejects.toThrow(BadRequestException);
-    expect(s.settings.set).not.toHaveBeenCalled();
+    expect(s.settings.setMany).not.toHaveBeenCalled();
   });
 });
 ```
@@ -468,6 +477,45 @@ describe('KpiSettingsService', () => {
       });
     });
   });
+
+  describe('setMany', () => {
+    beforeEach(() => {
+      prisma.$transaction = jest.fn((fn: (tx: unknown) => unknown) => fn(prisma));
+      prisma.setting.create.mockImplementation(async ({ data }: { data: object }) => ({ id: 's1', ...data }));
+    });
+
+    it('writes every key in one transaction, history on the same client, then clears the cache once', async () => {
+      await service.setMany(
+        COMPANY_ID,
+        [
+          ['kpi.leadPaid.mode', 'PERCENT'],
+          ['kpi.leadPaid.value', 5],
+        ],
+        7,
+      );
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(prisma.setting.create).toHaveBeenCalledTimes(2);
+      expect(entityHistoryService.recordCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ entityType: 'Setting', tx: prisma }),
+      );
+      expect(redis.del).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a bad value before anything is written', async () => {
+      await expect(
+        service.setMany(
+          COMPANY_ID,
+          [
+            ['kpi.leadPaid.mode', 'PERCENT'],
+            ['kpi.leadPaid.value', -1],
+          ],
+          7,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.setting.create).not.toHaveBeenCalled();
+    });
+  });
 ```
 
 Mavjud ro'yxatlarni yangilash (kalitlar qo'shilgani uchun ular ham yiqiladi):
@@ -477,7 +525,7 @@ Mavjud ro'yxatlarni yangilash (kalitlar qo'shilgani uchun ular ham yiqiladi):
 - [ ] **Step 2: Yiqilishini ko'rish**
 
 Run: `cd server && npx jest src/settings src/kpi`
-Expected: FAIL (`kpi.*` kalitlari registrda yo'q, `./kpi-rules` va `./kpi-settings.service` topilmaydi, `lastWrittenAt` yo'q).
+Expected: FAIL (`kpi.*` kalitlari registrda yo'q, `./kpi-rules` va `./kpi-settings.service` topilmaydi, `lastWrittenAt` va `setMany` yo'q).
 
 - [ ] **Step 3: Registrga kalitlar**
 
@@ -555,7 +603,7 @@ const KPI_VALUE_MAX = 10_000_000;
   },
 ```
 
-- [ ] **Step 4: `SettingsService.lastWrittenAt`**
+- [ ] **Step 4: `SettingsService.lastWrittenAt` va `setMany`**
 
 `server/src/settings/settings.service.ts` da `getBranchOverrides` dan oldin:
 
@@ -571,6 +619,89 @@ const KPI_VALUE_MAX = 10_000_000;
       select: { updatedAt: true },
     });
     return row?.updatedAt ?? null;
+  }
+```
+
+`set` ning qator yozish qismi (`const existing = …` dan `if/else` oxirigacha) xususiy `writeRow` ga ko'chiriladi va `set` uni `this.prisma` bilan chaqiradi — `set` ning xatti-harakati va mavjud testlari o'zgarmaydi. `@prisma/client` importi allaqachon `Prisma` ni beradi. `set` ning tanasi endi:
+
+```ts
+    const def = getSettingDefinition(key);
+    if (def.companyLevelOnly && branchId != null) {
+      throw new BadRequestException(
+        `${key} faqat kompaniya darajasida sozlanadi — filial darajasida alohida qiymatga ega emas`,
+      );
+    }
+    const value = def.parse(rawValue);
+    await this.writeRow(this.prisma, companyId, branchId ?? null, key, value, updatedById);
+    await invalidateCompanySettingsCache(this.redis, companyId);
+    return value;
+```
+
+(Filial qoidasi ustidagi uzun izoh joyida qoladi.) Klassga, `set` dan keyin:
+
+```ts
+  /**
+   * Several company-level keys in one transaction: all written or none
+   * (ADR-0094 — a KPI rule's mode and value never apart). Every value is
+   * parsed before anything is written.
+   */
+  async setMany(
+    companyId: number,
+    entries: ReadonlyArray<readonly [SettingKey, unknown]>,
+    updatedById: number | undefined,
+  ): Promise<void> {
+    const parsed = entries.map(([key, raw]) => [key, getSettingDefinition(key).parse(raw)] as const);
+    await this.prisma.$transaction(async (tx) => {
+      for (const [key, value] of parsed) {
+        await this.writeRow(tx, companyId, null, key, value, updatedById, tx);
+      }
+    });
+    await invalidateCompanySettingsCache(this.redis, companyId);
+  }
+
+  /**
+   * One row, `findFirst` + update/create (see `set` for why not `upsert`),
+   * with its history row. `tx` is passed on to the history only when the
+   * write runs inside a transaction.
+   */
+  private async writeRow(
+    db: Prisma.TransactionClient,
+    companyId: number,
+    branchId: number | null,
+    key: SettingKey,
+    value: unknown,
+    updatedById: number | undefined,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    const existing = await db.setting.findFirst({ where: { companyId, branchId, key } });
+    const jsonValue = value as Prisma.InputJsonValue;
+    if (existing) {
+      const updated = await db.setting.update({
+        where: { id: existing.id },
+        data: { value: jsonValue, updatedById },
+      });
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'Setting',
+        entityId: updated.id,
+        oldValues: { key: existing.key, branchId: existing.branchId, value: existing.value },
+        newValues: { key: updated.key, branchId: updated.branchId, value: updated.value },
+        changedById: updatedById,
+        companyId,
+        ...(tx && { tx }),
+      });
+    } else {
+      const created = await db.setting.create({
+        data: { companyId, branchId, key, value: jsonValue, updatedById },
+      });
+      await this.entityHistoryService.recordCreate({
+        entityType: 'Setting',
+        entityId: created.id,
+        newValues: { key: created.key, branchId: created.branchId, value: created.value },
+        changedById: updatedById,
+        companyId,
+        ...(tx && { tx }),
+      });
+    }
   }
 ```
 
@@ -663,6 +794,7 @@ export function explainKpi(r: {
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { KpiRuleMode } from '@prisma/client';
 import { SettingsService } from '../settings/settings.service';
+import type { SettingKey } from '../settings/settings.types';
 import type { KpiRule, KpiSettings } from './kpi-rules';
 
 export interface KpiSettingsPatch {
@@ -715,17 +847,21 @@ export class KpiSettingsService {
     if (patch.promiseKept) assertRule(patch.promiseKept);
 
     const current = await this.read(companyId);
+    const entries: [SettingKey, unknown][] = [];
     if (patch.enabled !== undefined && patch.enabled !== current.enabled) {
-      await this.settings.set(companyId, 'kpi.enabled', patch.enabled, userId);
+      entries.push(['kpi.enabled', patch.enabled]);
     }
     if (patch.leadPaid) {
-      await this.settings.set(companyId, 'kpi.leadPaid.mode', patch.leadPaid.mode, userId);
-      await this.settings.set(companyId, 'kpi.leadPaid.value', patch.leadPaid.value, userId);
+      entries.push(['kpi.leadPaid.mode', patch.leadPaid.mode], ['kpi.leadPaid.value', patch.leadPaid.value]);
     }
     if (patch.promiseKept) {
-      await this.settings.set(companyId, 'kpi.promiseKept.mode', patch.promiseKept.mode, userId);
-      await this.settings.set(companyId, 'kpi.promiseKept.value', patch.promiseKept.value, userId);
+      entries.push(
+        ['kpi.promiseKept.mode', patch.promiseKept.mode],
+        ['kpi.promiseKept.value', patch.promiseKept.value],
+      );
     }
+    // One transaction: a rule's mode and value are never seen apart.
+    if (entries.length > 0) await this.settings.setMany(companyId, entries, userId);
     return this.read(companyId);
   }
 }
@@ -1160,15 +1296,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 6: `KpiResultsService` — natijani yozish
 
 **Files:**
-- Create: `server/src/kpi/kpi-results.service.ts`
+- Create: `server/src/kpi/kpi-results.plan.ts` — o'qiydigan reja yordamchilari (`KpiResult` ga YOZMAYDI)
+- Create: `server/src/kpi/kpi-results.service.ts` — har `kpiResult.*` yozuvi faqat shu yerda
 - Test: `server/src/kpi/kpi-results.service.spec.ts`
 - Create: `server/src/kpi/kpi-write.single-source.spec.ts`
 
 **Interfaces:**
 - Consumes: `KpiSettingsService.read` (Task 2), `kpiAmount`, `recordingSince`, `isKpiEligible`, `KPI_START` (Task 2), `Lead.conversionKind` (Task 4), `PaymentPromise.resolvedPaymentId` (Task 5).
-- Produces:
+- Produces (`kpi-results.plan.ts`):
   - `interface KpiDraft { companyId: number; branchId: number | null; userId: number; type: KpiResultType; leadId: string | null; promiseId: string | null; studentId: number; paymentId: string; paymentAmount: number; baseAmount: number; ruleMode: KpiRuleMode; ruleValue: number; amount: number; month: string; occurredAt: Date; replacesResultId: string | null }`
-  - `KpiResultsService.planForPayment(paymentId: string, kindOverride?: ReadonlyMap<string, LeadConversionKind>): Promise<KpiDraft[]>` — yozmaydi.
+  - `interface KpiRestore { kinds: ReadonlyMap<string, LeadConversionKind>; resolvers: ReadonlyMap<string, string> }` — backfill tiklaydigan, hali yozilmagan qiymatlar (lid → tur, va'da → to'lov id).
+  - `PAYMENT_FACTS`, `type PaymentFacts`, `type Eligible = (userId: number) => Promise<boolean>`, `eligibility(db: PrismaService): Eligible`, `planLeadPaid(db, studentId, companyId, settings, since, eligible, restore?): Promise<KpiDraft[]>`, `planPromiseKept(db, payment, settings, since, eligible, restore?): Promise<KpiDraft[]>`.
+- Produces (`kpi-results.service.ts`):
+  - `KpiResultsService.planForPayment(paymentId: string, restore?: KpiRestore): Promise<KpiDraft[]>` — yozmaydi.
   - `KpiResultsService.recordForPayment(paymentId: string): Promise<KpiDraft[]>` — yozadi, yozilganlarini qaytaradi; idempotent.
 
 - [ ] **Step 1: Yiqiladigan test**
@@ -1306,7 +1446,10 @@ describe('KpiResultsService.recordForPayment — LEAD_PAID', () => {
 
     s.prisma.lead.findMany.mockResolvedValue([{ ...LEAD, conversionKind: null }]);
     await expect(s.service.planForPayment('p1')).resolves.toEqual([]);
-    const drafts = await s.service.planForPayment('p1', new Map([['L1', 'RETURNING' as const]]));
+    const drafts = await s.service.planForPayment('p1', {
+      kinds: new Map([['L1', 'RETURNING' as const]]),
+      resolvers: new Map(),
+    });
     expect(drafts.map((d) => d.leadId)).toEqual(['L1']);
     expect(s.prisma.kpiResult.create).not.toHaveBeenCalled();
   });
@@ -1433,6 +1576,25 @@ describe('KpiResultsService.recordForPayment — PROMISE_KEPT', () => {
     await s.service.recordForPayment('p1');
     expect(s.prisma.kpiResult.create).not.toHaveBeenCalled();
   });
+
+  it("the backfill's dry run also reads the promises it would link to this payment", async () => {
+    const s = setupKpiResults();
+    s.prisma.lead.findMany.mockResolvedValue([]);
+    s.prisma.paymentPromise.findMany.mockResolvedValue([PROMISE]);
+    const drafts = await s.service.planForPayment('p1', {
+      kinds: new Map(),
+      resolvers: new Map([
+        ['pr1', 'p1'],
+        ['pr9', 'p7'],
+      ]),
+    });
+    expect(s.prisma.paymentPromise.findMany.mock.calls[0][0].where).toEqual({
+      status: 'KEPT',
+      OR: [{ resolvedPaymentId: 'p1' }, { id: { in: ['pr1'] } }],
+    });
+    expect(drafts.map((d) => d.promiseId)).toEqual(['pr1']);
+    expect(s.prisma.kpiResult.create).not.toHaveBeenCalled();
+  });
 });
 ```
 
@@ -1493,12 +1655,13 @@ describe('KPI results are written only by KpiResultsService', () => {
 Run: `cd server && npx jest src/kpi/kpi-results.service.spec.ts src/kpi/kpi-write.single-source.spec.ts`
 Expected: FAIL — `Cannot find module './kpi-results.service'`.
 
-- [ ] **Step 3: Servisni yozish**
+- [ ] **Step 3: Reja yordamchilari (`kpi-results.plan.ts`)**
 
-`server/src/kpi/kpi-results.service.ts`:
+Reja o'qiydi, `KpiResult` ga yozmaydi — har yozuv servisda qoladi (`kpi-write.single-source.spec.ts`). Servis faylini 500 qatordan pastda saqlash uchun alohida.
+
+`server/src/kpi/kpi-results.plan.ts`:
 
 ```ts
-import { Injectable } from '@nestjs/common';
 import {
   KpiResultStatus,
   KpiResultType,
@@ -1512,14 +1675,12 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { whereUserMayAct } from '../common/auth/blocked-user';
 import { tashkentMonthKey } from '../common/date/tashkent';
-import { KpiSettingsService } from './kpi-settings.service';
-import {
-  KPI_START,
-  isKpiEligible,
-  kpiAmount,
-  recordingSince,
-  type KpiSettings,
-} from './kpi-rules';
+import { KPI_START, isKpiEligible, kpiAmount, type KpiSettings } from './kpi-rules';
+
+/**
+ * What a payment earns (ADR-0094, spec §7.2), read without writing. Every
+ * `KpiResult` write stays in `KpiResultsService`.
+ */
 
 /** A result about to be written (spec §7.5): every column but the generated ones. */
 export interface KpiDraft {
@@ -1541,7 +1702,17 @@ export interface KpiDraft {
   replacesResultId: string | null;
 }
 
-const PAYMENT_FACTS = {
+/**
+ * Values the backfill would restore but has not written yet (its dry run):
+ * a lead's conversion kind, and the payment (`resolvers`: promise id →
+ * payment id) that made a promise KEPT before `resolvedPaymentId` existed.
+ */
+export interface KpiRestore {
+  kinds: ReadonlyMap<string, LeadConversionKind>;
+  resolvers: ReadonlyMap<string, string>;
+}
+
+export const PAYMENT_FACTS = {
   id: true,
   studentId: true,
   amount: true,
@@ -1551,15 +1722,198 @@ const PAYMENT_FACTS = {
   branchId: true,
   correctsPaymentId: true,
 } satisfies Prisma.PaymentSelect;
-type PaymentFacts = Prisma.PaymentGetPayload<{ select: typeof PAYMENT_FACTS }>;
-type Eligible = (userId: number) => Promise<boolean>;
-type KindOverride = ReadonlyMap<string, LeadConversionKind>;
+export type PaymentFacts = Prisma.PaymentGetPayload<{ select: typeof PAYMENT_FACTS }>;
+export type Eligible = (userId: number) => Promise<boolean>;
 
 /** The conversions that earn a LEAD_PAID (spec §7.2): a new student, or one who came back. */
 const EARNING_KINDS: readonly LeadConversionKind[] = [
   LeadConversionKind.NEW_STUDENT,
   LeadConversionKind.RETURNING,
 ];
+
+/** Spec §7.1/1, read from the database when the result is written. Cached per call. */
+export function eligibility(db: PrismaService): Eligible {
+  const cache = new Map<number, boolean>();
+  return async (userId) => {
+    const hit = cache.get(userId);
+    if (hit !== undefined) return hit;
+    const user = await db.user.findFirst({
+      where: { id: userId, ...whereUserMayAct() },
+      select: { roles: { select: { role: { select: { name: true } } } } },
+    });
+    const ok = !!user && isKpiEligible(user.roles.map((r) => r.role.name));
+    cache.set(userId, ok);
+    return ok;
+  };
+}
+
+/**
+ * Spec §7.2 LEAD_PAID: each converted lead of the student with an owner gets
+ * the student's first COMPLETED payment after the conversion that no other
+ * lead holds. A converted lead archived with its section still counts (no
+ * `deletedAt` filter): the conversion happened.
+ */
+export async function planLeadPaid(
+  db: PrismaService,
+  studentId: number,
+  companyId: number,
+  settings: KpiSettings,
+  since: Date,
+  eligible: Eligible,
+  restore?: KpiRestore,
+): Promise<KpiDraft[]> {
+  const leads = await db.lead.findMany({
+    where: {
+      companyId,
+      convertedStudentId: studentId,
+      statusEnum: LeadStatus.CONVERTED,
+      ownerId: { not: null },
+      statusChangedAt: { gte: KPI_START },
+    },
+    select: { id: true, ownerId: true, branchId: true, statusChangedAt: true, conversionKind: true },
+    orderBy: [{ statusChangedAt: 'asc' }, { id: 'asc' }],
+  });
+  if (leads.length === 0) return [];
+  const active = await db.kpiResult.findMany({
+    where: { type: KpiResultType.LEAD_PAID, status: KpiResultStatus.ACTIVE, studentId },
+    select: { leadId: true, paymentId: true },
+  });
+  const done = new Set(active.map((r) => r.leadId));
+  const usedPayments = active.map((r) => r.paymentId);
+
+  const drafts: KpiDraft[] = [];
+  for (const lead of leads) {
+    const kind = lead.conversionKind ?? restore?.kinds.get(lead.id) ?? null;
+    if (!kind || !EARNING_KINDS.includes(kind)) continue;
+    if (done.has(lead.id) || lead.ownerId == null || lead.statusChangedAt == null) continue;
+    const first = await db.payment.findFirst({
+      where: {
+        studentId,
+        companyId,
+        status: PaymentStatus.COMPLETED,
+        createdAt: { gte: lead.statusChangedAt },
+        // A copy: the list grows below, and the query must keep what it was asked.
+        id: { notIn: [...usedPayments] },
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: { id: true, amount: true, createdAt: true, branchId: true },
+    });
+    // Paid while the switch was off: that result is never written later.
+    if (!first || first.createdAt < since) continue;
+    if (!(await eligible(lead.ownerId))) continue;
+    usedPayments.push(first.id);
+    drafts.push({
+      companyId,
+      branchId: lead.branchId ?? first.branchId,
+      userId: lead.ownerId,
+      type: KpiResultType.LEAD_PAID,
+      leadId: lead.id,
+      promiseId: null,
+      studentId,
+      paymentId: first.id,
+      paymentAmount: first.amount,
+      baseAmount: first.amount,
+      ruleMode: settings.leadPaid.mode,
+      ruleValue: settings.leadPaid.value,
+      amount: kpiAmount(settings.leadPaid, first.amount),
+      month: tashkentMonthKey(first.createdAt),
+      occurredAt: first.createdAt,
+      replacesResultId: null,
+    });
+  }
+  return drafts;
+}
+
+/** Spec §7.2 PROMISE_KEPT: the promises this payment made KEPT, to their writer. */
+export async function planPromiseKept(
+  db: PrismaService,
+  payment: PaymentFacts,
+  settings: KpiSettings,
+  since: Date,
+  eligible: Eligible,
+  restore?: KpiRestore,
+): Promise<KpiDraft[]> {
+  if (payment.createdAt < since) return [];
+  const restored = restore
+    ? [...restore.resolvers].filter(([, paymentId]) => paymentId === payment.id).map(([id]) => id)
+    : [];
+  const promises = await db.paymentPromise.findMany({
+    where: restored.length
+      ? {
+          status: PaymentPromiseStatus.KEPT,
+          OR: [{ resolvedPaymentId: payment.id }, { id: { in: restored } }],
+        }
+      : { resolvedPaymentId: payment.id, status: PaymentPromiseStatus.KEPT },
+    select: {
+      id: true,
+      createdById: true,
+      balanceAtPromise: true,
+      branchId: true,
+      studentId: true,
+      companyId: true,
+    },
+  });
+  if (promises.length === 0) return [];
+  const done = new Set(
+    (
+      await db.kpiResult.findMany({
+        where: {
+          type: KpiResultType.PROMISE_KEPT,
+          status: KpiResultStatus.ACTIVE,
+          promiseId: { in: promises.map((p) => p.id) },
+        },
+        select: { promiseId: true },
+      })
+    ).map((r) => r.promiseId),
+  );
+  const drafts: KpiDraft[] = [];
+  for (const p of promises) {
+    if (done.has(p.id) || !(await eligible(p.createdById))) continue;
+    const base = Math.max(0, -p.balanceAtPromise);
+    drafts.push({
+      companyId: p.companyId,
+      branchId: p.branchId ?? payment.branchId,
+      userId: p.createdById,
+      type: KpiResultType.PROMISE_KEPT,
+      leadId: null,
+      promiseId: p.id,
+      studentId: p.studentId,
+      paymentId: payment.id,
+      paymentAmount: payment.amount,
+      baseAmount: base,
+      ruleMode: settings.promiseKept.mode,
+      ruleValue: settings.promiseKept.value,
+      amount: kpiAmount(settings.promiseKept, base),
+      month: tashkentMonthKey(payment.createdAt),
+      occurredAt: payment.createdAt,
+      replacesResultId: null,
+    });
+  }
+  return drafts;
+}
+```
+
+- [ ] **Step 4: Servisni yozish**
+
+`server/src/kpi/kpi-results.service.ts`:
+
+```ts
+import { Injectable } from '@nestjs/common';
+import { PaymentStatus, Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { KpiSettingsService } from './kpi-settings.service';
+import { recordingSince } from './kpi-rules';
+import {
+  PAYMENT_FACTS,
+  eligibility,
+  planLeadPaid,
+  planPromiseKept,
+  type KpiDraft,
+  type KpiRestore,
+  type PaymentFacts,
+} from './kpi-results.plan';
+
+export type { KpiDraft, KpiRestore } from './kpi-results.plan';
 
 /**
  * The one writer of `KpiResult` (ADR-0094; `kpi-write.single-source.spec.ts`).
@@ -1578,11 +1932,11 @@ export class KpiResultsService {
   /**
    * What a COMPLETED payment earns, without writing: the student's LEAD_PAID
    * and the PROMISE_KEPT of the promises this payment kept. The backfill's
-   * dry run reads it; `kindOverride` supplies the kinds it would restore.
+   * dry run reads it; `restore` supplies what it would restore first.
    */
-  async planForPayment(paymentId: string, kindOverride?: KindOverride): Promise<KpiDraft[]> {
+  async planForPayment(paymentId: string, restore?: KpiRestore): Promise<KpiDraft[]> {
     const payment = await this.payment(paymentId);
-    return payment ? this.planFor(payment, kindOverride) : [];
+    return payment ? this.planFor(payment, restore) : [];
   }
 
   /** Writes what `planForPayment` finds; returns what was written. */
@@ -1601,164 +1955,15 @@ export class KpiResultsService {
     return p && p.status === PaymentStatus.COMPLETED ? p : null;
   }
 
-  private async planFor(payment: PaymentFacts, kindOverride?: KindOverride): Promise<KpiDraft[]> {
+  private async planFor(payment: PaymentFacts, restore?: KpiRestore): Promise<KpiDraft[]> {
     const settings = await this.kpiSettings.read(payment.companyId);
     const since = recordingSince(settings);
     if (!since) return [];
-    const eligible = this.eligibility();
+    const eligible = eligibility(this.prisma);
     return [
-      ...(await this.planLeadPaid(payment.studentId, payment.companyId, settings, since, eligible, kindOverride)),
-      ...(await this.planPromiseKept(payment, settings, since, eligible)),
+      ...(await planLeadPaid(this.prisma, payment.studentId, payment.companyId, settings, since, eligible, restore)),
+      ...(await planPromiseKept(this.prisma, payment, settings, since, eligible, restore)),
     ];
-  }
-
-  /**
-   * Spec §7.2 LEAD_PAID: each converted lead of the student with an owner
-   * gets the student's first COMPLETED payment after the conversion that no
-   * other lead holds. A converted lead archived with its section still counts
-   * (no `deletedAt` filter): the conversion happened.
-   */
-  private async planLeadPaid(
-    studentId: number,
-    companyId: number,
-    settings: KpiSettings,
-    since: Date,
-    eligible: Eligible,
-    kindOverride?: KindOverride,
-  ): Promise<KpiDraft[]> {
-    const leads = await this.prisma.lead.findMany({
-      where: {
-        companyId,
-        convertedStudentId: studentId,
-        statusEnum: LeadStatus.CONVERTED,
-        ownerId: { not: null },
-        statusChangedAt: { gte: KPI_START },
-      },
-      select: { id: true, ownerId: true, branchId: true, statusChangedAt: true, conversionKind: true },
-      orderBy: [{ statusChangedAt: 'asc' }, { id: 'asc' }],
-    });
-    if (leads.length === 0) return [];
-    const active = await this.prisma.kpiResult.findMany({
-      where: { type: KpiResultType.LEAD_PAID, status: KpiResultStatus.ACTIVE, studentId },
-      select: { leadId: true, paymentId: true },
-    });
-    const done = new Set(active.map((r) => r.leadId));
-    const usedPayments = active.map((r) => r.paymentId);
-
-    const drafts: KpiDraft[] = [];
-    for (const lead of leads) {
-      const kind = lead.conversionKind ?? kindOverride?.get(lead.id) ?? null;
-      if (!kind || !EARNING_KINDS.includes(kind)) continue;
-      if (done.has(lead.id) || lead.ownerId == null || lead.statusChangedAt == null) continue;
-      const first = await this.prisma.payment.findFirst({
-        where: {
-          studentId,
-          companyId,
-          status: PaymentStatus.COMPLETED,
-          createdAt: { gte: lead.statusChangedAt },
-          id: { notIn: usedPayments },
-        },
-        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-        select: { id: true, amount: true, createdAt: true, branchId: true },
-      });
-      // Paid while the switch was off: that result is never written later.
-      if (!first || first.createdAt < since) continue;
-      if (!(await eligible(lead.ownerId))) continue;
-      usedPayments.push(first.id);
-      drafts.push({
-        companyId,
-        branchId: lead.branchId ?? first.branchId,
-        userId: lead.ownerId,
-        type: KpiResultType.LEAD_PAID,
-        leadId: lead.id,
-        promiseId: null,
-        studentId,
-        paymentId: first.id,
-        paymentAmount: first.amount,
-        baseAmount: first.amount,
-        ruleMode: settings.leadPaid.mode,
-        ruleValue: settings.leadPaid.value,
-        amount: kpiAmount(settings.leadPaid, first.amount),
-        month: tashkentMonthKey(first.createdAt),
-        occurredAt: first.createdAt,
-        replacesResultId: null,
-      });
-    }
-    return drafts;
-  }
-
-  /** Spec §7.2 PROMISE_KEPT: the promises this payment made KEPT, to their writer. */
-  private async planPromiseKept(
-    payment: PaymentFacts,
-    settings: KpiSettings,
-    since: Date,
-    eligible: Eligible,
-  ): Promise<KpiDraft[]> {
-    if (payment.createdAt < since) return [];
-    const promises = await this.prisma.paymentPromise.findMany({
-      where: { resolvedPaymentId: payment.id, status: PaymentPromiseStatus.KEPT },
-      select: {
-        id: true,
-        createdById: true,
-        balanceAtPromise: true,
-        branchId: true,
-        studentId: true,
-        companyId: true,
-      },
-    });
-    if (promises.length === 0) return [];
-    const done = new Set(
-      (
-        await this.prisma.kpiResult.findMany({
-          where: {
-            type: KpiResultType.PROMISE_KEPT,
-            status: KpiResultStatus.ACTIVE,
-            promiseId: { in: promises.map((p) => p.id) },
-          },
-          select: { promiseId: true },
-        })
-      ).map((r) => r.promiseId),
-    );
-    const drafts: KpiDraft[] = [];
-    for (const p of promises) {
-      if (done.has(p.id) || !(await eligible(p.createdById))) continue;
-      const base = Math.max(0, -p.balanceAtPromise);
-      drafts.push({
-        companyId: p.companyId,
-        branchId: p.branchId ?? payment.branchId,
-        userId: p.createdById,
-        type: KpiResultType.PROMISE_KEPT,
-        leadId: null,
-        promiseId: p.id,
-        studentId: p.studentId,
-        paymentId: payment.id,
-        paymentAmount: payment.amount,
-        baseAmount: base,
-        ruleMode: settings.promiseKept.mode,
-        ruleValue: settings.promiseKept.value,
-        amount: kpiAmount(settings.promiseKept, base),
-        month: tashkentMonthKey(payment.createdAt),
-        occurredAt: payment.createdAt,
-        replacesResultId: null,
-      });
-    }
-    return drafts;
-  }
-
-  /** Spec §7.1/1, read from the database when the result is written. Cached per call. */
-  private eligibility(): Eligible {
-    const cache = new Map<number, boolean>();
-    return async (userId) => {
-      const hit = cache.get(userId);
-      if (hit !== undefined) return hit;
-      const user = await this.prisma.user.findFirst({
-        where: { id: userId, ...whereUserMayAct() },
-        select: { roles: { select: { role: { select: { name: true } } } } },
-      });
-      const ok = !!user && isKpiEligible(user.roles.map((r) => r.role.name));
-      cache.set(userId, ok);
-      return ok;
-    };
   }
 
   /** The one insert. A writer that got there first (`P2002`) is not an error. */
@@ -1776,12 +1981,12 @@ export class KpiResultsService {
 }
 ```
 
-- [ ] **Step 4: Testlar**
+- [ ] **Step 5: Testlar**
 
 Run: `cd server && npx jest src/kpi`
 Expected: PASS.
 
-- [ ] **Step 5: Format, lint, commit**
+- [ ] **Step 6: Format, lint, commit**
 
 ```bash
 cd server
@@ -1800,6 +2005,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `server/src/kpi/kpi-results.service.ts` (+ `kpi-results.service.spec.ts`)
+- Modify: `server/src/kpi/kpi-results.plan.ts` (`movedDraft` — sof)
 - Create: `server/src/kpi/kpi-recorder.listener.ts` (+ `.spec.ts`)
 - Create: `server/src/kpi/kpi.module.ts`
 - Modify: `server/src/app.module.ts`
@@ -1964,8 +2170,45 @@ Expected: FAIL (`cancelForPayment`, `./kpi-recorder.listener` yo'q; tuzatish ko'
 
 - [ ] **Step 2: Bekor qilish va ko'chirish**
 
+`kpi-results.plan.ts` oxiriga (sof — yozmaydi):
+
+```ts
+/**
+ * A corrected amount (spec §7.3): the old result on the re-post under its
+ * sealed rule. A percent LEAD_PAID is re-read from the new amount; a
+ * promise keeps its debt as the base.
+ */
+export function movedDraft(
+  old: Pick<
+    KpiDraft,
+    'companyId' | 'branchId' | 'userId' | 'type' | 'leadId' | 'promiseId' | 'studentId' | 'baseAmount' | 'ruleMode' | 'ruleValue'
+  > & { id: string },
+  payment: Pick<PaymentFacts, 'id' | 'amount' | 'createdAt'>,
+): KpiDraft {
+  const base = old.type === KpiResultType.LEAD_PAID ? payment.amount : old.baseAmount;
+  return {
+    companyId: old.companyId,
+    branchId: old.branchId,
+    userId: old.userId,
+    type: old.type,
+    leadId: old.leadId,
+    promiseId: old.promiseId,
+    studentId: old.studentId,
+    paymentId: payment.id,
+    paymentAmount: payment.amount,
+    baseAmount: base,
+    ruleMode: old.ruleMode,
+    ruleValue: old.ruleValue,
+    amount: kpiAmount({ mode: old.ruleMode, value: old.ruleValue }, base),
+    month: tashkentMonthKey(payment.createdAt),
+    occurredAt: payment.createdAt,
+    replacesResultId: old.id,
+  };
+}
+```
+
 `kpi-results.service.ts`:
-1. `./kpi-rules` importiga `CANCEL_REASON`.
+1. Importlar: `@prisma/client` dan `KpiResultStatus, KpiResultType` (+ mavjud `PaymentStatus, Prisma`); `./kpi-rules` dan `CANCEL_REASON, recordingSince`; `./kpi-results.plan` dan `movedDraft` ham.
 2. `recordForPayment` ni almashtiring:
 
 ```ts
@@ -2030,16 +2273,15 @@ Expected: FAIL (`cancelForPayment`, `./kpi-recorder.listener` yo'q; tuzatish ko'
     const settings = await this.kpiSettings.read(companyId);
     const since = recordingSince(settings);
     if (!since) return;
-    const drafts = await this.planLeadPaid(studentId, companyId, settings, since, this.eligibility());
+    const drafts = await planLeadPaid(this.prisma, studentId, companyId, settings, since, eligibility(this.prisma));
     for (const draft of drafts) await this.insert(draft);
   }
 
   /**
    * A corrected amount (spec §7.3): the old payment's results move to the
-   * re-post under their sealed rule — a percent LEAD_PAID is re-read from the
-   * new amount, a promise keeps its debt as the base. Written whatever the
-   * switch says (a result moved is not a new one). Safe to repeat, and safe in
-   * either order with the reversal's own handler.
+   * re-post under their sealed rule (`movedDraft`). Written whatever the
+   * switch says (a result moved is not a new one). Safe to repeat, and safe
+   * in either order with the reversal's own handler.
    */
   private async moveCorrected(payment: PaymentFacts, now: Date = new Date()): Promise<KpiDraft[]> {
     const oldPaymentId = payment.correctsPaymentId as string;
@@ -2063,30 +2305,14 @@ Expected: FAIL (`cancelForPayment`, `./kpi-recorder.listener` yo'q; tuzatish ko'
     const written: KpiDraft[] = [];
     for (const r of old) {
       if (moved.has(r.id)) continue;
-      const base = r.type === KpiResultType.LEAD_PAID ? payment.amount : r.baseAmount;
-      const draft: KpiDraft = {
-        companyId: r.companyId,
-        branchId: r.branchId,
-        userId: r.userId,
-        type: r.type,
-        leadId: r.leadId,
-        promiseId: r.promiseId,
-        studentId: r.studentId,
-        paymentId: payment.id,
-        paymentAmount: payment.amount,
-        baseAmount: base,
-        ruleMode: r.ruleMode,
-        ruleValue: r.ruleValue,
-        amount: kpiAmount({ mode: r.ruleMode, value: r.ruleValue }, base),
-        month: tashkentMonthKey(payment.createdAt),
-        occurredAt: payment.createdAt,
-        replacesResultId: r.id,
-      };
+      const draft = movedDraft(r, payment);
       if (await this.insert(draft)) written.push(draft);
     }
     return written;
   }
 ```
+
+**Tuzatishning qayta yozilishi muvaffaqiyatsiz bo'lsa** (`correctAmount` eski to'lovni bekor qildi, lekin yangi to'lov yozilmadi — `correctsPaymentId` bor to'lov yo'q): eski natijalar `CANCELLED` «To'lov tuzatildi» bo'lib qoladi, ko'chiradigan to'lov yo'q. O'quvchining keyingi `recordForPayment` i — tungi tuzatish (Task 12, o'quvchining oxirgi 2 kundagi biror to'lovi bo'lsa) yoki o'quvchining navbatdagi to'lovi hodisasi — lidni ko'radi va `LEAD_PAID` qolgan eng birinchi `COMPLETED` to'lovga qayta tanlanadi (admin to'g'ri summani qo'lda kiritsa — odatda o'sha to'lov). `PROMISE_KEPT` esa yo'qoladi: va'da `KEPT` holicha eski (bekor qilingan) to'lovga bog'langan, yangi to'lov uni qayta `KEPT` qilmaydi. Bu ma'lum chegara — ADR-0094 «Oqibatlari» da yozilgan (Task 19). Kod qo'shilmaydi.
 
 - [ ] **Step 3: Listener**
 
@@ -3004,20 +3230,67 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 10: `KpiReadService` — sahifa va xodim o'qilishi
 
 **Files:**
+- Modify: `server/src/leads/ownership/lead-ownership.service.ts` — `liveOwnedLeadWhere`, `ownershipLogBranchWhere`, `fullName` eksport qilinadi (`untouchedWhere` yonida), `summary` ularni ishlatadi
+- Modify: `server/src/leads/ownership/lead-ownership.service.spec.ts`
 - Create: `server/src/kpi/kpi-read.service.ts`
 - Test: `server/src/kpi/kpi-read.service.spec.ts`
 
 **Interfaces:**
 - Consumes: `assembleOverview`, `monthsFrom`, `LogFact` (Task 9), `workingDaysOfMonth` (Task 8), `KpiSettingsService.read`, `explainKpi`, `isKpiEligible`, `KPI_FIRST_MONTH` (Task 2).
-- Produces:
+- Produces (`lead-ownership.service.ts`, ADR-0093 egalik filtrlarining yagona nusxasi):
+  - `liveOwnedLeadWhere(companyId: number, scope: ReportBranchIds): Prisma.LeadWhereInput` — hozir egasi bor, o'chirilmagan, aylanmagan lid, filialda yoki filialsiz.
+  - `ownershipLogBranchWhere(scope: ReportBranchIds): Prisma.LeadOwnershipLogWhereInput` — filial yoki filialsiz yozuv; CEO uchun `{}`.
+  - `fullName(u: { firstName: string; lastName: string }): string` — «Ism Familiya» (mavjud xususiy yordamchi eksport qilinadi; `contract-documents/contract-fields.ts` dagi `personName` familiyani oldin yozadi — mos emas).
+- Produces (`kpi-read.service.ts`):
   - `interface KpiOverview extends OverviewBody { month: string; compare: string; status: { enabled: boolean; changedAt: Date | null } }`
   - `interface KpiResultView { id: string; type: KpiResultType; occurredAt: Date; studentId: number; studentName: string; paymentAmount: number; amount: number; explanation: string; status: KpiResultStatus; cancelledAt: Date | null; cancelReason: string | null }`
   - `interface KpiUserView { user: { id: number; name: string }; month: string; hasAny: boolean; total: number; compareTotal: number; months: { month: string; count: number; amount: number }[]; results: KpiResultView[] }`
   - `KpiReadService.overview(companyId: number, scope: ReportBranchIds, q: { month?: string; compare?: string }, now?: Date): Promise<KpiOverview>`
   - `KpiReadService.user(companyId: number, scope: ReportBranchIds, userId: number, q: { month?: string }, now?: Date): Promise<KpiUserView>`
-  - `kpiMonth(raw: string | undefined, current: string): string`
+  - `kpiMonth(raw: string | undefined, current: string): string` — `parseReportMonth` (`reports/group-payments/group-payments.math.ts`) qayta ishlatilmaydi: uning pastki chegarasi 2026-09 va xabari «Bu hisobot sentabr 2026 dan boshlanadi» o'sha hisobotga bog'langan; KPI 2026-10 dan.
 
-- [ ] **Step 1: Yiqiladigan test**
+- [ ] **Step 1: Yiqiladigan testlar**
+
+`server/src/leads/ownership/lead-ownership.service.spec.ts`: importga `liveOwnedLeadWhere, ownershipLogBranchWhere` (`./lead-ownership.service` dan), fayl oxiriga:
+
+```ts
+describe('ownership filters shared with the KPI page (ADR-0094)', () => {
+  it('a live owned lead: not deleted, not converted, in the branch or branch-less', () => {
+    expect(liveOwnedLeadWhere(1001, [2])).toEqual({
+      companyId: 1001,
+      deletedAt: null,
+      ownerId: { not: null },
+      statusEnum: { not: LeadStatus.CONVERTED },
+      AND: [{ OR: [{ branchId: { in: [2] } }, { branchId: null }] }],
+    });
+    expect(liveOwnedLeadWhere(1001, null).AND).toEqual([{}]);
+  });
+
+  it('a log row: in the branch or branch-less; everything for the CEO', () => {
+    expect(ownershipLogBranchWhere([2])).toEqual({
+      OR: [{ branchId: { in: [2] } }, { branchId: null }],
+    });
+    expect(ownershipLogBranchWhere(null)).toEqual({});
+  });
+
+  it('summary reads through the same filters', async () => {
+    const s = setup();
+    Object.assign(s.prisma, {
+      lead: { groupBy: jest.fn().mockResolvedValue([]) },
+      leadOwnershipLog: { groupBy: jest.fn().mockResolvedValue([]) },
+      user: { findMany: jest.fn().mockResolvedValue([]) },
+    });
+    await s.service.summary(1, [1], 'month');
+    const leadGroupBy = (s.prisma as unknown as { lead: { groupBy: jest.Mock } }).lead.groupBy;
+    const logGroupBy = (s.prisma as unknown as { leadOwnershipLog: { groupBy: jest.Mock } })
+      .leadOwnershipLog.groupBy;
+    expect(leadGroupBy.mock.calls[0][0].where).toEqual(liveOwnedLeadWhere(1, [1]));
+    expect(logGroupBy.mock.calls[0][0].where).toEqual(
+      expect.objectContaining(ownershipLogBranchWhere([1])),
+    );
+  });
+});
+```
 
 `server/src/kpi/kpi-read.service.spec.ts`:
 
@@ -3130,10 +3403,52 @@ describe('KpiReadService.user', () => {
 
 - [ ] **Step 2: Yiqilishini ko'rish**
 
-Run: `cd server && npx jest src/kpi/kpi-read.service.spec.ts`
-Expected: FAIL — `Cannot find module './kpi-read.service'`.
+Run: `cd server && npx jest src/kpi/kpi-read.service.spec.ts src/leads/ownership/lead-ownership.service.spec.ts`
+Expected: FAIL — `Cannot find module './kpi-read.service'`; `liveOwnedLeadWhere` eksport qilinmagan.
 
-- [ ] **Step 3: Servisni yozish**
+- [ ] **Step 3: Egalik filtrlari — bitta nusxa**
+
+`server/src/leads/ownership/lead-ownership.service.ts`:
+1. `untouchedWhere` dan keyin:
+
+```ts
+/**
+ * A lead held now: owned, not archived, not converted, in the scope or with
+ * no branch (a branch-less lead is everyone's, as on the board). Shared by
+ * `summary` and the KPI page (ADR-0094), so «band lid» means one thing.
+ */
+export function liveOwnedLeadWhere(
+  companyId: number,
+  scope: ReportBranchIds,
+): Prisma.LeadWhereInput {
+  return {
+    companyId,
+    deletedAt: null,
+    ownerId: { not: null },
+    statusEnum: { not: LeadStatus.CONVERTED },
+    AND: [leadBranchWhere(scope)],
+  };
+}
+
+/** An ownership log row in the scope, or with no branch; the CEO reads them all. */
+export function ownershipLogBranchWhere(
+  scope: ReportBranchIds,
+): Prisma.LeadOwnershipLogWhereInput {
+  return scope == null ? {} : { OR: [{ branchId: { in: scope } }, { branchId: null }] };
+}
+```
+
+2. `const fullName = …` → `export const fullName = …` (o'zgarishsiz, «Ism Familiya»).
+3. `summary` da `const live: Prisma.LeadWhereInput = { … };` va `const logBranch: … = …;` ni almashtiring:
+
+```ts
+    const live = liveOwnedLeadWhere(companyId, scope);
+    const logBranch = ownershipLogBranchWhere(scope);
+```
+
+(`summary` ning qolgan qismi o'zgarmaydi; mavjud testlar o'tishi kerak.)
+
+- [ ] **Step 4: Servisni yozish**
 
 `server/src/kpi/kpi-read.service.ts`:
 
@@ -3148,7 +3463,6 @@ import {
   KpiResultStatus,
   KpiResultType,
   LeadOwnershipKind,
-  LeadStatus,
   PaymentPromiseStatus,
   Prisma,
 } from '@prisma/client';
@@ -3167,7 +3481,11 @@ import {
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { buildHolidayDateSetsByBranch } from '../holidays/holiday-date-set';
-import { leadBranchWhere } from '../leads/shared/lead-scope';
+import {
+  fullName,
+  liveOwnedLeadWhere,
+  ownershipLogBranchWhere,
+} from '../leads/ownership/lead-ownership.service';
 import { KpiSettingsService } from './kpi-settings.service';
 import { KPI_FIRST_MONTH, explainKpi, isKpiEligible } from './kpi-rules';
 import { workingDaysOfMonth } from './kpi-signals';
@@ -3190,6 +3508,16 @@ const RESULT_FACT = {
   occurredAt: true,
   month: true,
 } satisfies Prisma.KpiResultSelect;
+const USER_FACT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  deletedAt: true,
+  status: true,
+  roles: { select: { role: { select: { name: true } } } },
+} satisfies Prisma.UserSelect;
+type UserFact = Prisma.UserGetPayload<{ select: typeof USER_FACT }>;
+type PaidLead = { userId: number; leadId: string | null };
 type MonthRange = { gte: Date; lt: Date };
 
 export interface KpiOverview extends OverviewBody {
@@ -3238,8 +3566,6 @@ function assertScope(scope: ReportBranchIds): void {
   }
 }
 
-const fullName = (p: { firstName: string; lastName: string }) =>
-  `${p.firstName} ${p.lastName}`.trim();
 const sumAmount = (list: readonly { amount: number }[]) =>
   list.reduce((s, r) => s + r.amount, 0);
 
@@ -3311,13 +3637,7 @@ export class KpiReadService {
       recent,
       this.prisma.lead.groupBy({
         by: ['ownerId'],
-        where: {
-          companyId,
-          deletedAt: null,
-          ownerId: { not: null },
-          statusEnum: { not: LeadStatus.CONVERTED },
-          AND: [leadBranchWhere(scope)],
-        },
+        where: liveOwnedLeadWhere(companyId, scope),
         _count: { _all: true },
       }),
       this.logs(companyId, taken, range, scope, 'to'),
@@ -3345,20 +3665,10 @@ export class KpiReadService {
             where: { type: KpiResultType.LEAD_PAID, status: active, leadId: { in: leadIds } },
             select: { userId: true, leadId: true },
           })
-        : Promise.resolve([]),
+        : Promise.resolve<PaidLead[]>([]),
       userIds.length
-        ? this.prisma.user.findMany({
-            where: { id: { in: userIds } },
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              deletedAt: true,
-              status: true,
-              roles: { select: { role: { select: { name: true } } } },
-            },
-          })
-        : Promise.resolve([]),
+        ? this.prisma.user.findMany({ where: { id: { in: userIds } }, select: USER_FACT })
+        : Promise.resolve<UserFact[]>([]),
       today ? this.workingDays(month, range) : Promise.resolve(null),
     ]);
 
@@ -3482,7 +3792,7 @@ export class KpiReadService {
         companyId,
         kind: { in: kinds },
         createdAt: range,
-        ...(scope == null ? {} : { OR: [{ branchId: { in: scope } }, { branchId: null }] }),
+        ...ownershipLogBranchWhere(scope),
       },
       select: { leadId: true, toUserId: true, fromUserId: true, createdAt: true },
     });
@@ -3505,19 +3815,19 @@ export class KpiReadService {
 }
 ```
 
-- [ ] **Step 4: Testlar**
+- [ ] **Step 5: Testlar**
 
-Run: `cd server && npx jest src/kpi`
+Run: `cd server && npx jest src/kpi src/leads`
 Expected: PASS.
 
-- [ ] **Step 5: Format, lint, commit**
+- [ ] **Step 6: Format, lint, commit**
 
 ```bash
 cd server
-npx prettier --write src/kpi/kpi-read.service.ts src/kpi/kpi-read.service.spec.ts
-npx eslint src/kpi/kpi-read.service.ts --quiet
+npx prettier --write src/kpi/kpi-read.service.ts src/kpi/kpi-read.service.spec.ts src/leads/ownership/lead-ownership.service.ts src/leads/ownership/lead-ownership.service.spec.ts
+npx eslint src/kpi/kpi-read.service.ts src/leads/ownership/lead-ownership.service.ts --quiet
 cd ..
-git add server/src/kpi
+git add server/src/kpi server/src/leads/ownership
 git commit -m "feat(kpi): the overview and one person's month, branch-scoped (ADR-0094)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -3820,7 +4130,8 @@ Expected: PASS (`permission-routes.spec.ts`, `branch-route-policy.spec.ts`, `per
 
 ```bash
 cd server
-npx prettier --write src/kpi src/common/auth/branch-route-policy.ts src/common/permissions/route-access.snapshot.json
+# Prettier only on .ts: on the snapshot JSON it rewrites ~1 450 lines; edit that file by hand in its own format.
+npx prettier --write src/kpi src/common/auth/branch-route-policy.ts
 npx eslint src/kpi src/common/auth/branch-route-policy.ts --quiet
 cd ..
 git add server/src
@@ -3836,16 +4147,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Files:**
 - Modify: `server/src/kpi/kpi-results.service.ts` (+ spec) — `selfHeal`
 - Create: `server/src/kpi/kpi-self-heal.cron.ts` (+ `.spec.ts`)
-- Create: `server/src/kpi/conversion-kind.ts` (+ `.spec.ts`)
+- Create: `server/src/kpi/kpi-backfill-restore.ts` (+ `.spec.ts`)
 - Create: `server/scripts/kpi-backfill.ts`
 - Modify: `server/src/kpi/kpi.module.ts`, `server/tsconfig.check.json`
 
 **Interfaces:**
-- Consumes: `cancelForPayment`, `recordForPayment`, `planForPayment` (Task 6–7), `enrollmentStatusOn`, `supplyOpeningRow` (`server/src/students/shared/enrollment-status-on.ts`), `parseApplyExpectArgs`, `UsageError` (`server/scripts/lib/apply-expect-args.ts`), `LEAD_LINKED_REASON` (`server/src/leads/leads.service.ts`).
+- Consumes: `cancelForPayment`, `recordForPayment`, `planForPayment` (Task 6–7), `KpiRestore` (Task 6), `enrollmentStatusOn`, `supplyOpeningRow` (`server/src/students/shared/enrollment-status-on.ts`), `parseApplyExpectArgs`, `UsageError` (`server/scripts/lib/apply-expect-args.ts`), `LEAD_LINKED_REASON` (`server/src/leads/leads.service.ts`).
 - Produces:
   - `KpiResultsService.selfHeal(now: Date): Promise<{ cancelled: number; written: number }>`
   - `KpiSelfHealCron.tick(): Promise<void>` — `@Cron('0 30 3 * * *', { timeZone: 'Asia/Tashkent' })`
   - `restoredConversionKind(linked: boolean, enrollments: readonly EnrollmentAtConversion[], at: Date): LeadConversionKind`; `interface EnrollmentAtConversion { createdAt: Date; statusChangedAt: Date | null; status: string; log: EnrollmentStatusEvent[] }`
+  - `RESOLVE_WINDOW_MS = 60_000`, `resolvingPaymentId(resolvedAt: Date, payments: readonly { id: string; createdAt: Date }[]): string | null` — `KPI_START` dan keyin, lekin `resolvedPaymentId` ustuni chiqmasdan oldin `KEPT` bo'lgan va'daning to'lovini tiklaydi.
   - `scripts/kpi-backfill.ts [--expect=<N>] [--apply]`
 
 - [ ] **Step 1: Yiqiladigan testlar**
@@ -3924,10 +4236,14 @@ describe('KpiSelfHealCron.tick', () => {
 });
 ```
 
-`server/src/kpi/conversion-kind.spec.ts`:
+`server/src/kpi/kpi-backfill-restore.spec.ts`:
 
 ```ts
-import { restoredConversionKind, type EnrollmentAtConversion } from './conversion-kind';
+import {
+  resolvingPaymentId,
+  restoredConversionKind,
+  type EnrollmentAtConversion,
+} from './kpi-backfill-restore';
 
 const d = (iso: string) => new Date(`${iso}T10:00:00+05:00`);
 const AT = d('2026-10-18');
@@ -3961,10 +4277,31 @@ describe('restoredConversionKind (spec §7.6)', () => {
     expect(restoredConversionKind(true, [enr({ createdAt: d('2026-10-20') })], AT)).toBe('RETURNING');
   });
 });
+
+describe('resolvingPaymentId (spec §7.6)', () => {
+  // `settleKeptPromises` stamps `resolvedAt` inside the payment's own transaction,
+  // after the payment row: the resolving payment is at or just before it.
+  const resolvedAt = new Date('2026-10-18T05:00:30Z');
+  const p = (id: string, iso: string) => ({ id, createdAt: new Date(iso) });
+
+  it('takes the latest payment of the 60 seconds up to resolvedAt', () => {
+    expect(resolvingPaymentId(resolvedAt, [p('a', '2026-10-18T05:00:29Z')])).toBe('a');
+    expect(
+      resolvingPaymentId(resolvedAt, [p('a', '2026-10-18T04:59:40Z'), p('b', '2026-10-18T05:00:10Z')]),
+    ).toBe('b');
+    expect(resolvingPaymentId(resolvedAt, [p('a', '2026-10-18T05:00:30Z')])).toBe('a');
+  });
+
+  it('none after resolvedAt, none older than 60 seconds', () => {
+    expect(resolvingPaymentId(resolvedAt, [p('a', '2026-10-18T05:00:31Z')])).toBeNull();
+    expect(resolvingPaymentId(resolvedAt, [p('a', '2026-10-18T04:59:29Z')])).toBeNull();
+    expect(resolvingPaymentId(resolvedAt, [])).toBeNull();
+  });
+});
 ```
 
 Run: `cd server && npx jest src/kpi`
-Expected: FAIL (`selfHeal`, `./kpi-self-heal.cron`, `./conversion-kind` yo'q).
+Expected: FAIL (`selfHeal`, `./kpi-self-heal.cron`, `./kpi-backfill-restore` yo'q).
 
 - [ ] **Step 2: `selfHeal`**
 
@@ -4067,9 +4404,9 @@ export class KpiSelfHealCron {
 
 `kpi.module.ts`: `import { KpiSelfHealCron } from './kpi-self-heal.cron';` va `providers` ro'yxatining oxiriga `KpiSelfHealCron` (cron `CRONS_ENABLED=false` da ishga tushmaydi — `ScheduleModule` umuman yuklanmaydi).
 
-- [ ] **Step 4: Aylanish turini tiklash**
+- [ ] **Step 4: Backfill tiklash qoidalari (sof)**
 
-`server/src/kpi/conversion-kind.ts`:
+`server/src/kpi/kpi-backfill-restore.ts`:
 
 ```ts
 import { LeadConversionKind } from '@prisma/client';
@@ -4078,6 +4415,11 @@ import {
   supplyOpeningRow,
   type EnrollmentStatusEvent,
 } from '../students/shared/enrollment-status-on';
+
+/**
+ * What the one-time backfill restores for the days between KPI_START and the
+ * deploy (spec §7.6): the facts stage 2 now writes live, but nobody wrote then.
+ */
 
 export interface EnrollmentAtConversion {
   createdAt: Date;
@@ -4088,11 +4430,11 @@ export interface EnrollmentAtConversion {
 }
 
 /**
- * The kind of a lead converted before stage 2 shipped (spec §7.6). A lead
- * not linked to an existing card opened a new student. A linked lead brought
- * back a student who was not studying at the conversion (RETURNING), or
- * earned nothing (ALREADY_STUDYING). "Studying" is an enrollment ACTIVE at
- * that moment, read by `enrollmentStatusOn`.
+ * The kind of a lead converted before stage 2 shipped. A lead not linked to
+ * an existing card opened a new student. A linked lead brought back a
+ * student who was not studying at the conversion (RETURNING), or earned
+ * nothing (ALREADY_STUDYING). "Studying" is an enrollment ACTIVE at that
+ * moment, read by `enrollmentStatusOn`.
  */
 export function restoredConversionKind(
   linked: boolean,
@@ -4106,6 +4448,35 @@ export function restoredConversionKind(
     return enrollmentStatusOn(log, at, e) === 'ACTIVE';
   });
   return studying ? LeadConversionKind.ALREADY_STUDYING : LeadConversionKind.RETURNING;
+}
+
+/**
+ * `settleKeptPromises` stamps `resolvedAt` inside the payment's own
+ * transaction, after the payment row (the transaction times out at 15 s), so
+ * the payment that kept a promise was made at most this long before it.
+ */
+export const RESOLVE_WINDOW_MS = 60_000;
+
+/**
+ * The payment that made a promise KEPT before `resolvedPaymentId` existed:
+ * the student's latest COMPLETED payment made in the 60 seconds up to
+ * `resolvedAt` (`payments` are that student's COMPLETED payments). None in
+ * the window — null, and the promise earns nothing (a payment since reversed
+ * is not COMPLETED, so its promise earns nothing either, as live).
+ */
+export function resolvingPaymentId(
+  resolvedAt: Date,
+  payments: readonly { id: string; createdAt: Date }[],
+): string | null {
+  const to = resolvedAt.getTime();
+  const from = to - RESOLVE_WINDOW_MS;
+  let best: { id: string; createdAt: Date } | null = null;
+  for (const p of payments) {
+    const t = p.createdAt.getTime();
+    if (t < from || t > to) continue;
+    if (!best || t > best.createdAt.getTime()) best = p;
+  }
+  return best?.id ?? null;
 }
 ```
 
@@ -4122,21 +4493,37 @@ export function restoredConversionKind(
  *     npx ts-node --transpile-only scripts/kpi-backfill.ts [--expect=<N>] [--apply]
  *
  * Dry run (default): the connection is read-only (checked, else it stops).
- * It restores in memory the `conversionKind` of the leads converted since
- * KPI_START that have none, plans every COMPLETED payment since KPI_START
- * oldest first, and prints the kinds, the results per type and N (kinds +
- * results). `--apply --expect=<N>` plans again and stops before writing if
- * the count differs; then it writes the kinds and records the payments one
- * by one. A failed payment is logged, the run goes on and exits non-zero; a
- * repeat writes nothing new.
+ * It restores in memory (1) the `conversionKind` of the leads converted since
+ * KPI_START that have none, and (2) the `resolvedPaymentId` of the promises
+ * KEPT since KPI_START that have none (`resolvingPaymentId`: the student's
+ * latest COMPLETED payment in the 60 seconds up to `resolvedAt`); then it
+ * plans every COMPLETED payment since KPI_START oldest first and prints the
+ * kinds, the links, the results per type and N (kinds + links + results).
+ * `--apply --expect=<N>` plans again and stops before writing if the count
+ * differs; then it writes the kinds and the links and records the payments
+ * one by one. A failed payment is logged, the run goes on and exits
+ * non-zero; a repeat writes nothing new.
  */
-import { LeadConversionKind, LeadStatus, PaymentStatus } from '@prisma/client';
+import {
+  LeadConversionKind,
+  LeadStatus,
+  PaymentPromiseStatus,
+  PaymentStatus,
+} from '@prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { SettingsService } from '../src/settings/settings.service';
 import { KpiSettingsService } from '../src/kpi/kpi-settings.service';
-import { KpiResultsService, type KpiDraft } from '../src/kpi/kpi-results.service';
+import {
+  KpiResultsService,
+  type KpiDraft,
+  type KpiRestore,
+} from '../src/kpi/kpi-results.service';
 import { KPI_START } from '../src/kpi/kpi-rules';
-import { restoredConversionKind } from '../src/kpi/conversion-kind';
+import {
+  RESOLVE_WINDOW_MS,
+  resolvingPaymentId,
+  restoredConversionKind,
+} from '../src/kpi/kpi-backfill-restore';
 import { LEAD_LINKED_REASON } from '../src/leads/leads.service';
 import { formatSom } from '../src/payments/shared/format-som';
 import { printHeader } from './lib/check-cli';
@@ -4190,6 +4577,36 @@ async function missingKinds(prisma: PrismaService): Promise<Map<string, LeadConv
   return out;
 }
 
+/** promise id → the payment that kept it, for KEPT promises since KPI_START without one. */
+async function missingResolvers(prisma: PrismaService): Promise<Map<string, string>> {
+  const promises = await prisma.paymentPromise.findMany({
+    where: {
+      status: PaymentPromiseStatus.KEPT,
+      resolvedPaymentId: null,
+      resolvedAt: { gte: KPI_START },
+    },
+    select: { id: true, studentId: true, resolvedAt: true },
+  });
+  const out = new Map<string, string>();
+  let unmatched = 0;
+  for (const p of promises) {
+    const resolvedAt = p.resolvedAt as Date;
+    const payments = await prisma.payment.findMany({
+      where: {
+        studentId: p.studentId,
+        status: PaymentStatus.COMPLETED,
+        createdAt: { gte: new Date(resolvedAt.getTime() - RESOLVE_WINDOW_MS), lte: resolvedAt },
+      },
+      select: { id: true, createdAt: true },
+    });
+    const paymentId = resolvingPaymentId(resolvedAt, payments);
+    if (paymentId) out.set(p.id, paymentId);
+    else unmatched += 1;
+  }
+  console.log(`promises KEPT without a payment: ${promises.length}, linked: ${out.size}, unmatched: ${unmatched}`);
+  return out;
+}
+
 function paymentsSinceStart(prisma: PrismaService) {
   return prisma.payment.findMany({
     where: { status: PaymentStatus.COMPLETED, createdAt: { gte: KPI_START } },
@@ -4202,11 +4619,11 @@ function paymentsSinceStart(prisma: PrismaService) {
 async function plan(
   prisma: PrismaService,
   results: KpiResultsService,
-  kinds: ReadonlyMap<string, LeadConversionKind>,
+  restore: KpiRestore,
 ): Promise<KpiDraft[]> {
   const byKey = new Map<string, KpiDraft>();
   for (const p of await paymentsSinceStart(prisma)) {
-    for (const d of await results.planForPayment(p.id, kinds)) {
+    for (const d of await results.planForPayment(p.id, restore)) {
       const key = d.type === 'LEAD_PAID' ? `L:${d.leadId}` : `P:${d.promiseId}`;
       if (!byKey.has(key)) byKey.set(key, d);
     }
@@ -4235,17 +4652,20 @@ async function main() {
       }
     }
 
-    const kinds = await missingKinds(prisma);
-    const drafts = await plan(prisma, results, kinds);
+    const restore: KpiRestore = {
+      kinds: await missingKinds(prisma),
+      resolvers: await missingResolvers(prisma),
+    };
+    const drafts = await plan(prisma, results, restore);
     for (const kind of Object.values(LeadConversionKind)) {
-      console.log(`kind ${kind}\t${[...kinds.values()].filter((k) => k === kind).length}`);
+      console.log(`kind ${kind}\t${[...restore.kinds.values()].filter((k) => k === kind).length}`);
     }
     for (const type of ['LEAD_PAID', 'PROMISE_KEPT'] as const) {
       const list = drafts.filter((d) => d.type === type);
       console.log(`${type}\t${list.length}\t${formatSom(list.reduce((s, d) => s + d.amount, 0))} so'm`);
     }
-    const total = kinds.size + drafts.length;
-    console.log(`\ntotal: ${total}`);
+    const total = restore.kinds.size + restore.resolvers.size + drafts.length;
+    console.log(`\ntotal: ${total} (kinds ${restore.kinds.size} + links ${restore.resolvers.size} + results ${drafts.length})`);
     if (!APPLY) return;
 
     // What was reviewed is what gets written.
@@ -4254,9 +4674,15 @@ async function main() {
         `This run found ${total} but --expect=${expect}. Nothing was written; review a fresh dry run and pass its count.`,
       );
     }
-    // The kinds first: the results of those leads need them.
-    for (const [id, kind] of kinds) {
+    // The kinds and the links first: the results need them.
+    for (const [id, kind] of restore.kinds) {
       await prisma.lead.updateMany({ where: { id, conversionKind: null }, data: { conversionKind: kind } });
+    }
+    for (const [id, paymentId] of restore.resolvers) {
+      await prisma.paymentPromise.updateMany({
+        where: { id, resolvedPaymentId: null },
+        data: { resolvedPaymentId: paymentId },
+      });
     }
     let written = 0;
     let failed = 0;
@@ -4268,7 +4694,9 @@ async function main() {
         console.error(`FAILED ${p.id}: ${err instanceof Error ? err.message : err}`);
       }
     }
-    console.log(`kinds written: ${kinds.size}, results written: ${written}`);
+    console.log(
+      `kinds written: ${restore.kinds.size}, links written: ${restore.resolvers.size}, results written: ${written}`,
+    );
     if (failed > 0) {
       console.error(`${failed} payment(s) failed — repeat the same command to retry them.`);
       process.exitCode = 1;
@@ -4455,18 +4883,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 14: Client — tiplar, formatlash, so'rovlar, menyular
+### Task 14: Client — tiplar, formatlash, so'rovlar
 
 **Files:**
 - Create: `client/src/components/reports/admin-kpi/kpi-types.ts`, `kpi-queries.ts`, `kpi-format.ts`, `kpi-format.test.ts`, `kpi-trend.tsx`
-- Modify: `client/src/lib/reports-nav.ts` (+ `reports-nav.test.ts`), `client/src/lib/settings-nav.ts` (+ `settings-nav.test.ts`), `client/src/lib/breadcrumb-routes.ts`
+
+Menyu havolalari sahifalar bilan birga qo'shiladi: «KPI sozlamalari» — Task 15, «Xodimlar KPI» — Task 16 (sahifasi yo'q havola bo'lmasin).
 
 **Interfaces:**
 - Consumes: Task 11 dagi HTTP javoblari (`Date` lar ISO satr bo'lib keladi).
 - Produces:
   - Tiplar: `KpiResultType`, `KpiResultStatus`, `KpiRuleMode`, `KpiRule`, `KpiSettings`, `KpiSettingsPatch`, `KpiPair`, `KpiSignal`, `KpiAdminRow`, `KpiOverview`, `KpiResultView`, `KpiUserView` (server bilan bir xil maydonlar).
   - So'rovlar: `useKpiOverview(month: string, compare: string)`, `useKpiUser(userId: number | null, month?: string)`, `useKpiSettings()`, `saveKpiSettings(patch: KpiSettingsPatch): Promise<KpiSettings>`, `KPI_SETTINGS_KEY`.
-  - Formatlash: `KPI_FIRST_MONTH`, `COMPARE_FLOOR_MONTH`, `KPI_MAX_SOM`, `kpiMonth(oy, current)`, `kpiCompare(bilan, month, current)`, `deltaLine(value, compare, unit: DeltaUnit)`, `deltaTone(value, compare, higherIsBetter?)`, `ratioText(pct, part, whole)`, `switchText(status)`, `RESULT_TYPE_LABEL`, `dayText(iso)`, `ruleError(rule)`, `settingsPatch(saved, draft)`, `showKpiTab({ canView, isAdministrator, hasAny })`, `KPI_DEFINITIONS`.
+  - Formatlash: `KPI_FIRST_MONTH`, `COMPARE_FLOOR_MONTH`, `KPI_MAX_SOM`, `kpiMonth(oy, current)`, `kpiCompare(bilan, month, current)`, `deltaLine(value, compare, unit: DeltaUnit)`, `deltaTone(value, compare, higherIsBetter?)`, `ratioText(pct, part, whole)`, `switchText(status)`, `RESULT_TYPE_LABEL`, `dayText(iso)`, `ruleError(rule)`, `settingsPatch(saved, draft)`, `KPI_DEFINITIONS`.
   - Komponentlar: `TrendLine({ value, compare, unit, higherIsBetter?, suffix? })`, `TrendMark({ value, compare, higherIsBetter? })`.
 
 - [ ] **Step 1: Yiqiladigan testlar**
@@ -4485,7 +4914,6 @@ import {
   ratioText,
   ruleError,
   settingsPatch,
-  showKpiTab,
   switchText,
 } from "./kpi-format";
 import type { KpiSettings } from "./kpi-types";
@@ -4562,48 +4990,9 @@ describe("settings form", () => {
     ).toEqual({ promiseKept: { mode: "PERCENT", value: 5 } });
   });
 });
-
-describe("showKpiTab", () => {
-  it("shows an administrator's tab, or anyone's with results, to a kpi.view holder", () => {
-    expect(showKpiTab({ canView: true, isAdministrator: true, hasAny: false })).toBe(true);
-    expect(showKpiTab({ canView: true, isAdministrator: false, hasAny: true })).toBe(true);
-    expect(showKpiTab({ canView: true, isAdministrator: false, hasAny: false })).toBe(false);
-    expect(showKpiTab({ canView: false, isAdministrator: true, hasAny: true })).toBe(false);
-  });
-});
 ```
 
-`client/src/lib/reports-nav.test.ts` oxiriga:
-
-```ts
-describe("Xodimlar KPI — kpi.view (ADR-0094)", () => {
-  it("CEO va filial direktori ochadi; administrator, o'qituvchi va kassir ochmaydi", () => {
-    for (const role of [1, 2]) {
-      expect(canOpenReportPath(canForRoles([role]), "/reports/xodimlar-kpi", [role])).toBe(true);
-    }
-    for (const role of [3, 4, 5]) {
-      expect(canOpenReportPath(canForRoles([role]), "/reports/xodimlar-kpi", [role])).toBe(false);
-    }
-    expect(routeLabels["xodimlar-kpi"]).toBe("Xodimlar KPI");
-  });
-});
-```
-
-`client/src/lib/settings-nav.test.ts`: `"the CEO sees all 14 items in two sections"` → `"the CEO sees all 15 items in two sections"`, `toHaveLength(14)` → `toHaveLength(15)`. Oxiriga:
-
-```ts
-describe("«KPI sozlamalari» — CEO only (ADR-0094)", () => {
-  const PATH = "/settings/kpi";
-  it("only the CEO sees and opens it", () => {
-    const ceo = getVisibleSettingsSections(canForRoles([CEO]), true).flatMap((s) => s.items);
-    expect(ceo.map((item) => item.url)).toContain(PATH);
-    expect(canOpenSettingsPath(PATH, canForRoles([BRANCH_DIRECTOR]), false)).toBe(false);
-    expect(canOpenSettingsPath(PATH, canForRoles([CEO]), true)).toBe(true);
-  });
-});
-```
-
-Run: `cd client && npx vitest run src/components/reports/admin-kpi src/lib/reports-nav.test.ts src/lib/settings-nav.test.ts`
+Run: `cd client && npx vitest run src/components/reports/admin-kpi`
 Expected: FAIL.
 
 - [ ] **Step 2: Tiplar**
@@ -4787,11 +5176,6 @@ export function settingsPatch(saved: KpiSettings, draft: KpiSettings): KpiSettin
   return patch;
 }
 
-/** Spec §7.8: the «KPI» tab of an Administrator, or of anyone who has results. */
-export function showKpiTab(p: { canView: boolean; isAdministrator: boolean; hasAny: boolean }): boolean {
-  return p.canView && (p.isAdministrator || p.hasAny);
-}
-
 /** The metric definitions of spec §7.7, printed under the table. */
 export const KPI_DEFINITIONS = [
   {
@@ -4915,14 +5299,54 @@ export function TrendMark({
 }
 ```
 
-- [ ] **Step 5: Menyular va breadcrumb**
+- [ ] **Step 5: Testlar va lint**
 
-`client/src/lib/reports-nav.ts`: `lucide-react` importiga `Trophy`; «Marketing va faoliyat» bo'limida «Lidlar hisoboti» dan keyin:
+```bash
+cd client
+npx vitest run src/components/reports/admin-kpi src/lib/permission-keys.test.ts
+npx eslint src/components/reports/admin-kpi
+```
+
+Expected: PASS, lint xatosiz.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add client/src/components/reports/admin-kpi
+git commit -m "feat(kpi): client types, formatting and queries (ADR-0094)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 15: Sozlamalar → «KPI sozlamalari»
+
+**Files:**
+- Create: `client/src/app/(dashboard)/settings/kpi/page.tsx`
+- Create: `client/src/components/settings/kpi-settings-client.tsx`
+- Modify: `client/src/lib/settings-nav.ts` (+ `settings-nav.test.ts`), `client/src/lib/breadcrumb-routes.ts`
+
+**Interfaces:**
+- Consumes: `useKpiSettings`, `saveKpiSettings`, `KPI_SETTINGS_KEY`, `ruleError`, `settingsPatch`, `switchText`, `KpiRule`, `KpiSettings` (Task 14).
+
+- [ ] **Step 0: Menyu testi (avval yiqiladi)**
+
+`client/src/lib/settings-nav.test.ts`: `"the CEO sees all 14 items in two sections"` → `"the CEO sees all 15 items in two sections"`, `toHaveLength(14)` → `toHaveLength(15)`. Oxiriga:
 
 ```ts
-      // «Xodimlar KPI» (ADR-0094): the managers' observation page.
-      { title: "Xodimlar KPI", url: "/reports/xodimlar-kpi", icon: Trophy, permission: "kpi.view" },
+describe("«KPI sozlamalari» — CEO only (ADR-0094)", () => {
+  const PATH = "/settings/kpi";
+  it("only the CEO sees and opens it", () => {
+    const ceo = getVisibleSettingsSections(canForRoles([CEO]), true).flatMap((s) => s.items);
+    expect(ceo.map((item) => item.url)).toContain(PATH);
+    expect(canOpenSettingsPath(PATH, canForRoles([BRANCH_DIRECTOR]), false)).toBe(false);
+    expect(canOpenSettingsPath(PATH, canForRoles([CEO]), true)).toBe(true);
+  });
+});
 ```
+
+Run: `cd client && npx vitest run src/lib/settings-nav.test.ts` — FAIL.
 
 `client/src/lib/settings-nav.ts`: `lucide-react` importiga `Trophy`; «CEO» bo'limida «Lidlar egaligi» dan keyin:
 
@@ -4937,42 +5361,14 @@ export function TrendMark({
       },
 ```
 
-`client/src/lib/breadcrumb-routes.ts` ga `"dars-baholari"` dan keyin `"xodimlar-kpi": "Xodimlar KPI",` va `"lead-ownership"` dan keyin:
+`client/src/lib/breadcrumb-routes.ts` ga `"lead-ownership"` dan keyin:
 
 ```ts
   // /settings/kpi — «KPI sozlamalari», CEO only (ADR-0094).
   kpi: "KPI sozlamalari",
 ```
 
-- [ ] **Step 6: Testlar va lint**
-
-```bash
-cd client
-npx vitest run src/components/reports/admin-kpi src/lib/reports-nav.test.ts src/lib/settings-nav.test.ts src/lib/permission-keys.test.ts
-npx eslint src/components/reports/admin-kpi src/lib/reports-nav.ts src/lib/settings-nav.ts src/lib/breadcrumb-routes.ts
-```
-
-Expected: PASS, lint xatosiz.
-
-- [ ] **Step 7: Commit**
-
-```bash
-git add client/src/components/reports/admin-kpi client/src/lib
-git commit -m "feat(kpi): client types, formatting, queries and menu entries (ADR-0094)
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
-```
-
----
-
-### Task 15: Sozlamalar → «KPI sozlamalari»
-
-**Files:**
-- Create: `client/src/app/(dashboard)/settings/kpi/page.tsx`
-- Create: `client/src/components/settings/kpi-settings-client.tsx`
-
-**Interfaces:**
-- Consumes: `useKpiSettings`, `saveKpiSettings`, `KPI_SETTINGS_KEY`, `ruleError`, `settingsPatch`, `switchText`, `KpiRule`, `KpiSettings` (Task 14).
+Run: `cd client && npx vitest run src/lib/settings-nav.test.ts` — PASS.
 
 - [ ] **Step 1: Sahifa**
 
@@ -5176,7 +5572,8 @@ function RuleFields({
 
 ```bash
 cd client
-npx eslint src/components/settings/kpi-settings-client.tsx "src/app/(dashboard)/settings/kpi/page.tsx"
+npx vitest run src/lib/settings-nav.test.ts
+npx eslint src/components/settings/kpi-settings-client.tsx "src/app/(dashboard)/settings/kpi/page.tsx" src/lib/settings-nav.ts src/lib/breadcrumb-routes.ts
 npx tsc --noEmit -p .
 cd ..
 git add client/src
@@ -5194,10 +5591,60 @@ Expected: lint va tsc xatosiz.
 **Files:**
 - Create: `client/src/app/(dashboard)/reports/xodimlar-kpi/page.tsx`
 - Create: `client/src/components/reports/admin-kpi/kpi-overview-page.tsx`, `kpi-summary-cards.tsx`, `kpi-attention.tsx`, `kpi-admin-table.tsx`
+- Modify: `client/src/lib/reports-nav.ts` (+ `reports-nav.test.ts`), `client/src/lib/nav-items.ts` (+ `nav-items.test.ts`), `client/src/lib/breadcrumb-routes.ts`
 
 **Interfaces:**
 - Consumes: `useKpiOverview`, `kpiMonth`, `kpiCompare`, `KPI_FIRST_MONTH`, `COMPARE_FLOOR_MONTH`, `switchText`, `ratioText`, `KPI_DEFINITIONS`, `TrendLine`, `TrendMark` (Task 14).
 - Produces: `KpiOverviewPage` (URL `oy`, `bilan`, `xodim`), `KpiSummaryCards({ data, isCurrent })`, `KpiAttention({ signals, onOpen })`, `KpiAdminTable({ rows, onOpen })`. Task 17 bu sahifaga `KpiDailyChart`, `KpiMonthsChart` va `KpiUserDrawer` ni qo'shadi.
+
+- [ ] **Step 0: Menyu (avval yiqiladigan testlar)**
+
+`client/src/lib/reports-nav.test.ts` oxiriga:
+
+```ts
+describe("Xodimlar KPI — kpi.view (ADR-0094)", () => {
+  it("CEO va filial direktori ochadi; administrator, o'qituvchi va kassir ochmaydi", () => {
+    for (const role of [1, 2]) {
+      expect(canOpenReportPath(canForRoles([role]), "/reports/xodimlar-kpi", [role])).toBe(true);
+    }
+    for (const role of [3, 4, 5]) {
+      expect(canOpenReportPath(canForRoles([role]), "/reports/xodimlar-kpi", [role])).toBe(false);
+    }
+    expect(routeLabels["xodimlar-kpi"]).toBe("Xodimlar KPI");
+  });
+});
+```
+
+`client/src/lib/nav-items.test.ts` oxiriga:
+
+```ts
+describe("navItems — «Hisobotlar»", () => {
+  it("opens for kpi.view too, so a role given only the KPI page still reaches it (ADR-0094)", () => {
+    expect(navItems.find((item) => item.url === "/reports")?.permission).toEqual([
+      "reports.finance",
+      "reports.payments",
+      "reports.students",
+      "reports.leads",
+      "kpi.view",
+    ]);
+  });
+});
+```
+
+Run: `cd client && npx vitest run src/lib/reports-nav.test.ts src/lib/nav-items.test.ts` — FAIL.
+
+`client/src/lib/reports-nav.ts`: `lucide-react` importiga `Trophy`; «Marketing va faoliyat» bo'limida «Lidlar hisoboti» dan keyin:
+
+```ts
+      // «Xodimlar KPI» (ADR-0094): the managers' observation page.
+      { title: "Xodimlar KPI", url: "/reports/xodimlar-kpi", icon: Trophy, permission: "kpi.view" },
+```
+
+`client/src/lib/nav-items.ts` «Hisobotlar» yozuvida `permission: ["reports.finance", "reports.payments", "reports.students", "reports.leads"]` → `permission: ["reports.finance", "reports.payments", "reports.students", "reports.leads", "kpi.view"]`.
+
+`client/src/lib/breadcrumb-routes.ts` ga `"dars-baholari"` dan keyin: `"xodimlar-kpi": "Xodimlar KPI",`.
+
+Run: `cd client && npx vitest run src/lib/reports-nav.test.ts src/lib/nav-items.test.ts` — PASS.
 
 - [ ] **Step 1: Yo'l**
 
@@ -5509,7 +5956,8 @@ export function KpiOverviewPage() {
 
 ```bash
 cd client
-npx eslint src/components/reports/admin-kpi "src/app/(dashboard)/reports/xodimlar-kpi/page.tsx"
+npx vitest run src/lib/reports-nav.test.ts src/lib/nav-items.test.ts
+npx eslint src/components/reports/admin-kpi "src/app/(dashboard)/reports/xodimlar-kpi/page.tsx" src/lib/reports-nav.ts src/lib/nav-items.ts src/lib/breadcrumb-routes.ts
 npx tsc --noEmit -p .
 cd ..
 git add client/src
@@ -5943,8 +6391,10 @@ Expected: hammasi xatosiz.
 - Modify: `client/src/components/settings/employee-profile-tabs.tsx`
 
 **Interfaces:**
-- Consumes: `KpiUserPanel` (Task 17), `useKpiUser`, `showKpiTab`, `kpiMonth` (Task 14).
+- Consumes: `KpiUserPanel` (Task 17), `kpiMonth` (Task 14).
 - Produces: `/settings/employees/[id]?tab=kpi` (oy — `?kpi_oy=`), `EmployeeProfileTabs` ga `showKpi?: boolean` prop.
+
+**Qaror (spec §7.8 «Administrator roli bor yoki KPI natijasi bor xodimda»):** sahifa ochilganda `/kpi/users/:id` ga oldindan so'rov yuborilmaydi. Yorliq faqat xodimda **hozir** Administrator roli bo'lsa va ko'ruvchida `kpi.view` bo'lsa chiqadi; ma'lumot yorliq ochilganda yuklanadi (Radix faqat faol yorliqni chizadi). Endi administrator bo'lmagan sobiq administratorning natijalari «Xodimlar KPI» sahifasida qoladi (jadval oyda natijasi bor har xodimni ko'rsatadi, qator bosilsa — `?xodim=` oynasi). Rol ro'yxati serverdan keladi, client hisoblamaydi.
 
 - [ ] **Step 1: Yorliq komponenti**
 
@@ -5979,35 +6429,23 @@ export function EmployeeKpiTab({ userId }: { userId: number }) {
 - [ ] **Step 2: Profil sahifasi**
 
 `employee-profile-client.tsx`:
-1. Importlar:
-
-```tsx
-import { useKpiUser } from "@/components/reports/admin-kpi/kpi-queries";
-import { showKpiTab } from "@/components/reports/admin-kpi/kpi-format";
-```
-
-2. `const canManageEmployees = useCan("employees.manage");` dan keyin:
+1. `const canManageEmployees = useCan("employees.manage");` dan keyin:
 
 ```tsx
   const canSeeKpi = useCan("kpi.view");
 ```
 
-3. `const isTeacher = …` dan keyin:
+2. `const isTeacher = …` dan keyin:
 
 ```tsx
-  const isAdministrator = employee?.roles.some((r) => r.id === 3) ?? false;
-  // Spec §7.8: an Administrator's tab, or anyone's who has results. The role answers
-  // without a request; only for the others the server is asked (a 404 hides the tab).
-  const kpiProbe = useKpiUser(employee && canSeeKpi && !isAdministrator ? employee.id : null);
-  const hasKpiTab = showKpiTab({
-    canView: canSeeKpi,
-    isAdministrator,
-    hasAny: kpiProbe.data?.hasAny ?? false,
-  });
+  // Spec §7.8: the «KPI» tab of a current Administrator, for `kpi.view`. No request
+  // on page load — the tab loads its month when opened. A former administrator's
+  // results stay on «Xodimlar KPI».
+  const hasKpiTab = canSeeKpi && (employee?.roles.some((r) => r.id === 3) ?? false);
 ```
 
-4. `availableTabs` oxiriga: `...(hasKpiTab ? ["kpi"] : []),`.
-5. Ikkala `<EmployeeProfileTabs … />` chaqiruviga: `showKpi={hasKpiTab}`.
+3. `availableTabs` oxiriga: `...(hasKpiTab ? ["kpi"] : []),`.
+4. Ikkala `<EmployeeProfileTabs … />` chaqiruviga: `showKpi={hasKpiTab}`.
 
 - [ ] **Step 3: Yorliqlar**
 
@@ -6030,7 +6468,7 @@ va destrukturlashga `showKpi = false,`.
 4. Oxirgi `TabsContent` dan keyin (Radix faqat faol yorliqni chizadi — so'rov yorliq ochilganda ketadi):
 
 ```tsx
-      {/* KPI — CEO va filial direktori (`kpi.view`), administrator yoki natijasi bor xodimda */}
+      {/* KPI — CEO va filial direktori (`kpi.view`), hozirgi administratorda */}
       {showKpi && (
         <TabsContent value="kpi">
           <EmployeeKpiTab userId={employee.id} />
@@ -6101,6 +6539,8 @@ Expected: xatosiz.
 - Tungi tuzatish o'tkazib yuborilgan natijani joriy narxda yozadi.
 - Kalit qayta yoqilsa, undan oldingi yoqilgan davrda o'tkazib yuborilgan natija tungi tuzatishda yozilmaydi (kalit oynasi oxirgi yoqilgan paytdan).
 - Arxivdan tiklangan aylangan lid egasini va aylanish vaqtini saqlaydi.
+- Tuzatishning qayta yozilishi muvaffaqiyatsiz bo'lsa (eski to'lov bekor qilindi, yangisi yozilmadi), natijalar «To'lov tuzatildi» bilan bekor holda qoladi. `LEAD_PAID` o'quvchining keyingi to'lovida yoki tungi tuzatishda qolgan eng birinchi to'lovga qayta tanlanadi; `PROMISE_KEPT` esa yo'qoladi — va'da bekor qilingan to'lovga bog'liq qoladi (ma'lum chegara).
+- Backfill `KPI_START` va deploy orasida `KEPT` bo'lgan va'daning to'lovini `resolvedAt` gacha bo'lgan 60 soniya ichidagi o'quvchining eng so'nggi `COMPLETED` to'lovi deb tiklaydi; topilmasa — natija yo'q.
 ```
 
 `docs/adr/README.md` jadvaliga 0093 qatoridan keyin:
@@ -6121,15 +6561,15 @@ Expected: xatosiz.
 ### Admin KPI results (`src/kpi/`, ADR-0094)
 
 - Stage 2 of the admin KPI: results are recorded, no money moves — no `Transaction`, `Expense`, `CashMovement` or payroll row; the salary, cash and profit reports do not read `KpiResult`. Spec `docs/superpowers/specs/2026-10-16-admin-kpi-design.md` §7.
-- **One writer**: `KpiResult` rows are written only by `KpiResultsService` (`kpi-write.single-source.spec.ts`). `LEAD_PAID` — the converted lead's frozen owner (ADR-0093), on the student's first `COMPLETED` payment after `Lead.statusChangedAt` that no other lead holds, for `conversionKind` `NEW_STUDENT` or `RETURNING` (`ALREADY_STUDYING` earns nothing). `PROMISE_KEPT` — the promise's `createdById`, on the payment `settleKeptPromises` wrote into `PaymentPromise.resolvedPaymentId` in the same transaction; base `max(0, −balanceAtPromise)`.
+- **One writer**: `KpiResult` rows are written only by `KpiResultsService` (`kpi-write.single-source.spec.ts`); the planning reads live in `kpi-results.plan.ts`, which writes nothing. `LEAD_PAID` — the converted lead's frozen owner (ADR-0093), on the student's first `COMPLETED` payment after `Lead.statusChangedAt` that no other lead holds, for `conversionKind` `NEW_STUDENT` or `RETURNING` (`ALREADY_STUDYING` earns nothing). `PROMISE_KEPT` — the promise's `createdById`, on the payment `settleKeptPromises` wrote into `PaymentPromise.resolvedPaymentId` in the same transaction; base `max(0, −balanceAtPromise)`.
 - Counted from `KPI_START` (17.10.2026 00:00 Tashkent); the month is the Tashkent month of the payment's `createdAt`; the owner or writer must hold Administrator and neither CEO nor Branch Director when the result is written (`isKpiEligible`, roles read through `whereUserMayAct()`). The amount is sealed: `ruleMode`, `ruleValue`, `baseAmount`, `amount` (percent = `Math.round(base × value / 100)`).
 - One ACTIVE result per lead and per payment (LEAD_PAID) and per promise: partial unique indexes in `20261016150000_kpi_results` (Prisma cannot express them); a concurrent second insert is `P2002` and is skipped.
 - `Lead.conversionKind` is written by `LeadsService.convert` (link path: `activeStudentWhere()` at the link → `ALREADY_STUDYING`, else `RETURNING`; create path `NEW_STUDENT`) and by `StudentLeadOriginService` (`NEW_STUDENT`).
 - Events: `KpiRecorderListener` — `payment.received` → `recordForPayment`; `payment.reversed` → `cancelForPayment` («To'lov bekor qilindi», then the lead takes its next earliest payment). A correction's reversal carries `correction: true` (`PaymentReversedPayload`): its results are cancelled «To'lov tuzatildi» and the re-post (`correctsPaymentId`) re-creates them under the sealed rule (`replacesResultId`; a percent LEAD_PAID is re-read from the new amount). Failures are logged; `KpiSelfHealCron` (03:30 Tashkent) cancels the results of payments that no longer stand and records the last two days' payments again. All of it is idempotent.
-- Switch `kpi.enabled` (company-level, CEO): off = no new result; a result is written only for a payment made since the switch last came on (`recordingSince`: the switch row's `updatedAt` via `SettingsService.lastWrittenAt`, written only on a flip). An off period is never filled in. Cancelling works while off, and so does a correction's move (a moved result is not a new one).
+- Switch `kpi.enabled` (company-level, CEO): off = no new result; a result is written only for a payment made since the switch last came on (`recordingSince`: the switch row's `updatedAt` via `SettingsService.lastWrittenAt`, written only on a flip). Prices are saved through `SettingsService.setMany` — a rule's mode and value in one transaction. An off period is never filled in. Cancelling works while off, and so does a correction's move (a moved result is not a new one).
 - Routes (`KpiController`): `GET /kpi/overview?month&compare`, `GET /kpi/users/:id?month`, `GET /kpi/settings` (`kpi.view`: CEO + Branch Director, allowed to the Director only; the first two take `@BranchScope()`, an empty scope is 403), `PATCH /kpi/settings` (`@CeoOnly()`). The «Diqqat» signals and the month-end forecast are the pure `kpiSignals` / `monthEndForecast` (`kpi-signals.ts`); the page figures are `assembleOverview` (`kpi-overview.math.ts`). In the current month every comparison stops at the same day of the compare month.
 - The generic `/archive` restore brings a lead with `convertedStudentId` back CONVERTED, with its owner and its `statusChanged*` untouched, one lead and batch alike.
-- One-time `scripts/kpi-backfill.ts` (dry run by default; `--apply --expect=<N>`) restores `conversionKind` through `enrollmentStatusOn` (`conversion-kind.ts`) and records every COMPLETED payment since `KPI_START` through the same service.
+- One-time `scripts/kpi-backfill.ts` (dry run by default; `--apply --expect=<N>`) restores `conversionKind` through `enrollmentStatusOn` and the `resolvedPaymentId` of promises KEPT since `KPI_START` (the student's latest COMPLETED payment in the 60 s up to `resolvedAt`; both in `kpi-backfill-restore.ts`), then records every COMPLETED payment since `KPI_START` through the same service.
 ```
 
 `client/CLAUDE.md` da «### Lead Forms and Their Responses» bo'limidan oldin:
@@ -6139,7 +6579,7 @@ Expected: xatosiz.
 
 - «Xodimlar KPI» in «Marketing va faoliyat» (`reports-nav.ts`, `permission: "kpi.view"`: CEO and Branch Director). Files in `components/reports/admin-kpi/`: `kpi-overview-page.tsx`, `kpi-summary-cards.tsx`, `kpi-attention.tsx`, `kpi-charts.tsx`, `kpi-admin-table.tsx`, `kpi-user-drawer.tsx`, `kpi-user-panel.tsx` (shared by the drawer and the employee tab), `employee-kpi-tab.tsx`, `kpi-trend.tsx`, `kpi-queries.ts`, `kpi-types.ts`, `kpi-format.ts` (pure, vitest).
 - URL: `oy` (empty = the current month, `MonthStepper` from 2026-10), `bilan` (empty = the month before), `xodim` (the open drawer); the employee tab's month is `kpi_oy`. Every figure, signal text and «Qanday hisoblandi» line is the server's; the client only formats and draws. The admin table is not paginated (the team at a glance); the results table of the drawer and the tab is (10–50).
-- The employee page shows «KPI» (`?tab=kpi`) to `useCan("kpi.view")` when the employee holds Administrator, or when `GET /kpi/users/:id` answers `hasAny` (`showKpiTab`). Sozlamalar → «KPI sozlamalari» (`/settings/kpi`) is `ceoOnly`; it sends only what changed (`settingsPatch`), so the switch's time stays the flip.
+- The employee page shows «KPI» (`?tab=kpi`) to `useCan("kpi.view")` only while the employee holds Administrator; nothing is fetched until the tab opens. A former administrator's results stay visible on «Xodimlar KPI». «Hisobotlar» in `nav-items.ts` opens for `kpi.view` too. Sozlamalar → «KPI sozlamalari» (`/settings/kpi`) is `ceoOnly`; it sends only what changed (`settingsPatch`), so the switch's time stays the flip.
 ```
 
 - [ ] **Step 3: Qo'llanma**
