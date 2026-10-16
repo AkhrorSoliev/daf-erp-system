@@ -525,9 +525,11 @@ export class ExpensesService {
     companyId: number,
     branchIds: ReportBranchIds,
   ): Promise<{ buffer: Buffer; filename: string }> {
+    // One month per request: rows, title and file name all name this one.
     const month = this.monthOf(query);
+    const monthQuery = month ? { ...query, oy: month } : query;
     const [rows, company, branch, creators] = await Promise.all([
-      this.exportAll(query, companyId, branchIds),
+      this.exportAll(monthQuery, companyId, branchIds),
       this.prisma.company.findUnique({
         where: { id: companyId },
         select: { name: true },
@@ -541,7 +543,7 @@ export class ExpensesService {
       // «Kim kiritgan: …» names the people the list was filtered by.
       query.createdById?.length
         ? this.prisma.user.findMany({
-            where: { id: { in: query.createdById } },
+            where: { id: { in: query.createdById }, companyId },
             select: { firstName: true, lastName: true },
             orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
           })

@@ -35,7 +35,28 @@ describe('ExpensesService — the PDF reads the month (spec B6 §5.3)', () => {
   };
   const doc = () => JSON.stringify((renderPdf as jest.Mock).mock.calls[0][0]);
 
+  // Only Date is faked, so the current-month cases cannot flake at midnight.
+  const NOW = new Date('2026-10-17T10:00:00.000Z');
   beforeEach(async () => {
+    jest.useFakeTimers({
+      now: NOW,
+      doNotFake: [
+        'hrtime',
+        'nextTick',
+        'performance',
+        'queueMicrotask',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+        'setImmediate',
+        'clearImmediate',
+        'setInterval',
+        'clearInterval',
+        'setTimeout',
+        'clearTimeout',
+      ],
+    });
     jest.clearAllMocks();
     prisma.expense.findMany.mockResolvedValue([ROW]);
     prisma.company.findUnique.mockResolvedValue({ name: 'Markaz' });
@@ -52,6 +73,8 @@ describe('ExpensesService — the PDF reads the month (spec B6 §5.3)', () => {
     }).compile();
     service = moduleRef.get(ExpensesService);
   });
+
+  afterEach(() => jest.useRealTimers());
 
   it('names the month on the «Davr» line and in the file name', async () => {
     const res = await service.generateExpensesPdf(
@@ -70,7 +93,7 @@ describe('ExpensesService — the PDF reads the month (spec B6 §5.3)', () => {
       1,
       null,
     );
-    expect(res.filename).toBe(`xarajatlar-${tashkentMonthKey(new Date())}.pdf`);
+    expect(res.filename).toBe(`xarajatlar-${tashkentMonthKey(NOW)}.pdf`);
   });
 
   it('lists who entered them when «Kim kiritgan» is filtered', async () => {
@@ -83,10 +106,35 @@ describe('ExpensesService — the PDF reads the month (spec B6 §5.3)', () => {
       null,
     );
     expect(prisma.user.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: { in: [10234] } } }),
+      expect.objectContaining({
+        where: { id: { in: [10234] }, companyId: 1 },
+      }),
     );
     expect(doc()).toContain('Kim kiritgan:');
     expect(doc()).toContain('Ism Aliyev');
+  });
+
+  it('joins several creators with a comma', async () => {
+    prisma.user.findMany.mockResolvedValue([
+      { firstName: 'Ism', lastName: 'Aliyev' },
+      { firstName: 'Ism', lastName: 'Valiyev' },
+    ]);
+    await service.generateExpensesPdf(
+      { oy: '2026-09', createdById: [10234, 10567] } as ExpenseQueryDto,
+      1,
+      null,
+    );
+    expect(doc()).toContain('Ism Aliyev, Ism Valiyev');
+  });
+
+  it('prints no «Kim kiritgan» line when no such user is found', async () => {
+    prisma.user.findMany.mockResolvedValue([]);
+    await service.generateExpensesPdf(
+      { oy: '2026-09', createdById: [10999] } as ExpenseQueryDto,
+      1,
+      null,
+    );
+    expect(doc()).not.toContain('Kim kiritgan:');
   });
 
   it('no «Kim kiritgan» line without the filter', async () => {
@@ -115,7 +163,7 @@ describe('ExpensesService — the PDF reads the month (spec B6 §5.3)', () => {
       1,
       null,
     );
-    expect(res.filename).toBe(`xarajatlar-${tashkentDateStr(new Date())}.pdf`);
+    expect(res.filename).toBe(`xarajatlar-${tashkentDateStr(NOW)}.pdf`);
     expect(doc()).toContain('01.10.2026 — 31.10.2026');
   });
 });
