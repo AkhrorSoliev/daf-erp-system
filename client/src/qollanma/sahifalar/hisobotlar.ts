@@ -3,6 +3,18 @@ import type { QollanmaSahifa } from "../turlar";
 export const hisobotlar: QollanmaSahifa[] = [
   {
     bolim: "hisobotlar",
+    sahifa: "guruhlar-tolovi",
+    sarlavha: "Guruhlar bo'yicha to'lov",
+    qisqacha:
+      "Tanlangan oyda qaysi guruh qancha to'lagani, qancha qolgani va kim to'lamagani — «Umumiy ma'lumotlar»dagi raqamlarning o'zi, guruh, ustoz va kurs kesimida.",
+    rollar: [1, 2, 3],
+    adr: ["0092", "0058"],
+    yollar: ["/reports/payment-reports"],
+    kalitSozlar: ["guruh to'lovi", "qarzdor guruh", "ustoz bo'yicha to'lov", "to'lov hisoboti", "qoldi", "excel"],
+    yangilangan: "2026-10-16",
+  },
+  {
+    bolim: "hisobotlar",
     sahifa: "dars-baholari",
     sarlavha: "Dars baholari",
     qisqacha:
