@@ -47,6 +47,8 @@ import { useLeadActivity } from "@/hooks/use-lead-activity";
 import { useAuth } from "@/hooks/use-auth";
 import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
 import { mockPaymentState } from "@/components/mock-exams/mock-fee";
+import type { LeadOwner } from "./ownership/ownership-format";
+import { LeadOwnerBlock } from "./ownership/lead-owner-block";
 
 interface LeadFormSubmission {
   id: string;
@@ -85,6 +87,8 @@ interface LeadDetail {
   createdAt: string;
   calledAt: string | null;
   calledBy: { id: number; firstName: string; lastName: string } | null;
+  owner: LeadOwner | null;
+  ownerDueAt: string | null;
   source: { id: string; name: string } | null;
   section: {
     id: string;
@@ -294,6 +298,7 @@ export function LeadDetailDrawer() {
   const openConvertLead = useLeadsUi((s) => s.openConvertLead);
   const applyLeadUpdate = useLeadsBoard((s) => s.applyLeadUpdate);
   const applyLeadRemove = useLeadsBoard((s) => s.applyLeadRemove);
+  const fetchSectionLeads = useLeadsBoard((s) => s.fetchSectionLeads);
   const bumpLeadCommentCount = useLeadsBoard((s) => s.bumpLeadCommentCount);
   const detailLeadTab = useLeadsUi((s) => s.detailLeadTab);
   const clearDetailLeadTab = useLeadsUi((s) => s.clearDetailLeadTab);
@@ -411,8 +416,12 @@ export function LeadDetailDrawer() {
       if (lead.section) bumpLeadCommentCount(lead.section.id, lead.id, 1);
       // Drop the cached hover preview so the next hover shows this new comment.
       invalidateActivity(lead.id);
+      // ADR-0092: the owner's comment moved their deadline; refresh the section.
+      if (lead.section && lead.owner?.id === authUser?.id) {
+        void fetchSectionLeads(lead.section.id);
+      }
     },
-    [lead, bumpLeadCommentCount, invalidateActivity],
+    [lead, bumpLeadCommentCount, invalidateActivity, authUser, fetchSectionLeads],
   );
 
   const handleToggleCalled = useCallback(async () => {
@@ -434,7 +443,12 @@ export function LeadDetailDrawer() {
           : null;
       setLead((prev) =>
         prev
-          ? { ...prev, calledAt: data.calledAt, calledBy: nextCalledBy }
+          ? {
+              ...prev,
+              calledAt: data.calledAt,
+              calledBy: nextCalledBy,
+              ownerDueAt: data.ownerDueAt,
+            }
           : prev,
       );
       // Reflect the new state on the board card immediately.
@@ -452,6 +466,17 @@ export function LeadDetailDrawer() {
       setMarking(false);
     }
   }, [lead, applyLeadUpdate, invalidateActivity, authUser]);
+
+  // ADR-0092: the owner changed in the drawer — keep the drawer and the card in step.
+  const handleOwnerChanged = useCallback(
+    (card: LeadCard) => {
+      setLead((prev) =>
+        prev ? { ...prev, owner: card.owner, ownerDueAt: card.ownerDueAt } : prev,
+      );
+      if (lead?.section) applyLeadUpdate(lead.section.id, card);
+    },
+    [lead, applyLeadUpdate],
+  );
 
   const handleCommentFailed = useCallback((tempId: string) => {
     setOptimisticComments((prev) =>
@@ -532,6 +557,8 @@ export function LeadDetailDrawer() {
                     value={format(parseISO(lead.createdAt), "dd.MM.yyyy")}
                   />
                 </div>
+
+                <LeadOwnerBlock lead={lead} onChanged={handleOwnerChanged} />
 
                 <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 p-3">
                   <div className="min-w-0">
