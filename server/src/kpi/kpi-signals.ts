@@ -54,7 +54,11 @@ const capped = (n: number) => Math.min(Math.max(n, 0), 99);
 /** The «Diqqat» block (spec §7.9): five rules, every signal with its numbers, at most five. */
 export function kpiSignals(
   users: readonly KpiSignalInput[],
-  opts: { isCurrentMonth: boolean },
+  opts: {
+    isCurrentMonth: boolean;
+    /** False while the compare month was not fully recorded (before KPI_START): rule 1 is then silent. */
+    compareRecorded: boolean;
+  },
 ): KpiSignal[] {
   const out: KpiSignal[] = [];
   const push = (
@@ -75,6 +79,7 @@ export function kpiSignals(
   for (const u of users) {
     // 1. ±30% against the compare month, at least 3 results in one of them.
     if (
+      opts.compareRecorded &&
       u.results !== u.compareResults &&
       Math.max(u.results, u.compareResults) >= 3
     ) {

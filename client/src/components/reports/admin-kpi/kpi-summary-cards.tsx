@@ -50,7 +50,7 @@ export function KpiSummaryCards({ data, isCurrent }: { data: KpiOverview; isCurr
             {c.forecast === null ? "—" : `≈ ${formatNumber(c.forecast)}`}
           </p>
           <p className="text-xs text-muted-foreground">
-            {c.forecast === null ? "oyning 3-ish kunidan ko'rinadi" : "natija, shu sur'at saqlansa"}
+            {c.forecast === null ? "hisob boshlangach 3-ish kunidan ko'rinadi" : "natija, shu sur'at saqlansa"}
           </p>
         </StatCard>
       )}

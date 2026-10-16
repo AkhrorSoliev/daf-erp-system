@@ -23,8 +23,8 @@ const u = (patch: Partial<KpiSignalInput>): KpiSignalInput => ({
   ...base,
   ...patch,
 });
-const past = { isCurrentMonth: false };
-const now = { isCurrentMonth: true };
+const past = { isCurrentMonth: false, compareRecorded: true };
+const now = { isCurrentMonth: true, compareRecorded: true };
 
 describe('kpiSignals (spec §7.9)', () => {
   it('1. a drop of 30% or more, when one of the months has at least 3 results', () => {
@@ -49,6 +49,13 @@ describe('kpiSignals (spec §7.9)', () => {
     expect(
       kpiSignals([u({ results: 3, compareResults: 0 })], past)[0].text,
     ).toBe('Nodira R: natijalar keskin oshdi — 0 → 3');
+  });
+
+  it('1. silent while the compare month was not fully recorded', () => {
+    const partial = { isCurrentMonth: true, compareRecorded: false };
+    expect(kpiSignals([u({ results: 4, compareResults: 0 })], partial)).toEqual(
+      [],
+    );
   });
 
   it('1. quiet under 30%, or under 3 results in both months', () => {

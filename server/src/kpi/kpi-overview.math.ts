@@ -38,6 +38,8 @@ export interface OverviewFacts {
   compare: string;
   /** Today ('YYYY-MM-DD', Tashkent) when `month` is the current month, else null. */
   today: string | null;
+  /** The compare month began on or after KPI_START, so all of it was recorded. */
+  compareRecorded: boolean;
   /** The month's results, every status. */
   monthResults: ResultFact[];
   /** The compare month's ACTIVE results. */
@@ -231,7 +233,7 @@ export function assembleOverview(f: OverviewFacts): OverviewBody {
       leadsReceived: r.leadToPaid.received,
       leadsPaid: r.leadToPaid.paid,
     })),
-    { isCurrentMonth: f.today !== null },
+    { isCurrentMonth: f.today !== null, compareRecorded: f.compareRecorded },
   );
 
   const lenM = daysIn(f.month);

@@ -85,6 +85,7 @@ function facts(over: Partial<OverviewFacts> = {}): OverviewFacts {
     ]),
     eligibleHolders: new Set([11, 13]),
     workingDays: workingDaysOfMonth('2026-10', () => false),
+    compareRecorded: true,
     recordingSinceDay: '2026-10-01',
     ...over,
   };

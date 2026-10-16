@@ -34,6 +34,7 @@ import {
 import { KpiSettingsService } from './kpi-settings.service';
 import {
   KPI_FIRST_MONTH,
+  KPI_START,
   explainKpi,
   isKpiEligible,
   recordingSince,
@@ -262,6 +263,7 @@ export class KpiReadService {
     const body = assembleOverview({
       month,
       compare,
+      compareRecorded: `${compare}-01` >= tashkentDateStr(KPI_START),
       today,
       monthResults,
       compareResults,

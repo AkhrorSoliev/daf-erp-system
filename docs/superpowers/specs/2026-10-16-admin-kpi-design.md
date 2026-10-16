@@ -364,7 +364,9 @@ bo'yicha tartiblangan.
 
 1. **Keskin oshdi / tushdi:** xodim natijalari soni taqqoslanayotgan oyga
    nisbatan ±30% va undan ko'p, ikki oydan kamida birida ≥ 3 natija. Joriy
-   oy — oyning shu kunigacha bo'lgan qismi bilan solishtiriladi.
+   oy — oyning shu kunigacha bo'lgan qismi bilan solishtiriladi. Taqqoslanayotgan
+   oy to'liq hisoblanmagan bo'lsa (17.10.2026 dan oldin boshlangan), bu qoida
+   jim turadi — u oyda natija yozilmagan kunlar bor edi.
 2. **Jim:** xodimda ≥ 3 band lid bor, oxirgi 7 kunda natija yo'q (faqat
    joriy oy).
 3. **Ko'p qaytish:** oyda qaytgan lidlar ≥ 3 va taqqoslanayotgan oydagidan
