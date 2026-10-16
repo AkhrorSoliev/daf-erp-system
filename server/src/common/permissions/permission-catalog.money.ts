@@ -275,4 +275,19 @@ export const MONEY_PERMISSIONS = {
     lockReasons: { [T]: LOCK.OWN_GROUPS },
     requires: [],
   },
+  // «Xodimlar KPI» (ADR-0094): in the observation month only the managers see
+  // it (CEO, 16.10.2026). `GET /kpi/overview` and `GET /kpi/users/:id` take
+  // `@BranchScope()`; `PATCH /kpi/settings` is `@CeoOnly()`.
+  'kpi.view': {
+    section: 'reports',
+    label: "Xodimlar KPI'sini ko'rish",
+    defaultRoles: [D],
+    allowedRoles: [D],
+    lockReasons: {
+      [A]: LOCK.LEADERS_ONLY,
+      [K]: LOCK.LEADERS_ONLY,
+      [T]: LOCK.NO_PAGE,
+    },
+    requires: [],
+  },
 } as const satisfies Record<string, PermissionDef>;
