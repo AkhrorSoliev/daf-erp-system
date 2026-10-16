@@ -57,3 +57,15 @@ describe("Dars baholari — faqat CEO", () => {
     }
   });
 });
+
+describe("Xodimlar KPI — kpi.view (ADR-0094)", () => {
+  it("CEO va filial direktori ochadi; administrator, o'qituvchi va kassir ochmaydi", () => {
+    for (const role of [1, 2]) {
+      expect(canOpenReportPath(canForRoles([role]), "/reports/xodimlar-kpi", [role])).toBe(true);
+    }
+    for (const role of [3, 4, 5]) {
+      expect(canOpenReportPath(canForRoles([role]), "/reports/xodimlar-kpi", [role])).toBe(false);
+    }
+    expect(routeLabels["xodimlar-kpi"]).toBe("Xodimlar KPI");
+  });
+});

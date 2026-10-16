@@ -104,3 +104,15 @@ describe("navItems — every role sees the same menu as before capabilities", ()
     expect(visible).toEqual(BEFORE[role]);
   });
 });
+
+describe("navItems — «Hisobotlar»", () => {
+  it("opens for kpi.view too, so a role given only the KPI page still reaches it (ADR-0094)", () => {
+    expect(navItems.find((item) => item.url === "/reports")?.permission).toEqual([
+      "reports.finance",
+      "reports.payments",
+      "reports.students",
+      "reports.leads",
+      "kpi.view",
+    ]);
+  });
+});
