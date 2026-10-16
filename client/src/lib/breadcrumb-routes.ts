@@ -47,6 +47,8 @@ export const routeLabels: Record<string, string> = {
   permissions: "Ruxsatlar",
   // /settings/lead-ownership — «Lidlar egaligi», CEO only (ADR-0093).
   "lead-ownership": "Lidlar egaligi",
+  // /settings/kpi — «KPI sozlamalari», CEO only (ADR-0094).
+  kpi: "KPI sozlamalari",
   tasks: "Topshiriqlar",
   notifications: "Bildirishnomalar",
   archive: "Arxiv",

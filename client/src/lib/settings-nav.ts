@@ -13,6 +13,7 @@ import {
   Smartphone,
   ShieldCheck,
   UserCheck,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import type { Can } from "./permission-check";
@@ -163,6 +164,14 @@ export const settingsNavSections: SettingsNavSection[] = [
         url: "/settings/lead-ownership",
         icon: UserCheck,
         description: "Lidni band qilish chegarasi va harakat muddatlari",
+        ceoOnly: true,
+      },
+      {
+        // The write is `@CeoOnly()` (ADR-0094): identity, not a capability.
+        title: "KPI sozlamalari",
+        url: "/settings/kpi",
+        icon: Trophy,
+        description: "KPI narxlari va hisoblash kaliti",
         ceoOnly: true,
       },
     ],
