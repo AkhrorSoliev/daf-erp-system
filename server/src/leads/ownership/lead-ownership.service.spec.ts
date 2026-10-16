@@ -8,7 +8,11 @@ import {
 import { LeadStatus } from '@prisma/client';
 import { CONCURRENT_CHANGE_MESSAGE } from '../../common/transaction-conflict';
 import { LEAD_OWNER_CHANGED } from '../lead-events';
-import { LeadOwnershipService } from './lead-ownership.service';
+import {
+  LeadOwnershipService,
+  liveOwnedLeadWhere,
+  ownershipLogBranchWhere,
+} from './lead-ownership.service';
 
 const FREE_LEAD = {
   id: 'L1',
@@ -555,5 +559,47 @@ describe('LeadOwnershipService.assignable', () => {
     await expect(s.service.assignable('L1', 1, [1])).resolves.toEqual([
       { id: 11, firstName: 'Nodira', lastName: 'R', photo: null },
     ]);
+  });
+});
+
+describe('ownership filters shared with the KPI page (ADR-0094)', () => {
+  it('a live owned lead: not deleted, not converted, in the branch or branch-less', () => {
+    expect(liveOwnedLeadWhere(1001, [2])).toEqual({
+      companyId: 1001,
+      deletedAt: null,
+      ownerId: { not: null },
+      statusEnum: { not: LeadStatus.CONVERTED },
+      AND: [{ OR: [{ branchId: { in: [2] } }, { branchId: null }] }],
+    });
+    expect(liveOwnedLeadWhere(1001, null).AND).toEqual([{}]);
+  });
+
+  it('a log row: in the branch or branch-less; everything for the CEO', () => {
+    expect(ownershipLogBranchWhere([2])).toEqual({
+      OR: [{ branchId: { in: [2] } }, { branchId: null }],
+    });
+    expect(ownershipLogBranchWhere(null)).toEqual({});
+  });
+
+  it('summary reads through the same filters', async () => {
+    const s = setup();
+    Object.assign(s.prisma, {
+      lead: { groupBy: jest.fn().mockResolvedValue([]) },
+      leadOwnershipLog: { groupBy: jest.fn().mockResolvedValue([]) },
+      user: { findMany: jest.fn().mockResolvedValue([]) },
+    });
+    await s.service.summary(1, [1], 'month');
+    const leadGroupBy = (
+      s.prisma as unknown as { lead: { groupBy: jest.Mock } }
+    ).lead.groupBy;
+    const logGroupBy = (
+      s.prisma as unknown as { leadOwnershipLog: { groupBy: jest.Mock } }
+    ).leadOwnershipLog.groupBy;
+    expect(leadGroupBy.mock.calls[0][0].where).toEqual(
+      liveOwnedLeadWhere(1, [1]),
+    );
+    expect(logGroupBy.mock.calls[0][0].where).toEqual(
+      expect.objectContaining(ownershipLogBranchWhere([1])),
+    );
   });
 });

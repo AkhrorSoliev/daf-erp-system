@@ -85,6 +85,33 @@ export function untouchedWhere(
   };
 }
 
+/**
+ * A lead held now: owned, not archived, not converted, in the scope or with
+ * no branch (a branch-less lead is everyone's, as on the board). Shared by
+ * `summary` and the KPI page (ADR-0094), so «band lid» means one thing.
+ */
+export function liveOwnedLeadWhere(
+  companyId: number,
+  scope: ReportBranchIds,
+): Prisma.LeadWhereInput {
+  return {
+    companyId,
+    deletedAt: null,
+    ownerId: { not: null },
+    statusEnum: { not: LeadStatus.CONVERTED },
+    AND: [leadBranchWhere(scope)],
+  };
+}
+
+/** An ownership log row in the scope, or with no branch; the CEO reads them all. */
+export function ownershipLogBranchWhere(
+  scope: ReportBranchIds,
+): Prisma.LeadOwnershipLogWhereInput {
+  return scope == null
+    ? {}
+    : { OR: [{ branchId: { in: scope } }, { branchId: null }] };
+}
+
 export interface OwnerSummaryRow {
   userId: number;
   name: string;
@@ -100,7 +127,7 @@ export interface OwnerSummaryRow {
 
 const STAFF_ROLE_NAMES = ['CEO', 'Branch Director', 'Administrator', 'Cashier'];
 
-const fullName = (u: { firstName: string; lastName: string }) =>
+export const fullName = (u: { firstName: string; lastName: string }) =>
   `${u.firstName} ${u.lastName}`.trim();
 
 const takenMessage = (owner: { firstName: string; lastName: string } | null) =>
@@ -343,17 +370,8 @@ export class LeadOwnershipService {
     period: LeadStatsPeriod,
   ): Promise<{ period: LeadStatsPeriod; rows: OwnerSummaryRow[] }> {
     const range = leadStatsRange(period, new Date());
-    const live: Prisma.LeadWhereInput = {
-      companyId,
-      deletedAt: null,
-      ownerId: { not: null },
-      statusEnum: { not: LeadStatus.CONVERTED },
-      AND: [leadBranchWhere(scope)],
-    };
-    const logBranch: Prisma.LeadOwnershipLogWhereInput =
-      scope == null
-        ? {}
-        : { OR: [{ branchId: { in: scope } }, { branchId: null }] };
+    const live = liveOwnedLeadWhere(companyId, scope);
+    const logBranch = ownershipLogBranchWhere(scope);
     const [held, untouched, taken, expired] = await Promise.all([
       this.prisma.lead.groupBy({
         by: ['ownerId'],
