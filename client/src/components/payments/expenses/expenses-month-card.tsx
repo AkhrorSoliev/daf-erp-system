@@ -75,16 +75,16 @@ export function ExpensesMonthCard({ summary, selected, onToggle }: {
                     <span className={cn(PILL_BASE, "bg-amber-500/25 text-foreground")}>yozilmagan</span>
                   ) : r.amount > 0 ? (
                     <>
-                      <span className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
+                      <span className="h-1.5 w-12 shrink-0 overflow-hidden sm:w-24 rounded-full bg-muted">
                         <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.round((r.amount / max) * 100)}%` }} />
                       </span>
-                      <span className="tabular-nums">{mln(r.amount)}</span>
+                      <span className="whitespace-nowrap tabular-nums">{mln(r.amount)}</span>
                     </>
                   ) : (
                     <Muted0 />
                   )}
                 </span>
-                <span className="text-right tabular-nums">{r.lastMonthAmount > 0 ? mln(r.lastMonthAmount) : <Muted0 />}</span>
+                <span className="whitespace-nowrap text-right tabular-nums">{r.lastMonthAmount > 0 ? mln(r.lastMonthAmount) : <Muted0 />}</span>
               </button>
             );
           })}

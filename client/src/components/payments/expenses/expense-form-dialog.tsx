@@ -132,7 +132,7 @@ export function ExpenseFormDialog({
         </DialogHeader>
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-2">
-            <Label>Kategoriya</Label>
+            <Label>Turkum</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger>
                 <SelectValue />
