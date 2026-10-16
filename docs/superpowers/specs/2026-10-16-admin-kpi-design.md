@@ -1,7 +1,9 @@
 # Adminlar KPI tizimi
 
 **Sana:** 2026-10-16
-**Holati:** CEO bilan kelishildi (16.10, «Ma'qul, hujjatni yozib 1-bosqichdan boshla»)
+**Holati:** CEO bilan kelishildi (16.10, «Ma'qul, hujjatni yozib 1-bosqichdan boshla»).
+1-bosqich PRODDA (16.10, PR #714, ADR-0093). 2-bosqich kelishildi (16.10,
+«Ha, ma'qul, hujjatni yozib boshla») — §7.
 **Bog'liq:** ADR-0007 (lavozim ≠ rol), ADR-0054 («Dars bo'ldimi?»),
 ADR-0079 / ADR-0087 (ruxsatlar), spec `2026-10-07-topshiriqlar-design.md`.
 
@@ -93,7 +95,7 @@ davomat belgilash, qo'ng'iroq va izoh soni.
 Har bosqich oldidan hal qilinadigan savollar:
 
 - **2-bosqich:** KPI kimga beriladi (administrator, kassir?); narxlar;
-  qaytib kelgan eski o'quvchining lidi hisoblanadimi.
+  qaytib kelgan eski o'quvchining lidi hisoblanadimi. — Hal qilindi, §7.1.
 - **3-bosqich:** qaysi oydan boshlanadi.
 - **4-bosqich:** bajarilmagan shart KPI'ni qanchaga kamaytiradi.
 
@@ -190,3 +192,215 @@ Hisobot va keyingi bosqichlar shu jadvaldan o'qiydi. Har yozuv lidning
 
 ADR-0093 «Lidning bitta egasi bor: xodim band qiladi, muddatda harakat
 qilmasa lid qaytadi» — shu PR bilan.
+
+## 7. 2-bosqich — KPI hisobi (pulsiz kuzatuv)
+
+Pul yo'q. Natija bo'lganda yozuv qilinadi, summa o'sha paytdagi narxda
+muhrlanadi; CEO va filial direktori «Xodimlar KPI» sahifasida va xodim
+sahifasida kim qancha natija qilganini, o'sish va kamayishni ko'radi. Bir oy
+kuzatiladi, keyin 3-bosqichda shu yozuvlar oylikka o'tadi.
+
+### 7.1 Qarorlar (CEO, 16.10 — qayta so'ralmaydi)
+
+1. **KPI faqat administratorlarga.** Natija paytida egasi (lid) yoki
+   yozuvchisi (va'da) Administrator roliga ega va CEO hamda Filial direktori
+   rollari yo'q bo'lsa — yoziladi. CEO, direktor, kassir natijasi yozilmaydi
+   (CEO qo'lda qo'shgan lid ham).
+2. **Narx:** har natija turi uchun qat'iy summa yoki foiz, Sozlamalarda
+   o'zgaradi. Boshlang'ich: «Lid to'lov qildi» — 50 000 so'm, «Va'da
+   bajarildi» — 20 000 so'm (ikkalasi qat'iy). Foiz bazasi: lid — birinchi
+   to'lov summasi; va'da — va'da paytidagi qarz.
+3. **Eski o'quvchiga bog'langan lid:** bog'lash paytida o'qimayotgan bo'lsa —
+   hisoblanadi (ketganni qaytardi); o'qiyotgan bo'lsa — yo'q.
+4. **Ko'radi:** CEO (hamma filial) va filial direktori (o'z filiali).
+   Administratorning o'zi kuzatuv paytida ko'rmaydi.
+5. **Natija darhol yoziladi, summa muhrlanadi.** Narx o'zgarsa — faqat
+   keyingi natijalarga ta'sir qiladi.
+6. **Xodim sahifasida «KPI» yorlig'i** — oylikdan alohida, har natija qanday
+   hisoblangani bilan.
+7. **Yoqish/o'chirish kaliti** (faqat CEO).
+8. **Taqqoslash va diagrammalar, «Diqqat» bloki** — qoidaga asoslangan,
+   har ogohlantirish raqam bilan.
+9. **Hisob 17.10.2026 00:00 (Toshkent) dan** — 1-bosqich shu kuni 00:55 da
+   chiqdi, lid egalari o'shandan beri bor.
+
+### 7.2 Natija turlari
+
+**`LEAD_PAID` — lid to'lov qildi**
+
+- Lid `CONVERTED`, aylanish paytida `ownerId` bor (aylangan lidning egasi
+  qotgan — ADR-0093). Natija shu egaga.
+- Aylanish turi lidga yoziladi — yangi `Lead.conversionKind`:
+  `NEW_STUDENT` (lid'dan yangi o'quvchi ochildi), `RETURNING` (mavjud
+  o'quvchiga bog'landi, o'sha payt `activeStudentWhere()` bo'yicha
+  o'qimayotgan edi), `ALREADY_STUDYING` (o'qiyotgan o'quvchiga bog'landi —
+  natija yo'q).
+- Natija — o'quvchining aylanishdan (`Lead.statusChangedAt`) keyingi **eng
+  birinchi `COMPLETED` to'lovi**. Bitta lidga bitta faol natija; bitta to'lov
+  faqat bitta `LEAD_PAID` natijaga asos bo'ladi.
+- Egasi yo'q yoki aylanish `KPI_START` dan oldin bo'lgan lid — natija yo'q.
+
+**`PROMISE_KEPT` — to'lov va'dasi bajarildi**
+
+- Mavjud qoida: to'lovdan keyin balans ≥ 0 bo'lsa `OPEN` va'da `KEPT`
+  bo'ladi (`settleKeptPromises`). Va'da `createdById` ga natija.
+- Va'dani `KEPT` qilgan to'lov yangi `PaymentPromise.resolvedPaymentId`
+  maydoniga yoziladi (o'sha tranzaksiyada) — natija shu to'lovga bog'lanadi.
+- Har va'daga bitta faol natija. Baza (foiz uchun) = `−balanceAtPromise`
+  (manfiy bo'lmasa — 0).
+
+**Ikkalasi uchun**
+
+- Natija oyi — to'lov `createdAt` ning Toshkent oyi.
+- 7.1/1-qoida natija yoziladigan paytda bazadan o'qiladi (rollar
+  `whereUserMayAct()` bilan). Keyin lavozim o'zgarsa — yozuv qoladi.
+- Kalit o'chiq bo'lsa yangi natija yozilmaydi; o'chiq davr keyin
+  to'ldirilmaydi.
+
+### 7.3 Bekor qilish va ko'chirish
+
+- To'lov bekor qilinsa (`payment.reversed`): shu to'lovga bog'langan faol
+  natijalar `CANCELLED` (sabab «To'lov bekor qilindi», vaqt). `LEAD_PAID`
+  uchun so'ng lid qayta ko'riladi: aylanishdan keyin boshqa `COMPLETED`
+  to'lov bo'lsa, eng birinchisi yangi natija bo'ladi.
+- To'lov summasi tuzatilsa (yangi to'lovda `correctsPaymentId`): eski
+  to'lovdagi natija `CANCELLED` (sabab «To'lov tuzatildi»), yangi to'lovga
+  yangi natija yoziladi — eski natijaning muhrlangan qoidasi bilan (foiz
+  bo'lsa — yangi summadan). `PROMISE_KEPT` shu yo'l bilan yo'qolmaydi.
+- Bekor qilish kalit o'chiq bo'lsa ham ishlaydi.
+
+### 7.4 Narx va kalit — Sozlamalar → «KPI sozlamalari» (faqat CEO)
+
+Kompaniya darajasidagi sozlamalar (`SETTING_DEFINITIONS`):
+
+| Kalit | Qiymat | Boshlang'ich |
+| --- | --- | --- |
+| `kpi.enabled` | ha/yo'q | ha |
+| `kpi.leadPaid.mode` | `FIXED` / `PERCENT` | `FIXED` |
+| `kpi.leadPaid.value` | so'm 0–10 000 000 yoki foiz 0–100 | 50 000 |
+| `kpi.promiseKept.mode` | `FIXED` / `PERCENT` | `FIXED` |
+| `kpi.promiseKept.value` | so'm 0–10 000 000 yoki foiz 0–100 | 20 000 |
+
+Foiz summasi = `round(baza × foiz / 100)`, so'mga yaxlitlanadi. Kalit
+o'zgarganda vaqti ham saqlanadi — sahifa «KPI hisoblash o'chiq (dd.mm dan)»
+deb yozadi. Yozish `@CeoOnly()`.
+
+### 7.5 Ma'lumot modeli
+
+`KpiResult` (faqat `KpiResultsService` yozadi — bitta eshik, spec testi
+bilan):
+
+`id, companyId, branchId, userId (natija egasi), type (LEAD_PAID |
+PROMISE_KEPT), leadId?, promiseId?, studentId, paymentId, paymentAmount,
+baseAmount, ruleMode, ruleValue, amount, month ('YYYY-MM'), occurredAt (to'lov
+vaqti), status (ACTIVE | CANCELLED), cancelledAt?, cancelReason?,
+replacesResultId?, createdAt`.
+
+- `branchId` — lidning filiali (`LEAD_PAID`) yoki va'daning filiali
+  (`PROMISE_KEPT`; bo'sh bo'lsa — o'quvchining filiali).
+- Qisman unikal indekslar (`status = 'ACTIVE'`): `(leadId)` LEAD_PAID uchun,
+  `(paymentId)` LEAD_PAID uchun, `(promiseId)` PROMISE_KEPT uchun.
+- `Lead.conversionKind` (yangi enum), `PaymentPromise.resolvedPaymentId`.
+
+### 7.6 Qachon yoziladi
+
+- `payment.received` (commit'dan keyin) → `KpiRecorder`: shu o'quvchining
+  `LEAD_PAID` va shu to'lov `KEPT` qilgan `PROMISE_KEPT` natijalarini
+  tekshirib yozadi. `payment.reversed` → bekor qilish (7.3).
+- Xato to'lovni to'xtatmaydi (log). **Har kecha 03:30 (Toshkent)** shu
+  funksiya oxirgi 2 kun to'lovlarini qayta ko'radi — o'tkazib yuborilgan
+  hodisani o'zi tuzatadi. Hammasi idempotent (unikal indekslar).
+- Deploydan keyin bir marta `scripts/kpi-backfill.ts` (`--apply` siz — faqat
+  ko'rsatadi) `KPI_START` dan beri hammasini shu funksiya bilan yozadi.
+  `KPI_START` dan keyin aylangan lidlarning `conversionKind` i aylanish
+  paytidagi holatdan (`enrollmentStatusOn`) tiklanadi.
+
+### 7.7 «Xodimlar KPI» sahifasi — Hisobotlar → `/reports/xodimlar-kpi`
+
+- **Oy** (`?oy=YYYY-MM`, joriy oy sukut, eng kichigi 2026-10) va
+  **taqqoslash** (`?bilan=` — sukut o'tgan oy).
+- **Kalit holati** qatori va «Kuzatuv: pul hali berilmaydi».
+- **Kartalar** (har biri ▲/▼ taqqoslash bilan): Natijalar (soni);
+  Berilganda bo'lardi (summa); Lid → to'lov (%); Oy oxiriga taxmin (faqat
+  joriy oy, «≈», oyning 3-ish kunidan keyin).
+- **«Diqqat»** — 7.9.
+- **«Oy davomida»** — kunlar bo'yicha yig'ma natijalar soni: tanlangan oy va
+  taqqoslanayotgan oy (oy kuni bo'yicha tekislangan) — ikki chiziq.
+- **«Oylar bo'yicha»** — oxirgi 6 oy (2026-10 dan oldin yo'q), ustunda
+  lid va va'da qismlari.
+- **Jadval** — har administrator (oyda natijasi yoki band lidi bor):
+  Lid to'lov qildi (soni · summa · ▲▼), Va'da bajarildi (soni · summa · ▲▼),
+  Lid → to'lov %, Va'da bajarilishi %, Qaytgan lidlar (▲▼), Jami summa.
+  Sahifalanmaydi (jamoa bir qarashda — oylik jadvali kabi). Qator bosilsa —
+  o'sha xodim natijalari oynasi (`?xodim=`).
+- Bekor qilingan natija summaga kirmaydi, oynada ustidan chizilgan holda,
+  sababi bilan.
+
+Ko'rsatkichlar ta'rifi (oy M, xodim U):
+
+- **Lid → to'lov:** M oyida U ga kelgan lidlar (`LeadOwnershipLog` CLAIM yoki
+  ASSIGN, `toUserId = U`, alohida `leadId`) dan nechtasida U ning faol
+  `LEAD_PAID` natijasi bor. Joriy oyda hali to'lamaganlar ham maxrajda —
+  sahifada izoh.
+- **Va'da bajarilishi:** U yozgan, va'da kuni M ga tushgan va'dalar:
+  `KEPT / (KEPT + BROKEN)`; `OPEN` kirmaydi.
+- **Qaytgan lidlar:** `LeadOwnershipLog` EXPIRE, `fromUserId = U`, M ichida.
+
+### 7.8 Xodim sahifasi — «KPI» yorlig'i (`/settings/employees/[id]?tab=kpi`)
+
+- Administrator roli bor yoki KPI natijasi bor xodimda ko'rinadi;
+  ruxsat va filial — 7.10.
+- Oy tanlash; «{Oy} KPI: X so'm» + «Oylikka qo'shilmaydi — kuzatuv»; ▲▼
+  o'tgan oy bilan; oxirgi 6 oy chizig'i.
+- Natijalar jadvali: sana, natija, «Qanday hisoblandi» (serverdan:
+  «birinchi to'lov 600 000 × 5%», «qarz 400 000 × 5%» yoki «qat'iy summa»),
+  summa. Bekor qilingan — ustidan chizilgan + sabab.
+
+### 7.9 «Diqqat» — qoidalar
+
+Server hisoblaydi (sof funksiya `kpiSignals`, testlar bilan), mijoz faqat
+chizadi. Har signal raqamlari bilan keladi; eng ko'pi 5 ta, og'irligi
+bo'yicha tartiblangan.
+
+1. **Keskin oshdi / tushdi:** xodim natijalari soni taqqoslanayotgan oyga
+   nisbatan ±30% va undan ko'p, ikki oydan kamida birida ≥ 3 natija. Joriy
+   oy — oyning shu kunigacha bo'lgan qismi bilan solishtiriladi.
+2. **Jim:** xodimda ≥ 3 band lid bor, oxirgi 7 kunda natija yo'q (faqat
+   joriy oy).
+3. **Ko'p qaytish:** oyda qaytgan lidlar ≥ 3 va taqqoslanayotgan oydagidan
+   ko'p.
+4. **Va'da past:** va'da bajarilishi < 30%, kamida 5 ta yopilgan va'da.
+5. **Eng yaxshi ulush:** eng yuqori «Lid → to'lov» (kamida 5 ta kelgan lid
+   bilan) — ijobiy signal.
+
+**Oy oxiri taxmini** (karta, signal emas): joriy oy natijalari ÷ o'tgan ish
+kunlari × oyning ish kunlari (du–sha, kompaniya bayramlarisiz), butun songa
+yaxlitlanadi.
+
+### 7.10 Ruxsatlar va yo'llar
+
+- Yangi ruxsat `kpi.view` («Xodimlar KPI'sini ko'rish»): boshlang'ich CEO,
+  Filial direktori; berilishi mumkin — faqat Direktor (Administrator, Kassir
+  — qulf: kuzatuv bosqichida faqat rahbarlar ko'radi).
+- Direktor faqat o'z filiali natijalari va xodimlarini ko'radi
+  (`@BranchScope()`).
+- `GET /kpi/overview?month&compare`, `GET /kpi/users/:id?month`,
+  `GET /kpi/settings` (`kpi.view`), `PATCH /kpi/settings` (`@CeoOnly()`).
+
+### 7.11 Oldindan tuzatish
+
+Umumiy `/archive` tiklash (`ArchiveRestoreService`) `CONVERTED` lidni `NEW`
+qilib yozadi va egasini bo'shatadi. `convertedStudentId` bor lid `CONVERTED`
+holicha, egasi bilan tiklanadi (`restore-release.ts` qoidasi bilan bir xil).
+
+### 7.12 Bu bosqichga kirmaydi
+
+- Pul: oylik qatori, kassa, foyda hisoboti — 3-bosqich.
+- Administrator o'z KPI'sini ko'rishi.
+- Shartlar (§4, 3–6) — 4-bosqich; «Qaytgan lidlar» faqat ma'lumot.
+- Sun'iy intellekt yozadigan xulosa; Telegram xabarlari.
+
+### 7.13 ADR
+
+ADR-0094 «KPI natijasi: administratorga, bir marta, summa muhrlanadi» — shu
+PR bilan.
