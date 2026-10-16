@@ -25,29 +25,16 @@ import {
 } from "@/components/ui/select";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import {
-  EXPENSE_CATEGORY_LABELS,
-  EXPENSE_METHOD_LABELS,
-} from "./expenses-filter-bar";
-
-export interface Expense {
-  id: string;
-  category: string;
-  paymentMethod: "CASH" | "CARD";
-  amount: number;
-  description: string;
-  date: string;
-  branchId: number | null;
-  relatedUserId?: number | null;
-  createdAt: string;
-  createdBy: { id: number; firstName: string; lastName: string };
-}
+import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, EXPENSE_METHOD_LABELS } from "./expenses-labels";
+import type { ExpensePreset, ExpenseRow } from "./expenses-types";
 
 interface ExpenseFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** When provided the dialog is in edit mode; otherwise it creates. */
-  expense?: Expense | null;
+  /** Edit mode when given; otherwise it creates. */
+  expense?: ExpenseRow | null;
+  /** «Yozish» (spec B6 §3.3, §3.7): category, the missing amount, description and branch filled in; its branch wins over the header's. */
+  preset?: ExpensePreset | null;
   branchId?: number;
   onSaved: () => void;
 }
@@ -56,12 +43,13 @@ export function ExpenseFormDialog({
   open,
   onOpenChange,
   expense,
+  preset,
   branchId,
   onSaved,
 }: ExpenseFormDialogProps) {
   const isEdit = !!expense;
 
-  const [category, setCategory] = useState("OTHER");
+  const [category, setCategory] = useState<string>("OTHER");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD">("CASH");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -79,13 +67,13 @@ export function ExpenseFormDialog({
       setDescription(expense.description);
       setDate(new Date(expense.date));
     } else {
-      setCategory("OTHER");
+      setCategory(preset?.category ?? "OTHER");
       setPaymentMethod("CASH");
-      setAmount("");
-      setDescription("");
+      setAmount(preset ? preset.amount.toLocaleString("uz-UZ") : "");
+      setDescription(preset?.description ?? "");
       setDate(new Date());
     }
-  }, [open, expense]);
+  }, [open, expense, preset]);
 
   const rawAmount = parseInt(amount.replace(/\D/g, ""), 10) || 0;
 
@@ -96,6 +84,7 @@ export function ExpenseFormDialog({
 
   const handleSubmit = async () => {
     if (rawAmount < 1 || !description.trim() || !date) return;
+    const targetBranchId = preset?.branchId ?? branchId;
     setSubmitting(true);
     try {
       const payload = {
@@ -112,11 +101,11 @@ export function ExpenseFormDialog({
       } else {
         // Every expense belongs to exactly one branch — a branch-less one
         // would sit in no branch's profit calculation at all.
-        if (!branchId) {
+        if (!targetBranchId) {
           toast.error("Avval filialni tanlang — xarajat filialsiz saqlanmaydi");
           return;
         }
-        await api.post("/expenses", { ...payload, branchId });
+        await api.post("/expenses", { ...payload, branchId: targetBranchId });
         toast.success("Xarajat qayd qilindi");
       }
       onOpenChange(false);
@@ -149,9 +138,9 @@ export function ExpenseFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
+                {EXPENSE_CATEGORIES.map((k) => (
                   <SelectItem key={k} value={k}>
-                    {v}
+                    {EXPENSE_CATEGORY_LABELS[k]}
                   </SelectItem>
                 ))}
               </SelectContent>
