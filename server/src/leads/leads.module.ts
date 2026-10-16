@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { StudentsModule } from '../students/students.module';
+import { SettingsModule } from '../settings/settings.module';
 import { LeadsController } from './leads.controller';
 import { LeadColumnsController } from './lead-columns.controller';
 import { LeadSectionsController } from './lead-sections.controller';
@@ -11,9 +12,10 @@ import { LeadsStatsService } from './leads-stats.service';
 import { LeadColumnsService } from './lead-columns.service';
 import { LeadSectionsService } from './lead-sections.service';
 import { LeadSourcesService } from './lead-sources.service';
+import { LeadOwnershipService } from './ownership/lead-ownership.service';
 
 @Module({
-  imports: [StudentsModule],
+  imports: [StudentsModule, SettingsModule],
   controllers: [
     LeadsController,
     LeadColumnsController,
@@ -28,7 +30,8 @@ import { LeadSourcesService } from './lead-sources.service';
     LeadColumnsService,
     LeadSectionsService,
     LeadSourcesService,
+    LeadOwnershipService,
   ],
-  exports: [LeadsService],
+  exports: [LeadsService, LeadOwnershipService],
 })
 export class LeadsModule {}

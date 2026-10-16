@@ -7,6 +7,7 @@ import { NotificationsGateway } from './notifications.gateway';
 import { NotificationEventsListener } from './notification-events.listener';
 import { NotificationResolverService } from './notification-resolver.service';
 import { PushService } from './push.service';
+import { LeadOwnerNotifyListener } from './lead-owner-notify.listener';
 
 @Module({
   imports: [TelegramModule, TelegramDigestModule],
@@ -15,6 +16,7 @@ import { PushService } from './push.service';
     NotificationsService,
     NotificationsGateway,
     NotificationEventsListener,
+    LeadOwnerNotifyListener,
     NotificationResolverService,
     PushService,
   ],
