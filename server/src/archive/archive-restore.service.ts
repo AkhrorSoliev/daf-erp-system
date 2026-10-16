@@ -133,9 +133,11 @@ export class ArchiveRestoreService {
         deletedAt: null,
         deletedById: null,
         deletionBatchId: null,
-        // A converted lead keeps the moment and the marker of its conversion.
+        // A converted lead keeps the moment and the marker of its conversion;
+        // a stale lost-reason goes and the legacy status string follows
+        // (as LeadsArchiveService does).
         ...(keepsConversion
-          ? {}
+          ? { lostReason: null, status: 'converted' }
           : {
               statusChangedAt: new Date(),
               statusChangedById: userId,

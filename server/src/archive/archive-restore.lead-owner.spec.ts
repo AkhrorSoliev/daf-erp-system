@@ -147,6 +147,7 @@ describe('ArchiveRestoreService: owner of a restored lead (ADR-0093)', () => {
       expect(prisma.lead.update).toHaveBeenCalledTimes(1);
       const data = prisma.lead.update.mock.calls[0][0].data;
       expect(data).toMatchObject({ deletedAt: null, statusEnum: 'CONVERTED' });
+      expect(data).toMatchObject({ lostReason: null, status: 'converted' });
       expect(data).not.toHaveProperty('ownerId');
       expect(data).not.toHaveProperty('statusChangedAt');
       expect(data).not.toHaveProperty('statusChangedById');
