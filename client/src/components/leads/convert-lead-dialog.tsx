@@ -70,6 +70,8 @@ export function ConvertLeadDialog() {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  const [groupsFailed, setGroupsFailed] = useState(false);
+  const [groupsReload, setGroupsReload] = useState(0);
   const [groupSearch, setGroupSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -95,6 +97,7 @@ export function ConvertLeadDialog() {
     }
     let cancelled = false;
     setLoadingGroups(true);
+    setGroupsFailed(false);
     (async () => {
       try {
         const { data } = await api.get("/groups", {
@@ -105,7 +108,10 @@ export function ConvertLeadDialog() {
         );
         if (!cancelled) setGroups(enrollable);
       } catch {
-        if (!cancelled) setGroups([]);
+        if (!cancelled) {
+          setGroups([]);
+          setGroupsFailed(true);
+        }
       } finally {
         if (!cancelled) setLoadingGroups(false);
       }
@@ -113,7 +119,7 @@ export function ConvertLeadDialog() {
     return () => {
       cancelled = true;
     };
-  }, [open, branchId]);
+  }, [open, branchId, groupsReload]);
 
   const filteredGroups = useMemo(() => {
     const q = groupSearch.trim().toLowerCase();
@@ -231,6 +237,20 @@ export function ConvertLeadDialog() {
                         <Skeleton className="h-3 w-40" />
                       </div>
                     ))
+                  ) : groupsFailed ? (
+                    <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Yuklab bo&apos;lmadi
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setGroupsReload((k) => k + 1)}
+                      >
+                        Qayta urinish
+                      </Button>
+                    </div>
                   ) : filteredGroups.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-6 text-center">
                       <Users className="mb-2 size-7 text-muted-foreground/40" />

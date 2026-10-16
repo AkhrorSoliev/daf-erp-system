@@ -77,6 +77,7 @@ export function LeadAdditionalFields({
           <TooltipTrigger asChild>
             <button
               type="button"
+              aria-label="Zaxira raqam"
               onClick={toggle}
               className={cn(
                 "inline-flex size-9 items-center justify-center rounded-lg border transition-colors",

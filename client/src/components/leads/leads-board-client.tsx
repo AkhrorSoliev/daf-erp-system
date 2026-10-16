@@ -58,12 +58,15 @@ export function LeadsBoardClient() {
   const filtering = leadFiltersActive(filters);
 
   return (
-    <div className="flex h-[calc(100svh-6.5rem)] flex-col gap-4 sm:h-[calc(100svh-8.5rem)]">
-      <div className="flex shrink-0 items-center justify-between gap-3">
+    // The page itself scrolls: the stats and owners strips above can be tall
+    // (they wrap on narrow screens), so a fixed-height page left the list or
+    // board a sliver with its own scrollbar and no way to scroll the page.
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Lidlarni ustun va bo&apos;limlar bo&apos;yicha boshqaring
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button asChild size="sm" variant="ghost">
             <Link href="/leads/forms">
               <FileEdit className="size-4" />
@@ -95,24 +98,22 @@ export function LeadsBoardClient() {
         </div>
       </div>
 
-      <div className="shrink-0 space-y-3">
+      <div className="space-y-3">
         <LeadsStatsStrip />
         <LeadOwnersStrip />
       </div>
 
-      <div className="shrink-0">
-        <LeadsFilterBar />
-      </div>
+      <LeadsFilterBar />
 
-      <div className="min-h-0 flex-1">
-        {filtering ? (
-          <div className="h-full overflow-y-auto">
-            <LeadsList />
-          </div>
-        ) : (
+      {filtering ? (
+        <LeadsList />
+      ) : (
+        // The board keeps a viewport-tall box: its columns scroll inside it,
+        // and the page scrolls down to it past the strips.
+        <div className="h-[calc(100svh-6.5rem)] min-h-[24rem] sm:h-[calc(100svh-8.5rem)]">
           <LeadsBoard />
-        )}
-      </div>
+        </div>
+      )}
 
       <AddLeadDrawer />
       <EditLeadDrawer />

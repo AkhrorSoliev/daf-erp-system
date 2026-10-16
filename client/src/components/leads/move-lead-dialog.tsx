@@ -63,6 +63,8 @@ export function MoveLeadDialog() {
       sections: col.sections.filter((s) => s.id !== moveTarget?.sectionId),
     }))
     .filter((col) => col.sections.length > 0);
+  // On "Barcha filiallar" column names repeat across branches — prefix them.
+  const showBranch = new Set(board.map((c) => c.branchId)).size > 1;
 
   return (
     <Dialog
@@ -86,7 +88,11 @@ export function MoveLeadDialog() {
             <SelectContent>
               {columns.map((col) => (
                 <SelectGroup key={col.id}>
-                  <SelectLabel>{col.name}</SelectLabel>
+                  <SelectLabel>
+                    {showBranch && col.branch
+                      ? `${col.branch.name} · ${col.name}`
+                      : col.name}
+                  </SelectLabel>
                   {col.sections.map((sec) => (
                     <SelectItem key={sec.id} value={sec.id}>
                       {sec.name}
