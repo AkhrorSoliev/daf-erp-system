@@ -12,6 +12,7 @@ import { LeadsStatsService } from './leads-stats.service';
 import { LeadColumnsService } from './lead-columns.service';
 import { LeadSectionsService } from './lead-sections.service';
 import { LeadSourcesService } from './lead-sources.service';
+import { LeadOwnershipController } from './ownership/lead-ownership.controller';
 import { LeadOwnershipService } from './ownership/lead-ownership.service';
 import { LeadOwnerTaskListener } from './ownership/lead-owner-task.listener';
 import { LeadOwnershipCron } from './ownership/lead-ownership.cron';
@@ -19,6 +20,7 @@ import { LeadOwnershipCron } from './ownership/lead-ownership.cron';
 @Module({
   imports: [StudentsModule, SettingsModule],
   controllers: [
+    LeadOwnershipController,
     LeadsController,
     LeadColumnsController,
     LeadSectionsController,

@@ -24,6 +24,8 @@ import {
   rethrowAsConflict,
 } from '../../common/transaction-conflict';
 import { leadBranchWhere } from '../shared/lead-scope';
+import { leadStatsRange } from '../leads-stats.service';
+import type { LeadStatsPeriod } from '../dto/lead-stats-query.dto';
 import {
   LEAD_OWNER_CHANGED,
   type LeadOwnerChangedPayload,
@@ -82,6 +84,21 @@ export function untouchedWhere(
     statusEnum: { not: LeadStatus.CONVERTED },
   };
 }
+
+export interface OwnerSummaryRow {
+  userId: number;
+  name: string;
+  /** Leads held now (not converted, not archived). */
+  held: number;
+  /** Of them, with no action yet. */
+  untouched: number;
+  /** Claimed or given in the period. */
+  taken: number;
+  /** Taken back by the system in the period. */
+  expired: number;
+}
+
+const STAFF_ROLE_NAMES = ['CEO', 'Branch Director', 'Administrator', 'Cashier'];
 
 const fullName = (u: { firstName: string; lastName: string }) =>
   `${u.firstName} ${u.lastName}`.trim();
@@ -294,6 +311,132 @@ export class LeadOwnershipService {
       return c;
     });
     this.emit(change);
+  }
+
+  /** «Kimda nechta lid» (ADR-0092): live holdings plus the period's log. */
+  async summary(
+    companyId: number,
+    scope: ReportBranchIds,
+    period: LeadStatsPeriod,
+  ): Promise<{ period: LeadStatsPeriod; rows: OwnerSummaryRow[] }> {
+    const range = leadStatsRange(period, new Date());
+    const live: Prisma.LeadWhereInput = {
+      companyId,
+      deletedAt: null,
+      ownerId: { not: null },
+      statusEnum: { not: LeadStatus.CONVERTED },
+      AND: [leadBranchWhere(scope)],
+    };
+    const logBranch: Prisma.LeadOwnershipLogWhereInput =
+      scope == null
+        ? {}
+        : { OR: [{ branchId: { in: scope } }, { branchId: null }] };
+    const [held, untouched, taken, expired] = await Promise.all([
+      this.prisma.lead.groupBy({
+        by: ['ownerId'],
+        where: live,
+        _count: { _all: true },
+      }),
+      this.prisma.lead.groupBy({
+        by: ['ownerId'],
+        where: { ...live, ownerActedAt: null },
+        _count: { _all: true },
+      }),
+      this.prisma.leadOwnershipLog.groupBy({
+        by: ['toUserId'],
+        where: {
+          companyId,
+          kind: { in: ['CLAIM', 'ASSIGN'] },
+          createdAt: range,
+          ...logBranch,
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.leadOwnershipLog.groupBy({
+        by: ['fromUserId'],
+        where: { companyId, kind: 'EXPIRE', createdAt: range, ...logBranch },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const rows = new Map<number, OwnerSummaryRow>();
+    const row = (userId: number) => {
+      let r = rows.get(userId);
+      if (!r) {
+        r = { userId, name: '', held: 0, untouched: 0, taken: 0, expired: 0 };
+        rows.set(userId, r);
+      }
+      return r;
+    };
+    for (const g of held) {
+      if (g.ownerId != null) row(g.ownerId).held = g._count._all;
+    }
+    for (const g of untouched) {
+      if (g.ownerId != null) row(g.ownerId).untouched = g._count._all;
+    }
+    for (const g of taken) {
+      if (g.toUserId != null) row(g.toUserId).taken = g._count._all;
+    }
+    for (const g of expired) {
+      if (g.fromUserId != null) row(g.fromUserId).expired = g._count._all;
+    }
+    if (rows.size) {
+      const users = await this.prisma.user.findMany({
+        where: { id: { in: [...rows.keys()] } },
+        select: { id: true, firstName: true, lastName: true },
+      });
+      for (const u of users) row(u.id).name = fullName(u);
+    }
+    return {
+      period,
+      rows: [...rows.values()].sort(
+        (a, b) =>
+          b.held - a.held || b.taken - a.taken || a.name.localeCompare(b.name),
+      ),
+    };
+  }
+
+  /** Whom a manager may give the lead to: active staff of its branch who may claim. */
+  async assignable(
+    leadId: string,
+    companyId: number,
+    scope: ReportBranchIds,
+  ): Promise<
+    { id: number; firstName: string; lastName: string; photo: string | null }[]
+  > {
+    const lead = await this.prisma.lead.findFirst({
+      where: {
+        id: leadId,
+        companyId,
+        deletedAt: null,
+        ...leadBranchWhere(scope),
+      },
+      select: { branchId: true },
+    });
+    if (!lead) throw new NotFoundException('Lid topilmadi');
+    const staff = await this.prisma.user.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        isActive: true,
+        status: UserStatus.ACTIVE,
+        roles: { some: { role: { name: { in: STAFF_ROLE_NAMES } } } },
+        ...(lead.branchId != null
+          ? {
+              OR: [
+                { mainBranch: lead.branchId },
+                { branches: { some: { branchId: lead.branchId } } },
+              ],
+            }
+          : {}),
+      },
+      select: { id: true, firstName: true, lastName: true, photo: true },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    });
+    const allowed = await Promise.all(
+      staff.map((u) => this.permissions.has(u.id, 'leads.claim')),
+    );
+    return staff.filter((_, i) => allowed[i]);
   }
 
   /** Takes back every owned lead whose deadline has passed (the 15-minute run). */

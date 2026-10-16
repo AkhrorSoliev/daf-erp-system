@@ -371,3 +371,71 @@ describe('LeadOwnershipService.expireOverdue', () => {
     expect(s.events.emit).not.toHaveBeenCalled();
   });
 });
+
+describe('LeadOwnershipService.summary', () => {
+  it('joins held, untouched, taken and expired per person', async () => {
+    const s = setup();
+    Object.assign(s.prisma, {
+      lead: {
+        groupBy: jest
+          .fn()
+          .mockResolvedValueOnce([{ ownerId: 11, _count: { _all: 4 } }])
+          .mockResolvedValueOnce([{ ownerId: 11, _count: { _all: 1 } }]),
+      },
+      leadOwnershipLog: {
+        groupBy: jest
+          .fn()
+          .mockResolvedValueOnce([{ toUserId: 11, _count: { _all: 6 } }])
+          .mockResolvedValueOnce([{ fromUserId: 12, _count: { _all: 2 } }]),
+      },
+      user: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: 11, firstName: 'Nodira', lastName: 'R' },
+          { id: 12, firstName: 'Farangiz', lastName: 'N' },
+        ]),
+      },
+    });
+    const out = await s.service.summary(1, [1], 'month');
+    expect(out.rows).toEqual([
+      {
+        userId: 11,
+        name: 'Nodira R',
+        held: 4,
+        untouched: 1,
+        taken: 6,
+        expired: 0,
+      },
+      {
+        userId: 12,
+        name: 'Farangiz N',
+        held: 0,
+        untouched: 0,
+        taken: 0,
+        expired: 2,
+      },
+    ]);
+  });
+});
+
+describe('LeadOwnershipService.assignable', () => {
+  it("lists the lead branch's staff who may claim leads", async () => {
+    const s = setup();
+    Object.assign(s.prisma, {
+      lead: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      user: {
+        findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([
+          { id: 11, firstName: 'Nodira', lastName: 'R', photo: null },
+          { id: 13, firstName: 'Bobur', lastName: 'K', photo: null },
+        ]),
+      },
+    });
+    const permissions = (
+      s.service as unknown as { permissions: { has: jest.Mock } }
+    ).permissions;
+    permissions.has.mockImplementation(async (id: number) => id === 11);
+    await expect(s.service.assignable('L1', 1, [1])).resolves.toEqual([
+      { id: 11, firstName: 'Nodira', lastName: 'R', photo: null },
+    ]);
+  });
+});
