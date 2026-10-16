@@ -141,6 +141,17 @@ describe('findStaffForChat', () => {
 });
 
 describe('staffMenuKeyboard', () => {
+  it('adds «📊 Hisobot» only for a report recipient', () => {
+    const flat = (k: ReturnType<typeof staffMenuKeyboard>) =>
+      k.reply_markup.inline_keyboard.flat().map((b) => b.text);
+    expect(flat(staffMenuKeyboard(GULNOZA, ADMIN_URL))).not.toContain(
+      '📊 Hisobot',
+    );
+    expect(
+      flat(staffMenuKeyboard(GULNOZA, ADMIN_URL, undefined, { report: true })),
+    ).toContain('📊 Hisobot');
+  });
+
   it('ustoz: kabinet, jadval, guruhlar va oylik', () => {
     expect(buttons(staffMenuKeyboard(DOSTON, LEHRER_URL))).toEqual([
       [[STAFF_CABINET_BUTTON_TEXT, LEHRER_URL]],
@@ -214,6 +225,7 @@ describe('StaffCabinet', () => {
       student: {
         count: jest.fn().mockResolvedValue(opts.studentCards ?? 0),
       },
+      telegramReportRecipient: { count: jest.fn().mockResolvedValue(0) },
     };
     const telegram = {
       setChatMenuButton: jest.fn().mockResolvedValue(true),
