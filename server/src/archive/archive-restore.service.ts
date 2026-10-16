@@ -88,7 +88,15 @@ export class ArchiveRestoreService {
     }
 
     const statusField = getStatusField(entityType);
-    const defaultStatus = ENTITY_DEFAULT_STATUS[entityType];
+    // ADR-0094: a converted lead comes back CONVERTED with its owner and its
+    // conversion time — its KPI is credited to that owner from that moment
+    // (the same rule as `restoreRelease`).
+    const keepsConversion =
+      entityType === ArchiveEntityType.LEADS &&
+      record.convertedStudentId != null;
+    const defaultStatus = keepsConversion
+      ? LeadStatus.CONVERTED
+      : ENTITY_DEFAULT_STATUS[entityType];
     const historyEntityType = ENTITY_TYPE_MAP[entityType];
 
     // ADR-0093: leads that come back owned are released to the common pool;
@@ -125,9 +133,14 @@ export class ArchiveRestoreService {
         deletedAt: null,
         deletedById: null,
         deletionBatchId: null,
-        statusChangedAt: new Date(),
-        statusChangedById: userId,
-        statusChangeReason: 'Arxivdan tiklandi',
+        // A converted lead keeps the moment and the marker of its conversion.
+        ...(keepsConversion
+          ? {}
+          : {
+              statusChangedAt: new Date(),
+              statusChangedById: userId,
+              statusChangeReason: 'Arxivdan tiklandi',
+            }),
       };
       restoreData[statusField] = defaultStatus;
 
@@ -198,8 +211,9 @@ export class ArchiveRestoreService {
   /**
    * One archived lead (ADR-0093): it returns to the pool, so an owner is
    * cleared and the release is logged in the same transaction as the restore.
-   * The generic restore always writes status NEW, so `restoreData.statusEnum`
-   * is what the lead becomes. A lead with no owner is a plain update.
+   * `restoreData.statusEnum` is what the lead becomes: NEW, or CONVERTED for a
+   * converted lead (ADR-0094), which `restoreRelease` leaves owned. A lead
+   * with no owner is a plain update.
    */
   private async restoreLead(
     lead: {
@@ -379,7 +393,18 @@ export class ArchiveRestoreService {
         where: { deletionBatchId: batchId },
         data: { ...restoreBase, status: StudentStatus.ACTIVE, isActive: true },
       });
-      // Every lead of the batch comes back as NEW, so every owned one is
+      // ADR-0094: the batch's converted leads keep CONVERTED, their owner and
+      // their conversion time; only the others come back NEW and unowned.
+      await tx.lead.updateMany({
+        where: { deletionBatchId: batchId, convertedStudentId: { not: null } },
+        data: {
+          deletedAt: null,
+          deletedById: null,
+          deletionBatchId: null,
+          statusEnum: LeadStatus.CONVERTED,
+        },
+      });
+      // The other leads of the batch come back as NEW, so every owned one is
       // released to the pool (ADR-0093); the owners are read before the write.
       const ownedLeads = await tx.lead.findMany({
         where: { deletionBatchId: batchId, ownerId: { not: null } },

@@ -134,6 +134,58 @@ describe('ArchiveRestoreService: owner of a restored lead (ADR-0093)', () => {
       expect(ownership.recordChange).not.toHaveBeenCalled();
       expect(ownership.emit).not.toHaveBeenCalled();
     });
+
+    it('brings a converted lead back CONVERTED, with its owner and its conversion time (ADR-0094)', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        ...OWNED,
+        statusEnum: 'CONVERTED',
+        convertedStudentId: 10500,
+      });
+
+      await restoreOne();
+
+      expect(prisma.lead.update).toHaveBeenCalledTimes(1);
+      const data = prisma.lead.update.mock.calls[0][0].data;
+      expect(data).toMatchObject({ deletedAt: null, statusEnum: 'CONVERTED' });
+      expect(data).not.toHaveProperty('ownerId');
+      expect(data).not.toHaveProperty('statusChangedAt');
+      expect(data).not.toHaveProperty('statusChangedById');
+      expect(data).not.toHaveProperty('statusChangeReason');
+      expect(statusHistory.changeStatus).not.toHaveBeenCalled();
+      expect(ownership.recordChange).not.toHaveBeenCalled();
+      expect(history.recordRestore).toHaveBeenCalledWith(
+        expect.objectContaining({ newValues: { status: 'CONVERTED' } }),
+      );
+    });
+
+    it('a converted lead deleted as LOST comes back CONVERTED too', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        ...OWNED,
+        convertedStudentId: 10500,
+      });
+
+      await restoreOne();
+
+      expect(statusHistory.changeStatus).toHaveBeenCalledWith(
+        expect.objectContaining({ fromStatus: 'LOST', toStatus: 'CONVERTED' }),
+      );
+      expect(prisma.lead.update.mock.calls[0][0].data.statusEnum).toBe(
+        'CONVERTED',
+      );
+    });
+
+    it('an unconverted lead still gets the restore time and reason', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ ...OWNED, ownerId: null });
+
+      await restoreOne();
+
+      expect(prisma.lead.update.mock.calls[0][0].data).toMatchObject({
+        statusEnum: 'NEW',
+        statusChangedById: 7,
+        statusChangeReason: 'Arxivdan tiklandi',
+        statusChangedAt: expect.any(Date),
+      });
+    });
   });
 
   describe('a deletion batch', () => {
@@ -223,6 +275,28 @@ describe('ArchiveRestoreService: owner of a restored lead (ADR-0093)', () => {
       expect(tx.lead.updateMany).toHaveBeenCalled();
       expect(ownership.recordChange).not.toHaveBeenCalled();
       expect(ownership.emit).not.toHaveBeenCalled();
+    });
+
+    it("restores the batch's converted leads CONVERTED first, before the rest are released", async () => {
+      tx.lead.findMany.mockResolvedValue([BATCH_LEAD]);
+
+      await restoreOne();
+
+      expect(tx.lead.updateMany).toHaveBeenNthCalledWith(1, {
+        where: {
+          deletionBatchId: 'batch-1',
+          convertedStudentId: { not: null },
+        },
+        data: {
+          deletedAt: null,
+          deletedById: null,
+          deletionBatchId: null,
+          statusEnum: 'CONVERTED',
+        },
+      });
+      expect(tx.lead.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
+        tx.lead.findMany.mock.invocationCallOrder[0],
+      );
     });
   });
 });
