@@ -941,21 +941,6 @@
     "CEO",
     "Cashier"
   ],
-  "GET /reports/payment-reports": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/payment-reports/teachers": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/payment-reports/teachers/:teacherId/groups": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
   "GET /reports/profit-composition": [
     "Branch Director",
     "CEO"

@@ -10,7 +10,6 @@ import { ReportsAttendanceAnalyticsService } from './reports-attendance-analytic
 import { ReportsFinancialService } from './reports-financial.service';
 import { ReportsDebtHistoryService } from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
-import { ReportsTeacherPaymentsService } from './reports-teacher-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
 import { ReportsDepartedStudentsService } from './reports-departed-students.service';
 import { ReportsDepartedListsService } from './reports-departed-lists.service';
@@ -47,7 +46,6 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsFinancialService,
     ReportsDebtHistoryService,
     ReportsPaymentsService,
-    ReportsTeacherPaymentsService,
     ReportsStudentPaymentsService,
     ReportsDepartedStudentsService,
     ReportsDepartedListsService,
