@@ -3,6 +3,7 @@ import { TelegramModule } from '../telegram/telegram.module';
 import { TelegramGroupsModule } from '../telegram-groups/telegram-groups.module';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { PersonalReportService } from './personal-report.service';
+import { PersonalReportCron } from './personal-report.cron';
 import { TelegramReportRecipientsService } from './telegram-report-recipients.service';
 import { TelegramReportController } from './telegram-report.controller';
 
@@ -10,6 +11,10 @@ import { TelegramReportController } from './telegram-report.controller';
 @Module({
   imports: [TelegramModule, TelegramGroupsModule, HolidaysModule],
   controllers: [TelegramReportController],
-  providers: [PersonalReportService, TelegramReportRecipientsService],
+  providers: [
+    PersonalReportService,
+    PersonalReportCron,
+    TelegramReportRecipientsService,
+  ],
 })
 export class TelegramReportModule {}
