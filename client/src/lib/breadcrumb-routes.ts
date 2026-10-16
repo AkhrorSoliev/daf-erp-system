@@ -45,6 +45,8 @@ export const routeLabels: Record<string, string> = {
   "absence-pause": "Avtomatik pauza",
   // /settings/permissions — «Ruxsatlar», CEO only (ADR-0087).
   permissions: "Ruxsatlar",
+  // /settings/lead-ownership — «Lidlar egaligi», CEO only (ADR-0093).
+  "lead-ownership": "Lidlar egaligi",
   tasks: "Topshiriqlar",
   notifications: "Bildirishnomalar",
   archive: "Arxiv",

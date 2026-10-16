@@ -45,6 +45,7 @@ describe("cardFilters", () => {
       search: "",
       holati: [],
       sourceId: [],
+      masul: [],
       startDate: "",
       karta: "created",
       page: 1,

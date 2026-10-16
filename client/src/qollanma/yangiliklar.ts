@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-16",
+    sarlavha: "Lid egasi",
+    matn: "Endi lidning egasi bor. Administrator lidni «Band qilish» tugmasi bilan oladi, band qilingan lidni boshqasi ololmaydi. Olingan lidga 2 ish soati ichida qo'ng'iroq, izoh yoki topshiriq bo'lishi kerak, keyin kamida har 3 ish kunida; bo'lmasa lid umumiy ro'yxatga o'zi qaytadi. Hali harakat qilinmagan 10 ta lidi bor xodim yangisini band qila olmaydi. Bu raqamlarni CEO Sozlamalarda o'zgartiradi. CEO va filial direktori lidni boshqa xodimga beradi. Lidlar sahifasida «Mas'ul» filtri va «Xodimlar bo'yicha» qatori qo'shildi, har o'zgarish lid tarixiga yoziladi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "oquvchilar", sahifa: "lid-egasi" },
+  },
+  {
+    sana: "2026-10-16",
     sarlavha: "Guruhlar bo'yicha to'lov",
     matn: "Hisobotlarda «To'lov hisobotlari» o'rniga «Guruhlar bo'yicha to'lov»: oy tanlanadi, har guruh qancha to'lagani va qancha qolgani ko'rinadi, guruhni bosib kim to'lamaganini ko'rish mumkin. Raqamlar «Umumiy ma'lumotlar» bilan bir xil.",
     rollar: [1, 2, 3],

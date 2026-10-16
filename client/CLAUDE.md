@@ -920,6 +920,12 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 
 The card also shows "Jinsi" and the age next to "Tug'ilgan sana". The age comes from `ageFromStoredDate` (`src/lib/age.ts`), which reads the day the card displays — the staff date picker stores local midnight (19:00Z the day before in Tashkent), the student's first-run form stores UTC midnight, so the ISO string's first ten characters are not the birthday.
 
+### Lead owner (`components/leads/ownership/`, ADR-0093)
+
+- The card shows the owner's initials and the server's `ownerDueAt` («14:30 gacha», orange under an hour, «Muddat o'tdi»), or «Band qilish» on a free lead for `useCan("leads.claim")` (`lead-owner-badge.tsx`). The drawer's «Mas'ul» block (`lead-owner-block.tsx`) has «Band qilish», «Bo'shatish» (the owner, or `leads.assign`) and «Boshqaga berish» (`lead-owner-assign.tsx`, `leads.assign`). A converted lead shows no buttons.
+- The client computes no deadline: `ownerDueAt` comes from the server; `ownership-format.ts` only formats it on the Tashkent clock and `useMinuteClock` re-renders once a minute.
+- The «Mas'ul» filter is the URL's `masul` (`me`, `none`, user ids) sent as `owner`; its options come from `GET /leads/ownership/summary`, which also draws «Xodimlar bo'yicha» under the stats strip (`lead-owners-strip.tsx`, same period). Sozlamalar → «Lidlar egaligi» is `ceoOnly`.
+
 ### Lead Forms and Their Responses (`/leads/forms`)
 
 Public sign-up forms (shared on Instagram/Telegram) turn every submission into a lead. Three routes:

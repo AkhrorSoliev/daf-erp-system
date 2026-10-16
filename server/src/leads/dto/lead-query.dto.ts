@@ -6,6 +6,7 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  Matches,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { LeadStatus } from '@prisma/client';
@@ -46,6 +47,17 @@ export class LeadQueryDto extends PaginationDto {
   @IsArray()
   @IsEnum(LeadStatus, { each: true })
   status?: LeadStatus[];
+
+  /**
+   * «Mas'ul» (ADR-0093): `me`, `none` and user ids, comma-separated; the
+   * values are ORed. A user id is at most 9 digits: the column is an int4, and
+   * a longer number would reach Prisma and end as a 500.
+   */
+  @IsOptional()
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @Matches(/^(me|none|\d{1,9})$/, { each: true })
+  owner?: string[];
 
   // "true" → only leads already marked called (calledAt set); "false" → only
   // not-yet-called leads. Omitted → no contact filter.

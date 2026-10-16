@@ -509,6 +509,20 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /leads/ownership/assignable": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/ownership/settings": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/ownership/summary": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /leads/sections/:sectionId/leads": [
     "Administrator",
     "Branch Director",
@@ -1522,6 +1536,13 @@
     "Branch Director",
     "CEO"
   ],
+  "PATCH /leads/:id/owner": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /leads/ownership/settings": [
+    "CEO"
+  ],
   "PATCH /leads/reorder": [
     "Administrator",
     "Branch Director",
@@ -1827,7 +1848,16 @@
     "Branch Director",
     "CEO"
   ],
+  "POST /leads/:id/claim": [
+    "Administrator",
+    "CEO"
+  ],
   "POST /leads/:id/convert": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /leads/:id/release": [
     "Administrator",
     "Branch Director",
     "CEO"

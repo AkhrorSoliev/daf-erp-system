@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import {
   MultiSelectCombobox,
   type MultiSelectOption,
@@ -26,6 +28,8 @@ import {
   leadDateFieldIsConversion,
   leadFiltersActive,
 } from "./lead-filter-schema";
+import { LEAD_STATS_SCHEMA, parseStatsPeriod } from "./lead-stats";
+import { fetchOwnerSummary } from "./ownership/ownership-api";
 
 /** A source option for the filter — includes soft-deleted-but-used ones. */
 interface FilterSource {
@@ -54,6 +58,25 @@ export function LeadsFilterBar() {
 
   const [sources, setSources] = useState<FilterSource[]>([]);
   const [searchInput, setSearchInput] = useState(filters.search);
+
+  // People who hold or took leads in the strip's period: the «Mas'ul» options.
+  const { filters: statsFilters } = useUrlFilters(LEAD_STATS_SCHEMA);
+  const period = parseStatsPeriod(statsFilters.period);
+  const branchId = useBranchSwitcher((s) => s.selectedBranch?.id ?? "all");
+  const branchLoaded = useBranchSwitcher((s) => s.loaded);
+  const { data: owners } = useQuery({
+    queryKey: ["leads", "owners", branchId, period],
+    queryFn: () => fetchOwnerSummary(period),
+    enabled: branchLoaded,
+  });
+  const ownerOptions: MultiSelectOption[] = [
+    { value: "me", label: "Meniki" },
+    { value: "none", label: "Egasiz" },
+    ...(owners?.rows ?? []).map((r) => ({
+      value: String(r.userId),
+      label: r.name,
+    })),
+  ];
 
   useEffect(() => {
     api
@@ -116,6 +139,15 @@ export function LeadsFilterBar() {
         onChange={(next) => setFilters({ columnId: next, page: 1 })}
         placeholder="Barcha ustunlar"
         searchPlaceholder="Ustun qidirish..."
+        className="w-full sm:w-48"
+      />
+
+      <MultiSelectCombobox
+        options={ownerOptions}
+        selected={filters.masul}
+        onChange={(next) => setFilters({ masul: next, page: 1 })}
+        placeholder="Barcha mas'ullar"
+        searchPlaceholder="Xodim qidirish..."
         className="w-full sm:w-48"
       />
 

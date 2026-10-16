@@ -13,6 +13,7 @@ import {
 } from './dto/comment-query.dto';
 import { assertCallerMayTouchCommentEntity } from '../common/auth/comment-entity-scope';
 import { PermissionsService } from '../common/permissions/permissions.service';
+import { touchLeadOwnerAction } from '../leads/ownership/owner-action';
 
 const commentInclude = {
   author: {
@@ -79,6 +80,11 @@ export class CommentsService {
       changedById: userId,
       companyId,
     });
+
+    // ADR-0093: the lead owner's comment is an action that keeps the lead.
+    if (dto.entityType === 'Lead') {
+      await touchLeadOwnerAction(this.prisma, String(dto.entityId), userId);
+    }
 
     // NOTE: no `comment.created` event. One used to be emitted here and
     // nothing has ever listened for it — wildcards are off

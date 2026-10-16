@@ -9,6 +9,11 @@ import {
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
 import { leadBranchWhere } from './shared/lead-scope';
+import {
+  LeadOwnershipService,
+  type OwnershipChange,
+} from './ownership/lead-ownership.service';
+import { RELEASED_OWNER, restoreRelease } from './ownership/restore-release';
 
 const DELETED_BY_SELECT = {
   select: { id: true, firstName: true, lastName: true },
@@ -26,6 +31,7 @@ export class LeadsArchiveService {
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
+    private ownership: LeadOwnershipService,
   ) {}
 
   /**
@@ -202,7 +208,14 @@ export class LeadsArchiveService {
         companyId,
         ...leadBranchWhere(scope),
       },
-      select: { id: true, statusEnum: true, convertedStudentId: true },
+      select: {
+        id: true,
+        statusEnum: true,
+        convertedStudentId: true,
+        firstName: true,
+        lastName: true,
+        ownerId: true,
+      },
     });
     if (!lead) {
       throw new NotFoundException('Arxivda lid topilmadi');
@@ -233,6 +246,13 @@ export class LeadsArchiveService {
 
     const status = this.restoredStatus(lead, section.column?.systemKey ?? null);
 
+    // ADR-0093: a lead back from the archive returns to the common pool.
+    const released = restoreRelease(lead, status, {
+      branchId,
+      companyId,
+      actorId: userId,
+    });
+
     const maxOrder = await this.prisma.lead.aggregate({
       where: { sectionId: dto.sectionId, deletedAt: null },
       _max: { order: true },
@@ -251,6 +271,7 @@ export class LeadsArchiveService {
           statusEnum: status,
           status: status.toLowerCase(),
           branchId,
+          ...(released ? RELEASED_OWNER : {}),
         },
         select: { id: true, sectionId: true },
       });
@@ -262,8 +283,10 @@ export class LeadsArchiveService {
         companyId,
         tx,
       });
+      if (released) await this.ownership.recordChange(tx, released);
       return r;
     });
+    if (released) this.ownership.emit(released);
 
     return {
       message: 'Lid tiklandi',
@@ -316,6 +339,7 @@ export class LeadsArchiveService {
 
     // Section restore + (optionally) its leads + all audit rows run in one
     // transaction so the restore and its audit trail are atomic.
+    const released: OwnershipChange[] = [];
     const restoredLeadCount = await this.prisma.$transaction(async (tx) => {
       const maxOrder = await tx.leadSection.aggregate({
         where: { columnId: dto.targetColumnId, deletedAt: null },
@@ -349,7 +373,14 @@ export class LeadsArchiveService {
               deletedAt: { not: null },
             }
           : { sectionId: id, deletedAt: { not: null } },
-        select: { id: true, statusEnum: true, convertedStudentId: true },
+        select: {
+          id: true,
+          statusEnum: true,
+          convertedStudentId: true,
+          firstName: true,
+          lastName: true,
+          ownerId: true,
+        },
       });
       if (leads.length === 0) return 0;
 
@@ -361,6 +392,11 @@ export class LeadsArchiveService {
 
       for (const l of leads) {
         const status = this.restoredStatus(l, column.systemKey);
+        const release = restoreRelease(l, status, {
+          branchId: column.branchId,
+          companyId,
+          actorId: userId,
+        });
         await tx.lead.update({
           where: { id: l.id },
           data: {
@@ -375,6 +411,7 @@ export class LeadsArchiveService {
             // Same rule as the section itself: the restored leads land on the
             // target column's board, so that is their branch now.
             branchId: column.branchId,
+            ...(release ? RELEASED_OWNER : {}),
           },
         });
         await this.entityHistoryService.recordRestore({
@@ -385,9 +422,14 @@ export class LeadsArchiveService {
           companyId,
           tx,
         });
+        if (release) {
+          await this.ownership.recordChange(tx, release);
+          released.push(release);
+        }
       }
       return leads.length;
     });
+    for (const change of released) this.ownership.emit(change);
 
     return {
       message: dto.withLeads ? "Bo'lim va lidlari tiklandi" : "Bo'lim tiklandi",

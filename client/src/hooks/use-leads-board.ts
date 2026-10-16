@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
+import type { LeadOwner } from "@/components/leads/ownership/ownership-format";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,6 +36,10 @@ export interface LeadCard {
   calledAt: string | null;
   /** Number of comments left on the lead — drives the comment icon. */
   commentCount: number;
+  /** The lead's owner (ADR-0093); null while it sits in the common pool. */
+  owner: LeadOwner | null;
+  /** When the lead returns to the pool unless its owner acts (server-computed). */
+  ownerDueAt: string | null;
 }
 
 export interface LeadBoardSection {
@@ -109,7 +114,8 @@ interface LeadsBoardState {
   /** Bumps on every lead create / edit / move so the filtered list refetches. */
   revision: number;
   fetchBoard: () => Promise<void>;
-  fetchSectionLeads: (sectionId: string) => Promise<void>;
+  /** `force` re-reads a section that is already loaded (the owner's deadline moved). */
+  fetchSectionLeads: (sectionId: string, force?: boolean) => Promise<void>;
   addSection: (section: LeadBoardSection & { columnId: string }) => void;
   addLead: (sectionId: string, lead: LeadCard) => void;
   addColumn: (column: LeadBoardColumn) => void;
@@ -219,9 +225,9 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
     }
   },
 
-  fetchSectionLeads: async (sectionId) => {
+  fetchSectionLeads: async (sectionId, force = false) => {
     const { loadedSections, loadingSections } = get();
-    if (loadedSections.has(sectionId) || loadingSections.has(sectionId)) return;
+    if ((!force && loadedSections.has(sectionId)) || loadingSections.has(sectionId)) return;
 
     set({ loadingSections: new Set(loadingSections).add(sectionId) });
     try {

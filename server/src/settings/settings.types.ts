@@ -34,7 +34,10 @@ export type SettingKey =
   | 'payment.attendanceOpensMinutesBefore'
   | 'payment.admissionMinPaidPercent'
   | 'payment.paidThroughReminderDays'
-  | 'lessonRating.enabled';
+  | 'lessonRating.enabled'
+  | 'leads.maxUntouched'
+  | 'leads.firstActionHours'
+  | 'leads.followUpDays';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -50,6 +53,9 @@ export interface SettingValueMap {
   'payment.admissionMinPaidPercent': number;
   'payment.paidThroughReminderDays': number;
   'lessonRating.enabled': boolean;
+  'leads.maxUntouched': number;
+  'leads.firstActionHours': number;
+  'leads.followUpDays': number;
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -161,6 +167,26 @@ function parseReminderDays(raw: unknown): number {
   }
   throw new BadRequestException(
     `payment.paidThroughReminderDays 0 dan 10 gacha bo'lgan butun son bo'lishi kerak, kelgan qiymat: ${JSON.stringify(raw)}`,
+  );
+}
+
+/** A whole number in `[min, max]`, refused with the key's name otherwise. */
+function parseIntInRange(
+  key: string,
+  raw: unknown,
+  min: number,
+  max: number,
+): number {
+  if (
+    typeof raw === 'number' &&
+    Number.isInteger(raw) &&
+    raw >= min &&
+    raw <= max
+  ) {
+    return raw;
+  }
+  throw new BadRequestException(
+    `${key} ${min} dan ${max} gacha bo'lgan butun son bo'lishi kerak, kelgan qiymat: ${JSON.stringify(raw)}`,
   );
 }
 
@@ -294,6 +320,26 @@ export const SETTING_DEFINITIONS: {
     // `LessonRatingSenderService` kompaniya bo'yicha o'qiydi.
     defaultValue: false,
     parse: (raw) => parseBoolean('lessonRating.enabled', raw),
+    companyLevelOnly: true,
+  },
+  // Lead owner (ADR-0093): read by `LeadOwnershipService` per company; the
+  // CEO changes them on Sozlamalar → «Lidlar egaligi».
+  'leads.maxUntouched': {
+    key: 'leads.maxUntouched',
+    defaultValue: 10,
+    parse: (raw) => parseIntInRange('leads.maxUntouched', raw, 1, 100),
+    companyLevelOnly: true,
+  },
+  'leads.firstActionHours': {
+    key: 'leads.firstActionHours',
+    defaultValue: 2,
+    parse: (raw) => parseIntInRange('leads.firstActionHours', raw, 1, 24),
+    companyLevelOnly: true,
+  },
+  'leads.followUpDays': {
+    key: 'leads.followUpDays',
+    defaultValue: 3,
+    parse: (raw) => parseIntInRange('leads.followUpDays', raw, 1, 14),
     companyLevelOnly: true,
   },
 };

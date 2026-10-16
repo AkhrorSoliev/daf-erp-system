@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { StudentsModule } from '../students/students.module';
+import { SettingsModule } from '../settings/settings.module';
 import { LeadsController } from './leads.controller';
 import { LeadColumnsController } from './lead-columns.controller';
 import { LeadSectionsController } from './lead-sections.controller';
@@ -11,10 +12,15 @@ import { LeadsStatsService } from './leads-stats.service';
 import { LeadColumnsService } from './lead-columns.service';
 import { LeadSectionsService } from './lead-sections.service';
 import { LeadSourcesService } from './lead-sources.service';
+import { LeadOwnershipController } from './ownership/lead-ownership.controller';
+import { LeadOwnershipService } from './ownership/lead-ownership.service';
+import { LeadOwnerTaskListener } from './ownership/lead-owner-task.listener';
+import { LeadOwnershipCron } from './ownership/lead-ownership.cron';
 
 @Module({
-  imports: [StudentsModule],
+  imports: [StudentsModule, SettingsModule],
   controllers: [
+    LeadOwnershipController,
     LeadsController,
     LeadColumnsController,
     LeadSectionsController,
@@ -28,7 +34,10 @@ import { LeadSourcesService } from './lead-sources.service';
     LeadColumnsService,
     LeadSectionsService,
     LeadSourcesService,
+    LeadOwnershipService,
+    LeadOwnerTaskListener,
+    LeadOwnershipCron,
   ],
-  exports: [LeadsService],
+  exports: [LeadsService, LeadOwnershipService],
 })
 export class LeadsModule {}

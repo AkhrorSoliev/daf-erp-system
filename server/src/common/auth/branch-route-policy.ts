@@ -174,6 +174,19 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: ['PATCH /lesson-ratings/settings'],
   },
   {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Lead ownership limits (ADR-0093): `leads.maxUntouched`, ' +
+      '`leads.firstActionHours` and `leads.followUpDays` are company-level ' +
+      'settings (`companyLevelOnly`) — one value for every branch. The read ' +
+      'carries numbers only; the write is CEO-only through `@CeoOnly()`. The ' +
+      'other ownership routes take `@BranchScope()`.',
+    routes: [
+      'GET /leads/ownership/settings',
+      'PATCH /leads/ownership/settings',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
       'Id-addressed money paths. The branch is resolved from the record (or ' +

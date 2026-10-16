@@ -56,7 +56,12 @@ describe('archive users tab — student accounts belong to their card', () => {
   });
 
   it('will not restore or permanently delete a student-only account on its own', async () => {
-    const restore = new ArchiveRestoreService(prisma, {} as any, {} as any);
+    const restore = new ArchiveRestoreService(
+      prisma,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
     await expect(
       restore.restore(ArchiveEntityType.USERS, 30001, 7, 1001),
     ).rejects.toThrow(NotFoundException);

@@ -2,6 +2,7 @@ import {
   ArrowRightLeft,
   Bot,
   ClipboardCheck,
+  Clock,
   GraduationCap,
   Link2,
   MessageSquare,
@@ -12,6 +13,7 @@ import {
   RotateCcw,
   Trash2,
   Unplug,
+  UserCheck,
   UserMinus,
   UserPlus,
   type LucideIcon,
@@ -46,6 +48,8 @@ export const FIELD_LABELS: Record<string, string | null> = {
   mainBranch: "Asosiy filial",
   guruh: "Guruh",
   sabab: "Sabab",
+  // Lead owner (ADR-0093).
+  masul: "Mas'ul",
   // Oy to'lovi bilan nima bo'lgani (shartnoma 6.2, ADR-0043).
   pul: "Pul",
   reason: "Sabab",
@@ -157,6 +161,15 @@ export function getActionInfo(record: HistoryRecord): ActionInfo {
       return { label: "Yaratildi", icon: Plus, variant: "default" };
 
     case "UPDATE":
+      // Lead owner (ADR-0093).
+      if (customAction === "LID_BAND_QILINDI")
+        return { label: "Lid band qilindi", icon: UserCheck, variant: "default" };
+      if (customAction === "LID_BERILDI")
+        return { label: "Lid boshqaga berildi", icon: ArrowRightLeft, variant: "secondary" };
+      if (customAction === "LID_BOSHATILDI")
+        return { label: "Lid bo'shatildi", icon: UserMinus, variant: "outline" };
+      if (customAction === "LID_QAYTDI")
+        return { label: "Muddat o'tib qaytdi", icon: Clock, variant: "destructive" };
       if (customAction === "DAVOMAT_YANGILANDI")
         return { label: "Davomat yangilandi", icon: ClipboardCheck, variant: "secondary" };
       if (customAction === "COMMENT_DELETED")

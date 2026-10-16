@@ -30,6 +30,13 @@ import { RemoveLeadDto } from './dto/remove-lead.dto';
 import { equalsOrIn } from '../common/dto/to-array';
 import { tashkentRangeFilter } from '../common/date/tashkent';
 import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import {
+  LeadOwnershipService,
+  type OwnedLeadFields,
+  type OwnershipChange,
+} from './ownership/lead-ownership.service';
+import { touchLeadOwnerAction } from './ownership/owner-action';
 
 // Sentinel stored in Lead.statusChangeReason when a lead is CONVERTED by being
 // linked to an already-existing student (no new account minted) rather than by
@@ -46,8 +53,16 @@ const LEAD_CARD_SELECT = {
   order: true,
   createdAt: true,
   calledAt: true,
+  branchId: true,
+  ownerId: true,
+  ownedAt: true,
+  ownerActedAt: true,
+  owner: { select: { id: true, firstName: true, lastName: true } },
   source: { select: { id: true, name: true } },
 } satisfies Prisma.LeadSelect;
+
+const andList = (a: Prisma.LeadWhereInput['AND']): Prisma.LeadWhereInput[] =>
+  a == null ? [] : Array.isArray(a) ? a : [a];
 
 /**
  * Who creates a lead — stated, never inferred from a missing id (server
@@ -71,6 +86,8 @@ export class LeadsService {
     private studentsService: StudentsService,
     private studentEnrollmentService: StudentEnrollmentService,
     private events: EventEmitter2,
+    private permissions: PermissionsService,
+    private ownership: LeadOwnershipService,
   ) {}
 
   /**
@@ -99,11 +116,48 @@ export class LeadsService {
     return { ...lead, commentCount: counts.get(lead.id) ?? 0 };
   }
 
+  /**
+   * Adds `ownerDueAt` (ADR-0093): one settings read and one holiday read, and
+   * none when no lead has a running clock (no owner, or a converted lead).
+   */
+  private async withOwnerDue<T extends OwnedLeadFields>(
+    leads: T[],
+    companyId: number,
+  ): Promise<(T & { ownerDueAt: Date | null })[]> {
+    if (leads.length === 0) return [];
+    const anyClock = leads.some(
+      (l) => l.ownerId != null && l.statusEnum !== LeadStatus.CONVERTED,
+    );
+    if (!anyClock) return leads.map((l) => ({ ...l, ownerDueAt: null }));
+    const due = await this.ownership.dueResolver(companyId);
+    return leads.map((lead) => ({ ...lead, ownerDueAt: due(lead) }));
+  }
+
+  /** A board card after a write: comment count and owner deadline. */
+  private async asCard<T extends OwnedLeadFields & { id: string }>(
+    lead: T,
+    companyId: number,
+  ) {
+    const [withDue] = await this.withOwnerDue([lead], companyId);
+    return this.withCommentCount(withDue);
+  }
+
+  /** One card by id: the ownership routes answer with it. */
+  async card(id: string, companyId: number) {
+    const lead = await this.prisma.lead.findFirst({
+      where: { id, companyId },
+      select: LEAD_CARD_SELECT,
+    });
+    if (!lead) throw new NotFoundException('Lid topilmadi');
+    return this.asCard(lead, companyId);
+  }
+
   /** Filtered, paginated flat list of leads — drives the filter view. */
   async findAll(
     query: LeadQueryDto,
     companyId: number,
     scope: ReportBranchIds,
+    userId?: number,
   ) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
@@ -135,6 +189,17 @@ export class LeadsService {
     if (query.columnId?.length)
       where.section = { columnId: equalsOrIn(query.columnId) };
     if (query.status?.length) where.statusEnum = equalsOrIn(query.status);
+
+    // «Mas'ul» (ADR-0093): the chosen values are ORed under AND, beside the
+    // branch predicate (and the search, which owns `where.OR`).
+    if (query.owner?.length) {
+      const ids = query.owner.filter((v) => /^\d+$/.test(v)).map(Number);
+      if (query.owner.includes('me') && userId != null) ids.push(userId);
+      const or: Prisma.LeadWhereInput[] = [];
+      if (ids.length) or.push({ ownerId: { in: [...new Set(ids)] } });
+      if (query.owner.includes('none')) or.push({ ownerId: null });
+      if (or.length) where.AND = [...andList(where.AND), { OR: or }];
+    }
 
     // Contact marker filter — leads already called vs not yet called.
     if (query.called === 'true') where.calledAt = { not: null };
@@ -181,6 +246,7 @@ export class LeadsService {
           statusChangedAt: true,
           deletedAt: true,
           convertedStudentId: true,
+          owner: { select: { id: true, firstName: true, lastName: true } },
           source: { select: { id: true, name: true } },
           section: {
             select: {
@@ -269,8 +335,11 @@ export class LeadsService {
       select: LEAD_CARD_SELECT,
     });
 
-    const counts = await this.commentCountsFor(leads.map((l) => l.id));
-    return leads.map((l) => ({ ...l, commentCount: counts.get(l.id) ?? 0 }));
+    const [counts, withDue] = await Promise.all([
+      this.commentCountsFor(leads.map((l) => l.id)),
+      this.withOwnerDue(leads, companyId),
+    ]);
+    return withDue.map((l) => ({ ...l, commentCount: counts.get(l.id) ?? 0 }));
   }
 
   /** Full lead detail for the detail drawer. */
@@ -290,6 +359,11 @@ export class LeadsService {
         createdAt: true,
         updatedAt: true,
         calledAt: true,
+        branchId: true,
+        ownerId: true,
+        ownedAt: true,
+        ownerActedAt: true,
+        owner: { select: { id: true, firstName: true, lastName: true } },
         calledBy: { select: { id: true, firstName: true, lastName: true } },
         source: { select: { id: true, name: true } },
         section: {
@@ -359,7 +433,8 @@ export class LeadsService {
       },
     });
 
-    return { ...lead, mockParticipations, matchedStudent };
+    const [withDue] = await this.withOwnerDue([lead], companyId);
+    return { ...withDue, mockParticipations, matchedStudent };
   }
 
   /**
@@ -521,46 +596,85 @@ export class LeadsService {
     // stage — a brand-new lead always starts as NEW regardless of its column.
     const statusEnum = LeadStatus.NEW;
 
+    // ADR-0093: whoever adds a lead by hand has already spoken to the person,
+    // so a staff member who may claim leads owns it, the creation being the
+    // first action. Public-form leads arrive with no owner.
+    const ownerId =
+      actor.kind === 'user' &&
+      (await this.permissions.has(actor.id, 'leads.claim'))
+        ? actor.id
+        : null;
+    const now = new Date();
+
     const maxOrder = await this.prisma.lead.aggregate({
       where: { sectionId: dto.sectionId, deletedAt: null },
       _max: { order: true },
     });
 
-    const created = await this.prisma.lead.create({
-      data: {
-        firstName,
-        lastName,
-        phone: dto.phone,
-        extraPhone: dto.extraPhone || null,
-        sectionId: dto.sectionId,
-        sourceId: dto.sourceId ?? null,
-        order: (maxOrder._max.order ?? -1) + 1,
-        statusEnum,
-        status: statusEnum.toLowerCase(),
+    // One transaction: the lead, its history row and (for an owned lead) the
+    // ownership log either all exist or none does. Otherwise a failure after
+    // the insert leaves an owned lead the log and the history never heard of.
+    const { created, change } = await this.prisma.$transaction(async (tx) => {
+      const lead = await tx.lead.create({
+        data: {
+          firstName,
+          lastName,
+          phone: dto.phone,
+          extraPhone: dto.extraPhone || null,
+          sectionId: dto.sectionId,
+          sourceId: dto.sourceId ?? null,
+          order: (maxOrder._max.order ?? -1) + 1,
+          statusEnum,
+          status: statusEnum.toLowerCase(),
+          companyId,
+          branchId,
+          ownerId,
+          ownedAt: ownerId ? now : null,
+          ownerActedAt: ownerId ? now : null,
+        },
+        select: LEAD_CARD_SELECT,
+      });
+
+      await this.entityHistoryService.recordCreate({
+        entityType: 'Lead',
+        entityId: lead.id,
+        newValues: {
+          firstName: lead.firstName,
+          lastName: lead.lastName,
+          phone: lead.phone,
+          // Not part of LEAD_CARD_SELECT (the board card never shows it), so the
+          // recorded value comes from the request rather than the created row.
+          extraPhone: dto.extraPhone || null,
+          statusEnum: lead.statusEnum,
+        },
+        changedById: actor.kind === 'user' ? actor.id : undefined,
         companyId,
-        branchId,
-      },
-      select: LEAD_CARD_SELECT,
-    });
+        tx,
+      });
 
-    await this.entityHistoryService.recordCreate({
-      entityType: 'Lead',
-      entityId: created.id,
-      newValues: {
-        firstName: created.firstName,
-        lastName: created.lastName,
-        phone: created.phone,
-        // Not part of LEAD_CARD_SELECT (the board card never shows it), so the
-        // recorded value comes from the request rather than the created row.
-        extraPhone: dto.extraPhone || null,
-        statusEnum: created.statusEnum,
-      },
-      changedById: actor.kind === 'user' ? actor.id : undefined,
-      companyId,
+      let ownerChange: OwnershipChange | null = null;
+      if (ownerId !== null) {
+        ownerChange = {
+          leadId: lead.id,
+          leadName: `${firstName} ${lastName}`,
+          branchId,
+          kind: 'CLAIM',
+          fromUserId: null,
+          toUserId: ownerId,
+          actorId: ownerId,
+          reason: "Lidni o'zi qo'shdi",
+          companyId,
+        };
+        await this.ownership.recordChange(tx, ownerChange);
+      }
+      return { created: lead, change: ownerChange };
     });
+    // Listeners hear about the owner only after the commit.
+    if (change) this.ownership.emit(change);
 
+    const [card] = await this.withOwnerDue([created], companyId);
     // A brand-new lead has no comments and has not been called yet.
-    return { ...created, commentCount: 0 };
+    return { ...card, commentCount: 0 };
   }
 
   /** Edits a lead's own data (name, phone, source). */
@@ -654,7 +768,7 @@ export class LeadsService {
       companyId,
     });
 
-    return this.withCommentCount(updated);
+    return this.asCard(updated, companyId);
   }
 
   /**
@@ -675,7 +789,15 @@ export class LeadsService {
         companyId,
         ...leadBranchWhere(scope),
       },
-      select: { id: true, sectionId: true, statusEnum: true, branchId: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        sectionId: true,
+        statusEnum: true,
+        branchId: true,
+        ownerId: true,
+      },
     });
     if (!lead) {
       throw new NotFoundException('Lid topilmadi');
@@ -716,32 +838,74 @@ export class LeadsService {
       _max: { order: true },
     });
 
-    const updated = await this.prisma.lead.update({
-      where: { id: leadId },
-      data: {
-        sectionId: dto.sectionId,
-        order: (maxOrder._max.order ?? -1) + 1,
-        statusEnum,
-        status: statusEnum.toLowerCase(),
-        branchId,
-      },
-      select: LEAD_CARD_SELECT,
-    });
+    // ADR-0093: an owner must work in the lead's branch, so a move to another
+    // branch takes the lead back from its owner. A converted lead's owner
+    // stays frozen (stage 2 credits it).
+    const releaseOwner =
+      lead.ownerId != null &&
+      lead.statusEnum !== LeadStatus.CONVERTED &&
+      lead.branchId !== branchId;
 
-    await this.entityHistoryService.recordUpdate({
-      entityType: 'Lead',
-      entityId: leadId,
-      oldValues: {
-        sectionId: lead.sectionId,
-        statusEnum: lead.statusEnum,
-        branchId: lead.branchId,
-      },
-      newValues: { sectionId: dto.sectionId, statusEnum, branchId },
-      changedById: userId,
-      companyId,
-    });
+    const { updated, change } = await this.prisma.$transaction(async (tx) => {
+      let ownerChange: OwnershipChange | null = null;
+      if (releaseOwner) {
+        // Only if nobody took, gave or released the lead since the read.
+        const { count } = await tx.lead.updateMany({
+          where: {
+            id: leadId,
+            ownerId: lead.ownerId,
+            statusEnum: { not: LeadStatus.CONVERTED },
+          },
+          data: { ownerId: null, ownedAt: null, ownerActedAt: null },
+        });
+        if (count > 0) {
+          ownerChange = {
+            leadId,
+            leadName: `${lead.firstName} ${lead.lastName}`.trim(),
+            // The branch the owner worked in, as release() logs it.
+            branchId: lead.branchId,
+            kind: 'RELEASE',
+            fromUserId: lead.ownerId,
+            toUserId: null,
+            actorId: userId,
+            reason: "Boshqa filialga o'tkazildi",
+            companyId,
+          };
+          await this.ownership.recordChange(tx, ownerChange);
+        }
+      }
 
-    return this.withCommentCount(updated);
+      // After the release, so the card answers without the old owner.
+      const row = await tx.lead.update({
+        where: { id: leadId },
+        data: {
+          sectionId: dto.sectionId,
+          order: (maxOrder._max.order ?? -1) + 1,
+          statusEnum,
+          status: statusEnum.toLowerCase(),
+          branchId,
+        },
+        select: LEAD_CARD_SELECT,
+      });
+
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'Lead',
+        entityId: leadId,
+        oldValues: {
+          sectionId: lead.sectionId,
+          statusEnum: lead.statusEnum,
+          branchId: lead.branchId,
+        },
+        newValues: { sectionId: dto.sectionId, statusEnum, branchId },
+        changedById: userId,
+        companyId,
+        tx,
+      });
+      return { updated: row, change: ownerChange };
+    });
+    if (change) this.ownership.emit(change);
+
+    return this.asCard(updated, companyId);
   }
 
   /**
@@ -832,6 +996,12 @@ export class LeadsService {
       select: LEAD_CARD_SELECT,
     });
 
+    // ADR-0093: the owner's call mark keeps the lead with them — stamped only
+    // once the mark is really saved.
+    if (dto.called) {
+      await touchLeadOwnerAction(this.prisma, id, userId);
+    }
+
     await this.entityHistoryService.recordUpdate({
       entityType: 'Lead',
       entityId: id,
@@ -850,7 +1020,7 @@ export class LeadsService {
       } satisfies LeadCalledPayload);
     }
 
-    return this.withCommentCount(updated);
+    return this.asCard(updated, companyId);
   }
 
   /**
@@ -1097,6 +1267,6 @@ export class LeadsService {
       companyId,
     });
 
-    return { studentId, lead: await this.withCommentCount(updated) };
+    return { studentId, lead: await this.asCard(updated, companyId) };
   }
 }

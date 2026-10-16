@@ -12,6 +12,7 @@ import {
   Wallet,
   Smartphone,
   ShieldCheck,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 import type { Can } from "./permission-check";
@@ -154,6 +155,14 @@ export const settingsNavSections: SettingsNavSection[] = [
         url: "/settings/permissions",
         icon: ShieldCheck,
         description: "Har bir rol uchun imkoniyatlarni yoqish va o'chirish",
+        ceoOnly: true,
+      },
+      {
+        // The write is `@CeoOnly()` (ADR-0093): identity, not a capability.
+        title: "Lidlar egaligi",
+        url: "/settings/lead-ownership",
+        icon: UserCheck,
+        description: "Lidni band qilish chegarasi va harakat muddatlari",
         ceoOnly: true,
       },
     ],
