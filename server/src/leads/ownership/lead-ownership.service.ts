@@ -103,6 +103,9 @@ const STAFF_ROLE_NAMES = ['CEO', 'Branch Director', 'Administrator', 'Cashier'];
 const fullName = (u: { firstName: string; lastName: string }) =>
   `${u.firstName} ${u.lastName}`.trim();
 
+const takenMessage = (owner: { firstName: string; lastName: string } | null) =>
+  `Bu lidni ${owner ? fullName(owner) : 'boshqa xodim'} band qilgan`;
+
 const LEAD_FOR_OWNERSHIP = {
   id: true,
   firstName: true,
@@ -145,9 +148,10 @@ export class LeadOwnershipService {
 
   /**
    * The deadline of each owned lead, for the board and the expiry run: one
-   * settings read and one holiday read per call. Holidays are read for 30
-   * days back and 70 ahead: an older deadline has passed anyway, and the
-   * longest wait (3 working days over a 60-day holiday) fits ahead.
+   * settings read and one holiday read per call. Holidays are read for 70
+   * days back and 70 ahead. Back: a holiday is at most 60 days long, so an
+   * ownership begun before one still sees every day of it. Ahead: the longest
+   * wait (3 working days over a 60-day holiday) fits.
    */
   async dueResolver(
     companyId: number,
@@ -156,7 +160,7 @@ export class LeadOwnershipService {
     const rules = await this.rules(companyId);
     const holidays = await buildHolidayDateSetsByBranch(
       this.prisma,
-      new Date(now.getTime() - 30 * DAY_MS),
+      new Date(now.getTime() - 70 * DAY_MS),
       new Date(now.getTime() + 70 * DAY_MS),
     );
     return (lead) => {
@@ -201,31 +205,50 @@ export class LeadOwnershipService {
     scope: ReportBranchIds,
   ): Promise<void> {
     const rules = await this.rules(companyId);
-    const change = await this.inTx(async (tx) => {
-      const lead = await this.findLead(tx, leadId, companyId, scope);
-      if (lead.ownerId === userId) {
-        throw new BadRequestException('Bu lid allaqachon sizda');
-      }
-      if (lead.ownerId !== null) {
-        const who = lead.owner ? fullName(lead.owner) : 'boshqa xodim';
-        throw new ConflictException(`Bu lidni ${who} band qilgan`);
-      }
-      const untouched = await tx.lead.count({
-        where: untouchedWhere(userId, companyId),
-      });
-      if (untouched >= rules.maxUntouched) {
-        throw new BadRequestException(
-          `Sizda ${untouched} ta hali bog'lanilmagan lid bor. Avval ular bilan bog'laning: bir vaqtda ${rules.maxUntouched} tadan ortiq bunday lid olib bo'lmaydi`,
-        );
-      }
-      await tx.lead.update({
-        where: { id: leadId },
-        data: { ownerId: userId, ownedAt: new Date(), ownerActedAt: null },
-      });
-      const c = this.changeOf(lead, 'CLAIM', userId, userId, null, companyId);
-      await this.recordChange(tx, c);
-      return c;
-    });
+    const change = await this.inTx(
+      async (tx) => {
+        const lead = await this.findLead(tx, leadId, companyId, scope);
+        if (lead.ownerId === userId) {
+          throw new BadRequestException('Bu lid allaqachon sizda');
+        }
+        if (lead.ownerId !== null) {
+          throw new ConflictException(takenMessage(lead.owner));
+        }
+        const untouched = await tx.lead.count({
+          where: untouchedWhere(userId, companyId),
+        });
+        if (untouched >= rules.maxUntouched) {
+          throw new BadRequestException(
+            `Sizda ${untouched} ta hali bog'lanilmagan lid bor. Avval ular bilan bog'laning: bir vaqtda ${rules.maxUntouched} tadan ortiq bunday lid olib bo'lmaydi`,
+          );
+        }
+        await tx.lead.update({
+          where: { id: leadId },
+          data: { ownerId: userId, ownedAt: new Date(), ownerActedAt: null },
+        });
+        const c = this.changeOf(lead, 'CLAIM', userId, userId, null, companyId);
+        await this.recordChange(tx, c);
+        return c;
+      },
+      // Two claims collided and this one lost: say who has the lead now, as
+      // a claim on an already-owned lead does, not the generic conflict.
+      async () => {
+        const current = await this.prisma.lead
+          .findFirst({
+            where: {
+              id: leadId,
+              companyId,
+              deletedAt: null,
+              ...leadBranchWhere(scope),
+            },
+            select: { ownerId: true, owner: LEAD_FOR_OWNERSHIP.owner },
+          })
+          .catch(() => null);
+        if (current?.ownerId != null && current.ownerId !== userId) {
+          throw new ConflictException(takenMessage(current.owner));
+        }
+      },
+    );
     this.emit(change);
   }
 
@@ -470,37 +493,44 @@ export class LeadOwnershipService {
     });
     let expired = 0;
     for (const lead of owned) {
-      const dueAt = due(lead);
-      if (!dueAt || dueAt > now) continue;
-      const change = this.changeOf(
-        lead,
-        'EXPIRE',
-        null,
-        null,
-        "Muddatida harakat bo'lmadi",
-        companyId,
-      );
-      const done = await this.prisma.$transaction(async (tx) => {
-        // Only if nothing moved since the read: an action or a new owner wins.
-        const { count } = await tx.lead.updateMany({
-          where: {
-            id: lead.id,
-            ownerId: lead.ownerId,
-            ownedAt: lead.ownedAt,
-            ownerActedAt: lead.ownerActedAt,
-            // Converted or archived since the read: its owner stays frozen.
-            deletedAt: null,
-            statusEnum: { not: LeadStatus.CONVERTED },
-          },
-          data: { ownerId: null, ownedAt: null, ownerActedAt: null },
+      // One failing lead must not block the ones after it: log it, go on.
+      try {
+        const dueAt = due(lead);
+        if (!dueAt || dueAt > now) continue;
+        const change = this.changeOf(
+          lead,
+          'EXPIRE',
+          null,
+          null,
+          "Muddatida harakat bo'lmadi",
+          companyId,
+        );
+        const done = await this.prisma.$transaction(async (tx) => {
+          // Only if nothing moved since the read: an action or a new owner wins.
+          const { count } = await tx.lead.updateMany({
+            where: {
+              id: lead.id,
+              ownerId: lead.ownerId,
+              ownedAt: lead.ownedAt,
+              ownerActedAt: lead.ownerActedAt,
+              // Converted or archived since the read: its owner stays frozen.
+              deletedAt: null,
+              statusEnum: { not: LeadStatus.CONVERTED },
+            },
+            data: { ownerId: null, ownedAt: null, ownerActedAt: null },
+          });
+          if (count === 0) return false;
+          await this.recordChange(tx, change);
+          return true;
         });
-        if (count === 0) return false;
-        await this.recordChange(tx, change);
-        return true;
-      });
-      if (done) {
-        expired++;
-        this.emit(change);
+        if (done) {
+          expired++;
+          this.emit(change);
+        }
+      } catch (err) {
+        this.logger.error(
+          `lead ${lead.id} ownership expiry failed: ${(err as Error).message}`,
+        );
       }
     }
     return expired;
@@ -611,13 +641,21 @@ export class LeadOwnershipService {
     return lead;
   }
 
+  /**
+   * Runs `fn` Serializable. A lost race becomes the generic 409; `onConflict`
+   * may throw a more specific one first.
+   */
   private async inTx<T>(
     fn: (tx: Prisma.TransactionClient) => Promise<T>,
+    onConflict?: () => Promise<void>,
   ): Promise<T> {
     try {
       return await this.prisma.$transaction(fn, SERIALIZABLE);
     } catch (err) {
-      if (isTransactionConflict(err)) rethrowAsConflict(err);
+      if (isTransactionConflict(err)) {
+        await onConflict?.();
+        rethrowAsConflict(err);
+      }
       throw err;
     }
   }

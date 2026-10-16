@@ -22,7 +22,11 @@ export class LeadOwnerTaskListener {
 
   @OnEvent(TASK_EVENTS.ASSIGNED)
   async onAssigned(p: TaskAssignedPayload): Promise<void> {
-    if (p.created && p.actorId != null) await this.touch(p.task.id, p.actorId);
+    // A recurring rule makes its task by itself, as the rule's author: that
+    // run is not an action of the lead's owner.
+    if (p.created && p.actorId != null) {
+      await this.touch(p.task.id, p.actorId, { skipRecurring: true });
+    }
   }
 
   @OnEvent(TASK_EVENTS.STATUS_CHANGED)
@@ -35,13 +39,18 @@ export class LeadOwnerTaskListener {
     await this.touch(p.task.id, p.actorId);
   }
 
-  private async touch(taskId: string, actorId: number): Promise<void> {
+  private async touch(
+    taskId: string,
+    actorId: number,
+    opts: { skipRecurring?: boolean } = {},
+  ): Promise<void> {
     try {
       const task = await this.prisma.task.findUnique({
         where: { id: taskId },
-        select: { entityType: true, entityId: true },
+        select: { entityType: true, entityId: true, recurrenceId: true },
       });
       if (task?.entityType !== 'Lead' || !task.entityId) return;
+      if (opts.skipRecurring && task.recurrenceId) return;
       await touchLeadOwnerAction(this.prisma, task.entityId, actorId);
     } catch (err) {
       this.logger.warn(

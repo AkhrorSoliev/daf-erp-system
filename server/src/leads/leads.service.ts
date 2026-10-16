@@ -34,6 +34,7 @@ import { PermissionsService } from '../common/permissions/permissions.service';
 import {
   LeadOwnershipService,
   type OwnedLeadFields,
+  type OwnershipChange,
 } from './ownership/lead-ownership.service';
 import { touchLeadOwnerAction } from './ownership/owner-action';
 
@@ -115,12 +116,19 @@ export class LeadsService {
     return { ...lead, commentCount: counts.get(lead.id) ?? 0 };
   }
 
-  /** Adds `ownerDueAt` (ADR-0092): one settings read and one holiday read. */
+  /**
+   * Adds `ownerDueAt` (ADR-0092): one settings read and one holiday read, and
+   * none when no lead has a running clock (no owner, or a converted lead).
+   */
   private async withOwnerDue<T extends OwnedLeadFields>(
     leads: T[],
     companyId: number,
   ): Promise<(T & { ownerDueAt: Date | null })[]> {
     if (leads.length === 0) return [];
+    const anyClock = leads.some(
+      (l) => l.ownerId != null && l.statusEnum !== LeadStatus.CONVERTED,
+    );
+    if (!anyClock) return leads.map((l) => ({ ...l, ownerDueAt: null }));
     const due = await this.ownership.dueResolver(companyId);
     return leads.map((lead) => ({ ...lead, ownerDueAt: due(lead) }));
   }
@@ -603,57 +611,66 @@ export class LeadsService {
       _max: { order: true },
     });
 
-    const created = await this.prisma.lead.create({
-      data: {
-        firstName,
-        lastName,
-        phone: dto.phone,
-        extraPhone: dto.extraPhone || null,
-        sectionId: dto.sectionId,
-        sourceId: dto.sourceId ?? null,
-        order: (maxOrder._max.order ?? -1) + 1,
-        statusEnum,
-        status: statusEnum.toLowerCase(),
-        companyId,
-        branchId,
-        ownerId,
-        ownedAt: ownerId ? now : null,
-        ownerActedAt: ownerId ? now : null,
-      },
-      select: LEAD_CARD_SELECT,
-    });
+    // One transaction: the lead, its history row and (for an owned lead) the
+    // ownership log either all exist or none does. Otherwise a failure after
+    // the insert leaves an owned lead the log and the history never heard of.
+    const { created, change } = await this.prisma.$transaction(async (tx) => {
+      const lead = await tx.lead.create({
+        data: {
+          firstName,
+          lastName,
+          phone: dto.phone,
+          extraPhone: dto.extraPhone || null,
+          sectionId: dto.sectionId,
+          sourceId: dto.sourceId ?? null,
+          order: (maxOrder._max.order ?? -1) + 1,
+          statusEnum,
+          status: statusEnum.toLowerCase(),
+          companyId,
+          branchId,
+          ownerId,
+          ownedAt: ownerId ? now : null,
+          ownerActedAt: ownerId ? now : null,
+        },
+        select: LEAD_CARD_SELECT,
+      });
 
-    await this.entityHistoryService.recordCreate({
-      entityType: 'Lead',
-      entityId: created.id,
-      newValues: {
-        firstName: created.firstName,
-        lastName: created.lastName,
-        phone: created.phone,
-        // Not part of LEAD_CARD_SELECT (the board card never shows it), so the
-        // recorded value comes from the request rather than the created row.
-        extraPhone: dto.extraPhone || null,
-        statusEnum: created.statusEnum,
-      },
-      changedById: actor.kind === 'user' ? actor.id : undefined,
-      companyId,
-    });
-
-    if (ownerId !== null) {
-      const change = {
-        leadId: created.id,
-        leadName: `${firstName} ${lastName}`,
-        branchId,
-        kind: 'CLAIM' as const,
-        fromUserId: null,
-        toUserId: ownerId,
-        actorId: ownerId,
-        reason: "Lidni o'zi qo'shdi",
+      await this.entityHistoryService.recordCreate({
+        entityType: 'Lead',
+        entityId: lead.id,
+        newValues: {
+          firstName: lead.firstName,
+          lastName: lead.lastName,
+          phone: lead.phone,
+          // Not part of LEAD_CARD_SELECT (the board card never shows it), so the
+          // recorded value comes from the request rather than the created row.
+          extraPhone: dto.extraPhone || null,
+          statusEnum: lead.statusEnum,
+        },
+        changedById: actor.kind === 'user' ? actor.id : undefined,
         companyId,
-      };
-      await this.ownership.recordChange(this.prisma, change);
-      this.ownership.emit(change);
-    }
+        tx,
+      });
+
+      let ownerChange: OwnershipChange | null = null;
+      if (ownerId !== null) {
+        ownerChange = {
+          leadId: lead.id,
+          leadName: `${firstName} ${lastName}`,
+          branchId,
+          kind: 'CLAIM',
+          fromUserId: null,
+          toUserId: ownerId,
+          actorId: ownerId,
+          reason: "Lidni o'zi qo'shdi",
+          companyId,
+        };
+        await this.ownership.recordChange(tx, ownerChange);
+      }
+      return { created: lead, change: ownerChange };
+    });
+    // Listeners hear about the owner only after the commit.
+    if (change) this.ownership.emit(change);
 
     const [card] = await this.withOwnerDue([created], companyId);
     // A brand-new lead has no comments and has not been called yet.
@@ -772,7 +789,15 @@ export class LeadsService {
         companyId,
         ...leadBranchWhere(scope),
       },
-      select: { id: true, sectionId: true, statusEnum: true, branchId: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        sectionId: true,
+        statusEnum: true,
+        branchId: true,
+        ownerId: true,
+      },
     });
     if (!lead) {
       throw new NotFoundException('Lid topilmadi');
@@ -813,30 +838,72 @@ export class LeadsService {
       _max: { order: true },
     });
 
-    const updated = await this.prisma.lead.update({
-      where: { id: leadId },
-      data: {
-        sectionId: dto.sectionId,
-        order: (maxOrder._max.order ?? -1) + 1,
-        statusEnum,
-        status: statusEnum.toLowerCase(),
-        branchId,
-      },
-      select: LEAD_CARD_SELECT,
-    });
+    // ADR-0092: an owner must work in the lead's branch, so a move to another
+    // branch takes the lead back from its owner. A converted lead's owner
+    // stays frozen (stage 2 credits it).
+    const releaseOwner =
+      lead.ownerId != null &&
+      lead.statusEnum !== LeadStatus.CONVERTED &&
+      lead.branchId !== branchId;
 
-    await this.entityHistoryService.recordUpdate({
-      entityType: 'Lead',
-      entityId: leadId,
-      oldValues: {
-        sectionId: lead.sectionId,
-        statusEnum: lead.statusEnum,
-        branchId: lead.branchId,
-      },
-      newValues: { sectionId: dto.sectionId, statusEnum, branchId },
-      changedById: userId,
-      companyId,
+    const { updated, change } = await this.prisma.$transaction(async (tx) => {
+      let ownerChange: OwnershipChange | null = null;
+      if (releaseOwner) {
+        // Only if nobody took, gave or released the lead since the read.
+        const { count } = await tx.lead.updateMany({
+          where: {
+            id: leadId,
+            ownerId: lead.ownerId,
+            statusEnum: { not: LeadStatus.CONVERTED },
+          },
+          data: { ownerId: null, ownedAt: null, ownerActedAt: null },
+        });
+        if (count > 0) {
+          ownerChange = {
+            leadId,
+            leadName: `${lead.firstName} ${lead.lastName}`.trim(),
+            // The branch the owner worked in, as release() logs it.
+            branchId: lead.branchId,
+            kind: 'RELEASE',
+            fromUserId: lead.ownerId,
+            toUserId: null,
+            actorId: userId,
+            reason: "Boshqa filialga o'tkazildi",
+            companyId,
+          };
+          await this.ownership.recordChange(tx, ownerChange);
+        }
+      }
+
+      // After the release, so the card answers without the old owner.
+      const row = await tx.lead.update({
+        where: { id: leadId },
+        data: {
+          sectionId: dto.sectionId,
+          order: (maxOrder._max.order ?? -1) + 1,
+          statusEnum,
+          status: statusEnum.toLowerCase(),
+          branchId,
+        },
+        select: LEAD_CARD_SELECT,
+      });
+
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'Lead',
+        entityId: leadId,
+        oldValues: {
+          sectionId: lead.sectionId,
+          statusEnum: lead.statusEnum,
+          branchId: lead.branchId,
+        },
+        newValues: { sectionId: dto.sectionId, statusEnum, branchId },
+        changedById: userId,
+        companyId,
+        tx,
+      });
+      return { updated: row, change: ownerChange };
     });
+    if (change) this.ownership.emit(change);
 
     return this.asCard(updated, companyId);
   }
@@ -914,11 +981,6 @@ export class LeadsService {
       throw new NotFoundException('Lid topilmadi');
     }
 
-    // ADR-0092: the owner's call mark keeps the lead with them.
-    if (dto.called) {
-      await touchLeadOwnerAction(this.prisma, id, userId);
-    }
-
     // When already called, leave BOTH calledAt and calledById untouched so the
     // (when, who) pair stays coherent — re-marking must not relabel the caller
     // while keeping the original timestamp.
@@ -933,6 +995,12 @@ export class LeadsService {
       data,
       select: LEAD_CARD_SELECT,
     });
+
+    // ADR-0092: the owner's call mark keeps the lead with them — stamped only
+    // once the mark is really saved.
+    if (dto.called) {
+      await touchLeadOwnerAction(this.prisma, id, userId);
+    }
 
     await this.entityHistoryService.recordUpdate({
       entityType: 'Lead',

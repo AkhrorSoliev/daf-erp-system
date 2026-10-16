@@ -50,12 +50,13 @@ export class LeadQueryDto extends PaginationDto {
 
   /**
    * «Mas'ul» (ADR-0092): `me`, `none` and user ids, comma-separated; the
-   * values are ORed.
+   * values are ORed. A user id is at most 9 digits: the column is an int4, and
+   * a longer number would reach Prisma and end as a 500.
    */
   @IsOptional()
   @Transform(({ value }) => toStringArray(value))
   @IsArray()
-  @Matches(/^(me|none|\d+)$/, { each: true })
+  @Matches(/^(me|none|\d{1,9})$/, { each: true })
   owner?: string[];
 
   // "true" → only leads already marked called (calledAt set); "false" → only

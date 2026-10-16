@@ -2,9 +2,11 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { LeadStatus } from '@prisma/client';
+import { CONCURRENT_CHANGE_MESSAGE } from '../../common/transaction-conflict';
 import { LEAD_OWNER_CHANGED } from '../lead-events';
 import { LeadOwnershipService } from './lead-ownership.service';
 
@@ -163,6 +165,76 @@ describe('LeadOwnershipService.claim', () => {
   });
 });
 
+describe('LeadOwnershipService.claim — a lost race', () => {
+  // Serializable lost the race: Prisma reports it as P2034.
+  const lost = () =>
+    Object.assign(new Error('write conflict'), { code: 'P2034' });
+
+  function raceSetup(read: jest.Mock) {
+    const s = setup();
+    (s.prisma.$transaction as jest.Mock).mockRejectedValue(lost());
+    Object.assign(s.prisma, { lead: { findFirst: read } });
+    return s;
+  }
+
+  it('names the person who won, like a claim on an owned lead does', async () => {
+    const read = jest.fn().mockResolvedValue({
+      ownerId: 12,
+      owner: { firstName: 'Farangiz', lastName: 'N' },
+    });
+    const s = raceSetup(read);
+    await expect(s.service.claim('L1', 11, 1, [1])).rejects.toThrow(
+      new ConflictException('Bu lidni Farangiz N band qilgan'),
+    );
+    expect(read).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'L1',
+          companyId: 1,
+          deletedAt: null,
+        }),
+      }),
+    );
+    expect(s.events.emit).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the generic conflict when nobody holds the lead now', async () => {
+    const s = raceSetup(
+      jest.fn().mockResolvedValue({ ownerId: null, owner: null }),
+    );
+    await expect(s.service.claim('L1', 11, 1, [1])).rejects.toThrow(
+      new ConflictException(CONCURRENT_CHANGE_MESSAGE),
+    );
+  });
+
+  it('falls back to the generic conflict when the winner is the caller', async () => {
+    const s = raceSetup(
+      jest.fn().mockResolvedValue({
+        ownerId: 11,
+        owner: { firstName: 'Nodira', lastName: 'R' },
+      }),
+    );
+    await expect(s.service.claim('L1', 11, 1, [1])).rejects.toThrow(
+      new ConflictException(CONCURRENT_CHANGE_MESSAGE),
+    );
+  });
+
+  it('falls back to the generic conflict when the lead cannot be read again', async () => {
+    const s = raceSetup(jest.fn().mockRejectedValue(new Error('db down')));
+    await expect(s.service.claim('L1', 11, 1, [1])).rejects.toThrow(
+      new ConflictException(CONCURRENT_CHANGE_MESSAGE),
+    );
+  });
+
+  it('reads nothing again for an error that is not a lost race', async () => {
+    const read = jest.fn();
+    const s = raceSetup(read);
+    (s.prisma.$transaction as jest.Mock).mockRejectedValue(new Error('boom'));
+    await expect(s.service.claim('L1', 11, 1, [1])).rejects.toThrow('boom');
+    expect(read).not.toHaveBeenCalled();
+  });
+});
+
 describe('LeadOwnershipService.release', () => {
   const OWNED = { ...FREE_LEAD, ownerId: 11, owner: null };
 
@@ -287,6 +359,32 @@ describe('LeadOwnershipService.dueResolver', () => {
     ).toEqual(at('2026-10-19', '12:00'));
   });
 
+  it('counts the days of a long holiday begun well before today', async () => {
+    const x = setup();
+    // Two and a half weeks of holiday that opened the day the lead was taken,
+    // seven weeks before now: a 30-day look-back would have cut it off.
+    (x.prisma as Record<string, unknown>).holiday = {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          date: at('2026-11-02', '00:00'),
+          endDate: at('2026-11-20', '00:00'),
+          branchId: null,
+        },
+      ]),
+    };
+    const due = await x.service.dueResolver(1, at('2026-12-21', '12:00'));
+    expect(
+      due({
+        ownerId: 11,
+        ownedAt: at('2026-11-02', '10:00'),
+        ownerActedAt: null,
+        branchId: 1,
+        statusEnum: LeadStatus.NEW,
+      }),
+      // The first working day after the holiday: Saturday 21 November.
+    ).toEqual(at('2026-11-21', '10:00'));
+  });
+
   it('gives no deadline to a free or a converted lead', async () => {
     const due = await s().service.dueResolver(1, at('2026-10-19', '10:30'));
     const owned = {
@@ -311,12 +409,12 @@ describe('LeadOwnershipService.expireOverdue', () => {
     ownerActedAt: null,
   };
 
-  function expirySetup(updated = 1) {
+  function expirySetup(updated = 1, leads: object[] = [OWNED]) {
     const s = setup();
     Object.assign(s.prisma, {
       company: { findMany: jest.fn().mockResolvedValue([{ id: 1 }]) },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
-      lead: { findMany: jest.fn().mockResolvedValue([OWNED]) },
+      lead: { findMany: jest.fn().mockResolvedValue(leads) },
     });
     Object.assign(s.tx.lead, {
       updateMany: jest.fn().mockResolvedValue({ count: updated }),
@@ -360,6 +458,26 @@ describe('LeadOwnershipService.expireOverdue', () => {
       s.service.expireOverdue(at('2026-10-19', '11:59')),
     ).resolves.toBe(0);
     expect(s.tx.lead.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('goes on to the next lead when one lead fails', async () => {
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const s = expirySetup(1, [OWNED, { ...OWNED, id: 'L2' }]);
+    (s.prisma.$transaction as jest.Mock).mockRejectedValueOnce(
+      new Error('db blip'),
+    );
+    await expect(
+      s.service.expireOverdue(at('2026-10-19', '12:15')),
+    ).resolves.toBe(1);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('lead L1 ownership expiry failed: db blip'),
+    );
+    expect(s.events.emit).toHaveBeenCalledTimes(1);
+    expect(s.events.emit).toHaveBeenCalledWith(
+      LEAD_OWNER_CHANGED,
+      expect.objectContaining({ kind: 'EXPIRE', leadId: 'L2' }),
+    );
+    error.mockRestore();
   });
 
   it('skips a lead whose owner acted or changed since the read', async () => {

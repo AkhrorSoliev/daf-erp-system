@@ -215,6 +215,20 @@ describe('LeadsService', () => {
 
       expect(ownership.dueResolver).not.toHaveBeenCalled();
     });
+
+    it('reads no settings or holidays when no lead has a running clock', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({ id: 'sec-1' });
+      // One lead nobody owns, one whose owner is frozen by the conversion.
+      prisma.lead.findMany.mockResolvedValue([
+        { id: 'lead-1', ownerId: null, statusEnum: 'NEW' },
+        { id: 'lead-2', ownerId: 11, statusEnum: 'CONVERTED' },
+      ]);
+
+      const result = await service.getSectionLeads('sec-1', 1001, null);
+
+      expect(ownership.dueResolver).not.toHaveBeenCalled();
+      expect(result.map((l) => l.ownerDueAt)).toEqual([null, null]);
+    });
   });
 
   describe('card', () => {
@@ -909,9 +923,103 @@ describe('LeadsService', () => {
         );
       });
 
+      describe('one transaction', () => {
+        // A client of its own, so a write that bypasses the transaction shows.
+        let tx: { lead: { create: jest.Mock } };
+        let committed: boolean;
+        let committedAtEmit: boolean | null;
+
+        beforeEach(() => {
+          tx = {
+            lead: {
+              create: jest.fn().mockResolvedValue({
+                id: 'lead-6',
+                firstName: 'Aziz',
+                lastName: 'Karimov',
+                phone: '901234567',
+                statusEnum: 'NEW',
+                ownerId: 1,
+              }),
+            },
+          };
+          committed = false;
+          committedAtEmit = null;
+          prisma.$transaction.mockImplementation(async (fn: any) => {
+            const result = await fn(tx);
+            committed = true;
+            return result;
+          });
+          ownership.emit.mockImplementation(() => {
+            committedAtEmit = committed;
+          });
+        });
+
+        it('writes the lead, its history row and the ownership log on the same client', async () => {
+          await service.create(
+            { ...validDto, sectionId: 'sec-2' },
+            1001,
+            CALLER,
+          );
+
+          expect(tx.lead.create).toHaveBeenCalledTimes(1);
+          expect(prisma.lead.create).not.toHaveBeenCalled();
+          expect(history.recordCreate).toHaveBeenCalledWith(
+            expect.objectContaining({ entityId: 'lead-6', tx }),
+          );
+          expect(ownership.recordChange).toHaveBeenCalledWith(
+            tx,
+            expect.objectContaining({ leadId: 'lead-6', kind: 'CLAIM' }),
+          );
+        });
+
+        it('tells listeners only after the commit', async () => {
+          await service.create(
+            { ...validDto, sectionId: 'sec-2' },
+            1001,
+            CALLER,
+          );
+
+          expect(ownership.emit).toHaveBeenCalledTimes(1);
+          expect(committedAtEmit).toBe(true);
+        });
+
+        it('announces nothing when the ownership log cannot be written', async () => {
+          ownership.recordChange.mockRejectedValue(new Error('log failed'));
+
+          await expect(
+            service.create({ ...validDto, sectionId: 'sec-2' }, 1001, CALLER),
+          ).rejects.toThrow('log failed');
+
+          expect(committed).toBe(false);
+          expect(ownership.emit).not.toHaveBeenCalled();
+        });
+
+        it('keeps the lead and its history in the transaction when nobody owns it', async () => {
+          await service.create({ ...validDto, sectionId: 'sec-2' }, 1001, {
+            kind: 'public-form',
+          });
+
+          expect(tx.lead.create).toHaveBeenCalledTimes(1);
+          expect(history.recordCreate).toHaveBeenCalledWith(
+            expect.objectContaining({ entityId: 'lead-6', tx }),
+          );
+          expect(ownership.recordChange).not.toHaveBeenCalled();
+          expect(ownership.emit).not.toHaveBeenCalled();
+        });
+      });
+
       it('answers with the new card and its deadline', async () => {
         const due = new Date('2026-10-19T07:00:00Z');
         ownership.dueResolver.mockResolvedValue(() => due);
+        // The owned row the insert returns, as the real card select carries it.
+        prisma.lead.create.mockResolvedValue({
+          id: 'lead-6',
+          firstName: 'Aziz',
+          lastName: 'Karimov',
+          phone: '901234567',
+          statusEnum: 'NEW',
+          ownerId: 1,
+        });
 
         const card = await service.create(
           { ...validDto, sectionId: 'sec-2' },
@@ -1031,9 +1139,11 @@ describe('LeadsService', () => {
         lastName: 'Karimov',
         phone: '901234567',
       });
+      // An owned lead: only a running clock asks for a deadline.
       prisma.lead.update.mockResolvedValue({
         id: 'lead-1',
         firstName: 'Azizbek',
+        ownerId: 11,
       });
 
       const card = await service.update(
@@ -1047,6 +1157,7 @@ describe('LeadsService', () => {
       expect(card).toEqual({
         id: 'lead-1',
         firstName: 'Azizbek',
+        ownerId: 11,
         commentCount: 0,
         ownerDueAt: due,
       });
@@ -1208,6 +1319,174 @@ describe('LeadsService', () => {
           }),
         }),
       );
+    });
+
+    describe('owner and branch (ADR-0092)', () => {
+      const OWNED_LEAD = {
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        sectionId: 'sec-1',
+        statusEnum: 'NEW',
+        branchId: 1,
+        ownerId: 11,
+      };
+      // A client of its own, so a write that bypasses the transaction shows.
+      let tx: { lead: { updateMany: jest.Mock; update: jest.Mock } };
+      let committed: boolean;
+      let committedAtEmit: boolean | null;
+
+      const setupMove = (
+        lead: object,
+        branchId: number,
+        updateManyCount = 1,
+      ) => {
+        prisma.lead.findFirst.mockResolvedValue(lead);
+        prisma.leadSection.findFirst.mockResolvedValue({
+          id: 'sec-2',
+          column: { systemKey: null, branchId },
+        });
+        prisma.lead.aggregate.mockResolvedValue({ _max: { order: 1 } });
+        tx.lead.updateMany.mockResolvedValue({ count: updateManyCount });
+      };
+
+      beforeEach(() => {
+        tx = {
+          lead: {
+            updateMany: jest.fn(),
+            update: jest.fn().mockResolvedValue({ id: 'lead-1' }),
+          },
+        };
+        committed = false;
+        committedAtEmit = null;
+        prisma.$transaction.mockImplementation(async (fn: any) => {
+          const result = await fn(tx);
+          committed = true;
+          return result;
+        });
+        ownership.emit.mockImplementation(() => {
+          committedAtEmit = committed;
+        });
+      });
+
+      it("releases the owner in the move's own transaction when the branch changes", async () => {
+        setupMove(OWNED_LEAD, 2);
+
+        await service.move('lead-1', { sectionId: 'sec-2' }, 1001, 5, null);
+
+        expect(tx.lead.updateMany).toHaveBeenCalledWith({
+          where: {
+            id: 'lead-1',
+            ownerId: 11,
+            statusEnum: { not: 'CONVERTED' },
+          },
+          data: { ownerId: null, ownedAt: null, ownerActedAt: null },
+        });
+        expect(ownership.recordChange).toHaveBeenCalledWith(tx, {
+          leadId: 'lead-1',
+          leadName: 'Aziz Karimov',
+          // The branch the owner worked in.
+          branchId: 1,
+          kind: 'RELEASE',
+          fromUserId: 11,
+          toUserId: null,
+          actorId: 5,
+          reason: "Boshqa filialga o'tkazildi",
+          companyId: 1001,
+        });
+        // The move itself and its history row are in the same transaction.
+        expect(tx.lead.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ branchId: 2 }),
+          }),
+        );
+        expect(prisma.lead.update).not.toHaveBeenCalled();
+        expect(history.recordUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ entityId: 'lead-1', tx }),
+        );
+      });
+
+      it('tells listeners only after the commit', async () => {
+        setupMove(OWNED_LEAD, 2);
+
+        await service.move('lead-1', { sectionId: 'sec-2' }, 1001, 5, null);
+
+        expect(ownership.emit).toHaveBeenCalledTimes(1);
+        expect(ownership.emit).toHaveBeenCalledWith(
+          expect.objectContaining({ kind: 'RELEASE', fromUserId: 11 }),
+        );
+        expect(committedAtEmit).toBe(true);
+      });
+
+      it('answers with a card that no longer names the old owner', async () => {
+        setupMove(OWNED_LEAD, 2);
+        // The card is read after the release, inside the transaction.
+        tx.lead.update.mockImplementation(async () => ({
+          id: 'lead-1',
+          ownerId: tx.lead.updateMany.mock.calls.length ? null : 11,
+        }));
+
+        const card = await service.move(
+          'lead-1',
+          { sectionId: 'sec-2' },
+          1001,
+          5,
+          null,
+        );
+
+        expect(card.ownerId).toBeNull();
+      });
+
+      it('keeps the owner when the lead stays in its branch', async () => {
+        setupMove(OWNED_LEAD, 1);
+
+        await service.move('lead-1', { sectionId: 'sec-2' }, 1001, 5, null);
+
+        expect(tx.lead.updateMany).not.toHaveBeenCalled();
+        expect(ownership.recordChange).not.toHaveBeenCalled();
+        expect(ownership.emit).not.toHaveBeenCalled();
+      });
+
+      it("keeps a converted lead's owner", async () => {
+        setupMove({ ...OWNED_LEAD, statusEnum: 'CONVERTED' }, 2);
+
+        await service.move('lead-1', { sectionId: 'sec-2' }, 1001, 5, null);
+
+        expect(tx.lead.updateMany).not.toHaveBeenCalled();
+        expect(ownership.recordChange).not.toHaveBeenCalled();
+      });
+
+      it('has nothing to release on a lead nobody owns', async () => {
+        setupMove({ ...OWNED_LEAD, ownerId: null }, 2);
+
+        await service.move('lead-1', { sectionId: 'sec-2' }, 1001, 5, null);
+
+        expect(tx.lead.updateMany).not.toHaveBeenCalled();
+        expect(ownership.recordChange).not.toHaveBeenCalled();
+      });
+
+      it('logs and announces nothing when the owner changed since the read', async () => {
+        setupMove(OWNED_LEAD, 2, 0);
+
+        await service.move('lead-1', { sectionId: 'sec-2' }, 1001, 5, null);
+
+        expect(ownership.recordChange).not.toHaveBeenCalled();
+        expect(ownership.emit).not.toHaveBeenCalled();
+        // The move itself still goes through.
+        expect(tx.lead.update).toHaveBeenCalled();
+      });
+
+      it('announces nothing when the move fails after the release', async () => {
+        setupMove(OWNED_LEAD, 2);
+        tx.lead.update.mockRejectedValue(new Error('update failed'));
+
+        await expect(
+          service.move('lead-1', { sectionId: 'sec-2' }, 1001, 5, null),
+        ).rejects.toThrow('update failed');
+
+        expect(committed).toBe(false);
+        expect(ownership.emit).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -1822,6 +2101,17 @@ describe('LeadsService', () => {
           where: expect.objectContaining({ id: 'lead-1', ownerId: 7 }),
         }),
       );
+    });
+
+    it('does not stamp an action when the call mark could not be saved', async () => {
+      prisma.lead.findFirst.mockResolvedValue({ id: 'lead-1', calledAt: null });
+      prisma.lead.update.mockRejectedValue(new Error('update failed'));
+
+      await expect(
+        service.markCalled('lead-1', { called: true }, 1001, 7, null),
+      ).rejects.toThrow('update failed');
+
+      expect(prisma.lead.updateMany).not.toHaveBeenCalled();
     });
 
     it('does not stamp an action when the call mark is cleared', async () => {

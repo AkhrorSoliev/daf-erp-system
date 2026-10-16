@@ -12,7 +12,11 @@ const TASK = {
 };
 
 function setup(
-  entity: { entityType: string | null; entityId: string | null } | null,
+  entity: {
+    entityType: string | null;
+    entityId: string | null;
+    recurrenceId?: string | null;
+  } | null,
 ) {
   const prisma = {
     task: { findUnique: jest.fn().mockResolvedValue(entity) },
@@ -57,6 +61,58 @@ describe('LeadOwnerTaskListener', () => {
       text: 'gaplashdim',
     });
     expect(s.prisma.lead.updateMany).toHaveBeenCalledTimes(2);
+  });
+
+  describe('a recurring task', () => {
+    const RECURRING = {
+      entityType: 'Lead',
+      entityId: 'L1',
+      recurrenceId: 'R1',
+    };
+
+    it("does not count the rule's automatic run as the owner's action", async () => {
+      const s = setup(RECURRING);
+      // The runner emits task.assigned (created) as the rule's author.
+      await s.listener.onAssigned({
+        task: TASK,
+        actorId: 11,
+        userIds: [11],
+        created: true,
+      });
+      expect(s.prisma.task.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({ recurrenceId: true }),
+        }),
+      );
+      expect(s.prisma.lead.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("still counts the owner's own status change and comment", async () => {
+      const s = setup(RECURRING);
+      await s.listener.onStatus({
+        task: TASK,
+        actorId: 11,
+        from: 'NEW',
+        to: 'IN_PROGRESS',
+      });
+      await s.listener.onCommented({
+        task: TASK,
+        actorId: 11,
+        text: 'gaplashdim',
+      });
+      expect(s.prisma.lead.updateMany).toHaveBeenCalledTimes(2);
+    });
+
+    it('counts a one-off task created by the owner as before', async () => {
+      const s = setup({ ...RECURRING, recurrenceId: null });
+      await s.listener.onAssigned({
+        task: TASK,
+        actorId: 11,
+        userIds: [11],
+        created: true,
+      });
+      expect(s.prisma.lead.updateMany).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('ignores a task on a student or with no record', async () => {
