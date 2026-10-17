@@ -215,6 +215,80 @@ const ru: Dictionary = {
   "Parolni takrorlang": "Повторите пароль",
   "Yangi parolni qayta kiriting": "Введите новый пароль ещё раз",
   "Saqlash": "Сохранить",
+
+  // Home page — money strip
+  "Bu oy pul": "Деньги за этот месяц",
+  "Bu oy tushum": "Поступления за месяц",
+  "{n} ta to'lov": "платежей: {n}",
+  "Shu oy kassaga tushgan pul (so'm).": "Деньги, поступившие в кассу в этом месяце (сум).",
+  "Bu oy hisoblandi": "Начислено за месяц",
+  "to'landi {pct}%": "оплачено {pct}%",
+  "hisob yozilmagan": "счета не выставлены",
+  "Shu oy uchun o'quvchilarga yozilgan oylik hisoblar. To'landi — shundan to'langan qismi.": "Ежемесячные счета, выставленные ученикам за этот месяц. «Оплачено» — оплаченная часть.",
+  "Oy oxiriga kutilyapti": "Ожидается к концу месяца",
+  "prognoz": "прогноз",
+  "Oy oxirigi prognoz: o'tilgan va rejadagi darslar qiymati. Bu kassa tushumi emas — ikkovi turli o'lchov, shuning uchun ular ayirilmaydi.": "Прогноз на конец месяца: стоимость проведённых и запланированных занятий. Это не поступления в кассу — это разные показатели, поэтому их не вычитают друг из друга.",
+  "O'qiyotganlar qarzi": "Долг учащихся",
+  "{n} ta · o'qimayotganlar {sum}": "учеников: {n} · не учатся: {sum}",
+  "Faol guruhda o'qiyotganlarning qarzi. O'qimayotganlar (guruhsiz, muzlatilgan, ketgan) qarzi alohida, qo'shilmaydi.": "Долг тех, кто учится в активной группе. Долг не учащихся (без группы, замороженных, ушедших) считается отдельно и не суммируется.",
+  "Foyda (kassa asosida)": "Прибыль (по кассе)",
+  "Sof foyda": "Чистая прибыль",
+  "kassa asosida": "по кассе",
+  "shu oy": "этот месяц",
+  "Kanonik sof foyda hisoblanmadi, bu kassa asosidagi raqam: ustoz oyligi keyingi davrda to'lanadi, shuning uchun bu son haqiqiy foydadan yuqori chiqadi.": "Каноническая чистая прибыль не рассчитана, это показатель по кассе: зарплата преподавателей выплачивается в следующем периоде, поэтому он выше фактической прибыли.",
+  "Shu oyning sof foydasi: dars tushumidan ustoz va admin oyligi, operatsion xarajat va qaytarishlar ayirilgan.": "Чистая прибыль за этот месяц: из выручки за занятия вычтены зарплаты преподавателей и администраторов, операционные расходы и возвраты.",
+
+  // Home page — people stats
+  "O'quvchilar va darslar": "Ученики и занятия",
+  "aktiv o'quvchi": "активных учеников",
+  "Shu oy: +{added} yangi, −{left} ketgan.": "В этом месяце: +{added} новых, −{left} ушедших.",
+  "Yana {n} nafari qaytmasa qo'shiladi (guruhdan chiqqan {a} kun, muzlatilgan {b} kun kutiladi).": "Ещё {n} будут добавлены, если не вернутся (срок ожидания в днях: вышли из группы — {a}, заморожены — {b}).",
+  "aktiv guruh": "активных групп",
+  "davomat (bu oy)": "посещаемость (за месяц)",
+  "dars bugun": "занятий сегодня",
+  "filial tanlanmagan": "филиал не выбран",
+
+  // Home page — lead funnel strip
+  "Lid voronkasi · shu oy": "Воронка лидов · этот месяц",
+  "Lid voronkasi · {date} dan": "Воронка лидов · с {date}",
+  "Liddan to'lovgacha": "От лида до оплаты",
+  "To'lamagan faol o'quvchi": "Активные ученики без оплаты",
+  "Batafsil": "Подробнее",
+  "Bu oyda hali lid yo'q.": "В этом месяце лидов пока нет.",
+  "Lid": "Лид",
+  "Guruhga yozildi": "Записались в группу",
+  "Darsga keldi": "Пришли на занятие",
+  "To'lov qildi": "Оплатили",
+  "{label}: {n} kishi — ro'yxatni ochish": "{label}, человек: {n} — открыть список",
+  "{label}: {n} kishi": "{label}, человек: {n}",
+  "doskadan {n}": "с доски: {n}",
+  "to'g'ridan {n}": "напрямую: {n}",
+  "{label} — {n} kishi": "{label} — человек: {n}",
+  "lidlarning {pct}": "{pct} от лидов",
+  "{pct} o'tdi": "{pct} прошли",
+  "{n} kishi o'tmadi": "не прошли: {n}",
+
+  // Home page — attention list
+  "E'tibor talab qiladi": "Требует внимания",
+  "Bugun e'tibor talab qiladigan narsa yo'q": "Сегодня ничего не требует внимания",
+  "Eng katta qarzdorlar": "Крупнейшие должники",
+  "so'm": "сум",
+  "Bugun darsga kelmadi": "Сегодня не пришли на занятие",
+  "Muddati o'tgan to'lov va'dasi": "Просроченное обещание оплаты",
+  "Ketma-ket 3 marta kelmadi": "Не пришли 3 раза подряд",
+
+  // Home page — next lessons
+  "Keyingi darslar": "Ближайшие занятия",
+  "To'liq jadval": "Полное расписание",
+  "Jadval bitta filialning xonalari va ish vaqti bo'yicha chiziladi, shuning uchun «Barcha filiallar» ko'rinishida ko'rsatilmaydi. Yuqoridagi almashtirgichdan filialni tanlang.": "Расписание строится по аудиториям и рабочему времени одного филиала, поэтому в режиме «Все филиалы» оно не показывается. Выберите филиал в переключателе выше.",
+  "Bugungi darslar tugadi.": "Занятия на сегодня закончились.",
+  "O'qituvchi belgilanmagan": "Преподаватель не назначен",
+
+  // Home page — errors
+  "E'tibor ro'yxati": "Список внимания",
+  "{label} ma'lumotini olishda xatolik. Sahifani yangilab ko'ring.": "Не удалось получить данные «{label}». Обновите страницу.",
+  "Ma'lumot yuklanmadi": "Данные не загружены",
+  "Server javob bermadi. Internet aloqangizni tekshiring yoki qaytadan urinib ko'ring.": "Сервер не ответил. Проверьте подключение к интернету или попробуйте ещё раз.",
 };
 
 export default ru;

@@ -54,6 +54,17 @@ export const STRICT_FILES: string[] = [
   "components/theme-toggle.tsx",
   "components/auth/forgot-password-dialog.tsx",
   "components/auth/forgot-password-fields.tsx",
+  "components/dashboard/home-overview.tsx",
+  "components/dashboard/home-money-cards.tsx",
+  "components/dashboard/home-people-stats.tsx",
+  "components/dashboard/home-lead-funnel-strip.tsx",
+  "components/dashboard/home-attention-list.tsx",
+  "components/dashboard/dashboard-home-visibility.ts",
+  "components/dashboard/home-next-lessons.tsx",
+  "components/dashboard/home-error-note.tsx",
+  "components/dashboard/home-load-error.tsx",
+  "components/reports/lead-funnel/lead-funnel-chart.tsx",
+  "components/reports/lead-funnel/lead-funnel-math.ts",
 ];
 
 function walk(dir: string): string[] {

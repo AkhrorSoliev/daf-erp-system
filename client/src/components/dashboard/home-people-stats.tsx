@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useT } from "@/i18n/context";
 import { formatNumber, formatPercent } from "@/lib/format-utils";
 import type { DashboardPeople } from "./dashboard-summary-types";
 
@@ -34,41 +37,56 @@ function PeopleStat({ value, label, hint, hintTitle, href }: PeopleStatProps) {
  * equal tiles would give them the same weight.
  */
 export function HomePeopleStats({ people }: { people: DashboardPeople }) {
+  const t = useT();
+  const pending =
+    (people.leftPending ?? 0) > 0 && people.leftGraceDays
+      ? ` ${t(
+          "Yana {n} nafari qaytmasa qo'shiladi (guruhdan chiqqan {a} kun, muzlatilgan {b} kun kutiladi).",
+          {
+            n: people.leftPending ?? 0,
+            a: people.leftGraceDays.LEFT_GROUP,
+            b: people.leftGraceDays.FROZEN,
+          },
+        )}`
+      : "";
+
   return (
     <section
-      aria-label="O'quvchilar va darslar"
+      aria-label={t("O'quvchilar va darslar")}
       className="flex flex-wrap items-baseline gap-x-6 gap-y-1.5 px-1"
     >
       <PeopleStat
         value={formatNumber(people.activeStudents)}
-        label="aktiv o'quvchi"
+        label={t("aktiv o'quvchi")}
         hint={`+${people.newThisMonth} / −${people.leftThisMonth}`}
         hintTitle={
-          `Shu oy: +${people.newThisMonth} yangi, −${people.leftThisMonth} ketgan.` +
-          ((people.leftPending ?? 0) > 0 && people.leftGraceDays
-            ? ` Yana ${people.leftPending} nafari qaytmasa qo'shiladi (guruhdan chiqqan ${people.leftGraceDays.LEFT_GROUP} kun, muzlatilgan ${people.leftGraceDays.FROZEN} kun kutiladi).`
-            : "")
+          t("Shu oy: +{added} yangi, −{left} ketgan.", {
+            added: people.newThisMonth,
+            left: people.leftThisMonth,
+          }) + pending
         }
         href="/students"
       />
       <PeopleStat
         value={formatNumber(people.activeGroups)}
-        label="aktiv guruh"
+        label={t("aktiv guruh")}
         href="/groups"
       />
       <PeopleStat
         value={formatPercent(
           people.attendancePct === null ? null : Math.round(people.attendancePct),
         )}
-        label="davomat (bu oy)"
+        label={t("davomat (bu oy)")}
         href="/reports/attendance"
       />
       <PeopleStat
         value={
           people.todayLessons === null ? "—" : formatNumber(people.todayLessons)
         }
-        label="dars bugun"
-        hint={people.todayLessons === null ? "filial tanlanmagan" : undefined}
+        label={t("dars bugun")}
+        hint={
+          people.todayLessons === null ? t("filial tanlanmagan") : undefined
+        }
         href="/schedule"
       />
     </section>

@@ -215,6 +215,80 @@ const en: Dictionary = {
   "Parolni takrorlang": "Repeat the password",
   "Yangi parolni qayta kiriting": "Enter the new password again",
   "Saqlash": "Save",
+
+  // Home page — money strip
+  "Bu oy pul": "Money this month",
+  "Bu oy tushum": "Income this month",
+  "{n} ta to'lov": "payments: {n}",
+  "Shu oy kassaga tushgan pul (so'm).": "Money received into the cash desk this month (UZS).",
+  "Bu oy hisoblandi": "Billed this month",
+  "to'landi {pct}%": "paid {pct}%",
+  "hisob yozilmagan": "nothing billed",
+  "Shu oy uchun o'quvchilarga yozilgan oylik hisoblar. To'landi — shundan to'langan qismi.": "Monthly bills issued to students for this month. “Paid” is the part of them that has been paid.",
+  "Oy oxiriga kutilyapti": "Expected by month end",
+  "prognoz": "forecast",
+  "Oy oxirigi prognoz: o'tilgan va rejadagi darslar qiymati. Bu kassa tushumi emas — ikkovi turli o'lchov, shuning uchun ular ayirilmaydi.": "Month-end forecast: the value of lessons held and planned. This is not cash received — the two are different measures, so they are not subtracted from each other.",
+  "O'qiyotganlar qarzi": "Debt of current students",
+  "{n} ta · o'qimayotganlar {sum}": "students: {n} · not studying: {sum}",
+  "Faol guruhda o'qiyotganlarning qarzi. O'qimayotganlar (guruhsiz, muzlatilgan, ketgan) qarzi alohida, qo'shilmaydi.": "Debt of students who study in an active group. The debt of those not studying (no group, frozen, left) is kept separate and not added.",
+  "Foyda (kassa asosida)": "Profit (cash basis)",
+  "Sof foyda": "Net profit",
+  "kassa asosida": "cash basis",
+  "shu oy": "this month",
+  "Kanonik sof foyda hisoblanmadi, bu kassa asosidagi raqam: ustoz oyligi keyingi davrda to'lanadi, shuning uchun bu son haqiqiy foydadan yuqori chiqadi.": "The canonical net profit has not been calculated; this is the cash-basis figure: teacher salaries are paid in the next period, so it comes out higher than the actual profit.",
+  "Shu oyning sof foydasi: dars tushumidan ustoz va admin oyligi, operatsion xarajat va qaytarishlar ayirilgan.": "This month's net profit: teacher and admin salaries, operating expenses and refunds are deducted from lesson income.",
+
+  // Home page — people stats
+  "O'quvchilar va darslar": "Students and lessons",
+  "aktiv o'quvchi": "active students",
+  "Shu oy: +{added} yangi, −{left} ketgan.": "This month: +{added} new, −{left} left.",
+  "Yana {n} nafari qaytmasa qo'shiladi (guruhdan chiqqan {a} kun, muzlatilgan {b} kun kutiladi).": "Another {n} will be added if they do not come back (waiting period in days: left the group {a}, frozen {b}).",
+  "aktiv guruh": "active groups",
+  "davomat (bu oy)": "attendance (this month)",
+  "dars bugun": "lessons today",
+  "filial tanlanmagan": "no branch selected",
+
+  // Home page — lead funnel strip
+  "Lid voronkasi · shu oy": "Lead funnel · this month",
+  "Lid voronkasi · {date} dan": "Lead funnel · from {date}",
+  "Liddan to'lovgacha": "Lead to payment",
+  "To'lamagan faol o'quvchi": "Active students who have not paid",
+  "Batafsil": "Details",
+  "Bu oyda hali lid yo'q.": "No leads yet this month.",
+  "Lid": "Lead",
+  "Guruhga yozildi": "Enrolled in a group",
+  "Darsga keldi": "Attended a lesson",
+  "To'lov qildi": "Paid",
+  "{label}: {n} kishi — ro'yxatni ochish": "{label}, people: {n} — open the list",
+  "{label}: {n} kishi": "{label}, people: {n}",
+  "doskadan {n}": "from the board: {n}",
+  "to'g'ridan {n}": "direct: {n}",
+  "{label} — {n} kishi": "{label} — people: {n}",
+  "lidlarning {pct}": "{pct} of leads",
+  "{pct} o'tdi": "{pct} moved on",
+  "{n} kishi o'tmadi": "dropped off: {n}",
+
+  // Home page — attention list
+  "E'tibor talab qiladi": "Needs attention",
+  "Bugun e'tibor talab qiladigan narsa yo'q": "Nothing needs attention today",
+  "Eng katta qarzdorlar": "Largest debtors",
+  "so'm": "UZS",
+  "Bugun darsga kelmadi": "Did not come to the lesson today",
+  "Muddati o'tgan to'lov va'dasi": "Overdue payment promise",
+  "Ketma-ket 3 marta kelmadi": "Absent 3 times in a row",
+
+  // Home page — next lessons
+  "Keyingi darslar": "Upcoming lessons",
+  "To'liq jadval": "Full schedule",
+  "Jadval bitta filialning xonalari va ish vaqti bo'yicha chiziladi, shuning uchun «Barcha filiallar» ko'rinishida ko'rsatilmaydi. Yuqoridagi almashtirgichdan filialni tanlang.": "The schedule is drawn from the rooms and working hours of a single branch, so it is not shown in the “All branches” view. Pick a branch in the switcher above.",
+  "Bugungi darslar tugadi.": "Today's lessons are over.",
+  "O'qituvchi belgilanmagan": "No teacher assigned",
+
+  // Home page — errors
+  "E'tibor ro'yxati": "Attention list",
+  "{label} ma'lumotini olishda xatolik. Sahifani yangilab ko'ring.": "Could not load the “{label}” data. Please refresh the page.",
+  "Ma'lumot yuklanmadi": "Data failed to load",
+  "Server javob bermadi. Internet aloqangizni tekshiring yoki qaytadan urinib ko'ring.": "The server did not respond. Check your internet connection or try again.",
 };
 
 export default en;

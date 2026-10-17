@@ -215,6 +215,80 @@ const de: Dictionary = {
   "Parolni takrorlang": "Passwort wiederholen",
   "Yangi parolni qayta kiriting": "Neues Passwort erneut eingeben",
   "Saqlash": "Speichern",
+
+  // Home page — money strip
+  "Bu oy pul": "Geld in diesem Monat",
+  "Bu oy tushum": "Einnahmen im Monat",
+  "{n} ta to'lov": "Zahlungen: {n}",
+  "Shu oy kassaga tushgan pul (so'm).": "Im Monat in die Kasse eingegangenes Geld (Sum).",
+  "Bu oy hisoblandi": "Im Monat berechnet",
+  "to'landi {pct}%": "bezahlt: {pct}%",
+  "hisob yozilmagan": "nichts berechnet",
+  "Shu oy uchun o'quvchilarga yozilgan oylik hisoblar. To'landi — shundan to'langan qismi.": "Für diesen Monat ausgestellte Monatsrechnungen der Teilnehmer. „Bezahlt“ ist der davon bezahlte Anteil.",
+  "Oy oxiriga kutilyapti": "Erwartet bis Monatsende",
+  "prognoz": "Prognose",
+  "Oy oxirigi prognoz: o'tilgan va rejadagi darslar qiymati. Bu kassa tushumi emas — ikkovi turli o'lchov, shuning uchun ular ayirilmaydi.": "Prognose zum Monatsende: Wert der gehaltenen und geplanten Unterrichtseinheiten. Das sind keine Kasseneinnahmen — es sind unterschiedliche Größen, deshalb werden sie nicht voneinander abgezogen.",
+  "O'qiyotganlar qarzi": "Schulden der Lernenden",
+  "{n} ta · o'qimayotganlar {sum}": "Teilnehmer: {n} · lernen nicht: {sum}",
+  "Faol guruhda o'qiyotganlarning qarzi. O'qimayotganlar (guruhsiz, muzlatilgan, ketgan) qarzi alohida, qo'shilmaydi.": "Schulden der Teilnehmer in aktiven Gruppen. Die Schulden der Nicht-Lernenden (ohne Gruppe, pausiert, ausgetreten) werden getrennt geführt und nicht addiert.",
+  "Foyda (kassa asosida)": "Gewinn (nach Kasse)",
+  "Sof foyda": "Nettogewinn",
+  "kassa asosida": "nach Kasse",
+  "shu oy": "dieser Monat",
+  "Kanonik sof foyda hisoblanmadi, bu kassa asosidagi raqam: ustoz oyligi keyingi davrda to'lanadi, shuning uchun bu son haqiqiy foydadan yuqori chiqadi.": "Der kanonische Nettogewinn wurde nicht berechnet, dies ist die Zahl nach Kasse: Die Lehrergehälter werden erst im nächsten Zeitraum gezahlt, daher liegt sie über dem tatsächlichen Gewinn.",
+  "Shu oyning sof foydasi: dars tushumidan ustoz va admin oyligi, operatsion xarajat va qaytarishlar ayirilgan.": "Nettogewinn dieses Monats: Vom Unterrichtsumsatz sind Lehrer- und Verwaltungsgehälter, Betriebskosten und Rückerstattungen abgezogen.",
+
+  // Home page — people stats
+  "O'quvchilar va darslar": "Teilnehmer und Unterricht",
+  "aktiv o'quvchi": "aktive Teilnehmer",
+  "Shu oy: +{added} yangi, −{left} ketgan.": "Diesen Monat: +{added} neu, −{left} ausgetreten.",
+  "Yana {n} nafari qaytmasa qo'shiladi (guruhdan chiqqan {a} kun, muzlatilgan {b} kun kutiladi).": "Weitere {n} werden hinzugezählt, wenn sie nicht zurückkehren (Wartezeit in Tagen: Gruppenaustritt {a}, pausiert {b}).",
+  "aktiv guruh": "aktive Gruppen",
+  "davomat (bu oy)": "Anwesenheit (diesen Monat)",
+  "dars bugun": "Unterricht heute",
+  "filial tanlanmagan": "keine Filiale gewählt",
+
+  // Home page — lead funnel strip
+  "Lid voronkasi · shu oy": "Lead-Trichter · dieser Monat",
+  "Lid voronkasi · {date} dan": "Lead-Trichter · ab {date}",
+  "Liddan to'lovgacha": "Vom Lead bis zur Zahlung",
+  "To'lamagan faol o'quvchi": "Aktive Teilnehmer ohne Zahlung",
+  "Batafsil": "Details",
+  "Bu oyda hali lid yo'q.": "In diesem Monat gibt es noch keine Leads.",
+  "Lid": "Lead",
+  "Guruhga yozildi": "In Gruppe eingeschrieben",
+  "Darsga keldi": "Zum Unterricht erschienen",
+  "To'lov qildi": "Bezahlt",
+  "{label}: {n} kishi — ro'yxatni ochish": "{label}, Personen: {n} — Liste öffnen",
+  "{label}: {n} kishi": "{label}, Personen: {n}",
+  "doskadan {n}": "vom Board: {n}",
+  "to'g'ridan {n}": "direkt: {n}",
+  "{label} — {n} kishi": "{label} — Personen: {n}",
+  "lidlarning {pct}": "{pct} der Leads",
+  "{pct} o'tdi": "{pct} weiter",
+  "{n} kishi o'tmadi": "nicht weitergekommen: {n}",
+
+  // Home page — attention list
+  "E'tibor talab qiladi": "Braucht Aufmerksamkeit",
+  "Bugun e'tibor talab qiladigan narsa yo'q": "Heute braucht nichts Aufmerksamkeit",
+  "Eng katta qarzdorlar": "Größte Schuldner",
+  "so'm": "Sum",
+  "Bugun darsga kelmadi": "Heute nicht zum Unterricht erschienen",
+  "Muddati o'tgan to'lov va'dasi": "Überfälliges Zahlungsversprechen",
+  "Ketma-ket 3 marta kelmadi": "3 Mal in Folge nicht erschienen",
+
+  // Home page — next lessons
+  "Keyingi darslar": "Nächster Unterricht",
+  "To'liq jadval": "Vollständiger Stundenplan",
+  "Jadval bitta filialning xonalari va ish vaqti bo'yicha chiziladi, shuning uchun «Barcha filiallar» ko'rinishida ko'rsatilmaydi. Yuqoridagi almashtirgichdan filialni tanlang.": "Der Stundenplan wird nach den Räumen und Öffnungszeiten einer einzelnen Filiale erstellt und deshalb in der Ansicht „Alle Filialen“ nicht angezeigt. Wählen Sie oben im Umschalter eine Filiale.",
+  "Bugungi darslar tugadi.": "Der Unterricht für heute ist beendet.",
+  "O'qituvchi belgilanmagan": "Lehrkraft nicht zugewiesen",
+
+  // Home page — errors
+  "E'tibor ro'yxati": "Hinweisliste",
+  "{label} ma'lumotini olishda xatolik. Sahifani yangilab ko'ring.": "Die Daten „{label}“ konnten nicht abgerufen werden. Bitte aktualisieren Sie die Seite.",
+  "Ma'lumot yuklanmadi": "Daten nicht geladen",
+  "Server javob bermadi. Internet aloqangizni tekshiring yoki qaytadan urinib ko'ring.": "Der Server hat nicht geantwortet. Prüfen Sie Ihre Internetverbindung oder versuchen Sie es erneut.",
 };
 
 export default de;

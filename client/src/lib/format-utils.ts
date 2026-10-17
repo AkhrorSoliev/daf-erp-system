@@ -92,11 +92,12 @@ export function formatPercent(
 
 /**
  * Balansni formatlash: 1500000 → "1 500 000 so'm", -50000 → "-50 000 so'm".
+ * `unit` — pul birligi so'zi; tarjima qilingan sahifa `t("so'm")` beradi.
  */
-export function formatBalance(balance: number): string {
+export function formatBalance(balance: number, unit = "so'm"): string {
   const abs = formatNumber(Math.abs(balance));
-  if (balance < 0) return `-${abs} so'm`;
-  return `${abs} so'm`;
+  if (balance < 0) return `-${abs} ${unit}`;
+  return `${abs} ${unit}`;
 }
 
 /**

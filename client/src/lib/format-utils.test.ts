@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatPhoneWithCodeInput } from "./format-utils";
+import {
+  formatBalance,
+  formatNumber,
+  formatPhoneWithCodeInput,
+} from "./format-utils";
 
 describe("formatPhoneWithCodeInput", () => {
   it("groups an Uzbek number as XXX XX XXX XX XX", () => {
@@ -32,5 +36,17 @@ describe("formatPhoneWithCodeInput", () => {
     expect(formatPhoneWithCodeInput("1234567890123456789")).toBe(
       "123 45 678 90 12 345",
     );
+  });
+});
+
+describe("formatBalance", () => {
+  it("keeps «so'm» when no unit is given", () => {
+    expect(formatBalance(1500000)).toBe(`${formatNumber(1500000)} so'm`);
+    expect(formatBalance(-50000)).toBe(`-${formatNumber(50000)} so'm`);
+  });
+
+  it("writes the unit it is given", () => {
+    expect(formatBalance(1500000, "сум")).toBe(`${formatNumber(1500000)} сум`);
+    expect(formatBalance(-50000, "UZS")).toBe(`-${formatNumber(50000)} UZS`);
   });
 });

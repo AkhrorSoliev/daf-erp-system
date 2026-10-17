@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, DoorOpen, Users } from "lucide-react";
+import { useT } from "@/i18n/context";
 import { pickNextLessons } from "./dashboard-home-visibility";
 import type { DashboardNextLesson } from "./dashboard-summary-types";
 import { CanLink } from "@/components/shared/can-link";
@@ -18,6 +19,7 @@ export function HomeNextLessons({
 }: {
   lessons: DashboardNextLesson[] | null;
 }) {
+  const t = useT();
   // `DashboardClient` foydalanuvchi hydrate bo'lgunicha skeleton chizadi, ya'ni
   // bu blok serverda hech qachon render qilinmaydi — shuning uchun boshlang'ich
   // qiymatni to'g'ridan-to'g'ri hisoblash xavfsiz. Jadval komponentidagi naqsh.
@@ -34,26 +36,26 @@ export function HomeNextLessons({
       <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
           <CalendarDays className="size-4 text-muted-foreground" />
-          Keyingi darslar
+          {t("Keyingi darslar")}
         </h2>
         <Link
           href="/schedule"
           className="flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:underline"
         >
-          To&apos;liq jadval
+          {t("To'liq jadval")}
           <ArrowRight className="size-3.5" />
         </Link>
       </header>
 
       {lessons === null ? (
         <p className="px-4 py-8 text-sm text-muted-foreground">
-          Jadval bitta filialning xonalari va ish vaqti bo&apos;yicha chiziladi,
-          shuning uchun &laquo;Barcha filiallar&raquo; ko&apos;rinishida
-          ko&apos;rsatilmaydi. Yuqoridagi almashtirgichdan filialni tanlang.
+          {t(
+            "Jadval bitta filialning xonalari va ish vaqti bo'yicha chiziladi, shuning uchun «Barcha filiallar» ko'rinishida ko'rsatilmaydi. Yuqoridagi almashtirgichdan filialni tanlang.",
+          )}
         </p>
       ) : next.length === 0 ? (
         <p className="px-4 py-8 text-sm text-muted-foreground">
-          Bugungi darslar tugadi.
+          {t("Bugungi darslar tugadi.")}
         </p>
       ) : (
         <ul className="divide-y">
@@ -73,7 +75,7 @@ export function HomeNextLessons({
                     {l.groupName}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {l.teacherName ?? "O'qituvchi belgilanmagan"}
+                    {l.teacherName ?? t("O'qituvchi belgilanmagan")}
                   </span>
                 </span>
                 <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">

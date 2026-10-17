@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { formatNumber, formatPercent } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useT } from "@/i18n/context";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   buildFunnelRows,
@@ -21,6 +22,7 @@ import type { LeadFunnelResponse } from "@/components/reports/lead-funnel/lead-f
  * uni kutmaydi, bu so'rov yiqilsa ham qolgan bloklar joyida qoladi.
  */
 export function HomeLeadFunnelStrip({ showDetails }: { showDetails: boolean }) {
+  const t = useT();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const router = useRouter();
@@ -56,21 +58,24 @@ export function HomeLeadFunnelStrip({ showDetails }: { showDetails: boolean }) {
         <div className="flex basis-full items-center gap-2 text-sm text-muted-foreground">
           <Filter className="size-4" />
           <span>
-            Lid voronkasi ·{" "}
             {range.startDate.endsWith("-01")
-              ? "shu oy"
-              : `${displayDate(range.startDate)} dan`}
+              ? t("Lid voronkasi · shu oy")
+              : t("Lid voronkasi · {date} dan", {
+                  date: displayDate(range.startDate),
+                })}
           </span>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Liddan to&apos;lovgacha</p>
+          <p className="text-xs text-muted-foreground">
+            {t("Liddan to'lovgacha")}
+          </p>
           <p className="text-xl font-semibold tabular-nums">
             {formatPercent(conversion)}
           </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">
-            To&apos;lamagan faol o&apos;quvchi
+            {t("To'lamagan faol o'quvchi")}
           </p>
           <p className="text-xl font-semibold tabular-nums">
             {formatNumber(data.unpaid.active)}
@@ -81,7 +86,7 @@ export function HomeLeadFunnelStrip({ showDetails }: { showDetails: boolean }) {
             href="/reports/leads"
             className="inline-flex items-center gap-0.5 text-sm font-medium text-primary hover:underline"
           >
-            Batafsil
+            {t("Batafsil")}
             <ChevronRight className="size-4" />
           </Link>
         )}
@@ -89,11 +94,12 @@ export function HomeLeadFunnelStrip({ showDetails }: { showDetails: boolean }) {
 
       {data.stages.lead === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
-          Bu oyda hali lid yo&apos;q.
+          {t("Bu oyda hali lid yo'q.")}
         </p>
       ) : (
         <LeadFunnelChart
           rows={rows}
+          t={t}
           compact
           onStageClick={showDetails ? openReport : undefined}
         />
