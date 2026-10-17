@@ -19,6 +19,8 @@ export const KEEP_LATIN: ReadonlySet<string> = new Set([
   "daftar",
   "daf",
   "sprachzentrum",
+  "goethe",
+  "deutsch",
 ]);
 
 const LETTERS: Record<string, string> = {
@@ -56,7 +58,7 @@ function convertWord(word: string): string {
     } else if (lc === "t" && next === "s") {
       out += put("ц");
       i += 2;
-    } else if (lc === "y" && next !== undefined && "aoue".includes(next) && !prevIsVowel(word, lower, i) && !(next === "o" && isApostrophe(word[i + 2]))) {
+    } else if (lc === "y" && next !== undefined && "aoue".includes(next) && !(next === "o" && isApostrophe(word[i + 2]))) {
       out += put({ a: "я", o: "ё", u: "ю", e: "е" }[next] as string);
       i += 2;
     } else if (lc === "e") {
@@ -75,18 +77,42 @@ function convertWord(word: string): string {
 }
 
 function convertToken(token: string): string {
-  const [, lead = "", core = "", trail = ""] = token.match(/^([’'ʻʼ‘`]*)(.*?)([’'ʻʼ‘`]*)$/) ?? [];
-  if (core === "") return token;
-  if (/^[A-Z]{2,}$/.test(core) || KEEP_LATIN.has(core.toLowerCase())) return token;
+  const [, lead = "", whole = "", closing = ""] = token.match(/^([’'ʻʼ‘`]*)(.*?)([’'ʻʼ‘`]*)$/) ?? [];
+  if (whole === "") return token;
+  if (/^[A-Z]{2,}$/.test(whole) || KEEP_LATIN.has(whole.toLowerCase())) return token;
+
+  // A word-final g' or o' is ғ or ў, not a closing quote: one apostrophe stays with the word.
+  let core = whole;
+  let trail = closing;
+  if (trail !== "" && /[goGO]$/.test(core)) {
+    core += trail[0];
+    trail = trail.slice(1);
+  }
+
+  // A brand or an acronym with a suffix (Telegram'ga, SMS'lar): the head stays Latin, the suffix is converted.
+  // An all-caps head needs a lower-case suffix, or a shouted word such as TO'LOV would count as an acronym.
+  const cut = core.search(/[’'ʻʼ‘`]/);
+  if (cut > 0) {
+    const head = core.slice(0, cut);
+    const suffix = core.slice(cut + 1);
+    if (KEEP_LATIN.has(head.toLowerCase()) || (/^[A-Z]{2,}$/.test(head) && /[a-z]/.test(suffix))) {
+      return `${lead}${head}'${convertWord(suffix)}${trail}`;
+    }
+  }
+
+  // An acronym with a suffix and no apostrophe (PDFni, SMSlar).
+  const acronym = core.match(/^([A-Z]{2,})([a-z]+)$/);
+  if (acronym) return `${lead}${acronym[1]}${convertWord(acronym[2])}${trail}`;
+
   return lead + convertWord(core) + trail;
 }
 
-// Order matters: a placeholder, a url, an e-mail and a handle are matched before a word.
-const TOKEN = /(\{[^}]*\}|https?:\/\/\S+|[\w.+-]+@[\w-]+\.[\w.-]+|@\w+|[A-Za-z’'ʻʼ‘`]+)/g;
+// Order matters: a placeholder, a url, an e-mail, a handle and a level code (A1, B2, C1) are matched before a word.
+const TOKEN = /(\{[^}]*\}|https?:\/\/\S+|[\w.+-]+@[\w-]+\.[\w.-]+|@\w+|\b[A-Z]\d+\b|[A-Za-z’'ʻʼ‘`]+)/g;
 
 export function toCyrillic(latin: string): string {
   return latin.replace(TOKEN, (token) => {
-    if (/^[{@]|^https?:\/\//.test(token) || token.includes("@")) return token;
+    if (/^[{@]|^https?:\/\/|^[A-Z]\d+$/.test(token) || token.includes("@")) return token;
     return convertToken(token);
   });
 }

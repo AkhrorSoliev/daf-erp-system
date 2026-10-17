@@ -43,13 +43,26 @@ describe("toCyrillic", () => {
     expect(toCyrillic("Mening oyligim")).toBe("Менинг ойлигим");
   });
 
+  it.each([
+    ["Moliya", "Молия"],
+    ["Familiya", "Фамилия"],
+    ["Ayol", "Аёл"],
+    ["Bo'yoq", "Бўёқ"],
+    ["Kategoriya", "Категория"],
+    ["Viloyat", "Вилоят"],
+    ["Yaqinlashayotgan", "Яқинлашаётган"],
+    ["Sayohat", "Саёҳат"],
+  ])("writes ya yo yu ye after a vowel too: %s → %s", (latin, cyrillic) => {
+    expect(toCyrillic(latin)).toBe(cyrillic);
+  });
+
   it("writes an apostrophe inside a word as ъ and ts as ц", () => {
     expect(toCyrillic("Ma'lumot")).toBe("Маълумот");
     expect(toCyrillic("tsentr")).toBe("центр");
   });
 
   it("accepts every apostrophe variant", () => {
-    for (const a of ["'", "ʻ", "ʼ", "‘", "’"]) {
+    for (const a of ["'", "ʻ", "ʼ", "‘", "’", "`"]) {
       expect(toCyrillic(`o${a}quvchi`)).toBe("ўқувчи");
       expect(toCyrillic(`ma${a}lumot`)).toBe("маълумот");
     }
@@ -59,6 +72,14 @@ describe("toCyrillic", () => {
     expect(toCyrillic("Sh")).toBe("Ш");
     expect(toCyrillic("SHAHAR".toLowerCase())).toBe("шаҳар");
     expect(toCyrillic("TO'LOV")).toBe("ТЎЛОВ");
+  });
+
+  it("converts an uppercase digraph (sh, ch, o', g') in a capitalised or a shouted word", () => {
+    expect(toCyrillic("Shahar")).toBe("Шаҳар");
+    expect(toCyrillic("Chiroyli")).toBe("Чиройли");
+    expect(toCyrillic("SHO'RVA")).toBe("ШЎРВА");
+    expect(toCyrillic("CHO'L")).toBe("ЧЎЛ");
+    expect(toCyrillic("G'ISHT")).toBe("ҒИШТ");
   });
 
   it("leaves placeholders, urls, e-mails, handles, numbers, punctuation, acronyms and brands alone", () => {
@@ -74,5 +95,30 @@ describe("toCyrillic", () => {
 
   it("leaves a quote mark around a word alone", () => {
     expect(toCyrillic("'Yangi'")).toBe("'Янги'");
+  });
+
+  it("reads a word-final g' and o' as ғ and ў, not as a closing quote", () => {
+    expect(toCyrillic("Tog'")).toBe("Тоғ");
+    expect(toCyrillic("Tog' va dasht")).toBe("Тоғ ва дашт");
+    expect(toCyrillic("Bo'lmasa, yo'q")).toBe("Бўлмаса, йўқ");
+    expect(toCyrillic("'Tog''")).toBe("'Тоғ'");
+  });
+
+  it("keeps a brand or an acronym with a suffix in Latin and converts only the suffix", () => {
+    expect(toCyrillic("Telegram'ga yuborish")).toBe("Telegram'га юбориш");
+    expect(toCyrillic("Payme'ga o'tish")).toBe("Payme'га ўтиш");
+    expect(toCyrillic("Click'ga o'tish")).toBe("Click'га ўтиш");
+    expect(toCyrillic("SMS'lar")).toBe("SMS'лар");
+    expect(toCyrillic("PDFni")).toBe("PDFни");
+    expect(toCyrillic("SMSlar")).toBe("SMSлар");
+    expect(toCyrillic("Telegram’ga")).toBe("Telegram'га");
+  });
+
+  it("leaves a level code (one capital letter and digits) alone, and keeps Goethe and Deutsch in Latin", () => {
+    expect(toCyrillic("A1 daraja")).toBe("A1 даража");
+    expect(toCyrillic("C1 darajasi")).toBe("C1 даражаси");
+    expect(toCyrillic("B2, C1")).toBe("B2, C1");
+    expect(toCyrillic("Goethe sinovi")).toBe("Goethe синови");
+    expect(toCyrillic("Deutsch kursi")).toBe("Deutsch курси");
   });
 });

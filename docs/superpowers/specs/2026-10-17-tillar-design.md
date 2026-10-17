@@ -56,17 +56,26 @@ tilni tanlash joyi ham yo'q.
 - **Bir harfli:** a а, b б, d д, e е, f ф, g г, h ҳ, i и, j ж, k к, l л, m м, n н, o о, p п, q қ,
   r р, s с, t т, u у, v в, x х, y й, z з, `ts`→ц.
 - **`e`** so'z boshida yoki unlidan keyin → э (`elektron`→электрон), boshqa joyda е.
-- **`ya yo yu ye`** so'z boshida yoki undoshdan keyin → я ё ю е (`yangi`→янги, `yordam`→ёрдам);
-  unlidan keyin y → й + unli (`mayda`→майда); `yo'` → йў (`yo'l`→йўл).
-- Bosh harf saqlanadi (`Sh`→Ш, `SH`→Ш).
+- **`ya yo yu ye`** → я ё ю е: so'z boshida, undoshdan keyin va unlidan keyin (`yangi`→янги, `yordam`→ёрдам,
+  `moliya`→молия, `ayol`→аёл, `bo'yoq`→бўёқ); `y` undoshdan oldin yoki so'z oxirida → й
+  (`mayda`→майда, `oyligim`→ойлигим); `yo'` → йў (`yo'l`→йўл).
+- **So'z oxiridagi `g'` / `o'`** → ғ / ў (`tog'`→тоғ), yopuvchi tirnoq emas; tirnoq ichidagi so'z
+  (`'yangi'`) tirnog'ini saqlaydi. (Shu sababli `o` yoki `g` bilan tugagan tirnoqdagi so'z, masalan `'bino'`,
+  noto'g'ri chiqadi — u `dictionaries/uz-cyrl.ts` istisnosiga yoziladi.)
+- Bosh harf saqlanadi (`Sh`→Ш, `Shahar`→Шаҳар; apostrofli bosh harfli so'zda ham: `SHO'RVA`→ШЎРВА).
 - **O'girilmaydi:** `{…}` ichidagi parametr nomi; URL, e-pochta, `@nom`; barcha bosh harfli qisqartmalar
-  (2+ harf: PDF, KPI, SMS, ID, CSV, QR) va `KEEP_LATIN` ro'yxatidagi so'zlar (Excel, Telegram, Payme,
-  Click, Uzum, Mock, Daftar…). Raqam va tinish belgilari o'z holicha.
+  (2+ harf: PDF, KPI, SMS, ID, CSV, QR; apostrofsiz — `SHAHAR` ham qisqartma deb olinadi) va `KEEP_LATIN`
+  ro'yxatidagi so'zlar (Excel, Telegram, Payme, Click, Uzum, Mock, Daftar, Goethe, Deutsch…); daraja kodi
+  (bitta bosh harf + raqam: A1, B2, C1). Raqam va tinish belgilari o'z holicha.
+- **Qo'shimchali brend va qisqartma:** bosh qismi lotinda qoladi, qo'shimcha o'giriladi
+  (`Telegram'ga`→`Telegram'га`, `Payme'ga`→`Payme'га`, `SMS'lar`→`SMS'лар`, `PDFni`→`PDFни`);
+  apostrof shunda ASCII `'` bo'ladi.
 - Noto'g'ri chiqqan so'zlar `dictionaries/uz-cyrl.ts` istisnosiga yoziladi.
 
 Testlar kafolatli juftliklarni tekshiradi (Bosh sahifa→Бош саҳифа, O'qituvchilar→Ўқитувчилар,
 To'lovlar→Тўловлар, Ish haqi→Иш ҳақи, Guruhlar→Гуруҳлар, Hisobotlar→Ҳисоботлар,
 Yordam→Ёрдам, Texnik yordam→Техник ёрдам, Mening oyligim→Менинг ойлигим, Qo'llanma→Қўлланма,
+Moliya→Молия, Familiya→Фамилия, Ayol→Аёл, Tog'→Тоғ, Telegram'ga→Telegram'га, A1 daraja→A1 даража,
 Ma'lumot→Маълумот, Xodimlar KPI→Ходимлар KPI, `{n} ta o'quvchi` parametri saqlanadi) va
 o'girishning har bir harf qoidasini.
 
