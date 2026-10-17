@@ -244,10 +244,42 @@ describe('DashboardSummaryService.getSummary', () => {
   });
 
   it("bo'sh filial qamrovi 403 beradi", async () => {
-    const { service } = makeService();
+    const { service, reports } = makeService();
     await expect(
       service.getSummary({ ...CEO, branchScope: [] }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(reports.getKpis).not.toHaveBeenCalled();
+  });
+
+  describe('odamlar bloki qamrovi (KPI)', () => {
+    const kpiQueries = (reports: { getKpis: jest.Mock }) =>
+      reports.getKpis.mock.calls.map((c: any[]) => c[1]);
+
+    it("filial tanlamagan ko'p filialli direktor uchun KPI faqat o'z filiallari ro'yxati bilan o'qiladi", async () => {
+      const { service, reports } = makeService({}, [ROLE_ID.BRANCH_DIRECTOR]);
+      await service.getSummary({
+        ...CEO,
+        roles: ['Branch Director'],
+        branchScope: [2, 3],
+      });
+
+      // `undefined` (butun kompaniya) emas: ro'yxatning o'zi o'tadi.
+      expect(kpiQueries(reports)).toEqual([{ branchIds: [2, 3] }]);
+    });
+
+    it("filial tanlamagan CEO uchun KPI hamma filialni o'qiydi (null)", async () => {
+      const { service, reports } = makeService();
+      await service.getSummary({ ...CEO, branchScope: null });
+
+      expect(kpiQueries(reports)).toEqual([{ branchIds: null }]);
+    });
+
+    it('bitta filial tanlangan bo‘lsa KPI shu filial bilan o‘qiladi', async () => {
+      const { service, reports } = makeService();
+      await service.getSummary({ ...CEO, branchScope: [7] });
+
+      expect(kpiQueries(reports)).toEqual([{ branchIds: [7] }]);
+    });
   });
 
   it('moliya yiqilsa qolgan bloklar chiqadi va failed da nomi turadi', async () => {
