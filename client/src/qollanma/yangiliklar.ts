@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Ketgan o'quvchilar hisoboti qayta qurildi",
+    matn: "Hisobotlar → «Ketgan o'quvchilar hisoboti» yangicha. Kurs va ustoz filtri endi sahifadagi hamma blokka ta'sir qiladi: kartalarga, oylar bo'yicha ustunlarga, sabablarga, kesimlarga va ro'yxatga. Nega ketishdi qismidagi sabablar yig'indisi endi tepadagi «ketdi» soniga teng, ro'yxatda esa davrdagi hamma ketganlar bor, qaytganlari belgi bilan. Hali qaytishi mumkin bo'lganlar alohida blokda ko'rinadi. Sarlavhada Excel tugmasi qo'shildi. «Kursni tugatdi» deb chiqqan o'quvchi hozircha ketgan hisoblanadi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "hisobotlar", sahifa: "ketgan-oquvchilar" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Kirish sahifasi panelga mos bo'ldi",
     matn: "Admin panel va o'qituvchi portalining kirish sahifasi endi panelning o'zidek: o'sha ranglar, o'sha shrift. Chap tomonda (telefonda tepada) logotip va ochilgan kitob varaqlari chizilgan to'q ko'k fon turadi. Daftar varag'i ko'rinishi olib tashlandi. Kirgach «Xush kelibsiz» salomi avvalgidek chiqadi.",
     rollar: [1, 2, 3, 4, 5],

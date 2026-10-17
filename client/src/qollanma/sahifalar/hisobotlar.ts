@@ -15,6 +15,18 @@ export const hisobotlar: QollanmaSahifa[] = [
   },
   {
     bolim: "hisobotlar",
+    sahifa: "ketgan-oquvchilar",
+    sarlavha: "Ketgan o'quvchilar hisoboti",
+    qisqacha:
+      "Kim, qachon, nega va qayerdan ketdi. Hamma raqam bitta ro'yxatdan hisoblanadi: sabablar, oylar va ro'yxat tepadagi «ketdi» soniga teng, kurs va ustoz filtri hamma blokka ta'sir qiladi.",
+    rollar: [1, 2],
+    adr: ["0097", "0035"],
+    yollar: ["/reports/departed-students"],
+    kalitSozlar: ["ketgan", "ketgan o'quvchilar", "ketish sababi", "kutilmoqda", "qaytgan", "oy boshida", "ulushi", "ustoz bo'yicha", "excel"],
+    yangilangan: "2026-10-17",
+  },
+  {
+    bolim: "hisobotlar",
     sahifa: "dars-baholari",
     sarlavha: "Dars baholari",
     qisqacha:
