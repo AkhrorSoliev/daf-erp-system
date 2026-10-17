@@ -75,7 +75,7 @@ export function DepartedStudentsPage() {
 
   const base = departedParams(filters, today);
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-heading text-lg font-semibold tracking-tight">Ketgan o&apos;quvchilar</h2>
         <div className="flex flex-wrap items-center gap-2">
@@ -102,7 +102,7 @@ export function DepartedStudentsPage() {
         </div>
       ) : (
         // The previous answer stays dimmed until the next one lands.
-        <div aria-busy={stale} className={cn("space-y-4", stale && "opacity-60")}>
+        <div aria-busy={stale} className={cn("flex flex-col gap-4", stale && "opacity-60")}>
           <DepartedCards data={data} previousLabel={data ? previousLabel(filters.preset, data.previous) : ""} isLoading={!data} />
           {data && <DepartedPending count={data.pendingToday} graceDays={data.graceDays} />}
           <div className="grid gap-4 lg:grid-cols-2">

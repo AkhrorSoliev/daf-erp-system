@@ -20,6 +20,13 @@ describe("DepartedCards", () => {
     expect(text).toContain("Har 100 o'quvchidan 12 tasi ketdi davr boshida 50 o'quvchi o'qiyotgan edi");
     expect(text).toContain("Ketguncha o'qidi 3,4 oy o'rtacha");
   });
+  it("a previous period before the system start has no «edi» line", () => {
+    const data = { ...DATA, cards: { ...DATA.cards, previousDeparted: null } } as DepartedOverview;
+    const text = render({ data, previousLabel: "avgustda", isLoading: false });
+    expect(text).toContain("Sentabrda ketdi 6 o'quvchi");
+    expect(text).not.toContain("edi Har");
+    expect(text).not.toContain("avgustda");
+  });
   it("a period over several months is not named after one month", () => {
     const data = { ...DATA, range: { startDate: "2026-07-01", endDate: "2026-09-30" } } as DepartedOverview;
     expect(render({ data, previousLabel: "oldingi 3 oyda", isLoading: false })).toContain("Shu davrda ketdi");

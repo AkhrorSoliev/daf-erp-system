@@ -228,6 +228,7 @@ describe('DepartedListService', () => {
         COMPANY,
         null,
         OCT,
+        { withTeacherChange: false },
       );
       void overview;
     });

@@ -4,13 +4,13 @@ import { formatNumber } from "@/lib/format-utils";
 import { capitalize, formatPer100, formatStudyMonths, rangeLabel } from "./departed-format";
 import type { DepartedOverview } from "./departed-types";
 
-function Figure({ label, value, sub }: { label: string; value: string; sub: string }) {
+function Figure({ label, value, sub }: { label: string; value: string; sub: string | null }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-1">
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
         <p className="font-heading text-2xl font-semibold tabular-nums">{value}</p>
-        <p className="text-xs text-muted-foreground">{sub}</p>
+        {sub !== null && <p className="text-xs text-muted-foreground">{sub}</p>}
       </CardContent>
     </Card>
   );
@@ -31,7 +31,7 @@ export function DepartedCards({ data, previousLabel, isLoading }: { data: Depart
       <Figure
         label={`${capitalize(rangeLabel(data.range))} ketdi`}
         value={`${formatNumber(cards.departed)} o'quvchi`}
-        sub={`${previousLabel} ${formatNumber(cards.previousDeparted)} edi`}
+        sub={cards.previousDeparted === null ? null : `${previousLabel} ${formatNumber(cards.previousDeparted)} edi`}
       />
       <Figure
         label="Har 100 o'quvchidan"

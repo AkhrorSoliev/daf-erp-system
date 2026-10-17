@@ -15,7 +15,7 @@ const render = (props: Record<string, unknown>) =>
 describe("TeacherChangeRetentionCards", () => {
   it("the maket sentence with the period, the groups and the students", () => {
     const text = norm(render({ data: { totalTeacherChanges: 6, departedAfterTeacherChange: 4 }, periodLabel: "sentabrda" }));
-    expect(text).toContain("Sentabrda 6 ta guruhda ustoz almashdi. Keyingi 5 darsda shu guruhlardan 4 o'quvchi ketdi.");
+    expect(text).toContain("Sentabrda 6 marta ustoz almashdi. Keyingi 5 darsda shu guruhlardan 4 o'quvchi ketdi.");
   });
   it("no period given: «Shu davrda»; no changes: says so and the links are off", () => {
     const html = render({ data: { totalTeacherChanges: 0, departedAfterTeacherChange: 0 } });

@@ -168,6 +168,61 @@ describe('DepartedOverviewService', () => {
     });
   });
 
+  describe('the system start date (floor)', () => {
+    // 2026-05-01 00:00 Tashkent.
+    const FLOOR = new Date('2026-04-30T19:00:00Z');
+
+    it('previous count is null when the previous period starts before the floor', async () => {
+      loadFacts.mockResolvedValue(
+        sets({ floor: FLOOR, previous: [fact('a')] }),
+      );
+      // April is before May 1st, so «O'tgan oy» for May has nothing to compare with.
+      const res = await service.overview(COMPANY, null, {
+        startDate: '2026-05-01',
+        endDate: '2026-05-31',
+      });
+      expect(res.cards.previousDeparted).toBeNull();
+    });
+
+    it('previous count is a number when the previous period starts on the floor', async () => {
+      loadFacts.mockResolvedValue(
+        sets({ floor: FLOOR, previous: [fact('a')] }),
+      );
+      const res = await service.overview(COMPANY, null, {
+        startDate: '2026-06-01',
+        endDate: '2026-06-30',
+      });
+      expect(res.cards.previousDeparted).toBe(1);
+    });
+
+    it('months that end on or before the floor are dropped, a partly later one stays', async () => {
+      const month = (key: string) => ({ key, provisional: false, facts: [] });
+      loadFacts.mockResolvedValue(
+        sets({
+          floor: new Date('2026-05-14T19:00:00Z'), // mid-May
+          months: ['2026-04', '2026-05', '2026-06'].map(month),
+        }),
+      );
+      const res = await service.overview(COMPANY, null, {
+        startDate: '2026-06-01',
+        endDate: '2026-06-30',
+      });
+      expect(res.months.map((m) => m.key)).toEqual(['2026-05', '2026-06']);
+    });
+
+    it('a month that closes exactly at the floor is dropped', async () => {
+      const month = (key: string) => ({ key, provisional: false, facts: [] });
+      loadFacts.mockResolvedValue(
+        sets({ floor: FLOOR, months: ['2026-04', '2026-05'].map(month) }),
+      );
+      const res = await service.overview(COMPANY, null, {
+        startDate: '2026-05-01',
+        endDate: '2026-05-31',
+      });
+      expect(res.months.map((m) => m.key)).toEqual(['2026-05']);
+    });
+  });
+
   describe('averageStudyMonths', () => {
     it('averages the study months of those who left, with no filter', async () => {
       loadFacts.mockResolvedValue(

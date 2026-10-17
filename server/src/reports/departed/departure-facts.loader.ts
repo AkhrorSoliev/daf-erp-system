@@ -225,25 +225,29 @@ export async function loadDepartureFacts(
 
   // One episode in two sets (the range and its month column) is one fact.
   const memo = new Map<string, DepartureFact>();
-  const factOf = (ep: DepartureEpisode): DepartureFact => {
+  const factOf = (ep: DepartureEpisode): DepartureFact | null => {
     const key = `${ep.studentId}:${ep.startedAt.getTime()}`;
     const hit = memo.get(key);
     if (hit) return hit;
-    const fact = buildFact(ep, students.get(ep.studentId) as StudentInput, ctx);
+    const student = students.get(ep.studentId);
+    if (!student) return null; // the card vanished between the two reads
+    const fact = buildFact(ep, student, ctx);
     memo.set(key, fact);
     return fact;
   };
+  const factsOf = (eps: DepartureEpisode[]) =>
+    eps.flatMap((ep) => factOf(ep) ?? []);
 
   return {
-    current: currentEp.map(factOf),
-    pendingInRange: pendingRangeEp.map(factOf),
-    previous: previousEp.map(factOf),
+    current: factsOf(currentEp),
+    pendingInRange: factsOf(pendingRangeEp),
+    previous: factsOf(previousEp),
     months: monthEps.map((m) => ({
       key: m.key,
       provisional: m.provisional,
-      facts: m.eps.map(factOf),
+      facts: factsOf(m.eps),
     })),
-    pendingToday: pendingTodayEp.map(factOf),
+    pendingToday: factsOf(pendingTodayEp),
     startMembers: dep.activeAtStartMembers.flatMap((m) => {
       const s = students.get(m.studentId);
       return s ? [buildStartMember(m.enrollmentId, s, req.range.gte, ctx)] : [];

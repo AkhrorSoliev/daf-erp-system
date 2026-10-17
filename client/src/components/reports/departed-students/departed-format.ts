@@ -47,10 +47,14 @@ export function formatDay(iso: string): string {
   return `${dd}.${mm}.${t.getUTCFullYear()}`;
 }
 
-/** What the chosen period is called: its month («sentabrda») when it sits in one month, else «shu davrda». */
+/** What the chosen period is called: its month («sentabrda») only when it is that whole month (1st to last day), else «shu davrda». */
 export function rangeLabel(range: { startDate: string; endDate: string }): string {
   if (range.startDate.slice(0, 7) !== range.endDate.slice(0, 7)) return "shu davrda";
-  return LOCATIVE[Number(range.startDate.slice(5, 7)) - 1] ?? "shu davrda";
+  const year = Number(range.startDate.slice(0, 4));
+  const month = Number(range.startDate.slice(5, 7));
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (range.startDate.slice(8, 10) !== "01" || Number(range.endDate.slice(8, 10)) !== lastDay) return "shu davrda";
+  return LOCATIVE[month - 1] ?? "shu davrda";
 }
 
 export const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);

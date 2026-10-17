@@ -22,7 +22,8 @@ export function DepartedMonths({ months, isLoading }: { months: DepartedOverview
     <Card>
       <CardContent className="flex flex-col gap-3">
         <p className="text-sm font-medium text-muted-foreground">Oylar bo&apos;yicha</p>
-        <div role="img" aria-label={capitalize(spoken)} className="flex h-40 items-end gap-2">
+        {months.length === 0 && <p className="text-sm text-muted-foreground">Tizim ishga tushgan sanadan oldingi davrlar ko&apos;rsatilmaydi.</p>}
+        <div role="img" aria-label={capitalize(spoken)} className={cn("flex h-40 items-end gap-2", months.length === 0 && "hidden")}>
           {months.map((m) => (
             <div key={m.key} className={cn("flex h-full flex-1 flex-col items-center justify-end gap-1", m.provisional && "opacity-50")}>
               <span className="text-xs font-medium tabular-nums">{m.departed}</span>

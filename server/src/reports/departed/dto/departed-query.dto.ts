@@ -49,6 +49,7 @@ export class DepartedListQueryDto extends DepartedFilterDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(64)
   reasonId?: string;
 
   @IsOptional()

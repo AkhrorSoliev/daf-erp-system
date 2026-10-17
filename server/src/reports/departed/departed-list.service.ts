@@ -143,6 +143,7 @@ export class DepartedListService {
       companyId,
       scope,
       q,
+      { withTeacherChange: false },
     );
     const rows = selectFacts(facts, q);
     if (rows.length > EXCEL_ROW_LIMIT) {

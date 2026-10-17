@@ -125,6 +125,13 @@ describe('aggregateOverview', () => {
       expect(out.cards.avgStudyMonths).toBe(3);
     });
 
+    it('an unknown previous period (before the floor) is null, not 0', () => {
+      const out = aggregateOverview(
+        input({ current: [fact()], previous: null }),
+      );
+      expect(out.cards.previousDeparted).toBeNull();
+    });
+
     it('rounds the mean to one decimal', () => {
       const out = aggregateOverview(
         input({

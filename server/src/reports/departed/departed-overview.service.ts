@@ -51,6 +51,7 @@ export class DepartedOverviewService {
     companyId: number,
     scope: ReportBranchIds,
     q: DepartedFilterDto,
+    opts: { withTeacherChange?: boolean } = {},
   ): Promise<{ overview: DepartedOverview; facts: FactSets }> {
     assertDepartedScope(scope);
     const range = parseDayRange(q.startDate, q.endDate);
@@ -69,6 +70,8 @@ export class DepartedOverviewService {
       };
     });
 
+    // ponytail: no cache; the page loads these facts twice (overview + list).
+    // If that gets slow, add a Redis key `departures:<company>:<day>` (spec B7a §5).
     const sets = await loadDepartureFacts(this.prisma, companyId, scope, {
       range,
       previous: prevRange,
@@ -79,19 +82,34 @@ export class DepartedOverviewService {
     });
     const filter = { courseIds: q.courseId, teacherIds: q.teacherIds };
     const f = applyFilter(sets, filter);
+    // Before the system start date nothing was recorded, so a period that
+    // reaches back there has no honest count: not zero (ADR-0005).
+    const { floor } = sets;
+    const floorTime = floor?.getTime();
+    const previousKnown =
+      floorTime === undefined || prevRange.gte.getTime() >= floorTime;
+    const shownMonths = new Set(
+      months
+        .filter((m) => floorTime === undefined || m.lt.getTime() > floorTime)
+        .map((m) => m.key),
+    );
     const agg = aggregateOverview({
       current: f.current,
-      previous: f.previous,
-      months: f.months,
+      previous: previousKnown ? f.previous : null,
+      months: f.months.filter((m) => shownMonths.has(m.key)),
       pendingToday: f.pendingToday,
       startMembers: f.startMembers,
     });
-    const tc = await loadTeacherChangeDepartures(this.prisma, companyId, {
-      scope,
-      start: range.gte,
-      end: range.lt,
-      groupFilter: filter,
-    });
+    // The Excel file never prints the teacher-change counts: skip that query there.
+    const tc =
+      opts.withTeacherChange === false
+        ? { changes: [], departures: [] }
+        : await loadTeacherChangeDepartures(this.prisma, companyId, {
+            scope,
+            start: range.gte,
+            end: range.lt,
+            groupFilter: filter,
+          });
 
     return {
       overview: {

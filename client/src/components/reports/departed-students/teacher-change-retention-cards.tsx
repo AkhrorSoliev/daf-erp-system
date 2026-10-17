@@ -61,7 +61,7 @@ export function TeacherChangeRetentionCards({ data, isLoading, queryParams, peri
               <>{capitalize(periodLabel)} ustoz almashgan guruh yo&apos;q.</>
             ) : (
               <>
-                {capitalize(periodLabel)} {formatNumber(data.totalTeacherChanges)} ta guruhda ustoz almashdi. Keyingi 5 darsda shu guruhlardan{" "}
+                {capitalize(periodLabel)} {formatNumber(data.totalTeacherChanges)} marta ustoz almashdi. Keyingi 5 darsda shu guruhlardan{" "}
                 <b>{formatNumber(data.departedAfterTeacherChange)} o&apos;quvchi</b> ketdi.
               </>
             )}

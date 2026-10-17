@@ -41,6 +41,15 @@ describe("DepartedMonths", () => {
     expect(html.match(/bg-primary/g)).toHaveLength(5);
     expect(html).not.toContain("<em");
   });
+  it("fewer than six months (the earlier ones are before the system start) draw only those bars", () => {
+    const html = render(MONTHS.slice(4));
+    expect(norm(html)).toContain("15 sen 8 okt");
+    expect(norm(html)).not.toContain("may");
+    expect(norm(html)).not.toContain("ko'rsatilmaydi");
+  });
+  it("no month at all says the period is before the system start", () => {
+    expect(norm(render([]))).toContain("Tizim ishga tushgan sanadan oldingi davrlar ko'rsatilmaydi.");
+  });
   it("loading draws a skeleton", () => {
     expect(renderToStaticMarkup(createElement(DepartedMonths, { months: undefined, isLoading: true }))).toContain('data-slot="skeleton"');
   });

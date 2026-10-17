@@ -63,10 +63,17 @@ describe("formatDay", () => {
 });
 
 describe("rangeLabel", () => {
-  it("a one-month range names the month, a longer one says «shu davrda»", () => {
+  it("a whole calendar month names the month, anything else says «shu davrda»", () => {
     expect(rangeLabel({ startDate: "2026-09-01", endDate: "2026-09-30" })).toBe("sentabrda");
-    expect(rangeLabel({ startDate: "2026-09-03", endDate: "2026-09-12" })).toBe("sentabrda");
+    expect(rangeLabel({ startDate: "2026-02-01", endDate: "2026-02-28" })).toBe("fevralda");
+    expect(rangeLabel({ startDate: "2028-02-01", endDate: "2028-02-29" })).toBe("fevralda");
     expect(rangeLabel({ startDate: "2026-07-01", endDate: "2026-09-30" })).toBe("shu davrda");
+  });
+  it("a part of one month is not named after the month", () => {
+    expect(rangeLabel({ startDate: "2026-09-03", endDate: "2026-09-12" })).toBe("shu davrda");
+    expect(rangeLabel({ startDate: "2026-09-10", endDate: "2026-09-10" })).toBe("shu davrda");
+    expect(rangeLabel({ startDate: "2026-09-01", endDate: "2026-09-29" })).toBe("shu davrda");
+    expect(rangeLabel({ startDate: "2026-09-02", endDate: "2026-09-30" })).toBe("shu davrda");
   });
 });
 

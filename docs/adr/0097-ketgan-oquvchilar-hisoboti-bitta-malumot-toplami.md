@@ -51,6 +51,10 @@ turlicha o'qirdi, va raqamlar bir-biriga to'g'ri kelmasdi:
   o'tish va Teilnahmebestätigung berish bilan isbotlanadi, tizimda esa bu hali
   yo'q. Ular qo'shilgach, shu ikki shartni bajarganlar «bitirgan» bo'ladi va
   ketganlarga kirmaydi — bu yangi ADR bilan qilinadi.
+- **Tizim ishga tushgan sanadan oldingi davrlar ko'rsatilmaydi.** Oldingi davr
+  (kartadagi «… edi») shu sanadan oldin boshlansa, soni ko'rsatilmaydi (0 emas,
+  noma'lum: `previousDeparted` = `null`), oxiri shu sanadan oldin tugagan oylar
+  ustunlar qatoriga kirmaydi (ADR-0005).
 - **ADR-0067 uchun:** marketingning «o'rtacha o'qigan oy» raqami endi shu
   manbadan (`DepartedOverviewService.averageStudyMonths`) keladi; raqamning
   o'zi o'zgarmaydi. ADR-0067 matni tahrirlanmaydi.
@@ -86,9 +90,13 @@ turlicha o'qirdi, va raqamlar bir-biriga to'g'ri kelmasdi:
 
 ## Oqibatlari
 
-**Yutuq:** sahifadagi hamma raqam bitta to'plamdan: sabablar, ustunlar,
-kesimlar va ro'yxatdagi tasdiqlanganlar soni tepadagi «ketdi» ga teng (parite
-testi tekshiradi). Filtr hamma blokka ta'sir qiladi.
+**Yutuq:** sahifadagi hamma raqam bitta to'plamdan: sabablar yig'indisi va
+ro'yxatdagi tasdiqlanganlar soni tepadagi «ketdi» ga teng, davr oyining ustuni
+ham (parite testi tekshiradi). Oylar bo'yicha ustunlar yig'indisi tepadagi songa
+teng emas: ular oxirgi 6 oy, tepadagi son esa tanlangan davr, va ikki marta
+ketgan o'quvchi ikki ustunda sanaladi, tepadagida bir marta. Ustoz kesimi ham
+tepadagidan ko'p bo'lishi mumkin: ikki ustozli guruhdagi o'quvchi ikkala ustozda
+sanaladi. Filtr hamma blokka ta'sir qiladi.
 
 **Narx:** har so'rov fakt to'plamini qayta yuklaydi (bir so'rovda bitta
 `loadDepartures`). Eski mijoz olib tashlangan yo'llarni chaqiradi, shuning

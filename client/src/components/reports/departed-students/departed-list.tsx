@@ -154,7 +154,7 @@ export function DepartedList({ list, loading, stale, reasons, filters, page, pag
                           {HEADS.map((h) => <TableCell key={h}><Skeleton className="h-5 w-full" /></TableCell>)}
                         </TableRow>
                       ))
-                    : rows.map((r) => <Row key={r.studentId} r={r} />)}
+                    : rows.map((r) => <Row key={`${r.studentId}:${r.departedAt}`} r={r} />)}
                 </TableBody>
               </Table>
             </div>

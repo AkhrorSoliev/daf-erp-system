@@ -90,7 +90,7 @@ export async function departedWorkbook(input: {
   ]);
   xs.addRows([
     ['Ketganlar', cards.departed],
-    ['Oldingi davrda', cards.previousDeparted],
+    ['Oldingi davrda', cards.previousDeparted ?? ''],
     ["Davr boshida o'qiyotgan edi", cards.atStart],
     ["Har 100 o'quvchidan", cards.per100 ?? ''],
     ["O'rtacha o'qigan (oy)", cards.avgStudyMonths ?? ''],

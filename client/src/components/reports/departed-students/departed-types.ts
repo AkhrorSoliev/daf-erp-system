@@ -24,7 +24,8 @@ export interface DepartedOverview {
   previous: { startDate: string; endDate: string };
   cards: {
     departed: number;
-    previousDeparted: number;
+    /** null when the previous period starts before the system start date. */
+    previousDeparted: number | null;
     atStart: number;
     per100: number | null;
     avgStudyMonths: number | null;

@@ -10,7 +10,8 @@ import { per100, shareOf } from './departed-period';
 
 export interface AggregateInput {
   current: DepartureFact[];
-  previous: DepartureFact[];
+  /** null = the previous period starts before the system start date: not known. */
+  previous: DepartureFact[] | null;
   months: { key: string; provisional: boolean; facts: DepartureFact[] }[];
   pendingToday: DepartureFact[];
   startMembers: StartMember[];
@@ -105,7 +106,7 @@ export function aggregateOverview(input: AggregateInput): AggregateOutput {
   return {
     cards: {
       departed: current.length,
-      previousDeparted: previous.length,
+      previousDeparted: previous === null ? null : previous.length,
       atStart: startMembers.length,
       per100: per100(current.length, startMembers.length),
       avgStudyMonths: avgStudyMonths(current),
