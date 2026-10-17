@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Kirish sahifasida til tanlash",
+    matn: "Admin panel va o'qituvchi portalining kirish sahifasida yuqori o'ng burchakda til tugmasi paydo bo'ldi. Besh tildan birini tanlang: O'zbekcha, Ўзбекча, Русский, Deutsch yoki English; sahifaning o'zi, parolni tiklash oynasi va salom ham tarjima qilingan. Kirgach profilingizdagi til ochiladi; profilingizda til tanlanmagan bo'lsa, tanlaganingiz profilga saqlanadi. O'quvchi portalining kirish sahifasi hali o'zbekcha.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "tizimga-kirish" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Xato berilgan qatnashganlik hujjatini bekor qilish",
     matn: "O'quvchi kartasidagi «Hujjatlar» yorlig'ida berilgan hujjat qatoriga uch nuqta tugmasi qo'shildi: u orqali «Bekor qilish»ni tanlab, sababini yozasiz. Bekor qilingan hujjat ro'yxatda chizilgan raqam, belgi va sabab bilan qoladi, PDF'i endi berilmaydi, QR sahifada esa «bekor qilingan» deb chiqadi. Raqam qayta berilmaydi; to'g'ri hujjat yangi raqam bilan beriladi. Bekor qilish o'quvchi tarixiga yoziladi.",
     rollar: [1, 2, 3],
