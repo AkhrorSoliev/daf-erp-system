@@ -70,6 +70,7 @@ const ru: Dictionary = {
   "Ruxsatlar": "Права доступа",
   "Lidlar egaligi": "Закрепление лидов",
   "KPI sozlamalari": "Настройки KPI",
+  "Qatnashganlik hujjati": "Подтверждение об участии",
   "Telegram hisobot": "Отчёт в Telegram",
   "Bildirishnomalar": "Уведомления",
   "Arxiv": "Архив",
