@@ -263,6 +263,27 @@ describe('TelegramChannelGateStatsService', () => {
       expect((await service.getSummary('2026-10')).blocked).toBe(1);
     });
 
+    it('an August row still waiting counts in waiting but not in the September cohort', async () => {
+      prisma.telegramChannelGateEvent.findMany.mockResolvedValue([
+        {
+          blockedAt: new Date('2026-08-20T10:00:00Z'),
+          joinedAt: null,
+          leftAt: null,
+        },
+        {
+          blockedAt: new Date('2026-09-03T10:00:00Z'),
+          joinedAt: new Date('2026-09-04T10:00:00Z'),
+          leftAt: null,
+        },
+      ]);
+
+      const res = await service.getSummary('2026-09');
+
+      expect(res.blocked).toBe(1);
+      expect(res.joined).toBe(1);
+      expect(res.waiting).toBe(1);
+    });
+
     it('an empty month is zeros', async () => {
       prisma.telegramChannelGateEvent.findMany.mockResolvedValue([]);
       expect(await service.getSummary('2026-09')).toEqual({
@@ -297,7 +318,7 @@ describe('TelegramChannelGateStatsService', () => {
           leftAt: new Date('2026-09-20T10:00:00Z'),
         },
       ]);
-      prisma.telegramChannelGateEvent.count.mockResolvedValue(2);
+      prisma.telegramChannelGateEvent.count.mockResolvedValue(12);
 
       const res = await service.getList({
         month: '2026-09',
@@ -326,7 +347,7 @@ describe('TelegramChannelGateStatsService', () => {
           leftAt: true,
         },
       });
-      expect(res.total).toBe(2);
+      expect(res.total).toBe(12);
       expect(res.page).toBe(2);
       expect(res.data.map((r) => [r.id, r.state])).toEqual([
         [3, 'waiting'],
@@ -349,6 +370,39 @@ describe('TelegramChannelGateStatsService', () => {
           },
         },
       });
+    });
+
+    it('clamps a page past the end to the last page', async () => {
+      prisma.telegramChannelGateEvent.count.mockResolvedValue(12);
+      prisma.telegramChannelGateEvent.findMany.mockResolvedValue([]);
+
+      const res = await service.getList({
+        month: '2026-09',
+        page: 5,
+        pageSize: 10,
+      });
+
+      expect(res.page).toBe(2);
+      expect(res.pageSize).toBe(10);
+      expect(prisma.telegramChannelGateEvent.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 10, take: 10 }),
+      );
+    });
+
+    it('an empty month answers page 1 whatever page was asked', async () => {
+      prisma.telegramChannelGateEvent.count.mockResolvedValue(0);
+      prisma.telegramChannelGateEvent.findMany.mockResolvedValue([]);
+
+      const res = await service.getList({
+        month: '2026-09',
+        page: 3,
+        pageSize: 10,
+      });
+
+      expect(res.page).toBe(1);
+      expect(prisma.telegramChannelGateEvent.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0 }),
+      );
     });
   });
 

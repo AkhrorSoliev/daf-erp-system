@@ -1471,7 +1471,7 @@ Create `docs/adr/0105-bot-hisoboti-oy-kohorti.md`:
 ## Qaror
 
 1. **Kohort** — `blockedAt` tanlangan Toshkent oyida (`tashkentMonthRangeUtc`, yuqori chegara eksklyuziv) bo'lgan qatorlar. `blockedAt` bo'sh qatorlar (to'siqsiz, o'zi kelganlar) kohortga kirmaydi.
-2. **Uch raqam faqat kohort bo'yicha:** «Bot to'xtatdi» = kohort soni; «Shulardan a'zo bo'ldi» = kohortdan to'xtatilgandan keyin a'zo bo'lganlar (hozirgacha, oy oxirigacha emas); «Keyin chiqib ketdi» = a'zo bo'lganlardan chiqib ketganlar. Foiz = a'zo bo'ldi ÷ to'xtatdi, qurilmaning o'zidan 100% dan oshmaydi.
+2. **Uch raqam faqat kohort bo'yicha:** «Bot to'xtatdi» = kohort soni; «Shulardan a'zo bo'ldi» = kohortdan to'xtatilgandan keyin a'zo bo'lganlar (hozirgacha, oy oxirigacha emas); «Keyin chiqib ketdi» = a'zo bo'lganlardan chiqib ketganlar. Foiz = a'zo bo'ldi ÷ to'xtatdi, tuzilishi bo'yicha 100% dan oshmaydi.
 3. **Qator holati bitta funksiyadan** (`classifyGateRow`, `server/src/telegram/gate-cohort.ts`): `waiting` | `joined` | `left`. `joinedAt` — birinchi a'zolik sanasi; `recordJoined` qaytib kirganda uni o'zgartirmaydi, faqat `leftAt`ni tozalaydi. Shuning uchun botga yozishdan oldin kanal a'zosi bo'lib, chiqib ketgan, keyin to'xtatilgan odam (`joinedAt < blockedAt`) `leftAt` bo'yicha hal qilinadi: `leftAt` yo'q — qaytgan (`joined`), bor — hali tashqarida (`waiting`).
 4. **Bugungi holat** (`waiting`, kanal a'zolari) oyga bog'liq emas: to'xtatilgan va hozir kanalda bo'lmagan hamma qatorlar, va Telegram'dan jonli son.
 5. **Ro'yxat ham kohort:** karta soni = ro'yxat `total`; har qatorning `state`i serverdan, mijoz holatni o'zi chiqarmaydi.

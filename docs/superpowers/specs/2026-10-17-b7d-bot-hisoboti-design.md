@@ -44,7 +44,7 @@ Maketdan: sahifa bitta **kohort**ni ko'rsatadi: tanlangan oyda bot to'xtatgan od
 - `blocked` = kohort soni.
 - `joined` = `joined` + `left` soni (to'xtatilgandan keyin a'zo bo'lganlar).
 - `left` = `left` soni (a'zo bo'lganlardan chiqib ketganlar).
-- `conversionRate` = `blocked > 0 ? round(joined / blocked * 100) : 0`. `joined ≤ blocked` qurilmaning o'zidan, shuning uchun 100% dan oshmaydi.
+- `conversionRate` = `blocked > 0 ? round(joined / blocked * 100) : 0`. `joined ≤ blocked` tuzilishi bo'yicha, shuning uchun 100% dan oshmaydi.
 
 **Bugungi holat (oyga bog'liq emas, `blockedAt` bor hamma qator):**
 - `waiting` = `waiting` holatidagilar soni.

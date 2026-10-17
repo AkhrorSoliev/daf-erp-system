@@ -43,7 +43,7 @@ export function BotReportTable({
               <Skeleton key={i} className="h-10" />
             ))}
           </div>
-        ) : rows.length === 0 ? (
+        ) : total === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             Bu oyda bot hech kimni to&apos;xtatmagan — boshqa oyni tanlab ko&apos;ring
           </p>
@@ -64,7 +64,7 @@ export function BotReportTable({
                 {rows.map((row, i) => (
                   <TableRow key={row.id}>
                     <TableCell className="border-r text-muted-foreground">
-                      {(params.page - 1) * params.pageSize + i + 1}
+                      {(fresh.page - 1) * fresh.pageSize + i + 1}
                     </TableCell>
                     <TableCell>
                       {row.username ? (
@@ -88,8 +88,8 @@ export function BotReportTable({
 
         {total > 0 && (
           <PaymentsPager
-            page={params.page}
-            pageSize={params.pageSize}
+            page={fresh?.page ?? params.page}
+            pageSize={fresh?.pageSize ?? params.pageSize}
             total={total}
             onPage={onPage}
             onPageSize={onPageSize}

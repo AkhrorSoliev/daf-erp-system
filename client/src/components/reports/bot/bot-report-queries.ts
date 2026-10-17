@@ -21,6 +21,5 @@ export function useBotList(params: ReturnType<typeof listParams>) {
     queryKey: ["bot-report-list", params],
     queryFn: () => api.get<BotList>("/telegram/channel-report/list", { params }).then((r) => r.data),
     staleTime: 0,
-    placeholderData: keepPreviousData,
   });
 }

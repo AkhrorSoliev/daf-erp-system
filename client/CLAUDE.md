@@ -827,7 +827,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 ### Bot report (`/reports/bot`, ADR-0105)
 
 - «Bot hisoboti» in `reports-nav.ts` (`permission: "reports.students"`: CEO and Branch Director). Files in `components/reports/bot/`: `bot-report-client.tsx` (the page: `MonthStepper`, the gate-off alert, cards, table), `bot-report-cards.tsx`, `bot-report-table.tsx`, `bot-report-url.ts`, `bot-report-format.ts` (pure, vitest), `bot-report-queries.ts`, `bot-report-types.ts`.
-- URL keys (`BOT_SCHEMA`): `oy` (empty = the current Tashkent month, 2026-05 …), `page`, `pageSize` (10–50). The old `?month=` is not read and there is no «Butun davr».
+- URL keys (`BOT_SCHEMA`): `oy` (empty = the current Tashkent month, 2026-05 …), `page`, `pageSize` (10, 20, 30, 40 or 50). The old `?month=` is not read and there is no «Butun davr».
 - Two requests: `GET /telegram/channel-report/summary?month=` (the three cohort cards + the standing figures) and `…/list?month=&page=&pageSize=` (the cohort, `state` per row). Every number and every row state is the server's; the client only formats.
 
 ### Lesson ratings (`/reports/dars-baholari`, ADR-0091)

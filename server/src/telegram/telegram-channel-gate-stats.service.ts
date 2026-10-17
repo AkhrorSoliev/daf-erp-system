@@ -186,32 +186,38 @@ export class TelegramChannelGateStatsService {
     return { ...cohortFigures(cohort), waiting: waitingNow(rows) };
   }
 
-  /** Hisobot jadvali: tanlangan oy kohorti, eng yangisi birinchi; `state` serverdan. */
+  /**
+   * Hisobot jadvali: tanlangan oy kohorti, eng yangisi birinchi; `state` serverdan.
+   * Sahifa oraliqdan tashqarida bo'lsa oxirgi mavjud sahifaga qisiladi (bo'sh
+   * jadval emas) va javobda qisilgan `page` qaytadi.
+   */
   async getList(params: { month: string; page: number; pageSize: number }) {
-    const { month, page, pageSize } = params;
+    const { month, pageSize } = params;
     const { gte, lt } = tashkentMonthRangeUtc(month);
     const where = {
       companyId: DEFAULT_COMPANY_ID,
       blockedAt: { gte, lt },
     };
-    const [rows, total] = await Promise.all([
-      this.prisma.telegramChannelGateEvent.findMany({
-        where,
-        orderBy: [{ blockedAt: 'desc' }, { id: 'desc' }],
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        select: {
-          id: true,
-          telegramUserId: true,
-          username: true,
-          firstName: true,
-          blockedAt: true,
-          joinedAt: true,
-          leftAt: true,
-        },
-      }),
-      this.prisma.telegramChannelGateEvent.count({ where }),
-    ]);
+    const total = await this.prisma.telegramChannelGateEvent.count({ where });
+    const page = Math.min(
+      params.page,
+      Math.max(1, Math.ceil(total / pageSize)),
+    );
+    const rows = await this.prisma.telegramChannelGateEvent.findMany({
+      where,
+      orderBy: [{ blockedAt: 'desc' }, { id: 'desc' }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        telegramUserId: true,
+        username: true,
+        firstName: true,
+        blockedAt: true,
+        joinedAt: true,
+        leftAt: true,
+      },
+    });
     const data = withBlocked(rows).map((r) => ({
       ...r,
       state: classifyGateRow(r),
