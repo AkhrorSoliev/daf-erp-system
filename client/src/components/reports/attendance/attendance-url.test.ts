@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFilters } from "@/lib/url-filter-params";
 import {
-  ATTENDANCE_SCHEMA, attendanceRange, excelFileName, missersParams, overviewParams, type AttendanceFilters,
+  ATTENDANCE_SCHEMA, attendanceRange, excelFileName, keepMissersFor, missersParams, overviewParams, type AttendanceFilters,
 } from "./attendance-url";
 
 const TODAY = new Date(2026, 9, 17); // 17.10.2026, the Tashkent day as a local date
@@ -40,5 +40,14 @@ describe("attendance-url", () => {
       startDate: "2026-09-01", endDate: "2026-09-30", cut: "teacher", key: "none", page: 1, pageSize: 10,
     });
     expect(excelFileName({ startDate: "2026-09-01", endDate: "2026-09-30" })).toBe("davomat-2026-09-01_2026-09-30.xlsx");
+  });
+
+  it("the missers list keeps the old answer only for the same row of the same cut", () => {
+    const a = missersParams({ startDate: "2026-09-01", endDate: "2026-09-30" }, "group", "g1", 1, 10);
+    expect(keepMissersFor(a, { ...a, page: 2 })).toBe(true);
+    expect(keepMissersFor(a, { ...a, key: "g2" })).toBe(false);
+    expect(keepMissersFor(a, { ...a, cut: "teacher" })).toBe(false);
+    expect(keepMissersFor(null, a)).toBe(false);
+    expect(keepMissersFor(a, null)).toBe(false);
   });
 });

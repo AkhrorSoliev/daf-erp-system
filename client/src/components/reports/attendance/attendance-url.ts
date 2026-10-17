@@ -74,3 +74,7 @@ export function missersParams(range: DayRange, cut: CutKey, key: string, page: n
 }
 
 export const excelFileName = (r: DayRange): string => `davomat-${r.startDate}_${r.endDate}.xlsx`;
+
+/** The earlier missers answer may stand in only for the same row of the same cut (another page); another row never shows this one's students. */
+export const keepMissersFor = (prev: MissersParams | null, next: MissersParams | null): boolean =>
+  prev !== null && next !== null && prev.key === next.key && prev.cut === next.cut;
