@@ -46,10 +46,12 @@ o'ng guruhning oxirida, bildirishnoma qo'ng'irog'idan keyin:
 `SidebarUserFooter` o'chiriladi (fayl ham, `AppSidebar` dagi ishlatilishi ham).
 O'rniga `components/sidebar-footer-info.tsx`:
 
-- **Yordam** — `COMPANY.supportHref` (`lib/company.ts`, kirish sahifasi
+- **Texnik yordam** — `COMPANY.supportHref` (`lib/company.ts`, kirish sahifasi
   footer'idagi o'sha havola) ga `target="_blank" rel="noopener noreferrer"`.
-  Ikonka `LifeBuoy`. Yig'ilgan sidebar'da faqat ikonka + tooltip «Yordam»
-  (shadcn `SidebarMenuButton tooltip`).
+  Ikonka `LifeBuoy`. Yig'ilgan sidebar'da faqat ikonka + tooltip «Texnik yordam»
+  (shadcn `SidebarMenuButton tooltip`). Nomi «Yordam» emas: yuqori panelda
+  allaqachon «Shu sahifa bo'yicha qo'llanma» (`?` tugmasi) bor, ikki xil
+  «yordam» aralashib ketmasin.
 - **Versiya qatori:** `Yangilangan: 17.10.2026 · a1b2c3d` (sana Toshkent
   vaqtida, `dd.MM.yyyy`; kod — commitning 7 belgisi). Yig'ilgan sidebar'da
   yashiriladi (`group-data-[collapsible=icon]:hidden`). `text-xs
