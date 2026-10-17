@@ -19,6 +19,7 @@ Hujjat **qatnashganlikni** tasdiqlaydi, baho emas. Imtihon va mock natijasi shar
 | Q3  | Davomat chegarasi           | 80%                                                                                                                                        |
 | Q4  | Ilova (Student App)         | Ikkinchi shart: hujjat berilgan kunda ochiq bo'lgan darslarning belgilangan foizi tugatilgan; foiz daraja bo'yicha sozlanadi, boshida 100%. Kontenti yo'q darajada shart o'chiq |
 | Q5  | Kim va qachon yaratadi      | Administrator tugmasi. Daraja tugaganini tizim o'zi bilmaydi (ADR-0044), uni administrator tasdiqlaydi                                      |
+| Q6  | QR va ko'rinish             | Hujjatda QR bo'ladi, u ochiq tekshirish sahifasiga olib boradi. Dizayn original va yoqimli bo'lishi kerak (namuna tasdiqlanadi)             |
 
 Men qo'ygan boshlang'ich qarorlar (CEO ko'rib o'zgartirishi mumkin): bir daraja bir necha guruhda o'tilsa davomat yig'iladi; shart bajarilmasa faqat CEO sababini yozib istisno beradi; o'quvchining holati (faol, muzlatilgan, bitirgan) o'zi to'siq emas.
 
@@ -95,13 +96,24 @@ Modul: `server/src/participation-certificates/`.
 - Bir o'quvchiga bir darajaga qayta berish mumkin (yangi raqam); eskisi arxivga ketmaydi, ro'yxatda ko'rinadi.
 - Tarix: `EntityHistory` — o'quvchida `QATNASHISH_HUJJATI_BERILDI` (raqam, daraja, istisno bo'lsa sabab). Chegara o'zgarishi kompaniya sozlamasi tarixida.
 - `Group.level` bo'sh guruh qatnashgan darajaga kirmaydi; preview'da «Guruh darajasi ko'rsatilmagan» deyiladi.
-- Telegramga yuborish va QR bilan haqiqiyligini tekshirish **birinchi versiyada yo'q**.
+- **Haqiqiylikni tekshirish (QR).** Hujjatdagi QR ochiq sahifaga olib boradi: `GET /participation-certificates/:id/verify` (`@Public()`, `IpThrottlerGuard`, route manifestida PUBLIC) va mijozda `/t/[id]` sahifasi, `/r/[id]` (kvitansiya) bilan bir xil naqsh. `id` — taxmin qilib bo'lmaydigan UUID (ketma-ket `TB-…` raqami emas, aks holda raqamlarni terib o'quvchilar ismini ko'rib chiqish mumkin bo'lardi). Sahifa faqat shuni ko'rsatadi: «haqiqiy» yoki «bekor qilingan», raqam, ism, daraja, davr, berilgan sana, markaz va filial nomi. Tug'ilgan sana, foizlar, mock va ilova natijasi ochiq sahifaga chiqmaydi. QR manzili kvitansiyalardagi `publicBaseUrl()` dan olinadi, nusxa ko'chirilmaydi.
+- Telegramga yuborish **birinchi versiyada yo'q**.
 
 ## 6. Hujjat (PDF)
 
-PDF `pdfmake` bilan (`receipts/pdf/render.ts` dagi mavjud yo'l), nemischa matn. Mazmun: markaz nomi, «Teilnahmebestätigung», o'quvchi ismi va tug'ilgan sanasi, daraja va kurs nomi, davr, «Anwesenheit: X % (a von b Unterrichtseinheiten)», ilova qo'llansa «Lernplattform: Y % der Lektionen abgeschlossen», bo'lsa mock satri, hujjat raqami va berilgan sana, imzo joyi.
+PDF `pdfmake` bilan (`receipts/pdf/render.ts` dagi mavjud yo'l), nemischa matn, bitta A4 sahifa. Namuna (17.10.2026) CEO ko'rigiga yuborildi; QR shu namunaga kiritilgan.
 
-Matnning aniq so'zlari va ko'rinish **CEO namunadan tasdiqlaydi** (PDF namunasi chiziladi, keyingi qadam). Jins ma'lum bo'lsa «Herr/Frau», bo'lmasa faqat ism.
+**Mazmun:** markaz va filial nomi, «Teilnahmebestätigung», o'quvchi ismi va tug'ilgan sanasi, daraja, davr, «Anwesenheit X % (a von b Unterrichtseinheiten)», ilova qo'llansa «Lernplattform Y %», bo'lsa kech qolish soni, yakuniy sinovlar va mock satri, «kurs qatnashganligini tasdiqlaydi, Sprachzertifikat o'rnini bosmaydi» izohi, QR («Echtheit prüfen»), hujjat raqami va sana, imzo va muhr joyi. Ixtiyoriy satr ma'lumot bo'lmasa chiqmaydi.
+
+**Ko'rinish (original dizayn):** iliq oq fon (`#FFFDF8`); yuqori o'ng burchakda to'q ko'k (`#17375E`) chorak doira ichida katta oq «A1» va «NIVEAU», uning atrofida ikkita ingichka oltin (`#B8924A`) halqa; pastki chap burchakda kichik aks sado; sarlavha to'q ko'k, ism katta, ostida qisqa oltin chiziq; davomat va ilova foizi halqa ko'rsatkich (SVG) bilan, qolgan raqamlar chap chetida oltin chizig'i bor kichik bloklarda. Shrift — markazning `Inter`i, yangi shrift qo'shilmaydi.
+
+**`pdfmake` tuzoqlari (namunada topildi, amalga oshirishda hisobga olinadi):**
+- Fon qatlami uchun `pageMargins: [0,0,0,0]`, asosiy tarkib esa o'z `margin`i bilan stack ichida. Sahifa chekkasi bor bo'lsa, butun sahifalik fon bloki sig'masdan **jimgina tashlab yuboriladi**.
+- Fon ichidagi hamma tugun (to'liq sahifa tuvali ham) `absolutePosition` bilan beriladi, aks holda ular oqim balandligiga qo'shilib, blok yana sig'maydi.
+- SVG ichidagi matn `Inter` bilan chiziladi (sinab ko'rildi). «100 %» ga kichikroq o'lcham kerak, aks holda yozuv halqa chizig'iga tegadi.
+- Ixtiyoriy satrlar o'zgaruvchan, shuning uchun halqa va QR bloklari oqimda turadi, fon faqat bezak.
+
+Jins ma'lum bo'lsa ismdan oldin «Herr/Frau» CEO javobini kutadi; hozircha faqat ism.
 
 ## 7. Administrator ekrani
 
@@ -129,4 +141,4 @@ Ekrandagi matnlarda inglizcha so'z yo'q. Dizayn namunasi chizilib CEO ko'radi, k
 
 ## 10. Qamrovdan tashqari
 
-Telegram orqali yuborish, QR bilan tekshirish, o'quvchining o'zi ilovadan so'rashi, daraja imtihoni balli, hujjat shabloni tillari (faqat nemischa), ommaviy yaratish.
+Telegram orqali yuborish, o'quvchining o'zi ilovadan so'rashi, daraja imtihoni balli, hujjat shabloni tillari (faqat nemischa), ommaviy yaratish.
