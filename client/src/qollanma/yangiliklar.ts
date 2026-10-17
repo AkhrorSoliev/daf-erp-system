@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Kirish sahifasi panelga mos bo'ldi",
+    matn: "Admin panel va o'qituvchi portalining kirish sahifasi endi panelning o'zidek: o'sha ranglar, o'sha shrift. Chap tomonda (telefonda tepada) logotip va ochilgan kitob varaqlari chizilgan to'q ko'k fon turadi. Daftar varag'i ko'rinishi olib tashlandi. Kirgach «Xush kelibsiz» salomi avvalgidek chiqadi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "tizimga-kirish" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Xodimlar KPI",
     matn: "Hisobotlarda «Xodimlar KPI» sahifasi qo'shildi. Administrator egasi bo'lgan lid birinchi to'lovni qilganda va u yozgan to'lov va'dasi bajarilganda natija yoziladi; summa o'sha paytdagi narx bilan muhrlanadi. Sahifada natijalar, berilganda bo'ladigan summa, «Lid → to'lov» ulushi, «Diqqat» bloki, kunlar va oylar bo'yicha diagrammalar va administratorlar jadvali bor; xodim sahifasida «KPI» yorlig'i chiqdi. Narxlar va hisoblash kaliti — Sozlamalar → «KPI sozlamalari» (faqat CEO). Hozir kuzatuv: pul berilmaydi.",
     rollar: [1, 2],

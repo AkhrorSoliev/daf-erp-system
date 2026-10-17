@@ -22,7 +22,6 @@ export const boshlash: QollanmaSahifa[] = [
       "zaxira raqam",
       "Telegram orqali kirish",
       "xush kelibsiz",
-      "daftar",
       "kabinet",
       "Telegram kabinet",
       "mini app",
