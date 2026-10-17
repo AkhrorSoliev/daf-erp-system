@@ -14,7 +14,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import type { PermissionKey } from '../common/permissions/permission-catalog';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
-import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
 
 describe('ReportsController', () => {
   let controller: ReportsController;
@@ -56,7 +55,6 @@ describe('ReportsController', () => {
     getDepartedStudentsDynamics: jest.fn().mockResolvedValue({}),
     getDepartedStudentsReasons: jest.fn().mockResolvedValue({}),
     getDepartedStudentsGroupBy: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsList: jest.fn().mockResolvedValue({}),
     getDepartedStudentsByReason: jest.fn().mockResolvedValue({}),
     getDepartedStudentsByStatus: jest.fn().mockResolvedValue({}),
     getDebtWriteOffsSummary: jest.fn().mockResolvedValue({
@@ -175,7 +173,6 @@ describe('ReportsController', () => {
         'getDepartedStudentsReasons',
         'getTeacherChangeReasons',
         'getTransferReasons',
-        'getDepartedStudentsList',
         'getDepartedStudentsByReason',
         'getDepartedStudentsGroupBy',
         'getTeacherChangesList',
@@ -539,29 +536,6 @@ describe('ReportsController', () => {
       expect(() =>
         controller.getDepartedStudentsSummary(september, 1001, []),
       ).toThrow(ForbiddenException);
-    });
-
-    it('hands the list the branch list and its own filters', async () => {
-      await controller.getDepartedStudentsList(
-        {
-          status: 'FROZEN',
-          debtorsOnly: true,
-          page: 2,
-          pageSize: 20,
-        } as DepartedStudentsListQueryDto,
-        1001,
-        [3, 7],
-      );
-      expect(mockService.getDepartedStudentsList).toHaveBeenLastCalledWith(
-        1001,
-        {
-          scope: [3, 7],
-          status: 'FROZEN',
-          debtorsOnly: true,
-          page: 2,
-          pageSize: 20,
-        },
-      );
     });
   });
 

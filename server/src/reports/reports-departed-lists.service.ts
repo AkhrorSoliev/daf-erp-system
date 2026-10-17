@@ -13,75 +13,10 @@ export class ReportsDepartedListsService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * "Qaytmagan ketganlar" — every open departure episode (ADR-0035): the
-   * students who stopped and have not come back, pending ones included.
-   * Filtered by branch, status and debt; not by the date range.
-   */
-  async getDepartedStudentsList(
-    companyId: number,
-    params: {
-      scope: ReportBranchIds;
-      status?: StudentStatus;
-      debtorsOnly?: boolean;
-      page?: number;
-      pageSize?: number;
-    },
-  ) {
-    const page = Math.max(1, params.page ?? 1);
-    const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 10));
-    // GRADUATED is never a departure, so it is not a valid filter either.
-    const status =
-      params.status && params.status !== StudentStatus.GRADUATED
-        ? params.status
-        : undefined;
-
-    const rows = (await this.openRows(companyId, params.scope))
-      .filter((r) => !status || r.student.status === status)
-      .filter((r) => !params.debtorsOnly || r.student.balance < 0)
-      .sort(
-        (a, b) =>
-          b.episode.startedAt.getTime() - a.episode.startedAt.getTime() ||
-          b.student.id - a.student.id,
-      );
-
-    const data = rows
-      .slice((page - 1) * pageSize, page * pageSize)
-      .map(({ episode, student }) => {
-        const g = student.enrollments[0]?.group ?? null;
-        return {
-          id: String(student.id),
-          student: {
-            id: student.id,
-            fullName: `${student.firstName} ${student.lastName}`,
-          },
-          phone: student.phone,
-          status: student.status,
-          balance: student.balance,
-          lastGroup: g ? { id: g.id, name: g.name } : null,
-          branch: g?.branch ?? null,
-          course: g?.course ?? null,
-          teachers:
-            g?.teachers.map((t) => ({
-              id: t.teacher.id,
-              fullName: `${t.teacher.firstName} ${t.teacher.lastName}`,
-            })) ?? [],
-          departedAt: episode.startedAt.toISOString(),
-          state: episode.state,
-          stopKind: episode.stopKind,
-        };
-      });
-
-    return { data, total: rows.length, page, pageSize };
-  }
-
-  /**
    * Enrollment-level list of DROPPED enrollments within a date range,
    * optionally narrowed to one departure reason. Powers the "Ketish
    * sabablari" chart's drill-down dialog — reasons live on the Enrollment
    * (`departureReasonId`), so that breakdown is inherently enrollment-level.
-   *
-   * Distinct from getDepartedStudentsList, which is the student-level "has no
-   * group right now" snapshot.
    */
   async getDepartedStudentsByReason(
     companyId: number,

@@ -14,11 +14,24 @@ import {
   previousRange,
 } from './departed-period';
 import type { DepartedOverview } from './departed.types';
-import { applyFilter, loadDepartureFacts } from './departure-facts.loader';
+import {
+  applyFilter,
+  loadDepartureFacts,
+  type FactSets,
+} from './departure-facts.loader';
 import type { DepartedFilterDto } from './dto/departed-query.dto';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MONTHS_SHOWN = 6;
+
+/** An empty scope is refused, never served as zeros (ADR-0002). */
+export function assertDepartedScope(scope: ReportBranchIds) {
+  if (isEmptyScope(scope)) {
+    throw new ForbiddenException(
+      "Bu filial ma'lumotlarini ko'rish huquqingiz yo'q",
+    );
+  }
+}
 
 /** «Ketgan o'quvchilar» — the page's top part (spec B7a §4). */
 @Injectable()
@@ -30,7 +43,16 @@ export class DepartedOverviewService {
     scope: ReportBranchIds,
     q: DepartedFilterDto,
   ): Promise<DepartedOverview> {
-    this.assertScope(scope);
+    return (await this.overviewWithFacts(companyId, scope, q)).overview;
+  }
+
+  /** The overview and the filtered facts it was built from (the Excel «Xulosa» sheet reads both). */
+  async overviewWithFacts(
+    companyId: number,
+    scope: ReportBranchIds,
+    q: DepartedFilterDto,
+  ): Promise<{ overview: DepartedOverview; facts: FactSets }> {
+    assertDepartedScope(scope);
     const range = parseDayRange(q.startDate, q.endDate);
     const prev = previousRange({ startDate: q.startDate, endDate: q.endDate });
     const prevRange = parseDayRange(prev.startDate, prev.endDate);
@@ -72,14 +94,17 @@ export class DepartedOverviewService {
     });
 
     return {
-      range: { startDate: q.startDate, endDate: q.endDate },
-      previous: prev,
-      ...agg,
-      teacherChange: {
-        totalTeacherChanges: tc.changes.length,
-        departedAfterTeacherChange: tc.departures.length,
+      overview: {
+        range: { startDate: q.startDate, endDate: q.endDate },
+        previous: prev,
+        ...agg,
+        teacherChange: {
+          totalTeacherChanges: tc.changes.length,
+          departedAfterTeacherChange: tc.departures.length,
+        },
+        graceDays: sets.graceDays,
       },
-      graceDays: sets.graceDays,
+      facts: f,
     };
   }
 
@@ -93,7 +118,7 @@ export class DepartedOverviewService {
     scope: ReportBranchIds,
     range: { startDate: string; endDate: string },
   ): Promise<number> {
-    this.assertScope(scope);
+    assertDepartedScope(scope);
     const sets = await loadDepartureFacts(this.prisma, companyId, scope, {
       range: parseDayRange(range.startDate, range.endDate),
     });
@@ -106,14 +131,5 @@ export class DepartedOverviewService {
         startMembers: [],
       }).cards.avgStudyMonths ?? 0
     );
-  }
-
-  /** An empty scope is refused, never served as zeros (ADR-0002). */
-  private assertScope(scope: ReportBranchIds) {
-    if (isEmptyScope(scope)) {
-      throw new ForbiddenException(
-        "Bu filial ma'lumotlarini ko'rish huquqingiz yo'q",
-      );
-    }
   }
 }

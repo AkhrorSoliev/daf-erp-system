@@ -847,6 +847,10 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /reports/departed-students/excel": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /reports/departed-students/group-by": [
     "Administrator",
     "Branch Director",

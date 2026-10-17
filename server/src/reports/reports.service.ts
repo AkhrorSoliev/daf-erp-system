@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 import { cachedNetProfit } from './net-profit-cache';
-import { StudentStatus } from '@prisma/client';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsOverviewService } from './reports-overview.service';
 import { ReportsAttendanceAnalyticsService } from './reports-attendance-analytics.service';
@@ -686,18 +685,6 @@ export class ReportsService {
     params: { scope: ReportBranchIds; startDate: string; endDate: string },
   ) {
     return this.departedStudents.getDepartedStudentsDynamics(companyId, params);
-  }
-  getDepartedStudentsList(
-    companyId: number,
-    params: {
-      scope: ReportBranchIds;
-      status?: StudentStatus;
-      debtorsOnly?: boolean;
-      page?: number;
-      pageSize?: number;
-    },
-  ) {
-    return this.departedLists.getDepartedStudentsList(companyId, params);
   }
   getDepartedStudentsByReason(
     companyId: number,

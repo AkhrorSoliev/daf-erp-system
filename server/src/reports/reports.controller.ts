@@ -21,7 +21,6 @@ import {
 } from '../common/finance/report-branch-scope';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-by-query.dto';
-import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
 import { DepartedStudentsByReasonQueryDto } from './dto/departed-students-by-reason-query.dto';
 import { DepartedStudentsBranchQueryDto } from './dto/departed-students-branch-query.dto';
 import { DepartedStudentsRangeQueryDto } from './dto/departed-students-range-query.dto';
@@ -665,22 +664,6 @@ export class ReportsController {
       teacherIds: query.teacherIds,
       startDate: query.startDate,
       endDate: query.endDate,
-    });
-  }
-
-  @Get('departed-students/list')
-  @Can('reports.students')
-  getDepartedStudentsList(
-    @Query() query: DepartedStudentsListQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getDepartedStudentsList(companyId, {
-      scope: this.listScope(scope),
-      status: query.status,
-      debtorsOnly: query.debtorsOnly,
-      page: query.page,
-      pageSize: query.pageSize,
     });
   }
 
