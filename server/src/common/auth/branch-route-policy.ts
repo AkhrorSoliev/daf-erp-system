@@ -205,12 +205,14 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'Teilnahmebestätigung (spec 2026-10-17). The student routes resolve the ' +
       "student's branch and check the caller against it with " +
       '`assertCallerMayTouchStudent`; the PDF loads the certificate, then does ' +
-      'the same for its student. The header branch is never read: a document ' +
-      'belongs to the branch of the student it was issued for.',
+      'the same for its student; so does the cancel (ADR-0104). The header ' +
+      'branch is never read: a document belongs to the branch of the student ' +
+      'it was issued for.',
     routes: [
       'GET /students/:id/participation-certificates/preview',
       'POST /students/:id/participation-certificates',
       'GET /participation-certificates/:id/pdf',
+      'POST /participation-certificates/:id/revoke',
     ],
   },
   {

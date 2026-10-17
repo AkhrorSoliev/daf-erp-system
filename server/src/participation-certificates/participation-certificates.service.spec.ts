@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -48,7 +49,12 @@ const SETTINGS = {
 };
 
 function make(
-  over: { facts?: StudentFacts; lastSeq?: number | null; ceo?: boolean } = {},
+  over: {
+    facts?: StudentFacts;
+    lastSeq?: number | null;
+    ceo?: boolean;
+    updateCount?: number;
+  } = {},
 ) {
   const created: unknown[] = [];
   const tx = {
@@ -62,9 +68,11 @@ function make(
           id: 'uuid-1',
           issuedAt: new Date('2026-10-17T07:00:00.000Z'),
           revokedAt: null,
+          revokedReason: null,
           ...data,
         });
       }),
+      updateMany: jest.fn().mockResolvedValue({ count: over.updateCount ?? 1 }),
     },
   };
   const prisma = {
@@ -139,6 +147,16 @@ describe('preview', () => {
         issuedAt: new Date('2026-10-01T05:00:00.000Z'),
         exemptReason: null,
         revokedAt: null,
+        revokedReason: null,
+      },
+      {
+        id: 'c0',
+        level: 'A1',
+        number: 'TB-2026-0000',
+        issuedAt: new Date('2026-09-01T05:00:00.000Z'),
+        exemptReason: null,
+        revokedAt: new Date('2026-09-02T05:00:00.000Z'),
+        revokedReason: "Noto'g'ri o'quvchiga berilgan",
       },
     ]);
     const out = await service.preview(7, 1001, 10001);
@@ -159,8 +177,26 @@ describe('preview', () => {
         issuedAt: '2026-10-01T05:00:00.000Z',
         exempt: false,
         revoked: false,
+        revokedAt: null,
+        revokedReason: null,
+      },
+      {
+        id: 'c0',
+        number: 'TB-2026-0000',
+        level: 'A1',
+        issuedAt: '2026-09-01T05:00:00.000Z',
+        exempt: false,
+        revoked: true,
+        revokedAt: '2026-09-02T05:00:00.000Z',
+        revokedReason: "Noto'g'ri o'quvchiga berilgan",
       },
     ]);
+    // The staff view needs the reason, so the query has to select it.
+    expect(prisma.participationCertificate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ revokedReason: true }),
+      }),
+    );
   });
 });
 
@@ -386,15 +422,33 @@ describe('verify', () => {
     });
   });
 
-  it('marks a revoked document invalid', async () => {
+  it('marks a revoked document invalid and shows nothing more about it', async () => {
     const { service, prisma } = make();
     prisma.participationCertificate.findFirst.mockResolvedValue(
-      row({ revokedAt: new Date('2026-10-18T00:00:00.000Z') }),
+      row({
+        revokedAt: new Date('2026-10-18T00:00:00.000Z'),
+        // Even if a row carried it, the public answer must not.
+        revokedReason: "Noto'g'ri o'quvchiga berilgan",
+      }),
     );
-    expect(await service.verify(CERT_ID)).toMatchObject({
+    expect(await service.verify(CERT_ID)).toEqual({
       valid: false,
       revoked: true,
+      number: 'TB-2026-0001',
+      studentName: 'Madina Karimova',
+      level: 'A1',
+      from: '2026-07-07',
+      to: '2026-10-15',
+      issuedAt: '2026-10-17T07:00:00.000Z',
+      companyName: 'DaF Sprachzentrum',
     });
+    // The reason is never even read for the public page.
+    const select = (
+      prisma.participationCertificate.findFirst.mock.calls[0] as [
+        { select: Record<string, boolean> },
+      ]
+    )[0].select;
+    expect(select).not.toHaveProperty('revokedReason');
   });
 });
 
@@ -425,6 +479,47 @@ describe('pdf', () => {
     expect(out.buffer.subarray(0, 4).toString()).toBe('%PDF');
   });
 
+  it('refuses the PDF of a cancelled document with a 409 and renders nothing', async () => {
+    const { service, prisma } = make();
+    prisma.participationCertificate.findFirst.mockResolvedValue({
+      id: CERT_ID,
+      studentId: 10001,
+      number: 'TB-2026-0001',
+      issuedAt: new Date('2026-10-17T07:00:00.000Z'),
+      revokedAt: new Date('2026-10-18T07:00:00.000Z'),
+      snapshot: { version: 1 },
+    });
+    const err = await service.pdf(7, 1001, CERT_ID).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ConflictException);
+    expect((err as ConflictException).message).toBe('Hujjat bekor qilingan');
+    expect(renderCertificatePdf).not.toHaveBeenCalled();
+    // The branch check comes first: another branch's caller learns nothing.
+    expect(assertCallerMayTouchStudent).toHaveBeenCalledWith(
+      expect.anything(),
+      7,
+      10001,
+      1001,
+    );
+  });
+
+  it('asks for the revoke state in the PDF lookup', async () => {
+    const { service, prisma } = make();
+    prisma.participationCertificate.findFirst.mockResolvedValue({
+      id: CERT_ID,
+      studentId: 10001,
+      number: 'TB-2026-0001',
+      issuedAt: new Date('2026-10-17T07:00:00.000Z'),
+      revokedAt: null,
+      snapshot: { version: 1 },
+    });
+    await service.pdf(7, 1001, CERT_ID);
+    expect(prisma.participationCertificate.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ revokedAt: true }),
+      }),
+    );
+  });
+
   it('404s for a certificate of another company', async () => {
     const { service, prisma } = make();
     prisma.participationCertificate.findFirst.mockResolvedValue(null);
@@ -447,4 +542,170 @@ describe('pdf', () => {
       expect(assertCallerMayTouchStudent).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('revoke', () => {
+  const LIVE = {
+    id: CERT_ID,
+    studentId: 10001,
+    number: 'TB-2026-0007',
+    level: 'A1',
+    issuedAt: new Date('2026-10-17T07:00:00.000Z'),
+    exemptReason: null,
+    revokedAt: null,
+  };
+  const REASON = "Noto'g'ri o'quvchiga berilgan";
+
+  it('cancels in one transaction: conditional update, then the history on the same client', async () => {
+    const { service, prisma, tx, history } = make();
+    prisma.participationCertificate.findFirst.mockResolvedValue(LIVE);
+    const out = await service.revoke(7, 1001, CERT_ID, REASON);
+
+    // The company is part of the lookup (another company's row is a 404).
+    expect(prisma.participationCertificate.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: CERT_ID, companyId: 1001 } }),
+    );
+    // Race-safe: only a still-live row is written, and only in this company.
+    expect(tx.participationCertificate.updateMany).toHaveBeenCalledWith({
+      where: { id: CERT_ID, companyId: 1001, revokedAt: null },
+      data: { revokedAt: expect.any(Date), revokedReason: REASON },
+    });
+    expect(history.recordCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: 'Student',
+        entityId: 10001,
+        companyId: 1001,
+        changedById: 7,
+        tx,
+        newValues: {
+          action: 'QATNASHISH_HUJJATI_BEKOR_QILINDI',
+          raqam: 'TB-2026-0007',
+          daraja: 'A1',
+          sabab: REASON,
+        },
+      }),
+    );
+    expect(out).toEqual({
+      id: CERT_ID,
+      number: 'TB-2026-0007',
+      level: 'A1',
+      issuedAt: '2026-10-17T07:00:00.000Z',
+      exempt: false,
+      revoked: true,
+      revokedAt: expect.any(String),
+      revokedReason: REASON,
+    });
+    // The stored figures are never touched: no snapshot write anywhere.
+    const data = tx.participationCertificate.updateMany.mock.calls[0][0].data;
+    expect(Object.keys(data).sort()).toEqual(['revokedAt', 'revokedReason']);
+  });
+
+  it('checks the student branch exactly as the PDF does', async () => {
+    const { service, prisma } = make();
+    prisma.participationCertificate.findFirst.mockResolvedValue(LIVE);
+    await service.revoke(7, 1001, CERT_ID, REASON);
+    expect(assertCallerMayTouchStudent).toHaveBeenCalledWith(
+      prisma,
+      7,
+      10001,
+      1001,
+    );
+  });
+
+  it('stops at the branch guard: nothing is written for a caller outside the branch', async () => {
+    const { service, prisma } = make();
+    prisma.participationCertificate.findFirst.mockResolvedValue(LIVE);
+    (assertCallerMayTouchStudent as jest.Mock).mockRejectedValueOnce(
+      new ForbiddenException('Bu filial emas'),
+    );
+    await expect(
+      service.revoke(7, 1001, CERT_ID, REASON),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('404s for a certificate of another company (or an unknown id)', async () => {
+    const { service, prisma } = make();
+    prisma.participationCertificate.findFirst.mockResolvedValue(null);
+    await expect(
+      service.revoke(7, 1001, OTHER_ID, REASON),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(assertCallerMayTouchStudent).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it.each(['\u0000', 'abc\u0000def', 'not-a-uuid', ''])(
+    '404s with the same text, and never asks the database, for the malformed id %j',
+    async (bad) => {
+      const { service, prisma } = make();
+      const err = await service
+        .revoke(7, 1001, bad, REASON)
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(NotFoundException);
+      expect((err as NotFoundException).message).toBe('Hujjat topilmadi');
+      expect(prisma.participationCertificate.findFirst).not.toHaveBeenCalled();
+      expect(assertCallerMayTouchStudent).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it('409s for a document that is already cancelled, writing nothing', async () => {
+    const { service, prisma, history } = make();
+    prisma.participationCertificate.findFirst.mockResolvedValue({
+      ...LIVE,
+      revokedAt: new Date('2026-10-18T07:00:00.000Z'),
+    });
+    const err = await service
+      .revoke(7, 1001, CERT_ID, REASON)
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ConflictException);
+    expect((err as ConflictException).message).toBe(
+      'Hujjat allaqachon bekor qilingan',
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(history.recordCreate).not.toHaveBeenCalled();
+  });
+
+  it('409s when a concurrent cancel wins the race (no row matched), without a history entry', async () => {
+    const { service, prisma, history } = make({ updateCount: 0 });
+    prisma.participationCertificate.findFirst.mockResolvedValue(LIVE);
+    const err = await service
+      .revoke(7, 1001, CERT_ID, REASON)
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ConflictException);
+    expect((err as ConflictException).message).toBe(
+      'Hujjat allaqachon bekor qilingan',
+    );
+    expect(history.recordCreate).not.toHaveBeenCalled();
+  });
+
+  it('rolls the cancel back when its history entry cannot be written', async () => {
+    const { service, prisma, tx, history } = make();
+    prisma.participationCertificate.findFirst.mockResolvedValue(LIVE);
+    let committed = false;
+    prisma.$transaction.mockImplementation(
+      async (fn: (t: typeof tx) => Promise<unknown>) => {
+        const result = await fn(tx);
+        committed = true;
+        return result;
+      },
+    );
+    history.recordCreate.mockRejectedValue(new Error('history down'));
+    await expect(service.revoke(7, 1001, CERT_ID, REASON)).rejects.toThrow(
+      'history down',
+    );
+    expect(tx.participationCertificate.updateMany).toHaveBeenCalledTimes(1);
+    expect(committed).toBe(false);
+  });
+
+  it('turns a serialization conflict into a 409 and writes nothing outside the transaction', async () => {
+    const { service, prisma, tx } = make();
+    prisma.participationCertificate.findFirst.mockResolvedValue(LIVE);
+    prisma.$transaction.mockRejectedValue({ code: 'P2034' });
+    await expect(
+      service.revoke(7, 1001, CERT_ID, REASON),
+    ).rejects.toMatchObject({ status: 409 });
+    // A serialization conflict became a 409 and nothing ran outside the tx.
+    expect(tx.participationCertificate.updateMany).not.toHaveBeenCalled();
+  });
 });
