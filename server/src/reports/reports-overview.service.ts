@@ -4,9 +4,12 @@ import { RedisService } from '../redis/redis.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { activeStudentWhere } from '../students/shared/active-student-where';
 import {
+  addDaysToDateStr,
+  tashkentDateStr,
   tashkentMonthKey,
   tashkentMonthRangeUtc,
   tashkentRangeFilter,
+  utcMidnightFromDateStr,
 } from '../common/date/tashkent';
 import {
   DEPARTURE_GRACE_DAYS,
@@ -21,6 +24,11 @@ import {
   studentBranchWhere,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
+import {
+  countRows,
+  markOf,
+  rateOf,
+} from './attendance-stats/attendance-counts';
 import { leadAttributionWhere } from '../leads/shared/lead-scope';
 
 @Injectable()
@@ -52,7 +60,7 @@ export class ReportsOverviewService {
       return {
         activeStudents: { current: 0, trend: 0 },
         activeGroups: 0,
-        averageAttendance: 0,
+        averageAttendance: null,
         leadConversionRate: 0,
         newStudentsThisMonth: 0,
         churnedThisMonth: 0,
@@ -72,7 +80,7 @@ export class ReportsOverviewService {
       lastMonthActiveStudents,
       activeGroups,
       newStudentsThisMonth,
-      attendanceCounts,
+      attendanceMarks,
       totalLeads,
       convertedLeads,
       departures,
@@ -120,14 +128,21 @@ export class ReportsOverviewService {
         },
       }),
 
-      this.prisma.attendance.groupBy({
-        by: ['status'],
+      // «Davomat (bu oy)» — the attendance report's own count (ADR-0103): the
+      // current Tashkent month from the 1st to today, the picked branch,
+      // through `countRows` + `rateOf`. No second formula.
+      this.prisma.attendance.findMany({
         where: {
           companyId,
-          date: { gte: firstOfMonth },
+          date: {
+            gte: utcMidnightFromDateStr(`${tashkentMonthKey(now)}-01`),
+            lt: utcMidnightFromDateStr(
+              addDaysToDateStr(tashkentDateStr(now), 1),
+            ),
+          },
           ...groupBranchWhere(scope),
         },
-        _count: { id: true },
+        select: { date: true, status: true, cancellationId: true },
       }),
 
       // Voronka konversiyasi FAQAT voronka lidlarini sanaydi. `sectionId: null`
@@ -170,21 +185,7 @@ export class ReportsOverviewService {
       departures.floor,
     ).length;
 
-    const totalAttendance = attendanceCounts.reduce(
-      (sum, a) => sum + a._count.id,
-      0,
-    );
-    const excusedCount = attendanceCounts
-      .filter((a) => a.status === 'EXCUSED')
-      .reduce((sum, a) => sum + a._count.id, 0);
-    const presentAndLate = attendanceCounts
-      .filter((a) => a.status === 'PRESENT' || a.status === 'LATE')
-      .reduce((sum, a) => sum + a._count.id, 0);
-    // Formula from reports-attendance-analytics.service.ts (A2.6):
-    // (PRESENT + LATE) / (PRESENT + LATE + ABSENT), excluding EXCUSED from denominator
-    const denominator = totalAttendance - excusedCount;
-    const averageAttendance =
-      denominator > 0 ? Math.round((presentAndLate / denominator) * 100) : 0;
+    const averageAttendance = rateOf(countRows(attendanceMarks.map(markOf)));
 
     const trend =
       lastMonthActiveStudents > 0

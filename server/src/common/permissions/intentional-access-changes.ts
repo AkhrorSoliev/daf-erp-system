@@ -16,8 +16,6 @@ export interface AccessChange {
 
 const DEPARTED =
   "Only the «Ketgan o'quvchilar» report calls it; its menu entry is CEO/BD only.";
-const ATTENDANCE =
-  'Only the «Davomat statistikasi» report calls it; its menu entry is CEO/BD only.';
 const NO_SCREEN = 'No screen calls it.';
 const OWN_SALARY =
   "The caller's own salary (`@CurrentUser('id')`); a cashier on payroll may read it like any staff member.";
@@ -38,22 +36,6 @@ export const INTENTIONAL_ACCESS_CHANGES: Record<string, AccessChange> = {
   'GET /reports/departed-students/teacher-changes-list': {
     remove: ['Administrator'],
     reason: DEPARTED,
-  },
-  'GET /reports/attendance-analytics': {
-    remove: ['Administrator'],
-    reason: ATTENDANCE,
-  },
-  'GET /reports/attendance-by-course': {
-    remove: ['Administrator'],
-    reason: ATTENDANCE,
-  },
-  'GET /reports/attendance-by-group': {
-    remove: ['Administrator'],
-    reason: ATTENDANCE,
-  },
-  'GET /reports/teacher-performance': {
-    remove: ['Administrator'],
-    reason: ATTENDANCE,
   },
   'GET /reports/kpis': { remove: ['Administrator'], reason: NO_SCREEN },
   'GET /reports/group-analytics': {
