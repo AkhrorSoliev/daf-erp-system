@@ -70,7 +70,7 @@ export async function linkStaffChatByPhone(
     for (const other of others) {
       await tx.user.update({
         where: { id: other.id },
-        data: { telegramChatId: null },
+        data: { telegramChatId: null, telegramDisconnectedAt: null },
       });
       await history.recordUpdate({
         entityType: 'User',
@@ -86,7 +86,7 @@ export async function linkStaffChatByPhone(
     if (target.telegramChatId !== chatId) {
       await tx.user.update({
         where: { id: target.id },
-        data: { telegramChatId: chatId },
+        data: { telegramChatId: chatId, telegramDisconnectedAt: null },
       });
       await history.recordUpdate({
         entityType: 'User',

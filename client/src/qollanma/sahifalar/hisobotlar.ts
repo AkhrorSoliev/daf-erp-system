@@ -44,9 +44,9 @@ export const hisobotlar: QollanmaSahifa[] = [
     qisqacha:
       "Kunlik hisobot CEO tanlagan xodimlarning shaxsiy Telegram chatiga, har biriga o'z vaqti, filiallari, bo'limlari va ko'rinishi bilan boradi.",
     rollar: [1],
-    adr: ["0095"],
+    adr: ["0095", "0097"],
     yollar: ["/settings/telegram-report"],
     kalitSozlar: ["telegram", "kunlik hisobot", "shaxsiy hisobot", "bot", "hisobot vaqti", "filial", "jadval"],
-    yangilangan: "2026-10-16",
+    yangilangan: "2026-10-17",
   },
 ];

@@ -1388,6 +1388,9 @@
   "GET /telegram-report/recipients": [
     "CEO"
   ],
+  "GET /telegram-report/recipients/:id/preview": [
+    "CEO"
+  ],
   "GET /telegram/channel-report/list": [
     "Branch Director",
     "CEO"
@@ -2220,6 +2223,9 @@
     "CEO"
   ],
   "POST /telegram-report/recipients": [
+    "CEO"
+  ],
+  "POST /telegram-report/recipients/:id/check": [
     "CEO"
   ],
   "POST /telegram-report/recipients/:id/test": [

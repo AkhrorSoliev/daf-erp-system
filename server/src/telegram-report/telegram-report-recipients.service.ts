@@ -16,6 +16,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { signInStaffWhere } from '../common/auth/staff-telegram';
 import { staffChatOf } from '../tasks/telegram/task-telegram-view';
 import { PersonalReportService } from './personal-report.service';
+import { reachOf } from './reach-state';
 import type { UpdateRecipientDto } from './dto/telegram-report.dto';
 
 const ENTITY = 'TelegramReportRecipient';
@@ -73,12 +74,20 @@ export class TelegramReportRecipientsService {
   ) {
     const users = await this.prisma.user.findMany({
       where: { id: { in: rows.map((r) => r.userId) } },
-      select: { id: true, firstName: true, lastName: true, position: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        position: true,
+        telegramDisconnectedAt: true,
+      },
     });
     const byId = new Map(users.map((u) => [u.id, u]));
     return Promise.all(
       rows.map(async (r) => {
         const u = byId.get(r.userId);
+        const linked = (await staffChatOf(this.prisma, r.userId)) !== null;
+        const disconnectedAt = u?.telegramDisconnectedAt ?? null;
         const allowed = r.allBranches
           ? branches
           : branches.filter((b) => r.branchIds.includes(b.id));
@@ -96,7 +105,20 @@ export class TelegramReportRecipientsService {
           lastSentDate: r.lastSentDate
             ? r.lastSentDate.toISOString().slice(0, 10)
             : null,
-          telegramLinked: (await staffChatOf(this.prisma, r.userId)) !== null,
+          telegramLinked: linked,
+          reach: reachOf({
+            linked,
+            disconnectedAt,
+            lastAttemptOk: r.lastAttemptOk,
+          }),
+          blockedAt: disconnectedAt ? disconnectedAt.toISOString() : null,
+          lastAttempt: r.lastAttemptAt
+            ? {
+                at: r.lastAttemptAt.toISOString(),
+                ok: r.lastAttemptOk === true,
+                note: r.lastAttemptNote,
+              }
+            : null,
           noBranch: allowed.length === 0,
         };
       }),
@@ -112,6 +134,8 @@ export class TelegramReportRecipientsService {
   }
 
   async list(companyId: number) {
+    // Started first: a cache miss waits on Telegram (up to 3 s) alongside the DB work.
+    const botActive = this.reports.botActive();
     const [rows, branches] = await Promise.all([
       this.prisma.telegramReportRecipient.findMany({
         where: { companyId },
@@ -119,7 +143,11 @@ export class TelegramReportRecipientsService {
       }),
       this.liveBranches(companyId),
     ]);
-    return { recipients: await this.view(rows, branches), branches };
+    return {
+      recipients: await this.view(rows, branches),
+      branches,
+      bot: { active: await botActive },
+    };
   }
 
   async candidates(companyId: number) {
@@ -242,7 +270,19 @@ export class TelegramReportRecipientsService {
     return { message: 'Oluvchi olib tashlandi' };
   }
 
-  /** «Hozir sinab ko'rish»: sends now, never touches `lastSentDate`. */
+  /** «Ulanishni tekshirish»: asks Telegram, shows nothing to the staff member. */
+  async check(companyId: number, id: number) {
+    const row = await this.one(companyId, id);
+    return this.reports.probe(row.userId);
+  }
+
+  /** The report this recipient would get now, as plain text with real figures. */
+  async preview(companyId: number, id: number) {
+    const row = await this.one(companyId, id);
+    return { text: await this.reports.preview(row) };
+  }
+
+  /** «Hozir yuborish»: sends now, never touches `lastSentDate`. */
   async test(companyId: number, id: number) {
     const row = await this.one(companyId, id);
     const out = await this.reports.deliver(row);

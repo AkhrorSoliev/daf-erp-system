@@ -46,9 +46,22 @@ export interface MyChatMemberUpdate {
   new_chat_member: { status: string };
 }
 
+/** The two row kinds a chat can belong to; both carry the same mark. */
+interface ChatRows {
+  findMany(args: {
+    where: Record<string, unknown>;
+    select: { id: true; companyId: true };
+  }): Promise<Array<{ id: number; companyId: number }>>;
+  updateMany(args: {
+    where: Record<string, unknown>;
+    data: { telegramDisconnectedAt: Date | null };
+  }): Promise<{ count: number }>;
+}
+
 /**
- * Whether the bot can still reach a student's linked Telegram chat —
- * `Student.telegramDisconnectedAt` (ADR-0066).
+ * Whether the bot can still reach a Telegram chat linked to students and staff
+ * accounts — `Student.telegramDisconnectedAt` (ADR-0066) and
+ * `User.telegramDisconnectedAt` (ADR-0097).
  *
  * The bot learns it in two ways, both handled here:
  * - Telegram says so: a private chat's `my_chat_member` update is `kicked`
@@ -69,55 +82,51 @@ export class StudentChatReach {
     private readonly logger: LoggerService,
   ) {}
 
-  /** Marks every live card on this chat that is not marked yet. */
-  async disconnected(chatId: string, at: Date, reason: string): Promise<void> {
-    const cards = await this.prisma.student.findMany({
-      where: {
-        telegramChatId: chatId,
-        telegramDisconnectedAt: null,
-        deletedAt: null,
-      },
-      select: { id: true, companyId: true },
-    });
-    for (const card of cards) {
-      // Conditional per card: two failures racing on one chat mark it once.
-      const { count } = await this.prisma.student.updateMany({
-        where: { id: card.id, telegramDisconnectedAt: null },
-        data: { telegramDisconnectedAt: at },
+  /** Flips the mark on every live row of both kinds on this chat. */
+  private async flip(
+    chatId: string,
+    to: Date | null,
+    history: Record<string, string>,
+  ): Promise<void> {
+    const kinds: Array<[string, ChatRows]> = [
+      ['Student', this.prisma.student as unknown as ChatRows],
+      ['User', this.prisma.user as unknown as ChatRows],
+    ];
+    for (const [entityType, rows] of kinds) {
+      const from = to ? null : { not: null };
+      const found = await rows.findMany({
+        where: {
+          telegramChatId: chatId,
+          telegramDisconnectedAt: from,
+          deletedAt: null,
+        },
+        select: { id: true, companyId: true },
       });
-      if (count === 0) continue;
-      await this.history.recordCreate({
-        entityType: 'Student',
-        entityId: card.id,
-        companyId: card.companyId,
-        newValues: { action: 'TELEGRAM_UZILDI', sabab: reason },
-      });
+      for (const row of found) {
+        // Conditional per row: two failures racing on one chat mark it once.
+        const { count } = await rows.updateMany({
+          where: { id: row.id, telegramDisconnectedAt: from },
+          data: { telegramDisconnectedAt: to },
+        });
+        if (count === 0) continue;
+        await this.history.recordCreate({
+          entityType,
+          entityId: row.id,
+          companyId: row.companyId,
+          newValues: history,
+        });
+      }
     }
   }
 
-  /** Clears the mark on every live card on this chat. */
+  /** Marks every live card and staff account on this chat not marked yet. */
+  async disconnected(chatId: string, at: Date, reason: string): Promise<void> {
+    await this.flip(chatId, at, { action: 'TELEGRAM_UZILDI', sabab: reason });
+  }
+
+  /** Clears the mark on every live card and staff account on this chat. */
   async reconnected(chatId: string): Promise<void> {
-    const cards = await this.prisma.student.findMany({
-      where: {
-        telegramChatId: chatId,
-        telegramDisconnectedAt: { not: null },
-        deletedAt: null,
-      },
-      select: { id: true, companyId: true },
-    });
-    for (const card of cards) {
-      const { count } = await this.prisma.student.updateMany({
-        where: { id: card.id, telegramDisconnectedAt: { not: null } },
-        data: { telegramDisconnectedAt: null },
-      });
-      if (count === 0) continue;
-      await this.history.recordCreate({
-        entityType: 'Student',
-        entityId: card.id,
-        companyId: card.companyId,
-        newValues: { action: 'TELEGRAM_QAYTA_ULANDI' },
-      });
-    }
+    await this.flip(chatId, null, { action: 'TELEGRAM_QAYTA_ULANDI' });
   }
 
   /** A private chat's `my_chat_member`: the user blocked or unblocked the bot. */

@@ -64,6 +64,24 @@ export class TelegramReportController {
     return this.recipients.remove(companyId, userId, id);
   }
 
+  @Post('recipients/:id/check')
+  @CeoOnly()
+  check(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.recipients.check(companyId, id);
+  }
+
+  @Get('recipients/:id/preview')
+  @CeoOnly()
+  preview(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.recipients.preview(companyId, id);
+  }
+
   @Post('recipients/:id/test')
   @CeoOnly()
   test(
