@@ -6,6 +6,7 @@ import {
   isMonthlyBillingMonth,
   type MonthCharges,
 } from '../reports/month-charges';
+import type { DebtSplit } from '../reports/debt-split';
 import {
   branchIdWhere,
   groupBranchWhere,
@@ -16,18 +17,13 @@ import {
 import { leadAttributionWhere } from '../leads/shared/lead-scope';
 import { activeStudentWhere } from '../students/shared/active-student-where';
 import {
-  escapeHtml,
+  formatSum,
   firstOfThisMonthDate,
   firstOfThisMonthUtc,
-  formatNumber,
-  formatSignedSum,
-  formatSum,
   tashkentDayRange,
   tashkentTodayDate,
 } from './utils/format.util';
-import { buildDebtSplitLines } from './utils/debt-split-lines.util';
-import { buildIncomeSplitLines } from './utils/income-split.util';
-import { buildMonthChargesLines } from './utils/month-charges-lines.util';
+import { renderGroupMessage } from './daily-report-group-message';
 import { buildTaskLine } from './utils/task-line.util';
 import { loadTaskReportFigures } from '../tasks/task-report-figures';
 
@@ -111,44 +107,6 @@ export class TelegramGroupDailyReportService {
   /** Attendance below this fires a red flag + downgrades to 🟡. */
   private static readonly ATTENDANCE_LOW_PCT = 75;
 
-  private static readonly WEEKDAYS_UZ = [
-    'Yakshanba',
-    'Dushanba',
-    'Seshanba',
-    'Chorshanba',
-    'Payshanba',
-    'Juma',
-    'Shanba',
-  ];
-  private static readonly MONTHS_UZ = [
-    'yanvar',
-    'fevral',
-    'mart',
-    'aprel',
-    'may',
-    'iyun',
-    'iyul',
-    'avgust',
-    'sentyabr',
-    'oktyabr',
-    'noyabr',
-    'dekabr',
-  ];
-  private static readonly METHOD_LABELS: Record<string, string> = {
-    CASH: 'Naqd',
-    PAYME: 'Payme',
-    CLICK: 'Click',
-    UZUM: 'Uzum',
-    TRANSFER: "O'tkazma",
-  };
-  private static readonly METHOD_ORDER = [
-    'CASH',
-    'PAYME',
-    'CLICK',
-    'UZUM',
-    'TRANSFER',
-  ];
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly salaryMonthly: SalaryMonthlyService,
@@ -168,6 +126,27 @@ export class TelegramGroupDailyReportService {
     message: string;
     snapshot: DailySnapshotData;
   }> {
+    const d = await this.collect(companyId, branchIds);
+    return {
+      message: renderGroupMessage(d),
+      snapshot: {
+        totalDebt: d.totalDebt,
+        debtorCount: d.debtorCount,
+        activeStudents: d.activeStudents,
+        mtdIncome: d.mtdIncome,
+      },
+    };
+  }
+
+  /**
+   * Runs every query behind the 21:00 report and returns the figures, before
+   * any text is written. `renderGroupMessage` turns them into the group
+   * message; the personal Telegram reports read the same data.
+   */
+  async collect(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<DailyReportData> {
     const today = tashkentDayRange();
     const todayDate = tashkentTodayDate();
     // `firstOfMonth` (a -5h-shifted timestamp) is correct only for the income
@@ -413,6 +392,11 @@ export class TelegramGroupDailyReportService {
       this.computeTaskLine(companyId, branchIds),
     ]);
 
+    // The printed income line reads the ledger tally (`attribution.total`) while
+    // the snapshot keeps the `Payment` aggregate — see `logIncomeBasisDrift`.
+    const mtdIncome = monthlyIncome._sum.amount ?? 0;
+    this.logIncomeBasisDrift(companyId, attribution, mtdIncome);
+
     // ── Derive figures ────────────────────────────────────────────────────
     const todayIncome = todayPayments._sum.amount ?? 0;
     const todayIncomeCount = todayPayments._count ?? 0;
@@ -438,7 +422,6 @@ export class TelegramGroupDailyReportService {
     const totalDebt = debtSplit.studying.total;
     const debtorCount = debtSplit.studying.count;
 
-    const mtdIncome = monthlyIncome._sum.amount ?? 0;
     const mtdExpense = monthlyExpenses._sum.amount ?? 0;
     // Advances are real cash paid to teachers (teacher pay), so Sof foyda nets
     // them out too — shown on their own line, kept out of the Xarajat figure.
@@ -473,206 +456,53 @@ export class TelegramGroupDailyReportService {
       attendanceDenom,
     });
 
-    // ── Compose message ───────────────────────────────────────────────────
-    const dayNum = todayDate.getUTCDate();
-    const monthName =
-      TelegramGroupDailyReportService.MONTHS_UZ[todayDate.getUTCMonth()];
-    const weekday =
-      TelegramGroupDailyReportService.WEEKDAYS_UZ[todayDate.getUTCDay()];
-    const companyName = escapeHtml(company?.name ?? 'Hisobot');
-
-    const lines: string[] = [];
-
-    // Header + traffic-light verdict.
-    lines.push(`📊 <b>${today.label}, ${weekday} — ${companyName}</b>`);
     // Name the scope. Two groups on different branches now receive different
     // numbers under the same title, and a reader has to be able to tell which
     // report they are holding.
-    if (branchIds !== null) {
-      const names = await this.branchNames(companyId, branchIds);
-      lines.push(`<i>${escapeHtml(names)}</i>`);
-    }
-    lines.push(`${light.emoji} <i>${light.subtitle}</i>`);
-    lines.push('');
-
-    // 💰 Bugungi moliya
-    lines.push(`💰 <b>Bugungi moliya</b>`);
-    lines.push(
-      `• Kirim: <b>${formatNumber(todayIncomeCount)} ta · ${formatSum(todayIncome)}</b>`,
-    );
-    const methodLine = this.buildMethodLine(todayPaymentsByMethod);
-    if (methodLine) lines.push(`   ${methodLine}`);
-    lines.push(`• Chiqim: <b>${formatSum(todaySpend)}</b>`);
-    lines.push(`• Sof (bugun): <b>${formatSignedSum(todayNet)}</b>`);
-    lines.push('');
-
-    // 👥 O'quvchilar harakati
-    lines.push(`👥 <b>O'quvchilar harakati</b>`);
-    lines.push(
-      `• Yangi o'quvchilar: <b>${formatNumber(todayNewStudents)}</b> · Ketgan: <b>${formatNumber(departedToday)}</b> — sof <b>${netMovement >= 0 ? '+' : ''}${formatNumber(netMovement)}</b>`,
-    );
-    const leadLine =
-      convertedLeadsToday > 0
-        ? `• Yangi lidlar: <b>${formatNumber(newLeadsToday)}</b> (${formatNumber(convertedLeadsToday)} tasi o'quvchiga aylandi)`
-        : `• Yangi lidlar: <b>${formatNumber(newLeadsToday)}</b>`;
-    lines.push(leadLine);
-    lines.push('');
-
-    // 🎓 Bugungi o'quv jarayoni
-    lines.push(`🎓 <b>Bugungi o'quv jarayoni</b>`);
-    lines.push(
-      `• Dars o'tilgan guruhlar: <b>${formatNumber(lessonsToday)}</b>`,
-    );
-    lines.push(
-      `• Davomat: <b>${formatNumber(present)}</b> keldi · <b>${formatNumber(late)}</b> kech · <b>${formatNumber(absent)}</b> kelmadi · <b>${formatNumber(excused)}</b> uzrli — <b>${attendancePct}%</b>`,
-    );
-    lines.push('');
-
-    // 📌 Hozirgi holat
-    lines.push(`📌 <b>Hozirgi holat</b>`);
-    lines.push(`• Faol o'quvchilar: <b>${formatNumber(activeStudents)}</b>`);
-    // The debt (ADR-0059): the lines every Telegram surface prints. Only
-    // «O'qiyotganlar qarzi» carries the ▲/▼ against yesterday.
-    for (const line of buildDebtSplitLines(debtSplit, {
-      studyingSuffix: this.buildDebtDeltaSuffix(
-        yesterdaySnapshot,
-        totalDebt,
-        debtorCount,
-      ),
-    })) {
-      lines.push(line);
-    }
-    lines.push('');
-
-    // 📅 Oy boshidan
-    lines.push(`📅 <b>Oy boshidan (1–${dayNum} ${monthName})</b>`);
-    // The income figure and its composition come from ONE attribution result,
-    // so the lines underneath are a decomposition of the number above them.
-    //
-    // The two figures share a window (both start at Tashkent midnight of the
-    // 1st) but not a BASIS: `mtdIncome` sums the `Payment` table, while
-    // `attribution.total` tallies the in-window PAYMENT rows of the effective
-    // ledger. They agree while every COMPLETED payment has exactly one active
-    // PAYMENT transaction of the same amount — the invariant
-    // `scripts/audit-finance-reconciliation.ts` checks as G1 — and `logIncome
-    // BasisDrift` below says so in the log if that ever stops holding.
-    //
-    // The returned snapshot figures keep the aggregate on purpose: it is the
-    // basis `DailySnapshotService`, the row's only writer, stores `mtdIncome` on.
-    this.logIncomeBasisDrift(companyId, attribution, mtdIncome);
-    lines.push(
-      `• Tushum (haqiqiy): <b>${formatSum(attribution ? attribution.total : mtdIncome)}</b>`,
-    );
-    if (attribution) {
-      for (const line of buildIncomeSplitLines(attribution)) lines.push(line);
-    }
-    lines.push(`• Xarajat: <b>${formatSum(mtdExpense)}</b>`);
-    if (mtdAdvance > 0) {
-      lines.push(`• Avans (ustozlarga): <b>${formatSum(mtdAdvance)}</b>`);
-    }
-    if (canonicalNet !== null) {
-      lines.push(`• Sof foyda: <b>${formatSignedSum(canonicalNet)}</b>`);
-      lines.push(
-        `• Kassa harakati (oyliksiz): <b>${formatSignedSum(mtdCashNet)}</b>`,
-      );
-    } else {
-      // Canonical figure unavailable — label the fallback honestly rather than
-      // presenting a cash number as "Sof foyda".
-      lines.push(
-        `• Kassa harakati (oyliksiz): <b>${formatSignedSum(mtdCashNet)}</b>`,
-      );
-    }
-    // Collection, on the ONE basis /payments/overview shows. The old line read
-    // `MTD cash ÷ forecast` — two different things over a denominator that is
-    // a schedule guess, so it printed 109–115% while the web page called the
-    // same month 83%. Now both surfaces divide the SAME two figures.
-    //
-    // From 2026-09 (ADR-0058) the month is read through «Bu oy hisoblandi /
-    // To'landi / Qoldi» instead, and «Shundan yig'ildi», «Oy oxiriga
-    // kutilyapti» and «Oy rejasidan yig'ildi» NEVER print in such a month — not
-    // even when the charges could not be read. They are the lesson-based
-    // figures that are wrong under monthly billing, so a month block without
-    // the new lines is right and one that falls back to these is not.
-    const monthlyBilling = isMonthlyBillingMonth(monthKey);
-    if (attribution && attribution.lessonsValue > 0) {
-      lines.push(
-        `• Shu oyning darslari: <b>${formatSum(attribution.lessonsValue)}</b>`,
-      );
-      if (!monthlyBilling) {
-        // The month's own cash in its old meaning, advance included (ADR-0067).
-        lines.push(
-          `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth + attribution.advance)}</b> (<b>${attribution.pct}%</b>)`,
-        );
-      }
-    }
-    if (monthCharges) {
-      // Same lines, same wording as the «Moliyaviy xulosa» card (ADR-0058).
-      for (const line of buildMonthChargesLines(monthCharges)) lines.push(line);
-    } else if (!monthlyBilling && expectedValue !== null && expectedValue > 0) {
-      // Lesson value, from the ONE canonical source. The line it replaces was a
-      // local `exactDays × 4` walk — a second implementation of a figure the web
-      // page also computed, and both were wrong the same way.
-      lines.push(`• Oy oxiriga kutilyapti: <b>${formatSum(expectedValue)}</b>`);
-      // How far through the month we are. "Shundan yig'ildi" above measures
-      // against the lessons already HELD, so it can read 50% on the 5th and say
-      // nothing about the month; this divides the same collected figure by the
-      // WHOLE month instead. Both numerator and denominator are already on the
-      // message above, and both come from the same services /payments/overview
-      // reads — no third figure is fetched, so the bot and the web page cannot
-      // drift apart.
-      //
-      // Deliberately unclamped: a reading above 100% would mean more was
-      // collected than the month is worth, and that should stay visible.
-      if (attribution) {
-        // The month's own cash in its old meaning, advance included (ADR-0067).
-        const monthPlanPct = Math.round(
-          ((attribution.currentMonth + attribution.advance) / expectedValue) *
-            100,
-        );
-        lines.push(`• Oy rejasidan yig'ildi: <b>${monthPlanPct}%</b>`);
-      }
-    }
-
-    // 💵 Ustozlar oyligi (only when there is real lesson data — skips the
-    // May-style config-gap month where getMonthly returns nulls).
-    if (salary && salary.fullDeserved !== null) {
-      lines.push('');
-      lines.push(`💵 <b>Ustozlar oyligi (oy boshidan)</b>`);
-      lines.push(
-        `• To'liq ishlangan: <b>${formatSum(salary.fullDeserved)}</b>`,
-      );
-      lines.push(`• O'quvchilar to'lagan: <b>${formatSum(salary.covered)}</b>`);
-      lines.push(
-        `• 🏛 Markaz qo'shimchasi: <b>${formatSum(salary.centerFunded)}</b>`,
-      );
-    }
-
-    // 💼 Xodimlar oyligi — non-teaching fixed-salary staff (independent of the
-    // teacher lesson-data gate above).
-    if (salary && salary.staffNet > 0) {
-      lines.push('');
-      lines.push(`💼 <b>Xodimlar oyligi</b>`);
-      lines.push(`• To'lanadi: <b>${formatSum(salary.staffNet)}</b>`);
-    }
-
-    // 📋 Topshiriqlar (its own line, not a flag)
-    if (taskLine) {
-      lines.push('');
-      lines.push(taskLine);
-    }
-
-    // 🚩 Diqqat (self-suppressing)
-    lines.push('');
-    if (flags.length > 0) {
-      lines.push(`🚩 <b>Diqqat</b>`);
-      for (const f of flags) lines.push(f);
-    } else {
-      lines.push(`✅ <b>Bugun jiddiy muammo yo'q</b>`);
-    }
+    const scopeLabel =
+      branchIds !== null ? await this.branchNames(companyId, branchIds) : null;
 
     return {
-      message: lines.join('\n'),
-      snapshot: { totalDebt, debtorCount, activeStudents, mtdIncome },
+      branchIds,
+      todayLabel: today.label,
+      todayDate,
+      monthKey,
+      companyName: company?.name ?? 'Hisobot',
+      scopeLabel,
+      todayIncome,
+      todayIncomeCount,
+      todayPaymentsByMethod,
+      todaySpend,
+      todayNet,
+      todayNewStudents,
+      departedToday,
+      netMovement,
+      newLeadsToday,
+      convertedLeadsToday,
+      present,
+      late,
+      absent,
+      excused,
+      attendancePct,
+      attendanceDenom,
+      lessonsToday,
+      activeStudents,
+      debtSplit,
+      yesterdaySnapshot,
+      totalDebt,
+      debtorCount,
+      mtdIncome,
+      mtdExpense,
+      mtdAdvance,
+      mtdCashNet,
+      attribution,
+      canonicalNet,
+      expectedValue,
+      monthCharges,
+      salary,
+      taskLine,
+      flags,
+      light,
     };
   }
 
@@ -689,35 +519,6 @@ export class TelegramGroupDailyReportService {
     status: 'PRESENT' | 'LATE' | 'ABSENT' | 'EXCUSED',
   ): number {
     return breakdown.find((r) => r.status === status)?._count ?? 0;
-  }
-
-  private buildMethodLine(
-    byMethod: Array<{ method: string; _sum: { amount: number | null } }>,
-  ): string | null {
-    const parts = TelegramGroupDailyReportService.METHOD_ORDER.map((m) => {
-      const row = byMethod.find((r) => r.method === m);
-      const amount = row?._sum.amount ?? 0;
-      if (amount <= 0) return null;
-      const label = TelegramGroupDailyReportService.METHOD_LABELS[m] ?? m;
-      return `${label} ${formatNumber(amount)}`;
-    }).filter((x): x is string => x !== null);
-    return parts.length > 0 ? parts.join(' · ') : null;
-  }
-
-  private buildDebtDeltaSuffix(
-    yesterday: { totalDebt: number; debtorCount: number } | null,
-    totalDebt: number,
-    debtorCount: number,
-  ): string {
-    if (!yesterday) return '';
-    const debtDelta = totalDebt - yesterday.totalDebt;
-    const countDelta = debtorCount - yesterday.debtorCount;
-    if (debtDelta === 0 && countDelta === 0) return '';
-    // Growing debt (positive delta) is the bad direction → ▲.
-    const arrow = debtDelta > 0 ? '▲' : debtDelta < 0 ? '▼' : '·';
-    const countPart =
-      countDelta !== 0 ? ` · ${countDelta > 0 ? '+' : ''}${countDelta}` : '';
-    return `  (bugun ${arrow} ${formatNumber(Math.abs(debtDelta))}${countPart})`;
   }
 
   private buildFlagLines(
@@ -952,15 +753,7 @@ export class TelegramGroupDailyReportService {
   private async computeIncomeAttribution(
     companyId: number,
     branchIds: ReportBranchIds,
-  ): Promise<{
-    total: number;
-    currentMonth: number;
-    advance: number;
-    lateTotal: number;
-    late: Array<{ label: string; amount: number }>;
-    lessonsValue: number;
-    pct: number | null;
-  } | null> {
+  ): Promise<IncomeAttribution | null> {
     try {
       const attribution = await this.reports.getIncomeMonthAttribution(
         companyId,
@@ -1102,10 +895,67 @@ export interface DailySnapshotData {
   mtdIncome: number;
 }
 
-interface SalaryTopUp {
+export interface IncomeAttribution {
+  total: number;
+  currentMonth: number;
+  advance: number;
+  lateTotal: number;
+  late: Array<{ label: string; amount: number }>;
+  lessonsValue: number;
+  pct: number | null;
+}
+
+export interface SalaryTopUp {
   fullDeserved: number | null;
   covered: number;
   centerFunded: number;
   /** Net payable to non-teaching FIXED_MONTHLY staff this month (Σ staff netToPay). */
   staffNet: number;
+}
+
+/** Everything the 21:00 message prints, before any text is written. */
+export interface DailyReportData {
+  branchIds: ReportBranchIds;
+  todayLabel: string; // tashkentDayRange().label
+  todayDate: Date; // tashkentTodayDate()
+  monthKey: string; // 'YYYY-MM'
+  companyName: string; // raw, NOT escaped; 'Hisobot' when the company has no name
+  scopeLabel: string | null; // branch names when branchIds !== null, else null
+  todayIncome: number;
+  todayIncomeCount: number;
+  todayPaymentsByMethod: Array<{
+    method: string;
+    _sum: { amount: number | null };
+  }>;
+  todaySpend: number;
+  todayNet: number;
+  todayNewStudents: number;
+  departedToday: number;
+  netMovement: number;
+  newLeadsToday: number;
+  convertedLeadsToday: number;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  attendancePct: number;
+  attendanceDenom: number;
+  lessonsToday: number;
+  activeStudents: number;
+  debtSplit: DebtSplit;
+  yesterdaySnapshot: { totalDebt: number; debtorCount: number } | null;
+  totalDebt: number;
+  debtorCount: number;
+  mtdIncome: number;
+  mtdExpense: number;
+  mtdAdvance: number;
+  mtdCashNet: number;
+  attribution: IncomeAttribution | null;
+  canonicalNet: number | null;
+  expectedValue: number | null;
+  monthCharges: MonthCharges | null;
+  salary: SalaryTopUp | null;
+  taskLine: string | null;
+  flags: string[];
+  light: { emoji: string; subtitle: string };
 }

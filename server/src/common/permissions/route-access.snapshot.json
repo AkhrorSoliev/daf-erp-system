@@ -153,6 +153,9 @@
   "DELETE /telegram-groups/:id": [
     "CEO"
   ],
+  "DELETE /telegram-report/recipients/:id": [
+    "CEO"
+  ],
   "DELETE /users/:id": [
     "Branch Director",
     "CEO"
@@ -1367,6 +1370,12 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /telegram-report/candidates": [
+    "CEO"
+  ],
+  "GET /telegram-report/recipients": [
+    "CEO"
+  ],
   "GET /telegram/channel-report/list": [
     "Branch Director",
     "CEO"
@@ -1678,6 +1687,9 @@
   ],
   "PATCH /telegram-groups/:id": [
     "Branch Director",
+    "CEO"
+  ],
+  "PATCH /telegram-report/recipients/:id": [
     "CEO"
   ],
   "PATCH /users/:id": [
@@ -2190,6 +2202,12 @@
     "CEO"
   ],
   "POST /telegram-groups/announce": [
+    "CEO"
+  ],
+  "POST /telegram-report/recipients": [
+    "CEO"
+  ],
+  "POST /telegram-report/recipients/:id/test": [
     "CEO"
   ],
   "POST /telegram/employee-link": [

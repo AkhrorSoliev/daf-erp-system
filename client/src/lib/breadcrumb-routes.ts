@@ -47,6 +47,8 @@ export const routeLabels: Record<string, string> = {
   permissions: "Ruxsatlar",
   // /settings/lead-ownership — «Lidlar egaligi», CEO only (ADR-0093).
   "lead-ownership": "Lidlar egaligi",
+  // /settings/telegram-report — «Telegram hisobot», CEO only (ADR-0095).
+  "telegram-report": "Telegram hisobot",
   tasks: "Topshiriqlar",
   notifications: "Bildirishnomalar",
   archive: "Arxiv",

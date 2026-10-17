@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-16",
+    sarlavha: "Telegram hisobot shaxsiy chatga",
+    matn: "CEO endi Sozlamalar → «Telegram hisobot» sahifasida kunlik hisobot kimning shaxsiy Telegram chatiga borishini belgilaydi: har oluvchi uchun vaqt, filiallar, bo'limlar va to'rt ko'rinishdan biri. Hisobot dushanba–shanba keladi, botdagi «📊 Hisobot» tugmasi bilan istalgan payt so'raladi, tagidagi tugmalar bilan filial tanlanadi.",
+    rollar: [1],
+    sahifa: { bolim: "hisobotlar", sahifa: "telegram-hisobot" },
+  },
+  {
+    sana: "2026-10-16",
     sarlavha: "Xarajatlar sahifasi yangilandi",
     matn: "Moliya → «Xarajatlar»da endi oy tanlanadi. Tepada oyning jami xarajati va turkumlar bo'yicha shu oy bilan o'tgan oy — jami «Foyda»dagi «Boshqa xarajatlar» bilan bir xil. Joriy oyda o'tgan oy yozilgan ijara, kommunal yoki soliq hali yozilmagan bo'lsa, ogohlantirish chiqadi: «Yozish» xarajat oynasini to'ldirib ochadi. «Kim kiritgan» filtri va Jihozlar, Ta'mirlash, Soliqlar turkumlari qo'shildi.",
     rollar: [1, 2],

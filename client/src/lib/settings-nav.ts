@@ -13,6 +13,7 @@ import {
   Smartphone,
   ShieldCheck,
   UserCheck,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import type { Can } from "./permission-check";
@@ -163,6 +164,14 @@ export const settingsNavSections: SettingsNavSection[] = [
         url: "/settings/lead-ownership",
         icon: UserCheck,
         description: "Lidni band qilish chegarasi va harakat muddatlari",
+        ceoOnly: true,
+      },
+      {
+        // Every route is `@CeoOnly()` (ADR-0095): identity, not a capability.
+        title: "Telegram hisobot",
+        url: "/settings/telegram-report",
+        icon: BarChart3,
+        description: "Kunlik hisobot kimning shaxsiy chatiga borishi",
         ceoOnly: true,
       },
     ],

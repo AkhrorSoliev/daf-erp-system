@@ -1367,3 +1367,42 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
     await expect(buildWith(reports)).rejects.toThrow('boom');
   });
 });
+
+describe('21:00 message — byte-for-byte guard (telegram-report plan Task 1)', () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-08T16:00:00Z'));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('company-wide, every section', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state));
+    expect((await service.build(1001, null)).message).toMatchSnapshot();
+  });
+
+  it('one branch: the scope line under the header', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state));
+    expect((await service.build(1001, [2])).message).toMatchSnapshot();
+  });
+
+  it('a clean day: no flags, no advance, no prior snapshot', async () => {
+    const state = {
+      ...defaultState(),
+      flags: [],
+      yesterdaySnapshot: null,
+      todayExpenses: 0,
+      salaryTotals: null,
+    };
+    const service = await buildService(makePrisma(state), makeSalary(state));
+    expect((await service.build(1001, null)).message).toMatchSnapshot();
+  });
+
+  it('canonical net profit fails: the honest cash line', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockRejectedValue(new Error('boom')),
+    });
+    expect((await service.build(1001, null)).message).toMatchSnapshot();
+  });
+});
