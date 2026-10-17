@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { HEAT_CLASS, hourLabel, insightSentences } from "./center-activity-format";
-import type { CenterOverview, HeatTone } from "./center-activity-types";
+import { DAY_FULL, HEAT_CLASS, heatDetail, hourLabel, insightSentences } from "./center-activity-format";
+import { CenterActivityHeatDetail } from "./center-activity-heat-detail";
+import type { CenterOverview, HeatTone, WeekDay } from "./center-activity-types";
 
 const DAY_HEAD = ["Du", "Se", "Chor", "Pay", "Ju", "Sha"];
 const LEGEND: { tone: HeatTone; text: string }[] = [
@@ -24,6 +26,11 @@ export function CenterActivityHeat({
   onBranch: (id: number) => void;
 }) {
   const { heat, insight } = data;
+  const [pick, setPick] = useState<{ branchId: number; day: WeekDay; hour: number } | null>(null);
+  // A pick from another branch is cleared for good (going back must not revive it); the page remounts this on a new month.
+  if (pick && pick.branchId !== data.branchId) setPick(null);
+  const detail = pick && pick.branchId === data.branchId ? heatDetail(heat, pick.day, pick.hour) : null;
+  const isPicked = (day: WeekDay, hour: number) => detail !== null && pick?.day === day && pick.hour === hour;
   const sentences = insightSentences(insight);
   const branchName = branches.find((b) => b.id === data.branchId)?.name;
   return (
@@ -80,13 +87,23 @@ export function CenterActivityHeat({
                   <tr key={day}>
                     <th scope="row" className="pr-2 text-right font-normal text-muted-foreground">{DAY_HEAD[di]}</th>
                     {heat.cells[di].map((c, hi) => (
-                      <td
-                        key={heat.hours[hi]}
-                        title={`${DAY_HEAD[di]} ${hourLabel(heat.hours[hi])}:00 — ${c.free} ta xona bo'sh`}
-                        aria-label={`${DAY_HEAD[di]} ${hourLabel(heat.hours[hi])}:00 — ${c.free} ta xona bo'sh`}
-                        className={cn("h-7 w-8 rounded text-center font-semibold", HEAT_CLASS[c.tone])}
-                      >
-                        {c.free}
+                      <td key={heat.hours[hi]}>
+                        <button
+                          type="button"
+                          title={`${DAY_HEAD[di]} ${hourLabel(heat.hours[hi])}:00 — ${c.free} ta xona bo'sh`}
+                          aria-label={`${DAY_FULL[day]} ${hourLabel(heat.hours[hi])}:00 — ${c.free} ta xona bo'sh`}
+                          aria-pressed={isPicked(day, heat.hours[hi])}
+                          onClick={() =>
+                            setPick(isPicked(day, heat.hours[hi]) ? null : { branchId: data.branchId, day, hour: heat.hours[hi] })
+                          }
+                          className={cn(
+                            "block h-7 w-8 rounded text-center font-semibold",
+                            HEAT_CLASS[c.tone],
+                            isPicked(day, heat.hours[hi]) && "outline outline-2 outline-offset-2 outline-primary",
+                          )}
+                        >
+                          {c.free}
+                        </button>
                       </td>
                     ))}
                   </tr>
@@ -95,6 +112,8 @@ export function CenterActivityHeat({
             </table>
           </div>
         )}
+
+        {heat.hours.length > 0 && <CenterActivityHeatDetail detail={detail} />}
 
         {(sentences.quiet.length > 0 || sentences.busy) && (
           <p className="rounded-md bg-muted px-3 py-2 text-sm">

@@ -6,9 +6,17 @@ export type HeatTone = "green" | "light" | "yellow" | "red";
 export interface HeatCell {
   free: number;
   tone: HeatTone;
+  /**
+   * The rooms that hold a lesson in this whole hour: `room` indexes
+   * `Heat.roomList`, `groups` are the deduped names of the groups holding it.
+   * The free rooms are the indices NOT listed here (`free` = roomList.length − busy.length).
+   */
+  busy: { room: number; groups: string[] }[];
 }
 export interface Heat {
   rooms: number;
+  /** The branch's rooms, in the order the cells' `busy[].room` index them. */
+  roomList: { id: string; name: string; capacity: number | null }[];
   days: WeekDay[];
   hours: number[];
   /** [dayIndex][hourIndex] */

@@ -27,6 +27,11 @@ export interface RoomResult {
   occupancyPct: number | null;
   window: WorkWindow;
   slots: Record<WeekDay, Set<number>>;
+  /**
+   * Per half-hour slot that holds a lesson: the (deduped) names of the groups
+   * that hold it. `slots[day]` is exactly the key set of `slotGroups[day]`.
+   */
+  slotGroups: Record<WeekDay, Map<number, string[]>>;
 }
 
 export interface GroupResult {
@@ -55,13 +60,13 @@ export interface CenterEval {
 }
 
 export const round1 = (n: number) => Math.round(n * 10) / 10;
-const emptySlots = (): Record<WeekDay, Set<number>> => ({
-  monday: new Set(),
-  tuesday: new Set(),
-  wednesday: new Set(),
-  thursday: new Set(),
-  friday: new Set(),
-  saturday: new Set(),
+const emptySlotGroups = (): Record<WeekDay, Map<number, string[]>> => ({
+  monday: new Map(),
+  tuesday: new Map(),
+  wednesday: new Map(),
+  thursday: new Map(),
+  friday: new Map(),
+  saturday: new Map(),
 });
 const isWeekDay = (d: string): d is WeekDay =>
   (WEEK_DAYS as readonly string[]).includes(d);
@@ -80,7 +85,10 @@ export function evaluateCenter(
   const roomById = new Map(rooms.map((r) => [r.id, r]));
   const open = facts.groups.filter((g) => isGroupOpen(g, at));
 
-  const slotsByRoom = new Map<string, Record<WeekDay, Set<number>>>();
+  const slotGroupsByRoom = new Map<
+    string,
+    Record<WeekDay, Map<number, string[]>>
+  >();
   const countByRoom = new Map<string, number>();
   const groups: GroupResult[] = [];
   let unplaced = 0;
@@ -92,10 +100,16 @@ export function evaluateCenter(
     const sched = pointOn(g.scheduleHistory, at, g.scheduleNow);
     const days = sched.exactDays.filter(isWeekDay);
     if (room) {
-      const slots = slotsByRoom.get(room.id) ?? emptySlots();
+      const held = slotGroupsByRoom.get(room.id) ?? emptySlotGroups();
       const covered = lessonSlots(sched.start, sched.end, room.window);
-      for (const day of days) for (const s of covered) slots[day].add(s);
-      slotsByRoom.set(room.id, slots);
+      for (const day of days) {
+        for (const s of covered) {
+          const names = held[day].get(s) ?? [];
+          if (!names.includes(g.name)) names.push(g.name);
+          held[day].set(s, names);
+        }
+      }
+      slotGroupsByRoom.set(room.id, held);
       countByRoom.set(room.id, (countByRoom.get(room.id) ?? 0) + 1);
     }
     const capacity = room
@@ -130,7 +144,9 @@ export function evaluateCenter(
   }
 
   const roomResults: RoomResult[] = rooms.map((r) => {
-    const slots = slotsByRoom.get(r.id) ?? emptySlots();
+    const slotGroups = slotGroupsByRoom.get(r.id) ?? emptySlotGroups();
+    const slots = {} as Record<WeekDay, Set<number>>;
+    for (const day of WEEK_DAYS) slots[day] = new Set(slotGroups[day].keys());
     let half = 0;
     for (const day of WEEK_DAYS) half += slots[day].size;
     const lessonHours = half / 2;
@@ -150,6 +166,7 @@ export function evaluateCenter(
         workHours > 0 ? round1((lessonHours / workHours) * 100) : null,
       window: r.window,
       slots,
+      slotGroups,
     };
   });
 

@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Markaz faoliyati: katakni bosib bo'sh xonalarni ko'ring",
+    matn: "«Qachon xona bo'sh» jadvalida katakni bossangiz, pastda o'sha soatda qaysi xonalar bo'sh ekani chiqadi: xona nomi va nechta o'rin borligi bilan. Band xonalar chizilgan holda, ularni egallab turgan guruh nomlari bilan ko'rinadi. Yangi guruhga xona qidirganda endi faqat sonni emas, xonaning o'zini ko'rasiz.",
+    rollar: [1, 2],
+    sahifa: { bolim: "hisobotlar", sahifa: "markaz-faoliyati" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Interfeys tilini tanlash",
     matn: "Yuqori paneldagi foydalanuvchi menyusida «Til» bandi paydo bo'ldi. Besh tildan birini tanlang: O'zbekcha, Ўзбекча, Русский, Deutsch yoki English. Sahifa qayta yuklanmaydi, tanlov akkauntingizda saqlanadi, shuning uchun boshqa qurilmada ham shu til chiqadi. Hozircha chap menyu, yuqori panel, foydalanuvchi menyusi va bildirishnomalar tarjima qilingan; sahifalar bosqichma-bosqich qo'shiladi, tarjimasi hali yo'q matn o'zbekcha lotinda chiqadi. Serverdan keladigan matnlar (xato xabarlari, bildirishnoma matni, hisobot fayllari) o'zbekcha qoladi. Kirish sahifasi hali o'zbekcha.",
     sahifa: { bolim: "boshlash", sahifa: "interfeys" },

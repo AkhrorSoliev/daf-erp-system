@@ -1,4 +1,5 @@
 import { evaluateCenter } from './center-metrics';
+import { WEEK_DAYS } from './center-activity.types';
 import type { CenterFacts, GroupFact, RoomFact } from './center-activity.types';
 
 const d = (s: string) => new Date(s);
@@ -83,6 +84,40 @@ describe('evaluateCenter', () => {
     // working hours: 14.5 h x 6 days = 87
     expect(r.workHours).toBe(87);
     expect(r.occupancyPct).toBeCloseTo(3.4, 1);
+  });
+
+  it('slotGroups names the groups per half-hour (deduped) and slots is its key set', () => {
+    const ev = evaluateCenter(
+      facts(
+        [room('r1')],
+        [
+          group('g1', 'r1'),
+          group('g2', 'r1', {
+            scheduleNow: {
+              exactDays: ['monday'],
+              start: '11:00',
+              end: '12:00',
+              courseId: 'c1',
+            },
+          }),
+          // same name as g1 at the same time: listed once
+          group('g1', 'r1', { id: 'g3' }),
+        ],
+      ),
+      AT,
+      false,
+    );
+    const [r] = ev.rooms;
+    // g1 10:00–11:30 → slots 20,21,22; g2 11:00–12:00 → slots 22,23
+    expect(r.slotGroups.monday.get(21)).toEqual(['g1']);
+    expect(r.slotGroups.monday.get(22)).toEqual(['g1', 'g2']);
+    expect(r.slotGroups.monday.get(23)).toEqual(['g2']);
+    expect(r.slotGroups.tuesday.size).toBe(0);
+    for (const day of WEEK_DAYS) {
+      expect([...r.slots[day]].sort()).toEqual(
+        [...r.slotGroups[day].keys()].sort(),
+      );
+    }
   });
 
   it('seats are per group; an overfull group counts as full', () => {
