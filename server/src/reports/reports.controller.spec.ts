@@ -20,8 +20,6 @@ describe('ReportsController', () => {
   const mockService = {
     getKpis: jest.fn().mockResolvedValue({}),
     getRoomUtilization: jest.fn().mockResolvedValue({}),
-    getTeacherPerformance: jest.fn().mockResolvedValue({}),
-    getAttendanceAnalytics: jest.fn().mockResolvedValue({}),
     getGroupAnalytics: jest.fn().mockResolvedValue({}),
     getFinancialTrendCanonical: jest.fn().mockResolvedValue([]),
     getIncomeMonthAttribution: jest.fn().mockResolvedValue({}),
@@ -155,10 +153,6 @@ describe('ReportsController', () => {
       handlers: [
         'getKpis',
         'getRoomUtilization',
-        'getTeacherPerformance',
-        'getAttendanceAnalytics',
-        'getAttendanceByGroup',
-        'getAttendanceByCourse',
         'getGroupAnalytics',
         'getTeacherChangeReasons',
         'getTeacherChangesList',
