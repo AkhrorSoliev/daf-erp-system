@@ -19,7 +19,9 @@ Hujjat **qatnashganlikni** tasdiqlaydi, baho emas. Imtihon va mock natijasi shar
 | Q3  | Davomat chegarasi           | 80%                                                                                                                                        |
 | Q4  | Ilova (Student App)         | Ikkinchi shart: hujjat berilgan kunda ochiq bo'lgan darslarning belgilangan foizi tugatilgan; foiz daraja bo'yicha sozlanadi, boshida 100%. Kontenti yo'q darajada shart o'chiq |
 | Q5  | Kim va qachon yaratadi      | Administrator tugmasi. Daraja tugaganini tizim o'zi bilmaydi (ADR-0044), uni administrator tasdiqlaydi                                      |
-| Q6  | QR va ko'rinish             | Hujjatda QR bo'ladi, u ochiq tekshirish sahifasiga olib boradi. Dizayn original va yoqimli bo'lishi kerak (namuna tasdiqlanadi)             |
+| Q6  | QR va ko'rinish             | Hujjatda QR bo'ladi, u ochiq tekshirish sahifasiga olib boradi. Dizayn jimjimador emas, lekin yoqimli; tuzilishi Goethe-Zertifikat'ga o'xshash (logotip, nom va rang bizniki) |
+| Q7  | Shrift                      | IBM Plex Serif (sarlavha va qiymatlar) + IBM Plex Sans (qolgan matn), saytdagi Plex oilasi                                                 |
+| Q8  | Kim nomidan                 | Hujjat DaF Sprachzentrum nomidan beriladi. Filial hujjatda ham, tekshirish sahifasida ham yozilmaydi. Imzo: «Zentrumsleitung»; kurs rahbari imzosi va muhr yo'q |
 
 Men qo'ygan boshlang'ich qarorlar (CEO ko'rib o'zgartirishi mumkin): bir daraja bir necha guruhda o'tilsa davomat yig'iladi; shart bajarilmasa faqat CEO sababini yozib istisno beradi; o'quvchining holati (faol, muzlatilgan, bitirgan) o'zi to'siq emas.
 
@@ -71,7 +73,7 @@ Ilovadagi **faol vaqt** kiritilmaydi: `StudentAppSession` vaqtni darajaga bog'la
 
 **`ParticipationCertificate`** — berilgan har hujjat bitta qator. Hisob natijasi **muhrlanadi**: keyin davomat tuzatilsa yoki chegara o'zgarsa ham berilgan hujjatning raqamlari qimirlamaydi (ADR-0096 dagi naqsh).
 
-- `id`, `companyId`, `branchId` (o'quvchi branchi, yozish paytida), `studentId`, `level`
+- `id`, `companyId`, `branchId` (o'quvchi filiali, yozish paytida), `studentId`, `level`. `branchId` faqat kirish huquqi va hisobot uchun; hujjatga ham, ochiq sahifaga ham chiqmaydi
 - `number` — `TB-2026-0001`, kompaniya + yil bo'yicha ketma-ket; Serializable tranzaksiyada `max + 1`, `@@unique([companyId, year, seq])`
 - `issuedAt`, `issuedById`
 - `snapshot Json` — davr (dan, gacha), davomat (keldi, kech, kelmadi, hisobdagi, foiz), ilova (tugatgan, ochiq, foiz yoki `null`), mock satri, unit sinovlari soni, guruh nomlari, ishlatilgan chegaralar, o'quvchi ismi, tug'ilgan sana
@@ -96,20 +98,35 @@ Modul: `server/src/participation-certificates/`.
 - Bir o'quvchiga bir darajaga qayta berish mumkin (yangi raqam); eskisi arxivga ketmaydi, ro'yxatda ko'rinadi.
 - Tarix: `EntityHistory` — o'quvchida `QATNASHISH_HUJJATI_BERILDI` (raqam, daraja, istisno bo'lsa sabab). Chegara o'zgarishi kompaniya sozlamasi tarixida.
 - `Group.level` bo'sh guruh qatnashgan darajaga kirmaydi; preview'da «Guruh darajasi ko'rsatilmagan» deyiladi.
-- **Haqiqiylikni tekshirish (QR).** Hujjatdagi QR ochiq sahifaga olib boradi: `GET /participation-certificates/:id/verify` (`@Public()`, `IpThrottlerGuard`, route manifestida PUBLIC) va mijozda `/t/[id]` sahifasi, `/r/[id]` (kvitansiya) bilan bir xil naqsh. `id` — taxmin qilib bo'lmaydigan UUID (ketma-ket `TB-…` raqami emas, aks holda raqamlarni terib o'quvchilar ismini ko'rib chiqish mumkin bo'lardi). Sahifa faqat shuni ko'rsatadi: «haqiqiy» yoki «bekor qilingan», raqam, ism, daraja, davr, berilgan sana, markaz va filial nomi. Tug'ilgan sana, foizlar, mock va ilova natijasi ochiq sahifaga chiqmaydi. QR manzili kvitansiyalardagi `publicBaseUrl()` dan olinadi, nusxa ko'chirilmaydi.
+- **Haqiqiylikni tekshirish (QR).** Hujjatdagi QR ochiq sahifaga olib boradi: `GET /participation-certificates/:id/verify` (`@Public()`, `IpThrottlerGuard`, route manifestida PUBLIC) va mijozda `/t/[id]` sahifasi, `/r/[id]` (kvitansiya) bilan bir xil naqsh. `id` — taxmin qilib bo'lmaydigan UUID (ketma-ket `TB-…` raqami emas, aks holda raqamlarni terib o'quvchilar ismini ko'rib chiqish mumkin bo'lardi). Sahifa faqat shuni ko'rsatadi: «haqiqiy» yoki «bekor qilingan», raqam, ism, daraja, davr, berilgan sana va markaz nomi (filial yo'q). Tug'ilgan sana, foizlar, mock va ilova natijasi ochiq sahifaga chiqmaydi. QR manzili kvitansiyalardagi `publicBaseUrl()` dan olinadi, nusxa ko'chirilmaydi.
 - Telegramga yuborish **birinchi versiyada yo'q**.
 
 ## 6. Hujjat (PDF)
 
-PDF `pdfmake` bilan (`receipts/pdf/render.ts` dagi mavjud yo'l), nemischa matn, bitta A4 sahifa. Namuna (17.10.2026) CEO ko'rigiga yuborildi; QR shu namunaga kiritilgan.
+PDF `pdfmake` bilan (`receipts/pdf/render.ts` dagi mavjud yo'l), nemischa matn, bitta A4 sahifa. Namuna: 17.10.2026, v7 (CEO ko'rigida). Hujjat **DaF Sprachzentrum nomidan** beriladi, filial hech qayerda yozilmaydi.
 
-**Mazmun:** markaz va filial nomi, «Teilnahmebestätigung», o'quvchi ismi va tug'ilgan sanasi, daraja, davr, «Anwesenheit X % (a von b Unterrichtseinheiten)», ilova qo'llansa «Lernplattform Y %», bo'lsa kech qolish soni, yakuniy sinovlar va mock satri, «kurs qatnashganligini tasdiqlaydi, Sprachzertifikat o'rnini bosmaydi» izohi, QR («Echtheit prüfen»), hujjat raqami va sana, imzo va muhr joyi. Ixtiyoriy satr ma'lumot bo'lmasa chiqmaydi.
+**Tuzilish (Goethe-Zertifikat'ga o'xshash; Goethe-Institut logotipi, nomi va rangi olinmagan):**
+1. Sarlavha qatori: chapda markaz logotipi; o'ngda «DaF Sprachzentrum», «Nr. TB-2026-0001», «Echtheit prüfen: QR-Code scannen» va QR. Ostida to'q ko'k chiziq.
+2. «TEILNAHMEBESTÄTIGUNG» (katta harf), ostida «Deutsch als Fremdsprache · Niveau A1»; o'ngda to'q ko'k kvadrat belgi: oq «A1», ostida kichik oltin «NIVEAU».
+3. Maydonlar bloki (yorliq chapda, qiymat o'ngda, ostida ingichka chiziq): `Name, Vorname`, `Geburtsdatum`, `Kurs`, `Zeitraum`, `Unterrichtseinheiten`.
+4. Tasdiq jumlasi: «hat im genannten Zeitraum regelmäßig am Deutschunterricht auf dem Niveau A1 des Gemeinsamen europäischen Referenzrahmens für Sprachen (GER) teilgenommen.»
+5. «Teilnahme im Überblick» jadvali, ustunlar `Bereich / Ergebnis / Erläuterung`: Anwesenheit, Verspätungen, Lernplattform, Abschlusstests, Mock-Prüfung. Ma'lumoti bo'lmagan qator chiqmaydi (3.2, 3.4).
+6. Izoh: «Diese Bestätigung bescheinigt die Teilnahme am Kurs. Sie ist kein Sprachzertifikat und ersetzt keine Prüfung.»
+7. GER shkalasi A1–C2, hujjat darajasi to'ldirilgan.
+8. Pastda ikki imzo qatori: `Datum` (berilgan sana) va `Zentrumsleitung`. Kurs rahbari imzosi, muhr va joy nomi yo'q.
 
-**Ko'rinish (v3, CEO: «jimjimador bo'lmasin, lekin yoqimli»):** oq fon, burchak bezaklari yo'q. Yuqorida logotip chapda, o'ngda to'q ko'k (`#17375E`) kvadrat belgi — oq «A1», ostida kichik oltin «NIVEAU»; ostida ingichka oltin (`#B8924A`) chiziq. Sarlavha to'q ko'k, ism katta, ostida qisqa oltin chiziq. Ko'rsatkichlar bitta «yo'l»da: yuqori va pastda oltin chiziq, orasida ingichka ajratgichlar; har katakda katta to'q ko'k raqam, ostida kichik harfli yorliq va izoh (`91 %` / Anwesenheit / 21 von 23 Einheiten). Ixtiyoriy katak ma'lumot bo'lmasa tushib qoladi, qolganlari kengayadi. Pastda QR, raqam va sana chapda, imzo va muhr chizig'i o'ngda. Shrift — markazning `Inter`i, yangi shrift qo'shilmaydi. Rad etilgan v2 (burchak doiralari, halqa ko'rsatkichlari) qaytmaydi.
+**Maydon qiymatlari:** `Kurs` — kurs nomi (`Course.name`). `Unterrichtseinheiten` — hisobdagi darslar soni (3.1 maxraji) va, bo'lsa, daqiqasi («à 90 Minuten»: `Group.lessonMinutes`, bo'lmasa `Course.lessonMinutes`); daqiqa noma'lum bo'lsa faqat son. Ism «Familiya, Ism» ko'rinishida; «Herr/Frau» yozilmaydi.
 
-**`pdfmake` eslatmasi:** v3 oddiy oqimda, fon qatlami yo'q — shuning uchun sahifa chekkasi odatdagidek. Fon qatlami kerak bo'lib qolsa: `pageMargins: [0,0,0,0]` va har fon tuguniga `absolutePosition`, aks holda blok sig'masdan jimgina tashlanadi (v2 da topilgan).
+**Rang:** to'q ko'k `#17375E`, oltin `#B8924A` (faqat «NIVEAU», ko'k kvadrat ichida), kulrang matn `#667085`, chiziqlar `#C9CED6`, jadval sarlavhasi `#EEF2F7`. Burchak bezaklari, halqa ko'rsatkichlar va fon qatlami yo'q (v2 rad etilgan, qaytmaydi).
 
-Jins ma'lum bo'lsa ismdan oldin «Herr/Frau» CEO javobini kutadi; hozircha faqat ism.
+**Shrift (Q7):**
+- IBM Plex Serif SemiBold — sarlavha, «A1» belgisi, maydon qiymatlari, «Ergebnis» raqamlari (bitta qalinlik).
+- IBM Plex Sans — qolgan matn: `Regular`, `SemiBold` (qalin), `Italic` (izoh).
+- Jami 4 fayl (~0,8 MB, OFL litsenziya; litsenziya matni shu papkada): `IBMPlexSerif-SemiBold.ttf`, `IBMPlexSans-Regular.ttf`, `IBMPlexSans-SemiBold.ttf`, `IBMPlexSans-Italic.ttf` → `server/assets/fonts/`. Manba — Google Fonts.
+- `receipts/pdf/render.ts` dagi shrift ro'yxatiga ikki oila (`PlexSerif`, `PlexSans`) qo'shiladi; kvitansiya va boshqa shablonlar `Inter` da qoladi.
+- O'zbekcha `ʻ ʼ ’ '` va nemis harflari (ä ö ü ß) ikkala oilada bor (`fontkit` bilan tekshirilgan). Plex'da `ʻ` atrofidagi oraliq kengroq ko'rinadi; ism bazadagi yozuvda qanday bo'lsa, shunday chiqadi.
+
+**`pdfmake` eslatmasi:** hujjat oddiy oqimda, fon qatlami yo'q. Fon qatlami kerak bo'lib qolsa: `pageMargins: [0,0,0,0]` va har fon tuguniga `absolutePosition`, aks holda blok sig'masdan jimgina tashlanadi (v2 da topilgan). Bitta sahifaga sig'ish: ixtiyoriy qatorlar hammasi bo'lganda ham (5 qator) namuna sig'di; sahifa chekkasi yuqori 38, past 26, yon 54; sarlavha 24 pt, maydon qiymatlari 12 pt. Plex Serif Inter'dan kengroq, shuning uchun o'lchamlarni oshirish ikkinchi sahifaga olib keladi.
 
 ## 7. Administrator ekrani
 
@@ -125,7 +142,8 @@ Ekrandagi matnlarda inglizcha so'z yo'q. Dizayn namunasi chizilib CEO ko'radi, k
 - Servis: bir necha guruhli daraja yig'iladi; boshqa filial o'quvchisi 403; mock bog'lanmagan bo'lsa satr chiqmaydi.
 - Kontroller: `@Roles` metadata va `RolesGuard` ruxsat/rad; faqat CEO istisnosi; manifest spec.
 - Muhrlash: hujjat berilgach davomat o'zgarsa PDF raqamlari o'zgarmaydi.
-- PDF: shablon xatosiz chiziladi, raqam va foiz matnda bor.
+- PDF: shablon xatosiz chiziladi, raqam va foiz matnda bor, matnda «filial», «Kursleitung», «Stempel» yo'q; barcha ixtiyoriy qatorlar bilan ham bitta sahifa.
+- Ochiq sahifa javobida filial va tug'ilgan sana yo'q.
 
 ## 9. Ma'lum chegaralar (ochiq masalalar)
 
