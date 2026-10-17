@@ -96,6 +96,22 @@ const ru: Dictionary = {
   "Topshiriq": "Задача",
   "Shu sahifa bo'yicha qo'llanma": "Руководство по этой странице",
   "Toshkent vaqti (UTC+5)": "Время в Ташкенте (UTC+5)",
+  "Yon panelni ochish/yopish": "Показать/скрыть боковое меню",
+  "Yon panel": "Боковое меню",
+  "Mobil yon panelni ko'rsatadi.": "Показывает боковое меню на мобильных устройствах.",
+
+  // Header search: tips, recent searches, student result lines
+  "Qidirish bo'yicha maslahatlar": "Подсказки по поиску",
+  "Ism yoki familiya yozing": "Введите имя или фамилию",
+  "Telefon raqam bilan qidiring": "Ищите по номеру телефона",
+  "ID bilan qidiring": "Ищите по ID",
+  "So'nggi qidiruvlar": "Недавние поиски",
+  "Tozalash": "Очистить",
+  "Guruh: {name}": "Группа: {name}",
+  "Guruhsiz": "Без группы",
+  "Ustoz: {name}": "Преподаватель: {name}",
+  "{amount} so'm": "{amount} сум",
+  "Balans: {amount} so'm": "Баланс: {amount} сум",
 
   // User menu
   "Ko'rinish": "Вид",

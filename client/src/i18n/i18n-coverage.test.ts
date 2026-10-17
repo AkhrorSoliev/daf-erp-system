@@ -34,6 +34,10 @@ export const STRICT_FILES: string[] = [
   "components/tashkent-clock.tsx",
   "components/header-user-menu.tsx",
   "lib/ui-skins.ts",
+  "components/global-search/search-dropdown-utils.ts",
+  "components/global-search/search-dropdown-empty-state.tsx",
+  "components/global-search/search-dropdown-results.tsx",
+  "components/ui/sidebar.tsx",
 ];
 
 function walk(dir: string): string[] {
