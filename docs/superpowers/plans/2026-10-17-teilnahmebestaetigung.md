@@ -1056,7 +1056,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `server/prisma/schema.prisma` (add the model after `KpiResult`)
-- Create: `server/prisma/migrations/20261017120000_participation_certificate/migration.sql` (pick a timestamp later than the newest folder in `server/prisma/migrations/`; the one shown is the newest at planning time)
+- Create: `server/prisma/migrations/20261017180000_participation_certificate/migration.sql` (pick a timestamp later than the newest folder in `server/prisma/migrations/`; the one shown is the newest at planning time)
 
 **Interfaces:**
 - Produces: the Prisma delegate `prisma.participationCertificate` with fields `id, companyId, branchId, studentId, level, year, seq, number, issuedAt, issuedById, snapshot, exemptReason, exemptById, revokedAt, revokedReason`.
@@ -1096,7 +1096,7 @@ model ParticipationCertificate {
 
 - [ ] **Step 2: Write the migration by hand (idempotent, like the other hand-written ones)**
 
-Create `server/prisma/migrations/20261017120000_participation_certificate/migration.sql`:
+Create `server/prisma/migrations/20261017180000_participation_certificate/migration.sql`:
 
 ```sql
 -- Teilnahmebestätigung (spec 2026-10-17): one row per issued document,
@@ -4615,4 +4615,4 @@ git commit -m "docs(participation): ADR and user guide for the Teilnahmebestäti
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-Do not push or open a PR without the user's explicit instruction. Deploy is manual and separate (the migration `20261017120000_participation_certificate` must be applied by the deploy; the four font files ship with the server).
+Do not push or open a PR without the user's explicit instruction. Deploy is manual and separate (the migration `20261017180000_participation_certificate` must be applied by the deploy; the four font files ship with the server).
