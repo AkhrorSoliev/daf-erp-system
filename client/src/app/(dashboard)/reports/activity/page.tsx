@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { CenterActivityClient } from "@/components/reports/center-activity/center-activity-client";
+import { CenterActivityPage } from "@/components/reports/center-activity/center-activity-page";
 
-export default function CenterActivityPage() {
+export default function CenterActivityRoute() {
   return (
     <Suspense fallback={null}>
-      <CenterActivityClient />
+      <CenterActivityPage />
     </Suspense>
   );
 }

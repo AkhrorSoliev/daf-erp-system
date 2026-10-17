@@ -10,7 +10,6 @@ import { ReportsPaymentsService } from './reports-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
-import { ReportsCenterActivityService } from './reports-center-activity.service';
 import { ReportsProfitLossService } from './reports-profit-loss.service';
 import { ReportsCashFlowService } from './reports-cash-flow.service';
 import { ReportsBalanceSheetService } from './reports-balance-sheet.service';
@@ -188,7 +187,6 @@ describe('ReportsService', () => {
         ReportsStudentPaymentsService,
         ReportsDepartedReasonsService,
         ReportsTeacherChangesService,
-        ReportsCenterActivityService,
         ReportsProfitLossService,
         ReportsCashFlowService,
         ReportsBalanceSheetService,

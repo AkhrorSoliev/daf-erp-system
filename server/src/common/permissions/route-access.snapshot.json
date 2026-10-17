@@ -816,8 +816,11 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/center-activity": [
-    "Administrator",
+  "GET /reports/center-activity/excel": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/center-activity/overview": [
     "Branch Director",
     "CEO"
   ],

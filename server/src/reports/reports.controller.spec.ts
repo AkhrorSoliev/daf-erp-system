@@ -155,7 +155,6 @@ describe('ReportsController', () => {
       handlers: [
         'getKpis',
         'getRoomUtilization',
-        'getCenterActivity',
         'getTeacherPerformance',
         'getAttendanceAnalytics',
         'getAttendanceByGroup',

@@ -13,7 +13,9 @@ import { ReportsPaymentsService } from './reports-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
-import { ReportsCenterActivityService } from './reports-center-activity.service';
+import { CenterActivityController } from './center-activity/center-activity.controller';
+import { CenterActivityService } from './center-activity/center-activity.service';
+import { CenterFactsLoader } from './center-activity/center-facts.loader';
 import { ReportsProfitLossService } from './reports-profit-loss.service';
 import { ReportsCashFlowService } from './reports-cash-flow.service';
 import { ReportsBalanceSheetService } from './reports-balance-sheet.service';
@@ -39,6 +41,7 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsLeadFunnelController,
     ReportsMarketingController,
     GroupPaymentsController,
+    CenterActivityController,
     DepartedController,
   ],
   providers: [
@@ -51,7 +54,8 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsStudentPaymentsService,
     ReportsDepartedReasonsService,
     ReportsTeacherChangesService,
-    ReportsCenterActivityService,
+    CenterActivityService,
+    CenterFactsLoader,
     ReportsProfitLossService,
     ReportsCashFlowService,
     ReportsBalanceSheetService,

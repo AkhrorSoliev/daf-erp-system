@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Markaz faoliyati hisoboti yangilandi",
+    matn: "Hisobotlarda «Markaz faoliyati» sahifasi qayta qurildi. Tepada uchta karta (xonalar bandligi, guruhlar to'lganligi, bo'sh o'rinlar), pastda «Qachon xona bo'sh» jadvali: yangi guruhni qaysi kun va soatga qo'yish mumkinligi ko'rinadi. Hafta dushanbadan shanbagacha hisoblanadi. O'tgan oylar to'liq: keyin yopilgan yoki o'chirilgan guruhlar ham o'sha oyda hisobga olinadi. Bo'sh o'rni bor guruhlar, xonalar va oylar bo'yicha bandlik jadvallari qo'shildi; xona o'rin sonini endi faqat Sozlamalar → Xonalar sahifasida o'zgartirasiz.",
+    rollar: [1, 2],
+    sahifa: { bolim: "hisobotlar", sahifa: "markaz-faoliyati" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Ketgan o'quvchilar hisoboti qayta qurildi",
     matn: "Hisobotlar → «Ketgan o'quvchilar hisoboti» yangicha. Kurs va ustoz filtri endi sahifadagi hamma blokka ta'sir qiladi: kartalarga, oylar bo'yicha ustunlarga, sabablarga, kesimlarga va ro'yxatga. Nega ketishdi qismidagi sabablar yig'indisi endi tepadagi «ketdi» soniga teng, ro'yxatda esa davrdagi hamma ketganlar bor, qaytganlari belgi bilan. Hali qaytishi mumkin bo'lganlar alohida blokda ko'rinadi. Sarlavhada Excel tugmasi qo'shildi. «Kursni tugatdi» deb chiqqan o'quvchi hozircha ketgan hisoblanadi.",
     rollar: [1, 2],
