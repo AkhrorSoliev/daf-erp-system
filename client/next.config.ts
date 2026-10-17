@@ -3,16 +3,18 @@ import createMDX from "@next/mdx";
 import path from "path";
 
 // Shown at the bottom of the admin sidebar («Yangilangan: dd.MM.yyyy · sha»).
-// The date is the Tashkent day of the build ("en-CA" prints yyyy-MM-dd);
-// VERCEL_GIT_COMMIT_SHA is a system variable Vercel sets itself, so nothing is
-// typed into the dashboard. Local builds have no sha and show «dev».
+// The date is the Tashkent day of the build ("en-CA" prints yyyy-MM-dd).
+// Vercel supplies VERCEL_GIT_COMMIT_SHA for Git deploys only; a CLI deploy
+// (`vercel --prod`) can pass `-b BUILD_SHA=$(git rev-parse --short HEAD)`
+// instead. With neither, the line shows «dev».
 const buildDate = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Tashkent",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
 }).format(new Date());
-const buildSha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "dev";
+const buildSha =
+  (process.env.VERCEL_GIT_COMMIT_SHA || process.env.BUILD_SHA)?.slice(0, 7) || "dev";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,

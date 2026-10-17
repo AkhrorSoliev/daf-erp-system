@@ -85,14 +85,18 @@ portali ishlatadi (CLAUDE.md «Theme control»).
 hech narsa bildirmaydi. O'rniga `next.config.ts` da build vaqtida ikki qiymat
 `env` ga yoziladi:
 
-- `NEXT_PUBLIC_BUILD_SHA` = `process.env.VERCEL_GIT_COMMIT_SHA` ning birinchi 7
-  belgisi, yo'q bo'lsa (`npm run dev`, lokal build) `"dev"`.
+- `NEXT_PUBLIC_BUILD_SHA` = `process.env.VERCEL_GIT_COMMIT_SHA` yoki, u bo'lmasa,
+  `process.env.BUILD_SHA` ning birinchi 7 belgisi; ikkalasi ham yo'q bo'lsa
+  (`npm run dev`, lokal build) `"dev"`.
 - `NEXT_PUBLIC_BUILD_DATE` = config yuklangan paytdagi sana, Toshkent vaqtida
   `YYYY-MM-DD` (build vaqti).
 
-`VERCEL_GIT_COMMIT_SHA` — Vercel o'zi beradigan tizim o'zgaruvchisi, uni
-panelda qo'lda kiritish kerak emas (`NEXT_PUBLIC_*` ning `.env` dan olinmasligi
-haqidagi ogohlantirish bu yerga tegishli emas: qiymat `next.config.ts` ichida
+`VERCEL_GIT_COMMIT_SHA` — Vercel uni faqat Git orqali qilingan deploy'da beradi.
+Bu loyiha Git'ga ulanmagan, deploy `vercel --prod` bilan lokal papkadan qilinadi,
+shuning uchun u bo'lmasligi mumkin; u holda sha `BUILD_SHA` dan olinadi:
+`vercel --prod --yes -b BUILD_SHA=$(git rev-parse --short HEAD)`. Panelda hech
+narsa kiritilmaydi (`NEXT_PUBLIC_*` ning `.env` dan olinmasligi haqidagi
+ogohlantirish bu yerga tegishli emas: qiymat `next.config.ts` ichida
 hisoblanadi). Lokal `dev` da sha `dev`, sana — bugun.
 
 Formatlash va `"dev"` holati `lib/build-info.ts` da: `formatBuildInfo({ date,
@@ -118,7 +122,8 @@ sha })` → `"Yangilangan: 17.10.2026 · a1b2c3d"`; sha `dev` bo'lsa
   elementlari siqilmaydi.
 - Sana `useEffect` ichida o'rnatiladi (SSR va klient mos kelsin): birinchi
   chizishda `--.--.---- · --:--:--`, `TashkentClock` ning hozirgi usuli.
-- `VERCEL_GIT_COMMIT_SHA` bo'lmagan muhit (self-host, lokal): `dev`, xato yo'q.
+- `VERCEL_GIT_COMMIT_SHA` ham, `BUILD_SHA` ham bo'lmagan muhit (self-host, lokal,
+  `-b` siz CLI deploy): `dev`, xato yo'q.
 
 ## Test
 
