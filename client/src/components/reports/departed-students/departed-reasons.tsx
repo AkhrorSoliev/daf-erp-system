@@ -23,8 +23,8 @@ export function DepartedReasons({ reasons, isLoading, onReadComments }: {
       </Card>
     );
   }
-  // Stable sort: only the unwritten reason moves, to the end.
-  const rows = [...reasons].sort((a, b) => Number(a.reasonId === null) - Number(b.reasonId === null));
+  // Biggest first (stable on ties); the unwritten reason goes last.
+  const rows = [...reasons].sort((a, b) => Number(a.reasonId === null) - Number(b.reasonId === null) || (a.reasonId !== null ? b.count - a.count : 0));
   const max = Math.max(...rows.map((r) => r.count), 0);
   return (
     <Card>
@@ -36,14 +36,14 @@ export function DepartedReasons({ reasons, isLoading, onReadComments }: {
           rows.map((r) => (
             <div key={r.reasonId ?? "none"} className="flex flex-col gap-1">
               <div className="grid grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 text-sm">
-                <span className="truncate">{r.name}</span>
+                <span className="truncate" title={r.name}>{r.name}</span>
                 <div className="h-2.5 rounded-full bg-muted">
                   <div className="h-full rounded-full bg-primary" style={{ width: `${max > 0 ? (r.count / max) * 100 : 0}%` }} />
                 </div>
                 <b className="tabular-nums">{formatNumber(r.count)}</b>
               </div>
               {r.name === OTHER && (
-                <Button variant="link" size="sm" className="self-start px-0" onClick={() => onReadComments(r.reasonId)}>
+                <Button type="button" variant="link" size="sm" className="self-start px-0" onClick={() => onReadComments(r.reasonId)}>
                   «Boshqa sabab» izohlarini o&apos;qish
                   <ArrowRight />
                 </Button>

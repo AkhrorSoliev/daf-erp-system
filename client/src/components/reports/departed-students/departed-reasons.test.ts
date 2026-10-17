@@ -23,6 +23,22 @@ describe("DepartedReasons", () => {
     expect(text).toContain("Chetlatilgan o'quvchining sababi uning kartasidan olinadi.");
     expect(text).not.toContain("kursni tugatish");
   });
+  it("rows sort by count, biggest first; the unwritten reason stays last", () => {
+    const text = norm(render([
+      { reasonId: null, name: "Sabab yozilmagan", count: 9 },
+      { reasonId: "r2", name: "Narx qimmat", count: 2 },
+      { reasonId: "r3", name: "Vaqt to'g'ri kelmagan", count: 7 },
+      { reasonId: "r4", name: "Filial almashdi", count: 7 },
+    ]));
+    expect(text.indexOf("Vaqt to'g'ri kelmagan 7")).toBeLessThan(text.indexOf("Filial almashdi 7"));
+    expect(text.indexOf("Filial almashdi 7")).toBeLessThan(text.indexOf("Narx qimmat 2"));
+    expect(text.indexOf("Narx qimmat 2")).toBeLessThan(text.indexOf("Sabab yozilmagan 9"));
+  });
+  it("a long reason name carries a title; the comments button is type=button", () => {
+    const html = render(REASONS);
+    expect(html).toContain('title="Narx qimmat"');
+    expect(html).toContain('type="button"');
+  });
   it("the comments button only under «Boshqa sabab»", () => {
     const html = render(REASONS);
     expect(html.match(/izohlarini o&#x27;qish/g)).toHaveLength(1);

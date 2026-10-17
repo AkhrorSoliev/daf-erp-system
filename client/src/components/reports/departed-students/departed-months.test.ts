@@ -35,6 +35,12 @@ describe("DepartedMonths", () => {
   it("all zeros do not divide by zero", () => {
     expect(render(MONTHS.map((m) => ({ ...m, departed: 0 })))).not.toContain("NaN");
   });
+  it("a zero month keeps a visible baseline, a non-zero one is solid", () => {
+    const html = render(MONTHS);
+    expect(html).toContain("min-h-px bg-muted");
+    expect(html.match(/bg-primary/g)).toHaveLength(5);
+    expect(html).not.toContain("<em");
+  });
   it("loading draws a skeleton", () => {
     expect(renderToStaticMarkup(createElement(DepartedMonths, { months: undefined, isLoading: true }))).toContain('data-slot="skeleton"');
   });

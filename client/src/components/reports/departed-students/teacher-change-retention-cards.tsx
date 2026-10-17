@@ -45,12 +45,12 @@ export function TeacherChangeRetentionCards({ data, isLoading, queryParams, peri
       <Card>
         <CardContent className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Repeat />
+            <Repeat className="size-4" />
             Ustoz almashgandan keyin
             <Tooltip>
               <TooltipTrigger asChild>
                 <button type="button" aria-label="Tushuntirish" className="transition-colors hover:text-foreground">
-                  <Info />
+                  <Info className="size-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs whitespace-pre-line">{WINDOW_EXPLANATION}</TooltipContent>
@@ -67,11 +67,11 @@ export function TeacherChangeRetentionCards({ data, isLoading, queryParams, peri
             )}
           </p>
           <div className="flex flex-wrap gap-x-4">
-            <Button variant="link" size="sm" className="px-0" disabled={data.totalTeacherChanges === 0} onClick={() => setChangesOpen(true)}>
+            <Button type="button" variant="link" size="sm" className="px-0" disabled={data.totalTeacherChanges === 0} onClick={() => setChangesOpen(true)}>
               Guruhlar
               <ArrowRight />
             </Button>
-            <Button variant="link" size="sm" className="px-0" disabled={data.departedAfterTeacherChange === 0} onClick={() => setDepartedOpen(true)}>
+            <Button type="button" variant="link" size="sm" className="px-0" disabled={data.departedAfterTeacherChange === 0} onClick={() => setDepartedOpen(true)}>
               Ketgan o&apos;quvchilar
               <ArrowRight />
             </Button>

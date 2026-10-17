@@ -74,7 +74,7 @@ export function DepartedFilterBar({ filters, today, onChange }: {
         className="w-auto min-w-48"
       />
       {hasDepartedFilter(filters) && (
-        <Button variant="ghost" onClick={() => onChange(DEPARTED_CLEARED)}>
+        <Button type="button" variant="ghost" onClick={() => onChange(DEPARTED_CLEARED)}>
           Tozalash
         </Button>
       )}

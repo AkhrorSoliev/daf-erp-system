@@ -27,9 +27,9 @@ export function DepartedMonths({ months, isLoading }: { months: DepartedOverview
             <div key={m.key} className={cn("flex h-full flex-1 flex-col items-center justify-end gap-1", m.provisional && "opacity-50")}>
               <span className="text-xs font-medium tabular-nums">{m.departed}</span>
               <div className="w-full flex-1 flex items-end">
-                <div className="w-full rounded-t-md bg-primary" style={{ height: `${max > 0 ? (m.departed / max) * 100 : 0}%` }} />
+                <div className={cn("w-full rounded-t-md", m.departed === 0 ? "min-h-px bg-muted" : "bg-primary")} style={{ height: `${max > 0 ? (m.departed / max) * 100 : 0}%` }} />
               </div>
-              <em className="text-xs not-italic text-muted-foreground">{monthShort(m.key)}</em>
+              <span className="text-xs text-muted-foreground">{monthShort(m.key)}</span>
             </div>
           ))}
         </div>

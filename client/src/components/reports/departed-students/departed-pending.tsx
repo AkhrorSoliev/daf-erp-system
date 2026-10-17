@@ -11,7 +11,7 @@ export function DepartedPending({ count, graceDays }: { count: number; graceDays
     <Card className="bg-amber-500/10">
       <CardContent className="flex flex-col gap-2">
         <p className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
-          <PhoneCall />
+          <PhoneCall className="size-4" />
           Hali qaytishi mumkin · bugungi holat
         </p>
         <div className="flex flex-wrap items-center justify-between gap-3">

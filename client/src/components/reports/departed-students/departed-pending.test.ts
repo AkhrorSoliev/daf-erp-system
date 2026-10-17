@@ -15,6 +15,7 @@ describe("DepartedPending", () => {
     expect(text).toContain("Aloqa markaziga");
     expect(html).toContain('href="/outreach"');
     expect(html).toContain("bg-amber-500/10");
+    expect(html).toContain("lucide-phone-call size-4");
   });
   it("nobody waiting: nothing is drawn", () => {
     expect(renderToStaticMarkup(createElement(DepartedPending, { count: 0, graceDays: GRACE }))).toBe("");
