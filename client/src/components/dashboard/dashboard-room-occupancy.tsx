@@ -15,6 +15,8 @@ import {
   type UnmarkedDialog,
 } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { answerState } from "@/lib/unmarked-lesson";
 import type { AttendanceStatus, DashboardLesson } from "./dashboard-daily-schedule";
 
@@ -25,10 +27,10 @@ const TIME_COL_W = 64;
 const ROOM_COL_MIN_W = 156;
 
 const attendanceLabel: Record<AttendanceStatus, string> = {
-  TAKEN: "Davomat olindi",
-  NOT_TAKEN: "Davomat olinmagan",
-  MISSED: "O'tkazib yuborilgan",
-  PENDING: "Kutilmoqda",
+  TAKEN: msg("Davomat olindi"),
+  NOT_TAKEN: msg("Davomat olinmagan"),
+  MISSED: msg("O'tkazib yuborilgan"),
+  PENDING: msg("Kutilmoqda"),
 };
 
 const attendanceBadgeClass: Record<AttendanceStatus, string> = {
@@ -171,6 +173,7 @@ export function DashboardRoomOccupancy({
   date,
   onAnswered,
 }: DashboardRoomOccupancyProps) {
+  const t = useT();
   const dayStart = timeToMin(workingHours.start);
   const dayEnd = timeToMin(workingHours.end);
   const slots = useMemo(
@@ -225,12 +228,12 @@ export function DashboardRoomOccupancy({
       <div className="rounded-lg border bg-muted/20 p-8 text-center">
         <CalendarX className="size-8 text-muted-foreground mx-auto mb-3" />
         <p className="text-sm font-medium">
-          {isTeacher ? "Darslaringiz yo'q" : "Filialda faol xona yo'q"}
+          {isTeacher ? t("Darslaringiz yo'q") : t("Filialda faol xona yo'q")}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
           {isTeacher
-            ? "Tanlangan kunda siz uchun dars rejalashtirilmagan"
-            : "Avval xonalar qo'shing yoki ularni faollashtiring"}
+            ? t("Tanlangan kunda siz uchun dars rejalashtirilmagan")
+            : t("Avval xonalar qo'shing yoki ularni faollashtiring")}
         </p>
       </div>
     );
@@ -249,7 +252,7 @@ export function DashboardRoomOccupancy({
             style={{ gridTemplateColumns }}
           >
             <div className="sticky left-0 z-20 bg-muted/40 border-r px-2 py-2 text-[11px] font-semibold text-muted-foreground text-center">
-              Vaqt
+              {t("Vaqt")}
             </div>
             {visibleRooms.map((room) => (
               <div
@@ -351,8 +354,8 @@ export function DashboardRoomOccupancy({
           {lessons.length === 0 && (
             <div className="border-t bg-muted/20 px-3 py-2 text-center text-xs text-muted-foreground">
               {isToday
-                ? "Bugun dars rejalashtirilmagan"
-                : "Tanlangan kunda dars rejalashtirilmagan"}
+                ? t("Bugun dars rejalashtirilmagan")
+                : t("Tanlangan kunda dars rejalashtirilmagan")}
             </div>
           )}
         </div>
@@ -382,6 +385,7 @@ function LessonSegmentCard({
 }: LessonSegmentCardProps) {
   const { lesson, lane, segmentLanes, startMin, endMin } = segment;
 
+  const t = useT();
   const user = useAuth((s) => s.user);
   const info = lesson.unmarked ?? null;
   const prompt = info ? answerState(info, user) : null;
@@ -429,6 +433,8 @@ function LessonSegmentCard({
 
   const att = lesson.attendanceStatus;
   const AttIcon = att ? attendanceIcon[att] : null;
+  // The label is a `msg()` text; `t` takes it by name, not as an index lookup.
+  const attLabel = att ? attendanceLabel[att] : "";
   const borderOverride =
     att === "NOT_TAKEN"
       ? "!border-red-400 dark:!border-red-600"
@@ -483,7 +489,7 @@ function LessonSegmentCard({
             {att && AttIcon && (
               <span
                 className={`absolute top-1 right-1 z-10 inline-flex items-center justify-center rounded-full size-4 ${attendanceBadgeClass[att]}`}
-                aria-label={attendanceLabel[att]}
+                aria-label={t(attLabel)}
               >
                 <AttIcon className="size-3" />
               </span>
@@ -547,14 +553,18 @@ function LessonSegmentCard({
             </p>
             {lesson.teachers.length > 0 && (
               <p className="text-xs">
-                Ustoz:{" "}
-                {lesson.teachers
-                  .map((t) => `${t.firstName} ${t.lastName}`)
-                  .join(", ")}
+                {t("Ustoz: {names}", {
+                  names: lesson.teachers
+                    .map((teacher) => `${teacher.firstName} ${teacher.lastName}`)
+                    .join(", "),
+                })}
               </p>
             )}
             <p className="text-xs">
-              Keldi: {lesson.presentCount}/{lesson.studentCount} ta
+              {t("Keldi: {present}/{total} ta", {
+                present: lesson.presentCount,
+                total: lesson.studentCount,
+              })}
             </p>
             {att && (
               <p
@@ -568,7 +578,7 @@ function LessonSegmentCard({
                         : "text-muted-foreground"
                 }`}
               >
-                Holat: {attendanceLabel[att]}
+                {t("Holat: {status}", { status: t(attLabel) })}
               </p>
             )}
           </div>
@@ -583,7 +593,7 @@ function LessonSegmentCard({
                 type="button"
                 className="absolute bottom-1 left-1 z-20 rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white shadow hover:bg-orange-600"
               >
-                Dars bo&apos;ldimi?
+                {t("Dars bo'ldimi?")}
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="flex w-auto flex-col items-start gap-1.5 p-3">
@@ -593,6 +603,7 @@ function LessonSegmentCard({
                   setPromptOpen(false);
                   setDialog(d);
                 }}
+                t={t}
               />
             </PopoverContent>
           </Popover>
