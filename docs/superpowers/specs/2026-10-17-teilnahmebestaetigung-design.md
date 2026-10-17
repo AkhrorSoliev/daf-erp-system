@@ -105,13 +105,9 @@ PDF `pdfmake` bilan (`receipts/pdf/render.ts` dagi mavjud yo'l), nemischa matn, 
 
 **Mazmun:** markaz va filial nomi, «Teilnahmebestätigung», o'quvchi ismi va tug'ilgan sanasi, daraja, davr, «Anwesenheit X % (a von b Unterrichtseinheiten)», ilova qo'llansa «Lernplattform Y %», bo'lsa kech qolish soni, yakuniy sinovlar va mock satri, «kurs qatnashganligini tasdiqlaydi, Sprachzertifikat o'rnini bosmaydi» izohi, QR («Echtheit prüfen»), hujjat raqami va sana, imzo va muhr joyi. Ixtiyoriy satr ma'lumot bo'lmasa chiqmaydi.
 
-**Ko'rinish (original dizayn):** iliq oq fon (`#FFFDF8`); yuqori o'ng burchakda to'q ko'k (`#17375E`) chorak doira ichida katta oq «A1» va «NIVEAU», uning atrofida ikkita ingichka oltin (`#B8924A`) halqa; pastki chap burchakda kichik aks sado; sarlavha to'q ko'k, ism katta, ostida qisqa oltin chiziq; davomat va ilova foizi halqa ko'rsatkich (SVG) bilan, qolgan raqamlar chap chetida oltin chizig'i bor kichik bloklarda. Shrift — markazning `Inter`i, yangi shrift qo'shilmaydi.
+**Ko'rinish (v3, CEO: «jimjimador bo'lmasin, lekin yoqimli»):** oq fon, burchak bezaklari yo'q. Yuqorida logotip chapda, o'ngda to'q ko'k (`#17375E`) kvadrat belgi — oq «A1», ostida kichik oltin «NIVEAU»; ostida ingichka oltin (`#B8924A`) chiziq. Sarlavha to'q ko'k, ism katta, ostida qisqa oltin chiziq. Ko'rsatkichlar bitta «yo'l»da: yuqori va pastda oltin chiziq, orasida ingichka ajratgichlar; har katakda katta to'q ko'k raqam, ostida kichik harfli yorliq va izoh (`91 %` / Anwesenheit / 21 von 23 Einheiten). Ixtiyoriy katak ma'lumot bo'lmasa tushib qoladi, qolganlari kengayadi. Pastda QR, raqam va sana chapda, imzo va muhr chizig'i o'ngda. Shrift — markazning `Inter`i, yangi shrift qo'shilmaydi. Rad etilgan v2 (burchak doiralari, halqa ko'rsatkichlari) qaytmaydi.
 
-**`pdfmake` tuzoqlari (namunada topildi, amalga oshirishda hisobga olinadi):**
-- Fon qatlami uchun `pageMargins: [0,0,0,0]`, asosiy tarkib esa o'z `margin`i bilan stack ichida. Sahifa chekkasi bor bo'lsa, butun sahifalik fon bloki sig'masdan **jimgina tashlab yuboriladi**.
-- Fon ichidagi hamma tugun (to'liq sahifa tuvali ham) `absolutePosition` bilan beriladi, aks holda ular oqim balandligiga qo'shilib, blok yana sig'maydi.
-- SVG ichidagi matn `Inter` bilan chiziladi (sinab ko'rildi). «100 %» ga kichikroq o'lcham kerak, aks holda yozuv halqa chizig'iga tegadi.
-- Ixtiyoriy satrlar o'zgaruvchan, shuning uchun halqa va QR bloklari oqimda turadi, fon faqat bezak.
+**`pdfmake` eslatmasi:** v3 oddiy oqimda, fon qatlami yo'q — shuning uchun sahifa chekkasi odatdagidek. Fon qatlami kerak bo'lib qolsa: `pageMargins: [0,0,0,0]` va har fon tuguniga `absolutePosition`, aks holda blok sig'masdan jimgina tashlanadi (v2 da topilgan).
 
 Jins ma'lum bo'lsa ismdan oldin «Herr/Frau» CEO javobini kutadi; hozircha faqat ism.
 
