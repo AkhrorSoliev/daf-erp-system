@@ -76,11 +76,13 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 5: The room occupancy panel
+### Task 5: The «Dars bo'ldimi?» dialogs and the calendar popup
 
-**Files (under `client/src/components/dashboard/`):** `dashboard-room-occupancy.tsx` (611 lines — read it fully once, then edit) and any helper it imports with visible text; dictionaries and `i18n-coverage.test.ts`.
+(`dashboard-room-occupancy.tsx` was translated together with Task 4.) The schedule view opens two dialogs from its attendance buttons and a calendar popup from its date picker; they were left Uzbek.
 
-- [ ] **Step 1: STRICT_FILES, wrap, red, translations, verify, commit.** Hours/time ranges keep their format; day names and legend texts are texts; room names are data. Commit message: `feat(client): translate the room occupancy panel into ru, de, en`.
+**Files (under `client/src/components/`):** `attendance/unmarked/late-attendance-dialog.tsx`, `attendance/unmarked/not-held-dialog.tsx` (read both fully; they are also opened from other dashboard pages — that is fine, all of them render inside the dashboard provider, so call `useT()` directly), `ui/date-picker.tsx` (shared by many pages; month/weekday names come from the date-fns `uz` locale: pick the date-fns locale by the page language through `useLocale()` — `ru`, `de`, `enUS`, `uz`, and the Cyrillic Uzbek locale `uzCyrl` from `date-fns/locale` — in a small pure helper `lib/date-fns-locale.ts` (`dateFnsLocale(locale: UiLocale)`) with a unit test; outside a provider `useLocale()` gives `uz`, so student-portal and other non-provider callers keep the Uzbek locale); the date picker's own visible texts (placeholder, buttons, aria-labels) go through `t()`; dictionaries and `i18n-coverage.test.ts`.
+
+- [ ] **Step 1: STRICT_FILES, wrap, red, translations, verify, commit.** If `ui/date-picker.tsx` is imported by a server component or outside any client boundary, report it instead of changing it. Check the other date-fns-locale users (`comment-list-helpers.tsx`, `attendance-month-calendar.tsx`, `student-schedule-view.tsx`) — do NOT change them in this task, just list in the report whether they could reuse the helper. Commit message: `feat(client): translate the attendance dialogs and the calendar popup into ru, de, en`.
 
 ---
 
