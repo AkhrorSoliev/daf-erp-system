@@ -222,3 +222,22 @@ describe("the «Davomat» page (B7c)", () => {
     expect(source(file).replace(/key: "absent"/g, "").replace(/\.absent\b/g, "")).not.toMatch(ENGLISH);
   });
 });
+
+// «Bot hisoboti» (B7d): the page names none of the English words the old page used on screen.
+describe("the «Bot hisoboti» page (B7d)", () => {
+  const dir = "reports/bot";
+  const files = [
+    ...readdirSync(join(__dirname, "..", "components", dir))
+      .filter((f) => f.endsWith(".tsx"))
+      .map((f) => `${dir}/${f}`),
+    `${dir}/bot-report-format.ts`,
+  ];
+
+  it("finds the new files", () => {
+    expect(files.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it.each(files)("%s carries no English jargon", (file) => {
+    expect(source(file)).not.toMatch(ENGLISH);
+  });
+});

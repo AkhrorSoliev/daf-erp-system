@@ -495,20 +495,26 @@ describe('LeadOwnershipService.expireOverdue', () => {
 });
 
 describe('LeadOwnershipService.summary', () => {
-  it('joins held, untouched, taken and expired per person', async () => {
+  it('joins held, untouched, taken, expired and converted per person', async () => {
     const s = setup();
     Object.assign(s.prisma, {
       lead: {
         groupBy: jest
           .fn()
           .mockResolvedValueOnce([{ ownerId: 11, _count: { _all: 4 } }])
-          .mockResolvedValueOnce([{ ownerId: 11, _count: { _all: 1 } }]),
+          .mockResolvedValueOnce([{ ownerId: 11, _count: { _all: 1 } }])
+          .mockResolvedValueOnce([{ ownerId: 11, _count: { _all: 2 } }]),
+        count: jest.fn().mockResolvedValue(19),
       },
       leadOwnershipLog: {
-        groupBy: jest
+        findMany: jest
           .fn()
-          .mockResolvedValueOnce([{ toUserId: 11, _count: { _all: 6 } }])
-          .mockResolvedValueOnce([{ fromUserId: 12, _count: { _all: 2 } }]),
+          .mockResolvedValueOnce([
+            { toUserId: 11 },
+            { toUserId: 11 },
+            { toUserId: 11 },
+          ])
+          .mockResolvedValueOnce([{ fromUserId: 12 }, { fromUserId: 12 }]),
       },
       user: {
         findMany: jest.fn().mockResolvedValue([
@@ -518,14 +524,16 @@ describe('LeadOwnershipService.summary', () => {
       },
     });
     const out = await s.service.summary(1, [1], 'month');
+    expect(out.unowned).toBe(19);
     expect(out.rows).toEqual([
       {
         userId: 11,
         name: 'Nodira R',
         held: 4,
         untouched: 1,
-        taken: 6,
+        taken: 3,
         expired: 0,
+        converted: 2,
       },
       {
         userId: 12,
@@ -534,8 +542,29 @@ describe('LeadOwnershipService.summary', () => {
         untouched: 0,
         taken: 0,
         expired: 2,
+        converted: 0,
       },
     ]);
+  });
+
+  it('counts a lead once however many times it was taken (distinct per person and lead)', async () => {
+    const s = setup();
+    const logFindMany = jest.fn().mockResolvedValue([]);
+    Object.assign(s.prisma, {
+      lead: {
+        groupBy: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      leadOwnershipLog: { findMany: logFindMany },
+      user: { findMany: jest.fn().mockResolvedValue([]) },
+    });
+    await s.service.summary(1, [1], 'month');
+    expect(logFindMany.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ distinct: ['toUserId', 'leadId'] }),
+    );
+    expect(logFindMany.mock.calls[1][0]).toEqual(
+      expect.objectContaining({ distinct: ['fromUserId', 'leadId'] }),
+    );
   });
 });
 
@@ -583,22 +612,23 @@ describe('ownership filters shared with the KPI page (ADR-0096)', () => {
 
   it('summary reads through the same filters', async () => {
     const s = setup();
+    const logFindMany = jest.fn().mockResolvedValue([]);
     Object.assign(s.prisma, {
-      lead: { groupBy: jest.fn().mockResolvedValue([]) },
-      leadOwnershipLog: { groupBy: jest.fn().mockResolvedValue([]) },
+      lead: {
+        groupBy: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      leadOwnershipLog: { findMany: logFindMany },
       user: { findMany: jest.fn().mockResolvedValue([]) },
     });
     await s.service.summary(1, [1], 'month');
     const leadGroupBy = (
       s.prisma as unknown as { lead: { groupBy: jest.Mock } }
     ).lead.groupBy;
-    const logGroupBy = (
-      s.prisma as unknown as { leadOwnershipLog: { groupBy: jest.Mock } }
-    ).leadOwnershipLog.groupBy;
     expect(leadGroupBy.mock.calls[0][0].where).toEqual(
       liveOwnedLeadWhere(1, [1]),
     );
-    expect(logGroupBy.mock.calls[0][0].where).toEqual(
+    expect(logFindMany.mock.calls[0][0].where).toEqual(
       expect.objectContaining(ownershipLogBranchWhere([1])),
     );
   });

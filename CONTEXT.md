@@ -208,6 +208,12 @@ qilgan dars (`cancellationId`) hech bir foizga kirmaydi. Hisobot, uning Exceli
 va bosh sahifa shu bitta funksiyadan o'qiydi (ADR-0103).
 `reports/attendance-stats/attendance-counts.ts`
 
+**Bot to'xtatgan kohort** — tanlangan Toshkent oyida botning kanalga a'zolik
+talabi to'xtatgan odamlar (`TelegramChannelGateEvent.blockedAt` shu oyda).
+«Bot hisoboti»ning uch raqami va ro'yxati faqat shu odamlar bo'yicha; a'zo
+bo'lgani hozirgacha sanaladi, shuning uchun foiz 100% dan oshmaydi (ADR-0105).
+`telegram/gate-cohort.ts`
+
 **PlannedAbsence** — o'quvchi oldindan aytgan kelmaslik. **Attendance qatori
 EMAS** — aks holda bo'lmagan dars uchun pul yechilardi va o'qituvchi qulfi
 ishga tushardi. Yon jadval sifatida ishlaydi.

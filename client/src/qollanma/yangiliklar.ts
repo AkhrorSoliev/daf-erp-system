@@ -14,10 +14,24 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-17",
+    sarlavha: "Bot hisoboti oy bo'yicha qayta hisoblandi",
+    matn: "«Bot hisoboti»da raqamlar endi tanlangan oyda bot to'xtatgan odamlar bo'yicha sanaladi: nechta odam to'xtatildi, ulardan nechtasi kanalga a'zo bo'ldi va keyin chiqib ketdi. Foiz hech qachon 100% dan oshmaydi. Sahifada oy o'qlar bilan almashadi, ro'yxat ham tanlangan oyniki. «Butun davr» tugmasi olib tashlandi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "hisobotlar", sahifa: "bot-hisoboti" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Xato berilgan qatnashganlik hujjatini bekor qilish",
     matn: "O'quvchi kartasidagi «Hujjatlar» yorlig'ida berilgan hujjat qatoriga uch nuqta tugmasi qo'shildi: u orqali «Bekor qilish»ni tanlab, sababini yozasiz. Bekor qilingan hujjat ro'yxatda chizilgan raqam, belgi va sabab bilan qoladi, PDF'i endi berilmaydi, QR sahifada esa «bekor qilingan» deb chiqadi. Raqam qayta berilmaydi; to'g'ri hujjat yangi raqam bilan beriladi. Bekor qilish o'quvchi tarixiga yoziladi.",
     rollar: [1, 2, 3],
     sahifa: { bolim: "oquvchilar", sahifa: "qatnashganlik-hujjati" },
+  },
+  {
+    sana: "2026-10-17",
+    sarlavha: "Lidlar: «Xodimlar bo'yicha» kartochkalari tushunarli bo'ldi",
+    matn: "Har bir xodim kartochkasida katta raqam — hozir qo'lida nechta lid turgani, sariq belgi — shulardan nechtasiga tegilmagani. Pastda tanlangan davr (hafta yoki oy) uchun uchta raqam: olgan, muddatda qaytgan, o'quvchi bo'lgan; har biriga sichqoncha olib borsangiz izohi chiqadi. «Olgan» endi har lidni bir marta sanaydi (ilgari olib, qaytarib, yana olingan lid ikki marta chiqardi). Oxirida «Hech kimda yo'q» kartochkasi egasiz lidlar sonini ko'rsatadi, bossangiz ro'yxatda shular chiqadi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "lid-egasi" },
   },
   {
     sana: "2026-10-17",

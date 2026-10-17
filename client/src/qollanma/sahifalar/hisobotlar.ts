@@ -39,6 +39,18 @@ export const hisobotlar: QollanmaSahifa[] = [
   },
   {
     bolim: "hisobotlar",
+    sahifa: "bot-hisoboti",
+    sarlavha: "Bot hisoboti",
+    qisqacha:
+      "Botning kanalga a'zolik talabi nechta odamni kanalga olib kelgani — tanlangan oyda bot to'xtatgan odamlar, ulardan nechtasi a'zo bo'lgani va keyin chiqib ketgani; foiz 100% dan oshmaydi.",
+    rollar: [1, 2],
+    adr: ["0105"],
+    yollar: ["/reports/bot"],
+    kalitSozlar: ["bot", "bot hisoboti", "kanal", "kanalga a'zo bo'ldi", "bot to'xtatdi", "kutilmoqda", "telegram kanal"],
+    yangilangan: "2026-10-17",
+  },
+  {
+    bolim: "hisobotlar",
     sahifa: "ketgan-oquvchilar",
     sarlavha: "Ketgan o'quvchilar hisoboti",
     qisqacha:
