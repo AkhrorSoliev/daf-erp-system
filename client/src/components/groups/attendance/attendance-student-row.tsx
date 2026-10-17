@@ -2,6 +2,7 @@
 
 import { CanLink } from "@/components/shared/can-link";
 import { useState } from "react";
+import { useT } from "@/i18n/context";
 import {
   AlertTriangle,
   Check,
@@ -75,15 +76,16 @@ export function AttendanceStudentRow({
   onPlanRemove,
   onCollectPayment,
 }: AttendanceStudentRowProps) {
+  const t = useT();
   const statusCfg = STATUS_CONFIG.find((s) => s.value === entry?.status);
   // The saved minutes, only while the row is still marked LATE on screen.
   const lateText =
     student.status === "LATE" && entry?.status === "LATE"
-      ? lateMinutesText(student.lateMinutes)
+      ? lateMinutesText(student.lateMinutes, t)
       : null;
   // Contract 3.2 (ADR-0047): a blocked student keeps their row, but only an
   // announced absence («Sababli») can be recorded for them.
-  const admission = admissionCopy(student.admission, isAdmin);
+  const admission = admissionCopy(student.admission, isAdmin, t);
   const rowBg = statusCfg?.activeBg ?? "";
 
   return (
@@ -103,7 +105,9 @@ export function AttendanceStudentRow({
           href={`/students/profile/${student.studentId}`}
           className="shrink-0 rounded-full"
           linkClassName="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={`${student.firstName} ${student.lastName} profilini ochish`}
+          aria-label={t("{name} profilini ochish", {
+            name: `${student.firstName} ${student.lastName}`,
+          })}
         >
           <Avatar className="size-9 sm:size-10">
             <AvatarImage
@@ -132,7 +136,7 @@ export function AttendanceStudentRow({
                 <TooltipTrigger asChild>
                   <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
                     <AlertTriangle className="size-3" />
-                    Qarz
+                    {t("Qarz")}
                     {typeof student.debtAmount === "number" &&
                       student.debtAmount > 0 && (
                         <span className="ml-0.5 font-mono tabular-nums">
@@ -142,9 +146,9 @@ export function AttendanceStudentRow({
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Oylik to&apos;lov to&apos;liq qilinmagan. 2-darsdan boshlab
-                  o&apos;quvchi to&apos;lagan puli yetgan darslargacha
-                  qatnashadi.
+                  {t(
+                    "Oylik to'lov to'liq qilinmagan. 2-darsdan boshlab o'quvchi to'lagan puli yetgan darslargacha qatnashadi.",
+                  )}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -156,16 +160,20 @@ export function AttendanceStudentRow({
                   <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-indigo-300 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
                     <ShieldCheck className="size-3" />
                     {student.plannedKind === "SABABLI"
-                      ? "Oldindan: Sababli"
-                      : "Oldindan: sababsiz"}
+                      ? t("Oldindan: Sababli")
+                      : t("Oldindan: sababsiz")}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
                   {student.plannedBy
-                    ? `${student.plannedBy.firstName} ${student.plannedBy.lastName} oldindan belgilagan.`
-                    : "Oldindan belgilangan."}
-                  {student.plannedNote ? ` Sabab: ${student.plannedNote}.` : ""}{" "}
-                  Kerak bo&apos;lsa holatni o&apos;zgartiring.
+                    ? t("{name} oldindan belgilagan.", {
+                        name: `${student.plannedBy.firstName} ${student.plannedBy.lastName}`,
+                      })
+                    : t("Oldindan belgilangan.")}
+                  {student.plannedNote
+                    ? ` ${t("Sabab: {note}.", { note: student.plannedNote })}`
+                    : ""}{" "}
+                  {t("Kerak bo'lsa holatni o'zgartiring.")}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -229,7 +237,7 @@ export function AttendanceStudentRow({
                   <opt.icon className="size-5" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{opt.label}</TooltipContent>
+              <TooltipContent>{t(opt.label)}</TooltipContent>
             </Tooltip>
           ))}
 
@@ -261,7 +269,7 @@ export function AttendanceStudentRow({
                   </svg>
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Izoh qo&apos;shish</TooltipContent>
+              <TooltipContent>{t("Izoh qo'shish")}</TooltipContent>
             </Tooltip>
           )}
         </div>
@@ -277,7 +285,7 @@ export function AttendanceStudentRow({
               className="self-start"
               onClick={() => onCollectPayment(student)}
             >
-              To&apos;lov qabul qilish
+              {t("To'lov qabul qilish")}
             </Button>
           )}
         </div>
@@ -286,7 +294,7 @@ export function AttendanceStudentRow({
       {isAdmin && isNoteOpen && (
         <div className="mt-2 pl-8 sm:pl-[4.25rem]">
           <Input
-            placeholder="Izoh yozing..."
+            placeholder={t("Izoh yozing...")}
             value={entry?.note ?? ""}
             onChange={(e) => onSetNote(student.studentId, e.target.value)}
             className="h-8 text-xs"
@@ -318,6 +326,7 @@ function PlanMarkInline({
   ) => void;
   onPlanRemove?: (studentId: number) => void;
 }) {
+  const t = useT();
   const [editingReason, setEditingReason] = useState(false);
   const [reason, setReason] = useState("");
 
@@ -341,11 +350,11 @@ function PlanMarkInline({
               ) : (
                 <UserX className="size-3.5" />
               )}
-              {isSababli ? "Sababli" : "Kelmaydi"}
+              {isSababli ? t("Sababli") : t("Kelmaydi")}
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            {isSababli ? "Sababli (uzrli)" : "Kelmaydi (sababsiz)"}
+            {isSababli ? t("Sababli (uzrli)") : t("Kelmaydi (sababsiz)")}
             {student.plannedNote ? ` — ${student.plannedNote}` : ""}
           </TooltipContent>
         </Tooltip>
@@ -364,7 +373,7 @@ function PlanMarkInline({
               )}
             </button>
           </TooltipTrigger>
-          <TooltipContent>Oldindan belgilashni o&apos;chirish</TooltipContent>
+          <TooltipContent>{t("Oldindan belgilashni o'chirish")}</TooltipContent>
         </Tooltip>
       </div>
     );
@@ -387,7 +396,7 @@ function PlanMarkInline({
       <div className="flex shrink-0 items-center gap-1.5">
         <Input
           autoFocus
-          placeholder="Sababni yozing..."
+          placeholder={t("Sababni yozing...")}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           onKeyDown={(e) => {
@@ -415,7 +424,7 @@ function PlanMarkInline({
               )}
             </button>
           </TooltipTrigger>
-          <TooltipContent>Sababli deb saqlash</TooltipContent>
+          <TooltipContent>{t("Sababli deb saqlash")}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -427,7 +436,7 @@ function PlanMarkInline({
               <X className="size-4" />
             </button>
           </TooltipTrigger>
-          <TooltipContent>Bekor qilish</TooltipContent>
+          <TooltipContent>{t("Bekor qilish")}</TooltipContent>
         </Tooltip>
       </div>
     );
@@ -446,7 +455,7 @@ function PlanMarkInline({
         className="flex items-center gap-1 rounded-lg border border-blue-200 px-2.5 py-2 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
       >
         <ShieldCheck className="size-4" />
-        Sababli
+        {t("Sababli")}
       </button>
       <button
         type="button"
@@ -455,7 +464,7 @@ function PlanMarkInline({
         className="flex items-center gap-1 rounded-lg border border-orange-200 px-2.5 py-2 text-xs font-medium text-orange-700 transition-colors hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950/30"
       >
         <UserX className="size-4" />
-        Kelmaydi
+        {t("Kelmaydi")}
       </button>
     </div>
   );
