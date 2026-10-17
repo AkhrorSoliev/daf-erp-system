@@ -1,9 +1,15 @@
+import { tashkentNow } from "@/lib/tashkent-time";
 import type { LevelPreview } from "./certificate-types";
 
 /** 'YYYY-MM-DD' → 'dd.MM.yyyy' (a calendar day, no timezone arithmetic). */
 export function dmy(ymd: string): string {
   const [y, m, d] = ymd.split("-");
   return `${d}.${m}.${y}`;
+}
+
+/** An issue instant as the TASHKENT day, 'dd.MM.yyyy': the day the PDF and the QR page print (the UTC day is wrong 00:00-05:00). */
+export function issuedDay(issuedAt: string): string {
+  return dmy(tashkentNow(new Date(issuedAt)).dateStr);
 }
 
 export function percentText(percent: number | null): string {

@@ -24,7 +24,7 @@ import {
   issueCertificate,
   useCertificatePreview,
 } from "./certificate-queries";
-import { dmy, issueMode, levelSummary } from "./certificate-rules";
+import { dmy, issueMode, issuedDay, levelSummary } from "./certificate-rules";
 import type { IssuedCertificate, LevelPreview } from "./certificate-types";
 
 /** The student card's «Hujjatlar» tab (spec 2026-10-17 §7). Every figure is the server's. */
@@ -158,7 +158,7 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
                   <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                     <span className="font-medium">{row.number}</span>
                     <span className="text-muted-foreground">
-                      {dmy(row.issuedAt.slice(0, 10))}
+                      {issuedDay(row.issuedAt)}
                       {row.exempt && " · istisno bilan"}
                       {row.revoked && " · bekor qilingan"}
                     </span>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dmy, issueMode, levelSummary, percentText } from "./certificate-rules";
+import { dmy, issueMode, issuedDay, levelSummary, percentText } from "./certificate-rules";
 import type { LevelPreview } from "./certificate-types";
 
 const base: LevelPreview = {
@@ -21,6 +21,17 @@ const base: LevelPreview = {
 describe("dmy", () => {
   it("turns YYYY-MM-DD into dd.MM.yyyy", () => {
     expect(dmy("2026-10-07")).toBe("07.10.2026");
+  });
+});
+
+describe("issuedDay", () => {
+  it("is the Tashkent day of the instant, the day the PDF and the QR page print", () => {
+    // 01:30 on 18.10 in Tashkent is still 17.10 in UTC: the UTC slice gave the wrong day.
+    expect(issuedDay("2026-10-17T20:30:00.000Z")).toBe("18.10.2026");
+    expect(issuedDay("2026-10-17T07:00:00.000Z")).toBe("17.10.2026");
+    // Tashkent midnight is 19:00 UTC the evening before.
+    expect(issuedDay("2026-10-17T19:00:00.000Z")).toBe("18.10.2026");
+    expect(issuedDay("2026-10-17T18:59:59.000Z")).toBe("17.10.2026");
   });
 });
 
