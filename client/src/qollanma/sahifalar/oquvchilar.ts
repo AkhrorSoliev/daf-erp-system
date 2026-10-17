@@ -80,7 +80,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     sahifa: "oquvchi-kartasi",
     sarlavha: "O'quvchi kartasi",
     qisqacha:
-      "Karta chapda o'quvchi ma'lumotlari, balans va amallarni, o'ngda 11 ta tabni ko'rsatadi. «To'lovlar» tabi o'quvchi qancha to'lagani, har oyning narxi, to'langani va qarzi hamda balans nimadan chiqqanini tushuntiradi.",
+      "Karta chapda o'quvchi ma'lumotlari, balans va amallarni, o'ngda 12 ta tabni ko'rsatadi. «To'lovlar» tabi o'quvchi qancha to'lagani, har oyning narxi, to'langani va qarzi hamda balans nimadan chiqqanini tushuntiradi.",
     rollar: [1, 2, 3],
     adr: ["0004", "0037", "0047", "0062", "0064", "0066", "0070", "0073", "0077"],
     yollar: ["/students/profile/*"],
@@ -126,7 +126,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "bekor qilingan yozuv",
       "balans tarixi",
     ],
-    yangilangan: "2026-10-10",
+    yangilangan: "2026-10-17",
   },
   {
     bolim: "oquvchilar",
