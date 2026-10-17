@@ -23,6 +23,10 @@ export const TONE_BAR: Record<Tone, string> = {
   none: "bg-muted",
 };
 
+/** «Sentabr 81%», and «(oy tugamagan)» for a month that has not ended — the spoken text of a month bar. */
+export const monthSpoken = (m: { month: string; rate: number | null; partial: boolean }): string =>
+  `${monthFull(m.month)} ${pctText(m.rate)}${m.partial ? " (oy tugamagan)" : ""}`;
+
 const WEEKDAY = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
 
 /** 1 = dushanba … 7 = yakshanba, the full name. */
@@ -51,12 +55,16 @@ export function previousText(preset: string, previous: { startDate: string; endD
 export const lessonsText = (lessons: number, attended: number): string =>
   `o'tilishi kerak bo'lgan ${formatNumber(lessons)} darsdan ${formatNumber(attended)} tasiga kelishgan`;
 
-/** The money block's sentence (spec §4.3); every number is the server's. */
+/**
+ * The money block (spec §4.3), two sentences: the counts (every branch), then the money
+ * (only the branches with the discount on, or why there is none). Every number is the server's.
+ */
 export function creditText(c: CreditResult): string {
   if (c.lessons === 0) return "Bu davrda oylik kurslarda sababli dars yo'q.";
-  const head = `${formatNumber(c.lessons)} ta sababli dars (${formatNumber(c.students)} o'quvchi)`;
-  if (!c.enabled || c.amount === null) return `${head}. Sababli dars chegirmasi o'chirilgan.`;
-  return `${head} uchun keyingi oy to'lovidan taxminan ${mlnText(c.amount)} chegiriladi.`;
+  const head = `${formatNumber(c.lessons)} ta sababli dars (${formatNumber(c.students)} o'quvchi).`;
+  if (!c.enabled) return `${head} Sababli dars chegirmasi o'chirilgan.`;
+  if (!c.amount) return `${head} Summa hali hisoblanmagan.`;
+  return `${head} Keyingi oy to'lovidan taxminan ${mlnText(c.amount)} chegiriladi (chegirma yoqilgan filiallar bo'yicha).`;
 }
 
 export const unchargedText = (n: number): string | null =>

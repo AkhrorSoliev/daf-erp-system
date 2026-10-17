@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { formatNumber } from "@/lib/format-utils";
+import { monthFull } from "@/components/reports/departed-students/departed-format";
 import { mlnText } from "@/components/reports/center-activity/center-activity-format";
 import {
-  TONE_BAR, cardTitle, creditText, hiddenText, lessonsText, pctText, previousText, rateTone, streakText, unchargedText, weekdayName,
+  TONE_BAR, cardTitle, creditText, hiddenText, lessonsText, monthSpoken, pctText, previousText, rateTone, streakText, unchargedText, weekdayName,
 } from "./attendance-format";
 
 describe("attendance-format", () => {
@@ -20,6 +21,11 @@ describe("attendance-format", () => {
     expect(rateTone(80)).toBe("good");
     expect(rateTone(null)).toBe("none");
     expect(Object.values(TONE_BAR).join(" ")).not.toMatch(/amber|sky|hsl\(/);
+  });
+
+  it("monthSpoken names the month and its rate, and says when the month has not ended", () => {
+    expect(monthSpoken({ month: "2026-09", rate: 72.2, partial: false })).toBe(`${monthFull("2026-09")} 72%`);
+    expect(monthSpoken({ month: "2026-10", rate: null, partial: true })).toBe(`${monthFull("2026-10")} — (oy tugamagan)`);
   });
 
   it("weekday names are full, for screen readers too", () => {
@@ -44,13 +50,31 @@ describe("attendance-format", () => {
     expect(lessonsText(4814, 3897)).toBe(`o'tilishi kerak bo'lgan ${formatNumber(4814)} darsdan ${formatNumber(3897)} tasiga kelishgan`);
   });
 
-  it("creditText: the estimate, the switched-off setting, nothing excused", () => {
+  it("creditText: two sentences — the counts, then the money", () => {
     expect(creditText({ lessons: 27, students: 25, amount: 970_000, enabled: true, uncharged: 0 })).toBe(
-      `27 ta sababli dars (25 o'quvchi) uchun keyingi oy to'lovidan taxminan ${mlnText(970_000)} chegiriladi.`,
+      `27 ta sababli dars (25 o'quvchi). Keyingi oy to'lovidan taxminan ${mlnText(970_000)} chegiriladi (chegirma yoqilgan filiallar bo'yicha).`,
     );
+  });
+
+  it("creditText: switched on but nothing charged yet says the sum is not worked out", () => {
+    expect(creditText({ lessons: 4, students: 3, amount: 0, enabled: true, uncharged: 4 })).toBe("4 ta sababli dars (3 o'quvchi). Summa hali hisoblanmagan.");
+    expect(creditText({ lessons: 4, students: 3, amount: null, enabled: true, uncharged: 4 })).toBe("4 ta sababli dars (3 o'quvchi). Summa hali hisoblanmagan.");
+  });
+
+  it("creditText: the setting off in every branch", () => {
     expect(creditText({ lessons: 27, students: 25, amount: null, enabled: false, uncharged: 0 })).toBe(
       "27 ta sababli dars (25 o'quvchi). Sababli dars chegirmasi o'chirilgan.",
     );
+  });
+
+  it("creditText: mixed branches — the counts are every branch's, the money only the enabled ones'", () => {
+    // 10 lessons in all, the discount on in one branch only: amount is that branch's.
+    expect(creditText({ lessons: 10, students: 6, amount: 250_000, enabled: true, uncharged: 2 })).toBe(
+      `10 ta sababli dars (6 o'quvchi). Keyingi oy to'lovidan taxminan ${mlnText(250_000)} chegiriladi (chegirma yoqilgan filiallar bo'yicha).`,
+    );
+  });
+
+  it("creditText: no excused lesson, no sentence about money", () => {
     expect(creditText({ lessons: 0, students: 0, amount: 0, enabled: true, uncharged: 0 })).toBe("Bu davrda oylik kurslarda sababli dars yo'q.");
   });
 

@@ -21,6 +21,12 @@ describe("AttendanceCard", () => {
     expect(h).toContain("darsdan");
   });
 
+  it("no marks at all: no «darsdan … tasiga» line", () => {
+    const h = html({ ...data, card: { ...data.card, lessons: 0, attended: 0, rate: null } });
+    expect(h).not.toContain("darsdan");
+    expect(h).toContain("avgustda 79% edi");
+  });
+
   it("no denominator: «—», never 0%", () => {
     expect(html({ ...data, card: { ...data.card, rate: null } })).toContain(">—<");
   });

@@ -1,12 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { monthFull, monthShort } from "@/components/reports/departed-students/departed-format";
+import { monthShort } from "@/components/reports/departed-students/departed-format";
 import { cn } from "@/lib/utils";
-import { TONE_BAR, pctText, rateTone, weekdayName } from "./attendance-format";
+import { TONE_BAR, monthSpoken, pctText, rateTone, weekdayName } from "./attendance-format";
 import type { AttendanceOverview } from "./attendance-types";
 
 /** Block 2 (spec §4): month columns and weekday bars, both the server's figures. */
 export function AttendanceTrends({ months, weekdays }: Pick<AttendanceOverview, "months" | "weekdays">) {
-  const spoken = months.map((m) => `${monthFull(m.month)} ${pctText(m.rate)}`).join(", ");
+  const spoken = months.map(monthSpoken).join(", ");
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
@@ -19,11 +19,14 @@ export function AttendanceTrends({ months, weekdays }: Pick<AttendanceOverview, 
                 <div className="flex w-full flex-1 items-end">
                   <div className={cn("w-full rounded-t-md", m.rate === null ? "min-h-px bg-muted" : "bg-primary")} style={{ height: `${m.rate ?? 0}%` }} />
                 </div>
-                <span className="text-xs text-muted-foreground">{monthShort(m.month)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {monthShort(m.month)}
+                  {m.partial && <span aria-hidden>*</span>}
+                </span>
               </div>
             ))}
           </div>
-          {months.some((m) => m.partial) && <p className="text-xs text-muted-foreground">Och rangdagi oy hali tugamagan.</p>}
+          {months.some((m) => m.partial) && <p className="text-xs text-muted-foreground">* Och rangdagi oy hali tugamagan.</p>}
         </CardContent>
       </Card>
       <Card>

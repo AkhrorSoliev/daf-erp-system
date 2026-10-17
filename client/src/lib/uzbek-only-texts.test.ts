@@ -203,16 +203,22 @@ describe("the «Markaz faoliyati» page (B7b)", () => {
 // of the English words the old page used on screen.
 describe("the «Davomat» page (B7c)", () => {
   const dir = "reports/attendance";
-  const files = readdirSync(join(__dirname, "..", "components", dir))
-    .filter((f) => f.endsWith(".tsx"))
-    .map((f) => `${dir}/${f}`);
+  // The components, plus `attendance-format.ts`, where most of the on-screen sentences are built.
+  const files = [
+    ...readdirSync(join(__dirname, "..", "components", dir))
+      .filter((f) => f.endsWith(".tsx"))
+      .map((f) => `${dir}/${f}`),
+    `${dir}/attendance-format.ts`,
+  ];
 
   it("finds the new files", () => {
-    expect(files.length).toBeGreaterThanOrEqual(8);
+    expect(files.length).toBeGreaterThanOrEqual(9);
   });
 
   it.each(files)("%s carries no English jargon", (file) => {
-    // `absent` is the server's field name in the code, never on screen; the enum name ABSENT still fails.
-    expect(source(file).replace(/\babsent\b/g, "")).not.toMatch(ENGLISH);
+    // `absent` is the server's field name in two code places (the chip key in attendance-card.tsx,
+    // `r.absent` in the missers dialog), never on screen; the enum name ABSENT and any other
+    // `absent` still fail.
+    expect(source(file).replace(/key: "absent"/g, "").replace(/\.absent\b/g, "")).not.toMatch(ENGLISH);
   });
 });

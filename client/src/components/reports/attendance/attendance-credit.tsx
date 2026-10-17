@@ -5,7 +5,7 @@ import type { CreditResult } from "./attendance-types";
 
 /** Block 3 (spec §4.3): what the excused lessons take off the next bill — an estimate. */
 export function AttendanceCredit({ credit, cancelled }: { credit: CreditResult; cancelled: number }) {
-  const uncharged = unchargedText(credit.uncharged);
+  const uncharged = credit.enabled ? unchargedText(credit.uncharged) : null;
   return (
     <Card>
       <CardContent className="flex flex-col gap-2">

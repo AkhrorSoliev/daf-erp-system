@@ -28,7 +28,10 @@ export function AttendanceCardSkeleton() {
 /** Block 1 (spec B7c §4): the rate, the earlier figure, the four marks. Every number is the server's. */
 export function AttendanceCard({ data, preset }: { data: AttendanceOverview; preset: string }) {
   const { card } = data;
-  const sub = [previousText(preset, data.previous, card.previousRate), lessonsText(card.lessons, card.attended)].filter(Boolean).join(" · ");
+  // No marks at all (lessons 0): nothing to say about «darsdan … tasiga».
+  const sub = [previousText(preset, data.previous, card.previousRate), card.lessons > 0 ? lessonsText(card.lessons, card.attended) : null]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <Card>
       <CardContent className="flex flex-col gap-3">
@@ -36,7 +39,7 @@ export function AttendanceCard({ data, preset }: { data: AttendanceOverview; pre
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium text-muted-foreground">{cardTitle(data.range)}</p>
             <p className="text-3xl font-semibold tabular-nums">{pctText(card.rate)}</p>
-            <p className="text-sm text-muted-foreground">{sub}</p>
+            {sub && <p className="text-sm text-muted-foreground">{sub}</p>}
           </div>
           {cleanPreset(preset) === "current_month" && (
             <p className="flex items-center gap-1.5 text-sm text-success">
