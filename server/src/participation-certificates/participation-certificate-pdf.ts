@@ -104,7 +104,8 @@ export function overviewRows(s: CertificateSnapshot): OverviewRow[] {
       note: `${s.app.done} von ${s.app.open} Lektionen abgeschlossen`,
     });
   }
-  if (s.unitTests) {
+  // Information only, and only a result worth showing: none passed, no row.
+  if (s.unitTests && s.unitTests.passed > 0) {
     rows.push({
       area: 'Abschlusstests',
       result: `${s.unitTests.passed} von ${s.unitTests.total}`,
@@ -119,6 +120,29 @@ export function overviewRows(s: CertificateSnapshot): OverviewRow[] {
     });
   }
   return rows;
+}
+
+/**
+ * The confirmation sentence. An exemption (the CEO gave the document although
+ * the rule is not met) does not say «regelmäßig»; nothing else marks it.
+ */
+function confirmationText(s: CertificateSnapshot): Content {
+  const tail = [
+    ' am Deutschunterricht auf dem Niveau ',
+    { text: s.level, bold: true },
+    ' des Gemeinsamen europäischen Referenzrahmens für Sprachen (GER) teilgenommen.',
+  ];
+  return {
+    text: s.exempt
+      ? ['hat im genannten Zeitraum', ...tail]
+      : [
+          'hat im genannten Zeitraum ',
+          { text: 'regelmäßig', bold: true },
+          ...tail,
+        ],
+    lineHeight: 1.45,
+    margin: [0, 14, 0, 18],
+  };
 }
 
 function fieldRow(label: string, value: string): TableCell[] {
@@ -337,17 +361,7 @@ export function buildCertificateDoc(
         layout: FIELDS_LAYOUT,
         margin: [0, 26, 0, 0],
       },
-      {
-        text: [
-          'hat im genannten Zeitraum ',
-          { text: 'regelmäßig', bold: true },
-          ' am Deutschunterricht auf dem Niveau ',
-          { text: s.level, bold: true },
-          ' des Gemeinsamen europäischen Referenzrahmens für Sprachen (GER) teilgenommen.',
-        ],
-        lineHeight: 1.45,
-        margin: [0, 14, 0, 18],
-      },
+      confirmationText(s),
       {
         text: 'Teilnahme im Überblick',
         fontSize: 11,

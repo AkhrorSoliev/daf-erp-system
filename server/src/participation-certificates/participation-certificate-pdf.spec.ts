@@ -76,6 +76,32 @@ describe('overviewRows', () => {
     ]);
   });
 
+  it('leaves the Abschlusstests row out when none was passed', () => {
+    const areas = overviewRows({
+      ...full,
+      unitTests: { passed: 0, total: 5 },
+    }).map((r) => r.area);
+    expect(areas).not.toContain('Abschlusstests');
+    expect(areas).toEqual([
+      'Anwesenheit',
+      'Verspätungen',
+      'Lernplattform',
+      'Mock-Prüfung',
+    ]);
+  });
+
+  it('shows the Abschlusstests row from the first passed test on', () => {
+    const row = overviewRows({
+      ...full,
+      unitTests: { passed: 1, total: 5 },
+    }).find((r) => r.area === 'Abschlusstests');
+    expect(row).toEqual({
+      area: 'Abschlusstests',
+      result: '1 von 5',
+      note: 'bestanden',
+    });
+  });
+
   it('writes a decimal score with a German comma', () => {
     const rows = overviewRows({
       ...full,
@@ -120,6 +146,55 @@ describe('buildCertificateDoc', () => {
   it('is one A4 page', () => {
     expect(build(full).pageSize).toBe('A4');
   });
+
+  describe('the confirmation sentence', () => {
+    const exempt: CertificateSnapshot = { ...full, exempt: true };
+
+    /** The sentence as printed: its pieces joined, bold or not. */
+    const sentenceNode = (snapshot: CertificateSnapshot) =>
+      (build(snapshot).content as { text?: unknown }[]).find(
+        (n) =>
+          Array.isArray(n.text) &&
+          typeof n.text[0] === 'string' &&
+          n.text[0].startsWith('hat im genannten Zeitraum'),
+      );
+    const sentence = (snapshot: CertificateSnapshot) =>
+      (sentenceNode(snapshot)?.text as (string | { text: string })[])
+        .map((p) => (typeof p === 'string' ? p : p.text))
+        .join('');
+
+    it('says «regelmäßig» on a normal document, as before', () => {
+      expect(sentence(full)).toBe(
+        'hat im genannten Zeitraum regelmäßig am Deutschunterricht auf dem Niveau A1 des Gemeinsamen europäischen Referenzrahmens für Sprachen (GER) teilgenommen.',
+      );
+    });
+
+    it('drops «regelmäßig» on an exemption, without a double space', () => {
+      const printed = sentence(exempt);
+      expect(printed).not.toContain('regelmäßig');
+      expect(printed).not.toMatch(/ {2}/);
+      expect(printed).toBe(
+        'hat im genannten Zeitraum am Deutschunterricht auf dem Niveau A1 des Gemeinsamen europäischen Referenzrahmens für Sprachen (GER) teilgenommen.',
+      );
+      expect(text(exempt)).not.toContain('regelmäßig');
+    });
+
+    it('marks an exemption nowhere else: only that sentence differs', () => {
+      const rest = (snapshot: CertificateSnapshot) =>
+        JSON.stringify(build(snapshot).content).replace(
+          JSON.stringify(sentenceNode(snapshot)),
+          '',
+        );
+      expect(rest(exempt)).toBe(rest(full));
+      expect(text(exempt)).not.toMatch(/Ausnahme|Befreiung|Sonderfall|exempt/i);
+    });
+
+    it('keeps the forbidden strings out of an exempt document too', () => {
+      expect(text(exempt)).not.toMatch(
+        /filial|Kursleitung|Zentrumsleitung|Stempel|Fargʻona|Unterschrift/i,
+      );
+    });
+  });
 });
 
 describe('renderCertificatePdf', () => {
@@ -141,6 +216,26 @@ describe('renderCertificatePdf', () => {
     const buf = await renderCertificatePdf({
       snapshot: minimal,
       number: 'TB-2026-0002',
+      issuedAt: new Date('2026-10-17T07:00:00.000Z'),
+      url: 'https://admin.dafzentrum.uz/t/x',
+    });
+    expect(pages(buf)).toBe(1);
+  });
+
+  it('renders one page for an exemption', async () => {
+    const buf = await renderCertificatePdf({
+      snapshot: { ...full, exempt: true },
+      number: 'TB-2026-0003',
+      issuedAt: new Date('2026-10-17T07:00:00.000Z'),
+      url: 'https://admin.dafzentrum.uz/t/x',
+    });
+    expect(pages(buf)).toBe(1);
+  });
+
+  it('renders one page when no unit test was passed', async () => {
+    const buf = await renderCertificatePdf({
+      snapshot: { ...full, unitTests: { passed: 0, total: 5 } },
+      number: 'TB-2026-0004',
       issuedAt: new Date('2026-10-17T07:00:00.000Z'),
       url: 'https://admin.dafzentrum.uz/t/x',
     });
