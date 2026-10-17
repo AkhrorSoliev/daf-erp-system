@@ -10,7 +10,6 @@ import {
   Sidebar,
   SidebarHeader,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
@@ -27,10 +26,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { SidebarUserFooter } from "@/components/sidebar-user-footer";
+import { SidebarFooterInfo } from "@/components/sidebar-footer-info";
 import { NavItemBadge } from "@/components/nav-item-badge";
 import { BranchSwitcher } from "@/components/branch-switcher";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   isNavChildActive,
   isNavGateOpen,
@@ -285,17 +283,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {isMobile && (
-        <SidebarFooter className="px-4 py-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Mavzu</span>
-            <ThemeToggle />
-          </div>
-          <Separator className="my-1" />
-        </SidebarFooter>
-      )}
-
-      <SidebarUserFooter />
+      <SidebarFooterInfo />
     </Sidebar>
   );
 }
