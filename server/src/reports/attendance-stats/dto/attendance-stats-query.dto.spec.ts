@@ -68,5 +68,8 @@ describe('AttendanceMissersQueryDto', () => {
       }),
     ).toEqual([]);
     expect(await props(AttendanceMissersQueryDto, RANGE)).toEqual(['key']);
+    expect(
+      await props(AttendanceMissersQueryDto, { ...RANGE, key: '' }),
+    ).toEqual(['key']);
   });
 });

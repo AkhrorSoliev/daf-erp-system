@@ -112,8 +112,8 @@ export function kpiSheet(wb: Workbook, kpis: any, period: string) {
   kvRow(
     ws,
     "O'rtacha davomat",
-    kpis.averageAttendance ?? 0,
-    'Shu oy; sababli (EXCUSED) hisobga olinmagan.',
+    kpis.averageAttendance ?? '—',
+    'Shu oy, 1-sanadan bugungacha; sababli va markaz bekor qilgan darslar foizga kirmaydi.',
     { percent: true },
   );
   kvRow(

@@ -1,3 +1,4 @@
+import { Workbook } from 'exceljs';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { AttendanceStatsService } from './attendance-stats.service';
 import type { AttRow, AttendanceFacts } from './attendance-stats.types';
@@ -199,5 +200,17 @@ describe('AttendanceStatsService', () => {
     expect(loader.load).toHaveBeenCalledTimes(1);
     expect(out.filename).toBe('davomat-2026-09-01_2026-09-30.xlsx');
     expect(out.buffer.length).toBeGreaterThan(0);
+
+    // The file lists every cut row: g1 has 8 lessons, under the min-rows rule
+    // (60 × 30 / 30), so the page hides it but «Kesim» keeps it.
+    const overview = await service.overview(1001, [1], Q);
+    expect(overview.cut.rows).toEqual([]);
+    expect(overview.cut.hidden).toBe(1);
+    const wb = new Workbook();
+    await wb.xlsx.load(out.buffer as never);
+    const kesim = wb.getWorksheet('Kesim')!;
+    expect(kesim.getRow(2).getCell(1).value).toBe('Guruh');
+    expect(kesim.getRow(2).getCell(2).value).toBe('A1-04 · Otabek Sobirov');
+    expect(kesim.getRow(2).getCell(4).value).toBe(8);
   });
 });

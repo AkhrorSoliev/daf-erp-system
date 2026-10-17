@@ -40,11 +40,11 @@ export async function attendanceWorkbook(
     ["Ko'rsatkich", 40],
     ['Qiymat', 22],
   ]);
-  const lines: [string, number | string][] = [
+  const lines: [string, number | string | null][] = [
     ['Davr', days(o.range)],
-    ['Davomat, %', o.card.rate ?? ''],
+    ['Davomat, %', o.card.rate ?? null],
     ['Oldingi davr', o.previous ? days(o.previous) : ''],
-    ['Oldingi davr davomati, %', o.card.previousRate ?? ''],
+    ['Oldingi davr davomati, %', o.card.previousRate ?? null],
     ["O'tilishi kerak bo'lgan darslar", o.card.lessons],
     ['Kelishgan', o.card.attended],
     ['Keldi', c.came],
@@ -72,7 +72,7 @@ export async function attendanceWorkbook(
   for (const m of o.months) {
     months.addRow([
       m.month,
-      m.rate ?? '',
+      m.rate ?? null,
       m.counts.came,
       m.counts.late,
       m.counts.absent,
@@ -100,7 +100,7 @@ export async function attendanceWorkbook(
       cut.addRow([
         CUT_NAME[k],
         r.name,
-        r.rate ?? '',
+        r.rate ?? null,
         r.lessons,
         r.counts.came,
         r.counts.late,

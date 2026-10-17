@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
@@ -47,6 +48,7 @@ export class AttendanceStatsQueryDto {
 /** `GET /reports/attendance-stats/missers`: one row of the cut. `key` = group id, teacher id or `none`, course id. */
 export class AttendanceMissersQueryDto extends AttendanceStatsQueryDto {
   @IsString()
+  @IsNotEmpty()
   @MaxLength(64)
   key: string;
 }

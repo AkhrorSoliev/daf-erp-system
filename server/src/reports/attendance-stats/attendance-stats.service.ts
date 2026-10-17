@@ -41,9 +41,11 @@ const pageOf = (total: number, page: number, pageSize: number) =>
 /**
  * «Davomat» (spec B7c, ADR-0103). One read of the marks, then pure functions.
  *
- * // ponytail: no cache — six months are ~35k marks and every cut/page click
- * reads them again; add Redis (key: company + scope + startDate + endDate) if
- * it is measured slow.
+ * // ponytail: no cache — six months are ~35k marks, the previous window is
+ * read too (a long period reads up to about twice that), and every cut/page
+ * click reads them again plus the streak query and the charge/settings reads
+ * (accepted); add Redis (key: company + scope + startDate + endDate) if it is
+ * measured slow.
  */
 @Injectable()
 export class AttendanceStatsService {

@@ -78,6 +78,25 @@ describe('resolvePeriod', () => {
       BadRequestException,
     );
   });
+
+  it('the previous period starts on the floor day, not before it', () => {
+    const p = resolvePeriod('2026-05-08', '2026-05-14', TODAY);
+    expect(p.previous).toEqual({
+      startDate: '2026-05-01',
+      endDate: '2026-05-07',
+    });
+    expect(
+      resolvePeriod('2026-05-05', '2026-05-11', TODAY).previous,
+    ).toBeNull();
+  });
+
+  it('elapsedDays at the edges: first day 1, the day before 0, last day the whole length', () => {
+    const days = (today: string) =>
+      resolvePeriod('2026-10-05', '2026-10-11', today).elapsedDays;
+    expect(days('2026-10-05')).toBe(1);
+    expect(days('2026-10-04')).toBe(0);
+    expect(days('2026-10-11')).toBe(7);
+  });
 });
 
 describe('monthWindow', () => {

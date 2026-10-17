@@ -104,16 +104,25 @@ describe('attendanceWorkbook', () => {
       overview: {
         ...overview,
         previous: null,
-        card: { ...overview.card, previousRate: null },
+        card: { ...overview.card, rate: null, previousRate: null },
+        months: [{ ...overview.months[1], rate: null }],
         credit: { ...overview.credit, amount: null, enabled: false },
       },
-      cuts: { group: [], teacher: [], course: [] },
+      cuts: {
+        group: [{ ...row('g1', 'A1-01'), rate: null }],
+        teacher: [],
+        course: [],
+      },
       missers: [],
     });
     const wb = new Workbook();
     await wb.xlsx.load(buffer as never);
     const sum = wb.getWorksheet('Umumiy')!;
-    expect(sum.getRow(5).getCell(2).text).toBe('');
+    // A rate that does not exist is an EMPTY cell, never text.
+    expect(sum.getRow(3).getCell(2).value).toBeNull();
+    expect(sum.getRow(5).getCell(2).value).toBeNull();
+    expect(wb.getWorksheet('Oylar')!.getRow(2).getCell(2).value).toBeNull();
+    expect(wb.getWorksheet('Kesim')!.getRow(2).getCell(3).value).toBeNull();
     expect(sum.getRow(15).getCell(2).value).toBe("chegirma o'chirilgan");
   });
 });
