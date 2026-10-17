@@ -87,7 +87,8 @@ export function TelegramReportSettingsClient() {
     onMutate: (id) => setCheckingId(id),
     onSettled: () => setCheckingId(null),
     onSuccess: (probe) => {
-      (probe.reach === "DELIVERED" ? toast.success : toast.error)(PROBE_TOAST[probe.reach]);
+      const text = probe.reach === "BLOCKED" ? (probe.note ?? PROBE_TOAST.BLOCKED) : PROBE_TOAST[probe.reach];
+      (probe.reach === "DELIVERED" ? toast.success : toast.error)(text);
       return refresh();
     },
     onError: (e) => toast.error(getErrorMessage(e, "Tekshirib bo'lmadi, keyinroq urinib ko'ring")),

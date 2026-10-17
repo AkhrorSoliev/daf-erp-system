@@ -25,6 +25,10 @@ describe("filterRecipients", () => {
     expect(filterRecipients(list, "", "problem").map((r) => r.id)).toEqual([2, 3]);
     expect(filterRecipients(list, "", "off").map((r) => r.id)).toEqual([4]);
   });
+  it("«problem» also lists a linked recipient whose last report failed", () => {
+    const failed = rec({ id: 5, lastAttempt: { at: "2026-10-17T11:00:00Z", ok: false, note: "Xabar juda uzun" } });
+    expect(filterRecipients([...list, failed], "", "problem").map((r) => r.id)).toEqual([2, 3, 5]);
+  });
   it("combines the query with the filter", () => {
     expect(filterRecipients(list, "ali", "problem").map((r) => r.id)).toEqual([3]);
   });
@@ -34,6 +38,11 @@ describe("summarize", () => {
   it("counts all, reaching (not blocked/unlinked) and problems", () => {
     const list = [rec({ reach: "DELIVERED" }), rec({ reach: "LINKED" }), rec({ reach: "BLOCKED" }), rec({ reach: "UNLINKED" })];
     expect(summarize(list)).toEqual({ total: 4, reaching: 2, problem: 2 });
+  });
+  it("a linked recipient with a failed last attempt is a problem; a delivered one is not", () => {
+    const failed = { at: "2026-10-17T11:00:00Z", ok: false, note: null };
+    const list = [rec({ reach: "LINKED", lastAttempt: failed }), rec({ reach: "DELIVERED", lastAttempt: failed }), rec()];
+    expect(summarize(list)).toEqual({ total: 3, reaching: 2, problem: 1 });
   });
 });
 
@@ -45,10 +54,19 @@ describe("reachMeta", () => {
   it("LINKED says nothing was sent yet", () => {
     expect(reachMeta(rec(), NOW)).toEqual({ label: "Ulangan", tone: "ok", note: "hali yuborilmagan" });
   });
+  it("LINKED with a failed last attempt warns with the reason and the time", () => {
+    const at = "2026-10-17T11:00:00Z";
+    expect(reachMeta(rec({ lastAttempt: { at, ok: false, note: "Xabar juda uzun" } }), NOW)).toEqual({
+      label: "Ulangan", tone: "warn", note: "oxirgi urinish: Xabar juda uzun · bugun 16:00",
+    });
+    expect(reachMeta(rec({ lastAttempt: { at, ok: false, note: null } }), NOW).note).toBe("oxirgi urinish: yuborilmadi · bugun 16:00");
+    expect(reachMeta(rec({ lastAttempt: { at, ok: true, note: null } }), NOW).tone).toBe("ok");
+  });
   it("BLOCKED shows the last failure note or the default reason, with the date", () => {
     expect(reachMeta(rec({ reach: "BLOCKED", blockedAt: "2026-10-16T10:00:00Z" }), NOW)).toEqual({
       label: "Yetmaydi", tone: "bad", note: "botni bloklagan · 16.10 dan",
     });
+    expect(reachMeta(rec({ reach: "BLOCKED" }), NOW).note).toBe("xabar qabul qilinmayapti");
     expect(reachMeta(rec({ reach: "BLOCKED", blockedAt: "2026-10-16T10:00:00Z", lastAttempt: { at: "2026-10-16T16:00:00Z", ok: false, note: "Telegram hisobini o'chirgan" } }), NOW).note)
       .toBe("Telegram hisobini o'chirgan · 16.10 dan");
   });
@@ -64,6 +82,8 @@ describe("formatWhen", () => {
   it("«bugun» for the Tashkent day of now, DD.MM otherwise", () => {
     expect(formatWhen("2026-10-17T11:00:00Z", NOW)).toBe("bugun 16:00");
     expect(formatWhen("2026-10-16T11:00:00Z", NOW)).toBe("16.10 16:00");
+    // 16.10 20:00Z is 17.10 01:00 in Tashkent: the next day, so «bugun».
+    expect(formatWhen("2026-10-16T20:00:00Z", NOW)).toBe("bugun 01:00");
   });
 });
 

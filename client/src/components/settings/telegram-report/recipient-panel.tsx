@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Eye, Loader2, Send, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,10 +36,12 @@ export function RecipientPanel({ recipient: r, branches, now, busy, testing, che
   // undefined = not loaded, null = the server had no branch to print.
   const [preview, setPreview] = useState<string | null | undefined>(undefined);
   const [previewing, setPreviewing] = useState(false);
+  // Bumped on every patch: a preview that started before the last patch is stale.
+  const patchSeq = useRef(0);
   const meta = reachMeta(r, now);
 
   // A saved change makes the loaded sample stale.
-  const patch = (p: RecipientPatch) => { setPreview(undefined); onPatch(p); };
+  const patch = (p: RecipientPatch) => { patchSeq.current += 1; setPreview(undefined); onPatch(p); };
   const toggleBranch = (id: number, on: boolean) =>
     patch({ branchIds: on ? [...r.branchIds, id] : r.branchIds.filter((b) => b !== id) });
   const toggleSection = (s: ReportSection, on: boolean) => {
@@ -47,9 +49,11 @@ export function RecipientPanel({ recipient: r, branches, now, busy, testing, che
     if (next.length) patch({ sections: next });
   };
   const loadPreview = async () => {
+    const seq = patchSeq.current;
     setPreviewing(true);
     try {
-      setPreview((await previewRecipient(r.id)).text);
+      const { text } = await previewRecipient(r.id);
+      if (seq === patchSeq.current) setPreview(text);
     } catch (e) {
       toast.error(getErrorMessage(e, "Namunani yuklab bo'lmadi"));
     } finally {
@@ -139,7 +143,7 @@ export function RecipientPanel({ recipient: r, branches, now, busy, testing, che
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" disabled={previewing} onClick={() => void loadPreview()}>
+        <Button variant="outline" size="sm" disabled={previewing || busy} onClick={() => void loadPreview()}>
           {previewing ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
           Namunani ko&apos;rish
         </Button>

@@ -17,7 +17,11 @@ export function formatWhen(iso: string, now: Date): string {
   return `${dayKey(d) === dayKey(now) ? "bugun" : dmOf(d)} ${timeOf(d)}`;
 }
 
-const isProblem = (r: Recipient) => r.reach === "BLOCKED" || r.reach === "UNLINKED";
+const failedAttempt = (r: Recipient) => r.lastAttempt !== null && !r.lastAttempt.ok;
+
+// A linked chat whose last report failed will not get the next one either.
+const isProblem = (r: Recipient) =>
+  r.reach === "BLOCKED" || r.reach === "UNLINKED" || (r.reach === "LINKED" && failedAttempt(r));
 
 export function filterRecipients(list: Recipient[], query: string, filter: RecipientFilter): Recipient[] {
   const q = query.trim().toLowerCase();
@@ -51,9 +55,21 @@ export function reachMeta(r: Recipient, now: Date): ReachMeta {
         note: r.lastAttempt ? `oxirgi: ${formatWhen(r.lastAttempt.at, now)}` : "yetib boradi",
       };
     case "LINKED":
+      if (r.lastAttempt && failedAttempt(r)) {
+        return {
+          label: "Ulangan",
+          tone: "warn",
+          note: `oxirgi urinish: ${r.lastAttempt.note ?? "yuborilmadi"} · ${formatWhen(r.lastAttempt.at, now)}`,
+        };
+      }
       return { label: "Ulangan", tone: "ok", note: "hali yuborilmagan" };
     case "BLOCKED": {
-      const why = r.lastAttempt && !r.lastAttempt.ok && r.lastAttempt.note ? r.lastAttempt.note : "botni bloklagan";
+      const why =
+        r.lastAttempt && !r.lastAttempt.ok && r.lastAttempt.note
+          ? r.lastAttempt.note
+          : r.blockedAt
+            ? "botni bloklagan"
+            : "xabar qabul qilinmayapti";
       const since = r.blockedAt ? ` · ${dmOf(new Date(r.blockedAt))} dan` : "";
       return { label: "Yetmaydi", tone: "bad", note: `${why}${since}` };
     }

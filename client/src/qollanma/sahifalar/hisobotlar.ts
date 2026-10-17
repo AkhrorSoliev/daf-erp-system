@@ -47,6 +47,6 @@ export const hisobotlar: QollanmaSahifa[] = [
     adr: ["0095", "0097"],
     yollar: ["/settings/telegram-report"],
     kalitSozlar: ["telegram", "kunlik hisobot", "shaxsiy hisobot", "bot", "hisobot vaqti", "filial", "jadval"],
-    yangilangan: "2026-10-16",
+    yangilangan: "2026-10-17",
   },
 ];
