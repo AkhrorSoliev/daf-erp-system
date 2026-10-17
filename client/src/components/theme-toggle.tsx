@@ -8,6 +8,8 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 const themeOrder = ["light", "dark", "system"] as const;
 
@@ -18,12 +20,13 @@ const themeIcon: Record<string, typeof Sun> = {
 };
 
 const themeLabel: Record<string, string> = {
-  light: "Yorug' rejim — qorong'iga o'tish",
-  dark: "Qorong'i rejim — tizim rejimiga o'tish",
-  system: "Tizim rejimi — yorug'iga o'tish",
+  light: msg("Yorug' rejim — qorong'iga o'tish"),
+  dark: msg("Qorong'i rejim — tizim rejimiga o'tish"),
+  system: msg("Tizim rejimi — yorug'iga o'tish"),
 };
 
 export function ThemeToggle() {
+  const t = useT();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -36,6 +39,8 @@ export function ThemeToggle() {
   }
 
   const current = theme ?? "system";
+  const labelSource = themeLabel[current];
+  const label = t(labelSource);
   const Icon = themeIcon[current] ?? Monitor;
   const nextTheme =
     themeOrder[(themeOrder.indexOf(current as (typeof themeOrder)[number]) + 1) % themeOrder.length];
@@ -46,13 +51,13 @@ export function ThemeToggle() {
         <button
           type="button"
           onClick={() => setTheme(nextTheme)}
-          aria-label={themeLabel[current]}
+          aria-label={label}
           className="inline-flex size-9 items-center justify-center rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         >
           <Icon className="size-4" />
         </button>
       </TooltipTrigger>
-      <TooltipContent>{themeLabel[current]}</TooltipContent>
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
 }

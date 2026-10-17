@@ -169,6 +169,28 @@ const en: Dictionary = {
   // Sign-in page
   "Boshqaruv": "Management",
   "O'qituvchi": "Teacher",
+  "Sizning rolingiz bu portalga kirish huquqiga ega emas": "Your role does not have access to this portal",
+  "Login yoki parol noto'g'ri": "Incorrect login or password",
+  "Telefon raqam": "Phone number",
+  "Parol": "Password",
+  "Parolingizni kiriting": "Enter your password",
+  "Parolni yashirish": "Hide password",
+  "Parolni ko'rsatish": "Show password",
+  "Kirish": "Sign in",
+  "Parolni unutdingizmi?": "Forgot your password?",
+  "Barcha huquqlar himoyalangan.": "All rights reserved.",
+  "Maxfiylik siyosati": "Privacy policy",
+  "Yordam": "Help",
+  "Telegram orqali yordam olish": "Get help on Telegram",
+  "Xush kelibsiz,": "Welcome,",
+  "Kabinet ochilmoqda…": "Opening your workspace…",
+  "Telegram orqali kirishni boshlab bo'lmadi": "Could not start signing in with Telegram",
+  "yoki": "or",
+  "Telegram ochilmoqda...": "Opening Telegram...",
+  "Telegram orqali kirish": "Sign in with Telegram",
+  "Yorug' rejim — qorong'iga o'tish": "Light mode — switch to dark",
+  "Qorong'i rejim — tizim rejimiga o'tish": "Dark mode — switch to system",
+  "Tizim rejimi — yorug'iga o'tish": "System mode — switch to light",
 };
 
 export default en;

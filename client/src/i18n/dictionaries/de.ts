@@ -169,6 +169,28 @@ const de: Dictionary = {
   // Sign-in page
   "Boshqaruv": "Verwaltung",
   "O'qituvchi": "Lehrkraft",
+  "Sizning rolingiz bu portalga kirish huquqiga ega emas": "Ihre Rolle hat keinen Zugang zu diesem Portal",
+  "Login yoki parol noto'g'ri": "Login oder Passwort ist falsch",
+  "Telefon raqam": "Telefonnummer",
+  "Parol": "Passwort",
+  "Parolingizni kiriting": "Passwort eingeben",
+  "Parolni yashirish": "Passwort verbergen",
+  "Parolni ko'rsatish": "Passwort anzeigen",
+  "Kirish": "Anmelden",
+  "Parolni unutdingizmi?": "Passwort vergessen?",
+  "Barcha huquqlar himoyalangan.": "Alle Rechte vorbehalten.",
+  "Maxfiylik siyosati": "Datenschutzerklärung",
+  "Yordam": "Hilfe",
+  "Telegram orqali yordam olish": "Hilfe über Telegram erhalten",
+  "Xush kelibsiz,": "Willkommen,",
+  "Kabinet ochilmoqda…": "Ihr Bereich wird geöffnet…",
+  "Telegram orqali kirishni boshlab bo'lmadi": "Die Anmeldung über Telegram konnte nicht gestartet werden",
+  "yoki": "oder",
+  "Telegram ochilmoqda...": "Telegram wird geöffnet...",
+  "Telegram orqali kirish": "Mit Telegram anmelden",
+  "Yorug' rejim — qorong'iga o'tish": "Heller Modus — zum dunklen wechseln",
+  "Qorong'i rejim — tizim rejimiga o'tish": "Dunkler Modus — zum Systemmodus wechseln",
+  "Tizim rejimi — yorug'iga o'tish": "Systemmodus — zum hellen wechseln",
 };
 
 export default de;

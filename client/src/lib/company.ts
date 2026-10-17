@@ -68,7 +68,11 @@ export const STORES = {
  */
 export const BADGE_HEIGHT = 26;
 
-/** The copyright line shown in every login footer. */
-export function copyrightLine(year: number): string {
-  return `© ${year} ${COMPANY.legalName}. Barcha huquqlar himoyalangan.`;
+/**
+ * The copyright line shown in every login footer. The rights sentence is a
+ * parameter so the footer can translate it; the legal entity's name is never
+ * translated.
+ */
+export function copyrightLine(year: number, rights = "Barcha huquqlar himoyalangan."): string {
+  return `© ${year} ${COMPANY.legalName}. ${rights}`;
 }

@@ -47,6 +47,11 @@ export const STRICT_FILES: string[] = [
   "components/auth/language-menu.tsx",
   "components/auth/sign-in-heading.tsx",
   "components/language-radio-group.tsx",
+  "app/(auth)/login/login-form.tsx",
+  "app/(auth)/login/login-footer.tsx",
+  "components/auth/staff-greeting.tsx",
+  "components/auth/telegram-login-button.tsx",
+  "components/theme-toggle.tsx",
 ];
 
 function walk(dir: string): string[] {

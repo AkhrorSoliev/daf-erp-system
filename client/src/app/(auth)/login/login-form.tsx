@@ -18,6 +18,7 @@ import { Greeting, useGreeting } from "@/components/auth/staff-greeting";
 import { type PortalType } from "@/lib/portal";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
 import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
+import { useT } from "@/i18n/context";
 
 // SMS-based password reset — now available on every portal (login is phone-based
 // across all roles). Eskiz account is active with approved template 78093; per
@@ -33,6 +34,7 @@ interface LoginFormProps {
 // own `Input` at a touch height, so the page and the panel behind it match.
 export function LoginForm({ portal }: LoginFormProps) {
   const { setAuth } = useAuth();
+  const t = useT();
 
   const [showPassword, setShowPassword] = useState(false);
   const [login, setLogin] = useState("");
@@ -68,11 +70,11 @@ export function LoginForm({ portal }: LoginFormProps) {
         setError(
           getErrorMessage(
             err,
-            "Sizning rolingiz bu portalga kirish huquqiga ega emas",
+            t("Sizning rolingiz bu portalga kirish huquqiga ega emas"),
           ),
         );
       } else {
-        setError("Login yoki parol noto'g'ri");
+        setError(t("Login yoki parol noto'g'ri"));
       }
     } finally {
       setLoading(false);
@@ -80,6 +82,10 @@ export function LoginForm({ portal }: LoginFormProps) {
   }
 
   if (greeted) return <Greeting user={greeted} />;
+
+  const passwordToggleLabel = showPassword
+    ? t("Parolni yashirish")
+    : t("Parolni ko'rsatish");
 
   return (
     <div className="flex flex-col gap-6">
@@ -94,7 +100,7 @@ export function LoginForm({ portal }: LoginFormProps) {
         ) : null}
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="login">Telefon raqam</Label>
+          <Label htmlFor="login">{t("Telefon raqam")}</Label>
           <div className="relative">
             <span
               aria-hidden="true"
@@ -117,7 +123,7 @@ export function LoginForm({ portal }: LoginFormProps) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="password">Parol</Label>
+          <Label htmlFor="password">{t("Parol")}</Label>
           <div className="relative">
             <Input
               id="password"
@@ -126,7 +132,7 @@ export function LoginForm({ portal }: LoginFormProps) {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Parolingizni kiriting"
+              placeholder={t("Parolingizni kiriting")}
               className="h-11 bg-card pr-11"
             />
             <Tooltip>
@@ -134,9 +140,7 @@ export function LoginForm({ portal }: LoginFormProps) {
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={
-                    showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"
-                  }
+                  aria-label={passwordToggleLabel}
                   className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {showPassword ? (
@@ -146,9 +150,7 @@ export function LoginForm({ portal }: LoginFormProps) {
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>
-                {showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
-              </TooltipContent>
+              <TooltipContent>{passwordToggleLabel}</TooltipContent>
             </Tooltip>
           </div>
         </div>
@@ -157,7 +159,7 @@ export function LoginForm({ portal }: LoginFormProps) {
           {loading ? (
             <Loader2 data-icon="inline-start" className="animate-spin" />
           ) : null}
-          Kirish
+          {t("Kirish")}
         </Button>
 
         {SMS_PASSWORD_RESET_ENABLED ? (
@@ -166,7 +168,7 @@ export function LoginForm({ portal }: LoginFormProps) {
             onClick={() => setForgotOpen(true)}
             className="self-center text-sm text-primary hover:underline"
           >
-            Parolni unutdingizmi?
+            {t("Parolni unutdingizmi?")}
           </button>
         ) : null}
       </form>

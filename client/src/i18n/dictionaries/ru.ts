@@ -169,6 +169,28 @@ const ru: Dictionary = {
   // Sign-in page
   "Boshqaruv": "Управление",
   "O'qituvchi": "Преподаватель",
+  "Sizning rolingiz bu portalga kirish huquqiga ega emas": "У вашей роли нет доступа к этому порталу",
+  "Login yoki parol noto'g'ri": "Неверный логин или пароль",
+  "Telefon raqam": "Номер телефона",
+  "Parol": "Пароль",
+  "Parolingizni kiriting": "Введите пароль",
+  "Parolni yashirish": "Скрыть пароль",
+  "Parolni ko'rsatish": "Показать пароль",
+  "Kirish": "Войти",
+  "Parolni unutdingizmi?": "Забыли пароль?",
+  "Barcha huquqlar himoyalangan.": "Все права защищены.",
+  "Maxfiylik siyosati": "Политика конфиденциальности",
+  "Yordam": "Помощь",
+  "Telegram orqali yordam olish": "Получить помощь в Telegram",
+  "Xush kelibsiz,": "Добро пожаловать,",
+  "Kabinet ochilmoqda…": "Открываем кабинет…",
+  "Telegram orqali kirishni boshlab bo'lmadi": "Не удалось начать вход через Telegram",
+  "yoki": "или",
+  "Telegram ochilmoqda...": "Открываем Telegram...",
+  "Telegram orqali kirish": "Войти через Telegram",
+  "Yorug' rejim — qorong'iga o'tish": "Светлая тема — переключить на тёмную",
+  "Qorong'i rejim — tizim rejimiga o'tish": "Тёмная тема — переключить на системную",
+  "Tizim rejimi — yorug'iga o'tish": "Системная тема — переключить на светлую",
 };
 
 export default ru;

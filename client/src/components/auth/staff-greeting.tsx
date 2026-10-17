@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { AuthUser } from "@/hooks/use-auth";
-import { useLocale } from "@/i18n/context";
+import { useLocale, useT } from "@/i18n/context";
 import { adoptAccountLocale } from "@/i18n/sign-in-locale";
 
 // How long the greeting stays before the cabinet opens. The session already
@@ -22,6 +22,7 @@ type Greeted = Pick<AuthUser, "firstName" | "photo" | "uiLocale">;
  * `.sign-in-greet-*` classes in globals.css.
  */
 export function Greeting({ user }: { user: Greeted }) {
+  const t = useT();
   return (
     <div role="status" className="flex flex-col items-start gap-4">
       <Avatar className="sign-in-greet-photo size-20 border-2 border-primary after:hidden">
@@ -32,14 +33,14 @@ export function Greeting({ user }: { user: Greeted }) {
       </Avatar>
       <div className="w-full">
         <p className="sign-in-greet-fade text-sm text-muted-foreground [animation-delay:0.3s]">
-          Xush kelibsiz,
+          {t("Xush kelibsiz,")}
         </p>
         <p className="sign-in-greet-name truncate text-3xl font-semibold tracking-tight text-primary">
           {user.firstName}
         </p>
       </div>
       <p className="sign-in-greet-fade text-sm text-muted-foreground [animation-delay:1.1s]">
-        Kabinet ochilmoqda…
+        {t("Kabinet ochilmoqda…")}
       </p>
     </div>
   );
