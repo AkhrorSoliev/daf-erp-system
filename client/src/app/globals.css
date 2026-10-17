@@ -302,7 +302,8 @@
        `transform` are separate properties, which is what lets both run;
      - `.fan-gust`: the whole fan leans and settles unevenly every 19s;
      - `.page-light`: a lighter copy of the page whose opacity carries a light
-       over the pages one after another, every 7s, starting once they are drawn.
+       over the pages one after another, every 6.5s, starting once they are drawn:
+       each page holds its light for about 3s, so the next wave follows soon.
      All of it turns about the spine, the bottom right corner of the box. */
   .sign-in-fan .fan-gust,
   .sign-in-fan .page-sway {
@@ -319,7 +320,7 @@
     stroke: var(--sign-in-fan-lit);
     stroke-width: 2;
     opacity: 0;
-    animation: sign-in-light 7s ease-in-out infinite;
+    animation: sign-in-light 6.5s ease-in-out infinite;
     animation-delay: calc(2s + var(--page) * 200ms);
   }
   .sign-in-fan .page-sway {
@@ -437,11 +438,12 @@
 }
 @keyframes sign-in-light {
   0%,
-  28%,
+  46%,
   100% {
     opacity: 0;
   }
-  12% {
+  12%,
+  22% {
     opacity: 1;
   }
 }

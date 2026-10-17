@@ -43,7 +43,9 @@ Harakat (CEO: «shamolda tebranish va nur», tebranish tartibsiz, nur esa bir te
    uchun harakat takrorlanmaganday ko'rinadi. Qiymatlar koddagi doimiy (renderda tasodifiy
    qiymat server bilan brauzerda farq qilardi);
 3. butun yelpig'ich har 19s notekis egilib qaytadi («shamol turtkisi»);
-4. har 7s yorug'lik varaqlar bo'ylab o'ngdan chapga bir tekis o'tadi (tartibsiz emas).
+4. har 6,5s yorug'lik varaqlar bo'ylab o'ngdan chapga bir tekis o'tadi (tartibsiz emas); har varaq
+   yorug'likni ~3s ushlab turadi (CEO: avval 7s va ~2s «tez tugab qolyapti» edi), to'lqinlar
+   orasi ~1s.
 Hammasi sof CSS (JavaScript yo'q); `prefers-reduced-motion` da hammasi o'chiq.
 
 Admin va o'qituvchi sahifasi faqat sarlavhasi bilan farq qiladi — panelning o'zida
