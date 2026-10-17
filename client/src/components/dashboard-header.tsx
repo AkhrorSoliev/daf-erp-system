@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { SearchDropdown } from "@/components/global-search/search-dropdown";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
+import { HeaderUserMenu } from "@/components/header-user-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { PushPermissionPrompt } from "@/components/notifications/push-permission-prompt";
 import { QollanmaYordamTugmasi } from "@/components/qollanma/qollanma-yordam-tugmasi";
@@ -73,9 +73,7 @@ export function DashboardHeader() {
           <HeaderTaskButton />
           <TashkentClock />
           <NotificationBell />
-          <div className="hidden sm:block">
-            <ThemeToggle />
-          </div>
+          <HeaderUserMenu />
         </div>
       </div>
 
