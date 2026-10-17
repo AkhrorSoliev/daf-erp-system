@@ -166,6 +166,9 @@ const en: Dictionary = {
   "Bildirishnomalarni yoqing": "Turn on notifications",
   "Yangi vazifa, dars va davomat haqidagi xabarlarni darhol olasiz.": "You will get messages about new tasks, lessons and attendance right away.",
   "Keyinroq": "Later",
+  // Sign-in page
+  "Boshqaruv": "Management",
+  "O'qituvchi": "Teacher",
 };
 
 export default en;

@@ -166,6 +166,9 @@ const ru: Dictionary = {
   "Bildirishnomalarni yoqing": "Включите уведомления",
   "Yangi vazifa, dars va davomat haqidagi xabarlarni darhol olasiz.": "Вы сразу получите сообщения о новых задачах, занятиях и посещаемости.",
   "Keyinroq": "Позже",
+  // Sign-in page
+  "Boshqaruv": "Управление",
+  "O'qituvchi": "Преподаватель",
 };
 
 export default ru;

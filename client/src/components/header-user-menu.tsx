@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Brush, Languages, LogOut, Monitor, Moon, Palette, Sun, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LanguageRadioGroup } from "@/components/language-radio-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +23,7 @@ import { roleLabel } from "@/components/payments/salary-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { useUiSkin } from "@/hooks/use-ui-skin";
-import { useT, useLocale } from "@/i18n/context";
-import { LOCALES, type UiLocale } from "@/i18n/locales";
+import { useT } from "@/i18n/context";
 import { msg } from "@/i18n/msg";
 import { UI_SKINS, type UiSkinId } from "@/lib/ui-skins";
 
@@ -56,7 +56,6 @@ export function HeaderUserMenu() {
   const signOut = useSignOut();
   const { skin, setSkin } = useUiSkin();
   const t = useT();
-  const { locale, setLocale } = useLocale();
 
   if (!user) return <Skeleton className="size-8 rounded-full" />;
 
@@ -143,20 +142,7 @@ export function HeaderUserMenu() {
             {t("Til")}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup
-              value={locale}
-              onValueChange={(value) => {
-                if (value !== locale) void setLocale(value as UiLocale);
-              }}
-            >
-              {LOCALES.map(({ id, label }) => (
-                // Each name is written in its own language: `lang` makes a
-                // screen reader speak it with that voice (WCAG 3.1.2).
-                <DropdownMenuRadioItem key={id} value={id} lang={id}>
-                  {label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
+            <LanguageRadioGroup />
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSeparator />

@@ -166,6 +166,9 @@ const de: Dictionary = {
   "Bildirishnomalarni yoqing": "Benachrichtigungen einschalten",
   "Yangi vazifa, dars va davomat haqidagi xabarlarni darhol olasiz.": "Sie erhalten Nachrichten zu neuen Aufgaben, Unterricht und Anwesenheit sofort.",
   "Keyinroq": "Später",
+  // Sign-in page
+  "Boshqaruv": "Verwaltung",
+  "O'qituvchi": "Lehrkraft",
 };
 
 export default de;
