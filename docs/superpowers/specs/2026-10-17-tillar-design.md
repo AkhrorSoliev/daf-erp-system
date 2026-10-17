@@ -38,7 +38,7 @@ tilni tanlash joyi ham yo'q.
 - **Topilmasa o'zbekcha lotin chiqadi** (xato yo'q): tarjima qilinmagan sahifalar shunday
   ko'rinadi, buzilmaydi.
 - `src/i18n/translate.ts` — sof funksiya `translate(locale, dictionary, source, params?)`
-  (React'siz, testlanadi). `useT()` (`hooks/use-t.ts`) joriy tilni oladi va `t` ni qaytaradi.
+  (React'siz, testlanadi). `useT()` (`i18n/context.tsx`) joriy tilni oladi va `t` ni qaytaradi.
 - **Ro'yxatlardagi matn** (menyu nomlari, breadcrumb nomlari — modul darajasidagi massivlar):
   literal `msg("Moliya")` bilan o'raladi — `msg` matnni o'zgartirmaydi, faqat tekshiruv uni
   topishi uchun; ekranga chiqarishda `t(item.title)`. Faqat `msg` ning argumenti literal bo'lishi
@@ -90,14 +90,16 @@ o'girishning har bir harf qoidasini.
   forma va statik sahifalar o'zgarmaydi). Noma'lum yoki yo'q → `uz`. Lug'at ham serverda yuklanadi
   (`loadDictionary(locale)`, dinamik `import`) va `<I18nProvider locale dictionary>` ga beriladi:
   shuning uchun o'zbekcha matn «chaqnab» qolmaydi va faqat tanlangan til lug'ati yuboriladi.
-- **`I18nProvider`** (`components/providers/i18n-provider.tsx`, client) holatda `{ locale, dictionary }`
-  saqlaydi, `document.documentElement.lang` ni qo'yadi, `setLocale(next)` beradi.
-- **Almashtirish `setLocale(next)`:** lug'atni yuklaydi (klientda ham dinamik `import`) va holatni
-  almashtiradi — sahifa qayta yuklanmaydi; keyin cookie'ni (`daf-locale`, `path=/`, 1 yil,
-  `SameSite=Lax`) yozadi; kirgan bo'lsa `PATCH /users/ui-locale`. Optimistik: xato bo'lsa eski tilga
-  qaytadi va `toast.error("Tilni saqlab bo'lmadi")` (uslub o'zgartirishidagi `changeUiSkin` qoidasi:
-  faqat oxirgi chaqiruv harakat qiladi). Mantiq sof funksiyada (`changeUiLocale`), skin'dagi kabi
-  testlanadi.
+- **`I18nProvider`** (`i18n/context.tsx`, client) holatda `{ locale, dictionary }`
+  saqlaydi, `document.documentElement.lang` ni qo'yadi (va tark etilganda `uz` ga qaytaradi:
+  `i18n/document-language.ts`), `setLocale(next)` beradi.
+- **Almashtirish `setLocale(next)`:** lug'atni yuklaydi (klientda ham dinamik `import`), holatni
+  almashtiradi va cookie'ni (`daf-locale`, `path=/`, 1 yil, `SameSite=Lax`) yozadi — sahifa qayta
+  yuklanmaydi; keyin kirgan bo'lsa `PATCH /users/ui-locale`. Optimistik: `PATCH` yiqilsa eski tilga
+  qaytadi (cookie ham eski tilga qayta yoziladi) va toast serverning xato matnini ko'rsatadi
+  (`getErrorMessage`, bo'lmasa «Tilni saqlab bo'lmadi»). Uslub o'zgartirishidagi `changeUiSkin`
+  qoidasi: faqat oxirgi chaqiruv harakat qiladi. Mantiq sof funksiyada (`changeUiLocale`), skin'dagi
+  kabi testlanadi.
 - **Akkaunt bilan moslash** (`LocaleSync`, `AuthProvider` ichida): kirgan foydalanuvchida `uiLocale`
   bor va joriy tildan farq qilsa — shunga o'tadi (cookie ham yangilanadi, PATCH yo'q: bu akkauntning
   o'zidan). `uiLocale` yo'q va joriy til `uz` emas bo'lsa (kirishdan oldin tanlangan) — bir marta
@@ -109,7 +111,7 @@ o'girishning har bir harf qoidasini.
   dev bazada `migrate dev` ishlamaydi (loyiha tartibi: `migrate diff` → `db execute` → `migrate resolve`),
   hech qaysi bazaga qo'llanmaydi.
 - **`server/src/common/ui-locales.ts`:** `UI_LOCALES = ['uz','uz-Cyrl','ru','de','en']`, `DEFAULT_UI_LOCALE`.
-  Klient `lib/locales.ts` nusxasi; test ikkalasini solishtiradi (`ui-skins` kabi).
+  Klient `i18n/locales.ts` nusxasi; test ikkalasini solishtiradi (`ui-skins` kabi).
 - **`PATCH /users/ui-locale`** (`@AnyStaff()`, `UpdateUiLocaleDto { locale }`, `@IsIn(UI_LOCALES, { message:
   "Noma'lum til" })`): faqat chaqiruvchining qatorini yozadi, tarixga yozilmaydi; javob `{ uiLocale }`;
   `users.controller.ts` da `@Patch(':id')` dan oldin. Marshrut manifestiga qo'shiladi
@@ -174,9 +176,15 @@ tanlagich. Ungacha login o'zbekcha lotin.
   shu qurilmaga ham o'tadi).
 - Serverdan o'zbekcha lotin matn kelsa (xato xabari, bildirishnoma) — o'zgarishsiz ko'rsatiladi;
   `uz-Cyrl` da ham o'girilmaydi (serverniki).
-- `<html lang>` `uz` bilan chiziladi, til almashgach `document.documentElement.lang` yangilanadi.
-- IBM Plex Sans ga `cyrillic` subseti qo'shiladi (hozir yo'q), aks holda kirill va rus matni zaxira
-  shriftda chiqadi. Boshqa uslublarning shriftlarida kirill bor.
+- `<html lang>` ildiz maketda `uz` bilan chiziladi; dashboard maketi sahifa o'qilayotganda inline skript
+  bilan uni cookie'dagi tilga almashtiradi (`languageBootScript`), til almashgach provayderning effekti
+  `document.documentElement.lang` ni yangilaydi, dashboard tark etilganda (masalan, Mini App'dan chiqib
+  `/tg` ga o'tganda) effektning tozalash funksiyasi `uz` ni qaytaradi.
+- IBM Plex Sans ga alohida `cyrillic` subseti **qo'shilmaydi**: `next/font` Google CSS dagi hamma subsetni
+  (har biri `unicode-range` bilan) o'zi xostlaydi, `subsets` faqat qaysi fayllar har sahifada oldindan
+  yuklanishini (preload) belgilaydi. Kirill va rus matni Plex'ning kirill glifini kerak bo'lganda o'zi
+  yuklaydi, zaxira shriftga tushmaydi; subset esa kirish va o'quvchi sahifalariga ham fayllar preloadini
+  qo'shardi. Boshqa uslublarning shriftlarida kirill bor.
 - Rus va nemis matn o'zbekchadan uzunroq: sidebar, tugma va jadval sarlavhalari sig'ishi brauzerda
   tekshiriladi (qisqartirish — `truncate` yoki lug'atda qisqaroq tarjima).
 
@@ -197,7 +205,10 @@ tanlagich. Ungacha login o'zbekcha lotin.
 
 ## Chiqarish tartibi
 
-Migratsiya (qo'lda), server, klient — ADR-0097 dagidek. Eski klient yangi maydonni ko'rmaydi; yangi klient
-eski serverda tilni akkauntga yozolmaydi (`PATCH` 404, toast), cookie baribir ishlaydi. `client/CLAUDE.md`
+Migratsiya (qo'lda), server, klient — ADR-0097 dagidek, tartib qat'iy. Eski klient yangi maydonni ko'rmaydi.
+Server migratsiyadan oldin chiqsa, Prisma `User` ni o'qiganda hali yo'q `uiLocale` ustunini so'raydi va
+kirish bilan `refresh` yiqiladi. Klient serverdan oldin chiqsa, kirgan xodimning har til tanlovi `PATCH`
+da 404 oladi: til eski holatiga qaytadi (cookie ham qayta yoziladi) va serverning inglizcha xatosi
+(«Cannot PATCH /api/users/ui-locale») toastda chiqadi. `client/CLAUDE.md`
 ga «Languages» bo'limi (matn kalit, `msg`, qat'iy fayllar, yangi til qo'shish tartibi, serverdan kelgan
 matnlar), qo'llanma (`interfeys.mdx`) va `yangiliklar.ts` yangilanadi.
