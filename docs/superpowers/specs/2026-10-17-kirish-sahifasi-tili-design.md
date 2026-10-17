@@ -50,4 +50,4 @@ CEO qarorlari (2026-10-17):
 - `LanguageMenu` / `LanguageRadioGroup`: `renderToStaticMarkup` (joriy til nomi, `lang` atributlari).
 - `npm run i18n:check`: yangi fayllar `STRICT_FILES` da, lug'atlar kalitlari teng.
 - Brauzerda (mock API): besh tilda kirish sahifasi, almashtirish qayta yuklamasdan, qayta yuklash chaqnashsiz, parolni tiklash oynasi, kirishdan keyin profil tili yutishi, o'quvchi kirish sahifasi o'zgarmagani.
-- Hujjat: yangi qisqa ADR (0103; raqam PR oldida tekshiriladi), `client/CLAUDE.md` «Languages» bo'limi, qo'llanma `tizimga-kirish` sahifasi, `yangiliklar.ts`.
+- Hujjat: yangi qisqa ADR (0106; raqam PR oldida tekshiriladi), `client/CLAUDE.md` «Languages» bo'limi, qo'llanma `tizimga-kirish` sahifasi, `yangiliklar.ts`.

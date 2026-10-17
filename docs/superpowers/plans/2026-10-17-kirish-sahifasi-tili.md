@@ -148,7 +148,7 @@ import { isUiLocale, type UiLocale } from "./locales";
 /**
  * The language the sign-in page must switch to once a person signs in, or null
  * to leave it. The account's language wins over the one picked on the page
- * (ADR-0103); an account that never chose (`null`) leaves the page's language,
+ * (ADR-0106); an account that never chose (`null`) leaves the page's language,
  * which `LocaleSync` then saves onto the account (ADR-0102).
  */
 export function localeToAdopt(accountLocale: unknown, current: UiLocale): UiLocale | null {
@@ -225,7 +225,7 @@ import { useLocale, useT } from "@/i18n/context";
 import { LOCALES } from "@/i18n/locales";
 
 /**
- * The sign-in page's language picker (ADR-0103): the current language's own
+ * The sign-in page's language picker (ADR-0106): the current language's own
  * name on the button, the five languages in a radio list. Nobody is signed in,
  * so a pick only changes the page and the device cookie.
  */
@@ -296,7 +296,7 @@ export function useGreeting(navigation: "push" | "replace") {
   return {
     greeted: greeting?.user ?? null,
     // The account's language wins over the one picked on the sign-in page
-    // (ADR-0103): switch first, so the greeting and the cabinet that follows
+    // (ADR-0106): switch first, so the greeting and the cabinet that follows
     // open in it. A failed switch never holds the greeting back.
     greet: async (user: Greeted, destination: string) => {
       await adoptAccountLocale(user.uiLocale, { current: pageLocale.current, setLocale });
@@ -356,7 +356,7 @@ interface StaffSignInShellProps {
  * it — so it has no theme of its own; only the cover is special. The two
  * portals differ by the heading alone, as the cabinets do. Like the dashboard
  * layout it reads the device's language cookie here, so the first paint is
- * already in the right language (ADR-0103).
+ * already in the right language (ADR-0106).
  */
 export async function StaffSignInShell({ portal, languageMenu = false, children }: StaffSignInShellProps) {
   const locale = await currentLocale();
@@ -706,16 +706,16 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ### Task 4: Docs, ADR and full checks
 
 **Files:**
-- Create: `docs/adr/0103-kirish-sahifasida-til-tanlash.md`
+- Create: `docs/adr/0106-kirish-sahifasida-til-tanlash.md`
 - Modify: `docs/adr/README.md` (index row), `client/CLAUDE.md` («Languages» section), `client/src/qollanma/kontent/boshlash/tizimga-kirish.mdx`, `client/src/qollanma/sahifalar/boshlash.ts`, `client/src/qollanma/yangiliklar.ts`
 
-- [ ] **Step 1: ADR** — verify 0103 is free (`ls docs/adr | tail -3`; `git fetch origin main`; `git ls-tree --name-only origin/main docs/adr/ | tail -3`, separate commands; if taken use the next free number everywhere below; other unmerged branches may hold numbers — the controller re-checks before the PR). Create `docs/adr/0103-kirish-sahifasida-til-tanlash.md` in Uzbek Latin, shaped like ADR-0102 (title, **Holati** Qabul qilindi, **Sana** 2026-10-17, **Bog'liq**: ADR-0102, `client/src/app/(auth)/staff-sign-in-shell.tsx`, `client/src/i18n/sign-in-locale.ts`, `client/src/components/auth/staff-greeting.tsx`, the spec; Kontekst; Qaror; Taqiqlanadi; Muqobillar; Oqibatlar) with these decisions: (1) xodimlar kirish sahifasida (`/login`, `admin.`/`lehrer.`) til tugmasi bor, o'quvchi kirish sahifasi, Telegram callback va Mini App'da yo'q; (2) `StaffSignInShell` ADR-0102 dagi usulni takrorlaydi: serverda `daf-locale` cookie o'qiladi, lug'at `I18nProvider` ga beriladi, `<html lang>` skript bilan qo'yiladi — shuning uchun qobiq ishlatadigan uchala sahifa ham tilni oladi; (3) kirishda profil tili yutadi: `useGreeting().greet` salomdan oldin `adoptAccountLocale` (`save: false`) ni chaqiradi, shunda salom va kabinet profil tilida ochiladi, kabinet birinchi chizishdayoq to'g'ri tilda; (4) profil til tanlamagan bo'lsa sahifa tili qoladi va kabinetdagi `LocaleSync` uni profilga bir marta saqlaydi (ADR-0102); (5) matnlar `t()`/`msg()` da, fayllar `STRICT_FILES` da; umumiy komponentlar (`forgot-password-*`, `login-footer`, `theme-toggle`, `telegram-login-button`) o'quvchi portalida o'zbekcha qoladi, chunki u `I18nProvider` dan tashqarida. Taqiqlanadi: kirish sahifasida tilni serverga (akkauntga) saqlash — u yerda hech kim kirmagan, shuning uchun faqat cookie; serverdan kelgan xato matnini mijozda tarjima qilish. Muqobillar: har til uchun alohida manzil (`/ru/login`) — tanlanmadi (ADR-0102 dagi sabab); til tugmasini hamma sahifaga qo'yish — tanlanmadi (foydalanuvchi menyusida allaqachon bor). Oqibatlar: faqat klient chiqariladi (migratsiya, server o'zgarishi yo'q); umumiy kompyuterda oldingi odam tanlagan til keyingi odamning kirish sahifasida turadi (profil tili yutadi); Telegram callback va Mini App ichki matnlari hali o'zbekcha. Add a row to `docs/adr/README.md` after the 0102 row: `| [0103](0103-kirish-sahifasida-til-tanlash.md) | Kirish sahifasida til tanlash: qobiq tilni cookie'dan o'qiydi, kirishda profil tili yutadi | Qabul qilindi | 2026-10-17 |`.
+- [ ] **Step 1: ADR** — verify 0106 is free (`ls docs/adr | tail -3`; `git fetch origin main`; `git ls-tree --name-only origin/main docs/adr/ | tail -3`, separate commands; if taken use the next free number everywhere below; other unmerged branches may hold numbers — the controller re-checks before the PR). Create `docs/adr/0106-kirish-sahifasida-til-tanlash.md` in Uzbek Latin, shaped like ADR-0102 (title, **Holati** Qabul qilindi, **Sana** 2026-10-17, **Bog'liq**: ADR-0102, `client/src/app/(auth)/staff-sign-in-shell.tsx`, `client/src/i18n/sign-in-locale.ts`, `client/src/components/auth/staff-greeting.tsx`, the spec; Kontekst; Qaror; Taqiqlanadi; Muqobillar; Oqibatlar) with these decisions: (1) xodimlar kirish sahifasida (`/login`, `admin.`/`lehrer.`) til tugmasi bor, o'quvchi kirish sahifasi, Telegram callback va Mini App'da yo'q; (2) `StaffSignInShell` ADR-0102 dagi usulni takrorlaydi: serverda `daf-locale` cookie o'qiladi, lug'at `I18nProvider` ga beriladi, `<html lang>` skript bilan qo'yiladi — shuning uchun qobiq ishlatadigan uchala sahifa ham tilni oladi; (3) kirishda profil tili yutadi: `useGreeting().greet` salomdan oldin `adoptAccountLocale` (`save: false`) ni chaqiradi, shunda salom va kabinet profil tilida ochiladi, kabinet birinchi chizishdayoq to'g'ri tilda; (4) profil til tanlamagan bo'lsa sahifa tili qoladi va kabinetdagi `LocaleSync` uni profilga bir marta saqlaydi (ADR-0102); (5) matnlar `t()`/`msg()` da, fayllar `STRICT_FILES` da; umumiy komponentlar (`forgot-password-*`, `login-footer`, `theme-toggle`, `telegram-login-button`) o'quvchi portalida o'zbekcha qoladi, chunki u `I18nProvider` dan tashqarida. Taqiqlanadi: kirish sahifasida tilni serverga (akkauntga) saqlash — u yerda hech kim kirmagan, shuning uchun faqat cookie; serverdan kelgan xato matnini mijozda tarjima qilish. Muqobillar: har til uchun alohida manzil (`/ru/login`) — tanlanmadi (ADR-0102 dagi sabab); til tugmasini hamma sahifaga qo'yish — tanlanmadi (foydalanuvchi menyusida allaqachon bor). Oqibatlar: faqat klient chiqariladi (migratsiya, server o'zgarishi yo'q); umumiy kompyuterda oldingi odam tanlagan til keyingi odamning kirish sahifasida turadi (profil tili yutadi); Telegram callback va Mini App ichki matnlari hali o'zbekcha. Add a row to `docs/adr/README.md` after the 0102 row: `| [0106](0106-kirish-sahifasida-til-tanlash.md) | Kirish sahifasida til tanlash: qobiq tilni cookie'dan o'qiydi, kirishda profil tili yutadi | Qabul qilindi | 2026-10-17 |`.
 
 - [ ] **Step 2: `client/CLAUDE.md`** — in the «Languages» section: replace the sentence «The student portal, the public form and the sign-in page are not translated yet (login follows once `feat/kirish-logotip-varaqlari` is on `main`).» by «The student portal, the public form, the student sign-in page, the Telegram callback's own texts and the Mini App notices are not translated yet.»; replace the last bullet «The picker is the «Til» submenu of `HeaderUserMenu`.» by:
 
 ```markdown
 - **Two pickers, one list:** the «Til» submenu of `HeaderUserMenu` and `LanguageMenu` on `/login`; both draw `LanguageRadioGroup` (`components/language-radio-group.tsx`).
-- **Staff sign-in pages (ADR-0103):** `StaffSignInShell` is `async` and wraps its children in `I18nProvider` from the `daf-locale` cookie (the same way the dashboard layout does), so `/login`, the Telegram callback and the staff Mini App entry all get a language; only `/login` passes `languageMenu`. The heading is `SignInHeading` (client, `t(title)` of a `msg()` text in `lib/portal.ts`). **Sign-in ends in `useGreeting().greet`**, which first calls `adoptAccountLocale(user.uiLocale, …)` (`i18n/sign-in-locale.ts`): the account's language wins over the one picked on the page and the cabinet opens in it; an account that never chose keeps the page's language and `LocaleSync` saves it (ADR-0102). Files shared with the student portal (`forgot-password-*`, `login-footer`, `theme-toggle`, `telegram-login-button`) use `useT()` too and stay Uzbek there, because the student portal has no provider.
+- **Staff sign-in pages (ADR-0106):** `StaffSignInShell` is `async` and wraps its children in `I18nProvider` from the `daf-locale` cookie (the same way the dashboard layout does), so `/login`, the Telegram callback and the staff Mini App entry all get a language; only `/login` passes `languageMenu`. The heading is `SignInHeading` (client, `t(title)` of a `msg()` text in `lib/portal.ts`). **Sign-in ends in `useGreeting().greet`**, which first calls `adoptAccountLocale(user.uiLocale, …)` (`i18n/sign-in-locale.ts`): the account's language wins over the one picked on the page and the cabinet opens in it; an account that never chose keeps the page's language and `LocaleSync` saves it (ADR-0102). Files shared with the student portal (`forgot-password-*`, `login-footer`, `theme-toggle`, `telegram-login-button`) use `useT()` too and stay Uzbek there, because the student portal has no provider.
 ```
 
 and in the «Pages translated so far» bullet add «the staff sign-in page (form, password reset dialog, footer, greeting)».
@@ -728,7 +728,7 @@ and in the «Pages translated so far» bullet add «the staff sign-in page (form
 Sahifaning yuqori o'ng burchagida til tugmasi turadi, mavzu tugmasining yonida. Besh tildan birini tanlang: O'zbekcha, Ўзбекча, Русский, Deutsch yoki English. Sahifa qayta yuklanmaydi. Kirgandan keyin profilingizda saqlangan til ochiladi: masalan, rus tilini tanlab kirsangiz-u, profilingizda o'zbekcha turgan bo'lsa, panel o'zbekcha ochiladi. Profilingizda til hali tanlanmagan bo'lsa, shu yerda tanlaganingiz profilga saqlanadi.
 ```
 
-In `sahifalar/boshlash.ts`, the `tizimga-kirish` entry: add `"0103"` to `adr` and `"til"`, `"tilni tanlash"`, `"русский"` to `kalitSozlar` (match the format). Add one entry at the top of `yangiliklar.ts` in the existing shape: `sana: "2026-10-17"`, `sarlavha: "Kirish sahifasida til tanlash"`, `matn: "Admin panel va o'qituvchi portalining kirish sahifasida yuqori o'ng burchakda til tugmasi paydo bo'ldi. Besh tildan birini tanlang: O'zbekcha, Ўзбекча, Русский, Deutsch yoki English; sahifaning o'zi, parolni tiklash oynasi va salom ham tarjima qilingan. Kirgach profilingizdagi til ochiladi; profilingizda til tanlanmagan bo'lsa, tanlaganingiz profilga saqlanadi. O'quvchi portalining kirish sahifasi hali o'zbekcha."`, `rollar: [1, 2, 3, 4, 5]`, `sahifa: { bolim: "boshlash", sahifa: "tizimga-kirish" }`. Run `npx vitest --config vitest.config.mts run src/qollanma`.
+In `sahifalar/boshlash.ts`, the `tizimga-kirish` entry: add `"0106"` to `adr` and `"til"`, `"tilni tanlash"`, `"русский"` to `kalitSozlar` (match the format). Add one entry at the top of `yangiliklar.ts` in the existing shape: `sana: "2026-10-17"`, `sarlavha: "Kirish sahifasida til tanlash"`, `matn: "Admin panel va o'qituvchi portalining kirish sahifasida yuqori o'ng burchakda til tugmasi paydo bo'ldi. Besh tildan birini tanlang: O'zbekcha, Ўзбекча, Русский, Deutsch yoki English; sahifaning o'zi, parolni tiklash oynasi va salom ham tarjima qilingan. Kirgach profilingizdagi til ochiladi; profilingizda til tanlanmagan bo'lsa, tanlaganingiz profilga saqlanadi. O'quvchi portalining kirish sahifasi hali o'zbekcha."`, `rollar: [1, 2, 3, 4, 5]`, `sahifa: { bolim: "boshlash", sahifa: "tizimga-kirish" }`. Run `npx vitest --config vitest.config.mts run src/qollanma`.
 
 - [ ] **Step 4: Full automated checks, one after another** (client only — no server file changed)
 
@@ -737,8 +737,8 @@ In `sahifalar/boshlash.ts`, the `tizimga-kirish` entry: add `"0103"` to `adr` an
 - [ ] **Step 5: Commit the docs**
 
 ```bash
-git add docs/adr/0103-kirish-sahifasida-til-tanlash.md docs/adr/README.md client/CLAUDE.md client/src/qollanma
-git commit -m "docs: sign-in language picker — ADR-0103, CLAUDE.md, user guide
+git add docs/adr/0106-kirish-sahifasida-til-tanlash.md docs/adr/README.md client/CLAUDE.md client/src/qollanma
+git commit -m "docs: sign-in language picker — ADR-0106, CLAUDE.md, user guide
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
