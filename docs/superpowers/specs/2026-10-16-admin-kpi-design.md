@@ -340,6 +340,10 @@ replacesResultId?, createdAt`.
   yozgan hozirgi administrator:
   Lid to'lov qildi (soni · summa · ▲▼), Va'da bajarildi (soni · summa · ▲▼),
   Lid → to'lov %, Va'da bajarilishi %, Qaytgan lidlar (▲▼), Jami summa.
+  Jadval ustida — «Egasiz o'quvchiga aylangan lidlar: N ta» qatori (CEO qarori
+  17.10.2026): oyda (17.10 dan) yangi yoki qaytgan o'quvchiga aylangan, lekin
+  egasi yo'q lidlar soni — ular uchun hech kimga natija yozilmaydi; qoida
+  o'zgarmaydi, faqat ko'rinadi.
   Sahifalanmaydi (jamoa bir qarashda — oylik jadvali kabi). Qator bosilsa —
   o'sha xodim natijalari oynasi (`?xodim=`).
 - Bekor qilingan natija summaga kirmaydi, oynada ustidan chizilgan holda,

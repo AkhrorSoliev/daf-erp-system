@@ -23,6 +23,7 @@ const data = (compareAvailable: boolean, compareRecorded = true): KpiOverview =>
   compareAvailable,
   compareRecorded,
   status: { enabled: true, changedAt: null },
+  unownedConversions: 0,
   cards: {
     results: { value: 5, compare: 0 },
     amount: { value: 50000, compare: 0 },

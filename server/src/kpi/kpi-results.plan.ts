@@ -70,7 +70,7 @@ export type PaymentFacts = Prisma.PaymentGetPayload<{
 export type Eligible = (userId: number) => Promise<boolean>;
 
 /** The conversions that earn a LEAD_PAID (spec §7.2): a new student, or one who came back. */
-const EARNING_KINDS: readonly LeadConversionKind[] = [
+export const EARNING_KINDS: readonly LeadConversionKind[] = [
   LeadConversionKind.NEW_STUDENT,
   LeadConversionKind.RETURNING,
 ];
