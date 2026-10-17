@@ -50,6 +50,7 @@ describe('ReportsController', () => {
     // the controller no longer asks for it.
     getOwnMonthProfit: jest.fn().mockResolvedValue({ ownMonthProfit: null }),
     getStudentPaymentsFilterOptions: jest.fn().mockResolvedValue({}),
+    getDepartedAfterTeacherChangeList: jest.fn().mockResolvedValue([]),
     getDebtWriteOffsSummary: jest.fn().mockResolvedValue({
       totalAmount: 0,
       count: 0,
@@ -480,6 +481,30 @@ describe('ReportsController', () => {
         10001,
         '2026-08',
       );
+    });
+  });
+
+  describe('departed-after-change drill-down', () => {
+    it('passes the course and teacher filter of the page, like the overview card', async () => {
+      await controller.getDepartedAfterTeacherChangeList(
+        {
+          startDate: '2026-09-01',
+          endDate: '2026-09-30',
+          courseId: ['3f2a8c1e-0000-4000-8000-000000000001'],
+          teacherIds: [5, 7],
+        },
+        1001,
+        [3],
+      );
+      expect(
+        mockService.getDepartedAfterTeacherChangeList,
+      ).toHaveBeenLastCalledWith(1001, {
+        branchId: 3,
+        courseId: ['3f2a8c1e-0000-4000-8000-000000000001'],
+        teacherIds: [5, 7],
+        startDate: '2026-09-01',
+        endDate: '2026-09-30',
+      });
     });
   });
 

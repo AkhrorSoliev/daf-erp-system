@@ -698,7 +698,13 @@ export class ReportsService {
   }
   getDepartedAfterTeacherChangeList(
     companyId: number,
-    params: { branchId?: number; startDate: string; endDate: string },
+    params: {
+      branchId?: number;
+      courseId?: string[];
+      teacherIds?: number[];
+      startDate: string;
+      endDate: string;
+    },
   ) {
     return this.teacherChanges.getDepartedAfterTeacherChangeList(
       companyId,

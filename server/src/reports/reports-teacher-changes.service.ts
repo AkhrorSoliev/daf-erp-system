@@ -118,7 +118,13 @@ export class ReportsTeacherChangesService {
    */
   async getDepartedAfterTeacherChangeList(
     companyId: number,
-    params: { branchId?: number; startDate: string; endDate: string },
+    params: {
+      branchId?: number;
+      courseId?: string[];
+      teacherIds?: number[];
+      startDate: string;
+      endDate: string;
+    },
   ) {
     // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
     // EXCLUSIVE start of the day after (see common/date/tashkent).
@@ -134,6 +140,11 @@ export class ReportsTeacherChangesService {
         scope: params.branchId !== undefined ? [params.branchId] : null,
         start,
         end,
+        // The overview card filters by the same course and teachers.
+        groupFilter: {
+          courseIds: params.courseId,
+          teacherIds: params.teacherIds,
+        },
       },
     );
     if (departures.length === 0) return [];

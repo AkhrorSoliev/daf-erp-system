@@ -601,6 +601,8 @@ export class ReportsController {
   ) {
     return this.reportsService.getDepartedAfterTeacherChangeList(companyId, {
       branchId: this.scoped(query, scope).branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
       startDate: query.startDate,
       endDate: query.endDate,
     });

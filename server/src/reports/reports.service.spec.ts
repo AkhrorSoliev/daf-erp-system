@@ -18,6 +18,8 @@ import { ExpensesService } from '../expenses/expenses.service';
 import { SalaryPaymentService } from '../salary/salary-payment.service';
 import { SalaryService } from '../salary/salary.service';
 import { PaymentsDebtorsService } from '../payments/payments-debtors.service';
+import { loadTeacherChangeDepartures } from './shared/teacher-change-departures';
+import { tashkentRangeUtc } from '../common/date/tashkent';
 import { DEPARTURE_GRACE_DAYS } from '../students/shared/departure-episodes';
 import {
   resolveMonthlyScope,
@@ -594,6 +596,76 @@ describe('ReportsService', () => {
       // Counts both DROPPED (guruhsiz qoldi) and FROZEN (muzlatildi).
       const enrWhere = prisma.enrollment.findMany.mock.calls[0][0].where;
       expect(enrWhere.status).toEqual({ in: ['DROPPED', 'FROZEN'] });
+    });
+
+    it('with a course and teacher filter, the list and the changes behind the card match the overview card', async () => {
+      const filter = {
+        courseId: [
+          '3f2a8c1e-0000-4000-8000-000000000001',
+          '3f2a8c1e-0000-4000-8000-000000000002',
+        ],
+        teacherIds: [30001, 30002],
+      };
+      const range = { startDate: '2026-03-01', endDate: '2026-03-31' };
+      mockTeacherChangeDepartures(prisma);
+      prisma.user.findMany.mockResolvedValue([]);
+
+      // What the card counts: the loader with the page's filter.
+      const { gte: start, lt: end } = tashkentRangeUtc(
+        range.startDate,
+        range.endDate,
+      );
+      const card = await loadTeacherChangeDepartures(prisma, 1, {
+        scope: null,
+        start,
+        end,
+        groupFilter: {
+          courseIds: filter.courseId,
+          teacherIds: filter.teacherIds,
+        },
+      });
+      const cardWhere =
+        prisma.groupTeacherHistory.findMany.mock.calls[0][0].where;
+      expect(cardWhere.group).toMatchObject({
+        courseId: { in: filter.courseId },
+        teachers: { some: { teacherId: { in: filter.teacherIds } } },
+      });
+      prisma.groupTeacherHistory.findMany.mockClear();
+
+      const departures = await service.getDepartedAfterTeacherChangeList(1, {
+        ...filter,
+        ...range,
+      });
+      // The changes list reads the same rows, with the group they belong to.
+      prisma.groupTeacherHistory.findMany.mockResolvedValueOnce(
+        card.changes.map((c) => ({
+          ...c,
+          changeType: 'REPLACED',
+          triggeredByDismissal: false,
+          changeReasonId: null,
+          group: {
+            id: c.groupId,
+            name: 'B1-01',
+            branch: { id: 1, name: 'Bosh' },
+            course: { id: 'c1', name: 'A1' },
+          },
+          changedBy: null,
+          changeReasonRef: null,
+        })),
+      );
+      const changes = await service.getTeacherChangesList(1, {
+        ...filter,
+        ...range,
+      });
+
+      // Both dialogs filter by exactly what the card filtered by.
+      const [departedCall, changesCall] =
+        prisma.groupTeacherHistory.findMany.mock.calls;
+      expect(departedCall[0].where).toEqual(cardWhere);
+      expect(changesCall[0].where).toEqual(cardWhere);
+      expect(card.departures.length).toBeGreaterThan(0);
+      expect(departures).toHaveLength(card.departures.length);
+      expect(changes).toHaveLength(card.changes.length);
     });
 
     it('returns empty when there are no teacher changes', async () => {

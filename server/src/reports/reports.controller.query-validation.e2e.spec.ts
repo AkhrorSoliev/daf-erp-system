@@ -222,7 +222,7 @@ describe('ReportsController — every whole-query parameter is validated', () =>
     }
 
     // Guards against a vacuous pass if the metadata lookup ever breaks.
-    expect(checked).toBeGreaterThan(10);
+    expect(checked).toBeGreaterThanOrEqual(20);
     expect(unvalidated).toEqual([]);
   });
 });
