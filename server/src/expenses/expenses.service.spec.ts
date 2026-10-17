@@ -11,6 +11,8 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { PermissionsService } from '../common/permissions/permissions.service';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
+import { tashkentMonthKey } from '../common/date/tashkent';
+import { expenseMonthWindow } from './expenses-month';
 
 describe('ExpensesService — findAll filters + summary', () => {
   let service: ExpensesService;
@@ -169,9 +171,77 @@ describe('ExpensesService — findAll filters + summary', () => {
     });
   });
 
-  it('omits the date filter entirely when neither bound is given', async () => {
+  it('defaults to the current Tashkent month when neither oy nor a range is given', async () => {
     await service.findAll({} as ExpenseQueryDto, COMPANY_ID, null);
-    expect(whereArg().date).toBeUndefined();
+    expect(whereArg().date).toEqual(
+      expenseMonthWindow(tashkentMonthKey(new Date())),
+    );
+  });
+
+  it('reads ?oy= as the Tashkent month window, the next 1st exclusive', async () => {
+    await service.findAll(
+      { oy: '2026-09' } as ExpenseQueryDto,
+      COMPANY_ID,
+      null,
+    );
+    expect(whereArg().date).toEqual({
+      gte: new Date('2026-09-01T00:00:00.000Z'),
+      lt: new Date('2026-10-01T00:00:00.000Z'),
+    });
+  });
+
+  it('refuses oy together with the old range, before any read', async () => {
+    await expect(
+      service.findAll(
+        { oy: '2026-09', startDate: '2026-09-01' } as ExpenseQueryDto,
+        COMPANY_ID,
+        null,
+      ),
+    ).rejects.toThrow("Oy yoki sana oralig'i — ikkalasi birga emas");
+    expect(prisma.expense.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['2026-04', "Xarajatlar may 2026 dan boshlab ko'rsatiladi"],
+    ['2099-01', "Kelajak oyni tanlab bo'lmaydi"],
+  ])('refuses oy=%s with 400', async (oy, message) => {
+    await expect(
+      service.findAll({ oy } as ExpenseQueryDto, COMPANY_ID, null),
+    ).rejects.toThrow(new BadRequestException(message));
+  });
+
+  it('filters «Kim kiritgan» by one author or several', async () => {
+    await service.findAll(
+      { createdById: [10234] } as ExpenseQueryDto,
+      COMPANY_ID,
+      null,
+    );
+    expect(whereArg().createdById).toBe(10234);
+    prisma.expense.findMany.mockClear();
+    await service.findAll(
+      { createdById: [10234, 10567] } as ExpenseQueryDto,
+      COMPANY_ID,
+      null,
+    );
+    expect(whereArg().createdById).toEqual({ in: [10234, 10567] });
+  });
+
+  it('orders by date, then entry time, then id — newest first', async () => {
+    await service.findAll({} as ExpenseQueryDto, COMPANY_ID, null);
+    expect(prisma.expense.findMany.mock.calls[0][0].orderBy).toEqual([
+      { date: 'desc' },
+      { createdAt: 'desc' },
+      { id: 'desc' },
+    ]);
+  });
+
+  it('gives every row its hint', async () => {
+    prisma.expense.findMany.mockResolvedValue([
+      { id: 'e1', category: 'OTHER', description: 'Stullar' },
+      { id: 'e2', category: 'RENT', description: 'Ijara' },
+    ]);
+    const res = await service.findAll({} as ExpenseQueryDto, COMPANY_ID, null);
+    expect(res.data.map((r) => r.hint)).toEqual(['EQUIPMENT', null]);
   });
 
   it('returns a summary derived from the grouped scan over the full filtered set', async () => {
@@ -289,6 +359,11 @@ describe('ExpensesService — findAll filters + summary', () => {
       // No pagination applied to the export.
       expect(call.skip).toBeUndefined();
       expect(call.take).toBeUndefined();
+      expect(call.orderBy).toEqual([
+        { date: 'desc' },
+        { createdAt: 'desc' },
+        { id: 'desc' },
+      ]);
       expect(rows).toEqual([{ id: 'e1' }]);
     });
   });

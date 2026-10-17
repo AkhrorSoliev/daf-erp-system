@@ -2,6 +2,12 @@
  * Pure pieces of the stats strip above the leads board (spec 2026-10-08).
  * The figures themselves come from `GET /leads/stats`; nothing is counted here.
  */
+import {
+  CLEARED_LEAD_FILTERS,
+  leadFiltersActive,
+  type LeadFilterValues,
+} from "./lead-filter-schema";
+
 export type LeadStatsPeriod = "week" | "month" | "last-month";
 
 export interface LeadStats {
@@ -63,14 +69,19 @@ export const STAT_CARD_LABELS: Record<StatCard, string> = {
  */
 export function cardFilters(card: StatCard) {
   return {
-    search: "",
+    ...CLEARED_LEAD_FILTERS,
     holati: card === "uncalled" ? UNCALLED_HOLATI : [],
-    sourceId: [],
-    columnId: [],
-    masul: [],
-    startDate: "",
-    endDate: "",
     karta: card === "created" || card === "converted" || card === "lost" ? card : "",
-    page: 1,
   };
+}
+
+/** The «Qo'ng'iroq qilinmagan» list is open: exactly the uncalled card's filters. */
+export function uncalledCardActive(f: LeadFilterValues): boolean {
+  const expected = cardFilters("uncalled");
+  return (
+    f.karta === "" &&
+    f.holati.length === expected.holati.length &&
+    expected.holati.every((h) => f.holati.includes(h)) &&
+    !leadFiltersActive({ ...f, holati: [] })
+  );
 }

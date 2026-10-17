@@ -56,6 +56,7 @@ export function LeadSection({
   const moveSection = useLeadsBoard((s) => s.moveSection);
   const leads = useLeadsBoard((s) => s.leadsBySection[section.id]);
   const loading = useLeadsBoard((s) => s.loadingSections.has(section.id));
+  const failed = useLeadsBoard((s) => s.failedSections.has(section.id));
   const openAddLead = useLeadsUi((s) => s.openAddLead);
   const openRename = useLeadsUi((s) => s.openRename);
   const openDelete = useLeadsUi((s) => s.openDelete);
@@ -217,6 +218,20 @@ export function LeadSection({
               <Skeleton className="h-14 w-full rounded-md" />
               <Skeleton className="h-14 w-full rounded-md" />
             </>
+          ) : !leads && failed ? (
+            <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-3 py-5 text-center">
+              <p className="text-xs text-muted-foreground">
+                Yuklab bo&apos;lmadi
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => fetchSectionLeads(section.id)}
+              >
+                Qayta urinish
+              </Button>
+            </div>
           ) : !leads || leads.length === 0 ? (
             <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-3 py-5 text-center">
               <p className="text-xs text-muted-foreground">

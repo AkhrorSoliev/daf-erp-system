@@ -315,6 +315,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: [
       'GET /cash-accounts',
       'GET /expenses',
+      'GET /expenses/month-summary',
       'GET /expenses/pdf',
       'GET /payments/debtors',
       'GET /payments/debtors/summary',

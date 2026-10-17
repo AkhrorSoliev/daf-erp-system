@@ -32,7 +32,7 @@ import {
   EmployeeAdvanceSelect,
   type EmployeeOption,
 } from "./employee-advance-select";
-import { EXPENSE_METHOD_LABELS } from "./expenses-filter-bar";
+import { EXPENSE_METHOD_LABELS } from "./expenses/expenses-labels";
 import type { EditableAdvance } from "./advance-row-actions";
 import { isOwnPayrollLocked } from "./own-payroll";
 

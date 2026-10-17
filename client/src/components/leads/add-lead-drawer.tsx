@@ -68,6 +68,9 @@ export function AddLeadDrawer() {
 
   const columnsWithSections = board.filter((c) => c.sections.length > 0);
   const sectionsExist = columnsWithSections.length > 0;
+  // On "Barcha filiallar" every branch brings its own same-named columns;
+  // name the branch in the group label then, as the board does.
+  const showBranch = new Set(board.map((c) => c.branchId)).size > 1;
 
   useEffect(() => {
     if (!open) return;
@@ -159,7 +162,7 @@ export function AddLeadDrawer() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Telefon raqami</Label>
+                <Label htmlFor="add-lead-phone">Telefon raqami</Label>
                 <Controller
                   name="phone"
                   control={control}
@@ -168,7 +171,11 @@ export function AddLeadDrawer() {
                       v.length === 9 || "Telefon raqamini to'liq kiriting",
                   }}
                   render={({ field }) => (
-                    <PhoneInput value={field.value} onChange={field.onChange} />
+                    <PhoneInput
+                      id="add-lead-phone"
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   )}
                 />
                 {errors.phone && (
@@ -192,7 +199,11 @@ export function AddLeadDrawer() {
                       <SelectContent>
                         {columnsWithSections.map((column) => (
                           <SelectGroup key={column.id}>
-                            <SelectLabel>{column.name}</SelectLabel>
+                            <SelectLabel>
+                              {showBranch && column.branch
+                                ? `${column.branch.name} · ${column.name}`
+                                : column.name}
+                            </SelectLabel>
                             {column.sections.map((section) => (
                               <SelectItem key={section.id} value={section.id}>
                                 {section.name}

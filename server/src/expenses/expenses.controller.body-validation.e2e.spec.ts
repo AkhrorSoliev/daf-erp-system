@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpensesController } from './expenses.controller';
 import { ExpensesService } from './expenses.service';
+import { ExpensesMonthService } from './expenses-month.service';
 
 /**
  * `PATCH /expenses/:id` used to take `Partial<CreateExpenseDto>`, which
@@ -23,6 +24,7 @@ describe('PATCH /expenses/:id — the body is validated', () => {
       controllers: [ExpensesController],
       providers: [
         { provide: ExpensesService, useValue: { update } },
+        { provide: ExpensesMonthService, useValue: {} },
         { provide: PrismaService, useValue: {} },
       ],
     }).compile();
@@ -103,5 +105,54 @@ describe('PATCH /expenses/:id — the body is validated', () => {
 
     expect(res.status).toBe(200);
     expect(update.mock.calls[0][1]).toEqual(body);
+  });
+});
+
+describe('GET /expenses* — the month is validated', () => {
+  let app: INestApplication;
+  let server: Server;
+  const findAll = jest.fn();
+  const monthSummary = jest.fn();
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      controllers: [ExpensesController],
+      providers: [
+        { provide: ExpensesService, useValue: { findAll } },
+        { provide: ExpensesMonthService, useValue: { monthSummary } },
+        { provide: PrismaService, useValue: {} },
+      ],
+    }).compile();
+    app = moduleRef.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+    app.use((req: { user?: unknown }, _res: unknown, next: () => void) => {
+      req.user = { id: 10001, companyId: 1001 };
+      next();
+    });
+    await app.init();
+    server = app.getHttpServer() as Server;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it.each([
+    '/expenses?oy=2026-1',
+    '/expenses?oy=oktabr',
+    '/expenses/pdf?oy=2026-13',
+    '/expenses/month-summary?oy=2026-1',
+    '/expenses/month-summary?foo=1',
+  ])('refuses %s with 400', async (url) => {
+    const res = await request(server).get(url);
+    expect(res.status).toBe(400);
+    expect(findAll).not.toHaveBeenCalled();
+    expect(monthSummary).not.toHaveBeenCalled();
   });
 });

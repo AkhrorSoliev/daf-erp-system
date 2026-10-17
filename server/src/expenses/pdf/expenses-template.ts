@@ -34,7 +34,8 @@ export interface ExpensesPdfInput {
   categoryLabel: string | null;
   methodLabel: string | null;
   search: string | null;
-  dateRangeLabel: string; // "Butun davr" or "dd.MM.yyyy — dd.MM.yyyy" etc.
+  creatorLabel: string | null; // «Kim kiritgan» filter, names
+  dateRangeLabel: string; // "Oktabr 2026", or the old range: "dd.MM.yyyy — dd.MM.yyyy", "Butun davr"
   generatedAt: Date;
   rows: ExpensesPdfRow[];
   totals: {
@@ -121,6 +122,7 @@ function filterBlock(input: ExpensesPdfInput): Content {
   if (input.categoryLabel) lines.push(kv('Kategoriya', input.categoryLabel));
   if (input.methodLabel) lines.push(kv("To'lov turi", input.methodLabel));
   if (input.search) lines.push(kv('Qidiruv', input.search));
+  if (input.creatorLabel) lines.push(kv('Kim kiritgan', input.creatorLabel));
   lines.push(kv('Tayyorlandi', formatDateTime(input.generatedAt)));
   return { stack: lines, margin: [0, 0, 0, 18] };
 }
@@ -201,7 +203,7 @@ function totalsBlock(totals: ExpensesPdfInput['totals']): ContentColumns {
       value: `${formatSom(totals.totalAmount)} so'm`,
       bold: true,
     },
-    { label: 'Naqt', value: `${formatSom(totals.cashTotal)} so'm` },
+    { label: 'Naqd', value: `${formatSom(totals.cashTotal)} so'm` },
     { label: 'Karta', value: `${formatSom(totals.cardTotal)} so'm` },
     // Advance is part of Jami; called out as a "shundan" (of which) sub-line.
     ...(totals.advancesTotal > 0

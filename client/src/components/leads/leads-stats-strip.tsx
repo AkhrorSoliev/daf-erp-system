@@ -23,6 +23,7 @@ import {
   cardFilters,
   parseStatsPeriod,
   topSourcesLine,
+  uncalledCardActive,
   type LeadStats,
   type StatCard,
 } from "./lead-stats";
@@ -83,6 +84,7 @@ export function LeadsStatsStrip() {
             }
             tone="urgent"
             loading={isPending}
+            active={uncalledCardActive(leadFilters)}
             onClick={() => open("uncalled")}
             hint="Qo'ng'iroq qilinmagan yangi lidlar ro'yxatini ochish"
           />

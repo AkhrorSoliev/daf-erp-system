@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useLeadsBoard, type LeadCard } from "./use-leads-board";
+import {
+  useLeadsBoard,
+  type LeadBoardColumn,
+  type LeadCard,
+} from "./use-leads-board";
 
-const { get } = vi.hoisted(() => ({
+const { get, patch } = vi.hoisted(() => ({
   get: vi.fn<(url: string) => Promise<unknown>>(),
+  patch: vi.fn<(url: string, body?: unknown) => Promise<unknown>>(),
 }));
-vi.mock("@/lib/api", () => ({ default: { get } }));
+vi.mock("@/lib/api", () => ({ default: { get, patch } }));
 vi.mock("react-hot-toast", () => ({ default: { error: vi.fn() } }));
 
 const card = (id: string, ownerDueAt: string | null = null): LeadCard => ({
@@ -28,6 +33,7 @@ const state = () => useLeadsBoard.getState();
 beforeEach(() => {
   useLeadsBoard.setState(useLeadsBoard.getInitialState(), true);
   get.mockReset();
+  patch.mockReset();
 });
 
 describe("fetchSectionLeads", () => {
@@ -57,5 +63,114 @@ describe("fetchSectionLeads", () => {
     resolve({ data: [card("a")] });
     await first;
     expect(state().loadedSections.has("s1")).toBe(true);
+  });
+});
+
+const column = (
+  id: string,
+  sectionIds: string[],
+  branchId = 1,
+): LeadBoardColumn => ({
+  id,
+  name: id,
+  order: 0,
+  isSystem: false,
+  systemKey: null,
+  branchId,
+  branch: { id: branchId, name: `B${branchId}` },
+  sections: sectionIds.map((s) => ({ id: s, name: s, order: 0, leadCount: 0 })),
+});
+
+describe("fetchSectionLeads failure", () => {
+  it("marks the section failed and clears the mark on success", async () => {
+    get.mockRejectedValueOnce(new Error("net"));
+    await state().fetchSectionLeads("s1");
+    expect(state().failedSections.has("s1")).toBe(true);
+    expect(state().loadedSections.has("s1")).toBe(false);
+    get.mockResolvedValueOnce({ data: [card("a")] });
+    await state().fetchSectionLeads("s1");
+    expect(state().failedSections.has("s1")).toBe(false);
+  });
+});
+
+describe("persistLeadMove", () => {
+  it("keeps the move and re-reads the target when only the reorder fails", async () => {
+    useLeadsBoard.setState({
+      leadsBySection: { s1: [card("a")], s2: [] },
+      loadedSections: new Set(["s1", "s2"]),
+    });
+    state().captureDragSnapshot();
+    state().moveLeadLocal({ leadId: "a", fromSectionId: "s1", toSectionId: "s2", toIndex: 0 });
+    patch
+      .mockResolvedValueOnce({ data: card("a") }) // move
+      .mockRejectedValueOnce(new Error("reorder"));
+    get.mockResolvedValueOnce({ data: [card("a")] });
+    const rev = state().revision;
+    await state().persistLeadMove({
+      leadId: "a",
+      toSectionId: "s2",
+      toLeadIds: ["a"],
+    });
+    await vi.waitFor(() => expect(get).toHaveBeenCalledWith("/leads/sections/s2/leads"));
+    expect(state().dragSnapshot).toBeNull();
+    expect(state().leadsBySection.s2.map((l) => l.id)).toEqual(["a"]);
+    expect(state().leadsBySection.s1).toEqual([]);
+    expect(state().revision).toBe(rev + 1);
+  });
+
+  it("rolls back when the move itself fails", async () => {
+    useLeadsBoard.setState({ leadsBySection: { s1: [card("a")], s2: [] } });
+    state().captureDragSnapshot();
+    state().moveLeadLocal({ leadId: "a", fromSectionId: "s1", toSectionId: "s2", toIndex: 0 });
+    patch.mockRejectedValueOnce(new Error("move"));
+    const rev = state().revision;
+    await state().persistLeadMove({ leadId: "a", toSectionId: "s2", toLeadIds: ["a"] });
+    expect(state().leadsBySection.s1.map((l) => l.id)).toEqual(["a"]);
+    expect(state().revision).toBe(rev);
+  });
+});
+
+describe("persistSectionMove", () => {
+  it("re-reads the board instead of rolling back when only the reorder fails", async () => {
+    useLeadsBoard.setState({ board: [column("c1", []), column("c2", ["x"])] });
+    state().captureDragSnapshot();
+    patch.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error("reorder"));
+    get.mockResolvedValueOnce({ data: [column("c1", []), column("c2", ["x"])] });
+    await state().persistSectionMove({ sectionId: "x", toColumnId: "c2", toSectionIds: ["x"] });
+    expect(get).toHaveBeenCalledWith("/leads/board");
+    expect(state().dragSnapshot).toBeNull();
+    expect(state().loadingBoard).toBe(false);
+  });
+});
+
+describe("moveLead (dialog)", () => {
+  it("adds the server card to a loaded target when the source was never loaded", async () => {
+    useLeadsBoard.setState({
+      board: [column("c1", ["s1", "s2"])],
+      leadsBySection: { s2: [] },
+    });
+    patch.mockResolvedValueOnce({ data: card("a") });
+    await state().moveLead("a", "s1", "s2");
+    expect(state().leadsBySection.s2.map((l) => l.id)).toEqual(["a"]);
+  });
+});
+
+describe("applySectionRemove", () => {
+  it("bumps revision", () => {
+    useLeadsBoard.setState({ board: [column("c1", ["s1"])] });
+    const rev = state().revision;
+    state().applySectionRemove("c1", "s1");
+    expect(state().board[0].sections).toEqual([]);
+    expect(state().revision).toBe(rev + 1);
+  });
+});
+
+describe("moveColumn", () => {
+  it("does nothing on a board that spans several branches", async () => {
+    const board = [column("c1", [], 1), column("c2", [], 2)];
+    useLeadsBoard.setState({ board });
+    await state().moveColumn("c1", "right");
+    expect(patch).not.toHaveBeenCalled();
+    expect(state().board).toBe(board);
   });
 });

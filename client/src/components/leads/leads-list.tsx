@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRightLeft,
   ChevronLeft,
@@ -103,8 +103,12 @@ export function LeadsList() {
   const [rows, setRows] = useState<LeadListRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  // Only the newest request may write rows: a quick search or two card clicks
+  // in a row would otherwise let an older, slower answer overwrite a newer one.
+  const requestId = useRef(0);
 
   const fetchLeads = useCallback(async () => {
+    const id = ++requestId.current;
     setLoading(true);
     try {
       const params: Record<string, string | number | undefined> = {
@@ -129,12 +133,14 @@ export function LeadsList() {
       }
 
       const { data } = await api.get("/leads", { params });
+      if (id !== requestId.current) return;
       setRows(data.data);
       setTotal(data.total);
     } catch (error) {
+      if (id !== requestId.current) return;
       toast.error(getErrorMessage(error, "Lidlarni yuklashda xatolik"));
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
   }, [
     filters.page,
@@ -292,6 +298,10 @@ export function LeadsList() {
                             <Pencil className="mr-2 size-4" />
                             Tahrirlash
                           </DropdownMenuItem>
+                          {/* A converted lead is a student now: the server refuses
+                              moving or deleting it. */}
+                          {lead.statusEnum !== "CONVERTED" && (
+                            <>
                           <DropdownMenuItem
                             onClick={() =>
                               openMoveLead({
@@ -318,6 +328,8 @@ export function LeadsList() {
                             <Trash2 className="mr-2 size-4" />
                             O&apos;chirish
                           </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
