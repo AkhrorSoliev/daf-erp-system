@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { formatPrice } from "@/lib/format-utils";
+import { formatBalance, formatPrice } from "@/lib/format-utils";
 import { SalaryAttentionCard } from "./salary-attention-card";
 import { mergePeople } from "./salary-page-model";
 import { SalaryPeopleTable } from "./salary-people-table";
@@ -25,12 +25,12 @@ describe("SalarySummaryCard", () => {
     expect(out).toContain("Sentabr oyliklari");
     expect(out).toContain("Hisoblandi · tasdiqlash kutilmoqda");
     expect(out).toContain("Ishladi");
-    expect(out).toContain("10,5 mln");
-    expect(out).toContain("ustozlar 7,5 mln · xodimlar 3 mln");
+    expect(out).toContain(formatBalance(10_500_000));
+    expect(out).toContain(`ustozlar ${formatBalance(7_500_000)} · xodimlar ${formatBalance(3_000_000)}`);
     expect(out).toContain("Avans (oylikdan ushlanadi)");
     expect(out).toContain("2 ta");
     expect(out).toContain("Beriladi");
-    expect(out).toContain("9,7 mln");
+    expect(out).toContain(formatBalance(9_700_000));
     expect(out).toContain("2 ustoz · 1 xodim");
     expect(out).not.toContain("Oy oxirida beriladi");
   });
@@ -43,7 +43,7 @@ describe("SalarySummaryCard", () => {
     const out = summary(response());
     expect(out).toContain("shundan ");
     expect(out).toContain("markaz qo'shdi");
-    expect(out).toContain("1,5 mln");
+    expect(out).toContain(formatBalance(1_500_000));
     expect(out).toContain("o'quvchilar sentabr to'lovini hali to'lamagan; to'lagan sari kamayadi");
   });
 
@@ -66,7 +66,7 @@ describe("SalarySummaryCard", () => {
       data: [teacher({ id: 10001, firstName: "Madina", hasLessonData: false, fullDeserved: null })],
     });
     const out = summary(manual);
-    expect(out).toContain("ustozlar — · xodimlar 3 mln");
+    expect(out).toContain(`ustozlar — · xodimlar ${formatBalance(3_000_000)}`);
     expect(out).toContain("o'tish oyi");
     expect(out).not.toContain("markaz qo'shdi");
   });
