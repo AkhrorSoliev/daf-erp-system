@@ -72,6 +72,26 @@ describe('AuthService', () => {
     });
   });
 
+  describe('login — session user', () => {
+    it("carries the user's design skin, null when none was chosen", async () => {
+      const chosen = { ...teacher, uiSkin: 'ormon' };
+      const withSkin = await service.login(chosen, undefined, undefined);
+      expect(withSkin.user.uiSkin).toBe('ormon');
+
+      const without = await service.login(teacher, undefined, undefined);
+      expect(without.user.uiSkin).toBeNull();
+    });
+
+    it("carries the user's interface language, null when none was chosen", async () => {
+      const chosen = { ...teacher, uiLocale: 'ru' };
+      const withLocale = await service.login(chosen, undefined, undefined);
+      expect(withLocale.user.uiLocale).toBe('ru');
+
+      const without = await service.login(teacher, undefined, undefined);
+      expect(without.user.uiLocale).toBeNull();
+    });
+  });
+
   describe('validateUser — phone-based login', () => {
     it('matches by phone field, scopes to the portal roles, strips the password', async () => {
       const hash = await bcrypt.hash('pass123', 10);

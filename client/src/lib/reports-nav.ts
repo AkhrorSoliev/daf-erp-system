@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { Can } from "./permission-check";
+import { msg } from "@/i18n/msg";
 import type { PermissionKey } from "./permission-keys";
 
 export interface ReportsNavItem {
@@ -39,30 +40,30 @@ interface ReportsNavSection {
  */
 export const reportsNavSections: ReportsNavSection[] = [
   {
-    title: "Moliyaviy hisobotlar",
+    title: msg("Moliyaviy hisobotlar"),
     items: [
-      { title: "Guruhlar bo'yicha to'lov", url: "/reports/payment-reports", icon: Receipt, permission: "reports.payments" },
+      { title: msg("Guruhlar bo'yicha to'lov"), url: "/reports/payment-reports", icon: Receipt, permission: "reports.payments" },
     ],
   },
   {
-    title: "O'quvchilar hisoboti",
+    title: msg("O'quvchilar hisoboti"),
     items: [
-      { title: "Ketgan o'quvchilar hisoboti", url: "/reports/departed-students", icon: UserMinus, permission: "reports.students" },
-      { title: "Bitiruvchilar", url: "/reports/graduates", icon: GraduationCap, permission: "reports.students" },
-      { title: "Dars baholari", url: "/reports/dars-baholari", icon: Star, forRoles: [1] },
+      { title: msg("Ketgan o'quvchilar hisoboti"), url: "/reports/departed-students", icon: UserMinus, permission: "reports.students" },
+      { title: msg("Bitiruvchilar"), url: "/reports/graduates", icon: GraduationCap, permission: "reports.students" },
+      { title: msg("Dars baholari"), url: "/reports/dars-baholari", icon: Star, forRoles: [1] },
     ],
   },
   {
-    title: "Marketing va faoliyat",
+    title: msg("Marketing va faoliyat"),
     items: [
-      { title: "Lidlar hisoboti", url: "/reports/leads", icon: UserPlus, permission: "reports.leads" },
+      { title: msg("Lidlar hisoboti"), url: "/reports/leads", icon: UserPlus, permission: "reports.leads" },
       // «Xodimlar KPI» (ADR-0096): the managers' observation page.
-      { title: "Xodimlar KPI", url: "/reports/xodimlar-kpi", icon: Trophy, permission: "kpi.view" },
+      { title: msg("Xodimlar KPI"), url: "/reports/xodimlar-kpi", icon: Trophy, permission: "kpi.view" },
       // A money report (server: `GET /reports/marketing`, ADR-0067).
-      { title: "Marketing", url: "/reports/marketing", icon: Megaphone, permission: "reports.finance" },
-      { title: "Markaz faoliyati", url: "/reports/activity", icon: Activity, permission: "reports.students" },
-      { title: "Davomat statistikasi", url: "/reports/attendance", icon: CalendarCheck, permission: "reports.students" },
-      { title: "Bot hisoboti", url: "/reports/bot", icon: Send, permission: "reports.students" },
+      { title: msg("Marketing"), url: "/reports/marketing", icon: Megaphone, permission: "reports.finance" },
+      { title: msg("Markaz faoliyati"), url: "/reports/activity", icon: Activity, permission: "reports.students" },
+      { title: msg("Davomat statistikasi"), url: "/reports/attendance", icon: CalendarCheck, permission: "reports.students" },
+      { title: msg("Bot hisoboti"), url: "/reports/bot", icon: Send, permission: "reports.students" },
     ],
   },
 ];

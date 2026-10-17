@@ -18,6 +18,8 @@ import { UserQueryDto } from './dto/user-query.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateUiSkinDto } from './dto/update-ui-skin.dto';
+import { UpdateUiLocaleDto } from './dto/update-ui-locale.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangePhoneDto } from './dto/change-phone.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -101,6 +103,24 @@ export class UsersController {
     return this.usersService.updateProfile(userId, dto);
   }
 
+  @Patch('ui-skin')
+  @AnyStaff()
+  updateUiSkin(
+    @CurrentUser('id') userId: number,
+    @Body() dto: UpdateUiSkinDto,
+  ) {
+    return this.usersService.updateUiSkin(userId, dto.skin);
+  }
+
+  @Patch('ui-locale')
+  @AnyStaff()
+  updateUiLocale(
+    @CurrentUser('id') userId: number,
+    @Body() dto: UpdateUiLocaleDto,
+  ) {
+    return this.usersService.updateUiLocale(userId, dto.locale);
+  }
+
   @Patch('password')
   @AnyUser()
   @UseGuards(OwnPasswordAttemptGuard)
@@ -142,8 +162,8 @@ export class UsersController {
     return this.usersService.changeOwnPhone(userId, dto);
   }
 
-  // Own profile, password and phone go through `profile` / `password` /
-  // `phone` above.
+  // Own profile, password, phone, design skin and interface language go
+  // through `profile` / `password` / `phone` / `ui-skin` / `ui-locale` above.
   @Patch(':id')
   @Can('employees.manage')
   update(

@@ -2,12 +2,21 @@
  * The bell's pure rules (spec 2026-10-07 §8): types, folding, the Tashkent
  * clock. No React and no API, so vitest covers them in node.
  */
+import { msg } from "@/i18n/msg";
+import { interpolate, type Params } from "@/i18n/translate";
 import {
   tashkentDayNumber,
   tashkentDdMm,
   tashkentHhmm,
   tashkentWallClock,
 } from "@/lib/tashkent-time";
+
+/**
+ * The page's `t` from `useT()`. The helpers below take it as an optional last
+ * argument; without it they read the Uzbek source as written (placeholders filled).
+ */
+export type Translate = (source: string, params?: Params) => string;
+const uzbek: Translate = interpolate;
 
 /** Mirrors `enum NotificationType` in server/prisma/schema.prisma (the test reads it). */
 export const NOTIFICATION_TYPES = [
@@ -39,10 +48,10 @@ export const NOTIFICATION_GROUPS = ["task", "attendance", "payment", "system"] a
 export type NotificationGroup = (typeof NOTIFICATION_GROUPS)[number];
 
 export const GROUP_LABEL: Record<NotificationGroup, string> = {
-  task: "Topshiriqlar",
-  attendance: "Davomat",
-  payment: "To'lovlar",
-  system: "Tizim",
+  task: msg("Topshiriqlar"),
+  attendance: msg("Davomat"),
+  payment: msg("To'lovlar"),
+  system: msg("Tizim"),
 };
 
 export interface AppNotification {
@@ -76,22 +85,24 @@ export function isPending(n: Pick<AppNotification, "actionRequired" | "resolvedA
 /** "HH:mm" on the Tashkent clock. */
 export const clockTime = tashkentHhmm;
 
+/** How many Tashkent days before `now` the instant is (0 = today). */
+const daysAgo = (iso: string, now: Date) => tashkentDayNumber(now) - tashkentDayNumber(iso);
+
 /** «Bugun», «Kecha» or dd.MM.yyyy — Tashkent days, never the browser's. */
-export function dayLabel(iso: string, now: Date): string {
-  const diff = tashkentDayNumber(now) - tashkentDayNumber(iso);
-  if (diff === 0) return "Bugun";
-  if (diff === 1) return "Kecha";
+export function dayLabel(iso: string, now: Date, t: Translate = uzbek): string {
+  const diff = daysAgo(iso, now);
+  if (diff === 0) return t("Bugun");
+  if (diff === 1) return t("Kecha");
   return `${tashkentDdMm(iso)}.${tashkentWallClock(iso).getUTCFullYear()}`;
 }
 
 /** «hozirgina», «5 daqiqa oldin», «2 soat oldin», then the clock. */
-export function relativeTime(iso: string, now: Date): string {
+export function relativeTime(iso: string, now: Date, t: Translate = uzbek): string {
   const minutes = Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000);
-  if (minutes < 1) return "hozirgina";
-  if (minutes < 60) return `${minutes} daqiqa oldin`;
-  if (minutes < 6 * 60) return `${Math.floor(minutes / 60)} soat oldin`;
-  const day = dayLabel(iso, now);
-  return day === "Bugun" ? clockTime(iso) : `${day}, ${clockTime(iso)}`;
+  if (minutes < 1) return t("hozirgina");
+  if (minutes < 60) return t("{n} daqiqa oldin", { n: minutes });
+  if (minutes < 6 * 60) return t("{n} soat oldin", { n: Math.floor(minutes / 60) });
+  return daysAgo(iso, now) === 0 ? clockTime(iso) : `${dayLabel(iso, now, t)}, ${clockTime(iso)}`;
 }
 
 export type NotificationRow =
@@ -128,13 +139,14 @@ export function groupNotifications(items: AppNotification[]): NotificationRow[] 
 export function groupByDay(
   items: AppNotification[],
   now: Date,
+  t: Translate = uzbek,
 ): { label: string; items: AppNotification[] }[] {
   const out: { day: number; label: string; items: AppNotification[] }[] = [];
   for (const item of items) {
     const day = tashkentDayNumber(item.createdAt);
     const last = out[out.length - 1];
     if (last && last.day === day) last.items.push(item);
-    else out.push({ day, label: dayLabel(item.createdAt, now), items: [item] });
+    else out.push({ day, label: dayLabel(item.createdAt, now, t), items: [item] });
   }
   return out.map(({ label, items: list }) => ({ label, items: list }));
 }
@@ -154,23 +166,37 @@ export function panelSections(
 }
 
 const LESSON_GROUP: Partial<Record<NotificationType, { title: string; hint: string }>> = {
-  LESSON_STARTED: { title: "Dars boshlandi", hint: "Davomatni belgilashni unutmang" },
-  ATTENDANCE_TEACHER_WARNING: { title: "Davomat olinmagan", hint: "Dars tugashiga 30 daqiqadan kam qoldi" },
-  ATTENDANCE_ADMIN_ALERT: { title: "Davomat olinmagan", hint: "Dars tugashiga 30 daqiqadan kam qoldi" },
-  ATTENDANCE_MISSING_TEACHER: { title: "Davomat olinmadi", hint: "Dars tugadi, davomat olinmadi" },
-  ATTENDANCE_MISSING_ADMIN: { title: "Davomat olinmadi", hint: "«Dars bo'ldimi?» savoliga javob bering" },
+  LESSON_STARTED: { title: msg("Dars boshlandi"), hint: msg("Davomatni belgilashni unutmang") },
+  ATTENDANCE_TEACHER_WARNING: {
+    title: msg("Davomat olinmagan"),
+    hint: msg("Dars tugashiga 30 daqiqadan kam qoldi"),
+  },
+  ATTENDANCE_ADMIN_ALERT: {
+    title: msg("Davomat olinmagan"),
+    hint: msg("Dars tugashiga 30 daqiqadan kam qoldi"),
+  },
+  ATTENDANCE_MISSING_TEACHER: { title: msg("Davomat olinmadi"), hint: msg("Dars tugadi, davomat olinmadi") },
+  ATTENDANCE_MISSING_ADMIN: {
+    title: msg("Davomat olinmadi"),
+    hint: msg("«Dars bo'ldimi?» savoliga javob bering"),
+  },
 };
 
-/** «Davomat olinmagan · 3 guruh». */
-export function groupTitle(row: GroupRow): string {
-  return `${LESSON_GROUP[row.type]?.title ?? row.items[0].title} · ${row.items.length} guruh`;
+/** «Davomat olinmagan · 3 guruh». A type outside the table keeps the server's own title. */
+export function groupTitle(row: GroupRow, t: Translate = uzbek): string {
+  const known = LESSON_GROUP[row.type];
+  const title = known ? t(known.title) : row.items[0].title;
+  return `${title} · ${t("{n} guruh", { n: row.items.length })}`;
 }
 
 /** The folded line's second line: what it waits for, or when the last one closed. */
-export function groupHint(row: GroupRow): string {
-  if (row.items.some((n) => n.resolvedAt === null)) return LESSON_GROUP[row.type]?.hint ?? "";
+export function groupHint(row: GroupRow, t: Translate = uzbek): string {
+  if (row.items.some((n) => n.resolvedAt === null)) {
+    const known = LESSON_GROUP[row.type];
+    return known ? t(known.hint) : "";
+  }
   const last = row.items.map((n) => n.resolvedAt ?? "").sort().pop() ?? "";
-  return `O'zi yopildi · ${clockTime(last)}`;
+  return t("O'zi yopildi · {time}", { time: clockTime(last) });
 }
 
 /**
@@ -202,13 +228,13 @@ export function lessonLine(n: Pick<AppNotification, "title" | "message">): strin
   return [group, time, teacher].filter(Boolean).join(" · ") || firstTextLine(n.message) || n.title;
 }
 
-export function resolvedLine(resolvedAt: string): string {
-  return `Eslatma o'zi yopildi · ${clockTime(resolvedAt)}`;
+export function resolvedLine(resolvedAt: string, t: Translate = uzbek): string {
+  return t("Eslatma o'zi yopildi · {time}", { time: clockTime(resolvedAt) });
 }
 
 /** A task is looked at; everything else is opened. */
-export function actionLabel(type: NotificationType): string {
-  return type.startsWith("TASK_") ? "Ko'rish" : "Ochish";
+export function actionLabel(type: NotificationType, t: Translate = uzbek): string {
+  return type.startsWith("TASK_") ? t("Ko'rish") : t("Ochish");
 }
 
 /** The page's left list, in order. */
@@ -216,8 +242,8 @@ export const PAGE_VIEWS = ["pending", "all", ...NOTIFICATION_GROUPS] as const;
 export type PageView = (typeof PAGE_VIEWS)[number];
 
 export const VIEW_LABEL: Record<PageView, string> = {
-  pending: "Kutilmoqda",
-  all: "Hammasi",
+  pending: msg("Kutilmoqda"),
+  all: msg("Hammasi"),
   ...GROUP_LABEL,
 };
 

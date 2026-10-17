@@ -7,6 +7,24 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Interfeys tilini tanlash",
+    matn: "Yuqori paneldagi foydalanuvchi menyusida «Til» bandi paydo bo'ldi. Besh tildan birini tanlang: O'zbekcha, Ўзбекча, Русский, Deutsch yoki English. Sahifa qayta yuklanmaydi, tanlov akkauntingizda saqlanadi, shuning uchun boshqa qurilmada ham shu til chiqadi. Hozircha chap menyu, yuqori panel, foydalanuvchi menyusi va bildirishnomalar tarjima qilingan; sahifalar bosqichma-bosqich qo'shiladi, tarjimasi hali yo'q matn o'zbekcha lotinda chiqadi. Serverdan keladigan matnlar (xato xabarlari, bildirishnoma matni, hisobot fayllari) o'zbekcha qoladi. Kirish sahifasi hali o'zbekcha.",
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-17",
+    sarlavha: "Dizayn uslubini tanlash",
+    matn: "Yuqori paneldagi foydalanuvchi menyusida «Dizayn uslubi» bandi paydo bo'ldi. Besh tayyor rang va shrift to'plamidan birini tanlang: Daftar (hozirgi), O'rmon, Gilos, Grafit yoki Qum. Har uslub yorug' va qorong'i rejimda alohida ishlaydi. Tanlov akkauntingizda saqlanadi, shuning uchun boshqa qurilmada ham shu uslub chiqadi. Holat ranglari (qizil, yashil, sariq) hamma uslubda bir xil qoladi. Kirish sahifasi har doim Daftar.",
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-17",
+    sarlavha: "Foydalanuvchi menyusi yuqori panelda",
+    matn: "Ismingiz va rasmingiz endi chap menyu pastida emas, yuqori panelning o'ng chetida: rasmni bossangiz «Profil», «Ko'rinish» va «Chiqish» chiqadi. Yorug', qorong'i yoki tizim rejimi shu yerdagi «Ko'rinish» bandidan tanlanadi; alohida mavzu tugmasi olib tashlandi. Soat endi sanani ham ko'rsatadi («17.10.2026 · 14:05:30»); 1024 pikseldan tor ekranda (planshet) soat faqat vaqtni, foydalanuvchi tugmasi esa faqat rasmni ko'rsatadi. Chap menyu pastida «Texnik yordam» havolasi (Telegramdagi yordam chati) va sayt oxirgi marta qachon yangilangani yozilgan qator paydo bo'ldi.",
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Markaz faoliyati hisoboti yangilandi",
     matn: "Hisobotlarda «Markaz faoliyati» sahifasi qayta qurildi. Tepada uchta karta (xonalar bandligi, guruhlar to'lganligi, bo'sh o'rinlar), pastda «Qachon xona bo'sh» jadvali: yangi guruhni qaysi kun va soatga qo'yish mumkinligi ko'rinadi. Hafta dushanbadan shanbagacha hisoblanadi. O'tgan oylar to'liq: keyin yopilgan yoki o'chirilgan guruhlar ham o'sha oyda hisobga olinadi. Bo'sh o'rni bor guruhlar, xonalar va oylar bo'yicha bandlik jadvallari qo'shildi; xona o'rin sonini endi faqat Sozlamalar → Xonalar sahifasida o'zgartirasiz.",
     rollar: [1, 2],

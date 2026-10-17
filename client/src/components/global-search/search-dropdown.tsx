@@ -10,6 +10,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { useGlobalSearch } from "@/hooks/use-global-search";
+import { useT } from "@/i18n/context";
 import {
   categoryConfig,
   entityRoutes,
@@ -25,6 +26,7 @@ import { KbdShortcut, SearchSkeleton } from "./search-dropdown-helpers";
 
 export function SearchDropdown() {
   const router = useRouter();
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -166,7 +168,7 @@ export function SearchDropdown() {
             onFocus={() => setIsOpen(true)}
             onClick={() => setIsOpen(true)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Qidirish..."
+            placeholder={t("Qidirish...")}
             className="pl-9 pr-16 w-full max-w-md"
           />
           <KbdShortcut />
@@ -192,12 +194,12 @@ export function SearchDropdown() {
           <SearchSkeleton />
         ) : !hasResults && query.trim().length >= 2 ? (
           <div className="p-6 text-center text-sm text-muted-foreground">
-            Natija topilmadi
+            {t("Natija topilmadi")}
           </div>
         ) : (
           <div className="py-1">
             {pageResults.length > 0 && (
-              <ResultCategory label="Sahifalar" icon={FileText}>
+              <ResultCategory label={t("Sahifalar")} icon={FileText}>
                 {pageResults.map((page) => {
                   const idx = flatItems.findIndex(
                     (f) => f.type === "pages" && f.id === page.url,
@@ -227,7 +229,7 @@ export function SearchDropdown() {
                 return (
                   <ResultCategory
                     key={cat.key}
-                    label={cat.label}
+                    label={t(cat.label)}
                     icon={cat.icon}
                   >
                     {category.items.map((item) => {
@@ -263,7 +265,7 @@ export function SearchDropdown() {
                           )
                         }
                       >
-                        Barchasini ko&#39;rish ({category.total})
+                        {t("Barchasini ko'rish ({n})", { n: category.total })}
                       </button>
                     )}
                   </ResultCategory>

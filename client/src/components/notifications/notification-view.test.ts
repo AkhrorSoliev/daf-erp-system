@@ -1,6 +1,8 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { describe, expect, it } from "vitest";
+import ru from "@/i18n/dictionaries/ru";
+import { interpolate, translate } from "@/i18n/translate";
 import {
   NOTIFICATION_TYPES,
   actionLabel,
@@ -13,10 +15,12 @@ import {
   lessonParts,
   panelSections,
   relativeTime,
+  resolvedLine,
   viewCount,
   viewParams,
   type AppNotification,
   type NotificationRow,
+  type Translate,
 } from "./notification-view";
 
 const n = (over: Partial<AppNotification>): AppNotification => ({
@@ -200,6 +204,50 @@ describe("row text", () => {
   it("labels the row button by what it opens", () => {
     expect(actionLabel("TASK_REVIEW")).toBe("Ko'rish");
     expect(actionLabel("PAYMENT_PROMISE_OVERDUE")).toBe("Ochish");
+  });
+});
+
+describe("translation", () => {
+  // Marks every text it is handed: a text that skipped `t` would show up bare.
+  const marked: Translate = (source, params) => `<${interpolate(source, params)}>`;
+  const russian: Translate = (source, params) => translate("ru", ru, source, params);
+  const lessonRow = (over: Partial<AppNotification> = {}) =>
+    asGroup(groupNotifications([alert("a1", over), alert("a2", over)])[0]);
+
+  it("sends the words of the time, the day and the buttons through t, and nothing else", () => {
+    expect(relativeTime("2026-10-10T06:59:30.000Z", NOW, marked)).toBe("<hozirgina>");
+    expect(relativeTime("2026-10-10T06:55:00.000Z", NOW, marked)).toBe("<5 daqiqa oldin>");
+    expect(relativeTime("2026-10-10T05:00:00.000Z", NOW, marked)).toBe("<2 soat oldin>");
+    // Today's clock and an older day's date keep their format in every language.
+    expect(relativeTime("2026-10-10T00:00:00.000Z", NOW, marked)).toBe("05:00");
+    expect(relativeTime("2026-10-09T18:30:00.000Z", NOW, marked)).toBe("<Kecha>, 23:30");
+    expect(dayLabel("2026-10-07T10:00:00.000Z", NOW, marked)).toBe("07.10.2026");
+    expect(groupByDay([n({ createdAt: "2026-10-10T06:00:00.000Z" })], NOW, marked)[0].label).toBe("<Bugun>");
+    expect(resolvedLine("2026-10-10T03:40:00.000Z", marked)).toBe("<Eslatma o'zi yopildi · 08:40>");
+    expect(actionLabel("TASK_REVIEW", marked)).toBe("<Ko'rish>");
+    expect(actionLabel("LESSON_STARTED", marked)).toBe("<Ochish>");
+  });
+
+  it("translates a lesson alert's folded line but keeps the server's own title", () => {
+    const known = lessonRow();
+    expect(groupTitle(known, marked)).toBe("<Davomat olinmagan> · <2 guruh>");
+    expect(groupHint(known, marked)).toBe("<Dars tugashiga 30 daqiqadan kam qoldi>");
+    const closed = lessonRow({ resolvedAt: "2026-10-10T05:05:00.000Z" });
+    expect(groupHint(closed, marked)).toBe("<O'zi yopildi · 10:05>");
+
+    // A type the table does not know shows the title the server sent, as it is.
+    const other = lessonRow({ type: "SYSTEM", title: "Server sarlavhasi" });
+    expect(groupTitle(other, marked)).toBe("Server sarlavhasi · <2 guruh>");
+    expect(groupHint(other, marked)).toBe("");
+  });
+
+  it("reads the Russian dictionary without a plural form", () => {
+    expect(relativeTime("2026-10-10T06:59:30.000Z", NOW, russian)).toBe("только что");
+    expect(relativeTime("2026-10-10T06:55:00.000Z", NOW, russian)).toBe("5 мин. назад");
+    expect(relativeTime("2026-10-10T05:00:00.000Z", NOW, russian)).toBe("2 ч. назад");
+    expect(relativeTime("2026-10-09T18:30:00.000Z", NOW, russian)).toBe("Вчера, 23:30");
+    expect(groupTitle(lessonRow(), russian)).toBe("Посещаемость не отмечена · групп: 2");
+    expect(resolvedLine("2026-10-10T03:40:00.000Z", russian)).toBe("Напоминание закрыто автоматически · 08:40");
   });
 });
 

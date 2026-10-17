@@ -79,8 +79,9 @@ client/src/
 │   ├── app-sidebar.tsx                    # Main navigation
 │   ├── dashboard-header.tsx               # Top header bar
 │   ├── branch-switcher.tsx                # Branch selection
-│   ├── sidebar-user-footer.tsx            # User menu + logout
-│   └── theme-toggle.tsx                   # Dark/light mode
+│   ├── header-user-menu.tsx               # Top-bar user menu (profile, appearance, logout)
+│   ├── sidebar-footer-info.tsx            # Sidebar support link + build line
+│   └── theme-toggle.tsx                   # Dark/light mode (login, error pages)
 │
 ├── hooks/                                 # Custom React hooks (Zustand stores)
 ├── lib/                                   # Utilities, API client, configs

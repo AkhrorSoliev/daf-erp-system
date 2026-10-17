@@ -7,6 +7,7 @@ import {
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
+import { msg } from "@/i18n/msg";
 
 export interface FlatItem {
   type: string;
@@ -25,12 +26,12 @@ export const entityRoutes: Record<string, (id: string | number) => string> = {
 
 export const categoryConfig: { key: string; label: string; icon: LucideIcon }[] =
   [
-    { key: "pages", label: "Sahifalar", icon: FileText },
-    { key: "students", label: "O'quvchilar", icon: BookOpen },
-    { key: "users", label: "Xodimlar", icon: Users },
-    { key: "teachers", label: "O'qituvchilar", icon: GraduationCap },
-    { key: "groups", label: "Guruhlar", icon: UsersRound },
-    { key: "courses", label: "Kurslar", icon: Layers },
+    { key: "pages", label: msg("Sahifalar"), icon: FileText },
+    { key: "students", label: msg("O'quvchilar"), icon: BookOpen },
+    { key: "users", label: msg("Xodimlar"), icon: Users },
+    { key: "teachers", label: msg("O'qituvchilar"), icon: GraduationCap },
+    { key: "groups", label: msg("Guruhlar"), icon: UsersRound },
+    { key: "courses", label: msg("Kurslar"), icon: Layers },
   ];
 
 export function formatPhone(phone: string | null | undefined): string | null {
