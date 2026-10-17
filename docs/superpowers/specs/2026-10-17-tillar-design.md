@@ -207,8 +207,9 @@ tanlagich. Ungacha login o'zbekcha lotin.
 
 Migratsiya (qo'lda), server, klient — ADR-0097 dagidek, tartib qat'iy. Eski klient yangi maydonni ko'rmaydi.
 Server migratsiyadan oldin chiqsa, Prisma `User` ni o'qiganda hali yo'q `uiLocale` ustunini so'raydi va
-kirish bilan `refresh` yiqiladi. Klient serverdan oldin chiqsa, kirgan xodimning har til tanlovi `PATCH`
-da 404 oladi: til eski holatiga qaytadi (cookie ham qayta yoziladi) va serverning inglizcha xatosi
-(«Cannot PATCH /api/users/ui-locale») toastda chiqadi. `client/CLAUDE.md`
+kirish bilan `refresh` yiqiladi. Klient serverdan oldin chiqsa, eski server `/users/ui-locale` ni
+`PATCH /users/:id` deb ushlaydi va kirgan xodimning har til tanlovini rad etadi (huquqi yo'qda 403,
+`employees.manage` borda 400): til eski holatiga qaytadi (cookie ham qayta yoziladi) va serverning
+o'z xato matni toastda chiqadi. `client/CLAUDE.md`
 ga «Languages» bo'limi (matn kalit, `msg`, qat'iy fayllar, yangi til qo'shish tartibi, serverdan kelgan
 matnlar), qo'llanma (`interfeys.mdx`) va `yangiliklar.ts` yangilanadi.

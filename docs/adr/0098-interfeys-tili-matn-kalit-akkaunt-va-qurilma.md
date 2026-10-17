@@ -37,12 +37,12 @@ Admin va o'qituvchi paneli to'liq o'zbekcha lotinda, matnlar kodga qo'lda yozilg
 - Migratsiya qo'shimcha (`ADD COLUMN IF NOT EXISTS "uiLocale"`), eski klient yangi maydonni ko'rmaydi.
 - **Chiqarish tartibi qat'iy: migratsiya, server, klient.**
   - Server migratsiyadan oldin chiqsa: Prisma yaratilgan klienti `User` qatorini o'qiganda `uiLocale` ustunini ham so'raydi, ustun esa hali yo'q, shuning uchun `User` ni `select`siz o'qiydigan so'rovlar, jumladan kirish va `refresh`, xato bilan yiqiladi.
-  - Klient serverdan oldin chiqsa: kirgan xodimning har til tanlovi `PATCH /users/ui-locale` da 404 oladi (eski serverda bu yo'l yo'q), shuning uchun har tanlov qaytariladi va xato xabari chiqadi.
+  - Klient serverdan oldin chiqsa: eski serverda `/users/ui-locale` yo'li yo'q, uni `PATCH /users/:id` (`@Can('employees.manage')`, `ParseIntPipe`) ushlab oladi, shuning uchun kirgan xodimning har til tanlovi rad etiladi (huquqi yo'qda 403, huquqi borda, masalan CEO da, 400), har tanlov qaytariladi va xato xabari chiqadi.
 - **Til almashganda kod aynan shunday ishlaydi** (`changeUiLocale`, `I18nProvider.setLocale`):
   1. Yangi til lug'ati yuklanadi. Yuklanmasa hech narsa o'zgarmaydi (cookie yozilmaydi), «Tilni yuklab bo'lmadi» xabari chiqadi.
   2. `apply`: sahifa darrov yangi tilga o'tadi va `daf-locale` cookie yangi til bilan qayta yoziladi.
   3. `persist`: kirgan xodimda `PATCH /users/ui-locale`. Hech kim kirmagan bo'lsa yoki o'zgarish akkauntning o'zidan kelgan bo'lsa (`LocaleSync`), bu qadam o'tkazib yuboriladi: til faqat qurilmada qoladi.
-  4. `PATCH` yiqilsa: eng so'nggi tanlov bo'lsa, `apply` eski til bilan qayta chaqiriladi, ya'ni sahifa **eski tilga qaytadi va cookie ham eski tilga qayta yoziladi** (cookie «baribir ishlaydi» emas). Xabar `getErrorMessage(error, "Tilni saqlab bo'lmadi")` bilan chiqadi: serverning o'z xato matni, bo'lmasa shu o'zbekcha matn. Eski serverda bu Nest'ning inglizcha «Cannot PATCH /api/users/ui-locale» matni bo'ladi.
+  4. `PATCH` yiqilsa: eng so'nggi tanlov bo'lsa, `apply` eski til bilan qayta chaqiriladi, ya'ni sahifa **eski tilga qaytadi va cookie ham eski tilga qayta yoziladi** (cookie «baribir ishlaydi» emas). Xabar `getErrorMessage(error, "Tilni saqlab bo'lmadi")` bilan chiqadi: serverning o'z xato matni, bo'lmasa shu o'zbekcha matn. Eski serverda bu Nest'ning o'z matni bo'ladi (403 yoki 400, yuqoridagi tartib buzilganda), o'zbekcha emas.
   5. Ikki tez tanlovdan faqat oxirgisi sahifaga tegadi.
 - Chiqishda `daf-locale` cookie qoladi (qurilma tili). Akkauntdagi til qurilmadagidan farq qilsa, `LocaleSync` sahifani akkauntdagi tilga o'tkazadi va cookie ham yangilanadi (bu holda `PATCH` yuborilmaydi).
 - Boshqa qurilmada o'zgartirilgan til shu qurilmaga keyingi token yangilanishida yoki qayta kirishda keladi.
