@@ -86,6 +86,26 @@ describe('KpiReadService.overview', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it("counts the month's unowned earning conversions from KPI_START, inside the branch", async () => {
+    const s = setup();
+    s.prisma.lead.count.mockResolvedValue(3);
+    const out = await s.service.overview(1001, [2], {}, NOW);
+    expect(out.unownedConversions).toBe(3);
+    expect(s.prisma.lead.count).toHaveBeenCalledWith({
+      where: {
+        companyId: 1001,
+        statusEnum: 'CONVERTED',
+        ownerId: null,
+        conversionKind: { in: ['NEW_STUDENT', 'RETURNING'] },
+        statusChangedAt: {
+          gte: new Date('2026-10-17T00:00:00+05:00'),
+          lt: new Date('2026-11-01T00:00:00+05:00'),
+        },
+        branchId: { in: [2] },
+      },
+    });
+  });
+
   it('reads the month and the one before by default, inside the branch', async () => {
     const s = setup();
     const out = await s.service.overview(1001, [2], {}, NOW);

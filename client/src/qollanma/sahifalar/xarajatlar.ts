@@ -11,6 +11,6 @@ export const xarajatlar: QollanmaSahifa[] = [
     adr: ["0094", "0038"],
     yollar: ["/payments/expenses"],
     kalitSozlar: ["xarajat", "xarajat qo'shish", "ijara", "kommunal", "soliq", "turkum", "kim kiritgan", "bu oy hali yozilmagan", "boshqa xarajatlar", "avans", "filial xarajati"],
-    yangilangan: "2026-10-16",
+    yangilangan: "2026-10-17",
   },
 ];

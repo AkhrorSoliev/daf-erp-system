@@ -8,6 +8,7 @@ import {
   KpiResultStatus,
   KpiResultType,
   LeadOwnershipKind,
+  LeadStatus,
   PaymentPromiseStatus,
   Prisma,
   UserStatus,
@@ -35,11 +36,13 @@ import {
 import { KpiSettingsService } from './kpi-settings.service';
 import {
   KPI_FIRST_MONTH,
+  KPI_START,
   explainKpi,
   isKpiEligible,
   monthFullyRecorded,
   recordingSince,
 } from './kpi-rules';
+import { EARNING_KINDS } from './kpi-results.plan';
 import { workingDaysOfMonth } from './kpi-signals';
 import {
   assembleOverview,
@@ -95,6 +98,12 @@ export interface KpiOverview extends OverviewBody {
    */
   compareRecorded: boolean;
   status: { enabled: boolean; changedAt: Date | null };
+  /**
+   * Leads converted this month (from KPI_START) into a new or returning
+   * student with no owner: nobody gets a result for them (CEO 17.10.2026 —
+   * the rule stays, the page shows the count).
+   */
+  unownedConversions: number;
 }
 
 export interface KpiResultView {
@@ -192,6 +201,7 @@ export class KpiReadService {
       compareExpired,
       promises,
       roster,
+      unownedConversions,
     ] = await Promise.all([
       this.kpiSettings.read(companyId),
       this.prisma.kpiResult.findMany({
@@ -251,6 +261,21 @@ export class KpiReadService {
           ...userBranchWhere(scope),
         },
         select: { id: true },
+      }),
+      // Leads converted in the month (from KPI_START) with no owner: an
+      // earning conversion nobody gets a result for — work done unclaimed.
+      this.prisma.lead.count({
+        where: {
+          companyId,
+          statusEnum: LeadStatus.CONVERTED,
+          ownerId: null,
+          conversionKind: { in: [...EARNING_KINDS] },
+          statusChangedAt: {
+            gte: range.gte > KPI_START ? range.gte : KPI_START,
+            lt: range.lt,
+          },
+          ...branch,
+        },
       }),
     ]);
 
@@ -342,6 +367,7 @@ export class KpiReadService {
       month,
       compare,
       compareAvailable,
+      unownedConversions,
       compareRecorded,
       status: { enabled: settings.enabled, changedAt: settings.changedAt },
       ...body,

@@ -14,6 +14,20 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-17",
+    sarlavha: "Summalar to'liq yoziladi",
+    matn: "Ish haqi, xarajatlar va to'lovlar sahifalaridagi kartalar va yorliqlarda summa endi «4,1 mln» deb yaxlitlanmaydi: butun so'mda yoziladi (masalan, 4 124 000 so'm). Grafiklarning o'qlaridagi qisqa yozuv (1,2 mln) o'zgarmadi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "tolovlar", sahifa: "ish-haqi" },
+  },
+  {
+    sana: "2026-10-17",
+    sarlavha: "Telegram hisobot sahifasi yangilandi",
+    matn: "Sozlamalar → «Telegram hisobot» endi jadval ko'rinishida: oluvchilarni ism yoki lavozim bo'yicha qidirish, «Yetmaydi» va «O'chirilgan» bo'yicha saralash mumkin. Har oluvchida xabar yetib borishi (xodim botni bloklaganmi), tepada botning holati ko'rinadi, «Ulanishni tekshirish» xodimga bildirmasdan tekshiradi, «Namunani ko'rish» hisobotni hozirgi raqamlar bilan ko'rsatadi.",
+    rollar: [1],
+    sahifa: { bolim: "hisobotlar", sahifa: "telegram-hisobot" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Kirish sahifasi panelga mos bo'ldi",
     matn: "Admin panel va o'qituvchi portalining kirish sahifasi endi panelning o'zidek: o'sha ranglar, o'sha shrift. Chap tomonda (telefonda tepada) logotip va ochilgan kitob varaqlari chizilgan to'q ko'k fon turadi. Daftar varag'i ko'rinishi olib tashlandi. Kirgach «Xush kelibsiz» salomi avvalgidek chiqadi.",
     rollar: [1, 2, 3, 4, 5],

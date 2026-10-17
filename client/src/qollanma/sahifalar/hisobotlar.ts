@@ -20,7 +20,7 @@ export const hisobotlar: QollanmaSahifa[] = [
     qisqacha:
       "Kim, qachon, nega va qayerdan ketdi. Hamma raqam bitta ro'yxatdan hisoblanadi: sabablar va ro'yxatdagi ketganlar soni tepadagi «ketdi» ga teng, davr oyining ustuni ham; kurs va ustoz filtri hamma blokka ta'sir qiladi.",
     rollar: [1, 2],
-    adr: ["0097", "0035"],
+    adr: ["0098", "0035"],
     yollar: ["/reports/departed-students"],
     kalitSozlar: ["ketgan", "ketgan o'quvchilar", "ketish sababi", "kutilmoqda", "qaytgan", "oy boshida", "ulushi", "ustoz bo'yicha", "excel"],
     yangilangan: "2026-10-17",
@@ -56,9 +56,9 @@ export const hisobotlar: QollanmaSahifa[] = [
     qisqacha:
       "Kunlik hisobot CEO tanlagan xodimlarning shaxsiy Telegram chatiga, har biriga o'z vaqti, filiallari, bo'limlari va ko'rinishi bilan boradi.",
     rollar: [1],
-    adr: ["0095"],
+    adr: ["0095", "0097"],
     yollar: ["/settings/telegram-report"],
     kalitSozlar: ["telegram", "kunlik hisobot", "shaxsiy hisobot", "bot", "hisobot vaqti", "filial", "jadval"],
-    yangilangan: "2026-10-16",
+    yangilangan: "2026-10-17",
   },
 ];

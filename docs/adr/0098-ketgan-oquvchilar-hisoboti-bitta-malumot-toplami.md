@@ -1,4 +1,4 @@
-# ADR-0097 — «Ketgan o'quvchilar» hisoboti bitta fakt to'plamidan hisoblanadi; sabab epizodniki, ustoz to'xtash paytidagi
+# ADR-0098 — «Ketgan o'quvchilar» hisoboti bitta fakt to'plamidan hisoblanadi; sabab epizodniki, ustoz to'xtash paytidagi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-17

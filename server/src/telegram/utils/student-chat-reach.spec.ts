@@ -24,6 +24,10 @@ function setup() {
       findMany: jest.fn().mockResolvedValue([]),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
+    user: {
+      findMany: jest.fn().mockResolvedValue([]),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
   };
   const history = { recordCreate: jest.fn().mockResolvedValue(undefined) };
   const logger = { warn: jest.fn(), log: jest.fn(), error: jest.fn() };
@@ -275,6 +279,63 @@ describe('StudentChatReach.onMyChatMember — Telegram announces a block', () =>
       reach.onMyChatMember(update('kicked')),
     ).resolves.toBeUndefined();
     expect(logger.warn).toHaveBeenCalled();
+  });
+});
+
+describe('staff accounts on the same chat', () => {
+  it('a block marks the live staff rows too, with a User history row', async () => {
+    const { reach, prisma, history } = setup();
+    prisma.user.findMany.mockResolvedValue([{ id: 50, companyId: 1001 }]);
+    await reach.disconnected(
+      CHAT,
+      new Date('2026-10-17T10:00:00Z'),
+      BLOCKED_REASON,
+    );
+    expect(prisma.user.findMany).toHaveBeenCalledWith({
+      where: {
+        telegramChatId: CHAT,
+        telegramDisconnectedAt: null,
+        deletedAt: null,
+      },
+      select: { id: true, companyId: true },
+    });
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 50, telegramDisconnectedAt: null },
+      data: { telegramDisconnectedAt: new Date('2026-10-17T10:00:00Z') },
+    });
+    expect(history.recordCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: 'User',
+        entityId: 50,
+        newValues: { action: 'TELEGRAM_UZILDI', sabab: BLOCKED_REASON },
+      }),
+    );
+  });
+
+  it('an unblock clears the mark on staff rows', async () => {
+    const { reach, prisma, history } = setup();
+    prisma.user.findMany.mockResolvedValue([{ id: 50, companyId: 1001 }]);
+    await reach.reconnected(CHAT);
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 50, telegramDisconnectedAt: { not: null } },
+      data: { telegramDisconnectedAt: null },
+    });
+    expect(history.recordCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: 'User',
+        newValues: { action: 'TELEGRAM_QAYTA_ULANDI' },
+      }),
+    );
+  });
+
+  it('a row another call already marked records no second history row', async () => {
+    const { reach, prisma, history } = setup();
+    prisma.user.findMany.mockResolvedValue([{ id: 50, companyId: 1001 }]);
+    prisma.user.updateMany.mockResolvedValue({ count: 0 });
+    await reach.disconnected(CHAT, new Date(), BLOCKED_REASON);
+    expect(history.recordCreate).not.toHaveBeenCalledWith(
+      expect.objectContaining({ entityType: 'User' }),
+    );
   });
 });
 

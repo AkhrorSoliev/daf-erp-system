@@ -1,4 +1,4 @@
-import { mln } from "@/components/payments/salary/salary-page-model";
+import { formatBalance } from "@/lib/format-utils";
 import { addMonths, monthLabel, monthShort } from "@/components/payments/salary-utils";
 import { tashkentWallClock } from "@/lib/tashkent-time";
 import { RECURRING_LABELS, type ExpenseCategoryKey } from "./expenses-labels";
@@ -14,10 +14,10 @@ export function missingTitle(row: MissingRow, multiBranch: boolean): string {
   return multiBranch ? `${name} · ${row.branchName}` : name;
 }
 
-/** «avgustda 17,8 mln edi», plus «, sentabrda hozircha 70 000 so'm» when part is recorded. */
+/** «avgustda 17 800 000 so'm edi», plus «, sentabrda hozircha 70 000 so'm» when part is recorded. */
 export function missingText(row: MissingRow, month: string): string {
-  const was = `${lowerMonth(addMonths(month, -1))}da ${mln(row.lastMonthAmount)} edi`;
-  return row.thisMonthAmount > 0 ? `${was}, ${lowerMonth(month)}da hozircha ${mln(row.thisMonthAmount)}` : was;
+  const was = `${lowerMonth(addMonths(month, -1))}da ${formatBalance(row.lastMonthAmount)} edi`;
+  return row.thisMonthAmount > 0 ? `${was}, ${lowerMonth(month)}da hozircha ${formatBalance(row.thisMonthAmount)}` : was;
 }
 
 /** «Shimol filiali», unless the name already says it. */
