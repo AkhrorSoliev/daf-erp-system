@@ -334,8 +334,10 @@ replacesResultId?, createdAt`.
   taqqoslanayotgan oy (oy kuni bo'yicha tekislangan) — ikki chiziq.
 - **«Oylar bo'yicha»** — oxirgi 6 oy (2026-10 dan oldin yo'q), ustunda
   lid va va'da qismlari.
-- **Jadval** — har administrator (oyda natijasi bor, hozir band lidi bor yoki shu
-  oyda lid olgan / lidi muddat o'tib qaytgan — hozirgi administrator):
+- **Jadval** — tanlangan filial(lar)ning har bir hozirgi administratori (natijasi
+  0 bo'lsa ham), shuningdek oyda natijasi bor, hozir band lidi bor, shu oyda lid
+  olgan / lidi muddat o'tib qaytgan yoki shu filialda shu oy muddatli va'da
+  yozgan hozirgi administrator:
   Lid to'lov qildi (soni · summa · ▲▼), Va'da bajarildi (soni · summa · ▲▼),
   Lid → to'lov %, Va'da bajarilishi %, Qaytgan lidlar (▲▼), Jami summa.
   Sahifalanmaydi (jamoa bir qarashda — oylik jadvali kabi). Qator bosilsa —

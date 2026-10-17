@@ -190,6 +190,7 @@ export class KpiReadService {
       expired,
       compareExpired,
       promises,
+      roster,
     ] = await Promise.all([
       this.kpiSettings.read(companyId),
       this.prisma.kpiResult.findMany({
@@ -236,6 +237,17 @@ export class KpiReadService {
         },
         select: { createdById: true, status: true },
       }),
+      // Every administrator of the branch(es) gets a row, zeros included:
+      // the table answers «who works here», not only «who has a result».
+      this.prisma.user.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          roles: { some: { role: { name: 'Administrator' } } },
+          ...userBranchWhere(scope),
+        },
+        select: { id: true },
+      }),
     ]);
 
     const heldMap = new Map<number, number>();
@@ -253,6 +265,8 @@ export class KpiReadService {
         ...heldMap.keys(),
         ...received.map((l) => l.userId),
         ...expired.map((l) => l.userId),
+        ...promises.map((p) => p.createdById),
+        ...roster.map((u) => u.id),
       ]),
     ];
     const [paidLeads, users, workingDays] = await Promise.all([
@@ -291,6 +305,7 @@ export class KpiReadService {
         ? recentResultUserIds(series, today)
         : new Set<number>(),
       held: heldMap,
+      roster: roster.map((u) => u.id),
       received,
       compareReceived,
       paidLeads: paidLeads.flatMap((p) =>
@@ -357,7 +372,7 @@ export class KpiReadService {
     // whoever holds a live lead in it and whoever took or lost one of its leads
     // this month (spec §7.10): every overview row opens.
     if (inBranch === 0 && anyResults === 0) {
-      const [holds, logged] = await Promise.all([
+      const [holds, logged, promised] = await Promise.all([
         this.prisma.lead.count({
           where: { ...liveOwnedLeadWhere(companyId, scope), ownerId: userId },
         }),
@@ -376,8 +391,18 @@ export class KpiReadService {
             ],
           },
         }),
+        this.prisma.paymentPromise.count({
+          where: {
+            companyId,
+            createdById: userId,
+            promiseDate: tashkentMonthRangeUtc(month),
+            ...branch,
+          },
+        }),
       ]);
-      if (holds === 0 && logged === 0) throw new NotFoundException(NOT_FOUND);
+      if (holds === 0 && logged === 0 && promised === 0) {
+        throw new NotFoundException(NOT_FOUND);
+      }
     }
 
     const months = monthsFrom(month);

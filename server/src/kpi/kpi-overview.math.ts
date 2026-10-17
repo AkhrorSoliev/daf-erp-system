@@ -58,6 +58,8 @@ export interface OverviewFacts {
   compareExpired: LogFact[];
   /** Promises written in scope whose day falls in the month, KEPT or BROKEN. */
   promises: PromiseFact[];
+  /** Administrators attached to the branch(es) in scope: each gets a row, zeros included. */
+  roster: readonly number[];
   names: ReadonlyMap<number, string>;
   /**
    * Of the people holding leads now or named in this month's logs, those who
@@ -186,10 +188,12 @@ export function assembleOverview(f: OverviewFacts): OverviewBody {
   const paidOf = (pairs: Set<string>) =>
     [...pairs].filter((p) => paid.has(p)).length;
 
-  // With a result, or an administrator who holds leads now or took or lost
-  // one this month — whose leads all expired is exactly rule 3's case.
+  // With a result, or an administrator of the branch, or one who holds leads
+  // now, took or lost one, or wrote a promise due this month.
   const ids = new Set(f.monthResults.map((r) => r.userId));
   for (const userId of [
+    ...f.roster,
+    ...f.promises.map((p) => p.userId),
     ...f.held.keys(),
     ...f.received.map((l) => l.userId),
     ...f.expired.map((l) => l.userId),
