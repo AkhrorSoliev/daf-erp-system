@@ -6,10 +6,6 @@ import {
   ATTENDANCE_TABLE_TOOLTIPS,
 } from "@/components/reports/attendance/metric-helpers";
 import {
-  KPI_TOOLTIPS,
-  TABLE_TOOLTIPS,
-} from "@/components/reports/center-activity/metric-helpers";
-import {
   FIELD_TYPE_LABELS as LEAD_FIELD_TYPE_LABELS,
   customFormSchema,
   defaultFormFields,
@@ -33,8 +29,6 @@ describe("report tooltips", () => {
   it.each([
     ["ATTENDANCE_KPI_TOOLTIPS", ATTENDANCE_KPI_TOOLTIPS],
     ["ATTENDANCE_TABLE_TOOLTIPS", ATTENDANCE_TABLE_TOOLTIPS],
-    ["KPI_TOOLTIPS", KPI_TOOLTIPS],
-    ["TABLE_TOOLTIPS", TABLE_TOOLTIPS],
   ])("%s carries no status enum name and no English jargon", (_name, tooltips) => {
     for (const [key, text] of Object.entries(tooltips)) {
       expect(text, key).not.toMatch(ENGLISH);
@@ -206,5 +200,22 @@ describe("the overview and marketing pages (B1)", () => {
 
   it.each(files)("%s carries no LTV, CAC or ROI", (file) => {
     expect(source(file)).not.toMatch(/\b(LTV|CAC|ROI)\b/);
+  });
+});
+
+// «Markaz faoliyati» (B7b): the page is drawn from the server's figures and
+// names none of the English words the old page used on screen.
+describe("the «Markaz faoliyati» page (B7b)", () => {
+  const dir = "reports/center-activity";
+  const files = readdirSync(join(__dirname, "..", "components", dir))
+    .filter((f) => f.endsWith(".tsx"))
+    .map((f) => `${dir}/${f}`);
+
+  it("finds the new files", () => {
+    expect(files.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it.each(files)("%s carries no English jargon", (file) => {
+    expect(source(file)).not.toMatch(ENGLISH);
   });
 });

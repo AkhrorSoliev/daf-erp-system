@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 import { cachedNetProfit } from './net-profit-cache';
-import { StudentStatus } from '@prisma/client';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsOverviewService } from './reports-overview.service';
 import { ReportsAttendanceAnalyticsService } from './reports-attendance-analytics.service';
@@ -12,11 +11,8 @@ import {
 } from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
-import { ReportsDepartedStudentsService } from './reports-departed-students.service';
-import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
-import { ReportsCenterActivityService } from './reports-center-activity.service';
 import { ReportsExpectationService } from './reports-expectation.service';
 import { ReportsExpectationHistoryService } from './reports-expectation-history.service';
 import { ReportsStudentFlowService } from './reports-student-flow.service';
@@ -38,7 +34,6 @@ import {
   ReportsBalanceSheetService,
   BalanceSheetQuery,
 } from './reports-balance-sheet.service';
-import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
 import {
   AttendanceAnalyticsQueryDto,
   AttendanceByCourseQueryDto,
@@ -78,11 +73,8 @@ export class ReportsService {
     private debtHistory: ReportsDebtHistoryService,
     private payments: ReportsPaymentsService,
     private studentPayments: ReportsStudentPaymentsService,
-    private departedStudents: ReportsDepartedStudentsService,
-    private departedLists: ReportsDepartedListsService,
     private departedReasons: ReportsDepartedReasonsService,
     private teacherChanges: ReportsTeacherChangesService,
-    private centerActivity: ReportsCenterActivityService,
     private profitLoss: ReportsProfitLossService,
     private cashFlow: ReportsCashFlowService,
     private balanceSheet: ReportsBalanceSheetService,
@@ -405,11 +397,6 @@ export class ReportsService {
     return this.balanceSheet.getBalanceSheet(companyId, query);
   }
 
-  // Center activity
-  getCenterActivity(companyId: number, query: CenterActivityQueryDto) {
-    return this.centerActivity.getCenterActivity(companyId, query);
-  }
-
   // Overview
   getKpis(companyId: number, query: ReportsQueryDto) {
     return this.overview.getKpis(companyId, query);
@@ -674,75 +661,6 @@ export class ReportsService {
     );
   }
 
-  // Departed students — core
-  getDepartedStudentsSummary(
-    companyId: number,
-    params: { scope: ReportBranchIds; startDate: string; endDate: string },
-  ) {
-    return this.departedStudents.getDepartedStudentsSummary(companyId, params);
-  }
-  getDepartedStudentsDynamics(
-    companyId: number,
-    params: { scope: ReportBranchIds; startDate: string; endDate: string },
-  ) {
-    return this.departedStudents.getDepartedStudentsDynamics(companyId, params);
-  }
-  getDepartedStudentsList(
-    companyId: number,
-    params: {
-      scope: ReportBranchIds;
-      status?: StudentStatus;
-      debtorsOnly?: boolean;
-      page?: number;
-      pageSize?: number;
-    },
-  ) {
-    return this.departedLists.getDepartedStudentsList(companyId, params);
-  }
-  getDepartedStudentsByReason(
-    companyId: number,
-    params: {
-      branchId?: number;
-      courseId?: string[];
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
-      page?: number;
-      pageSize?: number;
-      departureReasonId?: string;
-    },
-  ) {
-    return this.departedLists.getDepartedStudentsByReason(companyId, params);
-  }
-  getDepartedStudentsByStatus(
-    companyId: number,
-    params: { scope: ReportBranchIds },
-  ) {
-    return this.departedLists.getDepartedStudentsByStatus(companyId, params);
-  }
-  getDepartedStudentsGroupBy(
-    companyId: number,
-    params: {
-      scope: ReportBranchIds;
-      groupBy: 'course' | 'teacher' | 'branch';
-    },
-  ) {
-    return this.departedLists.getDepartedStudentsGroupBy(companyId, params);
-  }
-
-  // Departed reasons (3 charts)
-  getDepartedStudentsReasons(
-    companyId: number,
-    params: {
-      branchId?: number;
-      courseId?: string[];
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
-    },
-  ) {
-    return this.departedReasons.getDepartedStudentsReasons(companyId, params);
-  }
   getTeacherChangeReasons(
     companyId: number,
     params: {
@@ -754,18 +672,6 @@ export class ReportsService {
     },
   ) {
     return this.departedReasons.getTeacherChangeReasons(companyId, params);
-  }
-  getTransferReasons(
-    companyId: number,
-    params: {
-      branchId?: number;
-      courseId?: string[];
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
-    },
-  ) {
-    return this.departedReasons.getTransferReasons(companyId, params);
   }
 
   // Teacher changes drill-downs
@@ -782,7 +688,7 @@ export class ReportsService {
   ) {
     return this.teacherChanges.getTeacherChangesList(companyId, params);
   }
-  getTransferredList(
+  getDepartedAfterTeacherChangeList(
     companyId: number,
     params: {
       branchId?: number;
@@ -790,16 +696,7 @@ export class ReportsService {
       teacherIds?: number[];
       startDate: string;
       endDate: string;
-      page?: number;
-      pageSize?: number;
-      transferReasonId?: string;
     },
-  ) {
-    return this.teacherChanges.getTransferredList(companyId, params);
-  }
-  getDepartedAfterTeacherChangeList(
-    companyId: number,
-    params: { branchId?: number; startDate: string; endDate: string },
   ) {
     return this.teacherChanges.getDepartedAfterTeacherChangeList(
       companyId,

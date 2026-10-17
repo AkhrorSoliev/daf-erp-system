@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { DepartedStudentsClient } from "@/components/reports/departed-students/departed-students-client";
+import { DepartedStudentsPage } from "@/components/reports/departed-students/departed-students-page";
 
-export default function DepartedStudentsPage() {
+export default function Page() {
   return (
     <Suspense fallback={null}>
-      <DepartedStudentsClient />
+      <DepartedStudentsPage />
     </Suspense>
   );
 }

@@ -15,7 +15,7 @@ import {
 import { DEBT_FLOOR_MONTH, enumerateMonths } from '../debt-history.util';
 import { isMonthlyBillingMonth } from '../month-charges';
 import { ReportsFinancialService } from '../reports-financial.service';
-import { ReportsDepartedStudentsService } from '../reports-departed-students.service';
+import { DepartedOverviewService } from '../departed/departed-overview.service';
 import { ReportsLeadFunnelService } from '../lead-funnel/reports-lead-funnel.service';
 import { FUNNEL_START_DATE } from '../lead-funnel/lead-funnel.math';
 import {
@@ -29,7 +29,7 @@ import {
  * what they paid, the months before it back to the reporting floor, and the
  * lead-source cohort. Every figure comes from its single source — first
  * payments and spend read here once, the month charge from `getMonthCharges`,
- * the study months from `getDepartedStudentsSummary`, the sources from the
+ * the study months from `DepartedOverviewService.averageStudyMonths`, the sources from the
  * lead funnel's own cohort — and the arithmetic is `marketing.math.ts`.
  */
 @Injectable()
@@ -37,7 +37,7 @@ export class ReportsMarketingService {
   constructor(
     private prisma: PrismaService,
     private financial: ReportsFinancialService,
-    private departed: ReportsDepartedStudentsService,
+    private departed: DepartedOverviewService,
     private leadFunnel: ReportsLeadFunnelService,
   ) {}
 
@@ -57,7 +57,7 @@ export class ReportsMarketingService {
     const startDate = `${month}-01`;
     const endDate = addDaysToDateStr(`${addMonthsToMonthKey(month, 1)}-01`, -1);
 
-    const [firstPayments, expenses, departed, charges, sources] =
+    const [firstPayments, expenses, avgStudyMonths, charges, sources] =
       await Promise.all([
         // Every candidate student's FIRST completed payment and everything
         // paid since. A candidate is a live card in scope with at least one
@@ -91,8 +91,7 @@ export class ReportsMarketingService {
           },
           select: { date: true, amount: true },
         }),
-        this.departed.getDepartedStudentsSummary(companyId, {
-          scope: branchIds,
+        this.departed.averageStudyMonths(companyId, branchIds, {
           startDate,
           endDate,
         }),
@@ -133,7 +132,7 @@ export class ReportsMarketingService {
 
     return {
       ...months[0],
-      ltv: lifetimeValue(departed.avgDurationMonths, charges),
+      ltv: lifetimeValue(avgStudyMonths, charges),
       months,
       sources,
     };

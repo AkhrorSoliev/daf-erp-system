@@ -899,8 +899,12 @@ export class UsersService {
     if (dto.position !== undefined) updateData.position = dto.position.trim();
     if (dto.gender !== undefined) updateData.gender = dto.gender;
     if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
-    if (dto.telegramChatId !== undefined)
+    if (dto.telegramChatId !== undefined) {
       updateData.telegramChatId = dto.telegramChatId;
+      // A different chat is a fresh start: the old chat's «blocked» mark is not
+      // the new one's (ADR-0097).
+      updateData.telegramDisconnectedAt = null;
+    }
     if (dto.status !== undefined) {
       updateData.status = dto.status;
       updateData.isActive = dto.status === UserStatus.ACTIVE;

@@ -3,9 +3,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatBalance } from "@/lib/format-utils";
 import { INCOME_PART_COLOUR, IncomeBar } from "@/components/payments/overview/income-dialog";
 import { addMonths, monthShort } from "@/components/payments/salary-utils";
-import { METHOD_FILTER, periodTitle, shortMln } from "./payments-format";
+import { METHOD_FILTER, periodTitle } from "./payments-format";
 import type { PeriodView, PaymentSummary } from "./payments-list-types";
 import type { PeriodId } from "./payments-url";
 
@@ -60,7 +61,7 @@ export function PaymentsSummaryCard({ davr, period, summary, activePart, onPart 
           )}
         </div>
         <div>
-          <p className="font-heading text-3xl font-semibold tabular-nums">{shortMln(summary.total)}</p>
+          <p className="font-heading text-3xl font-semibold tabular-nums">{formatBalance(summary.total)}</p>
           <p className="text-sm text-muted-foreground">
             {summary.paymentCount} ta to&apos;lov · {summary.payerCount} o&apos;quvchi
           </p>
@@ -78,7 +79,7 @@ export function PaymentsSummaryCard({ davr, period, summary, activePart, onPart 
                   className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs hover:bg-muted aria-pressed:border-foreground aria-pressed:bg-muted"
                 >
                   <span className={`size-2 rounded-full ${p.colour}`} />
-                  {p.label} <b className="tabular-nums">{shortMln(p.amount)}</b>
+                  {p.label} <b className="tabular-nums">{formatBalance(p.amount)}</b>
                 </button>
               ))}
             </div>
@@ -88,12 +89,12 @@ export function PaymentsSummaryCard({ davr, period, summary, activePart, onPart 
           <div className="flex flex-wrap gap-2">
             {methods.map((m) => (
               <span key={m.method} className="rounded-full border px-3 py-1 text-xs">
-                {METHOD_LABEL[m.method] ?? m.method} <b className="tabular-nums">{shortMln(m.amount)}</b>
+                {METHOD_LABEL[m.method] ?? m.method} <b className="tabular-nums">{formatBalance(m.amount)}</b>
               </span>
             ))}
             {summary.online.count > 0 && (
               <span className="rounded-full border border-dashed px-3 py-1 text-xs text-muted-foreground">
-                shundan onlayn avtomatik <b className="tabular-nums">{shortMln(summary.online.amount)}</b> · {summary.online.count} ta
+                shundan onlayn avtomatik <b className="tabular-nums">{formatBalance(summary.online.amount)}</b> · {summary.online.count} ta
               </span>
             )}
           </div>

@@ -3,11 +3,6 @@ import { monthShort } from "@/components/payments/salary-utils";
 import type { PeriodId } from "./payments-url";
 import type { PaymentListResponse, PaymentRow } from "./payments-list-types";
 
-/** 12_345_678 → «12.3 mln»; below a million the whole figure. */
-export function shortMln(n: number): string {
-  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)} mln` : formatPrice(n);
-}
-
 /** «Tanlangan: N ta to'lov · X so'm» and the optional «shundan {qism}: Y so'm» (spec B4 §3.6). */
 export function selectedLine(
   totals: PaymentListResponse["totals"],

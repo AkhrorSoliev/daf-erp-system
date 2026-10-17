@@ -23,21 +23,18 @@ import { cn } from "@/lib/utils";
 
 /**
  * Which look the leaves of this file take. The student cabinet is Lumio
- * (ADR-0040); the staff cabinet (ADR-0045) is written on the Daftar sheet of
- * the staff sign-in pages. What `/tg` says and does is the same in both — the
- * states and their texts exist once, and only `Loading`, `Notice`, `Action`
- * and `Steps` read this.
- *
- * The sheet is written in whole 2rem rows (see `DaftarSheet`): its branches
- * below put text on `daftar-row` and size everything else in rows.
+ * (ADR-0040); the staff cabinet (ADR-0045) opens in the shell of the staff
+ * sign-in pages and takes the cabinet's own look. What `/tg` says and does is
+ * the same in both — the states and their texts exist once, and only
+ * `Loading`, `Notice`, `Action` and `Steps` read this.
  */
-export const DaftarSkin = createContext(false);
+export const StaffSkin = createContext(false);
 
 /** The sign-in request is on its way. */
 export function Loading({ children }: { children: ReactNode }) {
-  if (useContext(DaftarSkin)) {
+  if (useContext(StaffSkin)) {
     return (
-      <p className="daftar-row flex items-center gap-2 text-sm text-muted-foreground">
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
         {children}
       </p>
@@ -62,27 +59,22 @@ export function Notice({
   icon: ReactNode;
   title: string;
   description: string;
-  /** Something failed. The sheet writes it the way its sign-in form writes an
-      error — in red pen; Lumio draws every notice alike. */
+  /** Something failed. The staff look colours and announces it, as its
+      sign-in form does with an error; Lumio draws every notice alike. */
   alert?: boolean;
   children: ReactNode;
 }) {
-  if (useContext(DaftarSkin)) {
-    // No icon: the sheet is handwriting on paper, as on the sign-in pages.
+  if (useContext(StaffSkin)) {
+    // No icon: the page heading above already says where you are.
     return (
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-5">
         <div role={alert ? "alert" : undefined}>
           <h2
-            className={cn(
-              "daftar-row",
-              alert ? "daftar-hand text-lg text-destructive" : "font-semibold",
-            )}
+            className={cn("text-lg font-semibold", alert && "text-destructive")}
           >
             {title}
           </h2>
-          <p className="daftar-row text-sm text-muted-foreground">
-            {description}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         </div>
         {children}
       </div>
@@ -109,17 +101,17 @@ type ActionProps = Pick<
 
 /** A full-width button of a notice. */
 export function Action(props: ActionProps) {
-  if (useContext(DaftarSkin)) {
+  if (useContext(StaffSkin)) {
     const { variant, iconBefore, iconAfter, className, onClick, children } =
       props;
     if (variant === "ghost") {
-      // A quiet action is a line of the sheet, like «Parolni unutdingizmi?»
-      // on the sign-in form.
+      // A quiet action is a link-like line, like «Parolni unutdingizmi?» on
+      // the sign-in form.
       return (
         <button
           type="button"
           onClick={onClick}
-          className="daftar-row w-full text-center text-sm text-primary hover:underline"
+          className="w-full py-1 text-center text-sm text-primary hover:underline"
         >
           {children}
         </button>
@@ -130,8 +122,8 @@ export function Action(props: ActionProps) {
         type="button"
         size="lg"
         variant={variant === "secondary" ? "outline" : "default"}
-        // One empty row, then the button centred in two — as «Kirish».
-        className={cn("mt-10 mb-2 h-12 w-full", className)}
+        // The height of «Kirish» on the sign-in form.
+        className={cn("h-11 w-full", className)}
         onClick={onClick}
       >
         {iconBefore}
@@ -151,11 +143,11 @@ function Steps({
   otherwise: string;
   children: ReactNode;
 }) {
-  if (useContext(DaftarSkin)) {
+  if (useContext(StaffSkin)) {
     return (
-      <div className="mt-8">
-        <p className="daftar-row text-sm">{children}</p>
-        <p className="daftar-row text-sm text-muted-foreground">{otherwise}</p>
+      <div className="rounded-md border bg-card p-4 text-sm">
+        <p>{children}</p>
+        <p className="mt-2 text-muted-foreground">{otherwise}</p>
       </div>
     );
   }

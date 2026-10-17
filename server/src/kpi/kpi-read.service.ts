@@ -8,8 +8,10 @@ import {
   KpiResultStatus,
   KpiResultType,
   LeadOwnershipKind,
+  LeadStatus,
   PaymentPromiseStatus,
   Prisma,
+  UserStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { isBlockedStatus } from '../common/auth/blocked-user';
@@ -34,11 +36,13 @@ import {
 import { KpiSettingsService } from './kpi-settings.service';
 import {
   KPI_FIRST_MONTH,
+  KPI_START,
   explainKpi,
   isKpiEligible,
   monthFullyRecorded,
   recordingSince,
 } from './kpi-rules';
+import { EARNING_KINDS } from './kpi-results.plan';
 import { workingDaysOfMonth } from './kpi-signals';
 import {
   assembleOverview,
@@ -94,6 +98,12 @@ export interface KpiOverview extends OverviewBody {
    */
   compareRecorded: boolean;
   status: { enabled: boolean; changedAt: Date | null };
+  /**
+   * Leads converted this month (from KPI_START) into a new or returning
+   * student with no owner: nobody gets a result for them (CEO 17.10.2026 —
+   * the rule stays, the page shows the count).
+   */
+  unownedConversions: number;
 }
 
 export interface KpiResultView {
@@ -190,6 +200,8 @@ export class KpiReadService {
       expired,
       compareExpired,
       promises,
+      roster,
+      unownedConversions,
     ] = await Promise.all([
       this.kpiSettings.read(companyId),
       this.prisma.kpiResult.findMany({
@@ -236,6 +248,35 @@ export class KpiReadService {
         },
         select: { createdById: true, status: true },
       }),
+      // Every working administrator of the branch(es) gets a row, zeros
+      // included: the table answers «who works here», not only «who has a
+      // result». An inactive account joins only through its own activity.
+      this.prisma.user.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: UserStatus.ACTIVE,
+          isActive: true,
+          roles: { some: { role: { name: 'Administrator' } } },
+          ...userBranchWhere(scope),
+        },
+        select: { id: true },
+      }),
+      // Leads converted in the month (from KPI_START) with no owner: an
+      // earning conversion nobody gets a result for — work done unclaimed.
+      this.prisma.lead.count({
+        where: {
+          companyId,
+          statusEnum: LeadStatus.CONVERTED,
+          ownerId: null,
+          conversionKind: { in: [...EARNING_KINDS] },
+          statusChangedAt: {
+            gte: range.gte > KPI_START ? range.gte : KPI_START,
+            lt: range.lt,
+          },
+          ...branch,
+        },
+      }),
     ]);
 
     const heldMap = new Map<number, number>();
@@ -253,6 +294,8 @@ export class KpiReadService {
         ...heldMap.keys(),
         ...received.map((l) => l.userId),
         ...expired.map((l) => l.userId),
+        ...promises.map((p) => p.createdById),
+        ...roster.map((u) => u.id),
       ]),
     ];
     const [paidLeads, users, workingDays] = await Promise.all([
@@ -291,6 +334,7 @@ export class KpiReadService {
         ? recentResultUserIds(series, today)
         : new Set<number>(),
       held: heldMap,
+      roster: roster.map((u) => u.id),
       received,
       compareReceived,
       paidLeads: paidLeads.flatMap((p) =>
@@ -323,6 +367,7 @@ export class KpiReadService {
       month,
       compare,
       compareAvailable,
+      unownedConversions,
       compareRecorded,
       status: { enabled: settings.enabled, changedAt: settings.changedAt },
       ...body,
@@ -357,7 +402,7 @@ export class KpiReadService {
     // whoever holds a live lead in it and whoever took or lost one of its leads
     // this month (spec §7.10): every overview row opens.
     if (inBranch === 0 && anyResults === 0) {
-      const [holds, logged] = await Promise.all([
+      const [holds, logged, promised] = await Promise.all([
         this.prisma.lead.count({
           where: { ...liveOwnedLeadWhere(companyId, scope), ownerId: userId },
         }),
@@ -376,8 +421,18 @@ export class KpiReadService {
             ],
           },
         }),
+        this.prisma.paymentPromise.count({
+          where: {
+            companyId,
+            createdById: userId,
+            promiseDate: tashkentMonthRangeUtc(month),
+            ...branch,
+          },
+        }),
       ]);
-      if (holds === 0 && logged === 0) throw new NotFoundException(NOT_FOUND);
+      if (holds === 0 && logged === 0 && promised === 0) {
+        throw new NotFoundException(NOT_FOUND);
+      }
     }
 
     const months = monthsFrom(month);

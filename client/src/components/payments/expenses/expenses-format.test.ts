@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { mln } from "@/components/payments/salary/salary-page-model";
+import { formatBalance } from "@/lib/format-utils";
 import { dateText, emptyBranchTitle, enteredText, missingText, missingTitle, presetFor, toggleTurkum } from "./expenses-format";
 import type { MissingRow } from "./expenses-types";
 
 const row = (o: Partial<MissingRow> = {}): MissingRow => ({ key: "RENT", branchId: 2, branchName: "Shimol", amount: 17_800_000, lastMonthAmount: 17_800_000, thisMonthAmount: 0, ...o });
 
 describe("the warning's lines (spec B6 §3.3)", () => {
-  it("nothing recorded: «avgustda 17,8 mln edi»", () => {
-    expect(missingText(row(), "2026-09")).toBe(`avgustda ${mln(17_800_000)} edi`);
+  it("nothing recorded: «avgustda 17 800 000 so'm edi»", () => {
+    expect(missingText(row(), "2026-09")).toBe(`avgustda ${formatBalance(17_800_000)} edi`);
   });
   it("part recorded: what was, and what this month holds so far; under 100 000 in full so'm", () => {
     const r = row({ key: "UTILITIES", amount: 4_630_000, lastMonthAmount: 4_700_000, thisMonthAmount: 70_000 });
-    expect(missingText(r, "2026-10")).toBe(`sentabrda ${mln(4_700_000)} edi, oktabrda hozircha ${mln(70_000)}`);
-    expect(mln(70_000)).toContain("so'm");
+    expect(missingText(r, "2026-10")).toBe(`sentabrda ${formatBalance(4_700_000)} edi, oktabrda hozircha ${formatBalance(70_000)}`);
+    expect(formatBalance(70_000)).toContain("so'm");
   });
   it("the name, with the branch only when the scope holds several", () => {
     expect(missingTitle(row(), false)).toBe("Ijara");

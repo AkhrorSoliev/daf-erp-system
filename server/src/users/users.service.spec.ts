@@ -143,6 +143,16 @@ describe('UsersService — updateUser status/isActive sync', () => {
     );
   });
 
+  it('clears the Telegram reach mark when the chat id is written', async () => {
+    await service.updateUser(1, { telegramChatId: '555' } as any, 2);
+
+    const dataArg = updateMock.mock.calls[0][0].data;
+    expect(dataArg).toEqual({
+      telegramChatId: '555',
+      telegramDisconnectedAt: null,
+    });
+  });
+
   it('does not touch isActive when status is not in the dto', async () => {
     await service.updateUser(1, { firstName: 'Renamed' } as any, 2);
 

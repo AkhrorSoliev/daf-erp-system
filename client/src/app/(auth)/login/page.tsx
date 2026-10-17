@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { LoginForm } from "./login-form";
 import { StudentLoginForm } from "./student-login-form";
 import { LoginFooter } from "./login-footer";
-import { DaftarSheet } from "../daftar-sheet";
+import { StaffSignInShell } from "../staff-sign-in-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MiniAppLoginGuard } from "@/components/telegram-mini-app/mini-app-login-guard";
 import { getPortalType } from "@/lib/portal";
@@ -51,14 +51,13 @@ export default async function LoginPage() {
     );
   }
 
-  // Staff portals (admin., lehrer.) — the Daftar sheet; the portal picks the
-  // paper and the ink.
+  // Staff portals (admin., lehrer.) — the cabinet's own look with the logo cover.
   return (
     <>
       <MiniAppLoginGuard />
-      <DaftarSheet portal={portal}>
+      <StaffSignInShell portal={portal}>
         <LoginForm portal={portal} />
-      </DaftarSheet>
+      </StaffSignInShell>
     </>
   );
 }

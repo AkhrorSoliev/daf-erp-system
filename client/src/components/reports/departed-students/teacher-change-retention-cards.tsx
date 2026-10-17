@@ -1,172 +1,86 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRightLeft, Info, UserX } from "lucide-react";
+import { ArrowRight, Info, Repeat } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatNumber } from "@/lib/format-utils";
 import { TeacherChangesDialog } from "./teacher-changes-dialog";
 import { DepartedAfterChangeDialog } from "./departed-after-change-dialog";
-import type {
-  RetentionMetrics,
-  RetentionQueryParams,
-} from "./teacher-change-types";
+import { capitalize } from "./departed-format";
+import type { RetentionMetrics, RetentionQueryParams } from "./teacher-change-types";
 
 interface Props {
   data: RetentionMetrics | undefined;
   isLoading: boolean;
+  /** Period, branch, course and teachers the page is filtered by; both dialogs send all of it. */
   queryParams: RetentionQueryParams;
+  /** The period in the locative, e.g. «sentabrda» (`rangeLabel`). */
+  periodLabel?: string;
 }
 
 const WINDOW_EXPLANATION =
   "Ustoz almashgandan keyin guruhning dastlabki 5 dars davomida ketgan o'quvchilar hisoblanadi.\n" +
   "6-darsdan keyin ketsa — ustoz sabab emas deb hisoblanadi.";
 
-export function TeacherChangeRetentionCards({
-  data,
-  isLoading,
-  queryParams,
-}: Props) {
+export function TeacherChangeRetentionCards({ data, isLoading, queryParams, periodLabel = "shu davrda" }: Props) {
   const [changesOpen, setChangesOpen] = useState(false);
   const [departedOpen, setDepartedOpen] = useState(false);
 
   if (isLoading || !data) {
     return (
-      <div className="rounded-xl border bg-card p-4 space-y-3">
-        <Skeleton className="h-5 w-64" />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Skeleton className="h-[104px] rounded-xl" />
-          <Skeleton className="h-[104px] rounded-xl" />
-        </div>
-      </div>
+      <Card>
+        <CardContent className="flex flex-col gap-3">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-5 w-full max-w-lg" />
+        </CardContent>
+      </Card>
     );
   }
 
-  const ratePercent =
-    data.totalTeacherChanges > 0
-      ? (data.departedAfterTeacherChange / data.totalTeacherChanges) * 100
-      : 0;
-
-  const rateColor =
-    ratePercent >= 30
-      ? "text-red-600 dark:text-red-400"
-      : ratePercent >= 15
-        ? "text-amber-600 dark:text-amber-400"
-        : undefined;
-
   return (
     <>
-      <div className="rounded-xl border bg-card p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h3 className="font-semibold text-base">
-              Guruh o&apos;zgarishi — Saqlab qolish vositasi
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Ustoz almashishi o&apos;quvchilarning ketishiga qanday ta&apos;sir
-              qilganini ko&apos;rsatadi
-            </p>
+      <Card>
+        <CardContent className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Repeat className="size-4" />
+            Ustoz almashgandan keyin
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" aria-label="Tushuntirish" className="transition-colors hover:text-foreground">
+                  <Info className="size-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs whitespace-pre-line">{WINDOW_EXPLANATION}</TooltipContent>
+            </Tooltip>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label="Tushuntirish"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Info className="size-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs whitespace-pre-line">
-              {WINDOW_EXPLANATION}
-            </TooltipContent>
-          </Tooltip>
-        </div>
+          <p className="text-sm">
+            {data.totalTeacherChanges === 0 ? (
+              <>{capitalize(periodLabel)} ustoz almashgan guruh yo&apos;q.</>
+            ) : (
+              <>
+                {capitalize(periodLabel)} {formatNumber(data.totalTeacherChanges)} marta ustoz almashdi. Keyingi 5 darsda shu guruhlardan{" "}
+                <b>{formatNumber(data.departedAfterTeacherChange)} o&apos;quvchi</b> ketdi.
+              </>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-x-4">
+            <Button type="button" variant="link" size="sm" className="px-0" disabled={data.totalTeacherChanges === 0} onClick={() => setChangesOpen(true)}>
+              Guruhlar
+              <ArrowRight />
+            </Button>
+            <Button type="button" variant="link" size="sm" className="px-0" disabled={data.departedAfterTeacherChange === 0} onClick={() => setDepartedOpen(true)}>
+              Ketgan o&apos;quvchilar
+              <ArrowRight />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <ClickableKpiCard
-            icon={<ArrowRightLeft className="size-4" />}
-            label="Jami o'zgarishlar"
-            value={data.totalTeacherChanges.toLocaleString("uz-UZ")}
-            disabled={data.totalTeacherChanges === 0}
-            onClick={() => setChangesOpen(true)}
-          />
-          <ClickableKpiCard
-            icon={<UserX className="size-4" />}
-            label="O'zgargandan keyin ketish"
-            value={data.departedAfterTeacherChange.toLocaleString("uz-UZ")}
-            secondary={
-              data.totalTeacherChanges > 0
-                ? `${ratePercent.toFixed(1)}% (${data.departedAfterTeacherChange} / ${data.totalTeacherChanges})`
-                : undefined
-            }
-            valueColor={rateColor}
-            disabled={data.departedAfterTeacherChange === 0}
-            onClick={() => setDepartedOpen(true)}
-          />
-        </div>
-      </div>
-
-      <TeacherChangesDialog
-        open={changesOpen}
-        onOpenChange={setChangesOpen}
-        queryParams={queryParams}
-      />
-      <DepartedAfterChangeDialog
-        open={departedOpen}
-        onOpenChange={setDepartedOpen}
-        queryParams={queryParams}
-      />
+      <TeacherChangesDialog open={changesOpen} onOpenChange={setChangesOpen} queryParams={queryParams} />
+      <DepartedAfterChangeDialog open={departedOpen} onOpenChange={setDepartedOpen} queryParams={queryParams} />
     </>
-  );
-}
-
-interface ClickableKpiCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  secondary?: string;
-  valueColor?: string;
-  disabled: boolean;
-  onClick: () => void;
-}
-
-function ClickableKpiCard({
-  icon,
-  label,
-  value,
-  secondary,
-  valueColor,
-  disabled,
-  onClick,
-}: ClickableKpiCardProps) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className="rounded-xl border bg-background p-4 text-left transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-background"
-    >
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div
-        className={`text-2xl font-semibold tabular-nums mt-2 ${valueColor ?? ""}`}
-      >
-        {value}
-      </div>
-      {secondary && (
-        <div className="text-xs text-muted-foreground mt-1">{secondary}</div>
-      )}
-      {!disabled && (
-        <div className="text-xs text-muted-foreground mt-2">
-          Batafsil ko&apos;rish uchun bosing
-        </div>
-      )}
-    </button>
   );
 }

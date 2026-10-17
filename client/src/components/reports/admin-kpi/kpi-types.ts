@@ -71,6 +71,8 @@ export interface KpiOverview {
   daily: { day: number; current: number | null; compare: number | null }[];
   months: { month: string; leadPaid: number; promiseKept: number; amount: number }[];
   rows: KpiAdminRow[];
+  /** Leads converted this month into a new or returning student with no owner: nobody got a result. */
+  unownedConversions: number;
 }
 
 export interface KpiResultView {

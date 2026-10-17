@@ -14,6 +14,7 @@ import {
   ruleError,
   settingsPatch,
   switchText,
+  unownedConversionsText,
 } from "./kpi-format";
 import type { KpiSettings } from "./kpi-types";
 
@@ -133,5 +134,14 @@ describe("showKpiTab", () => {
     expect(showKpiTab([{ id: 5 }], true, true)).toBe(true);
     expect(showKpiTab(undefined, true, true)).toBe(true);
     expect(showKpiTab([{ id: 5 }], false, true)).toBe(false);
+  });
+});
+
+describe("unownedConversionsText", () => {
+  it("names the count of unclaimed conversions, and says so when there are none", () => {
+    expect(unownedConversionsText(3)).toBe(
+      "Egasiz o'quvchiga aylangan lidlar: 3 ta — ularni hech kim band qilmagan, natija hech kimga yozilmadi.",
+    );
+    expect(unownedConversionsText(0)).toBe("Egasiz o'quvchiga aylangan lid yo'q — hamma lid band qilinib ishlangan.");
   });
 });

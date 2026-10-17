@@ -15,6 +15,30 @@ export const hisobotlar: QollanmaSahifa[] = [
   },
   {
     bolim: "hisobotlar",
+    sahifa: "markaz-faoliyati",
+    sarlavha: "Markaz faoliyati",
+    qisqacha:
+      "Markaz xonalari va o'rinlarining qanchasi ishlatilayotgani, qachon xona bo'sh bo'lishi va qaysi guruhda bo'sh o'rin borligi — tanlangan oy uchun, o'tgan oylarda keyin yopilgan guruhlar bilan.",
+    rollar: [1, 2],
+    adr: ["0099"],
+    yollar: ["/reports/activity"],
+    kalitSozlar: ["markaz faoliyati", "xona bandligi", "bo'sh xona", "bo'sh o'rin", "guruh to'lganligi", "sig'im", "yangi guruh", "excel"],
+    yangilangan: "2026-10-17",
+  },
+  {
+    bolim: "hisobotlar",
+    sahifa: "ketgan-oquvchilar",
+    sarlavha: "Ketgan o'quvchilar hisoboti",
+    qisqacha:
+      "Kim, qachon, nega va qayerdan ketdi. Hamma raqam bitta ro'yxatdan hisoblanadi: sabablar va ro'yxatdagi ketganlar soni tepadagi «ketdi» ga teng, davr oyining ustuni ham; kurs va ustoz filtri hamma blokka ta'sir qiladi.",
+    rollar: [1, 2],
+    adr: ["0098", "0035"],
+    yollar: ["/reports/departed-students"],
+    kalitSozlar: ["ketgan", "ketgan o'quvchilar", "ketish sababi", "kutilmoqda", "qaytgan", "oy boshida", "ulushi", "ustoz bo'yicha", "excel"],
+    yangilangan: "2026-10-17",
+  },
+  {
+    bolim: "hisobotlar",
     sahifa: "dars-baholari",
     sarlavha: "Dars baholari",
     qisqacha:
@@ -44,9 +68,9 @@ export const hisobotlar: QollanmaSahifa[] = [
     qisqacha:
       "Kunlik hisobot CEO tanlagan xodimlarning shaxsiy Telegram chatiga, har biriga o'z vaqti, filiallari, bo'limlari va ko'rinishi bilan boradi.",
     rollar: [1],
-    adr: ["0095"],
+    adr: ["0095", "0097"],
     yollar: ["/settings/telegram-report"],
     kalitSozlar: ["telegram", "kunlik hisobot", "shaxsiy hisobot", "bot", "hisobot vaqti", "filial", "jadval"],
-    yangilangan: "2026-10-16",
+    yangilangan: "2026-10-17",
   },
 ];

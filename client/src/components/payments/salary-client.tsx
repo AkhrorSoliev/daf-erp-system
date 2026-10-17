@@ -15,7 +15,7 @@ import { SalarySettingsSheet } from "./salary-settings-sheet";
 import { CenterTopUpView } from "./debt/center-topup-view";
 import { resolveSalarySettingsAccess } from "./salary-settings-access";
 import { currentMonthKey } from "./salary-utils";
-import { mln } from "./salary/salary-page-model";
+import { formatBalance } from "@/lib/format-utils";
 import { SalaryPayDialog } from "./salary/salary-pay-dialog";
 import { SalaryRowDrawer } from "./salary/salary-row-drawer";
 import type { SalaryDetail } from "./salary/salary-types";
@@ -38,8 +38,8 @@ const HEADER_SCHEMA = {
   xodim: { type: "number" as const, defaultValue: 0 },
 };
 
-/** «Avanslar · 4,5 mln»; the amount is left out while loading and at 0 (Decision 12). */
-const tabLabel = (name: string, amount: number | undefined) => (amount ? `${name} · ${mln(amount)}` : name);
+/** «Avanslar · 4 500 000 so'm»; the amount is left out while loading and at 0 (Decision 12). */
+const tabLabel = (name: string, amount: number | undefined) => (amount ? `${name} · ${formatBalance(amount)}` : name);
 
 export function SalaryClient() {
   const canClose = useCan("salary.close");
