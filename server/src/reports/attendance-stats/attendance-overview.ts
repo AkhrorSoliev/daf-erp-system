@@ -42,9 +42,10 @@ export function buildOverview(i: OverviewInput): OverviewCore {
   const all = cutRows(facts, period.window, i.cut);
   const min = minLessons(period.elapsedDays);
   const listed = all.filter((r) => r.lessons >= min);
-  const page = Math.min(
-    i.page,
-    Math.max(1, Math.ceil(listed.length / i.pageSize)),
+  const pageSize = Math.max(1, i.pageSize);
+  const page = Math.max(
+    1,
+    Math.min(i.page, Math.ceil(listed.length / pageSize)),
   );
   return {
     range: period.range,
@@ -71,12 +72,12 @@ export function buildOverview(i: OverviewInput): OverviewCore {
     credit: i.credit,
     cut: {
       key: i.cut,
-      rows: listed.slice((page - 1) * i.pageSize, page * i.pageSize),
+      rows: listed.slice((page - 1) * pageSize, page * pageSize),
       total: listed.length,
       hidden: all.length - listed.length,
       minLessons: min,
       page,
-      pageSize: i.pageSize,
+      pageSize,
     },
   };
 }

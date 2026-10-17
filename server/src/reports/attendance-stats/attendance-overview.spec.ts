@@ -1,4 +1,4 @@
-import { cutRows } from './attendance-counts';
+import { countRows, cutRows, minLessons } from './attendance-counts';
 import { buildOverview, missersOf } from './attendance-overview';
 import { resolvePeriod } from './attendance-stats-period';
 import type {
@@ -202,6 +202,142 @@ describe('buildOverview', () => {
       rate: null,
     });
     expect(o.cut.minLessons).toBe(34);
+  });
+});
+
+const only = (rows: AttRow[], ...gs: GroupFact[]): AttendanceFacts => ({
+  groups: new Map(gs.map((g) => [g.id, g])),
+  rows,
+});
+const buildOn = (f: AttendanceFacts, p = period, page = 1, pageSize = 10) =>
+  buildOverview({
+    facts: f,
+    period: p,
+    currentMonth: '2026-10',
+    credit: CREDIT,
+    cut: 'group',
+    page,
+    pageSize,
+  });
+
+describe('previousRate', () => {
+  it('a previous window before 2026-05-01 → previous and previousRate are both null', () => {
+    const may = resolvePeriod('2026-05-01', '2026-05-31', '2026-10-17');
+    const o = buildOn(facts, may);
+    expect(o.previous).toBeNull();
+    expect(o.card.previousRate).toBeNull();
+  });
+
+  it('a previous window with only «Sababli» / centre-cancelled marks → null, never 0', () => {
+    const f = only(
+      [
+        ...marks('g1', 'PRESENT', 5),
+        ...marks('g1', 'EXCUSED', 4, {}, '2026-08'),
+        ...marks('g1', 'EXCUSED', 2, { cancelled: true }, '2026-08'),
+      ],
+      group('g1', 'A1-04'),
+    );
+    const o = buildOn(f);
+    expect(o.previous).toEqual({
+      startDate: '2026-08-01',
+      endDate: '2026-08-31',
+    });
+    expect(o.card.previousRate).toBeNull();
+  });
+
+  it("October: the previous rate is September's", () => {
+    const now = resolvePeriod('2026-10-01', '2026-10-31', '2026-10-17');
+    const o = buildOn(facts, now);
+    expect(o.previous).toEqual({
+      startDate: '2026-09-01',
+      endDate: '2026-09-30',
+    });
+    expect(o.card.previousRate).toBe(72.2);
+  });
+});
+
+describe('a period shorter than a month', () => {
+  it('the month bar counts the whole month, the card and weekdays only the period', () => {
+    const half = resolvePeriod('2026-09-01', '2026-09-15', '2026-10-17');
+    const o = buildOn(facts, half);
+    const bar = o.months.find((m) => m.month === '2026-09');
+    expect(bar?.counts).toEqual({
+      came: 99,
+      late: 5,
+      absent: 40,
+      excused: 2,
+      cancelled: 1,
+    });
+    expect(o.card.counts).toEqual(countRows(facts.rows, half.window));
+    expect(o.card.counts).not.toEqual(bar?.counts);
+    expect(o.card.lessons).toBeLessThan(144);
+    expect(sum(o.weekdays.map((w) => w.counts))).toEqual(o.card.counts);
+  });
+});
+
+describe("the cut's paging and minimum rows", () => {
+  const need = minLessons(period.elapsedDays); // 60 for the 30-day September
+  const boundary = only(
+    [
+      ...marks('ga', 'PRESENT', need),
+      ...marks('gb', 'PRESENT', need - 1),
+      ...marks('gc', 'PRESENT', need + 1),
+    ],
+    group('ga', 'A-60'),
+    group('gb', 'B-59'),
+    group('gc', 'C-61'),
+  );
+
+  it('exactly minLessons is listed, one fewer is hidden', () => {
+    const o = buildOn(boundary);
+    expect(need).toBe(60);
+    expect(o.cut.rows.map((r) => [r.key, r.lessons]).sort()).toEqual([
+      ['ga', 60],
+      ['gc', 61],
+    ]);
+    expect(o.cut.total).toBe(2);
+    expect(o.cut.hidden).toBe(1);
+  });
+
+  it('pageSize 1: page 2 is the second row; page 9 clamps to the last page', () => {
+    const p2 = buildOn(boundary, period, 2, 1);
+    expect(p2.cut.rows).toHaveLength(1);
+    expect(p2.cut.page).toBe(2);
+    expect(p2.cut.rows[0].key).not.toBe(
+      buildOn(boundary, period, 1, 1).cut.rows[0].key,
+    );
+    const p9 = buildOn(boundary, period, 9, 1);
+    expect(p9.cut.page).toBe(2);
+    expect(p9.cut.rows.map((r) => r.key)).toEqual(
+      p2.cut.rows.map((r) => r.key),
+    );
+    expect(p9.cut.total).toBe(2);
+  });
+
+  it('page 0 and pageSize 0 are raised to 1', () => {
+    const o = buildOn(boundary, period, 0, 0);
+    expect(o.cut.page).toBe(1);
+    expect(o.cut.pageSize).toBe(1);
+    expect(o.cut.rows).toHaveLength(1);
+  });
+});
+
+describe('no marks at all', () => {
+  it('null rates, no rows, no NaN', () => {
+    const o = buildOn({ groups: new Map(), rows: [] });
+    expect(o.card).toEqual({
+      counts: { came: 0, late: 0, absent: 0, excused: 0, cancelled: 0 },
+      lessons: 0,
+      attended: 0,
+      rate: null,
+      previousRate: null,
+    });
+    expect(o.months.every((m) => m.rate === null)).toBe(true);
+    expect(
+      o.weekdays.every((w) => w.rate === null && w.counts.came === 0),
+    ).toBe(true);
+    expect(o.cut).toMatchObject({ rows: [], total: 0, hidden: 0, page: 1 });
+    expect(o.months.every((m) => !Number.isNaN(m.counts.came))).toBe(true);
   });
 });
 
