@@ -38,4 +38,18 @@ export class ParticipationSettingsDto {
   @ValidateNested()
   @Type(() => MinAppPercentDto)
   minAppPercent?: MinAppPercentDto;
+
+  /** Fewest counted lessons (attended + absent). */
+  @IsOptional()
+  @IsInt({ message: "Darslar soni butun son bo'lishi kerak" })
+  @Min(1, { message: "Darslar soni 1 dan kam bo'lmaydi" })
+  @Max(200, { message: 'Darslar soni 200 dan oshmasin' })
+  minLessons?: number;
+
+  /** Most late lessons, percent of the lessons attended. */
+  @IsOptional()
+  @IsInt(INT)
+  @Min(0, MIN)
+  @Max(100, MAX)
+  maxLatePercent?: number;
 }

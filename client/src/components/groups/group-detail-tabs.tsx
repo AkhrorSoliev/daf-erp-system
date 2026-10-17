@@ -19,7 +19,11 @@ import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useCan } from "@/hooks/use-permissions";
 import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
+import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import api from "@/lib/api";
+import { isTeacherOnly } from "@/lib/teacher-only";
+import { cn } from "@/lib/utils";
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -41,6 +45,9 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
   const canChangeLessons = useCan("lessons.change");
   const canSeeHistory = useCan("groups.manage");
   const canSeeComments = useCan(["comments.write", "groups.manage"]);
+  const isMobile = useIsMobile();
+  const user = useAuth((s) => s.user);
+  const barTabs = isMobile && isTeacherOnly(user?.roles);
 
   const [students, setStudents] = useState<GroupStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
@@ -165,7 +172,13 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       className="w-full"
       onValueChange={handleTabChange}
     >
-      <TabsList className="w-full justify-start overflow-x-auto">
+      <TabsList
+        className={cn(
+          "w-full justify-start overflow-x-auto",
+          // A teacher on a phone changes tab from the bottom bar instead.
+          barTabs && "hidden",
+        )}
+      >
         <TabsTrigger value="davomat">Davomat</TabsTrigger>
         <TabsTrigger value="darslar">Darslar</TabsTrigger>
         <TabsTrigger value="oquvchilar">O&apos;quvchilar</TabsTrigger>

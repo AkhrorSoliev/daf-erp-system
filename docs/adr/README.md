@@ -173,6 +173,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0104](0104-hujjatni-bekor-qilish.md) | Hujjatni bekor qilish: qator o'chmaydi, raqam qayta berilmaydi, sabab majburiy, tarix bir tranzaksiyada; PDF berilmaydi, QR «bekor qilingan» deydi (ADR-0100 ni to'ldiradi) | Qabul qilindi | 2026-10-17 |
 | [0105](0105-bot-hisoboti-oy-kohorti.md) | Bot hisoboti: tanlangan oyda to'xtatilgan odamlar kohorti, uch raqam faqat shu odamlar bo'yicha (foiz 100% dan oshmaydi), qator holati bitta funksiyadan (`classifyGateRow`), ro'yxat ham kohort, «Butun davr» yo'q | Qabul qilindi | 2026-10-17 |
 | [0106](0106-kirish-sahifasida-til-tanlash.md) | Kirish sahifasida til tanlash: qobiq tilni cookie'dan o'qiydi, kirishda profil tili yutadi | Qabul qilindi | 2026-10-17 |
+| [0107](0107-hujjat-berish-shartlari-qarz-dars-kech-qolish-sinov.md) | Hujjat berish shartlari: qarz yo'q, eng kam dars (20), kech qolish chegarasi (20%), yakuniy sinovlar topshirilgan; hammasi `participation-rules.ts` da, ikki yangi CEO sozlamasi, snapshotga chegaralar ixtiyoriy qo'shiladi (ADR-0100 ni kengaytiradi) | Qabul qilindi | 2026-10-17 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

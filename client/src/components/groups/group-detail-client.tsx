@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { isTeacherOnly } from "@/lib/teacher-only";
+import { formatWeekdays } from "@/lib/weekdays";
 import { GroupInfoCard } from "./group-info-card";
 import { GroupDetailTabs } from "./group-detail-tabs";
 import { EditGroupDrawer } from "./edit-group-drawer";
@@ -26,14 +30,19 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const tabFromUrl = searchParams.get("tab") ?? "davomat";
-  const [activeTab, setActiveTabState] = useState(tabFromUrl);
+  // The URL is the one source of the tab: the teacher's bottom bar changes it
+  // from outside this component, and the page follows.
+  const activeTab = searchParams.get("tab") ?? "davomat";
   const [commentFocusKey, setCommentFocusKey] = useState(0);
   const setName = useBreadcrumbName((s) => s.setName);
+  const isMobile = useIsMobile();
+  const user = useAuth((s) => s.user);
+  const collapseInfo = isMobile && isTeacherOnly(user?.roles);
 
   const setActiveTab = useCallback((tab: string) => {
-    setActiveTabState(tab);
     const params = new URLSearchParams(searchParams.toString());
+    // Leaving the attendance tab also leaves its open form.
+    params.delete("sana");
     if (tab === "davomat") {
       params.delete("tab");
     } else {
@@ -109,12 +118,41 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
     <>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="w-full lg:w-85 lg:shrink-0">
-          <GroupInfoCard
-            group={group}
-            commentKey={commentKey}
-            onWriteComment={handleWriteComment}
-            onStatusChanged={fetchGroup}
-          />
+          {collapseInfo ? (
+            // Phone teacher: attendance comes first, the full card is one tap away.
+            <details className="group rounded-lg border bg-card">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 text-sm">
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{group.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {[
+                      group.exactDays?.length > 0 ? formatWeekdays(group.exactDays) : null,
+                      group.lessonStartTime && group.lessonEndTime
+                        ? `${group.lessonStartTime} – ${group.lessonEndTime}`
+                        : null,
+                      group.room?.name,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+                <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" />
+              </summary>
+              <GroupInfoCard
+                group={group}
+                commentKey={commentKey}
+                onWriteComment={handleWriteComment}
+                onStatusChanged={fetchGroup}
+              />
+            </details>
+          ) : (
+            <GroupInfoCard
+              group={group}
+              commentKey={commentKey}
+              onWriteComment={handleWriteComment}
+              onStatusChanged={fetchGroup}
+            />
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <GroupDetailTabs

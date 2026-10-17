@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useT } from "@/i18n/context";
+import { isTeacherOnly } from "@/lib/teacher-only";
 import { TaskCreateDialog, useTaskCreate } from "./task-create-dialog";
 import { useEntityContext } from "./entity-context";
 
@@ -17,7 +18,9 @@ export function HeaderTaskButton() {
   const open = useTaskCreate((s) => s.open);
   const ctx = useEntityContext((s) => s.context);
   const pathname = usePathname();
-  if (!user || !isStaff(user.roles)) return null;
+  // A teacher may only give a task to themselves (the server's ladder), and
+  // does not need the button: the tasks they receive are on «Topshiriqlar».
+  if (!user || !isStaff(user.roles) || isTeacherOnly(user.roles)) return null;
   return (
     <>
       <Button

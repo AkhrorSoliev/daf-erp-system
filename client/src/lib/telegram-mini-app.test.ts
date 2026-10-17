@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   SIGN_IN_BOUNCE_MS,
   STAFF_CABINET_HOME,
+  TEACHER_CABINET_HOME,
   bouncedAfterSignIn,
   clearMiniAppSignedIn,
   closeMiniApp,
@@ -218,6 +219,34 @@ describe("miniAppAudienceForHost (ADR-0045)", () => {
     ["abc.ngrok.app", "student"],
   ] as const)("%s → %s", (host, audience) => {
     expect(miniAppAudienceForHost(host)).toBe(audience);
+  });
+});
+
+describe("staffCabinetPath — the home of a role", () => {
+  const teacher = [{ id: 4 }];
+
+  it("opens a teacher's own groups when the bot names no page", () => {
+    expect(staffCabinetPath(null, teacher)).toBe(TEACHER_CABINET_HOME);
+    expect(staffCabinetPath(undefined, teacher)).toBe("/groups");
+    expect(staffCabinetPath("", teacher)).toBe("/groups");
+  });
+
+  it("opens the profile for everyone who is not a plain teacher", () => {
+    expect(staffCabinetPath(null, [{ id: 3 }])).toBe("/profile");
+    expect(staffCabinetPath(null, [{ id: 1 }])).toBe("/profile");
+    // A teacher who also manages is not a teacher-only user.
+    expect(staffCabinetPath(null, [{ id: 4 }, { id: 3 }])).toBe("/profile");
+  });
+
+  it("still opens the page the bot's menu names, whatever the role", () => {
+    expect(staffCabinetPath("/schedule", teacher)).toBe("/schedule");
+    expect(staffCabinetPath("/profile/salary", teacher)).toBe("/profile/salary");
+    expect(staffCabinetPath("/profile", teacher)).toBe("/profile");
+  });
+
+  it("falls back to the teacher's home, not the profile, on a page it will not follow", () => {
+    expect(staffCabinetPath("https://evil.example", teacher)).toBe("/groups");
+    expect(staffCabinetPath("/payments", teacher)).toBe("/groups");
   });
 });
 

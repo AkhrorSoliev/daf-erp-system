@@ -46,7 +46,9 @@ export type SettingKey =
   | 'participation.minAttendancePercent'
   | 'participation.minAppPercent.A1'
   | 'participation.minAppPercent.A2'
-  | 'participation.minAppPercent.B1';
+  | 'participation.minAppPercent.B1'
+  | 'participation.minLessons'
+  | 'participation.maxLatePercent';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -74,6 +76,8 @@ export interface SettingValueMap {
   'participation.minAppPercent.A1': number;
   'participation.minAppPercent.A2': number;
   'participation.minAppPercent.B1': number;
+  'participation.minLessons': number;
+  'participation.maxLatePercent': number;
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -433,6 +437,21 @@ export const SETTING_DEFINITIONS: {
     defaultValue: 100,
     parse: (raw) =>
       parseIntInRange('participation.minAppPercent.B1', raw, 0, 100),
+    companyLevelOnly: true,
+  },
+  // The CEO's conditions of 17.10.2026: the fewest counted lessons, and the
+  // most late lessons as a percent of the lessons attended.
+  'participation.minLessons': {
+    key: 'participation.minLessons',
+    defaultValue: 20,
+    parse: (raw) => parseIntInRange('participation.minLessons', raw, 1, 200),
+    companyLevelOnly: true,
+  },
+  'participation.maxLatePercent': {
+    key: 'participation.maxLatePercent',
+    defaultValue: 20,
+    parse: (raw) =>
+      parseIntInRange('participation.maxLatePercent', raw, 0, 100),
     companyLevelOnly: true,
   },
 };

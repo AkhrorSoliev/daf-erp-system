@@ -40,7 +40,12 @@ export class ParticipationFactsService {
   ): Promise<StudentFacts> {
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, companyId, deletedAt: null },
-      select: { firstName: true, lastName: true, dateOfBirth: true },
+      select: {
+        firstName: true,
+        lastName: true,
+        dateOfBirth: true,
+        balance: true,
+      },
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
 
@@ -125,6 +130,7 @@ export class ParticipationFactsService {
           ? storedBirthDay(student.dateOfBirth)
           : null,
       },
+      balance: student.balance,
       levels,
       unleveledGroups: [...unleveled],
     };

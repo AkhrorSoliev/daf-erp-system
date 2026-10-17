@@ -232,7 +232,9 @@ export function GroupsClient() {
 
   return (
     <div className="space-y-4">
-      <GroupsStats stats={stats} loading={loading} />
+      {/* A teacher has a handful of groups: counters and extra filters would
+          push the first group a screen down on a phone. */}
+      {!isTeacherOnly && <GroupsStats stats={stats} loading={loading} />}
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -252,33 +254,37 @@ export function GroupsClient() {
           countSuffix="guruh"
           className="w-[calc(100%-3rem)] sm:w-44"
         />
-        <MultiSelectCombobox
-          options={levelOptions}
-          selected={filters.level}
-          onChange={(next) => setUrlFilters({ level: next, page: 1 })}
-          placeholder="Barcha darajalar"
-          searchPlaceholder="Daraja qidirish..."
-          countSuffix="guruh"
-          className="w-[calc(100%-3rem)] sm:w-44"
-        />
-        <MultiSelectCombobox
-          options={courseTypeOptions}
-          selected={filters.courseType}
-          onChange={(next) => setUrlFilters({ courseType: next, page: 1 })}
-          placeholder="Barcha turlar"
-          searchPlaceholder="Tur qidirish..."
-          countSuffix="guruh"
-          className="w-[calc(100%-3rem)] sm:w-44"
-        />
-        <MultiSelectCombobox
-          options={roomOptions}
-          selected={filters.room}
-          onChange={(next) => setUrlFilters({ room: next, page: 1 })}
-          placeholder="Barcha xonalar"
-          searchPlaceholder="Xona qidirish..."
-          countSuffix="guruh"
-          className="w-[calc(100%-3rem)] sm:w-44"
-        />
+        {!isTeacherOnly && (
+          <>
+            <MultiSelectCombobox
+              options={levelOptions}
+              selected={filters.level}
+              onChange={(next) => setUrlFilters({ level: next, page: 1 })}
+              placeholder="Barcha darajalar"
+              searchPlaceholder="Daraja qidirish..."
+              countSuffix="guruh"
+              className="w-[calc(100%-3rem)] sm:w-44"
+            />
+            <MultiSelectCombobox
+              options={courseTypeOptions}
+              selected={filters.courseType}
+              onChange={(next) => setUrlFilters({ courseType: next, page: 1 })}
+              placeholder="Barcha turlar"
+              searchPlaceholder="Tur qidirish..."
+              countSuffix="guruh"
+              className="w-[calc(100%-3rem)] sm:w-44"
+            />
+            <MultiSelectCombobox
+              options={roomOptions}
+              selected={filters.room}
+              onChange={(next) => setUrlFilters({ room: next, page: 1 })}
+              placeholder="Barcha xonalar"
+              searchPlaceholder="Xona qidirish..."
+              countSuffix="guruh"
+              className="w-[calc(100%-3rem)] sm:w-44"
+            />
+          </>
+        )}
         {!isTeacherOnly && (
           <MultiSelectCombobox
             options={teacherOptions}

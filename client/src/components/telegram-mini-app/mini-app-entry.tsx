@@ -116,7 +116,7 @@ export function MiniAppEntry({ staff = false }: { staff?: boolean }) {
       { initData: initData.current },
     );
     if (data.status === "authenticated") {
-      enter(data, staffCabinetPath(nextPage.current));
+      enter(data, staffCabinetPath(nextPage.current, data.user.roles));
     } else {
       setView({ kind: "not_registered", audience: "staff" });
     }

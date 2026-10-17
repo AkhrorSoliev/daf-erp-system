@@ -29,10 +29,20 @@ export interface StudentFacts {
     /** 'YYYY-MM-DD' (the Tashkent day, `storedBirthDay`). */
     dateOfBirth: string | null;
   };
+  /** `Student.balance` now: negative is a debt. Live, never sealed into a document. */
+  balance: number;
   levels: LevelFacts[];
   /** Groups the student attended whose `level` is empty or not a GER level. */
   unleveledGroups: string[];
 }
+
+/**
+ * The thresholds in force when the document was issued. The two conditions of
+ * 17.10.2026 are optional: a document sealed before them has neither, and
+ * must still render and verify.
+ */
+export type SnapshotThresholds = Pick<Thresholds, 'attendance' | 'app'> &
+  Partial<Pick<Thresholds, 'minLessons' | 'maxLatePercent'>>;
 
 /** Frozen into `ParticipationCertificate.snapshot`; the PDF reads only this. */
 export interface CertificateSnapshot {
@@ -48,7 +58,7 @@ export interface CertificateSnapshot {
   app: AppTally;
   unitTests: { passed: number; total: number } | null;
   mock: { score: number; maxScore: number; date: string | null } | null;
-  thresholds: Thresholds;
+  thresholds: SnapshotThresholds;
   /** Given with a CEO exemption although the verdict was «not eligible». */
   exempt: boolean;
 }
@@ -75,6 +85,8 @@ export interface LevelPreview extends LevelFacts {
 
 export interface CertificatePreview {
   studentId: number;
+  /** `Student.balance`: negative is a debt (the «Qarz» line reads it). */
+  balance: number;
   unleveledGroups: string[];
   levels: LevelPreview[];
 }

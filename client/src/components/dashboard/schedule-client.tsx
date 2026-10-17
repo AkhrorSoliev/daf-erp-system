@@ -10,10 +10,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { format, isToday } from "date-fns";
+import { addDays, format, isToday } from "date-fns";
 import {
   CalendarDays,
   CalendarX,
+  ChevronLeft,
+  ChevronRight,
   DoorOpen,
   GraduationCap,
   LayoutGrid,
@@ -33,7 +35,10 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
 import { useT } from "@/i18n/context";
+import { isTeacherOnly } from "@/lib/teacher-only";
 import { DashboardDailySchedule } from "./dashboard-daily-schedule";
+import { TeacherLessonCards } from "./teacher-lesson-cards";
+import { UpcomingGroups } from "./upcoming-groups";
 import type { DashboardLesson } from "./dashboard-daily-schedule";
 import { DashboardRoomOccupancy } from "./dashboard-room-occupancy";
 import { DashboardScheduleSkeleton } from "./dashboard-schedule-skeleton";
@@ -61,7 +66,11 @@ export function ScheduleClient() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const scheduleView = searchParams.get("view") === "list" ? "list" : "grid";
+  const isTeacher = isTeacherOnly(user?.roles);
+  // The room grid is for whoever plans rooms. A teacher's day is a list of
+  // their own lessons, so for them the list is the only view.
+  const scheduleView =
+    isTeacher || searchParams.get("view") === "list" ? "list" : "grid";
 
   const handleViewChange = useCallback(
     (view: string) => {
@@ -76,9 +85,6 @@ export function ScheduleClient() {
     },
     [pathname, router, searchParams],
   );
-  const isTeacher =
-    user?.roles.some((r) => r.id === 4) &&
-    !user?.roles.some((r) => [1, 2, 3].includes(r.id));
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const isTodaySelected = isToday(selectedDate);
@@ -146,6 +152,14 @@ export function ScheduleClient() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Oldingi kun"
+          onClick={() => setSelectedDate((d) => addDays(d, -1))}
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
         {!isTodaySelected && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -165,6 +179,14 @@ export function ScheduleClient() {
           onChange={(d) => d && setSelectedDate(d)}
           className="w-auto"
         />
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Keyingi kun"
+          onClick={() => setSelectedDate((d) => addDays(d, 1))}
+        >
+          <ChevronRight className="size-4" />
+        </Button>
       </div>
 
       {needsBranchPick && (
@@ -312,14 +334,16 @@ export function ScheduleClient() {
                   ({myLessons.length})
                 </span>
               </h2>
-              <TabsList>
-                <TabsTrigger value="grid">
-                  <LayoutGrid className="size-3.5 mr-1" /> {t("Grid")}
-                </TabsTrigger>
-                <TabsTrigger value="list">
-                  <List className="size-3.5 mr-1" /> {t("Ro'yxat")}
-                </TabsTrigger>
-              </TabsList>
+              {!isTeacher && (
+                <TabsList>
+                  <TabsTrigger value="grid">
+                    <LayoutGrid className="size-3.5 mr-1" /> {t("Grid")}
+                  </TabsTrigger>
+                  <TabsTrigger value="list">
+                    <List className="size-3.5 mr-1" /> {t("Ro'yxat")}
+                  </TabsTrigger>
+                </TabsList>
+              )}
             </div>
             <TabsContent value="grid" className="p-3 mt-0">
               <DashboardRoomOccupancy
@@ -332,15 +356,21 @@ export function ScheduleClient() {
               />
             </TabsContent>
             <TabsContent value="list" className="mt-0">
-              <DashboardDailySchedule
-                lessons={myLessons}
-                isToday={isTodaySelected}
-                date={dateParam}
-              />
+              {isTeacher ? (
+                <TeacherLessonCards lessons={myLessons} isToday={isTodaySelected} />
+              ) : (
+                <DashboardDailySchedule
+                  lessons={myLessons}
+                  isToday={isTodaySelected}
+                  date={dateParam}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </>
       )}
+
+      {isTeacher && <UpcomingGroups />}
     </div>
   );
 }

@@ -14,6 +14,13 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-17",
+    sarlavha: "Qatnashganlik hujjati: yangi shartlar",
+    matn: "Qatnashganlik hujjati endi to'rt shart bilan ko'proq tekshiriladi. O'quvchining qarzi bo'lmasligi kerak (qancha bo'lmasin). Hisobga kirgan darslar kamida 20 ta bo'lishi kerak. Kech qolgan darslar o'quvchi kelgan darslarning 20% idan oshmasligi kerak. Darajada yakuniy sinovlar bo'lsa, hammasidan o'tgan bo'lishi kerak. Ilova sharti avvalgidek: ochiq dars bo'lsa tekshiriladi. «Hujjatlar» yorlig'ida bajarilmagan shartlar sabab bilan chiqadi, administrator hujjat bera olmaydi; faqat CEO sabab yozib istisno bilan beradi. 20 ta va 20% ni CEO Sozlamalar → «Qatnashganlik hujjati» sahifasida o'zgartiradi. Avval berilgan hujjatlar o'zgarmaydi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "qatnashganlik-hujjati" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Kirish sahifasida til tanlash",
     matn: "Admin panel va o'qituvchi portalining kirish sahifasida yuqori o'ng burchakda til tugmasi paydo bo'ldi. Besh tildan birini tanlang: O'zbekcha, Ўзбекча, Русский, Deutsch yoki English; sahifaning o'zi, parolni tiklash oynasi va salom ham tarjima qilingan. Kirgach profilingizdagi til ochiladi; profilingizda til tanlanmagan bo'lsa, o'zbekchadan boshqa tanlagan tilingiz profilga saqlanadi. O'quvchi portalining kirish sahifasi hali o'zbekcha.",
     rollar: [1, 2, 3, 4, 5],
@@ -25,6 +32,13 @@ export const yangiliklar: Yangilik[] = [
     matn: "«Bot hisoboti»da raqamlar endi tanlangan oyda bot to'xtatgan odamlar bo'yicha sanaladi: nechta odam to'xtatildi, ulardan nechtasi kanalga a'zo bo'ldi va keyin chiqib ketdi. Foiz hech qachon 100% dan oshmaydi. Sahifada oy o'qlar bilan almashadi, ro'yxat ham tanlangan oyniki. «Butun davr» tugmasi olib tashlandi.",
     rollar: [1, 2],
     sahifa: { bolim: "hisobotlar", sahifa: "bot-hisoboti" },
+  },
+  {
+    sana: "2026-10-17",
+    sarlavha: "O'qituvchi kabineti: guruhlar, kunlik jadval va davomat",
+    matn: "O'qituvchi Telegramdagi «Kabinet» orqali kirganda endi o'z guruhlari ochiladi (har guruh kartada: kun, vaqt, xona, o'quvchilar soni; hali boshlanmagani — boshlanish sanasi bilan). «Jadval»da bir kunni «‹» va «›» tugmalari bilan almashtirish mumkin va dars kartasidagi «Davomat olish» tugmasi guruhning davomat sahifasini ochadi. Pastda «Boshlanmagan guruhlarim» turadi. O'qituvchiga topshiriq berish tugmasi va «Bosh sahifa» havolasi ko'rinmaydi. Telefonda yon menyu o'rniga pastda panel paydo bo'ldi: Guruhlar, Jadval, Topshiriq, Oylik, Profil. Guruh ichida panel guruh bo'limlariga (Davomat, Darslar, O'quvchilar, Yana) almashadi va birinchi tugma doim guruhlar ro'yxatiga qaytaradi. Davomat ro'yxatida «Orqaga» va «Saqlash» pastda turadi; saqlanmagan belgilar bo'lsa, chiqishdan oldin so'raydi.",
+    rollar: [4],
+    sahifa: { bolim: "guruhlar", sahifa: "jadval" },
   },
   {
     sana: "2026-10-17",
@@ -200,7 +214,7 @@ export const yangiliklar: Yangilik[] = [
     sana: "2026-10-11",
     sarlavha: "Takrorlanuvchi topshiriqlar",
     matn: "Endi topshiriqni takrorlanadigan qilib berish mumkin: berish oynasida «Batafsil» → «Takrorlash» da «Har kuni», «Har hafta» (kunlarini belgilab) yoki «Har oy» (1–28-sana) va vaqtni tanlang. Birinchi topshiriq darhol beriladi, keyingilarini tizim har kuni ertalab 07:00 da beradi; yakshanba va bayramga tushsa — keyingi ish kuniga. Oldingisi bajarilmagan bo'lsa, yangisi berilmaydi. Kartada «Har dushanba» kabi belgi turadi; varaqda takrorlanishni o'zgartirish va to'xtatish mumkin, «Topshiriqlar» sahifasidagi «Takrorlanuvchi» tugmasi hammasini bitta ro'yxatda ko'rsatadi.",
-    rollar: [1, 2, 3, 4, 5],
+    rollar: [1, 2, 3, 5],
     sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
   },
   {

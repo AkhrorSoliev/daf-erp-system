@@ -33,12 +33,13 @@ const level = (over: Partial<LevelFacts> = {}): LevelFacts => ({
   ...over,
 });
 
-const facts = (levels: LevelFacts[]): StudentFacts => ({
+const facts = (levels: LevelFacts[], balance = 0): StudentFacts => ({
   student: {
     firstName: 'Madina',
     lastName: 'Karimova',
     dateOfBirth: '2004-03-14',
   },
+  balance,
   levels,
   unleveledGroups: [],
 });
@@ -46,6 +47,8 @@ const facts = (levels: LevelFacts[]): StudentFacts => ({
 const SETTINGS = {
   minAttendancePercent: 80,
   minAppPercent: { A1: 100, A2: 100, B1: 100 },
+  minLessons: 20,
+  maxLatePercent: 20,
 };
 
 function make(
@@ -98,6 +101,8 @@ function make(
     thresholdsFor: jest.fn((_s: unknown, lvl: string) => ({
       attendance: 80,
       app: ['A1', 'A2', 'B1'].includes(lvl) ? 100 : null,
+      minLessons: 20,
+      maxLatePercent: 20,
     })),
   };
   const history = { recordCreate: jest.fn().mockResolvedValue(undefined) };
@@ -168,7 +173,12 @@ describe('preview', () => {
     );
     expect(out.levels).toHaveLength(1);
     expect(out.levels[0].verdict.eligible).toBe(true);
-    expect(out.levels[0].thresholds).toEqual({ attendance: 80, app: 100 });
+    expect(out.levels[0].thresholds).toEqual({
+      attendance: 80,
+      app: 100,
+      minLessons: 20,
+      maxLatePercent: 20,
+    });
     expect(out.levels[0].issued).toEqual([
       {
         id: 'c1',
@@ -197,6 +207,169 @@ describe('preview', () => {
         select: expect.objectContaining({ revokedReason: true }),
       }),
     );
+  });
+});
+
+describe('preview of the conditions of 17.10', () => {
+  it('returns the live balance and the new parts of the verdict', async () => {
+    const { service } = make({ facts: facts([level()], -5000) });
+    const out = await service.preview(7, 1001, 10001);
+    expect(out.balance).toBe(-5000);
+    expect(out.levels[0].verdict).toMatchObject({
+      attendanceOk: true,
+      debtOk: false,
+      lessonsOk: true,
+      lateOk: true,
+      testsOk: true,
+      eligible: false,
+      reasons: ["Qarzi bor: 5 000 so'm"],
+    });
+  });
+
+  it('judges every level with the settings of this company', async () => {
+    const { service } = make({
+      facts: facts([
+        level({
+          attendance: {
+            attended: 10,
+            late: 0,
+            absent: 0,
+            counted: 10,
+            percent: 100,
+          },
+        }),
+      ]),
+    });
+    const out = await service.preview(7, 1001, 10001);
+    expect(out.levels[0].verdict.lessonsOk).toBe(false);
+    expect(out.levels[0].verdict.reasons).toEqual([
+      'Darslar soni 10 ta, kamida 20 ta kerak',
+    ]);
+  });
+});
+
+/** One student per new condition, each failing only that one. */
+const failing: [string, StudentFacts, RegExp][] = [
+  ['a debt', facts([level()], -1), /Qarzi bor: 1 so'm/],
+  [
+    'too few lessons (19 of 20)',
+    facts([
+      level({
+        attendance: {
+          attended: 19,
+          late: 0,
+          absent: 0,
+          counted: 19,
+          percent: 100,
+        },
+      }),
+    ]),
+    /Darslar soni 19 ta, kamida 20 ta kerak/,
+  ],
+  [
+    'too many late lessons (5 of 20 attended)',
+    facts([
+      level({
+        attendance: {
+          attended: 20,
+          late: 5,
+          absent: 0,
+          counted: 20,
+          percent: 100,
+        },
+      }),
+    ]),
+    /Kech qolish 25%, ruxsat etilgani 20%/,
+  ],
+  [
+    'a final test not passed (2 of 3)',
+    facts([level({ unitTests: { passed: 2, total: 3 } })]),
+    /Yakuniy sinovlar 2\/3 ta topshirilgan, hammasi kerak/,
+  ],
+];
+
+describe('issue under the conditions of 17.10', () => {
+  it.each(failing)(
+    'refuses %s without a reason, and names it',
+    async (_label, data, reason) => {
+      const { service, prisma } = make({ facts: data });
+      const err = await service
+        .issue(7, 1001, 10001, { level: 'A1' })
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(BadRequestException);
+      expect((err as BadRequestException).message).toMatch(reason);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(failing)(
+    'lets only the CEO exempt %s, with a reason',
+    async (_label, data) => {
+      const refused = make({ facts: data, ceo: false });
+      await expect(
+        refused.service.issue(7, 1001, 10001, {
+          level: 'A1',
+          exemptReason: 'Rahbar ruxsati',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(refused.prisma.$transaction).not.toHaveBeenCalled();
+
+      const { service, created, prisma } = make({ facts: data, ceo: true });
+      const out = await service.issue(7, 1001, 10001, {
+        level: 'A1',
+        exemptReason: 'Rahbar ruxsati',
+      });
+      expect(prisma.user.findFirst).toHaveBeenCalledWith(CEO_LOOKUP);
+      expect(out.exempt).toBe(true);
+      expect(created[0]).toMatchObject({
+        exemptReason: 'Rahbar ruxsati',
+        exemptById: 7,
+      });
+    },
+  );
+
+  it('seals the thresholds in force, new ones included, and not the balance', async () => {
+    const { service, created } = make({ facts: facts([level()], 120000) });
+    await service.issue(7, 1001, 10001, { level: 'A1' });
+    const snapshot = (created[0] as { snapshot: Record<string, unknown> })
+      .snapshot;
+    expect(snapshot.thresholds).toEqual({
+      attendance: 80,
+      app: 100,
+      minLessons: 20,
+      maxLatePercent: 20,
+    });
+    expect(JSON.stringify(snapshot)).not.toContain('120000');
+    expect(snapshot).not.toHaveProperty('balance');
+  });
+
+  it('issues without a reason exactly at every boundary (20 lessons, 20 % late, no debt, all tests)', async () => {
+    const edge = facts(
+      [
+        level({
+          attendance: {
+            attended: 20,
+            late: 4,
+            absent: 0,
+            counted: 20,
+            percent: 100,
+          },
+          unitTests: { passed: 3, total: 3 },
+        }),
+      ],
+      0,
+    );
+    const { service } = make({ facts: edge });
+    const out = await service.issue(7, 1001, 10001, { level: 'A1' });
+    expect(out.exempt).toBe(false);
+  });
+
+  it('skips the tests condition on a level that has none', async () => {
+    const { service } = make({
+      facts: facts([level({ unitTests: null })]),
+    });
+    const out = await service.issue(7, 1001, 10001, { level: 'A1' });
+    expect(out.exempt).toBe(false);
   });
 });
 
@@ -477,6 +650,30 @@ describe('pdf', () => {
     });
     expect(out.filename).toBe('TB-2026-0001.pdf');
     expect(out.buffer.subarray(0, 4).toString()).toBe('%PDF');
+  });
+
+  it('hands a document sealed before the new conditions to the renderer untouched (no defaults are invented)', async () => {
+    const { service, prisma } = make();
+    const old = {
+      version: 1,
+      level: 'A1',
+      thresholds: { attendance: 80, app: 100 },
+      exempt: false,
+    };
+    prisma.participationCertificate.findFirst.mockResolvedValue({
+      id: CERT_ID,
+      studentId: 10001,
+      number: 'TB-2026-0001',
+      issuedAt: new Date('2026-10-17T07:00:00.000Z'),
+      revokedAt: null,
+      snapshot: old,
+    });
+    await service.pdf(7, 1001, CERT_ID);
+    const arg = (renderCertificatePdf as jest.Mock).mock.calls[0][0] as {
+      snapshot: typeof old;
+    };
+    expect(arg.snapshot).toBe(old);
+    expect(arg.snapshot.thresholds).toEqual({ attendance: 80, app: 100 });
   });
 
   it('refuses the PDF of a cancelled document with a 409 and renders nothing', async () => {

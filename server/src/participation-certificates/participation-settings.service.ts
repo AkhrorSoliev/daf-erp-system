@@ -12,11 +12,17 @@ import {
 export interface ParticipationSettings {
   minAttendancePercent: number;
   minAppPercent: Record<AppLevel, number>;
+  /** Fewest counted lessons (attended + absent) a level needs. */
+  minLessons: number;
+  /** Most late lessons, percent of the lessons attended. */
+  maxLatePercent: number;
 }
 
 export interface ParticipationSettingsPatch {
   minAttendancePercent?: number;
   minAppPercent?: Partial<Record<AppLevel, number>>;
+  minLessons?: number;
+  maxLatePercent?: number;
 }
 
 /** The CEO's thresholds for the Teilnahmebestätigung, company-level (spec 3.3). */
@@ -25,15 +31,19 @@ export class ParticipationSettingsService {
   constructor(private settings: SettingsService) {}
 
   async read(companyId: number): Promise<ParticipationSettings> {
-    const [attendance, a1, a2, b1] = await Promise.all([
+    const [attendance, a1, a2, b1, minLessons, maxLate] = await Promise.all([
       this.settings.get(companyId, 'participation.minAttendancePercent'),
       this.settings.get(companyId, 'participation.minAppPercent.A1'),
       this.settings.get(companyId, 'participation.minAppPercent.A2'),
       this.settings.get(companyId, 'participation.minAppPercent.B1'),
+      this.settings.get(companyId, 'participation.minLessons'),
+      this.settings.get(companyId, 'participation.maxLatePercent'),
     ]);
     return {
       minAttendancePercent: attendance,
       minAppPercent: { A1: a1, A2: a2, B1: b1 },
+      minLessons,
+      maxLatePercent: maxLate,
     };
   }
 
@@ -55,6 +65,12 @@ export class ParticipationSettingsService {
         entries.push([`participation.minAppPercent.${level}`, value]);
       }
     }
+    if (patch.minLessons !== undefined) {
+      entries.push(['participation.minLessons', patch.minLessons]);
+    }
+    if (patch.maxLatePercent !== undefined) {
+      entries.push(['participation.maxLatePercent', patch.maxLatePercent]);
+    }
     if (entries.length === 0) {
       throw new BadRequestException('Kamida bitta sozlama yuborilishi kerak');
     }
@@ -67,6 +83,8 @@ export class ParticipationSettingsService {
     return {
       attendance: settings.minAttendancePercent,
       app: isAppLevel(level) ? settings.minAppPercent[level] : null,
+      minLessons: settings.minLessons,
+      maxLatePercent: settings.maxLatePercent,
     };
   }
 }
