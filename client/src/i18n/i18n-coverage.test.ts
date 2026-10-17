@@ -24,6 +24,8 @@ export const STRICT_FILES: string[] = [
   "components/qollanma/qollanma-yangilik-belgisi.tsx",
   "lib/breadcrumb-routes.ts",
   "components/app-breadcrumb.tsx",
+  "components/payments/payments-mobile-menu.tsx",
+  "components/reports/reports-mobile-menu.tsx",
 ];
 
 function walk(dir: string): string[] {
