@@ -61,6 +61,13 @@ export interface CreditSetting {
   cap: number | null;
 }
 
+/**
+ * `lessons` / `students` / `uncharged` count the period's «Sababli» marks of every
+ * in-scope monthly group, whatever the branch's setting; `amount` prices only the
+ * branches with the credit on. When the scope mixes on and off branches the counts
+ * can exceed what the amount covers, so the client words the amount as an estimate
+ * and keeps the counts in their own sentence (no money wording on the server).
+ */
 export interface CreditResult {
   /** «Sababli» marks of the period in monthly-course groups. */
   lessons: number;
