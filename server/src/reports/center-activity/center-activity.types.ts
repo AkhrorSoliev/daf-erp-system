@@ -1,0 +1,81 @@
+import type { EnrollmentStatusEvent } from '../../students/shared/enrollment-status-on';
+
+export const WEEK_DAYS = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+] as const;
+export type WeekDay = (typeof WEEK_DAYS)[number];
+export const DAY_SHORT: Record<WeekDay, string> = {
+  monday: 'Du',
+  tuesday: 'Se',
+  wednesday: 'Chor',
+  thursday: 'Pay',
+  friday: 'Ju',
+  saturday: 'Sha',
+};
+export const DEFAULT_WORK_START = '09:00';
+export const DEFAULT_WORK_END = '21:00';
+
+export interface Point<T> {
+  validFrom: Date;
+  validTo: Date | null;
+  value: T;
+}
+export interface WorkWindow {
+  start: string;
+  end: string;
+}
+export interface RoomFact {
+  id: string;
+  name: string;
+  branchId: number;
+  branchName: string;
+  createdAt: Date;
+  deletedAt: Date | null;
+  status: string;
+  capacityNow: number | null;
+  capacityHistory: Point<number>[];
+  window: WorkWindow;
+}
+export interface ScheduleValue {
+  exactDays: string[];
+  start: string | null;
+  end: string | null;
+  courseId: string | null;
+}
+export interface EnrollmentFact {
+  createdAt: Date;
+  statusChangedAt: Date | null;
+  status: string;
+  log: EnrollmentStatusEvent[];
+}
+export interface GroupFact {
+  id: string;
+  name: string;
+  roomId: string | null;
+  branchId: number;
+  createdAt: Date;
+  startDate: Date | null;
+  endDate: Date | null;
+  deletedAt: Date | null;
+  scheduleNow: ScheduleValue;
+  scheduleHistory: Point<ScheduleValue>[];
+  statusLog: { status: string; at: Date }[]; // ascending by `at`
+  enrollments: EnrollmentFact[];
+}
+export interface CourseFact {
+  id: string;
+  name: string;
+  monthly: boolean;
+  priceNow: number;
+  priceHistory: Point<number>[];
+}
+export interface CenterFacts {
+  rooms: RoomFact[];
+  groups: GroupFact[];
+  courses: Map<string, CourseFact>;
+}
