@@ -1,37 +1,18 @@
-import { CheckCircle2, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 import { notFound } from "next/navigation";
 import { dmy, issuedDay } from "@/components/students/certificates/certificate-rules";
+import { loadVerify } from "./load-verify";
 
-// What the server's `VerifyView` answers: no branch, no birth date, no percentages.
-interface VerifyDto {
-  valid: boolean;
-  revoked: boolean;
-  number: string;
-  studentName: string;
-  level: string;
-  from: string;
-  to: string;
-  issuedAt: string;
-  companyName: string;
-}
-
-async function fetchVerification(id: string): Promise<VerifyDto | null> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
-  try {
-    const res = await fetch(`${apiUrl}/participation-certificates/${encodeURIComponent(id)}/verify`, {
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as VerifyDto;
-  } catch {
-    return null;
-  }
-}
+// A JS string, not JSX text: an apostrophe entity plus a line break loses a space (SWC bug, Next 16.2).
+const UNAVAILABLE = "Hozir tekshirib bo'lmadi. Birozdan keyin qayta urinib ko'ring.";
 
 export default async function CertificateVerifyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const data = await fetchVerification(id);
-  if (!data) notFound();
+  const result = await loadVerify(id);
+  if (result.kind === "not-found") notFound();
+  // No verdict at all: a busy or failing server must not make a genuine document read as fake.
+  if (result.kind === "unavailable") return <Unavailable />;
+  const data = result.data;
 
   return (
     <div className="overflow-hidden rounded-lg border bg-background shadow-sm">
@@ -62,6 +43,15 @@ export default async function CertificateVerifyPage({ params }: { params: Promis
         {/* The Tashkent day, as on the PDF: slicing the UTC instant is a day off from 00:00 to 05:00. */}
         <Row label="Berilgan sana" value={issuedDay(data.issuedAt)} />
       </div>
+    </div>
+  );
+}
+
+function Unavailable() {
+  return (
+    <div className="rounded-lg border bg-background p-6 text-center shadow-sm">
+      <AlertCircle className="mx-auto mb-3 size-8 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">{UNAVAILABLE}</p>
     </div>
   );
 }
