@@ -77,6 +77,7 @@ function facts(over: Partial<OverviewFacts> = {}): OverviewFacts {
       { userId: 11, status: 'KEPT' },
       { userId: 11, status: 'BROKEN' },
     ],
+    roster: [],
     names: new Map([
       [11, 'Nodira R'],
       [12, 'Farangiz N'],
@@ -329,5 +330,33 @@ describe('assembleOverview — forecast after the switch came back on', () => {
     );
     // Working days from 20.10: 20–24, 26–31 = 11; 3 of them passed; 30 + 3 × 11 / 3.
     expect(out.cards.forecast).toBe(41);
+  });
+});
+
+describe('assembleOverview — every administrator of the branch gets a row', () => {
+  // 17 is on the branch roster with nothing at all; 18 only wrote promises;
+  // 19 is on the roster but no administrator now (not eligible).
+  const out = assembleOverview(
+    facts({
+      roster: [17, 19],
+      promises: [
+        { userId: 18, status: 'KEPT' },
+        { userId: 18, status: 'BROKEN' },
+        { userId: 18, status: 'BROKEN' },
+      ],
+      eligibleUsers: new Set([11, 13, 17, 18]),
+    }),
+  );
+
+  it('lists the roster with zeros and the promise writers, not the ineligible', () => {
+    const ids = out.rows.map((r) => r.userId);
+    expect(ids).toEqual(expect.arrayContaining([17, 18]));
+    expect(ids).not.toContain(19);
+    expect(out.rows.find((r) => r.userId === 17)).toEqual(
+      expect.objectContaining({ total: 0, held: 0 }),
+    );
+    expect(out.rows.find((r) => r.userId === 18)?.promiseRate).toEqual(
+      expect.objectContaining({ kept: 1, closed: 3 }),
+    );
   });
 });

@@ -28,7 +28,10 @@ function setup() {
       findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
     },
-    paymentPromise: { findMany: jest.fn().mockResolvedValue([]) },
+    paymentPromise: {
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    },
     user: {
       findMany: jest.fn().mockResolvedValue([]),
       findFirst: jest
@@ -93,6 +96,18 @@ describe('KpiReadService.overview', () => {
     expect(out.rows).toEqual([]);
     // 14.10 is before KPI_START (17.10): no working day has been recorded yet.
     expect(out.cards.forecast).toBeNull();
+    expect(s.prisma.user.findMany).toHaveBeenCalledWith({
+      where: {
+        companyId: 1001,
+        deletedAt: null,
+        roles: { some: { role: { name: 'Administrator' } } },
+        OR: [
+          { mainBranch: { in: [2] } },
+          { branches: { some: { branchId: { in: [2] } } } },
+        ],
+      },
+      select: { id: true },
+    });
     expect(s.prisma.kpiResult.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { companyId: 1001, month: '2026-10', branchId: { in: [2] } },
@@ -359,6 +374,17 @@ describe('KpiReadService.user', () => {
           },
         ],
       }),
+    });
+  });
+
+  it('admits a person who wrote a promise of the branch due this month', async () => {
+    const s = setup();
+    s.prisma.user.count.mockResolvedValue(0);
+    s.prisma.paymentPromise.count.mockResolvedValue(2);
+    const out = await s.service.user(1001, [2], 11, {}, NOW);
+    expect(out.user.id).toBe(11);
+    expect(s.prisma.paymentPromise.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({ companyId: 1001, createdById: 11 }),
     });
   });
 });
