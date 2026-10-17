@@ -60,7 +60,7 @@ export const reportsNavSections: ReportsNavSection[] = [
       { title: "Xodimlar KPI", url: "/reports/xodimlar-kpi", icon: Trophy, permission: "kpi.view" },
       // A money report (server: `GET /reports/marketing`, ADR-0067).
       { title: "Marketing", url: "/reports/marketing", icon: Megaphone, permission: "reports.finance" },
-      { title: "Markaz faoliyat statistikasi", url: "/reports/activity", icon: Activity, permission: "reports.students" },
+      { title: "Markaz faoliyati", url: "/reports/activity", icon: Activity, permission: "reports.students" },
       { title: "Davomat statistikasi", url: "/reports/attendance", icon: CalendarCheck, permission: "reports.students" },
       { title: "Bot hisoboti", url: "/reports/bot", icon: Send, permission: "reports.students" },
     ],
