@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Xato berilgan qatnashganlik hujjatini bekor qilish",
+    matn: "O'quvchi kartasidagi «Hujjatlar» yorlig'ida berilgan hujjat qatoriga uch nuqta tugmasi qo'shildi: u orqali «Bekor qilish»ni tanlab, sababini yozasiz. Bekor qilingan hujjat ro'yxatda chizilgan raqam, belgi va sabab bilan qoladi, PDF'i endi berilmaydi, QR sahifada esa «bekor qilingan» deb chiqadi. Raqam qayta berilmaydi; to'g'ri hujjat yangi raqam bilan beriladi. Bekor qilish o'quvchi tarixiga yoziladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "qatnashganlik-hujjati" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Pauzadagi guruhning darslari «Berilmadi» blokiga tushmaydi",
     matn: "Guruh to'xtatilgan (pauza) paytida tugagan darslar endi ustozning oyligidagi «Berilmadi — davomat olinmagan darslar» blokida chiqmaydi. Ilgari guruh qayta yoqilishi bilan pauzadagi o'tmagan darslar ham ustozga «yo'qotilgan» bo'lib ko'rinardi.",
     sahifa: { bolim: "davomat", sahifa: "dars-boldimi" },

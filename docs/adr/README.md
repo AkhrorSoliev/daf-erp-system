@@ -169,6 +169,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0100](0100-teilnahmebestatigung-qatnashganlik-hujjati.md) | Teilnahmebestätigung: qatnashganlik hujjati davomat va ilova bo'yicha, natija muhrlanadi | Qabul qilindi | 2026-10-17 |
 | [0101](0101-xodimning-dizayn-uslubi-akkauntda.md) | Xodimning dizayn uslubi akkauntda; uslub tokenlarni almashtiradi, holat ranglarini emas | Qabul qilindi | 2026-10-17 |
 | [0102](0102-interfeys-tili-matn-kalit-akkaunt-va-qurilma.md) | Interfeys tili: matn kalit, akkaunt va qurilmada saqlanadi | Qabul qilindi | 2026-10-17 |
+| [0104](0104-hujjatni-bekor-qilish.md) | Hujjatni bekor qilish: qator o'chmaydi, raqam qayta berilmaydi, sabab majburiy, tarix bir tranzaksiyada; PDF berilmaydi, QR «bekor qilingan» deydi (ADR-0100 ni to'ldiradi) | Qabul qilindi | 2026-10-17 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 
