@@ -22,7 +22,7 @@ const full: CertificateSnapshot = {
   app: { applies: true, done: 80, open: 80, percent: 100 },
   unitTests: { passed: 5, total: 5 },
   mock: { score: 72, maxScore: 100, date: '2026-10-07' },
-  thresholds: { attendance: 80, app: 100 },
+  thresholds: { attendance: 80, app: 100, minLessons: 20, maxLatePercent: 20 },
   exempt: false,
 };
 
@@ -34,6 +34,7 @@ const minimal: CertificateSnapshot = {
   app: { applies: false, done: 0, open: 0, percent: null },
   unitTests: null,
   mock: null,
+  // The shape of a document sealed before 17.10.2026: no minLessons, no maxLatePercent.
   thresholds: { attendance: 80, app: null },
 };
 
@@ -219,6 +220,26 @@ describe('renderCertificatePdf', () => {
       issuedAt: new Date('2026-10-17T07:00:00.000Z'),
       url: 'https://admin.dafzentrum.uz/t/x',
     });
+    expect(pages(buf)).toBe(1);
+  });
+
+  it('draws a document sealed before the new conditions exactly like a new one (the thresholds are not printed)', async () => {
+    // What the database hands back for a row issued before 17.10.2026.
+    const stored = JSON.parse(
+      JSON.stringify({
+        ...full,
+        thresholds: { attendance: 80, app: 100 },
+      }),
+    ) as CertificateSnapshot;
+    expect(stored.thresholds.minLessons).toBeUndefined();
+    expect(JSON.stringify(build(stored))).toBe(JSON.stringify(build(full)));
+    const buf = await renderCertificatePdf({
+      snapshot: stored,
+      number: 'TB-2026-0005',
+      issuedAt: new Date('2026-10-17T07:00:00.000Z'),
+      url: 'https://admin.dafzentrum.uz/t/x',
+    });
+    expect(buf.subarray(0, 4).toString()).toBe('%PDF');
     expect(pages(buf)).toBe(1);
   });
 

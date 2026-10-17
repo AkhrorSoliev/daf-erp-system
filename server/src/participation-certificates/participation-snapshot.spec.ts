@@ -25,7 +25,7 @@ describe('buildSnapshot', () => {
     const snapshot = buildSnapshot(
       student,
       facts,
-      { attendance: 80, app: 100 },
+      { attendance: 80, app: 100, minLessons: 20, maxLatePercent: 20 },
       false,
     );
     expect(snapshot).toEqual({
@@ -41,7 +41,12 @@ describe('buildSnapshot', () => {
       app: facts.app,
       unitTests: { passed: 5, total: 5 },
       mock: { score: 72, maxScore: 100, date: '2026-10-07' },
-      thresholds: { attendance: 80, app: 100 },
+      thresholds: {
+        attendance: 80,
+        app: 100,
+        minLessons: 20,
+        maxLatePercent: 20,
+      },
       exempt: false,
     });
   });
@@ -50,7 +55,7 @@ describe('buildSnapshot', () => {
     const snapshot = buildSnapshot(
       student,
       facts,
-      { attendance: 80, app: null },
+      { attendance: 80, app: null, minLessons: 20, maxLatePercent: 20 },
       true,
     );
     facts.attendance.attended = 0;

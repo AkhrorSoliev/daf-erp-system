@@ -116,13 +116,17 @@ export class ParticipationCertificatesService {
     ]);
     return {
       studentId,
+      balance: data.balance,
       unleveledGroups: data.unleveledGroups,
       levels: data.levels.map((facts) => {
         const thresholds = this.settings.thresholdsFor(settings, facts.level);
         return {
           ...facts,
           thresholds,
-          verdict: evaluate(facts.attendance, facts.app, thresholds),
+          verdict: evaluate(facts.attendance, facts.app, thresholds, {
+            balance: data.balance,
+            unitTests: facts.unitTests,
+          }),
           issued: issued
             .filter((i) => i.level === facts.level)
             .map(toIssuedView),
@@ -155,7 +159,10 @@ export class ParticipationCertificatesService {
       await this.settings.read(companyId),
       level,
     );
-    const verdict = evaluate(facts.attendance, facts.app, thresholds);
+    const verdict = evaluate(facts.attendance, facts.app, thresholds, {
+      balance: data.balance,
+      unitTests: facts.unitTests,
+    });
 
     const reason = dto.exemptReason?.trim() || null;
     const exempt = !verdict.eligible;

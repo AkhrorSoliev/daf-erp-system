@@ -129,6 +129,8 @@ describe('SettingsService', () => {
         'participation.minAppPercent.A1': 100,
         'participation.minAppPercent.A2': 100,
         'participation.minAppPercent.B1': 100,
+        'participation.minLessons': 20,
+        'participation.maxLatePercent': 20,
       });
     });
   });
@@ -232,6 +234,8 @@ describe('SettingsService', () => {
         'participation.minAppPercent.A1': [],
         'participation.minAppPercent.A2': [],
         'participation.minAppPercent.B1': [],
+        'participation.minLessons': [],
+        'participation.maxLatePercent': [],
       });
     });
 

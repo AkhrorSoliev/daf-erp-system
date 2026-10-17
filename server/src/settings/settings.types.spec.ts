@@ -35,6 +35,8 @@ describe('SETTING_DEFINITIONS registry', () => {
         'participation.minAppPercent.A1',
         'participation.minAppPercent.A2',
         'participation.minAppPercent.B1',
+        'participation.minLessons',
+        'participation.maxLatePercent',
       ].sort(),
     );
   });
