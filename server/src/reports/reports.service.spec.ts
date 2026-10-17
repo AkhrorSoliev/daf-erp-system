@@ -24,6 +24,22 @@ import {
   resolveMonthlyScope,
   type SalaryMonthlyQuery,
 } from '../salary/shared/resolve-monthly-scope';
+import {
+  countRows,
+  markOf,
+  rateOf,
+} from './attendance-stats/attendance-counts';
+
+const kpiMarks = (
+  n: number,
+  status: string,
+  cancellationId: string | null = null,
+) =>
+  Array.from({ length: n }, () => ({
+    date: new Date('2026-10-01T00:00:00.000Z'),
+    status,
+    cancellationId,
+  }));
 
 /**
  * One teacher change (5 March, 10:00 Tashkent) in group g1 whose five lessons
@@ -248,10 +264,10 @@ describe('ReportsService', () => {
 
       prisma.group.count.mockResolvedValue(10);
 
-      prisma.attendance.groupBy.mockResolvedValue([
-        { status: 'PRESENT', _count: { id: 80 } },
-        { status: 'ABSENT', _count: { id: 15 } },
-        { status: 'LATE', _count: { id: 5 } },
+      prisma.attendance.findMany.mockResolvedValue([
+        ...kpiMarks(80, 'PRESENT'),
+        ...kpiMarks(15, 'ABSENT'),
+        ...kpiMarks(5, 'LATE'),
       ]);
 
       prisma.lead.count
@@ -280,11 +296,11 @@ describe('ReportsService', () => {
 
       prisma.group.count.mockResolvedValue(10);
 
-      prisma.attendance.groupBy.mockResolvedValue([
-        { status: 'PRESENT', _count: { id: 70 } },
-        { status: 'LATE', _count: { id: 10 } },
-        { status: 'ABSENT', _count: { id: 10 } },
-        { status: 'EXCUSED', _count: { id: 10 } },
+      prisma.attendance.findMany.mockResolvedValue([
+        ...kpiMarks(70, 'PRESENT'),
+        ...kpiMarks(10, 'LATE'),
+        ...kpiMarks(10, 'ABSENT'),
+        ...kpiMarks(10, 'EXCUSED'),
       ]);
 
       prisma.lead.count
@@ -293,21 +309,62 @@ describe('ReportsService', () => {
 
       const result = await service.getKpis(1, {});
 
-      expect(result.averageAttendance).toBe(89); // round(80 / 90 × 100)
+      expect(result.averageAttendance).toBe(88.9); // 80 / 90, one decimal (the report's rateOf)
     });
 
     it('should handle zero students gracefully', async () => {
       prisma.student.count.mockResolvedValue(0);
       prisma.group.count.mockResolvedValue(0);
       prisma.enrollment.count.mockResolvedValue(0);
-      prisma.attendance.groupBy.mockResolvedValue([]);
+      prisma.attendance.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
 
       const result = await service.getKpis(1, {});
 
       expect(result.activeStudents.trend).toBe(0);
-      expect(result.averageAttendance).toBe(0);
+      expect(result.averageAttendance).toBeNull(); // no mark: «—», never 0%
       expect(result.leadConversionRate).toBe(0);
+    });
+
+    it("the home rate is the report's own function: a cancelled lesson counts nowhere", async () => {
+      const rows = [
+        ...kpiMarks(8, 'PRESENT'),
+        ...kpiMarks(2, 'ABSENT'),
+        ...kpiMarks(5, 'EXCUSED', 'c1'),
+      ];
+      prisma.attendance.findMany.mockResolvedValue(rows);
+      prisma.student.count.mockResolvedValue(0);
+      prisma.group.count.mockResolvedValue(0);
+      prisma.lead.count.mockResolvedValue(0);
+      const result = await service.getKpis(1, {});
+      expect(result.averageAttendance).toBe(
+        rateOf(countRows(rows.map((r) => markOf(r as never)))),
+      );
+      expect(result.averageAttendance).toBe(80);
+    });
+
+    it('reads the current Tashkent month, 1st to today, in the picked branch', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-31T19:30:00.000Z')); // 01.11 00:30 in Tashkent
+      try {
+        prisma.attendance.findMany.mockResolvedValue([]);
+        prisma.student.count.mockResolvedValue(0);
+        prisma.group.count.mockResolvedValue(0);
+        prisma.lead.count.mockResolvedValue(0);
+        await service.getKpis(1, { branchId: 4 });
+        const call = prisma.attendance.findMany.mock.calls.find(
+          (c: any[]) => c[0]?.select?.cancellationId,
+        );
+        expect(call[0].where).toEqual({
+          companyId: 1,
+          date: {
+            gte: new Date('2026-11-01T00:00:00.000Z'),
+            lt: new Date('2026-11-02T00:00:00.000Z'),
+          },
+          group: { branchId: { in: [4] } },
+        });
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     // RULING C — voronka konversiyasi faqat voronka lidlarini sanaydi.
@@ -318,7 +375,7 @@ describe('ReportsService', () => {
       prisma.student.count.mockResolvedValue(0);
       prisma.group.count.mockResolvedValue(0);
       prisma.enrollment.count.mockResolvedValue(0);
-      prisma.attendance.groupBy.mockResolvedValue([]);
+      prisma.attendance.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
 
       await service.getKpis(1, {});
