@@ -13,7 +13,9 @@ import type { RoomRow } from "./center-activity-types";
 export function CenterActivityRooms({ rooms, showBranch }: { rooms: RoomRow[]; showBranch: boolean }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const slice = rooms.slice((page - 1) * pageSize, page * pageSize);
+  // A list that shrank under the open page (a new month) never shows an empty page.
+  const p = Math.min(page, Math.max(1, Math.ceil(rooms.length / pageSize)));
+  const slice = rooms.slice((p - 1) * pageSize, p * pageSize);
   return (
     <Card>
       <CardContent className="flex flex-col gap-2 p-4">
@@ -31,7 +33,7 @@ export function CenterActivityRooms({ rooms, showBranch }: { rooms: RoomRow[]; s
           <TableBody>
             {slice.map((r, i) => (
               <TableRow key={r.id}>
-                <TableCell className="border-r text-muted-foreground">{(page - 1) * pageSize + i + 1}</TableCell>
+                <TableCell className="border-r text-muted-foreground">{(p - 1) * pageSize + i + 1}</TableCell>
                 <TableCell>
                   {r.name}
                   {showBranch && <span className="ml-1 text-xs text-muted-foreground">{r.branchName}</span>}
@@ -53,7 +55,7 @@ export function CenterActivityRooms({ rooms, showBranch }: { rooms: RoomRow[]; s
           </TableBody>
         </Table>
         <PaymentsPager
-          page={page} pageSize={pageSize} total={rooms.length}
+          page={p} pageSize={pageSize} total={rooms.length}
           onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }}
           sizes={CA_PAGE_SIZES} sizeLabel="Sahifadagi xonalar soni"
         />

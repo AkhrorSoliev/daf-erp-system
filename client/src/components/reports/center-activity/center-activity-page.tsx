@@ -76,7 +76,11 @@ export function CenterActivityPage() {
       {isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
           <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
+          {/* A stale or out-of-scope ?filial= makes the server answer 400; asking again would repeat it, so retry without it. */}
+          <Button
+            variant="outline" size="sm" className="mt-3"
+            onClick={() => (filters.filial > 0 ? setFilters({ filial: 0 }) : refetch())}
+          >
             Qayta urinish
           </Button>
         </div>
