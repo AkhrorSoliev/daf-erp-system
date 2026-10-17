@@ -7,6 +7,7 @@ import { DEFAULT_SKIN, UI_SKINS } from "@/lib/ui-skins";
 const globals = readFileSync(path.join(__dirname, "globals.css"), "utf8");
 const skinsCss = readFileSync(path.join(__dirname, "skins.css"), "utf8");
 const layout = readFileSync(path.join(__dirname, "layout.tsx"), "utf8");
+const authProvider = readFileSync(path.join(__dirname, "../components/providers/auth-provider.tsx"), "utf8");
 
 const SKINS = UI_SKINS.filter((s) => s.id !== DEFAULT_SKIN).map((s) => s.id);
 const base = cssTokens(globals, ":root");
@@ -49,6 +50,7 @@ describe.each(SKINS)("skin %s", (id) => {
   it("leaves the status colours and the other chart colours to the base theme", () => {
     for (const sel of [`:root[data-skin="${id}"]`, `.dark[data-skin="${id}"]`]) {
       const block = skinsCss.match(new RegExp(`^${sel.replace(/[.[\]"()]/g, "\\$&")} \\{([^}]*)\\}`, "m"))?.[1] ?? "";
+      expect(block, `${sel} block exists`).not.toBe("");
       expect(block).not.toMatch(/--(destructive|success|warning|info|chart-[2-5]):/);
     }
   });
@@ -57,5 +59,25 @@ describe.each(SKINS)("skin %s", (id) => {
     const fontVar = FONT_OF[id];
     expect(skinsCss).toContain(`html[data-skin="${id}"] { --font-plex: var(${fontVar}); }`);
     expect(layout).toContain(`variable: "${fontVar}"`);
+  });
+});
+
+describe("skin wiring", () => {
+  // `--font-plex` points at `var(--font-x)`; the variable exists only while the
+  // font's `.variable` class is on <html>. Drop it and the skin falls back to
+  // the browser font with every other test green.
+  const htmlClasses = layout.match(/<html[^>]*className=\{cn\(([^)]*)\)/)?.[1] ?? "";
+
+  it("puts every skin font's class on <html>", () => {
+    expect(htmlClasses).not.toBe("");
+    for (const font of ["rubik", "montserrat", "robotoCondensed", "ubuntu"]) {
+      expect(layout, `const ${font}`).toMatch(new RegExp(`const ${font} = `));
+      expect(htmlClasses, `${font}.variable on <html>`).toContain(`${font}.variable`);
+    }
+  });
+
+  it("runs the boot script in <head> and mounts SkinSync", () => {
+    expect(layout).toMatch(/<head>[^]*SKIN_BOOT_SCRIPT[^]*<\/head>/);
+    expect(authProvider).toContain("<SkinSync />");
   });
 });

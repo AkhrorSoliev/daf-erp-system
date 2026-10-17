@@ -52,6 +52,8 @@ const BRANCH_INDEPENDENT: Record<string, string> = {
     "Counts the viewer's own open tasks for the sidebar; GET /tasks/counts is keyed on the person, not the branch.",
   "hooks/use-tasks.ts":
     "Reached only through the sidebar recount; the store is reset on a branch switch (registerBranchScopedStore).",
+  "hooks/use-ui-skin.ts":
+    "Writes the signed-in person's own design skin (PATCH /users/ui-skin, route policy SELF): an account setting, not a branch's; nothing it holds changes on a switch.",
 };
 
 function resolveImport(spec: string): string | null {
