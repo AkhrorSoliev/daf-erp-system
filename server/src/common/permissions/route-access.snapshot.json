@@ -822,6 +822,10 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /reports/audience/overview": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /reports/center-activity/excel": [
     "Branch Director",
     "CEO"

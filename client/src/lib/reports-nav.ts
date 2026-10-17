@@ -9,6 +9,7 @@ import {
   Megaphone,
   Star,
   Trophy,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import type { Can } from "./permission-check";
@@ -64,6 +65,8 @@ export const reportsNavSections: ReportsNavSection[] = [
       { title: msg("Markaz faoliyati"), url: "/reports/activity", icon: Activity, permission: "reports.students" },
       { title: msg("Davomat"), url: "/reports/attendance", icon: CalendarCheck, permission: "reports.students" },
       { title: msg("Bot hisoboti"), url: "/reports/bot", icon: Send, permission: "reports.students" },
+      // «Auditoriya»: who studies here, by gender and age (ADR-0108).
+      { title: msg("Auditoriya"), url: "/reports/audience", icon: Users, permission: "reports.students" },
     ],
   },
 ];

@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Yangi hisobot: Auditoriya",
+    matn: "Hisobotlarda «Auditoriya» sahifasi paydo bo'ldi: hozir o'qiyotgan o'quvchilar jinsi, yoshi, kurs va filial bo'yicha. Foizlar faqat jinsi yoki tug'ilgan sanasi kiritilgan o'quvchilar ichidan hisoblanadi, sahifa tepasida esa ma'lumot qanchalik to'liqligi ko'rsatiladi. Ma'lumot o'quvchilar ilovaga kirgan sari to'lib boradi. Beshtadan kam ma'lumotli qatorda foiz o'rniga chiziqcha turadi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "hisobotlar", sahifa: "auditoriya" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Bosh sahifa tarjima qilindi",
     matn: "Bosh sahifa endi tanlangan tilda ochiladi: pul va odamlar qatori, lid voronkasi, e'tibor talab qiladigan ishlar, yaqin darslar, diagrammalar, filial ishga tushirish kartasi va o'qituvchining dars jadvali (xona bandligi, «Dars bo'ldimi?» oynalari va o'quvchilar qatorlari bilan). Serverdan keladigan matnlar va ismlar, nomlar o'zgarishsiz qoladi. Boshqa sahifalar hali o'zbekcha.",
     rollar: [1, 2, 3, 4, 5],

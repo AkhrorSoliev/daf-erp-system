@@ -45,6 +45,7 @@ const de: Dictionary = {
   "Xodimlar KPI": "Mitarbeiter-KPI",
   "Marketing": "Marketing",
   "Bot hisoboti": "Bot-Bericht",
+  "Auditoriya": "Zielgruppe",
 
   // DaF ilovasi
   "Umumiy holat": "Gesamtstatus",

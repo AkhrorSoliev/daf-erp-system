@@ -38,6 +38,9 @@ import { SettingsModule } from '../settings/settings.module';
 import { AttendanceFactsLoader } from './attendance-stats/attendance-facts.loader';
 import { AttendanceStatsController } from './attendance-stats/attendance-stats.controller';
 import { AttendanceStatsService } from './attendance-stats/attendance-stats.service';
+import { AudienceController } from './audience/audience.controller';
+import { AudienceFactsLoader } from './audience/audience-facts.loader';
+import { AudienceService } from './audience/audience.service';
 
 @Module({
   imports: [
@@ -55,6 +58,7 @@ import { AttendanceStatsService } from './attendance-stats/attendance-stats.serv
     GroupPaymentsController,
     CenterActivityController,
     AttendanceStatsController,
+    AudienceController,
     DepartedController,
   ],
   providers: [
@@ -71,6 +75,8 @@ import { AttendanceStatsService } from './attendance-stats/attendance-stats.serv
     CenterFactsLoader,
     AttendanceStatsService,
     AttendanceFactsLoader,
+    AudienceService,
+    AudienceFactsLoader,
     ReportsProfitLossService,
     ReportsCashFlowService,
     ReportsBalanceSheetService,
