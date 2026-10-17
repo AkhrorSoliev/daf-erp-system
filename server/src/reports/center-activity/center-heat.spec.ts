@@ -4,17 +4,34 @@ import type { RoomResult } from './center-metrics';
 import { WEEK_DAYS, type WeekDay } from './center-activity.types';
 
 const W = { start: '08:00', end: '22:30' };
-const slots = (m: Partial<Record<WeekDay, number[]>> = {}) => {
-  const out = {} as RoomResult['slots'];
-  for (const d of WEEK_DAYS) out[d] = new Set(m[d] ?? []);
+/** slot → group names, per day; a bare number list means one group "G" holds those slots. */
+type Held = Partial<Record<WeekDay, number[] | Record<number, string[]>>>;
+const slotGroups = (m: Held = {}) => {
+  const out = {} as RoomResult['slotGroups'];
+  for (const d of WEEK_DAYS) {
+    const v = m[d] ?? [];
+    out[d] = new Map(
+      Array.isArray(v)
+        ? v.map((s): [number, string[]] => [s, ['G']])
+        : Object.entries(v).map(([s, n]): [number, string[]] => [Number(s), n]),
+    );
+  }
   return out;
 };
-const room = (
+const room = (id: string, m: Held = {}, name = id): RoomResult => {
+  const sg = slotGroups(m);
+  const slots = {} as RoomResult['slots'];
+  for (const d of WEEK_DAYS) slots[d] = new Set(sg[d].keys());
+  return roomOf(id, name, slots, sg);
+};
+const roomOf = (
   id: string,
-  m: Partial<Record<WeekDay, number[]>> = {},
+  name: string,
+  slots: RoomResult['slots'],
+  sg: RoomResult['slotGroups'],
 ): RoomResult => ({
   id,
-  name: id,
+  name,
   branchId: 1,
   branchName: 'F',
   capacity: 16,
@@ -23,7 +40,8 @@ const room = (
   workHours: 87,
   occupancyPct: 0,
   window: W,
-  slots: slots(m),
+  slots,
+  slotGroups: sg,
 });
 
 describe('heatTone', () => {
@@ -55,7 +73,69 @@ describe('buildHeat', () => {
   });
 
   it('no rooms gives an empty matrix', () => {
-    expect(buildHeat([]).hours).toEqual([]);
+    const h = buildHeat([]);
+    expect(h.hours).toEqual([]);
+    expect(h.roomList).toEqual([]);
+  });
+
+  it('roomList keeps the order given, with name and capacity', () => {
+    const h = buildHeat([room('a', {}, '1-xona'), room('b', {}, '2-xona')]);
+    expect(h.roomList).toEqual([
+      { id: 'a', name: '1-xona', capacity: 16 },
+      { id: 'b', name: '2-xona', capacity: 16 },
+    ]);
+  });
+
+  it('lists the busy rooms with deduped group names (two groups in one hour)', () => {
+    // Monday hour 10 = slots 20, 21: A holds both slots, B only the second, so A appears once
+    const h = buildHeat([
+      room('a', { monday: { 20: ['A'], 21: ['A', 'B'] } }),
+      room('free'),
+      room('c', { monday: { 20: ['C'] } }),
+    ]);
+    const cell = h.cells[0][h.hours.indexOf(10)];
+    expect(cell.busy).toEqual([
+      { room: 0, groups: ['A', 'B'] },
+      { room: 2, groups: ['C'] },
+    ]);
+    expect(cell.free).toBe(1);
+    // the free room is the one index not listed
+    expect(
+      h.roomList
+        .map((_, i) => i)
+        .filter((i) => !cell.busy.some((b) => b.room === i)),
+    ).toEqual([1]);
+  });
+
+  it('a half-hour lesson touching one slot still marks the room busy for that hour only', () => {
+    const h = buildHeat([room('a', { tuesday: { 23: ['Short'] } })]);
+    const day = WEEK_DAYS.indexOf('tuesday');
+    expect(h.cells[day][h.hours.indexOf(11)].busy).toEqual([
+      { room: 0, groups: ['Short'] },
+    ]);
+    expect(h.cells[day][h.hours.indexOf(10)].busy).toEqual([]);
+    expect(h.cells[day][h.hours.indexOf(12)].busy).toEqual([]);
+  });
+
+  it('free === roomList.length − busy.length in every cell, and busy rooms are unique', () => {
+    const h = buildHeat([
+      room('a', { monday: [20, 21, 22], friday: [30] }),
+      room('b', { monday: [21], saturday: [40, 41] }),
+      room('c', { monday: [20, 21], wednesday: [25] }),
+    ]);
+    for (const row of h.cells) {
+      for (const c of row) {
+        expect(c.free).toBe(h.roomList.length - c.busy.length);
+        expect(new Set(c.busy.map((b) => b.room)).size).toBe(c.busy.length);
+        expect(c.tone).toBe(heatTone(c.free, h.rooms));
+      }
+    }
+    // Σ busy over the matrix = busy room-hours counted from the slot sets
+    const sumBusy = h.cells.flat().reduce((n, c) => n + c.busy.length, 0);
+    expect(sumBusy).toBe(
+      h.cells.flat().reduce((n, c) => n + (h.rooms - c.free), 0),
+    );
+    expect(h.cells[0][h.hours.indexOf(10)].free).toBe(0);
   });
 });
 

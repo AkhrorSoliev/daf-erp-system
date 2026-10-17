@@ -6,9 +6,17 @@ export type HeatTone = 'green' | 'light' | 'yellow' | 'red';
 export interface HeatCell {
   free: number;
   tone: HeatTone;
+  /**
+   * The rooms that hold a lesson in this whole hour: `room` indexes
+   * `Heat.roomList`, `groups` are the deduped names of the groups holding it.
+   * The free rooms are the indices NOT listed here (`free` = roomList.length − busy.length).
+   */
+  busy: { room: number; groups: string[] }[];
 }
 export interface Heat {
   rooms: number;
+  /** The branch's rooms, in the order the cells' `busy[].room` index them. */
+  roomList: { id: string; name: string; capacity: number | null }[];
   days: WeekDay[];
   hours: number[];
   /** [dayIndex][hourIndex] */
@@ -32,7 +40,13 @@ export function heatTone(free: number, rooms: number): HeatTone {
  */
 export function buildHeat(rooms: RoomResult[]): Heat {
   if (rooms.length === 0)
-    return { rooms: 0, days: [...WEEK_DAYS], hours: [], cells: [] };
+    return {
+      rooms: 0,
+      roomList: [],
+      days: [...WEEK_DAYS],
+      hours: [],
+      cells: [],
+    };
   const w = rooms[0].window;
   const hours: number[] = [];
   for (
@@ -43,13 +57,30 @@ export function buildHeat(rooms: RoomResult[]): Heat {
     hours.push(h);
   }
   const cells = WEEK_DAYS.map((day) =>
-    hours.map((h) => {
-      const busy = rooms.filter(
-        (r) => r.slots[day].has(h * 2) || r.slots[day].has(h * 2 + 1),
-      ).length;
-      const free = rooms.length - busy;
-      return { free, tone: heatTone(free, rooms.length) };
+    hours.map((h): HeatCell => {
+      const busy: HeatCell['busy'] = [];
+      rooms.forEach((r, room) => {
+        const first = r.slotGroups[day].get(h * 2);
+        const second = r.slotGroups[day].get(h * 2 + 1);
+        if (first || second)
+          busy.push({
+            room,
+            groups: [...new Set([...(first ?? []), ...(second ?? [])])],
+          });
+      });
+      const free = rooms.length - busy.length;
+      return { free, tone: heatTone(free, rooms.length), busy };
     }),
   );
-  return { rooms: rooms.length, days: [...WEEK_DAYS], hours, cells };
+  return {
+    rooms: rooms.length,
+    roomList: rooms.map((r) => ({
+      id: r.id,
+      name: r.name,
+      capacity: r.capacity,
+    })),
+    days: [...WEEK_DAYS],
+    hours,
+    cells,
+  };
 }

@@ -63,11 +63,16 @@ describe('centerActivityWorkbook', () => {
           branchName: "Farg'ona",
           heat: {
             rooms: 1,
+            roomList: [{ id: 'r1', name: '1-xona', capacity: 16 }],
             days: [...WEEK_DAYS],
             hours: [8, 9],
             cells: WEEK_DAYS.map(() => [
-              { free: 1, tone: 'green' as const },
-              { free: 0, tone: 'red' as const },
+              { free: 1, tone: 'green' as const, busy: [] },
+              {
+                free: 0,
+                tone: 'red' as const,
+                busy: [{ room: 0, groups: ['G1'] }],
+              },
             ]),
           },
         },
