@@ -17,7 +17,12 @@ describe('MonthlyBillingCronService', () => {
     monthlyChargeMock = {
       createChargesForPeriod: jest
         .fn()
-        .mockResolvedValue({ created: 0, skipped: 0, totalCharged: 0 }),
+        .mockResolvedValue({
+          created: 0,
+          skipped: 0,
+          failed: 0,
+          totalCharged: 0,
+        }),
     };
     // Boshlang'ich qiymat (1) — mavjud testlar shu bilan o'zgarishsiz
     // o'tadi. `payment.chargeDayOfMonth`ga xos testlar buni qayta belgilaydi.
@@ -76,6 +81,7 @@ describe('MonthlyBillingCronService', () => {
       .mockResolvedValueOnce({
         created: 5,
         skipped: 0,
+        failed: 0,
         totalCharged: 2_250_000,
       });
 

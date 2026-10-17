@@ -18,7 +18,12 @@ describe('MonthlyBillingWatchdogService', () => {
     monthlyChargeMock = {
       createChargesForPeriod: jest
         .fn()
-        .mockResolvedValue({ created: 0, skipped: 0, totalCharged: 0 }),
+        .mockResolvedValue({
+          created: 0,
+          skipped: 0,
+          failed: 0,
+          totalCharged: 0,
+        }),
     };
     // Boshlang'ich qiymat (1) — qorovul har kuni ishlaydigan mavjud
     // testlar shu bilan o'zgarishsiz o'tadi.
@@ -60,6 +65,7 @@ describe('MonthlyBillingWatchdogService', () => {
     monthlyChargeMock.createChargesForPeriod.mockResolvedValueOnce({
       created: 0,
       skipped: 0,
+      failed: 0,
       totalCharged: 0,
     });
 
@@ -69,12 +75,45 @@ describe('MonthlyBillingWatchdogService', () => {
     errorSpy.mockRestore();
   });
 
+  it('yozadigan dars qolmagan yozilish (skipped) xato emas — ERROR yozilmaydi', async () => {
+    const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-17T02:05:00+05:00'));
+    monthlyChargeMock.createChargesForPeriod.mockResolvedValueOnce({
+      created: 0,
+      skipped: 2,
+      failed: 0,
+      totalCharged: 0,
+    });
+
+    await watchdog.healMissingCharges();
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('haqiqiy xato (failed) bo`lsa ERROR yozadi', async () => {
+    const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-17T02:05:00+05:00'));
+    monthlyChargeMock.createChargesForPeriod.mockResolvedValueOnce({
+      created: 0,
+      skipped: 0,
+      failed: 1,
+      totalCharged: 0,
+    });
+
+    await watchdog.healMissingCharges();
+
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('xato'));
+    errorSpy.mockRestore();
+  });
+
   it('bo`shliq topsa baland ovozda (error darajasida) jurnalga yozadi', async () => {
     const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
     jest.useFakeTimers().setSystemTime(new Date('2026-10-17T02:05:00+05:00'));
     monthlyChargeMock.createChargesForPeriod.mockResolvedValueOnce({
       created: 3,
       skipped: 0,
+      failed: 0,
       totalCharged: 1_350_000,
     });
 
@@ -90,7 +129,12 @@ describe('MonthlyBillingWatchdogService', () => {
     prismaMock.company.findMany.mockResolvedValueOnce([{ id: 1 }, { id: 2 }]);
     monthlyChargeMock.createChargesForPeriod
       .mockRejectedValueOnce(new Error('baza yiqildi'))
-      .mockResolvedValueOnce({ created: 0, skipped: 0, totalCharged: 0 });
+      .mockResolvedValueOnce({
+        created: 0,
+        skipped: 0,
+        failed: 0,
+        totalCharged: 0,
+      });
 
     await expect(watchdog.healMissingCharges()).resolves.toBeUndefined();
     expect(monthlyChargeMock.createChargesForPeriod).toHaveBeenCalledTimes(2);
