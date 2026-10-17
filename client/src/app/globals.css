@@ -96,13 +96,13 @@
    Staff portals (admin, teacher) — the ledger theme
    The ink of the logo (public/daf-logo.png, navy) is the one accent; every
    neutral is tinted a little towards it, so the page reads as paper and ink
-   rather than as a grey template. The sign-in sheet (`.daftar` below) uses
-   the same family of colours. Status colours carry MEANING only: `--success`
-   paid / fine, `--warning` needs attention, `--info` neutral note,
-   `--destructive` debt / error. Use them (`text-success`, `bg-warning/10`)
-   instead of a raw Tailwind shade, so a status looks the same on every page.
-   The student portal (`.lumio`), the public form (`.form-theme`) and the
-   sign-in sheet (`.daftar`) re-point these variables inside their own scope.
+   rather than as a grey template. The staff sign-in pages use this theme
+   as it is (their cover is styled below). Status colours carry MEANING
+   only: `--success` paid / fine, `--warning` needs attention, `--info`
+   neutral note, `--destructive` debt / error. Use them (`text-success`,
+   `bg-warning/10`) instead of a raw Tailwind shade, so a status looks the
+   same on every page. The student portal (`.lumio`) and the public form
+   (`.form-theme`) re-point these variables inside their own scope.
    ============================================================ */
 :root {
   --background: oklch(0.977 0.004 250);
@@ -271,202 +271,57 @@
 }
 
 /* ============================================================
-   Staff sign-in — Daftar (scoped override)
-   The admin and teacher logins are one notebook sheet: squared paper and
-   navy ink on the admin portal (bookkeeping), ruled paper and green ink on
-   the teacher portal (writing), the same red margin line on both. Applied
-   via `.daftar` (+ `.daftar-lines` for the ruled variant); the class pair
-   comes from `daftarScope()` in lib/portal.ts, so content Radix portals to
-   <body> (the password-reset dialog) can carry it too.
-   Like `.form-theme` and `.lumio`, the scope re-points the shadcn semantic
-   vars, so every primitive inside it re-themes with no changes of its own.
-   Text is >= 4.5:1 and the field underline (--input) >= 3:1 against the
-   paper in all four states — src/app/daftar-theme.test.ts measures it.
+   Staff sign-in — the cover
+   The sign-in pages of the staff portals use the ledger theme above as it
+   is; only their cover is drawn here: the logo's navy as a block and the
+   pages of the logo's open book as a fan (components/auth/sign-in-cover.tsx).
+   At night the block is a deep navy, not the light ink `--primary` turns
+   into, so the logo stays white on dark.
    ============================================================ */
-.daftar {
-  --daftar-margin: #f0a3a3;
-
-  --background: #fdfdfb;
-  --foreground: #1e293b;
-  --card: #fdfdfb;
-  --card-foreground: #1e293b;
-  --popover: #fdfdfb;
-  --popover-foreground: #1e293b;
-  --primary: #1e3a8a;
-  --primary-foreground: #ffffff;
-  --secondary: #eef2f9;
-  --secondary-foreground: #1e293b;
-  --muted: #eef2f9;
-  --muted-foreground: #56657a;
-  --accent: #eef2f9;
-  --accent-foreground: #1e293b;
-  --destructive: #b42318;
-  --border: #d9e3f2;
-  --input: #6f88b3;
-  --ring: #1e3a8a;
-}
-
-/* Teacher portal: ruled paper, green ink. */
-.daftar.daftar-lines {
-  --primary: #14532d;
-  --secondary: #eef5f0;
-  --muted: #eef5f0;
-  --accent: #eef5f0;
-  --input: #5f9072;
-  --ring: #14532d;
-}
-
-/* Night paper. This selector and `.daftar.daftar-lines` are equally specific,
-   so on a dark ruled sheet these values win over the teacher's light ones by
-   source order — keep this block after it, and have the next rule re-state
-   every token the ruled variant sets. */
-.dark .daftar {
-  --daftar-margin: #7a3440;
-
-  --background: #0f1626;
-  --foreground: #e6ecf8;
-  --card: #0f1626;
-  --card-foreground: #e6ecf8;
-  --popover: #0f1626;
-  --popover-foreground: #e6ecf8;
-  --primary: #c9d7f7;
-  --primary-foreground: #0f1626;
-  --secondary: #172238;
-  --secondary-foreground: #e6ecf8;
-  --muted: #172238;
-  --muted-foreground: #9aa7bd;
-  --accent: #172238;
-  --accent-foreground: #e6ecf8;
-  --destructive: #ff8a80;
-  --border: #1c2740;
-  --input: #5a6f9a;
-  --ring: #c9d7f7;
-}
-
-.dark .daftar.daftar-lines {
-  --background: #0e1a14;
-  --foreground: #e8f1eb;
-  --card: #0e1a14;
-  --card-foreground: #e8f1eb;
-  --popover: #0e1a14;
-  --popover-foreground: #e8f1eb;
-  --primary: #bfe3cc;
-  --primary-foreground: #0e1a14;
-  --secondary: #15271d;
-  --secondary-foreground: #e8f1eb;
-  --muted: #15271d;
-  --muted-foreground: #9db3a5;
-  --accent: #15271d;
-  --accent-foreground: #e8f1eb;
-  --border: #1a2c22;
-  --input: #4f7a60;
-  --ring: #bfe3cc;
-}
-
 @layer components {
-  /* The sheet: paper plus its ruling — squared by default, ruled on the
-     teacher portal. The lines are gradients, so there is no image to load.
-     Both rulings share one rhythm: a row is 2rem (every second line of the
-     squared paper), with its rule on the row's last pixel. DaftarSheet lays
-     the writing out in whole rows from the top of the sheet, so it sits on
-     the lines. Sizes are in rem so the ruling scales with the text. */
-  .daftar-sheet {
-    background-color: var(--background);
-    background-image:
-      linear-gradient(transparent calc(100% - 1px), var(--border) calc(100% - 1px)),
-      linear-gradient(90deg, transparent calc(100% - 1px), var(--border) calc(100% - 1px));
-    background-size: 1rem 1rem;
+  .sign-in-cover {
+    --sign-in-fan: oklch(0.42 0.07 262);
+    background-color: var(--primary);
+    color: var(--primary-foreground);
   }
-  .daftar-lines.daftar-sheet {
-    background-image: linear-gradient(transparent calc(100% - 1px), var(--border) calc(100% - 1px));
-    background-size: 100% 2rem;
+  .dark .sign-in-cover {
+    --sign-in-fan: oklch(0.38 0.07 262);
+    background-color: oklch(0.21 0.045 262);
+    color: var(--foreground);
   }
 
-  /* One row of writing: a 2rem line box, nudged down so the text sits on the
-     rule under it instead of floating mid-row. The nudge is in em, so it
-     holds for any text size that fits a row. `--tw-leading` is what
-     Tailwind's `text-*` utilities read for their line height; without it
-     `text-sm` on the same element would bring its own 1.25rem back. */
-  .daftar-row {
-    --tw-leading: 2rem;
-    line-height: 2rem;
-    translate: 0 calc(0.7rem - 0.35em);
+  /* Each page is drawn in once, one after another (`--page` is its index;
+     `pathLength="1"` makes one dash the whole page). */
+  .sign-in-cover-fan path {
+    stroke: var(--sign-in-fan);
+    stroke-dasharray: 1;
+    animation: sign-in-page 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--page) * 60ms);
   }
 
-  /* The column starts a whole number of rows below the sheet's 4rem top bar,
-     and a taller window moves it down by whole rows. Centring it instead
-     would let the rows drift off the ruling with the window height. */
-  .daftar-column {
-    margin-top: 2rem;
+  /* The greeting after a sign-in: the photo pops in, the name is revealed
+     left to right, the rest fades in. `both` holds each piece hidden until
+     its turn. */
+  .sign-in-greet-photo {
+    animation: sign-in-greet-photo 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) both;
   }
-  @media (min-height: 45rem) {
-    .daftar-column {
-      margin-top: 4rem;
-    }
+  .sign-in-greet-fade {
+    animation: sign-in-greet-fade 0.4s ease-out both;
   }
-  @media (min-height: 52.5rem) {
-    .daftar-column {
-      margin-top: 6rem;
-    }
-  }
-  @media (min-height: 60rem) {
-    .daftar-column {
-      margin-top: 8rem;
-    }
-  }
-  @media (min-height: 67.5rem) {
-    .daftar-column {
-      margin-top: 10rem;
-    }
-  }
-
-  /* The red margin line. It hangs off the content column, not the viewport,
-     so the writing starts at the margin at every width. It runs far past the
-     column both ways; the sheet clips it to the page — with `overflow-clip`,
-     not `hidden`: a hidden box still scrolls when focus moves inside it, and
-     the line's overhang would give it somewhere to scroll to. */
-  .daftar-column::before {
-    content: "";
-    position: absolute;
-    top: -100vh;
-    bottom: -100vh;
-    left: -1rem;
-    width: 1.5px;
-    background-color: var(--daftar-margin);
-    pointer-events: none;
-  }
-  @media (min-width: 40rem) {
-    .daftar-column::before {
-      left: -1.25rem;
-    }
-  }
-
-  /* Handwriting: the italic Fraunces that DaftarSheet loads. */
-  .daftar-hand {
-    font-family: var(--font-daftar-hand), Georgia, serif;
-    font-style: italic;
-  }
-
-  /* The greeting after a sign-in: the photo is set down on the sheet, the
-     name is written from the margin, the rest fades in. `both` holds each
-     piece hidden until its turn. */
-  .daftar-greet-photo {
-    animation: daftar-greet-photo 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-  }
-  .daftar-greet-fade {
-    animation: daftar-greet-fade 0.4s ease-out both;
-  }
-  .daftar-greet-write {
-    animation: daftar-greet-write 0.9s ease-out 0.45s both;
+  .sign-in-greet-name {
+    animation: sign-in-greet-name 0.7s ease-out 0.4s both;
   }
   @media (prefers-reduced-motion: reduce) {
-    .daftar-greet-photo,
-    .daftar-greet-fade,
-    .daftar-greet-write {
+    .sign-in-cover-fan path,
+    .sign-in-greet-photo,
+    .sign-in-greet-fade,
+    .sign-in-greet-name {
       animation: none;
     }
   }
+}
 
+@layer components {
   /* The sidebar's «Topshiriqlar» row while tasks wait in «Kutilmoqda»: a
      faint red tint and a soft red wave that crosses the row, then rests for
      the second half of the cycle. */
@@ -507,22 +362,23 @@
   }
 }
 
-@keyframes daftar-greet-photo {
+@keyframes sign-in-page {
   from {
-    opacity: 0;
-    transform: scale(0.3) rotate(-14deg);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) rotate(-3deg);
+    stroke-dashoffset: 1;
   }
 }
-@keyframes daftar-greet-fade {
+@keyframes sign-in-greet-photo {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes sign-in-greet-fade {
   from {
     opacity: 0;
   }
 }
-@keyframes daftar-greet-write {
+@keyframes sign-in-greet-name {
   from {
     clip-path: inset(0 100% 0 0);
   }
@@ -1297,23 +1153,4 @@ button {
 .lumio :focus-within > textarea:autofill,
 .lumio :focus-within > select:autofill {
   box-shadow: inset 0 0 0 1000px var(--surface-card);
-}
-
-/* A Daftar field is transparent — the sheet shows through it — so the tint
-   autofill paints on the <input> would sit on the paper as a coloured box.
-   Repaint it in the paper's colour; as with Lumio above, the fill has to be a
-   box-shadow, and Firefox needs its own rule. */
-.daftar input:-webkit-autofill,
-.daftar input:-webkit-autofill:hover,
-.daftar input:-webkit-autofill:active {
-  -webkit-box-shadow: inset 0 0 0 1000px var(--background);
-  box-shadow: inset 0 0 0 1000px var(--background);
-  -webkit-text-fill-color: var(--foreground);
-  caret-color: var(--foreground);
-}
-
-.daftar input:autofill {
-  box-shadow: inset 0 0 0 1000px var(--background);
-  filter: none;
-  caret-color: var(--foreground);
 }

@@ -1,13 +1,13 @@
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { getPortalType } from "@/lib/portal";
-import { DaftarSheet } from "../../../daftar-sheet";
+import { StaffSignInShell } from "../../../staff-sign-in-shell";
 import { TelegramCallback } from "./telegram-callback";
 
 // The landing page of Telegram sign-in on every portal. The exchange itself is
 // in `TelegramCallback`; this file only picks the shell by host — the student
 // portal keeps its plain centred page, the staff portals get their sign-in
-// sheet.
+// shell.
 export default async function TelegramCallbackPage() {
   const headersList = await headers();
   const host =
@@ -28,10 +28,10 @@ export default async function TelegramCallbackPage() {
   }
 
   return (
-    <DaftarSheet portal={portal}>
+    <StaffSignInShell portal={portal}>
       <Suspense fallback={null}>
-        <TelegramCallback sheet />
+        <TelegramCallback staff />
       </Suspense>
-    </DaftarSheet>
+    </StaffSignInShell>
   );
 }

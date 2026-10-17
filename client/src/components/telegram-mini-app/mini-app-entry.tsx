@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
-import { Greeting, useGreeting } from "@/components/auth/daftar-greeting";
+import { Greeting, useGreeting } from "@/components/auth/staff-greeting";
 import {
   ArrowClockwise,
   CaretRight,
@@ -35,7 +35,7 @@ import {
 import {
   Action,
   CloseButton,
-  DaftarSkin,
+  StaffSkin,
   Loading,
   Notice,
   NotRegisteredNotice,
@@ -69,16 +69,16 @@ const SESSION_NOT_KEPT =
  * (parolsiz), bog'lanmagan bo'lsa — xabar. Telefon/parol formasi bu yerda yo'q:
  * Mini App ichida kirish faqat Telegram orqali.
  *
- * `daftar` — the page has put this on the Daftar sheet (the staff hosts): the
- * same states are then drawn in the sheet's look, and the sheet is the frame.
- * It changes nothing about who is signed in or how.
+ * `staff` — the page has put this in the staff sign-in shell (the staff
+ * hosts): the same states are then drawn in the cabinet's look, and the shell
+ * is the frame. It changes nothing about who is signed in or how.
  */
-export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
+export function MiniAppEntry({ staff = false }: { staff?: boolean }) {
   const router = useRouter();
   const setAuth = useAuth((s) => s.setAuth);
   const clearSession = useAuth((s) => s.clearSession);
   const [view, setView] = useState<View>({ kind: "loading" });
-  // On the staff sheet a sign-in ends with the greeting of the sign-in pages.
+  // On a staff host a sign-in ends with the greeting of the sign-in pages.
   const { greeted, greet } = useGreeting("replace");
   const initData = useRef("");
   // Xost va `?next=` `start()` da o'qiladi — server render'da `window` yo'q.
@@ -92,7 +92,7 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
     markMiniAppSignedOut(false);
     markMiniAppSignedIn();
     setAuth(session.user, session.accessToken, session.refreshToken);
-    if (daftar) greet(session.user, path);
+    if (staff) greet(session.user, path);
     else router.replace(path);
   }
 
@@ -193,7 +193,7 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
   );
 
   return (
-    <DaftarSkin value={daftar}>
+    <StaffSkin value={staff}>
       <Script
         src={TELEGRAM_WEB_APP_SCRIPT}
         strategy="afterInteractive"
@@ -206,7 +206,7 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
           })
         }
       />
-      {daftar ? (
+      {staff ? (
         greeted ? (
           <Greeting user={greeted} />
         ) : (
@@ -217,7 +217,7 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
           <div className="w-full max-w-sm">{state}</div>
         </main>
       )}
-    </DaftarSkin>
+    </StaffSkin>
   );
 }
 
