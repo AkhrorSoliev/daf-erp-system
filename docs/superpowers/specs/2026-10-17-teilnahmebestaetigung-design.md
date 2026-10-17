@@ -21,7 +21,7 @@ Hujjat **qatnashganlikni** tasdiqlaydi, baho emas. Imtihon va mock natijasi shar
 | Q5  | Kim va qachon yaratadi      | Administrator tugmasi. Daraja tugaganini tizim o'zi bilmaydi (ADR-0044), uni administrator tasdiqlaydi                                      |
 | Q6  | QR va ko'rinish             | Hujjatda QR bo'ladi, u ochiq tekshirish sahifasiga olib boradi. Dizayn jimjimador emas, lekin yoqimli; tuzilishi Goethe-Zertifikat'ga o'xshash (logotip, nom va rang bizniki) |
 | Q7  | Shrift                      | IBM Plex Serif (sarlavha va qiymatlar) + IBM Plex Sans (qolgan matn), saytdagi Plex oilasi                                                 |
-| Q8  | Kim nomidan                 | Hujjat DaF Sprachzentrum nomidan beriladi. Filial hujjatda ham, tekshirish sahifasida ham yozilmaydi. Imzo: «Zentrumsleitung»; kurs rahbari imzosi va muhr yo'q |
+| Q8  | Kim nomidan                 | Hujjat DaF Sprachzentrum nomidan beriladi. Filial hujjatda ham, tekshirish sahifasida ham yozilmaydi. Imzo qatori, kurs rahbari, markaz rahbari va muhr yo'q: hujjatning haqiqiyligini QR tasdiqlaydi |
 
 Men qo'ygan boshlang'ich qarorlar (CEO ko'rib o'zgartirishi mumkin): bir daraja bir necha guruhda o'tilsa davomat yig'iladi; shart bajarilmasa faqat CEO sababini yozib istisno beradi; o'quvchining holati (faol, muzlatilgan, bitirgan) o'zi to'siq emas.
 
@@ -113,7 +113,7 @@ PDF `pdfmake` bilan (`receipts/pdf/render.ts` dagi mavjud yo'l), nemischa matn, 
 5. «Teilnahme im Überblick» jadvali, ustunlar `Bereich / Ergebnis / Erläuterung`: Anwesenheit, Verspätungen, Lernplattform, Abschlusstests, Mock-Prüfung. Ma'lumoti bo'lmagan qator chiqmaydi (3.2, 3.4).
 6. Izoh: «Diese Bestätigung bescheinigt die Teilnahme am Kurs. Sie ist kein Sprachzertifikat und ersetzt keine Prüfung.»
 7. GER shkalasi A1–C2, hujjat darajasi to'ldirilgan.
-8. Pastda ikki imzo qatori: `Datum` (berilgan sana) va `Zentrumsleitung`. Kurs rahbari imzosi, muhr va joy nomi yo'q.
+8. Pastda faqat «Ausgestellt am 17.10.2026» (oddiy matn, chiziqsiz). Imzo qatori, `Kursleitung`, `Zentrumsleitung`, `Stempel` va joy nomi yo'q.
 
 **Maydon qiymatlari:** `Kurs` — kurs nomi (`Course.name`). `Unterrichtseinheiten` — hisobdagi darslar soni (3.1 maxraji) va, bo'lsa, daqiqasi («à 90 Minuten»: `Group.lessonMinutes`, bo'lmasa `Course.lessonMinutes`); daqiqa noma'lum bo'lsa faqat son. Ism «Familiya, Ism» ko'rinishida; «Herr/Frau» yozilmaydi.
 
@@ -142,7 +142,7 @@ Ekrandagi matnlarda inglizcha so'z yo'q. Dizayn namunasi chizilib CEO ko'radi, k
 - Servis: bir necha guruhli daraja yig'iladi; boshqa filial o'quvchisi 403; mock bog'lanmagan bo'lsa satr chiqmaydi.
 - Kontroller: `@Roles` metadata va `RolesGuard` ruxsat/rad; faqat CEO istisnosi; manifest spec.
 - Muhrlash: hujjat berilgach davomat o'zgarsa PDF raqamlari o'zgarmaydi.
-- PDF: shablon xatosiz chiziladi, raqam va foiz matnda bor, matnda «filial», «Kursleitung», «Stempel» yo'q; barcha ixtiyoriy qatorlar bilan ham bitta sahifa.
+- PDF: shablon xatosiz chiziladi, raqam va foiz matnda bor, matnda «filial», «Kursleitung», «Zentrumsleitung», «Stempel» yo'q; barcha ixtiyoriy qatorlar bilan ham bitta sahifa.
 - Ochiq sahifa javobida filial va tug'ilgan sana yo'q.
 
 ## 9. Ma'lum chegaralar (ochiq masalalar)
