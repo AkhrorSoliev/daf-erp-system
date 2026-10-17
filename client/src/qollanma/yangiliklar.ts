@@ -14,6 +14,13 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-17",
+    sarlavha: "Bosh sahifa tarjima qilindi",
+    matn: "Bosh sahifa endi tanlangan tilda ochiladi: pul va odamlar qatori, lid voronkasi, e'tibor talab qiladigan ishlar, yaqin darslar, diagrammalar, filial ishga tushirish kartasi va o'qituvchining dars jadvali (xona bandligi, «Dars bo'ldimi?» oynalari va o'quvchilar qatorlari bilan). Serverdan keladigan matnlar va ismlar, nomlar o'zgarishsiz qoladi. Boshqa sahifalar hali o'zbekcha.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Qatnashganlik hujjati: yangi shartlar",
     matn: "Qatnashganlik hujjati endi to'rt shart bilan ko'proq tekshiriladi. O'quvchining qarzi bo'lmasligi kerak (qancha bo'lmasin). Hisobga kirgan darslar kamida 20 ta bo'lishi kerak. Kech qolgan darslar o'quvchi kelgan darslarning 20% idan oshmasligi kerak. Darajada yakuniy sinovlar bo'lsa, hammasidan o'tgan bo'lishi kerak. Ilova sharti avvalgidek: ochiq dars bo'lsa tekshiriladi. «Hujjatlar» yorlig'ida bajarilmagan shartlar sabab bilan chiqadi, administrator hujjat bera olmaydi; faqat CEO sabab yozib istisno bilan beradi. 20 ta va 20% ni CEO Sozlamalar → «Qatnashganlik hujjati» sahifasida o'zgartiradi. Avval berilgan hujjatlar o'zgarmaydi.",
     rollar: [1, 2, 3],

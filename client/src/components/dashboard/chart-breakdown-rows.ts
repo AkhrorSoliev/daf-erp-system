@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import type { ChartProfitBreakdown } from "./dashboard-charts-types";
 
 export interface BreakdownRow {
@@ -30,11 +31,11 @@ export function breakdownRows(b: ChartProfitBreakdown): BreakdownRow[] {
   const pct = (n: number) => (base > 0 ? Math.round((n / base) * 100) : 0);
 
   const rows: BreakdownRow[] = [
-    { key: "teacherSalary", label: "Ustoz oyligi", amount: b.teacherSalary, pct: pct(b.teacherSalary), kind: "cost" },
-    { key: "adminSalary", label: "Xodim oyligi", amount: b.adminSalary, pct: pct(b.adminSalary), kind: "cost" },
-    { key: "operatingExpenses", label: "Operatsion xarajat", amount: b.operatingExpenses, pct: pct(b.operatingExpenses), kind: "cost" },
-    { key: "refunds", label: "Qaytarishlar", amount: b.refunds, pct: pct(b.refunds), kind: "cost" },
-    { key: "netProfit", label: "Qolgani — sof foyda", amount: b.netProfit, pct: pct(b.netProfit), kind: "profit" },
+    { key: "teacherSalary", label: msg("Ustoz oyligi"), amount: b.teacherSalary, pct: pct(b.teacherSalary), kind: "cost" },
+    { key: "adminSalary", label: msg("Xodim oyligi"), amount: b.adminSalary, pct: pct(b.adminSalary), kind: "cost" },
+    { key: "operatingExpenses", label: msg("Operatsion xarajat"), amount: b.operatingExpenses, pct: pct(b.operatingExpenses), kind: "cost" },
+    { key: "refunds", label: msg("Qaytarishlar"), amount: b.refunds, pct: pct(b.refunds), kind: "cost" },
+    { key: "netProfit", label: msg("Qolgani — sof foyda"), amount: b.netProfit, pct: pct(b.netProfit), kind: "profit" },
   ];
 
   return rows.filter((r) => r.amount !== 0);

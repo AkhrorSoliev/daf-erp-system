@@ -6,6 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import type { DashboardMoney } from "./dashboard-summary-types";
@@ -78,6 +79,7 @@ function MoneyCell({
  * loss in `--destructive`, a profit in `--success`.
  */
 export function HomeMoneyCards({ money }: { money: DashboardMoney }) {
+  const t = useT();
   // Kanonik sof foyda hisoblanmagan bo'lsa raqam kassa asosida keladi va
   // haqiqiy foydadan ancha yuqori chiqadi — karta buni YASHIRMAYDI, o'z
   // sarlavhasini almashtiradi.
@@ -85,58 +87,71 @@ export function HomeMoneyCards({ money }: { money: DashboardMoney }) {
 
   return (
     <section
-      aria-label="Bu oy pul"
+      aria-label={t("Bu oy pul")}
       className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border lg:grid-cols-4"
     >
       <MoneyCell
-        label="Bu oy tushum"
+        label={t("Bu oy tushum")}
         value={money.monthIncome}
-        hint={`${formatNumber(money.paymentCount)} ta to'lov`}
-        tooltip="Shu oy kassaga tushgan pul (so'm)."
+        hint={t("{n} ta to'lov", { n: formatNumber(money.paymentCount) })}
+        tooltip={t("Shu oy kassaga tushgan pul (so'm).")}
         href="/payments/overview"
       />
       {money.monthCharges ? (
         <MoneyCell
-          label="Bu oy hisoblandi"
+          label={t("Bu oy hisoblandi")}
           value={money.monthCharges.charged}
           hint={
             money.monthCharges.paidPct !== null
-              ? `to'landi ${money.monthCharges.paidPct}%`
-              : "hisob yozilmagan"
+              ? t("to'landi {pct}%", { pct: money.monthCharges.paidPct })
+              : t("hisob yozilmagan")
           }
           progress={money.monthCharges.paidPct}
-          tooltip="Shu oy uchun o'quvchilarga yozilgan oylik hisoblar. To'landi — shundan to'langan qismi."
+          tooltip={t(
+            "Shu oy uchun o'quvchilarga yozilgan oylik hisoblar. To'landi — shundan to'langan qismi.",
+          )}
           href="/payments/overview"
         />
       ) : (
         <MoneyCell
-          label="Oy oxiriga kutilyapti"
+          label={t("Oy oxiriga kutilyapti")}
           value={money.expectedMonthEnd}
-          hint="prognoz"
-          tooltip="Oy oxirigi prognoz: o'tilgan va rejadagi darslar qiymati. Bu kassa tushumi emas — ikkovi turli o'lchov, shuning uchun ular ayirilmaydi."
+          hint={t("prognoz")}
+          tooltip={t(
+            "Oy oxirigi prognoz: o'tilgan va rejadagi darslar qiymati. Bu kassa tushumi emas — ikkovi turli o'lchov, shuning uchun ular ayirilmaydi.",
+          )}
           href="/payments/overview"
         />
       )}
       {/* Qarz — ikki alohida raqam (ADR-0059): katak birinchisini ko'rsatadi,
           ikkinchisi ost-satrda. Ikkalasi serverdan keladi, qo'shilmaydi. */}
       <MoneyCell
-        label="O'qiyotganlar qarzi"
+        label={t("O'qiyotganlar qarzi")}
         value={money.debt.studying.total}
-        hint={`${formatNumber(money.debt.studying.count)} ta · o'qimayotganlar ${formatPrice(money.debt.notStudying.total)}`}
-        tooltip="Faol guruhda o'qiyotganlarning qarzi. O'qimayotganlar (guruhsiz, muzlatilgan, ketgan) qarzi alohida, qo'shilmaydi."
+        hint={t("{n} ta · o'qimayotganlar {sum}", {
+          n: formatNumber(money.debt.studying.count),
+          sum: formatPrice(money.debt.notStudying.total),
+        })}
+        tooltip={t(
+          "Faol guruhda o'qiyotganlarning qarzi. O'qimayotganlar (guruhsiz, muzlatilgan, ketgan) qarzi alohida, qo'shilmaydi.",
+        )}
         href="/payments/debt"
         valueClassName={
           money.debt.studying.total > 0 ? "text-destructive" : undefined
         }
       />
       <MoneyCell
-        label={profitIsCash ? "Foyda (kassa asosida)" : "Sof foyda"}
+        label={profitIsCash ? t("Foyda (kassa asosida)") : t("Sof foyda")}
         value={money.netProfit}
-        hint={profitIsCash ? "kassa asosida" : "shu oy"}
+        hint={profitIsCash ? t("kassa asosida") : t("shu oy")}
         tooltip={
           profitIsCash
-            ? "Kanonik sof foyda hisoblanmadi, bu kassa asosidagi raqam: ustoz oyligi keyingi davrda to'lanadi, shuning uchun bu son haqiqiy foydadan yuqori chiqadi."
-            : "Shu oyning sof foydasi: dars tushumidan ustoz va admin oyligi, operatsion xarajat va qaytarishlar ayirilgan."
+            ? t(
+                "Kanonik sof foyda hisoblanmadi, bu kassa asosidagi raqam: ustoz oyligi keyingi davrda to'lanadi, shuning uchun bu son haqiqiy foydadan yuqori chiqadi.",
+              )
+            : t(
+                "Shu oyning sof foydasi: dars tushumidan ustoz va admin oyligi, operatsion xarajat va qaytarishlar ayirilgan.",
+              )
         }
         href="/payments/overview"
         valueClassName={money.netProfit < 0 ? "text-destructive" : "text-success"}

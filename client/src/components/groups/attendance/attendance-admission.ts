@@ -1,5 +1,9 @@
+import { interpolate, type Params } from "@/i18n/translate";
 import { formatPrice } from "@/lib/format-utils";
 import type { LessonAdmission } from "./attendance-form-utils";
+
+/** The page's `t` from `useT()`; without it the Uzbek source is read as written. */
+type Translate = (source: string, params?: Params) => string;
 
 const ddmm = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}`;
 
@@ -32,88 +36,121 @@ export function suggestedPaymentAmount(
  * kept out by the least share, and late in the month one who paid 40% by the
  * lessons held. Without `reach` (an older server) the reason decides.
  */
-function blockedLabel(admission: LessonAdmission): string {
+function blockedLabel(admission: LessonAdmission, t: Translate): string {
   const reach = admission.reach;
   if (!reach) {
     return admission.reason === "BELOW_MIN_SHARE"
-      ? `Oy to'lovining ${admission.minPaidPercent}% i to'lanmagan · darsga qo'yilmaydi`
-      : "To'lov qilinmagan · darsga qo'yilmaydi";
+      ? t("Oy to'lovining {percent}% i to'lanmagan · darsga qo'yilmaydi", {
+          percent: String(admission.minPaidPercent),
+        })
+      : t("To'lov qilinmagan · darsga qo'yilmaydi");
   }
-  if (reach.monthPaid <= 0) return "To'lov qilinmagan · darsga qo'yilmaydi";
+  if (reach.monthPaid <= 0) return t("To'lov qilinmagan · darsga qo'yilmaydi");
   if (admission.reason === "BELOW_MIN_SHARE") {
     // Rounded down, so 49.6% never reads as the 50% asked for.
     const paid = Math.max(
       1,
       Math.floor((reach.monthPaid * 100) / reach.monthCharged),
     );
-    return `Oyning ${paid}% i to'langan · kamida ${admission.minPaidPercent}% kerak · darsga qo'yilmaydi`;
+    return t(
+      "Oyning {paid}% i to'langan · kamida {percent}% kerak · darsga qo'yilmaydi",
+      { paid, percent: String(admission.minPaidPercent) },
+    );
   }
   return reach.lastPaid
-    ? `Qisman to'lagan · puli ${ddmm(reach.lastPaid)} gacha yetdi · darsga qo'yilmaydi`
-    : "Qisman to'lagan · darsga qo'yilmaydi";
+    ? t("Qisman to'lagan · puli {date} gacha yetdi · darsga qo'yilmaydi", {
+        date: ddmm(reach.lastPaid),
+      })
+    : t("Qisman to'lagan · darsga qo'yilmaydi");
 }
 
 /** The row's label for an admitted student; null when nothing is owed this month. */
 function admittedLabel(
   admission: LessonAdmission,
   isAdmin: boolean,
+  t: Translate,
 ): string | null {
   const reach = admission.reach;
   if (!reach) {
     return admission.paidThrough
-      ? `Qisman to'lagan · ${ddmm(admission.paidThrough)} gacha qatnasha oladi`
+      ? t("Qisman to'lagan · {date} gacha qatnasha oladi", {
+          date: ddmm(admission.paidThrough),
+        })
       : null;
   }
   // The month is paid; a debt on the balance is a later month's.
   if (reach.paidLessons >= reach.lessons) return null;
   if (admission.paidThrough) {
-    return `Qisman to'lagan · ${reach.lessons} darsdan ${reach.paidLessons} tasi · ${ddmm(admission.paidThrough)} gacha`;
+    return t("Qisman to'lagan · {lessons} darsdan {paid} tasi · {date} gacha", {
+      lessons: reach.lessons,
+      paid: reach.paidLessons,
+      date: ddmm(admission.paidThrough),
+    });
   }
   // The month's free first lesson, and the money does not reach the next.
   if (admission.reason === "FIRST_LESSON" && reach.next) {
     return isAdmin
-      ? `1-dars to'lovsiz · keyingi dars (${ddmm(reach.next.date)}) uchun kamida ${formatPrice(reach.next.needed)} so'm kerak`
-      : "1-dars to'lovsiz · keyingi darsdan to'lov kerak";
+      ? t(
+          "1-dars to'lovsiz · keyingi dars ({date}) uchun kamida {amount} so'm kerak",
+          { date: ddmm(reach.next.date), amount: formatPrice(reach.next.needed) },
+        )
+      : t("1-dars to'lovsiz · keyingi darsdan to'lov kerak");
   }
   return null;
 }
 
-/** What a roster row says about contract 3.2 admission (ADR-0047). */
+/**
+ * What a roster row says about contract 3.2 admission (ADR-0047). `t` is the
+ * page's `useT()`; without it the Uzbek source is read as written.
+ */
 export function admissionCopy(
   admission: LessonAdmission | undefined,
   isAdmin: boolean,
+  t: Translate = interpolate,
 ): { blocked: boolean; label: string | null; warning: string | null } {
   if (!admission) return { blocked: false, label: null, warning: null };
   // After the lesson: no payment lets him into it, so no payment prompt.
   if (admission.reason === "LEFT_OUT") {
     return {
       blocked: true,
-      label: "Dars vaqtida davomatga kiritilmagan",
+      label: t("Dars vaqtida davomatga kiritilmagan"),
       warning: null,
     };
   }
   if (admission.reason === "BELOW_MIN_SHARE") {
-    const share = `${admission.minPaidPercent}%`;
+    const amount = formatPrice(admission.shortfall);
+    const percent = String(admission.minPaidPercent);
     return {
       blocked: true,
-      label: blockedLabel(admission),
+      label: blockedLabel(admission, t),
       warning: isAdmin
-        ? `Bu darsga kirishi uchun kamida ${formatPrice(admission.shortfall)} so'm kerak: oy to'lovining ${share} i to'lanishi shart. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.`
-        : `Bu o'quvchi oy to'lovining kamida ${share} ini to'lamagan. Shartnomaga ko'ra 2-darsdan boshlab shu qismi to'lanmaguncha darsga qo'yilmaydi. Agar u darsda o'tirsa va keyinroq to'lov qilsa ham, bu dars uchun sizga ish haqi yozilmaydi.`,
+        ? t(
+            "Bu darsga kirishi uchun kamida {amount} so'm kerak: oy to'lovining {percent}% i to'lanishi shart. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.",
+            { amount, percent },
+          )
+        : t(
+            "Bu o'quvchi oy to'lovining kamida {percent}% ini to'lamagan. Shartnomaga ko'ra 2-darsdan boshlab shu qismi to'lanmaguncha darsga qo'yilmaydi. Agar u darsda o'tirsa va keyinroq to'lov qilsa ham, bu dars uchun sizga ish haqi yozilmaydi.",
+            { percent },
+          ),
     };
   }
   if (!admission.admitted) {
     return {
       blocked: true,
-      label: blockedLabel(admission),
+      label: blockedLabel(admission, t),
       warning: isAdmin
-        ? `Bu darsga kirishi uchun kamida ${formatPrice(admission.shortfall)} so'm kerak. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.`
-        : "Bu o'quvchi oylik to'lovni qilmagan. Shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaydi. Agar u darsda o'tirsa va keyinroq to'lov qilsa ham, bu dars uchun sizga ish haqi yozilmaydi.",
+        ? t(
+            "Bu darsga kirishi uchun kamida {amount} so'm kerak. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.",
+            { amount: formatPrice(admission.shortfall) },
+          )
+        : t(
+            "Bu o'quvchi oylik to'lovni qilmagan. Shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaydi. Agar u darsda o'tirsa va keyinroq to'lov qilsa ham, bu dars uchun sizga ish haqi yozilmaydi.",
+          ),
     };
   }
   return {
     blocked: false,
-    label: admittedLabel(admission, isAdmin),
+    label: admittedLabel(admission, isAdmin, t),
     warning: null,
   };
 }

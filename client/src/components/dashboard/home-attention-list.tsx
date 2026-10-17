@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronRight, CircleAlert, CircleCheck } from "lucide-react";
+import { useT } from "@/i18n/context";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { visibleAttentionRows } from "./dashboard-home-visibility";
@@ -12,6 +15,7 @@ interface Props {
 }
 
 export function HomeAttentionList({ attention, includeOutreach }: Props) {
+  const t = useT();
   const rows = visibleAttentionRows(attention, { includeOutreach });
   const debtors = attention.topDebtors;
   const isEmpty = rows.length === 0 && debtors.length === 0;
@@ -20,13 +24,13 @@ export function HomeAttentionList({ attention, includeOutreach }: Props) {
     <section className="rounded-lg border bg-card">
       <header className="flex items-center gap-2 border-b px-4 py-3">
         <CircleAlert className="size-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold">E&apos;tibor talab qiladi</h2>
+        <h2 className="text-sm font-semibold">{t("E'tibor talab qiladi")}</h2>
       </header>
 
       {isEmpty ? (
         <div className="flex items-center gap-2 px-4 py-8 text-sm text-muted-foreground">
           <CircleCheck className="size-4 text-success" />
-          Bugun e&apos;tibor talab qiladigan narsa yo&apos;q
+          {t("Bugun e'tibor talab qiladigan narsa yo'q")}
         </div>
       ) : (
         <div className="divide-y">
@@ -49,7 +53,7 @@ export function HomeAttentionList({ attention, includeOutreach }: Props) {
                 {formatNumber(row.count)}
               </span>
               <span className="min-w-0 flex-1 truncate text-sm">
-                {row.label}
+                {t(row.label)}
               </span>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
             </Link>
@@ -59,13 +63,13 @@ export function HomeAttentionList({ attention, includeOutreach }: Props) {
             <div>
               <div className="flex items-center justify-between px-4 pt-3 pb-1">
                 <p className="text-xs font-medium text-muted-foreground">
-                  Eng katta qarzdorlar
+                  {t("Eng katta qarzdorlar")}
                 </p>
                 <Link
                   href="/payments/debt"
                   className="text-xs text-muted-foreground underline-offset-4 hover:underline"
                 >
-                  Hammasi
+                  {t("Hammasi")}
                 </Link>
               </div>
               {debtors.map((d) => (
@@ -78,7 +82,7 @@ export function HomeAttentionList({ attention, includeOutreach }: Props) {
                     {d.name}
                   </span>
                   <span className="text-sm font-medium text-destructive">
-                    {formatBalance(d.balance)}
+                    {formatBalance(d.balance, t("so'm"))}
                   </span>
                   <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                 </Link>

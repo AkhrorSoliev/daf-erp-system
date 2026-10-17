@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChartCard } from "@/components/shared/chart-card";
+import { useT } from "@/i18n/context";
 import { formatNumber } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { breakdownRows } from "./chart-breakdown-rows";
@@ -20,6 +21,7 @@ export function ChartProfitBreakdownCard({
 }: {
   data: ChartProfitBreakdown;
 }) {
+  const t = useT();
   const { palette } = useChartTheme();
   const rows = breakdownRows(data);
   const max = Math.max(...rows.map((r) => Math.abs(r.amount)), 1);
@@ -27,24 +29,31 @@ export function ChartProfitBreakdownCard({
 
   return (
     <ChartCard
-      title="Pul qayerga ketdi"
+      title={t("Pul qayerga ketdi")}
       subtitle={
         withdrawn > 0
-          ? `Bu oy tushum: ${formatNumber(data.revenue)} so'm · balansdan yechilgan: ${formatNumber(withdrawn)} so'm`
-          : `Bu oy tushum: ${formatNumber(data.revenue)} so'm`
+          ? t(
+              "Bu oy tushum: {revenue} so'm · balansdan yechilgan: {withdrawn} so'm",
+              {
+                revenue: formatNumber(data.revenue),
+                withdrawn: formatNumber(withdrawn),
+              },
+            )
+          : t("Bu oy tushum: {revenue} so'm", {
+              revenue: formatNumber(data.revenue),
+            })
       }
-      tooltip={
-        "Tushum va balansdan yechib olingan puldan ustoz va xodim oyligi, operatsion xarajat va qaytarishlar ayirilgach qolgani — sof foyda.\n\n" +
-        "Bu «Sof foyda» kartasi bilan bitta manbadan keladi, shuning uchun raqamlar har doim mos tushadi."
-      }
+      tooltip={t(
+        "Tushum va balansdan yechib olingan puldan ustoz va xodim oyligi, operatsion xarajat va qaytarishlar ayirilgach qolgani — sof foyda.\n\nBu «Sof foyda» kartasi bilan bitta manbadan keladi, shuning uchun raqamlar har doim mos tushadi.",
+      )}
       isEmpty={rows.length === 0}
-      emptyMessage="Bu oyda hali harakat yo'q"
+      emptyMessage={t("Bu oyda hali harakat yo'q")}
       headerAction={
         <Link
           href="/payments/expenses"
           className="text-xs text-muted-foreground underline-offset-4 hover:underline"
         >
-          Xarajatlar
+          {t("Xarajatlar")}
         </Link>
       }
     >
@@ -55,7 +64,7 @@ export function ChartProfitBreakdownCard({
           return (
             <div key={r.key} className="space-y-1">
               <div className="flex items-baseline justify-between gap-2 text-sm">
-                <span className="truncate">{r.label}</span>
+                <span className="truncate">{t(r.label)}</span>
                 <span
                   className={cn(
                     "shrink-0 font-medium tabular-nums",

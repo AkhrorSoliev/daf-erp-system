@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { uz } from "date-fns/locale/uz";
 import { CalendarIcon } from "lucide-react";
+import { useLocale, useT } from "@/i18n/use-t";
+import { dateFnsLocale } from "@/lib/date-fns-locale";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -33,7 +34,7 @@ interface DatePickerProps {
 export function DatePicker({
   value,
   onChange,
-  placeholder = "Sanani tanlang",
+  placeholder,
   disabled,
   className,
   id,
@@ -43,6 +44,9 @@ export function DatePicker({
   disabledDaysOfWeek,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const t = useT();
+  // Outside the dashboard's provider (student portal, public form) this is "uz".
+  const { locale } = useLocale();
 
   const disabledMatcher = React.useMemo(() => {
     const matchers: Array<
@@ -70,14 +74,18 @@ export function DatePicker({
           )}
         >
           <CalendarIcon className="mr-2 size-4" />
-          {value ? format(value, "dd.MM.yyyy") : <span>{placeholder}</span>}
+          {value ? format(value, "dd.MM.yyyy") : <span>{placeholder ?? t("Sanani tanlang")}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
           weekStartsOn={1}
-          locale={uz}
+          locale={dateFnsLocale(locale)}
+          labels={{
+            labelPrevious: () => t("Oldingi oy"),
+            labelNext: () => t("Keyingi oy"),
+          }}
           selected={value ?? undefined}
           defaultMonth={value ?? defaultMonth}
           disabled={disabledMatcher}

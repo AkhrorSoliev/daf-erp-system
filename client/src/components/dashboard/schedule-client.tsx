@@ -34,6 +34,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { isTeacherOnly } from "@/lib/teacher-only";
 import { DashboardDailySchedule } from "./dashboard-daily-schedule";
 import { TeacherLessonCards } from "./teacher-lesson-cards";
@@ -58,6 +59,7 @@ interface TodayScheduleResponse {
 }
 
 export function ScheduleClient() {
+  const t = useT();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const user = useAuth((s) => s.user);
@@ -120,7 +122,7 @@ export function ScheduleClient() {
     if (!data) return [];
     if (!isTeacher || !user) return data.lessons;
     return data.lessons.filter((l) =>
-      l.teachers.some((t) => t.id === user.id)
+      l.teachers.some((teacher) => teacher.id === user.id)
     );
   }, [data, isTeacher, user]);
 
@@ -139,7 +141,7 @@ export function ScheduleClient() {
       data.lessons.filter((l) => l.roomId).map((l) => l.roomId)
     );
     const teacherIds = new Set(
-      data.lessons.flatMap((l) => l.teachers.map((t) => t.id))
+      data.lessons.flatMap((l) => l.teachers.map((teacher) => teacher.id))
     );
     return {
       busyRooms: busyRoomIds.size,
@@ -169,7 +171,7 @@ export function ScheduleClient() {
                 <RotateCcw className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Bugunga qaytish</TooltipContent>
+            <TooltipContent>{t("Bugunga qaytish")}</TooltipContent>
           </Tooltip>
         )}
         <DatePicker
@@ -189,11 +191,13 @@ export function ScheduleClient() {
 
       {needsBranchPick && (
         <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-sm font-medium">Kunlik jadval uchun filial tanlang</p>
+          <p className="text-sm font-medium">
+            {t("Kunlik jadval uchun filial tanlang")}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Jadval bitta filialning xonalari va ish vaqti bo&apos;yicha
-            chiziladi, shuning uchun &laquo;Barcha filiallar&raquo; ko&apos;rinishida
-            ko&apos;rsatilmaydi. Yuqoridagi almashtirgichdan filialni tanlang.
+            {t(
+              "Jadval bitta filialning xonalari va ish vaqti bo'yicha chiziladi, shuning uchun «Barcha filiallar» ko'rinishida ko'rsatilmaydi. Yuqoridagi almashtirgichdan filialni tanlang.",
+            )}
           </p>
         </div>
       )}
@@ -206,8 +210,10 @@ export function ScheduleClient() {
             <div>
               <p className="font-medium text-orange-800 dark:text-orange-300">
                 {isTodaySelected
-                  ? "Bugun dam olish kuni"
-                  : `${format(selectedDate, "dd.MM.yyyy")} — dam olish kuni`}
+                  ? t("Bugun dam olish kuni")
+                  : t("{date} — dam olish kuni", {
+                      date: format(selectedDate, "dd.MM.yyyy"),
+                    })}
               </p>
               {data.holidayName && (
                 <p className="text-sm text-orange-600 dark:text-orange-400">
@@ -231,7 +237,7 @@ export function ScheduleClient() {
                   <CalendarDays className="text-muted-foreground size-4 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-muted-foreground text-xs truncate">
-                      {isTeacher ? "Darslarim" : "Darslar"}
+                      {isTeacher ? t("Darslarim") : t("Darslar")}
                     </p>
                     <p className="text-base sm:text-lg font-semibold">
                       {stats.lessonsCount}
@@ -241,8 +247,8 @@ export function ScheduleClient() {
               </TooltipTrigger>
               <TooltipContent>
                 {isTeacher
-                  ? "Tanlangan kundagi darslaringiz soni"
-                  : "Tanlangan kundagi darslar soni"}
+                  ? t("Tanlangan kundagi darslaringiz soni")
+                  : t("Tanlangan kundagi darslar soni")}
               </TooltipContent>
             </Tooltip>
 
@@ -252,7 +258,7 @@ export function ScheduleClient() {
                   <Users className="text-muted-foreground size-4 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-muted-foreground text-xs truncate">
-                      {isTeacher ? "O'quvchilarim" : "Jami o'quvchilar"}
+                      {isTeacher ? t("O'quvchilarim") : t("Jami o'quvchilar")}
                     </p>
                     <p className="text-base sm:text-lg font-semibold">
                       {stats.studentsCount}
@@ -262,8 +268,8 @@ export function ScheduleClient() {
               </TooltipTrigger>
               <TooltipContent>
                 {isTeacher
-                  ? "Tanlangan kundagi darslaringizdagi jami o'quvchilar"
-                  : "Tanlangan kundagi darslardagi jami o'quvchilar"}
+                  ? t("Tanlangan kundagi darslaringizdagi jami o'quvchilar")
+                  : t("Tanlangan kundagi darslardagi jami o'quvchilar")}
               </TooltipContent>
             </Tooltip>
 
@@ -275,7 +281,7 @@ export function ScheduleClient() {
                       <DoorOpen className="text-muted-foreground size-4 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-muted-foreground text-xs truncate">
-                          Band xonalar
+                          {t("Band xonalar")}
                         </p>
                         <p className="text-base sm:text-lg font-semibold">
                           {adminStats.busyRooms}
@@ -284,7 +290,7 @@ export function ScheduleClient() {
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Kamida bitta dars rejalashtirilgan xonalar
+                    {t("Kamida bitta dars rejalashtirilgan xonalar")}
                   </TooltipContent>
                 </Tooltip>
 
@@ -294,7 +300,7 @@ export function ScheduleClient() {
                       <GraduationCap className="text-muted-foreground size-4 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-muted-foreground text-xs truncate">
-                          O&apos;qituvchilar
+                          {t("O'qituvchilar")}
                         </p>
                         <p className="text-base sm:text-lg font-semibold">
                           {adminStats.teachersCount}
@@ -303,7 +309,7 @@ export function ScheduleClient() {
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Tanlangan kunda dars beruvchi o&apos;qituvchilar soni
+                    {t("Tanlangan kunda dars beruvchi o'qituvchilar soni")}
                   </TooltipContent>
                 </Tooltip>
               </>
@@ -320,8 +326,10 @@ export function ScheduleClient() {
               <h2 className="flex items-center gap-2 text-sm font-semibold">
                 <CalendarDays className="size-4 text-muted-foreground" />
                 {isTodaySelected
-                  ? "Bugungi darslar"
-                  : `${format(selectedDate, "dd.MM.yyyy")} darslar`}
+                  ? t("Bugungi darslar")
+                  : t("{date} darslar", {
+                      date: format(selectedDate, "dd.MM.yyyy"),
+                    })}
                 <span className="text-xs font-normal text-muted-foreground">
                   ({myLessons.length})
                 </span>
@@ -329,10 +337,10 @@ export function ScheduleClient() {
               {!isTeacher && (
                 <TabsList>
                   <TabsTrigger value="grid">
-                    <LayoutGrid className="size-3.5 mr-1" /> Grid
+                    <LayoutGrid className="size-3.5 mr-1" /> {t("Grid")}
                   </TabsTrigger>
                   <TabsTrigger value="list">
-                    <List className="size-3.5 mr-1" /> Ro&apos;yxat
+                    <List className="size-3.5 mr-1" /> {t("Ro'yxat")}
                   </TabsTrigger>
                 </TabsList>
               )}
