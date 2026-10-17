@@ -85,7 +85,10 @@ describe('lessonSlots', () => {
     expect(lessonSlots('12:00', '11:00', W)).toEqual([]);
     expect(lessonSlots('25:00', '26:00', W)).toEqual([]);
   });
-  it('toMinutes', () => {
+});
+
+describe('toMinutes', () => {
+  it('converts HH:MM to minutes', () => {
     expect(toMinutes('08:30')).toBe(510);
   });
 });
@@ -142,6 +145,31 @@ describe('isGroupOpen', () => {
     });
     expect(isGroupOpen(forming, d('2026-07-02T00:00:00Z'))).toBe(true);
   });
+  it('is closed for CANCELLED and COMPLETED', () => {
+    for (const status of ['CANCELLED', 'COMPLETED']) {
+      const g = group({
+        statusLog: [{ status, at: d('2026-07-01T00:00:00Z') }],
+      });
+      expect(isGroupOpen(g, d('2026-07-02T00:00:00Z'))).toBe(false);
+    }
+  });
+  it('closes exactly at deletedAt', () => {
+    const at = d('2026-09-10T00:00:00Z');
+    const g = group({ deletedAt: at });
+    expect(isGroupOpen(g, new Date(at.getTime() - 1))).toBe(true);
+    expect(isGroupOpen(g, at)).toBe(false);
+  });
+  it('stays open through the whole Tashkent day of endDate', () => {
+    for (const endDate of [
+      d('2026-09-30T00:00:00Z'), // UTC midnight
+      d('2026-09-29T19:00:00Z'), // Tashkent midnight
+    ]) {
+      const g = group({ endDate });
+      expect(isGroupOpen(g, d('2026-09-30T10:00:00Z'))).toBe(true);
+      expect(isGroupOpen(g, d('2026-09-30T18:59:59.999Z'))).toBe(true);
+      expect(isGroupOpen(g, d('2026-09-30T19:00:00.000Z'))).toBe(false);
+    }
+  });
 });
 
 describe('roomExistsOn', () => {
@@ -181,6 +209,17 @@ describe('roomExistsOn', () => {
         true,
       ),
     ).toBe(false);
+  });
+  it('exists at the createdAt instant and not at the deletedAt instant', () => {
+    const at = d('2026-05-01T00:00:00Z');
+    expect(roomExistsOn(room({ createdAt: at }), at, false)).toBe(true);
+    expect(
+      roomExistsOn(room({ createdAt: at }), new Date(at.getTime() - 1), false),
+    ).toBe(false);
+    const gone = d('2026-07-01T00:00:00Z');
+    const r = room({ deletedAt: gone });
+    expect(roomExistsOn(r, new Date(gone.getTime() - 1), false)).toBe(true);
+    expect(roomExistsOn(r, gone, false)).toBe(false);
   });
 });
 

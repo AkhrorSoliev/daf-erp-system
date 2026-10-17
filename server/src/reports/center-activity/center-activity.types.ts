@@ -51,6 +51,10 @@ export interface EnrollmentFact {
   createdAt: Date;
   statusChangedAt: Date | null;
   status: string;
+  /**
+   * MUST arrive ascending by time, then id, and already carry its opening row
+   * (`supplyOpeningRow`); `enrollmentStatusOn` reads it as given.
+   */
   log: EnrollmentStatusEvent[];
 }
 export interface GroupFact {
@@ -64,7 +68,8 @@ export interface GroupFact {
   deletedAt: Date | null;
   scheduleNow: ScheduleValue;
   scheduleHistory: Point<ScheduleValue>[];
-  statusLog: { status: string; at: Date }[]; // ascending by `at`
+  /** MUST arrive ascending by time, then id; the readers stop at the first later row. */
+  statusLog: { status: string; at: Date }[];
   enrollments: EnrollmentFact[];
 }
 export interface CourseFact {

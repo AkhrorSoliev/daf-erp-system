@@ -1,3 +1,7 @@
+import {
+  tashkentDateStr,
+  tashkentDayRangeUtc,
+} from '../../common/date/tashkent';
 import { enrollmentStatusOn } from '../../students/shared/enrollment-status-on';
 import {
   DEFAULT_WORK_END,
@@ -86,7 +90,13 @@ export function isGroupOpen(g: GroupFact, at: Date): boolean {
   const t = at.getTime();
   const opened = Math.max(g.createdAt.getTime(), g.startDate?.getTime() ?? 0);
   if (opened > t) return false;
-  if (g.endDate && t > g.endDate.getTime()) return false;
+  // endDate is a Tashkent calendar date: the group is open through that whole day.
+  if (
+    g.endDate &&
+    t >= tashkentDayRangeUtc(tashkentDateStr(g.endDate)).lt.getTime()
+  ) {
+    return false;
+  }
   if (g.deletedAt && t >= g.deletedAt.getTime()) return false;
   const s = groupStatusOn(g, at);
   return s === 'ACTIVE' || s === 'FORMING';
