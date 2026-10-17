@@ -281,22 +281,54 @@
 @layer components {
   .sign-in-cover {
     --sign-in-fan: oklch(0.42 0.07 262);
+    --sign-in-fan-lit: oklch(0.82 0.06 255);
     background-color: var(--primary);
     color: var(--primary-foreground);
   }
   .dark .sign-in-cover {
     --sign-in-fan: oklch(0.38 0.07 262);
+    --sign-in-fan-lit: oklch(0.82 0.06 255);
     background-color: oklch(0.21 0.045 262);
     color: var(--foreground);
   }
 
-  /* Each page is drawn in once, one after another (`--page` is its index;
-     `pathLength="1"` makes one dash the whole page). */
-  .sign-in-cover-fan path {
+  /* The fan of pages (components/auth/sign-in-cover.tsx). Four motions, each
+     on its own element so they add up instead of replacing one another:
+     - `.page-line`: drawn in once on load, one page after another (`--page`
+       is its index; `pathLength="1"` makes one dash the whole page);
+     - `.page-sway`: each page sways back and forth on two cycles of its own
+       length (`--da`/`--db`, strength `--amp`/`--ampb`, start `--ra`/`--rb`,
+       set per page), so the fan never visibly repeats. `rotate` and
+       `transform` are separate properties, which is what lets both run;
+     - `.fan-gust`: the whole fan leans and settles unevenly every 19s;
+     - `.page-light`: a lighter copy of the page whose opacity carries a light
+       over the pages one after another, every 7s, starting once they are drawn.
+     All of it turns about the spine, the bottom right corner of the box. */
+  .sign-in-fan .fan-gust,
+  .sign-in-fan .page-sway {
+    transform-box: view-box;
+    transform-origin: 400px 400px;
+  }
+  .sign-in-fan .page-line {
     stroke: var(--sign-in-fan);
     stroke-dasharray: 1;
     animation: sign-in-page 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: calc(var(--page) * 60ms);
+  }
+  .sign-in-fan .page-light {
+    stroke: var(--sign-in-fan-lit);
+    stroke-width: 2;
+    opacity: 0;
+    animation: sign-in-light 7s ease-in-out infinite;
+    animation-delay: calc(2s + var(--page) * 200ms);
+  }
+  .sign-in-fan .page-sway {
+    animation:
+      sign-in-sway-a var(--da) ease-in-out infinite var(--ra),
+      sign-in-sway-b var(--db) ease-in-out infinite var(--rb);
+  }
+  .sign-in-fan .fan-gust {
+    animation: sign-in-gust 19s ease-in-out infinite;
   }
 
   /* The greeting after a sign-in: the photo pops in, the name is revealed
@@ -312,7 +344,10 @@
     animation: sign-in-greet-name 0.7s ease-out 0.4s both;
   }
   @media (prefers-reduced-motion: reduce) {
-    .sign-in-cover-fan path,
+    .sign-in-fan .page-line,
+    .sign-in-fan .page-light,
+    .sign-in-fan .page-sway,
+    .sign-in-fan .fan-gust,
     .sign-in-greet-photo,
     .sign-in-greet-fade,
     .sign-in-greet-name {
@@ -365,6 +400,49 @@
 @keyframes sign-in-page {
   from {
     stroke-dashoffset: 1;
+  }
+}
+@keyframes sign-in-sway-a {
+  0%,
+  100% {
+    rotate: calc(var(--amp) * -1);
+  }
+  50% {
+    rotate: var(--amp);
+  }
+}
+@keyframes sign-in-sway-b {
+  0%,
+  100% {
+    transform: rotate(var(--ampb));
+  }
+  50% {
+    transform: rotate(calc(var(--ampb) * -1));
+  }
+}
+@keyframes sign-in-gust {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  30% {
+    rotate: -2.4deg;
+  }
+  55% {
+    rotate: 0.8deg;
+  }
+  75% {
+    rotate: -1.2deg;
+  }
+}
+@keyframes sign-in-light {
+  0%,
+  28%,
+  100% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
   }
 }
 @keyframes sign-in-greet-photo {

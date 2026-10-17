@@ -36,9 +36,15 @@ Joylashuv: `lg` dan kompyuterda ikki ustun (5fr / 7fr), muqova chapda; telefonda
 tepada 8rem li tasma. O'ng tomonda sarlavha («Boshqaruv» / «O'qituvchi») va forma —
 panelning o'z `Input`, `Label`, `Button` lari, `h-11`.
 
-Harakat: sahifa ochilganda varaqlar bir marta birin-ketin chizib chiqiladi
-(`stroke-dashoffset`, 60ms oraliq, 0.9s); `prefers-reduced-motion` da o'chiq. Boshqa
-animatsiya yo'q.
+Harakat (CEO: «shamolda tebranish va nur», tebranish tartibsiz, nur esa bir tekis):
+1. sahifa ochilganda varaqlar bir marta birin-ketin chiziladi (60ms oraliq, 0.9s);
+2. har varaq o'z tezligi (6–9s) va kuchida (0.8–2°) tebranadi, ustiga ikkinchi, sekinroq
+   tebranish (10–16s, 0.4–1.1°) qo'shilgan — davrlar hech qachon mos tushmaydi, shuning
+   uchun harakat takrorlanmaganday ko'rinadi. Qiymatlar koddagi doimiy (renderda tasodifiy
+   qiymat server bilan brauzerda farq qilardi);
+3. butun yelpig'ich har 19s notekis egilib qaytadi («shamol turtkisi»);
+4. har 7s yorug'lik varaqlar bo'ylab o'ngdan chapga bir tekis o'tadi (tartibsiz emas).
+Hammasi sof CSS (JavaScript yo'q); `prefers-reduced-motion` da hammasi o'chiq.
 
 Admin va o'qituvchi sahifasi faqat sarlavhasi bilan farq qiladi — panelning o'zida
 ham shunday.
