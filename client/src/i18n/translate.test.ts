@@ -1,0 +1,34 @@
+import { describe, expect, it } from "vitest";
+import { interpolate, translate } from "./translate";
+
+const ru = { "Bosh sahifa": "Главная", "{n} ta o'quvchi": "{n} учеников" };
+
+describe("interpolate", () => {
+  it("fills {name} placeholders and leaves unknown ones", () => {
+    expect(interpolate("{n} ta o'quvchi", { n: 5 })).toBe("5 ta o'quvchi");
+    expect(interpolate("{a} va {b}", { a: "x" })).toBe("x va {b}");
+    expect(interpolate("oddiy matn")).toBe("oddiy matn");
+  });
+});
+
+describe("translate", () => {
+  it("returns the Uzbek source for uz, whatever the dictionary holds", () => {
+    expect(translate("uz", ru, "Bosh sahifa")).toBe("Bosh sahifa");
+  });
+
+  it("takes the translation from the dictionary for ru, de and en", () => {
+    expect(translate("ru", ru, "Bosh sahifa")).toBe("Главная");
+    expect(translate("ru", ru, "{n} ta o'quvchi", { n: 3 })).toBe("3 учеников");
+  });
+
+  it("shows the Uzbek source when there is no translation", () => {
+    expect(translate("ru", ru, "Hali tarjima qilinmagan")).toBe("Hali tarjima qilinmagan");
+    expect(translate("de", {}, "Jadval")).toBe("Jadval");
+  });
+
+  it("transliterates the source for uz-Cyrl, an override in the dictionary wins", () => {
+    expect(translate("uz-Cyrl", {}, "Bosh sahifa")).toBe("Бош саҳифа");
+    expect(translate("uz-Cyrl", { "Bosh sahifa": "Асосий саҳифа" }, "Bosh sahifa")).toBe("Асосий саҳифа");
+    expect(translate("uz-Cyrl", {}, "{n} ta o'quvchi", { n: 5 })).toBe("5 та ўқувчи");
+  });
+});

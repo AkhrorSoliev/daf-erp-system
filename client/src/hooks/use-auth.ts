@@ -36,6 +36,7 @@ export interface AuthUser {
   company: UserCompany;
   studentId?: number;
   uiSkin?: string | null;
+  uiLocale?: string | null;
 }
 
 /**
