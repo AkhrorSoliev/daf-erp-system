@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Profil: rol o'zbekcha, filial tanlagichi faqat kerak bo'lganda",
+    matn: "Profil kartochkasida va foydalanuvchi menyusida rol nomi endi o'zbekcha: «O'qituvchi», «Kassir», «Filial direktori». Faqat bitta filialda ishlaydigan xodim (masalan, o'qituvchi) filial tanlagichini ko'rmaydi: tanlashga hech narsa yo'q, ma'lumot o'z filialidan keladi. Filial nomi Profil → «Batafsil ma'lumotlar»da turadi. Bir nechta filialli xodim va CEO uchun tanlagich o'zgarmadi. Direktorning profilida (oyligi yo'q) bo'sh «To'lanishi kerak —» bloki chiqmaydi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Qatnashganlik hujjati",
     matn: "O'quvchi kartasida «Hujjatlar» yorlig'i paydo bo'ldi. Daraja tugagach shu yerdan qatnashganlik hujjati (nemischa, QR bilan PDF) beriladi. Hujjat uchun davomat kamida 80% bo'lishi va ilovadagi ochiq darslar tugatilgan bo'lishi kerak; sababli kelmagan va bekor bo'lgan darslar hisobga kirmaydi. Shart bajarilmasa faqat CEO sabab yozib berishi mumkin. Chegaralar — Sozlamalar → «Qatnashganlik hujjati» (faqat CEO).",
     rollar: [1, 2, 3],
