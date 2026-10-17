@@ -65,7 +65,9 @@ describe("HeaderUserMenu", () => {
     const html = renderToStaticMarkup(createElement(HeaderUserMenu));
     const text = norm(html);
     expect(text).toContain("Ali Valiyev");
-    expect(text).toContain("Branch Director");
+    // The role is named in Uzbek; the English database name never reaches the screen.
+    expect(text).toContain("Filial direktori");
+    expect(text).not.toContain("Branch Director");
     expect(text).toContain("Profil");
     expect(text).toContain("Ko'rinish");
     expect(text).toContain("Yorug'");

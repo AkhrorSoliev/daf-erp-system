@@ -14,6 +14,13 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-17",
+    sarlavha: "Profil: rol o'zbekcha, filial tanlagichi faqat kerak bo'lganda",
+    matn: "Profil kartochkasida va foydalanuvchi menyusida rol nomi endi o'zbekcha: «O'qituvchi», «Kassir», «Filial direktori». Faqat bitta filialda ishlaydigan xodim (masalan, o'qituvchi) filial tanlagichini ko'rmaydi: tanlashga hech narsa yo'q, ma'lumot o'z filialidan keladi. Filial nomi Profil → «Batafsil ma'lumotlar»da turadi. Bir nechta filialli xodim va CEO uchun tanlagich o'zgarmadi. Direktorning profilida (oyligi yo'q) bo'sh «To'lanishi kerak —» bloki chiqmaydi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Davomat hisoboti yangilandi",
     matn: "Hisobotlarda «Davomat» sahifasi qayta qurildi. Tepada davomat foizi va to'rtta belgi (Keldi, Kechikdi, Kelmadi, Sababli), pastda oylar va hafta kunlari, sababli darslarning keyingi oy to'loviga taxminiy ta'siri, davomati past guruhlar, ustozlar va kurslar jadvali. «Ko'p qoldiruvchi» raqamini bossangiz, 3 va undan ko'p marta kelmagan o'quvchilar ro'yxati ochiladi. Markaz bekor qilgan darslar endi «Sababli»ga qo'shilmaydi, belgilanadigan dars bo'lmasa foiz o'rnida «—» chiqadi. Bosh sahifadagi davomat shu hisobotning «Bu oy» raqamining o'zi.",
     rollar: [1, 2],
