@@ -944,6 +944,33 @@ model KpiResult {
   @@index([paymentId])
 }
 
+/// Berilgan har «Teilnahmebestätigung» bitta qator. `snapshot` hujjat
+/// berilgan paytdagi hisobni MUHRLAYDI: keyin davomat tuzatilsa yoki
+/// chegara o'zgarsa ham berilgan hujjatning raqamlari qimirlamaydi.
+/// `branchId` faqat kirish huquqi uchun; hujjatga ham, ochiq sahifaga ham
+/// chiqmaydi. Hujjat hech qachon o'chirilmaydi; `revokedAt` bekor qilish
+/// ustuni (hozircha yozadigan yo'l yo'q, ochiq sahifa uni o'qiydi).
+model ParticipationCertificate {
+  id            String    @id @default(uuid())
+  companyId     Int
+  branchId      Int?
+  studentId     Int
+  level         String
+  year          Int
+  seq           Int
+  number        String
+  issuedAt      DateTime  @default(now())
+  issuedById    Int
+  snapshot      Json
+  exemptReason  String?
+  exemptById    Int?
+  revokedAt     DateTime?
+  revokedReason String?
+
+  @@unique([companyId, year, seq])
+  @@index([studentId, level])
+}
+
 // Leads board column. Two rows are seeded as fixed/system columns
 // (systemKey "NEW" and "CONTACTED") and cannot be renamed, moved or deleted.
 model LeadColumn {

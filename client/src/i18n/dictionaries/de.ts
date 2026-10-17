@@ -70,6 +70,7 @@ const de: Dictionary = {
   "Ruxsatlar": "Berechtigungen",
   "Lidlar egaligi": "Lead-Zuständigkeit",
   "KPI sozlamalari": "KPI-Einstellungen",
+  "Qatnashganlik hujjati": "Teilnahmebestätigung",
   "Telegram hisobot": "Telegram-Bericht",
   "Bildirishnomalar": "Benachrichtigungen",
   "Arxiv": "Archiv",

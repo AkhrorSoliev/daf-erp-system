@@ -42,7 +42,11 @@ export type SettingKey =
   | 'kpi.leadPaid.mode'
   | 'kpi.leadPaid.value'
   | 'kpi.promiseKept.mode'
-  | 'kpi.promiseKept.value';
+  | 'kpi.promiseKept.value'
+  | 'participation.minAttendancePercent'
+  | 'participation.minAppPercent.A1'
+  | 'participation.minAppPercent.A2'
+  | 'participation.minAppPercent.B1';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -66,6 +70,10 @@ export interface SettingValueMap {
   'kpi.leadPaid.value': number;
   'kpi.promiseKept.mode': KpiRuleMode;
   'kpi.promiseKept.value': number;
+  'participation.minAttendancePercent': number;
+  'participation.minAppPercent.A1': number;
+  'participation.minAppPercent.A2': number;
+  'participation.minAppPercent.B1': number;
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -394,6 +402,37 @@ export const SETTING_DEFINITIONS: {
     defaultValue: 20_000,
     parse: (raw) =>
       parseIntInRange('kpi.promiseKept.value', raw, 0, KPI_VALUE_MAX),
+    companyLevelOnly: true,
+  },
+  // Teilnahmebestätigung (spec 2026-10-17): read by
+  // `ParticipationSettingsService` per company; the CEO changes them on
+  // Sozlamalar → «Qatnashganlik hujjati».
+  'participation.minAttendancePercent': {
+    key: 'participation.minAttendancePercent',
+    defaultValue: 80,
+    parse: (raw) =>
+      parseIntInRange('participation.minAttendancePercent', raw, 0, 100),
+    companyLevelOnly: true,
+  },
+  'participation.minAppPercent.A1': {
+    key: 'participation.minAppPercent.A1',
+    defaultValue: 100,
+    parse: (raw) =>
+      parseIntInRange('participation.minAppPercent.A1', raw, 0, 100),
+    companyLevelOnly: true,
+  },
+  'participation.minAppPercent.A2': {
+    key: 'participation.minAppPercent.A2',
+    defaultValue: 100,
+    parse: (raw) =>
+      parseIntInRange('participation.minAppPercent.A2', raw, 0, 100),
+    companyLevelOnly: true,
+  },
+  'participation.minAppPercent.B1': {
+    key: 'participation.minAppPercent.B1',
+    defaultValue: 100,
+    parse: (raw) =>
+      parseIntInRange('participation.minAppPercent.B1', raw, 0, 100),
     companyLevelOnly: true,
   },
 };
