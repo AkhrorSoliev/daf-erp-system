@@ -104,3 +104,9 @@ export function tashkentInstantOn(pickedDay: Date, hour: number): string {
     Date.UTC(pickedDay.getFullYear(), pickedDay.getMonth(), pickedDay.getDate(), hour - 5),
   ).toISOString();
 }
+
+/** "2026-10-17" (`TashkentNow.dateStr`) → "17.10.2026", the display format. */
+export function formatDdMmYyyy(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-");
+  return `${day}.${month}.${year}`;
+}

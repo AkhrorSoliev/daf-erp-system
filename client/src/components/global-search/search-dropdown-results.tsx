@@ -4,6 +4,7 @@ import { FileText } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { SearchItem } from "@/hooks/use-global-search";
+import { useT } from "@/i18n/context";
 import { formatPhone, getInitials } from "./search-dropdown-utils";
 
 export function ResultCategory({
@@ -63,6 +64,7 @@ export function EntityResultItem({
   isActive: boolean;
   onClick: () => void;
 }) {
+  const t = useT();
   const phone = formatPhone(item.phone);
 
   return (
@@ -105,27 +107,27 @@ export function EntityResultItem({
           <div className="text-xs truncate flex items-center gap-1">
             {item.groupName ? (
               <span className="text-muted-foreground">
-                Guruh: {item.groupName}
+                {t("Guruh: {name}", { name: item.groupName })}
               </span>
             ) : (
-              <span className="text-orange-500">Guruhsiz</span>
+              <span className="text-orange-500">{t("Guruhsiz")}</span>
             )}
             {item.teacherName && (
               <>
                 <span className="text-muted-foreground/50">·</span>
                 <span className="text-muted-foreground">
-                  Ustoz: {item.teacherName}
+                  {t("Ustoz: {name}", { name: item.teacherName })}
                 </span>
               </>
             )}
             <span className="text-muted-foreground/50">·</span>
             {item.balance != null && item.balance < 0 ? (
               <span className="text-destructive font-medium">
-                {item.balance.toLocaleString("uz-UZ")} so&#39;m
+                {t("{amount} so'm", { amount: item.balance.toLocaleString("uz-UZ") })}
               </span>
             ) : (
               <span className="text-emerald-500 font-medium">
-                Balans: {(item.balance ?? 0).toLocaleString("uz-UZ")} so&#39;m
+                {t("Balans: {amount} so'm", { amount: (item.balance ?? 0).toLocaleString("uz-UZ") })}
               </span>
             )}
           </div>

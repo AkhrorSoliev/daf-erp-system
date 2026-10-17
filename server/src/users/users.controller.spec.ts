@@ -20,6 +20,8 @@ describe('UsersController — route access', () => {
     create: jest.fn().mockResolvedValue({}),
     updateUser: jest.fn().mockResolvedValue({}),
     updateProfile: jest.fn().mockResolvedValue({}),
+    updateUiSkin: jest.fn().mockResolvedValue({ uiSkin: 'ormon' }),
+    updateUiLocale: jest.fn().mockResolvedValue({ uiLocale: 'ru' }),
     changePassword: jest.fn().mockResolvedValue({}),
     softDelete: jest.fn().mockResolvedValue({}),
   };
@@ -225,6 +227,34 @@ describe('UsersController — route access', () => {
       expect(routeAccess(UsersController, 'updateProfile')).toEqual({
         kind: 'anyUser',
       });
+    });
+  });
+
+  describe('updateUiSkin()', () => {
+    it('is open to every staff account', () => {
+      expect(routeAccess(UsersController, 'updateUiSkin')).toEqual({
+        kind: 'anyStaff',
+      });
+    });
+
+    it("writes the CALLER's skin only, taking the id from the token", async () => {
+      const res = await controller.updateUiSkin(7, { skin: 'ormon' });
+      expect(mockService.updateUiSkin).toHaveBeenCalledWith(7, 'ormon');
+      expect(res).toEqual({ uiSkin: 'ormon' });
+    });
+  });
+
+  describe('updateUiLocale()', () => {
+    it('is open to every staff account', () => {
+      expect(routeAccess(UsersController, 'updateUiLocale')).toEqual({
+        kind: 'anyStaff',
+      });
+    });
+
+    it("writes the CALLER's language only, taking the id from the token", async () => {
+      const res = await controller.updateUiLocale(7, { locale: 'ru' });
+      expect(mockService.updateUiLocale).toHaveBeenCalledWith(7, 'ru');
+      expect(res).toEqual({ uiLocale: 'ru' });
     });
   });
 

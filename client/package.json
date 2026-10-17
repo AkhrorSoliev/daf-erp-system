@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "i18n:check": "vitest --config vitest.config.mts run src/i18n",
     "radio:check": "node scripts/check-radio.mjs",
     "qollanma:klient": "NEXT_PUBLIC_API_URL=http://localhost:4100/api next dev --port 3000",
     "qollanma:skrinshot": "node scripts/qollanma-skrinshot.mjs",
