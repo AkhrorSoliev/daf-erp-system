@@ -62,7 +62,7 @@ export function LoginForm({ portal }: LoginFormProps) {
       const isStudent = res.data.user?.roles?.some((r: any) => r.id === 6);
       // Awaited so `loading` stays true until the greeting replaces the form
       // (greet may first load the account's language).
-      await greet(res.data.user,portal === "student" || isStudent ? "/portal" : "/");
+      await greet(res.data.user, portal === "student" || isStudent ? "/portal" : "/");
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response
         ?.status;

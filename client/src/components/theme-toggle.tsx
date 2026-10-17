@@ -39,7 +39,7 @@ export function ThemeToggle() {
   }
 
   const current = theme ?? "system";
-  const labelSource = themeLabel[current];
+  const labelSource = themeLabel[current] ?? themeLabel.system;
   const label = t(labelSource);
   const Icon = themeIcon[current] ?? Monitor;
   const nextTheme =
