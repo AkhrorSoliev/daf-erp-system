@@ -15,6 +15,7 @@ import {
   UserCheck,
   Trophy,
   BarChart3,
+  FileCheck2,
   type LucideIcon,
 } from "lucide-react";
 import type { Can } from "./permission-check";
@@ -173,6 +174,14 @@ export const settingsNavSections: SettingsNavSection[] = [
         url: "/settings/kpi",
         icon: Trophy,
         description: "KPI narxlari va hisoblash kaliti",
+        ceoOnly: true,
+      },
+      {
+        // Every route is `@CeoOnly()` (spec 2026-10-17): identity, not a capability.
+        title: "Qatnashganlik hujjati",
+        url: "/settings/participation",
+        icon: FileCheck2,
+        description: "Teilnahmebestätigung berish chegaralari",
         ceoOnly: true,
       },
       {
