@@ -26,14 +26,16 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const tabFromUrl = searchParams.get("tab") ?? "davomat";
-  const [activeTab, setActiveTabState] = useState(tabFromUrl);
+  // The URL is the one source of the tab: the teacher's bottom bar changes it
+  // from outside this component, and the page follows.
+  const activeTab = searchParams.get("tab") ?? "davomat";
   const [commentFocusKey, setCommentFocusKey] = useState(0);
   const setName = useBreadcrumbName((s) => s.setName);
 
   const setActiveTab = useCallback((tab: string) => {
-    setActiveTabState(tab);
     const params = new URLSearchParams(searchParams.toString());
+    // Leaving the attendance tab also leaves its open form.
+    params.delete("sana");
     if (tab === "davomat") {
       params.delete("tab");
     } else {

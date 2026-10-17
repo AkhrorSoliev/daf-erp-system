@@ -31,6 +31,13 @@ export interface TelegramWebApp {
    * `http(s)` dan boshqa havolaga xato otadi.
    */
   openLink(url: string): void;
+  /** Telegram'ning tepadagi «←» tugmasi (Bot API 6.1+). */
+  BackButton?: {
+    show(): void;
+    hide(): void;
+    onClick(callback: () => void): void;
+    offClick(callback: () => void): void;
+  };
   /** `activated` — Bot API 8.0+; eski klientlarda hech qachon kelmaydi. */
   onEvent(eventType: "activated", callback: () => void): void;
   offEvent(eventType: "activated", callback: () => void): void;

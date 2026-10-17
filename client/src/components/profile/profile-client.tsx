@@ -13,7 +13,9 @@ import { ChangePasswordDrawer } from "./change-password-drawer";
 import { LogoutOthersDialog } from "@/components/shared/logout-others-dialog";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
 import { TeacherStatsCharts } from "@/components/teachers/teacher-stats-charts";
+import { isTeacherOnly } from "@/lib/teacher-only";
 import { hasOwnSalary, uzbekRoles } from "./profile-roles";
+import { TeacherProfileLinks } from "./teacher-profile-links";
 
 const TEACHER_ROLE_ID = 4;
 
@@ -40,6 +42,9 @@ export function ProfileClient() {
   const fullName = `${user.firstName} ${user.lastName}`;
   const uzRoles = uzbekRoles(user.roles);
   const showSalary = hasOwnSalary(user.roles);
+  // A teacher on a phone: the side menu is gone, so this page also holds the
+  // guide and the support link, and the salary block opens «Oylik».
+  const phoneTeacher = isMobile && isTeacherOnly(user.roles);
   const displayBranches = isCeo
     ? branches.map((b) => ({ id: b.id, name: b.name }))
     : user.branches;
@@ -60,6 +65,7 @@ export function ProfileClient() {
               roles={uzRoles}
               salaryDueUserId={showSalary ? user.id : undefined}
               salaryDueScope="me"
+              salaryDueHref={phoneTeacher ? "/profile/salary" : undefined}
               phone={user.phone}
               branches={displayBranches}
               infoItems={[{ label: "Kompaniya", value: user.company.name }]}
@@ -89,6 +95,7 @@ export function ProfileClient() {
               <LogOut className="mr-1.5 size-4" />
               Boshqa qurilmalardan chiqish
             </Button>
+            {phoneTeacher && <TeacherProfileLinks />}
           </>
         ) : (
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start">

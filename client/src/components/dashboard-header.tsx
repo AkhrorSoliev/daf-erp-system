@@ -71,7 +71,8 @@ export function DashboardHeader() {
   return (
     <header className="border-b border-border bg-background">
       <div className="flex h-12 sm:h-14 items-center gap-2 sm:gap-4 px-3 sm:px-4">
-        <SidebarTrigger />
+        {/* A teacher's phone has the bottom bar instead of the side menu. */}
+        {!(teacherOnly && isMobile) && <SidebarTrigger />}
         <Separator orientation="vertical" className="h-6 hidden sm:block" />
 
         <div className="hidden sm:block">

@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { TeacherChrome } from "@/components/teacher-chrome/teacher-chrome";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { BranchScopedMain } from "@/components/providers/branch-scoped-main";
@@ -40,6 +42,10 @@ export default async function DashboardLayout({
               `<main>`: it does not remount on a branch switch, and its own
               store clears itself via `registerBranchScopedStore`. */}
           <SpotlightHost />
+          {/* A teacher's phone chrome: bottom bar, Telegram «←» (see the component). */}
+          <Suspense>
+            <TeacherChrome />
+          </Suspense>
         </SidebarInset>
       </SidebarProvider>
     </I18nProvider>

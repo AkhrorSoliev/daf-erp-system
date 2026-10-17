@@ -15,7 +15,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
     sarlavha: "O'qituvchi kabineti: guruhlar, kunlik jadval va davomat",
-    matn: "O'qituvchi Telegramdagi «Kabinet» orqali kirganda endi o'z guruhlari ochiladi (har guruh kartada: kun, vaqt, xona, o'quvchilar soni; hali boshlanmagani — boshlanish sanasi bilan). «Jadval»da bir kunni «‹» va «›» tugmalari bilan almashtirish mumkin va dars kartasidagi «Davomat olish» tugmasi guruhning davomat sahifasini ochadi. Pastda «Boshlanmagan guruhlarim» turadi. O'qituvchiga topshiriq berish tugmasi va «Bosh sahifa» havolasi ko'rinmaydi.",
+    matn: "O'qituvchi Telegramdagi «Kabinet» orqali kirganda endi o'z guruhlari ochiladi (har guruh kartada: kun, vaqt, xona, o'quvchilar soni; hali boshlanmagani — boshlanish sanasi bilan). «Jadval»da bir kunni «‹» va «›» tugmalari bilan almashtirish mumkin va dars kartasidagi «Davomat olish» tugmasi guruhning davomat sahifasini ochadi. Pastda «Boshlanmagan guruhlarim» turadi. O'qituvchiga topshiriq berish tugmasi va «Bosh sahifa» havolasi ko'rinmaydi. Telefonda yon menyu o'rniga pastda panel paydo bo'ldi: Guruhlar, Jadval, Topshiriq, Oylik, Profil. Guruh ichida panel guruh bo'limlariga (Davomat, Darslar, O'quvchilar, Yana) almashadi va birinchi tugma doim guruhlar ro'yxatiga qaytaradi. Davomat ro'yxatida «Orqaga» va «Saqlash» pastda turadi; saqlanmagan belgilar bo'lsa, chiqishdan oldin so'raydi.",
     rollar: [4],
     sahifa: { bolim: "guruhlar", sahifa: "jadval" },
   },
