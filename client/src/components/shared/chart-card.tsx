@@ -8,6 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -30,12 +31,13 @@ export function ChartCard({
   tooltip,
   isLoading = false,
   isEmpty = false,
-  emptyMessage = "Ma'lumot topilmadi",
+  emptyMessage,
   headerAction,
   children,
   className,
   bodyHeightClass = "h-[240px]",
 }: Props) {
+  const t = useT();
   return (
     <div className={cn("rounded-xl border bg-card p-4 space-y-3", className)}>
       <div className="flex items-start justify-between gap-2">
@@ -51,7 +53,7 @@ export function ChartCard({
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  aria-label="Tushuntirish"
+                  aria-label={t("Tushuntirish")}
                   className="text-muted-foreground hover:text-foreground transition-colors mt-1"
                 >
                   <Info className="size-4" />
@@ -70,7 +72,7 @@ export function ChartCard({
           <Skeleton className="h-full w-full" />
         ) : isEmpty ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            {emptyMessage}
+            {emptyMessage ?? t("Ma'lumot topilmadi")}
           </div>
         ) : (
           children

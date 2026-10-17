@@ -289,6 +289,61 @@ const en: Dictionary = {
   "{label} ma'lumotini olishda xatolik. Sahifani yangilab ko'ring.": "Could not load the “{label}” data. Please refresh the page.",
   "Ma'lumot yuklanmadi": "Data failed to load",
   "Server javob bermadi. Internet aloqangizni tekshiring yoki qaytadan urinib ko'ring.": "The server did not respond. Check your internet connection or try again.",
+
+  // Home page — charts
+  "Diagrammalar": "Charts",
+  "Foyda tarkibi": "Profit breakdown",
+  "Moliya diagrammalari": "Finance charts",
+  "O'quvchilar oqimi": "Student flow",
+  "Tushuntirish": "Explanation",
+  "Ma'lumot topilmadi": "No data found",
+  "Yan": "Jan",
+  "Fev": "Feb",
+  "Mar": "Mar",
+  "Apr": "Apr",
+  "May": "May",
+  "Iyn": "Jun",
+  "Iyl": "Jul",
+  "Avg": "Aug",
+  "Sen": "Sep",
+  "Okt": "Oct",
+  "Noy": "Nov",
+  "Dek": "Dec",
+
+  // Home page — charts: attendance
+  "Oxirgi hafta: {rate}%": "Last week: {rate}%",
+  "Oxirgi 12 hafta. Kelgan va kech kelganlarning belgilangan davomatlarga nisbati.": "Last 12 weeks. Share of students who came on time or late among all recorded attendance.",
+  "Bu davrda davomat belgilanmagan": "No attendance was recorded in this period",
+
+  // Home page — charts: money trend
+  "Moliya trendi": "Finance trend",
+  "Oxirgi oy: kassaga {income}, sof foyda {profit} so'm": "Last month: cash in {income}, net profit {profit} UZS",
+  "Oxirgi 6 oy.\n\nUstunlar — KASSA harakati: haqiqatan kirgan va chiqqan pul.\n\nChiziq — sof foyda, u o'tilgan DARSLAR bo'yicha hisoblanadi va « Sof foyda » kartasi bilan bitta manbadan keladi.\n\nIkkalasi turli o'lchov: chiziq ustunlar ayirmasiga TENG EMAS va undan yuqori ham bo'lishi mumkin — masalan o'quvchi oldindan to'lagan oyda kassa to'ladi, dars esa keyingi oyda o'tiladi.": "Last 6 months.\n\nBars — CASH movement: the money that actually came in and went out.\n\nLine — net profit; it is calculated from the LESSONS held and comes from the same source as the “Net profit” card.\n\nThe two are different measures: the line is NOT EQUAL to the difference of the bars and can be higher — for example, when a student pays in advance the cash arrives in that month, but the lesson is held in the next.",
+  "Bu davrda moliyaviy harakat yo'q": "No financial activity in this period",
+  "mln": "M",
+  "ming": "K",
+  "Kassa tushumi": "Cash in",
+  "Kassa xarajati": "Cash out",
+
+  // Home page — charts: student flow
+  "Oxirgi oy: +{arrived} / −{left}, o'zgarish {net}": "Last month: +{arrived} / −{left}, change {net}",
+  "Oxirgi 6 oy. Yuqoriga — qo'shilganlar, pastga — ketganlar (muzlatilgan, chetlatilgan, bitirgan, arxivlangan).\n\nChiziq — sof o'zgarish.": "Last 6 months. Up — those who joined, down — those who left (frozen, expelled, graduated, archived).\n\nLine — net change.",
+  "Bu davrda o'quvchi harakati yo'q": "No student movement in this period",
+  "Qo'shildi": "Joined",
+  "Ketdi": "Left",
+  "Sof o'zgarish": "Net change",
+
+  // Home page — charts: profit breakdown
+  "Pul qayerga ketdi": "Where the money went",
+  "Bu oy tushum: {revenue} so'm · balansdan yechilgan: {withdrawn} so'm": "Revenue this month: {revenue} UZS · withdrawn from balances: {withdrawn} UZS",
+  "Bu oy tushum: {revenue} so'm": "Revenue this month: {revenue} UZS",
+  "Tushum va balansdan yechib olingan puldan ustoz va xodim oyligi, operatsion xarajat va qaytarishlar ayirilgach qolgani — sof foyda.\n\nBu «Sof foyda» kartasi bilan bitta manbadan keladi, shuning uchun raqamlar har doim mos tushadi.": "What is left of the revenue and the money withdrawn from balances after teacher and staff salaries, operating expenses and refunds are deducted is the net profit.\n\nIt comes from the same source as the “Net profit” card, so the figures always match.",
+  "Bu oyda hali harakat yo'q": "No activity yet this month",
+  "Ustoz oyligi": "Teacher salaries",
+  "Xodim oyligi": "Staff salaries",
+  "Operatsion xarajat": "Operating expenses",
+  "Qaytarishlar": "Refunds",
+  "Qolgani — sof foyda": "Remainder — net profit",
 };
 
 export default en;

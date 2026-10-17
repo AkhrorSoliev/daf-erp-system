@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { resolveHomeSections } from "./dashboard-home-visibility";
@@ -23,6 +24,7 @@ import { HomeErrorNote } from "./home-error-note";
  * esa o'z o'rnida skeleton ko'rsatib turadi.
  */
 export function HomeCharts({ ready }: { ready: boolean }) {
+  const t = useT();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const can = usePermissions((s) => s.can);
@@ -46,7 +48,7 @@ export function HomeCharts({ ready }: { ready: boolean }) {
   });
 
   if (!maySeeCharts) return null;
-  if (isError) return <HomeErrorNote label="Diagrammalar" />;
+  if (isError) return <HomeErrorNote label={t("Diagrammalar")} />;
   if (isPending || !data) return <ChartsSkeleton showMoney={sections.money} />;
 
   const failed = (s: string) => data.failed.includes(s);
@@ -61,11 +63,11 @@ export function HomeCharts({ ready }: { ready: boolean }) {
               {data.money.breakdown ? (
                 <ChartProfitBreakdownCard data={data.money.breakdown} />
               ) : (
-                <HomeErrorNote label="Foyda tarkibi" />
+                <HomeErrorNote label={t("Foyda tarkibi")} />
               )}
             </>
           ) : failed("money") ? (
-            <HomeErrorNote label="Moliya diagrammalari" />
+            <HomeErrorNote label={t("Moliya diagrammalari")} />
           ) : null}
         </div>
       )}
@@ -74,12 +76,12 @@ export function HomeCharts({ ready }: { ready: boolean }) {
         {data.students ? (
           <ChartStudentFlow data={data.students} />
         ) : failed("students") ? (
-          <HomeErrorNote label="O'quvchilar oqimi" />
+          <HomeErrorNote label={t("O'quvchilar oqimi")} />
         ) : null}
         {data.attendance ? (
           <ChartAttendance data={data.attendance} />
         ) : failed("attendance") ? (
-          <HomeErrorNote label="Davomat" />
+          <HomeErrorNote label={t("Davomat")} />
         ) : null}
       </div>
     </div>

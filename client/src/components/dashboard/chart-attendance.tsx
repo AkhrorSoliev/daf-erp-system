@@ -11,35 +11,41 @@ import {
   YAxis,
 } from "recharts";
 import { ChartCard } from "@/components/shared/chart-card";
+import { useT } from "@/i18n/context";
+import { chartMonthLabel } from "./chart-months";
 import { ChartTooltip } from "./chart-tooltip";
 import { useChartTheme } from "./use-chart-theme";
 import type { ChartAttendancePoint } from "./dashboard-charts-types";
 
 export function ChartAttendance({ data }: { data: ChartAttendancePoint[] }) {
+  const t = useT();
   const { palette } = useChartTheme();
   const last = data[data.length - 1];
+  const shaped = data.map((d) => ({ ...d, label: chartMonthLabel(d.label, t) }));
 
   return (
     <ChartCard
-      title="Davomat"
+      title={t("Davomat")}
       subtitle={
-        last ? `Oxirgi hafta: ${last.rate}%` : undefined
+        last ? t("Oxirgi hafta: {rate}%", { rate: last.rate }) : undefined
       }
-      tooltip="Oxirgi 12 hafta. Kelgan va kech kelganlarning belgilangan davomatlarga nisbati."
+      tooltip={t(
+        "Oxirgi 12 hafta. Kelgan va kech kelganlarning belgilangan davomatlarga nisbati.",
+      )}
       isEmpty={data.length === 0}
-      emptyMessage="Bu davrda davomat belgilanmagan"
+      emptyMessage={t("Bu davrda davomat belgilanmagan")}
       headerAction={
         <Link
           href="/reports/attendance"
           className="text-xs text-muted-foreground underline-offset-4 hover:underline"
         >
-          Batafsil
+          {t("Batafsil")}
         </Link>
       }
     >
       <div className="h-[240px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+          <LineChart data={shaped} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
             <CartesianGrid stroke={palette.grid} vertical={false} />
             <XAxis
               dataKey="label"
@@ -63,7 +69,7 @@ export function ChartAttendance({ data }: { data: ChartAttendancePoint[] }) {
             <Line
               type="monotone"
               dataKey="rate"
-              name="Davomat"
+              name={t("Davomat")}
               stroke={palette.series1}
               strokeWidth={2}
               dot={{ r: 3, strokeWidth: 0, fill: palette.series1 }}

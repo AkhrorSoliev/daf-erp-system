@@ -289,6 +289,61 @@ const ru: Dictionary = {
   "{label} ma'lumotini olishda xatolik. Sahifani yangilab ko'ring.": "Не удалось получить данные «{label}». Обновите страницу.",
   "Ma'lumot yuklanmadi": "Данные не загружены",
   "Server javob bermadi. Internet aloqangizni tekshiring yoki qaytadan urinib ko'ring.": "Сервер не ответил. Проверьте подключение к интернету или попробуйте ещё раз.",
+
+  // Home page — charts
+  "Diagrammalar": "Диаграммы",
+  "Foyda tarkibi": "Структура прибыли",
+  "Moliya diagrammalari": "Финансовые диаграммы",
+  "O'quvchilar oqimi": "Движение учеников",
+  "Tushuntirish": "Пояснение",
+  "Ma'lumot topilmadi": "Данные не найдены",
+  "Yan": "янв",
+  "Fev": "фев",
+  "Mar": "мар",
+  "Apr": "апр",
+  "May": "май",
+  "Iyn": "июн",
+  "Iyl": "июл",
+  "Avg": "авг",
+  "Sen": "сен",
+  "Okt": "окт",
+  "Noy": "ноя",
+  "Dek": "дек",
+
+  // Home page — charts: attendance
+  "Oxirgi hafta: {rate}%": "Последняя неделя: {rate}%",
+  "Oxirgi 12 hafta. Kelgan va kech kelganlarning belgilangan davomatlarga nisbati.": "Последние 12 недель. Доля пришедших и опоздавших среди всех отмеченных посещений.",
+  "Bu davrda davomat belgilanmagan": "За этот период посещаемость не отмечена",
+
+  // Home page — charts: money trend
+  "Moliya trendi": "Динамика финансов",
+  "Oxirgi oy: kassaga {income}, sof foyda {profit} so'm": "Последний месяц: в кассу {income}, чистая прибыль {profit} сум",
+  "Oxirgi 6 oy.\n\nUstunlar — KASSA harakati: haqiqatan kirgan va chiqqan pul.\n\nChiziq — sof foyda, u o'tilgan DARSLAR bo'yicha hisoblanadi va « Sof foyda » kartasi bilan bitta manbadan keladi.\n\nIkkalasi turli o'lchov: chiziq ustunlar ayirmasiga TENG EMAS va undan yuqori ham bo'lishi mumkin — masalan o'quvchi oldindan to'lagan oyda kassa to'ladi, dars esa keyingi oyda o'tiladi.": "Последние 6 месяцев.\n\nСтолбцы — движение по КАССЕ: деньги, которые действительно поступили и ушли.\n\nЛиния — чистая прибыль; она считается по проведённым ЗАНЯТИЯМ и берётся из того же источника, что и карточка «Чистая прибыль».\n\nЭто разные показатели: линия НЕ РАВНА разности столбцов и может быть выше неё — например, если ученик заплатил заранее, деньги поступают в кассу в этом месяце, а занятия проходят в следующем.",
+  "Bu davrda moliyaviy harakat yo'q": "За этот период нет финансовых операций",
+  "mln": "млн",
+  "ming": "тыс.",
+  "Kassa tushumi": "Поступления в кассу",
+  "Kassa xarajati": "Расходы из кассы",
+
+  // Home page — charts: student flow
+  "Oxirgi oy: +{arrived} / −{left}, o'zgarish {net}": "Последний месяц: +{arrived} / −{left}, изменение {net}",
+  "Oxirgi 6 oy. Yuqoriga — qo'shilganlar, pastga — ketganlar (muzlatilgan, chetlatilgan, bitirgan, arxivlangan).\n\nChiziq — sof o'zgarish.": "Последние 6 месяцев. Вверх — присоединившиеся, вниз — ушедшие (замороженные, отчисленные, окончившие, архивированные).\n\nЛиния — чистое изменение.",
+  "Bu davrda o'quvchi harakati yo'q": "За этот период движения учеников нет",
+  "Qo'shildi": "Пришли",
+  "Ketdi": "Ушли",
+  "Sof o'zgarish": "Чистое изменение",
+
+  // Home page — charts: profit breakdown
+  "Pul qayerga ketdi": "Куда ушли деньги",
+  "Bu oy tushum: {revenue} so'm · balansdan yechilgan: {withdrawn} so'm": "Поступления за месяц: {revenue} сум · снято с баланса: {withdrawn} сум",
+  "Bu oy tushum: {revenue} so'm": "Поступления за месяц: {revenue} сум",
+  "Tushum va balansdan yechib olingan puldan ustoz va xodim oyligi, operatsion xarajat va qaytarishlar ayirilgach qolgani — sof foyda.\n\nBu «Sof foyda» kartasi bilan bitta manbadan keladi, shuning uchun raqamlar har doim mos tushadi.": "Что остаётся после вычета из поступлений и денег, снятых с баланса, зарплат преподавателей и сотрудников, операционных расходов и возвратов, — это чистая прибыль.\n\nОна берётся из того же источника, что и карточка «Чистая прибыль», поэтому цифры всегда совпадают.",
+  "Bu oyda hali harakat yo'q": "В этом месяце движений пока нет",
+  "Ustoz oyligi": "Зарплата преподавателей",
+  "Xodim oyligi": "Зарплата сотрудников",
+  "Operatsion xarajat": "Операционные расходы",
+  "Qaytarishlar": "Возвраты",
+  "Qolgani — sof foyda": "Остаток — чистая прибыль",
 };
 
 export default ru;

@@ -289,6 +289,61 @@ const de: Dictionary = {
   "{label} ma'lumotini olishda xatolik. Sahifani yangilab ko'ring.": "Die Daten „{label}“ konnten nicht abgerufen werden. Bitte aktualisieren Sie die Seite.",
   "Ma'lumot yuklanmadi": "Daten nicht geladen",
   "Server javob bermadi. Internet aloqangizni tekshiring yoki qaytadan urinib ko'ring.": "Der Server hat nicht geantwortet. Prüfen Sie Ihre Internetverbindung oder versuchen Sie es erneut.",
+
+  // Home page — charts
+  "Diagrammalar": "Diagramme",
+  "Foyda tarkibi": "Gewinnzusammensetzung",
+  "Moliya diagrammalari": "Finanzdiagramme",
+  "O'quvchilar oqimi": "Teilnehmerbewegung",
+  "Tushuntirish": "Erklärung",
+  "Ma'lumot topilmadi": "Keine Daten gefunden",
+  "Yan": "Jan",
+  "Fev": "Feb",
+  "Mar": "Mär",
+  "Apr": "Apr",
+  "May": "Mai",
+  "Iyn": "Jun",
+  "Iyl": "Jul",
+  "Avg": "Aug",
+  "Sen": "Sep",
+  "Okt": "Okt",
+  "Noy": "Nov",
+  "Dek": "Dez",
+
+  // Home page — charts: attendance
+  "Oxirgi hafta: {rate}%": "Letzte Woche: {rate}%",
+  "Oxirgi 12 hafta. Kelgan va kech kelganlarning belgilangan davomatlarga nisbati.": "Letzte 12 Wochen. Anteil der Anwesenden und Verspäteten an allen erfassten Anwesenheiten.",
+  "Bu davrda davomat belgilanmagan": "In diesem Zeitraum wurde keine Anwesenheit erfasst",
+
+  // Home page — charts: money trend
+  "Moliya trendi": "Finanztrend",
+  "Oxirgi oy: kassaga {income}, sof foyda {profit} so'm": "Letzter Monat: Kasseneingang {income}, Nettogewinn {profit} Sum",
+  "Oxirgi 6 oy.\n\nUstunlar — KASSA harakati: haqiqatan kirgan va chiqqan pul.\n\nChiziq — sof foyda, u o'tilgan DARSLAR bo'yicha hisoblanadi va « Sof foyda » kartasi bilan bitta manbadan keladi.\n\nIkkalasi turli o'lchov: chiziq ustunlar ayirmasiga TENG EMAS va undan yuqori ham bo'lishi mumkin — masalan o'quvchi oldindan to'lagan oyda kassa to'ladi, dars esa keyingi oyda o'tiladi.": "Letzte 6 Monate.\n\nSäulen — KASSENBEWEGUNG: das Geld, das tatsächlich eingegangen und ausgegangen ist.\n\nLinie — Nettogewinn; er wird nach den gehaltenen UNTERRICHTSSTUNDEN berechnet und stammt aus derselben Quelle wie die Karte „Nettogewinn“.\n\nBeides sind unterschiedliche Maße: Die Linie ist NICHT GLEICH der Differenz der Säulen und kann auch höher liegen — zum Beispiel geht das Geld in dem Monat in die Kasse, in dem ein Teilnehmer im Voraus zahlt, der Unterricht findet aber im Folgemonat statt.",
+  "Bu davrda moliyaviy harakat yo'q": "In diesem Zeitraum gab es keine Finanzbewegungen",
+  "mln": "Mio.",
+  "ming": "Tsd.",
+  "Kassa tushumi": "Kasseneingang",
+  "Kassa xarajati": "Kassenausgang",
+
+  // Home page — charts: student flow
+  "Oxirgi oy: +{arrived} / −{left}, o'zgarish {net}": "Letzter Monat: +{arrived} / −{left}, Veränderung {net}",
+  "Oxirgi 6 oy. Yuqoriga — qo'shilganlar, pastga — ketganlar (muzlatilgan, chetlatilgan, bitirgan, arxivlangan).\n\nChiziq — sof o'zgarish.": "Letzte 6 Monate. Nach oben — Neuzugänge, nach unten — Abgänge (pausiert, ausgeschlossen, abgeschlossen, archiviert).\n\nLinie — Nettoveränderung.",
+  "Bu davrda o'quvchi harakati yo'q": "In diesem Zeitraum gab es keine Teilnehmerbewegung",
+  "Qo'shildi": "Hinzugekommen",
+  "Ketdi": "Ausgetreten",
+  "Sof o'zgarish": "Nettoveränderung",
+
+  // Home page — charts: profit breakdown
+  "Pul qayerga ketdi": "Wohin das Geld floss",
+  "Bu oy tushum: {revenue} so'm · balansdan yechilgan: {withdrawn} so'm": "Einnahmen im Monat: {revenue} Sum · vom Guthaben abgebucht: {withdrawn} Sum",
+  "Bu oy tushum: {revenue} so'm": "Einnahmen im Monat: {revenue} Sum",
+  "Tushum va balansdan yechib olingan puldan ustoz va xodim oyligi, operatsion xarajat va qaytarishlar ayirilgach qolgani — sof foyda.\n\nBu «Sof foyda» kartasi bilan bitta manbadan keladi, shuning uchun raqamlar har doim mos tushadi.": "Was von den Einnahmen und dem vom Guthaben abgebuchten Geld nach Abzug von Lehrkräfte- und Mitarbeitergehältern, Betriebsausgaben und Rückerstattungen übrig bleibt, ist der Nettogewinn.\n\nEr stammt aus derselben Quelle wie die Karte „Nettogewinn“, deshalb stimmen die Zahlen immer überein.",
+  "Bu oyda hali harakat yo'q": "In diesem Monat gibt es noch keine Bewegungen",
+  "Ustoz oyligi": "Lehrkräftegehalt",
+  "Xodim oyligi": "Mitarbeitergehalt",
+  "Operatsion xarajat": "Betriebsausgaben",
+  "Qaytarishlar": "Rückerstattungen",
+  "Qolgani — sof foyda": "Rest — Nettogewinn",
 };
 
 export default de;
