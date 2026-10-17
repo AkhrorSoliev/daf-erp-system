@@ -857,6 +857,10 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /reports/departed-students/overview": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /reports/departed-students/reasons": [
     "Administrator",
     "Branch Director",
