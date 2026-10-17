@@ -87,11 +87,6 @@ export const INTENTIONAL_ACCESS_CHANGES: Record<string, AccessChange> = {
     remove: ['Administrator'],
     reason: ATTENDANCE,
   },
-  'GET /reports/center-activity': {
-    remove: ['Administrator'],
-    reason:
-      'Only the «Markaz faoliyat statistikasi» report calls it; its menu entry is CEO/BD only.',
-  },
   'GET /reports/kpis': { remove: ['Administrator'], reason: NO_SCREEN },
   'GET /reports/group-analytics': {
     remove: ['Administrator'],

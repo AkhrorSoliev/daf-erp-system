@@ -16,7 +16,6 @@ import { ReportsDepartedStudentsService } from './reports-departed-students.serv
 import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
-import { ReportsCenterActivityService } from './reports-center-activity.service';
 import { ReportsExpectationService } from './reports-expectation.service';
 import { ReportsExpectationHistoryService } from './reports-expectation-history.service';
 import { ReportsStudentFlowService } from './reports-student-flow.service';
@@ -38,7 +37,6 @@ import {
   ReportsBalanceSheetService,
   BalanceSheetQuery,
 } from './reports-balance-sheet.service';
-import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
 import {
   AttendanceAnalyticsQueryDto,
   AttendanceByCourseQueryDto,
@@ -82,7 +80,6 @@ export class ReportsService {
     private departedLists: ReportsDepartedListsService,
     private departedReasons: ReportsDepartedReasonsService,
     private teacherChanges: ReportsTeacherChangesService,
-    private centerActivity: ReportsCenterActivityService,
     private profitLoss: ReportsProfitLossService,
     private cashFlow: ReportsCashFlowService,
     private balanceSheet: ReportsBalanceSheetService,
@@ -403,11 +400,6 @@ export class ReportsService {
   }
   getBalanceSheet(companyId: number, query: BalanceSheetQuery) {
     return this.balanceSheet.getBalanceSheet(companyId, query);
-  }
-
-  // Center activity
-  getCenterActivity(companyId: number, query: CenterActivityQueryDto) {
-    return this.centerActivity.getCenterActivity(companyId, query);
   }
 
   // Overview

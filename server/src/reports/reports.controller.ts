@@ -27,7 +27,6 @@ import { DepartedStudentsBranchQueryDto } from './dto/departed-students-branch-q
 import { DepartedStudentsRangeQueryDto } from './dto/departed-students-range-query.dto';
 import { DepartedStudentsTeacherChangesQueryDto } from './dto/departed-students-teacher-changes-query.dto';
 import { DepartedStudentsTransferredQueryDto } from './dto/departed-students-transferred-query.dto';
-import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
 import {
   AttendanceAnalyticsQueryDto,
   AttendanceByCourseQueryDto,
@@ -70,19 +69,6 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getRoomUtilization(
-      companyId,
-      this.scoped(query, scope),
-    );
-  }
-
-  @Get('center-activity')
-  @Can('reports.students')
-  getCenterActivity(
-    @Query() query: CenterActivityQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getCenterActivity(
       companyId,
       this.scoped(query, scope),
     );

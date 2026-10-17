@@ -130,6 +130,7 @@ export interface CenterOverview {
     seats: { pct: number | null; enrolled: number; capacity: number };
     free: { seats: number; revenue: number };
   };
+  /** Drawn for the picked branch (the only thing `filial` changes) or the first one; the rest of the answer covers the whole scope. */
   heat: { branchId: number; heat: Heat; insight: HeatInsight } | null;
   rooms: RoomRow[];
   /** Only groups with free seats, most free first. */

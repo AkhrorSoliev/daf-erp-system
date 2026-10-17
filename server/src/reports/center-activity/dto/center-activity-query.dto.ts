@@ -9,7 +9,12 @@ export class CenterActivityQueryDto {
   })
   oy?: string;
 
-  /** The branch the «Qachon xona bo'sh» table is drawn for. Must be inside the caller's scope (checked in the service). */
+  /**
+   * The branch the «Qachon xona bo'sh» table is drawn for — it changes ONLY the heat;
+   * the cards and tables always cover the whole scope. Must be inside the caller's
+   * scope (400 otherwise, checked in the service); a branch in scope that has no
+   * room yet in the chosen month falls back to the first branch.
+   */
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: "Filial butun son bo'lishi kerak" })
