@@ -10,6 +10,7 @@ import {
   LeadOwnershipKind,
   PaymentPromiseStatus,
   Prisma,
+  UserStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { isBlockedStatus } from '../common/auth/blocked-user';
@@ -237,12 +238,15 @@ export class KpiReadService {
         },
         select: { createdById: true, status: true },
       }),
-      // Every administrator of the branch(es) gets a row, zeros included:
-      // the table answers «who works here», not only «who has a result».
+      // Every working administrator of the branch(es) gets a row, zeros
+      // included: the table answers «who works here», not only «who has a
+      // result». An inactive account joins only through its own activity.
       this.prisma.user.findMany({
         where: {
           companyId,
           deletedAt: null,
+          status: UserStatus.ACTIVE,
+          isActive: true,
           roles: { some: { role: { name: 'Administrator' } } },
           ...userBranchWhere(scope),
         },
