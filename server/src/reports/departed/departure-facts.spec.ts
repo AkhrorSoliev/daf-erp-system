@@ -86,6 +86,24 @@ describe('pickEnrollmentAt', () => {
     expect(pickEnrollmentAt([e], d('2026-09-10'))).toBe(e);
   });
 
+  it('counts an enrollment closed exactly at the stop as live just before it', () => {
+    const at = d('2026-09-20');
+    const older = enr({ id: 'older', createdAt: d('2026-09-01') });
+    const closedAtStop = enr({
+      id: 'closed-at-stop',
+      status: 'DROPPED',
+      createdAt: d('2026-09-05'),
+      statusChangedAt: at,
+      stateLog: [
+        { status: 'ACTIVE', transitionAt: d('2026-09-05') },
+        { status: 'DROPPED', transitionAt: at },
+      ],
+    });
+    expect(pickEnrollmentAt([older, closedAtStop], at)?.id).toBe(
+      'closed-at-stop',
+    );
+  });
+
   it('picks the later created one when two were ACTIVE before the stop', () => {
     const older = enr({ id: 'old', createdAt: d('2026-09-01') });
     const newer = enr({ id: 'new', createdAt: d('2026-09-05') });
@@ -318,5 +336,33 @@ describe('buildStartMember', () => {
       branch: { id: 1, name: 'Central' },
       teachers: [{ id: 11, fullName: 'Teacher Eleven' }],
     });
+  });
+
+  it('uses the teachers the group had at the moment, not today', () => {
+    const s = student({
+      enrollments: [enr({ id: 'e1', group: group({ teacherIds: [11] }) })],
+    });
+    const changes = new Map([
+      ['g1', [{ createdAt: d('2026-09-10'), previousTeacherIds: [10] }]],
+    ]);
+    const member = buildStartMember(
+      'e1',
+      s,
+      d('2026-09-01'),
+      ctx({ teacherChangesByGroup: changes }),
+    );
+    expect(member.teachers).toEqual([{ id: 10, fullName: 'Teacher Ten' }]);
+  });
+
+  it('leaves placement empty for an unknown enrollment', () => {
+    expect(buildStartMember('nope', student(), d('2026-09-01'), ctx())).toEqual(
+      {
+        studentId: 7,
+        group: null,
+        course: null,
+        branch: null,
+        teachers: [],
+      },
+    );
   });
 });
