@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PaymentsPager } from "@/components/payments/list/payments-table";
-import { dateTime, STATE_LABEL, stateTone } from "./bot-report-format";
+import { dateTime, settled, STATE_LABEL, stateTone } from "./bot-report-format";
 import { useBotList } from "./bot-report-queries";
 import { BOT_PAGE_SIZES, type listParams } from "./bot-report-url";
 
@@ -19,9 +19,9 @@ export function BotReportTable({
   onPage: (page: number) => void;
   onPageSize: (size: number) => void;
 }) {
-  const { data, isError, refetch } = useBotList(params);
-  // An answer kept from another month is never drawn as this month's.
-  const fresh = data && data.page === params.page ? data : undefined;
+  const { data, isError, isPlaceholderData, refetch } = useBotList(params);
+  // An answer kept from another month, page or page size is never drawn as the current one.
+  const fresh = settled(data, isPlaceholderData);
   const rows = fresh?.data ?? [];
   const total = fresh?.total ?? 0;
 

@@ -2,6 +2,10 @@ import { monthShort } from "@/components/payments/salary-utils";
 import { formatDdMmYyyy, tashkentHhmm, tashkentWallClock } from "@/lib/tashkent-time";
 import type { GateState } from "./bot-report-types";
 
+/** An answer kept by `keepPreviousData` from another month, page or size is never drawn as the current one. */
+export const settled = <T,>(data: T | undefined, isPlaceholderData: boolean): T | undefined =>
+  isPlaceholderData ? undefined : data;
+
 /** «70%» — the server's whole percent, never worked out here. */
 export const rateText = (rate: number): string => `${rate}%`;
 

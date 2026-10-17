@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cohortTitle, dateTime, joinedHint, rateText, STATE_LABEL, stateTone } from "./bot-report-format";
+import { cohortTitle, dateTime, joinedHint, rateText, settled, STATE_LABEL, stateTone } from "./bot-report-format";
 
 describe("bot-report-format", () => {
   it("rateText prints the server's whole percent", () => {
@@ -29,5 +29,11 @@ describe("bot-report-format", () => {
     // 20:00 UTC on 30.09 is 01:00 on 01.10 in Tashkent.
     expect(dateTime("2026-09-30T20:00:00.000Z")).toBe("01.10.2026, 01:00");
     expect(dateTime(null)).toBe("—");
+  });
+
+  it("settled hides an answer kept from another month, page or size", () => {
+    expect(settled("x", false)).toBe("x");
+    expect(settled("x", true)).toBeUndefined();
+    expect(settled(undefined, false)).toBeUndefined();
   });
 });
