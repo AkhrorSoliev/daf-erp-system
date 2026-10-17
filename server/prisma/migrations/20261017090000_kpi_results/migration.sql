@@ -1,4 +1,4 @@
--- KPI results (ADR-0095): stage 2 of the admin KPI, no money. Idempotent,
+-- KPI results (ADR-0096): stage 2 of the admin KPI, no money. Idempotent,
 -- like the other hand-written migrations here.
 DO $$
 BEGIN

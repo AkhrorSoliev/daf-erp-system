@@ -58,7 +58,7 @@ describe("Dars baholari — faqat CEO", () => {
   });
 });
 
-describe("Xodimlar KPI — kpi.view (ADR-0095)", () => {
+describe("Xodimlar KPI — kpi.view (ADR-0096)", () => {
   it("CEO va filial direktori ochadi; administrator, o'qituvchi va kassir ochmaydi", () => {
     for (const role of [1, 2]) {
       expect(canOpenReportPath(canForRoles([role]), "/reports/xodimlar-kpi", [role])).toBe(true);

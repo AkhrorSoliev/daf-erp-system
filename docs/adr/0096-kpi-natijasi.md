@@ -1,4 +1,4 @@
-# ADR-0095: KPI natijasi — administratorga, bir marta, summa muhrlanadi
+# ADR-0096: KPI natijasi — administratorga, bir marta, summa muhrlanadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-16

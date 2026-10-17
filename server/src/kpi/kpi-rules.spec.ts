@@ -8,7 +8,7 @@ import {
   promiseOldEnough,
 } from './kpi-rules';
 
-describe('KPI rules (ADR-0095)', () => {
+describe('KPI rules (ADR-0096)', () => {
   it('counts from 17.10.2026 00:00 Tashkent', () => {
     expect(KPI_START.toISOString()).toBe('2026-10-16T19:00:00.000Z');
     expect(KPI_FIRST_MONTH).toBe('2026-10');

@@ -3,7 +3,7 @@ import { tashkentDateStr } from '../common/date/tashkent';
 import { formatSom } from '../payments/shared/format-som';
 
 /**
- * The rules of a KPI result (ADR-0095, spec §7). Pure: the writer, the read
+ * The rules of a KPI result (ADR-0096, spec §7). Pure: the writer, the read
  * side and the backfill share them.
  */
 

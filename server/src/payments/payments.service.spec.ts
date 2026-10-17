@@ -650,7 +650,7 @@ describe('PaymentsService', () => {
     });
   });
 
-  describe('a payment that keeps a promise (ADR-0095)', () => {
+  describe('a payment that keeps a promise (ADR-0096)', () => {
     const plain = { studentId: 10001, amount: 500000, method: 'CASH' as any };
 
     it('create() writes itself on the promises it made KEPT', async () => {
@@ -689,7 +689,7 @@ describe('PaymentsService', () => {
     });
   });
 
-  describe('payment.reversed says whether it is a correction (ADR-0095)', () => {
+  describe('payment.reversed says whether it is a correction (ADR-0096)', () => {
     it('a plain reversal is not', async () => {
       prisma.payment.findFirst.mockResolvedValue({
         id: 'payment-uuid-1',

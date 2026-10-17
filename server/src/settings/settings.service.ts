@@ -99,7 +99,7 @@ export class SettingsService {
   /**
    * When the company-level row of `key` was last written; null = never.
    * `KpiSettingsService` writes `kpi.enabled` only when the switch flips, so
-   * for that key this is the moment of the flip (ADR-0095).
+   * for that key this is the moment of the flip (ADR-0096).
    */
   async lastWrittenAt(
     companyId: number,
@@ -188,7 +188,7 @@ export class SettingsService {
 
   /**
    * Several company-level keys in one transaction: all written or none
-   * (ADR-0095 — a KPI rule's mode and value never apart). Every value is
+   * (ADR-0096 — a KPI rule's mode and value never apart). Every value is
    * parsed before anything is written.
    */
   async setMany(

@@ -74,7 +74,7 @@ export interface PaymentReversedPayload {
   performedById?: number;
   /**
    * The first leg of an amount correction (`correctAmount`): the KPI moves its
-   * results to the re-post instead of choosing again (ADR-0095).
+   * results to the re-post instead of choosing again (ADR-0096).
    */
   correction?: boolean;
 }
@@ -875,7 +875,7 @@ export class PaymentsWriteService {
       studentId: number;
       balance: number | null | undefined;
       performedById: number | null | undefined;
-      /** The payment that cleared the debt — the promise's KPI hangs on it (ADR-0095). */
+      /** The payment that cleared the debt — the promise's KPI hangs on it (ADR-0096). */
       paymentId: string;
     },
   ) {

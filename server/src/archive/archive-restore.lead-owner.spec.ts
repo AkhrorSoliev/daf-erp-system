@@ -135,7 +135,7 @@ describe('ArchiveRestoreService: owner of a restored lead (ADR-0093)', () => {
       expect(ownership.emit).not.toHaveBeenCalled();
     });
 
-    it('brings a converted lead back CONVERTED, with its owner and its conversion time (ADR-0095)', async () => {
+    it('brings a converted lead back CONVERTED, with its owner and its conversion time (ADR-0096)', async () => {
       prisma.lead.findFirst.mockResolvedValue({
         ...OWNED,
         statusEnum: 'CONVERTED',

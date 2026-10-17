@@ -106,7 +106,7 @@ describe("navItems — every role sees the same menu as before capabilities", ()
 });
 
 describe("navItems — «Hisobotlar»", () => {
-  it("opens for kpi.view too, so a role given only the KPI page still reaches it (ADR-0095)", () => {
+  it("opens for kpi.view too, so a role given only the KPI page still reaches it (ADR-0096)", () => {
     expect(navItems.find((item) => item.url === "/reports")?.permission).toEqual([
       "reports.finance",
       "reports.payments",

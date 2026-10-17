@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 
 /**
- * KPI results have one door: `KpiResultsService` (ADR-0095, spec §7.5). A
+ * KPI results have one door: `KpiResultsService` (ADR-0096, spec §7.5). A
  * result is sealed when written and cancelled only with a reason; a write
  * from another module would skip the eligibility rule, the switch and the
  * one-active-result guard. The backfill script calls the service too.

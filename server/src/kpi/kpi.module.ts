@@ -7,7 +7,7 @@ import { KpiResultsService } from './kpi-results.service';
 import { KpiSelfHealCron } from './kpi-self-heal.cron';
 import { KpiSettingsService } from './kpi-settings.service';
 
-/** Admin KPI results (ADR-0095). Stage 2: recorded and shown, no money. */
+/** Admin KPI results (ADR-0096). Stage 2: recorded and shown, no money. */
 @Module({
   imports: [SettingsModule],
   controllers: [KpiController],

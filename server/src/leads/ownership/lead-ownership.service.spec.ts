@@ -562,7 +562,7 @@ describe('LeadOwnershipService.assignable', () => {
   });
 });
 
-describe('ownership filters shared with the KPI page (ADR-0095)', () => {
+describe('ownership filters shared with the KPI page (ADR-0096)', () => {
   it('a live owned lead: not deleted, not converted, in the branch or branch-less', () => {
     expect(liveOwnedLeadWhere(1001, [2])).toEqual({
       companyId: 1001,

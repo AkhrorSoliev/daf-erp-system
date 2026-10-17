@@ -88,7 +88,7 @@ export function untouchedWhere(
 /**
  * A lead held now: owned, not archived, not converted, in the scope or with
  * no branch (a branch-less lead is everyone's, as on the board). Shared by
- * `summary` and the KPI page (ADR-0095), so «band lid» means one thing.
+ * `summary` and the KPI page (ADR-0096), so «band lid» means one thing.
  */
 export function liveOwnedLeadWhere(
   companyId: number,

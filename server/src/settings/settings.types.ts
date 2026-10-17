@@ -362,7 +362,7 @@ export const SETTING_DEFINITIONS: {
     parse: (raw) => parseIntInRange('leads.followUpDays', raw, 1, 14),
     companyLevelOnly: true,
   },
-  // Admin KPI (ADR-0095): read by `KpiSettingsService` per company; the CEO
+  // Admin KPI (ADR-0096): read by `KpiSettingsService` per company; the CEO
   // changes them on Sozlamalar → «KPI sozlamalari» (`PATCH /kpi/settings`).
   'kpi.enabled': {
     key: 'kpi.enabled',

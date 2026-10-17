@@ -1941,7 +1941,7 @@ describe('LeadsService', () => {
       expect(students.create).not.toHaveBeenCalled();
     });
 
-    it('marks a lead that opened a new student NEW_STUDENT (ADR-0095)', async () => {
+    it('marks a lead that opened a new student NEW_STUDENT (ADR-0096)', async () => {
       prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
       students.create.mockResolvedValue({ id: 10007 });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
