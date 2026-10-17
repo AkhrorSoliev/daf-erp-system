@@ -1,4 +1,6 @@
 import type { EnrollmentStatusEvent } from '../../students/shared/enrollment-status-on';
+import type { Heat } from './center-heat';
+import type { HeatInsight } from './heat-insight';
 
 export const WEEK_DAYS = [
   'monday',
@@ -83,4 +85,55 @@ export interface CenterFacts {
   rooms: RoomFact[];
   groups: GroupFact[];
   courses: Map<string, CourseFact>;
+}
+
+export interface OverviewBranch {
+  id: number;
+  name: string;
+  rooms: number;
+}
+export interface RoomRow {
+  id: string;
+  name: string;
+  branchId: number;
+  branchName: string;
+  capacity: number | null;
+  groupCount: number;
+  lessonHours: number;
+  occupancyPct: number | null;
+}
+export interface GroupRow {
+  id: string;
+  name: string;
+  courseName: string;
+  branchId: number;
+  days: WeekDay[];
+  start: string | null;
+  end: string | null;
+  enrolled: number;
+  capacity: number;
+  free: number;
+  overfull: boolean;
+}
+export interface CenterOverview {
+  month: string;
+  /** ISO instant the figures are read at. */
+  asOf: string;
+  current: boolean;
+  /** Branches that have a room at `asOf`, by name. */
+  branches: OverviewBranch[];
+  cards: {
+    occupancyPct: number | null;
+    lessonHoursPerWeek: number;
+    /** null when the branches work in different windows. */
+    workWindow: { start: string; end: string } | null;
+    seats: { pct: number | null; enrolled: number; capacity: number };
+    free: { seats: number; revenue: number };
+  };
+  heat: { branchId: number; heat: Heat; insight: HeatInsight } | null;
+  rooms: RoomRow[];
+  /** Only groups with free seats, most free first. */
+  groups: GroupRow[];
+  months: { month: string; pct: number | null }[];
+  notes: { deletedLater: number; unplaced: number };
 }
