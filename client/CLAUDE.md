@@ -824,6 +824,12 @@ The financial section lives under `/payments/*` with these sub-pages:
 - URL keys (`ATTENDANCE_SCHEMA`): `preset`, `startDate`, `endDate`, `cut` (`group|teacher|course`), `page`, `pageSize`. The old `att_*` keys are not read; an unknown value falls back to its default. The page reads the Tashkent day on every render, so the query key changes when the month rolls over.
 - One request (`GET /reports/attendance-stats/overview`) answers every block; the client computes no figure (`pctText` only rounds the server's one-decimal rate; tones: below 80 `warning`, below 75 `danger`). The server pages the cut and clamps a page past the end; the URL follows its `page`. The page has no branch picker of its own: it follows the header. The old components (filter panel, KPI cards, diagnostics, dual-axis trend, status pie, rankings tabs, three tables, `metric-helpers.ts`) were deleted.
 
+### Bot report (`/reports/bot`, ADR-0105)
+
+- «Bot hisoboti» in `reports-nav.ts` (`permission: "reports.students"`: CEO and Branch Director). Files in `components/reports/bot/`: `bot-report-client.tsx` (the page: `MonthStepper`, the gate-off alert, cards, table), `bot-report-cards.tsx`, `bot-report-table.tsx`, `bot-report-url.ts`, `bot-report-format.ts` (pure, vitest), `bot-report-queries.ts`, `bot-report-types.ts`.
+- URL keys (`BOT_SCHEMA`): `oy` (empty = the current Tashkent month, 2026-05 …), `page`, `pageSize` (10–50). The old `?month=` is not read and there is no «Butun davr».
+- Two requests: `GET /telegram/channel-report/summary?month=` (the three cohort cards + the standing figures) and `…/list?month=&page=&pageSize=` (the cohort, `state` per row). Every number and every row state is the server's; the client only formats.
+
 ### Lesson ratings (`/reports/dars-baholari`, ADR-0091)
 
 - CEO only, by identity: the report item has `forRoles: [1]` (`reports-nav.ts`; `canEnterReports(can, roleIds)` / `canOpenReportPath(can, pathname, roleIds)` take the user's role ids), the teacher profile's «Baholar» tab is drawn for `isCeoUser(user)`. The server refuses everyone else (`@CeoOnly()`).

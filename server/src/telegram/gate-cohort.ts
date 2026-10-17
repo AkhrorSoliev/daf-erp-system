@@ -35,6 +35,8 @@ export interface GateRowTimes {
  * The ONE reading of a gate row. `joinedAt` is the FIRST join and
  * `recordJoined` only clears `leftAt` on a return, so a member who left,
  * was blocked and came back has `joinedAt < blockedAt` and no `leftAt`.
+ * Known limit: if such a member then leaves again (`leftAt` after the block)
+ * they read as `waiting`, so `joined` and `left` can be undercounted.
  */
 export function classifyGateRow(row: GateRowTimes): GateState {
   if (!row.joinedAt) return 'waiting';
