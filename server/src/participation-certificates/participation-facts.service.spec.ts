@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { AttendanceStatus } from '@prisma/client';
+import { AttendanceStatus, PlannedAbsenceKind } from '@prisma/client';
 import { ParticipationFactsService } from './participation-facts.service';
 
 type Row = {
@@ -62,6 +62,71 @@ describe('ParticipationFactsService', () => {
     await expect(
       new ParticipationFactsService(prisma as never).load(10001, 1001),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('404s for an archived student, like one of another company', async () => {
+    // A fake table: the archived card is found only when the query does not
+    // ask for `deletedAt: null`.
+    const archived = {
+      firstName: 'Madina',
+      lastName: 'Karimova',
+      dateOfBirth: null,
+    };
+    const findFirst = jest
+      .fn()
+      .mockImplementation(({ where }: { where: { deletedAt?: null } }) =>
+        Promise.resolve(where.deletedAt === null ? null : archived),
+      );
+    const prisma = makePrisma({ student: { findFirst } });
+    await expect(
+      new ParticipationFactsService(prisma as never).load(10001, 1001),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 10001,
+          companyId: 1001,
+          deletedAt: null,
+        }),
+      }),
+    );
+  });
+
+  it('scopes every query to this student and company', async () => {
+    const rows: Row[] = [
+      att('2026-07-07', AttendanceStatus.PRESENT, 'g1', group('A1-17', 'A1')),
+    ];
+    const lessons = [
+      { id: 1, unitId: 10, kind: 'SECTION_A', _count: { exercises: 3 } },
+      { id: 2, unitId: 10, kind: 'UNIT_TEST', _count: { exercises: 0 } },
+    ];
+    const prisma = makePrisma({
+      attendance: { findMany: jest.fn().mockResolvedValue(rows) },
+      dafLesson: { findMany: jest.fn().mockResolvedValue(lessons) },
+    });
+    await new ParticipationFactsService(prisma as never).load(10001, 1001);
+
+    const whereOf = (where: Record<string, unknown>) =>
+      expect.objectContaining({ where: expect.objectContaining(where) });
+    expect(prisma.student.findFirst).toHaveBeenCalledWith(
+      whereOf({ id: 10001, companyId: 1001, deletedAt: null }),
+    );
+    expect(prisma.attendance.findMany).toHaveBeenCalledWith(
+      whereOf({ studentId: 10001, companyId: 1001 }),
+    );
+    expect(prisma.plannedAbsence.findMany).toHaveBeenCalledWith(
+      whereOf({
+        studentId: 10001,
+        companyId: 1001,
+        kind: PlannedAbsenceKind.SABABSIZ,
+      }),
+    );
+    expect(prisma.dafLessonProgress.findMany).toHaveBeenCalledWith(
+      whereOf({ studentId: 10001, completedAt: { not: null } }),
+    );
+    expect(prisma.dafSession.findMany).toHaveBeenCalledWith(
+      whereOf({ studentId: 10001, passed: true, lessonId: { in: [2] } }),
+    );
   });
 
   it('reads the birth date as the Tashkent day', async () => {

@@ -34,7 +34,7 @@ export class ParticipationFactsService {
     onlyLevel?: GerLevel,
   ): Promise<StudentFacts> {
     const student = await this.prisma.student.findFirst({
-      where: { id: studentId, companyId },
+      where: { id: studentId, companyId, deletedAt: null },
       select: { firstName: true, lastName: true, dateOfBirth: true },
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
