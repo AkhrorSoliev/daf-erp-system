@@ -16,14 +16,12 @@ describe('MonthlyBillingWatchdogService', () => {
       company: { findMany: jest.fn().mockResolvedValue([{ id: 1 }]) },
     };
     monthlyChargeMock = {
-      createChargesForPeriod: jest
-        .fn()
-        .mockResolvedValue({
-          created: 0,
-          skipped: 0,
-          failed: 0,
-          totalCharged: 0,
-        }),
+      createChargesForPeriod: jest.fn().mockResolvedValue({
+        created: 0,
+        skipped: 0,
+        failed: 0,
+        totalCharged: 0,
+      }),
     };
     // Boshlang'ich qiymat (1) — qorovul har kuni ishlaydigan mavjud
     // testlar shu bilan o'zgarishsiz o'tadi.
