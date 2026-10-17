@@ -60,6 +60,15 @@ export function recordingSince(
   return s.changedAt && s.changedAt > KPI_START ? s.changedAt : KPI_START;
 }
 
+/**
+ * CEO decision 17.10.2026: a promise earns PROMISE_KEPT only when it was
+ * written on an earlier Tashkent day than the payment that kept it — a promise
+ * written moments before entering the payment proves nothing.
+ */
+export function promiseOldEnough(writtenAt: Date, paidAt: Date): boolean {
+  return tashkentDateStr(writtenAt) < tashkentDateStr(paidAt);
+}
+
 /** Spec §7.1/1: an Administrator, and neither CEO nor Branch Director. */
 export function isKpiEligible(roleNames: readonly string[]): boolean {
   return (

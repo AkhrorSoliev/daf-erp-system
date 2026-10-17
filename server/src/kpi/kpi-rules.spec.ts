@@ -5,6 +5,7 @@ import {
   isKpiEligible,
   kpiAmount,
   recordingSince,
+  promiseOldEnough,
 } from './kpi-rules';
 
 describe('KPI rules (ADR-0095)', () => {
@@ -69,5 +70,21 @@ describe('KPI rules (ADR-0095)', () => {
         baseAmount: 600_000,
       }),
     ).toBe("qat'iy summa");
+  });
+});
+
+describe('promiseOldEnough', () => {
+  const paid = new Date('2026-10-20T10:00:00+05:00');
+  it('needs an earlier Tashkent day than the payment', () => {
+    expect(promiseOldEnough(new Date('2026-10-19T23:59:00+05:00'), paid)).toBe(
+      true,
+    );
+    expect(promiseOldEnough(new Date('2026-10-20T00:00:00+05:00'), paid)).toBe(
+      false,
+    );
+    // 19:30 UTC on the 19th is already the 20th in Tashkent.
+    expect(promiseOldEnough(new Date('2026-10-19T19:30:00Z'), paid)).toBe(
+      false,
+    );
   });
 });

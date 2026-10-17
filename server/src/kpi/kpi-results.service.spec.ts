@@ -168,6 +168,7 @@ describe('KpiResultsService.recordForPayment — PROMISE_KEPT', () => {
     branchId: null as number | null,
     studentId: 10500,
     companyId: 1001,
+    createdAt: new Date('2026-10-18T09:00:00+05:00'),
   };
 
   it("credits the promise's writer, the debt at the promise as the base", async () => {
@@ -185,6 +186,7 @@ describe('KpiResultsService.recordForPayment — PROMISE_KEPT', () => {
         branchId: true,
         studentId: true,
         companyId: true,
+        createdAt: true,
       },
     });
     expect(s.prisma.kpiResult.create.mock.calls[0][0].data).toEqual({
@@ -231,6 +233,16 @@ describe('KpiResultsService.recordForPayment — PROMISE_KEPT', () => {
       async ({ where }: { where: { type?: string } }) =>
         where.type === 'PROMISE_KEPT' ? [{ promiseId: 'pr1' }] : [],
     );
+    await s.service.recordForPayment('p1');
+    expect(s.prisma.kpiResult.create).not.toHaveBeenCalled();
+  });
+
+  it('skips a promise written the same Tashkent day as the payment (CEO, 17.10.2026)', async () => {
+    const s = setupKpiResults();
+    s.prisma.lead.findMany.mockResolvedValue([]);
+    s.prisma.paymentPromise.findMany.mockResolvedValue([
+      { ...PROMISE, createdAt: new Date('2026-10-20T00:10:00+05:00') },
+    ]);
     await s.service.recordForPayment('p1');
     expect(s.prisma.kpiResult.create).not.toHaveBeenCalled();
   });

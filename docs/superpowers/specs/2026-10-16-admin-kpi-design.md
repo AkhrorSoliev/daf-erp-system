@@ -248,6 +248,10 @@ kuzatiladi, keyin 3-bosqichda shu yozuvlar oylikka o'tadi.
   maydoniga yoziladi (o'sha tranzaksiyada) — natija shu to'lovga bog'lanadi.
 - Har va'daga bitta faol natija. Baza (foiz uchun) = `−balanceAtPromise`
   (manfiy bo'lmasa — 0).
+- Va'da to'lovdan kamida bir Toshkent kuni oldin yozilgan bo'lishi shart
+  (CEO qarori 17.10.2026, `promiseOldEnough`): bugun yozilib bugun to'langan
+  va'da natija bermaydi — to'lovdan bir necha soniya oldin yozilgan va'da
+  hech narsani isbotlamaydi.
 
 **Ikkalasi uchun**
 

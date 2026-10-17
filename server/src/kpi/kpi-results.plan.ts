@@ -15,6 +15,7 @@ import {
   KPI_START,
   isKpiEligible,
   kpiAmount,
+  promiseOldEnough,
   type KpiSettings,
 } from './kpi-rules';
 
@@ -211,6 +212,7 @@ export async function planPromiseKept(
       branchId: true,
       studentId: true,
       companyId: true,
+      createdAt: true,
     },
   });
   if (promises.length === 0) return [];
@@ -228,7 +230,12 @@ export async function planPromiseKept(
   );
   const drafts: KpiDraft[] = [];
   for (const p of promises) {
-    if (done.has(p.id) || !(await eligible(p.createdById))) continue;
+    if (
+      done.has(p.id) ||
+      !promiseOldEnough(p.createdAt, payment.createdAt) ||
+      !(await eligible(p.createdById))
+    )
+      continue;
     const base = Math.max(0, -p.balanceAtPromise);
     drafts.push({
       companyId: p.companyId,

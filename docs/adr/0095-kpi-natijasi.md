@@ -10,7 +10,7 @@
 
 ## Qaror
 
-1. Natija `KpiResult` jadvaliga yoziladi, faqat `KpiResultsService` orqali. Ikki tur: `LEAD_PAID` — lid egasiga, aylanishdan keyingi birinchi `COMPLETED` to'lovda; `PROMISE_KEPT` — va'da `createdById` ga, va'dani `KEPT` qilgan to'lovda (`PaymentPromise.resolvedPaymentId`, to'lov tranzaksiyasida yoziladi).
+1. Natija `KpiResult` jadvaliga yoziladi, faqat `KpiResultsService` orqali. Ikki tur: `LEAD_PAID` — lid egasiga, aylanishdan keyingi birinchi `COMPLETED` to'lovda; `PROMISE_KEPT` — va'da `createdById` ga, va'dani `KEPT` qilgan to'lovda (`PaymentPromise.resolvedPaymentId`, to'lov tranzaksiyasida yoziladi), va'da to'lovdan kamida bir Toshkent kuni oldin yozilgan bo'lsa (CEO qarori 17.10.2026, `promiseOldEnough`: bugun yozilib bugun to'langan va'da natija bermaydi).
 2. Natija paytida Administrator roli bor va CEO hamda Filial direktori rollari yo'q xodimga yoziladi; rollar bazadan o'qiladi.
 3. `Lead.conversionKind`: `NEW_STUDENT` va `RETURNING` (bog'lash paytida o'qimayotgan eski o'quvchi) hisoblanadi; `ALREADY_STUDYING` — yo'q.
 4. Narx har tur uchun `FIXED` yoki `PERCENT` (Sozlamalar, faqat CEO). Boshlang'ich narx: lid to'lov qildi — 50 000 so'm, va'da bajarildi — 20 000 so'm (qat'iy). Summa yozilganda muhrlanadi (`ruleMode`, `ruleValue`, `baseAmount`, `amount`).
