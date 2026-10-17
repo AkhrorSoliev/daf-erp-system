@@ -1583,6 +1583,25 @@ describe('LeadsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('ignores CONVERTED leads — the board hides them, so it never sends them', async () => {
+      prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1' }]);
+
+      await service.reorder(
+        { sectionId: 'sec-1', leadIds: ['lead-1'] },
+        1001,
+        1,
+      );
+
+      expect(prisma.lead.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            sectionId: 'sec-1',
+            statusEnum: { not: 'CONVERTED' },
+          }),
+        }),
+      );
+    });
+
     it('renumbers the section leads inside a transaction', async () => {
       prisma.lead.findMany.mockResolvedValue([
         { id: 'lead-1' },

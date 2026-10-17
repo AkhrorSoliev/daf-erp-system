@@ -934,7 +934,14 @@ export class LeadsService {
     await assertCallerInBranch(this.prisma, userId, section.column.branchId);
 
     const leads = await this.prisma.lead.findMany({
-      where: { sectionId: dto.sectionId, deletedAt: null },
+      // The set the board shows (getSectionLeads hides CONVERTED leads). Counting
+      // them here made a drop into a section holding one fail with
+      // "Barcha lidlar tartibda ko‘rsatilishi kerak".
+      where: {
+        sectionId: dto.sectionId,
+        deletedAt: null,
+        statusEnum: { not: LeadStatus.CONVERTED },
+      },
       select: { id: true },
     });
     const ids = new Set(leads.map((l) => l.id));
