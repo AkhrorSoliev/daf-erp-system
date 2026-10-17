@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import {
   answerState,
@@ -36,10 +37,15 @@ export function UnmarkedLessonButtons({
   state: AnswerState;
   onPick: (dialog: Exclude<UnmarkedDialog, null>) => void;
 }) {
+  const t = useT();
   return (
     <>
-      <span className="text-xs font-semibold text-orange-800 dark:text-orange-300">Dars bo&apos;ldimi?</span>
-      {state.heldBy && <span className="text-[11px] text-muted-foreground">{state.heldBy} javob bermoqda</span>}
+      <span className="text-xs font-semibold text-orange-800 dark:text-orange-300">{t("Dars bo'ldimi?")}</span>
+      {state.heldBy && (
+        <span className="text-[11px] text-muted-foreground">
+          {t("{name} javob bermoqda", { name: state.heldBy })}
+        </span>
+      )}
       <div className="flex gap-1.5">
         <Button
           type="button"
@@ -50,7 +56,7 @@ export function UnmarkedLessonButtons({
           className="h-7 gap-1 px-2 text-xs text-green-700 dark:text-green-400"
         >
           <CheckCircle2 className="size-3.5" />
-          Bo&apos;ldi
+          {t("Bo'ldi")}
         </Button>
         <Button
           type="button"
@@ -61,7 +67,7 @@ export function UnmarkedLessonButtons({
           className="h-7 gap-1 px-2 text-xs text-red-700 dark:text-red-400"
         >
           <XCircle className="size-3.5" />
-          Bo&apos;lmadi
+          {t("Bo'lmadi")}
         </Button>
       </div>
     </>

@@ -13,37 +13,47 @@ import {
   YAxis,
 } from "recharts";
 import { ChartCard } from "@/components/shared/chart-card";
+import { useT } from "@/i18n/context";
+import { chartMonthLabel } from "./chart-months";
 import { ChartTooltip } from "./chart-tooltip";
 import { useChartTheme } from "./use-chart-theme";
 import type { ChartStudentFlowPoint } from "./dashboard-charts-types";
 
 export function ChartStudentFlow({ data }: { data: ChartStudentFlowPoint[] }) {
+  const t = useT();
   const { palette } = useChartTheme();
   const last = data[data.length - 1];
 
   // Ketganlar pastga chiziladi — «kelgan» va «ketgan» qarama-qarshi yo'nalish.
-  const shaped = data.map((d) => ({ ...d, leftNeg: -d.left }));
+  const shaped = data.map((d) => ({
+    ...d,
+    month: chartMonthLabel(d.month, t),
+    leftNeg: -d.left,
+  }));
 
   return (
     <ChartCard
-      title="O'quvchilar oqimi"
+      title={t("O'quvchilar oqimi")}
       subtitle={
         last
-          ? `Oxirgi oy: +${last.arrived} / −${last.left}, o'zgarish ${last.net > 0 ? "+" : ""}${last.net}`
+          ? t("Oxirgi oy: +{arrived} / −{left}, o'zgarish {net}", {
+              arrived: last.arrived,
+              left: last.left,
+              net: `${last.net > 0 ? "+" : ""}${last.net}`,
+            })
           : undefined
       }
-      tooltip={
-        "Oxirgi 6 oy. Yuqoriga — qo'shilganlar, pastga — ketganlar (muzlatilgan, chetlatilgan, bitirgan, arxivlangan).\n\n" +
-        "Chiziq — sof o'zgarish."
-      }
+      tooltip={t(
+        "Oxirgi 6 oy. Yuqoriga — qo'shilganlar, pastga — ketganlar (muzlatilgan, chetlatilgan, bitirgan, arxivlangan).\n\nChiziq — sof o'zgarish.",
+      )}
       isEmpty={data.length === 0}
-      emptyMessage="Bu davrda o'quvchi harakati yo'q"
+      emptyMessage={t("Bu davrda o'quvchi harakati yo'q")}
       headerAction={
         <Link
           href="/reports/departed-students"
           className="text-xs text-muted-foreground underline-offset-4 hover:underline"
         >
-          Batafsil
+          {t("Batafsil")}
         </Link>
       }
     >
@@ -75,14 +85,14 @@ export function ChartStudentFlow({ data }: { data: ChartStudentFlowPoint[] }) {
             />
             <Bar
               dataKey="arrived"
-              name="Qo'shildi"
+              name={t("Qo'shildi")}
               fill={palette.series1}
               radius={[4, 4, 0, 0]}
               maxBarSize={22}
             />
             <Bar
               dataKey="leftNeg"
-              name="Ketdi"
+              name={t("Ketdi")}
               fill={palette.series2}
               radius={[0, 0, 4, 4]}
               maxBarSize={22}
@@ -90,7 +100,7 @@ export function ChartStudentFlow({ data }: { data: ChartStudentFlowPoint[] }) {
             <Line
               type="monotone"
               dataKey="net"
-              name="Sof o'zgarish"
+              name={t("Sof o'zgarish")}
               stroke={palette.series3}
               strokeWidth={2}
               dot={{ r: 3, strokeWidth: 0, fill: palette.series3 }}

@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -33,6 +34,7 @@ interface NotHeldDialogProps {
 
 /** «Bo'lmadi» — cancel (money back) or move to a later lesson (spec §3.5). */
 export function NotHeldDialog({ open, onOpenChange, lesson, onDone }: NotHeldDialogProps) {
+  const t = useT();
   const [reason, setReason] = useState("");
   const [action, setAction] = useState<Action>("CANCEL");
   const [newDate, setNewDate] = useState<Date | undefined>();
@@ -46,11 +48,11 @@ export function NotHeldDialog({ open, onOpenChange, lesson, onDone }: NotHeldDia
     action !== "RESCHEDULE"
       ? null
       : !newDateStr || !startTime || !endTime
-        ? "Qo'shimcha dars sanasi va vaqtini tanlang"
+        ? t("Qo'shimcha dars sanasi va vaqtini tanlang")
         : endTime <= startTime
-          ? "Tugash vaqti boshlanishdan keyin bo'lishi kerak"
+          ? t("Tugash vaqti boshlanishdan keyin bo'lishi kerak")
           : !makeUpIsAhead(newDateStr, startTime, now)
-            ? "Qo'shimcha dars hali boshlanmagan bo'lishi kerak"
+            ? t("Qo'shimcha dars hali boshlanmagan bo'lishi kerak")
             : null;
   const canSubmit = reason.trim().length > 0 && makeUpProblem === null && !submitting;
 
@@ -79,12 +81,14 @@ export function NotHeldDialog({ open, onOpenChange, lesson, onDone }: NotHeldDia
           : {}),
       });
       toast.success(
-        action === "CANCEL" ? "Dars bekor qilindi, o'quvchilarga pul qaytarildi" : "Dars boshqa kunga ko'chirildi",
+        action === "CANCEL"
+          ? t("Dars bekor qilindi, o'quvchilarga pul qaytarildi")
+          : t("Dars boshqa kunga ko'chirildi"),
       );
       reset();
       onDone();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -114,7 +118,7 @@ export function NotHeldDialog({ open, onOpenChange, lesson, onDone }: NotHeldDia
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>Dars bo&apos;lmadi</DialogTitle>
+          <DialogTitle>{t("Dars bo'lmadi")}</DialogTitle>
           <DialogDescription>
             {lesson.groupName}, {formatLessonDay(lesson.date)}
             {time}
@@ -125,12 +129,12 @@ export function NotHeldDialog({ open, onOpenChange, lesson, onDone }: NotHeldDia
           <Textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Nega bo'lmadi? (majburiy)"
+            placeholder={t("Nega bo'lmadi? (majburiy)")}
             maxLength={500}
           />
           <div className="flex flex-col gap-2 sm:flex-row">
-            {choice("CANCEL", "Bekor qilish", "O'quvchilarga pul qaytadi", Undo2)}
-            {choice("RESCHEDULE", "Boshqa kunga ko'chirish", "Qo'shimcha dars, pul qaytmaydi", CalendarClock)}
+            {choice("CANCEL", t("Darsni bekor qilish"), t("O'quvchilarga pul qaytadi"), Undo2)}
+            {choice("RESCHEDULE", t("Boshqa kunga ko'chirish"), t("Qo'shimcha dars, pul qaytmaydi"), CalendarClock)}
           </div>
           {action === "RESCHEDULE" && (
             <div className="space-y-2">
@@ -138,11 +142,11 @@ export function NotHeldDialog({ open, onOpenChange, lesson, onDone }: NotHeldDia
                 value={newDate}
                 onChange={setNewDate}
                 minDate={new Date(`${now.dateStr}T00:00:00`)}
-                placeholder="Qo'shimcha dars sanasi"
+                placeholder={t("Qo'shimcha dars sanasi")}
               />
               <div className="grid grid-cols-2 gap-2">
-                <TimePicker value={startTime} onChange={setStartTime} placeholder="Boshlanishi" />
-                <TimePicker value={endTime} onChange={setEndTime} placeholder="Tugashi" />
+                <TimePicker value={startTime} onChange={setStartTime} placeholder={t("Boshlanishi")} />
+                <TimePicker value={endTime} onChange={setEndTime} placeholder={t("Tugashi")} />
               </div>
               {makeUpProblem && <p className="text-xs text-amber-700 dark:text-amber-400">{makeUpProblem}</p>}
             </div>
@@ -151,11 +155,11 @@ export function NotHeldDialog({ open, onOpenChange, lesson, onDone }: NotHeldDia
 
         <DialogFooter className="border-t px-6 py-4">
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>
-            Yopish
+            {t("Yopish")}
           </Button>
           <Button onClick={submit} disabled={!canSubmit}>
             {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>

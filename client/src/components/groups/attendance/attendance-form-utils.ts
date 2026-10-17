@@ -5,6 +5,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { msg } from "@/i18n/msg";
 import { formatShortDate, MONTH_NAMES } from "./attendance-cycle-utils";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
@@ -148,7 +149,7 @@ export interface StatusOption {
 export const STATUS_CONFIG: StatusOption[] = [
   {
     value: "PRESENT",
-    label: "Keldi",
+    label: msg("Keldi"),
     icon: Check,
     color:
       "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30",
@@ -158,7 +159,7 @@ export const STATUS_CONFIG: StatusOption[] = [
   },
   {
     value: "ABSENT",
-    label: "Kelmadi",
+    label: msg("Kelmadi"),
     icon: X,
     color:
       "border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30",
@@ -169,7 +170,7 @@ export const STATUS_CONFIG: StatusOption[] = [
   },
   {
     value: "LATE",
-    label: "Kechikdi",
+    label: msg("Kechikdi"),
     icon: AlarmClock,
     color:
       "border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30",
@@ -180,7 +181,7 @@ export const STATUS_CONFIG: StatusOption[] = [
   },
   {
     value: "EXCUSED",
-    label: "Sababli",
+    label: msg("Sababli"),
     icon: ShieldCheck,
     color:
       "border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30",

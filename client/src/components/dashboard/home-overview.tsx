@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useT } from "@/i18n/context";
 import { resolveHomeSections } from "./dashboard-home-visibility";
 import type { DashboardSummary } from "./dashboard-summary-types";
 import { HomeAttentionList } from "./home-attention-list";
@@ -28,6 +29,7 @@ import { HomeSkeleton } from "./home-skeleton";
  * yetarli emas — API'ni to'g'ridan-to'g'ri chaqirish mumkin.
  */
 export function HomeOverview() {
+  const t = useT();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const can = usePermissions((s) => s.can);
@@ -62,14 +64,14 @@ export function HomeOverview() {
         (data.money ? (
           <HomeMoneyCards money={data.money} />
         ) : failed("money") ? (
-          <HomeErrorNote label="Moliya" />
+          <HomeErrorNote label={t("Moliya")} />
         ) : null)}
 
       {sections.people &&
         (data.people ? (
           <HomePeopleStats people={data.people} />
         ) : failed("people") ? (
-          <HomeErrorNote label="O'quvchilar" />
+          <HomeErrorNote label={t("O'quvchilar")} />
         ) : null)}
 
       {sections.leadFunnel && (
@@ -88,14 +90,14 @@ export function HomeOverview() {
                 includeOutreach={sections.attentionOutreachRows}
               />
             ) : failed("attention") ? (
-              <HomeErrorNote label="E'tibor ro'yxati" />
+              <HomeErrorNote label={t("E'tibor ro'yxati")} />
             ) : null}
           </div>
         )}
         {sections.nextLessons && (
           <div className="lg:col-span-2">
             {failed("nextLessons") ? (
-              <HomeErrorNote label="Jadval" />
+              <HomeErrorNote label={t("Jadval")} />
             ) : (
               <HomeNextLessons lessons={data.nextLessons} />
             )}
