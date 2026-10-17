@@ -31,6 +31,10 @@ describe('SETTING_DEFINITIONS registry', () => {
         'kpi.leadPaid.value',
         'kpi.promiseKept.mode',
         'kpi.promiseKept.value',
+        'participation.minAttendancePercent',
+        'participation.minAppPercent.A1',
+        'participation.minAppPercent.A2',
+        'participation.minAppPercent.B1',
       ].sort(),
     );
   });
