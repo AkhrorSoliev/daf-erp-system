@@ -1,4 +1,5 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { BranchScope, CurrentUser } from '../../common/decorators';
 import type { ReportBranchIds } from '../../common/finance/report-branch-scope';
 import { Can } from '../../common/permissions/access.decorators';
@@ -23,5 +24,24 @@ export class CenterActivityController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.service.overview(companyId, scope, q);
+  }
+
+  /** The workbook of the same month (same scope, no page). */
+  @Get('excel')
+  @Can('reports.students')
+  async excel(
+    @Query() q: CenterActivityQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+    @Res() res: Response,
+  ) {
+    const { buffer, filename } = await this.service.excel(companyId, scope, q);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
   }
 }

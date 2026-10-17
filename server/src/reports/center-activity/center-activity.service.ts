@@ -3,7 +3,10 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
-import { tashkentMonthRangeUtc } from '../../common/date/tashkent';
+import {
+  tashkentMonthKey,
+  tashkentMonthRangeUtc,
+} from '../../common/date/tashkent';
 import {
   isEmptyScope,
   type ReportBranchIds,
@@ -15,6 +18,9 @@ import {
   parseCenterMonth,
 } from './center-activity-period';
 import { CenterFactsLoader } from './center-facts.loader';
+import { centerActivityWorkbook } from './center-activity.excel';
+import { buildHeat } from './center-heat';
+import { evaluateCenter } from './center-metrics';
 import { buildOverview } from './center-overview';
 import type { CenterActivityQueryDto } from './dto/center-activity-query.dto';
 
@@ -52,6 +58,32 @@ export class CenterActivityService {
       if (e instanceof RangeError) return buildOverview(facts, month, now);
       throw e;
     }
+  }
+
+  /** `GET /reports/center-activity/excel`: the page's figures, every branch's free-rooms table, every open group. */
+  async excel(
+    companyId: number,
+    scope: ReportBranchIds,
+    q: CenterActivityQueryDto,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const { facts, month, now } = await this.read(companyId, scope, q);
+    const overview = buildOverview(facts, month, now);
+    const ev = evaluateCenter(
+      facts,
+      asOfForMonth(month, now),
+      month === tashkentMonthKey(now),
+    );
+    const heats = overview.branches.map((b) => ({
+      branchName: b.name,
+      heat: buildHeat(ev.rooms.filter((r) => r.branchId === b.id)),
+    }));
+    const buffer = await centerActivityWorkbook({
+      month,
+      overview,
+      groups: ev.groups,
+      heats,
+    });
+    return { buffer, filename: `markaz-faoliyati-${month}.xlsx` };
   }
 
   /** The facts for the month and the bars before it — shared by the page and the Excel. */

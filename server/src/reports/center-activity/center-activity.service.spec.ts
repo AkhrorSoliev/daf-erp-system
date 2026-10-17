@@ -113,4 +113,18 @@ describe('CenterActivityService', () => {
     });
     expect(out.heat?.branchId).toBe(2);
   });
+
+  it('excel builds the workbook of the month and names the file after it', async () => {
+    const out = await service.excel(1001, [1], { oy: '2026-09' });
+    expect(out.filename).toBe('markaz-faoliyati-2026-09.xlsx');
+    expect(out.buffer.length).toBeGreaterThan(0);
+    expect(loader.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('excel refuses an empty scope before reading anything', async () => {
+    await expect(service.excel(1001, [], {})).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(loader.load).not.toHaveBeenCalled();
+  });
 });
