@@ -401,11 +401,7 @@ describe('branch scope coverage — marketing', () => {
     const service = new ReportsMarketingService(
       prisma as never,
       { getMonthCharges: jest.fn().mockResolvedValue(null) } as never,
-      {
-        getDepartedStudentsSummary: jest
-          .fn()
-          .mockResolvedValue({ avgDurationMonths: 0 }),
-      } as never,
+      { averageStudyMonths: jest.fn().mockResolvedValue(0) } as never,
       { getSourceBreakdown: jest.fn().mockResolvedValue([]) } as never,
     );
 

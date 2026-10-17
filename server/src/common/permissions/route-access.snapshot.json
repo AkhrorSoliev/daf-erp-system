@@ -827,28 +827,12 @@
     "CEO",
     "Cashier"
   ],
-  "GET /reports/departed-students/by-reason": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/departed-students/by-status": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
   "GET /reports/departed-students/departed-after-change": [
     "Administrator",
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/departed-students/dynamics": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/departed-students/group-by": [
-    "Administrator",
+  "GET /reports/departed-students/excel": [
     "Branch Director",
     "CEO"
   ],
@@ -857,13 +841,7 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/departed-students/reasons": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/departed-students/summary": [
-    "Administrator",
+  "GET /reports/departed-students/overview": [
     "Branch Director",
     "CEO"
   ],
@@ -873,16 +851,6 @@
     "CEO"
   ],
   "GET /reports/departed-students/teacher-changes-list": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/departed-students/transfer-reasons": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/departed-students/transferred-list": [
     "Administrator",
     "Branch Director",
     "CEO"

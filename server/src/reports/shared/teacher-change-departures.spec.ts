@@ -655,4 +655,40 @@ describe('loadTeacherChangeDepartures', () => {
 
     expect(rows).toEqual([]);
   });
+
+  describe('groupFilter', () => {
+    const queriedGroupWhere = async (groupFilter?: {
+      courseIds?: string[];
+      teacherIds?: number[];
+    }) => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      await loadTeacherChangeDepartures(
+        { groupTeacherHistory: { findMany } } as unknown as PrismaService,
+        COMPANY,
+        { ...RANGE, groupFilter },
+      );
+      return (findMany.mock.calls[0][0] as Row).where as Row;
+    };
+
+    it('narrows the groups by course and by teacher when a filter is given', async () => {
+      const where = await queriedGroupWhere({
+        courseIds: ['c1'],
+        teacherIds: [30001],
+      });
+      expect(where.group).toEqual({
+        companyId: COMPANY,
+        deletedAt: null,
+        courseId: { in: ['c1'] },
+        teachers: { some: { teacherId: { in: [30001] } } },
+      });
+    });
+
+    it('leaves the group condition as it was without a filter', async () => {
+      const where = await queriedGroupWhere();
+      expect(where.group).toEqual({ companyId: COMPANY, deletedAt: null });
+      expect(
+        (await queriedGroupWhere({ courseIds: [], teacherIds: [] })).group,
+      ).toEqual({ companyId: COMPANY, deletedAt: null });
+    });
+  });
 });

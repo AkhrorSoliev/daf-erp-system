@@ -6,7 +6,7 @@ describe('ReportsMarketingService', () => {
     expense: { findMany: jest.fn() },
   };
   const financial = { getMonthCharges: jest.fn() };
-  const departed = { getDepartedStudentsSummary: jest.fn() };
+  const departed = { averageStudyMonths: jest.fn() };
   const leadFunnel = { getSourceBreakdown: jest.fn() };
   const service = new ReportsMarketingService(
     prisma as never,
@@ -56,9 +56,7 @@ describe('ReportsMarketingService', () => {
       students: 10,
       unpaidStudents: 0,
     });
-    departed.getDepartedStudentsSummary.mockResolvedValue({
-      avgDurationMonths: 3.4,
-    });
+    departed.averageStudyMonths.mockResolvedValue(3.4);
     leadFunnel.getSourceBreakdown.mockResolvedValue([
       { source: 'Instagram', leads: 12, students: 3, rate: 25 },
     ]);
@@ -153,8 +151,7 @@ describe('ReportsMarketingService', () => {
       },
       select: { date: true, amount: true },
     });
-    expect(departed.getDepartedStudentsSummary).toHaveBeenCalledWith(1001, {
-      scope: [4],
+    expect(departed.averageStudyMonths).toHaveBeenCalledWith(1001, [4], {
       startDate: '2026-10-01',
       endDate: '2026-10-31',
     });
