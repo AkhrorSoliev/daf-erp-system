@@ -4,6 +4,7 @@ import {
   MockExamStatus,
   PlannedAbsenceKind,
 } from '@prisma/client';
+import { RESULTS_AUDIENCE } from '../mock-exams/mock-results-audience';
 import { ParticipationFactsService } from './participation-facts.service';
 
 type Row = {
@@ -281,7 +282,7 @@ describe('ParticipationFactsService', () => {
     expect(prisma.dafLesson.findMany).not.toHaveBeenCalled();
   });
 
-  it('adds the latest mock result of the level, only from an announced exam', async () => {
+  it('adds the latest mock result of the level, only from an announced exam, for the results audience', async () => {
     const rows: Row[] = [
       att('2026-07-07', AttendanceStatus.PRESENT, 'g1', group('A1-17', 'A1')),
     ];
@@ -318,6 +319,8 @@ describe('ParticipationFactsService', () => {
             status: { in: [MockExamStatus.ANNOUNCED, MockExamStatus.ARCHIVED] },
             deletedAt: null,
           },
+          // Only a participant who paid (or owes nothing) gets a result printed.
+          AND: [RESULTS_AUDIENCE],
         }),
       }),
     );

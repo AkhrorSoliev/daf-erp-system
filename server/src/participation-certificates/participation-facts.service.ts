@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { tashkentDateStr } from '../common/date/tashkent';
 import { storedBirthDay } from '../contract-documents/contract-fields';
+import { RESULTS_AUDIENCE } from '../mock-exams/mock-results-audience';
 import {
   GER_LEVELS,
   isAppLevel,
@@ -192,10 +193,11 @@ export class ParticipationFactsService {
   }
 
   /**
-   * The latest mock result of the level from an exam whose results were
+   * The latest mock result of the level, from an exam whose results were
    * announced to students (ANNOUNCED, or ARCHIVED, which is reachable only
-   * from ANNOUNCED); none when the participant is not linked to the card. An
-   * exam still in grading can change its scores, and the snapshot is sealed.
+   * from ANNOUNCED), of a participant in the results audience; none when the
+   * participant is not linked to the card. An exam still in grading can change
+   * its scores, and the snapshot is sealed.
    */
   private async mockFor(
     studentId: number,
@@ -211,6 +213,8 @@ export class ParticipationFactsService {
           status: { in: [MockExamStatus.ANNOUNCED, MockExamStatus.ARCHIVED] },
           deletedAt: null,
         },
+        // The CEO's standing rule (25.09): only a participant who paid, or owes nothing, gets a result.
+        AND: [RESULTS_AUDIENCE],
         level: { equals: level, mode: 'insensitive' },
         totalScore: { not: null },
         gradedAt: { not: null },
