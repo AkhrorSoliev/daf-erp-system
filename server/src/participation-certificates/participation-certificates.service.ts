@@ -33,6 +33,19 @@ const TX_OPTIONS = {
   timeout: 15_000,
 };
 
+const UUID_SHAPE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Postgres raises on a NUL byte (%00) and on text that is not a uuid, which
+ * would surface as a 500. A malformed id cannot name a document, so it gets the
+ * same 404 as a missing row: the public page maps a 404 to «Hujjat topilmadi»
+ * and anything else to its outage card.
+ */
+function assertCertificateId(id: string): void {
+  if (!UUID_SHAPE.test(id)) throw new NotFoundException('Hujjat topilmadi');
+}
+
 interface IssuedRow {
   id: string;
   number: string;
@@ -204,6 +217,7 @@ export class ParticipationCertificatesService {
     companyId: number,
     id: string,
   ): Promise<{ buffer: Buffer; filename: string }> {
+    assertCertificateId(id);
     const row = await this.prisma.participationCertificate.findFirst({
       where: { id, companyId },
       select: {
@@ -232,6 +246,7 @@ export class ParticipationCertificatesService {
 
   /** The public QR answer: no branch, no birth date, no percentages. */
   async verify(id: string): Promise<VerifyView> {
+    assertCertificateId(id);
     const row = await this.prisma.participationCertificate.findFirst({
       where: { id },
       select: {

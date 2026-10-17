@@ -106,6 +106,10 @@ function make(
 
 beforeEach(() => jest.clearAllMocks());
 
+/** A well-formed certificate id (the id column is a uuid). */
+const CERT_ID = '3f2b8c1e-5a47-4d9e-8b6a-0c1d2e3f4a5b';
+const OTHER_ID = '9a8b7c6d-1e2f-4a3b-9c4d-5e6f7a8b9c0d';
+
 /**
  * The exemption door reads the caller from the DATABASE (ADR-0028): a live
  * account (not archived, not SUSPENDED / TERMINATED / ARCHIVED) that holds the
@@ -348,15 +352,28 @@ describe('verify', () => {
   it('404s for an unknown id', async () => {
     const { service, prisma } = make();
     prisma.participationCertificate.findFirst.mockResolvedValue(null);
-    await expect(service.verify('nope')).rejects.toBeInstanceOf(
+    await expect(service.verify(OTHER_ID)).rejects.toBeInstanceOf(
       NotFoundException,
     );
+    expect(prisma.participationCertificate.findFirst).toHaveBeenCalledTimes(1);
   });
+
+  it.each(['\u0000', 'abc\u0000def', 'not-a-uuid', '', '3f2b8c1e'])(
+    '404s with the same text, and never asks the database, for the malformed id %j',
+    async (bad) => {
+      const { service, prisma } = make();
+      const err = await service.verify(bad).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(NotFoundException);
+      expect((err as NotFoundException).message).toBe('Hujjat topilmadi');
+      expect(prisma.participationCertificate.findFirst).not.toHaveBeenCalled();
+      expect(prisma.company.findFirst).not.toHaveBeenCalled();
+    },
+  );
 
   it('shows only what the public page may show', async () => {
     const { service, prisma } = make();
     prisma.participationCertificate.findFirst.mockResolvedValue(row());
-    expect(await service.verify('uuid-1')).toEqual({
+    expect(await service.verify(CERT_ID)).toEqual({
       valid: true,
       revoked: false,
       number: 'TB-2026-0001',
@@ -374,7 +391,7 @@ describe('verify', () => {
     prisma.participationCertificate.findFirst.mockResolvedValue(
       row({ revokedAt: new Date('2026-10-18T00:00:00.000Z') }),
     );
-    expect(await service.verify('uuid-1')).toMatchObject({
+    expect(await service.verify(CERT_ID)).toMatchObject({
       valid: false,
       revoked: true,
     });
@@ -385,13 +402,13 @@ describe('pdf', () => {
   it('checks the student branch and renders from the stored snapshot, QR to the public page', async () => {
     const { service, prisma } = make();
     prisma.participationCertificate.findFirst.mockResolvedValue({
-      id: 'uuid-1',
+      id: CERT_ID,
       studentId: 10001,
       number: 'TB-2026-0001',
       issuedAt: new Date('2026-10-17T07:00:00.000Z'),
       snapshot: { version: 1 },
     });
-    const out = await service.pdf(7, 1001, 'uuid-1');
+    const out = await service.pdf(7, 1001, CERT_ID);
     expect(assertCallerMayTouchStudent).toHaveBeenCalledWith(
       expect.anything(),
       7,
@@ -402,7 +419,7 @@ describe('pdf', () => {
       snapshot: { version: 1 },
       number: 'TB-2026-0001',
       issuedAt: new Date('2026-10-17T07:00:00.000Z'),
-      url: 'https://admin.dafzentrum.uz/t/uuid-1',
+      url: `https://admin.dafzentrum.uz/t/${CERT_ID}`,
     });
     expect(out.filename).toBe('TB-2026-0001.pdf');
     expect(out.buffer.subarray(0, 4).toString()).toBe('%PDF');
@@ -411,11 +428,23 @@ describe('pdf', () => {
   it('404s for a certificate of another company', async () => {
     const { service, prisma } = make();
     prisma.participationCertificate.findFirst.mockResolvedValue(null);
-    await expect(service.pdf(7, 1001, 'x')).rejects.toBeInstanceOf(
+    await expect(service.pdf(7, 1001, OTHER_ID)).rejects.toBeInstanceOf(
       NotFoundException,
     );
     expect(prisma.participationCertificate.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'x', companyId: 1001 } }),
+      expect.objectContaining({ where: { id: OTHER_ID, companyId: 1001 } }),
     );
   });
+
+  it.each(['\u0000', 'abc\u0000def', 'not-a-uuid', ''])(
+    '404s with the same text, and never asks the database, for the malformed id %j',
+    async (bad) => {
+      const { service, prisma } = make();
+      const err = await service.pdf(7, 1001, bad).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(NotFoundException);
+      expect((err as NotFoundException).message).toBe('Hujjat topilmadi');
+      expect(prisma.participationCertificate.findFirst).not.toHaveBeenCalled();
+      expect(assertCallerMayTouchStudent).not.toHaveBeenCalled();
+    },
+  );
 });
