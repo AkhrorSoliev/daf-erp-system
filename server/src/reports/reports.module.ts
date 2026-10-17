@@ -11,8 +11,6 @@ import { ReportsFinancialService } from './reports-financial.service';
 import { ReportsDebtHistoryService } from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
-import { ReportsDepartedStudentsService } from './reports-departed-students.service';
-import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
 import { CenterActivityController } from './center-activity/center-activity.controller';
@@ -27,6 +25,9 @@ import { ReportsExpectationHistoryService } from './reports-expectation-history.
 import { ReportsStudentFlowService } from './reports-student-flow.service';
 import { GroupPaymentsController } from './group-payments/group-payments.controller';
 import { GroupPaymentsService } from './group-payments/group-payments.service';
+import { DepartedController } from './departed/departed.controller';
+import { DepartedOverviewService } from './departed/departed-overview.service';
+import { DepartedListService } from './departed/departed-list.service';
 import { ReportsProfitCompositionService } from './reports-profit-composition.service';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { ExpensesModule } from '../expenses/expenses.module';
@@ -41,6 +42,7 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsMarketingController,
     GroupPaymentsController,
     CenterActivityController,
+    DepartedController,
   ],
   providers: [
     ReportsService,
@@ -50,8 +52,6 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsDebtHistoryService,
     ReportsPaymentsService,
     ReportsStudentPaymentsService,
-    ReportsDepartedStudentsService,
-    ReportsDepartedListsService,
     ReportsDepartedReasonsService,
     ReportsTeacherChangesService,
     CenterActivityService,
@@ -67,6 +67,8 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsProfitCompositionService,
     ReportsMarketingService,
     GroupPaymentsService,
+    DepartedOverviewService,
+    DepartedListService,
   ],
   // Exposed so the Telegram admin bot's report menu can generate the same
   // financial Excel workbook + in-chat summary the /payments panel uses.

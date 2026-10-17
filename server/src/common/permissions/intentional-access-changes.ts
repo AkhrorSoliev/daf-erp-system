@@ -23,35 +23,11 @@ const OWN_SALARY =
   "The caller's own salary (`@CurrentUser('id')`); a cashier on payroll may read it like any staff member.";
 
 export const INTENTIONAL_ACCESS_CHANGES: Record<string, AccessChange> = {
-  'GET /reports/departed-students/by-reason': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/by-status': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
   'GET /reports/departed-students/departed-after-change': {
     remove: ['Administrator'],
     reason: DEPARTED,
   },
-  'GET /reports/departed-students/dynamics': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/group-by': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
   'GET /reports/departed-students/list': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/reasons': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/summary': {
     remove: ['Administrator'],
     reason: DEPARTED,
   },
@@ -60,14 +36,6 @@ export const INTENTIONAL_ACCESS_CHANGES: Record<string, AccessChange> = {
     reason: DEPARTED,
   },
   'GET /reports/departed-students/teacher-changes-list': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/transfer-reasons': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/transferred-list': {
     remove: ['Administrator'],
     reason: DEPARTED,
   },

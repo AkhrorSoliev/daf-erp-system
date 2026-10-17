@@ -93,7 +93,7 @@ describe('departed-students drill-downs — filters reach the database as lists'
       providers: [
         {
           provide: ReportsService,
-          // The facade only forwards these two; everything under test happens
+          // The facade only forwards this one; everything under test happens
           // before it (route typing, DTO, pipe) or after it (the service).
           useValue: {
             getTeacherChangesList: (
@@ -101,11 +101,6 @@ describe('departed-students drill-downs — filters reach the database as lists'
                 ReportsTeacherChangesService['getTeacherChangesList']
               >
             ) => teacherChanges.getTeacherChangesList(...args),
-            getTransferredList: (
-              ...args: Parameters<
-                ReportsTeacherChangesService['getTransferredList']
-              >
-            ) => teacherChanges.getTransferredList(...args),
           },
         },
         { provide: PrismaService, useValue: {} },
@@ -191,36 +186,6 @@ describe('departed-students drill-downs — filters reach the database as lists'
       expect(queries).toEqual([]);
     });
   });
-
-  describe('GET /reports/departed-students/transferred-list', () => {
-    const URL = '/reports/departed-students/transferred-list';
-
-    it('filters by the picked course and teacher, and pages as asked', async () => {
-      const res = await get(URL, {
-        ...RANGE,
-        courseId: COURSE_A,
-        teacherIds: '5',
-        page: '2',
-        pageSize: '20',
-        transferReasonId: 'null',
-      });
-
-      expect(res.status).toBe(200);
-      const args = argsOf('enrollment.findMany');
-      expect(args.where).toEqual({
-        deletedAt: null,
-        student: { companyId: 1001, deletedAt: null },
-        group: {
-          courseId: COURSE_A,
-          teachers: { some: { teacherId: { in: [5] } } },
-        },
-        status: 'TRANSFERRED',
-        statusChangedAt: RANGE_UTC,
-        transferReasonId: null,
-      });
-      expect(args).toMatchObject({ skip: 20, take: 20 });
-    });
-  });
 });
 
 describe('ReportsController — every whole-query parameter is validated', () => {
@@ -229,7 +194,7 @@ describe('ReportsController — every whole-query parameter is validated', () =>
    * inline object, an interface, `any`) is emitted as `Object`, and the global
    * ValidationPipe passes `Object` through untouched: no validation, no
    * transform, no whitelist. Its filters then arrive as raw strings. This is
-   * how both drill-downs above broke; the check covers every route of the
+   * how the drill-downs broke; the check covers every route of the
    * controller, including ones added later.
    */
   it('types every @Query() with a DTO class', () => {
@@ -257,7 +222,7 @@ describe('ReportsController — every whole-query parameter is validated', () =>
     }
 
     // Guards against a vacuous pass if the metadata lookup ever breaks.
-    expect(checked).toBeGreaterThan(20);
+    expect(checked).toBeGreaterThanOrEqual(20);
     expect(unvalidated).toEqual([]);
   });
 });

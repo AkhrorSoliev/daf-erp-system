@@ -26,6 +26,11 @@ export interface LoadedDepartures {
   episodes: DepartureEpisode[];
   /** Students with an ACTIVE enrollment at `activeAt`, moved up to the floor; 0 when not asked. */
   activeAtStart: number;
+  /**
+   * Who is counted in `activeAtStart`: the enrollment that was ACTIVE at
+   * `activeAt`, one per student. `[]` when `activeAt` is not asked.
+   */
+  activeAtStartMembers: { studentId: number; enrollmentId: string }[];
   /** `Company.systemStartDate` (ADR-0005), or null. */
   floor: Date | null;
   /** Days each kind of stop waits for a return (ADR-0035). */
@@ -89,7 +94,13 @@ export async function loadDepartures(
     select: { id: true, status: true, statusChangedAt: true },
   });
   if (students.length === 0) {
-    return { episodes: [], activeAtStart: 0, floor, graceDays };
+    return {
+      episodes: [],
+      activeAtStart: 0,
+      activeAtStartMembers: [],
+      floor,
+      graceDays,
+    };
   }
   const ids = students.map((s) => s.id);
 
@@ -152,7 +163,8 @@ export async function loadDepartures(
       : opts.activeAt;
 
   const events: StudentEvent[] = [];
-  let activeAtStart = 0;
+  const activeAtStartMembers: { studentId: number; enrollmentId: string }[] =
+    [];
   for (const s of students) {
     const own = enrollmentsByStudent.get(s.id) ?? [];
     const membership = membershipEvents(s.id, own, logsByEnrollment);
@@ -167,17 +179,20 @@ export async function loadDepartures(
         ),
       );
     }
-    if (
-      activeAt &&
-      own.some((e) => statusOn(e, logsByEnrollment, activeAt) === 'ACTIVE')
-    ) {
-      activeAtStart += 1;
+    if (activeAt) {
+      const live = own.find(
+        (e) => statusOn(e, logsByEnrollment, activeAt) === 'ACTIVE',
+      );
+      if (live) {
+        activeAtStartMembers.push({ studentId: s.id, enrollmentId: live.id });
+      }
     }
   }
 
   return {
     episodes: buildDepartureEpisodes(events, { graceDays, now }),
-    activeAtStart,
+    activeAtStart: activeAtStartMembers.length,
+    activeAtStartMembers,
     floor,
     graceDays,
   };

@@ -293,7 +293,7 @@ This applies to **all roles** — not just teachers. Whenever a role should not 
   - **Reset `page` to `1` whenever the dialog's target entity changes** (e.g. the user clicks a different segment/bar). Use `useEffect` watching the key identifier (`drilldown?.reasonId`, `row?.id`, etc.).
   - Keep the footer pagination controls inside `DialogContent` (next to the bottom, outside the scrolling table area) so they stay visible while the table body scrolls.
   - The pagination footer must occupy a non-shrinking slot (`shrink-0`) so the table above is the only scroll container.
-  - Reference: `src/components/reports/departed-students/departed-students-reasons-chart.tsx` → `ReasonStudentsDialog`.
+  - Reference: `src/components/reports/departed-students/departed-after-change-dialog.tsx` (with `dialog-pagination-footer.tsx`).
 
 #### Row Actions Column
 
@@ -518,7 +518,7 @@ so existing links keep working.
 
 ### Charts and Data Visualization
 
-These rules codify lessons learned while building `/reports/departed-students`. Every chart in the project — existing and future — must follow them.
+These rules codify lessons learned while building the first version of `/reports/departed-students` (rebuilt in October 2026 on one data set, ADR-0098; it now draws no charts of its own, see «Departed students report» below). Every chart in the project — existing and future — must follow them.
 
 #### Chart Library
 
@@ -539,8 +539,8 @@ These rules codify lessons learned while building `/reports/departed-students`. 
 - **Filter out zero-value entries** for stacked charts so the tooltip only shows segments that actually have data.
 - **Include a total row** at the bottom for multi-segment charts — helps the user understand the bucket's magnitude.
 - Reference implementations:
-  - `src/components/reports/departed-students/departed-students-group-by-chart.tsx` → `GroupByTooltip`
-  - `src/components/reports/departed-students/departed-students-dynamics-chart.tsx` → `DynamicsTooltip`
+  - `src/components/reports/admin-kpi/kpi-charts.tsx` → `DailyTooltip`
+  - `src/components/dashboard/chart-tooltip.tsx` → `ChartTooltip`
 
 #### Color Palette for Categorical Data
 
@@ -557,9 +557,7 @@ These rules codify lessons learned while building `/reports/departed-students`. 
 #### Data Aggregation: Top N + "Boshqalar"
 
 - Every ranked breakdown chart **must collapse the long tail**. A chart with 20+ segments or 20+ rows is noise, not signal.
-- Defaults used on `/reports/departed-students`:
-  - `TOP_N_BUCKETS = 10` — max rows/columns in a chart
-  - `TOP_N_REASONS = 3` — max segments in a stacked bar (additional segments merge into "Boshqalar")
+- Defaults: at most 10 rows/columns in a chart and 3 segments in a stacked bar (additional segments merge into "Boshqalar").
 - Label the collapsed row with the count: `"Boshqalar (${tail.length} ta ...)"` so the user knows how much is hidden.
 - Collapsed rows must be **non-interactive** (disable click-through — there's no single entity to drill into).
 
@@ -568,7 +566,7 @@ These rules codify lessons learned while building `/reports/departed-students`. 
 - Every chart has a clear **title** and an informative **subtitle** that adds context at a glance:
   - Title: what the chart shows (e.g. `"Ketish dinamikasi"`, `"Ketish sabablari"`).
   - Subtitle: one-line summary with totals or the top finding (e.g. `"Jami 71 ta ketish — eng asosiy sabab: Moliyaviy qiyinchilik (31 ta)"`).
-- Use the shared `<ChartCard title subtitle tooltip ...>` component at `src/components/reports/departed-students/chart-card.tsx` as the reference pattern. Copy it (or lift it to `src/components/shared/`) for new report pages.
+- Use the shared `<ChartCard title subtitle tooltip ...>` component at `src/components/shared/chart-card.tsx` as the reference pattern.
 
 #### Empty States Must Be Actionable
 
@@ -591,8 +589,7 @@ These rules codify lessons learned while building `/reports/departed-students`. 
   - Numbers and percents aligned inline, easy to scan
   - Better hover/focus states via `<button>` + Tailwind
   - Click-through drill-down is just an `onClick` on the button — no Recharts event plumbing
-- Reference: `src/components/reports/departed-students/departed-students-reasons-chart.tsx`.
-- Use Recharts when the chart actually benefits from its axes: time series (dynamics), stacked bars (group-by with segmentation), grouped bars.
+- Use Recharts when the chart actually benefits from its axes: time series (dynamics), stacked bars (with segmentation), grouped bars.
 
 #### Number Display in Bars
 
@@ -766,6 +763,13 @@ The financial section lives under `/payments/*` with these sub-pages:
 - **No manual salary calculation** — the daily cron settles each completed cycle automatically (`POST /salary/calculate` is cron-internal; there is intentionally no "Oylikni hisoblash" button in the UI). Do not re-introduce a manual calculate dialog.
 - **The report is month-selectable, not "live current cycle"** — pick a month; per teacher `fullDeserved` (all lessons held × rate), `covered` (students' money ONLY — accruals with `wasCenterTopUp` false), `centerFunded` (the centre's leg: top-up accruals already written PLUS lessons it still has to front), `advances` (what this month's payout nets — ADR-0082: the open month shows every advance it will net, uncapped, for people who can still earn), `netToPay`. The split is computed identically for a settled and an in-progress month — settling one only moves money between `centerFunded`'s two terms. `netToPay` base is `fullDeserved` (covered + centerFunded) **since the July 2026 center-top-up**, gated per month by the backend `isTopUpMonth` (`TOPUP_EFFECTIVE_MONTH='2026-07'`); earlier months stay on the `covered` base. This is now **actually paid** (not display-only) — the salary cron's Phase 0 fronts the gap with center-funded accruals, so a top-up month's shown `netToPay` equals what the cron pays; already-settled months show their real settled amount. The table shows only Ishladi / Avans / Beriladi; the covered / centre split is the row drawer's line «shundan o'quvchilar to'lagan X · markaz qo'shdi Y» and the summary's «shundan markaz qo'shdi — X» (ADR-0052's split stays). Manual/Excel months (May) show `—` for deserved/covered/centerFunded (no per-lesson data). Do not re-introduce "Kutilayotgan"/"Real ishlangan" columns here.
 - **No tax UI** — the system does not compute or apply taxes anywhere. Possible deductions (Ustoz 12%, Markaz qo'shimchasi 12%, Markaz daromad 4%, gateway 2%) are surfaced as a static info note via `possible-deductions-info.tsx` only. Do not re-introduce a tax config sheet or any "Soliqdan keyin" / "Brutto" / "Netto" columns in salary views.
+
+### Departed students report (`/reports/departed-students`, ADR-0098)
+
+- «Ketgan o'quvchilar hisoboti» (`reports-nav.ts`, `permission: "reports.students"`). Files in `components/reports/departed-students/`: `departed-students-page.tsx` (header, period buttons, Excel), `departed-filter-bar.tsx`, `departed-cards.tsx`, `departed-pending.tsx`, `departed-months.tsx`, `departed-reasons.tsx`, `departed-cuts.tsx`, `departed-list.tsx`, `teacher-change-retention-cards.tsx` with its two dialogs, `departed-url.ts`, `departed-format.ts` (pure, vitest), `departed-queries.ts`, `departed-types.ts`.
+- Two requests carry the page: `GET /reports/departed-students/overview` (cards, pending count, months, reasons, the four cuts, teacher-change card) and `GET /reports/departed-students/list` (the table); `GET /reports/departed-students/excel` is the file. Every figure is the server's and comes from one fact set, so reasons, cuts and the list add up to the headline; the client only formats and draws. The course and teacher filters apply to every block.
+- URL keys (`DEPARTED_SCHEMA`): `preset`, `startDate`, `endDate`, `courseId`, `teacherIds`, `cut`, `q`, `reason`, `state`, `debtors`, `page`, `pageSize`. Period buttons: «Bu oy» (default), «O'tgan oy», «3 oy», «6 oy», «Oraliq».
+- The page draws no Recharts chart: the months are columns and the reasons are bars made of plain markup.
 
 ### Marketing report (`/reports/marketing`, ADR-0067)
 
