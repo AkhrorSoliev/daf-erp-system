@@ -7,6 +7,20 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Qatnashganlik hujjati: yangi shartlar",
+    matn: "Qatnashganlik hujjati endi to'rt shart bilan ko'proq tekshiriladi. O'quvchining qarzi bo'lmasligi kerak (qancha bo'lmasin). Hisobga kirgan darslar kamida 20 ta bo'lishi kerak. Kech qolgan darslar o'quvchi kelgan darslarning 20% idan oshmasligi kerak. Darajada yakuniy sinovlar bo'lsa, hammasidan o'tgan bo'lishi kerak. Ilova sharti avvalgidek: ochiq dars bo'lsa tekshiriladi. «Hujjatlar» yorlig'ida bajarilmagan shartlar sabab bilan chiqadi, administrator hujjat bera olmaydi; faqat CEO sabab yozib istisno bilan beradi. 20 ta va 20% ni CEO Sozlamalar → «Qatnashganlik hujjati» sahifasida o'zgartiradi. Avval berilgan hujjatlar o'zgarmaydi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "qatnashganlik-hujjati" },
+  },
+  {
+    sana: "2026-10-17",
+    sarlavha: "Kirish sahifasida til tanlash",
+    matn: "Admin panel va o'qituvchi portalining kirish sahifasida yuqori o'ng burchakda til tugmasi paydo bo'ldi. Besh tildan birini tanlang: O'zbekcha, Ўзбекча, Русский, Deutsch yoki English; sahifaning o'zi, parolni tiklash oynasi va salom ham tarjima qilingan. Kirgach profilingizdagi til ochiladi; profilingizda til tanlanmagan bo'lsa, o'zbekchadan boshqa tanlagan tilingiz profilga saqlanadi. O'quvchi portalining kirish sahifasi hali o'zbekcha.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "tizimga-kirish" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Bot hisoboti oy bo'yicha qayta hisoblandi",
     matn: "«Bot hisoboti»da raqamlar endi tanlangan oyda bot to'xtatgan odamlar bo'yicha sanaladi: nechta odam to'xtatildi, ulardan nechtasi kanalga a'zo bo'ldi va keyin chiqib ketdi. Foiz hech qachon 100% dan oshmaydi. Sahifada oy o'qlar bilan almashadi, ro'yxat ham tanlangan oyniki. «Butun davr» tugmasi olib tashlandi.",
     rollar: [1, 2],

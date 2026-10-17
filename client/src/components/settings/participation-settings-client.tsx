@@ -23,15 +23,19 @@ import { SettingsPageHeader } from "./settings-page-header";
 
 const KEY = ["participation-certificates", "settings"] as const;
 const TITLE = "Qatnashganlik hujjati";
-const DESCRIPTION = "Hujjat berish uchun davomat va ilova chegarasi";
+const DESCRIPTION = "Hujjat berish uchun davomat, darslar soni, kech qolish va ilova chegaralari";
 // JS strings, not JSX text: a JSX chunk with an entity AND a line break loses the space before the break (SWC bug, Next 16.2).
 const LOAD_FAILED = "Sozlamalarni yuklab bo'lmadi.";
 const ATTENDANCE_HINT =
   "Kelgan va kech kelgan darslar ulushi shundan kam bo'lsa, hujjat berilmaydi. Sababli kelmagan va bekor bo'lgan darslar hisobga kirmaydi.";
+const LESSONS_HINT =
+  "Kelgan va kelmagan darslar soni shundan kam bo'lsa, hujjat berilmaydi. Sababli kelmagan va bekor bo'lgan darslar sanalmaydi.";
+const LATE_HINT =
+  "Kech qolgan darslar kelgan darslarning shuncha foizidan oshsa, hujjat berilmaydi. 0 qo'yilsa, bitta kech qolish ham to'sqinlik qiladi.";
 const APP_HINT =
   "O'quvchi darajaning hujjat berilgan kunda ochiq darslaridan shuncha foizini tugatgan bo'lishi kerak. Kontenti yo'q darajalarda (A2, B1 hozircha) bu shart qo'llanmaydi.";
 
-/** CEO-only (spec 2026-10-17): one attendance threshold, and the app threshold of A1, A2 and B1. */
+/** CEO-only (spec 2026-10-17): the attendance threshold, the fewest lessons, the lateness limit and the app threshold of A1, A2 and B1. */
 export function ParticipationSettingsClient() {
   const queryClient = useQueryClient();
   const { data, isLoading, isError, isFetching, refetch } = useQuery({
@@ -92,6 +96,28 @@ export function ParticipationSettingsClient() {
           onChange={(e) => set("attendance", e.target.value)}
         />
         <p className="text-xs text-muted-foreground">{ATTENDANCE_HINT}</p>
+      </section>
+
+      <section className="space-y-2">
+        <Label htmlFor="min-lessons">Eng kam dars soni</Label>
+        <Input
+          id="min-lessons"
+          inputMode="numeric"
+          value={form.minLessons}
+          onChange={(e) => set("minLessons", e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">{LESSONS_HINT}</p>
+      </section>
+
+      <section className="space-y-2">
+        <Label htmlFor="max-late">Kech qolish chegarasi, %</Label>
+        <Input
+          id="max-late"
+          inputMode="numeric"
+          value={form.maxLate}
+          onChange={(e) => set("maxLate", e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">{LATE_HINT}</p>
       </section>
 
       <section className="space-y-3">

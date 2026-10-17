@@ -14,6 +14,7 @@ import {
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone, formatPhoneInput } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 import {
   type FpVariant,
   FpField,
@@ -42,6 +43,7 @@ export function ForgotPasswordDialog({
   onOpenChange,
   variant = "default",
 }: ForgotPasswordDialogProps) {
+  const t = useT();
   const lumio = variant === "lumio";
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -71,8 +73,8 @@ export function ForgotPasswordDialog({
   // Resend countdown.
   useEffect(() => {
     if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [cooldown]);
 
   function handleOpenChange(next: boolean) {
@@ -90,7 +92,7 @@ export function ForgotPasswordDialog({
     } catch {
       // The request endpoint always succeeds server-side; a failure here is a
       // network/server error — keep the message generic.
-      setError("Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.");
+      setError(t("Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."));
     } finally {
       setLoading(false);
     }
@@ -99,7 +101,7 @@ export function ForgotPasswordDialog({
   async function handleRequest(e: React.FormEvent) {
     e.preventDefault();
     if (phone.length !== 9) {
-      setError("Telefon raqamni to'liq kiriting");
+      setError(t("Telefon raqamni to'liq kiriting"));
       return;
     }
     await sendCode();
@@ -114,7 +116,7 @@ export function ForgotPasswordDialog({
     e.preventDefault();
     setError("");
     if (code.length !== 4) {
-      setError("Kod 4 xonali bo'lishi kerak");
+      setError(t("Kod 4 xonali bo'lishi kerak"));
       return;
     }
     setLoading(true);
@@ -126,7 +128,7 @@ export function ForgotPasswordDialog({
       setResetToken(res.data.resetToken);
       setStep(3);
     } catch (err) {
-      setError(getErrorMessage(err, "Kod noto'g'ri yoki muddati tugagan"));
+      setError(getErrorMessage(err, t("Kod noto'g'ri yoki muddati tugagan")));
     } finally {
       setLoading(false);
     }
@@ -136,11 +138,11 @@ export function ForgotPasswordDialog({
     e.preventDefault();
     setError("");
     if (newPassword.length < 6) {
-      setError("Parol kamida 6 ta belgidan iborat bo'lishi kerak");
+      setError(t("Parol kamida 6 ta belgidan iborat bo'lishi kerak"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("Parollar mos kelmadi");
+      setError(t("Parollar mos kelmadi"));
       return;
     }
     setLoading(true);
@@ -149,13 +151,13 @@ export function ForgotPasswordDialog({
         resetToken,
         newPassword,
       });
-      toast.success("Parol muvaffaqiyatli o'zgartirildi. Endi kirishingiz mumkin.");
+      toast.success(t("Parol muvaffaqiyatli o'zgartirildi. Endi kirishingiz mumkin."));
       handleOpenChange(false);
     } catch (err) {
       setError(
         getErrorMessage(
           err,
-          "Sessiya muddati tugadi. Iltimos, qaytadan urinib ko'ring.",
+          t("Sessiya muddati tugadi. Iltimos, qaytadan urinib ko'ring."),
         ),
       );
     } finally {
@@ -170,13 +172,13 @@ export function ForgotPasswordDialog({
           <DialogTitle
             className={cn(lumio && "font-display text-xl font-extrabold")}
           >
-            Parolni tiklash
+            {t("Parolni tiklash")}
           </DialogTitle>
           <DialogDescription className={cn(lumio && "font-semibold")}>
             {step === 1 &&
-              "Telefon raqamingizni kiriting — SMS orqali tasdiqlash kodi yuboramiz."}
-            {step === 2 && "Tasdiqlash kodi telefon raqamingizga yuborildi."}
-            {step === 3 && "Yangi parolingizni o'rnating."}
+              t("Telefon raqamingizni kiriting — SMS orqali tasdiqlash kodi yuboramiz.")}
+            {step === 2 && t("Tasdiqlash kodi telefon raqamingizga yuborildi.")}
+            {step === 3 && t("Yangi parolingizni o'rnating.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -184,7 +186,7 @@ export function ForgotPasswordDialog({
 
         {step === 1 && (
           <form onSubmit={handleRequest} className="space-y-4">
-            <FpField lumio={lumio} label="Telefon raqam" htmlFor="fp-phone">
+            <FpField lumio={lumio} label={t("Telefon raqam")} htmlFor="fp-phone">
               <FpPhoneInput
                 lumio={lumio}
                 value={formatPhoneInput(phone)}
@@ -192,7 +194,7 @@ export function ForgotPasswordDialog({
               />
             </FpField>
             <FpSubmit lumio={lumio} loading={loading}>
-              Kod yuborish
+              {t("Kod yuborish")}
             </FpSubmit>
           </form>
         )}
@@ -214,10 +216,10 @@ export function ForgotPasswordDialog({
                   lumio && "font-semibold",
                 )}
               >
-                Ushbu raqamga yuborilgan 4 xonali kodni kiriting.
+                {t("Ushbu raqamga yuborilgan 4 xonali kodni kiriting.")}
               </p>
             </div>
-            <FpField lumio={lumio} label="Tasdiqlash kodi" htmlFor="fp-code">
+            <FpField lumio={lumio} label={t("Tasdiqlash kodi")} htmlFor="fp-code">
               <FpCodeInput lumio={lumio} value={code} onChange={setCode} />
             </FpField>
             <div
@@ -241,7 +243,7 @@ export function ForgotPasswordDialog({
                 )}
               >
                 <ArrowLeft className="size-3.5" />
-                Raqamni o&apos;zgartirish
+                {t("Raqamni o'zgartirish")}
               </button>
               <button
                 type="button"
@@ -254,32 +256,34 @@ export function ForgotPasswordDialog({
                     : "text-primary disabled:text-muted-foreground",
                 )}
               >
-                {cooldown > 0 ? `Qayta yuborish (${cooldown}s)` : "Qayta yuborish"}
+                {cooldown > 0
+                  ? t("Qayta yuborish ({n}s)", { n: cooldown })
+                  : t("Qayta yuborish")}
               </button>
             </div>
             <FpSubmit lumio={lumio} loading={loading}>
-              Tasdiqlash
+              {t("Tasdiqlash")}
             </FpSubmit>
           </form>
         )}
 
         {step === 3 && (
           <form onSubmit={handleReset} className="space-y-4">
-            <FpField lumio={lumio} label="Yangi parol" htmlFor="fp-new">
+            <FpField lumio={lumio} label={t("Yangi parol")} htmlFor="fp-new">
               <FpPasswordInput
                 lumio={lumio}
                 id="fp-new"
                 autoFocus
                 value={newPassword}
                 onChange={setNewPassword}
-                placeholder="Kamida 6 ta belgi"
+                placeholder={t("Kamida 6 ta belgi")}
                 show={showPassword}
                 onToggleShow={() => setShowPassword((p) => !p)}
               />
             </FpField>
             <FpField
               lumio={lumio}
-              label="Parolni takrorlang"
+              label={t("Parolni takrorlang")}
               htmlFor="fp-confirm"
             >
               <FpPasswordInput
@@ -287,12 +291,12 @@ export function ForgotPasswordDialog({
                 id="fp-confirm"
                 value={confirmPassword}
                 onChange={setConfirmPassword}
-                placeholder="Yangi parolni qayta kiriting"
+                placeholder={t("Yangi parolni qayta kiriting")}
                 show={showPassword}
               />
             </FpField>
             <FpSubmit lumio={lumio} loading={loading}>
-              Saqlash
+              {t("Saqlash")}
             </FpSubmit>
           </form>
         )}

@@ -295,9 +295,9 @@ export const oquvchilar: QollanmaSahifa[] = [
     sahifa: "qatnashganlik-hujjati",
     sarlavha: "Qatnashganlik hujjati",
     qisqacha:
-      "O'quvchi darajani tugatgach, «Hujjatlar» tabidan qatnashganlik hujjati beriladi: davomat kamida 80% va ilovadagi ochiq darslar tugatilgan bo'lishi kerak. Hujjatda QR bor, u hujjat haqiqiyligini ko'rsatadi.",
+      "O'quvchi darajani tugatgach, «Hujjatlar» tabidan qatnashganlik hujjati beriladi: davomat kamida 80% va kamida 20 ta dars bo'lishi, kech qolish 20% dan oshmasligi, yakuniy sinovlardan o'tgan va qarzi yo'q bo'lishi kerak; ilovada ochiq dars bo'lsa, u ham tugatilgan bo'lishi kerak. Hujjatda QR bor, u hujjat haqiqiyligini ko'rsatadi.",
     rollar: [1, 2, 3],
-    adr: ["0100", "0104"],
+    adr: ["0100", "0104", "0107"],
     yollar: ["/students/profile/*", "/settings/participation"],
     kalitSozlar: ["hujjat", "qatnashganlik", "daraja", "davomat", "QR", "PDF", "istisno"],
     yangilangan: "2026-10-17",

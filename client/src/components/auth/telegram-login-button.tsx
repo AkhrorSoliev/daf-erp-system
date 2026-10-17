@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 
 // Telegram'ning rasmiy OAuth oqimi. Tugma faqat backend funksiya yoniq deb
 // aytganda ko'rinadi — sozlama Railway env'ida bo'lmasa hech narsa chizilmaydi.
@@ -11,6 +12,7 @@ export function TelegramLoginButton({
 }: {
   variant?: "default" | "lumio";
 }) {
+  const t = useT();
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -39,7 +41,7 @@ export function TelegramLoginButton({
       const res = await api.get("/auth/telegram/start");
       window.location.href = res.data.url;
     } catch (err) {
-      setError(getErrorMessage(err, "Telegram orqali kirishni boshlab bo'lmadi"));
+      setError(getErrorMessage(err, t("Telegram orqali kirishni boshlab bo'lmadi")));
       setLoading(false);
     }
   }
@@ -57,7 +59,7 @@ export function TelegramLoginButton({
               : "text-sm text-muted-foreground"
           }
         >
-          yoki
+          {t("yoki")}
         </span>
         <div className={isLumio ? "h-px flex-1 bg-line" : "h-px flex-1 bg-border"} />
       </div>
@@ -84,7 +86,7 @@ export function TelegramLoginButton({
             : "inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-input bg-card px-4 text-sm font-medium transition-colors hover:bg-accent disabled:opacity-50"
         }
       >
-        {loading ? "Telegram ochilmoqda..." : "Telegram orqali kirish"}
+        {loading ? t("Telegram ochilmoqda...") : t("Telegram orqali kirish")}
       </button>
     </div>
   );

@@ -55,7 +55,7 @@ export default async function LoginPage() {
   return (
     <>
       <MiniAppLoginGuard />
-      <StaffSignInShell portal={portal}>
+      <StaffSignInShell portal={portal} languageMenu>
         <LoginForm portal={portal} />
       </StaffSignInShell>
     </>

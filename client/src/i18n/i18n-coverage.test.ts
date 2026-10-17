@@ -43,6 +43,17 @@ export const STRICT_FILES: string[] = [
   "components/notifications/notification-actions.ts",
   "components/notifications/push-permission-prompt.tsx",
   "components/notifications/notification-view.ts",
+  "lib/portal.ts",
+  "components/auth/language-menu.tsx",
+  "components/auth/sign-in-heading.tsx",
+  "components/language-radio-group.tsx",
+  "app/(auth)/login/login-form.tsx",
+  "app/(auth)/login/login-footer.tsx",
+  "components/auth/staff-greeting.tsx",
+  "components/auth/telegram-login-button.tsx",
+  "components/theme-toggle.tsx",
+  "components/auth/forgot-password-dialog.tsx",
+  "components/auth/forgot-password-fields.tsx",
 ];
 
 function walk(dir: string): string[] {
