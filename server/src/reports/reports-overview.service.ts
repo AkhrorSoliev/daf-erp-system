@@ -9,11 +9,18 @@ import {
   tashkentRangeFilter,
 } from '../common/date/tashkent';
 import {
+  DEPARTURE_GRACE_DAYS,
   departuresInRange,
   pendingInRange,
 } from '../students/shared/departure-episodes';
 import { loadDepartures } from './shared/departures.loader';
-import type { ReportBranchIds } from '../common/finance/report-branch-scope';
+import {
+  branchIdWhere,
+  groupBranchWhere,
+  isEmptyScope,
+  studentBranchWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 import { leadAttributionWhere } from '../leads/shared/lead-scope';
 
 @Injectable()
@@ -23,17 +30,42 @@ export class ReportsOverviewService {
     private redis: RedisService,
   ) {}
 
-  async getKpis(companyId: number, query: ReportsQueryDto) {
+  /**
+   * `branchIds` is the caller's resolved scope (`null` = every branch,
+   * `[]` = nothing, else those branches) and wins when given. Without it the
+   * plain `branchId` query keeps meaning one branch, or all when absent.
+   */
+  async getKpis(
+    companyId: number,
+    query: ReportsQueryDto & { branchIds?: ReportBranchIds },
+  ) {
+    const scope: ReportBranchIds =
+      query.branchIds !== undefined
+        ? query.branchIds
+        : query.branchId
+          ? [query.branchId]
+          : null;
+
+    // Fail closed: `{ in: [] }` would also read nothing, but not reading at all
+    // says so plainly and spares eight queries.
+    if (isEmptyScope(scope)) {
+      return {
+        activeStudents: { current: 0, trend: 0 },
+        activeGroups: 0,
+        averageAttendance: 0,
+        leadConversionRate: 0,
+        newStudentsThisMonth: 0,
+        churnedThisMonth: 0,
+        pendingDepartures: 0,
+        departureGraceDays: DEPARTURE_GRACE_DAYS,
+      };
+    }
+
     const now = new Date();
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const branchStudentFilter = query.branchId
-      ? { branches: { some: { branchId: query.branchId } } }
-      : {};
-
-    const branchGroupFilter = query.branchId
-      ? { branchId: query.branchId }
-      : {};
+    const branchStudentFilter = studentBranchWhere(scope);
+    const branchGroupFilter = branchIdWhere(scope);
 
     const [
       activeStudents,
@@ -93,7 +125,7 @@ export class ReportsOverviewService {
         where: {
           companyId,
           date: { gte: firstOfMonth },
-          ...(query.branchId ? { group: { branchId: query.branchId } } : {}),
+          ...groupBranchWhere(scope),
         },
         _count: { id: true },
       }),
@@ -122,12 +154,7 @@ export class ReportsOverviewService {
       // alongside the queries above rather than after them — it depends on
       // none of their results, and awaiting it separately just stacked its
       // latency on top on a cold cache.
-      loadDepartures(
-        this.prisma,
-        companyId,
-        query.branchId ? [query.branchId] : null,
-        { now },
-      ),
+      loadDepartures(this.prisma, companyId, scope, { now }),
     ]);
 
     // Both count stops that started in this Tashkent month.

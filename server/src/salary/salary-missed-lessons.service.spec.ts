@@ -7,9 +7,17 @@ const group = {
   name: 'A1-1',
   branchId: 1,
   exactDays: ['monday', 'wednesday', 'friday'],
+  lessonEndTime: '19:30',
   startDate: new Date('2026-09-01T00:00:00Z'),
   endDate: null,
 };
+
+/** A `StatusHistory` row of the group; `at` is a real instant (UTC). */
+const statusChange = (toStatus: string, at: string) => ({
+  entityId: 'g1',
+  toStatus,
+  createdAt: new Date(at),
+});
 
 function makePrisma() {
   return {
@@ -22,6 +30,7 @@ function makePrisma() {
         .fn()
         .mockResolvedValue({ startDate: group.startDate, endDate: null }),
     },
+    statusHistory: { findMany: jest.fn().mockResolvedValue([]) },
     holiday: { findMany: jest.fn().mockResolvedValue([]) },
     lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
     lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
@@ -169,6 +178,63 @@ describe('SalaryMissedLessonsService', () => {
         },
       },
       select: { groupId: true, date: true, teacherPayExempt: true },
+    });
+  });
+
+  describe('a group that was PAUSED', () => {
+    const ask = () =>
+      service.forTeacher(7, 1, '2026-10', new Date('2026-10-08T05:00:00Z'));
+
+    it('does not miss a lesson that ended while the group was paused', async () => {
+      // Paused 04.10, back 06.10: 05.10 (Mon) was never held; 07.10 was due.
+      prisma.statusHistory.findMany.mockResolvedValue([
+        statusChange('PAUSED', '2026-10-04T10:00:00Z'),
+        statusChange('ACTIVE', '2026-10-06T10:00:00Z'),
+      ]);
+      const r = await ask();
+      expect(r.lessons.map((l) => l.date)).toEqual(['2026-10-07']);
+      expect(prisma.statusHistory.findMany).toHaveBeenCalledWith({
+        where: {
+          entityType: 'Group',
+          entityId: { in: ['g1'] },
+          createdAt: { lt: new Date('2026-10-08T00:00:00+05:00') },
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { entityId: true, toStatus: true, createdAt: true },
+      });
+    });
+
+    it('treats a pause that starts mid-lesson as paused at the lesson end', async () => {
+      // 05.10 lesson is 17:30–19:30; paused 17:41, so nobody could mark it.
+      prisma.statusHistory.findMany.mockResolvedValue([
+        statusChange('PAUSED', '2026-10-05T12:41:00Z'),
+        statusChange('ACTIVE', '2026-10-06T10:00:00Z'),
+      ]);
+      const r = await ask();
+      expect(r.lessons.map((l) => l.date)).toEqual(['2026-10-07']);
+    });
+
+    it('still misses a lesson that ended before the pause began', async () => {
+      // Paused 20:00 on 05.10, after the 19:30 end: the question was asked.
+      prisma.statusHistory.findMany.mockResolvedValue([
+        statusChange('PAUSED', '2026-10-05T15:00:00Z'),
+        statusChange('ACTIVE', '2026-10-06T10:00:00Z'),
+      ]);
+      const r = await ask();
+      expect(r.lessons.map((l) => l.date)).toEqual([
+        '2026-10-05',
+        '2026-10-07',
+      ]);
+    });
+
+    it('misses the lesson on the day the group came back before it ended', async () => {
+      // Back at 17:34 on 07.10, the lesson ends 19:30: it was due.
+      prisma.statusHistory.findMany.mockResolvedValue([
+        statusChange('PAUSED', '2026-10-04T10:00:00Z'),
+        statusChange('ACTIVE', '2026-10-07T12:34:00Z'),
+      ]);
+      const r = await ask();
+      expect(r.lessons.map((l) => l.date)).toEqual(['2026-10-07']);
     });
   });
 
