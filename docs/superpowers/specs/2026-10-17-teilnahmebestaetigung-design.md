@@ -67,6 +67,8 @@ Chegaralar: davomat uchun bitta umumiy son (boshida 80), ilova uchun daraja bo'y
 - Mock imtihon: o'quvchiga bog'langan (`MockExamParticipant.studentId`) va `level` shu darajaga teng, baholangan eng oxirgi natija (ball, maksimal ball, sana). Bog'lanmagan qatnashchi qidirilmaydi.
 - Yakuniy sinovdan o'tgan unitlar soni (`DafSession.passed`).
 
+> **O'zgarish 17.10 (CEO javoblari):** mock natijasi «baholangan eng oxirgi natija» emas, balki **natijasi e'lon qilingan** (`ANNOUNCED`, yoki undan keyingi `ARCHIVED`) imtihonning eng oxirgi natijasi, va faqat **natijalar auditoriyasidagi** qatnashchiniki (`RESULTS_AUDIENCE`, CEO 25.09: to'lagan yoki to'lovi 0). Baholash davom etayotgan imtihon hisobga kirmaydi, chunki muhrlangan hujjatda hali o'zgarishi mumkin ball turmasligi kerak. «Abschlusstests» qatori faqat kamida bitta yakuniy sinov topshirilgan bo'lsa chiqadi (qoida o'zgarmaydi).
+
 Ilovadagi **faol vaqt** kiritilmaydi: `StudentAppSession` vaqtni darajaga bog'lamaydi, daraja bo'yicha son chiqarib bo'lmaydi.
 
 ## 4. Ma'lumot modeli
@@ -115,6 +117,8 @@ PDF `pdfmake` bilan (`receipts/pdf/render.ts` dagi mavjud yo'l), nemischa matn, 
 7. GER shkalasi A1–C2, hujjat darajasi to'ldirilgan.
 8. Pastda faqat «Ausgestellt am 17.10.2026» (oddiy matn, chiziqsiz). Imzo qatori, `Kursleitung`, `Zentrumsleitung`, `Stempel` va joy nomi yo'q.
 
+> **O'zgarish 17.10 (CEO javoblari):** 4-band: tasdiq jumlasida «regelmäßig» doim bo'lmaydi. **Istisno bilan berilgan hujjatda** u tushib qoladi («hat im genannten Zeitraum am Deutschunterricht auf dem Niveau A1 … teilgenommen.»), boshqa belgi yoki qator qo'shilmaydi; oddiy hujjat o'zgarmaydi. 5-band: «Abschlusstests» qatori doim chiqmaydi, faqat kamida bitta yakuniy sinov topshirilgan bo'lsa (0 ta bo'lsa jadval bir qator kam). Ikkalasi ham qoidani (3.3) o'zgartirmaydi.
+
 **Maydon qiymatlari:** `Kurs` — kurs nomi (`Course.name`). `Unterrichtseinheiten` — hisobdagi darslar soni (3.1 maxraji) va, bo'lsa, daqiqasi («à 90 Minuten»: `Group.lessonMinutes`, bo'lmasa `Course.lessonMinutes`); daqiqa noma'lum bo'lsa faqat son. Ism «Familiya, Ism» ko'rinishida; «Herr/Frau» yozilmaydi.
 
 **Rang:** to'q ko'k `#17375E`, oltin `#B8924A` (faqat «NIVEAU», ko'k kvadrat ichida), kulrang matn `#667085`, chiziqlar `#C9CED6`, jadval sarlavhasi `#EEF2F7`. Burchak bezaklari, halqa ko'rsatkichlar va fon qatlami yo'q (v2 rad etilgan, qaytmaydi).
@@ -135,6 +139,8 @@ O'quvchi kartasida yangi tab «Hujjatlar» (tab ma'lumoti faqat ochilganda yukla
 Sozlamalar sahifasida (faqat CEO, `/settings/participation`, «Qatnashganlik hujjati») bitta davomat chegarasi va A1, A2, B1 uchun ilova chegarasi.
 
 Ekrandagi matnlarda inglizcha so'z yo'q. Dizayn namunasi chizilib CEO ko'radi, keyin quriladi.
+
+> **O'zgarish 17.10 (CEO javoblari):** (1) Hujjat ekranda hamma joyda o'zbekcha **«Qatnashganlik hujjati»** deb ataladi (sozlamalar tavsifi, ochiq tekshirish sahifasining sarlavhasi, yangiliklar, qo'llanma); nemischa nom faqat PDF ichida qoladi. (2) «Hujjatlar» tabi «Shartnomalar» tabidan **keyin** turadi (Guruhlar, To'lovlar, Shartnomalar, Hujjatlar, Darslar…). (3) Daraja uchun hujjat allaqachon berilgan bo'lsa, «Hujjat berish» darrov bermaydi: tasdiq so'raydi («Ha, berish» / «Bekor qilish»), yangi hujjat yangi raqam oladi; CEO istisnosida tasdiq qadami yo'q, sabab oynasida bitta ogohlantirish qatori chiqadi.
 
 ## 8. Testlar
 
