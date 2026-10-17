@@ -3,6 +3,8 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { UserStatus } from '@prisma/client';
+import { ROLE_ID } from '../common/auth/role-ids';
 import { ParticipationCertificatesService } from './participation-certificates.service';
 import type { LevelFacts, StudentFacts } from './participation-types';
 
@@ -104,6 +106,24 @@ function make(
 
 beforeEach(() => jest.clearAllMocks());
 
+/**
+ * The exemption door reads the caller from the DATABASE (ADR-0028): a live
+ * account (not archived, not SUSPENDED / TERMINATED / ARCHIVED) that holds the
+ * CEO role. `make()` answers `user.findFirst` from a flag whatever the query
+ * is, so this pins the query itself: dropping the role clause or the
+ * live-account clause would let any active non-CEO grant exemptions.
+ */
+const CEO_LOOKUP = expect.objectContaining({
+  where: expect.objectContaining({
+    id: 7,
+    deletedAt: null,
+    status: {
+      notIn: [UserStatus.SUSPENDED, UserStatus.TERMINATED, UserStatus.ARCHIVED],
+    },
+    roles: { some: { role: { id: ROLE_ID.CEO } } },
+  }),
+});
+
 describe('preview', () => {
   it('checks the student branch, then returns each level with its verdict and issued list', async () => {
     const { service, prisma } = make();
@@ -142,7 +162,7 @@ describe('preview', () => {
 
 describe('issue', () => {
   it('numbers the next certificate of the year, stores the snapshot and writes the student history', async () => {
-    const { service, created, history } = make({ lastSeq: 41 });
+    const { service, created, history, tx } = make({ lastSeq: 41 });
     const out = await service.issue(7, 1001, 10001, { level: 'A1' });
     expect(out).toMatchObject({
       id: 'uuid-1',
@@ -171,12 +191,35 @@ describe('issue', () => {
         entityId: 10001,
         companyId: 1001,
         changedById: 7,
+        // Written on the issue transaction's own client, with the number the
+        // row was just given, so the audit entry commits or rolls back with it.
+        tx,
         newValues: expect.objectContaining({
           action: 'QATNASHISH_HUJJATI_BERILDI',
+          raqam: out.number,
           daraja: 'A1',
         }),
       }),
     );
+  });
+
+  it('rolls the document back when its history entry cannot be written', async () => {
+    const { service, prisma, tx, history } = make({ lastSeq: 41 });
+    let committed = false;
+    prisma.$transaction.mockImplementation(
+      async (fn: (t: typeof tx) => Promise<unknown>) => {
+        const result = await fn(tx);
+        committed = true;
+        return result;
+      },
+    );
+    history.recordCreate.mockRejectedValue(new Error('history down'));
+    await expect(
+      service.issue(7, 1001, 10001, { level: 'A1' }),
+    ).rejects.toThrow('history down');
+    // The failure happened inside the transaction callback, before commit.
+    expect(tx.participationCertificate.create).toHaveBeenCalledTimes(1);
+    expect(committed).toBe(false);
   });
 
   it('starts a fresh year at 0001', async () => {
@@ -215,6 +258,7 @@ describe('issue', () => {
     await expect(
       service.issue(7, 1001, 10001, { level: 'A1', exemptReason: 'Kasal edi' }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.user.findFirst).toHaveBeenCalledWith(CEO_LOOKUP);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
@@ -228,7 +272,7 @@ describe('issue', () => {
         percent: 74,
       },
     });
-    const { service, created, history } = make({
+    const { service, prisma, created, history } = make({
       facts: facts([weak]),
       ceo: true,
     });
@@ -236,6 +280,7 @@ describe('issue', () => {
       level: 'A1',
       exemptReason: '  Kasal edi  ',
     });
+    expect(prisma.user.findFirst).toHaveBeenCalledWith(CEO_LOOKUP);
     expect(out.exempt).toBe(true);
     expect(created[0]).toMatchObject({
       exemptReason: 'Kasal edi',

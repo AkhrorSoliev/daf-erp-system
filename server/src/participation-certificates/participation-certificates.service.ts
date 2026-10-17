@@ -160,7 +160,7 @@ export class ParticipationCertificatesService {
           select: { seq: true },
         });
         const seq = (last?.seq ?? 0) + 1;
-        return tx.participationCertificate.create({
+        const created = await tx.participationCertificate.create({
           data: {
             companyId,
             branchId,
@@ -176,22 +176,26 @@ export class ParticipationCertificatesService {
             exemptById: exempt ? userId : null,
           },
         });
+        // In the same transaction: a failed history row rolls the document
+        // back, so a number is never issued without its audit entry.
+        await this.history.recordCreate({
+          entityType: 'Student',
+          entityId: studentId,
+          newValues: {
+            action: 'QATNASHISH_HUJJATI_BERILDI',
+            raqam: created.number,
+            daraja: level,
+            istisno: exempt ? reason : null,
+          },
+          changedById: userId,
+          companyId,
+          tx,
+        });
+        return created;
       }, TX_OPTIONS)
       // The unique (company, year, seq) can only collide with a concurrent issue.
       .catch((e: unknown) => rethrowAsConflict(e, { duplicate: true }));
 
-    await this.history.recordCreate({
-      entityType: 'Student',
-      entityId: studentId,
-      newValues: {
-        action: 'QATNASHISH_HUJJATI_BERILDI',
-        raqam: row.number,
-        daraja: level,
-        istisno: exempt ? reason : null,
-      },
-      changedById: userId,
-      companyId,
-    });
     return toIssuedView(row);
   }
 
