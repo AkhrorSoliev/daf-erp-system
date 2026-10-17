@@ -58,5 +58,47 @@ describe("changeUiLocale", () => {
     expect(second).toBe(true);
     expect(firstResult).toBe(false);
     expect(read().locale).toBe("en");
+    expect(deps.apply).not.toHaveBeenCalledWith("ru", expect.anything());
+    expect(deps.persist).not.toHaveBeenCalledWith("ru");
+    expect(deps.persist).toHaveBeenCalledWith("en");
+  });
+
+  it("does not undo the newer choice when an older save fails late", async () => {
+    const boom = new Error("500");
+    let failFirstSave!: (error: Error) => void;
+    const persist = vi.fn((locale: string) =>
+      locale === "ru" ? new Promise<void>((_, reject) => (failFirstSave = reject)) : Promise.resolve(),
+    );
+    const { deps, read } = setup({ persist });
+
+    const first = changeUiLocale("ru", deps);
+    await vi.waitFor(() => expect(persist).toHaveBeenCalledWith("ru"));
+    expect(read().locale).toBe("ru");
+
+    expect(await changeUiLocale("en", deps)).toBe(true);
+    failFirstSave(boom);
+
+    expect(await first).toBe(false);
+    expect(read().locale).toBe("en");
+    expect(deps.apply).toHaveBeenCalledTimes(2);
+    expect(deps.fail).toHaveBeenCalledTimes(1);
+    expect(deps.fail).toHaveBeenCalledWith(boom, "save");
+  });
+
+  it("stays silent when an older load fails late", async () => {
+    let failFirstLoad!: (error: Error) => void;
+    const load = vi.fn((locale: string) =>
+      locale === "ru" ? new Promise<{ marker: string }>((_, reject) => (failFirstLoad = reject)) : Promise.resolve({ marker: locale }),
+    );
+    const { deps, read } = setup({ load });
+
+    const first = changeUiLocale("ru", deps);
+    expect(await changeUiLocale("en", deps)).toBe(true);
+    failFirstLoad(new Error("offline"));
+
+    expect(await first).toBe(false);
+    expect(read().locale).toBe("en");
+    expect(deps.apply).toHaveBeenCalledTimes(1);
+    expect(deps.fail).not.toHaveBeenCalled();
   });
 });

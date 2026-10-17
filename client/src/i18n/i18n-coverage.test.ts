@@ -5,6 +5,7 @@ import de from "./dictionaries/de";
 import en from "./dictionaries/en";
 import ru from "./dictionaries/ru";
 import uzCyrl from "./dictionaries/uz-cyrl";
+import { scanI18nCalls } from "./scan-literals";
 
 const SRC = path.join(__dirname, "..");
 
@@ -23,29 +24,33 @@ function walk(dir: string): string[] {
   });
 }
 
-const CALL = /\b(?:t|msg)\(\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/g;
-const unescape = (s: string) => s.replace(/\\(.)/g, "$1");
-
-function literalsOf(file: string): string[] {
-  const text = readFileSync(file, "utf8");
-  return [...text.matchAll(CALL)].map((m) => unescape(m[1] ?? m[2] ?? ""));
-}
+const scanFile = (file: string) => scanI18nCalls(readFileSync(file, "utf8"));
 
 const files = walk(SRC);
-const used = new Set(files.flatMap(literalsOf));
+const scans = files.map((file) => ({ file, ...scanFile(file) }));
+const used = new Set(scans.flatMap((s) => s.literals));
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
 const DICTIONARIES = { ru, de, en } as const;
 
 describe("i18n coverage", () => {
+  it("really walks the source tree", () => {
+    expect(files.length).toBeGreaterThan(100);
+  });
+
   it("lists only files that exist", () => {
     for (const f of STRICT_FILES) expect(existsSync(path.join(SRC, f)), f).toBe(true);
+  });
+
+  it("reads every t(…) and msg(…) call of the source: a first argument it cannot check is an error", () => {
+    const offenders = scans.flatMap((s) => s.unsupported.map((call) => `${path.relative(SRC, s.file)}: ${call}`));
+    expect(offenders, `write a string literal in each call, ok ? t("Ha") : t("Yo'q"):\n${offenders.join("\n")}`).toEqual([]);
   });
 
   it.each(Object.entries(DICTIONARIES))("%s translates every text of the strict files", (name, dictionary) => {
     const missing: string[] = [];
     for (const f of STRICT_FILES) {
-      for (const literal of literalsOf(path.join(SRC, f))) {
+      for (const literal of scanFile(path.join(SRC, f)).literals) {
         if (!(literal in dictionary)) missing.push(`${f}: ${literal}`);
       }
     }
