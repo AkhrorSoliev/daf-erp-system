@@ -72,6 +72,17 @@ describe('AuthService', () => {
     });
   });
 
+  describe('login — session user', () => {
+    it("carries the user's design skin, null when none was chosen", async () => {
+      const chosen = { ...teacher, uiSkin: 'ormon' };
+      const withSkin = await service.login(chosen, undefined, undefined);
+      expect(withSkin.user.uiSkin).toBe('ormon');
+
+      const without = await service.login(teacher, undefined, undefined);
+      expect(without.user.uiSkin).toBeNull();
+    });
+  });
+
   describe('validateUser — phone-based login', () => {
     it('matches by phone field, scopes to the portal roles, strips the password', async () => {
       const hash = await bcrypt.hash('pass123', 10);

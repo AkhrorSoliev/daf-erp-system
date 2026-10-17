@@ -265,6 +265,7 @@ export class AuthService {
       lastName: user.lastName,
       phone: user.phone,
       photo: user.photo,
+      uiSkin: user.uiSkin ?? null,
       gender: user.gender,
       balance: user.balance,
       companyId: user.companyId,
