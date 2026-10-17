@@ -32,4 +32,5 @@
 
 - Migratsiya qo'shimcha (`ADD COLUMN IF NOT EXISTS "uiSkin"`), eski klient yangi maydonni ko'rmaydi. Chiqarish tartibi: migratsiya, server, klient.
 - Boshqa qurilmada o'zgartirilgan uslub shu qurilmaga keyingi token yangilanishida (soatiga) yoki qayta kirishda keladi.
-- Login va o'quvchi portali o'zgarmaydi (kirishdan oldin `user` cookie yo'q; `.lumio` tokenlarni o'z blokida qayta yozadi).
+- Xodimlarning kirish sahifasi ranglari bo'yicha doim Daftar (kirishdan oldin sessiya cookie'si yo'q, atribut qo'yilmaydi). Shrift esa uslubga ergashadi: `setAuth` dan keyingi salomlashuv paytida va Mini App'dan chiqilgach (`clearSession`) xodimlarning `/tg` varag'ida. Bu faqat ko'rinish masalasi.
+- O'quvchi portali (`.lumio`) va ommaviy forma (`.form-theme`) `--font-plex` ni qayta yozmaydi, ya'ni ular uslubdan o'zi himoyalanmagan: uslub atributi ularga yetib bormagani uchun xavfsiz. Birinchi sabab: ular boshqa domenlarda (`student.`, `form.`) turadi va admin cookie'si u yerga bormaydi. Ikkinchisi: `PATCH /users/ui-skin` — `@AnyStaff()`, o'quvchi uslub yoza olmaydi.

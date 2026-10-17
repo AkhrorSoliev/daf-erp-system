@@ -46,9 +46,9 @@ export const boshlash: QollanmaSahifa[] = [
     qisqacha:
       "Chap menyu rolingizga qarab ochiladi. Yuqori panelda filial, qidiruv, soat, bildirishnomalar, shu sahifa bo'yicha qo'llanma tugmasi va foydalanuvchi menyusi turadi.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0076"],
+    adr: ["0076", "0097"],
     yollar: ["/", "/notifications"],
-    kalitSozlar: ["menyu", "filial", "qidiruv", "bildirishnoma", "bildirishnomalar", "qo'ng'iroqcha", "kutilmoqda", "o'qilgan", "mavzu", "ko'rinish", "profil", "chiqish", "foydalanuvchi menyusi", "texnik yordam", "yangilangan"],
+    kalitSozlar: ["menyu", "filial", "qidiruv", "bildirishnoma", "bildirishnomalar", "qo'ng'iroqcha", "kutilmoqda", "o'qilgan", "mavzu", "ko'rinish", "profil", "chiqish", "foydalanuvchi menyusi", "dizayn", "dizayn uslubi", "uslub", "shrift", "texnik yordam", "yangilangan"],
     yangilangan: "2026-10-17",
   },
   {

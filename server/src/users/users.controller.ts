@@ -152,8 +152,8 @@ export class UsersController {
     return this.usersService.changeOwnPhone(userId, dto);
   }
 
-  // Own profile, password and phone go through `profile` / `password` /
-  // `phone` above.
+  // Own profile, password, phone and design skin go through `profile` /
+  // `password` / `phone` / `ui-skin` above.
   @Patch(':id')
   @Can('employees.manage')
   update(
