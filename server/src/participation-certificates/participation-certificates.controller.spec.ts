@@ -19,6 +19,29 @@ describe('ParticipationCertificatesController', () => {
     ]);
   });
 
+  it('cancelling is gated by students.manage, like issuing: CEO, Branch Director, Administrator', () => {
+    expect(routeAccess(ParticipationCertificatesController, 'revoke')).toEqual({
+      kind: 'can',
+      keys: ['students.manage'],
+    });
+    expect(
+      defaultRolesOf(ParticipationCertificatesController, 'revoke'),
+    ).toEqual(['Administrator', 'Branch Director', 'CEO']);
+  });
+
+  it('cancelling passes the caller, the company, the id and the reason to the service', async () => {
+    const view = { id: 'c1', revoked: true };
+    const service = { revoke: jest.fn().mockResolvedValue(view) };
+    const controller = new ParticipationCertificatesController(
+      service as never,
+      { read: jest.fn(), update: jest.fn() } as never,
+    );
+    await expect(
+      controller.revoke('c1', { reason: 'Xato berilgan' }, 7, 1001),
+    ).resolves.toBe(view);
+    expect(service.revoke).toHaveBeenCalledWith(7, 1001, 'c1', 'Xato berilgan');
+  });
+
   it('the QR page is public', () => {
     expect(routeAccess(ParticipationCertificatesController, 'verify')).toEqual({
       kind: 'public',

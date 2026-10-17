@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { Download, FileCheck2, Loader2 } from "lucide-react";
+import { FileCheck2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,11 +24,12 @@ import {
   issueCertificate,
   useCertificatePreview,
 } from "./certificate-queries";
+import { IssuedDocumentsList } from "./issued-documents-list";
+import { RevokeCertificateDialog } from "./revoke-certificate-dialog";
 import {
   dmy,
   issueClickAction,
   issueMode,
-  issuedDay,
   levelSummary,
   needsReissueConfirm,
   REISSUE_CONFIRM_TEXT,
@@ -48,6 +49,8 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
   // The level whose "give another one?" confirmation is open (a document already exists).
   const [reissueFor, setReissueFor] = useState<LevelPreview | null>(null);
   const [reason, setReason] = useState("");
+  // The standing document whose «Bekor qilish» confirmation is open.
+  const [revokeFor, setRevokeFor] = useState<IssuedCertificate | null>(null);
 
   async function give(level: LevelPreview, exemptReason?: string) {
     setBusy(level.level);
@@ -172,26 +175,18 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
             )}
 
             {level.issued.length > 0 && (
-              <ul className="divide-y rounded-md border text-sm">
-                {level.issued.map((row) => (
-                  <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                    <span className="font-medium">{row.number}</span>
-                    <span className="text-muted-foreground">
-                      {issuedDay(row.issuedAt)}
-                      {row.exempt && " · istisno bilan"}
-                      {row.revoked && " · bekor qilingan"}
-                    </span>
-                    <Button variant="ghost" size="sm" onClick={() => void download(row)}>
-                      <Download className="size-4" />
-                      PDF
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+              <IssuedDocumentsList
+                rows={level.issued}
+                canRevoke={canIssue}
+                onDownload={(row) => void download(row)}
+                onRevoke={setRevokeFor}
+              />
             )}
           </section>
         );
       })}
+
+      <RevokeCertificateDialog studentId={studentId} row={revokeFor} onClose={() => setRevokeFor(null)} />
 
       <Dialog open={exemptFor !== null} onOpenChange={(open) => !open && !busy && setExemptFor(null)}>
         <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">

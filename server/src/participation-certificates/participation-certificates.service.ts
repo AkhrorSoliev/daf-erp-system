@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -46,6 +47,8 @@ function assertCertificateId(id: string): void {
   if (!UUID_SHAPE.test(id)) throw new NotFoundException('Hujjat topilmadi');
 }
 
+const ALREADY_REVOKED = 'Hujjat allaqachon bekor qilingan';
+
 interface IssuedRow {
   id: string;
   number: string;
@@ -53,6 +56,7 @@ interface IssuedRow {
   issuedAt: Date;
   exemptReason: string | null;
   revokedAt: Date | null;
+  revokedReason: string | null;
 }
 
 const toIssuedView = (r: IssuedRow): IssuedView => ({
@@ -62,6 +66,8 @@ const toIssuedView = (r: IssuedRow): IssuedView => ({
   issuedAt: r.issuedAt.toISOString(),
   exempt: r.exemptReason !== null,
   revoked: r.revokedAt !== null,
+  revokedAt: r.revokedAt?.toISOString() ?? null,
+  revokedReason: r.revokedReason,
 });
 
 /**
@@ -104,6 +110,7 @@ export class ParticipationCertificatesService {
           issuedAt: true,
           exemptReason: true,
           revokedAt: true,
+          revokedReason: true,
         },
       }),
     ]);
@@ -225,6 +232,7 @@ export class ParticipationCertificatesService {
         studentId: true,
         number: true,
         issuedAt: true,
+        revokedAt: true,
         snapshot: true,
       },
     });
@@ -235,6 +243,8 @@ export class ParticipationCertificatesService {
       row.studentId,
       companyId,
     );
+    // A cancelled document is no longer handed out, not even to staff.
+    if (row.revokedAt) throw new ConflictException('Hujjat bekor qilingan');
     const buffer = await renderCertificatePdf({
       snapshot: row.snapshot as unknown as CertificateSnapshot,
       number: row.number,
@@ -242,6 +252,69 @@ export class ParticipationCertificatesService {
       url: `${publicBaseUrl(this.config)}/t/${row.id}`,
     });
     return { buffer, filename: `${row.number}.pdf` };
+  }
+
+  /**
+   * Soft cancel (ADR-0104): the row and its number stay, `revokedAt` /
+   * `revokedReason` are written once. The stored snapshot is never touched.
+   */
+  async revoke(
+    userId: number,
+    companyId: number,
+    id: string,
+    reason: string,
+  ): Promise<IssuedView> {
+    assertCertificateId(id);
+    const row = await this.prisma.participationCertificate.findFirst({
+      where: { id, companyId },
+      select: {
+        id: true,
+        studentId: true,
+        number: true,
+        level: true,
+        issuedAt: true,
+        exemptReason: true,
+        revokedAt: true,
+      },
+    });
+    if (!row) throw new NotFoundException('Hujjat topilmadi');
+    await assertCallerMayTouchStudent(
+      this.prisma,
+      userId,
+      row.studentId,
+      companyId,
+    );
+    if (row.revokedAt) throw new ConflictException(ALREADY_REVOKED);
+
+    const revokedAt = new Date();
+    await this.prisma
+      .$transaction(async (tx) => {
+        // `revokedAt: null` makes it race-safe: the second of two cancels
+        // matches no row and gets the same 409 as an already cancelled one.
+        const { count } = await tx.participationCertificate.updateMany({
+          where: { id, companyId, revokedAt: null },
+          data: { revokedAt, revokedReason: reason },
+        });
+        if (count === 0) throw new ConflictException(ALREADY_REVOKED);
+        // In the same transaction: a failed history row rolls the cancel
+        // back, so a document is never cancelled without its audit entry.
+        await this.history.recordCreate({
+          entityType: 'Student',
+          entityId: row.studentId,
+          newValues: {
+            action: 'QATNASHISH_HUJJATI_BEKOR_QILINDI',
+            raqam: row.number,
+            daraja: row.level,
+            sabab: reason,
+          },
+          changedById: userId,
+          companyId,
+          tx,
+        });
+      }, TX_OPTIONS)
+      .catch((e: unknown) => rethrowAsConflict(e));
+
+    return toIssuedView({ ...row, revokedAt, revokedReason: reason });
   }
 
   /** The public QR answer: no branch, no birth date, no percentages. */

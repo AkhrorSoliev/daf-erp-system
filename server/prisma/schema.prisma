@@ -948,8 +948,9 @@ model KpiResult {
 /// berilgan paytdagi hisobni MUHRLAYDI: keyin davomat tuzatilsa yoki
 /// chegara o'zgarsa ham berilgan hujjatning raqamlari qimirlamaydi.
 /// `branchId` faqat kirish huquqi uchun; hujjatga ham, ochiq sahifaga ham
-/// chiqmaydi. Hujjat hech qachon o'chirilmaydi; `revokedAt` bekor qilish
-/// ustuni (hozircha yozadigan yo'l yo'q, ochiq sahifa uni o'qiydi).
+/// chiqmaydi. Hujjat hech qachon o'chirilmaydi; xato berilgani bekor
+/// qilinadi (ADR-0104): `revokedAt` va `revokedReason` bir marta yoziladi,
+/// raqam band qoladi, ochiq sahifa sababsiz «bekor qilingan» deydi.
 model ParticipationCertificate {
   id            String    @id @default(uuid())
   companyId     Int
