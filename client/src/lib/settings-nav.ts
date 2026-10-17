@@ -181,7 +181,7 @@ export const settingsNavSections: SettingsNavSection[] = [
         title: "Qatnashganlik hujjati",
         url: "/settings/participation",
         icon: FileCheck2,
-        description: "Teilnahmebestätigung berish chegaralari",
+        description: "Qatnashganlik hujjatini berish chegaralari",
         ceoOnly: true,
       },
       {

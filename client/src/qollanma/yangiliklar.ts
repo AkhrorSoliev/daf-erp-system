@@ -8,7 +8,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
     sarlavha: "Qatnashganlik hujjati",
-    matn: "O'quvchi kartasida «Hujjatlar» yorlig'i paydo bo'ldi. Daraja tugagach shu yerdan Teilnahmebestätigung (nemischa, QR bilan PDF) beriladi. Hujjat uchun davomat kamida 80% bo'lishi va ilovadagi ochiq darslar tugatilgan bo'lishi kerak; sababli kelmagan va bekor bo'lgan darslar hisobga kirmaydi. Shart bajarilmasa faqat CEO sabab yozib berishi mumkin. Chegaralar — Sozlamalar → «Qatnashganlik hujjati» (faqat CEO).",
+    matn: "O'quvchi kartasida «Hujjatlar» yorlig'i paydo bo'ldi. Daraja tugagach shu yerdan qatnashganlik hujjati (nemischa, QR bilan PDF) beriladi. Hujjat uchun davomat kamida 80% bo'lishi va ilovadagi ochiq darslar tugatilgan bo'lishi kerak; sababli kelmagan va bekor bo'lgan darslar hisobga kirmaydi. Shart bajarilmasa faqat CEO sabab yozib berishi mumkin. Chegaralar — Sozlamalar → «Qatnashganlik hujjati» (faqat CEO).",
     rollar: [1, 2, 3],
     sahifa: { bolim: "oquvchilar", sahifa: "qatnashganlik-hujjati" },
   },

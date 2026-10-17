@@ -31,7 +31,7 @@ export default async function CertificateVerifyPage({ params }: { params: Promis
             <div className="text-base font-semibold">
               {data.valid ? "Bu hujjat haqiqiy" : "Bu hujjat bekor qilingan"}
             </div>
-            <div className="text-xs text-muted-foreground">Teilnahmebestätigung № {data.number}</div>
+            <div className="text-xs text-muted-foreground">Qatnashganlik hujjati № {data.number}</div>
           </div>
         </div>
       </div>

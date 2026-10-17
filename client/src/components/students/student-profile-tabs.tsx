@@ -297,6 +297,7 @@ export function StudentProfileTabs({
           {canSeeDetails && (
             <TabsTrigger value="shartnomalar">Shartnomalar</TabsTrigger>
           )}
+          {canSeeDetails && <TabsTrigger value="hujjatlar">Hujjatlar</TabsTrigger>}
           {canSeeDetails && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
           {canSeeComments && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
           {canSeeDetails && (
@@ -320,7 +321,6 @@ export function StudentProfileTabs({
             <TabsTrigger value="mock-imtihonlar">Mock imtihonlar</TabsTrigger>
           )}
           {canSeeDetails && <TabsTrigger value="ilova">Ilova</TabsTrigger>}
-          {canSeeDetails && <TabsTrigger value="hujjatlar">Hujjatlar</TabsTrigger>}
         </TabsList>
 
         {/* Guruhlar */}
@@ -477,7 +477,7 @@ export function StudentProfileTabs({
           </TabsContent>
         )}
 
-        {/* Hujjatlar — Teilnahmebestätigung */}
+        {/* Hujjatlar — qatnashganlik hujjati */}
         {canSeeDetails && (
           <TabsContent value="hujjatlar">
             {certificatesVisible && <StudentCertificatesTab studentId={student.id} />}

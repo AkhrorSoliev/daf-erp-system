@@ -863,6 +863,7 @@ The student profile (`/students/profile/[id]`) has **12 tabs** (URL `?tab=<value
 | Guruhlar | `guruhlar` (default) | Enrollments list |
 | To'lovlar | `tolovlar` | Money-flow transactions — see deep-dive below |
 | Shartnomalar | `shartnomalar` | Student contracts (ADR-0075): create, edit while unsigned, «Qog'ozda imzolandi», cancel (signed — CEO only), PDF in a new tab. `components/students/contracts/`; pure rules in `contract-rules.ts` (tested). Visible with `useCan("students.details")`; create, edit, sign and cancel need `contracts.manage` («Shartnoma tuzish va imzolash», default Branch Director + Administrator, ADR-0087) |
+| Hujjatlar | `hujjatlar` | Participation document, the «Teilnahmebestätigung» (ADR-0100): one block per level the student attended, with the server's verdict, «Hujjat berish» (`useCan("students.manage")`; the CEO alone gets «Istisno bilan berish» with a reason when the condition fails), and the issued documents with a PDF button. `components/students/certificates/`; the figures are the server's, pure rules in `certificate-rules.ts` (tested). Visible with `useCan("students.details")`, fetched on first activation. The QR opens the public `/t/[id]` page and the CEO sets the thresholds on `/settings/participation` |
 | Darslar | `darslar` | Lesson trail (LESSON_DEDUCTION + LESSON_CONSUMPTION) — see deep-dive below |
 | Izohlar | `izohlar` | Comments (shared `CommentList` / `CommentForm`; tasks live on `/tasks`) |
 | Qo'ng'iroq | `qongiroq` | Call history |
@@ -871,7 +872,6 @@ The student profile (`/students/profile/[id]`) has **12 tabs** (URL `?tab=<value
 | Lid | `lid` | Lead/source info |
 | Mock imtihonlar | `mock-imtihonlar` | Mock exam attempts and results |
 | Ilova | `ilova` | App usage: active time, radio, practice days, exercise accuracy, course progress (CEO/BD/Admin). Same panel as the group sheet |
-| Hujjatlar | `hujjatlar` | Participation document, the «Teilnahmebestätigung» (ADR-0100): one block per level the student attended, with the server's verdict, «Hujjat berish» (`useCan("students.manage")`; the CEO alone gets «Istisno bilan berish» with a reason when the condition fails), and the issued documents with a PDF button. `components/students/certificates/`; the figures are the server's, pure rules in `certificate-rules.ts` (tested). Visible with `useCan("students.details")`, fetched on first activation. The QR opens the public `/t/[id]` page and the CEO sets the thresholds on `/settings/participation` |
 
 The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth below because they share an endpoint family and have a near-strict separation contract: every `Transaction` type belongs to exactly one tab — **except `LESSON_DEDUCTION`, which intentionally appears on both**. `LESSON_DEDUCTION` is a real money-flow row (it moves the balance), so it shows on "To'lovlar" to explain balance drops; it is also part of the lesson story, so it stays on "Darslar". `LESSON_CONSUMPTION` (amount=0) stays exclusive to "Darslar". Do not move any other type across tabs.
 
