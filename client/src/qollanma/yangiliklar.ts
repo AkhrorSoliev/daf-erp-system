@@ -14,6 +14,13 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-17",
+    sarlavha: "Lidlar: «Xodimlar bo'yicha» kartochkalari tushunarli bo'ldi",
+    matn: "Har bir xodim kartochkasida katta raqam — hozir qo'lida nechta lid turgani, sariq belgi — shulardan nechtasiga tegilmagani. Pastda tanlangan davr (hafta yoki oy) uchun uchta raqam: olgan, muddatda qaytgan, o'quvchi bo'lgan; har biriga sichqoncha olib borsangiz izohi chiqadi. «Olgan» endi har lidni bir marta sanaydi (ilgari olib, qaytarib, yana olingan lid ikki marta chiqardi). Oxirida «Hech kimda yo'q» kartochkasi egasiz lidlar sonini ko'rsatadi, bossangiz ro'yxatda shular chiqadi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "lid-egasi" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Profil: rol o'zbekcha, filial tanlagichi faqat kerak bo'lganda",
     matn: "Profil kartochkasida va foydalanuvchi menyusida rol nomi endi o'zbekcha: «O'qituvchi», «Kassir», «Filial direktori». Faqat bitta filialda ishlaydigan xodim (masalan, o'qituvchi) filial tanlagichini ko'rmaydi: tanlashga hech narsa yo'q, ma'lumot o'z filialidan keladi. Filial nomi Profil → «Batafsil ma'lumotlar»da turadi. Bir nechta filialli xodim va CEO uchun tanlagich o'zgarmadi. Direktorning profilida (oyligi yo'q) bo'sh «To'lanishi kerak —» bloki chiqmaydi.",
     rollar: [1, 2, 3, 4, 5],

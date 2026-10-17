@@ -7,15 +7,27 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { LEAD_FILTER_SCHEMA } from "../lead-filter-schema";
-import { LEAD_STATS_SCHEMA, parseStatsPeriod } from "../lead-stats";
-import { fetchOwnerSummary } from "./ownership-api";
+import {
+  LEAD_STATS_PERIODS,
+  LEAD_STATS_SCHEMA,
+  parseStatsPeriod,
+} from "../lead-stats";
+import { fetchOwnerSummary, type OwnerSummaryRow } from "./ownership-api";
 
 /**
- * «Xodimlar bo'yicha» under the stats strip (ADR-0093): how many leads each
- * person holds now (and how many untouched), how many they took and how many
- * went back in the strip's period. A click lists that person's leads. A failed
- * request or nobody holding leads hides it; the board works without it.
+ * «Xodimlar bo'yicha» under the stats strip (ADR-0093): one card per person.
+ * The big number is how many leads they hold NOW; the three small ones are
+ * what happened in the strip's period (taken, taken back by the deadline,
+ * became students). A click lists that person's leads; the last card lists the
+ * leads nobody holds. A failed request or no one to show hides the strip, the
+ * board works without it.
  */
 export function LeadOwnersStrip() {
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
@@ -24,9 +36,11 @@ export function LeadOwnersStrip() {
   const { filters: statsFilters } = useUrlFilters(LEAD_STATS_SCHEMA);
   const { filters, setFilters } = useUrlFilters(LEAD_FILTER_SCHEMA);
   const period = parseStatsPeriod(statsFilters.period);
-  // The list shows exactly this person's leads.
-  const active = (userId: number) =>
-    filters.masul.length === 1 && filters.masul[0] === String(userId);
+  const periodLabel =
+    LEAD_STATS_PERIODS.find((p) => p.value === period)?.label ?? "";
+  // The list shows exactly this owner's leads.
+  const active = (value: string) =>
+    filters.masul.length === 1 && filters.masul[0] === value;
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["leads", "owners", selectedBranch?.id ?? "all", period, revision],
@@ -35,42 +49,158 @@ export function LeadOwnersStrip() {
     placeholderData: (previous) => previous,
   });
 
-  if (isError || (data && data.rows.length === 0)) return null;
+  if (isError || (data && data.rows.length === 0 && data.unowned === 0)) {
+    return null;
+  }
 
   return (
     <section className="space-y-1.5">
-      <div className="flex h-6 items-center px-0.5 text-xs text-muted-foreground">
-        Xodimlar bo&apos;yicha
+      <div className="flex h-6 items-baseline justify-between gap-2 px-0.5 text-xs text-muted-foreground">
+        <span>Xodimlar bo&apos;yicha</span>
+        <span>
+          Davr: {periodLabel.toLowerCase()} · bosing — ro&apos;yxatda shu
+          lidlar chiqadi
+        </span>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {isPending || !data
-          ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-44" />)
-          : data.rows.map((r) => (
-              <button
-                key={r.userId}
-                type="button"
-                onClick={() => setFilters({ masul: [String(r.userId)], page: 1 })}
-                aria-pressed={active(r.userId)}
-                className={cn(
-                  "rounded-md border bg-card px-3 py-2 text-left text-xs transition-colors hover:bg-muted/50",
-                  active(r.userId) && "ring-2 ring-primary",
-                )}
-              >
-                <p className="text-sm font-medium">{r.name}</p>
-                <p className="text-muted-foreground">
-                  {formatNumber(r.held)} ta lid
-                  {r.untouched > 0 && ` · ${formatNumber(r.untouched)} tasi harakatsiz`}
-                </p>
-                <p
-                  className={cn(
-                    r.expired > 0 ? "text-orange-600 dark:text-orange-400" : "text-muted-foreground",
+      <TooltipProvider>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {isPending || !data
+            ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-24" />)
+            : (
+                <>
+                  {data.rows.map((r) => (
+                    <OwnerCard
+                      key={r.userId}
+                      row={r}
+                      selected={active(String(r.userId))}
+                      onSelect={() =>
+                        setFilters({ masul: [String(r.userId)], page: 1 })
+                      }
+                    />
+                  ))}
+                  {data.unowned > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFilters({ masul: ["none"], page: 1 })}
+                      aria-pressed={active("none")}
+                      className={cn(
+                        "rounded-lg border border-dashed bg-muted/30 px-3 py-2.5 text-left transition-colors hover:bg-muted/60",
+                        active("none") && "ring-2 ring-primary",
+                      )}
+                    >
+                      <p className="text-sm font-medium">Hech kimda yo&apos;q</p>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        Egasiz lidlar
+                      </p>
+                      <p className="flex items-baseline gap-1.5">
+                        <span className="text-2xl font-medium tabular-nums">
+                          {formatNumber(data.unowned)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ta lid
+                        </span>
+                      </p>
+                    </button>
                   )}
-                >
-                  olgan {formatNumber(r.taken)} · qaytgan {formatNumber(r.expired)}
-                </p>
-              </button>
-            ))}
-      </div>
+                </>
+              )}
+        </div>
+      </TooltipProvider>
     </section>
+  );
+}
+
+function OwnerCard({
+  row,
+  selected,
+  onSelect,
+}: {
+  row: OwnerSummaryRow;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={cn(
+        "rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
+        selected && "ring-2 ring-primary",
+      )}
+    >
+      <p className="truncate text-sm font-medium">{row.name}</p>
+      <p className="mt-1.5 text-xs text-muted-foreground">Hozir qo&apos;lida</p>
+      <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
+        <span className="text-2xl font-medium tabular-nums">
+          {formatNumber(row.held)}
+        </span>
+        <span className="text-xs text-muted-foreground">ta lid</span>
+        {row.untouched > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="rounded-md bg-yellow-100 px-2 py-0.5 text-[11px] text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200">
+                {formatNumber(row.untouched)} tasiga tegilmagan
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              Qo&apos;ng&apos;iroq, izoh yoki topshiriq hali yo&apos;q. Muddati
+              o&apos;tsa lid umumiy ro&apos;yxatga qaytadi.
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+      <div className="mt-2 flex gap-3 border-t pt-2">
+        <Metric
+          value={row.taken}
+          label="olgan"
+          hint="Shu davrda band qilgan yoki unga berilgan lidlar. Bir lid bir marta sanaladi."
+        />
+        <Metric
+          value={row.expired}
+          label="muddatda qaytgan"
+          warn={row.expired > 0}
+          hint="Muddatida harakat qilinmagani uchun tizim umumiy ro'yxatga qaytargan lidlar."
+        />
+        <Metric
+          value={row.converted}
+          label="o'quvchi bo'lgan"
+          hint="Shu davrda o'quvchiga aylangan lidlari."
+        />
+      </div>
+    </button>
+  );
+}
+
+function Metric({
+  value,
+  label,
+  hint,
+  warn,
+}: {
+  value: number;
+  label: string;
+  hint: string;
+  warn?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="min-w-0 flex-1">
+          <b
+            className={cn(
+              "block text-base font-medium tabular-nums",
+              warn && "text-orange-600 dark:text-orange-400",
+            )}
+          >
+            {formatNumber(value)}
+          </b>
+          <span className="block text-[11px] leading-tight text-muted-foreground">
+            {label}
+          </span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{hint}</TooltipContent>
+    </Tooltip>
   );
 }
