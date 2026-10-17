@@ -3,10 +3,9 @@
 import { CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatNumber } from "@/lib/format-utils";
+import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { PILL_BASE } from "@/components/payments/list/payments-table";
-import { mln } from "@/components/payments/salary/salary-page-model";
 import { addMonths, monthShort } from "@/components/payments/salary-utils";
 import { CATEGORY_HINT, SAME_AS_PROFIT } from "./expenses-format";
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategoryKey } from "./expenses-labels";
@@ -46,9 +45,9 @@ export function ExpensesMonthCard({ summary, selected, onToggle }: {
               <p className="mt-1 text-sm text-muted-foreground">Bu oyda xarajat yozilmagan</p>
             ) : (
               <>
-                <p className="font-heading text-2xl font-semibold tabular-nums">{mln(summary.total)}</p>
+                <p className="font-heading text-2xl font-semibold tabular-nums">{formatBalance(summary.total)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {formatNumber(summary.count)} ta · naqd {mln(summary.cashTotal)} · karta {mln(summary.cardTotal)}
+                  {formatNumber(summary.count)} ta · naqd {formatBalance(summary.cashTotal)} · karta {formatBalance(summary.cardTotal)}
                 </p>
               </>
             )}
@@ -78,20 +77,20 @@ export function ExpensesMonthCard({ summary, selected, onToggle }: {
                       <span className="h-1.5 w-12 shrink-0 overflow-hidden sm:w-24 rounded-full bg-muted">
                         <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.round((r.amount / max) * 100)}%` }} />
                       </span>
-                      <span className="whitespace-nowrap tabular-nums">{mln(r.amount)}</span>
+                      <span className="whitespace-nowrap tabular-nums">{formatBalance(r.amount)}</span>
                     </>
                   ) : (
                     <Muted0 />
                   )}
                 </span>
-                <span className="whitespace-nowrap text-right tabular-nums">{r.lastMonthAmount > 0 ? mln(r.lastMonthAmount) : <Muted0 />}</span>
+                <span className="whitespace-nowrap text-right tabular-nums">{r.lastMonthAmount > 0 ? formatBalance(r.lastMonthAmount) : <Muted0 />}</span>
               </button>
             );
           })}
           <div className={cn(GRID, "border-t px-1 pt-1.5 font-semibold")}>
             <span>Jami</span>
-            <span className="tabular-nums">{mln(summary.total)}</span>
-            <span className="text-right tabular-nums">{mln(summary.lastMonthTotal)}</span>
+            <span className="tabular-nums">{formatBalance(summary.total)}</span>
+            <span className="text-right tabular-nums">{formatBalance(summary.lastMonthTotal)}</span>
           </div>
         </div>
         <p className="text-xs text-muted-foreground">{CATEGORY_HINT}</p>
