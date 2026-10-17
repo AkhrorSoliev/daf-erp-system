@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatLessonDay, type UnmarkedLessonRef } from "@/lib/unmarked-lesson";
@@ -50,6 +51,7 @@ export function LateAttendanceDialog({
   teacherPayExempt,
   onSaved,
 }: LateAttendanceDialogProps) {
+  const t = useT();
   const [marks, setMarks] = useState<Map<number, AttendanceEntry>>(() => new Map());
   const [openNote, setOpenNote] = useState<number | null>(null);
   const [exempt, setExempt] = useState(false);
@@ -122,11 +124,11 @@ export function LateAttendanceDialog({
         }),
         ...(exempt ? { teacherPayExempt: true, exemptReason: exemptReason.trim() } : {}),
       });
-      toast.success(data?.message || "Davomat saqlandi");
+      toast.success(data?.message || t("Davomat saqlandi"));
       reset();
       onSaved();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Davomatni saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Davomatni saqlashda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -138,7 +140,7 @@ export function LateAttendanceDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>Dars bo&apos;ldi — kim keldi?</DialogTitle>
+          <DialogTitle>{t("Dars bo'ldi — kim keldi?")}</DialogTitle>
           <DialogDescription>
             {lesson.groupName}, {formatLessonDay(lesson.date)}
             {time}
@@ -149,7 +151,7 @@ export function LateAttendanceDialog({
           {!exempt && !teacherPayExempt && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              Davomat dars vaqtida olinmagan — ustozga bu dars uchun haq yozilmaydi.
+              {t("Davomat dars vaqtida olinmagan — ustozga bu dars uchun haq yozilmaydi.")}
             </div>
           )}
 
@@ -160,9 +162,9 @@ export function LateAttendanceDialog({
               ))}
             </div>
           ) : roster.isError ? (
-            <p className="text-sm text-destructive">O&apos;quvchilar ro&apos;yxatini yuklab bo&apos;lmadi</p>
+            <p className="text-sm text-destructive">{t("O'quvchilar ro'yxatini yuklab bo'lmadi")}</p>
           ) : students.length === 0 ? (
-            <p className="text-sm text-muted-foreground">O&apos;sha kuni guruhda o&apos;quvchi bo&apos;lmagan</p>
+            <p className="text-sm text-muted-foreground">{t("O'sha kuni guruhda o'quvchi bo'lmagan")}</p>
           ) : (
             <>
               <Button
@@ -173,7 +175,7 @@ export function LateAttendanceDialog({
                 className="text-green-700 dark:text-green-400"
               >
                 <UserCheck className="mr-1.5 size-4" />
-                Barchasiga — Keldi
+                {t("Barchasiga — Keldi")}
               </Button>
               <div className="space-y-1.5">
                 {students.map((student, index) => (
@@ -199,13 +201,13 @@ export function LateAttendanceDialog({
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2 text-sm font-medium">
                 <Checkbox checked={exempt} onCheckedChange={(v) => setExempt(v === true)} />
-                Ustoz aybdor emas — haq yozilsin
+                {t("Ustoz aybdor emas — haq yozilsin")}
               </label>
               {exempt && (
                 <Textarea
                   value={exemptReason}
                   onChange={(e) => setExemptReason(e.target.value)}
-                  placeholder="Sabab: masalan, akkaunt hali ochilmagan edi"
+                  placeholder={t("Sabab: masalan, akkaunt hali ochilmagan edi")}
                   maxLength={500}
                 />
               )}
@@ -216,18 +218,18 @@ export function LateAttendanceDialog({
         <DialogFooter className="border-t px-6 py-4">
           {unmarkedCount > 0 && (
             <span className="mr-auto self-center text-xs font-medium text-amber-700 dark:text-amber-400">
-              Belgilanmagan: {unmarkedCount} ta
+              {t("Belgilanmagan: {n}", { n: unmarkedCount })}
             </span>
           )}
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             onClick={handleSave}
             disabled={submitting || roster.isFetching || students.length === 0 || unmarkedCount > 0 || reasonMissing}
           >
             {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>
