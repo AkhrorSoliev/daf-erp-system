@@ -58,7 +58,9 @@ export function LoginForm({ portal }: LoginFormProps) {
       setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
       // Student portal foydalanuvchilarini /portal ga yo'naltirish
       const isStudent = res.data.user?.roles?.some((r: any) => r.id === 6);
-      greet(res.data.user, portal === "student" || isStudent ? "/portal" : "/");
+      // Awaited so `loading` stays true until the greeting replaces the form
+      // (greet may first load the account's language).
+      await greet(res.data.user,portal === "student" || isStudent ? "/portal" : "/");
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response
         ?.status;
