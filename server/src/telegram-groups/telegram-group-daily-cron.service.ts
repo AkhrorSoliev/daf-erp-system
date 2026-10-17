@@ -11,6 +11,10 @@ import { TelegramGroupReportMenuService } from './telegram-group-report-menu.ser
 import { reportBranchIdsForGroup } from './group-report-scope';
 import { isTashkentSunday, tashkentDayRange } from './utils/format.util';
 import { HolidaysService } from '../holidays/holidays.service';
+import {
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+} from '../common/date/tashkent';
 
 /**
  * Runs daily at 21:00 Tashkent (end of workday) and sends each approved
@@ -49,8 +53,10 @@ export class TelegramGroupDailyCronService {
     // zeros and would spam groups with empty stats on Navro'z / Mustaqillik.
     // Company-wide holidays only (`null`): one branch closing does not stop
     // the other branches' messages (CEO decision 10.10.2026).
+    // Holidays are UTC-midnight dates (date <= X <= endDate): ask for the
+    // Tashkent day, not the instant, or a holiday's last day is missed.
     const holiday = await this.holidaysService.findActiveHolidayCovering(
-      new Date(),
+      utcMidnightFromDateStr(tashkentDateStr(new Date())),
       null,
     );
     if (holiday) {
