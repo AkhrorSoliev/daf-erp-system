@@ -1,6 +1,89 @@
 import type { Dictionary } from "../translate";
 
 /** German: Uzbek source text → translation. Keys are the texts in `t("…")` / `msg("…")`. */
-const de: Dictionary = {};
+const de: Dictionary = {
+  // Sidebar, menu configs, footer
+  "Asosiy": "Hauptmenü",
+  "Bosh sahifa": "Startseite",
+  "Jadval": "Stundenplan",
+  "O'qituvchilar": "Lehrkräfte",
+  "O'quvchilar": "Teilnehmer",
+  "Lidlar": "Leads",
+  "Aloqa markazi": "Kontaktzentrum",
+  "Mock imtihonlar": "Probeprüfungen",
+  "Guruhlar": "Gruppen",
+  "Topshiriqlar": "Aufgaben",
+  "Media": "Medien",
+  "DaF ilovasi": "DaF-App",
+  "Mening oyligim": "Mein Gehalt",
+  "Moliya": "Finanzen",
+  "Hisobotlar": "Berichte",
+  "Qo'llanma": "Anleitung",
+  "Sozlamalar": "Einstellungen",
+  "Texnik yordam": "Technischer Support",
+  "Yangilangan": "Aktualisiert",
+  "{n} ta yangi o'zgarish": "Neue Änderungen: {n}",
+
+  // Moliya
+  "Umumiy ma'lumotlar": "Übersicht",
+  "To'lovlar": "Zahlungen",
+  "Xarajatlar": "Ausgaben",
+  "Ish haqi": "Gehalt",
+  "Qaytariladigan pul": "Geld zur Rückzahlung",
+  "Qarzdorlik": "Schulden",
+  "To'lov tizimlari jurnali": "Zahlungssystem-Protokoll",
+
+  // Hisobotlar
+  "Moliyaviy hisobotlar": "Finanzberichte",
+  "Guruhlar bo'yicha to'lov": "Zahlungen nach Gruppen",
+  "O'quvchilar hisoboti": "Teilnehmerbericht",
+  "Ketgan o'quvchilar hisoboti": "Bericht: Ausgeschiedene Teilnehmer",
+  "Bitiruvchilar": "Absolventen",
+  "Dars baholari": "Unterrichtsfeedback",
+  "Marketing va faoliyat": "Marketing und Aktivität",
+  "Lidlar hisoboti": "Lead-Bericht",
+  "Xodimlar KPI": "Mitarbeiter-KPI",
+  "Marketing": "Marketing",
+  "Markaz faoliyat statistikasi": "Statistik der Zentrumsaktivität",
+  "Davomat statistikasi": "Anwesenheitsstatistik",
+  "Bot hisoboti": "Bot-Bericht",
+
+  // DaF ilovasi
+  "Umumiy holat": "Gesamtstatus",
+
+  // Breadcrumbs
+  "Forma sozlash": "Formular einrichten",
+  "Formalar": "Formulare",
+  "Yangi": "Neu",
+  "Tahrirlash": "Bearbeiten",
+  "Ketgan o'quvchilar": "Ausgeschiedene Teilnehmer",
+  "Markaz faoliyati": "Zentrumsaktivität",
+  "Profil": "Profil",
+  "Umumiy sozlamalar": "Allgemeine Einstellungen",
+  "Kurslar": "Kurse",
+  "To'lov": "Zahlung",
+  "Filiallar": "Filialen",
+  "Xodimlar": "Mitarbeiter",
+  "Xonalar": "Räume",
+  "Dam olish kunlari": "Freie Tage",
+  "Sabablar": "Gründe",
+  "Avtomatik pauza": "Automatische Pause",
+  "Ruxsatlar": "Berechtigungen",
+  "Lidlar egaligi": "Lead-Zuständigkeit",
+  "KPI sozlamalari": "KPI-Einstellungen",
+  "Telegram hisobot": "Telegram-Bericht",
+  "Bildirishnomalar": "Benachrichtigungen",
+  "Arxiv": "Archiv",
+  "Kutilyotgan to'lovlar": "Ausstehende Zahlungen",
+  "Qarz tarixi": "Schuldenverlauf",
+  "Kechirilgan qarzlar": "Erlassene Schulden",
+  "Tarix": "Verlauf",
+  "Oyliklar": "Gehälter",
+  "Oylik belgilash": "Gehalt festlegen",
+  "Sun'iy intellekt": "Künstliche Intelligenz",
+  "Qidiruv natijalari": "Suchergebnisse",
+  "Media fayllari": "Mediendateien",
+  "Nima yangi": "Neuigkeiten",
+};
 
 export default de;

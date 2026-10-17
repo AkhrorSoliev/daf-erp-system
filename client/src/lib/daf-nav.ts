@@ -1,5 +1,6 @@
 import { Gauge, Users, type LucideIcon } from "lucide-react";
 import type { Can } from "./permission-check";
+import { msg } from "@/i18n/msg";
 import type { PermissionKey } from "./permission-keys";
 
 export interface DafNavItem {
@@ -14,13 +15,13 @@ export interface DafNavItem {
 // teacher sees the app activity in their own group's «Ilova faolligi» tab.
 export const dafNavItems: DafNavItem[] = [
   {
-    title: "Umumiy holat",
+    title: msg("Umumiy holat"),
     url: "/daf",
     icon: Gauge,
     permission: "daf.activity",
   },
   {
-    title: "O'quvchilar",
+    title: msg("O'quvchilar"),
     url: "/daf/oquvchilar",
     icon: Users,
     permission: "daf.activity",

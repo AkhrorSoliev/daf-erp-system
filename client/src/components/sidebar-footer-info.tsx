@@ -7,6 +7,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useT } from "@/i18n/context";
 import { currentBuildInfo, formatBuildInfo } from "@/lib/build-info";
 import { COMPANY } from "@/lib/company";
 
@@ -17,23 +18,24 @@ import { COMPANY } from "@/lib/company";
  * site was last published; it disappears on the icon-only sidebar.
  */
 export function SidebarFooterInfo() {
+  const t = useT();
   const build = currentBuildInfo();
 
   return (
     <SidebarFooter>
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton asChild tooltip="Texnik yordam">
+          <SidebarMenuButton asChild tooltip={t("Texnik yordam")}>
             <a href={COMPANY.supportHref} target="_blank" rel="noopener noreferrer">
               <LifeBuoy />
-              <span>Texnik yordam</span>
+              <span>{t("Texnik yordam")}</span>
             </a>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
       {build && (
         <p className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-          {formatBuildInfo(build)}
+          {formatBuildInfo(build, t("Yangilangan"))}
         </p>
       )}
     </SidebarFooter>

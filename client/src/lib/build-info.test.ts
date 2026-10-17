@@ -15,6 +15,12 @@ describe("formatBuildInfo", () => {
       "Yangilangan: 17.10.2026 · dev",
     );
   });
+
+  it("translates only the label; the date and the commit keep their form", () => {
+    expect(formatBuildInfo({ date: "2026-10-17", sha: "a1b2c3d" }, "Обновлено")).toBe(
+      "Обновлено: 17.10.2026 · a1b2c3d",
+    );
+  });
 });
 
 describe("resolveBuildInfo", () => {

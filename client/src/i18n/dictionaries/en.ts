@@ -1,6 +1,89 @@
 import type { Dictionary } from "../translate";
 
 /** English: Uzbek source text → translation. Keys are the texts in `t("…")` / `msg("…")`. */
-const en: Dictionary = {};
+const en: Dictionary = {
+  // Sidebar, menu configs, footer
+  "Asosiy": "Main",
+  "Bosh sahifa": "Home",
+  "Jadval": "Schedule",
+  "O'qituvchilar": "Teachers",
+  "O'quvchilar": "Students",
+  "Lidlar": "Leads",
+  "Aloqa markazi": "Contact center",
+  "Mock imtihonlar": "Mock exams",
+  "Guruhlar": "Groups",
+  "Topshiriqlar": "Tasks",
+  "Media": "Media",
+  "DaF ilovasi": "DaF app",
+  "Mening oyligim": "My salary",
+  "Moliya": "Finance",
+  "Hisobotlar": "Reports",
+  "Qo'llanma": "User guide",
+  "Sozlamalar": "Settings",
+  "Texnik yordam": "Technical support",
+  "Yangilangan": "Updated",
+  "{n} ta yangi o'zgarish": "New changes: {n}",
+
+  // Moliya
+  "Umumiy ma'lumotlar": "Overview",
+  "To'lovlar": "Payments",
+  "Xarajatlar": "Expenses",
+  "Ish haqi": "Salary",
+  "Qaytariladigan pul": "Refundable money",
+  "Qarzdorlik": "Debt",
+  "To'lov tizimlari jurnali": "Payment systems log",
+
+  // Hisobotlar
+  "Moliyaviy hisobotlar": "Financial reports",
+  "Guruhlar bo'yicha to'lov": "Payments by group",
+  "O'quvchilar hisoboti": "Student report",
+  "Ketgan o'quvchilar hisoboti": "Departed students report",
+  "Bitiruvchilar": "Graduates",
+  "Dars baholari": "Lesson ratings",
+  "Marketing va faoliyat": "Marketing and activity",
+  "Lidlar hisoboti": "Leads report",
+  "Xodimlar KPI": "Staff KPI",
+  "Marketing": "Marketing",
+  "Markaz faoliyat statistikasi": "Center activity statistics",
+  "Davomat statistikasi": "Attendance statistics",
+  "Bot hisoboti": "Bot report",
+
+  // DaF ilovasi
+  "Umumiy holat": "Overall status",
+
+  // Breadcrumbs
+  "Forma sozlash": "Form setup",
+  "Formalar": "Forms",
+  "Yangi": "New",
+  "Tahrirlash": "Edit",
+  "Ketgan o'quvchilar": "Departed students",
+  "Markaz faoliyati": "Center activity",
+  "Profil": "Profile",
+  "Umumiy sozlamalar": "General settings",
+  "Kurslar": "Courses",
+  "To'lov": "Payment",
+  "Filiallar": "Branches",
+  "Xodimlar": "Staff",
+  "Xonalar": "Rooms",
+  "Dam olish kunlari": "Days off",
+  "Sabablar": "Reasons",
+  "Avtomatik pauza": "Automatic pause",
+  "Ruxsatlar": "Permissions",
+  "Lidlar egaligi": "Lead ownership",
+  "KPI sozlamalari": "KPI settings",
+  "Telegram hisobot": "Telegram report",
+  "Bildirishnomalar": "Notifications",
+  "Arxiv": "Archive",
+  "Kutilyotgan to'lovlar": "Pending payments",
+  "Qarz tarixi": "Debt history",
+  "Kechirilgan qarzlar": "Written-off debts",
+  "Tarix": "History",
+  "Oyliklar": "Salaries",
+  "Oylik belgilash": "Set salary",
+  "Sun'iy intellekt": "Artificial intelligence",
+  "Qidiruv natijalari": "Search results",
+  "Media fayllari": "Media files",
+  "Nima yangi": "What's new",
+};
 
 export default en;

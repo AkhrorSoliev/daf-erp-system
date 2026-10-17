@@ -24,6 +24,7 @@ export function currentBuildInfo(): BuildInfo | null {
   );
 }
 
-export function formatBuildInfo({ date, sha }: BuildInfo): string {
-  return `Yangilangan: ${formatDdMmYyyy(date)} · ${sha}`;
+/** `label` is the translated word «Yangilangan»; the date and the commit keep their form in every language. */
+export function formatBuildInfo({ date, sha }: BuildInfo, label = "Yangilangan"): string {
+  return `${label}: ${formatDdMmYyyy(date)} · ${sha}`;
 }

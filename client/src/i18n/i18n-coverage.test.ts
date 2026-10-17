@@ -14,7 +14,17 @@ const SRC = path.join(__dirname, "..");
  * dictionaries. A task that translates a file adds it here; the pages are added
  * as they are translated (spec 2026-10-17-tillar §9).
  */
-export const STRICT_FILES: string[] = [];
+export const STRICT_FILES: string[] = [
+  "lib/nav-items.ts",
+  "lib/payments-nav.ts",
+  "lib/reports-nav.ts",
+  "lib/daf-nav.ts",
+  "components/app-sidebar.tsx",
+  "components/sidebar-footer-info.tsx",
+  "components/qollanma/qollanma-yangilik-belgisi.tsx",
+  "lib/breadcrumb-routes.ts",
+  "components/app-breadcrumb.tsx",
+];
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

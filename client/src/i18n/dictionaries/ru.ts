@@ -1,6 +1,89 @@
 import type { Dictionary } from "../translate";
 
 /** Russian: Uzbek source text → translation. Keys are the texts in `t("…")` / `msg("…")`. */
-const ru: Dictionary = {};
+const ru: Dictionary = {
+  // Sidebar, menu configs, footer
+  "Asosiy": "Основное",
+  "Bosh sahifa": "Главная",
+  "Jadval": "Расписание",
+  "O'qituvchilar": "Преподаватели",
+  "O'quvchilar": "Ученики",
+  "Lidlar": "Лиды",
+  "Aloqa markazi": "Колл-центр",
+  "Mock imtihonlar": "Пробные экзамены",
+  "Guruhlar": "Группы",
+  "Topshiriqlar": "Задачи",
+  "Media": "Медиа",
+  "DaF ilovasi": "Приложение DaF",
+  "Mening oyligim": "Моя зарплата",
+  "Moliya": "Финансы",
+  "Hisobotlar": "Отчёты",
+  "Qo'llanma": "Руководство",
+  "Sozlamalar": "Настройки",
+  "Texnik yordam": "Техподдержка",
+  "Yangilangan": "Обновлено",
+  "{n} ta yangi o'zgarish": "Новых изменений: {n}",
+
+  // Moliya
+  "Umumiy ma'lumotlar": "Обзор",
+  "To'lovlar": "Платежи",
+  "Xarajatlar": "Расходы",
+  "Ish haqi": "Зарплата",
+  "Qaytariladigan pul": "Деньги к возврату",
+  "Qarzdorlik": "Задолженность",
+  "To'lov tizimlari jurnali": "Журнал платёжных систем",
+
+  // Hisobotlar
+  "Moliyaviy hisobotlar": "Финансовые отчёты",
+  "Guruhlar bo'yicha to'lov": "Платежи по группам",
+  "O'quvchilar hisoboti": "Отчёт по ученикам",
+  "Ketgan o'quvchilar hisoboti": "Отчёт по ушедшим ученикам",
+  "Bitiruvchilar": "Выпускники",
+  "Dars baholari": "Оценки занятий",
+  "Marketing va faoliyat": "Маркетинг и активность",
+  "Lidlar hisoboti": "Отчёт по лидам",
+  "Xodimlar KPI": "KPI сотрудников",
+  "Marketing": "Маркетинг",
+  "Markaz faoliyat statistikasi": "Статистика активности центра",
+  "Davomat statistikasi": "Статистика посещаемости",
+  "Bot hisoboti": "Отчёт по боту",
+
+  // DaF ilovasi
+  "Umumiy holat": "Общее состояние",
+
+  // Breadcrumbs
+  "Forma sozlash": "Настройка формы",
+  "Formalar": "Формы",
+  "Yangi": "Создание",
+  "Tahrirlash": "Редактирование",
+  "Ketgan o'quvchilar": "Ушедшие ученики",
+  "Markaz faoliyati": "Активность центра",
+  "Profil": "Профиль",
+  "Umumiy sozlamalar": "Общие настройки",
+  "Kurslar": "Курсы",
+  "To'lov": "Оплата",
+  "Filiallar": "Филиалы",
+  "Xodimlar": "Сотрудники",
+  "Xonalar": "Аудитории",
+  "Dam olish kunlari": "Выходные дни",
+  "Sabablar": "Причины",
+  "Avtomatik pauza": "Автоматическая пауза",
+  "Ruxsatlar": "Права доступа",
+  "Lidlar egaligi": "Закрепление лидов",
+  "KPI sozlamalari": "Настройки KPI",
+  "Telegram hisobot": "Отчёт в Telegram",
+  "Bildirishnomalar": "Уведомления",
+  "Arxiv": "Архив",
+  "Kutilyotgan to'lovlar": "Ожидаемые платежи",
+  "Qarz tarixi": "История долгов",
+  "Kechirilgan qarzlar": "Списанные долги",
+  "Tarix": "История",
+  "Oyliklar": "Зарплаты",
+  "Oylik belgilash": "Назначение зарплаты",
+  "Sun'iy intellekt": "Искусственный интеллект",
+  "Qidiruv natijalari": "Результаты поиска",
+  "Media fayllari": "Медиафайлы",
+  "Nima yangi": "Что нового",
+};
 
 export default ru;

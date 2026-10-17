@@ -36,6 +36,7 @@ import {
   type NavItem,
   type NavItemChild,
 } from "@/lib/nav-items";
+import { useT } from "@/i18n/context";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTaskCounts } from "@/hooks/use-task-counts";
@@ -43,6 +44,7 @@ import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const t = useT();
   const { state, isMobile, setOpenMobile } = useSidebar();
   const isIconCollapsed = state === "collapsed" && !isMobile;
   const user = useAuth((s) => s.user);
@@ -83,7 +85,7 @@ export function AppSidebar() {
         <Link
           href="/"
           onClick={handleNavClick}
-          aria-label="Bosh sahifa"
+          aria-label={t("Bosh sahifa")}
           className="flex items-center group-data-[collapsible=icon]:hidden"
         >
           <Image
@@ -107,7 +109,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Asosiy</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("Asosiy")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredItems.map((item) => {
@@ -124,15 +126,15 @@ export function AppSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={parentActive}
-                          tooltip={item.title}
+                          tooltip={t(item.title)}
                         >
                           <Link
                             href={item.url}
                             onClick={handleNavClick}
-                            title={item.title}
+                            title={t(item.title)}
                           >
                             <item.icon />
-                            <span>{item.title}</span>
+                            <span>{t(item.title)}</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -154,11 +156,11 @@ export function AppSidebar() {
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton
                             isActive={parentActive}
-                            tooltip={item.title}
-                            title={item.title}
+                            tooltip={t(item.title)}
+                            title={t(item.title)}
                           >
                             <item.icon />
-                            <span className="flex-1 min-w-0 truncate">{item.title}</span>
+                            <span className="flex-1 min-w-0 truncate">{t(item.title)}</span>
                             <ChevronRight className="ml-auto shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
@@ -182,9 +184,9 @@ export function AppSidebar() {
                                           asChild
                                           isActive={childActive}
                                         >
-                                          <button type="button" title={child.title}>
+                                          <button type="button" title={t(child.title)}>
                                             <child.icon />
-                                            <span className="flex-1 min-w-0 truncate">{child.title}</span>
+                                            <span className="flex-1 min-w-0 truncate">{t(child.title)}</span>
                                             <ChevronRight className="ml-auto shrink-0 transition-transform duration-200 group-data-[state=open]/sub-collapsible:rotate-90" />
                                           </button>
                                         </SidebarMenuSubButton>
@@ -200,10 +202,10 @@ export function AppSidebar() {
                                                 <Link
                                                   href={gc.url}
                                                   onClick={handleNavClick}
-                                                  title={gc.title}
+                                                  title={t(gc.title)}
                                                 >
                                                   <gc.icon />
-                                                  <span>{gc.title}</span>
+                                                  <span>{t(gc.title)}</span>
                                                 </Link>
                                               </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>
@@ -224,10 +226,10 @@ export function AppSidebar() {
                                     <Link
                                       href={child.url}
                                       onClick={handleNavClick}
-                                      title={child.title}
+                                      title={t(child.title)}
                                     >
                                       <child.icon />
-                                      <span>{child.title}</span>
+                                      <span>{t(child.title)}</span>
                                     </Link>
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
@@ -250,16 +252,16 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isItemActive(item)}
-                      tooltip={item.title}
+                      tooltip={t(item.title)}
                       className={cn(overdue && "sidebar-news")}
                     >
                       <Link
                         href={item.url}
                         onClick={handleNavClick}
-                        title={item.title}
+                        title={t(item.title)}
                       >
                         <item.icon className={cn(overdue && "text-red-500")} />
-                        <span className="flex-1 min-w-0 truncate">{item.title}</span>
+                        <span className="flex-1 min-w-0 truncate">{t(item.title)}</span>
                         {news > 0 && (
                           <span
                             className={cn(
