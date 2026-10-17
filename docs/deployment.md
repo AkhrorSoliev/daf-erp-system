@@ -121,6 +121,18 @@ The staff cabinet (ADR-0045) needs no variable of its own: the bot swaps the `st
 and the QR target embedded in PDF receipts. When omitted the code falls back
 to `<PUBLIC_BASE_URL or APP_URL>/r/<id>` for backward compat.
 
+The Teilnahmebestätigung's QR code (ADR-0100) points to
+`<PUBLIC_BASE_URL or APP_URL>/t/<uuid>` (`publicBaseUrl()`), so in production one
+of those variables **must be the admin host** (`https://admin.dafzentrum.uz`, which
+is also the default when both are unset). The `invoice.` and `form.` hosts rewrite
+every path to `/r/<id>` or `/f/<slug>`, so a QR code on either of them would answer
+404. Before the feature is used, the migration
+`20261017180000_participation_certificate` must be applied (`railway run npm run
+db:migrate:deploy`) and the server image must contain the four IBM Plex font files
+in `server/assets/fonts/` (`IBMPlexSerif-SemiBold`, `IBMPlexSans-Regular`,
+`IBMPlexSans-SemiBold`, `IBMPlexSans-Italic`); `nest-cli.json` copies that folder
+into `dist/assets` at build time.
+
 ### Custom Domain
 
 `api.dafzentrum.uz` — CNAME points to `p93259ss.up.railway.app`

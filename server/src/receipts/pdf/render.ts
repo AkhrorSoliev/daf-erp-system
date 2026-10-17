@@ -34,6 +34,20 @@ const fonts = {
     italics: path.join(FONT_DIR, 'Inter-Italic.ttf'),
     bolditalics: path.join(FONT_DIR, 'Inter-BoldItalic.ttf'),
   },
+  // Teilnahmebestätigung (spec 2026-10-17): one weight of the serif for
+  // titles and numbers, the sans for everything else. The receipts keep Inter.
+  PlexSerif: {
+    normal: path.join(FONT_DIR, 'IBMPlexSerif-SemiBold.ttf'),
+    bold: path.join(FONT_DIR, 'IBMPlexSerif-SemiBold.ttf'),
+    italics: path.join(FONT_DIR, 'IBMPlexSerif-SemiBold.ttf'),
+    bolditalics: path.join(FONT_DIR, 'IBMPlexSerif-SemiBold.ttf'),
+  },
+  PlexSans: {
+    normal: path.join(FONT_DIR, 'IBMPlexSans-Regular.ttf'),
+    bold: path.join(FONT_DIR, 'IBMPlexSans-SemiBold.ttf'),
+    italics: path.join(FONT_DIR, 'IBMPlexSans-Italic.ttf'),
+    bolditalics: path.join(FONT_DIR, 'IBMPlexSans-Italic.ttf'),
+  },
 };
 
 const printer = new PdfPrinter(fonts);

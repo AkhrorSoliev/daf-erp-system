@@ -62,6 +62,7 @@ import { AbsencePauseModule } from './absence-pause/absence-pause.module';
 import { PlannedAbsencesModule } from './planned-absences/planned-absences.module';
 import { PaymentPromisesModule } from './payment-promises/payment-promises.module';
 import { KpiModule } from './kpi/kpi.module';
+import { ParticipationCertificatesModule } from './participation-certificates/participation-certificates.module';
 import { SettingsModule } from './settings/settings.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
@@ -150,6 +151,7 @@ import { validateEnv } from './config/env.validation';
     PlannedAbsencesModule,
     PaymentPromisesModule,
     KpiModule,
+    ParticipationCertificatesModule,
     CallLogsModule,
     StatementsModule,
     ContractDocumentsModule,

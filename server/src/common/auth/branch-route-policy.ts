@@ -103,13 +103,16 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'usable by someone who has no branch yet; the public form and its schema ' +
       'are handed to strangers on purpose (the resulting lead takes its branch ' +
       'from the section it routes into); the receipt endpoints exist so a payer ' +
-      'can verify a document they were given.',
+      'can verify a document they were given, and so does the certificate QR ' +
+      'route (`GET /participation-certificates/:id/verify`), which shows a ' +
+      "printed Teilnahmebestätigung's number, name, level and validity only.",
     routes: [
       'GET /auth/otp/poll',
       'GET /auth/telegram/callback',
       'GET /auth/telegram/start',
       'GET /auth/telegram/status',
       'GET /notifications/vapid-public-key',
+      'GET /participation-certificates/:id/verify',
       'GET /public/forms/:slug',
       'GET /receipts/:id/verify',
       'GET /receipts/payment/:id.pdf',
@@ -195,6 +198,31 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'CEO-only through `@CeoOnly()`. `GET /kpi/overview` and ' +
       '`GET /kpi/users/:id` take `@BranchScope()`.',
     routes: ['GET /kpi/settings', 'PATCH /kpi/settings'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Teilnahmebestätigung (spec 2026-10-17). The student routes resolve the ' +
+      "student's branch and check the caller against it with " +
+      '`assertCallerMayTouchStudent`; the PDF loads the certificate, then does ' +
+      'the same for its student. The header branch is never read: a document ' +
+      'belongs to the branch of the student it was issued for.',
+    routes: [
+      'GET /students/:id/participation-certificates/preview',
+      'POST /students/:id/participation-certificates',
+      'GET /participation-certificates/:id/pdf',
+    ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Teilnahmebestätigung thresholds: `participation.*` are company-level ' +
+      'settings (`companyLevelOnly`) — one value for every branch. Both routes ' +
+      'are CEO-only through `@CeoOnly()`.',
+    routes: [
+      'GET /participation-certificates/settings',
+      'PATCH /participation-certificates/settings',
+    ],
   },
   {
     policy: 'COMPANY_WIDE',

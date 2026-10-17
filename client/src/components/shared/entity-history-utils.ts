@@ -3,6 +3,7 @@ import {
   Bot,
   ClipboardCheck,
   Clock,
+  FileCheck2,
   GraduationCap,
   Link2,
   MessageSquare,
@@ -52,6 +53,10 @@ export const FIELD_LABELS: Record<string, string | null> = {
   masul: "Mas'ul",
   // Oy to'lovi bilan nima bo'lgani (shartnoma 6.2, ADR-0043).
   pul: "Pul",
+  // Berilgan hujjat: shartnoma va qatnashganlik hujjati.
+  raqam: "Hujjat raqami",
+  daraja: "Daraja",
+  istisno: "Istisno",
   reason: "Sabab",
   content: "Izoh",
   isActive: "Faolmi",
@@ -156,6 +161,9 @@ export function getActionInfo(record: HistoryRecord): ActionInfo {
         return { label: "Telegram uzildi", icon: Unplug, variant: "destructive" };
       if (customAction === "TELEGRAM_QAYTA_ULANDI")
         return { label: "Telegram qayta ulandi", icon: Plug, variant: "default" };
+      // A participation document was issued (the card's «Hujjatlar» tab).
+      if (customAction === "QATNASHISH_HUJJATI_BERILDI")
+        return { label: "Qatnashganlik hujjati berildi", icon: FileCheck2, variant: "default" };
       if (nv?.guruh)
         return { label: "Guruhga qo'shildi", icon: UserPlus, variant: "default" };
       return { label: "Yaratildi", icon: Plus, variant: "default" };

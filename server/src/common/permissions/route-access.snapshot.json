@@ -659,6 +659,15 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /participation-certificates/:id/pdf": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /participation-certificates/:id/verify": "PUBLIC",
+  "GET /participation-certificates/settings": [
+    "CEO"
+  ],
   "GET /payment-promises": [
     "Administrator",
     "Branch Director",
@@ -1228,6 +1237,11 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /students/:id/participation-certificates/preview": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /students/:id/sms": [
     "Administrator",
     "Branch Director",
@@ -1595,6 +1609,9 @@
   ],
   "PATCH /notifications/:id/read": "ANY",
   "PATCH /notifications/read-all": "ANY",
+  "PATCH /participation-certificates/settings": [
+    "CEO"
+  ],
   "PATCH /payment-promises/:id/cancel": [
     "Administrator",
     "Branch Director",
@@ -2122,6 +2139,11 @@
     "CEO"
   ],
   "POST /students/:id/initial-balance": [
+    "CEO"
+  ],
+  "POST /students/:id/participation-certificates": [
+    "Administrator",
+    "Branch Director",
     "CEO"
   ],
   "POST /students/:id/sms": [

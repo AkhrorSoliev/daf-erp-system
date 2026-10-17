@@ -896,13 +896,14 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 ### Student Profile Tabs
 
-The student profile (`/students/profile/[id]`) has **11 tabs** (URL `?tab=<value>`):
+The student profile (`/students/profile/[id]`) has **12 tabs** (URL `?tab=<value>`):
 
 | Tab | URL value | Purpose |
 |-----|-----------|---------|
 | Guruhlar | `guruhlar` (default) | Enrollments list |
 | To'lovlar | `tolovlar` | Money-flow transactions — see deep-dive below |
 | Shartnomalar | `shartnomalar` | Student contracts (ADR-0075): create, edit while unsigned, «Qog'ozda imzolandi», cancel (signed — CEO only), PDF in a new tab. `components/students/contracts/`; pure rules in `contract-rules.ts` (tested). Visible with `useCan("students.details")`; create, edit, sign and cancel need `contracts.manage` («Shartnoma tuzish va imzolash», default Branch Director + Administrator, ADR-0087) |
+| Hujjatlar | `hujjatlar` | Participation document, the «Teilnahmebestätigung» (ADR-0100): one block per level the student attended, with the server's verdict, «Hujjat berish» (`useCan("students.manage")`; the CEO alone gets «Istisno bilan berish» with a reason when the condition fails), and the issued documents with a PDF button. `components/students/certificates/`; the figures are the server's, pure rules in `certificate-rules.ts` (tested). Visible with `useCan("students.details")`, fetched on first activation. The QR opens the public `/t/[id]` page and the CEO sets the thresholds on `/settings/participation` |
 | Darslar | `darslar` | Lesson trail (LESSON_DEDUCTION + LESSON_CONSUMPTION) — see deep-dive below |
 | Izohlar | `izohlar` | Comments (shared `CommentList` / `CommentForm`; tasks live on `/tasks`) |
 | Qo'ng'iroq | `qongiroq` | Call history |
