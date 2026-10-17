@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canSubmitRevoke,
   dmy,
   issueClickAction,
   issueMode,
@@ -9,8 +10,12 @@ import {
   percentText,
   REISSUE_CONFIRM_TEXT,
   REISSUE_EXEMPT_NOTICE,
+  revokeDescription,
+  revokedState,
+  revokeReasonHint,
+  validRevokeReason,
 } from "./certificate-rules";
-import type { LevelPreview } from "./certificate-types";
+import type { IssuedCertificate, LevelPreview } from "./certificate-types";
 
 const base: LevelPreview = {
   level: "A1",
@@ -67,13 +72,22 @@ describe("issueMode", () => {
   });
 });
 
-const given = {
+const given: IssuedCertificate = {
   id: "3f9c2a7e-5b1d-4c8a-9e60-2d7f81a4c0b3",
   number: "TB-2026-0001",
   level: "A1",
   issuedAt: "2026-10-17T07:00:00.000Z",
   exempt: false,
   revoked: false,
+  revokedAt: null,
+  revokedReason: null,
+};
+const cancelled: IssuedCertificate = {
+  ...given,
+  number: "TB-2026-0003",
+  revoked: true,
+  revokedAt: "2026-10-18T07:00:00.000Z",
+  revokedReason: "Noto'g'ri o'quvchiga berilgan",
 };
 
 describe("needsReissueConfirm", () => {
@@ -81,6 +95,79 @@ describe("needsReissueConfirm", () => {
     expect(needsReissueConfirm({ issued: [] })).toBe(false);
     expect(needsReissueConfirm({ issued: [given] })).toBe(true);
     expect(needsReissueConfirm({ issued: [given, { ...given, number: "TB-2026-0002" }] })).toBe(true);
+  });
+
+  // A cancelled document no longer stands: re-issuing after a mistake must not ask «another one?».
+  it("counts only documents that were not cancelled", () => {
+    expect(needsReissueConfirm({ issued: [cancelled] })).toBe(false);
+    expect(needsReissueConfirm({ issued: [cancelled, cancelled] })).toBe(false);
+    expect(needsReissueConfirm({ issued: [cancelled, given] })).toBe(true);
+  });
+
+  it("issues at once after the only document was cancelled", () => {
+    expect(issueClickAction({ issued: [cancelled] }, "normal")).toBe("issue");
+  });
+});
+
+describe("validRevokeReason", () => {
+  it("wants 3 to 500 characters after trimming", () => {
+    expect(validRevokeReason("")).toBe(false);
+    expect(validRevokeReason("   ")).toBe(false);
+    expect(validRevokeReason("ab")).toBe(false);
+    expect(validRevokeReason("  ab  ")).toBe(false);
+    expect(validRevokeReason("abc")).toBe(true);
+    expect(validRevokeReason("  abc  ")).toBe(true);
+    expect(validRevokeReason("a".repeat(500))).toBe(true);
+    expect(validRevokeReason("a".repeat(501))).toBe(false);
+  });
+});
+
+describe("canSubmitRevoke", () => {
+  it("needs a valid reason and no request in flight", () => {
+    expect(canSubmitRevoke("Xato berilgan", false)).toBe(true);
+    expect(canSubmitRevoke("Xato berilgan", true)).toBe(false);
+    expect(canSubmitRevoke("ab", false)).toBe(false);
+    expect(canSubmitRevoke("", false)).toBe(false);
+  });
+});
+
+describe("revokeReasonHint", () => {
+  it("says nothing before typing and while the reason is fine, and asks for more when too short", () => {
+    expect(revokeReasonHint("")).toBeNull();
+    expect(revokeReasonHint("   ")).toBeNull();
+    expect(revokeReasonHint("ab")).toBe("Sabab kamida 3 belgidan iborat bo'lsin");
+    expect(revokeReasonHint("abc")).toBeNull();
+  });
+});
+
+describe("revokeDescription", () => {
+  it("is the owner's words with the document's number", () => {
+    expect(revokeDescription("TB-2026-0007")).toBe(
+      "TB-2026-0007 raqamli hujjat bekor qilinadi. QR sahifa «bekor qilingan» deb ko'rsatadi, PDF endi berilmaydi, raqam qayta berilmaydi. Buni qaytarib bo'lmaydi.",
+    );
+  });
+});
+
+describe("revokedState", () => {
+  it("is null for a document that stands", () => {
+    expect(revokedState(given)).toBeNull();
+  });
+
+  it("gives the pill, the Tashkent day and the reason line of a cancelled one", () => {
+    expect(revokedState(cancelled)).toEqual({
+      pill: "Bekor qilingan",
+      day: "18.10.2026",
+      reasonLine: "Sabab: Noto'g'ri o'quvchiga berilgan",
+    });
+  });
+
+  it("copes with a cancelled row that carries no reason or day", () => {
+    expect(revokedState({ ...cancelled, revokedAt: null, revokedReason: null })).toEqual({
+      pill: "Bekor qilingan",
+      day: null,
+      reasonLine: null,
+    });
+    expect(revokedState({ ...cancelled, revokedReason: "  " })?.reasonLine).toBeNull();
   });
 });
 

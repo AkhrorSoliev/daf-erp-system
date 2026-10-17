@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Xato berilgan qatnashganlik hujjatini bekor qilish",
+    matn: "O'quvchi kartasidagi «Hujjatlar» yorlig'ida berilgan hujjat qatoriga uch nuqta tugmasi qo'shildi: u orqali «Bekor qilish»ni tanlab, sababini yozasiz. Bekor qilingan hujjat ro'yxatda chizilgan raqam, belgi va sabab bilan qoladi, PDF'i endi berilmaydi, QR sahifada esa «bekor qilingan» deb chiqadi. Raqam qayta berilmaydi; to'g'ri hujjat yangi raqam bilan beriladi. Bekor qilish o'quvchi tarixiga yoziladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "qatnashganlik-hujjati" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Profil: rol o'zbekcha, filial tanlagichi faqat kerak bo'lganda",
     matn: "Profil kartochkasida va foydalanuvchi menyusida rol nomi endi o'zbekcha: «O'qituvchi», «Kassir», «Filial direktori». Faqat bitta filialda ishlaydigan xodim (masalan, o'qituvchi) filial tanlagichini ko'rmaydi: tanlashga hech narsa yo'q, ma'lumot o'z filialidan keladi. Filial nomi Profil → «Batafsil ma'lumotlar»da turadi. Bir nechta filialli xodim va CEO uchun tanlagich o'zgarmadi. Direktorning profilida (oyligi yo'q) bo'sh «To'lanishi kerak —» bloki chiqmaydi.",
     rollar: [1, 2, 3, 4, 5],

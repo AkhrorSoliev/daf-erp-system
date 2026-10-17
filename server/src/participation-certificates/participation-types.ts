@@ -61,6 +61,10 @@ export interface IssuedView {
   issuedAt: string;
   exempt: boolean;
   revoked: boolean;
+  /** ISO instant; null while the document stands. */
+  revokedAt: string | null;
+  /** Staff only: the public QR answer never carries it. */
+  revokedReason: string | null;
 }
 
 export interface LevelPreview extends LevelFacts {
