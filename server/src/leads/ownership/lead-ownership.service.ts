@@ -23,8 +23,8 @@ import {
   isTransactionConflict,
   rethrowAsConflict,
 } from '../../common/transaction-conflict';
-import { leadBranchWhere } from '../shared/lead-scope';
-import { leadStatsRange } from '../leads-stats.service';
+import { activeBoardLeadWhere, leadBranchWhere } from '../shared/lead-scope';
+import { leadStatsRange, statCardWhere } from '../leads-stats.service';
 import type { LeadStatsPeriod } from '../dto/lead-stats-query.dto';
 import {
   LEAD_OWNER_CHANGED,
@@ -119,10 +119,12 @@ export interface OwnerSummaryRow {
   held: number;
   /** Of them, with no action yet. */
   untouched: number;
-  /** Claimed or given in the period. */
+  /** Leads claimed or given in the period — each lead once. */
   taken: number;
-  /** Taken back by the system in the period. */
+  /** Leads the system took back in the period — each lead once. */
   expired: number;
+  /** Leads of this owner that became students in the period. */
+  converted: number;
 }
 
 const STAFF_ROLE_NAMES = ['CEO', 'Branch Director', 'Administrator', 'Cashier'];
@@ -368,43 +370,71 @@ export class LeadOwnershipService {
     companyId: number,
     scope: ReportBranchIds,
     period: LeadStatsPeriod,
-  ): Promise<{ period: LeadStatsPeriod; rows: OwnerSummaryRow[] }> {
+  ): Promise<{
+    period: LeadStatsPeriod;
+    rows: OwnerSummaryRow[];
+    /** Leads on the board nobody holds now. */
+    unowned: number;
+  }> {
     const range = leadStatsRange(period, new Date());
     const live = liveOwnedLeadWhere(companyId, scope);
     const logBranch = ownershipLogBranchWhere(scope);
-    const [held, untouched, taken, expired] = await Promise.all([
-      this.prisma.lead.groupBy({
-        by: ['ownerId'],
-        where: live,
-        _count: { _all: true },
-      }),
-      this.prisma.lead.groupBy({
-        by: ['ownerId'],
-        where: { ...live, ownerActedAt: null },
-        _count: { _all: true },
-      }),
-      this.prisma.leadOwnershipLog.groupBy({
-        by: ['toUserId'],
-        where: {
-          companyId,
-          kind: { in: ['CLAIM', 'ASSIGN'] },
-          createdAt: range,
-          ...logBranch,
-        },
-        _count: { _all: true },
-      }),
-      this.prisma.leadOwnershipLog.groupBy({
-        by: ['fromUserId'],
-        where: { companyId, kind: 'EXPIRE', createdAt: range, ...logBranch },
-        _count: { _all: true },
-      }),
-    ]);
+    const [held, untouched, taken, expired, converted, unowned] =
+      await Promise.all([
+        this.prisma.lead.groupBy({
+          by: ['ownerId'],
+          where: live,
+          _count: { _all: true },
+        }),
+        this.prisma.lead.groupBy({
+          by: ['ownerId'],
+          where: { ...live, ownerActedAt: null },
+          _count: { _all: true },
+        }),
+        // A lead taken, given back and taken again is still one lead.
+        this.prisma.leadOwnershipLog.findMany({
+          where: {
+            companyId,
+            kind: { in: ['CLAIM', 'ASSIGN'] },
+            createdAt: range,
+            ...logBranch,
+          },
+          distinct: ['toUserId', 'leadId'],
+          select: { toUserId: true },
+        }),
+        this.prisma.leadOwnershipLog.findMany({
+          where: { companyId, kind: 'EXPIRE', createdAt: range, ...logBranch },
+          distinct: ['fromUserId', 'leadId'],
+          select: { fromUserId: true },
+        }),
+        // A converted lead keeps its owner (ADR-0093), so this credits them.
+        this.prisma.lead.groupBy({
+          by: ['ownerId'],
+          where: {
+            ...statCardWhere('converted', companyId, scope, range),
+            ownerId: { not: null },
+            deletedAt: null,
+          },
+          _count: { _all: true },
+        }),
+        this.prisma.lead.count({
+          where: { ...activeBoardLeadWhere(companyId, scope), ownerId: null },
+        }),
+      ]);
 
     const rows = new Map<number, OwnerSummaryRow>();
     const row = (userId: number) => {
       let r = rows.get(userId);
       if (!r) {
-        r = { userId, name: '', held: 0, untouched: 0, taken: 0, expired: 0 };
+        r = {
+          userId,
+          name: '',
+          held: 0,
+          untouched: 0,
+          taken: 0,
+          expired: 0,
+          converted: 0,
+        };
         rows.set(userId, r);
       }
       return r;
@@ -416,10 +446,13 @@ export class LeadOwnershipService {
       if (g.ownerId != null) row(g.ownerId).untouched = g._count._all;
     }
     for (const g of taken) {
-      if (g.toUserId != null) row(g.toUserId).taken = g._count._all;
+      if (g.toUserId != null) row(g.toUserId).taken += 1;
     }
     for (const g of expired) {
-      if (g.fromUserId != null) row(g.fromUserId).expired = g._count._all;
+      if (g.fromUserId != null) row(g.fromUserId).expired += 1;
+    }
+    for (const g of converted) {
+      if (g.ownerId != null) row(g.ownerId).converted = g._count._all;
     }
     if (rows.size) {
       const users = await this.prisma.user.findMany({
@@ -430,6 +463,7 @@ export class LeadOwnershipService {
     }
     return {
       period,
+      unowned,
       rows: [...rows.values()].sort(
         (a, b) =>
           b.held - a.held || b.taken - a.taken || a.name.localeCompare(b.name),

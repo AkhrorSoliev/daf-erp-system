@@ -32,15 +32,24 @@ export interface OwnerSummaryRow {
   name: string;
   held: number;
   untouched: number;
+  /** Leads taken in the period, each lead once. */
   taken: number;
+  /** Leads the system took back in the period, each lead once. */
   expired: number;
+  /** Leads of this person that became students in the period. */
+  converted: number;
 }
 
 export type OwnershipPeriod = "week" | "month" | "last-month";
 
 export async function fetchOwnerSummary(
   period: OwnershipPeriod,
-): Promise<{ period: OwnershipPeriod; rows: OwnerSummaryRow[] }> {
+): Promise<{
+  period: OwnershipPeriod;
+  rows: OwnerSummaryRow[];
+  /** Leads on the board nobody holds now. */
+  unowned: number;
+}> {
   return (await api.get("/leads/ownership/summary", { params: { period } })).data;
 }
 
