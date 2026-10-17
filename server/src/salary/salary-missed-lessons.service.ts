@@ -8,8 +8,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   addDaysToDateStr,
   tashkentDateStr,
+  tashkentDayStartUtc,
   utcMidnightFromDateStr,
 } from '../common/date/tashkent';
+import {
+  DAY_END_TIME,
+  toMinutes,
+} from '../attendance/shared/attendance-window';
 import { resolveMonthPlan } from '../billing/month-plan';
 import { lessonDatesInMonth } from '../billing/planned-lessons';
 import type { RateVersion } from './shared/deserved-math';
@@ -68,6 +73,7 @@ export class SalaryMissedLessonsService {
         name: true,
         branchId: true,
         exactDays: true,
+        lessonEndTime: true,
         startDate: true,
         endDate: true,
       },
@@ -108,59 +114,105 @@ export class SalaryMissedLessonsService {
       gte: utcMidnightFromDateStr(from),
       lt: utcMidnightFromDateStr(addDaysToDateStr(to, 1)),
     };
-    const [taken, questions, overrides, charges, excused, versionRows] =
-      await Promise.all([
-        this.prisma.attendance.groupBy({
-          by: ['groupId', 'date'],
-          where: { groupId: { in: groupIds }, date: dateRange },
-        }),
-        this.prisma.unmarkedLesson.findMany({
-          where: { groupId: { in: groupIds }, date: dateRange },
-          select: { groupId: true, date: true, teacherPayExempt: true },
-        }),
-        this.prisma.lessonTeacherOverride.findMany({
-          where: {
-            groupId: { in: groupIds },
-            deletedAt: null,
-            date: dateRange,
-          },
-          select: { groupId: true, date: true, teacherIds: true },
-        }),
-        this.prisma.enrollmentMonthlyCharge.findMany({
-          where: {
-            groupId: { in: groupIds },
-            periodYear: year,
-            periodMonth: mon,
-            status: MonthlyChargeStatus.CHARGED,
-          },
-          select: {
-            groupId: true,
-            studentId: true,
-            coveredDates: true,
-            frozenOutDates: true,
-            perLessonCost: true,
-            plannedLessons: true,
-          },
-        }),
-        this.prisma.plannedAbsence.findMany({
-          where: {
-            groupId: { in: groupIds },
-            kind: PlannedAbsenceKind.SABABLI,
-            date: dateRange,
-          },
-          select: { groupId: true, studentId: true, date: true },
-        }),
-        this.prisma.employeeSalaryConfigVersion.findMany({
-          where: { companyId, config: { userId: teacherId, isActive: true } },
-          select: {
-            salaryType: true,
-            value: true,
-            effectiveFrom: true,
-            effectiveTo: true,
-            config: { select: { groupId: true } },
-          },
-        }),
-      ]);
+    const [
+      taken,
+      questions,
+      overrides,
+      charges,
+      excused,
+      versionRows,
+      statusChanges,
+    ] = await Promise.all([
+      this.prisma.attendance.groupBy({
+        by: ['groupId', 'date'],
+        where: { groupId: { in: groupIds }, date: dateRange },
+      }),
+      this.prisma.unmarkedLesson.findMany({
+        where: { groupId: { in: groupIds }, date: dateRange },
+        select: { groupId: true, date: true, teacherPayExempt: true },
+      }),
+      this.prisma.lessonTeacherOverride.findMany({
+        where: {
+          groupId: { in: groupIds },
+          deletedAt: null,
+          date: dateRange,
+        },
+        select: { groupId: true, date: true, teacherIds: true },
+      }),
+      this.prisma.enrollmentMonthlyCharge.findMany({
+        where: {
+          groupId: { in: groupIds },
+          periodYear: year,
+          periodMonth: mon,
+          status: MonthlyChargeStatus.CHARGED,
+        },
+        select: {
+          groupId: true,
+          studentId: true,
+          coveredDates: true,
+          frozenOutDates: true,
+          perLessonCost: true,
+          plannedLessons: true,
+        },
+      }),
+      this.prisma.plannedAbsence.findMany({
+        where: {
+          groupId: { in: groupIds },
+          kind: PlannedAbsenceKind.SABABLI,
+          date: dateRange,
+        },
+        select: { groupId: true, studentId: true, date: true },
+      }),
+      this.prisma.employeeSalaryConfigVersion.findMany({
+        where: { companyId, config: { userId: teacherId, isActive: true } },
+        select: {
+          salaryType: true,
+          value: true,
+          effectiveFrom: true,
+          effectiveTo: true,
+          config: { select: { groupId: true } },
+        },
+      }),
+      // Every change up to the end of the range, not only inside it: the
+      // status at a lesson's end is the last change before that instant.
+      this.prisma.statusHistory.findMany({
+        where: {
+          entityType: 'Group',
+          entityId: { in: groupIds },
+          createdAt: { lt: tashkentDayStartUtc(addDaysToDateStr(to, 1)) },
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { entityId: true, toStatus: true, createdAt: true },
+      }),
+    ]);
+
+    // A lesson that ended while its group was PAUSED was never held: nobody
+    // could take its register (attendance needs an ACTIVE group) and the
+    // sweep asks ACTIVE groups only. The group's status NOW says nothing
+    // about that — a group paused for a week and resumed is ACTIVE again.
+    const endTimes = new Map(groups.map((g) => [g.id, g.lessonEndTime]));
+    const wasPausedAt = (groupId: string, at: Date): boolean => {
+      let status: string | undefined;
+      for (const c of statusChanges) {
+        if (c.entityId !== groupId) continue;
+        if (c.createdAt > at) break;
+        status = c.toStatus;
+      }
+      return status === GroupStatus.PAUSED;
+    };
+    const held = planned.map((g) => {
+      const endMinutes = toMinutes(endTimes.get(g.id) ?? DAY_END_TIME);
+      return {
+        ...g,
+        plannedDates: g.plannedDates.filter(
+          (d) =>
+            !wasPausedAt(
+              g.id,
+              new Date(tashkentDayStartUtc(d).getTime() + endMinutes * 60_000),
+            ),
+        ),
+      };
+    });
 
     const byGroup = new Map<string, RateVersion[]>();
     const global: RateVersion[] = [];
@@ -195,7 +247,7 @@ export class SalaryMissedLessonsService {
     }
     return computeMissedLessons({
       teacherId,
-      groups: planned,
+      groups: held,
       takenLessons,
       overrides: new Map(
         overrides.map((o) => [`${o.groupId}::${day(o.date)}`, o.teacherIds]),

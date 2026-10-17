@@ -7,6 +7,12 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Pauzadagi guruhning darslari «Berilmadi» blokiga tushmaydi",
+    matn: "Guruh to'xtatilgan (pauza) paytida tugagan darslar endi ustozning oyligidagi «Berilmadi — davomat olinmagan darslar» blokida chiqmaydi. Ilgari guruh qayta yoqilishi bilan pauzadagi o'tmagan darslar ham ustozga «yo'qotilgan» bo'lib ko'rinardi.",
+    sahifa: { bolim: "davomat", sahifa: "dars-boldimi" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Markaz faoliyati: katakni bosib bo'sh xonalarni ko'ring",
     matn: "«Qachon xona bo'sh» jadvalida katakni bossangiz, pastda o'sha soatda qaysi xonalar bo'sh ekani chiqadi: xona nomi va nechta o'rin borligi bilan. Band xonalar chizilgan holda, ularni egallab turgan guruh nomlari bilan ko'rinadi. Yangi guruhga xona qidirganda endi faqat sonni emas, xonaning o'zini ko'rasiz.",
     rollar: [1, 2],
