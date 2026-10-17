@@ -131,10 +131,11 @@ export function evaluate(
     attendance.counted,
     thresholds.attendance,
   );
-  const appRequired = app.applies && thresholds.app !== null;
-  const appOk = appRequired
-    ? meetsPercent(app.done, app.open, thresholds.app ?? 0)
-    : null;
+  // The app part counts only when the level has an app threshold AND open
+  // lessons: A2/B1 can have a threshold with no content yet.
+  const appMin = app.applies ? thresholds.app : null;
+  const appOk =
+    appMin !== null ? meetsPercent(app.done, app.open, appMin) : null;
 
   const reasons: string[] = [];
   if (!attendanceOk) {

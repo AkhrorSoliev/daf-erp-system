@@ -5,6 +5,7 @@ import {
   APP_LEVELS,
   isAppLevel,
   type AppLevel,
+  type GerLevel,
   type Thresholds,
 } from './participation-rules';
 
@@ -62,7 +63,7 @@ export class ParticipationSettingsService {
     return this.read(companyId);
   }
 
-  thresholdsFor(settings: ParticipationSettings, level: string): Thresholds {
+  thresholdsFor(settings: ParticipationSettings, level: GerLevel): Thresholds {
     return {
       attendance: settings.minAttendancePercent,
       app: isAppLevel(level) ? settings.minAppPercent[level] : null,

@@ -182,6 +182,19 @@ describe('evaluate (spec 3.3)', () => {
     expect(v.eligible).toBe(true);
   });
 
+  it('does not ask for the app on a level that has a threshold but no open lessons yet (A2/B1 today)', () => {
+    const v = evaluate(att(5, 5), tallyApp(0, 0), {
+      attendance: 80,
+      app: 100,
+    });
+    expect(v).toEqual({
+      attendanceOk: true,
+      appOk: null,
+      eligible: true,
+      reasons: [],
+    });
+  });
+
   it('lists both reasons when both fail', () => {
     const v = evaluate(att(1, 2), tallyApp(1, 2), { attendance: 80, app: 100 });
     expect(v.reasons).toEqual([
