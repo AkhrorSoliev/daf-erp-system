@@ -84,6 +84,32 @@ const en: Dictionary = {
   "Qidiruv natijalari": "Search results",
   "Media fayllari": "Media files",
   "Nima yangi": "What's new",
+
+  // Header: branch switcher, search, buttons, clock
+  "Barcha filiallar": "All branches",
+  "Filialni tanlash": "Select branch",
+  "Qidirish...": "Search...",
+  "Natija topilmadi": "No results found",
+  "Sahifalar": "Pages",
+  "Barchasini ko'rish ({n})": "View all ({n})",
+  "Yangi topshiriq": "New task",
+  "Topshiriq": "Task",
+  "Shu sahifa bo'yicha qo'llanma": "User guide for this page",
+  "Toshkent vaqti (UTC+5)": "Tashkent time (UTC+5)",
+
+  // User menu
+  "Ko'rinish": "Appearance",
+  "Yorug'": "Light",
+  "Qorong'i": "Dark",
+  "Tizim": "System",
+  "Dizayn uslubi": "Design style",
+  "To'q ko'k, texnik shrift": "Dark blue, technical font",
+  "Chuqur yashil, yumaloq shakllar": "Deep green, rounded shapes",
+  "To'q bordo, keng harflar": "Dark burgundy, wide letters",
+  "Kulrang, tor shrift": "Gray, narrow font",
+  "Iliq jigarrang": "Warm brown",
+  "Til": "Language",
+  "Chiqish": "Sign out",
 };
 
 export default en;

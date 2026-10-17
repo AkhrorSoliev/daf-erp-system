@@ -26,6 +26,14 @@ export const STRICT_FILES: string[] = [
   "components/app-breadcrumb.tsx",
   "components/payments/payments-mobile-menu.tsx",
   "components/reports/reports-mobile-menu.tsx",
+  "components/dashboard-header.tsx",
+  "components/branch-switcher.tsx",
+  "components/global-search/search-dropdown.tsx",
+  "components/tasks/header-task-button.tsx",
+  "components/qollanma/qollanma-yordam-tugmasi.tsx",
+  "components/tashkent-clock.tsx",
+  "components/header-user-menu.tsx",
+  "lib/ui-skins.ts",
 ];
 
 function walk(dir: string): string[] {

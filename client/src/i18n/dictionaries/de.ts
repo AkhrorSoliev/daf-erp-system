@@ -84,6 +84,32 @@ const de: Dictionary = {
   "Qidiruv natijalari": "Suchergebnisse",
   "Media fayllari": "Mediendateien",
   "Nima yangi": "Neuigkeiten",
+
+  // Header: branch switcher, search, buttons, clock
+  "Barcha filiallar": "Alle Filialen",
+  "Filialni tanlash": "Filiale auswählen",
+  "Qidirish...": "Suche...",
+  "Natija topilmadi": "Keine Ergebnisse gefunden",
+  "Sahifalar": "Seiten",
+  "Barchasini ko'rish ({n})": "Alle anzeigen ({n})",
+  "Yangi topshiriq": "Neue Aufgabe",
+  "Topshiriq": "Aufgabe",
+  "Shu sahifa bo'yicha qo'llanma": "Anleitung zu dieser Seite",
+  "Toshkent vaqti (UTC+5)": "Zeit in Taschkent (UTC+5)",
+
+  // User menu
+  "Ko'rinish": "Darstellung",
+  "Yorug'": "Hell",
+  "Qorong'i": "Dunkel",
+  "Tizim": "System",
+  "Dizayn uslubi": "Designstil",
+  "To'q ko'k, texnik shrift": "Dunkelblau, technische Schrift",
+  "Chuqur yashil, yumaloq shakllar": "Tiefgrün, runde Formen",
+  "To'q bordo, keng harflar": "Dunkles Weinrot, breite Buchstaben",
+  "Kulrang, tor shrift": "Grau, schmale Schrift",
+  "Iliq jigarrang": "Warmes Braun",
+  "Til": "Sprache",
+  "Chiqish": "Abmelden",
 };
 
 export default de;

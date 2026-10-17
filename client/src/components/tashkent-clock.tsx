@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import { formatDdMmYyyy, tashkentNow } from "@/lib/tashkent-time";
 
 function formatHms(secondsOfDay: number): string {
@@ -32,6 +33,7 @@ function formatNow(): { date: string; time: string } {
  * the system says it's already over.
  */
 export function TashkentClock() {
+  const t = useT();
   const [label, setLabel] = useState<{ date: string; time: string } | null>(null);
 
   useEffect(() => {
@@ -55,7 +57,7 @@ export function TashkentClock() {
           </span>
         </div>
       </TooltipTrigger>
-      <TooltipContent>Toshkent vaqti (UTC+5)</TooltipContent>
+      <TooltipContent>{t("Toshkent vaqti (UTC+5)")}</TooltipContent>
     </Tooltip>
   );
 }

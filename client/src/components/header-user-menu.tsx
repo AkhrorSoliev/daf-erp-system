@@ -23,12 +23,13 @@ import { useSignOut } from "@/hooks/use-sign-out";
 import { useUiSkin } from "@/hooks/use-ui-skin";
 import { useT, useLocale } from "@/i18n/context";
 import { LOCALES, type UiLocale } from "@/i18n/locales";
+import { msg } from "@/i18n/msg";
 import { UI_SKINS, type UiSkinId } from "@/lib/ui-skins";
 
 const THEMES = [
-  { value: "light", label: "Yorug'", Icon: Sun },
-  { value: "dark", label: "Qorong'i", Icon: Moon },
-  { value: "system", label: "Tizim", Icon: Monitor },
+  { value: "light", label: msg("Yorug'"), Icon: Sun },
+  { value: "dark", label: msg("Qorong'i"), Icon: Moon },
+  { value: "system", label: msg("Tizim"), Icon: Monitor },
 ] as const;
 
 function getInitials(name: string) {
@@ -89,20 +90,20 @@ export function HeaderUserMenu() {
         <DropdownMenuItem asChild>
           <Link href="/profile">
             <User className="mr-2 size-4" />
-            Profil
+            {t("Profil")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Palette className="mr-2 size-4" />
-            Ko&apos;rinish
+            {t("Ko'rinish")}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
               {THEMES.map(({ value, label, Icon }) => (
                 <DropdownMenuRadioItem key={value} value={value}>
                   <Icon className="mr-2 size-4" />
-                  {label}
+                  {t(label)}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
@@ -111,7 +112,7 @@ export function HeaderUserMenu() {
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Brush className="mr-2 size-4" />
-            Dizayn uslubi
+            {t("Dizayn uslubi")}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuRadioGroup
@@ -128,7 +129,7 @@ export function HeaderUserMenu() {
                     style={{ backgroundColor: swatch }}
                   />
                   <span>{label}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{hint}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{t(hint)}</span>
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
@@ -157,7 +158,7 @@ export function HeaderUserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={signOut}>
           <LogOut className="mr-2 size-4" />
-          Chiqish
+          {t("Chiqish")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

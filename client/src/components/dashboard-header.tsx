@@ -16,6 +16,8 @@ import { TashkentClock } from "@/components/tashkent-clock";
 import { HeaderTaskButton } from "@/components/tasks/header-task-button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCan } from "@/hooks/use-permissions";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { routeLabels } from "@/lib/breadcrumb-routes";
 
 function getParentRoute(pathname: string): { path: string; label: string } | null {
@@ -26,7 +28,7 @@ function getParentRoute(pathname: string): { path: string; label: string } | nul
 
   // Top-level sahifalar uchun → Bosh sahifa ga qaytish
   if (segments.length === 1) {
-    return { path: "/", label: routeLabels[""] ?? "Bosh sahifa" };
+    return { path: "/", label: routeLabels[""] ?? msg("Bosh sahifa") };
   }
 
   // Oxirgi segmentni olib tashlash → parent path
@@ -37,7 +39,7 @@ function getParentRoute(pathname: string): { path: string; label: string } | nul
     segments.pop();
   }
 
-  if (segments.length === 0) return { path: "/", label: routeLabels[""] ?? "Bosh sahifa" };
+  if (segments.length === 0) return { path: "/", label: routeLabels[""] ?? msg("Bosh sahifa") };
 
   const parentPath = "/" + segments.join("/");
   const lastSegment = segments[segments.length - 1];
@@ -49,6 +51,7 @@ function getParentRoute(pathname: string): { path: string; label: string } | nul
 
 export function DashboardHeader() {
   const pathname = usePathname();
+  const t = useT();
   const isMobile = useIsMobile();
   const canSearch = useCan(["students.list", "leads.view", "teachers.view"]);
   const parentRoute = isMobile ? getParentRoute(pathname) : null;
@@ -84,7 +87,7 @@ export function DashboardHeader() {
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="size-4" />
-            {parentRoute.label}
+            {t(parentRoute.label)}
           </Link>
         ) : (
           <AppBreadcrumb />

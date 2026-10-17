@@ -84,6 +84,32 @@ const ru: Dictionary = {
   "Qidiruv natijalari": "Результаты поиска",
   "Media fayllari": "Медиафайлы",
   "Nima yangi": "Что нового",
+
+  // Header: branch switcher, search, buttons, clock
+  "Barcha filiallar": "Все филиалы",
+  "Filialni tanlash": "Выбрать филиал",
+  "Qidirish...": "Поиск...",
+  "Natija topilmadi": "Ничего не найдено",
+  "Sahifalar": "Страницы",
+  "Barchasini ko'rish ({n})": "Показать все ({n})",
+  "Yangi topshiriq": "Новая задача",
+  "Topshiriq": "Задача",
+  "Shu sahifa bo'yicha qo'llanma": "Руководство по этой странице",
+  "Toshkent vaqti (UTC+5)": "Время в Ташкенте (UTC+5)",
+
+  // User menu
+  "Ko'rinish": "Вид",
+  "Yorug'": "Светлая",
+  "Qorong'i": "Тёмная",
+  "Tizim": "Системная",
+  "Dizayn uslubi": "Стиль оформления",
+  "To'q ko'k, texnik shrift": "Тёмно-синий, технический шрифт",
+  "Chuqur yashil, yumaloq shakllar": "Глубокий зелёный, округлые формы",
+  "To'q bordo, keng harflar": "Тёмно-бордовый, широкие буквы",
+  "Kulrang, tor shrift": "Серый, узкий шрифт",
+  "Iliq jigarrang": "Тёплый коричневый",
+  "Til": "Язык",
+  "Chiqish": "Выйти",
 };
 
 export default ru;
