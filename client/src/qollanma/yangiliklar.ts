@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Yangi hisobot: Auditoriya",
+    matn: "Hisobotlarda «Auditoriya» sahifasi paydo bo'ldi: hozir o'qiyotgan o'quvchilar jinsi, yoshi, kurs va filial bo'yicha. Foizlar faqat jinsi yoki tug'ilgan sanasi kiritilgan o'quvchilar ichidan hisoblanadi, sahifa tepasida esa ma'lumot qanchalik to'liqligi ko'rsatiladi. Ma'lumot o'quvchilar ilovaga kirgan sari to'lib boradi. Beshtadan kam ma'lumotli qatorda foiz o'rniga chiziqcha turadi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "hisobotlar", sahifa: "auditoriya" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Qatnashganlik hujjati: yangi shartlar",
     matn: "Qatnashganlik hujjati endi to'rt shart bilan ko'proq tekshiriladi. O'quvchining qarzi bo'lmasligi kerak (qancha bo'lmasin). Hisobga kirgan darslar kamida 20 ta bo'lishi kerak. Kech qolgan darslar o'quvchi kelgan darslarning 20% idan oshmasligi kerak. Darajada yakuniy sinovlar bo'lsa, hammasidan o'tgan bo'lishi kerak. Ilova sharti avvalgidek: ochiq dars bo'lsa tekshiriladi. «Hujjatlar» yorlig'ida bajarilmagan shartlar sabab bilan chiqadi, administrator hujjat bera olmaydi; faqat CEO sabab yozib istisno bilan beradi. 20 ta va 20% ni CEO Sozlamalar → «Qatnashganlik hujjati» sahifasida o'zgartiradi. Avval berilgan hujjatlar o'zgarmaydi.",
     rollar: [1, 2, 3],

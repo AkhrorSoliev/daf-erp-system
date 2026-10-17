@@ -27,6 +27,7 @@ export const routeLabels: Record<string, string> = {
   attendance: msg("Davomat"),
   marketing: msg("Marketing"),
   bot: msg("Bot hisoboti"),
+  audience: msg("Auditoriya"),
   "dars-baholari": msg("Dars baholari"),
   "xodimlar-kpi": msg("Xodimlar KPI"),
   profile: msg("Profil"),

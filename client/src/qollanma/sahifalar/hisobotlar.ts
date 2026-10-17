@@ -39,6 +39,18 @@ export const hisobotlar: QollanmaSahifa[] = [
   },
   {
     bolim: "hisobotlar",
+    sahifa: "auditoriya",
+    sarlavha: "Auditoriya",
+    qisqacha:
+      "Hozir o'qiyotgan o'quvchilar kim: jinsi, yoshi, kurs va filial kesimida — va bu raqamlar qanchalik to'liq ma'lumotga tayanishi.",
+    rollar: [1, 2],
+    adr: ["0108", "0039"],
+    yollar: ["/reports/audience"],
+    kalitSozlar: ["auditoriya", "jins", "yosh", "erkak", "ayol", "o'rtacha yosh", "yosh guruhlari", "kim o'qiydi"],
+    yangilangan: "2026-10-17",
+  },
+  {
+    bolim: "hisobotlar",
     sahifa: "bot-hisoboti",
     sarlavha: "Bot hisoboti",
     qisqacha:

@@ -45,6 +45,7 @@ const ru: Dictionary = {
   "Xodimlar KPI": "KPI сотрудников",
   "Marketing": "Маркетинг",
   "Bot hisoboti": "Отчёт по боту",
+  "Auditoriya": "Аудитория",
 
   // DaF ilovasi
   "Umumiy holat": "Общее состояние",
