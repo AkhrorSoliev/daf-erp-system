@@ -390,6 +390,83 @@ describe('ReportsService', () => {
     });
   });
 
+  describe('getKpis branch scope', () => {
+    const emptyReads = () => {
+      prisma.student.count.mockResolvedValue(0);
+      prisma.group.count.mockResolvedValue(0);
+      prisma.attendance.groupBy.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+    };
+
+    it('confines every KPI read to the whole branch list a several-branch caller holds', async () => {
+      emptyReads();
+
+      await service.getKpis(1, { branchIds: [2, 3] });
+
+      for (const [{ where }] of prisma.student.count.mock.calls) {
+        expect(where.branches).toEqual({
+          some: { branchId: { in: [2, 3] } },
+        });
+      }
+      expect(prisma.student.count).toHaveBeenCalledTimes(3);
+      expect(prisma.group.count.mock.calls[0][0].where.branchId).toEqual({
+        in: [2, 3],
+      });
+      expect(prisma.attendance.groupBy.mock.calls[0][0].where.group).toEqual({
+        branchId: { in: [2, 3] },
+      });
+    });
+
+    it('puts no branch predicate on any read when the scope is every branch (null)', async () => {
+      emptyReads();
+
+      await service.getKpis(1, { branchIds: null });
+
+      for (const [{ where }] of prisma.student.count.mock.calls) {
+        expect(where).not.toHaveProperty('branches');
+      }
+      expect(prisma.group.count.mock.calls[0][0].where).not.toHaveProperty(
+        'branchId',
+      );
+      expect(
+        prisma.attendance.groupBy.mock.calls[0][0].where,
+      ).not.toHaveProperty('group');
+    });
+
+    it('answers zeros without reading anything when the scope is empty', async () => {
+      const result = await service.getKpis(1, { branchIds: [] });
+
+      expect(result).toEqual({
+        activeStudents: { current: 0, trend: 0 },
+        activeGroups: 0,
+        averageAttendance: null,
+        leadConversionRate: 0,
+        newStudentsThisMonth: 0,
+        churnedThisMonth: 0,
+        pendingDepartures: 0,
+        departureGraceDays: DEPARTURE_GRACE_DAYS,
+      });
+      expect(prisma.student.count).not.toHaveBeenCalled();
+      expect(prisma.student.findMany).not.toHaveBeenCalled();
+      expect(prisma.group.count).not.toHaveBeenCalled();
+      expect(prisma.attendance.groupBy).not.toHaveBeenCalled();
+      expect(prisma.lead.count).not.toHaveBeenCalled();
+    });
+
+    it('still reads the single branch of the plain branchId query', async () => {
+      emptyReads();
+
+      await service.getKpis(1, { branchId: 5 });
+
+      expect(prisma.student.count.mock.calls[0][0].where.branches).toEqual({
+        some: { branchId: { in: [5] } },
+      });
+      expect(prisma.group.count.mock.calls[0][0].where.branchId).toEqual({
+        in: [5],
+      });
+    });
+  });
+
   describe('getRoomUtilization', () => {
     it('should return cached data if available', async () => {
       const cached = { rooms: [], summary: {} };

@@ -202,7 +202,9 @@ export class DashboardSummaryService {
     branchId: number | undefined,
   ): Promise<DashboardPeople> {
     const [kpis, todayLessons] = await Promise.all([
-      this.reports.getKpis(ctx.companyId, { branchId }),
+      // KPI butun qamrovni oladi (ro'yxat): `branchId` bitta filialga siqilgan
+      // bo'lib, ko'p filialli direktorga butun kompaniyani ko'rsatardi.
+      this.reports.getKpis(ctx.companyId, { branchIds: ctx.branchScope }),
       // Jadval bitta filialning xonalari va ish vaqtiga chiziladi, shuning
       // uchun «Barcha filiallar» rejimida bu son mavjud emas. `0` qaytarish
       // yolg'on bo'lardi — darslar bor, faqat qaysi filialda ekani aytilmagan.

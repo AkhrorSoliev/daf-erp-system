@@ -15,7 +15,7 @@ import {
   allocatePaymentReceiptCode,
   allocateRefundReceiptCode,
 } from './receipt-code';
-import { apiBaseUrl, refundReceiptPdfUrl } from './receipt-urls';
+import { apiBaseUrl, publicBaseUrl, refundReceiptPdfUrl } from './receipt-urls';
 import type { ReceiptVerificationDto } from './dto/verification.dto';
 
 /**
@@ -352,11 +352,7 @@ export class ReceiptsService {
   }
 
   private publicBaseUrl(): string {
-    return (
-      this.config.get<string>('PUBLIC_BASE_URL') ??
-      this.config.get<string>('APP_URL') ??
-      'https://admin.dafzentrum.uz'
-    );
+    return publicBaseUrl(this.config);
   }
 
   /**

@@ -52,6 +52,8 @@ export const routeLabels: Record<string, string> = {
   "lead-ownership": msg("Lidlar egaligi"),
   // /settings/kpi — «KPI sozlamalari», CEO only (ADR-0096).
   kpi: msg("KPI sozlamalari"),
+  // /settings/participation — «Qatnashganlik hujjati», CEO only.
+  participation: msg("Qatnashganlik hujjati"),
   // /settings/telegram-report — «Telegram hisobot», CEO only (ADR-0095).
   "telegram-report": msg("Telegram hisobot"),
   tasks: msg("Topshiriqlar"),

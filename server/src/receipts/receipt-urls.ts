@@ -1,3 +1,5 @@
+import type { ConfigService } from '@nestjs/config';
+
 /**
  * Where the backend API itself is reachable — the host the public receipt
  * PDFs are served from (`api.dafzentrum.uz`), not the frontend portal.
@@ -19,3 +21,16 @@ export function apiBaseUrl(): string {
  */
 export const refundReceiptPdfUrl = (refundId: string): string =>
   `${apiBaseUrl()}/api/receipts/refund/${refundId}.pdf`;
+
+/**
+ * The frontend host a public QR page lives on: `PUBLIC_BASE_URL`, else
+ * `APP_URL`, else the admin host. Receipts and the Teilnahmebestätigung both
+ * build their `/r/<id>` and `/t/<id>` links from it.
+ */
+export function publicBaseUrl(config: ConfigService): string {
+  return (
+    config.get<string>('PUBLIC_BASE_URL') ??
+    config.get<string>('APP_URL') ??
+    'https://admin.dafzentrum.uz'
+  );
+}

@@ -19,6 +19,7 @@ import type { Student } from "@/data/student-model";
 import { useCan } from "@/hooks/use-permissions";
 import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import { StudentContractsTab } from "./contracts/student-contracts-tab";
+import { StudentCertificatesTab } from "./certificates/student-certificates-tab";
 import { StudentAppActivityTab } from "./student-app-activity-tab";
 import { StudentGroupCard } from "./student-group-card";
 import { PaymentStatement } from "./statement/payment-statement";
@@ -74,6 +75,8 @@ export function StudentProfileTabs({
   const ilovaShown = useRef(false);
   const [contractsVisible, setContractsVisible] = useState(false);
   const contractsShown = useRef(false);
+  const [certificatesVisible, setCertificatesVisible] = useState(false);
+  const certificatesShown = useRef(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
   );
@@ -165,6 +168,10 @@ export function StudentProfileTabs({
       if (value === "shartnomalar" && !contractsShown.current) {
         contractsShown.current = true;
         setContractsVisible(true);
+      }
+      if (value === "hujjatlar" && !certificatesShown.current) {
+        certificatesShown.current = true;
+        setCertificatesVisible(true);
       }
     },
     [],
@@ -290,6 +297,7 @@ export function StudentProfileTabs({
           {canSeeDetails && (
             <TabsTrigger value="shartnomalar">Shartnomalar</TabsTrigger>
           )}
+          {canSeeDetails && <TabsTrigger value="hujjatlar">Hujjatlar</TabsTrigger>}
           {canSeeDetails && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
           {canSeeComments && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
           {canSeeDetails && (
@@ -466,6 +474,13 @@ export function StudentProfileTabs({
         {canSeeDetails && (
           <TabsContent value="ilova">
             {ilovaVisible && <StudentAppActivityTab studentId={student.id} />}
+          </TabsContent>
+        )}
+
+        {/* Hujjatlar — qatnashganlik hujjati */}
+        {canSeeDetails && (
+          <TabsContent value="hujjatlar">
+            {certificatesVisible && <StudentCertificatesTab studentId={student.id} />}
           </TabsContent>
         )}
       </Tabs>

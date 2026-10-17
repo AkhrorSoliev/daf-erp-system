@@ -396,7 +396,10 @@ export class ReportsService {
   }
 
   // Overview
-  getKpis(companyId: number, query: ReportsQueryDto) {
+  getKpis(
+    companyId: number,
+    query: ReportsQueryDto & { branchIds?: ReportBranchIds },
+  ) {
     return this.overview.getKpis(companyId, query);
   }
   getRoomUtilization(companyId: number, query: ReportsQueryDto) {
