@@ -100,6 +100,8 @@ describe('KpiReadService.overview', () => {
       where: {
         companyId: 1001,
         deletedAt: null,
+        status: 'ACTIVE',
+        isActive: true,
         roles: { some: { role: { name: 'Administrator' } } },
         OR: [
           { mainBranch: { in: [2] } },
