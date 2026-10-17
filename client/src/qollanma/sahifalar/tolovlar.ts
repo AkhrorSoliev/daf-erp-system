@@ -349,7 +349,7 @@ export const tolovlar: QollanmaSahifa[] = [
       "darslar bo'yicha csv",
       "hisoblash davri",
     ],
-    yangilangan: "2026-10-10",
+    yangilangan: "2026-10-17",
   },
   {
     bolim: "tolovlar",

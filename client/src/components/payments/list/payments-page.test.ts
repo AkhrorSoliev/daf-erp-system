@@ -99,12 +99,12 @@ describe("PaymentsSummaryCard", () => {
   it("«Bu oy»: title, total, counts, badge, three parts", () => {
     const t = text(card("oy"));
     expect(t).toContain("Oktabrda tushgan pul");
-    expect(t).toContain("12.3 mln");
+    expect(t).toContain("12 345 678 so'm");
     expect(t).toContain("31 ta to'lov · 27 o'quvchi");
     expect(t).toContain("«Kassaga tushdi» kartasidagi raqamning o'zi");
-    expect(t).toContain("Oktabr to'lovi 8.0 mln");
-    expect(t).toContain("Noyabr uchun oldindan 3.0 mln");
-    expect(t).toContain("Eski qarzlar 1.3 mln");
+    expect(t).toContain("Oktabr to'lovi 8 000 000 so'm");
+    expect(t).toContain("Noyabr uchun oldindan 3 000 000 so'm");
+    expect(t).toContain("Eski qarzlar 1 345 678 so'm");
   });
 
   it("a part that is 0 is not drawn", () => {
@@ -118,7 +118,7 @@ describe("PaymentsSummaryCard", () => {
     expect(t.indexOf("Naqd")).toBeGreaterThan(-1);
     expect(t.indexOf("Naqd")).toBeLessThan(t.indexOf("Click"));
     expect(t).not.toContain("Uzum");
-    expect(t).toContain("shundan onlayn avtomatik 1.5 mln · 4 ta");
+    expect(t).toContain("shundan onlayn avtomatik 1 500 000 so'm · 4 ta");
     expect(text(card("oy", SUMMARY.period, { ...SUMMARY, online: { amount: 0, count: 0 } }))).not.toContain("shundan onlayn");
   });
 

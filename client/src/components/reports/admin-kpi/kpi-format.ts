@@ -127,6 +127,12 @@ export const KPI_DEFINITIONS = [
 ] as const;
 
 /** Y-axis tick for sums: 1 200 000 → «1,2 mln», smaller ones in full. */
+/** The line under «Administratorlar»: converted leads nobody had claimed (CEO, 17.10.2026). */
+export function unownedConversionsText(n: number): string {
+  if (n === 0) return "Egasiz o'quvchiga aylangan lid yo'q — hamma lid band qilinib ishlangan.";
+  return `Egasiz o'quvchiga aylangan lidlar: ${n} ta — ularni hech kim band qilmagan, natija hech kimga yozilmadi.`;
+}
+
 export function axisSom(v: number): string {
   return v >= 1_000_000 ? `${formatNumber(v / 1_000_000, { maximumFractionDigits: 1 })} mln` : formatPrice(v);
 }

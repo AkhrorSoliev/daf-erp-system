@@ -84,7 +84,7 @@ describe('linkStaffChatByPhone (ADR-0045)', () => {
     });
     expect(tx.user.update).toHaveBeenCalledWith({
       where: { id: 30401 },
-      data: { telegramChatId: CHAT },
+      data: { telegramChatId: CHAT, telegramDisconnectedAt: null },
     });
     expect(history.recordUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -97,6 +97,22 @@ describe('linkStaffChatByPhone (ADR-0045)', () => {
         tx,
       }),
     );
+  });
+
+  it("yangi bog'langan chat yetib bo'lmas deb belgilanmaydi — telegramDisconnectedAt tozalanadi", async () => {
+    const { prisma, tx } = setup([DOSTON]);
+
+    await linkStaffChatByPhone(
+      prisma as any,
+      { recordUpdate: jest.fn() },
+      CHAT,
+      PHONE,
+    );
+
+    expect(tx.user.update).toHaveBeenCalledWith({
+      where: { id: 30401 },
+      data: expect.objectContaining({ telegramDisconnectedAt: null }),
+    });
   });
 
   it("boshqa Telegram'ga bog'langan hisob yangi chatga o'tadi; eski chat qaytariladi", async () => {
@@ -114,7 +130,7 @@ describe('linkStaffChatByPhone (ADR-0045)', () => {
     );
     expect(tx.user.update).toHaveBeenCalledWith({
       where: { id: 30401 },
-      data: { telegramChatId: CHAT },
+      data: { telegramChatId: CHAT, telegramDisconnectedAt: null },
     });
   });
 
@@ -132,7 +148,7 @@ describe('linkStaffChatByPhone (ADR-0045)', () => {
     });
     expect(tx.user.update).toHaveBeenCalledWith({
       where: { id: 30777 },
-      data: { telegramChatId: null },
+      data: { telegramChatId: null, telegramDisconnectedAt: null },
     });
     expect(history.recordUpdate).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -1,17 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { formatPrice } from "@/lib/format-utils";
-import { METHOD_FILTER, PART_FILTER, periodTitle, receiptText, receivedByText, selectedLine, shortMln } from "./payments-format";
+import { METHOD_FILTER, PART_FILTER, periodTitle, receiptText, receivedByText, selectedLine } from "./payments-format";
 
 const p = formatPrice;
-
-describe("shortMln", () => {
-  it("one decimal from a million, the full figure below", () => {
-    expect(shortMln(12_345_678)).toBe("12.3 mln");
-    expect(shortMln(1_000_000)).toBe("1.0 mln");
-    expect(shortMln(950_000)).toBe(p(950_000));
-    expect(shortMln(0)).toBe(p(0));
-  });
-});
 
 describe("selectedLine", () => {
   it("count and sum", () =>

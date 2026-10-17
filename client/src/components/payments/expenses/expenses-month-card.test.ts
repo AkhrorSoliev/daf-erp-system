@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { mln } from "@/components/payments/salary/salary-page-model";
+import { formatBalance } from "@/lib/format-utils";
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS } from "./expenses-labels";
 import { CATEGORY_HINT, MISSING_FOOTNOTE, SAME_AS_PROFIT } from "./expenses-format";
 import { ExpensesHeader } from "./expenses-header";
@@ -38,8 +38,8 @@ describe("ExpensesMonthCard (spec B6 §3.4)", () => {
   it("the month's total, its count with cash and card, the green line", () => {
     const t = text(card());
     expect(t).toContain("Oktabr xarajatlari");
-    expect(t).toContain(norm(mln(5_070_000)));
-    expect(t).toContain(norm(`2 ta · naqd ${mln(5_000_000)} · karta ${mln(70_000)}`));
+    expect(t).toContain(norm(formatBalance(5_070_000)));
+    expect(t).toContain(norm(`2 ta · naqd ${formatBalance(5_000_000)} · karta ${formatBalance(70_000)}`));
     expect(t).toContain(SAME_AS_PROFIT);
   });
   it("eight categories in the fixed order, this month against last, «Jami», the hint line", () => {
@@ -49,7 +49,7 @@ describe("ExpensesMonthCard (spec B6 §3.4)", () => {
     const rows = t.slice(t.indexOf("Turkum Oktabr Sentabr"));
     const at = EXPENSE_CATEGORIES.map((c) => rows.indexOf(EXPENSE_CATEGORY_LABELS[c]));
     expect(at.every((p, i) => p >= 0 && (i === 0 || p > at[i - 1]))).toBe(true);
-    expect(t).toContain(norm(`Jami ${mln(5_070_000)} ${mln(10_900_000)}`));
+    expect(t).toContain(norm(`Jami ${formatBalance(5_070_000)} ${formatBalance(10_900_000)}`));
     expect(t).toContain(CATEGORY_HINT);
   });
   it("«yozilmagan» where the server says so", () => {
@@ -70,8 +70,8 @@ describe("ExpensesMissingCard (spec B6 §3.3)", () => {
   it("the title, each gap with its branch, the empty branch and the footnote", () => {
     const t = text(missing());
     expect(t).toContain("Bu oy hali yozilmagan");
-    expect(t).toContain(norm(`Kommunal · Markaz — sentabrda ${mln(4_700_000)} edi, oktabrda hozircha ${mln(70_000)}`));
-    expect(t).toContain(norm(`Soliq · Shimol — sentabrda ${mln(1_200_000)} edi`));
+    expect(t).toContain(norm(`Kommunal · Markaz — sentabrda ${formatBalance(4_700_000)} edi, oktabrda hozircha ${formatBalance(70_000)}`));
+    expect(t).toContain(norm(`Soliq · Shimol — sentabrda ${formatBalance(1_200_000)} edi`));
     expect(t).toContain("Shimol filiali — bu oy bitta ham xarajat yozilmagan");
     expect(t).toContain(MISSING_FOOTNOTE);
   });
@@ -80,7 +80,7 @@ describe("ExpensesMissingCard (spec B6 §3.3)", () => {
     expect(text(missing({}, false))).not.toContain("Yozish");
   });
   it("one branch in scope: no branch name", () => {
-    expect(text(missing({ multiBranch: false }))).toContain(norm(`Kommunal — sentabrda ${mln(4_700_000)}`));
+    expect(text(missing({ multiBranch: false }))).toContain(norm(`Kommunal — sentabrda ${formatBalance(4_700_000)}`));
   });
   it("nothing outside the current month, nothing without a row", () => {
     expect(raw(missing({ isCurrentMonth: false }))).toBe("");
