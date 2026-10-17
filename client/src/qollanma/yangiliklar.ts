@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Bosh sahifa tarjima qilindi",
+    matn: "Bosh sahifa endi tanlangan tilda ochiladi: pul va odamlar qatori, lid voronkasi, e'tibor talab qiladigan ishlar, yaqin darslar, diagrammalar, filial ishga tushirish kartasi va o'qituvchining dars jadvali (xona bandligi, «Dars bo'ldimi?» oynalari va o'quvchilar qatorlari bilan). Serverdan keladigan matnlar va ismlar, nomlar o'zgarishsiz qoladi. Boshqa sahifalar hali o'zbekcha.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Kirish sahifasida til tanlash",
     matn: "Admin panel va o'qituvchi portalining kirish sahifasida yuqori o'ng burchakda til tugmasi paydo bo'ldi. Besh tildan birini tanlang: O'zbekcha, Ўзбекча, Русский, Deutsch yoki English; sahifaning o'zi, parolni tiklash oynasi va salom ham tarjima qilingan. Kirgach profilingizdagi til ochiladi; profilingizda til tanlanmagan bo'lsa, o'zbekchadan boshqa tanlagan tilingiz profilga saqlanadi. O'quvchi portalining kirish sahifasi hali o'zbekcha.",
     rollar: [1, 2, 3, 4, 5],
