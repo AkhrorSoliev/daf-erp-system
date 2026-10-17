@@ -18,12 +18,15 @@ sahifani so'radi.
    (bloklangan, hisob o'chirilgan) yoki Telegram `my_chat_member` orqali
    bloklanganini aytsa belgilanadi; xabar yetsa yoki blokdan chiqarsa
    o'chadi. Yozuvchi — o'sha `StudentChatReach` (xodim qatorlari ham, tarix
-   qatori ham). Belgi yuborishni to'xtatmaydi. Xodim chatini ulash yoki qayta
-   ulash belgini o'chiradi: `staff-link.ts` har `User.telegramChatId` yozuvi
-   bilan birga `telegramDisconnectedAt: null` yozadi (ham ulanayotgan hisobga,
-   ham chat olib qo'yilayotgan hisobga).
+   qatori ham). Belgi yuborishni to'xtatmaydi. Chatni o'zgartiradigan ulash belgini o'chiradi: `staff-link.ts` har
+   `User.telegramChatId` yozuvi bilan birga `telegramDisconnectedAt: null`
+   yozadi (ham ulanayotgan hisobga, ham chat olib qo'yilayotgan hisobga);
+   chat o'zgarmasa (`target.telegramChatId === chatId`) yozuv o'tkazib
+   yuboriladi va belgi qoladi — botga yozish uchun xodim uni blokdan
+   chiqargan bo'lishi kerak, bot blokdan chiqarishni o'zi eshitadi.
 2. «Ulanishni tekshirish» — `sendChatAction('typing')`: xodimning chatida
-   hech narsa ko'rinmaydi. 403 «bloklagan» — yagona aniq «yetmaydi» javobi;
+   hech narsa ko'rinmaydi. `classifyTelegramError` doimiy deb bilgan har xato belgini qo'yadi (403
+   «bloklagan»; 400 «chat not found», PEER_ID_INVALID, «user is deactivated»);
    boshqa xato belgini o'zgartirmaydi. Belgi shu yerning o'zida yoziladi
    (fon yozuvi sahifaning qayta yuklashiga yetib kelmasligi mumkin), shuning
    uchun bu yo'lda tarix qatori yozilmaydi.
