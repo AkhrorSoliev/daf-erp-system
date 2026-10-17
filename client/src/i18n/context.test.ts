@@ -40,4 +40,18 @@ describe("I18nProvider, useT, useLocale", () => {
   it("behaves as Uzbek outside a provider", () => {
     expect(unescape(renderToStaticMarkup(createElement(Probe)))).toContain("uz|Bosh sahifa|2 ta o'quvchi");
   });
+
+  it("cannot switch the language outside a provider: setLocale resolves false", async () => {
+    // A server render only draws, so the probe calls `setLocale` while drawing
+    // and keeps the promise in `answers` for the test to await.
+    const answers: Promise<boolean>[] = [];
+    function SetLocaleProbe() {
+      const { setLocale } = useLocale();
+      answers.push(setLocale("ru"));
+      return null;
+    }
+    renderToStaticMarkup(createElement(SetLocaleProbe));
+    expect(answers).toHaveLength(1);
+    await expect(answers[0]).resolves.toBe(false);
+  });
 });

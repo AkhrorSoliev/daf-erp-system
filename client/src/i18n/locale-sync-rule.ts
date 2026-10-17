@@ -21,3 +21,24 @@ export function localeSyncAction(input: {
   }
   return deviceLocale === DEFAULT_LOCALE ? { kind: "none" } : { kind: "save-device", locale: deviceLocale };
 }
+
+/**
+ * One run of the sync effect. The decision is made ONCE per account value
+ * (`handledKey` is that value): the person's own pick switches the page before
+ * the save is answered, while the account still holds the old language, and a
+ * key that included the device's language would read that as a new case and
+ * fight the pick (a second save, or a flip back). Pass the returned `handledKey`
+ * into the next run. Signed out: nothing to do, and nothing is remembered.
+ */
+export function localeSyncStep(input: {
+  signedIn: boolean;
+  accountLocale: string | null | undefined;
+  deviceLocale: UiLocale;
+  handledKey: string | null;
+}): { action: LocaleSyncAction; handledKey: string | null } {
+  const { signedIn, accountLocale, deviceLocale, handledKey } = input;
+  if (!signedIn) return { action: { kind: "none" }, handledKey: null };
+  const key = accountLocale ?? "none";
+  if (handledKey === key) return { action: { kind: "none" }, handledKey: key };
+  return { action: localeSyncAction({ accountLocale, deviceLocale }), handledKey: key };
+}

@@ -41,12 +41,13 @@ export function I18nProvider({
   children: ReactNode;
 }) {
   const [state, setState] = useState<LocaleState>({ locale: initialLocale, dictionary: initialDictionary });
+  // What the page holds right now. `apply` is its only writer, so a late render
+  // never puts an older state over a newer one.
   const stateRef = useRef(state);
 
   useEffect(() => {
-    stateRef.current = state;
     document.documentElement.lang = state.locale;
-  }, [state]);
+  }, [state.locale]);
 
   const setLocale = useCallback(
     (next: UiLocale, options?: SetLocaleOptions) =>
@@ -63,7 +64,9 @@ export function I18nProvider({
           const { user, patchUser } = useAuth.getState();
           if (!user) return;
           await api.patch("/users/ui-locale", { locale });
-          patchUser({ uiLocale: locale });
+          // A newer pick may have taken the page while this save was in flight;
+          // its own answer will write the account.
+          if (stateRef.current.locale === locale) patchUser({ uiLocale: locale });
         },
         fail: (error, stage) =>
           toast.error(
