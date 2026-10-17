@@ -10,7 +10,7 @@ import type { AttendanceOverview, Counts } from "./attendance-types";
 const CHIPS: { key: keyof Counts; label: string; dot: string }[] = [
   { key: "came", label: "Keldi", dot: "bg-success" },
   { key: "late", label: "Kechikdi", dot: "bg-warning" },
-  { key: "absent", label: "Kelmadi", dot: "bg-danger" },
+  { key: "absent", label: "Kelmadi", dot: "bg-destructive" },
 ];
 
 export function AttendanceCardSkeleton() {

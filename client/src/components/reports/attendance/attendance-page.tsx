@@ -18,12 +18,12 @@ import { useAttendanceOverview } from "./attendance-queries";
 import { AttendanceStreak } from "./attendance-streak";
 import { AttendanceTrends } from "./attendance-trends";
 import {
-  ATTENDANCE_DEFAULTS, ATTENDANCE_SCHEMA, attendanceRange, cleanCut, excelFileName, overviewParams, type AttendanceFilters,
+  ATTENDANCE_SCHEMA, attendanceRange, cleanCut, excelFileName, overviewParams, type AttendanceFilters,
 } from "./attendance-url";
 
 /** «Davomat» (spec B7c §4). Every figure is the server's; the page only arranges and formats. No branch picker: it follows the header. */
 export function AttendancePage() {
-  const { filters: raw, setFilters } = useUrlFilters(ATTENDANCE_SCHEMA);
+  const { filters: raw, setFilters, resetFilters } = useUrlFilters(ATTENDANCE_SCHEMA);
   const filters = raw as unknown as AttendanceFilters;
   // Read on every render, not memoised: when the Tashkent month rolls over «Bu oy» resolves to new days, so the query key changes.
   const today = tashkentDayAsLocalDate(new Date());
@@ -69,8 +69,8 @@ export function AttendancePage() {
       {isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
           <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
-          {/* A stale link can keep failing; retrying with it would repeat the error, so a non-default URL goes back to the defaults. */}
-          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => (isDefault ? refetch() : setFilters(ATTENDANCE_DEFAULTS))}>
+          {/* A stale link can keep failing; retrying with it would repeat the error, so a non-default URL goes back to the defaults, stale `att_*` keys included (the plain path). */}
+          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => (isDefault ? refetch() : resetFilters())}>
             Qayta urinish
           </Button>
         </div>

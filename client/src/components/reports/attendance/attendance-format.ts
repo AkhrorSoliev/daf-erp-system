@@ -19,7 +19,7 @@ export function rateTone(n: number | null): Tone {
 export const TONE_BAR: Record<Tone, string> = {
   good: "bg-success",
   warn: "bg-warning",
-  bad: "bg-danger",
+  bad: "bg-destructive",
   none: "bg-muted",
 };
 
