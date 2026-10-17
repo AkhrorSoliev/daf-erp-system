@@ -83,7 +83,7 @@ ADR-0104 (kohort qoidasi, nega oy-oyma-oy sana emas, `joinedAt` birinchi sana ek
 - `gate-cohort.spec.ts`: boshqa oyda to'xtatilib shu oyda a'zo bo'lgan odam foizni oshirmaydi; `joined ≤ blocked` har qanday kirishda (xossa testi); `joinedAt < blockedAt` ikki holati (`leftAt` bor/yo'q); chiqib ketgan va qayta kirgan; bo'sh oy 0%; oy chegarasi (Toshkent 00:00, oxirgi kecha keyingi oyga).
 - Servis spec: `blockedAt` bo'sh qatorlar kohortga kirmaydi; ro'yxat va kartalar bir xil kohortdan (karta soni = ro'yxat `total`).
 - Kontroller spec: marker (`routeAccess`), `month` tekshiruvi, default oy.
-- Klient: `bot-report-format.test.ts`; sahifa holatlari (yuklanmoqda, xato, bo'sh oy).
+- Klient: `bot-report-format.test.ts`, `bot-report-url.test.ts`, `uzbek-only-texts.test.ts` (papka qamrovi). Klient testlari DOM'siz (node); sahifa holatlari (yuklanmoqda, xato, bo'sh oy, kanal tekshiruvi o'chiq) soxta API bilan brauzerda tekshiriladi.
 
 ## 8. Cheklovlar
 
