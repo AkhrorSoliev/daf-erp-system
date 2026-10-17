@@ -59,7 +59,7 @@ Manba — `DafLessonProgress.completedAt`. Faqat `DafLevel` bor daraja (A1, A2, 
 
 `berilishi mumkin = davomat foizi ≥ davomat chegarasi VA (ilova qo'llanmasa YOKI ilova foizi ≥ ilova chegarasi)`.
 
-Chegaralar daraja bo'yicha: `davomat` boshida 80, `ilova` boshida 100. Qator yo'q daraja uchun shu boshlang'ich qiymatlar.
+Chegaralar: davomat uchun bitta umumiy son (boshida 80), ilova uchun daraja bo'yicha (A1, A2, B1; boshida 100). Ular `Setting` jadvalida turadi (4-bo'lim), alohida jadval yo'q.
 
 ### 3.4 Hujjatda ma'lumot sifatida (shart emas)
 
@@ -78,9 +78,9 @@ Ilovadagi **faol vaqt** kiritilmaydi: `StudentAppSession` vaqtni darajaga bog'la
 - `issuedAt`, `issuedById`
 - `snapshot Json` — davr (dan, gacha), davomat (keldi, kech, kelmadi, hisobdagi, foiz), ilova (tugatgan, ochiq, foiz yoki `null`), mock satri, unit sinovlari soni, guruh nomlari, ishlatilgan chegaralar, o'quvchi ismi, tug'ilgan sana
 - `exemptReason String?`, `exemptById Int?` — faqat CEO istisnosi
-- `deletedAt`, `deletedById`, `deletionBatchId` — arxivlash (o'chirib bo'lmaydi), partial unique
+- `revokedAt DateTime?`, `revokedReason String?` — hujjatni bekor qilish ustuni. Birinchi versiyada yozadigan yo'l yo'q (YAGNI); ochiq tekshirish sahifasi uni o'qiydi, shuning uchun yo'l keyin faqat bitta route bo'lib qo'shiladi. Hujjat hech qachon o'chirilmaydi
 
-**`ParticipationRule`** — daraja bo'yicha chegara: `companyId`, `level`, `minAttendancePercent`, `minAppPercent`, `@@unique([companyId, level])`. Qator yo'q bo'lsa 80 / 100.
+**Chegaralar yangi jadval emas, mavjud sozlamalar tizimida** (`SettingsService`, kompaniya darajasi, faqat CEO yozadi): `participation.minAttendancePercent` (0–100, boshida 80) va `participation.minAppPercent.A1` / `.A2` / `.B1` (0–100, boshida 100). Qiymat yo'q bo'lsa boshlang'ich son o'qiladi.
 
 PDF saqlanmaydi: `snapshot` dan har safar qayta chiziladi. Fayl xotirasi (R2) kerak emas.
 
@@ -90,11 +90,11 @@ Modul: `server/src/participation-certificates/`.
 
 - `participation-rules.ts` — **sof funksiyalar** (bazaga tegmaydi): davomat qatorlarini sanash (3.1), ilova foizi (3.2), shart (3.3). Yagona hisob joyi, ekran ham, hujjat ham shundan o'qiydi.
 - `participation-certificates.service.ts` — bitta o'quvchi uchun ma'lumot yig'ish, `preview`, `issue`.
-- Endpointlar (hammasi `@BranchScope()`, filial yo'l manifestida yozilgan):
-  - `GET /students/:id/participation-certificates/preview` — o'quvchi qatnashgan har daraja uchun foizlar, shart natijasi, avval berilgan hujjatlar. Rollar: CEO, Branch Director, Administrator.
-  - `POST /students/:id/participation-certificates` — `{ level, exemptReason? }`. Shart bajarilgan bo'lsa hujjat yaratadi. Bajarilmagan bo'lsa 400, faqat CEO `exemptReason` bilan o'tadi (CEO roli **bazadan** o'qiladi, ADR-0028; boshqaga 403). Qaytishda to'liq yozuv.
-  - `GET /participation-certificates/:id/pdf` — PDF. Rollar yuqoridagidek, o'quvchi filiali tekshiriladi.
-  - `GET/PUT /settings/participation-rules` — chegaralar. Faqat CEO.
+- Endpointlar. Yangi imkoniyat kaliti qo'shilmaydi: mavjud `students.details` va `students.manage` ishlatiladi (ikkalasi: CEO, Branch Director, Administrator). O'quvchi id'si bilan kelganlar o'quvchi filialini `assertCallerMayTouchStudent` bilan tekshiradi (`BRANCH_SCOPED_BY_ENTITY`):
+  - `GET /students/:id/participation-certificates/preview` (`students.details`) — o'quvchi qatnashgan har daraja uchun foizlar, shart natijasi, chegaralar, avval berilgan hujjatlar.
+  - `POST /students/:id/participation-certificates` (`students.manage`) — `{ level, exemptReason? }`. Shart bajarilgan bo'lsa hujjat yaratadi. Bajarilmagan bo'lsa 400, faqat CEO `exemptReason` bilan o'tadi (CEO roli **bazadan** o'qiladi, ADR-0028; boshqaga 403). Qaytishda to'liq yozuv.
+  - `GET /participation-certificates/:id/pdf` (`students.details`) — PDF; hujjat o'quvchisining filiali tekshiriladi.
+  - `GET /participation-certificates/settings`, `PATCH /participation-certificates/settings` (`@CeoOnly()`, `COMPANY_WIDE`) — chegaralar.
 - Bir o'quvchiga bir darajaga qayta berish mumkin (yangi raqam); eskisi arxivga ketmaydi, ro'yxatda ko'rinadi.
 - Tarix: `EntityHistory` — o'quvchida `QATNASHISH_HUJJATI_BERILDI` (raqam, daraja, istisno bo'lsa sabab). Chegara o'zgarishi kompaniya sozlamasi tarixida.
 - `Group.level` bo'sh guruh qatnashgan darajaga kirmaydi; preview'da «Guruh darajasi ko'rsatilmagan» deyiladi.
@@ -132,7 +132,7 @@ PDF `pdfmake` bilan (`receipts/pdf/render.ts` dagi mavjud yo'l), nemischa matn, 
 
 O'quvchi kartasida yangi tab «Hujjatlar» (tab ma'lumoti faqat ochilganda yuklanadi). Har daraja uchun qator: davomat foizi, ilova foizi, ikkala chegara, yashil/qizil belgi, kech qolish soni. Shart bajarilgan bo'lsa «Hujjat berish» tugmasi; bajarilmagan bo'lsa tugma yopiq va sababi yoziladi («Davomat 74%, kerak 80%»). CEO uchun «Istisno bilan berish» (sabab majburiy). Berilgan hujjatlar ro'yxati: raqam, sana, PDF yuklash.
 
-Sozlamalar sahifasida (faqat CEO) «Teilnahmebestätigung» bo'limi: har daraja uchun ikki chegara.
+Sozlamalar sahifasida (faqat CEO, `/settings/participation`, «Qatnashganlik hujjati») bitta davomat chegarasi va A1, A2, B1 uchun ilova chegarasi.
 
 Ekrandagi matnlarda inglizcha so'z yo'q. Dizayn namunasi chizilib CEO ko'radi, keyin quriladi.
 
@@ -155,4 +155,4 @@ Ekrandagi matnlarda inglizcha so'z yo'q. Dizayn namunasi chizilib CEO ko'radi, k
 
 ## 10. Qamrovdan tashqari
 
-Telegram orqali yuborish, o'quvchining o'zi ilovadan so'rashi, daraja imtihoni balli, hujjat shabloni tillari (faqat nemischa), ommaviy yaratish.
+Hujjatni bekor qilish yo'li (ustun va ochiq sahifa tayyor, route yo'q), Telegram orqali yuborish, o'quvchining o'zi ilovadan so'rashi, daraja imtihoni balli, hujjat shabloni tillari (faqat nemischa), ommaviy yaratish.
