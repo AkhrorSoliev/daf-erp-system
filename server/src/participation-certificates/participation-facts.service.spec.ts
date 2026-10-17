@@ -47,6 +47,7 @@ function makePrisma(over: Record<string, unknown> = {}) {
         firstName: 'Madina',
         lastName: 'Karimova',
         dateOfBirth: new Date('2004-03-13T19:00:00.000Z'),
+        balance: 0,
       }),
     },
     attendance: { findMany: jest.fn().mockResolvedValue([]) },
@@ -131,6 +132,38 @@ describe('ParticipationFactsService', () => {
     );
     expect(prisma.dafSession.findMany).toHaveBeenCalledWith(
       whereOf({ studentId: 10001, passed: true, lessonId: { in: [2] } }),
+    );
+  });
+
+  it('reads the balance of a live card of this company, and keeps it out of the sealed student block', async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      firstName: 'Madina',
+      lastName: 'Karimova',
+      dateOfBirth: null,
+      balance: -250000,
+    });
+    const prisma = makePrisma({ student: { findFirst } });
+    const facts = await new ParticipationFactsService(prisma as never).load(
+      10001,
+      1001,
+    );
+    expect(facts.balance).toBe(-250000);
+    // The balance is live money; only the name and the birth date are sealed.
+    expect(facts.student).toEqual({
+      firstName: 'Madina',
+      lastName: 'Karimova',
+      dateOfBirth: null,
+    });
+    // Same read as the name: this company, not archived, balance selected.
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 10001,
+          companyId: 1001,
+          deletedAt: null,
+        }),
+        select: expect.objectContaining({ balance: true }),
+      }),
     );
   });
 

@@ -18,6 +18,16 @@ export interface AppTally {
 export interface CertificateVerdict {
   attendanceOk: boolean;
   appOk: boolean | null;
+  /** No debt: the balance is not negative. */
+  debtOk: boolean;
+  /** The counted lessons reach the minimum. */
+  lessonsOk: boolean;
+  /** Late lessons are within the limit. */
+  lateOk: boolean;
+  /** Share of the attended lessons that were late, rounded up by the server; null when none attended. */
+  latePercent: number | null;
+  /** null: the level has no final tests. */
+  testsOk: boolean | null;
   eligible: boolean;
   reasons: string[];
 }
@@ -45,13 +55,22 @@ export interface LevelPreview {
   app: AppTally;
   unitTests: { passed: number; total: number } | null;
   mock: { score: number; maxScore: number; date: string | null } | null;
-  thresholds: { attendance: number; app: number | null };
+  thresholds: {
+    attendance: number;
+    app: number | null;
+    /** The fewest counted lessons. */
+    minLessons: number;
+    /** The most late lessons, percent of the lessons attended. */
+    maxLatePercent: number;
+  };
   verdict: CertificateVerdict;
   issued: IssuedCertificate[];
 }
 
 export interface CertificatePreview {
   studentId: number;
+  /** The student's balance now: negative is a debt. */
+  balance: number;
   unleveledGroups: string[];
   levels: LevelPreview[];
 }

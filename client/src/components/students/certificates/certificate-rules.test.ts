@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { formatBalance } from "@/lib/format-utils";
 import {
   canSubmitRevoke,
   dmy,
@@ -17,6 +18,18 @@ import {
 } from "./certificate-rules";
 import type { IssuedCertificate, LevelPreview } from "./certificate-types";
 
+const PASSING = {
+  attendanceOk: true,
+  appOk: true,
+  debtOk: true,
+  lessonsOk: true,
+  lateOk: true,
+  latePercent: 10,
+  testsOk: true,
+  eligible: true,
+  reasons: [],
+};
+
 const base: LevelPreview = {
   level: "A1",
   groupNames: ["A1-17"],
@@ -28,8 +41,8 @@ const base: LevelPreview = {
   app: { applies: true, done: 80, open: 80, percent: 100 },
   unitTests: { passed: 5, total: 5 },
   mock: { score: 72, maxScore: 100, date: "2026-10-07" },
-  thresholds: { attendance: 80, app: 100 },
-  verdict: { attendanceOk: true, appOk: true, eligible: true, reasons: [] },
+  thresholds: { attendance: 80, app: 100, minLessons: 20, maxLatePercent: 20 },
+  verdict: PASSING,
   issued: [],
 };
 
@@ -65,7 +78,7 @@ describe("issueMode", () => {
   it("is exempt for the CEO and blocked for anyone else when the student does not qualify", () => {
     const weak: LevelPreview = {
       ...base,
-      verdict: { attendanceOk: false, appOk: null, eligible: false, reasons: ["Davomat 74%, kerak 80%"] },
+      verdict: { ...PASSING, attendanceOk: false, appOk: null, eligible: false, reasons: ["Davomat 74%, kerak 80%"] },
     };
     expect(issueMode(weak, true)).toBe("exempt");
     expect(issueMode(weak, false)).toBe("blocked");
@@ -194,12 +207,14 @@ describe("the reissue texts", () => {
 });
 
 describe("levelSummary", () => {
-  it("lists attendance, app, late count, unit tests and mock", () => {
-    expect(levelSummary(base)).toEqual([
+  it("lists attendance, lessons, lateness, app, final tests, debt and mock", () => {
+    expect(levelSummary(base, 0)).toEqual([
       { label: "Davomat", value: "91% · 21 / 23 dars", hint: "chegara 80%" },
+      { label: "Darslar soni", value: "23 ta", hint: "kamida 20 ta" },
+      { label: "Kech qolgan", value: "2 / 21 dars (10%)", hint: "chegara 20%" },
       { label: "Ilova", value: "100% · 80 / 80 dars", hint: "chegara 100%" },
-      { label: "Kech qolgan", value: "2 marta", hint: null },
-      { label: "Yakuniy sinovlar", value: "5 / 5", hint: null },
+      { label: "Yakuniy sinovlar", value: "5 / 5", hint: "hammasi kerak" },
+      { label: "Qarz", value: "yo'q", hint: null },
       { label: "Mock imtihon", value: "72 / 100 · 07.10.2026", hint: null },
     ]);
   });
@@ -209,15 +224,54 @@ describe("levelSummary", () => {
       ...base,
       level: "B2",
       app: { applies: false, done: 0, open: 0, percent: null },
-      thresholds: { attendance: 80, app: null },
+      thresholds: { attendance: 80, app: null, minLessons: 20, maxLatePercent: 20 },
       unitTests: null,
       mock: null,
       attendance: { attended: 10, late: 0, absent: 0, counted: 10, percent: 100 },
+      verdict: { ...PASSING, latePercent: 0 },
     };
-    expect(levelSummary(b2)).toEqual([
+    expect(levelSummary(b2, 0)).toEqual([
       { label: "Davomat", value: "100% · 10 / 10 dars", hint: "chegara 80%" },
+      { label: "Darslar soni", value: "10 ta", hint: "kamida 20 ta" },
+      { label: "Kech qolgan", value: "0 / 10 dars (0%)", hint: "chegara 20%" },
       { label: "Ilova", value: "shart qo'llanmaydi", hint: null },
-      { label: "Kech qolgan", value: "0 marta", hint: null },
+      { label: "Qarz", value: "yo'q", hint: null },
     ]);
+  });
+
+  it("writes the debt the server sent, in so'm, and says nothing is owed for zero or a credit", () => {
+    const debt = levelSummary(base, -250000).find((l) => l.label === "Qarz");
+    expect(debt).toEqual({ label: "Qarz", value: formatBalance(250000), hint: null });
+    expect(levelSummary(base, 120000).find((l) => l.label === "Qarz")?.value).toBe("yo'q");
+  });
+
+  it("prints the lateness percent as the server computed it, and a dash when none attended", () => {
+    const late: LevelPreview = {
+      ...base,
+      attendance: { attended: 19, late: 4, absent: 0, counted: 19, percent: 100 },
+      verdict: { ...PASSING, lateOk: false, latePercent: 22, eligible: false },
+    };
+    expect(levelSummary(late, 0).find((l) => l.label === "Kech qolgan")).toEqual({
+      label: "Kech qolgan",
+      value: "4 / 19 dars (22%)",
+      hint: "chegara 20%",
+    });
+    const none: LevelPreview = {
+      ...base,
+      attendance: { attended: 0, late: 0, absent: 3, counted: 3, percent: 0 },
+      verdict: { ...PASSING, latePercent: null },
+    };
+    expect(levelSummary(none, 0).find((l) => l.label === "Kech qolgan")?.value).toBe("0 / 0 dars (—)");
+  });
+
+  it("takes the thresholds from the server, not from a constant", () => {
+    const custom: LevelPreview = { ...base, thresholds: { ...base.thresholds, minLessons: 30, maxLatePercent: 5 } };
+    const lines = levelSummary(custom, 0);
+    expect(lines.find((l) => l.label === "Darslar soni")?.hint).toBe("kamida 30 ta");
+    expect(lines.find((l) => l.label === "Kech qolgan")?.hint).toBe("chegara 5%");
+  });
+
+  it("shows a final-tests line only when the level has some", () => {
+    expect(levelSummary({ ...base, unitTests: null }, 0).some((l) => l.label === "Yakuniy sinovlar")).toBe(false);
   });
 });

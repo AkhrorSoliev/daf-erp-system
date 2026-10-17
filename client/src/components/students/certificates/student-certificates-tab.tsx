@@ -137,7 +137,7 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
             </header>
 
             <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
-              {levelSummary(level).map((line) => (
+              {levelSummary(level, data.balance).map((line) => (
                 <div key={line.label} className="flex items-baseline justify-between gap-3 border-b py-1">
                   <dt className="text-muted-foreground">{line.label}</dt>
                   <dd className="text-right font-medium tabular-nums">

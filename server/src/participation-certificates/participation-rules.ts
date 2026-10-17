@@ -1,4 +1,5 @@
 import { AttendanceStatus } from '@prisma/client';
+import { formatSom } from '../payments/shared/format-som';
 
 /**
  * The ONE place that counts a student's level and decides whether a
@@ -102,6 +103,23 @@ export interface Thresholds {
   attendance: number;
   /** null: this level has no app threshold (not A1/A2/B1). */
   app: number | null;
+  /** `counted` lessons (attended + absent) the level needs at least. */
+  minLessons: number;
+  /** Most late lessons, as a percent of the lessons attended. */
+  maxLatePercent: number;
+}
+
+export interface UnitTestTally {
+  passed: number;
+  total: number;
+}
+
+/** What `evaluate` needs besides the two tallies: facts of the student. */
+export interface VerdictFacts {
+  /** `Student.balance`: negative is a debt. */
+  balance: number;
+  /** Open final (unit) tests of the level; null when the level has none. */
+  unitTests: UnitTestTally | null;
 }
 
 /** `numerator / denominator ≥ minPercent`, in integers: 79,6 % never passes 80. */
@@ -117,6 +135,16 @@ export interface Verdict {
   attendanceOk: boolean;
   /** null: the app condition does not apply to this level. */
   appOk: boolean | null;
+  /** No debt: `Student.balance` is not negative. */
+  debtOk: boolean;
+  /** `counted` reaches the minimum number of lessons. */
+  lessonsOk: boolean;
+  /** `late × 100 ≤ maxLatePercent × attended`, in integers. */
+  lateOk: boolean;
+  /** Share of the attended lessons that were late, rounded UP; null when none attended. */
+  latePercent: number | null;
+  /** null: the level has no final tests, so there is nothing to require. */
+  testsOk: boolean | null;
   eligible: boolean;
   reasons: string[];
 }
@@ -125,12 +153,25 @@ export function evaluate(
   attendance: AttendanceTally,
   app: AppTally,
   thresholds: Thresholds,
+  facts: VerdictFacts,
 ): Verdict {
   const attendanceOk = meetsPercent(
     attendance.attended,
     attendance.counted,
     thresholds.attendance,
   );
+  const debtOk = facts.balance >= 0;
+  const lessonsOk = attendance.counted >= thresholds.minLessons;
+  // Integers only; with nothing attended there is no late lesson either, and
+  // the attendance rule has already failed.
+  const lateOk =
+    attendance.late * 100 <= thresholds.maxLatePercent * attendance.attended;
+  const latePercent =
+    attendance.attended > 0
+      ? Math.ceil((attendance.late * 100) / attendance.attended)
+      : null;
+  const tests = facts.unitTests;
+  const testsOk = tests && tests.total > 0 ? tests.passed >= tests.total : null;
   // The app part counts only when the level has an app threshold AND open
   // lessons: A2/B1 can have a threshold with no content yet.
   const appMin = app.applies ? thresholds.app : null;
@@ -145,13 +186,42 @@ export function evaluate(
         : `Davomat ${attendance.percent}%, kerak ${thresholds.attendance}%`,
     );
   }
+  if (!lessonsOk) {
+    reasons.push(
+      `Darslar soni ${attendance.counted} ta, kamida ${thresholds.minLessons} ta kerak`,
+    );
+  }
+  if (!lateOk) {
+    reasons.push(
+      `Kech qolish ${latePercent}%, ruxsat etilgani ${thresholds.maxLatePercent}%`,
+    );
+  }
   if (appOk === false) {
     reasons.push(`Ilova ${app.percent}%, kerak ${thresholds.app}%`);
+  }
+  if (testsOk === false && tests) {
+    reasons.push(
+      `Yakuniy sinovlar ${tests.passed}/${tests.total} ta topshirilgan, hammasi kerak`,
+    );
+  }
+  if (!debtOk) {
+    reasons.push(`Qarzi bor: ${formatSom(-facts.balance)} so'm`);
   }
   return {
     attendanceOk,
     appOk,
-    eligible: attendanceOk && appOk !== false,
+    debtOk,
+    lessonsOk,
+    lateOk,
+    latePercent,
+    testsOk,
+    eligible:
+      attendanceOk &&
+      appOk !== false &&
+      debtOk &&
+      lessonsOk &&
+      lateOk &&
+      testsOk !== false,
     reasons,
   };
 }
