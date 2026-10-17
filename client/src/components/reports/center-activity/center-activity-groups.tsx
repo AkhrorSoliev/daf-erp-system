@@ -17,10 +17,10 @@ export function CenterActivityGroups({ groups }: { groups: GroupRow[] }) {
   const p = Math.min(page, Math.max(1, Math.ceil(groups.length / pageSize)));
   const slice = groups.slice((p - 1) * pageSize, p * pageSize);
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardContent className="flex flex-col gap-2 p-4">
         <h3 className="font-medium">Bo&apos;sh o&apos;rni bor guruhlar</h3>
-        <Table>
+        <Table className="min-w-[34rem]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>

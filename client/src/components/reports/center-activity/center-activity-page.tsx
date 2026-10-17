@@ -55,7 +55,7 @@ export function CenterActivityPage() {
           <h2 className="font-heading text-lg font-semibold tracking-tight">Markaz faoliyati</h2>
           {onlyBranch && (
             <p className="text-sm text-muted-foreground">
-              {onlyBranch.name} filiali · {onlyBranch.rooms} xona
+              {onlyBranch.name} · {onlyBranch.rooms} xona
             </p>
           )}
         </div>
@@ -100,7 +100,7 @@ export function CenterActivityPage() {
           )}
           {fresh && (
             <>
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <CenterActivityRooms rooms={fresh.rooms} showBranch={fresh.branches.length > 1} />
                 <CenterActivityGroups groups={fresh.groups} />
               </div>

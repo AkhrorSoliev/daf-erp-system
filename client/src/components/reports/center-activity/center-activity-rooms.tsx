@@ -17,10 +17,10 @@ export function CenterActivityRooms({ rooms, showBranch }: { rooms: RoomRow[]; s
   const p = Math.min(page, Math.max(1, Math.ceil(rooms.length / pageSize)));
   const slice = rooms.slice((p - 1) * pageSize, p * pageSize);
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardContent className="flex flex-col gap-2 p-4">
         <h3 className="font-medium">Xonalar</h3>
-        <Table>
+        <Table className="min-w-[30rem]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>

@@ -33,7 +33,7 @@ export function CenterActivityHeat({
           <div className="flex flex-col gap-0.5">
             <h3 className="font-medium">Qachon xona bo&apos;sh — yangi guruh uchun</h3>
             <p className="text-sm text-muted-foreground">
-              {branchName ? `${branchName} filiali bo'yicha. ` : ""}
+              {branchName ? `${branchName} bo'yicha. ` : ""}
               Katakdagi son — o&apos;sha soatda nechta xona bo&apos;sh ({heat.rooms} tadan).
             </p>
           </div>

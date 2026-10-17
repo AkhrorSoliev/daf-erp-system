@@ -33,7 +33,7 @@ export function insightSentences(i: HeatInsight): { quiet: string[]; busy: strin
 /** HTML cell colours (not SVG): the free share of rooms, from the server's tone. */
 export const HEAT_CLASS: Record<HeatTone, string> = {
   green: "bg-emerald-600 text-white",
-  light: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+  light: "bg-emerald-100 text-emerald-800 dark:bg-emerald-700/50 dark:text-emerald-100 dark:ring-1 dark:ring-emerald-400/40",
   yellow: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
   red: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
 };

@@ -13,15 +13,18 @@ export function CenterActivityMonths({ months, selected }: { months: CenterOverv
     <Card>
       <CardContent className="flex flex-col gap-3 p-4">
         <h3 className="font-medium">Oylar bo&apos;yicha bandlik</h3>
-        <div className="grid items-end gap-3" style={{ gridTemplateColumns: `repeat(${months.length}, minmax(0, 1fr))`, height: 150 }}>
+        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(1, months.length)}, minmax(0, 1fr))` }}>
           {months.map((m) => (
-            <div key={m.month} className="flex h-full flex-col items-center justify-end gap-1">
-              <span className="text-xs font-semibold">{pctText(m.pct)}</span>
-              <div
-                className={cn("w-full max-w-10 rounded-t-md", m.month === selected ? "bg-primary" : "bg-primary/35")}
-                style={{ height: `${((m.pct ?? 0) / top) * 100}%`, minHeight: 2 }}
-              />
-              <span className="text-xs text-muted-foreground">{monthName(m.month)}</span>
+            <div key={m.month} className="flex flex-col items-center gap-1">
+              <span className="shrink-0 text-xs font-semibold">{pctText(m.pct)}</span>
+              {/* A fixed-height box: each bar is a share of it, so the label rows cannot squeeze the bars. */}
+              <div className="flex h-32 w-full items-end justify-center">
+                <div
+                  className={cn("min-h-1 w-full max-w-10 rounded-t-md", m.month === selected ? "bg-primary" : "bg-primary/35")}
+                  style={{ height: `${((m.pct ?? 0) / top) * 100}%` }}
+                />
+              </div>
+              <span className="shrink-0 text-xs text-muted-foreground">{monthName(m.month)}</span>
             </div>
           ))}
         </div>
