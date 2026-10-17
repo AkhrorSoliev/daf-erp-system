@@ -1,5 +1,5 @@
 import { tashkentNow } from "@/lib/tashkent-time";
-import type { LevelPreview } from "./certificate-types";
+import type { IssuedCertificate, LevelPreview } from "./certificate-types";
 
 /** 'YYYY-MM-DD' → 'dd.MM.yyyy' (a calendar day, no timezone arithmetic). */
 export function dmy(ymd: string): string {
@@ -35,9 +35,58 @@ export const REISSUE_CONFIRM_TEXT =
 export const REISSUE_EXEMPT_NOTICE =
   "Bu daraja uchun hujjat allaqachon berilgan. Yangisiga yangi raqam beriladi.";
 
-/** A level that already has a document asks before another one (with a new number) is issued. */
+/**
+ * A level that already has a STANDING document asks before another one (with a
+ * new number) is issued. A cancelled document no longer stands, so re-issuing
+ * after a mistake is an ordinary issue.
+ */
 export function needsReissueConfirm(level: Pick<LevelPreview, "issued">): boolean {
-  return level.issued.length > 0;
+  return level.issued.some((d) => !d.revoked);
+}
+
+export const REVOKE_REASON_MIN = 3;
+export const REVOKE_REASON_MAX = 500;
+
+/** The server's rule for the cancel reason: 3 to 500 characters after trimming. */
+export function validRevokeReason(text: string): boolean {
+  const n = text.trim().length;
+  return n >= REVOKE_REASON_MIN && n <= REVOKE_REASON_MAX;
+}
+
+/** The confirm button: a valid reason, and not while the request is running. */
+export function canSubmitRevoke(reason: string, busy: boolean): boolean {
+  return !busy && validRevokeReason(reason);
+}
+
+/** A short hint only once something is typed and it is still too short. */
+export function revokeReasonHint(text: string): string | null {
+  const n = text.trim().length;
+  return n > 0 && n < REVOKE_REASON_MIN ? "Sabab kamida 3 belgidan iborat bo'lsin" : null;
+}
+
+/** The owner's words (17.10.2026) for the cancel confirmation. */
+export function revokeDescription(number: string): string {
+  return `${number} raqamli hujjat bekor qilinadi. QR sahifa «bekor qilingan» deb ko'rsatadi, PDF endi berilmaydi, raqam qayta berilmaydi. Buni qaytarib bo'lmaydi.`;
+}
+
+export const REVOKED_PILL = "Bekor qilingan";
+
+export interface RevokedState {
+  pill: string;
+  /** Tashkent day of the cancel, 'dd.MM.yyyy'. */
+  day: string | null;
+  reasonLine: string | null;
+}
+
+/** What a cancelled row shows; null for a document that stands. */
+export function revokedState(row: IssuedCertificate): RevokedState | null {
+  if (!row.revoked) return null;
+  const reason = row.revokedReason?.trim();
+  return {
+    pill: REVOKED_PILL,
+    day: row.revokedAt ? issuedDay(row.revokedAt) : null,
+    reasonLine: reason ? `Sabab: ${reason}` : null,
+  };
 }
 
 /**

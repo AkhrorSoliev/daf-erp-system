@@ -37,6 +37,11 @@ export async function issueCertificate(
   ).data;
 }
 
+/** Soft cancel of an issued document; the server returns the updated row. */
+export async function revokeCertificate(id: string, reason: string): Promise<IssuedCertificate> {
+  return (await api.post<IssuedCertificate>(`/participation-certificates/${id}/revoke`, { reason })).data;
+}
+
 export function downloadCertificatePdf(id: string, number: string): Promise<void> {
   return downloadAuthedFile(`/participation-certificates/${id}/pdf`, `${number}.pdf`);
 }

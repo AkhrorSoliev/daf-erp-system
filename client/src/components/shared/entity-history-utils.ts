@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   Clock,
   FileCheck2,
+  FileX2,
   GraduationCap,
   Link2,
   MessageSquare,
@@ -164,6 +165,9 @@ export function getActionInfo(record: HistoryRecord): ActionInfo {
       // A participation document was issued (the card's «Hujjatlar» tab).
       if (customAction === "QATNASHISH_HUJJATI_BERILDI")
         return { label: "Qatnashganlik hujjati berildi", icon: FileCheck2, variant: "default" };
+      // ... and later cancelled (the document stays, the reason is «sabab»).
+      if (customAction === "QATNASHISH_HUJJATI_BEKOR_QILINDI")
+        return { label: "Qatnashganlik hujjati bekor qilindi", icon: FileX2, variant: "destructive" };
       if (nv?.guruh)
         return { label: "Guruhga qo'shildi", icon: UserPlus, variant: "default" };
       return { label: "Yaratildi", icon: Plus, variant: "default" };

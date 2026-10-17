@@ -29,6 +29,9 @@ export interface IssuedCertificate {
   issuedAt: string;
   exempt: boolean;
   revoked: boolean;
+  /** ISO instant; null while the document stands. */
+  revokedAt: string | null;
+  revokedReason: string | null;
 }
 
 export interface LevelPreview {
