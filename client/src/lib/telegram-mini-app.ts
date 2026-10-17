@@ -1,4 +1,5 @@
 import type { AuthUser } from "@/hooks/use-auth";
+import { isTeacherOnly } from "@/lib/teacher-only";
 
 /**
  * Telegram Mini App ichidagi kabinet: o'quvchiniki (ADR-0040) va xodimniki
@@ -204,11 +205,23 @@ const STAFF_CABINET_PAGES = new Set([
 const STAFF_TASK_PAGE =
   /^\/tasks\?task=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function staffCabinetPath(next: string | null | undefined): string {
-  if (!next) return STAFF_CABINET_HOME;
+/** A teacher opens their own groups first; the profile is in the user menu. */
+export const TEACHER_CABINET_HOME = "/groups";
+
+/**
+ * Where the staff cabinet opens: the page the bot names, else the role's home —
+ * the groups for a teacher, the profile for everyone else. `roles` is the
+ * signed-in user's; without it the profile is the home.
+ */
+export function staffCabinetPath(
+  next: string | null | undefined,
+  roles?: readonly { id: number }[],
+): string {
+  const home = isTeacherOnly(roles) ? TEACHER_CABINET_HOME : STAFF_CABINET_HOME;
+  if (!next) return home;
   return STAFF_CABINET_PAGES.has(next) || STAFF_TASK_PAGE.test(next)
     ? next
-    : STAFF_CABINET_HOME;
+    : home;
 }
 
 // ── `POST /auth/telegram/webapp` va `…/webapp/staff` javoblari ─────────────
