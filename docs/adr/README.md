@@ -163,6 +163,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0094](0094-xarajatlar-oy-boyicha-foyda-bilan-bitta-toplam.md) | Xarajatlar sahifasi oy bo'yicha (`?oy=`, may 2026 dan): jami — kanonik sof foydaning `operatingExpenses` i bilan bitta to'plam (tenglik testi); «Bu oy hali yozilmagan» — `missingRecurringExpenses` har filialga alohida, «Yozish» qolganini yozadi; maslahat belgilari serverda, faqat «Boshqa» | Qabul qilindi | 2026-10-16 |
 | [0095](0095-shaxsiy-telegram-hisobot.md) | Kunlik hisobot shaxsiy chatga: CEO oluvchi, filial va bo'limni belgilaydi | Qabul qilindi | 2026-10-16 |
 | [0096](0096-kpi-natijasi.md) | KPI natijasi: administratorga, bir marta, summa muhrlanadi | Qabul qilindi | 2026-10-16 |
+| [0099](0099-markaz-faoliyati-bitta-malumot-toplami.md) | Markaz faoliyati: hamma blok bitta ma'lumot to'plamidan (`CenterFacts` + sof `evaluateCenter`), o'tgan oy o'sha oyning holatida (keyin yopilgan/o'chirilgan guruhlar ham hisobga kiradi), hafta du–sha, o'rin guruh bo'yicha `Σ min(o'quvchi, sig'im)`, tushum taxmini faqat oylik kurslar; eski `GET /reports/center-activity` olib tashlandi | Qabul qilindi | 2026-10-17 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

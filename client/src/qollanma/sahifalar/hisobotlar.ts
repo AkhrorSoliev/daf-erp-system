@@ -15,6 +15,18 @@ export const hisobotlar: QollanmaSahifa[] = [
   },
   {
     bolim: "hisobotlar",
+    sahifa: "markaz-faoliyati",
+    sarlavha: "Markaz faoliyati",
+    qisqacha:
+      "Markaz xonalari va o'rinlarining qanchasi ishlatilayotgani, qachon xona bo'sh bo'lishi va qaysi guruhda bo'sh o'rin borligi — tanlangan oy uchun, o'tgan oylarda keyin yopilgan guruhlar bilan.",
+    rollar: [1, 2],
+    adr: ["0099"],
+    yollar: ["/reports/activity"],
+    kalitSozlar: ["markaz faoliyati", "xona bandligi", "bo'sh xona", "bo'sh o'rin", "guruh to'lganligi", "sig'im", "yangi guruh", "excel"],
+    yangilangan: "2026-10-17",
+  },
+  {
+    bolim: "hisobotlar",
     sahifa: "dars-baholari",
     sarlavha: "Dars baholari",
     qisqacha:

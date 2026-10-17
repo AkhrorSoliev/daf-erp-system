@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Markaz faoliyati hisoboti yangilandi",
+    matn: "Hisobotlarda «Markaz faoliyati» sahifasi qayta qurildi. Tepada uchta karta (xonalar bandligi, guruhlar to'lganligi, bo'sh o'rinlar), pastda «Qachon xona bo'sh» jadvali: yangi guruhni qaysi kun va soatga qo'yish mumkinligi ko'rinadi. Hafta dushanbadan shanbagacha hisoblanadi. O'tgan oylar to'liq: keyin yopilgan yoki o'chirilgan guruhlar ham o'sha oyda hisobga olinadi. Bo'sh o'rni bor guruhlar, xonalar va oylar bo'yicha bandlik jadvallari qo'shildi; xona o'rin sonini endi faqat Sozlamalar → Xonalar sahifasida o'zgartirasiz.",
+    rollar: [1, 2],
+    sahifa: { bolim: "hisobotlar", sahifa: "markaz-faoliyati" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Kirish sahifasi panelga mos bo'ldi",
     matn: "Admin panel va o'qituvchi portalining kirish sahifasi endi panelning o'zidek: o'sha ranglar, o'sha shrift. Chap tomonda (telefonda tepada) logotip va ochilgan kitob varaqlari chizilgan to'q ko'k fon turadi. Daftar varag'i ko'rinishi olib tashlandi. Kirgach «Xush kelibsiz» salomi avvalgidek chiqadi.",
     rollar: [1, 2, 3, 4, 5],
