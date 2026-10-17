@@ -89,13 +89,14 @@ shart). Serif yo'q: CEO «AI sayt» ko'rinishini xohlamagan.
 
 - **`AuthUser.uiSkin?: string | null`** (`hooks/use-auth.ts`); eski cookie'da yo'q bo'lishi mumkin.
 - **`SkinSync`** (`components/providers/skin-sync.tsx`, `AuthProvider` ichida): `user.uiSkin`
-  o'zgarganda `document.documentElement.dataset.skin` ni yozadi (`skinOrDefault`), `localStorage["daf-skin"]`
-  ga nusxa saqlaydi; foydalanuvchi chiqqanda (user yo'q) atributni va nusxani olib tashlaydi.
-- **Chaqnashsiz boshlash:** `<head>` da qisqa inline skript (`next-themes` kabi): `token` cookie
-  bor bo'lsa `localStorage["daf-skin"]` ni o'qib `data-skin` ni sahifa chizilishidan oldin qo'yadi.
-  Cookie yo'q (kirmagan) bo'lsa hech narsa qilmaydi, shuning uchun login doim Daftar. Yangi
-  qurilmada nusxa yo'q: birinchi kirishda foydalanuvchi ma'lumoti kelgach qo'llanadi.
-  `suppressHydrationWarning` `<html>` da allaqachon bor.
+  o'zgarganda `document.documentElement.dataset.skin` ni yozadi (`skinOrDefault`). Faqat
+  foydalanuvchi kirgan bo'lsa ishlaydi: user yo'q paytda atributga tegmaydi. Uslub o'zgarganda
+  `useAuth().patchUser` mavjud `user` cookie'ni qayta yozadi.
+- **Chaqnashsiz boshlash:** `<head>` da qisqa inline skript (`next-themes` kabi): mavjud `user`
+  cookie'ni o'qib, undagi `uiSkin` ni `data-skin` ga sahifa chizilishidan oldin qo'yadi
+  (`localStorage["daf-skin"]` yo'q). Cookie yo'q (kirmagan) bo'lsa hech narsa qilmaydi,
+  shuning uchun login doim Daftar. Yangi qurilmada cookie kirishda yoziladi, shuning uchun
+  uslub birinchi chizishdan qo'llanadi. `suppressHydrationWarning` `<html>` da allaqachon bor.
 - **Tanlash:** `useUiSkin()` (`hooks/use-ui-skin.ts`): `setSkin(id)` — darrov qo'llaydi
   (optimistik), `PATCH /users/ui-skin`, muvaffaqiyatda `user` store va cookie'ni yangilaydi
   (`setAuth` ni qayta chaqirmaydi, tokenlarga tegmaydi), xatoda eski uslubga qaytaradi va
@@ -137,8 +138,6 @@ Telefonda ham shu menyu (1-bo'lak: user yuqori panelda hamma kenglikda).
 - Qorong'i rejim va uslub mustaqil: `next-themes` `.dark` ni boshqaradi, uslub `data-skin` ni.
 - Boshqa qurilmada o'zgartirilgan uslub: shu qurilmada keyingi token yangilanishida
   (`/auth/refresh`, soatiga) yoki qayta kirishda keladi. Darrov sinxronlash yo'q (SSE yo'q).
-- `localStorage` o'chirilgan (shaxsiy rejim): nusxa yo'q, birinchi chizishda Daftar, so'ng
-  `SkinSync` qo'llaydi — qisqa chaqnash, buzilish emas.
 
 ## Test
 

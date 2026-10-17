@@ -7,6 +7,12 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Dizayn uslubini tanlash",
+    matn: "Yuqori paneldagi foydalanuvchi menyusida «Dizayn uslubi» bandi paydo bo'ldi. Besh tayyor rang va shrift to'plamidan birini tanlang: Daftar (hozirgi), O'rmon, Gilos, Grafit yoki Qum. Har uslub yorug' va qorong'i rejimda alohida ishlaydi. Tanlov akkauntingizda saqlanadi, shuning uchun boshqa qurilmada ham shu uslub chiqadi. Holat ranglari (qizil, yashil, sariq) hamma uslubda bir xil qoladi. Kirish sahifasi har doim Daftar.",
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Foydalanuvchi menyusi yuqori panelda",
     matn: "Ismingiz va rasmingiz endi chap menyu pastida emas, yuqori panelning o'ng chetida: rasmni bossangiz «Profil», «Ko'rinish» va «Chiqish» chiqadi. Yorug', qorong'i yoki tizim rejimi shu yerdagi «Ko'rinish» bandidan tanlanadi; alohida mavzu tugmasi olib tashlandi. Soat endi sanani ham ko'rsatadi («17.10.2026 · 14:05:30»); 1024 pikseldan tor ekranda (planshet) soat faqat vaqtni, foydalanuvchi tugmasi esa faqat rasmni ko'rsatadi. Chap menyu pastida «Texnik yordam» havolasi (Telegramdagi yordam chati) va sayt oxirgi marta qachon yangilangani yozilgan qator paydo bo'ldi.",
     sahifa: { bolim: "boshlash", sahifa: "interfeys" },
