@@ -1,7 +1,6 @@
 import {
   WEEK_DAYS,
   type CenterFacts,
-  type GroupFact,
   type WeekDay,
   type WorkWindow,
 } from './center-activity.types';
@@ -55,7 +54,7 @@ export interface CenterEval {
   deletedLater: number;
 }
 
-const round1 = (n: number) => Math.round(n * 10) / 10;
+export const round1 = (n: number) => Math.round(n * 10) / 10;
 const emptySlots = (): Record<WeekDay, Set<number>> => ({
   monday: new Set(),
   tuesday: new Set(),
@@ -156,5 +155,3 @@ export function evaluateCenter(
 
   return { rooms: roomResults, groups, unplaced, deletedLater };
 }
-
-export type { GroupFact };

@@ -10,12 +10,11 @@ import { asOfForMonth, monthsUpTo } from './center-activity-period';
 import { buildHeat } from './center-heat';
 import {
   evaluateCenter,
+  round1,
   type CenterEval,
   type GroupResult,
 } from './center-metrics';
 import { heatInsight } from './heat-insight';
-
-const round1 = (n: number) => Math.round(n * 10) / 10;
 
 /** The seats a group really fills: an overfull group counts at its capacity. The only place this is computed. */
 const filledSeats = (g: Pick<GroupResult, 'enrolled' | 'capacity'>) =>
@@ -69,16 +68,23 @@ export function buildOverview(
   const capacity = ev.groups.reduce((s, g) => s + g.capacity, 0);
   const filled = ev.groups.reduce((s, g) => s + filledSeats(g), 0);
 
-  const rooms: RoomRow[] = ev.rooms.map((r) => ({
-    id: r.id,
-    name: r.name,
-    branchId: r.branchId,
-    branchName: r.branchName,
-    capacity: r.capacity,
-    groupCount: r.groupCount,
-    lessonHours: r.lessonHours,
-    occupancyPct: r.occupancyPct,
-  }));
+  // Grouped by branch, then by room name (numeric: «2-xona» before «10-xona»).
+  const rooms: RoomRow[] = ev.rooms
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      branchId: r.branchId,
+      branchName: r.branchName,
+      capacity: r.capacity,
+      groupCount: r.groupCount,
+      lessonHours: r.lessonHours,
+      occupancyPct: r.occupancyPct,
+    }))
+    .sort(
+      (a, b) =>
+        a.branchName.localeCompare(b.branchName, 'uz', { numeric: true }) ||
+        a.name.localeCompare(b.name, 'uz', { numeric: true }),
+    );
   const free = ev.groups.filter((g) => g.free > 0);
   const groups: GroupRow[] = [...free]
     .sort((a, b) => b.free - a.free || a.name.localeCompare(b.name, 'uz'))

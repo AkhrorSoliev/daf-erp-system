@@ -40,6 +40,30 @@ function groupBy<K extends string, R extends { [P in K]: string }>(
 }
 
 /**
+ * The group's status timeline, ascending. The branch, course and pause
+ * cascades (`StatusCascadeService`) set `Group.statusEnum` and
+ * `statusChangedAt` but write no `StatusHistory` row, so when the column holds
+ * a status the log does not end in (ACTIVE when the log is empty, as
+ * `groupStatusOn` reads it) and it is not older than the log's last row, that
+ * change is appended as a row of its own.
+ */
+function statusLogOf(
+  g: { statusEnum: string; statusChangedAt: Date | null },
+  rows: { toStatus: string; createdAt: Date }[],
+) {
+  const log = rows.map((h) => ({ status: h.toStatus, at: h.createdAt }));
+  const last = log[log.length - 1];
+  if (
+    g.statusChangedAt &&
+    g.statusEnum !== (last?.status ?? 'ACTIVE') &&
+    (!last || g.statusChangedAt.getTime() >= last.at.getTime())
+  ) {
+    log.push({ status: g.statusEnum, at: g.statusChangedAt });
+  }
+  return log;
+}
+
+/**
  * Everything the page needs, read ONCE for a range of months (spec B7b §3).
  *
  * Deleted and closed groups are read on purpose: a group is part of a past
@@ -107,6 +131,8 @@ export class CenterFactsLoader {
           endDate: true,
           createdAt: true,
           deletedAt: true,
+          statusEnum: true,
+          statusChangedAt: true,
           enrollments: {
             select: {
               id: true,
@@ -252,10 +278,7 @@ export class CenterFactsLoader {
           },
         }),
       ),
-      statusLog: (statusByGroup.get(g.id) ?? []).map((h) => ({
-        status: h.toStatus,
-        at: h.createdAt,
-      })),
+      statusLog: statusLogOf(g, statusByGroup.get(g.id) ?? []),
       enrollments: g.enrollments.map((e) => {
         const log: EnrollmentStatusEvent[] = (
           logByEnrollment.get(e.id) ?? []

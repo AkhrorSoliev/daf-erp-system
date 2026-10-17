@@ -151,6 +151,70 @@ describe('buildOverview', () => {
     expect(o.heat).toBeNull();
   });
 
+  it('sorts the rooms by branch, then by name with numbers in order', () => {
+    const o = buildOverview(
+      facts(
+        [
+          room('x1', 2, { name: '10-xona' }),
+          room('x2', 1, { name: '10-xona' }),
+          room('x3', 2, { name: '2-xona' }),
+          room('x4', 1, { name: '2-xona' }),
+        ],
+        [],
+      ),
+      '2026-09',
+      NOW,
+    );
+    expect(o.rooms.map((r) => [r.branchName, r.name])).toEqual([
+      ["Farg'ona", '2-xona'],
+      ["Farg'ona", '10-xona'],
+      ['Namangan', '2-xona'],
+      ['Namangan', '10-xona'],
+    ]);
+  });
+
+  it('the heat follows the picked branch: its own rooms and its own work window', () => {
+    const mixed = facts(
+      [
+        room('r1'),
+        room('r2'),
+        room('r3', 2, { window: { start: '09:00', end: '21:00' } }),
+      ],
+      [],
+    );
+    const first = buildOverview(mixed, '2026-09', NOW).heat!;
+    expect(first.branchId).toBe(1);
+    expect(first.heat.rooms).toBe(2);
+    expect(first.heat.hours).toHaveLength(14); // 08:00–22:30 → hours 8…21
+    const second = buildOverview(mixed, '2026-09', NOW, 2).heat!;
+    expect(second.branchId).toBe(2);
+    expect(second.heat.rooms).toBe(1);
+    expect(second.heat.hours).toHaveLength(12); // 09:00–21:00 → hours 9…20
+  });
+
+  it('an earlier month bar is read at its own instant, not at the picked month', () => {
+    // g2 is created in the middle of August: July cannot hold it.
+    const grew = facts(
+      [room('r1')],
+      [
+        group('g1', 'r1'),
+        group('g2', 'r1', {
+          createdAt: d('2026-08-15T00:00:00Z'),
+          scheduleNow: {
+            exactDays: ['tuesday', 'thursday'],
+            start: '10:00',
+            end: '12:00',
+            courseId: 'c1',
+          },
+        }),
+      ],
+    );
+    const bars = buildOverview(grew, '2026-09', NOW).months;
+    const pct = (m: string) => bars.find((b) => b.month === m)!.pct!;
+    expect(pct('2026-07')).toBeLessThan(pct('2026-08'));
+    expect(pct('2026-08')).toBe(pct('2026-09'));
+  });
+
   it('the work window is null when branches differ', () => {
     const o = buildOverview(
       facts(
