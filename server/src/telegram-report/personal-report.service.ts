@@ -152,16 +152,22 @@ export class PersonalReportService {
       | undefined;
     let active = false;
     if (bot) {
+      let timer: NodeJS.Timeout | undefined;
       try {
         await Promise.race([
           bot.telegram.getMe(),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), GET_ME_TIMEOUT_MS),
-          ),
+          new Promise((_, reject) => {
+            timer = setTimeout(
+              () => reject(new Error('timeout')),
+              GET_ME_TIMEOUT_MS,
+            );
+          }),
         ]);
         active = true;
       } catch {
         active = false;
+      } finally {
+        clearTimeout(timer);
       }
     }
     this.botCheck = { at: Date.now(), active };

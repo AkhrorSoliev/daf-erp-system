@@ -312,6 +312,16 @@ describe('botActive', () => {
     expect(await svc.botActive()).toBe(true);
     expect(bot.telegram.getMe).toHaveBeenCalledTimes(1);
   });
+  it('leaves no pending timer after a successful getMe', async () => {
+    jest.useFakeTimers();
+    try {
+      const { svc } = setup();
+      expect(await svc.botActive()).toBe(true);
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
   it('false without a bot or when getMe fails', async () => {
     expect(await setup({ bot: null }).svc.botActive()).toBe(false);
     const { svc, bot } = setup();

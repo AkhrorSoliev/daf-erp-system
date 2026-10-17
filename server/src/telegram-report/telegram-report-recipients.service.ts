@@ -134,6 +134,8 @@ export class TelegramReportRecipientsService {
   }
 
   async list(companyId: number) {
+    // Started first: a cache miss waits on Telegram (up to 3 s) alongside the DB work.
+    const botActive = this.reports.botActive();
     const [rows, branches] = await Promise.all([
       this.prisma.telegramReportRecipient.findMany({
         where: { companyId },
@@ -144,7 +146,7 @@ export class TelegramReportRecipientsService {
     return {
       recipients: await this.view(rows, branches),
       branches,
-      bot: { active: await this.reports.botActive() },
+      bot: { active: await botActive },
     };
   }
 
@@ -280,7 +282,7 @@ export class TelegramReportRecipientsService {
     return { text: await this.reports.preview(row) };
   }
 
-  /** «Hozir sinab ko'rish»: sends now, never touches `lastSentDate`. */
+  /** «Hozir yuborish»: sends now, never touches `lastSentDate`. */
   async test(companyId: number, id: number) {
     const row = await this.one(companyId, id);
     const out = await this.reports.deliver(row);
