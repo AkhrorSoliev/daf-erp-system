@@ -3,7 +3,11 @@ import { Cron } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
-import { tashkentDateStr, tashkentDayStartUtc } from '../common/date/tashkent';
+import {
+  tashkentDateStr,
+  tashkentDayStartUtc,
+  utcMidnightFromDateStr,
+} from '../common/date/tashkent';
 import { MIN_ALERT_DEBT } from './overdue-digest';
 
 /** One branch's promises broken this morning — one message for all of them. */
@@ -42,8 +46,10 @@ export class PaymentPromiseCronService {
   async run() {
     // Company-wide holidays only: one branch closing does not hold up every
     // branch's broken-promise list (CEO decision 10.10.2026).
+    // Holidays are UTC-midnight dates (date <= X <= endDate): ask for the
+    // Tashkent day, not the instant, or a holiday's last day is missed.
     const holiday = await this.holidays.findActiveHolidayCovering(
-      new Date(),
+      utcMidnightFromDateStr(tashkentDateStr(new Date())),
       null,
     );
     if (holiday) {

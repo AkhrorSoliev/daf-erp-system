@@ -132,12 +132,26 @@ describe('TelegramGroupDigestCronService', () => {
   });
 
   // A branch's own holiday must not hold back every other branch's digest.
-  it('asks for company-wide holidays only', async () => {
+  it('asks for company-wide holidays only, by Tashkent day (UTC midnight)', async () => {
     await service.flushDigests();
     expect(findActiveHolidayCovering).toHaveBeenCalledWith(
-      expect.any(Date),
+      new Date('2026-05-18T00:00:00Z'),
       null,
     );
+  });
+
+  it('skips at 20:00 Tashkent on the LAST day of a one-day holiday', async () => {
+    // Holidays are stored as UTC midnight; a lookup by instant (15:00Z) would
+    // fall after endDate and miss the holiday.
+    const day = new Date('2026-05-18T00:00:00Z');
+    findActiveHolidayCovering.mockImplementation((x: Date) =>
+      Promise.resolve(
+        x >= day && x <= day ? { id: 'h1', name: 'Mustaqillik' } : null,
+      ),
+    );
+    await service.flushDigests();
+    expect(findMany).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 
   it('skips a holiday after purging', async () => {
