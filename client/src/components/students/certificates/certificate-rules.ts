@@ -1,3 +1,4 @@
+import { formatBalance } from "@/lib/format-utils";
 import { tashkentNow } from "@/lib/tashkent-time";
 import type { IssuedCertificate, LevelPreview } from "./certificate-types";
 
@@ -108,8 +109,12 @@ export interface SummaryLine {
   hint: string | null;
 }
 
-/** The lines of one level's card; a line with nothing to say is left out. */
-export function levelSummary(l: LevelPreview): SummaryLine[] {
+/**
+ * The lines of one level's card; a line with nothing to say is left out.
+ * Every figure and limit is the server's: `balance` is the student's balance now,
+ * `verdict.latePercent` the server's own rounding. Nothing is computed here.
+ */
+export function levelSummary(l: LevelPreview, balance: number): SummaryLine[] {
   const lines: SummaryLine[] = [
     {
       label: "Davomat",
@@ -117,6 +122,16 @@ export function levelSummary(l: LevelPreview): SummaryLine[] {
       hint: `chegara ${l.thresholds.attendance}%`,
     },
   ];
+  lines.push({
+    label: "Darslar soni",
+    value: `${l.attendance.counted} ta`,
+    hint: `kamida ${l.thresholds.minLessons} ta`,
+  });
+  lines.push({
+    label: "Kech qolgan",
+    value: `${l.attendance.late} / ${l.attendance.attended} dars (${percentText(l.verdict.latePercent)})`,
+    hint: `chegara ${l.thresholds.maxLatePercent}%`,
+  });
   if (l.app.applies) {
     lines.push({
       label: "Ilova",
@@ -126,14 +141,18 @@ export function levelSummary(l: LevelPreview): SummaryLine[] {
   } else {
     lines.push({ label: "Ilova", value: "shart qo'llanmaydi", hint: null });
   }
-  lines.push({ label: "Kech qolgan", value: `${l.attendance.late} marta`, hint: null });
   if (l.unitTests) {
     lines.push({
       label: "Yakuniy sinovlar",
       value: `${l.unitTests.passed} / ${l.unitTests.total}`,
-      hint: null,
+      hint: "hammasi kerak",
     });
   }
+  lines.push({
+    label: "Qarz",
+    value: balance < 0 ? formatBalance(-balance) : "yo'q",
+    hint: null,
+  });
   if (l.mock) {
     lines.push({
       label: "Mock imtihon",
