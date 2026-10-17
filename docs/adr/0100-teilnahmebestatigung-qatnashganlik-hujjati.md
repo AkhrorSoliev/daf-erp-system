@@ -18,6 +18,7 @@ O'quvchi darajani (A1, A2, B1…) tugatgach markaz unga qatnashganlik hujjati �
 6. Hujjat DaF Sprachzentrum nomidan; filial, rahbar imzosi va muhr yozilmaydi. QR ochiq `/t/<uuid>` sahifaga olib boradi (ketma-ket raqam emas, taxmin qilib bo'lmaydigan UUID); sahifa filial, tug'ilgan sana va foizlarni ko'rsatmaydi.
 7. Yangi imkoniyat kaliti yo'q: `students.details` (o'qish), `students.manage` (berish), sozlamalar `@CeoOnly()`. Yo'llar: `GET /students/:id/participation-certificates/preview`, `POST /students/:id/participation-certificates`, `GET /participation-certificates/:id/pdf`, `GET|PATCH /participation-certificates/settings`, ochiq `GET /participation-certificates/:id/verify`.
 8. Shrift: IBM Plex Serif + IBM Plex Sans (OFL), 4 fayl `server/assets/fonts/`.
+9. CEO javoblari (2026-10-17), qoida o'zgarmaydi: mock natijasi faqat natijasi e'lon qilingan imtihondan (`ANNOUNCED`, yoki undan keyingi `ARCHIVED`) olinadi, chunki muhrlangan hujjatda hali o'zgarishi mumkin ball turmasligi kerak; «Abschlusstests» qatori kamida bitta yakuniy sinov topshirilganda chiqadi; istisno bilan berilgan hujjatda tasdiq jumlasidan «regelmäßig» tushadi, boshqa belgi qo'shilmaydi; hujjat ekranda o'zbekcha «Qatnashganlik hujjati» deb ataladi (nemischa nom faqat PDF ichida); daraja uchun hujjat allaqachon berilgan bo'lsa yangisini berishdan oldin tasdiq so'raladi va u yangi raqam oladi.
 
 ## Ko'rib chiqilgan muqobillar
 
