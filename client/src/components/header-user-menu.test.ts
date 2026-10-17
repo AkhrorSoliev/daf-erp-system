@@ -68,9 +68,14 @@ describe("HeaderUserMenu", () => {
     expect(html).toContain('href="/profile"');
   });
 
-  it("hides the name below md so a phone shows the picture only", () => {
+  it("hides the name below lg so a phone or tablet shows the picture only", () => {
     const html = renderToStaticMarkup(createElement(HeaderUserMenu));
-    expect(html).toMatch(/class="hidden max-w-40 truncate text-sm font-medium md:block"/);
+    expect(html).toMatch(/class="hidden max-w-40 truncate text-sm font-medium lg:block"/);
+  });
+
+  it("labels the trigger with the user's name", () => {
+    const html = renderToStaticMarkup(createElement(HeaderUserMenu));
+    expect(html).toContain('aria-label="Ali Valiyev"');
   });
 
   it("draws no menu items before the session is hydrated", () => {

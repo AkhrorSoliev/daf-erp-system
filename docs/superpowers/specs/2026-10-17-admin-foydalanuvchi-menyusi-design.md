@@ -26,8 +26,10 @@ Dizayn variantlari va til tanlagichi keladigan bo'lsa, ular uchun ham
 Yangi komponent `components/header-user-menu.tsx`, `dashboard-header.tsx` da
 o'ng guruhning oxirida, bildirishnoma qo'ng'irog'idan keyin:
 
-- **Tugma:** rasm (`size-8`, rasm yo'q bo'lsa `getInitials` bosh harflari) va ism. Ism `md` dan kichik
-  ekranda yashiriladi (telefonda faqat rasm), uzun ism `truncate` + `max-w-40`.
+- **Tugma:** rasm (`size-8`, rasm yo'q bo'lsa `getInitials` bosh harflari) va ism. Ism `lg` (1024px) dan kichik
+  ekranda yashiriladi (telefon va planshetda faqat rasm: planshetda `md`–`lg` oralig'ida
+  qidiruv uchun joy qolsin), uzun ism `truncate` + `max-w-40`. Tugmaning `aria-label` i —
+  foydalanuvchining to'liq ismi.
 - **Menyu** (`DropdownMenu`, `align="end"`, `w-64`):
   1. Sarlavha: to'liq ism va rol (`user.roles[0].name`), bosilmaydi.
   2. **Profil** → `/profile`.
@@ -62,9 +64,11 @@ O'rniga `components/sidebar-footer-info.tsx`:
 
 ### 3. Yuqori panel: sana va soat birga
 
-`TashkentClock` hozir faqat `HH:mm:ss` ko'rsatadi. Endi `dd.MM.yyyy · HH:mm:ss`
-(sana `tashkentNow().dateStr` dan olinadi, `yyyy-MM-dd` → `dd.MM.yyyy`
-formatlash helper'i `lib/tashkent-time.ts` ga qo'shiladi va test qilinadi).
+`TashkentClock` hozir faqat `HH:mm:ss` ko'rsatadi. Endi `lg` (1024px) dan boshlab
+`dd.MM.yyyy · HH:mm:ss`, `md`–`lg` oralig'ida (planshet) avvalgidek faqat `HH:mm:ss`
+(sana qismi `hidden lg:inline` o'z `span` ida, ajratuvchi ` · ` bilan birga).
+Sana `tashkentNow().dateStr` dan olinadi, `yyyy-MM-dd` → `dd.MM.yyyy`
+formatlash helper'i `lib/tashkent-time.ts` ga qo'shiladi va test qilinadi.
 Tooltip o'sha: «Toshkent vaqti (UTC+5)». `hidden md:flex` o'zgarmaydi (telefonda
 soat yashirin).
 
@@ -122,7 +126,7 @@ sha })` → `"Yangilangan: 17.10.2026 · a1b2c3d"`; sha `dev` bo'lsa
 - `lib/tashkent-time.test.ts` ga: `yyyy-MM-dd` → `dd.MM.yyyy` helper'i (oy/yil
   chegaralari, nol bilan to'ldirish).
 - `header-user-menu.test.tsx`: statik render — ism, rol, «Profil», «Chiqish»
-  bor; telefon kengligida ism yo'q (sinf tekshiruvi).
+  bor; `lg` dan kichik kenglikda ism yo'q (sinf tekshiruvi).
 - `nav-items.test.ts` va sidebar bilan bog'liq mavjud testlar o'tishi kerak
   (sidebar `SidebarUserFooter` ni import qilmaydi).
 - `npx tsc --noEmit`, `npx eslint src`, `npm test`, `npm run build`.

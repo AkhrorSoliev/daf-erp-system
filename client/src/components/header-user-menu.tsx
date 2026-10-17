@@ -38,7 +38,8 @@ function getInitials(name: string) {
 
 /**
  * The signed-in user, at the right end of the top bar on every width. The
- * name is dropped below `md` so a phone keeps only the picture. «Ko'rinish»
+ * name is dropped below `lg` so a phone or tablet keeps only the picture and
+ * the search box keeps its room. «Ko'rinish»
  * is where the colour mode lives now (the bar's standalone toggle is gone).
  */
 export function HeaderUserMenu() {
@@ -58,7 +59,7 @@ export function HeaderUserMenu() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label="Foydalanuvchi menyusi"
+          aria-label={fullName}
           className="flex items-center gap-2 rounded-md p-1 outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-accent"
         >
           <Avatar className="size-8 rounded-lg">
@@ -67,7 +68,7 @@ export function HeaderUserMenu() {
               {getInitials(fullName)}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden max-w-40 truncate text-sm font-medium md:block">
+          <span className="hidden max-w-40 truncate text-sm font-medium lg:block">
             {fullName}
           </span>
         </button>
@@ -101,10 +102,7 @@ export function HeaderUserMenu() {
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-destructive focus:text-destructive"
-          onClick={signOut}
-        >
+        <DropdownMenuItem variant="destructive" onClick={signOut}>
           <LogOut className="mr-2 size-4" />
           Chiqish
         </DropdownMenuItem>
