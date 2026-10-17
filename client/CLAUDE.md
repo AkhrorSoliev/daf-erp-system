@@ -428,18 +428,18 @@ so existing links keep working.
 
 - **Every `<Tabs>` set in the app must persist its active tab in the URL — never `defaultValue` + local `useState`.** Reload, share, and back/forward navigation must restore the same tab the user was on. This applies to detail/profile pages, list/report pages, dashboards, nested sub-tabs, and tabs inside drawers/sheets alike.
 - **Why:** users link colleagues to a specific tab (`/teachers/profile/10239?tab=ish-haqi`), and reloading the page must not drop them back to the default tab.
-- **Scope:** all tabbed UIs. Current coverage — `/groups/[id]`, `/students/profile/[id]`, `/teachers/profile/[id]`, `/settings/courses/[id]`, `/settings/employees/[id]`, `/mock-exams/[id]`, `/tasks`, `/outreach`, `/reports/attendance`, the home dashboard schedule view, the leads detail drawer, and the outreach callbacks sub-filter. The only exemption is a `<Tabs>` with a **single** trigger (no navigation choice); it may stay uncontrolled. Add the pattern to any new tab set you introduce.
+- **Scope:** all tabbed UIs. Current coverage — `/groups/[id]`, `/students/profile/[id]`, `/teachers/profile/[id]`, `/settings/courses/[id]`, `/settings/employees/[id]`, `/mock-exams/[id]`, `/tasks`, `/outreach`, the home dashboard schedule view, the leads detail drawer, and the outreach callbacks sub-filter. The only exemption is a `<Tabs>` with a **single** trigger (no navigation choice); it may stay uncontrolled. Add the pattern to any new tab set you introduce.
 - **Implementation:** the parent `*-client.tsx` owns the URL ↔ tab state and passes `activeTab` + `onTabChange` to the tabs component:
   - Read: `const activeTab = searchParams.get("tab") ?? "<default>"`.
   - Write: `useCallback((tab) => { ... router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false }) }, [...])`.
   - **Omit the default tab from the URL** — when tab equals the default (e.g. `"guruhlar"`), `delete` the param so the URL stays clean.
   - The tabs component uses `<Tabs value={activeTab} onValueChange={handleTabChange}>` (NOT `defaultValue`).
 - **Param naming — avoid collisions.** The plain `?tab=` belongs to the page-level tab set. Any tab set that can coexist with another in the same URL gets its own distinct param:
-  - A second/nested tab set on the same page uses a prefixed name — e.g. attendance rankings use `?att_tab=`, the outreach callbacks sub-filter (nested under `?tab=callbacks`) uses `?cb=`.
+  - A second/nested tab set on the same page uses a prefixed name — e.g. the outreach callbacks sub-filter (nested under `?tab=callbacks`) uses `?cb=`.
   - A **view-mode toggle** (grid/list, not real navigation) uses a semantic name — the dashboard schedule uses `?view=`.
   - **Tabs inside a drawer/sheet** use their own param (the leads detail drawer uses `?lead_tab=`) and **must delete that param when the drawer closes** (clear it from every close path — the `onOpenChange` handler and any action button that dismisses the sheet) so it never lingers in the URL while the drawer is shut.
 - **Lazy-load on direct URL navigation:** if any tab fetches data on first activation (history, izohlar, ish-haqi, tolovlar, etc.), wrap the fetch logic in a `useCallback` and call it from BOTH the click handler AND a `useEffect` keyed on `activeTab`. Without the effect, reloading on `?tab=ish-haqi` shows an empty tab because the click handler never fired. The `*Shown.current` ref guards keep it idempotent.
-- Reference implementation: `group-detail-client.tsx` ↔ `group-detail-tabs.tsx` (page-level); `attendance-section.tsx` (prefixed param); `lead-detail-drawer.tsx` (drawer-scoped param with close cleanup).
+- Reference implementation: `group-detail-client.tsx` ↔ `group-detail-tabs.tsx` (page-level); `lead-detail-drawer.tsx` (drawer-scoped param with close cleanup).
 
 ### Sidebar Active State
 
@@ -451,6 +451,7 @@ so existing links keep working.
 
 - **The signed-in user lives in the top bar, not the sidebar.** `HeaderUserMenu` (`src/components/header-user-menu.tsx`) sits at the right end of `DashboardHeader`, after the notification bell, on every width; the name is hidden below `lg` (a phone or tablet keeps the picture only, so the search box keeps its room). Its menu is Profil · Ko'rinish (light/dark/system) · Dizayn uslubi · Til · Chiqish. «Chiqish» goes through `useSignOut()` like everywhere else. The dashboard has no standalone theme toggle any more — colour mode is the «Ko'rinish» submenu. `components/theme-toggle.tsx` stays for the login pages, the privacy-policy page and the error pages (never inside `/portal/*`).
 - **New per-user settings (display variants, language) are added as items in this same menu**, not as new header buttons.
+- **A role is named in Uzbek on screen** (menu label, profile card): `roleLabel` from `components/payments/salary-utils.ts`, never `user.roles[0].name` (the database name is English). The profile builds its roles with `uzbekRoles` and hides the «To'lanishi kerak» block for a Director with no other role (`hasOwnSalary`), both in `components/profile/profile-roles.ts`.
 - **The sidebar footer is `SidebarFooterInfo`:** «Texnik yordam» (`COMPANY.supportHref`) and a «Yangilangan: dd.MM.yyyy · sha» line. The line comes from `NEXT_PUBLIC_BUILD_DATE` / `NEXT_PUBLIC_BUILD_SHA`, which `next.config.ts` sets itself at build time (Tashkent date; the sha is the first 7 characters of `VERCEL_GIT_COMMIT_SHA` when the deploy has it, else of `BUILD_SHA`, else «dev»). The Vercel project is not Git-connected (deploys are `vercel --prod` from a local folder), so Vercel does not supply `VERCEL_GIT_COMMIT_SHA` there: pass the sha with `vercel --prod --yes -b BUILD_SHA=$(git rev-parse --short HEAD)`, or the line reads «dev». Nothing is configured in the Vercel dashboard, and `package.json`'s `version` is not shown — it never changes. Read the values only through `lib/build-info.ts`.
 - `TashkentClock` shows the Tashkent date and time together (`dd.MM.yyyy · HH:mm:ss`, a deliberate exception to the `dd.MM.yyyy, HH:mm:ss` rule above). The date shows from `lg` up; below that (tablet) the clock is the time only, as before.
 
@@ -700,6 +701,7 @@ Two things react to a branch switch: `BranchScopedMain` remounts the page conten
 - **Never key `<main>` on `selectedBranch`/`loaded`**, not even behind a "not loaded yet" sentinel. That was a key change on every hard load: the page remounted right after `GET /branches` returned, wiping typed input (e.g. the title on `/leads/forms/new`) and repeating the page's first requests. `lib/branch-scope-single-rule.test.ts` fails if either consumer reads the selection again.
 - Once resolved, `hydrateFor` keeps the tab's own selection while it is still allowed (it re-runs on every token refresh), and `persist` compares against the tab's own selection rather than the shared `localStorage` key.
 - Known limit: all tabs still share one `branchId` key, so a switch in one tab changes the header of another tab's later requests.
+- **The switcher is drawn only when there is a choice** (`showBranchSwitcher` in `lib/branch-header.ts`): a CEO always gets it, anyone else only with two or more branches. A teacher works in one branch, so they never see it; their branch is still selected (`resolveStoredBranch` falls back to `branches[0]`) and its name is on the profile («Batafsil ma'lumotlar»). The component keeps mounting and seeding the store either way, so hiding the control never changes a request's branch header.
 
 ### Student Registration Links Follow the Bot's Branch Rule
 
@@ -818,6 +820,12 @@ The financial section lives under `/payments/*` with these sub-pages:
 - URL keys (`CENTER_ACTIVITY_SCHEMA`): `oy` (empty = the current Tashkent month, 2026-05 …) and `filial` (the branch drawn in the heat matrix only; cards and tables cover the whole scope; changing the month resets `filial` to 0). The page makes ONE request, `GET /reports/center-activity/overview`; the client computes no figure and only formats the server's numbers and structures (the insight sentence is assembled from the server's structure in `center-activity-format.ts`).
 - The rooms table and the groups table are paginated on the client (`useState`, 10–50) over the full lists the server sends. Capacity is NOT edited here any more: it stays in Settings → Xonalar (`settings.reference`). The old components of this folder (filter panel, KPI cards, diagnostics, trend, room table, the four dialogs and the capacity dialogs) were deleted.
 
+### Attendance report (`/reports/attendance`, ADR-0103)
+
+- «Davomat» in `reports-nav.ts` (`permission: "reports.students"`: CEO and Branch Director). Files in `components/reports/attendance/`: `attendance-page.tsx` (title, Excel, the one request), `attendance-period-bar.tsx` (7a's period buttons, «Oraliq» days paired, none before 2026-05-01), `attendance-card.tsx`, `attendance-trends.tsx` (months as columns, weekdays as bars with full day names in `aria-label`), `attendance-credit.tsx`, `attendance-cuts.tsx` (Guruhlar · Ustozlar · Kurslar, `#` column, server-paged 10–50, `aria-live` table), `attendance-missers-dialog.tsx` (loaded on first open, `GET /reports/attendance-stats/missers`, mounted with a `key` per row), `attendance-streak.tsx` (`CanLink` to `/outreach`), `attendance-url.ts`, `attendance-format.ts` (pure, vitest), `attendance-queries.ts`, `attendance-types.ts`.
+- URL keys (`ATTENDANCE_SCHEMA`): `preset`, `startDate`, `endDate`, `cut` (`group|teacher|course`), `page`, `pageSize`. The old `att_*` keys are not read; an unknown value falls back to its default. The page reads the Tashkent day on every render, so the query key changes when the month rolls over.
+- One request (`GET /reports/attendance-stats/overview`) answers every block; the client computes no figure (`pctText` only rounds the server's one-decimal rate; tones: below 80 `warning`, below 75 `danger`). The server pages the cut and clamps a page past the end; the URL follows its `page`. The page has no branch picker of its own: it follows the header. The old components (filter panel, KPI cards, diagnostics, dual-axis trend, status pie, rankings tabs, three tables, `metric-helpers.ts`) were deleted.
+
 ### Lesson ratings (`/reports/dars-baholari`, ADR-0091)
 
 - CEO only, by identity: the report item has `forRoles: [1]` (`reports-nav.ts`; `canEnterReports(can, roleIds)` / `canOpenReportPath(can, pathname, roleIds)` take the user's role ids), the teacher profile's «Baholar» tab is drawn for `isCeoUser(user)`. The server refuses everyone else (`@CeoOnly()`).
@@ -896,13 +904,14 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 ### Student Profile Tabs
 
-The student profile (`/students/profile/[id]`) has **11 tabs** (URL `?tab=<value>`):
+The student profile (`/students/profile/[id]`) has **12 tabs** (URL `?tab=<value>`):
 
 | Tab | URL value | Purpose |
 |-----|-----------|---------|
 | Guruhlar | `guruhlar` (default) | Enrollments list |
 | To'lovlar | `tolovlar` | Money-flow transactions — see deep-dive below |
 | Shartnomalar | `shartnomalar` | Student contracts (ADR-0075): create, edit while unsigned, «Qog'ozda imzolandi», cancel (signed — CEO only), PDF in a new tab. `components/students/contracts/`; pure rules in `contract-rules.ts` (tested). Visible with `useCan("students.details")`; create, edit, sign and cancel need `contracts.manage` («Shartnoma tuzish va imzolash», default Branch Director + Administrator, ADR-0087) |
+| Hujjatlar | `hujjatlar` | Participation document, the «Teilnahmebestätigung» (ADR-0100): one block per level the student attended, with the server's verdict, «Hujjat berish» (`useCan("students.manage")`; the CEO alone gets «Istisno bilan berish» with a reason when the condition fails), and the issued documents (`issued-documents-list.tsx`): a standing row has the PDF button and, with `useCan("students.manage")`, a ⋯ menu whose «Bekor qilish» opens `revoke-certificate-dialog.tsx` (an `AlertDialog` with a required reason, 3–500 characters, ADR-0104; the preview is read again afterwards, never patched); a cancelled row keeps its number struck through, a «Bekor qilingan» pill and «Sabab: …», and has no PDF. `needsReissueConfirm` counts only documents that were not cancelled. `components/students/certificates/`; the figures are the server's, pure rules in `certificate-rules.ts` (tested). Visible with `useCan("students.details")`, fetched on first activation. The QR opens the public `/t/[id]` page and the CEO sets the thresholds on `/settings/participation` |
 | Darslar | `darslar` | Lesson trail (LESSON_DEDUCTION + LESSON_CONSUMPTION) — see deep-dive below |
 | Izohlar | `izohlar` | Comments (shared `CommentList` / `CommentForm`; tasks live on `/tasks`) |
 | Qo'ng'iroq | `qongiroq` | Call history |

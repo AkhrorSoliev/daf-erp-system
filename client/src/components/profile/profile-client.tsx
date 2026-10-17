@@ -13,6 +13,7 @@ import { ChangePasswordDrawer } from "./change-password-drawer";
 import { LogoutOthersDialog } from "@/components/shared/logout-others-dialog";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
 import { TeacherStatsCharts } from "@/components/teachers/teacher-stats-charts";
+import { hasOwnSalary, uzbekRoles } from "./profile-roles";
 
 const TEACHER_ROLE_ID = 4;
 
@@ -37,6 +38,8 @@ export function ProfileClient() {
   if (!user) return null;
 
   const fullName = `${user.firstName} ${user.lastName}`;
+  const uzRoles = uzbekRoles(user.roles);
+  const showSalary = hasOwnSalary(user.roles);
   const displayBranches = isCeo
     ? branches.map((b) => ({ id: b.id, name: b.name }))
     : user.branches;
@@ -54,8 +57,8 @@ export function ProfileClient() {
               photo={user.photo}
               fullName={fullName}
               id={user.id}
-              roles={user.roles}
-              salaryDueUserId={user.id}
+              roles={uzRoles}
+              salaryDueUserId={showSalary ? user.id : undefined}
               salaryDueScope="me"
               phone={user.phone}
               branches={displayBranches}
@@ -90,7 +93,12 @@ export function ProfileClient() {
         ) : (
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
             <div className="w-full lg:w-85 lg:shrink-0">
-              <ProfileCard user={user} onEdit={() => setEditOpen(true)} />
+              <ProfileCard
+                user={user}
+                roles={uzRoles}
+                showSalary={showSalary}
+                onEdit={() => setEditOpen(true)}
+              />
             </div>
             <div className="min-w-0 flex-1">
               <ProfileDetails

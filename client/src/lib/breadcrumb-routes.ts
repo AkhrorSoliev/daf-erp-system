@@ -24,7 +24,7 @@ export const routeLabels: Record<string, string> = {
   "departed-students": msg("Ketgan o'quvchilar"),
   graduates: msg("Bitiruvchilar"),
   activity: msg("Markaz faoliyati"),
-  attendance: msg("Davomat statistikasi"),
+  attendance: msg("Davomat"),
   marketing: msg("Marketing"),
   "dars-baholari": msg("Dars baholari"),
   "xodimlar-kpi": msg("Xodimlar KPI"),
@@ -52,6 +52,8 @@ export const routeLabels: Record<string, string> = {
   "lead-ownership": msg("Lidlar egaligi"),
   // /settings/kpi — «KPI sozlamalari», CEO only (ADR-0096).
   kpi: msg("KPI sozlamalari"),
+  // /settings/participation — «Qatnashganlik hujjati», CEO only.
+  participation: msg("Qatnashganlik hujjati"),
   // /settings/telegram-report — «Telegram hisobot», CEO only (ADR-0095).
   "telegram-report": msg("Telegram hisobot"),
   tasks: msg("Topshiriqlar"),

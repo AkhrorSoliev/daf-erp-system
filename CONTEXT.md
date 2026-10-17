@@ -202,6 +202,12 @@ kechirildi») va bekor qilingan darslar chetlab o'tiladi. Yagona haqiqat —
 `BILLABLE` to'plami.
 `billing/lesson-billing.service.ts`
 
+**Davomat foizi** — (Keldi + Kechikdi) ÷ (Keldi + Kechikdi + Kelmadi), bir kasr;
+maxraj 0 bo'lsa «—», hech qachon 0%. «Sababli» (`EXCUSED`) va markaz bekor
+qilgan dars (`cancellationId`) hech bir foizga kirmaydi. Hisobot, uning Exceli
+va bosh sahifa shu bitta funksiyadan o'qiydi (ADR-0103).
+`reports/attendance-stats/attendance-counts.ts`
+
 **PlannedAbsence** — o'quvchi oldindan aytgan kelmaslik. **Attendance qatori
 EMAS** — aks holda bo'lmagan dars uchun pul yechilardi va o'qituvchi qulfi
 ishga tushardi. Yon jadval sifatida ishlaydi.

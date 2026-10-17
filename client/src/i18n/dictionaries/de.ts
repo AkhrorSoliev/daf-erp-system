@@ -44,7 +44,6 @@ const de: Dictionary = {
   "Lidlar hisoboti": "Lead-Bericht",
   "Xodimlar KPI": "Mitarbeiter-KPI",
   "Marketing": "Marketing",
-  "Davomat statistikasi": "Anwesenheitsstatistik",
   "Bot hisoboti": "Bot-Bericht",
 
   // DaF ilovasi
@@ -70,6 +69,7 @@ const de: Dictionary = {
   "Ruxsatlar": "Berechtigungen",
   "Lidlar egaligi": "Lead-Zuständigkeit",
   "KPI sozlamalari": "KPI-Einstellungen",
+  "Qatnashganlik hujjati": "Teilnahmebestätigung",
   "Telegram hisobot": "Telegram-Bericht",
   "Bildirishnomalar": "Benachrichtigungen",
   "Arxiv": "Archiv",

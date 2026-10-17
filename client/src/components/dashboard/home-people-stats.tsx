@@ -57,7 +57,9 @@ export function HomePeopleStats({ people }: { people: DashboardPeople }) {
         href="/groups"
       />
       <PeopleStat
-        value={formatPercent(people.attendancePct)}
+        value={formatPercent(
+          people.attendancePct === null ? null : Math.round(people.attendancePct),
+        )}
         label="davomat (bu oy)"
         href="/reports/attendance"
       />

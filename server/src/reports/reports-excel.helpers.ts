@@ -316,13 +316,15 @@ export function totalsRow(
 export function kvRow(
   ws: Worksheet,
   label: string,
-  value: number,
+  value: number | string,
   izoh?: string,
   opts: { percent?: boolean; bold?: boolean } = {},
 ): Row {
   const r = ws.addRow([label, value, izoh ?? '']);
   if (opts.bold) r.font = { bold: true };
-  r.getCell(2).numFmt = opts.percent ? PCT : SOM;
+  if (typeof value === 'number') {
+    r.getCell(2).numFmt = opts.percent ? PCT : SOM;
+  }
   const ic = r.getCell(3);
   ic.font = { italic: true, size: 9, color: { argb: SUBTLE } };
   ic.alignment = { wrapText: true, vertical: 'top' };

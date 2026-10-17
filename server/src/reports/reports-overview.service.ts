@@ -4,16 +4,31 @@ import { RedisService } from '../redis/redis.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { activeStudentWhere } from '../students/shared/active-student-where';
 import {
+  addDaysToDateStr,
+  tashkentDateStr,
   tashkentMonthKey,
   tashkentMonthRangeUtc,
   tashkentRangeFilter,
+  utcMidnightFromDateStr,
 } from '../common/date/tashkent';
 import {
+  DEPARTURE_GRACE_DAYS,
   departuresInRange,
   pendingInRange,
 } from '../students/shared/departure-episodes';
 import { loadDepartures } from './shared/departures.loader';
-import type { ReportBranchIds } from '../common/finance/report-branch-scope';
+import {
+  branchIdWhere,
+  groupBranchWhere,
+  isEmptyScope,
+  studentBranchWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
+import {
+  countRows,
+  markOf,
+  rateOf,
+} from './attendance-stats/attendance-counts';
 import { leadAttributionWhere } from '../leads/shared/lead-scope';
 
 @Injectable()
@@ -23,24 +38,49 @@ export class ReportsOverviewService {
     private redis: RedisService,
   ) {}
 
-  async getKpis(companyId: number, query: ReportsQueryDto) {
+  /**
+   * `branchIds` is the caller's resolved scope (`null` = every branch,
+   * `[]` = nothing, else those branches) and wins when given. Without it the
+   * plain `branchId` query keeps meaning one branch, or all when absent.
+   */
+  async getKpis(
+    companyId: number,
+    query: ReportsQueryDto & { branchIds?: ReportBranchIds },
+  ) {
+    const scope: ReportBranchIds =
+      query.branchIds !== undefined
+        ? query.branchIds
+        : query.branchId
+          ? [query.branchId]
+          : null;
+
+    // Fail closed: `{ in: [] }` would also read nothing, but not reading at all
+    // says so plainly and spares eight queries.
+    if (isEmptyScope(scope)) {
+      return {
+        activeStudents: { current: 0, trend: 0 },
+        activeGroups: 0,
+        averageAttendance: null,
+        leadConversionRate: 0,
+        newStudentsThisMonth: 0,
+        churnedThisMonth: 0,
+        pendingDepartures: 0,
+        departureGraceDays: DEPARTURE_GRACE_DAYS,
+      };
+    }
+
     const now = new Date();
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const branchStudentFilter = query.branchId
-      ? { branches: { some: { branchId: query.branchId } } }
-      : {};
-
-    const branchGroupFilter = query.branchId
-      ? { branchId: query.branchId }
-      : {};
+    const branchStudentFilter = studentBranchWhere(scope);
+    const branchGroupFilter = branchIdWhere(scope);
 
     const [
       activeStudents,
       lastMonthActiveStudents,
       activeGroups,
       newStudentsThisMonth,
-      attendanceCounts,
+      attendanceMarks,
       totalLeads,
       convertedLeads,
       departures,
@@ -88,14 +128,21 @@ export class ReportsOverviewService {
         },
       }),
 
-      this.prisma.attendance.groupBy({
-        by: ['status'],
+      // «Davomat (bu oy)» — the attendance report's own count (ADR-0103): the
+      // current Tashkent month from the 1st to today, the picked branch,
+      // through `countRows` + `rateOf`. No second formula.
+      this.prisma.attendance.findMany({
         where: {
           companyId,
-          date: { gte: firstOfMonth },
-          ...(query.branchId ? { group: { branchId: query.branchId } } : {}),
+          date: {
+            gte: utcMidnightFromDateStr(`${tashkentMonthKey(now)}-01`),
+            lt: utcMidnightFromDateStr(
+              addDaysToDateStr(tashkentDateStr(now), 1),
+            ),
+          },
+          ...groupBranchWhere(scope),
         },
-        _count: { id: true },
+        select: { date: true, status: true, cancellationId: true },
       }),
 
       // Voronka konversiyasi FAQAT voronka lidlarini sanaydi. `sectionId: null`
@@ -122,12 +169,7 @@ export class ReportsOverviewService {
       // alongside the queries above rather than after them — it depends on
       // none of their results, and awaiting it separately just stacked its
       // latency on top on a cold cache.
-      loadDepartures(
-        this.prisma,
-        companyId,
-        query.branchId ? [query.branchId] : null,
-        { now },
-      ),
+      loadDepartures(this.prisma, companyId, scope, { now }),
     ]);
 
     // Both count stops that started in this Tashkent month.
@@ -143,21 +185,7 @@ export class ReportsOverviewService {
       departures.floor,
     ).length;
 
-    const totalAttendance = attendanceCounts.reduce(
-      (sum, a) => sum + a._count.id,
-      0,
-    );
-    const excusedCount = attendanceCounts
-      .filter((a) => a.status === 'EXCUSED')
-      .reduce((sum, a) => sum + a._count.id, 0);
-    const presentAndLate = attendanceCounts
-      .filter((a) => a.status === 'PRESENT' || a.status === 'LATE')
-      .reduce((sum, a) => sum + a._count.id, 0);
-    // Formula from reports-attendance-analytics.service.ts (A2.6):
-    // (PRESENT + LATE) / (PRESENT + LATE + ABSENT), excluding EXCUSED from denominator
-    const denominator = totalAttendance - excusedCount;
-    const averageAttendance =
-      denominator > 0 ? Math.round((presentAndLate / denominator) * 100) : 0;
+    const averageAttendance = rateOf(countRows(attendanceMarks.map(markOf)));
 
     const trend =
       lastMonthActiveStudents > 0

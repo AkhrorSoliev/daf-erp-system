@@ -659,6 +659,15 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /participation-certificates/:id/pdf": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /participation-certificates/:id/verify": "PUBLIC",
+  "GET /participation-certificates/settings": [
+    "CEO"
+  ],
   "GET /payment-promises": [
     "Administrator",
     "Branch Director",
@@ -801,18 +810,15 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/attendance-analytics": [
-    "Administrator",
+  "GET /reports/attendance-stats/excel": [
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/attendance-by-course": [
-    "Administrator",
+  "GET /reports/attendance-stats/missers": [
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/attendance-by-group": [
-    "Administrator",
+  "GET /reports/attendance-stats/overview": [
     "Branch Director",
     "CEO"
   ],
@@ -959,11 +965,6 @@
     "Branch Director",
     "CEO",
     "Cashier"
-  ],
-  "GET /reports/teacher-performance": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
   ],
   "GET /rooms": [
     "Administrator",
@@ -1224,6 +1225,11 @@
     "CEO"
   ],
   "GET /students/:id/lessons-overview": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/participation-certificates/preview": [
     "Administrator",
     "Branch Director",
     "CEO"
@@ -1595,6 +1601,9 @@
   ],
   "PATCH /notifications/:id/read": "ANY",
   "PATCH /notifications/read-all": "ANY",
+  "PATCH /participation-certificates/settings": [
+    "CEO"
+  ],
   "PATCH /payment-promises/:id/cancel": [
     "Administrator",
     "Branch Director",
@@ -1953,6 +1962,11 @@
   ],
   "POST /notifications/devices": "ANY",
   "POST /notifications/push/subscribe": "ANY",
+  "POST /participation-certificates/:id/revoke": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "POST /payment-promises": [
     "Administrator",
     "Branch Director",
@@ -2122,6 +2136,11 @@
     "CEO"
   ],
   "POST /students/:id/initial-balance": [
+    "CEO"
+  ],
+  "POST /students/:id/participation-certificates": [
+    "Administrator",
+    "Branch Director",
     "CEO"
   ],
   "POST /students/:id/sms": [

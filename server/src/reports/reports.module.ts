@@ -33,15 +33,28 @@ import { HolidaysModule } from '../holidays/holidays.module';
 import { ExpensesModule } from '../expenses/expenses.module';
 import { SalaryModule } from '../salary/salary.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { OutreachModule } from '../outreach/outreach.module';
+import { SettingsModule } from '../settings/settings.module';
+import { AttendanceFactsLoader } from './attendance-stats/attendance-facts.loader';
+import { AttendanceStatsController } from './attendance-stats/attendance-stats.controller';
+import { AttendanceStatsService } from './attendance-stats/attendance-stats.service';
 
 @Module({
-  imports: [HolidaysModule, ExpensesModule, SalaryModule, PaymentsModule],
+  imports: [
+    HolidaysModule,
+    ExpensesModule,
+    SalaryModule,
+    PaymentsModule,
+    SettingsModule,
+    OutreachModule,
+  ],
   controllers: [
     ReportsController,
     ReportsLeadFunnelController,
     ReportsMarketingController,
     GroupPaymentsController,
     CenterActivityController,
+    AttendanceStatsController,
     DepartedController,
   ],
   providers: [
@@ -56,6 +69,8 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsTeacherChangesService,
     CenterActivityService,
     CenterFactsLoader,
+    AttendanceStatsService,
+    AttendanceFactsLoader,
     ReportsProfitLossService,
     ReportsCashFlowService,
     ReportsBalanceSheetService,

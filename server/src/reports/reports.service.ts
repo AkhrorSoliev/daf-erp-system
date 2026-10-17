@@ -36,8 +36,6 @@ import {
 } from './reports-balance-sheet.service';
 import {
   AttendanceAnalyticsQueryDto,
-  AttendanceByCourseQueryDto,
-  AttendanceByGroupQueryDto,
   AttendanceTeacherPerfQueryDto,
 } from './dto/attendance-reports-query.dto';
 import { buildNetProfit, NetProfit } from './reports-excel.helpers';
@@ -398,7 +396,10 @@ export class ReportsService {
   }
 
   // Overview
-  getKpis(companyId: number, query: ReportsQueryDto) {
+  getKpis(
+    companyId: number,
+    query: ReportsQueryDto & { branchIds?: ReportBranchIds },
+  ) {
     return this.overview.getKpis(companyId, query);
   }
   getRoomUtilization(companyId: number, query: ReportsQueryDto) {
@@ -425,12 +426,6 @@ export class ReportsService {
     query: AttendanceAnalyticsQueryDto,
   ) {
     return this.attendanceAnalytics.getAttendanceAnalytics(companyId, query);
-  }
-  getAttendanceByGroup(companyId: number, query: AttendanceByGroupQueryDto) {
-    return this.attendanceAnalytics.getAttendanceByGroup(companyId, query);
-  }
-  getAttendanceByCourse(companyId: number, query: AttendanceByCourseQueryDto) {
-    return this.attendanceAnalytics.getAttendanceByCourse(companyId, query);
   }
 
   // Financial

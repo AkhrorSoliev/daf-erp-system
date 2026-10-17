@@ -7,6 +7,40 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Xato berilgan qatnashganlik hujjatini bekor qilish",
+    matn: "O'quvchi kartasidagi «Hujjatlar» yorlig'ida berilgan hujjat qatoriga uch nuqta tugmasi qo'shildi: u orqali «Bekor qilish»ni tanlab, sababini yozasiz. Bekor qilingan hujjat ro'yxatda chizilgan raqam, belgi va sabab bilan qoladi, PDF'i endi berilmaydi, QR sahifada esa «bekor qilingan» deb chiqadi. Raqam qayta berilmaydi; to'g'ri hujjat yangi raqam bilan beriladi. Bekor qilish o'quvchi tarixiga yoziladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "qatnashganlik-hujjati" },
+  },
+  {
+    sana: "2026-10-17",
+    sarlavha: "Profil: rol o'zbekcha, filial tanlagichi faqat kerak bo'lganda",
+    matn: "Profil kartochkasida va foydalanuvchi menyusida rol nomi endi o'zbekcha: «O'qituvchi», «Kassir», «Filial direktori». Faqat bitta filialda ishlaydigan xodim (masalan, o'qituvchi) filial tanlagichini ko'rmaydi: tanlashga hech narsa yo'q, ma'lumot o'z filialidan keladi. Filial nomi Profil → «Batafsil ma'lumotlar»da turadi. Bir nechta filialli xodim va CEO uchun tanlagich o'zgarmadi. Direktorning profilida (oyligi yo'q) bo'sh «To'lanishi kerak —» bloki chiqmaydi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-17",
+    sarlavha: "Davomat hisoboti yangilandi",
+    matn: "Hisobotlarda «Davomat» sahifasi qayta qurildi. Tepada davomat foizi va to'rtta belgi (Keldi, Kechikdi, Kelmadi, Sababli), pastda oylar va hafta kunlari, sababli darslarning keyingi oy to'loviga taxminiy ta'siri, davomati past guruhlar, ustozlar va kurslar jadvali. «Ko'p qoldiruvchi» raqamini bossangiz, 3 va undan ko'p marta kelmagan o'quvchilar ro'yxati ochiladi. Markaz bekor qilgan darslar endi «Sababli»ga qo'shilmaydi, belgilanadigan dars bo'lmasa foiz o'rnida «—» chiqadi. Bosh sahifadagi davomat shu hisobotning «Bu oy» raqamining o'zi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "hisobotlar", sahifa: "davomat-hisoboti" },
+  },
+  {
+    sana: "2026-10-17",
+    sarlavha: "Pauzadagi guruhning darslari «Berilmadi» blokiga tushmaydi",
+    matn: "Guruh to'xtatilgan (pauza) paytida tugagan darslar endi ustozning oyligidagi «Berilmadi — davomat olinmagan darslar» blokida chiqmaydi. Ilgari guruh qayta yoqilishi bilan pauzadagi o'tmagan darslar ham ustozga «yo'qotilgan» bo'lib ko'rinardi.",
+    sahifa: { bolim: "davomat", sahifa: "dars-boldimi" },
+  },
+  {
+    sana: "2026-10-17",
+    sarlavha: "Qatnashganlik hujjati",
+    matn: "O'quvchi kartasida «Hujjatlar» yorlig'i paydo bo'ldi. Daraja tugagach shu yerdan qatnashganlik hujjati (nemischa, QR bilan PDF) beriladi. Hujjat uchun davomat kamida 80% bo'lishi va ilovadagi ochiq darslar tugatilgan bo'lishi kerak; sababli kelmagan va bekor bo'lgan darslar hisobga kirmaydi. Shart bajarilmasa faqat CEO sabab yozib berishi mumkin. Chegaralar — Sozlamalar → «Qatnashganlik hujjati» (faqat CEO).",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "qatnashganlik-hujjati" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Markaz faoliyati: katakni bosib bo'sh xonalarni ko'ring",
     matn: "«Qachon xona bo'sh» jadvalida katakni bossangiz, pastda o'sha soatda qaysi xonalar bo'sh ekani chiqadi: xona nomi va nechta o'rin borligi bilan. Band xonalar chizilgan holda, ularni egallab turgan guruh nomlari bilan ko'rinadi. Yangi guruhga xona qidirganda endi faqat sonni emas, xonaning o'zini ko'rasiz.",
     rollar: [1, 2],

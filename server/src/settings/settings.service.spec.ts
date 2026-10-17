@@ -125,6 +125,10 @@ describe('SettingsService', () => {
         'kpi.leadPaid.value': 50000,
         'kpi.promiseKept.mode': 'FIXED',
         'kpi.promiseKept.value': 20000,
+        'participation.minAttendancePercent': 80,
+        'participation.minAppPercent.A1': 100,
+        'participation.minAppPercent.A2': 100,
+        'participation.minAppPercent.B1': 100,
       });
     });
   });
@@ -224,6 +228,10 @@ describe('SettingsService', () => {
         'kpi.leadPaid.value': [],
         'kpi.promiseKept.mode': [],
         'kpi.promiseKept.value': [],
+        'participation.minAttendancePercent': [],
+        'participation.minAppPercent.A1': [],
+        'participation.minAppPercent.A2': [],
+        'participation.minAppPercent.B1': [],
       });
     });
 

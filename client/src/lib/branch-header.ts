@@ -61,6 +61,22 @@ export function branchScopeChanged(
 }
 
 /**
+ * Whether the header and the side panel draw the branch switcher.
+ *
+ * A caller who can pick «Barcha filiallar» (CEO) always gets it. Everyone else
+ * only when there is a real choice: with no branch, or with exactly one (a
+ * teacher works in one), there is nothing to switch to. The branch is still
+ * selected for them (`resolveStoredBranch` below falls back to `branches[0]`),
+ * so hiding the control never changes what their requests claim.
+ */
+export function showBranchSwitcher(
+  canSelectAll: boolean,
+  branchCount: number,
+): boolean {
+  return canSelectAll || branchCount > 1;
+}
+
+/**
  * Restore a persisted selection, dropping it when it is no longer legal.
  *
  * The saved value was never checked against the current user's branches, so
