@@ -44,7 +44,6 @@ const en: Dictionary = {
   "Lidlar hisoboti": "Leads report",
   "Xodimlar KPI": "Staff KPI",
   "Marketing": "Marketing",
-  "Davomat statistikasi": "Attendance statistics",
   "Bot hisoboti": "Bot report",
 
   // DaF ilovasi

@@ -2,10 +2,6 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  ATTENDANCE_KPI_TOOLTIPS,
-  ATTENDANCE_TABLE_TOOLTIPS,
-} from "@/components/reports/attendance/metric-helpers";
-import {
   FIELD_TYPE_LABELS as LEAD_FIELD_TYPE_LABELS,
   customFormSchema,
   defaultFormFields,
@@ -24,23 +20,6 @@ import {
 // Status enum names and the English words the plan replaced.
 const ENGLISH =
   /\b(ACTIVE|FROZEN|DROPPED|TRANSFERRED|COMPLETED|PRESENT|ABSENT|KPI|enrollment|slots?|preview|submission|feature)\b/i;
-
-describe("report tooltips", () => {
-  it.each([
-    ["ATTENDANCE_KPI_TOOLTIPS", ATTENDANCE_KPI_TOOLTIPS],
-    ["ATTENDANCE_TABLE_TOOLTIPS", ATTENDANCE_TABLE_TOOLTIPS],
-  ])("%s carries no status enum name and no English jargon", (_name, tooltips) => {
-    for (const [key, text] of Object.entries(tooltips)) {
-      expect(text, key).not.toMatch(ENGLISH);
-    }
-  });
-
-  it("the retention tooltip says who counts in a group and who has left, in Uzbek", () => {
-    expect(ATTENDANCE_KPI_TOOLTIPS.retention).toContain(
-      "Guruhda hisoblanadi = faol yoki muzlatilgan. Ketgan = chiqdi, o'tkazildi yoki tugallangan.",
-    );
-  });
-});
 
 // Reads a component's source the way `home-money-cards.test.ts` does for the
 // tooltip a closed card hides. Whitespace is collapsed (JSX wraps its lines)
@@ -217,5 +196,23 @@ describe("the «Markaz faoliyati» page (B7b)", () => {
 
   it.each(files)("%s carries no English jargon", (file) => {
     expect(source(file)).not.toMatch(ENGLISH);
+  });
+});
+
+// «Davomat» (B7c): the page is drawn from the server's figures and names none
+// of the English words the old page used on screen.
+describe("the «Davomat» page (B7c)", () => {
+  const dir = "reports/attendance";
+  const files = readdirSync(join(__dirname, "..", "components", dir))
+    .filter((f) => f.endsWith(".tsx"))
+    .map((f) => `${dir}/${f}`);
+
+  it("finds the new files", () => {
+    expect(files.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it.each(files)("%s carries no English jargon", (file) => {
+    // `absent` is the server's field name in the code, never on screen; the enum name ABSENT still fails.
+    expect(source(file).replace(/\babsent\b/g, "")).not.toMatch(ENGLISH);
   });
 });
