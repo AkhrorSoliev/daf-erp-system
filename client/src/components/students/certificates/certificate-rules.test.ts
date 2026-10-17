@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { dmy, issueMode, issuedDay, levelSummary, percentText } from "./certificate-rules";
+import {
+  dmy,
+  issueClickAction,
+  issueMode,
+  issuedDay,
+  levelSummary,
+  needsReissueConfirm,
+  percentText,
+  REISSUE_CONFIRM_TEXT,
+  REISSUE_EXEMPT_NOTICE,
+} from "./certificate-rules";
 import type { LevelPreview } from "./certificate-types";
 
 const base: LevelPreview = {
@@ -54,6 +64,45 @@ describe("issueMode", () => {
     };
     expect(issueMode(weak, true)).toBe("exempt");
     expect(issueMode(weak, false)).toBe("blocked");
+  });
+});
+
+const given = {
+  id: "3f9c2a7e-5b1d-4c8a-9e60-2d7f81a4c0b3",
+  number: "TB-2026-0001",
+  level: "A1",
+  issuedAt: "2026-10-17T07:00:00.000Z",
+  exempt: false,
+  revoked: false,
+};
+
+describe("needsReissueConfirm", () => {
+  it("is false for a level with no document and true from the first one on", () => {
+    expect(needsReissueConfirm({ issued: [] })).toBe(false);
+    expect(needsReissueConfirm({ issued: [given] })).toBe(true);
+    expect(needsReissueConfirm({ issued: [given, { ...given, number: "TB-2026-0002" }] })).toBe(true);
+  });
+});
+
+describe("issueClickAction", () => {
+  it("issues at once when the level has no document yet", () => {
+    expect(issueClickAction({ issued: [] }, "normal")).toBe("issue");
+  });
+  it("asks first when the level already has a document", () => {
+    expect(issueClickAction({ issued: [given] }, "normal")).toBe("confirm");
+  });
+  it("keeps the CEO exemption on its own reason dialog, with or without an earlier document", () => {
+    expect(issueClickAction({ issued: [] }, "exempt")).toBe("exempt");
+    expect(issueClickAction({ issued: [given] }, "exempt")).toBe("exempt");
+  });
+});
+
+describe("the reissue texts", () => {
+  it("are the owner's words", () => {
+    expect(REISSUE_CONFIRM_TEXT).toBe(
+      "Bu daraja uchun hujjat allaqachon berilgan. Yangi raqamli yana bittasini berasizmi?",
+    );
+    expect(REISSUE_EXEMPT_NOTICE).toBe("Bu daraja uchun hujjat allaqachon berilgan. Yangisiga yangi raqam beriladi.");
   });
 });
 

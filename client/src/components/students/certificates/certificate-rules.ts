@@ -29,6 +29,30 @@ export function issueMode(
   return isCeo ? "exempt" : "blocked";
 }
 
+/** The owner's words (17.10.2026), one place: the dialog, the exemption notice and their test read these. */
+export const REISSUE_CONFIRM_TEXT =
+  "Bu daraja uchun hujjat allaqachon berilgan. Yangi raqamli yana bittasini berasizmi?";
+export const REISSUE_EXEMPT_NOTICE =
+  "Bu daraja uchun hujjat allaqachon berilgan. Yangisiga yangi raqam beriladi.";
+
+/** A level that already has a document asks before another one (with a new number) is issued. */
+export function needsReissueConfirm(level: Pick<LevelPreview, "issued">): boolean {
+  return level.issued.length > 0;
+}
+
+/**
+ * What a click on the issue button does. The exemption keeps its own reason
+ * dialog (it only adds a notice, no extra step); a normal issue is immediate
+ * unless the level already has a document.
+ */
+export function issueClickAction(
+  level: Pick<LevelPreview, "issued">,
+  mode: "normal" | "exempt",
+): "issue" | "confirm" | "exempt" {
+  if (mode === "exempt") return "exempt";
+  return needsReissueConfirm(level) ? "confirm" : "issue";
+}
+
 export interface SummaryLine {
   label: string;
   value: string;

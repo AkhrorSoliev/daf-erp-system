@@ -24,7 +24,16 @@ import {
   issueCertificate,
   useCertificatePreview,
 } from "./certificate-queries";
-import { dmy, issueMode, issuedDay, levelSummary } from "./certificate-rules";
+import {
+  dmy,
+  issueClickAction,
+  issueMode,
+  issuedDay,
+  levelSummary,
+  needsReissueConfirm,
+  REISSUE_CONFIRM_TEXT,
+  REISSUE_EXEMPT_NOTICE,
+} from "./certificate-rules";
 import type { IssuedCertificate, LevelPreview } from "./certificate-types";
 
 /** The student card's «Hujjatlar» tab (spec 2026-10-17 §7). Every figure is the server's. */
@@ -36,6 +45,8 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
 
   const [busy, setBusy] = useState<string | null>(null);
   const [exemptFor, setExemptFor] = useState<LevelPreview | null>(null);
+  // The level whose "give another one?" confirmation is open (a document already exists).
+  const [reissueFor, setReissueFor] = useState<LevelPreview | null>(null);
   const [reason, setReason] = useState("");
 
   async function give(level: LevelPreview, exemptReason?: string) {
@@ -50,6 +61,7 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
     } catch (err) {
       toast.error(getErrorMessage(err, "Hujjat berishda xatolik yuz berdi"));
     }
+    setReissueFor(null);
     setBusy(null);
   }
 
@@ -143,7 +155,12 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
               <Button
                 disabled={busy !== null}
                 variant={mode === "exempt" ? "outline" : "default"}
-                onClick={() => (mode === "exempt" ? setExemptFor(level) : void give(level))}
+                onClick={() => {
+                  const action = issueClickAction(level, mode);
+                  if (action === "exempt") setExemptFor(level);
+                  else if (action === "confirm") setReissueFor(level);
+                  else void give(level);
+                }}
               >
                 {busy === level.level ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -185,6 +202,11 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 space-y-2 overflow-y-auto px-6 py-4">
+            {exemptFor && needsReissueConfirm(exemptFor) && (
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                {REISSUE_EXEMPT_NOTICE}
+              </p>
+            )}
             <Textarea
               value={reason}
               maxLength={500}
@@ -202,6 +224,25 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
             >
               {busy !== null && <Loader2 className="size-4 animate-spin" />}
               Berish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Another document for a level that already has one: asked first, the new one gets a new number. */}
+      <Dialog open={reissueFor !== null} onOpenChange={(open) => !open && busy === null && setReissueFor(null)}>
+        <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle>Hujjat berish</DialogTitle>
+            <DialogDescription>{REISSUE_CONFIRM_TEXT}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="border-t px-6 py-4">
+            <Button variant="outline" disabled={busy !== null} onClick={() => setReissueFor(null)}>
+              Bekor qilish
+            </Button>
+            <Button disabled={busy !== null} onClick={() => reissueFor && void give(reissueFor)}>
+              {busy !== null && <Loader2 className="size-4 animate-spin" />}
+              Ha, berish
             </Button>
           </DialogFooter>
         </DialogContent>
