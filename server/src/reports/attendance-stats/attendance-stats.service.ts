@@ -6,8 +6,9 @@ import {
 } from '../../common/finance/report-branch-scope';
 import { AbsenceStreakService } from '../../outreach/absence-streak.service';
 import { SettingsService } from '../../settings/settings.service';
-import { groupOf } from './attendance-counts';
+import { cutRows, groupOf, missPairs } from './attendance-counts';
 import { excusedCredit, excusedMonthly } from './attendance-credit';
+import { attendanceWorkbook } from './attendance-stats.excel';
 import { AttendanceFactsLoader } from './attendance-facts.loader';
 import { buildOverview, missersOf } from './attendance-overview';
 import { resolvePeriod, type StatsPeriod } from './attendance-stats-period';
@@ -111,6 +112,42 @@ export class AttendanceStatsService {
       page,
       pageSize,
     };
+  }
+
+  /** `GET /reports/attendance-stats/excel`: the page's answer, every cut row, every 3+ pair (spec §9). */
+  async excel(
+    companyId: number,
+    scope: ReportBranchIds,
+    q: AttendanceStatsQueryDto,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    assertScope(scope);
+    const now = new Date();
+    const period = resolvePeriod(q.startDate, q.endDate, tashkentDateStr(now));
+    const facts = await this.loader.load(companyId, scope, period.load);
+    const credit = await this.credit(companyId, facts, period);
+    const overview = buildOverview({
+      facts,
+      period,
+      currentMonth: tashkentMonthKey(now),
+      credit,
+      cut: 'group',
+      page: 1,
+      pageSize: 10,
+    });
+    const buffer = await attendanceWorkbook({
+      overview,
+      cuts: {
+        group: cutRows(facts, period.window, 'group'),
+        teacher: cutRows(facts, period.window, 'teacher'),
+        course: cutRows(facts, period.window, 'course'),
+      },
+      missers: await this.named(
+        companyId,
+        facts,
+        missPairs(facts.rows, period.window),
+      ),
+    });
+    return { buffer, filename: `davomat-${q.startDate}_${q.endDate}.xlsx` };
   }
 
   /** The «Sababli» money block: charges and the per-branch setting behind its marks. */

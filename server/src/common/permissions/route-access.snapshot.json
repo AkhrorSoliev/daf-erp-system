@@ -801,6 +801,10 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /reports/attendance-stats/excel": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /reports/attendance-stats/missers": [
     "Branch Director",
     "CEO"

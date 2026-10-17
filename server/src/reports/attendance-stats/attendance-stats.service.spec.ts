@@ -189,4 +189,15 @@ describe('AttendanceStatsService', () => {
       pageSize: 10,
     });
   });
+
+  it('excel: same scope rule, one read, a named file', async () => {
+    const { service, loader } = setup();
+    await expect(service.excel(1001, [], Q)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    const out = await service.excel(1001, [1], Q);
+    expect(loader.load).toHaveBeenCalledTimes(1);
+    expect(out.filename).toBe('davomat-2026-09-01_2026-09-30.xlsx');
+    expect(out.buffer.length).toBeGreaterThan(0);
+  });
 });
