@@ -1,5 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
-import { AttendanceStatus, PlannedAbsenceKind } from '@prisma/client';
+import {
+  AttendanceStatus,
+  MockExamStatus,
+  PlannedAbsenceKind,
+} from '@prisma/client';
 import { ParticipationFactsService } from './participation-facts.service';
 
 type Row = {
@@ -277,7 +281,7 @@ describe('ParticipationFactsService', () => {
     expect(prisma.dafLesson.findMany).not.toHaveBeenCalled();
   });
 
-  it('adds the latest graded mock result of the level', async () => {
+  it('adds the latest mock result of the level, only from an announced exam', async () => {
     const rows: Row[] = [
       att('2026-07-07', AttendanceStatus.PRESENT, 'g1', group('A1-17', 'A1')),
     ];
@@ -309,6 +313,11 @@ describe('ParticipationFactsService', () => {
           studentId: 10001,
           companyId: 1001,
           deletedAt: null,
+          // A result of an exam still in grading can change; the snapshot is sealed.
+          exam: {
+            status: { in: [MockExamStatus.ANNOUNCED, MockExamStatus.ARCHIVED] },
+            deletedAt: null,
+          },
         }),
       }),
     );

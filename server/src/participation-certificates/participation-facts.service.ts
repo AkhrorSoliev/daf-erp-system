@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DafLessonKind, PlannedAbsenceKind } from '@prisma/client';
+import {
+  DafLessonKind,
+  MockExamStatus,
+  PlannedAbsenceKind,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { tashkentDateStr } from '../common/date/tashkent';
 import { storedBirthDay } from '../contract-documents/contract-fields';
@@ -187,7 +191,12 @@ export class ParticipationFactsService {
     };
   }
 
-  /** The latest graded mock result of the level; none when the participant is not linked to the card. */
+  /**
+   * The latest mock result of the level from an exam whose results were
+   * announced to students (ANNOUNCED, or ARCHIVED, which is reachable only
+   * from ANNOUNCED); none when the participant is not linked to the card. An
+   * exam still in grading can change its scores, and the snapshot is sealed.
+   */
   private async mockFor(
     studentId: number,
     companyId: number,
@@ -198,6 +207,10 @@ export class ParticipationFactsService {
         studentId,
         companyId,
         deletedAt: null,
+        exam: {
+          status: { in: [MockExamStatus.ANNOUNCED, MockExamStatus.ARCHIVED] },
+          deletedAt: null,
+        },
         level: { equals: level, mode: 'insensitive' },
         totalScore: { not: null },
         gradedAt: { not: null },
