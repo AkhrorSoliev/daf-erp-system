@@ -3,6 +3,7 @@
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPhoneInput } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import {
   Button as LumioButton,
@@ -148,6 +149,8 @@ export function FpPasswordInput({
   show: boolean;
   onToggleShow?: () => void;
 }) {
+  const t = useT();
+  const toggleLabel = show ? t("Parolni yashirish") : t("Parolni ko'rsatish");
   const shared = {
     id,
     autoFocus,
@@ -170,7 +173,7 @@ export function FpPasswordInput({
         <button
           type="button"
           onClick={onToggleShow}
-          aria-label={show ? "Parolni yashirish" : "Parolni ko'rsatish"}
+          aria-label={toggleLabel}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
         >
           {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}

@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/msg";
+
 export type PortalType =
   | "admin"
   | "lehrer"
@@ -13,11 +15,11 @@ interface PortalConfig {
 
 const portalConfigs: Record<PortalType, PortalConfig> = {
   admin: {
-    title: "Boshqaruv",
+    title: msg("Boshqaruv"),
     allowedRoleIds: [1, 2, 3, 5], // CEO, Branch Director, Administrator, Cashier
   },
   lehrer: {
-    title: "O'qituvchi",
+    title: msg("O'qituvchi"),
     allowedRoleIds: [4], // Teacher
   },
   student: {
