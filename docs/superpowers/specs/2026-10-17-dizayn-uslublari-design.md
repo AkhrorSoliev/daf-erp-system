@@ -97,12 +97,14 @@ shart). Serif yo'q: CEO «AI sayt» ko'rinishini xohlamagan.
   (`localStorage["daf-skin"]` yo'q). Cookie yo'q (kirmagan) bo'lsa hech narsa qilmaydi,
   shuning uchun login doim Daftar. Yangi qurilmada cookie kirishda yoziladi, shuning uchun
   uslub birinchi chizishdan qo'llanadi. `suppressHydrationWarning` `<html>` da allaqachon bor.
-- **Tanlash:** `useUiSkin()` (`hooks/use-ui-skin.ts`): `setSkin(id)` — darrov qo'llaydi
-  (optimistik), `PATCH /users/ui-skin`, muvaffaqiyatda `user` store va cookie'ni yangilaydi
-  (`setAuth` ni qayta chaqirmaydi, tokenlarga tegmaydi), xatoda eski uslubga qaytaradi va
-  `toast.error(getErrorMessage(…, "Dizayn uslubini saqlab bo'lmadi"))`. Ikki bosish ketma-ket:
-  oxirgisi yutadi (so'rov kelmagan holatda oldingisi bekor emas, lekin oxirgi javob
-  `user.uiSkin` ni belgilaydi).
+- **Tanlash:** `useUiSkin()` (`hooks/use-ui-skin.ts`): `setSkin(id)` — uslubni darrov qo'llaydi
+  (optimistik: `patchUser` store va cookie'ni yangilaydi, `setAuth` ni chaqirmaydi, tokenlarga
+  tegmaydi), `PATCH /users/ui-skin`. Saqlash tugagach eng oxirgi tanlov yana qo'llanadi (oradagi
+  sessiya yangilanishi store'ni serverning eski foydalanuvchisi bilan yozib yuborsa ham, tanlov
+  bekor bo'lmasin). Saqlash xato bersa eski uslub qaytadi va
+  `toast.error(getErrorMessage(…, "Dizayn uslubini saqlab bo'lmadi"))` chiqadi. Ketma-ket bosishda
+  faqat oxirgi tanlov sahifaga tegadi (hisoblagich `latest`); eskirgan so'rovning xatosi ham
+  foydalanuvchiga aytiladi, lekin sahifadagi uslubni o'zgartirmaydi.
 
 ### 5. Menyu
 

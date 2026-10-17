@@ -11,19 +11,27 @@ export interface ChangeUiSkinDeps {
   fail(error: unknown): void;
 }
 
+/** Counts the changes; only the newest one may touch the page when its save settles. */
+let latest = 0;
+
 /**
  * Optimistic skin change: the page switches at once, the account is written
- * after. A failed save puts the old skin back — but only if nothing newer was
- * chosen meanwhile, so a slow failure never undoes the latest choice.
+ * after. When a save settles only the newest change acts: on success it applies
+ * its skin again (a session refresh during the save overwrites the store with
+ * the server's older user, and would otherwise undo it); on failure it puts the
+ * old skin back. An older change never touches the page, so a slow failure
+ * cannot undo the latest choice. The user is told about every failed save.
  */
 export async function changeUiSkin(next: UiSkinId, deps: ChangeUiSkinDeps): Promise<boolean> {
+  const seq = ++latest;
   const previous = deps.current() ?? null;
   deps.apply(next);
   try {
     await deps.save(next);
+    if (seq === latest) deps.apply(next);
     return true;
   } catch (error) {
-    if (deps.current() === next) deps.apply(previous);
+    if (seq === latest) deps.apply(previous);
     deps.fail(error);
     return false;
   }

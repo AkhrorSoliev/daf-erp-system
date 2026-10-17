@@ -112,7 +112,9 @@ export function HeaderUserMenu() {
           <DropdownMenuSubContent>
             <DropdownMenuRadioGroup
               value={skin}
-              onValueChange={(value) => void setSkin(value as UiSkinId)}
+              onValueChange={(value) => {
+                if (value !== skin) void setSkin(value as UiSkinId);
+              }}
             >
               {UI_SKINS.map(({ id, label, hint, swatch }) => (
                 <DropdownMenuRadioItem key={id} value={id}>
