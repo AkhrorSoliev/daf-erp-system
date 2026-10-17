@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Qatnashganlik hujjati",
+    matn: "O'quvchi kartasida «Hujjatlar» yorlig'i paydo bo'ldi. Daraja tugagach shu yerdan Teilnahmebestätigung (nemischa, QR bilan PDF) beriladi. Hujjat uchun davomat kamida 80% bo'lishi va ilovadagi ochiq darslar tugatilgan bo'lishi kerak; sababli kelmagan va bekor bo'lgan darslar hisobga kirmaydi. Shart bajarilmasa faqat CEO sabab yozib berishi mumkin. Chegaralar — Sozlamalar → «Qatnashganlik hujjati» (faqat CEO).",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "qatnashganlik-hujjati" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Kirish sahifasi panelga mos bo'ldi",
     matn: "Admin panel va o'qituvchi portalining kirish sahifasi endi panelning o'zidek: o'sha ranglar, o'sha shrift. Chap tomonda (telefonda tepada) logotip va ochilgan kitob varaqlari chizilgan to'q ko'k fon turadi. Daftar varag'i ko'rinishi olib tashlandi. Kirgach «Xush kelibsiz» salomi avvalgidek chiqadi.",
     rollar: [1, 2, 3, 4, 5],
