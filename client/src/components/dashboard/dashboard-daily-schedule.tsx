@@ -247,7 +247,6 @@ export function DashboardDailySchedule({
                       }}
                       info={lesson.unmarked}
                       onAnswered={onAnswered ?? (() => undefined)}
-                      t={t}
                     />
                   ) : (() => {
                     const att = lesson.attendanceStatus;

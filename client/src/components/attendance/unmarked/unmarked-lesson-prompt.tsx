@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { interpolate, type Params } from "@/i18n/translate";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import {
   answerState,
@@ -17,14 +17,6 @@ import { LateAttendanceDialog } from "./late-attendance-dialog";
 import { NotHeldDialog } from "./not-held-dialog";
 
 export type UnmarkedDialog = "held" | "notHeld" | null;
-
-/**
- * The page's `t` from `useT()`. The prompt is shared with pages that are not
- * translated yet, so it takes `t` as an optional prop and reads the Uzbek source
- * as written (placeholders filled) without it.
- */
-type Translate = (source: string, params?: Params) => string;
-const uzbek: Translate = interpolate;
 
 // Same group-scoped keys the lesson-changes tab refreshes after a cancellation or
 // reschedule; a prefix match covers every cached month.
@@ -41,12 +33,11 @@ const ANSWER_GROUP_KEYS = [
 export function UnmarkedLessonButtons({
   state,
   onPick,
-  t = uzbek,
 }: {
   state: AnswerState;
   onPick: (dialog: Exclude<UnmarkedDialog, null>) => void;
-  t?: Translate;
 }) {
+  const t = useT();
   return (
     <>
       <span className="text-xs font-semibold text-orange-800 dark:text-orange-300">{t("Dars bo'ldimi?")}</span>
@@ -143,13 +134,11 @@ export function UnmarkedLessonPrompt({
   info,
   onAnswered,
   className,
-  t = uzbek,
 }: {
   lesson: UnmarkedLessonRef;
   info: UnmarkedLessonInfo;
   onAnswered: () => void;
   className?: string;
-  t?: Translate;
 }) {
   const user = useAuth((s) => s.user);
   const state = answerState(info, user);
@@ -162,7 +151,7 @@ export function UnmarkedLessonPrompt({
         className,
       )}
     >
-      <UnmarkedLessonButtons state={state} onPick={setDialog} t={t} />
+      <UnmarkedLessonButtons state={state} onPick={setDialog} />
       <UnmarkedLessonDialogs
         lesson={lesson}
         dialog={dialog}

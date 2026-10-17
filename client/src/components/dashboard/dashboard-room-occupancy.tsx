@@ -603,7 +603,6 @@ function LessonSegmentCard({
                   setPromptOpen(false);
                   setDialog(d);
                 }}
-                t={t}
               />
             </PopoverContent>
           </Popover>

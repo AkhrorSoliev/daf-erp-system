@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -9,23 +9,13 @@ import { changeUiLocale, type LocaleState } from "./change-ui-locale";
 import { bindDocumentLanguage } from "./document-language";
 import { loadDictionary } from "./load-dictionary";
 import { writeLocaleCookie } from "./locale-cookie";
-import { DEFAULT_LOCALE, type UiLocale } from "./locales";
-import { translate, type Dictionary, type Params } from "./translate";
+import type { UiLocale } from "./locales";
+import type { Dictionary } from "./translate";
+import { I18nContext, type SetLocaleOptions } from "./use-t";
 
-interface SetLocaleOptions {
-  /** false: the change came from the account, so do not write it back. Default true. */
-  save?: boolean;
-}
-
-interface I18nValue extends LocaleState {
-  setLocale(next: UiLocale, options?: SetLocaleOptions): Promise<boolean>;
-}
-
-const I18nContext = createContext<I18nValue>({
-  locale: DEFAULT_LOCALE,
-  dictionary: {},
-  setLocale: async () => false,
-});
+// The readers live in ./use-t (no heavy imports); re-exported so callers and
+// tests that use or mock `@/i18n/context` are unchanged.
+export { useT, useLocale } from "./use-t";
 
 /**
  * The page's interface language. The dashboard layout reads the device cookie on
@@ -81,15 +71,4 @@ export function I18nProvider({
 
   const value = useMemo(() => ({ ...state, setLocale }), [state, setLocale]);
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
-}
-
-/** `t("Uzbek text", { n: 5 })` in the page's language; the Uzbek text when it has no translation. */
-export function useT(): (source: string, params?: Params) => string {
-  const { locale, dictionary } = useContext(I18nContext);
-  return useCallback((source: string, params?: Params) => translate(locale, dictionary, source, params), [locale, dictionary]);
-}
-
-export function useLocale(): { locale: UiLocale; setLocale: I18nValue["setLocale"] } {
-  const { locale, setLocale } = useContext(I18nContext);
-  return { locale, setLocale };
 }
