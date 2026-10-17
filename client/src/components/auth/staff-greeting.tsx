@@ -13,28 +13,30 @@ const GREETING_REDUCED_MOTION_MS = 700;
 type Greeted = Pick<AuthUser, "firstName" | "photo">;
 
 /**
- * The staff greeting after a sign-in, on the Daftar sheet: the employee's
- * photo (their initial when there is none) and their name. Every way a staff
- * member signs in shows it — the password form, «Telegram orqali kirish» and
- * the Telegram Mini App. Three rows of photo, then text rows: the sheet's row
- * rule holds.
+ * The staff greeting after a sign-in, in place of the form on the sign-in
+ * page: the employee's photo (their initial when there is none) and their
+ * name. Every way a staff member signs in shows it — the password form,
+ * «Telegram orqali kirish» and the Telegram Mini App. Motion is the
+ * `.sign-in-greet-*` classes in globals.css.
  */
 export function Greeting({ user }: { user: Greeted }) {
   return (
-    <div role="status" className="flex flex-col">
-      <Avatar className="daftar-greet-photo size-24 border-2 border-primary after:hidden">
+    <div role="status" className="flex flex-col items-start gap-4">
+      <Avatar className="sign-in-greet-photo size-20 border-2 border-primary after:hidden">
         {user.photo ? <AvatarImage src={user.photo} alt="" /> : null}
-        <AvatarFallback className="bg-background text-3xl text-primary">
+        <AvatarFallback className="bg-background text-2xl font-semibold text-primary">
           {user.firstName.charAt(0).toUpperCase()}
         </AvatarFallback>
       </Avatar>
-      <p className="daftar-row daftar-greet-fade text-sm text-muted-foreground [animation-delay:0.3s]">
-        Xush kelibsiz,
-      </p>
-      <p className="daftar-hand daftar-greet-write translate-y-2 truncate text-[2.75rem] leading-[4rem] font-medium text-primary">
-        {user.firstName}
-      </p>
-      <p className="daftar-row daftar-greet-fade text-sm text-muted-foreground [animation-delay:1.4s]">
+      <div className="w-full">
+        <p className="sign-in-greet-fade text-sm text-muted-foreground [animation-delay:0.3s]">
+          Xush kelibsiz,
+        </p>
+        <p className="sign-in-greet-name truncate text-3xl font-semibold tracking-tight text-primary">
+          {user.firstName}
+        </p>
+      </div>
+      <p className="sign-in-greet-fade text-sm text-muted-foreground [animation-delay:1.1s]">
         Kabinet ochilmoqda…
       </p>
     </div>
