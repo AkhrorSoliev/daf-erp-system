@@ -13,7 +13,6 @@ import { ReportsProfitCompositionService } from './reports-profit-composition.se
 import { PrismaService } from '../prisma/prisma.service';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import type { PermissionKey } from '../common/permissions/permission-catalog';
-import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 
 describe('ReportsController', () => {
   let controller: ReportsController;
@@ -51,12 +50,6 @@ describe('ReportsController', () => {
     // the controller no longer asks for it.
     getOwnMonthProfit: jest.fn().mockResolvedValue({ ownMonthProfit: null }),
     getStudentPaymentsFilterOptions: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsSummary: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsDynamics: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsReasons: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsGroupBy: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsByReason: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsByStatus: jest.fn().mockResolvedValue({}),
     getDebtWriteOffsSummary: jest.fn().mockResolvedValue({
       totalAmount: 0,
       count: 0,
@@ -167,16 +160,8 @@ describe('ReportsController', () => {
         'getAttendanceByGroup',
         'getAttendanceByCourse',
         'getGroupAnalytics',
-        'getDepartedStudentsSummary',
-        'getDepartedStudentsDynamics',
-        'getDepartedStudentsByStatus',
-        'getDepartedStudentsReasons',
         'getTeacherChangeReasons',
-        'getTransferReasons',
-        'getDepartedStudentsByReason',
-        'getDepartedStudentsGroupBy',
         'getTeacherChangesList',
-        'getTransferredList',
         'getDepartedAfterTeacherChangeList',
       ],
     },
@@ -495,47 +480,6 @@ describe('ReportsController', () => {
         10001,
         '2026-08',
       );
-    });
-  });
-
-  describe('departed students — branch scope', () => {
-    const september = {
-      startDate: '2026-09-01',
-      endDate: '2026-09-30',
-    } as DepartedStudentsSummaryQueryDto;
-
-    it('hands the summary the branch list instead of narrowing it to one branch', async () => {
-      await controller.getDepartedStudentsSummary(september, 1001, [3, 7]);
-      expect(mockService.getDepartedStudentsSummary).toHaveBeenLastCalledWith(
-        1001,
-        {
-          scope: [3, 7],
-          startDate: '2026-09-01',
-          endDate: '2026-09-30',
-        },
-      );
-    });
-
-    it('hands the dynamics chart the date range', async () => {
-      await controller.getDepartedStudentsDynamics(
-        { startDate: '2026-07-01', endDate: '2026-09-30' },
-        1001,
-        null,
-      );
-      expect(mockService.getDepartedStudentsDynamics).toHaveBeenLastCalledWith(
-        1001,
-        {
-          scope: null,
-          startDate: '2026-07-01',
-          endDate: '2026-09-30',
-        },
-      );
-    });
-
-    it('refuses a caller whose scope resolved to no branch', () => {
-      expect(() =>
-        controller.getDepartedStudentsSummary(september, 1001, []),
-      ).toThrow(ForbiddenException);
     });
   });
 

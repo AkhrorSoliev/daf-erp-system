@@ -8,8 +8,6 @@ import { ReportsFinancialService } from './reports-financial.service';
 import { ReportsDebtHistoryService } from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
-import { ReportsDepartedStudentsService } from './reports-departed-students.service';
-import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
 import { ReportsCenterActivityService } from './reports-center-activity.service';
@@ -186,8 +184,6 @@ describe('ReportsService', () => {
         ReportsDebtHistoryService,
         ReportsPaymentsService,
         ReportsStudentPaymentsService,
-        ReportsDepartedStudentsService,
-        ReportsDepartedListsService,
         ReportsDepartedReasonsService,
         ReportsTeacherChangesService,
         ReportsCenterActivityService,
@@ -552,161 +548,6 @@ describe('ReportsService', () => {
     });
   });
 
-  describe('getDepartedStudentsSummary', () => {
-    // Only the teacher-change metrics are covered here; departures have their own spec.
-    const baseParams = {
-      scope: null,
-      startDate: '2026-03-01',
-      endDate: '2026-03-31',
-    };
-
-    it('counts a departure by the freeze that started it, even after the enrollment was closed later', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      prisma.student.count.mockResolvedValueOnce(0);
-      mockTeacherChangeDepartures(prisma);
-
-      const result = await service.getDepartedStudentsSummary(1, baseParams);
-
-      expect(result.totalTeacherChanges).toBe(1);
-      // e1 and e3 froze inside the window; e2 froze before the change.
-      expect(result.departedAfterTeacherChange).toBe(2);
-      // "Left" after a teacher change = DROPPED or FROZEN.
-      const enrWhere = prisma.enrollment.findMany.mock.calls[0][0].where;
-      expect(enrWhere.status).toEqual({ in: ['DROPPED', 'FROZEN'] });
-    });
-
-    it('skips teacher changes with no lessons conducted after', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      prisma.student.count.mockResolvedValueOnce(0);
-      prisma.groupTeacherHistory.findMany.mockResolvedValueOnce([
-        { id: 'ch1', groupId: 'g1', createdAt: new Date('2026-03-05') },
-      ]);
-      prisma.attendance.findMany.mockResolvedValueOnce([]);
-
-      const result = await service.getDepartedStudentsSummary(1, baseParams);
-
-      expect(result.totalTeacherChanges).toBe(1);
-      expect(result.departedAfterTeacherChange).toBe(0);
-    });
-
-    it("counts a student inside two teacher changes' windows once", async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      prisma.student.count.mockResolvedValueOnce(0);
-      mockTeacherChangeDepartures(prisma);
-      prisma.groupTeacherHistory.findMany.mockResolvedValue([
-        {
-          id: 'ch1',
-          groupId: 'g1',
-          previousTeacherIds: [],
-          newTeacherIds: [30002],
-          createdAt: new Date('2026-03-05T05:00:00Z'),
-        },
-        {
-          id: 'ch2',
-          groupId: 'g1',
-          previousTeacherIds: [30002],
-          newTeacherIds: [30003],
-          createdAt: new Date('2026-03-07T05:00:00Z'),
-        },
-      ]);
-
-      const result = await service.getDepartedStudentsSummary(1, baseParams);
-
-      expect(result.totalTeacherChanges).toBe(2);
-      // e1 and e3 stopped inside both windows; each counts once.
-      expect(result.departedAfterTeacherChange).toBe(2);
-    });
-  });
-
-  describe('getDepartedStudentsReasons', () => {
-    const baseParams = {
-      startDate: '2026-03-01',
-      endDate: '2026-03-31',
-    };
-
-    it('returns counts by reason with names, sorted descending', async () => {
-      prisma.enrollment.groupBy.mockResolvedValueOnce([
-        { departureReasonId: 'r1', _count: { _all: 3 } },
-        { departureReasonId: 'r2', _count: { _all: 5 } },
-        { departureReasonId: null, _count: { _all: 2 } },
-      ]);
-      prisma.studentExitReason.findMany.mockResolvedValueOnce([
-        { id: 'r1', name: 'Moliyaviy' },
-        { id: 'r2', name: 'Vaqt yetmasligi' },
-      ]);
-
-      const result = await service.getDepartedStudentsReasons(1, baseParams);
-      expect(result.data.map((d: any) => d.count)).toEqual([5, 3, 2]);
-      expect(result.data[0]).toMatchObject({
-        reasonId: 'r2',
-        reasonName: 'Vaqt yetmasligi',
-      });
-      const nullRow = result.data.find((d: any) => d.reasonId === null);
-      expect(nullRow?.reasonName).toBe("Sababi ko'rsatilmagan");
-    });
-
-    it('returns empty data when no dropped enrollments exist', async () => {
-      prisma.enrollment.groupBy.mockResolvedValueOnce([]);
-      const result = await service.getDepartedStudentsReasons(1, baseParams);
-      expect(result.data).toEqual([]);
-      // no follow-up reason lookup needed
-      expect(prisma.studentExitReason.findMany).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getDepartedStudentsByReason', () => {
-    const baseParams = {
-      startDate: '2026-03-01',
-      endDate: '2026-03-31',
-    };
-
-    it('returns enrollment-level DROPPED rows flattened', async () => {
-      const row = {
-        id: 'e1',
-        createdAt: new Date('2026-01-01'),
-        statusChangedAt: new Date('2026-03-10'),
-        statusChangeReason: 'Moliyaviy',
-        departureReasonId: 'r1',
-        student: { id: 10001, firstName: 'Ali', lastName: 'Valiyev' },
-        group: {
-          id: 'g1',
-          name: 'B1-01',
-          branch: { id: 1, name: 'Bosh' },
-          course: { id: 'c1', name: 'A1' },
-          teachers: [
-            { teacher: { id: 30001, firstName: 'Feruz', lastName: 'Ustoz' } },
-          ],
-        },
-      };
-      prisma.$transaction.mockResolvedValueOnce([[row], 1]);
-
-      const result = await service.getDepartedStudentsByReason(1, baseParams);
-      expect(result.total).toBe(1);
-      expect(result.data[0]).toMatchObject({
-        id: 'e1',
-        student: { id: 10001, fullName: 'Ali Valiyev' },
-        group: { id: 'g1', name: 'B1-01' },
-        branch: { id: 1, name: 'Bosh' },
-        course: { id: 'c1', name: 'A1' },
-        teachers: [{ id: 30001, fullName: 'Feruz Ustoz' }],
-        reason: 'Moliyaviy',
-        departureReasonId: 'r1',
-        departedAt: new Date('2026-03-10').toISOString(),
-      });
-    });
-
-    it('clamps pageSize to 100 and page to >= 1', async () => {
-      prisma.$transaction.mockResolvedValueOnce([[], 0]);
-      const result = await service.getDepartedStudentsByReason(1, {
-        ...baseParams,
-        page: 0,
-        pageSize: 9999,
-      });
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(100);
-    });
-  });
-
   describe('getDepartedAfterTeacherChangeList', () => {
     it('lists who left within 5 lessons, dated by the stop that started their absence', async () => {
       mockTeacherChangeDepartures(prisma);
@@ -753,23 +594,6 @@ describe('ReportsService', () => {
       // Counts both DROPPED (guruhsiz qoldi) and FROZEN (muzlatildi).
       const enrWhere = prisma.enrollment.findMany.mock.calls[0][0].where;
       expect(enrWhere.status).toEqual({ in: ['DROPPED', 'FROZEN'] });
-    });
-
-    it('lists exactly as many students as the retention KPI counts', async () => {
-      mockTeacherChangeDepartures(prisma);
-      prisma.user.findMany.mockResolvedValue([]);
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      prisma.student.count.mockResolvedValueOnce(0);
-      const range = { startDate: '2026-03-01', endDate: '2026-03-31' };
-
-      const summary = await service.getDepartedStudentsSummary(1, {
-        ...range,
-        scope: null,
-      });
-      const rows = await service.getDepartedAfterTeacherChangeList(1, range);
-
-      expect(rows).toHaveLength(summary.departedAfterTeacherChange);
-      expect(rows.map((r) => r.enrollmentId).sort()).toEqual(['e1', 'e3']);
     });
 
     it('returns empty when there are no teacher changes', async () => {

@@ -24,13 +24,13 @@ describe('DepartedController', () => {
     controller = module.get(DepartedController);
   });
 
-  it('overview is gated by reports.students, like the old summary', () => {
+  it('overview is gated by reports.students, like the kept teacher-change drill-downs', () => {
     expect(routeAccess(DepartedController, 'overview')).toEqual({
       kind: 'can',
       keys: ['reports.students'],
     });
     expect(defaultRolesOf(DepartedController, 'overview')).toEqual(
-      defaultRolesOf(ReportsController, 'getDepartedStudentsSummary'),
+      defaultRolesOf(ReportsController, 'getTeacherChangesList'),
     );
   });
 

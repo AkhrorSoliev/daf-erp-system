@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { buildDepartedEnrollmentWhere } from './shared/departed-filter';
 import { loadTeacherChangeDepartures } from './shared/teacher-change-departures';
 import { equalsOrIn } from '../common/dto/to-array';
 import { tashkentRangeUtc } from '../common/date/tashkent';
@@ -108,106 +107,6 @@ export class ReportsTeacherChangesService {
         ? `${c.changedBy.firstName} ${c.changedBy.lastName}`
         : null,
     }));
-  }
-
-  /**
-   * Drill-down: transferred enrollments, optionally filtered by transferReasonId.
-   * Drives the "Transfer sabablari" chart's drill-down dialog.
-   */
-  async getTransferredList(
-    companyId: number,
-    params: {
-      branchId?: number;
-      courseId?: string[];
-      teacherIds?: number[];
-      startDate: string;
-      endDate: string;
-      page?: number;
-      pageSize?: number;
-      transferReasonId?: string;
-    },
-  ) {
-    const page = Math.max(1, params.page ?? 1);
-    const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 10));
-    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
-    // EXCLUSIVE start of the day after (see common/date/tashkent).
-    const { gte: start, lt: end } = tashkentRangeUtc(
-      params.startDate,
-      params.endDate,
-    );
-
-    const where: any = {
-      ...buildDepartedEnrollmentWhere(companyId, params),
-      status: 'TRANSFERRED' as const,
-      statusChangedAt: { gte: start, lt: end },
-    };
-    if (params.transferReasonId !== undefined) {
-      where.transferReasonId =
-        params.transferReasonId === 'null' ? null : params.transferReasonId;
-    }
-
-    const [rows, total] = await this.prisma.$transaction([
-      this.prisma.enrollment.findMany({
-        where,
-        orderBy: { statusChangedAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        select: {
-          id: true,
-          createdAt: true,
-          statusChangedAt: true,
-          transferredToId: true,
-          transferReasonId: true,
-          student: {
-            select: { id: true, firstName: true, lastName: true },
-          },
-          group: {
-            select: {
-              id: true,
-              name: true,
-              branch: { select: { id: true, name: true } },
-              course: { select: { id: true, name: true } },
-            },
-          },
-          transferReason: { select: { id: true, name: true } },
-        },
-      }),
-      this.prisma.enrollment.count({ where }),
-    ]);
-
-    const targetIds = Array.from(
-      new Set(rows.map((r) => r.transferredToId).filter(Boolean) as string[]),
-    );
-    const targets = targetIds.length
-      ? await this.prisma.group.findMany({
-          where: { id: { in: targetIds } },
-          select: { id: true, name: true },
-        })
-      : [];
-    const targetMap = new Map(targets.map((g) => [g.id, g.name]));
-
-    const data = rows.map((r) => ({
-      id: r.id,
-      student: {
-        id: r.student.id,
-        fullName: `${r.student.firstName} ${r.student.lastName}`,
-      },
-      fromGroup: r.group ? { id: r.group.id, name: r.group.name } : null,
-      toGroup: r.transferredToId
-        ? {
-            id: r.transferredToId,
-            name: targetMap.get(r.transferredToId) ?? '—',
-          }
-        : null,
-      branch: r.group?.branch ?? null,
-      course: r.group?.course ?? null,
-      transferredAt: r.statusChangedAt?.toISOString() ?? null,
-      reason: r.transferReason
-        ? { id: r.transferReason.id, name: r.transferReason.name }
-        : null,
-    }));
-
-    return { data, total, page, pageSize };
   }
 
   /**

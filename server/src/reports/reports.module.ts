@@ -11,8 +11,6 @@ import { ReportsFinancialService } from './reports-financial.service';
 import { ReportsDebtHistoryService } from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
-import { ReportsDepartedStudentsService } from './reports-departed-students.service';
-import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
 import { ReportsCenterActivityService } from './reports-center-activity.service';
@@ -51,8 +49,6 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsDebtHistoryService,
     ReportsPaymentsService,
     ReportsStudentPaymentsService,
-    ReportsDepartedStudentsService,
-    ReportsDepartedListsService,
     ReportsDepartedReasonsService,
     ReportsTeacherChangesService,
     ReportsCenterActivityService,

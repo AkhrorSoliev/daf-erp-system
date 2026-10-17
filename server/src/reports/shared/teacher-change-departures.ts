@@ -11,7 +11,7 @@ import {
 
 /**
  * Who "left" within 5 lessons of a teacher change — the one reader behind the
- * retention card's count (`ReportsDepartedStudentsService`) and its drill-down
+ * retention card's count (`DepartedOverviewService`) and its drill-down
  * list (`ReportsTeacherChangesService`), so the two cannot disagree.
  *
  * The window runs from the change to the 5th distinct `Attendance` date after
