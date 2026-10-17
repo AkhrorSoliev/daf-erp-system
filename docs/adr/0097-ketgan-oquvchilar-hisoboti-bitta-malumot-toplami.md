@@ -69,8 +69,11 @@ turlicha o'qirdi, va raqamlar bir-biriga to'g'ri kelmasdi:
 2. Ustoz almashishning ikkala oynasi (`teacher-changes-list`,
    `departed-after-change`) bir nechta filialga ega chaqiruvchini bitta
    filialga toraytiradi (`scoped()`); karta esa butun filial ro'yxatini oladi.
-3. Oxirgi ikki oy dastlabki: muzlatish 60 kun kutiladi (ADR-0035), shuning uchun
-   ularning ustuni keyin o'zgarishi mumkin.
+3. Qaytish muddati hali tugamagan oylar dastlabki (odatda oxirgi 2–3 oy): muzlatish
+   60 kun, guruhdan chiqish 21 kun kutiladi (ADR-0035), shuning uchun ularning
+   ustuni keyin o'zgarishi mumkin.
+4. «Kursni tugatdi» o'quvchilar imtihon va Teilnahmebestätigung tizimda paydo
+   bo'lguncha ketgan sanaladi (yuqoridagi «Qaror»).
 
 ## Ko'rib chiqilgan muqobillar
 
