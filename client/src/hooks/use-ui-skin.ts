@@ -9,7 +9,7 @@ import { skinOrDefault, type UiSkinId } from "@/lib/ui-skins";
 import { useAuth } from "@/hooks/use-auth";
 
 /**
- * The signed-in user's design skin and the way to change it (ADR-0097). The
+ * The signed-in user's design skin and the way to change it (ADR-0101). The
  * change shows at once (the store feeds `SkinSync`) and is saved on the
  * account; a failed save puts the old skin back with a toast.
  */

@@ -373,9 +373,9 @@ model User {
   balance        Int        @default(0)
   login          String?
   position       String?
-  // The staff portals' design skin (ADR-0097): one of common/ui-skins.ts, null = the default.
+  // The staff portals' design skin (ADR-0101): one of common/ui-skins.ts, null = the default.
   uiSkin         String?
-  // The staff portals' interface language (ADR-0098): one of common/ui-locales.ts, null = the default.
+  // The staff portals' interface language (ADR-0102): one of common/ui-locales.ts, null = the default.
   uiLocale       String?
   password       String?
   // Bumped by every password write and by "log out other devices"; every

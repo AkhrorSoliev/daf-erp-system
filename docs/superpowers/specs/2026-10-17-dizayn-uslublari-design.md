@@ -81,7 +81,7 @@ shart). Serif yo'q: CEO «AI sayt» ko'rinishini xohlamagan.
 - **Marshrut manifesti:** yangi marshrut `route-access.snapshot.json` va `branch-route-policy.ts`
   ga (`SELF`: faqat o'ziga tegishli) qo'shiladi, `permission-routes.spec.ts` shuni talab qiladi.
   Tarixga (`EntityHistory`) yozilmaydi: bu shaxsiy sozlama, audit uchun shovqin.
-- **ADR-0097** (ma'lumot modeli o'zgaradi): `User.uiSkin` shaxsiy sozlama, akkauntda saqlanadi,
+- **ADR-0101** (ma'lumot modeli o'zgaradi): `User.uiSkin` shaxsiy sozlama, akkauntda saqlanadi,
   tarix yozilmaydi, kirmagan odamga ko'rsatilmaydi. Raqam `main` dagi oxirgisidan keyingisi
   bo'lishi kerak (PR oldidan `docs/adr/README.md` tekshiriladi, to'qnashsa `git mv`).
 

@@ -1,8 +1,8 @@
-# ADR-0098 — Interfeys tili: matn kalit, akkaunt va qurilmada saqlanadi
+# ADR-0102 — Interfeys tili: matn kalit, akkaunt va qurilmada saqlanadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-17
-**Bog'liq:** ADR-0097, `client/src/i18n/`, `server/src/common/ui-locales.ts`, `server/src/users/users.service.ts` (`updateUiLocale`), `client/src/i18n/context.tsx` (`I18nProvider`, `useT`, `useLocale`), `client/src/i18n/change-ui-locale.ts`, `docs/superpowers/specs/2026-10-17-tillar-design.md`, `docs/superpowers/plans/2026-10-17-tillar.md`
+**Bog'liq:** ADR-0101, `client/src/i18n/`, `server/src/common/ui-locales.ts`, `server/src/users/users.service.ts` (`updateUiLocale`), `client/src/i18n/context.tsx` (`I18nProvider`, `useT`, `useLocale`), `client/src/i18n/change-ui-locale.ts`, `docs/superpowers/specs/2026-10-17-tillar-design.md`, `docs/superpowers/plans/2026-10-17-tillar.md`
 
 ## Kontekst
 
@@ -30,7 +30,7 @@ Admin va o'qituvchi paneli to'liq o'zbekcha lotinda, matnlar kodga qo'lda yozilg
 - **Kalit nomlari (`nav.home`)**: lug'at tartibliroq, lekin kod o'qilmay qoladi (`t("nav.home")` nima chiqarishi ko'rinmaydi), har matn uchun ikki joyni tahrirlash kerak. Tanlanmadi.
 - **DOM'ni ish vaqtida tarjima qilish** (matn tugunlarini almashtirish): kodni o'zgartirmaydi, lekin mo'rt: dinamik matn, React qayta chizishi va parametrli matnlarda buziladi. Tanlanmadi.
 - **`next-intl`**: tayyor kutubxona (marshrut prefikslarisiz sozlash ham bor), lekin qo'shimcha bog'liqlik va o'zining xabar-kalit formatini olib keladi: 15 mingga yaqin mavjud matnni kalitga ko'chirish kerak bo'lardi. Bizga yuz qator atrofidagi o'z kodimiz yetadi (`translate`, `I18nProvider`, `changeUiLocale`). Tanlanmadi.
-- **Faqat cookie (akkauntsiz)**: bazaga tegmaydi, lekin har qurilmada qayta tanlash kerak. CEO tanlamadi (ADR-0097 dagi sabab).
+- **Faqat cookie (akkauntsiz)**: bazaga tegmaydi, lekin har qurilmada qayta tanlash kerak. CEO tanlamadi (ADR-0101 dagi sabab).
 
 ## Oqibatlar
 

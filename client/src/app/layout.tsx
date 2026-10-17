@@ -41,7 +41,7 @@ const fontBody = Nunito({
   display: "swap",
 });
 
-// The staff portals' other design skins (ADR-0097). Each is loaded only when
+// The staff portals' other design skins (ADR-0101). Each is loaded only when
 // its skin is chosen: `preload: false` keeps them out of the page's head, and
 // the browser fetches a font file only once the skin applies it (`skins.css`
 // re-points `--font-plex` at one of these).

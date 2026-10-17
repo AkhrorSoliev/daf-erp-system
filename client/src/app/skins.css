@@ -1,4 +1,4 @@
-/* Design skins for the staff portals (admin, teacher), ADR-0097.
+/* Design skins for the staff portals (admin, teacher), ADR-0101.
    A skin is <html data-skin="…">. Each block keeps Daftar's lightness and
    chroma and swaps the hue, so a skin reads as the same paper with another ink.
    Status tokens (--success --warning --info --destructive) and --chart-2..5 are

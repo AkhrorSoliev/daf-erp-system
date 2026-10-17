@@ -44,7 +44,6 @@ const ru: Dictionary = {
   "Lidlar hisoboti": "Отчёт по лидам",
   "Xodimlar KPI": "KPI сотрудников",
   "Marketing": "Маркетинг",
-  "Markaz faoliyat statistikasi": "Статистика активности центра",
   "Davomat statistikasi": "Статистика посещаемости",
   "Bot hisoboti": "Отчёт по боту",
 

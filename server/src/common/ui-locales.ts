@@ -1,5 +1,5 @@
 /**
- * The staff portals' interface languages (ADR-0098). `User.uiLocale` holds one
+ * The staff portals' interface languages (ADR-0102). `User.uiLocale` holds one
  * of these ids; null means the default. `client/src/i18n/locales.ts` mirrors
  * this list and its test compares the two.
  */

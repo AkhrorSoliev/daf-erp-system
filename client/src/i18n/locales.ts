@@ -1,5 +1,5 @@
 /**
- * The staff portals' interface languages (ADR-0098). The ids mirror
+ * The staff portals' interface languages (ADR-0102). The ids mirror
  * `server/src/common/ui-locales.ts` (locales.test.ts compares them); a label is
  * always written in its own language, so a person finds theirs in any language.
  */

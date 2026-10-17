@@ -91,7 +91,7 @@ Create `server/src/common/ui-skins.ts`:
 
 ```ts
 /**
- * The staff portals' design skins (ADR-0097): a colour set plus a font, chosen
+ * The staff portals' design skins (ADR-0101): a colour set plus a font, chosen
  * per account. `User.uiSkin` holds one of these ids; null means the default.
  * `client/src/lib/ui-skins.ts` mirrors this list and its test compares the two.
  */
@@ -105,14 +105,14 @@ export const DEFAULT_UI_SKIN: UiSkinId = 'daftar';
 In `server/prisma/schema.prisma`, inside `model User`, directly after the line `position       String?`, add:
 
 ```prisma
-  // The staff portals' design skin (ADR-0097): one of common/ui-skins.ts, null = the default.
+  // The staff portals' design skin (ADR-0101): one of common/ui-skins.ts, null = the default.
   uiSkin         String?
 ```
 
 Create `server/prisma/migrations/20261017120000_user_ui_skin/migration.sql`:
 
 ```sql
--- Xodimning dizayn uslubi (ADR-0097). null = «daftar» (boshlang'ich).
+-- Xodimning dizayn uslubi (ADR-0101). null = «daftar» (boshlang'ich).
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "uiSkin" TEXT;
 ```
 
@@ -271,7 +271,7 @@ Create `server/src/users/dto/update-ui-skin.dto.ts`:
 import { IsIn } from 'class-validator';
 import { UI_SKIN_IDS } from '../../common/ui-skins';
 
-/** Your own design skin (ADR-0097): one of the five known ids, nothing else. */
+/** Your own design skin (ADR-0101): one of the five known ids, nothing else. */
 export class UpdateUiSkinDto {
   @IsIn(UI_SKIN_IDS, { message: "Noma'lum dizayn uslubi" })
   skin!: string;
@@ -282,7 +282,7 @@ In `server/src/users/users.service.ts`, after the `updateProfile` method, add:
 
 ```ts
   /**
-   * Your own design skin (ADR-0097). A personal setting: written for the
+   * Your own design skin (ADR-0101). A personal setting: written for the
    * caller's row only and not recorded in the entity history.
    */
   async updateUiSkin(id: number, skin: string) {
@@ -529,7 +529,7 @@ Expected: FAIL — the four modules/`patchUser` do not exist.
 
 ```ts
 /**
- * The staff portals' design skins (ADR-0097): a colour set plus a font. The
+ * The staff portals' design skins (ADR-0101): a colour set plus a font. The
  * ids mirror `server/src/common/ui-skins.ts` (ui-skins.test.ts compares them);
  * the colours and fonts themselves live in `app/skins.css` and `app/layout.tsx`.
  * `swatch` is only the dot drawn in the menu.
@@ -805,7 +805,7 @@ In `client/src/app/layout.tsx`:
 2. After the `fontBody` constant add:
 
 ```ts
-// The staff portals' other design skins (ADR-0097). Each is loaded only when
+// The staff portals' other design skins (ADR-0101). Each is loaded only when
 // its skin is chosen: `preload: false` keeps them out of the page's head, and
 // the browser fetches a font file only once the skin applies it (`skins.css`
 // re-points `--font-plex` at one of these).
@@ -859,7 +859,7 @@ import { skinAttribute } from "@/lib/ui-skins";
 
 /**
  * Keeps `<html data-skin>` equal to the signed-in user's design skin
- * (ADR-0097). The inline boot script in `layout.tsx` has already set it from
+ * (ADR-0101). The inline boot script in `layout.tsx` has already set it from
  * the cookie before first paint; this follows the store afterwards (a skin
  * chosen in the menu, a refreshed session). It does nothing while nobody is
  * signed in: at mount the store is still empty for one tick (`hydrate` runs
@@ -961,7 +961,7 @@ import { skinOrDefault, type UiSkinId } from "@/lib/ui-skins";
 import { useAuth } from "@/hooks/use-auth";
 
 /**
- * The signed-in user's design skin and the way to change it (ADR-0097). The
+ * The signed-in user's design skin and the way to change it (ADR-0101). The
  * change shows at once (the store feeds `SkinSync`) and is saved on the
  * account; a failed save puts the old skin back with a toast.
  */
@@ -1039,7 +1039,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ### Task 6: Docs, ADR, full checks
 
 **Files:**
-- Create: `docs/adr/0097-xodimning-dizayn-uslubi-akkauntda.md`
+- Create: `docs/adr/0101-xodimning-dizayn-uslubi-akkauntda.md`
 - Modify: `docs/adr/README.md` (index row + ADR numbering check)
 - Modify: `client/CLAUDE.md` (new subsection after «Header User Menu and Sidebar Footer (admin panel)»)
 - Modify: `client/src/qollanma/kontent/boshlash/interfeys.mdx`, `client/src/qollanma/yangiliklar.ts`
@@ -1047,12 +1047,12 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: ADR**
 
-Before writing, confirm the number is free: run `ls docs/adr | tail -3` and `git fetch origin main` then `git ls-tree --name-only origin/main docs/adr/ | tail -3` (as separate commands). If `0097` is taken on `main`, use the next free number everywhere below (file name, title, README row).
+Before writing, confirm the number is free: run `ls docs/adr | tail -3` and `git fetch origin main` then `git ls-tree --name-only origin/main docs/adr/ | tail -3` (as separate commands). If `0101` is taken on `main`, use the next free number everywhere below (file name, title, README row).
 
-Create `docs/adr/0097-xodimning-dizayn-uslubi-akkauntda.md` (Uzbek, same shape as ADR-0094: title, **Holati**, **Sana**, **Bog'liq**, Kontekst, Qaror, Taqiqlanadi, Muqobillar, Oqibatlar):
+Create `docs/adr/0101-xodimning-dizayn-uslubi-akkauntda.md` (Uzbek, same shape as ADR-0094: title, **Holati**, **Sana**, **Bog'liq**, Kontekst, Qaror, Taqiqlanadi, Muqobillar, Oqibatlar):
 
 ```markdown
-# ADR-0097 — Xodimning dizayn uslubi akkauntda saqlanadi; uslub tokenlarni almashtiradi, holat ranglarini emas
+# ADR-0101 — Xodimning dizayn uslubi akkauntda saqlanadi; uslub tokenlarni almashtiradi, holat ranglarini emas
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-17
@@ -1092,7 +1092,7 @@ Create `docs/adr/0097-xodimning-dizayn-uslubi-akkauntda.md` (Uzbek, same shape a
 In `docs/adr/README.md` add a row after the 0096 row (same table format):
 
 ```markdown
-| [0097](0097-xodimning-dizayn-uslubi-akkauntda.md) | Xodimning dizayn uslubi akkauntda; uslub tokenlarni almashtiradi, holat ranglarini emas | Qabul qilindi | 2026-10-17 |
+| [0101](0101-xodimning-dizayn-uslubi-akkauntda.md) | Xodimning dizayn uslubi akkauntda; uslub tokenlarni almashtiradi, holat ranglarini emas | Qabul qilindi | 2026-10-17 |
 ```
 
 - [ ] **Step 2: `client/CLAUDE.md`**
@@ -1100,7 +1100,7 @@ In `docs/adr/README.md` add a row after the 0096 row (same table format):
 Insert after the «Header User Menu and Sidebar Footer (admin panel)» section (before «### Settings Page (`/settings`)»), in English:
 
 ```markdown
-### Design skins (admin and teacher portals, ADR-0097)
+### Design skins (admin and teacher portals, ADR-0101)
 
 - **A skin is `<html data-skin="…">`.** Five skins: `daftar` (default, no attribute), `ormon`, `gilos`, `grafit`, `qum` — a colour set plus a font. The registry is `src/lib/ui-skins.ts` (mirrored by `server/src/common/ui-skins.ts`; `ui-skins.test.ts` compares the two). The colours live in `src/app/skins.css`, **not** in `globals.css`, and the fonts are loaded in `layout.tsx` with `preload: false`, so only the chosen skin's font file is fetched.
 - **The font is switched through `--font-plex`.** `@theme inline` copies `var(--font-plex)` into the font utilities, so overriding `--font-sans` does nothing; each skin has an `html[data-skin="x"] { --font-plex: var(--font-x); }` rule.
@@ -1126,8 +1126,8 @@ If a check fails because of this branch, fix the cause and rerun that check and 
 - [ ] **Step 5: Commit the docs**
 
 ```bash
-git add docs/adr/0097-xodimning-dizayn-uslubi-akkauntda.md docs/adr/README.md client/CLAUDE.md client/src/qollanma docs/superpowers/specs/2026-10-17-dizayn-uslublari-design.md
-git commit -m "docs: design skins — ADR-0097, CLAUDE.md section, user guide
+git add docs/adr/0101-xodimning-dizayn-uslubi-akkauntda.md docs/adr/README.md client/CLAUDE.md client/src/qollanma docs/superpowers/specs/2026-10-17-dizayn-uslublari-design.md
+git commit -m "docs: design skins — ADR-0101, CLAUDE.md section, user guide
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
@@ -1141,7 +1141,7 @@ Report the commit list and the check results. The controller then verifies in th
 ## Appendix A — `client/src/app/skins.css` (verbatim)
 
 ```css
-/* Design skins for the staff portals (admin, teacher), ADR-0097.
+/* Design skins for the staff portals (admin, teacher), ADR-0101.
    A skin is <html data-skin="…">. Each block keeps Daftar's lightness and
    chroma and swaps the hue, so a skin reads as the same paper with another ink.
    Status tokens (--success --warning --info --destructive) and --chart-2..5 are

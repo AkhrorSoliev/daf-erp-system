@@ -117,7 +117,7 @@ o'girishning har bir harf qoidasini.
   `users.controller.ts` da `@Patch(':id')` dan oldin. Marshrut manifestiga qo'shiladi
   (`route-access.snapshot.json`, `branch-route-policy.ts` `SELF`).
 - **`formatUser`** `uiLocale` ni qaytaradi (kirish, `refresh`, Mini App). `AuthUser.uiLocale?: string | null`.
-- **ADR-0098:** shaxsiy sozlama akkauntda, qurilmada cookie; matn kalit; serverdan keladigan matnlar
+- **ADR-0102:** shaxsiy sozlama akkauntda, qurilmada cookie; matn kalit; serverdan keladigan matnlar
   o'zbekcha lotin qoladi.
 
 ### 6. Qobiq: shu bo'lakda tarjima bo'ladigan joylar
@@ -205,7 +205,7 @@ tanlagich. Ungacha login o'zbekcha lotin.
 
 ## Chiqarish tartibi
 
-Migratsiya (qo'lda), server, klient — ADR-0097 dagidek, tartib qat'iy. Eski klient yangi maydonni ko'rmaydi.
+Migratsiya (qo'lda), server, klient — ADR-0101 dagidek, tartib qat'iy. Eski klient yangi maydonni ko'rmaydi.
 Server migratsiyadan oldin chiqsa, Prisma `User` ni o'qiganda hali yo'q `uiLocale` ustunini so'raydi va
 kirish bilan `refresh` yiqiladi. Klient serverdan oldin chiqsa, eski server `/users/ui-locale` ni
 `PATCH /users/:id` deb ushlaydi va kirgan xodimning har til tanlovini rad etadi (huquqi yo'qda 403,

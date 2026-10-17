@@ -1,4 +1,4 @@
-# ADR-0097 — Xodimning dizayn uslubi akkauntda saqlanadi; uslub tokenlarni almashtiradi, holat ranglarini emas
+# ADR-0101 — Xodimning dizayn uslubi akkauntda saqlanadi; uslub tokenlarni almashtiradi, holat ranglarini emas
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-17

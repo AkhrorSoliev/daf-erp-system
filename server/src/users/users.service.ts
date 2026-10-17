@@ -538,7 +538,7 @@ export class UsersService {
   }
 
   /**
-   * Your own design skin (ADR-0097). A personal setting: written for the
+   * Your own design skin (ADR-0101). A personal setting: written for the
    * caller's row only and not recorded in the entity history.
    */
   async updateUiSkin(id: number, skin: string) {
@@ -551,7 +551,7 @@ export class UsersService {
   }
 
   /**
-   * Your own interface language (ADR-0098). A personal setting: written for
+   * Your own interface language (ADR-0102). A personal setting: written for
    * the caller's row only and not recorded in the entity history.
    */
   async updateUiLocale(id: number, locale: string) {

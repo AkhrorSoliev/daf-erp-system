@@ -1,7 +1,7 @@
 import { msg } from "@/i18n/msg";
 
 /**
- * The staff portals' design skins (ADR-0097): a colour set plus a font. The
+ * The staff portals' design skins (ADR-0101): a colour set plus a font. The
  * ids mirror `server/src/common/ui-skins.ts` (ui-skins.test.ts compares them);
  * the colours and fonts themselves live in `app/skins.css` and `app/layout.tsx`.
  * `swatch` is only the dot drawn in the menu. The labels are names and stay as

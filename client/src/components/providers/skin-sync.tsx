@@ -6,7 +6,7 @@ import { skinAttribute } from "@/lib/ui-skins";
 
 /**
  * Keeps `<html data-skin>` equal to the signed-in user's design skin
- * (ADR-0097). The inline boot script in `layout.tsx` has already set it from
+ * (ADR-0101). The inline boot script in `layout.tsx` has already set it from
  * the cookie before first paint; this follows the store afterwards (a skin
  * chosen in the menu, a refreshed session). It does nothing while nobody is
  * signed in: at mount the store is still empty for one tick (`hydrate` runs
