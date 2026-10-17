@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { MoreVertical, Phone, ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
@@ -48,6 +49,8 @@ interface MobileProfileHeaderProps {
    */
   salaryDueUserId?: number;
   salaryDueScope?: "admin" | "me";
+  /** Makes the salary block a link (a teacher's opens «Oylik»). */
+  salaryDueHref?: string;
   phone?: string | null;
   branches?: Array<{ id: number; name: string }>;
   infoItems?: InfoItem[];
@@ -80,6 +83,7 @@ export function MobileProfileHeader({
   balance,
   salaryDueUserId,
   salaryDueScope = "admin",
+  salaryDueHref,
   phone,
   branches,
   infoItems,
@@ -172,11 +176,19 @@ export function MobileProfileHeader({
       )}
 
       {/* Salary due banner (staff) */}
-      {salaryDueUserId !== undefined && (
-        <div className="mt-3 rounded-md bg-muted/40 px-3 py-2">
-          <SalaryDueCard userId={salaryDueUserId} scope={salaryDueScope} />
-        </div>
-      )}
+      {salaryDueUserId !== undefined &&
+        (salaryDueHref ? (
+          <Link
+            href={salaryDueHref}
+            className="mt-3 block rounded-md bg-muted/40 px-3 py-2 transition-colors hover:bg-muted/60"
+          >
+            <SalaryDueCard userId={salaryDueUserId} scope={salaryDueScope} />
+          </Link>
+        ) : (
+          <div className="mt-3 rounded-md bg-muted/40 px-3 py-2">
+            <SalaryDueCard userId={salaryDueUserId} scope={salaryDueScope} />
+          </div>
+        ))}
 
       {/* Balance banner (student prepaid) */}
       {balance !== undefined && (

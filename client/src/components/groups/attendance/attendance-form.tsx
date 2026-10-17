@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   Loader2,
@@ -15,6 +15,16 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -28,6 +38,10 @@ import {
   OPENS_MINUTES_BEFORE,
 } from "@/lib/attendance-window";
 import { useCan } from "@/hooks/use-permissions";
+import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { registerLeaveGuard, requestLeave } from "@/lib/leave-guard";
+import { isTeacherOnly } from "@/lib/teacher-only";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
@@ -84,6 +98,17 @@ export function AttendanceForm({
   // bu bayroq finalize rejimiga o'tkazadi.
   const [forceFinalizeMode, setForceFinalizeMode] = useState(false);
   const [planSubmitting, setPlanSubmitting] = useState<number | null>(null);
+  // A teacher on a phone: the register has its own bottom bar («Orqaga» and
+  // «Saqlash»), and the cabinet's bottom navigation steps aside.
+  const user = useAuth((s) => s.user);
+  const isMobile = useIsMobile();
+  const bottomBar = isMobile && isTeacherOnly(user?.roles);
+  // The statuses as the register loaded, to tell unsaved marks from saved ones.
+  const [loadedStatuses, setLoadedStatuses] = useState<
+    Map<number, AttendanceStatus | null>
+  >(new Map());
+  // Set while «Saqlanmagan o'zgarishlar» waits for an answer: what to do on «Chiqish».
+  const [leaveAsk, setLeaveAsk] = useState<(() => void) | null>(null);
   // The lesson's real times for this date and the company's lead, from the
   // register's own read: a day moved here can carry times of its own, and the
   // server judges the window on them with the same lead.
@@ -216,6 +241,7 @@ export function AttendanceForm({
         });
       }
       setEntries(map);
+      setLoadedStatuses(new Map(Array.from(map, ([id, e]) => [id, e.status] as const)));
     } catch {
       setStudents([]);
       setDebtorStudents([]);
@@ -409,20 +435,42 @@ export function AttendanceForm({
   // take the empty save and the toast would claim a register was saved.
   const hasMarks = Array.from(entries.values()).some((e) => e.status !== null);
 
+  // Marks that are not saved yet: «orqaga» must not throw them away unasked.
+  const dirty = Array.from(entries.values()).some(
+    (e) => (loadedStatuses.get(e.studentId) ?? null) !== e.status,
+  );
+  const dirtyRef = useRef(false);
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty]);
+  useEffect(
+    () =>
+      registerLeaveGuard((leave) => {
+        if (dirtyRef.current) setLeaveAsk(() => leave);
+        else leave();
+      }),
+    [],
+  );
+  const markedCount = Array.from(entries.values()).filter(
+    (e) => e.status !== null,
+  ).length;
+
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", bottomBar && "pb-24")}>
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onBack}
-            disabled={submitting}
-          >
-            <ArrowLeft className="mr-1.5 size-4" />
-            Orqaga
-          </Button>
+          {!bottomBar && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => requestLeave(onBack)}
+              disabled={submitting}
+            >
+              <ArrowLeft className="mr-1.5 size-4" />
+              Orqaga
+            </Button>
+          )}
           <div>
             <h3 className="text-sm font-semibold">
               {formattedDate}, {dayName}
@@ -626,7 +674,33 @@ export function AttendanceForm({
       )}
 
       {/* Save button */}
-      {!loading && students.length > 0 && !alreadyTakenForTeacher && !planningMode && (
+      {!loading && students.length > 0 && !alreadyTakenForTeacher && !planningMode && bottomBar && (
+        <div className="bg-background fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => requestLeave(onBack)}
+            disabled={submitting}
+          >
+            <ArrowLeft className="mr-1.5 size-4" />
+            Orqaga
+          </Button>
+          <Button
+            className="flex-[2]"
+            onClick={handleSave}
+            disabled={
+              submitting ||
+              isLocked ||
+              unmarkedStudents.length > 0 ||
+              !hasMarks
+            }
+          >
+            {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+            Saqlash · {markedCount}/{markedCount + unmarkedStudents.length}
+          </Button>
+        </div>
+      )}
+      {!loading && students.length > 0 && !alreadyTakenForTeacher && !planningMode && !bottomBar && (
         <div className="sticky bottom-4 flex items-center justify-end gap-3 pt-2">
           {unmarkedStudents.length > 0 && !isLocked && (
             <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 shadow-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
@@ -687,6 +761,36 @@ export function AttendanceForm({
           refreshRows();
         }}
       />
+
+      {/* «Orqaga» with marks that are not saved */}
+      <AlertDialog
+        open={leaveAsk !== null}
+        onOpenChange={(open) => {
+          if (!open) setLeaveAsk(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Saqlanmagan o&apos;zgarishlar bor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Belgilangan davomat saqlanmagan. Chiqsangiz, belgilar yo&apos;qoladi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Qolish</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                const leave = leaveAsk;
+                setLeaveAsk(null);
+                leave?.();
+              }}
+            >
+              Chiqish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* QR Davomat Dialog */}
       <QrAttendanceDialog

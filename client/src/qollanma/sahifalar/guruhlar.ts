@@ -175,7 +175,11 @@ export const guruhlar: QollanmaSahifa[] = [
       "dam olish kuni",
       "filial tanlang",
       "bugunga qaytish",
+      "davomat olish",
+      "boshlanmagan guruhlarim",
+      "oldingi kun",
+      "keyingi kun",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-17",
   },
 ];

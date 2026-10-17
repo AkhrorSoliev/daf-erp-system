@@ -17,6 +17,10 @@ import { LevelBadge } from "./level-badge";
 import { CoveringBadge } from "./covering-badge";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useCan } from "@/hooks/use-permissions";
+import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { isTeacherOnly } from "@/lib/teacher-only";
+import { GroupsCards } from "./groups-cards";
 
 import { formatWeekdays } from "@/lib/weekdays";
 
@@ -36,6 +40,14 @@ export function GroupsTable({
   onStatusChanged,
 }: GroupsTableProps) {
   const canManage = useCan("groups.manage");
+  const user = useAuth((s) => s.user);
+  const isMobile = useIsMobile();
+
+  // A teacher on a phone gets cards: the table would hide their days, time,
+  // room and student count (the Telegram cabinet opens on this list).
+  if (isMobile && isTeacherOnly(user?.roles)) {
+    return <GroupsCards groups={groups} />;
+  }
 
   if (groups.length === 0) {
     return (

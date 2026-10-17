@@ -28,6 +28,13 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-17",
+    sarlavha: "O'qituvchi kabineti: guruhlar, kunlik jadval va davomat",
+    matn: "O'qituvchi Telegramdagi «Kabinet» orqali kirganda endi o'z guruhlari ochiladi (har guruh kartada: kun, vaqt, xona, o'quvchilar soni; hali boshlanmagani — boshlanish sanasi bilan). «Jadval»da bir kunni «‹» va «›» tugmalari bilan almashtirish mumkin va dars kartasidagi «Davomat olish» tugmasi guruhning davomat sahifasini ochadi. Pastda «Boshlanmagan guruhlarim» turadi. O'qituvchiga topshiriq berish tugmasi va «Bosh sahifa» havolasi ko'rinmaydi. Telefonda yon menyu o'rniga pastda panel paydo bo'ldi: Guruhlar, Jadval, Topshiriq, Oylik, Profil. Guruh ichida panel guruh bo'limlariga (Davomat, Darslar, O'quvchilar, Yana) almashadi va birinchi tugma doim guruhlar ro'yxatiga qaytaradi. Davomat ro'yxatida «Orqaga» va «Saqlash» pastda turadi; saqlanmagan belgilar bo'lsa, chiqishdan oldin so'raydi.",
+    rollar: [4],
+    sahifa: { bolim: "guruhlar", sahifa: "jadval" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Xato berilgan qatnashganlik hujjatini bekor qilish",
     matn: "O'quvchi kartasidagi «Hujjatlar» yorlig'ida berilgan hujjat qatoriga uch nuqta tugmasi qo'shildi: u orqali «Bekor qilish»ni tanlab, sababini yozasiz. Bekor qilingan hujjat ro'yxatda chizilgan raqam, belgi va sabab bilan qoladi, PDF'i endi berilmaydi, QR sahifada esa «bekor qilingan» deb chiqadi. Raqam qayta berilmaydi; to'g'ri hujjat yangi raqam bilan beriladi. Bekor qilish o'quvchi tarixiga yoziladi.",
     rollar: [1, 2, 3],
@@ -200,7 +207,7 @@ export const yangiliklar: Yangilik[] = [
     sana: "2026-10-11",
     sarlavha: "Takrorlanuvchi topshiriqlar",
     matn: "Endi topshiriqni takrorlanadigan qilib berish mumkin: berish oynasida «Batafsil» → «Takrorlash» da «Har kuni», «Har hafta» (kunlarini belgilab) yoki «Har oy» (1–28-sana) va vaqtni tanlang. Birinchi topshiriq darhol beriladi, keyingilarini tizim har kuni ertalab 07:00 da beradi; yakshanba va bayramga tushsa — keyingi ish kuniga. Oldingisi bajarilmagan bo'lsa, yangisi berilmaydi. Kartada «Har dushanba» kabi belgi turadi; varaqda takrorlanishni o'zgartirish va to'xtatish mumkin, «Topshiriqlar» sahifasidagi «Takrorlanuvchi» tugmasi hammasini bitta ro'yxatda ko'rsatadi.",
-    rollar: [1, 2, 3, 4, 5],
+    rollar: [1, 2, 3, 5],
     sahifa: { bolim: "boshlash", sahifa: "topshiriqlar" },
   },
   {

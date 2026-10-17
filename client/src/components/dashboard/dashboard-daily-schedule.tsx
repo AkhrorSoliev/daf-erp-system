@@ -55,7 +55,7 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
-function getLessonStatus(
+export function getLessonStatus(
   startTime: string,
   endTime: string,
   now: string
@@ -81,7 +81,7 @@ interface DashboardDailyScheduleProps {
   onAnswered?: () => void;
 }
 
-const attendanceBadge: Record<
+export const attendanceBadge: Record<
   AttendanceStatus,
   { label: string; className: string; icon: typeof CheckCircle2 }
 > = {
