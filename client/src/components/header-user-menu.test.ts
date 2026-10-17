@@ -36,6 +36,9 @@ vi.mock("@/hooks/use-auth", () => {
   });
   return { useAuth };
 });
+vi.mock("@/hooks/use-ui-skin", () => ({
+  useUiSkin: () => ({ skin: "ormon", setSkin: async () => true }),
+}));
 
 import { useAuth } from "@/hooks/use-auth";
 import { HeaderUserMenu } from "./header-user-menu";
@@ -76,6 +79,19 @@ describe("HeaderUserMenu", () => {
   it("labels the trigger with the user's name", () => {
     const html = renderToStaticMarkup(createElement(HeaderUserMenu));
     expect(html).toContain('aria-label="Ali Valiyev"');
+  });
+
+  it("offers the five design skins and marks the current one", () => {
+    const html = renderToStaticMarkup(createElement(HeaderUserMenu));
+    const text = norm(html);
+    expect(text).toContain("Dizayn uslubi");
+    for (const name of ["Daftar", "O'rmon", "Gilos", "Grafit", "Qum"]) {
+      expect(text).toContain(name);
+    }
+    // the colour dots come from the registry
+    for (const swatch of ["#1b2d4e", "#1f4d3a", "#6b2233", "#2f3640", "#6b4a1e"]) {
+      expect(html).toContain(swatch);
+    }
   });
 
   it("draws no menu items before the session is hydrated", () => {

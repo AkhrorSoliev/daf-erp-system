@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { LogOut, Monitor, Moon, Palette, Sun, User } from "lucide-react";
+import { Brush, LogOut, Monitor, Moon, Palette, Sun, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -20,6 +20,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useSignOut } from "@/hooks/use-sign-out";
+import { useUiSkin } from "@/hooks/use-ui-skin";
+import { UI_SKINS, type UiSkinId } from "@/lib/ui-skins";
 
 const THEMES = [
   { value: "light", label: "Yorug'", Icon: Sun },
@@ -48,6 +50,7 @@ export function HeaderUserMenu() {
   // Inside the staff Mini App (ADR-0045) «Chiqish» waits at /tg for
   // «Qayta kirish» — a plain logout would be signed straight back in.
   const signOut = useSignOut();
+  const { skin, setSkin } = useUiSkin();
 
   if (!user) return <Skeleton className="size-8 rounded-full" />;
 
@@ -96,6 +99,30 @@ export function HeaderUserMenu() {
                 <DropdownMenuRadioItem key={value} value={value}>
                   <Icon className="mr-2 size-4" />
                   {label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Brush className="mr-2 size-4" />
+            Dizayn uslubi
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuRadioGroup
+              value={skin}
+              onValueChange={(value) => void setSkin(value as UiSkinId)}
+            >
+              {UI_SKINS.map(({ id, label, hint, swatch }) => (
+                <DropdownMenuRadioItem key={id} value={id}>
+                  <span
+                    aria-hidden
+                    className="mr-2 size-3 shrink-0 rounded-full border border-border"
+                    style={{ backgroundColor: swatch }}
+                  />
+                  <span>{label}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{hint}</span>
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
