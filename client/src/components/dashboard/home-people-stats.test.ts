@@ -60,3 +60,16 @@ describe("HomePeopleStats hint", () => {
     expect(title).toBe("Shu oy: +12 yangi, −5 ketgan.");
   });
 });
+
+describe("HomePeopleStats attendance", () => {
+  const html = (p: DashboardPeople) =>
+    renderToStaticMarkup(createElement(HomePeopleStats, { people: p }));
+
+  it("shows the report's figure whole, as the report does", () => {
+    expect(html({ ...people, attendancePct: 88.9 })).toContain(">89%<");
+  });
+
+  it("shows «—» when the month has no mark yet", () => {
+    expect(html({ ...people, attendancePct: null })).toContain(">—<");
+  });
+});

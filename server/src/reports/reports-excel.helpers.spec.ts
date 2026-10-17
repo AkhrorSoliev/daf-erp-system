@@ -1,4 +1,6 @@
+import { Workbook } from 'exceljs';
 import { buildNetProfit } from './reports-excel.helpers';
+import { kpiSheet } from './reports-excel.operational-sheets';
 
 describe('buildNetProfit — top-up gating', () => {
   const pl = {
@@ -173,5 +175,27 @@ describe('buildNetProfit — balance withdrawals', () => {
     const np = buildNetProfit(pl, salaries, outflows, '2026-10', 100_000);
     expect(np.balanceWithdrawals).toBe(0);
     expect(np.netProfit).toBe(50_000);
+  });
+});
+
+describe("kpiSheet — «O'rtacha davomat»", () => {
+  const rateCell = (averageAttendance: number | null) => {
+    const wb = new Workbook();
+    kpiSheet(wb, { averageAttendance }, '2026-10');
+    let cell: any = null;
+    wb.getWorksheet('KPI paneli')!.eachRow((row) => {
+      if (row.getCell(1).value === "O'rtacha davomat") cell = row.getCell(2);
+    });
+    return cell;
+  };
+
+  it('writes «—» (text, no number format) for null — never 0%', () => {
+    const cell = rateCell(null);
+    expect(cell.value).toBe('—');
+    expect(cell.numFmt).toBeUndefined();
+  });
+
+  it('writes a real rate as a number', () => {
+    expect(rateCell(88.9).value).toBe(88.9);
   });
 });

@@ -220,10 +220,9 @@ describe('ReportsController — every whole-query parameter is validated', () =>
         if (types[arg.index] === Object) unvalidated.push(handler);
       }
     }
-    // Guards against a vacuous pass if the metadata lookup ever breaks (19 after
-    // the old departed-students and center-activity endpoints were removed).
-    // Guards against a vacuous pass if the metadata lookup ever breaks.
-    expect(checked).toBeGreaterThanOrEqual(19);
+    // Guards against a vacuous pass if the metadata lookup ever breaks (15 after
+    // the old departed-students, center-activity and attendance endpoints were removed).
+    expect(checked).toBeGreaterThanOrEqual(15);
     expect(unvalidated).toEqual([]);
   });
 });
