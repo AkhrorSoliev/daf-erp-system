@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STATE_LABEL, formatDay, formatPer100, formatStudyMonths, previousLabel } from "./departed-format";
+import { STATE_LABEL, capitalize, formatDay, formatPer100, formatStudyMonths, monthFull, monthShort, previousLabel, rangeLabel } from "./departed-format";
 
 describe("formatPer100", () => {
   it("below 10 one decimal with a comma, from 10 whole, no data a dash", () => {
@@ -40,7 +40,11 @@ describe("previousLabel", () => {
     expect(previousLabel("3m", { startDate: "2026-05-01" })).toBe("oldingi 3 oyda");
     expect(previousLabel("6m", { startDate: "2026-05-01" })).toBe("oldingi 6 oyda");
     expect(previousLabel("range", { startDate: "2026-05-03" })).toBe("oldingi davrda");
-    expect(previousLabel("12m", { startDate: "2026-05-03" })).toBe("oldingi davrda");
+    // An unknown preset resolves to this month (cleanPreset), so it is labelled like one.
+    expect(previousLabel("nonsense", { startDate: "2026-08-01" })).toBe("avgustda");
+  });
+  it("a legacy 12m link reads like 6m", () => {
+    expect(previousLabel("12m", { startDate: "2026-05-03" })).toBe("oldingi 6 oyda");
   });
 });
 
@@ -55,5 +59,22 @@ describe("formatDay", () => {
     expect(formatDay("2026-10-17T10:00:00.000Z")).toBe("17.10.2026");
     // 20:00 UTC is already the next day in Tashkent (UTC+5).
     expect(formatDay("2026-10-17T20:00:00.000Z")).toBe("18.10.2026");
+  });
+});
+
+describe("rangeLabel", () => {
+  it("a one-month range names the month, a longer one says «shu davrda»", () => {
+    expect(rangeLabel({ startDate: "2026-09-01", endDate: "2026-09-30" })).toBe("sentabrda");
+    expect(rangeLabel({ startDate: "2026-09-03", endDate: "2026-09-12" })).toBe("sentabrda");
+    expect(rangeLabel({ startDate: "2026-07-01", endDate: "2026-09-30" })).toBe("shu davrda");
+  });
+});
+
+describe("month names and capitalize", () => {
+  it("short and full names from a «YYYY-MM» key", () => {
+    expect(monthShort("2026-09")).toBe("sen");
+    expect(monthShort("2026-01")).toBe("yan");
+    expect(monthFull("2026-08")).toBe("avgust");
+    expect(capitalize("sentabrda")).toBe("Sentabrda");
   });
 });

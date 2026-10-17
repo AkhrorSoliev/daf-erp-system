@@ -1,4 +1,5 @@
 import { tashkentWallClock } from "@/lib/tashkent-time";
+import { cleanPreset } from "./departed-url";
 import type { ListState } from "./departed-types";
 
 export const STATE_LABEL: Record<ListState, string> = {
@@ -29,11 +30,12 @@ export function formatStudyMonths(v: number | null): string {
 
 /** What the previous period is called under a card: «sentabrda», «oldingi 3 oyda»… */
 export function previousLabel(preset: string, previous: { startDate: string }): string {
-  if (preset === "current_month" || preset === "last_month") {
+  const p = cleanPreset(preset);
+  if (p === "current_month" || p === "last_month") {
     return LOCATIVE[Number(previous.startDate.slice(5, 7)) - 1] ?? "oldingi davrda";
   }
-  if (preset === "3m") return "oldingi 3 oyda";
-  if (preset === "6m") return "oldingi 6 oyda";
+  if (p === "3m") return "oldingi 3 oyda";
+  if (p === "6m") return "oldingi 6 oyda";
   return "oldingi davrda";
 }
 
@@ -44,3 +46,20 @@ export function formatDay(iso: string): string {
   const mm = String(t.getUTCMonth() + 1).padStart(2, "0");
   return `${dd}.${mm}.${t.getUTCFullYear()}`;
 }
+
+/** What the chosen period is called: its month («sentabrda») when it sits in one month, else «shu davrda». */
+export function rangeLabel(range: { startDate: string; endDate: string }): string {
+  if (range.startDate.slice(0, 7) !== range.endDate.slice(0, 7)) return "shu davrda";
+  return LOCATIVE[Number(range.startDate.slice(5, 7)) - 1] ?? "shu davrda";
+}
+
+export const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+const MONTH_SHORT = ["yan", "fev", "mar", "apr", "may", "iyun", "iyul", "avg", "sen", "okt", "noy", "dek"];
+const MONTH_FULL = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
+
+/** «2026-09» → «sen». */
+export const monthShort = (key: string): string => MONTH_SHORT[Number(key.slice(5, 7)) - 1] ?? key;
+
+/** «2026-09» → «sentabr». */
+export const monthFull = (key: string): string => MONTH_FULL[Number(key.slice(5, 7)) - 1] ?? key;
