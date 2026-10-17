@@ -24,6 +24,7 @@ Telegramdagi «💼 Kabinet» ustozni profil va oylik raqamiga olib kirardi, kom
 | Kirish | Botdagi «Kabinet» → `/groups` («Guruhlarim»). Bot ko'rsatgan sahifa (`next`) har doim ustun. |
 | Pastki panel (global) | Guruhlar · Jadval · Topshiriq (menga berilgan soni belgi bo'lib) · Oylik · Profil |
 | Guruh ichida | «‹ Guruhlar» · Davomat · Darslar · O'quvchilar · Yana (Materiallar, Imtihonlar, Statistika, Ilova faolligi) |
+| Guruh ma'lumot kartasi | Telefonda yig'iq: nom, kun · vaqt · xona qatori; bossa to'liq karta ochiladi. Davomat birinchi ekranda |
 | Davomat ro'yxati | Panel yo'qoladi; «Orqaga» va «Saqlash · belgilangan/jami» paneli |
 | ☰ yon menyu | Yo'q. «Qo'llanma» va «Texnik yordam» Profil sahifasida; «To'lanishi kerak» bloki «Oylik»ni ochadi |
 | Guruhlar | Kartalar (kun, vaqt, xona, o'quvchilar, boshlanmagan guruhda boshlanish sanasi); hisoblagichlar va darajа/tur/xona filtrlari yo'q |
