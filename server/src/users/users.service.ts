@@ -537,6 +537,19 @@ export class UsersService {
     return formatUser(updated);
   }
 
+  /**
+   * Your own design skin (ADR-0097). A personal setting: written for the
+   * caller's row only and not recorded in the entity history.
+   */
+  async updateUiSkin(id: number, skin: string) {
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { uiSkin: skin },
+      select: { uiSkin: true },
+    });
+    return { uiSkin: updated.uiSkin };
+  }
+
   /** Journal a password write on the employee record: who did it, and how. */
   private recordPasswordEvent(
     userId: number,

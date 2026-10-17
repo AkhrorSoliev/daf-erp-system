@@ -18,6 +18,7 @@ import { UserQueryDto } from './dto/user-query.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateUiSkinDto } from './dto/update-ui-skin.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangePhoneDto } from './dto/change-phone.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -99,6 +100,15 @@ export class UsersController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.usersService.updateProfile(userId, dto);
+  }
+
+  @Patch('ui-skin')
+  @AnyStaff()
+  updateUiSkin(
+    @CurrentUser('id') userId: number,
+    @Body() dto: UpdateUiSkinDto,
+  ) {
+    return this.usersService.updateUiSkin(userId, dto.skin);
   }
 
   @Patch('password')

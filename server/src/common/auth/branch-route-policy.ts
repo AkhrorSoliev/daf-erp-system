@@ -640,6 +640,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'PATCH /users/password',
       'PATCH /users/phone',
       'PATCH /users/profile',
+      'PATCH /users/ui-skin',
       'POST /users/logout-others',
     ],
   },

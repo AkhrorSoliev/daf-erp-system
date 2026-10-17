@@ -1720,6 +1720,13 @@
     "Teacher"
   ],
   "PATCH /users/profile": "ANY",
+  "PATCH /users/ui-skin": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "POST /archive/:entityType/:id/restore": [
     "CEO"
   ],
