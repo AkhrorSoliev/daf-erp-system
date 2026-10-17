@@ -373,6 +373,10 @@ model User {
   balance        Int        @default(0)
   login          String?
   position       String?
+  // The staff portals' design skin (ADR-0101): one of common/ui-skins.ts, null = the default.
+  uiSkin         String?
+  // The staff portals' interface language (ADR-0102): one of common/ui-locales.ts, null = the default.
+  uiLocale       String?
   password       String?
   // Bumped by every password write and by "log out other devices"; every
   // token carries it as `sv` and stops working once it falls behind (ADR-0030).
@@ -380,6 +384,11 @@ model User {
   isActive       Boolean    @default(true)
   status         UserStatus @default(ACTIVE)
   telegramChatId String?
+  /// When the bot learned this account's linked chat no longer takes its
+  /// messages (blocked the bot, deleted Telegram). Null = reachable. Same rule
+  /// as `Student.telegramDisconnectedAt` (ADR-0066); written only by
+  /// `StudentChatReach` and the report page's probe (ADR-0097).
+  telegramDisconnectedAt DateTime?
   companyId      Int
   company        Company    @relation(fields: [companyId], references: [id])
   mainBranch     Int?
@@ -4551,6 +4560,11 @@ model TelegramReportRecipient {
   isActive     Boolean                 @default(true)
   /// Tashkent day of the last automatic send (the cron's claim).
   lastSentDate DateTime?               @db.Date
+  /// The last attempt to send this recipient a report (cron, test or none yet).
+  lastAttemptAt   DateTime?
+  lastAttemptOk   Boolean?
+  /// Why it failed, in the CEO's words; null after a success.
+  lastAttemptNote String?
   createdById  Int
   createdAt    DateTime                @default(now())
   updatedAt    DateTime                @updatedAt

@@ -13,9 +13,11 @@ import {
 } from "@/components/ui/breadcrumb";
 import { routeLabels } from "@/lib/breadcrumb-routes";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
+import { useT } from "@/i18n/context";
 
 export function AppBreadcrumb() {
   const pathname = usePathname();
+  const t = useT();
   const { names } = useBreadcrumbName();
   const segments = pathname.split("/").filter(Boolean);
 
@@ -32,7 +34,10 @@ export function AppBreadcrumb() {
 
   const crumbs = filtered.map((segment, index) => {
     const url = "/" + segments.slice(0, segments.indexOf(segment) + 1).join("/");
-    const label = routeLabels[segment] ?? names[segment] ?? segment;
+    // Only a name from the route table is translated; an entity name or a raw
+    // segment is shown as it came.
+    const known = routeLabels[segment];
+    const label = known !== undefined ? t(known) : (names[segment] ?? segment);
     const isLast = index === filtered.length - 1;
 
     // Pass-through segmentdan keyingi so'nggi segment uchun to'liq URL berish
@@ -48,7 +53,7 @@ export function AppBreadcrumb() {
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link href="/">Bosh sahifa</Link>
+            <Link href="/">{t("Bosh sahifa")}</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
 

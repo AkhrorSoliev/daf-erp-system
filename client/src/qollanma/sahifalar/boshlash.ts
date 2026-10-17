@@ -36,19 +36,19 @@ export const boshlash: QollanmaSahifa[] = [
       "admin panel",
       "o'qituvchi portali",
     ],
-    yangilangan: "2026-10-10",
+    yangilangan: "2026-10-17",
   },
   {
     bolim: "boshlash",
     sahifa: "interfeys",
     sarlavha: "Ekran tuzilishi",
     qisqacha:
-      "Chap menyu rolingizga qarab ochiladi. Yuqori panelda filial, qidiruv, soat, bildirishnomalar va shu sahifa bo'yicha qo'llanma tugmasi turadi.",
+      "Chap menyu rolingizga qarab ochiladi. Yuqori panelda filial, qidiruv, soat, bildirishnomalar, shu sahifa bo'yicha qo'llanma tugmasi va foydalanuvchi menyusi turadi.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0076"],
+    adr: ["0076", "0101", "0102"],
     yollar: ["/", "/notifications"],
-    kalitSozlar: ["menyu", "filial", "qidiruv", "bildirishnoma", "bildirishnomalar", "qo'ng'iroqcha", "kutilmoqda", "o'qilgan", "mavzu", "profil", "chiqish"],
-    yangilangan: "2026-10-10",
+    kalitSozlar: ["menyu", "filial", "qidiruv", "bildirishnoma", "bildirishnomalar", "qo'ng'iroqcha", "kutilmoqda", "o'qilgan", "mavzu", "ko'rinish", "profil", "chiqish", "foydalanuvchi menyusi", "dizayn", "dizayn uslubi", "uslub", "shrift", "til", "tilni almashtirish", "русский", "texnik yordam", "yangilangan"],
+    yangilangan: "2026-10-17",
   },
   {
     bolim: "boshlash",
@@ -91,7 +91,7 @@ export const boshlash: QollanmaSahifa[] = [
       "boshlang'ich holatga qaytarish",
       "o'zgarishlar tarixi",
     ],
-    yangilangan: "2026-10-11",
+    yangilangan: "2026-10-17",
   },
   {
     bolim: "boshlash",

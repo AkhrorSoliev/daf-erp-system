@@ -32,10 +32,7 @@ export class RoomsService {
   ) {}
 
   private async invalidateActivityCache(companyId: number) {
-    const patterns = [
-      `reports:center-activity:${companyId}:*`,
-      `reports:room-util:${companyId}:*`,
-    ];
+    const patterns = [`reports:room-util:${companyId}:*`];
     for (const pattern of patterns) {
       const stream = this.redis.scanStream({ match: pattern, count: 100 });
       for await (const keys of stream) {

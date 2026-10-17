@@ -35,6 +35,8 @@ export interface AuthUser {
   branches: UserBranch[];
   company: UserCompany;
   studentId?: number;
+  uiSkin?: string | null;
+  uiLocale?: string | null;
 }
 
 /**
@@ -55,6 +57,12 @@ interface AuthState {
    * session another account left in the same WebView.
    */
   clearSession: () => void;
+  /**
+   * Merges a patch into the signed-in user and rewrites the `user` cookie (the
+   * tokens are untouched). For a field the user changes about themselves, such
+   * as the design skin; does nothing when nobody is signed in.
+   */
+  patchUser: (patch: Partial<AuthUser>) => void;
   logout: () => void;
   hydrate: () => void;
 }
@@ -78,6 +86,14 @@ export const useAuth = create<AuthState>((set, get) => ({
     localStorage.removeItem("companyId");
     localStorage.removeItem("branchId");
     set({ user: null, token: null });
+  },
+
+  patchUser: (patch) => {
+    const user = get().user;
+    if (!user) return;
+    const next = { ...user, ...patch };
+    Cookies.set("user", JSON.stringify(next), { expires: 1 });
+    set({ user: next });
   },
 
   logout: () => {

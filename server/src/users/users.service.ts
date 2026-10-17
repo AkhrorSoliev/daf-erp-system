@@ -537,6 +537,32 @@ export class UsersService {
     return formatUser(updated);
   }
 
+  /**
+   * Your own design skin (ADR-0101). A personal setting: written for the
+   * caller's row only and not recorded in the entity history.
+   */
+  async updateUiSkin(id: number, skin: string) {
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { uiSkin: skin },
+      select: { uiSkin: true },
+    });
+    return { uiSkin: updated.uiSkin };
+  }
+
+  /**
+   * Your own interface language (ADR-0102). A personal setting: written for
+   * the caller's row only and not recorded in the entity history.
+   */
+  async updateUiLocale(id: number, locale: string) {
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { uiLocale: locale },
+      select: { uiLocale: true },
+    });
+    return { uiLocale: updated.uiLocale };
+  }
+
   /** Journal a password write on the employee record: who did it, and how. */
   private recordPasswordEvent(
     userId: number,
@@ -873,8 +899,12 @@ export class UsersService {
     if (dto.position !== undefined) updateData.position = dto.position.trim();
     if (dto.gender !== undefined) updateData.gender = dto.gender;
     if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
-    if (dto.telegramChatId !== undefined)
+    if (dto.telegramChatId !== undefined) {
       updateData.telegramChatId = dto.telegramChatId;
+      // A different chat is a fresh start: the old chat's «blocked» mark is not
+      // the new one's (ADR-0097).
+      updateData.telegramDisconnectedAt = null;
+    }
     if (dto.status !== undefined) {
       updateData.status = dto.status;
       updateData.isActive = dto.status === UserStatus.ACTIVE;

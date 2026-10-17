@@ -237,6 +237,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'PATCH /telegram-report/recipients/:id',
       'DELETE /telegram-report/recipients/:id',
       'POST /telegram-report/recipients/:id/test',
+      'POST /telegram-report/recipients/:id/check',
+      'GET /telegram-report/recipients/:id/preview',
     ],
   },
   {
@@ -668,6 +670,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'PATCH /users/password',
       'PATCH /users/phone',
       'PATCH /users/profile',
+      'PATCH /users/ui-locale',
+      'PATCH /users/ui-skin',
       'POST /users/logout-others',
     ],
   },

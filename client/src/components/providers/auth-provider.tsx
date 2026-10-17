@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { PermissionsSync } from "./permissions-sync";
+import { SkinSync } from "./skin-sync";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { hydrate } = useAuth();
@@ -14,6 +15,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <>
       <PermissionsSync />
+      <SkinSync />
       {children}
     </>
   );

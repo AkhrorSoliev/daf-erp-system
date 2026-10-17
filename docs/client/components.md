@@ -17,7 +17,7 @@ Features:
 - Navigation items from `lib/nav-items.ts`
 - Active state highlighting
 - Collapsible to icon-only mode
-- User footer at the bottom
+- Support link and build line (`SidebarFooterInfo`) at the bottom
 
 ### DashboardHeader
 
@@ -27,16 +27,23 @@ Top header bar containing:
 - Sidebar trigger (hamburger menu)
 - Search input
 - Notification bell
-- Theme toggle (dark/light)
+- User menu (`HeaderUserMenu`, right end)
 - Branch switcher
 
-### SidebarUserFooter
+### HeaderUserMenu
 
-**File:** `components/sidebar-user-footer.tsx`
+**File:** `components/header-user-menu.tsx`
 
-Displays the logged-in user's avatar, name, and role. Dropdown menu with:
+Top-bar menu for the logged-in user (avatar, name hidden below `md`). Dropdown with:
 - Profile link
+- Appearance submenu (light / dark / system)
 - Logout action
+
+### SidebarFooterInfo
+
+**File:** `components/sidebar-footer-info.tsx`
+
+Bottom of the sidebar: support link ("Texnik yordam") and the build line ("Yangilangan: date · sha", from `lib/build-info.ts`). Collapsed to icons, only the support icon remains.
 
 ### BranchSwitcher
 

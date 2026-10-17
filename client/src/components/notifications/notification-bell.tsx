@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useSSE } from "@/hooks/use-sse";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { useNotificationActions } from "./notification-actions";
 import {
@@ -30,6 +31,7 @@ const CHIPS: (NotificationGroup | null)[] = [null, "task", "attendance", "paymen
 type Tab = "pending" | "all";
 
 export function NotificationBell() {
+  const t = useT();
   const badge = useNotifications((s) => s.badge);
   const chip = useNotifications((s) => s.chip);
   const fetchBadge = useNotifications((s) => s.fetchBadge);
@@ -56,7 +58,11 @@ export function NotificationBell() {
           <PopoverTrigger asChild>
             <button
               type="button"
-              aria-label={badge > 0 ? `Bildirishnomalar, ${badge > 99 ? "99+" : badge} ta` : "Bildirishnomalar"}
+              aria-label={
+                badge > 0
+                  ? t("Bildirishnomalar, {count} ta", { count: badge > 99 ? "99+" : badge })
+                  : t("Bildirishnomalar")
+              }
               className="relative inline-flex size-9 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <Bell className="size-4" />
@@ -68,7 +74,7 @@ export function NotificationBell() {
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent>Bildirishnomalar</TooltipContent>
+        <TooltipContent>{t("Bildirishnomalar")}</TooltipContent>
       </Tooltip>
 
       <PopoverContent className="w-[400px] max-w-[calc(100vw-1rem)] p-0" align="end">
@@ -79,7 +85,8 @@ export function NotificationBell() {
 }
 
 /** Mounts when the popover opens, so its clock («5 daqiqa oldin») is read fresh each time. */
-function NotificationPanel({ tab, onTab, onClose }: { tab: Tab; onTab: (t: Tab) => void; onClose: () => void }) {
+function NotificationPanel({ tab, onTab, onClose }: { tab: Tab; onTab: (next: Tab) => void; onClose: () => void }) {
+  const t = useT();
   const { pending, recent, counts, chip, loaded, failed, loadPanel, markAllRead } = useNotifications();
   const { hrefOf, onOpen } = useNotificationActions(onClose);
   const [now] = useState(() => new Date());
@@ -92,51 +99,54 @@ function NotificationPanel({ tab, onTab, onClose }: { tab: Tab; onTab: (t: Tab) 
     <>
       <div className="space-y-2 border-b px-4 pb-2 pt-3">
         <div className="flex items-center">
-          <h3 className="text-sm font-semibold">Bildirishnomalar</h3>
+          <h3 className="text-sm font-semibold">{t("Bildirishnomalar")}</h3>
           <button
             type="button"
             className="ml-auto text-xs text-primary hover:underline"
             onClick={() => void markAllRead()}
           >
-            {"Hammasini o'qilgan qilish"}
+            {t("Hammasini o'qilgan qilish")}
           </button>
         </div>
         <div className="flex gap-1">
-          {(["pending", "all"] as const).map((t) => (
+          {(["pending", "all"] as const).map((name) => (
             <button
-              key={t}
+              key={name}
               type="button"
-              onClick={() => onTab(t)}
-              aria-pressed={tab === t}
+              onClick={() => onTab(name)}
+              aria-pressed={tab === name}
               className={cn(
                 "rounded-md px-2.5 py-1 text-xs font-medium",
-                tab === t ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                tab === name ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {t === "pending" ? "Kutilmoqda" : "Hammasi"}
-              {t === "pending" && counts ? (
+              {name === "pending" ? t("Kutilmoqda") : t("Hammasi")}
+              {name === "pending" && counts ? (
                 <span className="ml-1 rounded-full bg-primary/10 px-1.5 text-primary">{counts.pending}</span>
               ) : null}
             </button>
           ))}
         </div>
         <div className="flex flex-wrap gap-1">
-          {CHIPS.map((c) => (
-            <button
-              key={c ?? "hammasi"}
-              type="button"
-              onClick={() => void loadPanel(c)}
-              aria-pressed={chip === c}
-              className={cn(
-                "rounded-full border px-2.5 py-0.5 text-xs",
-                chip === c
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {c ? GROUP_LABEL[c] : "Hammasi"}
-            </button>
-          ))}
+          {CHIPS.map((c) => {
+            const label = c ? GROUP_LABEL[c] : null;
+            return (
+              <button
+                key={c ?? "hammasi"}
+                type="button"
+                onClick={() => void loadPanel(c)}
+                aria-pressed={chip === c}
+                className={cn(
+                  "rounded-full border px-2.5 py-0.5 text-xs",
+                  chip === c
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {label ? t(label) : t("Hammasi")}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -150,19 +160,19 @@ function NotificationPanel({ tab, onTab, onClose }: { tab: Tab; onTab: (t: Tab) 
           )
         ) : tab === "pending" ? (
           <>
-            <Section title="Sizdan kutilmoqda" />
-            {waiting.length > 0 ? rowsOf(waiting) : <NotificationEmpty text="Sizdan hech narsa kutilmayapti" />}
+            <Section title={t("Sizdan kutilmoqda")} />
+            {waiting.length > 0 ? rowsOf(waiting) : <NotificationEmpty text={t("Sizdan hech narsa kutilmayapti")} />}
             {todayInfo.length > 0 && (
               <>
-                <Section title="Ma'lumot uchun · bugun" />
+                <Section title={t("Ma'lumot uchun · bugun")} />
                 {rowsOf(todayInfo)}
               </>
             )}
           </>
         ) : recent.length === 0 ? (
-          <NotificationEmpty text="Bildirishnomalar yo'q" />
+          <NotificationEmpty text={t("Bildirishnomalar yo'q")} />
         ) : (
-          groupByDay(recent, now).map((day) => (
+          groupByDay(recent, now, t).map((day) => (
             <div key={day.label}>
               <Section title={day.label} />
               {rowsOf(groupNotifications(day.items))}
@@ -176,7 +186,7 @@ function NotificationPanel({ tab, onTab, onClose }: { tab: Tab; onTab: (t: Tab) 
         onClick={onClose}
         className="block border-t px-4 py-2.5 text-center text-sm font-medium text-primary hover:bg-muted/50"
       >
-        Barcha bildirishnomalar
+        {t("Barcha bildirishnomalar")}
       </Link>
     </>
   );

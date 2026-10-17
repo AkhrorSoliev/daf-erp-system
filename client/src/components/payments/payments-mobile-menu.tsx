@@ -4,8 +4,10 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { paymentsNavItems } from "@/lib/payments-nav";
 import { usePermissions, usePermissionsReady } from "@/hooks/use-permissions";
+import { useT } from "@/i18n/context";
 
 export function PaymentsMobileMenu() {
+  const t = useT();
   const can = usePermissions((s) => s.can);
   const ready = usePermissionsReady();
 
@@ -27,7 +29,7 @@ export function PaymentsMobileMenu() {
         >
           <div className="flex items-center gap-3">
             <item.icon className="size-5 text-muted-foreground" />
-            <span className="text-sm font-medium">{item.title}</span>
+            <span className="text-sm font-medium">{t(item.title)}</span>
           </div>
           <ChevronRight className="size-4 text-muted-foreground" />
         </Link>

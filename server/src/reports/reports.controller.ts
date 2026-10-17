@@ -20,14 +20,7 @@ import {
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
-import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-by-query.dto';
-import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
-import { DepartedStudentsByReasonQueryDto } from './dto/departed-students-by-reason-query.dto';
-import { DepartedStudentsBranchQueryDto } from './dto/departed-students-branch-query.dto';
-import { DepartedStudentsRangeQueryDto } from './dto/departed-students-range-query.dto';
 import { DepartedStudentsTeacherChangesQueryDto } from './dto/departed-students-teacher-changes-query.dto';
-import { DepartedStudentsTransferredQueryDto } from './dto/departed-students-transferred-query.dto';
-import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
 import {
   AttendanceAnalyticsQueryDto,
   AttendanceByCourseQueryDto,
@@ -70,19 +63,6 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getRoomUtilization(
-      companyId,
-      this.scoped(query, scope),
-    );
-  }
-
-  @Get('center-activity')
-  @Can('reports.students')
-  getCenterActivity(
-    @Query() query: CenterActivityQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getCenterActivity(
       companyId,
       this.scoped(query, scope),
     );
@@ -565,77 +545,6 @@ export class ReportsController {
     };
   }
 
-  /**
-   * Hand a report the resolved scope as a LIST, so a caller with several
-   * branches gets all of them rather than a 400 from `scoped()`. Used by the
-   * departed-students reports (ADR-0035). An empty scope
-   * is refused, never served as zeros (ADR-0002).
-   */
-  private listScope(scope: ReportBranchIds): ReportBranchIds {
-    if (isEmptyScope(scope)) {
-      throw new ForbiddenException(
-        "Bu filial ma'lumotlarini ko'rish huquqingiz yo'q",
-      );
-    }
-    return scope;
-  }
-
-  @Get('departed-students/summary')
-  @Can('reports.students')
-  getDepartedStudentsSummary(
-    @Query() query: DepartedStudentsSummaryQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getDepartedStudentsSummary(companyId, {
-      scope: this.listScope(scope),
-      startDate: query.startDate,
-      endDate: query.endDate,
-    });
-  }
-
-  @Get('departed-students/dynamics')
-  @Can('reports.students')
-  getDepartedStudentsDynamics(
-    @Query() query: DepartedStudentsRangeQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getDepartedStudentsDynamics(companyId, {
-      scope: this.listScope(scope),
-      startDate: query.startDate,
-      endDate: query.endDate,
-    });
-  }
-
-  @Get('departed-students/by-status')
-  @Can('reports.students')
-  getDepartedStudentsByStatus(
-    @Query() query: DepartedStudentsBranchQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getDepartedStudentsByStatus(companyId, {
-      scope: this.listScope(scope),
-    });
-  }
-
-  @Get('departed-students/reasons')
-  @Can('reports.students')
-  getDepartedStudentsReasons(
-    @Query() query: DepartedStudentsSummaryQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getDepartedStudentsReasons(companyId, {
-      branchId: this.scoped(query, scope).branchId,
-      courseId: query.courseId,
-      teacherIds: query.teacherIds,
-      startDate: query.startDate,
-      endDate: query.endDate,
-    });
-  }
-
   @Get('departed-students/teacher-change-reasons')
   @Can('reports.students')
   getTeacherChangeReasons(
@@ -649,70 +558,6 @@ export class ReportsController {
       teacherIds: query.teacherIds,
       startDate: query.startDate,
       endDate: query.endDate,
-    });
-  }
-
-  @Get('departed-students/transfer-reasons')
-  @Can('reports.students')
-  getTransferReasons(
-    @Query() query: DepartedStudentsSummaryQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getTransferReasons(companyId, {
-      branchId: this.scoped(query, scope).branchId,
-      courseId: query.courseId,
-      teacherIds: query.teacherIds,
-      startDate: query.startDate,
-      endDate: query.endDate,
-    });
-  }
-
-  @Get('departed-students/list')
-  @Can('reports.students')
-  getDepartedStudentsList(
-    @Query() query: DepartedStudentsListQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getDepartedStudentsList(companyId, {
-      scope: this.listScope(scope),
-      status: query.status,
-      debtorsOnly: query.debtorsOnly,
-      page: query.page,
-      pageSize: query.pageSize,
-    });
-  }
-
-  @Get('departed-students/by-reason')
-  @Can('reports.students')
-  getDepartedStudentsByReason(
-    @Query() query: DepartedStudentsByReasonQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getDepartedStudentsByReason(companyId, {
-      branchId: this.scoped(query, scope).branchId,
-      courseId: query.courseId,
-      teacherIds: query.teacherIds,
-      startDate: query.startDate,
-      endDate: query.endDate,
-      page: query.page,
-      pageSize: query.pageSize,
-      departureReasonId: query.departureReasonId,
-    });
-  }
-
-  @Get('departed-students/group-by')
-  @Can('reports.students')
-  getDepartedStudentsGroupBy(
-    @Query() query: DepartedStudentsGroupByQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getDepartedStudentsGroupBy(companyId, {
-      scope: this.listScope(scope),
-      groupBy: query.groupBy,
     });
   }
 
@@ -733,25 +578,6 @@ export class ReportsController {
     });
   }
 
-  @Get('departed-students/transferred-list')
-  @Can('reports.students')
-  getTransferredList(
-    @Query() query: DepartedStudentsTransferredQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getTransferredList(companyId, {
-      branchId: this.scoped(query, scope).branchId,
-      courseId: query.courseId,
-      teacherIds: query.teacherIds,
-      startDate: query.startDate,
-      endDate: query.endDate,
-      page: query.page,
-      pageSize: query.pageSize,
-      transferReasonId: query.transferReasonId,
-    });
-  }
-
   @Get('departed-students/departed-after-change')
   @Can('reports.students')
   getDepartedAfterTeacherChangeList(
@@ -761,6 +587,8 @@ export class ReportsController {
   ) {
     return this.reportsService.getDepartedAfterTeacherChangeList(companyId, {
       branchId: this.scoped(query, scope).branchId,
+      courseId: query.courseId,
+      teacherIds: query.teacherIds,
       startDate: query.startDate,
       endDate: query.endDate,
     });

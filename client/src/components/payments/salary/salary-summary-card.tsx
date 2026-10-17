@@ -1,8 +1,9 @@
 import { BadgeCheck, CircleCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatBalance } from "@/lib/format-utils";
 import { monthShort } from "../salary-utils";
-import { centerLine, mln, monthStatePill, netLabel, summaryNumbers } from "./salary-page-model";
+import { centerLine, monthStatePill, netLabel, summaryNumbers } from "./salary-page-model";
 import { SalaryToneBadge } from "./salary-tone-badge";
 import type { MonthlyResponse } from "./salary-types";
 
@@ -27,14 +28,14 @@ function Figure({ label, value, sub }: { label: string; value: string; sub: stri
 
 /**
  * «{Oy} oyliklari» (spec §2.2): the month state and three figures, all the
- * server's. The figures are short («10,5 mln»); the table below has the so'm.
+ * server's. The figures are whole so'm, never rounded to millions.
  */
 export function SalarySummaryCard({ data, canClose, unpaidCount, onSettle }: Props) {
   const s = summaryNumbers(data);
   const pill = monthStatePill(data.monthState, data.month);
   const net = netLabel(data.monthState);
   const center = centerLine(data);
-  const teachers = s.teachersWorked == null ? "—" : mln(s.teachersWorked);
+  const teachers = s.teachersWorked == null ? "—" : formatBalance(s.teachersWorked);
   const showSettle = canClose && unpaidCount > 0 && data.monthState.kind !== "OPEN";
 
   return (
@@ -50,21 +51,21 @@ export function SalarySummaryCard({ data, canClose, unpaidCount, onSettle }: Pro
           <div className="flex flex-col gap-0.5">
             <Figure
               label="Ishladi"
-              value={s.worked == null ? "—" : mln(s.worked)}
-              sub={`ustozlar ${teachers} · xodimlar ${mln(s.staffWorked)}`}
+              value={s.worked == null ? "—" : formatBalance(s.worked)}
+              sub={`ustozlar ${teachers} · xodimlar ${formatBalance(s.staffWorked)}`}
             />
             {s.teachersWorked == null && <p className="text-xs text-amber-600">o&apos;tish oyi</p>}
           </div>
-          <Figure label="Avans (oylikdan ushlanadi)" value={mln(s.advances)} sub={`${s.advanceCount} ta`} />
+          <Figure label="Avans (oylikdan ushlanadi)" value={formatBalance(s.advances)} sub={`${s.advanceCount} ta`} />
           <Figure
             label={net.label}
-            value={mln(s.net)}
+            value={formatBalance(s.net)}
             sub={net.sub ?? `${s.teacherCount} ustoz · ${s.staffCount} xodim`}
           />
         </div>
         {center && (
           <p className="text-sm">
-            shundan <b>{`markaz qo'shdi — ${mln(center.amount)}`}</b>{" "}
+            shundan <b>{`markaz qo'shdi — ${formatBalance(center.amount)}`}</b>{" "}
             <span className="text-muted-foreground">{center.note}</span>
           </p>
         )}
