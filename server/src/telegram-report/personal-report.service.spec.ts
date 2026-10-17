@@ -18,6 +18,10 @@ function setup(opts: { branches?: typeof BRANCHES; bot?: unknown } = {}) {
     branch: {
       findMany: jest.fn().mockResolvedValue(opts.branches ?? BRANCHES),
     },
+    telegramReportRecipient: {
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
+    user: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
   };
   const collect = jest.fn(async (_c: number, ids: number[] | null) => ({
     branchIds: ids,
@@ -26,13 +30,29 @@ function setup(opts: { branches?: typeof BRANCHES; bot?: unknown } = {}) {
     yesterdaySnapshot: null,
   }));
   const sendMessage = jest.fn().mockResolvedValue({ message_id: 9 });
-  const bot = opts.bot === undefined ? { telegram: { sendMessage } } : opts.bot;
+  const bot = (
+    opts.bot === undefined
+      ? {
+          telegram: {
+            sendMessage,
+            sendChatAction: jest.fn().mockResolvedValue(true),
+            getMe: jest.fn().mockResolvedValue({ id: 1 }),
+          },
+        }
+      : opts.bot
+  ) as {
+    telegram: {
+      sendMessage: jest.Mock;
+      sendChatAction: jest.Mock;
+      getMe: jest.Mock;
+    };
+  };
   const svc = new PersonalReportService(
     prisma as never,
     { collect } as never,
     { getBot: () => bot } as never,
   );
-  return { svc, prisma, collect, sendMessage };
+  return { svc, prisma, collect, sendMessage, bot };
 }
 
 const rec = {
@@ -178,5 +198,134 @@ describe('PersonalReportService', () => {
       ok: false,
       reason: 'NO_BOT',
     });
+  });
+});
+
+describe('deliver records the attempt', () => {
+  beforeEach(() => jest.mocked(staffChatOf).mockReset());
+
+  it('a success stores ok=true and no note', async () => {
+    jest.mocked(staffChatOf).mockResolvedValue({ chatId: '777', roleIds: [1] });
+    const { svc, prisma } = setup();
+    await svc.deliver(rec as never, new Map(), NOW);
+    expect(prisma.telegramReportRecipient.updateMany).toHaveBeenCalledWith({
+      where: { companyId: 1, userId: 50 },
+      data: { lastAttemptAt: NOW, lastAttemptOk: true, lastAttemptNote: null },
+    });
+  });
+
+  it('a failure stores ok=false and the note', async () => {
+    jest.mocked(staffChatOf).mockResolvedValue(null);
+    const { svc, prisma } = setup();
+    await svc.deliver(rec as never, new Map(), NOW);
+    expect(prisma.telegramReportRecipient.updateMany).toHaveBeenCalledWith({
+      where: { companyId: 1, userId: 50 },
+      data: {
+        lastAttemptAt: NOW,
+        lastAttemptOk: false,
+        lastAttemptNote: 'Telegram ulanmagan',
+      },
+    });
+  });
+
+  it('a failing bookkeeping write never fails the delivery', async () => {
+    jest.mocked(staffChatOf).mockResolvedValue({ chatId: '777', roleIds: [1] });
+    const { svc, prisma } = setup();
+    prisma.telegramReportRecipient.updateMany.mockRejectedValue(
+      new Error('db'),
+    );
+    expect(await svc.deliver(rec as never, new Map(), NOW)).toEqual({
+      ok: true,
+    });
+  });
+});
+
+describe('probe', () => {
+  beforeEach(() => jest.mocked(staffChatOf).mockReset());
+
+  it('no linked chat → UNLINKED, nothing sent', async () => {
+    jest.mocked(staffChatOf).mockResolvedValue(null);
+    const { svc, bot } = setup();
+    expect(await svc.probe(50)).toEqual({
+      reach: 'UNLINKED',
+      note: 'Telegram ulanmagan',
+    });
+    expect(bot.telegram.sendChatAction).not.toHaveBeenCalled();
+  });
+
+  it('a silent typing action that succeeds → DELIVERED, clears a stale mark', async () => {
+    jest.mocked(staffChatOf).mockResolvedValue({ chatId: '777', roleIds: [1] });
+    const { svc, bot, prisma } = setup();
+    expect(await svc.probe(50)).toEqual({ reach: 'DELIVERED', note: null });
+    expect(bot.telegram.sendChatAction).toHaveBeenCalledWith('777', 'typing');
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 50, telegramDisconnectedAt: { not: null } },
+      data: { telegramDisconnectedAt: null },
+    });
+  });
+
+  it('403 «blocked» → BLOCKED, marks the account at once', async () => {
+    jest.mocked(staffChatOf).mockResolvedValue({ chatId: '777', roleIds: [1] });
+    const { svc, bot, prisma } = setup();
+    bot.telegram.sendChatAction.mockRejectedValue(
+      Object.assign(new Error('Forbidden'), {
+        response: {
+          error_code: 403,
+          description: 'Forbidden: bot was blocked by the user',
+        },
+      }),
+    );
+    expect(await svc.probe(50)).toEqual({
+      reach: 'BLOCKED',
+      note: 'Botni bloklagan',
+    });
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 50, telegramDisconnectedAt: null },
+      data: { telegramDisconnectedAt: expect.any(Date) as unknown },
+    });
+  });
+
+  it('any other error → FAILED and the mark is left alone', async () => {
+    jest.mocked(staffChatOf).mockResolvedValue({ chatId: '777', roleIds: [1] });
+    const { svc, bot, prisma } = setup();
+    bot.telegram.sendChatAction.mockRejectedValue(new Error('socket hang up'));
+    expect(await svc.probe(50)).toEqual({
+      reach: 'FAILED',
+      note: 'Telegram vaqtincha javob bermadi',
+    });
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('no bot → NO_BOT', async () => {
+    jest.mocked(staffChatOf).mockResolvedValue({ chatId: '777', roleIds: [1] });
+    expect(await setup({ bot: null }).svc.probe(50)).toEqual({
+      reach: 'NO_BOT',
+      note: 'Bot ishlamayapti',
+    });
+  });
+});
+
+describe('botActive', () => {
+  it('true when getMe answers, cached for a minute', async () => {
+    const { svc, bot } = setup();
+    expect(await svc.botActive()).toBe(true);
+    expect(await svc.botActive()).toBe(true);
+    expect(bot.telegram.getMe).toHaveBeenCalledTimes(1);
+  });
+  it('false without a bot or when getMe fails', async () => {
+    expect(await setup({ bot: null }).svc.botActive()).toBe(false);
+    const { svc, bot } = setup();
+    bot.telegram.getMe.mockRejectedValue(new Error('401'));
+    expect(await svc.botActive()).toBe(false);
+  });
+});
+
+describe('preview', () => {
+  it("plain text of today's report for the recipient, null when no branch is allowed", async () => {
+    const { svc } = setup();
+    const text = await svc.preview(rec as never);
+    expect(text).toContain('holati');
+    expect(text).not.toContain('<b>');
+    expect(await setup({ branches: [] }).svc.preview(rec as never)).toBeNull();
   });
 });

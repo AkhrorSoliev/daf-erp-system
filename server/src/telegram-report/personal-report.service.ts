@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { TelegramReportRecipient } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
@@ -7,7 +7,11 @@ import {
   type DailyReportData,
 } from '../telegram-groups/telegram-group-daily-report.service';
 import { staffChatOf } from '../tasks/telegram/task-telegram-view';
+import { htmlToPlainText } from '../refunds/refund-student-text';
+import { unreachableReason } from '../telegram/utils/student-chat-reach';
 import {
+  classifyTelegramError,
+  describeError,
   sendTelegramText,
   type TelegramFailureKind,
   type TelegramTextSender,
@@ -18,6 +22,7 @@ import {
 } from './personal-report-render';
 import { reportKeyboard, type ReportFocus } from './report-keyboard';
 import { tashkentClock } from './report-clock';
+import { attemptNote } from './reach-state';
 
 export type RecipientLike = Pick<
   TelegramReportRecipient,
@@ -34,12 +39,23 @@ export type DeliverResult =
       description: string;
     };
 
+export type ProbeResult = {
+  reach: 'DELIVERED' | 'BLOCKED' | 'UNLINKED' | 'NO_BOT' | 'FAILED';
+  note: string | null;
+};
+
+const BOT_CHECK_TTL_MS = 60_000;
+const GET_ME_TIMEOUT_MS = 3_000;
+
 /**
  * The personal daily report (ADR-0095). Figures come only from
  * `TelegramGroupDailyReportService.collect` — the 21:00 report's own source.
  */
 @Injectable()
 export class PersonalReportService {
+  private readonly logger = new Logger(PersonalReportService.name);
+  private botCheck: { at: number; active: boolean } | null = null;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly daily: TelegramGroupDailyReportService,
@@ -119,6 +135,113 @@ export class PersonalReportService {
     r: RecipientLike,
     cache: ReportCache = new Map(),
     now = new Date(),
+  ): Promise<DeliverResult> {
+    const result = await this.send(r, cache, now);
+    await this.recordAttempt(r, result, now);
+    return result;
+  }
+
+  /** Is the main bot configured and does Telegram answer it? Cached a minute. */
+  async botActive(): Promise<boolean> {
+    if (this.botCheck && Date.now() - this.botCheck.at < BOT_CHECK_TTL_MS) {
+      return this.botCheck.active;
+    }
+    const bot = this.telegram.getBot() as unknown as
+      | { telegram: { getMe(): Promise<unknown> } }
+      | null
+      | undefined;
+    let active = false;
+    if (bot) {
+      try {
+        await Promise.race([
+          bot.telegram.getMe(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), GET_ME_TIMEOUT_MS),
+          ),
+        ]);
+        active = true;
+      } catch {
+        active = false;
+      }
+    }
+    this.botCheck = { at: Date.now(), active };
+    return active;
+  }
+
+  /**
+   * «Ulanishni tekshirish»: a silent `typing` action — nothing appears in the
+   * person's chat. 403 «blocked» is the only certain «will not arrive». The
+   * mark on the account is written here at once (the send wrapper that also
+   * learns it writes in the background, too late for the page's refetch);
+   * its conditional write then finds nothing to change.
+   */
+  async probe(userId: number): Promise<ProbeResult> {
+    const chat = await staffChatOf(this.prisma, userId);
+    if (!chat) return { reach: 'UNLINKED', note: 'Telegram ulanmagan' };
+    const bot = this.telegram.getBot() as unknown as
+      | {
+          telegram: {
+            sendChatAction(chatId: string, action: string): Promise<unknown>;
+          };
+        }
+      | null
+      | undefined;
+    if (!bot) return { reach: 'NO_BOT', note: 'Bot ishlamayapti' };
+    try {
+      await bot.telegram.sendChatAction(chat.chatId, 'typing');
+    } catch (err) {
+      const failure = classifyTelegramError(err);
+      if (failure.kind === 'permanent') {
+        await this.prisma.user.updateMany({
+          where: { id: userId, telegramDisconnectedAt: null },
+          data: { telegramDisconnectedAt: new Date() },
+        });
+        return {
+          reach: 'BLOCKED',
+          note: unreachableReason(failure.description),
+        };
+      }
+      return { reach: 'FAILED', note: 'Telegram vaqtincha javob bermadi' };
+    }
+    await this.prisma.user.updateMany({
+      where: { id: userId, telegramDisconnectedAt: { not: null } },
+      data: { telegramDisconnectedAt: null },
+    });
+    return { reach: 'DELIVERED', note: null };
+  }
+
+  /** The report as plain text with today's real figures; null = no allowed branch. */
+  async preview(r: RecipientLike): Promise<string | null> {
+    const report = await this.compose(r, 'all');
+    return report ? htmlToPlainText(report.text) : null;
+  }
+
+  /** The attempt log the page shows; never fails a delivery. */
+  private async recordAttempt(
+    r: RecipientLike,
+    result: DeliverResult,
+    at: Date,
+  ): Promise<void> {
+    try {
+      await this.prisma.telegramReportRecipient.updateMany({
+        where: { companyId: r.companyId, userId: r.userId },
+        data: {
+          lastAttemptAt: at,
+          lastAttemptOk: result.ok,
+          lastAttemptNote: attemptNote(result),
+        },
+      });
+    } catch (err) {
+      this.logger.warn(
+        `could not record the report attempt: ${describeError(err)}`,
+      );
+    }
+  }
+
+  private async send(
+    r: RecipientLike,
+    cache: ReportCache,
+    now: Date,
   ): Promise<DeliverResult> {
     const chat = await staffChatOf(this.prisma, r.userId);
     if (!chat) return { ok: false, reason: 'NO_CHAT' };
