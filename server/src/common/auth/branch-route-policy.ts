@@ -103,7 +103,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'usable by someone who has no branch yet; the public form and its schema ' +
       'are handed to strangers on purpose (the resulting lead takes its branch ' +
       'from the section it routes into); the receipt endpoints exist so a payer ' +
-      'can verify a document they were given.',
+      'can verify a document they were given, and so does the certificate QR ' +
+      'route (`GET /participation-certificates/:id/verify`), which shows a ' +
+      "printed Teilnahmebestätigung's number, name, level and validity only.",
     routes: [
       'GET /auth/otp/poll',
       'GET /auth/telegram/callback',
