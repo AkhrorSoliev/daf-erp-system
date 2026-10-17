@@ -35,10 +35,12 @@ interface Props {
   now: Date;
   onSelect: (id: number) => void;
   onToggle: (id: number, isActive: boolean) => void;
+  /** A save is pending: the switch waits for the refetch, like the panel. */
+  busy: boolean;
   empty: string;
 }
 
-export function RecipientTable({ rows, branches, selectedId, now, onSelect, onToggle, empty }: Props) {
+export function RecipientTable({ rows, branches, selectedId, now, onSelect, onToggle, busy, empty }: Props) {
   return (
     <div role="grid" aria-label="Hisobot oluvchilar" className="overflow-hidden rounded-xl border">
       <div
@@ -89,6 +91,7 @@ export function RecipientTable({ rows, branches, selectedId, now, onSelect, onTo
               <Switch
                 checked={r.isActive}
                 aria-label="Yoqilgan"
+                disabled={busy}
                 onClick={(e) => e.stopPropagation()}
                 onCheckedChange={(v) => onToggle(r.id, v)}
               />

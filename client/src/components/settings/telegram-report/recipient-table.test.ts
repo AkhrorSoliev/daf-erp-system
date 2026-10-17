@@ -15,7 +15,7 @@ const html = (rows: Recipient[], extra: Partial<Parameters<typeof RecipientTable
   renderToStaticMarkup(
     createElement(RecipientTable, {
       rows, branches, selectedId: 1, now: new Date("2026-10-17T12:00:00Z"),
-      onSelect: () => {}, onToggle: () => {}, empty: "Hali oluvchi yo'q", ...extra,
+      onSelect: () => {}, onToggle: () => {}, busy: false, empty: "Hali oluvchi yo'q", ...extra,
     }),
   );
 
@@ -35,6 +35,11 @@ describe("RecipientTable", () => {
     expect(out).toContain('aria-selected="true"');
     expect(out).toContain("Yetmaydi");
     expect(out).toContain("botni bloklagan");
+  });
+
+  it("disables the switch while a save is pending", () => {
+    expect(html([base], { busy: true })).toContain('disabled=""');
+    expect(html([base], { busy: false })).not.toContain('disabled=""');
   });
 
   it("shows the empty text when there are no rows", () => {

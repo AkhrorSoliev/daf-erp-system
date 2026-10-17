@@ -78,8 +78,9 @@ export function TelegramReportSettingsClient() {
     mutationFn: testRecipient,
     onMutate: (id) => setTestingId(id),
     onSettled: () => setTestingId(null),
-    onSuccess: () => toast.success("Hisobot yuborildi"),
-    onError: (e) => toast.error(getErrorMessage(e, "Yuborib bo'lmadi")),
+    // The server stores every attempt (success or not): re-read either way.
+    onSuccess: () => { toast.success("Hisobot yuborildi"); return refresh(); },
+    onError: (e) => { toast.error(getErrorMessage(e, "Yuborib bo'lmadi")); return refresh(); },
   });
   const check = useMutation({
     mutationFn: checkRecipient,
@@ -161,6 +162,7 @@ export function TelegramReportSettingsClient() {
               now={now}
               onSelect={setSelectedId}
               onToggle={(id, isActive) => patch.mutate({ id, p: { isActive } })}
+              busy={patch.isPending || remove.isPending}
               empty={filtered ? "Hech narsa topilmadi" : "Hali oluvchi yo'q"}
             />
             <p className="text-xs text-muted-foreground">
