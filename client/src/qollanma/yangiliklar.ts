@@ -7,6 +7,12 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Interfeys tilini tanlash",
+    matn: "Yuqori paneldagi foydalanuvchi menyusida «Til» bandi paydo bo'ldi. Besh tildan birini tanlang: O'zbekcha, Ўзбекча, Русский, Deutsch yoki English. Sahifa qayta yuklanmaydi, tanlov akkauntingizda saqlanadi, shuning uchun boshqa qurilmada ham shu til chiqadi. Hozircha chap menyu, yuqori panel, foydalanuvchi menyusi va bildirishnomalar tarjima qilingan; sahifalar bosqichma-bosqich qo'shiladi, tarjimasi hali yo'q matn o'zbekcha lotinda chiqadi. Serverdan keladigan matnlar (xato xabarlari, bildirishnoma matni, hisobot fayllari) o'zbekcha qoladi. Kirish sahifasi hali o'zbekcha.",
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Dizayn uslubini tanlash",
     matn: "Yuqori paneldagi foydalanuvchi menyusida «Dizayn uslubi» bandi paydo bo'ldi. Besh tayyor rang va shrift to'plamidan birini tanlang: Daftar (hozirgi), O'rmon, Gilos, Grafit yoki Qum. Har uslub yorug' va qorong'i rejimda alohida ishlaydi. Tanlov akkauntingizda saqlanadi, shuning uchun boshqa qurilmada ham shu uslub chiqadi. Holat ranglari (qizil, yashil, sariq) hamma uslubda bir xil qoladi. Kirish sahifasi har doim Daftar.",
     sahifa: { bolim: "boshlash", sahifa: "interfeys" },

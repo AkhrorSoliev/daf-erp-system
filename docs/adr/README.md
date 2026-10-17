@@ -164,6 +164,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0095](0095-shaxsiy-telegram-hisobot.md) | Kunlik hisobot shaxsiy chatga: CEO oluvchi, filial va bo'limni belgilaydi | Qabul qilindi | 2026-10-16 |
 | [0096](0096-kpi-natijasi.md) | KPI natijasi: administratorga, bir marta, summa muhrlanadi | Qabul qilindi | 2026-10-16 |
 | [0097](0097-xodimning-dizayn-uslubi-akkauntda.md) | Xodimning dizayn uslubi akkauntda; uslub tokenlarni almashtiradi, holat ranglarini emas | Qabul qilindi | 2026-10-17 |
+| [0098](0098-interfeys-tili-matn-kalit-akkaunt-va-qurilma.md) | Interfeys tili: matn kalit, akkaunt va qurilmada saqlanadi | Qabul qilindi | 2026-10-17 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

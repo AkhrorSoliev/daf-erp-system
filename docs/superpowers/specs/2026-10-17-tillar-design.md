@@ -33,14 +33,17 @@ tilni tanlash joyi ham yo'q.
 - **Lug'at** har til uchun alohida fayl: `src/i18n/dictionaries/ru.ts`, `de.ts`, `en.ts`,
   `Record<string, string>` ("o'zbekcha matn" → tarjima). `uz` lug'atsiz (matnning o'zi).
   `uz-Cyrl` lug'atsiz: o'zbek lotindan avtomatik o'giriladi (3-band); istisno kerak bo'lsa
-  `dictionaries/uz-cyrl.ts` da qo'lda yoziladi (kalit shu, qiymat to'g'ri kirill).
+  `dictionaries/uz-cyrl.ts` da qo'lda yoziladi (kalit shu, qiymat to'g'ri kirill). Bu fayl
+  ixtiyoriy override fayli: bo'sh bo'lishi mumkin, faqat qoida noto'g'ri chiqargan so'zlar yoziladi.
 - **Topilmasa o'zbekcha lotin chiqadi** (xato yo'q): tarjima qilinmagan sahifalar shunday
   ko'rinadi, buzilmaydi.
 - `src/i18n/translate.ts` — sof funksiya `translate(locale, dictionary, source, params?)`
   (React'siz, testlanadi). `useT()` (`hooks/use-t.ts`) joriy tilni oladi va `t` ni qaytaradi.
 - **Ro'yxatlardagi matn** (menyu nomlari, breadcrumb nomlari — modul darajasidagi massivlar):
   literal `msg("Moliya")` bilan o'raladi — `msg` matnni o'zgartirmaydi, faqat tekshiruv uni
-  topishi uchun; ekranga chiqarishda `t(item.title)`.
+  topishi uchun; ekranga chiqarishda `t(item.title)`. Faqat `msg` ning argumenti literal bo'lishi
+  shart; `t(o'zgaruvchi)` yoki `t(item.title)` ruxsat, chunki qiymat `msg` dan kelgan va `msg` o'zi
+  tekshiriladi.
 - **Ko'plik shakllari** (rus/nemis/ingliz) bu bo'lakda yo'q: qobiqda hisob bilan matn yo'q.
   Kerak bo'lsa 4-bo'lakda `tn()` qo'shiladi.
 - **Raqam va sana formati o'zgarmaydi** (`1 500 000`, `dd.MM.yyyy`, client/CLAUDE.md qoidasi).
@@ -150,8 +153,11 @@ tanlagich. Ungacha login o'zbekcha lotin.
 
 `npm run i18n:check` = `vitest run src/i18n` (yangi vositasiz, CI da oddiy testlar bilan yuradi). Test:
 
-1. `src/**/*.{ts,tsx}` dan `t("…")` va `msg("…")` literallarini yig'adi (birinchi argument literal bo'lishi
-   shart; literal bo'lmagan `t(...)` chaqiruvi — xato, `translate` ning o'zi va testlar bundan mustasno).
+1. `src/**/*.{ts,tsx}` dan `t("…")` va `msg("…")` literallarini yig'adi. Faqat `msg` ning argumenti literal
+   bo'lishi shart; `t(o'zgaruvchi)` va `t(item.title)` (qiymat `msg` dan kelgan) ruxsat. Boshqa shakldagi
+   `t(...)` chaqiruvi (shartli ifoda, shablon, qo'shish, chaqiruv) tekshirib bo'lmaydi, shuning uchun xato:
+   har matn uchun bitta literal chaqiruv yoziladi (`ok ? t("Ha") : t("Yo'q")`); `translate` ning o'zi va
+   testlar bundan mustasno.
 2. **Qat'iy fayllar** ro'yxati (`STRICT_FILES`, shu bo'lakda 6-band fayllari): ularning har bir literali
    `ru`, `de`, `en` lug'atlarida bo'lishi shart. Boshqa fayllarda — tekshirilmaydi (4-bo'lak ro'yxatni
    kengaytiradi).
