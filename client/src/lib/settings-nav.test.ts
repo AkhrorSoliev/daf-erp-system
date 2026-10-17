@@ -33,10 +33,10 @@ function visibleTitles(roleIds: number[]): Record<string, string[]> {
 }
 
 describe("getVisibleSettingsSections — /settings da kim nimani ko'radi", () => {
-  it("the CEO sees all 15 items in two sections", () => {
+  it("the CEO sees all 16 items in two sections", () => {
     const sections = getVisibleSettingsSections(canForRoles([CEO]), true);
     expect(sections.map((section) => section.title)).toEqual(["Administratsiya", "CEO"]);
-    expect(sections.flatMap((section) => section.items)).toHaveLength(15);
+    expect(sections.flatMap((section) => section.items)).toHaveLength(16);
   });
 
   it("filial direktori 10 ta punktni ko'radi — Arxiv va DaF normasisiz", () => {
@@ -145,6 +145,16 @@ describe("«Lidlar egaligi» — CEO only (ADR-0093)", () => {
 
 describe("«KPI sozlamalari» — CEO only (ADR-0096)", () => {
   const PATH = "/settings/kpi";
+  it("only the CEO sees and opens it", () => {
+    const ceo = getVisibleSettingsSections(canForRoles([CEO]), true).flatMap((s) => s.items);
+    expect(ceo.map((item) => item.url)).toContain(PATH);
+    expect(canOpenSettingsPath(PATH, canForRoles([BRANCH_DIRECTOR]), false)).toBe(false);
+    expect(canOpenSettingsPath(PATH, canForRoles([CEO]), true)).toBe(true);
+  });
+});
+
+describe("«Telegram hisobot» — CEO only (ADR-0095)", () => {
+  const PATH = "/settings/telegram-report";
   it("only the CEO sees and opens it", () => {
     const ceo = getVisibleSettingsSections(canForRoles([CEO]), true).flatMap((s) => s.items);
     expect(ceo.map((item) => item.url)).toContain(PATH);

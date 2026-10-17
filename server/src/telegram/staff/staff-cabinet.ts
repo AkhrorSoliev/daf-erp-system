@@ -41,6 +41,10 @@ export const STAFF_PAGES = {
 export const STAFF_TASKS_ACTION = 'tk:list';
 export const STAFF_TASKS_BUTTON_TEXT = '📋 Topshiriqlarim';
 
+/** The personal report (ADR-0095); answered by `src/telegram-report/`. */
+export const STAFF_REPORT_ACTION = 'tr:open';
+export const STAFF_REPORT_BUTTON_TEXT = '📊 Hisobot';
+
 /** Botga tanish xodim: kabinet shu ma'lumot bilan quriladi. */
 export interface StaffAccount {
   id: number;
@@ -135,6 +139,7 @@ export function staffMenuKeyboard(
   account: StaffAccount,
   cabinetUrl: string,
   studentCabinetUrl?: string,
+  opts: { report?: boolean } = {},
 ) {
   const pages = [
     Markup.button.webApp(
@@ -155,6 +160,11 @@ export function staffMenuKeyboard(
     pages,
     [Markup.button.callback(STAFF_TASKS_BUTTON_TEXT, STAFF_TASKS_ACTION)],
   ];
+  if (opts.report) {
+    rows.push([
+      Markup.button.callback(STAFF_REPORT_BUTTON_TEXT, STAFF_REPORT_ACTION),
+    ]);
+  }
   if (account.roleIds.includes(TEACHER_ROLE_ID)) {
     rows.push([
       Markup.button.webApp(
@@ -181,7 +191,10 @@ function cabinetKeyboard(cabinetUrl: string) {
 
 export class StaffCabinet {
   constructor(
-    private readonly prisma: Pick<PrismaService, 'user' | 'student'>,
+    private readonly prisma: Pick<
+      PrismaService,
+      'user' | 'student' | 'telegramReportRecipient'
+    >,
     private readonly telegram: Pick<
       Telegram,
       'setChatMenuButton' | 'sendMessage'
@@ -234,6 +247,11 @@ export class StaffCabinet {
         ? this.studentMiniAppUrl
         : undefined;
 
+    const report =
+      (await this.prisma.telegramReportRecipient.count({
+        where: { userId: account.id, isActive: true },
+      })) > 0;
+
     // Reply-klaviaturani tozalaydi: yarim qolgan oqimning «📱 Telefon
     // raqamni yuborish» tugmasi ekranda yopishib qolmasin (o'quvchi
     // menyusidagidek).
@@ -243,7 +261,7 @@ export class StaffCabinet {
     );
     await ctx.reply(
       'Xodim kabinetingiz — quyidagi imkoniyatlardan birini tanlang:',
-      staffMenuKeyboard(account, cabinetUrl, studentCabinetUrl),
+      staffMenuKeyboard(account, cabinetUrl, studentCabinetUrl, { report }),
     );
     return true;
   }

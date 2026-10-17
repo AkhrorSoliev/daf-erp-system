@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   UserCheck,
   Trophy,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import type { Can } from "./permission-check";
@@ -172,6 +173,14 @@ export const settingsNavSections: SettingsNavSection[] = [
         url: "/settings/kpi",
         icon: Trophy,
         description: "KPI narxlari va hisoblash kaliti",
+        ceoOnly: true,
+      },
+      {
+        // Every route is `@CeoOnly()` (ADR-0095): identity, not a capability.
+        title: "Telegram hisobot",
+        url: "/settings/telegram-report",
+        icon: BarChart3,
+        description: "Kunlik hisobot kimning shaxsiy chatiga borishi",
         ceoOnly: true,
       },
     ],

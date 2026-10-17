@@ -41,6 +41,7 @@ import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module'
   exports: [
     TelegramGroupsService,
     TelegramGroupStatsService,
+    TelegramGroupDailyReportService,
     TelegramGroupAnnouncementService,
     TelegramAdminBotService,
   ],

@@ -4489,3 +4489,45 @@ model LessonRating {
   @@index([companyId, date])
   @@index([chatId, promptMessageId])
 }
+
+/// Who gets the personal daily report in their own Telegram chat (ADR-0095).
+/// Settings, not a ledger row: removing a recipient deletes the row.
+enum TelegramReportLayout {
+  BY_SECTION
+  TABLE
+  BY_BRANCH
+  TOTAL_ONLY
+}
+
+enum TelegramReportSection {
+  TODAY_MONEY
+  STUDENTS
+  LESSONS
+  ACTIVE_STUDENTS
+  DEBT
+  MONTH
+  SALARY
+  ALERTS
+}
+
+model TelegramReportRecipient {
+  id           Int                     @id @default(autoincrement())
+  companyId    Int
+  userId       Int
+  /// "HH:MM", :00 or :30, 07:00–23:30 (Tashkent).
+  sendTime     String                  @default("21:00")
+  layout       TelegramReportLayout    @default(BY_SECTION)
+  /// true = every live branch, including branches opened later.
+  allBranches  Boolean                 @default(false)
+  branchIds    Int[]                   @default([])
+  sections     TelegramReportSection[] @default([])
+  isActive     Boolean                 @default(true)
+  /// Tashkent day of the last automatic send (the cron's claim).
+  lastSentDate DateTime?               @db.Date
+  createdById  Int
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  @@unique([companyId, userId])
+  @@index([isActive, sendTime])
+}

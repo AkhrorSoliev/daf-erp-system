@@ -1,0 +1,154 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`21:00 message — byte-for-byte guard (telegram-report plan Task 1) a clean day: no flags, no advance, no prior snapshot 1`] = `
+"📊 <b>08.07.2026, Chorshanba — DaF Sprachzentrum</b>
+🟢 <i>Kun yakuni: yaxshi</i>
+
+💰 <b>Bugungi moliya</b>
+• Kirim: <b>14 ta · 8 400 000 so'm</b>
+   Naqd 3 200 000 · Payme 3 100 000 · Click 1 300 000 · O'tkazma 800 000
+• Chiqim: <b>0 so'm</b>
+• Sof (bugun): <b>+8 400 000 so'm</b>
+
+👥 <b>O'quvchilar harakati</b>
+• Yangi o'quvchilar: <b>3</b> · Ketgan: <b>1</b> — sof <b>+2</b>
+• Yangi lidlar: <b>5</b> (1 tasi o'quvchiga aylandi)
+
+🎓 <b>Bugungi o'quv jarayoni</b>
+• Dars o'tilgan guruhlar: <b>18</b>
+• Davomat: <b>198</b> keldi · <b>6</b> kech · <b>18</b> kelmadi · <b>4</b> uzrli — <b>92%</b>
+
+📌 <b>Hozirgi holat</b>
+• Faol o'quvchilar: <b>1 240</b>
+• O'qiyotganlar qarzi: <b>48</b> ta — <b>20 070 000 so'm</b>
+   🟡 shu oy 18 000 000 so'm · 🔴 eski qarz 2 070 000 so'm
+• O'qimayotganlar qarzi: <b>29</b> ta — <b>8 190 000 so'm</b>
+
+📅 <b>Oy boshidan (1–8 iyul)</b>
+• Tushum (haqiqiy): <b>280 000 000 so'm</b>
+• Xarajat: <b>95 000 000 so'm</b>
+• Sof foyda: <b>+12 345 678 so'm</b>
+• Kassa harakati (oyliksiz): <b>+185 000 000 so'm</b>
+
+✅ <b>Bugun jiddiy muammo yo'q</b>"
+`;
+
+exports[`21:00 message — byte-for-byte guard (telegram-report plan Task 1) canonical net profit fails: the honest cash line 1`] = `
+"📊 <b>08.07.2026, Chorshanba — DaF Sprachzentrum</b>
+🟡 <i>Kun yakuni: ehtiyot bo'ling</i>
+
+💰 <b>Bugungi moliya</b>
+• Kirim: <b>14 ta · 8 400 000 so'm</b>
+   Naqd 3 200 000 · Payme 3 100 000 · Click 1 300 000 · O'tkazma 800 000
+• Chiqim: <b>1 850 000 so'm</b>
+• Sof (bugun): <b>+6 550 000 so'm</b>
+
+👥 <b>O'quvchilar harakati</b>
+• Yangi o'quvchilar: <b>3</b> · Ketgan: <b>1</b> — sof <b>+2</b>
+• Yangi lidlar: <b>5</b> (1 tasi o'quvchiga aylandi)
+
+🎓 <b>Bugungi o'quv jarayoni</b>
+• Dars o'tilgan guruhlar: <b>18</b>
+• Davomat: <b>198</b> keldi · <b>6</b> kech · <b>18</b> kelmadi · <b>4</b> uzrli — <b>92%</b>
+
+📌 <b>Hozirgi holat</b>
+• Faol o'quvchilar: <b>1 240</b>
+• O'qiyotganlar qarzi: <b>48</b> ta — <b>20 070 000 so'm</b>  (bugun ▲ 1 080 000 · +2)
+   🟡 shu oy 18 000 000 so'm · 🔴 eski qarz 2 070 000 so'm
+• O'qimayotganlar qarzi: <b>29</b> ta — <b>8 190 000 so'm</b>
+
+📅 <b>Oy boshidan (1–8 iyul)</b>
+• Tushum (haqiqiy): <b>280 000 000 so'm</b>
+• Xarajat: <b>95 000 000 so'm</b>
+• Kassa harakati (oyliksiz): <b>+185 000 000 so'm</b>
+
+💵 <b>Ustozlar oyligi (oy boshidan)</b>
+• To'liq ishlangan: <b>40 000 000 so'm</b>
+• O'quvchilar to'lagan: <b>32 000 000 so'm</b>
+• 🏛 Markaz qo'shimchasi: <b>8 000 000 so'm</b>
+
+🚩 <b>Diqqat</b>
+• Qaytarilgan to'lov: <b>350 000 so'm</b> (1 ta)
+• Qarz kechirildi: <b>900 000 so'm</b> (1 ta)"
+`;
+
+exports[`21:00 message — byte-for-byte guard (telegram-report plan Task 1) company-wide, every section 1`] = `
+"📊 <b>08.07.2026, Chorshanba — DaF Sprachzentrum</b>
+🟡 <i>Kun yakuni: ehtiyot bo'ling</i>
+
+💰 <b>Bugungi moliya</b>
+• Kirim: <b>14 ta · 8 400 000 so'm</b>
+   Naqd 3 200 000 · Payme 3 100 000 · Click 1 300 000 · O'tkazma 800 000
+• Chiqim: <b>1 850 000 so'm</b>
+• Sof (bugun): <b>+6 550 000 so'm</b>
+
+👥 <b>O'quvchilar harakati</b>
+• Yangi o'quvchilar: <b>3</b> · Ketgan: <b>1</b> — sof <b>+2</b>
+• Yangi lidlar: <b>5</b> (1 tasi o'quvchiga aylandi)
+
+🎓 <b>Bugungi o'quv jarayoni</b>
+• Dars o'tilgan guruhlar: <b>18</b>
+• Davomat: <b>198</b> keldi · <b>6</b> kech · <b>18</b> kelmadi · <b>4</b> uzrli — <b>92%</b>
+
+📌 <b>Hozirgi holat</b>
+• Faol o'quvchilar: <b>1 240</b>
+• O'qiyotganlar qarzi: <b>48</b> ta — <b>20 070 000 so'm</b>  (bugun ▲ 1 080 000 · +2)
+   🟡 shu oy 18 000 000 so'm · 🔴 eski qarz 2 070 000 so'm
+• O'qimayotganlar qarzi: <b>29</b> ta — <b>8 190 000 so'm</b>
+
+📅 <b>Oy boshidan (1–8 iyul)</b>
+• Tushum (haqiqiy): <b>280 000 000 so'm</b>
+• Xarajat: <b>95 000 000 so'm</b>
+• Sof foyda: <b>+12 345 678 so'm</b>
+• Kassa harakati (oyliksiz): <b>+185 000 000 so'm</b>
+
+💵 <b>Ustozlar oyligi (oy boshidan)</b>
+• To'liq ishlangan: <b>40 000 000 so'm</b>
+• O'quvchilar to'lagan: <b>32 000 000 so'm</b>
+• 🏛 Markaz qo'shimchasi: <b>8 000 000 so'm</b>
+
+🚩 <b>Diqqat</b>
+• Qaytarilgan to'lov: <b>350 000 so'm</b> (1 ta)
+• Qarz kechirildi: <b>900 000 so'm</b> (1 ta)"
+`;
+
+exports[`21:00 message — byte-for-byte guard (telegram-report plan Task 1) one branch: the scope line under the header 1`] = `
+"📊 <b>08.07.2026, Chorshanba — DaF Sprachzentrum</b>
+<i>Namangan filiali</i>
+🟡 <i>Kun yakuni: ehtiyot bo'ling</i>
+
+💰 <b>Bugungi moliya</b>
+• Kirim: <b>14 ta · 8 400 000 so'm</b>
+   Naqd 3 200 000 · Payme 3 100 000 · Click 1 300 000 · O'tkazma 800 000
+• Chiqim: <b>1 850 000 so'm</b>
+• Sof (bugun): <b>+6 550 000 so'm</b>
+
+👥 <b>O'quvchilar harakati</b>
+• Yangi o'quvchilar: <b>3</b> · Ketgan: <b>1</b> — sof <b>+2</b>
+• Yangi lidlar: <b>5</b> (1 tasi o'quvchiga aylandi)
+
+🎓 <b>Bugungi o'quv jarayoni</b>
+• Dars o'tilgan guruhlar: <b>18</b>
+• Davomat: <b>198</b> keldi · <b>6</b> kech · <b>18</b> kelmadi · <b>4</b> uzrli — <b>92%</b>
+
+📌 <b>Hozirgi holat</b>
+• Faol o'quvchilar: <b>1 240</b>
+• O'qiyotganlar qarzi: <b>48</b> ta — <b>20 070 000 so'm</b>  (bugun ▲ 1 080 000 · +2)
+   🟡 shu oy 18 000 000 so'm · 🔴 eski qarz 2 070 000 so'm
+• O'qimayotganlar qarzi: <b>29</b> ta — <b>8 190 000 so'm</b>
+
+📅 <b>Oy boshidan (1–8 iyul)</b>
+• Tushum (haqiqiy): <b>280 000 000 so'm</b>
+• Xarajat: <b>95 000 000 so'm</b>
+• Sof foyda: <b>+12 345 678 so'm</b>
+• Kassa harakati (oyliksiz): <b>+185 000 000 so'm</b>
+
+💵 <b>Ustozlar oyligi (oy boshidan)</b>
+• To'liq ishlangan: <b>40 000 000 so'm</b>
+• O'quvchilar to'lagan: <b>32 000 000 so'm</b>
+• 🏛 Markaz qo'shimchasi: <b>8 000 000 so'm</b>
+
+🚩 <b>Diqqat</b>
+• Qaytarilgan to'lov: <b>350 000 so'm</b> (1 ta)
+• Qarz kechirildi: <b>900 000 so'm</b> (1 ta)"
+`;

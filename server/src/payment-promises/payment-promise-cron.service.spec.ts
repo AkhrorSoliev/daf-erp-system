@@ -35,12 +35,33 @@ describe('PaymentPromiseCronService', () => {
   });
 
   // One branch closing does not hold up every branch's broken-promise list.
-  it('asks for company-wide holidays only', async () => {
-    await service.run();
-    expect(holidays.findActiveHolidayCovering).toHaveBeenCalledWith(
-      expect.any(Date),
-      null,
-    );
+  describe('company-wide holidays, asked by Tashkent day', () => {
+    beforeEach(() => {
+      jest.useFakeTimers({
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      });
+      jest.setSystemTime(new Date('2026-10-14T04:00:00Z')); // 14.10 09:00 Tashkent
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('asks for company-wide holidays only, by UTC-midnight date', async () => {
+      await service.run();
+      expect(holidays.findActiveHolidayCovering).toHaveBeenCalledWith(
+        new Date('2026-10-14T00:00:00Z'),
+        null,
+      );
+    });
+
+    it('skips at 09:00 Tashkent on the LAST day of a one-day holiday', async () => {
+      // Stored as UTC midnight; a lookup by instant (04:00Z) is after endDate.
+      const day = new Date('2026-10-14T00:00:00Z');
+      holidays.findActiveHolidayCovering.mockImplementation((x: Date) =>
+        Promise.resolve(x >= day && x <= day ? { id: 'h1' } : null),
+      );
+      const res = await service.run();
+      expect(res).toEqual({ processed: 0, alerted: 0 });
+      expect(prisma.paymentPromise.findMany).not.toHaveBeenCalled();
+    });
   });
 
   it('short-circuits on an active holiday (no queries, no events)', async () => {

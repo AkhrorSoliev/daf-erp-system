@@ -77,13 +77,33 @@ describe('TelegramGroupDailyCronService', () => {
   });
 
   // A branch's own holiday must not silence every other branch's report.
-  it('asks for company-wide holidays only', async () => {
+  it('asks for company-wide holidays only, by Tashkent day (UTC midnight)', async () => {
     prisma.telegramGroup.findMany.mockResolvedValue([]);
     await service.sendDailyReports();
     expect(findActiveHolidayCovering).toHaveBeenCalledWith(
-      expect.any(Date),
+      new Date('2026-05-18T00:00:00Z'),
       null,
     );
+  });
+
+  it('skips at 21:00 Tashkent on the LAST day of a one-day holiday', async () => {
+    // Holidays are stored as UTC midnight; a lookup by instant (16:00Z) would
+    // fall after endDate and miss the holiday.
+    const holiday = {
+      id: 'h-1',
+      name: 'Mustaqillik',
+      date: new Date('2026-05-18T00:00:00Z'),
+      endDate: new Date('2026-05-18T00:00:00Z'),
+    };
+    findActiveHolidayCovering.mockImplementation((x: Date) =>
+      Promise.resolve(
+        x >= holiday.date && x <= holiday.endDate ? holiday : null,
+      ),
+    );
+    jest.setSystemTime(new Date('2026-05-18T16:00:00Z'));
+    await service.sendDailyReports();
+    expect(prisma.telegramGroup.findMany).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 
   it('runs normally on a non-holiday day', async () => {
