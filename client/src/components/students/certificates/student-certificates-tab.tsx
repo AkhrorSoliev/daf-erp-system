@@ -32,7 +32,7 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
   const queryClient = useQueryClient();
   const isCeo = isCeoUser(useAuth((s) => s.user));
   const canIssue = useCan("students.manage");
-  const { data, isLoading, isError, isFetching, refetch } = useCertificatePreview(studentId, true);
+  const { data, isLoading, isFetching, refetch } = useCertificatePreview(studentId, true);
 
   const [busy, setBusy] = useState<string | null>(null);
   const [exemptFor, setExemptFor] = useState<LevelPreview | null>(null);
@@ -69,7 +69,9 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
       </div>
     );
   }
-  if (isError || !data) {
+  // Only «no answer yet» is a full-screen error: a failed background refetch
+  // (after issuing) keeps the list that is already on screen.
+  if (!data) {
     return (
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">{"Hujjat ma'lumotini yuklab bo'lmadi."}</p>
@@ -179,7 +181,7 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
           <DialogHeader className="border-b px-6 py-4">
             <DialogTitle>Istisno bilan hujjat berish</DialogTitle>
             <DialogDescription>
-              {exemptFor?.verdict.reasons.join(" · ")}. Sabab hujjat tarixiga yoziladi.
+              {`${exemptFor?.verdict.reasons.join(" · ") ?? ""}. Sabab o'quvchi tarixiga yoziladi.`}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 space-y-2 overflow-y-auto px-6 py-4">

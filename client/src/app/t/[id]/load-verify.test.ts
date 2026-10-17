@@ -56,6 +56,34 @@ describe("loadVerify", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [url, init] = fetchImpl.mock.calls[0];
     expect(String(url)).toMatch(/\/participation-certificates\/a%2Fb%20c\/verify$/);
-    expect(init).toEqual({ cache: "no-store" });
+    expect(init).toMatchObject({ cache: "no-store" });
+    // A hanging API must end the request (and the page) instead of waiting for ever.
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  // The timer fires as a TimeoutError (a hanging API), a navigation away as an AbortError: neither is a verdict.
+  it.each(["TimeoutError", "AbortError"])("a %s from the fetch -> unavailable, never «not issued»", async (name) => {
+    const timedOut = vi.fn().mockRejectedValue(new DOMException("The operation timed out.", name));
+    expect(await loadVerify("abc", timedOut)).toEqual({ kind: "unavailable" });
+  });
+
+  it("gives up on an API that never answers: the 8 s timer's signal aborts the fetch", async () => {
+    // The timer itself is Node's; here the signal it would hand out is driven by hand.
+    const controller = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+    const hanging = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        }),
+    );
+    try {
+      const pending = loadVerify("abc", hanging as unknown as typeof fetch);
+      expect(timeout).toHaveBeenCalledWith(8000);
+      controller.abort(new DOMException("The operation timed out.", "TimeoutError"));
+      expect(await pending).toEqual({ kind: "unavailable" });
+    } finally {
+      timeout.mockRestore();
+    }
   });
 });

@@ -1,14 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { downloadAuthedFile } from "@/lib/download-file";
+import { retryDrawer } from "@/components/payments/debt/debt-queries";
 import type { CertificatePreview, IssuedCertificate } from "./certificate-types";
 
 export const certificatePreviewKey = (studentId: number) =>
   ["participation-certificates", "preview", studentId] as const;
 
-/** Lazy: pass `enabled` once the tab has been opened. */
-export function useCertificatePreview(studentId: number, enabled: boolean) {
-  return useQuery({
+/**
+ * `retryDrawer`: only a network or 5xx failure is retried. An archived student's
+ * 404 (or a 403) will not change, so the CEO must not wait on a skeleton for it.
+ */
+export const certificatePreviewOptions = (studentId: number, enabled: boolean) =>
+  queryOptions({
     queryKey: certificatePreviewKey(studentId),
     queryFn: () =>
       api
@@ -16,7 +20,12 @@ export function useCertificatePreview(studentId: number, enabled: boolean) {
         .then((r) => r.data),
     enabled,
     staleTime: 0,
+    retry: retryDrawer,
   });
+
+/** Lazy: pass `enabled` once the tab has been opened. */
+export function useCertificatePreview(studentId: number, enabled: boolean) {
+  return useQuery(certificatePreviewOptions(studentId, enabled));
 }
 
 export async function issueCertificate(

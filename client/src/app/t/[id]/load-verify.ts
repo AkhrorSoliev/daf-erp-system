@@ -29,6 +29,8 @@ export async function loadVerify(id: string, fetchImpl: typeof fetch = fetch): P
   try {
     const res = await fetchImpl(`${apiUrl}/participation-certificates/${encodeURIComponent(id)}/verify`, {
       cache: "no-store",
+      // A hanging API ends in the catch below («Hozir tekshirib bo'lmadi…») instead of hanging the page.
+      signal: AbortSignal.timeout(8000),
     });
     if (res.status === 404) return { kind: "not-found" };
     if (!res.ok) return { kind: "unavailable" };
