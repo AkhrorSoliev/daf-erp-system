@@ -39,6 +39,10 @@ vi.mock("@/hooks/use-auth", () => {
 vi.mock("@/hooks/use-ui-skin", () => ({
   useUiSkin: () => ({ skin: "ormon", setSkin: async () => true }),
 }));
+vi.mock("@/i18n/context", () => ({
+  useT: () => (source: string) => source,
+  useLocale: () => ({ locale: "ru", setLocale: async () => true }),
+}));
 
 import { useAuth } from "@/hooks/use-auth";
 import { HeaderUserMenu } from "./header-user-menu";
@@ -91,6 +95,14 @@ describe("HeaderUserMenu", () => {
     // the colour dots come from the registry
     for (const swatch of ["#1b2d4e", "#1f4d3a", "#6b2233", "#2f3640", "#6b4a1e"]) {
       expect(html).toContain(swatch);
+    }
+  });
+
+  it("offers the five interface languages, each in its own name", () => {
+    const text = norm(renderToStaticMarkup(createElement(HeaderUserMenu)));
+    expect(text).toContain("Til");
+    for (const name of ["O'zbekcha", "Ўзбекча", "Русский", "Deutsch", "English"]) {
+      expect(text).toContain(name);
     }
   });
 

@@ -13,10 +13,10 @@ import { Toaster } from "react-hot-toast";
 // The staff portals' one typeface: text, headings and figures alike
 // (`--font-sans`, `--font-heading` and `--font-mono` all point at it in
 // globals.css). Three weights are enough for a ledger; latin-ext carries the
-// Uzbek apostrophe letters.
+// Uzbek apostrophe letters, cyrillic the Russian and Uzbek Cyrillic interface.
 const plexSans = IBM_Plex_Sans({
   variable: "--font-plex",
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin", "latin-ext", "cyrillic"],
   weight: ["400", "500", "600"],
   display: "swap",
 });

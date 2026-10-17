@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { Brush, LogOut, Monitor, Moon, Palette, Sun, User } from "lucide-react";
+import { Brush, Languages, LogOut, Monitor, Moon, Palette, Sun, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -21,6 +21,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { useUiSkin } from "@/hooks/use-ui-skin";
+import { useT, useLocale } from "@/i18n/context";
+import { LOCALES, type UiLocale } from "@/i18n/locales";
 import { UI_SKINS, type UiSkinId } from "@/lib/ui-skins";
 
 const THEMES = [
@@ -51,6 +53,8 @@ export function HeaderUserMenu() {
   // «Qayta kirish» — a plain logout would be signed straight back in.
   const signOut = useSignOut();
   const { skin, setSkin } = useUiSkin();
+  const t = useT();
+  const { locale, setLocale } = useLocale();
 
   if (!user) return <Skeleton className="size-8 rounded-full" />;
 
@@ -125,6 +129,26 @@ export function HeaderUserMenu() {
                   />
                   <span>{label}</span>
                   <span className="ml-2 text-xs text-muted-foreground">{hint}</span>
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Languages className="mr-2 size-4" />
+            {t("Til")}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuRadioGroup
+              value={locale}
+              onValueChange={(value) => {
+                if (value !== locale) void setLocale(value as UiLocale);
+              }}
+            >
+              {LOCALES.map(({ id, label }) => (
+                <DropdownMenuRadioItem key={id} value={id}>
+                  {label}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
