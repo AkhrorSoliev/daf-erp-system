@@ -810,18 +810,15 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/attendance-analytics": [
-    "Administrator",
+  "GET /reports/attendance-stats/excel": [
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/attendance-by-course": [
-    "Administrator",
+  "GET /reports/attendance-stats/missers": [
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/attendance-by-group": [
-    "Administrator",
+  "GET /reports/attendance-stats/overview": [
     "Branch Director",
     "CEO"
   ],
@@ -968,11 +965,6 @@
     "Branch Director",
     "CEO",
     "Cashier"
-  ],
-  "GET /reports/teacher-performance": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
   ],
   "GET /rooms": [
     "Administrator",

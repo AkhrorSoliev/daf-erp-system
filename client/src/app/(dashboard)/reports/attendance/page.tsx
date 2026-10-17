@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { AttendanceSection } from "@/components/reports/attendance/attendance-section";
+import { AttendancePage } from "@/components/reports/attendance/attendance-page";
 
-export default function AttendancePage() {
+export default function AttendanceReportPage() {
   return (
     <Suspense fallback={null}>
-      <AttendanceSection />
+      <AttendancePage />
     </Suspense>
   );
 }

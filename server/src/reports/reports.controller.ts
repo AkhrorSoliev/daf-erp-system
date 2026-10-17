@@ -21,12 +21,6 @@ import {
 } from '../common/finance/report-branch-scope';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 import { DepartedStudentsTeacherChangesQueryDto } from './dto/departed-students-teacher-changes-query.dto';
-import {
-  AttendanceAnalyticsQueryDto,
-  AttendanceByCourseQueryDto,
-  AttendanceByGroupQueryDto,
-  AttendanceTeacherPerfQueryDto,
-} from './dto/attendance-reports-query.dto';
 import { CurrentUser, BranchScope } from '../common/decorators';
 import { Can } from '../common/permissions/access.decorators';
 import { PrismaService } from '../prisma/prisma.service';
@@ -63,58 +57,6 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getRoomUtilization(
-      companyId,
-      this.scoped(query, scope),
-    );
-  }
-
-  @Get('teacher-performance')
-  @Can('reports.students')
-  getTeacherPerformance(
-    @Query() query: AttendanceTeacherPerfQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getTeacherPerformance(
-      companyId,
-      this.scoped(query, scope),
-    );
-  }
-
-  @Get('attendance-analytics')
-  @Can('reports.students')
-  getAttendanceAnalytics(
-    @Query() query: AttendanceAnalyticsQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getAttendanceAnalytics(
-      companyId,
-      this.scoped(query, scope),
-    );
-  }
-
-  @Get('attendance-by-group')
-  @Can('reports.students')
-  getAttendanceByGroup(
-    @Query() query: AttendanceByGroupQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getAttendanceByGroup(
-      companyId,
-      this.scoped(query, scope),
-    );
-  }
-
-  @Get('attendance-by-course')
-  @Can('reports.students')
-  getAttendanceByCourse(
-    @Query() query: AttendanceByCourseQueryDto,
-    @CurrentUser('companyId') companyId: number,
-    @BranchScope() scope: ReportBranchIds,
-  ) {
-    return this.reportsService.getAttendanceByCourse(
       companyId,
       this.scoped(query, scope),
     );
