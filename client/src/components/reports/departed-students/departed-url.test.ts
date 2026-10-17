@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   DEPARTED_CLEARED,
   DEPARTED_SCHEMA,
+  cleanCut,
   cleanPreset,
+  departedExcelFileName,
+  departedExcelParams,
   departedParams,
   hasDepartedFilter,
   isoDay,
@@ -129,6 +132,25 @@ describe("hasDepartedFilter / DEPARTED_CLEARED", () => {
     expect(hasDepartedFilter(f({ teacherIds: ["3"] }))).toBe(true);
   });
   it("«Tozalash» puts the period back and empties the course and teacher lists", () => {
-    expect(DEPARTED_CLEARED).toEqual({ preset: "current_month", startDate: "", endDate: "", courseId: [], teacherIds: [], page: 1 });
+    expect(DEPARTED_CLEARED).toEqual({ preset: "current_month", startDate: "", endDate: "", courseId: [], teacherIds: [] });
+  });
+});
+
+describe("cleanCut", () => {
+  it("the four cuts pass, anything else is the teacher cut", () => {
+    for (const c of ["teacher", "course", "group", "branch"]) expect(cleanCut(c)).toBe(c);
+    expect(cleanCut("x")).toBe("teacher");
+    expect(cleanCut("")).toBe("teacher");
+  });
+});
+
+describe("departedExcelParams / departedExcelFileName", () => {
+  it("the list filters without the page", () => {
+    expect(departedExcelParams(f({ q: " ali ", reason: "none", state: "qaytgan", debtors: "1", courseId: ["c1"], page: 3, pageSize: 50 }), TODAY)).toEqual({
+      startDate: "2026-10-01", endDate: "2026-10-31", courseId: "c1", q: "ali", reasonId: "none", state: "qaytgan", debtorsOnly: true,
+    });
+  });
+  it("the file is named after the period", () => {
+    expect(departedExcelFileName({ startDate: "2026-10-01", endDate: "2026-10-31" })).toBe("ketgan-oquvchilar-2026-10-01_2026-10-31.xlsx");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STATE_LABEL, capitalize, formatDay, formatPer100, formatStudyMonths, monthFull, monthShort, previousLabel, rangeLabel } from "./departed-format";
+import { STATE_LABEL, capitalize, formatDay, formatPer100, formatShare, formatStudyMonths, monthFull, monthShort, previousLabel, rangeLabel } from "./departed-format";
 
 describe("formatPer100", () => {
   it("below 10 one decimal with a comma, from 10 whole, no data a dash", () => {
@@ -76,5 +76,14 @@ describe("month names and capitalize", () => {
     expect(monthShort("2026-01")).toBe("yan");
     expect(monthFull("2026-08")).toBe("avgust");
     expect(capitalize("sentabrda")).toBe("Sentabrda");
+  });
+});
+
+describe("formatShare", () => {
+  it("a percentage with a comma, a whole number without a decimal; no share a dash", () => {
+    expect(formatShare(12.5)).toBe("12,5%");
+    expect(formatShare(8)).toBe("8%");
+    expect(formatShare(0)).toBe("0%");
+    expect(formatShare(null)).toBe("—");
   });
 });

@@ -63,3 +63,8 @@ export const monthShort = (key: string): string => MONTH_SHORT[Number(key.slice(
 
 /** «2026-09» → «sentabr». */
 export const monthFull = (key: string): string => MONTH_FULL[Number(key.slice(5, 7)) - 1] ?? key;
+
+/** «17,5%», «4%»; no share (too few students at the start) «—». */
+export function formatShare(share: number | null): string {
+  return share === null ? "—" : `${String(share).replace(".", ",")}%`;
+}

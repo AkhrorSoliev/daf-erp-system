@@ -1,4 +1,4 @@
-import type { ListState } from "./departed-types";
+import type { CutKey, ListState } from "./departed-types";
 
 export const DEPARTED_PAGE_SIZES = [10, 20, 30, 40, 50];
 
@@ -33,14 +33,13 @@ export interface DepartedFilters {
   pageSize: number;
 }
 
-/** «Tozalash»: the period back to this month, no course or teacher; the search, cut and list filters stay. */
+/** «Tozalash»: the period back to this month, no course or teacher; the search, cut and list filters stay. The page puts the list on page 1. */
 export const DEPARTED_CLEARED: Partial<DepartedFilters> = {
   preset: "current_month",
   startDate: "",
   endDate: "",
   courseId: [],
   teacherIds: [],
-  page: 1,
 };
 
 const PRESETS: readonly string[] = ["current_month", "last_month", "3m", "6m", "range"];
@@ -112,3 +111,19 @@ export function listParams(f: DepartedFilters, today: Date): Record<string, stri
 
 export const hasDepartedFilter = (f: DepartedFilters): boolean =>
   cleanPreset(f.preset) !== "current_month" || f.courseId.length > 0 || f.teacherIds.length > 0;
+
+const CUTS: readonly string[] = ["teacher", "course", "group", "branch"];
+
+/** An unknown `?cut=` is the teacher cut. */
+export const cleanCut = (v: string): CutKey => (CUTS.includes(v) ? (v as CutKey) : "teacher");
+
+/** The list's filters without the page, for `GET /reports/departed-students/excel`. */
+export function departedExcelParams(f: DepartedFilters, today: Date): Record<string, string | number | boolean> {
+  const out = listParams(f, today);
+  delete out.page;
+  delete out.pageSize;
+  return out;
+}
+
+export const departedExcelFileName = (range: { startDate: string; endDate: string }): string =>
+  `ketgan-oquvchilar-${range.startDate}_${range.endDate}.xlsx`;
