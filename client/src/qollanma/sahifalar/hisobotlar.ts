@@ -27,6 +27,18 @@ export const hisobotlar: QollanmaSahifa[] = [
   },
   {
     bolim: "hisobotlar",
+    sahifa: "xodimlar-kpi",
+    sarlavha: "Xodimlar KPI",
+    qisqacha:
+      "Administrator egasi bo'lgan lid birinchi to'lovni qilganda va u yozgan to'lov va'dasi bajarilganda natija yoziladi. CEO va filial direktori kim qancha natija qilganini, o'sish va kamayishni shu sahifada ko'radi. Hozir kuzatuv: pul berilmaydi.",
+    rollar: [1, 2],
+    adr: ["0096", "0093"],
+    yollar: ["/reports/xodimlar-kpi", "/settings/kpi"],
+    kalitSozlar: ["KPI", "xodim natijasi", "administrator", "lid to'lov qildi", "va'da bajarildi", "mukofot", "kuzatuv"],
+    yangilangan: "2026-10-17",
+  },
+  {
+    bolim: "hisobotlar",
     sahifa: "telegram-hisobot",
     sarlavha: "Telegram hisobot",
     qisqacha:

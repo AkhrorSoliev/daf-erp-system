@@ -86,6 +86,12 @@ const TABLE: Row[] = [
   ['reports.payments', 'DA', 'DAK', { T: 'OWN_GROUPS' }],
   ['reports.students', 'D', 'DAK', { T: 'OWN_GROUPS' }],
   ['reports.leads', 'DA', 'DAK', { T: 'OWN_GROUPS' }],
+  [
+    'kpi.view',
+    'D',
+    'D',
+    { A: 'LEADERS_ONLY', K: 'LEADERS_ONLY', T: 'NO_PAGE' },
+  ],
   ['teachers.view', 'DA', 'DAK', { T: 'OWN_GROUPS' }],
   ['teachers.manage', 'D', 'DA', { K: 'UNTESTED', T: 'UNTESTED' }],
   ['employees.view', 'D', 'DAK', { T: 'OWN_GROUPS' }],
@@ -123,8 +129,8 @@ describe('permission catalog', () => {
     }
   });
 
-  it('has 69 capabilities in 14 sections, none of them empty', () => {
-    expect(PERMISSION_KEYS).toHaveLength(69);
+  it('has 70 capabilities in 14 sections, none of them empty', () => {
+    expect(PERMISSION_KEYS).toHaveLength(70);
     expect(PERMISSION_SECTIONS).toHaveLength(14);
     for (const section of PERMISSION_SECTIONS) {
       expect(
@@ -190,8 +196,8 @@ describe('permission catalog', () => {
   });
 
   it('gives the CEO every capability, whatever else they hold', () => {
-    expect(defaultKeysForRoles([ROLE_ID.CEO]).size).toBe(69);
-    expect(defaultKeysForRoles([ROLE_ID.TEACHER, ROLE_ID.CEO]).size).toBe(69);
+    expect(defaultKeysForRoles([ROLE_ID.CEO]).size).toBe(70);
+    expect(defaultKeysForRoles([ROLE_ID.TEACHER, ROLE_ID.CEO]).size).toBe(70);
   });
 
   it('gives a teacher only their groups and attendance', () => {
@@ -309,12 +315,12 @@ describe('who the CEO may give a capability to (spec §6)', () => {
     ).toEqual(['attendance.mark', 'groups.view']);
   });
 
-  it('counts 101 locked cells, 67 keys with a lock and 7 CEO-only keys', () => {
+  it('counts 104 locked cells, 68 keys with a lock and 7 CEO-only keys', () => {
     const locks = PERMISSION_KEYS.map(
       (key) => Object.keys(permissionDef(key).lockReasons).length,
     );
-    expect(locks.reduce((sum, n) => sum + n, 0)).toBe(101);
-    expect(locks.filter((n) => n > 0)).toHaveLength(67);
+    expect(locks.reduce((sum, n) => sum + n, 0)).toBe(104);
+    expect(locks.filter((n) => n > 0)).toHaveLength(68);
     expect(
       PERMISSION_KEYS.filter(
         (key) => permissionDef(key).allowedRoles.length === 0,

@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-17",
+    sarlavha: "Xodimlar KPI",
+    matn: "Hisobotlarda «Xodimlar KPI» sahifasi qo'shildi. Administrator egasi bo'lgan lid birinchi to'lovni qilganda va u yozgan to'lov va'dasi bajarilganda natija yoziladi; summa o'sha paytdagi narx bilan muhrlanadi. Sahifada natijalar, berilganda bo'ladigan summa, «Lid → to'lov» ulushi, «Diqqat» bloki, kunlar va oylar bo'yicha diagrammalar va administratorlar jadvali bor; xodim sahifasida «KPI» yorlig'i chiqdi. Narxlar va hisoblash kaliti — Sozlamalar → «KPI sozlamalari» (faqat CEO). Hozir kuzatuv: pul berilmaydi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "hisobotlar", sahifa: "xodimlar-kpi" },
+  },
+  {
     sana: "2026-10-16",
     sarlavha: "Telegram hisobot shaxsiy chatga",
     matn: "CEO endi Sozlamalar → «Telegram hisobot» sahifasida kunlik hisobot kimning shaxsiy Telegram chatiga borishini belgilaydi: har oluvchi uchun vaqt, filiallar, bo'limlar va to'rt ko'rinishdan biri. Hisobot dushanba–shanba keladi, botdagi «📊 Hisobot» tugmasi bilan istalgan payt so'raladi, tagidagi tugmalar bilan filial tanlanadi.",

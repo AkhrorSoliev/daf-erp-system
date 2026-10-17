@@ -61,6 +61,7 @@ import { OutreachModule } from './outreach/outreach.module';
 import { AbsencePauseModule } from './absence-pause/absence-pause.module';
 import { PlannedAbsencesModule } from './planned-absences/planned-absences.module';
 import { PaymentPromisesModule } from './payment-promises/payment-promises.module';
+import { KpiModule } from './kpi/kpi.module';
 import { SettingsModule } from './settings/settings.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
@@ -148,6 +149,7 @@ import { validateEnv } from './config/env.validation';
     AbsencePauseModule,
     PlannedAbsencesModule,
     PaymentPromisesModule,
+    KpiModule,
     CallLogsModule,
     StatementsModule,
     ContractDocumentsModule,

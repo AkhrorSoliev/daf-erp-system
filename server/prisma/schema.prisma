@@ -819,6 +819,10 @@ model Lead {
   ownedAt       DateTime?
   ownerActedAt  DateTime?
   ownershipLogs LeadOwnershipLog[]
+  // How the lead was converted (ADR-0096): written by `LeadsService.convert`
+  // and `StudentLeadOriginService`. Null = not converted, or converted before
+  // stage 2 (the backfill restores the ones since KPI_START).
+  conversionKind LeadConversionKind?
 
   formSubmissions CustomFormSubmission[]
 
@@ -852,6 +856,12 @@ enum LeadOwnershipKind {
   EXPIRE
 }
 
+enum LeadConversionKind {
+  NEW_STUDENT
+  RETURNING
+  ALREADY_STUDYING
+}
+
 // Every change of a lead's owner (ADR-0093), append-only. Reports and the
 // later KPI stages read it; the lead's «Tarix» tab gets an EntityHistory row
 // for the same change. User ids are plain columns, like `statusChangedById`.
@@ -872,6 +882,57 @@ model LeadOwnershipLog {
   @@index([leadId])
   @@index([companyId, kind, createdAt])
   @@index([fromUserId])
+}
+
+enum KpiResultType {
+  LEAD_PAID
+  PROMISE_KEPT
+}
+
+enum KpiResultStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum KpiRuleMode {
+  FIXED
+  PERCENT
+}
+
+// One KPI result (ADR-0096), written only by `KpiResultsService`; the amount
+// is sealed at the rule of that moment and no money moves in stage 2. Ids are
+// plain columns (like `LeadOwnershipLog`), so archiving or deleting a lead, a
+// promise or a user never touches the record. One ACTIVE result per lead and
+// per payment (LEAD_PAID) and per promise (PROMISE_KEPT): partial unique
+// indexes in the migration, which this schema cannot express.
+model KpiResult {
+  id               String          @id @default(uuid())
+  companyId        Int
+  branchId         Int?
+  userId           Int
+  type             KpiResultType
+  leadId           String?
+  promiseId        String?
+  studentId        Int
+  paymentId        String
+  paymentAmount    Int
+  baseAmount       Int
+  ruleMode         KpiRuleMode
+  ruleValue        Int
+  amount           Int
+  // 'YYYY-MM', the Tashkent month of the payment.
+  month            String
+  occurredAt       DateTime
+  status           KpiResultStatus @default(ACTIVE)
+  cancelledAt      DateTime?
+  cancelReason     String?
+  // A correction's re-post carries the old result over (spec §7.3).
+  replacesResultId String?
+  createdAt        DateTime        @default(now())
+
+  @@index([companyId, month])
+  @@index([userId, month])
+  @@index([paymentId])
 }
 
 // Leads board column. Two rows are seeded as fixed/system columns
@@ -2477,6 +2538,9 @@ model PaymentPromise {
   resolvedAt       DateTime?
   resolvedById     Int?
   resolvedBy       User?                @relation("PaymentPromiseResolvedBy", fields: [resolvedById], references: [id])
+  // The payment that made the promise KEPT (ADR-0096), written by
+  // `settleKeptPromises` in the payment's own transaction. A plain column.
+  resolvedPaymentId String?
   createdById      Int
   createdBy        User                 @relation("PaymentPromiseCreatedBy", fields: [createdById], references: [id])
   branchId         Int? // for Branch Director scoping on /outreach
@@ -2489,6 +2553,7 @@ model PaymentPromise {
   @@index([companyId, status])
   @@index([status, promiseDate])
   @@index([branchId])
+  @@index([resolvedPaymentId])
 }
 
 enum CallReason {

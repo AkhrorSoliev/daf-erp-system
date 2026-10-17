@@ -117,7 +117,7 @@ export const navItems: NavItem[] = [
     icon: BarChart3,
     // An Administrator sees only the Lidlar and «Guruhlar bo'yicha to'lov» reports; the
     // children list filters the rest.
-    permission: ["reports.finance", "reports.payments", "reports.students", "reports.leads"],
+    permission: ["reports.finance", "reports.payments", "reports.students", "reports.leads", "kpi.view"],
     children: reportsChildren,
   },
   // The guide is open to every staff member; it filters its pages by role itself.

@@ -56,6 +56,7 @@ export const PERMISSION_KEYS = [
   "reports.payments",
   "reports.students",
   "reports.leads",
+  "kpi.view",
   "teachers.view",
   "teachers.manage",
   "employees.view",

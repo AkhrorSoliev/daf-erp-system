@@ -8,6 +8,7 @@ import {
   Send,
   Megaphone,
   Star,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import type { Can } from "./permission-check";
@@ -55,6 +56,8 @@ export const reportsNavSections: ReportsNavSection[] = [
     title: "Marketing va faoliyat",
     items: [
       { title: "Lidlar hisoboti", url: "/reports/leads", icon: UserPlus, permission: "reports.leads" },
+      // «Xodimlar KPI» (ADR-0096): the managers' observation page.
+      { title: "Xodimlar KPI", url: "/reports/xodimlar-kpi", icon: Trophy, permission: "kpi.view" },
       // A money report (server: `GET /reports/marketing`, ADR-0067).
       { title: "Marketing", url: "/reports/marketing", icon: Megaphone, permission: "reports.finance" },
       { title: "Markaz faoliyat statistikasi", url: "/reports/activity", icon: Activity, permission: "reports.students" },

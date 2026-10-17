@@ -72,6 +72,11 @@ export interface PaymentReversedPayload {
   reason: string | null;
   companyId: number;
   performedById?: number;
+  /**
+   * The first leg of an amount correction (`correctAmount`): the KPI moves its
+   * results to the re-post instead of choosing again (ADR-0096).
+   */
+  correction?: boolean;
 }
 
 /**
@@ -296,6 +301,7 @@ export class PaymentsWriteService {
             studentId: dto.studentId,
             balance: updatedStudent?.balance,
             performedById: userId,
+            paymentId: payment.id,
           });
 
           await this.entityHistoryService.recordCreate({
@@ -387,7 +393,12 @@ export class PaymentsWriteService {
     // are system actions with no real user — pass undefined so the audit
     // `changedById` is null rather than a non-existent user id 0 (which trips
     // the FK). (F-40)
-    params: { reason?: string; performedById?: number; companyId: number },
+    params: {
+      reason?: string;
+      performedById?: number;
+      companyId: number;
+      correction?: boolean;
+    },
   ) {
     const payment = await this.prisma.payment.findFirst({
       where: { id, companyId: params.companyId },
@@ -550,6 +561,7 @@ export class PaymentsWriteService {
       reason: params.reason ?? null,
       companyId: params.companyId,
       performedById: params.performedById,
+      correction: params.correction === true,
     } satisfies PaymentReversedPayload);
 
     return { reversedPaymentId: id, amount: result.amount };
@@ -752,6 +764,7 @@ export class PaymentsWriteService {
         : "To'lov usuli to'g'rilandi",
       performedById: userId,
       companyId,
+      correction: true,
     });
 
     // Step 2 — re-post at the correct amount/method (its own atomic tx).
@@ -862,6 +875,8 @@ export class PaymentsWriteService {
       studentId: number;
       balance: number | null | undefined;
       performedById: number | null | undefined;
+      /** The payment that cleared the debt — the promise's KPI hangs on it (ADR-0096). */
+      paymentId: string;
     },
   ) {
     if (params.balance == null || params.balance < 0) return;
@@ -871,6 +886,7 @@ export class PaymentsWriteService {
         status: 'KEPT',
         resolvedAt: new Date(),
         resolvedById: params.performedById ?? null,
+        resolvedPaymentId: params.paymentId,
       },
     });
   }
@@ -997,6 +1013,7 @@ export class PaymentsWriteService {
         studentId: params.studentId,
         balance: updatedStudent?.balance,
         performedById: params.performedById,
+        paymentId: payment.id,
       });
 
       await this.entityHistoryService.recordStatusChange({

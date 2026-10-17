@@ -189,6 +189,16 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'COMPANY_WIDE',
     reason:
+      'KPI prices and switch (ADR-0096): `kpi.enabled`, `kpi.leadPaid.*` and ' +
+      '`kpi.promiseKept.*` are company-level settings (`companyLevelOnly`) — one ' +
+      'value for every branch. The read carries the rules only; the write is ' +
+      'CEO-only through `@CeoOnly()`. `GET /kpi/overview` and ' +
+      '`GET /kpi/users/:id` take `@BranchScope()`.',
+    routes: ['GET /kpi/settings', 'PATCH /kpi/settings'],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
       'Personal Telegram report recipients (ADR-0095): who receives the daily ' +
       'report in their own chat, with which branches. Company-level settings, ' +
       'CEO-only through `@CeoOnly()`; the CEO picks any branch for anyone.',

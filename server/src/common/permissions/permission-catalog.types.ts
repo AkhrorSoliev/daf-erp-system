@@ -46,6 +46,7 @@ export type PermissionSection = (typeof PERMISSION_SECTIONS)[number]['key'];
  *   COMPANY      — a COMPANY_WIDE write (`branch-route-policy.ts`).
  *   BRANCH       — an UNREVIEWED route or a lookup with no branch check.
  *   GROUP_REPORT — approving a Telegram group sends it the 21:00 report.
+ *   LEADERS_ONLY — the KPI observation month is for the managers (ADR-0096).
  */
 export const LOCK = {
   OWN_GROUPS: "o'qituvchi faqat o'z guruhlarini ko'radi",
@@ -54,6 +55,7 @@ export const LOCK = {
   COMPANY: "butun kompaniyaga ta'sir qiladi",
   BRANCH: 'filial chegarasi hali tekshirilmagan',
   GROUP_REPORT: 'guruhga moliya hisoboti ketadi',
+  LEADERS_ONLY: "kuzatuv bosqichida KPI'ni faqat rahbarlar ko'radi",
 } as const;
 
 export type LockReason = (typeof LOCK)[keyof typeof LOCK];

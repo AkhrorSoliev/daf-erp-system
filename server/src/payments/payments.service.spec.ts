@@ -650,6 +650,97 @@ describe('PaymentsService', () => {
     });
   });
 
+  describe('a payment that keeps a promise (ADR-0096)', () => {
+    const plain = { studentId: 10001, amount: 500000, method: 'CASH' as any };
+
+    it('create() writes itself on the promises it made KEPT', async () => {
+      await service.create(plain, 1, 1001);
+      expect(prisma.paymentPromise.updateMany).toHaveBeenCalledWith({
+        where: { studentId: 10001, status: 'OPEN' },
+        data: expect.objectContaining({
+          status: 'KEPT',
+          resolvedPaymentId: 'payment-uuid-1',
+        }),
+      });
+    });
+
+    it('createFromExternal() does the same', async () => {
+      await service.createFromExternal({
+        studentId: 10001,
+        amount: 300000,
+        method: 'PAYME' as any,
+        externalId: 'ext-1',
+        source: 'GATEWAY_WEBHOOK' as any,
+        companyId: 1001,
+      });
+      expect(prisma.paymentPromise.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            resolvedPaymentId: 'payment-uuid-1',
+          }),
+        }),
+      );
+    });
+
+    it('leaves promises alone while the balance stays below zero', async () => {
+      prisma.student.findUnique.mockResolvedValue({ balance: -100 });
+      await service.create(plain, 1, 1001);
+      expect(prisma.paymentPromise.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('payment.reversed says whether it is a correction (ADR-0096)', () => {
+    it('a plain reversal is not', async () => {
+      prisma.payment.findFirst.mockResolvedValue({
+        id: 'payment-uuid-1',
+        studentId: 10001,
+        amount: 500000,
+        contractId: null,
+        status: PaymentStatus.COMPLETED,
+      });
+      await service.reverse('payment-uuid-1', {
+        reason: "Xato to'lov",
+        performedById: 1,
+        companyId: 1001,
+      });
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'payment.reversed',
+        expect.objectContaining({
+          paymentId: 'payment-uuid-1',
+          correction: false,
+        }),
+      );
+    });
+
+    it('the first leg of an amount correction is', async () => {
+      prisma.payment.findFirst.mockResolvedValue({
+        id: 'payment-uuid-1',
+        studentId: 10001,
+        amount: 5000000,
+        method: 'CASH',
+        contractId: null,
+        branchId: 1,
+        status: PaymentStatus.COMPLETED,
+        source: 'ADMIN_MANUAL',
+        createdAt: new Date(),
+      });
+      await service.correctAmount(
+        'payment-uuid-1',
+        { correctAmount: 400000, reason: 'Ortiqcha nol' },
+        99,
+        1001,
+        ['Administrator'],
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'payment.reversed',
+        expect.objectContaining({
+          paymentId: 'payment-uuid-1',
+          correction: true,
+        }),
+      );
+    });
+  });
+
   describe('createFromExternal()', () => {
     const externalParams = {
       studentId: 10001,

@@ -13,6 +13,7 @@ import {
   Smartphone,
   ShieldCheck,
   UserCheck,
+  Trophy,
   BarChart3,
   type LucideIcon,
 } from "lucide-react";
@@ -164,6 +165,14 @@ export const settingsNavSections: SettingsNavSection[] = [
         url: "/settings/lead-ownership",
         icon: UserCheck,
         description: "Lidni band qilish chegarasi va harakat muddatlari",
+        ceoOnly: true,
+      },
+      {
+        // The write is `@CeoOnly()` (ADR-0096): identity, not a capability.
+        title: "KPI sozlamalari",
+        url: "/settings/kpi",
+        icon: Trophy,
+        description: "KPI narxlari va hisoblash kaliti",
         ceoOnly: true,
       },
       {
