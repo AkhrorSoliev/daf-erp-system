@@ -70,6 +70,8 @@ export const STRICT_FILES: string[] = [
   "components/dashboard/chart-student-flow.tsx",
   "components/dashboard/chart-breakdown-rows.ts",
   "components/dashboard/chart-months.ts",
+  "components/dashboard/launch/branch-launch-card.tsx",
+  "components/dashboard/launch/launch-stations.ts",
   "components/shared/chart-card.tsx",
   "components/reports/lead-funnel/lead-funnel-chart.tsx",
   "components/reports/lead-funnel/lead-funnel-math.ts",
