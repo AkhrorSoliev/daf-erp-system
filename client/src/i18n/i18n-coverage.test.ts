@@ -38,6 +38,11 @@ export const STRICT_FILES: string[] = [
   "components/global-search/search-dropdown-empty-state.tsx",
   "components/global-search/search-dropdown-results.tsx",
   "components/ui/sidebar.tsx",
+  "components/notifications/notification-bell.tsx",
+  "components/notifications/notification-row.tsx",
+  "components/notifications/notification-actions.ts",
+  "components/notifications/push-permission-prompt.tsx",
+  "components/notifications/notification-view.ts",
 ];
 
 function walk(dir: string): string[] {

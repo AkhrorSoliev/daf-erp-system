@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { useIsMiniApp } from "@/hooks/use-is-mini-app";
+import { useT } from "@/i18n/context";
 
 /**
  * Keeps asking staff to turn push on until they do: a dialog on every visit
@@ -23,6 +24,7 @@ import { useIsMiniApp } from "@/hooks/use-is-mini-app";
 export function PushPermissionPrompt() {
   const { state, enable } = usePushNotifications();
   const isMiniApp = useIsMiniApp();
+  const t = useT();
   const [dialogOpen, setDialogOpen] = useState(true);
 
   // Telegram's webview has no Web Push
@@ -33,8 +35,7 @@ export function PushPermissionPrompt() {
       <div className="flex items-start gap-2 border-t bg-warning/10 px-3 py-2 text-sm sm:px-4">
         <Lock className="mt-0.5 size-4 shrink-0 text-warning" />
         <span>
-          Bildirishnomalar bloklangan. Manzil satrining chap tomonidagi belgini bosing,
-          «Bildirishnomalar»ni «Ruxsat berish»ga o&apos;zgartiring va sahifani yangilang.
+          {t("Bildirishnomalar bloklangan. Manzil satrining chap tomonidagi belgini bosing, «Bildirishnomalar»ni «Ruxsat berish»ga o'zgartiring va sahifani yangilang.")}
         </span>
       </div>
     );
@@ -47,10 +48,10 @@ export function PushPermissionPrompt() {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t bg-warning/10 px-3 py-2 text-sm sm:px-4">
         <BellOff className="size-4 shrink-0 text-warning" />
         <span className="flex-1">
-          Bildirishnomalar o&apos;chiq. Vazifa, dars va davomat haqidagi xabarlar sizga kelmaydi.
+          {t("Bildirishnomalar o'chiq. Vazifa, dars va davomat haqidagi xabarlar sizga kelmaydi.")}
         </span>
         <Button size="sm" variant="outline" onClick={enable}>
-          Yoqish
+          {t("Yoqish")}
         </Button>
       </div>
 
@@ -60,14 +61,14 @@ export function PushPermissionPrompt() {
             <div className="mb-1 flex size-11 items-center justify-center rounded-full bg-warning/10 text-warning">
               <BellRing className="size-5" />
             </div>
-            <DialogTitle>Bildirishnomalarni yoqing</DialogTitle>
+            <DialogTitle>{t("Bildirishnomalarni yoqing")}</DialogTitle>
             <DialogDescription>
-              Yangi vazifa, dars va davomat haqidagi xabarlarni darhol olasiz.
+              {t("Yangi vazifa, dars va davomat haqidagi xabarlarni darhol olasiz.")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-center">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Keyinroq
+              {t("Keyinroq")}
             </Button>
             <Button
               onClick={() => {
@@ -75,7 +76,7 @@ export function PushPermissionPrompt() {
                 enable();
               }}
             >
-              Yoqish
+              {t("Yoqish")}
             </Button>
           </DialogFooter>
         </DialogContent>
