@@ -40,7 +40,6 @@ Yangi modul `server/src/reports/center-activity/`. U bir marta yuklaydi (tanlang
 | kurs narxi shu kunda | `CoursePriceSnapshot` (SCD2) |
 | guruh holati shu kunda | `StatusHistory` (`entityType 'Group'`), yo'q bo'lsa `createdAt` dan ACTIVE |
 | o'quvchi guruhda faolmi shu kunda | `EnrollmentStateLog` + `enrollmentStatusOn` / `supplyOpeningRow` (ADR-0035 o'qiydigan o'sha yordamchilar) |
-| bayram kunlari | `HolidaysService.buildHolidayDateSetsByBranch` (filial bo'yicha) |
 
 **«Shu kunda» = `asOf`:**
 - o'tgan oy uchun oyning oxiri (`tashkentMonthRangeUtc(oy).lt − 1 ms`),
@@ -56,7 +55,7 @@ Yangi modul `server/src/reports/center-activity/`. U bir marta yuklaydi (tanlang
 
 ## 4. Raqamlar qanday hisoblanadi
 
-Hamma raqam `asOf` holatidagi **odatiy hafta** uchun. Bayram bitta xonaning haftalik jadvalini o'zgartirmaydi, shuning uchun bayram kunlari bu hisobga kirmaydi (CEO'ga aytilgan «bayramlar chiqariladi» o'rniga: ular odatiy haftani o'zgartirmaydi). `HolidaysService` faqat Excel'dagi «shu oyda N ish kuni» yordamchi qatori uchun o'qiladi.
+Hamma raqam `asOf` holatidagi **odatiy hafta** uchun. Bayram bitta xonaning haftalik jadvalini o'zgartirmaydi, shuning uchun bayram kunlari bu hisobga kirmaydi (CEO'ga aytilgan «bayramlar chiqariladi» o'rniga: ular odatiy haftani o'zgartirmaydi).
 
 - **Dars soatlari (xona, hafta kuni):** xonadagi ochiq guruhlarning `exactDays` × (`lessonStartTime`–`lessonEndTime`) oralig'i, 30 daqiqalik bo'laklar to'plami (ikkita guruh bir vaqtda bo'lsa bir marta sanaladi). Ish vaqti oynasidan tashqari qism qirqiladi, shuning uchun bandlik 100% dan oshmaydi.
 - **Xonalar bandligi %:** `Σ xonalar dars soatlari / Σ xonalar ish soatlari`, ish soati = kunlik ish vaqti × 6. Sub-satr: «haftasiga N soat dars · ish vaqti HH:mm–HH:mm, du–sha».
