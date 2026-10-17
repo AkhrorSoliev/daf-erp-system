@@ -1470,7 +1470,8 @@ describe('MonthlyChargeService', () => {
       });
 
       expect(res.created).toBe(2);
-      expect(res.skipped).toBe(1);
+      expect(res.failed).toBe(1);
+      expect(res.skipped).toBe(0);
       expect(chargeSpy).toHaveBeenCalledTimes(3);
     });
 
@@ -1522,7 +1523,12 @@ describe('MonthlyChargeService', () => {
         periodMonth: 10,
       });
 
-      expect(res).toEqual({ created: 0, skipped: 0, totalCharged: 0 });
+      expect(res).toEqual({
+        created: 0,
+        skipped: 0,
+        failed: 0,
+        totalCharged: 0,
+      });
       expect(chargeSpy).not.toHaveBeenCalled();
     });
 
@@ -3326,7 +3332,12 @@ describe('MonthlyChargeService', () => {
         chargedAmount: 225_000, // 450 000 x 7/14
       });
       expect(lastChargeRow.coveredDates).toEqual(afterOctober15);
-      expect(res).toEqual({ created: 1, skipped: 0, totalCharged: 225_000 });
+      expect(res).toEqual({
+        created: 1,
+        skipped: 0,
+        failed: 0,
+        totalCharged: 225_000,
+      });
       // The run must read the return moment from the database.
       expect(
         prismaMock.enrollment.findMany.mock.calls[0][0].select,
@@ -3349,7 +3360,12 @@ describe('MonthlyChargeService', () => {
         periodMonth: 9,
       });
 
-      expect(res).toEqual({ created: 0, skipped: 1, totalCharged: 0 });
+      expect(res).toEqual({
+        created: 0,
+        skipped: 1,
+        failed: 0,
+        totalCharged: 0,
+      });
       expect(prismaMock.enrollmentMonthlyCharge.create).not.toHaveBeenCalled();
       expect(txWriteMock.chargeMonthlyFee).not.toHaveBeenCalled();
     });

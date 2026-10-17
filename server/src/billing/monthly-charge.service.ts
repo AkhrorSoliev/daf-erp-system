@@ -1646,7 +1646,12 @@ export class MonthlyChargeService {
     periodYear: number;
     periodMonth: number;
     performedById?: number;
-  }): Promise<{ created: number; skipped: number; totalCharged: number }> {
+  }): Promise<{
+    created: number;
+    skipped: number;
+    failed: number;
+    totalCharged: number;
+  }> {
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         status: EnrollmentStatus.ACTIVE,
@@ -1696,7 +1701,11 @@ export class MonthlyChargeService {
     });
 
     let created = 0;
+    // `skipped` — yozadigan dars qolmagan (masalan, shu oyda guruhga qayta
+    // qo'shilgan o'quvchining darslarini eski yozilish hisobi qoplagan): bu XATO
+    // EMAS. `failed` — haqiqiy xato, faqat u qorovulda ERROR bo'ladi.
     let skipped = 0;
+    let failed = 0;
     let totalCharged = 0;
 
     // `payment.excusedCreditEnabled`/`MonthlyCap` filial darajasida
@@ -1761,7 +1770,7 @@ export class MonthlyChargeService {
           skipped++;
         }
       } catch (err) {
-        skipped++;
+        failed++;
         this.logger.error(
           `Oylik hisob yozilmadi: enrollment=${enr.id} ` +
             `davr=${params.periodYear}-${params.periodMonth}`,
@@ -1770,7 +1779,7 @@ export class MonthlyChargeService {
       }
     }
 
-    return { created, skipped, totalCharged };
+    return { created, skipped, failed, totalCharged };
   }
 
   /** O'tgan oyning sarflanmagan uzrli darslari. */

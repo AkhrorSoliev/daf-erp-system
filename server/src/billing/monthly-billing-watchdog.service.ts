@@ -90,10 +90,18 @@ export class MonthlyBillingWatchdogService {
           );
         }
 
+        // `skipped` (yozadigan dars qolmagan) xato emas, har kecha ERROR
+        // yozmaslik uchun faqat debug; ERROR faqat haqiqiy xatoda.
         if (res.skipped > 0) {
+          this.logger.debug(
+            `Kompaniya ${company.id}: ${periodYear}-${periodMonth} — ` +
+              `${res.skipped} ta yozilishga yozadigan dars yo'q.`,
+          );
+        }
+        if (res.failed > 0) {
           this.logger.error(
             `Kompaniya ${company.id}: ${periodYear}-${periodMonth} — ` +
-              `${res.skipped} ta yozilish qorovul aylanishida ham xato ` +
+              `${res.failed} ta yozilish qorovul aylanishida ham xato ` +
               `bilan o'tkazib yuborildi. Batafsili yuqoridagi xatolik ` +
               `qatorlarida.`,
           );
