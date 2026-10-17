@@ -4,6 +4,7 @@ import {
   branchHeaderValue,
   branchScopeChanged,
   resolveStoredBranch,
+  showBranchSwitcher,
 } from "./branch-header";
 
 /**
@@ -71,6 +72,31 @@ describe("resolveStoredBranch — a stale selection must not survive", () => {
 
   it("ignores a non-numeric saved value", () => {
     expect(resolveStoredBranch("oops", [FARGONA], false)).toBe(FARGONA);
+  });
+});
+
+describe("showBranchSwitcher — only when there is a choice", () => {
+  it("is hidden for a one-branch user (a teacher works in one branch)", () => {
+    expect(showBranchSwitcher(false, 1)).toBe(false);
+  });
+
+  it("is hidden when a confined user has no branch at all", () => {
+    expect(showBranchSwitcher(false, 0)).toBe(false);
+  });
+
+  it("is shown to a confined user with several branches", () => {
+    expect(showBranchSwitcher(false, 2)).toBe(true);
+  });
+
+  it("is always shown to a CEO, even with one branch in the company", () => {
+    expect(showBranchSwitcher(true, 1)).toBe(true);
+    expect(showBranchSwitcher(true, 0)).toBe(true);
+  });
+
+  it("keeps a hidden one-branch user on that branch", () => {
+    // Hiding the control must not change what the requests claim.
+    const only = { id: 7 };
+    expect(resolveStoredBranch(null, [only], false)).toBe(only);
   });
 });
 

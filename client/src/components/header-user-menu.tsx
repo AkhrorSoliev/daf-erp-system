@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { roleLabel } from "@/components/payments/salary-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { useUiSkin } from "@/hooks/use-ui-skin";
@@ -59,7 +60,8 @@ export function HeaderUserMenu() {
 
   if (!user) return <Skeleton className="size-8 rounded-full" />;
 
-  const roleName = user.roles[0]?.name ?? "";
+  // The database role name is English; the screen shows the Uzbek title.
+  const roleName = user.roles.length ? roleLabel(user.roles) : "";
   const fullName = `${user.firstName} ${user.lastName}`;
 
   return (
