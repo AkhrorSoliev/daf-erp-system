@@ -17,6 +17,7 @@ import {
   kpiCompare,
   kpiMonth,
   switchText,
+  unownedConversionsText,
 } from "./kpi-format";
 import { useKpiOverview } from "./kpi-queries";
 import { KpiSummaryCards } from "./kpi-summary-cards";
@@ -97,6 +98,15 @@ function KpiOverview() {
           </div>
           <section className="space-y-3">
             <h3 className="font-medium">Administratorlar</h3>
+            <p
+              className={
+                q.data.unownedConversions > 0
+                  ? "rounded-md border border-l-4 border-l-destructive px-3 py-2 text-sm"
+                  : "text-sm text-muted-foreground"
+              }
+            >
+              {unownedConversionsText(q.data.unownedConversions)}
+            </p>
             <KpiAdminTable
               rows={q.data.rows}
               compareAvailable={q.data.compareAvailable}
