@@ -7,6 +7,12 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-17",
+    sarlavha: "Pauzadagi guruhning darslari «Berilmadi» blokiga tushmaydi",
+    matn: "Guruh to'xtatilgan (pauza) paytida tugagan darslar endi ustozning oyligidagi «Berilmadi — davomat olinmagan darslar» blokida chiqmaydi. Ilgari guruh qayta yoqilishi bilan pauzadagi o'tmagan darslar ham ustozga «yo'qotilgan» bo'lib ko'rinardi.",
+    sahifa: { bolim: "davomat", sahifa: "dars-boldimi" },
+  },
+  {
+    sana: "2026-10-17",
     sarlavha: "Qatnashganlik hujjati",
     matn: "O'quvchi kartasida «Hujjatlar» yorlig'i paydo bo'ldi. Daraja tugagach shu yerdan qatnashganlik hujjati (nemischa, QR bilan PDF) beriladi. Hujjat uchun davomat kamida 80% bo'lishi va ilovadagi ochiq darslar tugatilgan bo'lishi kerak; sababli kelmagan va bekor bo'lgan darslar hisobga kirmaydi. Shart bajarilmasa faqat CEO sabab yozib berishi mumkin. Chegaralar — Sozlamalar → «Qatnashganlik hujjati» (faqat CEO).",
     rollar: [1, 2, 3],

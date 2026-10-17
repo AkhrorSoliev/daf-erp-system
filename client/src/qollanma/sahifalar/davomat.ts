@@ -95,7 +95,7 @@ export const davomat: QollanmaSahifa[] = [
       "davomatni kech kiritish",
       "javob bermoqda",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-17",
   },
   {
     bolim: "davomat",
