@@ -1,3 +1,8 @@
+import {
+  THROTTLER_LIMIT,
+  THROTTLER_TTL,
+} from '@nestjs/throttler/dist/throttler.constants';
+import { IpThrottlerGuard } from '../common/guards';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import { ParticipationCertificatesController } from './participation-certificates.controller';
 
@@ -18,6 +23,21 @@ describe('ParticipationCertificatesController', () => {
     expect(routeAccess(ParticipationCertificatesController, 'verify')).toEqual({
       kind: 'public',
     });
+  });
+
+  it('the QR page is rate-limited per IP: IpThrottlerGuard, 60 requests a minute', () => {
+    const verify = (
+      ParticipationCertificatesController.prototype as unknown as Record<
+        string,
+        object
+      >
+    ).verify;
+    const guards =
+      (Reflect.getMetadata('__guards__', verify) as unknown[]) ?? [];
+    expect(guards).toContain(IpThrottlerGuard);
+    // `@Throttle({ default: ... })` stores the numbers under `<key>default`.
+    expect(Reflect.getMetadata(`${THROTTLER_LIMIT}default`, verify)).toBe(60);
+    expect(Reflect.getMetadata(`${THROTTLER_TTL}default`, verify)).toBe(60_000);
   });
 
   it.each(['getSettings', 'setSettings'])('%s is the CEO alone', (method) => {

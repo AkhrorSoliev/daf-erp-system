@@ -7,6 +7,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { CurrentUser, Public } from '../common/decorators';
 import { IpThrottlerGuard } from '../common/guards';
@@ -61,10 +62,13 @@ export class ParticipationCertificatesController {
   /**
    * What the QR code opens. The UUID in the path is the access token, like
    * the receipt's (`/r/<id>`); the answer carries no branch, birth date or
-   * percentage.
+   * percentage. 60 a minute per IP, like the Mini App door: a class scanning
+   * the QR codes on the centre's Wi-Fi shares one address, and the UUID cannot
+   * be guessed, so a wide limit costs nothing.
    */
   @Public()
   @UseGuards(IpThrottlerGuard)
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @Get(':id/verify')
   verify(@Param('id') id: string) {
     return this.certificates.verify(id);
