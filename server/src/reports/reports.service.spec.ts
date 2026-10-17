@@ -394,7 +394,7 @@ describe('ReportsService', () => {
     const emptyReads = () => {
       prisma.student.count.mockResolvedValue(0);
       prisma.group.count.mockResolvedValue(0);
-      prisma.attendance.groupBy.mockResolvedValue([]);
+      prisma.attendance.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
     };
 
@@ -412,7 +412,7 @@ describe('ReportsService', () => {
       expect(prisma.group.count.mock.calls[0][0].where.branchId).toEqual({
         in: [2, 3],
       });
-      expect(prisma.attendance.groupBy.mock.calls[0][0].where.group).toEqual({
+      expect(prisma.attendance.findMany.mock.calls[0][0].where.group).toEqual({
         branchId: { in: [2, 3] },
       });
     });
@@ -429,7 +429,7 @@ describe('ReportsService', () => {
         'branchId',
       );
       expect(
-        prisma.attendance.groupBy.mock.calls[0][0].where,
+        prisma.attendance.findMany.mock.calls[0][0].where,
       ).not.toHaveProperty('group');
     });
 
@@ -449,7 +449,7 @@ describe('ReportsService', () => {
       expect(prisma.student.count).not.toHaveBeenCalled();
       expect(prisma.student.findMany).not.toHaveBeenCalled();
       expect(prisma.group.count).not.toHaveBeenCalled();
-      expect(prisma.attendance.groupBy).not.toHaveBeenCalled();
+      expect(prisma.attendance.findMany).not.toHaveBeenCalled();
       expect(prisma.lead.count).not.toHaveBeenCalled();
     });
 
