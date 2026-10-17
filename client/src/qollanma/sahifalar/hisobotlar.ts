@@ -27,6 +27,18 @@ export const hisobotlar: QollanmaSahifa[] = [
   },
   {
     bolim: "hisobotlar",
+    sahifa: "davomat-hisoboti",
+    sarlavha: "Davomat hisoboti",
+    qisqacha:
+      "O'quvchilar darsga kelyaptimi, qayerda kelmayapti va sababli darslar to'lovga qanday ta'sir qiladi — hamma blok bitta yozuvlar to'plamidan, bosh sahifadagi davomat ham shu raqam.",
+    rollar: [1, 2],
+    adr: ["0103", "0054"],
+    yollar: ["/reports/attendance"],
+    kalitSozlar: ["davomat", "davomat foizi", "kelmadi", "sababli", "ko'p qoldiruvchi", "past davomat", "ketma-ket kelmayotganlar", "excel"],
+    yangilangan: "2026-10-17",
+  },
+  {
+    bolim: "hisobotlar",
     sahifa: "ketgan-oquvchilar",
     sarlavha: "Ketgan o'quvchilar hisoboti",
     qisqacha:
