@@ -2,7 +2,7 @@
 
 **Sana:** 2026-10-17
 **Maket:** https://claude.ai/artifact/YA4jhqf4NH8ZrqnBbjB9UL (`v-bot`; CEO tasdiqlagan, 17.10 qarorlari bilan to'ldirildi)
-**ADR:** 0104 (shu PR'da; PR ochishdan oldin `docs/adr/README.md` tekshiriladi, raqam band bo'lsa keyingisi olinadi)
+**ADR:** 0105 (shu PR'da; PR ochishdan oldin `docs/adr/README.md` tekshiriladi, raqam band bo'lsa keyingisi olinadi)
 **Bog'liq:** ADR-0103 (7c, "bitta ma'lumot to'plami" qoidasi), ADR-0067 (hisobotlar bazasi 2026-05), `docs/superpowers/specs/2026-10-17-b7c-davomat-design.md`
 
 7-qism to'rt hisobotdan iborat. Bu hujjat oxirgisi. 7a, 7b, 7c saytda. Bu qismda sahifaning ko'rinishi deyarli o'zgarmaydi: **hisob tuzatiladi.**
@@ -76,7 +76,7 @@ Maketdan: sahifa bitta **kohort**ni ko'rsatadi: tanlangan oyda bot to'xtatgan od
 
 ## 6. Hujjatlar
 
-ADR-0104 (kohort qoidasi, nega oy-oyma-oy sana emas, `joinedAt` birinchi sana ekani), `docs/adr/README.md` qatori, qo'llanma sahifasi `client/src/qollanma/kontent/hisobotlar/bot-hisoboti.mdx` (yo'q bo'lsa yaratiladi, reyestr bilan) va `yangiliklar.ts` yozuvi, CONTEXT.md'da «bot to'xtatgan kohort» termini, `server/CLAUDE.md` va `client/CLAUDE.md`da qisqa bo'lim. Barcha UI matnlari o'zbekcha lotin; `uzbek-only-texts.test.ts` papkani qamrasin.
+ADR-0105 (kohort qoidasi, nega oy-oyma-oy sana emas, `joinedAt` birinchi sana ekani), `docs/adr/README.md` qatori, qo'llanma sahifasi `client/src/qollanma/kontent/hisobotlar/bot-hisoboti.mdx` (yo'q bo'lsa yaratiladi, reyestr bilan) va `yangiliklar.ts` yozuvi, CONTEXT.md'da «bot to'xtatgan kohort» termini, `server/CLAUDE.md` va `client/CLAUDE.md`da qisqa bo'lim. Barcha UI matnlari o'zbekcha lotin; `uzbek-only-texts.test.ts` papkani qamrasin.
 
 ## 7. Testlar
 

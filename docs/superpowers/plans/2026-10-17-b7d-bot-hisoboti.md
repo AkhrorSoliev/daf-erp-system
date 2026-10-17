@@ -38,7 +38,7 @@ Client (`client/src/components/reports/bot/`):
 - Rewrite `bot-report-client.tsx` (page), `bot-report-table.tsx`; create `bot-report-cards.tsx`.
 - Modify `client/src/lib/uzbek-only-texts.test.ts` (add the bot folder).
 
-Docs: `docs/adr/0104-bot-hisoboti-oy-kohorti.md`, `docs/adr/README.md`, `client/src/qollanma/kontent/hisobotlar/bot-hisoboti.mdx`, `client/src/qollanma/sahifalar/hisobotlar.ts`, `client/src/qollanma/yangiliklar.ts`, `CONTEXT.md`, `server/CLAUDE.md`, `client/CLAUDE.md`.
+Docs: `docs/adr/0105-bot-hisoboti-oy-kohorti.md`, `docs/adr/README.md`, `client/src/qollanma/kontent/hisobotlar/bot-hisoboti.mdx`, `client/src/qollanma/sahifalar/hisobotlar.ts`, `client/src/qollanma/yangiliklar.ts`, `CONTEXT.md`, `server/CLAUDE.md`, `client/CLAUDE.md`.
 
 ---
 
@@ -249,7 +249,7 @@ export function parseGateMonth(month: string | undefined, now: Date): string {
   return month;
 }
 
-/** Where a person the bot stopped stands now (ADR-0104). */
+/** Where a person the bot stopped stands now (ADR-0105). */
 export type GateState = 'waiting' | 'joined' | 'left';
 
 export interface GateRowTimes {
@@ -540,7 +540,7 @@ Replace the whole `getSummary` method (with its doc comment, currently lines 161
 
 ```ts
   /**
-   * Hisobot uchun jamlanma (ADR-0104). Kohort — tanlangan oyda bot to'xtatgan
+   * Hisobot uchun jamlanma (ADR-0105). Kohort — tanlangan oyda bot to'xtatgan
    * odamlar (`blockedAt` shu Toshkent oyida); uch raqam faqat shu odamlar
    * bo'yicha, shuning uchun `joined <= blocked` va foiz 100% dan oshmaydi.
    * `waiting` ATAYLAB oyga bog'liq emas — bugungi holat: to'xtatilgan va hali
@@ -636,7 +636,7 @@ export class TelegramChannelReportController {
   ) {}
 
   /**
-   * Jamlanma (ADR-0104). `month` — "YYYY-MM"; berilmasa joriy Toshkent oyi.
+   * Jamlanma (ADR-0105). `month` — "YYYY-MM"; berilmasa joriy Toshkent oyi.
    * Noto'g'ri, 2026-05 dan oldingi yoki kelajak oy — 400.
    */
   @Get('summary')
@@ -957,7 +957,7 @@ Expected: FAIL — modules not found.
 Create `bot-report-types.ts`:
 
 ```ts
-/** Where a person the bot stopped stands now (the server decides, ADR-0104). */
+/** Where a person the bot stopped stands now (the server decides, ADR-0105). */
 export type GateState = "waiting" | "joined" | "left";
 
 export interface BotSummary {
@@ -1447,18 +1447,18 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ### Task 5: ADR, guide, glossary and CLAUDE.md notes
 
 **Files:**
-- Create: `docs/adr/0104-bot-hisoboti-oy-kohorti.md`
+- Create: `docs/adr/0105-bot-hisoboti-oy-kohorti.md`
 - Modify: `docs/adr/README.md` (add a row after the 0103 row)
 - Create: `client/src/qollanma/kontent/hisobotlar/bot-hisoboti.mdx`
 - Modify: `client/src/qollanma/sahifalar/hisobotlar.ts` (add an entry), `client/src/qollanma/yangiliklar.ts` (add an entry on top)
 - Modify: `CONTEXT.md`, `server/CLAUDE.md`, `client/CLAUDE.md`
 
-- [ ] **Step 1: ADR-0104** (Uzbek, the repo's ADR language)
+- [ ] **Step 1: ADR-0105** (Uzbek, the repo's ADR language)
 
-Create `docs/adr/0104-bot-hisoboti-oy-kohorti.md`:
+Create `docs/adr/0105-bot-hisoboti-oy-kohorti.md`:
 
 ```markdown
-# ADR-0104: Bot hisoboti — tanlangan oyda to'xtatilgan odamlar kohorti
+# ADR-0105: Bot hisoboti — tanlangan oyda to'xtatilgan odamlar kohorti
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-17
@@ -1499,10 +1499,10 @@ Create `docs/adr/0104-bot-hisoboti-oy-kohorti.md`:
 Append to `docs/adr/README.md` right after the 0103 row (keep the same column layout):
 
 ```markdown
-| [0104](0104-bot-hisoboti-oy-kohorti.md) | Bot hisoboti: tanlangan oyda to'xtatilgan odamlar kohorti, uch raqam faqat shu odamlar bo'yicha (foiz 100% dan oshmaydi), qator holati bitta funksiyadan (`classifyGateRow`), ro'yxat ham kohort, «Butun davr» yo'q | Qabul qilindi | 2026-10-17 |
+| [0105](0105-bot-hisoboti-oy-kohorti.md) | Bot hisoboti: tanlangan oyda to'xtatilgan odamlar kohorti, uch raqam faqat shu odamlar bo'yicha (foiz 100% dan oshmaydi), qator holati bitta funksiyadan (`classifyGateRow`), ro'yxat ham kohort, «Butun davr» yo'q | Qabul qilindi | 2026-10-17 |
 ```
 
-Before committing, `ls docs/adr | tail -3`: if another `0104-*.md` already exists on `main` (fetch first: `git fetch origin && git ls-tree origin/main docs/adr/ | tail -3`), renumber this one to the next free number in the file name, the title, the README row, the spec header and every reference below.
+Before committing, `ls docs/adr | tail -3`: if another `0105-*.md` already exists on `main` (fetch first: `git fetch origin && git ls-tree origin/main docs/adr/ | tail -3`), renumber this one to the next free number in the file name, the title, the README row, the spec header and every reference below.
 
 - [ ] **Step 2: Guide page** (Uzbek; no `# h1`, avoid `{`, `}` and `<` in prose)
 
@@ -1546,7 +1546,7 @@ Add to `client/src/qollanma/sahifalar/hisobotlar.ts`, after the `davomat-hisobot
     qisqacha:
       "Botning kanalga a'zolik talabi nechta odamni kanalga olib kelgani — tanlangan oyda bot to'xtatgan odamlar, ulardan nechtasi a'zo bo'lgani va keyin chiqib ketgani; foiz 100% dan oshmaydi.",
     rollar: [1, 2],
-    adr: ["0104"],
+    adr: ["0105"],
     yollar: ["/reports/bot"],
     kalitSozlar: ["bot", "bot hisoboti", "kanal", "kanalga a'zo bo'ldi", "bot to'xtatdi", "kutilmoqda", "telegram kanal"],
     yangilangan: "2026-10-17",
@@ -1575,20 +1575,20 @@ Run `cd client && npx vitest run src/qollanma` — the registry tests (`reyestr.
 **Bot to'xtatgan kohort** — tanlangan Toshkent oyida botning kanalga a'zolik
 talabi to'xtatgan odamlar (`TelegramChannelGateEvent.blockedAt` shu oyda).
 «Bot hisoboti»ning uch raqami va ro'yxati faqat shu odamlar bo'yicha; a'zo
-bo'lgani hozirgacha sanaladi, shuning uchun foiz 100% dan oshmaydi (ADR-0104).
+bo'lgani hozirgacha sanaladi, shuning uchun foiz 100% dan oshmaydi (ADR-0105).
 `telegram/gate-cohort.ts`
 ```
 
 `server/CLAUDE.md` — in «Reports Module», directly after the «Davomat» bullet (the one starting `- **«Davomat» (`GET /reports/attendance-stats/…`), add:
 
 ```markdown
-- **«Bot hisoboti» (`GET /telegram/channel-report/summary|list`, `reports.students`, ADR-0104)** — the controller lives in `TelegramModule` (see its header: `ReportsModule` would form a cycle). Both routes take `?month=YYYY-MM` (empty = the current Tashkent month; 400 before 2026-05 or in the future, `parseGateMonth`). The cohort is the rows whose `blockedAt` falls in that Tashkent month; `classifyGateRow` (`telegram/gate-cohort.ts`) is the ONE reading of a row (`waiting | joined | left`), `cohortFigures` the three cards (`blocked`, `joined` incl. the ones who left, `left`, `conversionRate`), `waitingNow` the standing «hali a'zo bo'lmagan» (all stopped rows, not tied to the month). `joinedAt` is the FIRST join: `recordJoined` only clears `leftAt` on a return, so a member who left, was blocked and came back has `joinedAt < blockedAt` and no `leftAt` and counts as `joined`. The list is the same cohort with `state` per row. `organicJoins`, `stillMemberViaGate` and the per-event-date counting are gone. No cache (`// ponytail:` in `getSummary`).
+- **«Bot hisoboti» (`GET /telegram/channel-report/summary|list`, `reports.students`, ADR-0105)** — the controller lives in `TelegramModule` (see its header: `ReportsModule` would form a cycle). Both routes take `?month=YYYY-MM` (empty = the current Tashkent month; 400 before 2026-05 or in the future, `parseGateMonth`). The cohort is the rows whose `blockedAt` falls in that Tashkent month; `classifyGateRow` (`telegram/gate-cohort.ts`) is the ONE reading of a row (`waiting | joined | left`), `cohortFigures` the three cards (`blocked`, `joined` incl. the ones who left, `left`, `conversionRate`), `waitingNow` the standing «hali a'zo bo'lmagan» (all stopped rows, not tied to the month). `joinedAt` is the FIRST join: `recordJoined` only clears `leftAt` on a return, so a member who left, was blocked and came back has `joinedAt < blockedAt` and no `leftAt` and counts as `joined`. The list is the same cohort with `state` per row. `organicJoins`, `stillMemberViaGate` and the per-event-date counting are gone. No cache (`// ponytail:` in `getSummary`).
 ```
 
 `client/CLAUDE.md` — after the «Attendance report» section, add:
 
 ```markdown
-### Bot report (`/reports/bot`, ADR-0104)
+### Bot report (`/reports/bot`, ADR-0105)
 
 - «Bot hisoboti» in `reports-nav.ts` (`permission: "reports.students"`: CEO and Branch Director). Files in `components/reports/bot/`: `bot-report-client.tsx` (the page: `MonthStepper`, the gate-off alert, cards, table), `bot-report-cards.tsx`, `bot-report-table.tsx`, `bot-report-url.ts`, `bot-report-format.ts` (pure, vitest), `bot-report-queries.ts`, `bot-report-types.ts`.
 - URL keys (`BOT_SCHEMA`): `oy` (empty = the current Tashkent month, 2026-05 …), `page`, `pageSize` (10–50). The old `?month=` is not read and there is no «Butun davr».
@@ -1601,8 +1601,8 @@ Run: `cd client && npx vitest run src/qollanma src/lib/uzbek-only-texts.test.ts 
 Expected: PASS and clean.
 
 ```bash
-git add docs/adr/0104-bot-hisoboti-oy-kohorti.md docs/adr/README.md client/src/qollanma CONTEXT.md server/CLAUDE.md client/CLAUDE.md
-git commit -m "docs(bot-report): ADR-0104, guide page, glossary and CLAUDE.md notes
+git add docs/adr/0105-bot-hisoboti-oy-kohorti.md docs/adr/README.md client/src/qollanma CONTEXT.md server/CLAUDE.md client/CLAUDE.md
+git commit -m "docs(bot-report): ADR-0105, guide page, glossary and CLAUDE.md notes
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```

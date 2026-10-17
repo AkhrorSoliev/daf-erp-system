@@ -1,4 +1,4 @@
-/** Where a person the bot stopped stands now (the server decides, ADR-0104). */
+/** Where a person the bot stopped stands now (the server decides, ADR-0105). */
 export type GateState = "waiting" | "joined" | "left";
 
 export interface BotSummary {

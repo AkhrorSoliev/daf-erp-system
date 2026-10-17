@@ -29,7 +29,7 @@ export class TelegramChannelReportController {
   ) {}
 
   /**
-   * Jamlanma (ADR-0104). `month` — "YYYY-MM"; berilmasa joriy Toshkent oyi.
+   * Jamlanma (ADR-0105). `month` — "YYYY-MM"; berilmasa joriy Toshkent oyi.
    * Noto'g'ri, 2026-05 dan oldingi yoki kelajak oy — 400.
    */
   @Get('summary')

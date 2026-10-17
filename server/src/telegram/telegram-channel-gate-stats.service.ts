@@ -166,7 +166,7 @@ export class TelegramChannelGateStatsService {
   }
 
   /**
-   * Hisobot uchun jamlanma (ADR-0104). Kohort — tanlangan oyda bot to'xtatgan
+   * Hisobot uchun jamlanma (ADR-0105). Kohort — tanlangan oyda bot to'xtatgan
    * odamlar (`blockedAt` shu Toshkent oyida); uch raqam faqat shu odamlar
    * bo'yicha, shuning uchun `joined <= blocked` va foiz 100% dan oshmaydi.
    * `waiting` ATAYLAB oyga bog'liq emas — bugungi holat: to'xtatilgan va hali

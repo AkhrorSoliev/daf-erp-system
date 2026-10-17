@@ -22,7 +22,7 @@ export function parseGateMonth(month: string | undefined, now: Date): string {
   return month;
 }
 
-/** Where a person the bot stopped stands now (ADR-0104). */
+/** Where a person the bot stopped stands now (ADR-0105). */
 export type GateState = 'waiting' | 'joined' | 'left';
 
 export interface GateRowTimes {
