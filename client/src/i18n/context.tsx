@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { changeUiLocale, type LocaleState } from "./change-ui-locale";
+import { bindDocumentLanguage } from "./document-language";
 import { loadDictionary } from "./load-dictionary";
 import { writeLocaleCookie } from "./locale-cookie";
 import { DEFAULT_LOCALE, type UiLocale } from "./locales";
@@ -45,9 +46,9 @@ export function I18nProvider({
   // never puts an older state over a newer one.
   const stateRef = useRef(state);
 
-  useEffect(() => {
-    document.documentElement.lang = state.locale;
-  }, [state.locale]);
+  // The cleanup puts "uz" back, so a client navigation out of the dashboard
+  // group (the staff Mini App signing out to /tg) keeps no stale language.
+  useEffect(() => bindDocumentLanguage(document.documentElement, state.locale), [state.locale]);
 
   const setLocale = useCallback(
     (next: UiLocale, options?: SetLocaleOptions) =>

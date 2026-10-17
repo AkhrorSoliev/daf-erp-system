@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import uzCyrl from "./dictionaries/uz-cyrl";
 import { interpolate, translate } from "./translate";
 
 const ru = { "Bosh sahifa": "Главная", "{n} ta o'quvchi": "{n} учеников" };
@@ -30,5 +31,10 @@ describe("translate", () => {
     expect(translate("uz-Cyrl", {}, "Bosh sahifa")).toBe("Бош саҳифа");
     expect(translate("uz-Cyrl", { "Bosh sahifa": "Асосий саҳифа" }, "Bosh sahifa")).toBe("Асосий саҳифа");
     expect(translate("uz-Cyrl", {}, "{n} ta o'quvchi", { n: 5 })).toBe("5 та ўқувчи");
+  });
+
+  it("uses the real uz-Cyrl overrides: «Profil» keeps its soft sign", () => {
+    expect(translate("uz-Cyrl", {}, "Profil")).toBe("Профил");
+    expect(translate("uz-Cyrl", uzCyrl, "Profil")).toBe("Профиль");
   });
 });

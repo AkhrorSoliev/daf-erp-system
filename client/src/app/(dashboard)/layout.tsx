@@ -4,6 +4,7 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import { BranchScopedMain } from "@/components/providers/branch-scoped-main";
 import { SpotlightHost } from "@/components/spotlight/spotlight-host";
 import { I18nProvider } from "@/i18n/context";
+import { languageBootScript } from "@/i18n/document-language";
 import { LocaleSync } from "@/i18n/locale-sync";
 import { loadDictionary } from "@/i18n/load-dictionary";
 import { currentLocale } from "@/i18n/server";
@@ -17,6 +18,11 @@ export default async function DashboardLayout({
   const dictionary = await loadDictionary(locale);
   return (
     <I18nProvider initialLocale={locale} initialDictionary={dictionary}>
+      {/* Sets <html lang> while the page is parsed, so the first paint is not
+          lang="uz". The locale is whitelisted by `localeOrDefault`, and the root
+          <html> has `suppressHydrationWarning`. The provider's effect keeps the
+          attribute right after that and resets it when the dashboard is left. */}
+      <script dangerouslySetInnerHTML={{ __html: languageBootScript(locale) }} />
       <LocaleSync />
       <SidebarProvider defaultOpen={false}>
         <AppSidebar />

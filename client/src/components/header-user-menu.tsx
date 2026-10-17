@@ -148,7 +148,9 @@ export function HeaderUserMenu() {
               }}
             >
               {LOCALES.map(({ id, label }) => (
-                <DropdownMenuRadioItem key={id} value={id}>
+                // Each name is written in its own language: `lang` makes a
+                // screen reader speak it with that voice (WCAG 3.1.2).
+                <DropdownMenuRadioItem key={id} value={id} lang={id}>
                   {label}
                 </DropdownMenuRadioItem>
               ))}

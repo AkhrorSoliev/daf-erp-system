@@ -13,10 +13,13 @@ import { Toaster } from "react-hot-toast";
 // The staff portals' one typeface: text, headings and figures alike
 // (`--font-sans`, `--font-heading` and `--font-mono` all point at it in
 // globals.css). Three weights are enough for a ledger; latin-ext carries the
-// Uzbek apostrophe letters, cyrillic the Russian and Uzbek Cyrillic interface.
+// Uzbek apostrophe letters. There is no "cyrillic" here on purpose: next/font
+// self-hosts every subset of the Google CSS with its unicode-range, so the
+// Russian and Uzbek Cyrillic interface already gets Plex's Cyrillic glyphs on
+// demand; `subsets` only picks the files preloaded on every page.
 const plexSans = IBM_Plex_Sans({
   variable: "--font-plex",
-  subsets: ["latin", "latin-ext", "cyrillic"],
+  subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600"],
   display: "swap",
 });
