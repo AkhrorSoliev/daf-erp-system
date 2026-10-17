@@ -96,7 +96,7 @@ export function CenterActivityPage() {
         <div aria-busy={isPlaceholderData} className={cn("flex flex-col gap-4", isPlaceholderData && "pointer-events-none opacity-60")}>
           {fresh ? <CenterActivityCards cards={fresh.cards} /> : <CenterActivityCardsSkeleton />}
           {fresh?.heat && (
-            <CenterActivityHeat data={fresh.heat} branches={fresh.branches} onBranch={(id) => setFilters({ filial: id })} />
+            <CenterActivityHeat key={fresh.month} data={fresh.heat} branches={fresh.branches} onBranch={(id) => setFilters({ filial: id })} />
           )}
           {fresh && (
             <>

@@ -1,8 +1,12 @@
 import { formatNumber } from "@/lib/format-utils";
-import type { GroupRow, HeatInsight, HeatTone, InsightSlot, WeekDay } from "./center-activity-types";
+import type { GroupRow, Heat, HeatInsight, HeatTone, InsightSlot, WeekDay } from "./center-activity-types";
 
 const DAY_SHORT: Record<WeekDay, string> = {
   monday: "Du", tuesday: "Se", wednesday: "Chor", thursday: "Pay", friday: "Ju", saturday: "Sha",
+};
+
+const DAY_FULL: Record<WeekDay, string> = {
+  monday: "Dushanba", tuesday: "Seshanba", wednesday: "Chorshanba", thursday: "Payshanba", friday: "Juma", saturday: "Shanba",
 };
 
 /** «27%»: the server's one-decimal figure shown whole; «—» when the server had none (no rooms, no seats). */
@@ -37,3 +41,32 @@ export const HEAT_CLASS: Record<HeatTone, string> = {
   yellow: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
   red: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
 };
+
+export const HEAT_HINT = "Katakni bosing: o'sha soatda qaysi xonalar bo'sh ekanini ko'rasiz.";
+export const HEAT_NO_FREE = "Bu soatda bo'sh xona yo'q.";
+
+export interface HeatDetail {
+  /** «Dushanba, 09:00–10:00 — 7 ta xona bo'sh» */
+  title: string;
+  /** «1-xona · 14 o'rin»; just the name when the room has no capacity. */
+  free: { id: string; text: string }[];
+  /** `groups` is «Standart-04, A1-07». */
+  busy: { id: string; name: string; groups: string }[];
+}
+
+/** One heat cell opened up: which rooms are free in that hour and which groups hold the busy ones. null when the cell is not in this heat. */
+export function heatDetail(heat: Heat, day: WeekDay, hour: number): HeatDetail | null {
+  const di = heat.days.indexOf(day);
+  const hi = heat.hours.indexOf(hour);
+  if (di < 0 || hi < 0) return null;
+  const cell = heat.cells[di][hi];
+  const busyAt = new Map(cell.busy.map((b) => [b.room, b.groups]));
+  const free: HeatDetail["free"] = [];
+  const busy: HeatDetail["busy"] = [];
+  heat.roomList.forEach((r, i) => {
+    const groups = busyAt.get(i);
+    if (groups) busy.push({ id: r.id, name: r.name, groups: groups.join(", ") });
+    else free.push({ id: r.id, text: r.capacity === null ? r.name : `${r.name} · ${r.capacity} o'rin` });
+  });
+  return { title: `${DAY_FULL[day]}, ${hh(hour)}–${hh(hour + 1)} — ${free.length} ta xona bo'sh`, free, busy };
+}
