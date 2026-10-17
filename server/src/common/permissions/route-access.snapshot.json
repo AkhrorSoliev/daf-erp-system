@@ -1962,6 +1962,11 @@
   ],
   "POST /notifications/devices": "ANY",
   "POST /notifications/push/subscribe": "ANY",
+  "POST /participation-certificates/:id/revoke": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "POST /payment-promises": [
     "Administrator",
     "Branch Director",

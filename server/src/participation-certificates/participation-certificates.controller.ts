@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import type { Response } from 'express';
 import { CurrentUser, Public } from '../common/decorators';
 import { IpThrottlerGuard } from '../common/guards';
 import { Can, CeoOnly } from '../common/permissions/access.decorators';
+import { RevokeCertificateDto } from './dto/revoke-certificate.dto';
 import { ParticipationSettingsDto } from './dto/participation-settings.dto';
 import { ParticipationCertificatesService } from './participation-certificates.service';
 import { ParticipationSettingsService } from './participation-settings.service';
@@ -57,6 +59,18 @@ export class ParticipationCertificatesController {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', buffer.length);
     res.end(buffer);
+  }
+
+  /** Soft cancel of a document issued by mistake (same people as issuing). */
+  @Post(':id/revoke')
+  @Can('students.manage')
+  revoke(
+    @Param('id') id: string,
+    @Body() dto: RevokeCertificateDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.certificates.revoke(userId, companyId, id, dto.reason);
   }
 
   /**
