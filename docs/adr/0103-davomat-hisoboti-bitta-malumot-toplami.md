@@ -34,15 +34,14 @@ Eski `/reports/attendance` (`reports-attendance-analytics.service.ts`, 1078 qato
 
 ## Oqibatlari
 
-- Kartadagi raqam hafta kunlari, oylar ustuni va har kesim yig'indisiga teng.
+- Kartadagi raqam har qanday davrda hafta kunlari va har kesim yig'indisiga teng; davr aynan bitta to'liq oy bo'lsa, oylar ustunidagi shu oy ham unga teng (ustunlar har doim to'liq kalendar oyi).
 - Bosh sahifadagi davomat endi «0%» emas, yozuv bo'lmasa «—»; qiymat hisobotdagi «Bu oy» raqami bilan bir xil.
 - Har kesim yoki sahifa bosilganda davr yozuvlari qayta o'qiladi (6 oy ≈ 35 ming qator); sekinlashsa Redis keshi (`// ponytail:`).
 
 ## Ma'lum cheklovlar
 
 - Hech kim belgilamagan dars yozuv bermaydi, shuning uchun foizga kirmaydi; u «Dars bo'ldimi?» orqali hal qilinguncha ko'rinmaydi (ADR-0054).
-- Oldindan aytilgan «sababsiz» yo'qlik `EXCUSED` bo'lib saqlanadi va maxrajdan chiqadi, ketma-ket kelmaslik hisobi esa uni kelmagan deb oladi. Sentabrda bunday yozuv yo'q.
-- Ustoz va kurs kesimi guruhning **hozirgi** ustozi va kursi bo'yicha; o'rinbosar o'tgan dars guruhning o'z ustoziga yoziladi; kurs almashgan guruhning o'tgan oylari hozirgi kursida chiqadi.
+- Oldindan aytilgan «sababsiz» yo'qlik `EXCUSED` bo'lib saqlanadi va maxrajdan chiqadi, ketma-ket kelmaslik hisobi esa uni kelmagan deb oladi.- Ustoz va kurs kesimi guruhning **hozirgi** ustozi va kursi bo'yicha; o'rinbosar o'tgan dars guruhning o'z ustoziga yoziladi; kurs almashgan guruhning o'tgan oylari hozirgi kursida chiqadi.
 - Bosh sahifaning haftalik grafigi, moliyaviy Excel «Davomat» varag'i va Telegram 21:00 hisoboti o'z ta'rifida qoladi va bu hisobotdan farq qilishi mumkin.
-- «Pulga ta'siri» summasi taxminiy: hisob o'sha oyning bir dars narxi bilan, haqiqiy chegirma esa keyingi oy hisobida o'sha oyning narxi bilan va yalpi summa bo'yicha butun darsga tushirib chiqariladi (keyingi oy hisobi chiqquncha). Bir nechta filial ko'rinib, sozlama ba'zisida o'chiq bo'lsa, summa faqat yoqilgan filiallardan.
+- «Pulga ta'siri» summasi taxminiy. Sahifa har sababli dars uchun sababli dars bo'lgan oyning O'ZIDAGI hisobning chegirmali bir dars narxini oladi (oyiga `payment.excusedCreditMonthlyCap` dan ko'p emas). Haqiqiy kredit esa keyingi oy hisoblanganda (`monthly-charge.service.ts`, `applyLessonCredit`) KEYINGI hisob oyining bir dars narxi bilan, butun darslarda beriladi va o'sha oy yalpi summasidan oshmaydi (`floor(yalpi ÷ bir dars narxi)`); sig'magan darslar keyingi oyga suriladi. Narx oyma-oy farq qilsa yoki yalpi summa yetmasa, real chegirma sahifadagi summadan farq qiladi. Bir nechta filial ko'rinib, sozlama ba'zisida o'chiq bo'lsa, summa faqat yoqilgan filiallardan.
 - Eng kam yozuv qoidasi kalendar kunlariga tayanadi: 31 kunlik to'liq oyda chegara 62, 30 kunlikda 60.
