@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { HEAT_CLASS, heatDetail, hourLabel, insightSentences } from "./center-activity-format";
+import { DAY_FULL, HEAT_CLASS, heatDetail, hourLabel, insightSentences } from "./center-activity-format";
 import { CenterActivityHeatDetail } from "./center-activity-heat-detail";
 import type { CenterOverview, HeatTone, WeekDay } from "./center-activity-types";
 
@@ -91,7 +91,7 @@ export function CenterActivityHeat({
                         <button
                           type="button"
                           title={`${DAY_HEAD[di]} ${hourLabel(heat.hours[hi])}:00 — ${c.free} ta xona bo'sh`}
-                          aria-label={`${DAY_HEAD[di]} ${hourLabel(heat.hours[hi])}:00 — ${c.free} ta xona bo'sh`}
+                          aria-label={`${DAY_FULL[day]} ${hourLabel(heat.hours[hi])}:00 — ${c.free} ta xona bo'sh`}
                           aria-pressed={isPicked(day, heat.hours[hi])}
                           onClick={() =>
                             setPick(isPicked(day, heat.hours[hi]) ? null : { branchId: data.branchId, day, hour: heat.hours[hi] })

@@ -5,7 +5,7 @@ const DAY_SHORT: Record<WeekDay, string> = {
   monday: "Du", tuesday: "Se", wednesday: "Chor", thursday: "Pay", friday: "Ju", saturday: "Sha",
 };
 
-const DAY_FULL: Record<WeekDay, string> = {
+export const DAY_FULL: Record<WeekDay, string> = {
   monday: "Dushanba", tuesday: "Seshanba", wednesday: "Chorshanba", thursday: "Payshanba", friday: "Juma", saturday: "Shanba",
 };
 

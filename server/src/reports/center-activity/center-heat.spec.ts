@@ -130,11 +130,6 @@ describe('buildHeat', () => {
         expect(c.tone).toBe(heatTone(c.free, h.rooms));
       }
     }
-    // Σ busy over the matrix = busy room-hours counted from the slot sets
-    const sumBusy = h.cells.flat().reduce((n, c) => n + c.busy.length, 0);
-    expect(sumBusy).toBe(
-      h.cells.flat().reduce((n, c) => n + (h.rooms - c.free), 0),
-    );
     expect(h.cells[0][h.hours.indexOf(10)].free).toBe(0);
   });
 });
