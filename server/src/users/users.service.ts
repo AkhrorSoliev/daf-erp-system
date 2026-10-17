@@ -550,6 +550,19 @@ export class UsersService {
     return { uiSkin: updated.uiSkin };
   }
 
+  /**
+   * Your own interface language (ADR-0098). A personal setting: written for
+   * the caller's row only and not recorded in the entity history.
+   */
+  async updateUiLocale(id: number, locale: string) {
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { uiLocale: locale },
+      select: { uiLocale: true },
+    });
+    return { uiLocale: updated.uiLocale };
+  }
+
   /** Journal a password write on the employee record: who did it, and how. */
   private recordPasswordEvent(
     userId: number,

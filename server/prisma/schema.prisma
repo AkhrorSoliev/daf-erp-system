@@ -375,6 +375,8 @@ model User {
   position       String?
   // The staff portals' design skin (ADR-0097): one of common/ui-skins.ts, null = the default.
   uiSkin         String?
+  // The staff portals' interface language (ADR-0098): one of common/ui-locales.ts, null = the default.
+  uiLocale       String?
   password       String?
   // Bumped by every password write and by "log out other devices"; every
   // token carries it as `sv` and stops working once it falls behind (ADR-0030).

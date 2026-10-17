@@ -81,6 +81,15 @@ describe('AuthService', () => {
       const without = await service.login(teacher, undefined, undefined);
       expect(without.user.uiSkin).toBeNull();
     });
+
+    it("carries the user's interface language, null when none was chosen", async () => {
+      const chosen = { ...teacher, uiLocale: 'ru' };
+      const withLocale = await service.login(chosen, undefined, undefined);
+      expect(withLocale.user.uiLocale).toBe('ru');
+
+      const without = await service.login(teacher, undefined, undefined);
+      expect(without.user.uiLocale).toBeNull();
+    });
   });
 
   describe('validateUser — phone-based login', () => {

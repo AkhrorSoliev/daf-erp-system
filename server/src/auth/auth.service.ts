@@ -266,6 +266,7 @@ export class AuthService {
       phone: user.phone,
       photo: user.photo,
       uiSkin: user.uiSkin ?? null,
+      uiLocale: user.uiLocale ?? null,
       gender: user.gender,
       balance: user.balance,
       companyId: user.companyId,

@@ -1724,3 +1724,48 @@ describe('UsersService — updateUiSkin', () => {
     expect(res).toEqual({ uiSkin: 'gilos' });
   });
 });
+
+describe('UsersService — updateUiLocale', () => {
+  let service: UsersService;
+  const update = jest.fn();
+
+  beforeEach(async () => {
+    update.mockReset();
+    update.mockImplementation(({ data }) =>
+      Promise.resolve({ uiLocale: data.uiLocale }),
+    );
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        { provide: PrismaService, useValue: { user: { update } } },
+        { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+    service = module.get(UsersService);
+  });
+
+  it("writes only the caller's own row and returns the stored language", async () => {
+    const res = await service.updateUiLocale(7, 'de');
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { uiLocale: 'de' },
+      select: { uiLocale: true },
+    });
+    expect(res).toEqual({ uiLocale: 'de' });
+  });
+});
