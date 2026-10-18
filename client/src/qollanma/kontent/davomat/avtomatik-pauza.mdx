@@ -49,7 +49,7 @@ Chegaralar boshlang'ich qiymatlar bilan berilgan (CEO o'zgartiradi).
 
 ## Kunlik chegara
 
-Bir ertalabki tekshiruvda pauzaga nomzod o'quvchilar soni «Bir kunda ko'pi bilan» chegarasidan ko'p bo'lsa, hech kim pauzaga tushmaydi. Barcha CEO ga «Avtomatik pauza» bildirishnomasi boradi: nechta nomzod topilgani, chegara qancha ekani va hech kim pauza qilinmagani yoziladi.
+Bir ertalabki tekshiruvda pauzaga nomzod o'quvchilar soni «Kuniga ko'pi bilan» chegarasidan ko'p bo'lsa, hech kim pauzaga tushmaydi. Barcha CEO ga «Avtomatik pauza» bildirishnomasi boradi: nechta nomzod topilgani, chegara qancha ekani va hech kim pauza qilinmagani yoziladi.
 
 - Birinchi bir nechtasini tanlab pauza qilinmaydi: qaysilari ekani tasodifiy bo'lardi.
 - Ogohlantirish xabarlari chegaraga bog'liq emas: ular baribir yuboriladi.
@@ -63,10 +63,15 @@ Sozlamalar → «O'quv qoidalari» sahifasining «Avtomatik pauza» blokida:
 
 | Maydon | Nima qiladi | Boshlang'ich qiymat | Mumkin qiymatlar |
 |---|---|---|---|
-| «Avtomatik pauza yoqilgan» | Yoqadi yoki o'chiradi. O'chiq bo'lsa, xabar ham, pauza ham yo'q. | O'chiq | — |
-| «Ogohlantirish» | Shuncha dars qoldirilganda o'quvchiga Telegram xabar ketadi. | 2 | 1 dan 10 gacha |
+| «Qoidani yoqish» | Yoqadi yoki o'chiradi. O'chiq bo'lsa, xabar ham, pauza ham yo'q. Yonidagi belgi saqlangan holatni ko'rsatadi: «Yoqilgan» yoki «O'chiq». | O'chiq | — |
+| «Xabar» | Shuncha dars qoldirilganda o'quvchiga Telegram xabar ketadi. | 2 | 1 dan 10 gacha |
 | «Pauza» | Shuncha dars qoldirilganda o'quvchi pauzaga o'tkaziladi. | 3 | 2 dan 20 gacha |
-| «Bir kunda ko'pi bilan» | Shunchadan ko'p nomzod topilsa, hech kim pauza qilinmaydi va CEO ga xabar keladi. | 10 | 1 dan 100 gacha |
+| «Kuniga ko'pi bilan» | Shunchadan ko'p nomzod topilsa, hech kim pauza qilinmaydi va CEO ga xabar keladi. | 10 | 1 dan 100 gacha |
+
+- Raqam maydonlari strelkasiz: raqamni yozasiz. Maydonni bo'sh qoldirib saqlab bo'lmaydi, xato maydon tagida yoziladi. «Chegaralar» tagidagi jumla joriy qiymatlar nima qilishini aytadi: «O'quvchi ketma-ket 2 ta dars qoldirsa xabar oladi, 3 ta qoldirsa pauzaga o'tadi».
+- Qoidani yoqmoqchi bo'lsangiz yoki pauza chegarasini o'zgartirsangiz, saqlashdan oldin sahifa hozir shu chegarada nechta o'quvchi pauzaga tushishini aytadi («Hozir 7 nafar o'quvchi 3 va undan ko'p dars qoldirgan»). Soni «Kuniga ko'pi bilan» dan oshsa, hech kim to'xtatilmasligi ham yoziladi. «Ro'yxatni ko'rish» ularni «Aloqa markazi»da ochadi.
+- Switchni bosish hech narsani saqlamaydi: «Saqlanmagan o'zgarish bor» paneli chiqadi, «Saqlash» bosilguncha belgi ham eski holatda turadi. «Bekor qilish» qiymatlarni qaytaradi.
+- Kartada «Oxirgi o'zgarish» qatori bor: nima o'zgargani, kim va qachon (Toshkent vaqti). Sahifa tepasidagi «Tarix» tugmasi to'liq ro'yxatni yon panelda ochadi: yoqildi, o'chirildi va chegara o'zgarishlari («Pauza chegarasi 3 → 4»), 10 tadan sahifalab.
 
 - O'zgartirgach «Saqlash» ni bosing. Ogohlantirish chegarasi pauza chegarasidan kichik bo'lishi kerak.
 - Sozlamani faqat CEO o'zgartiradi: yoqadi, o'chiradi, chegaralarni qo'yadi. Bu dasturchisiz, sahifadan qilinadi. Filial direktori sahifani ko'radi, o'zgartira olmaydi. Sozlama butun markaz uchun bitta, filial bo'yicha alohida emas.

@@ -5,23 +5,25 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SettingsPageHeader } from "./settings-page-header";
+import { FormError, SettingsCard, SettingsSaveBar, UnitNumberField } from "./settings-form-parts";
 import { useAuth } from "@/hooks/use-auth";
 import { useCan } from "@/hooks/use-permissions";
 import { getErrorMessage } from "@/lib/get-error-message";
 import api from "@/lib/api";
+import {
+  draftErrors,
+  isDirty,
+  isValid,
+  normText,
+  toDraft,
+  toNorma,
+  type DafDraft,
+  type DafNorma,
+} from "./daf-norma-draft";
 
 /** Server: `Company.daf*` ustunlari (dizayn 3.4). */
-interface DafNorma {
-  kunlikDaqiqa: number;
-  kunlikSavol: number;
-  haftalikKun: number;
-  sariqKun: number;
-}
-
 interface CompanyNorma {
   id: number;
   dafKunlikDaqiqa: number;
@@ -30,63 +32,9 @@ interface CompanyNorma {
   dafSariqKun: number;
 }
 
-/** DTO chegaralari bilan bir xil — server ham tekshiradi, bu darhol javob uchun. */
-const CHEGARA: Record<keyof DafNorma, { min: number; max: number }> = {
-  kunlikDaqiqa: { min: 1, max: 1440 },
-  kunlikSavol: { min: 1, max: 500 },
-  haftalikKun: { min: 1, max: 7 },
-  sariqKun: { min: 1, max: 7 },
-};
-
-/**
- * Chegaradan chiqqan xabarda qaysi maydon ekanini aytish uchun. Ekrandagi
- * label bilan bir xil, faqat qavs ichidagi birlik («(daqiqa)», «(kun)»)
- * olib tashlangan — xabar oxirida baribir ruxsat etilgan oraliq yoziladi.
- */
-const MAYDON_NOMI: Record<keyof DafNorma, string> = {
-  kunlikDaqiqa: "Kunlik eng kam vaqt",
-  kunlikSavol: "Kunlik eng kam savol",
-  haftalikKun: "Haftada eng kam faol kun",
-  sariqKun: "Sariq chegarasi",
-};
-
-function NumberField({
-  id,
-  label,
-  hint,
-  value,
-  disabled,
-  onChange,
-}: {
-  id: keyof DafNorma;
-  label: string;
-  hint: string;
-  value: number;
-  disabled: boolean;
-  onChange: (n: number) => void;
-}) {
-  const { min, max } = CHEGARA[id];
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        type="number"
-        inputMode="numeric"
-        min={min}
-        max={max}
-        value={value}
-        disabled={disabled}
-        className="max-w-28"
-        onChange={(e) => {
-          const n = Number(e.target.value);
-          if (Number.isFinite(n)) onChange(n);
-        }}
-      />
-      <p className="text-xs text-muted-foreground">{hint}</p>
-    </div>
-  );
-}
+const TITLE = "DaF normasi";
+const DESCRIPTION =
+  "O'quvchi ilovada qancha ishlashi kerak: «DaF ilovasi» bo'limidagi ranglar shu normadan chiqadi";
 
 export function DafNormaSettingsClient() {
   const queryClient = useQueryClient();
@@ -95,13 +43,14 @@ export function DafNormaSettingsClient() {
   // the lock keeps the button from ending in a 403.
   const canEdit = useCan("settings.company");
   const companyId = user?.companyId;
+  const key = ["company-daf-norma", companyId] as const;
 
   // Qoralama faqat foydalanuvchi tahrirlagandan keyin paydo bo'ladi; shu
-  // paytgacha serverdagi qiymat ko'rsatiladi (absence-pause sahifasidagi naqsh).
-  const [draft, setDraft] = useState<DafNorma | null>(null);
+  // paytgacha serverdagi qiymat ko'rsatiladi (pauza blokidagi naqsh).
+  const [draft, setDraft] = useState<DafDraft | null>(null);
 
-  const { data, isLoading } = useQuery<DafNorma>({
-    queryKey: ["company-daf-norma", companyId],
+  const { data, isLoading, isError, isFetching, refetch } = useQuery<DafNorma>({
+    queryKey: key,
     enabled: companyId !== undefined,
     queryFn: async () => {
       const res = await api.get<CompanyNorma>(`/company/${companyId}`);
@@ -122,10 +71,12 @@ export function DafNormaSettingsClient() {
         dafHaftalikKun: next.haftalikKun,
         dafSariqKun: next.sariqKun,
       });
+      return next;
     },
-    onSuccess: () => {
+    onSuccess: (saved) => {
+      // Saqlangan qiymat avval keshga tushadi: qoralama tozalanganda bir lahza eski qiymat ko'rinmasin.
+      queryClient.setQueryData(key, saved);
       setDraft(null);
-      queryClient.invalidateQueries({ queryKey: ["company-daf-norma"] });
       // Markaz sahifalari normani o'z javobida oladi — ular ham yangilansin.
       queryClient.invalidateQueries({ queryKey: ["daf-center"] });
       toast.success("Norma saqlandi");
@@ -133,120 +84,96 @@ export function DafNormaSettingsClient() {
     onError: (err) => toast.error(getErrorMessage(err, "Saqlashda xatolik")),
   });
 
-  const form = draft ?? data ?? null;
-
-  if (isLoading || !form) {
+  if (isError) {
+    return (
+      <div className="space-y-3">
+        <SettingsPageHeader title={TITLE} description={DESCRIPTION} />
+        <p className="text-sm text-muted-foreground">Normani yuklab bo&apos;lmadi.</p>
+        <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>
+          {isFetching && <Loader2 className="size-4 animate-spin" />}
+          Qayta urinish
+        </Button>
+      </div>
+    );
+  }
+  if (isLoading || !data) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-64 w-full max-w-xl" />
       </div>
     );
   }
 
-  // `.find()` — qaysi maydon chegaradan chiqqanini xabarda aytish uchun (I8
-  // kichik tuzatish: avval faqat "qiymat chegaradan tashqarida" deyilardi).
-  const chegaradanTashqariMaydon =
-    (Object.keys(CHEGARA) as (keyof DafNorma)[]).find(
-      (k) => form[k] < CHEGARA[k].min || form[k] > CHEGARA[k].max,
-    ) ?? null;
-  // Teng bo'lsa sariq oraliq yo'qoladi. Server ham tekshiradi.
-  const sariqNotogri = form.sariqKun >= form.haftalikKun;
+  const form = draft ?? toDraft(data);
+  const errors = draftErrors(form);
+  const dirty = isDirty(data, form);
   const locked = !canEdit || save.isPending;
-  const set = (k: keyof DafNorma) => (n: number) => setDraft({ ...form, [k]: n });
-  // Sariq oralig'i faqat norma to'g'ri bo'lganda ma'noga ega: sariq yashildan
-  // katta bo'lsa `4–3 kun` kabi teskari oraliq chiqardi. Bunday paytda butun
-  // tushuntirish o'rniga bitta yo'naltiruvchi qator ko'rsatiladi.
-  const sariqOraliq =
-    form.sariqKun === form.haftalikKun - 1
-      ? `${form.sariqKun} kun`
-      : `${form.sariqKun}–${form.haftalikKun - 1} kun`;
+  const set = (k: keyof DafDraft) => (text: string) => setDraft({ ...form, [k]: text });
 
   return (
-    <div className="space-y-6">
-      <SettingsPageHeader
-        title="DaF normasi"
-        description="O'quvchi ilovada qancha ishlashi kerak — «DaF ilovasi» bo'limidagi ranglar shu normadan chiqadi"
-      />
+    <div>
+      <SettingsPageHeader title={TITLE} description={DESCRIPTION} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <NumberField
-          id="kunlikDaqiqa"
-          label="Kunlik eng kam vaqt (daqiqa)"
-          hint="Faqat o'quv bo'limidagi vaqt sanaladi; radio va boshqa bo'limlar kirmaydi"
-          value={form.kunlikDaqiqa}
-          disabled={locked}
-          onChange={set("kunlikDaqiqa")}
-        />
-        <NumberField
-          id="kunlikSavol"
-          label="Kunlik eng kam savol"
-          hint="Tugatilgan seanslardagi savollar. Vaqt YOKI savol — bittasi yetsa kun faol"
-          value={form.kunlikSavol}
-          disabled={locked}
-          onChange={set("kunlikSavol")}
-        />
-        <NumberField
-          id="haftalikKun"
-          label="Haftada eng kam faol kun (yashil)"
-          hint="7 kundan nechtasi faol bo'lsa norma bajarilgan hisoblanadi"
-          value={form.haftalikKun}
-          disabled={locked}
-          onChange={set("haftalikKun")}
-        />
-        <NumberField
-          id="sariqKun"
-          label="Sariq chegarasi (kun)"
-          hint="Shundan kam bo'lsa qizil; yashil chegaradan kichik bo'lishi shart"
-          value={form.sariqKun}
-          disabled={locked}
-          onChange={set("sariqKun")}
-        />
-      </div>
-
-      {sariqNotogri && (
-        <p className="text-sm text-destructive">
-          Sariq chegarasi haftalik normadan kichik bo&apos;lishi kerak
-        </p>
-      )}
-      {chegaradanTashqariMaydon && (
-        <p className="text-sm text-destructive">
-          {MAYDON_NOMI[chegaradanTashqariMaydon]} ruxsat etilgan oraliqdan tashqarida (
-          {CHEGARA[chegaradanTashqariMaydon].min}–{CHEGARA[chegaradanTashqariMaydon].max})
-        </p>
-      )}
-
-      <p className="rounded-lg border bg-muted/40 p-4 text-sm leading-relaxed">
-        {sariqNotogri ? (
-          <>Sariq chegarasi to&apos;g&apos;rilangach, normaning izohi shu yerda ko&apos;rinadi.</>
-        ) : (
-          <>
-            Hozirgi norma: o&apos;quvchi kuniga kamida <b>{form.kunlikDaqiqa} daqiqa</b> o&apos;quv
-            bo&apos;limida ishlashi yoki <b>{form.kunlikSavol} ta</b> savolga javob berishi kerak.
-            Haftada shunday <b>{form.haftalikKun} kun</b> bo&apos;lsa — yashil, <b>{sariqOraliq}</b>{" "}
-            bo&apos;lsa — sariq, kamroq bo&apos;lsa — qizil. Norma o&apos;zgartirilsa o&apos;tmish ham
-            yangi norma bilan hisoblanadi.
-          </>
-        )}
-      </p>
-
-      {canEdit && (
-        <div className="flex justify-end">
-          <Button
-            disabled={locked || sariqNotogri || chegaradanTashqariMaydon !== null || draft === null}
-            onClick={() => save.mutate(form)}
-          >
-            {save.isPending ? (
-              <>
-                <Loader2 className="mr-1.5 size-4 animate-spin" />
-                Saqlanmoqda...
-              </>
-            ) : (
-              "Saqlash"
-            )}
-          </Button>
+      <SettingsCard>
+        <div className="flex flex-wrap gap-4">
+          <UnitNumberField
+            id="kunlikDaqiqa"
+            label="Kunlik eng kam vaqt"
+            unit="daqiqa"
+            hint="Faqat o'quv bo'limi sanaladi"
+            value={form.kunlikDaqiqa}
+            error={errors.kunlikDaqiqa}
+            disabled={locked}
+            onChange={set("kunlikDaqiqa")}
+          />
+          <UnitNumberField
+            id="kunlikSavol"
+            label="Kunlik eng kam savol"
+            unit="ta savol"
+            hint="Vaqt yoki savol: bittasi yetsa kun faol"
+            value={form.kunlikSavol}
+            error={errors.kunlikSavol}
+            disabled={locked}
+            onChange={set("kunlikSavol")}
+          />
         </div>
-      )}
+        <div className="flex flex-wrap gap-4">
+          <UnitNumberField
+            id="haftalikKun"
+            label="Yashil chegarasi"
+            unit="kun"
+            hint="7 kundan shuncha faol bo'lsa norma bajarilgan"
+            value={form.haftalikKun}
+            error={errors.haftalikKun}
+            disabled={locked}
+            onChange={set("haftalikKun")}
+          />
+          <UnitNumberField
+            id="sariqKun"
+            label="Sariq chegarasi"
+            unit="kun"
+            hint="Shundan kam bo'lsa qizil"
+            value={form.sariqKun}
+            error={errors.sariqKun}
+            disabled={locked}
+            onChange={set("sariqKun")}
+          />
+        </div>
+
+        {errors.order && <FormError>{errors.order}</FormError>}
+        <p className="rounded-md bg-muted/40 px-3 py-2 text-sm leading-relaxed text-muted-foreground">
+          {normText(form)}
+        </p>
+
+        <SettingsSaveBar
+          dirty={dirty}
+          canSave={dirty && isValid(form)}
+          saving={save.isPending}
+          onCancel={() => setDraft(null)}
+          onSave={() => save.mutate(toNorma(form))}
+        />
+      </SettingsCard>
     </div>
   );
 }

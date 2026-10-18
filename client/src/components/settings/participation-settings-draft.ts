@@ -97,3 +97,9 @@ export function draftPatch(
   if (maxLate !== null && maxLate !== saved.maxLatePercent) patch.maxLatePercent = maxLate;
   return Object.keys(patch).length > 0 ? patch : null;
 }
+
+/** Qoralamada saqlanganidan farq bor-yo'qligi (yaroqsiz matn ham farq hisoblanadi). */
+export function isDirty(saved: ParticipationSettings, d: ParticipationDraft): boolean {
+  const base = toDraft(saved);
+  return (Object.keys(base) as (keyof ParticipationDraft)[]).some((k) => d[k] !== base[k]);
+}
