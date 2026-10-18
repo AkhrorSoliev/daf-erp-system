@@ -1062,6 +1062,7 @@ model LeadSource {
 
   leads       Lead[]
   customForms CustomForm[]
+  expenses    Expense[]
 
   @@index([companyId])
   @@index([deletedAt])
@@ -3242,6 +3243,11 @@ model Expense {
   settledBySalaryPaymentId String?
   settledBySalaryPayment   SalaryPayment? @relation("ExpenseSettledBy", fields: [settledBySalaryPaymentId], references: [id])
 
+  // Which lead source (channel) a MARKETING expense paid for (ADR-0109).
+  // NULL = not tied to one channel. Only MARKETING rows carry it.
+  leadSourceId String?
+  leadSource   LeadSource? @relation(fields: [leadSourceId], references: [id])
+
   companyId Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3258,6 +3264,7 @@ model Expense {
   @@index([deletedAt])
   @@index([relatedUserId])
   @@index([branchId])
+  @@index([leadSourceId])
 }
 
 // ===== PAYMENT GATEWAY EVENT LOG =====

@@ -25,9 +25,12 @@ const REPORT: MarketingReport = {
   ltv: { value: 1_258_000, avgMonths: 3.4, monthlyCharge: 370_000 },
   months: [OCTOBER, SEPTEMBER, JUNE],
   sources: [
-    { source: "Instagram", leads: 40, students: 10, rate: 25 },
-    { source: null, leads: 3, students: 1, rate: 33.3 },
+    { source: "Instagram", spend: 4_000_000, leads: 40, students: 10, rate: 25, cac: 400_000, paid: 12_000_000, roi: 3 },
+    { source: "Tavsiya", spend: 0, leads: 8, students: 2, rate: 25, cac: null, paid: 800_000, roi: null },
+    { source: null, spend: 0, leads: 3, students: 1, rate: 33.3, cac: null, paid: 300_000, roi: null },
   ],
+  sourcesTotal: { spend: 5_800_000, leads: 51, students: 13, rate: 25.5, cac: 446_154, paid: 13_100_000, roi: 2.26 },
+  unassignedSpend: 1_800_000,
 };
 
 const markup = (data: MarketingReport) => renderToStaticMarkup(createElement(MarketingReportView, { data }));
@@ -65,22 +68,40 @@ describe("MarketingReportView", () => {
     expect(text).toContain("* May–iyun — tizimga o'tish oylari");
   });
 
-  it("lists the lead sources with the server's conversion rate, «Manba yozilmagan» for none", () => {
+  it("lists each channel with its spend, cost of one student, money and return, «—» where it cost nothing", () => {
     const text = render(REPORT);
 
-    expect(text).toContain("Manba bo'yicha (lid manbasi yozilganlar)");
-    expect(text).toContain("Instagram 40 10 25%");
+    expect(text).toContain("Kanallar bo'yicha");
+    expect(text).toContain(
+      `Instagram ${money(4_000_000)} 40 10 ${money(400_000)} ${money(12_000_000)} ${oneDecimal(3)}× 25%`,
+    );
+    // Nothing was spent on it: no cost of one student and no return, but its money counts.
+    expect(text).toContain(`Tavsiya — 8 2 — ${money(800_000)} — 25%`);
     // The server's one-decimal rate, printed as sent (the client divides nothing).
-    expect(text).toContain(`Manba yozilmagan 3 1 ${oneDecimal(33.3)}%`);
-    // The bar is drawn from the same rate.
-    expect(markup(REPORT)).toContain("width:33.3%");
+    expect(text).toContain(`Manba yozilmagan — 3 1 — ${money(300_000)} — ${oneDecimal(33.3)}%`);
     expect(text).toContain("Lid manbasi 10.09.2026 dan beri yoziladi.");
   });
 
+  it("closes the channel table with «Hammasi» and names the spend that names no channel", () => {
+    const text = render(REPORT);
+
+    expect(text).toContain(`Hammasi ${money(5_800_000)} 51 13 ${money(446_154)} ${money(13_100_000)} ${oneDecimal(2.26)}× ${oneDecimal(25.5)}%`);
+    expect(text).toContain(`Kanali ko'rsatilmagan sarf: ${money(1_800_000)}`);
+    expect(render({ ...REPORT, unassignedSpend: 0 })).not.toContain("Kanali ko'rsatilmagan sarf");
+  });
+
+  it("puts the channel table above the overall figures", () => {
+    const text = render(REPORT);
+
+    expect(text.indexOf("Kanallar bo'yicha")).toBeLessThan(text.indexOf("Jami (hamma kanal birga)"));
+    expect(text.indexOf("Jami (hamma kanal birga)")).toBeLessThan(text.indexOf("Marketingga sarflandi"));
+  });
+
   it("a month before lead sources shows only the footnote; missing figures are «—»", () => {
-    const text = render({ ...REPORT, cac: null, ltv: null, sources: null });
+    const text = render({ ...REPORT, cac: null, ltv: null, sources: null, sourcesTotal: null, unassignedSpend: null });
 
     expect(text).not.toContain("Manba yozilmagan");
+    expect(text).not.toContain("Hammasi");
     expect(text).toContain("Lid manbasi 10.09.2026 dan beri yoziladi.");
     expect(text).toContain("Jalb qilish narxi — sarf");
     expect(text).toContain("O'quvchi qiymati — o'rtacha — oy × oyiga —");

@@ -175,6 +175,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0106](0106-kirish-sahifasida-til-tanlash.md) | Kirish sahifasida til tanlash: qobiq tilni cookie'dan o'qiydi, kirishda profil tili yutadi | Qabul qilindi | 2026-10-17 |
 | [0107](0107-hujjat-berish-shartlari-qarz-dars-kech-qolish-sinov.md) | Hujjat berish shartlari: qarz yo'q, eng kam dars (20), kech qolish chegarasi (20%), yakuniy sinovlar topshirilgan; hammasi `participation-rules.ts` da, ikki yangi CEO sozlamasi, snapshotga chegaralar ixtiyoriy qo'shiladi (ADR-0100 ni kengaytiradi) | Qabul qilindi | 2026-10-17 |
 | [0108](0108-auditoriya-hisoboti-jins-va-yosh.md) | «Auditoriya» hisoboti: hozir o'qiyotganlar jinsi va yoshi (kurs va filial kesimida), mavjud maydonlardan; noma'lum foizga kirmaydi va alohida ko'rsatiladi, 5 dan kam ma'lumotda foiz yo'q, yosh Toshkent kuni bilan bitta funksiyadan | Qabul qilindi | 2026-10-17 |
+| [0109](0109-marketing-kanal-boyicha.md) | Marketing hisoboti kanal bo'yicha: marketing xarajati lid manbasiga bog'lanadi (`Expense.leadSourceId`, faqat MARKETING); kanal qatori = oydagi lid kohorti, 1 o'quvchi narxi = sarf ÷ to'lagan odamlar, samara = ularning to'lovi ÷ sarf; kanalsiz sarf «Hammasi»da, kanal qatorlarida emas | Qabul qilindi | 2026-10-18 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

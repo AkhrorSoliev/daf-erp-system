@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   Min,
 } from 'class-validator';
 import { ExpenseCategory, ExpensePaymentMethod } from '@prisma/client';
@@ -44,4 +45,10 @@ export class CreateExpenseDto {
   @IsOptional()
   @IsInt()
   relatedUserId?: number;
+
+  // The lead source a MARKETING expense paid for (ADR-0109). Empty = not tied
+  // to one channel. Refused on any other category.
+  @IsOptional()
+  @IsUUID()
+  leadSourceId?: string | null;
 }

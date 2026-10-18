@@ -2,6 +2,7 @@ import {
   isTransitionMonth,
   lifetimeValue,
   marketingMonths,
+  sourceRows,
 } from './marketing.math';
 
 describe('isTransitionMonth', () => {
@@ -108,5 +109,100 @@ describe('lifetimeValue', () => {
     expect(
       lifetimeValue(3.4, { ...charges, students: 0, charged: 0 }),
     ).toBeNull();
+  });
+});
+
+describe('sourceRows', () => {
+  const sources = [
+    {
+      source: 'Instagram',
+      leads: 40,
+      students: 4,
+      rate: 10,
+      studentIds: [1, 2, 3, 4],
+    },
+    { source: 'Tavsiya', leads: 10, students: 2, rate: 20, studentIds: [5, 6] },
+    { source: null, leads: 5, students: 1, rate: 20, studentIds: [7] },
+  ];
+  const paidByStudent = new Map([
+    [1, 400_000],
+    [2, 400_000],
+    [3, 200_000],
+    [4, 0],
+    [5, 500_000],
+    [7, 100_000],
+  ]); // student 6 has no payment row
+
+  it('gives each source its own spend, cost per student, money and return', () => {
+    const r = sourceRows({
+      sources,
+      spendBySource: new Map([['Instagram', 1_000_000]]),
+      paidByStudent,
+      monthSpend: 1_500_000,
+    });
+
+    expect(r.rows[0]).toEqual({
+      source: 'Instagram',
+      spend: 1_000_000,
+      leads: 40,
+      students: 4,
+      rate: 10,
+      cac: 250_000,
+      paid: 1_000_000,
+      roi: 1,
+    });
+    // Nothing was spent on it: no cost per student and no return, but its money counts.
+    expect(r.rows[1]).toMatchObject({
+      source: 'Tavsiya',
+      spend: 0,
+      cac: null,
+      paid: 500_000,
+      roi: null,
+    });
+    expect(r.rows[2]).toMatchObject({ source: null, spend: 0, paid: 100_000 });
+  });
+
+  it('puts the whole month in the total and the unnamed spend beside it', () => {
+    const r = sourceRows({
+      sources,
+      spendBySource: new Map([['Instagram', 1_000_000]]),
+      paidByStudent,
+      monthSpend: 1_500_000,
+    });
+
+    expect(r.total).toEqual({
+      spend: 1_500_000,
+      leads: 55,
+      students: 7,
+      rate: 12.7,
+      cac: 214_286,
+      paid: 1_600_000,
+      roi: 1.07,
+    });
+    expect(r.unassignedSpend).toBe(500_000);
+  });
+
+  it('keeps a paid-for source that brought no lead', () => {
+    const r = sourceRows({
+      sources: [],
+      spendBySource: new Map([['Telegram', 300_000]]),
+      paidByStudent: new Map(),
+      monthSpend: 300_000,
+    });
+
+    expect(r.rows).toEqual([
+      {
+        source: 'Telegram',
+        spend: 300_000,
+        leads: 0,
+        students: 0,
+        rate: 0,
+        cac: null,
+        paid: 0,
+        roi: 0,
+      },
+    ]);
+    expect(r.unassignedSpend).toBe(0);
+    expect(r.total.cac).toBeNull();
   });
 });

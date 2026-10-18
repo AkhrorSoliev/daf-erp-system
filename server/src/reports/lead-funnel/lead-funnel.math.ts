@@ -154,26 +154,43 @@ export function personsAtStage(
  * them reached «to'lov», and that share as `rate` (0–100, one decimal — the
  * Lidlar report's rule; the client only prints it). Sorted by people, most
  * first; «no source» (null) goes after the named sources it ties with.
+ * `studentIds` are the student cards of the people who paid: the marketing
+ * report sums their payments per source (ADR-0109).
  */
 export function sourceBreakdown(
   persons: FunnelPerson[],
   sets: StageSets,
-): { source: string | null; leads: number; students: number; rate: number }[] {
+): {
+  source: string | null;
+  leads: number;
+  students: number;
+  rate: number;
+  studentIds: number[];
+}[] {
   const paid = new Set(
     personsAtStage(persons, sets, 'paid', 'all').map((p) => p.key),
   );
   const rows = new Map<
     string | null,
-    { source: string | null; leads: number; students: number }
+    {
+      source: string | null;
+      leads: number;
+      students: number;
+      studentIds: number[];
+    }
   >();
   for (const p of persons) {
     const row = rows.get(p.source) ?? {
       source: p.source,
       leads: 0,
       students: 0,
+      studentIds: [],
     };
     row.leads += 1;
-    if (paid.has(p.key)) row.students += 1;
+    if (paid.has(p.key)) {
+      row.students += 1;
+      if (p.studentId != null) row.studentIds.push(p.studentId);
+    }
     rows.set(p.source, row);
   }
   return [...rows.values()]

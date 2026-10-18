@@ -76,7 +76,10 @@ export function ExpensesTable({ rows, loading, offset, emptyMonth, canManage, on
                     <TableRow key={e.id}>
                       <TableCell className="border-r text-muted-foreground tabular-nums">{offset + i + 1}</TableCell>
                       <TableCell className="text-sm tabular-nums">{dateText(e.date)}</TableCell>
-                      <TableCell><Badge variant="secondary">{EXPENSE_CATEGORY_LABELS[e.category]}</Badge></TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{EXPENSE_CATEGORY_LABELS[e.category]}</Badge>
+                        {e.leadSource && <span className="mt-0.5 block text-xs text-muted-foreground">{e.leadSource.name}</span>}
+                      </TableCell>
                       <TableCell className="text-sm">
                         {e.description}
                         {e.hint && <span className={cn(PILL_BASE, "ml-2 bg-amber-500/25 align-middle text-foreground")}>{EXPENSE_HINT_LABELS[e.hint]}</span>}

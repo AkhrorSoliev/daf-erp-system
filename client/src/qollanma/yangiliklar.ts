@@ -13,6 +13,26 @@ export const yangiliklar: Yangilik[] = [
     sahifa: { bolim: "boshlash", sahifa: "interfeys" },
   },
   {
+    sana: "2026-10-18",
+    sarlavha: "Lidlar arxivi yangilandi",
+    matn: "Lidlar arxivida endi «Lidlar» va «Bo'limlar» yorliqlari bor, jadvallar sahifalarga bo'lingan (10 dan 50 tagacha). Ism, telefon yoki sabab bo'yicha qidirish, «Kim tomonidan» va sana oralig'i bo'yicha filtr qo'shildi; filtrlar havolada saqlanadi. Har qatorda arxivlangan sana ko'rinadi. Lidni tiklash oynasi lidning eski joyini oldindan tanlaydi va tiklash nimani o'zgartirishini (bosqich, mas'ul) yozib turadi. Tiklash tugmasi faqat lidlarni boshqarish huquqi borlarga ko'rinadi. Tiklangan qator darrov ro'yxatdan yo'qoladi.",
+    rollar: [1, 2, 3],
+  },
+  {
+    sana: "2026-10-18",
+    sarlavha: "Sozlamalar tartibga keltirildi",
+    matn: "Sozlamalar sahifasi endi mavzu bo'yicha: Markaz, Jamoa va ruxsatlar, O'quv jarayoni, To'lov va lidlar, Telegram va arxiv. Ko'p sahifa ko'rinadigan rolda tepada qidiruv bor («/» tugmasi ham ishlaydi). Kichik sozlamalar bir sahifaga yig'ildi: «O'quv qoidalari» (avtomatik pauza, DaF normasi, qatnashganlik hujjati), «Lidlar va KPI» (lidlar egaligi, KPI narxlari) va «Telegram» (guruhlar va kunlik hisobot varaqlari). Eski havolalar o'zi yangi joyga olib boradi; kim nimani o'zgartira olishi avvalgidek.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-18",
+    sarlavha: "Marketing kanal bo'yicha: bitta o'quvchi qancha turadi",
+    matn: "Marketing xarajatini yozayotganda endi «Kanal» tanlanadi (Instagram, Telegram, tavsiya...). Hisobotlar → «Marketing» sahifasining tepasida «Kanallar bo'yicha» jadvali paydo bo'ldi: har kanal uchun sarf, lid, o'quvchi bo'lganlar, bitta o'quvchi narxi, ular hozirgacha to'lagan pul va samara. Butun markaz bo'yicha jami pastga tushdi. Kanal belgilanmagan sarf «Hammasi» qatorida bor, lekin birorta kanalga kirmaydi; ilgari yozilgan xarajatlar «Umumiy» bo'lib qolgan, kanalini «Tahrirlash» orqali qo'yish mumkin.",
+    rollar: [1, 2],
+    sahifa: { bolim: "xarajatlar", sahifa: "xarajatlar-sahifasi" },
+  },
+  {
     sana: "2026-10-17",
     sarlavha: "Yangi hisobot: Auditoriya",
     matn: "Hisobotlarda «Auditoriya» sahifasi paydo bo'ldi: hozir o'qiyotgan o'quvchilar jinsi, yoshi, kurs va filial bo'yicha. Foizlar faqat jinsi yoki tug'ilgan sanasi kiritilgan o'quvchilar ichidan hisoblanadi, sahifa tepasida esa ma'lumot qanchalik to'liqligi ko'rsatiladi. Ma'lumot o'quvchilar ilovaga kirgan sari to'lib boradi. Beshtadan kam ma'lumotli qatorda foiz o'rniga chiziqcha turadi.",

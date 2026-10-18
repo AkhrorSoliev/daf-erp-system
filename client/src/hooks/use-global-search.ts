@@ -2,9 +2,11 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import { filterPages, type SearchablePage } from "@/data/searchable-pages";
+import { filterPages, searchablePages, type SearchablePage } from "@/data/searchable-pages";
 import api from "@/lib/api";
 import { canOpenEmployeeSettings } from "@/lib/settings-nav";
+import { settingsSearchPages } from "@/lib/settings-search";
+import { isCeoUser, useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useBranchChange } from "@/hooks/use-branch-change";
 
@@ -68,6 +70,7 @@ export function useGlobalSearch() {
   const [isOpen, setIsOpen] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const can = usePermissions((s) => s.can);
+  const user = useAuth((s) => s.user);
 
   useEffect(() => {
     setRecentSearches(loadRecentSearches());
@@ -165,7 +168,12 @@ export function useGlobalSearch() {
   );
 
   const pageResults: SearchablePage[] =
-    query.trim().length >= 1 ? filterPages(query.trim()).slice(0, 5) : [];
+    query.trim().length >= 1
+      ? filterPages(query.trim(), [
+          ...searchablePages,
+          ...settingsSearchPages(can, isCeoUser(user)),
+        ]).slice(0, 5)
+      : [];
 
   // "users" are staff without the teacher role. Their only page is employee
   // settings, which sends an Administrator back to /settings.
