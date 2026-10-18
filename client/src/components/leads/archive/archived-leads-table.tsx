@@ -91,10 +91,8 @@ export function ArchivedLeadsTable({
               <TableRow
                 key={lead.id}
                 tabIndex={0}
-                role="button"
-                aria-label={`${lead.firstName} ${lead.lastName} — ma'lumotni ochish`}
                 className={cn(
-                  "cursor-pointer hover:bg-muted/40",
+                  "cursor-pointer hover:bg-muted/40 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                   openId === lead.id && "bg-muted/50",
                 )}
                 onClick={() => onOpen(lead.id)}
@@ -110,9 +108,16 @@ export function ArchivedLeadsTable({
                   {(page - 1) * pageSize + index + 1}
                 </TableCell>
                 <TableCell>
-                  <p className="font-medium">
+                  <button
+                    type="button"
+                    className="text-left font-medium"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpen(lead.id);
+                    }}
+                  >
                     {lead.firstName} {lead.lastName}
-                  </p>
+                  </button>
                   <p className="text-xs text-muted-foreground">
                     {formatPhone(lead.phone)}
                   </p>

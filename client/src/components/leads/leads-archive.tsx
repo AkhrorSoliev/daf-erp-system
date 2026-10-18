@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -78,6 +78,15 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
 
   const [leadTarget, setLeadTarget] = useState<RestoreLeadTarget | null>(null);
   const panel = useArchivePanelUrl();
+  // The last opened lead stays for the panel's closing animation.
+  const [lastLid, setLastLid] = useState("");
+  if (filters.lid && filters.lid !== lastLid) setLastLid(filters.lid);
+  // A link like ?tab=bolimlar&lid=x must not leave a dangling panel param.
+  const strayLid = tab !== "lidlar" && !!filters.lid;
+  const closePanel = panel.close;
+  useEffect(() => {
+    if (strayLid) closePanel();
+  }, [strayLid, closePanel]);
   const [sectionTarget, setSectionTarget] = useState<ArchivedSection | null>(
     null,
   );
@@ -233,9 +242,10 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
         onClose={() => setLeadTarget(null)}
         onRestored={() => leadTarget && leadRestored(leadTarget)}
       />
-      {tab === "lidlar" && filters.lid && (
+      {tab === "lidlar" && (
         <ArchivedLeadPanel
-          leadId={filters.lid}
+          open={!!filters.lid}
+          leadId={filters.lid || lastLid}
           canRestore={canRestore}
           onClose={() => panel.close()}
           onRestore={(target) => {

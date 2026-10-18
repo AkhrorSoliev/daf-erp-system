@@ -22,6 +22,8 @@ interface CommentListProps {
   entityId: string | number;
   optimisticComments?: CommentData[];
   onCommentChange?: () => void;
+  /** No edit or delete for anyone (an archived record). */
+  readOnly?: boolean;
 }
 
 export function CommentList({
@@ -29,6 +31,7 @@ export function CommentList({
   entityId,
   optimisticComments,
   onCommentChange,
+  readOnly = false,
 }: CommentListProps) {
   const user = useAuth((s) => s.user);
   const [comments, setComments] = useState<CommentData[]>([]);
@@ -157,9 +160,11 @@ export function CommentList({
         <p className="text-sm text-muted-foreground">
           Hozircha izohlar yo&apos;q
         </p>
-        <p className="text-xs text-muted-foreground/60 mt-0.5">
-          Birinchi izohni qoldiring
-        </p>
+        {!readOnly && (
+          <p className="text-xs text-muted-foreground/60 mt-0.5">
+            Birinchi izohni qoldiring
+          </p>
+        )}
       </div>
     );
   }
@@ -179,8 +184,8 @@ export function CommentList({
             {index > 0 && <Separator className="my-0" />}
             <CommentItem
               comment={comment}
-              currentUserId={user?.id}
-              canModerate={canModerate}
+              currentUserId={readOnly ? -1 : user?.id}
+              canModerate={canModerate && !readOnly}
               isEditing={editingId === comment.id}
               editContent={editContent}
               editSaving={editSaving}

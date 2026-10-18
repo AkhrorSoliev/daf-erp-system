@@ -28,11 +28,14 @@ const statusOf = (error: unknown): number | undefined =>
  * was archived. Open while `leadId` is set; the only action is «Tiklash».
  */
 export function ArchivedLeadPanel({
+  open,
   leadId,
   canRestore,
   onClose,
   onRestore,
 }: {
+  open: boolean;
+  /** Kept after closing so the exit animation still has content. */
   leadId: string;
   canRestore: boolean;
   onClose: () => void;
@@ -44,7 +47,7 @@ export function ArchivedLeadPanel({
   const notFound = query.isError && statusOf(query.error) === 404;
 
   return (
-    <Sheet open={!!leadId} onOpenChange={(o) => !o && onClose()}>
+    <Sheet open={open}onOpenChange={(o) => !o && onClose()}>
       <SheetContent
         side="right"
         className="flex flex-col overflow-hidden p-0 sm:max-w-md"
@@ -88,7 +91,7 @@ export function ArchivedLeadPanel({
                 <p className="text-xs text-muted-foreground">
                   Arxivdagi lidga yangi izoh yozib bo&apos;lmaydi.
                 </p>
-                <CommentList entityType="Lead" entityId={lead.id} />
+                <CommentList entityType="Lead" entityId={lead.id} readOnly />
               </TabsContent>
               <TabsContent value="tarix" className="mt-0">
                 {tab === "tarix" && (

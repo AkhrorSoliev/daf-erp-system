@@ -184,6 +184,22 @@ describe('LeadsArchiveReadService', () => {
       expect(res.ownershipLog).toEqual([]);
     });
 
+    it('passes a branch scope through the lead branch predicate', async () => {
+      prisma.lead.findFirst = jest.fn().mockResolvedValue(row());
+      await service.getArchivedLead('l1', 1001, [7]);
+      const where = prisma.lead.findFirst.mock.calls[0][0].where.AND[0];
+      expect(where.OR).toEqual([{ branchId: { in: [7] } }, { branchId: null }]);
+    });
+
+    it('words what a restore changes for a lost, owned lead', async () => {
+      prisma.lead.findFirst = jest.fn().mockResolvedValue(row());
+      const res = await service.getArchivedLead('l1', 1001, null);
+      expect(res.notes).toEqual([
+        "Yo'qotilgan lid «Yangi» bosqichiga qaytadi, yo'qotilish sababi o'chadi.",
+        "Lidning mas'uli bo'shaydi: u umumiy havzaga qaytadi.",
+      ]);
+    });
+
     it('404s when not archived or out of scope', async () => {
       prisma.lead.findFirst = jest.fn().mockResolvedValue(null);
       await expect(service.getArchivedLead('x', 1001, null)).rejects.toThrow(

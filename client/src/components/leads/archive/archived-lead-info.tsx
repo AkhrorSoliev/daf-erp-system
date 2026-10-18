@@ -56,7 +56,7 @@ export function ArchivedLeadInfo({ lead }: { lead: ArchivedLeadDetail }) {
         {lead.calledAt ? (
           <p className="text-sm">
             Telefon qilingan · {archiveDate(lead.calledAt)} ·{" "}
-            {deletedByName(lead.calledBy)}
+            {lead.calledBy ? deletedByName(lead.calledBy) : "noma'lum xodim"}
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">Telefon qilinmagan</p>
@@ -98,7 +98,7 @@ export function ArchivedLeadInfo({ lead }: { lead: ArchivedLeadDetail }) {
         {lead.lostReason && (
           <Row label="Yo'qotilish sababi" value={lead.lostReason} />
         )}
-        {lead.statusChangeReason && lead.statusEnum !== "CONVERTED" && (
+        {lead.statusChangeReason && (
           <Row label="Holat o'zgargan sabab" value={lead.statusChangeReason} />
         )}
         {lead.notes.length > 0 && (
