@@ -25,9 +25,9 @@ const statItems = [
   },
   {
     key: "active" as const,
-    label: msg("Faol"),
+    label: msg("Faol guruhlar"),
     icon: CheckCircle,
-    tooltip: msg("Faol guruhlar"),
+    tooltip: msg("Faol guruhlar soni"),
   },
   {
     key: "forming" as const,

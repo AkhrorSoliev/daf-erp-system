@@ -51,7 +51,7 @@ const STATUS_MAP: Record<
   FORMING: { label: msg("Boshlanmagan"), variant: "secondary" },
   PAUSED: { label: msg("Pauza"), variant: "outline" },
   COMPLETED: { label: msg("Yakunlangan"), variant: "outline" },
-  CANCELLED: { label: msg("Bekor qilingan"), variant: "destructive" },
+  CANCELLED: { label: msg("Bekor qilingan guruh"), variant: "destructive" },
   ARCHIVED: { label: msg("Arxivlangan"), variant: "outline" },
 };
 

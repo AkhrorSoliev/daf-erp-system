@@ -120,5 +120,6 @@ describe("toCyrillic", () => {
     expect(toCyrillic("B2, C1")).toBe("B2, C1");
     expect(toCyrillic("Goethe sinovi")).toBe("Goethe синови");
     expect(toCyrillic("Deutsch kursi")).toBe("Deutsch курси");
+    expect(toCyrillic("Veb, Android va iOS bir xil qoida bilan sanaladi")).toBe("Веб, Андроид ва iOS бир хил қоида билан саналади");
   });
 });

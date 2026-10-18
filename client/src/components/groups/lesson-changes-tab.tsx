@@ -686,7 +686,7 @@ function CreateOverrideDialog({
             </div>
             <p className="text-xs text-muted-foreground">
               {t(
-                "Default: guruhning {n} ta standart ustozi. Tanlovni o'zgartirsangiz, faqat tanlanganlarga oylik yoziladi.",
+                "Odatda: guruhning {n} ta standart ustozi. Tanlovni o'zgartirsangiz, faqat tanlanganlarga oylik yoziladi.",
                 { n: group.teachers?.length ?? 0 },
               )}
             </p>

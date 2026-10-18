@@ -163,7 +163,7 @@ function RowBadges({ row }: { row: LessonModificationRow }) {
     <div className="flex flex-wrap gap-1">
       {row.cancellation && (
         <Badge variant="destructive" className="font-normal">
-          {t("Bekor qilingan")}
+          {t("Bekor qilingan dars")}
         </Badge>
       )}
       {row.reschedule && (

@@ -51,7 +51,7 @@ interface TeacherOption {
 const LEVEL_OPTIONS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 const STATUS_OPTIONS = [
-  { value: "ACTIVE", label: msg("Faol") },
+  { value: "ACTIVE", label: msg("Faol guruhlar") },
   { value: "FORMING", label: msg("Boshlanmagan") },
   { value: "PAUSED", label: msg("Pauza") },
   { value: "COMPLETED", label: msg("Tugallangan") },

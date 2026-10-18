@@ -44,4 +44,9 @@ describe("translate", () => {
     expect(translate("uz-Cyrl", {}, "Profil")).toBe("Профил");
     expect(translate("uz-Cyrl", uzCyrl, "Profil")).toBe("Профиль");
   });
+
+  it("uses the real uz-Cyrl overrides: the all-caps «JAMI» is a word, not an acronym", () => {
+    expect(translate("uz-Cyrl", {}, "JAMI")).toBe("JAMI");
+    expect(translate("uz-Cyrl", uzCyrl, "JAMI")).toBe("ЖАМИ");
+  });
 });

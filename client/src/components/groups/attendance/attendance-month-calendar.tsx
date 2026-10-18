@@ -229,7 +229,7 @@ function LessonCard({
         {cell.type === "cancelled" && (
           <>
             <XCircle className="size-3" />
-            <span>{t("Bekor qilingan")}</span>
+            <span>{t("Bekor qilingan dars")}</span>
           </>
         )}
         {cell.type === "regular" && cell.hasAttendance && (
@@ -339,7 +339,7 @@ function Legend() {
       />
       <LegendDot
         className="bg-red-200 dark:bg-red-800"
-        label={t("Bekor qilingan")}
+        label={t("Bekor qilingan dars")}
       />
     </div>
   );

@@ -112,7 +112,7 @@ describe("the student's app-activity sections follow the page language", () => {
     expect(html).toContain("Прогресс по курсу");
     expect(html).toContain("Идёт");
     expect(html).toContain("Ещё не начат");
-    expect(html).toContain("Занятий: 5/10");
+    expect(html).toContain("Уроков: 5/10");
   });
 
   it("words and sessions: counts, session kinds and an untitled review in Russian", () => {

@@ -77,7 +77,7 @@ const GROUP_STATUS_LABELS: Record<string, string> = {
   FORMING: msg("Shakllanmoqda"),
   PAUSED: msg("To'xtatilgan"),
   COMPLETED: msg("Tugallangan"),
-  CANCELLED: msg("Bekor qilingan"),
+  CANCELLED: msg("Bekor qilingan guruh"),
   ARCHIVED: msg("Arxivlangan"),
 };
 
