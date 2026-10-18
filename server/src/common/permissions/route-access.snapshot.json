@@ -161,6 +161,14 @@
     "CEO"
   ],
   "DELETE /users/sessions/:sid": "ANY",
+  "GET /absence-pause/history": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /absence-pause/preview": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /absence-pause/settings": [
     "Branch Director",
     "CEO"
