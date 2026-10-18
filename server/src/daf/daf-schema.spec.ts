@@ -77,6 +77,22 @@ describe('Daf sxemasi', () => {
       expect(body).toMatch(/sourceId\s+String\s+@unique/);
     },
   );
+
+  // DafStudentDay — a DERIVED table: the source of truth stays DafAttempt
+  // (points included). groupKey is never NULL: a NULL key would not block
+  // a duplicate row. (Task 7 adds: the rebuild script must exist.)
+  it('DafStudentDay is derived and its key cannot duplicate', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const block = schema.slice(schema.indexOf('model DafStudentDay {'));
+    const body = block.slice(0, block.indexOf('\n}'));
+    expect(body).toMatch(/groupKey\s+String\s+@default\(""\)/);
+    expect(body).toMatch(/@@unique\(\[studentId, day, groupKey\]\)/);
+    expect(body).toMatch(/day\s+DateTime\s+@db\.Date/);
+    expect(fieldsOf('DafAttempt')).toContain('points');
+  });
 });
 
 describe('A1 strukturasi', () => {
