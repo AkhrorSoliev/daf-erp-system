@@ -11,12 +11,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEditTeacher } from "@/hooks/use-edit-teacher";
 import { EditTeacherForm } from "./edit-teacher-form";
+import { useT } from "@/i18n/context";
 
 interface EditTeacherDrawerProps {
   onSaved?: (updated: import("@/hooks/use-edit-teacher").TeacherData) => void;
 }
 
 export function EditTeacherDrawer({ onSaved }: EditTeacherDrawerProps) {
+  const t = useT();
   const { open, mode, teacher, submitting, closeDrawer } = useEditTeacher();
   const isAdd = mode === "add";
 
@@ -31,12 +33,12 @@ export function EditTeacherDrawer({ onSaved }: EditTeacherDrawerProps) {
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            {isAdd ? "Yangi o'qituvchi qo'shish" : "O'qituvchini tahrirlash"}
+            {isAdd ? t("Yangi o'qituvchi qo'shish") : t("O'qituvchini tahrirlash")}
           </SheetTitle>
           <SheetDescription>
             {isAdd
-              ? "Yangi o'qituvchi ma'lumotlarini kiriting"
-              : "O'qituvchi ma'lumotlarini o'zgartirish"}
+              ? t("Yangi o'qituvchi ma'lumotlarini kiriting")
+              : t("O'qituvchi ma'lumotlarini o'zgartirish")}
           </SheetDescription>
         </SheetHeader>
 
@@ -53,10 +55,10 @@ export function EditTeacherDrawer({ onSaved }: EditTeacherDrawerProps) {
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
             <Button type="button" variant="outline" onClick={closeDrawer}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" form="edit-teacher-form" disabled={submitting}>
-              {submitting ? "Saqlanmoqda..." : isAdd ? "Qo'shish" : "Saqlash"}
+              {submitting ? t("Saqlanmoqda...") : isAdd ? t("Qo'shish") : t("Saqlash")}
             </Button>
           </div>
         </SheetFooter>

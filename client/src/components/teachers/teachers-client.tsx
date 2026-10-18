@@ -40,6 +40,7 @@ import { useTeacherRegistrationLink } from "@/hooks/use-teacher-registration-lin
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
@@ -50,6 +51,7 @@ const filtersSchema = {
 };
 
 export function TeachersClient() {
+  const t = useT();
   const [teachers, setTeachers] = useState<TeacherData[]>([]);
   const [total, setTotal] = useState(0);
   const { filters, setFilter, setFilters: setUrlFilters } = useUrlFilters(filtersSchema);
@@ -81,14 +83,14 @@ export function TeachersClient() {
     try {
       const url = await copyPendingText(reloadLink());
       if (!url) {
-        toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
+        toast.error(t(TELEGRAM_BOT_NOT_CONFIGURED));
         return;
       }
       setCopied(true);
-      toast.success("Havola nusxalandi");
+      toast.success(t("Havola nusxalandi"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Havolani nusxalab bo'lmadi");
+      toast.error(t("Havolani nusxalab bo'lmadi"));
     } finally {
       setCopying(false);
     }
@@ -144,7 +146,7 @@ export function TeachersClient() {
         <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            placeholder="Ism bo'yicha qidirish..."
+            placeholder={t("Ism bo'yicha qidirish...")}
             value={searchInput}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-9"
@@ -170,12 +172,10 @@ export function TeachersClient() {
                       ) : (
                         <Copy className="size-4 sm:mr-2" />
                       )}
-                      <span className="hidden sm:inline">{copied ? "Nusxalandi" : "Havola olish"}</span>
+                      <span className="hidden sm:inline">{copied ? t("Nusxalandi") : t("Havola olish")}</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    Telegram orqali ro&apos;yxatdan o&apos;tish havolasini nusxalash
-                  </TooltipContent>
+                  <TooltipContent>{t("Telegram orqali ro'yxatdan o'tish havolasini nusxalash")}</TooltipContent>
                 </Tooltip>
                 <Dialog>
                   <Tooltip>
@@ -186,11 +186,11 @@ export function TeachersClient() {
                         </Button>
                       </DialogTrigger>
                     </TooltipTrigger>
-                    <TooltipContent>QR kod orqali havola</TooltipContent>
+                    <TooltipContent>{t("QR kod orqali havola")}</TooltipContent>
                   </Tooltip>
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                      <DialogTitle>QR kod — O&apos;qituvchi ro&apos;yxatdan o&apos;tish</DialogTitle>
+                      <DialogTitle>{t("QR kod — O'qituvchi ro'yxatdan o'tish")}</DialogTitle>
                     </DialogHeader>
                     <div className="flex flex-col items-center gap-4 py-4">
                       {linkLoading ? (
@@ -205,16 +205,16 @@ export function TeachersClient() {
                         </div>
                       ) : (
                         <p className="text-muted-foreground text-center text-sm">
-                          {TELEGRAM_BOT_NOT_CONFIGURED}
+                          {t(TELEGRAM_BOT_NOT_CONFIGURED)}
                         </p>
                       )}
                       {linkLoading || teacherLink ? (
                         <div className="flex flex-col gap-1 text-center">
                           <p className="text-muted-foreground text-sm">
-                            Ushbu QR kodni skanerlang va Telegram bot orqali ro&apos;yxatdan o&apos;ting
+                            {t("Ushbu QR kodni skanerlang va Telegram bot orqali ro'yxatdan o'ting")}
                           </p>
                           <p className="text-muted-foreground text-xs">
-                            Havola 3 kun amal qiladi.
+                            {t("Havola 3 kun amal qiladi.")}
                           </p>
                         </div>
                       ) : null}
@@ -228,12 +228,12 @@ export function TeachersClient() {
                   <span tabIndex={0}>
                     <Button variant="outline" className="size-9 sm:size-auto sm:h-9 sm:px-4" disabled>
                       <Copy className="size-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Havola olish</span>
+                      <span className="hidden sm:inline">{t("Havola olish")}</span>
                     </Button>
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {selectedBranch ? TELEGRAM_BOT_NOT_CONFIGURED : "Avval filial tanlang"}
+                  {selectedBranch ? t(TELEGRAM_BOT_NOT_CONFIGURED) : t("Avval filial tanlang")}
                 </TooltipContent>
               </Tooltip>
             )
@@ -244,10 +244,10 @@ export function TeachersClient() {
                 <TooltipTrigger asChild>
                   <Button onClick={openAddDrawer} data-tour="teacher-add" className="size-9 sm:size-auto sm:h-9 sm:px-4">
                     <Plus className="size-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Yangi o&apos;qituvchi</span>
+                    <span className="hidden sm:inline">{t("Yangi o'qituvchi")}</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="sm:hidden">Yangi o&apos;qituvchi</TooltipContent>
+                <TooltipContent className="sm:hidden">{t("Yangi o'qituvchi")}</TooltipContent>
               </Tooltip>
             ) : (
               <Tooltip>
@@ -255,12 +255,12 @@ export function TeachersClient() {
                   <span tabIndex={0}>
                     <Button disabled className="size-9 sm:size-auto sm:h-9 sm:px-4">
                       <Plus className="size-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Yangi o&apos;qituvchi</span>
+                      <span className="hidden sm:inline">{t("Yangi o'qituvchi")}</span>
                     </Button>
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Avval filial qo&apos;shing
+                  {t("Avval filial qo'shing")}
                 </TooltipContent>
               </Tooltip>
             )
@@ -270,13 +270,13 @@ export function TeachersClient() {
 
       {loading ? (
         <div className="text-muted-foreground flex h-40 items-center justify-center rounded-md border">
-          Yuklanmoqda...
+          {t("Yuklanmoqda...")}
         </div>
       ) : (
         <TeachersTable
           teachers={teachers}
           onDeleted={(id) => {
-            setTeachers((prev) => prev.filter((t) => t.id !== id));
+            setTeachers((prev) => prev.filter((x) => x.id !== id));
             setTotal((prev) => Math.max(0, prev - 1));
           }}
         />
@@ -285,7 +285,7 @@ export function TeachersClient() {
       {totalPages > 1 && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-sm">Sahifada:</span>
+            <span className="text-muted-foreground text-sm">{t("Sahifada:")}</span>
             <Select value={String(filters.pageSize)} onValueChange={handlePageSizeChange}>
               <SelectTrigger className="h-8 w-20">
                 <SelectValue />
@@ -299,7 +299,7 @@ export function TeachersClient() {
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-sm">
-              Jami: {total} ta o&apos;qituvchi
+              {t("Jami: {n} ta o'qituvchi", { n: total })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -310,7 +310,7 @@ export function TeachersClient() {
               onClick={() => setFilter("page", filters.page - 1)}
             >
               <ChevronLeft className="mr-1 size-4" />
-              Oldingi
+              {t("Oldingi")}
             </Button>
             <span className="text-sm">
               {filters.page} / {totalPages}
@@ -321,7 +321,7 @@ export function TeachersClient() {
               disabled={filters.page >= totalPages}
               onClick={() => setFilter("page", filters.page + 1)}
             >
-              Keyingi
+              {t("Keyingi")}
               <ChevronRight className="ml-1 size-4" />
             </Button>
           </div>
@@ -332,10 +332,10 @@ export function TeachersClient() {
         <EditTeacherDrawer
           onSaved={(updated) => {
             setTeachers((prev) => {
-              const exists = prev.some((t) => t.id === updated.id);
+              const exists = prev.some((x) => x.id === updated.id);
               if (exists) {
                 // Update — optimistic replace
-                return prev.map((t) => (t.id === updated.id ? updated : t));
+                return prev.map((x) => (x.id === updated.id ? updated : x));
               }
               // Add — refetch to respect pagination/filters
               fetchTeachers();
