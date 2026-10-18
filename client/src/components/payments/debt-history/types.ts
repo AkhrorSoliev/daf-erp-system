@@ -1,5 +1,7 @@
 /** Shared shapes for the debt page's "Oylik qarzdorlik" tab. Mirrors the API. */
 
+import { msg } from "@/i18n/msg";
+
 export type DebtStatusFilter = "all" | "active" | "inactive";
 
 export interface DebtMonth {
@@ -122,9 +124,9 @@ export interface DebtHistoryResponse {
 
 /** Which statuses count as "still with us" — matches the backend's split. */
 export const STATUS_FILTER_LABELS: Record<DebtStatusFilter, string> = {
-  all: "Hammasi",
-  active: "Faol",
-  inactive: "Nofaol",
+  all: msg("Hammasi"),
+  active: msg("Faol"),
+  inactive: msg("Nofaol"),
 };
 
 /**
@@ -149,13 +151,14 @@ export const STATUS_COLORS: Record<string, string> = {
  * it implies for collecting — not what the enum is called.
  */
 export const STATUS_HINTS: Record<string, string> = {
-  ACTIVE: "Hozir o'qiyapti. Bu pulni undirish eng oson.",
-  FROZEN: "O'qishni vaqtincha to'xtatgan. Qaytib kelsa to'lashi mumkin.",
-  EXPELLED: "Markazdan chetlatilgan. Bu pulning qaytishi qiyin.",
-  GRADUATED: "Kursni tugatib ketgan, lekin qarzi qolgan.",
-  INACTIVE: "Nofaol o'quvchi.",
-  ARCHIVED: "Ro'yxatdan olib tashlangan.",
-  ARCHIVED_SOFT:
+  ACTIVE: msg("Hozir o'qiyapti. Bu pulni undirish eng oson."),
+  FROZEN: msg("O'qishni vaqtincha to'xtatgan. Qaytib kelsa to'lashi mumkin."),
+  EXPELLED: msg("Markazdan chetlatilgan. Bu pulning qaytishi qiyin."),
+  GRADUATED: msg("Kursni tugatib ketgan, lekin qarzi qolgan."),
+  INACTIVE: msg("Nofaol o'quvchi."),
+  ARCHIVED: msg("Ro'yxatdan olib tashlangan."),
+  ARCHIVED_SOFT: msg(
     "Ro'yxatdan olib tashlangan — tizimning boshqa sahifalarida ko'rinmaydi, lekin qarzi yopilmagan.",
-  PROSPECT: "Faqat ro'yxatdan o'tgan, hali guruhga kirmagan.",
+  ),
+  PROSPECT: msg("Faqat ro'yxatdan o'tgan, hali guruhga kirmagan."),
 };

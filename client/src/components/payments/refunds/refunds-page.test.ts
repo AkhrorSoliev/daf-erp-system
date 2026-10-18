@@ -94,13 +94,13 @@ describe("RefundsPage — Kutilayotgan qaytarishlar (spec §3.3)", () => {
     expect(text).toContain(`Vali Aliyev ID 10002 · ${norm(formatPhone("931234567"))} ${num(620_000)} 09.10 23.10 gacha 9 bank kuni qoldi`);
   });
 
-  it("«Berildi» for every role of the page, «Bekor qilish» for CEO and Branch Director only", () => {
-    expect(render("", RESPONSE, [1])).toContain("9 bank kuni qoldi Berildi Bekor qilish");
-    expect(render("", RESPONSE, [2])).toContain("Berildi Bekor qilish");
+  it("«Berildi» for every role of the page, «So'rovni bekor qilish» for CEO and Branch Director only", () => {
+    expect(render("", RESPONSE, [1])).toContain("9 bank kuni qoldi Berildi So'rovni bekor qilish");
+    expect(render("", RESPONSE, [2])).toContain("Berildi So'rovni bekor qilish");
     for (const role of [3, 5]) {
       const text = render("", RESPONSE, [role]);
       expect(text).toContain("9 bank kuni qoldi Berildi");
-      expect(text).not.toContain("Bekor qilish");
+      expect(text).not.toContain("So'rovni bekor qilish");
     }
   });
 

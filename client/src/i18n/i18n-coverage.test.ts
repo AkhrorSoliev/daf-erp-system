@@ -306,6 +306,21 @@ export const STRICT_FILES: string[] = [
   "components/payments/debt-write-off-actions.ts",
   "app/(dashboard)/payments/debt-history/page.tsx",
   "app/(dashboard)/payments/debt-write-offs/page.tsx",
+  // Payments — debt history and «Qaytariladigan pul» (refunds/refunds-format.ts is listed above)
+  "components/payments/debt-history/debt-flow-table.tsx",
+  "components/payments/debt-history/month-cohort-dialog.tsx",
+  "components/payments/debt-history/types.ts",
+  "components/payments/debt-history/marked-text.tsx",
+  "components/reports/departed-students/dialog-pagination-footer.tsx",
+  "components/payments/refunds/refunds-page.tsx",
+  "components/payments/refunds/refunds-tables.tsx",
+  "components/payments/refunds/refundable-drawer.tsx",
+  "components/payments/refunds/pending-dialogs.tsx",
+  "components/payments/refunds/refund-history-page.tsx",
+  "components/payments/refunds/transfer-note.tsx",
+  "components/payments/refunds/refunds-queries.ts",
+  "components/payments/refunds/refunds-url.ts",
+  "components/payments/refunds/refunds-types.ts",
 ];
 
 function walk(dir: string): string[] {

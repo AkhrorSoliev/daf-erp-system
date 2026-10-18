@@ -12,6 +12,7 @@ import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { EnrollToGroupDialog } from "@/components/students/enroll-to-group-dialog";
 import { useCan, usePermissions } from "@/hooks/use-permissions";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import { downloadAuthedFile } from "@/lib/download-file";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -39,11 +40,13 @@ const AGE_CHIPS: ("" | AgeBucket)[] = ["", ...AGE_BUCKETS];
  * server's; the summary is the one place the three tabs are added (money held).
  */
 export function RefundsPage() {
+  const t = useT();
   const qc = useQueryClient();
   const { filters: raw, setFilters } = useUrlFilters(REFUNDS_SCHEMA);
   // A value the server would refuse (an old bookmark) is read as its default.
   const filters = cleanRefundsFilters(raw as RefundsFilters);
   const tab = refundsTab(filters);
+  const tabRule = TAB_RULE[tab];
   const { data, isPending, isPlaceholderData, isError, refetch } = useRefundableList(filters);
   const can = usePermissions((s) => s.can);
   const canHandOver = useCan("refunds.hand-over");
@@ -76,44 +79,44 @@ export function RefundsPage() {
     try {
       await downloadAuthedFile(`/refundable/excel${qs}`, `qaytariladigan-pul-${today}.xlsx`);
     } catch (e) {
-      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+      toast.error(getErrorMessage(e, t("Excel yuklab olishda xatolik")));
     }
   };
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="flex-1 font-heading text-lg font-semibold tracking-tight">Qaytariladigan pul</h1>
+        <h1 className="flex-1 font-heading text-lg font-semibold tracking-tight">{t("Qaytariladigan pul")}</h1>
         <span className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm text-muted-foreground">
-          <Clock className="size-3.5" />Bugungi holat · {dayMonth(today)}
+          <Clock className="size-3.5" />{t("Bugungi holat · {date}", { date: dayMonth(today) })}
         </span>
-        <Button variant="outline" onClick={exportExcel}><Download className="mr-2 size-4" />Excel</Button>
+        <Button variant="outline" onClick={exportExcel}><Download className="mr-2 size-4" />{t("Excel")}</Button>
       </div>
 
       <div className="rounded-xl border p-4">
-        <p className="text-sm text-muted-foreground">O'qimayotganlarning markazda turgan puli</p>
+        <p className="text-sm text-muted-foreground">{t("O'qimayotganlarning markazda turgan puli")}</p>
         <p className="text-2xl font-bold tabular-nums">{data ? formatBalance(data.summary.total) : "—"}</p>
-        {data && <p className="text-sm text-muted-foreground">{summaryLine(data.summary.count)}</p>}
-        <p className="mt-1.5 text-xs text-muted-foreground">O'qiyotganlarning oldindan to'lagani bu yerga kirmaydi — u keyingi oy hisobiga o'tadi.</p>
+        {data && <p className="text-sm text-muted-foreground">{summaryLine(data.summary.count, t)}</p>}
+        <p className="mt-1.5 text-xs text-muted-foreground">{t("O'qiyotganlarning oldindan to'lagani bu yerga kirmaydi — u keyingi oy hisobiga o'tadi.")}</p>
       </div>
 
       <div className="space-y-3 rounded-xl border p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium text-muted-foreground">Kutilayotgan qaytarishlar</p>
+          <p className="text-sm font-medium text-muted-foreground">{t("Kutilayotgan qaytarishlar")}</p>
           {data && (
             // The history reads GET /refunds: whoever opens or hands over a refund.
             <CanLink href="/payments/refunds/history" perm={["refunds.create", "refunds.hand-over"]}
               className="inline-flex items-center gap-1 text-sm font-medium" linkClassName="text-primary hover:underline">
-              Tarix · {formatNumber(data.pending.historyCount)} ta<ArrowRight className="size-3.5" />
+              {t("Tarix · {n} ta", { n: formatNumber(data.pending.historyCount) })}<ArrowRight className="size-3.5" />
             </CanLink>
           )}
         </div>
-        {data && data.pending.total > 0 && <p className="text-lg font-bold tabular-nums">{pendingSumLine(data.pending.sum, data.pending.total)}</p>}
-        <p className="text-sm text-muted-foreground">{PENDING_RULE}</p>
+        {data && data.pending.total > 0 && <p className="text-lg font-bold tabular-nums">{pendingSumLine(data.pending.sum, data.pending.total, t)}</p>}
+        <p className="text-sm text-muted-foreground">{t(PENDING_RULE)}</p>
         {!data ? (
           <Skeleton className="h-24 rounded" />
         ) : data.pending.total === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">{pendingEmptyText(data.pending.lastHandedOverAt)}</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{pendingEmptyText(data.pending.lastHandedOverAt, t)}</p>
         ) : (
           <div aria-busy={isPlaceholderData} className={cn("space-y-3", isPlaceholderData && "pointer-events-none opacity-60")}>
             <PendingTable rows={data.pending.data} offset={(filters.pendingPage - 1) * filters.pendingPageSize}
@@ -125,36 +128,37 @@ export function RefundsPage() {
         )}
       </div>
 
-      <TabButtons data={data} active={tab} onSelect={(t) => setFilters({ tab: t, age: "", page: 1 })} />
-      <p className="text-sm text-muted-foreground">{TAB_RULE[tab]}</p>
+      <TabButtons data={data} active={tab} onSelect={(next) => setFilters({ tab: next, age: "", page: 1 })} />
+      <p className="text-sm text-muted-foreground">{t(tabRule)}</p>
 
       {tab === "muzlatilgan" && (
-        <div role="group" aria-label="Muzlatilganiga necha kun bo'lgan" className="flex w-max max-w-full flex-wrap gap-1 rounded-lg bg-muted p-1">
+        <div role="group" aria-label={t("Muzlatilganiga necha kun bo'lgan")} className="flex w-max max-w-full flex-wrap gap-1 rounded-lg bg-muted p-1">
           {AGE_CHIPS.map((a) => {
             const count = data?.chips[a || "all"];
+            const chipLabel = a ? AGE_LABEL[a] : "";
             return (
               <button key={a || "all"} type="button" aria-pressed={filters.age === a} onClick={() => setFilters({ age: a, page: 1 })}
                 className={cn("rounded-md px-3 py-1 text-sm font-medium text-muted-foreground", filters.age === a && "bg-background text-foreground shadow-sm")}>
-                {a ? AGE_LABEL[a] : "Hammasi"} · {count === undefined ? "—" : formatNumber(count)}
+                {a ? t(chipLabel) : t("Hammasi")} · {count === undefined ? "—" : formatNumber(count)}
               </button>
             );
           })}
         </div>
       )}
 
-      <UrlSearchBox value={filters.search} onSearch={onSearch} label="O'quvchini qidirish" />
+      <UrlSearchBox value={filters.search} onSearch={onSearch} label={t("O'quvchini qidirish")} />
       {/* Nothing else on the row says it opens (the debt page's lesson). */}
       {data && data.rows.total > 0 && (
         <p className="flex items-center gap-2 rounded-md bg-primary/5 px-3 py-2 text-sm text-primary">
           <MousePointerClick className="size-4 shrink-0" />
-          O'quvchi ustiga bosing — tafsilot va amallar o'ng tomonda ochiladi
+          {t("O'quvchi ustiga bosing — tafsilot va amallar o'ng tomonda ochiladi")}
         </p>
       )}
 
       {isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          <p>Ro'yxatni yuklab bo'lmadi.</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>Qayta urinish</Button>
+          <p>{t("Ro'yxatni yuklab bo'lmadi.")}</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>{t("Qayta urinish")}</Button>
         </div>
       ) : (
         <div aria-busy={isPlaceholderData} className={cn(isPlaceholderData && "pointer-events-none opacity-60")}>
@@ -177,21 +181,23 @@ export function RefundsPage() {
 }
 
 function TabButtons({ data, active, onSelect }: {
-  data: RefundableListResponse | undefined; active: RefundableTab; onSelect: (t: RefundableTab) => void;
+  data: RefundableListResponse | undefined; active: RefundableTab; onSelect: (tab: RefundableTab) => void;
 }) {
+  const t = useT();
   const overThirty = data ? data.chips.d31to60 + data.chips.over60 : 0;
   return (
-    <div role="tablist" aria-label="Kimlarning puli" className="grid gap-3 md:grid-cols-3">
-      {REFUNDABLE_TABS.map((t) => {
-        const total = data?.tabs[t];
+    <div role="tablist" aria-label={t("Kimlarning puli")} className="grid gap-3 md:grid-cols-3">
+      {REFUNDABLE_TABS.map((key) => {
+        const total = data?.tabs[key];
+        const tabLabel = TAB_LABEL[key];
         return (
-          <button key={t} type="button" role="tab" aria-selected={t === active} onClick={() => onSelect(t)}
-            className={cn("flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left", t === active && "border-primary ring-1 ring-primary")}>
+          <button key={key} type="button" role="tab" aria-selected={key === active} onClick={() => onSelect(key)}
+            className={cn("flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left", key === active && "border-primary ring-1 ring-primary")}>
             <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <span className={cn("size-2 rounded-full", TAB_DOT[t])} />{TAB_LABEL[t]}
+              <span className={cn("size-2 rounded-full", TAB_DOT[key])} />{t(tabLabel)}
             </span>
             <span className="text-xl font-bold tabular-nums">{total ? formatBalance(total.total) : "—"}</span>
-            {total && <span className="text-xs text-muted-foreground">{tabSubline(t, total.count, overThirty)}</span>}
+            {total && <span className="text-xs text-muted-foreground">{tabSubline(key, total.count, overThirty, t)}</span>}
           </button>
         );
       })}

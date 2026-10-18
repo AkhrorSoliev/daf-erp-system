@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import { formatPhone, formatPrice } from "@/lib/format-utils";
 import { instantDayMonth } from "../debt/debt-format";
 import { lastPageIfPast } from "../debt/debt-url";
@@ -19,9 +20,10 @@ import { cleanHistoryPage, HISTORY_SCHEMA } from "./refunds-url";
 import type { RefundHistoryRow } from "./refunds-types";
 
 function HandedCell({ row }: { row: RefundHistoryRow }) {
-  const cell = handedCell(row);
+  const t = useT();
+  const cell = handedCell(row, t);
   if (!cell.cancelled) return <>{cell.text}</>;
-  const pill = <Pill tone="muted">bekor qilindi</Pill>;
+  const pill = <Pill tone="muted">{t("bekor qilindi")}</Pill>;
   if (!cell.reason) return pill;
   return (
     <Tooltip>
@@ -33,6 +35,7 @@ function HandedCell({ row }: { row: RefundHistoryRow }) {
 
 /** «Qaytarishlar tarixi» (spec §3.6): handed-over and cancelled requests in scope, newest request first. */
 export function RefundHistoryPage() {
+  const t = useT();
   const { filters, setFilters } = useUrlFilters(HISTORY_SCHEMA);
   const { page, pageSize } = cleanHistoryPage(filters.page, filters.pageSize);
   const { data, isPlaceholderData, isError, refetch } = useRefundHistory(page, pageSize);
@@ -44,32 +47,32 @@ export function RefundHistoryPage() {
   return (
     <div className="space-y-4">
       <Link href="/payments/refunds" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-        <ArrowLeft className="size-4" />Qaytariladigan pul
+        <ArrowLeft className="size-4" />{t("Qaytariladigan pul")}
       </Link>
       <div>
-        <h1 className="font-heading text-lg font-semibold tracking-tight">Qaytarishlar tarixi</h1>
-        <p className="text-sm text-muted-foreground">Berilgan va bekor qilingan so'rovlar</p>
+        <h1 className="font-heading text-lg font-semibold tracking-tight">{t("Qaytarishlar tarixi")}</h1>
+        <p className="text-sm text-muted-foreground">{t("Berilgan va bekor qilingan so'rovlar")}</p>
       </div>
       {isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          <p>Tarixni yuklab bo'lmadi.</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>Qayta urinish</Button>
+          <p>{t("Tarixni yuklab bo'lmadi.")}</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>{t("Qayta urinish")}</Button>
         </div>
       ) : !data || last !== null ? (
         <div className="space-y-2">{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-12 rounded" />)}</div>
       ) : data.data.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">Hali berilgan yoki bekor qilingan so'rov yo'q</p>
+        <p className="py-8 text-center text-sm text-muted-foreground">{t("Hali berilgan yoki bekor qilingan so'rov yo'q")}</p>
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead>O'quvchi</TableHead>
-                <TableHead className="text-right">Summa</TableHead>
-                <TableHead>So'ralgan</TableHead>
-                <TableHead>Berildi</TableHead>
-                <TableHead>Kim berdi / Kim bekor qildi</TableHead>
+                <TableHead>{t("O'quvchi")}</TableHead>
+                <TableHead className="text-right">{t("Summa")}</TableHead>
+                <TableHead>{t("So'ralgan")}</TableHead>
+                <TableHead>{t("Berildi")}</TableHead>
+                <TableHead>{t("Kim berdi / Kim bekor qildi")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

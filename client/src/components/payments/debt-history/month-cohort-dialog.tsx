@@ -30,11 +30,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { DialogPaginationFooter } from "@/components/reports/departed-students/dialog-pagination-footer";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
+import { markedText } from "./marked-text";
 import { STATUS_COLORS } from "./types";
 import { DebtMonthsBadge } from "../debt/debt-months-badge";
+import { monthLabel } from "../salary-utils";
 import type {
   AgingDebtor,
   DebtMonth,
@@ -53,16 +57,22 @@ import type {
  */
 
 const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: "Faol",
-  INACTIVE: "Nofaol",
-  FROZEN: "Muzlatilgan",
-  GRADUATED: "Bitirgan",
-  EXPELLED: "Chetlatilgan",
-  ARCHIVED: "Arxivlangan",
-  PROSPECT: "Ro'yxatda",
+  ACTIVE: msg("Faol"),
+  INACTIVE: msg("Nofaol"),
+  FROZEN: msg("Muzlatilgan"),
+  GRADUATED: msg("Bitirgan"),
+  EXPELLED: msg("Chetlatilgan"),
+  ARCHIVED: msg("Arxivlangan"),
+  PROSPECT: msg("Ro'yxatda"),
 };
 
 type TabKey = "debtors" | "writeoffs";
+
+/** A known status in the page language; one the client does not know prints as the server sent it. */
+function statusText(status: string, t: (source: string) => string): string {
+  const label = STATUS_LABELS[status];
+  return label ? t(label) : status;
+}
 
 function fmtDate(iso: string) {
   return format(new Date(iso), "dd.MM.yyyy");
@@ -124,6 +134,7 @@ interface Props {
 }
 
 export function MonthCohortDialog({ target, statusFilter, onClose }: Props) {
+  const t = useT();
   const open = target !== null;
   const [tab, setTab] = useState<TabKey>("debtors");
   const [page, setPage] = useState(1);
@@ -165,26 +176,31 @@ export function MonthCohortDialog({ target, statusFilter, onClose }: Props) {
     clampedPage * pageSize,
   );
   const cols = tab === "debtors" ? 7 : 6;
-  const t = data?.totals;
+  const totals = data?.totals;
+  const month = target ? monthLabel(target.monthKey, t) : "";
+  // The sentence holds {badge} where the sample «N oy» chip goes.
+  const [debtorsBefore, debtorsAfter = ""] = t(
+    "Summalar faqat **{month}** oyiga tegishli — shu oyda o'tilgan darslardan hali to'lanmagani. Qarzi boshqa oylarga ham tarqalganlarda {badge} belgisi turadi.",
+    { month },
+  ).split("{badge}");
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="flex max-h-[88vh] w-[min(1040px,95vw)] !max-w-[min(1040px,95vw)] flex-col gap-4 overflow-hidden p-6">
         <DialogHeader className="space-y-2">
-          <DialogTitle>{target?.label ?? ""} — batafsil</DialogTitle>
+          <DialogTitle>{t("{month} — batafsil", { month })}</DialogTitle>
           {target && (
             <DialogDescription>
-              {target.label} oyidan bugungi kunga qolgan qarz
-              {t ? (
-                <>
-                  {" — "}
-                  <span className="font-medium text-foreground">
-                    {formatPrice(t.debt)} so&apos;m
-                  </span>
-                  , <span className="font-medium">{t.debtorCount}</span> ta
-                  o&apos;quvchida.
-                </>
-              ) : null}
+              {totals
+                ? markedText(
+                    t("{month} oyidan bugungi kunga qolgan qarz — **{amount}**, **{n}** ta o'quvchida.", {
+                      month,
+                      amount: `${formatPrice(totals.debt)} ${t("so'm")}`,
+                      n: totals.debtorCount,
+                    }),
+                    "font-medium text-foreground",
+                  )
+                : t("{month} oyidan bugungi kunga qolgan qarz", { month })}
             </DialogDescription>
           )}
         </DialogHeader>
@@ -192,15 +208,15 @@ export function MonthCohortDialog({ target, statusFilter, onClose }: Props) {
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
           <TabsList className="grid h-auto w-full grid-cols-2">
             <TabsTrigger value="debtors" className="flex-col gap-0.5 py-1.5">
-              <span>Qarzdorlar</span>
+              <span>{t("Qarzdorlar")}</span>
               <span className="text-[11px] font-normal opacity-70">
-                {data ? `${data.debtors.length} ta o'quvchi` : "—"}
+                {data ? t("{n} ta o'quvchi", { n: data.debtors.length }) : "—"}
               </span>
             </TabsTrigger>
             <TabsTrigger value="writeoffs" className="flex-col gap-0.5 py-1.5">
-              <span>Kechirilgan</span>
+              <span>{t("Kechirilgan")}</span>
               <span className="text-[11px] font-normal opacity-70">
-                {data ? `${data.writeOffs.length} ta` : "—"}
+                {data ? t("{n} ta", { n: data.writeOffs.length }) : "—"}
               </span>
             </TabsTrigger>
           </TabsList>
@@ -211,20 +227,14 @@ export function MonthCohortDialog({ target, statusFilter, onClose }: Props) {
           <span>
             {tab === "debtors" ? (
               <>
-                Summalar faqat <b>{target?.label}</b> oyiga tegishli — shu
-                oyda o&apos;tilgan darslardan hali to&apos;lanmagani. Qarzi
-                boshqa oylarga ham tarqalganlarda{" "}
+                {markedText(debtorsBefore)}
                 <span className="rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                  N oy
-                </span>{" "}
-                belgisi turadi.
+                  {t("N oy")}
+                </span>
+                {markedText(debtorsAfter)}
               </>
             ) : (
-              <>
-                Shu oyda hisobdan chiqarilgan qarzlar — pul olinmagan. Ular
-                yuqoridagi ro&apos;yxatda yo&apos;q, chunki bu qarz endi
-                undirilmaydi.
-              </>
+              t("Shu oyda hisobdan chiqarilgan qarzlar — pul olinmagan. Ular yuqoridagi ro'yxatda yo'q, chunki bu qarz endi undirilmaydi.")
             )}
           </span>
         </div>
@@ -237,29 +247,27 @@ export function MonthCohortDialog({ target, statusFilter, onClose }: Props) {
                 <TableHead className="w-12 border-r">#</TableHead>
                 {tab === "debtors" ? (
                   <>
-                    <TableHead>O&apos;quvchi</TableHead>
-                    <TableHead>Telefon</TableHead>
-                    <TableHead>Guruh</TableHead>
-                    <TableHead>Holat</TableHead>
+                    <TableHead>{t("O'quvchi")}</TableHead>
+                    <TableHead>{t("Telefon")}</TableHead>
+                    <TableHead>{t("Guruh")}</TableHead>
+                    <TableHead>{t("Holat")}</TableHead>
                     <HintHead
-                      label={`${target?.label ?? ""} qarzi`}
+                      label={t("{month} qarzi", { month })}
                       className="text-right"
                     >
-                      Shu o&apos;quvchining aynan shu oydan qolgan qarzi.
-                      Boshqa oylardagi qarzi bu raqamga kirmaydi.
+                      {t("Shu o'quvchining aynan shu oydan qolgan qarzi. Boshqa oylardagi qarzi bu raqamga kirmaydi.")}
                     </HintHead>
-                    <HintHead label="Jami qarzi" className="text-right">
-                      Shu o&apos;quvchining bugungi umumiy qarzi — barcha oylar
-                      bo&apos;yicha.
+                    <HintHead label={t("Jami qarzi")} className="text-right">
+                      {t("Shu o'quvchining bugungi umumiy qarzi — barcha oylar bo'yicha.")}
                     </HintHead>
                   </>
                 ) : (
                   <>
-                    <TableHead>Sana</TableHead>
-                    <TableHead>O&apos;quvchi</TableHead>
-                    <TableHead className="text-right">Summa</TableHead>
-                    <TableHead>Sabab</TableHead>
-                    <TableHead>Bajardi</TableHead>
+                    <TableHead>{t("Sana")}</TableHead>
+                    <TableHead>{t("O'quvchi")}</TableHead>
+                    <TableHead className="text-right">{t("Summa")}</TableHead>
+                    <TableHead>{t("Sabab")}</TableHead>
+                    <TableHead>{t("Bajardi")}</TableHead>
                   </>
                 )}
               </TableRow>
@@ -280,8 +288,8 @@ export function MonthCohortDialog({ target, statusFilter, onClose }: Props) {
                     className="py-10 text-center text-sm text-muted-foreground"
                   >
                     {tab === "debtors"
-                      ? "Bu oydan qolgan qarz yo'q — hammasi to'langan."
-                      : "Bu oyda qarz kechirilmagan."}
+                      ? t("Bu oydan qolgan qarz yo'q — hammasi to'langan.")
+                      : t("Bu oyda qarz kechirilmagan.")}
                   </TableCell>
                 </TableRow>
               ) : tab === "debtors" ? (
@@ -312,13 +320,13 @@ export function MonthCohortDialog({ target, statusFilter, onClose }: Props) {
                               STATUS_COLORS[d.status] ?? "#94a3b8",
                           }}
                         />
-                        {STATUS_LABELS[d.status] ?? d.status}
+                        {statusText(d.status, t)}
                         {d.isArchived && (
                           <Badge
                             variant="outline"
                             className="h-4 px-1 text-[10px] font-normal"
                           >
-                            arxiv
+                            {t("arxiv")}
                           </Badge>
                         )}
                       </span>

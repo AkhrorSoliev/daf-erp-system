@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { formatBalance, formatPhone, formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -36,6 +37,7 @@ const OPTION_KEYS: Record<DrawerAction | "notice", PermissionKey> = {
 export function RefundableDrawer({ studentId, can, onClose, onAction }: {
   studentId: number | null; can: Can; onClose: () => void; onAction: (kind: DrawerAction, student: DrawerStudent) => void;
 }) {
+  const t = useT();
   const { data, isPending, isError, error } = useRefundableStudent(studentId);
   return (
     <Sheet open={studentId !== null} onOpenChange={(open) => !open && onClose()}>
@@ -43,13 +45,13 @@ export function RefundableDrawer({ studentId, can, onClose, onAction }: {
         <SheetHeader className="border-b px-6 py-4">
           {/* pr-8 keeps the name clear of the sheet's own close button. */}
           <div className="min-w-0 pr-8">
-            <SheetTitle className="truncate">{data ? `${data.student.firstName} ${data.student.lastName}` : "O'quvchi"}</SheetTitle>
-            <SheetDescription>{data ? `ID ${data.student.id} · ${formatPhone(data.student.phone)}` : "Yuklanmoqda…"}</SheetDescription>
+            <SheetTitle className="truncate">{data ? `${data.student.firstName} ${data.student.lastName}` : t("O'quvchi")}</SheetTitle>
+            <SheetDescription>{data ? `ID ${data.student.id} · ${formatPhone(data.student.phone)}` : t("Yuklanmoqda…")}</SheetDescription>
           </div>
         </SheetHeader>
         {isError ? (
           // Another branch's student: the server names the branch to switch to (ADR-0063).
-          <p className="p-6 text-sm text-muted-foreground">{getErrorMessage(error, "Ma'lumotni yuklab bo'lmadi")}</p>
+          <p className="p-6 text-sm text-muted-foreground">{getErrorMessage(error, t("Ma'lumotni yuklab bo'lmadi"))}</p>
         ) : isPending || !data ? (
           <div className="space-y-3 p-6">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : (
@@ -78,43 +80,44 @@ const Option = ({ title, hint, locked = false, children }: { title: string; hint
 export function RefundableDrawerBody({ drawer: d, can, onAction }: {
   drawer: DrawerData; can: Can; onAction: (kind: DrawerAction) => void;
 }) {
+  const t = useT();
   const may = (option: DrawerAction | "notice") => can(OPTION_KEYS[option]);
   return (
     <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4 text-sm">
       <div className="rounded-lg bg-muted/50 px-4 py-3">
-        <p className="text-xs text-muted-foreground">Markazdagi puli</p>
+        <p className="text-xs text-muted-foreground">{t("Markazdagi puli")}</p>
         <p className="text-2xl font-bold tabular-nums">{formatBalance(d.balance)}</p>
       </div>
       <div>
-        <Fact label="Holat">{drawerKindLine(d)}</Fact>
-        <Fact label="Oxirgi guruh">{d.lastGroup?.name ?? "—"}</Fact>
-        <Fact label="Oxirgi to'lov">{d.lastPayment ? `${instantDayMonth(d.lastPayment.createdAt)} · ${formatPrice(d.lastPayment.amount)}` : "—"}</Fact>
-        <Fact label="Telegram bot">{d.telegramLinked ? "ulangan" : "ulanmagan"}</Fact>
-        <Fact label="Xabar">{noticeText(d.transfer.notice)}</Fact>
+        <Fact label={t("Holat")}>{drawerKindLine(d, t)}</Fact>
+        <Fact label={t("Oxirgi guruh")}>{d.lastGroup?.name ?? "—"}</Fact>
+        <Fact label={t("Oxirgi to'lov")}>{d.lastPayment ? `${instantDayMonth(d.lastPayment.createdAt)} · ${formatPrice(d.lastPayment.amount)}` : "—"}</Fact>
+        <Fact label={t("Telegram bot")}>{d.telegramLinked ? t("ulangan") : t("ulanmagan")}</Fact>
+        <Fact label={t("Xabar")}>{noticeText(d.transfer.notice, t)}</Fact>
       </div>
       {can(Object.values(OPTION_KEYS)) && (
         <section className="space-y-2">
-          <h3 className="text-xs font-medium text-muted-foreground">Nima qilish mumkin</h3>
+          <h3 className="text-xs font-medium text-muted-foreground">{t("Nima qilish mumkin")}</h3>
           {d.kind === "muzlatilgan" && may("return") && (
-            <Option title="Qaytdi — guruhga qaytarish" hint="Pul oyning qolgan darslari hisobiga o'tadi.">
-              <Button size="sm" variant="outline" onClick={() => onAction("return")}>Qaytarish</Button>
+            <Option title={t("Qaytdi — guruhga qaytarish")} hint={t("Pul oyning qolgan darslari hisobiga o'tadi.")}>
+              <Button size="sm" variant="outline" onClick={() => onAction("return")}>{t("Guruhga qaytarish")}</Button>
             </Option>
           )}
           {d.kind === "guruhsiz" && may("enroll") && (
-            <Option title="Guruhga qo'shish" hint="Pul shu oyning qolgan darslari hisobiga o'tadi.">
-              <Button size="sm" variant="outline" onClick={() => onAction("enroll")}>Guruh tanlash</Button>
+            <Option title={t("Guruhga qo'shish")} hint={t("Pul shu oyning qolgan darslari hisobiga o'tadi.")}>
+              <Button size="sm" variant="outline" onClick={() => onAction("enroll")}>{t("Guruh tanlash")}</Button>
             </Option>
           )}
           {may("refund") && (
-            <Option title="Pulni o'quvchiga qaytarish" hint="So'rov ochiladi: balans 0 bo'ladi, pul 10 bank kuni ichida beriladi.">
-              <Button size="sm" variant="outline" onClick={() => onAction("refund")}>Qaytarishni boshlash</Button>
+            <Option title={t("Pulni o'quvchiga qaytarish")} hint={t("So'rov ochiladi: balans 0 bo'ladi, pul 10 bank kuni ichida beriladi.")}>
+              <Button size="sm" variant="outline" onClick={() => onAction("refund")}>{t("Qaytarishni boshlash")}</Button>
             </Option>
           )}
           {may("notice") && <NoticeOption drawer={d} />}
           {may("transfer") && (
-            <Option title="Markaz hisobiga o'tkazish" hint="Pul markaz daromadiga o'tadi. Sabab yoziladi." locked={!d.transfer.allowed}>
+            <Option title={t("Markaz hisobiga o'tkazish")} hint={t("Pul markaz daromadiga o'tadi. Sabab yoziladi.")} locked={!d.transfer.allowed}>
               <TransferNote transfer={d.transfer} />
-              <Button size="sm" variant="destructive" disabled={!d.transfer.allowed} onClick={() => onAction("transfer")}>O'tkazish</Button>
+              <Button size="sm" variant="destructive" disabled={!d.transfer.allowed} onClick={() => onAction("transfer")}>{t("O'tkazish")}</Button>
             </Option>
           )}
         </section>
@@ -125,6 +128,7 @@ export function RefundableDrawerBody({ drawer: d, can, onAction }: {
 
 /** «Xabar berish» (spec §5.1): the bot text exactly as the server would send it, or a call mark. The notice starts the transfer clock. */
 function NoticeOption({ drawer: d }: { drawer: DrawerData }) {
+  const t = useT();
   const qc = useQueryClient();
   const [callOpen, setCallOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -132,41 +136,41 @@ function NoticeOption({ drawer: d }: { drawer: DrawerData }) {
     mutationFn: (channel: "BOT" | "CALL") =>
       api.post(`/students/${d.student.id}/balance-notices`, { channel, note: channel === "CALL" ? note.trim() || undefined : undefined }),
     onSuccess: (_answer, channel) => {
-      toast.success(channel === "BOT" ? "Xabar botga yuborildi" : "Qo'ng'iroq belgilandi");
+      toast.success(channel === "BOT" ? t("Xabar botga yuborildi") : t("Qo'ng'iroq belgilandi"));
       setCallOpen(false);
       setNote("");
       invalidateRefunds(qc);
     },
     // A refusal («Botga xabar yetmadi», «O'quvchi hisobida pul yo'q») may mean the facts moved: read them again.
     onError: (e) => {
-      toast.error(getErrorMessage(e, "Xabarni saqlashda xatolik"));
+      toast.error(getErrorMessage(e, t("Xabarni saqlashda xatolik")));
       invalidateRefunds(qc);
     },
   });
   return (
-    <Option title="Xabar berish" hint="«Pulingizni olib keting» — markazga o'tkazishdan oldin kamida bir marta.">
+    <Option title={t("Xabar berish")} hint={t("«Pulingizni olib keting» — markazga o'tkazishdan oldin kamida bir marta.")}>
       {/* Plain text from the server (line breaks, emoji): printed as text, never as HTML. */}
       {d.telegramLinked && d.noticePreview && <p className="whitespace-pre-line rounded-md bg-muted px-3 py-2 text-xs">{d.noticePreview}</p>}
       {callOpen ? (
         <div className="flex flex-wrap gap-2">
-          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Izoh (ixtiyoriy)" maxLength={500} aria-label="Izoh" className="min-w-0 flex-1" />
+          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("Izoh (ixtiyoriy)")} maxLength={500} aria-label={t("Izoh")} className="min-w-0 flex-1" />
           <Button size="sm" onClick={() => send.mutate("CALL")} disabled={send.isPending}>
-            {send.isPending && <Loader2 className="mr-1 size-4 animate-spin" />}Saqlash
+            {send.isPending && <Loader2 className="mr-1 size-4 animate-spin" />}{t("Saqlash")}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => { setCallOpen(false); setNote(""); }} disabled={send.isPending}>Bekor qilish</Button>
+          <Button size="sm" variant="outline" onClick={() => { setCallOpen(false); setNote(""); }} disabled={send.isPending}>{t("Bekor qilish")}</Button>
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
           {d.telegramLinked && (
             <Button size="sm" variant="outline" disabled={!d.noticePreview || send.isPending} onClick={() => send.mutate("BOT")}>
-              {send.isPending ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Send className="mr-1 size-4" />}Botga xabar yuborish
+              {send.isPending ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Send className="mr-1 size-4" />}{t("Botga xabar yuborish")}
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={() => setCallOpen(true)}><Phone className="mr-1 size-4" />Qo'ng'iroq qilib aytildi</Button>
+          <Button size="sm" variant="outline" onClick={() => setCallOpen(true)}><Phone className="mr-1 size-4" />{t("Qo'ng'iroq qilib aytildi")}</Button>
         </div>
       )}
-      {!d.telegramLinked && <p className="text-xs text-muted-foreground">Bot ulanmagan — qo'ng'iroq qiling va belgilang.</p>}
-      {d.telegramLinked && !d.noticePreview && <p className="text-xs text-muted-foreground">Filial telefon raqami kiritilmagan</p>}
+      {!d.telegramLinked && <p className="text-xs text-muted-foreground">{t("Bot ulanmagan — qo'ng'iroq qiling va belgilang.")}</p>}
+      {d.telegramLinked && !d.noticePreview && <p className="text-xs text-muted-foreground">{t("Filial telefon raqami kiritilmagan")}</p>}
     </Option>
   );
 }
