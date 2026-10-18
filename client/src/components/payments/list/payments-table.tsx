@@ -6,14 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import { paymentMethodLabel } from "@/components/payments/overview/overview-math";
 import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { tashkentDdMm, tashkentHhmm } from "@/lib/tashkent-time";
 import { cn } from "@/lib/utils";
-import { METHOD_FILTER, receivedByText, selectedLine } from "./payments-format";
+import { receivedByText, selectedLine } from "./payments-format";
 import type { PartKind, PaymentListResponse, PaymentRow } from "./payments-list-types";
 
-const METHOD_LABEL = Object.fromEntries(METHOD_FILTER.map((m) => [m.value, m.label]));
-const HEADS = ["#", "Sana", "O'quvchi", "Guruh", "Summa", "Usul", "Nimaga ketdi", "Qabul qildi"];
+// "#" is a sign, not a text; the others are drawn with t().
+const HEADS: string[] = ["#", msg("Sana"), msg("O'quvchi"), msg("Guruh"), msg("Summa"), msg("Usul"), msg("Nimaga ketdi"), msg("Qabul qildi")];
 const AMOUNT_AT = 4;
 
 // Semantic tokens with a tint: the text stays `foreground`/`destructive`, so both themes read without `dark:` overrides.
@@ -35,17 +38,18 @@ const Pill = ({ tone, children }: { tone: keyof typeof PILL; children: ReactNode
 const Dash = () => <span className="text-muted-foreground">—</span>;
 
 function PartsCell({ row, onOpen }: { row: PaymentRow; onOpen: (id: string) => void }) {
+  const t = useT();
   if (row.status === "REVERSED") {
     if (row.correctedBy) {
       const to = row.correctedBy.id;
       return (
         <button type="button" className={cn(PILL_BASE, PILL.orange, "cursor-pointer hover:opacity-80")}
           onClick={(e) => { e.stopPropagation(); onOpen(to); }}>
-          tuzatildi → {formatPrice(row.correctedBy.amount)}
+          {t("tuzatildi → {amount}", { amount: formatPrice(row.correctedBy.amount) })}
         </button>
       );
     }
-    return <Pill tone="red">bekor qilingan</Pill>;
+    return <Pill tone="red">{t("bekor qilingan")}</Pill>;
   }
   if (!row.parts?.length) return <Dash />;
   return (
@@ -60,6 +64,7 @@ function PartsCell({ row, onOpen }: { row: PaymentRow; onOpen: (id: string) => v
 }
 
 function PaymentRowView({ row, index, onOpen }: { row: PaymentRow; index: number; onOpen: (id: string) => void }) {
+  const t = useT();
   const reversed = row.status === "REVERSED";
   const name = `${row.student.firstName} ${row.student.lastName}`;
   const [first, ...rest] = row.groups;
@@ -77,9 +82,9 @@ function PaymentRowView({ row, index, onOpen }: { row: PaymentRow; index: number
       <TableCell>
         <div className={row.student.archived ? undefined : "font-semibold"}>
           {name}
-          {row.student.archived && <> <Pill tone="muted">arxivda</Pill></>}
+          {row.student.archived && <> <Pill tone="muted">{t("arxivda")}</Pill></>}
         </div>
-        <div className="text-xs text-muted-foreground">ID {row.student.id}</div>
+        <div className="text-xs text-muted-foreground">{t("ID {id}", { id: row.student.id })}</div>
       </TableCell>
       <TableCell>
         {first ? (
@@ -91,11 +96,11 @@ function PaymentRowView({ row, index, onOpen }: { row: PaymentRow; index: number
       </TableCell>
       <TableCell className={cn("text-right font-semibold tabular-nums", reversed && "font-normal line-through")}>{formatPrice(row.amount)}</TableCell>
       <TableCell className="whitespace-nowrap">
-        {METHOD_LABEL[row.method] ?? row.method}
-        {row.online && <> <Pill tone="muted">onlayn</Pill></>}
+        {paymentMethodLabel(row.method, t)}
+        {row.online && <> <Pill tone="muted">{t("onlayn")}</Pill></>}
       </TableCell>
       <TableCell><PartsCell row={row} onOpen={onOpen} /></TableCell>
-      <TableCell className="whitespace-nowrap">{receivedByText(row)}</TableCell>
+      <TableCell className="whitespace-nowrap">{receivedByText(row, t)}</TableCell>
     </TableRow>
   );
 }
@@ -110,11 +115,12 @@ export function PaymentsTable({ rows, loading, offset, onOpen, onClear }: {
   /** Given when a filter is set: the empty state then offers to clear it. */
   onClear?: () => void;
 }) {
+  const t = useT();
   if (!loading && rows && rows.length === 0) {
     return (
       <div className="rounded-md border p-8 text-center text-sm text-muted-foreground">
-        <p>Bu tanlovda to&apos;lov yo&apos;q</p>
-        {onClear && <Button variant="outline" size="sm" className="mt-3" onClick={onClear}>Tozalash</Button>}
+        <p>{t("Bu tanlovda to'lov yo'q")}</p>
+        {onClear && <Button variant="outline" size="sm" className="mt-3" onClick={onClear}>{t("Tozalash")}</Button>}
       </div>
     );
   }
@@ -124,7 +130,7 @@ export function PaymentsTable({ rows, loading, offset, onOpen, onClear }: {
         <TableHeader>
           <TableRow>
             {HEADS.map((h, i) => (
-              <TableHead key={h} className={i === 0 ? "w-12 border-r" : i === AMOUNT_AT ? "text-right" : undefined}>{h}</TableHead>
+              <TableHead key={h} className={i === 0 ? "w-12 border-r" : i === AMOUNT_AT ? "text-right" : undefined}>{i === 0 ? h : t(h)}</TableHead>
             ))}
           </TableRow>
         </TableHeader>
@@ -148,14 +154,15 @@ export function PaymentsTotalsLine({ totals, holat, partLabel }: {
   holat: string;
   partLabel: string | null;
 }) {
-  const { main, part } = selectedLine(totals, holat, partLabel);
+  const t = useT();
+  const { main, part } = selectedLine(totals, holat, partLabel, t);
   return <p className="text-sm font-medium">{part ? `${main} · ${part}` : main}</p>;
 }
 
 const PAGE_SIZES = [50, 100];
 
 /** «1–50 / N», the page size and ‹ ›. `onPageSize` must also put the page back on 1 (the caller sets both in one URL write). */
-export function PaymentsPager({ page, pageSize, total, onPage, onPageSize, sizes = PAGE_SIZES, sizeLabel = "Sahifadagi to'lovlar soni" }: {
+export function PaymentsPager({ page, pageSize, total, onPage, onPageSize, sizes = PAGE_SIZES, sizeLabel }: {
   page: number;
   pageSize: number;
   total: number;
@@ -163,8 +170,10 @@ export function PaymentsPager({ page, pageSize, total, onPage, onPageSize, sizes
   onPageSize: (size: number) => void;
   /** The sizes offered; «Guruhlar bo'yicha to'lov» passes 10–50. */
   sizes?: number[];
+  /** Another page's own label (a `msg()` text or its Uzbek literal); omitted = «Sahifadagi to'lovlar soni». */
   sizeLabel?: string;
 }) {
+  const t = useT();
   const last = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
@@ -173,17 +182,17 @@ export function PaymentsPager({ page, pageSize, total, onPage, onPageSize, sizes
       <span className="tabular-nums">{from}–{to} / {formatNumber(total)}</span>
       <div className="flex items-center gap-2">
         <Select value={String(pageSize)} onValueChange={(v) => onPageSize(Number(v))}>
-          <SelectTrigger className="w-24" aria-label={sizeLabel}>
-            <SelectValue>{pageSize} ta</SelectValue>
+          <SelectTrigger className="w-24" aria-label={sizeLabel ? t(sizeLabel) : t("Sahifadagi to'lovlar soni")}>
+            <SelectValue>{t("{n} ta", { n: pageSize })}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {sizes.map((n) => <SelectItem key={n} value={String(n)}>{n} ta</SelectItem>)}
+            {sizes.map((n) => <SelectItem key={n} value={String(n)}>{t("{n} ta", { n })}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="icon" aria-label="Oldingi sahifa" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+        <Button variant="outline" size="icon" aria-label={t("Oldingi sahifa")} disabled={page <= 1} onClick={() => onPage(page - 1)}>
           <ChevronLeft className="size-4" />
         </Button>
-        <Button variant="outline" size="icon" aria-label="Keyingi sahifa" disabled={page >= last} onClick={() => onPage(page + 1)}>
+        <Button variant="outline" size="icon" aria-label={t("Keyingi sahifa")} disabled={page >= last} onClick={() => onPage(page + 1)}>
           <ChevronRight className="size-4" />
         </Button>
       </div>

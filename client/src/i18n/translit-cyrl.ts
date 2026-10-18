@@ -22,6 +22,8 @@ export const KEEP_LATIN: ReadonlySet<string> = new Set([
   "goethe",
   "deutsch",
   "ios",
+  "webhook",
+  "externalid",
 ]);
 
 const LETTERS: Record<string, string> = {

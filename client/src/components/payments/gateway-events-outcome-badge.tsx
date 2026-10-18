@@ -1,8 +1,10 @@
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/i18n/context";
 import type { Outcome } from "./gateway-events-helpers";
 
 export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
+  const t = useT();
   if (outcome === "success") {
     return (
       <Badge
@@ -10,7 +12,7 @@ export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
         className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300"
       >
         <CheckCircle2 className="size-3 mr-1" />
-        Muvaffaqiyatli
+        {t("Muvaffaqiyatli")}
       </Badge>
     );
   }
@@ -21,7 +23,7 @@ export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
         className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-300"
       >
         <Clock className="size-3 mr-1" />
-        Kutilmoqda
+        {t("So'rov kutilmoqda")}
       </Badge>
     );
   }
@@ -32,7 +34,7 @@ export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
         className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300"
       >
         <XCircle className="size-3 mr-1" />
-        Xavfsizlik xatosi
+        {t("Xavfsizlik xatosi")}
       </Badge>
     );
   }
@@ -42,7 +44,7 @@ export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
       className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300"
     >
       <XCircle className="size-3 mr-1" />
-      Xato
+      {t("So'rovda xato")}
     </Badge>
   );
 }

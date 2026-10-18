@@ -1,4 +1,7 @@
 import { formatBalance } from "@/lib/format-utils";
+import { msg } from "@/i18n/msg";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "@/components/payments/record-payment-admission";
 import type { ProfitComposition } from "./types";
 
 /** Nothing is reported before this month (the company's first month in the system). */
@@ -32,19 +35,25 @@ export function dayMonth(date: string): string {
   return `${date.slice(8, 10)}.${date.slice(5, 7)}`;
 }
 
-/** "1 500 000 so'm"; a missing figure is «—». A negated 0 (`-0`) prints «0 so'm», never «-0». */
-export function som(amount: number | null | undefined): string {
-  return amount == null ? "—" : formatBalance(amount);
+/** "1 500 000 so'm"; a missing figure is «—». A negated 0 (`-0`) prints «0 so'm», never «-0». `t` translates the unit. */
+export function som(amount: number | null | undefined, t?: Translate): string {
+  return amount == null ? "—" : formatBalance(amount, t ? t("so'm") : "so'm");
 }
 
 /** A payment method's name, never the stored value. */
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: "Naqd",
-  PAYME: "Payme",
-  CLICK: "Click",
-  UZUM: "Uzum",
-  TRANSFER: "O'tkazma",
+  CASH: msg("Naqd"),
+  PAYME: msg("Payme"),
+  CLICK: msg("Click"),
+  UZUM: msg("Uzum"),
+  TRANSFER: msg("O'tkazma"),
 };
+
+/** The method's name in the page language; an unknown code prints as it is. */
+export function paymentMethodLabel(method: string, t: Translate = interpolate): string {
+  const label = PAYMENT_METHOD_LABELS[method];
+  return label ? t(label) : method;
+}
 
 export interface ProfitLine {
   label: string;
@@ -58,14 +67,15 @@ export interface ProfitLine {
  */
 export function profitLines(
   c: Pick<ProfitComposition, "revenue" | "withdrawals" | "teachers" | "staff" | "expenses" | "refunds">,
+  t: Translate = interpolate,
 ): ProfitLine[] {
   const withdrawn = c.withdrawals?.total ?? 0;
   return [
-    { label: "O'tilgan darslar puli", amount: c.revenue.total },
-    ...(withdrawn !== 0 ? [{ label: "Balansdan yechib olingan", amount: withdrawn }] : []),
-    { label: "Ustozlar oyligi", amount: -c.teachers.total },
-    { label: "Xodimlar oyligi", amount: -c.staff.total },
-    { label: "Boshqa xarajatlar", amount: -c.expenses.total },
-    ...(c.refunds !== 0 ? [{ label: "Qaytarilgan pul", amount: -c.refunds }] : []),
+    { label: t("O'tilgan darslar puli"), amount: c.revenue.total },
+    ...(withdrawn !== 0 ? [{ label: t("Balansdan yechib olingan"), amount: withdrawn }] : []),
+    { label: t("Ustozlar oyligi"), amount: -c.teachers.total },
+    { label: t("Xodimlar oyligi"), amount: -c.staff.total },
+    { label: t("Boshqa xarajatlar"), amount: -c.expenses.total },
+    ...(c.refunds !== 0 ? [{ label: t("Qaytarilgan pul"), amount: -c.refunds }] : []),
   ];
 }

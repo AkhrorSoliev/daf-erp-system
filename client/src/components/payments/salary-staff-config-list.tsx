@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 import { positionLabel } from "./salary-utils";
 
 export interface StaffConfigRow {
@@ -57,6 +58,7 @@ export function SalaryStaffConfigList({
   enabled,
   onEdit,
 }: Props) {
+  const t = useT();
   const { data, isLoading } = useQuery({
     queryKey: ["salary-staff-config", search, refreshKey, enabled],
     enabled,
@@ -86,7 +88,7 @@ export function SalaryStaffConfigList({
   if (rows.length === 0) {
     return (
       <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-        Xodim topilmadi.
+        {t("Xodim topilmadi.")}
       </div>
     );
   }
@@ -104,13 +106,13 @@ export function SalaryStaffConfigList({
                   month is still payable, so they must stay editable. */}
               {!row.user.isActive && (
                 <Badge variant="outline" className="text-xs font-normal">
-                  Nofaol
+                  {t("Nofaol")}
                 </Badge>
               )}
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-1">
               <span className="text-xs text-muted-foreground">
-                {positionLabel(row.user)}
+                {positionLabel(row.user, t)}
                 {row.user.branch ? ` · ${row.user.branch.name}` : ""}
               </span>
               {row.configs.length === 0 ? (
@@ -118,7 +120,7 @@ export function SalaryStaffConfigList({
                   variant="outline"
                   className="border-amber-300 text-xs font-normal text-amber-700 dark:text-amber-400"
                 >
-                  Belgilanmagan
+                  {t("Stavka belgilanmagan")}
                 </Badge>
               ) : (
                 row.configs.map((c) => (
@@ -128,8 +130,8 @@ export function SalaryStaffConfigList({
                     className="text-xs font-normal"
                   >
                     {c.salaryType === "PERCENTAGE"
-                      ? `Foiz: ${c.value}%`
-                      : `Oylik: ${formatPrice(c.value)} so'm`}
+                      ? t("Foiz: {value}%", { value: c.value })
+                      : t("Oylik: {amount} so'm", { amount: formatPrice(c.value) })}
                   </Badge>
                 ))
               )}
@@ -140,7 +142,7 @@ export function SalaryStaffConfigList({
             variant="ghost"
             className="size-8 shrink-0"
             onClick={() => onEdit(row)}
-            aria-label="Stavkani tahrirlash"
+            aria-label={t("Stavkani tahrirlash")}
           >
             <Pencil className="size-3.5" />
           </Button>

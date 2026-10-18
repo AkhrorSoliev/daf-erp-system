@@ -56,11 +56,11 @@ describe("ReversePaymentDialog (spec B4 §3.9)", () => {
     expect(html).toContain("Masalan: to&#x27;lov xato o&#x27;quvchiga yozilgan");
     expect(text).toContain("0 / 500");
     expect(text).toContain("Yopish");
-    expect(text).toContain("Bekor qilish");
+    expect(text).toContain("To'lovni bekor qilish");
   });
 
-  it("«Bekor qilish» is disabled while the reason is empty", () => {
-    expect(html).toMatch(/<button[^>]*\sdisabled=""[^>]*>(?:(?!<\/button>).)*Bekor qilish/);
+  it("«To'lovni bekor qilish» is disabled while the reason is empty", () => {
+    expect(html).toMatch(/<button[^>]*\sdisabled=""[^>]*>(?:(?!<\/button>).)*To(?:'|&#x27;)lovni bekor qilish/);
   });
 
   it("draws nothing without a payment", () => {

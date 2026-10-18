@@ -10,6 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EntityHistoryTable } from "@/components/shared/entity-history-table";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useCan } from "@/hooks/use-permissions";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -36,16 +38,18 @@ import {
 type FormState = { expense: ExpenseRow | null; preset: ExpensePreset | null } | null;
 
 function LoadError({ onRetry }: { onRetry: () => void }) {
+  const t = useT();
   return (
     <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-      <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
-      <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>Qayta urinish</Button>
+      <p>{t("Ma'lumotni yuklab bo'lmadi")}</p>
+      <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>{t("Qayta urinish")}</Button>
     </div>
   );
 }
 
 /** «Xarajatlar» (spec B6 §3). Every figure is the server's; the page only formats. */
 export function ExpensesPage() {
+  const t = useT();
   const { filters: raw, setFilters } = useUrlFilters(EXPENSES_SCHEMA);
   const filters = raw as ExpensesFilters;
   const qc = useQueryClient();
@@ -83,7 +87,7 @@ export function ExpensesPage() {
       const qs = new URLSearchParams(Object.entries(pdfParams(filters, current, branchId)).map(([k, v]) => [k, String(v)])).toString();
       await downloadAuthedFile(`/expenses/pdf?${qs}`, pdfFileName(month));
     } catch (e) {
-      toast.error(getErrorMessage(e, "PDF yuklab olishda xatolik"));
+      toast.error(getErrorMessage(e, t("PDF yuklab olishda xatolik")));
     } finally {
       setExporting(false);
     }
@@ -94,11 +98,11 @@ export function ExpensesPage() {
     setDeleting(true);
     try {
       await api.delete(`/expenses/${confirmDelete.id}`);
-      toast.success("Xarajat o'chirildi");
+      toast.success(t("Xarajat o'chirildi"));
       setConfirmDelete(null);
       refresh();
     } catch (e) {
-      toast.error(getErrorMessage(e, "O'chirishda xatolik"));
+      toast.error(getErrorMessage(e, t("O'chirishda xatolik")));
     } finally {
       setDeleting(false);
     }
@@ -136,7 +140,7 @@ export function ExpensesPage() {
             onClear={hasExpenseFilter(filters) ? () => onChange(EXPENSES_CLEARED) : undefined} />
           {data && data.total > 0 && !tableLoading && (
             <PaymentsPager page={Number(params.page)} pageSize={Number(params.pageSize)} total={data.total} sizes={EXPENSES_PAGE_SIZES}
-              sizeLabel="Sahifadagi qatorlar soni" onPage={(sahifa) => setFilters({ sahifa })} onPageSize={(soni) => setFilters({ soni, sahifa: 1 })} />
+              sizeLabel={msg("Sahifadagi qatorlar soni")} onPage={(sahifa) => setFilters({ sahifa })} onPageSize={(soni) => setFilters({ soni, sahifa: 1 })} />
           )}
         </div>
       )}
@@ -147,7 +151,7 @@ export function ExpensesPage() {
       <Dialog open={!!historyFor} onOpenChange={(v) => { if (!v) setHistoryFor(null); }}>
         <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
           <DialogHeader className="border-b px-6 py-4">
-            <DialogTitle>Xarajat tarixi</DialogTitle>
+            <DialogTitle>{t("Xarajat tarixi")}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {historyFor && <EntityHistoryTable entityType="Expense" entityId={historyFor.id} />}
@@ -158,16 +162,16 @@ export function ExpensesPage() {
       <AlertDialog open={!!confirmDelete} onOpenChange={(v) => { if (!v && !deleting) setConfirmDelete(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xarajatni o&apos;chirasizmi?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Xarajatni o'chirasizmi?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu xarajat o&apos;chiriladi va unga bog&apos;liq moliyaviy yozuv teskari yoziladi. Bu amalni qaytarib bo&apos;lmaydi.
+              {t("Bu xarajat o'chiriladi va unga bog'liq moliyaviy yozuv teskari yoziladi. Bu amalni qaytarib bo'lmaydi.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" disabled={deleting} onClick={(ev) => { ev.preventDefault(); void remove(); }}>
               {deleting && <Loader2 className="mr-2 size-4 animate-spin" />}
-              O&apos;chirish
+              {t("O'chirish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, HandCoins, Info, TrendingUp, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { SummaryCard } from "./summary-card";
@@ -86,6 +87,8 @@ function shortDay(iso: string): string {
  * the table.
  */
 export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
+  const t = useT();
+  const som = (amount: number) => formatBalance(amount, t("so'm"));
   const { filters } = useUrlFilters(filtersSchema);
   // An advance write moves the «Oyliklar» figures and the tab label too, not just this calendar.
   const invalidateSalary = useInvalidateSalary();
@@ -134,17 +137,17 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
               <HandCoins className="size-5 text-amber-700 dark:text-amber-300" />
             }
             tone="amber"
-            label="Jami avans"
-            value={totals ? formatBalance(totals.total) : "—"}
+            label={t("Jami avans")}
+            value={totals ? som(totals.total) : "—"}
           />
           <SummaryCard
             icon={
               <CalendarDays className="size-5 text-blue-700 dark:text-blue-300" />
             }
             tone="blue"
-            label="Berilgan kunlar"
+            label={t("Berilgan kunlar")}
             value={
-              totals ? `${formatNumber(totals.daysWithAdvances)} kun` : "—"
+              totals ? t("{n} kun", { n: formatNumber(totals.daysWithAdvances) }) : "—"
             }
           />
           <SummaryCard
@@ -152,18 +155,18 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
               <Users className="size-5 text-violet-700 dark:text-violet-300" />
             }
             tone="violet"
-            label="Xodimlar"
-            value={totals ? `${formatNumber(totals.employeeCount)} ta` : "—"}
+            label={t("Xodimlar")}
+            value={totals ? t("{n} ta", { n: formatNumber(totals.employeeCount) }) : "—"}
           />
           <SummaryCard
             icon={
               <TrendingUp className="size-5 text-red-700 dark:text-red-300" />
             }
             tone="red"
-            label="Eng katta kun"
+            label={t("Eng katta kun")}
             value={
               totals?.maxDay
-                ? `${shortDay(totals.maxDay.date)} — ${formatBalance(totals.maxDay.total)}`
+                ? `${shortDay(totals.maxDay.date)} — ${som(totals.maxDay.total)}`
                 : "—"
             }
           />
@@ -176,8 +179,8 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         <div className="rounded-lg border border-dashed p-10 text-center">
           <p className="text-sm text-muted-foreground">
             {canPay
-              ? "Bu oyda avans berilmagan — «Avans berish» tugmasi bilan qo'shing."
-              : "Bu oyda avans berilmagan."}
+              ? t("Bu oyda avans berilmagan — «Avans berish» tugmasi bilan qo'shing.")
+              : t("Bu oyda avans berilmagan.")}
           </p>
         </div>
       ) : (
@@ -215,10 +218,10 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
           <Info className="mt-0.5 size-4 shrink-0" />
           <p>
-            {formatNumber(totals.outsideRoster.count)} ta avans (
-            {formatBalance(totals.outsideRoster.total)}) oyligi belgilanmagan
-            xodimga berilgan — oylik belgilanmaguncha hech qaysi oylikdan
-            ushlanmaydi va «Oyliklar» tabida ko&apos;rinmaydi.
+            {t(
+              "{n} ta avans ({amount}) oyligi belgilanmagan xodimga berilgan — oylik belgilanmaguncha hech qaysi oylikdan ushlanmaydi va «Oyliklar» tabida ko'rinmaydi.",
+              { n: formatNumber(totals.outsideRoster.count), amount: som(totals.outsideRoster.total) },
+            )}
           </p>
         </div>
       )}

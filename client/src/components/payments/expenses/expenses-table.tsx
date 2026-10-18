@@ -7,13 +7,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatPrice } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { cn } from "@/lib/utils";
 import { PILL_BASE } from "@/components/payments/list/payments-table";
 import { ADVANCE_NOTE, dateText, enteredText } from "./expenses-format";
-import { EXPENSE_CATEGORY_LABELS, EXPENSE_HINT_LABELS, EXPENSE_METHOD_LABELS } from "./expenses-labels";
+import { categoryLabel, hintLabel, methodLabel } from "./expenses-labels";
 import type { ExpenseRow } from "./expenses-types";
 
-const HEADS = ["#", "Sana", "Turkum", "Tavsif", "Summa", "To'lov turi", "Kim kiritgan", ""];
+const HEADS = ["#", msg("Sana"), msg("Turkum"), msg("Tavsif"), msg("Summa"), msg("To'lov turi"), msg("Kim kiritgan"), ""];
 
 /** «⋯» (spec B6 §3.1): Tahrirlash and O'chirish need `expenses.manage`; Tarix is `expenses.view`. */
 export function rowActions(canManage: boolean): readonly ("edit" | "history" | "delete")[] {
@@ -37,6 +39,7 @@ export function ExpensesTable({ rows, loading, offset, emptyMonth, canManage, on
   /** The rows are a previous answer (keepPreviousData): dimmed and inert, never drawn as current. */
   stale?: boolean;
 }) {
+  const t = useT();
   const actions = rowActions(canManage);
   // A kept previous answer is never drawn as current: an empty one is a skeleton too.
   const skeleton = loading || !rows || (stale && rows.length === 0);
@@ -45,11 +48,11 @@ export function ExpensesTable({ rows, loading, offset, emptyMonth, canManage, on
       {!skeleton && rows.length === 0 ? (
         <div className="rounded-md border p-8 text-center text-sm text-muted-foreground">
           {emptyMonth ? (
-            <p>Bu oyda xarajat yozilmagan</p>
+            <p>{t("Bu oyda xarajat yozilmagan")}</p>
           ) : (
             <>
-              <p>Bu tanlovda xarajat yo&apos;q</p>
-              {onClear && <Button variant="outline" size="sm" className="mt-3" onClick={onClear}>Tozalash</Button>}
+              <p>{t("Bu tanlovda xarajat yo'q")}</p>
+              {onClear && <Button variant="outline" size="sm" className="mt-3" onClick={onClear}>{t("Tozalash")}</Button>}
             </>
           )}
         </div>
@@ -60,7 +63,7 @@ export function ExpensesTable({ rows, loading, offset, emptyMonth, canManage, on
               <TableRow>
                 {HEADS.map((h, i) => (
                   <TableHead key={i} className={i === 0 ? "w-12 border-r" : h === "Summa" ? "text-right" : i === HEADS.length - 1 ? "w-12" : undefined}>
-                    {h || <span className="sr-only">Amallar</span>}
+                    {h ? t(h) : <span className="sr-only">{t("Amallar")}</span>}
                   </TableHead>
                 ))}
               </TableRow>
@@ -77,15 +80,15 @@ export function ExpensesTable({ rows, loading, offset, emptyMonth, canManage, on
                       <TableCell className="border-r text-muted-foreground tabular-nums">{offset + i + 1}</TableCell>
                       <TableCell className="text-sm tabular-nums">{dateText(e.date)}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{EXPENSE_CATEGORY_LABELS[e.category]}</Badge>
+                        <Badge variant="secondary">{categoryLabel(e.category, t)}</Badge>
                         {e.leadSource && <span className="mt-0.5 block text-xs text-muted-foreground">{e.leadSource.name}</span>}
                       </TableCell>
                       <TableCell className="text-sm">
                         {e.description}
-                        {e.hint && <span className={cn(PILL_BASE, "ml-2 bg-amber-500/25 align-middle text-foreground")}>{EXPENSE_HINT_LABELS[e.hint]}</span>}
+                        {e.hint && <span className={cn(PILL_BASE, "ml-2 bg-amber-500/25 align-middle text-foreground")}>{hintLabel(e.hint, t)}</span>}
                       </TableCell>
-                      <TableCell className="text-right font-semibold tabular-nums">{formatPrice(e.amount)} so&apos;m</TableCell>
-                      <TableCell className="text-sm">{EXPENSE_METHOD_LABELS[e.paymentMethod]}</TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">{formatPrice(e.amount)} {t("so'm")}</TableCell>
+                      <TableCell className="text-sm">{methodLabel(e.paymentMethod, t)}</TableCell>
                       <TableCell className="text-sm">
                         <span>{e.createdBy.firstName} {e.createdBy.lastName}</span>
                         <span className="block text-xs text-muted-foreground">{enteredText(e.createdAt)}</span>
@@ -95,17 +98,17 @@ export function ExpensesTable({ rows, loading, offset, emptyMonth, canManage, on
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="size-8">
                               <MoreHorizontal className="size-4" />
-                              <span className="sr-only">Amallar</span>
+                              <span className="sr-only">{t("Amallar")}</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {actions.includes("edit") && (
-                              <DropdownMenuItem onClick={() => onEdit(e)}><Pencil className="mr-2 size-4" />Tahrirlash</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => onEdit(e)}><Pencil className="mr-2 size-4" />{t("Tahrirlash")}</DropdownMenuItem>
                             )}
-                            <DropdownMenuItem onClick={() => onHistory(e)}><History className="mr-2 size-4" />Tarix</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onHistory(e)}><History className="mr-2 size-4" />{t("Tarix")}</DropdownMenuItem>
                             {actions.includes("delete") && (
                               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDelete(e)}>
-                                <Trash2 className="mr-2 size-4" />O&apos;chirish
+                                <Trash2 className="mr-2 size-4" />{t("O'chirish")}
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -117,7 +120,7 @@ export function ExpensesTable({ rows, loading, offset, emptyMonth, canManage, on
           </Table>
         </div>
       )}
-      <p className="text-xs text-muted-foreground">{ADVANCE_NOTE}</p>
+      <p className="text-xs text-muted-foreground">{t(ADVANCE_NOTE)}</p>
     </div>
   );
 }

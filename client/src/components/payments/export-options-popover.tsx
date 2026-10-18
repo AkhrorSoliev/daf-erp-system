@@ -7,6 +7,8 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -27,18 +29,18 @@ import {
 const EXTRA_OPTS = [
   {
     key: "buxgalteriya",
-    label: "Buxgalteriya",
-    hint: "Foyda va zarar, Balans, Tekshiruv",
+    label: msg("Buxgalteriya"),
+    hint: msg("Foyda va zarar, Balans, Tekshiruv"),
   },
   {
     key: "marketing",
-    label: "Marketing va ustozlar",
-    hint: "Lidlar, ustozlar samaradorligi",
+    label: msg("Marketing va ustozlar"),
+    hint: msg("Lidlar, ustozlar samaradorligi"),
   },
   {
     key: "qarzdorlar",
-    label: "Qarzdorlar ro'yxati",
-    hint: "Har bir qarzdor o'quvchi",
+    label: msg("Qarzdorlar ro'yxati"),
+    hint: msg("Har bir qarzdor o'quvchi"),
   },
 ] as const;
 
@@ -57,6 +59,7 @@ export function ExportOptionsPopover({
   startStr: string;
   endStr: string;
 }) {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
   const branches = useBranchSwitcher((s) => s.branches);
@@ -102,7 +105,7 @@ export function ExportOptionsPopover({
       URL.revokeObjectURL(url);
       setOpen(false);
     } catch (e) {
-      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+      toast.error(getErrorMessage(e, t("Excel yuklab olishda xatolik")));
     } finally {
       setExporting(false);
     }
@@ -113,14 +116,14 @@ export function ExportOptionsPopover({
       <PopoverTrigger asChild>
         <Button variant="outline">
           <Download className="size-4 mr-2" />
-          Excel yuklab olish
+          {t("Excel yuklab olish")}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 space-y-4">
         {/* Filial */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-muted-foreground">
-            Filial
+            {t("Filial")}
           </Label>
           <Select value={selectedBranchId} onValueChange={setBranchId}>
             <SelectTrigger>
@@ -129,7 +132,7 @@ export function ExportOptionsPopover({
             <SelectContent>
               {!mustPickBranch && (
                 <SelectItem value="all">
-                  {isCeo ? "Barcha filiallar" : "Barcha filiallarim"}
+                  {isCeo ? t("Barcha filiallar") : t("Barcha filiallarim")}
                 </SelectItem>
               )}
               {branches.map((b) => (
@@ -144,13 +147,13 @@ export function ExportOptionsPopover({
         {/* Qo'shimcha bo'limlar */}
         <div className="space-y-2">
           <Label className="text-xs font-medium text-muted-foreground">
-            Qo&apos;shimcha bo&apos;limlar (ixtiyoriy)
+            {t("Qo'shimcha bo'limlar (ixtiyoriy)")}
           </Label>
           <p className="text-xs text-muted-foreground">
             {/* No exact count: the «Filiallar» sheet renders only for a
                 company-wide scope, so a single-branch download is one short —
                 and the branch selector sits right above this line. */}
-            Bo&apos;sh qoldirilsa — qisqa hisobot chiqadi (~10 varaq).
+            {t("Bo'sh qoldirilsa — qisqa hisobot chiqadi (~10 varaq).")}
           </p>
           {EXTRA_OPTS.map((o) => (
             <div key={o.key} className="flex items-start gap-2">
@@ -164,9 +167,9 @@ export function ExportOptionsPopover({
                 htmlFor={`extra-${o.key}`}
                 className="cursor-pointer flex-col items-start gap-0.5 text-sm leading-tight font-normal"
               >
-                {o.label}
+                {t(o.label)}
                 <span className="text-xs font-normal text-muted-foreground">
-                  {o.hint}
+                  {t(o.hint)}
                 </span>
               </Label>
             </div>
@@ -179,7 +182,7 @@ export function ExportOptionsPopover({
           ) : (
             <Download className="size-4 mr-2" />
           )}
-          Yuklab olish
+          {t("Yuklab olish")}
         </Button>
       </PopoverContent>
     </Popover>

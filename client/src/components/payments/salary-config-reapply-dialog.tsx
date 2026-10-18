@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useT } from "@/i18n/context";
 import { reapplyLines, type RateReapplySummary } from "./salary-config-reapply";
 
 interface Props {
@@ -32,13 +33,14 @@ export function SalaryConfigReapplyDialog({
   onCancel,
   onConfirm,
 }: Props) {
-  const lines = summary ? reapplyLines(summary, fromLabel) : null;
+  const t = useT();
+  const lines = summary ? reapplyLines(summary, fromLabel, t) : null;
 
   return (
     <AlertDialog open={!!summary} onOpenChange={(open) => !open && onCancel()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Oldingi darslar ham qayta hisoblanadi</AlertDialogTitle>
+          <AlertDialogTitle>{t("Oldingi darslar ham qayta hisoblanadi")}</AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2 text-sm">
               {lines?.main && (
@@ -51,8 +53,8 @@ export function SalaryConfigReapplyDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>Saqlash</AlertDialogAction>
+          <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>{t("Saqlash")}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

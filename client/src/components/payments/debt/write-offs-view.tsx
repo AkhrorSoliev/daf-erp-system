@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/context";
 import { DebtWriteOffsClient } from "../debt-write-offs-client";
 
 /**
@@ -14,13 +15,13 @@ import { DebtWriteOffsClient } from "../debt-write-offs-client";
  * reader actually is.
  */
 export function WriteOffsView() {
+  const t = useT();
   return (
     <div className="space-y-4">
       {/* One line. The previous three explained the accounting; a reader who
           opens a tab called "Kechirilganlar" already knows why they are here. */}
       <p className="text-sm text-muted-foreground">
-        O&apos;quvchi o&apos;qishni tashlagani uchun undirilmaydigan deb
-        belgilangan qarzlar.
+        {t("O'quvchi o'qishni tashlagani uchun undirilmaydigan deb belgilangan qarzlar.")}
       </p>
       <DebtWriteOffsClient />
     </div>

@@ -50,6 +50,20 @@ describe("translate", () => {
     expect(translate("uz-Cyrl", uzCyrl, "JAMI")).toBe("ЖАМИ");
   });
 
+  it("writes the payments loanwords with ц and keeps technical terms in Latin", () => {
+    expect(translate("uz-Cyrl", uzCyrl, "Kvitansiya")).toBe("Квитанция");
+    expect(translate("uz-Cyrl", uzCyrl, "Tranzaksiyani biriktirish")).toBe("Транзакцияни бириктириш");
+    expect(translate("uz-Cyrl", uzCyrl, "Tranzaksiya raqami (externalId)")).toBe("Транзакция рақами (externalId)");
+    expect(translate("uz-Cyrl", uzCyrl, "Tranzaksiya raqami ({provider} tizimida)", { provider: "Payme" })).toBe(
+      "Транзакция рақами (Payme тизимида)",
+    );
+    expect(translate("uz-Cyrl", uzCyrl, "Ism, telefon, ID yoki kvitansiya raqami")).toBe("Исм, телефон, ID ёки квитанция рақами");
+    expect(translate("uz-Cyrl", uzCyrl, "Webhook so'rovi")).toBe("Webhook сўрови");
+    expect(translate("uz-Cyrl", uzCyrl, "Bu {n} ta xodim uchun mavjud **umumiy** qoidani bekor qiladi (per-group qoidalar tegmaydi).", { n: 3 })).toBe(
+      "Бу 3 та ходим учун мавжуд **умумий** қоидани бекор қилади (per-group қоидалар тегмайди).",
+    );
+  });
+
   it("writes the month lists (full and short) in Uzbek Cyrillic spelling", () => {
     const full = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
     const short = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];
