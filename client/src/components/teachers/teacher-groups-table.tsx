@@ -11,15 +11,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { GroupData } from "@/hooks/use-edit-group";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 const STATUS_MAP: Record<
   number,
   { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
 > = {
-  1: { label: "Faol", variant: "default" },
-  2: { label: "Boshlanmagan", variant: "secondary" },
-  3: { label: "Pauza", variant: "outline" },
-  4: { label: "To'xtatilgan", variant: "destructive" },
+  1: { label: msg("Faol"), variant: "default" },
+  2: { label: msg("Boshlanmagan"), variant: "secondary" },
+  3: { label: msg("Pauza"), variant: "outline" },
+  4: { label: msg("To'xtatilgan"), variant: "destructive" },
 };
 
 import { formatWeekdays } from "@/lib/weekdays";
@@ -29,13 +31,11 @@ interface TeacherGroupsTableProps {
 }
 
 export function TeacherGroupsTable({ groups }: TeacherGroupsTableProps) {
-
+  const t = useT();
   if (groups.length === 0) {
     return (
       <div className="flex h-24 items-center justify-center rounded-md border">
-        <p className="text-sm text-muted-foreground">
-          Guruhlar hali ulanmagan
-        </p>
+        <p className="text-sm text-muted-foreground">{t("Guruhlar hali ulanmagan")}</p>
       </div>
     );
   }
@@ -46,18 +46,18 @@ export function TeacherGroupsTable({ groups }: TeacherGroupsTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead className="min-w-12 border-r">#</TableHead>
-            <TableHead className="min-w-28">Nomi</TableHead>
-            <TableHead className="hidden min-w-24 sm:table-cell">Kurs</TableHead>
-            <TableHead className="hidden lg:table-cell">Kun / Vaqt</TableHead>
-            <TableHead className="min-w-24">Holat</TableHead>
-            <TableHead className="hidden sm:table-cell">O&apos;quvchilar</TableHead>
+            <TableHead className="min-w-28">{t("Nomi")}</TableHead>
+            <TableHead className="hidden min-w-24 sm:table-cell">{t("Kurs")}</TableHead>
+            <TableHead className="hidden lg:table-cell">{t("Kun / Vaqt")}</TableHead>
+            <TableHead className="min-w-24">{t("Holat")}</TableHead>
+            <TableHead className="hidden sm:table-cell">{t("O'quvchilar")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {groups.map((group, index) => {
             const status = STATUS_MAP[group.status] ?? STATUS_MAP[2];
             const daysLabel = group.exactDays?.length > 0
-              ? formatWeekdays(group.exactDays)
+              ? formatWeekdays(group.exactDays, t)
               : null;
             const timeLabel =
               group.lessonStartTime && group.lessonEndTime
@@ -87,7 +87,7 @@ export function TeacherGroupsTable({ groups }: TeacherGroupsTableProps) {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={status.variant}>{status.label}</Badge>
+                  <Badge variant={status.variant}>{t(status.label)}</Badge>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {group.studentCount}

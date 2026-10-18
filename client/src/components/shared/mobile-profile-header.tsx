@@ -20,6 +20,7 @@ import {
 import { formatPhone, formatBalance } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { SalaryDueCard } from "@/components/shared/salary-due-card";
+import { useT } from "@/i18n/context";
 
 interface ProfileAction {
   icon: React.ReactNode;
@@ -91,6 +92,7 @@ export function MobileProfileHeader({
   showActionsInline = false,
   latestComment,
 }: MobileProfileHeaderProps) {
+  const t = useT();
   const hasDetails = phone || (infoItems && infoItems.length > 0) || (branches && branches.length > 0);
 
   return (
@@ -125,7 +127,7 @@ export function MobileProfileHeader({
             ))}
             {!isActive && (
               <Badge variant="destructive" className="text-[11px] px-1.5 py-0">
-                Nofaol
+                {t("Nofaol")}
               </Badge>
             )}
           </div>
@@ -200,14 +202,14 @@ export function MobileProfileHeader({
               : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
           )}
         >
-          {formatBalance(balance)}
+          {formatBalance(balance, t("so'm"))}
         </div>
       )}
 
       {/* Latest comment preview (employee) */}
       {latestComment && (
         <div className="mt-3 rounded-md bg-muted/40 px-3 py-2">
-          <p className="text-xs font-medium text-muted-foreground mb-1">So&apos;nggi izoh</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1">{t("So'nggi izoh")}</p>
           <p className="text-sm line-clamp-2">{latestComment.content}</p>
           <div className="flex items-center gap-1.5 mt-1 text-[11px] text-muted-foreground">
             <span className="font-medium">{latestComment.author}</span>
@@ -221,7 +223,7 @@ export function MobileProfileHeader({
       {hasDetails && (
         <Collapsible>
           <CollapsibleTrigger className="mt-3 flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
-            <span>Batafsil ma&apos;lumotlar</span>
+            <span>{t("Batafsil ma'lumotlar")}</span>
             <ChevronDown className="size-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -247,7 +249,7 @@ export function MobileProfileHeader({
 
               {branches && branches.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-muted-foreground">Filiallar:</span>
+                  <span className="text-muted-foreground">{t("Filiallar")}:</span>
                   {branches.map((b) => (
                     <Badge key={b.id} variant="outline" className="text-xs">
                       {b.name}

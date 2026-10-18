@@ -13,6 +13,7 @@ import {
   TableCell,
   TableRow,
 } from "@/components/ui/table";
+import { useT } from "@/i18n/context";
 import {
   formatValue,
   getFieldLabel,
@@ -51,6 +52,7 @@ export function HistorySkeleton() {
 }
 
 export function ChangedFields({ record }: { record: HistoryRecord }) {
+  const t = useT();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { action, oldValues, newValues } = record;
 
@@ -101,18 +103,18 @@ export function ChangedFields({ record }: { record: HistoryRecord }) {
 
   if (entries.length === 0) {
     if (action === "DELETE")
-      return <span className="text-xs text-muted-foreground">Arxivlandi</span>;
+      return <span className="text-xs text-muted-foreground">{t("Arxivlandi")}</span>;
     return <span className="text-muted-foreground text-xs">—</span>;
   }
 
   hasLongValue = entries.some(([key, val]) => {
     if (mode === "diff" && oldValues) {
       return (
-        formatValue(val).length > VALUE_MAX_LENGTH ||
-        formatValue(oldValues[key]).length > VALUE_MAX_LENGTH
+        formatValue(val, t).length > VALUE_MAX_LENGTH ||
+        formatValue(oldValues[key], t).length > VALUE_MAX_LENGTH
       );
     }
-    return formatValue(val).length > VALUE_MAX_LENGTH;
+    return formatValue(val, t).length > VALUE_MAX_LENGTH;
   });
 
   const shownEntries = mode === "create" ? entries.slice(0, 3) : entries;
@@ -136,15 +138,15 @@ export function ChangedFields({ record }: { record: HistoryRecord }) {
     );
 
   const renderRow = (key: string, val: unknown, full: boolean) => {
-    const label = getFieldLabel(key);
+    const label = getFieldLabel(key, t);
     const v = full
-      ? { text: formatValue(val), truncated: false }
-      : truncateValue(val);
+      ? { text: formatValue(val, t), truncated: false }
+      : truncateValue(val, t);
 
     if (mode === "diff" && oldValues) {
       const ov = full
-        ? { text: formatValue(oldValues[key]), truncated: false }
-        : truncateValue(oldValues[key]);
+        ? { text: formatValue(oldValues[key], t), truncated: false }
+        : truncateValue(oldValues[key], t);
 
       if (key === "guruh") {
         const gid = getGroupId(newValues);
@@ -209,7 +211,7 @@ export function ChangedFields({ record }: { record: HistoryRecord }) {
         {shownEntries.map(([key, val]) => renderRow(key, val, false))}
         {mode === "create" && entries.length > 3 && (
           <span className="text-[10px] text-muted-foreground">
-            +{entries.length - 3} ta maydon
+            {t("+{n} ta maydon", { n: entries.length - 3 })}
           </span>
         )}
         {hasLongValue && (
@@ -218,7 +220,7 @@ export function ChangedFields({ record }: { record: HistoryRecord }) {
             onClick={() => setDialogOpen(true)}
             className="inline-flex items-center gap-0.5 text-[11px] text-primary hover:underline mt-0.5"
           >
-            To&apos;liq o&apos;qish
+            {t("To'liq o'qish")}
             <ChevronsRight className="size-3" />
           </button>
         )}
@@ -228,7 +230,7 @@ export function ChangedFields({ record }: { record: HistoryRecord }) {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>O&apos;zgarishlar tafsiloti</DialogTitle>
+              <DialogTitle>{t("O'zgarishlar tafsiloti")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-2 max-h-96 overflow-y-auto py-2">
               {entries.map(([key, val]) => renderRow(key, val, true))}

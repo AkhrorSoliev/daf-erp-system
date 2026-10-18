@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useIsMiniApp } from "@/hooks/use-is-mini-app";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTaskCounts } from "@/hooks/use-task-counts";
+import { useT } from "@/i18n/context";
 import { requestLeave } from "@/lib/leave-guard";
 import { getTelegramWebApp } from "@/lib/telegram-mini-app";
 import {
@@ -64,6 +65,7 @@ export function TeacherChrome() {
 function TeacherBars() {
   const pathname = usePathname();
   const search = useSearchParams().toString();
+  const t = useT();
   const mode = teacherBarMode(pathname, search ? `?${search}` : "");
 
   return (
@@ -75,7 +77,7 @@ function TeacherBars() {
           {/* Keeps the page's last lines above the fixed bar. */}
           <div aria-hidden className="h-[calc(4.25rem+env(safe-area-inset-bottom))]" />
           <nav
-            aria-label="Asosiy"
+            aria-label={t("Asosiy navigatsiya")}
             className="bg-background fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)]"
           >
             {mode === "group" ? <GroupBar /> : <GlobalBar />}
@@ -117,6 +119,7 @@ function Item({
 
 function GlobalBar() {
   const pathname = usePathname();
+  const t = useT();
   const active = teacherNavActive(pathname);
   const counts = useTaskCounts();
   return (
@@ -125,7 +128,7 @@ function GlobalBar() {
         <li key={item.key}>
           <Link href={item.href} aria-current={active === item.key ? "page" : undefined}>
             <Item
-              label={item.label}
+              label={t(item.label)}
               icon={NAV_ICONS[item.key]}
               active={active === item.key}
               badge={item.key === "tasks" ? counts.my : undefined}
@@ -141,15 +144,16 @@ function GroupBar() {
   const pathname = usePathname();
   const search = `?${useSearchParams().toString()}`;
   const current = groupTab(search);
+  const t = useT();
   const [moreOpen, setMoreOpen] = useState(false);
-  const moreActive = GROUP_MORE_TABS.some((t) => t.key === current);
+  const moreActive = GROUP_MORE_TABS.some((tab) => tab.key === current);
 
   return (
     <>
       <ul className="grid grid-cols-5">
         <li>
           <Link href="/groups">
-            <Item label="Guruhlar" icon={ArrowLeft} />
+            <Item label={t("Guruhlar")} icon={ArrowLeft} />
           </Link>
         </li>
         {GROUP_MAIN_TABS.map((tab) => (
@@ -160,20 +164,20 @@ function GroupBar() {
               scroll={false}
               aria-current={current === tab.key ? "page" : undefined}
             >
-              <Item label={tab.label} icon={GROUP_ICONS[tab.key]} active={current === tab.key} />
+              <Item label={t(tab.label)} icon={GROUP_ICONS[tab.key]} active={current === tab.key} />
             </Link>
           </li>
         ))}
         <li>
           <button type="button" className="w-full" onClick={() => setMoreOpen(true)}>
-            <Item label="Yana" icon={MoreHorizontal} active={moreActive} />
+            <Item label={t("Yana")} icon={MoreHorizontal} active={moreActive} />
           </button>
         </li>
       </ul>
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent side="bottom" className="pb-[env(safe-area-inset-bottom)]">
           <SheetHeader>
-            <SheetTitle>Yana</SheetTitle>
+            <SheetTitle>{t("Yana")}</SheetTitle>
           </SheetHeader>
           <ul className="divide-y px-4 pb-4">
             {GROUP_MORE_TABS.map((tab) => (
@@ -185,7 +189,7 @@ function GroupBar() {
                   onClick={() => setMoreOpen(false)}
                   className={cn("block py-3 text-sm", current === tab.key && "text-primary font-medium")}
                 >
-                  {tab.label}
+                  {t(tab.label)}
                 </Link>
               </li>
             ))}

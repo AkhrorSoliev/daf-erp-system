@@ -12,6 +12,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 
 type EventKind =
   | "SalaryChanged"
@@ -68,6 +69,7 @@ const colorForKind = (kind: EventKind) => {
  * chronological feed sourced from `GET /salary/timeline/:userId`.
  */
 export function TeacherTimelineTab({ teacherId }: Props) {
+  const t = useT();
   const { data, isLoading } = useQuery({
     queryKey: ["teacher-timeline", teacherId],
     queryFn: () =>
@@ -90,7 +92,7 @@ export function TeacherTimelineTab({ teacherId }: Props) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground text-sm">
-          Hech qanday muhim o&apos;zgarish topilmadi
+          {t("Hech qanday muhim o'zgarish topilmadi")}
         </CardContent>
       </Card>
     );
