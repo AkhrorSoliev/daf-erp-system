@@ -7,6 +7,12 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
+    sarlavha: "O'quvchi ilovasida kunlik maqsad va nishonlar",
+    matn: "O'quvchi «Ta'lim» bo'limida kunlik maqsadni o'zi tanlaydi: Yengil (40 ball), O'rta (80) yoki Jiddiy (160); tanlamasa — O'rta. Yo'l tepasidagi halqa bugungi ballni ko'rsatadi; bugun qiladigan mashq qolmagan bo'lsa maqsad bajarilgan hisoblanadi. Seans oxirida maqsad bajarilsa va yangi nishon olinsa, shu haqda qator chiqadi. Nishonlar — ketma-ket mashq kunlari (3, 7, 14, 30, 60, 100) va o'rganilgan so'zlar (50, 150, 300, A1 dagi hammasi) uchun; «Reyting → Darajam» tabida ko'rinadi. Nishon olib qo'yilmaydi, maqsad bajarilmasa jazo yo'q.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
+    sana: "2026-10-18",
     sarlavha: "Profilda faol seanslar ro'yxati",
     matn: "Profil sahifasida «Faol seanslar» bo'limi paydo bo'ldi: hisobingizga kirilgan qurilmalar (brauzer va tizim nomi, IP manzil, oxirgi faollik). Siz turgan qurilma «Joriy qurilma» deb belgilanadi. Tanimagan qurilma yonidagi «Chiqarish» tugmasi faqat shu qurilmadagi kirishni darhol tugatadi, qolganlariga tegmaydi. «Boshqa qurilmalardan chiqish» tugmasi avvalgidek ishlaydi. Shahar hozircha ko'rsatilmaydi. Yangilanishdan oldin kirgan qurilmalar ro'yxatda taxminan bir soatdan keyin paydo bo'ladi.",
     rollar: [1, 2, 3, 4, 5],
