@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/multi-select-combobox";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
@@ -49,15 +51,15 @@ interface TeacherOption {
 const LEVEL_OPTIONS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 const STATUS_OPTIONS = [
-  { value: "ACTIVE", label: "Faol" },
-  { value: "FORMING", label: "Boshlanmagan" },
-  { value: "PAUSED", label: "Pauza" },
-  { value: "COMPLETED", label: "Tugallangan" },
+  { value: "ACTIVE", label: msg("Faol") },
+  { value: "FORMING", label: msg("Boshlanmagan") },
+  { value: "PAUSED", label: msg("Pauza") },
+  { value: "COMPLETED", label: msg("Tugallangan") },
 ];
 
 const COURSE_TYPE_OPTIONS = [
-  { value: "standard", label: "Standart" },
-  { value: "intensive", label: "Intensiv" },
+  { value: "standard", label: msg("Standart") },
+  { value: "intensive", label: msg("Intensiv") },
 ];
 
 interface FilterCounts {
@@ -90,6 +92,7 @@ const filtersSchema = {
 };
 
 export function GroupsClient() {
+  const t = useT();
   const [groups, setGroups] = useState<GroupData[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<GroupsStatsData>({ total: 0, active: 0, forming: 0, paused: 0, completed: 0 });
@@ -130,7 +133,7 @@ export function GroupsClient() {
         api.get("/users", { params: { ...branchParam, user_type: "Teacher", pageSize: 100 } }),
       ]);
       setRooms(roomsRes.data.data.map((r: any) => ({ id: r.id, name: r.name })));
-      setTeachers(teachersRes.data.data.map((t: any) => ({ id: t.id, firstName: t.firstName, lastName: t.lastName })));
+      setTeachers(teachersRes.data.data.map((u: any) => ({ id: u.id, firstName: u.firstName, lastName: u.lastName })));
     } catch {
       // xatolik
     }
@@ -203,6 +206,7 @@ export function GroupsClient() {
 
   const statusOptions: MultiSelectOption[] = STATUS_OPTIONS.map((o) => ({
     ...o,
+    label: t(o.label),
     count: filterCounts.status[o.value] ?? 0,
   }));
 
@@ -215,6 +219,7 @@ export function GroupsClient() {
 
   const courseTypeOptions: MultiSelectOption[] = COURSE_TYPE_OPTIONS.map((o) => ({
     ...o,
+    label: t(o.label),
     count: filterCounts.courseType[o.value] ?? 0,
   }));
 
@@ -224,10 +229,10 @@ export function GroupsClient() {
     count: filterCounts.room[String(r.id)] ?? 0,
   }));
 
-  const teacherOptions: MultiSelectOption[] = teachers.map((t) => ({
-    value: String(t.id),
-    label: `${t.lastName} ${t.firstName}`,
-    count: filterCounts.teacher[String(t.id)] ?? 0,
+  const teacherOptions: MultiSelectOption[] = teachers.map((teacher) => ({
+    value: String(teacher.id),
+    label: `${teacher.lastName} ${teacher.firstName}`,
+    count: filterCounts.teacher[String(teacher.id)] ?? 0,
   }));
 
   return (
@@ -239,7 +244,7 @@ export function GroupsClient() {
         <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            placeholder="Nomi bo'yicha qidirish..."
+            placeholder={t("Nomi bo'yicha qidirish...")}
             value={searchInput}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-9"
@@ -249,9 +254,9 @@ export function GroupsClient() {
           options={statusOptions}
           selected={filters.status}
           onChange={(next) => setUrlFilters({ status: next, page: 1 })}
-          placeholder="Barcha holatlar"
-          searchPlaceholder="Holat qidirish..."
-          countSuffix="guruh"
+          placeholder={t("Barcha holatlar")}
+          searchPlaceholder={t("Holat qidirish...")}
+          countSuffix={t("guruh")}
           className="w-[calc(100%-3rem)] sm:w-44"
         />
         {!isTeacherOnly && (
@@ -260,27 +265,27 @@ export function GroupsClient() {
               options={levelOptions}
               selected={filters.level}
               onChange={(next) => setUrlFilters({ level: next, page: 1 })}
-              placeholder="Barcha darajalar"
-              searchPlaceholder="Daraja qidirish..."
-              countSuffix="guruh"
+              placeholder={t("Barcha darajalar")}
+              searchPlaceholder={t("Daraja qidirish...")}
+              countSuffix={t("guruh")}
               className="w-[calc(100%-3rem)] sm:w-44"
             />
             <MultiSelectCombobox
               options={courseTypeOptions}
               selected={filters.courseType}
               onChange={(next) => setUrlFilters({ courseType: next, page: 1 })}
-              placeholder="Barcha turlar"
-              searchPlaceholder="Tur qidirish..."
-              countSuffix="guruh"
+              placeholder={t("Barcha turlar")}
+              searchPlaceholder={t("Tur qidirish...")}
+              countSuffix={t("guruh")}
               className="w-[calc(100%-3rem)] sm:w-44"
             />
             <MultiSelectCombobox
               options={roomOptions}
               selected={filters.room}
               onChange={(next) => setUrlFilters({ room: next, page: 1 })}
-              placeholder="Barcha xonalar"
-              searchPlaceholder="Xona qidirish..."
-              countSuffix="guruh"
+              placeholder={t("Barcha xonalar")}
+              searchPlaceholder={t("Xona qidirish...")}
+              countSuffix={t("guruh")}
               className="w-[calc(100%-3rem)] sm:w-44"
             />
           </>
@@ -290,9 +295,9 @@ export function GroupsClient() {
             options={teacherOptions}
             selected={filters.teacher}
             onChange={(next) => setUrlFilters({ teacher: next, page: 1 })}
-            placeholder="Barcha o'qituvchilar"
-            searchPlaceholder="O'qituvchi qidirish..."
-            countSuffix="guruh"
+            placeholder={t("Barcha o'qituvchilar")}
+            searchPlaceholder={t("O'qituvchi qidirish...")}
+            countSuffix={t("guruh")}
             className="w-[calc(100%-3rem)] sm:w-48"
             contentClassName="w-[288px]"
           />
@@ -307,10 +312,10 @@ export function GroupsClient() {
                   className="size-9 sm:size-auto sm:h-9 sm:px-4 shrink-0"
                 >
                   <Plus className="size-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Yangi guruh</span>
+                  <span className="hidden sm:inline">{t("Yangi guruh")}</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent className="sm:hidden">Yangi guruh</TooltipContent>
+              <TooltipContent className="sm:hidden">{t("Yangi guruh")}</TooltipContent>
             </Tooltip>
           ) : (
             <Tooltip>
@@ -322,11 +327,11 @@ export function GroupsClient() {
                     className="sm:size-auto sm:px-4 shrink-0"
                   >
                     <Plus className="size-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Yangi guruh</span>
+                    <span className="hidden sm:inline">{t("Yangi guruh")}</span>
                   </Button>
                 </span>
               </TooltipTrigger>
-              <TooltipContent>Avval filialni tanlang</TooltipContent>
+              <TooltipContent>{t("Avval filialni tanlang")}</TooltipContent>
             </Tooltip>
           ))}
       </div>
@@ -378,7 +383,7 @@ export function GroupsClient() {
       {totalPages > 1 && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-sm">Sahifada:</span>
+            <span className="text-muted-foreground text-sm">{t("Sahifada:")}</span>
             <Select
               value={String(filters.pageSize)}
               onValueChange={handlePageSizeChange}
@@ -395,7 +400,7 @@ export function GroupsClient() {
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-sm">
-              Jami: {total} ta guruh
+              {t("Jami: {n} ta guruh", { n: total })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -406,7 +411,7 @@ export function GroupsClient() {
               onClick={() => setFilter("page", filters.page - 1)}
             >
               <ChevronLeft className="mr-1 size-4" />
-              Oldingi
+              {t("Oldingi")}
             </Button>
             <span className="text-sm">
               {filters.page} / {totalPages}
@@ -417,7 +422,7 @@ export function GroupsClient() {
               disabled={filters.page >= totalPages}
               onClick={() => setFilter("page", filters.page + 1)}
             >
-              Keyingi
+              {t("Keyingi")}
               <ChevronRight className="ml-1 size-4" />
             </Button>
           </div>

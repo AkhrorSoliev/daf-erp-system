@@ -1,18 +1,23 @@
 import { cn } from "@/lib/utils";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
+import { interpolate, type Params } from "@/i18n/translate";
+
+type Translate = (source: string, params?: Params) => string;
 
 const MONTHS = [
-  "yanv",
-  "fevr",
-  "mart",
-  "apr",
-  "may",
-  "iyun",
-  "iyul",
-  "avg",
-  "sent",
-  "okt",
-  "noyab",
-  "dek",
+  msg("yanv"),
+  msg("fevr"),
+  msg("mart"),
+  msg("apr"),
+  msg("may"),
+  msg("iyun"),
+  msg("iyul"),
+  msg("avg"),
+  msg("sent"),
+  msg("okt"),
+  msg("noyab"),
+  msg("dek"),
 ];
 
 /**
@@ -25,9 +30,10 @@ const MONTHS = [
  * Exported for its test: a test that re-implements the formatter only proves
  * the copy agrees with itself.
  */
-export function shortDate(iso: string): string {
+export function shortDate(iso: string, t: Translate = interpolate): string {
   const [, month, day] = iso.split("-").map(Number);
-  return `${day}-${MONTHS[month - 1] ?? month}`;
+  const name = MONTHS[month - 1];
+  return name ? t("{day}-{month}", { day, month: t(name) }) : `${day}-${month}`;
 }
 
 /**
@@ -58,12 +64,13 @@ export function CoveringBadge({
   dates: string[];
   className?: string;
 }) {
+  const t = useT();
   if (dates.length === 0) return null;
 
   const single = dates.length === 1;
   const label = single
-    ? `Faqat ${shortDate(dates[0])}`
-    : `Faqat ${dates.length} kun`;
+    ? t("Faqat {date}", { date: shortDate(dates[0], t) })
+    : t("Faqat {n} kun", { n: dates.length });
 
   return (
     <span
@@ -72,8 +79,8 @@ export function CoveringBadge({
       // count on its own is not actionable.
       title={
         single
-          ? `Bu guruhga faqat ${shortDate(dates[0])} kuni o'rinbosar sifatida kirasiz`
-          : `O'rinbosar sifatida kirasiz: ${dates.map(shortDate).join(", ")}`
+          ? t("Bu guruhga faqat {date} kuni o'rinbosar sifatida kirasiz", { date: shortDate(dates[0], t) })
+          : t("O'rinbosar sifatida kirasiz: {dates}", { dates: dates.map((d) => shortDate(d, t)).join(", ") })
       }
       className={cn(
         "inline-flex h-5 w-fit shrink-0 items-center rounded-md border border-dashed",

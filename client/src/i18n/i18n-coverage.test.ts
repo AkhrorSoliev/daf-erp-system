@@ -168,6 +168,15 @@ export const STRICT_FILES: string[] = [
   "components/students/contracts/contract-form-dialog.tsx",
   "components/students/contracts/profile-conflict-note.tsx",
   "components/students/contracts/student-contracts-tab.tsx",
+  "components/groups/groups-client.tsx",
+  "components/groups/groups-table.tsx",
+  "components/groups/groups-cards.tsx",
+  "components/groups/groups-stats.tsx",
+  "components/groups/groups-heading.tsx",
+  "components/groups/group-row-actions.tsx",
+  "components/groups/group-delete-dialog.tsx",
+  "components/groups/group-delete-copy.ts",
+  "components/groups/covering-badge.tsx",
 ];
 
 function walk(dir: string): string[] {
