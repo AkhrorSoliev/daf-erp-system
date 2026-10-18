@@ -1,5 +1,5 @@
 import { OmitType, PartialType } from '@nestjs/mapped-types';
-import { IsInt, IsOptional } from 'class-validator';
+import { IsInt, IsOptional, IsUUID } from 'class-validator';
 import { CreateExpenseDto } from './create-expense.dto';
 
 /**
@@ -14,7 +14,7 @@ import { CreateExpenseDto } from './create-expense.dto';
  * would pass `categoryChanged` and re-post the ledger entry for nothing.
  */
 export class UpdateExpenseDto extends PartialType(
-  OmitType(CreateExpenseDto, ['relatedUserId'] as const),
+  OmitType(CreateExpenseDto, ['relatedUserId', 'leadSourceId'] as const),
   { skipNullProperties: false },
 ) {
   // The one field that may be cleared: the expense form sends `null` on every
@@ -22,4 +22,9 @@ export class UpdateExpenseDto extends PartialType(
   @IsOptional()
   @IsInt()
   relatedUserId?: number | null;
+
+  // `null` clears the channel (ADR-0109); omitted leaves it as it is.
+  @IsOptional()
+  @IsUUID()
+  leadSourceId?: string | null;
 }

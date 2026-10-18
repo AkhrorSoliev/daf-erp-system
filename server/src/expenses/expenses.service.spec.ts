@@ -52,6 +52,7 @@ describe('ExpensesService — findAll filters + summary', () => {
         roles: [{ role: { name: 'CEO' } }],
       }),
     },
+    leadSource: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -426,6 +427,138 @@ describe('ExpensesService — findAll filters + summary', () => {
       );
       expect(checked).toContain(1);
       expect(checked).toContain(2);
+    });
+  });
+
+  describe('marketing channel (ADR-0109)', () => {
+    const SOURCE = '0b0c7c1e-6a1c-4f7e-9d0a-3f5b2f1c9a11';
+    const dto = (over: object = {}) =>
+      ({
+        category: 'MARKETING',
+        paymentMethod: 'CASH',
+        amount: 100,
+        description: 'Instagram reklama',
+        date: '2026-10-01',
+        branchId: 1,
+        ...over,
+      }) as any;
+
+    beforeEach(() => {
+      prisma.expense.create.mockResolvedValue({
+        id: 'exp-1',
+        amount: 100,
+        branchId: 1,
+        companyId: COMPANY_ID,
+      });
+      (tx as any).expense.create = prisma.expense.create;
+    });
+
+    it('saves the channel on a MARKETING expense', async () => {
+      prisma.leadSource.findFirst.mockResolvedValueOnce({ id: SOURCE });
+
+      await service.create(dto({ leadSourceId: SOURCE }), 42, COMPANY_ID);
+
+      expect(prisma.leadSource.findFirst).toHaveBeenCalledWith({
+        where: { id: SOURCE, companyId: COMPANY_ID, deletedAt: null },
+        select: { id: true },
+      });
+      expect(prisma.expense.create.mock.calls[0][0].data.leadSourceId).toBe(
+        SOURCE,
+      );
+    });
+
+    it('saves no channel when none is given', async () => {
+      await service.create(dto(), 42, COMPANY_ID);
+
+      expect(prisma.leadSource.findFirst).not.toHaveBeenCalled();
+      expect(
+        prisma.expense.create.mock.calls[0][0].data.leadSourceId,
+      ).toBeNull();
+    });
+
+    it('refuses a channel on any other category, before writing', async () => {
+      await expect(
+        service.create(
+          dto({ category: 'RENT', leadSourceId: SOURCE }),
+          42,
+          COMPANY_ID,
+        ),
+      ).rejects.toThrow('faqat marketing xarajatiga');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses a source that is not this company’s live source', async () => {
+      prisma.leadSource.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        service.create(dto({ leadSourceId: SOURCE }), 42, COMPANY_ID),
+      ).rejects.toThrow('Manba topilmadi');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    describe('update', () => {
+      const existing = (over: object = {}) => ({
+        id: 'exp-1',
+        category: 'MARKETING',
+        amount: 100,
+        branchId: 1,
+        companyId: COMPANY_ID,
+        deletedAt: null,
+        leadSourceId: SOURCE,
+        ...over,
+      });
+      const dataOfUpdate = () => tx.expense.update.mock.calls[0][0].data;
+
+      it('clears the channel when the form sends null', async () => {
+        prisma.expense.findFirst.mockResolvedValue(existing());
+
+        await service.update(
+          'exp-1',
+          { leadSourceId: null } as any,
+          42,
+          COMPANY_ID,
+        );
+
+        expect(dataOfUpdate().leadSourceId).toBeNull();
+      });
+
+      it('leaves the channel alone when the field is not sent', async () => {
+        prisma.expense.findFirst.mockResolvedValue(existing());
+
+        await service.update('exp-1', { amount: 100 } as any, 42, COMPANY_ID);
+
+        expect(dataOfUpdate()).not.toHaveProperty('leadSourceId');
+      });
+
+      it('drops the channel when the row stops being MARKETING', async () => {
+        prisma.expense.findFirst.mockResolvedValue(existing());
+        // A category change re-posts the ledger entry from the updated row.
+        tx.expense.update.mockResolvedValueOnce(
+          existing({ category: 'OTHER', leadSourceId: null }),
+        );
+
+        await service.update(
+          'exp-1',
+          { category: 'OTHER' } as any,
+          42,
+          COMPANY_ID,
+        );
+
+        expect(dataOfUpdate().leadSourceId).toBeNull();
+      });
+
+      it('refuses a channel given together with a non-MARKETING category', async () => {
+        prisma.expense.findFirst.mockResolvedValue(existing());
+
+        await expect(
+          service.update(
+            'exp-1',
+            { category: 'OTHER', leadSourceId: SOURCE } as any,
+            42,
+            COMPANY_ID,
+          ),
+        ).rejects.toThrow('faqat marketing xarajatiga');
+      });
     });
   });
 

@@ -812,8 +812,9 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 ### Marketing report (`/reports/marketing`, ADR-0067)
 
-- `components/reports/marketing/` — `marketing-client.tsx` (month picker `?month=`, `GET /reports/marketing`), `marketing-view.tsx` (four cards, «Marketing samarasi», «Oylar bo'yicha», «Manba bo'yicha»), `marketing-format.ts` (pure: «13×», the sentence). CEO/BD only (`reports-nav.ts`, `CEO_BD`).
-- Every figure is the server's, «Manba bo'yicha»'s «Aylanish» included (the row's `rate`, printed with `formatPercent`); a null one prints «—». Transition months (May–June 2026) print the new-student count with «*» and «—» for the rest, with the footnote. No visible LTV, CAC or ROI — `lib/uzbek-only-texts.test.ts` scans both B1 folders for them.
+- `components/reports/marketing/` — `marketing-client.tsx` (month picker `?month=`, `GET /reports/marketing`), `marketing-view.tsx` («Kanallar bo'yicha» first, then «Jami (hamma kanal birga)»: four cards, «Marketing samarasi», then «Oylar bo'yicha»), `marketing-sources.tsx` («Kanallar bo'yicha», ADR-0109), `marketing-format.ts` (pure: «13×», the sentence). CEO/BD only (`reports-nav.ts`, `CEO_BD`).
+- «Kanallar bo'yicha» is a table of the month's lead sources: Sarflandi, Lid, O'quvchi bo'ldi, 1 o'quvchi narxi, Hozirgacha to'lagan, Samara, Aylanish, closed by «Hammasi» (`sourcesTotal`, the WHOLE month's spend) with the spend that names no channel under it (`unassignedSpend`). A MARKETING expense names its channel in the expense dialog's «Kanal» field (`expenses/expense-source-field.tsx`, the lead sources list; «Umumiy» = none); the expenses table prints it under the turkum.
+- Every figure is the server's, the «Aylanish» included (the row's `rate`, printed with `formatPercent`); a null one prints «—». Transition months (May–June 2026) print the new-student count with «*» and «—» for the rest, with the footnote. No visible LTV, CAC or ROI — `lib/uzbek-only-texts.test.ts` scans both B1 folders for them.
 
 ### Group payments report (`/reports/payment-reports`, ADR-0092)
 

@@ -13,12 +13,33 @@ export interface MarketingMonth {
   transition: boolean;
 }
 
+/** One lead source of the month (ADR-0109): every figure is the server's; null prints «—». */
+export interface SourceRow {
+  /** null = leads with no source written. */
+  source: string | null;
+  spend: number;
+  leads: number;
+  /** People of these leads who paid. */
+  students: number;
+  /** «Aylanish», 0–100, one decimal. */
+  rate: number;
+  /** Cost of one student: spend ÷ students. */
+  cac: number | null;
+  /** What those students have paid so far. */
+  paid: number;
+  roi: number | null;
+}
+
 export interface MarketingReport extends MarketingMonth {
   ltv: { value: number; avgMonths: number; monthlyCharge: number } | null;
   /** The asked month first, back to 2026-05. */
   months: MarketingMonth[];
-  /** Lead sources of the month; null before 10.09.2026. `rate` — «Aylanish», 0–100, the server's. */
-  sources: { source: string | null; leads: number; students: number; rate: number }[] | null;
+  /** Lead sources of the month; null before 10.09.2026. */
+  sources: SourceRow[] | null;
+  /** «Hammasi»: the whole month's spend against all the sources' people. Null with `sources`. */
+  sourcesTotal: Omit<SourceRow, "source"> | null;
+  /** Spend that names no source: in «Hammasi», in no source row. Null with `sources`. */
+  unassignedSpend: number | null;
 }
 
 /** "13" from 10 up, "3,4" below it. */

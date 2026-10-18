@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-18",
+    sarlavha: "Marketing kanal bo'yicha: bitta o'quvchi qancha turadi",
+    matn: "Marketing xarajatini yozayotganda endi «Kanal» tanlanadi (Instagram, Telegram, tavsiya...). Hisobotlar → «Marketing» sahifasining tepasida «Kanallar bo'yicha» jadvali paydo bo'ldi: har kanal uchun sarf, lid, o'quvchi bo'lganlar, bitta o'quvchi narxi, ular hozirgacha to'lagan pul va samara. Butun markaz bo'yicha jami pastga tushdi. Kanal belgilanmagan sarf «Hammasi» qatorida bor, lekin birorta kanalga kirmaydi; ilgari yozilgan xarajatlar «Umumiy» bo'lib qolgan, kanalini «Tahrirlash» orqali qo'yish mumkin.",
+    rollar: [1, 2],
+    sahifa: { bolim: "xarajatlar", sahifa: "xarajatlar-sahifasi" },
+  },
+  {
     sana: "2026-10-17",
     sarlavha: "Yangi hisobot: Auditoriya",
     matn: "Hisobotlarda «Auditoriya» sahifasi paydo bo'ldi: hozir o'qiyotgan o'quvchilar jinsi, yoshi, kurs va filial bo'yicha. Foizlar faqat jinsi yoki tug'ilgan sanasi kiritilgan o'quvchilar ichidan hisoblanadi, sahifa tepasida esa ma'lumot qanchalik to'liqligi ko'rsatiladi. Ma'lumot o'quvchilar ilovaga kirgan sari to'lib boradi. Beshtadan kam ma'lumotli qatorda foiz o'rniga chiziqcha turadi.",
