@@ -1,4 +1,4 @@
-import { createElement } from "react";
+import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   QueryClient,
@@ -10,6 +10,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const get = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/api", () => ({ default: { get } }));
 
+import { I18nProvider } from "@/i18n/context";
+import ru from "@/i18n/dictionaries/ru";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
 import {
   EnrollPreviewBlock,
@@ -68,20 +70,28 @@ const pack = (over: Partial<EnrollPreview> = {}): EnrollPreview => ({
 
 type Props = Partial<Parameters<typeof EnrollPreviewBlock>[0]>;
 
-function markup(client: QueryClient, props: Props = {}): string {
+function markup(client: QueryClient, props: Props = {}, russian = false): string {
+  const block = createElement(
+    QueryClientProvider,
+    { client },
+    createElement(EnrollPreviewBlock, {
+      studentId: 10042,
+      groupId: "g-1",
+      startDate: undefined,
+      onStartDateChange: () => {},
+      ...props,
+    }),
+  );
   return norm(
     renderToStaticMarkup(
-      createElement(
-        QueryClientProvider,
-        { client },
-        createElement(EnrollPreviewBlock, {
-          studentId: 10042,
-          groupId: "g-1",
-          startDate: undefined,
-          onStartDateChange: () => {},
-          ...props,
-        }),
-      ),
+      russian
+        ? createElement(
+            I18nProvider,
+            // `children` is the third argument (react/no-children-prop).
+            { initialLocale: "ru", initialDictionary: ru } as ComponentProps<typeof I18nProvider>,
+            block,
+          )
+        : block,
     ),
   );
 }
@@ -100,6 +110,7 @@ async function answered(
   outcome: EnrollPreview | Error,
   props: Props = {},
   client = newClient(),
+  russian = false,
 ): Promise<string> {
   get.mockImplementationOnce(() =>
     outcome instanceof Error
@@ -110,7 +121,7 @@ async function answered(
   await Promise.allSettled(
     client.getQueryCache().getAll().map((query) => query.fetch()),
   );
-  return markup(client, props);
+  return markup(client, props, russian);
 }
 
 beforeEach(() => get.mockReset());
@@ -305,5 +316,32 @@ describe("EnrollPreviewBlock — the request", () => {
       expect(text).toContain("Hisoblanmoqda…");
       expect(text).not.toContain(money(199231));
     }
+  });
+});
+
+describe("EnrollPreviewBlock in Russian", () => {
+  it("translates the labels and the month, keeps the figures and the format of the amounts", async () => {
+    const text = await answered(monthly({ discountPercent: 10 }), {}, newClient(), true);
+
+    expect(text).toContain("Дата начала (с какого занятия)");
+    expect(text).toContain("Цена за месяц: " + norm(formatPrice(405000)) + " сум");
+    expect(text).toContain("За октябрь (8/13 занятий) · скидка 10%: " + money(249231).replace("so'm", "сум"));
+    expect(text).toContain("Баланс ученика: " + norm(formatBalance(50000, "сум")));
+    expect(text).toContain("К оплате (примерно): " + norm(formatPrice(199231)) + " сум");
+    expect(text).not.toContain("so'm");
+  });
+
+  it("translates the pack lines and the word for enough", async () => {
+    const text = await answered(pack({ discountPercent: 10, balance: 900000, payable: 0 }), {}, newClient(), true);
+
+    expect(text).toContain("Цена курса (12 занятий): " + norm(formatPrice(400000)) + " сум Скидка: 10%");
+    expect(text).toContain("К оплате (примерно): Достаточно");
+  });
+
+  it("translates the loading line and the placeholder", () => {
+    const text = markup(newClient(), {}, true);
+
+    expect(text).toContain("Расчёт…");
+    expect(text).toContain("С сегодняшнего дня");
   });
 });

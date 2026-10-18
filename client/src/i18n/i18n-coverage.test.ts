@@ -113,6 +113,15 @@ export const STRICT_FILES: string[] = [
   "components/students/student-mock-exams-tab.tsx",
   "lib/weekdays.ts",
   "hooks/use-leads-board.ts",
+  "components/students/enroll-to-group-dialog.tsx",
+  "components/students/enroll-preview-block.tsx",
+  "components/students/student-remove-from-group-dialog.tsx",
+  "components/students/departure-money-block.tsx",
+  "components/students/departure-money.ts",
+  "components/students/student-closed-enrollments-section.tsx",
+  "components/students/write-off-debt-dialog.tsx",
+  "components/students/debt-write-off-types.ts",
+  "components/payments/salary-utils.ts",
 ];
 
 function walk(dir: string): string[] {
