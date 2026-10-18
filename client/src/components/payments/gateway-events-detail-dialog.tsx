@@ -12,6 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/i18n/context";
+import { markedText } from "./debt-history/marked-text";
 import { OutcomeBadge } from "./gateway-events-outcome-badge";
 import {
   computeOutcome,
@@ -32,6 +34,7 @@ export function GatewayEventsDetailDialog({
   event,
   onClose,
 }: GatewayEventsDetailDialogProps) {
+  const t = useT();
   const [payloadExpanded, setPayloadExpanded] = useState(false);
 
   return (
@@ -63,12 +66,12 @@ export function GatewayEventsDetailDialog({
                       {PROVIDER_LABELS[event.provider] ?? event.provider}
                     </Badge>
                     <DialogTitle className="text-lg">
-                      {step?.label ?? event.eventType}
+                      {step ? t(step.label) : event.eventType}
                     </DialogTitle>
                     <OutcomeBadge outcome={outcome} />
                   </div>
                   <DialogDescription>
-                    {step?.description ?? "Webhook so'rovi"}
+                    {step ? t(step.description) : t("Webhook so'rovi")}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -76,7 +79,7 @@ export function GatewayEventsDetailDialog({
                 <div className="grid grid-cols-2 gap-4 py-2">
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">
-                      Vaqt
+                      {t("Vaqt")}
                     </div>
                     <div className="text-sm">
                       {format(
@@ -88,16 +91,16 @@ export function GatewayEventsDetailDialog({
 
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">
-                      Summa
+                      {t("Summa")}
                     </div>
                     <div className="text-sm font-semibold">
-                      {formatAmount(amount)}
+                      {formatAmount(amount, t)}
                     </div>
                   </div>
 
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">
-                      O&apos;quvchi
+                      {t("O'quvchi")}
                     </div>
                     <div className="text-sm">
                       {event.student ? (
@@ -118,7 +121,7 @@ export function GatewayEventsDetailDialog({
 
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">
-                      Qayta ishlangan vaqt
+                      {t("Qayta ishlangan vaqt")}
                     </div>
                     <div className="text-sm">
                       {event.processedAt
@@ -132,8 +135,9 @@ export function GatewayEventsDetailDialog({
 
                   <div className="col-span-2">
                     <div className="text-xs text-muted-foreground mb-1">
-                      Tranzaksiya raqami (
-                      {event.provider === "PAYME" ? "Payme" : "Click"} tizimida)
+                      {t("Tranzaksiya raqami ({provider} tizimida)", {
+                        provider: event.provider === "PAYME" ? "Payme" : "Click",
+                      })}
                     </div>
                     <div className="font-mono text-xs break-all bg-muted/50 px-2 py-1 rounded">
                       {event.externalId}
@@ -145,7 +149,7 @@ export function GatewayEventsDetailDialog({
                 {event.errorMessage && (
                   <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-3">
                     <div className="text-xs text-red-700 dark:text-red-300 font-semibold mb-1">
-                      Xato xabari
+                      {t("Xato xabari")}
                     </div>
                     <div className="text-sm text-red-900 dark:text-red-200 break-words">
                       {event.errorMessage}
@@ -155,9 +159,11 @@ export function GatewayEventsDetailDialog({
 
                 {!event.signatureValid && (
                   <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-3 text-sm text-red-900 dark:text-red-200">
-                    <strong>Diqqat:</strong> Bu so&apos;rovning xavfsizlik kaliti
-                    to&apos;g&apos;ri kelmagan. Ehtimol, birovning noto&apos;g&apos;ri
-                    so&apos;rovi yoki tizim sozlamalarida muammo bor.
+                    {markedText(
+                      t(
+                        "**Diqqat:** Bu so'rovning xavfsizlik kaliti to'g'ri kelmagan. Ehtimol, birovning noto'g'ri so'rovi yoki tizim sozlamalarida muammo bor.",
+                      ),
+                    )}
                   </div>
                 )}
 
@@ -172,7 +178,9 @@ export function GatewayEventsDetailDialog({
                     ) : (
                       <ChevronDown className="size-3" />
                     )}
-                    Texnik ma&apos;lumot ({event.provider} yuborgan xom JSON)
+                    {t("Texnik ma'lumot ({provider} yuborgan xom JSON)", {
+                      provider: event.provider,
+                    })}
                   </button>
                   {payloadExpanded && (
                     <pre className="bg-muted p-3 rounded text-xs overflow-x-auto max-h-80 mt-2">

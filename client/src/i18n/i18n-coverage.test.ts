@@ -354,6 +354,12 @@ export const STRICT_FILES: string[] = [
   "components/payments/salary-config-history.ts",
   "components/payments/salary-settle-month-dialog.tsx",
   "components/payments/salary-settings-access.ts",
+  "components/payments/gateway-events-client.tsx",
+  "components/payments/gateway-events-detail-dialog.tsx",
+  "components/payments/gateway-events-filter-bar.tsx",
+  "components/payments/gateway-events-helpers.ts",
+  "components/payments/gateway-events-outcome-badge.tsx",
+  "components/profile/teacher-salary-client.tsx",
 ];
 
 function walk(dir: string): string[] {
