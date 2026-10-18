@@ -219,6 +219,11 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
   const openId = canOpen ? filters.id : "";
   const sheetTab = filters.atab === "tarix" ? "tarix" : "malumot";
   const [restoreTarget, setRestoreTarget] = useState<any | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const openRestore = (item: any) => {
+    setRestoreTarget(item);
+    setRestoreOpen(true);
+  };
   const closeSheet = () => setUrlFilters({ id: "", atab: "" });
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
@@ -252,7 +257,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
       setItems((prev) => prev.filter((item) => item.id !== id));
       setTotal((prev) => Math.max(0, prev - 1));
       if (filters.id === String(id)) closeSheet();
-      setRestoreTarget(null);
+      setRestoreOpen(false);
     } catch (err) {
       // A refused restore says why — e.g. a student card whose number is on
       // another live card (ADR-0033).
@@ -339,6 +344,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                   onKeyDown={
                     canOpen
                       ? (e) => {
+                          if (e.target !== e.currentTarget) return;
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
                             setUrlFilters({ id: String(item.id) });
@@ -378,7 +384,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                             disabled={actionId === item.id}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setRestoreTarget(item);
+                              openRestore(item);
                             }}
                           >
                             <RotateCcw className="size-4" />
@@ -438,9 +444,9 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
       )}
 
       <AlertDialog
-        open={restoreTarget !== null}
+        open={restoreOpen}
         onOpenChange={(open) => {
-          if (!open) setRestoreTarget(null);
+          if (!open) setRestoreOpen(false);
         }}
       >
         <AlertDialogContent>
@@ -470,7 +476,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
           tab={sheetTab}
           onTabChange={(t) => setUrlFilters({ atab: t === "tarix" ? "tarix" : "" })}
           onClose={closeSheet}
-          onRestore={(it) => setRestoreTarget(it)}
+          onRestore={openRestore}
         />
       )}
     </div>
