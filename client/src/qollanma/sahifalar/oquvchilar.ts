@@ -224,10 +224,10 @@ export const oquvchilar: QollanmaSahifa[] = [
     sahifa: "chetlatish-va-arxiv",
     sarlavha: "Chetlatish, bitirish, arxiv",
     qisqacha:
-      "Chetlatilgan o'quvchining qarzi qoladi va u portal orqali to'lay oladi; bitirish guruh «Tugallangan» qilinganda o'zi bo'ladi. Arxiv faqat xato yoki takroriy yozuv uchun: «O'chirish» belgisi yoki «Statusni o'zgartirish» oynasi orqali qilinadi, kirish hisobi yopiladi, tiklashni faqat CEO qiladi.",
+      "Chetlatilgan o'quvchining qarzi qoladi va u portal orqali to'lay oladi; bitirish guruh «Tugallangan» qilinganda o'zi bo'ladi. Arxiv faqat xato yoki takroriy yozuv uchun: «O'chirish» belgisi yoki «Statusni o'zgartirish» oynasi orqali qilinadi, kirish hisobi yopiladi, tiklashni faqat CEO qiladi. Sozlamalar → Arxivda arxivdagi o'quvchi va guruhni ochib ko'rish, arxivga tushish sababini ko'rish mumkin.",
     rollar: [1, 2, 3],
     adr: ["0033", "0035", "0036", "0044", "0048", "0059", "0060"],
-    yollar: ["/students/profile/*"],
+    yollar: ["/students/profile/*", "/settings/archive"],
     kalitSozlar: [
       "chetlatish",
       "chetlatilgan",
@@ -247,7 +247,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "o'qimayotganlar qarzi",
       "sinov darsi",
     ],
-    yangilangan: "2026-10-02",
+    yangilangan: "2026-10-18",
   },
   {
     bolim: "oquvchilar",

@@ -40,7 +40,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Tooltip,
@@ -48,6 +47,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { SettingsPageHeader } from "./settings-page-header";
+import { ArchiveDetailSheet } from "./archive-detail-sheet";
+import { archiveReason, isDetailType } from "./archive-detail-rules";
 import { LeadsArchive } from "@/components/leads/leads-archive";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
@@ -200,6 +201,8 @@ const archiveListSchema = {
   type: { type: "string" as const, defaultValue: "" },
   search: { type: "string" as const, defaultValue: "" },
   page: { type: "number" as const, defaultValue: 1 },
+  id: { type: "string" as const, defaultValue: "" },
+  atab: { type: "string" as const, defaultValue: "" },
 };
 
 function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
@@ -210,6 +213,18 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | number | null>(null);
   const perPage = 10;
+  const canOpen = isDetailType(entityType);
+  const showReason = canOpen;
+  const colCount = showReason ? 6 : 5;
+  const openId = canOpen ? filters.id : "";
+  const sheetTab = filters.atab === "tarix" ? "tarix" : "malumot";
+  const [restoreTarget, setRestoreTarget] = useState<any | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const openRestore = (item: any) => {
+    setRestoreTarget(item);
+    setRestoreOpen(true);
+  };
+  const closeSheet = () => setUrlFilters({ id: "", atab: "" });
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setUrlFilters({ search: value, page: 1 });
@@ -241,6 +256,8 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
       toast.success("Muvaffaqiyatli tiklandi");
       setItems((prev) => prev.filter((item) => item.id !== id));
       setTotal((prev) => Math.max(0, prev - 1));
+      if (filters.id === String(id)) closeSheet();
+      setRestoreOpen(false);
     } catch (err) {
       // A refused restore says why — e.g. a student card whose number is on
       // another live card (ADR-0033).
@@ -290,6 +307,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Nomi</TableHead>
+              {showReason && <TableHead>Sabab</TableHead>}
               <TableHead>Arxivlangan sana</TableHead>
               <TableHead>Kim tomonidan</TableHead>
               <TableHead className="w-10" />
@@ -299,7 +317,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={5}>
+                  <TableCell colSpan={colCount}>
                     <div className="h-5 animate-pulse rounded bg-muted/50" />
                   </TableCell>
                 </TableRow>
@@ -307,7 +325,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
             ) : items.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={colCount}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -318,13 +336,43 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
               </TableRow>
             ) : (
               items.map((item, index) => (
-                <TableRow key={item.id}>
+                <TableRow
+                  key={item.id}
+                  className={
+                    canOpen
+                      ? "cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      : undefined
+                  }
+                  aria-label={
+                    canOpen ? `${getDisplayName(entityType, item)} — ko'rish` : undefined
+                  }
+                  tabIndex={canOpen ? 0 : undefined}
+                  onClick={canOpen ? () => setUrlFilters({ id: String(item.id) }) : undefined}
+                  onKeyDown={
+                    canOpen
+                      ? (e) => {
+                          if (e.target !== e.currentTarget) return;
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setUrlFilters({ id: String(item.id) });
+                          }
+                        }
+                      : undefined
+                  }
+                >
                   <TableCell className="border-r text-muted-foreground">
                     {(filters.page - 1) * perPage + index + 1}
                   </TableCell>
                   <TableCell className="font-medium">
                     {getDisplayName(entityType, item)}
                   </TableCell>
+                  {showReason && (
+                    <TableCell>
+                      {archiveReason(item) ?? (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="text-muted-foreground">
                     {item.deletedAt
                       ? format(new Date(item.deletedAt), "dd.MM.yyyy, HH:mm")
@@ -335,40 +383,22 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <AlertDialog>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                disabled={actionId === item.id}
-                              >
-                                <RotateCcw className="size-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>Qayta tiklash</TooltipContent>
-                        </Tooltip>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Qayta tiklash</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              &quot;{getDisplayName(entityType, item)}&quot;
-                              arxivdan tiklanadi va faol holatga qaytadi. Davom
-                              etasizmi?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleRestore(item.id)}
-                            >
-                              Tiklash
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            disabled={actionId === item.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRestore(item);
+                            }}
+                          >
+                            <RotateCcw className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Qayta tiklash</TooltipContent>
+                      </Tooltip>
 
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -418,6 +448,44 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
             </Button>
           </div>
         </div>
+      )}
+
+      <AlertDialog
+        open={restoreOpen}
+        onOpenChange={(open) => {
+          if (!open) setRestoreOpen(false);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Qayta tiklash</AlertDialogTitle>
+            <AlertDialogDescription>
+              &quot;{restoreTarget ? getDisplayName(entityType, restoreTarget) : ""}&quot;
+              arxivdan tiklanadi va faol holatga qaytadi. Davom etasizmi?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => restoreTarget && handleRestore(restoreTarget.id)}
+            >
+              Tiklash
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {openId && isDetailType(entityType) && (
+        <ArchiveDetailSheet
+          key={openId}
+          entityType={entityType}
+          id={openId}
+          tab={sheetTab}
+          onTabChange={(t) => setUrlFilters({ atab: t === "tarix" ? "tarix" : "" })}
+          onClose={closeSheet}
+          onRestore={openRestore}
+          restoring={actionId !== null && String(actionId) === openId}
+        />
       )}
     </div>
   );

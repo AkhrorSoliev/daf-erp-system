@@ -31,6 +31,8 @@ type PrismaLike = PrismaService | Prisma.TransactionClient;
  *
  * `roles` comes from the caller's own record via `@CurrentUser('roles')`, never
  * from a client-shaped payload.
+ *
+ * `includeArchived` is for READING (history) only; writing paths must not pass it.
  */
 export async function assertCallerMayTouchGroup(
   prisma: PrismaLike,
@@ -38,7 +40,7 @@ export async function assertCallerMayTouchGroup(
   roles: string[],
   groupId: string,
   message = "Bu guruh boshqa filialga tegishli — u bilan ishlash huquqingiz yo'q",
-  options: { lessonDate?: Date } = {},
+  options: { lessonDate?: Date; includeArchived?: boolean } = {},
 ): Promise<void> {
   const isTeacherOnly = roles.length > 0 && roles.every((r) => r === 'Teacher');
 
@@ -82,7 +84,10 @@ export async function assertCallerMayTouchGroup(
   }
 
   const group = await prisma.group.findFirst({
-    where: { id: groupId, deletedAt: null },
+    where: {
+      id: groupId,
+      ...(options.includeArchived ? {} : { deletedAt: null }),
+    },
     select: { branchId: true },
   });
   // 404 rather than 403 for a missing group: the id is a uuid, and confirming

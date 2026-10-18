@@ -4,6 +4,7 @@ import { ArchiveEntityType, ArchiveQueryDto } from './dto/archive-query.dto';
 import {
   archiveScope,
   getDelegate,
+  getDetailInclude,
   getInclude,
   getOmit,
   getSearchFilter,
@@ -105,7 +106,7 @@ export class ArchiveReadService {
     companyId: number,
   ) {
     const delegate = getDelegate(this.prisma, entityType);
-    const include = getInclude(entityType);
+    const include = getDetailInclude(entityType);
     const omit = getOmit(entityType);
     const parsedId = parseId(entityType, id);
 

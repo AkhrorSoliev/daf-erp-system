@@ -157,6 +157,48 @@ describe('assertCallerMayTouchGroup', () => {
     });
   });
 
+  describe('arxivdagi guruh', () => {
+    it('standart: arxivdagi guruhni qidirmaydi (deletedAt: null)', async () => {
+      const prisma = prismaFor({
+        groupBranch: 1,
+        caller: {
+          mainBranch: 1,
+          branches: [{ branchId: 1 }],
+          role: 'Administrator',
+        },
+      });
+      await assertCallerMayTouchGroup(prisma, 7, ['Administrator'], GROUP);
+      expect((prisma as any).group.findFirst.mock.calls[0][0].where).toEqual({
+        id: GROUP,
+        deletedAt: null,
+      });
+    });
+
+    it("includeArchived: deletedAt filtri yo'q, filial tekshiruvi qoladi", async () => {
+      const prisma = prismaFor({
+        groupBranch: 2,
+        caller: {
+          mainBranch: 1,
+          branches: [{ branchId: 1 }],
+          role: 'Administrator',
+        },
+      });
+      await expect(
+        assertCallerMayTouchGroup(
+          prisma,
+          7,
+          ['Administrator'],
+          GROUP,
+          undefined,
+          { includeArchived: true },
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect((prisma as any).group.findFirst.mock.calls[0][0].where).toEqual({
+        id: GROUP,
+      });
+    });
+  });
+
   describe('fails closed', () => {
     it('404s on a missing group rather than confirming the id', async () => {
       const prisma = prismaFor({ groupBranch: null });
