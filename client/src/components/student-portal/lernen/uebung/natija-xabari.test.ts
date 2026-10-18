@@ -134,7 +134,13 @@ describe("natijaQatorlari", () => {
   };
 
   it("no answer from the server draws nothing", () => {
-    expect(natijaQatorlari(null)).toEqual({ ball: null, serie: null, orin: null });
+    expect(natijaQatorlari(null)).toEqual({
+      ball: null,
+      serie: null,
+      orin: null,
+      maqsad: null,
+      nishonlar: [],
+    });
   });
 
   it("points, the streak on the first practice of the day, the group rank", () => {
@@ -142,6 +148,8 @@ describe("natijaQatorlari", () => {
       ball: 50,
       serie: 4,
       orin: "Guruhda 1-o'rin — 2 pog'ona ko'tarildingiz",
+      maqsad: null,
+      nishonlar: [],
     });
   });
 
@@ -159,5 +167,27 @@ describe("natijaQatorlari", () => {
   it("no group: the centre rank speaks", () => {
     const r = natijaQatorlari({ ...base, orin: { gruppe: null, zentrum: { oldin: 9, hozir: 12 } } });
     expect(r.orin).toBe("Markazda 12-o'rin — 3 pog'ona tushdingiz");
+  });
+
+  it("maqsad faqat shu seansda bajarilganda", () => {
+    const yangi = { ball: 80, hozir: 130, bajarildi: true, yangiBajarildi: true };
+    expect(natijaQatorlari({ ...base, maqsad: yangi }).maqsad).toBe(
+      "Kunlik maqsad bajarildi — 130 / 80",
+    );
+    expect(
+      natijaQatorlari({ ...base, maqsad: { ...yangi, yangiBajarildi: false } }).maqsad,
+    ).toBeNull();
+    expect(
+      natijaQatorlari({
+        ...base,
+        maqsad: { ball: 80, hozir: 30, bajarildi: false, yangiBajarildi: false },
+      }).maqsad,
+    ).toBeNull();
+  });
+
+  it("har yangi nishon — alohida qator", () => {
+    expect(
+      natijaQatorlari({ ...base, yangiNishonlar: ["SERIE_14", "WOERTER_50"] }).nishonlar,
+    ).toEqual(["Yangi nishon: 14 kun ketma-ket", "Yangi nishon: 50 ta so'z"]);
   });
 });

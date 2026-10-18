@@ -129,6 +129,10 @@ export interface SeansNatijasi {
     gruppe: { oldin: number; hozir: number } | null;
     zentrum: { oldin: number; hozir: number };
   };
+  /** Kunlik maqsad; `yangiBajarildi` — shu seans uni kesib o'tdi. Eski server javobida yo'q. */
+  maqsad?: { ball: number; hozir: number; bajarildi: boolean; yangiBajarildi: boolean };
+  /** Shu seans bergan nishon kalitlari. */
+  yangiNishonlar?: string[];
 }
 
 export interface AbschlussErgebnis {
@@ -292,6 +296,26 @@ export interface LernenGrammarItem {
   exerciseCount: number;
 }
 
+export type MaqsadDarajasi = "YENGIL" | "ORTA" | "JIDDIY";
+
+/** Kunlik maqsad — server hisoblaydi; `bosh` — bugun qiladigan mashq qolmagan. */
+export interface Maqsad {
+  daraja: MaqsadDarajasi;
+  ball: number;
+  hozir: number;
+  bajarildi: boolean;
+  bosh: boolean;
+}
+
+/** `GET .../nishonlar` qatori: `olingan` — ISO sana yoki `null`, `qoldi` — chegaragacha. */
+export interface NishonQatori {
+  key: string;
+  tur: "SERIE" | "WOERTER";
+  chegara: number;
+  olingan: string | null;
+  qoldi: number | null;
+}
+
 /** Yo'l tepasidagi chiplar uchun umumiy ilgarilash. */
 export interface Fortschritt {
   gesamt: number;
@@ -310,6 +334,8 @@ export interface Fortschritt {
    * takrorlanadigan so'z yo'q" deb bosilmay qoladi.
    */
   faelligeWoerter: number;
+  /** Kunlik maqsad (S2). Eski server javobida yo'q — karta chizilmaydi. */
+  maqsad?: Maqsad;
 }
 
 /** Reyting jadvalidagi bitta qator. */

@@ -20,7 +20,10 @@ import type {
   LernenLesson,
   LernenLevel,
   LernenUnit,
+  Maqsad,
+  MaqsadDarajasi,
   MaterialTyp,
+  NishonQatori,
   PruefErgebnis,
   PublicFrage,
   ReytingZeile,
@@ -244,6 +247,8 @@ export function useAbschluss() {
       // tugagach ular eski qiymatni ko'rsatib qolardi.
       void qc.invalidateQueries({ queryKey: ["lernen", "fortschritt"] });
       void qc.invalidateQueries({ queryKey: ["lernen", "reyting"] });
+      // Seans oxirida yangi nishon berilgan bo'lishi mumkin.
+      void qc.invalidateQueries({ queryKey: ["lernen", "nishonlar"] });
       // Takrorlash so'rovi `staleTime: Infinity` bilan abadiy keshda
       // turadi (Fix 3) — bu invalidatsiya bo'lmasa, oddiy DARS seansi
       // ham muddati kelgan so'zlarni "yeb qo'yadi" (Leitner holatini
@@ -269,6 +274,7 @@ export function useWiederholungAbschluss() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["lernen", "fortschritt"] });
       void qc.invalidateQueries({ queryKey: ["lernen", "reyting"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "nishonlar"] });
     },
   });
 }
@@ -286,6 +292,31 @@ export function useReyting(scope: "gruppe" | "zentrum") {
   return useQuery<ReytingZeile[]>({
     queryKey: ["lernen", "reyting", scope],
     queryFn: () => api.get(`${BASE}/reyting`, { params: { scope } }).then((r) => r.data),
+  });
+}
+
+/**
+ * Kunlik maqsad darajasini saqlaydi. Javob — yangi maqsad bugungi ball bilan;
+ * u yo'l tepasidagi keshga darrov yoziladi (halqa qayta so'rovsiz o'zgaradi).
+ */
+export function useMaqsadOzgartir() {
+  const qc = useQueryClient();
+  return useMutation<Maqsad, unknown, MaqsadDarajasi>({
+    mutationFn: (daraja) =>
+      api.patch(`${BASE}/maqsad`, { daraja }).then((r) => r.data),
+    onSuccess: (maqsad) => {
+      qc.setQueryData<Fortschritt>(["lernen", "fortschritt"], (old) =>
+        old ? { ...old, maqsad } : old,
+      );
+    },
+  });
+}
+
+/** «Darajam» tabidagi nishonlar — faqat shu bo'lim ko'ringanda so'raladi. */
+export function useNishonlar() {
+  return useQuery<NishonQatori[]>({
+    queryKey: ["lernen", "nishonlar"],
+    queryFn: () => api.get(`${BASE}/nishonlar`).then((r) => r.data),
   });
 }
 
