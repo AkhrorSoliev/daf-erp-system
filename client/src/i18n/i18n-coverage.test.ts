@@ -291,6 +291,21 @@ export const STRICT_FILES: string[] = [
   "components/payments/expenses/expense-source-field.tsx",
   "components/payments/expenses/expenses-labels.ts",
   "components/payments/expenses/expenses-format.ts",
+  "components/payments/debt/debt-page.tsx",
+  "components/payments/debt/debt-format.ts",
+  "components/payments/debt/debt-drawer.tsx",
+  "components/payments/debt/debt-table.tsx",
+  "components/payments/debt/debt-filter-bar.tsx",
+  "components/payments/debt/debt-status-filter-bar.tsx",
+  "components/payments/debt/debt-subpage.tsx",
+  "components/payments/debt/monthly-debt-view.tsx",
+  "components/payments/debt/write-offs-view.tsx",
+  "components/payments/debt/center-topup-view.tsx",
+  "components/payments/debt/center-topup-content.tsx",
+  "components/payments/debt-write-offs-client.tsx",
+  "components/payments/debt-write-off-actions.ts",
+  "app/(dashboard)/payments/debt-history/page.tsx",
+  "app/(dashboard)/payments/debt-write-offs/page.tsx",
 ];
 
 function walk(dir: string): string[] {

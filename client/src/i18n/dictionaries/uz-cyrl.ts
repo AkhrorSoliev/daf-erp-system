@@ -12,6 +12,8 @@ const uzCyrl: Dictionary = {
   "JAMI": "ЖАМИ",
   // Key names stay as printed on the keyboard.
   "Esc — bekor, Ctrl+Enter — saqlash": "Esc — бекор, Ctrl+Enter — сақлаш",
+  // The names are sorted in Latin order: the letters stay Latin.
+  "Ism (A–Z)": "Исм (A–Z)",
   // Month names: Cyrillic Uzbek writes «я» here, which the rules cannot know.
   "Sentabr": "Сентябр",
   "Oktabr": "Октябр",

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowRight, Clock, Download, MousePointerClick } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
+import { useLocale, useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { LogCallDialog, type LogCallPrefill } from "@/components/outreach/log-call-dialog";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -19,6 +21,7 @@ import { DebtFilterBar } from "./debt-filter-bar";
 import { dayMonth, KIND_LABEL, sumLine, TAB_LABEL, tabRule, tabSubline } from "./debt-format";
 import { useDebtList } from "./debt-queries";
 import { DebtTable } from "./debt-table";
+import { keepsMonthCapital } from "../expenses/expenses-format";
 import { activeTab, cleanDebtFilters, DEBT_LIST_SCHEMA, debtListParams, hasDebtFilter, lastPageIfPast, type DebtFilters } from "./debt-url";
 import { DEBT_TABS, type DebtKind, type DebtListResponse, type DebtTab, type PayTarget } from "./debt-types";
 
@@ -31,6 +34,8 @@ const KINDS: ("" | DebtKind)[] = ["", "ungrouped", "frozen", "left"];
  * are the same split's rows.
  */
 export function DebtPage() {
+  const t = useT();
+  const { locale } = useLocale();
   const { filters: raw, setFilters } = useUrlFilters(DEBT_LIST_SCHEMA);
   // A value the server would refuse (an old bookmark) is read as its default.
   const filters = cleanDebtFilters(raw as DebtFilters);
@@ -49,6 +54,9 @@ export function DebtPage() {
   // A kept empty answer is not the new one: skeleton, not «qarzdor yo'q», until it lands.
   const tableLoading = isPending || lastPage !== null || (isPlaceholderData && !data?.data.length);
 
+  // The link sits inside the sentence: the translated sentence is split at its marker.
+  const frozenLine = t("Muzlatilganlarning markazda turgan puli — {page} sahifasida.", { page: "\u0000" }).split("\u0000");
+
   const exportExcel = async () => {
     // The list's own query; the server ignores page and pageSize for the Excel.
     const qs = new URLSearchParams(
@@ -57,38 +65,39 @@ export function DebtPage() {
     try {
       await downloadAuthedFile(`/payments/debt/excel?${qs}`, `qarzdorlik-${tab}-${today}.xlsx`);
     } catch (e) {
-      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+      toast.error(getErrorMessage(e, t("Excel yuklab olishda xatolik")));
     }
   };
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="flex-1 font-heading text-lg font-semibold tracking-tight">Qarzdorlik</h1>
+        <h1 className="flex-1 font-heading text-lg font-semibold tracking-tight">{t("Qarzdorlik")}</h1>
         <span className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm text-muted-foreground">
-          <Clock className="size-3.5" />Bugungi holat · {dayMonth(today)}
+          <Clock className="size-3.5" />{t("Bugungi holat · {date}", { date: dayMonth(today) })}
         </span>
         <Button variant="outline" onClick={exportExcel}><Download className="mr-2 size-4" />Excel</Button>
       </div>
 
-      <TabButtons tabs={data?.tabs} active={tab} monthKey={monthKey}
-        onSelect={(t) => setFilters({ tab: t, page: 1, kind: "", groupIds: [], teacherIds: [] })} />
+      <TabButtons tabs={data?.tabs} active={tab} monthKey={monthKey} lowerMonth={!keepsMonthCapital(locale)}
+        onSelect={(next) => setFilters({ tab: next, page: 1, kind: "", groupIds: [], teacherIds: [] })} />
 
       {tab === "shu-oy" && data && data.leftThisMonth > 0 && (
         <p className="text-sm text-muted-foreground">
-          Shu oy guruhdan chiqqanlarning shu oy qarzi — {formatBalance(data.leftThisMonth)} — «O&apos;qimayotganlar» bo&apos;limida.
+          {t("Shu oy guruhdan chiqqanlarning shu oy qarzi — {amount} — «O'qimayotganlar» bo'limida.", { amount: formatBalance(data.leftThisMonth, t("so'm")) })}
         </p>
       )}
-      <p className="text-sm text-muted-foreground">{tabRule(tab, monthKey)}</p>
+      <p className="text-sm text-muted-foreground">{tabRule(tab, monthKey, t)}</p>
 
       {tab === "chiqqan" && (
-        <div role="group" aria-label="Holat" className="flex w-max max-w-full flex-wrap gap-1 rounded-lg bg-muted p-1">
+        <div role="group" aria-label={t("Holat")} className="flex w-max max-w-full flex-wrap gap-1 rounded-lg bg-muted p-1">
           {KINDS.map((k) => {
             const count = k ? data?.tabs.chiqqan.byKind[k].count : data?.tabs.chiqqan.count;
+            const label = k ? KIND_LABEL[k] : msg("Hammasi");
             return (
               <button key={k || "all"} type="button" aria-pressed={filters.kind === k} onClick={() => setFilters({ kind: k, page: 1 })}
                 className={cn("rounded-md px-3 py-1 text-sm font-medium text-muted-foreground", filters.kind === k && "bg-background text-foreground shadow-sm")}>
-                {k ? KIND_LABEL[k] : "Hammasi"} · {count === undefined ? "—" : formatNumber(count)}
+                {t(label)} · {count === undefined ? "—" : formatNumber(count)}
               </button>
             );
           })}
@@ -96,19 +105,19 @@ export function DebtPage() {
       )}
 
       <DebtFilterBar filters={filters} setFilters={setFilters} options={data?.options} />
-      {data && !isPlaceholderData && <p className="text-sm text-muted-foreground">{sumLine(hasDebtFilter(filters), data.total, data.sum, data.tabs[tab])}</p>}
+      {data && !isPlaceholderData && <p className="text-sm text-muted-foreground">{sumLine(hasDebtFilter(filters), data.total, data.sum, data.tabs[tab], t)}</p>}
       {/* Nothing else on the row says it opens: until this line, admins found the drawer by accident. */}
       {data && data.total > 0 && (
         <p className="flex items-center gap-2 rounded-md bg-primary/5 px-3 py-2 text-sm text-primary">
           <MousePointerClick className="size-4 shrink-0" />
-          O&apos;quvchi ustiga bosing — qarz tafsiloti, aloqa va va&apos;da o&apos;ng tomonda ochiladi
+          {t("O'quvchi ustiga bosing — qarz tafsiloti, aloqa va va'da o'ng tomonda ochiladi")}
         </p>
       )}
 
       {isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          <p>Qarzdorlar ro&apos;yxatini yuklab bo&apos;lmadi.</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>Qayta urinish</Button>
+          <p>{t("Qarzdorlar ro'yxatini yuklab bo'lmadi.")}</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>{t("Qayta urinish")}</Button>
         </div>
       ) : (
         // The previous page stays dimmed and inert until the next one answers.
@@ -125,21 +134,21 @@ export function DebtPage() {
 
       <div className="space-y-1.5 pt-2">
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium">
-          <FooterLink href="/payments/debt-history">Oylar bo&apos;yicha qarz tarixi</FooterLink>
-          <FooterLink href="/payments/debt-write-offs">Kechirilgan qarzlar arxivi{data ? ` · ${formatNumber(data.writeOffCount)} ta` : ""}</FooterLink>
+          <FooterLink href="/payments/debt-history">{t("Oylar bo'yicha qarz tarixi")}</FooterLink>
+          <FooterLink href="/payments/debt-write-offs">{t("Kechirilgan qarzlar arxivi")}{data ? ` · ${t("{n} ta", { n: formatNumber(data.writeOffCount) })}` : ""}</FooterLink>
         </div>
-        <p className="text-xs text-muted-foreground">Markaz qoplagani — Ish haqi sahifasida.</p>
+        <p className="text-xs text-muted-foreground">{t("Markaz qoplagani — Ish haqi sahifasida.")}</p>
         {/* Spec B2b §3.8: the frozen balances live on «Qaytariladigan pul» now. */}
         <p className="text-xs text-muted-foreground">
-          Muzlatilganlarning markazda turgan puli —{" "}
-          <Link href="/payments/refunds?tab=muzlatilgan" className="text-primary hover:underline">«Qaytariladigan pul»</Link> sahifasida.
+          {frozenLine[0]}
+          <Link href="/payments/refunds?tab=muzlatilgan" className="text-primary hover:underline">«{t("Qaytariladigan pul")}»</Link>{frozenLine[1]}
         </p>
       </div>
 
       <RecordPaymentDialog open={payTarget !== null} onOpenChange={(open) => !open && setPayTarget(null)}
         preSelectedStudent={payTarget} suggestedAmount={payTarget?.suggested} />
       <DebtDrawer studentId={drawerId} onClose={() => setDrawerId(null)}
-        onPay={(t) => { setDrawerId(null); setPayTarget(t); }}
+        onPay={(target) => { setDrawerId(null); setPayTarget(target); }}
         onLogCall={(p) => { setDrawerId(null); setCallTarget(p); }} />
       <LogCallDialog open={callTarget !== null} onOpenChange={(open) => !open && setCallTarget(null)} prefill={callTarget} />
     </div>
@@ -150,21 +159,23 @@ const FooterLink = ({ href, children }: { href: string; children: ReactNode }) =
   <Link href={href} className="inline-flex items-center gap-1 text-primary hover:underline">{children}<ArrowRight className="size-3.5" /></Link>
 );
 
-function TabButtons({ tabs, active, monthKey, onSelect }: {
-  tabs: DebtListResponse["tabs"] | undefined; active: DebtTab; monthKey: string; onSelect: (t: DebtTab) => void;
+function TabButtons({ tabs, active, monthKey, lowerMonth, onSelect }: {
+  tabs: DebtListResponse["tabs"] | undefined; active: DebtTab; monthKey: string; lowerMonth: boolean; onSelect: (tab: DebtTab) => void;
 }) {
+  const t = useT();
   return (
-    <div role="tablist" aria-label="Qarz turi" className="grid gap-3 md:grid-cols-3">
-      {DEBT_TABS.map((t) => {
-        const total = tabs?.[t];
+    <div role="tablist" aria-label={t("Qarz turi")} className="grid gap-3 md:grid-cols-3">
+      {DEBT_TABS.map((key) => {
+        const total = tabs?.[key];
+        const label = TAB_LABEL[key];
         return (
-          <button key={t} type="button" role="tab" aria-selected={t === active} onClick={() => onSelect(t)}
-            className={cn("flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left", t === "chiqqan" && "bg-muted/50", t === active && "border-primary ring-1 ring-primary")}>
+          <button key={key} type="button" role="tab" aria-selected={key === active} onClick={() => onSelect(key)}
+            className={cn("flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left", key === "chiqqan" && "bg-muted/50", key === active && "border-primary ring-1 ring-primary")}>
             <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <span className={cn("size-2 rounded-full", TAB_DOT[t])} />{TAB_LABEL[t]}
+              <span className={cn("size-2 rounded-full", TAB_DOT[key])} />{t(label)}
             </span>
-            <span className={cn("text-xl font-bold tabular-nums", t !== "chiqqan" && "text-red-600 dark:text-red-400")}>{total ? formatBalance(total.total) : "—"}</span>
-            {total && <span className="text-xs text-muted-foreground">{tabSubline(t, total.count, monthKey)}</span>}
+            <span className={cn("text-xl font-bold tabular-nums", key !== "chiqqan" && "text-red-600 dark:text-red-400")}>{total ? formatBalance(total.total, t("so'm")) : "—"}</span>
+            {total && <span className="text-xs text-muted-foreground">{tabSubline(key, total.count, monthKey, t, lowerMonth)}</span>}
           </button>
         );
       })}

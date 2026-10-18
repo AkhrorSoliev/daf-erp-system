@@ -32,11 +32,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { DebtMonthsBadge } from "./debt-months-badge";
 import { monthLabel, monthShort } from "../salary-utils";
+import type { Translate } from "../record-payment-admission";
 import { SummaryCard } from "../summary-card";
 import {
   MultiSelectCombobox,
@@ -44,11 +47,11 @@ import {
 } from "@/components/ui/multi-select-combobox";
 
 const STUDENT_STATUS_OPTIONS: MultiSelectOption[] = [
-  { value: "ACTIVE", label: "Faol" },
-  { value: "FROZEN", label: "Muzlatilgan" },
-  { value: "EXPELLED", label: "Chetlatilgan" },
-  { value: "GRADUATED", label: "Bitirgan" },
-  { value: "ARCHIVED", label: "Arxivlangan" },
+  { value: "ACTIVE", label: msg("Faol") },
+  { value: "FROZEN", label: msg("Muzlatilgan") },
+  { value: "EXPELLED", label: msg("Chetlatilgan") },
+  { value: "GRADUATED", label: msg("Bitirgan") },
+  { value: "ARCHIVED", label: msg("Arxivlangan") },
 ];
 
 export interface TopUpRow {
@@ -107,11 +110,11 @@ export interface TopUpResponse {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: "Faol",
-  FROZEN: "Muzlatilgan",
-  EXPELLED: "Chetlatilgan",
-  GRADUATED: "Bitirgan",
-  ARCHIVED: "Arxivlangan",
+  ACTIVE: msg("Faol"),
+  FROZEN: msg("Muzlatilgan"),
+  EXPELLED: msg("Chetlatilgan"),
+  GRADUATED: msg("Bitirgan"),
+  ARCHIVED: msg("Arxivlangan"),
 };
 
 const PAGE_SIZES = [10, 20, 30, 40, 50];
@@ -144,11 +147,12 @@ const hasDebt = (r: TopUpRow) => r.centerUnrecovered > 0;
 function chipLabel(
   monthKey: string,
   months: TopUpRow["months"],
+  t: Translate,
 ): string {
   const years = new Set(months.map((m) => m.monthKey.slice(0, 4)));
   return years.size > 1
-    ? `${monthShort(monthKey)} ’${monthKey.slice(2, 4)}`
-    : monthShort(monthKey);
+    ? `${monthShort(monthKey, t)} ’${monthKey.slice(2, 4)}`
+    : monthShort(monthKey, t);
 }
 
 interface Props {
@@ -172,6 +176,7 @@ export const ALL_MONTHS = "all";
  * the parent.
  */
 export function CenterTopUpContent({ month }: Props) {
+  const t = useT();
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -236,13 +241,13 @@ export function CenterTopUpContent({ month }: Props) {
   const shown = useMemo(
     () =>
       rows.reduce(
-        (t, r) => ({
-          centerPaid: t.centerPaid + r.centerPaid,
-          centerUnrecovered: t.centerUnrecovered + r.centerUnrecovered,
-          studentDebt: t.studentDebt + r.studentDebt,
-          lessons: t.lessons + r.lessons,
-          students: t.students + 1,
-          inactive: t.inactive + (r.student.status === "ACTIVE" ? 0 : 1),
+        (sum, r) => ({
+          centerPaid: sum.centerPaid + r.centerPaid,
+          centerUnrecovered: sum.centerUnrecovered + r.centerUnrecovered,
+          studentDebt: sum.studentDebt + r.studentDebt,
+          lessons: sum.lessons + r.lessons,
+          students: sum.students + 1,
+          inactive: sum.inactive + (r.student.status === "ACTIVE" ? 0 : 1),
         }),
         {
           centerPaid: 0,
@@ -275,7 +280,7 @@ export function CenterTopUpContent({ month }: Props) {
   if (isError && !data) {
     return (
       <div className="py-10 text-center text-sm text-muted-foreground">
-        Ma&apos;lumotni yuklab bo&apos;lmadi.
+        {t("Ma'lumotni yuklab bo'lmadi")}
       </div>
     );
   }
@@ -284,8 +289,8 @@ export function CenterTopUpContent({ month }: Props) {
     return (
       <div className="py-10 text-center text-sm text-muted-foreground">
         {allMonths
-          ? "Markaz qoplagan, hali qaytmagan dars yo'q — hammasi undirilgan."
-          : `${monthLabel(month)}da markaz qoplagan dars yo'q — bu oyda hali dars o'tilmagan yoki hamma o'quvchi to'lagan.`}
+          ? t("Markaz qoplagan, hali qaytmagan dars yo'q — hammasi undirilgan.")
+          : t("{month}da markaz qoplagan dars yo'q — bu oyda hali dars o'tilmagan yoki hamma o'quvchi to'lagan.", { month: monthLabel(month, t) })}
       </div>
     );
   }
@@ -301,40 +306,40 @@ export function CenterTopUpContent({ month }: Props) {
         <SummaryCard
           tone="amber"
           icon={<HandCoins className="size-5 text-amber-700 dark:text-amber-300" />}
-          label={isForecast ? "Markaz to'laydi" : "Markaz to'lagan"}
-          value={`${formatPrice(shown.centerPaid)} so'm`}
+          label={isForecast ? t("Markaz to'laydi") : t("Markaz to'lagan")}
+          value={`${formatPrice(shown.centerPaid)} ${t("so'm")}`}
           hint={
             isForecast
-              ? "Oy yopilganda ustozlarga chiqadi — hali chiqmagan"
-              : "Kassadan ustozlarga chiqqan pul"
+              ? t("Oy yopilganda ustozlarga chiqadi — hali chiqmagan")
+              : t("Kassadan ustozlarga chiqqan pul")
           }
         />
         <SummaryCard
           tone="red"
           icon={<Wallet className="size-5 text-red-700 dark:text-red-300" />}
-          label={isForecast ? "Qoplanishi kerak" : "Hali qaytmagan"}
-          value={`${formatPrice(shown.centerUnrecovered)} so'm`}
+          label={isForecast ? t("Qoplanishi kerak") : t("Hali qaytmagan")}
+          value={`${formatPrice(shown.centerUnrecovered)} ${t("so'm")}`}
           hint={
             isForecast
-              ? "Oy yopilguncha undirilsa, markaz to'lamaydi"
-              : "Chiqqan puldan hali undirilmagani"
+              ? t("Oy yopilguncha undirilsa, markaz to'lamaydi")
+              : t("Chiqqan puldan hali undirilmagani")
           }
         />
         <SummaryCard
           tone="slate"
           icon={<Users className="size-5 text-slate-700 dark:text-slate-300" />}
-          label="O'quvchilar"
-          value={`${shown.students} ta`}
-          hint={`${shown.lessons} ta dars ${isForecast ? "qoplanadi" : "qoplangan"}`}
+          label={t("O'quvchilar")}
+          value={t("{n} ta", { n: shown.students })}
+          hint={isForecast ? t("{n} ta dars qoplanadi", { n: shown.lessons }) : t("{n} ta dars qoplangan", { n: shown.lessons })}
         />
         <SummaryCard
           tone="violet"
           icon={
             <UserMinus className="size-5 text-violet-700 dark:text-violet-300" />
           }
-          label="Faol emas"
-          value={`${shown.inactive} ta`}
-          hint="Darsga kelmaydi — pul o'zi qaytmaydi"
+          label={t("Faol emas")}
+          value={t("{n} ta", { n: shown.inactive })}
+          hint={t("Darsga kelmaydi — pul o'zi qaytmaydi")}
         />
       </div>
 
@@ -342,28 +347,20 @@ export function CenterTopUpContent({ month }: Props) {
         <div className="mb-4 flex items-start gap-2 rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
           <Info className="mt-0.5 size-4 shrink-0" />
           <span>
-            <b>{monthLabel(month)} oyligi hali yopilmagan.</b> Darslar
-            o&apos;tilgan, lekin markaz ustozlarga hali to&apos;lagani yo&apos;q
-            — bu pul oy yopilganda chiqadi. Ya&apos;ni hozir undirilsa, markaz
-            umuman to&apos;lamaydi.
+            <b>{t("{month} oyligi hali yopilmagan.", { month: monthLabel(month, t) })}</b>{" "}
+            {t("Darslar o'tilgan, lekin markaz ustozlarga hali to'lagani yo'q — bu pul oy yopilganda chiqadi. Ya'ni hozir undirilsa, markaz umuman to'lamaydi.")}
           </span>
         </div>
       )}
 
       <p className="mb-4 text-xs text-muted-foreground">
-        {allMonths ? "Butun davr" : monthLabel(month)}
-        {isFiltered && " · filtrlangan"} · &laquo;Markaz hali
-        olmagan&raquo; — jami qarzning markaz ustozlarga chiqarib bo&apos;lgan
-        qismi. &laquo;Jami qarzi&raquo; esa o&apos;quvchining profilidagi to&apos;liq
-        qarzi: unga markaz qoplamagan oldingi oylar ham kiradi, qaysilari
-        ekani &laquo;⧉&raquo; nishonida.
+        {allMonths ? t("Butun davr") : monthLabel(month, t)}
+        {isFiltered && ` · ${t("filtrlangan")}`} ·{" "}
+        {t("«Markaz hali olmagan» — jami qarzning markaz ustozlarga chiqarib bo'lgan qismi. «Jami qarzi» esa o'quvchining profilidagi to'liq qarzi: unga markaz qoplamagan oldingi oylar ham kiradi, qaysilari ekani «⧉» nishonida.")}
         {!isFiltered && data.totals.repaidStudentCount > 0 && (
           <>
             {" "}
-            Oylik sahifasidagi kartada {formatPrice(data.totals.centerPaid)}{" "}
-            turibdi — farqi puli to&apos;liq qaytgan{" "}
-            {data.totals.repaidStudentCount} o&apos;quvchi, ular bu
-            ro&apos;yxatda ko&apos;rinmaydi.
+            {t("Oylik sahifasidagi kartada {amount} turibdi — farqi puli to'liq qaytgan {n} o'quvchi, ular bu ro'yxatda ko'rinmaydi.", { amount: formatPrice(data.totals.centerPaid), n: data.totals.repaidStudentCount })}
           </>
         )}
       </p>
@@ -372,9 +369,7 @@ export function CenterTopUpContent({ month }: Props) {
         <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <span>
-            {shown.inactive} ta o&apos;quvchi faol emas (muzlatilgan /
-            chetlatilgan / arxiv). Ular darsga kelmaydi, ya&apos;ni bu pul
-            o&apos;z-o&apos;zidan qaytmaydi — ular bilan bog&apos;lanish kerak.
+            {t("{n} ta o'quvchi faol emas (muzlatilgan / chetlatilgan / arxiv). Ular darsga kelmaydi, ya'ni bu pul o'z-o'zidan qaytmaydi — ular bilan bog'lanish kerak.", { n: shown.inactive })}
           </span>
         </div>
       )}
@@ -385,18 +380,18 @@ export function CenterTopUpContent({ month }: Props) {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Ism, telefon yoki ID bo'yicha qidirish…"
+            placeholder={t("Ism, telefon yoki ID bo'yicha qidirish…")}
             spellCheck={false}
-            aria-label="Ro'yxat ichidan qidirish"
+            aria-label={t("Ro'yxat ichidan qidirish")}
             className="pl-8"
           />
         </div>
         <MultiSelectCombobox
-          options={STUDENT_STATUS_OPTIONS}
+          options={STUDENT_STATUS_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))}
           selected={statusFilter}
           onChange={setStatusFilter}
-          placeholder="Barcha holatlar"
-          searchPlaceholder="Holat qidirish..."
+          placeholder={t("Barcha holatlar")}
+          searchPlaceholder={t("Holat qidirish...")}
           className="w-auto min-w-[160px]"
         />
       </div>
@@ -406,17 +401,17 @@ export function CenterTopUpContent({ month }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>O&apos;quvchi</TableHead>
-              <TableHead>Guruh</TableHead>
+              <TableHead>{t("O'quvchi")}</TableHead>
+              <TableHead>{t("Guruh")}</TableHead>
               {/* NOT "which months is the debt from" — that is a different set
                   and a bigger one. Production August 2026: the center fronted
                   only July, while these students' debt runs from May
                   (one student's 600 000 dates to 2026-05). Naming this column
                   after the debt would have it answer a question it cannot. */}
               <TableHead>
-                {isForecast ? "Qoplanadigan oylar" : "Markaz qoplagan oylar"}
+                {isForecast ? t("Qoplanadigan oylar") : t("Markaz qoplagan oylar")}
               </TableHead>
-              <TableHead className="text-right">Darslar</TableHead>
+              <TableHead className="text-right">{t("Darslar soni")}</TableHead>
               {/* ONE money column per row, deliberately. The centre's spend
                   used to sit beside it and read as a second thing to collect:
                   one student showed "markaz 16 667" next to "qarzi 500" and the
@@ -428,7 +423,7 @@ export function CenterTopUpContent({ month }: Props) {
                   summary card above, where it is a company total, not an
                   instruction. */}
               <TableHead className="border-l text-right">
-                {isForecast ? "Markaz to'laydi" : "Markaz hali olmagan"}
+                {isForecast ? t("Markaz to'laydi") : t("Markaz hali olmagan")}
               </TableHead>
               {/* The whole the column before it is a part of. An admin on the
                   phone asks for the DEBT, not for the centre's share of it, and
@@ -437,7 +432,7 @@ export function CenterTopUpContent({ month }: Props) {
                   The badge opens the month-by-month split, because a single
                   figure spanning four months reads as one month's arrears. */}
               <TableHead className="border-l text-right">
-                Jami qarzi
+                {t("Jami qarzi")}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -449,12 +444,14 @@ export function CenterTopUpContent({ month }: Props) {
                   className="py-8 text-center text-sm text-muted-foreground"
                 >
                   {search.trim()
-                    ? `«${search.trim()}» bo'yicha hech kim topilmadi.`
-                    : "Bu holatda o'quvchi yo'q — filtrni o'zgartirib ko'ring."}
+                    ? t("«{query}» bo'yicha hech kim topilmadi.", { query: search.trim() })
+                    : t("Bu holatda o'quvchi yo'q — filtrni o'zgartirib ko'ring.")}
                 </TableCell>
               </TableRow>
             ) : (
-              pageRows.map((r, i) => (
+              pageRows.map((r, i) => {
+                const statusLabel = STATUS_LABELS[r.student.status];
+                return (
                 <TableRow key={r.student.id}>
                   <TableCell className="border-r text-muted-foreground">
                     {(page - 1) * pageSize + i + 1}
@@ -476,7 +473,7 @@ export function CenterTopUpContent({ month }: Props) {
                           variant="outline"
                           className="px-1 py-0 text-[10px] font-normal"
                         >
-                          {STATUS_LABELS[r.student.status] ?? r.student.status}
+                          {statusLabel ? t(statusLabel) : r.student.status}
                         </Badge>
                       )}
                     </div>
@@ -494,9 +491,9 @@ export function CenterTopUpContent({ month }: Props) {
                           key={m.monthKey}
                           variant="secondary"
                           className="px-1.5 py-0 text-[11px] font-normal"
-                          title={`${monthLabel(m.monthKey)}: ${m.lessons} dars`}
+                          title={t("{month}: {n} dars", { month: monthLabel(m.monthKey, t), n: m.lessons })}
                         >
-                          {chipLabel(m.monthKey, r.months)}
+                          {chipLabel(m.monthKey, r.months, t)}
                           <span className="ml-1 opacity-60">{m.lessons}</span>
                         </Badge>
                       ))}
@@ -524,14 +521,15 @@ export function CenterTopUpContent({ month }: Props) {
                     </span>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
           {rows.length > 0 && (
             <TableFooter>
               <TableRow>
                 <TableCell className="border-r" />
-                <TableCell className="font-semibold">Jami</TableCell>
+                <TableCell className="font-semibold">{t("Jami")}</TableCell>
                 <TableCell />
                 <TableCell />
                 <TableCell className="text-right font-semibold tabular-nums">
@@ -552,7 +550,7 @@ export function CenterTopUpContent({ month }: Props) {
       {rows.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Sahifada:</span>
+            <span className="text-muted-foreground">{t("Sahifada:")}</span>
             <Select
               value={String(pageSize)}
               onValueChange={(v) => {
@@ -571,7 +569,7 @@ export function CenterTopUpContent({ month }: Props) {
                 ))}
               </SelectContent>
             </Select>
-            <span className="text-muted-foreground">Jami {rows.length} ta</span>
+            <span className="text-muted-foreground">{t("Jami {n} ta", { n: rows.length })}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -583,7 +581,7 @@ export function CenterTopUpContent({ month }: Props) {
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
-              Oldingi
+              {t("Oldingi")}
             </button>
             <span className="text-muted-foreground">
               {page} / {totalPages}
@@ -597,7 +595,7 @@ export function CenterTopUpContent({ month }: Props) {
               disabled={page >= totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             >
-              Keyingi
+              {t("Keyingi")}
             </button>
           </div>
         </div>
