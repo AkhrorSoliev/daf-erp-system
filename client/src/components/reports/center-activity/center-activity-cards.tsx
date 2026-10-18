@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
 import { formatNumber } from "@/lib/format-utils";
 import { mlnText, pctText } from "./center-activity-format";
 import type { CenterOverview } from "./center-activity-types";
@@ -28,26 +29,30 @@ export function CenterActivityCardsSkeleton() {
 
 /** The three cards (spec B7b §4). Every number is the server's. */
 export function CenterActivityCards({ cards }: { cards: CenterOverview["cards"] }) {
-  const window = cards.workWindow ? ` · ish vaqti ${cards.workWindow.start}–${cards.workWindow.end}, du–sha` : "";
+  const t = useT();
+  const hours = t("haftasiga {n} soat dars", { n: formatNumber(cards.lessonHoursPerWeek) });
+  const workWindow = cards.workWindow
+    ? ` · ${t("ish vaqti {start}–{end}, du–sha", { start: cards.workWindow.start, end: cards.workWindow.end })}`
+    : "";
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <Stat
-        title="Xonalar bandligi"
+        title={t("Xonalar bandligi")}
         value={pctText(cards.occupancyPct)}
-        sub={`haftasiga ${formatNumber(cards.lessonHoursPerWeek)} soat dars${window}`}
+        sub={`${hours}${workWindow}`}
       />
       <Stat
-        title="Guruhlar to'lganligi"
+        title={t("Guruhlar to'lganligi")}
         value={pctText(cards.seats.pct)}
-        sub={`${formatNumber(cards.seats.enrolled)} o'quvchi · ${formatNumber(cards.seats.capacity)} o'rin`}
+        sub={`${t("{n} o'quvchi", { n: formatNumber(cards.seats.enrolled) })} · ${t("{n} o'rin", { n: formatNumber(cards.seats.capacity) })}`}
       />
       <Stat
-        title="Bo'sh o'rinlar"
-        value={`${formatNumber(cards.free.seats)} ta`}
+        title={t("Bo'sh o'rinlar")}
+        value={t("{n} ta", { n: formatNumber(cards.free.seats) })}
         sub={
           cards.free.revenue > 0
-            ? `mavjud guruhlarda · to'lsa, oyiga taxminan ${mlnText(cards.free.revenue)} qo'shimcha`
-            : "mavjud guruhlarda"
+            ? t("mavjud guruhlarda · to'lsa, oyiga taxminan {amount} qo'shimcha", { amount: mlnText(cards.free.revenue, t) })
+            : t("mavjud guruhlarda")
         }
       />
     </div>

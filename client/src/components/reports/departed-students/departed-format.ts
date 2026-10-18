@@ -51,6 +51,12 @@ export function formatDay(iso: string): string {
   return `${dd}.${mm}.${t.getUTCFullYear()}`;
 }
 
+/** «2026-09» → «sentabrda» (the bot report's card title); an unreadable key comes back as it is. */
+export const monthLocative = (key: string, t: Translate = interpolate): string => {
+  const name = LOCATIVE[Number(key.slice(5, 7)) - 1];
+  return name ? t(name) : key;
+};
+
 /** What the chosen period is called: its month («sentabrda») only when it is that whole month (1st to last day), else «shu davrda». */
 export function rangeLabel(range: { startDate: string; endDate: string }, t: Translate = interpolate): string {
   if (range.startDate.slice(0, 7) !== range.endDate.slice(0, 7)) return t("shu davrda");

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MonthStepper } from "@/components/shared/month-stepper";
 import { currentMonthKey } from "@/components/payments/salary-utils";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import { BotReportCards, BotReportCardsSkeleton } from "./bot-report-cards";
 import { useBotSummary } from "./bot-report-queries";
 import { BotReportTable } from "./bot-report-table";
@@ -13,6 +14,7 @@ import { BOT_FIRST_MONTH, BOT_SCHEMA, listParams, pageMonth, type BotFilters } f
 
 /** «Bot hisoboti» (spec B7d §5). Every figure is the server's; the page only formats. */
 export function BotReportClient() {
+  const t = useT();
   const { filters: raw, setFilters } = useUrlFilters(BOT_SCHEMA);
   const filters = raw as BotFilters;
   const current = currentMonthKey();
@@ -37,10 +39,9 @@ export function BotReportClient() {
           <CardContent className="flex items-start gap-2 p-4 text-sm">
             <Send className="mt-0.5 size-4 shrink-0 text-amber-600" />
             <div>
-              <p className="font-medium">Kanal a&apos;zoligi tekshiruvi hozircha o&apos;chiq</p>
+              <p className="font-medium">{t("Kanal a'zoligi tekshiruvi hozircha o'chiq")}</p>
               <p className="mt-0.5 text-muted-foreground">
-                Bot foydalanuvchilardan kanalga a&apos;zo bo&apos;lishni so&apos;ramayapti, shuning uchun
-                quyidagi raqamlar to&apos;planmaydi.
+                {t("Bot foydalanuvchilardan kanalga a'zo bo'lishni so'ramayapti, shuning uchun quyidagi raqamlar to'planmaydi.")}
               </p>
             </div>
           </CardContent>
@@ -50,9 +51,9 @@ export function BotReportClient() {
       {isError ? (
         <Card>
           <CardContent className="p-10 text-center text-sm text-muted-foreground">
-            <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+            <p>{t("Ma'lumotni yuklab bo'lmadi")}</p>
             <Button variant="outline" className="mt-3" onClick={() => void refetch()}>
-              Qayta urinish
+              {t("Qayta urinish")}
             </Button>
           </CardContent>
         </Card>

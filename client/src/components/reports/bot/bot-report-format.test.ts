@@ -19,7 +19,7 @@ describe("bot-report-format", () => {
   });
 
   it("names every state and gives each a tone", () => {
-    expect(STATE_LABEL).toEqual({ waiting: "Kutilmoqda", joined: "A'zo", left: "Chiqib ketgan" });
+    expect(STATE_LABEL).toEqual({ waiting: "Hali a'zo emas", joined: "A'zo", left: "Chiqib ketgan" });
     expect(stateTone("joined")).toBe("default");
     expect(stateTone("waiting")).toBe("secondary");
     expect(stateTone("left")).toBe("destructive");
