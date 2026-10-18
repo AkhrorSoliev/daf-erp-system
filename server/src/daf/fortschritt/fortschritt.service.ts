@@ -53,6 +53,16 @@ export interface SeansNatijasi {
 
 export type ReytingQamrovi = 'gruppe' | 'zentrum';
 
+/** `oquvchiRaqamlari` so'rovining bitta qatori. */
+interface OquvchiRaqamlari {
+  punkte: number;
+  hozir: number;
+  oldin: number;
+  gesamt: number;
+  tage: string[];
+  heuteAttempts: number;
+}
+
 /** Haftalik jadvaldan qaytadigan bitta qatorning umumlashgan shakli. */
 interface HaftalikYigindi {
   studentId: number;
@@ -66,11 +76,6 @@ const ZENTRUM_TOP_CHEGARA = 50;
 /** The week's lower bound for the `@db.Date` column. */
 function montagGte(jetzt: Date): Date {
   return utcMidnightFromDateStr(wochenStartTag(jetzt));
-}
-
-/** A `@db.Date` value is UTC midnight of its calendar day. */
-function tagStr(day: Date): string {
-  return day.toISOString().slice(0, 10);
 }
 
 function ballOl(satr: HaftalikYigindi): number {
@@ -95,7 +100,7 @@ function saralaBarqaror<T extends HaftalikYigindi>(royxat: T[]): T[] {
 
 /**
  * Markazning haftalik ro'yxati — SQL'dagi `t` CTE. Markaz jadvali
- * (`zentrumReytingi`) ham, o'rin (`zentrumOrni`: chip va seans oxiri) ham
+ * (`zentrumReytingi`) ham, o'rin (`oquvchiRaqamlari`: chip va seans oxiri) ham
  * SHU bo'lakdan o'qiydi, shuning uchun ular bir xil populyatsiya va bir xil
  * tartib bilan hisoblanadi.
  *
@@ -166,39 +171,40 @@ export class FortschrittService {
     // Hamma so'rov BIR bosqichda: 50 o'quvchi bir vaqtda kelganda har
     // ketma-ket bosqich ulanishlar navbatiga qaytadan turadi (S1 yuklama
     // sinovi). Guruh zanjiri faqat `groupId` ga bog'liq.
-    const [jamiy, serie, faelligeWoerter, zentrum, wochePlatzGruppe] =
-      await Promise.all([
-        this.prisma.dafStudentDay.aggregate({
-          where: { studentId },
-          _sum: { points: true },
-        }),
-        this.serieFuer(studentId, heute),
-        // `uebung.wiederholung()` bilan BIR XIL predikat (`dueAt <= hozir`)
-        // — bu shu o'quvchi uchun so'ragan `student`ga tegishli qatorlar
-        // ustida ishlaydi, deyarli bepul (`DafLexemeState` studentId bo'yicha
-        // indekslangan).
-        this.prisma.dafLexemeState.count({
-          where: { studentId, dueAt: { lte: hozir } },
-        } as any),
-        // Markaz o'rni `zentrumHaftaCte` orqali hisoblanadi — xuddi shu
-        // bo'lak `reyting('zentrum')` jadvalini quradi. Guruh uchun
-        // qilingan tuzatish (pastdagi izohga qarang) markazga tegishli emas
-        // edi: `zentrumReytingi` o'z qatorini FAQAT o'quvchi shu hafta
-        // urinish qilgan bo'lsa qo'shar edi, shuning uchun dushanba ertalab
-        // chip "1-o'rin" deb, Markaz jadvali esa "hech kim ball yig'magan"
-        // deb ikkitasi bir vaqtda ikki xil javob berardi.
-        this.zentrumOrni(studentId, companyId, wochenStartTag(hozir), 0),
-        // Guruh o'rni `gruppeHaftaligi` orqali hisoblanadi — xuddi shu
-        // funksiya `reyting('gruppe')` jadvalini quradi. Bitta joyda
-        // hisoblanmasa, ikki ekran bir xil savolga ikki xil javob berishi
-        // mumkin edi: bu haqiqiy xato bo'lib topilgan (mashq qilmagan a'zo
-        // o'z o'rnini past ko'rsatgan — "shu hafta mashq qilganlar"
-        // populyatsiyasi bilan hisoblangan eski versiya butun rosterni
-        // emas, faqat urinish qilganlarni ko'rgan).
-        this.gruppePlatz(studentId, companyId, montag),
-      ]);
+    const [faelligeWoerter, oz, wochePlatzGruppe] = await Promise.all([
+      // `uebung.wiederholung()` bilan BIR XIL predikat (`dueAt <= hozir`)
+      // — bu shu o'quvchi uchun so'ragan `student`ga tegishli qatorlar
+      // ustida ishlaydi, deyarli bepul (`DafLexemeState` studentId bo'yicha
+      // indekslangan).
+      this.prisma.dafLexemeState.count({
+        where: { studentId, dueAt: { lte: hozir } },
+      } as any),
+      // Markaz o'rni `zentrumHaftaCte` orqali hisoblanadi — xuddi shu
+      // bo'lak `reyting('zentrum')` jadvalini quradi. Guruh uchun
+      // qilingan tuzatish (pastdagi izohga qarang) markazga tegishli emas
+      // edi: `zentrumReytingi` o'z qatorini FAQAT o'quvchi shu hafta
+      // urinish qilgan bo'lsa qo'shar edi, shuning uchun dushanba ertalab
+      // chip "1-o'rin" deb, Markaz jadvali esa "hech kim ball yig'magan"
+      // deb ikkitasi bir vaqtda ikki xil javob berardi.
+      // Umumiy ball, seriya kunlari va haftalik bal ham shu so'rovda.
+      this.oquvchiRaqamlari(
+        studentId,
+        companyId,
+        wochenStartTag(hozir),
+        heute,
+        0,
+      ),
+      // Guruh o'rni `gruppeHaftaligi` orqali hisoblanadi — xuddi shu
+      // funksiya `reyting('gruppe')` jadvalini quradi. Bitta joyda
+      // hisoblanmasa, ikki ekran bir xil savolga ikki xil javob berishi
+      // mumkin edi: bu haqiqiy xato bo'lib topilgan (mashq qilmagan a'zo
+      // o'z o'rnini past ko'rsatgan — "shu hafta mashq qilganlar"
+      // populyatsiyasi bilan hisoblangan eski versiya butun rosterni
+      // emas, faqat urinish qilganlarni ko'rgan).
+      this.gruppePlatz(studentId, companyId, montag),
+    ]);
 
-    const gesamt = jamiy._sum.points ?? 0;
+    const gesamt = oz.gesamt;
     const { jetzt, naechste } = stufeFuer(gesamt);
 
     return {
@@ -207,10 +213,10 @@ export class FortschrittService {
       naechsteStufe: naechste
         ? { de: naechste.de, uz: naechste.uz, ab: naechste.ab }
         : null,
-      serie,
-      wochePunkte: zentrum.punkte,
+      serie: serieAus(oz.tage, heute),
+      wochePunkte: oz.punkte,
       wochePlatzGruppe,
-      wochePlatzZentrum: zentrum.hozir,
+      wochePlatzZentrum: oz.hozir,
       faelligeWoerter,
     };
   }
@@ -229,29 +235,6 @@ export class FortschrittService {
       montag,
     );
     return saralangan.length > 0 ? platziniTop(saralangan, studentId) : null;
-  }
-
-  /**
-   * Days with at least one attempt — the streak rule is unchanged
-   * (06.09 design §7). At most one row per day per group, so this stays
-   * small however many answers the student gave.
-   *
-   * Seriya "mashq qilingan kun" bo'yicha sanaladi, "tugatilgan seans"
-   * emas: `DafLessonProgress.completedAt` har o'tishda ustiga yoziladi va
-   * tarix qolmaydi, urinishlar esa qoladi. Bu yumshoqroq — seansni
-   * boshlab tugatmagan o'quvchi ham seriyasini saqlaydi, "jazolamaslik"
-   * qaroriga mos.
-   */
-  private async serieFuer(studentId: number, heute: string): Promise<number> {
-    const kunlar = await this.prisma.dafStudentDay.findMany({
-      where: { studentId, attempts: { gt: 0 } },
-      select: { day: true },
-      distinct: ['day'],
-    });
-    return serieAus(
-      kunlar.map((k) => tagStr(k.day)),
-      heute,
-    );
   }
 
   /**
@@ -292,18 +275,14 @@ export class FortschrittService {
     const shuHaftaOf = (xs: Awaited<typeof urinishlarP>) =>
       xs.filter((u) => u.createdAt >= montagUtc);
 
-    const [urinishlar, bugun, serie, zentrum, guruh] = await Promise.all([
+    const [urinishlar, oz, guruh] = await Promise.all([
       urinishlarP,
-      this.prisma.dafStudentDay.aggregate({
-        where: { studentId, day: utcMidnightFromDateStr(heute) },
-        _sum: { attempts: true },
-      }),
-      this.serieFuer(studentId, heute),
       urinishlarP.then((xs) =>
-        this.zentrumOrni(
+        this.oquvchiRaqamlari(
           studentId,
           companyId,
           wochenStartTag(jetzt),
+          heute,
           sum(shuHaftaOf(xs)),
         ),
       ),
@@ -329,11 +308,11 @@ export class FortschrittService {
 
     return {
       punkte: sum(urinishlar),
-      serie,
-      serieYangi: bugungi > 0 && (bugun._sum.attempts ?? 0) === bugungi,
+      serie: serieAus(oz.tage, heute),
+      serieYangi: bugungi > 0 && oz.heuteAttempts === bugungi,
       orin: {
         gruppe,
-        zentrum: { oldin: zentrum.oldin, hozir: zentrum.hozir },
+        zentrum: { oldin: oz.oldin, hozir: oz.hozir },
       },
     };
   }
@@ -458,44 +437,68 @@ export class FortschrittService {
    * (`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md`, 6.1).
    */
   /**
-   * O'quvchining markazdagi haftalik bali va o'rni — `uebersicht` (chip)
-   * va `seansNatijasi` (oldin/hozir) shuni chaqiradi; jadval
-   * (`zentrumReytingi`) bilan bir xil `zentrumHaftaCte` dan o'qiydi.
+   * O'quvchining O'Z raqamlari BITTA so'rovda — `uebersicht` (chip) va
+   * `seansNatijasi` (oldin/hozir) shuni chaqiradi. Har alohida so'rov 50
+   * parallel chaqiruvda ulanish navbatiga qaytadan turardi (S1 yuklama
+   * sinovi: `uebersicht` 7 so'rovdan 5 taga tushdi).
    *
-   * O'rin = (boshqalar ichida ballari ko'p, yoki teng ball va `studentId`
-   * kichik bo'lganlar soni) + 1 — `row_number() OVER (ORDER BY p DESC,
-   * "studentId")` bilan aynan bir xil, faqat ro'yxatni tashimaydi.
-   * `oldin` — o'quvchining bali `minus` ga kamaytirilgan (0 dan past emas),
-   * boshqalarniki o'sha; `minus = 0` da `oldin === hozir`.
+   * - `punkte`, `hozir` — markazdagi haftalik bal va o'rin. Jadval
+   *   (`zentrumReytingi`) bilan bir xil `zentrumHaftaCte` dan o'qiladi.
+   *   O'rin = (boshqalar ichida ballari ko'p, yoki teng ball va `studentId`
+   *   kichik bo'lganlar soni) + 1 — `row_number() OVER (ORDER BY p DESC,
+   *   "studentId")` bilan aynan bir xil, faqat ro'yxatni tashimaydi.
+   * - `oldin` — o'quvchining bali `minus` ga kamaytirilgan (0 dan past
+   *   emas), boshqalarniki o'sha; `minus = 0` da `oldin === hozir`.
+   * - `gesamt` — o'quvchining hamma kunlik qatorlari `SUM(points)`.
+   * - `tage` — `attempts > 0` bo'lgan kunlar (`YYYY-MM-DD`), seriya
+   *   `serieAus` bilan hisoblanadi (qoida o'zgarmaydi, 06.09 §7). Seriya
+   *   "mashq qilingan kun" bo'yicha, "tugatilgan seans" emas: seansni
+   *   boshlab tugatmagan o'quvchi ham seriyasini saqlaydi.
+   * - `heuteAttempts` — bugungi (Toshkent) urinishlar soni.
    *
-   * Guruh tomonidagi `gruppeHaftaligi` tuzatishi shu yerga ham tegishli:
+   * Guruh tomonidagi `gruppeHaftaligi` tuzatishi markazga ham tegishli:
    * mashq qilmagan o'quvchi ham o'rin oladi, va jadvalda ham shu o'rin
-   * bilan ko'rinadi (dizayn 6.2: har bir o'quvchi ikkalasida ham bo'lishi
-   * shart).
+   * bilan ko'rinadi (dizayn 6.2).
    */
-  private async zentrumOrni(
+  private async oquvchiRaqamlari(
     studentId: number,
     companyId: number,
     montagTag: string,
+    heuteTag: string,
     minus: number,
-  ): Promise<{ punkte: number; hozir: number; oldin: number }> {
-    // `minus` OXIRGI bog'langan qiymat bo'lishi shart (soxta `$queryRaw`).
-    // Bitta o'tish (`COUNT FILTER`), korrelyatsiyali subso'rov emas: u
-    // reja narxini 228k ga ko'tarib `jit_above_cost` (100k) dan oshirardi va
-    // Postgres har chaqiruvda ~20 ms JIT kompilyatsiya qilardi.
-    const [satr] = await this.prisma.$queryRaw<
-      { punkte: number; hozir: number; oldin: number }[]
-    >(Prisma.sql`/* zentrum-rank */
+  ): Promise<OquvchiRaqamlari> {
+    // Bog'langan qiymatlarning OXIRGI ikkitasi `minus`, `heuteTag` bo'lishi
+    // shart (soxta `$queryRaw`). O'rin bitta o'tishda (`COUNT FILTER`),
+    // korrelyatsiyali subso'rov emas: u reja narxini 228k ga ko'tarib
+    // `jit_above_cost` (100k) dan oshirardi va Postgres har chaqiruvda
+    // ~20 ms JIT kompilyatsiya qilardi.
+    const [satr] = await this.prisma.$queryRaw<OquvchiRaqamlari[]>(
+      Prisma.sql`/* oquvchi-raqamlari */
       WITH ${zentrumHaftaCte(companyId, montagTag, studentId)},
+      mine AS (
+        SELECT day, points, attempts FROM "DafStudentDay"
+        WHERE "studentId" = ${studentId}
+      ),
       q AS (SELECT "studentId" AS id, p FROM t WHERE "studentId" = ${studentId}),
-      o AS (SELECT id, p, GREATEST(p - ${minus}::int, 0) AS op FROM q)
-      SELECT o.p AS punkte,
-        1 + (COUNT(*) FILTER (WHERE t."studentId" <> o.id
-          AND (t.p > o.p OR (t.p = o.p AND t."studentId" < o.id))))::int AS hozir,
-        1 + (COUNT(*) FILTER (WHERE t."studentId" <> o.id
-          AND (t.p > o.op OR (t.p = o.op AND t."studentId" < o.id))))::int AS oldin
-      FROM t CROSS JOIN o
-      GROUP BY o.id, o.p, o.op`);
+      o AS (SELECT id, p, GREATEST(p - ${minus}::int, 0) AS op FROM q),
+      r AS (
+        SELECT o.p AS punkte,
+          1 + (COUNT(*) FILTER (WHERE t."studentId" <> o.id
+            AND (t.p > o.p OR (t.p = o.p AND t."studentId" < o.id))))::int AS hozir,
+          1 + (COUNT(*) FILTER (WHERE t."studentId" <> o.id
+            AND (t.p > o.op OR (t.p = o.op AND t."studentId" < o.id))))::int AS oldin
+        FROM t CROSS JOIN o
+        GROUP BY o.id, o.p, o.op
+      )
+      SELECT r.punkte, r.hozir, r.oldin,
+        (SELECT COALESCE(SUM(points), 0)::int FROM mine) AS gesamt,
+        ARRAY(
+          SELECT DISTINCT to_char(day, 'YYYY-MM-DD') FROM mine WHERE attempts > 0
+        ) AS tage,
+        (SELECT COALESCE(SUM(attempts), 0)::int FROM mine
+          WHERE day = ${heuteTag}::date) AS "heuteAttempts"
+      FROM r`,
+    );
     return satr;
   }
 

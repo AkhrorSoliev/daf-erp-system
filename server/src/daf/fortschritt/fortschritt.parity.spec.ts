@@ -114,28 +114,13 @@ function fakeDayPrisma() {
   return {
     // The centre ranking runs in SQL; the fake sees the rows its WHERE would:
     // the company, from the Monday DATE the service binds.
-    $queryRaw: zentrumQueryRaw((companyId, montagTag) =>
-      data.filter(
-        (r) =>
-          r.companyId === companyId &&
-          r.day >= new Date(`${montagTag}T00:00:00.000Z`),
-      ),
+    // The ranking, the total and the streak days run in SQL; the fake reads
+    // the same day rows.
+    $queryRaw: zentrumQueryRaw(() =>
+      data.map((r) => ({ ...r, day: r.day.toISOString().slice(0, 10) })),
     ),
     dafStudentDay: {
-      aggregate: jest.fn(async ({ where }: any) => ({
-        _sum: {
-          points: data
-            .filter((r) => matches(r, where))
-            .reduce((s, r) => s + r.points, 0),
-        },
-      })),
-      // Emulates `distinct: ['day']` — one row per calendar day.
-      findMany: jest.fn(async ({ where }: any) => {
-        const days = new Map<string, Date>();
-        for (const r of data.filter((x) => matches(x, where)))
-          days.set(r.day.toISOString(), r.day);
-        return [...days.values()].map((day) => ({ day }));
-      }),
+      // Only the group table still uses groupBy.
       groupBy: jest.fn(async ({ where }: any) => {
         const sums = new Map<number, number>();
         for (const r of data.filter((x) => matches(x, where)))

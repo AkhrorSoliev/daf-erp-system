@@ -11,20 +11,25 @@ function fake(opts: {
   groupId?: string | null;
 }) {
   return {
-    // The centre's week: ranked in SQL, answered by the reference fake.
-    $queryRaw: zentrumQueryRaw(() => opts.week),
+    // Day rows for the SQL fake: the week dated today (Monday), the caller's
+    // row carrying today's attempts, and a Sunday row for the streak.
+    $queryRaw: zentrumQueryRaw(() => [
+      ...opts.week.map((w) => ({
+        ...w,
+        companyId: 1,
+        day: '2026-10-19',
+        attempts: w.studentId === 55 ? opts.todayAttempts : 1,
+      })),
+      {
+        studentId: 55,
+        companyId: 1,
+        day: '2026-10-18',
+        points: 0,
+        attempts: 1,
+      },
+    ]),
     dafAttempt: { findMany: jest.fn(async () => opts.session) },
     dafStudentDay: {
-      // The service only asks for `_sum.attempts` here (today's attempts).
-      aggregate: jest.fn(async ({ _sum }: any) =>
-        _sum.attempts
-          ? { _sum: { attempts: opts.todayAttempts } }
-          : { _sum: { points: 0 } },
-      ),
-      findMany: jest.fn(async () => [
-        { day: new Date('2026-10-18T00:00:00.000Z') },
-        { day: new Date('2026-10-19T00:00:00.000Z') },
-      ]),
       // Only the group table still uses groupBy.
       groupBy: jest.fn(async () =>
         (opts.groupWeek ?? []).map((w) => ({

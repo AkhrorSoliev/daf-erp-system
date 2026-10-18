@@ -1,13 +1,23 @@
 import { FortschrittService } from './fortschritt.service';
-import { HaftaQatori, zentrumQueryRaw } from './zentrum-sql.fake-spec';
+import { KunQatori, zentrumQueryRaw } from './zentrum-sql.fake-spec';
+import { wochenStartTag } from '../uebung/punkte';
 
-/** `week` — the centre's week, read by the `$queryRaw` ranking queries. */
-function fakePrisma(week: HaftaQatori[] = []) {
+/**
+ * `week` — the centre's week (one row each, dated this Monday); `extra` —
+ * further day rows. Both are read by the `$queryRaw` fake.
+ */
+function fakePrisma(
+  week: { studentId: number; points: number }[] = [],
+  extra: KunQatori[] = [],
+) {
+  const montag = wochenStartTag(new Date());
   return {
-    $queryRaw: zentrumQueryRaw(() => week),
+    $queryRaw: zentrumQueryRaw(() => [
+      ...week.map((w) => ({ ...w, companyId: 1, day: montag, attempts: 1 })),
+      ...extra,
+    ]),
     dafStudentDay: {
-      aggregate: jest.fn(async () => ({ _sum: { points: 0 } })),
-      findMany: jest.fn(async () => []),
+      // Only the group table still uses groupBy.
       groupBy: jest.fn(async () => []),
     },
     enrollment: {
@@ -22,12 +32,29 @@ function fakePrisma(week: HaftaQatori[] = []) {
 
 describe('uebersicht', () => {
   it('umumiy balldan darajani chiqaradi', async () => {
-    const prisma = fakePrisma();
-    prisma.dafStudentDay.aggregate = jest.fn(async () => ({
-      _sum: { points: 1_600 },
-    }));
+    // Earlier weeks count in the total, not in this week.
+    const prisma = fakePrisma(
+      [],
+      [
+        {
+          studentId: 55,
+          companyId: 1,
+          day: '2026-01-05',
+          points: 1_000,
+          attempts: 3,
+        },
+        {
+          studentId: 55,
+          companyId: 1,
+          day: '2026-02-02',
+          points: 600,
+          attempts: 2,
+        },
+      ],
+    );
     const f = await new FortschrittService(prisma).uebersicht(55, 1);
     expect(f.gesamt).toBe(1_600);
+    expect(f.wochePunkte).toBe(0);
     expect(f.stufe.de).toBe('Kenner');
     // `stufe.ab` — HOZIRGI darajaning pastki chegarasi, `naechsteStufe.ab`dan
     // FARQLI: mijoz chiziqni "shu daraja ichida qancha bosib o'tildi" deb
