@@ -257,3 +257,91 @@ quruq yurish → `--apply`.
 | Nishon berishdagi xato seansni yiqitadi | `seansNatijasiXavfsiz` o'rami; keyingi seansda shart bo'yicha qaytadan beriladi |
 | Mavjud o'quvchilar nishonsiz qoladi | Bir martalik skript, eng uzun tarixiy ketma-ketlik bo'yicha |
 | Reyting ekrani to'rt tab bilan tor | «Nishonlarim» — «Darajam» tabi ichida |
+
+---
+
+## 8. Yuklama natijalari
+
+O'lchangan 18.10.2026, lokal sinov bazasi `daf_s1_yuklama` (S1 §10 bilan bir
+xil ma'lumot, qayta yaratilgan): 12 000 o'quvchi (urinishlar birinchi 5 000
+tasida), ≈1,47 mln urinish, `DafStudentDay`da ≈392 ming qator (shu hafta
+≈49,9 ming), A1 kontenti u01–u05 (457 so'z, 192 dars). S2 ma'lumoti: 9 000
+o'quvchida maqsad qatori (yarmida `JIDDIY`, chorakda `YENGIL`, chorakda qator
+yo'q), 608 500 `DafLexemeState`, 16 808 `DafStudentBadge`. 50 parallel
+o'quvchi × 10 raund, servis darajasida, Prisma pool prod'dagidek (10
+ulanish), kod `bbefe4a7`. Skriptlar: `server/scripts/load/` (S2 uchun yangi:
+`daf-yuklama-s2-seed.ts`, `daf-yuklama-kohort.ts`).
+
+**Kohortlar.** S1 sinovida `DafLexemeState` bo'sh edi, ya'ni hamma o'quvchida
+muddati kelgan so'z yo'q. S2 da eng yomon yo'llar alohida o'lchanadi (5 000
+o'quvchi tartib raqami bo'yicha o'nta guruhga bo'lingan):
+
+| Kohort | O'quvchi | Nima |
+| --- | --- | --- |
+| DUE | 1 500 | 20 ta so'z muddati kelgan — dars so'rovi o'qilmaydi |
+| OCHIQ | 1 000 | so'z qatori yo'q, ochiq dars bor — dars so'rovi birinchi topilganda to'xtaydi |
+| TUGAGAN | 500 | so'z qatori yo'q, hamma dars tugatilgan — dars so'rovi oxirigacha yuradi |
+| TOLIQ | 500 | 105 kunlik seriya, 457 so'z, 9 ta nishon allaqachon berilgan — har seans oxirida `INSERT` ning hamma qatori konfliktga tushadi |
+| QISMAN | 500 | 8 kunlik seriya, 60 so'z, 3 nishon berilgan — 3 qator konflikt |
+| YANGI | 1 000 | 105 kunlik seriya, 320 so'z, nishon yo'q — birinchi seans oxirida qatorlar haqiqatan yoziladi |
+
+Katalogdagi `WOERTER_592` bu bazada berilmaydi (u01–u05 da 457 so'z bor), shuning
+uchun TOLIQ da 10 tadan 9 tasi konfliktga tushadi.
+
+**Natija (p50 / p95, ms).** Ikki o'lchov, bir xil kod va ma'lumot. Birinchisi
+nisbatan bo'sh mashinada (load average 2,5 → 4,9), ikkinchisi band mashinada
+(6,4 → 7,9; 10 yadro).
+
+| Amal | Yengil yuk | Og'ir yuk | Chegara (p95) | Holat |
+| --- | --- | --- | --- | --- |
+| `uebersicht` (fortschritt), tasodifiy aralash | 91 / 171 | 121 / 186 | 200 | o'tdi |
+| `reyting zentrum` | 63 / 69 | 93 / 103 | 200 | o'tdi |
+| `reyting gruppe` | 24 / 29 | 22 / 27 | 200 | o'tdi |
+| `recordAttempt` | 16 / 51 | 13 / 52 | 200 | o'tdi |
+| `seansNatijasi`, tasodifiy aralash | 96 / 109 | 126 / 174 | 300 | o'tdi |
+| `nishonlar` | 10 / 16 | 10 / 16 | 200 | o'tdi |
+| `uebersicht`, muddati kelgan so'z bor (DUE) | 84 / 89 | 116 / 119 | 200 | o'tdi |
+| `uebersicht`, 0 so'z, ochiq dars bor (OCHIQ) | 91 / 102 | 128 / 166 | 200 | o'tdi |
+| `uebersicht`, 0 so'z, dars qolmagan (TUGAGAN) | 93 / 102 | 123 / 134 | 200 | o'tdi |
+| `seansNatijasi`, berish uchun nishon yo'q (OCHIQ) | 103 / 111 | 123 / 131 | 300 | o'tdi |
+| `seansNatijasi`, `INSERT`, hamma qator konflikt (TOLIQ) | 111 / 116 | 131 / 138 | 300 | o'tdi |
+| `seansNatijasi`, `INSERT`, 3 qator konflikt (QISMAN) | 113 / 123 | 134 / 174 | 300 | o'tdi |
+| `seansNatijasi`, `INSERT`, hamma qator yangi (YANGI) | 122 / 153 | 149 / 164 | 300 | o'tdi |
+| `nishonlar`, 105 kunlik seriya, 10 nishon (TOLIQ) | 12 / 19 | 12 / 19 | 200 | o'tdi |
+
+Aralash `uebersicht` kohortlardan yuqori (171–186 va 89–166): u har raundda
+birinchi turadi va aralashda 105 kunlik seriyali o'quvchilar ham bor. S1
+natijasi bilan (168, qamrab oluvchi indeks bilan) bir xil darajada; chegaragacha
+zaxira band mashinada 14 ms. S2 qo'shgan ikki yo'l (bugungi ball va maqsad CTE
+lari, 0 so'zda `dafLesson.findFirst`) `uebersicht` ni sezilarli sekinlashtirmadi:
+DUE (so'rovsiz yo'l) va TUGAGAN (eng uzun dars so'rovi) orasidagi farq p95 da
+13–15 ms. Nishon `INSERT` i `seansNatijasi` p95 ga qo'shadi: hamma qator konfliktga
+tushsa ≈5–7 ms (TOLIQ), qatorlar haqiqatan yozilsa ≈33–42 ms (YANGI) — har
+nishon o'quvchida bir marta yoziladi, keyingi seanslar konflikt yo'lida
+ketadi. YANGI ning ikkinchi o'lchovdagi 462 ta namunasi: kohortning 38 tasi
+o'lchovgacha nishon olib bo'lgan (moslik skripti ham seans oxirini chaqiradi).
+
+**EXPLAIN (ANALYZE, BUFFERS).** O'z raqamlari so'rovi (`oquvchi-raqamlari`,
+ikki yangi CTE bilan) 20,8 ms: haftalik yig'indi `Index Only Scan on
+DafStudentDay_companyId_day_cover_idx` (49 949 qator), maqsad qatori
+`DafStudentSetting_pkey` dan 0,03 ms, bugungi ball `mine` CTE sidan (qo'shimcha
+o'tish yo'q). `DafLexemeState` da so'z soni 0,6 ms (457 qator, `studentId`
+indeksi), nishonlar ro'yxati 0,02 ms, hamma qator konfliktga tushadigan nishon
+`INSERT` i 0,08 ms. «Ochiq dars» so'rovi eng yomon holatda (hamma dars
+tugatilgan, 192 dars) 0,55 ms. `DafAttempt` bo'ylab `Seq Scan` yo'q.
+
+**Bir o'quvchiga 50 parallel `grantBadges`:** 0 → 10 qator, «yangi» deb
+qaytgan kalitlar 10 — takror 0 (ikkala o'lchovda). Bir qatorga 50 parallel
+`recordAttempt`: farq 0 (ball 1 465 = 1 465, urinishlar 82 = 82; ikkinchi
+o'lchovda 1 485 = 1 485, 83 = 83).
+
+**Moslik** (`daf-yuklama-paritet.ts`, 244 o'quvchi; 72 tasi bugun ikki
+guruhda javob bergan; maqsad qatori: 119 `JIDDIY`, 69 `YENGIL`, 56 qatorsiz →
+`ORTA`): S1 tekshiruvlariga (jadval, o'rin, haftalik/umumiy ball, seriya,
+`serieYangi`, oldin/hozir) qo'shildi — `uebersicht().maqsad` va
+`seansNatijasi().maqsad` (daraja, maqsad balli, bugungi ball, `bosh`,
+`bajarildi`, `yangiBajarildi`) `DafAttempt` ni bevosita yig'ib hisoblangan
+qiymat bilan solishtirildi (bugungi ball — Toshkent kuni, HAMMA guruh bo'yicha
+yig'indi; `bosh` alohida SQL bilan). Tekshiruv farqni ajrata oladi: 148
+o'quvchida bugungi ball faqat joriy guruh bo'yicha o'qilsa boshqacha chiqardi.
+**0 farq.**
