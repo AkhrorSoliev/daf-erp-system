@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   AttendanceStatus,
+  CallOutcome,
   EnrollmentStatus,
   StudentStatus,
 } from '@prisma/client';
@@ -106,7 +107,7 @@ export class OutreachService {
 
     // "Bog'lanildi" badge — was this student already called (any reason) on the
     // viewed date? Lets the admin skip students they've already worked through.
-    const calledSet = await this.getCalledStudentIds(
+    const outcomeByStudent = await this.getLatestCallOutcomes(
       ctx.companyId,
       rows.map((r) => r.student.id),
       dateStr,
@@ -115,7 +116,8 @@ export class OutreachService {
     const items = rows.map((r) => ({
       attendanceId: r.id,
       note: r.note,
-      calledToday: calledSet.has(r.student.id),
+      calledToday: outcomeByStudent.has(r.student.id),
+      callOutcome: outcomeByStudent.get(r.student.id) ?? null,
       student: r.student,
       group: {
         id: r.group.id,
@@ -481,6 +483,27 @@ export class OutreachService {
     }));
 
     return { total: items.length, items };
+  }
+
+  // Latest call outcome per student on the given Tashkent day (any reason) —
+  // powers the "Natija" column on the absentees list.
+  private async getLatestCallOutcomes(
+    companyId: number,
+    studentIds: number[],
+    dateStr: string,
+  ): Promise<Map<number, CallOutcome>> {
+    if (studentIds.length === 0) return new Map();
+    const rows = await this.prisma.callLog.findMany({
+      where: {
+        companyId,
+        studentId: { in: studentIds },
+        createdAt: tashkentDayRangeUtc(dateStr),
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { studentId: true, outcome: true },
+    });
+    // asc order: the last call of the day overwrites earlier ones.
+    return new Map(rows.map((r) => [r.studentId, r.outcome]));
   }
 
   // Set of student IDs called (any reason) on the given Tashkent day — powers
