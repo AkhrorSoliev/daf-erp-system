@@ -15,7 +15,6 @@ import {
   sozHisobiniEskirt,
   useAbschluss,
   useErsatz,
-  useFortschritt,
   useJuftTekshir,
   useLernenLesson,
   usePruefen,
@@ -58,11 +57,6 @@ import { NatijaEkrani } from "./natija-ekrani";
 import type { SinovHolati } from "./sinov-natijasi";
 import { SuhbatPleyer } from "./suhbat-pleyer";
 import { TranskriptBlok } from "./transkript-blok";
-import {
-  fortschrittSurati,
-  keyingiBoshlangichSurati,
-  type FortschrittSurati,
-} from "./seans-boshlangich";
 
 /**
  * `manba: "takrorlash"`da `lessonId` UMUMAN QABUL QILINMAYDI — takrorlash
@@ -125,7 +119,6 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const ersatzSorov = useErsatz();
   const abschluss = useAbschluss();
   const wiederholungAbschluss = useWiederholungAbschluss();
-  const fortschritt = useFortschritt();
   // The bottom bar is `fixed`; it needs the rail's width to stay clear of it.
   const sidebarMode = useSidebar((s) => s.mode);
 
@@ -177,40 +170,14 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const [savolBoshi, setSavolBoshi] = React.useState(() => Date.now());
   const [seansBoshi, setSeansBoshi] = React.useState(() => Date.now());
 
-  // Natija ekranidagi ball/seriya/o'rin FARQ ko'rsatadi — buning uchun
-  // seans BOSHLANGANDAGI surat kerak, va u `keyingiBoshlangichSurati`
-  // (sof mantiq, sinalgan `seans-boshlangich.test.ts`da) orqali hisoblanadi.
-  const boshlangichFortschritt = React.useRef<FortschrittSurati | null>(null);
-
-  // Seans faqat serverdan savollar kelganda BIR MARTA boshlanadi — har
-  // qayta chizilishda `boshla` chaqirilsa, o'quvchining joriy o'rni
-  // yo'qolib, seans qaytadan boshidan tushardi.
-  //
-  // Boshlanish IKKALASINI ham kutadi — `seans.data` VA `fortschritt`ning
-  // "hal bo'lganini" (`data` keldi YOKI so'rov xatoga uchradi). Sabab:
-  // server har javobni DARHOL ballaydi, shuning uchun sekin ulanishda
-  // `fortschritt` hali yuklanayotgan paytda birinchi savolga javob
-  // berilsa, boshlang'ich surat o'sha ballni ALLAQACHON o'z ichiga olib,
-  // seans oxiridagi farqni kamsitib ko'rsatardi (Task 9 review,
-  // Important). Lekin FAQAT `fortschritt.data`ga emas — so'rov XATOGA
-  // uchrasa `data` hech qachon kelmaydi va mashq abadiy shu yerda osilib
-  // qolardi; ball dekor, muvaffaqiyatsiz yon so'rov mashqni to'smasligi
-  // kerak (xuddi `YolTepasi`dagi kabi). Xato yo'lida boshlang'ich `null`
-  // qoladi — bu allaqachon to'g'ri darajada tushiriladi: `yutuqlarBormi`
-  // `natija-ekrani.tsx`da `false` bo'lib, karta shunchaki ko'rinmaydi.
+  // The session starts once, when the questions arrive.
   const boshlandiMi = React.useRef(false);
   React.useEffect(() => {
     if (boshlandiMi.current) return;
     if (!seans.data || seans.data.length === 0) return;
-    if (!fortschritt.data && !fortschritt.isError) return;
     boshlandiMi.current = true;
-    boshlangichFortschritt.current = keyingiBoshlangichSurati(
-      boshlangichFortschritt.current,
-      fortschrittSurati(fortschritt.data),
-      false,
-    );
     setHolat(boshla(seans.data));
-  }, [seans.data, fortschritt.data, fortschritt.isError]);
+  }, [seans.data]);
 
   const frage = holat ? joriy(holat) : null;
   // The next question's pictures load while this one is answered.
@@ -476,14 +443,6 @@ export function SeansEkrani(props: SeansEkraniProps) {
     yozildi.current = true;
     tugashDavomiyligi.current = Date.now() - seansBoshi;
 
-    // Natija ekranidagi ball/seriya/o'rin `fortschritt` YANGILANGANIDAN
-    // keyingina to'g'ri ko'rinadi. Dars seansida buni `abschluss`ning
-    // muvaffaqiyati ALLAQACHON qiladi (pastda, `invalidateQueries`
-    // orqali) — lekin takrorlash `abschluss` UMUMAN yubormaydi, shuning
-    // uchun yangilash bu yerda ikkala holat uchun ham so'raladi, o'sha
-    // chaqiruvga osilib qolmay.
-    void fortschritt.refetch();
-
     // Takrorlash so'rovi (`useWiederholung`) `staleTime: Infinity` bilan
     // abadiy keshda turadi va `abschluss` UMUMAN yubormaydi (pastda),
     // shuning uchun uning `onSuccess`idagi invalidatsiya takrorlash
@@ -548,9 +507,6 @@ export function SeansEkrani(props: SeansEkraniProps) {
     //   ulanadi, render sayin o'zgarmaydi.
     // - `wiederholungAbschluss` — xuddi `abschluss` bilan bir xil sabab:
     //   uning `.mutate`si ham react-query'ning barqaror ulanishi.
-    // - `fortschritt` — xuddi shunday, `.refetch`i barqaror; ro'yxatga
-    //   qo'shilsa har `fortschritt.data` yangilanishida bu butun effekt
-    //   qayta ishga tushib, `abschluss.mutate`ni ikkinchi marta chaqirardi.
     // - `qc` — `useQueryClient()` bitta Providerdan olingan barqaror
     //   obyekt, komponent umri davomida o'zgarmaydi.
     // - `tugadimi` — sof, modul darajasidagi import, hech qachon o'zgarmaydi.
@@ -568,49 +524,17 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holat]);
 
-  // Qayta o'tishda seans YANGI so'rov bilan yangilanadi — Leitner
-  // jadvali orqali qaytgan so'zlar birinchi safargidan farq qilishi
-  // mumkin, shuning uchun eski `seans.data` emas, `refetch` natijasi
-  // ishlatiladi. `fortschritt` ham XUDDI SHUNDAY: ambient `fortschritt.data`
-  // keshiga emas, shu yerda KUTILGAN `refetch()` natijasiga ishoniladi.
-  //
-  // Bu ATAYLAB shunday — avvalgi versiya ambient keshni o'qirdi va faqat
-  // IZOHDA "tugash effektida allaqachon refetch qilingan" deb DA'VO
-  // qilardi, biroq buni hech narsa MAJBURLAMAGAN edi: tugash effektidagi
-  // `fortschritt.refetch()` KUTILMAYDI, "Qayta o'tish" tugmasi esa darhol
-  // bosiladigan. Sekin ulanishda o'quvchi o'sha `refetch` tugashidan OLDIN
-  // bossa, ambient kesh hali BIRINCHI SEANSDAN OLDINGI qiymatni ko'rsatib
-  // turardi — va aynan o'sha eski qiymat retry uchun boshlang'ich sifatida
-  // qulflanib qolardi, natijada ko'rsatilgan farq birinchi seans + retry'ni
-  // BIRGA qamrab olardi (Task 9 review, round 2). Shu sabab bu yerda
-  // `fortschritt.refetch()` ham `seans.refetch()` kabi so'raladi va
-  // KUTILADI — ambient `fortschritt.data`ga umuman qo'l tegilmaydi.
+  // Qayta o'tishda seans YANGI so'rov bilan yangilanadi — Leitner orqali
+  // qaytgan so'zlar birinchi safargidan farq qilishi mumkin.
   const qaytaOtish = async () => {
-    const [seansNatija, fortschrittNatija] = await Promise.all([
-      seans.refetch(),
-      // Ball dekor — muvaffaqiyatsiz yon so'rov qayta o'tishni TO'SMASLIGI
-      // kerak. Xato bo'lsa `null`ga tushadi, pastdagi `fortschrittSurati`
-      // buni tabiiy ravishda "boshlang'ich noma'lum" holatiga aylantiradi
-      // — natija ekranida esa bu allaqachon to'g'ri darajada tushiriladi
-      // (yutuqlar kartasi shunchaki ko'rinmaydi).
-      fortschritt.refetch().catch(() => null),
-    ]);
-    const { data } = seansNatija;
+    const { data } = await seans.refetch();
     if (!data) return;
     yozildi.current = false;
     // Oldingi urinishning natijasi (masalan «Hali o'tmadingiz») yangi
     // urinishning natija ekraniga o'tib qolmasin.
     abschluss.reset();
+    wiederholungAbschluss.reset();
     tugashDavomiyligi.current = null;
-    // Yangi urinish uchun yangi "boshlang'ich" nuqta — `qaytaOtishMi: true`
-    // orqali `keyingiBoshlangichSurati` OLDINGI boshlang'ichni e'tiborsiz
-    // qoldirib, YUQORIDA ENDIGINA KUTILGAN `fortschrittNatija`ni ishlatadi
-    // (ambient `fortschritt.data` emas — sabab yuqorida).
-    boshlangichFortschritt.current = keyingiBoshlangichSurati(
-      boshlangichFortschritt.current,
-      fortschrittSurati(fortschrittNatija?.data),
-      true,
-    );
     setHolat(boshla(data));
     setNatija(null);
     setTanlangan(null);
@@ -849,9 +773,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
         xatolar={holat.xatolar}
         unitId={unitId}
         onQayta={qaytaOtish}
-        gesamtBoshida={boshlangichFortschritt.current?.gesamt ?? null}
-        serieBoshida={boshlangichFortschritt.current?.serie ?? null}
-        orinBoshida={boshlangichFortschritt.current?.wochePlatzGruppe ?? null}
+        natija={
+          (darsMi ? abschluss.data?.natija : wiederholungAbschluss.data?.natija) ??
+          null
+        }
         sinov={sinovHolati}
         onNatijaQaytaYubor={natijaniQaytaYubor}
       />
