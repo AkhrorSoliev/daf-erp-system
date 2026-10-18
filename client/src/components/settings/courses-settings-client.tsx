@@ -52,6 +52,10 @@ export function CoursesSettingsClient() {
   const canAddCourse = useCan("courses.create");
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
+  const branches = useBranchSwitcher((s) => s.branches);
+  // «Barcha filiallar» — kurs qaysi filialniki ekanini ustun ko'rsatadi
+  const showBranch = !selectedBranch;
+  const colCount = showBranch ? 8 : 7;
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,11 +68,12 @@ export function CoursesSettingsClient() {
   }, 300);
 
   const fetchCourses = useCallback(async () => {
-    if (!branchLoaded || !selectedBranch) return;
+    if (!branchLoaded) return;
     setLoading(true);
     try {
+      // «Barcha filiallar» (selectedBranch null) — branch_id yuborilmaydi, server o'zining doirasini qo'llaydi
       const { data } = await api.get("/courses", {
-        params: { branch_id: selectedBranch.id, page: filters.page, pageSize: filters.pageSize },
+        params: { branch_id: selectedBranch?.id, page: filters.page, pageSize: filters.pageSize },
       });
       setCourses(data.data);
       setTotal(data.total);
@@ -164,6 +169,7 @@ export function CoursesSettingsClient() {
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>Kurs nomi</TableHead>
+              {showBranch && <TableHead>Filial</TableHead>}
               <TableHead>Sikl darslari</TableHead>
               <TableHead>Narxi</TableHead>
               <TableHead>To&apos;lov modeli</TableHead>
@@ -174,14 +180,14 @@ export function CoursesSettingsClient() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={colCount} className="h-24 text-center">
                   <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={colCount}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -203,6 +209,11 @@ export function CoursesSettingsClient() {
                     <Link href={`/settings/courses/${course.id}`} className="absolute inset-0" />
                     {course.name}
                   </TableCell>
+                  {showBranch && (
+                    <TableCell>
+                      {branches.find((b) => b.id === course.branchId)?.name ?? "—"}
+                    </TableCell>
+                  )}
                   <TableCell>
                     {course.lessonPaymentCount
                       ? `${course.lessonPaymentCount} ta`

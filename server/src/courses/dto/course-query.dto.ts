@@ -3,9 +3,10 @@ import { Type } from 'class-transformer';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export class CourseQueryDto extends PaginationDto {
+  @IsOptional()
   @IsInt()
   @Type(() => Number)
-  branch_id: number;
+  branch_id?: number;
 
   @IsOptional()
   @IsInt()
