@@ -22,11 +22,11 @@ const table = (over: Partial<Parameters<typeof GroupPaymentsTable>[0]> = {}) =>
 
 describe("GroupPaymentsTable (spec B5 §3.5)", () => {
   it("Guruhlar: # first, then Guruh, Ustoz and the figures", () => {
-    expect(norm(raw(table())).trimStart().startsWith("# Guruh Ustoz O'quvchi Hisoblandi To'landi Qoldi Foiz To'lamagan")).toBe(true);
+    expect(norm(raw(table())).trimStart().startsWith("# Guruh Ustoz O'quvchilar Hisoblandi To'landi Qoldi Foiz To'lamagan")).toBe(true);
   });
   it("Ustozlar and Kurslar: no Ustoz column, their own first column", () => {
-    expect(norm(raw(table({ kesim: "ustoz" }))).trimStart().startsWith("# Ustoz O'quvchi Hisoblandi")).toBe(true);
-    expect(norm(raw(table({ kesim: "kurs" }))).trimStart().startsWith("# Kurs O'quvchi Hisoblandi")).toBe(true);
+    expect(norm(raw(table({ kesim: "ustoz" }))).trimStart().startsWith("# Ustoz O'quvchilar Hisoblandi")).toBe(true);
+    expect(norm(raw(table({ kesim: "kurs" }))).trimStart().startsWith("# Kurs O'quvchilar Hisoblandi")).toBe(true);
   });
   it("a row: name with the course under it, teachers by comma, pills, numbering from the offset", () => {
     const text = norm(raw(table({ offset: 10 })));

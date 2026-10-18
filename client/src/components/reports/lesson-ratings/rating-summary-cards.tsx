@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatNumber } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import { averageText, responseText, trend } from "./rating-format";
 import { RatingDistributionCard } from "./rating-distribution-card";
 import type { RatingSummary } from "./types";
@@ -27,41 +28,42 @@ export function RatingSummaryCards({
   data: RatingSummary;
   onOpenTeacher: (teacherId: number) => void;
 }) {
+  const t = useT();
   const { totals } = data;
-  const t = trend(totals.average, data.previousAverage);
+  const tr = trend(totals.average, data.previousAverage, t);
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="O'rtacha baho">
+        <StatCard title={t("O'rtacha baho")}>
           <p className="text-2xl font-semibold">{averageText(totals.average)}</p>
-          {t && (
+          {tr && (
             <p
               className={cn(
                 "text-xs",
-                t.tone === "up" && "text-green-600",
-                t.tone === "down" && "text-destructive",
+                tr.tone === "up" && "text-green-600",
+                tr.tone === "down" && "text-destructive",
               )}
             >
-              {t.text} — o&apos;tgan oyga nisbatan
+              {tr.text} — {t("o'tgan oyga nisbatan")}
             </p>
           )}
         </StatCard>
-        <StatCard title="Yuborilgan so'rovlar">
+        <StatCard title={t("Yuborilgan so'rovlar")}>
           <p className="text-2xl font-semibold">{formatNumber(totals.delivered)}</p>
-          <p className="text-xs text-muted-foreground">shu oy xabar yetgan o&apos;quvchilar</p>
+          <p className="text-xs text-muted-foreground">{t("shu oy xabar yetgan o'quvchilar")}</p>
         </StatCard>
-        <StatCard title="Javob berganlar">
+        <StatCard title={t("Javob berganlar")}>
           <p className="text-2xl font-semibold">
             {responseText(totals.rated, totals.delivered, totals.responseRate)}
           </p>
-          <p className="text-xs text-muted-foreground">xabar yetganlardan</p>
+          <p className="text-xs text-muted-foreground">{t("xabar yetganlardan")}</p>
         </StatCard>
-        <StatCard title="Izoh yozganlar">
+        <StatCard title={t("Izoh yozganlar")}>
           <p className="text-2xl font-semibold">
             {formatNumber(data.lowCommented)} / {formatNumber(totals.low)}
           </p>
           <p className="text-xs text-muted-foreground">
-            past baho qo&apos;yganlardan (izoh faqat 1–3 da so&apos;raladi)
+            {t("past baho qo'yganlardan (izoh faqat 1–3 da so'raladi)")}
           </p>
         </StatCard>
       </div>

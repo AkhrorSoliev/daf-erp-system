@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { monthLabel } from "@/components/payments/salary-utils";
+import { useT } from "@/i18n/context";
 import { KpiUserPanel } from "./kpi-user-panel";
 
 /** Row click on «Xodimlar KPI» (spec §7.7): the person's results of the page's month. Closing deletes `?xodim=`. */
@@ -17,14 +18,15 @@ export function KpiUserDrawer({
   month: string;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <Sheet open={userId !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 data-[side=right]:sm:max-w-2xl">
         <SheetHeader className="border-b px-6 py-4">
           {/* pr-8 keeps the title clear of the sheet's own close button. */}
           <div className="min-w-0 pr-8">
-            <SheetTitle className="truncate">{name ?? "Xodim natijalari"}</SheetTitle>
-            <SheetDescription>{monthLabel(month)} natijalari</SheetDescription>
+            <SheetTitle className="truncate">{name ?? t("Xodim natijalari")}</SheetTitle>
+            <SheetDescription>{t("{month} natijalari", { month: monthLabel(month, t) })}</SheetDescription>
           </div>
         </SheetHeader>
         <div className="min-h-0 flex-1 px-6 py-4">
@@ -32,7 +34,7 @@ export function KpiUserDrawer({
         </div>
         <SheetFooter className="border-t px-6 py-4">
           <Button variant="outline" onClick={onClose}>
-            Yopish
+            {t("Yopish")}
           </Button>
         </SheetFooter>
       </SheetContent>

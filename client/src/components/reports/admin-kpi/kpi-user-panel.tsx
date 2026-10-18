@@ -8,6 +8,8 @@ import { TablePagination } from "@/components/forms/table-pagination";
 import { MonthStepper } from "@/components/shared/month-stepper";
 import { BlockError } from "@/components/payments/overview/block-state";
 import { currentMonthKey, monthLabel } from "@/components/payments/salary-utils";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { KpiUserMonthsChart } from "./kpi-charts";
@@ -29,6 +31,7 @@ export function KpiUserPanel({
   month: string;
   onMonthChange?: (month: string) => void;
 }) {
+  const t = useT();
   const q = useKpiUser(userId, month);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -48,7 +51,7 @@ export function KpiUserPanel({
     return (
       <div className="space-y-4">
         {stepper}
-        <BlockError title="KPI" onRetry={() => q.refetch()} />
+        <BlockError title={t("KPI")} onRetry={() => q.refetch()} />
       </div>
     );
   }
@@ -61,19 +64,28 @@ export function KpiUserPanel({
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
       {stepper}
       <div className="rounded-lg border bg-muted/40 p-4">
-        <p className="text-sm text-muted-foreground">{monthLabel(d.month)} KPI</p>
-        <p className="font-heading text-2xl font-semibold tabular-nums">{formatPrice(d.total)} so&apos;m</p>
-        <TrendLine value={d.total} compare={d.compareTotal} unit="som" suffix=" — o'tgan oyga nisbatan" compareAvailable={d.compareAvailable} compareRecorded={d.compareRecorded} />
-        <p className="mt-1 text-xs text-muted-foreground">Oylikka qo&apos;shilmaydi — kuzatuv</p>
+        <p className="text-sm text-muted-foreground">{t("{month} KPI", { month: monthLabel(d.month, t) })}</p>
+        <p className="font-heading text-2xl font-semibold tabular-nums">
+          {formatPrice(d.total)} {t("so'm")}
+        </p>
+        <TrendLine
+          value={d.total}
+          compare={d.compareTotal}
+          unit="som"
+          suffix={msg("o'tgan oyga nisbatan")}
+          compareAvailable={d.compareAvailable}
+          compareRecorded={d.compareRecorded}
+        />
+        <p className="mt-1 text-xs text-muted-foreground">{t("Oylikka qo'shilmaydi — kuzatuv")}</p>
       </div>
 
       <KpiUserMonthsChart data={d.months} />
 
       <section className="space-y-2">
-        <h3 className="text-sm font-medium">Natijalar</h3>
+        <h3 className="text-sm font-medium">{t("Natijalar")}</h3>
         {d.results.length === 0 ? (
           <p className="rounded-md border p-4 text-center text-sm text-muted-foreground">
-            Bu oyda natija yo&apos;q — boshqa oyni tanlab ko&apos;ring
+            {t("Bu oyda natija yo'q — boshqa oyni tanlab ko'ring")}
           </p>
         ) : (
           <>
@@ -81,21 +93,22 @@ export function KpiUserPanel({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>Sana</TableHead>
-                  <TableHead>Natija</TableHead>
-                  <TableHead>Qanday hisoblandi</TableHead>
-                  <TableHead className="text-right">Summa</TableHead>
+                  <TableHead>{t("Sana")}</TableHead>
+                  <TableHead>{t("Natija")}</TableHead>
+                  <TableHead>{t("Qanday hisoblandi")}</TableHead>
+                  <TableHead className="text-right">{t("Summa")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((r, i) => {
                   const cancelled = r.status === "CANCELLED";
+                  const typeLabel = RESULT_TYPE_LABEL[r.type];
                   return (
                     <TableRow key={r.id} className={cn(cancelled && "text-muted-foreground")}>
                       <TableCell className="border-r text-muted-foreground">{(page - 1) * pageSize + i + 1}</TableCell>
                       <TableCell className="whitespace-nowrap">{dayText(r.occurredAt)}</TableCell>
                       <TableCell>
-                        <div className={cn(cancelled && "line-through")}>{RESULT_TYPE_LABEL[r.type]}</div>
+                        <div className={cn(cancelled && "line-through")}>{t(typeLabel)}</div>
                         <Link href={`/students/profile/${r.studentId}`} className="text-xs hover:underline">
                           {r.studentName}
                         </Link>
@@ -108,7 +121,7 @@ export function KpiUserPanel({
                       </TableCell>
                       <TableCell className={cn(cancelled && "line-through")}>{r.explanation}</TableCell>
                       <TableCell className={cn("text-right tabular-nums", cancelled && "line-through")}>
-                        {formatPrice(r.amount)} so&apos;m
+                        {formatPrice(r.amount)} {t("so'm")}
                       </TableCell>
                     </TableRow>
                   );

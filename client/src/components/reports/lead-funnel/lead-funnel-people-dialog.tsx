@@ -6,8 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { formatPhone } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import {
   Dialog,
   DialogContent,
@@ -69,6 +71,8 @@ function PeopleBody({
   stage: PeopleStage;
   range: { startDate: string; endDate: string };
 }) {
+  const t = useT();
+  const stageLabel = STAGE_LABELS[stage];
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const hasStuck = stage !== "paid" && stage !== "unpaid";
   // «Hammasi» dan ochiladi: ro'yxat jami bosilgan bosqichdagi son bilan bir xil.
@@ -99,23 +103,29 @@ function PeopleBody({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{STAGE_LABELS[stage]}</DialogTitle>
+        <DialogTitle>{t(stageLabel)}</DialogTitle>
         <DialogDescription>
           {stage === "unpaid"
-            ? `${displayDate(FUNNEL_START_DATE)} dan beri lid bo'lib kelgan, darsga kelgan, lekin hali to'lov qilmaganlar — bugungi holat.`
-            : `${displayDate(range.startDate)} — ${displayDate(range.endDate)} oralig'ida kelgan lidlar.`}
+            ? t(
+                "{date} dan beri lid bo'lib kelgan, darsga kelgan, lekin hali to'lov qilmaganlar — bugungi holat.",
+                { date: displayDate(FUNNEL_START_DATE) },
+              )
+            : t("{start} — {end} oralig'ida kelgan lidlar.", {
+                start: displayDate(range.startDate),
+                end: displayDate(range.endDate),
+              })}
         </DialogDescription>
       </DialogHeader>
 
       {hasStuck && (
         <div
           role="group"
-          aria-label="Ro'yxat turi"
+          aria-label={t("Ro'yxat turi")}
           className="inline-flex w-fit rounded-lg border bg-muted/40 p-0.5 text-sm"
         >
           {(
             [
-              ["all", "Hammasi"],
+              ["all", msg("Hammasi")],
               ["stuck", STUCK_LABELS[stage as keyof typeof STUCK_LABELS]],
             ] as const
           ).map(([value, label]) => (
@@ -129,7 +139,7 @@ function PeopleBody({
               }}
               className="rounded-md px-3 py-1 transition-colors aria-pressed:bg-background aria-pressed:font-medium aria-pressed:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
@@ -140,11 +150,11 @@ function PeopleBody({
           <TableHeader className="sticky top-0 z-10 bg-muted/40">
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Ism</TableHead>
-              <TableHead>Telefon</TableHead>
-              <TableHead>Manba</TableHead>
-              <TableHead>Holati</TableHead>
-              <TableHead>Kelgan sana</TableHead>
+              <TableHead>{t("Ism familiya")}</TableHead>
+              <TableHead>{t("Telefon")}</TableHead>
+              <TableHead>{t("Manba")}</TableHead>
+              <TableHead>{t("Holat")}</TableHead>
+              <TableHead>{t("Kelgan sana")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -164,7 +174,7 @@ function PeopleBody({
                   colSpan={6}
                   className="py-10 text-center text-sm text-destructive"
                 >
-                  Ro&apos;yxatni yuklab bo&apos;lmadi. Oynani yopib qayta oching.
+                  {t("Ro'yxatni yuklab bo'lmadi. Oynani yopib qayta oching.")}
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
@@ -173,7 +183,7 @@ function PeopleBody({
                   colSpan={6}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
-                  Bu ro&apos;yxatda hech kim yo&apos;q.
+                  {t("Bu ro'yxatda hech kim yo'q.")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -200,13 +210,13 @@ function PeopleBody({
                   <TableCell>{p.source ?? "—"}</TableCell>
                   <TableCell>
                     {p.studentStatus ? (
-                      <StatusBadge
+                      <TranslatedStatusBadge
                         entityType="students"
                         status={p.studentStatus}
                       />
                     ) : (
                       <span className="text-sm text-muted-foreground">
-                        Lid
+                        {t("Lid")}
                       </span>
                     )}
                   </TableCell>
