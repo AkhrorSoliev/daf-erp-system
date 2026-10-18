@@ -18,6 +18,7 @@ import {
 import { useFortschritt, useReyting } from "../queries";
 import { darajaFoizi, qisqaRaqam } from "../yol/yol-tuzilishi";
 import type { ReytingZeile } from "../types";
+import { Nishonlarim } from "./nishonlarim";
 import { loadState } from "../../lib/load-state";
 import { LoadFailed } from "../../load-failed";
 
@@ -109,6 +110,8 @@ function ReytingJadvali({ scope }: { scope: "gruppe" | "zentrum" }) {
  * xato edi: u nolldan boshlaydi va Kenner'ga endi yetgan (1500/4000)
  * o'quvchini "keyingi darajagacha 37% qolgan" deb ko'rsatardi — aslida
  * u shu band boshida, hali hech narsa bosib o'tmagan.
+ *
+ * Ostida «Nishonlarim» (S2) — o'z so'rovi bilan, faqat shu tab ochilganda.
  */
 function DarajamTab() {
   const query = useFortschritt();
@@ -122,35 +125,38 @@ function DarajamTab() {
   const qoldi = naechsteStufe ? Math.max(0, naechsteStufe.ab - gesamt) : 0;
 
   return (
-    <Card className="space-y-6 text-center">
-      <div>
-        <p className="font-display text-4xl font-extrabold text-ink-900">
-          {qisqaRaqam(gesamt)}
-        </p>
-        <p className="text-sm font-semibold text-ink-500">umumiy ball</p>
-      </div>
-
-      <div>
-        <p className="font-display text-2xl font-extrabold text-ink-900">
-          {stufe.de}
-        </p>
-        <p className="text-sm font-semibold text-ink-500">{stufe.uz}</p>
-      </div>
-
-      {naechsteStufe ? (
-        <div className="space-y-1.5 text-left">
-          <ProgressBar value={foiz} />
-          <p className="text-xs font-semibold text-ink-500">
-            {naechsteStufe.de} ({naechsteStufe.uz}) darajagacha{" "}
-            {qisqaRaqam(qoldi)} ball qoldi
+    <div className="space-y-4">
+      <Card className="space-y-6 text-center">
+        <div>
+          <p className="font-display text-4xl font-extrabold text-ink-900">
+            {qisqaRaqam(gesamt)}
           </p>
+          <p className="text-sm font-semibold text-ink-500">umumiy ball</p>
         </div>
-      ) : (
-        <Badge tone="amber" size="md" className="mx-auto">
-          Eng yuqori daraja
-        </Badge>
-      )}
-    </Card>
+
+        <div>
+          <p className="font-display text-2xl font-extrabold text-ink-900">
+            {stufe.de}
+          </p>
+          <p className="text-sm font-semibold text-ink-500">{stufe.uz}</p>
+        </div>
+
+        {naechsteStufe ? (
+          <div className="space-y-1.5 text-left">
+            <ProgressBar value={foiz} />
+            <p className="text-xs font-semibold text-ink-500">
+              {naechsteStufe.de} ({naechsteStufe.uz}) darajagacha{" "}
+              {qisqaRaqam(qoldi)} ball qoldi
+            </p>
+          </div>
+        ) : (
+          <Badge tone="amber" size="md" className="mx-auto">
+            Eng yuqori daraja
+          </Badge>
+        )}
+      </Card>
+      <Nishonlarim />
+    </div>
   );
 }
 
