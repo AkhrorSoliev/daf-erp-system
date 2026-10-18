@@ -17,6 +17,7 @@ const empty: ArchiveFilters = {
   gacha: "",
   sahifa: 1,
   soni: 10,
+  lid: "",
 };
 
 describe("archiveParams", () => {
@@ -52,6 +53,10 @@ describe("archiveParams", () => {
     });
   });
 
+  it("never sends the open panel lead", () => {
+    expect(archiveParams({ ...empty, lid: "l1" })).toEqual(archiveParams(empty));
+  });
+
   it("falls back to 10 for a page size the page does not offer", () => {
     expect(archivePageSize(99)).toBe(10);
     expect(archivePageSize(50)).toBe(50);
@@ -70,6 +75,7 @@ describe("hasArchiveFilter", () => {
   it("is false for paging and tab alone", () => {
     expect(hasArchiveFilter({ ...empty, tab: "bolimlar", sahifa: 4 })).toBe(false);
     expect(hasArchiveFilter({ ...empty, q: "  " })).toBe(false);
+    expect(hasArchiveFilter({ ...empty, lid: "l1" })).toBe(false);
   });
   it("is true for search, people or a date", () => {
     expect(hasArchiveFilter({ ...empty, q: "a" })).toBe(true);

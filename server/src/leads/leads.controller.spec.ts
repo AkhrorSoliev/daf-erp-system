@@ -11,6 +11,7 @@ describe('LeadsController — route access', () => {
     'getHoverSummary',
     'getArchiveSummary',
     'listArchivedLeads',
+    'getArchivedLead',
     'listArchivedSections',
     'getBoard',
     'getStats',

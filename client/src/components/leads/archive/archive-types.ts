@@ -1,3 +1,4 @@
+import type { LeadStatus } from "@/hooks/use-leads-board";
 export type { ArchiveSummary, Paged } from "./archive-cache";
 export type { RestoreColumn as BoardColumn } from "./restore-lead-model";
 
@@ -32,4 +33,39 @@ export interface ArchivedSection {
   deletedBy: DeletedBy | null;
   column: { id: string; name: string } | null;
   leadCount: number;
+}
+
+export interface ArchivedLeadDetail {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  extraPhone: string | null;
+  statusEnum: LeadStatus;
+  convertedStudentId: number | null;
+  statusChangeReason: string | null;
+  lostReason: string | null;
+  createdAt: string;
+  calledAt: string | null;
+  calledBy: DeletedBy | null;
+  owner: DeletedBy | null;
+  ownedAt: string | null;
+  source: { id: string; name: string } | null;
+  section: ArchivedLead["section"];
+  deletedAt: string | null;
+  deletedBy: DeletedBy | null;
+  /** What restoring will change (the server's words). */
+  notes: string[];
+  ownershipLog: OwnershipLogEntry[];
+}
+
+export interface OwnershipLogEntry {
+  id: string;
+  kind: "CLAIM" | "ASSIGN" | "RELEASE" | "EXPIRE";
+  from: string | null;
+  to: string | null;
+  /** Null = the system. */
+  actor: string | null;
+  reason: string | null;
+  createdAt: string;
 }

@@ -16,7 +16,9 @@ export function withoutRow<T extends { id: string }>(
   page: Paged<T> | undefined,
   id: string,
 ): Paged<T> | undefined {
-  if (!page || !page.data.some((r) => r.id === id)) return page;
+  // The leads key prefix also holds single-lead details: only paged lists change.
+  if (!page || !Array.isArray(page.data) || !page.data.some((r) => r.id === id))
+    return page;
   return {
     ...page,
     data: page.data.filter((r) => r.id !== id),
