@@ -5,6 +5,8 @@ import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
+import { leadColumnName } from "@/hooks/use-leads-board";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -60,6 +62,7 @@ export function RestoreLeadDialog({
   onClose: () => void;
   onRestored: () => void;
 }) {
+  const t = useT();
   // What the user picked; null = still the suggested place.
   const [picked, setPicked] = useState<{
     columnId: string;
@@ -91,16 +94,16 @@ export function RestoreLeadDialog({
   async function handleConfirm() {
     if (!target) return;
     if (!columnId || !sectionId) {
-      toast.error("Ustun va bo'limni tanlang");
+      toast.error(t("Ustun va bo'limni tanlang"));
       return;
     }
     setSubmitting(true);
     try {
       await api.post(`/leads/${target.id}/restore`, { columnId, sectionId });
-      toast.success("Lid tiklandi");
+      toast.success(t("Lid tiklandi"));
       onRestored();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Tiklashda xatolik"));
+      toast.error(getErrorMessage(error, t("Tiklashda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -110,29 +113,31 @@ export function RestoreLeadDialog({
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Lidni tiklash</DialogTitle>
+          <DialogTitle>{t("Lidni tiklash")}</DialogTitle>
           <DialogDescription>
-            &laquo;{target?.firstName} {target?.lastName}&raquo; lidi
-            qaytariladigan ustun va bo&apos;limni tanlang
+            {t("«{name}» lidi qaytariladigan ustun va bo'limni tanlang", {
+              name: `${target?.firstName ?? ""} ${target?.lastName ?? ""}`,
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           {columnsFailed && (
             <p className="text-xs text-destructive">
-              Ustunlarni yuklab bo&apos;lmadi. Oynani yopib, qayta oching.
+              {t("Ustunlarni yuklab bo'lmadi. Oynani yopib, qayta oching.")}
             </p>
           )}
 
           {place.missingLabel && !columnsFailed && (
             <p className="rounded-md border bg-muted/50 p-2.5 text-xs text-muted-foreground">
-              Asl joyi &laquo;{place.missingLabel}&raquo; arxivda yoki
-              o&apos;chirilgan &mdash; yangi joy tanlang.
+              {t("Asl joyi «{place}» arxivda yoki o'chirilgan — yangi joy tanlang.", {
+                place: place.missingLabel,
+              })}
             </p>
           )}
 
           <div className="space-y-1.5">
-            <Label>Ustun</Label>
+            <Label>{t("Ustun")}</Label>
             <Select
               value={columnId}
               onValueChange={(v) => setPicked({ columnId: v, sectionId: "" })}
@@ -141,14 +146,14 @@ export function RestoreLeadDialog({
               <SelectTrigger>
                 <SelectValue
                   placeholder={
-                    columnsLoading ? "Yuklanmoqda..." : "Ustunni tanlang"
+                    columnsLoading ? t("Yuklanmoqda...") : t("Ustunni tanlang")
                   }
                 />
               </SelectTrigger>
               <SelectContent>
                 {columns.map((col) => (
                   <SelectItem key={col.id} value={col.id}>
-                    {col.name}
+                    {leadColumnName(col, t)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -156,7 +161,7 @@ export function RestoreLeadDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Bo&apos;lim</Label>
+            <Label>{t("Bo'lim")}</Label>
             <Select
               value={sectionId}
               onValueChange={(v) => setPicked({ columnId, sectionId: v })}
@@ -167,9 +172,9 @@ export function RestoreLeadDialog({
                   placeholder={
                     columnId
                       ? sections.length
-                        ? "Bo'limni tanlang"
-                        : "Bu ustunda bo'lim yo'q"
-                      : "Avval ustunni tanlang"
+                        ? t("Bo'limni tanlang")
+                        : t("Bu ustunda bo'lim yo'q")
+                      : t("Avval ustunni tanlang")
                   }
                 />
               </SelectTrigger>
@@ -199,7 +204,7 @@ export function RestoreLeadDialog({
             onClick={onClose}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             type="button"
@@ -207,7 +212,7 @@ export function RestoreLeadDialog({
             disabled={submitting || columnsLoading || columnsFailed}
           >
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Tiklash
+            {t("Tiklash")}
           </Button>
         </DialogFooter>
       </DialogContent>

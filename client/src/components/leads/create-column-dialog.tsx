@@ -19,8 +19,10 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { useLeadsBoard, type LeadBoardColumn } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useT } from "@/i18n/context";
 
 export function CreateColumnDialog() {
+  const t = useT();
   const open = useLeadsUi((s) => s.createColumnOpen);
   const closeCreateColumn = useLeadsUi((s) => s.closeCreateColumn);
   const addColumn = useLeadsBoard((s) => s.addColumn);
@@ -44,7 +46,7 @@ export function CreateColumnDialog() {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) {
-      toast.error("Ustun nomini kiriting");
+      toast.error(t("Ustun nomini kiriting"));
       return;
     }
     setSubmitting(true);
@@ -53,10 +55,10 @@ export function CreateColumnDialog() {
         name: trimmed,
       });
       addColumn(data);
-      toast.success("Ustun yaratildi");
+      toast.success(t("Ustun yaratildi"));
       closeCreateColumn();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Ustun yaratishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Ustun yaratishda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -69,19 +71,21 @@ export function CreateColumnDialog() {
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Yangi ustun</DialogTitle>
+          <DialogTitle>{t("Yangi ustun")}</DialogTitle>
           <DialogDescription>
             {noBranch
-              ? "Har bir filialning o'z doskasi bor"
-              : `${selectedBranch.name} doskasining oxiriga qo'shiladi`}
+              ? t("Har bir filialning o'z doskasi bor")
+              : t("{branch} doskasining oxiriga qo'shiladi", {
+                  branch: selectedBranch.name,
+                })}
           </DialogDescription>
         </DialogHeader>
 
         {noBranch ? (
           <p className="rounded-md bg-muted px-3 py-2.5 text-sm text-muted-foreground">
-            Ustun qaysi filialga tegishli ekani aniq bo&apos;lishi kerak. Yuqoridagi
-            filial almashtirgichdan bitta filialni tanlab, keyin qayta urinib
-            ko&apos;ring.
+            {t(
+              "Ustun qaysi filialga tegishli ekani aniq bo'lishi kerak. Yuqoridagi filial almashtirgichdan bitta filialni tanlab, keyin qayta urinib ko'ring.",
+            )}
           </p>
         ) : (
           <form
@@ -89,13 +93,13 @@ export function CreateColumnDialog() {
             onSubmit={handleSubmit}
             className="space-y-1.5"
           >
-            <Label htmlFor="column-name">Ustun nomi</Label>
+            <Label htmlFor="column-name">{t("Ustun nomi")}</Label>
             <Input
               id="column-name"
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Masalan: Sinovga yozildi"
+              placeholder={t("Masalan: Sinovga yozildi")}
               maxLength={100}
             />
           </form>
@@ -108,7 +112,7 @@ export function CreateColumnDialog() {
             onClick={closeCreateColumn}
             disabled={submitting}
           >
-            {noBranch ? "Yopish" : "Bekor qilish"}
+            {noBranch ? t("Yopish") : t("Bekor qilish")}
           </Button>
           {!noBranch && (
             <Button
@@ -117,7 +121,7 @@ export function CreateColumnDialog() {
               disabled={submitting}
             >
               {submitting && <Loader2 className="size-4 animate-spin" />}
-              Yaratish
+              {t("Yaratish")}
             </Button>
           )}
         </DialogFooter>

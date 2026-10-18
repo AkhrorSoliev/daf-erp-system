@@ -481,6 +481,15 @@ export const STRICT_FILES: string[] = [
   "components/leads/add-lead-drawer.tsx",
   "components/leads/edit-lead-drawer.tsx",
   "components/leads/lead-additional-fields.tsx",
+  "components/leads/convert-lead-dialog.tsx",
+  "components/leads/create-column-dialog.tsx",
+  "components/leads/create-section-dialog.tsx",
+  "components/leads/delete-confirm-dialog.tsx",
+  "components/leads/manage-sources-dialog.tsx",
+  "components/leads/move-lead-dialog.tsx",
+  "components/leads/move-section-dialog.tsx",
+  "components/leads/rename-dialog.tsx",
+  "components/leads/restore-lead-dialog.tsx",
 ];
 
 function walk(dir: string): string[] {
