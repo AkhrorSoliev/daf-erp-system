@@ -30,10 +30,12 @@ interface PhoneInputProps
   value?: string;
   onChange?: (e: { target: { name?: string; value: string } }) => void;
   name?: string;
+  /** Extra classes for the fixed +998 box (e.g. a larger radius on a form). */
+  prefixClassName?: string;
 }
 
 const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
-  ({ className, value = "", onChange, name, ...props }, ref) => {
+  ({ className, prefixClassName, value = "", onChange, name, ...props }, ref) => {
     const [display, setDisplay] = React.useState(() =>
       formatPhoneValue(value)
     );
@@ -54,7 +56,12 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
 
     return (
       <div className="flex">
-        <span className="inline-flex items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">
+        <span
+          className={cn(
+            "inline-flex items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground",
+            prefixClassName
+          )}
+        >
           +998
         </span>
         <Input
