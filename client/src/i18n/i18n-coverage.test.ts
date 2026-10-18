@@ -272,6 +272,15 @@ export const STRICT_FILES: string[] = [
   "components/payments/employee-advance-select.tsx",
   "components/payments/promise-month.ts",
   "components/payments/refunds/refunds-format.ts",
+  "components/payments/list/payments-list-page.tsx",
+  "components/payments/list/payments-period-bar.tsx",
+  "components/payments/list/payments-summary-card.tsx",
+  "components/payments/list/payments-filter-bar.tsx",
+  "components/payments/list/payments-table.tsx",
+  "components/payments/list/payments-format.ts",
+  "components/payments/list/payment-drawer.tsx",
+  "components/payments/list/payment-drawer-model.ts",
+  "components/payments/list/reverse-payment-dialog.tsx",
 ];
 
 function walk(dir: string): string[] {
