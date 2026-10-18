@@ -40,6 +40,8 @@ export interface LeadCard {
   owner: LeadOwner | null;
   /** When the lead returns to the pool unless its owner acts (server-computed). */
   ownerDueAt: string | null;
+  /** A live student with the same phone — the lead is tied to another profile. */
+  linkedStudent?: { id: number; firstName: string; lastName: string } | null;
 }
 
 export interface LeadBoardSection {

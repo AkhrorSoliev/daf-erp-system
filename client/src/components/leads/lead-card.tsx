@@ -2,6 +2,7 @@
 
 import {
   GripVertical,
+  Link2,
   MessageSquareText,
   Phone,
   PhoneCall,
@@ -43,6 +44,20 @@ function CardBody({ lead }: { lead: LeadCard }) {
         <Badge variant="secondary" className="mt-1.5 text-[10px]">
           {lead.source.name}
         </Badge>
+      )}
+      {lead.linkedStudent && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="mt-1.5 flex w-fit items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+              <Link2 className="size-3" />
+              Profilga bog&apos;langan
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            O&apos;quvchi profili: {lead.linkedStudent.firstName}{" "}
+            {lead.linkedStudent.lastName} (#{lead.linkedStudent.id})
+          </TooltipContent>
+        </Tooltip>
       )}
     </>
   );
