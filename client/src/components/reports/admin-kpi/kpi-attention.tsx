@@ -1,16 +1,18 @@
 "use client";
 
 import { AlertTriangle, TrendingUp } from "lucide-react";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import type { KpiSignal } from "./kpi-types";
 
 /** «Diqqat» (spec §7.9): the server's signals, numbers included; a click opens the person. */
 export function KpiAttention({ signals, onOpen }: { signals: KpiSignal[]; onOpen: (userId: number) => void }) {
+  const t = useT();
   return (
     <section className="space-y-2">
-      <h3 className="font-medium">Diqqat</h3>
+      <h3 className="font-medium">{t("Diqqat")}</h3>
       {signals.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Bu oyda e&apos;tibor talab qiladigan holat yo&apos;q</p>
+        <p className="text-sm text-muted-foreground">{t("Bu oyda e'tibor talab qiladigan holat yo'q")}</p>
       ) : (
         <ul className="space-y-2">
           {signals.map((s, i) => (

@@ -1,6 +1,7 @@
 "use client";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useT } from "@/i18n/context";
 import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { ratioText } from "./kpi-format";
 import { TrendMark } from "./kpi-trend";
@@ -19,9 +20,10 @@ function CountCell({
   compareAvailable: boolean;
   compareRecorded: boolean;
 }) {
+  const t = useT();
   return (
     <span className="whitespace-nowrap tabular-nums">
-      {formatNumber(count)} · {formatPrice(amount)} so&apos;m
+      {formatNumber(count)} · {formatPrice(amount)} {t("so'm")}
       <TrendMark
         value={count}
         compare={compare}
@@ -49,10 +51,11 @@ export function KpiAdminTable({
   compareRecorded: boolean;
   onOpen: (userId: number) => void;
 }) {
+  const t = useT();
   if (rows.length === 0) {
     return (
       <p className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-        Bu oyda natija ham, band lid ham yo&apos;q — boshqa oyni tanlab ko&apos;ring
+        {t("Bu oyda natija ham, band lid ham yo'q — boshqa oyni tanlab ko'ring")}
       </p>
     );
   }
@@ -61,13 +64,13 @@ export function KpiAdminTable({
       <TableHeader>
         <TableRow>
           <TableHead className="w-12 border-r">#</TableHead>
-          <TableHead>Xodim</TableHead>
-          <TableHead>Lid to&apos;lov qildi</TableHead>
-          <TableHead>Va&apos;da bajarildi</TableHead>
-          <TableHead>Lid → to&apos;lov</TableHead>
-          <TableHead>Va&apos;da bajarilishi</TableHead>
-          <TableHead>Qaytgan lidlar</TableHead>
-          <TableHead className="text-right">Jami summa</TableHead>
+          <TableHead>{t("Xodim")}</TableHead>
+          <TableHead>{t("Lid to'lov qildi")}</TableHead>
+          <TableHead>{t("Va'da bajarildi")}</TableHead>
+          <TableHead>{t("Lid → to'lov")}</TableHead>
+          <TableHead>{t("Va'da bajarilishi")}</TableHead>
+          <TableHead>{t("Qaytgan lidlar")}</TableHead>
+          <TableHead className="text-right">{t("Jami summa")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -75,7 +78,7 @@ export function KpiAdminTable({
           <TableRow
             key={r.userId}
             tabIndex={0}
-            aria-label={`${r.name} — natijalarni ochish`}
+            aria-label={t("{name} — natijalarni ochish", { name: r.name })}
             className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={() => onOpen(r.userId)}
             onKeyDown={(e) => {
@@ -122,7 +125,9 @@ export function KpiAdminTable({
                 compareRecorded={compareRecorded}
               />
             </TableCell>
-            <TableCell className="text-right tabular-nums">{formatPrice(r.total)} so&apos;m</TableCell>
+            <TableCell className="text-right tabular-nums">
+              {formatPrice(r.total)} {t("so'm")}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

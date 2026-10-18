@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/i18n/context";
 
 export const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
@@ -27,11 +28,12 @@ export function TablePagination({
   onPageChange,
   onPageSizeChange,
 }: Props) {
+  const t = useT();
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return (
     <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Sahifada:</span>
+        <span className="text-sm text-muted-foreground">{t("Sahifada:")}</span>
         <Select
           value={String(pageSize)}
           onValueChange={(value) => onPageSizeChange(Number(value))}
@@ -47,7 +49,7 @@ export function TablePagination({
             ))}
           </SelectContent>
         </Select>
-        <span className="text-sm text-muted-foreground">Jami: {total} ta</span>
+        <span className="text-sm text-muted-foreground">{t("Jami: {n} ta", { n: total })}</span>
       </div>
       <div className="flex items-center gap-2">
         <Button
@@ -58,7 +60,7 @@ export function TablePagination({
           onClick={() => onPageChange(page - 1)}
         >
           <ChevronLeft className="size-4" />
-          <span className="sr-only">Oldingi sahifa</span>
+          <span className="sr-only">{t("Oldingi sahifa")}</span>
         </Button>
         <span className="text-sm tabular-nums">
           {page} / {totalPages}
@@ -71,7 +73,7 @@ export function TablePagination({
           onClick={() => onPageChange(page + 1)}
         >
           <ChevronRight className="size-4" />
-          <span className="sr-only">Keyingi sahifa</span>
+          <span className="sr-only">{t("Keyingi sahifa")}</span>
         </Button>
       </div>
     </div>
