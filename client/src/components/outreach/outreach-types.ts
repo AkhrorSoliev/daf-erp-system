@@ -23,6 +23,14 @@ export interface OutreachTeacher {
   lastName: string;
 }
 
+export type CallOutcome =
+  | "ANSWERED"
+  | "NO_ANSWER"
+  | "PROMISED" // legacy combined "keladi / to'laydi"
+  | "WILL_COME"
+  | "WILL_PAY"
+  | "LEFT";
+
 export interface TodayAbsenteesResponse {
   date: string;
   total: number;
@@ -34,6 +42,8 @@ export interface TodayAbsenteeItem {
   note: string | null;
   // Bu o'quvchiga ko'rilayotgan sanada qo'ng'iroq qilinganmi.
   calledToday: boolean;
+  // Ko'rilayotgan sanadagi oxirgi qo'ng'iroq natijasi (null = qo'ng'iroq yo'q).
+  callOutcome: CallOutcome | null;
   student: OutreachStudent;
   group: OutreachGroupSummary & {
     lessonStartTime: string | null;
@@ -42,15 +52,8 @@ export interface TodayAbsenteeItem {
   teacher: OutreachTeacher | null;
 }
 
-// Qo'ng'iroq sababi (qaysi ro'yxatdan chiqilgan) va natijasi.
+// Qo'ng'iroq sababi (qaysi ro'yxatdan chiqilgan).
 export type CallReason = "ABSENCE" | "DEBT" | "REMOVAL" | "OTHER";
-export type CallOutcome =
-  | "ANSWERED"
-  | "NO_ANSWER"
-  | "PROMISED" // legacy combined "keladi / to'laydi"
-  | "WILL_COME"
-  | "WILL_PAY"
-  | "LEFT";
 
 // Shared badge labels + colors for call reason / outcome. Used by the
 // outreach call-history tab, the log-call dialog, and the debtors page so the
