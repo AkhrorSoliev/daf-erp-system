@@ -193,6 +193,7 @@ export const STRICT_FILES: string[] = [
   "components/groups/group-info-card.tsx",
   "components/groups/group-students-table.tsx",
   "components/groups/lesson-modifications/lesson-modifications-table.tsx",
+  "components/groups/lesson-changes-tab.tsx",
   "lib/lesson-dates.ts",
   "lib/schemas/group-schema.ts",
 ];
