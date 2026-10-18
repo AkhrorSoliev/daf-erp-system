@@ -745,6 +745,8 @@ const en: Dictionary = {
   "✓ To'langan": "✓ Paid",
   "Bepul": "Free",
   "Mock imtihonlar — o'quvchini real imtihonga tayyorlash uchun. ID raqami #{id} bo'yicha PDF natijalarda ko'rinadi.": "Mock exams prepare the student for the real exam. In PDF results the student appears under ID #{id}.",
+  "Tizim (avtomatik)": "System",
+  "To'lov kutilmoqda": "Payment pending",
 };
 
 export default en;

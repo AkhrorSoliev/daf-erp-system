@@ -434,7 +434,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
               <div className="rounded-lg bg-muted/40 px-3 py-2.5 space-y-1.5">
                 <p className="text-sm leading-relaxed line-clamp-3">{latestComment.content}</p>
                 <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <span className="font-medium">{latestComment.author ? `${latestComment.author.firstName} ${latestComment.author.lastName}` : t("Tizim")}</span>
+                  <span className="font-medium">{latestComment.author ? `${latestComment.author.firstName} ${latestComment.author.lastName}` : t("Tizim (avtomatik)")}</span>
                   <span>&middot;</span>
                   <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
                 </div>

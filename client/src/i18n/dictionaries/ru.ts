@@ -745,6 +745,8 @@ const ru: Dictionary = {
   "✓ To'langan": "✓ Оплачено",
   "Bepul": "Бесплатно",
   "Mock imtihonlar — o'quvchini real imtihonga tayyorlash uchun. ID raqami #{id} bo'yicha PDF natijalarda ko'rinadi.": "Пробные экзамены нужны, чтобы подготовить ученика к настоящему экзамену. В PDF-результатах он указан по ID #{id}.",
+  "Tizim (avtomatik)": "Система",
+  "To'lov kutilmoqda": "Ожидается оплата",
 };
 
 export default ru;

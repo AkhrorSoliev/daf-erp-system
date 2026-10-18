@@ -185,7 +185,7 @@ export function StudentMockExamsTab({ studentId }: { studentId: number }) {
                       {t("✓ To'langan")}
                     </span>
                   ) : mockPaymentState(r, r.exam.price) === "pending" ? (
-                    <span className="text-amber-600">{t("Kutilmoqda")}</span>
+                    <span className="text-amber-600">{t("To'lov kutilmoqda")}</span>
                   ) : (
                     <span className="text-muted-foreground">{t("Bepul")}</span>
                   )}
