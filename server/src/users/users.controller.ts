@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   ParseIntPipe,
+  ParseUUIDPipe,
   UseGuards,
   Logger,
   HttpCode,
@@ -58,6 +59,22 @@ export class UsersController {
       branchScope,
       await this.permissions.has(userId, 'salary.view'),
     );
+  }
+
+  /**
+   * Profildagi «Faol seanslar» (ADR-0112): shu hisobning tirik qurilmalari.
+   * Id token'dan olinadi, so'rovdan emas — boshqa hisobga yetib bo'lmaydi.
+   * `:id` dan OLDIN e'lon qilingan: marshrut e'lon tartibida mos keladi va
+   * `:id` "sessions" ni ParseIntPipe bilan 400 qilib yuborardi.
+   */
+  @Get('sessions')
+  @AnyUser()
+  listSessions(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('sessionVersion') sessionVersion: number,
+    @CurrentUser('sid') sid: string | undefined,
+  ) {
+    return this.authService.listSessions(userId, sessionVersion, sid);
   }
 
   @Get(':id')
@@ -126,16 +143,17 @@ export class UsersController {
   @UseGuards(OwnPasswordAttemptGuard)
   async changePassword(
     @CurrentUser('id') userId: number,
+    @CurrentUser('sid') sid: string | undefined,
     @Body() dto: ChangePasswordDto,
   ) {
     const { sessionVersion, ...result } =
       await this.usersService.changePassword(userId, dto);
     // The change ended every session of this account, the caller's included
     // (ADR-0030). A fresh pair, signed with the version this change produced,
-    // keeps THIS device signed in.
+    // keeps THIS device signed in (and on its own row in the list, ADR-0112).
     return {
       ...result,
-      ...(await this.authService.issueSession(userId, sessionVersion)),
+      ...(await this.authService.issueSession(userId, sessionVersion, sid)),
     };
   }
 
@@ -149,8 +167,19 @@ export class UsersController {
   logoutOthers(
     @CurrentUser('id') userId: number,
     @CurrentUser('sessionVersion') sessionVersion: number,
+    @CurrentUser('sid') sid: string | undefined,
   ) {
-    return this.authService.logoutOtherSessions(userId, sessionVersion);
+    return this.authService.logoutOtherSessions(userId, sessionVersion, sid);
+  }
+
+  @Delete('sessions/:sid')
+  @AnyUser()
+  revokeSession(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('sid') callerSid: string | undefined,
+    @Param('sid', ParseUUIDPipe) sid: string,
+  ) {
+    return this.authService.revokeSession(userId, sid, callerSid);
   }
 
   // Declared before `@Patch(':id')`: routes match in declaration order, and

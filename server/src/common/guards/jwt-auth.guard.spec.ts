@@ -183,6 +183,51 @@ describe('JwtAuthGuard', () => {
     });
   });
 
+  describe('a device removed from the list (ADR-0112)', () => {
+    const revokedKey = 'user:session-revoked:sid-1';
+    const withSid = { ...jwtStrategyUser, sessionVersion: 0, sid: 'sid-1' };
+
+    function cache(values: Record<string, string>) {
+      redis.get.mockImplementation(async (key: string) => values[key] ?? null);
+    }
+
+    it('stops the access token of a removed device with a 401', async () => {
+      cache({ [revokedKey]: '1' });
+
+      await expect(
+        guard.canActivate(mockContext(false, withSid)),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        guard.canActivate(mockContext(false, withSid)),
+      ).rejects.toThrow('Sessiya tugagan. Iltimos, qaytadan kiring.');
+    });
+
+    it('lets a device that was not removed through, without a database query', async () => {
+      cache({ 'user:session-revoked:sid-other': '1' });
+
+      await expect(
+        guard.canActivate(mockContext(false, withSid)),
+      ).resolves.toBe(true);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('does not look a token without sid up (pre-deploy token)', async () => {
+      await guard.canActivate(mockContext(false, jwtStrategyUser));
+
+      expect(redis.get).not.toHaveBeenCalledWith(
+        expect.stringContaining('user:session-revoked'),
+      );
+    });
+
+    it('lets the request through when Redis is unreachable — refresh stops the device', async () => {
+      redis.get.mockRejectedValue(new Error('ENOTFOUND'));
+
+      await expect(
+        guard.canActivate(mockContext(false, withSid)),
+      ).resolves.toBe(true);
+    });
+  });
+
   describe('session version (ADR-0030)', () => {
     const sessionKey = 'user:session-version:10505';
 

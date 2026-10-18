@@ -116,6 +116,8 @@ describe('TelegramOauthService', () => {
       expect(authService.login).toHaveBeenCalledWith(
         expect.objectContaining({ id: 5 }),
         'https://admin.dafzentrum.uz',
+        undefined,
+        undefined,
       );
     });
 

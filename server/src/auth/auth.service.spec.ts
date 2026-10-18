@@ -35,6 +35,13 @@ describe('AuthService', () => {
         findUnique: jest.fn(),
         updateMany: jest.fn(),
       },
+      userSession: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        create: jest.fn().mockResolvedValue({ id: 'sid-new' }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
     jwt = { sign: jest.fn().mockReturnValue('tok'), verify: jest.fn() };
     config = { get: jest.fn().mockReturnValue('secret') };
@@ -504,6 +511,7 @@ describe('AuthService', () => {
         sub: 2,
         type: 'refresh',
         sv: 3,
+        sid: 'sid-new',
       });
     });
 
@@ -518,6 +526,7 @@ describe('AuthService', () => {
         sub: 2,
         type: 'refresh',
         sv: 3,
+        sid: 'sid-new',
       });
     });
 
@@ -578,6 +587,7 @@ describe('AuthService', () => {
           sub: 2,
           type: 'refresh',
           sv: 7,
+          sid: 'sid-new',
         });
         expect(prisma.user.findFirst.mock.calls[0][0].where).toEqual({
           id: 2,
@@ -594,6 +604,182 @@ describe('AuthService', () => {
         await expect(service.issueSession(2, 3)).rejects.toThrow(
           'Hisobingiz bloklangan',
         );
+      });
+    });
+
+    describe('device list (ADR-0112)', () => {
+      it("refresh keeps the token's own row and renews its last-used time", async () => {
+        jwt.verify.mockReturnValue({
+          sub: 2,
+          type: 'refresh',
+          sv: 3,
+          sid: 'sid-1',
+        });
+        prisma.user.findFirst.mockResolvedValue(liveTeacher);
+
+        await service.refresh('refresh-token');
+
+        expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
+          where: { id: 'sid-1', userId: 2 },
+          data: { lastUsedAt: expect.any(Date) },
+        });
+        expect(prisma.userSession.create).not.toHaveBeenCalled();
+        expect(jwt.sign.mock.calls[1][0]).toMatchObject({ sid: 'sid-1' });
+      });
+
+      it('refresh refuses a device whose row was removed', async () => {
+        jwt.verify.mockReturnValue({
+          sub: 2,
+          type: 'refresh',
+          sv: 3,
+          sid: 'sid-gone',
+        });
+        prisma.user.findFirst.mockResolvedValue(liveTeacher);
+        prisma.userSession.updateMany.mockResolvedValue({ count: 0 });
+
+        await expect(service.refresh('refresh-token')).rejects.toThrow(
+          'Sessiya tugagan. Iltimos, qaytadan kiring.',
+        );
+        expect(jwt.sign).not.toHaveBeenCalled();
+      });
+
+      it("a login opens a row with the device, and sweeps this account's dead rows", async () => {
+        await service.login(liveTeacher, undefined, undefined, {
+          userAgent:
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120 Safari/537',
+          ip: '1.2.3.4',
+        });
+
+        expect(prisma.userSession.deleteMany).toHaveBeenCalledWith({
+          where: {
+            userId: 2,
+            OR: [
+              { sessionVersion: { lt: 3 } },
+              { lastUsedAt: { lt: expect.any(Date) } },
+            ],
+          },
+        });
+        expect(prisma.userSession.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              userId: 2,
+              sessionVersion: 3,
+              ip: '1.2.3.4',
+            }),
+          }),
+        );
+        expect(jwt.sign.mock.calls[0][0]).toMatchObject({ sid: 'sid-new' });
+      });
+
+      it("lists only this version's live rows and marks the caller's own", async () => {
+        prisma.userSession.findMany.mockResolvedValue([
+          {
+            id: 'sid-1',
+            userAgent: 'Mozilla/5.0 (iPhone) Safari/604',
+            ip: '9.9.9.9',
+            createdAt: new Date('2026-10-18T10:00:00Z'),
+            lastUsedAt: new Date('2026-10-18T11:00:00Z'),
+          },
+          {
+            id: 'sid-2',
+            userAgent: null,
+            ip: null,
+            createdAt: new Date('2026-10-17T10:00:00Z'),
+            lastUsedAt: new Date('2026-10-17T11:00:00Z'),
+          },
+        ]);
+
+        const rows = await service.listSessions(2, 3, 'sid-2');
+
+        expect(prisma.userSession.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              userId: 2,
+              sessionVersion: 3,
+              lastUsedAt: { gte: expect.any(Date) },
+            },
+          }),
+        );
+        expect(rows.map((r) => [r.id, r.device, r.current])).toEqual([
+          ['sid-1', 'Safari · iOS', false],
+          ['sid-2', "Noma'lum qurilma", true],
+        ]);
+      });
+
+      it('revoking removes the row, marks it for the guard and journals it', async () => {
+        prisma.userSession.deleteMany.mockResolvedValue({ count: 1 });
+        prisma.user.findUnique.mockResolvedValue({
+          companyId: 1,
+          student: null,
+        });
+
+        await service.revokeSession(2, 'sid-1', 'sid-me');
+
+        expect(prisma.userSession.deleteMany).toHaveBeenCalledWith({
+          where: { id: 'sid-1', userId: 2 },
+        });
+        expect(redis.set).toHaveBeenCalledWith(
+          'user:session-revoked:sid-1',
+          '1',
+          'EX',
+          expect.any(Number),
+        );
+        expect(history.recordUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ entityType: 'User', entityId: 2 }),
+        );
+      });
+
+      it('revoking still succeeds when Redis is down (refresh stops the device)', async () => {
+        prisma.userSession.deleteMany.mockResolvedValue({ count: 1 });
+        prisma.user.findUnique.mockResolvedValue({
+          companyId: 1,
+          student: null,
+        });
+        redis.set.mockRejectedValue(new Error('redis down'));
+
+        await expect(
+          service.revokeSession(2, 'sid-1', 'sid-me'),
+        ).resolves.toHaveProperty('message');
+      });
+
+      it("cannot revoke the device it is asked from, nor another account's row", async () => {
+        await expect(
+          service.revokeSession(2, 'sid-me', 'sid-me'),
+        ).rejects.toThrow('Chiqish');
+        expect(prisma.userSession.deleteMany).not.toHaveBeenCalled();
+
+        prisma.userSession.deleteMany.mockResolvedValue({ count: 0 });
+        await expect(
+          service.revokeSession(2, 'sid-of-someone-else', 'sid-me'),
+        ).rejects.toThrow('Seans topilmadi');
+        expect(redis.set).not.toHaveBeenCalled();
+      });
+
+      it("log out other devices deletes the other rows and keeps the caller's", async () => {
+        prisma.user.updateMany.mockResolvedValue({ count: 1 });
+        prisma.user.findUnique.mockResolvedValue({
+          companyId: 1,
+          student: null,
+        });
+        prisma.user.findFirst.mockResolvedValue({
+          ...liveTeacher,
+          sessionVersion: 4,
+        });
+
+        await service.logoutOtherSessions(2, 3, 'sid-me');
+
+        expect(prisma.userSession.deleteMany).toHaveBeenCalledWith({
+          where: { userId: 2, id: { not: 'sid-me' } },
+        });
+        expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
+          where: { id: 'sid-me', userId: 2 },
+          data: { sessionVersion: 4, lastUsedAt: expect.any(Date) },
+        });
+        expect(prisma.userSession.create).not.toHaveBeenCalled();
+        expect(jwt.sign.mock.calls[0][0]).toMatchObject({
+          sid: 'sid-me',
+          sv: 4,
+        });
       });
     });
 

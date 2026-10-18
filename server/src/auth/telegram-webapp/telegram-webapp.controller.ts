@@ -4,10 +4,12 @@ import {
   Headers,
   HttpCode,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../../common/decorators';
+import { clientMeta } from '../../common/auth/user-session';
 import { IpThrottlerGuard } from '../../common/guards';
 import { TelegramWebAppLoginDto } from '../dto/telegram-webapp-login.dto';
 import { TelegramWebAppStaffLoginDto } from '../dto/telegram-webapp-staff-login.dto';
@@ -35,8 +37,12 @@ export class TelegramWebAppController {
   @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @HttpCode(200)
   @Post('webapp')
-  async signIn(@Body() dto: TelegramWebAppLoginDto) {
-    return this.telegramWebApp.signIn(dto.initData, dto.studentId);
+  async signIn(@Body() dto: TelegramWebAppLoginDto, @Req() req) {
+    return this.telegramWebApp.signIn(
+      dto.initData,
+      dto.studentId,
+      clientMeta(req),
+    );
   }
 
   /**
@@ -53,8 +59,13 @@ export class TelegramWebAppController {
   @Post('webapp/staff')
   async signInStaff(
     @Body() dto: TelegramWebAppStaffLoginDto,
-    @Headers('origin') origin?: string,
+    @Headers('origin') origin: string | undefined,
+    @Req() req,
   ) {
-    return this.telegramWebApp.signInStaff(dto.initData, origin);
+    return this.telegramWebApp.signInStaff(
+      dto.initData,
+      origin,
+      clientMeta(req),
+    );
   }
 }

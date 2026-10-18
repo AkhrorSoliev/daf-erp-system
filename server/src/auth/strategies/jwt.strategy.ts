@@ -11,6 +11,8 @@ interface JwtPayload {
   studentId?: number;
   /** The session version the token was minted with (ADR-0030). */
   sv?: unknown;
+  /** The `UserSession` row behind this token (ADR-0112); older tokens have none. */
+  sid?: unknown;
   /** Set on refresh tokens only. */
   type?: string;
 }
@@ -42,6 +44,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       roles: payload.roles,
       companyId: payload.companyId,
       sessionVersion,
+      ...(typeof payload.sid === 'string' && { sid: payload.sid }),
       ...(payload.studentId && { studentId: payload.studentId }),
     };
   }

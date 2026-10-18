@@ -11,6 +11,7 @@ import { ProfileDetails } from "./profile-details";
 import { EditProfileDrawer } from "./edit-profile-drawer";
 import { ChangePasswordDrawer } from "./change-password-drawer";
 import { LogoutOthersDialog } from "@/components/shared/logout-others-dialog";
+import { ActiveSessions } from "./sessions/active-sessions";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
 import { TeacherStatsCharts } from "@/components/teachers/teacher-stats-charts";
 import { isTeacherOnly } from "@/lib/teacher-only";
@@ -95,6 +96,7 @@ export function ProfileClient() {
               <LogOut className="mr-1.5 size-4" />
               Boshqa qurilmalardan chiqish
             </Button>
+            <ActiveSessions />
             {phoneTeacher && <TeacherProfileLinks />}
           </>
         ) : (
@@ -113,6 +115,9 @@ export function ProfileClient() {
                 onChangePassword={() => setPasswordOpen(true)}
                 onLogoutOthers={() => setLogoutOthersOpen(true)}
               />
+              <div className="mt-6">
+                <ActiveSessions />
+              </div>
             </div>
           </div>
         )}

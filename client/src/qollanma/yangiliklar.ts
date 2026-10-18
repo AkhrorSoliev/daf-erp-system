@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
+    sarlavha: "Profilda faol seanslar ro'yxati",
+    matn: "Profil sahifasida «Faol seanslar» bo'limi paydo bo'ldi: hisobingizga kirilgan qurilmalar (brauzer va tizim nomi, IP manzil, oxirgi faollik). Siz turgan qurilma «Joriy qurilma» deb belgilanadi. Tanimagan qurilma yonidagi «Chiqarish» tugmasi faqat shu qurilmadagi kirishni darhol tugatadi, qolganlariga tegmaydi. «Boshqa qurilmalardan chiqish» tugmasi avvalgidek ishlaydi. Shahar hozircha ko'rsatilmaydi. Yangilanishdan oldin kirgan qurilmalar ro'yxatda taxminan bir soatdan keyin paydo bo'ladi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "tizimga-kirish" },
+  },
+  {
+    sana: "2026-10-18",
     sarlavha: "Dars baholari to'liq anonim, izoh holati ko'rinadi",
     matn: "Dars baholari hisobotida o'quvchining ismi endi hech qayerda ko'rinmaydi, botda ham o'quvchiga shunday deyiladi. Past baholar ro'yxatida izoh holati bor: Yozdi, Yozmadi yoki Kutilmoqda, va faqat izohlilarni ko'rsatadigan tugma. Uzun izoh «Ko'proq o'qish» bilan ochiladi. Kartalar ixchamlashdi: taqsimot va eng yaxshi, eng past ustoz bitta kartada, ustozlar jadvalida «Izohlar» ustuni qo'shildi.",
     rollar: [1],
