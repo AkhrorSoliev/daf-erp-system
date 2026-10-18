@@ -232,6 +232,11 @@ export const STRICT_FILES: string[] = [
   "components/payments/possible-deductions-info.tsx",
   "components/payments/overview/block-state.tsx",
   "components/reports/lesson-ratings/teacher-ratings-panel.tsx",
+  "lib/teacher-nav.ts",
+  "components/teacher-chrome/teacher-chrome.tsx",
+  "components/dashboard/teacher-lesson-cards.tsx",
+  "components/dashboard/upcoming-groups.tsx",
+  "components/profile/teacher-profile-links.tsx",
 ];
 
 function walk(dir: string): string[] {

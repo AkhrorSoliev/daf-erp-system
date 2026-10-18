@@ -1702,6 +1702,10 @@ const ru: Dictionary = {
   "Bu oyda baho yo'q": "В этом месяце нет оценок",
   "{avg} · {n} ta": "{avg} · оценок: {n}",
   "Bu oyda izoh yozilmagan": "В этом месяце нет комментариев",
+
+  // Teachers section — teacher portal blocks (bottom bar, lesson cards, upcoming groups)
+  "Yana": "Ещё",
+  "Boshlanmagan guruhlarim": "Мои ещё не начатые группы",
 };
 
 export default ru;

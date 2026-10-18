@@ -8,28 +8,30 @@
  * - `hidden`: the attendance form, which has its own «Orqaga» / «Saqlash» bar.
  */
 
+import { msg } from "@/i18n/msg";
+
 export type TeacherNavKey = "groups" | "schedule" | "tasks" | "salary" | "profile";
 
 export const TEACHER_NAV: ReadonlyArray<{ key: TeacherNavKey; label: string; href: string }> = [
-  { key: "groups", label: "Guruhlar", href: "/groups" },
-  { key: "schedule", label: "Jadval", href: "/schedule" },
-  { key: "tasks", label: "Topshiriq", href: "/tasks" },
-  { key: "salary", label: "Oylik", href: "/profile/salary" },
-  { key: "profile", label: "Profil", href: "/profile" },
+  { key: "groups", label: msg("Guruhlar"), href: "/groups" },
+  { key: "schedule", label: msg("Jadval"), href: "/schedule" },
+  { key: "tasks", label: msg("Topshiriq"), href: "/tasks" },
+  { key: "salary", label: msg("Oylik"), href: "/profile/salary" },
+  { key: "profile", label: msg("Profil"), href: "/profile" },
 ];
 
 /** The group tabs that sit on the bar; the rest open from «Yana». */
 export const GROUP_MAIN_TABS = [
-  { key: "davomat", label: "Davomat" },
-  { key: "darslar", label: "Darslar" },
-  { key: "oquvchilar", label: "O'quvchilar" },
+  { key: "davomat", label: msg("Davomat") },
+  { key: "darslar", label: msg("Darslar") },
+  { key: "oquvchilar", label: msg("O'quvchilar") },
 ] as const;
 
 export const GROUP_MORE_TABS = [
-  { key: "materiallar", label: "Materiallar" },
-  { key: "imtihonlar", label: "Imtihonlar" },
-  { key: "statistika", label: "Statistika" },
-  { key: "ilova", label: "Ilova faolligi" },
+  { key: "materiallar", label: msg("Materiallar") },
+  { key: "imtihonlar", label: msg("Imtihonlar") },
+  { key: "statistika", label: msg("Statistika") },
+  { key: "ilova", label: msg("Ilova faolligi") },
 ] as const;
 
 export const DEFAULT_GROUP_TAB = "davomat";

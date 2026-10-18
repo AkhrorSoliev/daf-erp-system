@@ -1702,6 +1702,10 @@ const de: Dictionary = {
   "Bu oyda baho yo'q": "Keine Bewertungen in diesem Monat",
   "{avg} · {n} ta": "{avg} · Bewertungen: {n}",
   "Bu oyda izoh yozilmagan": "Keine Kommentare in diesem Monat",
+
+  // Teachers section — teacher portal blocks (bottom bar, lesson cards, upcoming groups)
+  "Yana": "Mehr",
+  "Boshlanmagan guruhlarim": "Meine noch nicht gestarteten Gruppen",
 };
 
 export default de;
