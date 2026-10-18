@@ -1171,6 +1171,9 @@
   "GET /student-portal/lernen/levels": [
     "Student"
   ],
+  "GET /student-portal/lernen/nishonlar": [
+    "Student"
+  ],
   "GET /student-portal/lernen/reyting": [
     "Student"
   ],
@@ -1661,6 +1664,9 @@
     "Administrator",
     "Branch Director",
     "CEO"
+  ],
+  "PATCH /student-portal/lernen/maqsad": [
+    "Student"
   ],
   "PATCH /student-portal/name": [
     "Student"

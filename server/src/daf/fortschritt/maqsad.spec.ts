@@ -1,4 +1,4 @@
-import { bugunBoshmi } from './maqsad';
+import { bugunBoshmi, maqsadniSaqla } from './maqsad';
 
 function fake(opts: { due: number; ochiqDars: boolean }) {
   return {
@@ -48,6 +48,49 @@ describe('bugunBoshmi', () => {
         progress: { none: { studentId: 55, completedAt: { not: null } } },
       },
       select: { id: true },
+    });
+  });
+});
+
+describe('maqsadniSaqla', () => {
+  beforeEach(() =>
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-19T09:00:00Z')),
+  );
+  afterEach(() => jest.useRealTimers());
+
+  function prismaFor(bugungiBall: number) {
+    return {
+      dafStudentSetting: { upsert: jest.fn(async () => ({})) },
+      dafStudentDay: {
+        aggregate: jest.fn(async () => ({ _sum: { points: bugungiBall } })),
+      },
+      dafLexemeState: { count: jest.fn(async () => 2) },
+      dafLesson: { findFirst: jest.fn(async () => ({ id: 1 })) },
+    } as any;
+  }
+
+  it('upsert bilan saqlaydi — ikki parallel bosish ham bitta qator', async () => {
+    const prisma = prismaFor(30);
+    await maqsadniSaqla(prisma, 55, 1, 'JIDDIY');
+    expect(prisma.dafStudentSetting.upsert).toHaveBeenCalledWith({
+      where: { studentId: 55 },
+      create: { studentId: 55, companyId: 1, dailyGoal: 'JIDDIY' },
+      update: { dailyGoal: 'JIDDIY' },
+    });
+  });
+
+  it('darrov kuchga kiradi: yangi maqsad bugungi ball bilan qaytadi', async () => {
+    const prisma = prismaFor(45);
+    expect(await maqsadniSaqla(prisma, 55, 1, 'YENGIL')).toEqual({
+      daraja: 'YENGIL',
+      ball: 40,
+      hozir: 45,
+      bajarildi: true,
+      bosh: false,
+    });
+    expect(prisma.dafStudentDay.aggregate).toHaveBeenCalledWith({
+      where: { studentId: 55, day: new Date('2026-10-19T00:00:00.000Z') },
+      _sum: { points: true },
     });
   });
 });

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { DafDailyGoal } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   tashkentDateStr,
@@ -18,7 +19,8 @@ import {
   yangiBajarildi,
   type MaqsadHolati,
 } from '../uebung/punkte';
-import { bugunBoshmi } from './maqsad';
+import { nishonlarRoyxati, type NishonQatori } from '../nishon/nishonlar';
+import { bugunBoshmi, maqsadniSaqla } from './maqsad';
 
 export interface Fortschritt {
   gesamt: number;
@@ -404,6 +406,20 @@ export class FortschrittService {
       );
       return null;
     }
+  }
+
+  /** `PATCH .../maqsad` — o'quvchi faqat o'zining maqsadini o'zgartiradi. */
+  maqsadniOzgartir(
+    studentId: number,
+    companyId: number,
+    daraja: DafDailyGoal,
+  ): Promise<MaqsadHolati> {
+    return maqsadniSaqla(this.prisma, studentId, companyId, daraja);
+  }
+
+  /** `GET .../nishonlar` — hamma katalog, o'quvchining o'z nishonlari bilan. Yozmaydi. */
+  nishonlar(studentId: number): Promise<NishonQatori[]> {
+    return nishonlarRoyxati(this.prisma, studentId, new Date());
   }
 
   async reyting(

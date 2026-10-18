@@ -931,10 +931,15 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       '`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md` section 6.1, ' +
       "and in the comment on `FortschrittService`'s centre query " +
       '(`fortschritt/fortschritt.service.ts`). Do not add a `branchId` filter ' +
-      "there — that would be 'fixing' a considered decision.",
+      "there — that would be 'fixing' a considered decision. " +
+      '`GET .../nishonlar` and `PATCH .../maqsad` (S2, ADR-0115) are SELF ' +
+      "the ordinary way: the caller's own badges and the caller's own goal " +
+      'row (`DafStudentSetting`, keyed on the token `studentId`) — no branch question.',
     routes: [
       'GET /student-portal/lernen/fortschritt',
       'GET /student-portal/lernen/reyting',
+      'GET /student-portal/lernen/nishonlar',
+      'PATCH /student-portal/lernen/maqsad',
     ],
   },
   {

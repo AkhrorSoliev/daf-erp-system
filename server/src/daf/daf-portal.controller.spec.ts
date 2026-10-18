@@ -86,7 +86,7 @@ function fakeUebungPrisma() {
  * tegadi, ya'ni kelajakdagi reytingga.
  */
 describe('DafPortalController — ruxsat', () => {
-  // The 16 routes of the learning section, found the way Nest finds them: a
+  // The 18 routes of the learning section, found the way Nest finds them: a
   // method that carries route metadata.
   const routes = Object.getOwnPropertyNames(DafPortalController.prototype)
     .filter((name) => name !== 'constructor')
@@ -97,8 +97,8 @@ describe('DafPortalController — ruxsat', () => {
       ),
     );
 
-  it('has the 16 learning routes', () => {
-    expect(routes).toHaveLength(16);
+  it('has the 18 learning routes', () => {
+    expect(routes).toHaveLength(18);
   });
 
   it('every route is student-only, set once at class level', () => {
@@ -255,5 +255,55 @@ describe('DafPortalController — seans yakuni natija bilan', () => {
       1,
     );
     expect(order).toEqual(['abschluss', 'natija']);
+  });
+});
+
+describe('DafPortalController — maqsad va nishonlar (S2)', () => {
+  const maqsad = {
+    daraja: 'JIDDIY',
+    ball: 160,
+    hozir: 20,
+    bajarildi: false,
+    bosh: false,
+  };
+
+  function make() {
+    const fortschritt = {
+      maqsadniOzgartir: jest.fn(async () => maqsad),
+      nishonlar: jest.fn(async () => []),
+    };
+    const controller = new DafPortalController(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fortschritt as any,
+    );
+    return { controller, fortschritt };
+  }
+
+  it('PATCH maqsad — faqat tokendagi o`quvchiniki', async () => {
+    const { controller, fortschritt } = make();
+    const r = await controller.patchMaqsad({ daraja: 'JIDDIY' } as any, 55, 1);
+    expect(r).toEqual(maqsad);
+    expect(fortschritt.maqsadniOzgartir).toHaveBeenCalledWith(55, 1, 'JIDDIY');
+  });
+
+  it('GET nishonlar — tokendagi o`quvchi', async () => {
+    const { controller, fortschritt } = make();
+    await controller.getNishonlar(55);
+    expect(fortschritt.nishonlar).toHaveBeenCalledWith(55);
+  });
+
+  it('yo`llar va usullar', () => {
+    const proto = DafPortalController.prototype as any;
+    expect(Reflect.getMetadata('path', proto.patchMaqsad)).toBe('maqsad');
+    expect(Reflect.getMetadata('method', proto.patchMaqsad)).toBe(
+      RequestMethod.PATCH,
+    );
+    expect(Reflect.getMetadata('path', proto.getNishonlar)).toBe('nishonlar');
+    expect(Reflect.getMetadata('method', proto.getNishonlar)).toBe(
+      RequestMethod.GET,
+    );
   });
 });
