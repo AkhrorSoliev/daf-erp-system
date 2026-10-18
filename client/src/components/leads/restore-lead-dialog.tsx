@@ -74,7 +74,7 @@ export function RestoreLeadDialog({
       setPicked(null);
       setSubmitting(false);
     }
-  }, [open]);
+  }, [open, target?.id]);
 
   const place = useMemo(
     () => initialPlace(target?.origin, columns, !columnsLoading),
@@ -124,7 +124,7 @@ export function RestoreLeadDialog({
             </p>
           )}
 
-          {place.missingLabel && (
+          {place.missingLabel && !columnsFailed && (
             <p className="rounded-md border bg-muted/50 p-2.5 text-xs text-muted-foreground">
               Asl joyi &laquo;{place.missingLabel}&raquo; arxivda yoki
               o&apos;chirilgan &mdash; yangi joy tanlang.
@@ -204,7 +204,7 @@ export function RestoreLeadDialog({
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={submitting || columnsLoading}
+            disabled={submitting || columnsLoading || columnsFailed}
           >
             {submitting && <Loader2 className="size-4 animate-spin" />}
             Tiklash
