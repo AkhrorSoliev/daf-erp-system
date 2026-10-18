@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { RotateCcw } from "lucide-react";
 import api from "@/lib/api";
@@ -66,21 +66,30 @@ export function ArchiveDetailSheet({
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
+  // Eng so'nggi so'rov raqami: eskirgan javob holatni buzmasin.
+  const reqId = useRef(0);
+
   const load = useCallback(async () => {
+    const mine = ++reqId.current;
+    setItem(null);
     setLoading(true);
     setFailed(false);
     try {
       const { data } = await api.get(`/archive/${entityType}/${id}`);
-      setItem(data);
+      if (mine === reqId.current) setItem(data);
     } catch {
-      setFailed(true);
+      if (mine === reqId.current) setFailed(true);
     } finally {
-      setLoading(false);
+      if (mine === reqId.current) setLoading(false);
     }
   }, [entityType, id]);
 
   useEffect(() => {
     load();
+    // id/tur o'zgarsa yoki oyna yopilsa, kutilayotgan javob bekor sanaladi
+    return () => {
+      reqId.current++;
+    };
   }, [load]);
 
   const isStudent = entityType === "students";
