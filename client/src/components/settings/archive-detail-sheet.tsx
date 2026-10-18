@@ -34,10 +34,25 @@ export interface ArchiveDetailSheetProps {
   onTabChange: (tab: TabKey) => void;
   onClose: () => void;
   onRestore: (item: any) => void;
+  restoring?: boolean;
 }
 
 const fmt = (d?: string | null) =>
   d ? format(new Date(d), "dd.MM.yyyy, HH:mm") : "—";
+
+const fmtDay = (d?: string | null) => {
+  if (!d) return null;
+  const dt = new Date(d);
+  return Number.isNaN(dt.getTime()) ? null : format(dt, "dd.MM.yyyy");
+};
+
+// Yozilish sanalari: boshlanishi; faol bo'lmasa — holat o'zgargan kun ham.
+function enrollmentRange(e: any): string | null {
+  const start = fmtDay(e.startDate ?? e.createdAt);
+  if (!start) return null;
+  const end = e.status !== "ACTIVE" ? fmtDay(e.statusChangedAt) : null;
+  return end ? `${start} — ${end}` : start;
+}
 
 function deletedByName(item: any): string {
   const by = item.deletedBy;
@@ -61,6 +76,7 @@ export function ArchiveDetailSheet({
   onTabChange,
   onClose,
   onRestore,
+  restoring = false,
 }: ArchiveDetailSheetProps) {
   const [item, setItem] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -147,6 +163,7 @@ export function ArchiveDetailSheet({
                   variant="outline"
                   size="sm"
                   className="mt-2"
+                  disabled={restoring}
                   onClick={() => onRestore(item)}
                 >
                   <RotateCcw className="mr-2 size-4" />
@@ -202,9 +219,15 @@ export function ArchiveDetailSheet({
                       <div className="divide-y text-sm">
                         {rows.shown.map((e: any) => {
                           const st = getStatusConfig("enrollments", e.status);
+                          const range = enrollmentRange(e);
                           return (
                             <div key={e.id} className="flex items-center justify-between gap-3 py-1.5">
-                              <span>{isStudent ? e.group?.name ?? "—" : personName(e.student)}</span>
+                              <span>
+                                {isStudent ? e.group?.name ?? "—" : personName(e.student)}
+                                {range && (
+                                  <span className="block text-xs text-muted-foreground">{range}</span>
+                                )}
+                              </span>
                               <Badge variant={st.variant}>{st.label}</Badge>
                             </div>
                           );

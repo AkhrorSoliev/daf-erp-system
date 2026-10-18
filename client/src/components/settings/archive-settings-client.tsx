@@ -338,7 +338,14 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
               items.map((item, index) => (
                 <TableRow
                   key={item.id}
-                  className={canOpen ? "cursor-pointer hover:bg-muted/50" : undefined}
+                  className={
+                    canOpen
+                      ? "cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      : undefined
+                  }
+                  aria-label={
+                    canOpen ? `${getDisplayName(entityType, item)} — ko'rish` : undefined
+                  }
                   tabIndex={canOpen ? 0 : undefined}
                   onClick={canOpen ? () => setUrlFilters({ id: String(item.id) }) : undefined}
                   onKeyDown={
@@ -477,6 +484,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
           onTabChange={(t) => setUrlFilters({ atab: t === "tarix" ? "tarix" : "" })}
           onClose={closeSheet}
           onRestore={openRestore}
+          restoring={actionId !== null && String(actionId) === openId}
         />
       )}
     </div>
