@@ -86,6 +86,16 @@ export const STRICT_FILES: string[] = [
   "components/shared/chart-card.tsx",
   "components/reports/lead-funnel/lead-funnel-chart.tsx",
   "components/reports/lead-funnel/lead-funnel-math.ts",
+  "components/students/students-client.tsx",
+  "components/students/students-filters.tsx",
+  "components/students/students-stats.tsx",
+  "components/students/students-table.tsx",
+  "components/students/student-row-actions.tsx",
+  "components/students/student-status-badge.tsx",
+  "components/students/student-contact-badges.tsx",
+  "components/students/student-phone-rows.ts",
+  "lib/status-config.ts",
+  "lib/telegram-link.ts",
 ];
 
 function walk(dir: string): string[] {

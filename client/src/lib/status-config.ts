@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/msg";
+
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "ghost";
 
 interface StatusConfig {
@@ -7,12 +9,12 @@ interface StatusConfig {
 
 // ─── Student ──────────────────────────────────────────
 const STUDENT_STATUS: Record<string, StatusConfig> = {
-  ACTIVE: { label: "Faol", variant: "default" },
-  INACTIVE: { label: "Muzlatilgan", variant: "outline" }, // legacy — FROZEN bilan bir xil
-  FROZEN: { label: "Muzlatilgan", variant: "outline" },
-  GRADUATED: { label: "Bitirgan", variant: "outline" },
-  EXPELLED: { label: "Chetlatilgan", variant: "destructive" },
-  ARCHIVED: { label: "Arxivlangan", variant: "ghost" },
+  ACTIVE: { label: msg("Faol"), variant: "default" },
+  INACTIVE: { label: msg("Muzlatilgan"), variant: "outline" }, // legacy — FROZEN bilan bir xil
+  FROZEN: { label: msg("Muzlatilgan"), variant: "outline" },
+  GRADUATED: { label: msg("Bitirgan"), variant: "outline" },
+  EXPELLED: { label: msg("Chetlatilgan"), variant: "destructive" },
+  ARCHIVED: { label: msg("Arxivlangan"), variant: "ghost" },
 };
 
 // ─── User / Teacher ──────────────────────────────────

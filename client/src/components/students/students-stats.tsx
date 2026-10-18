@@ -1,3 +1,5 @@
+"use client";
+
 import { TrendingDown, UserCheck, UserX, Users } from "lucide-react";
 import {
   Tooltip,
@@ -5,6 +7,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 export interface StudentsStatsData {
   total: number;
@@ -16,27 +20,27 @@ export interface StudentsStatsData {
 const allStats = [
   {
     key: "total" as const,
-    label: "Jami",
+    label: msg("Jami"),
     icon: Users,
-    tooltip: "Barcha o'quvchilar soni",
+    tooltip: msg("Barcha o'quvchilar soni"),
   },
   {
     key: "active" as const,
-    label: "Faol",
+    label: msg("Faol"),
     icon: UserCheck,
-    tooltip: "Faol o'quvchilar",
+    tooltip: msg("Faol o'quvchilar"),
   },
   {
     key: "frozen" as const,
-    label: "Muzlatilgan",
+    label: msg("Muzlatilgan"),
     icon: UserX,
-    tooltip: "Muzlatilgan o'quvchilar",
+    tooltip: msg("Muzlatilgan o'quvchilar"),
   },
   {
     key: "debtors" as const,
-    label: "Qarzdorlar",
+    label: msg("Qarzdorlar"),
     icon: TrendingDown,
-    tooltip: "Balansi manfiy bo'lgan o'quvchilar",
+    tooltip: msg("Balansi manfiy bo'lgan o'quvchilar"),
   },
 ];
 
@@ -47,6 +51,7 @@ interface StudentsStatsProps {
 }
 
 export function StudentsStats({ stats, loading, isTeacher }: StudentsStatsProps) {
+  const t = useT();
   const items = isTeacher
     ? allStats.filter((s) => ["total", "active", "frozen"].includes(s.key))
     : allStats;
@@ -59,7 +64,7 @@ export function StudentsStats({ stats, loading, isTeacher }: StudentsStatsProps)
             <div className="bg-card flex items-center gap-2 sm:gap-3 rounded-lg border px-2.5 py-2 sm:p-3">
               <Icon className="text-muted-foreground size-4 shrink-0" />
               <div className="min-w-0">
-                <p className="text-muted-foreground text-xs truncate">{label}</p>
+                <p className="text-muted-foreground text-xs truncate">{t(label)}</p>
                 {loading ? (
                   <Skeleton className="mt-0.5 sm:mt-1 h-5 sm:h-6 w-8 sm:w-10" />
                 ) : (
@@ -70,7 +75,7 @@ export function StudentsStats({ stats, loading, isTeacher }: StudentsStatsProps)
               </div>
             </div>
           </TooltipTrigger>
-          <TooltipContent>{tooltip}</TooltipContent>
+          <TooltipContent>{t(tooltip)}</TooltipContent>
         </Tooltip>
       ))}
     </div>
