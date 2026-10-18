@@ -17,10 +17,14 @@ const noop = () => {};
 // Made-up rows.
 const ROWS: ExpenseRow[] = [
   { id: "e1", category: "OTHER", paymentMethod: "CASH", amount: 450_000, description: "Stullar", date: "2026-10-05T00:00:00.000Z", branchId: 1, receiptUrl: null,
-    createdAt: "2026-10-05T09:30:00.000Z", createdBy: { id: 10001, firstName: "Ism", lastName: "Aliyev" }, hint: "EQUIPMENT" },
+    createdAt: "2026-10-05T09:30:00.000Z", createdBy: { id: 10001, firstName: "Ism", lastName: "Aliyev" }, hint: "EQUIPMENT", leadSource: null },
   { id: "e2", category: "RENT", paymentMethod: "CARD", amount: 5_000_000, description: "Ijara", date: "2026-10-03T00:00:00.000Z", branchId: 1, receiptUrl: null,
-    createdAt: "2026-10-03T05:00:00.000Z", createdBy: { id: 10002, firstName: "Ism", lastName: "Karimov" }, hint: null },
+    createdAt: "2026-10-03T05:00:00.000Z", createdBy: { id: 10002, firstName: "Ism", lastName: "Karimov" }, hint: null, leadSource: null },
 ];
+const MARKETING_ROW: ExpenseRow = {
+  id: "e3", category: "MARKETING", paymentMethod: "CASH", amount: 1_500_000, description: "Reklama", date: "2026-10-04T00:00:00.000Z", branchId: 1, receiptUrl: null,
+  createdAt: "2026-10-04T05:00:00.000Z", createdBy: { id: 10002, firstName: "Ism", lastName: "Karimov" }, hint: null, leadSource: { id: "s1", name: "Instagram" },
+};
 const table = (over: Partial<Parameters<typeof ExpensesTable>[0]> = {}) =>
   createElement(ExpensesTable, { rows: ROWS, loading: false, offset: 0, emptyMonth: false, canManage: true, onEdit: noop, onHistory: noop, onDelete: noop, ...over });
 
@@ -32,6 +36,11 @@ describe("ExpensesTable (spec B6 §3.6)", () => {
     const t = text(table({ offset: 10 }));
     expect(t).toContain(norm(`11 05.10.2026 Boshqa Stullar Jihozlar turkumi emasmi? ${formatPrice(450_000)} so'm Naqd Ism Aliyev 05.10.2026, 14:30`));
     expect(t).toContain(norm(`12 03.10.2026 Ijara Ijara ${formatPrice(5_000_000)} so'm Karta Ism Karimov 03.10.2026, 10:00`));
+  });
+  it("names the channel under a marketing row's turkum, and only there", () => {
+    const t = text(table({ rows: [...ROWS, MARKETING_ROW] }));
+    expect(t).toContain("Marketing Instagram Reklama");
+    expect(text(table()).includes("Instagram")).toBe(false);
   });
   it("the hint pill only where the server sent one", () => {
     expect(text(table()).match(/turkumi emasmi\?/g)?.length).toBe(1);

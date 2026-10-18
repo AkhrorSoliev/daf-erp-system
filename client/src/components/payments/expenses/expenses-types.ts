@@ -18,6 +18,8 @@ export interface ExpenseRow {
   createdAt: string;
   createdBy: { id: number; firstName: string; lastName: string };
   hint: ExpenseHint | null;
+  /** The channel a MARKETING expense paid for (ADR-0109); null = not one channel. */
+  leadSource: { id: string; name: string } | null;
 }
 
 export interface ExpensesListResponse {

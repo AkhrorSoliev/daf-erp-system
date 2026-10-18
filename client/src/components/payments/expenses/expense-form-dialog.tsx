@@ -26,6 +26,7 @@ import {
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, EXPENSE_METHOD_LABELS } from "./expenses-labels";
+import { ExpenseSourceField, NO_SOURCE } from "./expense-source-field";
 import type { ExpensePreset, ExpenseRow } from "./expenses-types";
 
 interface ExpenseFormDialogProps {
@@ -54,6 +55,7 @@ export function ExpenseFormDialog({
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState<Date | null>(new Date());
+  const [sourceId, setSourceId] = useState(NO_SOURCE);
   const [submitting, setSubmitting] = useState(false);
 
   // Seed the form whenever the dialog opens (edit → existing values, create →
@@ -66,7 +68,9 @@ export function ExpenseFormDialog({
       setAmount(expense.amount.toLocaleString("uz-UZ"));
       setDescription(expense.description);
       setDate(new Date(expense.date));
+      setSourceId(expense.leadSource?.id ?? NO_SOURCE);
     } else {
+      setSourceId(NO_SOURCE);
       setCategory(preset?.category ?? "OTHER");
       setPaymentMethod("CASH");
       setAmount(preset ? preset.amount.toLocaleString("uz-UZ") : "");
@@ -94,6 +98,8 @@ export function ExpenseFormDialog({
         description: description.trim(),
         date: format(date, "yyyy-MM-dd"),
         relatedUserId: null,
+        // Only marketing money has a channel (ADR-0109); null also clears it on edit.
+        leadSourceId: category === "MARKETING" && sourceId !== NO_SOURCE ? sourceId : null,
       };
       if (isEdit) {
         await api.patch(`/expenses/${expense!.id}`, payload);
@@ -146,6 +152,9 @@ export function ExpenseFormDialog({
               </SelectContent>
             </Select>
           </div>
+          {category === "MARKETING" && (
+            <ExpenseSourceField value={sourceId} onChange={setSourceId} current={expense?.leadSource} />
+          )}
           <div className="space-y-2">
             <Label>To&apos;lov turi</Label>
             <Select

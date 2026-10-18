@@ -87,3 +87,104 @@ export function lifetimeValue(
     monthlyCharge,
   };
 }
+
+/** One lead source of the asked month: what it cost and what its people paid. */
+export interface SourceRow {
+  source: string | null;
+  /** Σ MARKETING expenses that named this source; 0 for «no source». */
+  spend: number;
+  leads: number;
+  /** People of this source's leads who reached «to'lov». */
+  students: number;
+  /** students ÷ leads, one decimal (the lead funnel's rate). */
+  rate: number;
+  /** round(spend ÷ students); null with no spend or no students. */
+  cac: number | null;
+  /** Σ every COMPLETED payment of those students, to date. */
+  paid: number;
+  /** paid ÷ spend, two decimals; null when the source cost nothing. */
+  roi: number | null;
+}
+
+const roiOf = (paid: number, spend: number): number | null =>
+  spend > 0 ? Math.round((paid / spend) * 100) / 100 : null;
+const cacOf = (spend: number, students: number): number | null =>
+  spend > 0 && students > 0 ? Math.round(spend / students) : null;
+
+/**
+ * Pure (ADR-0109). One row per lead source of the month's lead cohort, plus a
+ * row for a source that was paid for but brought no lead. The «Hammasi» row
+ * carries the WHOLE month's spend, so spend that names no source
+ * (`unassignedSpend`) is in it and in no source row.
+ */
+export function sourceRows(input: {
+  sources: readonly {
+    source: string | null;
+    leads: number;
+    students: number;
+    rate: number;
+    studentIds: readonly number[];
+  }[];
+  /** MARKETING spend of the month by source name. */
+  spendBySource: ReadonlyMap<string, number>;
+  /** Σ COMPLETED payments to date by student id. */
+  paidByStudent: ReadonlyMap<number, number>;
+  /** Σ MARKETING spend of the month, named source or not. */
+  monthSpend: number;
+}): {
+  rows: SourceRow[];
+  total: Omit<SourceRow, 'source'>;
+  unassignedSpend: number;
+} {
+  const rows: SourceRow[] = input.sources.map((s) => {
+    const spend =
+      s.source != null ? (input.spendBySource.get(s.source) ?? 0) : 0;
+    const paid = s.studentIds.reduce(
+      (sum, id) => sum + (input.paidByStudent.get(id) ?? 0),
+      0,
+    );
+    return {
+      source: s.source,
+      spend,
+      leads: s.leads,
+      students: s.students,
+      rate: s.rate,
+      cac: cacOf(spend, s.students),
+      paid,
+      roi: roiOf(paid, spend),
+    };
+  });
+
+  const shown = new Set(rows.map((r) => r.source));
+  for (const [source, spend] of input.spendBySource) {
+    if (shown.has(source) || spend <= 0) continue;
+    rows.push({
+      source,
+      spend,
+      leads: 0,
+      students: 0,
+      rate: 0,
+      cac: null,
+      paid: 0,
+      roi: roiOf(0, spend),
+    });
+  }
+
+  const attributed = rows.reduce((sum, r) => sum + r.spend, 0);
+  const leads = rows.reduce((sum, r) => sum + r.leads, 0);
+  const students = rows.reduce((sum, r) => sum + r.students, 0);
+  const paid = rows.reduce((sum, r) => sum + r.paid, 0);
+  return {
+    rows,
+    total: {
+      spend: input.monthSpend,
+      leads,
+      students,
+      rate: leads > 0 ? Math.round((students / leads) * 1000) / 10 : 0,
+      cac: cacOf(input.monthSpend, students),
+      paid,
+      roi: roiOf(paid, input.monthSpend),
+    },
+    unassignedSpend: Math.max(0, input.monthSpend - attributed),
+  };
+}

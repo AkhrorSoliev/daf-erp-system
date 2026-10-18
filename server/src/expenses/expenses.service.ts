@@ -220,9 +220,33 @@ export class ExpensesService {
     }
   }
 
+  /**
+   * The channel a MARKETING expense paid for (ADR-0109). Only MARKETING rows
+   * carry one, and it must be a live lead source of this company: the marketing
+   * report joins spend to leads by it.
+   */
+  private async assertLeadSource(
+    leadSourceId: string | null | undefined,
+    category: ExpenseCategory,
+    companyId: number,
+  ): Promise<void> {
+    if (leadSourceId == null) return;
+    if (category !== ExpenseCategory.MARKETING) {
+      throw new BadRequestException(
+        'Manba (kanal) faqat marketing xarajatiga yoziladi',
+      );
+    }
+    const source = await this.prisma.leadSource.findFirst({
+      where: { id: leadSourceId, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!source) throw new BadRequestException('Manba topilmadi');
+  }
+
   async create(dto: CreateExpenseDto, userId: number, companyId: number) {
     await this.assertMayWrite(userId, dto.category);
     await this.assertBranchWritable(dto.branchId, companyId, userId);
+    await this.assertLeadSource(dto.leadSourceId, dto.category, companyId);
 
     if (dto.category === ExpenseCategory.TEACHER_ADVANCE) {
       await this.assertAdvanceRecipient(
@@ -246,6 +270,7 @@ export class ExpensesService {
             branchId: dto.branchId,
             receiptUrl: dto.receiptUrl,
             relatedUserId: dto.relatedUserId,
+            leadSourceId: dto.leadSourceId ?? null,
             createdById: userId,
             companyId,
           },
@@ -380,6 +405,7 @@ export class ExpensesService {
     branchId: true,
     receiptUrl: true,
     createdAt: true,
+    leadSource: { select: { id: true, name: true } },
     createdBy: { select: { id: true, firstName: true, lastName: true } },
   } satisfies Prisma.ExpenseSelect;
 
@@ -669,6 +695,19 @@ export class ExpensesService {
       );
     }
 
+    // The channel follows the category (ADR-0109): a row that stops being
+    // MARKETING loses it; a given one is checked against the category it gets.
+    const nextCategory = dto.category ?? existing.category;
+    await this.assertLeadSource(dto.leadSourceId, nextCategory, companyId);
+    const leadSourceData: { leadSourceId?: string | null } =
+      nextCategory !== ExpenseCategory.MARKETING
+        ? existing.leadSourceId != null
+          ? { leadSourceId: null }
+          : {}
+        : dto.leadSourceId !== undefined
+          ? { leadSourceId: dto.leadSourceId }
+          : {};
+
     // Detect if the change touches financial fields. Description/date/branch/
     // receiptUrl edits do not require a ledger correction; amount or category
     // changes must be reflected in Transaction or cash-flow reports drift.
@@ -697,6 +736,7 @@ export class ExpensesService {
             ...(dto.relatedUserId !== undefined && {
               relatedUserId: dto.relatedUserId,
             }),
+            ...leadSourceData,
           },
         });
 

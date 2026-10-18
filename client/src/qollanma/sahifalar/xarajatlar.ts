@@ -8,9 +8,9 @@ export const xarajatlar: QollanmaSahifa[] = [
     qisqacha:
       "Tanlangan oyda qancha xarajat yozilgani, nimaga va kim yozgani, nima hali yozilmagani — jami foydadagi «Boshqa xarajatlar» qatorining o'zi.",
     rollar: [1, 2],
-    adr: ["0094", "0038"],
+    adr: ["0094", "0038", "0109"],
     yollar: ["/payments/expenses"],
-    kalitSozlar: ["xarajat", "xarajat qo'shish", "ijara", "kommunal", "soliq", "turkum", "kim kiritgan", "bu oy hali yozilmagan", "boshqa xarajatlar", "avans", "filial xarajati"],
-    yangilangan: "2026-10-17",
+    kalitSozlar: ["xarajat", "xarajat qo'shish", "ijara", "kommunal", "soliq", "turkum", "kim kiritgan", "bu oy hali yozilmagan", "boshqa xarajatlar", "avans", "filial xarajati", "marketing kanali", "instagram", "reklama"],
+    yangilangan: "2026-10-18",
   },
 ];
