@@ -36,13 +36,6 @@ export const TRANSACTION_TYPE_INFO: Record<
   MOCK_EXAM_FEE: { label: msg("Mock imtihon to'lovi"), variant: "outline" },
 };
 
-// LESSON_DEDUCTION metadata `mode` → human label for the "Tafsilot" column.
-export const LESSON_DEDUCTION_MODE_LABELS: Record<string, string> = {
-  FULL_CYCLE: msg("To'liq tsikl"),
-  PARTIAL: msg("Qisman"),
-  SINGLE_UNCOVERED: msg("Qarzga yozildi"),
-};
-
 // The correction dialog draws `t(label)`.
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: msg("Naqd"),

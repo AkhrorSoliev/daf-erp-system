@@ -68,6 +68,12 @@ export function SmsTab({
   telegramDisconnectedAt,
 }: SmsTabProps) {
   const t = useT();
+  // The fetch below reads `t` only to say an error, so a language switch must
+  // not re-run it: it goes through a ref.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  });
   const [messages, setMessages] = useState<SmsMessageData[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -93,10 +99,12 @@ export function SmsTab({
           setMessages(data);
         }
       } catch {
+        // `t` here is the ref's current one (the i18n scan reads a bare `t(…)`).
+        const t = tRef.current;
         toast.error(t("SMS tarixini yuklashda xatolik"));
       }
     },
-    [studentId, t],
+    [studentId],
   );
 
   useEffect(() => {

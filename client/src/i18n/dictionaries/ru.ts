@@ -997,9 +997,6 @@ const ru: Dictionary = {
   "Chegirma tuzatishi": "Корректировка скидки",
   "Qarz kechirildi": "Долг списан",
   "Mock imtihon to'lovi": "Оплата пробного экзамена",
-  "To'liq tsikl": "Полный цикл",
-  "Qisman": "Частично",
-  "Qarzga yozildi": "Записано в долг",
 };
 
 export default ru;

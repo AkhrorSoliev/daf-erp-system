@@ -997,9 +997,6 @@ const de: Dictionary = {
   "Chegirma tuzatishi": "Rabattkorrektur",
   "Qarz kechirildi": "Schulden erlassen",
   "Mock imtihon to'lovi": "Zahlung für die Probeprüfung",
-  "To'liq tsikl": "Voller Zyklus",
-  "Qisman": "Teilweise",
-  "Qarzga yozildi": "Als Schulden verbucht",
 };
 
 export default de;
