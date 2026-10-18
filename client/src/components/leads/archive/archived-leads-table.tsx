@@ -25,6 +25,7 @@ import {
 } from "./archive-table-parts";
 import type { ArchivedLead, Paged } from "./archive-types";
 import { ARCHIVE_PAGE_SIZES } from "./archive-url";
+import { useT } from "@/i18n/context";
 
 export function ArchivedLeadsTable({
   query,
@@ -52,6 +53,7 @@ export function ArchivedLeadsTable({
   onPageSize: (size: number) => void;
   onClear: () => void;
 }) {
+  const t = useT();
   const rows = query.data?.data ?? [];
   const span = canRestore ? 7 : 6;
   return (
@@ -66,11 +68,11 @@ export function ArchivedLeadsTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Ism</TableHead>
-              <TableHead>Bo&apos;lim</TableHead>
-              <TableHead>Yo&apos;qotilish sababi</TableHead>
-              <TableHead>Sana</TableHead>
-              <TableHead>Kim tomonidan</TableHead>
+              <TableHead>{t("Ism familiya")}</TableHead>
+              <TableHead>{t("Bo'lim")}</TableHead>
+              <TableHead>{t("Yo'qotilish sababi")}</TableHead>
+              <TableHead>{t("Sana")}</TableHead>
+              <TableHead>{t("Kim tomonidan")}</TableHead>
               {canRestore && <TableHead className="w-10" />}
             </TableRow>
           </TableHeader>
@@ -170,7 +172,7 @@ export function ArchivedLeadsTable({
           onPage={onPage}
           onPageSize={onPageSize}
           sizes={ARCHIVE_PAGE_SIZES}
-          sizeLabel="Sahifadagi qatorlar soni"
+          sizeLabel={t("Sahifadagi qatorlar soni")}
         />
       )}
     </div>

@@ -490,6 +490,20 @@ export const STRICT_FILES: string[] = [
   "components/leads/move-section-dialog.tsx",
   "components/leads/rename-dialog.tsx",
   "components/leads/restore-lead-dialog.tsx",
+  "components/leads/leads-archive.tsx",
+  "components/leads/archive/archive-filter-bar.tsx",
+  "components/leads/archive/archive-table-parts.tsx",
+  "components/leads/archive/archived-lead-info.tsx",
+  "components/leads/archive/archived-lead-panel.tsx",
+  "components/leads/archive/archived-leads-table.tsx",
+  "components/leads/archive/archived-sections-table.tsx",
+  "components/leads/archive/ownership-log-text.ts",
+  "components/leads/archive/restore-section-dialog.tsx",
+  "components/leads/ownership/lead-owner-assign.tsx",
+  "components/leads/ownership/lead-owner-badge.tsx",
+  "components/leads/ownership/lead-owner-block.tsx",
+  "components/leads/ownership/lead-owners-strip.tsx",
+  "components/leads/ownership/ownership-format.ts",
 ];
 
 function walk(dir: string): string[] {
