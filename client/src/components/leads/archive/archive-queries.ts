@@ -18,11 +18,13 @@ export const archiveKeys = {
   board: [...ROOT, "board-columns"] as const,
 };
 
+/** Archive reads use staleTime 0: refetch on every mount and tab switch, since the global default is 5 minutes. */
 export function useArchiveSummary() {
   return useQuery({
     queryKey: archiveKeys.summary,
     queryFn: async () =>
       (await api.get<ArchiveSummary>("/leads/archive/summary")).data,
+    staleTime: 0,
   });
 }
 
@@ -34,6 +36,7 @@ export function useArchivedLeads(params: ArchiveParams, enabled: boolean) {
       (await api.get<Paged<ArchivedLead>>("/leads/archive/leads", { params }))
         .data,
     enabled,
+    staleTime: 0,
     placeholderData: (previous) => previous,
   });
 }
@@ -48,6 +51,7 @@ export function useArchivedSections(params: ArchiveParams, enabled: boolean) {
         })
       ).data,
     enabled,
+    staleTime: 0,
     placeholderData: (previous) => previous,
   });
 }
