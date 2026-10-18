@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/i18n/context";
 import {
   CUSTOMER_KINDS,
   CUSTOMER_KIND_LABEL,
@@ -44,6 +45,7 @@ export function ContractCustomerFields({
   profileUpdates = [],
   onProfileUpdatesChange,
 }: Props) {
+  const t = useT();
   const self = value.kind === "SELF";
   const set = <K extends keyof CustomerDraft>(key: K, v: CustomerDraft[K]) =>
     onChange({ ...value, [key]: v });
@@ -68,32 +70,35 @@ export function ContractCustomerFields({
 
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold">Buyurtmachi</h3>
+      <h3 className="text-sm font-semibold">{t("Buyurtmachi")}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label>Buyurtmachi kim</Label>
+          <Label>{t("Buyurtmachi kim")}</Label>
           <Select value={value.kind} onValueChange={(v) => onKindChange(v as CustomerKind)}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {CUSTOMER_KINDS.map((k) => (
-                <SelectItem key={k} value={k} disabled={k === "SELF" && minor === true}>
-                  {CUSTOMER_KIND_LABEL[k]}
-                </SelectItem>
-              ))}
+              {CUSTOMER_KINDS.map((k) => {
+                const kindLabel = CUSTOMER_KIND_LABEL[k];
+                return (
+                  <SelectItem key={k} value={k} disabled={k === "SELF" && minor === true}>
+                    {t(kindLabel)}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           {minor === true && (
             <p className="text-xs text-muted-foreground">
-              O&apos;quvchi 18 yoshdan kichik — Buyurtmachi ota-ona yoki vasiy bo&apos;ladi.
+              {t("O'quvchi 18 yoshdan kichik — Buyurtmachi ota-ona yoki vasiy bo'ladi.")}
             </p>
           )}
         </div>
 
         {value.kind === "OTHER" && (
           <div className="space-y-1.5">
-            <Label htmlFor="contract-kind-other">Vakillik asosi</Label>
+            <Label htmlFor="contract-kind-other">{t("Vakillik asosi")}</Label>
             <Input
               id="contract-kind-other"
               value={value.kindOther}
@@ -104,7 +109,7 @@ export function ContractCustomerFields({
         )}
 
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="contract-full-name">F.I.O.</Label>
+          <Label htmlFor="contract-full-name">{t("F.I.O.")}</Label>
           <Input
             id="contract-full-name"
             value={value.fullName}
@@ -117,7 +122,7 @@ export function ContractCustomerFields({
 
         {!self && (
           <div className="space-y-1.5">
-            <Label>Tug&apos;ilgan sana</Label>
+            <Label>{t("Tug'ilgan sana")}</Label>
             <DatePicker
               value={dateValue(value.birthDate)}
               onChange={(d) => set("birthDate", dayString(d))}
@@ -127,7 +132,7 @@ export function ContractCustomerFields({
         )}
 
         <div className="space-y-1.5">
-          <Label htmlFor="contract-passport">Pasport / ID seriya, raqami</Label>
+          <Label htmlFor="contract-passport">{t("Pasport / ID seriya, raqami")}</Label>
           <Input
             id="contract-passport"
             value={value.passport}
@@ -139,7 +144,7 @@ export function ContractCustomerFields({
         </div>
 
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="contract-address">Yashash manzili</Label>
+          <Label htmlFor="contract-address">{t("Yashash manzili")}</Label>
           <Input
             id="contract-address"
             value={value.address}
@@ -150,7 +155,7 @@ export function ContractCustomerFields({
         </div>
 
         <div className="space-y-1.5">
-          <Label>Telefon</Label>
+          <Label>{t("Telefon")}</Label>
           <PhoneInput value={value.phone} onChange={(e) => set("phone", e.target.value)} />
           {note("phone")}
         </div>
@@ -162,13 +167,13 @@ export function ContractCustomerFields({
             value={value.telegram}
             onChange={(e) => set("telegram", e.target.value)}
             maxLength={64}
-            placeholder="@ism"
+            placeholder={t("@ism")}
           />
           {note("telegram")}
         </div>
 
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="contract-email">E-mail</Label>
+          <Label htmlFor="contract-email">{t("E-mail")}</Label>
           <Input
             id="contract-email"
             type="email"
@@ -179,8 +184,7 @@ export function ContractCustomerFields({
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Bo&apos;sh qoldirilgan joy shartnomada chiziq bo&apos;lib chiqadi va qog&apos;ozda qo&apos;lda
-        yoziladi.
+        {t("Bo'sh qoldirilgan joy shartnomada chiziq bo'lib chiqadi va qog'ozda qo'lda yoziladi.")}
       </p>
     </section>
   );

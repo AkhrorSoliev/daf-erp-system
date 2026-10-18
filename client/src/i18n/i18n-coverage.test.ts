@@ -144,6 +144,21 @@ export const STRICT_FILES: string[] = [
   "components/students/statement/receipt-link.tsx",
   "components/students/statement/statement-utils.ts",
   "lib/ledger-reversal.ts",
+  "components/students/certificates/certificate-rules.ts",
+  "components/students/certificates/issued-documents-list.tsx",
+  "components/students/certificates/revoke-certificate-dialog.tsx",
+  "components/students/certificates/student-certificates-tab.tsx",
+  "components/students/contracts/contract-rules.ts",
+  "components/students/contracts/contract-card.tsx",
+  "components/students/contracts/contract-cancel-dialog.tsx",
+  "components/students/contracts/contract-course-extras.tsx",
+  "components/students/contracts/contract-courses-picker.tsx",
+  "components/students/contracts/contract-create-form.tsx",
+  "components/students/contracts/contract-customer-fields.tsx",
+  "components/students/contracts/contract-edit-form.tsx",
+  "components/students/contracts/contract-form-dialog.tsx",
+  "components/students/contracts/profile-conflict-note.tsx",
+  "components/students/contracts/student-contracts-tab.tsx",
 ];
 
 function walk(dir: string): string[] {

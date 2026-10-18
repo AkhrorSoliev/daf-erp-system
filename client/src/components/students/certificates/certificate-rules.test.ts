@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import de from "@/i18n/dictionaries/de";
+import ru from "@/i18n/dictionaries/ru";
+import { translate, type Params } from "@/i18n/translate";
 import { formatBalance } from "@/lib/format-utils";
 import {
   canSubmitRevoke,
@@ -273,5 +276,40 @@ describe("levelSummary", () => {
 
   it("shows a final-tests line only when the level has some", () => {
     expect(levelSummary({ ...base, unitTests: null }, 0).some((l) => l.label === "Yakuniy sinovlar")).toBe(false);
+  });
+});
+
+describe("the texts in another language", () => {
+  const tRu = (source: string, params?: Params) => translate("ru", ru, source, params);
+  const tDe = (source: string, params?: Params) => translate("de", de, source, params);
+
+  it("draws the summary lines in the page language, with the server's figures untouched", () => {
+    expect(levelSummary(base, -250000, tRu)).toEqual([
+      { label: "Посещаемость", value: "91% · 21 из 23 занятий", hint: "порог 80%" },
+      { label: "Количество занятий", value: "23", hint: "минимум 20" },
+      { label: "Опоздания", value: "2 из 21 занятий (10%)", hint: "порог 20%" },
+      { label: "Приложение", value: "100% · 80 из 80 занятий", hint: "порог 100%" },
+      { label: "Итоговые тесты", value: "5 / 5", hint: "нужны все" },
+      { label: "Долг", value: formatBalance(250000, "сум"), hint: null },
+      { label: "Пробный экзамен", value: "72 / 100 · 07.10.2026", hint: null },
+    ]);
+    expect(levelSummary(base, 0, tDe).find((l) => l.label === "Schulden")?.value).toBe("keine");
+  });
+
+  it("translates the reason hint, the cancel texts and the pill but never the typed reason", () => {
+    expect(revokeReasonHint("ab", tRu)).toBe("Причина должна содержать не менее 3 символов");
+    expect(revokeDescription("TB-2026-0007", tRu)).toContain("Документ TB-2026-0007 будет отменён");
+    // The public QR page prints «bekor qilingan» in Uzbek: every language keeps those words.
+    for (const t of [tRu, tDe]) expect(revokeDescription("TB-2026-0007", t)).toContain("«bekor qilingan»");
+    expect(revokedState(cancelled, tRu)).toEqual({
+      pill: "Отменено",
+      day: "18.10.2026",
+      reasonLine: "Причина: Noto'g'ri o'quvchiga berilgan",
+    });
+  });
+
+  it("translates the owner's reissue texts through the constants", () => {
+    expect(tRu(REISSUE_CONFIRM_TEXT)).toBe("Для этого уровня документ уже выдан. Выдать ещё один, с новым номером?");
+    expect(tDe(REISSUE_EXEMPT_NOTICE)).toContain("neue Nummer");
   });
 });

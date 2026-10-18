@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { ContractCreateForm } from "./contract-create-form";
 import { ContractEditForm } from "./contract-edit-form";
 import type { ContractPrefill, ContractView } from "./contract-types";
@@ -25,17 +26,20 @@ interface Props {
 }
 
 export function ContractFormDialog({ studentId, mode, onClose, onSaved }: Props) {
+  const t = useT();
   return (
     <Dialog open={mode !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>
-            {mode?.kind === "edit" ? `Shartnoma № ${mode.contract.number}` : "Shartnoma tuzish"}
+            {mode?.kind === "edit"
+              ? t("Shartnoma № {number}", { number: mode.contract.number })
+              : t("Shartnoma tuzish")}
           </DialogTitle>
           <DialogDescription>
             {mode?.kind === "edit"
-              ? "Imzolanmaguncha Buyurtmachi va kurs qo'shimcha ma'lumotlarini o'zgartirish mumkin."
-              : "Kurs, guruh, ustoz, jadval va narx o'quvchining ma'lumotlaridan o'zi to'ldiriladi."}
+              ? t("Imzolanmaguncha Buyurtmachi va kurs qo'shimcha ma'lumotlarini o'zgartirish mumkin.")
+              : t("Kurs, guruh, ustoz, jadval va narx o'quvchining ma'lumotlaridan o'zi to'ldiriladi.")}
           </DialogDescription>
         </DialogHeader>
         {mode && (
@@ -67,6 +71,7 @@ function PrefillLoader({
   onCancel: () => void;
   onSaved: (view: ContractView, studentChanged: boolean) => void;
 }) {
+  const t = useT();
   const prefill = useQuery({
     queryKey: ["contract-prefill", studentId],
     queryFn: () =>
@@ -102,9 +107,9 @@ function PrefillLoader({
   if (prefill.isError) {
     return (
       <div className="flex flex-1 flex-col items-center gap-3 px-6 py-10 text-center">
-        <p className="text-sm text-muted-foreground">Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+        <p className="text-sm text-muted-foreground">{t("Ma'lumotni yuklab bo'lmadi")}</p>
         <Button variant="outline" size="sm" onClick={() => prefill.refetch()}>
-          Qayta urinish
+          {t("Qayta urinish")}
         </Button>
       </div>
     );
