@@ -2,7 +2,7 @@ import { FortschrittService } from './fortschritt.service';
 
 function fakePrisma() {
   return {
-    dafAttempt: {
+    dafStudentDay: {
       aggregate: jest.fn(async () => ({ _sum: { points: 0 } })),
       findMany: jest.fn(async () => []),
       groupBy: jest.fn(async () => []),
@@ -20,7 +20,7 @@ function fakePrisma() {
 describe('uebersicht', () => {
   it('umumiy balldan darajani chiqaradi', async () => {
     const prisma = fakePrisma();
-    prisma.dafAttempt.aggregate = jest.fn(async () => ({
+    prisma.dafStudentDay.aggregate = jest.fn(async () => ({
       _sum: { points: 1_600 },
     }));
     const f = await new FortschrittService(prisma).uebersicht(55, 1);
@@ -65,7 +65,7 @@ describe('uebersicht', () => {
   it("guruhi yo'q o'quvchining guruh o'rni null, markaz o'rni bor", async () => {
     const prisma = fakePrisma();
     prisma.enrollment.findFirst = jest.fn(async () => null);
-    prisma.dafAttempt.groupBy = jest.fn(async () => [
+    prisma.dafStudentDay.groupBy = jest.fn(async () => [
       { studentId: 55, _sum: { points: 40 } },
     ]);
     const f = await new FortschrittService(prisma).uebersicht(55, 1);
@@ -77,7 +77,7 @@ describe('uebersicht', () => {
 describe('reyting', () => {
   it('ballga qarab kamayish tartibida saralaydi va o`rin qo`yadi', async () => {
     const prisma = fakePrisma();
-    prisma.dafAttempt.groupBy = jest.fn(async () => [
+    prisma.dafStudentDay.groupBy = jest.fn(async () => [
       { studentId: 7, _sum: { points: 300 } },
       { studentId: 55, _sum: { points: 900 } },
     ]);
@@ -101,7 +101,7 @@ describe('reyting', () => {
       { studentId: 55 },
       { studentId: 7 },
     ]);
-    prisma.dafAttempt.groupBy = jest.fn(async () => []);
+    prisma.dafStudentDay.groupBy = jest.fn(async () => []);
     const r = await new FortschrittService(prisma).reyting(55, 1, 'gruppe');
     expect(r).toHaveLength(2);
     expect(r.every((z) => z.punkte === 0)).toBe(true);
@@ -109,7 +109,7 @@ describe('reyting', () => {
 
   it('teng ballda tartib BARQAROR (studentId bo`yicha)', async () => {
     const prisma = fakePrisma();
-    prisma.dafAttempt.groupBy = jest.fn(async () => [
+    prisma.dafStudentDay.groupBy = jest.fn(async () => [
       { studentId: 9, _sum: { points: 100 } },
       { studentId: 4, _sum: { points: 100 } },
     ]);
@@ -136,7 +136,7 @@ describe('reyting', () => {
   it('markaz jadvali FILIALGA cheklanmaydi', async () => {
     const prisma = fakePrisma();
     await new FortschrittService(prisma).reyting(55, 1, 'zentrum');
-    const where = prisma.dafAttempt.groupBy.mock.calls[0][0].where;
+    const where = prisma.dafStudentDay.groupBy.mock.calls[0][0].where;
     expect(where).not.toHaveProperty('branchId');
     expect(where.companyId).toBe(1);
   });
@@ -162,7 +162,7 @@ describe('reyting', () => {
         { studentId: 55 },
         { studentId: 7 },
       ]);
-      prisma.dafAttempt.groupBy = jest.fn(async () => [
+      prisma.dafStudentDay.groupBy = jest.fn(async () => [
         { studentId: 7, _sum: { points: 100 } },
       ]);
 
@@ -191,7 +191,7 @@ describe('reyting', () => {
       // Markaz tabi esa "hech kim ball yig'magan" deb ikkalasi bir
       // vaqtda ikki xil javob berardi.
       const prisma = fakePrisma();
-      prisma.dafAttempt.groupBy = jest.fn(async () => [
+      prisma.dafStudentDay.groupBy = jest.fn(async () => [
         { studentId: 7, _sum: { points: 500 } },
         { studentId: 9, _sum: { points: 100 } },
       ]);

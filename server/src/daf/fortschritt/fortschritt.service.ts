@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { tashkentDateStr } from '../../attendance/shared/date-utils';
+import {
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+} from '../../common/date/tashkent';
 import { currentGroupId } from '../shared/student-scope';
-import { serieAus, stufeFuer, wochenStartUtc } from '../uebung/punkte';
+import { serieAus, stufeFuer, wochenStartTag } from '../uebung/punkte';
 
 export interface Fortschritt {
   gesamt: number;
@@ -42,6 +45,16 @@ interface HaftalikYigindi {
 /** Markaz jadvalida TO'LIQ ko'rsatiladigan yuqori qatorlar soni — undan
  * pastdagilar faqat o'z qatori sifatida (haqiqiy o'rni bilan) qo'shiladi. */
 const ZENTRUM_TOP_CHEGARA = 50;
+
+/** The week's lower bound for the `@db.Date` column. */
+function montagGte(jetzt: Date): Date {
+  return utcMidnightFromDateStr(wochenStartTag(jetzt));
+}
+
+/** A `@db.Date` value is UTC midnight of its calendar day. */
+function tagStr(day: Date): string {
+  return day.toISOString().slice(0, 10);
+}
 
 function ballOl(satr: HaftalikYigindi): number {
   return satr._sum.points ?? 0;
@@ -85,17 +98,13 @@ export class FortschrittService {
   constructor(private readonly prisma: PrismaService) {}
 
   async uebersicht(studentId: number, companyId: number): Promise<Fortschritt> {
-    const [jamiy, urinishlar, groupId, faelligeWoerter] = await Promise.all([
-      this.prisma.dafAttempt.aggregate({
+    const heute = tashkentDateStr(new Date());
+    const [jamiy, serie, groupId, faelligeWoerter] = await Promise.all([
+      this.prisma.dafStudentDay.aggregate({
         where: { studentId },
         _sum: { points: true },
       }),
-      // Butun tarix o'qiladi — `serieAus` yig'ilgan sanalar to'plamiga
-      // qarab hisoblaydi, haftalik oynaga qamalmaydi.
-      this.prisma.dafAttempt.findMany({
-        where: { studentId },
-        select: { createdAt: true },
-      }),
+      this.serieFuer(studentId, heute),
       currentGroupId(this.prisma, studentId),
       // `uebung.wiederholung()` bilan BIR XIL predikat (`dueAt <= hozir`)
       // — bu shu o'quvchi uchun so'ragan `student`ga tegishli qatorlar
@@ -109,16 +118,7 @@ export class FortschrittService {
     const gesamt = jamiy._sum.points ?? 0;
     const { jetzt, naechste } = stufeFuer(gesamt);
 
-    const heute = tashkentDateStr(new Date());
-    // Seriya "mashq qilingan kun" bo'yicha sanaladi, "tugatilgan seans"
-    // emas: `DafLessonProgress.completedAt` har o'tishda ustiga yoziladi va
-    // tarix qolmaydi, urinishlar esa qoladi. Bu yumshoqroq — seansni
-    // boshlab tugatmagan o'quvchi ham seriyasini saqlaydi, "jazolamaslik"
-    // qaroriga mos.
-    const kunlar = urinishlar.map((u) => tashkentDateStr(u.createdAt));
-    const serie = serieAus(kunlar, heute);
-
-    const wochenStart = wochenStartUtc(new Date());
+    const montag = montagGte(new Date());
 
     // Markaz o'rni `zentrumHaftaligi` orqali hisoblanadi — xuddi shu
     // funksiya `reyting('zentrum')` jadvalini quradi. Guruh uchun
@@ -130,7 +130,7 @@ export class FortschrittService {
     const zentrumSaralangan = await this.zentrumHaftaligi(
       studentId,
       companyId,
-      wochenStart,
+      montag,
     );
     const wochePunkte =
       zentrumSaralangan.find((s) => s.studentId === studentId)?._sum.points ??
@@ -148,7 +148,7 @@ export class FortschrittService {
       const { saralangan } = await this.gruppeHaftaligi(
         groupId,
         companyId,
-        wochenStart,
+        montag,
       );
       if (saralangan.length > 0) {
         wochePlatzGruppe = platziniTop(saralangan, studentId);
@@ -169,17 +169,40 @@ export class FortschrittService {
     };
   }
 
+  /**
+   * Days with at least one attempt — the streak rule is unchanged
+   * (06.09 design §7). At most one row per day per group, so this stays
+   * small however many answers the student gave.
+   *
+   * Seriya "mashq qilingan kun" bo'yicha sanaladi, "tugatilgan seans"
+   * emas: `DafLessonProgress.completedAt` har o'tishda ustiga yoziladi va
+   * tarix qolmaydi, urinishlar esa qoladi. Bu yumshoqroq — seansni
+   * boshlab tugatmagan o'quvchi ham seriyasini saqlaydi, "jazolamaslik"
+   * qaroriga mos.
+   */
+  private async serieFuer(studentId: number, heute: string): Promise<number> {
+    const kunlar = await this.prisma.dafStudentDay.findMany({
+      where: { studentId, attempts: { gt: 0 } },
+      select: { day: true },
+      distinct: ['day'],
+    });
+    return serieAus(
+      kunlar.map((k) => tagStr(k.day)),
+      heute,
+    );
+  }
+
   async reyting(
     studentId: number,
     companyId: number,
     scope: ReytingQamrovi,
   ): Promise<ReytingZeile[]> {
-    const wochenStart = wochenStartUtc(new Date());
+    const montag = montagGte(new Date());
 
     if (scope === 'gruppe') {
-      return this.gruppeReytingi(studentId, companyId, wochenStart);
+      return this.gruppeReytingi(studentId, companyId, montag);
     }
-    return this.zentrumReytingi(studentId, companyId, wochenStart);
+    return this.zentrumReytingi(studentId, companyId, montag);
   }
 
   /**
@@ -192,7 +215,7 @@ export class FortschrittService {
   private async gruppeReytingi(
     studentId: number,
     companyId: number,
-    wochenStart: Date,
+    montag: Date,
   ): Promise<ReytingZeile[]> {
     const groupId = await currentGroupId(this.prisma, studentId);
     if (!groupId) return [];
@@ -200,7 +223,7 @@ export class FortschrittService {
     const { saralangan, azoIdlari } = await this.gruppeHaftaligi(
       groupId,
       companyId,
-      wochenStart,
+      montag,
     );
     if (azoIdlari.length === 0) return [];
 
@@ -226,7 +249,7 @@ export class FortschrittService {
   private async gruppeHaftaligi(
     groupId: string,
     companyId: number,
-    wochenStart: Date,
+    montag: Date,
   ): Promise<{ saralangan: HaftalikYigindi[]; azoIdlari: number[] }> {
     const azolar = await this.prisma.enrollment.findMany({
       where: { groupId, status: 'ACTIVE' },
@@ -240,9 +263,9 @@ export class FortschrittService {
     // `groupId` yozuv paytida muhrlangan: ball topilgan paytdagi guruhga
     // tegishli, o'quvchining HOZIRGI guruhiga emas. Shu bitta so'rov bilan
     // guruh a'zolari sonidan qat'i nazar N+1 ga tushilmaydi.
-    const haftalik = await this.prisma.dafAttempt.groupBy({
+    const haftalik = await this.prisma.dafStudentDay.groupBy({
       by: ['studentId'],
-      where: { companyId, groupId, createdAt: { gte: wochenStart } },
+      where: { companyId, groupKey: groupId, day: { gte: montag } },
       _sum: { points: true },
     });
     const ballMap = new Map(haftalik.map((h) => [h.studentId, ballOl(h)]));
@@ -285,11 +308,11 @@ export class FortschrittService {
   private async zentrumHaftaligi(
     studentId: number,
     companyId: number,
-    wochenStart: Date,
+    montag: Date,
   ): Promise<HaftalikYigindi[]> {
-    const haftalik = await this.prisma.dafAttempt.groupBy({
+    const haftalik = await this.prisma.dafStudentDay.groupBy({
       by: ['studentId'],
-      where: { companyId, createdAt: { gte: wochenStart } },
+      where: { companyId, day: { gte: montag } },
       _sum: { points: true },
     });
     return saralaBarqaror(oʻziniQoshib(haftalik, studentId));
@@ -312,12 +335,12 @@ export class FortschrittService {
   private async zentrumReytingi(
     studentId: number,
     companyId: number,
-    wochenStart: Date,
+    montag: Date,
   ): Promise<ReytingZeile[]> {
     const saralangan = await this.zentrumHaftaligi(
       studentId,
       companyId,
-      wochenStart,
+      montag,
     );
     const darajali = saralangan.map((s, i) => ({
       studentId: s.studentId,

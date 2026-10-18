@@ -3,6 +3,7 @@ import {
   punkteFuer,
   serieAus,
   stufeFuer,
+  wochenStartTag,
   wochenStartUtc,
 } from './punkte';
 
@@ -109,5 +110,25 @@ describe('serieAus', () => {
     expect(
       serieAus(['2026-09-06', '2026-09-06', '2026-09-05'], '2026-09-06'),
     ).toBe(2);
+  });
+});
+
+describe('wochenStartTag', () => {
+  it('Sunday 23:50 Tashkent still belongs to the week that began on Monday', () => {
+    // 2026-10-18 is a Sunday; 18:50Z = 23:50 Tashkent.
+    expect(wochenStartTag(new Date('2026-10-18T18:50:00Z'))).toBe('2026-10-12');
+  });
+
+  it('Monday 00:10 Tashkent starts the new week', () => {
+    // 2026-10-18T19:10Z = Monday 2026-10-19 00:10 Tashkent.
+    expect(wochenStartTag(new Date('2026-10-18T19:10:00Z'))).toBe('2026-10-19');
+  });
+
+  it('wochenStartUtc is the same Monday at 00:00 Tashkent', () => {
+    const jetzt = new Date('2026-10-15T08:00:00Z');
+    expect(wochenStartUtc(jetzt).toISOString()).toBe(
+      '2026-10-11T19:00:00.000Z',
+    );
+    expect(wochenStartTag(jetzt)).toBe('2026-10-12');
   });
 });
