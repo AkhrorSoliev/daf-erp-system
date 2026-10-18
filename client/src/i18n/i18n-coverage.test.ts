@@ -237,6 +237,19 @@ export const STRICT_FILES: string[] = [
   "components/dashboard/teacher-lesson-cards.tsx",
   "components/dashboard/upcoming-groups.tsx",
   "components/profile/teacher-profile-links.tsx",
+  "components/shared/entity-history-table.tsx",
+  "components/shared/entity-history-changed-fields.tsx",
+  "components/shared/entity-history-utils.ts",
+  "components/shared/comment-list.tsx",
+  "components/shared/comment-form.tsx",
+  "components/shared/comment-item.tsx",
+  "components/shared/comment-list-helpers.tsx",
+  "components/ui/month-picker.tsx",
+  "components/shared/month-stepper.tsx",
+  "components/shared/mobile-profile-header.tsx",
+  "components/shared/salary-missed-lessons.tsx",
+  "components/shared/salary-missed-lessons-text.ts",
+  "components/shared/teacher-groups-rate-list.tsx",
 ];
 
 function walk(dir: string): string[] {

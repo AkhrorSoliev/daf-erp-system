@@ -9,6 +9,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { useCan } from "@/hooks/use-permissions";
+import { useT } from "@/i18n/context";
 import {
   CommentSkeleton,
   type CommentData,
@@ -33,6 +34,7 @@ export function CommentList({
   onCommentChange,
   readOnly = false,
 }: CommentListProps) {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,10 +117,10 @@ export function CommentList({
           c.id === commentId ? { ...c, content: data.content } : c,
         ),
       );
-      toast.success("Izoh tahrirlandi");
+      toast.success(t("Izoh tahrirlandi"));
       cancelEdit();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Tahrirlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Tahrirlashda xatolik")));
     } finally {
       setEditSaving(false);
     }
@@ -130,10 +132,10 @@ export function CommentList({
       await api.delete(`/comments/${commentId}`);
       setComments((prev) => prev.filter((c) => c.id !== commentId));
       setTotal((prev) => prev - 1);
-      toast.success("Izoh o'chirildi");
+      toast.success(t("Izoh o'chirildi"));
       onCommentChange?.();
     } catch (err) {
-      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
+      toast.error(getErrorMessage(err, t("O'chirishda xatolik")));
     }
   };
 
@@ -158,11 +160,11 @@ export function CommentList({
           <MessageSquare className="size-5 text-muted-foreground/50" />
         </div>
         <p className="text-sm text-muted-foreground">
-          Hozircha izohlar yo&apos;q
+          {t("Hozircha izohlar yo'q")}
         </p>
         {!readOnly && (
           <p className="text-xs text-muted-foreground/60 mt-0.5">
-            Birinchi izohni qoldiring
+            {t("Birinchi izohni qoldiring")}
           </p>
         )}
       </div>
@@ -174,7 +176,7 @@ export function CommentList({
       <div className="flex items-center gap-2 pb-2">
         <MessageSquare className="size-4 text-muted-foreground/60" />
         <span className="text-xs font-medium text-muted-foreground">
-          {total} ta izoh
+          {t("{n} ta izoh", { n: total })}
         </span>
       </div>
 
@@ -212,7 +214,7 @@ export function CommentList({
               disabled={page <= 1 || loading}
               onClick={() => fetchComments(page - 1)}
             >
-              Oldingi
+              {t("Oldingi")}
             </Button>
             <Button
               variant="ghost"
@@ -221,7 +223,7 @@ export function CommentList({
               disabled={page >= totalPages || loading}
               onClick={() => fetchComments(page + 1)}
             >
-              Keyingi
+              {t("Keyingi")}
             </Button>
           </div>
         </div>

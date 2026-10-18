@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { GroupStudentsHoverCard } from "@/components/shared/group-students-hover-card";
 import { formatPrice } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
+import type { Params } from "@/i18n/translate";
 
 /**
  * `GET /teachers/:id/salary-summary` — group CONTEXT for the salary tab.
@@ -23,11 +25,15 @@ export interface SalaryGroupsSummary {
   hasConfig: boolean;
 }
 
-function rateLabel(type: string | null, value: number): string {
+function rateLabel(
+  type: string | null,
+  value: number,
+  t: (source: string, params?: Params) => string,
+): string {
   if (!type) return "";
   if (type === "PERCENTAGE") return `${value}%`;
-  if (type === "FIXED_MONTHLY") return `${formatPrice(value)} so'm/oy`;
-  return `${formatPrice(value)} so'm`;
+  if (type === "FIXED_MONTHLY") return t("{price} so'm/oy", { price: formatPrice(value) });
+  return `${formatPrice(value)} ${t("so'm")}`;
 }
 
 /**
@@ -39,11 +45,12 @@ export function TeacherGroupsRateList({
 }: {
   summary: SalaryGroupsSummary;
 }) {
+  const t = useT();
   return (
     <div className="space-y-4">
       {summary.groups.length > 0 && (
         <div>
-          <h4 className="mb-2 text-sm font-medium">Guruhlar bo&apos;yicha</h4>
+          <h4 className="mb-2 text-sm font-medium">{t("Guruhlar bo'yicha")}</h4>
           <div className="space-y-2">
             {summary.groups.map((g) => (
               <div
@@ -60,11 +67,11 @@ export function TeacherGroupsRateList({
                     </Link>
                   </GroupStudentsHoverCard>
                   <p className="text-xs text-muted-foreground">
-                    {g.activeStudents} o&apos;quvchi
+                    {t("{n} o'quvchi", { n: g.activeStudents })}
                     {g.salaryType
-                      ? ` · ${rateLabel(g.salaryType, g.salaryValue)}`
+                      ? ` · ${rateLabel(g.salaryType, g.salaryValue, t)}`
                       : ""}
-                    {` · kurs ${formatPrice(g.coursePrice)} so'm`}
+                    {` · ${t("kurs {price} so'm", { price: formatPrice(g.coursePrice) })}`}
                   </p>
                 </div>
               </div>
@@ -75,8 +82,7 @@ export function TeacherGroupsRateList({
 
       {!summary.hasConfig && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
-          Bu xodim uchun oylik konfiguratsiyasi belgilanmagan. Moliya
-          bo&apos;limidan sozlang.
+          {t("Bu xodim uchun oylik konfiguratsiyasi belgilanmagan. Moliya bo'limidan sozlang.")}
         </div>
       )}
     </div>

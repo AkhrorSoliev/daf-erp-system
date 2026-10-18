@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import { usePermissions } from "@/hooks/use-permissions";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { canOpenEmployeeSettings } from "@/lib/settings-nav";
 import { getActionInfo, type HistoryRecord } from "./entity-history-utils";
 import {
@@ -43,6 +44,7 @@ export function EntityHistoryTable({
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const fetched = useRef(false);
+  const t = useT();
   const can = usePermissions((s) => s.can);
   const canOpenEmployees = canOpenEmployeeSettings(can);
 
@@ -83,10 +85,10 @@ export function EntityHistoryTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead className="w-40">Kim</TableHead>
-              <TableHead className="w-44">Amal</TableHead>
-              <TableHead>O&apos;zgarishlar</TableHead>
-              <TableHead className="w-36">Sana</TableHead>
+              <TableHead className="w-40">{t("Kim")}</TableHead>
+              <TableHead className="w-44">{t("Amal")}</TableHead>
+              <TableHead>{t("O'zgarishlar")}</TableHead>
+              <TableHead className="w-36">{t("Sana")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -100,7 +102,7 @@ export function EntityHistoryTable({
   if (!loading && records.length === 0) {
     return (
       <div className="flex h-24 items-center justify-center rounded-md border">
-        <p className="text-sm text-muted-foreground">Tarix mavjud emas</p>
+        <p className="text-sm text-muted-foreground">{t("Tarix mavjud emas")}</p>
       </div>
     );
   }
@@ -112,16 +114,19 @@ export function EntityHistoryTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead className="w-40">Kim</TableHead>
-              <TableHead className="w-44">Amal</TableHead>
-              <TableHead>O&apos;zgarishlar</TableHead>
-              <TableHead className="w-36">Sana</TableHead>
+              <TableHead className="w-40">{t("Kim")}</TableHead>
+              <TableHead className="w-44">{t("Amal")}</TableHead>
+              <TableHead>{t("O'zgarishlar")}</TableHead>
+              <TableHead className="w-36">{t("Sana")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {records.map((record, index) => {
               const actionInfo = getActionInfo(record);
               const Icon = actionInfo.icon;
+              // An unknown action falls back to the server code itself: data, not a text.
+              const actionLabel =
+                actionInfo.label === record.action ? record.action : t(actionInfo.label);
 
               return (
                 <TableRow key={record.id}>
@@ -150,7 +155,7 @@ export function EntityHistoryTable({
                               {record.changedBy!.lastName}
                               {isStudent && (
                                 <span className="text-xs text-muted-foreground ml-1">
-                                  (o&apos;quvchi)
+                                  {t("(o'quvchi)")}
                                 </span>
                               )}
                             </span>
@@ -168,13 +173,13 @@ export function EntityHistoryTable({
                                 {content}
                               </Link>
                             </TooltipTrigger>
-                            <TooltipContent>Profilga o&apos;tish</TooltipContent>
+                            <TooltipContent>{t("Profilga o'tish")}</TooltipContent>
                           </Tooltip>
                         );
                       })()
                     ) : (
                       <span className="text-sm text-muted-foreground">
-                        Tizim
+                        {t("Tizim (avtomatik)")}
                       </span>
                     )}
                   </TableCell>
@@ -182,7 +187,7 @@ export function EntityHistoryTable({
                   <TableCell>
                     <Badge variant={actionInfo.variant} className="gap-1">
                       <Icon className="size-3" />
-                      {actionInfo.label}
+                      {actionLabel}
                     </Badge>
                   </TableCell>
 
@@ -202,7 +207,7 @@ export function EntityHistoryTable({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>Jami: {total} ta yozuv</span>
+          <span>{t("Jami: {n} ta yozuv", { n: total })}</span>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -210,7 +215,7 @@ export function EntityHistoryTable({
               disabled={page <= 1 || loading}
               onClick={() => fetchHistory(page - 1)}
             >
-              Oldingi
+              {t("Oldingi")}
             </Button>
             <span>
               {page} / {totalPages}
@@ -221,7 +226,7 @@ export function EntityHistoryTable({
               disabled={page >= totalPages || loading}
               onClick={() => fetchHistory(page + 1)}
             >
-              Keyingi
+              {t("Keyingi")}
             </Button>
           </div>
         </div>

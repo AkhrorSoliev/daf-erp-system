@@ -1,7 +1,8 @@
 "use client";
 
 import { format, formatDistanceToNow } from "date-fns";
-import { uz } from "date-fns/locale";
+import { useLocale, useT } from "@/i18n/context";
+import { dateFnsLocale } from "@/lib/date-fns-locale";
 import { Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -23,7 +24,7 @@ export interface CommentData {
   entityId: string;
   content: string;
   isSystem?: boolean;
-  /** Null for a system task (shown as «Tizim»). */
+  /** Null for a system task (shown as «Tizim (avtomatik)»). */
   author: CommentAuthor | null;
   createdAt: string;
   _pending?: boolean;
@@ -49,6 +50,7 @@ export function CommentSkeleton() {
 }
 
 export function RelativeTime({ date }: { date: string }) {
+  const { locale } = useLocale();
   const d = new Date(date);
   const now = new Date();
   const diffHours = (now.getTime() - d.getTime()) / (1000 * 60 * 60);
@@ -58,7 +60,7 @@ export function RelativeTime({ date }: { date: string }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="text-[11px] text-muted-foreground/70 cursor-default">
-            {formatDistanceToNow(d, { addSuffix: true, locale: uz })}
+            {formatDistanceToNow(d, { addSuffix: true, locale: dateFnsLocale(locale) })}
           </span>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
@@ -82,6 +84,7 @@ export function SendStatus({
   pending?: boolean;
   failed?: boolean;
 }) {
+  const t = useT();
   if (failed) {
     return (
       <Tooltip>
@@ -89,7 +92,7 @@ export function SendStatus({
           <span className="text-destructive text-[10px] font-bold">!</span>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
-          Yuborilmadi
+          {t("Yuborilmadi")}
         </TooltipContent>
       </Tooltip>
     );

@@ -1,3 +1,7 @@
+import { interpolate, type Params } from "@/i18n/translate";
+
+type Translate = (source: string, params?: Params) => string;
+
 /** One lesson that ended with no attendance (server: `computeMissedLessons`). */
 export interface MissedLesson {
   /** "YYYY-MM-DD". */
@@ -20,6 +24,6 @@ export function missedLessonDate(date: string): string {
 }
 
 /** The heading's count: "3 ta dars". */
-export function missedLessonsCount(data: MissedLessons): string {
-  return `${data.lessons.length} ta dars`;
+export function missedLessonsCount(data: MissedLessons, t: Translate = interpolate): string {
+  return t("{n} ta dars", { n: data.lessons.length });
 }
