@@ -281,6 +281,16 @@ export const STRICT_FILES: string[] = [
   "components/payments/list/payment-drawer.tsx",
   "components/payments/list/payment-drawer-model.ts",
   "components/payments/list/reverse-payment-dialog.tsx",
+  "components/payments/expenses/expenses-page.tsx",
+  "components/payments/expenses/expenses-header.tsx",
+  "components/payments/expenses/expenses-missing-card.tsx",
+  "components/payments/expenses/expenses-month-card.tsx",
+  "components/payments/expenses/expenses-filter-bar.tsx",
+  "components/payments/expenses/expenses-table.tsx",
+  "components/payments/expenses/expense-form-dialog.tsx",
+  "components/payments/expenses/expense-source-field.tsx",
+  "components/payments/expenses/expenses-labels.ts",
+  "components/payments/expenses/expenses-format.ts",
 ];
 
 function walk(dir: string): string[] {

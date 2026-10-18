@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 
 /** The «no channel» choice: a Radix select cannot hold an empty value. */
@@ -27,6 +28,7 @@ export function ExpenseSourceField({
   onChange: (sourceId: string) => void;
   current?: SourceOption | null;
 }) {
+  const t = useT();
   const [sources, setSources] = useState<SourceOption[]>([]);
 
   useEffect(() => {
@@ -47,13 +49,13 @@ export function ExpenseSourceField({
 
   return (
     <div className="space-y-2">
-      <Label>Kanal</Label>
+      <Label>{t("Kanal")}</Label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={NO_SOURCE}>Umumiy (bitta kanal emas)</SelectItem>
+          <SelectItem value={NO_SOURCE}>{t("Umumiy (bitta kanal emas)")}</SelectItem>
           {options.map((s) => (
             <SelectItem key={s.id} value={s.id}>
               {s.name}
@@ -61,7 +63,7 @@ export function ExpenseSourceField({
           ))}
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">Reklama qaysi kanal uchun bo&apos;lsa, shuni tanlang — hisobotda shu kanalning o&apos;quvchisi narxi chiqadi.</p>
+      <p className="text-xs text-muted-foreground">{t("Reklama qaysi kanal uchun bo'lsa, shuni tanlang — hisobotda shu kanalning o'quvchisi narxi chiqadi.")}</p>
     </div>
   );
 }
