@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CanLink } from "@/components/shared/can-link";
+import { useLocale, useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { keepsMonthCapital } from "../expenses/expenses-format";
 import { isOwnPayrollLocked } from "../own-payroll";
 import { currentMonthKey, monthLabel, staffRoleText } from "../salary-utils";
 import { csvFromLessons, drawerButtons, drawerHint } from "./salary-drawer-model";
@@ -31,13 +33,14 @@ interface Props {
 
 /** Row click on «Ish haqi» (spec §2.5): one person's month, in any state. */
 export function SalaryRowDrawer({ userId, month, state, onClose, onPay, canClose, canPay }: Props) {
+  const t = useT();
   const { data, isError, isFetching, refetch } = useSalaryDetail(userId, month);
   // Until the page's answer arrives: OPEN is exactly "the current Tashkent month" (spec §4).
   const kind = state ?? (month === currentMonthKey() ? "OPEN" : "NOT_CALCULATED");
   const user = data?.row.user;
   // The table's own words: «Ustoz», or the staff member's position.
-  const role = user && "position" in user ? staffRoleText(user.position) : "Ustoz";
-  const name = user ? `${user.firstName} ${user.lastName}` : "Xodim";
+  const role = user && "position" in user ? staffRoleText(user.position, t) : t("Ustoz");
+  const name = user ? `${user.firstName} ${user.lastName}` : t("Xodim");
 
   return (
     <Sheet open={userId !== null} onOpenChange={(open) => !open && onClose()}>
@@ -53,7 +56,7 @@ export function SalaryRowDrawer({ userId, month, state, onClose, onPay, canClose
               name
             )}
           </SheetTitle>
-          <SheetDescription>{data ? `${role} · ${monthLabel(data.month)}` : "Yuklanmoqda…"}</SheetDescription>
+          <SheetDescription>{data ? `${role} · ${monthLabel(data.month, t)}` : t("Yuklanmoqda…")}</SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -61,9 +64,9 @@ export function SalaryRowDrawer({ userId, month, state, onClose, onPay, canClose
             <SalaryDrawerBody detail={data} state={kind} />
           ) : isError ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
-              <p className="text-sm text-muted-foreground">Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+              <p className="text-sm text-muted-foreground">{t("Ma'lumotni yuklab bo'lmadi")}</p>
               <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-                Qayta urinish
+                {t("Qayta urinish")}
               </Button>
             </div>
           ) : (
@@ -106,6 +109,8 @@ function DrawerActions({
   canPay: boolean;
   onPay: () => void;
 }) {
+  const t = useT();
+  const { locale } = useLocale();
   const invalidate = useInvalidateSalary();
   const [busy, setBusy] = useState<"csv" | "approve" | null>(null);
   const payment = detail.row.payment?.status === "CANCELLED" ? null : detail.row.payment;
@@ -115,8 +120,8 @@ function DrawerActions({
   const buttons = drawerButtons(state, payment, canClose, canPay && !ownLocked);
   const hint =
     ownLocked && payment?.status === "APPROVED"
-      ? "Bu sizning oyligingiz — uni boshqa rahbar beradi."
-      : drawerHint(state, payment, detail.month);
+      ? t("Bu sizning oyligingiz — uni boshqa rahbar beradi.")
+      : drawerHint(state, payment, detail.month, t, !keepsMonthCapital(locale));
 
   const downloadCsv = async () => {
     setBusy("csv");
@@ -134,7 +139,7 @@ function DrawerActions({
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Faylni yuklab bo'lmadi"));
+      toast.error(getErrorMessage(err, t("Faylni yuklab bo'lmadi")));
     } finally {
       setBusy(null);
     }
@@ -145,11 +150,11 @@ function DrawerActions({
     setBusy("approve");
     try {
       await api.patch(`/salary/payments/${payment.id}/approve`);
-      toast.success("Tasdiqlandi");
+      toast.success(t("Tasdiqlandi"));
       // Financial data: refetch, never patch the cache by hand.
       await invalidate();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Tasdiqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Tasdiqlashda xatolik")));
     } finally {
       setBusy(null);
     }
@@ -160,7 +165,7 @@ function DrawerActions({
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={downloadCsv} disabled={busy !== null}>
           {busy === "csv" ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Download data-icon="inline-start" />}
-          Darslar bo&apos;yicha (CSV)
+          {t("Darslar bo'yicha (CSV)")}
         </Button>
         {buttons.approve && (
           <Button onClick={approve} disabled={buttons.approve === "disabled" || busy !== null}>
@@ -169,13 +174,13 @@ function DrawerActions({
             ) : (
               <CheckCircle data-icon="inline-start" />
             )}
-            Tasdiqlash
+            {t("Tasdiqlash")}
           </Button>
         )}
         {buttons.pay && (
           <Button onClick={onPay} disabled={buttons.pay === "disabled" || busy !== null}>
             <HandCoins data-icon="inline-start" />
-            Berildi
+            {t("Berildi")}
           </Button>
         )}
       </div>

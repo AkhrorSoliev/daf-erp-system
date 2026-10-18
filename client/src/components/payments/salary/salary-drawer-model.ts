@@ -1,7 +1,9 @@
+import { interpolate } from "@/i18n/translate";
 import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { csvCell } from "@/components/forms/responses/submission-format";
 import { instantDate } from "../debt/debt-format";
 import { isMonthlyBillingMonth } from "../overview/overview-math";
+import type { Translate } from "../record-payment-admission";
 import { addMonths, monthShort, SALARY_TYPE_LABELS } from "../salary-utils";
 import type {
   BreakdownLine,
@@ -14,6 +16,7 @@ import type {
 
 // The row drawer's words as pure functions of the detail answer (spec §2.5).
 // Every figure is the server's (ADR-0006); this file only picks the wording.
+// The words take an optional last `t` (default: the Uzbek source); the CSV stays Uzbek.
 
 /** The «Stavka» line. `coverage` is the staff row's days; `monthKey` decides a per-student rate's unit. */
 export function rateText(
@@ -21,24 +24,27 @@ export function rateText(
   kind: "teacher" | "staff",
   coverage?: { activeDays: number; cycleDays: number },
   monthKey?: string,
+  t: Translate = interpolate,
 ): string {
-  if (!rate) return kind === "teacher" ? "Guruhlar bo'yicha — pastda" : "Stavka qo'yilmagan";
+  if (!rate) return kind === "teacher" ? t("Guruhlar bo'yicha — pastda") : t("Stavka qo'yilmagan");
   const value = formatPrice(rate.value);
   switch (rate.salaryType) {
     case "PERCENTAGE":
-      return `Foiz: o'quvchi to'lovining ${formatNumber(rate.value)}%`;
+      return t("Foiz: o'quvchi to'lovining {value}%", { value: formatNumber(rate.value) });
     case "FIXED_PER_STUDENT":
       // Before monthly billing the rate was per cycle (server `rateBasis`).
       return monthKey && !isMonthlyBillingMonth(monthKey)
-        ? `Har o'quvchi uchun tsikliga ${value} so'm`
-        : `Har o'quvchi uchun oyiga ${value} so'm`;
+        ? t("Har o'quvchi uchun tsikliga {value} so'm", { value })
+        : t("Har o'quvchi uchun oyiga {value} so'm", { value });
     case "FIXED_MONTHLY": {
       // `activeDays: 0` is a row that exists only for its payment, not a 0-day salary.
-      const part =
-        coverage && coverage.activeDays > 0 && coverage.activeDays < coverage.cycleDays
-          ? `; oyning ${coverage.cycleDays} kunidan ${coverage.activeDays} tasi`
-          : "";
-      return `Oyiga ${value} so'm${part}`;
+      return coverage && coverage.activeDays > 0 && coverage.activeDays < coverage.cycleDays
+        ? t("Oyiga {value} so'm; oyning {total} kunidan {days} tasi", {
+            value,
+            total: coverage.cycleDays,
+            days: coverage.activeDays,
+          })
+        : t("Oyiga {value} so'm", { value });
     }
   }
 }
@@ -46,26 +52,41 @@ export function rateText(
 /** A payment the cron wrote and nobody cancelled; a cancelled one counts as none. */
 const live = (p: RowPayment | null) => (p && p.status !== "CANCELLED" ? p : null);
 
-export function drawerTotalLabel(state: MonthStateKind, payment: RowPayment | null): string {
-  if (state === "OPEN") return "Oy oxirida beriladi";
-  return live(payment)?.status === "PAID" ? "Berildi" : "Beriladi";
+export function drawerTotalLabel(
+  state: MonthStateKind,
+  payment: RowPayment | null,
+  t: Translate = interpolate,
+): string {
+  if (state === "OPEN") return t("Oy oxirida beriladi");
+  return live(payment)?.status === "PAID" ? t("Berildi") : t("Beriladi");
 }
 
-/** The line under the action buttons: what opens them, or why they stay shut. */
-export function drawerHint(state: MonthStateKind, payment: RowPayment | null, month: string): string {
+/**
+ * The line under the action buttons: what opens them, or why they stay shut.
+ * `lowerMonth`: the month name inside the sentence is lower-cased (Uzbek, Russian), not in de/en.
+ */
+export function drawerHint(
+  state: MonthStateKind,
+  payment: RowPayment | null,
+  month: string,
+  t: Translate = interpolate,
+  lowerMonth = true,
+): string {
   if (state === "OPEN") {
-    const next = monthShort(addMonths(month, 1)).toLowerCase();
-    return `Tasdiqlash va «Berildi» — oy hisoblangach (1-${next}) ochiladi.`;
+    const next = monthShort(addMonths(month, 1), t);
+    return t("Tasdiqlash va «Berildi» — oy hisoblangach (1-{month}) ochiladi.", {
+      month: lowerMonth ? next.toLowerCase() : next,
+    });
   }
   switch (live(payment)?.status) {
     case "CALCULATED":
-      return "Avval CEO tasdiqlaydi, keyin «Berildi» ochiladi.";
+      return t("Avval CEO tasdiqlaydi, keyin «Berildi» ochiladi.");
     case "APPROVED":
-      return "«Berildi» — CEO yoki filial direktori.";
+      return t("«Berildi» — CEO yoki filial direktori.");
     case "PAID":
-      return "Berilgan oylik o'zgartirilmaydi.";
+      return t("Berilgan oylik o'zgartirilmaydi.");
     default:
-      return "Bu oy uchun oylik hisoblanmagan.";
+      return t("Bu oy uchun oylik hisoblanmagan.");
   }
 }
 
@@ -84,15 +105,15 @@ export interface CalcLine {
  * the equation on it. Before 2026-07 the server sets `fullDeserved` to the pay
  * base, so the difference there is a real change too.
  */
-export function calcLines(detail: SalaryDetail): CalcLine[] {
+export function calcLines(detail: SalaryDetail, t: Translate = interpolate): CalcLine[] {
   const { row } = detail;
   const worked = workedOf(row);
   const diff = detail.afterCalcDiff;
   const lines: CalcLine[] = [];
-  if (worked != null) lines.push({ label: "Ishladi", value: worked, sign: "+" });
-  lines.push({ label: "Avans (ushlanadi)", value: row.advances, sign: "-" });
-  if (diff) lines.push({ label: "Hisoblangandan keyin o'zgardi", value: diff, sign: "±" });
-  lines.push({ label: "Beriladi", value: live(row.payment)?.amount ?? row.netToPay, sign: "=" });
+  if (worked != null) lines.push({ label: t("Ishladi"), value: worked, sign: "+" });
+  lines.push({ label: t("Avans (ushlanadi)"), value: row.advances, sign: "-" });
+  if (diff) lines.push({ label: t("Hisoblangandan keyin o'zgardi"), value: diff, sign: "±" });
+  lines.push({ label: t("Beriladi"), value: live(row.payment)?.amount ?? row.netToPay, sign: "=" });
   return lines;
 }
 
@@ -101,10 +122,10 @@ export function calcLines(detail: SalaryDetail): CalcLine[] {
  * outrun the earnings so far: the server shows «Beriladi» as 0 (it clamps),
  * so the equation does not close, and this says why.
  */
-export function advanceAheadNote(detail: SalaryDetail): string | null {
+export function advanceAheadNote(detail: SalaryDetail, t: Translate = interpolate): string | null {
   const worked = workedOf(detail.row);
   if (live(detail.row.payment) || worked == null || worked - detail.row.advances >= 0) return null;
-  return "Avans hozircha ishlanganidan ko'p — qolgani oy oxirigacha ishlanganidan ushlanadi.";
+  return t("Avans hozircha ishlanganidan ko'p — qolgani oy oxirigacha ishlanganidan ushlanadi.");
 }
 
 type ButtonState = "enabled" | "disabled" | null;
@@ -130,26 +151,35 @@ export function drawerButtons(
 }
 
 /** Under «Guruhlar bo'yicha»: how much of the pay the students covered and how much the center put in. */
-export function splitLine(row: TeacherRow): string | null {
+export function splitLine(row: TeacherRow, t: Translate = interpolate): string | null {
   if (!row.hasLessonData || row.covered == null || row.centerFunded == null) return null;
-  if (row.centerFunded <= 0) return "hammasini o'quvchilar to'lagan";
-  return `shundan o'quvchilar to'lagan ${formatPrice(row.covered)} · markaz qo'shdi ${formatPrice(
-    row.centerFunded,
-  )} (o'quvchilar hali to'lamagan)`;
+  if (row.centerFunded <= 0) return t("hammasini o'quvchilar to'lagan");
+  return t("shundan o'quvchilar to'lagan {covered} · markaz qo'shdi {center} (o'quvchilar hali to'lamagan)", {
+    covered: formatPrice(row.covered),
+    center: formatPrice(row.centerFunded),
+  });
 }
 
 /** The green PAID box: the Tashkent day, one line per cash slice, who marked it. */
-export function payoutLines(payout: NonNullable<SalaryDetail["payout"]>): {
+export function payoutLines(
+  payout: NonNullable<SalaryDetail["payout"]>,
+  t: Translate = interpolate,
+): {
   title: string;
   slices: string[];
   by: string | null;
 } {
   return {
-    title: payout.paidAt ? `Berildi ${instantDate(payout.paidAt)}` : "Berildi",
-    slices: payout.slices.map(
-      (s) => `${s.accountType === "CASH" ? "naqd" : "karta"} ${formatPrice(s.amount)} — ${s.accountName}`,
+    title: payout.paidAt ? t("Berildi {date}", { date: instantDate(payout.paidAt) }) : t("Berildi"),
+    // The account name is data.
+    slices: payout.slices.map((s) =>
+      s.accountType === "CASH"
+        ? t("naqd {amount} — {account}", { amount: formatPrice(s.amount), account: s.accountName })
+        : t("karta {amount} — {account}", { amount: formatPrice(s.amount), account: s.accountName }),
     ),
-    by: payout.paidBy ? `Kim belgiladi: ${payout.paidBy.firstName} ${payout.paidBy.lastName}` : null,
+    by: payout.paidBy
+      ? t("Kim belgiladi: {name}", { name: `${payout.paidBy.firstName} ${payout.paidBy.lastName}` })
+      : null,
   };
 }
 

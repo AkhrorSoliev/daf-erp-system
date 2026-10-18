@@ -19,10 +19,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PriceInput } from "@/components/ui/price-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLocale, useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
+import { keepsMonthCapital } from "../expenses/expenses-format";
 import { accountsByKind, buildPayBody, payTitle, payToast, sliceCheck } from "./salary-pay-model";
 import { SALARY_KEYS, useInvalidateSalary } from "./salary-queries";
 import type { SalaryDetail } from "./salary-types";
@@ -68,6 +70,8 @@ function PayForm({
   onClose: () => void;
   onPaid: () => void;
 }) {
+  const t = useT();
+  const { locale } = useLocale();
   const invalidate = useInvalidateSalary();
   const queryClient = useQueryClient();
   const { cash: cashAccounts, card: cardAccounts } = accountsByKind(detail.cashAccounts);
@@ -90,7 +94,7 @@ function PayForm({
 
   const cash = Number(cashText || 0);
   const card = Number(cardText || 0);
-  const check = sliceCheck(total, cash, card);
+  const check = sliceCheck(total, cash, card, t);
   // An amount with no account to leave from cannot be sent.
   const accountsReady = (cash === 0 || cashId !== "") && (card === 0 || cardId !== "");
   const canSubmit = check.ok && accountsReady && !detail.payeeBranchMissing && !submitting;
@@ -114,11 +118,11 @@ function PayForm({
       );
       notified = res.data.notified;
     } catch (err) {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik yuz berdi")));
       setSubmitting(false);
       return;
     }
-    toast.success(payToast(notified));
+    toast.success(payToast(notified, t));
     // Financial data: refetch, never patch the cache by hand. The drawer is shut, so its
     // query for this person is idle and only marked stale; drop it so the reopened drawer
     // waits for the payout instead of flashing the old «Berildi» button.
@@ -131,20 +135,20 @@ function PayForm({
     <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle className="pr-8">{payTitle(name, detail.month)}</DialogTitle>
-          <DialogDescription>Pul tanlangan kassa va kartadan chiqadi. Keyin xodimga bot xabari boradi.</DialogDescription>
+          <DialogTitle className="pr-8">{payTitle(name, detail.month, t, !keepsMonthCapital(locale))}</DialogTitle>
+          <DialogDescription>{t("Pul tanlangan kassa va kartadan chiqadi. Keyin xodimga bot xabari boradi.")}</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-1.5">
-            <Label>Summa</Label>
+            <Label>{t("Summa")}</Label>
             <div className="text-lg font-semibold tabular-nums">
-              {formatPrice(total)} <span className="text-sm font-normal text-muted-foreground">so&apos;m</span>
+              {formatPrice(total)} <span className="text-sm font-normal text-muted-foreground">{t("so'm")}</span>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="pay-date">Sana</Label>
+            <Label htmlFor="pay-date">{t("Sana")}</Label>
             <DatePicker
               id="pay-date"
               value={paidAt}
@@ -159,7 +163,7 @@ function PayForm({
             <>
               <AmountRow
                 id="pay-cash"
-                label="Naqd"
+                label={t("Naqd")}
                 accounts={cashAccounts}
                 accountId={cashId}
                 onAccountChange={setCashId}
@@ -170,7 +174,7 @@ function PayForm({
               {cardAccounts.length > 0 && (
                 <AmountRow
                   id="pay-card"
-                  label="Karta"
+                  label={t("Karta")}
                   accounts={cardAccounts}
                   accountId={cardId}
                   onAccountChange={setCardId}
@@ -183,7 +187,7 @@ function PayForm({
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="pay-note">Izoh</Label>
+            <Label htmlFor="pay-note">{t("Izoh")}</Label>
             <Input id="pay-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} disabled={submitting} />
           </div>
 
@@ -195,18 +199,18 @@ function PayForm({
           </p>
           {detail.payeeBranchMissing && (
             <p className="text-sm font-medium text-destructive">
-              Xodimning filiali aniqlanmagan — oylikni berib bo&apos;lmaydi.
+              {t("Xodimning filiali aniqlanmagan — oylikni berib bo'lmaydi.")}
             </p>
           )}
         </div>
 
         <DialogFooter className="border-t px-6 py-4">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button onClick={submit} disabled={!canSubmit}>
             {submitting && <Loader2 className="animate-spin" data-icon="inline-start" />}
-            Berildi
+            {t("Berildi")}
           </Button>
         </DialogFooter>
       </DialogContent>

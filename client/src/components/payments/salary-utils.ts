@@ -62,11 +62,11 @@ export const SALARY_STATUS_CELL: Record<string, string> = {
 };
 
 const ROLE_LABELS: Record<number, string> = {
-  1: "Direktor",
-  2: "Filial direktori",
-  3: "Administrator",
-  4: "O'qituvchi",
-  5: "Kassir",
+  1: msg("Direktor"),
+  2: msg("Filial direktori"),
+  3: msg("Administrator"),
+  4: msg("O'qituvchi"),
+  5: msg("Kassir"),
 };
 
 /**
@@ -92,11 +92,17 @@ const ROLE_IDS_BY_NAME: Record<string, number> = {
  * to the role NAME («Cashier») for an employee with no job title, so a role name
  * is said in Uzbek; any other text is a real job title and passes through.
  */
-export function staffRoleText(position: string | null | undefined): string {
+export function staffRoleText(
+  position: string | null | undefined,
+  t: (source: string) => string = (source) => source,
+): string {
   const p = position?.trim();
-  if (!p) return "Xodim";
+  if (!p) return t("Xodim");
   const id = ROLE_IDS_BY_NAME[p];
-  return id ? ROLE_LABELS[id] : p;
+  // A typed job title is data: only the role names are translated.
+  if (!id) return p;
+  const label = ROLE_LABELS[id];
+  return t(label);
 }
 
 /** Same, for the nested `{ role: { id } }` shape the user endpoints return. */
