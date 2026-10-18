@@ -78,7 +78,10 @@
     "scripts/backfill-payment-receipt-codes.ts",
     "scripts/lib/receipt-code-plan.ts",
     "scripts/lib/receipt-code-plan.spec.ts",
-    "scripts/kpi-backfill.ts"
+    "scripts/kpi-backfill.ts",
+    "scripts/daf-badges-backfill.ts",
+    "scripts/lib/daf-badges-backfill-plan.ts",
+    "scripts/lib/daf-badges-backfill-plan.spec.ts"
   ],
   "exclude": ["node_modules", "dist", "src/generated"]
 }
