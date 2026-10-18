@@ -1,6 +1,7 @@
 "use client";
 
 import { MoreHorizontal, Pencil } from "lucide-react";
+import { useT } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -40,10 +41,11 @@ export function StatementPayments({
   isCorrectable: (a: ModelAllocation) => boolean;
   onCorrect: (p: CorrectablePayment) => void;
 }) {
+  const t = useT();
   if (rows.length === 0) {
     return (
       <p className="rounded-lg border px-4 py-3 text-sm text-muted-foreground">
-        Hali to&apos;lov qilinmagan.
+        {t("Hali to'lov qilinmagan.")}
       </p>
     );
   }
@@ -52,10 +54,10 @@ export function StatementPayments({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Sana</TableHead>
-            <TableHead>Usul</TableHead>
-            <TableHead className="text-right">Summa</TableHead>
-            <TableHead>Qaysi oyga yozildi</TableHead>
+            <TableHead>{t("Sana")}</TableHead>
+            <TableHead>{t("Usul")}</TableHead>
+            <TableHead className="text-right">{t("Summa")}</TableHead>
+            <TableHead>{t("Qaysi oyga yozildi")}</TableHead>
             <TableHead className="w-20" />
           </TableRow>
         </TableHeader>
@@ -87,7 +89,7 @@ export function StatementPayments({
                             className="size-7"
                           >
                             <MoreHorizontal className="size-4" />
-                            <span className="sr-only">Amallar</span>
+                            <span className="sr-only">{t("Amallar")}</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -101,7 +103,7 @@ export function StatementPayments({
                             }
                           >
                             <Pencil className="mr-2 size-4" />
-                            Summani to&apos;g&apos;rilash
+                            {t("Summani to'g'rilash")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -113,7 +115,7 @@ export function StatementPayments({
           })}
           {total && (
             <TableRow className="border-t-2 font-semibold hover:bg-transparent">
-              <TableCell colSpan={2}>Jami to&apos;langan</TableCell>
+              <TableCell colSpan={2}>{t("Jami to'langan")}</TableCell>
               <TableCell className={AMOUNT}>{total}</TableCell>
               <TableCell colSpan={2} />
             </TableRow>

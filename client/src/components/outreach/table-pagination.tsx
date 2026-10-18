@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatNumber } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
@@ -31,16 +32,17 @@ export function TablePagination({
   onPageChange,
   onPageSizeChange,
 }: TablePaginationProps) {
+  const t = useT();
   if (total <= 0) return null;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div className="flex items-center justify-between text-sm text-muted-foreground">
-      <span>Jami: {formatNumber(total)} ta yozuv</span>
+      <span>{t("Jami: {n} ta yozuv", { n: formatNumber(total) })}</span>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs">Sahifa hajmi:</span>
+          <span className="text-xs">{t("Sahifa hajmi:")}</span>
           <Select
             value={String(pageSize)}
             onValueChange={(v) => onPageSizeChange(Number(v))}
@@ -63,7 +65,7 @@ export function TablePagination({
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
-          Oldingi
+          {t("Oldingi")}
         </Button>
         <span className="text-xs">
           {page} / {totalPages}
@@ -74,7 +76,7 @@ export function TablePagination({
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >
-          Keyingi
+          {t("Keyingi")}
         </Button>
       </div>
     </div>

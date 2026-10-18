@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/msg";
+
 // Shared between the remove-from-group dialog and the (future) profile-page
 // write-off button. Mirrors the shape returned by:
 //   GET /students/:id/enrollments/:enrollmentId/debt-write-off-eligibility
@@ -65,28 +67,34 @@ export function writeOffNoticeCopy(
   // Shuning uchun unga alohida sarlavha beriladi: "shart bajarilmadi" deyish
   // administratorni davomatni tuzatib ko'rishga undardi, holbuki muammo
   // boshqa joyda — sozlamada.
+  // The texts are `msg()` markers: the dialog draws them with `t(…)`.
   const heading =
     reason === "DISABLED"
-      ? "Qarz kechirish o'chirilgan"
-      : "Hisobdan chiqarish sharti bajarilmadi";
+      ? msg("Qarz kechirish o'chirilgan")
+      : msg("Hisobdan chiqarish sharti bajarilmadi");
 
   // STUDENT_ATTENDED endi uniondan olib tashlangan, lekin eski server javobi
   // hali shu sababni qaytarishi mumkin — matni saqlanadi.
   const bodyByReason: Record<string, string> = {
-    NO_DEBT:
+    NO_DEBT: msg(
       "Bu yozuv uchun balans manfiy emas — hisobdan chiqarishga hojat yo'q.",
-    STUDENT_ATTENDED:
+    ),
+    STUDENT_ATTENDED: msg(
       "O'quvchi joriy siklda darslarga qatnashgan — bu yozuv qarzi haqiqiy qarz hisoblanadi.",
-    NO_ABSENT_IN_CYCLE:
+    ),
+    NO_ABSENT_IN_CYCLE: msg(
       "Joriy siklda 'ABSENT' (kelmagan) belgilangan davomat yo'q.",
-    DISABLED:
+    ),
+    DISABLED: msg(
       "Qarz kechirish o'chirilgan — qarz butun tarixi bilan saqlanadi. Yoqish: Sozlamalar → To'lov → «Qarz kechirishga ruxsat».",
-    MONTHLY:
+    ),
+    MONTHLY: msg(
       "Oylik to'lovdagi qarz hisobdan chiqarilmaydi — pul guruhdan chiqarishda tanlangan tartib bo'yicha hal bo'ladi.",
+    ),
   };
 
   return {
     heading,
-    body: (reason && bodyByReason[reason]) || "Sharti bajarilmadi.",
+    body: (reason && bodyByReason[reason]) || msg("Sharti bajarilmadi."),
   };
 }

@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCan } from "@/hooks/use-permissions";
 import api from "@/lib/api";
 import { downloadAuthedFile } from "@/lib/download-file";
+import { useT } from "@/i18n/context";
 import {
   CorrectPaymentDialog,
   type CorrectablePayment,
@@ -31,6 +32,7 @@ export function PaymentStatement({
   /** A payment was corrected: the student's balance changed. */
   onCorrected?: (newBalance: number | null) => void;
 }) {
+  const t = useT();
   const user = useAuth((s) => s.user);
   // The CEO's 72-hour bypass is identity; whether a correction is offered at all
   // is the capability.
@@ -81,7 +83,7 @@ export function PaymentStatement({
         "tolovlar-hisoboti.pdf",
       );
     } catch {
-      toast.error("PDF yuklab olishda xatolik");
+      toast.error(t("PDF yuklab olishda xatolik"));
     } finally {
       setDownloading(false);
     }
@@ -91,10 +93,10 @@ export function PaymentStatement({
     return (
       <div className="flex flex-col items-center gap-3 rounded-lg border py-10 text-center">
         <p className="text-sm text-muted-foreground">
-          To&apos;lovlar hisobotini yuklab bo&apos;lmadi
+          {t("To'lovlar hisobotini yuklab bo'lmadi")}
         </p>
         <Button variant="outline" size="sm" onClick={retry}>
-          Qayta urinish
+          {t("Qayta urinish")}
         </Button>
       </div>
     );
@@ -132,7 +134,7 @@ export function PaymentStatement({
           ) : (
             <Download className="size-4" />
           )}
-          PDF yuklab olish
+          {t("PDF yuklab olish")}
         </Button>
       </header>
 

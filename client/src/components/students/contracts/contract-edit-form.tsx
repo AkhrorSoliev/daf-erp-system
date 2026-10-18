@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import { ContractCourseExtras } from "./contract-course-extras";
 import { ContractCustomerFields } from "./contract-customer-fields";
 import {
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export function ContractEditForm({ contract, profile, onCancel, onSaved }: Props) {
+  const t = useT();
   const f = contract.fields;
   const [customer, setCustomer] = useState<CustomerDraft>(() =>
     customerDraftFromFields(f.customer),
@@ -45,11 +47,14 @@ export function ContractEditForm({ contract, profile, onCancel, onSaved }: Props
   const [saving, setSaving] = useState(false);
   const [profileUpdates, setProfileUpdates] = useState<ProfileField[]>([]);
   const conflicts = profileConflicts(customer, profile);
-  const problem = formProblem({
-    customer,
-    minor: f.student.isMinor,
-    unsettledProfile: unsettled(conflicts, profileUpdates).length,
-  });
+  const problem = formProblem(
+    {
+      customer,
+      minor: f.student.isMinor,
+      unsettledProfile: unsettled(conflicts, profileUpdates).length,
+    },
+    t,
+  );
 
   // Switching the kind starts the block over; SELF takes the student's own name.
   const onKind = (kind: CustomerKind) =>
@@ -69,10 +74,10 @@ export function ContractEditForm({ contract, profile, onCancel, onSaved }: Props
         `/contract-documents/${contract.id}`,
         updateBody(customer, courses, profileUpdatesBody(conflicts, profileUpdates)),
       );
-      toast.success(`Shartnoma ${data.number} yangilandi`);
+      toast.success(t("Shartnoma {number} yangilandi", { number: data.number }));
       onSaved(data);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Shartnomani saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Shartnomani saqlashda xatolik yuz berdi")));
     } finally {
       setSaving(false);
     }
@@ -82,8 +87,9 @@ export function ContractEditForm({ contract, profile, onCancel, onSaved }: Props
     <>
       <div className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
         <p className="text-sm text-muted-foreground">
-          Kurs, guruh, narx va jadval shartnoma tuzilgan kuni muhrlangan va o&apos;zgarmaydi. Xato
-          bo&apos;lsa, shartnomani bekor qilib, yangisini tuzing.
+          {t(
+            "Kurs, guruh, narx va jadval shartnoma tuzilgan kuni muhrlangan va o'zgarmaydi. Xato bo'lsa, shartnomani bekor qilib, yangisini tuzing.",
+          )}
         </p>
         <ContractCustomerFields
           value={customer}
@@ -109,11 +115,11 @@ export function ContractEditForm({ contract, profile, onCancel, onSaved }: Props
       <DialogFooter className="items-center border-t px-6 py-4">
         {problem && <p className="mr-auto text-xs text-muted-foreground">{problem}</p>}
         <Button variant="outline" onClick={onCancel} disabled={saving}>
-          Bekor qilish
+          {t("Bekor qilish")}
         </Button>
         <Button onClick={submit} disabled={saving || problem !== null}>
           {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Saqlash
+          {t("Saqlash")}
         </Button>
       </DialogFooter>
     </>

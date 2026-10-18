@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useEditStudent } from "@/hooks/use-edit-student";
+import { useT } from "@/i18n/context";
 import { EditStudentForm } from "./edit-student-form";
 import type { Student } from "@/data/student-model";
 
@@ -18,6 +19,7 @@ interface EditStudentDrawerProps {
 }
 
 export function EditStudentDrawer({ onSaved }: EditStudentDrawerProps) {
+  const t = useT();
   const { open, student, closeDrawer } = useEditStudent();
 
   if (!student) return null;
@@ -31,10 +33,10 @@ export function EditStudentDrawer({ onSaved }: EditStudentDrawerProps) {
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            O&apos;quvchini tahrirlash
+            {t("O'quvchini tahrirlash")}
           </SheetTitle>
           <SheetDescription>
-            O&apos;quvchi ma&apos;lumotlarini o&apos;zgartirish
+            {t("O'quvchi ma'lumotlarini o'zgartirish")}
           </SheetDescription>
         </SheetHeader>
 
@@ -50,10 +52,10 @@ export function EditStudentDrawer({ onSaved }: EditStudentDrawerProps) {
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
             <Button type="button" variant="outline" onClick={closeDrawer}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" form="edit-student-form">
-              Saqlash
+              {t("Saqlash")}
             </Button>
           </div>
         </SheetFooter>

@@ -22,6 +22,8 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 import { mockPaymentState } from "@/components/mock-exams/mock-fee";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 
 type MockExamStatus =
   | "REGISTRATION_OPEN"
@@ -54,11 +56,11 @@ interface MockExamRecord {
 }
 
 const STATUS_LABELS: Record<MockExamStatus, string> = {
-  REGISTRATION_OPEN: "Ro'yxat ochiq",
-  REGISTRATION_CLOSED: "Ro'yxat yopiq",
-  GRADING: "Baholanmoqda",
-  ANNOUNCED: "E'lon qilingan",
-  ARCHIVED: "Arxivlangan",
+  REGISTRATION_OPEN: msg("Ro'yxat ochiq"),
+  REGISTRATION_CLOSED: msg("Ro'yxat yopiq"),
+  GRADING: msg("Baholanmoqda"),
+  ANNOUNCED: msg("E'lon qilingan"),
+  ARCHIVED: msg("Arxivlangan"),
 };
 
 const STATUS_COLORS: Record<MockExamStatus, string> = {
@@ -73,6 +75,7 @@ const STATUS_COLORS: Record<MockExamStatus, string> = {
 };
 
 export function StudentMockExamsTab({ studentId }: { studentId: number }) {
+  const t = useT();
   const [records, setRecords] = useState<MockExamRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const fetched = useRef(false);
@@ -87,12 +90,12 @@ export function StudentMockExamsTab({ studentId }: { studentId: number }) {
         toast.error(
           getErrorMessage(
             error,
-            "Mock imtihonlar tarixini yuklashda xatolik",
+            t("Mock imtihonlar tarixini yuklashda xatolik"),
           ),
         );
       })
       .finally(() => setLoading(false));
-  }, [studentId]);
+  }, [studentId, t]);
 
   if (loading) {
     return (
@@ -109,7 +112,7 @@ export function StudentMockExamsTab({ studentId }: { studentId: number }) {
       <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-12 text-center">
         <ClipboardCheck className="size-8 text-muted-foreground opacity-40" />
         <p className="text-sm text-muted-foreground">
-          Bu o&apos;quvchi hali biror mock imtihonda qatnashmagan
+          {t("Bu o'quvchi hali biror mock imtihonda qatnashmagan")}
         </p>
       </div>
     );
@@ -122,16 +125,18 @@ export function StudentMockExamsTab({ studentId }: { studentId: number }) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead className="w-32">Sana</TableHead>
-              <TableHead>Imtihon</TableHead>
-              <TableHead className="w-28">Holat</TableHead>
-              <TableHead className="w-28">To&apos;lov</TableHead>
-              <TableHead className="w-28 text-right">Natija</TableHead>
-              <TableHead className="w-20 text-center">O&apos;rin</TableHead>
+              <TableHead className="w-32">{t("Sana")}</TableHead>
+              <TableHead>{t("Imtihon")}</TableHead>
+              <TableHead className="w-28">{t("Holat")}</TableHead>
+              <TableHead className="w-28">{t("To'lov")}</TableHead>
+              <TableHead className="w-28 text-right">{t("Natija")}</TableHead>
+              <TableHead className="w-20 text-center">{t("O'rin")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.map((r, i) => (
+            {records.map((r, i) => {
+              const statusLabel = STATUS_LABELS[r.exam.status];
+              return (
               <TableRow key={r.id}>
                 <TableCell className="border-r text-muted-foreground">
                   {i + 1}
@@ -171,18 +176,18 @@ export function StudentMockExamsTab({ studentId }: { studentId: number }) {
                       STATUS_COLORS[r.exam.status]
                     }`}
                   >
-                    {STATUS_LABELS[r.exam.status]}
+                    {t(statusLabel)}
                   </span>
                 </TableCell>
                 <TableCell className="text-xs">
                   {r.paid ? (
                     <span className="text-emerald-600">
-                      ✓ To&apos;langan
+                      {t("✓ To'langan")}
                     </span>
                   ) : mockPaymentState(r, r.exam.price) === "pending" ? (
-                    <span className="text-amber-600">Kutilmoqda</span>
+                    <span className="text-amber-600">{t("To'lov kutilmoqda")}</span>
                   ) : (
-                    <span className="text-muted-foreground">Bepul</span>
+                    <span className="text-muted-foreground">{t("Bepul")}</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right text-sm tabular-nums">
@@ -213,16 +218,15 @@ export function StudentMockExamsTab({ studentId }: { studentId: number }) {
                   )}
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </div>
 
       <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
         <Trophy className="mr-1 inline size-3" />
-        Mock imtihonlar — o&apos;quvchini real imtihonga tayyorlash uchun.
-        ID raqami #{records[0]?.publicId} bo&apos;yicha PDF natijalarda
-        ko&apos;rinadi.
+        {t("Mock imtihonlar — o'quvchini real imtihonga tayyorlash uchun. ID raqami #{id} bo'yicha PDF natijalarda ko'rinadi.", { id: records[0]?.publicId ?? "" })}
       </div>
     </div>
   );

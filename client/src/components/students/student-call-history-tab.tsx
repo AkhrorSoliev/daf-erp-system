@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/table";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import api from "@/lib/api";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 import type {
   CallLogItem,
   CallLogsResponse,
@@ -23,22 +25,23 @@ import type {
 } from "@/components/outreach/outreach-types";
 
 const REASON_INFO: Record<CallReason, { label: string; className: string }> = {
-  ABSENCE: { label: "Kelmagan", className: "bg-amber-100 text-amber-800" },
-  DEBT: { label: "Qarz", className: "bg-red-100 text-red-700" },
-  REMOVAL: { label: "Chiqarish", className: "bg-orange-100 text-orange-800" },
-  OTHER: { label: "Boshqa", className: "bg-slate-100 text-slate-700" },
+  ABSENCE: { label: msg("Kelmagan"), className: "bg-amber-100 text-amber-800" },
+  DEBT: { label: msg("Qarz"), className: "bg-red-100 text-red-700" },
+  REMOVAL: { label: msg("Guruhdan chiqarish"), className: "bg-orange-100 text-orange-800" },
+  OTHER: { label: msg("Boshqa"), className: "bg-slate-100 text-slate-700" },
 };
 
 const OUTCOME_INFO: Record<CallOutcome, { label: string; className: string }> = {
-  ANSWERED: { label: "Gaplashildi", className: "bg-emerald-100 text-emerald-700" },
-  NO_ANSWER: { label: "Javob bermadi", className: "bg-slate-100 text-slate-700" },
-  WILL_COME: { label: "Keladi", className: "bg-indigo-100 text-indigo-700" },
-  WILL_PAY: { label: "To'laydi", className: "bg-blue-100 text-blue-700" },
-  PROMISED: { label: "Keladi / to'laydi", className: "bg-violet-100 text-violet-700" },
-  LEFT: { label: "O'qishni tashladi", className: "bg-red-100 text-red-700" },
+  ANSWERED: { label: msg("Gaplashildi"), className: "bg-emerald-100 text-emerald-700" },
+  NO_ANSWER: { label: msg("Javob bermadi"), className: "bg-slate-100 text-slate-700" },
+  WILL_COME: { label: msg("Keladi"), className: "bg-indigo-100 text-indigo-700" },
+  WILL_PAY: { label: msg("To'laydi"), className: "bg-blue-100 text-blue-700" },
+  PROMISED: { label: msg("Keladi / to'laydi"), className: "bg-violet-100 text-violet-700" },
+  LEFT: { label: msg("O'qishni tashladi"), className: "bg-red-100 text-red-700" },
 };
 
 export function StudentCallHistoryTab({ studentId }: { studentId: number }) {
+  const t = useT();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -67,7 +70,7 @@ export function StudentCallHistoryTab({ studentId }: { studentId: number }) {
     return (
       <div className="flex h-24 items-center justify-center rounded-md border">
         <p className="text-sm text-muted-foreground">
-          Qo&apos;ng&apos;iroq tarixi mavjud emas
+          {t("Qo'ng'iroq tarixi mavjud emas")}
         </p>
       </div>
     );
@@ -80,11 +83,11 @@ export function StudentCallHistoryTab({ studentId }: { studentId: number }) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Sana / vaqt</TableHead>
-              <TableHead>Sabab</TableHead>
-              <TableHead>Natija</TableHead>
-              <TableHead>Izoh</TableHead>
-              <TableHead>Kim qo&apos;ng&apos;iroq qildi</TableHead>
+              <TableHead>{t("Sana / vaqt")}</TableHead>
+              <TableHead>{t("Sabab")}</TableHead>
+              <TableHead>{t("Natija")}</TableHead>
+              <TableHead>{t("Izoh")}</TableHead>
+              <TableHead>{t("Kim qo'ng'iroq qildi")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -109,6 +112,7 @@ export function StudentCallHistoryTab({ studentId }: { studentId: number }) {
 }
 
 function Row({ row, index }: { row: CallLogItem; index: number }) {
+  const t = useT();
   const reason = REASON_INFO[row.reason];
   const outcome = OUTCOME_INFO[row.outcome];
   return (
@@ -119,12 +123,12 @@ function Row({ row, index }: { row: CallLogItem; index: number }) {
       </TableCell>
       <TableCell>
         <Badge variant="outline" className={`${reason.className} hover:${reason.className}`}>
-          {reason.label}
+          {t(reason.label)}
         </Badge>
       </TableCell>
       <TableCell>
         <Badge variant="outline" className={`${outcome.className} hover:${outcome.className}`}>
-          {outcome.label}
+          {t(outcome.label)}
         </Badge>
       </TableCell>
       <TableCell className="max-w-[280px] truncate text-sm text-muted-foreground">

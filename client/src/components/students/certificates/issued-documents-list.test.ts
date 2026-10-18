@@ -1,6 +1,8 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import ru from "@/i18n/dictionaries/ru";
+import { I18nContext } from "@/i18n/use-t";
 import { IssuedDocumentsList } from "./issued-documents-list";
 import type { IssuedCertificate } from "./certificate-types";
 
@@ -61,6 +63,27 @@ describe("IssuedDocumentsList", () => {
   it("the ⋯ menu («Amallar») is drawn on a standing row only for a caller who may cancel", () => {
     expect(rowHtml(render([live], true), "TB-2026-0001")).toContain("Amallar");
     expect(rowHtml(render([live], false), "TB-2026-0001")).not.toContain("Amallar");
+  });
+
+  it("speaks the page language, while the number and the typed reason stay as they are", () => {
+    const value = { locale: "ru" as const, dictionary: ru, setLocale: async () => false };
+    const html = renderToStaticMarkup(
+      createElement(
+        I18nContext.Provider,
+        { value },
+        createElement(IssuedDocumentsList, {
+          rows: [{ ...live, exempt: true }, cancelled],
+          canRevoke: true,
+          onDownload: vi.fn(),
+          onRevoke: vi.fn(),
+        }),
+      ),
+    );
+    expect(norm(rowHtml(html, "TB-2026-0001"))).toContain("в порядке исключения");
+    expect(html).toContain("Действия");
+    const gone = norm(rowHtml(html, "TB-2026-0002"));
+    expect(gone).toContain("Отменено");
+    expect(gone).toContain("Причина: Noto'g'ri o'quvchiga berilgan");
   });
 
   it("mixes both kinds in one list", () => {

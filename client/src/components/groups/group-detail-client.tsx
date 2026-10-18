@@ -93,11 +93,7 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
 
   if (otherBranch) {
     return (
-      <InOtherBranch
-        title="Guruh boshqa filialda"
-        what="guruh"
-        branch={otherBranch}
-      />
+      <InOtherBranch what="guruh" branch={otherBranch} />
     );
   }
 

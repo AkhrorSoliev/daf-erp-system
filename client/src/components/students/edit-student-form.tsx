@@ -19,8 +19,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EditStudentAdditionalFields } from "./edit-student-additional-fields";
 import {
   editStudentSchema,
+  studentFormError,
   type EditStudentFormValues,
 } from "@/lib/schemas/student-schema";
+import { useT } from "@/i18n/context";
 import type { Student } from "@/data/student-model";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
@@ -72,6 +74,7 @@ export function EditStudentForm({
   onSaved,
   formId,
 }: EditStudentFormProps) {
+  const t = useT();
   const form = useForm<EditStudentFormValues>({
     resolver: zodResolver(editStudentSchema),
     defaultValues: mapStudentToForm(student),
@@ -143,11 +146,11 @@ export function EditStudentForm({
       }
 
       const { data } = await api.patch(`/students/${student.id}`, payload);
-      toast.success("O'quvchi muvaffaqiyatli yangilandi");
+      toast.success(t("O'quvchi muvaffaqiyatli yangilandi"));
       onSaved?.(data);
       onClose();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik yuz berdi")));
     }
   };
 
@@ -163,7 +166,7 @@ export function EditStudentForm({
       {/* Asosiy ma'lumotlar */}
       <section className="space-y-5 px-6 py-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Asosiy ma&apos;lumotlar
+          {t("Asosiy ma'lumotlar")}
         </h3>
 
         <div className="flex items-center gap-4">
@@ -188,7 +191,7 @@ export function EditStudentForm({
                   <Camera className="size-3" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Rasm yuklash</TooltipContent>
+              <TooltipContent>{t("Rasm yuklash")}</TooltipContent>
             </Tooltip>
             <input
               ref={fileInputRef}
@@ -208,35 +211,35 @@ export function EditStudentForm({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="firstName">Ism</Label>
+            <Label htmlFor="firstName">{t("Ism")}</Label>
             <Input
               id="firstName"
-              placeholder="Ism"
+              placeholder={t("Ism")}
               {...form.register("firstName")}
             />
             {form.formState.errors.firstName && (
               <p className="text-xs text-destructive">
-                {form.formState.errors.firstName.message}
+                {studentFormError(t, form.formState.errors.firstName.message)}
               </p>
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="lastName">Familiya</Label>
+            <Label htmlFor="lastName">{t("Familiya")}</Label>
             <Input
               id="lastName"
-              placeholder="Familiya"
+              placeholder={t("Familiya")}
               {...form.register("lastName")}
             />
             {form.formState.errors.lastName && (
               <p className="text-xs text-destructive">
-                {form.formState.errors.lastName.message}
+                {studentFormError(t, form.formState.errors.lastName.message)}
               </p>
             )}
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <Label>Telefon raqam</Label>
+          <Label>{t("Telefon raqam")}</Label>
           <Controller
             control={form.control}
             name="phone"
@@ -250,7 +253,7 @@ export function EditStudentForm({
           />
           {form.formState.errors.phone && (
             <p className="text-xs text-destructive">
-              {form.formState.errors.phone.message}
+              {studentFormError(t, form.formState.errors.phone.message)}
             </p>
           )}
         </div>
@@ -265,7 +268,7 @@ export function EditStudentForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label>Tug&apos;ilgan sana</Label>
+          <Label>{t("Tug'ilgan sana")}</Label>
           <Controller
             control={form.control}
             name="dateOfBirth"
@@ -279,7 +282,7 @@ export function EditStudentForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label>Jinsi</Label>
+          <Label>{t("Jinsi")}</Label>
           <div className="flex gap-3">
             <button
               type="button"
@@ -292,7 +295,7 @@ export function EditStudentForm({
               )}
             >
               <User className="size-4" />
-              Erkak
+              {t("Erkak")}
             </button>
             <button
               type="button"
@@ -305,23 +308,23 @@ export function EditStudentForm({
               )}
             >
               <UserRound className="size-4" />
-              Ayol
+              {t("Ayol")}
             </button>
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="comment">Izoh</Label>
+          <Label htmlFor="comment">{t("Izoh")}</Label>
           <Input
             id="comment"
-            placeholder="O'quvchi haqida izoh..."
+            placeholder={t("O'quvchi haqida izoh...")}
             {...form.register("comment")}
           />
         </div>
 
         {canSetDiscount && (
           <div className="space-y-1.5">
-            <Label htmlFor="discountPercent">Chegirma (%)</Label>
+            <Label htmlFor="discountPercent">{t("Chegirma (%)")}</Label>
             <div className="relative">
               <Input
                 id="discountPercent"
@@ -338,13 +341,16 @@ export function EditStudentForm({
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Chegirma har bir darsda balansdan ushlanadigan summaga
-              qo&apos;llanadi. O&apos;zgarish faqat keyingi darslarga ta&apos;sir
-              qiladi — o&apos;tgan darslar qayta hisoblanmaydi.
+              {t(
+                "Chegirma har bir darsda balansdan ushlanadigan summaga qo'llanadi. O'zgarish faqat keyingi darslarga ta'sir qiladi — o'tgan darslar qayta hisoblanmaydi.",
+              )}
             </p>
             {form.formState.errors.discountPercent && (
               <p className="text-xs text-destructive">
-                {form.formState.errors.discountPercent.message}
+                {studentFormError(
+                  t,
+                  form.formState.errors.discountPercent.message,
+                )}
               </p>
             )}
           </div>
@@ -354,16 +360,16 @@ export function EditStudentForm({
       {/* Kirish ma'lumotlari */}
       <section className="space-y-5 border-t px-6 py-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Kirish ma&apos;lumotlari
+          {t("Kirish ma'lumotlari")}
         </h3>
 
         <div className="space-y-1.5">
-          <Label htmlFor="password">Yangi parol</Label>
+          <Label htmlFor="password">{t("Yangi parol")}</Label>
           <div className="relative">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="O'zgartirmaslik uchun bo'sh qoldiring"
+              placeholder={t("O'zgartirmaslik uchun bo'sh qoldiring")}
               className="pr-9"
               autoComplete="new-password"
               {...form.register("password")}
@@ -385,18 +391,21 @@ export function EditStudentForm({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                {showPassword
+                  ? t("Parolni yashirish")
+                  : t("Parolni ko'rsatish")}
               </TooltipContent>
             </Tooltip>
           </div>
           {form.formState.errors.password && (
             <p className="text-xs text-destructive">
-              {form.formState.errors.password.message}
+              {studentFormError(t, form.formState.errors.password.message)}
             </p>
           )}
           <p className="text-xs text-muted-foreground">
-            O&apos;quvchi student.dafzentrum.uz tizimiga telefon raqami va parol
-            bilan kiradi.
+            {t(
+              "O'quvchi student.dafzentrum.uz tizimiga telefon raqami va parol bilan kiradi.",
+            )}
           </p>
         </div>
       </section>

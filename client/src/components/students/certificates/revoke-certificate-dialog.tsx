@@ -17,6 +17,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 import { certificatePreviewKey, revokeCertificate } from "./certificate-queries";
 import {
   canSubmitRevoke,
@@ -27,7 +29,7 @@ import {
 import type { IssuedCertificate } from "./certificate-types";
 
 // JS strings, not JSX text: an apostrophe entity plus a line break loses a space (SWC bug, Next 16.2).
-const PLACEHOLDER = "Masalan: noto'g'ri o'quvchiga berilgan";
+const PLACEHOLDER = msg("Masalan: noto'g'ri o'quvchiga berilgan");
 
 /**
  * «Hujjat bekor qilinsinmi?»: the cancel needs a written reason. Not
@@ -44,6 +46,7 @@ export function RevokeCertificateDialog({
   row: IssuedCertificate | null;
   onClose: () => void;
 }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -58,38 +61,38 @@ export function RevokeCertificateDialog({
     setBusy(true);
     try {
       await revokeCertificate(row.id, reason.trim());
-      toast.success("Hujjat bekor qilindi");
+      toast.success(t("Hujjat bekor qilindi"));
       await queryClient.invalidateQueries({ queryKey: certificatePreviewKey(studentId) });
       close();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Bekor qilishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Bekor qilishda xatolik yuz berdi")));
     }
     setBusy(false);
   }
 
-  const hint = revokeReasonHint(reason);
+  const hint = revokeReasonHint(reason, t);
 
   return (
     <AlertDialog open={row !== null} onOpenChange={(open) => !open && !busy && close()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Hujjat bekor qilinsinmi?</AlertDialogTitle>
-          <AlertDialogDescription>{row ? revokeDescription(row.number) : ""}</AlertDialogDescription>
+          <AlertDialogTitle>{t("Hujjat bekor qilinsinmi?")}</AlertDialogTitle>
+          <AlertDialogDescription>{row ? revokeDescription(row.number, t) : ""}</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2">
-          <Label htmlFor="revoke-reason">Sabab</Label>
+          <Label htmlFor="revoke-reason">{t("Sabab")}</Label>
           <Textarea
             id="revoke-reason"
             value={reason}
             maxLength={REVOKE_REASON_MAX}
             disabled={busy}
-            placeholder={PLACEHOLDER}
+            placeholder={t(PLACEHOLDER)}
             onChange={(e) => setReason(e.target.value)}
           />
           {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Yopish</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>{t("Yopish")}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             disabled={!canSubmitRevoke(reason, busy)}
@@ -99,7 +102,7 @@ export function RevokeCertificateDialog({
             }}
           >
             {busy && <Loader2 className="size-4 animate-spin" />}
-            Bekor qilish
+            {t("Hujjatni bekor qilish")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

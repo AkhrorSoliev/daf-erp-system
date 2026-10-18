@@ -1,4 +1,5 @@
 import type { Student } from "@/data/student-model";
+import { msg } from "@/i18n/msg";
 
 export interface StudentPhoneRow {
   key: "phone" | "extraPhone" | "parentPhone";
@@ -29,8 +30,10 @@ function row(
 export function studentPhoneRows(
   s: Pick<Student, "phone" | "extraPhone" | "parentPhone">,
 ): StudentPhoneRow[] {
-  const rows = [row("phone", "Asosiy", s.phone, true)];
-  if (s.extraPhone) rows.push(row("extraPhone", "Zaxira", s.extraPhone, true));
-  if (s.parentPhone) rows.push(row("parentPhone", "Ota-ona", s.parentPhone, false));
+  // «Asosiy raqam», not «Asosiy»: «Asosiy» is already the sidebar group (one
+  // Uzbek text = one meaning in the dictionaries). The card draws `t(row.label)`.
+  const rows = [row("phone", msg("Asosiy raqam"), s.phone, true)];
+  if (s.extraPhone) rows.push(row("extraPhone", msg("Zaxira"), s.extraPhone, true));
+  if (s.parentPhone) rows.push(row("parentPhone", msg("Ota-ona"), s.parentPhone, false));
   return rows;
 }

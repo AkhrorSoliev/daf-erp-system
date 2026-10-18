@@ -23,10 +23,13 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { LeadSourcePicker } from "@/components/leads/lead-source-picker";
 import {
   addStudentSchema,
+  studentFormError,
   type AddStudentFormValues,
 } from "@/lib/schemas/student-schema";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
-import { sortWeekdays, WEEKDAY_SHORT } from "@/lib/weekdays";
+import { sortWeekdays } from "@/lib/weekdays";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import type { Student } from "@/data/student-model";
 import api from "@/lib/api";
 
@@ -34,11 +37,24 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   const maybeAxios = err as {
     response?: { data?: { message?: string | string[] } };
   };
-  const msg = maybeAxios?.response?.data?.message;
-  if (Array.isArray(msg)) return msg[0] ?? fallback;
-  if (typeof msg === "string" && msg.length > 0) return msg;
+  const serverMessage = maybeAxios?.response?.data?.message;
+  if (Array.isArray(serverMessage)) return serverMessage[0] ?? fallback;
+  if (typeof serverMessage === "string" && serverMessage.length > 0) {
+    return serverMessage;
+  }
   return fallback;
 }
+
+// Same short day names as `lib/weekdays.ts`, as texts the page language can
+// translate (that module is shared with other pages and stays Uzbek).
+const WEEKDAY_SHORT_TEXT: Record<string, string> = {
+  monday: msg("Du"),
+  tuesday: msg("Se"),
+  wednesday: msg("Chor"),
+  thursday: msg("Pay"),
+  friday: msg("Ju"),
+  saturday: msg("Sha"),
+};
 
 interface GroupTeacher {
   id: number;
@@ -86,6 +102,11 @@ export function AddStudentDialog({
   onOpenChange,
   onCreated,
 }: AddStudentDialogProps) {
+  const t = useT();
+  const dayText = (day: string) => {
+    const short = WEEKDAY_SHORT_TEXT[day];
+    return short ? t(short) : day;
+  };
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
   const [groups, setGroups] = useState<GroupOption[]>([]);
@@ -151,7 +172,7 @@ export function AddStudentDialog({
 
   const onSubmit = async (values: AddStudentFormValues) => {
     if (!selectedBranch) {
-      toast.error("Avval filial tanlang");
+      toast.error(t("Avval filial tanlang"));
       return;
     }
     setSubmitting(true);
@@ -174,7 +195,7 @@ export function AddStudentDialog({
           toast.error(
             extractErrorMessage(
               enrollErr,
-              "O'quvchi yaratildi, lekin guruhga qo'shilmadi",
+              t("O'quvchi yaratildi, lekin guruhga qo'shilmadi"),
             ),
           );
           onCreated?.(student);
@@ -183,11 +204,13 @@ export function AddStudentDialog({
         }
       }
 
-      toast.success("O'quvchi muvaffaqiyatli qo'shildi");
+      toast.success(t("O'quvchi muvaffaqiyatli qo'shildi"));
       onCreated?.(student);
       onOpenChange(false);
     } catch (err: unknown) {
-      toast.error(extractErrorMessage(err, "O'quvchi qo'shishda xatolik"));
+      toast.error(
+        extractErrorMessage(err, t("O'quvchi qo'shishda xatolik")),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -197,10 +220,11 @@ export function AddStudentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Yangi o&apos;quvchi qo&apos;shish</DialogTitle>
+          <DialogTitle>{t("Yangi o'quvchi qo'shish")}</DialogTitle>
           <DialogDescription>
-            Ism, familiya, telefon raqami va o&apos;quvchi markazni qayerdan
-            bilganini kiriting. Guruh tanlash ixtiyoriy.
+            {t(
+              "Ism, familiya, telefon raqami va o'quvchi markazni qayerdan bilganini kiriting. Guruh tanlash ixtiyoriy.",
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -211,37 +235,40 @@ export function AddStudentDialog({
         >
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="add-firstName">Ism</Label>
+              <Label htmlFor="add-firstName">{t("Ism")}</Label>
               <Input
                 id="add-firstName"
-                placeholder="Ism"
+                placeholder={t("Ism")}
                 autoComplete="off"
                 {...form.register("firstName")}
               />
               {form.formState.errors.firstName && (
                 <p className="text-xs text-destructive">
-                  {form.formState.errors.firstName.message}
+                  {studentFormError(
+                    t,
+                    form.formState.errors.firstName.message,
+                  )}
                 </p>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="add-lastName">Familiya</Label>
+              <Label htmlFor="add-lastName">{t("Familiya")}</Label>
               <Input
                 id="add-lastName"
-                placeholder="Familiya"
+                placeholder={t("Familiya")}
                 autoComplete="off"
                 {...form.register("lastName")}
               />
               {form.formState.errors.lastName && (
                 <p className="text-xs text-destructive">
-                  {form.formState.errors.lastName.message}
+                  {studentFormError(t, form.formState.errors.lastName.message)}
                 </p>
               )}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Telefon raqam</Label>
+            <Label>{t("Telefon raqam")}</Label>
             <Controller
               control={form.control}
               name="phone"
@@ -255,13 +282,13 @@ export function AddStudentDialog({
             />
             {form.formState.errors.phone && (
               <p className="text-xs text-destructive">
-                {form.formState.errors.phone.message}
+                {studentFormError(t, form.formState.errors.phone.message)}
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label>Zaxira raqam (ixtiyoriy)</Label>
+            <Label>{t("Zaxira raqam (ixtiyoriy)")}</Label>
             <Controller
               control={form.control}
               name="extraPhone"
@@ -274,11 +301,11 @@ export function AddStudentDialog({
               )}
             />
             <p className="text-xs text-muted-foreground">
-              O&apos;quvchi bu raqam bilan ham tizimga kira oladi.
+              {t("O'quvchi bu raqam bilan ham tizimga kira oladi.")}
             </p>
             {form.formState.errors.extraPhone && (
               <p className="text-xs text-destructive">
-                {form.formState.errors.extraPhone.message}
+                {studentFormError(t, form.formState.errors.extraPhone.message)}
               </p>
             )}
           </div>
@@ -291,18 +318,23 @@ export function AddStudentDialog({
                 open={open}
                 value={field.value}
                 onChange={field.onChange}
-                label="Qayerdan bildi?"
+                label={t("Qayerdan bildi?")}
                 required
                 id="add-student-sourceId"
-                error={form.formState.errors.sourceId?.message}
-                loadErrorMessage="Manbalar ro'yxati yuklanmadi — o'quvchi qo'shish uchun sahifani yangilang"
+                error={studentFormError(
+                  t,
+                  form.formState.errors.sourceId?.message,
+                )}
+                loadErrorMessage={t(
+                  "Manbalar ro'yxati yuklanmadi — o'quvchi qo'shish uchun sahifani yangilang",
+                )}
               />
             )}
           />
 
           <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between">
-              <Label>Guruh (ixtiyoriy)</Label>
+              <Label>{t("Guruh (ixtiyoriy)")}</Label>
               {selectedGroupId && (
                 <Button
                   type="button"
@@ -311,7 +343,7 @@ export function AddStudentDialog({
                   className="h-7 px-2 text-xs"
                   onClick={() => form.setValue("groupId", undefined)}
                 >
-                  Tozalash
+                  {t("Tozalash")}
                 </Button>
               )}
             </div>
@@ -319,7 +351,7 @@ export function AddStudentDialog({
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Guruh nomini qidirish..."
+                placeholder={t("Guruh nomini qidirish...")}
                 value={groupSearch}
                 onChange={(e) => setGroupSearch(e.target.value)}
                 className="pl-9"
@@ -341,7 +373,7 @@ export function AddStudentDialog({
                 <div className="flex flex-col items-center justify-center py-6 text-center">
                   <Users className="size-8 text-muted-foreground/40 mb-2" />
                   <p className="text-sm text-muted-foreground">
-                    Guruhlar topilmadi
+                    {t("Guruhlar topilmadi")}
                   </p>
                 </div>
               ) : (
@@ -416,7 +448,7 @@ export function AddStudentDialog({
                                   : "text-blue-700 bg-blue-100 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800"
                               }`}
                             >
-                              {intensive ? "Intensiv" : "Standart"}
+                              {intensive ? t("Intensiv") : t("Standart")}
                             </span>
                             <span className="text-sm text-muted-foreground truncate">
                               {group.course.name}
@@ -433,7 +465,7 @@ export function AddStudentDialog({
                                     key={d}
                                     className="flex size-6 items-center justify-center rounded-md bg-muted text-[10px] font-semibold"
                                   >
-                                    {WEEKDAY_SHORT[d] ?? d}
+                                    {dayText(d)}
                                   </span>
                                 ))}
                               </div>
@@ -450,21 +482,26 @@ export function AddStudentDialog({
                           {group.teachers.length > 0 ? (
                             <div className="flex items-center gap-2 min-w-0">
                               <div className="flex -space-x-1.5 shrink-0">
-                                {group.teachers.slice(0, 2).map((t) => (
+                                {group.teachers.slice(0, 2).map((teacher) => (
                                   <Avatar
-                                    key={t.id}
+                                    key={teacher.id}
                                     className="size-5 border-2 border-background"
                                   >
-                                    {t.photo && <AvatarImage src={t.photo} />}
+                                    {teacher.photo && (
+                                      <AvatarImage src={teacher.photo} />
+                                    )}
                                     <AvatarFallback className="text-[7px] font-medium">
-                                      {`${t.firstName?.[0] ?? ""}${t.lastName?.[0] ?? ""}`}
+                                      {`${teacher.firstName?.[0] ?? ""}${teacher.lastName?.[0] ?? ""}`}
                                     </AvatarFallback>
                                   </Avatar>
                                 ))}
                               </div>
                               <span className="text-xs text-muted-foreground truncate">
                                 {group.teachers
-                                  .map((t) => `${t.firstName} ${t.lastName}`)
+                                  .map(
+                                    (teacher) =>
+                                      `${teacher.firstName} ${teacher.lastName}`,
+                                  )
                                   .join(", ")}
                               </span>
                             </div>
@@ -499,11 +536,11 @@ export function AddStudentDialog({
             onClick={() => onOpenChange(false)}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button type="submit" form="add-student-form" disabled={submitting}>
             {submitting && <Loader2 className="mr-1.5 size-4 animate-spin" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -40,6 +40,7 @@ import {
   type DeparturePolicy,
 } from "./departure-money";
 import { useDeparturePreview } from "./use-departure-preview";
+import { useT } from "@/i18n/context";
 
 interface StudentRemoveFromGroupDialogProps {
   open: boolean;
@@ -117,6 +118,7 @@ function RemoveDialogBody({
   writeOffReason = "",
   onWriteOffReasonChange,
 }: StudentRemoveFromGroupDialogProps) {
+  const t = useT();
   const hasConfiguredReasons = (reasons?.length ?? 0) > 0;
   // "Boshqa sabab" says nothing on its own — the comment carries the reason,
   // so it is required alongside it. Gated here rather than in each of the
@@ -138,11 +140,11 @@ function RemoveDialogBody({
   return (
     <>
       <AlertDialogHeader className="shrink-0">
-        <AlertDialogTitle>Guruhdan chiqarish</AlertDialogTitle>
+        <AlertDialogTitle>{t("Guruhdan chiqarish")}</AlertDialogTitle>
         <AlertDialogDescription>
           {hasConfiguredReasons
-            ? "Ketish sababini tanlang"
-            : "O'quvchini guruhdan chiqarish sababini kiriting"}
+            ? t("Ketish sababini tanlang")
+            : t("O'quvchini guruhdan chiqarish sababini kiriting")}
         </AlertDialogDescription>
       </AlertDialogHeader>
 
@@ -156,7 +158,7 @@ function RemoveDialogBody({
               onValueChange={(v) => onReasonIdChange(v)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Sababni tanlang" />
+                <SelectValue placeholder={t("Sababni tanlang")} />
               </SelectTrigger>
               <SelectContent>
                 {reasons?.map((r) => (
@@ -169,8 +171,8 @@ function RemoveDialogBody({
             <Textarea
               placeholder={
                 commentMissing
-                  ? "Nima sababdan? (majburiy)"
-                  : "Qo'shimcha izoh (ixtiyoriy)"
+                  ? t("Nima sababdan? (majburiy)")
+                  : t("Qo'shimcha izoh (ixtiyoriy)")
               }
               value={reasonText}
               onChange={(e) => onReasonTextChange(e.target.value)}
@@ -180,15 +182,15 @@ function RemoveDialogBody({
             />
             {commentMissing && (
               <p className="text-xs text-destructive">
-                «Boshqa sabab» tanlandi — o&apos;quvchi nima sababdan
-                ketayotganini yozing (kamida{" "}
-                {EXIT_REASON_COMMENT_MIN_LENGTH} belgi).
+                {t("«Boshqa sabab» tanlandi — o'quvchi nima sababdan ketayotganini yozing (kamida {n} belgi).", {
+                  n: EXIT_REASON_COMMENT_MIN_LENGTH,
+                })}
               </p>
             )}
           </div>
         ) : (
           <Textarea
-            placeholder="Sabab yozing..."
+            placeholder={t("Sabab yozing...")}
             value={reasonText}
             onChange={(e) => onReasonTextChange(e.target.value)}
             rows={3}
@@ -231,7 +233,7 @@ function RemoveDialogBody({
       </div>
 
       <AlertDialogFooter className="shrink-0">
-        <AlertDialogCancel disabled={removing}>Bekor qilish</AlertDialogCancel>
+        <AlertDialogCancel disabled={removing}>{t("Bekor qilish")}</AlertDialogCancel>
         <AlertDialogAction
           onClick={() =>
             onConfirm(
@@ -245,7 +247,7 @@ function RemoveDialogBody({
           disabled={!canSubmit || commentMissing || removing || money.isLoading}
           variant="destructive"
         >
-          {removing ? "Chiqarilmoqda..." : "Chiqarish"}
+          {removing ? t("Chiqarilmoqda...") : t("Chiqarish")}
         </AlertDialogAction>
       </AlertDialogFooter>
     </>
@@ -275,6 +277,7 @@ function WriteOffBlock({
   onWriteOffReasonChange: (text: string) => void;
   disabled: boolean;
 }) {
+  const t = useT();
   const d = eligibility.details;
   const balanceClass =
     d.currentBalance < 0 ? "text-destructive" : "text-emerald-600";
@@ -289,47 +292,49 @@ function WriteOffBlock({
         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
         <div className="space-y-1">
           <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-            Qarzni hisobdan chiqarish
+            {t("Qarzni hisobdan chiqarish")}
           </p>
           <p className="text-xs text-muted-foreground">
-            Joriy ({d.lessonPaymentCount} darslik) sikl bo&apos;yicha kelgan va
-            kelmagan darslar narxi. Admin qaysi summani hisobdan chiqarishni
-            tanlaydi.
+            {t("Joriy ({n} darslik) sikl bo'yicha kelgan va kelmagan darslar narxi. Admin qaysi summani hisobdan chiqarishni tanlaydi.", {
+              n: d.lessonPaymentCount,
+            })}
           </p>
         </div>
       </div>
 
       <div className="rounded-md border bg-background/80 p-3 text-xs">
         <div className="grid grid-cols-[1fr_auto] gap-y-1">
-          <span className="text-muted-foreground">Sikl raqami:</span>
+          <span className="text-muted-foreground">{t("Sikl raqami:")}</span>
           <span className="text-right font-medium">#{d.cycleNumber}</span>
 
-          <span className="text-muted-foreground">Bir dars narxi:</span>
+          <span className="text-muted-foreground">{t("Bir dars narxi:")}</span>
           <span className="text-right font-medium">
-            {formatBalance(d.perLessonCost)}
+            {formatBalance(d.perLessonCost, t("so'm"))}
           </span>
 
           <span className="text-muted-foreground">
-            Kelgan darslar ({d.cyclePresentCount + d.cycleLateCount} ta):
+            {t("Kelgan darslar ({n} ta):", {
+              n: d.cyclePresentCount + d.cycleLateCount,
+            })}
           </span>
           <span className="text-right font-medium text-emerald-700 dark:text-emerald-400">
-            {formatBalance(d.attendedCost)}
+            {formatBalance(d.attendedCost, t("so'm"))}
           </span>
 
           <span className="text-muted-foreground">
-            Kelmagan darslar ({d.cycleAbsentCount} ta):
+            {t("Kelmagan darslar ({n} ta):", { n: d.cycleAbsentCount })}
           </span>
           <span className="text-right font-medium text-amber-700 dark:text-amber-300">
-            {formatBalance(d.absentCost)}
+            {formatBalance(d.absentCost, t("so'm"))}
           </span>
 
           <span className="mt-1 border-t pt-1 text-muted-foreground">
-            Joriy balans:
+            {t("Joriy balans:")}
           </span>
           <span
             className={`mt-1 border-t pt-1 text-right font-semibold ${balanceClass}`}
           >
-            {formatBalance(d.currentBalance)}
+            {formatBalance(d.currentBalance, t("so'm"))}
           </span>
         </div>
       </div>
@@ -346,7 +351,7 @@ function WriteOffBlock({
           htmlFor="write-off-debt"
           className="text-sm leading-relaxed cursor-pointer"
         >
-          Qarzni hisobdan chiqarish
+          {t("Qarzni hisobdan chiqarish")}
         </Label>
       </div>
 
@@ -354,30 +359,30 @@ function WriteOffBlock({
         <div className="space-y-3 rounded-md border bg-background/60 p-3">
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">
-              Qancha summani hisobdan chiqarish kerak?
+              {t("Qancha summani hisobdan chiqarish kerak?")}
             </Label>
             <PresetOption
               checked={writeOffChoice === "real"}
               onSelect={() => onWriteOffChoiceChange("real")}
               disabled={disabled}
-              label="Real qarz"
-              hint="Faqat kelmagan darslar narxi"
+              label={t("Real qarz")}
+              hint={t("Faqat kelmagan darslar narxi")}
               amount={d.realDebtAmount}
             />
             <PresetOption
               checked={writeOffChoice === "jami"}
               onSelect={() => onWriteOffChoiceChange("jami")}
               disabled={disabled}
-              label="Jami qarz"
-              hint="Balansdagi to'liq qarzdorlik"
+              label={t("Jami qarz")}
+              hint={t("Balansdagi to'liq qarzdorlik")}
               amount={d.totalDebtAmount}
             />
             <PresetOption
               checked={writeOffChoice === "custom"}
               onSelect={() => onWriteOffChoiceChange("custom")}
               disabled={disabled}
-              label="Boshqa summa"
-              hint={`1 — ${formatNumber(d.maxWriteOff)} so'm oralig'ida`}
+              label={t("Boshqa summa")}
+              hint={t("1 — {max} so'm oralig'ida", { max: formatNumber(d.maxWriteOff) })}
             >
               {writeOffChoice === "custom" && (
                 <div className="mt-2">
@@ -387,15 +392,16 @@ function WriteOffBlock({
                       onWriteOffCustomAmountChange(e.target.value)
                     }
                     disabled={disabled}
-                    placeholder="Summani kiriting"
+                    placeholder={t("Summani kiriting")}
                   />
                   {writeOffCustomAmount.trim().length > 0 &&
                     (!Number.isFinite(customAmountNumber) ||
                       customAmountNumber < 1 ||
                       customAmountNumber > d.maxWriteOff) && (
                       <p className="mt-1 text-[11px] text-destructive">
-                        Summa 1 dan {formatNumber(d.maxWriteOff)} so&apos;m
-                        gacha bo&apos;lishi kerak
+                        {t("Summa 1 dan {max} so'm gacha bo'lishi kerak", {
+                          max: formatNumber(d.maxWriteOff),
+                        })}
                       </p>
                     )}
                 </div>
@@ -408,11 +414,11 @@ function WriteOffBlock({
               htmlFor="write-off-reason"
               className="text-xs text-muted-foreground"
             >
-              Izoh (majburiy, kamida 5 belgi)
+              {t("Izoh (majburiy, kamida 5 belgi)")}
             </Label>
             <Textarea
               id="write-off-reason"
-              placeholder="Masalan: O'quvchi yo'qolib qoldi, aloqaga chiqmadi..."
+              placeholder={t("Masalan: O'quvchi yo'qolib qoldi, aloqaga chiqmadi...")}
               value={writeOffReason}
               onChange={(e) => onWriteOffReasonChange(e.target.value)}
               rows={2}
@@ -443,6 +449,7 @@ function PresetOption({
   amount?: number;
   children?: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <div
       className={`rounded-md border p-2 transition-colors ${
@@ -462,7 +469,7 @@ function PresetOption({
             <span className="text-sm font-medium">{label}</span>
             {typeof amount === "number" && (
               <span className="text-sm font-semibold tabular-nums">
-                {formatBalance(amount)}
+                {formatBalance(amount, t("so'm"))}
               </span>
             )}
           </div>
