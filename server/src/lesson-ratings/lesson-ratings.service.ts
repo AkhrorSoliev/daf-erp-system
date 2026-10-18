@@ -18,7 +18,7 @@ import {
   totalsOf,
   type RatingRow,
 } from './rating-math';
-import { LOW_SCORE_MAX } from './rating-rules';
+import { isWithinWindow, LOW_SCORE_MAX } from './rating-rules';
 
 /** `@db.Date` ustuni uchun oy chegarasi: [1-kun, keyingi oyning 1-kuni). */
 function monthDates(month: string): { gte: Date; lt: Date } {
@@ -31,6 +31,18 @@ function monthDates(month: string): { gte: Date; lt: Date } {
 const dayStr = (d: Date) => d.toISOString().slice(0, 10);
 const nameOf = (u: { firstName: string; lastName: string }) =>
   `${u.firstName} ${u.lastName}`;
+
+export type CommentState = 'WRITTEN' | 'PENDING' | 'NOT_WRITTEN';
+
+/** Izoh bor — WRITTEN; yo'q va 48 soatlik oyna ochiq — PENDING; aks holda NOT_WRITTEN. */
+function commentState(
+  comment: string | null,
+  sentAt: Date | null,
+  now: Date,
+): CommentState {
+  if (comment !== null) return 'WRITTEN';
+  return sentAt && isWithinWindow(sentAt, now) ? 'PENDING' : 'NOT_WRITTEN';
+}
 
 /** Eng yaxshi / eng past ustoz kartasi uchun qisqa ko'rinish. */
 function brief(
@@ -124,10 +136,8 @@ export class LessonRatingsService {
         messageId: true,
         comment: true,
         groupId: true,
-        studentId: true,
         teacherIds: true,
         group: { select: { name: true } },
-        student: { select: { firstName: true, lastName: true } },
       },
     });
     const asRow = (r: (typeof rows)[number]): RatingRow => ({
@@ -167,8 +177,6 @@ export class LessonRatingsService {
       .map((r) => ({
         date: dayStr(r.date),
         groupName: r.group.name,
-        studentId: r.studentId,
-        studentName: nameOf(r.student),
         score: r.score!,
         comment: r.comment!,
       }));
@@ -187,12 +195,15 @@ export class LessonRatingsService {
     month: string | undefined,
     page: number,
     pageSize: number,
+    onlyCommented?: boolean,
+    now: Date = new Date(),
   ) {
     const m = month ?? tashkentMonthKey(new Date());
     const where = {
       companyId,
       date: monthDates(m),
       score: { lte: LOW_SCORE_MAX },
+      ...(onlyCommented ? { comment: { not: null } } : {}),
       ...branchIdWhere(scope),
     };
     const [total, rows] = await Promise.all([
@@ -207,11 +218,10 @@ export class LessonRatingsService {
           date: true,
           score: true,
           comment: true,
+          sentAt: true,
           groupId: true,
-          studentId: true,
           teacherIds: true,
           group: { select: { name: true } },
-          student: { select: { firstName: true, lastName: true } },
         },
       }),
     ]);
@@ -230,10 +240,9 @@ export class LessonRatingsService {
         teacherNames: r.teacherIds
           .map((id) => names.get(id))
           .filter((n): n is string => !!n),
-        studentId: r.studentId,
-        studentName: nameOf(r.student),
         score: r.score!,
         comment: r.comment,
+        commentState: commentState(r.comment, r.sentAt, now),
       })),
       total,
       page,

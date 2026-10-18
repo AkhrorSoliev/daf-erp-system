@@ -60,6 +60,7 @@ export class LessonRatingsController {
       q.month,
       q.page ?? 1,
       q.pageSize ?? 10,
+      q.commented,
     );
   }
 

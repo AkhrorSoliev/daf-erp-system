@@ -29,13 +29,14 @@ export function useTeacherRatings(teacherId: number | null, month: string) {
   });
 }
 
-export function useLowRatings(month: string, page: number, pageSize: number) {
+export function useLowRatings(month: string, page: number, pageSize: number, commented: boolean) {
   const { selectedBranch } = useBranchSwitcher();
   return useQuery({
-    queryKey: ["lesson-ratings", "low", selectedBranch?.id, month, page, pageSize],
+    queryKey: ["lesson-ratings", "low", selectedBranch?.id, month, page, pageSize, commented],
     queryFn: () =>
       api
-        .get<Paged<LowRating>>("/lesson-ratings/low", { params: { month, page, pageSize } })
+        .get<Paged<LowRating>>("/lesson-ratings/low", { params: { month, page, pageSize, commented: commented ? 1 : undefined },
+        })
         .then((r) => r.data),
     staleTime: 0,
   });

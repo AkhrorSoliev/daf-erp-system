@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
+    sarlavha: "Dars baholari to'liq anonim, izoh holati ko'rinadi",
+    matn: "Dars baholari hisobotida o'quvchining ismi endi hech qayerda ko'rinmaydi, botda ham o'quvchiga shunday deyiladi. Past baholar ro'yxatida izoh holati bor: Yozdi, Yozmadi yoki Kutilmoqda, va faqat izohlilarni ko'rsatadigan tugma. Uzun izoh «Ko'proq o'qish» bilan ochiladi. Kartalar ixchamlashdi: taqsimot va eng yaxshi, eng past ustoz bitta kartada, ustozlar jadvalida «Izohlar» ustuni qo'shildi.",
+    rollar: [1],
+    sahifa: { bolim: "hisobotlar", sahifa: "dars-baholari" },
+  },
+  {
+    sana: "2026-10-18",
     sarlavha: "Arxivdagi o'quvchi va guruhni ko'rish, arxivga tushish sababi",
     matn: "Sozlamalar → Arxiv → «O'quvchilar» va «Guruhlar» ro'yxatida endi «Sabab» ustuni bor. Qatorni bossangiz o'ng tomondan oyna ochiladi: arxivlangan sana, kim arxivlagani, sabab, o'quvchining guruhlari (yoki guruhning ustozi va o'quvchilari) va tarixi. Oyna faqat ko'rish uchun; «Qayta tiklash» tugmasi ro'yxatdagi bilan bir xil. Sabab yozilmagan eski yozuvlarda «—» turadi.",
     rollar: [1],

@@ -3,8 +3,17 @@
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/forms/table-pagination";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { LowRating } from "./types";
-import { dayText } from "./rating-format";
+import { commentStateLabel, dayText } from "./rating-format";
+import { ExpandableText } from "./expandable-text";
+
+const TONE = {
+  green: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+  amber: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  muted: "bg-muted text-muted-foreground",
+};
 
 export function RatingLowList({
   rows,
@@ -13,6 +22,7 @@ export function RatingLowList({
   total,
   onPageChange,
   onPageSizeChange,
+  commentedOnly,
 }: {
   rows: LowRating[];
   page: number;
@@ -20,11 +30,12 @@ export function RatingLowList({
   total: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  commentedOnly: boolean;
 }) {
   if (total === 0) {
     return (
       <p className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-        Bu oyda 1–3 baho yo&apos;q
+        {commentedOnly ? "Bu oyda izohli past baho yo'q" : "Bu oyda 1–3 baho yo'q"}
       </p>
     );
   }
@@ -37,7 +48,6 @@ export function RatingLowList({
             <TableHead>Sana</TableHead>
             <TableHead>Guruh</TableHead>
             <TableHead>Ustoz</TableHead>
-            <TableHead>O&apos;quvchi</TableHead>
             <TableHead>Baho</TableHead>
             <TableHead>Izoh</TableHead>
           </TableRow>
@@ -55,13 +65,10 @@ export function RatingLowList({
                 </Link>
               </TableCell>
               <TableCell>{r.teacherNames.join(", ") || "—"}</TableCell>
-              <TableCell>
-                <Link href={`/students/profile/${r.studentId}`} className="hover:underline">
-                  {r.studentName}
-                </Link>
-              </TableCell>
               <TableCell className="text-destructive">{r.score} ⭐</TableCell>
-              <TableCell className="max-w-xs whitespace-normal text-sm">{r.comment ?? "—"}</TableCell>
+              <TableCell className="max-w-xs whitespace-normal text-sm">
+                <CommentCell row={r} />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -73,6 +80,18 @@ export function RatingLowList({
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
       />
+    </div>
+  );
+}
+
+function CommentCell({ row }: { row: LowRating }) {
+  const label = commentStateLabel(row.commentState);
+  return (
+    <div className="space-y-1">
+      <Badge variant="ghost" className={cn(TONE[label.tone])}>
+        {label.text}
+      </Badge>
+      {row.comment && <ExpandableText text={row.comment} />}
     </div>
   );
 }

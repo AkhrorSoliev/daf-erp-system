@@ -17,6 +17,8 @@ export interface RatingTotals {
   /** rated / delivered, foizda, bir xona; yetkazilgan yo'q — null. */
   responseRate: number | null;
   low: number;
+  /** Izoh yozilgan qatorlar soni. */
+  commented: number;
 }
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
@@ -26,8 +28,10 @@ export function totalsOf(rows: RatingRow[]): RatingTotals {
   let rated = 0;
   let delivered = 0;
   let low = 0;
+  let commented = 0;
   for (const r of rows) {
     if (r.delivered) delivered += 1;
+    if (r.commented === true) commented += 1;
     if (r.score === null) continue;
     rated += 1;
     sum += r.score;
@@ -39,6 +43,7 @@ export function totalsOf(rows: RatingRow[]): RatingTotals {
     delivered,
     responseRate: delivered ? round1((rated / delivered) * 100) : null,
     low,
+    commented,
   };
 }
 

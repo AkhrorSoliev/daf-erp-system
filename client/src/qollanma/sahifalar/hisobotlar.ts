@@ -80,10 +80,10 @@ export const hisobotlar: QollanmaSahifa[] = [
     qisqacha:
       "O'quvchi darsdan keyin Telegram botda darsga 1 dan 5 gacha baho qo'yadi, past bahoda sababini yozadi. CEO ustozlarning o'rtacha bahosi, javob ulushi va past baholarni shu sahifada ko'radi.",
     rollar: [1],
-    adr: ["0091"],
+    adr: ["0091", "0111"],
     yollar: ["/reports/dars-baholari"],
     kalitSozlar: ["baho", "dars bahosi", "yulduz", "o'quvchi fikri", "ustoz sifati", "past baho", "izoh"],
-    yangilangan: "2026-10-16",
+    yangilangan: "2026-10-18",
   },
   {
     bolim: "hisobotlar",
