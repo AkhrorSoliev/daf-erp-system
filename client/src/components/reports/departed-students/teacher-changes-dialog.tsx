@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DialogPaginationFooter } from "./dialog-pagination-footer";
+import { useT } from "@/i18n/context";
 import {
   CHANGE_TYPE_LABELS,
   type RetentionQueryParams,
@@ -39,6 +40,7 @@ export function TeacherChangesDialog({
   onOpenChange,
   queryParams,
 }: TeacherChangesDialogProps) {
+  const t = useT();
   const { data, isLoading } = useQuery<TeacherChangeRow[]>({
     queryKey: ["teacher-changes-list", queryParams],
     queryFn: () =>
@@ -71,9 +73,9 @@ export function TeacherChangesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!max-w-[min(1200px,95vw)] w-[min(1200px,95vw)] max-h-[85vh] overflow-hidden flex flex-col gap-4 p-6">
         <DialogHeader>
-          <DialogTitle>Ustoz almashish hodisalari</DialogTitle>
+          <DialogTitle>{t("Ustoz almashish hodisalari")}</DialogTitle>
           <DialogDescription>
-            Tanlangan davrdagi barcha guruh ustoz o&apos;zgarishlari
+            {t("Tanlangan davrdagi barcha guruh ustoz o'zgarishlari")}
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-auto rounded-md border">
@@ -81,14 +83,14 @@ export function TeacherChangesDialog({
             <TableHeader className="sticky top-0 z-10 bg-muted/40">
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead>Sana</TableHead>
-                <TableHead>Guruh</TableHead>
-                <TableHead>Filial</TableHead>
-                <TableHead>Oldingi ustoz</TableHead>
-                <TableHead>Yangi ustoz</TableHead>
-                <TableHead>Tur</TableHead>
-                <TableHead>Sabab</TableHead>
-                <TableHead>O&apos;zgartirgan</TableHead>
+                <TableHead>{t("Sana")}</TableHead>
+                <TableHead>{t("Guruh")}</TableHead>
+                <TableHead>{t("Filial")}</TableHead>
+                <TableHead>{t("Oldingi ustoz")}</TableHead>
+                <TableHead>{t("Yangi ustoz")}</TableHead>
+                <TableHead>{t("Tur")}</TableHead>
+                <TableHead>{t("Sabab")}</TableHead>
+                <TableHead>{t("O'zgartirgan")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -108,49 +110,52 @@ export function TeacherChangesDialog({
                     colSpan={9}
                     className="text-center py-16 text-muted-foreground"
                   >
-                    Ma&apos;lumot yo&apos;q
+                    {t("Ma'lumot yo'q")}
                   </TableCell>
                 </TableRow>
               ) : (
-                pagedData.map((row, i) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="border-r text-muted-foreground">
-                      {(clampedPage - 1) * pageSize + i + 1}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {format(new Date(row.changedAt), "dd.MM.yyyy, HH:mm")}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {row.groupName}
-                    </TableCell>
-                    <TableCell>{row.branchName}</TableCell>
-                    <TableCell>
-                      {row.previousTeachers.length > 0
-                        ? row.previousTeachers.join(", ")
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {row.newTeachers.length > 0
-                        ? row.newTeachers.join(", ")
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {CHANGE_TYPE_LABELS[row.changeType]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {row.triggeredByDismissal ? (
-                        <Badge variant="destructive">
-                          Ustoz ishdan ketgan
+                pagedData.map((row, i) => {
+                  const changeType = CHANGE_TYPE_LABELS[row.changeType];
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell className="border-r text-muted-foreground">
+                        {(clampedPage - 1) * pageSize + i + 1}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {format(new Date(row.changedAt), "dd.MM.yyyy, HH:mm")}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {row.groupName}
+                      </TableCell>
+                      <TableCell>{row.branchName}</TableCell>
+                      <TableCell>
+                        {row.previousTeachers.length > 0
+                          ? row.previousTeachers.join(", ")
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {row.newTeachers.length > 0
+                          ? row.newTeachers.join(", ")
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {t(changeType)}
                         </Badge>
-                      ) : (
-                        <Badge variant="secondary">Oddiy o&apos;zgarish</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{row.changedBy ?? "—"}</TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell>
+                        {row.triggeredByDismissal ? (
+                          <Badge variant="destructive">
+                            {t("Ustoz ishdan ketgan")}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">{t("Oddiy o'zgarish")}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{row.changedBy ?? "—"}</TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

@@ -10,6 +10,7 @@ import { downloadAuthedFile } from "@/lib/download-file";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import { lastPageIfPast } from "@/components/payments/debt/debt-url";
 import { DepartedCards } from "./departed-cards";
 import { DepartedCuts } from "./departed-cuts";
@@ -29,6 +30,7 @@ import {
 
 /** «Ketgan o'quvchilar» (spec B7a §4). Every figure is the server's; the page only arranges and formats. */
 export function DepartedStudentsPage() {
+  const t = useT();
   const { filters: raw, setFilters } = useUrlFilters(DEPARTED_SCHEMA);
   const filters = raw as unknown as DepartedFilters;
   const canManageReasons = useCan("settings.reference");
@@ -67,7 +69,7 @@ export function DepartedStudentsPage() {
       const qs = new URLSearchParams(Object.entries(departedExcelParams(filters, today)).map(([k, v]) => [k, String(v)])).toString();
       await downloadAuthedFile(`/reports/departed-students/excel?${qs}`, departedExcelFileName(range));
     } catch (e) {
-      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+      toast.error(getErrorMessage(e, t("Excel yuklab olishda xatolik")));
     } finally {
       setExporting(false);
     }
@@ -77,14 +79,14 @@ export function DepartedStudentsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">Ketgan o&apos;quvchilar</h2>
+        <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Ketgan o'quvchilar")}</h2>
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" onClick={exportExcel} disabled={exporting}>
             {exporting ? <Loader2 className="animate-spin" /> : <Download />}
-            Excel
+            {t("Excel")}
           </Button>
           {canManageReasons && (
-            <Button type="button" variant="outline" size="icon" aria-label="Ketish sabablarini boshqarish" title="Ketish sabablarini boshqarish" onClick={() => setSettingsOpen(true)}>
+            <Button type="button" variant="outline" size="icon" aria-label={t("Ketish sabablarini boshqarish")} title={t("Ketish sabablarini boshqarish")} onClick={() => setSettingsOpen(true)}>
               <Settings />
             </Button>
           )}
@@ -95,15 +97,15 @@ export function DepartedStudentsPage() {
 
       {overview.isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+          <p>{t("Ma'lumotni yuklab bo'lmadi")}</p>
           <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => overview.refetch()}>
-            Qayta urinish
+            {t("Qayta urinish")}
           </Button>
         </div>
       ) : (
         // The previous answer stays dimmed until the next one lands.
         <div aria-busy={stale} className={cn("flex flex-col gap-4", stale && "opacity-60")}>
-          <DepartedCards data={data} previousLabel={data ? previousLabel(filters.preset, data.previous) : ""} isLoading={!data} />
+          <DepartedCards data={data} previousLabel={data ? previousLabel(filters.preset, data.previous, t) : ""} isLoading={!data} />
           {data && <DepartedPending count={data.pendingToday} graceDays={data.graceDays} />}
           <div className="grid gap-4 lg:grid-cols-2">
             <DepartedMonths months={data?.months} isLoading={!data} />
@@ -122,9 +124,9 @@ export function DepartedStudentsPage() {
       <div ref={listRef} className="scroll-mt-4">
         {list.isError && !listData ? (
           <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-            <p>Ro&apos;yxatni yuklab bo&apos;lmadi</p>
+            <p>{t("Ro'yxatni yuklab bo'lmadi")}</p>
             <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => list.refetch()}>
-              Qayta urinish
+              {t("Qayta urinish")}
             </Button>
           </div>
         ) : (
@@ -149,7 +151,7 @@ export function DepartedStudentsPage() {
             data={data?.teacherChange}
             isLoading={!data}
             queryParams={{ startDate: base.startDate, endDate: base.endDate, courseId: base.courseId, teacherIds: base.teacherIds }}
-            periodLabel={data ? rangeLabel(data.range) : undefined}
+            periodLabel={data ? rangeLabel(data.range, t) : undefined}
           />
         </div>
       )}

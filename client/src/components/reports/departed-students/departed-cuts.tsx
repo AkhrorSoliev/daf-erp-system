@@ -5,11 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatNumber } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { formatShare } from "./departed-format";
 import type { CutKey, DepartedOverview } from "./departed-types";
 
-const CUT_LABEL: Record<CutKey, string> = { teacher: "Ustoz", course: "Kurs", group: "Guruh", branch: "Filial" };
-const CUT_ORDER: CutKey[] = ["teacher", "course", "group", "branch"];
+const CUT_LABEL: Record<CutKey, string> = { teacher: msg("Ustoz"), course: msg("Kurs"), group: msg("Guruh"), branch: msg("Filial") };
+const CUTS = (["teacher", "course", "group", "branch"] as const).map((key) => ({ key, label: CUT_LABEL[key] }));
 
 /** «Qayerdan ketishdi»: the same departures cut four ways (spec B7a §4.4). */
 export function DepartedCuts({ cuts, uniqueDeparted, cut, onCutChange, isLoading }: {
@@ -19,16 +21,18 @@ export function DepartedCuts({ cuts, uniqueDeparted, cut, onCutChange, isLoading
   onCutChange: (cut: CutKey) => void;
   isLoading?: boolean;
 }) {
+  const t = useT();
   const rows = cuts?.[cut];
+  const cutLabel = CUT_LABEL[cut];
   return (
     <Card>
       <CardContent className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-medium text-muted-foreground">Qayerdan ketishdi</p>
-          <div role="group" aria-label="Kesim" className="flex flex-wrap gap-1">
-            {CUT_ORDER.map((k) => (
+          <p className="text-sm font-medium text-muted-foreground">{t("Qayerdan ketishdi")}</p>
+          <div role="group" aria-label={t("Kesim")} className="flex flex-wrap gap-1">
+            {CUTS.map(({ key: k, label }) => (
               <Button key={k} type="button" size="sm" variant={k === cut ? "default" : "outline"} aria-pressed={k === cut} onClick={() => onCutChange(k)}>
-                {CUT_LABEL[k]}
+                {t(label)}
               </Button>
             ))}
           </div>
@@ -38,16 +42,16 @@ export function DepartedCuts({ cuts, uniqueDeparted, cut, onCutChange, isLoading
             {[0, 1, 2].map((i) => <Skeleton key={i} className="h-8" />)}
           </div>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Bu davrda ketgan o&apos;quvchi yo&apos;q</p>
+          <p className="text-sm text-muted-foreground">{t("Bu davrda ketgan o'quvchi yo'q")}</p>
         ) : (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{CUT_LABEL[cut]}</TableHead>
-                  <TableHead className="text-right">Ketdi</TableHead>
-                  <TableHead className="text-right">Oy boshida</TableHead>
-                  <TableHead className="text-right">Ulushi</TableHead>
+                  <TableHead>{t(cutLabel)}</TableHead>
+                  <TableHead className="text-right">{t("Ketdi")}</TableHead>
+                  <TableHead className="text-right">{t("Oy boshida")}</TableHead>
+                  <TableHead className="text-right">{t("Ulushi")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -67,8 +71,8 @@ export function DepartedCuts({ cuts, uniqueDeparted, cut, onCutChange, isLoading
         )}
         {cut === "teacher" && rows && rows.length > 0 && (
           <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-            <p>Ustoz — o&apos;quvchi ketgan paytdagi ustozi. Ikki ustozli guruh ikkala ustozda sanaladi.</p>
-            <p>Jami (takrorlanmasdan): <b className="tabular-nums">{formatNumber(uniqueDeparted)}</b></p>
+            <p>{t("Ustoz — o'quvchi ketgan paytdagi ustozi. Ikki ustozli guruh ikkala ustozda sanaladi.")}</p>
+            <p>{t("Jami (takrorlanmasdan):")} <b className="tabular-nums">{formatNumber(uniqueDeparted)}</b></p>
           </div>
         )}
       </CardContent>
