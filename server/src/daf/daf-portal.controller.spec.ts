@@ -187,3 +187,73 @@ describe('DafPortalController — mashq javobida sizib chiqish yo`q', () => {
     expect('studentId' in dto).toBe(false);
   });
 });
+
+describe('DafPortalController — seans yakuni natija bilan', () => {
+  const natija = {
+    punkte: 50,
+    serie: 3,
+    serieYangi: true,
+    orin: { gruppe: null, zentrum: { oldin: 4, hozir: 2 } },
+  };
+
+  function make() {
+    const uebung = {
+      abschluss: jest.fn(async () => ({ bestScore: 9, runs: 1 })),
+      wiederholungAbschluss: jest.fn(async () => ({
+        questionCount: 12,
+        firstTryCorrect: 10,
+      })),
+    };
+    const fortschritt = { seansNatijasiXavfsiz: jest.fn(async () => natija) };
+    const controller = new DafPortalController(
+      {} as any,
+      {} as any,
+      {} as any,
+      uebung as any,
+      fortschritt as any,
+    );
+    return { controller, uebung, fortschritt };
+  }
+
+  it('lesson end adds natija, studentId from the token', async () => {
+    const { controller, fortschritt } = make();
+    const r = await controller.postAbschluss(
+      5,
+      { richtig: 9, gesamt: 12, sessionId: 's-1' } as any,
+      55,
+      1,
+    );
+    expect(r).toEqual({ bestScore: 9, runs: 1, natija });
+    expect(fortschritt.seansNatijasiXavfsiz).toHaveBeenCalledWith('s-1', 55, 1);
+  });
+
+  it('review end adds natija', async () => {
+    const { controller } = make();
+    const r = await controller.postWiederholungAbschluss(
+      { sessionId: 's-2' } as any,
+      55,
+      1,
+    );
+    expect(r).toEqual({ questionCount: 12, firstTryCorrect: 10, natija });
+  });
+
+  it('natija is computed after the lesson is saved', async () => {
+    const { controller, uebung, fortschritt } = make();
+    const order: string[] = [];
+    uebung.abschluss.mockImplementation(async () => {
+      order.push('abschluss');
+      return { bestScore: 9, runs: 1 };
+    });
+    fortschritt.seansNatijasiXavfsiz.mockImplementation(async () => {
+      order.push('natija');
+      return natija;
+    });
+    await controller.postAbschluss(
+      5,
+      { richtig: 9, gesamt: 12, sessionId: 's-1' } as any,
+      55,
+      1,
+    );
+    expect(order).toEqual(['abschluss', 'natija']);
+  });
+});

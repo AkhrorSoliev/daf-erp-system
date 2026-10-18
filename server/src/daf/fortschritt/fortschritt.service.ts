@@ -1,11 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   tashkentDateStr,
   utcMidnightFromDateStr,
 } from '../../common/date/tashkent';
 import { currentGroupId } from '../shared/student-scope';
-import { serieAus, stufeFuer, wochenStartTag } from '../uebung/punkte';
+import {
+  serieAus,
+  stufeFuer,
+  wochenStartTag,
+  wochenStartUtc,
+} from '../uebung/punkte';
 
 export interface Fortschritt {
   gesamt: number;
@@ -32,6 +37,17 @@ export interface ReytingZeile {
   punkte: number;
   platz: number;
   selbst: boolean;
+}
+
+/** What the session-end screen shows: this session's points, the streak, the rank before/after. */
+export interface SeansNatijasi {
+  punkte: number;
+  serie: number;
+  serieYangi: boolean;
+  orin: {
+    gruppe: { oldin: number; hozir: number } | null;
+    zentrum: { oldin: number; hozir: number };
+  };
 }
 
 export type ReytingQamrovi = 'gruppe' | 'zentrum';
@@ -93,8 +109,23 @@ function platziniTop(saralangan: HaftalikYigindi[], studentId: number): number {
   return saralangan.findIndex((s) => s.studentId === studentId) + 1;
 }
 
+/** The same list with one student's points lowered by `minus` (never below 0). */
+function ayir(
+  royxat: HaftalikYigindi[],
+  studentId: number,
+  minus: number,
+): HaftalikYigindi[] {
+  return royxat.map((s) =>
+    s.studentId === studentId
+      ? { studentId, _sum: { points: Math.max(0, ballOl(s) - minus) } }
+      : s,
+  );
+}
+
 @Injectable()
 export class FortschrittService {
+  private readonly logger = new Logger(FortschrittService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async uebersicht(studentId: number, companyId: number): Promise<Fortschritt> {
@@ -190,6 +221,100 @@ export class FortschrittService {
       kunlar.map((k) => tagStr(k.day)),
       heute,
     );
+  }
+
+  /**
+   * The session's result for the end screen (spec §5). "Before" = everyone
+   * else as now, this student's week without this session's share of it.
+   * Both ranks go through the same sort, so the two can be compared.
+   */
+  async seansNatijasi(
+    sessionId: string,
+    studentId: number,
+    companyId: number,
+  ): Promise<SeansNatijasi> {
+    const jetzt = new Date();
+    const heute = tashkentDateStr(jetzt);
+    const montag = montagGte(jetzt);
+    const montagUtc = wochenStartUtc(jetzt);
+
+    const [urinishlar, bugun, groupId, serie, zentrum] = await Promise.all([
+      this.prisma.dafAttempt.findMany({
+        where: { sessionId, studentId },
+        select: { points: true, createdAt: true, groupId: true },
+      }),
+      this.prisma.dafStudentDay.aggregate({
+        where: { studentId, day: utcMidnightFromDateStr(heute) },
+        _sum: { attempts: true },
+      }),
+      currentGroupId(this.prisma, studentId),
+      this.serieFuer(studentId, heute),
+      this.zentrumHaftaligi(studentId, companyId, montag),
+    ]);
+
+    const sum = (xs: { points: number }[]) =>
+      xs.reduce((s, x) => s + x.points, 0);
+    const shuHafta = urinishlar.filter((u) => u.createdAt >= montagUtc);
+    const bugungi = urinishlar.filter(
+      (u) => tashkentDateStr(u.createdAt) === heute,
+    ).length;
+
+    const zentrumOldin = saralaBarqaror(
+      ayir(zentrum, studentId, sum(shuHafta)),
+    );
+
+    let gruppe: SeansNatijasi['orin']['gruppe'] = null;
+    if (groupId) {
+      const { saralangan } = await this.gruppeHaftaligi(
+        groupId,
+        companyId,
+        montag,
+      );
+      if (saralangan.length > 0) {
+        const minus = sum(shuHafta.filter((u) => u.groupId === groupId));
+        gruppe = {
+          oldin: platziniTop(
+            saralaBarqaror(ayir(saralangan, studentId, minus)),
+            studentId,
+          ),
+          hozir: platziniTop(saralangan, studentId),
+        };
+      }
+    }
+
+    return {
+      punkte: sum(urinishlar),
+      serie,
+      serieYangi: bugungi > 0 && (bugun._sum.attempts ?? 0) === bugungi,
+      orin: {
+        gruppe,
+        zentrum: {
+          oldin: platziniTop(zentrumOldin, studentId),
+          hozir: platziniTop(zentrum, studentId),
+        },
+      },
+    };
+  }
+
+  /**
+   * The end screen's figures are decoration: the lesson is already saved
+   * when this runs, so a failure here must not turn the answer into an
+   * error (the client would say «Natija saqlanmadi»).
+   */
+  async seansNatijasiXavfsiz(
+    sessionId: string | undefined,
+    studentId: number,
+    companyId: number,
+  ): Promise<SeansNatijasi | null> {
+    if (!sessionId) return null;
+    try {
+      return await this.seansNatijasi(sessionId, studentId, companyId);
+    } catch (err) {
+      this.logger.warn(
+        `Seans natijasi hisoblanmadi (sessionId=${sessionId}, studentId=${studentId}): ${(err as Error).message}`,
+      );
+      return null;
+    }
   }
 
   async reyting(
