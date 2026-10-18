@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth, isCeoUser } from "@/hooks/use-auth";
 import { useCan } from "@/hooks/use-permissions";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import {
   certificatePreviewKey,
   downloadCertificatePdf,
@@ -39,6 +40,7 @@ import type { IssuedCertificate, LevelPreview } from "./certificate-types";
 
 /** The student card's «Hujjatlar» tab (spec 2026-10-17 §7). Every figure is the server's. */
 export function StudentCertificatesTab({ studentId }: { studentId: number }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const isCeo = isCeoUser(useAuth((s) => s.user));
   const canIssue = useCan("students.manage");
@@ -56,13 +58,13 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
     setBusy(level.level);
     try {
       const row = await issueCertificate(studentId, { level: level.level, exemptReason });
-      toast.success(`Hujjat berildi: ${row.number}`);
+      toast.success(t("Hujjat berildi: {number}", { number: row.number }));
       await queryClient.invalidateQueries({ queryKey: certificatePreviewKey(studentId) });
       setExemptFor(null);
       setReason("");
       await downloadCertificatePdf(row.id, row.number).catch(() => {});
     } catch (err) {
-      toast.error(getErrorMessage(err, "Hujjat berishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Hujjat berishda xatolik yuz berdi")));
     }
     setReissueFor(null);
     setBusy(null);
@@ -72,7 +74,7 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
     try {
       await downloadCertificatePdf(row.id, row.number);
     } catch (err) {
-      toast.error(getErrorMessage(err, "PDF yuklab bo'lmadi"));
+      toast.error(getErrorMessage(err, t("PDF yuklab bo'lmadi")));
     }
   }
 
@@ -89,10 +91,10 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
   if (!data) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">{"Hujjat ma'lumotini yuklab bo'lmadi."}</p>
+        <p className="text-sm text-muted-foreground">{t("Hujjat ma'lumotini yuklab bo'lmadi.")}</p>
         <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>
           {isFetching && <Loader2 className="size-4 animate-spin" />}
-          Qayta urinish
+          {t("Qayta urinish")}
         </Button>
       </div>
     );
@@ -103,14 +105,17 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
       {data.levels.length === 0 && (
         <div className="flex h-24 items-center justify-center rounded-md border">
           <p className="text-sm text-muted-foreground">
-            {"Bu o'quvchi hali hech bir darajada davomatga yozilmagan"}
+            {t("Bu o'quvchi hali hech bir darajada davomatga yozilmagan")}
           </p>
         </div>
       )}
 
       {data.unleveledGroups.length > 0 && (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
-          {`Guruh darajasi ko'rsatilmagan: ${data.unleveledGroups.join(", ")}. Bu guruhlar hisobga kirmaydi — guruhga daraja yozing.`}
+          {t(
+            "Guruh darajasi ko'rsatilmagan: {groups}. Bu guruhlar hisobga kirmaydi — guruhga daraja yozing.",
+            { groups: data.unleveledGroups.join(", ") },
+          )}
         </p>
       )}
 
@@ -120,7 +125,7 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
           <section key={level.level} className="space-y-3 rounded-lg border p-4">
             <header className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-base font-semibold">
-                {level.level} daraja
+                {t("{level} daraja", { level: level.level })}
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
                   {dmy(level.from)} – {dmy(level.to)} · {level.groupNames.join(", ")}
                 </span>
@@ -132,12 +137,12 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
                     : "rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-300"
                 }
               >
-                {level.verdict.eligible ? "Shart bajarilgan" : "Shart bajarilmagan"}
+                {level.verdict.eligible ? t("Shart bajarilgan") : t("Shart bajarilmagan")}
               </span>
             </header>
 
             <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
-              {levelSummary(level, data.balance).map((line) => (
+              {levelSummary(level, data.balance, t).map((line) => (
                 <div key={line.label} className="flex items-baseline justify-between gap-3 border-b py-1">
                   <dt className="text-muted-foreground">{line.label}</dt>
                   <dd className="text-right font-medium tabular-nums">
@@ -170,7 +175,7 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
                 ) : (
                   <FileCheck2 className="size-4" />
                 )}
-                {mode === "exempt" ? "Istisno bilan berish" : "Hujjat berish"}
+                {mode === "exempt" ? t("Istisno bilan berish") : t("Hujjat berish")}
               </Button>
             )}
 
@@ -191,34 +196,37 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
       <Dialog open={exemptFor !== null} onOpenChange={(open) => !open && !busy && setExemptFor(null)}>
         <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
           <DialogHeader className="border-b px-6 py-4">
-            <DialogTitle>Istisno bilan hujjat berish</DialogTitle>
+            <DialogTitle>{t("Istisno bilan hujjat berish")}</DialogTitle>
             <DialogDescription>
-              {`${exemptFor?.verdict.reasons.join(" · ") ?? ""}. Sabab o'quvchi tarixiga yoziladi.`}
+              {/* The reasons are the server's sentences: passed in as a value, never translated. */}
+              {t("{reasons}. Sabab o'quvchi tarixiga yoziladi.", {
+                reasons: exemptFor?.verdict.reasons.join(" · ") ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 space-y-2 overflow-y-auto px-6 py-4">
             {exemptFor && needsReissueConfirm(exemptFor) && (
               <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
-                {REISSUE_EXEMPT_NOTICE}
+                {t(REISSUE_EXEMPT_NOTICE)}
               </p>
             )}
             <Textarea
               value={reason}
               maxLength={500}
-              placeholder="Sababi (masalan: kasal bo'lgan, hujjati bor)"
+              placeholder={t("Sababi (masalan: kasal bo'lgan, hujjati bor)")}
               onChange={(e) => setReason(e.target.value)}
             />
           </div>
           <DialogFooter className="border-t px-6 py-4">
             <Button variant="outline" disabled={busy !== null} onClick={() => setExemptFor(null)}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button
               disabled={busy !== null || reason.trim().length < 3}
               onClick={() => exemptFor && void give(exemptFor, reason.trim())}
             >
               {busy !== null && <Loader2 className="size-4 animate-spin" />}
-              Berish
+              {t("Berish")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -228,16 +236,16 @@ export function StudentCertificatesTab({ studentId }: { studentId: number }) {
       <Dialog open={reissueFor !== null} onOpenChange={(open) => !open && busy === null && setReissueFor(null)}>
         <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
           <DialogHeader className="border-b px-6 py-4">
-            <DialogTitle>Hujjat berish</DialogTitle>
-            <DialogDescription>{REISSUE_CONFIRM_TEXT}</DialogDescription>
+            <DialogTitle>{t("Hujjat berish")}</DialogTitle>
+            <DialogDescription>{t(REISSUE_CONFIRM_TEXT)}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="border-t px-6 py-4">
             <Button variant="outline" disabled={busy !== null} onClick={() => setReissueFor(null)}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button disabled={busy !== null} onClick={() => reissueFor && void give(reissueFor)}>
               {busy !== null && <Loader2 className="size-4 animate-spin" />}
-              Ha, berish
+              {t("Ha, berish")}
             </Button>
           </DialogFooter>
         </DialogContent>

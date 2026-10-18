@@ -25,6 +25,7 @@ import {
   type WriteOffChoice,
 } from "@/components/students/student-remove-from-group-dialog";
 import { useEditStudent } from "@/hooks/use-edit-student";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
@@ -41,6 +42,7 @@ interface StudentRowActionsProps {
 }
 
 export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusChanged }: StudentRowActionsProps) {
+  const t = useT();
   const { openDrawer } = useEditStudent();
   const [showRemove, setShowRemove] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
@@ -125,11 +127,11 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
       });
       toast.success(
         writeOff && eligibility?.eligible
-          ? "O'quvchi chiqarildi va qarz hisobdan chiqarildi"
-          : "O'quvchi guruhdan chiqarildi",
+          ? t("O'quvchi chiqarildi va qarz hisobdan chiqarildi")
+          : t("O'quvchi guruhdan chiqarildi"),
       );
     } catch (error) {
-      toast.error(getErrorMessage(error, "Chiqarishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Chiqarishda xatolik yuz berdi")));
     } finally {
       setRemoving(false);
       setRemoveReason("");
@@ -163,29 +165,29 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreHorizontal className="size-4" />
-                <span className="sr-only">Amallar</span>
+                <span className="sr-only">{t("Amallar")}</span>
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
-          <TooltipContent>Amallar</TooltipContent>
+          <TooltipContent>{t("Amallar")}</TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem onClick={() => openDrawer(student)}>
             <Pencil className="mr-2 size-4" />
-            Tahrirlash
+            {t("Tahrirlash")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowEnroll(true)}>
             <UserPlus className="mr-2 size-4" />
-            Guruhga biriktirish
+            {t("Guruhga biriktirish")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setShowStatus(true)}>
             <RefreshCw className="mr-2 size-4" />
-            Status o&apos;zgartirish
+            {t("Status o'zgartirish")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowHistory(true)}>
             <History className="mr-2 size-4" />
-            Status tarixi
+            {t("Status tarixi")}
           </DropdownMenuItem>
           {enrollmentId && (
             <>
@@ -195,7 +197,7 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
                 onClick={() => setShowRemove(true)}
               >
                 <UserMinus className="mr-2 size-4" />
-                Guruhdan chiqarish
+                {t("Guruhdan chiqarish")}
               </DropdownMenuItem>
             </>
           )}

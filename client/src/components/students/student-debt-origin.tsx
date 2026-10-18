@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { DebtMonthsBadge } from "@/components/payments/debt/debt-months-badge";
+import { useT } from "@/i18n/context";
 
 interface DebtOrigin {
   since: string;
@@ -43,6 +44,7 @@ export function StudentDebtOrigin({
   studentId: number;
   studentName: string;
 }) {
+  const t = useT();
   const { data } = useQuery<DebtOrigin | null>({
     queryKey: ["student-debt-origin", studentId],
     queryFn: () =>
@@ -62,7 +64,11 @@ export function StudentDebtOrigin({
   }));
   const total = slices.reduce((s, x) => s + x.amount, 0);
   const label =
-    months === 0 ? "shu oydan" : months === 1 ? "1 oy" : `${months} oy`;
+    months === 0
+      ? t("shu oydan qarzdor")
+      : months === 1
+        ? t("1 oy qarzdor")
+        : t("{n} oy qarzdor", { n: months });
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5">
@@ -78,11 +84,11 @@ export function StudentDebtOrigin({
               }
             >
               <CalendarClock className="mr-1 size-3" />
-              {label} qarzdor
+              {label}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            {format(since, "dd.MM.yyyy")} dan beri
+            {t("{date} dan beri", { date: format(since, "dd.MM.yyyy") })}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

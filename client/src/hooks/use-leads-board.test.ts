@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  leadConvertedLabel,
   useLeadsBoard,
   type LeadBoardColumn,
   type LeadCard,
@@ -172,5 +173,21 @@ describe("moveColumn", () => {
     await state().moveColumn("c1", "right");
     expect(patch).not.toHaveBeenCalled();
     expect(state().board).toBe(board);
+  });
+});
+
+describe("leadConvertedLabel", () => {
+  const up = (source: string) => source.toUpperCase();
+
+  it("keeps the Uzbek text without a translator", () => {
+    expect(leadConvertedLabel("CONVERTED", null)).toBe("O'quvchiga aylangan");
+    expect(leadConvertedLabel("CONVERTED", "LINKED_TO_EXISTING")).toBe("Mavjud o'quvchiga biriktirilgan");
+    expect(leadConvertedLabel("LOST", null)).toBe("Yo'qotilgan");
+  });
+
+  it("translates the converted texts and leaves other statuses to their own label", () => {
+    expect(leadConvertedLabel("CONVERTED", null, up)).toBe("O'QUVCHIGA AYLANGAN");
+    expect(leadConvertedLabel("CONVERTED", "LINKED_TO_EXISTING", up)).toBe("MAVJUD O'QUVCHIGA BIRIKTIRILGAN");
+    expect(leadConvertedLabel("LOST", null, up)).toBe("Yo'qotilgan");
   });
 });

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 import type { StatementModel, StatementView } from "./statement-types";
 
 const ANSWER_TONE = {
@@ -24,13 +25,14 @@ export function StatementSummary({
   answer: StatementView["answer"];
   equation: StatementModel["equation"];
 }) {
+  const t = useT();
   const other =
     equation.items.reduce((sum, i) => sum + i.amount, 0) -
     equation.prepaidAhead;
   const tiles = [
-    { label: "To'lagan", value: formatNumber(equation.paid) },
-    { label: "Darslar narxi", value: formatNumber(equation.lessons) },
-    ...(other !== 0 ? [{ label: "Boshqa", value: signed(other) }] : []),
+    { label: t("To'lagan"), value: formatNumber(equation.paid) },
+    { label: t("Darslar narxi"), value: formatNumber(equation.lessons) },
+    ...(other !== 0 ? [{ label: t("Boshqa"), value: signed(other) }] : []),
   ];
   const balanceTone =
     equation.balance < 0
@@ -53,16 +55,16 @@ export function StatementSummary({
           tiles.length === 3 ? "sm:grid-cols-4" : "sm:grid-cols-3",
         )}
       >
-        {tiles.map((t) => (
-          <div key={t.label} className="rounded-lg border px-3 py-2">
-            <dt className="text-xs text-muted-foreground">{t.label}</dt>
+        {tiles.map((tile) => (
+          <div key={tile.label} className="rounded-lg border px-3 py-2">
+            <dt className="text-xs text-muted-foreground">{tile.label}</dt>
             <dd className="font-mono text-base font-semibold tabular-nums">
-              {t.value}
+              {tile.value}
             </dd>
           </div>
         ))}
         <div className="rounded-lg border bg-muted/30 px-3 py-2">
-          <dt className="text-xs text-muted-foreground">Qoldiq</dt>
+          <dt className="text-xs text-muted-foreground">{t("Qoldiq")}</dt>
           <dd
             className={cn(
               "font-mono text-base font-semibold tabular-nums",

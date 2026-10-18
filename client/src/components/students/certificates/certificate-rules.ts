@@ -1,6 +1,13 @@
 import { formatBalance } from "@/lib/format-utils";
+import { msg } from "@/i18n/msg";
+import { interpolate, type Params } from "@/i18n/translate";
 import { tashkentNow } from "@/lib/tashkent-time";
 import type { IssuedCertificate, LevelPreview } from "./certificate-types";
+
+/** `t` of a page with a language; the default says the Uzbek text. */
+type Translate = (source: string, params?: Params) => string;
+
+const SAY_UZBEK: Translate = interpolate;
 
 /** 'YYYY-MM-DD' → 'dd.MM.yyyy' (a calendar day, no timezone arithmetic). */
 export function dmy(ymd: string): string {
@@ -31,10 +38,12 @@ export function issueMode(
 }
 
 /** The owner's words (17.10.2026), one place: the dialog, the exemption notice and their test read these. */
-export const REISSUE_CONFIRM_TEXT =
-  "Bu daraja uchun hujjat allaqachon berilgan. Yangi raqamli yana bittasini berasizmi?";
-export const REISSUE_EXEMPT_NOTICE =
-  "Bu daraja uchun hujjat allaqachon berilgan. Yangisiga yangi raqam beriladi.";
+export const REISSUE_CONFIRM_TEXT = msg(
+  "Bu daraja uchun hujjat allaqachon berilgan. Yangi raqamli yana bittasini berasizmi?",
+);
+export const REISSUE_EXEMPT_NOTICE = msg(
+  "Bu daraja uchun hujjat allaqachon berilgan. Yangisiga yangi raqam beriladi.",
+);
 
 /**
  * A level that already has a STANDING document asks before another one (with a
@@ -60,17 +69,24 @@ export function canSubmitRevoke(reason: string, busy: boolean): boolean {
 }
 
 /** A short hint only once something is typed and it is still too short. */
-export function revokeReasonHint(text: string): string | null {
+export function revokeReasonHint(text: string, t: Translate = SAY_UZBEK): string | null {
   const n = text.trim().length;
-  return n > 0 && n < REVOKE_REASON_MIN ? "Sabab kamida 3 belgidan iborat bo'lsin" : null;
+  return n > 0 && n < REVOKE_REASON_MIN ? t("Sabab kamida 3 belgidan iborat bo'lsin") : null;
 }
 
-/** The owner's words (17.10.2026) for the cancel confirmation. */
-export function revokeDescription(number: string): string {
-  return `${number} raqamli hujjat bekor qilinadi. QR sahifa «bekor qilingan» deb ko'rsatadi, PDF endi berilmaydi, raqam qayta berilmaydi. Buni qaytarib bo'lmaydi.`;
+/**
+ * The owner's words (17.10.2026) for the cancel confirmation. «bekor qilingan»
+ * is what the public QR page prints (it is Uzbek only), so every translation
+ * keeps those two words as they are.
+ */
+export function revokeDescription(number: string, t: Translate = SAY_UZBEK): string {
+  return t(
+    "{number} raqamli hujjat bekor qilinadi. QR sahifa «bekor qilingan» deb ko'rsatadi, PDF endi berilmaydi, raqam qayta berilmaydi. Buni qaytarib bo'lmaydi.",
+    { number },
+  );
 }
 
-export const REVOKED_PILL = "Bekor qilingan";
+export const REVOKED_PILL = msg("Bekor qilingan");
 
 export interface RevokedState {
   pill: string;
@@ -80,13 +96,14 @@ export interface RevokedState {
 }
 
 /** What a cancelled row shows; null for a document that stands. */
-export function revokedState(row: IssuedCertificate): RevokedState | null {
+export function revokedState(row: IssuedCertificate, t: Translate = SAY_UZBEK): RevokedState | null {
   if (!row.revoked) return null;
   const reason = row.revokedReason?.trim();
   return {
-    pill: REVOKED_PILL,
+    pill: t(REVOKED_PILL),
     day: row.revokedAt ? issuedDay(row.revokedAt) : null,
-    reasonLine: reason ? `Sabab: ${reason}` : null,
+    // The reason is what staff typed: data, passed in as a value.
+    reasonLine: reason ? t("Sabab: {reason}", { reason }) : null,
   };
 }
 
@@ -114,48 +131,61 @@ export interface SummaryLine {
  * Every figure and limit is the server's: `balance` is the student's balance now,
  * `verdict.latePercent` the server's own rounding. Nothing is computed here.
  */
-export function levelSummary(l: LevelPreview, balance: number): SummaryLine[] {
+export function levelSummary(l: LevelPreview, balance: number, t: Translate = SAY_UZBEK): SummaryLine[] {
+  const limit = (percent: number) => t("chegara {n}%", { n: percent });
   const lines: SummaryLine[] = [
     {
-      label: "Davomat",
-      value: `${percentText(l.attendance.percent)} · ${l.attendance.attended} / ${l.attendance.counted} dars`,
-      hint: `chegara ${l.thresholds.attendance}%`,
+      label: t("Davomat"),
+      value: t("{percent} · {done} / {total} dars", {
+        percent: percentText(l.attendance.percent),
+        done: l.attendance.attended,
+        total: l.attendance.counted,
+      }),
+      hint: limit(l.thresholds.attendance),
     },
   ];
   lines.push({
-    label: "Darslar soni",
-    value: `${l.attendance.counted} ta`,
-    hint: `kamida ${l.thresholds.minLessons} ta`,
+    label: t("Darslar soni"),
+    value: t("{n} ta", { n: l.attendance.counted }),
+    hint: t("kamida {n} ta", { n: l.thresholds.minLessons }),
   });
   lines.push({
-    label: "Kech qolgan",
-    value: `${l.attendance.late} / ${l.attendance.attended} dars (${percentText(l.verdict.latePercent)})`,
-    hint: `chegara ${l.thresholds.maxLatePercent}%`,
+    label: t("Kech qolgan"),
+    value: t("{late} / {attended} dars ({percent})", {
+      late: l.attendance.late,
+      attended: l.attendance.attended,
+      percent: percentText(l.verdict.latePercent),
+    }),
+    hint: limit(l.thresholds.maxLatePercent),
   });
   if (l.app.applies) {
     lines.push({
-      label: "Ilova",
-      value: `${percentText(l.app.percent)} · ${l.app.done} / ${l.app.open} dars`,
-      hint: l.thresholds.app === null ? null : `chegara ${l.thresholds.app}%`,
+      label: t("Ilova"),
+      value: t("{percent} · {done} / {total} dars", {
+        percent: percentText(l.app.percent),
+        done: l.app.done,
+        total: l.app.open,
+      }),
+      hint: l.thresholds.app === null ? null : limit(l.thresholds.app),
     });
   } else {
-    lines.push({ label: "Ilova", value: "shart qo'llanmaydi", hint: null });
+    lines.push({ label: t("Ilova"), value: t("shart qo'llanmaydi"), hint: null });
   }
   if (l.unitTests) {
     lines.push({
-      label: "Yakuniy sinovlar",
+      label: t("Yakuniy sinovlar"),
       value: `${l.unitTests.passed} / ${l.unitTests.total}`,
-      hint: "hammasi kerak",
+      hint: t("hammasi kerak"),
     });
   }
   lines.push({
-    label: "Qarz",
-    value: balance < 0 ? formatBalance(-balance) : "yo'q",
+    label: t("Qarz"),
+    value: balance < 0 ? formatBalance(-balance, t("so'm")) : t("yo'q"),
     hint: null,
   });
   if (l.mock) {
     lines.push({
-      label: "Mock imtihon",
+      label: t("Mock imtihon"),
       value: `${l.mock.score} / ${l.mock.maxScore}${l.mock.date ? ` · ${dmy(l.mock.date)}` : ""}`,
       hint: null,
     });

@@ -3,6 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
 import { oxirgiFaollikMatni, StudentActivityPanel } from "./student-activity-panel";
 import type { Davr } from "./types";
 
@@ -19,6 +20,7 @@ export function StudentActivitySheet({
   onDavrChange: (d: Davr) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <Sheet open={studentId !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
@@ -39,14 +41,14 @@ export function StudentActivitySheet({
                       </Avatar>
                       <div className="min-w-0">
                         <SheetTitle className="truncate">{data.ism}</SheetTitle>
-                        <SheetDescription>Oxirgi faollik: {oxirgiFaollikMatni(data)}</SheetDescription>
+                        <SheetDescription>{t("Oxirgi faollik: {when}", { when: oxirgiFaollikMatni(data, t) })}</SheetDescription>
                       </div>
                     </div>
                     {data.akkaunt && meta}
                   </>
                 ) : (
                   <>
-                    <SheetTitle className="sr-only">O&apos;quvchi faolligi</SheetTitle>
+                    <SheetTitle className="sr-only">{t("O'quvchi faolligi")}</SheetTitle>
                     <Skeleton className="h-11 w-56" />
                   </>
                 )}

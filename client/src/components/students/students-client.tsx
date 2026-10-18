@@ -32,6 +32,7 @@ import { useBranchStatus, useBranchSwitcher } from "@/hooks/use-branch-switcher"
 import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import {
   BRANCH_CLOSED_TO_REGISTRATION,
   branchClosedToRegistration,
@@ -53,6 +54,7 @@ const filtersSchema = {
 };
 
 export function StudentsClient() {
+  const t = useT();
   const [students, setStudents] = useState<Student[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<StudentsStatsData>({ total: 0, active: 0, frozen: 0, debtors: 0 });
@@ -72,11 +74,11 @@ export function StudentsClient() {
   );
   // Why "Havola olish" is disabled, or null when a link can be handed out.
   const linkUnavailableReason = !selectedBranch
-    ? "Avval filial tanlang"
+    ? t("Avval filial tanlang")
     : branchClosed
-      ? BRANCH_CLOSED_TO_REGISTRATION
+      ? t(BRANCH_CLOSED_TO_REGISTRATION)
       : !isTelegramBotConfigured
-        ? TELEGRAM_BOT_NOT_CONFIGURED
+        ? t(TELEGRAM_BOT_NOT_CONFIGURED)
         : null;
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
@@ -87,12 +89,12 @@ export function StudentsClient() {
     if (!selectedBranch || branchClosed) return;
     const link = buildBotLink(`student_${selectedBranch.id}`);
     if (!link) {
-      toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
+      toast.error(t(TELEGRAM_BOT_NOT_CONFIGURED));
       return;
     }
     await navigator.clipboard.writeText(link);
     setCopied(true);
-    toast.success("Havola nusxalandi");
+    toast.success(t("Havola nusxalandi"));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -174,10 +176,10 @@ export function StudentsClient() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">
-            O&apos;quvchilar
+            {t("O'quvchilar")}
           </h1>
           <p className="text-muted-foreground">
-            {isTeacher ? "Sizning guruhlaringizdagi o\u2018quvchilar" : "Barcha o\u2018quvchilar ro\u2018yxati"}
+            {isTeacher ? t("Sizning guruhlaringizdagi o'quvchilar") : t("Barcha o'quvchilar ro'yxati")}
           </p>
         </div>
         {canManage && (
@@ -187,11 +189,11 @@ export function StudentsClient() {
                 <TooltipTrigger asChild>
                   <Button onClick={() => setAddOpen(true)} data-tour="student-add" className="shrink-0">
                     <Plus className="mr-2 size-4" />
-                    Yangi o&apos;quvchi
+                    {t("Yangi o'quvchi")}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Qo&apos;lda yangi o&apos;quvchi qo&apos;shish (Telegramsiz)
+                  {t("Qo'lda yangi o'quvchi qo'shish (Telegramsiz)")}
                 </TooltipContent>
               </Tooltip>
             ) : (
@@ -200,11 +202,11 @@ export function StudentsClient() {
                   <span tabIndex={0}>
                     <Button disabled className="shrink-0">
                       <Plus className="mr-2 size-4" />
-                      Yangi o&apos;quvchi
+                      {t("Yangi o'quvchi")}
                     </Button>
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>Avval filial tanlang</TooltipContent>
+                <TooltipContent>{t("Avval filial tanlang")}</TooltipContent>
               </Tooltip>
             )}
             {linkUnavailableReason === null ? (
@@ -216,11 +218,11 @@ export function StudentsClient() {
                     ) : (
                       <Copy className="mr-2 size-4" />
                     )}
-                    {copied ? "Nusxalandi" : "Havola olish"}
+                    {copied ? t("Nusxalandi") : t("Havola olish")}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Telegram orqali ro&apos;yxatdan o&apos;tish havolasini nusxalash
+                  {t("Telegram orqali ro'yxatdan o'tish havolasini nusxalash")}
                 </TooltipContent>
               </Tooltip>
             ) : (
@@ -229,7 +231,7 @@ export function StudentsClient() {
                   <span tabIndex={0}>
                     <Button variant="outline" disabled className="shrink-0">
                       <Copy className="mr-2 size-4" />
-                      Havola olish
+                      {t("Havola olish")}
                     </Button>
                   </span>
                 </TooltipTrigger>
@@ -300,7 +302,7 @@ export function StudentsClient() {
       {totalPages > 1 && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-sm">Sahifada:</span>
+            <span className="text-muted-foreground text-sm">{t("Sahifada:")}</span>
             <Select value={String(filters.pageSize)} onValueChange={handlePageSizeChange}>
               <SelectTrigger className="h-8 w-20">
                 <SelectValue />
@@ -314,7 +316,7 @@ export function StudentsClient() {
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-sm">
-              {`Jami: ${total} ta o'quvchi`}
+              {t("Jami: {n} ta o'quvchi", { n: total })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -325,7 +327,7 @@ export function StudentsClient() {
               onClick={() => setFilter("page", filters.page - 1)}
             >
               <ChevronLeft className="mr-1 size-4" />
-              Oldingi
+              {t("Oldingi")}
             </Button>
             <span className="text-sm">
               {filters.page} / {totalPages}
@@ -336,7 +338,7 @@ export function StudentsClient() {
               disabled={filters.page >= totalPages}
               onClick={() => setFilter("page", filters.page + 1)}
             >
-              Keyingi
+              {t("Keyingi")}
               <ChevronRight className="ml-1 size-4" />
             </Button>
           </div>

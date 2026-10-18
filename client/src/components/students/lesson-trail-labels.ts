@@ -1,4 +1,10 @@
-import { MONTH_NAMES } from "@/components/groups/attendance/attendance-cycle-utils";
+import { monthShort } from "@/components/payments/salary-utils";
+import { interpolate, type Params } from "@/i18n/translate";
+
+/** `t` of a page with a language; the default says the Uzbek text. */
+type Translate = (source: string, params?: Params) => string;
+
+const SAY_UZBEK: Translate = interpolate;
 
 /**
  * A «Darslar» block's title: a month from the first monthly charge on
@@ -8,21 +14,23 @@ import { MONTH_NAMES } from "@/components/groups/attendance/attendance-cycle-uti
 export function blockTitle(
   block: { cycleSequenceNumber: number | null; month?: string | null },
   currentYear: string,
+  t: Translate = SAY_UZBEK,
 ): string {
   if (block.month) {
     const [year, month] = block.month.split("-");
-    const name = MONTH_NAMES[Number(month)] ?? block.month;
+    const name = monthShort(`${year}-${month}`, t);
     return year === currentYear ? name : `${name} ${year}`;
   }
-  return `${block.cycleSequenceNumber}-sikl`;
+  return t("{n}-sikl", { n: block.cycleSequenceNumber ?? "" });
 }
 
 /** "1/13 dars" while a block is not full; "13 dars" when full or of unknown size. */
 export function blockCount(
   lessonCount: number,
   capacity: number | null,
+  t: Translate = SAY_UZBEK,
 ): string {
   return capacity !== null && lessonCount < capacity
-    ? `${lessonCount}/${capacity} dars`
-    : `${lessonCount} dars`;
+    ? t("{n}/{capacity} dars", { n: lessonCount, capacity })
+    : t("{n} dars", { n: lessonCount });
 }

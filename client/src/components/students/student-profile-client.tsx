@@ -17,8 +17,10 @@ import { usePublishEntity } from "@/components/tasks/entity-context";
 import type { Student } from "@/data/student-model";
 import api from "@/lib/api";
 import { otherBranchOf, type OtherBranch } from "@/lib/other-branch";
+import { useT } from "@/i18n/context";
 
 export function StudentProfileClient({ studentId }: { studentId: string }) {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -107,11 +109,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
 
   if (otherBranch) {
     return (
-      <InOtherBranch
-        title="O'quvchi boshqa filialda"
-        what="o'quvchi"
-        branch={otherBranch}
-      />
+      <InOtherBranch what="o'quvchi" branch={otherBranch} />
     );
   }
 
@@ -119,10 +117,10 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
     return (
       <div className="space-y-6">
         <h1 className="font-heading text-2xl font-bold tracking-tight">
-          O&apos;quvchi topilmadi
+          {t("O'quvchi topilmadi")}
         </h1>
         <p className="text-muted-foreground">
-          ID: {studentId} bo&apos;yicha o&apos;quvchi mavjud emas
+          {t("ID: {id} bo'yicha o'quvchi mavjud emas", { id: studentId })}
         </p>
       </div>
     );

@@ -1,5 +1,6 @@
 import { format } from "date-fns";
-import { formatNumber } from "@/lib/format-utils";
+import { formatBalance } from "@/lib/format-utils";
+import { interpolate, type Params } from "@/i18n/translate";
 
 /**
  * How a ledger row relates to a cancellation (`reversal` on the rows of
@@ -25,15 +26,26 @@ const day = (iso: string) => format(new Date(iso), "dd.MM.yyyy");
  * One line saying what happened: "26.09.2026 da bekor qilingan: <sabab>" on
  * the cancelled row, "18.09.2026 dagi -37 500 so'm bekor qilindi: <sabab>"
  * on the row that cancelled it. The student portal leaves the reason out:
- * it is written for staff.
+ * it is written for staff. The reason is the staff's own text and is never
+ * translated; `t` puts the rest into the page's language (the default says the
+ * Uzbek text, so the student portal is unchanged).
  */
 export function reversalNote(
   reversal: LedgerReversal,
-  { withReason = true }: { withReason?: boolean } = {},
+  {
+    withReason = true,
+    t = interpolate,
+  }: {
+    withReason?: boolean;
+    t?: (source: string, params?: Params) => string;
+  } = {},
 ): string {
   const head =
     reversal.kind === "reversed"
-      ? `${day(reversal.at)} da bekor qilingan`
-      : `${day(reversal.originalAt)} dagi ${formatNumber(reversal.originalAmount)} so'm bekor qilindi`;
+      ? t("{date} da bekor qilingan", { date: day(reversal.at) })
+      : t("{date} dagi {amount} bekor qilindi", {
+          date: day(reversal.originalAt),
+          amount: formatBalance(reversal.originalAmount, t("so'm")),
+        });
   return withReason && reversal.reason ? `${head}: ${reversal.reason}` : head;
 }

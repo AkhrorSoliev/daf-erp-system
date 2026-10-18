@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/format-utils";
+import { interpolate, type Params } from "@/i18n/translate";
 
 /** `GET /students/:id/active-enrollments-prepaid` → `pack[]` (LESSON_PACK only). */
 export interface PackRefundRow {
@@ -38,12 +39,19 @@ export function freezePreviewLists(data: unknown): FreezeRefundPreview {
   return { pack: d.pack ?? [], monthly: d.monthly ?? [] };
 }
 
-/** The read-only line under a monthly enrollment in the freeze dialog. */
+/**
+ * The read-only line under a monthly enrollment in the freeze dialog. The
+ * optional last `t` is the page's translator; the default says the Uzbek text.
+ */
 export function monthlyReleaseLabel(
   row: Pick<MonthlyReleaseRow, "releaseLessons" | "releaseAmount">,
+  t: (source: string, params?: Params) => string = interpolate,
 ): string {
   if (row.releaseLessons <= 0 || row.releaseAmount <= 0) {
-    return "Bu oydan qaytadigan dars yo'q — balans o'zgarmaydi";
+    return t("Bu oydan qaytadigan dars yo'q — balans o'zgarmaydi");
   }
-  return `Oyning qolgan ${row.releaseLessons} darsi uchun ${formatPrice(row.releaseAmount)} so'm balansga qaytadi`;
+  return t("Oyning qolgan {lessons} darsi uchun {amount} so'm balansga qaytadi", {
+    lessons: row.releaseLessons,
+    amount: formatPrice(row.releaseAmount),
+  });
 }

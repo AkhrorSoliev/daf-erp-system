@@ -1,35 +1,49 @@
+import { msg } from "@/i18n/msg";
+import { interpolate, type Params } from "@/i18n/translate";
 import type { DafSkill, DarajaHolati, OquvchiFaolligi, Platforma } from "./types";
 
+/**
+ * The helpers that build a text take the page's translator as an optional last
+ * argument; the default says the Uzbek text, so the group and center pages that
+ * do not pass one are unchanged.
+ */
+export type Translate = (source: string, params?: Params) => string;
+
+const SAY_UZBEK: Translate = interpolate;
+
+// Draw with `t(…)`.
 export const PLATFORMA_NOMLARI: Record<Platforma, string> = {
-  WEB: "Veb",
-  ANDROID: "Android",
-  IOS: "iOS",
+  WEB: msg("Veb"),
+  ANDROID: msg("Android"),
+  IOS: msg("iOS"),
 };
 
+// `uz` is drawn with `t(…)`; `de` is the course's German skill name and stays as it is.
 export const KONIKMA_NOMLARI: Record<DafSkill, { uz: string; de: string }> = {
-  WORTSCHATZ: { uz: "Lug'at", de: "Wortschatz" },
-  GRAMMATIK: { uz: "Grammatika", de: "Grammatik" },
-  LESEN: { uz: "O'qish", de: "Lesen" },
-  HOEREN: { uz: "Tinglash", de: "Hören" },
-  SCHREIBEN: { uz: "Yozish", de: "Schreiben" },
-  SPRECHEN: { uz: "Gapirish", de: "Sprechen" },
+  WORTSCHATZ: { uz: msg("Lug'at"), de: "Wortschatz" },
+  GRAMMATIK: { uz: msg("Grammatika"), de: "Grammatik" },
+  LESEN: { uz: msg("O'qish"), de: "Lesen" },
+  HOEREN: { uz: msg("Tinglash"), de: "Hören" },
+  SCHREIBEN: { uz: msg("Yozish"), de: "Schreiben" },
+  SPRECHEN: { uz: msg("Gapirish"), de: "Sprechen" },
 };
 
+// Draw with `t(…)`.
 export const DARAJA_HOLATI_NOMLARI: Record<DarajaHolati, string> = {
-  DAVOM: "Davom etmoqda",
-  TUGATILGAN: "Tugatilgan",
-  BOSHLANMAGAN: "Boshlanmagan",
-  KURS_YOQ: "Kurs hali yo'q",
+  DAVOM: msg("Davom etmoqda"),
+  TUGATILGAN: msg("Tugatilgan"),
+  BOSHLANMAGAN: msg("Hali boshlanmagan"),
+  KURS_YOQ: msg("Kurs hali yo'q"),
 };
 
-export function formatDavomiylik(soniya: number): string {
-  if (soniya <= 0) return "0 daq";
-  if (soniya < 60) return "<1 daq";
+export function formatDavomiylik(soniya: number, t: Translate = SAY_UZBEK): string {
+  if (soniya <= 0) return t("0 daq");
+  if (soniya < 60) return t("<1 daq");
   const daqiqa = Math.floor(soniya / 60);
   const soat = Math.floor(daqiqa / 60);
   const qoldiq = daqiqa % 60;
-  if (soat === 0) return `${qoldiq} daq`;
-  return qoldiq === 0 ? `${soat} soat` : `${soat} soat ${qoldiq} daq`;
+  if (soat === 0) return t("{n} daq", { n: qoldiq });
+  return qoldiq === 0 ? t("{n} soat", { n: soat }) : t("{h} soat {m} daq", { h: soat, m: qoldiq });
 }
 
 /** `YYYY-MM-DD` → `DD.MM`. Satrdan o'qiladi — brauzer vaqt mintaqasi aralashmaydi. */
@@ -55,14 +69,15 @@ export function hechQachonKirmaganmi(data: FaollikXulosasi): boolean {
   );
 }
 
-const HAFTA = ["Yak", "Du", "Se", "Chor", "Pay", "Ju", "Sha"];
+const HAFTA = [msg("Yak"), msg("Du"), msg("Se"), msg("Chor"), msg("Pay"), msg("Ju"), msg("Sha")];
 
-export function haftaKuni(sana: string): string {
-  return HAFTA[new Date(`${sana}T00:00:00Z`).getUTCDay()];
+export function haftaKuni(sana: string, t: Translate = SAY_UZBEK): string {
+  const nom = HAFTA[new Date(`${sana}T00:00:00Z`).getUTCDay()];
+  return t(nom);
 }
 
-export function formatKunYorligi(sana: string): string {
-  return `${formatKunOy(sana)} (${haftaKuni(sana)})`;
+export function formatKunYorligi(sana: string, t: Translate = SAY_UZBEK): string {
+  return `${formatKunOy(sana)} (${haftaKuni(sana, t)})`;
 }
 
 const TOSHKENT_MS = 5 * 60 * 60 * 1000;
@@ -70,18 +85,18 @@ const toshkent = (d: Date) => new Date(d.getTime() + TOSHKENT_MS);
 const kunKaliti = (d: Date) => toshkent(d).toISOString().slice(0, 10);
 const soatDaqiqa = (d: Date) => toshkent(d).toISOString().slice(11, 16);
 
-export function formatOxirgiFaollik(iso: string | null, now: Date): string {
-  if (!iso) return "Ilovaga hali kirmagan";
+export function formatOxirgiFaollik(iso: string | null, now: Date, t: Translate = SAY_UZBEK): string {
+  if (!iso) return t("Ilovaga hali kirmagan");
   const vaqt = new Date(iso);
-  if (now.getTime() - vaqt.getTime() < 5 * 60 * 1000) return "Hozirgina";
+  if (now.getTime() - vaqt.getTime() < 5 * 60 * 1000) return t("Hozirgina");
   const farq = Math.round(
     (new Date(`${kunKaliti(now)}T00:00:00Z`).getTime() -
       new Date(`${kunKaliti(vaqt)}T00:00:00Z`).getTime()) /
       86_400_000,
   );
-  if (farq <= 0) return `Bugun, ${soatDaqiqa(vaqt)}`;
-  if (farq === 1) return `Kecha, ${soatDaqiqa(vaqt)}`;
-  return `${farq} kun oldin`;
+  if (farq <= 0) return t("Bugun, {time}", { time: soatDaqiqa(vaqt) });
+  if (farq === 1) return t("Kecha, {time}", { time: soatDaqiqa(vaqt) });
+  return t("{n} kun oldin", { n: farq });
 }
 
 export function formatSanaVaqt(iso: string): string {

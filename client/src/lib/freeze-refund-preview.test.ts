@@ -14,6 +14,16 @@ describe("monthlyReleaseLabel", () => {
       "Bu oydan qaytadigan dars yo'q — balans o'zgarmaydi",
     );
   });
+  it("hands the sentence and its figures to the page's translator", () => {
+    const t = (source: string, params?: Record<string, string | number>) =>
+      `[${source}|${params ? Object.keys(params).join(",") : ""}]`;
+    expect(monthlyReleaseLabel({ releaseLessons: 8, releaseAmount: 276_920 }, t)).toBe(
+      "[Oyning qolgan {lessons} darsi uchun {amount} so'm balansga qaytadi|lessons,amount]",
+    );
+    expect(monthlyReleaseLabel({ releaseLessons: 0, releaseAmount: 0 }, t)).toBe(
+      "[Bu oydan qaytadigan dars yo'q — balans o'zgarmaydi|]",
+    );
+  });
 });
 
 describe("freezePreviewLists", () => {

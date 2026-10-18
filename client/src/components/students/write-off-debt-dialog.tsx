@@ -24,6 +24,7 @@ import {
   writeOffNoticeCopy,
   type DebtWriteOffEligibility,
 } from "./debt-write-off-types";
+import { useT } from "@/i18n/context";
 
 interface WriteOffDebtDialogProps {
   open: boolean;
@@ -52,6 +53,7 @@ export function WriteOffDebtDialog({
   groupName,
   onSuccess,
 }: WriteOffDebtDialogProps) {
+  const t = useT();
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -93,12 +95,12 @@ export function WriteOffDebtDialog({
           confirmAmount: eligibility.details.suggestedWriteOff,
         },
       );
-      toast.success("Joriy sikl qarzi hisobdan chiqarildi");
+      toast.success(t("Joriy sikl qarzi hisobdan chiqarildi"));
       onSuccess?.();
       onOpenChange(false);
     } catch (err) {
       toast.error(
-        getErrorMessage(err, "Hisobdan chiqarishda xatolik yuz berdi"),
+        getErrorMessage(err, t("Hisobdan chiqarishda xatolik yuz berdi")),
       );
     } finally {
       setSubmitting(false);
@@ -109,11 +111,11 @@ export function WriteOffDebtDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-lg">
         <AlertDialogHeader>
-          <AlertDialogTitle>Joriy sikl qarzini hisobdan chiqarish</AlertDialogTitle>
+          <AlertDialogTitle>{t("Joriy sikl qarzini hisobdan chiqarish")}</AlertDialogTitle>
           <AlertDialogDescription>
             {groupName
-              ? `Guruh: ${groupName}`
-              : "Yopilgan yozuv uchun joriy sikl qarzi tahlili"}
+              ? t("Guruh: {name}", { name: groupName })
+              : t("Yopilgan yozuv uchun joriy sikl qarzi tahlili")}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -140,7 +142,7 @@ export function WriteOffDebtDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={submitting}>
-            Bekor qilish
+            {t("Bekor qilish")}
           </AlertDialogCancel>
           {eligibility?.eligible && (
             <Button
@@ -151,10 +153,10 @@ export function WriteOffDebtDialog({
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Bajarilmoqda...
+                  {t("Bajarilmoqda...")}
                 </>
               ) : (
-                "Hisobdan chiqarish"
+                t("Hisobdan chiqarish")
               )}
             </Button>
           )}
@@ -169,16 +171,18 @@ function IneligibleNotice({
 }: {
   eligibility: DebtWriteOffEligibility;
 }) {
+  const t = useT();
   // Sarlavha va matn qarori sof funksiyada turadi (debt-write-off-types.ts)
   // — yonidagi .test.ts uni qulflaydi, chunki client testlari komponentni
   // chizmaydi va JSX ichidagi shart hech qanday qorovulsiz qolardi.
   const copy = writeOffNoticeCopy(eligibility.reason);
   return (
     <div className="rounded-md border border-muted-foreground/30 bg-muted/40 p-3 text-sm">
-      <p className="font-medium">{copy.heading}</p>
-      <p className="mt-1 text-muted-foreground">{copy.body}</p>
+      <p className="font-medium">{t(copy.heading)}</p>
+      <p className="mt-1 text-muted-foreground">{t(copy.body)}</p>
       <div className="mt-2 text-xs text-muted-foreground">
-        Joriy balans: <strong>{formatBalance(eligibility.details.currentBalance)}</strong>
+        {t("Joriy balans:")}{" "}
+        <strong>{formatBalance(eligibility.details.currentBalance, t("so'm"))}</strong>
       </div>
     </div>
   );
@@ -195,6 +199,7 @@ function EligibleBlock({
   onReasonChange: (v: string) => void;
   disabled: boolean;
 }) {
+  const t = useT();
   const d = eligibility.details;
   const balanceClass =
     d.currentBalance < 0 ? "text-destructive" : "text-emerald-600";
@@ -204,46 +209,47 @@ function EligibleBlock({
       <div className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
         <p className="text-sm text-amber-900 dark:text-amber-200">
-          Bu o&apos;quvchi joriy ({d.lessonPaymentCount} darslik) siklda biror
-          marta darsga kelmagan.
+          {t("Bu o'quvchi joriy ({n} darslik) siklda biror marta darsga kelmagan.", {
+            n: d.lessonPaymentCount,
+          })}
         </p>
       </div>
 
       <div className="rounded-md border bg-background/80 p-3 text-xs">
         <div className="grid grid-cols-[1fr_auto] gap-y-1">
-          <span className="text-muted-foreground">Sikl raqami:</span>
+          <span className="text-muted-foreground">{t("Sikl raqami:")}</span>
           <span className="text-right font-medium">#{d.cycleNumber}</span>
 
-          <span className="text-muted-foreground">Qatnashgan (keldi, kechikdi):</span>
+          <span className="text-muted-foreground">{t("Qatnashgan (keldi, kechikdi):")}</span>
           <span className="text-right font-medium">
-            {d.cyclePresentCount + d.cycleLateCount} dars
+            {t("{n} dars", { n: d.cyclePresentCount + d.cycleLateCount })}
           </span>
 
-          <span className="text-muted-foreground">Kelmagan (sababsiz):</span>
-          <span className="text-right font-medium">{d.cycleAbsentCount} dars</span>
+          <span className="text-muted-foreground">{t("Kelmagan (sababsiz):")}</span>
+          <span className="text-right font-medium">{t("{n} dars", { n: d.cycleAbsentCount })}</span>
 
-          <span className="text-muted-foreground">Bir dars narxi:</span>
+          <span className="text-muted-foreground">{t("Bir dars narxi:")}</span>
           <span className="text-right font-medium">
-            {formatBalance(d.perLessonCost)}
+            {formatBalance(d.perLessonCost, t("so'm"))}
           </span>
 
-          <span className="text-muted-foreground">Joriy balans:</span>
+          <span className="text-muted-foreground">{t("Joriy balans:")}</span>
           <span className={`text-right font-medium ${balanceClass}`}>
-            {formatBalance(d.currentBalance)}
+            {formatBalance(d.currentBalance, t("so'm"))}
           </span>
 
           <span className="mt-1 border-t pt-1 text-muted-foreground">
-            Hisobdan chiqariladigan summa:
+            {t("Hisobdan chiqariladigan summa:")}
           </span>
           <span className="mt-1 border-t pt-1 text-right font-semibold text-amber-700 dark:text-amber-300">
-            {formatBalance(d.suggestedWriteOff)}
+            {formatBalance(d.suggestedWriteOff, t("so'm"))}
           </span>
         </div>
         {d.theoreticalCycleDebt > d.suggestedWriteOff && (
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Nazariy qarz {formatNumber(d.theoreticalCycleDebt)} so&apos;m, lekin
-            joriy balansdan ko&apos;p emas — faqat haqiqiy qarz miqdorida
-            chiqariladi.
+            {t("Nazariy qarz {amount} so'm, lekin joriy balansdan ko'p emas — faqat haqiqiy qarz miqdorida chiqariladi.", {
+              amount: formatNumber(d.theoreticalCycleDebt),
+            })}
           </p>
         )}
       </div>
@@ -253,11 +259,11 @@ function EligibleBlock({
           htmlFor="standalone-write-off-reason"
           className="text-xs text-muted-foreground"
         >
-          Izoh (majburiy, kamida 5 belgi)
+          {t("Izoh (majburiy, kamida 5 belgi)")}
         </Label>
         <Textarea
           id="standalone-write-off-reason"
-          placeholder="Masalan: O'quvchi yo'qolib qoldi, aloqaga chiqmadi..."
+          placeholder={t("Masalan: O'quvchi yo'qolib qoldi, aloqaga chiqmadi...")}
           value={reason}
           onChange={(e) => onReasonChange(e.target.value)}
           rows={3}

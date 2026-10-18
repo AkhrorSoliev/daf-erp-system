@@ -19,6 +19,7 @@ export function interpolate(text: string, params?: Params): string {
  * is not translated yet still works.
  */
 export function translate(locale: UiLocale, dictionary: Dictionary, source: string, params?: Params): string {
+  if (typeof source !== "string") return "";
   let text: string;
   if (locale === "uz") text = source;
   else if (locale === "uz-Cyrl") text = dictionary[source] ?? toCyrillic(source);

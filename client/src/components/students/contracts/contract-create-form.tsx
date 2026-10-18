@@ -9,6 +9,7 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import { ContractCourseExtras } from "./contract-course-extras";
 import { ContractCoursesPicker } from "./contract-courses-picker";
 import { ContractCustomerFields } from "./contract-customer-fields";
@@ -40,6 +41,7 @@ interface Props {
 }
 
 export function ContractCreateForm({ studentId, prefill, onCancel, onSaved }: Props) {
+  const t = useT();
   const free = prefill.courses.filter((c) => c.contractNumber === null);
   const [enrollmentIds, setEnrollmentIds] = useState<string[]>(() =>
     free.length === 1 ? [free[0].enrollmentId] : [],
@@ -57,15 +59,18 @@ export function ContractCreateForm({ studentId, prefill, onCancel, onSaved }: Pr
   const needsBirthDate = prefill.student.birthDate === null;
   const minor = prefill.student.isMinor ?? isMinor(birthDate || null, prefill.today);
   const conflicts = profileConflicts(customer, prefill.student);
-  const problem = formProblem({
-    enrollmentIds,
-    needsBirthDate,
-    birthDate,
-    customer,
-    minor,
-    branchMissing: prefill.branch.missing,
-    unsettledProfile: unsettled(conflicts, profileUpdates).length,
-  });
+  const problem = formProblem(
+    {
+      enrollmentIds,
+      needsBirthDate,
+      birthDate,
+      customer,
+      minor,
+      branchMissing: prefill.branch.missing,
+      unsettledProfile: unsettled(conflicts, profileUpdates).length,
+    },
+    t,
+  );
 
   const onBirthDate = (value: string) => {
     setBirthDate(value);
@@ -90,11 +95,11 @@ export function ContractCreateForm({ studentId, prefill, onCancel, onSaved }: Pr
           profileUpdates: profileUpdatesBody(conflicts, profileUpdates),
         }),
       );
-      toast.success(`Shartnoma ${data.number} tuzildi`);
+      toast.success(t("Shartnoma {number} tuzildi", { number: data.number }));
       // The contract may have filled the profile: the profile card reloads.
       onSaved(data, true);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Shartnoma tuzishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Shartnoma tuzishda xatolik yuz berdi")));
     } finally {
       setSaving(false);
     }
@@ -107,8 +112,11 @@ export function ContractCreateForm({ studentId, prefill, onCancel, onSaved }: Pr
           <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <p>
-              {prefill.branch.name} sozlamasida {prefill.branch.missing.join(", ")} kiritilmagan.
-              Sozlamalar → Filiallar bo&apos;limida to&apos;ldiring, keyin shartnoma tuzing.
+              {/* The branch name and the missing settings are data; only the sentence is translated. */}
+              {t(
+                "{branch} sozlamasida {fields} kiritilmagan. Sozlamalar → Filiallar bo'limida to'ldiring, keyin shartnoma tuzing.",
+                { branch: prefill.branch.name, fields: prefill.branch.missing.join(", ") },
+              )}
             </p>
           </div>
         )}
@@ -121,15 +129,16 @@ export function ContractCreateForm({ studentId, prefill, onCancel, onSaved }: Pr
 
         {needsBirthDate && (
           <section className="space-y-1.5">
-            <Label>O&apos;quvchining tug&apos;ilgan sanasi</Label>
+            <Label>{t("O'quvchining tug'ilgan sanasi")}</Label>
             <DatePicker
               value={dateValue(birthDate)}
               onChange={(d) => onBirthDate(dayString(d))}
               maxDate={new Date()}
             />
             <p className="text-xs text-muted-foreground">
-              Profilda yo&apos;q — shu yerda kiriting, profilga ham yoziladi. 18 yoshdan kichik
-              o&apos;quvchi uchun Buyurtmachi ota-ona yoki vasiy bo&apos;ladi.
+              {t(
+                "Profilda yo'q — shu yerda kiriting, profilga ham yoziladi. 18 yoshdan kichik o'quvchi uchun Buyurtmachi ota-ona yoki vasiy bo'ladi.",
+              )}
             </p>
           </section>
         )}
@@ -163,11 +172,11 @@ export function ContractCreateForm({ studentId, prefill, onCancel, onSaved }: Pr
       <DialogFooter className="items-center border-t px-6 py-4">
         {problem && <p className="mr-auto text-xs text-muted-foreground">{problem}</p>}
         <Button variant="outline" onClick={onCancel} disabled={saving}>
-          Bekor qilish
+          {t("Bekor qilish")}
         </Button>
         <Button onClick={submit} disabled={saving || problem !== null}>
           {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Saqlash
+          {t("Saqlash")}
         </Button>
       </DialogFooter>
     </>
