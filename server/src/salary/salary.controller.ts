@@ -2,7 +2,9 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -27,6 +29,11 @@ import { SalaryStaffConfigQueryDto } from './dto/salary-staff-config-query.dto';
 import { SalaryMonthlyQueryDto } from './dto/salary-monthly-query.dto';
 import { SalaryCenterTopUpService } from './salary-center-topup.service';
 import { SalaryStaffConfigService } from './salary-staff-config.service';
+import { StaffSalaryAdjustmentService } from './staff-salary-adjustment.service';
+import {
+  ClearStaffAdjustmentQueryDto,
+  SetStaffAdjustmentDto,
+} from './dto/staff-salary-adjustment.dto';
 import { PayPaymentDto } from './dto/pay-payment.dto';
 import { SettleMonthDto } from './dto/settle-month.dto';
 import { CalculateSalaryDto } from './dto/calculate-salary.dto';
@@ -47,6 +54,7 @@ export class SalaryController {
     private centerTopUpService: SalaryCenterTopUpService,
     private staffConfigService: SalaryStaffConfigService,
     private monthlyDetailService: SalaryMonthlyDetailService,
+    private staffAdjustment: StaffSalaryAdjustmentService,
   ) {}
 
   // =========================================================================
@@ -451,6 +459,44 @@ export class SalaryController {
     return this.monthlyDetailService.getDetail(
       targetUserId,
       { month: query.month, branchId: singleBranchId(scope) },
+      companyId,
+      performedById,
+    );
+  }
+
+  /**
+   * The CEO's manual figure for a staff member's pay in one month (ADR-0112).
+   * Staff pay is the CEO's (ADR-0034), so it is its own capability; the payee's
+   * branch is still checked in the service.
+   */
+  @Put('monthly/user/:userId/adjustment')
+  @Can('salary.adjust')
+  setStaffAdjustment(
+    @Param('userId', ParseIntPipe) targetUserId: number,
+    @Body() dto: SetStaffAdjustmentDto,
+    @CurrentUser('id') performedById: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.staffAdjustment.set(
+      targetUserId,
+      dto,
+      companyId,
+      performedById,
+    );
+  }
+
+  /** Returns the month to the prorated formula. */
+  @Delete('monthly/user/:userId/adjustment')
+  @Can('salary.adjust')
+  clearStaffAdjustment(
+    @Param('userId', ParseIntPipe) targetUserId: number,
+    @Query() query: ClearStaffAdjustmentQueryDto,
+    @CurrentUser('id') performedById: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.staffAdjustment.clear(
+      targetUserId,
+      query.month,
       companyId,
       performedById,
     );

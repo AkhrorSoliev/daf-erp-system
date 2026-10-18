@@ -66,6 +66,14 @@ describe("mergePeople", () => {
     expect(staffWith("Branch Director")).toBe("Filial direktori");
     expect(staffWith("Farrosh")).toBe("Farrosh");
   });
+
+  it("marks a staff row whose pay the CEO set by hand (ADR-0112)", () => {
+    const adjustment = { amount: 2_076_000, reason: "x", by: null, at: "2026-10-17T10:00:00.000Z" };
+    const manual = mergePeople(response({ data: [], staff: [{ ...staffRow, adjustment }] }))[0];
+    const plain = mergePeople(response({ data: [], staff: [{ ...staffRow, adjustment: null }] }))[0];
+    expect(manual.manual).toBe(true);
+    expect(plain.manual).toBe(false);
+  });
 });
 
 describe("staffFrom", () => {

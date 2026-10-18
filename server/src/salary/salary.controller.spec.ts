@@ -53,6 +53,15 @@ describe('SalaryController — route access', () => {
         expect(defaultRolesOf(SalaryController, method)).toEqual(CEO_ONLY);
       },
     );
+
+    // ADR-0112: a staff member's monthly pay is the CEO's to correct.
+    it.each(['setStaffAdjustment', 'clearStaffAdjustment'] as const)(
+      '%s is gated by the adjust capability, CEO by default',
+      (method) => {
+        expectCan(method, 'salary.adjust');
+        expect(defaultRolesOf(SalaryController, method)).toEqual(CEO_ONLY);
+      },
+    );
   });
 
   describe('Payouts', () => {
@@ -216,6 +225,7 @@ describe('SalaryController — the row drawer routes', () => {
     {} as never,
     {} as never,
     detailService as never,
+    {} as never,
   );
 
   beforeEach(() => jest.resetAllMocks());
@@ -283,6 +293,7 @@ describe('SalaryController — the advance calendar follows the header', () => {
     {} as never,
     {} as never,
     {} as never,
+    {} as never,
   );
 
   beforeEach(() => jest.resetAllMocks());
@@ -319,6 +330,7 @@ describe('SalaryController — «Berildi» (pay route)', () => {
   const salaryService = { payPayment: jest.fn() };
   const controller = new SalaryController(
     salaryService as never,
+    {} as never,
     {} as never,
     {} as never,
     {} as never,

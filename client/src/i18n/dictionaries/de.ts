@@ -2600,6 +2600,11 @@ const de: Dictionary = {
   // Payments overview — debt kinds as counted groups
   "muzlatilganlar": "eingefroren",
   "ketganlar": "ausgetreten",
+
+  // Payments — staff pay correction (merged from main)
+  "Oylik hisobi": "Gehaltsberechnung",
+  "Qo'lda": "Manuell",
+  "Tizim hisobi": "Systemberechnung",
 };
 
 export default de;

@@ -2600,6 +2600,11 @@ const ru: Dictionary = {
   // Payments overview — debt kinds as counted groups
   "muzlatilganlar": "заморожены",
   "ketganlar": "выбыли",
+
+  // Payments — staff pay correction (merged from main)
+  "Oylik hisobi": "Расчёт оклада",
+  "Qo'lda": "Вручную",
+  "Tizim hisobi": "Расчёт системы",
 };
 
 export default ru;

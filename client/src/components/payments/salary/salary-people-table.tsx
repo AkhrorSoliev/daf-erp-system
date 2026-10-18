@@ -97,6 +97,11 @@ export function SalaryPeopleTable({ rows, state, loading, onOpenRow }: Props) {
                   <TableCell className="text-muted-foreground">{r.from}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {r.worked == null ? <Muted>—</Muted> : formatPrice(r.worked)}
+                    {r.manual && (
+                      <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        qo&apos;lda
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {r.advances > 0 ? formatPrice(r.advances) : <Muted>0</Muted>}

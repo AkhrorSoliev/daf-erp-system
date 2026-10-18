@@ -32,6 +32,8 @@ export interface PersonRow {
   advances: number;
   net: number;
   payment: RowPayment | null;
+  /** A staff member whose pay the CEO set by hand (ADR-0112). */
+  manual?: boolean;
 }
 
 const fullName = (u: { firstName: string; lastName: string }) => `${u.firstName} ${u.lastName}`;
@@ -76,6 +78,7 @@ export function mergePeople(data: MonthlyResponse, t: Translate = interpolate): 
         advances: s.advances,
         net: s.netToPay,
         payment: s.payment,
+        manual: !!s.adjustment,
       }),
     ),
   ];

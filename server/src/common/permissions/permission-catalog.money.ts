@@ -238,6 +238,22 @@ export const MONEY_PERMISSIONS = {
     requires: ['salary.view'],
     danger: 'money',
   },
+  // PUT/DELETE /salary/monthly/user/:userId/adjustment: a staff member's pay is
+  // the CEO's (ADR-0034, ADR-0112); the payee's branch is still checked.
+  'salary.adjust': {
+    section: 'salary',
+    label: "Xodim oyligini qo'lda to'g'rilash",
+    defaultRoles: [],
+    allowedRoles: [],
+    lockReasons: {
+      [D]: LOCK.COMPANY,
+      [A]: LOCK.COMPANY,
+      [K]: LOCK.COMPANY,
+      [T]: LOCK.COMPANY,
+    },
+    requires: ['salary.view'],
+    danger: 'money',
+  },
 
   // Hisobotlar
   // The finance reports show staff salaries (the «Oyliklar» card and sheet),

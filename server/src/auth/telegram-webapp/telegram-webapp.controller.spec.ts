@@ -54,11 +54,13 @@ describe('TelegramWebAppController', () => {
       controller.signInStaff(
         { initData: 'auth_date=1&hash=x' },
         'https://lehrer.dafzentrum.uz',
+        {},
       ),
     ).resolves.toEqual({ status: 'not_registered' });
     expect(service.signInStaff).toHaveBeenCalledWith(
       'auth_date=1&hash=x',
       'https://lehrer.dafzentrum.uz',
+      expect.objectContaining({ userAgent: null }),
     );
   });
 
@@ -69,9 +71,16 @@ describe('TelegramWebAppController', () => {
     const controller = new TelegramWebAppController(service as any);
 
     await expect(
-      controller.signIn({ initData: 'auth_date=1&hash=x', studentId: 10501 }),
+      controller.signIn(
+        { initData: 'auth_date=1&hash=x', studentId: 10501 },
+        {},
+      ),
     ).resolves.toEqual({ status: 'not_registered' });
-    expect(service.signIn).toHaveBeenCalledWith('auth_date=1&hash=x', 10501);
+    expect(service.signIn).toHaveBeenCalledWith(
+      'auth_date=1&hash=x',
+      10501,
+      expect.objectContaining({ userAgent: null }),
+    );
   });
 
   // `new` bilan yasash Nest konteynerini chetlab o'tadi; bu test konstruktorni

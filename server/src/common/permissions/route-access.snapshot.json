@@ -160,6 +160,7 @@
     "Branch Director",
     "CEO"
   ],
+  "DELETE /users/sessions/:sid": "ANY",
   "GET /absence-pause/settings": [
     "Branch Director",
     "CEO"
@@ -1075,6 +1076,12 @@
     "Branch Director",
     "CEO"
   ],
+  "PUT /salary/monthly/user/:userId/adjustment": [
+    "CEO"
+  ],
+  "DELETE /salary/monthly/user/:userId/adjustment": [
+    "CEO"
+  ],
   "GET /salary/monthly/user/:userId/lessons": [
     "Branch Director",
     "CEO"
@@ -1433,6 +1440,7 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /users/sessions": "ANY",
   "GET /withdrawals/preview/:studentId": [
     "Administrator",
     "Branch Director",

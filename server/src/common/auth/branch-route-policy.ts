@@ -669,6 +669,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "`@CurrentUser('id')` and never from the request, so there is no " +
       'other account it could reach and a branch check would gate nothing.',
     routes: [
+      'DELETE /users/sessions/:sid',
+      'GET /users/sessions',
       'PATCH /users/password',
       'PATCH /users/phone',
       'PATCH /users/profile',
@@ -693,6 +695,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'payslip reads took no caller at all, and the matrix let an ' +
       'Administrator see every branch.',
     routes: [
+      'DELETE /salary/monthly/user/:userId/adjustment',
       'GET /salary/accruals/:userId',
       'GET /salary/config-history/:userId',
       'GET /salary/config/:userId',
@@ -704,6 +707,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /salary/payments/settle-month/preview',
       'POST /salary/payments/:id/pay',
       'POST /salary/payments/settle-month',
+      'PUT /salary/monthly/user/:userId/adjustment',
     ],
   },
   {

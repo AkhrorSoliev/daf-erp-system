@@ -7,6 +7,7 @@ import { SalaryOverviewService } from './salary-overview.service';
 import { SalaryMonthlyService } from './salary-monthly.service';
 import { SalaryMonthlyDetailService } from './salary-monthly-detail.service';
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
+import { StaffSalaryAdjustmentService } from './staff-salary-adjustment.service';
 import { SalaryMissedLessonsService } from './salary-missed-lessons.service';
 import { SalaryStaffConfigService } from './salary-staff-config.service';
 import { SalaryCenterTopUpService } from './salary-center-topup.service';
@@ -35,6 +36,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
     SalaryMonthlyService,
     SalaryMonthlyDetailService,
     SalaryStaffMonthlyService,
+    StaffSalaryAdjustmentService,
     SalaryMissedLessonsService,
     SalaryStaffConfigService,
     SalaryCenterTopUpService,

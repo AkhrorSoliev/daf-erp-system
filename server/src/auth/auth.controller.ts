@@ -23,6 +23,7 @@ import {
   resolveAllowedRoleIds,
 } from './portal-roles.config';
 import { Public } from '../common/decorators';
+import { clientMeta } from '../common/auth/user-session';
 import { IpThrottlerGuard } from '../common/guards';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
@@ -52,7 +53,7 @@ export class AuthController {
     const origin = req.headers['origin'] as string | undefined;
     // Native apps send X-Portal (no browser Origin) — gates the student app to role 6.
     const portal = req.headers['x-portal'] as string | undefined;
-    return this.authService.login(req.user, origin, portal);
+    return this.authService.login(req.user, origin, portal, clientMeta(req));
   }
 
   @Public()
@@ -61,8 +62,8 @@ export class AuthController {
   @UseGuards(IpThrottlerGuard)
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Post('refresh')
-  async refresh(@Body() dto: RefreshDto) {
-    return this.authService.refresh(dto.refreshToken);
+  async refresh(@Body() dto: RefreshDto, @Req() req) {
+    return this.authService.refresh(dto.refreshToken, clientMeta(req));
   }
 
   // Native app (link/poll): poll a login request until the bot approves it.
@@ -72,8 +73,8 @@ export class AuthController {
   @UseGuards(IpThrottlerGuard)
   @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @Get('otp/poll')
-  async pollLogin(@Query('requestId') requestId: string) {
-    return this.authService.pollLoginRequest(requestId ?? '');
+  async pollLogin(@Query('requestId') requestId: string, @Req() req) {
+    return this.authService.pollLoginRequest(requestId ?? '', clientMeta(req));
   }
 
   // ── Telegram OAuth (OIDC) — web portallar uchun ────────────────────────────
@@ -145,7 +146,11 @@ export class AuthController {
   @UseGuards(IpThrottlerGuard)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Get('telegram/callback')
-  async telegramCallback(@Query() query: TelegramOauthCallbackDto, @Res() res) {
+  async telegramCallback(
+    @Query() query: TelegramOauthCallbackDto,
+    @Res() res,
+    @Req() req,
+  ) {
     if (query.error) {
       // Foydalanuvchi Telegram ekranida rad etdi — bu xato emas.
       throw new BadRequestException('Kirish bekor qilindi');
@@ -153,6 +158,7 @@ export class AuthController {
     const { redirectUrl } = await this.telegramOauthService.handleCallback(
       query.code ?? '',
       query.state ?? '',
+      clientMeta(req),
     );
     res.redirect(302, redirectUrl);
   }

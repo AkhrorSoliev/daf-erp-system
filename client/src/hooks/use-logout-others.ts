@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -16,6 +17,7 @@ export function useLogoutOthers() {
   // Selector, not the whole store: this hook only calls setAuth, it never
   // renders auth state.
   const setAuth = useAuth((s) => s.setAuth);
+  const queryClient = useQueryClient();
   const [pending, setPending] = useState(false);
 
   const logoutOthers = useCallback(async () => {
@@ -27,6 +29,8 @@ export function useLogoutOthers() {
         setAuth(session.user, session.accessToken, session.refreshToken);
       }
       toast.success("Boshqa qurilmalardagi kirishlar tugatildi");
+      // The list of devices on the profile (ADR-0113) just lost every row but this one.
+      queryClient.invalidateQueries({ queryKey: ["user-sessions"] });
       return true;
     } catch (error) {
       toast.error(
@@ -36,7 +40,7 @@ export function useLogoutOthers() {
     } finally {
       setPending(false);
     }
-  }, [setAuth]);
+  }, [setAuth, queryClient]);
 
   return { logoutOthers, pending };
 }
