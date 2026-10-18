@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n/context";
 import { CopyFormLinkButton } from "../copy-form-link-dialog";
 import { TablePagination } from "../table-pagination";
 import { ResponsesTable } from "./responses-table";
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function FormResponsesBody({ slug, submissions, onOpenLead, onRestore }: Props) {
+  const t = useT();
   const {
     result,
     loading,
@@ -60,11 +62,11 @@ export function FormResponsesBody({ slug, submissions, onOpenLead, onRestore }: 
       return (
         <EmptyState
           icon={AlertCircle}
-          title="Javoblarni yuklab bo'lmadi"
+          title={t("Javoblarni yuklab bo'lmadi")}
           description={error}
           action={
             <Button variant="outline" onClick={() => void refetch()}>
-              Qayta urinish
+              {t("Qayta urinish")}
             </Button>
           }
         />
@@ -102,20 +104,20 @@ export function FormResponsesBody({ slug, submissions, onOpenLead, onRestore }: 
         filters.stage === "awaiting" && !otherFilters ? (
           <EmptyState
             icon={PhoneCall}
-            title="Hammaga qo'ng'iroq qilindi"
+            title={t("Hammaga qo'ng'iroq qilindi")}
             action={
               <Button variant="outline" onClick={() => changeFilters({ stage: "" })}>
-                Barcha javoblar
+                {t("Barcha javoblar")}
               </Button>
             }
           />
         ) : (
           <EmptyState
             icon={SearchX}
-            title="Tanlangan filtrlar bo'yicha javob yo'q"
+            title={t("Tanlangan filtrlar bo'yicha javob yo'q")}
             action={
               <Button variant="outline" onClick={resetFilters}>
-                Filtrlarni tozalash
+                {t("Filtrlarni tozalash")}
               </Button>
             }
           />
@@ -143,17 +145,19 @@ export function FormResponsesBody({ slug, submissions, onOpenLead, onRestore }: 
 }
 
 function NoResponsesYet({ slug }: { slug: string }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center gap-3 rounded-md border border-dashed px-4 py-16 text-center">
       <Share2 className="size-8 text-muted-foreground" />
       <div className="space-y-1">
-        <p className="font-medium">Hali hech kim ro&apos;yxatdan o&apos;tmadi</p>
+        <p className="font-medium">{t("Hali hech kim ro'yxatdan o'tmadi")}</p>
         <p className="text-sm text-muted-foreground">
-          Havolani Instagram yoki Telegram&apos;da ulashing. Javoblar shu yerda
-          paydo bo&apos;ladi.
+          {t(
+            "Havolani Instagram yoki Telegram'da ulashing. Javoblar shu yerda paydo bo'ladi.",
+          )}
         </p>
       </div>
-      <CopyFormLinkButton slug={slug} label="Havolani nusxalash" />
+      <CopyFormLinkButton slug={slug} />
     </div>
   );
 }

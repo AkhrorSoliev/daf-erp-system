@@ -509,6 +509,18 @@ export const STRICT_FILES: string[] = [
   "components/forms/form-field-editor.tsx",
   "components/forms/copy-form-link-dialog.tsx",
   "components/forms/form-preview.tsx",
+  "components/forms/responses/types.ts",
+  "components/forms/responses/submission-format.ts",
+  "components/forms/responses/use-form-submissions.ts",
+  "components/forms/responses/call-cell.tsx",
+  "components/forms/responses/form-responses-body.tsx",
+  "components/forms/responses/form-responses-client.tsx",
+  "components/forms/responses/responses-header.tsx",
+  "components/forms/responses/responses-table.tsx",
+  "components/forms/responses/responses-toolbar.tsx",
+  "components/forms/responses/source-breakdown.tsx",
+  "components/forms/responses/stage-chips.tsx",
+  "components/forms/responses/submission-cells.tsx",
   "lib/schemas/custom-form-schema.ts",
 ];
 

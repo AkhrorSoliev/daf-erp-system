@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
+import { formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
 import {
   buildSubmissionsCsv,
@@ -45,6 +47,12 @@ export function useFormSubmissions(formId: string) {
     SUBMISSION_FILTER_SCHEMA,
   );
   const user = useAuth((s) => s.user);
+  const translate = useT();
+  // The fetch callbacks read `t` from a ref, so a language switch does not refetch.
+  const tRef = useRef(translate);
+  useEffect(() => {
+    tRef.current = translate;
+  }, [translate]);
   const [result, setResult] = useState<SubmissionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +86,7 @@ export function useFormSubmissions(formId: string) {
   );
 
   const refetch = useCallback(async () => {
+    const t = tRef.current;
     setLoading(true);
     try {
       const { data } = await api.get<SubmissionsResponse>(
@@ -93,8 +102,9 @@ export function useFormSubmissions(formId: string) {
       setResult(data);
       setError(null);
     } catch (err) {
-      setError(getErrorMessage(err, "Javoblarni yuklashda xatolik"));
-      toast.error(getErrorMessage(err, "Javoblarni yuklashda xatolik"));
+      const message = getErrorMessage(err, t("Javoblarni yuklashda xatolik"));
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -106,6 +116,7 @@ export function useFormSubmissions(formId: string) {
 
   const toggleCalled = useCallback(
     async (rowId: string, called: boolean): Promise<boolean> => {
+      const t = tRef.current;
       const row = latest.current?.data.find((r) => r.id === rowId);
       if (!row?.lead) return false;
       const previous = { calledAt: row.lead.calledAt, calledBy: row.lead.calledBy };
@@ -134,7 +145,7 @@ export function useFormSubmissions(formId: string) {
           return withCalled(cur, rowId, previous.calledAt, previous.calledBy);
         });
         toast.error(
-          getErrorMessage(error, "Qo'ng'iroq belgisini saqlashda xatolik"),
+          getErrorMessage(error, t("Qo'ng'iroq belgisini saqlashda xatolik")),
         );
         return false;
       }
@@ -144,6 +155,7 @@ export function useFormSubmissions(formId: string) {
 
   const exportCsv = useCallback(
     async (title: string) => {
+      const t = tRef.current;
       setExporting(true);
       try {
         const { data } = await api.get<SubmissionsExport>(
@@ -154,9 +166,11 @@ export function useFormSubmissions(formId: string) {
           buildSubmissionsCsv(data),
           submissionsCsvFileName(title, new Date()),
         );
-        toast.success(`${data.data.length} ta javob yuklab olindi`);
+        toast.success(
+          t("{n} ta javob yuklab olindi", { n: formatNumber(data.data.length) }),
+        );
       } catch (error) {
-        toast.error(getErrorMessage(error, "CSV tayyorlashda xatolik"));
+        toast.error(getErrorMessage(error, t("CSV tayyorlashda xatolik")));
       } finally {
         setExporting(false);
       }
