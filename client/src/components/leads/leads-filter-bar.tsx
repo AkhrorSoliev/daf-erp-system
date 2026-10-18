@@ -31,6 +31,7 @@ import {
 } from "./lead-filter-schema";
 import { LEAD_STATS_SCHEMA, parseStatsPeriod } from "./lead-stats";
 import { fetchOwnerSummary } from "./ownership/ownership-api";
+import { useT } from "@/i18n/context";
 
 /** A source option for the filter — includes soft-deleted-but-used ones. */
 interface FilterSource {
@@ -39,20 +40,8 @@ interface FilterSource {
   deleted: boolean;
 }
 
-/**
- * Variantlar guruh tartibida tekislanadi — `MultiSelectCombobox` sarlavhani
- * guruh o'zgargan joyda chizadi, shuning uchun tartib muhim.
- */
-const HOLATI_OPTIONS: MultiSelectOption[] = LEAD_HOLATI_GROUPS.flatMap(
-  (group) =>
-    LEAD_HOLATI_OPTIONS.filter((o) => o.group === group).map((o) => ({
-      value: o.value,
-      label: o.label,
-      group,
-    })),
-);
-
 export function LeadsFilterBar() {
+  const t = useT();
   const { filters, setFilters } = useUrlFilters(LEAD_FILTER_SCHEMA);
   const columns = useLeadsBoard((s) => s.board);
   // Bumped by lead and source changes; a renamed or deleted source must reach
@@ -73,8 +62,8 @@ export function LeadsFilterBar() {
     enabled: branchLoaded,
   });
   const ownerOptions: MultiSelectOption[] = [
-    { value: "me", label: "Meniki" },
-    { value: "none", label: "Egasiz" },
+    { value: "me", label: t("Meniki") },
+    { value: "none", label: t("Egasiz") },
     ...(owners?.rows ?? []).map((r) => ({
       value: String(r.userId),
       label: r.name,
@@ -107,16 +96,24 @@ export function LeadsFilterBar() {
   const endDate = filters.endDate ? parseISO(filters.endDate) : null;
 
   // Sana tanlagichlarining yorlig'i qaysi sana filtrlanayotganini aytib tursin.
-  const dateLabel = leadDateFieldIsConversion(filters.holati)
-    ? "Aylangan sana"
-    : "Sana";
+  const byConversion = leadDateFieldIsConversion(filters.holati);
+
+  // Variantlar guruh tartibida tekislanadi — `MultiSelectCombobox` sarlavhani
+  // guruh o'zgargan joyda chizadi, shuning uchun tartib muhim.
+  const holatiOptions: MultiSelectOption[] = LEAD_HOLATI_GROUPS.flatMap((group) =>
+    LEAD_HOLATI_OPTIONS.filter((o) => o.group === group).map((o) => ({
+      value: o.value,
+      label: t(o.label),
+      group: t(group),
+    })),
+  );
 
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="relative w-full sm:w-auto">
         <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Ism yoki telefon bo'yicha qidirish..."
+          placeholder={t("Ism yoki telefon bo'yicha qidirish...")}
           value={searchInput}
           onChange={(e) => {
             setSearchInput(e.target.value);
@@ -127,23 +124,25 @@ export function LeadsFilterBar() {
       </div>
 
       <MultiSelectCombobox
-        options={HOLATI_OPTIONS}
+        options={holatiOptions}
         selected={filters.holati}
         onChange={(next) => setFilters({ holati: next, page: 1 })}
-        placeholder="Barcha holatlar"
-        searchPlaceholder="Holat qidirish..."
+        placeholder={t("Barcha holatlar")}
+        searchPlaceholder={t("Holat qidirish...")}
         className="w-full sm:w-56"
       />
 
       <MultiSelectCombobox
         options={sources.map((x) => ({
           value: x.id,
-          label: `${x.name}${x.deleted ? " (o'chirilgan)" : ""}`,
+          label: x.deleted
+            ? t("{name} (o'chirilgan)", { name: x.name })
+            : x.name,
         }))}
         selected={filters.sourceId}
         onChange={(next) => setFilters({ sourceId: next, page: 1 })}
-        placeholder="Barcha manbalar"
-        searchPlaceholder="Manba qidirish..."
+        placeholder={t("Barcha manbalar")}
+        searchPlaceholder={t("Manba qidirish...")}
         className="w-full sm:w-48"
       />
 
@@ -151,8 +150,8 @@ export function LeadsFilterBar() {
         options={columns.map((x) => ({ value: x.id, label: x.name }))}
         selected={filters.columnId}
         onChange={(next) => setFilters({ columnId: next, page: 1 })}
-        placeholder="Barcha ustunlar"
-        searchPlaceholder="Ustun qidirish..."
+        placeholder={t("Barcha ustunlar")}
+        searchPlaceholder={t("Ustun qidirish...")}
         className="w-full sm:w-48"
       />
 
@@ -160,14 +159,16 @@ export function LeadsFilterBar() {
         options={ownerOptions}
         selected={filters.masul}
         onChange={(next) => setFilters({ masul: next, page: 1 })}
-        placeholder="Barcha mas'ullar"
-        searchPlaceholder="Xodim qidirish..."
+        placeholder={t("Barcha mas'ullar")}
+        searchPlaceholder={t("Xodim qidirish...")}
         className="w-full sm:w-48"
       />
 
       <DatePicker
         value={startDate}
-        placeholder={`${dateLabel}: boshi`}
+        placeholder={
+          byConversion ? t("Aylangan sana: boshi") : t("Sana: boshi")
+        }
         maxDate={endDate ?? undefined}
         defaultMonth={endDate ?? undefined}
         onChange={(d) =>
@@ -177,7 +178,9 @@ export function LeadsFilterBar() {
       />
       <DatePicker
         value={endDate}
-        placeholder={`${dateLabel}: oxiri`}
+        placeholder={
+          byConversion ? t("Aylangan sana: oxiri") : t("Sana: oxiri")
+        }
         minDate={startDate ?? undefined}
         defaultMonth={startDate ?? undefined}
         onChange={(d) =>
@@ -195,10 +198,10 @@ export function LeadsFilterBar() {
               onClick={() => setFilters(CLEARED_LEAD_FILTERS)}
             >
               <X className="mr-1 size-4" />
-              Tozalash
+              {t("Tozalash")}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Barcha filtrlarni tozalash</TooltipContent>
+          <TooltipContent>{t("Barcha filtrlarni tozalash")}</TooltipContent>
         </Tooltip>
       )}
     </div>

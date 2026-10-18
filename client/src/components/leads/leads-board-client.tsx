@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { useT } from "@/i18n/context";
 import { LEAD_FILTER_SCHEMA, leadFiltersActive } from "./lead-filter-schema";
 import { LeadsFilterBar } from "./leads-filter-bar";
 import { LeadsBoard } from "./leads-board";
@@ -27,6 +28,7 @@ import { LeadsStatsStrip } from "./leads-stats-strip";
 import { LeadOwnersStrip } from "./ownership/lead-owners-strip";
 
 export function LeadsBoardClient() {
+  const t = useT();
   const fetchBoard = useLeadsBoard((s) => s.fetchBoard);
   const openAddLead = useLeadsUi((s) => s.openAddLead);
   const openCreateColumn = useLeadsUi((s) => s.openCreateColumn);
@@ -64,19 +66,19 @@ export function LeadsBoardClient() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Lidlarni ustun va bo&apos;limlar bo&apos;yicha boshqaring
+          {t("Lidlarni ustun va bo'limlar bo'yicha boshqaring")}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild size="sm" variant="ghost">
             <Link href="/leads/forms">
               <FileEdit className="size-4" />
-              Formalar
+              {t("Formalar")}
             </Link>
           </Button>
           <Button asChild size="sm" variant="ghost">
             <Link href="/leads/archive">
               <Archive className="size-4" />
-              Arxiv
+              {t("Arxiv")}
             </Link>
           </Button>
           <Button
@@ -85,15 +87,15 @@ export function LeadsBoardClient() {
             onClick={() => setManageSourcesOpen(true)}
           >
             <Megaphone className="size-4" />
-            Manbalar
+            {t("Manbalar")}
           </Button>
           <Button size="sm" variant="outline" onClick={openCreateColumn}>
             <Columns3 className="size-4" />
-            Yangi ustun
+            {t("Yangi ustun")}
           </Button>
           <Button size="sm" onClick={() => openAddLead()}>
             <Plus className="size-4" />
-            Yangi lid
+            {t("Yangi lid")}
           </Button>
         </div>
       </div>

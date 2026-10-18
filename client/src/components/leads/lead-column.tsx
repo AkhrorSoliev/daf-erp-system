@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useLeadsBoard, type LeadBoardColumn } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { useT } from "@/i18n/context";
 import { LeadSection } from "./lead-section";
 
 interface LeadColumnProps {
@@ -55,6 +56,7 @@ export function LeadColumn({
   onToggleCollapse,
   showBranch,
 }: LeadColumnProps) {
+  const t = useT();
   const moveColumn = useLeadsBoard((s) => s.moveColumn);
   const openCreateSection = useLeadsUi((s) => s.openCreateSection);
   const openRename = useLeadsUi((s) => s.openRename);
@@ -93,10 +95,10 @@ export function LeadColumn({
               }}
             >
               <ChevronsRight className="size-4" />
-              <span className="sr-only">Ustunni ochish</span>
+              <span className="sr-only">{t("Ustunni ochish")}</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">Ustunni ochish</TooltipContent>
+          <TooltipContent side="right">{t("Ustunni ochish")}</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -106,7 +108,10 @@ export function LeadColumn({
             </span>
           </TooltipTrigger>
           <TooltipContent side="right">
-            {column.sections.length} ta bo&apos;lim / {totalLeads} ta lid
+            {t("{sections} ta bo'lim / {leads} ta lid", {
+              sections: column.sections.length,
+              leads: totalLeads,
+            })}
           </TooltipContent>
         </Tooltip>
 
@@ -130,10 +135,10 @@ export function LeadColumn({
                 onClick={onToggleCollapse}
               >
                 <ChevronsLeft className="size-4" />
-                <span className="sr-only">Ustunni yopish</span>
+                <span className="sr-only">{t("Ustunni yopish")}</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Ustunni yopish</TooltipContent>
+            <TooltipContent>{t("Ustunni yopish")}</TooltipContent>
           </Tooltip>
           <h2 className="truncate text-sm font-semibold">{column.name}</h2>
           {showBranch && column.branch && (
@@ -148,7 +153,10 @@ export function LeadColumn({
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              {column.sections.length} ta bo&apos;lim / {totalLeads} ta lid
+              {t("{sections} ta bo'lim / {leads} ta lid", {
+              sections: column.sections.length,
+              leads: totalLeads,
+            })}
             </TooltipContent>
           </Tooltip>
         </div>
@@ -160,14 +168,14 @@ export function LeadColumn({
             onClick={() => openCreateSection(column.id, column.name)}
           >
             <FolderPlus className="size-3.5" />
-            Bo&apos;lim
+            {t("Bo'lim")}
           </Button>
           {!column.isSystem && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="size-7">
                   <MoreVertical className="size-4" />
-                  <span className="sr-only">Ustun amallari</span>
+                  <span className="sr-only">{t("Ustun amallari")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -181,7 +189,7 @@ export function LeadColumn({
                   }
                 >
                   <Pencil className="mr-2 size-4" />
-                  Tahrirlash
+                  {t("Tahrirlash")}
                 </DropdownMenuItem>
                 {/* Column order is per branch; a mixed board has none to change. */}
                 <DropdownMenuItem
@@ -189,14 +197,14 @@ export function LeadColumn({
                   onClick={() => moveColumn(column.id, "left")}
                 >
                   <ArrowLeft className="mr-2 size-4" />
-                  Chapga surish
+                  {t("Chapga surish")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={!canMoveRight || showBranch}
                   onClick={() => moveColumn(column.id, "right")}
                 >
                   <ArrowRight className="mr-2 size-4" />
-                  O&apos;ngga surish
+                  {t("O'ngga surish")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -210,7 +218,7 @@ export function LeadColumn({
                   }
                 >
                   <Trash2 className="mr-2 size-4" />
-                  O&apos;chirish
+                  {t("O'chirish")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -228,7 +236,7 @@ export function LeadColumn({
         {column.sections.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-4 py-8 text-center">
             <p className="text-sm text-muted-foreground">
-              Bu ustunda hali bo&apos;lim yo&apos;q
+              {t("Bu ustunda hali bo'lim yo'q")}
             </p>
             <Button
               variant="outline"
@@ -237,7 +245,7 @@ export function LeadColumn({
               onClick={() => openCreateSection(column.id, column.name)}
             >
               <FolderPlus className="size-3.5" />
-              Birinchi bo&apos;limni yarating
+              {t("Birinchi bo'limni yarating")}
             </Button>
           </div>
         ) : (

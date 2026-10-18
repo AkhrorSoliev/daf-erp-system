@@ -467,6 +467,16 @@ export const STRICT_FILES: string[] = [
   "components/payments/gateway-events-helpers.ts",
   "components/payments/gateway-events-outcome-badge.tsx",
   "components/profile/teacher-salary-client.tsx",
+  "components/leads/leads-board-client.tsx",
+  "components/leads/leads-board.tsx",
+  "components/leads/lead-section.tsx",
+  "components/leads/lead-column.tsx",
+  "components/leads/lead-card.tsx",
+  "components/leads/leads-filter-bar.tsx",
+  "components/leads/lead-filter-schema.ts",
+  "components/leads/leads-stats-strip.tsx",
+  "components/leads/lead-stats.ts",
+  "components/leads/leads-list.tsx",
 ];
 
 function walk(dir: string): string[] {

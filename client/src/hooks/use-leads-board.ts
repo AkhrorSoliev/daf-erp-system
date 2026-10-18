@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
+import { msg } from "@/i18n/msg";
 import type { LeadOwner } from "@/components/leads/ownership/ownership-format";
 
 // ---------------------------------------------------------------------------
@@ -72,13 +73,15 @@ export interface LeadBoardColumn {
 // Display labels
 // ---------------------------------------------------------------------------
 
+// msg() texts: a translated page draws them with t(). NEW reads «Yangi lid»
+// because the dictionary's «Yangi» means creating.
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
-  NEW: "Yangi",
-  CONTACTED: "Aloqaga chiqilgan",
-  TRIAL: "Sinov darsida",
-  CONVERTED: "O'quvchiga aylangan",
-  LOST: "Yo'qotilgan",
-  ARCHIVED: "Arxivlangan",
+  NEW: msg("Yangi lid"),
+  CONTACTED: msg("Aloqaga chiqilgan"),
+  TRIAL: msg("Sinov darsida"),
+  CONVERTED: msg("O'quvchiga aylangan"),
+  LOST: msg("Yo'qotilgan"),
+  ARCHIVED: msg("Arxivlangan"),
 };
 
 // Mirror of the backend LEAD_LINKED_REASON sentinel (Lead.statusChangeReason):
@@ -96,8 +99,7 @@ export function leadConvertedLabel(
   statusChangeReason: string | null | undefined,
   t: (source: string) => string = (source) => source,
 ): string {
-  // The other statuses stay Uzbek: `LEAD_STATUS_LABELS` is not translated yet
-  // (its «Yangi» would clash with the dictionary's «Yangi» = creating).
+  // The other statuses come back untranslated (their callers draw them).
   if (statusEnum !== "CONVERTED") return LEAD_STATUS_LABELS[statusEnum];
   return statusChangeReason === LEAD_LINKED_REASON
     ? t("Mavjud o'quvchiga biriktirilgan")

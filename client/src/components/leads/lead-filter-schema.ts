@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/msg";
+
 /**
  * URL-persisted filter schema for the leads page, shared by the filter bar, the
  * filtered list, and the board client (which decides board-vs-list from it).
@@ -48,43 +50,48 @@ export interface LeadHolatiOption {
   param: { key: "status" | "called" | "hasComments"; value: string };
 }
 
-export const LEAD_HOLATI_GROUPS = ["Bosqich", "Aloqa", "Izoh"] as const;
+// Labels and group titles are msg() texts the filter bar draws with t().
+export const LEAD_HOLATI_GROUPS = [
+  msg("Lid bosqichi"),
+  msg("Aloqa"),
+  msg("Izoh"),
+];
 
 export const LEAD_HOLATI_OPTIONS: LeadHolatiOption[] = [
   {
     value: "NEW",
-    label: "Yangi",
-    group: "Bosqich",
+    label: msg("Yangi lid"),
+    group: LEAD_HOLATI_GROUPS[0],
     param: { key: "status", value: "NEW" },
   },
   {
     value: "CONVERTED",
-    label: "O'quvchiga aylangan",
-    group: "Bosqich",
+    label: msg("O'quvchiga aylangan"),
+    group: LEAD_HOLATI_GROUPS[0],
     param: { key: "status", value: "CONVERTED" },
   },
   {
     value: "called",
-    label: "Aloqaga chiqilgan",
-    group: "Aloqa",
+    label: msg("Aloqaga chiqilgan"),
+    group: LEAD_HOLATI_GROUPS[1],
     param: { key: "called", value: "true" },
   },
   {
     value: "uncalled",
-    label: "Aloqaga chiqilmagan",
-    group: "Aloqa",
+    label: msg("Aloqaga chiqilmagan"),
+    group: LEAD_HOLATI_GROUPS[1],
     param: { key: "called", value: "false" },
   },
   {
     value: "commented",
-    label: "Izoh yozilgan",
-    group: "Izoh",
+    label: msg("Izoh yozilgan"),
+    group: LEAD_HOLATI_GROUPS[2],
     param: { key: "hasComments", value: "true" },
   },
   {
     value: "uncommented",
-    label: "Izohsiz",
-    group: "Izoh",
+    label: msg("Izohsiz"),
+    group: LEAD_HOLATI_GROUPS[2],
     param: { key: "hasComments", value: "false" },
   },
 ];

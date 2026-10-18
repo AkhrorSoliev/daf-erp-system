@@ -2,6 +2,7 @@
  * Pure pieces of the stats strip above the leads board (spec 2026-10-08).
  * The figures themselves come from `GET /leads/stats`; nothing is counted here.
  */
+import { msg } from "@/i18n/msg";
 import {
   CLEARED_LEAD_FILTERS,
   leadFiltersActive,
@@ -22,9 +23,9 @@ export interface LeadStats {
 
 export const LEAD_STATS_PERIODS: { value: LeadStatsPeriod; label: string }[] =
   [
-    { value: "week", label: "Bu hafta" },
-    { value: "month", label: "Shu oy" },
-    { value: "last-month", label: "O'tgan oy" },
+    { value: "week", label: msg("Bu hafta") },
+    { value: "month", label: msg("Shu oy") },
+    { value: "last-month", label: msg("O'tgan oy") },
   ];
 
 /** `?period=` in the URL; the default month is left out of it. */
@@ -54,11 +55,11 @@ export function topSourcesLine(sources: LeadStats["flow"]["topSources"]) {
 export type StatCard = "onBoard" | "uncalled" | "created" | "converted" | "lost";
 
 export const STAT_CARD_LABELS: Record<StatCard, string> = {
-  onBoard: "Doskada",
-  uncalled: "Qo'ng'iroq qilinmagan",
-  created: "Yangi lidlar",
-  converted: "O'quvchi bo'ldi",
-  lost: "Yo'qotildi",
+  onBoard: msg("Doskada"),
+  uncalled: msg("Qo'ng'iroq qilinmagan"),
+  created: msg("Yangi lidlar"),
+  converted: msg("O'quvchi bo'ldi"),
+  lost: msg("Yo'qotildi"),
 };
 
 /**
