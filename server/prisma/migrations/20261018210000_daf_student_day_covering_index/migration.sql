@@ -1,6 +1,7 @@
--- DafStudentDay: haftalik reyting uchun qamrab oluvchi indeks (ADR-0111).
--- Prisma INCLUDE'ni ifodalay olmaydi, shuning uchun qo'lda yozilgan. Sxemadagi
--- (companyId, day) indeksi o'zgarmaydi; bu qo'shimcha. Reja Index Only Scan
--- ishlatadi: jadvalga (heap) tegmasdan studentId va points o'qiladi.
+-- DafStudentDay: covering index for the weekly ranking (ADR-0111).
+-- Hand-written because Prisma cannot express INCLUDE. The (companyId, day)
+-- index declared in schema.prisma stays; this one is an addition. The planner
+-- can answer the centre-week query with an Index Only Scan, reading studentId
+-- and points without touching the heap.
 CREATE INDEX IF NOT EXISTS "DafStudentDay_companyId_day_cover_idx"
   ON "DafStudentDay" ("companyId", "day") INCLUDE ("studentId", "points");
