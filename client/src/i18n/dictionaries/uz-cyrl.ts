@@ -18,6 +18,8 @@ const uzCyrl: Dictionary = {
   // Month names: Cyrillic Uzbek writes «я» here, which the rules cannot know.
   "Sentabr": "Сентябр",
   "Oktabr": "Октябр",
+  "sentabrda": "сентябрда",
+  "oktabrda": "октябрда",
   "Iyn": "Июн",
   "Iyl": "Июл",
   "Noy": "Ноя",

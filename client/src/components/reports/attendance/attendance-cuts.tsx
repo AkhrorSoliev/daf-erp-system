@@ -49,7 +49,7 @@ export function AttendanceCuts({ selected, data, onCut, onPage, onPageSize, onMi
                 <TableHead className="w-12 border-r">#</TableHead>
                 <TableHead>{t(column)}</TableHead>
                 <TableHead>{t("Davomat")}</TableHead>
-                <TableHead className="text-right">{t("Darslar")}</TableHead>
+                <TableHead className="text-right">{t("Darslar soni")}</TableHead>
                 <TableHead className="text-right">{t("Ko'p qoldiruvchi")}</TableHead>
               </TableRow>
             </TableHeader>

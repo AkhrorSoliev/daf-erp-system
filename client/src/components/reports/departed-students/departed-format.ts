@@ -3,13 +3,6 @@ import { interpolate } from "@/i18n/translate";
 import { tashkentWallClock } from "@/lib/tashkent-time";
 import type { Translate } from "@/components/notifications/notification-view";
 import { cleanPreset } from "./departed-url";
-import type { ListState } from "./departed-types";
-
-export const STATE_LABEL: Record<ListState, string> = {
-  ketgan: msg("Ketgan"),
-  kutilmoqda: msg("Kutilmoqda"),
-  qaytgan: msg("Qaytgan"),
-};
 
 const LOCATIVE = [
   msg("yanvarda"), msg("fevralda"), msg("martda"), msg("aprelda"), msg("mayda"), msg("iyunda"),

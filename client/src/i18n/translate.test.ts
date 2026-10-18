@@ -74,4 +74,11 @@ describe("translate", () => {
       "Ян", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек",
     ]);
   });
+
+  it("writes the month locatives («sentabrda») with the same stems as the month names", () => {
+    const locative = ["yanvarda", "fevralda", "martda", "aprelda", "mayda", "iyunda", "iyulda", "avgustda", "sentabrda", "oktabrda", "noyabrda", "dekabrda"];
+    expect(locative.map((m) => translate("uz-Cyrl", uzCyrl, m))).toEqual([
+      "январда", "февралда", "мартда", "апрелда", "майда", "июнда", "июлда", "августда", "сентябрда", "октябрда", "ноябрда", "декабрда",
+    ]);
+  });
 });

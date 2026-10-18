@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { ChartCard } from "@/components/shared/chart-card";
 import { monthLabel, monthShort } from "@/components/payments/salary-utils";
+import { capitalize } from "@/components/reports/departed-students/departed-format";
 import { useT } from "@/i18n/context";
 import { msg } from "@/i18n/msg";
 import { formatNumber, formatPrice } from "@/lib/format-utils";
@@ -61,8 +62,8 @@ export function dailyLegend(
   t: (source: string) => string = (source) => source,
 ): LegendItem[] {
   return [
-    { label: monthLabel(month, t), color: CURRENT },
-    ...(compareAvailable ? [{ label: monthLabel(compare, t), color: COMPARE, dashed: true }] : []),
+    { label: capitalize(monthLabel(month, t)), color: CURRENT },
+    ...(compareAvailable ? [{ label: capitalize(monthLabel(compare, t)), color: COMPARE, dashed: true }] : []),
   ];
 }
 
@@ -113,10 +114,10 @@ export function KpiDailyChart({
       subtitle={
         compareAvailable
           ? t("{month} va {compare} — yig'ma natijalar soni, oy kuni bo'yicha", {
-              month: monthLabel(month, t),
+              month: capitalize(monthLabel(month, t)),
               compare: monthLabel(compare, t),
             })
-          : t("{month} — yig'ma natijalar soni, oy kuni bo'yicha", { month: monthLabel(month, t) })
+          : t("{month} — yig'ma natijalar soni, oy kuni bo'yicha", { month: capitalize(monthLabel(month, t)) })
       }
       isEmpty={isEmpty}
       emptyMessage={
@@ -161,8 +162,8 @@ export function DailyTooltip({
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload as { day: number; current: number | null; compare: number | null };
   const lines = [
-    { label: monthLabel(month, t), value: row.current, color: CURRENT },
-    ...(compareAvailable ? [{ label: monthLabel(compare, t), value: row.compare, color: COMPARE }] : []),
+    { label: capitalize(monthLabel(month, t)), value: row.current, color: CURRENT },
+    ...(compareAvailable ? [{ label: capitalize(monthLabel(compare, t)), value: row.compare, color: COMPARE }] : []),
   ].filter((l) => l.value !== null);
   return (
     <div className="min-w-[180px] rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
@@ -223,7 +224,7 @@ export function MonthsTooltip({ active, payload }: TooltipProps) {
   const row = payload[0]?.payload as KpiOverview["months"][number];
   return (
     <div className="min-w-[200px] rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
-      <div className="mb-1 text-muted-foreground">{monthLabel(row.month, t)}</div>
+      <div className="mb-1 text-muted-foreground">{capitalize(monthLabel(row.month, t))}</div>
       {[
         { label: t("Lid to'lov qildi"), value: row.leadPaid, color: LEAD },
         { label: t("Va'da bajarildi"), value: row.promiseKept, color: PROMISE },
@@ -277,7 +278,7 @@ function UserMonthsTooltip({ active, payload }: TooltipProps) {
   const row = payload[0]?.payload as KpiUserView["months"][number];
   return (
     <div className="rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
-      <div className="mb-1 text-muted-foreground">{monthLabel(row.month, t)}</div>
+      <div className="mb-1 text-muted-foreground">{capitalize(monthLabel(row.month, t))}</div>
       <div className="tabular-nums">
         {t("{n} ta natija", { n: formatNumber(row.count) })} · {formatPrice(row.amount)} {t("so'm")}
       </div>
