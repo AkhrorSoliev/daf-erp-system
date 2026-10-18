@@ -341,7 +341,53 @@ bo'lishi kerak.
 
 ## 10. Yuklama natijalari
 
-_(Bajarish paytida to'ldiriladi: har so'rov p50 / p95, `EXPLAIN` xulosasi.)_
+O'lchangan 18.10.2026, lokal sinov bazasi `daf_s1_yuklama`: 12 000 o'quvchi
+(urinishlar birinchi 5 000 tasida), ≈1,3 mln urinish, `DafStudentDay`da
+≈253 ming qator (shu hafta 49 361). 50 parallel o'quvchi × 10 raund,
+servis darajasida, Prisma pool — prod'dagidek (10 ulanish). Skriptlar:
+`server/scripts/load/` (`daf-yuklama-seed.ts`, `daf-yuklama-olchov.ts`,
+`daf-yuklama-paritet.ts`; faqat lokal bazada, `assertLocalDb`).
+
+**Natija (ms).** Mashina boshqa ishlar bilan band edi — o'lchov paytida
+load average 9,3–10,3 (10 yadro); 10 daqiqa kutilganda ham 4 dan
+tushmadi. Raqamlar shu sharoitda:
+
+| Amal | p50 | p95 | Chegara (p95) | Holat |
+| --- | --- | --- | --- | --- |
+| `uebersicht` (fortschritt) | 123 | 252 | 200 | **o'tmadi** |
+| `reyting zentrum` | 90 | 105 | 200 | o'tdi |
+| `reyting gruppe` | 26 | 31 | 200 | o'tdi |
+| `recordAttempt` | 15 | 65 | 200 | o'tdi |
+| `seansNatijasi` | 120 | 131 | 300 | o'tdi |
+
+Birinchi o'lchovda (tuzatishdan oldin): fortschritt 459, reyting zentrum
+324, seansNatijasi 349 — uchalasi o'tmagan edi.
+
+**Tuzatish.** Markaz reytingi endi Postgres'da hisoblanadi: bitta umumiy CTE
+(`zentrumHaftaCte`) haftani o'quvchi bo'yicha yig'adi va so'ragan
+o'quvchini 0 ball bilan qo'shadi; jadval `row_number()` bilan TOP 50 + o'z
+qatorini oladi, chip va seans oxiri esa oldindagilar sonini sanaydi.
+Ilgari har chaqiruv ~5 000 qatorni Node'ga olib saralardi. O'rin so'rovi
+bitta o'tishda (`COUNT FILTER`) yoziladi — korrelyatsiyali subso'rov reja
+narxini `jit_above_cost` dan oshirib, har chaqiruvda ~20 ms JIT
+kompilyatsiyaga sabab bo'lardi. Saralash qoidasi o'zgarmadi; moslik
+skripti 200 o'quvchida (30 tasi shu hafta qatorsiz, 170 tasida sun'iy
+seans) eski JS algoritmi bilan solishtirdi — **0 farq**.
+
+**EXPLAIN.** Haftalik yig'indi: `Bitmap Index Scan on
+DafStudentDay_companyId_day_idx` → `Bitmap Heap Scan` (49 361 qator) →
+`HashAggregate` (5 000), 13 ms. `DafAttempt` bo'ylab `Seq Scan` yo'q.
+Guruh so'rovi `DafStudentDay_groupKey_day_idx` dan, 0,7 ms. O'rin so'rovi
+18–25 ms (JIT yo'q), TOP 50 so'rovi ≈16 ms.
+
+**Bir qatorga 50 parallel yozish** (`recordAttempt`, bir o'quvchi, bir kun,
+bir guruh): `ON CONFLICT` hech narsa yo'qotmadi — ball 1 465 = 1 465,
+urinishlar 80 = 80.
+
+**Ochiq:** `uebersicht` p95 chegaradan yuqori (252 > 200). Har chaqiruv
+bitta og'ir so'rov (haftalik yig'indi) + oltita yengil so'rov; 50 parallel
+o'quvchida 350 so'rov 10 ulanish navbatida turadi. Yechim nazoratchi
+qarori bilan shu bosqichda tanlanadi (variantlar hisobotda).
 
 ---
 

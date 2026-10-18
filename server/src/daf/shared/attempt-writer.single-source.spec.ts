@@ -19,6 +19,8 @@ const ALLOWED: Record<string, string[]> = {
   'scripts/rebuild-daf-student-day.ts': ['DafStudentDay'],
   'scripts/lib/daf-student-day-sql.ts': ['DafStudentDay'],
   'scripts/load/daf-yuklama-seed.ts': ['DafAttempt', 'DafStudentDay'],
+  // Local only: two 0-point rows inside a transaction that is always rolled back.
+  'scripts/load/daf-yuklama-paritet.ts': ['DafStudentDay'],
 };
 
 function walk(dir: string, out: string[] = []): string[] {
