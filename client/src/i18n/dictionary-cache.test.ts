@@ -22,13 +22,12 @@ describe("dictionary cache", () => {
     load.mockImplementation(async (locale: UiLocale): Promise<Record<string, string>> => (locale === "uz" ? {} : { "Bosh sahifa": `[${locale}]` }));
   });
 
-  it("resolves uz to {} and tags the promise fulfilled once it settles", async () => {
+  it("has uz settled from the start, without calling the loader", async () => {
     const { getDictionary } = await freshCache();
     const thenable = getDictionary("uz");
-    expect(tags(thenable).status).toBe("pending");
-    await expect(thenable).resolves.toEqual({});
     expect(tags(thenable).status).toBe("fulfilled");
     expect(tags(thenable).value).toEqual({});
+    expect(load).not.toHaveBeenCalled();
   });
 
   it("returns the same promise for the same locale and loads once", async () => {

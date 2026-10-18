@@ -17,6 +17,14 @@ type Tagging = Promise<Dictionary> & { status: string; value?: Dictionary; reaso
 // the page's life, on the server the process's (the dictionaries are static).
 const cache = new Map<UiLocale, DictionaryThenable>();
 
+// Uzbek has no dictionary: seed a settled entry, so its pages never suspend.
+{
+  const uz = Promise.resolve({}) as Tagging;
+  uz.status = "fulfilled";
+  uz.value = {};
+  cache.set("uz", uz as DictionaryThenable);
+}
+
 /** How long a failed load stays cached before a read tries again. */
 export const RETRY_AFTER_MS = 3000;
 
