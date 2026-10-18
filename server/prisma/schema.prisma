@@ -4294,7 +4294,7 @@ model DafAttempt {
 
 /// DERIVED: the source of truth is DafAttempt. Rebuilt from it at any time by
 /// `scripts/rebuild-daf-student-day.ts`. One writer: `recordAttempt`
-/// (src/daf/shared/attempt-writer.ts). ADR-0111.
+/// (src/daf/shared/attempt-writer.ts). ADR-0114.
 model DafStudentDay {
   id        Int      @id @default(autoincrement())
   studentId Int

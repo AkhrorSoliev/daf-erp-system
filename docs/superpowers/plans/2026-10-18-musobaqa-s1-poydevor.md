@@ -52,7 +52,7 @@
 | `server/scripts/load/local-db-guard.ts` | "faqat lokal baza" qorovuli | 8 |
 | `server/scripts/load/daf-yuklama-seed.ts` | 5 000 o'quvchi × hafta urinishlar | 8 |
 | `server/scripts/load/daf-yuklama-olchov.ts` | p50/p95 o'lchov + EXPLAIN | 8 |
-| `docs/adr/0111-daf-kunlik-yigindi-hosila-jadval.md` | ADR | 9 |
+| `docs/adr/0114-daf-kunlik-yigindi-hosila-jadval.md` | ADR | 9 |
 | `server/CLAUDE.md` | DaF yozuvchi bo'limi | 9 |
 
 ---
@@ -118,7 +118,7 @@ Expected: FAIL (`model DafStudentDay` topilmaydi).
 ```prisma
 /// DERIVED: the source of truth is DafAttempt. Rebuilt from it at any time by
 /// `scripts/rebuild-daf-student-day.ts`. One writer: `recordAttempt`
-/// (src/daf/shared/attempt-writer.ts). ADR-0111.
+/// (src/daf/shared/attempt-writer.ts). ADR-0114.
 model DafStudentDay {
   id        Int      @id @default(autoincrement())
   studentId Int
@@ -149,7 +149,7 @@ va `model Student` ichida `dafAttempts       DafAttempt[]` qatoridan keyin:
 - [ ] **Step 4: Migratsiya faylini yozish** — `server/prisma/migrations/20261018200000_daf_student_day/migration.sql`:
 
 ```sql
--- DafStudentDay: derived daily totals of DafAttempt (ADR-0111).
+-- DafStudentDay: derived daily totals of DafAttempt (ADR-0114).
 CREATE TABLE "DafStudentDay" (
     "id" SERIAL NOT NULL,
     "studentId" INTEGER NOT NULL,
@@ -332,7 +332,7 @@ export type AttemptData = Omit<
 /**
  * The day row an attempt belongs to. The writer, the rebuild SQL and the
  * parity test all follow this one rule: the Tashkent day of `createdAt`,
- * and the sealed group ("" for none, never NULL — ADR-0111).
+ * and the sealed group ("" for none, never NULL — ADR-0114).
  */
 export function kunlikKalit(
   createdAt: Date,
@@ -400,7 +400,7 @@ import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 
 /**
- * DafAttempt and DafStudentDay have one door: `recordAttempt` (ADR-0111).
+ * DafAttempt and DafStudentDay have one door: `recordAttempt` (ADR-0114).
  * A write anywhere else would leave the day totals behind the attempts, and
  * every ranking reads the totals. Scripts that rebuild or seed the table
  * write raw SQL and are named here on purpose.
@@ -1480,7 +1480,7 @@ export const REBUILD_SQL = Prisma.sql`
 ```ts
 /**
  * READ-ONLY. Compares DafStudentDay with the totals rebuilt from DafAttempt
- * (ADR-0111). Exits 1 on any difference.
+ * (ADR-0114). Exits 1 on any difference.
  *
  *   railway run --service caring-courage --environment production npx ts-node --transpile-only scripts/audit-daf-student-day.ts
  */
@@ -1516,7 +1516,7 @@ run(async (prisma) => {
 
 ```ts
 /**
- * Rebuilds DafStudentDay from DafAttempt (ADR-0111). Dry run by default
+ * Rebuilds DafStudentDay from DafAttempt (ADR-0114). Dry run by default
  * (prints the difference); --apply replaces the table in one transaction.
  *
  * The table is locked first (EXCLUSIVE): a concurrent recordAttempt waits
@@ -1561,7 +1561,7 @@ Expected: ikkalasi `Farq … 0`. (Bo'sh bazada ham 0 — haqiqiy sinov Task 8 da
 - [ ] **Step 5: Sxema testiga "qayta qurish mavjud" sharti** — `daf-schema.spec.ts` dagi `DafStudentDay is derived…` testi oxiriga:
 
 ```ts
-    // The table is derived only while it can be rebuilt (ADR-0111).
+    // The table is derived only while it can be rebuilt (ADR-0114).
     expect(
       existsSync(join(__dirname, '..', '..', 'scripts', 'rebuild-daf-student-day.ts')),
     ).toBe(true);
@@ -1776,7 +1776,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 9: ADR, CLAUDE.md, to'liq tekshiruv
 
 **Files:**
-- Create: `docs/adr/0111-daf-kunlik-yigindi-hosila-jadval.md`
+- Create: `docs/adr/0114-daf-kunlik-yigindi-hosila-jadval.md`
 - Modify: `docs/adr/README.md` (indeks)
 - Modify: `server/CLAUDE.md` (DaF bo'limi; agar yo'q bo'lsa «Lesson ratings» bo'limidan oldin yangi `### DaF progress (src/daf/)`)
 
@@ -1793,7 +1793,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 4: `server/CLAUDE.md`** — inglizcha, 4–6 band:
 
 ```markdown
-### DaF progress (`src/daf/`, ADR-0111)
+### DaF progress (`src/daf/`, ADR-0114)
 
 - **Every attempt goes through `recordAttempt`** (`daf/shared/attempt-writer.ts`): the `DafAttempt` row and its `DafStudentDay` day total (`+points`, `+1 attempt`, Postgres `ON CONFLICT … DO UPDATE`) commit in one transaction. `attempt-writer.single-source.spec.ts` fails on any other write of either table.
 - **`DafStudentDay` is derived** (student × Tashkent day × `groupKey`, `''` for no group, never NULL). `DafAttempt` stays the source of truth, points included. After anything deletes or rewrites attempts, or after the points formula changes, run `scripts/rebuild-daf-student-day.ts --apply`; `scripts/audit-daf-student-day.ts` (read-only) must then report 0.

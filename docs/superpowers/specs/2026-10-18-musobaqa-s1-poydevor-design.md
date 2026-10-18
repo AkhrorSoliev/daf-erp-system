@@ -372,7 +372,7 @@ p95 121 (yangi) / 171 (oldingi kommit), `seansNatijasi` 126 / 132.
 Only Scan`; fortschritt p95 168, reyting zentrum 79, seansNatijasi 104 —
 hammasi o'tadi, zaxira kattaroq. Qaror: indeks qo'shildi —
 `20261018210000_daf_student_day_covering_index` (qo'lda yozilgan migratsiya,
-`schema.prisma` o'zgarmadi; ADR-0111).
+`schema.prisma` o'zgarmadi; ADR-0114).
 
 **Tuzatish.** Markaz reytingi endi Postgres'da hisoblanadi: bitta umumiy CTE
 (`zentrumHaftaCte`) haftani o'quvchi bo'yicha yig'adi va so'ragan

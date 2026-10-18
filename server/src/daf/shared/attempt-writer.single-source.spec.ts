@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 
 /**
- * DafAttempt and DafStudentDay have one door: `recordAttempt` (ADR-0111).
+ * DafAttempt and DafStudentDay have one door: `recordAttempt` (ADR-0114).
  * A write anywhere else would leave the day totals behind the attempts, and
  * every ranking reads the totals. Scripts that rebuild or seed the table
  * write raw SQL and are named here on purpose.

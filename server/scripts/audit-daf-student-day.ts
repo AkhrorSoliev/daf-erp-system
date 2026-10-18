@@ -1,6 +1,6 @@
 /**
  * READ-ONLY. Compares DafStudentDay with the totals rebuilt from DafAttempt
- * (ADR-0111). Exits 1 on any difference.
+ * (ADR-0114). Exits 1 on any difference.
  *
  *   railway run --service caring-courage --environment production npx ts-node --transpile-only scripts/audit-daf-student-day.ts
  */

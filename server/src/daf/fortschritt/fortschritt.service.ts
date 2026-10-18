@@ -119,7 +119,7 @@ function saralaBarqaror<T extends HaftalikYigindi>(royxat: T[]): T[] {
  * sana MATNI sifatida `::date` bilan beriladi, vaqt lahzasi emas.
  *
  * Bog'langan qiymatlar tartibi `[companyId, montagTag, studentId, …]` —
- * spec'dagi soxta `$queryRaw` (`zentrum-sql.fake.ts`) shunga tayanadi.
+ * spec'dagi soxta `$queryRaw` (`zentrum-sql.fake-spec.ts`) shunga tayanadi.
  */
 function zentrumHaftaCte(
   companyId: number,
@@ -425,18 +425,6 @@ export class FortschrittService {
   }
 
   /**
-   * MARKAZ JADVALI FILIALGA CHEKLANMAYDI — bu ataylab qilingan istisno.
-   *
-   * Bu repoda deyarli hamma narsa filialga qulflangan
-   * (`branch-route-policy` manifesti, `narrowPayrollScope` va boshqalar).
-   * O'quvchilar reytingi shundan chiqariladi: CEO 2026-09-06 da reyting
-   * butun markaz bo'yicha bo'lsin dedi. Natijasi ochiq: Namangandagi
-   * o'quvchi Farg'onadagi o'quvchining to'liq ismini ko'radi.
-   *
-   * Buni "xato" deb tuzatmang — qaror hujjatda
-   * (`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md`, 6.1).
-   */
-  /**
    * O'quvchining O'Z raqamlari BITTA so'rovda — `uebersicht` (chip) va
    * `seansNatijasi` (oldin/hozir) shuni chaqiradi. Har alohida so'rov 50
    * parallel chaqiruvda ulanish navbatiga qaytadan turardi (S1 yuklama
@@ -503,6 +491,17 @@ export class FortschrittService {
   }
 
   /**
+   * MARKAZ JADVALI FILIALGA CHEKLANMAYDI — bu ataylab qilingan istisno.
+   *
+   * Bu repoda deyarli hamma narsa filialga qulflangan
+   * (`branch-route-policy` manifesti, `narrowPayrollScope` va boshqalar).
+   * O'quvchilar reytingi shundan chiqariladi: CEO 2026-09-06 da reyting
+   * butun markaz bo'yicha bo'lsin dedi. Natijasi ochiq: Namangandagi
+   * o'quvchi Farg'onadagi o'quvchining to'liq ismini ko'radi.
+   *
+   * Buni "xato" deb tuzatmang — qaror hujjatda
+   * (`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md`, 6.1).
+   *
    * Markaz jadvalining qatorlari.
    *
    * Ro'yxat markazning TO'LIQ ro'yxati emas — TOP 50 + o'quvchining o'z

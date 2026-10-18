@@ -1,4 +1,4 @@
--- DafStudentDay: derived daily totals of DafAttempt (ADR-0111).
+-- DafStudentDay: derived daily totals of DafAttempt (ADR-0114).
 CREATE TABLE "DafStudentDay" (
     "id" SERIAL NOT NULL,
     "studentId" INTEGER NOT NULL,

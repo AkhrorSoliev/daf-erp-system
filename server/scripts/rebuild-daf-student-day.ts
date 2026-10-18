@@ -1,5 +1,5 @@
 /**
- * Rebuilds DafStudentDay from DafAttempt (ADR-0111). Dry run by default
+ * Rebuilds DafStudentDay from DafAttempt (ADR-0114). Dry run by default
  * (prints the difference); --apply replaces the table in one transaction.
  *
  * The table is locked first (EXCLUSIVE): a concurrent recordAttempt waits

@@ -11,7 +11,7 @@ export type AttemptData = Omit<
 /**
  * The day row an attempt belongs to. The writer, the rebuild SQL and the
  * parity test all follow this one rule: the Tashkent day of `createdAt`,
- * and the sealed group ("" for none, never NULL — ADR-0111).
+ * and the sealed group ("" for none, never NULL — ADR-0114).
  */
 export function kunlikKalit(
   createdAt: Date,

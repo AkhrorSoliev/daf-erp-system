@@ -1,4 +1,4 @@
--- DafStudentDay: covering index for the weekly ranking (ADR-0111).
+-- DafStudentDay: covering index for the weekly ranking (ADR-0114).
 -- Hand-written because Prisma cannot express INCLUDE. The (companyId, day)
 -- index declared in schema.prisma stays; this one is an addition. The planner
 -- can answer the centre-week query with an Index Only Scan, reading studentId

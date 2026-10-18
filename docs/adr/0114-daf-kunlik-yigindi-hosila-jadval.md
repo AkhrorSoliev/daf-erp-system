@@ -1,4 +1,4 @@
-# ADR-0111 — DaF kunlik yig'indisi: hosila jadval `DafStudentDay`
+# ADR-0114 — DaF kunlik yig'indisi: hosila jadval `DafStudentDay`
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-18
@@ -33,6 +33,6 @@
 - **Yuklama raqamlari** (spec §10; 12 000 o'quvchi, ≈1,3 mln urinish, ≈253 ming kunlik qator, 50 parallel o'quvchi, band mashina): `uebersicht` p95 193 ms (chegara 200), `reyting zentrum` 91, `reyting gruppe` 30, `recordAttempt` 56, `seansNatijasi` 116 (chegara 300). `DafAttempt` bo'ylab `Seq Scan` yo'q. Bir qatorga 50 parallel yozishda yig'indi yo'qolmadi (farq 0).
 - **Qamrab oluvchi indeks.** `uebersicht` p95 chegaraga yaqin edi (193 va 202 ms, 200 ga qarshi). `("companyId","day") INCLUDE ("studentId","points")` `Index Only Scan` beradi va p95 ni 168 ms ga tushiradi; shu uchun alohida migratsiya qo'shildi. Narxi: jadval yozilganda bitta qo'shimcha indeks yangilanadi. Indeks `schema.prisma` da yo'q, shuning uchun keyingi `prisma migrate diff` uni `DROP INDEX` deb ko'rsatadi — bu kutilgan farq, uni migratsiyaga olib kirmang.
 - **Siljish xavfi bor va uni qorovullar ushlaydi:** qorovul test (kod ichida), audit skripti (prod'da), qayta qurish skripti (davo). Qorovul ko'rmaydigan joyda (qo'lda SQL) urinishni o'chirish jadvalni siljitadi — shundan keyin qayta qurish majburiy.
-- **Deploy tartibi:** migratsiyalar (boshlang'ich to'ldirish ichida) kodsiz oldin ishlaydi, keyin kod chiqadi. Deploydan keyin prod'da `scripts/audit-daf-student-day.ts` bir marta yuritiladi; kutilgan natija — farq 0.
+- **Deploy tartibi:** migratsiyalar (boshlang'ich to'ldirish ichida) kodsiz oldin ishlaydi, keyin kod chiqadi. Deploydan keyin prod'da `scripts/audit-daf-student-day.ts` bir marta yuritiladi; kutilgan natija — farq 0. Deploy paytida eski nusxa hali ishlab turadi: yangi nusxa migratsiya va boshlang'ich to'ldirishni yurgizayotganda eski nusxa javoblarni saqlashda davom etishi mumkin, shu oz sonli javoblar `DafAttempt`da bor, lekin `DafStudentDay`da yo'q. Eski nusxa o'chgach `scripts/rebuild-daf-student-day.ts` yuritiladi (avval dry run, farq ko'rsatsa `--apply`), shundan keyin audit 0 ko'rsatishi shart; yoki deployni dars soatlaridan tashqarida qiling.
 - Ball formulasi o'zgarsa yoki urinish o'chirilsa jadval avtomatik to'g'rilanmaydi: `rebuild-daf-student-day.ts --apply` yuritiladi.
 - Yurak, tosh va seriyani pulga sotib olish rad etilgan holicha qoladi (06.09 dizayni §7).

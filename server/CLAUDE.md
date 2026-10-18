@@ -1429,10 +1429,10 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
 | Salary page reads (`/payments/salary`)           | ✅  | ✅  |  ❌   |   ❌    |   ❌    |
 | «Markaz qoplagani» (salary page tab)             | ✅  | ✅  |  ❌   |   ❌    |   ❌    |
 
-### DaF progress (`src/daf/`, ADR-0111)
+### DaF progress (`src/daf/`, ADR-0114)
 
 - **Every attempt goes through `recordAttempt`** (`daf/shared/attempt-writer.ts`): the `DafAttempt` row and its `DafStudentDay` day total (`+points`, `+1 attempt`, Postgres `ON CONFLICT … DO UPDATE`) commit in one transaction. `attempt-writer.single-source.spec.ts` fails on any other write of either table.
-- **`DafStudentDay` is derived** (student × Tashkent day × `groupKey`, `''` for no group, never NULL). `DafAttempt` stays the source of truth, points included. After anything deletes or rewrites attempts, or after the points formula changes, run `scripts/rebuild-daf-student-day.ts --apply`; `scripts/audit-daf-student-day.ts` (read-only) must then report 0.
+- **`DafStudentDay` is derived** (student × Tashkent day × `groupKey`, `''` for no group, never NULL). `DafAttempt` stays the source of truth, points included. After anything deletes or rewrites attempts, or after the points formula changes, run `scripts/rebuild-daf-student-day.ts --apply`; `scripts/audit-daf-student-day.ts` (read-only) must then report 0. In a deploy the old instance can still save answers while the new one runs the migration, so run the rebuild (dry run, then `--apply` on a difference) once the old instance is gone, then the audit (ADR-0114).
 - **`FortschrittService` reads only `DafStudentDay`** for total, streak and both weekly rankings; the ranking rules of the 06.09 design are unchanged.
 - **The session end answers with `natija`** (`seansNatijasiXavfsiz`): points of the session, streak, `serieYangi`, rank before/after for group and centre. A failure there returns `null` and never fails the save.
 
