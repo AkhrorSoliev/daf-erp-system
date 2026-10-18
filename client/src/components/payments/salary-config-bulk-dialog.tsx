@@ -19,6 +19,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
+import { markedText } from "./debt-history/marked-text";
 import {
   savedToastText,
   type RateReapplySummary,
@@ -67,6 +69,7 @@ interface Props {
  * yet (ADR-0050); the toast reports how many were re-priced.
  */
 export function SalaryConfigBulkDialog({ kind, userIds, onClose, onSaved }: Props) {
+  const t = useT();
   const open = !!kind;
   const isPercent = kind === "percent";
 
@@ -127,11 +130,18 @@ export function SalaryConfigBulkDialog({ kind, userIds, onClose, onSaved }: Prop
 
     if (failed === 0) {
       toast.success(
-        savedToastText(`${succeeded} ta xodimga qoida belgilandi`, reapplied),
+        savedToastText(
+          t("{n} ta xodimga qoida belgilandi", { n: succeeded }),
+          reapplied,
+          t,
+        ),
       );
     } else if (succeeded > 0) {
       toast(
-        `${succeeded} ta saqlandi · ${failed} ta xato. Xatosi bo'lganlarni alohida tekshiring.`,
+        t("{ok} ta saqlandi · {failed} ta xato. Xatosi bo'lganlarni alohida tekshiring.", {
+          ok: succeeded,
+          failed,
+        }),
         { icon: "⚠️" },
       );
     } else {
@@ -139,7 +149,7 @@ export function SalaryConfigBulkDialog({ kind, userIds, onClose, onSaved }: Prop
         (r): r is PromiseRejectedResult => r.status === "rejected",
       );
       toast.error(
-        getErrorMessage(firstReject?.reason, "Saqlashda xatolik yuz berdi"),
+        getErrorMessage(firstReject?.reason, t("Saqlashda xatolik yuz berdi")),
       );
     }
 
@@ -158,21 +168,19 @@ export function SalaryConfigBulkDialog({ kind, userIds, onClose, onSaved }: Prop
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isPercent ? "Foiz qo'yish" : "Oylik qo'yish"}
+            {isPercent ? t("Foiz qo'yish") : t("Oylik qo'yish")}
           </DialogTitle>
           <DialogDescription>
-            {userIds.length} ta xodim uchun{" "}
             {isPercent
-              ? "har dars narxidan foiz hisoblanadi"
-              : "oyiga qattiq summa belgilanadi"}
-            .
+              ? t("{n} ta xodim uchun har dars narxidan foiz hisoblanadi.", { n: userIds.length })
+              : t("{n} ta xodim uchun oyiga qattiq summa belgilanadi.", { n: userIds.length })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">
-              {isPercent ? "Foiz qiymati" : "Summa"}
+              {isPercent ? t("Foiz qiymati") : t("Summa")}
             </Label>
             {isPercent ? (
               <div className="relative">
@@ -195,40 +203,43 @@ export function SalaryConfigBulkDialog({ kind, userIds, onClose, onSaved }: Prop
               <PriceInput
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder="Masalan 4 000 000"
+                placeholder={t("Masalan 4 000 000")}
               />
             )}
           </div>
 
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">
-              Kuchga kirish sanasi (ixtiyoriy)
+              {t("Kuchga kirish sanasi (ixtiyoriy)")}
             </Label>
             <DatePicker
               value={effectiveFrom}
               onChange={setEffectiveFrom}
               disabled={submitting}
-              placeholder="Bugundan boshlab"
+              placeholder={t("Bugundan boshlab")}
             />
             <p className="text-xs text-muted-foreground">
-              Bu sanadan boshlangan darslar yangi qoida bo&apos;yicha
-              hisoblanadi. Avvalgi davrlar avvalgi qoidada qoladi.
+              {t("Bu sanadan boshlangan darslar yangi qoida bo'yicha hisoblanadi. Avvalgi davrlar avvalgi qoidada qoladi.")}
             </p>
           </div>
 
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-            ⚠️ Bu {userIds.length} ta xodim uchun mavjud{" "}
-            <b>umumiy</b> qoidani bekor qiladi (per-group qoidalar tegmaydi).
+            ⚠️{" "}
+            {markedText(
+              t("Bu {n} ta xodim uchun mavjud **umumiy** qoidani bekor qiladi (per-group qoidalar tegmaydi).", {
+                n: userIds.length,
+              }),
+            )}
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || submitting}>
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            Qo&apos;llash
+            {t("Qo'llash")}
           </Button>
         </DialogFooter>
       </DialogContent>

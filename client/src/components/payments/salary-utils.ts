@@ -2,6 +2,8 @@
 
 import { formatNumber } from "@/lib/format-utils";
 import { msg } from "@/i18n/msg";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "./record-payment-admission";
 
 /**
  * The unit a rate is written in: «month» — per student per MONTH, «cycle» —
@@ -20,13 +22,14 @@ export type RateBasis = "month" | "cycle";
 export function breakdownRateLabel(
   rate: { salaryType: string; value: number },
   rateBasis: RateBasis,
+  t: Translate = interpolate,
 ): string {
   if (rate.salaryType === "PERCENTAGE") return `${rate.value}%`;
   const value = formatNumber(rate.value);
   if (rate.salaryType === "FIXED_PER_STUDENT") {
-    return rateBasis === "month" ? `${value}/o'quvchi/oy` : `${value}/tsikl`;
+    return rateBasis === "month" ? t("{value}/o'quvchi/oy", { value }) : t("{value}/tsikl", { value });
   }
-  return `${value}/oy`;
+  return t("{value}/oy", { value });
 }
 
 /**
@@ -34,9 +37,9 @@ export function breakdownRateLabel(
  * breakdown drawer's CSV (opened in Excel) both read it.
  */
 export const SALARY_TYPE_LABELS: Record<string, string> = {
-  PERCENTAGE: "Foiz",
-  FIXED_PER_STUDENT: "O'quvchi boshiga",
-  FIXED_MONTHLY: "Oylik",
+  PERCENTAGE: msg("Foiz"),
+  FIXED_PER_STUDENT: msg("O'quvchi boshiga"),
+  FIXED_MONTHLY: msg("Oylik"),
 };
 
 export const SALARY_STATUS_LABELS: Record<string, string> = {
@@ -117,11 +120,16 @@ export function primaryRoleLabel(
  * role-less employee has — a cleaner carries no role by design. Employees
  * created before the column exists fall back to their role.
  */
-export function positionLabel(user: {
-  position?: string | null;
-  roles?: { id: number }[];
-}): string {
-  return user.position?.trim() || roleLabel(user.roles);
+export function positionLabel(
+  user: {
+    position?: string | null;
+    roles?: { id: number }[];
+  },
+  t: (source: string) => string = (source) => source,
+): string {
+  // A typed job title is data: only the role name is translated.
+  const role = roleLabel(user.roles);
+  return user.position?.trim() || t(role);
 }
 
 const UZ_MONTHS = [

@@ -345,6 +345,15 @@ export const STRICT_FILES: string[] = [
   "components/payments/salary/salary-center-recovery-card.tsx",
   "components/payments/salary/salary-queries.ts",
   "components/payments/salary/salary-types.ts",
+  "components/payments/salary-settings-sheet.tsx",
+  "components/payments/salary-config-row-sheet.tsx",
+  "components/payments/salary-config-bulk-dialog.tsx",
+  "components/payments/salary-config-reapply-dialog.tsx",
+  "components/payments/salary-config-reapply.ts",
+  "components/payments/salary-staff-config-list.tsx",
+  "components/payments/salary-config-history.ts",
+  "components/payments/salary-settle-month-dialog.tsx",
+  "components/payments/salary-settings-access.ts",
 ];
 
 function walk(dir: string): string[] {
