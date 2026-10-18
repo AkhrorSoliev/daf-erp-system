@@ -96,6 +96,11 @@ export const STRICT_FILES: string[] = [
   "components/students/student-phone-rows.ts",
   "lib/status-config.ts",
   "lib/telegram-link.ts",
+  "components/students/add-student-dialog.tsx",
+  "components/students/edit-student-form.tsx",
+  "components/students/edit-student-drawer.tsx",
+  "components/students/edit-student-additional-fields.tsx",
+  "lib/schemas/student-schema.ts",
 ];
 
 function walk(dir: string): string[] {
