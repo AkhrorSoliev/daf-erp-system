@@ -1,7 +1,10 @@
 import { FortschrittService } from './fortschritt.service';
+import { HaftaQatori, zentrumQueryRaw } from './zentrum-sql.fake-spec';
 
-function fakePrisma() {
+/** `week` — the centre's week, read by the `$queryRaw` ranking queries. */
+function fakePrisma(week: HaftaQatori[] = []) {
   return {
+    $queryRaw: zentrumQueryRaw(() => week),
     dafStudentDay: {
       aggregate: jest.fn(async () => ({ _sum: { points: 0 } })),
       findMany: jest.fn(async () => []),
@@ -63,23 +66,20 @@ describe('uebersicht', () => {
   );
 
   it("guruhi yo'q o'quvchining guruh o'rni null, markaz o'rni bor", async () => {
-    const prisma = fakePrisma();
+    const prisma = fakePrisma([{ studentId: 55, points: 40 }]);
     prisma.enrollment.findFirst = jest.fn(async () => null);
-    prisma.dafStudentDay.groupBy = jest.fn(async () => [
-      { studentId: 55, _sum: { points: 40 } },
-    ]);
     const f = await new FortschrittService(prisma).uebersicht(55, 1);
     expect(f.wochePlatzGruppe).toBeNull();
     expect(f.wochePlatzZentrum).toBe(1);
+    expect(f.wochePunkte).toBe(40);
   });
 });
 
 describe('reyting', () => {
   it('ballga qarab kamayish tartibida saralaydi va o`rin qo`yadi', async () => {
-    const prisma = fakePrisma();
-    prisma.dafStudentDay.groupBy = jest.fn(async () => [
-      { studentId: 7, _sum: { points: 300 } },
-      { studentId: 55, _sum: { points: 900 } },
+    const prisma = fakePrisma([
+      { studentId: 7, points: 300 },
+      { studentId: 55, points: 900 },
     ]);
     prisma.student.findMany = jest.fn(async () => [
       { id: 7, firstName: 'Malika', lastName: 'Sodiqova' },
@@ -108,17 +108,16 @@ describe('reyting', () => {
   });
 
   it('teng ballda tartib BARQAROR (studentId bo`yicha)', async () => {
-    const prisma = fakePrisma();
-    prisma.dafStudentDay.groupBy = jest.fn(async () => [
-      { studentId: 9, _sum: { points: 100 } },
-      { studentId: 4, _sum: { points: 100 } },
+    const prisma = fakePrisma([
+      { studentId: 9, points: 100 },
+      { studentId: 4, points: 100 },
     ]);
     prisma.student.findMany = jest.fn(async () => [
       { id: 4, firstName: 'A', lastName: 'A' },
       { id: 9, firstName: 'B', lastName: 'B' },
     ]);
     const r = await new FortschrittService(prisma).reyting(55, 1, 'zentrum');
-    // So'ragan o'quvchi (55) bu hafta mashq qilmagan — `groupBy`da yo'q,
+    // So'ragan o'quvchi (55) bu hafta mashq qilmagan — haftalik ro'yxatda yo'q,
     // lekin Fix 2 talabiga ko'ra O'Z QATORI baribir 0 ball bilan
     // qo'shiladi (eng pastda, chunki 0 < 100). Bu test 4/9 orasidagi
     // BARQAROR tartibni tekshiradi; 55ning qo'shilishi shunchaki shu
@@ -136,9 +135,50 @@ describe('reyting', () => {
   it('markaz jadvali FILIALGA cheklanmaydi', async () => {
     const prisma = fakePrisma();
     await new FortschrittService(prisma).reyting(55, 1, 'zentrum');
-    const where = prisma.dafStudentDay.groupBy.mock.calls[0][0].where;
-    expect(where).not.toHaveProperty('branchId');
-    expect(where.companyId).toBe(1);
+    const sql = prisma.$queryRaw.mock.calls[0][0];
+    expect(sql.strings.join('?')).not.toMatch(/branch/i);
+    expect(sql.values[0]).toBe(1); // companyId
+  });
+
+  it(
+    "markaz jadvali TOP 50 + o'z qatori HAQIQIY o'rni bilan (qayta " +
+      'raqamlanmaydi)',
+    async () => {
+      // 60 o'quvchi 600, 590, … 10 ball; so'ragan o'quvchi (55) 35 ball —
+      // 58-o'rin. Jadvalda 50 + 1 qator, o'zi 51 emas, 58 deb ko'rinadi.
+      const week = Array.from({ length: 60 }, (_, i) => ({
+        studentId: 100 + i,
+        points: 600 - i * 10,
+      }));
+      const prisma = fakePrisma([...week, { studentId: 55, points: 35 }]);
+      const service = new FortschrittService(prisma);
+      const r = await service.reyting(55, 1, 'zentrum');
+      expect(r).toHaveLength(51);
+      expect(r[49].platz).toBe(50);
+      expect(r[50]).toMatchObject({ studentId: 55, platz: 58, selbst: true });
+      // Chegara so'rovning OXIRGI qiymati sifatida 50 bilan boradi.
+      const sql = prisma.$queryRaw.mock.calls[0][0];
+      expect(sql.values[sql.values.length - 1]).toBe(50);
+      const f = await service.uebersicht(55, 1);
+      expect(f.wochePlatzZentrum).toBe(58);
+    },
+  );
+
+  it("qatori yo'q o'quvchi teng nol ballilar orasiga id tartibida kiradi", async () => {
+    // 4 va 9 — qatori bor, 0 ball; 5 — qatori yo'q. Tartib: 7, 4, 5, 9:
+    // 9 uchinchi emas, to'rtinchi o'rinda.
+    const prisma = fakePrisma([
+      { studentId: 7, points: 100 },
+      { studentId: 9, points: 0 },
+      { studentId: 4, points: 0 },
+    ]);
+    const r = await new FortschrittService(prisma).reyting(5, 1, 'zentrum');
+    expect(r.map((z) => [z.studentId, z.platz])).toEqual([
+      [7, 1],
+      [4, 2],
+      [5, 3],
+      [9, 4],
+    ]);
   });
 
   it(
@@ -181,8 +221,8 @@ describe('reyting', () => {
       "keladi — bu hafta mashq qilmagan o'quvchi ham qatorda ko'rinadi " +
       '(Fix 2: chip va Markaz jadvali bir xil javob berishi shart)',
     async () => {
-      // O'quvchi (55) bu hafta hech narsa qilmagan — `groupBy` uni umuman
-      // qaytarmaydi. Ikkita boshqa o'quvchi ball yig'gan. Tuzatishdan
+      // O'quvchi (55) bu hafta hech narsa qilmagan — haftalik ro'yxat uni
+      // umuman qaytarmaydi. Ikkita boshqa o'quvchi ball yig'gan. Tuzatishdan
       // oldingi kodda `zentrumReytingi` faqat `groupBy` natijasidan
       // quriladi va o'z qatorini FAQAT topilganda qo'shadi — mashq
       // qilmagan o'quvchi u yerda yo'q, shuning uchun jadvalda umuman
@@ -190,10 +230,9 @@ describe('reyting', () => {
       // unga baribir o'rin beradi — dushanba ertalab chip "1-o'rin" deb,
       // Markaz tabi esa "hech kim ball yig'magan" deb ikkalasi bir
       // vaqtda ikki xil javob berardi.
-      const prisma = fakePrisma();
-      prisma.dafStudentDay.groupBy = jest.fn(async () => [
-        { studentId: 7, _sum: { points: 500 } },
-        { studentId: 9, _sum: { points: 100 } },
+      const prisma = fakePrisma([
+        { studentId: 7, points: 500 },
+        { studentId: 9, points: 100 },
       ]);
 
       const service = new FortschrittService(prisma);

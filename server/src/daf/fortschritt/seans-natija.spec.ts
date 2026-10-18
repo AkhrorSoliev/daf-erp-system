@@ -1,4 +1,5 @@
 import { FortschrittService } from './fortschritt.service';
+import { zentrumQueryRaw } from './zentrum-sql.fake-spec';
 
 const NOW = new Date('2026-10-19T09:00:00Z'); // Monday 14:00 Tashkent
 
@@ -10,6 +11,8 @@ function fake(opts: {
   groupId?: string | null;
 }) {
   return {
+    // The centre's week: ranked in SQL, answered by the reference fake.
+    $queryRaw: zentrumQueryRaw(() => opts.week),
     dafAttempt: { findMany: jest.fn(async () => opts.session) },
     dafStudentDay: {
       // The service only asks for `_sum.attempts` here (today's attempts).
@@ -22,8 +25,9 @@ function fake(opts: {
         { day: new Date('2026-10-18T00:00:00.000Z') },
         { day: new Date('2026-10-19T00:00:00.000Z') },
       ]),
-      groupBy: jest.fn(async ({ where }: any) =>
-        (where.groupKey ? (opts.groupWeek ?? []) : opts.week).map((w) => ({
+      // Only the group table still uses groupBy.
+      groupBy: jest.fn(async () =>
+        (opts.groupWeek ?? []).map((w) => ({
           studentId: w.studentId,
           _sum: { points: w.points },
         })),

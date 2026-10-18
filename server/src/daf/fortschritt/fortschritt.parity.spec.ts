@@ -2,6 +2,7 @@ import { FortschrittService } from './fortschritt.service';
 import { kunlikKalit } from '../shared/attempt-writer';
 import { serieAus, wochenStartUtc } from '../uebung/punkte';
 import { tashkentDateStr } from '../../common/date/tashkent';
+import { zentrumQueryRaw } from './zentrum-sql.fake-spec';
 
 /**
  * The OLD formulas read DafAttempt directly; the service now reads the
@@ -111,6 +112,15 @@ function matches(r: Row, where: any): boolean {
 function fakeDayPrisma() {
   const data = rows();
   return {
+    // The centre ranking runs in SQL; the fake sees the rows its WHERE would:
+    // the company, from the Monday DATE the service binds.
+    $queryRaw: zentrumQueryRaw((companyId, montagTag) =>
+      data.filter(
+        (r) =>
+          r.companyId === companyId &&
+          r.day >= new Date(`${montagTag}T00:00:00.000Z`),
+      ),
+    ),
     dafStudentDay: {
       aggregate: jest.fn(async ({ where }: any) => ({
         _sum: {
