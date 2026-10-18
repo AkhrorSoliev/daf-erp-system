@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useT } from "@/i18n/context";
 import { monthShort } from "@/components/payments/salary-utils";
 import { FULL_TEACHER_PAY_MONTH, profitLines, som } from "./overview-math";
 import type { ProfitComposition } from "./types";
@@ -18,6 +19,7 @@ export function ProfitDialog({
   month: string;
   composition: ProfitComposition;
 }) {
+  const t = useT();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -25,14 +27,14 @@ export function ProfitDialog({
         className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
       >
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>{monthShort(month)} foydasi qanday hisoblandi</DialogTitle>
+          <DialogTitle>{t("{month} foydasi qanday hisoblandi", { month: monthShort(month, t) })}</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <ProfitBreakdown month={month} composition={composition} />
         </div>
         <DialogFooter className="border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Yopish
+            {t("Yopish")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -46,20 +48,21 @@ export function ProfitDialog({
  * rather than falling back to cash paid — is it the Ish haqi page's total.
  */
 export function ProfitBreakdown({ month, composition }: { month: string; composition: ProfitComposition }) {
+  const t = useT();
   return (
     <div className="space-y-2 text-sm">
-      {profitLines(composition).map((line) => (
+      {profitLines(composition, t).map((line) => (
         <div key={line.label} className="flex justify-between gap-2">
           <span className="text-muted-foreground">{line.label}</span>
-          <span className="tabular-nums">{som(line.amount)}</span>
+          <span className="tabular-nums">{som(line.amount, t)}</span>
         </div>
       ))}
       <div className="flex justify-between gap-2 border-t pt-2 font-semibold">
-        <span>Foyda</span>
-        <span className="tabular-nums">{som(composition.netProfit)}</span>
+        <span>{t("Foyda")}</span>
+        <span className="tabular-nums">{som(composition.netProfit, t)}</span>
       </div>
       {month >= FULL_TEACHER_PAY_MONTH && composition.teacherSalaryBasis === "hisoblangan" && (
-        <p className="text-xs text-muted-foreground">Ustozlar oyligi — Ish haqi sahifasidagi jami bilan bir xil</p>
+        <p className="text-xs text-muted-foreground">{t("Ustozlar oyligi — Ish haqi sahifasidagi jami bilan bir xil")}</p>
       )}
     </div>
   );

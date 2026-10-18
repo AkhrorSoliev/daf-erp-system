@@ -7,8 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { BlockError } from "./block-state";
-import { PAYMENT_METHOD_LABELS, som } from "./overview-math";
+import { paymentMethodLabel, som } from "./overview-math";
 import { useBranchId } from "./queries";
 
 interface Payment {
@@ -50,6 +51,7 @@ export function useRecentPayments() {
  * «Guruh» is the student's group NOW, not a property of the payment.
  */
 export function RecentPayments() {
+  const t = useT();
   const { data, isPending, isError, refetch } = useRecentPayments();
 
   if (isPending) {
@@ -61,11 +63,11 @@ export function RecentPayments() {
       </div>
     );
   }
-  if (isError) return <BlockError title="Oxirgi to'lovlar" onRetry={() => refetch()} />;
+  if (isError) return <BlockError title={t("Oxirgi to'lovlar")} onRetry={() => refetch()} />;
 
   const payments = data.data;
   if (payments.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">Hali to&apos;lov qayd qilinmagan</p>;
+    return <p className="py-8 text-center text-sm text-muted-foreground">{t("Hali to'lov qayd qilinmagan")}</p>;
   }
 
   return (
@@ -73,12 +75,12 @@ export function RecentPayments() {
       <TableHeader>
         <TableRow>
           <TableHead className="w-12 border-r">#</TableHead>
-          <TableHead>O&apos;quvchi</TableHead>
-          <TableHead>Guruh</TableHead>
-          <TableHead>Summa</TableHead>
-          <TableHead>Usul</TableHead>
-          <TableHead>Qabul qildi</TableHead>
-          <TableHead>Sana</TableHead>
+          <TableHead>{t("O'quvchi")}</TableHead>
+          <TableHead>{t("Guruh")}</TableHead>
+          <TableHead>{t("Summa")}</TableHead>
+          <TableHead>{t("Usul")}</TableHead>
+          <TableHead>{t("Qabul qildi")}</TableHead>
+          <TableHead>{t("Sana")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -96,10 +98,10 @@ export function RecentPayments() {
             <TableCell className="text-sm">
               {p.student.groups?.length ? p.student.groups.map((g) => g.name).join(", ") : "—"}
             </TableCell>
-            <TableCell className="font-medium text-green-600">+{som(p.amount)}</TableCell>
+            <TableCell className="font-medium text-green-600">+{som(p.amount, t)}</TableCell>
             <TableCell>
               <Badge variant="secondary" className={methodColors[p.method]}>
-                {PAYMENT_METHOD_LABELS[p.method] ?? p.method}
+                {paymentMethodLabel(p.method, t)}
               </Badge>
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
