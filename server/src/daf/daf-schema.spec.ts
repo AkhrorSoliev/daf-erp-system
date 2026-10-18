@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { Prisma } from '@prisma/client';
 
@@ -92,6 +92,12 @@ describe('Daf sxemasi', () => {
     expect(body).toMatch(/@@unique\(\[studentId, day, groupKey\]\)/);
     expect(body).toMatch(/day\s+DateTime\s+@db\.Date/);
     expect(fieldsOf('DafAttempt')).toContain('points');
+    // The table is derived only while it can be rebuilt (ADR-0111).
+    expect(
+      existsSync(
+        join(__dirname, '..', '..', 'scripts', 'rebuild-daf-student-day.ts'),
+      ),
+    ).toBe(true);
   });
 });
 
