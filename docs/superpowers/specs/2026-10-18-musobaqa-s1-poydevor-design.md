@@ -258,15 +258,17 @@ urinish, ularning kunlik qatorlari (`recordAttempt` orqali emas — sinov
 skripti to'g'ridan-to'g'ri yozadi, keyin moslik audit skripti bilan
 tekshiriladi).
 
-**O'lchanadi** — 50 parallel o'quvchi:
+**O'lchanadi** — 50 parallel o'quvchi, 10 raund. Servis darajasida,
+haqiqiy Postgres bilan (HTTP qatlami so'rov vaqtiga deyarli qo'shmaydi;
+og'irlik bazada):
 
-| So'rov | Chegara (p95) |
+| Amal (endpoint) | Chegara (p95) |
 | --- | --- |
-| `GET lernen/fortschritt` | < 200 ms |
-| `GET lernen/reyting?scope=zentrum` | < 200 ms |
-| `GET lernen/reyting?scope=gruppe` | < 200 ms |
-| `POST …/pruefen` | < 200 ms |
-| `POST …/abschluss` (natija bilan) | < 300 ms |
+| `uebersicht` (`GET lernen/fortschritt`) | < 200 ms |
+| `reyting zentrum` (`GET lernen/reyting?scope=zentrum`) | < 200 ms |
+| `reyting gruppe` (`GET lernen/reyting?scope=gruppe`) | < 200 ms |
+| `recordAttempt` (`pruefen` / `juft` ning yozuvi) | < 200 ms |
+| `seansNatijasi` (`abschluss` ga qo'shiladigan qism) | < 300 ms |
 
 Har so'rovning rejasi `EXPLAIN ANALYZE` bilan ko'riladi: indeks ishlatiladi,
 `DafAttempt` bo'ylab to'liq skan yo'q. Natija raqamlari shu hujjatga
