@@ -504,6 +504,12 @@ export const STRICT_FILES: string[] = [
   "components/leads/ownership/lead-owner-block.tsx",
   "components/leads/ownership/lead-owners-strip.tsx",
   "components/leads/ownership/ownership-format.ts",
+  "components/forms/forms-list-client.tsx",
+  "components/forms/form-builder-client.tsx",
+  "components/forms/form-field-editor.tsx",
+  "components/forms/copy-form-link-dialog.tsx",
+  "components/forms/form-preview.tsx",
+  "lib/schemas/custom-form-schema.ts",
 ];
 
 function walk(dir: string): string[] {

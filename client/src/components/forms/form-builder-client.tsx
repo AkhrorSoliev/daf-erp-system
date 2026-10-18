@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -35,11 +35,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
-import { useLeadsBoard } from "@/hooks/use-leads-board";
+import { leadColumnName, useLeadsBoard } from "@/hooks/use-leads-board";
 import {
+  customFormError,
   customFormSchema,
   defaultFormFields,
   FIELD_TYPES,
@@ -66,6 +68,12 @@ interface Props {
 }
 
 export function FormBuilderClient({ formId }: Props) {
+  const t = useT();
+  // The load effect reads t from here: a language switch must not refetch.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const router = useRouter();
   const setName = useBreadcrumbName((s) => s.setName);
   // Tahrirlashda javoblar sahifasiga, yaratishda ro'yxatga qaytiladi.
@@ -132,6 +140,7 @@ export function FormBuilderClient({ formId }: Props) {
 
   useEffect(() => {
     if (!formId) return;
+    const t = tRef.current;
     setLoading(true);
     api
       .get<CustomFormDetail>(`/custom-forms/${formId}`)
@@ -147,7 +156,7 @@ export function FormBuilderClient({ formId }: Props) {
         });
       })
       .catch((error) => {
-        toast.error(getErrorMessage(error, "Formani yuklashda xatolik"));
+        toast.error(getErrorMessage(error, t("Formani yuklashda xatolik")));
         router.push("/leads/forms");
       })
       .finally(() => setLoading(false));
@@ -204,18 +213,18 @@ export function FormBuilderClient({ formId }: Props) {
     try {
       if (formId) {
         await api.patch<CustomFormSummary>(`/custom-forms/${formId}`, payload);
-        toast.success("Forma yangilandi");
+        toast.success(t("Forma yangilandi"));
         router.push(`/leads/forms/${formId}`);
       } else {
         const { data } = await api.post<CustomFormSummary>(
           "/custom-forms",
           payload,
         );
-        toast.success("Forma yaratildi");
+        toast.success(t("Forma yaratildi"));
         router.push(`/leads/forms/${data.id}`);
       }
     } catch (error) {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik")));
     } finally {
       setSaving(false);
     }
@@ -235,7 +244,7 @@ export function FormBuilderClient({ formId }: Props) {
         <Button asChild type="button" variant="ghost" size="sm">
           <Link href={backHref}>
             <ArrowLeft className="size-4" />
-            Orqaga
+            {t("Orqaga")}
           </Link>
         </Button>
         {slug && <CopyFormLinkButton slug={slug} />}
@@ -243,26 +252,26 @@ export function FormBuilderClient({ formId }: Props) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <div className="space-y-6">
-          <Section title="Asosiy ma'lumotlar">
+          <Section title={t("Asosiy ma'lumotlar")}>
         <div className="grid gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="title">Forma nomi</Label>
+            <Label htmlFor="title">{t("Forma nomi")}</Label>
             <Input
               id="title"
               {...register("title")}
-              placeholder="masalan: Yozgi A1 kursi uchun ro'yxatdan o'tish"
+              placeholder={t("masalan: Yozgi A1 kursi uchun ro'yxatdan o'tish")}
               maxLength={150}
             />
             {errors.title && (
-              <p className="text-xs text-destructive">{errors.title.message}</p>
+              <p className="text-xs text-destructive">{customFormError(t, errors.title.message)}</p>
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="description">Tavsif (ixtiyoriy)</Label>
+            <Label htmlFor="description">{t("Tavsif (ixtiyoriy)")}</Label>
             <Textarea
               id="description"
               {...register("description")}
-              placeholder="Forma sarlavhasi ostida ko'rinadigan qisqa matn"
+              placeholder={t("Forma sarlavhasi ostida ko'rinadigan qisqa matn")}
               rows={3}
               maxLength={1000}
             />
@@ -271,12 +280,14 @@ export function FormBuilderClient({ formId }: Props) {
       </Section>
 
       <Section
-        title="Forma maydonlari"
-        titleHint="Ism, Familiya va Telefon — har qanday formada majburiy (lid yaratish uchun). Ostida o'zingiz xohlagan maydonlarni qo'shing."
+        title={t("Forma maydonlari")}
+        titleHint={t(
+          "Ism, Familiya va Telefon — har qanday formada majburiy (lid yaratish uchun). Ostida o'zingiz xohlagan maydonlarni qo'shing.",
+        )}
       >
         {typeof errors.fields?.message === "string" && (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-            {errors.fields.message}
+            {customFormError(t, errors.fields.message)}
           </p>
         )}
 
@@ -299,10 +310,10 @@ export function FormBuilderClient({ formId }: Props) {
         <AddFieldMenu onPick={addField} />
       </Section>
 
-      <Section title="Javoblar qayerga tushadi">
+      <Section title={t("Javoblar qayerga tushadi")}>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>1. Ustun</Label>
+            <Label>{t("1. Ustun")}</Label>
             <Select
               value={selectedColumnId || undefined}
               onValueChange={(newColumnId) => {
@@ -321,19 +332,19 @@ export function FormBuilderClient({ formId }: Props) {
               }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Ustun tanlang" />
+                <SelectValue placeholder={t("Ustunni tanlang")} />
               </SelectTrigger>
               <SelectContent>
                 {board.map((col) => (
                   <SelectItem key={col.id} value={col.id}>
-                    {col.name}
+                    {leadColumnName(col, t)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>2. Bo&apos;lim</Label>
+            <Label>{t("2. Bo'lim")}</Label>
             <Controller
               control={control}
               name="sectionId"
@@ -347,10 +358,10 @@ export function FormBuilderClient({ formId }: Props) {
                     <SelectValue
                       placeholder={
                         !selectedColumnId
-                          ? "Avval ustun tanlang"
+                          ? t("Avval ustunni tanlang")
                           : availableSections.length === 0
-                            ? "Bu ustunda bo'lim yo'q"
-                            : "Bo'lim tanlang"
+                            ? t("Bu ustunda bo'lim yo'q")
+                            : t("Bo'limni tanlang")
                       }
                     />
                   </SelectTrigger>
@@ -366,7 +377,7 @@ export function FormBuilderClient({ formId }: Props) {
             />
             {errors.sectionId && (
               <p className="text-xs text-destructive">
-                {errors.sectionId.message}
+                {customFormError(t, errors.sectionId.message)}
               </p>
             )}
           </div>
@@ -383,15 +394,16 @@ export function FormBuilderClient({ formId }: Props) {
                 onCheckedChange={(v) => field.onChange(Boolean(v))}
               />
               <Label htmlFor="isActive" className="cursor-pointer text-sm">
-                Faol
+                {t("Forma faol")}
               </Label>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <HelpCircle className="size-3.5 cursor-help text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  O&apos;chirilsa ochiq havola ishlamaydi va yangi javoblar
-                  qabul qilinmaydi.
+                  {t(
+                    "O'chirilsa ochiq havola ishlamaydi va yangi javoblar qabul qilinmaydi.",
+                  )}
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -413,7 +425,7 @@ export function FormBuilderClient({ formId }: Props) {
       <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 px-6 py-3 backdrop-blur lg:left-[var(--sidebar-width,16rem)]">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
           <span className="text-xs text-muted-foreground">
-            {isDirty && !saving ? "Saqlanmagan o'zgarishlar" : ""}
+            {isDirty && !saving ? t("Saqlanmagan o'zgarishlar") : ""}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -422,11 +434,11 @@ export function FormBuilderClient({ formId }: Props) {
               onClick={() => router.push(backHref)}
               disabled={saving}
             >
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="size-4 animate-spin" />}
-              {formId ? "Saqlash" : "Yaratish"}
+              {formId ? t("Saqlash") : t("Yaratish")}
             </Button>
           </div>
         </div>
@@ -467,21 +479,23 @@ function AddFieldMenu({
 }: {
   onPick: (type: FormFieldType) => void;
 }) {
+  const t = useT();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button type="button" variant="outline" className="w-full">
           <Plus className="size-4" />
-          Maydon qo&apos;shish
+          {t("Maydon qo'shish")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
-        {FIELD_TYPES.map((t) => {
-          const Icon = ADD_FIELD_TYPE_ICONS[t];
+        {FIELD_TYPES.map((type) => {
+          const Icon = ADD_FIELD_TYPE_ICONS[type];
+          const typeLabel = FIELD_TYPE_LABELS[type];
           return (
-            <DropdownMenuItem key={t} onClick={() => onPick(t)}>
+            <DropdownMenuItem key={type} onClick={() => onPick(type)}>
               <Icon className="mr-2 size-4" />
-              {FIELD_TYPE_LABELS[t]}
+              {t(typeLabel)}
             </DropdownMenuItem>
           );
         })}

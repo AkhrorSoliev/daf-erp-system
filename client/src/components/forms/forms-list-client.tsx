@@ -47,6 +47,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import {
@@ -60,13 +61,17 @@ import { TablePagination } from "./table-pagination";
 // daraxti bo'ylab qatorga yetib boradi — shu sabab o'rovchi katak to'xtatadi.
 const stop = (event: SyntheticEvent) => event.stopPropagation();
 
-function lastSubmitted(form: CustomFormSummary): string {
+function lastSubmitted(
+  form: CustomFormSummary,
+  t: (source: string) => string,
+): string {
   return form.lastSubmittedAt
     ? format(new Date(form.lastSubmittedAt), "dd.MM.yyyy")
-    : "Hali yo'q";
+    : t("Hali yo'q");
 }
 
 export function FormsListClient() {
+  const t = useT();
   const router = useRouter();
   const { forms, loading, setForms } = useCustomForms(true);
   const [page, setPage] = useState(1);
@@ -87,10 +92,10 @@ export function FormsListClient() {
     try {
       await api.delete(`/custom-forms/${deleteTarget.id}`);
       setForms((prev) => prev.filter((f) => f.id !== deleteTarget.id));
-      toast.success("Forma o'chirildi");
+      toast.success(t("Forma o'chirildi"));
       setDeleteTarget(null);
     } catch (error) {
-      toast.error(getErrorMessage(error, "O'chirishda xatolik"));
+      toast.error(getErrorMessage(error, t("O'chirishda xatolik")));
     } finally {
       setDeleting(false);
     }
@@ -100,13 +105,14 @@ export function FormsListClient() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Formani bosing: kim ro&apos;yxatdan o&apos;tgani va kimga hali
-          qo&apos;ng&apos;iroq qilinmagani ko&apos;rinadi.
+          {t(
+            "Formani bosing: kim ro'yxatdan o'tgani va kimga hali qo'ng'iroq qilinmagani ko'rinadi.",
+          )}
         </p>
         <Button asChild>
           <Link href="/leads/forms/new">
             <Plus className="size-4" />
-            Yangi forma
+            {t("Yangi forma")}
           </Link>
         </Button>
       </div>
@@ -120,11 +126,11 @@ export function FormsListClient() {
       ) : forms.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-md border px-4 py-16 text-center">
           <FileEdit className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Hali forma yo&apos;q</p>
+          <p className="text-sm text-muted-foreground">{t("Hali forma yo'q")}</p>
           <Button asChild variant="outline" className="mt-2">
             <Link href="/leads/forms/new">
               <Plus className="size-4" />
-              Birinchi formani yaratish
+              {t("Birinchi formani yaratish")}
             </Link>
           </Button>
         </div>
@@ -167,22 +173,23 @@ export function FormsListClient() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Formani o&apos;chirish</AlertDialogTitle>
+            <AlertDialogTitle>{t("Formani o'chirish")}</AlertDialogTitle>
             <AlertDialogDescription>
-              &laquo;{deleteTarget?.title}&raquo; formasi arxivga
-              ko&apos;chiriladi. Public havola ishlamay qoladi va yangi javob
-              qabul qilinmaydi.
+              {t(
+                "«{title}» formasi arxivga ko'chiriladi. Public havola ishlamay qoladi va yangi javob qabul qilinmaydi.",
+                { title: deleteTarget?.title ?? "" },
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
               variant="destructive"
             >
               {deleting && <Loader2 className="mr-2 size-4 animate-spin" />}
-              O&apos;chirish
+              {t("O'chirish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -202,31 +209,32 @@ function FormsTable({
   onOpen,
   onDelete,
 }: RowProps & { forms: CustomFormSummary[]; offset: number }) {
+  const t = useT();
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead className="w-12 border-r">#</TableHead>
-          <TableHead>Forma</TableHead>
-          <TableHead className="text-right">Javoblar</TableHead>
+          <TableHead>{t("Forma")}</TableHead>
+          <TableHead className="text-right">{t("Javoblar")}</TableHead>
           <TableHead className="text-right">
             <span className="inline-flex items-center gap-1">
-              Qo&apos;ng&apos;iroq kutmoqda
+              {t("Qo'ng'iroq kutmoqda")}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="size-3.5 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  Hali hech kim qo&apos;ng&apos;iroq qilmagan yangi lidlar soni
+                  {t("Hali hech kim qo'ng'iroq qilmagan yangi lidlar soni")}
                 </TooltipContent>
               </Tooltip>
             </span>
           </TableHead>
-          <TableHead>Oxirgi javob</TableHead>
+          <TableHead>{t("Oxirgi javob")}</TableHead>
           <TableHead className="w-28">
-            <span className="sr-only">Havola</span>
+            <span className="sr-only">{t("Havola")}</span>
           </TableHead>
-          <TableHead className="w-12 text-right">Amal</TableHead>
+          <TableHead className="w-12 text-right">{t("Amal")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -247,7 +255,7 @@ function FormsTable({
                 <div className="font-medium">{form.submissionCount}</div>
                 {form.convertedCount > 0 && (
                   <div className="text-xs text-muted-foreground">
-                    {form.convertedCount} tasi o&apos;quvchi bo&apos;ldi
+                    {t("{n} tasi o'quvchi bo'ldi", { n: form.convertedCount })}
                   </div>
                 )}
               </div>
@@ -256,10 +264,10 @@ function FormsTable({
               <AwaitingCount form={form} />
             </TableCell>
             <TableCell className="whitespace-nowrap text-muted-foreground">
-              {lastSubmitted(form)}
+              {lastSubmitted(form, t)}
             </TableCell>
             <TableCell onClick={stop}>
-              <CopyFormLinkButton slug={form.slug} label="Havola" />
+              <CopyFormLinkButton slug={form.slug} label={t("Havola")} />
             </TableCell>
             <TableCell className="text-right" onClick={stop}>
               <FormActions form={form} onOpen={onOpen} onDelete={onDelete} />
@@ -272,29 +280,31 @@ function FormsTable({
 }
 
 function FormCard({ form, onOpen, onDelete }: RowProps & { form: CustomFormSummary }) {
+  const t = useT();
   return (
     <li className="space-y-2 px-3 py-3" onClick={() => onOpen(form.id)}>
       <div className="flex items-start justify-between gap-2">
         <FormTitle form={form} />
         <div className="flex shrink-0 items-center gap-1" onClick={stop}>
-          <CopyFormLinkButton slug={form.slug} label="Havola" />
+          <CopyFormLinkButton slug={form.slug} label={t("Havola")} />
           <FormActions form={form} onOpen={onOpen} onDelete={onDelete} />
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span className="tabular-nums">{form.submissionCount} javob</span>
+        <span className="tabular-nums">{t("{n} javob", { n: form.submissionCount })}</span>
         {form.awaitingCallCount > 0 && (
           <span className="font-semibold text-amber-700 dark:text-amber-400">
-            {form.awaitingCallCount} ta qo&apos;ng&apos;iroq kutmoqda
+            {t("{n} ta qo'ng'iroq kutmoqda", { n: form.awaitingCallCount })}
           </span>
         )}
-        <span>{lastSubmitted(form)}</span>
+        <span>{lastSubmitted(form, t)}</span>
       </div>
     </li>
   );
 }
 
 function FormTitle({ form }: { form: CustomFormSummary }) {
+  const t = useT();
   return (
     <div className="min-w-0">
       <div className="flex items-center gap-2">
@@ -307,7 +317,7 @@ function FormTitle({ form }: { form: CustomFormSummary }) {
         </Link>
         {!form.isActive && (
           <Badge variant="outline" className="shrink-0 text-[10px]">
-            Faol emas
+            {t("Forma faol emas")}
           </Badge>
         )}
       </div>
@@ -334,23 +344,24 @@ function AwaitingCount({ form }: { form: CustomFormSummary }) {
 }
 
 function FormActions({ form, onOpen, onDelete }: RowProps & { form: CustomFormSummary }) {
+  const t = useT();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button size="icon" variant="ghost" className="size-8">
           <MoreHorizontal className="size-4" />
-          <span className="sr-only">Amallar</span>
+          <span className="sr-only">{t("Amallar")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onOpen(form.id)}>
           <Eye className="mr-2 size-4" />
-          Javoblar
+          {t("Javoblar")}
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href={`/leads/forms/${form.id}/tahrirlash`}>
             <Pencil className="mr-2 size-4" />
-            Tahrirlash
+            {t("Tahrirlash")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -358,7 +369,7 @@ function FormActions({ form, onOpen, onDelete }: RowProps & { form: CustomFormSu
           className="text-destructive focus:text-destructive"
         >
           <Trash2 className="mr-2 size-4" />
-          O&apos;chirish
+          {t("O'chirish")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
