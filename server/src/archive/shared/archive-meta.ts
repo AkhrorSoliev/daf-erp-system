@@ -136,6 +136,19 @@ export function getInclude(entityType: ArchiveEntityType) {
   return map[entityType] || null;
 }
 
+/**
+ * Columns an archive read must never return. The archive endpoints hand the
+ * whole row to the browser, and a `User` row carries the bcrypt hash, the
+ * session version and the Telegram chat id — none of which the archive page
+ * reads (it shows names, deleter and roles/branches only).
+ */
+export function getOmit(entityType: ArchiveEntityType) {
+  if (entityType === ArchiveEntityType.USERS) {
+    return { password: true, sessionVersion: true, telegramChatId: true };
+  }
+  return null;
+}
+
 export function getSearchFilter(entityType: ArchiveEntityType, search: string) {
   switch (entityType) {
     // `User` has no `name` column — only firstName/lastName. Filtering on
