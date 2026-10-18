@@ -131,6 +131,19 @@ export const STRICT_FILES: string[] = [
   "components/outreach/table-pagination.tsx",
   "components/payments/debt/debt-months-badge.tsx",
   "components/groups/app-activity/student-activity-panel.tsx",
+  "components/students/lesson-trail-tab.tsx",
+  "components/students/lesson-trail-labels.ts",
+  "components/students/sms-tab.tsx",
+  "components/students/sms-error-text.ts",
+  "components/students/statement/payment-statement.tsx",
+  "components/students/statement/statement-summary.tsx",
+  "components/students/statement/statement-payments.tsx",
+  "components/students/statement/statement-months-table.tsx",
+  "components/students/statement/statement-ledger.tsx",
+  "components/students/statement/statement-report.tsx",
+  "components/students/statement/receipt-link.tsx",
+  "components/students/statement/statement-utils.ts",
+  "lib/ledger-reversal.ts",
 ];
 
 function walk(dir: string): string[] {

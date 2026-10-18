@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import type { LessonStatus, ModelAllocation } from "./statement-types";
 
 /** Non-CEO operators may correct a payment only within 72h of it landing. */
@@ -40,32 +41,33 @@ export function dayMonth(day: string): string {
   return `${day.slice(8, 10)}.${day.slice(5, 7)}`;
 }
 
+// The lesson-day chips draw `t(label)`.
 export const LESSON_STATUS: Record<
   LessonStatus,
   { label: string; className: string }
 > = {
   keldi: {
-    label: "keldi",
+    label: msg("keldi"),
     className:
       "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300",
   },
   kelmagan: {
-    label: "kelmagan",
+    label: msg("kelmagan"),
     className:
       "border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300",
   },
   uzrli: {
-    label: "uzrli",
+    label: msg("uzrli"),
     className:
       "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300",
   },
   belgilanmagan: {
-    label: "belgilanmagan",
+    label: msg("belgilanmagan"),
     className:
       "border-yellow-300 bg-yellow-50 text-yellow-900 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300",
   },
   kelgusi: {
-    label: "hali o'tilmagan",
+    label: msg("hali o'tilmagan"),
     className: "border-dashed bg-muted/40 text-muted-foreground",
   },
 };

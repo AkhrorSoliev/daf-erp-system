@@ -12,6 +12,7 @@ export const STATUS_MAP: Record<number, { label: string; variant: BadgeVariant }
     4: { label: msg("To'xtatilgan"), variant: "destructive" },
   };
 
+// The statement ledger draws `t(label)`.
 // The money-flow types the "To'lovlar" tab requests — every type that moves
 // the student balance. LESSON_DEDUCTION is included on purpose: it is a real
 // outflow, so the tab can explain a balance drop (retroactive billing after a
@@ -21,25 +22,25 @@ export const TRANSACTION_TYPE_INFO: Record<
   string,
   { label: string; variant: BadgeVariant }
 > = {
-  PAYMENT: { label: "To'lov", variant: "default" },
-  REFUND: { label: "Qaytarish", variant: "destructive" },
-  ADJUSTMENT: { label: "Tuzatish", variant: "secondary" },
-  INITIAL_BALANCE: { label: "Boshlang'ich balans", variant: "outline" },
-  BALANCE_WITHDRAWAL: { label: "Yechib olish", variant: "destructive" },
-  LESSON_DEDUCTION: { label: "Darsga yechildi", variant: "outline" },
+  PAYMENT: { label: msg("To'lov"), variant: "default" },
+  REFUND: { label: msg("Qaytarish"), variant: "destructive" },
+  ADJUSTMENT: { label: msg("Tuzatish"), variant: "secondary" },
+  INITIAL_BALANCE: { label: msg("Boshlang'ich balans"), variant: "outline" },
+  BALANCE_WITHDRAWAL: { label: msg("Yechib olish"), variant: "destructive" },
+  LESSON_DEDUCTION: { label: msg("Darsga yechildi"), variant: "outline" },
   // These three move the balance too. Leaving them off the tab left 37 rows
   // (4 296 450 so'm) of balance movement with no visible cause, so the list
   // could not explain its own totals.
-  DISCOUNT_ADJUSTMENT: { label: "Chegirma tuzatishi", variant: "secondary" },
-  DEBT_WRITE_OFF: { label: "Qarz kechirildi", variant: "secondary" },
-  MOCK_EXAM_FEE: { label: "Mock imtihon to'lovi", variant: "outline" },
+  DISCOUNT_ADJUSTMENT: { label: msg("Chegirma tuzatishi"), variant: "secondary" },
+  DEBT_WRITE_OFF: { label: msg("Qarz kechirildi"), variant: "secondary" },
+  MOCK_EXAM_FEE: { label: msg("Mock imtihon to'lovi"), variant: "outline" },
 };
 
 // LESSON_DEDUCTION metadata `mode` → human label for the "Tafsilot" column.
 export const LESSON_DEDUCTION_MODE_LABELS: Record<string, string> = {
-  FULL_CYCLE: "To'liq tsikl",
-  PARTIAL: "Qisman",
-  SINGLE_UNCOVERED: "Qarzga yozildi",
+  FULL_CYCLE: msg("To'liq tsikl"),
+  PARTIAL: msg("Qisman"),
+  SINGLE_UNCOVERED: msg("Qarzga yozildi"),
 };
 
 // The correction dialog draws `t(label)`.
