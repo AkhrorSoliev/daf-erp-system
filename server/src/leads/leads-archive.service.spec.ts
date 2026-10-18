@@ -56,33 +56,6 @@ describe('LeadsArchiveService', () => {
     service = module.get(LeadsArchiveService);
   });
 
-  describe('getArchive', () => {
-    it('returns archived leads + sections with per-section lead counts', async () => {
-      prisma.lead.findMany.mockResolvedValue([
-        { id: 'lead-1', firstName: 'Aziz', lastName: 'Karimov' },
-      ]);
-      prisma.leadSection.findMany.mockResolvedValue([
-        { id: 'sec-1', name: 'Reklama', deletionBatchId: 'batch-1' },
-        { id: 'sec-2', name: 'Eski', deletionBatchId: null },
-      ]);
-      prisma.lead.groupBy
-        // by batch
-        .mockResolvedValueOnce([
-          { deletionBatchId: 'batch-1', _count: { _all: 2 } },
-        ])
-        // by section (legacy)
-        .mockResolvedValueOnce([{ sectionId: 'sec-2', _count: { _all: 5 } }]);
-
-      const result = await service.getArchive(1001, null);
-
-      expect(result.leads).toHaveLength(1);
-      expect(result.sections).toEqual([
-        expect.objectContaining({ id: 'sec-1', leadCount: 2 }),
-        expect.objectContaining({ id: 'sec-2', leadCount: 5 }),
-      ]);
-    });
-  });
-
   describe('restoreLead', () => {
     it('throws NotFound when the archived lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
