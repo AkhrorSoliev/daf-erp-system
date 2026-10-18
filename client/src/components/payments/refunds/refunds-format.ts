@@ -1,4 +1,6 @@
 import { formatNumber, formatPrice } from "@/lib/format-utils";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "../record-payment-admission";
 import { dayMonth, instantDayMonth } from "../debt/debt-format";
 import type {
   AgeBucket, CashAccountOption, NoticeCell, PendingRefundRow, RefundableDrawer, RefundableTab, RefundHistoryRow, TransferState,
@@ -84,12 +86,12 @@ export function drawerKindLine(d: Pick<RefundableDrawer, "kind" | "since" | "day
 }
 
 /** The refund dialog's line (spec §4), from the preview's `dueDate`. */
-export const requestDueLine = (dueDate: string) =>
-  `So'rov ochilgach bu summa balansdan darhol ayiriladi. Pul ${dayMonth(dueDate)} gacha berilishi kerak (10 bank kuni). Kassadan pul «Berildi» bosilganda chiqadi.`;
+export const requestDueLine = (dueDate: string, t: Translate = interpolate) =>
+  t("So'rov ochilgach bu summa balansdan darhol ayiriladi. Pul {date} gacha berilishi kerak (10 bank kuni). Kassadan pul «Berildi» bosilganda chiqadi.", { date: dayMonth(dueDate) });
 
 /** The success toast (spec §4), from the answer's `dueDate`. */
-export const requestOpenedText = (dueDate: string | null) =>
-  dueDate ? `So'rov ochildi — pul ${dayMonth(dueDate)} gacha beriladi` : "So'rov ochildi";
+export const requestOpenedText = (dueDate: string | null, t: Translate = interpolate) =>
+  dueDate ? t("So'rov ochildi — pul {date} gacha beriladi", { date: dayMonth(dueDate) }) : t("So'rov ochildi");
 
 /** History «Berildi»: «dd.MM · naqd|karta», or the «bekor qilindi» pill with the reason. */
 export function handedCell(r: Pick<RefundHistoryRow, "status" | "handedOverAt" | "refundMethod" | "cancelReason">):

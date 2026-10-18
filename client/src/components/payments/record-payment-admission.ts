@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/format-utils";
+import { interpolate, type Params } from "@/i18n/translate";
 
 /** GET /payments/preview → monthly.admission (ADR-0047, contract 3.2). */
 export interface PaymentReach {
@@ -22,32 +23,37 @@ export interface PaymentReach {
 
 const ddmm = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}`;
 
-export function reachLines(reach: PaymentReach): string[] {
+/** `t` of a page with a language; the default says the Uzbek text. */
+export type Translate = (source: string, params?: Params) => string;
+
+export function reachLines(reach: PaymentReach, t: Translate = interpolate): string[] {
   if (reach.clearsDebt) {
-    return ["Qarz to'liq yopiladi: oyning oxirigacha qatnashadi."];
+    return [t("Qarz to'liq yopiladi: oyning oxirigacha qatnashadi.")];
   }
   const next = reach.next;
-  const share =
-    next && next.minPaidPercent != null
-      ? `oy to'lovining kamida ${next.minPaidPercent}% i to'lanishi kerak — yana ${formatPrice(next.needed)} so'm`
-      : null;
+  const share = next && next.minPaidPercent != null ? next.minPaidPercent : null;
+  const params: Params = next
+    ? { amount: formatPrice(next.needed), percent: share ?? 0, date: ddmm(next.date), group: next.groupName }
+    : {};
   if (!reach.paidThrough && next) {
-    const where = `(${ddmm(next.date)}, ${next.groupName})`;
     return [
-      share
-        ? `Bu pul darsga kirish uchun yetmaydi: ${share} ${where}.`
-        : `Bu pul bugungi darsga yetmaydi: kamida yana ${formatPrice(next.needed)} so'm kerak ${where}.`,
+      share !== null
+        ? t(
+            "Bu pul darsga kirish uchun yetmaydi: oy to'lovining kamida {percent}% i to'lanishi kerak — yana {amount} so'm ({date}, {group}).",
+            params,
+          )
+        : t("Bu pul bugungi darsga yetmaydi: kamida yana {amount} so'm kerak ({date}, {group}).", params),
     ];
   }
   const lines: string[] = [];
   if (reach.paidThrough) {
-    lines.push(
-      `Bu pul ${ddmm(reach.paidThrough)} gacha yetadi: bugungi darsga kiradi.`,
-    );
+    lines.push(t("Bu pul {date} gacha yetadi: bugungi darsga kiradi.", { date: ddmm(reach.paidThrough) }));
   }
   if (next) {
     lines.push(
-      `Keyingi dars ${ddmm(next.date)} (${next.groupName}): ${share ?? `yana kamida ${formatPrice(next.needed)} so'm kerak`}.`,
+      share !== null
+        ? t("Keyingi dars {date} ({group}): oy to'lovining kamida {percent}% i to'lanishi kerak — yana {amount} so'm.", params)
+        : t("Keyingi dars {date} ({group}): yana kamida {amount} so'm kerak.", params),
     );
   }
   return lines;

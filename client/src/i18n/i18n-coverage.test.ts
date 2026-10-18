@@ -250,6 +250,17 @@ export const STRICT_FILES: string[] = [
   "components/shared/salary-missed-lessons.tsx",
   "components/shared/salary-missed-lessons-text.ts",
   "components/shared/teacher-groups-rate-list.tsx",
+  "components/payments/payments-layout-shell.tsx",
+  "components/payments/summary-card.tsx",
+  "components/payments/export-options-popover.tsx",
+  "components/payments/record-payment-dialog.tsx",
+  "components/payments/record-payment-admission.ts",
+  "components/payments/record-payment-quick-amounts.ts",
+  "components/payments/refund-dialog.tsx",
+  "components/payments/withdrawal-dialog.tsx",
+  "components/payments/employee-advance-select.tsx",
+  "components/payments/promise-month.ts",
+  "components/payments/refunds/refunds-format.ts",
 ];
 
 function walk(dir: string): string[] {

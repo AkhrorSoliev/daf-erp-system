@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Loader2, AlertCircle, AlertTriangle } from "lucide-react";
@@ -19,6 +19,8 @@ import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 import { requestDueLine, requestOpenedText } from "./refunds/refunds-format";
 import { invalidateRefunds } from "./refunds/refunds-queries";
 import type { RefundRowView } from "./refunds/refunds-types";
@@ -59,15 +61,17 @@ interface Props {
 }
 
 const refundMethods = [
-  { value: "CASH", label: "Naqd" },
-  { value: "TRANSFER", label: "Bank o'tkazmasi" },
-  { value: "PAYME", label: "Payme" },
-  { value: "CLICK", label: "Click" },
-  { value: "UZUM", label: "Uzum" },
+  { value: "CASH", label: msg("Naqd") },
+  { value: "TRANSFER", label: msg("Bank o'tkazmasi") },
+  { value: "PAYME", label: msg("Payme") },
+  { value: "CLICK", label: msg("Click") },
+  { value: "UZUM", label: msg("Uzum") },
 ];
 
-const methodLabel = (value: string) =>
-  refundMethods.find((m) => m.value === value)?.label ?? value;
+const methodLabel = (value: string, t: (source: string) => string) => {
+  const known = refundMethods.find((m) => m.value === value);
+  return known ? t(known.label) : value;
+};
 
 export function RefundDialog({
   open,
@@ -76,6 +80,12 @@ export function RefundDialog({
   studentName,
   onSuccess,
 }: Props) {
+  const t = useT();
+  // The preview effect reads t from here: a language switch must not refetch.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const queryClient = useQueryClient();
   const [preview, setPreview] = useState<RefundPreview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -93,6 +103,7 @@ export function RefundDialog({
 
   useEffect(() => {
     if (!open) return;
+    const t = tRef.current;
     setLoading(true);
     setLoadError(null);
     api
@@ -102,7 +113,7 @@ export function RefundDialog({
       })
       .catch((err) => {
         setPreview(null);
-        setLoadError(getErrorMessage(err, "Ma'lumotlarni yuklashda xatolik"));
+        setLoadError(getErrorMessage(err, t("Ma'lumotlarni yuklashda xatolik")));
       })
       .finally(() => setLoading(false));
   }, [open, studentId]);
@@ -120,12 +131,12 @@ export function RefundDialog({
         amount: rawAmount,
         reason: reason.trim() || undefined,
       });
-      toast.success(requestOpenedText(data.dueDate));
+      toast.success(requestOpenedText(data.dueDate, t));
       onOpenChange(false);
       resetForm();
       onSuccess?.();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, "Pulni qaytarishda xatolik"));
+      toast.error(getErrorMessage(err, t("Pulni qaytarishda xatolik")));
     } finally {
       // Financial data is never trusted after a write attempt: refetch on
       // success and on refusal alike (the server may have answered 409/400
@@ -146,7 +157,7 @@ export function RefundDialog({
     >
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>Pulni qaytarish — so&apos;rov</DialogTitle>
+          <DialogTitle>{t("Pulni qaytarish — so'rov")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
@@ -159,7 +170,7 @@ export function RefundDialog({
           {loading && (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
-              Yuklanmoqda...
+              {t("Yuklanmoqda...")}
             </div>
           )}
 
@@ -174,66 +185,68 @@ export function RefundDialog({
             <>
               <div className="rounded-md border bg-muted/30 p-3 space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Guruh:</span>
+                  <span className="text-muted-foreground">{t("Guruh:")}</span>
                   <span className="font-medium">{preview.groupName}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Kurs:</span>
+                  <span className="text-muted-foreground">{t("Kurs:")}</span>
                   <span className="font-medium">{preview.courseName}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">To&apos;langan:</span>
+                  <span className="text-muted-foreground">{t("To'langan:")}</span>
                   <span className="font-medium">
-                    {formatPrice(preview.paidAmount)} so&apos;m
+                    {formatPrice(preview.paidAmount)} {t("so'm")}
                   </span>
                 </div>
                 {preview.lastPayment && (
                   <div className="flex items-start justify-between">
                     <span className="text-muted-foreground">
-                      Oxirgi to&apos;lov:
+                      {t("Oxirgi to'lov:")}
                     </span>
                     <span className="text-right">
                       <span className="block font-medium">
-                        {formatPrice(preview.lastPayment.amount)} so&apos;m
+                        {formatPrice(preview.lastPayment.amount)} {t("so'm")}
                       </span>
                       <span className="block text-xs text-muted-foreground">
                         {format(
                           new Date(preview.lastPayment.paidAt),
                           "dd.MM.yyyy",
                         )}{" "}
-                        &middot; {methodLabel(preview.lastPayment.method)}
+                        &middot; {methodLabel(preview.lastPayment.method, t)}
                       </span>
                     </span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">
-                    O&apos;tilgan darslar:
+                    {t("O'tilgan darslar:")}
                   </span>
                   <span className="font-medium">
-                    {preview.lessonsAttended} ta
+                    {t("{n} ta", { n: preview.lessonsAttended })}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">
-                    Hisobidagi balans:
+                    {t("Hisobidagi balans:")}
                   </span>
                   <span className="font-medium">
-                    {formatPrice(preview.studentBalance)} so&apos;m
+                    {formatPrice(preview.studentBalance)} {t("so'm")}
                   </span>
                 </div>
                 {preview.prepaidLessons > 0 && (
                   <div className="flex items-start justify-between">
                     <span className="text-muted-foreground">
-                      Oldindan to&apos;langan darslar:
+                      {t("Oldindan to'langan darslar:")}
                     </span>
                     <span className="text-right">
                       <span className="block font-medium">
-                        {preview.prepaidLessons} ta &middot;{" "}
-                        {formatPrice(preview.prepaidValue)} so&apos;m
+                        {t("{n} ta · {amount} so'm", {
+                          n: preview.prepaidLessons,
+                          amount: formatPrice(preview.prepaidValue),
+                        })}
                       </span>
                       <span className="block text-xs text-muted-foreground">
-                        Kerak bo&apos;lsa bekor qilinadi
+                        {t("Kerak bo'lsa bekor qilinadi")}
                       </span>
                     </span>
                   </div>
@@ -241,17 +254,17 @@ export function RefundDialog({
                 {preview.previousRefunds > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">
-                      Oldingi qaytarishlar:
+                      {t("Oldingi qaytarishlar:")}
                     </span>
                     <span className="font-medium">
-                      {formatPrice(preview.previousRefunds)} so&apos;m
+                      {formatPrice(preview.previousRefunds)} {t("so'm")}
                     </span>
                   </div>
                 )}
                 <div className="border-t pt-2 flex items-center justify-between">
-                  <span className="font-medium">Qaytarish mumkin:</span>
+                  <span className="font-medium">{t("Qaytarish mumkin:")}</span>
                   <span className="text-lg font-bold text-green-600">
-                    {formatPrice(preview.maxRefundable)} so&apos;m
+                    {formatPrice(preview.maxRefundable)} {t("so'm")}
                   </span>
                 </div>
               </div>
@@ -266,12 +279,12 @@ export function RefundDialog({
               )}
 
               <p className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-                {requestDueLine(preview.dueDate)}
+                {requestDueLine(preview.dueDate, t)}
               </p>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Qaytarish summasi</Label>
+                  <Label>{t("Qaytarish summasi")}</Label>
                   {preview.suggestedAmount > 0 &&
                     preview.suggestedAmount !== rawAmount && (
                       <button
@@ -281,7 +294,9 @@ export function RefundDialog({
                           setAmount(String(preview.suggestedAmount))
                         }
                       >
-                        Tavsiya: {formatPrice(preview.suggestedAmount)} so&apos;m
+                        {t("Tavsiya: {amount} so'm", {
+                          amount: formatPrice(preview.suggestedAmount),
+                        })}
                       </button>
                     )}
                 </div>
@@ -291,25 +306,26 @@ export function RefundDialog({
                 />
                 {overMax && (
                   <p className="text-xs text-destructive">
-                    Maksimum {formatPrice(preview.maxRefundable)} so&apos;m
-                    qaytarish mumkin
+                    {t("Maksimum {amount} so'm qaytarish mumkin", {
+                      amount: formatPrice(preview.maxRefundable),
+                    })}
                   </p>
                 )}
                 {!overMax &&
                   rawAmount > Math.max(0, preview.studentBalance) &&
                   preview.prepaidLessons > 0 && (
                     <p className="text-xs text-amber-600 dark:text-amber-400">
-                      Balansdagi pul yetmaydi — yetishmagan qismi oldindan
-                      to&apos;langan darslarni bekor qilish hisobidan
-                      qaytariladi
+                      {t(
+                        "Balansdagi pul yetmaydi — yetishmagan qismi oldindan to'langan darslarni bekor qilish hisobidan qaytariladi",
+                      )}
                     </p>
                   )}
               </div>
 
               <div className="space-y-2">
-                <Label>Sabab (ixtiyoriy)</Label>
+                <Label>{t("Sabab (ixtiyoriy)")}</Label>
                 <Textarea
-                  placeholder="Qaytarish sababi..."
+                  placeholder={t("Qaytarish sababi...")}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   rows={2}
@@ -328,7 +344,7 @@ export function RefundDialog({
             }}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -337,7 +353,7 @@ export function RefundDialog({
             }
           >
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            So&apos;rovni ochish
+            {t("So'rovni ochish")}
           </Button>
         </DialogFooter>
       </DialogContent>
