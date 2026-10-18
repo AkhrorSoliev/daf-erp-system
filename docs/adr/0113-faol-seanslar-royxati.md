@@ -1,4 +1,4 @@
-# ADR-0112 — Faol seanslar ro'yxati: har kirish bitta qator
+# ADR-0113 — Faol seanslar ro'yxati: har kirish bitta qator
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-18

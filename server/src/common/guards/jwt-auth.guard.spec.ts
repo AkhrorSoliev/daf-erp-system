@@ -183,7 +183,7 @@ describe('JwtAuthGuard', () => {
     });
   });
 
-  describe('a device removed from the list (ADR-0112)', () => {
+  describe('a device removed from the list (ADR-0113)', () => {
     const revokedKey = 'user:session-revoked:sid-1';
     const withSid = { ...jwtStrategyUser, sessionVersion: 0, sid: 'sid-1' };
 

@@ -29,7 +29,7 @@ import {
 export const SESSIONS_KEY = ["user-sessions"] as const;
 
 /**
- * «Faol seanslar» (ADR-0112): this account's signed-in devices, like Telegram's.
+ * «Faol seanslar» (ADR-0113): this account's signed-in devices, like Telegram's.
  * The server names each device and says which one is this; the client only
  * draws the list and removes a row.
  */

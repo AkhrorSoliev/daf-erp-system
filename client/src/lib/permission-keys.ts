@@ -52,6 +52,7 @@ export const PERMISSION_KEYS = [
   "salary.pay",
   "salary.rate-edit",
   "salary.close",
+  "salary.adjust",
   "reports.finance",
   "reports.payments",
   "reports.students",

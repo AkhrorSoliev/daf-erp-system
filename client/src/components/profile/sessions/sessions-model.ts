@@ -1,6 +1,6 @@
 import { relativeTime } from "@/components/notifications/notification-view";
 
-/** One row of `GET /users/sessions` (ADR-0112). */
+/** One row of `GET /users/sessions` (ADR-0113). */
 export interface ActiveSession {
   id: string;
   /** "Chrome · macOS" — the server names the device; the client never parses a User-Agent. */

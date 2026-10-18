@@ -5,8 +5,8 @@ import { MonthlyScope } from './shared/resolve-monthly-scope';
 import {
   FixedMonthlyVersion,
   fixedMonthlyCoverage,
-  prorateFixedMonthly,
 } from './shared/prorate-fixed-monthly';
+import { resolveStaffMonthly } from './shared/staff-monthly-amount';
 import { pickActiveVersion } from './shared/deserved-math';
 import { byWalkOrder, planShownAdvances } from './shared/advance-netting';
 import { tashkentMonthKey } from '../common/date/tashkent';
@@ -86,8 +86,17 @@ export interface StaffRow {
     isActive: boolean;
     branch: { id: number; name: string } | null;
   };
-  /** Prorated fixed-monthly salary for the period (full month = the flat value). */
+  /** Prorated fixed-monthly salary for the period (full month = the flat value), or the CEO's figure when `adjustment` is set. */
   monthly: number;
+  /** What the formula gives for the month; `monthly` is the CEO's figure when `adjustment` is set (ADR-0112). */
+  calculated: number;
+  /** The CEO's manual figure for the month, or null when the formula stands. */
+  adjustment: {
+    amount: number;
+    reason: string;
+    by: { id: number; firstName: string; lastName: string };
+    at: string;
+  } | null;
   /** The rate behind `monthly`; null when no version overlaps the month. */
   rate: RateRef | null;
   /** Days the salary is on, of the period's days («d/D kun» when prorated). */
@@ -267,6 +276,19 @@ export class SalaryStaffMonthlyService {
       versByConfig.set(r.configId, arr);
     }
 
+    // 2b. The CEO's manual figures for this month (ADR-0112).
+    const adjustmentRows = await this.prisma.staffSalaryAdjustment.findMany({
+      where: { companyId, month, userId: { in: userIds } },
+      select: {
+        userId: true,
+        amount: true,
+        reason: true,
+        updatedAt: true,
+        createdBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+    const adjustmentByUser = new Map(adjustmentRows.map((a) => [a.userId, a]));
+
     // 3. Unsettled advances the payout would net (ADR-0082): everything dated
     // before the month's end that no payment has taken yet.
     const pendingRows = await this.prisma.expense.findMany({
@@ -332,7 +354,13 @@ export class SalaryStaffMonthlyService {
     let advanceCount = 0;
     for (const c of inScope) {
       const versions = versByConfig.get(c.id) ?? [];
-      const monthly = prorateFixedMonthly(versions, periodStart, periodEnd);
+      const adj = adjustmentByUser.get(c.userId) ?? null;
+      const { amount: monthly, calculated } = resolveStaffMonthly({
+        versions,
+        adjustment: adj,
+        periodStart,
+        periodEnd,
+      });
       const payment = paymentByUser.get(c.userId) ?? null;
       // No active version this cycle AND nothing settled → not on fixed-monthly
       // this month; drop it (mirrors the cron's `if (!activeVersion) continue`).
@@ -370,6 +398,15 @@ export class SalaryStaffMonthlyService {
           branch: c.user.branches[0]?.branch ?? null,
         },
         monthly,
+        calculated,
+        adjustment: adj
+          ? {
+              amount: adj.amount,
+              reason: adj.reason,
+              by: adj.createdBy,
+              at: adj.updatedAt.toISOString(),
+            }
+          : null,
         rate: staffRateOf(versions, periodEnd),
         coverage: fixedMonthlyCoverage(versions, periodStart, periodEnd),
         advances,

@@ -315,7 +315,7 @@ export const tolovlar: QollanmaSahifa[] = [
     qisqacha:
       "«Ish haqi» sahifasi ustozlar va xodimlarning oyligini bitta jadvalda va oy holati bilan ko'rsatadi: kim qancha ishladi, qancha avans ushlanadi, qancha beriladi. Avans berilgan oyining oyligidan ushlanadi. Pul berilgach «Berildi» bosiladi: sana va naqd/karta summalari so'raladi, xodimga bot xabari boradi.",
     rollar: [1, 2],
-    adr: ["0082", "0006", "0052", "0072"],
+    adr: ["0082", "0006", "0052", "0072", "0112"],
     yollar: ["/payments/salary"],
     kalitSozlar: [
       "ish haqi",
@@ -348,8 +348,10 @@ export const tolovlar: QollanmaSahifa[] = [
       "oylik berilganini tasdiqlash",
       "darslar bo'yicha csv",
       "hisoblash davri",
+      "oylikni to'g'rilash",
+      "qo'lda oylik",
     ],
-    yangilangan: "2026-10-17",
+    yangilangan: "2026-10-18",
   },
   {
     bolim: "tolovlar",

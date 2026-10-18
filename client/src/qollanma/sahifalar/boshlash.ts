@@ -8,7 +8,7 @@ export const boshlash: QollanmaSahifa[] = [
     qisqacha:
       "Tizimga telefon raqam va parol bilan kirasiz, xohlasangiz Telegram orqali ham; botdagi «Kabinet» tugmasi kabinetni parolsiz ochadi. Parolni unutsangiz SMS kod yordam beradi; o'z parolingiz va telefoningizni Profilda o'zgartirasiz.",
     rollar: [1, 2, 3, 4, 5],
-    adr: ["0022", "0030", "0031", "0045", "0070", "0106", "0112"],
+    adr: ["0022", "0030", "0031", "0045", "0070", "0106", "0113"],
     yollar: ["/profile"],
     kalitSozlar: [
       "kirish",

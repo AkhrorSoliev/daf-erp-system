@@ -607,7 +607,7 @@ describe('AuthService', () => {
       });
     });
 
-    describe('device list (ADR-0112)', () => {
+    describe('device list (ADR-0113)', () => {
       it("refresh keeps the token's own row and renews its last-used time", async () => {
         jwt.verify.mockReturnValue({
           sub: 2,

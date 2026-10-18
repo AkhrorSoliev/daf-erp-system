@@ -260,7 +260,7 @@ describe('UsersController — route access', () => {
     });
   });
 
-  describe('device list (ADR-0112)', () => {
+  describe('device list (ADR-0113)', () => {
     it('is open to every signed-in account, own data only', () => {
       expect(routeAccess(UsersController, 'listSessions')).toEqual({
         kind: 'anyUser',

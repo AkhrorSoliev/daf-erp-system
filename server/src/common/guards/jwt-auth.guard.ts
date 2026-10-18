@@ -66,7 +66,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   /**
-   * Profildan bitta qurilma o'chirilsa (ADR-0112), `AuthService` Redis'ga
+   * Profildan bitta qurilma o'chirilsa (ADR-0113), `AuthService` Redis'ga
    * shu `sid` uchun belgi qo'yadi — access token keyingi so'rovdayoq to'xtaydi.
    * Belgi faqat haqiqiy o'chirishda yoziladi va `sid` hech qachon qayta
    * ishlatilmaydi, shuning uchun bazadan tasdiqlash kerak emas. Redis

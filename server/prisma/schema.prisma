@@ -454,6 +454,8 @@ model User {
   // Financial relations (employee salary — works for all roles)
   salaryConfigs       EmployeeSalaryConfig[] @relation("UserSalaryConfigs")
   salaryPayments      SalaryPayment[]        @relation("UserSalaryPayments")
+  staffSalaryAdjustments        StaffSalaryAdjustment[] @relation("StaffSalaryAdjustmentUser")
+  staffSalaryAdjustmentsWritten StaffSalaryAdjustment[] @relation("StaffSalaryAdjustmentBy")
   salaryAccruals      SalaryAccrual[]        @relation("UserSalaryAccruals")
   teacherTransactions Transaction[]          @relation("TeacherTransactions")
 
@@ -511,7 +513,7 @@ model User {
   @@index([status])
 }
 
-/// Bitta kirish = bitta qator (ADR-0112). Token `sid` sifatida shu id'ni
+/// Bitta kirish = bitta qator (ADR-0113). Token `sid` sifatida shu id'ni
 /// ko'taradi; qator o'chsa, qurilma `refresh` da to'xtaydi va Redis belgisi
 /// access token'ni ham keyingi so'rovdayoq to'xtatadi.
 model UserSession {
@@ -3162,6 +3164,30 @@ model SalaryPayment {
   @@index([userId])
   @@index([companyId, periodEnd])
   @@index([status])
+}
+
+// ADR-0112: the CEO's manual figure for one staff member's pay (before advances)
+// in one Tashkent calendar month. The prorated FIXED_MONTHLY formula stays the
+// proposal; when this row exists it replaces the formula everywhere, through
+// `resolveStaffMonthly`. Deleting the row returns the month to the formula.
+model StaffSalaryAdjustment {
+  id               String   @id @default(uuid())
+  companyId        Int
+  userId           Int
+  user             User     @relation("StaffSalaryAdjustmentUser", fields: [userId], references: [id])
+  /// 'YYYY-MM', the Tashkent calendar month of the payroll period.
+  month            String
+  amount           Int
+  /// What the formula gave when this was saved (audit only; the live figure is re-derived on read).
+  calculatedAmount Int
+  reason           String
+  createdById      Int
+  createdBy        User     @relation("StaffSalaryAdjustmentBy", fields: [createdById], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([companyId, userId, month])
+  @@index([companyId, month])
 }
 
 model Refund {

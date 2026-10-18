@@ -1,8 +1,10 @@
 import { Fragment, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { dayMonth } from "../overview/overview-math";
 import { PossibleDeductionsInfo } from "../possible-deductions-info";
+import { adjustLockReason, adjustmentFacts, adjustmentMeta } from "./salary-adjustment-model";
 import {
   advanceAheadNote,
   calcLines,
@@ -12,7 +14,7 @@ import {
   splitLine,
   type CalcLine,
 } from "./salary-drawer-model";
-import type { AdvanceItem, MonthStateKind, RateRef, SalaryDetail, TeacherRow } from "./salary-types";
+import type { AdvanceItem, MonthStateKind, RateRef, SalaryDetail, StaffRow, TeacherRow } from "./salary-types";
 
 // The row drawer's body, top to bottom as spec §2.5 lists it.
 
@@ -129,7 +131,49 @@ function PayoutBlock({ payout }: { payout: NonNullable<SalaryDetail["payout"]> }
   );
 }
 
-export function SalaryDrawerBody({ detail, state }: { detail: SalaryDetail; state: MonthStateKind }) {
+/** The staff member's pay for the month: the formula, or the CEO's figure with the formula beside it (ADR-0112). */
+function MonthlyBlock({ row, onAdjust }: { row: StaffRow; onAdjust?: () => void }) {
+  const f = adjustmentFacts(row);
+  const lock = adjustLockReason(row.payment);
+  return (
+    <Block title="Oylik hisobi">
+      {f.manual && row.adjustment ? (
+        <>
+          <Line
+            left="Qo'lda"
+            sub={`${row.adjustment.reason} · ${adjustmentMeta(row.adjustment)}`}
+            right={formatPrice(row.adjustment.amount)}
+          />
+          <Line
+            left={<span className="text-muted-foreground line-through">Tizim hisobi</span>}
+            right={<span className="text-muted-foreground line-through">{formatPrice(f.formula)}</span>}
+          />
+        </>
+      ) : (
+        <Line left="Tizim hisobi" right={formatPrice(f.formula)} />
+      )}
+      {onAdjust &&
+        (lock ? (
+          <p className="text-xs text-muted-foreground">{lock}</p>
+        ) : (
+          <Button variant="outline" size="sm" className="self-start" onClick={onAdjust}>
+            {f.manual ? "O'zgartirish" : "To'g'rilash"}
+          </Button>
+        ))}
+    </Block>
+  );
+}
+
+export function SalaryDrawerBody({
+  detail,
+  state,
+  onAdjust,
+}: {
+  detail: SalaryDetail;
+  state: MonthStateKind;
+  /** Opens the correction dialog; absent for a viewer without `salary.adjust`. */
+  onAdjust?: () => void;
+}) {
   const { row } = detail;
   const teacherRow = "fullDeserved" in row ? row : null;
   const coverage = "fullDeserved" in row ? undefined : row.coverage;
@@ -142,6 +186,7 @@ export function SalaryDrawerBody({ detail, state }: { detail: SalaryDetail; stat
       <Block title="Stavka">
         <p className="text-sm">{rateText(row.rate, detail.kind, coverage, detail.month)}</p>
       </Block>
+      {!teacherRow && <MonthlyBlock row={row as StaffRow} onAdjust={onAdjust} />}
       {teacherRow && <GroupsBlock row={teacherRow} month={detail.month} />}
       <AdvancesBlock items={row.advanceItems ?? []} />
       <CalcBlock detail={detail} />

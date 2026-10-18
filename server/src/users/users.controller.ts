@@ -62,7 +62,7 @@ export class UsersController {
   }
 
   /**
-   * Profildagi «Faol seanslar» (ADR-0112): shu hisobning tirik qurilmalari.
+   * Profildagi «Faol seanslar» (ADR-0113): shu hisobning tirik qurilmalari.
    * Id token'dan olinadi, so'rovdan emas — boshqa hisobga yetib bo'lmaydi.
    * `:id` dan OLDIN e'lon qilingan: marshrut e'lon tartibida mos keladi va
    * `:id` "sessions" ni ParseIntPipe bilan 400 qilib yuborardi.
@@ -150,7 +150,7 @@ export class UsersController {
       await this.usersService.changePassword(userId, dto);
     // The change ended every session of this account, the caller's included
     // (ADR-0030). A fresh pair, signed with the version this change produced,
-    // keeps THIS device signed in (and on its own row in the list, ADR-0112).
+    // keeps THIS device signed in (and on its own row in the list, ADR-0113).
     return {
       ...result,
       ...(await this.authService.issueSession(userId, sessionVersion, sid)),

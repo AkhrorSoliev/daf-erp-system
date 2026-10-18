@@ -29,7 +29,7 @@ export function useLogoutOthers() {
         setAuth(session.user, session.accessToken, session.refreshToken);
       }
       toast.success("Boshqa qurilmalardagi kirishlar tugatildi");
-      // The list of devices on the profile (ADR-0112) just lost every row but this one.
+      // The list of devices on the profile (ADR-0113) just lost every row but this one.
       queryClient.invalidateQueries({ queryKey: ["user-sessions"] });
       return true;
     } catch (error) {

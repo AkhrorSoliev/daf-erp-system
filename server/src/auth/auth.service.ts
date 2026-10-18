@@ -343,7 +343,7 @@ export class AuthService {
     const studentId = await this.resolveStudentId(user.id, roleIds);
 
     // Qator `resolveStudentId` dan KEYIN ochiladi: rad etilgan kirish iz
-    // qoldirmasin (ADR-0112).
+    // qoldirmasin (ADR-0113).
     const sid =
       opts.sid ??
       (await this.startSession(user.id, user.sessionVersion, opts.meta));
@@ -415,7 +415,7 @@ export class AuthService {
   }
 
   /**
-   * Yangi qurilma qatori (ADR-0112). Shu hisobning o'lik qatorlari — versiyasi
+   * Yangi qurilma qatori (ADR-0113). Shu hisobning o'lik qatorlari — versiyasi
    * orqada qolgan yoki refresh token'i allaqachon o'lgan — shu yerda
    * tozalanadi, alohida cron kerak emas.
    */
@@ -519,7 +519,7 @@ export class AuthService {
       }
 
       // Qurilma ro'yxatdan o'chirilgan bo'lsa refresh ham to'xtaydi
-      // (ADR-0112). `sid`siz eski token ADR'dan oldin berilgan: u shu yerda
+      // (ADR-0113). `sid`siz eski token ADR'dan oldin berilgan: u shu yerda
       // o'z qatorini oladi, hech kim chiqib ketmaydi.
       const sid = typeof payload.sid === 'string' ? payload.sid : undefined;
       if (sid) {
@@ -553,7 +553,7 @@ export class AuthService {
    */
   async issueSession(userId: number, sessionVersion: number, keepSid?: string) {
     const user = await this.loadSessionUser(userId);
-    // Qurilma o'z qatorini saqlab qoladi (ADR-0112): yangi versiya yoziladi,
+    // Qurilma o'z qatorini saqlab qoladi (ADR-0113): yangi versiya yoziladi,
     // `createdAt` o'zgarmaydi. Qator topilmasa (eski token) yangisi ochiladi.
     let sid: string | undefined;
     if (keepSid) {
@@ -602,7 +602,7 @@ export class AuthService {
   }
 
   /**
-   * Profildagi «Faol seanslar» (ADR-0112). Faqat shu hisobning JORIY versiyasi
+   * Profildagi «Faol seanslar» (ADR-0113). Faqat shu hisobning JORIY versiyasi
    * va tirik refresh token'li qatorlar; chaqiruvchining o'zi `current`.
    */
   async listSessions(

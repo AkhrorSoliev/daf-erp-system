@@ -4,7 +4,7 @@ import {
 } from '../../auth/token-lifetimes';
 
 /*
- * Qurilmalar ro'yxati (ADR-0112): har kirish bitta `UserSession` qatori.
+ * Qurilmalar ro'yxati (ADR-0113): har kirish bitta `UserSession` qatori.
  *
  * Token `sid` (qator id) ko'taradi. Qator `refresh` da tekshiriladi (bazaga
  * qarab), `JwtAuthGuard` esa o'chirilgan qurilmaning access token'ini Redis

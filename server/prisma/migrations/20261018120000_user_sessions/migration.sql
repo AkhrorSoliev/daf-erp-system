@@ -1,4 +1,4 @@
--- ADR-0112: faol seanslar ro'yxati (qurilmalar). Faqat yangi jadval, mavjud
+-- ADR-0113: faol seanslar ro'yxati (qurilmalar). Faqat yangi jadval, mavjud
 -- ma'lumotga tegmaydi: eski token'lar birinchi refresh'da o'z qatorini oladi.
 CREATE TABLE "UserSession" (
     "id" TEXT NOT NULL,

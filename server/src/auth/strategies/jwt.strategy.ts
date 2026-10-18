@@ -11,7 +11,7 @@ interface JwtPayload {
   studentId?: number;
   /** The session version the token was minted with (ADR-0030). */
   sv?: unknown;
-  /** The `UserSession` row behind this token (ADR-0112); older tokens have none. */
+  /** The `UserSession` row behind this token (ADR-0113); older tokens have none. */
   sid?: unknown;
   /** Set on refresh tokens only. */
   type?: string;
