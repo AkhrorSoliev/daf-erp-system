@@ -18,19 +18,18 @@ export const searchablePages: SearchablePage[] = [
   { label: "Hisobotlar", url: "/reports", keywords: ["report", "hisobot", "statistika"] },
   { label: "Guruhlar bo'yicha to'lov", url: "/reports/payment-reports", keywords: ["guruh to'lovi", "qarzdor guruh", "ustoz bo'yicha to'lov", "to'lov hisoboti"] },
   { label: "Sozlamalar", url: "/settings", keywords: ["setting", "sozlama", "config"] },
-  { label: "Umumiy sozlamalar", url: "/settings/general", keywords: ["general", "umumiy"] },
-  { label: "Kurslar", url: "/settings/courses", keywords: ["course", "kurs", "fan"] },
-  { label: "Filiallar", url: "/settings/branches", keywords: ["branch", "filial"] },
-  { label: "Xodimlar", url: "/settings/employees", keywords: ["employee", "xodim", "ishchi"] },
-  { label: "Xonalar", url: "/settings/rooms", keywords: ["room", "xona", "sinf"] },
-  { label: "Dam olish kunlari", url: "/settings/holidays", keywords: ["holiday", "dam", "bayram"] },
-  { label: "Arxiv", url: "/settings/archive", keywords: ["archive", "arxiv"] },
+  // Sozlamalarning ichki sahifalari bu yerda yo'q: ular `settings-nav.ts` dan
+  // olinadi va faqat foydalanuvchi ochishi mumkinlari qidiruvga kiradi
+  // (`settingsSearchPages`, `use-global-search.ts`).
   { label: "Profil", url: "/profile", keywords: ["profile", "profil", "shaxsiy"] },
 ];
 
-export function filterPages(query: string): SearchablePage[] {
+export function filterPages(
+  query: string,
+  pages: SearchablePage[] = searchablePages,
+): SearchablePage[] {
   const q = query.toLowerCase();
-  return searchablePages.filter(
+  return pages.filter(
     (page) =>
       page.label.toLowerCase().includes(q) ||
       page.keywords.some((kw) => kw.includes(q)),

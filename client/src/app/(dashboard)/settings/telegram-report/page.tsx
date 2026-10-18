@@ -1,10 +1,6 @@
-import { Suspense } from "react";
-import { TelegramReportSettingsClient } from "@/components/settings/telegram-report/telegram-report-settings-client";
+import { redirect } from "next/navigation";
 
-export default function TelegramReportSettingsPage() {
-  return (
-    <Suspense>
-      <TelegramReportSettingsClient />
-    </Suspense>
-  );
+// Eski manzil: sahifa «Telegram» ga qo'shildi (hisobot — uning ikkinchi varag'i).
+export default function TelegramReportRedirect() {
+  redirect("/settings/telegram?tab=hisobot");
 }

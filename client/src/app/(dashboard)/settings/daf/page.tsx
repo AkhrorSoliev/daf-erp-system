@@ -1,5 +1,6 @@
-import { DafNormaSettingsClient } from "@/components/settings/daf-norma-settings-client";
+import { redirect } from "next/navigation";
 
-export default function DafNormaSettingsPage() {
-  return <DafNormaSettingsClient />;
+// Eski manzil: sahifa «O'quv qoidalari» ga qo'shildi.
+export default function DafNormaRedirect() {
+  redirect("/settings/rules#daf");
 }
