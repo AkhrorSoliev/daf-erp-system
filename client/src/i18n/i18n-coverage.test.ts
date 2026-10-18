@@ -102,6 +102,17 @@ export const STRICT_FILES: string[] = [
   "components/students/edit-student-additional-fields.tsx",
   "lib/schemas/student-schema.ts",
   "components/leads/lead-source-picker.tsx",
+  "components/students/student-profile-client.tsx",
+  "components/students/student-profile-card.tsx",
+  "components/students/student-profile-tabs.tsx",
+  "components/students/student-profile-tabs-utils.ts",
+  "components/students/student-group-card.tsx",
+  "components/students/student-debt-origin.tsx",
+  "components/students/student-lead-tab.tsx",
+  "components/students/student-call-history-tab.tsx",
+  "components/students/student-mock-exams-tab.tsx",
+  "lib/weekdays.ts",
+  "hooks/use-leads-board.ts",
 ];
 
 function walk(dir: string): string[] {

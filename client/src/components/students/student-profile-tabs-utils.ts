@@ -1,13 +1,15 @@
 import type { LedgerReversal } from "@/lib/ledger-reversal";
+import { msg } from "@/i18n/msg";
 
 type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
 
+// The group card draws `t(label)`.
 export const STATUS_MAP: Record<number, { label: string; variant: BadgeVariant }> =
   {
-    1: { label: "Faol", variant: "default" },
-    2: { label: "Boshlanmagan", variant: "secondary" },
-    3: { label: "Pauza", variant: "outline" },
-    4: { label: "To'xtatilgan", variant: "destructive" },
+    1: { label: msg("Faol"), variant: "default" },
+    2: { label: msg("Boshlanmagan"), variant: "secondary" },
+    3: { label: msg("Pauza"), variant: "outline" },
+    4: { label: msg("To'xtatilgan"), variant: "destructive" },
   };
 
 // The money-flow types the "To'lovlar" tab requests — every type that moves
