@@ -4,7 +4,8 @@ import { AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useLocale, useT } from "@/i18n/context";
-import { emptyBranchTitle, keepsMonthCapital, MISSING_FOOTNOTE, missingText, missingTitle } from "./expenses-format";
+import { emptyBranchTitle, MISSING_FOOTNOTE, missingText, missingTitle } from "./expenses-format";
+import { keepsMonthCapital } from "../salary-utils";
 import type { MissingRow, MonthSummary } from "./expenses-types";
 
 /** «Bu oy hali yozilmagan» (spec B6 §3.3): the current month only, and only with a row. «Xarajatni yozish» only with `expenses.manage`. */

@@ -31,12 +31,11 @@ import {
 } from "@/components/ui/tooltip";
 import { DialogPaginationFooter } from "@/components/reports/departed-students/dialog-pagination-footer";
 import { useT } from "@/i18n/context";
-import { msg } from "@/i18n/msg";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { markedText } from "./marked-text";
-import { STATUS_COLORS } from "./types";
+import { STATUS_COLORS, statusText } from "./types";
 import { DebtMonthsBadge } from "../debt/debt-months-badge";
 import { monthLabel } from "../salary-utils";
 import type {
@@ -56,23 +55,7 @@ import type {
  * that were forgiven outright.
  */
 
-const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: msg("Faol"),
-  INACTIVE: msg("Nofaol"),
-  FROZEN: msg("Muzlatilgan"),
-  GRADUATED: msg("Bitirgan"),
-  EXPELLED: msg("Chetlatilgan"),
-  ARCHIVED: msg("Arxivlangan"),
-  PROSPECT: msg("Ro'yxatda"),
-};
-
 type TabKey = "debtors" | "writeoffs";
-
-/** A known status in the page language; one the client does not know prints as the server sent it. */
-function statusText(status: string, t: (source: string) => string): string {
-  const label = STATUS_LABELS[status];
-  return label ? t(label) : status;
-}
 
 function fmtDate(iso: string) {
   return format(new Date(iso), "dd.MM.yyyy");

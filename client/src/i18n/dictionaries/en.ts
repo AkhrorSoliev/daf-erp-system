@@ -2597,6 +2597,9 @@ const en: Dictionary = {
   "Aktiv yozuvlar ({n} ta):": "Active entries ({n}):",
   "Shundan oldingi oydan ({n} ta dars):": "Of which from the previous month (lessons: {n}):",
   "Bekor qilingan ({n} ta):": "Cancelled ({n}):",
+  // Payments overview — debt kinds as counted groups
+  "muzlatilganlar": "frozen",
+  "ketganlar": "left",
 };
 
 export default en;

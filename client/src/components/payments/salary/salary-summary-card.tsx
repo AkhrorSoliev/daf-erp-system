@@ -6,8 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { useLocale, useT } from "@/i18n/context";
 import { formatBalance } from "@/lib/format-utils";
 import { markedText } from "../debt-history/marked-text";
-import { keepsMonthCapital } from "../expenses/expenses-format";
-import { monthShort } from "../salary-utils";
+import { keepsMonthCapital, monthShort } from "../salary-utils";
 import { centerLine, monthStatePill, netLabel, summaryNumbers } from "./salary-page-model";
 import { SalaryToneBadge } from "./salary-tone-badge";
 import type { MonthlyResponse } from "./salary-types";

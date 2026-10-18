@@ -2402,7 +2402,7 @@ const de: Dictionary = {
   "Hammasi bir kunda berilgan bo'lsa — bir yo'la belgilash. Sana va har filial kassa/karta summalari so'raladi.": "Wenn alles an einem Tag ausgezahlt wurde — auf einmal markieren. Abgefragt werden das Datum und die Bar-/Kartenbeträge je Filiale.",
   "Oylik berilganini tasdiqlash ({n} ta)": "Gehaltsauszahlung bestätigen ({n})",
   "Umumiy ma'lumotlardagi «Oyliklar» kartasi va ustozning «Mening oyligim» sahifasi — shu raqamlar": "Die Karte «Gehälter» in der «Übersicht» und die Seite «Mein Gehalt» der Lehrkraft zeigen dieselben Zahlen",
-  "**{n} ta darsga ustoz haqi yozilmagan** — {name} uchun stavka qo'yilmagan.": "**Unterrichtsstunden ohne Vergütung: {n}** — für {name} ist keine Vergütung festgelegt.",
+  "**{n} ta darsga ustoz haqi yozilmagan** — {name} uchun stavka qo'yilmagan.": "**Unterrichtsstunden ohne Vergütung: {n}** — für {name} ist kein Satz festgelegt.",
   "**{n} xodimning oyligi hisoblanmaydi** — {names} uchun oylik summa kiritilmagan.": "**Mitarbeiter ohne Gehaltsberechnung: {n}** — für {names} ist kein Monatsbetrag erfasst.",
   "Nimadan": "Grundlage",
   "Bu oyda hech kim topilmadi — oyni yoki qidiruvni o'zgartirib ko'ring.": "In diesem Monat wurde niemand gefunden — ändern Sie den Monat oder die Suche.",
@@ -2418,7 +2418,7 @@ const de: Dictionary = {
   "Avans olinmagan": "Kein Vorschuss erhalten",
   "Hisob": "Berechnung",
   "Guruhlar bo'yicha — pastda": "Nach Gruppen — siehe unten",
-  "Stavka qo'yilmagan": "Keine Vergütung festgelegt",
+  "Stavka qo'yilmagan": "Kein Satz festgelegt",
   "Foiz: o'quvchi to'lovining {value}%": "Prozent: {value}% der Teilnehmerzahlung",
   "Har o'quvchi uchun tsikliga {value} so'm": "{value} Sum pro Teilnehmer und Zyklus",
   "Har o'quvchi uchun oyiga {value} so'm": "{value} Sum pro Teilnehmer und Monat",
@@ -2591,12 +2591,15 @@ const de: Dictionary = {
   "Joriy davr — har dars uchun batafsil": "Laufender Zeitraum — Details je Unterrichtsstunde",
   "Yuklanyapti...": "Wird geladen...",
   "Hozircha bu davrda yozilgan oylik yo'q": "Für diesen Zeitraum liegen noch keine Gehaltsbuchungen vor",
-  "Dars narxi": "Preis pro Stunde",
+  "Dars narxi": "Preis pro Unterrichtsstunde",
   "Yozilgan": "Gebucht",
   "{rate} (guruh)": "{rate} (Gruppe)",
   "Aktiv yozuvlar ({n} ta):": "Aktive Buchungen ({n}):",
   "Shundan oldingi oydan ({n} ta dars):": "Davon aus dem Vormonat (Unterrichtsstunden: {n}):",
   "Bekor qilingan ({n} ta):": "Storniert ({n}):",
+  // Payments overview — debt kinds as counted groups
+  "muzlatilganlar": "eingefroren",
+  "ketganlar": "ausgetreten",
 };
 
 export default de;

@@ -21,7 +21,7 @@ import { DebtFilterBar } from "./debt-filter-bar";
 import { dayMonth, KIND_LABEL, sumLine, TAB_LABEL, tabRule, tabSubline } from "./debt-format";
 import { useDebtList } from "./debt-queries";
 import { DebtTable } from "./debt-table";
-import { keepsMonthCapital } from "../expenses/expenses-format";
+import { keepsMonthCapital } from "../salary-utils";
 import { activeTab, cleanDebtFilters, DEBT_LIST_SCHEMA, debtListParams, hasDebtFilter, lastPageIfPast, type DebtFilters } from "./debt-url";
 import { DEBT_TABS, type DebtKind, type DebtListResponse, type DebtTab, type PayTarget } from "./debt-types";
 

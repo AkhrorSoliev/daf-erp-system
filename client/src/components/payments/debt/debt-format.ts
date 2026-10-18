@@ -8,7 +8,7 @@ import { monthShort } from "../salary-utils";
 import type { DebtDrawer, DebtKind, DebtListItem, DebtTab, PromiseCell, TabTotal } from "./debt-types";
 
 export const TAB_LABEL: Record<DebtTab, string> = { "shu-oy": msg("Shu oy"), eski: msg("Eski qarz"), chiqqan: msg("O'qimayotganlar") };
-export const KIND_LABEL: Record<DebtKind, string> = { ungrouped: msg("Guruhsiz"), frozen: msg("Muzlatilgan"), left: msg("Ketgan") };
+export const KIND_LABEL: Record<DebtKind, string> = { ungrouped: msg("Guruhsiz"), frozen: msg("Muzlatilganlar"), left: msg("Ketganlar") };
 /** The kind inside a line or a pill (lower case). */
 export const KIND_PILL: Record<DebtKind, string> = { ungrouped: msg("guruhsiz"), frozen: msg("muzlatilgan"), left: msg("ketgan") };
 

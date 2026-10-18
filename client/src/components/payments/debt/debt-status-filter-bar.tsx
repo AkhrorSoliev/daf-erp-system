@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import {
   STATUS_COLORS,
   STATUS_HINTS,
+  statusText,
   type DebtHistoryResponse,
   type DebtStatusFilter,
 } from "../debt-history/types";
@@ -67,7 +68,7 @@ export function DebtStatusFilterBar({
         return (
           <Tile
             key={s.status}
-            label={s.label}
+            label={statusText(s.status, t, s.label)}
             color={STATUS_COLORS[s.status] ?? "#94a3b8"}
             amount={s.amount}
             count={s.count}

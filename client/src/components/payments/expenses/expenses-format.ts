@@ -9,9 +9,6 @@ import type { ExpensePreset, MissingRow } from "./expenses-types";
 
 // Words and dates of the «Xarajatlar» page. Every amount is the server's.
 
-/** Languages whose month names are capitalised in the middle of a sentence (German nouns, English months). */
-export const keepsMonthCapital = (locale: string): boolean => locale === "de" || locale === "en";
-
 // The month name in the middle of a sentence: «avgust» in Uzbek and Russian, «August» in German and English.
 function lowerMonth(month: string, t: Translate, lower: boolean): string {
   const name = monthShort(month, t);

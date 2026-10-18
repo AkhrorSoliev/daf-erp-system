@@ -54,7 +54,7 @@ export function HandOverDialog({ target, accounts, onClose }: {
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4 text-sm">
           <div className="flex items-center justify-between border-b pb-2 font-medium">
             <span>{t("Berilgan summa")}</span>
-            <span className="tabular-nums">{formatBalance(target.amount)}</span>
+            <span className="tabular-nums">{formatBalance(target.amount, t("so'm"))}</span>
           </div>
           <div className="space-y-2">
             <Label htmlFor="ho-account">{t("Qaysi kassadan")}</Label>
@@ -105,7 +105,7 @@ export function CancelRefundDialog({ target, onClose }: { target: PendingRefundR
       <DialogContent className={SHELL}>
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{t("So'rovni bekor qilish")}</DialogTitle>
-          <DialogDescription>{`${target.firstName} ${target.lastName} · ${formatBalance(target.amount)}`}</DialogDescription>
+          <DialogDescription>{`${target.firstName} ${target.lastName} · ${formatBalance(target.amount, t("so'm"))}`}</DialogDescription>
         </DialogHeader>
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4 text-sm">
           <p>{cancelConsequence(target.amount, t)}</p>

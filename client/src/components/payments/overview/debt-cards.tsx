@@ -11,8 +11,8 @@ import { useFinancialOverview } from "./queries";
 
 const KINDS = [
   ["ungrouped", msg("guruhsiz")],
-  ["frozen", msg("muzlatilgan")],
-  ["left", msg("ketgan")],
+  ["frozen", msg("muzlatilganlar")],
+  ["left", msg("ketganlar")],
 ] as const;
 
 /**

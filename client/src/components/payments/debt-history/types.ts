@@ -129,6 +129,28 @@ export const STATUS_FILTER_LABELS: Record<DebtStatusFilter, string> = {
   inactive: msg("Nofaol"),
 };
 
+/** Student status codes in words; drawn with `t()`. */
+export const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: msg("Faol"),
+  INACTIVE: msg("Nofaol"),
+  FROZEN: msg("Muzlatilgan"),
+  GRADUATED: msg("Bitirgan"),
+  EXPELLED: msg("Chetlatilgan"),
+  ARCHIVED: msg("Arxivlangan"),
+  ARCHIVED_SOFT: msg("Arxivlangan"),
+  PROSPECT: msg("Ro'yxatda"),
+};
+
+/** A known status in the page language; an unknown one prints `fallback` (server data, never through `t()`). */
+export function statusText(
+  status: string,
+  t: (source: string) => string,
+  fallback: string = status,
+): string {
+  const label = STATUS_LABELS[status];
+  return label ? t(label) : fallback;
+}
+
 /**
  * One colour per status slice. Literal hex, never `hsl(var(--…))` — CSS
  * variables resolve to nothing inside SVG attributes and the shape falls back

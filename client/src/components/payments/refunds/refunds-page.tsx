@@ -95,7 +95,7 @@ export function RefundsPage() {
 
       <div className="rounded-xl border p-4">
         <p className="text-sm text-muted-foreground">{t("O'qimayotganlarning markazda turgan puli")}</p>
-        <p className="text-2xl font-bold tabular-nums">{data ? formatBalance(data.summary.total) : "—"}</p>
+        <p className="text-2xl font-bold tabular-nums">{data ? formatBalance(data.summary.total, t("so'm")) : "—"}</p>
         {data && <p className="text-sm text-muted-foreground">{summaryLine(data.summary.count, t)}</p>}
         <p className="mt-1.5 text-xs text-muted-foreground">{t("O'qiyotganlarning oldindan to'lagani bu yerga kirmaydi — u keyingi oy hisobiga o'tadi.")}</p>
       </div>
@@ -196,7 +196,7 @@ function TabButtons({ data, active, onSelect }: {
             <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <span className={cn("size-2 rounded-full", TAB_DOT[key])} />{t(tabLabel)}
             </span>
-            <span className="text-xl font-bold tabular-nums">{total ? formatBalance(total.total) : "—"}</span>
+            <span className="text-xl font-bold tabular-nums">{total ? formatBalance(total.total, t("so'm")) : "—"}</span>
             {total && <span className="text-xs text-muted-foreground">{tabSubline(key, total.count, overThirty, t)}</span>}
           </button>
         );

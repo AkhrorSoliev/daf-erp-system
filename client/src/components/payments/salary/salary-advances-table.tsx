@@ -5,10 +5,9 @@ import { TablePagination } from "@/components/outreach/table-pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useLocale, useT } from "@/i18n/context";
 import { formatPrice } from "@/lib/format-utils";
-import { keepsMonthCapital } from "../expenses/expenses-format";
 import { methodLabel } from "../expenses/expenses-labels";
 import type { AdvanceRow } from "../salary-advances-tab";
-import { monthShort } from "../salary-utils";
+import { keepsMonthCapital, monthShort } from "../salary-utils";
 import { SalaryToneBadge } from "./salary-tone-badge";
 
 const fullName = (u: { firstName: string; lastName: string }) => `${u.firstName} ${u.lastName}`;

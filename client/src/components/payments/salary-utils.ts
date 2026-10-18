@@ -175,6 +175,9 @@ export function monthShort(
   return t(month);
 }
 
+/** Languages whose month names are capitalised in the middle of a sentence (German nouns, English months). */
+export const keepsMonthCapital = (locale: string): boolean => locale === "de" || locale === "en";
+
 /** Current Tashkent month key. */
 export function currentMonthKey(): string {
   const t = new Date(Date.now() + TASHKENT_OFFSET_MS);

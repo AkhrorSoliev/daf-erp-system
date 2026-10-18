@@ -14,7 +14,7 @@ import { useT } from "@/i18n/context";
 import { formatNumber } from "@/lib/format-utils";
 import { tashkentNow } from "@/lib/tashkent-time";
 import { paymentsListHref } from "@/components/payments/list/payments-url";
-import { addMonths, monthShort } from "@/components/payments/salary-utils";
+import { addMonths, monthLabel, monthShort } from "@/components/payments/salary-utils";
 import { paymentMethodLabel, som } from "./overview-math";
 import { interpolate } from "@/i18n/translate";
 import type { Translate } from "@/components/payments/record-payment-admission";
@@ -138,7 +138,7 @@ export function IncomeBreakdown({ month, data, byMethod }: { month: string; data
               <ul className="space-y-0.5 pl-5 text-xs">
                 {data.late.map((m) => (
                   <li key={m.monthKey} className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">{t("{label} qarzi", { label: m.label })}</span>
+                    <span className="text-muted-foreground">{t("{label} qarzi", { label: monthLabel(m.monthKey, t) })}</span>
                     <span className="tabular-nums">{som(m.amount, t)}</span>
                   </li>
                 ))}

@@ -24,7 +24,7 @@ import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
-import { keepsMonthCapital } from "../expenses/expenses-format";
+import { keepsMonthCapital } from "../salary-utils";
 import { accountsByKind, buildPayBody, payTitle, payToast, sliceCheck } from "./salary-pay-model";
 import { SALARY_KEYS, useInvalidateSalary } from "./salary-queries";
 import type { SalaryDetail } from "./salary-types";

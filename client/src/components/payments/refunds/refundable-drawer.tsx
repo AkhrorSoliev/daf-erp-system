@@ -86,7 +86,7 @@ export function RefundableDrawerBody({ drawer: d, can, onAction }: {
     <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4 text-sm">
       <div className="rounded-lg bg-muted/50 px-4 py-3">
         <p className="text-xs text-muted-foreground">{t("Markazdagi puli")}</p>
-        <p className="text-2xl font-bold tabular-nums">{formatBalance(d.balance)}</p>
+        <p className="text-2xl font-bold tabular-nums">{formatBalance(d.balance, t("so'm"))}</p>
       </div>
       <div>
         <Fact label={t("Holat")}>{drawerKindLine(d, t)}</Fact>
