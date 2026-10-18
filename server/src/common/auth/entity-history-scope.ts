@@ -120,6 +120,7 @@ export async function assertCallerMayReadEntityHistory(
         roles,
         entityId,
         msg,
+        { includeArchived: true },
       );
       return;
 
