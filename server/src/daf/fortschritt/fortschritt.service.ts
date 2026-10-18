@@ -159,62 +159,47 @@ export class FortschrittService {
   constructor(private readonly prisma: PrismaService) {}
 
   async uebersicht(studentId: number, companyId: number): Promise<Fortschritt> {
-    const heute = tashkentDateStr(new Date());
-    const [jamiy, serie, groupId, faelligeWoerter] = await Promise.all([
-      this.prisma.dafStudentDay.aggregate({
-        where: { studentId },
-        _sum: { points: true },
-      }),
-      this.serieFuer(studentId, heute),
-      currentGroupId(this.prisma, studentId),
-      // `uebung.wiederholung()` bilan BIR XIL predikat (`dueAt <= hozir`)
-      // — bu shu o'quvchi uchun so'ragan `student`ga tegishli qatorlar
-      // ustida ishlaydi, deyarli bepul (`DafLexemeState` studentId bo'yicha
-      // indekslangan).
-      this.prisma.dafLexemeState.count({
-        where: { studentId, dueAt: { lte: new Date() } },
-      } as any),
-    ]);
+    const hozir = new Date();
+    const heute = tashkentDateStr(hozir);
+    const montag = montagGte(hozir);
+
+    // Hamma so'rov BIR bosqichda: 50 o'quvchi bir vaqtda kelganda har
+    // ketma-ket bosqich ulanishlar navbatiga qaytadan turadi (S1 yuklama
+    // sinovi). Guruh zanjiri faqat `groupId` ga bog'liq.
+    const [jamiy, serie, faelligeWoerter, zentrum, wochePlatzGruppe] =
+      await Promise.all([
+        this.prisma.dafStudentDay.aggregate({
+          where: { studentId },
+          _sum: { points: true },
+        }),
+        this.serieFuer(studentId, heute),
+        // `uebung.wiederholung()` bilan BIR XIL predikat (`dueAt <= hozir`)
+        // — bu shu o'quvchi uchun so'ragan `student`ga tegishli qatorlar
+        // ustida ishlaydi, deyarli bepul (`DafLexemeState` studentId bo'yicha
+        // indekslangan).
+        this.prisma.dafLexemeState.count({
+          where: { studentId, dueAt: { lte: hozir } },
+        } as any),
+        // Markaz o'rni `zentrumHaftaCte` orqali hisoblanadi — xuddi shu
+        // bo'lak `reyting('zentrum')` jadvalini quradi. Guruh uchun
+        // qilingan tuzatish (pastdagi izohga qarang) markazga tegishli emas
+        // edi: `zentrumReytingi` o'z qatorini FAQAT o'quvchi shu hafta
+        // urinish qilgan bo'lsa qo'shar edi, shuning uchun dushanba ertalab
+        // chip "1-o'rin" deb, Markaz jadvali esa "hech kim ball yig'magan"
+        // deb ikkitasi bir vaqtda ikki xil javob berardi.
+        this.zentrumOrni(studentId, companyId, wochenStartTag(hozir), 0),
+        // Guruh o'rni `gruppeHaftaligi` orqali hisoblanadi — xuddi shu
+        // funksiya `reyting('gruppe')` jadvalini quradi. Bitta joyda
+        // hisoblanmasa, ikki ekran bir xil savolga ikki xil javob berishi
+        // mumkin edi: bu haqiqiy xato bo'lib topilgan (mashq qilmagan a'zo
+        // o'z o'rnini past ko'rsatgan — "shu hafta mashq qilganlar"
+        // populyatsiyasi bilan hisoblangan eski versiya butun rosterni
+        // emas, faqat urinish qilganlarni ko'rgan).
+        this.gruppePlatz(studentId, companyId, montag),
+      ]);
 
     const gesamt = jamiy._sum.points ?? 0;
     const { jetzt, naechste } = stufeFuer(gesamt);
-
-    const jetztWoche = new Date();
-    const montag = montagGte(jetztWoche);
-
-    // Markaz o'rni `zentrumHaftaCte` orqali hisoblanadi — xuddi shu
-    // bo'lak `reyting('zentrum')` jadvalini quradi. Guruh uchun
-    // qilingan tuzatish (pastdagi izohga qarang) markazga tegishli emas
-    // edi: `zentrumReytingi` o'z qatorini FAQAT o'quvchi shu hafta
-    // urinish qilgan bo'lsa qo'shar edi, shuning uchun dushanba ertalab
-    // chip "1-o'rin" deb, Markaz jadvali esa "hech kim ball yig'magan"
-    // deb ikkitasi bir vaqtda ikki xil javob berardi.
-    const zentrum = await this.zentrumOrni(
-      studentId,
-      companyId,
-      wochenStartTag(jetztWoche),
-      0,
-    );
-    const wochePunkte = zentrum.punkte;
-    const wochePlatzZentrum = zentrum.hozir;
-
-    // Guruh o'rni `gruppeHaftaligi` orqali hisoblanadi — xuddi shu funksiya
-    // `reyting('gruppe')` jadvalini quradi. Bitta joyda hisoblanmasa, ikki
-    // ekran bir xil savolga ikki xil javob berishi mumkin edi: bu haqiqiy
-    // xato bo'lib topilgan (mashq qilmagan a'zo o'z o'rnini past ko'rsatgan
-    // — "shu hafta mashq qilganlar" populyatsiyasi bilan hisoblangan
-    // eski versiya butun rosterni emas, faqat urinish qilganlarni ko'rgan).
-    let wochePlatzGruppe: number | null = null;
-    if (groupId) {
-      const { saralangan } = await this.gruppeHaftaligi(
-        groupId,
-        companyId,
-        montag,
-      );
-      if (saralangan.length > 0) {
-        wochePlatzGruppe = platziniTop(saralangan, studentId);
-      }
-    }
 
     return {
       gesamt,
@@ -223,11 +208,27 @@ export class FortschrittService {
         ? { de: naechste.de, uz: naechste.uz, ab: naechste.ab }
         : null,
       serie,
-      wochePunkte,
+      wochePunkte: zentrum.punkte,
       wochePlatzGruppe,
-      wochePlatzZentrum,
+      wochePlatzZentrum: zentrum.hozir,
       faelligeWoerter,
     };
+  }
+
+  /** O'quvchining guruh jadvalidagi o'rni; guruhsiz yoki bo'sh guruh — `null`. */
+  private async gruppePlatz(
+    studentId: number,
+    companyId: number,
+    montag: Date,
+  ): Promise<number | null> {
+    const groupId = await currentGroupId(this.prisma, studentId);
+    if (!groupId) return null;
+    const { saralangan } = await this.gruppeHaftaligi(
+      groupId,
+      companyId,
+      montag,
+    );
+    return saralangan.length > 0 ? platziniTop(saralangan, studentId) : null;
   }
 
   /**
@@ -268,53 +269,63 @@ export class FortschrittService {
     const montag = montagGte(jetzt);
     const montagUtc = wochenStartUtc(jetzt);
 
-    const [urinishlar, bugun, groupId, serie] = await Promise.all([
-      this.prisma.dafAttempt.findMany({
-        where: { sessionId, studentId },
-        select: { points: true, createdAt: true, groupId: true },
-      }),
+    // Ikki zanjir parallel: seans urinishlari → markaz o'rni (`minus` ga
+    // muhtoj) va guruh → guruh ro'yxati (urinishlarni kutmaydi). Har
+    // ketma-ket bosqich 50 parallel so'rovda ulanishlar navbatiga qaytadan
+    // turadi (S1 yuklama sinovi).
+    const urinishlarP = this.prisma.dafAttempt.findMany({
+      where: { sessionId, studentId },
+      select: { points: true, createdAt: true, groupId: true },
+    });
+    const guruhP = currentGroupId(this.prisma, studentId).then(
+      async (groupId) =>
+        groupId
+          ? {
+              groupId,
+              ...(await this.gruppeHaftaligi(groupId, companyId, montag)),
+            }
+          : null,
+    );
+
+    const sum = (xs: { points: number }[]) =>
+      xs.reduce((s, x) => s + x.points, 0);
+    const shuHaftaOf = (xs: Awaited<typeof urinishlarP>) =>
+      xs.filter((u) => u.createdAt >= montagUtc);
+
+    const [urinishlar, bugun, serie, zentrum, guruh] = await Promise.all([
+      urinishlarP,
       this.prisma.dafStudentDay.aggregate({
         where: { studentId, day: utcMidnightFromDateStr(heute) },
         _sum: { attempts: true },
       }),
-      currentGroupId(this.prisma, studentId),
       this.serieFuer(studentId, heute),
+      urinishlarP.then((xs) =>
+        this.zentrumOrni(
+          studentId,
+          companyId,
+          wochenStartTag(jetzt),
+          sum(shuHaftaOf(xs)),
+        ),
+      ),
+      guruhP,
     ]);
 
-    const sum = (xs: { points: number }[]) =>
-      xs.reduce((s, x) => s + x.points, 0);
-    const shuHafta = urinishlar.filter((u) => u.createdAt >= montagUtc);
+    const shuHafta = shuHaftaOf(urinishlar);
     const bugungi = urinishlar.filter(
       (u) => tashkentDateStr(u.createdAt) === heute,
     ).length;
 
-    const gruppeOrni = async (): Promise<SeansNatijasi['orin']['gruppe']> => {
-      if (!groupId) return null;
-      const { saralangan } = await this.gruppeHaftaligi(
-        groupId,
-        companyId,
-        montag,
-      );
-      if (saralangan.length === 0) return null;
-      const minus = sum(shuHafta.filter((u) => u.groupId === groupId));
-      return {
+    let gruppe: SeansNatijasi['orin']['gruppe'] = null;
+    if (guruh && guruh.saralangan.length > 0) {
+      const minus = sum(shuHafta.filter((u) => u.groupId === guruh.groupId));
+      gruppe = {
         oldin: platziniTop(
-          saralaBarqaror(ayir(saralangan, studentId, minus)),
+          saralaBarqaror(ayir(guruh.saralangan, studentId, minus)),
           studentId,
         ),
-        hozir: platziniTop(saralangan, studentId),
+        hozir: platziniTop(guruh.saralangan, studentId),
       };
-    };
-
-    const [zentrum, gruppe] = await Promise.all([
-      this.zentrumOrni(
-        studentId,
-        companyId,
-        wochenStartTag(jetzt),
-        sum(shuHafta),
-      ),
-      gruppeOrni(),
-    ]);
+    }
 
     return {
       punkte: sum(urinishlar),
@@ -469,20 +480,22 @@ export class FortschrittService {
     minus: number,
   ): Promise<{ punkte: number; hozir: number; oldin: number }> {
     // `minus` OXIRGI bog'langan qiymat bo'lishi shart (soxta `$queryRaw`).
+    // Bitta o'tish (`COUNT FILTER`), korrelyatsiyali subso'rov emas: u
+    // reja narxini 228k ga ko'tarib `jit_above_cost` (100k) dan oshirardi va
+    // Postgres har chaqiruvda ~20 ms JIT kompilyatsiya qilardi.
     const [satr] = await this.prisma.$queryRaw<
       { punkte: number; hozir: number; oldin: number }[]
     >(Prisma.sql`/* zentrum-rank */
       WITH ${zentrumHaftaCte(companyId, montagTag, studentId)},
       q AS (SELECT "studentId" AS id, p FROM t WHERE "studentId" = ${studentId}),
-      o AS (SELECT GREATEST(q.p - ${minus}::int, 0) AS p FROM q)
-      SELECT q.p AS punkte,
-        1 + (SELECT COUNT(*)::int FROM t
-             WHERE t."studentId" <> q.id
-               AND (t.p > q.p OR (t.p = q.p AND t."studentId" < q.id))) AS hozir,
-        1 + (SELECT COUNT(*)::int FROM t
-             WHERE t."studentId" <> q.id
-               AND (t.p > o.p OR (t.p = o.p AND t."studentId" < q.id))) AS oldin
-      FROM q, o`);
+      o AS (SELECT id, p, GREATEST(p - ${minus}::int, 0) AS op FROM q)
+      SELECT o.p AS punkte,
+        1 + (COUNT(*) FILTER (WHERE t."studentId" <> o.id
+          AND (t.p > o.p OR (t.p = o.p AND t."studentId" < o.id))))::int AS hozir,
+        1 + (COUNT(*) FILTER (WHERE t."studentId" <> o.id
+          AND (t.p > o.op OR (t.p = o.op AND t."studentId" < o.id))))::int AS oldin
+      FROM t CROSS JOIN o
+      GROUP BY o.id, o.p, o.op`);
     return satr;
   }
 
