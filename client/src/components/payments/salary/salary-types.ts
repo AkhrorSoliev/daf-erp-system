@@ -74,6 +74,15 @@ export interface TeacherRow {
   rate?: RateRef | null;
 }
 
+/** The CEO's manual figure for a staff member's pay in one month (ADR-0112). */
+export interface StaffAdjustment {
+  amount: number;
+  reason: string;
+  by: { id: number; firstName: string; lastName: string } | null;
+  /** ISO instant of the save. */
+  at: string;
+}
+
 export interface StaffRow {
   user: {
     id: number;
@@ -84,6 +93,9 @@ export interface StaffRow {
     branch: { id: number; name: string } | null;
   };
   monthly: number;
+  /** The formula's figure; `monthly` is the CEO's figure when `adjustment` is set. */
+  calculated?: number;
+  adjustment?: StaffAdjustment | null;
   advances: number;
   netToPay: number;
   payment: RowPayment | null;
