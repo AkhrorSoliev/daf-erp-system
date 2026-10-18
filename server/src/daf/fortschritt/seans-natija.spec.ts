@@ -14,6 +14,10 @@ function fake(opts: {
   /** Muddati kelgan so'zlar (`bosh` tekshiruvi). */
   due?: number;
   ochiqDars?: boolean;
+  /** `bosh` tekshiruvidagi dars so'rovi yiqiladi. */
+  darsXato?: boolean;
+  /** Qo'shimcha mashq qilingan kunlar (seriya uchun), YYYY-MM-DD. */
+  oldingiKunlar?: string[];
   /** O'rganilgan so'zlar (nishon sharti). */
   woerter?: number;
   /** INSERT … RETURNING javobi; `'xato'` — so'rov yiqiladi. */
@@ -29,13 +33,13 @@ function fake(opts: {
         day: '2026-10-19',
         attempts: w.studentId === 55 ? opts.todayAttempts : 1,
       })),
-      {
+      ...['2026-10-18', ...(opts.oldingiKunlar ?? [])].map((day) => ({
         studentId: 55,
         companyId: 1,
-        day: '2026-10-18',
+        day,
         points: 0,
         attempts: 1,
-      },
+      })),
     ],
     () => opts.dailyGoal ?? null,
   );
@@ -61,9 +65,10 @@ function fake(opts: {
       ),
     },
     dafLesson: {
-      findFirst: jest.fn(async () =>
-        opts.ochiqDars === false ? null : { id: 1 },
-      ),
+      findFirst: jest.fn(async () => {
+        if (opts.darsXato) throw new Error('db down');
+        return opts.ochiqDars === false ? null : { id: 1 };
+      }),
     },
     enrollment: {
       findFirst: jest.fn(async () =>
@@ -248,7 +253,71 @@ describe('seansNatijasi', () => {
         }),
       );
       const n = await svc.seansNatijasi('s-1', 55, 1);
-      expect(n.maqsad.yangiBajarildi).toBe(false);
+      // bosh yutuqni yashiradi, lekin ball bo'yicha `bajarildi` ni o'zgartirmaydi.
+      expect(n.maqsad).toMatchObject({
+        hozir: 100,
+        bajarildi: true,
+        yangiBajarildi: false,
+      });
+    });
+
+    it('seans maqsadga AYNAN yetdi — yangiBajarildi', async () => {
+      // Bugun 80 (oldin 40 + seans 40), maqsad O'RTA 80.
+      const svc = new FortschrittService(
+        fake({
+          session: [seans(40)],
+          todayAttempts: 2,
+          week: [{ studentId: 55, points: 80 }],
+        }),
+      );
+      const n = await svc.seansNatijasi('s-1', 55, 1);
+      expect(n.maqsad).toEqual({
+        ball: 80,
+        hozir: 80,
+        bajarildi: true,
+        yangiBajarildi: true,
+      });
+    });
+
+    it('seans maqsadga yetmadi — bajarilmagan, yangi emas', async () => {
+      const prisma = fake({
+        session: [seans(30)],
+        todayAttempts: 2,
+        week: [{ studentId: 55, points: 70 }],
+      });
+      const n = await new FortschrittService(prisma).seansNatijasi(
+        's-1',
+        55,
+        1,
+      );
+      expect(n.maqsad).toEqual({
+        ball: 80,
+        hozir: 70,
+        bajarildi: false,
+        yangiBajarildi: false,
+      });
+      expect(prisma.dafLesson.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('bosh tekshiruvi yiqilsa natija va nishonlar saqlanadi', async () => {
+      const svc = new FortschrittService(
+        fake({
+          session: [seans(50)],
+          todayAttempts: 2,
+          week: [{ studentId: 55, points: 100 }],
+          due: 0,
+          darsXato: true,
+          woerter: 50,
+          badges: ['WOERTER_50'],
+        }),
+      );
+      const n = await svc.seansNatijasi('s-1', 55, 1);
+      expect(n.punkte).toBe(50);
+      expect(n.maqsad).toMatchObject({
+        bajarildi: true,
+        yangiBajarildi: false,
+      });
+      expect(n.yangiNishonlar).toEqual(['WOERTER_50']);
     });
   });
 

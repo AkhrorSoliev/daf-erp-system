@@ -6,7 +6,7 @@ import {
   utcMidnightFromDateStr,
 } from '../../common/date/tashkent';
 import { currentGroupId } from '../shared/student-scope';
-import { nishonlarniBerXavfsiz } from '../nishon/nishon-berish';
+import { nishonlarniBerXavfsiz, woerterSoni } from '../nishon/nishon-berish';
 import {
   MAQSAD_BALL,
   maqsadDarajasi,
@@ -302,6 +302,11 @@ export class FortschrittService {
     const shuHaftaOf = (xs: Awaited<typeof urinishlarP>) =>
       xs.filter((u) => u.createdAt >= montagUtc);
 
+    // So'z soni seriyaga bog'liq emas: birinchi bosqichda parallel. Yiqilsa
+    // `null` (nishon berilmaydi) — bu yerda tashlanmaydi, aks holda
+    // `urinishlarP` yiqilganda ushlanmagan rad etish qoladi.
+    const woerterP = woerterSoni(this.prisma, studentId).catch(() => null);
+
     const [urinishlar, oz, guruh] = await Promise.all([
       urinishlarP,
       urinishlarP.then((xs) =>
@@ -345,11 +350,20 @@ export class FortschrittService {
       false,
     );
     // `bosh` faqat maqsad kesilganda o'qiladi — kuniga ko'pi bilan bir marta.
-    // Nishonlar shu yerda (seriya va so'z soni yangilangan); xatosi o'zi
-    // ushlanadi, natija `null` ga tushmaydi.
+    // Nishonlar shu yerda (seriya yangilangan); xatosi o'zi ushlanadi,
+    // natija `null` ga tushmaydi. `bosh` yiqilsa faqat `yangiBajarildi`
+    // pasayadi (false): nishonlar allaqachon yozilgan bo'lishi mumkin va
+    // keyingi INSERT ularni qaytarmaydi, natijani yo'qotib bo'lmaydi.
     const [bosh, yangiNishonlar] = await Promise.all([
-      kesdi ? bugunBoshmi(this.prisma, studentId) : Promise.resolve(false),
-      nishonlarniBerXavfsiz(this.prisma, studentId, companyId, serie),
+      kesdi
+        ? bugunBoshmi(this.prisma, studentId).catch((err: Error) => {
+            this.logger.warn(
+              `Bosh holat o'qilmadi (studentId=${studentId}): ${err.message}`,
+            );
+            return true;
+          })
+        : Promise.resolve(false),
+      nishonlarniBerXavfsiz(this.prisma, studentId, companyId, serie, woerterP),
     ]);
 
     return {

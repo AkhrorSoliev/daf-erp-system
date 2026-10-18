@@ -65,9 +65,19 @@ export async function nishonlarniBerXavfsiz(
   studentId: number,
   companyId: number,
   serie: number,
+  /**
+   * Oldindan boshlangan so'z soni (u seriyaga bog'liq emas, shuning uchun
+   * chaqiruvchi uni parallel boshlaydi). `null` — sanash yiqilgan: nishon
+   * berilmaydi. Berilmasa shu yerda sanaladi.
+   */
+  woerterP?: Promise<number | null>,
 ): Promise<string[]> {
   try {
-    const woerter = await woerterSoni(prisma, studentId);
+    const woerter = await (woerterP ?? woerterSoni(prisma, studentId));
+    if (woerter === null) {
+      logger.warn(`So'z soni sanalmadi (studentId=${studentId})`);
+      return [];
+    }
     return await grantBadges(prisma, studentId, companyId, { serie, woerter });
   } catch (err) {
     logger.warn(

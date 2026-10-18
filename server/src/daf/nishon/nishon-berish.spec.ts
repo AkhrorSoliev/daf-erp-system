@@ -121,6 +121,25 @@ describe('nishonlarniBerXavfsiz', () => {
     ]);
   });
 
+  it("oldindan boshlangan so'z soni berilsa qayta sanalmaydi", async () => {
+    const { prisma, count } = fakeBadgeTable([], 0);
+    expect(
+      await nishonlarniBerXavfsiz(prisma, 55, 1, 0, Promise.resolve(50)),
+    ).toEqual(['WOERTER_50']);
+    expect(count).not.toHaveBeenCalled();
+  });
+
+  it("so'z soni sanalmagan (null) yoki rad etilgan — bo`sh ro`yxat, INSERT yo'q", async () => {
+    const { prisma, $queryRaw } = fakeBadgeTable([], 50);
+    await expect(
+      nishonlarniBerXavfsiz(prisma, 55, 1, 3, Promise.resolve(null)),
+    ).resolves.toEqual([]);
+    await expect(
+      nishonlarniBerXavfsiz(prisma, 55, 1, 3, Promise.reject(new Error('x'))),
+    ).resolves.toEqual([]);
+    expect($queryRaw).not.toHaveBeenCalled();
+  });
+
   it('xato — bo`sh ro`yxat, otilmaydi (seans saqlangan)', async () => {
     const { prisma, $queryRaw } = fakeBadgeTable([], 50);
     $queryRaw.mockRejectedValueOnce(new Error('db down'));
