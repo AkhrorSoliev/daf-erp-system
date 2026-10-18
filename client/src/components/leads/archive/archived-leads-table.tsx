@@ -74,7 +74,9 @@ export function ArchivedLeadsTable({
               span={span}
               isPending={query.isPending}
               isError={query.isError && !query.data}
-              isEmpty={!!query.data && rows.length === 0}
+              isEmpty={
+                !!query.data && rows.length === 0 && !query.isPlaceholderData
+              }
               filtered={filtered}
               noun="lid"
               onRetry={() => query.refetch()}

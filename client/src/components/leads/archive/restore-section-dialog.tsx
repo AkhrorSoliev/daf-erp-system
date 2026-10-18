@@ -35,12 +35,14 @@ export function RestoreSectionDialog({
   target,
   columns,
   columnsLoading = false,
+  columnsFailed = false,
   onClose,
   onRestored,
 }: {
   target: ArchivedSection | null;
   columns: BoardColumn[];
   columnsLoading?: boolean;
+  columnsFailed?: boolean;
   onClose: () => void;
   onRestored: (result: { restoredLeadCount: number }) => void;
 }) {
@@ -96,6 +98,12 @@ export function RestoreSectionDialog({
         </DialogHeader>
 
         <div className="space-y-3">
+          {columnsFailed && (
+            <p className="text-xs text-destructive">
+              Ustunlarni yuklab bo&apos;lmadi. Oynani yopib, qayta oching.
+            </p>
+          )}
+
           <div className="space-y-1.5">
             <Label>Ustun</Label>
             <Select
@@ -161,7 +169,7 @@ export function RestoreSectionDialog({
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={submitting || columnsLoading}
+            disabled={submitting || columnsLoading || columnsFailed}
           >
             {submitting && <Loader2 className="size-4 animate-spin" />}
             Tiklash

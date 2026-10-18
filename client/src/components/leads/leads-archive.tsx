@@ -71,6 +71,8 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
     null,
   );
   const board = useBoardColumns(!!leadTarget || !!sectionTarget);
+  // A failed background refetch keeps the columns it already has.
+  const boardFailed = board.isError && !board.data;
 
   // A filter change always puts the list back on page 1.
   const patch = useCallback(
@@ -117,6 +119,8 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
     // Restored leads leave the leads list: refetch it when it is on screen,
     // otherwise on its next visit.
     queryClient.invalidateQueries({ queryKey: archiveKeys.leads });
+    // The cached board lacks the section that just came back.
+    queryClient.invalidateQueries({ queryKey: archiveKeys.board });
     stepBackIfEmpty(sections.data?.data.length ?? 0);
     setSectionTarget(null);
   }
@@ -211,7 +215,7 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
         }
         columns={board.data ?? NO_COLUMNS}
         columnsLoading={board.isPending}
-        columnsFailed={board.isError}
+        columnsFailed={boardFailed}
         onClose={() => setLeadTarget(null)}
         onRestored={() => leadTarget && leadRestored(leadTarget)}
       />
@@ -219,6 +223,7 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
         target={sectionTarget}
         columns={board.data ?? NO_COLUMNS}
         columnsLoading={board.isPending}
+        columnsFailed={boardFailed}
         onClose={() => setSectionTarget(null)}
         onRestored={({ restoredLeadCount }) =>
           sectionTarget && sectionRestored(sectionTarget, restoredLeadCount)
