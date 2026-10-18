@@ -370,8 +370,9 @@ p95 121 (yangi) / 171 (oldingi kommit), `seansNatijasi` 126 / 132.
 **Qamrab oluvchi indeks sinovi** (`("companyId", day) INCLUDE
 ("studentId", points)`, faqat sinov bazasida, keyin o'chirildi): `Index
 Only Scan`; fortschritt p95 168, reyting zentrum 79, seansNatijasi 104 —
-hammasi o'tadi, zaxira kattaroq. Migratsiya QO'SHILMAGAN — qaror
-nazoratchida.
+hammasi o'tadi, zaxira kattaroq. Qaror: indeks qo'shildi —
+`20261018210000_daf_student_day_covering_index` (qo'lda yozilgan migratsiya,
+`schema.prisma` o'zgarmadi; ADR-0111).
 
 **Tuzatish.** Markaz reytingi endi Postgres'da hisoblanadi: bitta umumiy CTE
 (`zentrumHaftaCte`) haftani o'quvchi bo'yicha yig'adi va so'ragan
@@ -398,9 +399,8 @@ so'rovi ≈17 ms (narx 12,5k, JIT yo'q; o'quvchi qatorlari
 bir guruh): `ON CONFLICT` hech narsa yo'qotmadi — har o'lchovda farq 0
 (oxirgisi: ball 1 465 = 1 465, urinishlar 77 = 77).
 
-**Ochiq:** `uebersicht` p95 chegara yonida (193 / 202, band mashinada).
-Qamrab oluvchi indeks uni 168 ga tushiradi — migratsiya sifatida qo'shish
-nazoratchi qarori.
+**Yopildi:** `uebersicht` p95 chegara yonida edi (193 / 202, band mashinada);
+qamrab oluvchi indeks migratsiya sifatida qo'shildi, u 168 ga tushiradi.
 ---
 
 ## 11. Bu bosqichda QILINMAYDI

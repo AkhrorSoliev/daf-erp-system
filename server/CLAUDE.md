@@ -1428,6 +1428,13 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
 | Salary page reads (`/payments/salary`)           | ✅  | ✅  |  ❌   |   ❌    |   ❌    |
 | «Markaz qoplagani» (salary page tab)             | ✅  | ✅  |  ❌   |   ❌    |   ❌    |
 
+### DaF progress (`src/daf/`, ADR-0111)
+
+- **Every attempt goes through `recordAttempt`** (`daf/shared/attempt-writer.ts`): the `DafAttempt` row and its `DafStudentDay` day total (`+points`, `+1 attempt`, Postgres `ON CONFLICT … DO UPDATE`) commit in one transaction. `attempt-writer.single-source.spec.ts` fails on any other write of either table.
+- **`DafStudentDay` is derived** (student × Tashkent day × `groupKey`, `''` for no group, never NULL). `DafAttempt` stays the source of truth, points included. After anything deletes or rewrites attempts, or after the points formula changes, run `scripts/rebuild-daf-student-day.ts --apply`; `scripts/audit-daf-student-day.ts` (read-only) must then report 0.
+- **`FortschrittService` reads only `DafStudentDay`** for total, streak and both weekly rankings; the ranking rules of the 06.09 design are unchanged.
+- **The session end answers with `natija`** (`seansNatijasiXavfsiz`): points of the session, streak, `serieYangi`, rank before/after for group and centre. A failure there returns `null` and never fails the save.
+
 ### Lesson ratings (`src/lesson-ratings/`, ADR-0091)
 
 - **Who is asked:** `LessonRatingSenderService` (`@Cron('0 */10 7-22 * * 1-6')`, Tashkent) reads today's ended lessons through `loadEndedLessonsToday` (`attendance/shared/load-ended-lessons.ts`, shared with «Dars bo'ldimi?») and asks, 10–180 minutes after the lesson's end, every PRESENT/LATE student whose card is live and whose `telegramChatId` is set and not disconnected (ADR-0066). Off while `lessonRating.enabled` (company-level, default false) is off. A failure for one student (or one lesson) is logged and does not stop the others.
