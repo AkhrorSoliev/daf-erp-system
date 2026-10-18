@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { TablePagination } from "@/components/forms/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import type { LowRating } from "./types";
 import { commentStateLabel, dayText } from "./rating-format";
 import { ExpandableText } from "./expandable-text";
@@ -32,10 +33,11 @@ export function RatingLowList({
   onPageSizeChange: (size: number) => void;
   commentedOnly: boolean;
 }) {
+  const t = useT();
   if (total === 0) {
     return (
       <p className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-        {commentedOnly ? "Bu oyda izohli past baho yo'q" : "Bu oyda 1–3 baho yo'q"}
+        {commentedOnly ? t("Bu oyda izohli past baho yo'q") : t("Bu oyda 1–3 baho yo'q")}
       </p>
     );
   }
@@ -45,11 +47,11 @@ export function RatingLowList({
         <TableHeader>
           <TableRow>
             <TableHead className="w-12 border-r">#</TableHead>
-            <TableHead>Sana</TableHead>
-            <TableHead>Guruh</TableHead>
-            <TableHead>Ustoz</TableHead>
-            <TableHead>Baho</TableHead>
-            <TableHead>Izoh</TableHead>
+            <TableHead>{t("Sana")}</TableHead>
+            <TableHead>{t("Guruh")}</TableHead>
+            <TableHead>{t("Ustoz")}</TableHead>
+            <TableHead>{t("Baho")}</TableHead>
+            <TableHead>{t("Izoh")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -85,11 +87,12 @@ export function RatingLowList({
 }
 
 function CommentCell({ row }: { row: LowRating }) {
+  const t = useT();
   const label = commentStateLabel(row.commentState);
   return (
     <div className="space-y-1">
       <Badge variant="ghost" className={cn(TONE[label.tone])}>
-        {label.text}
+        {t(label.text)}
       </Badge>
       {row.comment && <ExpandableText text={row.comment} />}
     </div>

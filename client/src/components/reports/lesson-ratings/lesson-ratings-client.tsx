@@ -20,6 +20,7 @@ import { clampMonth } from "@/components/payments/overview/overview-math";
 import { currentMonthKey } from "@/components/payments/salary-utils";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import { useLowRatings, useRatingSummary, useSetRatingEnabled } from "./queries";
 import { RATING_FLOOR_MONTH } from "./rating-format";
 import { RatingSummaryCards } from "./rating-summary-cards";
@@ -35,6 +36,7 @@ const FILTERS = {
 
 /** «Dars baholari» (spec 2026-10-13 §6.3). Faqat CEO. */
 export function LessonRatingsClient() {
+  const t = useT();
   const { filters, setFilter } = useUrlFilters(FILTERS);
   const current = currentMonthKey();
   const month = clampMonth(filters.month || current, RATING_FLOOR_MONTH, current);
@@ -47,19 +49,19 @@ export function LessonRatingsClient() {
   const commented = filters.izoh === 1;
   const onCommented = (on: boolean) => setFilter("izoh", on ? 1 : 0);
   const openTeacher = filters.ustoz || null;
-  const openName = summary.data?.teachers.find((t) => t.teacherId === openTeacher)?.name;
+  const openName = summary.data?.teachers.find((row) => row.teacherId === openTeacher)?.name;
 
   const onToggle = (enabled: boolean) =>
     toggle.mutate(enabled, {
       onSuccess: (r) =>
-        toast.success(r.enabled ? "Baho so'rash yoqildi" : "Baho so'rash o'chirildi"),
-      onError: (e) => toast.error(getErrorMessage(e, "Sozlamani saqlab bo'lmadi")),
+        toast.success(r.enabled ? t("Baho so'rash yoqildi") : t("Baho so'rash o'chirildi")),
+      onError: (e) => toast.error(getErrorMessage(e, t("Sozlamani saqlab bo'lmadi"))),
     });
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">Dars baholari</h2>
+        <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Dars baholari")}</h2>
         <div className="flex flex-wrap items-center gap-4">
           {summary.data && (
             <div className="flex items-center gap-2">
@@ -70,7 +72,7 @@ export function LessonRatingsClient() {
                 onCheckedChange={onToggle}
               />
               <Label htmlFor="rating-enabled">
-                Baho so&apos;rash: {summary.data.enabled ? "Yoqilgan" : "O'chirilgan"}
+                {summary.data.enabled ? t("Baho so'rash: Yoqilgan") : t("Baho so'rash: O'chirilgan")}
               </Label>
             </div>
           )}
@@ -87,23 +89,23 @@ export function LessonRatingsClient() {
       </div>
 
       <Alert className="border-green-300 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
-        🔒 Baholar ANONIM: o&apos;quvchining ismi hech qayerda ko&apos;rsatilmaydi.
+        🔒 {t("Baholar ANONIM: o'quvchining ismi hech qayerda ko'rsatilmaydi.")}
       </Alert>
 
       {summary.isPending ? (
         <BlockSkeleton className="h-64" />
       ) : summary.isError ? (
-        <BlockError title="Dars baholari" onRetry={() => summary.refetch()} />
+        <BlockError title={t("Dars baholari")} onRetry={() => summary.refetch()} />
       ) : (
         <>
           {!summary.data.enabled && (
             <p className="rounded-md border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
-              Hozir o&apos;quvchilardan baho so&apos;ralmayapti.
+              {t("Hozir o'quvchilardan baho so'ralmayapti.")}
             </p>
           )}
           <RatingSummaryCards data={summary.data} onOpenTeacher={(id) => setFilter("ustoz", id)} />
           <section className="space-y-3">
-            <h3 className="font-medium">Ustozlar</h3>
+            <h3 className="font-medium">{t("Ustozlar")}</h3>
             <RatingTeachersTable
               rows={summary.data.teachers.slice((safePage - 1) * pageSize, safePage * pageSize)}
               page={safePage}
@@ -119,7 +121,7 @@ export function LessonRatingsClient() {
           </section>
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-medium">Past baholar va izohlar</h3>
+              <h3 className="font-medium">{t("Past baholar va izohlar")}</h3>
               <ToggleGroup
                 type="single"
                 variant="outline"
@@ -127,10 +129,10 @@ export function LessonRatingsClient() {
                 spacing={0}
                 value={commented ? "izoh" : "all"}
                 onValueChange={(v) => v && onCommented(v === "izoh")}
-                aria-label="Past baholarni saralash"
+                aria-label={t("Past baholarni saralash")}
               >
-                <ToggleGroupItem value="all">Hammasi</ToggleGroupItem>
-                <ToggleGroupItem value="izoh">Faqat izohlilar</ToggleGroupItem>
+                <ToggleGroupItem value="all">{t("Hammasi")}</ToggleGroupItem>
+                <ToggleGroupItem value="izoh">{t("Faqat izohlilar")}</ToggleGroupItem>
               </ToggleGroup>
             </div>
             <RatingLowSection key={`${month}-${commented}`} month={month} commented={commented} />
@@ -141,9 +143,9 @@ export function LessonRatingsClient() {
       <Sheet open={openTeacher !== null} onOpenChange={(o) => !o && setFilter("ustoz", 0)}>
         <SheetContent className="flex flex-col gap-0 p-0 sm:max-w-lg">
           <SheetHeader className="border-b px-6 py-4">
-            <SheetTitle>{openName ?? "Ustoz baholari"}</SheetTitle>
+            <SheetTitle>{openName ?? t("Ustoz baholari")}</SheetTitle>
             <SheetDescription className="sr-only">
-              Ustozning oylar, guruhlar va izohlar bo&apos;yicha baholari
+              {t("Ustozning oylar, guruhlar va izohlar bo'yicha baholari")}
             </SheetDescription>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -159,10 +161,11 @@ export function LessonRatingsClient() {
 function RatingLowSection({ month, commented }: { month: string; commented: boolean }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const t = useT();
   const q = useLowRatings(month, page, pageSize, commented);
 
   if (q.isPending) return <Skeleton className="h-40 w-full" />;
-  if (q.isError) return <BlockError title="Past baholar" onRetry={() => q.refetch()} />;
+  if (q.isError) return <BlockError title={t("Past baholar")} onRetry={() => q.refetch()} />;
   return (
     <RatingLowList
       rows={q.data.data}

@@ -9,6 +9,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { downloadAuthedFile } from "@/lib/download-file";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import { currentMonthKey } from "@/components/payments/salary-utils";
 import { lastPageIfPast } from "@/components/payments/debt/debt-url";
 import { PaymentsPager } from "@/components/payments/list/payments-table";
@@ -25,6 +26,7 @@ import {
 
 /** «Guruhlar bo'yicha to'lov» (spec B5 §3). Every figure is the server's; the page only formats. */
 export function GroupPaymentsPage() {
+  const t = useT();
   const { filters: raw, setFilters } = useUrlFilters(GROUP_PAYMENTS_SCHEMA);
   const filters = raw as GroupPaymentsFilters;
   const [exporting, setExporting] = useState(false);
@@ -53,7 +55,7 @@ export function GroupPaymentsPage() {
       const qs = new URLSearchParams(excelParams(filters, current)).toString();
       await downloadAuthedFile(`/reports/group-payments/excel?${qs}`, excelFileName(month));
     } catch (e) {
-      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+      toast.error(getErrorMessage(e, t("Excel yuklab olishda xatolik")));
     } finally {
       setExporting(false);
     }
@@ -62,12 +64,12 @@ export function GroupPaymentsPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">Guruhlar bo&apos;yicha to&apos;lov</h2>
+        <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Guruhlar bo'yicha to'lov")}</h2>
         <div className="flex flex-wrap items-center gap-2">
           <MonthStepper value={month} min={GP_FIRST_MONTH} max={current} onChange={(m) => onChange({ oy: m === current ? "" : m, guruh: "" })} />
           <Button variant="outline" onClick={exportExcel} disabled={exporting}>
             {exporting ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />}
-            Excel
+            {t("Excel")}
           </Button>
         </div>
       </div>
@@ -78,9 +80,9 @@ export function GroupPaymentsPage() {
 
       {isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+          <p>{t("Ma'lumotni yuklab bo'lmadi")}</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
-            Qayta urinish
+            {t("Qayta urinish")}
           </Button>
         </div>
       ) : (
@@ -103,15 +105,15 @@ export function GroupPaymentsPage() {
               pageSize={Number(params.soni)}
               total={fresh.total}
               sizes={GP_PAGE_SIZES}
-              sizeLabel="Sahifadagi qatorlar soni"
+              sizeLabel={t("Sahifadagi qatorlar soni")}
               onPage={(sahifa) => setFilters({ sahifa })}
               onPageSize={(soni) => setFilters({ soni, sahifa: 1 })}
             />
           )}
           {fresh && fresh.rows.length > 0 && !tableLoading && (
             <div className="space-y-1 text-xs text-muted-foreground">
-              {fresh.multiTeacherNote && <p>{MULTI_TEACHER_NOTE}</p>}
-              <p>{QOLDI_NOTE}</p>
+              {fresh.multiTeacherNote && <p>{t(MULTI_TEACHER_NOTE)}</p>}
+              <p>{t(QOLDI_NOTE)}</p>
             </div>
           )}
         </div>

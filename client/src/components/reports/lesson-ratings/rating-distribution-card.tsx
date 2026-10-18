@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatNumber } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 import { averageText, barPercent } from "./rating-format";
 import type { RatingSummary, RatingTeacherBrief } from "./types";
 
@@ -10,7 +12,7 @@ import type { RatingSummary, RatingTeacherBrief } from "./types";
 const LOW_SCORE_MAX = 3;
 /** Taqsimot yuqoridan pastga: 5 ⭐ → 1 ⭐. */
 const SCORES_DESC = [5, 4, 3, 2, 1];
-const EMPTY_TEXT = "Bu oyda baho yo'q";
+const EMPTY_TEXT = msg("Bu oyda baho yo'q");
 
 /** Chapda taqsimot (3/5), o'ngda eng yaxshi / eng past ustoz (2/5). */
 export function RatingDistributionCard({
@@ -20,13 +22,14 @@ export function RatingDistributionCard({
   data: RatingSummary;
   onOpenTeacher: (teacherId: number) => void;
 }) {
+  const t = useT();
   return (
     <Card>
       <CardContent className="grid gap-6 pt-6 lg:grid-cols-5 lg:gap-0">
         <div className="lg:col-span-3 lg:pr-6">
           <CardHeader className="p-0 pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Baholar taqsimoti
+              {t("Baholar taqsimoti")}
             </CardTitle>
           </CardHeader>
           <Distribution counts={data.distribution} />
@@ -34,13 +37,13 @@ export function RatingDistributionCard({
         <div className="space-y-4 border-t pt-4 lg:col-span-2 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
           {data.best ? (
             <>
-              <TeacherBlock label="Eng yaxshi ustoz" teacher={data.best} onOpen={onOpenTeacher} />
+              <TeacherBlock label={t("Eng yaxshi ustoz")} teacher={data.best} onOpen={onOpenTeacher} />
               {data.worst && (
-                <TeacherBlock label="Eng past ustoz" teacher={data.worst} onOpen={onOpenTeacher} />
+                <TeacherBlock label={t("Eng past ustoz")} teacher={data.worst} onOpen={onOpenTeacher} />
               )}
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">{EMPTY_TEXT}</p>
+            <p className="text-sm text-muted-foreground">{t(EMPTY_TEXT)}</p>
           )}
         </div>
       </CardContent>
@@ -49,8 +52,9 @@ export function RatingDistributionCard({
 }
 
 function Distribution({ counts }: { counts: number[] }) {
+  const t = useT();
   const max = Math.max(0, ...counts);
-  if (max === 0) return <p className="text-sm text-muted-foreground">{EMPTY_TEXT}</p>;
+  if (max === 0) return <p className="text-sm text-muted-foreground">{t(EMPTY_TEXT)}</p>;
   return (
     <ul className="space-y-2">
       {SCORES_DESC.map((score) => {
@@ -84,6 +88,7 @@ function TeacherBlock({
   teacher: RatingTeacherBrief;
   onOpen: (teacherId: number) => void;
 }) {
+  const t = useT();
   return (
     <div className="space-y-1 text-sm">
       <p className="text-muted-foreground">{label}</p>
@@ -96,7 +101,7 @@ function TeacherBlock({
       </button>
       <p>
         {averageText(teacher.average)}{" "}
-        <span className="text-muted-foreground">· {formatNumber(teacher.rated)} ta baho</span>
+        <span className="text-muted-foreground">· {t("{n} ta baho", { n: formatNumber(teacher.rated) })}</span>
       </p>
     </div>
   );

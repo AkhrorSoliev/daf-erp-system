@@ -10,6 +10,7 @@ const uzCyrl: Dictionary = {
   "Profil": "Профиль",
   // An all-caps word reads as an acronym and stays Latin; this one is Uzbek.
   "JAMI": "ЖАМИ",
+  "Baholar ANONIM: o'quvchining ismi hech qayerda ko'rsatilmaydi.": "Баҳолар АНОНИМ: ўқувчининг исми ҳеч қаерда кўрсатилмайди.",
   // Key names stay as printed on the keyboard.
   "Esc — bekor, Ctrl+Enter — saqlash": "Esc — бекор, Ctrl+Enter — сақлаш",
   // The names are sorted in Latin order: the letters stay Latin.

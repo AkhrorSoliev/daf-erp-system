@@ -1,5 +1,8 @@
 import type { CommentState } from "./types";
 import { formatNumber, formatPercent } from "@/lib/format-utils";
+import { msg } from "@/i18n/msg";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "@/components/notifications/notification-view";
 
 /** Baholar shu oydan beri yig'iladi (spec 2026-10-13). */
 export const RATING_FLOOR_MONTH = "2026-10";
@@ -13,10 +16,11 @@ export function averageText(average: number | null): string {
 export function trend(
   current: number | null,
   previous: number | null,
+  t: Translate = interpolate,
 ): { text: string; tone: "up" | "down" | "same" } | null {
   if (current === null || previous === null) return null;
   const diff = Math.round((current - previous) * 10) / 10;
-  if (diff === 0) return { text: "o'zgarmadi", tone: "same" };
+  if (diff === 0) return { text: t("o'zgarmadi"), tone: "same" };
   return diff > 0
     ? { text: `↑ ${oneDecimal(diff)}`, tone: "up" }
     : { text: `↓ ${oneDecimal(-diff)}`, tone: "down" };
@@ -51,10 +55,10 @@ export function commentStateLabel(state: CommentState): {
 } {
   switch (state) {
     case "WRITTEN":
-      return { text: "Yozdi", tone: "green" };
+      return { text: msg("Yozdi"), tone: "green" };
     case "PENDING":
-      return { text: "Kutilmoqda", tone: "amber" };
+      return { text: msg("Izoh kutilmoqda"), tone: "amber" };
     default:
-      return { text: "Yozmadi", tone: "muted" };
+      return { text: msg("Yozmadi"), tone: "muted" };
   }
 }
